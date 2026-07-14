@@ -78,6 +78,13 @@ Factories: `SECTION_TYPE_DEFAULTS` in `src/utils/defaultDataSectionTypes.js`.
 
 Bundle splits: `react-pdf`, `docx`, `firebase` (`vite.config.js` `manualChunks`).
 
+### React-PDF fidelity notes (branch `fix/react-pdf-fidelity`)
+
+- CSS spacing (design panel px) → PDF points via `pdfUnits.js` (`* 0.75`) once in `resolveTemplateSettings` / `getEffectiveSpacing`.
+- Photo sizes must match `templateShared.photoStyle` / `modernPhotoStyle` (`pdfPhoto.js`).
+- Warm export: `warmPdfExport(resume)` from Editor on template/font change.
+- PDF metadata creator/producer: **CPWT-CV** (not FlowCV).
+
 ## Cloud sync (resumes only)
 
 - Path: `users/{uid}/resumes/{id}`, deletions meta: `users/{uid}/meta/deletions`
