@@ -1,5 +1,6 @@
 import { View, Text } from '@react-pdf/renderer';
 import { MailIcon, PhoneIcon, MapPinIcon, GlobeIcon, LinkedinPdfIcon, GithubPdfIcon } from './PdfIcons';
+import { pxToPt } from './pdfUnits';
 
 function buildItems(personal) {
   const hidden = personal?.hiddenFields || [];
@@ -17,9 +18,11 @@ export function PdfContactRow({ personal, settings, color }) {
   const contactStyle  = settings?.contactStyle  || 'icon';
   const contactLayout = settings?.contactLayout || 'justify';
   const baseSize = settings?.fontSizeBase || 11;
-  const iconPt   = Math.max(7, Math.round((settings?.iconSize ?? 11) * 0.72));
+  // Canvas icons use CSS px; convert so PDF contact row scale matches preview
+  const iconPt   = Math.max(7, pxToPt(settings?.iconSize ?? 11));
   const c        = color || '#555555';
-  const textSize = baseSize - 1.5;
+  // Canvas contact text uses baseSize (pt), slightly smaller visual via gray color not size cut
+  const textSize = Math.max(8, baseSize - 0.5);
 
   const items = buildItems(personal);
   if (!items.length) return null;
@@ -53,10 +56,11 @@ export function PdfContactRow({ personal, settings, color }) {
   }
 
   if (contactLayout === '2grid') {
+    // Canvas: gap '2px 24px'
     return (
-      <View style={{ marginTop: 3, flexDirection: 'row', flexWrap: 'wrap' }}>
+      <View style={{ marginTop: 3, flexDirection: 'row', flexWrap: 'wrap', columnGap: pxToPt(24), rowGap: pxToPt(2) }}>
         {items.map(item => (
-          <View key={item.key} style={{ width: '50%', paddingBottom: 1 }}>{renderItem(item)}</View>
+          <View key={item.key} style={{ width: '46%', paddingBottom: 1 }}>{renderItem(item)}</View>
         ))}
       </View>
     );
@@ -66,7 +70,7 @@ export function PdfContactRow({ personal, settings, color }) {
   // HTML canvas: gap: '2px 16px' — 2px row gap, 16px column gap
   if (contactStyle === 'icon') {
     return (
-      <View style={{ marginTop: 3, flexDirection: 'row', flexWrap: 'wrap', columnGap: 12, rowGap: 2 }}>
+      <View style={{ marginTop: 3, flexDirection: 'row', flexWrap: 'wrap', columnGap: pxToPt(16), rowGap: pxToPt(2) }}>
         {items.map(renderItem)}
       </View>
     );

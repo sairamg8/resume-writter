@@ -35,8 +35,9 @@
 | “Dark” template | Seeded in store defaults (`template: 'dark'`) but **not** registered in `TEMPLATE_MAP` or PDF loaders |
 | README structure section | Out of date (missing job tracker, PDF tree, split components; still lists DarkTemplate.jsx) |
 | Job cloud sync | Jobs stay in localStorage only |
-| Git / open-source packaging | No `.git` in current workspace; LICENSE file not present despite README MIT claim |
-| Branding | Product is CPWT-CV, not FlowCV; still useful as FlowCV-inspired free alternative |
+| Open-source packaging | LICENSE file may still be missing; git + worktree now in use |
+| Branding | Product is CPWT-CV; PDF metadata updated off FlowCV |
+| Print vs react-pdf | Legacy print path kept as fallback; react-pdf is primary and fidelity-improved (2026-07-14 worktree) |
 
 ---
 

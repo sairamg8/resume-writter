@@ -41,7 +41,7 @@ export default function ClassicTemplate({ data }) {
   return (
     <SectionCaseContext.Provider value={st.sectionTitleCase || 'upper'}>
     <HeadingStyleContext.Provider value={st.headingStyle || 'line'}>
-      <div style={{ fontFamily, color: textColor, fontSize: baseSize + 'pt', '--fs-base': baseSize + 'pt', '--fs-name': nameSize + 'pt', '--fs-section': sectionSize + 'pt', '--fs-entry': entrySize + 'pt', '--section-gap': (st.sectionGap ?? 16) + 'px', '--item-gap': (st.itemGap ?? 12) + 'px', '--section-border-width': (st.sectionBorderWidth ?? 1) + 'px' }}>
+      <div style={{ fontFamily, color: textColor, fontSize: baseSize + 'pt', lineHeight: st.lineHeightValue ?? 1.5, '--fs-base': baseSize + 'pt', '--fs-name': nameSize + 'pt', '--fs-section': sectionSize + 'pt', '--fs-entry': entrySize + 'pt', '--section-gap': (st.sectionGap ?? 16) + 'px', '--item-gap': (st.itemGap ?? 12) + 'px', '--section-border-width': (st.sectionBorderWidth ?? 1) + 'px' }}>
         <div className={`mb-5 ${st.showHeaderBorder !== false ? 'pb-4' : ''}`} style={st.showHeaderBorder !== false ? { borderBottom: `${st.headerBorderWidth || 2}px solid ${accent}` } : {}}>
           <div className={`flex ${centered ? 'flex-col items-center text-center' : (st.photoTextAlign === 'center' ? 'items-center' : st.photoTextAlign === 'bottom' ? 'items-end' : 'items-start')} gap-3`}>
             {personal.photo && !hidden.has('photo') && (

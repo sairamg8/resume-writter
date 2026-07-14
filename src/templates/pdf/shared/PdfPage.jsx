@@ -1,11 +1,20 @@
 import { StyleSheet } from '@react-pdf/renderer';
+import {
+  CSS_PX_TO_PT,
+  DEFAULT_ITEM_GAP_PX,
+  DEFAULT_SECTION_GAP_PX,
+} from './pdfUnits';
 
+/**
+ * Per-template fallbacks used only when the user has NOT set a value.
+ * Keep these aligned with each HTML template's `st.x || fallback` chains.
+ */
 export const DEFAULTS = {
   classic: {
     accentColor: '#2563eb',
     textColor: '#1a1a1a',
-    nameColor: (s) => s.textColor || '#1a1a1a',
-    jobTitleColor: (s) => s.accentColor || '#2563eb',
+    nameColor: (s) => s.nameColor || s.textColor || '#1a1a1a',
+    jobTitleColor: (s) => s.jobTitleColor || s.accentColor || '#2563eb',
     headingStyle: 'line',
     sectionTitleCase: 'upper',
   },
@@ -20,16 +29,16 @@ export const DEFAULTS = {
   minimal: {
     accentColor: '#2563eb',
     textColor: '#111111',
-    nameColor: (s) => s.textColor || '#111111',
-    jobTitleColor: () => '#555555',
+    nameColor: (s) => s.nameColor || s.textColor || '#111111',
+    jobTitleColor: (s) => s.jobTitleColor || '#555555',
     headingStyle: 'underline',
     sectionTitleCase: 'upper',
   },
   executive: {
     accentColor: '#2563eb',
     textColor: '#111111',
-    nameColor: (s) => s.textColor || '#111111',
-    jobTitleColor: (s) => s.accentColor || '#2563eb',
+    nameColor: (s) => s.nameColor || s.textColor || '#111111',
+    jobTitleColor: (s) => s.jobTitleColor || s.accentColor || '#2563eb',
     headingStyle: 'underline',
     sectionTitleCase: 'normal',
   },
@@ -44,31 +53,67 @@ export const DEFAULTS = {
   },
 };
 
+/**
+ * Resolve design settings for PDF export.
+ * - User-provided settings always win.
+ * - Spacing values (CSS px from design panel) are converted to PDF points once.
+ * - Font sizes stay as-is (already "pt" numbers on canvas).
+ */
 export function resolveTemplateSettings(settings = {}, templateKey) {
   const tConfig = DEFAULTS[templateKey] || DEFAULTS.classic;
   const s = { ...settings };
 
-  // Resolve base colors
-  s.accentColor       = settings.accentColor       || tConfig.accentColor;
-  s.textColor         = settings.textColor         || tConfig.textColor;
-  s.headingStyle      = settings.headingStyle      || tConfig.headingStyle;
-  s.sectionTitleCase  = settings.sectionTitleCase  || tConfig.sectionTitleCase;
+  s.accentColor = settings.accentColor || tConfig.accentColor;
+  s.textColor = settings.textColor || tConfig.textColor;
+  s.headingStyle = settings.headingStyle || tConfig.headingStyle;
+  s.sectionTitleCase = settings.sectionTitleCase || tConfig.sectionTitleCase;
+  s.headerTextColor = settings.headerTextColor || '#ffffff';
 
-  // Resolve dependent template-specific colors
-  s.nameColor         = settings.nameColor         || (typeof tConfig.nameColor === 'function' ? tConfig.nameColor(s) : tConfig.nameColor);
-  s.jobTitleColor     = settings.jobTitleColor     || (typeof tConfig.jobTitleColor === 'function' ? tConfig.jobTitleColor(s) : tConfig.jobTitleColor);
+  s.nameColor = settings.nameColor
+    || (typeof tConfig.nameColor === 'function' ? tConfig.nameColor(s) : tConfig.nameColor);
+  s.jobTitleColor = settings.jobTitleColor
+    || (typeof tConfig.jobTitleColor === 'function' ? tConfig.jobTitleColor(s) : tConfig.jobTitleColor);
 
   if (templateKey === 'sidebar') {
-    s.sidebarBg       = settings.sidebarBg       || tConfig.sidebarBg;
+    s.sidebarBg = settings.sidebarBg || tConfig.sidebarBg;
   }
 
-  // Common font/spacing configurations
-  s.fontSizeBase      = settings.fontSizeBase      || 11;
-  s.lineHeightValue   = settings.lineHeightValue   || 1.5;
-  s.marginV           = settings.marginV           || 14;
-  s.marginH           = settings.marginH           || 18;
-  s.sectionGap        = (settings.sectionGap       ?? 16) * 0.75;
-  s.itemGap           = (settings.itemGap          ?? 12) * 0.75;
+  // Font metrics — match canvas (pt numbers, no conversion)
+  s.fontSizeBase = settings.fontSizeBase ?? 11;
+  s.fontSizeNameDelta = settings.fontSizeNameDelta ?? 8;
+  s.fontSizeSectionDelta = settings.fontSizeSectionDelta ?? 1;
+  s.fontSizeEntryDelta = settings.fontSizeEntryDelta ?? 0;
+  s.lineHeightValue = settings.lineHeightValue ?? 1.5;
+  s.iconSize = settings.iconSize ?? 11;
+
+  // Page margins (mm — used as mm in getPageStyle)
+  s.marginV = settings.marginV ?? 14;
+  s.marginH = settings.marginH ?? 18;
+
+  // Spacing: convert CSS px → PDF pt exactly once
+  const sectionGapPx = settings.sectionGap ?? DEFAULT_SECTION_GAP_PX;
+  const itemGapPx = settings.itemGap ?? DEFAULT_ITEM_GAP_PX;
+  s.sectionGap = sectionGapPx * CSS_PX_TO_PT;
+  s.itemGap = itemGapPx * CSS_PX_TO_PT;
+  // Keep raw px for any per-section override math that still expects px inputs
+  s._sectionGapPx = sectionGapPx;
+  s._itemGapPx = itemGapPx;
+
+  s.sectionBorderWidth = settings.sectionBorderWidth ?? 1;
+  s.sectionBorderColor = settings.sectionBorderColor || '';
+  s.headerBorderWidth = settings.headerBorderWidth ?? 2;
+  s.headerAlign = settings.headerAlign || 'left';
+  s.headerLayout = settings.headerLayout || 'stack';
+  s.headerInlineGap = (settings.headerInlineGap ?? 8) * CSS_PX_TO_PT;
+  s.contactStyle = settings.contactStyle || 'icon';
+  s.contactLayout = settings.contactLayout || 'justify';
+  s.photoShape = settings.photoShape || 'circle';
+  s.photoSize = settings.photoSize || 'md';
+  s.photoBorder = settings.photoBorder || 'accent';
+  s.photoHeight = settings.photoHeight || 'match';
+  s.photoTextAlign = settings.photoTextAlign || 'center';
+  // showHeaderBorder: false is a valid explicit choice (ATS_DEFAULTS)
+  s.showHeaderBorder = settings.showHeaderBorder;
 
   return s;
 }
@@ -76,15 +121,27 @@ export function resolveTemplateSettings(settings = {}, templateKey) {
 export function getPageStyle(settings) {
   return StyleSheet.create({
     page: {
-      fontFamily:      settings._pdfFontFamily || 'NotoSans',
-      paddingTop:      `${settings.marginV}mm`,
-      paddingBottom:   `${settings.marginV}mm`,
-      paddingLeft:     `${settings.marginH}mm`,
-      paddingRight:    `${settings.marginH}mm`,
-      fontSize:        settings.fontSizeBase,
-      lineHeight:      settings.lineHeightValue,
-      color:           settings.textColor,
+      fontFamily: settings._pdfFontFamily || 'NotoSans',
+      paddingTop: `${settings.marginV}mm`,
+      paddingBottom: `${settings.marginV}mm`,
+      paddingLeft: `${settings.marginH}mm`,
+      paddingRight: `${settings.marginH}mm`,
+      fontSize: settings.fontSizeBase,
+      lineHeight: settings.lineHeightValue,
+      color: settings.textColor,
       backgroundColor: 'white',
-    }
+    },
   }).page;
+}
+
+/** Document metadata — product branding (not FlowCV). */
+export function getDocumentProps(personal) {
+  return {
+    title: personal?.name ? `${personal.name} Resume` : 'Resume',
+    author: personal?.name || '',
+    creator: 'CPWT-CV',
+    producer: 'CPWT-CV',
+    subject: 'Resume',
+    keywords: 'resume, cv, CPWT-CV',
+  };
 }

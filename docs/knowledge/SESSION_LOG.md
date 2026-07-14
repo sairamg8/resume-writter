@@ -4,6 +4,30 @@ Append-only. Newest entries at the top.
 
 ---
 
+## 2026-07-14 — React-PDF fidelity + performance (worktree)
+
+**Branch / worktree:** `fix/react-pdf-fidelity` @ `/home/sairam/Documents/flowcv-pdf-worktree`
+
+**Problem:** Canvas preview (HTML) and “Export PDF” (react-pdf) diverged; two export paths (print legacy vs react-pdf). Goal: make react-pdf the competitive primary path.
+
+**Changes**
+
+- Shared unit bridge `pdfUnits.js` (CSS px → PDF pt @ 0.75)
+- Shared photo sizing `pdfPhoto.js` matching `templateShared` canvas sizes
+- `resolveTemplateSettings` / `getPageStyle` / `getDocumentProps` rewrite in `PdfPage.jsx`
+- All template PDFs: classic/modern/minimal/executive/sidebar + cover letter branding CPWT-CV
+- Rich text parser hardened; contact gaps match canvas
+- Export performance: template cache, font prefetch, hyphenation off, `warmPdfExport` on editor mount
+- Classic canvas now applies `lineHeightValue` on root (was missing)
+
+**Verification**
+
+- `npm run build` OK
+- Playwright `08-pdf-design-fidelity.spec.js` — 8/8 passed
+- Worktree isolated from master
+
+---
+
 ## 2026-07-14 — Knowledge base bootstrap
 
 **Participants:** User (Sairam), Grok agent  

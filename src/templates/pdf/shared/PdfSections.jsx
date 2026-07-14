@@ -1,6 +1,7 @@
 import { View, Text } from '@react-pdf/renderer';
 import { PdfSectionTitle } from './PdfSection';
 import { PdfRichText } from './PdfRichText';
+import { CSS_PX_TO_PT, SECTION_SPACING_PX } from './pdfUnits';
 
 import {
   ExperienceSection,
@@ -216,19 +217,27 @@ export function SectionRouter({ section, settings, marginBottom, itemGap, italic
   }
 }
 
-// Helper to compute per-section spacing overrides (used by all template PDFs)
-export const SECTION_SPACING_MAP = { compact: 4, normal: 8, relaxed: 14 };
+// Spacing presets in CSS px (match ClassicTemplateHelpers.SKILL_ROW_GAP).
+export const SECTION_SPACING_MAP = SECTION_SPACING_PX;
 
+/**
+ * Per-section spacing overrides.
+ * - Global sectionGap/itemGap on settings are already PDF points (from resolveTemplateSettings).
+ * - Per-section spaceAfter / spaceBefore / itemGap are stored as CSS px → convert once.
+ * - spacing presets (compact/normal/relaxed) are CSS px → convert once.
+ */
 export function getEffectiveSpacing(section, settings) {
   const ss = section.settings || {};
   const globalSecGap  = settings?.sectionGap ?? 12;
   const globalItemGap = settings?.itemGap    ?? 9;
 
   return {
-    marginBottom:  ss.spaceAfter != null ? ss.spaceAfter * 0.75 : globalSecGap,
-    spaceBefore:   ss.spaceBefore != null ? ss.spaceBefore * 0.75 : undefined,
-    itemGap:       ss.itemGap != null
-      ? ss.itemGap * 0.75
-      : (SECTION_SPACING_MAP[ss.spacing] != null ? SECTION_SPACING_MAP[ss.spacing] * 0.75 : globalItemGap),
+    marginBottom: ss.spaceAfter != null ? ss.spaceAfter * CSS_PX_TO_PT : globalSecGap,
+    spaceBefore:  ss.spaceBefore != null ? ss.spaceBefore * CSS_PX_TO_PT : undefined,
+    itemGap: ss.itemGap != null
+      ? ss.itemGap * CSS_PX_TO_PT
+      : (SECTION_SPACING_PX[ss.spacing] != null
+        ? SECTION_SPACING_PX[ss.spacing] * CSS_PX_TO_PT
+        : globalItemGap),
   };
 }
