@@ -1,8 +1,10 @@
 # Progress Snapshot
 
-**Date:** 2026-07-14  
-**Phase:** Feature-complete local product → prepare for free developer sharing  
-**Overall maturity:** High for resume/cover letter/export; medium for open-source packaging
+**Date:** 2026-07-14 (handoff saved)  
+**Phase:** React-PDF fidelity complete on branch → awaiting merge + open-source packaging  
+**Overall maturity:** High for resume/cover letter/export; medium for open-source packaging  
+**Active checkout:** worktree `/home/sairam/Documents/flowcv-pdf-worktree` · branch `fix/react-pdf-fidelity` @ `874f9da`  
+**Resume guide:** [HANDOFF.md](./HANDOFF.md)
 
 ---
 

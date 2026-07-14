@@ -4,6 +4,31 @@ Append-only. Newest entries at the top.
 
 ---
 
+## 2026-07-14 — Progress saved for next session (handoff)
+
+**Action:** Wrote persistent handoff so the next agent/session continues without re-discovery.
+
+**Artifacts**
+
+- `docs/knowledge/HANDOFF.md` — primary resume file (paths, HEAD, done/not-done, next prompts)
+- `INDEX.md` — points to HANDOFF first
+- `PROGRESS.md` — phase updated to “awaiting merge”
+- Same `HANDOFF.md` + INDEX pointer also on main folder `docs/knowledge/` so opening either workspace finds the trail
+
+**State at save**
+
+- Worktree clean after commits `9d93430` + `874f9da` (plus pending doc handoff commit)
+- Master still at `fbd8195` without PDF fidelity
+- User asked only to save progress — **no merge performed**
+
+**Next session must**
+
+1. Open worktree or recreate it from branch `fix/react-pdf-fidelity`
+2. Read `HANDOFF.md`
+3. Ask user before merging to master
+
+---
+
 ## 2026-07-14 — React-PDF fidelity + performance (worktree)
 
 **Branch / worktree:** `fix/react-pdf-fidelity` @ `/home/sairam/Documents/flowcv-pdf-worktree`

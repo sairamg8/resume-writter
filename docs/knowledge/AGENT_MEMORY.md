@@ -2,9 +2,12 @@
 
 Short-form project memory for AI/human continuity. Details live in numbered docs.
 
+> **Session resume:** also read [`HANDOFF.md`](./HANDOFF.md) before coding.
+
 ## Identity
 
-- **Repo path:** `/home/sairam/Documents/flowcv`
+- **Repo path (master):** `/home/sairam/Documents/flowcv`
+- **Active worktree (PDF branch):** `/home/sairam/Documents/flowcv-pdf-worktree` · `fix/react-pdf-fidelity`
 - **Product name:** CPWT-CV (UI + README). Folder/package name: `flowcv`.
 - **Inspiration:** Free FlowCV-style online resume builder.
 - **Owner/author:** Sairam Gudiputi (`sairamgudiputi8@gmail.com`)
