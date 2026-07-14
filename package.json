@@ -1,0 +1,43 @@
+{
+  "name": "flowcv",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "lint": "oxlint",
+    "preview": "vite preview",
+    "test": "npx playwright test",
+    "test:ui": "npx playwright test --ui"
+  },
+  "dependencies": {
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
+    "@fontsource/noto-sans": "^5.2.10",
+    "@react-pdf/renderer": "^4.5.1",
+    "@tailwindcss/vite": "^4.3.1",
+    "docx": "^9.7.1",
+    "file-saver": "^2.0.5",
+    "firebase": "^12.15.0",
+    "lucide-react": "^1.21.0",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "react-router-dom": "^7.18.0",
+    "tailwindcss": "^4.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.2",
+    "oxlint": "^1.69.0",
+    "pdfjs-dist": "^6.1.200",
+    "playwright": "^1.61.1",
+    "vite": "^8.1.0"
+  },
+  "allowScripts": {
+    "@firebase/util@1.15.1": true,
+    "protobufjs@7.6.4": true
+  }
+}

@@ -1,0 +1,86 @@
+# 09 — File Map (actual tree)
+
+README’s structure section is partial. This is the living map as of 2026-07-14.
+
+```
+flowcv/
+├── docs/knowledge/          # ← this knowledge base
+├── dist/                    # production build output
+├── graphify-out/            # code knowledge graph artifacts
+├── public/                  # favicon, fonts, icons
+├── src/
+│   ├── main.jsx
+│   ├── App.jsx
+│   ├── App.css, index.css
+│   ├── assets/
+│   ├── components/
+│   │   ├── AuthBar.jsx
+│   │   ├── CareerHistoryPanel.jsx
+│   │   ├── CoverLetterPanel.jsx
+│   │   ├── DesignPanel*.jsx
+│   │   ├── ExportDropdown.jsx
+│   │   ├── LayoutToggle.jsx
+│   │   ├── PaginatedPreview.jsx
+│   │   ├── PersonalInfoEditor*.jsx
+│   │   ├── ResumeCard.jsx
+│   │   ├── RichTextEditor.jsx
+│   │   ├── SectionEditor*.jsx
+│   │   ├── JobModal.jsx
+│   │   └── job/             # tracker UI pieces
+│   ├── constants/
+│   │   ├── resume.js
+│   │   └── jobs.js
+│   ├── hooks/
+│   │   ├── useAuth.js
+│   │   ├── useCloudSync.js
+│   │   ├── useResumeStore.js
+│   │   ├── useResumeSectionActions.js
+│   │   ├── useJobStore.js
+│   │   └── useJobStages.js
+│   ├── pages/
+│   │   ├── Dashboard.jsx
+│   │   ├── Editor.jsx
+│   │   ├── JobTracker.jsx
+│   │   ├── JobDetail.jsx
+│   │   ├── JobForm.jsx
+│   │   ├── PrivacyPage.jsx
+│   │   └── TermsPage.jsx
+│   ├── templates/
+│   │   ├── Classic|Modern|Minimal|Sidebar|Executive*.jsx
+│   │   ├── CoverLetterTemplate*.jsx
+│   │   ├── headingStyle.js, sectionCase.js, templateShared.jsx
+│   │   └── pdf/             # react-pdf templates + shared/
+│   └── utils/
+│       ├── defaultData*.js
+│       ├── firebase.js
+│       ├── fonts.js
+│       ├── pdfExport.js
+│       ├── pdfExportReactPDF.js
+│       ├── resume.js
+│       ├── wordExport*.js
+│       └── brandIcons.jsx
+├── tests/                   # Playwright
+├── firestore.rules
+├── index.html
+├── jsconfig.json
+├── package.json
+├── package-lock.json
+├── playwright.config.js
+├── README.md
+├── TODO_RESOLVE_CONFLICTS.md
+└── vite.config.js
+```
+
+## Rough size
+
+- ~100+ JS/JSX modules under `src/`
+- ~9.5k lines across src (approx; includes templates)
+
+## Config files of note
+
+| File | Role |
+|------|------|
+| `vite.config.js` | React, Tailwind, `@` alias, manualChunks |
+| `jsconfig.json` | editor path alias |
+| `firestore.rules` | owner-only user subtree |
+| `playwright.config.js` | E2E server + browser defaults |
