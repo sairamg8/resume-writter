@@ -51,9 +51,9 @@ export function ExperienceSection({ section, settings, marginBottom, itemGap, it
                 centered={centered}
               />
               {desc && desc.replace(/<[^>]*>/g, '').trim() && (
-                <PdfRichText html={desc} style={{ fontSize: entrySize - 0.5, color: '#333333', lineHeight: lineH, marginTop: 2, textAlign: centered ? 'center' : 'left' }} />
+                <PdfRichText html={desc} style={{ fontSize: entrySize, color: '#333333', lineHeight: lineH, marginTop: 2, textAlign: centered ? 'center' : 'left' }} />
               )}
-              <RenderBullets bullets={item.bullets} style={{ fontSize: entrySize - 0.5, color: '#333333', lineHeight: lineH, textAlign: centered ? 'center' : 'left' }} accent={accent} isModern={isModern} template={settings?._template} />
+              <RenderBullets bullets={item.bullets} style={{ fontSize: entrySize, color: '#333333', lineHeight: lineH, textAlign: centered ? 'center' : 'left' }} accent={accent} isModern={isModern} template={settings?._template} />
             </View>
           );
         }}

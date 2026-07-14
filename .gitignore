@@ -24,3 +24,8 @@ dist-ssr
 *.sw?
 .claude
 .grok
+
+# Test / playwright artifacts
+playwright-report/
+test-results/
+

@@ -4,7 +4,7 @@
 > **Product goal:** Free, open resume + cover letter + job tracker for fellow developers.  
 > **Last full audit:** 2026-07-14  
 > **Canonical product name in UI/README:** **CPWT-CV** (repo folder: `flowcv`)  
-> **Active work:** worktree `fix/react-pdf-fidelity` — see [HANDOFF.md](./HANDOFF.md)
+> **Active branch:** `master` (React-PDF fidelity merged) — see [HANDOFF.md](./HANDOFF.md)
 
 ---
 

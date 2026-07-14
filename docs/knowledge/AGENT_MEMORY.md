@@ -2,9 +2,11 @@
 
 Short-form project memory for AI/human continuity. Details live in numbered docs.
 
+> **Session resume:** also read [`HANDOFF.md`](./HANDOFF.md) before coding.
+
 ## Identity
 
-- **Repo path:** `/home/sairam/Documents/flowcv`
+- **Repo path:** `/home/sairam/Documents/flowcv` · branch `master` (React-PDF fidelity merged)
 - **Product name:** CPWT-CV (UI + README). Folder/package name: `flowcv`.
 - **Inspiration:** Free FlowCV-style online resume builder.
 - **Owner/author:** Sairam Gudiputi (`sairamgudiputi8@gmail.com`)
@@ -77,6 +79,13 @@ Factories: `SECTION_TYPE_DEFAULTS` in `src/utils/defaultDataSectionTypes.js`.
 | JSON | client download of resume object |
 
 Bundle splits: `react-pdf`, `docx`, `firebase` (`vite.config.js` `manualChunks`).
+
+### React-PDF fidelity notes (on master)
+
+- CSS spacing (design panel px) → PDF points via `pdfUnits.js` (`* 0.75`) once in `resolveTemplateSettings` / `getEffectiveSpacing`.
+- Photo sizes must match `templateShared.photoStyle` / `modernPhotoStyle` (`pdfPhoto.js`).
+- Warm export: `warmPdfExport(resume)` from Editor on template/font change.
+- PDF metadata creator/producer: **CPWT-CV** (not FlowCV).
 
 ## Cloud sync (resumes only)
 

@@ -4,15 +4,63 @@ Append-only. Newest entries at the top.
 
 ---
 
-## 2026-07-14 — Progress saved (handoff pointer on master)
+## 2026-07-14 — Merged `fix/react-pdf-fidelity` into `master`
 
-Active PDF work is **not** on this `master` checkout. Full handoff:
+**Action:** User requested merge of PDF worktree branch into master.
 
-- This folder: `docs/knowledge/HANDOFF.md` (pointer)
-- Worktree: `/home/sairam/Documents/flowcv-pdf-worktree` · branch `fix/react-pdf-fidelity` @ `874f9da`
-- Full detail: worktree `docs/knowledge/HANDOFF.md`
+**Result**
 
-PDF fidelity + performance completed on that branch (tests green). **Not merged to master.**
+- Merged branch `fix/react-pdf-fidelity` into `master`
+- Resolved add/add and content conflicts in knowledge docs (`HANDOFF.md`, `INDEX.md`, `PROGRESS.md`, `SESSION_LOG.md`)
+- Handoff docs updated to reflect work now lives on `master` (worktree no longer required)
+
+**Code landed on master**
+
+- React-PDF fidelity (units, photos, spacing, rich text, contact, all templates)
+- Export warm-up / cache / font prefetch
+- Related `.gitignore` and knowledge-base updates
+
+---
+
+## 2026-07-14 — Progress saved for next session (handoff)
+
+**Action:** Wrote persistent handoff so the next agent/session continues without re-discovery.
+
+**Artifacts**
+
+- `docs/knowledge/HANDOFF.md` — primary resume file (paths, HEAD, done/not-done, next prompts)
+- `INDEX.md` — points to HANDOFF first
+- `PROGRESS.md` — phase was “awaiting merge” (now merged — see entry above)
+- Same trail on main folder `docs/knowledge/` and worktree
+
+**State at save (pre-merge)**
+
+- Worktree clean after commits `9d93430` + `874f9da` (plus handoff commit)
+- Master had pointer commit only; PDF fidelity lived on branch
+
+---
+
+## 2026-07-14 — React-PDF fidelity + performance (worktree)
+
+**Branch / worktree:** `fix/react-pdf-fidelity` @ `/home/sairam/Documents/flowcv-pdf-worktree`
+
+**Problem:** Canvas preview (HTML) and “Export PDF” (react-pdf) diverged; two export paths (print legacy vs react-pdf). Goal: make react-pdf the competitive primary path.
+
+**Changes**
+
+- Shared unit bridge `pdfUnits.js` (CSS px → PDF pt @ 0.75)
+- Shared photo sizing `pdfPhoto.js` matching `templateShared` canvas sizes
+- `resolveTemplateSettings` / `getPageStyle` / `getDocumentProps` rewrite in `PdfPage.jsx`
+- All template PDFs: classic/modern/minimal/executive/sidebar + cover letter branding CPWT-CV
+- Rich text parser hardened; contact gaps match canvas
+- Export performance: template cache, font prefetch, hyphenation off, `warmPdfExport` on editor mount
+- Classic canvas now applies `lineHeightValue` on root (was missing)
+
+**Verification**
+
+- `npm run build` OK
+- Playwright `08-pdf-design-fidelity.spec.js` — 8/8 passed
+- Worktree isolated from master (until merge above)
 
 ---
 

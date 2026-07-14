@@ -1,57 +1,112 @@
 # Session Handoff — Resume Here
 
-> **For the next human or AI session:** read this file first.  
+> **For the next human or AI session:** read this file first, then `AGENT_MEMORY.md`.  
 > **Saved:** 2026-07-14  
-> **Important:** Active PDF work is **not** on this folder’s `master` checkout.
+> **Status:** React-PDF fidelity work **merged into `master`**.
 
 ---
 
-## Critical: use the worktree
+## Where the active work lives
 
 | Item | Value |
 |------|--------|
-| **Active code (PDF branch)** | `/home/sairam/Documents/flowcv-pdf-worktree` |
-| **Branch** | `fix/react-pdf-fidelity` @ `874f9da` |
-| **This folder** | `/home/sairam/Documents/flowcv` → `master` @ `fbd8195` (baseline, **missing PDF fidelity commits**) |
-
-Full handoff detail (identical purpose, may be slightly richer on the branch):
-
-```
-/home/sairam/Documents/flowcv-pdf-worktree/docs/knowledge/HANDOFF.md
-```
-
-```bash
-cd /home/sairam/Documents/flowcv-pdf-worktree
-git log --oneline -5
-npm run dev
-```
-
-If worktree is gone:
+| **Active code** | `/home/sairam/Documents/flowcv` |
+| **Branch** | `master` (includes `fix/react-pdf-fidelity`) |
+| **Product** | CPWT-CV (FlowCV-inspired free resume builder) |
+| **Owner goal** | Share free with fellow developers (open source) |
 
 ```bash
 cd /home/sairam/Documents/flowcv
-git worktree add ../flowcv-pdf-worktree fix/react-pdf-fidelity
+git status
+npm install   # if needed
+npm run dev
+```
+
+Optional worktree (historical; no longer required for PDF work):
+
+```bash
+# /home/sairam/Documents/flowcv-pdf-worktree · branch fix/react-pdf-fidelity
+git worktree list
 ```
 
 ---
 
-## Last completed work (summary)
+## What was just finished (do not redo)
 
-- React-PDF export aligned with canvas (units, photos, spacing, rich text, contact).
-- Export performance: cache, font prefetch, `warmPdfExport` on editor load.
-- Tests: fidelity 8/8, export+templates 63/63, build OK.
-- Commits: `9d93430` (main fix), `874f9da` (docs).
+### Problem
+Canvas preview (HTML) ≠ “Export PDF” (react-pdf). Two export paths (print legacy + react-pdf). Goal: improve react-pdf to match canvas and perform better for open-source / FlowCV-competitive quality.
 
-## Not merged
+### Delivered
+1. **Branch** `fix/react-pdf-fidelity` (was developed in worktree `../flowcv-pdf-worktree`)
+2. **Fidelity layer**
+   - `src/templates/pdf/shared/pdfUnits.js` — CSS px → PDF pt (`× 0.75`)
+   - `src/templates/pdf/shared/pdfPhoto.js` — photo sizes match canvas `templateShared`
+   - `PdfPage.jsx` — `resolveTemplateSettings`, `getPageStyle`, `getDocumentProps` (CPWT-CV branding)
+   - All template PDFs: Classic, Modern, Minimal, Executive, Sidebar + Cover letter
+   - `PdfContact`, `PdfRichText`, `PdfSections` / spacing fixes
+   - Classic HTML template now applies `lineHeightValue` on root
+3. **Performance**
+   - Template chunk cache, font prefetch, hyphenation off
+   - `warmPdfExport()` from `Editor.jsx` on template/font change
+4. **Docs**
+   - `SESSION_LOG.md`, `PROGRESS.md`, `AGENT_MEMORY.md` updated
+5. **Verified**
+   - `npm run build` OK
+   - Playwright `08-pdf-design-fidelity.spec.js` → **8/8**
+   - `07-export` + `02-templates` → **63/63**
+6. **Merged** into `master` (2026-07-14)
 
-`fix/react-pdf-fidelity` has **not** been merged into `master` yet.
+### Not done / next choices for owner
+- [ ] Manual visual QA of multi-page long resumes / all templates side-by-side
+- [ ] Optionally hide or remove “Export PDF (Legacy)” once happy
+- [ ] Dark template still orphaned (seed has `dark`, no `TEMPLATE_MAP` entry)
+- [ ] Open-source packaging: LICENSE, `.env.example`, README accuracy
+- [ ] Job tracker still localStorage-only (no cloud sync)
 
-## Suggested next steps
+---
 
-1. Merge branch → master (if owner approves)
-2. Visual QA multi-page resumes
-3. Open-source packaging (LICENSE, `.env.example`, README)
-4. Dark template fix / legacy PDF cleanup
+## Key files touched (PDF work)
 
-Also load: `docs/knowledge/AGENT_MEMORY.md`, `PROGRESS.md`, `SESSION_LOG.md`  
-(on the **worktree** for up-to-date PDF notes).
+```
+src/utils/pdfExportReactPDF.js
+src/pages/Editor.jsx
+src/templates/ClassicTemplate.jsx
+src/templates/pdf/*
+src/templates/pdf/shared/pdfUnits.js      (new)
+src/templates/pdf/shared/pdfPhoto.js      (new)
+src/templates/pdf/shared/PdfPage.jsx
+src/templates/pdf/shared/pdfFontLoader.js
+src/templates/pdf/shared/PdfContact.jsx
+src/templates/pdf/shared/PdfRichText.jsx
+src/templates/pdf/shared/PdfSections.jsx
+src/templates/pdf/shared/PdfSectionsOne.jsx
+.gitignore  (playwright-report/, test-results/)
+docs/knowledge/*
+```
+
+---
+
+## Conventions established (keep using)
+
+1. Design-panel **spacing is CSS px** → convert **once** to PDF points via `CSS_PX_TO_PT` / `pxToPt`.
+2. **Font sizes** are already pt numbers on canvas — **do not** multiply by 0.75.
+3. Photos: use `getPdfPhotoStyle(settings, accent, 'classic'|'modern')` — never hardcode sm/md/lg to 40/50/65.
+4. Document metadata: creator/producer **CPWT-CV**, not FlowCV.
+5. Primary export path: react-pdf; legacy print is fallback only.
+
+---
+
+## Suggested next session prompts
+
+1. “Visually compare canvas vs Export PDF for all 5 templates.”
+2. “Prepare repo for free public release (LICENSE, env example, README).”
+3. “Continue improving multi-page PDF / sidebar edge cases.”
+
+---
+
+## Quick mental model
+
+```
+master (this folder)  = includes React-PDF fidelity + warm export  ← CONTINUE HERE
+fix/react-pdf-fidelity = historical feature branch (merged)
+```

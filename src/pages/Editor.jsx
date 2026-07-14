@@ -120,6 +120,19 @@ export function Editor({ store, auth, sync }) {
     if (settings.customFont) loadCustomGoogleFont(settings.customFont);
   }, [settings.customFont]);
 
+  // Warm react-pdf fonts + template chunk so Export PDF feels instant
+  useEffect(() => {
+    if (!resume) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { warmPdfExport } = await import('@/utils/pdfExportReactPDF');
+        if (!cancelled) await warmPdfExport(resume);
+      } catch { /* warm is best-effort */ }
+    })();
+    return () => { cancelled = true; };
+  }, [resume?.template, resume?.settings?.font, resume?.settings?.customFont]);
+
   useEffect(() => { setResumeName(resume?.name || ''); }, [resume?.id]);
   useEffect(() => { if (resume) setLastSaved(Date.now()); }, [resume]);
   useEffect(() => {

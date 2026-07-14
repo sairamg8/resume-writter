@@ -1,9 +1,10 @@
 # Progress Snapshot
 
-**Date:** 2026-07-14 (handoff saved)  
-**Phase:** React-PDF fidelity on branch `fix/react-pdf-fidelity` — **not merged** here  
+**Date:** 2026-07-14 (merged to master)  
+**Phase:** React-PDF fidelity **merged** to `master` → next: visual QA + open-source packaging  
 **Overall maturity:** High for resume/cover letter/export; medium for open-source packaging  
-**Resume:** [HANDOFF.md](./HANDOFF.md) → worktree `/home/sairam/Documents/flowcv-pdf-worktree`
+**Active checkout:** `/home/sairam/Documents/flowcv` · branch `master`  
+**Resume guide:** [HANDOFF.md](./HANDOFF.md)
 
 ---
 
@@ -16,7 +17,7 @@
 | 5 layout templates | Done | Classic, Modern, Minimal, Sidebar, Executive |
 | Cover letter | Done | Panel + matching template + PDF export |
 | Design system | Done | Colors, fonts, spacing, heading styles, per-section overrides |
-| PDF export (react-pdf) | Done | Per-template PDF components + font registration |
+| PDF export (react-pdf) | Done | Per-template PDF components + font registration; canvas-aligned fidelity |
 | PDF export (legacy) | Done | Fallback via `pdfExport.js` |
 | Word (.docx) export | Done | `docx` builders |
 | JSON backup/restore | Done | Dashboard + editor |
@@ -36,8 +37,9 @@
 | “Dark” template | Seeded in store defaults (`template: 'dark'`) but **not** registered in `TEMPLATE_MAP` or PDF loaders |
 | README structure section | Out of date (missing job tracker, PDF tree, split components; still lists DarkTemplate.jsx) |
 | Job cloud sync | Jobs stay in localStorage only |
-| Git / open-source packaging | No `.git` in current workspace; LICENSE file not present despite README MIT claim |
-| Branding | Product is CPWT-CV, not FlowCV; still useful as FlowCV-inspired free alternative |
+| Open-source packaging | LICENSE file may still be missing; git + worktree now in use |
+| Branding | Product is CPWT-CV; PDF metadata updated off FlowCV |
+| Print vs react-pdf | Legacy print path kept as fallback; react-pdf is primary and fidelity-improved (2026-07-14) |
 
 ---
 

@@ -1,5 +1,5 @@
 import { Document, Page, View, Text, Image } from '@react-pdf/renderer';
-import { getPageStyle } from './shared/PdfPage';
+import { getPageStyle, getDocumentProps } from './shared/PdfPage';
 import { PdfRichText } from './shared/PdfRichText';
 import { PdfContactRow } from './shared/PdfContact';
 
@@ -107,10 +107,9 @@ export function CoverLetterTemplatePDF({ data }) {
 
   return (
     <Document
+      {...getDocumentProps(personal)}
       title={personal?.name ? `${personal.name} Cover Letter` : 'Cover Letter'}
-      author={personal?.name || ''}
-      creator="FlowCV"
-      producer="FlowCV"
+      subject="Cover Letter"
     >
       <Page size="A4" style={{ ...pageStyle, color: textColor }}>
         {/* Header block with accent bottom border */}
