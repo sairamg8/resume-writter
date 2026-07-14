@@ -1,6 +1,6 @@
 import { Document, Page, View, Text, Image } from '@react-pdf/renderer';
 import { getPageStyle, getDocumentProps } from './shared/PdfPage';
-import { SectionRouter, getEffectiveSpacing } from './shared/PdfSections';
+import { SectionRouter, getEffectiveSpacing, getVisibleSections } from './shared/PdfSections';
 import { PdfRichText } from './shared/PdfRichText';
 import { MailIcon, PhoneIcon, MapPinIcon, GlobeIcon, LinkedinPdfIcon, GithubPdfIcon } from './shared/PdfIcons';
 import { getPdfPhotoStyle } from './shared/pdfPhoto';
@@ -95,9 +95,10 @@ export function ModernTemplatePDF({ data }) {
           )}
         </View>
 
-        {sections.map((section) => {
-          if (section.visible === false) return null;
-          const { marginBottom, spaceBefore, itemGap } = getEffectiveSpacing(section, settings);
+        {getVisibleSections(sections).visible.map((section, index, list) => {
+          const { marginBottom, spaceBefore, itemGap } = getEffectiveSpacing(section, settings, {
+            isLast: index === list.length - 1,
+          });
           return (
             <View key={section.id} style={spaceBefore != null ? { marginTop: spaceBefore } : undefined} wrap>
               <SectionRouter section={section} settings={settings} marginBottom={marginBottom} itemGap={itemGap} />

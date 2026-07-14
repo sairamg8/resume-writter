@@ -47,7 +47,7 @@ export function RenderBullets({ bullets, style, accent, isModern, template }) {
   return (
     <View style={{ marginTop: 2, gap: 1.5 }}>
       {bullets.map((b, i) => b ? (
-        <View key={i} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 4 }} wrap={false}>
+        <View key={i} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 4 }}>
           <Text style={{ ...style, width: 8, color: bulletColor }}>{bulletChar}</Text>
           <Text style={{ ...style, flex: 1, color: style.color || '#333333' }}>{b}</Text>
         </View>
@@ -115,10 +115,12 @@ export function ItemHeader({ primary, sub, loc, dateStr, settings, titleStyle = 
     : null;
   const locText    = loc ? <Text style={locStyle}>{sub ? ' · ' : ''}{loc}</Text> : null;
 
+  // wrap={false}: never orphan primary/sub/date across a page break (was producing a
+  // nearly-empty last PDF page while canvas stayed at N−1 pages).
   if (centered) {
     if (titleStyle === 'sidebyside' || titleStyle === 'inline') {
       return (
-        <View style={{ alignItems: 'center', marginBottom: 2 }}>
+        <View wrap={false} style={{ alignItems: 'center', marginBottom: 2 }}>
           <Text style={{ fontSize: entrySize, color: textColor, textAlign: 'center' }}>
             <Text style={{ fontWeight: 'bold' }}>{primary}</Text>
             {sub ? <Text style={subStyle}>{italicSub ? `, ` : ' — '}{sub}</Text> : null}
@@ -129,7 +131,7 @@ export function ItemHeader({ primary, sub, loc, dateStr, settings, titleStyle = 
       );
     }
     return (
-      <View style={{ alignItems: 'center', marginBottom: 2 }}>
+      <View wrap={false} style={{ alignItems: 'center', marginBottom: 2 }}>
         <Text style={{ fontSize: entrySize, fontWeight: 'bold', color: textColor, textAlign: 'center' }}>{primary}</Text>
         {subLocLine}
         {dateStr ? <Text style={{ fontSize: baseSize, color: dateColor, marginTop: 1, textAlign: 'center' }}>{dateStr}</Text> : null}
@@ -139,7 +141,7 @@ export function ItemHeader({ primary, sub, loc, dateStr, settings, titleStyle = 
 
   if (titleStyle === 'sidebyside') {
     return (
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', gap: 8 }}>
+      <View wrap={false} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', gap: 8 }}>
         <View style={{ flex: 1, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'baseline', gap: 6 }}>
           <Text style={{ fontSize: entrySize, fontWeight: 'bold', color: textColor }}>{primary}</Text>
           {sub ? <Text style={subStyle}>{sub}</Text> : null}
@@ -152,7 +154,7 @@ export function ItemHeader({ primary, sub, loc, dateStr, settings, titleStyle = 
 
   if (titleStyle === 'inline') {
     return (
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+      <View wrap={false} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <View style={{ flex: 1 }}>
           <Text style={{ fontSize: entrySize, color: textColor }}>
             <Text style={{ fontWeight: 'bold' }}>{primary}</Text>
@@ -166,7 +168,7 @@ export function ItemHeader({ primary, sub, loc, dateStr, settings, titleStyle = 
   }
 
   return (
-    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+    <View wrap={false} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
       <View style={{ flex: 1 }}>
         <Text style={{ fontSize: entrySize, fontWeight: 'bold', color: textColor }}>{primary}</Text>
         {subLocLine}
@@ -225,14 +227,20 @@ export const SECTION_SPACING_MAP = SECTION_SPACING_PX;
  * - Global sectionGap/itemGap on settings are already PDF points (from resolveTemplateSettings).
  * - Per-section spaceAfter / spaceBefore / itemGap are stored as CSS px → convert once.
  * - spacing presets (compact/normal/relaxed) are CSS px → convert once.
+ * - isLast: drop trailing marginBottom so it cannot overflow onto a blank final page
+ *   (canvas pagination collapses near-empty trailing pages; react-pdf does not).
  */
-export function getEffectiveSpacing(section, settings) {
+export function getEffectiveSpacing(section, settings, { isLast = false } = {}) {
   const ss = section.settings || {};
   const globalSecGap  = settings?.sectionGap ?? 12;
   const globalItemGap = settings?.itemGap    ?? 9;
 
+  const marginBottom = isLast
+    ? 0
+    : (ss.spaceAfter != null ? ss.spaceAfter * CSS_PX_TO_PT : globalSecGap);
+
   return {
-    marginBottom: ss.spaceAfter != null ? ss.spaceAfter * CSS_PX_TO_PT : globalSecGap,
+    marginBottom,
     spaceBefore:  ss.spaceBefore != null ? ss.spaceBefore * CSS_PX_TO_PT : undefined,
     itemGap: ss.itemGap != null
       ? ss.itemGap * CSS_PX_TO_PT
@@ -240,4 +248,10 @@ export function getEffectiveSpacing(section, settings) {
         ? SECTION_SPACING_PX[ss.spacing] * CSS_PX_TO_PT
         : globalItemGap),
   };
+}
+
+/** Visible sections in order + last id (for isLast spacing). */
+export function getVisibleSections(sections = []) {
+  const visible = sections.filter(s => s.visible !== false);
+  return { visible, lastId: visible[visible.length - 1]?.id };
 }

@@ -119,15 +119,25 @@ export function resolveTemplateSettings(settings = {}, templateKey) {
 }
 
 export function getPageStyle(settings) {
+  // Note: page-level lineHeight is intentionally omitted — it can inflate yoga
+  // layout height beyond Text metrics and contribute to blank trailing pages.
+  // Line height is applied on Text/PdfRichText instead (matches canvas).
+  //
+  // paddingBottom: react-pdf's page wrap is sensitive to bottom padding when the
+  // last block sits near the edge (github.com/diegomura/react-pdf/issues/739).
+  // Keep visual margins equal via a 0.5mm epsilon only on the bottom.
+  const v = settings.marginV ?? 14;
+  const h = settings.marginH ?? 18;
+  const bottom = Math.max(0, v - 0.5);
+
   return StyleSheet.create({
     page: {
       fontFamily: settings._pdfFontFamily || 'NotoSans',
-      paddingTop: `${settings.marginV}mm`,
-      paddingBottom: `${settings.marginV}mm`,
-      paddingLeft: `${settings.marginH}mm`,
-      paddingRight: `${settings.marginH}mm`,
+      paddingTop: `${v}mm`,
+      paddingBottom: `${bottom}mm`,
+      paddingLeft: `${h}mm`,
+      paddingRight: `${h}mm`,
       fontSize: settings.fontSizeBase,
-      lineHeight: settings.lineHeightValue,
       color: settings.textColor,
       backgroundColor: 'white',
     },

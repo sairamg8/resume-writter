@@ -79,8 +79,10 @@ export function PdfRichText({ html, style = {} }) {
       if (list) {
         list.items.forEach((item, i) => {
           const bullet = list.ordered ? `${i + 1}.` : '•';
+          // Allow wrapping so long bullets can split across pages (canvas can window
+          // tall leaves). wrap={false} left large empty bottoms and extra PDF pages.
           elements.push(
-            <View key={`li-${elements.length}-${i}`} style={{ flexDirection: 'row', marginBottom: 1.5 }} wrap={false}>
+            <View key={`li-${elements.length}-${i}`} style={{ flexDirection: 'row', marginBottom: 1.5 }}>
               <Text style={{ ...style, width: list.ordered ? 14 : 10 }}>{bullet}</Text>
               <Text style={{ ...style, flex: 1 }}>{parseInlineSegments(item, style)}</Text>
             </View>

@@ -1,7 +1,7 @@
 import { Document, Page, View, Text, Image } from '@react-pdf/renderer';
 import { getPageStyle, getDocumentProps } from './shared/PdfPage';
 import { PdfContactRow } from './shared/PdfContact';
-import { SectionRouter, getEffectiveSpacing } from './shared/PdfSections';
+import { SectionRouter, getEffectiveSpacing, getVisibleSections } from './shared/PdfSections';
 import { PdfRichText } from './shared/PdfRichText';
 import { getPdfPhotoStyle } from './shared/pdfPhoto';
 import { HEADER_BORDER_PAD_PT, HEADER_MARGIN_BOTTOM_PT } from './shared/pdfUnits';
@@ -109,9 +109,10 @@ export function ExecutiveTemplatePDF({ data }) {
           )}
         </View>
 
-        {sections.map((section) => {
-          if (section.visible === false) return null;
-          const { marginBottom, spaceBefore, itemGap } = getEffectiveSpacing(section, settings);
+        {getVisibleSections(sections).visible.map((section, index, list) => {
+          const { marginBottom, spaceBefore, itemGap } = getEffectiveSpacing(section, settings, {
+            isLast: index === list.length - 1,
+          });
           return (
             <View key={section.id} style={spaceBefore != null ? { marginTop: spaceBefore } : undefined} wrap>
               <SectionRouter

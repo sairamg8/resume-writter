@@ -131,9 +131,10 @@ export function SidebarTemplatePDF({ data }) {
             </View>
           )}
 
-          {sidebarSections.map(section => {
+          {sidebarSections.map((section, index) => {
             const ss = section.settings || {};
-            const effGap = ss.spaceAfter != null ? ss.spaceAfter * CSS_PX_TO_PT : sideSectionGap;
+            const isLast = index === sidebarSections.length - 1;
+            const effGap = isLast ? 0 : (ss.spaceAfter != null ? ss.spaceAfter * CSS_PX_TO_PT : sideSectionGap);
             const effItemGap = ss.itemGap != null ? ss.itemGap * CSS_PX_TO_PT : sideItemGap;
             return (
               <View
@@ -175,8 +176,10 @@ export function SidebarTemplatePDF({ data }) {
             </View>
           )}
 
-          {mainSections.map((section) => {
-            const { marginBottom, spaceBefore, itemGap: ig } = getEffectiveSpacing(section, settings);
+          {mainSections.map((section, index) => {
+            const { marginBottom, spaceBefore, itemGap: ig } = getEffectiveSpacing(section, settings, {
+              isLast: index === mainSections.length - 1,
+            });
             return (
               <View key={section.id} style={spaceBefore != null ? { marginTop: spaceBefore } : undefined} wrap>
                 <SidebarMainSectionRouter

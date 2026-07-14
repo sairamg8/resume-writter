@@ -28,4 +28,5 @@ dist-ssr
 # Test / playwright artifacts
 playwright-report/
 test-results/
+qa-visual-compare/
 
