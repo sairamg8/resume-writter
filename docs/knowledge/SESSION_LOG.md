@@ -4,6 +4,18 @@ Append-only. Newest entries at the top.
 
 ---
 
+## 2026-07-14 — Progress saved (handoff pointer on master)
+
+Active PDF work is **not** on this `master` checkout. Full handoff:
+
+- This folder: `docs/knowledge/HANDOFF.md` (pointer)
+- Worktree: `/home/sairam/Documents/flowcv-pdf-worktree` · branch `fix/react-pdf-fidelity` @ `874f9da`
+- Full detail: worktree `docs/knowledge/HANDOFF.md`
+
+PDF fidelity + performance completed on that branch (tests green). **Not merged to master.**
+
+---
+
 ## 2026-07-14 — Knowledge base bootstrap
 
 **Participants:** User (Sairam), Grok agent  

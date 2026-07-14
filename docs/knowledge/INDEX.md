@@ -3,7 +3,8 @@
 > **Purpose:** Persistent project memory for humans and AI agents.  
 > **Product goal:** Free, open resume + cover letter + job tracker for fellow developers.  
 > **Last full audit:** 2026-07-14  
-> **Canonical product name in UI/README:** **CPWT-CV** (repo folder: `flowcv`)
+> **Canonical product name in UI/README:** **CPWT-CV** (repo folder: `flowcv`)  
+> **Active work:** worktree `fix/react-pdf-fidelity` — see [HANDOFF.md](./HANDOFF.md)
 
 ---
 
@@ -11,6 +12,7 @@
 
 | Doc | What it covers |
 |-----|----------------|
+| **[HANDOFF.md](./HANDOFF.md)** | **← Next session: resume here first** |
 | [PROGRESS.md](./PROGRESS.md) | Current status, maturity, known gaps, next work |
 | [AGENT_MEMORY.md](./AGENT_MEMORY.md) | Condensed facts every future agent session should load first |
 | [SESSION_LOG.md](./SESSION_LOG.md) | Chronological decisions and session notes |
