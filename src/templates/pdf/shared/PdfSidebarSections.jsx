@@ -1,7 +1,7 @@
 import { View, Text } from '@react-pdf/renderer';
 import { PdfRichText } from './PdfRichText';
 import { hasRichText } from '@/utils/richText';
-import { SectionTitleOf, RenderBullets, hexAlpha, SectionRouter } from './PdfSections';
+import { SectionTitleOf, RenderBullets, RenderColGrid, hexAlpha, SectionRouter, SPACER } from './PdfSections';
 
 // Sections that live in the dark sidebar column
 export const SIDEBAR_TYPES = new Set(['skills', 'education', 'languages', 'certifications', 'interests', 'references']);
@@ -265,7 +265,7 @@ function CardItem({ children }) {
   );
 }
 
-export function SidebarMainExperience({ section, settings, marginBottom, itemGap }) {
+export function SidebarMainExperience({ section, settings, marginBottom, spaceBefore, itemGap }) {
   const s = section.settings || {};
   const titleOrder = s.titleOrder || 'role';
   const showDates  = s.showDates  !== false;
@@ -277,10 +277,14 @@ export function SidebarMainExperience({ section, settings, marginBottom, itemGap
   const visibleItems = (section.items || []).filter(i => i.visible !== false);
 
   return (
-    <View style={{ marginBottom }}>
+    <View style={{ marginBottom, marginTop: spaceBefore }}>
+      {SPACER}
       <SectionTitleOf section={section} settings={settings} />
-      <View style={{ gap: itemGap }}>
-        {visibleItems.map((item, idx) => {
+      <RenderColGrid
+        items={visibleItems}
+        cols={s.columns || 1}
+        gap={itemGap}
+        renderItem={(item, idx) => {
           const iH = item.hiddenFields || [];
           const company  = iH.includes('company')   ? '' : (item.company   || '');
           const role     = iH.includes('role')      ? '' : (item.role      || '');
@@ -294,7 +298,7 @@ export function SidebarMainExperience({ section, settings, marginBottom, itemGap
           const desc = iH.includes('description') ? '' : item.description;
           return (
             <CardItem key={idx}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <View wrap={false} minPresenceAhead={Math.round(entrySize * lineH * 2)} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <View style={{ flex: 1 }}>
                   {primary ? <Text style={{ fontSize: entrySize, fontWeight: 'bold', color: textColor, lineHeight: 1.2 }}>{primary}</Text> : null}
                   {subLine ? <Text style={{ fontSize: entrySize - 1, color: hexAlpha(accent, 0.8), lineHeight: 1.2 }}>{subLine}</Text> : null}
@@ -307,13 +311,13 @@ export function SidebarMainExperience({ section, settings, marginBottom, itemGap
               <RenderBullets bullets={item.bullets} style={{ fontSize: entrySize - 0.5, color: '#333333', lineHeight: lineH }} accent={accent} isModern={false} template="sidebar" />
             </CardItem>
           );
-        })}
-      </View>
+        }}
+      />
     </View>
   );
 }
 
-export function SidebarMainProjects({ section, settings, marginBottom, itemGap }) {
+export function SidebarMainProjects({ section, settings, marginBottom, spaceBefore, itemGap }) {
   const s = section.settings || {};
   const showDates = s.showDates !== false;
   const entrySize  = (settings?.fontSizeBase || 11) + (settings?.fontSizeEntryDelta ?? 0);
@@ -323,16 +327,20 @@ export function SidebarMainProjects({ section, settings, marginBottom, itemGap }
   const visibleItems = (section.items || []).filter(i => i.visible !== false);
 
   return (
-    <View style={{ marginBottom }}>
+    <View style={{ marginBottom, marginTop: spaceBefore }}>
+      {SPACER}
       <SectionTitleOf section={section} settings={settings} />
-      <View style={{ gap: itemGap }}>
-        {visibleItems.map((item, idx) => {
+      <RenderColGrid
+        items={visibleItems}
+        cols={s.columns || 1}
+        gap={itemGap}
+        renderItem={(item, idx) => {
           const sd = item.startDate || '';
           const ed = item.endDate   || '';
           const dateStr = showDates && (sd || ed) ? `${sd}${ed ? ` – ${ed}` : ''}` : '';
           return (
             <CardItem key={idx}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <View wrap={false} minPresenceAhead={Math.round(entrySize * lineH * 2)} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <View style={{ flex: 1 }}>
                   <Text style={{ fontSize: entrySize, fontWeight: 'bold', color: textColor, lineHeight: 1.2 }}>
                     {item.name}
@@ -348,19 +356,19 @@ export function SidebarMainProjects({ section, settings, marginBottom, itemGap }
               <RenderBullets bullets={item.bullets} style={{ fontSize: entrySize - 0.5, color: '#333333', lineHeight: lineH }} accent={accent} isModern={false} template="sidebar" />
             </CardItem>
           );
-        })}
-      </View>
+        }}
+      />
     </View>
   );
 }
 
 // Dispatches experience/projects to card-style renderers; everything else to generic SectionRouter
-export function SidebarMainSectionRouter({ section, settings, marginBottom, itemGap }) {
+export function SidebarMainSectionRouter({ section, settings, marginBottom, spaceBefore, itemGap }) {
   if (section.visible === false) return null;
-  const props = { section, settings, marginBottom, itemGap };
+  const props = { section, settings, marginBottom, spaceBefore, itemGap };
   switch (section.type) {
     case 'experience': return <SidebarMainExperience {...props} />;
     case 'projects':   return <SidebarMainProjects   {...props} />;
-    default:           return <SectionRouter section={section} settings={settings} marginBottom={marginBottom} itemGap={itemGap} />;
+    default:           return <SectionRouter section={section} settings={settings} marginBottom={marginBottom} spaceBefore={spaceBefore} itemGap={itemGap} />;
   }
 }

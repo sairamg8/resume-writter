@@ -1,6 +1,6 @@
 import { Document, Page, View, Text, Image, StyleSheet } from '@react-pdf/renderer';
 import { PdfSectionTitle } from './shared/PdfSection';
-import { getEffectiveSpacing } from './shared/PdfSections';
+import { getEffectiveSpacing, SPACER } from './shared/PdfSections';
 import { PdfRichText } from './shared/PdfRichText';
 import { hasRichText } from '@/utils/richText';
 import { getDocumentProps } from './shared/PdfPage';
@@ -74,10 +74,16 @@ export function SidebarTemplatePDF({ data }) {
     { key: 'github',   label: 'GitHub',   val: personal?.github,   display: personal?.githubLabel  || personal?.github },
   ].filter(({ key, val }) => !hidden.includes(key) && val);
 
+  // Top and bottom margins belong to the page, so react-pdf repeats them on every page; a
+  // column's own padding applies only where the column starts and ends (pages 2+ used to print
+  // from the paper edge). The fixed sidebar background still bleeds to the edges.
   const pageStyle = StyleSheet.create({
     page: {
       fontFamily: settings._pdfFontFamily || 'NotoSans',
-      padding: 0,
+      paddingTop: `${vMm}mm`,
+      paddingBottom: `${Math.max(0, vMm - 0.5)}mm`,
+      paddingLeft: 0,
+      paddingRight: 0,
       flexDirection: 'row',
       fontSize: baseSize,
       lineHeight: lineH,
@@ -93,8 +99,6 @@ export function SidebarTemplatePDF({ data }) {
         <View style={{
           width: '38%',
           backgroundColor: 'transparent',
-          paddingTop: `${vMm}mm`,
-          paddingBottom: `${vMm}mm`,
           paddingLeft: `${hMm}mm`,
           paddingRight: 10,
           color: '#e2e8f0',
@@ -147,6 +151,7 @@ export function SidebarTemplatePDF({ data }) {
                 key={section.id}
                 style={ss.spaceBefore != null ? { marginTop: ss.spaceBefore * CSS_PX_TO_PT } : undefined}
               >
+                {SPACER}
                 {renderSideSection(section, effGap, effItemGap, accent)}
               </View>
             );
@@ -155,8 +160,6 @@ export function SidebarTemplatePDF({ data }) {
 
         <View style={{
           flex: 1,
-          paddingTop: `${vMm}mm`,
-          paddingBottom: `${vMm}mm`,
           paddingLeft: 14,
           paddingRight: `${hMm}mm`,
           color: textColor,
@@ -164,6 +167,7 @@ export function SidebarTemplatePDF({ data }) {
           {!hidden.includes('summary') && personal?.summary &&
            hasRichText(personal.summary) && (
             <View style={{ marginBottom: sectionGap }}>
+              {SPACER}
               <PdfSectionTitle
                 title="About Me"
                 headingStyle={settings.headingStyle}
@@ -174,6 +178,7 @@ export function SidebarTemplatePDF({ data }) {
                 sectionBorderWidth={settings.sectionBorderWidth ?? 1}
                 template="sidebar"
                 lineHeightValue={settings.lineHeightValue ?? 1.5}
+                presence={Math.round(baseSize * lineH * 3)}
               />
               <PdfRichText
                 html={personal.summary}
