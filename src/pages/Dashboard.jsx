@@ -75,6 +75,13 @@ export function Dashboard({ store, auth, sync }) {
             <AuthBar {...auth} {...sync} />
           </div>
         </div>
+        {store.persistError && (
+          <div className="max-w-7xl mx-auto px-6 pb-3">
+            <p role="alert" className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+              Changes are not being saved: browser storage is full. Remove large photos or export your resumes as JSON.
+            </p>
+          </div>
+        )}
         {importError && (
           <div className="max-w-7xl mx-auto px-6 pb-3">
             <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{importError}</p>

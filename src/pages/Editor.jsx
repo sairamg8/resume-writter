@@ -251,6 +251,12 @@ export function Editor({ store, auth, sync }) {
           </div>
         </div>
 
+        {store.persistError && (
+          <div role="alert" className="px-4 py-2 text-xs text-red-700 bg-red-50 border-b border-red-200">
+            Not saved: browser storage is full. Export JSON to keep a copy, or remove large photos.
+          </div>
+        )}
+
         {/* Mode bar */}
         <div className="flex items-center gap-2 px-3 py-3 border-b border-gray-200 bg-gray-50/60">
           <div className="flex gap-1 flex-1 bg-white border border-gray-200 rounded-xl p-1">
@@ -407,7 +413,11 @@ export function Editor({ store, auth, sync }) {
         )}
 
         <div className="mt-6 flex items-center gap-3 text-xs text-gray-400 shrink-0">
-          <span>{lastSaved ? `Saved ${timeAgo(lastSaved)}` : 'Auto-saved to your browser'}</span>
+          {store.persistError ? (
+            <span className="text-red-600 font-medium">Not saved</span>
+          ) : (
+            <span>{lastSaved ? `Saved ${timeAgo(lastSaved)}` : 'Auto-saved to your browser'}</span>
+          )}
           <span>·</span>
           <button onClick={() => navigate('/terms')} className="hover:text-gray-600 transition-colors">Terms</button>
           <button onClick={() => navigate('/privacy')} className="hover:text-gray-600 transition-colors">Privacy</button>
