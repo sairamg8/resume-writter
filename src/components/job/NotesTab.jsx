@@ -6,6 +6,7 @@ export function NotesTab({ job, set }) {
       <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4">Notes</p>
       <RichTextEditor
         key={job.id}
+        ariaLabel="Notes"
         value={job.notes || ''}
         onChange={html => set('notes', html)}
         placeholder="Interview format, recruiter details, key contacts, salary expectations, company culture impressions, next steps, gut feeling…"

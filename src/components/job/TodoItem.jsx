@@ -29,6 +29,7 @@ export function TodoItem({ todo, onToggle, onDelete, onRename }) {
       {editing ? (
         <input
           ref={ref}
+          aria-label="Task"
           value={draft}
           onChange={e => setDraft(e.target.value)}
           onBlur={commit}

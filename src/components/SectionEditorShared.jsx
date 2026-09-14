@@ -1,13 +1,16 @@
-import { useState } from 'react';
+import { useState, useId } from 'react';
 import { Eye, EyeOff, Trash2, ChevronDown, ChevronUp, X, GripVertical } from 'lucide-react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { FieldIdsContext, useFieldIds } from '@/hooks/useFieldIds';
 
 export function InputField({ label, value, onChange, placeholder, type = 'text' }) {
+  const { id } = useFieldIds(label);
   return (
     <div className="w-full">
-      {label && <label className="block text-xs text-gray-500 mb-1">{label}</label>}
+      {label && <label htmlFor={id} className="block text-xs text-gray-500 mb-1">{label}</label>}
       <input
+        id={id}
         type={type}
         value={value || ''}
         onChange={e => onChange(e.target.value)}
@@ -23,6 +26,8 @@ export const CUR_YEAR = new Date().getFullYear();
 export const YEARS = Array.from({ length: 55 }, (_, i) => CUR_YEAR + 5 - i);
 
 export function MonthPicker({ label, value, onChange, disabled }) {
+  // The label names the month select; each select also says which half of the date it holds.
+  const { id, label: name } = useFieldIds(label);
   const parts = (value || '').split(' ');
   const monthStr = MONTHS.includes(parts[0]) ? parts[0] : '';
   const yearStr = parts[1] || '';
@@ -36,9 +41,11 @@ export function MonthPicker({ label, value, onChange, disabled }) {
 
   return (
     <div className={disabled ? 'opacity-40 pointer-events-none' : ''}>
-      {label && <label className="block text-xs text-gray-500 mb-1">{label}</label>}
+      {label && <label htmlFor={id} className="block text-xs text-gray-500 mb-1">{label}</label>}
       <div className="flex gap-1 items-center">
         <select
+          id={id}
+          aria-label={name ? `${name} month` : 'Month'}
           value={monthStr}
           onChange={e => update(e.target.value, yearStr)}
           className="flex-1 px-2 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
@@ -47,6 +54,7 @@ export function MonthPicker({ label, value, onChange, disabled }) {
           {MONTHS.map(m => <option key={m} value={m}>{m}</option>)}
         </select>
         <select
+          aria-label={name ? `${name} year` : 'Year'}
           value={yearStr}
           onChange={e => update(monthStr, e.target.value)}
           className="flex-1 px-2 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
@@ -66,10 +74,12 @@ export function MonthPicker({ label, value, onChange, disabled }) {
 
 export function FieldRow({ label, field, hiddenSet, onToggle, children }) {
   const isHidden = hiddenSet.has(field);
+  const id = useId();
+  const ids = { id, labelId: `${id}label`, label };
   return (
     <div className={isHidden ? 'opacity-50' : ''}>
       <div className="flex items-center justify-between mb-1">
-        <label className="text-xs text-gray-500">{label}</label>
+        <label id={ids.labelId} htmlFor={id} className="text-xs text-gray-500">{label}</label>
         <button
           onClick={() => onToggle(field)}
           className={`p-0.5 ${isHidden ? 'text-gray-300 hover:text-gray-400' : 'text-blue-500 hover:text-blue-600'}`}
@@ -78,7 +88,7 @@ export function FieldRow({ label, field, hiddenSet, onToggle, children }) {
           {isHidden ? <EyeOff size={11} /> : <Eye size={11} />}
         </button>
       </div>
-      {children}
+      <FieldIdsContext.Provider value={ids}>{children}</FieldIdsContext.Provider>
     </div>
   );
 }

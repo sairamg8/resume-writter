@@ -210,6 +210,7 @@ export function Editor({ store, auth, sync }) {
             {editingName ? (
               <input
                 autoFocus
+                aria-label="Résumé name"
                 value={resumeName}
                 onChange={e => setResumeName(e.target.value)}
                 onBlur={commitName}

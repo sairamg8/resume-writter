@@ -1,14 +1,16 @@
 // The Cover Letter panel's building blocks: a labelled input, an option chip and a collapsible
 // block.
-import { useState } from 'react';
+import { useState, useId } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 
 /** A labelled text input; `children` (e.g. a "Today" button) sit inside the input's right end. */
 export function Field({ label, value, onChange, placeholder, children }) {
+  const id = useId();
   return (
     <div className="relative">
-      <label className="block text-xs font-medium text-gray-500 mb-1">{label}</label>
+      <label htmlFor={id} className="block text-xs font-medium text-gray-500 mb-1">{label}</label>
       <input
+        id={id}
         type="text"
         value={value || ''}
         onChange={e => onChange(e.target.value)}

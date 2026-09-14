@@ -34,6 +34,7 @@ export function Field({ label, value, onChange, type = 'text', icon: Icon, place
       {editing ? (
         <input
           ref={ref}
+          aria-label={label}
           type={type}
           value={draft}
           onChange={e => setDraft(e.target.value)}

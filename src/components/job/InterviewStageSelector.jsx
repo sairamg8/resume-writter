@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useId } from 'react';
 import { Plus, X as XIcon, CheckCircle2 } from 'lucide-react';
 import { PREDEFINED_STAGES } from '@/hooks/useJobStages';
 
 export function InterviewStageSelector({ stage, onStageChange, customStages, addCustomStage, removeCustomStage }) {
   const [newStageInput, setNewStageInput] = useState('');
+  const inputId = useId();
 
   function handleAddStage() {
     const trimmed = newStageInput.trim();
@@ -82,9 +83,10 @@ export function InterviewStageSelector({ stage, onStageChange, customStages, add
           </div>
 
           <div className="mt-4 pt-4 border-t border-gray-100">
-            <p className="text-[10px] font-semibold text-gray-400 mb-2">Add Custom Stage</p>
+            <label htmlFor={inputId} className="block text-[10px] font-semibold text-gray-400 mb-2">Add Custom Stage</label>
             <div className="flex gap-2">
               <input
+                id={inputId}
                 value={newStageInput}
                 onChange={e => setNewStageInput(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddStage(); } }}

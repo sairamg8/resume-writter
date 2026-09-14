@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useId } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { useJobStore } from '@/hooks/useJobStore';
@@ -7,10 +7,11 @@ import { todayLocalISO } from '@/utils/dates';
 import { JOB_STATUSES } from '@/constants/jobs';
 import { InterviewStageSelector } from '@/components/job/InterviewStageSelector';
 
-function Field({ label, required, children }) {
+/** A labelled control: `id` is the control's, so the label names it (M8). */
+function Field({ id, label, required, children }) {
   return (
     <div>
-      <label className="block text-xs font-semibold text-gray-500 mb-1.5">
+      <label htmlFor={id} className="block text-xs font-semibold text-gray-500 mb-1.5">
         {label}{required && <span className="text-red-400 ml-0.5">*</span>}
       </label>
       {children}
@@ -27,6 +28,7 @@ export function JobForm({ store }) {
   const { appState } = store;
   const resumes = appState.resumes;
   const { customStages, addCustomStage, removeCustomStage } = useJobStages();
+  const uid = useId();
 
   const isEdit = !!id;
   const existing = isEdit ? jobs.find(j => j.id === id) : null;
@@ -71,21 +73,21 @@ export function JobForm({ store }) {
         <section className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
           <h2 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Basic Info</h2>
           <div className="grid grid-cols-2 gap-4">
-            <Field label="Company" required>
-              <input autoFocus value={form.company} onChange={e => set('company', e.target.value)} placeholder="Google, Stripe, Notion…" className={INPUT} />
+            <Field id={uid + 'company'} label="Company" required>
+              <input id={uid + 'company'} autoFocus value={form.company} onChange={e => set('company', e.target.value)} placeholder="Google, Stripe, Notion…" className={INPUT} />
             </Field>
-            <Field label="Role / Position" required>
-              <input value={form.role} onChange={e => set('role', e.target.value)} placeholder="Software Engineer, Product Manager…" className={INPUT} />
+            <Field id={uid + 'role'} label="Role / Position" required>
+              <input id={uid + 'role'} value={form.role} onChange={e => set('role', e.target.value)} placeholder="Software Engineer, Product Manager…" className={INPUT} />
             </Field>
-            <Field label="Location">
-              <input value={form.location} onChange={e => set('location', e.target.value)} placeholder="Remote, New York…" className={INPUT} />
+            <Field id={uid + 'location'} label="Location">
+              <input id={uid + 'location'} value={form.location} onChange={e => set('location', e.target.value)} placeholder="Remote, New York…" className={INPUT} />
             </Field>
-            <Field label="Salary / Comp">
-              <input value={form.salary} onChange={e => set('salary', e.target.value)} placeholder="$150k – $200k" className={INPUT} />
+            <Field id={uid + 'salary'} label="Salary / Comp">
+              <input id={uid + 'salary'} value={form.salary} onChange={e => set('salary', e.target.value)} placeholder="$150k – $200k" className={INPUT} />
             </Field>
             <div className="col-span-2">
-              <Field label="Job Posting URL">
-                <input value={form.url} onChange={e => set('url', e.target.value)} placeholder="https://jobs.company.com/…" className={INPUT} />
+              <Field id={uid + 'url'} label="Job Posting URL">
+                <input id={uid + 'url'} value={form.url} onChange={e => set('url', e.target.value)} placeholder="https://jobs.company.com/…" className={INPUT} />
               </Field>
             </div>
           </div>
@@ -94,18 +96,18 @@ export function JobForm({ store }) {
         <section className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
           <h2 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Status & Dates</h2>
           <div className="grid grid-cols-3 gap-4">
-            <Field label="Application Status">
-              <select value={form.status} onChange={e => set('status', e.target.value)} className={INPUT + ' bg-white cursor-pointer'}>
+            <Field id={uid + 'status'} label="Application Status">
+              <select id={uid + 'status'} value={form.status} onChange={e => set('status', e.target.value)} className={INPUT + ' bg-white cursor-pointer'}>
                 {JOB_STATUSES.map((s, i) => (
                   <option key={s.id} value={s.id}>{i + 1}. {s.label}</option>
                 ))}
               </select>
             </Field>
-            <Field label="Applied Date">
-              <input type="date" value={form.appliedDate} onChange={e => set('appliedDate', e.target.value)} className={INPUT} />
+            <Field id={uid + 'appliedDate'} label="Applied Date">
+              <input id={uid + 'appliedDate'} type="date" value={form.appliedDate} onChange={e => set('appliedDate', e.target.value)} className={INPUT} />
             </Field>
-            <Field label="Deadline / Follow-up">
-              <input type="date" value={form.deadline} onChange={e => set('deadline', e.target.value)} className={INPUT} />
+            <Field id={uid + 'deadline'} label="Deadline / Follow-up">
+              <input id={uid + 'deadline'} type="date" value={form.deadline} onChange={e => set('deadline', e.target.value)} className={INPUT} />
             </Field>
           </div>
         </section>
@@ -121,11 +123,11 @@ export function JobForm({ store }) {
         <section className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
           <h2 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Contact & Resume</h2>
           <div className="grid grid-cols-2 gap-4">
-            <Field label="Contact Person">
-              <input value={form.contact} onChange={e => set('contact', e.target.value)} placeholder="Recruiter name, email…" className={INPUT} />
+            <Field id={uid + 'contact'} label="Contact Person">
+              <input id={uid + 'contact'} value={form.contact} onChange={e => set('contact', e.target.value)} placeholder="Recruiter name, email…" className={INPUT} />
             </Field>
-            <Field label="Resume Used">
-              <select value={form.resumeId} onChange={e => set('resumeId', e.target.value)} className={INPUT + ' bg-white cursor-pointer'}>
+            <Field id={uid + 'resumeId'} label="Resume Used">
+              <select id={uid + 'resumeId'} value={form.resumeId} onChange={e => set('resumeId', e.target.value)} className={INPUT + ' bg-white cursor-pointer'}>
                 <option value="">— Not linked yet —</option>
                 {resumes.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
               </select>
@@ -135,7 +137,7 @@ export function JobForm({ store }) {
 
         <section className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
           <h2 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Notes</h2>
-          <textarea value={form.notes} onChange={e => set('notes', e.target.value)} rows={4} placeholder="Key contacts, interview format, compensation details, next steps…" className={INPUT + ' resize-none'} />
+          <textarea aria-label="Notes" value={form.notes} onChange={e => set('notes', e.target.value)} rows={4} placeholder="Key contacts, interview format, compensation details, next steps…" className={INPUT + ' resize-none'} />
         </section>
 
         <div className="flex justify-end gap-3 pb-8">

@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import { AlignLeft, AlignCenter, RotateCcw } from 'lucide-react';
 import { resolveSection } from '@/templates/pdf/shared/templateSectionDefaults';
 import { templateId, inSidebarColumn } from '@/constants/templates';
@@ -53,6 +54,7 @@ export function SectionCustomizer({ section, template, updateSectionSettings }) 
   const hasTitleStyle = !sideColumn && ['experience', 'education', 'volunteering', 'custom'].includes(section.type);
   const skillsStyle = s.skillsStyle || 'inline';
   const set = (k, v) => updateSectionSettings(section.id, k, v);
+  const uid = useId();
 
   return (
     <div className="px-3 py-3 bg-slate-50 border-b border-slate-100 space-y-2.5">
@@ -147,9 +149,10 @@ export function SectionCustomizer({ section, template, updateSectionSettings }) 
             { label: 'Item gap', key: 'itemGap', title: 'Gap between items (px)' },
           ].map(({ label, key, title }) => (
             <div key={key} className="flex flex-col gap-1">
-              <span className="text-[10px] text-slate-400">{label}</span>
+              <label htmlFor={uid + key} className="text-[10px] text-slate-400">{label}</label>
               <div className="flex items-center gap-0.5">
                 <input
+                  id={uid + key}
                   type="number"
                   min={0}
                   max={80}

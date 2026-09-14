@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useId } from 'react';
 import { User, Mail, Phone, MapPin, Globe, Link, Code, FileText, Eye, EyeOff, ImagePlus, X } from 'lucide-react';
 import RichTextEditor from '@/components/RichTextEditor';
 import { HeaderCustomization } from '@/components/PersonalInfoEditorHeader';
@@ -21,6 +21,7 @@ export default function PersonalInfoEditor({ personal, updatePersonal, toggleFie
   const s = settings || {};
   const [headerOpen, setHeaderOpen] = useState(false);
   const [photoOpen, setPhotoOpen] = useState(false);
+  const uid = useId();
   const templateLabel = template ? template.charAt(0).toUpperCase() + template.slice(1) : 'Classic';
 
   function set(key, val) { updateSetting?.(key, val); }
@@ -84,7 +85,7 @@ export default function PersonalInfoEditor({ personal, updatePersonal, toggleFie
             return (
               <div key={key}>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="text-xs font-medium text-gray-500 flex items-center gap-1">
+                  <label htmlFor={uid + key} className="text-xs font-medium text-gray-500 flex items-center gap-1">
                     <Icon size={13} className="text-gray-400" />
                     {label}
                   </label>
@@ -99,6 +100,7 @@ export default function PersonalInfoEditor({ personal, updatePersonal, toggleFie
                   )}
                 </div>
                 <input
+                  id={uid + key}
                   type="text"
                   value={personal[key] || ''}
                   onChange={e => updatePersonal(key, e.target.value)}
@@ -107,8 +109,8 @@ export default function PersonalInfoEditor({ personal, updatePersonal, toggleFie
                 />
                 {hasUrl && hasValue && (
                   <div className="mt-1 flex gap-1.5">
-                    <input type="text" value={personal[labelKey] || ''} onChange={e => updatePersonal(labelKey, e.target.value)} placeholder="Display label (optional)" className="flex-1 px-2 py-1 text-xs border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-400 bg-gray-50 text-gray-600 placeholder-gray-300" />
-                    <input type="text" value={personal[urlKey] || ''} onChange={e => updatePersonal(urlKey, e.target.value)} placeholder="Link URL (e.g. https://...)" className="flex-1 px-2 py-1 text-xs border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-400 bg-gray-50 text-gray-600 placeholder-gray-300" />
+                    <input type="text" aria-label={`${label} display label`} value={personal[labelKey] || ''} onChange={e => updatePersonal(labelKey, e.target.value)} placeholder="Display label (optional)" className="flex-1 px-2 py-1 text-xs border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-400 bg-gray-50 text-gray-600 placeholder-gray-300" />
+                    <input type="text" aria-label={`${label} link URL`} value={personal[urlKey] || ''} onChange={e => updatePersonal(urlKey, e.target.value)} placeholder="Link URL (e.g. https://...)" className="flex-1 px-2 py-1 text-xs border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-400 bg-gray-50 text-gray-600 placeholder-gray-300" />
                   </div>
                 )}
                 {showIconControls && (
@@ -160,7 +162,7 @@ export default function PersonalInfoEditor({ personal, updatePersonal, toggleFie
             {hidden.has('summary') ? <EyeOff size={12} /> : <Eye size={12} />}
           </button>
         </div>
-        <RichTextEditor label="" value={personal.summary || ''} onChange={v => updatePersonal('summary', v)} placeholder="Brief professional summary highlighting your experience, skills, and goals..." rows={4} />
+        <RichTextEditor ariaLabel="Professional summary" value={personal.summary || ''} onChange={v => updatePersonal('summary', v)} placeholder="Brief professional summary highlighting your experience, skills, and goals..." rows={4} />
       </div>
     </div>
   );

@@ -81,6 +81,7 @@ export function OverviewTab({ job, set, resumes, navigate }) {
                   <Calendar size={13} className={`shrink-0 ${isDeadlinePast ? 'text-red-400' : isDeadlineSoon ? 'text-amber-400' : 'text-gray-400'}`} />
                   <input
                     type="date"
+                    aria-label="Deadline / Follow-up"
                     value={job.deadline || ''}
                     onChange={e => set('deadline', e.target.value)}
                     className={`flex-1 text-sm bg-transparent focus:outline-none ${
@@ -115,6 +116,7 @@ export function OverviewTab({ job, set, resumes, navigate }) {
               <div className="flex items-center gap-2 px-3 py-2 rounded-xl border border-transparent hover:border-gray-200 hover:bg-gray-50 transition-all">
                 <FileText size={13} className="text-gray-400 shrink-0" />
                 <select
+                  aria-label="Resume used"
                   value={job.resumeId || ''}
                   onChange={e => set('resumeId', e.target.value)}
                   className="flex-1 text-sm bg-transparent focus:outline-none cursor-pointer text-gray-700"

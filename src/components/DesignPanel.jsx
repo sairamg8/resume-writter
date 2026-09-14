@@ -167,7 +167,7 @@ export default function DesignPanel({ resume, updateSetting, setTemplate, resetS
           <span className="text-xs text-gray-500">Border thickness</span>
           <div className="flex items-center gap-1">
             <button onClick={() => updateSetting('sectionBorderWidth', Math.max(1, (settings.sectionBorderWidth ?? 1) - 1))} className="w-6 h-6 flex items-center justify-center border border-gray-200 rounded text-gray-600 hover:bg-gray-100 text-base leading-none">−</button>
-            <input type="number" min={1} max={8} value={settings.sectionBorderWidth ?? 1} onChange={e => { const v = parseInt(e.target.value, 10); if (!isNaN(v)) updateSetting('sectionBorderWidth', Math.min(8, Math.max(1, v))); }} className="w-10 text-center text-xs font-medium text-gray-700 border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-400 h-6" />
+            <input type="number" aria-label="Section border thickness (px)" min={1} max={8} value={settings.sectionBorderWidth ?? 1} onChange={e => { const v = parseInt(e.target.value, 10); if (!isNaN(v)) updateSetting('sectionBorderWidth', Math.min(8, Math.max(1, v))); }} className="w-10 text-center text-xs font-medium text-gray-700 border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-400 h-6" />
             <button onClick={() => updateSetting('sectionBorderWidth', Math.min(8, (settings.sectionBorderWidth ?? 1) + 1))} className="w-6 h-6 flex items-center justify-center border border-gray-200 rounded text-gray-600 hover:bg-gray-100 text-base leading-none">+</button>
             <span className="text-[11px] text-gray-400 ml-1">px</span>
           </div>
@@ -176,7 +176,7 @@ export default function DesignPanel({ resume, updateSetting, setTemplate, resetS
         <div className="flex items-center justify-between">
           <span className="text-xs text-gray-500">Border color</span>
           <div className="flex items-center gap-2">
-            <input type="color" value={settings.sectionBorderColor || settings.accentColor || '#374151'} onChange={e => updateSetting('sectionBorderColor', e.target.value)} className="h-6 w-10 rounded border border-gray-200 cursor-pointer p-0.5" title="Pick border color" />
+            <input type="color" value={settings.sectionBorderColor || settings.accentColor || '#374151'} onChange={e => updateSetting('sectionBorderColor', e.target.value)} className="h-6 w-10 rounded border border-gray-200 cursor-pointer p-0.5" title="Pick border color" aria-label="Section border color" />
             <span className="text-[11px] text-gray-400 font-mono">{settings.sectionBorderColor || 'accent'}</span>
             {settings.sectionBorderColor && (
               <button onClick={() => updateSetting('sectionBorderColor', '')} className="text-[11px] text-gray-400 hover:text-gray-600" title="Reset to accent color">↺</button>

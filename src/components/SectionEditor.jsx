@@ -87,6 +87,7 @@ export function SortableSection({
         </button>
         <input
           type="text"
+          aria-label="Section title"
           value={section.title}
           onChange={e => updateSection(section.id, s => ({ ...s, title: e.target.value }))}
           className={`flex-1 text-sm font-semibold bg-transparent focus:outline-none min-w-0 ${isHidden ? 'text-gray-400 line-through' : 'text-gray-700'}`}

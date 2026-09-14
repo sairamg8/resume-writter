@@ -30,12 +30,14 @@ export function LanguageItem({ item, onUpdate, onRemove }) {
       <div className="flex-1 grid grid-cols-[2fr_3fr] gap-2">
         <input
           type="text"
+          aria-label="Language"
           value={item.language || ''}
           onChange={e => onUpdate({ ...item, language: e.target.value })}
           placeholder="Language"
           className="px-2.5 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
         <select
+          aria-label="Proficiency"
           value={item.proficiency || 'Professional'}
           onChange={e => onUpdate({ ...item, proficiency: e.target.value })}
           className="px-2.5 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
@@ -115,6 +117,7 @@ export function InterestItem({ item, onUpdate, onRemove }) {
     <div className={`flex gap-2 items-center ${visible ? '' : 'opacity-50'}`}>
       <input
         type="text"
+        aria-label="Interests"
         value={item.interests || ''}
         onChange={e => onUpdate({ ...item, interests: e.target.value })}
         placeholder="e.g. Photography, Hiking, Open Source"

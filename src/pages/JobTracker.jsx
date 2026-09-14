@@ -236,6 +236,7 @@ export function JobTracker({ store }) {
             <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
             <input
               type="text"
+              aria-label="Search applications"
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Search company, role, location…"

@@ -4,9 +4,15 @@ import {
   AlignLeft, AlignCenter, AlignRight, AlignJustify, Link,
 } from 'lucide-react';
 import { sanitizeRichText, sanitizeForInsert, plainTextToHtml, safeHref } from '@/utils/richText';
+import { useFieldIds } from '@/hooks/useFieldIds';
 
-export default function RichTextEditor({ label, value, onChange, placeholder, rows = 3 }) {
+/**
+ * `label` draws a label above the editor; without one, the editor is named by the FieldRow it
+ * sits in, or by `ariaLabel` (for an editor under its own heading).
+ */
+export default function RichTextEditor({ label, ariaLabel, value, onChange, placeholder, rows = 3 }) {
   const ref = useRef(null);
+  const ids = useFieldIds(label);
   const isComposing = useRef(false);
 
   // Adopt `value` whenever it changes from outside (another resume opened, an import, a cloud
@@ -79,7 +85,8 @@ export default function RichTextEditor({ label, value, onChange, placeholder, ro
 
   return (
     <div>
-      {label && <label className="block text-xs text-gray-500 mb-1">{label}</label>}
+      {/* A <label> cannot name a contenteditable: the editor points back at it, and a click focuses it. */}
+      {label && <label id={ids.labelId} htmlFor={ids.id} onClick={() => ref.current?.focus()} className="block text-xs text-gray-500 mb-1">{label}</label>}
       <div className="border border-gray-200 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-transparent">
 
         {/* Toolbar */}
@@ -113,6 +120,11 @@ export default function RichTextEditor({ label, value, onChange, placeholder, ro
         {/* Editable area */}
         <div
           ref={ref}
+          id={ids.id}
+          role="textbox"
+          aria-multiline="true"
+          aria-label={ariaLabel}
+          aria-labelledby={ariaLabel ? undefined : ids.labelId}
           contentEditable
           suppressContentEditableWarning
           onInput={onInput}

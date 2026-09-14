@@ -36,6 +36,7 @@ export function TasksTab({ todos, onChange }) {
           <input
             ref={inputRef}
             type="text"
+            aria-label="New task"
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addTodo(input); } }}

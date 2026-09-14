@@ -122,7 +122,7 @@ export function HeaderCustomization({ s, set, template, templateLabel, open, onT
                     <span className="text-[11px] text-gray-400">Thickness</span>
                     <div className="flex items-center gap-1">
                       <button onClick={() => set('headerBorderWidth', Math.max(1, (s.headerBorderWidth || 2) - 1))} className="w-6 h-6 flex items-center justify-center border border-gray-200 rounded text-gray-600 hover:bg-gray-100 text-base leading-none">−</button>
-                      <input type="number" min={1} max={12} value={s.headerBorderWidth || 2} onChange={e => { const v = parseInt(e.target.value, 10); if (!isNaN(v)) set('headerBorderWidth', Math.min(12, Math.max(1, v))); }} className="w-14 text-center text-xs font-medium text-gray-700 border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-400 h-6" />
+                      <input type="number" aria-label="Header border thickness (px)" min={1} max={12} value={s.headerBorderWidth || 2} onChange={e => { const v = parseInt(e.target.value, 10); if (!isNaN(v)) set('headerBorderWidth', Math.min(12, Math.max(1, v))); }} className="w-14 text-center text-xs font-medium text-gray-700 border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-400 h-6" />
                       <button onClick={() => set('headerBorderWidth', Math.min(12, (s.headerBorderWidth || 2) + 1))} className="w-6 h-6 flex items-center justify-center border border-gray-200 rounded text-gray-600 hover:bg-gray-100 text-base leading-none">+</button>
                       <span className="text-[11px] text-gray-400 ml-1">px</span>
                     </div>

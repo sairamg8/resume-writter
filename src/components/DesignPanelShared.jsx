@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useId } from 'react';
 import { ChevronDown, RotateCcw } from 'lucide-react';
 
 export function Label({ children }) {
@@ -6,6 +6,7 @@ export function Label({ children }) {
 }
 
 export function SizeRow({ label, value, onChange, min = 6, max = 40 }) {
+  const labelId = useId();
   const [raw, setRaw] = useState('');
   const [editing, setEditing] = useState(false);
 
@@ -17,11 +18,12 @@ export function SizeRow({ label, value, onChange, min = 6, max = 40 }) {
 
   return (
     <div className="flex items-center justify-between">
-      <span className="text-xs text-gray-600 w-28">{label}</span>
+      <span id={labelId} className="text-xs text-gray-600 w-28">{label}</span>
       <div className="flex items-center gap-1">
         <button onClick={() => onChange(Math.max(min, value - 1))} className="w-6 h-6 flex items-center justify-center border border-gray-200 rounded text-gray-600 hover:bg-gray-100 text-base leading-none">−</button>
         <input
           type="text"
+          aria-labelledby={labelId}
           value={editing ? raw : value + 'pt'}
           onFocus={() => { setEditing(true); setRaw(String(value)); }}
           onChange={e => setRaw(e.target.value)}
@@ -39,6 +41,7 @@ export function SizeRow({ label, value, onChange, min = 6, max = 40 }) {
 }
 
 export function NumberRow({ label, value, onChange, min = 1, max = 200, step = 1, unit = '' }) {
+  const labelId = useId();
   const [raw, setRaw] = useState('');
   const [editing, setEditing] = useState(false);
 
@@ -52,11 +55,12 @@ export function NumberRow({ label, value, onChange, min = 1, max = 200, step = 1
 
   return (
     <div className="flex items-center justify-between">
-      <span className="text-xs text-gray-600 w-28">{label}</span>
+      <span id={labelId} className="text-xs text-gray-600 w-28">{label}</span>
       <div className="flex items-center gap-1">
         <button onClick={() => onChange(Math.max(min, Math.round((value - step) / step) * step))} className="w-6 h-6 flex items-center justify-center border border-gray-200 rounded text-gray-600 hover:bg-gray-100 text-base leading-none">−</button>
         <input
           type="text"
+          aria-labelledby={labelId}
           value={display}
           onFocus={() => { setEditing(true); setRaw(String(value)); }}
           onChange={e => setRaw(e.target.value)}

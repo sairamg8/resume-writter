@@ -241,7 +241,7 @@ export default function CoverLetterPanel({ coverLetter, personal, settings, upda
         <div className="space-y-2.5">
           <Field label="Closing Phrase" placeholder="Sincerely" {...f('closing')} />
           <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1">Signature Space</label>
+            <p className="block text-xs font-medium text-gray-500 mb-1">Signature Space</p>
             <div className="flex gap-2">
               {[
                 { val: 'tight', label: 'Tight' },
