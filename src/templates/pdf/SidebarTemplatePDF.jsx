@@ -43,7 +43,6 @@ export function SidebarTemplatePDF({ data }) {
   const nameSize   = baseSize + (settings.fontSizeNameDelta ?? 8);
   const entrySize  = baseSize + (settings.fontSizeEntryDelta ?? 0);
   const sectionGap = settings.sectionGap ?? 12;
-  const itemGap    = settings.itemGap ?? 9;
   const hidden     = personal?.hiddenFields || [];
 
   const visibleSections = sections.filter(s => s.visible !== false);
@@ -53,7 +52,6 @@ export function SidebarTemplatePDF({ data }) {
   // Canvas: SideContact uses `st.iconSize ?? 8` as CSS px; PDF points ≈ px * 0.75
   const sideIconPt     = Math.max(6, Math.round((settings?.iconSize ?? 8) * CSS_PX_TO_PT));
   const sideSectionGap = sectionGap;
-  const sideItemGap    = itemGap;
 
   // Classic proportions scaled for the ~38% sidebar column so photos stay proportional
   // to the canvas without overflowing the dark panel.
@@ -142,17 +140,15 @@ export function SidebarTemplatePDF({ data }) {
           )}
 
           {sidebarSections.map((section, index) => {
-            const ss = section.settings || {};
-            const isLast = index === sidebarSections.length - 1;
-            const effGap = isLast ? 0 : (ss.spaceAfter != null ? ss.spaceAfter * CSS_PX_TO_PT : sideSectionGap);
-            const effItemGap = ss.itemGap != null ? ss.itemGap * CSS_PX_TO_PT : sideItemGap;
+            // The main column's rule (Item gap override → spacing preset → global), so the
+            // section's Spacing control works in both columns (FIDB-38).
+            const { marginBottom, spaceBefore, itemGap: ig } = getEffectiveSpacing(section, settings, {
+              isLast: index === sidebarSections.length - 1,
+            });
             return (
-              <View
-                key={section.id}
-                style={ss.spaceBefore != null ? { marginTop: ss.spaceBefore * CSS_PX_TO_PT } : undefined}
-              >
+              <View key={section.id} style={spaceBefore != null ? { marginTop: spaceBefore } : undefined}>
                 {SPACER}
-                {renderSideSection(section, effGap, effItemGap, accent)}
+                {renderSideSection(section, marginBottom, ig, accent)}
               </View>
             );
           })}

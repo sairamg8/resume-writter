@@ -37,3 +37,22 @@ describe('Sidebar entry links (FIDB-14)', () => {
     assert.ok(allText(pages).includes('javascript:alert(1)'), allText(pages));
   });
 });
+
+describe('Sidebar dark-column spacing (FIDB-38)', () => {
+  /** Baseline-to-baseline distance between the first two skill groups of the dark column. */
+  async function skillGap(settings) {
+    const pages = await read(await render(sidebar([
+      section('skills', [{ category: 'Alpha', skills: 'One' }, { category: 'Beta', skills: 'Two' }], settings),
+    ])));
+    const [a, b] = ['ALPHA', 'BETA'].map((s) => itemsWith(pages, s)[0]);
+    return a.y - b.y;
+  }
+
+  it('the section\'s spacing preset sets the gap between items, as in the main column', async () => {
+    const compact = await skillGap({ spacing: 'compact' });
+    const relaxed = await skillGap({ spacing: 'relaxed' });
+    assert.ok(Math.abs(relaxed - compact - (14 - 4) * 0.75) < 0.2, `compact ${compact}, relaxed ${relaxed}`);
+    const override = await skillGap({ spacing: 'compact', itemGap: 20 });
+    assert.ok(Math.abs(override - compact - (20 - 4) * 0.75) < 0.2, `an Item gap override wins: ${override}`);
+  });
+});
