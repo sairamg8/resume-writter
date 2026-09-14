@@ -1,4 +1,5 @@
-// Header contacts: the cover letter's own contact visibility (FIDB-44).
+// Header contacts: the cover letter's own contact visibility (FIDB-44) and the icon packs the
+// Design panel offers, drawn from the table the PDF draws from too (FIDA-39, FIDB-07).
 import { buildTestState } from '../../tests/helpers.js';
 
 /** Resume the store marks active. */
@@ -62,5 +63,28 @@ describe('cover letter contacts follow the letter\'s own visibility (FIDB-44)', 
       expect(active(s).coverLetter.hiddenFields).to.deep.eq([]);
       expect(active(s).personal.hiddenFields).to.deep.eq(['phone']);
     });
+  });
+});
+
+describe('contact icon packs in the Design panel (FIDA-39, FIDB-07)', () => {
+  /** The option buttons of Design → Contact icons. */
+  const packs = () => cy.contains('p', 'Global icon style for the whole resume').next().children('button');
+
+  it('previews five distinct packs, and picking one reaches the store', () => {
+    cy.visitEditor('classic');
+    cy.get('button[title="Design & Customize"]').click();
+    packs().should('have.length', 5).each(($b) => {
+      expect($b.find('svg')).to.have.length(6);
+      $b.find('svg').each((_, svg) => expect(svg.querySelectorAll('path, rect, circle').length).to.be.greaterThan(0));
+    });
+    // The phone (second icon) is a handset in Classic and Bold, a smartphone in Modern and Minimal.
+    const phone = (label) => packs().filter(`:contains("${label}")`).find('svg').eq(1);
+    phone('Classic').find('path').first().should('have.attr', 'd').and('match', /^M13\.832 16\.568/);
+    phone('Modern').find('rect').should('have.attr', 'x', '7');
+    phone('Minimal').find('path').first().should('have.attr', 'd').and('match', /^M7 3\.5h10/);
+    phone('Bold').find('path').first().should('have.attr', 'stroke-width', '2.6');
+    packs().filter(':contains("Minimal")').click();
+    cy.store().should((s) => expect(active(s).settings.iconSet).to.eq('minimal'));
+    packs().filter(':contains("Minimal")').should('contain.text', 'Selected');
   });
 });
