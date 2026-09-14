@@ -5,6 +5,7 @@ import { HeaderCustomization } from '@/components/PersonalInfoEditorHeader';
 import { PhotoSection } from '@/components/PersonalInfoEditorPhoto';
 import { ContactIcon } from '@/utils/contactIcons';
 import { readImageFile } from '@/utils/imageUpload';
+import { drawsContactIcons } from '@/constants/templates';
 
 const FIELDS = [
   { key: 'name',     label: 'Full Name',  icon: User,     placeholder: 'John Doe',            required: true },
@@ -81,7 +82,7 @@ export default function PersonalInfoEditor({ personal, updatePersonal, toggleFie
             const labelKey = key + 'Label';
             const hasValue = !!personal[key];
             const customIcon = s.customContactIcons?.[key];
-            const showIconControls = contactIcon && (s.contactStyle === 'icon' || s.contactStyle === undefined);
+            const showIconControls = contactIcon && drawsContactIcons(template, s);
             return (
               <div key={key}>
                 <div className="flex items-center justify-between mb-1">
@@ -117,7 +118,7 @@ export default function PersonalInfoEditor({ personal, updatePersonal, toggleFie
                   <div className="mt-1.5 flex items-center gap-2">
                     <span className="text-[10px] text-gray-400 shrink-0">Resume icon</span>
                     <div className="flex items-center gap-1.5 px-1.5 py-1 rounded border border-gray-200 bg-gray-50">
-                      <ContactIcon field={key} settings={s} size={14} strokeWidth={2} className="text-gray-600" />
+                      <ContactIcon field={key} settings={s} size={14} className="text-gray-600" />
                     </div>
                     <label className="inline-flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-gray-600 border border-gray-200 rounded-md hover:bg-gray-50 cursor-pointer">
                       <ImagePlus size={11} />

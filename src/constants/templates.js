@@ -59,6 +59,16 @@ export function photoTextPositionApplies(settings, template) {
   return t === 'modern' || settings?.headerAlign !== 'center';
 }
 
+/**
+ * Does the header draw contact icons (the pack's, or a field's uploaded image)? Modern's banner
+ * and the Sidebar column always do; the other templates only with Contact Style "Icon" (the
+ * default). The editor offers the per-field icon upload exactly then (R1-2).
+ */
+export function drawsContactIcons(template, settings) {
+  const t = templateId(template);
+  return t === 'modern' || t === 'sidebar' || (settings?.contactStyle || 'icon') === 'icon';
+}
+
 /** Text Position as a flex alignment for the photo's row (Center when unset). */
 export const photoTextAlignItems = (settings) =>
   ({ top: 'flex-start', bottom: 'flex-end' })[settings?.photoTextAlign] || 'center';

@@ -1,5 +1,6 @@
 import { ChevronDown, ChevronRight, Eye, EyeOff } from 'lucide-react';
 import { hasHeaderControls, headerBorderOn } from '@/constants/templates';
+import { ICON_SET_OPTIONS, getIconSetId } from '@/utils/contactIcons';
 
 function LayoutPreview({ type }) {
   const bar = (w) => <div className="h-1 bg-gray-300 rounded-sm" style={{ width: w }} />;
@@ -148,14 +149,8 @@ export function HeaderCustomization({ s, set, template, templateLabel, open, onT
                   <div className="space-y-2">
                     <p className="text-[11px] text-gray-400 mb-1">Icon set</p>
                     <div className="flex flex-wrap gap-2 mb-1">
-                      {[
-                        { val: 'filled', label: 'Filled' },
-                        { val: 'lucide', label: 'Classic' },
-                        { val: 'refined', label: 'Modern' },
-                        { val: 'minimal', label: 'Minimal' },
-                        { val: 'bold', label: 'Bold' },
-                      ].map(({ val, label }) => (
-                        <Chip key={val} active={(s.iconSet || 'lucide') === val} onClick={() => set('iconSet', val)}>{label}</Chip>
+                      {ICON_SET_OPTIONS.map(({ id, label }) => (
+                        <Chip key={id} active={getIconSetId(s) === id} onClick={() => set('iconSet', id)}>{label}</Chip>
                       ))}
                     </div>
                     <p className="text-[10px] text-gray-400 leading-snug">

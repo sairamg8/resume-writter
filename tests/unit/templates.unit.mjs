@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   TEMPLATE_IDS, templateId, withKnownTemplate, hasHeaderControls, headerBorderOn, templateStyleDefaults,
-  SIDEBAR_COLUMN_TYPES, inSidebarColumn,
+  SIDEBAR_COLUMN_TYPES, inSidebarColumn, drawsContactIcons, photoTextAlignItems,
 } from '../../src/constants/templates.js';
 
 test('templateId: the five templates stay; any other id reads as Classic (M15)', () => {
@@ -58,3 +58,19 @@ test('inSidebarColumn: Sidebar prints skills, education, languages, certificatio
   for (const type of ['experience', 'projects', 'awards', 'volunteering', 'custom']) assert.equal(inSidebarColumn('sidebar', type), false, type);
 });
 
+test('drawsContactIcons: Modern and Sidebar always draw icons; the others with Contact Style "Icon" (R1-2)', () => {
+  for (const style of [undefined, '', 'icon', 'bullet', 'bar']) {
+    assert.equal(drawsContactIcons('modern', { contactStyle: style }), true, `modern ${style}`);
+    assert.equal(drawsContactIcons('sidebar', { contactStyle: style }), true, `sidebar ${style}`);
+    for (const t of ['classic', 'minimal', 'executive', 'dark']) {
+      assert.equal(drawsContactIcons(t, { contactStyle: style }), !style || style === 'icon', `${t} ${style}`);
+    }
+  }
+  assert.equal(drawsContactIcons('classic', undefined), true, 'no settings: the default style, Icon');
+});
+
+test('photoTextAlignItems: Top / Center / Bottom as a flex alignment, Center when unset (R3-0)', () => {
+  assert.deepEqual(['top', 'center', 'bottom', undefined, 'junk'].map((photoTextAlign) => photoTextAlignItems({ photoTextAlign })),
+    ['flex-start', 'center', 'flex-end', 'center', 'center']);
+  assert.equal(photoTextAlignItems(undefined), 'center');
+});

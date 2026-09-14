@@ -149,3 +149,31 @@ describe('uploads in formats the PDF cannot draw are converted (R1-1)', () => {
     cy.store().should((s) => expect(active(s).coverLetter.clPhoto).to.match(/^data:image\/jpeg;base64,/));
   });
 });
+
+describe('per-field contact icons in the editor (R1-2, R1-4)', () => {
+  const iconRows = () => cy.get('body').find('span:contains("Resume icon")');
+  const withStyle = (template, contactStyle, iconSet) => {
+    const state = buildTestState(template);
+    active(state).settings = { ...active(state).settings, contactStyle, iconSet };
+    return state;
+  };
+
+  for (const template of ['modern', 'sidebar']) {
+    it(`${template} offers the upload with any contact style — it always draws icons`, () => {
+      cy.visitEditor(template, { state: withStyle(template, 'bar') });
+      iconRows().should('have.length.at.least', 1);
+    });
+  }
+
+  it('Classic offers it only with the Icon style', () => {
+    cy.visitEditor('classic', { state: withStyle('classic', 'bar') });
+    cy.contains('label', 'Email').should('exist');
+    iconRows().should('have.length', 0);
+  });
+
+  it('the "Resume icon" chip draws the pack with its own stroke width, as the PDF does', () => {
+    cy.visitEditor('classic', { state: withStyle('classic', 'icon', 'minimal') });
+    cy.contains('span', 'Resume icon').first().next().find('svg [stroke-width]').first()
+      .should('have.attr', 'stroke-width', '1.5');
+  });
+});
