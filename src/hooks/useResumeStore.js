@@ -1,31 +1,13 @@
 import { useState, useEffect } from 'react';
-import {
-  defaultResumeData,
-  defaultResumeDataModern,
-  defaultResumeDataMinimal,
-  defaultResumeDataDark,
-  defaultResumeDataSidebar,
-  defaultResumeDataExecutive,
-  ATS_DEFAULTS,
-} from '@/utils/defaultData';
+import { ATS_DEFAULTS, createBlankResume } from '@/utils/defaultData';
 import { createSectionActions } from '@/hooks/useResumeSectionActions';
 
 const STORAGE_KEY = 'cpwtcv_v1';
 const DATA_VERSION = 6;
 
-const TEMPLATE_DEFAULTS = [
-  defaultResumeData, defaultResumeDataExecutive, defaultResumeDataModern,
-  defaultResumeDataMinimal, defaultResumeDataDark, defaultResumeDataSidebar,
-];
-
-function seedResumes() {
-  const now = Date.now();
-  const resumes = TEMPLATE_DEFAULTS.map((d, i) => ({
-    ...JSON.parse(JSON.stringify(d)),
-    id: `resume_${now + i}`,
-    updatedAt: now,
-  }));
-  return { resumes, activeId: resumes[0].id, dataVersion: DATA_VERSION, deletedIds: [] };
+/** First run: no résumés. The dashboard shows its "Create your first resume" state. */
+function emptyStore() {
+  return { resumes: [], activeId: null, dataVersion: DATA_VERSION, deletedIds: [] };
 }
 
 /** Copy a value we are about to replace into its own key, so a bad load never destroys data. */
@@ -35,27 +17,27 @@ function backupRaw(raw) {
 
 function loadStore() {
   let saved = null;
-  try { saved = localStorage.getItem(STORAGE_KEY); } catch { return seedResumes(); }
-  if (!saved) return seedResumes();
+  try { saved = localStorage.getItem(STORAGE_KEY); } catch { return emptyStore(); }
+  if (!saved) return emptyStore();
   try {
     const parsed = JSON.parse(saved);
-    const resumes = Array.isArray(parsed?.resumes) ? parsed.resumes.filter(r => r && r.id) : [];
-    if (!resumes.length) {
+    if (!Array.isArray(parsed?.resumes)) {
       backupRaw(saved);
-      return seedResumes();
+      return emptyStore();
     }
+    const resumes = parsed.resumes.filter(r => r && r.id);
     // Any data version is kept: user resumes must survive an app upgrade (or downgrade).
     // Version-specific migrations go here, keyed on parsed.dataVersion.
     return {
       ...parsed,
       resumes,
-      activeId: resumes.some(r => r.id === parsed.activeId) ? parsed.activeId : resumes[0].id,
+      activeId: resumes.some(r => r.id === parsed.activeId) ? parsed.activeId : (resumes[0]?.id ?? null),
       deletedIds: Array.isArray(parsed.deletedIds) ? parsed.deletedIds : [],
       dataVersion: DATA_VERSION,
     };
   } catch {
     backupRaw(saved);
-    return seedResumes();
+    return emptyStore();
   }
 }
 
@@ -109,7 +91,7 @@ export function useAppStore() {
 
   function createResume(name = 'Untitled Resume') {
     const id = `resume_${Date.now()}`;
-    const newResume = { ...JSON.parse(JSON.stringify(defaultResumeData)), id, name, updatedAt: Date.now(), settings: { ...ATS_DEFAULTS } };
+    const newResume = createBlankResume({ id, name });
     setAppState(prev => ({ ...prev, resumes: [...prev.resumes, newResume], activeId: id }));
     return id;
   }
@@ -134,11 +116,8 @@ export function useAppStore() {
     setAppState(prev => {
       const remaining = prev.resumes.filter(r => r.id !== id);
       const deletedIds = [...(prev.deletedIds || []), id];
-      if (!remaining.length) {
-        const newResume = { ...JSON.parse(JSON.stringify(defaultResumeData)), id: `resume_${Date.now()}`, updatedAt: Date.now() };
-        return { ...prev, resumes: [newResume], activeId: newResume.id, deletedIds };
-      }
-      return { ...prev, resumes: remaining, activeId: prev.activeId === id ? remaining[0].id : prev.activeId, deletedIds };
+      const activeId = prev.activeId === id ? (remaining[0]?.id ?? null) : prev.activeId;
+      return { ...prev, resumes: remaining, activeId, deletedIds };
     });
   }
 

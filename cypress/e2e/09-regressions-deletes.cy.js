@@ -1,5 +1,6 @@
 // Regression tests: destructive deletes ask first (audit main-loop note M5).
 import { CARD } from '../support/selectors.js';
+import { dashboardState } from '../support/state.js';
 
 /** Answer every window.confirm with `answer`, and expose the stub as @confirm. */
 const answerConfirm = (answer) =>
@@ -10,11 +11,11 @@ const sectionCard = (title) =>
 
 describe('regressions — deletes ask first', () => {
   it('dashboard: cancelling the confirm keeps the resume', () => {
-    cy.visitDashboard();
+    cy.visitDashboard(dashboardState());
     answerConfirm(false);
-    cy.contains(CARD, 'Dark').contains('button', 'Delete').click();
-    cy.get('@confirm').should('have.been.calledOnceWith', 'Delete "Dark"? This cannot be undone.');
-    cy.get(CARD).should('have.length', 6);
+    cy.contains(CARD, 'Modern CV').contains('button', 'Delete').click();
+    cy.get('@confirm').should('have.been.calledOnceWith', 'Delete "Modern CV"? This cannot be undone.');
+    cy.get(CARD).should('have.length', 3);
   });
 
   it('editor: cancelling keeps a section and an entry that has content', () => {

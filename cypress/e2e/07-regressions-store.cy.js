@@ -1,6 +1,7 @@
 // Regression tests for resume-store data-loss bugs (audit main-loop notes M1–M3).
 import { buildTestState, STORAGE_KEY } from '../../tests/helpers.js';
 import { CARD } from '../support/selectors.js';
+import { dashboardState } from '../support/state.js';
 
 const visitWithRawStore = (raw) =>
   cy.visit('/#/', {
@@ -12,15 +13,15 @@ const visitWithRawStore = (raw) =>
 
 describe('regressions — resume store', () => {
   it('M1: creating, duplicating or importing a resume keeps the deleted-ids list', () => {
-    cy.visitDashboard();
-    cy.contains(CARD, 'Dark').contains('button', 'Delete').click();
+    cy.visitDashboard(dashboardState());
+    cy.contains(CARD, 'Minimal CV').contains('button', 'Delete').click();
     cy.store().its('deletedIds').should('have.length', 1);
 
     cy.contains('button', 'New Resume').click();
     cy.store().its('deletedIds').should('have.length', 1);
 
     cy.get('button[title="Back to dashboard"]').click();
-    cy.contains(CARD, 'Modern').contains('button', 'Copy').click();
+    cy.contains(CARD, 'Modern CV').contains('button', 'Copy').click();
     cy.store().its('deletedIds').should('have.length', 1);
 
     cy.get('button[title="Back to dashboard"]').click();
@@ -44,9 +45,9 @@ describe('regressions — resume store', () => {
     });
   });
 
-  it('M2: an unreadable store is backed up before the demo seed replaces it', () => {
+  it('M2: an unreadable store is backed up before the app starts empty', () => {
     visitWithRawStore('{ this is not json');
-    cy.get(CARD).should('have.length', 6);
+    cy.contains('No resumes yet').should('be.visible');
     cy.window().then((win) => {
       const backups = Object.keys(win.localStorage).filter((k) => k.startsWith(`${STORAGE_KEY}_backup_`));
       expect(backups).to.have.length(1);

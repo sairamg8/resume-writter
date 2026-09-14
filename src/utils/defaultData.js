@@ -1,4 +1,4 @@
-import { SAIRAM_PERSONAL, SAIRAM_SECTIONS, BASE_COVER_LETTER } from '@/utils/defaultDataContent';
+import { BLANK_PERSONAL, blankSections, BASE_COVER_LETTER } from '@/utils/defaultDataContent';
 
 // ATS-safe defaults — proper dimensions, neutral colors, standard font
 export const ATS_DEFAULTS = {
@@ -48,66 +48,16 @@ export const ATS_DEFAULTS = {
 
 export { SECTION_TYPE_DEFAULTS } from '@/utils/defaultDataSectionTypes';
 
-export const defaultResumeData = {
-  id: 'resume_default',
-  name: 'Classic',
-  updatedAt: Date.now(),
-  template: 'classic',
-  settings: { ...ATS_DEFAULTS, accentColor: '#111111', textColor: '#111111', headingStyle: 'ruled', headerAlign: 'left' },
-  personal: SAIRAM_PERSONAL,
-  sections: SAIRAM_SECTIONS,
-  coverLetter: BASE_COVER_LETTER,
-};
-
-export const defaultResumeDataModern = {
-  id: 'resume_modern',
-  name: 'Modern',
-  updatedAt: Date.now(),
-  template: 'modern',
-  settings: { ...ATS_DEFAULTS, accentColor: '#1d4ed8', textColor: '#1a1a1a', headingStyle: 'line', headerAlign: 'left', fontSizeNameDelta: 10, sectionGap: 14, itemGap: 10 },
-  personal: SAIRAM_PERSONAL,
-  sections: SAIRAM_SECTIONS,
-  coverLetter: BASE_COVER_LETTER,
-};
-
-export const defaultResumeDataMinimal = {
-  id: 'resume_minimal',
-  name: 'Minimal',
-  updatedAt: Date.now(),
-  template: 'minimal',
-  settings: { ...ATS_DEFAULTS, accentColor: '#374151', textColor: '#111827', headingStyle: 'underline', sectionGap: 18, itemGap: 10, marginH: 20, marginV: 16 },
-  personal: SAIRAM_PERSONAL,
-  sections: SAIRAM_SECTIONS,
-  coverLetter: BASE_COVER_LETTER,
-};
-
-export const defaultResumeDataDark = {
-  id: 'resume_dark',
-  name: 'Dark',
-  updatedAt: Date.now(),
-  template: 'dark',
-  settings: { ...ATS_DEFAULTS, accentColor: '#0f172a', textColor: '#1a1a1a', headingStyle: 'ruled', sidebarBg: '#0f172a', headerTextColor: '#ffffff', nameColor: '#ffffff', jobTitleColor: '#cbd5e1' },
-  personal: SAIRAM_PERSONAL,
-  sections: SAIRAM_SECTIONS,
-  coverLetter: BASE_COVER_LETTER,
-};
-
-export const defaultResumeDataSidebar = {
-  id: 'resume_sidebar',
-  name: 'Sidebar',
-  updatedAt: Date.now(),
-  template: 'sidebar',
-  settings: { ...ATS_DEFAULTS, accentColor: '#1e40af', textColor: '#1a1a1a', headingStyle: 'plain', sidebarBg: '#1e40af', headerTextColor: '#ffffff', nameColor: '#ffffff', jobTitleColor: '#bfdbfe', sectionGap: 14, itemGap: 10 },
-  personal: SAIRAM_PERSONAL,
-  sections: SAIRAM_SECTIONS,
-  coverLetter: BASE_COVER_LETTER,
-};
-
-export const defaultResumeDataExecutive = {
-  ...defaultResumeData,
-  id: 'resume_executive',
-  name: 'Executive',
-  updatedAt: Date.now(),
-  template: 'executive',
-  settings: { ...ATS_DEFAULTS, accentColor: '#2563eb', textColor: '#111111', headingStyle: 'underline', sectionTitleCase: 'normal', contactStyle: 'icon', contactLayout: 'justify', fontSizeNameDelta: 9, sectionGap: 16, itemGap: 10 },
-};
+/** A fresh, empty résumé (Classic template, ATS-safe settings). */
+export function createBlankResume({ id, name = 'Untitled Resume', template = 'classic' } = {}) {
+  return {
+    id,
+    name,
+    updatedAt: Date.now(),
+    template,
+    settings: { ...ATS_DEFAULTS },
+    personal: { ...BLANK_PERSONAL, hiddenFields: [] },
+    sections: blankSections(),
+    coverLetter: { ...BASE_COVER_LETTER },
+  };
+}

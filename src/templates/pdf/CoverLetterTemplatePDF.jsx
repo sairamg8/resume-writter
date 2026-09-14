@@ -122,13 +122,14 @@ export function CoverLetterTemplatePDF({ data }) {
           <View style={{ marginBottom: 16 }}>
             <PdfRichText html={cl.body} style={{ fontSize: baseSize, color: textColor, lineHeight: lineH }} />
           </View>
-        ) : (
+        ) : data._preview ? (
+          // Writing hint for the live preview only — an exported letter never contains it.
           <View style={{ marginBottom: 16 }}>
             <Text style={{ fontSize: baseSize, color: '#9ca3af', lineHeight: lineH }}>
               {'Dear Hiring Manager,\n\nStart writing your cover letter in the "Cover Letter" tab on the left...\n\nBest regards,\n' + (personal?.name || 'Your Name')}
             </Text>
           </View>
-        )}
+        ) : null}
 
         {/* Closing / Signature */}
         <View>
