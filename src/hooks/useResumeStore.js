@@ -103,6 +103,20 @@ export function useAppStore() {
     return id;
   }
 
+  /** Put résumés back (replacing any with the same id) and forget that they were deleted. */
+  function restoreResumes(list) {
+    const ids = new Set(list.map(r => r.id));
+    setAppState(prev => {
+      const resumes = [...prev.resumes.filter(r => !ids.has(r.id)), ...list];
+      return {
+        ...prev,
+        resumes,
+        activeId: resumes.some(r => r.id === prev.activeId) ? prev.activeId : (resumes[0]?.id ?? null),
+        deletedIds: (prev.deletedIds || []).filter(id => !ids.has(id)),
+      };
+    });
+  }
+
   function duplicateResume(id) {
     const source = appState.resumes.find(r => r.id === id);
     if (!source) return;
@@ -171,6 +185,7 @@ export function useAppStore() {
     deleteResume,
     renameResume,
     importResume,
+    restoreResumes,
     updatePersonal,
     toggleFieldVisibility,
     updateSetting,

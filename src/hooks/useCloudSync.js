@@ -3,6 +3,7 @@ import {
   collection, doc, getDocs, getDoc, writeBatch,
 } from 'firebase/firestore';
 import { db } from '@/utils/firebase';
+import { isDemoId, nextTombstones } from '@/utils/demoSeed';
 
 function resumesCol(uid) { return collection(db, 'users', uid, 'resumes'); }
 function resumeDoc(uid, id) { return doc(db, 'users', uid, 'resumes', id); }
@@ -44,6 +45,9 @@ export function useCloudSync({ user, appState, store }) {
   const [isOnline, setIsOnline] = useState(
     typeof navigator !== 'undefined' ? navigator.onLine : true
   );
+  // Set once the signed-in account's résumé list is known (first sync done, or no cloud to sync
+  // with): { uid, cloudDemo } — cloudDemo is the cloud's sample résumés, deleted ones included.
+  const [account, setAccount] = useState(null);
 
   // Single bag so we never change hook count when adding flags (HMR-safe pattern).
   const stateRef = useRef({
@@ -52,6 +56,7 @@ export function useCloudSync({ user, appState, store }) {
     prevResumes: null,
     pendingWrites: new Map(),
     pendingDeletes: new Set(),
+    tombstones: new Set(), // the cloud deletion list as last read or written
     timer: null,
   });
 
@@ -75,12 +80,16 @@ export function useCloudSync({ user, appState, store }) {
       s.initialSyncDone = false;
       s.cloudDisabled = false;
       s.prevResumes = null;
+      s.tombstones = new Set();
       setSyncStatus('idle');
+      setAccount(null);
       return;
     }
 
     if (!db || s.cloudDisabled) {
       setSyncStatus('error');
+      // Nothing to wait for: this browser's résumés are the whole list.
+      setAccount(a => (a?.uid === user.uid ? a : { uid: user.uid, cloudDemo: [] }));
       return;
     }
 
@@ -105,7 +114,8 @@ export function useCloudSync({ user, appState, store }) {
         const cloudResumes = snap.docs.map(d => d.data());
         const cloudDeletedIds = new Set(delSnap.exists() ? (delSnap.data().ids || []) : []);
         const localDeletedIds = new Set(appState.deletedIds || []);
-        const deletedIds = new Set([...cloudDeletedIds, ...localDeletedIds]);
+        const flaggedIds = cloudResumes.filter(r => r.deleted).map(r => r.id);
+        const deletedIds = new Set([...cloudDeletedIds, ...localDeletedIds, ...flaggedIds]);
 
         const merged = mergeResumeLists(appState.resumes, cloudResumes, deletedIds);
 
@@ -116,7 +126,10 @@ export function useCloudSync({ user, appState, store }) {
 
         store.loadResumes(merged);
         s.prevResumes = merged;
+        s.tombstones = cloudDeletedIds;
         s.initialSyncDone = true;
+        const cloudDemo = cloudResumes.filter(r => isDemoId(r.id)).map(({ deleted: _deleted, ...r }) => r);
+        setAccount({ uid: user.uid, cloudDemo });
         setSyncStatus('synced');
         setLastSynced(new Date());
       } catch (e) {
@@ -126,6 +139,7 @@ export function useCloudSync({ user, appState, store }) {
           s.initialSyncDone = false;
           s.prevResumes = appState.resumes;
           setSyncStatus('error');
+          setAccount({ uid: user.uid, cloudDemo: [] });
           // One clear message — app keeps working on localStorage only
           console.info(
             '[CloudSync] Cloud sync disabled (local-only). '
@@ -174,7 +188,11 @@ export function useCloudSync({ user, appState, store }) {
       s.pendingWrites.delete(id);
       s.pendingDeletes.add(id);
     });
-    changed.forEach(r => s.pendingWrites.set(r.id, r));
+    // A résumé deleted and put back before the flush (a restored sample) must not be deleted.
+    changed.forEach(r => {
+      s.pendingDeletes.delete(r.id);
+      s.pendingWrites.set(r.id, r);
+    });
 
     s.prevResumes = current;
 
@@ -198,16 +216,25 @@ export function useCloudSync({ user, appState, store }) {
     try {
       const batch = writeBatch(db);
       writes.forEach(r => batch.set(resumeDoc(uid, r.id), r));
-      deletes.forEach(id => batch.delete(resumeDoc(uid, id)));
+      // A deleted sample résumé is flagged, not removed: its last copy stays in the cloud so that
+      // restoring the samples on any device brings back the edited version. Writing it again
+      // (a restore) replaces the whole document, flag included.
+      const hardDeletes = deletes.filter(id => !isDemoId(id));
+      deletes.filter(isDemoId).forEach(id => batch.set(resumeDoc(uid, id), { deleted: true }, { merge: true }));
+      hardDeletes.forEach(id => batch.delete(resumeDoc(uid, id)));
 
-      if (deletes.length) {
+      // A sample that an older build deleted outright is on the deletion list; a restore takes it off.
+      const revives = writes.some(r => isDemoId(r.id) && s.tombstones.has(r.id));
+      let tombstones = null;
+      if (hardDeletes.length || revives) {
         const delSnap = await getDoc(deletionsDoc(uid));
         const existing = delSnap.exists() ? (delSnap.data().ids || []) : [];
-        const merged = [...new Set([...existing, ...deletes])];
-        batch.set(deletionsDoc(uid), { ids: merged });
+        tombstones = nextTombstones(existing, hardDeletes, writes.map(r => r.id));
+        batch.set(deletionsDoc(uid), { ids: tombstones });
       }
 
       await batch.commit();
+      if (tombstones) s.tombstones = new Set(tombstones);
       setSyncStatus('synced');
       setLastSynced(new Date());
     } catch (e) {
@@ -227,5 +254,5 @@ export function useCloudSync({ user, appState, store }) {
     }
   }
 
-  return { syncStatus, lastSynced, isOnline };
+  return { syncStatus, lastSynced, isOnline, account };
 }

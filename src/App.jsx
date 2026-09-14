@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAppStore } from '@/hooks/useResumeStore';
 import { useAuth } from '@/hooks/useAuth';
 import { useCloudSync } from '@/hooks/useCloudSync';
+import { useDemoSeed } from '@/hooks/useDemoSeed';
 import { Dashboard } from '@/pages/Dashboard';
 import { Editor } from '@/pages/Editor';
 import { JobTracker } from '@/pages/JobTracker';
@@ -14,6 +15,7 @@ function AppRoutes() {
   const store = useAppStore();
   const auth  = useAuth();
   const sync  = useCloudSync({ user: auth.user, appState: store.appState, store });
+  useDemoSeed({ user: auth.user, appState: store.appState, store, sync });
 
   return (
     <Routes>
