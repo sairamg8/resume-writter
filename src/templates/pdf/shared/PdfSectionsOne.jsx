@@ -2,6 +2,7 @@ import { View, Text } from '@react-pdf/renderer';
 import { PdfRichText } from './PdfRichText';
 import { hasRichText } from '@/utils/richText';
 import { solid, tint } from './pdfColors';
+import { tracking } from './pdfUnits';
 import {
   SPACER,
   SectionTitleOf,
@@ -100,7 +101,7 @@ export function SkillsSection({ section, settings, marginBottom, spaceBefore, it
             return (
               <View>
                 {showCat && (
-                  <Text style={{ fontSize: entrySize, fontWeight: 'bold', color: accent, letterSpacing: 0.5, textTransform: 'uppercase' }}>{item.category}</Text>
+                  <Text style={{ fontSize: entrySize, fontWeight: 'bold', color: accent, letterSpacing: tracking(entrySize, 0.5), textTransform: 'uppercase' }}>{item.category}</Text>
                 )}
                 {skills.map((sk, i) => (
                   <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3 }}>
@@ -149,7 +150,7 @@ export function SkillsSection({ section, settings, marginBottom, spaceBefore, it
             return (
               <View style={{ alignItems: centered ? 'center' : 'flex-start' }}>
                 {showCat && (
-                  <Text style={{ fontSize: entrySize, fontWeight: 'bold', color: accent, marginBottom: 4, letterSpacing: 0.5, textAlign: centered ? 'center' : 'left' }}>
+                  <Text style={{ fontSize: entrySize, fontWeight: 'bold', color: accent, marginBottom: 4, letterSpacing: tracking(entrySize, 0.5), textAlign: centered ? 'center' : 'left' }}>
                     {item.category.toUpperCase()}
                   </Text>
                 )}

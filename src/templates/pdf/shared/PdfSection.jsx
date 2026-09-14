@@ -1,5 +1,6 @@
 import { View, Text } from '@react-pdf/renderer';
 import { solid, tint } from './pdfColors';
+import { tracking } from './pdfUnits';
 
 export function PdfSectionTitle({
   title,
@@ -17,8 +18,10 @@ export function PdfSectionTitle({
   const label = sectionTitleCase === 'upper' ? title.toUpperCase() : title;
   const bc = borderColor || accent;
   const textAlignment = centered ? { textAlign: 'center' } : {};
-  const accentText  = { fontSize: sectionSize, fontWeight: 'bold', color: accent, letterSpacing: 0.7, lineHeight: lineHeightValue, ...textAlignment };
-  const neutralText = { fontSize: sectionSize, fontWeight: 'bold', color: '#374151', letterSpacing: 0.7, lineHeight: lineHeightValue, ...textAlignment };
+  // 0.7 pt tracking, narrower below 11.7 pt so small titles still extract as words (tracking()).
+  const letterSpacing = tracking(sectionSize, 0.7);
+  const accentText  = { fontSize: sectionSize, fontWeight: 'bold', color: accent, letterSpacing, lineHeight: lineHeightValue, ...textAlignment };
+  const neutralText = { fontSize: sectionSize, fontWeight: 'bold', color: '#374151', letterSpacing, lineHeight: lineHeightValue, ...textAlignment };
 
   // Resolve whether the heading text color should be accent or neutral dark gray
   let useAccentText = true;

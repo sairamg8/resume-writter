@@ -1,11 +1,8 @@
 // The Sidebar template: links, fields, spacing, colours and styles of its two columns.
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
-import os from 'node:os';
-import path from 'node:path';
-import { spawnSync } from 'node:child_process';
 import { setup, teardown, resume, section, render, read, allText, itemsWith, drawState, loadModule } from './harness.mjs';
+import { hasPdftotext, splitWords } from './extractors.mjs';
 import { contrast, readableOn } from '../../src/templates/pdf/shared/pdfColors.js';
 
 before(setup);
@@ -149,37 +146,12 @@ describe('Sidebar labels extract as whole words (FIDB-68)', () => {
     section('interests', [{ interests: 'Chess' }], {}, { title: PANGRAM }),
     section('references', [{ name: 'Jane' }]),
   ], { settings, personal: { email: 'me@example.com', phone: '+1 555 0100', location: 'Hyderabad', website: 'example.com', linkedin: 'linkedin.com/in/me', github: 'github.com/me' } });
-  const broken = (text) => WORDS.filter((w) => !new RegExp(`(^|[^A-Z])${w}([^A-Z]|$)`).test(text));
-
-  const POPPLER_MODES = [[], ['-raw'], ['-layout']];
-  const hasPoppler = spawnSync('pdftotext', ['-v']).status === 0;
-  /** The text each pdftotext mode reads (reading order, -raw, -layout); none without Poppler. */
-  function poppler(bytes) {
-    if (!hasPoppler) return [];
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'sidebar-'));
-    try {
-      const file = path.join(dir, 'r.pdf');
-      fs.writeFileSync(file, bytes);
-      return POPPLER_MODES.map((mode) => {
-        const run = spawnSync('pdftotext', [...mode, file, '-'], { encoding: 'utf8' });
-        assert.equal(run.status, 0, run.stderr);
-        return [`pdftotext ${mode.join(' ') || '(reading order)'}`, run.stdout];
-      });
-    } finally {
-      fs.rmSync(dir, { recursive: true, force: true });
-    }
-  }
-  /** "reader: WORD" for every label a reader splits — each reader on its own. */
-  async function splits(bytes) {
-    const readers = [['pdf.js', allText(await read(bytes))], ...poppler(bytes)];
-    return readers.flatMap(([name, text]) => broken(text).map((w) => `${name}: ${w}`));
-  }
 
   it('pdf.js and every pdftotext mode read each label and heading as one word, at every base size', async (t) => {
-    if (!hasPoppler) t.diagnostic('pdftotext not installed: Poppler not checked');
+    if (!hasPdftotext) t.diagnostic('pdftotext not installed: Poppler not checked');
     const found = [];
     for (let fontSizeBase = 8; fontSizeBase <= 16; fontSizeBase += 1) {
-      for (const s of await splits(await render(labelled({ fontSizeBase })))) found.push(`base ${fontSizeBase} pt, ${s}`);
+      for (const s of await splitWords(await render(labelled({ fontSizeBase })), WORDS)) found.push(`base ${fontSizeBase} pt, ${s}`);
     }
     assert.deepEqual(found, []);
   });
@@ -187,12 +159,12 @@ describe('Sidebar labels extract as whole words (FIDB-68)', () => {
   it('every offered font family keeps them whole, at the smallest and largest base size (fonts from jsDelivr; skipped offline)', async (t) => {
     const online = await fetch('https://cdn.jsdelivr.net/npm/@fontsource/inter@5/metadata.json', { signal: AbortSignal.timeout(5000) }).then((r) => r.ok, () => false);
     if (!online) return t.skip('offline');
-    if (!hasPoppler) t.diagnostic('pdftotext not installed: Poppler not checked');
+    if (!hasPdftotext) t.diagnostic('pdftotext not installed: Poppler not checked');
     const { FONT_MAP } = await loadModule('/src/templates/pdf/shared/pdfFontLoader.js');
     const found = [];
     for (const font of Object.keys(FONT_MAP)) {
       for (const fontSizeBase of [8, 16]) {
-        for (const s of await splits(await render(labelled({ font, fontSizeBase })))) found.push(`${font} ${fontSizeBase} pt, ${s}`);
+        for (const s of await splitWords(await render(labelled({ font, fontSizeBase })), WORDS)) found.push(`${font} ${fontSizeBase} pt, ${s}`);
       }
     }
     assert.deepEqual(found, []);
