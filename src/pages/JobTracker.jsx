@@ -10,6 +10,7 @@ import { JOB_STATUSES } from '@/constants/jobs';
 import { KanbanView } from '@/components/job/KanbanView';
 import { ListView } from '@/components/job/ListView';
 import { CareerHistoryPanel } from '@/components/CareerHistoryPanel';
+import { downloadBlob } from '@/utils/download';
 
 export function JobTracker() {
   const navigate = useNavigate();
@@ -24,13 +25,7 @@ export function JobTracker() {
   const [importError, setImportError] = useState(null);
 
   function handleExport() {
-    const blob = new Blob([JSON.stringify(jobs, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'job_applications.json';
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadBlob(new Blob([JSON.stringify(jobs, null, 2)], { type: 'application/json' }), 'job_applications.json');
   }
 
   function handleImport(e) {

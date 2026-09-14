@@ -25,6 +25,7 @@ import { ExportDropdown } from '@/components/ExportDropdown';
 import ClassicTemplate from '@/templates/ClassicTemplate';
 import CoverLetterTemplate from '@/templates/CoverLetterTemplate';
 import { getFontById, loadGoogleFont, loadCustomGoogleFont } from '@/utils/fonts';
+import { downloadBlob } from '@/utils/download';
 
 function buildExportFilename(authUser, resume) {
   const name = (authUser?.displayName || resume?.personal?.name || 'resume').replace(/\s+/g, '_');
@@ -200,11 +201,7 @@ export function Editor({ store, auth, sync }) {
 
   function handleExportJSON() {
     const filename = buildExportFilename(auth?.user, resume);
-    const blob = new Blob([JSON.stringify(resume, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = `${filename}.json`; a.click();
-    URL.revokeObjectURL(url);
+    downloadBlob(new Blob([JSON.stringify(resume, null, 2)], { type: 'application/json' }), `${filename}.json`);
   }
 
   function commitName() {

@@ -7,6 +7,7 @@ import {
 } from '@/templates/pdf/shared/pdfFontLoader';
 import { resolveTemplateSettings } from '@/templates/pdf/shared/PdfPage';
 import { resolveSection } from '@/templates/pdf/shared/templateSectionDefaults';
+import { downloadBlob } from '@/utils/download';
 
 const LOADERS = {
   classic:   () => import('@/templates/pdf/ClassicTemplatePDF').then(m => m.ClassicTemplatePDF),
@@ -26,19 +27,6 @@ async function loadTemplate(key) {
   const Comp = await load();
   templateCache.set(k, Comp);
   return Comp;
-}
-
-function triggerDownload(blob, filename) {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  a.rel = 'noopener';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  // Revoke on next tick so the browser has time to start the download.
-  setTimeout(() => URL.revokeObjectURL(url), 1_000);
 }
 
 function prepareResumeData(resume, fontFamily, templateKey) {
@@ -83,7 +71,7 @@ export async function exportToPDFReact(resume, filename = 'resume.pdf') {
   const blob = await instance.toBlob();
   // Free internal resources when the API supports it
   try { instance.reset?.(); } catch { /* no-op */ }
-  triggerDownload(blob, filename);
+  downloadBlob(blob, filename);
   return blob;
 }
 
@@ -107,6 +95,6 @@ export async function exportCoverLetterPDFReact(resume, filename = 'cover-letter
   const instance = pdf(React.createElement(mod.CoverLetterTemplatePDF, { data }));
   const blob = await instance.toBlob();
   try { instance.reset?.(); } catch { /* no-op */ }
-  triggerDownload(blob, filename);
+  downloadBlob(blob, filename);
   return blob;
 }
