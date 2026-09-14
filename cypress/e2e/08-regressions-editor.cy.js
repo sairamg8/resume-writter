@@ -65,3 +65,28 @@ describe('regressions — export failures', () => {
     cy.contains('[role="alert"]', 'Word export failed').should('be.visible');
   });
 });
+
+describe('regressions — imports say why they failed', () => {
+  const pick = (contents, fileName) =>
+    cy.get('input[type="file"][accept=".json"]').selectFile({ contents: Cypress.Buffer.from(contents), fileName }, { force: true });
+
+  it('M11: the editor Import JSON reports unparseable and non-resume files', () => {
+    cy.visitEditor('classic');
+    cy.openExportMenu();
+    cy.contains('button', 'Import JSON').click();
+    pick('{ nope', 'broken.json');
+    cy.contains('[role="alert"]', 'Could not parse file').should('be.visible');
+    pick(JSON.stringify({ hello: 'world' }), 'other.json');
+    cy.contains('[role="alert"]', 'Invalid resume file').should('be.visible');
+    cy.location('hash').should('eq', '#/resume/test_classic');
+  });
+
+  it('M11: the job tracker Import reports unparseable and empty files', () => {
+    cy.seedAndVisit('/#/jobs', null);
+    pick('{ nope', 'broken.json');
+    cy.contains('[role="alert"]', 'Could not parse file').should('be.visible');
+    pick('[]', 'empty.json');
+    cy.contains('[role="alert"]', 'No job applications found').should('be.visible');
+    cy.jobStore().its('jobs').should('have.length', 1);
+  });
+});
