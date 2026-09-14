@@ -6,7 +6,7 @@ import { hasRichText } from '@/utils/richText';
 import { getDocumentProps } from './shared/PdfPage';
 import { getPdfPhotoStyle } from './shared/pdfPhoto';
 import { PdfPhoto } from './shared/PdfPhoto';
-import { CSS_PX_TO_PT } from './shared/pdfUnits';
+import { CSS_PX_TO_PT, tracking } from './shared/pdfUnits';
 import { PdfContactIcon } from './shared/PdfContactIcon';
 import { ContactValue } from './shared/PdfContact';
 import { contactItems } from '@/utils/contacts';
@@ -23,7 +23,7 @@ function SideContactRow({ field, label, value, href, iconPt, settings }) {
     <View style={{ marginBottom: 6 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3.5, marginBottom: 1 }}>
         <PdfContactIcon field={field} settings={settings} size={iconPt} color={SIDEBAR_MUTED} />
-        <Text style={{ fontSize: 8, fontWeight: 'bold', color: SIDEBAR_MUTED, letterSpacing: 0.8, lineHeight: 1.2 }}>
+        <Text style={{ fontSize: 8, fontWeight: 'bold', color: SIDEBAR_MUTED, letterSpacing: tracking(8, 0.8), lineHeight: 1.2 }}>
           {label.toUpperCase()}
         </Text>
       </View>

@@ -1,5 +1,6 @@
 import { View, Text, Link } from '@react-pdf/renderer';
 import { safeHref } from '@/utils/richText';
+import { tracking } from './pdfUnits';
 
 /**
  * The Sidebar template's dark column: its section title and the renderers of the sections that
@@ -27,7 +28,7 @@ export function EntryLink({ url, label, style }) {
 export function SideSectionTitle({ title }) {
   return (
     <View style={{ marginBottom: 6 }}>
-      <Text style={{ fontSize: 8.5, fontWeight: 'bold', color: '#94a3b8', letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 2.5, lineHeight: 1.2 }}>
+      <Text style={{ fontSize: 8.5, fontWeight: 'bold', color: '#94a3b8', letterSpacing: tracking(8.5, 1.2), textTransform: 'uppercase', marginBottom: 2.5, lineHeight: 1.2 }}>
         {title.toUpperCase()}
       </Text>
       <View style={{ height: 1, backgroundColor: '#334155' }} />

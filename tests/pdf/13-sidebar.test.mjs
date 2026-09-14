@@ -1,7 +1,11 @@
 // The Sidebar template: links, fields, spacing, colours and styles of its two columns.
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { setup, teardown, resume, section, render, read, allText, itemsWith, drawState } from './harness.mjs';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { spawnSync } from 'node:child_process';
+import { setup, teardown, resume, section, render, read, allText, itemsWith, drawState, loadModule } from './harness.mjs';
 import { contrast, readableOn } from '../../src/templates/pdf/shared/pdfColors.js';
 
 before(setup);
@@ -126,5 +130,71 @@ describe('Sidebar job title colour (FIDB-42)', () => {
     assert.equal((await titleFill({ accentColor: '#fbbf24' })).fill, '#fbbf24');
     assert.equal((await titleFill({ accentColor: '#111111', jobTitleColor: '#bfdbfe' })).fill, '#bfdbfe');
     assert.equal((await titleFill({ accentColor: '#111111', jobTitleColor: '#222222' })).fill, '#222222');
+  });
+});
+
+describe('Sidebar labels extract as whole words (FIDB-68)', () => {
+  // A heading holds whatever the user types: a pangram puts every letter into the heading style.
+  const PANGRAM = 'Jackdaws Love My Big Sphinx Of Quartz';
+  const WORDS = [
+    'CONTACT', 'EMAIL', 'PHONE', 'LOCATION', 'WEBSITE', 'LINKEDIN', 'GITHUB', // contact block
+    'SKILLS', 'EDUCATION', 'LANGUAGES', 'CERTIFICATIONS', 'REFERENCES', ...PANGRAM.toUpperCase().split(' '), // headings
+    'CORE TECHNOLOGY', 'WAVY AVATAR', // skill categories
+  ];
+  const labelled = (settings = {}) => sidebar([
+    section('skills', [{ category: 'Core Technology', skills: 'React, Go' }, { category: 'Wavy Avatar', skills: 'Figma' }], { skillsStyle: 'tags' }),
+    section('education', [{ institution: 'Uni', degree: 'BTech' }]),
+    section('languages', [{ language: 'English', proficiency: 'Native' }]),
+    section('certifications', [{ name: 'AWS' }]),
+    section('interests', [{ interests: 'Chess' }], {}, { title: PANGRAM }),
+    section('references', [{ name: 'Jane' }]),
+  ], { settings, personal: { email: 'me@example.com', phone: '+1 555 0100', location: 'Hyderabad', website: 'example.com', linkedin: 'linkedin.com/in/me', github: 'github.com/me' } });
+  const broken = (text) => WORDS.filter((w) => !new RegExp(`(^|[^A-Z])${w}([^A-Z]|$)`).test(text));
+
+  const POPPLER_MODES = [[], ['-raw'], ['-layout']];
+  const hasPoppler = spawnSync('pdftotext', ['-v']).status === 0;
+  /** The text each pdftotext mode reads (reading order, -raw, -layout); none without Poppler. */
+  function poppler(bytes) {
+    if (!hasPoppler) return [];
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'sidebar-'));
+    try {
+      const file = path.join(dir, 'r.pdf');
+      fs.writeFileSync(file, bytes);
+      return POPPLER_MODES.map((mode) => {
+        const run = spawnSync('pdftotext', [...mode, file, '-'], { encoding: 'utf8' });
+        assert.equal(run.status, 0, run.stderr);
+        return [`pdftotext ${mode.join(' ') || '(reading order)'}`, run.stdout];
+      });
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  }
+  /** "reader: WORD" for every label a reader splits — each reader on its own. */
+  async function splits(bytes) {
+    const readers = [['pdf.js', allText(await read(bytes))], ...poppler(bytes)];
+    return readers.flatMap(([name, text]) => broken(text).map((w) => `${name}: ${w}`));
+  }
+
+  it('pdf.js and every pdftotext mode read each label and heading as one word, at every base size', async (t) => {
+    if (!hasPoppler) t.diagnostic('pdftotext not installed: Poppler not checked');
+    const found = [];
+    for (let fontSizeBase = 8; fontSizeBase <= 16; fontSizeBase += 1) {
+      for (const s of await splits(await render(labelled({ fontSizeBase })))) found.push(`base ${fontSizeBase} pt, ${s}`);
+    }
+    assert.deepEqual(found, []);
+  });
+
+  it('every offered font family keeps them whole, at the smallest and largest base size (fonts from jsDelivr; skipped offline)', async (t) => {
+    const online = await fetch('https://cdn.jsdelivr.net/npm/@fontsource/inter@5/metadata.json', { signal: AbortSignal.timeout(5000) }).then((r) => r.ok, () => false);
+    if (!online) return t.skip('offline');
+    if (!hasPoppler) t.diagnostic('pdftotext not installed: Poppler not checked');
+    const { FONT_MAP } = await loadModule('/src/templates/pdf/shared/pdfFontLoader.js');
+    const found = [];
+    for (const font of Object.keys(FONT_MAP)) {
+      for (const fontSizeBase of [8, 16]) {
+        for (const s of await splits(await render(labelled({ font, fontSizeBase })))) found.push(`${font} ${fontSizeBase} pt, ${s}`);
+      }
+    }
+    assert.deepEqual(found, []);
   });
 });

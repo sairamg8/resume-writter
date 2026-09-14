@@ -37,3 +37,15 @@ export const DEFAULT_ITEM_GAP_PX = 12;
  * scale Design → "Between Items" (see getEffectiveSpacing).
  */
 export const SECTION_SPACING_PX = { compact: 4, normal: 8, relaxed: 14 };
+
+/**
+ * The largest letter-spacing, as a fraction of the font size, that text extraction still reads
+ * as one word. pdf.js and Poppler's pdftotext — and the ATS parsers built on them — take a gap
+ * of about 0.09 em between two letters for a word break, so wider tracking exported the Sidebar
+ * labels as "C O N TA C T" and "EM AI L" (FIDB-68). 0.06 em leaves a margin for kerning in every
+ * offered font; a 12 pt section heading keeps its 0.7 pt.
+ */
+export const MAX_TRACKING_EM = 0.06;
+
+/** Letter-spacing in pt: the design's `pt`, capped at MAX_TRACKING_EM of `fontSize`. */
+export const tracking = (fontSize, pt) => Math.min(pt, fontSize * MAX_TRACKING_EM);

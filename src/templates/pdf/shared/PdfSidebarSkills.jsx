@@ -1,6 +1,7 @@
 import { View, Text } from '@react-pdf/renderer';
 import { hexAlpha } from './PdfSections';
 import { SideSectionTitle } from './PdfSidebarColumn';
+import { tracking } from './pdfUnits';
 
 export function SideSkills({ section, sectionGap, itemGap, accent }) {
   const s     = section.settings || {};
@@ -20,7 +21,7 @@ export function SideSkills({ section, sectionGap, itemGap, accent }) {
             return (
               <View key={i}>
                 {item.category && !iH.includes('category') && (
-                  <Text style={{ fontSize: 8.5, fontWeight: 'bold', color: '#64748b', letterSpacing: 0.5, marginBottom: 2, lineHeight: 1.2 }}>
+                  <Text style={{ fontSize: 8.5, fontWeight: 'bold', color: '#64748b', letterSpacing: tracking(8.5, 0.5), marginBottom: 2, lineHeight: 1.2 }}>
                     {item.category.toUpperCase()}
                   </Text>
                 )}
@@ -51,7 +52,7 @@ export function SideSkills({ section, sectionGap, itemGap, accent }) {
             return (
               <View key={i}>
                 {item.category && !iH.includes('category') && (
-                  <Text style={{ fontSize: 8.5, fontWeight: 'bold', color: '#64748b', letterSpacing: 0.5, marginBottom: 2, lineHeight: 1.2 }}>
+                  <Text style={{ fontSize: 8.5, fontWeight: 'bold', color: '#64748b', letterSpacing: tracking(8.5, 0.5), marginBottom: 2, lineHeight: 1.2 }}>
                     {item.category.toUpperCase()}
                   </Text>
                 )}
