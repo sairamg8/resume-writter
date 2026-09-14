@@ -118,9 +118,14 @@ export function MinimalTemplatePDF({ data }) {
             isLast: index === list.length - 1,
           });
           return (
-            <View key={section.id} style={spaceBefore != null ? { marginTop: spaceBefore } : undefined} wrap>
-              <SectionRouter section={section} settings={settings} marginBottom={marginBottom} itemGap={itemGap} />
-            </View>
+            <SectionRouter
+              key={section.id}
+              section={section}
+              settings={settings}
+              spaceBefore={spaceBefore}
+              marginBottom={marginBottom}
+              itemGap={itemGap}
+            />
           );
         })}
       </Page>

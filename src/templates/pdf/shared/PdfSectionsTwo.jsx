@@ -2,6 +2,7 @@ import { View, Text } from '@react-pdf/renderer';
 import { PdfRichText } from './PdfRichText';
 import { hasRichText } from '@/utils/richText';
 import {
+  SPACER,
   SectionTitleOf,
   RenderColGrid,
   ItemHeader,
@@ -10,7 +11,7 @@ import {
   getDateColor,
 } from './PdfSections';
 
-export function CertificationsSection({ section, settings, marginBottom, itemGap, italicSubs, centered }) {
+export function CertificationsSection({ section, settings, marginBottom, spaceBefore, itemGap, italicSubs, centered }) {
   const s        = section.settings || {};
   const showDates = s.showDates !== false;
   const entrySize  = (settings?.fontSizeBase || 11) + (settings?.fontSizeEntryDelta ?? 0);
@@ -23,7 +24,8 @@ export function CertificationsSection({ section, settings, marginBottom, itemGap
   const dateColor  = getDateColor(settings);
 
   return (
-    <View style={{ marginBottom }}>
+    <View style={{ marginBottom, marginTop: spaceBefore }}>
+      {SPACER}
       <SectionTitleOf section={section} settings={settings} centered={centered} />
       <RenderColGrid
         items={visibleItems}
@@ -59,7 +61,7 @@ export function CertificationsSection({ section, settings, marginBottom, itemGap
   );
 }
 
-export function ProjectsSection({ section, settings, marginBottom, itemGap, centered }) {
+export function ProjectsSection({ section, settings, marginBottom, spaceBefore, itemGap, centered }) {
   const s        = section.settings || {};
   const showDates = s.showDates !== false;
   const entrySize  = (settings?.fontSizeBase || 11) + (settings?.fontSizeEntryDelta ?? 0);
@@ -75,7 +77,8 @@ export function ProjectsSection({ section, settings, marginBottom, itemGap, cent
   const dateColor  = getDateColor(settings);
 
   return (
-    <View style={{ marginBottom }}>
+    <View style={{ marginBottom, marginTop: spaceBefore }}>
+      {SPACER}
       <SectionTitleOf section={section} settings={settings} centered={centered} />
       <RenderColGrid
         items={visibleItems}
@@ -107,7 +110,7 @@ export function ProjectsSection({ section, settings, marginBottom, itemGap, cent
   );
 }
 
-export function LanguagesSection({ section, settings, marginBottom, itemGap, centered }) {
+export function LanguagesSection({ section, settings, marginBottom, spaceBefore, itemGap, centered }) {
   const s        = section.settings || {};
   const cols     = s.columns || 2;
   const baseSize = settings?.fontSizeBase || 11;
@@ -115,7 +118,8 @@ export function LanguagesSection({ section, settings, marginBottom, itemGap, cen
   const visibleItems = (section.items || []).filter(i => i.visible !== false);
 
   return (
-    <View style={{ marginBottom }}>
+    <View style={{ marginBottom, marginTop: spaceBefore }}>
+      {SPACER}
       <SectionTitleOf section={section} settings={settings} centered={centered} />
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: itemGap }}>
         {visibleItems.map((item, i) => (
@@ -129,7 +133,7 @@ export function LanguagesSection({ section, settings, marginBottom, itemGap, cen
   );
 }
 
-export function AwardsSection({ section, settings, marginBottom, itemGap, italicSubs, centered }) {
+export function AwardsSection({ section, settings, marginBottom, spaceBefore, itemGap, italicSubs, centered }) {
   const s        = section.settings || {};
   const showDates = s.showDates !== false;
   const entrySize  = (settings?.fontSizeBase || 11) + (settings?.fontSizeEntryDelta ?? 0);
@@ -144,7 +148,8 @@ export function AwardsSection({ section, settings, marginBottom, itemGap, italic
   const dateColor  = getDateColor(settings);
 
   return (
-    <View style={{ marginBottom }}>
+    <View style={{ marginBottom, marginTop: spaceBefore }}>
+      {SPACER}
       <SectionTitleOf section={section} settings={settings} centered={centered} />
       <RenderColGrid
         items={visibleItems}
@@ -167,7 +172,7 @@ export function AwardsSection({ section, settings, marginBottom, itemGap, italic
   );
 }
 
-export function VolunteeringSection({ section, settings, marginBottom, itemGap, italicSubs, centered }) {
+export function VolunteeringSection({ section, settings, marginBottom, spaceBefore, itemGap, italicSubs, centered }) {
   const s        = section.settings || {};
   const showDates = s.showDates    !== false;
   const showLoc   = s.showLocation !== false;
@@ -180,7 +185,8 @@ export function VolunteeringSection({ section, settings, marginBottom, itemGap, 
   const isModern   = settings?._template === 'modern';
 
   return (
-    <View style={{ marginBottom }}>
+    <View style={{ marginBottom, marginTop: spaceBefore }}>
+      {SPACER}
       <SectionTitleOf section={section} settings={settings} centered={centered} />
       <RenderColGrid
         items={visibleItems}

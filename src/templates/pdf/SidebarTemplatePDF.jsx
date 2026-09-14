@@ -187,14 +187,14 @@ export function SidebarTemplatePDF({ data }) {
               isLast: index === mainSections.length - 1,
             });
             return (
-              <View key={section.id} style={spaceBefore != null ? { marginTop: spaceBefore } : undefined} wrap>
-                <SidebarMainSectionRouter
-                  section={section}
-                  settings={settings}
-                  marginBottom={marginBottom}
-                  itemGap={ig}
-                />
-              </View>
+              <SidebarMainSectionRouter
+                key={section.id}
+                section={section}
+                settings={settings}
+                spaceBefore={spaceBefore}
+                marginBottom={marginBottom}
+                itemGap={ig}
+              />
             );
           })}
         </View>

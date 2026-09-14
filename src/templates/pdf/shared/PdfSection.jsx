@@ -11,6 +11,7 @@ export function PdfSectionTitle({
   centered = false,
   template = '',
   lineHeightValue = 1.5,
+  presence = 50,
 }) {
   const label = sectionTitleCase === 'upper' ? title.toUpperCase() : title;
   const bc = borderColor || accent;
@@ -47,9 +48,9 @@ export function PdfSectionTitle({
     : template === 'minimal' ? (bc + '12')
     : (bc + '14'); // executive, classic, sidebar
 
-  // wrap={false} + minPresenceAhead: keep section title with following content (avoid
-  // orphan headings at the bottom of a page that force an extra PDF page vs canvas).
-  const keepWithNext = { wrap: false, minPresenceAhead: 28 };
+  // Never leave a heading alone at the bottom of a page: it moves unless `presence` points of
+  // the section fit below it. (Works because SPACER gives the title a previous sibling.)
+  const keepWithNext = { wrap: false, minPresenceAhead: presence };
 
   if (headingStyle === 'ruled') {
     return (

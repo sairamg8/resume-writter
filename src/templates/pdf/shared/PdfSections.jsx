@@ -23,6 +23,16 @@ import {
   CustomSection,
 } from './PdfSectionsThree';
 
+/**
+ * A zero-height first child. react-pdf keeps a whole View on the current page when a page
+ * break would move all of its children and it is the first child of its parent ("the page is
+ * empty") — which, inside nested Views, squeezed an entry that did not fit into the last few
+ * points of the page, overprinting its lines below the margin. With this first child a View
+ * always has something on the current page, so its real content moves to the next page intact.
+ * It also gives the first real child a previous sibling, which minPresenceAhead needs.
+ */
+export const SPACER = <View style={{ height: 0 }} />;
+
 // Helper to determine the item width in grid layout based on column setting
 export function getColumnWidth(cols) {
   if (cols === 2) return '48%';
@@ -39,45 +49,47 @@ export function hexAlpha(hex, opacity) {
   return `#${clean}${alphaHex}`;
 }
 
-export function RenderBullets({ bullets, style, accent, isModern, template }) {
-  if (!bullets || !bullets.length) return null;
-  const isMinimal = template === 'minimal';
-  const bulletColor = isModern ? accent : '#6b7280';
-  const bulletChar = isMinimal ? '–' : '•';
-  return (
-    <View style={{ marginTop: 2, gap: 1.5 }}>
-      {bullets.map((b, i) => b ? (
-        <View key={i} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 4 }}>
-          <Text style={{ ...style, width: 8, color: bulletColor }}>{bulletChar}</Text>
-          <Text style={{ ...style, flex: 1, color: style.color || '#333333' }}>{b}</Text>
-        </View>
-      ) : null)}
-    </View>
-  );
+/** Legacy / imported `bullets[]` strings, printed like a rich-text list. */
+export function RenderBullets({ bullets, style }) {
+  const list = (bullets || []).filter((b) => b && String(b).trim());
+  if (!list.length) return null;
+  const esc = (t) => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  return <PdfRichText html={`<ul>${list.map((b) => `<li>${esc(b)}</li>`).join('')}</ul>`} style={{ ...style, marginTop: 2 }} />;
 }
 
-// Reusable column-wrapping container for multi-column layouts in React-PDF
-export function RenderColGrid({ items, cols, gap, renderItem }) {
-  if (cols > 1) {
+/** An entry's content in a breakable View led by SPACER; a rendered <View> is unwrapped into it. */
+function entry(el, style, key) {
+  if (el && el.type === View) {
+    const own = el.props.style;
     return (
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: gap }}>
-        {items.map((item, i) => (
-          <View key={i} style={{ width: getColumnWidth(cols) }} wrap={false}>
-            {renderItem(item, i)}
-          </View>
-        ))}
+      <View key={key} {...el.props} style={[...(Array.isArray(own) ? own : [own]), style].filter(Boolean)}>
+        {SPACER}
+        {el.props.children}
       </View>
     );
   }
-  return (
-    <View style={{ gap }}>
-      {items.map((item, i) => (
-        <View key={i}>
-          {renderItem(item, i)}
-        </View>
-      ))}
-    </View>
-  );
+  return <View key={key} style={style}>{SPACER}{el}</View>;
+}
+
+/**
+ * Entries of a section, one per row or `cols` per row. Returned as siblings of the section
+ * title (no wrapper View), so every entry, and every row of a grid, can move or split on its
+ * own at a page break. Grid rows split cell by cell: a cell taller than a page continues on
+ * the next page instead of being cut off.
+ */
+export function RenderColGrid({ items, cols, gap, renderItem }) {
+  if (cols > 1) {
+    const rows = [];
+    for (let i = 0; i < items.length; i += cols) rows.push(items.slice(i, i + cols));
+    const width = getColumnWidth(cols);
+    return rows.map((row, r) => (
+      <View key={r} style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: r ? gap : 0 }}>
+        {row.map((item, c) => entry(renderItem(item, r * cols + c), { width }, c))}
+        {Array.from({ length: cols - row.length }, (_, f) => <View key={`fill${f}`} style={{ width }} />)}
+      </View>
+    ));
+  }
+  return items.map((item, i) => entry(renderItem(item, i), i ? { marginTop: gap } : null, i));
 }
 
 export function getDateColor(settings) {
@@ -106,6 +118,8 @@ export function ItemHeader({ primary, sub, loc, dateStr, settings, titleStyle = 
   const subStyle   = { fontSize: baseSize, color: subColor, fontStyle: italicSub ? 'italic' : 'normal', textAlign: centered ? 'center' : 'left' };
   const locStyle   = { fontSize: baseSize, color: '#9ca3af', fontStyle: italicSub ? 'italic' : 'normal', textAlign: centered ? 'center' : 'left' };
   const dateColor  = getDateColor(settings);
+  // Keep the header with at least two lines of what follows it (react-pdf moves it otherwise).
+  const keep = { wrap: false, minPresenceAhead: Math.round(baseSize * (settings?.lineHeightValue ?? 1.5) * 2) };
   // Sub and loc must share ONE parent Text when they belong on the same line: sibling
   // <Text> elements inside a (column-flex, by default) View each become their own line
   // in react-pdf, unlike HTML where sibling <span>s flow inline. Only the row-flex
@@ -115,12 +129,11 @@ export function ItemHeader({ primary, sub, loc, dateStr, settings, titleStyle = 
     : null;
   const locText    = loc ? <Text style={locStyle}>{sub ? ' · ' : ''}{loc}</Text> : null;
 
-  // wrap={false}: never orphan primary/sub/date across a page break (was producing a
-  // nearly-empty last PDF page while canvas stayed at N−1 pages).
+  // Unbreakable, and kept with what follows (`keep`): primary/sub/date never split or orphan.
   if (centered) {
     if (titleStyle === 'sidebyside' || titleStyle === 'inline') {
       return (
-        <View wrap={false} style={{ alignItems: 'center', marginBottom: 2 }}>
+        <View {...keep} style={{ alignItems: 'center', marginBottom: 2 }}>
           <Text style={{ fontSize: entrySize, color: textColor, textAlign: 'center' }}>
             <Text style={{ fontWeight: 'bold' }}>{primary}</Text>
             {sub ? <Text style={subStyle}>{italicSub ? `, ` : ' — '}{sub}</Text> : null}
@@ -131,7 +144,7 @@ export function ItemHeader({ primary, sub, loc, dateStr, settings, titleStyle = 
       );
     }
     return (
-      <View wrap={false} style={{ alignItems: 'center', marginBottom: 2 }}>
+      <View {...keep} style={{ alignItems: 'center', marginBottom: 2 }}>
         <Text style={{ fontSize: entrySize, fontWeight: 'bold', color: textColor, textAlign: 'center' }}>{primary}</Text>
         {subLocLine}
         {dateStr ? <Text style={{ fontSize: baseSize, color: dateColor, marginTop: 1, textAlign: 'center' }}>{dateStr}</Text> : null}
@@ -141,7 +154,7 @@ export function ItemHeader({ primary, sub, loc, dateStr, settings, titleStyle = 
 
   if (titleStyle === 'sidebyside') {
     return (
-      <View wrap={false} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', gap: 8 }}>
+      <View {...keep} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', gap: 8 }}>
         <View style={{ flex: 1, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'baseline', gap: 6 }}>
           <Text style={{ fontSize: entrySize, fontWeight: 'bold', color: textColor }}>{primary}</Text>
           {sub ? <Text style={subStyle}>{sub}</Text> : null}
@@ -154,7 +167,7 @@ export function ItemHeader({ primary, sub, loc, dateStr, settings, titleStyle = 
 
   if (titleStyle === 'inline') {
     return (
-      <View wrap={false} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+      <View {...keep} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <View style={{ flex: 1 }}>
           <Text style={{ fontSize: entrySize, color: textColor }}>
             <Text style={{ fontWeight: 'bold' }}>{primary}</Text>
@@ -168,7 +181,7 @@ export function ItemHeader({ primary, sub, loc, dateStr, settings, titleStyle = 
   }
 
   return (
-    <View wrap={false} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+    <View {...keep} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
       <View style={{ flex: 1 }}>
         <Text style={{ fontSize: entrySize, fontWeight: 'bold', color: textColor }}>{primary}</Text>
         {subLocLine}
@@ -192,17 +205,18 @@ export function SectionTitleOf({ section, settings, centered }) {
       centered={centered}
       template={settings?._template}
       lineHeightValue={settings?.lineHeightValue ?? 1.5}
+      presence={Math.round((settings?.fontSizeBase || 11) * (settings?.lineHeightValue ?? 1.5) * 3)}
     />
   );
 }
 
 // Main router — dispatches section type to the correct renderer.
-export function SectionRouter({ section, settings, marginBottom, itemGap, italicSubs = false }) {
+export function SectionRouter({ section, settings, marginBottom, spaceBefore, itemGap, italicSubs = false }) {
   if (section.visible === false) return null;
   const mbVal = marginBottom ?? (settings?.sectionGap ?? 12);
   const igVal = itemGap     ?? (settings?.itemGap     ?? 9);
   const centered = section.settings?.alignment === 'center';
-  const props = { section, settings, marginBottom: mbVal, itemGap: igVal, italicSubs, centered };
+  const props = { section, settings, marginBottom: mbVal, spaceBefore, itemGap: igVal, italicSubs, centered };
 
   switch (section.type) {
     case 'experience':     return <ExperienceSection     {...props} />;

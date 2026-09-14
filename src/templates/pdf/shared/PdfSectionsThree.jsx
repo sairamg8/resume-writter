@@ -2,6 +2,7 @@ import { View, Text } from '@react-pdf/renderer';
 import { PdfRichText } from './PdfRichText';
 import { hasRichText } from '@/utils/richText';
 import {
+  SPACER,
   SectionTitleOf,
   RenderColGrid,
   ItemHeader,
@@ -9,7 +10,7 @@ import {
   getColumnWidth,
 } from './PdfSections';
 
-export function ReferencesSection({ section, settings, marginBottom, itemGap, centered }) {
+export function ReferencesSection({ section, settings, marginBottom, spaceBefore, itemGap, centered }) {
   const s = section.settings || {};
   const cols = s.columns || 2;
   const baseSize  = settings?.fontSizeBase || 11;
@@ -19,7 +20,8 @@ export function ReferencesSection({ section, settings, marginBottom, itemGap, ce
   const alignStyle = centered ? { textAlign: 'center' } : {};
 
   return (
-    <View style={{ marginBottom }}>
+    <View style={{ marginBottom, marginTop: spaceBefore }}>
+      {SPACER}
       <SectionTitleOf section={section} settings={settings} centered={centered} />
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: itemGap }}>
         {visibleItems.map((item, i) => (
@@ -37,7 +39,7 @@ export function ReferencesSection({ section, settings, marginBottom, itemGap, ce
   );
 }
 
-export function InterestsSection({ section, settings, marginBottom, itemGap, centered }) {
+export function InterestsSection({ section, settings, marginBottom, spaceBefore, itemGap, centered }) {
   const baseSize = settings?.fontSizeBase || 11;
   const accent   = settings?.accentColor || '#2563eb';
   const visibleItems = (section.items || []).filter(i => i.visible !== false);
@@ -46,7 +48,8 @@ export function InterestsSection({ section, settings, marginBottom, itemGap, cen
   );
 
   return (
-    <View style={{ marginBottom }}>
+    <View style={{ marginBottom, marginTop: spaceBefore }}>
+      {SPACER}
       <SectionTitleOf section={section} settings={settings} centered={centered} />
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: itemGap, justifyContent: centered ? 'center' : 'flex-start' }}>
         {allInterests.map((interest, i) => (
@@ -59,7 +62,7 @@ export function InterestsSection({ section, settings, marginBottom, itemGap, cen
   );
 }
 
-export function CustomSection({ section, settings, marginBottom, itemGap, italicSubs, centered }) {
+export function CustomSection({ section, settings, marginBottom, spaceBefore, itemGap, italicSubs, centered }) {
   const s        = section.settings || {};
   const titleStyle = s.titleStyle || 'stacked';
   const entrySize  = (settings?.fontSizeBase || 11) + (settings?.fontSizeEntryDelta ?? 0);
@@ -70,7 +73,8 @@ export function CustomSection({ section, settings, marginBottom, itemGap, italic
   const isModern   = settings?._template === 'modern';
 
   return (
-    <View style={{ marginBottom }}>
+    <View style={{ marginBottom, marginTop: spaceBefore }}>
+      {SPACER}
       <SectionTitleOf section={section} settings={settings} centered={centered} />
       <RenderColGrid
         items={visibleItems}

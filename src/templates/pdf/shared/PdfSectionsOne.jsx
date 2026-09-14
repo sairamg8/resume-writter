@@ -2,13 +2,14 @@ import { View, Text } from '@react-pdf/renderer';
 import { PdfRichText } from './PdfRichText';
 import { hasRichText } from '@/utils/richText';
 import {
+  SPACER,
   SectionTitleOf,
   RenderColGrid,
   ItemHeader,
   RenderBullets,
 } from './PdfSections';
 
-export function ExperienceSection({ section, settings, marginBottom, itemGap, italicSubs, centered }) {
+export function ExperienceSection({ section, settings, marginBottom, spaceBefore, itemGap, italicSubs, centered }) {
   const s = section.settings || {};
   const titleOrder = s.titleOrder || 'company';
   const showDates  = s.showDates  !== false;
@@ -22,7 +23,8 @@ export function ExperienceSection({ section, settings, marginBottom, itemGap, it
   const isModern   = settings?._template === 'modern';
 
   return (
-    <View style={{ marginBottom }}>
+    <View style={{ marginBottom, marginTop: spaceBefore }}>
+      {SPACER}
       <SectionTitleOf section={section} settings={settings} centered={centered} />
       <RenderColGrid
         items={visibleItems}
@@ -63,7 +65,7 @@ export function ExperienceSection({ section, settings, marginBottom, itemGap, it
   );
 }
 
-export function SkillsSection({ section, settings, marginBottom, itemGap, centered }) {
+export function SkillsSection({ section, settings, marginBottom, spaceBefore, itemGap, centered }) {
   const s        = section.settings || {};
   const style    = s.skillsStyle || 'inline';
   const sep      = s.separator === 'dash' ? ' – ' : ': ';
@@ -78,7 +80,8 @@ export function SkillsSection({ section, settings, marginBottom, itemGap, center
   const isMinimal  = settings?._template === 'minimal';
 
   return (
-    <View style={{ marginBottom }}>
+    <View style={{ marginBottom, marginTop: spaceBefore }}>
+      {SPACER}
       <SectionTitleOf section={section} settings={settings} centered={centered} />
       {style === 'bars' ? (
         <RenderColGrid
@@ -200,7 +203,7 @@ export function SkillsSection({ section, settings, marginBottom, itemGap, center
   );
 }
 
-export function EducationSection({ section, settings, marginBottom, itemGap, italicSubs, centered }) {
+export function EducationSection({ section, settings, marginBottom, spaceBefore, itemGap, italicSubs, centered }) {
   const s        = section.settings || {};
   const showDates = s.showDates    !== false;
   const showLoc   = s.showLocation !== false;
@@ -213,7 +216,8 @@ export function EducationSection({ section, settings, marginBottom, itemGap, ita
   const isModern   = settings?._template === 'modern';
 
   return (
-    <View style={{ marginBottom }}>
+    <View style={{ marginBottom, marginTop: spaceBefore }}>
+      {SPACER}
       <SectionTitleOf section={section} settings={settings} centered={centered} />
       <RenderColGrid
         items={visibleItems}
