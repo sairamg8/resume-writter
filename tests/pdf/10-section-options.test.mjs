@@ -113,6 +113,25 @@ describe('experience Order (FIDA-58 / FIDB-72)', () => {
   });
 });
 
+describe('entry Title layout', () => {
+  // Stacked puts the second field under the first; Inline and Side by side keep them on one line.
+  async function lineOf(template, type, titleStyle) {
+    const items = type === 'experience' ? [{ company: 'Acme Corp', role: 'Staff Engineer', location: 'Pune' }] : [{ org: 'Acme Corp', role: 'Staff Engineer', location: 'Pune' }];
+    const pages = await read(await render(resume({ template, sections: [section(type, items, { titleStyle })] })));
+    return Math.abs(first(pages, 'Acme Corp').y - first(pages, 'Staff Engineer').y) < 1 ? 'one line' : 'two lines';
+  }
+
+  for (const template of TEMPLATES) {
+    it(`${template}: experience and volunteering print each Title option (Stacked, Inline, Side by side)`, async () => {
+      for (const type of ['experience', 'volunteering']) {
+        assert.equal(await lineOf(template, type, 'stacked'), 'two lines', `${type} Stacked`);
+        assert.equal(await lineOf(template, type, 'inline'), 'one line', `${type} Inline`);
+        assert.equal(await lineOf(template, type, 'sidebyside'), 'one line', `${type} Side by side`);
+      }
+    });
+  }
+});
+
 describe('item spacing (FIDA-53)', () => {
   // Distance between two entries' matching lines: the entry's height plus the item gap.
   const pitch = async (template, itemGap, sectionSettings = {}) => {

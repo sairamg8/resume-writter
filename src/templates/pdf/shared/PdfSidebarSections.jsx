@@ -1,7 +1,7 @@
 import { View, Text } from '@react-pdf/renderer';
 import { PdfRichText } from './PdfRichText';
 import { hasRichText } from '@/utils/richText';
-import { SectionTitleOf, RenderBullets, RenderColGrid, hexAlpha, SectionRouter, SPACER } from './PdfSections';
+import { SectionTitleOf, RenderBullets, RenderColGrid, hexAlpha, SectionRouter, SPACER, ItemHeader } from './PdfSections';
 import {
   SIDEBAR_TYPES, SideSectionTitle, EntryLink, SideEducation, SideLanguages, SideCertifications, SideInterests, SideReferences,
 } from './PdfSidebarColumn';
@@ -38,6 +38,7 @@ function CardItem({ children }) {
 export function SidebarMainExperience({ section, settings, marginBottom, spaceBefore, itemGap }) {
   const s = section.settings || {};
   const titleOrder = s.titleOrder || 'role';
+  const titleStyle = s.titleStyle || 'stacked';
   const showDates  = s.showDates  !== false;
   const showLoc    = s.showLocation !== false;
   const entrySize  = (settings?.fontSizeBase || 11) + (settings?.fontSizeEntryDelta ?? 0);
@@ -68,13 +69,18 @@ export function SidebarMainExperience({ section, settings, marginBottom, spaceBe
           const desc = iH.includes('description') ? '' : item.description;
           return (
             <CardItem key={idx}>
-              <View wrap={false} minPresenceAhead={Math.round(entrySize * lineH * 2)} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <View style={{ flex: 1 }}>
-                  {primary ? <Text style={{ fontSize: entrySize, fontWeight: 'bold', color: textColor, lineHeight: 1.2 }}>{primary}</Text> : null}
-                  {subLine ? <Text style={{ fontSize: entrySize - 1, color: hexAlpha(accent, 0.8), lineHeight: 1.2 }}>{subLine}</Text> : null}
+              {titleStyle === 'stacked' ? (
+                <View wrap={false} minPresenceAhead={Math.round(entrySize * lineH * 2)} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <View style={{ flex: 1 }}>
+                    {primary ? <Text style={{ fontSize: entrySize, fontWeight: 'bold', color: textColor, lineHeight: 1.2 }}>{primary}</Text> : null}
+                    {subLine ? <Text style={{ fontSize: entrySize - 1, color: hexAlpha(accent, 0.8), lineHeight: 1.2 }}>{subLine}</Text> : null}
+                  </View>
+                  {dateStr ? <Text style={{ fontSize: entrySize - 1.5, color: '#9ca3af', flexShrink: 0, marginLeft: 6 }}>{dateStr}</Text> : null}
                 </View>
-                {dateStr ? <Text style={{ fontSize: entrySize - 1.5, color: '#9ca3af', flexShrink: 0, marginLeft: 6 }}>{dateStr}</Text> : null}
-              </View>
+              ) : (
+                // Title "Inline" / "Side by side": the shared one-line header, as the other templates print it.
+                <ItemHeader primary={primary} sub={secondary || undefined} loc={loc || undefined} dateStr={dateStr} settings={settings} titleStyle={titleStyle} />
+              )}
               {hasRichText(desc) ? (
                 <PdfRichText html={desc} style={{ fontSize: entrySize - 0.5, color: '#333333', lineHeight: lineH, marginTop: 2 }} />
               ) : null}
