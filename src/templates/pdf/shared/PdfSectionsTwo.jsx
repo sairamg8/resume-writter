@@ -1,6 +1,6 @@
 import { View, Text } from '@react-pdf/renderer';
 import { PdfRichText } from './PdfRichText';
-import { Value } from './PdfContact';
+import { ContactValue } from './PdfContact';
 import { pxToPt } from './pdfUnits';
 import { hasRichText, safeHref } from '@/utils/richText';
 import {
@@ -42,7 +42,7 @@ export function CertificationsSection({ section, settings, marginBottom, spaceBe
               <Text style={{ fontWeight: 'bold' }}>{item.name || item.title}</Text>
               {item.issuer ? <Text style={{ color: shade.sub, fontStyle: italicSubs ? 'italic' : 'normal' }}>{' — '}{item.issuer}</Text> : null}
               {item.credentialId ? <Text style={{ color: shade.muted }}>{` · ID: ${item.credentialId}`}</Text> : null}
-              {item.url ? <Text style={{ color: accent }}>{' · '}<Value item={{ value: item.urlLabel || item.url, href: safeHref(item.url) }} style={{ color: accent }} /></Text> : null}
+              {item.url ? <Text style={{ color: accent }}>{' · '}<ContactValue value={item.urlLabel || item.url} href={safeHref(item.url)} style={{ color: accent }} /></Text> : null}
             </Text>
           );
           if (centered) {
@@ -99,7 +99,7 @@ export function ProjectsSection({ section, settings, marginBottom, spaceBefore, 
                 <Text style={{ fontSize: entrySize, fontWeight: 'bold', color: textColor, textAlign }}>
                   {item.name}
                   {item.technologies ? <Text style={{ fontSize: baseSize, color: shade.meta, fontWeight: 'normal' }}>{` · ${item.technologies}`}</Text> : null}
-                  {item.url          ? <Text style={{ fontSize: baseSize, color: accent,    fontWeight: 'normal' }}>{' · '}<Value item={{ value: item.url, href: safeHref(item.url) }} style={{ color: accent }} /></Text> : null}
+                  {item.url          ? <Text style={{ fontSize: baseSize, color: accent,    fontWeight: 'normal' }}>{' · '}<ContactValue value={item.url} href={safeHref(item.url)} style={{ color: accent }} /></Text> : null}
                 </Text>
                 {dateStr ? <Text style={{ fontSize: baseSize, color: dateColor, marginTop: 1, textAlign }}>{dateStr}</Text> : null}
               </View>

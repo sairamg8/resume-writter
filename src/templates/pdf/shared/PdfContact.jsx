@@ -9,10 +9,13 @@ const NBSP = '\u00a0';
 /** A contact value never breaks across lines ("+1 555 0100", "New York, NY"). */
 const keepTogether = (s) => String(s).replace(/ /g, NBSP);
 
-/** The value as printed: a link (same colour, no underline) when it has a target. */
-export function Value({ item, style }) {
-  if (!item.href) return <Text style={style}>{item.value}</Text>;
-  return <Link src={item.href} style={{ ...style, textDecoration: 'none' }}>{item.value}</Link>;
+/**
+ * A contact value as printed: a link (same colour, no underline) when it has a target. Every
+ * template's contacts go through here, with `value` and `href` from contactItems().
+ */
+export function ContactValue({ value, href, style }) {
+  if (!href) return <Text style={style}>{value}</Text>;
+  return <Link src={href} style={{ ...style, textDecoration: 'none' }}>{value}</Link>;
 }
 
 /**
@@ -37,7 +40,7 @@ export function PdfContactRow({ personal, settings, color, hidden }) {
       <View key={item.key} style={{ flexDirection: 'row', alignItems: 'center', gap: 2, maxWidth: '100%' }}>
         {contactStyle === 'icon' && <PdfContactIcon field={item.key} settings={settings} size={iconPt} color={c} />}
         {contactStyle === 'bullet' && <Text style={{ fontSize: textSize, color: '#bbbbbb' }}>•</Text>}
-        <Value item={item} style={{ ...text, flexShrink: 1 }} />
+        <ContactValue value={item.value} href={item.href} style={{ ...text, flexShrink: 1 }} />
       </View>
     );
   }
@@ -77,7 +80,7 @@ export function PdfContactRow({ personal, settings, color, hidden }) {
     <Text {...NO_HYPHEN_BREAKS} style={{ ...text, marginTop: 3, textAlign: centered ? 'center' : 'left' }}>
       {items.map((item, i) => (
         <Text key={item.key}>
-          <Value item={{ ...item, value: keepTogether(item.value) }} style={text} />
+          <ContactValue value={keepTogether(item.value)} href={item.href} style={text} />
           {i < items.length - 1 && <Text style={{ color: sepColor }}>{`${NBSP}${NBSP}${sep} `}</Text>}
         </Text>
       ))}
@@ -96,7 +99,7 @@ export function PdfSidebarContact({ personal, settings, iconPt = 8 }) {
       {items.map((item) => (
         <View key={item.key} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
           <PdfContactIcon field={item.key} settings={settings} size={iconPt} color={muted} />
-          <Value item={item} style={{ fontSize: textSize, color: value, flex: 1 }} />
+          <ContactValue value={item.value} href={item.href} style={{ fontSize: textSize, color: value, flex: 1 }} />
         </View>
       ))}
     </View>

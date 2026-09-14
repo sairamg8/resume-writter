@@ -8,13 +8,17 @@ import { getPdfPhotoStyle } from './shared/pdfPhoto';
 import { PdfPhoto } from './shared/PdfPhoto';
 import { CSS_PX_TO_PT } from './shared/pdfUnits';
 import { PdfContactIcon } from './shared/PdfContactIcon';
+import { ContactValue } from './shared/PdfContact';
+import { contactItems } from '@/utils/contacts';
 import { SIDEBAR_TYPES, SideSectionTitle, renderSideSection, SidebarMainSectionRouter } from './shared/PdfSidebarSections';
 
 // Match canvas SideContact: icons + labels share muted slate (#94a3b8), not accent.
 const SIDEBAR_MUTED = '#94a3b8';
 const SIDEBAR_CONTACT_VALUE = '#cbd5e1';
 
-function SideContactRow({ field, label, display, iconPt, settings }) {
+const CONTACT_LABELS = { email: 'Email', phone: 'Phone', location: 'Location', website: 'Website', linkedin: 'LinkedIn', github: 'GitHub' };
+
+function SideContactRow({ field, label, value, href, iconPt, settings }) {
   return (
     <View style={{ marginBottom: 6 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3.5, marginBottom: 1 }}>
@@ -23,7 +27,7 @@ function SideContactRow({ field, label, display, iconPt, settings }) {
           {label.toUpperCase()}
         </Text>
       </View>
-      <Text style={{ fontSize: 9, color: SIDEBAR_CONTACT_VALUE, paddingLeft: iconPt + 3.5, lineHeight: 1.2 }}>{display}</Text>
+      <ContactValue value={value} href={href} style={{ fontSize: 9, color: SIDEBAR_CONTACT_VALUE, paddingLeft: iconPt + 3.5, lineHeight: 1.2 }} />
     </View>
   );
 }
@@ -64,14 +68,7 @@ export function SidebarTemplatePDF({ data }) {
     marginBottom: 10,
   };
 
-  const contactItems = [
-    { key: 'email',    label: 'Email',    val: personal?.email,    display: personal?.email },
-    { key: 'phone',    label: 'Phone',    val: personal?.phone,    display: personal?.phone },
-    { key: 'location', label: 'Location', val: personal?.location, display: personal?.location },
-    { key: 'website',  label: 'Website',  val: personal?.website,  display: personal?.websiteLabel || personal?.website },
-    { key: 'linkedin', label: 'LinkedIn', val: personal?.linkedin, display: personal?.linkedinLabel || personal?.linkedin },
-    { key: 'github',   label: 'GitHub',   val: personal?.github,   display: personal?.githubLabel  || personal?.github },
-  ].filter(({ key, val }) => !hidden.includes(key) && val);
+  const contacts = contactItems(personal);
 
   // Top and bottom margins belong to the page, so react-pdf repeats them on every page; a
   // column's own padding applies only where the column starts and ends (pages 2+ used to print
@@ -122,16 +119,17 @@ export function SidebarTemplatePDF({ data }) {
             )}
           </View>
 
-          {contactItems.length > 0 && (
+          {contacts.length > 0 && (
             <View style={{ marginBottom: sideSectionGap }}>
               <SideSectionTitle title="Contact" />
               <View style={{ marginTop: 2 }}>
-                {contactItems.map(item => (
+                {contacts.map(item => (
                   <SideContactRow
                     key={item.key}
                     field={item.key}
-                    label={item.label}
-                    display={item.display}
+                    label={CONTACT_LABELS[item.key]}
+                    value={item.value}
+                    href={item.href}
                     iconPt={sideIconPt}
                     settings={settings}
                   />

@@ -1,29 +1,8 @@
 import { Image } from '@react-pdf/renderer';
-import {
-  MailIcon, PhoneIcon, MapPinIcon, GlobeIcon, LinkedinPdfIcon, GithubPdfIcon,
-  FilledMailPdf, FilledPhonePdf, FilledPinPdf, FilledGlobePdf, FilledLinkedinPdf, FilledGithubPdf,
-} from './PdfIcons';
-import { getCustomContactIcon, getIconSetId } from '@/utils/contactIcons';
+import { PdfIcon } from './PdfIcons';
+import { getCustomContactIcon, getIconSetId } from '@/utils/contactIconPaths';
 
-const OUTLINE = {
-  email: MailIcon,
-  phone: PhoneIcon,
-  location: MapPinIcon,
-  website: GlobeIcon,
-  linkedin: LinkedinPdfIcon,
-  github: GithubPdfIcon,
-};
-
-const FILLED = {
-  email: FilledMailPdf,
-  phone: FilledPhonePdf,
-  location: FilledPinPdf,
-  website: FilledGlobePdf,
-  linkedin: FilledLinkedinPdf,
-  github: FilledGithubPdf,
-};
-
-/** PDF contact icon — custom image wins, else pack by iconSet */
+/** PDF contact icon — the image uploaded for this field wins, else the chosen pack's icon. */
 export function PdfContactIcon({ field, settings, size = 9, color = '#555555' }) {
   const custom = getCustomContactIcon(field, settings);
   if (custom) {
@@ -34,8 +13,5 @@ export function PdfContactIcon({ field, settings, size = 9, color = '#555555' })
       />
     );
   }
-  const pack = getIconSetId(settings) === 'filled' ? FILLED : OUTLINE;
-  const Icon = pack[field] || OUTLINE[field];
-  if (!Icon) return null;
-  return <Icon size={size} color={color} />;
+  return <PdfIcon setId={getIconSetId(settings)} field={field} size={size} color={color} />;
 }
