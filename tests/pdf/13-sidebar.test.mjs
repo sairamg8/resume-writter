@@ -200,4 +200,38 @@ describe('Sidebar skills', () => {
     assert.ok(!texts.some((t) => /Haskell|Elm/.test(t)), texts.join(' | '));
     assert.ok(texts.some((t) => t.includes('Scala, OCaml')), texts.join(' | '));
   });
+
+  const GROUPS = [{ category: 'Core Tech', skills: 'React, Go' }, { category: 'Cloud', skills: 'AWS, GCP' }];
+  const skillsText = async (settings) => allText(await read(await render(sidebar([section('skills', GROUPS, settings)]))));
+
+  it('Bullet prints one marked line per group, "CATEGORY: skills" (FIDB-75)', async () => {
+    const text = await skillsText({ skillsStyle: 'bullet' });
+    assert.match(text, /• CORE TECH: React, Go • CLOUD: AWS, GCP/);
+    assert.ok(!(await skillsText({ skillsStyle: 'inline' })).includes('•'), 'Inline has no markers');
+  });
+
+  it('the Dash separator prints "CATEGORY – skills" in Inline and Bullet (FIDB-75)', async () => {
+    assert.match(await skillsText({ skillsStyle: 'inline', separator: 'dash' }), /CORE TECH – React, Go CLOUD – AWS, GCP/);
+    assert.match(await skillsText({ skillsStyle: 'bullet', separator: 'dash' }), /• CORE TECH – React, Go • CLOUD – AWS, GCP/);
+    assert.match(await skillsText({ skillsStyle: 'inline', separator: 'colon' }), /CORE TECH: React, Go/);
+  });
+
+  it('a Bullet group that wraps keeps its lines clear of the marker', async () => {
+    const long = { category: 'Tools', skills: 'Webpack, Vite, Rollup, esbuild, Babel, SWC, Turbopack, Parcel, Nx' };
+    const pages = await read(await render(sidebar([section('skills', [long], { skillsStyle: 'bullet' })])));
+    const marker = itemsWith(pages, '•')[0];
+    const lines = [...new Set(['TOOLS', 'Webpack', 'Turbopack', 'Parcel', 'Nx'].map((w) => itemsWith(pages, w)[0]))];
+    assert.ok(new Set(lines.map((t) => Math.round(t.y))).size > 1, 'the group wraps onto a second line');
+    for (const t of lines) assert.ok(t.x > marker.x + marker.w, `"${t.str}" at x=${t.x.toFixed(1)}, marker ends at ${(marker.x + marker.w).toFixed(1)}`);
+  });
+});
+
+describe('Sidebar education', () => {
+  it('prints the location, and "Show location" hides it', async () => {
+    const edu = [{ institution: 'IIT Madras', degree: 'BTech', location: 'Chennai, India', startDate: '2015', endDate: '2019' }];
+    const shown = allText(await read(await render(sidebar([section('education', edu)]))));
+    assert.ok(shown.includes('Chennai, India') && shown.includes('IIT Madras'), shown);
+    const hidden = allText(await read(await render(sidebar([section('education', edu, { showLocation: false })]))));
+    assert.ok(!hidden.includes('Chennai') && hidden.includes('IIT Madras'), hidden);
+  });
 });

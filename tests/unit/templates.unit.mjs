@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   TEMPLATE_IDS, templateId, withKnownTemplate, hasHeaderControls, headerBorderOn, templateStyleDefaults,
+  SIDEBAR_COLUMN_TYPES, inSidebarColumn,
 } from '../../src/constants/templates.js';
 
 test('templateId: the five templates stay; any other id reads as Classic (M15)', () => {
@@ -47,3 +48,13 @@ test('templateStyleDefaults: each template\'s heading style and title case; an u
   templateStyleDefaults('executive').headingStyle = 'box';
   assert.equal(templateStyleDefaults('executive').headingStyle, 'underline', 'callers get a copy');
 });
+
+test('inSidebarColumn: Sidebar prints skills, education, languages, certifications, interests and references in its side column (FIDB-75)', () => {
+  assert.deepEqual(SIDEBAR_COLUMN_TYPES.toSorted(), ['certifications', 'education', 'interests', 'languages', 'references', 'skills']);
+  for (const type of SIDEBAR_COLUMN_TYPES) {
+    assert.equal(inSidebarColumn('sidebar', type), true, type);
+    for (const other of ['classic', 'modern', 'minimal', 'executive', 'dark']) assert.equal(inSidebarColumn(other, type), false, `${other} ${type}`);
+  }
+  for (const type of ['experience', 'projects', 'awards', 'volunteering', 'custom']) assert.equal(inSidebarColumn('sidebar', type), false, type);
+});
+

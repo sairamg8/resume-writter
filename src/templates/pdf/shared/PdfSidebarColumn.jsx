@@ -1,5 +1,6 @@
 import { View, Text, Link } from '@react-pdf/renderer';
 import { safeHref } from '@/utils/richText';
+import { SIDEBAR_COLUMN_TYPES } from '@/constants/templates';
 import { tracking } from './pdfUnits';
 
 /**
@@ -7,8 +8,8 @@ import { tracking } from './pdfUnits';
  * live there (skills in PdfSidebarSkills.jsx). The main column's cards are in PdfSidebarSections.jsx.
  */
 
-// Sections that live in the dark sidebar column
-export const SIDEBAR_TYPES = new Set(['skills', 'education', 'languages', 'certifications', 'interests', 'references']);
+// Sections that live in the dark sidebar column (the section editor reads the same list)
+export const SIDEBAR_TYPES = new Set(SIDEBAR_COLUMN_TYPES);
 
 /**
  * An entry's URL as printed: `label` (else the URL) linking to it when safeHref accepts it —
@@ -39,6 +40,7 @@ export function SideSectionTitle({ title }) {
 export function SideEducation({ section, sectionGap, itemGap }) {
   const s        = section.settings || {};
   const showDates = s.showDates !== false;
+  const showLoc   = s.showLocation !== false;
   const visibleItems = (section.items || []).filter(i => i.visible !== false);
 
   return (
@@ -50,6 +52,7 @@ export function SideEducation({ section, sectionGap, itemGap }) {
             <Text style={{ fontSize: 10, fontWeight: 'bold', color: '#e2e8f0', lineHeight: 1.2 }}>{item.degree}</Text>
             {item.institution && <Text style={{ fontSize: 9, color: '#94a3b8', lineHeight: 1.2 }}>{item.institution}</Text>}
             {item.fieldOfStudy && <Text style={{ fontSize: 9, color: '#94a3b8', lineHeight: 1.2 }}>{item.fieldOfStudy}</Text>}
+            {showLoc && item.location ? <Text style={{ fontSize: 9, color: '#64748b', lineHeight: 1.2 }}>{item.location}</Text> : null}
             {item.gpa && <Text style={{ fontSize: 9, color: '#64748b', lineHeight: 1.2 }}>GPA: {item.gpa}</Text>}
             {showDates && (item.startDate || item.endDate) && (
               <Text style={{ fontSize: 9, color: '#64748b', lineHeight: 1.2 }}>

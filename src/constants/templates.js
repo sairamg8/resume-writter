@@ -33,6 +33,12 @@ export function withKnownTemplate(resume) {
   return { ...resume, template: templateId(resume.template) };
 }
 
+/** Section types the Sidebar template prints in its dark side column; the rest go to the main column. */
+export const SIDEBAR_COLUMN_TYPES = ['skills', 'education', 'languages', 'certifications', 'interests', 'references'];
+
+/** Does a `type` section print in the Sidebar's side column — one narrow, left-aligned column? */
+export const inSidebarColumn = (template, type) => templateId(template) === 'sidebar' && SIDEBAR_COLUMN_TYPES.includes(type);
+
 /**
  * Templates whose header takes Header Customization's alignment, name/title layout, rule and
  * contact controls. Modern prints a fixed banner, Sidebar a side panel.

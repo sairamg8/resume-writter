@@ -1,6 +1,6 @@
 import { AlignLeft, AlignCenter, RotateCcw } from 'lucide-react';
 import { resolveSection } from '@/templates/pdf/shared/templateSectionDefaults';
-import { templateId } from '@/constants/templates';
+import { templateId, inSidebarColumn } from '@/constants/templates';
 
 export function ToggleRow({ label, value, onChange }) {
   return (
@@ -44,25 +44,35 @@ export function SectionCustomizer({ section, template, updateSectionSettings }) 
   // and Sidebar lead with the role, …), so an unset control shows the template's choice (FIDA-58).
   const s = resolveSection(section, templateId(template)).settings;
   const isSkills = section.type === 'skills';
+  // Sidebar prints skills, education, … in its narrow side column: one left-aligned column, so
+  // alignment, grids and title layouts cannot apply there and are not offered (FIDB-75).
+  const sideColumn = inSidebarColumn(template, section.type);
   const hasLocation = ['experience', 'education', 'volunteering'].includes(section.type);
   const hasDates = !['skills', 'languages', 'references', 'interests'].includes(section.type);
-  const hasCols = !['interests'].includes(section.type);
-  const hasTitleStyle = ['experience', 'education', 'volunteering', 'custom'].includes(section.type);
+  const hasCols = !sideColumn && !['interests'].includes(section.type);
+  const hasTitleStyle = !sideColumn && ['experience', 'education', 'volunteering', 'custom'].includes(section.type);
+  const skillsStyle = s.skillsStyle || 'inline';
   const set = (k, v) => updateSectionSettings(section.id, k, v);
 
   return (
     <div className="px-3 py-3 bg-slate-50 border-b border-slate-100 space-y-2.5">
       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Section Options</p>
 
-      <SegmentRow
-        label="Alignment"
-        value={s.alignment || 'left'}
-        onChange={v => set('alignment', v)}
-        options={[
-          { label: <span className="flex items-center gap-1"><AlignLeft size={11} />Left</span>, value: 'left' },
-          { label: <span className="flex items-center gap-1"><AlignCenter size={11} />Center</span>, value: 'center' },
-        ]}
-      />
+      {sideColumn ? (
+        <p className="text-[11px] text-slate-500 leading-snug">
+          Sidebar prints this section in its side column, one left-aligned column: no alignment, grid or title layout to choose.
+        </p>
+      ) : (
+        <SegmentRow
+          label="Alignment"
+          value={s.alignment || 'left'}
+          onChange={v => set('alignment', v)}
+          options={[
+            { label: <span className="flex items-center gap-1"><AlignLeft size={11} />Left</span>, value: 'left' },
+            { label: <span className="flex items-center gap-1"><AlignCenter size={11} />Center</span>, value: 'center' },
+          ]}
+        />
+      )}
 
       <SegmentRow
         label={isSkills ? 'Rows' : 'Spacing'}
@@ -86,11 +96,12 @@ export function SectionCustomizer({ section, template, updateSectionSettings }) 
         <>
           <SegmentRow
             label="Style"
-            value={s.skillsStyle || 'inline'}
+            value={skillsStyle}
             onChange={v => set('skillsStyle', v)}
             options={[{ label: 'Inline', value: 'inline' }, { label: 'Stacked', value: 'stacked' }, { label: 'Bullet', value: 'bullet' }, { label: 'Tags', value: 'tags' }]}
           />
-          {(s.skillsStyle || 'inline') === 'inline' && (
+          {/* Inline and Bullet both print "Category: skills" lines, with this separator. */}
+          {(skillsStyle === 'inline' || skillsStyle === 'bullet') && (
             <SegmentRow
               label="Separator"
               value={s.separator || 'colon'}

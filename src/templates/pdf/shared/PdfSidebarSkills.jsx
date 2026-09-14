@@ -21,6 +21,7 @@ function shownGroup(item) {
 export function SideSkills({ section, sectionGap, itemGap, accent }) {
   const s     = section.settings || {};
   const style = s.skillsStyle || 'inline';
+  const sep   = s.separator === 'dash' ? ' – ' : ': '; // as in the main column and Word
   const groups = (section.items || []).filter(i => i.visible !== false).map(shownGroup);
 
   if (style === 'bars') {
@@ -98,14 +99,18 @@ export function SideSkills({ section, sectionGap, itemGap, accent }) {
     );
   }
 
+  // Inline: "CATEGORY: skills" per group; Bullet: the same line behind a marker, wrapped lines
+  // hanging clear of it (FIDB-75). The separator (colon or dash) comes only with skills.
+  const bullet = style === 'bullet';
   return (
     <View style={{ marginBottom: sectionGap }}>
       <SideSectionTitle title={section.title} />
       <View style={{ gap: itemGap }}>
         {groups.map(({ category, skills }, i) => (
-          <View key={i}>
-            <Text style={{ fontSize: 9, lineHeight: 1.2 }}>
-              {category ? <Text style={{ fontSize: 8.5, fontWeight: 'bold', color: '#64748b' }}>{category}{skills ? ': ' : ''}</Text> : null}
+          <View key={i} style={bullet ? { flexDirection: 'row' } : undefined}>
+            {bullet ? <Text style={{ fontSize: 9, lineHeight: 1.2, color: '#94a3b8', width: 8 }}>•</Text> : null}
+            <Text style={{ fontSize: 9, lineHeight: 1.2, flex: bullet ? 1 : undefined }}>
+              {category ? <Text style={{ fontSize: 8.5, fontWeight: 'bold', color: '#64748b' }}>{category}{skills ? sep : ''}</Text> : null}
               {skills ? <Text style={{ color: '#cbd5e1' }}>{skills}</Text> : null}
             </Text>
           </View>
