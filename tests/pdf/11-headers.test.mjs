@@ -55,8 +55,8 @@ describe('header controls', () => {
     assert.equal(await drawn('executive', {}), await drawn('executive', {}));
   });
 
-  for (const template of ['executive', 'classic']) {
-    it(`${template}: every Header Customization control changes the PDF (FIDA-50)`, async () => {
+  for (const template of ['executive', 'classic', 'minimal']) {
+    it(`${template}: every Header Customization control changes the PDF (FIDA-50, FIDA-20)`, async () => {
       const unchanged = [];
       for (const [label, from, to] of HEADER_CONTROLS) {
         if (await drawn(template, from) === await drawn(template, to)) unchanged.push(label);
@@ -77,6 +77,12 @@ describe('header rule', () => {
     assert.equal(await headerRule('executive', { showHeaderBorder: undefined }), false, 'unset');
     assert.equal(await headerRule('executive', { showHeaderBorder: false }), false, 'off');
     assert.equal(await headerRule('executive', { showHeaderBorder: true }), true, 'on');
+  });
+
+  it('minimal: the Header Bottom Border toggle draws the rule; unset stays off (FIDA-20)', async () => {
+    assert.equal(await headerRule('minimal', { showHeaderBorder: undefined }), false, 'unset');
+    assert.equal(await headerRule('minimal', { showHeaderBorder: false }), false, 'off');
+    assert.equal(await headerRule('minimal', { showHeaderBorder: true }), true, 'on');
   });
 
   it('classic: an unset setting keeps the rule (the Classic design), the toggle still turns it off', async () => {

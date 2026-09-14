@@ -1,11 +1,11 @@
 import { Document, Page, View, Text, Image } from '@react-pdf/renderer';
-import { getPageStyle, getDocumentProps } from './shared/PdfPage';
+import { getPageStyle, getDocumentProps, getHeaderBorderStyle } from './shared/PdfPage';
 import { PdfContactRow } from './shared/PdfContact';
 import { SectionRouter, getEffectiveSpacing, getVisibleSections } from './shared/PdfSections';
 import { PdfRichText } from './shared/PdfRichText';
 import { hasRichText } from '@/utils/richText';
 import { getPdfPhotoStyle } from './shared/pdfPhoto';
-import { HEADER_MARGIN_BOTTOM_PT, pxToPt } from './shared/pdfUnits';
+import { HEADER_MARGIN_BOTTOM_PT } from './shared/pdfUnits';
 import { solid } from './shared/pdfColors';
 
 
@@ -28,6 +28,8 @@ export function MinimalTemplatePDF({ data }) {
   const headerLayout = settings.headerLayout || 'stack';
   const centered     = headerAlign === 'center';
   const headerMb     = Math.max(HEADER_MARGIN_BOTTOM_PT, sectionGap || 0);
+  // Off unless the user turns it on (the Minimal design has no header rule).
+  const headerBorderStyle = getHeaderBorderStyle(settings);
 
   const photoTextAlign = settings.photoTextAlign || 'center';
   const alignItemsVal = photoTextAlign === 'bottom' ? 'flex-end'
@@ -73,7 +75,7 @@ export function MinimalTemplatePDF({ data }) {
   return (
     <Document {...getDocumentProps(personal)}>
       <Page size="A4" style={pageStyle} wrap>
-        <View style={{ marginBottom: headerMb }} wrap={false}>
+        <View style={[{ marginBottom: headerMb }, headerBorderStyle]} wrap={false}>
           <View style={{
             flexDirection: centered ? 'column' : 'row',
             alignItems: centered ? 'center' : alignItemsVal,
