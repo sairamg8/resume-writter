@@ -6,7 +6,7 @@ export const SECTION_TYPE_DEFAULTS = {
   }),
   education: (id) => ({
     id, type: 'education', title: 'Education',
-    settings: { spacing: 'normal', columns: 1, showDates: true, showLocation: false, titleStyle: 'stacked' },
+    settings: { spacing: 'normal', columns: 1, showDates: true, showLocation: true, titleStyle: 'stacked' },
     items: [{ id: `${id}_item1`, institution: '', degree: '', fieldOfStudy: '', location: '', startDate: '', endDate: '', gpa: '', description: '', bullets: [] }],
   }),
   skills: (id) => ({
