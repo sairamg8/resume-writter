@@ -3,6 +3,10 @@ import { getPageStyle, getDocumentProps } from './shared/PdfPage';
 import { PdfRichText } from './shared/PdfRichText';
 import { PdfContactRow } from './shared/PdfContact';
 import { solid } from './shared/pdfColors';
+import { letterBlock } from '@/utils/coverLetter';
+
+/** Space under the date, the recipient block and the subject. */
+const BLOCK_GAP = 12;
 
 function getPhotoStyle(settings, accent) {
   const sh = settings?.photoShape || 'circle';
@@ -42,6 +46,9 @@ export function CoverLetterTemplatePDF({ data }) {
   const sigName        = cl.signatureName        != null ? cl.signatureName        : (personal?.name  || '');
   const sigDesignation = cl.signatureDesignation != null ? cl.signatureDesignation : (personal?.title || '');
   const sigGap         = cl.signatureSpace === 'wide' ? 24 : 8;
+
+  const block     = letterBlock(cl);
+  const blockLine = { fontSize: baseSize, color: textColor, lineHeight: 1.3 };
 
   const pageStyle = getPageStyle({
     ...settings,
@@ -117,6 +124,21 @@ export function CoverLetterTemplatePDF({ data }) {
         <View style={{ borderBottomWidth: 2.5, borderBottomColor: solid(accent), paddingBottom: 12, marginBottom: 16 }}>
           {renderHeader()}
         </View>
+
+        {/* Date, recipient block, subject — each line only when filled */}
+        {block.date ? <Text style={{ ...blockLine, marginBottom: BLOCK_GAP }}>{block.date}</Text> : null}
+        {block.recipientName || block.recipientTitle || block.company ? (
+          <View style={{ marginBottom: BLOCK_GAP }}>
+            {block.recipientName ? (
+              <Text style={{ ...blockLine, fontWeight: 'bold', color: '#0f172a' }}>{block.recipientName}</Text>
+            ) : null}
+            {block.recipientTitle ? <Text style={blockLine}>{block.recipientTitle}</Text> : null}
+            {block.company ? <Text style={blockLine}>{block.company}</Text> : null}
+          </View>
+        ) : null}
+        {block.subject ? (
+          <Text style={{ ...blockLine, fontWeight: 'bold', marginBottom: BLOCK_GAP }}>{block.subject}</Text>
+        ) : null}
 
         {/* Body */}
         {cl.body ? (

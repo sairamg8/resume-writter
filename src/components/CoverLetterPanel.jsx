@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { Mail, Phone, MapPin, Globe, Link2, Code, Eye, EyeOff, ChevronDown, ChevronUp, Camera } from 'lucide-react';
 import RichTextEditor from '@/components/RichTextEditor';
+import { todayLetterDate } from '@/utils/coverLetter';
 
 const CONTACT_FIELDS = [
   { key: 'email',    label: 'Email',    Icon: Mail   },
@@ -11,17 +12,19 @@ const CONTACT_FIELDS = [
   { key: 'github',   label: 'GitHub',   Icon: Code   },
 ];
 
-function Field({ label, value, onChange, placeholder }) {
+/** A labelled text input; `children` (e.g. a "Today" button) sit inside the input's right end. */
+function Field({ label, value, onChange, placeholder, children }) {
   return (
-    <div>
+    <div className="relative">
       <label className="block text-xs font-medium text-gray-500 mb-1">{label}</label>
       <input
         type="text"
         value={value || ''}
         onChange={e => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full px-2.5 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className={`w-full px-2.5 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${children ? 'pr-14' : ''}`}
       />
+      {children}
     </div>
   );
 }
@@ -246,6 +249,25 @@ export default function CoverLetterPanel({ coverLetter, personal, updateCoverLet
               );
             })}
           </div>
+        </div>
+      </SectionBlock>
+
+      {/* ── Date, Recipient & Subject — printed above the body, each only when filled ── */}
+      <SectionBlock title="Date, Recipient & Subject" defaultOpen={true}>
+        <div className="space-y-2.5">
+          <Field label="Date" placeholder="15 January 2026" {...f('date')}>
+            <button
+              type="button"
+              onClick={() => updateCoverLetter('date', todayLetterDate())}
+              className="absolute right-1.5 bottom-1.5 px-1.5 py-0.5 text-[11px] font-medium text-blue-600 hover:bg-blue-50 rounded"
+            >
+              Today
+            </button>
+          </Field>
+          <Field label="Recipient Name" placeholder="Jane Smith" {...f('recipientName')} />
+          <Field label="Recipient Title" placeholder="Hiring Manager" {...f('recipientTitle')} />
+          <Field label="Company" placeholder="Company name" {...f('company')} />
+          <Field label="Subject" placeholder="Application for the Senior Engineer role" {...f('subject')} />
         </div>
       </SectionBlock>
 

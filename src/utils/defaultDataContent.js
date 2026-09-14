@@ -36,9 +36,10 @@ export function blankSections() {
   ];
 }
 
+// Every line of the letter block starts empty: a filled field prints, an empty one does not.
 export const BASE_COVER_LETTER = {
   recipientName: '',
-  recipientTitle: 'Hiring Manager',
+  recipientTitle: '',
   company: '',
   date: '',
   subject: '',
