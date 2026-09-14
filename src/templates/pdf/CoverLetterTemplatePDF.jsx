@@ -1,8 +1,9 @@
-import { Document, Page, View, Text, Image } from '@react-pdf/renderer';
+import { Document, Page, View, Text } from '@react-pdf/renderer';
 import { getPageStyle, getDocumentProps } from './shared/PdfPage';
 import { PdfRichText } from './shared/PdfRichText';
 import { PdfContactRow } from './shared/PdfContact';
 import { solid } from './shared/pdfColors';
+import { PdfPhoto } from './shared/PdfPhoto';
 
 function getPhotoStyle(settings, accent) {
   const sh = settings?.photoShape || 'circle';
@@ -57,7 +58,7 @@ export function CoverLetterTemplatePDF({ data }) {
   );
 
   const photoEl = photoSrc ? (
-    <Image src={photoSrc} style={getPhotoStyle(settings, accent)} />
+    <PdfPhoto src={photoSrc} style={getPhotoStyle(settings, accent)} />
   ) : null;
 
   const nameBlock = (

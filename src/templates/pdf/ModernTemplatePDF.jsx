@@ -1,10 +1,11 @@
-import { Document, Page, View, Text, Image } from '@react-pdf/renderer';
+import { Document, Page, View, Text } from '@react-pdf/renderer';
 import { getPageStyle, getDocumentProps } from './shared/PdfPage';
 import { SectionRouter, getEffectiveSpacing, getVisibleSections } from './shared/PdfSections';
 import { PdfRichText } from './shared/PdfRichText';
 import { hasRichText } from '@/utils/richText';
 import { MailIcon, PhoneIcon, MapPinIcon, GlobeIcon, LinkedinPdfIcon, GithubPdfIcon } from './shared/PdfIcons';
 import { getPdfPhotoStyle } from './shared/pdfPhoto';
+import { PdfPhoto } from './shared/PdfPhoto';
 import { MODERN_HEADER_PAD_X_PT, MODERN_HEADER_PAD_Y_PT, pxToPt } from './shared/pdfUnits';
 
 const CSS_ICON_SCALE = 0.9;
@@ -71,7 +72,7 @@ export function ModernTemplatePDF({ data }) {
         }} wrap={false}>
           <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: pxToPt(16) }}>
             {personal?.photo && !hidden.includes('photo') && (
-              <Image src={personal.photo} style={getPdfPhotoStyle(settings, '#ffffff', 'modern')} />
+              <PdfPhoto src={personal.photo} style={getPdfPhotoStyle(settings, '#ffffff', 'modern')} />
             )}
             <View style={{ flex: 1 }}>
               <Text style={{ fontSize: nameSize, fontWeight: 'bold', color: nameColor, marginBottom: 1, lineHeight: 1.2 }}>

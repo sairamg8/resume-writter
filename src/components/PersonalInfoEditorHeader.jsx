@@ -1,4 +1,5 @@
 import { ChevronDown, ChevronRight, Eye, EyeOff } from 'lucide-react';
+import { hasHeaderControls, headerBorderOn } from '@/constants/templates';
 
 function LayoutPreview({ type }) {
   const bar = (w) => <div className="h-1 bg-gray-300 rounded-sm" style={{ width: w }} />;
@@ -62,7 +63,9 @@ export function Chip({ active, onClick, children }) {
   );
 }
 
-export function HeaderCustomization({ s, set, isClassicOrMinimal, template, templateLabel, open, onToggle }) {
+export function HeaderCustomization({ s, set, template, templateLabel, open, onToggle }) {
+  // The rule's state as the PDF prints it: an unset setting follows the template's design.
+  const borderOn = headerBorderOn(s, template);
   return (
     <div className="bg-gray-50 rounded-xl border border-gray-100">
       <button onClick={onToggle} className="w-full flex items-center justify-between p-3 text-left">
@@ -72,7 +75,7 @@ export function HeaderCustomization({ s, set, isClassicOrMinimal, template, temp
 
       {open && (
         <div className="space-y-4 px-3 pb-3">
-          {isClassicOrMinimal ? (
+          {hasHeaderControls(template) ? (
             <>
               <div>
                 <p className="text-xs font-semibold text-gray-700 mb-2">Text Alignment</p>
@@ -107,14 +110,14 @@ export function HeaderCustomization({ s, set, isClassicOrMinimal, template, temp
                 <div className="flex items-center justify-between">
                   <p className="text-xs font-semibold text-gray-700">Header Bottom Border</p>
                   <button
-                    onClick={() => set('showHeaderBorder', s.showHeaderBorder === false ? true : false)}
-                    className={`p-1 rounded transition-colors ${s.showHeaderBorder === false ? 'text-gray-300 hover:text-gray-400' : 'text-blue-500 hover:text-blue-600'}`}
-                    title={s.showHeaderBorder === false ? 'Show border' : 'Hide border'}
+                    onClick={() => set('showHeaderBorder', !borderOn)}
+                    className={`p-1 rounded transition-colors ${borderOn ? 'text-blue-500 hover:text-blue-600' : 'text-gray-300 hover:text-gray-400'}`}
+                    title={borderOn ? 'Hide border' : 'Show border'}
                   >
-                    {s.showHeaderBorder === false ? <EyeOff size={14} /> : <Eye size={14} />}
+                    {borderOn ? <Eye size={14} /> : <EyeOff size={14} />}
                   </button>
                 </div>
-                {s.showHeaderBorder !== false && (
+                {borderOn && (
                   <div className="flex items-center justify-between mt-1.5">
                     <span className="text-[11px] text-gray-400">Thickness</span>
                     <div className="flex items-center gap-1">
@@ -179,7 +182,7 @@ export function HeaderCustomization({ s, set, isClassicOrMinimal, template, temp
           ) : (
             <div className="rounded-lg bg-slate-50 border border-slate-200 p-3 space-y-1.5">
               <p className="text-xs font-semibold text-slate-700">{templateLabel} template header</p>
-              <p className="text-[11px] text-slate-500 leading-relaxed">The {templateLabel} template uses a fixed banner header — alignment, border, and contact layout controls apply to <strong>Classic</strong> and <strong>Minimal</strong> templates only.</p>
+              <p className="text-[11px] text-slate-500 leading-relaxed">The {templateLabel} template uses a fixed banner header — alignment, border, and contact layout controls apply to the <strong>Classic</strong>, <strong>Minimal</strong> and <strong>Executive</strong> templates.</p>
               <p className="text-[11px] text-slate-500 leading-relaxed">To change header text color, name color, or job title color, open the <strong>Design</strong> tab → <strong>Colors</strong>.</p>
             </div>
           )}

@@ -1,10 +1,11 @@
-import { Document, Page, View, Text, Image, StyleSheet } from '@react-pdf/renderer';
+import { Document, Page, View, Text, StyleSheet } from '@react-pdf/renderer';
 import { PdfSectionTitle } from './shared/PdfSection';
 import { getEffectiveSpacing, SPACER } from './shared/PdfSections';
 import { PdfRichText } from './shared/PdfRichText';
 import { hasRichText } from '@/utils/richText';
 import { getDocumentProps } from './shared/PdfPage';
 import { getPdfPhotoStyle } from './shared/pdfPhoto';
+import { PdfPhoto } from './shared/PdfPhoto';
 import { CSS_PX_TO_PT } from './shared/pdfUnits';
 import { PdfContactIcon } from './shared/PdfContactIcon';
 import { SIDEBAR_TYPES, SideSectionTitle, renderSideSection, SidebarMainSectionRouter } from './shared/PdfSidebarSections';
@@ -105,7 +106,7 @@ export function SidebarTemplatePDF({ data }) {
         }}>
           <View style={{ marginBottom: sideSectionGap, alignItems: 'center' }} wrap={false}>
             {personal?.photo && !hidden.includes('photo') && (
-              <Image src={personal.photo} style={sidePhoto} />
+              <PdfPhoto src={personal.photo} style={sidePhoto} />
             )}
             <Text style={{
               fontSize: nameSize, fontWeight: 'bold', color: nameColor,

@@ -21,7 +21,6 @@ export default function PersonalInfoEditor({ personal, updatePersonal, toggleFie
   const s = settings || {};
   const [headerOpen, setHeaderOpen] = useState(false);
   const [photoOpen, setPhotoOpen] = useState(false);
-  const isClassicOrMinimal = !template || template === 'classic' || template === 'minimal';
   const templateLabel = template ? template.charAt(0).toUpperCase() + template.slice(1) : 'Classic';
 
   function set(key, val) { updateSetting?.(key, val); }
@@ -54,7 +53,6 @@ export default function PersonalInfoEditor({ personal, updatePersonal, toggleFie
       <HeaderCustomization
         s={s}
         set={set}
-        isClassicOrMinimal={isClassicOrMinimal}
         template={template}
         templateLabel={templateLabel}
         open={headerOpen}

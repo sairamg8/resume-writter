@@ -1,12 +1,12 @@
-import { Document, Page, View, Text, Image } from '@react-pdf/renderer';
-import { getPageStyle, getDocumentProps } from './shared/PdfPage';
+import { Document, Page, View, Text } from '@react-pdf/renderer';
+import { getPageStyle, getDocumentProps, getHeaderBorderStyle } from './shared/PdfPage';
 import { PdfContactRow } from './shared/PdfContact';
 import { SectionRouter, getEffectiveSpacing, getVisibleSections } from './shared/PdfSections';
 import { PdfRichText } from './shared/PdfRichText';
 import { hasRichText } from '@/utils/richText';
 import { getPdfPhotoStyle } from './shared/pdfPhoto';
-import { HEADER_BORDER_PAD_PT, HEADER_MARGIN_BOTTOM_PT } from './shared/pdfUnits';
-import { solid } from './shared/pdfColors';
+import { PdfPhoto } from './shared/PdfPhoto';
+import { HEADER_MARGIN_BOTTOM_PT } from './shared/pdfUnits';
 
 export function ExecutiveTemplatePDF({ data }) {
   const { personal, sections = [], settings = {} } = data;
@@ -26,15 +26,8 @@ export function ExecutiveTemplatePDF({ data }) {
   const headerLayout = settings.headerLayout || 'stack';
   const centered     = headerAlign === 'center';
   const headerMb     = Math.max(HEADER_MARGIN_BOTTOM_PT, sectionGap || 0);
-
-  const showHeaderBorder  = settings.showHeaderBorder !== false;
-  const headerBorderStyle = showHeaderBorder
-    ? {
-        borderBottomWidth: settings.headerBorderWidth || 2,
-        borderBottomColor: solid(accent),
-        paddingBottom: HEADER_BORDER_PAD_PT,
-      }
-    : {};
+  // Off unless the user turns it on (the Executive design has no header rule).
+  const headerBorderStyle = getHeaderBorderStyle(settings);
 
   const photoTextAlign = settings.photoTextAlign || 'center';
   const alignItemsVal = photoTextAlign === 'bottom' ? 'flex-end'
@@ -87,7 +80,7 @@ export function ExecutiveTemplatePDF({ data }) {
             gap: 10,
           }}>
             {personal?.photo && !hidden.includes('photo') && (
-              <Image src={personal.photo} style={getPdfPhotoStyle(settings, accent, 'classic')} />
+              <PdfPhoto src={personal.photo} style={getPdfPhotoStyle(settings, accent, 'classic')} />
             )}
             <View style={centered ? { alignItems: 'center', alignSelf: 'stretch' } : { flex: 1 }}>
               {nameBlock}
