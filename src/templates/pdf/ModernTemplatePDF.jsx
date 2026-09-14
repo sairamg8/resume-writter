@@ -8,6 +8,7 @@ import { ContactValue } from './shared/PdfContact';
 import { contactItems } from '@/utils/contacts';
 import { getPdfPhotoStyle } from './shared/pdfPhoto';
 import { PdfPhoto } from './shared/PdfPhoto';
+import { parseColor } from './shared/pdfColors';
 import { MODERN_HEADER_PAD_X_PT, MODERN_HEADER_PAD_Y_PT, pxToPt } from './shared/pdfUnits';
 
 const CSS_ICON_SCALE = 0.9;
@@ -50,10 +51,9 @@ export function ModernTemplatePDF({ data }) {
   const entrySize = baseSize + (settings.fontSizeEntryDelta ?? 0);
   const hidden    = personal?.hiddenFields || [];
   const headerText = settings.headerTextColor || '#ffffff';
-  // Canvas summary uses opacity 0.85 on header text
-  const summaryColor = headerText === '#ffffff' || headerText === '#fff'
-    ? 'rgba(255,255,255,0.85)'
-    : headerText;
+  // The summary prints at 85% of the header text colour, however that colour is written (#fff,
+  // #FFFFFF, white, rgb(…)); a colour's own alpha multiplies in, as CSS opacity would (FIDB-11).
+  const summaryOpacity = 0.85 * (parseColor(headerText)?.[3] ?? 1);
 
   const pageStyle = getPageStyle(settings);
 
@@ -89,7 +89,7 @@ export function ModernTemplatePDF({ data }) {
             <View style={{ marginTop: 8 }}>
               <PdfRichText
                 html={personal.summary}
-                style={{ fontSize: baseSize, color: summaryColor, lineHeight: lineH }}
+                style={{ fontSize: baseSize, color: headerText, opacity: summaryOpacity, lineHeight: lineH }}
               />
             </View>
           )}

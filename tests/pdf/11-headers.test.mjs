@@ -2,7 +2,7 @@
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs';
-import { setup, teardown, resume, render, read } from './harness.mjs';
+import { setup, teardown, resume, render, read, drawState } from './harness.mjs';
 
 before(setup);
 after(teardown);
@@ -88,5 +88,31 @@ describe('header rule', () => {
   it('classic: an unset setting keeps the rule (the Classic design), the toggle still turns it off', async () => {
     assert.equal(await headerRule('classic', { showHeaderBorder: undefined }), true, 'unset');
     assert.equal(await headerRule('classic', { showHeaderBorder: false }), false, 'off');
+  });
+});
+
+describe('modern banner summary (FIDB-11)', () => {
+  const SUMMARY = '<p>SumPlain <strong>SumBold</strong></p><ul><li>SumItem</li></ul>';
+
+  it('prints at 85% of the header text colour, however the colour is written', async () => {
+    const cases = [
+      ['#ffffff', '#ffffff'], ['#fff', '#ffffff'], ['#FFF', '#ffffff'], ['#FFFFFF', '#ffffff'], ['white', '#ffffff'],
+      ['rgb(255,255,255)', '#ffffff'], ['#1e293b', '#1e293b'], ['#F8FAFC', '#f8fafc'],
+    ];
+    for (const [headerTextColor, fill] of cases) {
+      const bytes = await render(resume({ template: 'modern', personal: { summary: SUMMARY }, settings: { headerTextColor } }));
+      for (const word of ['SumPlain', 'SumBold', 'SumItem']) {
+        const hits = await drawState(bytes, word);
+        assert.equal(hits.length, 1, `${headerTextColor}: "${word}" drawn once`);
+        assert.equal(hits[0].fill, fill, `${headerTextColor}: "${word}" in the header text colour`);
+        assert.ok(Math.abs(hits[0].alpha - 0.85) < 0.005, `${headerTextColor}: "${word}" at alpha ${hits[0].alpha}`);
+      }
+    }
+  });
+
+  it('a header text colour with its own alpha keeps it, times 85% (as CSS opacity would)', async () => {
+    const bytes = await render(resume({ template: 'modern', personal: { summary: SUMMARY }, settings: { headerTextColor: 'rgba(255,255,255,0.5)' } }));
+    const [hit] = await drawState(bytes, 'SumPlain');
+    assert.ok(Math.abs(hit.alpha - 0.425) < 0.005, `alpha ${hit.alpha}`);
   });
 });
