@@ -172,8 +172,12 @@ export function Editor({ store, auth, sync }) {
   function handleExportWord() {
     const filename = buildExportFilename(auth?.user, resume);
     return runExport('word', 'Word export', async () => {
-      const { exportToWord } = await import('@/utils/wordExport');
-      await exportToWord(resume, `${filename}.docx`);
+      const { exportToWord, exportCoverLetterToWord } = await import('@/utils/wordExport');
+      if (activeTab === 'coverletter') {
+        await exportCoverLetterToWord(resume, `${filename}_cover_letter.docx`);
+      } else {
+        await exportToWord(resume, `${filename}.docx`);
+      }
     });
   }
 

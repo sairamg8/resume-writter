@@ -3,9 +3,10 @@ import {
 } from 'docx';
 import { parseRichText, safeHref } from '@/utils/richText';
 
-export function accent2Hex(color) {
+/** A '#rrggbb' colour as Word's 'rrggbb'; anything else gives `fallback`. */
+export function accent2Hex(color, fallback = '2563eb') {
   const hex = String(color || '').replace('#', '');
-  return /^[0-9a-f]{6}$/i.test(hex) ? hex : '2563eb';
+  return /^[0-9a-f]{6}$/i.test(hex) ? hex : fallback;
 }
 
 export function bold(text, extra = {}) {
