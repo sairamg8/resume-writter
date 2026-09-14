@@ -4,35 +4,34 @@ import { SectionRouter, getEffectiveSpacing, getVisibleSections } from './shared
 import { PdfRichText } from './shared/PdfRichText';
 import { hasRichText } from '@/utils/richText';
 import { MailIcon, PhoneIcon, MapPinIcon, GlobeIcon, LinkedinPdfIcon, GithubPdfIcon } from './shared/PdfIcons';
+import { ContactValue } from './shared/PdfContact';
+import { contactItems } from '@/utils/contacts';
 import { getPdfPhotoStyle } from './shared/pdfPhoto';
 import { MODERN_HEADER_PAD_X_PT, MODERN_HEADER_PAD_Y_PT, pxToPt } from './shared/pdfUnits';
 
 const CSS_ICON_SCALE = 0.9;
+const ICONS = { email: MailIcon, phone: PhoneIcon, location: MapPinIcon, website: GlobeIcon, linkedin: LinkedinPdfIcon, github: GithubPdfIcon };
 
+/** The banner's contact row — the same values and links as every template (contactItems). */
 function HeaderContact({ personal, settings, textColor }) {
-  const hidden   = personal?.hiddenFields || [];
   const baseSize = settings?.fontSizeBase || 11;
   const iconPt   = Math.max(7, Math.round((settings?.iconSize ?? 9) * CSS_ICON_SCALE));
   const textSize = baseSize - 1.5;
-  const items = [
-    { key: 'email',    Icon: MailIcon,        val: personal?.email,    display: personal?.email },
-    { key: 'phone',    Icon: PhoneIcon,       val: personal?.phone,    display: personal?.phone },
-    { key: 'location', Icon: MapPinIcon,      val: personal?.location, display: personal?.location },
-    { key: 'website',  Icon: GlobeIcon,       val: personal?.website,  display: personal?.websiteLabel || personal?.website },
-    { key: 'linkedin', Icon: LinkedinPdfIcon, val: personal?.linkedin, display: personal?.linkedinLabel || personal?.linkedin },
-    { key: 'github',   Icon: GithubPdfIcon,   val: personal?.github,   display: personal?.githubLabel  || personal?.github },
-  ].filter(({ key, val }) => !hidden.includes(key) && val);
+  const items = contactItems(personal);
 
   if (!items.length) return null;
   // Canvas: gap-x-4 gap-y-0.5 → 16px / 2px
   return (
     <View style={{ flexDirection: 'row', flexWrap: 'wrap', columnGap: pxToPt(16), rowGap: pxToPt(2), marginTop: 4 }}>
-      {items.map(({ key, Icon, display }) => (
-        <View key={key} style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
-          <Icon size={iconPt} color={textColor} />
-          <Text style={{ fontSize: textSize, color: textColor, lineHeight: 1.2 }}>{display}</Text>
-        </View>
-      ))}
+      {items.map(({ key, value, href }) => {
+        const Icon = ICONS[key];
+        return (
+          <View key={key} style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+            <Icon size={iconPt} color={textColor} />
+            <ContactValue value={value} href={href} style={{ fontSize: textSize, color: textColor, lineHeight: 1.2 }} />
+          </View>
+        );
+      })}
     </View>
   );
 }

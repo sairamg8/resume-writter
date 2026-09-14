@@ -1,7 +1,9 @@
 // Header contact lines and line breaking.
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { setup, teardown, resume, experience, render, read, allItems, allText } from './harness.mjs';
+import {
+  setup, teardown, resume, experience, render, renderCover, read, allItems, allText, TEMPLATES,
+} from './harness.mjs';
 
 before(setup);
 after(teardown);
@@ -11,16 +13,29 @@ const PERSONAL = {
   website: 'https://www.example.com/', linkedin: 'linkedin.com/in/firstname-lastname', github: 'github.com/firstname',
 };
 
+/** Every document with a contact header: the five résumé templates and the cover letter. */
+const DOCUMENTS = [
+  ...TEMPLATES.map((template) => [template, (personal) => render(resume({ template, personal }))]),
+  ['cover letter', (personal) => renderCover(resume({ personal }))],
+];
+
 describe('header contacts', () => {
-  for (const template of ['classic', 'minimal', 'executive']) {
-    it(`${template}: contact lines are links (FIDA-26)`, async () => {
-      const pages = await read(await render(resume({ template, personal: PERSONAL })));
+  for (const [name, make] of DOCUMENTS) {
+    it(`${name}: contact lines are links (FIDA-26, FIDB-14)`, async () => {
+      const pages = await read(await make(PERSONAL));
       const urls = pages[0].links.map((l) => l.url);
       for (const u of ['mailto:firstname.lastname@example.com', 'tel:+15550100', 'https://www.example.com/', 'https://linkedin.com/in/firstname-lastname', 'https://github.com/firstname']) {
         assert.ok(urls.includes(u), `${u} in ${urls.join(', ')}`);
       }
       assert.ok(allText(pages).includes('example.com'), 'a website prints without https://www.');
       assert.ok(!allText(pages).includes('https://'), allText(pages));
+    });
+
+    it(`${name}: a contact prints its display label and links to its Link URL`, async () => {
+      const pages = await read(await make({ ...PERSONAL, linkedinLabel: 'My LinkedIn', linkedinUrl: 'https://www.linkedin.com/in/other/' }));
+      assert.ok(pages[0].links.some((l) => l.url === 'https://www.linkedin.com/in/other/'), pages[0].links.map((l) => l.url).join(', '));
+      assert.ok(allText(pages).includes('My LinkedIn'), allText(pages));
+      assert.ok(!allText(pages).includes('linkedin.com/in/firstname-lastname'), allText(pages));
     });
   }
 
