@@ -88,14 +88,19 @@ export function SideCertifications({ section, sectionGap, itemGap }) {
     <View style={{ marginBottom: sectionGap }}>
       <SideSectionTitle title={section.title} />
       <View style={{ gap: itemGap }}>
-        {visibleItems.map((item, i) => (
-          <View key={i}>
-            <Text style={{ fontSize: 9, fontWeight: 'bold', color: '#e2e8f0', lineHeight: 1.2 }}>{item.name}</Text>
-            {item.issuer && <Text style={{ fontSize: 9, color: '#94a3b8', lineHeight: 1.2 }}>{item.issuer}</Text>}
-            {showDates && item.date && <Text style={{ fontSize: 9, color: '#64748b', lineHeight: 1.2 }}>{item.date}</Text>}
-            {item.url && <EntryLink url={item.url} label={item.urlLabel} style={{ fontSize: 9, color: '#cbd5e1', lineHeight: 1.2 }} />}
-          </View>
-        ))}
+        {visibleItems.map((item, i) => {
+          // Issued – expires, as the main column prints it ("– 03/2027" without an issue date).
+          const dateStr = showDates ? `${item.date || ''}${item.expiry ? ` – ${item.expiry}` : ''}`.trim() : '';
+          return (
+            <View key={i}>
+              <Text style={{ fontSize: 9, fontWeight: 'bold', color: '#e2e8f0', lineHeight: 1.2 }}>{item.name}</Text>
+              {item.issuer && <Text style={{ fontSize: 9, color: '#94a3b8', lineHeight: 1.2 }}>{item.issuer}</Text>}
+              {dateStr ? <Text style={{ fontSize: 9, color: '#64748b', lineHeight: 1.2 }}>{dateStr}</Text> : null}
+              {item.credentialId && <Text style={{ fontSize: 9, color: '#64748b', lineHeight: 1.2 }}>ID: {item.credentialId}</Text>}
+              {item.url && <EntryLink url={item.url} label={item.urlLabel} style={{ fontSize: 9, color: '#cbd5e1', lineHeight: 1.2 }} />}
+            </View>
+          );
+        })}
       </View>
     </View>
   );

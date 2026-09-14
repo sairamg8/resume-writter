@@ -68,6 +68,15 @@ describe('Sidebar dark-column fields', () => {
     for (const s of ['Jane Doe', 'CTO', 'Acme Corp', 'Former Manager', 'jane@acme.com', '+1 555 0101']) assert.ok(text.includes(s), `${s} in: ${text}`);
     assert.ok(!text.includes('Hidden'), 'a hidden reference stays out');
   });
+
+  it('certifications print the expiry date, credential ID and link label (FIDB-58)', async () => {
+    const cert = { name: 'AWS Dev', issuer: 'Amazon', date: '03/2024', expiry: '03/2027', credentialId: 'ABC-12345', url: 'https://credential.example.com/abc', urlLabel: 'View Certificate' };
+    const text = allText(await read(await render(sidebar([section('certifications', [cert, { name: 'No Issue Date', expiry: '05/2030' }])]))));
+    for (const s of ['AWS Dev', 'Amazon', '03/2024 – 03/2027', 'ID: ABC-12345', 'View Certificate', '– 05/2030']) assert.ok(text.includes(s), `${s} in: ${text}`);
+    const undated = allText(await read(await render(sidebar([section('certifications', [cert], { showDates: false })]))));
+    assert.ok(!undated.includes('2024') && !undated.includes('2027'), `Show dates off: ${undated}`);
+    assert.ok(undated.includes('ID: ABC-12345'), undated);
+  });
 });
 
 describe('Sidebar job title colour (FIDB-42)', () => {
