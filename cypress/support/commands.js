@@ -43,6 +43,11 @@ Cypress.Commands.addQuery('store', function store() {
   return () => JSON.parse(cy.state('window').localStorage.getItem(STORAGE_KEY) || 'null');
 });
 
+/** Parsed job-tracker store (`cpwtcv_jobs_v1`). A retrying query, like `store`. */
+Cypress.Commands.addQuery('jobStore', function jobStore() {
+  return () => JSON.parse(cy.state('window').localStorage.getItem('cpwtcv_jobs_v1') || 'null');
+});
+
 Cypress.Commands.add('openExportMenu', () => {
   cy.contains('button', 'Export').click();
 });
