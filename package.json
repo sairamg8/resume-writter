@@ -8,6 +8,8 @@
     "build": "vite build",
     "lint": "oxlint",
     "preview": "vite preview",
+    "test": "node --test \"tests/pdf/**/*.test.mjs\"",
+    "test:pdf": "node --test \"tests/pdf/**/*.test.mjs\"",
     "cy:open": "cypress open --e2e",
     "cy:run": "cypress run --e2e",
     "test:e2e": "vite build && start-server-and-test \"vite preview --host 127.0.0.1 --port 4173 --strictPort\" http://127.0.0.1:4173 \"cypress run --e2e\""
