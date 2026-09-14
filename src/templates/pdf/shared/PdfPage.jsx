@@ -1,13 +1,12 @@
 import { StyleSheet } from '@react-pdf/renderer';
 import { headerBorderOn } from '@/constants/templates';
-import { readableOn } from './pdfColors';
+import { readableOn, solid } from './pdfColors';
 import {
   CSS_PX_TO_PT,
   DEFAULT_ITEM_GAP_PX,
   DEFAULT_SECTION_GAP_PX,
   HEADER_BORDER_PAD_PT,
 } from './pdfUnits';
-import { solid } from './pdfColors';
 
 /**
  * Per-template fallbacks used only when the user has NOT set a value.

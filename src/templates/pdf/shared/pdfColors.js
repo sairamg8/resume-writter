@@ -47,13 +47,16 @@ export function solid(color, alpha = 1, background = '#ffffff') {
 
 /**
  * Body and secondary text in the user's Text colour: `text` blended toward the white page,
- * opaque, so it prints and copies out like any other text. At the default Text colour
- * (#111111) the shades are the greys the sections used to hard-code — a résumé in the default
- * colour looks as before — and a custom Text colour reaches every run.
- *   body   #333333    descriptions, bullets, the summary
- *   sub    ≈ #4b5563  subtitles, skills, issuers, proficiency, contacts, grey dates
- *   meta   ≈ #6b7280  technologies, relationship, phone, list markers
- *   muted  ≈ #9ca3af  locations, credential IDs, light dates
+ * opaque, so it prints and copies out like any other text, and a custom Text colour reaches
+ * every run. At the default Text colour (#111111, what every new résumé stores) the body is
+ * exactly the #333333 the sections used to hard-code, and the secondary shades have the old
+ * greys' lightness in neutral grey instead of their slate tint (R2-5):
+ *   body   #333333               descriptions, bullets, the summary
+ *   sub    #545454 (was #4b5563) subtitles, skills, issuers, proficiency, contacts, grey dates
+ *   meta   #707070 (was #6b7280) technologies, relationship, phone, list markers
+ *   muted  #a0a0a0 (was #9ca3af) locations, credential IDs, light dates
+ * A résumé that stores no Text colour (an import, older data) takes its template's default,
+ * and that colour's tint: Modern's slate prints slate greys.
  */
 export function textShades(text) {
   return { body: solid(text, 0.857), sub: solid(text, 0.72), meta: solid(text, 0.6), muted: solid(text, 0.4) };

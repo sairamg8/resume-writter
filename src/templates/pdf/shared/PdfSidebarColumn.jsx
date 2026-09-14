@@ -1,8 +1,9 @@
-import { View, Text, Link } from '@react-pdf/renderer';
+import { View, Text } from '@react-pdf/renderer';
 import { safeHref, hasRichText } from '@/utils/richText';
 import { contactHref } from '@/utils/contacts';
+import { dateRange } from '@/utils/dates';
 import { SIDEBAR_COLUMN_TYPES } from '@/constants/templates';
-import { tracking } from './pdfUnits';
+import { CSS_PX_TO_PT, DEFAULT_ITEM_GAP_PX, tracking } from './pdfUnits';
 import { sidebarShades } from './pdfColors';
 import { PdfRichText } from './PdfRichText';
 import { RenderBullets } from './PdfSections';
@@ -21,15 +22,13 @@ export const SIDEBAR_TYPES = new Set(SIDEBAR_COLUMN_TYPES);
 
 /**
  * An entry's URL as printed: `label` (else the URL) linking to it when safeHref accepts it —
- * same colour, no underline — else plain text. The link is a run inside the line, so only the
- * words are clickable, not the rest of the column.
+ * same colour, no underline — else plain text: the main column's ContactValue inside the line,
+ * so only the words are clickable, not the rest of the column.
  */
 export function EntryLink({ url, label, style }) {
-  const href = safeHref(url);
-  const text = label || url;
   return (
     <Text style={style}>
-      {href ? <Link src={href} style={{ color: style.color, textDecoration: 'none' }}>{text}</Link> : text}
+      <ContactValue value={label || url} href={safeHref(url)} style={{ color: style.color }} />
     </Text>
   );
 }
@@ -105,7 +104,7 @@ export function SideCertifications({ section, sectionGap, itemGap, shades = NAVY
       <View style={{ gap: itemGap }}>
         {visibleItems.map((item, i) => {
           // Issued – expires, as the main column prints it ("– 03/2027" without an issue date).
-          const dateStr = showDates ? `${item.date || ''}${item.expiry ? ` – ${item.expiry}` : ''}`.trim() : '';
+          const dateStr = showDates ? dateRange(item.date, item.expiry) : '';
           return (
             <View key={i}>
               <Text style={{ fontSize: 9, fontWeight: 'bold', color: shades.strong, lineHeight: 1.2 }}>{item.name}</Text>
@@ -121,7 +120,15 @@ export function SideCertifications({ section, sectionGap, itemGap, shades = NAVY
   );
 }
 
-export function SideInterests({ section, sectionGap, shades = NAVY }) {
+/**
+ * The interest chips' gap follows the section's item gap (its Spacing preset × Design → Between
+ * Items, or its own override) in proportion: 2.5 pt at the default 6 pt, as the column always
+ * printed it — the controls used to do nothing here (R2-6).
+ */
+const CHIP_GAP_PT = 2.5;
+const DEFAULT_ITEM_GAP_PT = DEFAULT_ITEM_GAP_PX * CSS_PX_TO_PT;
+
+export function SideInterests({ section, sectionGap, itemGap = DEFAULT_ITEM_GAP_PT, shades = NAVY }) {
   const visibleItems = (section.items || []).filter(i => i.visible !== false);
   const allInterests = visibleItems.flatMap(item =>
     (item.interests || '').split(',').map(s => s.trim()).filter(Boolean)
@@ -130,7 +137,7 @@ export function SideInterests({ section, sectionGap, shades = NAVY }) {
   return (
     <View style={{ marginBottom: sectionGap }}>
       <SideSectionTitle title={section.title} shades={shades} />
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 2.5 }}>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: (CHIP_GAP_PT * itemGap) / DEFAULT_ITEM_GAP_PT }}>
         {allInterests.map((interest, i) => (
           <View key={i} style={{ backgroundColor: shades.fill, borderRadius: 2, paddingHorizontal: 5, paddingVertical: 1.5 }}>
             <Text style={{ fontSize: 8.5, color: shades.chip, lineHeight: 1.2 }}>{interest}</Text>

@@ -1,7 +1,7 @@
 // Body and secondary text follow Design → Colors → Text colour (FIDB-27 / FIDA-44).
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { setup, teardown, resume, section, experience, render, drawState, TEMPLATES } from './harness.mjs';
+import { setup, teardown, resume, section, experience, render, drawState, loadModule, TEMPLATES } from './harness.mjs';
 
 before(setup);
 after(teardown);
@@ -77,12 +77,28 @@ describe('text colour', () => {
       }
     });
 
+    // Guard (R2-5): the old greys' lightness at the default, and — exactly — the Text colour's own
+    // shades at the default #111111, the panel's "Near Black" #1a1a1a, and (no Text colour stored,
+    // e.g. an import) the template's default Text colour.
     it(`${template}: the default Text colour prints (nearly) the greys it printed before`, async () => {
       const got = await colours(template, '#111111');
       const avg = (c) => (c[0] + c[1] + c[2]) / 3;
       for (const [needle, before] of Object.entries(runsOf(template))) {
         const c = got[needle];
         assert.ok(Math.abs(avg(c) - avg(rgb(before))) <= 8, `"${needle}" rgb(${c.map(Math.round)}) vs ${before} before`);
+      }
+    });
+
+    it(`${template}: every body and secondary run is one of the Text colour's shades (R2-5)`, async () => {
+      const { resolveTemplateSettings } = await loadModule('/src/templates/pdf/shared/PdfPage.jsx');
+      const { textShades } = await loadModule('/src/templates/pdf/shared/pdfColors.js');
+      const hex = (c) => `#${c.map((v) => Math.round(v).toString(16).padStart(2, '0')).join('')}`;
+      for (const textColor of ['#111111', '#1a1a1a', undefined]) {
+        const base = textColor || resolveTemplateSettings({}, template).textColor;
+        const allowed = new Set([base, ...Object.values(textShades(base))]);
+        for (const [needle, c] of Object.entries(await colours(template, textColor))) {
+          assert.ok(allowed.has(hex(c)), `${textColor || 'no Text colour'}: "${needle}" printed ${hex(c)}, not a shade of ${base}`);
+        }
       }
     });
   }

@@ -4,6 +4,7 @@ import {
 } from '@/utils/wordExportUtils';
 import { contactItems } from '@/utils/contacts';
 import { hasRichText } from '@/utils/richText';
+import { dateRange } from '@/utils/dates';
 
 const GREY = '6b7280';
 const spacer = (after = 60) => new Paragraph({ children: [], spacing: { after } });
@@ -12,7 +13,7 @@ const spacer = (after = 60) => new Paragraph({ children: [], spacing: { after } 
 const shown = (section) => (section.items || []).filter((item) => item && item.visible !== false);
 /** A field of an entry, or '' when its eye toggle hides it. */
 const field = (item, key) => ((item.hiddenFields || []).includes(key) ? '' : (item[key] || ''));
-const range = (start, end) => (start || end ? `${start || ''}${end ? ` – ${end}` : ''}` : '');
+const range = dateRange;
 
 /** Description + legacy bullets of an entry. */
 function body(item) {

@@ -23,3 +23,14 @@ export function deadlineState(iso, now = new Date()) {
   if (end < now) return 'past';
   return end - now < SOON_MS ? 'soon' : null;
 }
+
+/**
+ * A from–to range as the exports print it: "05/2023 – 05/2026", "05/2023" alone, "– 05/2026"
+ * when only the end is known (a certificate's expiry), '' when neither is. One helper for the
+ * PDF's two columns and Word, which each built it slightly differently (R2-7).
+ */
+export function dateRange(start, end) {
+  const [a, b] = [start, end].map((v) => (typeof v === 'string' ? v.trim() : ''));
+  if (a && b) return `${a} – ${b}`;
+  return a || (b ? `– ${b}` : '');
+}

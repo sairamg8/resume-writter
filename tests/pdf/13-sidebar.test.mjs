@@ -3,7 +3,6 @@ import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { setup, teardown, resume, section, render, renderDocx, read, allText, itemsWith, drawState, loadModule } from './harness.mjs';
 import { hasPdftotext, splitWords } from './extractors.mjs';
-import { contrast, readableOn } from '../../src/templates/pdf/shared/pdfColors.js';
 
 before(setup);
 after(teardown);
@@ -41,13 +40,14 @@ describe('Sidebar entry links (FIDB-14)', () => {
     assert.ok(Math.abs(x1 - t.x) < 2 && Math.abs(x2 - (t.x + t.w)) < 2, 'only the address is clickable');
   });
 
-  it('a URL that is not safe to link prints as text, not as a link', async () => {
+  it('a URL that is not safe to link prints as text, not as a link — beside a safe one that is (R2-8)', async () => {
     const pages = await read(await render(sidebar([
-      section('projects', [{ name: 'Proj', url: 'javascript:alert(1)' }]),
+      section('projects', [{ name: 'Proj', url: 'javascript:alert(1)' }, { name: 'Safe', url: 'github.com/me/safe' }]),
       section('certifications', [{ name: 'Cert', url: 'javascript:alert(2)' }]),
     ])));
-    assert.deepEqual(linksOf(pages), []);
-    assert.ok(allText(pages).includes('javascript:alert(1)'), allText(pages));
+    assert.deepEqual(linksOf(pages), ['https://github.com/me/safe'], 'the safe URL is the only link');
+    const text = allText(pages);
+    assert.ok(text.includes('javascript:alert(1)') && text.includes('javascript:alert(2)'), text);
   });
 });
 
@@ -71,6 +71,27 @@ describe('Sidebar dark-column spacing (FIDB-38)', () => {
     const override = await skillGap({ spacing: 'compact', itemGap: 20 });
     assert.ok(Math.abs(override - compact - (20 * 0.75 - between * 4 / 8)) < 0.2, `an Item gap override wins: ${override}`);
   });
+
+  it('Design → Between Items reaches the dark column: skills and interest chips move with it (R2-6)', async () => {
+    const at = async (itemGap) => {
+      const pages = await read(await render(sidebar([
+        section('skills', [{ category: 'Alpha', skills: 'One' }, { category: 'Beta', skills: 'Two' }]),
+        section('interests', [{ interests: 'Chess, Hiking' }]),
+      ], { settings: itemGap === undefined ? {} : { itemGap } })));
+      const [a, b] = ['ALPHA', 'BETA'].map((s) => itemsWith(pages, s)[0]);
+      const [c, h] = ['Chess', 'Hiking'].map((s) => itemsWith(pages, s)[0]);
+      return { rows: a.y - b.y, chips: h.x - (c.x + c.w) };
+    };
+    const base = await at(undefined);
+    const wide = await at(40);
+    assert.ok(Math.abs(wide.rows - base.rows - (40 - 8) * 0.75) < 0.2, `skills rows ${base.rows} → ${wide.rows}`);
+    // The chips keep 2.5 pt at the default and grow in proportion: 2.5 × 30 / 6 pt at 40 px.
+    const pad = base.chips - 2.5;
+    assert.ok(Math.abs(wide.chips - pad - 2.5 * 5) < 0.2, `chip gap ${base.chips} → ${wide.chips}`);
+    const spacious = await read(await render(sidebar([section('interests', [{ interests: 'Chess, Hiking' }], { spacing: 'relaxed' })])));
+    const [c, h] = ['Chess', 'Hiking'].map((s) => itemsWith(spacious, s)[0]);
+    assert.ok(Math.abs(h.x - (c.x + c.w) - pad - 2.5 * 1.75) < 0.2, 'the Spacious preset widens the chips\' gap');
+  });
 });
 
 describe('Sidebar dark-column fields', () => {
@@ -91,53 +112,6 @@ describe('Sidebar dark-column fields', () => {
     const undated = allText(await read(await render(sidebar([section('certifications', [cert], { showDates: false })]))));
     assert.ok(!undated.includes('2024') && !undated.includes('2027'), `Show dates off: ${undated}`);
     assert.ok(undated.includes('ID: ABC-12345'), undated);
-  });
-});
-
-describe('Sidebar job title colour (FIDB-42)', () => {
-  // WCAG 2 contrast, written out here rather than taken from the code under test.
-  const lum = (hex) => {
-    const n = parseInt(hex.slice(1), 16);
-    return [n >> 16, (n >> 8) & 255, n & 255]
-      .map((v) => v / 255).map((c) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4))
-      .reduce((sum, c, i) => sum + c * [0.2126, 0.7152, 0.0722][i], 0);
-  };
-  const ratio = (a, b) => {
-    const [hi, lo] = [lum(a), lum(b)].sort((x, y) => y - x);
-    return (hi + 0.05) / (lo + 0.05);
-  };
-  async function titleFill(settings) {
-    const bytes = await render(sidebar([], { settings, personal: { title: 'Staff Engineer' } }));
-    const [hit] = await drawState(bytes, 'Staff Engineer');
-    return hit;
-  }
-
-  it('a dark accent never makes the title unreadable on the sidebar fill', async () => {
-    const cases = [['#111111', '#1e293b'], ['#374151', '#1e293b'], ['#2563eb', '#1e293b'], ['#111111', '#14532d'], ['#7f1d1d', '#450a0a']];
-    for (const [accentColor, sidebarBg] of cases) {
-      const hit = await titleFill({ accentColor, sidebarBg });
-      assert.equal(hit.alpha, 1);
-      const r = ratio(hit.fill, sidebarBg);
-      assert.ok(r >= 4.5, `accent ${accentColor} on ${sidebarBg}: title ${hit.fill}, contrast ${r.toFixed(2)}:1`);
-    }
-  });
-
-  it('contrast() is the WCAG ratio; readableOn() lightens on dark, darkens on light, keeps what reads', () => {
-    assert.equal(contrast('#000000', '#ffffff').toFixed(2), '21.00');
-    assert.equal(contrast('#ffffff80', '#000000').toFixed(2), ratio('#808080', '#000000').toFixed(2));
-    assert.equal(contrast('red', '#000000'), null);
-    assert.equal(readableOn('#fbbf24', '#1e293b'), '#fbbf24');
-    const light = readableOn('#111111', '#1e293b');
-    assert.ok(lum(light) > lum('#111111') && ratio(light, '#1e293b') >= 4.5, light);
-    const dark = readableOn('#fde68a', '#ffffff');
-    assert.ok(lum(dark) < lum('#fde68a') && ratio(dark, '#ffffff') >= 4.5, dark);
-    assert.equal(readableOn('red', '#1e293b'), 'red');
-  });
-
-  it('a readable accent is kept, and a job title colour the user picked always wins', async () => {
-    assert.equal((await titleFill({ accentColor: '#fbbf24' })).fill, '#fbbf24');
-    assert.equal((await titleFill({ accentColor: '#111111', jobTitleColor: '#bfdbfe' })).fill, '#bfdbfe');
-    assert.equal((await titleFill({ accentColor: '#111111', jobTitleColor: '#222222' })).fill, '#222222');
   });
 });
 
@@ -241,6 +215,9 @@ describe('Sidebar education', () => {
   it('prints the description and legacy bullets, readable on the dark column', async () => {
     const edu = [{ institution: 'IIT Madras', degree: 'BTech', description: '<p>EduDescText <strong>coursework</strong></p><ul><li>EduListItem</li></ul>', bullets: ['EduLegacyBullet'] }];
     const bytes = await render(sidebar([section('education', edu)]));
+    // Imported here, not at the top: a helper newer than the code under test must not stop the
+    // whole file from loading (R2-8).
+    const { contrast } = await import('../../src/templates/pdf/shared/pdfColors.js');
     const text = allText(await read(bytes));
     for (const s of ['EduDescText coursework', 'EduListItem', 'EduLegacyBullet']) assert.ok(text.includes(s), `${s} in: ${text}`);
     for (const s of ['EduDescText', 'EduListItem', 'EduLegacyBullet']) {

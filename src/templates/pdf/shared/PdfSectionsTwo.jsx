@@ -3,6 +3,7 @@ import { PdfRichText } from './PdfRichText';
 import { ContactValue } from './PdfContact';
 import { pxToPt } from './pdfUnits';
 import { hasRichText, safeHref } from '@/utils/richText';
+import { dateRange } from '@/utils/dates';
 import {
   SPACER,
   SectionTitleOf,
@@ -36,7 +37,7 @@ export function CertificationsSection({ section, settings, marginBottom, spaceBe
         cols={cols}
         gap={itemGap}
         renderItem={(item) => {
-          const dateStr = showDates ? [item.date, item.expiry ? ` – ${item.expiry}` : ''].filter(Boolean).join('') : '';
+          const dateStr = showDates ? dateRange(item.date, item.expiry) : '';
           const nameLine = (
             <Text style={{ fontSize: entrySize, color: textColor, textAlign }}>
               <Text style={{ fontWeight: 'bold' }}>{item.name || item.title}</Text>
