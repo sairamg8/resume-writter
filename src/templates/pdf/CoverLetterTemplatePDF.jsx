@@ -40,6 +40,8 @@ export function CoverLetterTemplatePDF({ data }) {
   const fieldsPos       = cl.fieldsPosition || 'right';
 
   const photoSrc = cl.showPhoto !== false ? (cl.clPhoto || personal?.photo) : null;
+  // The panel's "Text Position (relative to photo)": the name block's place beside the photo.
+  const photoAlign = { top: 'flex-start', bottom: 'flex-end' }[cl.photoTextAlign] || 'center';
   const hidden   = letterHiddenFields(cl, personal);
 
   const sig    = letterSignature(cl, personal);
@@ -79,7 +81,7 @@ export function CoverLetterTemplatePDF({ data }) {
   function renderHeader() {
     if (fieldsPos === 'below-name') {
       return (
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+        <View style={{ flexDirection: 'row', alignItems: photoAlign }}>
           {photoEl}
           <View style={{ flex: 1, minWidth: 0 }}>
             {nameBlock}
@@ -91,7 +93,7 @@ export function CoverLetterTemplatePDF({ data }) {
     if (fieldsPos === 'below-all') {
       return (
         <View>
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <View style={{ flexDirection: 'row', alignItems: photoAlign }}>
             {photoEl}
             {nameBlock}
           </View>
@@ -102,7 +104,7 @@ export function CoverLetterTemplatePDF({ data }) {
     // 'right' — default: name+photo on left, contact on right
     return (
       <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', flexShrink: 0 }}>
+        <View style={{ flexDirection: 'row', alignItems: photoAlign, flexShrink: 0 }}>
           {photoEl}
           {nameBlock}
         </View>

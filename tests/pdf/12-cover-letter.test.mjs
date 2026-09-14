@@ -102,3 +102,56 @@ describe('cover letter — Word export (FIDB-50)', () => {
     assert.deepEqual(doc.texts.slice(-3), ['Sincerely,', 'Test Person', 'Engineer'], 'the signature falls back to the résumé name and title');
   });
 });
+
+// ── Photo ↔ text alignment ───────────────────────────────────────────────────
+
+const PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+
+/** Bottom y and height of each image drawn on page 1 (the CTM in effect when it is painted). */
+async function imageBoxes(bytes) {
+  const { pdfjs } = await setup();
+  const doc = await pdfjs.getDocument({ data: bytes.slice(), isEvalSupported: false, verbosity: 0 }).promise;
+  const O = pdfjs.OPS;
+  const ops = await (await doc.getPage(1)).getOperatorList();
+  const mul = (m, n) => [
+    m[0] * n[0] + m[1] * n[2], m[0] * n[1] + m[1] * n[3], m[2] * n[0] + m[3] * n[2],
+    m[2] * n[1] + m[3] * n[3], m[4] * n[0] + m[5] * n[2] + n[4], m[4] * n[1] + m[5] * n[3] + n[5],
+  ];
+  let ctm = [1, 0, 0, 1, 0, 0];
+  const stack = [];
+  const boxes = [];
+  ops.fnArray.forEach((fn, k) => {
+    if (fn === O.save) stack.push(ctm);
+    else if (fn === O.restore) ctm = stack.pop() || ctm;
+    else if (fn === O.transform) ctm = mul(ops.argsArray[k], ctm);
+    else if (fn === O.paintImageXObject || fn === O.paintInlineImageXObject) boxes.push({ y: ctm[5], h: ctm[3] });
+  });
+  await doc.loadingTask.destroy();
+  return boxes;
+}
+
+describe('cover letter — photo ↔ text alignment (FIDB-76)', () => {
+  for (const fieldsPosition of ['right', 'below-name', 'below-all']) {
+    it(`${fieldsPosition}: Top / Center / Bottom move the name block against the photo`, async () => {
+      const at = {};
+      for (const photoTextAlign of ['top', 'center', 'bottom']) {
+        const bytes = await renderCover(resume({
+          settings: { photoShape: 'square', photoHeight: 'taller' }, // a photo much taller than the name block
+          personal: { photo: PNG, email: 'me@example.com' },
+          coverLetter: { fieldsPosition, photoTextAlign },
+        }));
+        const [photo] = await imageBoxes(bytes);
+        at[photoTextAlign] = { photo, name: letterhead(await read(bytes)).y };
+      }
+      const { top, center, bottom } = at;
+      assert.equal(top.photo.y, center.photo.y, 'the photo stays put');
+      assert.equal(bottom.photo.y, center.photo.y, 'the photo stays put');
+      const up = top.name - center.name;
+      const down = center.name - bottom.name;
+      assert.ok(up > 3 && down > 3, `top moves the name up (${up.toFixed(1)} pt), bottom moves it down (${down.toFixed(1)} pt)`);
+      assert.ok(Math.abs(up - down) < 0.5, `centred halfway between: up ${up.toFixed(2)}, down ${down.toFixed(2)}`);
+      const photoTop = top.photo.y + top.photo.h;
+      assert.ok(top.name < photoTop && top.name > photoTop - 19 * 1.2, `top: the name's line starts at the photo's top edge (${photoTop.toFixed(1)}), baseline ${top.name.toFixed(1)}`);
+    });
+  }
+});
