@@ -1,9 +1,12 @@
 import { StyleSheet } from '@react-pdf/renderer';
+import { headerBorderOn } from '@/constants/templates';
 import {
   CSS_PX_TO_PT,
   DEFAULT_ITEM_GAP_PX,
   DEFAULT_SECTION_GAP_PX,
+  HEADER_BORDER_PAD_PT,
 } from './pdfUnits';
+import { solid } from './pdfColors';
 
 /**
  * Per-template fallbacks used only when the user has NOT set a value.
@@ -112,10 +115,20 @@ export function resolveTemplateSettings(settings = {}, templateKey) {
   s.photoBorder = settings.photoBorder || 'accent';
   s.photoHeight = settings.photoHeight || 'match';
   s.photoTextAlign = settings.photoTextAlign || 'center';
-  // showHeaderBorder: false is a valid explicit choice (ATS_DEFAULTS)
-  s.showHeaderBorder = settings.showHeaderBorder;
+  // A boolean from here on: the stored choice, else the template's own default.
+  s.showHeaderBorder = headerBorderOn(settings, templateKey);
 
   return s;
+}
+
+/** The header's bottom rule (Classic, Minimal, Executive) when the settings turn it on. */
+export function getHeaderBorderStyle(settings) {
+  if (!settings.showHeaderBorder) return {};
+  return {
+    borderBottomWidth: settings.headerBorderWidth || 2,
+    borderBottomColor: solid(settings.accentColor),
+    paddingBottom: HEADER_BORDER_PAD_PT,
+  };
 }
 
 export function getPageStyle(settings) {

@@ -1,12 +1,11 @@
 import { Document, Page, View, Text, Image } from '@react-pdf/renderer';
-import { getPageStyle, getDocumentProps } from './shared/PdfPage';
+import { getPageStyle, getDocumentProps, getHeaderBorderStyle } from './shared/PdfPage';
 import { PdfContactRow } from './shared/PdfContact';
 import { SectionRouter, getEffectiveSpacing, getVisibleSections } from './shared/PdfSections';
 import { PdfRichText } from './shared/PdfRichText';
 import { hasRichText } from '@/utils/richText';
 import { getPdfPhotoStyle } from './shared/pdfPhoto';
-import { HEADER_BORDER_PAD_PT, HEADER_MARGIN_BOTTOM_PT } from './shared/pdfUnits';
-import { solid } from './shared/pdfColors';
+import { HEADER_MARGIN_BOTTOM_PT } from './shared/pdfUnits';
 
 export function ClassicTemplatePDF({ data }) {
   const { personal, sections = [], settings = {} } = data;
@@ -27,16 +26,8 @@ export function ClassicTemplatePDF({ data }) {
   const headerLayout = settings.headerLayout || 'stack';
   const centered     = headerAlign === 'center';
 
-  // Match canvas: showHeaderBorder !== false means default ON when undefined;
-  // ATS_DEFAULTS sets false explicitly so that still hides the border.
-  const showHeaderBorder = settings.showHeaderBorder !== false;
-  const headerBorderStyle = showHeaderBorder
-    ? {
-        borderBottomWidth: settings.headerBorderWidth || 2,
-        borderBottomColor: solid(accent),
-        paddingBottom: HEADER_BORDER_PAD_PT,
-      }
-    : {};
+  // On when the setting is unset (the Classic design); new résumés store false (ATS_DEFAULTS).
+  const headerBorderStyle = getHeaderBorderStyle(settings);
 
   const photoTextAlign = settings.photoTextAlign || 'center';
   const alignItemsVal = photoTextAlign === 'bottom' ? 'flex-end'
