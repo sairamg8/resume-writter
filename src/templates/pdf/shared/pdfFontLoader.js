@@ -138,3 +138,28 @@ export function registerPdfFont(settings) {
   if (!config.local) registerFromCDN(config.family, config.pkg);
   return config.family;
 }
+
+const primedFonts = new WeakSet();
+
+/**
+ * Load every registered face of `families` and seed fontkit's glyph cache from each cmap.
+ * Call before every render.
+ *
+ * fontkit caches one glyph object per glyph id, carrying the characters of the FIRST request.
+ * Embedding a composite glyph requests its components with no characters — the middle dot
+ * "·" is drawn from the period's outline, "é" from "e" — so a later "." then gets an empty
+ * ToUnicode entry: the PDF looks right, but copy-paste and ATS parsers read
+ * "me@example.com" as "me@examplecom". Seeding the cache from the cmap first gives every
+ * directly mapped glyph its real code point, whatever is embedded later.
+ */
+export async function prepareFonts(families) {
+  const store = Font.getRegisteredFonts();
+  const sources = families.flatMap((family) => store[family]?.sources || []);
+  // A face that fails to load is left to react-pdf, which reports it when the face is used.
+  await Promise.all(sources.map((source) => source.load().catch(() => null)));
+  for (const { data: font } of sources) {
+    if (!font || primedFonts.has(font) || typeof font.glyphForCodePoint !== 'function') continue;
+    for (const codePoint of font.characterSet || []) font.glyphForCodePoint(codePoint);
+    primedFonts.add(font);
+  }
+}

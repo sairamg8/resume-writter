@@ -3,6 +3,7 @@ import { pdf } from '@react-pdf/renderer';
 import {
   registerPdfFont,
   prefetchPdfFont,
+  prepareFonts,
   ensureNoHyphenation,
 } from '@/templates/pdf/shared/pdfFontLoader';
 import { resolveTemplateSettings } from '@/templates/pdf/shared/PdfPage';
@@ -67,6 +68,7 @@ export async function renderResumePdf(resume) {
     loadTemplate(key),
   ]);
 
+  await prepareFonts([fontFamily]);
   const data = prepareResumeData(resume, fontFamily, key);
   const instance = pdf(React.createElement(TemplatePDF, { data }));
   const blob = await instance.toBlob();
@@ -89,6 +91,7 @@ export async function renderCoverLetterPdf(resume, { preview = false } = {}) {
     import('@/templates/pdf/CoverLetterTemplatePDF'),
   ]);
 
+  await prepareFonts([fontFamily]);
   const resolvedSettings = resolveTemplateSettings({
     ...resume?.settings,
     _pdfFontFamily: fontFamily,
