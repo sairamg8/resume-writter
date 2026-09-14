@@ -2,10 +2,10 @@ import { useState, useEffect } from 'react';
 import { createBlankResume, defaultSettings } from '@/utils/defaultData';
 import { createSectionActions } from '@/hooks/useResumeSectionActions';
 import { newId } from '@/utils/ids';
-import { templateStyleDefaults, withKnownTemplate } from '@/constants/templates';
+import { templateStyleDefaults } from '@/constants/templates';
+import { DATA_VERSION, normalizeResume } from '@/utils/normalizeResume';
 
 const STORAGE_KEY = 'cpwtcv_v1';
-const DATA_VERSION = 6;
 
 /** First run: no résumés. The dashboard shows its "Create your first resume" state. */
 function emptyStore() {
@@ -27,9 +27,9 @@ function loadStore() {
       backupRaw(saved);
       return emptyStore();
     }
-    const resumes = parsed.resumes.filter(r => r && r.id).map(withKnownTemplate);
-    // Any data version is kept: user resumes must survive an app upgrade (or downgrade).
-    // Version-specific migrations go here, keyed on parsed.dataVersion.
+    // Any data version is kept: user resumes must survive an app upgrade (or downgrade). Each
+    // résumé is migrated from its own dataVersion (normalizeResume), not the store's.
+    const resumes = parsed.resumes.filter(r => r && r.id).map(normalizeResume);
     return {
       ...parsed,
       resumes,
@@ -73,7 +73,7 @@ export function useAppStore() {
   }
 
   function loadResumes(list) {
-    const resumes = list.map(withKnownTemplate);
+    const resumes = list.map(normalizeResume);
     setAppState(prev => ({
       ...prev,
       resumes,
@@ -93,7 +93,7 @@ export function useAppStore() {
 
   function importResume(data) {
     const id = newId('resume');
-    const imported = withKnownTemplate({ ...JSON.parse(JSON.stringify(data)), id, updatedAt: Date.now() });
+    const imported = normalizeResume({ ...JSON.parse(JSON.stringify(data)), id, updatedAt: Date.now() });
     setAppState(prev => ({ ...prev, resumes: [...prev.resumes, imported], activeId: id }));
     return id;
   }
@@ -102,7 +102,7 @@ export function useAppStore() {
   function restoreResumes(list) {
     const ids = new Set(list.map(r => r.id));
     setAppState(prev => {
-      const resumes = [...prev.resumes.filter(r => !ids.has(r.id)), ...list.map(withKnownTemplate)];
+      const resumes = [...prev.resumes.filter(r => !ids.has(r.id)), ...list.map(normalizeResume)];
       return {
         ...prev,
         resumes,

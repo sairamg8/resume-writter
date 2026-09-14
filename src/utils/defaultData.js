@@ -1,5 +1,6 @@
 import { BLANK_PERSONAL, blankSections, BASE_COVER_LETTER } from '@/utils/defaultDataContent';
 import { templateStyleDefaults } from '@/constants/templates';
+import { DATA_VERSION } from '@/utils/normalizeResume';
 
 // ATS-safe defaults — proper dimensions, neutral colors, standard font
 export const ATS_DEFAULTS = {
@@ -57,12 +58,16 @@ export function defaultSettings(template) {
 
 export { SECTION_TYPE_DEFAULTS } from '@/utils/defaultDataSectionTypes';
 
-/** A fresh, empty résumé (Classic template, ATS-safe settings). */
+/**
+ * A fresh, empty résumé (Classic template, ATS-safe settings). It is current data, so it carries
+ * DATA_VERSION: no migration ever runs on what its user types.
+ */
 export function createBlankResume({ id, name = 'Untitled Resume', template = 'classic' } = {}) {
   return {
     id,
     name,
     updatedAt: Date.now(),
+    dataVersion: DATA_VERSION,
     template,
     settings: { ...ATS_DEFAULTS },
     personal: { ...BLANK_PERSONAL, hiddenFields: [] },

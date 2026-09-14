@@ -4,23 +4,11 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/utils/firebase';
 import { isDemoId, nextTombstones } from '@/utils/demoSeed';
+import { mergeResumeLists } from '@/utils/syncMerge';
 
 function resumesCol(uid) { return collection(db, 'users', uid, 'resumes'); }
 function resumeDoc(uid, id) { return doc(db, 'users', uid, 'resumes', id); }
 function deletionsDoc(uid) { return doc(db, 'users', uid, 'meta', 'deletions'); }
-
-// Merge local + cloud resumes: newer updatedAt wins, deleted IDs excluded.
-function mergeResumeLists(local, cloud, deletedIds) {
-  const byId = {};
-  for (const r of cloud) {
-    if (!deletedIds.has(r.id)) byId[r.id] = r;
-  }
-  for (const r of local) {
-    if (deletedIds.has(r.id)) continue;
-    if (!byId[r.id] || r.updatedAt >= byId[r.id].updatedAt) byId[r.id] = r;
-  }
-  return Object.values(byId);
-}
 
 /**
  * Errors that mean cloud sync cannot work until Firebase project/rules are fixed.

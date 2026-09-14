@@ -25,8 +25,8 @@ export const templateStyleDefaults = (template) => ({ ...TEMPLATE_STYLE_DEFAULTS
 
 /**
  * `resume` with a template the app offers, so the Design panel shows it selected and every
- * control reads the template the PDF prints. Applied wherever résumés come in: load, import,
- * cloud sync, restore. The same object when nothing changes.
+ * control reads the template the PDF prints. normalizeResume() applies it wherever résumés come
+ * in: load, import, cloud sync, restore. The same object when nothing changes.
  */
 export function withKnownTemplate(resume) {
   if (!resume || resume.template === templateId(resume.template)) return resume;

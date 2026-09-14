@@ -1,5 +1,5 @@
-// Regression tests for resume-store bugs (audit main-loop notes M1–M3, M15).
-import { buildTestState, STORAGE_KEY } from '../../tests/helpers.js';
+// Regression tests for resume-store bugs (audit main-loop notes M1–M3, M15; review R1-0).
+import { buildTestState, DATA_VERSION, STORAGE_KEY } from '../../tests/helpers.js';
 import { CARD, IMPORT_INPUT } from '../support/selectors.js';
 import { dashboardState } from '../support/state.js';
 
@@ -40,7 +40,7 @@ describe('regressions — resume store', () => {
     visitWithRawStore(JSON.stringify(state));
     cy.get(CARD).should('have.length', 1).and('contain.text', 'My Real CV');
     cy.store().should((s) => {
-      expect(s.dataVersion).to.eq(6);
+      expect(s.dataVersion).to.eq(DATA_VERSION);
       expect(s.resumes.map((r) => r.name)).to.deep.eq(['My Real CV']);
     });
   });
@@ -95,6 +95,62 @@ describe('regressions — resume store', () => {
     cy.location('hash').should('match', /^#\/resume\//);
     cy.store().should((s) => expect(s.resumes.find((r) => r.name === 'Aurora CV').template).to.eq('classic'));
     classicSelected();
+  });
+});
+
+describe('regressions — letters saved with the old "Hiring Manager" default (R1-0)', () => {
+  // Every résumé created before bf0467f saved this block: a recipient title nobody typed (there
+  // was no input for it) and nothing else.
+  const OLD_LETTER = {
+    recipientName: '', recipientTitle: 'Hiring Manager', company: '', date: '', subject: '',
+    body: '<p>I would love to join the team.</p>', closing: 'Sincerely',
+  };
+  const letter = () => cy.get('#cover-letter-preview');
+  const titleInput = () => cy.contains('label', 'Recipient Title').next('input');
+  const v6State = () => {
+    const state = buildTestState('classic');
+    state.dataVersion = 6;
+    state.resumes[0].coverLetter = { ...OLD_LETTER };
+    return state;
+  };
+  const printsNoTitle = () => {
+    letter().should('contain.text', 'I would love to join the team.').and('not.contain.text', 'Hiring Manager');
+    titleInput().should('have.value', '').and('have.attr', 'placeholder', 'Hiring Manager');
+  };
+
+  it('a letter saved under data version 6 prints no "Hiring Manager" line, and the store is migrated', () => {
+    cy.visitEditor('classic', { state: v6State(), tab: 'coverletter' });
+    printsNoTitle();
+    cy.store().should((s) => {
+      expect(s.dataVersion).to.eq(DATA_VERSION);
+      expect(s.resumes[0].dataVersion).to.eq(DATA_VERSION);
+      expect(s.resumes[0].coverLetter).to.deep.eq({ ...OLD_LETTER, recipientTitle: '' });
+    });
+  });
+
+  it('an imported file saved with the old default prints no "Hiring Manager" line', () => {
+    cy.visitDashboard(dashboardState());
+    const old = { ...buildTestState('classic').resumes[0], name: 'Old Letter CV', coverLetter: OLD_LETTER };
+    cy.get(IMPORT_INPUT).selectFile({ contents: Cypress.Buffer.from(JSON.stringify(old)), fileName: 'old.json' }, { force: true });
+    cy.location('hash').should('match', /^#\/resume\//);
+    // Wait for the editor: the dashboard has a "Cover Letter" button of its own (a new letter).
+    cy.preview().should('contain.text', 'Alex Johnson');
+    cy.contains('button', 'Cover Letter').click();
+    cy.previewReady();
+    printsNoTitle();
+    cy.store().should((s) => expect(s.resumes.find((r) => r.name === 'Old Letter CV').coverLetter.recipientTitle).to.eq(''));
+  });
+
+  it('a "Hiring Manager" the user types afterwards is theirs: it survives a reload', () => {
+    cy.visitEditor('classic', { state: v6State(), tab: 'coverletter' });
+    printsNoTitle();
+    titleInput().type('Hiring Manager');
+    letter().should('contain.text', 'Hiring Manager');
+    cy.store().its('resumes.0.coverLetter.recipientTitle').should('eq', 'Hiring Manager');
+    cy.reload();
+    cy.previewReady();
+    titleInput().should('have.value', 'Hiring Manager');
+    letter().should('contain.text', 'Hiring Manager');
   });
 });
 
