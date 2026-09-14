@@ -1,0 +1,75 @@
+// Unit tests for the demo-account rules (src/utils/demoSeed.js). Run: yarn test:unit
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import {
+  isDemoId, parseAccountList, isDemoAccount, needsDemoRestore,
+  rememberDemo, buildDemoRestore, nextTombstones,
+} from '../../src/utils/demoSeed.js';
+
+const resume = (id, updatedAt, name = id) => ({ id, name, updatedAt, sections: [] });
+const PRISTINE = [resume('demo_a', 0, 'Sample A'), resume('demo_b', 0, 'Sample B')];
+
+test('isDemoId: only ids with the demo_ prefix', () => {
+  assert.equal(isDemoId('demo_classic'), true);
+  assert.equal(isDemoId('resume_1757840000000'), false);
+  assert.equal(isDemoId('my_demo_classic'), false);
+  assert.equal(isDemoId(undefined), false);
+  assert.equal(isDemoId(42), false);
+});
+
+test('parseAccountList: trims, lower-cases and drops empty entries', () => {
+  assert.deepEqual(parseAccountList(' A@X.com, ,b@y.com ,'), ['a@x.com', 'b@y.com']);
+  assert.deepEqual(parseAccountList(''), []);
+  assert.deepEqual(parseAccountList(undefined), []);
+});
+
+test('isDemoAccount: matches the email case-insensitively, never a signed-out visitor', () => {
+  const accounts = ['owner@example.com'];
+  assert.equal(isDemoAccount({ email: 'Owner@Example.com' }, accounts), true);
+  assert.equal(isDemoAccount({ email: 'someone@example.com' }, accounts), false);
+  assert.equal(isDemoAccount({ email: null }, accounts), false);
+  assert.equal(isDemoAccount({}, accounts), false);
+  assert.equal(isDemoAccount(null, accounts), false);
+});
+
+test('needsDemoRestore: an empty list, or one holding only the user\'s own résumés', () => {
+  assert.equal(needsDemoRestore([]), true);
+  assert.equal(needsDemoRestore([resume('resume_1', 1)]), true);
+  assert.equal(needsDemoRestore([resume('resume_1', 1), resume('demo_b', 1)]), false);
+});
+
+test('rememberDemo: keeps the newest copy of each sample, and forgets nothing on deletion', () => {
+  const seed = new Map();
+  rememberDemo(seed, [resume('demo_a', 5, 'old'), resume('resume_1', 9)]);
+  rememberDemo(seed, [resume('demo_a', 3, 'older')]);
+  assert.equal(seed.get('demo_a').name, 'old');
+  rememberDemo(seed, [resume('demo_a', 7, 'edited')]);
+  assert.equal(seed.get('demo_a').name, 'edited');
+  rememberDemo(seed, []); // every résumé deleted
+  assert.equal(seed.get('demo_a').name, 'edited');
+  assert.equal(seed.has('resume_1'), false);
+});
+
+test('rememberDemo: ignores a cloud stub that holds only the deleted flag', () => {
+  const seed = rememberDemo(new Map(), [{ id: 'demo_a' }, null, { deleted: true }]);
+  assert.equal(seed.size, 0);
+});
+
+test('buildDemoRestore: the latest edited copy where known, else the built-in sample', () => {
+  const seed = new Map([['demo_a', { ...resume('demo_a', 7, 'My edited A'), extra: { x: 1 } }]]);
+  const restored = buildDemoRestore(PRISTINE, seed, 1000);
+  assert.deepEqual(restored.map((r) => [r.id, r.name, r.updatedAt]), [
+    ['demo_a', 'My edited A', 1000],
+    ['demo_b', 'Sample B', 1000],
+  ]);
+  restored[0].extra.x = 2; // a deep copy: editing the restored résumé leaves the seed alone
+  assert.equal(seed.get('demo_a').extra.x, 1);
+  assert.equal(PRISTINE[1].updatedAt, 0);
+});
+
+test('nextTombstones: adds the deleted ids once, and takes restored samples off', () => {
+  assert.deepEqual(nextTombstones(['resume_1'], ['resume_2', 'resume_1'], []), ['resume_1', 'resume_2']);
+  assert.deepEqual(nextTombstones(['resume_1', 'demo_a'], [], ['demo_a']), ['resume_1']);
+  // A regular résumé written again stays deleted (a stale device cannot resurrect it).
+  assert.deepEqual(nextTombstones(['resume_1'], [], ['resume_1']), ['resume_1']);
+});
