@@ -75,8 +75,11 @@ export async function renderResumePdf(resume) {
   return blob;
 }
 
-/** Render the cover letter exactly as it is exported. */
-export async function renderCoverLetterPdf(resume) {
+/**
+ * Render the cover letter exactly as it is exported. `preview: true` adds the grey writing
+ * hint an empty letter shows in the editor; exports never carry it.
+ */
+export async function renderCoverLetterPdf(resume, { preview = false } = {}) {
   ensureNoHyphenation();
   const templateKey = resume?.template || 'classic';
 
@@ -92,7 +95,7 @@ export async function renderCoverLetterPdf(resume) {
     _template: templateKey,
   }, templateKey);
 
-  const data = { ...resume, settings: resolvedSettings };
+  const data = { ...resume, settings: resolvedSettings, _preview: preview };
   const instance = pdf(React.createElement(mod.CoverLetterTemplatePDF, { data }));
   const blob = await instance.toBlob();
   try { instance.reset?.(); } catch { /* no-op */ }

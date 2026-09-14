@@ -1,7 +1,8 @@
 describe('smoke', () => {
-  it('dashboard seeds demo resumes on first visit', () => {
+  it('a first visit shows an empty dashboard', () => {
     cy.visitDashboard();
-    cy.store().its('resumes').should('have.length.at.least', 1);
+    cy.contains('No resumes yet').should('be.visible');
+    cy.store().its('resumes').should('have.length', 0);
   });
 
   it('editor renders the preview and exports a PDF', () => {

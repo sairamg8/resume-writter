@@ -28,7 +28,7 @@ import { downloadBlob } from '@/utils/download';
 const renderResumePreview = (resume) =>
   import('@/utils/pdfExportReactPDF').then((m) => m.renderResumePdf(resume));
 const renderCoverLetterPreview = (resume) =>
-  import('@/utils/pdfExportReactPDF').then((m) => m.renderCoverLetterPdf(resume));
+  import('@/utils/pdfExportReactPDF').then((m) => m.renderCoverLetterPdf(resume, { preview: true }));
 
 function buildExportFilename(authUser, resume) {
   const name = (authUser?.displayName || resume?.personal?.name || 'resume').replace(/\s+/g, '_');

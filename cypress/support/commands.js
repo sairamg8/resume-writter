@@ -24,9 +24,10 @@ Cypress.Commands.add('visitEditor', (template = 'classic', opts = {}) => {
   return cy.wrap(state, { log: false });
 });
 
+/** Open the dashboard with `state` in localStorage (null = a first visit: empty store). */
 Cypress.Commands.add('visitDashboard', (state = null) => {
   cy.seedAndVisit('/#/', state);
-  cy.get(CARD).should('have.length.at.least', 1);
+  cy.contains('h1', 'My Resumes').should('be.visible');
 });
 
 /** Wait until the PDF preview has painted (it renders the exported PDF with pdf.js). */
