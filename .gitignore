@@ -30,3 +30,18 @@ playwright-report/
 test-results/
 qa-visual-compare/
 
+
+# Local env (real Firebase keys) — copy .env.example instead
+.env
+.env.*
+!.env.example
+
+# Yarn 4 (node-modules linker) local state
+.yarn/*
+!.yarn/patches
+!.yarn/releases
+
+# Cypress artifacts
+cypress/downloads/
+cypress/screenshots/
+cypress/videos/
