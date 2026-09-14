@@ -142,3 +142,29 @@ describe('Photo → Text Position (R3-0)', () => {
     }
   });
 });
+
+describe('Sidebar photo height (R3-1)', () => {
+  const PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAEElEQVR4nGP4z8AARAwQCgAf7gP9i18U1AAAAABJRU5ErkJggg==';
+  // The name sits right under the photo in the Sidebar column, so its baseline moves down by
+  // exactly the photo box's extra height.
+  const nameY = async (settings) => {
+    const bytes = await render(resume({ template: 'sidebar', personal: { photo: PNG, name: 'Pat Sample' }, settings: { photoShape: 'square', photoBorder: 'none', ...settings } }));
+    const doc = await pdfjs.getDocument({ data: bytes.slice(), isEvalSupported: false, verbosity: 0 }).promise;
+    const items = (await (await doc.getPage(1)).getTextContent()).items;
+    await doc.loadingTask.destroy();
+    return items.find((t) => t.str.includes('Pat Sample')).transform[5];
+  };
+  // The Sidebar photo's width at each size: Classic's 130 / 165 / 200 px × 0.75 pt/px × 0.55.
+  const WIDTH = { sm: 53.625, md: 68.0625, lg: 82.5 };
+
+  for (const photoSize of ['sm', 'md', 'lg']) {
+    it(`${photoSize}: Square, Tall and Portrait print 1 : 1.4 : 1.8 boxes`, async () => {
+      const w = WIDTH[photoSize];
+      const square = await nameY({ photoSize, photoHeight: 'match' });
+      for (const [photoHeight, ratio] of [['tall', 1.4], ['taller', 1.8]]) {
+        const h = w + (square - await nameY({ photoSize, photoHeight }));
+        assert.ok(Math.abs(h / w - ratio) < 0.01, `${photoHeight}: ${h.toFixed(1)} × ${w} pt is 1:${(h / w).toFixed(2)}, expected 1:${ratio}`);
+      }
+    });
+  }
+});

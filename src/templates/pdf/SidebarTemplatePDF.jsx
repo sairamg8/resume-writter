@@ -57,13 +57,17 @@ export function SidebarTemplatePDF({ data }) {
   const sideIconPt     = Math.max(6, Math.round((settings?.iconSize ?? 8) * CSS_PX_TO_PT));
   const sideSectionGap = sectionGap;
 
-  // Classic proportions scaled for the ~38% sidebar column so photos stay proportional
-  // to the canvas without overflowing the dark panel.
+  // Classic's photo scaled for the ~38% column by ONE factor, so every Photo → Height option
+  // keeps its shape (Square 1:1, Tall 1:1.4, Portrait 1:1.8). Capping width and height
+  // separately at 90 pt made Tall and Portrait print the same box (R3-1). The width cap keeps a
+  // photo inside the column; a circle's radius follows the scaled width.
   const classicPhoto = getPdfPhotoStyle(settings, accent, 'classic', { lightBorder: true });
+  const photoScale = Math.min(0.55, 90 / classicPhoto.width);
   const sidePhoto = {
     ...classicPhoto,
-    width: Math.min(classicPhoto.width * 0.55, 90),
-    height: Math.min(classicPhoto.height * 0.55, 90),
+    width: classicPhoto.width * photoScale,
+    height: classicPhoto.height * photoScale,
+    borderRadius: Math.min(classicPhoto.borderRadius, (classicPhoto.width * photoScale) / 2),
     marginBottom: 10,
   };
 
