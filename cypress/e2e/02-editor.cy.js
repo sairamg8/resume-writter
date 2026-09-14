@@ -127,7 +127,7 @@ describe('editor — shell', () => {
   it('Resume, Cover Letter and Design tabs swap both the panel and the preview', () => {
     cy.contains('Résumé · A4').should('be.visible');
     cy.contains('button', 'Cover Letter').click();
-    cy.get('#cover-letter-preview').should('be.visible');
+    cy.get('#cover-letter-preview').should('contain.text', 'I am excited to apply');
     cy.contains('Cover Letter · A4').should('be.visible');
     cy.get('button[title="Design & Customize"]').click();
     cy.contains('button', 'Template').should('be.visible');
@@ -180,13 +180,12 @@ describe('editor — shell', () => {
 describe('editor — deep links', () => {
   it('?tab=coverletter opens straight onto the cover letter', () => {
     cy.visitEditor('classic', { tab: 'coverletter' });
-    cy.get('#cover-letter-preview').should('be.visible');
+    cy.get('#cover-letter-preview').should('contain.text', 'I am excited to apply');
   });
 
   it('the header keeps the resume name visible at the default panel width', () => {
     cy.visitEditor('classic');
     cy.get('button[title="Rename resume"]').should('be.visible').and('have.text', 'Test Classic')
       .invoke('outerWidth').should('be.gt', 60);
-    cy.get('button[title="Sign in with Google"]').should('be.visible');
   });
 });

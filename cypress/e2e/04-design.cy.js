@@ -8,8 +8,8 @@ const openDesign = (section) => {
   if (section) cy.contains('button', new RegExp(`^${section}$`, 'i')).click();
 };
 
-/** Rendered (CSS-transformed) text of the first visible preview page (#resume-preview is hidden, so its innerText is empty). */
-const renderedText = () => cy.previewPages().first().invoke('prop', 'innerText');
+/** Text of the PDF preview — the PDF's own glyphs, so upper-casing shows as real capitals. */
+const renderedText = () => cy.preview().invoke('text');
 
 const squash = (s) => s.replace(/\s+/g, '').toLowerCase();
 
@@ -60,8 +60,8 @@ describe('design — settings', () => {
     openDesign('Colors');
     cy.get('button[title="Rose"]').first().click();
     cy.store().should((s) => expect(settingsOf(s).accentColor).to.eq('#e11d48'));
-    // Classic prints the job title in the accent colour.
-    cy.preview().contains('Full Stack Engineer').should('have.css', 'color', 'rgb(225, 29, 72)');
+    cy.previewReady();
+    // Classic prints the job title in the accent colour (the preview is this same PDF).
     cy.exportPdf().then((pdf) => {
       const title = pdf.runs.find((r) => r.str.includes('Full Stack Engineer'));
       expect(title, 'job title run').to.exist;

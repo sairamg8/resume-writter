@@ -20,7 +20,7 @@ Cypress.Commands.add('visitEditor', (template = 'classic', opts = {}) => {
   const q = opts.tab ? `?tab=${opts.tab}` : '';
   cy.seedAndVisit(`/#/resume/${state.activeId}${q}`, state);
   cy.contains('button', 'Export').should('be.visible');
-  cy.document().then((doc) => doc.fonts?.ready);
+  cy.previewReady();
   return cy.wrap(state, { log: false });
 });
 
@@ -29,10 +29,17 @@ Cypress.Commands.add('visitDashboard', (state = null) => {
   cy.get(CARD).should('have.length.at.least', 1);
 });
 
-/** The off-screen single-flow preview (source of truth for canvas text). */
+/** Wait until the PDF preview has painted (it renders the exported PDF with pdf.js). */
+Cypress.Commands.add('previewReady', () =>
+  cy.get('[data-preview-status="ready"]', { timeout: 30_000 }));
+
+/**
+ * Text of the PDF preview's pages (hidden text node filled from pdf.js). It is the exported
+ * PDF's own text, so it reflects real casing and only what the PDF prints.
+ */
 Cypress.Commands.add('preview', () => cy.get('#resume-preview'));
 
-/** The visible paginated A4 pages. */
+/** The visible preview pages (one canvas per PDF page). */
 Cypress.Commands.add('previewPages', () => cy.get('div.bg-white.shadow-2xl'));
 
 /**

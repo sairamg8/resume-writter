@@ -47,8 +47,11 @@ describe('regressions — editor', () => {
 
 describe('regressions — export failures', () => {
   it('M6: a failed PDF export says so and frees the Export button', () => {
-    cy.intercept('GET', '**/assets/pdfExportReactPDF-*.js', { statusCode: 500, body: '' });
+    // The preview loads the PDF chunk too, so break the download step instead of the chunk.
     cy.visitEditor('classic');
+    cy.window().then((win) => {
+      cy.stub(win.URL, 'createObjectURL').throws(new Error('download blocked'));
+    });
     cy.openExportMenu();
     cy.contains('button', /^\s*Export PDF\s*$/).click();
     cy.contains('[role="alert"]', 'PDF export failed').should('be.visible');
