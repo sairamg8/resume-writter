@@ -1,5 +1,3 @@
-import { useAppStore } from '@/hooks/useResumeStore';
-
 function parseDate(str) {
   if (!str) return null;
   const [m, y] = str.split('/');

@@ -21,10 +21,10 @@ function AppRoutes() {
     <Routes>
       <Route path="/"           element={<Dashboard store={store} auth={auth} sync={sync} />} />
       <Route path="/resume/:id" element={<Editor    store={store} auth={auth} sync={sync} />} />
-      <Route path="/jobs"          element={<JobTracker />} />
-      <Route path="/jobs/new"      element={<JobForm />} />
-      <Route path="/jobs/:id/edit" element={<JobForm />} />
-      <Route path="/jobs/:id"      element={<JobDetail />} />
+      <Route path="/jobs"          element={<JobTracker store={store} />} />
+      <Route path="/jobs/new"      element={<JobForm    store={store} />} />
+      <Route path="/jobs/:id/edit" element={<JobForm    store={store} />} />
+      <Route path="/jobs/:id"      element={<JobDetail  store={store} />} />
       <Route path="/terms"      element={<TermsPage />} />
       <Route path="/privacy"    element={<PrivacyPage />} />
       <Route path="*"           element={<Navigate to="/" replace />} />

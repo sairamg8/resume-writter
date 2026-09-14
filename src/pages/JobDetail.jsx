@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, ExternalLink, Trash2, Info, LayoutList, AlignLeft, Pencil } from 'lucide-react';
 import { useJobStore } from '@/hooks/useJobStore';
-import { useAppStore } from '@/hooks/useResumeStore';
 import { STATUS_MAP } from '@/constants/jobs';
 import { Pipeline } from '@/components/job/Pipeline';
 import { TasksTab } from '@/components/job/TasksTab';
@@ -16,11 +15,11 @@ const TABS = [
   { id: 'notes',    label: 'Notes',    icon: AlignLeft },
 ];
 
-export function JobDetail() {
+export function JobDetail({ store }) {
   const { id } = useParams();
   const navigate = useNavigate();
   const { jobs, updateJob, deleteJob } = useJobStore();
-  const { appState } = useAppStore();
+  const { appState } = store;
   const resumes = appState.resumes;
   const [activeTab, setActiveTab] = useState('tasks');
 

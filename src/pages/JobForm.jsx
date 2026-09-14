@@ -3,7 +3,6 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { useJobStore } from '@/hooks/useJobStore';
 import { useJobStages } from '@/hooks/useJobStages';
-import { useAppStore } from '@/hooks/useResumeStore';
 import { todayLocalISO } from '@/utils/dates';
 import { JOB_STATUSES } from '@/constants/jobs';
 import { InterviewStageSelector } from '@/components/job/InterviewStageSelector';
@@ -21,11 +20,11 @@ function Field({ label, required, children }) {
 
 const INPUT = 'w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors';
 
-export function JobForm() {
+export function JobForm({ store }) {
   const navigate = useNavigate();
   const { id } = useParams();
   const { jobs, addJob, updateJob } = useJobStore();
-  const { appState } = useAppStore();
+  const { appState } = store;
   const resumes = appState.resumes;
   const { customStages, addCustomStage, removeCustomStage } = useJobStages();
 

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useSyncExternalStore } from 'react';
 import { backupRaw } from '@/utils/storageBackup';
 import { newId } from '@/utils/ids';
 
@@ -52,82 +52,112 @@ function load() {
   return { jobs, recovery };
 }
 
-export function useJobStore() {
-  const [initial] = useState(load);
-  const [state, setState] = useState({ jobs: initial.jobs });
-  // Set when the saved list could not be read in full; the tracker shows it until dismissed.
-  const [recovery, setRecovery] = useState(initial.recovery);
-  // null when the last write reached localStorage; otherwise the error (usually QuotaExceededError).
-  const [persistError, setPersistError] = useState(null);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(KEY, JSON.stringify({ ...state, dataVersion: JOB_VERSION }));
-      setPersistError(null);
-    } catch (e) {
-      setPersistError(e);
-    }
-  }, [state]);
-
-  function addJob(data = {}) {
-    const now = Date.now();
-    const initialStatus = data.status || 'saved';
-    const job = {
-      id: newId('job'),
-      company: '', role: '', status: 'saved',
-      url: '', location: '', salary: '',
-      contact: '', resumeId: '', notes: '',
-      appliedDate: '', deadline: '',
-      todos: [],
-      statusHistory: [{ status: initialStatus, changedAt: now }],
-      createdAt: now, updatedAt: now,
-      ...data,
-      // ensure statusHistory always exists (imports may lack it)
-    };
-    if (!job.statusHistory) {
-      job.statusHistory = [{ status: job.status, changedAt: job.createdAt || now }];
-    }
-    setState(s => ({ jobs: [...s.jobs, job] }));
-    return job.id;
+/** Write the list; null when it reached localStorage, else the error (usually QuotaExceededError). */
+function persist(jobs) {
+  try {
+    localStorage.setItem(KEY, JSON.stringify({ jobs, dataVersion: JOB_VERSION }));
+    return null;
+  } catch (e) {
+    return e;
   }
+}
 
-  function updateJob(id, updates) {
-    setState(s => ({
-      jobs: s.jobs.map(j => {
-        if (j.id !== id) return j;
-        const updated = { ...j, ...updates, updatedAt: Date.now() };
-        if (updates.status && updates.status !== j.status) {
-          const prev = j.statusHistory || [{ status: j.status, changedAt: j.createdAt || Date.now() }];
-          updated.statusHistory = [...prev, { status: updates.status, changedAt: Date.now() }];
-        }
-        return updated;
-      }),
-    }));
+/**
+ * The one job list every job page shares (M14): `{ jobs, recovery, persistError }`. Read from
+ * localStorage when the first job page opens, then kept in memory for the visit — a page used to
+ * read its own copy when it opened, so a change storage refused was gone on the next page.
+ */
+let current = null;
+const listeners = new Set();
+
+function snapshot() {
+  if (!current) {
+    const { jobs, recovery } = load();
+    // Saved at once, as the page used to on opening: a migrated or repaired list replaces the
+    // stored value (whose backup load() has kept).
+    current = { jobs, recovery, persistError: persist(jobs) };
+    // Another tab saved its list: take it, so a change here does not write over that tab's.
+    window.addEventListener('storage', e => {
+      if (e.key === KEY && e.newValue) update({ jobs: load().jobs });
+    });
   }
+  return current;
+}
 
-  function deleteJob(id) {
-    setState(s => ({ jobs: s.jobs.filter(j => j.id !== id) }));
-  }
+function subscribe(listener) {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+}
 
-  function importJobs(incoming) {
-    const stamped = incoming.map(j => ({
-      todos: [],
-      contact: '',
-      deadline: '',
-      ...j,
-      id: newId('job'),
-      createdAt: j.createdAt || Date.now(),
-      updatedAt: Date.now(),
-    }));
-    setState(s => ({ jobs: [...s.jobs, ...stamped] }));
-  }
+function update(patch) {
+  current = { ...snapshot(), ...patch };
+  listeners.forEach(l => l());
+}
 
-  function clearDemoData() {
-    setState({ jobs: [] });
-  }
+function setJobs(change) {
+  const jobs = change(snapshot().jobs);
+  update({ jobs, persistError: persist(jobs) });
+}
 
-  return {
-    jobs: state.jobs, persistError, recovery, dismissRecovery: () => setRecovery(null),
-    addJob, updateJob, deleteJob, importJobs, clearDemoData,
+function addJob(data = {}) {
+  const now = Date.now();
+  const initialStatus = data.status || 'saved';
+  const job = {
+    id: newId('job'),
+    company: '', role: '', status: 'saved',
+    url: '', location: '', salary: '',
+    contact: '', resumeId: '', notes: '',
+    appliedDate: '', deadline: '',
+    todos: [],
+    statusHistory: [{ status: initialStatus, changedAt: now }],
+    createdAt: now, updatedAt: now,
+    ...data,
+    // ensure statusHistory always exists (imports may lack it)
   };
+  if (!job.statusHistory) {
+    job.statusHistory = [{ status: job.status, changedAt: job.createdAt || now }];
+  }
+  setJobs(jobs => [...jobs, job]);
+  return job.id;
+}
+
+function updateJob(id, updates) {
+  setJobs(jobs => jobs.map(j => {
+    if (j.id !== id) return j;
+    const updated = { ...j, ...updates, updatedAt: Date.now() };
+    if (updates.status && updates.status !== j.status) {
+      const prev = j.statusHistory || [{ status: j.status, changedAt: j.createdAt || Date.now() }];
+      updated.statusHistory = [...prev, { status: updates.status, changedAt: Date.now() }];
+    }
+    return updated;
+  }));
+}
+
+function deleteJob(id) {
+  setJobs(jobs => jobs.filter(j => j.id !== id));
+}
+
+function importJobs(incoming) {
+  const stamped = incoming.map(j => ({
+    todos: [],
+    contact: '',
+    deadline: '',
+    ...j,
+    id: newId('job'),
+    createdAt: j.createdAt || Date.now(),
+    updatedAt: Date.now(),
+  }));
+  setJobs(jobs => [...jobs, ...stamped]);
+}
+
+function clearDemoData() {
+  setJobs(() => []);
+}
+
+// Set when the saved list could not be read in full; the tracker shows it until dismissed.
+const dismissRecovery = () => update({ recovery: null });
+
+export function useJobStore() {
+  const { jobs, persistError, recovery } = useSyncExternalStore(subscribe, snapshot);
+  return { jobs, persistError, recovery, dismissRecovery, addJob, updateJob, deleteJob, importJobs, clearDemoData };
 }

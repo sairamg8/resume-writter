@@ -5,17 +5,16 @@ import {
   Briefcase, Search, X, Eraser,
 } from 'lucide-react';
 import { useJobStore } from '@/hooks/useJobStore';
-import { useAppStore } from '@/hooks/useResumeStore';
 import { JOB_STATUSES } from '@/constants/jobs';
 import { KanbanView } from '@/components/job/KanbanView';
 import { ListView } from '@/components/job/ListView';
 import { CareerHistoryPanel } from '@/components/CareerHistoryPanel';
 import { downloadBlob } from '@/utils/download';
 
-export function JobTracker() {
+export function JobTracker({ store }) {
   const navigate = useNavigate();
   const { jobs, persistError, recovery, dismissRecovery, updateJob, deleteJob, importJobs, clearDemoData } = useJobStore();
-  const { appState } = useAppStore();
+  const { appState } = store;
   const resumes = appState.resumes;
 
   const [view, setView] = useState('kanban');
