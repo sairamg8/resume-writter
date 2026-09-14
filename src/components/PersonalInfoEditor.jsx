@@ -4,6 +4,7 @@ import RichTextEditor from '@/components/RichTextEditor';
 import { HeaderCustomization } from '@/components/PersonalInfoEditorHeader';
 import { PhotoSection } from '@/components/PersonalInfoEditorPhoto';
 import { ContactIcon } from '@/utils/contactIcons';
+import { readImageFile } from '@/utils/imageUpload';
 
 const FIELDS = [
   { key: 'name',     label: 'Full Name',  icon: User,     placeholder: 'John Doe',            required: true },
@@ -43,9 +44,7 @@ export default function PersonalInfoEditor({ personal, updatePersonal, toggleFie
       alert('Icon image should be under 400KB.');
       return;
     }
-    const reader = new FileReader();
-    reader.onload = ev => setCustomIcon(field, ev.target.result);
-    reader.readAsDataURL(file);
+    readImageFile(file, { kind: 'icon' }).then(dataUrl => setCustomIcon(field, dataUrl), err => alert(err.message));
   }
 
   return (
@@ -124,7 +123,7 @@ export default function PersonalInfoEditor({ personal, updatePersonal, toggleFie
                       {customIcon ? 'Replace' : 'Upload'}
                       <input
                         type="file"
-                        accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                        accept="image/*"
                         className="hidden"
                         onChange={e => {
                           const f = e.target.files?.[0];

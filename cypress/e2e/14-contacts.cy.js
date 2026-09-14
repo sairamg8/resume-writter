@@ -116,3 +116,36 @@ describe('contact icon packs in the Design panel (FIDA-39, FIDB-07)', () => {
     packs().filter(':contains("Minimal")').should('contain.text', 'Selected');
   });
 });
+
+describe('uploads in formats the PDF cannot draw are converted (R1-1)', () => {
+  // 1×1 WebP and GIF: the browser shows them, react-pdf cannot decode them.
+  const WEBP = 'UklGRiIAAABXRUJQVlA4IBYAAAAwAQCdASoBAAEADsD+JaQAA3AAAAAA';
+  const GIF = 'R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+  const file = (b64, fileName, mimeType) => ({ contents: Cypress.Buffer.from(b64, 'base64'), fileName, mimeType });
+  const inputNear = (label) => cy.contains('p', label).parent().parent().find('input[type=file]');
+
+  it('a WebP profile photo is stored as JPEG, a GIF contact icon as PNG', () => {
+    cy.visitEditor('classic', { state: buildTestState('classic') });
+    cy.contains('button', /^Photo/).click();
+    inputNear('Profile Photo').selectFile(file(WEBP, 'me.webp', 'image/webp'), { force: true });
+    cy.store().should((s) => expect(active(s).personal.photo).to.match(/^data:image\/jpeg;base64,/));
+    cy.contains('span', 'Resume icon').first().parent().find('input[type=file]')
+      .selectFile(file(GIF, 'mail.gif', 'image/gif'), { force: true });
+    cy.store().should((s) => {
+      const icons = Object.values(active(s).settings.customContactIcons || {});
+      expect(icons).to.have.length(1);
+      expect(icons[0]).to.match(/^data:image\/png;base64,/);
+    });
+  });
+
+  it('a WebP cover-letter photo is stored as JPEG; a file the browser cannot decode is refused with a message', () => {
+    cy.visitEditor('classic', { state: buildTestState('classic'), tab: 'coverletter' });
+    inputNear('Cover Letter Photo').selectFile(file(WEBP, 'me.webp', 'image/webp'), { force: true });
+    cy.store().should((s) => expect(active(s).coverLetter.clPhoto).to.match(/^data:image\/jpeg;base64,/));
+    const alerted = cy.stub().as('alert');
+    cy.on('window:alert', alerted);
+    inputNear('Cover Letter Photo').selectFile(file('bm90IGFuIGltYWdl', 'broken.webp', 'image/webp'), { force: true });
+    cy.get('@alert').should('have.been.calledWithMatch', /could not be read/);
+    cy.store().should((s) => expect(active(s).coverLetter.clPhoto).to.match(/^data:image\/jpeg;base64,/));
+  });
+});

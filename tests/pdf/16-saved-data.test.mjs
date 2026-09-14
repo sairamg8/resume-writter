@@ -3,7 +3,7 @@
 // what the documents print afterwards.
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { setup, teardown, resume, renderCover, read, allText, loadModule, readDocx } from './harness.mjs';
+import { setup, teardown, resume, render, renderCover, read, allText, itemsWith, loadModule, readDocx } from './harness.mjs';
 
 before(setup);
 after(teardown);
@@ -99,4 +99,22 @@ describe('cloud sync merge (R1-0)', () => {
     const tie = mergeResumeLists([{ ...localOlder, updatedAt: 20 }], [cloudNewer], new Set());
     assert.equal(tie[0].coverLetter.closing, 'Local', 'this browser wins a tie');
   });
+});
+
+describe('a photo saved in a format the PDF cannot draw (R1-1)', () => {
+  const WEBP = 'data:image/webp;base64,UklGRiIAAABXRUJQVlA4IBYAAAAwAQCdASoBAAEADsD+JaQAA3AAAAAA';
+  const PERSONAL = { name: 'Test Person', title: 'Engineer', email: 'me@example.com' };
+  const docs = [
+    ...['classic', 'modern', 'minimal', 'executive', 'sidebar'].map((t) => [t, (personal) => render(resume({ template: t, personal: { ...PERSONAL, ...personal }, settings: { photoBorder: 'accent' } }))]),
+    ['cover letter', (personal) => renderCover(resume({ personal: { ...PERSONAL, ...personal }, settings: { photoBorder: 'accent' }, coverLetter: { body: '<p>Hello</p>' } }))],
+  ];
+  for (const [name, make] of docs) {
+    it(`${name}: a WebP photo prints as no photo — no empty ring, no gap before the name`, async () => {
+      const [withWebp, without] = await Promise.all([make({ photo: WEBP }), make({})]);
+      const pos = (pages) => itemsWith(pages, 'Test Person').map((t) => [Math.round(t.x), Math.round(t.y)]);
+      const [a, b] = [await read(withWebp), await read(without)];
+      assert.deepEqual(pos(a), pos(b), 'the name sits where it sits without a photo');
+      assert.deepEqual([...a[0].strokes].sort(), [...b[0].strokes].sort(), 'no ring is stroked');
+    });
+  }
 });

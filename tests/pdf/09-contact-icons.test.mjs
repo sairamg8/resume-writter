@@ -107,3 +107,18 @@ describe('contact icon packs (FIDA-39, FIDB-07, FIDB-06)', () => {
     });
   }
 });
+
+/** A WebP data URL, as uploads were stored before they were converted: react-pdf cannot decode it. */
+const WEBP = 'data:image/webp;base64,UklGRiIAAABXRUJQVlA4IBYAAAAwAQCdASoBAAEADsD+JaQAA3AAAAAA';
+
+describe('an uploaded icon the PDF cannot draw (R1-1)', () => {
+  for (const [name, make] of DOCUMENTS) {
+    it(`${name}: a WebP icon saved before uploads were converted prints the pack's icon, not an empty slot`, async () => {
+      const bytes = await make({ iconSet: 'lucide', contactStyle: 'icon', customContactIcons: { email: WEBP, phone: RED_PNG } });
+      assert.equal(await images(bytes), 1, 'only the PNG phone icon is drawn as an image');
+      const drawn = await icons(bytes);
+      assert.deepEqual(drawn.map((shapes) => shapes.map((x) => x.paint).join('')),
+        [PACKS.lucide.shapes[0], ...PACKS.lucide.shapes.slice(2)], 'e-mail falls back to the pack icon');
+    });
+  }
+});

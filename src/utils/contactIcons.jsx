@@ -5,6 +5,7 @@
  * The shapes come from contactIconPaths.js — the table the PDF draws from too.
  */
 import { getCustomContactIcon, getIconSetId, iconShapes } from '@/utils/contactIconPaths';
+import { isDrawableImage } from '@/utils/imageUpload';
 
 export { getCustomContactIcon, getIconSetId };
 
@@ -19,10 +20,13 @@ export const ICON_SET_OPTIONS = [
   { id: 'bold',    label: 'Bold',     desc: 'Classic shapes, thicker lines' },
 ];
 
-/** Editor contact icon — custom image wins, else the pack's icon (stroke width: the pack's own unless given). */
+/**
+ * Editor contact icon — custom image wins, else the pack's icon (stroke width: the pack's own
+ * unless given). Like the PDF (PdfContactIcon), an upload the PDF cannot draw shows the pack's.
+ */
 export function ContactIcon({ field, settings, size = 11, strokeWidth, className = '', style }) {
   const custom = getCustomContactIcon(field, settings);
-  if (custom) {
+  if (isDrawableImage(custom)) {
     return (
       <img
         src={custom}

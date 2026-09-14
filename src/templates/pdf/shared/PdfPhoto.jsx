@@ -1,4 +1,5 @@
 import { View, Image } from '@react-pdf/renderer';
+import { isDrawableImage } from '@/utils/imageUpload';
 
 /**
  * The profile photo, with its ring. `style` comes from getPdfPhotoStyle (plus any layout
@@ -7,8 +8,12 @@ import { View, Image } from '@react-pdf/renderer';
  * react-pdf paints an Image's own border first and then the picture over the whole box,
  * border included, so a border on the Image never shows. The ring is a View's border here,
  * and the picture sits inside it with its own, smaller corner radius.
+ *
+ * Nothing at all for a photo react-pdf cannot decode (a WebP or GIF saved before uploads were
+ * converted): an empty ring, or an error on every render, is worse than no photo.
  */
 export function PdfPhoto({ src, style }) {
+  if (!isDrawableImage(src)) return null;
   const { width, height, borderRadius = 0, borderWidth: ring = 0, borderColor, objectFit = 'cover', ...layout } = style;
   if (!ring) return <Image src={src} style={{ ...layout, width, height, borderRadius, objectFit }} />;
   return (

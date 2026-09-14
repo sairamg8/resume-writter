@@ -3,6 +3,7 @@ import { Mail, Phone, MapPin, Globe, Link2, Code, Eye, EyeOff, Camera } from 'lu
 import RichTextEditor from '@/components/RichTextEditor';
 import { Chip, Field, SectionBlock } from '@/components/CoverLetterPanelShared';
 import { letterContactFormat, letterHiddenFields, todayLetterDate } from '@/utils/coverLetter';
+import { readImageFile } from '@/utils/imageUpload';
 
 const CONTACT_FIELDS = [
   { key: 'email',    label: 'Email',    Icon: Mail   },
@@ -36,10 +37,9 @@ export default function CoverLetterPanel({ coverLetter, personal, settings, upda
 
   function handlePhotoChange(e) {
     const file = e.target.files?.[0];
+    e.target.value = '';
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = ev => updateCoverLetter('clPhoto', ev.target.result);
-    reader.readAsDataURL(file);
+    readImageFile(file).then(dataUrl => updateCoverLetter('clPhoto', dataUrl), err => alert(err.message));
   }
 
   const hasPhoto = !!cl.clPhoto || !!personal?.photo;

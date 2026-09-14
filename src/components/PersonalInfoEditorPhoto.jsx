@@ -1,16 +1,16 @@
 import { useRef } from 'react';
 import { Camera, ChevronDown, ChevronRight, Eye, EyeOff } from 'lucide-react';
 import { Chip } from '@/components/PersonalInfoEditorHeader';
+import { readImageFile } from '@/utils/imageUpload';
 
 export function PhotoSection({ personal, updatePersonal, toggleFieldVisibility, hidden, s, set, open, onToggle }) {
   const photoInputRef = useRef(null);
 
   function handlePhotoChange(e) {
     const file = e.target.files?.[0];
+    e.target.value = '';
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => updatePersonal('photo', ev.target.result);
-    reader.readAsDataURL(file);
+    readImageFile(file).then((dataUrl) => updatePersonal('photo', dataUrl), (err) => alert(err.message));
   }
 
   return (
