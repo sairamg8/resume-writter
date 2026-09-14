@@ -10,13 +10,17 @@ const MONTHS = [
 
 const text = (v) => (typeof v === 'string' ? v.trim() : '');
 
-/** A 'YYYY-MM-DD' date as "15 January 2026"; anything else prints exactly as the user typed it. */
+/**
+ * A 'YYYY-MM-DD' date as "15 January 2026"; anything else — including a day the month does not
+ * have, like 2026-02-31 (R1-12) — prints exactly as the user typed it.
+ */
 export function letterDate(value) {
   const v = text(value);
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v);
-  const month = m ? Number(m[2]) : 0;
-  const day = m ? Number(m[3]) : 0;
-  if (!m || month < 1 || month > 12 || day < 1 || day > 31) return v;
+  if (!m) return v;
+  const [year, month, day] = [Number(m[1]), Number(m[2]), Number(m[3])];
+  const real = new Date(year, month - 1, day);
+  if (real.getFullYear() !== year || real.getMonth() !== month - 1 || real.getDate() !== day) return v;
   return `${day} ${MONTHS[month - 1]} ${m[1]}`;
 }
 
@@ -62,12 +66,14 @@ export function letterHiddenFields(cl = {}, personal = {}) {
 }
 
 /**
- * The closing line and the signature. The name and designation are the letter's own once the
- * user has set them (even to ''), else the résumé's name and title.
+ * The closing line and the signature. The closing gets one comma — also when the user typed
+ * it with one ("Best regards," printed ",," — R1-7). The name and designation are the letter's
+ * own once the user has set them (even to ''), else the résumé's name and title.
  */
 export function letterSignature(cl = {}, personal = {}) {
+  const closing = text(cl.closing).replace(/[\s,]+$/, '') || 'Sincerely';
   return {
-    closing: `${cl.closing || 'Sincerely'},`,
+    closing: `${closing},`,
     name: cl.signatureName != null ? cl.signatureName : (personal?.name || ''),
     designation: cl.signatureDesignation != null ? cl.signatureDesignation : (personal?.title || ''),
     wide: cl.signatureSpace === 'wide',

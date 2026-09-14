@@ -2,10 +2,11 @@ import { Document, Page, View, Text } from '@react-pdf/renderer';
 import { getPageStyle, getDocumentProps } from './shared/PdfPage';
 import { PdfRichText } from './shared/PdfRichText';
 import { PdfContactRow } from './shared/PdfContact';
-import { solid } from './shared/pdfColors';
+import { solid, textShades } from './shared/pdfColors';
 import { PdfPhoto } from './shared/PdfPhoto';
 import { letterBlock, letterContactFormat, letterHiddenFields, letterSignature } from '@/utils/coverLetter';
 import { photoTextAlignItems } from '@/constants/templates';
+import { hasRichText } from '@/utils/richText';
 
 /** Space under the date, the recipient block and the subject. */
 const BLOCK_GAP = 12;
@@ -33,6 +34,9 @@ export function CoverLetterTemplatePDF({ data }) {
 
   const accent    = settings.accentColor    || '#2563eb';
   const textColor = settings.textColor      || '#1e293b';
+  // Names in the Text colour, contacts and the designation in its grey: a custom Text colour
+  // reaches every line of the letter (R1-13), as it does the résumé's sections (f37a9f5).
+  const meta      = textShades(textColor).meta;
   const baseSize  = settings.fontSizeBase   || 11;
   const nameSize  = baseSize + (settings.fontSizeNameDelta ?? 8);
   const lineH     = settings.lineHeightValue || 1.5;
@@ -61,7 +65,7 @@ export function CoverLetterTemplatePDF({ data }) {
       personal={personal}
       hidden={hidden}
       settings={{ ...settings, contactStyle: contacts.style, contactLayout: contacts.layout }}
-      color="#64748b"
+      color={meta}
     />
   );
 
@@ -71,7 +75,7 @@ export function CoverLetterTemplatePDF({ data }) {
 
   const nameBlock = (
     <View style={{ minWidth: 0 }}>
-      <Text style={{ fontSize: nameSize, fontWeight: 'bold', color: '#0f172a', lineHeight: 1.2 }}>
+      <Text style={{ fontSize: nameSize, fontWeight: 'bold', color: textColor, lineHeight: 1.2 }}>
         {personal?.name || 'Your Name'}
       </Text>
       {personal?.title ? (
@@ -132,7 +136,7 @@ export function CoverLetterTemplatePDF({ data }) {
         {block.recipientName || block.recipientTitle || block.company ? (
           <View style={{ marginBottom: BLOCK_GAP }}>
             {block.recipientName ? (
-              <Text style={{ ...blockLine, fontWeight: 'bold', color: '#0f172a' }}>{block.recipientName}</Text>
+              <Text style={{ ...blockLine, fontWeight: 'bold' }}>{block.recipientName}</Text>
             ) : null}
             {block.recipientTitle ? <Text style={blockLine}>{block.recipientTitle}</Text> : null}
             {block.company ? <Text style={blockLine}>{block.company}</Text> : null}
@@ -142,8 +146,8 @@ export function CoverLetterTemplatePDF({ data }) {
           <Text style={{ ...blockLine, fontWeight: 'bold', marginBottom: BLOCK_GAP }}>{block.subject}</Text>
         ) : null}
 
-        {/* Body */}
-        {cl.body ? (
+        {/* Body — an empty editor ('<p><br></p>') is no body: no blank gap, and the preview's hint (R1-11) */}
+        {hasRichText(cl.body) ? (
           <View style={{ marginBottom: 16 }}>
             <PdfRichText html={cl.body} style={{ fontSize: baseSize, color: textColor, lineHeight: lineH }} />
           </View>
@@ -156,17 +160,17 @@ export function CoverLetterTemplatePDF({ data }) {
           </View>
         ) : null}
 
-        {/* Closing / Signature */}
-        <View>
+        {/* Closing and signature stay together on one page, as in the Word letter (R1-6) */}
+        <View wrap={false}>
           <Text style={{ fontSize: baseSize, color: textColor, lineHeight: lineH }}>
             {sig.closing}
           </Text>
           <View style={{ marginTop: sigGap }}>
             {sig.name ? (
-              <Text style={{ fontSize: baseSize, fontWeight: 'bold', color: '#0f172a', lineHeight: 1.3 }}>{sig.name}</Text>
+              <Text style={{ fontSize: baseSize, fontWeight: 'bold', color: textColor, lineHeight: 1.3 }}>{sig.name}</Text>
             ) : null}
             {sig.designation ? (
-              <Text style={{ fontSize: baseSize, color: '#64748b', lineHeight: 1.3 }}>{sig.designation}</Text>
+              <Text style={{ fontSize: baseSize, color: meta, lineHeight: 1.3 }}>{sig.designation}</Text>
             ) : null}
           </View>
         </View>
