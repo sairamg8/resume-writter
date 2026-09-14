@@ -3,7 +3,7 @@ import { getPageStyle, getDocumentProps } from './shared/PdfPage';
 import { SectionRouter, getEffectiveSpacing, getVisibleSections } from './shared/PdfSections';
 import { PdfRichText } from './shared/PdfRichText';
 import { hasRichText } from '@/utils/richText';
-import { PdfIcon } from './shared/PdfIcons';
+import { PdfContactIcon } from './shared/PdfContactIcon';
 import { ContactValue } from './shared/PdfContact';
 import { contactItems } from '@/utils/contacts';
 import { getPdfPhotoStyle } from './shared/pdfPhoto';
@@ -11,7 +11,10 @@ import { MODERN_HEADER_PAD_X_PT, MODERN_HEADER_PAD_Y_PT, pxToPt } from './shared
 
 const CSS_ICON_SCALE = 0.9;
 
-/** The banner's contact row — the same values and links as every template (contactItems). */
+/**
+ * The banner's contact row: the same values, links and icons (the chosen pack, or the image
+ * uploaded for a field) as every other template.
+ */
 function HeaderContact({ personal, settings, textColor }) {
   const baseSize = settings?.fontSizeBase || 11;
   const iconPt   = Math.max(7, Math.round((settings?.iconSize ?? 9) * CSS_ICON_SCALE));
@@ -24,7 +27,7 @@ function HeaderContact({ personal, settings, textColor }) {
     <View style={{ flexDirection: 'row', flexWrap: 'wrap', columnGap: pxToPt(16), rowGap: pxToPt(2), marginTop: 4 }}>
       {items.map(({ key, value, href }) => (
         <View key={key} style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
-          <PdfIcon setId="refined" field={key} size={iconPt} color={textColor} />
+          <PdfContactIcon field={key} settings={settings} size={iconPt} color={textColor} />
           <ContactValue value={value} href={href} style={{ fontSize: textSize, color: textColor, lineHeight: 1.2 }} />
         </View>
       ))}

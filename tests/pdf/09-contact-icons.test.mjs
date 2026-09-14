@@ -60,11 +60,24 @@ async function icons(bytes) {
 
 const DOCUMENTS = [
   ['classic', (settings) => render(resume({ template: 'classic', settings, personal: PERSONAL }))],
+  ['modern', (settings) => render(resume({ template: 'modern', settings, personal: PERSONAL }))],
   ['sidebar', (settings) => render(resume({ template: 'sidebar', settings, personal: PERSONAL }))],
   ['cover letter', (settings) => renderCover(resume({ settings, personal: PERSONAL }))],
 ];
 
-describe('contact icon packs (FIDA-39, FIDB-07)', () => {
+/** A 2×2 red PNG, as the Personal info "custom icon" upload stores it. */
+const RED_PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAEElEQVR4nGP4z8AARAwQCgAf7gP9i18U1AAAAABJRU5ErkJggg==';
+
+/** How many images page 1 paints. */
+async function images(bytes) {
+  const doc = await pdfjs.getDocument({ data: bytes.slice(), isEvalSupported: false, verbosity: 0 }).promise;
+  const ops = await (await doc.getPage(1)).getOperatorList();
+  await doc.loadingTask.destroy();
+  const O = pdfjs.OPS;
+  return ops.fnArray.filter((fn) => fn === O.paintImageXObject || fn === O.paintInlineImageXObject).length;
+}
+
+describe('contact icon packs (FIDA-39, FIDB-07, FIDB-06)', () => {
   for (const [name, make] of DOCUMENTS) {
     it(`${name}: each pack is drawn as itself, and no two packs look alike`, async () => {
       const seen = new Map();
@@ -81,6 +94,16 @@ describe('contact icon packs (FIDA-39, FIDB-07)', () => {
         for (const [other, sig] of seen) assert.notEqual(signature, sig, `${iconSet} draws the same icons as ${other}`);
         seen.set(iconSet, signature);
       }
+    });
+  }
+
+  for (const [name, make] of DOCUMENTS) {
+    it(`${name}: an uploaded icon replaces that field's pack icon`, async () => {
+      const bytes = await make({ iconSet: 'lucide', contactStyle: 'icon', customContactIcons: { email: RED_PNG } });
+      assert.equal(await images(bytes), 1, 'the uploaded e-mail icon is drawn');
+      const drawn = await icons(bytes);
+      assert.equal(drawn.length, 5, 'the other five fields keep their pack icons');
+      assert.deepEqual(drawn.map((shapes) => shapes.map((x) => x.paint).join('')), PACKS.lucide.shapes.slice(1));
     });
   }
 });
