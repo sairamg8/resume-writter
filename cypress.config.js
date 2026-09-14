@@ -1,0 +1,71 @@
+import { defineConfig } from 'cypress';
+import fs from 'node:fs';
+import path from 'node:path';
+import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
+import { extractPdfTextRuns } from './tests/pdf-utils.js';
+
+const DOWNLOADS = 'cypress/downloads';
+
+/** Newest finished file in the downloads folder with the given extension, or null. */
+function newestDownload(ext) {
+  if (!fs.existsSync(DOWNLOADS)) return null;
+  const files = fs.readdirSync(DOWNLOADS)
+    .filter((f) => f.endsWith(ext))
+    .map((f) => ({ f, t: fs.statSync(path.join(DOWNLOADS, f)).mtimeMs }))
+    .sort((a, b) => b.t - a.t);
+  return files[0] ? path.join(DOWNLOADS, files[0].f) : null;
+}
+
+export default defineConfig({
+  e2e: {
+    // `yarn test:e2e` builds + serves the app on 4173; override with CYPRESS_BASE_URL.
+    baseUrl: process.env.CYPRESS_BASE_URL || 'http://127.0.0.1:4173',
+    specPattern: 'cypress/e2e/**/*.cy.js',
+    supportFile: 'cypress/support/e2e.js',
+    viewportWidth: 1440,
+    viewportHeight: 900,
+    defaultCommandTimeout: 10_000,
+    downloadsFolder: DOWNLOADS,
+    trashAssetsBeforeRuns: true,
+    video: false,
+    retries: { runMode: 1, openMode: 0 },
+    setupNodeEvents(on, config) {
+      on('task', {
+        clearDownloads() {
+          fs.rmSync(DOWNLOADS, { recursive: true, force: true });
+          fs.mkdirSync(DOWNLOADS, { recursive: true });
+          return null;
+        },
+        /** Poll until a download with `ext` exists and its size is stable. */
+        async waitForDownload({ ext = '.pdf', timeoutMs = 45_000 } = {}) {
+          const start = Date.now();
+          let last = -1;
+          while (Date.now() - start < timeoutMs) {
+            const file = newestDownload(ext);
+            if (file) {
+              const size = fs.statSync(file).size;
+              if (size > 0 && size === last) return file;
+              last = size;
+            }
+            await new Promise((r) => setTimeout(r, 250));
+          }
+          return null;
+        },
+        /** Page count, text runs ({ page, str, x, y, fontSize, colorHex }) and document info. */
+        async readPdf(file) {
+          const buffer = fs.readFileSync(file);
+          const doc = await pdfjsLib.getDocument({ data: new Uint8Array(buffer), isEvalSupported: false }).promise;
+          const { info } = await doc.getMetadata();
+          const page1 = await doc.getPage(1);
+          const [, , width, height] = page1.view;
+          const runs = await extractPdfTextRuns(buffer);
+          return { numPages: doc.numPages, width, height, info, runs, bytes: buffer.length };
+        },
+        readTextFile(file) {
+          return fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : null;
+        },
+      });
+      return config;
+    },
+  },
+});
