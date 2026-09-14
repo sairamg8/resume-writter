@@ -61,7 +61,7 @@ const SYMBOL_RANGES = SYMBOL_FONTS.map((f) => [f, parseRanges(f.ranges)]);
 
 // Every Noto Sans face that ships with the app, by "<subset>-<weight>-<style>".
 const NOTO_FILES = Object.fromEntries(Object.entries(
-  import.meta.glob('/node_modules/@fontsource/noto-sans/files/noto-sans-*-{400,700}-{normal,italic}.woff', {
+  import.meta.glob('/node_modules/@fontsource/noto-sans/files/noto-sans-*-{400,500,700}-{normal,italic}.woff', {
     query: '?url', import: 'default', eager: true,
   }),
 ).map(([path, url]) => [path.match(/noto-sans-(.+)\.woff$/)[1], url]));
@@ -79,11 +79,14 @@ export function ensureNoHyphenation() {
   hyphenationSet = true;
 }
 
-/** Register a family whose faces are known: { '400-normal': url, … } for weights 400/700 × normal/italic. */
+// Weights the templates use: regular, medium (the job title in inline headers) and bold.
+const WEIGHTS = [400, 500, 700];
+
+/** Register a family from faceUrl(weight, style) for every weight in WEIGHTS × normal/italic. */
 function registerFaces(family, faceUrl) {
   const fonts = [];
   for (const fontStyle of ['normal', 'italic']) {
-    for (const fontWeight of [400, 700]) fonts.push({ src: absolute(faceUrl(fontWeight, fontStyle)), fontWeight, fontStyle });
+    for (const fontWeight of WEIGHTS) fonts.push({ src: absolute(faceUrl(fontWeight, fontStyle)), fontWeight, fontStyle });
   }
   Font.register({ family, fonts });
 }

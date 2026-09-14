@@ -75,6 +75,14 @@ describe('font choices never break the PDF', () => {
     assert.ok([...fontsOf(pages)].some((f) => /Gelasio/.test(f)), [...fontsOf(pages)].join(', '));
   });
 
+  for (const template of ['classic', 'executive', 'minimal']) {
+    it(`${template}: the job title in the inline header prints medium weight (FIDA-22)`, async () => {
+      const pages = await read(await render(resume({ template, settings: { headerLayout: 'inline' }, personal: { title: 'Staff Engineer' } })));
+      const title = allItems(pages).find((t) => t.str.includes('Staff Engineer'));
+      assert.match(title.font, /NotoSans-Medium/, title.font);
+    });
+  }
+
   for (const font of ['inter', 'opensans', 'firasans', 'ibmplexsans', 'asap', 'roboto', 'lato', 'sourcesans', 'sourceserif', 'ptserif', 'literata']) {
     it(`picker font "${font}" renders regular, bold and italic`, async (t) => {
       if (!(await isOnline())) return t.skip('offline');
