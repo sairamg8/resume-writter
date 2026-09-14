@@ -1,18 +1,11 @@
 import { Document, Packer, convertInchesToTwip } from 'docx';
-import { saveAs } from 'file-saver';
 import { accent2Hex } from '@/utils/wordExportUtils';
 import { buildPersonalSection, buildSection } from '@/utils/wordExportBuilders';
+import { resolveSection } from '@/templates/pdf/shared/templateSectionDefaults';
+import { downloadBlob } from '@/utils/download';
 
-export async function exportToWord(resumeData, filename = 'resume.docx') {
-  const { personal, sections, settings } = resumeData;
-  const accentHex = accent2Hex(settings?.accentColor);
-
-  const children = [
-    ...buildPersonalSection(personal, settings),
-    ...sections.flatMap(s => buildSection(s, accentHex)),
-  ];
-
-  const doc = new Document({
+function buildDocument(children) {
+  return new Document({
     styles: {
       default: {
         document: {
@@ -35,7 +28,20 @@ export async function exportToWord(resumeData, filename = 'resume.docx') {
       children,
     }],
   });
+}
 
-  const blob = await Packer.toBlob(doc);
-  saveAs(blob, filename);
+/** The résumé as a .docx Blob — same sections, entries and hidden fields as the PDF. */
+export async function renderResumeDocx(resume) {
+  const { personal = {}, sections = [], settings = {}, template = 'classic' } = resume || {};
+  const accentHex = accent2Hex(settings.accentColor);
+  const children = [
+    ...buildPersonalSection(personal, settings),
+    // Template defaults (e.g. Executive and Sidebar put the role first) apply as in the PDF.
+    ...sections.flatMap((s) => buildSection(resolveSection(s, template), accentHex)),
+  ];
+  return Packer.toBlob(buildDocument(children));
+}
+
+export async function exportToWord(resume, filename = 'resume.docx') {
+  downloadBlob(await renderResumeDocx(resume), filename);
 }

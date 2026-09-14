@@ -8,6 +8,7 @@ import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import zlib from 'node:zlib';
 import { createServer } from 'vite';
 
 const ROOT = path.resolve(fileURLToPath(new URL('../..', import.meta.url)));
@@ -212,4 +213,60 @@ export function overlaps(page) {
     }
   }
   return out;
+}
+
+// ── Word ─────────────────────────────────────────────────────────────────────
+
+/** One entry of a zip archive (a .docx is one), found through the central directory. */
+function unzipEntry(buffer, name) {
+  const eocd = buffer.lastIndexOf(Buffer.from([0x50, 0x4b, 0x05, 0x06]));
+  if (eocd < 0) throw new Error('not a zip archive');
+  const count = buffer.readUInt16LE(eocd + 10);
+  let p = buffer.readUInt32LE(eocd + 16);
+  for (let i = 0; i < count; i += 1) {
+    const method = buffer.readUInt16LE(p + 10);
+    const size = buffer.readUInt32LE(p + 20);
+    const nameLen = buffer.readUInt16LE(p + 28);
+    const extraLen = buffer.readUInt16LE(p + 30);
+    const commentLen = buffer.readUInt16LE(p + 32);
+    const local = buffer.readUInt32LE(p + 42);
+    if (buffer.toString('utf8', p + 46, p + 46 + nameLen) === name) {
+      const start = local + 30 + buffer.readUInt16LE(local + 26) + buffer.readUInt16LE(local + 28);
+      const data = buffer.subarray(start, start + size);
+      return (method === 8 ? zlib.inflateRawSync(data) : data).toString('utf8');
+    }
+    p += 46 + nameLen + extraLen + commentLen;
+  }
+  return null;
+}
+
+const xmlText = (s) => s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&amp;/g, '&');
+
+/**
+ * A .docx read back: paragraphs as text (a <w:br/> is "\n", a <w:tab/> is "\t"), each with its
+ * raw XML, and the external link targets in order of appearance.
+ */
+export function readDocx(bytes) {
+  const buffer = Buffer.from(bytes);
+  const xml = unzipEntry(buffer, 'word/document.xml') || '';
+  const rels = unzipEntry(buffer, 'word/_rels/document.xml.rels') || '';
+  const targets = {};
+  for (const [, attrs] of rels.matchAll(/<Relationship\s([^>]*)\/?>/g)) {
+    const id = (attrs.match(/Id="([^"]*)"/) || [])[1];
+    const target = (attrs.match(/Target="([^"]*)"/) || [])[1];
+    if (/TargetMode="External"/.test(attrs)) targets[id] = xmlText(target);
+  }
+  const paragraphs = xml.split('</w:p>').map((p) => ({
+    xml: p,
+    text: [...p.matchAll(/<w:t(?:\s[^>]*)?>([^<]*)<\/w:t>|<w:(br|tab)\/>/g)]
+      .map((m) => (m[1] !== undefined ? xmlText(m[1]) : (m[2] === 'br' ? '\n' : '\t'))).join(''),
+  })).filter((p) => p.text);
+  const links = [...xml.matchAll(/<w:hyperlink [^>]*r:id="([^"]+)"/g)].map((m) => targets[m[1]]);
+  return { paragraphs, texts: paragraphs.map((p) => p.text), links, xml };
+}
+
+export async function renderDocx(r) {
+  const { renderResumeDocx } = await ctx.load('/src/utils/wordExport.js');
+  const blob = await renderResumeDocx(r);
+  return readDocx(new Uint8Array(await blob.arrayBuffer()));
 }
