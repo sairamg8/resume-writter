@@ -71,11 +71,26 @@ const NOTO_FILES = Object.fromEntries(Object.entries(
 const ORIGIN = typeof window !== 'undefined' && window.location?.origin ? window.location.origin : '';
 const absolute = (url) => (/^https?:/.test(url) ? url : `${ORIGIN}${url}`);
 
+/**
+ * A hyphenation callback that never hyphenates, but lets a long unbroken token — a URL, an
+ * e-mail address — break after / . - _ @ ? & = # (or every `max` characters) instead of running
+ * off the page. The break is a U+FEFF part: zero-width in every Fontsource font, and textkit
+ * turns a part that trims to "" into ordinary glue — a break with no hyphen drawn.
+ * Tokens up to `max` characters are left whole (so ordinary e-mails copy out intact).
+ */
+export function breakLongWords(max) {
+  return (word) => {
+    if (word.length <= max) return [word];
+    const parts = word.split(/(?<=[/.\-_@?&=#])/).flatMap((p) => p.match(new RegExp(`.{1,${max}}`, 'gsu')) || [p]);
+    return parts.flatMap((p, i) => (i ? ['\ufeff', p] : [p]));
+  };
+}
+
 let hyphenationSet = false;
-/** Words are never hyphenated — résumé text should read as typed. */
+/** Words are never hyphenated — résumé text should read as typed. Very long tokens may break. */
 export function ensureNoHyphenation() {
   if (hyphenationSet) return;
-  Font.registerHyphenationCallback((word) => [word]);
+  Font.registerHyphenationCallback(breakLongWords(48));
   hyphenationSet = true;
 }
 

@@ -28,9 +28,16 @@ export function contactHref(key, personal) {
 export function contactItems(personal, hidden = personal?.hiddenFields || []) {
   return CONTACT_KEYS
     .filter((key) => String(personal?.[key] || '').trim() && !hidden.includes(key))
-    .map((key) => ({
-      key,
-      value: String(personal[`${key}Label`] || '').trim() || String(personal[key]).trim(),
-      href: contactHref(key, personal),
-    }));
+    .map((key) => {
+      const raw = String(personal[key]).trim();
+      const label = String(personal[`${key}Label`] || '').trim();
+      return { key, value: label || (LINK_FIELDS.has(key) ? displayUrl(raw) : raw), href: contactHref(key, personal) };
+    });
+}
+
+const LINK_FIELDS = new Set(['website', 'linkedin', 'github']);
+
+/** A URL as a résumé prints it: "https://www.linkedin.com/in/me/" → "linkedin.com/in/me". */
+export function displayUrl(url) {
+  return String(url || '').trim().replace(/^https?:\/\//i, '').replace(/^www\./i, '').replace(/\/+$/, '');
 }

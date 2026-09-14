@@ -9,6 +9,10 @@ const LIST_GAP = 1.5;     // pt between two list items
 // behind at the bottom of a page while its text starts the next one. Longer items (far beyond
 // a page's worth in any column) split normally rather than overflow the page.
 const KEEP_TOGETHER_CHARS = 1500;
+// textkit splits words at formatting changes ("pre<b>view</b>") and may break the line there,
+// drawing a hyphen that is not in the text. A penalty of 10000 (its "infinity") forbids that;
+// ordinary breaks at spaces are unaffected. See also breakLongWords.
+export const NO_HYPHEN_BREAKS = { hyphenationPenalty: 10000 };
 
 function runStyle(run, color) {
   const style = {};
@@ -76,7 +80,7 @@ export function PdfRichText({ html, style = {} }) {
       // Body text, or a further paragraph of a list item aligned with that item's text.
       const left = block.indent > 0 ? (textStart[block.indent] ?? block.indent * INDENT) : 0;
       return (
-        <Text key={i} style={{ ...textStyle, ...edges, textAlign: align, marginLeft: left || undefined }}>
+        <Text key={i} {...NO_HYPHEN_BREAKS} style={{ ...textStyle, ...edges, textAlign: align, marginLeft: left || undefined }}>
           <Runs runs={block.runs} color={color} />
         </Text>
       );
@@ -94,7 +98,7 @@ export function PdfRichText({ html, style = {} }) {
         style={{ ...edges, flexDirection: 'row', marginLeft: left || undefined }}
       >
         <Text style={{ ...textStyle, textAlign: 'left', width }}>{block.marker}</Text>
-        <Text style={{ ...textStyle, textAlign: align, flex: 1 }}>
+        <Text {...NO_HYPHEN_BREAKS} style={{ ...textStyle, textAlign: align, flex: 1 }}>
           <Runs runs={block.runs} color={color} />
         </Text>
       </View>

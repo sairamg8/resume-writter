@@ -64,7 +64,7 @@ export function ClassicTemplatePDF({ data }) {
       )}
     </View>
   ) : (
-    <View>
+    <View style={centered ? { alignSelf: 'stretch' } : undefined}>
       <Text style={{
         fontSize: nameSize, fontWeight: 'bold', color: nameColor,
         textAlign: centered ? 'center' : 'left', lineHeight: 1.2,
@@ -96,7 +96,7 @@ export function ClassicTemplatePDF({ data }) {
             {personal?.photo && !hidden.includes('photo') && (
               <Image src={personal.photo} style={getPdfPhotoStyle(settings, accent, 'classic')} />
             )}
-            <View style={centered ? { alignItems: 'center', flex: 1 } : { flex: 1 }}>
+            <View style={centered ? { alignItems: 'center', alignSelf: 'stretch' } : { flex: 1 }}>
               {nameBlock}
               <PdfContactRow personal={personal} settings={settings} />
             </View>
