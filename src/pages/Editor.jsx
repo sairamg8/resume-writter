@@ -51,6 +51,7 @@ export function Editor({ store, auth, sync }) {
   const [personalOpen, setPersonalOpen] = useState(true);
   const [addSectionOpen, setAddSectionOpen] = useState(false);
   const [exporting, setExporting] = useState(null);
+  const [exportError, setExportError] = useState(null);
   const [resumeName, setResumeName] = useState(resume?.name || '');
   const [editingName, setEditingName] = useState(false);
   const [layoutMode, setLayoutMode] = useState('split');
@@ -155,36 +156,46 @@ export function Editor({ store, auth, sync }) {
     }
   }
 
-  async function handleExportPDF() {
-    setExporting('pdf');
-    const filename = buildExportFilename(auth?.user, resume);
+  /** Run one export, keeping the button state and a visible error message honest. */
+  async function runExport(kind, label, fn) {
+    setExporting(kind);
+    setExportError(null);
     try {
+      await fn();
+    } catch (e) {
+      console.error(`${label} failed:`, e);
+      setExportError(`${label} failed${e?.message ? ` (${e.message})` : ''}. Check your connection and try again.`);
+    } finally {
+      setExporting(null);
+    }
+  }
+
+  function handleExportPDF() {
+    const filename = buildExportFilename(auth?.user, resume);
+    return runExport('pdf', 'PDF export', async () => {
       const { exportToPDFReact, exportCoverLetterPDFReact } = await import('@/utils/pdfExportReactPDF');
       if (activeTab === 'coverletter') {
         await exportCoverLetterPDFReact(resume, `${filename}_cover_letter.pdf`);
       } else {
         await exportToPDFReact(resume, `${filename}.pdf`);
       }
-    } catch (e) { console.error('PDF export failed:', e); }
-    setExporting(null);
+    });
   }
 
-  async function handleExportPDFLegacy() {
-    setExporting('pdf');
+  function handleExportPDFLegacy() {
     const filename = buildExportFilename(auth?.user, resume);
-    const { exportToPDF } = await import('@/utils/pdfExport');
-    await exportToPDF(activeTab === 'coverletter' ? 'cover-letter-preview' : 'resume-preview', `${filename}.pdf`, margin);
-    setExporting(null);
+    return runExport('pdf', 'PDF export (legacy)', async () => {
+      const { exportToPDF } = await import('@/utils/pdfExport');
+      await exportToPDF(activeTab === 'coverletter' ? 'cover-letter-preview' : 'resume-preview', `${filename}.pdf`, margin);
+    });
   }
 
-  async function handleExportWord() {
-    setExporting('word');
+  function handleExportWord() {
     const filename = buildExportFilename(auth?.user, resume);
-    try {
+    return runExport('word', 'Word export', async () => {
       const { exportToWord } = await import('@/utils/wordExport');
       await exportToWord(resume, `${filename}.docx`);
-    } catch (e) { console.error('Word export failed:', e); }
-    setExporting(null);
+    });
   }
 
   function handleExportJSON() {
@@ -251,6 +262,12 @@ export function Editor({ store, auth, sync }) {
           </div>
         </div>
 
+        {exportError && (
+          <div role="alert" className="px-4 py-2 text-xs text-red-700 bg-red-50 border-b border-red-200 flex items-start gap-2">
+            <span className="flex-1">{exportError}</span>
+            <button onClick={() => setExportError(null)} className="font-semibold hover:text-red-900 shrink-0">Dismiss</button>
+          </div>
+        )}
         {store.persistError && (
           <div role="alert" className="px-4 py-2 text-xs text-red-700 bg-red-50 border-b border-red-200">
             Not saved: browser storage is full. Export JSON to keep a copy, or remove large photos.
