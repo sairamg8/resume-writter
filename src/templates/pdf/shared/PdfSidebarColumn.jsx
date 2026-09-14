@@ -1,4 +1,5 @@
-import { View, Text } from '@react-pdf/renderer';
+import { View, Text, Link } from '@react-pdf/renderer';
+import { safeHref } from '@/utils/richText';
 
 /**
  * The Sidebar template's dark column: its section title and the renderers of the sections that
@@ -7,6 +8,21 @@ import { View, Text } from '@react-pdf/renderer';
 
 // Sections that live in the dark sidebar column
 export const SIDEBAR_TYPES = new Set(['skills', 'education', 'languages', 'certifications', 'interests', 'references']);
+
+/**
+ * An entry's URL as printed: `label` (else the URL) linking to it when safeHref accepts it —
+ * same colour, no underline — else plain text. The link is a run inside the line, so only the
+ * words are clickable, not the rest of the column.
+ */
+export function EntryLink({ url, label, style }) {
+  const href = safeHref(url);
+  const text = label || url;
+  return (
+    <Text style={style}>
+      {href ? <Link src={href} style={{ color: style.color, textDecoration: 'none' }}>{text}</Link> : text}
+    </Text>
+  );
+}
 
 export function SideSectionTitle({ title }) {
   return (
@@ -77,6 +93,7 @@ export function SideCertifications({ section, sectionGap, itemGap }) {
             <Text style={{ fontSize: 9, fontWeight: 'bold', color: '#e2e8f0', lineHeight: 1.2 }}>{item.name}</Text>
             {item.issuer && <Text style={{ fontSize: 9, color: '#94a3b8', lineHeight: 1.2 }}>{item.issuer}</Text>}
             {showDates && item.date && <Text style={{ fontSize: 9, color: '#64748b', lineHeight: 1.2 }}>{item.date}</Text>}
+            {item.url && <EntryLink url={item.url} label={item.urlLabel} style={{ fontSize: 9, color: '#cbd5e1', lineHeight: 1.2 }} />}
           </View>
         ))}
       </View>

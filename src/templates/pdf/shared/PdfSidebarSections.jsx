@@ -3,7 +3,7 @@ import { PdfRichText } from './PdfRichText';
 import { hasRichText } from '@/utils/richText';
 import { SectionTitleOf, RenderBullets, RenderColGrid, hexAlpha, SectionRouter, SPACER } from './PdfSections';
 import {
-  SIDEBAR_TYPES, SideSectionTitle, SideEducation, SideLanguages, SideCertifications, SideInterests, SideReferences,
+  SIDEBAR_TYPES, SideSectionTitle, EntryLink, SideEducation, SideLanguages, SideCertifications, SideInterests, SideReferences,
 } from './PdfSidebarColumn';
 import { SideSkills } from './PdfSidebarSkills';
 
@@ -116,7 +116,7 @@ export function SidebarMainProjects({ section, settings, marginBottom, spaceBefo
                     {item.name}
                     {item.technologies ? <Text style={{ fontSize: entrySize - 1, color: hexAlpha(accent, 0.7), fontWeight: 'normal' }}>{` · ${item.technologies}`}</Text> : null}
                   </Text>
-                  {item.url ? <Text style={{ fontSize: entrySize - 1.5, color: accent }}>{item.url}</Text> : null}
+                  {item.url ? <EntryLink url={item.url} style={{ fontSize: entrySize - 1.5, color: accent }} /> : null}
                 </View>
                 {dateStr ? <Text style={{ fontSize: entrySize - 1.5, color: '#9ca3af', flexShrink: 0, marginLeft: 6 }}>{dateStr}</Text> : null}
               </View>
