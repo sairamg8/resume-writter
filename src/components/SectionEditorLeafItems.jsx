@@ -1,5 +1,6 @@
 import { Eye, EyeOff, Trash2 } from 'lucide-react';
 import RichTextEditor from '@/components/RichTextEditor';
+import { newId } from '@/utils/ids';
 import { InputField, MonthPicker, FieldRow, ItemCard } from '@/components/SectionEditorShared';
 
 export function SkillItem({ item, onUpdate, onRemove }) {
@@ -134,17 +135,17 @@ export function InterestItem({ item, onUpdate, onRemove }) {
 }
 
 export const NEW_ITEM = {
-  experience:     () => ({ id: `exp_${Date.now()}`,   company: '', role: '', location: '', startDate: '', endDate: '', current: false, description: '', bullets: [] }),
-  education:      () => ({ id: `edu_${Date.now()}`,   institution: '', degree: '', fieldOfStudy: '', location: '', startDate: '', endDate: '', gpa: '', description: '', bullets: [] }),
-  skills:         () => ({ id: `sk_${Date.now()}`,    category: '', skills: '' }),
-  projects:       () => ({ id: `proj_${Date.now()}`,  name: '', url: '', technologies: '', startDate: '', endDate: '', description: '', bullets: [] }),
-  languages:      () => ({ id: `lang_${Date.now()}`,  language: '', proficiency: 'Professional' }),
-  certifications: () => ({ id: `cert_${Date.now()}`,  name: '', issuer: '', date: '', expiry: '', credentialId: '', url: '' }),
-  awards:         () => ({ id: `awd_${Date.now()}`,   title: '', issuer: '', date: '', description: '' }),
-  volunteering:   () => ({ id: `vol_${Date.now()}`,   org: '', role: '', location: '', startDate: '', endDate: '', description: '', bullets: [] }),
-  references:     () => ({ id: `ref_${Date.now()}`,   name: '', jobTitle: '', company: '', relationship: '', email: '', phone: '' }),
-  interests:      () => ({ id: `int_${Date.now()}`,   interests: '' }),
-  custom:         () => ({ id: `cust_${Date.now()}`,  title: '', subtitle: '', date: '', location: '', description: '', bullets: [] }),
+  experience:     () => ({ id: newId('exp'),  company: '', role: '', location: '', startDate: '', endDate: '', current: false, description: '', bullets: [] }),
+  education:      () => ({ id: newId('edu'),  institution: '', degree: '', fieldOfStudy: '', location: '', startDate: '', endDate: '', gpa: '', description: '', bullets: [] }),
+  skills:         () => ({ id: newId('sk'),   category: '', skills: '' }),
+  projects:       () => ({ id: newId('proj'), name: '', url: '', technologies: '', startDate: '', endDate: '', description: '', bullets: [] }),
+  languages:      () => ({ id: newId('lang'), language: '', proficiency: 'Professional' }),
+  certifications: () => ({ id: newId('cert'), name: '', issuer: '', date: '', expiry: '', credentialId: '', url: '' }),
+  awards:         () => ({ id: newId('awd'),  title: '', issuer: '', date: '', description: '' }),
+  volunteering:   () => ({ id: newId('vol'),  org: '', role: '', location: '', startDate: '', endDate: '', description: '', bullets: [] }),
+  references:     () => ({ id: newId('ref'),  name: '', jobTitle: '', company: '', relationship: '', email: '', phone: '' }),
+  interests:      () => ({ id: newId('int'),  interests: '' }),
+  custom:         () => ({ id: newId('cust'), title: '', subtitle: '', date: '', location: '', description: '', bullets: [] }),
 };
 
 export const ADD_LABEL = {

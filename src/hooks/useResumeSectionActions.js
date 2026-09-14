@@ -1,4 +1,5 @@
 import { SECTION_TYPE_DEFAULTS } from '@/utils/defaultData';
+import { newId } from '@/utils/ids';
 
 export function createSectionActions(patchActive) {
   function updateSections(sections) {
@@ -20,7 +21,7 @@ export function createSectionActions(patchActive) {
   }
 
   function addSection(type) {
-    const id = `${type}_${Date.now()}`;
+    const id = newId(type);
     const factory = SECTION_TYPE_DEFAULTS[type] || SECTION_TYPE_DEFAULTS.custom;
     patchActive(r => ({ ...r, sections: [...r.sections, factory(id)] }));
   }

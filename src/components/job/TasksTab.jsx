@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { Plus, CheckSquare } from 'lucide-react';
 import { TodoItem } from '@/components/job/TodoItem';
+import { newId } from '@/utils/ids';
 
 const DONE_PAGE_SIZE = 5;
 
@@ -17,7 +18,7 @@ export function TasksTab({ todos, onChange }) {
   function addTodo(text) {
     const t = text.trim();
     if (!t || todos.some(td => td.text === t)) return;
-    onChange([...todos, { id: `td_${Date.now()}_${Math.random().toString(36).slice(2, 5)}`, text: t, done: false }]);
+    onChange([...todos, { id: newId('td'), text: t, done: false }]);
     setInput('');
     inputRef.current?.focus();
   }

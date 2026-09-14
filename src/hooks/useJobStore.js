@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { backupRaw } from '@/utils/storageBackup';
+import { newId } from '@/utils/ids';
 
 const KEY = 'cpwtcv_jobs_v1';
 
@@ -45,7 +46,7 @@ function load() {
   let jobs = parsed.jobs.filter(j => j && typeof j === 'object' && !Array.isArray(j));
   const recovery = jobs.length < parsed.jobs.length ? { backupKey: backupRaw(KEY, saved) } : null;
   // A job the router cannot address (no id, or a non-string one) gets an id rather than being dropped.
-  jobs = jobs.map((j, i) => (typeof j.id === 'string' && j.id ? j : { ...j, id: `job_${Date.now()}_${i}` }));
+  jobs = jobs.map(j => (typeof j.id === 'string' && j.id ? j : { ...j, id: newId('job') }));
   // Migrate: strip old demo_* jobs, keep user-created ones
   if (parsed.dataVersion !== JOB_VERSION) jobs = [...DEMO_JOBS, ...jobs.filter(j => !j.id.startsWith('demo_'))];
   return { jobs, recovery };
@@ -72,7 +73,7 @@ export function useJobStore() {
     const now = Date.now();
     const initialStatus = data.status || 'saved';
     const job = {
-      id: `job_${now}`,
+      id: newId('job'),
       company: '', role: '', status: 'saved',
       url: '', location: '', salary: '',
       contact: '', resumeId: '', notes: '',
@@ -114,7 +115,7 @@ export function useJobStore() {
       contact: '',
       deadline: '',
       ...j,
-      id: `job_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      id: newId('job'),
       createdAt: j.createdAt || Date.now(),
       updatedAt: Date.now(),
     }));

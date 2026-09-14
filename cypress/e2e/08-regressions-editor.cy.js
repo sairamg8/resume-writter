@@ -16,7 +16,7 @@ describe('regressions — editor', () => {
     cy.get('input[type="file"][accept=".json"]').selectFile({
       contents: Cypress.Buffer.from(JSON.stringify(other)), fileName: 'other.json',
     }, { force: true });
-    cy.location('hash').should('match', /^#\/resume\/resume_\d+$/);
+    cy.location('hash').should('match', /^#\/resume\/resume_[\w-]+$/);
 
     summaryEditor().should('contain.text', 'Imported summary text.').and('not.contain.text', 'experienced full stack');
     summaryEditor().click().type('{moveToEnd} More.');

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ATS_DEFAULTS, createBlankResume } from '@/utils/defaultData';
 import { createSectionActions } from '@/hooks/useResumeSectionActions';
+import { newId } from '@/utils/ids';
 
 const STORAGE_KEY = 'cpwtcv_v1';
 const DATA_VERSION = 6;
@@ -90,14 +91,14 @@ export function useAppStore() {
   // ── Resume management ──────────────────────────────────────────────
 
   function createResume(name = 'Untitled Resume') {
-    const id = `resume_${Date.now()}`;
+    const id = newId('resume');
     const newResume = createBlankResume({ id, name });
     setAppState(prev => ({ ...prev, resumes: [...prev.resumes, newResume], activeId: id }));
     return id;
   }
 
   function importResume(data) {
-    const id = `resume_${Date.now()}`;
+    const id = newId('resume');
     const imported = { ...JSON.parse(JSON.stringify(data)), id, updatedAt: Date.now() };
     setAppState(prev => ({ ...prev, resumes: [...prev.resumes, imported], activeId: id }));
     return id;
@@ -106,10 +107,10 @@ export function useAppStore() {
   function duplicateResume(id) {
     const source = appState.resumes.find(r => r.id === id);
     if (!source) return;
-    const newId = `resume_${Date.now()}`;
-    const copy = { ...JSON.parse(JSON.stringify(source)), id: newId, name: `${source.name} (Copy)`, updatedAt: Date.now() };
-    setAppState(prev => ({ ...prev, resumes: [...prev.resumes, copy], activeId: newId }));
-    return newId;
+    const copyId = newId('resume');
+    const copy = { ...JSON.parse(JSON.stringify(source)), id: copyId, name: `${source.name} (Copy)`, updatedAt: Date.now() };
+    setAppState(prev => ({ ...prev, resumes: [...prev.resumes, copy], activeId: copyId }));
+    return copyId;
   }
 
   function deleteResume(id) {
