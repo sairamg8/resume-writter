@@ -11,40 +11,49 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
  * - Page text goes into a visually hidden element (`textId`) for screen readers and tests.
  */
 
-const A4_WIDTH_PX = 794; // 210 mm at 96 dpi — the preview's 100 % width
+const A4_WIDTH_PX = 794; // 210 mm at 96 dpi — the largest "100 %" width
+const GUTTER_PX = 48;    // breathing room either side of the page
 const DEBOUNCE_MS = 350;
+
+/** Free a pdf.js document (PDFDocumentProxy has no destroy(); its loading task does). */
+const release = (pdf) => { pdf?.loadingTask?.destroy(); };
 
 let pdfjsPromise = null;
 function loadPdfjs() {
   if (!pdfjsPromise) {
+    // The legacy build: pdf.js 6's default build calls ES2025 APIs (Uint8Array#toHex) that
+    // browsers older than ~2025 lack, which would leave those users with no preview at all.
     pdfjsPromise = Promise.all([
-      import('pdfjs-dist'),
-      import('pdfjs-dist/build/pdf.worker.min.mjs?url'),
+      import('pdfjs-dist/legacy/build/pdf.mjs'),
+      import('pdfjs-dist/legacy/build/pdf.worker.min.mjs?url'),
     ]).then(([lib, worker]) => {
       lib.GlobalWorkerOptions.workerSrc = worker.default;
-      return lib;
+      // One worker for every render: a document given a caller-owned worker leaves it running
+      // when its loading task is destroyed, so re-renders skip worker start-up.
+      return { lib, worker: new lib.PDFWorker() };
     }).catch((e) => { pdfjsPromise = null; throw e; });
   }
   return pdfjsPromise;
 }
 
-/** Reading-order text of one page: a space where runs sit apart on a line, a newline between lines. */
+/**
+ * Reading-order text of one page, for screen readers and tests: runs that sit apart get a
+ * space, and line ends become spaces too (a wrapped sentence reads as one sentence).
+ */
 function pageText(content) {
   let out = '';
   let prev = null;
   for (const item of content.items) {
     if (typeof item.str !== 'string') continue;
-    if (prev && !prev.hasEOL) {
-      const sameLine = Math.abs(item.transform[5] - prev.transform[5]) < 1;
+    if (prev) {
+      const sameLine = !prev.hasEOL && Math.abs(item.transform[5] - prev.transform[5]) < 1;
       const gap = item.transform[4] - (prev.transform[4] + prev.width);
-      if (!sameLine) out += '\n';
-      else if (gap > 0.5 && !/\s$/.test(out) && !/^\s/.test(item.str)) out += ' ';
+      if ((!sameLine || gap > 0.5) && !/\s$/.test(out) && !/^\s/.test(item.str)) out += ' ';
     }
     out += item.str;
-    if (item.hasEOL) out += '\n';
     prev = item;
   }
-  return out.trim();
+  return out.replace(/\s+/g, ' ').trim();
 }
 
 /** Paint every page into a fresh canvas at `cssWidth` (device-pixel sharp). */
@@ -72,7 +81,7 @@ function PageCanvas({ canvas, width, height, label }) {
       ref={ref}
       role="img"
       aria-label={label}
-      className="bg-white shadow-2xl shrink-0"
+      className="mx-auto bg-white shadow-2xl shrink-0"
       style={{ width, height }}
     />
   );
@@ -85,7 +94,11 @@ export function PdfPreview({ render, input, zoom = 1, textId, title = 'Résumé'
   const [retry, setRetry] = useState(0);
   const generation = useRef(0);
   const docRef = useRef(null);
-  const cssWidth = Math.round(A4_WIDTH_PX * zoom);
+  const rootRef = useRef(null);
+  const [available, setAvailable] = useState(A4_WIDTH_PX + GUTTER_PX);
+  // 100 % = fit the column (never wider than true A4 size); the zoom buttons scale from there.
+  const fitWidth = Math.max(240, Math.min(A4_WIDTH_PX, available - GUTTER_PX));
+  const cssWidth = Math.round(fitWidth * zoom);
   const widthRef = useRef(cssWidth);
   widthRef.current = cssWidth;
 
@@ -99,7 +112,7 @@ export function PdfPreview({ render, input, zoom = 1, textId, title = 'Résumé'
         const [blob, pdfjs] = await Promise.all([render(input), loadPdfjs()]);
         if (gen !== generation.current) return;
         const data = new Uint8Array(await blob.arrayBuffer());
-        const pdf = await pdfjs.getDocument({ data, isEvalSupported: false }).promise;
+        const pdf = await pdfjs.lib.getDocument({ data, worker: pdfjs.worker, isEvalSupported: false }).promise;
         const pages = [];
         for (let i = 1; i <= pdf.numPages; i += 1) {
           const page = await pdf.getPage(i);
@@ -108,8 +121,8 @@ export function PdfPreview({ render, input, zoom = 1, textId, title = 'Résumé'
         }
         const width = widthRef.current;
         const painted = await paint(pages, width);
-        if (gen !== generation.current) { pdf.destroy(); return; }
-        docRef.current?.destroy();
+        if (gen !== generation.current) { release(pdf); return; }
+        release(docRef.current);
         docRef.current = pdf;
         setView({ pages, painted, cssWidth: width });
         setError(null);
@@ -134,18 +147,30 @@ export function PdfPreview({ render, input, zoom = 1, textId, title = 'Résumé'
     return () => { cancelled = true; };
   }, [cssWidth, view]);
 
-  useEffect(() => () => { docRef.current?.destroy(); }, []);
+  useEffect(() => () => { release(docRef.current); }, []);
+
+  // Track the scroll column's width so the page always fits it at 100 %.
+  useLayoutEffect(() => {
+    const host = rootRef.current?.parentElement;
+    if (!host) return undefined;
+    const measure = () => setAvailable(host.clientWidth);
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(host);
+    return () => ro.disconnect();
+  }, []);
 
   const count = view?.pages.length || 0;
 
   return (
     <div
-      className="flex flex-col items-center gap-6 shrink-0"
+      ref={rootRef}
+      className="w-full flex flex-col gap-6 shrink-0"
       data-preview-status={status}
       data-preview-pages={count}
     >
       {status === 'error' && (
-        <div role="alert" className="max-w-md text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2 flex items-start gap-2">
+        <div role="alert" className="mx-auto max-w-md text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2 flex items-start gap-2">
           <span className="flex-1">Preview failed to render{error?.message ? ` (${error.message})` : ''}.</span>
           <button onClick={() => setRetry((n) => n + 1)} className="font-semibold hover:text-red-900">Retry</button>
         </div>
@@ -153,7 +178,7 @@ export function PdfPreview({ render, input, zoom = 1, textId, title = 'Résumé'
 
       {!view && status !== 'error' && (
         <div
-          className="bg-white shadow-2xl shrink-0 flex items-center justify-center text-xs text-gray-400"
+          className="mx-auto bg-white shadow-2xl shrink-0 flex items-center justify-center text-xs text-gray-400"
           style={{ width: cssWidth, height: Math.round(cssWidth * 1.4142) }}
         >
           Rendering preview…
@@ -161,7 +186,7 @@ export function PdfPreview({ render, input, zoom = 1, textId, title = 'Résumé'
       )}
 
       {view && (
-        <div className={`flex flex-col items-center gap-6 transition-opacity ${status === 'rendering' ? 'opacity-90' : ''}`}>
+        <div className={`flex flex-col gap-6 transition-opacity ${status === 'rendering' ? 'opacity-90' : ''}`}>
           {view.painted.map((p, i) => (
             <PageCanvas
               key={i}

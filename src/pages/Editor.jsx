@@ -379,7 +379,7 @@ export function Editor({ store, auth, sync }) {
       )}
 
       <div
-        className={`${layoutMode === 'editor' ? 'hidden' : 'flex-1 min-w-0 min-h-0 h-full'} overflow-y-auto overflow-x-hidden bg-[#f5f3ef] flex flex-col items-center py-8`}
+        className={`${layoutMode === 'editor' ? 'hidden' : 'flex-1 min-w-0 min-h-0 h-full'} overflow-auto bg-[#f5f3ef] flex flex-col items-center py-8`}
         style={{ overscrollBehavior: 'contain' }}
       >
         <div className="mb-4 flex items-center gap-3 shrink-0">
