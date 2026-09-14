@@ -6,11 +6,8 @@ import { PdfRichText } from './shared/PdfRichText';
 import { hasRichText } from '@/utils/richText';
 import { getPdfPhotoStyle } from './shared/pdfPhoto';
 import { HEADER_MARGIN_BOTTOM_PT, pxToPt } from './shared/pdfUnits';
+import { solid } from './shared/pdfColors';
 
-function hexAlpha(hex, a) {
-  if (!hex || !hex.startsWith('#') || hex.length < 7) return hex;
-  return hex.slice(0, 7) + Math.round(a * 255).toString(16).padStart(2, '0');
-}
 
 export function MinimalTemplatePDF({ data }) {
   const { personal, sections = [], settings = {} } = data;
@@ -96,7 +93,7 @@ export function MinimalTemplatePDF({ data }) {
             <View style={{
               marginTop: 6,
               borderLeftWidth: 2,
-              borderLeftColor: hexAlpha(accent, 0.4),
+              borderLeftColor: solid(accent, 0.4),
               paddingLeft: 8,
             }}>
               <PdfRichText

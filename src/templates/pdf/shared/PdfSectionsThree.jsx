@@ -1,6 +1,7 @@
 import { View, Text } from '@react-pdf/renderer';
 import { PdfRichText } from './PdfRichText';
 import { hasRichText } from '@/utils/richText';
+import { tint } from './pdfColors';
 import {
   SPACER,
   SectionTitleOf,
@@ -53,7 +54,7 @@ export function InterestsSection({ section, settings, marginBottom, spaceBefore,
       <SectionTitleOf section={section} settings={settings} centered={centered} />
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: itemGap, justifyContent: centered ? 'center' : 'flex-start' }}>
         {allInterests.map((interest, i) => (
-          <View key={i} style={{ backgroundColor: accent + '12', borderRadius: 3, paddingHorizontal: 6, paddingVertical: 1 }}>
+          <View key={i} style={{ backgroundColor: tint(accent, 0x12 / 255), borderRadius: 3, paddingHorizontal: 6, paddingVertical: 1 }}>
             <Text style={{ fontSize: baseSize, color: accent }}>{interest}</Text>
           </View>
         ))}

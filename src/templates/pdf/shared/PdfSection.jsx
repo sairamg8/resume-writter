@@ -1,4 +1,5 @@
 import { View, Text } from '@react-pdf/renderer';
+import { solid, tint } from './pdfColors';
 
 export function PdfSectionTitle({
   title,
@@ -33,20 +34,19 @@ export function PdfSectionTitle({
 
   const titleText = useAccentText ? accentText : neutralText;
 
-  // Rule/box colors are hand-rolled per template on the Canvas side (each *TemplateHelpers.jsx
-  // uses its own fallback/alpha formula), so they must be resolved per template here too rather
-  // than sharing one generic constant — a shared constant only happens to match classic/sidebar.
-  const ruledColor = template === 'modern' ? (borderColor || accent + '30')
+  // Rule and box colours per template. Rules and boxes are fills (translucency allowed);
+  // the underline is a border, so it is made opaque (see pdfColors.js).
+  const ruledColor = template === 'modern' ? (borderColor || tint(accent, 0x30 / 255))
     : template === 'minimal' ? (borderColor || '#d1d5db')
     : template === 'executive' ? (borderColor || '#d1d5db')
     : (borderColor || '#e5e7eb'); // classic, sidebar
-  const lineColor = template === 'modern' ? (borderColor || accent + '30')
+  const lineColor = template === 'modern' ? (borderColor || tint(accent, 0x30 / 255))
     : template === 'minimal' ? (borderColor || '#d1d5db')
-    : template === 'executive' ? (bc + '50')
-    : (borderColor || accent + '40'); // classic, sidebar
-  const boxBg = template === 'modern' ? (accent + '14')
-    : template === 'minimal' ? (bc + '12')
-    : (bc + '14'); // executive, classic, sidebar
+    : template === 'executive' ? tint(bc, 0x50 / 255)
+    : (borderColor || tint(accent, 0x40 / 255)); // classic, sidebar
+  const boxBg = template === 'modern' ? tint(accent, 0x14 / 255)
+    : template === 'minimal' ? tint(bc, 0x12 / 255)
+    : tint(bc, 0x14 / 255); // executive, classic, sidebar
 
   // Never leave a heading alone at the bottom of a page: it moves unless `presence` points of
   // the section fit below it. (Works because SPACER gives the title a previous sibling.)
@@ -61,7 +61,7 @@ export function PdfSectionTitle({
     );
   }
   if (headingStyle === 'underline') {
-    const underlineColor = template === 'minimal' ? (borderColor || '#e5e7eb') : bc;
+    const underlineColor = solid(template === 'minimal' ? (borderColor || '#e5e7eb') : bc);
     return (
       <View {...keepWithNext} style={{ marginBottom: 6, borderBottomWidth: sectionBorderWidth, borderBottomColor: underlineColor, paddingBottom: 2 }}>
         <Text style={titleText}>{label}</Text>

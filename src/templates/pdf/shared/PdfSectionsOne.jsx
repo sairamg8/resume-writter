@@ -1,6 +1,7 @@
 import { View, Text } from '@react-pdf/renderer';
 import { PdfRichText } from './PdfRichText';
 import { hasRichText } from '@/utils/richText';
+import { solid, tint } from './pdfColors';
 import {
   SPACER,
   SectionTitleOf,
@@ -101,8 +102,8 @@ export function SkillsSection({ section, settings, marginBottom, spaceBefore, it
                 {skills.map((sk, i) => (
                   <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3 }}>
                     <Text style={{ fontSize: entrySize - 1, width: 70, color: '#1a1a1a', opacity: 0.8 }}>{sk}</Text>
-                    <View style={{ flex: 1, height: 3, borderRadius: 2, backgroundColor: accent + '20' }}>
-                      <View style={{ width: '80%', height: 3, borderRadius: 2, backgroundColor: accent + 'b3' }} />
+                    <View style={{ flex: 1, height: 3, borderRadius: 2, backgroundColor: tint(accent, 0x20 / 255) }}>
+                      <View style={{ width: '80%', height: 3, borderRadius: 2, backgroundColor: tint(accent, 0xb3 / 255) }} />
                     </View>
                   </View>
                 ))}
@@ -158,12 +159,12 @@ export function SkillsSection({ section, settings, marginBottom, spaceBefore, it
                         paddingHorizontal: 5,
                         paddingVertical: 1,
                       } : {
-                        backgroundColor: accent + (isModern ? '10' : '15'),
+                        backgroundColor: tint(accent, (isModern ? 0x10 : 0x15) / 255),
                         borderRadius: 3,
                         paddingHorizontal: 5,
                         paddingVertical: 1,
                         borderWidth: 1,
-                        borderColor: accent + '30',
+                        borderColor: solid(accent, 0x30 / 255),
                       }}>
                         <Text style={{ fontSize: entrySize - 0.5, color: isMinimal ? '#4b5563' : accent }}>{tag}</Text>
                       </View>

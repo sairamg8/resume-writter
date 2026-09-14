@@ -2,6 +2,7 @@ import { Document, Page, View, Text, Image } from '@react-pdf/renderer';
 import { getPageStyle, getDocumentProps } from './shared/PdfPage';
 import { PdfRichText } from './shared/PdfRichText';
 import { PdfContactRow } from './shared/PdfContact';
+import { solid } from './shared/pdfColors';
 
 function getPhotoStyle(settings, accent) {
   const sh = settings?.photoShape || 'circle';
@@ -14,7 +15,7 @@ function getPhotoStyle(settings, accent) {
     width: w, height: h,
     borderRadius: sh === 'rounded' ? 5 : sh === 'square' ? 1 : w / 2,
     borderWidth: br === 'none' ? 0 : 1.5,
-    borderColor: br === 'none' ? 'transparent' : br === 'thin' ? '#e5e7eb' : accent,
+    borderColor: br === 'none' ? '#ffffff' : br === 'thin' ? '#e5e7eb' : solid(accent),
     objectFit: 'cover',
     marginRight: 10,
   };
@@ -113,7 +114,7 @@ export function CoverLetterTemplatePDF({ data }) {
     >
       <Page size="A4" style={{ ...pageStyle, color: textColor }}>
         {/* Header block with accent bottom border */}
-        <View style={{ borderBottomWidth: 2.5, borderBottomColor: accent, paddingBottom: 12, marginBottom: 16 }}>
+        <View style={{ borderBottomWidth: 2.5, borderBottomColor: solid(accent), paddingBottom: 12, marginBottom: 16 }}>
           {renderHeader()}
         </View>
 

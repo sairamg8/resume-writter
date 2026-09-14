@@ -2,6 +2,7 @@ import { View, Text } from '@react-pdf/renderer';
 import { PdfSectionTitle } from './PdfSection';
 import { PdfRichText } from './PdfRichText';
 import { CSS_PX_TO_PT, SECTION_SPACING_PX } from './pdfUnits';
+import { tint } from './pdfColors';
 
 import {
   ExperienceSection,
@@ -41,13 +42,8 @@ export function getColumnWidth(cols) {
   return '100%';
 }
 
-export function hexAlpha(hex, opacity) {
-  if (!hex || !hex.startsWith('#')) return hex;
-  const clean = hex.slice(1);
-  const percent = Math.min(100, Math.max(0, Math.round(opacity * 100)));
-  const alphaHex = Math.round((percent / 100) * 255).toString(16).padStart(2, '0');
-  return `#${clean}${alphaHex}`;
-}
+/** `color` at `opacity`, for fills and text (see pdfColors.js for borders). */
+export const hexAlpha = (color, opacity) => tint(color, opacity);
 
 /** Legacy / imported `bullets[]` strings, printed like a rich-text list. */
 export function RenderBullets({ bullets, style }) {
