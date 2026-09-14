@@ -1,5 +1,6 @@
 import { StyleSheet } from '@react-pdf/renderer';
 import { headerBorderOn } from '@/constants/templates';
+import { readableOn } from './pdfColors';
 import {
   CSS_PX_TO_PT,
   DEFAULT_ITEM_GAP_PX,
@@ -49,7 +50,10 @@ export const DEFAULTS = {
     accentColor: '#2563eb',
     textColor: '#1e2937',
     nameColor: (s) => s.nameColor || s.headerTextColor || '#ffffff',
-    jobTitleColor: (s) => s.jobTitleColor || s.accentColor || '#2563eb',
+    // The accent on the dark sidebar only where it reads there; a dark accent (the default
+    // #374151, or #111111) gets a light tint of itself instead (FIDB-42).
+    jobTitleColor: (s) => s.jobTitleColor
+      || readableOn(s.accentColor || '#2563eb', s.sidebarBg || DEFAULTS.sidebar.sidebarBg),
     headingStyle: 'plain',
     sectionTitleCase: 'upper',
     sidebarBg: '#1e293b',

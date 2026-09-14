@@ -66,3 +66,38 @@ export function tint(color, alpha = 1) {
   const a = c[3] * alpha;
   return `#${hex2(c[0])}${hex2(c[1])}${hex2(c[2])}${a >= 1 ? '' : hex2(a * 255)}`;
 }
+
+/** WCAG relative luminance (0–1) of an opaque [r, g, b]. */
+function luminance([r, g, b]) {
+  const lin = (v) => (v / 255 <= 0.04045 ? v / 255 / 12.92 : ((v / 255 + 0.055) / 1.055) ** 2.4);
+  return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+}
+
+/**
+ * WCAG contrast ratio (1–21) of `color` drawn on `background` (a translucent colour is blended
+ * onto it first); null when either colour cannot be read.
+ */
+export function contrast(color, background = '#ffffff') {
+  const bg = parseColor(solid(background));
+  const fg = bg && parseColor(solid(color, 1, background));
+  if (!bg || !fg) return null;
+  const [hi, lo] = [luminance(fg), luminance(bg)].sort((x, y) => y - x);
+  return (hi + 0.05) / (lo + 0.05);
+}
+
+/**
+ * `color` when it reads on `background` (contrast ≥ `min`; 4.5 is WCAG AA for body text), else
+ * the least-lightened tint of it that does — mixed toward white on a dark background, toward
+ * black on a light one — as "#rrggbb". Colours it cannot read pass through unchanged.
+ */
+export function readableOn(color, background, min = 4.5) {
+  const current = contrast(color, background);
+  if (current == null || current >= min) return color;
+  const base = solid(color, 1, background);
+  const toward = luminance(parseColor(solid(background))) < 0.18 ? '#ffffff' : '#000000';
+  for (let step = 1; step < 50; step += 1) {
+    const mixed = solid(toward, step / 50, base);
+    if (contrast(mixed, background) >= min) return mixed;
+  }
+  return toward;
+}
