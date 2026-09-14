@@ -44,3 +44,24 @@ describe('regressions — editor', () => {
     });
   });
 });
+
+describe('regressions — export failures', () => {
+  it('M6: a failed PDF export says so and frees the Export button', () => {
+    cy.intercept('GET', '**/assets/pdfExportReactPDF-*.js', { statusCode: 500, body: '' });
+    cy.visitEditor('classic');
+    cy.openExportMenu();
+    cy.contains('button', /^\s*Export PDF\s*$/).click();
+    cy.contains('[role="alert"]', 'PDF export failed').should('be.visible');
+    cy.contains('button', /^\s*Export\s*$/).should('not.be.disabled');
+    cy.contains('[role="alert"] button', 'Dismiss').click();
+    cy.get('[role="alert"]').should('not.exist');
+  });
+
+  it('M6: a failed Word export says so', () => {
+    cy.intercept('GET', '**/assets/wordExport-*.js', { statusCode: 500, body: '' });
+    cy.visitEditor('classic');
+    cy.openExportMenu();
+    cy.contains('button', /^\s*Export Word\s*$/).click();
+    cy.contains('[role="alert"]', 'Word export failed').should('be.visible');
+  });
+});
