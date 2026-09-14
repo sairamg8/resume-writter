@@ -5,7 +5,7 @@ import { Paragraph, BorderStyle } from 'docx';
 import { accent2Hex, bold, normal, linked, descriptionToParagraphs } from '@/utils/wordExportUtils';
 import { contactItems } from '@/utils/contacts';
 import { hasRichText } from '@/utils/richText';
-import { letterBlock, letterHiddenFields, letterSignature } from '@/utils/coverLetter';
+import { letterBlock, letterContactFormat, letterHiddenFields, letterSignature } from '@/utils/coverLetter';
 
 const DARK = '0f172a';
 const GREY = '64748b';
@@ -20,7 +20,7 @@ function letterhead(personal, settings, cl, sizes, accentHex) {
   const contacts = contactItems(personal, letterHiddenFields(cl, personal));
   if (contacts.length) {
     const style = { size: sizes.contact, color: GREY };
-    const sep = (cl.headerStyle || settings.contactStyle) === 'bullet' ? '  •  ' : '  |  ';
+    const sep = letterContactFormat(cl, settings).style === 'bullet' ? '  •  ' : '  |  ';
     rows.push({ runs: contacts.flatMap((c, i) => [...(i ? [normal(sep, style)] : []), linked(c.value, c.href, style)]) });
   }
   // Word measures border width in eighths of a point: 20 = the PDF's 2.5 pt rule, 12 pt below the text.

@@ -1,5 +1,6 @@
-// Header contacts: the cover letter's own contact visibility (FIDB-44) and the icon packs the
-// Design panel offers, drawn from the table the PDF draws from too (FIDA-39, FIDB-07).
+// Header contacts: the cover letter's own contact visibility (FIDB-44), style and layout, and
+// the icon packs the Design panel offers, drawn from the table the PDF draws from too
+// (FIDA-39, FIDB-07).
 import { buildTestState } from '../../tests/helpers.js';
 
 /** Resume the store marks active. */
@@ -62,6 +63,33 @@ describe('cover letter contacts follow the letter\'s own visibility (FIDB-44)', 
     cy.store().should((s) => {
       expect(active(s).coverLetter.hiddenFields).to.deep.eq([]);
       expect(active(s).personal.hiddenFields).to.deep.eq(['phone']);
+    });
+  });
+});
+
+describe('cover letter contact style and layout: the panel shows what the letter prints', () => {
+  /** A chip of one row ("Contact Style" / "Contact Layout") in the Cover Letter panel. */
+  const chip = (row, label) => cy.contains('p', row).next().contains('button', label);
+  const on = (row, label) => chip(row, label).should('have.class', 'bg-blue-600');
+  const off = (row, label) => chip(row, label).should('not.have.class', 'bg-blue-600');
+
+  it('a letter with no style or layout of its own shows and prints the résumé\'s, until a chip sets its own', () => {
+    cy.visitEditor('classic', { settings: { contactStyle: 'bullet', contactLayout: 'single' }, tab: 'coverletter' });
+    on('Contact Style', 'Bullet');
+    off('Contact Style', 'Bar');
+    on('Contact Layout', 'Single');
+    off('Contact Layout', 'Justify');
+    letter().invoke('text').should('contain', '•');
+
+    chip('Contact Style', 'Bar').click();
+    on('Contact Style', 'Bar');
+    letter().invoke('text').should('not.contain', '•');
+    chip('Contact Layout', 'Justify').click();
+    on('Contact Layout', 'Justify');
+    letter().invoke('text').should('contain', '|');
+    cy.store().should((s) => {
+      expect(active(s).coverLetter).to.include({ headerStyle: 'bar', headerLayout: 'justify' });
+      expect(active(s).settings).to.include({ contactStyle: 'bullet', contactLayout: 'single' });
     });
   });
 });

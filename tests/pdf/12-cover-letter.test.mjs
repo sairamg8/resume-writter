@@ -115,6 +115,23 @@ describe('cover letter — Word export (FIDB-50)', () => {
   });
 });
 
+describe('cover letter — contact style and layout', () => {
+  it('the letter\'s own once set, else the résumé\'s: what the PDF prints and the panel\'s chips show', async () => {
+    const { letterContactFormat } = await loadModule('/src/utils/coverLetter.js');
+    const cv = { contactStyle: 'bullet', contactLayout: 'single' };
+    assert.deepEqual(letterContactFormat({}, cv), { style: 'bullet', layout: 'single' });
+    assert.deepEqual(letterContactFormat({ headerStyle: 'bar', headerLayout: '2grid' }, cv), { style: 'bar', layout: '2grid' });
+    assert.deepEqual(letterContactFormat({}, {}), { style: 'bar', layout: 'justify' });
+    assert.deepEqual(letterContactFormat(undefined, undefined), { style: 'bar', layout: 'justify' });
+
+    const r = resume({ settings: cv, personal: { email: 'me@example.com', phone: '+1 555 0100' } });
+    const pdf = allText(await read(await renderCover(r)));
+    assert.ok(pdf.includes('•'), `the résumé's bullet style: ${pdf}`);
+    const doc = await renderCoverDocx(r);
+    assert.ok(doc.texts.some((t) => t.includes('me@example.com  •  +1 555 0100')), doc.texts.join(' | '));
+  });
+});
+
 // ── Photo ↔ text alignment ───────────────────────────────────────────────────
 
 const PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';

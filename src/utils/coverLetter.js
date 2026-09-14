@@ -37,6 +37,18 @@ export function letterBlock(cl = {}) {
   };
 }
 
+/**
+ * The letterhead's contact style (icon | bullet | bar) and layout (single | justify | 2grid):
+ * the letter's own once its panel sets them, else the résumé's. The panel's chips show these
+ * same values.
+ */
+export function letterContactFormat(cl = {}, settings = {}) {
+  return {
+    style: cl?.headerStyle || settings?.contactStyle || 'bar',
+    layout: cl?.headerLayout || settings?.contactLayout || 'justify',
+  };
+}
+
 const list = (v) => (Array.isArray(v) ? v : null);
 
 /**

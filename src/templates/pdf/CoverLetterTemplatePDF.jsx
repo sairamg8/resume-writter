@@ -4,7 +4,7 @@ import { PdfRichText } from './shared/PdfRichText';
 import { PdfContactRow } from './shared/PdfContact';
 import { solid } from './shared/pdfColors';
 import { PdfPhoto } from './shared/PdfPhoto';
-import { letterBlock, letterHiddenFields, letterSignature } from '@/utils/coverLetter';
+import { letterBlock, letterContactFormat, letterHiddenFields, letterSignature } from '@/utils/coverLetter';
 
 /** Space under the date, the recipient block and the subject. */
 const BLOCK_GAP = 12;
@@ -36,9 +36,8 @@ export function CoverLetterTemplatePDF({ data }) {
   const nameSize  = baseSize + (settings.fontSizeNameDelta ?? 8);
   const lineH     = settings.lineHeightValue || 1.5;
 
-  const clContactStyle  = cl.headerStyle    || settings.contactStyle  || 'bar';
-  const clContactLayout = cl.headerLayout   || settings.contactLayout || 'justify';
-  const fieldsPos       = cl.fieldsPosition || 'right';
+  const contacts  = letterContactFormat(cl, settings);
+  const fieldsPos = cl.fieldsPosition || 'right';
 
   const photoSrc = cl.showPhoto !== false ? (cl.clPhoto || personal?.photo) : null;
   // The panel's "Text Position (relative to photo)": the name block's place beside the photo.
@@ -60,7 +59,7 @@ export function CoverLetterTemplatePDF({ data }) {
     <PdfContactRow
       personal={personal}
       hidden={hidden}
-      settings={{ ...settings, contactStyle: clContactStyle, contactLayout: clContactLayout }}
+      settings={{ ...settings, contactStyle: contacts.style, contactLayout: contacts.layout }}
       color="#64748b"
     />
   );

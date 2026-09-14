@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { Mail, Phone, MapPin, Globe, Link2, Code, Eye, EyeOff, ChevronDown, ChevronUp, Camera } from 'lucide-react';
 import RichTextEditor from '@/components/RichTextEditor';
-import { letterHiddenFields, todayLetterDate } from '@/utils/coverLetter';
+import { letterContactFormat, letterHiddenFields, todayLetterDate } from '@/utils/coverLetter';
 
 const CONTACT_FIELDS = [
   { key: 'email',    label: 'Email',    Icon: Mail   },
@@ -64,8 +64,9 @@ function SectionBlock({ title, defaultOpen = true, children }) {
   );
 }
 
-export default function CoverLetterPanel({ coverLetter, personal, updateCoverLetter }) {
+export default function CoverLetterPanel({ coverLetter, personal, settings, updateCoverLetter }) {
   const cl = coverLetter || {};
+  const contacts = letterContactFormat(cl, settings); // what the letter prints until a chip sets its own
   const photoInputRef = useRef(null);
 
   function f(key) {
@@ -203,7 +204,7 @@ export default function CoverLetterPanel({ coverLetter, personal, updateCoverLet
               { val: 'bullet', label: '• Bullet' },
               { val: 'bar',    label: '| Bar' },
             ].map(({ val, label }) => (
-              <Chip key={val} active={(cl.headerStyle || 'bar') === val} onClick={() => updateCoverLetter('headerStyle', val)}>
+              <Chip key={val} active={contacts.style === val} onClick={() => updateCoverLetter('headerStyle', val)}>
                 {label}
               </Chip>
             ))}
@@ -219,7 +220,7 @@ export default function CoverLetterPanel({ coverLetter, personal, updateCoverLet
               { val: 'justify', label: 'Justify' },
               { val: '2grid',   label: '2 Grid' },
             ].map(({ val, label }) => (
-              <Chip key={val} active={(cl.headerLayout || 'justify') === val} onClick={() => updateCoverLetter('headerLayout', val)}>
+              <Chip key={val} active={contacts.layout === val} onClick={() => updateCoverLetter('headerLayout', val)}>
                 {label}
               </Chip>
             ))}
