@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { ATS_DEFAULTS, createBlankResume } from '@/utils/defaultData';
+import { createBlankResume, defaultSettings } from '@/utils/defaultData';
 import { createSectionActions } from '@/hooks/useResumeSectionActions';
 import { newId } from '@/utils/ids';
-import { withKnownTemplate } from '@/constants/templates';
+import { templateStyleDefaults, withKnownTemplate } from '@/constants/templates';
 
 const STORAGE_KEY = 'cpwtcv_v1';
 const DATA_VERSION = 6;
@@ -42,14 +42,6 @@ function loadStore() {
     return emptyStore();
   }
 }
-
-const TEMPLATE_STYLE_DEFAULTS = {
-  executive: { headingStyle: 'underline', sectionTitleCase: 'normal' },
-  classic:   { headingStyle: 'ruled',     sectionTitleCase: 'upper' },
-  modern:    { headingStyle: 'line',      sectionTitleCase: 'upper' },
-  minimal:   { headingStyle: 'underline', sectionTitleCase: 'upper' },
-  sidebar:   { headingStyle: 'plain',     sectionTitleCase: 'upper' },
-};
 
 export function useAppStore() {
   const [appState, setAppState] = useState(loadStore);
@@ -162,13 +154,13 @@ export function useAppStore() {
     patchActive(r => ({ ...r, settings: { ...(r.settings || {}), [key]: value } }));
   }
 
+  /** Design → Reset: the ATS-safe defaults with the current template's heading style (M16). */
   function resetSettings() {
-    patchActive(r => ({ ...r, settings: { ...ATS_DEFAULTS } }));
+    patchActive(r => ({ ...r, settings: defaultSettings(r.template) }));
   }
 
   function setTemplate(template) {
-    const styleDefaults = TEMPLATE_STYLE_DEFAULTS[template] || {};
-    patchActive(r => ({ ...r, template, settings: { ...r.settings, ...styleDefaults } }));
+    patchActive(r => ({ ...r, template, settings: { ...r.settings, ...templateStyleDefaults(template) } }));
   }
 
   function updateCoverLetter(field, value) {

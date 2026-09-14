@@ -1,4 +1,5 @@
 import { BLANK_PERSONAL, blankSections, BASE_COVER_LETTER } from '@/utils/defaultDataContent';
+import { templateStyleDefaults } from '@/constants/templates';
 
 // ATS-safe defaults — proper dimensions, neutral colors, standard font
 export const ATS_DEFAULTS = {
@@ -45,6 +46,14 @@ export const ATS_DEFAULTS = {
   nameColor: '',
   jobTitleColor: '',
 };
+
+/**
+ * The design settings Reset returns a résumé to: the ATS-safe defaults with the heading style
+ * and title case its template brings (the same ones picking the template sets).
+ */
+export function defaultSettings(template) {
+  return { ...ATS_DEFAULTS, ...templateStyleDefaults(template) };
+}
 
 export { SECTION_TYPE_DEFAULTS } from '@/utils/defaultDataSectionTypes';
 

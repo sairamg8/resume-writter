@@ -2,7 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  TEMPLATE_IDS, templateId, withKnownTemplate, hasHeaderControls, headerBorderOn,
+  TEMPLATE_IDS, templateId, withKnownTemplate, hasHeaderControls, headerBorderOn, templateStyleDefaults,
 } from '../../src/constants/templates.js';
 
 test('templateId: the five templates stay; any other id reads as Classic (M15)', () => {
@@ -30,4 +30,20 @@ test('header helpers read an unknown id as Classic (M15)', () => {
   assert.equal(headerBorderOn({ showHeaderBorder: false }, 'dark'), false);
   assert.equal(hasHeaderControls('modern'), false);
   assert.equal(headerBorderOn({}, 'executive'), false);
+});
+
+test('templateStyleDefaults: each template\'s heading style and title case; an unknown id gets Classic\'s (M16)', () => {
+  assert.deepEqual(
+    Object.fromEntries(TEMPLATE_IDS.map((t) => [t, templateStyleDefaults(t)])),
+    {
+      classic: { headingStyle: 'ruled', sectionTitleCase: 'upper' },
+      modern: { headingStyle: 'line', sectionTitleCase: 'upper' },
+      minimal: { headingStyle: 'underline', sectionTitleCase: 'upper' },
+      executive: { headingStyle: 'underline', sectionTitleCase: 'normal' },
+      sidebar: { headingStyle: 'plain', sectionTitleCase: 'upper' },
+    },
+  );
+  assert.deepEqual(templateStyleDefaults('dark'), templateStyleDefaults('classic'));
+  templateStyleDefaults('executive').headingStyle = 'box';
+  assert.equal(templateStyleDefaults('executive').headingStyle, 'underline', 'callers get a copy');
 });

@@ -12,6 +12,17 @@ export const TEMPLATE_IDS = ['classic', 'modern', 'minimal', 'executive', 'sideb
  */
 export const templateId = (template) => (TEMPLATE_IDS.includes(template) ? template : 'classic');
 
+/** The heading style and title case each template brings: set when it is picked and on Reset. */
+const TEMPLATE_STYLE_DEFAULTS = {
+  executive: { headingStyle: 'underline', sectionTitleCase: 'normal' },
+  classic:   { headingStyle: 'ruled',     sectionTitleCase: 'upper' },
+  modern:    { headingStyle: 'line',      sectionTitleCase: 'upper' },
+  minimal:   { headingStyle: 'underline', sectionTitleCase: 'upper' },
+  sidebar:   { headingStyle: 'plain',     sectionTitleCase: 'upper' },
+};
+
+export const templateStyleDefaults = (template) => ({ ...TEMPLATE_STYLE_DEFAULTS[templateId(template)] });
+
 /**
  * `resume` with a template the app offers, so the Design panel shows it selected and every
  * control reads the template the PDF prints. Applied wherever résumés come in: load, import,

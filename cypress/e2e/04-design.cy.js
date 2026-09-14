@@ -111,3 +111,27 @@ describe('design — settings', () => {
     cy.store().should((s) => expect(settingsOf(s).accentColor).to.eq('#374151')); // ATS_DEFAULTS.accentColor
   });
 });
+
+describe('design — reset returns to the template\'s defaults (M16)', () => {
+  it('Reset keeps an Executive résumé\'s heading style and normal-case titles', () => {
+    cy.visitEditor('executive', { settings: { headingStyle: 'box', sectionTitleCase: 'upper', accentColor: '#0d9488' } });
+    renderedText().should('contain', 'PROFESSIONAL EXPERIENCE');
+    openDesign();
+    cy.contains('button', /^Reset$/).click();
+    cy.contains('button', 'Yes, Reset').click();
+    cy.store().should((s) => {
+      expect(active(s).template).to.eq('executive');
+      expect(settingsOf(s)).to.include({ headingStyle: 'underline', sectionTitleCase: 'normal', accentColor: '#374151' });
+    });
+    renderedText().should('contain', 'Professional Experience').and('not.contain', 'PROFESSIONAL EXPERIENCE');
+  });
+
+  it('Section Headings\' reset gives a Sidebar résumé Sidebar\'s plain headings', () => {
+    cy.visitEditor('sidebar', { settings: { headingStyle: 'box', sectionTitleCase: 'normal', sectionBorderWidth: 4 } });
+    openDesign();
+    cy.get('button[title="Reset Section Headings to defaults"]').click();
+    cy.store().should((s) => {
+      expect(settingsOf(s)).to.include({ headingStyle: 'plain', sectionTitleCase: 'upper', sectionBorderWidth: 1 });
+    });
+  });
+});

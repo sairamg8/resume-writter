@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ATS_DEFAULTS } from '@/utils/defaultData';
+import { defaultSettings } from '@/utils/defaultData';
 import { templateId } from '@/constants/templates';
 import { DesignSection, NumberRow } from '@/components/DesignPanelShared';
 import { ColorsSection } from '@/components/DesignPanelColors';
@@ -30,8 +30,10 @@ export default function DesignPanel({ resume, updateSetting, setTemplate, resetS
   const current = templateId(resume.template); // the template the PDF prints
   const [confirmReset, setConfirmReset] = useState(false);
 
+  /** A section's reset: its settings back to the template's defaults (Sidebar's plain headings, …). */
   function resetSection(keys) {
-    keys.forEach(k => { if (k in ATS_DEFAULTS) updateSetting(k, ATS_DEFAULTS[k]); });
+    const defaults = defaultSettings(resume.template);
+    keys.forEach(k => { if (k in defaults) updateSetting(k, defaults[k]); });
   }
 
   return (
@@ -216,8 +218,8 @@ export default function DesignPanel({ resume, updateSetting, setTemplate, resetS
             <p className="text-xs font-semibold text-amber-800">Reset Design Settings</p>
             <p className="text-[10px] text-amber-600 mt-0.5">
               {confirmReset
-                ? 'This will reset all design settings to ATS defaults. Resume content is kept.'
-                : 'Resets font, colors, spacing, and layout settings to ATS-safe defaults.'}
+                ? 'This will reset all design settings to this template\'s ATS-safe defaults. Resume content is kept.'
+                : 'Resets font, colors, spacing, and layout settings to this template\'s ATS-safe defaults.'}
             </p>
           </div>
           {confirmReset ? (
