@@ -1,0 +1,135 @@
+import { buildTestState } from '../../tests/helpers.js';
+import { CARD, CARD_RENAME, IMPORT_INPUT } from '../support/selectors.js';
+
+const SEED_NAMES = ['Classic', 'Executive', 'Modern', 'Minimal', 'Dark', 'Sidebar'];
+
+/** Resume the store marks active, or undefined. */
+const active = (s) => s.resumes.find((r) => r.id === s.activeId);
+
+describe('dashboard', () => {
+  beforeEach(() => cy.visitDashboard());
+
+  it('seeds one demo resume per starter template on first visit', () => {
+    cy.get(CARD).should('have.length', SEED_NAMES.length);
+    SEED_NAMES.forEach((name) => cy.contains(CARD, name).should('be.visible'));
+    cy.contains('h1', 'My Resumes').next().should('have.text', '6 resumes');
+    cy.store().its('resumes').should('have.length', 6);
+  });
+
+  it('New Resume creates an untitled resume and opens it in the editor', () => {
+    cy.contains('button', 'New Resume').click();
+    cy.location('hash').should('match', /^#\/resume\/resume_\d+$/);
+    cy.contains('button', 'Export').should('be.visible');
+    cy.store().should((s) => {
+      expect(s.resumes).to.have.length(7);
+      expect(active(s).name).to.eq('Untitled Resume');
+    });
+  });
+
+  it('New Cover creates a resume and opens its cover-letter tab', () => {
+    cy.contains('button', 'New Cover').click();
+    cy.location('hash').should('match', /^#\/resume\/resume_\d+\?tab=coverletter$/);
+    cy.store().should((s) => expect(active(s).name).to.eq('Cover Letter'));
+  });
+
+  it('Copy duplicates a resume as "<name> (Copy)" and opens the copy', () => {
+    cy.contains(CARD, 'Modern').contains('button', 'Copy').click();
+    cy.location('hash').should('match', /^#\/resume\/resume_\d+$/);
+    cy.store().should((s) => {
+      expect(s.resumes).to.have.length(7);
+      const copy = active(s);
+      const source = s.resumes.find((r) => r.name === 'Modern');
+      expect(copy.name).to.eq('Modern (Copy)');
+      expect(copy.id).not.to.eq(source.id);
+      expect(copy.template).to.eq(source.template);
+      expect(copy.sections).to.deep.eq(source.sections);
+    });
+  });
+
+  it('rename: Enter commits, Escape cancels, a blank name reverts', () => {
+    // By position: once the name moves into the rename <input>, a text query no longer matches.
+    cy.get(CARD).eq(SEED_NAMES.indexOf('Minimal')).as('card').should('contain.text', 'Minimal');
+
+    cy.get('@card').find(CARD_RENAME).click({ force: true });
+    cy.get('@card').find('input').clear().type('Minimal — Frontend{enter}');
+    cy.get(CARD).should('contain.text', 'Minimal — Frontend');
+    cy.store().its('resumes').should((rs) => expect(rs.map((r) => r.name)).to.include('Minimal — Frontend'));
+
+    cy.get('@card').find(CARD_RENAME).click({ force: true });
+    cy.get('@card').find('input').clear().type('Thrown away{esc}');
+    cy.get(CARD).should('contain.text', 'Minimal — Frontend').and('not.contain.text', 'Thrown away');
+
+    cy.get('@card').find(CARD_RENAME).click({ force: true });
+    cy.get('@card').find('input').clear().type('   {enter}');
+    cy.get(CARD).should('contain.text', 'Minimal — Frontend');
+  });
+
+  it('Delete removes the card and records the id for cloud sync', () => {
+    cy.store().then((s) => {
+      const dark = s.resumes.find((r) => r.name === 'Dark');
+      cy.contains(CARD, 'Dark').contains('button', 'Delete').click();
+      cy.get(CARD).should('have.length', 5).and('not.contain.text', 'Dark');
+      cy.store().should((after) => {
+        expect(after.resumes.map((r) => r.id)).not.to.include(dark.id);
+        expect(after.deletedIds).to.include(dark.id);
+      });
+    });
+  });
+
+  it('deleting every resume leaves one fresh resume behind', () => {
+    for (let i = 0; i < SEED_NAMES.length; i += 1) {
+      cy.get(CARD).first().contains('button', 'Delete').click();
+    }
+    cy.get(CARD).should('have.length', 1);
+    cy.store().its('resumes').should('have.length', 1);
+  });
+
+  it('Import opens a valid resume JSON in the editor', () => {
+    const resume = buildTestState('sidebar').resumes[0];
+    cy.get(IMPORT_INPUT).selectFile({
+      contents: Cypress.Buffer.from(JSON.stringify({ ...resume, name: 'Imported CV' })),
+      fileName: 'imported.json',
+      mimeType: 'application/json',
+    }, { force: true });
+    cy.location('hash').should('match', /^#\/resume\/resume_\d+$/);
+    cy.preview().should('contain.text', 'Alex Johnson');
+    cy.store().should((s) => {
+      expect(s.resumes).to.have.length(7);
+      expect(active(s).name).to.eq('Imported CV');
+      expect(active(s).template).to.eq('sidebar');
+    });
+  });
+
+  it('Import rejects a JSON file that is not a resume, and unparseable files', () => {
+    cy.get(IMPORT_INPUT).selectFile({
+      contents: Cypress.Buffer.from(JSON.stringify({ hello: 'world' })),
+      fileName: 'not-a-resume.json',
+    }, { force: true });
+    cy.contains('Invalid resume file').should('be.visible');
+    cy.location('hash').should('eq', '#/');
+
+    cy.get(IMPORT_INPUT).selectFile({
+      contents: Cypress.Buffer.from('{ this is not json'),
+      fileName: 'broken.json',
+    }, { force: true });
+    cy.contains('Could not parse file').should('be.visible');
+    cy.store().its('resumes').should('have.length', 6);
+  });
+
+  it('header and footer links reach the job tracker, terms and privacy pages', () => {
+    cy.contains('button', 'Job Tracker').click();
+    cy.location('hash').should('eq', '#/jobs');
+    cy.go('back');
+    cy.contains('button', 'Terms').click();
+    cy.location('hash').should('eq', '#/terms');
+    cy.go('back');
+    cy.contains('button', 'Privacy Policy').click();
+    cy.location('hash').should('eq', '#/privacy');
+  });
+
+  it('an unknown route redirects to the dashboard', () => {
+    cy.visit('/#/definitely/not/a/page');
+    cy.location('hash').should('eq', '#/');
+    cy.get(CARD).should('have.length.at.least', 1);
+  });
+});

@@ -1,4 +1,5 @@
 import { buildTestState, STORAGE_KEY } from '../../tests/helpers.js';
+import { CARD } from './selectors.js';
 
 /** Visit `url` with localStorage replaced by `state` (or emptied when state is null). */
 Cypress.Commands.add('seedAndVisit', (url, state) => {
@@ -25,7 +26,7 @@ Cypress.Commands.add('visitEditor', (template = 'classic', opts = {}) => {
 
 Cypress.Commands.add('visitDashboard', (state = null) => {
   cy.seedAndVisit('/#/', state);
-  cy.get('.group.bg-white.rounded-2xl').should('have.length.at.least', 1);
+  cy.get(CARD).should('have.length.at.least', 1);
 });
 
 /** The off-screen single-flow preview (source of truth for canvas text). */
@@ -34,9 +35,13 @@ Cypress.Commands.add('preview', () => cy.get('#resume-preview'));
 /** The visible paginated A4 pages. */
 Cypress.Commands.add('previewPages', () => cy.get('div.bg-white.shadow-2xl'));
 
-/** Parsed app store from localStorage. */
-Cypress.Commands.add('store', () =>
-  cy.window().then((win) => JSON.parse(win.localStorage.getItem(STORAGE_KEY) || 'null')));
+/**
+ * Parsed app store from localStorage. A query, so `cy.store().its(...).should(...)` retries
+ * until the app's persist effect has written the assertion's state.
+ */
+Cypress.Commands.addQuery('store', function store() {
+  return () => JSON.parse(cy.state('window').localStorage.getItem(STORAGE_KEY) || 'null');
+});
 
 Cypress.Commands.add('openExportMenu', () => {
   cy.contains('button', 'Export').click();
