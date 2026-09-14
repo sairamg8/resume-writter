@@ -45,3 +45,6 @@ qa-visual-compare/
 cypress/downloads/
 cypress/screenshots/
 cypress/videos/
+
+# Personal data kept out of the repo (e.g. private/sairam-resume.json — importable backup)
+private/
