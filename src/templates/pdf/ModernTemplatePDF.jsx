@@ -3,14 +3,13 @@ import { getPageStyle, getDocumentProps } from './shared/PdfPage';
 import { SectionRouter, getEffectiveSpacing, getVisibleSections } from './shared/PdfSections';
 import { PdfRichText } from './shared/PdfRichText';
 import { hasRichText } from '@/utils/richText';
-import { MailIcon, PhoneIcon, MapPinIcon, GlobeIcon, LinkedinPdfIcon, GithubPdfIcon } from './shared/PdfIcons';
+import { PdfIcon } from './shared/PdfIcons';
 import { ContactValue } from './shared/PdfContact';
 import { contactItems } from '@/utils/contacts';
 import { getPdfPhotoStyle } from './shared/pdfPhoto';
 import { MODERN_HEADER_PAD_X_PT, MODERN_HEADER_PAD_Y_PT, pxToPt } from './shared/pdfUnits';
 
 const CSS_ICON_SCALE = 0.9;
-const ICONS = { email: MailIcon, phone: PhoneIcon, location: MapPinIcon, website: GlobeIcon, linkedin: LinkedinPdfIcon, github: GithubPdfIcon };
 
 /** The banner's contact row — the same values and links as every template (contactItems). */
 function HeaderContact({ personal, settings, textColor }) {
@@ -23,15 +22,12 @@ function HeaderContact({ personal, settings, textColor }) {
   // Canvas: gap-x-4 gap-y-0.5 → 16px / 2px
   return (
     <View style={{ flexDirection: 'row', flexWrap: 'wrap', columnGap: pxToPt(16), rowGap: pxToPt(2), marginTop: 4 }}>
-      {items.map(({ key, value, href }) => {
-        const Icon = ICONS[key];
-        return (
-          <View key={key} style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
-            <Icon size={iconPt} color={textColor} />
-            <ContactValue value={value} href={href} style={{ fontSize: textSize, color: textColor, lineHeight: 1.2 }} />
-          </View>
-        );
-      })}
+      {items.map(({ key, value, href }) => (
+        <View key={key} style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+          <PdfIcon setId="refined" field={key} size={iconPt} color={textColor} />
+          <ContactValue value={value} href={href} style={{ fontSize: textSize, color: textColor, lineHeight: 1.2 }} />
+        </View>
+      ))}
     </View>
   );
 }
