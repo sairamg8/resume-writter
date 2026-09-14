@@ -101,3 +101,33 @@ export function readableOn(color, background, min = 4.5) {
   }
   return toward;
 }
+
+const SIDEBAR_NAVY = '#1e293b';
+
+/**
+ * The Sidebar column's colours on its background `bg` (Design → Sidebar Background). Each text
+ * colour is the navy palette's wherever it reads on `bg` — on the default navy all four do, so
+ * the column looks as it always has — else the least-shifted tint that does (readableOn): a
+ * light background gets dark text instead of text that vanishes, a blue or green one gets
+ * lighter dates (R2-2).
+ *   strong  #e2e8f0  names, degrees, languages, the column's default text
+ *   value   #cbd5e1  descriptions, bullets, skills, contact values, links
+ *   label   #94a3b8  section titles, contact labels and icons, institutions, issuers
+ *   meta    #64748b  dates, GPA, proficiency, IDs, relationship, phone, skill categories
+ *   fill    #334155  chips, skill-bar tracks, the rule under titles: one step off the background
+ *   chip             chip text, readable on `fill`
+ */
+export function sidebarShades(bg = SIDEBAR_NAVY) {
+  const base = parseColor(solid(bg)) ? solid(bg) : SIDEBAR_NAVY;
+  const dark = luminance(parseColor(base)) < 0.18;
+  const fill = base === SIDEBAR_NAVY ? '#334155' : solid(dark ? '#ffffff' : '#000000', dark ? 0.1 : 0.07, base);
+  const value = readableOn('#cbd5e1', base, 4.5);
+  return {
+    strong: readableOn('#e2e8f0', base, 7),
+    value,
+    label: readableOn('#94a3b8', base, 4.5),
+    meta: readableOn('#64748b', base, 3),
+    fill,
+    chip: readableOn(value, fill, 4.5),
+  };
+}

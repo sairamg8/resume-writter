@@ -10,8 +10,8 @@ import { SideSkills } from './PdfSidebarSkills';
 export { SIDEBAR_TYPES, SideSectionTitle };
 
 // Dark-column sections (PdfSidebarColumn.jsx, PdfSidebarSkills.jsx)
-export function renderSideSection(section, sectionGap, itemGap, accent) {
-  const props = { section, sectionGap, itemGap, accent };
+export function renderSideSection(section, sectionGap, itemGap, accent, shades) {
+  const props = { section, sectionGap, itemGap, accent, shades };
   switch (section.type) {
     case 'skills':         return <SideSkills         {...props} />;
     case 'education':      return <SideEducation      {...props} />;

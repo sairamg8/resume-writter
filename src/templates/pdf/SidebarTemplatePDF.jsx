@@ -11,23 +11,21 @@ import { PdfContactIcon } from './shared/PdfContactIcon';
 import { ContactValue } from './shared/PdfContact';
 import { contactItems } from '@/utils/contacts';
 import { SIDEBAR_TYPES, SideSectionTitle, renderSideSection, SidebarMainSectionRouter } from './shared/PdfSidebarSections';
-
-// Match canvas SideContact: icons + labels share muted slate (#94a3b8), not accent.
-const SIDEBAR_MUTED = '#94a3b8';
-const SIDEBAR_CONTACT_VALUE = '#cbd5e1';
+import { sidebarShades } from './shared/pdfColors';
 
 const CONTACT_LABELS = { email: 'Email', phone: 'Phone', location: 'Location', website: 'Website', linkedin: 'LinkedIn', github: 'GitHub' };
 
-function SideContactRow({ field, label, value, href, iconPt, settings }) {
+/** A contact in the dark column: icon and label in the column's label colour, not the accent. */
+function SideContactRow({ field, label, value, href, iconPt, settings, shades }) {
   return (
     <View style={{ marginBottom: 6 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3.5, marginBottom: 1 }}>
-        <PdfContactIcon field={field} settings={settings} size={iconPt} color={SIDEBAR_MUTED} />
-        <Text style={{ fontSize: 8, fontWeight: 'bold', color: SIDEBAR_MUTED, letterSpacing: tracking(8, 0.8), lineHeight: 1.2 }}>
+        <PdfContactIcon field={field} settings={settings} size={iconPt} color={shades.label} />
+        <Text style={{ fontSize: 8, fontWeight: 'bold', color: shades.label, letterSpacing: tracking(8, 0.8), lineHeight: 1.2 }}>
           {label.toUpperCase()}
         </Text>
       </View>
-      <ContactValue value={value} href={href} style={{ fontSize: 9, color: SIDEBAR_CONTACT_VALUE, paddingLeft: iconPt + 3.5, lineHeight: 1.2 }} />
+      <ContactValue value={value} href={href} style={{ fontSize: 9, color: shades.value, paddingLeft: iconPt + 3.5, lineHeight: 1.2 }} />
     </View>
   );
 }
@@ -45,6 +43,7 @@ export function SidebarTemplatePDF({ data }) {
   const vMm        = settings.marginV ?? 14;
   const hMm        = settings.marginH ?? 18;
   const sidebarBg  = settings.sidebarBg || '#1e293b';
+  const side       = sidebarShades(sidebarBg); // the column's colours on its background (R2-2)
   const nameSize   = baseSize + (settings.fontSizeNameDelta ?? 8);
   const entrySize  = baseSize + (settings.fontSizeEntryDelta ?? 0);
   const sectionGap = settings.sectionGap ?? 12;
@@ -97,7 +96,7 @@ export function SidebarTemplatePDF({ data }) {
           backgroundColor: 'transparent',
           paddingLeft: `${hMm}mm`,
           paddingRight: 10,
-          color: '#e2e8f0',
+          color: side.strong,
         }}>
           <View style={{ marginBottom: sideSectionGap, alignItems: 'center' }} wrap={false}>
             {personal?.photo && !hidden.includes('photo') && (
@@ -121,7 +120,7 @@ export function SidebarTemplatePDF({ data }) {
 
           {contacts.length > 0 && (
             <View style={{ marginBottom: sideSectionGap }}>
-              <SideSectionTitle title="Contact" />
+              <SideSectionTitle title="Contact" shades={side} />
               <View style={{ marginTop: 2 }}>
                 {contacts.map(item => (
                   <SideContactRow
@@ -132,6 +131,7 @@ export function SidebarTemplatePDF({ data }) {
                     href={item.href}
                     iconPt={sideIconPt}
                     settings={settings}
+                    shades={side}
                   />
                 ))}
               </View>
@@ -147,7 +147,7 @@ export function SidebarTemplatePDF({ data }) {
             return (
               <View key={section.id} style={spaceBefore != null ? { marginTop: spaceBefore } : undefined}>
                 {SPACER}
-                {renderSideSection(section, marginBottom, ig, accent)}
+                {renderSideSection(section, marginBottom, ig, accent, side)}
               </View>
             );
           })}

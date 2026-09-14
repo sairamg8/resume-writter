@@ -2,13 +2,17 @@ import { View, Text, Link } from '@react-pdf/renderer';
 import { safeHref, hasRichText } from '@/utils/richText';
 import { SIDEBAR_COLUMN_TYPES } from '@/constants/templates';
 import { tracking } from './pdfUnits';
+import { sidebarShades } from './pdfColors';
 import { PdfRichText } from './PdfRichText';
 import { RenderBullets } from './PdfSections';
 
 /**
  * The Sidebar template's dark column: its section title and the renderers of the sections that
  * live there (skills in PdfSidebarSkills.jsx). The main column's cards are in PdfSidebarSections.jsx.
+ * Every colour comes from `shades` — sidebarShades(Design → Sidebar Background) — so the column
+ * reads on any background the user picks (R2-2).
  */
+const NAVY = sidebarShades();
 
 // Sections that live in the dark sidebar column (the section editor reads the same list)
 export const SIDEBAR_TYPES = new Set(SIDEBAR_COLUMN_TYPES);
@@ -28,18 +32,18 @@ export function EntryLink({ url, label, style }) {
   );
 }
 
-export function SideSectionTitle({ title }) {
+export function SideSectionTitle({ title, shades = NAVY }) {
   return (
     <View style={{ marginBottom: 6 }}>
-      <Text style={{ fontSize: 8.5, fontWeight: 'bold', color: '#94a3b8', letterSpacing: tracking(8.5, 1.2), textTransform: 'uppercase', marginBottom: 2.5, lineHeight: 1.2 }}>
+      <Text style={{ fontSize: 8.5, fontWeight: 'bold', color: shades.label, letterSpacing: tracking(8.5, 1.2), textTransform: 'uppercase', marginBottom: 2.5, lineHeight: 1.2 }}>
         {title.toUpperCase()}
       </Text>
-      <View style={{ height: 1, backgroundColor: '#334155' }} />
+      <View style={{ height: 1, backgroundColor: shades.fill }} />
     </View>
   );
 }
 
-export function SideEducation({ section, sectionGap, itemGap }) {
+export function SideEducation({ section, sectionGap, itemGap, shades = NAVY }) {
   const s        = section.settings || {};
   const showDates = s.showDates !== false;
   const showLoc   = s.showLocation !== false;
@@ -47,23 +51,23 @@ export function SideEducation({ section, sectionGap, itemGap }) {
 
   return (
     <View style={{ marginBottom: sectionGap }}>
-      <SideSectionTitle title={section.title} />
+      <SideSectionTitle title={section.title} shades={shades} />
       <View style={{ gap: itemGap }}>
         {visibleItems.map((item, i) => (
           <View key={i}>
-            <Text style={{ fontSize: 10, fontWeight: 'bold', color: '#e2e8f0', lineHeight: 1.2 }}>{item.degree}</Text>
-            {item.institution && <Text style={{ fontSize: 9, color: '#94a3b8', lineHeight: 1.2 }}>{item.institution}</Text>}
-            {item.fieldOfStudy && <Text style={{ fontSize: 9, color: '#94a3b8', lineHeight: 1.2 }}>{item.fieldOfStudy}</Text>}
-            {showLoc && item.location ? <Text style={{ fontSize: 9, color: '#64748b', lineHeight: 1.2 }}>{item.location}</Text> : null}
-            {item.gpa && <Text style={{ fontSize: 9, color: '#64748b', lineHeight: 1.2 }}>GPA: {item.gpa}</Text>}
+            <Text style={{ fontSize: 10, fontWeight: 'bold', color: shades.strong, lineHeight: 1.2 }}>{item.degree}</Text>
+            {item.institution && <Text style={{ fontSize: 9, color: shades.label, lineHeight: 1.2 }}>{item.institution}</Text>}
+            {item.fieldOfStudy && <Text style={{ fontSize: 9, color: shades.label, lineHeight: 1.2 }}>{item.fieldOfStudy}</Text>}
+            {showLoc && item.location ? <Text style={{ fontSize: 9, color: shades.meta, lineHeight: 1.2 }}>{item.location}</Text> : null}
+            {item.gpa && <Text style={{ fontSize: 9, color: shades.meta, lineHeight: 1.2 }}>GPA: {item.gpa}</Text>}
             {showDates && (item.startDate || item.endDate) && (
-              <Text style={{ fontSize: 9, color: '#64748b', lineHeight: 1.2 }}>
+              <Text style={{ fontSize: 9, color: shades.meta, lineHeight: 1.2 }}>
                 {item.startDate}{item.endDate ? ` – ${item.endDate}` : ''}
               </Text>
             )}
             {/* Coursework, honours …: printed like the main column's, in the column's light text. */}
-            {hasRichText(item.description) ? <PdfRichText html={item.description} style={{ fontSize: 9, color: '#cbd5e1', lineHeight: 1.3, marginTop: 2 }} /> : null}
-            <RenderBullets bullets={item.bullets} style={{ fontSize: 9, color: '#cbd5e1', lineHeight: 1.3 }} />
+            {hasRichText(item.description) ? <PdfRichText html={item.description} style={{ fontSize: 9, color: shades.value, lineHeight: 1.3, marginTop: 2 }} /> : null}
+            <RenderBullets bullets={item.bullets} style={{ fontSize: 9, color: shades.value, lineHeight: 1.3 }} />
           </View>
         ))}
       </View>
@@ -71,16 +75,16 @@ export function SideEducation({ section, sectionGap, itemGap }) {
   );
 }
 
-export function SideLanguages({ section, sectionGap, itemGap }) {
+export function SideLanguages({ section, sectionGap, itemGap, shades = NAVY }) {
   const visibleItems = (section.items || []).filter(i => i.visible !== false);
   return (
     <View style={{ marginBottom: sectionGap }}>
-      <SideSectionTitle title={section.title} />
+      <SideSectionTitle title={section.title} shades={shades} />
       <View style={{ gap: itemGap }}>
         {visibleItems.map((item, i) => (
           <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-            <Text style={{ fontSize: 9, color: '#e2e8f0', lineHeight: 1.2 }}>{item.language}</Text>
-            <Text style={{ fontSize: 9, color: '#64748b', lineHeight: 1.2 }}>{item.proficiency}</Text>
+            <Text style={{ fontSize: 9, color: shades.strong, lineHeight: 1.2 }}>{item.language}</Text>
+            <Text style={{ fontSize: 9, color: shades.meta, lineHeight: 1.2 }}>{item.proficiency}</Text>
           </View>
         ))}
       </View>
@@ -88,25 +92,25 @@ export function SideLanguages({ section, sectionGap, itemGap }) {
   );
 }
 
-export function SideCertifications({ section, sectionGap, itemGap }) {
+export function SideCertifications({ section, sectionGap, itemGap, shades = NAVY }) {
   const s        = section.settings || {};
   const showDates = s.showDates !== false;
   const visibleItems = (section.items || []).filter(i => i.visible !== false);
 
   return (
     <View style={{ marginBottom: sectionGap }}>
-      <SideSectionTitle title={section.title} />
+      <SideSectionTitle title={section.title} shades={shades} />
       <View style={{ gap: itemGap }}>
         {visibleItems.map((item, i) => {
           // Issued – expires, as the main column prints it ("– 03/2027" without an issue date).
           const dateStr = showDates ? `${item.date || ''}${item.expiry ? ` – ${item.expiry}` : ''}`.trim() : '';
           return (
             <View key={i}>
-              <Text style={{ fontSize: 9, fontWeight: 'bold', color: '#e2e8f0', lineHeight: 1.2 }}>{item.name}</Text>
-              {item.issuer && <Text style={{ fontSize: 9, color: '#94a3b8', lineHeight: 1.2 }}>{item.issuer}</Text>}
-              {dateStr ? <Text style={{ fontSize: 9, color: '#64748b', lineHeight: 1.2 }}>{dateStr}</Text> : null}
-              {item.credentialId && <Text style={{ fontSize: 9, color: '#64748b', lineHeight: 1.2 }}>ID: {item.credentialId}</Text>}
-              {item.url && <EntryLink url={item.url} label={item.urlLabel} style={{ fontSize: 9, color: '#cbd5e1', lineHeight: 1.2 }} />}
+              <Text style={{ fontSize: 9, fontWeight: 'bold', color: shades.strong, lineHeight: 1.2 }}>{item.name}</Text>
+              {item.issuer && <Text style={{ fontSize: 9, color: shades.label, lineHeight: 1.2 }}>{item.issuer}</Text>}
+              {dateStr ? <Text style={{ fontSize: 9, color: shades.meta, lineHeight: 1.2 }}>{dateStr}</Text> : null}
+              {item.credentialId && <Text style={{ fontSize: 9, color: shades.meta, lineHeight: 1.2 }}>ID: {item.credentialId}</Text>}
+              {item.url && <EntryLink url={item.url} label={item.urlLabel} style={{ fontSize: 9, color: shades.value, lineHeight: 1.2 }} />}
             </View>
           );
         })}
@@ -115,7 +119,7 @@ export function SideCertifications({ section, sectionGap, itemGap }) {
   );
 }
 
-export function SideInterests({ section, sectionGap }) {
+export function SideInterests({ section, sectionGap, shades = NAVY }) {
   const visibleItems = (section.items || []).filter(i => i.visible !== false);
   const allInterests = visibleItems.flatMap(item =>
     (item.interests || '').split(',').map(s => s.trim()).filter(Boolean)
@@ -123,11 +127,11 @@ export function SideInterests({ section, sectionGap }) {
 
   return (
     <View style={{ marginBottom: sectionGap }}>
-      <SideSectionTitle title={section.title} />
+      <SideSectionTitle title={section.title} shades={shades} />
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 2.5 }}>
         {allInterests.map((interest, i) => (
-          <View key={i} style={{ backgroundColor: '#334155', borderRadius: 2, paddingHorizontal: 5, paddingVertical: 1.5 }}>
-            <Text style={{ fontSize: 8.5, color: '#cbd5e1', lineHeight: 1.2 }}>{interest}</Text>
+          <View key={i} style={{ backgroundColor: shades.fill, borderRadius: 2, paddingHorizontal: 5, paddingVertical: 1.5 }}>
+            <Text style={{ fontSize: 8.5, color: shades.chip, lineHeight: 1.2 }}>{interest}</Text>
           </View>
         ))}
       </View>
@@ -135,20 +139,20 @@ export function SideInterests({ section, sectionGap }) {
   );
 }
 
-export function SideReferences({ section, sectionGap, itemGap }) {
+export function SideReferences({ section, sectionGap, itemGap, shades = NAVY }) {
   const visibleItems = (section.items || []).filter(i => i.visible !== false);
   return (
     <View style={{ marginBottom: sectionGap }}>
-      <SideSectionTitle title={section.title} />
+      <SideSectionTitle title={section.title} shades={shades} />
       <View style={{ gap: itemGap }}>
         {visibleItems.map((item, i) => (
           <View key={i}>
-            <Text style={{ fontSize: 9, fontWeight: 'bold', color: '#e2e8f0', lineHeight: 1.2 }}>{item.name}</Text>
-            {item.jobTitle && <Text style={{ fontSize: 9, color: '#94a3b8', lineHeight: 1.2 }}>{item.jobTitle}</Text>}
-            {item.company && <Text style={{ fontSize: 9, color: '#94a3b8', lineHeight: 1.2 }}>{item.company}</Text>}
-            {item.relationship && <Text style={{ fontSize: 9, color: '#64748b', fontStyle: 'italic', lineHeight: 1.2 }}>{item.relationship}</Text>}
-            {item.email && <Text style={{ fontSize: 9, color: '#64748b', lineHeight: 1.2 }}>{item.email}</Text>}
-            {item.phone && <Text style={{ fontSize: 9, color: '#64748b', lineHeight: 1.2 }}>{item.phone}</Text>}
+            <Text style={{ fontSize: 9, fontWeight: 'bold', color: shades.strong, lineHeight: 1.2 }}>{item.name}</Text>
+            {item.jobTitle && <Text style={{ fontSize: 9, color: shades.label, lineHeight: 1.2 }}>{item.jobTitle}</Text>}
+            {item.company && <Text style={{ fontSize: 9, color: shades.label, lineHeight: 1.2 }}>{item.company}</Text>}
+            {item.relationship && <Text style={{ fontSize: 9, color: shades.meta, fontStyle: 'italic', lineHeight: 1.2 }}>{item.relationship}</Text>}
+            {item.email && <Text style={{ fontSize: 9, color: shades.meta, lineHeight: 1.2 }}>{item.email}</Text>}
+            {item.phone && <Text style={{ fontSize: 9, color: shades.meta, lineHeight: 1.2 }}>{item.phone}</Text>}
           </View>
         ))}
       </View>
