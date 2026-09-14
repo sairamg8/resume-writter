@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { ATS_DEFAULTS, createBlankResume } from '@/utils/defaultData';
 import { createSectionActions } from '@/hooks/useResumeSectionActions';
 import { newId } from '@/utils/ids';
+import { withKnownTemplate } from '@/constants/templates';
 
 const STORAGE_KEY = 'cpwtcv_v1';
 const DATA_VERSION = 6;
@@ -26,7 +27,7 @@ function loadStore() {
       backupRaw(saved);
       return emptyStore();
     }
-    const resumes = parsed.resumes.filter(r => r && r.id);
+    const resumes = parsed.resumes.filter(r => r && r.id).map(withKnownTemplate);
     // Any data version is kept: user resumes must survive an app upgrade (or downgrade).
     // Version-specific migrations go here, keyed on parsed.dataVersion.
     return {
@@ -79,7 +80,8 @@ export function useAppStore() {
     }));
   }
 
-  function loadResumes(resumes) {
+  function loadResumes(list) {
+    const resumes = list.map(withKnownTemplate);
     setAppState(prev => ({
       ...prev,
       resumes,
@@ -99,7 +101,7 @@ export function useAppStore() {
 
   function importResume(data) {
     const id = newId('resume');
-    const imported = { ...JSON.parse(JSON.stringify(data)), id, updatedAt: Date.now() };
+    const imported = withKnownTemplate({ ...JSON.parse(JSON.stringify(data)), id, updatedAt: Date.now() });
     setAppState(prev => ({ ...prev, resumes: [...prev.resumes, imported], activeId: id }));
     return id;
   }
@@ -108,7 +110,7 @@ export function useAppStore() {
   function restoreResumes(list) {
     const ids = new Set(list.map(r => r.id));
     setAppState(prev => {
-      const resumes = [...prev.resumes.filter(r => !ids.has(r.id)), ...list];
+      const resumes = [...prev.resumes.filter(r => !ids.has(r.id)), ...list.map(withKnownTemplate)];
       return {
         ...prev,
         resumes,

@@ -4,6 +4,7 @@ import { resolvePdfFonts, collectText } from '@/templates/pdf/shared/pdfFontLoad
 import { resolveTemplateSettings } from '@/templates/pdf/shared/PdfPage';
 import { resolveSection } from '@/templates/pdf/shared/templateSectionDefaults';
 import { downloadBlob } from '@/utils/download';
+import { templateId } from '@/constants/templates';
 
 const LOADERS = {
   classic:   () => import('@/templates/pdf/ClassicTemplatePDF').then(m => m.ClassicTemplatePDF),
@@ -41,7 +42,7 @@ function prepareResumeData(resume, fontFamily, templateKey) {
  * Call from the editor on mount / when template or font changes.
  */
 export async function warmPdfExport(resume) {
-  const key = resume?.template || 'classic';
+  const key = templateId(resume?.template);
   await Promise.all([
     resolvePdfFonts(resume?.settings, collectText(resume)).catch(() => null),
     loadTemplate(key).catch(() => null),
@@ -52,7 +53,7 @@ export async function warmPdfExport(resume) {
 
 /** Render the résumé exactly as it is exported. Used by the live preview and by Export PDF. */
 export async function renderResumePdf(resume) {
-  const key = resume?.template || 'classic';
+  const key = templateId(resume?.template);
   const [{ fontFamily }, TemplatePDF] = await Promise.all([
     resolvePdfFonts(resume?.settings, collectText(resume)),
     loadTemplate(key),
@@ -70,7 +71,7 @@ export async function renderResumePdf(resume) {
  * hint an empty letter shows in the editor; exports never carry it.
  */
 export async function renderCoverLetterPdf(resume, { preview = false } = {}) {
-  const templateKey = resume?.template || 'classic';
+  const templateKey = templateId(resume?.template);
   const [{ fontFamily }, mod] = await Promise.all([
     resolvePdfFonts(resume?.settings, collectText({ personal: resume?.personal, coverLetter: resume?.coverLetter })),
     import('@/templates/pdf/CoverLetterTemplatePDF'),

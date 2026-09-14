@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ATS_DEFAULTS } from '@/utils/defaultData';
+import { templateId } from '@/constants/templates';
 import { DesignSection, NumberRow } from '@/components/DesignPanelShared';
 import { ColorsSection } from '@/components/DesignPanelColors';
 import { TypographySection } from '@/components/DesignPanelTypography';
@@ -26,6 +27,7 @@ const ICON_KEYS       = ['iconSet', 'iconSize', 'contactStyle'];
 
 export default function DesignPanel({ resume, updateSetting, setTemplate, resetSettings }) {
   const settings = resume.settings || {};
+  const current = templateId(resume.template); // the template the PDF prints
   const [confirmReset, setConfirmReset] = useState(false);
 
   function resetSection(keys) {
@@ -42,12 +44,12 @@ export default function DesignPanel({ resume, updateSetting, setTemplate, resetS
               key={t.id}
               onClick={() => setTemplate(t.id)}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border text-left transition-all ${
-                resume.template === t.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                current === t.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
               }`}
             >
               <div
-                className={`w-8 h-10 rounded shrink-0 flex flex-col gap-0.5 p-1 ${resume.template === t.id ? 'opacity-100' : 'opacity-40'}`}
-                style={{ backgroundColor: resume.template === t.id ? settings.accentColor || '#2563eb' : '#94a3b8' }}
+                className={`w-8 h-10 rounded shrink-0 flex flex-col gap-0.5 p-1 ${current === t.id ? 'opacity-100' : 'opacity-40'}`}
+                style={{ backgroundColor: current === t.id ? settings.accentColor || '#2563eb' : '#94a3b8' }}
               >
                 <div className="h-1 bg-white/60 rounded-sm w-full" />
                 <div className="h-0.5 bg-white/40 rounded-sm w-3/4" />
@@ -56,7 +58,7 @@ export default function DesignPanel({ resume, updateSetting, setTemplate, resetS
               </div>
               <div>
                 <div className="flex items-center gap-1.5">
-                  <p className={`text-sm font-medium ${resume.template === t.id ? 'text-blue-700' : 'text-gray-700'}`}>{t.label}</p>
+                  <p className={`text-sm font-medium ${current === t.id ? 'text-blue-700' : 'text-gray-700'}`}>{t.label}</p>
                   {t.ats && <span className="text-[9px] font-bold px-1 py-0.5 rounded bg-emerald-100 text-emerald-700">ATS</span>}
                 </div>
                 <p className="text-[10px] text-gray-400">{t.desc}</p>

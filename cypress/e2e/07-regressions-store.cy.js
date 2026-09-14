@@ -1,6 +1,6 @@
-// Regression tests for resume-store data-loss bugs (audit main-loop notes M1–M3).
+// Regression tests for resume-store bugs (audit main-loop notes M1–M3, M15).
 import { buildTestState, STORAGE_KEY } from '../../tests/helpers.js';
-import { CARD } from '../support/selectors.js';
+import { CARD, IMPORT_INPUT } from '../support/selectors.js';
 import { dashboardState } from '../support/state.js';
 
 const visitWithRawStore = (raw) =>
@@ -67,6 +67,34 @@ describe('regressions — resume store', () => {
     cy.contains('label', 'Full Name').parent().next('input').clear().type('Still Editing');
     cy.preview().should('contain.text', 'Still Editing');
     cy.contains('[role="alert"]', 'Not saved').should('be.visible');
+  });
+
+  /** The Design panel's template list shows Classic, and only Classic, selected. */
+  const classicSelected = () => {
+    cy.get('button[title="Design & Customize"]').click();
+    ['Clean accent headings', 'Two-column header', 'Full-width layout', 'whitespace-first', 'Colored left sidebar']
+      .forEach((desc) => cy.contains('button', desc)
+        .should(desc === 'Two-column header' ? 'have.class' : 'not.have.class', 'border-blue-500'));
+  };
+
+  it('M15: a saved résumé with a template the app does not offer (the old seed\'s "dark") opens as Classic, selected', () => {
+    const state = buildTestState('classic');
+    state.resumes[0].template = 'dark';
+    cy.visitEditor('classic', { state });
+    cy.store().should((s) => expect(s.resumes[0].template).to.eq('classic'));
+    cy.preview().should('contain.text', 'Alex Johnson');
+    classicSelected();
+  });
+
+  it('M15: importing a résumé with an unknown template opens it as Classic, selected', () => {
+    cy.visitDashboard(dashboardState());
+    cy.get(IMPORT_INPUT).selectFile({
+      contents: Cypress.Buffer.from(JSON.stringify({ ...buildTestState('classic').resumes[0], template: 'aurora', name: 'Aurora CV' })),
+      fileName: 'aurora.json',
+    }, { force: true });
+    cy.location('hash').should('match', /^#\/resume\//);
+    cy.store().should((s) => expect(s.resumes.find((r) => r.name === 'Aurora CV').template).to.eq('classic'));
+    classicSelected();
   });
 });
 

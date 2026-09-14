@@ -91,6 +91,17 @@ describe('header rule', () => {
   });
 });
 
+describe('unknown template ids (M15)', () => {
+  it('a template id the app does not offer (the old seed\'s "dark", an import\'s) prints exactly as Classic', async () => {
+    for (const settings of [{ showHeaderBorder: undefined }, { showHeaderBorder: false }, { headerAlign: 'center' }]) {
+      const classic = await drawn('classic', settings);
+      for (const template of ['dark', 'aurora', '']) {
+        assert.equal(await drawn(template, settings), classic, `${template} with ${JSON.stringify(settings)}`);
+      }
+    }
+  });
+});
+
 describe('modern banner summary (FIDB-11)', () => {
   const SUMMARY = '<p>SumPlain <strong>SumBold</strong></p><ul><li>SumItem</li></ul>';
 
