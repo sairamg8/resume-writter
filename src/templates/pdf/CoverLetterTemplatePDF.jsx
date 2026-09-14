@@ -58,7 +58,8 @@ export function CoverLetterTemplatePDF({ data }) {
 
   const contactEl = (
     <PdfContactRow
-      personal={{ ...personal, hiddenFields: hidden }}
+      personal={personal}
+      hidden={hidden}
       settings={{ ...settings, contactStyle: clContactStyle, contactLayout: clContactLayout }}
       color="#64748b"
     />

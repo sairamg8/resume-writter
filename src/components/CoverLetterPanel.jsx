@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { Mail, Phone, MapPin, Globe, Link2, Code, Eye, EyeOff, ChevronDown, ChevronUp, Camera } from 'lucide-react';
 import RichTextEditor from '@/components/RichTextEditor';
-import { todayLetterDate } from '@/utils/coverLetter';
+import { letterHiddenFields, todayLetterDate } from '@/utils/coverLetter';
 
 const CONTACT_FIELDS = [
   { key: 'email',    label: 'Email',    Icon: Mail   },
@@ -72,8 +72,9 @@ export default function CoverLetterPanel({ coverLetter, personal, updateCoverLet
     return { value: cl[key], onChange: v => updateCoverLetter(key, v) };
   }
 
-  // Cover letter uses its own hidden fields — independent from resume
-  const hiddenFields = cl.hiddenFields ?? [];
+  // The letter's own hidden fields, independent of the résumé's — the same list its PDF and
+  // Word export print from (a letter with no list yet starts from the résumé's).
+  const hiddenFields = letterHiddenFields(cl, personal);
   const hiddenSet = new Set(hiddenFields);
 
   function toggleField(key) {
@@ -241,6 +242,7 @@ export default function CoverLetterPanel({ coverLetter, personal, updateCoverLet
                   </span>
                   <button
                     onClick={() => toggleField(key)}
+                    title={isHidden ? `Show ${label} on the cover letter` : `Hide ${label} from the cover letter`}
                     className={`p-0.5 rounded transition-colors ${isHidden ? 'text-gray-300 hover:text-gray-400' : 'text-blue-500 hover:text-blue-600'}`}
                   >
                     {isHidden ? <EyeOff size={13} /> : <Eye size={13} />}

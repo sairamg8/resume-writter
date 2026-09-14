@@ -101,6 +101,18 @@ describe('cover letter — Word export (FIDB-50)', () => {
     assert.ok(!text.includes('Hiring Manager') && !text.includes('<'), text);
     assert.deepEqual(doc.texts.slice(-3), ['Sincerely,', 'Test Person', 'Engineer'], 'the signature falls back to the résumé name and title');
   });
+
+  it('contacts follow the letter\'s own visibility, not the résumé\'s (FIDB-44)', async () => {
+    const text = async (resumeHidden, coverLetter) => (await renderCoverDocx(resume({
+      personal: { email: 'me@example.com', phone: '+1 555 0100', hiddenFields: resumeHidden }, coverLetter,
+    }))).texts.join(' | ');
+    const shown = await text(['phone'], { hiddenFields: [] });
+    assert.ok(shown.includes('+1 555 0100'), `hidden on the résumé, shown on the letter: ${shown}`);
+    const hidden = await text([], { hiddenFields: ['phone'] });
+    assert.ok(!hidden.includes('+1 555 0100') && hidden.includes('me@example.com'), `hidden on the letter only: ${hidden}`);
+    const unset = await text(['phone'], {});
+    assert.ok(!unset.includes('+1 555 0100') && unset.includes('me@example.com'), `no list of its own: the résumé's: ${unset}`);
+  });
 });
 
 // ── Photo ↔ text alignment ───────────────────────────────────────────────────

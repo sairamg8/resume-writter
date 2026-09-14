@@ -37,9 +37,16 @@ export function letterBlock(cl = {}) {
   };
 }
 
-/** Contact fields the letter leaves out: the résumé's hidden fields plus the letter's own. */
+const list = (v) => (Array.isArray(v) ? v : null);
+
+/**
+ * Contact fields the letter leaves out: its own list — the Cover Letter panel's "Visible Contact
+ * Fields" — whatever the résumé hides (FIDB-44). A letter that has no list yet (a new letter, or
+ * one saved before the panel wrote it) follows the résumé's hidden fields, as it always printed;
+ * the panel shows that same state, and its first toggle gives the letter a list of its own.
+ */
 export function letterHiddenFields(cl = {}, personal = {}) {
-  return [...(personal?.hiddenFields || []), ...(cl?.hiddenFields || [])];
+  return list(cl?.hiddenFields) ?? list(personal?.hiddenFields) ?? [];
 }
 
 /**
