@@ -1,6 +1,7 @@
 import { View, Text } from '@react-pdf/renderer';
 import { PdfRichText } from './PdfRichText';
 import { Value } from './PdfContact';
+import { pxToPt } from './pdfUnits';
 import { hasRichText, safeHref } from '@/utils/richText';
 import {
   SPACER,
@@ -117,6 +118,11 @@ export function LanguagesSection({ section, settings, marginBottom, spaceBefore,
   const baseSize = settings?.fontSizeBase || 11;
   const textColor = settings?.textColor   || '#1a1a1a';
   const visibleItems = (section.items || []).filter(i => i.visible !== false);
+  // Centred: each "English  Native" pair is centred in its column. Left: the language at the
+  // left edge, the proficiency at the right. Rows are spaced by the item gap alone.
+  const pair = centered
+    ? { justifyContent: 'center', gap: pxToPt(8) }
+    : { justifyContent: 'space-between', paddingRight: 12 };
 
   return (
     <View style={{ marginBottom, marginTop: spaceBefore }}>
@@ -124,7 +130,7 @@ export function LanguagesSection({ section, settings, marginBottom, spaceBefore,
       <SectionTitleOf section={section} settings={settings} centered={centered} />
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: itemGap }}>
         {visibleItems.map((item, i) => (
-          <View key={i} style={{ width: getColumnWidth(cols), flexDirection: 'row', justifyContent: 'space-between', paddingRight: 12, marginBottom: 3 }}>
+          <View key={i} style={{ width: getColumnWidth(cols), flexDirection: 'row', ...pair }}>
             <Text style={{ fontSize: baseSize, fontWeight: 'bold', color: textColor }}>{item.language}</Text>
             {item.proficiency && <Text style={{ fontSize: baseSize, color: '#4b5563' }}>{item.proficiency}</Text>}
           </View>
