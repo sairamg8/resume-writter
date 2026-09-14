@@ -52,6 +52,29 @@ function load() {
   return { jobs, recovery };
 }
 
+/**
+ * The notice for a list that could not be read in full is kept in storage until the user
+ * dismisses it: the list is repaired (and saved over) on whichever job page reads it first, and
+ * only the tracker shows the notice — a reload of that page used to lose it for good (R4-0).
+ */
+const RECOVERY_KEY = `${KEY}_recovery`;
+
+function pendingRecovery() {
+  try {
+    const v = JSON.parse(localStorage.getItem(RECOVERY_KEY));
+    return v && typeof v === 'object' ? { backupKey: typeof v.backupKey === 'string' ? v.backupKey : null } : null;
+  } catch {
+    return null;
+  }
+}
+
+function rememberRecovery(recovery) {
+  try {
+    if (recovery) localStorage.setItem(RECOVERY_KEY, JSON.stringify(recovery));
+    else localStorage.removeItem(RECOVERY_KEY);
+  } catch { /* best effort: the notice still shows for this visit */ }
+}
+
 /** Write the list; null when it reached localStorage, else the error (usually QuotaExceededError). */
 function persist(jobs) {
   try {
@@ -72,7 +95,9 @@ const listeners = new Set();
 
 function snapshot() {
   if (!current) {
-    const { jobs, recovery } = load();
+    const { jobs, recovery: found } = load();
+    if (found) rememberRecovery(found);
+    const recovery = found || pendingRecovery();
     // Saved at once, as the page used to on opening: a migrated or repaired list replaces the
     // stored value (whose backup load() has kept).
     current = { jobs, recovery, persistError: persist(jobs) };
@@ -155,7 +180,10 @@ function clearDemoData() {
 }
 
 // Set when the saved list could not be read in full; the tracker shows it until dismissed.
-const dismissRecovery = () => update({ recovery: null });
+function dismissRecovery() {
+  rememberRecovery(null);
+  update({ recovery: null });
+}
 
 export function useJobStore() {
   const { jobs, persistError, recovery } = useSyncExternalStore(subscribe, snapshot);

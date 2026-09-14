@@ -186,6 +186,26 @@ describe('regressions — job store', () => {
     cy.contains('[role="alert"]', 'could not be read').should('not.exist');
   });
 
+  it('R4-0: a list first read on a job page is repaired there, and the tracker still says so — after a reload, until dismissed', () => {
+    cy.visit('/#/jobs/new', {
+      onBeforeLoad(win) {
+        win.localStorage.clear();
+        win.localStorage.setItem(JOBS_KEY, '{ this is not json');
+      },
+    });
+    cy.contains('h1', 'Add Job Application').should('be.visible'); // the form page read (and repaired) the list
+    cy.window().then((win) => expect(Object.values(jobBackups(win))).to.deep.eq(['{ this is not json']));
+    cy.reload(); // what refreshing the form does: the stored list is already the repaired one
+    cy.visit('/#/jobs');
+    cy.contains('[role="alert"]', 'could not be read').should('be.visible');
+    cy.window().then((win) => cy.contains('[role="alert"]', Object.keys(jobBackups(win))[0]).should('be.visible'));
+    cy.contains('[role="alert"]', 'could not be read').contains('button', 'Dismiss').click();
+    cy.reload();
+    cy.contains('span', /^Total$/).should('be.visible');
+    cy.contains('[role="alert"]', 'could not be read').should('not.exist');
+    cy.window().then((win) => expect(Object.keys(jobBackups(win))).to.have.length(1, 'one backup, made once'));
+  });
+
   // Version 1 goes through the demo-job migration, version 2 (current) does not.
   [1, 2].forEach((dataVersion) => {
     it(`NEW-5: one broken entry does not throw the whole saved list away (data version ${dataVersion})`, () => {
