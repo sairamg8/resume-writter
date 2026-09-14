@@ -205,10 +205,11 @@ export function Editor({ store, auth, sync }) {
   if (!resume) return null;
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#f5f3ef]">
+    /* fixed inset-0: never let document/body scroll (up or down) and tear the split layout */
+    <div className="fixed inset-0 z-20 flex overflow-hidden bg-[#f5f3ef]">
       <div
-        className={`${layoutMode === 'preview' ? 'hidden' : layoutMode === 'editor' ? 'flex-1' : ''} bg-white flex flex-col overflow-hidden shadow-sm`}
-        style={layoutMode === 'split' ? { width: panelWidth, minWidth: panelWidth, flexShrink: 0 } : undefined}
+        className={`${layoutMode === 'preview' ? 'hidden' : layoutMode === 'editor' ? 'flex-1 min-w-0' : ''} bg-white flex flex-col overflow-hidden shadow-sm min-h-0 h-full`}
+        style={layoutMode === 'split' ? { width: panelWidth, minWidth: panelWidth, maxWidth: panelWidth, flexShrink: 0 } : undefined}
       >
         {/* Header */}
         <div className="px-4 py-3 border-b border-gray-200 flex items-center gap-2 bg-white">
@@ -274,8 +275,11 @@ export function Editor({ store, auth, sync }) {
           </button>
         </div>
 
-        {/* Tab Content */}
-        <div className="flex-1 overflow-y-auto">
+        {/* Tab Content — independent scroll; overscroll-behavior blocks scroll chaining to body */}
+        <div
+          className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden"
+          style={{ overscrollBehavior: 'contain' }}
+        >
           {activeTab === 'resume' && (
             <div className="px-4 py-4 space-y-3">
               <div className="flex justify-end">
@@ -375,8 +379,11 @@ export function Editor({ store, auth, sync }) {
         <div onMouseDown={onDragHandleMouseDown} title="Drag to resize panel" className="w-1 shrink-0 bg-gray-200 hover:bg-blue-400 active:bg-blue-500 cursor-col-resize transition-colors z-10" />
       )}
 
-      <div className={`${layoutMode === 'editor' ? 'hidden' : 'flex-1'} overflow-auto bg-[#f5f3ef] flex flex-col items-center py-8`}>
-        <div className="mb-4 flex items-center gap-3">
+      <div
+        className={`${layoutMode === 'editor' ? 'hidden' : 'flex-1 min-w-0 min-h-0 h-full'} overflow-y-auto overflow-x-hidden bg-[#f5f3ef] flex flex-col items-center py-8`}
+        style={{ overscrollBehavior: 'contain' }}
+      >
+        <div className="mb-4 flex items-center gap-3 shrink-0">
           <LayoutToggle layoutMode={layoutMode} setLayoutMode={setLayoutMode} />
           <span className="text-xs text-gray-300">·</span>
           <span className="text-xs text-gray-400 font-medium uppercase tracking-wider">
@@ -391,14 +398,14 @@ export function Editor({ store, auth, sync }) {
         </div>
 
         {activeTab === 'coverletter' ? (
-          <div id="cover-letter-preview" className="bg-white shadow-2xl" style={{ width: '210mm', minHeight: '297mm', padding: margin, fontSize, lineHeight }}>
+          <div id="cover-letter-preview" className="bg-white shadow-2xl shrink-0" style={{ width: '210mm', minHeight: '297mm', padding: margin, fontSize, lineHeight }}>
             <CoverLetterTemplate data={resume} />
           </div>
         ) : (
           <PaginatedPreview resume={resume} ActiveTemplate={ActiveTemplate} margin={margin} fontSize={fontSize} lineHeight={lineHeight} pageContentMm={pageContentMm} zoom={previewZoom} />
         )}
 
-        <div className="mt-6 flex items-center gap-3 text-xs text-gray-400">
+        <div className="mt-6 flex items-center gap-3 text-xs text-gray-400 shrink-0">
           <span>{lastSaved ? `Saved ${timeAgo(lastSaved)}` : 'Auto-saved to your browser'}</span>
           <span>·</span>
           <button onClick={() => navigate('/terms')} className="hover:text-gray-600 transition-colors">Terms</button>

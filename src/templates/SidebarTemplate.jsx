@@ -1,5 +1,4 @@
-import { Mail, Phone, MapPin, Globe } from 'lucide-react';
-import { LinkedinIcon, GithubIcon } from '@/utils/brandIcons';
+import { ContactIcon } from '@/utils/contactIcons';
 import { getFontById } from '@/utils/fonts';
 import { HeadingStyleContext } from '@/templates/headingStyle';
 import { SectionCaseContext } from '@/templates/sectionCase';
@@ -31,7 +30,7 @@ export default function SidebarTemplate({ data }) {
   const sidebarSections = visibleSections.filter(s =>  SIDEBAR_TYPES.has(s.type));
   const mainSections    = visibleSections.filter(s => !SIDEBAR_TYPES.has(s.type));
 
-  const cp = { iconSize: st.iconSize ?? 8, accent, personal };
+  const cp = { iconSize: st.iconSize ?? 8, accent, personal, settings: st };
 
   function applySpacing(ss) {
     const ov = {};
@@ -55,13 +54,14 @@ export default function SidebarTemplate({ data }) {
   }
 
   function renderMain(section) {
-    const props = { key: section.id, section, accent, borderColor, textColor };
+    const props = { section, accent, borderColor, textColor };
+    const key = section.id;
     switch (section.type) {
-      case 'experience':   return <MainExperience   {...props} />;
-      case 'projects':     return <MainProjects     {...props} />;
-      case 'awards':       return <MainAwards       {...props} />;
-      case 'volunteering': return <MainVolunteering {...props} />;
-      default:             return <MainCustom       {...props} />;
+      case 'experience':   return <MainExperience   key={key} {...props} />;
+      case 'projects':     return <MainProjects     key={key} {...props} />;
+      case 'awards':       return <MainAwards       key={key} {...props} />;
+      case 'volunteering': return <MainVolunteering key={key} {...props} />;
+      default:             return <MainCustom       key={key} {...props} />;
     }
   }
 
@@ -89,12 +89,12 @@ export default function SidebarTemplate({ data }) {
         <div style={{ marginBottom: 'var(--section-gap)' }}>
           <SideTitle title="Contact" />
           <div className="space-y-1.5">
-            {!hidden.has('email')    && personal.email    && <SideContact icon={Mail}         ckey="email"    label="Email"    text={personal.email}    {...cp} />}
-            {!hidden.has('phone')    && personal.phone    && <SideContact icon={Phone}        ckey="phone"    label="Phone"    text={personal.phone}    {...cp} />}
-            {!hidden.has('location') && personal.location && <SideContact icon={MapPin}       ckey="location" label="Location" text={personal.location} {...cp} />}
-            {!hidden.has('website')  && personal.website  && <SideContact icon={Globe}        ckey="website"  label="Website"  text={personal.website}  display={personal.websiteLabel  || personal.website}  {...cp} />}
-            {!hidden.has('linkedin') && personal.linkedin && <SideContact icon={LinkedinIcon} ckey="linkedin" label="LinkedIn" text={personal.linkedin} display={personal.linkedinLabel || personal.linkedin} {...cp} />}
-            {!hidden.has('github')   && personal.github   && <SideContact icon={GithubIcon}   ckey="github"   label="GitHub"   text={personal.github}   display={personal.githubLabel  || personal.github}   {...cp} />}
+            {!hidden.has('email')    && personal.email    && <SideContact ckey="email"    label="Email"    text={personal.email}    {...cp} />}
+            {!hidden.has('phone')    && personal.phone    && <SideContact ckey="phone"    label="Phone"    text={personal.phone}    {...cp} />}
+            {!hidden.has('location') && personal.location && <SideContact ckey="location" label="Location" text={personal.location} {...cp} />}
+            {!hidden.has('website')  && personal.website  && <SideContact ckey="website"  label="Website"  text={personal.website}  display={personal.websiteLabel  || personal.website}  {...cp} />}
+            {!hidden.has('linkedin') && personal.linkedin && <SideContact ckey="linkedin" label="LinkedIn" text={personal.linkedin} display={personal.linkedinLabel || personal.linkedin} {...cp} />}
+            {!hidden.has('github')   && personal.github   && <SideContact ckey="github"   label="GitHub"   text={personal.github}   display={personal.githubLabel  || personal.github}   {...cp} />}
           </div>
         </div>
         {sidebarSections.map(section => (

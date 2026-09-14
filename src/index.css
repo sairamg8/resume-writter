@@ -4,15 +4,22 @@
   box-sizing: border-box;
 }
 
+html {
+  height: 100%;
+}
+
 body {
   margin: 0;
+  min-height: 100%;
   font-family: system-ui, -apple-system, sans-serif;
   background: #f0f2f5;
+  /* Prevent rubber-band document scroll fighting the editor shell */
+  overscroll-behavior: none;
 }
 
 #root {
   width: 100%;
-  min-height: 100vh;
+  min-height: 100%;
 }
 
 .empty-placeholder:empty:before {

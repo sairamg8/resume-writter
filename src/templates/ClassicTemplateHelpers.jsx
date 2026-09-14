@@ -1,21 +1,20 @@
 import { useContext } from 'react';
-import { Mail, Phone, MapPin, Globe } from 'lucide-react';
-import { LinkedinIcon, GithubIcon } from '@/utils/brandIcons';
 import { HeadingStyleContext } from '@/templates/headingStyle';
 import { SectionCaseContext } from '@/templates/sectionCase';
 import { contactHref, COLS } from '@/templates/templateShared';
+import { ContactIcon } from '@/utils/contactIcons';
 
 export { COLS };
 export const SKILL_ROW_GAP = { compact: '4px', normal: '8px', relaxed: '14px' };
 
-export function ContactRow({ personal, hidden, contactStyle, contactLayout, iconSize = 11 }) {
+export function ContactRow({ personal, hidden, contactStyle, contactLayout, iconSize = 11, settings }) {
   const items = [
-    { key: 'email',    Icon: Mail,         val: personal.email,    display: personal.email },
-    { key: 'phone',    Icon: Phone,        val: personal.phone,    display: personal.phone },
-    { key: 'location', Icon: MapPin,       val: personal.location, display: personal.location },
-    { key: 'website',  Icon: Globe,        val: personal.website,  display: personal.websiteLabel || personal.website },
-    { key: 'linkedin', Icon: LinkedinIcon, val: personal.linkedin, display: personal.linkedinLabel || personal.linkedin },
-    { key: 'github',   Icon: GithubIcon,   val: personal.github,   display: personal.githubLabel || personal.github },
+    { key: 'email',    val: personal.email,    display: personal.email },
+    { key: 'phone',    val: personal.phone,    display: personal.phone },
+    { key: 'location', val: personal.location, display: personal.location },
+    { key: 'website',  val: personal.website,  display: personal.websiteLabel || personal.website },
+    { key: 'linkedin', val: personal.linkedin, display: personal.linkedinLabel || personal.linkedin },
+    { key: 'github',   val: personal.github,   display: personal.githubLabel || personal.github },
   ].filter(({ key, val }) => !hidden.has(key) && val);
 
   if (!items.length) return null;
@@ -23,14 +22,15 @@ export function ContactRow({ personal, hidden, contactStyle, contactLayout, icon
   const layout = contactLayout || 'justify';
   const color = '#555';
 
-  function decorated(key, Icon, val, display) {
+  function decorated(key, val, display) {
     const href = contactHref(key, val, personal);
     const label = href
       ? <a href={href} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'none' }}>{display}</a>
       : display;
     if (contactStyle === 'icon') return (
       <span key={key} className="flex items-center gap-1.5" style={{ overflowWrap: 'anywhere' }}>
-        <Icon size={iconSize} strokeWidth={2} className="shrink-0" />{label}
+        <ContactIcon field={key} settings={settings} size={iconSize} strokeWidth={2} className="shrink-0" />
+        {label}
       </span>
     );
     if (contactStyle === 'bullet') return (
@@ -44,14 +44,14 @@ export function ContactRow({ personal, hidden, contactStyle, contactLayout, icon
   if (layout === 'single') {
     return (
       <div className="mt-1 space-y-0.5" style={{ color }}>
-        {items.map(({ key, Icon, val, display }) => <div key={key}>{decorated(key, Icon, val, display)}</div>)}
+        {items.map(({ key, val, display }) => <div key={key}>{decorated(key, val, display)}</div>)}
       </div>
     );
   }
   if (layout === '2grid') {
     return (
       <div className="mt-1" style={{ color, display: 'grid', gridTemplateColumns: 'auto auto', justifyContent: 'start', gap: '2px 24px' }}>
-        {items.map(({ key, Icon, val, display }) => decorated(key, Icon, val, display))}
+        {items.map(({ key, val, display }) => decorated(key, val, display))}
       </div>
     );
   }
@@ -59,7 +59,7 @@ export function ContactRow({ personal, hidden, contactStyle, contactLayout, icon
   if (contactStyle === 'icon') {
     return (
       <div className="mt-1 flex flex-wrap" style={{ color, gap: '2px 16px' }}>
-        {items.map(({ key, Icon, val, display }) => decorated(key, Icon, val, display))}
+        {items.map(({ key, val, display }) => decorated(key, val, display))}
       </div>
     );
   }

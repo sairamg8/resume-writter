@@ -1,4 +1,5 @@
-import { Mail, Phone, MapPin, Globe, Link2, Code } from 'lucide-react';
+import { contactHref as sharedHref } from '@/templates/templateShared';
+import { ContactIcon } from '@/utils/contactIcons';
 
 export function photoStyle(settings, accent) {
   const sh = settings?.photoShape || 'circle';
@@ -18,31 +19,26 @@ export function photoStyle(settings, accent) {
 }
 
 export const CONTACT_FIELDS = [
-  { key: 'email',    Icon: Mail   },
-  { key: 'phone',    Icon: Phone  },
-  { key: 'location', Icon: MapPin },
-  { key: 'website',  Icon: Globe  },
-  { key: 'linkedin', Icon: Link2  },
-  { key: 'github',   Icon: Code   },
+  { key: 'email' },
+  { key: 'phone' },
+  { key: 'location' },
+  { key: 'website' },
+  { key: 'linkedin' },
+  { key: 'github' },
 ];
 
 export function contactHref(key, val) {
-  if (key === 'email') return `mailto:${val}`;
-  if (key === 'phone') return `tel:${val.replace(/\s/g, '')}`;
-  if (key === 'website' || key === 'linkedin' || key === 'github') {
-    return val.startsWith('http') ? val : `https://${val}`;
-  }
-  return null;
+  return sharedHref(key, val);
 }
 
-export function ContactRow({ personal, hidden, style, layout, iconSize = 11 }) {
+export function ContactRow({ personal, hidden, style, layout, iconSize = 11, settings }) {
   const items = CONTACT_FIELDS.filter(({ key }) => !hidden.has(key) && personal?.[key]);
   if (!items.length) return null;
 
   const color = '#64748b';
   const lyt = layout || 'justify';
 
-  function decorated(key, Icon) {
+  function decorated(key) {
     const val = personal[key];
     const href = contactHref(key, val);
     const display = href
@@ -50,7 +46,8 @@ export function ContactRow({ personal, hidden, style, layout, iconSize = 11 }) {
       : val;
     if (style === 'icon') return (
       <span key={key} className="flex items-center gap-1" style={{ overflowWrap: 'anywhere' }}>
-        <Icon size={iconSize} className="shrink-0" />{display}
+        <ContactIcon field={key} settings={settings} size={iconSize} strokeWidth={2} className="shrink-0" />
+        {display}
       </span>
     );
     if (style === 'bullet') return (
@@ -64,7 +61,7 @@ export function ContactRow({ personal, hidden, style, layout, iconSize = 11 }) {
   if (lyt === 'single') {
     return (
       <div className="space-y-0.5" style={{ color }}>
-        {items.map(({ key, Icon }) => <div key={key}>{decorated(key, Icon)}</div>)}
+        {items.map(({ key }) => <div key={key}>{decorated(key)}</div>)}
       </div>
     );
   }
@@ -72,47 +69,38 @@ export function ContactRow({ personal, hidden, style, layout, iconSize = 11 }) {
   if (lyt === '2grid') {
     return (
       <div style={{ color, display: 'grid', gridTemplateColumns: 'auto auto', gap: '2px 16px' }}>
-        {items.map(({ key, Icon }) => decorated(key, Icon))}
+        {items.map(({ key }) => decorated(key))}
       </div>
     );
   }
 
-  // justify
   if (style === 'icon') {
     return (
       <div className="flex flex-wrap items-center" style={{ color, gap: '2px 14px' }}>
-        {items.map(({ key, Icon }) => decorated(key, Icon))}
+        {items.map(({ key }) => decorated(key))}
       </div>
     );
   }
   if (style === 'bullet') {
     return (
       <div className="flex flex-wrap items-center" style={{ color }}>
-        {items.map(({ key }, i) => {
-          const val = personal[key];
-          const href = contactHref(key, val);
-          return (
-            <span key={key} className="flex items-center">
-              {i > 0 && <span className="mx-1.5" style={{ color: '#cbd5e1' }}>•</span>}
-              {href ? <a href={href} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'none' }}>{val}</a> : <span>{val}</span>}
-            </span>
-          );
-        })}
+        {items.map(({ key }, i) => (
+          <span key={key} className="flex items-center">
+            {i > 0 && <span className="mx-1.5" style={{ color: '#cbd5e1' }}>•</span>}
+            {decorated(key)}
+          </span>
+        ))}
       </div>
     );
   }
   return (
     <div className="flex flex-wrap items-center" style={{ color }}>
-      {items.map(({ key }, i) => {
-        const val = personal[key];
-        const href = contactHref(key, val);
-        return (
-          <span key={key} className="flex items-center">
-            {i > 0 && <span className="mx-1.5" style={{ color: '#cbd5e1' }}>|</span>}
-            {href ? <a href={href} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'none' }}>{val}</a> : <span>{val}</span>}
-          </span>
-        );
-      })}
+      {items.map(({ key }, i) => (
+        <span key={key} className="flex items-center">
+          {i > 0 && <span className="mx-1.5" style={{ color: '#e2e8f0' }}>|</span>}
+          {personal[key]}
+        </span>
+      ))}
     </div>
   );
 }

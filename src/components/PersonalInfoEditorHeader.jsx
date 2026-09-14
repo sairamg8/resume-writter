@@ -142,12 +142,29 @@ export function HeaderCustomization({ s, set, isClassicOrMinimal, template, temp
                   ))}
                 </div>
                 {(s.contactStyle === 'icon' || s.contactStyle === undefined) && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] text-gray-400">Icon size</span>
-                    <div className="flex items-center gap-1">
-                      <button onClick={() => set('iconSize', Math.max(8, (s.iconSize ?? 11) - 1))} className="w-6 h-6 flex items-center justify-center border border-gray-200 rounded text-gray-600 hover:bg-gray-100 text-base leading-none">−</button>
-                      <span className="w-10 text-center text-xs font-medium text-gray-700 border border-gray-200 rounded h-6 flex items-center justify-center">{s.iconSize ?? 11}px</span>
-                      <button onClick={() => set('iconSize', Math.min(20, (s.iconSize ?? 11) + 1))} className="w-6 h-6 flex items-center justify-center border border-gray-200 rounded text-gray-600 hover:bg-gray-100 text-base leading-none">+</button>
+                  <div className="space-y-2">
+                    <p className="text-[11px] text-gray-400 mb-1">Icon set</p>
+                    <div className="flex flex-wrap gap-2 mb-1">
+                      {[
+                        { val: 'filled', label: 'Filled' },
+                        { val: 'lucide', label: 'Classic' },
+                        { val: 'refined', label: 'Modern' },
+                        { val: 'minimal', label: 'Minimal' },
+                        { val: 'bold', label: 'Bold' },
+                      ].map(({ val, label }) => (
+                        <Chip key={val} active={(s.iconSet || 'lucide') === val} onClick={() => set('iconSet', val)}>{label}</Chip>
+                      ))}
+                    </div>
+                    <p className="text-[10px] text-gray-400 leading-snug">
+                      Also in <strong>Design → Contact icons</strong>. Upload custom images under <strong>Fields</strong> if needed.
+                    </p>
+                    <div className="flex items-center justify-between pt-1">
+                      <span className="text-[11px] text-gray-400">Icon size</span>
+                      <div className="flex items-center gap-1">
+                        <button onClick={() => set('iconSize', Math.max(8, (s.iconSize ?? 11) - 1))} className="w-6 h-6 flex items-center justify-center border border-gray-200 rounded text-gray-600 hover:bg-gray-100 text-base leading-none">−</button>
+                        <span className="w-10 text-center text-xs font-medium text-gray-700 border border-gray-200 rounded h-6 flex items-center justify-center">{s.iconSize ?? 11}px</span>
+                        <button onClick={() => set('iconSize', Math.min(20, (s.iconSize ?? 11) + 1))} className="w-6 h-6 flex items-center justify-center border border-gray-200 rounded text-gray-600 hover:bg-gray-100 text-base leading-none">+</button>
+                      </div>
                     </div>
                   </div>
                 )}

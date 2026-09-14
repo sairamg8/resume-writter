@@ -49,6 +49,7 @@ export default function CoverLetterTemplate({ data }) {
       style={clContactStyle}
       layout={clContactLayout}
       iconSize={settings?.iconSize ?? 11}
+      settings={settings}
     />
   );
 

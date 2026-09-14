@@ -1,4 +1,5 @@
 import { useState, useRef, useLayoutEffect } from 'react';
+import { createPortal } from 'react-dom';
 
 const PX_PER_MM = 96 / 25.4;
 
@@ -52,8 +53,6 @@ function computeRanges(contentEl, pageContentPx) {
   if (start < total - 1) ranges.push({ start, height: total - start });
 
   // Collapse a near-empty trailing page into the previous to prevent blank last pages.
-  // Triggered when a leaf barely overflows a page boundary (section margins, sub-pixel layout).
-  // Only collapses if the tail content fits within 4px of the available room on the prior page.
   if (ranges.length > 1) {
     const last = ranges[ranges.length - 1];
     const prev = ranges[ranges.length - 2];
@@ -89,28 +88,44 @@ export function PaginatedPreview({ resume, ActiveTemplate, margin, fontSize, lin
     return () => ro.disconnect();
   }, [resume, margin, fontSize, lineHeight, pageContentMm]);
 
-  return (
-    <>
-      {/* Off-screen single-content source — measured and cloned for export */}
+  // Portal measure node to <body> so it never participates in editor scroll metrics
+  // (up or down). Full layout width so getBoundingClientRect pagination stays accurate.
+  const measurePortal = createPortal(
+    <div
+      aria-hidden
+      style={{
+        position: 'fixed',
+        left: '-10000px',
+        top: 0,
+        width: '210mm',
+        visibility: 'hidden',
+        pointerEvents: 'none',
+        zIndex: -1,
+      }}
+    >
       <div
         id="resume-preview"
-        aria-hidden
         className="bg-white"
-        style={{
-          position: 'absolute', left: '-9999px', top: 0, pointerEvents: 'none',
-          width: '210mm', padding: margin, fontSize, lineHeight,
-        }}
+        style={{ width: '210mm', padding: margin, fontSize, lineHeight }}
       >
         <div ref={contentRef}>
           <ActiveTemplate data={resume} />
         </div>
       </div>
+    </div>,
+    document.body,
+  );
 
-      <div style={{ zoom }} className="flex flex-col items-center gap-6">
+  return (
+    <>
+      {measurePortal}
+
+      {/* Visible A4 pages only — no off-screen tall siblings in this tree */}
+      <div style={{ zoom }} className="flex flex-col items-center gap-6 w-full">
         {ranges.map((range, i) => (
           <div
             key={i}
-            className="bg-white shadow-2xl relative"
+            className="bg-white shadow-2xl relative shrink-0"
             style={{ width: '210mm', height: '297mm', padding: margin, fontSize, lineHeight }}
           >
             <div style={{ height: `${Math.min(range.height, pageContentMm * PX_PER_MM)}px`, overflow: 'hidden' }}>

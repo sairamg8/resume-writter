@@ -2,6 +2,7 @@ import { useContext } from 'react';
 import { HeadingStyleContext } from '@/templates/headingStyle';
 import { SectionCaseContext } from '@/templates/sectionCase';
 import { contactHref as sharedContactHref } from '@/templates/templateShared';
+import { ContactIcon } from '@/utils/contactIcons';
 
 export const ROW_GAP = { compact: '4px', normal: '8px', relaxed: '14px' };
 
@@ -127,12 +128,12 @@ export function SideTitle({ title }) {
   );
 }
 
-export function SideContact({ icon: Icon, label, text, display, ckey, iconSize = 8, accent, personal }) {
+export function SideContact({ label, text, display, ckey, iconSize = 8, accent, personal, settings }) {
   const href = sharedContactHref(ckey, text, personal);
   return (
     <div>
       <div className="flex items-center gap-1" style={{ color: '#94a3b8', fontSize: '9px' }}>
-        <Icon size={iconSize} strokeWidth={2} />
+        <ContactIcon field={ckey} settings={settings} size={iconSize} strokeWidth={1.75} />
         <span className="uppercase tracking-wider font-bold">{label}</span>
       </div>
       <div style={{ color: '#cbd5e1', fontSize: '10px', wordBreak: 'break-all' }}>

@@ -3,6 +3,12 @@ import { ATS_DEFAULTS } from '@/utils/defaultData';
 import { DesignSection, NumberRow } from '@/components/DesignPanelShared';
 import { ColorsSection } from '@/components/DesignPanelColors';
 import { TypographySection } from '@/components/DesignPanelTypography';
+import {
+  ICON_SET_OPTIONS,
+  CONTACT_ICON_FIELDS,
+  ContactIcon,
+  getIconSetId,
+} from '@/utils/contactIcons';
 
 const TEMPLATES = [
   { id: 'executive', label: 'Executive', desc: 'ATS-friendly · Clean accent headings · Vibrant', ats: true },
@@ -16,6 +22,7 @@ const COLOR_KEYS      = ['accentColor', 'textColor', 'sidebarBg', 'headerTextCol
 const TYPOGRAPHY_KEYS = ['font', 'fontSize', 'fontSizeBase', 'fontSizeNameDelta', 'fontSizeSectionDelta', 'fontSizeEntryDelta', 'customFont', 'iconSize'];
 const SPACING_KEYS    = ['lineHeightValue', 'marginV', 'marginH', 'sectionGap', 'itemGap'];
 const HEADING_KEYS    = ['headingStyle', 'sectionTitleCase', 'sectionBorderWidth', 'sectionBorderColor'];
+const ICON_KEYS       = ['iconSet', 'iconSize', 'contactStyle'];
 
 export default function DesignPanel({ resume, updateSetting, setTemplate, resetSettings }) {
   const settings = resume.settings || {};
@@ -60,6 +67,65 @@ export default function DesignPanel({ resume, updateSetting, setTemplate, resetS
       </DesignSection>
 
       <ColorsSection resume={resume} settings={settings} updateSetting={updateSetting} onReset={() => resetSection(COLOR_KEYS)} />
+
+      <DesignSection title="Contact icons" defaultOpen onReset={() => resetSection(ICON_KEYS)}>
+        <p className="text-[11px] text-gray-400 mb-2 leading-relaxed">
+          Global icon style for the whole resume. Contact style must be <strong>Icon</strong> for these to show.
+          You can still upload a custom image per field under Personal Info → Fields.
+        </p>
+        <div className="space-y-2">
+          {ICON_SET_OPTIONS.map(opt => {
+            const active = getIconSetId(settings) === opt.id;
+            const previewSettings = { ...settings, iconSet: opt.id, customContactIcons: {} };
+            return (
+              <button
+                key={opt.id}
+                type="button"
+                onClick={() => {
+                  updateSetting('iconSet', opt.id);
+                  if ((settings.contactStyle || 'icon') !== 'icon') updateSetting('contactStyle', 'icon');
+                }}
+                className={`w-full text-left px-3 py-2.5 rounded-lg border transition-all ${
+                  active ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                }`}
+              >
+                <div className="flex items-center justify-between gap-2 mb-1.5">
+                  <div>
+                    <p className={`text-sm font-medium ${active ? 'text-blue-700' : 'text-gray-700'}`}>{opt.label}</p>
+                    <p className="text-[10px] text-gray-400">{opt.desc}</p>
+                  </div>
+                  {active && <span className="text-[10px] font-semibold text-blue-600">Selected</span>}
+                </div>
+                <div className={`flex items-center gap-2.5 ${active ? 'text-blue-700' : 'text-gray-600'}`}>
+                  {CONTACT_ICON_FIELDS.map(field => (
+                    <span key={field} className="inline-flex w-5 h-5 items-center justify-center" title={field}>
+                      <ContactIcon field={field} settings={previewSettings} size={16} />
+                    </span>
+                  ))}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+        <div className="flex items-center justify-between mt-3 pt-2 border-t border-gray-100">
+          <span className="text-xs text-gray-500">Icon size</span>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => updateSetting('iconSize', Math.max(8, (settings.iconSize ?? 11) - 1))}
+              className="w-6 h-6 flex items-center justify-center border border-gray-200 rounded text-gray-600 hover:bg-gray-100 text-base leading-none"
+            >−</button>
+            <span className="w-10 text-center text-xs font-medium text-gray-700 border border-gray-200 rounded h-6 flex items-center justify-center">
+              {settings.iconSize ?? 11}px
+            </span>
+            <button
+              type="button"
+              onClick={() => updateSetting('iconSize', Math.min(20, (settings.iconSize ?? 11) + 1))}
+              className="w-6 h-6 flex items-center justify-center border border-gray-200 rounded text-gray-600 hover:bg-gray-100 text-base leading-none"
+            >+</button>
+          </div>
+        </div>
+      </DesignSection>
 
       <TypographySection settings={settings} updateSetting={updateSetting} onReset={() => resetSection(TYPOGRAPHY_KEYS)} />
 

@@ -2,22 +2,26 @@ import { Document, Page, View, Text, Image, StyleSheet } from '@react-pdf/render
 import { PdfSectionTitle } from './shared/PdfSection';
 import { getEffectiveSpacing } from './shared/PdfSections';
 import { PdfRichText } from './shared/PdfRichText';
-import { MailIcon, PhoneIcon, MapPinIcon, GlobeIcon, LinkedinPdfIcon, GithubPdfIcon } from './shared/PdfIcons';
 import { getDocumentProps } from './shared/PdfPage';
 import { getPdfPhotoStyle } from './shared/pdfPhoto';
 import { CSS_PX_TO_PT } from './shared/pdfUnits';
+import { PdfContactIcon } from './shared/PdfContactIcon';
 import { SIDEBAR_TYPES, SideSectionTitle, renderSideSection, SidebarMainSectionRouter } from './shared/PdfSidebarSections';
 
-function SideContactRow({ Icon, label, display, accent, iconPt }) {
+// Match canvas SideContact: icons + labels share muted slate (#94a3b8), not accent.
+const SIDEBAR_MUTED = '#94a3b8';
+const SIDEBAR_CONTACT_VALUE = '#cbd5e1';
+
+function SideContactRow({ field, label, display, iconPt, settings }) {
   return (
     <View style={{ marginBottom: 6 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3.5, marginBottom: 1 }}>
-        <Icon size={iconPt} color={accent || '#94a3b8'} />
-        <Text style={{ fontSize: 8, fontWeight: 'bold', color: '#94a3b8', letterSpacing: 0.8, lineHeight: 1.2 }}>
+        <PdfContactIcon field={field} settings={settings} size={iconPt} color={SIDEBAR_MUTED} />
+        <Text style={{ fontSize: 8, fontWeight: 'bold', color: SIDEBAR_MUTED, letterSpacing: 0.8, lineHeight: 1.2 }}>
           {label.toUpperCase()}
         </Text>
       </View>
-      <Text style={{ fontSize: 9, color: '#cbd5e1', paddingLeft: iconPt + 3.5, lineHeight: 1.2 }}>{display}</Text>
+      <Text style={{ fontSize: 9, color: SIDEBAR_CONTACT_VALUE, paddingLeft: iconPt + 3.5, lineHeight: 1.2 }}>{display}</Text>
     </View>
   );
 }
@@ -45,7 +49,8 @@ export function SidebarTemplatePDF({ data }) {
   const sidebarSections = visibleSections.filter(s => SIDEBAR_TYPES.has(s.type));
   const mainSections    = visibleSections.filter(s => !SIDEBAR_TYPES.has(s.type));
 
-  const sideIconPt     = Math.max(7, Math.round((settings?.iconSize ?? 11) * 0.72));
+  // Canvas: SideContact uses `st.iconSize ?? 8` as CSS px; PDF points ≈ px * 0.75
+  const sideIconPt     = Math.max(6, Math.round((settings?.iconSize ?? 8) * CSS_PX_TO_PT));
   const sideSectionGap = sectionGap;
   const sideItemGap    = itemGap;
 
@@ -60,12 +65,12 @@ export function SidebarTemplatePDF({ data }) {
   };
 
   const contactItems = [
-    { key: 'email',    Icon: MailIcon,        label: 'Email',    val: personal?.email,    display: personal?.email },
-    { key: 'phone',    Icon: PhoneIcon,       label: 'Phone',    val: personal?.phone,    display: personal?.phone },
-    { key: 'location', Icon: MapPinIcon,      label: 'Location', val: personal?.location, display: personal?.location },
-    { key: 'website',  Icon: GlobeIcon,       label: 'Website',  val: personal?.website,  display: personal?.websiteLabel || personal?.website },
-    { key: 'linkedin', Icon: LinkedinPdfIcon, label: 'LinkedIn', val: personal?.linkedin, display: personal?.linkedinLabel || personal?.linkedin },
-    { key: 'github',   Icon: GithubPdfIcon,   label: 'GitHub',   val: personal?.github,   display: personal?.githubLabel  || personal?.github },
+    { key: 'email',    label: 'Email',    val: personal?.email,    display: personal?.email },
+    { key: 'phone',    label: 'Phone',    val: personal?.phone,    display: personal?.phone },
+    { key: 'location', label: 'Location', val: personal?.location, display: personal?.location },
+    { key: 'website',  label: 'Website',  val: personal?.website,  display: personal?.websiteLabel || personal?.website },
+    { key: 'linkedin', label: 'LinkedIn', val: personal?.linkedin, display: personal?.linkedinLabel || personal?.linkedin },
+    { key: 'github',   label: 'GitHub',   val: personal?.github,   display: personal?.githubLabel  || personal?.github },
   ].filter(({ key, val }) => !hidden.includes(key) && val);
 
   const pageStyle = StyleSheet.create({
@@ -120,11 +125,11 @@ export function SidebarTemplatePDF({ data }) {
                 {contactItems.map(item => (
                   <SideContactRow
                     key={item.key}
-                    Icon={item.Icon}
+                    field={item.key}
                     label={item.label}
                     display={item.display}
-                    accent={accent}
                     iconPt={sideIconPt}
+                    settings={settings}
                   />
                 ))}
               </View>
