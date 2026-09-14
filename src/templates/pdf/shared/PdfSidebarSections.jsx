@@ -1,7 +1,7 @@
 import { View, Text } from '@react-pdf/renderer';
 import { PdfRichText } from './PdfRichText';
 import { hasRichText } from '@/utils/richText';
-import { SectionTitleOf, RenderBullets, RenderColGrid, hexAlpha, SectionRouter, SPACER, ItemHeader } from './PdfSections';
+import { SectionTitleOf, RenderBullets, RenderColGrid, hexAlpha, SectionRouter, SPACER, ItemHeader, shadesOf } from './PdfSections';
 import {
   SIDEBAR_TYPES, SideSectionTitle, EntryLink, SideEducation, SideLanguages, SideCertifications, SideInterests, SideReferences,
 } from './PdfSidebarColumn';
@@ -45,6 +45,7 @@ export function SidebarMainExperience({ section, settings, marginBottom, spaceBe
   const lineH      = settings?.lineHeightValue || 1.5;
   const textColor  = settings?.textColor || '#1a1a1a';
   const accent     = settings?.accentColor || '#2563eb';
+  const shade      = shadesOf(settings); // body and date follow Design → Text colour
   const visibleItems = (section.items || []).filter(i => i.visible !== false);
 
   return (
@@ -75,16 +76,16 @@ export function SidebarMainExperience({ section, settings, marginBottom, spaceBe
                     {primary ? <Text style={{ fontSize: entrySize, fontWeight: 'bold', color: textColor, lineHeight: 1.2 }}>{primary}</Text> : null}
                     {subLine ? <Text style={{ fontSize: entrySize - 1, color: hexAlpha(accent, 0.8), lineHeight: 1.2 }}>{subLine}</Text> : null}
                   </View>
-                  {dateStr ? <Text style={{ fontSize: entrySize - 1.5, color: '#9ca3af', flexShrink: 0, marginLeft: 6 }}>{dateStr}</Text> : null}
+                  {dateStr ? <Text style={{ fontSize: entrySize - 1.5, color: shade.muted, flexShrink: 0, marginLeft: 6 }}>{dateStr}</Text> : null}
                 </View>
               ) : (
                 // Title "Inline" / "Side by side": the shared one-line header, as the other templates print it.
                 <ItemHeader primary={primary} sub={secondary || undefined} loc={loc || undefined} dateStr={dateStr} settings={settings} titleStyle={titleStyle} />
               )}
               {hasRichText(desc) ? (
-                <PdfRichText html={desc} style={{ fontSize: entrySize - 0.5, color: '#333333', lineHeight: lineH, marginTop: 2 }} />
+                <PdfRichText html={desc} style={{ fontSize: entrySize - 0.5, color: shade.body, lineHeight: lineH, marginTop: 2 }} />
               ) : null}
-              <RenderBullets bullets={item.bullets} style={{ fontSize: entrySize - 0.5, color: '#333333', lineHeight: lineH }} accent={accent} isModern={false} template="sidebar" />
+              <RenderBullets bullets={item.bullets} style={{ fontSize: entrySize - 0.5, color: shade.body, lineHeight: lineH }} accent={accent} isModern={false} template="sidebar" />
             </CardItem>
           );
         }}
@@ -100,6 +101,7 @@ export function SidebarMainProjects({ section, settings, marginBottom, spaceBefo
   const lineH      = settings?.lineHeightValue || 1.5;
   const textColor  = settings?.textColor || '#1a1a1a';
   const accent     = settings?.accentColor || '#2563eb';
+  const shade      = shadesOf(settings); // body and date follow Design → Text colour
   const visibleItems = (section.items || []).filter(i => i.visible !== false);
 
   return (
@@ -124,12 +126,12 @@ export function SidebarMainProjects({ section, settings, marginBottom, spaceBefo
                   </Text>
                   {item.url ? <EntryLink url={item.url} style={{ fontSize: entrySize - 1.5, color: accent }} /> : null}
                 </View>
-                {dateStr ? <Text style={{ fontSize: entrySize - 1.5, color: '#9ca3af', flexShrink: 0, marginLeft: 6 }}>{dateStr}</Text> : null}
+                {dateStr ? <Text style={{ fontSize: entrySize - 1.5, color: shade.muted, flexShrink: 0, marginLeft: 6 }}>{dateStr}</Text> : null}
               </View>
               {hasRichText(item.description) ? (
-                <PdfRichText html={item.description} style={{ fontSize: entrySize - 0.5, color: '#333333', lineHeight: lineH, marginTop: 2 }} />
+                <PdfRichText html={item.description} style={{ fontSize: entrySize - 0.5, color: shade.body, lineHeight: lineH, marginTop: 2 }} />
               ) : null}
-              <RenderBullets bullets={item.bullets} style={{ fontSize: entrySize - 0.5, color: '#333333', lineHeight: lineH }} accent={accent} isModern={false} template="sidebar" />
+              <RenderBullets bullets={item.bullets} style={{ fontSize: entrySize - 0.5, color: shade.body, lineHeight: lineH }} accent={accent} isModern={false} template="sidebar" />
             </CardItem>
           );
         }}

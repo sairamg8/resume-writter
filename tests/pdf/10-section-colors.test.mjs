@@ -32,7 +32,12 @@ const RUNS = {
 const HEADER = { SummaryText: '#333333', 'me@example.com': '#555555' };
 /** The runs each template prints in grey (Sidebar prints most sections in its own dark column). */
 function runsOf(template) {
-  if (template === 'sidebar') return { AwardIssuer: '#4b5563', AwardDesc: '#4b5563', VolTown: '#9ca3af', VolDesc: '#333333', CustDesc: '#333333', 'Spring 2024': '#9ca3af' };
+  if (template === 'sidebar') {
+    return {
+      AwardIssuer: '#4b5563', AwardDesc: '#4b5563', VolTown: '#9ca3af', VolDesc: '#333333', CustDesc: '#333333', 'Spring 2024': '#9ca3af',
+      ExpDesc: '#333333', BulletItem: '#333333', ProjDesc: '#333333', '01/2020': '#9ca3af', // the experience and project cards
+    };
+  }
   const own = {
     classic: { VolOrg: '#4b5563', CustSub: '#4b5563', ...HEADER },
     modern: {},
