@@ -123,6 +123,8 @@ export function ListView({ jobs, resumes, onNavigate, onDelete }) {
                   <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button
                       onClick={e => { e.stopPropagation(); onDelete(job.id); }}
+                      title="Delete application"
+                      aria-label="Delete application"
                       className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
                     >
                       <Trash2 size={13} />

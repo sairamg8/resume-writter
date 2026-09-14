@@ -47,6 +47,11 @@ export function JobTracker() {
     e.target.value = '';
   }
 
+  function confirmDelete(id) {
+    const job = jobs.find(j => j.id === id);
+    if (confirm(`Delete ${job?.company || 'this job'}?`)) deleteJob(id);
+  }
+
   function handleFilterStatus(id) {
     setFilterStatus(prev => prev === id ? '' : id);
   }
@@ -241,7 +246,7 @@ export function JobTracker() {
               jobs={filteredJobs}
               updateJob={updateJob}
               onNavigate={id => navigate(`/jobs/${id}`)}
-              onDelete={deleteJob}
+              onDelete={confirmDelete}
               scrollToStatus={filterStatus}
             />
           ) : (
@@ -249,7 +254,7 @@ export function JobTracker() {
               jobs={filteredJobs}
               resumes={resumes}
               onNavigate={id => navigate(`/jobs/${id}`)}
-              onDelete={deleteJob}
+              onDelete={confirmDelete}
             />
           )}
         </div>

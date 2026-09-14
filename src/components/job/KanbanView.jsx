@@ -83,6 +83,8 @@ function KanbanCard({ job, onDelete, overlay = false }) {
         <button
           onPointerDown={e => e.stopPropagation()}
           onClick={e => { e.stopPropagation(); onDelete(job.id); }}
+          title="Delete application"
+          aria-label="Delete application"
           className="p-1 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
         >
           <Trash2 size={11} />

@@ -124,7 +124,9 @@ export function Dashboard({ store, auth, sync }) {
                     resume={r}
                     onOpen={id => navigate(`/resume/${id}`)}
                     onDuplicate={id => { const newId = store.duplicateResume(id); if (newId) navigate(`/resume/${newId}`); }}
-                    onDelete={store.deleteResume}
+                    onDelete={id => {
+                      if (confirm(`Delete "${r.name}"? This cannot be undone.`)) store.deleteResume(id);
+                    }}
                     onRename={store.renameResume}
                   />
                 ))}
