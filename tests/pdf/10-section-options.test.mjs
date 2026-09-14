@@ -1,7 +1,7 @@
 // Section Options (the section editor's "Customize layout") as they print.
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { setup, teardown, resume, section, render, renderDocx, read, itemsWith, allText, MM, TEMPLATES } from './harness.mjs';
+import { setup, teardown, resume, section, experience, render, renderDocx, read, itemsWith, allText, MM, TEMPLATES } from './harness.mjs';
 
 before(setup);
 after(teardown);
@@ -75,4 +75,23 @@ describe('custom section', () => {
     assert.ok(texts.some((t) => t.includes('React Performance Patterns')));
     assert.ok(!texts.some((t) => t.includes('2024')), texts.join(' | '));
   });
+});
+
+describe('item spacing (FIDA-53)', () => {
+  // Distance between two entries' matching lines: the entry's height plus the item gap.
+  const pitch = async (template, itemGap, sectionSettings = {}) => {
+    const pages = await read(await render(resume({ template, settings: { itemGap }, sections: [experience([{}, {}, {}], sectionSettings)] })));
+    return first(pages, 'Role 1').y - first(pages, 'Role 2').y;
+  };
+  const near = (actual, expected, what) => assert.ok(Math.abs(actual - expected) < 0.3, `${what}: ${actual.toFixed(2)} pt, expected ${expected.toFixed(2)}`);
+
+  for (const template of TEMPLATES) {
+    it(`${template}: Design → "Between Items" moves the entries; the section preset scales it; an item-gap override wins`, async () => {
+      const base = await pitch(template, 12);
+      near(await pitch(template, 40) - base, (40 - 12) * 0.75, 'Between Items 12 → 40 px');
+      near(await pitch(template, 12, { spacing: 'compact' }) - base, (6 - 12) * 0.75, 'Tight is half the global gap');
+      near(await pitch(template, 12, { spacing: 'relaxed' }) - base, (21 - 12) * 0.75, 'Spacious is 1.75× the global gap');
+      near(await pitch(template, 40, { spacing: 'relaxed', itemGap: 5 }) - base, (5 - 12) * 0.75, 'a section\'s own item gap (px) wins');
+    });
+  }
 });

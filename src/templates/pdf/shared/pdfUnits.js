@@ -32,5 +32,8 @@ export const MODERN_HEADER_PAD_Y_PT = pxToPt(20); // 15
 export const DEFAULT_SECTION_GAP_PX = 16;
 export const DEFAULT_ITEM_GAP_PX = 12;
 
-/** Section spacing presets used by skills/experience (match ClassicTemplateHelpers). */
+/**
+ * A section's Spacing preset (Tight / Normal / Spacious). Only the proportions count: they
+ * scale Design → "Between Items" (see getEffectiveSpacing).
+ */
 export const SECTION_SPACING_PX = { compact: 4, normal: 8, relaxed: 14 };

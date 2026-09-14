@@ -229,14 +229,14 @@ export function SectionRouter({ section, settings, marginBottom, spaceBefore, it
   }
 }
 
-// Spacing presets in CSS px (match ClassicTemplateHelpers.SKILL_ROW_GAP).
-export const SECTION_SPACING_MAP = SECTION_SPACING_PX;
-
 /**
  * Per-section spacing overrides.
  * - Global sectionGap/itemGap on settings are already PDF points (from resolveTemplateSettings).
  * - Per-section spaceAfter / spaceBefore / itemGap are stored as CSS px → convert once.
- * - spacing presets (compact/normal/relaxed) are CSS px → convert once.
+ * - The gap between entries is Design → Spacing → "Between Items", scaled by the section's
+ *   Spacing preset in SECTION_SPACING_PX's proportions (Tight ½×, Normal 1×, Spacious 1¾×),
+ *   unless the section sets its own item gap. Every section is created with a preset, so
+ *   when a preset stood for a fixed gap the slider never moved anything (FIDA-53).
  * - isLast: drop trailing marginBottom so it cannot overflow onto a blank final page
  *   (canvas pagination collapses near-empty trailing pages; react-pdf does not).
  */
@@ -244,6 +244,7 @@ export function getEffectiveSpacing(section, settings, { isLast = false } = {}) 
   const ss = section.settings || {};
   const globalSecGap  = settings?.sectionGap ?? 12;
   const globalItemGap = settings?.itemGap    ?? 9;
+  const preset = (SECTION_SPACING_PX[ss.spacing] ?? SECTION_SPACING_PX.normal) / SECTION_SPACING_PX.normal;
 
   const marginBottom = isLast
     ? 0
@@ -252,11 +253,7 @@ export function getEffectiveSpacing(section, settings, { isLast = false } = {}) 
   return {
     marginBottom,
     spaceBefore:  ss.spaceBefore != null ? ss.spaceBefore * CSS_PX_TO_PT : undefined,
-    itemGap: ss.itemGap != null
-      ? ss.itemGap * CSS_PX_TO_PT
-      : (SECTION_SPACING_PX[ss.spacing] != null
-        ? SECTION_SPACING_PX[ss.spacing] * CSS_PX_TO_PT
-        : globalItemGap),
+    itemGap: ss.itemGap != null ? ss.itemGap * CSS_PX_TO_PT : globalItemGap * preset,
   };
 }
 
