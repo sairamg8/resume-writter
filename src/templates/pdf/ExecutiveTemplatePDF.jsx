@@ -7,6 +7,7 @@ import { hasRichText } from '@/utils/richText';
 import { getPdfPhotoStyle } from './shared/pdfPhoto';
 import { PdfPhoto } from './shared/PdfPhoto';
 import { HEADER_MARGIN_BOTTOM_PT } from './shared/pdfUnits';
+import { textShades } from './shared/pdfColors';
 
 export function ExecutiveTemplatePDF({ data }) {
   const { personal, sections = [], settings = {} } = data;
@@ -95,7 +96,7 @@ export function ExecutiveTemplatePDF({ data }) {
                 html={personal.summary}
                 style={{
                   fontSize: baseSize,
-                  color: '#333333',
+                  color: textShades(settings.textColor).body,
                   lineHeight: lineH,
                   textAlign: centered ? 'center' : 'left',
                 }}
