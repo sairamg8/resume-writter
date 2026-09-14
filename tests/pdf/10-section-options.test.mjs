@@ -50,6 +50,7 @@ describe('languages (FIDA-34 / FIDB-71)', () => {
     });
   }
 
+  // Guard: left alignment already worked; the fix (9e776bb) was the centred one.
   it('left alignment keeps language at the left edge and proficiency on the right', async () => {
     const pages = await read(await render(resume({ sections: [section('languages', LANGS, { columns: 1 })] })));
     assert.ok(Math.abs(first(pages, 'English').x - 18 * MM) < 0.5);
@@ -69,6 +70,7 @@ describe('custom section', () => {
     });
   }
 
+  // Guard: Word already honoured 'Show dates'; the fix (c5a71ac) was the PDF's.
   it('Word: "Show dates" off hides the date too', async () => {
     const items = [{ title: 'React Performance Patterns', date: 'Spring 2024' }];
     const { texts } = await renderDocx(resume({ sections: [section('custom', items, { showDates: false })] }));

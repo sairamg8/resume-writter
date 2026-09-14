@@ -109,6 +109,7 @@ describe('Sidebar job title colour (FIDB-42)', () => {
     assert.equal(readableOn('red', '#1e293b'), 'red');
   });
 
+  // Guard: readable accents and picked colours were never changed; the fix is the test above.
   it('a readable accent is kept, and a job title colour the user picked always wins', async () => {
     assert.equal((await titleFill({ accentColor: '#fbbf24' })).fill, '#fbbf24');
     assert.equal((await titleFill({ accentColor: '#111111', jobTitleColor: '#bfdbfe' })).fill, '#bfdbfe');
