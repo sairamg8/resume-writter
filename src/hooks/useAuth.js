@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { GoogleAuthProvider, signInWithPopup, signOut as fbSignOut, onAuthStateChanged } from 'firebase/auth';
-import { auth } from '@/utils/firebase';
+import { auth, e2eUser } from '@/utils/firebase';
 
 export function useAuth() {
-  const [user, setUser] = useState(null);
+  // e2eUser: Cypress's fake account in e2e builds (see firebase.js); null everywhere else.
+  const [user, setUser] = useState(e2eUser);
   // Without Firebase there is nothing to wait for.
   const [authLoading, setAuthLoading] = useState(Boolean(auth));
 
