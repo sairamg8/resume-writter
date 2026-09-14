@@ -1,11 +1,10 @@
 import { pxToPt } from './pdfUnits';
 
 /**
- * Photo sizes mirror src/templates/templateShared.jsx so the PDF matches the
- * canvas preview scale on a 210mm A4 frame.
+ * Photo sizes in CSS px on a 210mm A4 page (converted to pt below).
  *
- *   classic / executive / minimal / sidebar → photoStyle()   (130 / 165 / 200 px)
- *   modern                                  → modernPhotoStyle() (42 / 54 / 68 px)
+ *   classic / executive / minimal / sidebar → 130 / 165 / 200 px
+ *   modern                                  → 42 / 54 / 68 px
  */
 const SIZES = {
   classic: { sm: 130, md: 165, lg: 200 },

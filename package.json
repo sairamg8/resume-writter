@@ -8,8 +8,6 @@
     "build": "vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "test": "npx playwright test",
-    "test:ui": "npx playwright test --ui",
     "cy:open": "cypress open --e2e",
     "cy:run": "cypress run --e2e",
     "test:e2e": "vite build && start-server-and-test \"vite preview --host 127.0.0.1 --port 4173 --strictPort\" http://127.0.0.1:4173 \"cypress run --e2e\""
