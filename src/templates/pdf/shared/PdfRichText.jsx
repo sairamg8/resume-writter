@@ -1,119 +1,103 @@
-import { Text, View } from '@react-pdf/renderer';
+import { Text, View, Link } from '@react-pdf/renderer';
+import { parseRichText, safeHref } from '@/utils/richText';
 
-function decodeEntities(str) {
-  return str
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&#39;/g, "'")
-    .replace(/&quot;/g, '"')
-    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)))
-    .replace(/&#x([0-9a-fA-F]+);/g, (_, h) => String.fromCharCode(parseInt(h, 16)));
+const INDENT = 10;        // pt of text indent per list level
+const MARKER_GAP = 3;     // pt between a list marker and its text
+const PARA_GAP = 2;       // pt between blocks
+const LIST_GAP = 1.5;     // pt between two list items
+// A list item this short is kept on one page: it never splits, so its marker can never be left
+// behind at the bottom of a page while its text starts the next one. Longer items (far beyond
+// a page's worth in any column) split normally rather than overflow the page.
+const KEEP_TOGETHER_CHARS = 1500;
+
+function runStyle(run, color) {
+  const style = {};
+  if (run.bold) style.fontWeight = 'bold';
+  if (run.italic) style.fontStyle = 'italic';
+  const deco = [run.underline && 'underline', run.strike && 'line-through'].filter(Boolean).join(' ');
+  if (deco) style.textDecoration = deco;
+  if (run.href) {
+    // react-pdf paints links blue and underlined unless told otherwise.
+    style.color = color;
+    if (!deco) style.textDecoration = 'none';
+  }
+  return style;
+}
+
+function Runs({ runs, color }) {
+  return runs.map((run, i) => {
+    const style = runStyle(run, color);
+    const href = run.href && safeHref(run.href);
+    if (href) return <Link key={i} src={href} style={style}>{run.text}</Link>;
+    return Object.keys(style).length ? <Text key={i} style={style}>{run.text}</Text> : run.text;
+  });
+}
+
+const isBullet = (marker) => marker.length === 1;
+
+/** Marker column width for a list level: room for its longest marker ("•", "9." … "viii."). */
+function markerWidth(chars, fontSize) {
+  return Math.max(chars * fontSize * 0.55, fontSize * 0.6) + MARKER_GAP;
 }
 
 /**
- * Parse inline markup into react-pdf Text nodes.
- * Supports: <strong>/<b>, <em>/<i>, <br>, color spans, strips links to text.
- */
-function parseInlineSegments(html, baseStyle) {
-  const marked = html
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<span\s+style="[^"]*color:\s*([^;"']+)[^"]*"[^>]*>([\s\S]*?)<\/span>/gi, '\x07$1\x08$2\x09')
-    .replace(/<span\s+style='[^']*color:\s*([^;']+)[^']*'[^>]*>([\s\S]*?)<\/span>/gi, '\x07$1\x08$2\x09')
-    .replace(/<strong>([\s\S]*?)<\/strong>/gi, '\x01$1\x02')
-    .replace(/<b>([\s\S]*?)<\/b>/gi, '\x01$1\x02')
-    .replace(/<em>([\s\S]*?)<\/em>/gi, '\x03$1\x04')
-    .replace(/<i>([\s\S]*?)<\/i>/gi, '\x03$1\x04')
-    .replace(/<u>([\s\S]*?)<\/u>/gi, '\x0b$1\x0c')
-    .replace(/<a[^>]*>([\s\S]*?)<\/a>/gi, '$1')
-    .replace(/<[^>]+>/g, '');
-
-  const clean = decodeEntities(marked);
-  const parts = clean.split(/(\x01[\s\S]*?\x02|\x03[\s\S]*?\x04|\x07[\s\S]*?\x08[\s\S]*?\x09|\x0b[\s\S]*?\x0c)/);
-
-  return parts.map((part, i) => {
-    if (part.startsWith('\x01') && part.endsWith('\x02')) {
-      return <Text key={i} style={{ ...baseStyle, fontWeight: 'bold' }}>{part.slice(1, -1)}</Text>;
-    }
-    if (part.startsWith('\x03') && part.endsWith('\x04')) {
-      return <Text key={i} style={{ ...baseStyle, fontStyle: 'italic' }}>{part.slice(1, -1)}</Text>;
-    }
-    if (part.startsWith('\x0b') && part.endsWith('\x0c')) {
-      return <Text key={i} style={{ ...baseStyle, textDecoration: 'underline' }}>{part.slice(1, -1)}</Text>;
-    }
-    if (part.startsWith('\x07') && part.includes('\x08') && part.endsWith('\x09')) {
-      const idx = part.indexOf('\x08');
-      const colorVal = part.slice(1, idx).trim();
-      const textVal = part.slice(idx + 1, -1);
-      return <Text key={i} style={{ ...baseStyle, color: colorVal }}>{textVal}</Text>;
-    }
-    return part ? <Text key={i} style={baseStyle}>{part}</Text> : null;
-  }).filter(Boolean);
-}
-
-/**
- * HTML → react-pdf rich text, closer to the canvas `.rich-text-output` behavior.
+ * Rich text (the editor's HTML) as react-pdf blocks: one <Text> per paragraph and one row per
+ * list item, returned as siblings so the page can break between any two of them.
+ *
+ * `style` is the text style (font size, colour, line height, alignment); its marginTop and
+ * marginBottom apply once, above the first block and below the last.
  */
 export function PdfRichText({ html, style = {} }) {
-  if (!html) return null;
+  const blocks = parseRichText(html);
+  if (!blocks.length) return null;
+  const { marginTop, marginBottom, ...textStyle } = style;
+  const fontSize = textStyle.fontSize || 11;
+  const color = textStyle.color;
 
-  const elements = [];
-  let src = html;
+  // Every item of one level shares a marker column as wide as its longest marker, so "9." and
+  // "10." start their text at the same x.
+  const longest = {};
+  for (const b of blocks) {
+    if (!b.marker) continue;
+    const key = `${b.indent}:${isBullet(b.marker)}`;
+    longest[key] = Math.max(longest[key] || 0, b.marker.length);
+  }
+  const textStart = [0]; // x where the text of each list depth starts
 
-  const lists = [];
-  src = src.replace(/<(ul|ol)>([\s\S]*?)<\/\1>/gi, (_, tag, inner) => {
-    const items = [...inner.matchAll(/<li[^>]*>([\s\S]*?)<\/li>/gi)].map(m => m[1]);
-    const idx = lists.length;
-    lists.push({ ordered: tag.toLowerCase() === 'ol', items });
-    return `\x05${idx}\x06`;
-  });
+  return blocks.map((block, i) => {
+    const prev = blocks[i - 1];
+    const edges = {
+      marginTop: i === 0 ? marginTop : (prev.marker && block.marker ? LIST_GAP : PARA_GAP),
+      marginBottom: i === blocks.length - 1 ? marginBottom : undefined,
+    };
+    const align = block.align || textStyle.textAlign;
 
-  // Split on list markers and paragraph boundaries
-  const parts = src.split(/(\x05\d+\x06)|<\/p>|<p[^>]*>/i).filter(p => p != null && p !== '');
-
-  for (const part of parts) {
-    const listMatch = part.match(/^\x05(\d+)\x06$/);
-    if (listMatch) {
-      const list = lists[parseInt(listMatch[1], 10)];
-      if (list) {
-        list.items.forEach((item, i) => {
-          const bullet = list.ordered ? `${i + 1}.` : '•';
-          // Allow wrapping so long bullets can split across pages (canvas can window
-          // tall leaves). wrap={false} left large empty bottoms and extra PDF pages.
-          elements.push(
-            <View key={`li-${elements.length}-${i}`} style={{ flexDirection: 'row', marginBottom: 1.5 }}>
-              <Text style={{ ...style, width: list.ordered ? 14 : 10 }}>{bullet}</Text>
-              <Text style={{ ...style, flex: 1 }}>{parseInlineSegments(item, style)}</Text>
-            </View>
-          );
-        });
-      }
-      continue;
-    }
-
-    // Skip pure whitespace / leftover tags
-    const stripped = part.replace(/<[^>]+>/g, '').trim();
-    if (!stripped) continue;
-
-    const inline = parseInlineSegments(part, style);
-    if (inline.length) {
-      elements.push(
-        <Text key={`p-${elements.length}`} style={{ ...style, marginBottom: 2 }}>
-          {inline}
+    if (!block.marker) {
+      // Body text, or a further paragraph of a list item aligned with that item's text.
+      const left = block.indent > 0 ? (textStart[block.indent] ?? block.indent * INDENT) : 0;
+      return (
+        <Text key={i} style={{ ...textStyle, ...edges, textAlign: align, marginLeft: left || undefined }}>
+          <Runs runs={block.runs} color={color} />
         </Text>
       );
     }
-  }
 
-  if (!elements.length) {
-    // Fallback: strip tags and dump plain text so content is never silently dropped
-    const plain = decodeEntities(html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim());
-    if (plain) {
-      return <Text style={style}>{plain}</Text>;
-    }
-    return null;
-  }
-
-  return <>{elements}</>;
+    const left = textStart[block.indent - 1] ?? (block.indent - 1) * INDENT;
+    const width = markerWidth(longest[`${block.indent}:${isBullet(block.marker)}`], fontSize);
+    textStart[block.indent] = left + width;
+    textStart.length = block.indent + 1;
+    const length = block.runs.reduce((n, r) => n + r.text.length, 0);
+    return (
+      <View
+        key={i}
+        wrap={length > KEEP_TOGETHER_CHARS}
+        style={{ ...edges, flexDirection: 'row', marginLeft: left || undefined }}
+      >
+        <Text style={{ ...textStyle, textAlign: 'left', width }}>{block.marker}</Text>
+        <Text style={{ ...textStyle, textAlign: align, flex: 1 }}>
+          <Runs runs={block.runs} color={color} />
+        </Text>
+      </View>
+    );
+  });
 }

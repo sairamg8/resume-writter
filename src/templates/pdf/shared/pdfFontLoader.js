@@ -52,6 +52,7 @@ Font.register({
     { src: localFontUrl('noto-sans-latin-400-normal.woff'), fontWeight: 400 },
     { src: localFontUrl('noto-sans-latin-700-normal.woff'), fontWeight: 700 },
     { src: localFontUrl('noto-sans-latin-400-italic.woff'), fontStyle: 'italic', fontWeight: 400 },
+    { src: localFontUrl('noto-sans-latin-700-italic.woff'), fontStyle: 'italic', fontWeight: 700 },
   ],
 });
 registered.add('NotoSans');

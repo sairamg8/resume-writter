@@ -1,5 +1,6 @@
 import { View, Text } from '@react-pdf/renderer';
 import { PdfRichText } from './PdfRichText';
+import { hasRichText } from '@/utils/richText';
 import {
   SectionTitleOf,
   RenderColGrid,
@@ -50,7 +51,7 @@ export function ExperienceSection({ section, settings, marginBottom, itemGap, it
                 italicSub={italicSubs}
                 centered={centered}
               />
-              {desc && desc.replace(/<[^>]*>/g, '').trim() && (
+              {hasRichText(desc) && (
                 <PdfRichText html={desc} style={{ fontSize: entrySize, color: '#333333', lineHeight: lineH, marginTop: 2, textAlign: centered ? 'center' : 'left' }} />
               )}
               <RenderBullets bullets={item.bullets} style={{ fontSize: entrySize, color: '#333333', lineHeight: lineH, textAlign: centered ? 'center' : 'left' }} accent={accent} isModern={isModern} template={settings?._template} />
@@ -238,7 +239,7 @@ export function EducationSection({ section, settings, marginBottom, itemGap, ita
                 italicSub={italicSubs}
                 centered={centered}
               />
-              {item.description && item.description.replace(/<[^>]*>/g, '').trim() && (
+              {hasRichText(item.description) && (
                 <PdfRichText html={item.description} style={{ fontSize: entrySize - 0.5, color: '#333333', lineHeight: lineH, marginTop: 2, textAlign: centered ? 'center' : 'left' }} />
               )}
               <RenderBullets bullets={item.bullets} style={{ fontSize: entrySize - 0.5, color: '#333333', lineHeight: lineH, textAlign: centered ? 'center' : 'left' }} accent={accent} isModern={isModern} template={settings?._template} />

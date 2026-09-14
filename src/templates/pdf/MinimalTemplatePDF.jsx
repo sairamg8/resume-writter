@@ -3,6 +3,7 @@ import { getPageStyle, getDocumentProps } from './shared/PdfPage';
 import { PdfContactRow } from './shared/PdfContact';
 import { SectionRouter, getEffectiveSpacing, getVisibleSections } from './shared/PdfSections';
 import { PdfRichText } from './shared/PdfRichText';
+import { hasRichText } from '@/utils/richText';
 import { getPdfPhotoStyle } from './shared/pdfPhoto';
 import { HEADER_MARGIN_BOTTOM_PT, pxToPt } from './shared/pdfUnits';
 
@@ -91,7 +92,7 @@ export function MinimalTemplatePDF({ data }) {
           </View>
 
           {!hidden.includes('summary') && personal?.summary &&
-           personal.summary.replace(/<[^>]*>/g, '').trim() && (
+           hasRichText(personal.summary) && (
             <View style={{
               marginTop: 6,
               borderLeftWidth: 2,

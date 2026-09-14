@@ -1,5 +1,6 @@
 import { View, Text } from '@react-pdf/renderer';
 import { PdfRichText } from './PdfRichText';
+import { hasRichText } from '@/utils/richText';
 import { SectionTitleOf, RenderBullets, hexAlpha, SectionRouter } from './PdfSections';
 
 // Sections that live in the dark sidebar column
@@ -300,7 +301,7 @@ export function SidebarMainExperience({ section, settings, marginBottom, itemGap
                 </View>
                 {dateStr ? <Text style={{ fontSize: entrySize - 1.5, color: '#9ca3af', flexShrink: 0, marginLeft: 6 }}>{dateStr}</Text> : null}
               </View>
-              {desc && desc.replace(/<[^>]*>/g, '').trim() ? (
+              {hasRichText(desc) ? (
                 <PdfRichText html={desc} style={{ fontSize: entrySize - 0.5, color: '#333333', lineHeight: lineH, marginTop: 2 }} />
               ) : null}
               <RenderBullets bullets={item.bullets} style={{ fontSize: entrySize - 0.5, color: '#333333', lineHeight: lineH }} accent={accent} isModern={false} template="sidebar" />
@@ -341,7 +342,7 @@ export function SidebarMainProjects({ section, settings, marginBottom, itemGap }
                 </View>
                 {dateStr ? <Text style={{ fontSize: entrySize - 1.5, color: '#9ca3af', flexShrink: 0, marginLeft: 6 }}>{dateStr}</Text> : null}
               </View>
-              {item.description && item.description.replace(/<[^>]*>/g, '').trim() ? (
+              {hasRichText(item.description) ? (
                 <PdfRichText html={item.description} style={{ fontSize: entrySize - 0.5, color: '#333333', lineHeight: lineH, marginTop: 2 }} />
               ) : null}
               <RenderBullets bullets={item.bullets} style={{ fontSize: entrySize - 0.5, color: '#333333', lineHeight: lineH }} accent={accent} isModern={false} template="sidebar" />

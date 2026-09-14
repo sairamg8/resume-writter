@@ -2,6 +2,7 @@ import { Document, Page, View, Text, Image, StyleSheet } from '@react-pdf/render
 import { PdfSectionTitle } from './shared/PdfSection';
 import { getEffectiveSpacing } from './shared/PdfSections';
 import { PdfRichText } from './shared/PdfRichText';
+import { hasRichText } from '@/utils/richText';
 import { getDocumentProps } from './shared/PdfPage';
 import { getPdfPhotoStyle } from './shared/pdfPhoto';
 import { CSS_PX_TO_PT } from './shared/pdfUnits';
@@ -161,7 +162,7 @@ export function SidebarTemplatePDF({ data }) {
           color: textColor,
         }}>
           {!hidden.includes('summary') && personal?.summary &&
-           personal.summary.replace(/<[^>]*>/g, '').trim() && (
+           hasRichText(personal.summary) && (
             <View style={{ marginBottom: sectionGap }}>
               <PdfSectionTitle
                 title="About Me"

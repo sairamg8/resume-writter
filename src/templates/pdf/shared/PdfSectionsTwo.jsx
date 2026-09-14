@@ -1,5 +1,6 @@
 import { View, Text } from '@react-pdf/renderer';
 import { PdfRichText } from './PdfRichText';
+import { hasRichText } from '@/utils/richText';
 import {
   SectionTitleOf,
   RenderColGrid,
@@ -94,7 +95,7 @@ export function ProjectsSection({ section, settings, marginBottom, itemGap, cent
                 </Text>
                 {dateStr ? <Text style={{ fontSize: baseSize, color: dateColor, marginTop: 1, textAlign }}>{dateStr}</Text> : null}
               </View>
-              {item.description && item.description.replace(/<[^>]*>/g, '').trim() && (
+              {hasRichText(item.description) && (
                 <PdfRichText html={item.description} style={{ fontSize: entrySize - 0.5, color: '#333333', lineHeight: lineH, marginTop: 2, textAlign }} />
               )}
               <RenderBullets bullets={item.bullets} style={{ fontSize: entrySize - 0.5, color: '#333333', lineHeight: lineH, textAlign }} accent={accent} isModern={isModern} template={settings?._template} />
@@ -156,7 +157,7 @@ export function AwardsSection({ section, settings, marginBottom, itemGap, italic
               <Text style={{ fontSize: baseSize, color: '#4b5563', fontStyle: italicSubs ? 'italic' : 'normal', textAlign }}>{item.issuer}</Text>
             )}
             {showDates && item.date ? <Text style={{ fontSize: baseSize, color: dateColor, marginTop: 1, textAlign }}>{item.date}</Text> : null}
-            {item.description && item.description.replace(/<[^>]*>/g, '').trim() && (
+            {hasRichText(item.description) && (
               <PdfRichText html={item.description} style={{ fontSize: baseSize, color: '#4b5563', lineHeight: lineH, marginTop: 1, textAlign }} />
             )}
           </View>
@@ -202,7 +203,7 @@ export function VolunteeringSection({ section, settings, marginBottom, itemGap, 
                 italicSub={italicSubs}
                 centered={centered}
               />
-              {item.description && item.description.replace(/<[^>]*>/g, '').trim() && (
+              {hasRichText(item.description) && (
                 <PdfRichText html={item.description} style={{ fontSize: entrySize - 0.5, color: '#333333', lineHeight: lineH, marginTop: 2, textAlign: centered ? 'center' : 'left' }} />
               )}
               <RenderBullets bullets={item.bullets} style={{ fontSize: entrySize - 0.5, color: '#333333', lineHeight: lineH, textAlign: centered ? 'center' : 'left' }} accent={accent} isModern={isModern} template={settings?._template} />

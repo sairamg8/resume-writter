@@ -2,6 +2,7 @@ import { Document, Page, View, Text, Image } from '@react-pdf/renderer';
 import { getPageStyle, getDocumentProps } from './shared/PdfPage';
 import { SectionRouter, getEffectiveSpacing, getVisibleSections } from './shared/PdfSections';
 import { PdfRichText } from './shared/PdfRichText';
+import { hasRichText } from '@/utils/richText';
 import { MailIcon, PhoneIcon, MapPinIcon, GlobeIcon, LinkedinPdfIcon, GithubPdfIcon } from './shared/PdfIcons';
 import { getPdfPhotoStyle } from './shared/pdfPhoto';
 import { MODERN_HEADER_PAD_X_PT, MODERN_HEADER_PAD_Y_PT, pxToPt } from './shared/pdfUnits';
@@ -85,7 +86,7 @@ export function ModernTemplatePDF({ data }) {
             </View>
           </View>
           {!hidden.includes('summary') && personal?.summary &&
-           personal.summary.replace(/<[^>]*>/g, '').trim() && (
+           hasRichText(personal.summary) && (
             <View style={{ marginTop: 8 }}>
               <PdfRichText
                 html={personal.summary}

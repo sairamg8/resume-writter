@@ -3,6 +3,7 @@ import { getPageStyle, getDocumentProps } from './shared/PdfPage';
 import { PdfContactRow } from './shared/PdfContact';
 import { SectionRouter, getEffectiveSpacing, getVisibleSections } from './shared/PdfSections';
 import { PdfRichText } from './shared/PdfRichText';
+import { hasRichText } from '@/utils/richText';
 import { getPdfPhotoStyle } from './shared/pdfPhoto';
 import { HEADER_BORDER_PAD_PT, HEADER_MARGIN_BOTTOM_PT } from './shared/pdfUnits';
 
@@ -101,7 +102,7 @@ export function ClassicTemplatePDF({ data }) {
           </View>
 
           {!hidden.includes('summary') && personal?.summary &&
-           personal.summary.replace(/<[^>]*>/g, '').trim() && (
+           hasRichText(personal.summary) && (
             <View style={{ marginTop: 8 }}>
               <PdfRichText
                 html={personal.summary}
