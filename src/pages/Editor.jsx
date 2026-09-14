@@ -230,12 +230,13 @@ export function Editor({ store, auth, sync }) {
                 className="w-full text-sm font-semibold border-b border-blue-400 outline-none bg-transparent text-gray-800"
               />
             ) : (
-              <button onClick={() => setEditingName(true)} className="text-sm font-semibold text-gray-800 hover:text-gray-600 truncate w-full text-left">
+              <button onClick={() => setEditingName(true)} title="Rename resume" className="text-sm font-semibold text-gray-800 hover:text-gray-600 truncate w-full text-left">
                 {resume.name}
               </button>
             )}
           </div>
-          <LayoutToggle layoutMode={layoutMode} setLayoutMode={setLayoutMode} />
+          {/* In split and preview modes the preview toolbar carries the toggle; only editor-only needs one here. */}
+          {layoutMode === 'editor' && <LayoutToggle layoutMode={layoutMode} setLayoutMode={setLayoutMode} />}
           <div className="flex items-center gap-1.5 shrink-0">
             <ExportDropdown
               exporting={exporting}
@@ -246,7 +247,7 @@ export function Editor({ store, auth, sync }) {
               onImportJSON={data => { const newId = store.importResume(data); navigate(`/resume/${newId}`); }}
             />
             <div className="w-px h-4 bg-gray-200 self-center" />
-            <AuthBar {...auth} {...sync} />
+            <AuthBar {...auth} {...sync} compact />
           </div>
         </div>
 

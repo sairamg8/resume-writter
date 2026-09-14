@@ -45,7 +45,8 @@ function SyncDot({ syncStatus, lastSynced, isOnline }) {
   );
 }
 
-export default function AuthBar({ user, authLoading, signInWithGoogle, signOut, syncStatus, lastSynced, isOnline }) {
+/** `compact` renders the signed-out state as an icon-only button, for narrow headers. */
+export default function AuthBar({ user, authLoading, signInWithGoogle, signOut, syncStatus, lastSynced, isOnline, compact = false }) {
   const [signingIn, setSigningIn] = useState(false);
   const [menuOpen, setMenuOpen]   = useState(false);
 
@@ -64,10 +65,12 @@ export default function AuthBar({ user, authLoading, signInWithGoogle, signOut, 
       <button
         onClick={handleSignIn}
         disabled={signingIn}
-        className="flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-200 text-gray-700 rounded-lg text-xs font-semibold hover:bg-gray-50 transition-colors shadow-sm disabled:opacity-60"
+        title={compact ? 'Sign in with Google' : undefined}
+        aria-label={compact ? 'Sign in with Google' : undefined}
+        className={`flex items-center gap-2 ${compact ? 'p-1.5' : 'px-3 py-1.5'} bg-white border border-gray-200 text-gray-700 rounded-lg text-xs font-semibold hover:bg-gray-50 transition-colors shadow-sm disabled:opacity-60 shrink-0`}
       >
         <GoogleIcon />
-        {signingIn ? 'Signing in…' : 'Sign in with Google'}
+        {!compact && (signingIn ? 'Signing in…' : 'Sign in with Google')}
       </button>
     );
   }
