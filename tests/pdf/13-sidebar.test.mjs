@@ -56,3 +56,15 @@ describe('Sidebar dark-column spacing (FIDB-38)', () => {
     assert.ok(Math.abs(override - compact - (20 - 4) * 0.75) < 0.2, `an Item gap override wins: ${override}`);
   });
 });
+
+describe('Sidebar dark-column fields', () => {
+  it('references print every field the editor offers (FIDB-40)', async () => {
+    const pages = await read(await render(sidebar([section('references', [
+      { name: 'Jane Doe', jobTitle: 'CTO', company: 'Acme Corp', relationship: 'Former Manager', email: 'jane@acme.com', phone: '+1 555 0101' },
+      { name: 'Hidden Ref', company: 'Hidden Co', visible: false },
+    ])])));
+    const text = allText(pages);
+    for (const s of ['Jane Doe', 'CTO', 'Acme Corp', 'Former Manager', 'jane@acme.com', '+1 555 0101']) assert.ok(text.includes(s), `${s} in: ${text}`);
+    assert.ok(!text.includes('Hidden'), 'a hidden reference stays out');
+  });
+});

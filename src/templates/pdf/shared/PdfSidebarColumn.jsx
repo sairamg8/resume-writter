@@ -131,7 +131,10 @@ export function SideReferences({ section, sectionGap, itemGap }) {
           <View key={i}>
             <Text style={{ fontSize: 9, fontWeight: 'bold', color: '#e2e8f0', lineHeight: 1.2 }}>{item.name}</Text>
             {item.jobTitle && <Text style={{ fontSize: 9, color: '#94a3b8', lineHeight: 1.2 }}>{item.jobTitle}</Text>}
+            {item.company && <Text style={{ fontSize: 9, color: '#94a3b8', lineHeight: 1.2 }}>{item.company}</Text>}
+            {item.relationship && <Text style={{ fontSize: 9, color: '#64748b', fontStyle: 'italic', lineHeight: 1.2 }}>{item.relationship}</Text>}
             {item.email && <Text style={{ fontSize: 9, color: '#64748b', lineHeight: 1.2 }}>{item.email}</Text>}
+            {item.phone && <Text style={{ fontSize: 9, color: '#64748b', lineHeight: 1.2 }}>{item.phone}</Text>}
           </View>
         ))}
       </View>
