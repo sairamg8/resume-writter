@@ -12,20 +12,23 @@ import {
   SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, arrayMove,
 } from '@dnd-kit/sortable';
 
-import { TEMPLATE_MAP, SECTION_GROUPS, FONT_SIZE_MAP } from '@/constants/resume';
-import { computeMargin, computeLineHeight, timeAgo } from '@/utils/resume';
+import { SECTION_GROUPS } from '@/constants/resume';
+import { timeAgo } from '@/utils/resume';
 import AuthBar from '@/components/AuthBar';
 import { LayoutToggle } from '@/components/LayoutToggle';
-import { PaginatedPreview } from '@/components/PaginatedPreview';
+import { PdfPreview } from '@/components/PdfPreview';
 import PersonalInfoEditor from '@/components/PersonalInfoEditor';
 import { SortableSection } from '@/components/SectionEditor';
 import DesignPanel from '@/components/DesignPanel';
 import CoverLetterPanel from '@/components/CoverLetterPanel';
 import { ExportDropdown } from '@/components/ExportDropdown';
-import ClassicTemplate from '@/templates/ClassicTemplate';
-import CoverLetterTemplate from '@/templates/CoverLetterTemplate';
-import { getFontById, loadGoogleFont, loadCustomGoogleFont } from '@/utils/fonts';
 import { downloadBlob } from '@/utils/download';
+
+// Module-level so their identity is stable: PdfPreview re-renders when `render` changes.
+const renderResumePreview = (resume) =>
+  import('@/utils/pdfExportReactPDF').then((m) => m.renderResumePdf(resume));
+const renderCoverLetterPreview = (resume) =>
+  import('@/utils/pdfExportReactPDF').then((m) => m.renderCoverLetterPdf(resume));
 
 function buildExportFilename(authUser, resume) {
   const name = (authUser?.displayName || resume?.personal?.name || 'resume').replace(/\s+/g, '_');
@@ -105,23 +108,6 @@ export function Editor({ store, auth, sync }) {
     window.addEventListener('mouseup', onMouseUp);
   }
 
-  const ActiveTemplate = TEMPLATE_MAP[resume?.template] || ClassicTemplate;
-  const settings = resume?.settings || {};
-  const margin = computeMargin(settings);
-  const fontSize = FONT_SIZE_MAP[settings.fontSize] || '11px';
-  const lineHeight = computeLineHeight(settings);
-  const vMarginMm = parseFloat(margin.split(' ')[0]) || 14;
-  const pageContentMm = Math.max(100, 297 - vMarginMm * 2);
-
-  useEffect(() => {
-    const font = getFontById(settings.font);
-    if (font) loadGoogleFont(font);
-  }, [settings.font]);
-
-  useEffect(() => {
-    if (settings.customFont) loadCustomGoogleFont(settings.customFont);
-  }, [settings.customFont]);
-
   // Warm react-pdf fonts + template chunk so Export PDF feels instant
   useEffect(() => {
     if (!resume) return;
@@ -183,14 +169,6 @@ export function Editor({ store, auth, sync }) {
     });
   }
 
-  function handleExportPDFLegacy() {
-    const filename = buildExportFilename(auth?.user, resume);
-    return runExport('pdf', 'PDF export (legacy)', async () => {
-      const { exportToPDF } = await import('@/utils/pdfExport');
-      await exportToPDF(activeTab === 'coverletter' ? 'cover-letter-preview' : 'resume-preview', `${filename}.pdf`, margin);
-    });
-  }
-
   function handleExportWord() {
     const filename = buildExportFilename(auth?.user, resume);
     return runExport('word', 'Word export', async () => {
@@ -249,7 +227,6 @@ export function Editor({ store, auth, sync }) {
             <ExportDropdown
               exporting={exporting}
               onExportPDF={handleExportPDF}
-              onExportPDFLegacy={handleExportPDFLegacy}
               onExportWord={handleExportWord}
               onExportJSON={handleExportJSON}
               onImportJSON={data => { setExportError(null); const newId = store.importResume(data); navigate(`/resume/${newId}`); }}
@@ -420,11 +397,9 @@ export function Editor({ store, auth, sync }) {
         </div>
 
         {activeTab === 'coverletter' ? (
-          <div id="cover-letter-preview" className="bg-white shadow-2xl shrink-0" style={{ width: '210mm', minHeight: '297mm', padding: margin, fontSize, lineHeight }}>
-            <CoverLetterTemplate data={resume} />
-          </div>
+          <PdfPreview key="coverletter" title="Cover letter" textId="cover-letter-preview" input={resume} render={renderCoverLetterPreview} zoom={previewZoom} />
         ) : (
-          <PaginatedPreview resume={resume} ActiveTemplate={ActiveTemplate} margin={margin} fontSize={fontSize} lineHeight={lineHeight} pageContentMm={pageContentMm} zoom={previewZoom} />
+          <PdfPreview key="resume" title="Résumé" textId="resume-preview" input={resume} render={renderResumePreview} zoom={previewZoom} />
         )}
 
         <div className="mt-6 flex items-center gap-3 text-xs text-gray-400 shrink-0">

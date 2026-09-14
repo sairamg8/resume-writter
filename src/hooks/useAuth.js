@@ -4,9 +4,11 @@ import { auth } from '@/utils/firebase';
 
 export function useAuth() {
   const [user, setUser] = useState(null);
-  const [authLoading, setAuthLoading] = useState(true);
+  // Without Firebase there is nothing to wait for.
+  const [authLoading, setAuthLoading] = useState(Boolean(auth));
 
   useEffect(() => {
+    if (!auth) return undefined;
     const unsub = onAuthStateChanged(auth, u => {
       setUser(u);
       setAuthLoading(false);
@@ -15,13 +17,14 @@ export function useAuth() {
   }, []);
 
   async function signInWithGoogle() {
+    if (!auth) throw new Error('Cloud sync is not configured for this build.');
     const provider = new GoogleAuthProvider();
     await signInWithPopup(auth, provider);
   }
 
   async function signOut() {
-    await fbSignOut(auth);
+    if (auth) await fbSignOut(auth);
   }
 
-  return { user, authLoading, signInWithGoogle, signOut };
+  return { user, authLoading, cloudAvailable: Boolean(auth), signInWithGoogle, signOut };
 }

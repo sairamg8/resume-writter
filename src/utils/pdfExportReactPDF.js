@@ -55,7 +55,8 @@ export async function warmPdfExport(resume) {
   ]);
 }
 
-export async function exportToPDFReact(resume, filename = 'resume.pdf') {
+/** Render the résumé exactly as it is exported. Used by the live preview and by Export PDF. */
+export async function renderResumePdf(resume) {
   ensureNoHyphenation();
   const key = resume?.template || 'classic';
 
@@ -71,11 +72,11 @@ export async function exportToPDFReact(resume, filename = 'resume.pdf') {
   const blob = await instance.toBlob();
   // Free internal resources when the API supports it
   try { instance.reset?.(); } catch { /* no-op */ }
-  downloadBlob(blob, filename);
   return blob;
 }
 
-export async function exportCoverLetterPDFReact(resume, filename = 'cover-letter.pdf') {
+/** Render the cover letter exactly as it is exported. */
+export async function renderCoverLetterPdf(resume) {
   ensureNoHyphenation();
   const templateKey = resume?.template || 'classic';
 
@@ -95,6 +96,17 @@ export async function exportCoverLetterPDFReact(resume, filename = 'cover-letter
   const instance = pdf(React.createElement(mod.CoverLetterTemplatePDF, { data }));
   const blob = await instance.toBlob();
   try { instance.reset?.(); } catch { /* no-op */ }
+  return blob;
+}
+
+export async function exportToPDFReact(resume, filename = 'resume.pdf') {
+  const blob = await renderResumePdf(resume);
+  downloadBlob(blob, filename);
+  return blob;
+}
+
+export async function exportCoverLetterPDFReact(resume, filename = 'cover-letter.pdf') {
+  const blob = await renderCoverLetterPdf(resume);
   downloadBlob(blob, filename);
   return blob;
 }

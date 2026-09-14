@@ -1,7 +1,7 @@
 import { useRef, useState, useEffect } from 'react';
 import { Download, FileText, Upload, ChevronDown } from 'lucide-react';
 
-export function ExportDropdown({ exporting, onExportPDF, onExportPDFLegacy, onExportWord, onExportJSON, onImportJSON, onImportError }) {
+export function ExportDropdown({ exporting, onExportPDF, onExportWord, onExportJSON, onImportJSON, onImportError }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   const importRef = useRef(null);
@@ -37,13 +37,6 @@ export function ExportDropdown({ exporting, onExportPDF, onExportPDFLegacy, onEx
             className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-blue-50 hover:text-blue-700 disabled:opacity-50"
           >
             <Download size={12} className="text-blue-500" /> Export PDF
-          </button>
-          <button
-            onClick={() => { onExportPDFLegacy(); setOpen(false); }}
-            disabled={!!exporting}
-            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-500 hover:bg-gray-50 hover:text-gray-700 disabled:opacity-50"
-          >
-            <Download size={12} className="text-gray-400" /> Export PDF (Legacy)
           </button>
           <button
             onClick={() => { onExportWord(); setOpen(false); }}

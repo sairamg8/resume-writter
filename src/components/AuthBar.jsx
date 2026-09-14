@@ -46,7 +46,7 @@ function SyncDot({ syncStatus, lastSynced, isOnline }) {
 }
 
 /** `compact` renders the signed-out state as an icon-only button, for narrow headers. */
-export default function AuthBar({ user, authLoading, signInWithGoogle, signOut, syncStatus, lastSynced, isOnline, compact = false }) {
+export default function AuthBar({ user, authLoading, cloudAvailable = true, signInWithGoogle, signOut, syncStatus, lastSynced, isOnline, compact = false }) {
   const [signingIn, setSigningIn] = useState(false);
   const [menuOpen, setMenuOpen]   = useState(false);
 
@@ -55,6 +55,9 @@ export default function AuthBar({ user, authLoading, signInWithGoogle, signOut, 
     try { await signInWithGoogle(); } catch (e) { console.error(e); }
     setSigningIn(false);
   }
+
+  // A build without Firebase config has no accounts: everything stays in this browser.
+  if (!cloudAvailable) return null;
 
   if (authLoading) {
     return <div className="w-6 h-6 rounded-full bg-gray-100 animate-pulse" />;
