@@ -94,11 +94,14 @@ function registerNoto(subset) {
   if (!registeredFamilies.has(family)) {
     registerFaces(family, (w, s) => NOTO_FILES[`${subset}-${w}-${s}`]);
     registeredFamilies.add(family);
+    if (subset !== 'latin') fallbackFamilies.add(family);
   }
   return family;
 }
 
 const registeredFamilies = new Set();
+// Families that only ever back up another font (a subset or a symbol font). See prepareFonts.
+const fallbackFamilies = new Set();
 registerNoto('latin');
 ensureNoHyphenation();
 
@@ -123,7 +126,8 @@ function fetchMetadata(pkg) {
 const nearest = (weights, target) => weights.reduce((best, w) => (Math.abs(w - target) < Math.abs(best - target) ? w : best));
 
 /** Register `family` from Fontsource `pkg` and `subset`, using only faces the package has. */
-function registerCdn(family, pkg, meta, subset) {
+function registerCdn(family, pkg, meta, subset, { fallback = false } = {}) {
+  if (fallback) fallbackFamilies.add(family);
   if (registeredFamilies.has(family)) return family;
   const hasItalic = meta.styles.includes('italic');
   registerFaces(family, (weight, style) => {
@@ -171,7 +175,7 @@ export function collectText(value) {
 }
 
 /** Fallback families for the characters in `text` that the primary (latin) face lacks. */
-async function fallbackFamilies(text, primary) {
+async function fallbacksFor(text, primary) {
   const subsets = new Set();
   const symbols = new Set();
   for (const ch of new Set(text)) {
@@ -185,13 +189,15 @@ async function fallbackFamilies(text, primary) {
   const families = [];
   for (const subset of Object.keys(SUBSETS)) {
     if (!subsets.has(subset)) continue;
-    if (primary?.meta.subsets?.includes(subset)) families.push(registerCdn(`${primary.family} ${subset}`, primary.pkg, primary.meta, subset));
+    if (primary?.meta.subsets?.includes(subset)) {
+      families.push(registerCdn(`${primary.family} ${subset}`, primary.pkg, primary.meta, subset, { fallback: true }));
+    }
     if (NOTO_FILES[`${subset}-400-normal`]) families.push(registerNoto(subset));
   }
   for (const font of SYMBOL_FONTS) {
     if (!symbols.has(font)) continue;
     const meta = await fetchMetadata(font.pkg);
-    if (meta) families.push(registerCdn(font.family, font.pkg, meta, font.subset));
+    if (meta) families.push(registerCdn(font.family, font.pkg, meta, font.subset, { fallback: true }));
   }
   return families;
 }
@@ -205,7 +211,7 @@ export async function resolvePdfFonts(settings, text = '') {
   ensureNoHyphenation();
   let primary = await chosenFont(settings);
   if (primary && !(await loads(primary.family))) primary = null;
-  const families = [primary ? primary.family : 'NotoSans', ...(await fallbackFamilies(text, primary))];
+  const families = [primary ? primary.family : 'NotoSans', ...(await fallbacksFor(text, primary))];
   const usable = [];
   for (const family of families) if (family === families[0] || await loads(family)) usable.push(family);
   await prepareFonts(usable);
@@ -227,24 +233,32 @@ async function loads(family) {
 const primedFonts = new WeakSet();
 
 /**
- * Load every registered face of `families` and seed fontkit's glyph cache from each cmap.
+ * Load every registered face of `families` and get their fontkit fonts ready to render.
  * Call before every render.
  *
- * fontkit caches one glyph object per glyph id, carrying the characters of the FIRST request.
- * Embedding a composite glyph requests its components with no characters — the middle dot
- * "·" is drawn from the period's outline, "é" from "e" — so a later "." then gets an empty
- * ToUnicode entry: the PDF looks right, but copy-paste and ATS parsers read
- * "me@example.com" as "me@examplecom". Seeding the cache from the cmap first gives every
- * directly mapped glyph its real code point, whatever is embedded later.
+ * 1. Seed fontkit's glyph cache from each cmap. fontkit caches one glyph object per glyph id,
+ *    carrying the characters of the FIRST request. Embedding a composite glyph requests its
+ *    components with no characters — the middle dot "·" is drawn from the period's outline,
+ *    "é" from "e" — so a later "." got an empty ToUnicode entry: the PDF looked right, but
+ *    copy-paste and ATS parsers read "me@example.com" as "me@examplecom".
+ * 2. Give each fallback font its own PostScript name. Every subset file of a typeface carries
+ *    the same name ("NotoSans-Regular"), and the PDF writer reuses an embedded font by name,
+ *    so Cyrillic glyph ids were written into the Latin font ("Привет" printed as "Пeивеg").
  */
 export async function prepareFonts(families) {
   const store = Font.getRegisteredFonts();
-  const sources = families.flatMap((family) => store[family]?.sources || []);
+  const entries = families.flatMap((family) => (store[family]?.sources || []).map((source) => ({ family, source })));
   // A face that fails to load is left to react-pdf, which reports it when the face is used.
-  await Promise.all(sources.map((source) => source.load().catch(() => null)));
-  for (const { data: font } of sources) {
-    if (!font || primedFonts.has(font) || typeof font.glyphForCodePoint !== 'function') continue;
-    for (const codePoint of font.characterSet || []) font.glyphForCodePoint(codePoint);
-    primedFonts.add(font);
+  await Promise.all(entries.map(({ source }) => source.load().catch(() => null)));
+  for (const { family, source: { data: font } } of entries) {
+    if (!font || typeof font.glyphForCodePoint !== 'function') continue;
+    if (!primedFonts.has(font)) {
+      for (const codePoint of font.characterSet || []) font.glyphForCodePoint(codePoint);
+      if (fallbackFamilies.has(family)) {
+        const name = `${font.postscriptName}-${family.replace(/[^A-Za-z0-9]+/g, '')}`;
+        Object.defineProperty(font, 'postscriptName', { value: name, configurable: true });
+      }
+      primedFonts.add(font);
+    }
   }
 }

@@ -161,10 +161,29 @@ export async function read(bytes) {
     const links = (await page.getAnnotations())
       .filter((a) => a.subtype === 'Link')
       .map((a) => ({ url: a.url || a.unsafeUrl || null, rect: a.rect }));
-    pages.push({ W, H, items, links, strokes, fills, text: items.map((t) => t.str).join(' ') });
+    pages.push({ W, H, items, links, strokes, fills, text: joinItems(items) });
   }
   await doc.loadingTask.destroy();
   return pages;
+}
+
+/**
+ * Reading-order text of a page's items: runs on one line that touch (a font change splits a
+ * word into several items) join without a space; separate words and lines get one.
+ */
+function joinItems(items) {
+  let out = '';
+  let prev = null;
+  for (const t of items) {
+    if (prev) {
+      const sameLine = Math.abs(t.y - prev.y) < 1;
+      const gap = t.x - (prev.x + prev.w);
+      if ((!sameLine || gap > 0.8) && !/\s$/.test(out) && !/^\s/.test(t.str)) out += ' ';
+    }
+    out += t.str;
+    prev = t;
+  }
+  return out.replace(/\s+/g, ' ').trim();
 }
 
 /** Every text item of every page, in page order. */
