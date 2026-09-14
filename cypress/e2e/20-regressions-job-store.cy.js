@@ -1,7 +1,7 @@
 // Regression tests: the job pages share the app's one résumé store and one job store (audit
 // main-loop note M14). Each page used to create its own copy of both, read from localStorage
 // when it opened, so a page only knew what storage held at that moment.
-import { buildTestState, STORAGE_KEY } from '../../tests/helpers.js';
+import { buildTestState, DATA_VERSION, STORAGE_KEY } from '../../tests/helpers.js';
 
 const JOBS_KEY = 'cpwtcv_jobs_v1';
 const OWNER = { uid: 'e2e-owner', email: 'sairamgudiputi8@gmail.com', displayName: 'Owner' };
@@ -64,7 +64,8 @@ describe('regressions — one résumé store and one job store (M14)', () => {
       expect(s.jobs[1]).to.deep.eq(job('job_b', 'Beta', 'Designer'));
       expect(s.jobs[2].resumeId).to.eq(resumes.activeId);
     });
-    cy.store().should((s) => expect(s.resumes).to.deep.eq(resumes.resumes));
+    // The résumés are untouched — only stamped with the data version they were loaded as.
+    cy.store().should((s) => expect(s.resumes).to.deep.eq(resumes.resumes.map((r) => ({ ...r, dataVersion: DATA_VERSION }))));
   });
 
   it('M14: a job added or edited while storage is full stays in the tracker, which says it is not saved', () => {
