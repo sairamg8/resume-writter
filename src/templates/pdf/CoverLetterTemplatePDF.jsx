@@ -3,7 +3,7 @@ import { getPageStyle, getDocumentProps } from './shared/PdfPage';
 import { PdfRichText } from './shared/PdfRichText';
 import { PdfContactRow } from './shared/PdfContact';
 import { solid } from './shared/pdfColors';
-import { letterBlock } from '@/utils/coverLetter';
+import { letterBlock, letterHiddenFields, letterSignature } from '@/utils/coverLetter';
 
 /** Space under the date, the recipient block and the subject. */
 const BLOCK_GAP = 12;
@@ -38,14 +38,12 @@ export function CoverLetterTemplatePDF({ data }) {
   const clContactStyle  = cl.headerStyle    || settings.contactStyle  || 'bar';
   const clContactLayout = cl.headerLayout   || settings.contactLayout || 'justify';
   const fieldsPos       = cl.fieldsPosition || 'right';
-  const clHiddenSet     = new Set(cl.hiddenFields ?? []);
 
   const photoSrc = cl.showPhoto !== false ? (cl.clPhoto || personal?.photo) : null;
-  const hidden   = (personal?.hiddenFields || []).concat([...clHiddenSet]);
+  const hidden   = letterHiddenFields(cl, personal);
 
-  const sigName        = cl.signatureName        != null ? cl.signatureName        : (personal?.name  || '');
-  const sigDesignation = cl.signatureDesignation != null ? cl.signatureDesignation : (personal?.title || '');
-  const sigGap         = cl.signatureSpace === 'wide' ? 24 : 8;
+  const sig    = letterSignature(cl, personal);
+  const sigGap = sig.wide ? 24 : 8;
 
   const block     = letterBlock(cl);
   const blockLine = { fontSize: baseSize, color: textColor, lineHeight: 1.3 };
@@ -157,14 +155,14 @@ export function CoverLetterTemplatePDF({ data }) {
         {/* Closing / Signature */}
         <View>
           <Text style={{ fontSize: baseSize, color: textColor, lineHeight: lineH }}>
-            {cl.closing || 'Sincerely'},
+            {sig.closing}
           </Text>
           <View style={{ marginTop: sigGap }}>
-            {sigName ? (
-              <Text style={{ fontSize: baseSize, fontWeight: 'bold', color: '#0f172a', lineHeight: 1.3 }}>{sigName}</Text>
+            {sig.name ? (
+              <Text style={{ fontSize: baseSize, fontWeight: 'bold', color: '#0f172a', lineHeight: 1.3 }}>{sig.name}</Text>
             ) : null}
-            {sigDesignation ? (
-              <Text style={{ fontSize: baseSize, color: '#64748b', lineHeight: 1.3 }}>{sigDesignation}</Text>
+            {sig.designation ? (
+              <Text style={{ fontSize: baseSize, color: '#64748b', lineHeight: 1.3 }}>{sig.designation}</Text>
             ) : null}
           </View>
         </View>

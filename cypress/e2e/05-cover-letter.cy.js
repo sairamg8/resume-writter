@@ -94,6 +94,18 @@ describe('cover letter', () => {
     letter().should('contain.text', '4 September 2026');
   });
 
+  it('Export Word on the Cover Letter tab downloads the letter, not the resume (FIDB-50)', () => {
+    cy.exportDocx().then((docx) => {
+      expect(docx.file.split(/[\\/]/).pop()).to.eq('Alex_Johnson_Full_Stack_Engineer_cover_letter.docx');
+      const text = squash(docx.paragraphs.join(' '));
+      ['15 January 2026', 'Sarah Smith', 'Globex Corp', 'Application for Senior Engineer role',
+        'I am excited to apply for the Senior Engineer position', 'Sincerely,', 'alex@example.com']
+        .forEach((s) => expect(text, s).to.contain(squash(s)));
+      ['Professional Experience', 'Acme Corp', 'Employee of the Year']
+        .forEach((s) => expect(text, `the résumé's "${s}"`).not.to.contain(squash(s)));
+    });
+  });
+
   it('cover letter edits do not leak into the resume preview', () => {
     field('Closing Phrase').clear().type('Only in the letter');
     cy.contains('button', 'Resume').click();

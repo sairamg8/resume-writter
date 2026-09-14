@@ -1,5 +1,6 @@
 // What a cover letter prints around its body, worked out once so the PDF and the Word export
-// cannot drift: the date line, the recipient block and the subject line.
+// cannot drift: the hidden contacts, the date line, the recipient block, the subject line, the
+// closing and the signature.
 import { todayLocalISO } from '@/utils/dates';
 
 const MONTHS = [
@@ -33,5 +34,23 @@ export function letterBlock(cl = {}) {
     recipientTitle: text(cl.recipientTitle),
     company: text(cl.company),
     subject: text(cl.subject),
+  };
+}
+
+/** Contact fields the letter leaves out: the résumé's hidden fields plus the letter's own. */
+export function letterHiddenFields(cl = {}, personal = {}) {
+  return [...(personal?.hiddenFields || []), ...(cl?.hiddenFields || [])];
+}
+
+/**
+ * The closing line and the signature. The name and designation are the letter's own once the
+ * user has set them (even to ''), else the résumé's name and title.
+ */
+export function letterSignature(cl = {}, personal = {}) {
+  return {
+    closing: `${cl.closing || 'Sincerely'},`,
+    name: cl.signatureName != null ? cl.signatureName : (personal?.name || ''),
+    designation: cl.signatureDesignation != null ? cl.signatureDesignation : (personal?.title || ''),
+    wide: cl.signatureSpace === 'wide',
   };
 }

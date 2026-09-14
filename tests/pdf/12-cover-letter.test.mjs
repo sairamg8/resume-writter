@@ -1,7 +1,9 @@
-// The cover letter PDF: the business-letter block (date, recipient, subject).
+// The cover letter: the business-letter block (date, recipient, subject) and the Word export.
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { setup, teardown, resume, renderCover, read, allItems, allText } from './harness.mjs';
+import {
+  setup, teardown, resume, experience, renderCover, read, allItems, allText, loadModule, readDocx,
+} from './harness.mjs';
 
 before(setup);
 after(teardown);
@@ -59,5 +61,44 @@ describe('cover letter — date, recipient and subject (FIDB-49)', () => {
     } })));
     assert.equal(allText(blank), 'Test Person Engineer Hello Sincerely, Test Person Engineer');
     assert.equal(item(bare, 'Hello').y, item(blank, 'Hello').y, 'blank fields leave no gap');
+  });
+});
+
+async function renderCoverDocx(r) {
+  const { renderCoverLetterDocx } = await loadModule('/src/utils/wordExport.js');
+  return readDocx(new Uint8Array(await (await renderCoverLetterDocx(r)).arrayBuffer()));
+}
+
+describe('cover letter — Word export (FIDB-50)', () => {
+  it('is the letter, in the PDF\'s order: letterhead, date, recipient, subject, body, closing, signature', async () => {
+    const r = resume({
+      personal: { email: 'me@example.com', phone: '+1 555 0100', summary: '<p>Resume summary</p>' },
+      sections: [experience([{ company: 'Resume Only Co' }])],
+      coverLetter: { ...LETTER, closing: 'Kind regards', signatureName: 'T. Person', signatureDesignation: 'Staff Engineer' },
+    });
+    const doc = await renderCoverDocx(r);
+    const order = ['Test Person', 'Engineer', 'me@example.com', '15 January 2026', 'Sarah Smith', 'Engineering Manager',
+      'Globex Corp', 'Application for the Senior Engineer role', 'Dear Sarah,', 'I am excited to apply.',
+      'Kind regards,', 'T. Person', 'Staff Engineer'];
+    const at = order.map((s) => doc.texts.findIndex((t) => t === s || (s.includes('@') && t.includes(s))));
+    assert.ok(!at.includes(-1), `${order.filter((_, i) => at[i] < 0).join(', ')} missing in: ${doc.texts.join(' | ')}`);
+    assert.deepEqual(at, [...at].sort((a, b) => a - b), doc.texts.join(' | '));
+    for (const s of ['Resume Only Co', 'Resume summary', 'PROFESSIONAL EXPERIENCE']) {
+      assert.ok(!doc.texts.some((t) => t.includes(s)), `the résumé's "${s}" is not in the letter`);
+    }
+    assert.deepEqual(doc.links, ['mailto:me@example.com', 'tel:+15550100']);
+  });
+
+  it('leaves out hidden contacts and empty lines; the body keeps its rich text', async () => {
+    const doc = await renderCoverDocx(resume({
+      personal: { email: 'me@example.com', phone: '+1 555 0100' },
+      coverLetter: { hiddenFields: ['email'], body: '<p>Hi <strong>there</strong></p><ol><li>First</li></ol><p><a href="https://example.com/p">portfolio</a></p>' },
+    }));
+    const text = doc.texts.join(' | ');
+    assert.ok(!text.includes('me@example.com') && text.includes('+1 555 0100'), text);
+    assert.ok(doc.texts.includes('Hi there') && doc.texts.includes('1.\tFirst'), text);
+    assert.ok(doc.links.includes('https://example.com/p'), doc.links.join(', '));
+    assert.ok(!text.includes('Hiring Manager') && !text.includes('<'), text);
+    assert.deepEqual(doc.texts.slice(-3), ['Sincerely,', 'Test Person', 'Engineer'], 'the signature falls back to the résumé name and title');
   });
 });
