@@ -1,11 +1,6 @@
 import React from 'react';
 import { pdf } from '@react-pdf/renderer';
-import {
-  registerPdfFont,
-  prefetchPdfFont,
-  prepareFonts,
-  ensureNoHyphenation,
-} from '@/templates/pdf/shared/pdfFontLoader';
+import { resolvePdfFonts, collectText } from '@/templates/pdf/shared/pdfFontLoader';
 import { resolveTemplateSettings } from '@/templates/pdf/shared/PdfPage';
 import { resolveSection } from '@/templates/pdf/shared/templateSectionDefaults';
 import { downloadBlob } from '@/utils/download';
@@ -42,14 +37,13 @@ function prepareResumeData(resume, fontFamily, templateKey) {
 }
 
 /**
- * Warm caches used by Export PDF: hyphenation off, font prefetch, template chunk.
+ * Warm caches used by Export PDF: fonts and the template chunk.
  * Call from the editor on mount / when template or font changes.
  */
 export async function warmPdfExport(resume) {
-  ensureNoHyphenation();
   const key = resume?.template || 'classic';
   await Promise.all([
-    prefetchPdfFont(resume?.settings),
+    resolvePdfFonts(resume?.settings, collectText(resume)).catch(() => null),
     loadTemplate(key).catch(() => null),
     // Cover letter is small; warm in background when user may need it
     import('@/templates/pdf/CoverLetterTemplatePDF').catch(() => null),
@@ -58,17 +52,11 @@ export async function warmPdfExport(resume) {
 
 /** Render the résumé exactly as it is exported. Used by the live preview and by Export PDF. */
 export async function renderResumePdf(resume) {
-  ensureNoHyphenation();
   const key = resume?.template || 'classic';
-
-  // Font + template in parallel (font registration is sync after prefetch warms cache)
-  const [, fontFamily, TemplatePDF] = await Promise.all([
-    prefetchPdfFont(resume?.settings),
-    Promise.resolve(registerPdfFont(resume?.settings)),
+  const [{ fontFamily }, TemplatePDF] = await Promise.all([
+    resolvePdfFonts(resume?.settings, collectText(resume)),
     loadTemplate(key),
   ]);
-
-  await prepareFonts([fontFamily]);
   const data = prepareResumeData(resume, fontFamily, key);
   const instance = pdf(React.createElement(TemplatePDF, { data }));
   const blob = await instance.toBlob();
@@ -82,16 +70,11 @@ export async function renderResumePdf(resume) {
  * hint an empty letter shows in the editor; exports never carry it.
  */
 export async function renderCoverLetterPdf(resume, { preview = false } = {}) {
-  ensureNoHyphenation();
   const templateKey = resume?.template || 'classic';
-
-  const [, fontFamily, mod] = await Promise.all([
-    prefetchPdfFont(resume?.settings),
-    Promise.resolve(registerPdfFont(resume?.settings)),
+  const [{ fontFamily }, mod] = await Promise.all([
+    resolvePdfFonts(resume?.settings, collectText({ personal: resume?.personal, coverLetter: resume?.coverLetter })),
     import('@/templates/pdf/CoverLetterTemplatePDF'),
   ]);
-
-  await prepareFonts([fontFamily]);
   const resolvedSettings = resolveTemplateSettings({
     ...resume?.settings,
     _pdfFontFamily: fontFamily,
