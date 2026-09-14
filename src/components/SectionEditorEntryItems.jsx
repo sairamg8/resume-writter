@@ -33,7 +33,7 @@ export function ExperienceItem({ item, onUpdate, onRemove }) {
         Currently working here
       </label>
       <FieldRow label="Description" field="description" hiddenSet={itemHidden} onToggle={toggleField}>
-        <RichTextEditor key={item.id + '_desc'} value={item.description} onChange={v => u('description', v)} placeholder="Use bullet points for achievements. Use italic for project sub-headings (bold is auto-stripped in ATS PDF exports)." rows={5} />
+        <RichTextEditor key={item.id + '_desc'} value={item.description} onChange={v => u('description', v)} placeholder="Use bullet points for achievements — start each with a strong verb and a measurable result." rows={5} />
       </FieldRow>
     </ItemCard>
   );
