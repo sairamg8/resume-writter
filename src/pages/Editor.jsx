@@ -255,7 +255,8 @@ export function Editor({ store, auth, sync }) {
               onExportPDFLegacy={handleExportPDFLegacy}
               onExportWord={handleExportWord}
               onExportJSON={handleExportJSON}
-              onImportJSON={data => { const newId = store.importResume(data); navigate(`/resume/${newId}`); }}
+              onImportJSON={data => { setExportError(null); const newId = store.importResume(data); navigate(`/resume/${newId}`); }}
+              onImportError={setExportError}
             />
             <div className="w-px h-4 bg-gray-200 self-center" />
             <AuthBar {...auth} {...sync} compact />

@@ -21,6 +21,7 @@ export function JobTracker() {
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const importRef = useRef(null);
+  const [importError, setImportError] = useState(null);
 
   function handleExport() {
     const blob = new Blob([JSON.stringify(jobs, null, 2)], { type: 'application/json' });
@@ -37,11 +38,14 @@ export function JobTracker() {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = ev => {
-      try {
-        const parsed = JSON.parse(ev.target.result);
-        const arr = Array.isArray(parsed) ? parsed : (parsed.jobs || []);
-        if (arr.length) importJobs(arr);
-      } catch {}
+      let parsed;
+      try { parsed = JSON.parse(ev.target.result); } catch {
+        setImportError('Could not parse file. Make sure it is a job-tracker JSON export.');
+        return;
+      }
+      const arr = (Array.isArray(parsed) ? parsed : (parsed?.jobs || [])).filter(j => j && typeof j === 'object');
+      if (arr.length) { importJobs(arr); setImportError(null); }
+      else setImportError('No job applications found in that file.');
     };
     reader.readAsText(file);
     e.target.value = '';
@@ -141,6 +145,15 @@ export function JobTracker() {
           </div>
         </div>
       </div>
+
+      {importError && (
+        <div className="max-w-7xl mx-auto px-6 pt-3">
+          <p role="alert" className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 flex items-start gap-2">
+            <span className="flex-1">{importError}</span>
+            <button onClick={() => setImportError(null)} className="font-semibold hover:text-red-800">Dismiss</button>
+          </p>
+        </div>
+      )}
 
       {/* Stats bar */}
       <div className="bg-white border-b border-gray-100">

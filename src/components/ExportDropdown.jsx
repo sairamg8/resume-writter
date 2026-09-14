@@ -1,7 +1,7 @@
 import { useRef, useState, useEffect } from 'react';
 import { Download, FileText, Upload, ChevronDown } from 'lucide-react';
 
-export function ExportDropdown({ exporting, onExportPDF, onExportPDFLegacy, onExportWord, onExportJSON, onImportJSON }) {
+export function ExportDropdown({ exporting, onExportPDF, onExportPDFLegacy, onExportWord, onExportJSON, onImportJSON, onImportError }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   const importRef = useRef(null);
@@ -78,10 +78,13 @@ export function ExportDropdown({ exporting, onExportPDF, onExportPDFLegacy, onEx
           if (!file) return;
           const reader = new FileReader();
           reader.onload = ev => {
-            try {
-              const parsed = JSON.parse(ev.target.result);
-              if (parsed.personal && Array.isArray(parsed.sections)) onImportJSON(parsed);
-            } catch {}
+            let parsed;
+            try { parsed = JSON.parse(ev.target.result); } catch {
+              onImportError?.("Could not parse file. Make sure it's a valid CPWT-CV JSON.");
+              return;
+            }
+            if (parsed?.personal && Array.isArray(parsed.sections)) onImportJSON(parsed);
+            else onImportError?.('Invalid resume file — missing required fields.');
           };
           reader.readAsText(file);
           e.target.value = '';
