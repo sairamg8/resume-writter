@@ -14,7 +14,7 @@ import { downloadBlob } from '@/utils/download';
 
 export function JobTracker() {
   const navigate = useNavigate();
-  const { jobs, persistError, updateJob, deleteJob, importJobs, clearDemoData } = useJobStore();
+  const { jobs, persistError, recovery, dismissRecovery, updateJob, deleteJob, importJobs, clearDemoData } = useJobStore();
   const { appState } = useAppStore();
   const resumes = appState.resumes;
 
@@ -145,6 +145,19 @@ export function JobTracker() {
         <div className="max-w-7xl mx-auto px-6 pt-3">
           <p role="alert" className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
             Changes are not being saved: browser storage is full. Export your applications to keep a copy.
+          </p>
+        </div>
+      )}
+      {recovery && (
+        <div className="max-w-7xl mx-auto px-6 pt-3">
+          <p role="alert" className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 flex items-start gap-2">
+            <span className="flex-1">
+              Your saved job list could not be read in full, so what could not be read was left out.{' '}
+              {recovery.backupKey
+                ? <>A copy of the original is kept in this browser's local storage under “{recovery.backupKey}”.</>
+                : 'Browser storage is full, so no copy of the original could be kept.'}
+            </span>
+            <button onClick={dismissRecovery} className="font-semibold hover:text-red-800">Dismiss</button>
           </p>
         </div>
       )}

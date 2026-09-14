@@ -70,7 +70,51 @@ describe('regressions — resume store', () => {
   });
 });
 
+const JOBS_KEY = 'cpwtcv_jobs_v1';
+
+const visitJobsWithRaw = (raw) =>
+  cy.visit('/#/jobs', {
+    onBeforeLoad(win) {
+      win.localStorage.clear();
+      win.localStorage.setItem(JOBS_KEY, raw);
+    },
+  });
+
+/** The job-store backups in localStorage, as { key: value }. */
+const jobBackups = (win) => Object.fromEntries(Object.keys(win.localStorage)
+  .filter((k) => k.startsWith(`${JOBS_KEY}_backup_`))
+  .map((k) => [k, win.localStorage.getItem(k)]));
+
 describe('regressions — job store', () => {
+  it('NEW-5: an unreadable job list is backed up, and the tracker says so before starting empty', () => {
+    visitJobsWithRaw('{ this is not json');
+    cy.contains('[role="alert"]', 'could not be read').should('be.visible');
+    cy.contains('span', /^Total$/).prev('span').should('have.text', '0');
+    cy.window().then((win) => {
+      const backups = jobBackups(win);
+      expect(Object.values(backups)).to.deep.eq(['{ this is not json']);
+      cy.contains('[role="alert"]', Object.keys(backups)[0]).should('be.visible');
+    });
+    // The next save replaces the unreadable value; the backup stays.
+    cy.jobStore().its('jobs').should('deep.eq', []);
+    cy.window().then((win) => expect(Object.keys(jobBackups(win))).to.have.length(1));
+    cy.contains('[role="alert"]', 'could not be read').contains('button', 'Dismiss').click();
+    cy.contains('[role="alert"]', 'could not be read').should('not.exist');
+  });
+
+  // Version 1 goes through the demo-job migration, version 2 (current) does not.
+  [1, 2].forEach((dataVersion) => {
+    it(`NEW-5: one broken entry does not throw the whole saved list away (data version ${dataVersion})`, () => {
+      const acme = { id: 'job_1', company: 'Acme', role: 'Dev', status: 'applied', todos: [] };
+      const raw = JSON.stringify({ dataVersion, jobs: [null, 'junk', acme] });
+      visitJobsWithRaw(raw);
+      cy.contains('Acme').should('be.visible');
+      cy.contains('[role="alert"]', 'could not be read').should('be.visible');
+      cy.jobStore().should((s) => expect(s.jobs.map((j) => j.company)).to.include('Acme'));
+      cy.window().then((win) => expect(Object.values(jobBackups(win))).to.deep.eq([raw]));
+    });
+  });
+
   it('M3: a full localStorage does not crash the job tracker and says so', () => {
     cy.seedAndVisit('/#/jobs', null);
     cy.window().then((win) => {

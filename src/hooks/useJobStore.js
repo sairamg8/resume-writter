@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { backupRaw } from '@/utils/storageBackup';
+import { newId } from '@/utils/ids';
 
 const KEY = 'cpwtcv_jobs_v1';
 
@@ -27,24 +29,34 @@ const DEMO_JOBS = [
 
 const JOB_VERSION = 2;
 
+/**
+ * The saved job list, as `{ jobs, recovery }`. Whatever cannot be read — the whole value or single
+ * entries — is left out, and the raw value is first copied to a backup key, because the next save
+ * replaces it. `recovery` is then `{ backupKey }` (null when not even the copy could be written).
+ */
 function load() {
-  try {
-    const s = localStorage.getItem(KEY);
-    if (s) {
-      const parsed = JSON.parse(s);
-      if (parsed.jobs) {
-        if (parsed.dataVersion === JOB_VERSION) return parsed;
-        // Migrate: strip old demo_* jobs, keep user-created ones
-        const userJobs = parsed.jobs.filter(j => !j.id.startsWith('demo_'));
-        return { jobs: [...DEMO_JOBS, ...userJobs], dataVersion: JOB_VERSION };
-      }
-    }
-  } catch {}
-  return { jobs: DEMO_JOBS, dataVersion: JOB_VERSION };
+  const fresh = { jobs: DEMO_JOBS, recovery: null };
+  let saved = null;
+  try { saved = localStorage.getItem(KEY); } catch { return fresh; }
+  if (!saved) return fresh;
+  let parsed = null;
+  try { parsed = JSON.parse(saved); } catch { /* unreadable: handled below */ }
+  if (!Array.isArray(parsed?.jobs)) return { jobs: [], recovery: { backupKey: backupRaw(KEY, saved) } };
+
+  let jobs = parsed.jobs.filter(j => j && typeof j === 'object' && !Array.isArray(j));
+  const recovery = jobs.length < parsed.jobs.length ? { backupKey: backupRaw(KEY, saved) } : null;
+  // A job the router cannot address (no id, or a non-string one) gets an id rather than being dropped.
+  jobs = jobs.map(j => (typeof j.id === 'string' && j.id ? j : { ...j, id: newId('job') }));
+  // Migrate: strip old demo_* jobs, keep user-created ones
+  if (parsed.dataVersion !== JOB_VERSION) jobs = [...DEMO_JOBS, ...jobs.filter(j => !j.id.startsWith('demo_'))];
+  return { jobs, recovery };
 }
 
 export function useJobStore() {
-  const [state, setState] = useState(load);
+  const [initial] = useState(load);
+  const [state, setState] = useState({ jobs: initial.jobs });
+  // Set when the saved list could not be read in full; the tracker shows it until dismissed.
+  const [recovery, setRecovery] = useState(initial.recovery);
   // null when the last write reached localStorage; otherwise the error (usually QuotaExceededError).
   const [persistError, setPersistError] = useState(null);
 
@@ -61,7 +73,7 @@ export function useJobStore() {
     const now = Date.now();
     const initialStatus = data.status || 'saved';
     const job = {
-      id: `job_${now}`,
+      id: newId('job'),
       company: '', role: '', status: 'saved',
       url: '', location: '', salary: '',
       contact: '', resumeId: '', notes: '',
@@ -103,7 +115,7 @@ export function useJobStore() {
       contact: '',
       deadline: '',
       ...j,
-      id: `job_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      id: newId('job'),
       createdAt: j.createdAt || Date.now(),
       updatedAt: Date.now(),
     }));
@@ -114,5 +126,8 @@ export function useJobStore() {
     setState({ jobs: [] });
   }
 
-  return { jobs: state.jobs, persistError, addJob, updateJob, deleteJob, importJobs, clearDemoData };
+  return {
+    jobs: state.jobs, persistError, recovery, dismissRecovery: () => setRecovery(null),
+    addJob, updateJob, deleteJob, importJobs, clearDemoData,
+  };
 }

@@ -103,7 +103,7 @@ describe('export — Word and JSON', () => {
       contents: Cypress.Buffer.from(JSON.stringify({ ...resume, name: 'From the editor' })),
       fileName: 'from-editor.json',
     }, { force: true });
-    cy.location('hash').should('match', /^#\/resume\/resume_\d+$/);
+    cy.location('hash').should('match', /^#\/resume\/resume_[\w-]+$/);
     cy.contains('button', 'From the editor').should('be.visible');
     cy.store().should((s) => expect(s.resumes).to.have.length(2));
   });

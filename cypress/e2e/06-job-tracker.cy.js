@@ -25,7 +25,7 @@ describe('job tracker', () => {
     formField('Role / Position').type('Backend Engineer');
     formField('Application Status').select('offer');
     cy.contains('button', /^Add Job$/).click();
-    cy.location('hash').should('match', /^#\/jobs\/job_\d+$/);
+    cy.location('hash').should('match', /^#\/jobs\/job_[\w-]+$/);
     cy.contains('h1', 'Stripe').should('be.visible');
     cy.jobStore().should((s) => {
       expect(s.jobs).to.have.length(2);

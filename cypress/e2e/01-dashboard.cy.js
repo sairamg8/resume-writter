@@ -19,7 +19,7 @@ describe('dashboard — first visit', () => {
 
   it('Create Resume opens a blank résumé in the editor', () => {
     cy.contains('button', 'Create Resume').click();
-    cy.location('hash').should('match', /^#\/resume\/resume_\d+$/);
+    cy.location('hash').should('match', /^#\/resume\/resume_[\w-]+$/);
     cy.contains('button', 'Export').should('be.visible');
     cy.get('input[placeholder="John Doe"]').should('have.value', '');
     cy.store().should((s) => {
@@ -44,7 +44,7 @@ describe('dashboard — with résumés', () => {
 
   it('New Resume creates an untitled blank résumé and opens it', () => {
     cy.contains('button', 'New Resume').click();
-    cy.location('hash').should('match', /^#\/resume\/resume_\d+$/);
+    cy.location('hash').should('match', /^#\/resume\/resume_[\w-]+$/);
     cy.contains('button', 'Export').should('be.visible');
     cy.store().should((s) => {
       expect(s.resumes).to.have.length(4);
@@ -55,13 +55,13 @@ describe('dashboard — with résumés', () => {
 
   it('New Cover creates a résumé and opens its cover-letter tab', () => {
     cy.contains('button', 'New Cover').click();
-    cy.location('hash').should('match', /^#\/resume\/resume_\d+\?tab=coverletter$/);
+    cy.location('hash').should('match', /^#\/resume\/resume_[\w-]+\?tab=coverletter$/);
     cy.store().should((s) => expect(active(s).name).to.eq('Cover Letter'));
   });
 
   it('Copy duplicates a résumé as "<name> (Copy)" and opens the copy', () => {
     cy.contains(CARD, 'Modern CV').contains('button', 'Copy').click();
-    cy.location('hash').should('match', /^#\/resume\/resume_\d+$/);
+    cy.location('hash').should('match', /^#\/resume\/resume_[\w-]+$/);
     cy.store().should((s) => {
       expect(s.resumes).to.have.length(4);
       const copy = active(s);
@@ -120,7 +120,7 @@ describe('dashboard — with résumés', () => {
       fileName: 'imported.json',
       mimeType: 'application/json',
     }, { force: true });
-    cy.location('hash').should('match', /^#\/resume\/resume_\d+$/);
+    cy.location('hash').should('match', /^#\/resume\/resume_[\w-]+$/);
     cy.preview().should('contain.text', 'Alex Johnson');
     cy.store().should((s) => {
       expect(s.resumes).to.have.length(4);
