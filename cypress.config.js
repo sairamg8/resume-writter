@@ -1,10 +1,37 @@
 import { defineConfig } from 'cypress';
 import fs from 'node:fs';
 import path from 'node:path';
+import zlib from 'node:zlib';
 import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
 import { extractPdfTextRuns } from './tests/pdf-utils.js';
 
 const DOWNLOADS = 'cypress/downloads';
+
+/**
+ * Text of one entry in a zip archive (a .docx is a zip), located through the central
+ * directory so data-descriptor entries with zeroed local sizes still read correctly.
+ */
+function readZipEntry(buffer, name) {
+  const eocd = buffer.lastIndexOf(Buffer.from([0x50, 0x4b, 0x05, 0x06]));
+  if (eocd < 0) throw new Error('not a zip archive');
+  const count = buffer.readUInt16LE(eocd + 10);
+  let p = buffer.readUInt32LE(eocd + 16);
+  for (let i = 0; i < count; i += 1) {
+    const method = buffer.readUInt16LE(p + 10);
+    const size = buffer.readUInt32LE(p + 20);
+    const nameLen = buffer.readUInt16LE(p + 28);
+    const extraLen = buffer.readUInt16LE(p + 30);
+    const commentLen = buffer.readUInt16LE(p + 32);
+    const local = buffer.readUInt32LE(p + 42);
+    if (buffer.toString('utf8', p + 46, p + 46 + nameLen) === name) {
+      const start = local + 30 + buffer.readUInt16LE(local + 26) + buffer.readUInt16LE(local + 28);
+      const data = buffer.subarray(start, start + size);
+      return (method === 8 ? zlib.inflateRawSync(data) : data).toString('utf8');
+    }
+    p += 46 + nameLen + extraLen + commentLen;
+  }
+  return null;
+}
 
 /** Newest finished file in the downloads folder with the given extension, or null. */
 function newestDownload(ext) {
@@ -60,6 +87,16 @@ export default defineConfig({
           const [, , width, height] = page1.view;
           const runs = await extractPdfTextRuns(buffer);
           return { numPages: doc.numPages, width, height, info, runs, bytes: buffer.length };
+        },
+        /** Paragraph texts of a .docx (word/document.xml), plus the file size. */
+        readDocx(file) {
+          const buffer = fs.readFileSync(file);
+          const xml = readZipEntry(buffer, 'word/document.xml') || '';
+          const paragraphs = xml.split('</w:p>').map((p) =>
+            [...p.matchAll(/<w:t(?:\s[^>]*)?>([^<]*)<\/w:t>/g)].map((m) => m[1]).join('')
+              .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'"))
+            .filter(Boolean);
+          return { bytes: buffer.length, paragraphs };
         },
         readTextFile(file) {
           return fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : null;

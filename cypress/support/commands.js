@@ -47,13 +47,23 @@ Cypress.Commands.add('openExportMenu', () => {
   cy.contains('button', 'Export').click();
 });
 
-/** Click an export menu entry and resolve with the parsed PDF ({ numPages, runs, info, ... }). */
-Cypress.Commands.add('exportPdf', (label = 'Export PDF') => {
+/** Click an export menu entry and resolve with the downloaded file's path. */
+Cypress.Commands.add('exportFile', (label, ext) => {
   cy.task('clearDownloads');
   cy.openExportMenu();
   cy.contains('button', new RegExp(`^\\s*${label.replace(/[()]/g, '\\$&')}\\s*$`)).click();
-  return cy.task('waitForDownload', { ext: '.pdf' }, { timeout: 60_000 }).then((file) => {
-    expect(file, 'a PDF was downloaded').to.be.a('string');
-    return cy.task('readPdf', file, { timeout: 60_000 });
+  return cy.task('waitForDownload', { ext }, { timeout: 60_000 }).then((file) => {
+    expect(file, `a ${ext} file was downloaded`).to.be.a('string');
+    return file;
   });
 });
+
+/** Export a PDF and resolve with it parsed: { numPages, width, height, info, runs, bytes, file }. */
+Cypress.Commands.add('exportPdf', (label = 'Export PDF') =>
+  cy.exportFile(label, '.pdf').then((file) =>
+    cy.task('readPdf', file, { timeout: 60_000 }).then((pdf) => ({ ...pdf, file }))));
+
+/** Export Word and resolve with { paragraphs, bytes, file }. */
+Cypress.Commands.add('exportDocx', () =>
+  cy.exportFile('Export Word', '.docx').then((file) =>
+    cy.task('readDocx', file).then((docx) => ({ ...docx, file }))));
