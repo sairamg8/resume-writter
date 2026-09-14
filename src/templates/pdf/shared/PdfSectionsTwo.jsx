@@ -1,6 +1,7 @@
 import { View, Text } from '@react-pdf/renderer';
 import { PdfRichText } from './PdfRichText';
-import { hasRichText } from '@/utils/richText';
+import { Value } from './PdfContact';
+import { hasRichText, safeHref } from '@/utils/richText';
 import {
   SPACER,
   SectionTitleOf,
@@ -38,7 +39,7 @@ export function CertificationsSection({ section, settings, marginBottom, spaceBe
               <Text style={{ fontWeight: 'bold' }}>{item.name || item.title}</Text>
               {item.issuer ? <Text style={{ color: '#4b5563', fontStyle: italicSubs ? 'italic' : 'normal' }}>{' — '}{item.issuer}</Text> : null}
               {item.credentialId ? <Text style={{ color: '#9ca3af' }}>{` · ID: ${item.credentialId}`}</Text> : null}
-              {item.url ? <Text style={{ color: accent }}>{` · ${item.urlLabel || item.url}`}</Text> : null}
+              {item.url ? <Text style={{ color: accent }}>{' · '}<Value item={{ value: item.urlLabel || item.url, href: safeHref(item.url) }} style={{ color: accent }} /></Text> : null}
             </Text>
           );
           if (centered) {
@@ -94,7 +95,7 @@ export function ProjectsSection({ section, settings, marginBottom, spaceBefore, 
                 <Text style={{ fontSize: entrySize, fontWeight: 'bold', color: textColor, textAlign }}>
                   {item.name}
                   {item.technologies ? <Text style={{ fontSize: baseSize, color: '#6b7280', fontWeight: 'normal' }}>{` · ${item.technologies}`}</Text> : null}
-                  {item.url          ? <Text style={{ fontSize: baseSize, color: accent,    fontWeight: 'normal' }}>{` · ${item.url}`}</Text>          : null}
+                  {item.url          ? <Text style={{ fontSize: baseSize, color: accent,    fontWeight: 'normal' }}>{' · '}<Value item={{ value: item.url, href: safeHref(item.url) }} style={{ color: accent }} /></Text> : null}
                 </Text>
                 {dateStr ? <Text style={{ fontSize: baseSize, color: dateColor, marginTop: 1, textAlign }}>{dateStr}</Text> : null}
               </View>

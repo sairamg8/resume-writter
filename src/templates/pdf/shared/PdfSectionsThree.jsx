@@ -1,7 +1,9 @@
 import { View, Text } from '@react-pdf/renderer';
 import { PdfRichText } from './PdfRichText';
 import { hasRichText } from '@/utils/richText';
+import { contactHref } from '@/utils/contacts';
 import { tint } from './pdfColors';
+import { Value } from './PdfContact';
 import {
   SPACER,
   SectionTitleOf,
@@ -31,8 +33,8 @@ export function ReferencesSection({ section, settings, marginBottom, spaceBefore
             {item.jobTitle      && <Text style={{ fontSize: baseSize, color: '#4b5563', ...alignStyle }}>{item.jobTitle}</Text>}
             {item.company       && <Text style={{ fontSize: baseSize, color: '#4b5563', ...alignStyle }}>{item.company}</Text>}
             {item.relationship  && <Text style={{ fontSize: baseSize, color: '#6b7280', fontStyle: 'italic', ...alignStyle }}>{item.relationship}</Text>}
-            {item.email         && <Text style={{ fontSize: baseSize, color: accent, marginTop: 2, ...alignStyle }}>{item.email}</Text>}
-            {item.phone         && <Text style={{ fontSize: baseSize, color: '#6b7280', ...alignStyle }}>{item.phone}</Text>}
+            {item.email         && <Text style={{ fontSize: baseSize, color: accent, marginTop: 2, ...alignStyle }}><Value item={{ value: item.email, href: contactHref('email', item) }} style={{ color: accent }} /></Text>}
+            {item.phone         && <Text style={{ fontSize: baseSize, color: '#6b7280', ...alignStyle }}><Value item={{ value: item.phone, href: contactHref('phone', item) }} style={{ color: '#6b7280' }} /></Text>}
           </View>
         ))}
       </View>

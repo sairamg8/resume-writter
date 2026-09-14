@@ -9,7 +9,7 @@ const NBSP = '\u00a0';
 const keepTogether = (s) => String(s).replace(/ /g, NBSP);
 
 /** The value as printed: a link (same colour, no underline) when it has a target. */
-function Value({ item, style }) {
+export function Value({ item, style }) {
   if (!item.href) return <Text style={style}>{item.value}</Text>;
   return <Link src={item.href} style={{ ...style, textDecoration: 'none' }}>{item.value}</Link>;
 }
