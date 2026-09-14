@@ -68,6 +68,7 @@ export function InterestsSection({ section, settings, marginBottom, spaceBefore,
 export function CustomSection({ section, settings, marginBottom, spaceBefore, itemGap, italicSubs, centered }) {
   const s        = section.settings || {};
   const titleStyle = s.titleStyle || 'stacked';
+  const showDates  = s.showDates !== false;
   const entrySize  = (settings?.fontSizeBase || 11) + (settings?.fontSizeEntryDelta ?? 0);
   const lineH      = settings?.lineHeightValue || 1.5;
   const visibleItems = (section.items || []).filter(i => i.visible !== false);
@@ -90,7 +91,7 @@ export function CustomSection({ section, settings, marginBottom, spaceBefore, it
                 primary={item.title || ''}
                 sub={item.subtitle || undefined}
                 loc={item.location || undefined}
-                dateStr={item.date || ''}
+                dateStr={showDates ? (item.date || '') : ''}
                 settings={settings}
                 titleStyle={titleStyle}
                 italicSub={italicSubs}

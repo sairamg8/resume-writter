@@ -1,7 +1,7 @@
 // Section Options (the section editor's "Customize layout") as they print.
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { setup, teardown, resume, section, render, read, itemsWith, MM } from './harness.mjs';
+import { setup, teardown, resume, section, render, renderDocx, read, itemsWith, allText, MM, TEMPLATES } from './harness.mjs';
 
 before(setup);
 after(teardown);
@@ -54,5 +54,25 @@ describe('languages (FIDA-34 / FIDB-71)', () => {
     const pages = await read(await render(resume({ sections: [section('languages', LANGS, { columns: 1 })] })));
     assert.ok(Math.abs(first(pages, 'English').x - 18 * MM) < 0.5);
     assert.ok(first(pages, 'Native').x > pages[0].W / 2);
+  });
+});
+
+describe('custom section', () => {
+  for (const template of TEMPLATES) {
+    it(`${template}: "Show dates" off hides the date (FIDA-35)`, async () => {
+      const items = [{ title: 'React Performance Patterns', subtitle: 'Tech Blog', date: 'Spring 2024' }];
+      const shown = allText(await read(await render(resume({ template, sections: [section('custom', items)] }))));
+      assert.ok(shown.includes('Spring 2024'), shown);
+      const hidden = allText(await read(await render(resume({ template, sections: [section('custom', items, { showDates: false })] }))));
+      assert.ok(hidden.includes('React Performance Patterns'), hidden);
+      assert.ok(!hidden.includes('2024'), hidden);
+    });
+  }
+
+  it('Word: "Show dates" off hides the date too', async () => {
+    const items = [{ title: 'React Performance Patterns', date: 'Spring 2024' }];
+    const { texts } = await renderDocx(resume({ sections: [section('custom', items, { showDates: false })] }));
+    assert.ok(texts.some((t) => t.includes('React Performance Patterns')));
+    assert.ok(!texts.some((t) => t.includes('2024')), texts.join(' | '));
   });
 });
