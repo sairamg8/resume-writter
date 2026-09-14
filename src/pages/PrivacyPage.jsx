@@ -75,10 +75,12 @@ export default function PrivacyPage() {
                 </a>.
               </li>
               <li>
-                <strong>Google Fonts</strong> — loaded on-demand for font selection. Google may log font requests.
-                See{' '}
-                <a href="https://developers.google.com/fonts/faq/privacy" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
-                  Google Fonts Privacy FAQ
+                <strong>jsDelivr (Fontsource font files)</strong> — the default font, Noto Sans, ships with
+                the app. When you pick another font, add a custom Google Font, or your text contains symbols
+                that font lacks, its files are downloaded from the jsDelivr CDN. No résumé content is sent —
+                only the font file request, which jsDelivr may log. See{' '}
+                <a href="https://www.jsdelivr.com/terms/privacy-policy-jsdelivr-net" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                  jsDelivr Privacy Policy
                 </a>.
               </li>
             </ul>

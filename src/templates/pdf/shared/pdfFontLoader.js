@@ -1,5 +1,6 @@
 import { Font } from '@react-pdf/renderer';
 import { decodeEntities } from '@/utils/richText';
+import { FONTSOURCE_CDN as CDN, fetchMetadata, fontsourceId } from '@/utils/fontsource';
 
 /**
  * Fonts for the PDF (which is also the editor preview).
@@ -15,8 +16,6 @@ import { decodeEntities } from '@/utils/richText';
  *   else Noto Sans's (bundled; devanagari too); arrows and maths from Noto Sans Math; ✓ ★ ☎ and
  *   other symbols from Noto Sans Symbols 2.
  */
-
-const CDN = 'https://cdn.jsdelivr.net/npm/@fontsource';
 
 /** settings.font id → Fontsource package. Georgia is not a web font: Gelasio is its metric twin. */
 export const FONT_MAP = {
@@ -107,22 +106,6 @@ ensureNoHyphenation();
 
 // ── Fontsource (CDN) fonts ───────────────────────────────────────────────────
 
-const metadata = new Map(); // pkg → Promise<metadata | null>
-
-/** A Fontsource package's metadata.json, or null when the package does not exist / is offline. */
-function fetchMetadata(pkg) {
-  if (!metadata.has(pkg)) {
-    metadata.set(pkg, fetch(`${CDN}/${pkg}@5/metadata.json`, { credentials: 'omit' })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((m) => (m && Array.isArray(m.weights) && Array.isArray(m.styles) ? m : null))
-      .catch(() => {
-        metadata.delete(pkg); // offline: try again next render
-        return null;
-      }));
-  }
-  return metadata.get(pkg);
-}
-
 const nearest = (weights, target) => weights.reduce((best, w) => (Math.abs(w - target) < Math.abs(best - target) ? w : best));
 
 /** Register `family` from Fontsource `pkg` and `subset`, using only faces the package has. */
@@ -137,16 +120,6 @@ function registerCdn(family, pkg, meta, subset, { fallback = false } = {}) {
   });
   registeredFamilies.add(family);
   return family;
-}
-
-/** Fontsource package id for a font name: "Playfair Display" → "playfair-display". */
-export const fontsourceId = (name) => String(name || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-
-/** Is `name` a font the PDF can use? Resolves { ok, family } — used before saving a custom font. */
-export async function checkFont(name) {
-  const pkg = fontsourceId(name);
-  const meta = pkg ? await fetchMetadata(pkg) : null;
-  return meta ? { ok: true, family: meta.family || name } : { ok: false, family: null };
 }
 
 /** The chosen font: { family, pkg, meta } for a Fontsource font, null for bundled Noto Sans. */
@@ -209,32 +182,19 @@ async function fallbacksFor(text, primary) {
  */
 export async function resolvePdfFonts(settings, text = '') {
   ensureNoHyphenation();
-  let primary = await chosenFont(settings);
-  if (primary && !(await loads(primary.family))) primary = null;
+  const primary = await chosenFont(settings);
   const families = [primary ? primary.family : 'NotoSans', ...(await fallbacksFor(text, primary))];
-  const usable = [];
-  for (const family of families) if (family === families[0] || await loads(family)) usable.push(family);
-  await prepareFonts(usable);
+  let usable = await prepareFonts(families);
+  // The chosen font could not be loaded at all (offline, blocked): Noto Sans takes its place.
+  if (primary && usable[0] !== primary.family) usable = await prepareFonts(['NotoSans', ...usable]);
   return { fontFamily: usable.length > 1 ? usable : usable[0] };
-}
-
-/** Does the family's regular face load? */
-async function loads(family) {
-  const source = Font.getRegisteredFonts()[family]?.sources.find((s) => s.fontWeight === 400 && s.fontStyle === 'normal');
-  if (!source) return false;
-  try {
-    await source.load();
-    return true;
-  } catch {
-    return false;
-  }
 }
 
 const primedFonts = new WeakSet();
 
 /**
- * Load every registered face of `families` and get their fontkit fonts ready to render.
- * Call before every render.
+ * Load every registered face of `families` and get their fontkit fonts ready to render;
+ * returns the families that can be used, in order. Call before every render.
  *
  * 1. Seed fontkit's glyph cache from each cmap. fontkit caches one glyph object per glyph id,
  *    carrying the characters of the FIRST request. Embedding a composite glyph requests its
@@ -247,12 +207,24 @@ const primedFonts = new WeakSet();
  */
 export async function prepareFonts(families) {
   const store = Font.getRegisteredFonts();
-  const entries = families.flatMap((family) => (store[family]?.sources || []).map((source) => ({ family, source })));
-  // A face that fails to load is left to react-pdf, which reports it when the face is used.
-  await Promise.all(entries.map(({ source }) => source.load().catch(() => null)));
-  for (const { family, source: { data: font } } of entries) {
-    if (!font || typeof font.glyphForCodePoint !== 'function') continue;
-    if (!primedFonts.has(font)) {
+  const usable = [];
+  for (const family of families) {
+    const sources = store[family]?.sources || [];
+    const loaded = await Promise.all(sources.map((source) => source.load().then(() => true, () => false)));
+    if (!loaded.some(Boolean)) continue; // nothing of this family loads: leave it out of the chain
+    // A face that failed (a CDN hiccup) borrows the nearest loaded face of the family, or
+    // react-pdf would retry it during layout and fail the whole PDF.
+    sources.forEach((source, i) => {
+      if (loaded[i]) return;
+      const donor = sources
+        .filter((_, j) => loaded[j])
+        .sort((a, b) => (a.fontStyle !== source.fontStyle) - (b.fontStyle !== source.fontStyle)
+          || Math.abs(a.fontWeight - source.fontWeight) - Math.abs(b.fontWeight - source.fontWeight))[0];
+      source.data = donor.data;
+      source.loadResultPromise = Promise.resolve();
+    });
+    for (const { data: font } of sources) {
+      if (!font || primedFonts.has(font) || typeof font.glyphForCodePoint !== 'function') continue;
       for (const codePoint of font.characterSet || []) font.glyphForCodePoint(codePoint);
       if (fallbackFamilies.has(family)) {
         const name = `${font.postscriptName}-${family.replace(/[^A-Za-z0-9]+/g, '')}`;
@@ -260,5 +232,7 @@ export async function prepareFonts(families) {
       }
       primedFonts.add(font);
     }
+    usable.push(family);
   }
+  return usable;
 }

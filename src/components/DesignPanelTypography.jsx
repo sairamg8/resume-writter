@@ -1,28 +1,48 @@
 import { useState, useEffect } from 'react';
-import { FONTS, getFontById, loadGoogleFont, loadCustomGoogleFont, loadCustomFonts, saveCustomFont, removeCustomFont } from '@/utils/fonts';
+import { FONTS, loadPreviewFont, loadCustomFonts, saveCustomFont, removeCustomFont, checkFont } from '@/utils/fonts';
 import { Label, SizeRow, SegmentControl, DesignSection } from '@/components/DesignPanelShared';
+
+// The quick size buttons set the base size (pt) the PDF is laid out with.
+const SIZE_PRESETS = { small: 10, normal: 11, large: 12 };
 
 export function TypographySection({ settings, updateSetting, onReset }) {
   const [customFontInput, setCustomFontInput] = useState('');
   const [savedCustomFonts, setSavedCustomFonts] = useState(() => loadCustomFonts());
+  const [checking, setChecking] = useState(false);
+  const [fontError, setFontError] = useState(null);
 
+  // Show every choice in its own face — from the same files the PDF embeds.
   useEffect(() => {
-    const font = getFontById(settings.font);
-    if (font) loadGoogleFont(font);
-  }, [settings.font]);
+    FONTS.forEach((font) => loadPreviewFont(font.name, font.pkg));
+    savedCustomFonts.forEach((name) => loadPreviewFont(name));
+  }, [savedCustomFonts]);
 
-  useEffect(() => {
-    savedCustomFonts.forEach(name => loadCustomGoogleFont(name));
-  }, []);
-
-  function applyCustomFont(name) {
-    loadCustomGoogleFont(name);
+  function chooseCustomFont(name) {
     updateSetting('customFont', name);
     updateSetting('font', '');
-    saveCustomFont(name);
+  }
+
+  // A custom font is kept only if the PDF can load it; the name is stored as Google spells it.
+  async function applyCustomFont(input) {
+    setChecking(true);
+    setFontError(null);
+    const result = await checkFont(input);
+    setChecking(false);
+    if (!result.ok) {
+      setFontError(`“${input}” was not found on Google Fonts. Check the spelling (e.g. “Playfair Display”).`);
+      return;
+    }
+    loadPreviewFont(result.family, result.pkg);
+    chooseCustomFont(result.family);
+    saveCustomFont(result.family);
     setSavedCustomFonts(loadCustomFonts());
     setCustomFontInput('');
   }
+
+  const base = settings.fontSizeBase ?? 11;
+  // No font set (older or imported résumés) prints in Noto Sans, so that is what is selected.
+  const activeFont = settings.customFont ? null : (FONTS.some((f) => f.id === settings.font) ? settings.font : 'notosans');
+  const sizePreset = Object.keys(SIZE_PRESETS).find((k) => SIZE_PRESETS[k] === base) || '';
 
   return (
     <DesignSection title="Typography" onReset={onReset}>
@@ -32,10 +52,11 @@ export function TypographySection({ settings, updateSetting, onReset }) {
           {FONTS.map(font => (
             <button
               key={font.id}
-              onClick={() => { updateSetting('font', font.id); updateSetting('customFont', ''); setCustomFontInput(''); }}
+              onClick={() => { updateSetting('font', font.id); updateSetting('customFont', ''); setCustomFontInput(''); setFontError(null); }}
               style={{ fontFamily: font.family }}
+              title={font.title}
               className={`px-1.5 py-1.5 text-xs rounded-md border transition-all text-left truncate ${
-                settings.font === font.id && !settings.customFont
+                activeFont === font.id
                   ? 'bg-blue-50 border-blue-400 text-blue-700'
                   : 'border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50'
               }`}
@@ -52,11 +73,12 @@ export function TypographySection({ settings, updateSetting, onReset }) {
                 const active = settings.customFont === name;
                 return (
                   <div key={name} className={`flex items-center gap-1 px-2 py-1 rounded-full border text-xs transition-all ${active ? 'border-blue-400 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}>
-                    <button style={{ fontFamily: `'${name}', sans-serif` }} onClick={() => { loadCustomGoogleFont(name); updateSetting('customFont', name); updateSetting('font', ''); }} className="leading-none">{name}</button>
+                    <button style={{ fontFamily: `'${name}', sans-serif` }} onClick={() => chooseCustomFont(name)} className="leading-none">{name}</button>
                     <button
                       onClick={() => { removeCustomFont(name); setSavedCustomFonts(loadCustomFonts()); if (settings.customFont === name) updateSetting('customFont', ''); }}
                       className="text-gray-300 hover:text-red-400 leading-none ml-0.5"
                       title="Remove font"
+                      aria-label={`Remove ${name}`}
                     >×</button>
                   </div>
                 );
@@ -64,25 +86,35 @@ export function TypographySection({ settings, updateSetting, onReset }) {
             </div>
           </div>
         )}
-        <p className="text-[11px] text-gray-400 mb-1">Add a Google Font:</p>
+        <label htmlFor="custom-font-input" className="block text-[11px] text-gray-400 mb-1">Add a Google Font:</label>
         <div className="flex gap-1.5">
           <input
+            id="custom-font-input"
             type="text"
             value={customFontInput}
-            onChange={e => setCustomFontInput(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter' && customFontInput.trim()) applyCustomFont(customFontInput.trim()); }}
+            onChange={e => { setCustomFontInput(e.target.value); setFontError(null); }}
+            onKeyDown={e => { if (e.key === 'Enter' && customFontInput.trim() && !checking) applyCustomFont(customFontInput.trim()); }}
             placeholder="e.g. Nunito, Raleway, Poppins"
+            aria-invalid={fontError ? 'true' : undefined}
+            aria-describedby={fontError ? 'custom-font-error' : undefined}
             className="flex-1 px-2.5 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
-          <button onClick={() => { if (customFontInput.trim()) applyCustomFont(customFontInput.trim()); }} className="px-2.5 py-1.5 text-xs font-semibold bg-blue-600 text-white rounded-md hover:bg-blue-700">Add</button>
+          <button
+            onClick={() => { if (customFontInput.trim()) applyCustomFont(customFontInput.trim()); }}
+            disabled={checking}
+            className="px-2.5 py-1.5 text-xs font-semibold bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-60"
+          >
+            {checking ? 'Checking…' : 'Add'}
+          </button>
         </div>
+        {fontError && <p id="custom-font-error" role="alert" className="mt-1 text-[11px] text-red-600">{fontError}</p>}
       </div>
 
       <div>
         <Label>Font Size</Label>
         <SegmentControl
-          value={settings.fontSize || 'normal'}
-          onChange={v => updateSetting('fontSize', v)}
+          value={sizePreset}
+          onChange={v => updateSetting('fontSizeBase', SIZE_PRESETS[v])}
           options={[{ label: 'Small', value: 'small' }, { label: 'Normal', value: 'normal' }, { label: 'Large', value: 'large' }]}
         />
       </div>
@@ -91,7 +123,6 @@ export function TypographySection({ settings, updateSetting, onReset }) {
         <Label>Typography Scale</Label>
         <div className="space-y-2.5">
           {(() => {
-            const base = settings.fontSizeBase || 11;
             const nameDelta = settings.fontSizeNameDelta ?? 8;
             const sectionDelta = settings.fontSizeSectionDelta ?? 1;
             const entryDelta = settings.fontSizeEntryDelta ?? 0;

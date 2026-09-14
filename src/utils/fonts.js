@@ -1,61 +1,62 @@
+import { faceUrl, fontsourceId } from '@/utils/fontsource';
+
+export { checkFont } from '@/utils/fontsource';
+
+/**
+ * The font picker. `name` is the family the preview registers; `pkg` is its Fontsource package —
+ * the same files the PDF embeds (see templates/pdf/shared/pdfFontLoader.js).
+ */
 export const FONTS = [
-  { id: 'notosans',   label: 'Noto Sans',         family: "'Noto Sans', sans-serif",              googleQuery: 'Noto+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400' },
-  { id: 'inter',      label: 'Inter',             family: "'Inter', sans-serif",                  googleQuery: 'Inter:wght@400;500;600;700' },
-  { id: 'opensans',   label: 'Open Sans',         family: "'Open Sans', sans-serif",              googleQuery: 'Open+Sans:ital,wght@0,400;0,600;0,700;1,400' },
-  { id: 'firasans',   label: 'Fira Sans',         family: "'Fira Sans', sans-serif",              googleQuery: 'Fira+Sans:ital,wght@0,400;0,500;0,600;1,400' },
-  { id: 'ibmplexsans',label: 'IBM Plex Sans',     family: "'IBM Plex Sans', sans-serif",          googleQuery: 'IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400' },
-  { id: 'asap',       label: 'Asap',              family: "'Asap', sans-serif",                   googleQuery: 'Asap:ital,wght@0,400;0,500;0,600;1,400' },
-  { id: 'roboto',     label: 'Roboto',            family: "'Roboto', sans-serif",                 googleQuery: 'Roboto:ital,wght@0,400;0,500;0,700;1,400' },
-  { id: 'lato',       label: 'Lato',              family: "'Lato', sans-serif",                   googleQuery: 'Lato:ital,wght@0,400;0,700;1,400' },
-  { id: 'sourcesans', label: 'Source Sans 3',     family: "'Source Sans 3', sans-serif",          googleQuery: 'Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400' },
-  { id: 'georgia',    label: 'Georgia',           family: 'Georgia, serif',                       googleQuery: null },
-  { id: 'sourceserif',label: 'Source Serif Pro',  family: "'Source Serif 4', serif",              googleQuery: 'Source+Serif+4:ital,wght@0,300;0,400;0,600;1,300;1,400' },
-  { id: 'ptserif',    label: 'PT Serif',          family: "'PT Serif', serif",                    googleQuery: 'PT+Serif:ital,wght@0,400;0,700;1,400' },
-  { id: 'literata',   label: 'Literata',          family: "'Literata', serif",                    googleQuery: 'Literata:ital,opsz,wght@0,7..72,300;0,7..72,400;0,7..72,600;1,7..72,400' },
-];
+  { id: 'notosans',    label: 'Noto Sans',      name: 'Noto Sans',      pkg: 'noto-sans',      category: 'sans-serif' },
+  { id: 'inter',       label: 'Inter',          name: 'Inter',          pkg: 'inter',          category: 'sans-serif' },
+  { id: 'opensans',    label: 'Open Sans',      name: 'Open Sans',      pkg: 'open-sans',      category: 'sans-serif' },
+  { id: 'firasans',    label: 'Fira Sans',      name: 'Fira Sans',      pkg: 'fira-sans',      category: 'sans-serif' },
+  { id: 'ibmplexsans', label: 'IBM Plex Sans',  name: 'IBM Plex Sans',  pkg: 'ibm-plex-sans',  category: 'sans-serif' },
+  { id: 'asap',        label: 'Asap',           name: 'Asap',           pkg: 'asap',           category: 'sans-serif' },
+  { id: 'roboto',      label: 'Roboto',         name: 'Roboto',         pkg: 'roboto',         category: 'sans-serif' },
+  { id: 'lato',        label: 'Lato',           name: 'Lato',           pkg: 'lato',           category: 'sans-serif' },
+  { id: 'sourcesans',  label: 'Source Sans 3',  name: 'Source Sans 3',  pkg: 'source-sans-3',  category: 'sans-serif' },
+  // Georgia is not a web font; the PDF embeds Gelasio, its open, metric-compatible twin.
+  { id: 'georgia',     label: 'Georgia',        name: 'Gelasio',        pkg: 'gelasio',        category: 'serif', title: 'Printed with Gelasio, an open font with Georgia’s proportions' },
+  { id: 'sourceserif', label: 'Source Serif 4', name: 'Source Serif 4', pkg: 'source-serif-4', category: 'serif' },
+  { id: 'ptserif',     label: 'PT Serif',       name: 'PT Serif',       pkg: 'pt-serif',       category: 'serif' },
+  { id: 'literata',    label: 'Literata',       name: 'Literata',       pkg: 'literata',       category: 'serif' },
+].map((f) => ({ ...f, family: `'${f.name}', ${f.category}` }));
 
-export function getFontById(id) {
-  return FONTS.find(f => f.id === id) || FONTS.find(f => f.id === 'inter');
+const previewing = new Set();
+
+/** Show `name` in its own face in the app, loaded from the files the PDF uses (no Google Fonts CSS). */
+export function loadPreviewFont(name, pkg = fontsourceId(name)) {
+  if (!name || !pkg || previewing.has(pkg) || typeof FontFace === 'undefined') return;
+  previewing.add(pkg);
+  new FontFace(name, `url(${faceUrl(pkg, { format: 'woff2' })}) format('woff2')`)
+    .load()
+    .then((face) => document.fonts.add(face))
+    .catch(() => previewing.delete(pkg));
 }
 
-export function loadGoogleFont(font) {
-  if (!font?.googleQuery) return;
-  const id = `gfont-${font.id}`;
-  if (document.getElementById(id)) return;
-  const link = document.createElement('link');
-  link.id = id;
-  link.rel = 'stylesheet';
-  link.href = `https://fonts.googleapis.com/css2?family=${font.googleQuery}&display=swap`;
-  document.head.appendChild(link);
-}
-
-// Custom fonts persisted separately from resume data
+// Custom fonts are remembered per browser, apart from résumé data.
 const CUSTOM_FONTS_KEY = 'cpwtcv_custom_fonts';
 
 export function loadCustomFonts() {
-  try { return JSON.parse(localStorage.getItem(CUSTOM_FONTS_KEY) || '[]'); } catch { return []; }
+  try {
+    const list = JSON.parse(localStorage.getItem(CUSTOM_FONTS_KEY) || '[]');
+    return Array.isArray(list) ? list.filter((n) => typeof n === 'string' && n.trim()) : [];
+  } catch {
+    return [];
+  }
+}
+
+function storeCustomFonts(list) {
+  try { localStorage.setItem(CUSTOM_FONTS_KEY, JSON.stringify(list)); } catch { /* storage full: the list just isn't remembered */ }
 }
 
 export function saveCustomFont(name) {
   if (!name) return;
   const list = loadCustomFonts();
-  if (!list.includes(name)) {
-    localStorage.setItem(CUSTOM_FONTS_KEY, JSON.stringify([...list, name]));
-  }
+  if (!list.includes(name)) storeCustomFonts([...list, name]);
 }
 
 export function removeCustomFont(name) {
-  const list = loadCustomFonts().filter(f => f !== name);
-  localStorage.setItem(CUSTOM_FONTS_KEY, JSON.stringify(list));
-}
-
-export function loadCustomGoogleFont(name) {
-  if (!name) return;
-  const id = `gfont-custom-${name.toLowerCase().replace(/\s+/g, '-')}`;
-  if (document.getElementById(id)) return;
-  const link = document.createElement('link');
-  link.id = id;
-  link.rel = 'stylesheet';
-  link.href = `https://fonts.googleapis.com/css2?family=${name.replace(/\s+/g, '+')}:ital,wght@0,400;0,600;0,700;1,400&display=swap`;
-  document.head.appendChild(link);
+  storeCustomFonts(loadCustomFonts().filter((f) => f !== name));
 }
