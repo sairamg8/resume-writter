@@ -8,6 +8,7 @@ import { getPdfPhotoStyle } from './shared/pdfPhoto';
 import { PdfPhoto } from './shared/PdfPhoto';
 import { HEADER_MARGIN_BOTTOM_PT } from './shared/pdfUnits';
 import { solid, textShades } from './shared/pdfColors';
+import { photoTextAlignItems } from '@/constants/templates';
 
 
 export function MinimalTemplatePDF({ data }) {
@@ -32,10 +33,7 @@ export function MinimalTemplatePDF({ data }) {
   // Off unless the user turns it on (the Minimal design has no header rule).
   const headerBorderStyle = getHeaderBorderStyle(settings);
 
-  const photoTextAlign = settings.photoTextAlign || 'center';
-  const alignItemsVal = photoTextAlign === 'bottom' ? 'flex-end'
-    : photoTextAlign === 'center' ? 'center'
-      : 'flex-start';
+  const alignItemsVal = photoTextAlignItems(settings); // Photo → Text Position
 
   const nameBlock = headerLayout === 'inline' ? (
     <View style={{

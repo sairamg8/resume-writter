@@ -10,6 +10,7 @@ import { getPdfPhotoStyle } from './shared/pdfPhoto';
 import { PdfPhoto } from './shared/PdfPhoto';
 import { parseColor } from './shared/pdfColors';
 import { MODERN_HEADER_PAD_X_PT, MODERN_HEADER_PAD_Y_PT, pxToPt } from './shared/pdfUnits';
+import { photoTextAlignItems } from '@/constants/templates';
 
 const CSS_ICON_SCALE = 0.9;
 
@@ -68,7 +69,8 @@ export function ModernTemplatePDF({ data }) {
           paddingHorizontal: MODERN_HEADER_PAD_X_PT,
           marginBottom: sectionGap,
         }} wrap={false}>
-          <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: pxToPt(16) }}>
+          {/* Photo → Text Position, as Classic, Minimal and Executive take it (R3-0). */}
+          <View style={{ flexDirection: 'row', alignItems: photoTextAlignItems(settings), gap: pxToPt(16) }}>
             {personal?.photo && !hidden.includes('photo') && (
               <PdfPhoto src={personal.photo} style={getPdfPhotoStyle(settings, '#ffffff', 'modern')} />
             )}

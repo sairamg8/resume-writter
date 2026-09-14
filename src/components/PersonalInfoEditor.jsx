@@ -66,6 +66,7 @@ export default function PersonalInfoEditor({ personal, updatePersonal, toggleFie
         hidden={hidden}
         s={s}
         set={set}
+        template={template}
         open={photoOpen}
         onToggle={() => setPhotoOpen(o => !o)}
       />

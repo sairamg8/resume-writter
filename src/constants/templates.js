@@ -48,6 +48,22 @@ const HEADER_CONTROL_TEMPLATES = ['classic', 'minimal', 'executive'];
 export const hasHeaderControls = (template) => HEADER_CONTROL_TEMPLATES.includes(templateId(template));
 
 /**
+ * Photo → Text Position lines the text beside the photo up with its top, centre or bottom. There
+ * is no text beside it in Sidebar (the photo sits above the name) or in a centred header
+ * (Classic, Minimal, Executive stack the photo above it), so the editor hides the control there
+ * rather than offer one that does nothing (R3-0). Modern's banner always has the text beside it.
+ */
+export function photoTextPositionApplies(settings, template) {
+  const t = templateId(template);
+  if (t === 'sidebar') return false;
+  return t === 'modern' || settings?.headerAlign !== 'center';
+}
+
+/** Text Position as a flex alignment for the photo's row (Center when unset). */
+export const photoTextAlignItems = (settings) =>
+  ({ top: 'flex-start', bottom: 'flex-end' })[settings?.photoTextAlign] || 'center';
+
+/**
  * The header's bottom rule when a résumé has no `showHeaderBorder` (older or imported data;
  * new résumés store `false`): the Classic design draws it, Minimal and Executive do not.
  */

@@ -5,6 +5,7 @@ import { PdfContactRow } from './shared/PdfContact';
 import { solid } from './shared/pdfColors';
 import { PdfPhoto } from './shared/PdfPhoto';
 import { letterBlock, letterContactFormat, letterHiddenFields, letterSignature } from '@/utils/coverLetter';
+import { photoTextAlignItems } from '@/constants/templates';
 
 /** Space under the date, the recipient block and the subject. */
 const BLOCK_GAP = 12;
@@ -41,7 +42,7 @@ export function CoverLetterTemplatePDF({ data }) {
 
   const photoSrc = cl.showPhoto !== false ? (cl.clPhoto || personal?.photo) : null;
   // The panel's "Text Position (relative to photo)": the name block's place beside the photo.
-  const photoAlign = { top: 'flex-start', bottom: 'flex-end' }[cl.photoTextAlign] || 'center';
+  const photoAlign = photoTextAlignItems(cl); // the letter's own Text Position
   const hidden   = letterHiddenFields(cl, personal);
 
   const sig    = letterSignature(cl, personal);

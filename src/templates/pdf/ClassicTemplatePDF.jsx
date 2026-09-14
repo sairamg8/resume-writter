@@ -8,6 +8,7 @@ import { getPdfPhotoStyle } from './shared/pdfPhoto';
 import { PdfPhoto } from './shared/PdfPhoto';
 import { HEADER_MARGIN_BOTTOM_PT } from './shared/pdfUnits';
 import { textShades } from './shared/pdfColors';
+import { photoTextAlignItems } from '@/constants/templates';
 
 export function ClassicTemplatePDF({ data }) {
   const { personal, sections = [], settings = {} } = data;
@@ -31,10 +32,7 @@ export function ClassicTemplatePDF({ data }) {
   // On when the setting is unset (the Classic design); new résumés store false (ATS_DEFAULTS).
   const headerBorderStyle = getHeaderBorderStyle(settings);
 
-  const photoTextAlign = settings.photoTextAlign || 'center';
-  const alignItemsVal = photoTextAlign === 'bottom' ? 'flex-end'
-    : photoTextAlign === 'center' ? 'center'
-      : 'flex-start';
+  const alignItemsVal = photoTextAlignItems(settings); // Photo → Text Position
 
   // Canvas classic header uses fixed mb-5 (20px); fall back to sectionGap if larger.
   const headerMb = Math.max(HEADER_MARGIN_BOTTOM_PT, sectionGap || 0);

@@ -2,8 +2,9 @@ import { useRef } from 'react';
 import { Camera, ChevronDown, ChevronRight, Eye, EyeOff } from 'lucide-react';
 import { Chip } from '@/components/PersonalInfoEditorHeader';
 import { readImageFile } from '@/utils/imageUpload';
+import { photoTextPositionApplies, templateId } from '@/constants/templates';
 
-export function PhotoSection({ personal, updatePersonal, toggleFieldVisibility, hidden, s, set, open, onToggle }) {
+export function PhotoSection({ personal, updatePersonal, toggleFieldVisibility, hidden, s, set, template, open, onToggle }) {
   const photoInputRef = useRef(null);
 
   function handlePhotoChange(e) {
@@ -102,11 +103,19 @@ export function PhotoSection({ personal, updatePersonal, toggleFieldVisibility, 
 
           <div>
             <p className="text-xs font-semibold text-gray-700 mb-1.5">Text Position</p>
-            <div className="flex gap-2">
-              {[{ val: 'top', label: '↑ Top' }, { val: 'center', label: '↕ Center' }, { val: 'bottom', label: '↓ Bottom' }].map(({ val, label }) => (
-                <Chip key={val} active={(s.photoTextAlign || 'center') === val} onClick={() => set('photoTextAlign', val)}>{label}</Chip>
-              ))}
-            </div>
+            {photoTextPositionApplies(s, template) ? (
+              <div className="flex gap-2">
+                {[{ val: 'top', label: '↑ Top' }, { val: 'center', label: '↕ Center' }, { val: 'bottom', label: '↓ Bottom' }].map(({ val, label }) => (
+                  <Chip key={val} active={(s.photoTextAlign || 'center') === val} onClick={() => set('photoTextAlign', val)}>{label}</Chip>
+                ))}
+              </div>
+            ) : (
+              <p className="text-[11px] text-gray-400" data-testid="photo-text-position-note">
+                {templateId(template) === 'sidebar'
+                  ? 'The Sidebar template prints the photo above your name.'
+                  : 'A centered header prints the photo above your name. Align the header left to place the text beside it.'}
+              </p>
+            )}
           </div>
         </div>
       )}

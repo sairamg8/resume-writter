@@ -35,3 +35,38 @@ describe('header customization', () => {
     cy.contains('p', 'Text Alignment').should('not.exist');
   });
 });
+
+describe('photo text position (R3-0)', () => {
+  const openPhoto = () => cy.contains('button', /^Photo/).click();
+  const chip = (label) => cy.contains('button', label);
+  const note = () => cy.get('[data-testid="photo-text-position-note"]');
+
+  for (const template of ['classic', 'modern']) {
+    it(`${template} offers Top / Center / Bottom and stores the choice`, () => {
+      cy.visitEditor(template);
+      openPhoto();
+      note().should('not.exist');
+      chip('↓ Bottom').click();
+      cy.store().should((s) => expect(active(s).settings.photoTextAlign).to.eq('bottom'));
+    });
+  }
+
+  it('Sidebar explains that the photo sits above the name instead of offering chips that do nothing', () => {
+    cy.visitEditor('sidebar');
+    openPhoto();
+    note().should('contain.text', 'Sidebar template prints the photo above your name');
+    chip('↑ Top').should('not.exist');
+  });
+
+  it('a centred header hides the chips until the header is aligned left again', () => {
+    cy.visitEditor('classic');
+    openHeader();
+    cy.contains('button', /^Center$/).click();
+    openPhoto();
+    note().should('contain.text', 'centered header');
+    chip('↑ Top').should('not.exist');
+    cy.contains('button', /^Left$/).click();
+    note().should('not.exist');
+    chip('↑ Top').scrollIntoView().should('be.visible');
+  });
+});

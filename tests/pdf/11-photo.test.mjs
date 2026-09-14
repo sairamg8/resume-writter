@@ -2,7 +2,7 @@
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs';
-import { setup, teardown, resume, render, renderCover } from './harness.mjs';
+import { setup, teardown, resume, render, renderCover, loadModule } from './harness.mjs';
 
 before(setup);
 after(teardown);
@@ -102,5 +102,43 @@ describe('photo ring', { skip: canvasLib ? false : '@napi-rs/canvas is not insta
     const r = resume({ personal: { photo: photo() }, settings: { accentColor: ACCENT, photoBorder: 'none' } });
     const ring = ringAround(await paintTop(await render(r)), ACCENT);
     for (const [side, d] of Object.entries(ring)) assert.ok(d > 100, `${side}: an accent pixel ${d} away`);
+  });
+});
+
+describe('Photo → Text Position (R3-0)', () => {
+  // A 2×2 PNG: the photo's box size comes from the Size/Height settings, not the image.
+  const PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAEElEQVR4nGP4z8AARAwQCgAf7gP9i18U1AAAAABJRU5ErkJggg==';
+
+  /**
+   * Page 1's drawing operations, as a string: equal strings draw the same page. pdf.js names
+   * fonts per loaded document (g_d0_f1, g_d2_f1 …), so those ids are made document-neutral.
+   */
+  async function drawing(bytes) {
+    const doc = await pdfjs.getDocument({ data: bytes.slice(), isEvalSupported: false, verbosity: 0 }).promise;
+    const ops = await (await doc.getPage(1)).getOperatorList();
+    await doc.loadingTask.destroy();
+    return JSON.stringify(ops.fnArray.map((fn, k) => [fn, ops.argsArray[k]])).replace(/g_d\d+_/g, 'g_');
+  }
+  const pages = (template, settings) => Promise.all(['top', 'center', 'bottom'].map(async (photoTextAlign) =>
+    drawing(await render(resume({ template, personal: { photo: PNG, email: 'me@example.com' }, settings: { photoSize: 'large', ...settings, photoTextAlign } })))));
+
+  for (const [template, settings] of [['modern', {}], ['classic', {}], ['minimal', {}], ['executive', {}], ['modern', { headerAlign: 'center' }]]) {
+    it(`${template}${settings.headerAlign ? ' (centred header)' : ''}: Top, Center and Bottom draw three different pages`, async () => {
+      const [top, center, bottom] = await pages(template, settings);
+      assert.ok(top !== center && center !== bottom && top !== bottom, 'each position moves the text or the photo');
+    });
+  }
+
+  it('the editor offers it exactly where it applies: not in Sidebar, not with a centred header (except Modern\'s banner)', async () => {
+    const { photoTextPositionApplies } = await loadModule('/src/constants/templates.js');
+    for (const t of ['classic', 'minimal', 'executive', 'modern']) assert.equal(photoTextPositionApplies({}, t), true, t);
+    assert.equal(photoTextPositionApplies({ headerAlign: 'center' }, 'modern'), true, 'Modern ignores header alignment');
+    for (const t of ['classic', 'minimal', 'executive']) assert.equal(photoTextPositionApplies({ headerAlign: 'center' }, t), false, `${t} centred`);
+    assert.equal(photoTextPositionApplies({}, 'sidebar'), false, 'sidebar');
+    // Where it is hidden, it really does nothing: the three positions draw the same page.
+    for (const [t, s] of [['sidebar', {}], ['classic', { headerAlign: 'center' }]]) {
+      const [top, center, bottom] = await pages(t, s);
+      assert.ok(top === center && center === bottom, `${t} ${JSON.stringify(s)}`);
+    }
   });
 });
