@@ -3,6 +3,7 @@ import {
   Bold, Italic, Underline, List, ListOrdered,
   AlignLeft, AlignCenter, AlignRight, AlignJustify, Link,
 } from 'lucide-react';
+import { sanitizeRichText, sanitizeForInsert, plainTextToHtml, safeHref } from '@/utils/richText';
 
 export default function RichTextEditor({ label, value, onChange, placeholder, rows = 3 }) {
   const ref = useRef(null);
@@ -10,26 +11,68 @@ export default function RichTextEditor({ label, value, onChange, placeholder, ro
 
   // Adopt `value` whenever it changes from outside (another resume opened, an import, a cloud
   // pull), but never while this editor has focus: there the DOM is the source of truth and
-  // rewriting innerHTML would reset the caret. Our own onChange round-trips an identical string.
+  // rewriting innerHTML would reset the caret. The value is sanitized first: it may come from
+  // an imported file, and innerHTML runs <img onerror> and friends.
   useEffect(() => {
     const el = ref.current;
     if (!el || document.activeElement === el) return;
-    if (el.innerHTML !== (value || '')) el.innerHTML = value || '';
+    const clean = sanitizeRichText(value || '');
+    if (el.innerHTML !== clean) el.innerHTML = clean;
   }, [value]);
+
+  function emit() {
+    onChange(ref.current?.innerHTML || '');
+  }
 
   function exec(cmd, val = null) {
     ref.current?.focus();
     document.execCommand(cmd, false, val);
-    onChange(ref.current?.innerHTML || '');
+    emit();
   }
 
   function insertLink() {
-    const url = window.prompt('Paste URL (e.g. https://github.com/you):');
-    if (url && url.trim()) exec('createLink', url.trim());
+    const input = window.prompt('Paste URL (e.g. https://github.com/you):');
+    if (!input || !input.trim()) return;
+    const href = safeHref(input.trim());
+    if (!href) {
+      window.alert('That is not a web, e-mail or phone link.');
+      return;
+    }
+    exec('createLink', href);
+  }
+
+  function insertClean(data) {
+    const html = data?.getData('text/html');
+    const text = data?.getData('text/plain');
+    if (!html && !text) return false;
+    document.execCommand('insertHTML', false, html ? sanitizeForInsert(html) : plainTextToHtml(text));
+    emit();
+    return true;
+  }
+
+  // Pasted and dropped content is reduced to what the editor itself can produce — no colours,
+  // fonts or backgrounds from Google Docs or web pages, and nothing executable.
+  function onPaste(e) {
+    if (insertClean(e.clipboardData)) e.preventDefault();
+  }
+
+  function onDrop(e) {
+    const data = e.dataTransfer;
+    if (!data?.getData('text/html') && !data?.getData('text/plain')) return;
+    e.preventDefault();
+    const range = document.caretRangeFromPoint?.(e.clientX, e.clientY);
+    if (range) {
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+    } else {
+      ref.current?.focus();
+    }
+    insertClean(data);
   }
 
   function onInput() {
-    if (!isComposing.current) onChange(ref.current?.innerHTML || '');
+    if (!isComposing.current) emit();
   }
 
   const minH = `${rows * 1.7}rem`;
@@ -73,6 +116,8 @@ export default function RichTextEditor({ label, value, onChange, placeholder, ro
           contentEditable
           suppressContentEditableWarning
           onInput={onInput}
+          onPaste={onPaste}
+          onDrop={onDrop}
           onCompositionStart={() => { isComposing.current = true; }}
           onCompositionEnd={() => { isComposing.current = false; onInput(); }}
           className="px-3 py-2 text-sm focus:outline-none empty-placeholder rich-text-output"

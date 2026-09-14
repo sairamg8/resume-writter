@@ -8,6 +8,7 @@ import { Pipeline } from '@/components/job/Pipeline';
 import { TasksTab } from '@/components/job/TasksTab';
 import { OverviewTab } from '@/components/job/OverviewTab';
 import { NotesTab } from '@/components/job/NotesTab';
+import { safeHref } from '@/utils/richText';
 
 const TABS = [
   { id: 'overview', label: 'Overview', icon: Info },
@@ -124,9 +125,9 @@ export function JobDetail() {
                 <Pencil size={14} />
               </button>
 
-              {job.url && (
+              {safeHref(job.url) && (
                 <a
-                  href={job.url}
+                  href={safeHref(job.url)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="p-1.5 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"

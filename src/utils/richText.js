@@ -437,3 +437,18 @@ export function sanitizeRichText(html) {
   closeLists(0);
   return out;
 }
+
+/** Plain text (a paste without HTML) as editor HTML: escaped, one line per <br>. */
+export function plainTextToHtml(text) {
+  return esc(String(text || '').replace(/\r\n?/g, '\n')).replace(/\n/g, '<br>');
+}
+
+/**
+ * Sanitized HTML ready to insert at the caret: a single paragraph is unwrapped so pasting a
+ * phrase into a line does not split the line.
+ */
+export function sanitizeForInsert(html) {
+  const clean = sanitizeRichText(html);
+  const single = /^<p>((?:(?!<\/?p[\s>]).)*)<\/p>$/s.exec(clean);
+  return single ? single[1] : clean;
+}

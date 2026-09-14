@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ExternalLink, Trash2, ChevronUp, ChevronDown } from 'lucide-react';
 import { StatusBadge } from '@/components/job/StatusBadge';
 import { deadlineState } from '@/utils/dates';
+import { safeHref } from '@/utils/richText';
 
 function SortIcon({ active, dir }) {
   if (!active) return null;
@@ -64,12 +65,14 @@ export function ListView({ jobs, resumes, onNavigate, onDelete }) {
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-1.5">
                     <span className="font-medium text-gray-900">{job.company || '—'}</span>
-                    {job.url && (
+                    {safeHref(job.url) && (
                       <a
-                        href={job.url}
+                        href={safeHref(job.url)}
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={e => e.stopPropagation()}
+                        title="Open job posting"
+                        aria-label={`Open the ${job.company || 'job'} posting`}
                         className="text-gray-300 hover:text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity"
                       >
                         <ExternalLink size={11} />

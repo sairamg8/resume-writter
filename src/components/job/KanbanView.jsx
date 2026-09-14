@@ -6,6 +6,7 @@ import {
 } from '@dnd-kit/core';
 import { JOB_STATUSES } from '@/constants/jobs';
 import { deadlineState } from '@/utils/dates';
+import { hasRichText, richTextToPlain, safeHref } from '@/utils/richText';
 
 function KanbanCard({ job, onDelete, overlay = false }) {
   const deadline = deadlineState(job.deadline);
@@ -19,12 +20,14 @@ function KanbanCard({ job, onDelete, overlay = false }) {
     <div className={`bg-white border rounded-xl p-3 select-none ${overlay ? 'shadow-2xl border-indigo-200 rotate-1 scale-105' : 'border-gray-200 shadow-sm hover:shadow-md'} transition-all`}>
       <div className="flex items-start justify-between gap-1 mb-0.5">
         <p className="text-sm font-semibold text-gray-900 leading-snug">{job.company || '—'}</p>
-        {job.url && (
+        {safeHref(job.url) && (
           <a
-            href={job.url}
+            href={safeHref(job.url)}
             target="_blank"
             rel="noopener noreferrer"
             onPointerDown={e => e.stopPropagation()}
+            title="Open job posting"
+            aria-label={`Open the ${job.company || 'job'} posting`}
             className="p-0.5 text-gray-300 hover:text-blue-500 shrink-0 mt-0.5 transition-colors"
           >
             <ExternalLink size={11} />
@@ -53,11 +56,10 @@ function KanbanCard({ job, onDelete, overlay = false }) {
         </p>
       )}
 
-      {job.notes && (
-        <p
-          className="text-[10px] text-gray-400 line-clamp-2 mb-1.5 italic leading-relaxed"
-          dangerouslySetInnerHTML={{ __html: job.notes }}
-        />
+      {hasRichText(job.notes) && (
+        <p className="text-[10px] text-gray-400 line-clamp-2 mb-1.5 italic leading-relaxed">
+          {richTextToPlain(job.notes)}
+        </p>
       )}
 
       {todos.length > 0 && (
