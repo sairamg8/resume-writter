@@ -6,7 +6,7 @@ import { PdfRichText } from './shared/PdfRichText';
 import { hasRichText } from '@/utils/richText';
 import { getPdfPhotoStyle } from './shared/pdfPhoto';
 import { HEADER_MARGIN_BOTTOM_PT, pxToPt } from './shared/pdfUnits';
-import { solid } from './shared/pdfColors';
+import { solid, textShades } from './shared/pdfColors';
 
 
 export function MinimalTemplatePDF({ data }) {
@@ -100,7 +100,7 @@ export function MinimalTemplatePDF({ data }) {
                 html={personal.summary}
                 style={{
                   fontSize: baseSize,
-                  color: '#555555',
+                  color: textShades(textColor).sub,
                   lineHeight: lineH,
                   fontStyle: 'italic',
                   textAlign: centered ? 'center' : 'left',

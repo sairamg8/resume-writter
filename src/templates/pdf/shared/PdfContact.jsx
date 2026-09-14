@@ -3,6 +3,7 @@ import { PdfContactIcon } from './PdfContactIcon';
 import { pxToPt } from './pdfUnits';
 import { contactItems } from '@/utils/contacts';
 import { NO_HYPHEN_BREAKS } from './PdfRichText';
+import { textShades } from './pdfColors';
 
 const NBSP = '\u00a0';
 /** A contact value never breaks across lines ("+1 555 0100", "New York, NY"). */
@@ -24,7 +25,7 @@ export function PdfContactRow({ personal, settings, color, hidden }) {
   const centered = settings?.headerAlign === 'center';
   const baseSize = settings?.fontSizeBase || 11;
   const iconPt   = Math.max(7, pxToPt(settings?.iconSize ?? 11));
-  const c        = color || '#555555';
+  const c        = color || textShades(settings?.textColor || '#1a1a1a').sub;
   const textSize = Math.max(8, baseSize - 0.5);
   const text = { fontSize: textSize, color: c };
 

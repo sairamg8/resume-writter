@@ -8,6 +8,7 @@ import {
   RenderColGrid,
   ItemHeader,
   RenderBullets,
+  shadesOf,
 } from './PdfSections';
 
 export function ExperienceSection({ section, settings, marginBottom, spaceBefore, itemGap, italicSubs, centered }) {
@@ -22,6 +23,7 @@ export function ExperienceSection({ section, settings, marginBottom, spaceBefore
   const cols       = s.columns || 1;
   const accent     = settings?.accentColor || '#2563eb';
   const isModern   = settings?._template === 'modern';
+  const body       = shadesOf(settings).body;
 
   return (
     <View style={{ marginBottom, marginTop: spaceBefore }}>
@@ -55,9 +57,9 @@ export function ExperienceSection({ section, settings, marginBottom, spaceBefore
                 centered={centered}
               />
               {hasRichText(desc) && (
-                <PdfRichText html={desc} style={{ fontSize: entrySize, color: '#333333', lineHeight: lineH, marginTop: 2, textAlign: centered ? 'center' : 'left' }} />
+                <PdfRichText html={desc} style={{ fontSize: entrySize, color: body, lineHeight: lineH, marginTop: 2, textAlign: centered ? 'center' : 'left' }} />
               )}
-              <RenderBullets bullets={item.bullets} style={{ fontSize: entrySize, color: '#333333', lineHeight: lineH, textAlign: centered ? 'center' : 'left' }} accent={accent} isModern={isModern} template={settings?._template} />
+              <RenderBullets bullets={item.bullets} style={{ fontSize: entrySize, color: body, lineHeight: lineH, textAlign: centered ? 'center' : 'left' }} accent={accent} isModern={isModern} template={settings?._template} />
             </View>
           );
         }}
@@ -79,6 +81,7 @@ export function SkillsSection({ section, settings, marginBottom, spaceBefore, it
   const cols       = s.columns || 1;
   const isModern   = settings?._template === 'modern';
   const isMinimal  = settings?._template === 'minimal';
+  const shade      = shadesOf(settings);
 
   return (
     <View style={{ marginBottom, marginTop: spaceBefore }}>
@@ -101,7 +104,7 @@ export function SkillsSection({ section, settings, marginBottom, spaceBefore, it
                 )}
                 {skills.map((sk, i) => (
                   <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3 }}>
-                    <Text style={{ fontSize: entrySize - 1, width: 70, color: '#1a1a1a', opacity: 0.8 }}>{sk}</Text>
+                    <Text style={{ fontSize: entrySize - 1, width: 70, color: textColor, opacity: 0.8 }}>{sk}</Text>
                     <View style={{ flex: 1, height: 3, borderRadius: 2, backgroundColor: tint(accent, 0x20 / 255) }}>
                       <View style={{ width: '80%', height: 3, borderRadius: 2, backgroundColor: tint(accent, 0xb3 / 255) }} />
                     </View>
@@ -128,7 +131,7 @@ export function SkillsSection({ section, settings, marginBottom, spaceBefore, it
                     <View style={{ height: 0.5, backgroundColor: '#e5e7eb', marginTop: 1, marginBottom: 1 }} />
                   </View>
                 )}
-                {showSk && <Text style={{ fontSize: entrySize, color: '#4b5563', lineHeight: lineH, textAlign: centered ? 'center' : 'left' }}>{item.skills}</Text>}
+                {showSk && <Text style={{ fontSize: entrySize, color: shade.sub, lineHeight: lineH, textAlign: centered ? 'center' : 'left' }}>{item.skills}</Text>}
               </View>
             );
           }}
@@ -166,7 +169,7 @@ export function SkillsSection({ section, settings, marginBottom, spaceBefore, it
                         borderWidth: 1,
                         borderColor: solid(accent, 0x30 / 255),
                       }}>
-                        <Text style={{ fontSize: entrySize - 0.5, color: isMinimal ? '#4b5563' : accent }}>{tag}</Text>
+                        <Text style={{ fontSize: entrySize - 0.5, color: isMinimal ? shade.sub : accent }}>{tag}</Text>
                       </View>
                     ))}
                   </View>
@@ -188,12 +191,12 @@ export function SkillsSection({ section, settings, marginBottom, spaceBefore, it
             const skillStr = Array.isArray(item.skills) ? item.skills.join(', ') : (item.skills || '');
             return (
               <View style={{ flexDirection: 'row', justifyContent: centered ? 'center' : 'flex-start' }} wrap={false}>
-                {isBullet && <Text style={{ color: '#6b7280', fontSize: entrySize, marginRight: 4 }}>•</Text>}
+                {isBullet && <Text style={{ color: shade.meta, fontSize: entrySize, marginRight: 4 }}>•</Text>}
                 <Text style={{ fontSize: entrySize, lineHeight: lineH, textAlign: centered ? 'center' : 'left' }}>
                   {showCat && item.category
                     ? <Text style={{ fontWeight: 'bold', color: isModern ? accent : textColor }}>{item.category}{showSk ? sep : ''}</Text>
                     : null}
-                  {showSk ? <Text style={{ color: '#4b5563' }}>{skillStr}</Text> : null}
+                  {showSk ? <Text style={{ color: shade.sub }}>{skillStr}</Text> : null}
                 </Text>
               </View>
             );
@@ -215,6 +218,7 @@ export function EducationSection({ section, settings, marginBottom, spaceBefore,
   const cols       = s.columns || 1;
   const accent     = settings?.accentColor || '#2563eb';
   const isModern   = settings?._template === 'modern';
+  const body       = shadesOf(settings).body;
 
   return (
     <View style={{ marginBottom, marginTop: spaceBefore }}>
@@ -245,9 +249,9 @@ export function EducationSection({ section, settings, marginBottom, spaceBefore,
                 centered={centered}
               />
               {hasRichText(item.description) && (
-                <PdfRichText html={item.description} style={{ fontSize: entrySize - 0.5, color: '#333333', lineHeight: lineH, marginTop: 2, textAlign: centered ? 'center' : 'left' }} />
+                <PdfRichText html={item.description} style={{ fontSize: entrySize - 0.5, color: body, lineHeight: lineH, marginTop: 2, textAlign: centered ? 'center' : 'left' }} />
               )}
-              <RenderBullets bullets={item.bullets} style={{ fontSize: entrySize - 0.5, color: '#333333', lineHeight: lineH, textAlign: centered ? 'center' : 'left' }} accent={accent} isModern={isModern} template={settings?._template} />
+              <RenderBullets bullets={item.bullets} style={{ fontSize: entrySize - 0.5, color: body, lineHeight: lineH, textAlign: centered ? 'center' : 'left' }} accent={accent} isModern={isModern} template={settings?._template} />
             </View>
           );
         }}

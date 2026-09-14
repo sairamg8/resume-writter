@@ -2,7 +2,7 @@ import { View, Text } from '@react-pdf/renderer';
 import { PdfSectionTitle } from './PdfSection';
 import { PdfRichText, NO_HYPHEN_BREAKS } from './PdfRichText';
 import { CSS_PX_TO_PT, SECTION_SPACING_PX } from './pdfUnits';
-import { tint } from './pdfColors';
+import { tint, textShades } from './pdfColors';
 
 import {
   ExperienceSection,
@@ -44,6 +44,9 @@ export function getColumnWidth(cols) {
 
 /** `color` at `opacity`, for fills and text (see pdfColors.js for borders). */
 export const hexAlpha = (color, opacity) => tint(color, opacity);
+
+/** Body and secondary text colours — shades of the user's Text colour (see textShades). */
+export const shadesOf = (settings) => textShades(settings?.textColor || '#1a1a1a');
 
 /** Legacy / imported `bullets[]` strings, printed like a rich-text list. */
 export function RenderBullets({ bullets, style }) {
@@ -90,8 +93,8 @@ export function RenderColGrid({ items, cols, gap, renderItem }) {
 
 export function getDateColor(settings) {
   const template = settings?._template;
-  if (template === 'minimal' || template === 'executive') return '#4b5563';
-  if (template === 'sidebar') return '#9ca3af';
+  if (template === 'minimal' || template === 'executive') return shadesOf(settings).sub;
+  if (template === 'sidebar') return shadesOf(settings).muted;
   return settings?.accentColor || '#2563eb';
 }
 
@@ -106,13 +109,12 @@ export function ItemHeader({ primary, sub, loc, dateStr, settings, titleStyle = 
   const baseSize   = settings?.fontSizeBase || 11;
   const isModern   = settings?._template === 'modern';
   const isSidebar  = settings?._template === 'sidebar';
-  const isMinimal  = settings?._template === 'minimal';
+  const shade      = shadesOf(settings);
   const subColor   = isModern  ? hexAlpha(accent, 0.85)
     : isSidebar ? hexAlpha(accent, 0.8)
-    : isMinimal ? '#555555'
-    : '#4b5563';
+    : shade.sub;
   const subStyle   = { fontSize: baseSize, color: subColor, fontStyle: italicSub ? 'italic' : 'normal', textAlign: centered ? 'center' : 'left' };
-  const locStyle   = { fontSize: baseSize, color: '#9ca3af', fontStyle: italicSub ? 'italic' : 'normal', textAlign: centered ? 'center' : 'left' };
+  const locStyle   = { fontSize: baseSize, color: shade.muted, fontStyle: italicSub ? 'italic' : 'normal', textAlign: centered ? 'center' : 'left' };
   const dateColor  = getDateColor(settings);
   // Keep the header with at least two lines of what follows it (react-pdf moves it otherwise).
   const keep = { wrap: false, minPresenceAhead: Math.round(baseSize * (settings?.lineHeightValue ?? 1.5) * 2) };

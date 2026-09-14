@@ -45,6 +45,20 @@ export function solid(color, alpha = 1, background = '#ffffff') {
   return `#${[0, 1, 2].map((i) => hex2(c[i] * a + bg[i] * (1 - a))).join('')}`;
 }
 
+/**
+ * Body and secondary text in the user's Text colour: `text` blended toward the white page,
+ * opaque, so it prints and copies out like any other text. At the default Text colour
+ * (#111111) the shades are the greys the sections used to hard-code — a résumé in the default
+ * colour looks as before — and a custom Text colour reaches every run.
+ *   body   #333333    descriptions, bullets, the summary
+ *   sub    ≈ #4b5563  subtitles, skills, issuers, proficiency, contacts, grey dates
+ *   meta   ≈ #6b7280  technologies, relationship, phone, list markers
+ *   muted  ≈ #9ca3af  locations, credential IDs, light dates
+ */
+export function textShades(text) {
+  return { body: solid(text, 0.857), sub: solid(text, 0.72), meta: solid(text, 0.6), muted: solid(text, 0.4) };
+}
+
 /** `color` at `alpha` as "#rrggbbaa", for fills. Unreadable colours pass through unchanged. */
 export function tint(color, alpha = 1) {
   const c = parseColor(color);

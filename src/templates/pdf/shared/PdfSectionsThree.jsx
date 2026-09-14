@@ -11,6 +11,7 @@ import {
   ItemHeader,
   RenderBullets,
   getColumnWidth,
+  shadesOf,
 } from './PdfSections';
 
 export function ReferencesSection({ section, settings, marginBottom, spaceBefore, itemGap, centered }) {
@@ -19,6 +20,7 @@ export function ReferencesSection({ section, settings, marginBottom, spaceBefore
   const baseSize  = settings?.fontSizeBase || 11;
   const textColor = settings?.textColor   || '#1a1a1a';
   const accent    = settings?.accentColor || '#2563eb';
+  const shade     = shadesOf(settings);
   const visibleItems = (section.items || []).filter(i => i.visible !== false);
   const alignStyle = centered ? { textAlign: 'center' } : {};
 
@@ -30,11 +32,11 @@ export function ReferencesSection({ section, settings, marginBottom, spaceBefore
         {visibleItems.map((item, i) => (
           <View key={i} style={{ width: getColumnWidth(cols), padding: 5, borderWidth: 0.5, borderColor: '#e5e7eb', borderRadius: 3, alignItems: centered ? 'center' : 'flex-start' }} wrap={false}>
             <Text style={{ fontSize: baseSize, fontWeight: 'bold', color: textColor, ...alignStyle }}>{item.name}</Text>
-            {item.jobTitle      && <Text style={{ fontSize: baseSize, color: '#4b5563', ...alignStyle }}>{item.jobTitle}</Text>}
-            {item.company       && <Text style={{ fontSize: baseSize, color: '#4b5563', ...alignStyle }}>{item.company}</Text>}
-            {item.relationship  && <Text style={{ fontSize: baseSize, color: '#6b7280', fontStyle: 'italic', ...alignStyle }}>{item.relationship}</Text>}
+            {item.jobTitle      && <Text style={{ fontSize: baseSize, color: shade.sub, ...alignStyle }}>{item.jobTitle}</Text>}
+            {item.company       && <Text style={{ fontSize: baseSize, color: shade.sub, ...alignStyle }}>{item.company}</Text>}
+            {item.relationship  && <Text style={{ fontSize: baseSize, color: shade.meta, fontStyle: 'italic', ...alignStyle }}>{item.relationship}</Text>}
             {item.email         && <Text style={{ fontSize: baseSize, color: accent, marginTop: 2, ...alignStyle }}><Value item={{ value: item.email, href: contactHref('email', item) }} style={{ color: accent }} /></Text>}
-            {item.phone         && <Text style={{ fontSize: baseSize, color: '#6b7280', ...alignStyle }}><Value item={{ value: item.phone, href: contactHref('phone', item) }} style={{ color: '#6b7280' }} /></Text>}
+            {item.phone         && <Text style={{ fontSize: baseSize, color: shade.meta, ...alignStyle }}><Value item={{ value: item.phone, href: contactHref('phone', item) }} style={{ color: shade.meta }} /></Text>}
           </View>
         ))}
       </View>
@@ -75,6 +77,7 @@ export function CustomSection({ section, settings, marginBottom, spaceBefore, it
   const cols       = s.columns || 1;
   const accent     = settings?.accentColor || '#2563eb';
   const isModern   = settings?._template === 'modern';
+  const body       = shadesOf(settings).body;
 
   return (
     <View style={{ marginBottom, marginTop: spaceBefore }}>
@@ -98,9 +101,9 @@ export function CustomSection({ section, settings, marginBottom, spaceBefore, it
                 centered={centered}
               />
               {hasRichText(item.description) && (
-                <PdfRichText html={item.description} style={{ fontSize: entrySize - 0.5, color: '#333333', lineHeight: lineH, marginTop: 2, textAlign: centered ? 'center' : 'left' }} />
+                <PdfRichText html={item.description} style={{ fontSize: entrySize - 0.5, color: body, lineHeight: lineH, marginTop: 2, textAlign: centered ? 'center' : 'left' }} />
               )}
-              <RenderBullets bullets={item.bullets} style={{ fontSize: entrySize - 0.5, color: '#333333', lineHeight: lineH, textAlign: centered ? 'center' : 'left' }} accent={accent} isModern={isModern} template={settings?._template} />
+              <RenderBullets bullets={item.bullets} style={{ fontSize: entrySize - 0.5, color: body, lineHeight: lineH, textAlign: centered ? 'center' : 'left' }} accent={accent} isModern={isModern} template={settings?._template} />
             </View>
           );
         }}
