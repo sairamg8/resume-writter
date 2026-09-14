@@ -4,7 +4,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/utils/firebase';
 import { isDemoId, nextTombstones } from '@/utils/demoSeed';
-import { mergeResumeLists } from '@/utils/syncMerge';
+import { planFlush, planInitialSync, queueChanges } from '@/utils/cloudSyncPlan';
 
 function resumesCol(uid) { return collection(db, 'users', uid, 'resumes'); }
 function resumeDoc(uid, id) { return doc(db, 'users', uid, 'resumes', id); }
@@ -99,22 +99,27 @@ export function useCloudSync({ user, appState, store }) {
         ]);
         if (cancelled) return;
 
-        const cloudResumes = snap.docs.map(d => d.data());
-        const cloudDeletedIds = new Set(delSnap.exists() ? (delSnap.data().ids || []) : []);
-        const localDeletedIds = new Set(appState.deletedIds || []);
-        const flaggedIds = cloudResumes.filter(r => r.deleted).map(r => r.id);
-        const deletedIds = new Set([...cloudDeletedIds, ...localDeletedIds, ...flaggedIds]);
+        // The document id, not a field: a flagged sample the cloud never held is a bare stub.
+        const cloudResumes = snap.docs.map(d => ({ ...d.data(), id: d.id }));
+        const cloudDeleted = delSnap.exists() ? (delSnap.data().ids || []) : [];
+        const plan = planInitialSync({
+          local: appState.resumes, localDeleted: appState.deletedIds || [], cloud: cloudResumes, cloudDeleted,
+        });
 
-        const merged = mergeResumeLists(appState.resumes, cloudResumes, deletedIds);
-
+        // Deletions this browser never sent reach the cloud in the same batch, before the store
+        // forgets them (loadResumes clears deletedIds) — else the next sync restores them (R4-1).
         const batch = writeBatch(db);
-        merged.forEach(r => batch.set(resumeDoc(user.uid, r.id), r));
+        plan.merged.forEach(r => batch.set(resumeDoc(user.uid, r.id), r));
+        plan.flags.forEach(id => batch.set(resumeDoc(user.uid, id), { deleted: true }, { merge: true }));
+        plan.hardDeletes.forEach(id => batch.delete(resumeDoc(user.uid, id)));
+        if (plan.tombstones) batch.set(deletionsDoc(user.uid), { ids: plan.tombstones });
         await batch.commit();
         if (cancelled) return;
 
+        const { merged } = plan;
         store.loadResumes(merged);
         s.prevResumes = merged;
-        s.tombstones = cloudDeletedIds;
+        s.tombstones = new Set(plan.tombstones || cloudDeleted);
         s.initialSyncDone = true;
         const cloudDemo = cloudResumes.filter(r => isDemoId(r.id)).map(({ deleted: _deleted, ...r }) => r);
         setAccount({ uid: user.uid, cloudDemo });
@@ -159,29 +164,10 @@ export function useCloudSync({ user, appState, store }) {
     if (!user || !s.initialSyncDone || s.cloudDisabled || !db) return;
 
     const current = appState.resumes;
-    const prev = s.prevResumes || [];
-
-    const prevIds = new Set(prev.map(r => r.id));
-    const currIds = new Set(current.map(r => r.id));
-    const deleted = [...prevIds].filter(id => !currIds.has(id));
-
-    const changed = current.filter(r => {
-      const p = prev.find(x => x.id === r.id);
-      return !p || p.updatedAt !== r.updatedAt;
-    });
-
-    if (!deleted.length && !changed.length) return;
-
-    deleted.forEach(id => {
-      s.pendingWrites.delete(id);
-      s.pendingDeletes.add(id);
-    });
-    // A résumé deleted and put back before the flush (a restored sample) must not be deleted.
-    changed.forEach(r => {
-      s.pendingDeletes.delete(r.id);
-      s.pendingWrites.set(r.id, r);
-    });
-
+    const queued = queueChanges({ writes: s.pendingWrites, deletes: s.pendingDeletes }, s.prevResumes || [], current);
+    if (!queued.dirty) return;
+    s.pendingWrites = queued.writes;
+    s.pendingDeletes = queued.deletes;
     s.prevResumes = current;
 
     clearTimeout(s.timer);
@@ -202,22 +188,20 @@ export function useCloudSync({ user, appState, store }) {
     if (!writes.length && !deletes.length) return;
 
     try {
-      const batch = writeBatch(db);
-      writes.forEach(r => batch.set(resumeDoc(uid, r.id), r));
       // A deleted sample résumé is flagged, not removed: its last copy stays in the cloud so that
       // restoring the samples on any device brings back the edited version. Writing it again
       // (a restore) replaces the whole document, flag included.
-      const hardDeletes = deletes.filter(id => !isDemoId(id));
-      deletes.filter(isDemoId).forEach(id => batch.set(resumeDoc(uid, id), { deleted: true }, { merge: true }));
-      hardDeletes.forEach(id => batch.delete(resumeDoc(uid, id)));
+      const plan = planFlush(writes, deletes, s.tombstones);
+      const batch = writeBatch(db);
+      plan.sets.forEach(r => batch.set(resumeDoc(uid, r.id), r));
+      plan.flags.forEach(id => batch.set(resumeDoc(uid, id), { deleted: true }, { merge: true }));
+      plan.hardDeletes.forEach(id => batch.delete(resumeDoc(uid, id)));
 
-      // A sample that an older build deleted outright is on the deletion list; a restore takes it off.
-      const revives = writes.some(r => isDemoId(r.id) && s.tombstones.has(r.id));
       let tombstones = null;
-      if (hardDeletes.length || revives) {
+      if (plan.rewriteTombstones) {
         const delSnap = await getDoc(deletionsDoc(uid));
         const existing = delSnap.exists() ? (delSnap.data().ids || []) : [];
-        tombstones = nextTombstones(existing, hardDeletes, writes.map(r => r.id));
+        tombstones = nextTombstones(existing, plan.hardDeletes, writes.map(r => r.id));
         batch.set(deletionsDoc(uid), { ids: tombstones });
       }
 
