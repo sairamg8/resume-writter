@@ -14,7 +14,7 @@ import { downloadBlob } from '@/utils/download';
 
 export function JobTracker() {
   const navigate = useNavigate();
-  const { jobs, updateJob, deleteJob, importJobs, clearDemoData } = useJobStore();
+  const { jobs, persistError, updateJob, deleteJob, importJobs, clearDemoData } = useJobStore();
   const { appState } = useAppStore();
   const resumes = appState.resumes;
 
@@ -141,6 +141,13 @@ export function JobTracker() {
         </div>
       </div>
 
+      {persistError && (
+        <div className="max-w-7xl mx-auto px-6 pt-3">
+          <p role="alert" className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+            Changes are not being saved: browser storage is full. Export your applications to keep a copy.
+          </p>
+        </div>
+      )}
       {importError && (
         <div className="max-w-7xl mx-auto px-6 pt-3">
           <p role="alert" className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 flex items-start gap-2">

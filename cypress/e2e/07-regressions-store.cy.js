@@ -68,3 +68,20 @@ describe('regressions — resume store', () => {
     cy.contains('[role="alert"]', 'Not saved').should('be.visible');
   });
 });
+
+describe('regressions — job store', () => {
+  it('M3: a full localStorage does not crash the job tracker and says so', () => {
+    cy.seedAndVisit('/#/jobs', null);
+    cy.window().then((win) => {
+      const original = win.Storage.prototype.setItem;
+      cy.stub(win.Storage.prototype, 'setItem').callsFake(function setItem(key, value) {
+        if (key === 'cpwtcv_jobs_v1') throw new win.DOMException('The quota has been exceeded.', 'QuotaExceededError');
+        return original.call(this, key, value);
+      });
+    });
+    cy.on('window:confirm', () => true);
+    cy.get('button[title="Clear all job data"]').click();
+    cy.contains('span', /^Total$/).prev('span').should('have.text', '0');
+    cy.contains('[role="alert"]', 'not being saved').should('be.visible');
+  });
+});
