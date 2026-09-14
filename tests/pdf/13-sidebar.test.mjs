@@ -30,6 +30,17 @@ describe('Sidebar entry links (FIDB-14)', () => {
     }
   });
 
+  it('reference e-mail and phone are mailto: and tel: links, as in the main column and Word (R2-3)', async () => {
+    const pages = await read(await render(sidebar([section('references', [
+      { name: 'Jane Doe', email: 'jane@acme.com', phone: '+1 (555) 0101' },
+    ])])));
+    const urls = linksOf(pages);
+    assert.ok(urls.includes('mailto:jane@acme.com') && urls.includes('tel:+15550101'), urls.join(', '));
+    const t = itemsWith(pages, 'jane@acme.com')[0];
+    const [x1, , x2] = pages[0].links.find((l) => l.url === 'mailto:jane@acme.com').rect;
+    assert.ok(Math.abs(x1 - t.x) < 2 && Math.abs(x2 - (t.x + t.w)) < 2, 'only the address is clickable');
+  });
+
   it('a URL that is not safe to link prints as text, not as a link', async () => {
     const pages = await read(await render(sidebar([
       section('projects', [{ name: 'Proj', url: 'javascript:alert(1)' }]),

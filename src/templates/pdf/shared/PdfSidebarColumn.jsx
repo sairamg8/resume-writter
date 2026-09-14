@@ -1,10 +1,12 @@
 import { View, Text, Link } from '@react-pdf/renderer';
 import { safeHref, hasRichText } from '@/utils/richText';
+import { contactHref } from '@/utils/contacts';
 import { SIDEBAR_COLUMN_TYPES } from '@/constants/templates';
 import { tracking } from './pdfUnits';
 import { sidebarShades } from './pdfColors';
 import { PdfRichText } from './PdfRichText';
 import { RenderBullets } from './PdfSections';
+import { ContactValue } from './PdfContact';
 
 /**
  * The Sidebar template's dark column: its section title and the renderers of the sections that
@@ -151,8 +153,9 @@ export function SideReferences({ section, sectionGap, itemGap, shades = NAVY }) 
             {item.jobTitle && <Text style={{ fontSize: 9, color: shades.label, lineHeight: 1.2 }}>{item.jobTitle}</Text>}
             {item.company && <Text style={{ fontSize: 9, color: shades.label, lineHeight: 1.2 }}>{item.company}</Text>}
             {item.relationship && <Text style={{ fontSize: 9, color: shades.meta, fontStyle: 'italic', lineHeight: 1.2 }}>{item.relationship}</Text>}
-            {item.email && <Text style={{ fontSize: 9, color: shades.meta, lineHeight: 1.2 }}>{item.email}</Text>}
-            {item.phone && <Text style={{ fontSize: 9, color: shades.meta, lineHeight: 1.2 }}>{item.phone}</Text>}
+            {/* mailto: / tel: links, as the main-column templates and the Word export print them (R2-3). */}
+            {item.email && <Text style={{ fontSize: 9, color: shades.meta, lineHeight: 1.2 }}><ContactValue value={item.email} href={contactHref('email', item)} style={{ color: shades.meta }} /></Text>}
+            {item.phone && <Text style={{ fontSize: 9, color: shades.meta, lineHeight: 1.2 }}><ContactValue value={item.phone} href={contactHref('phone', item)} style={{ color: shades.meta }} /></Text>}
           </View>
         ))}
       </View>
