@@ -8,7 +8,7 @@
     "build": "vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "test": "node --test \"tests/pdf/**/*.test.mjs\"",
+    "test": "node --test \"tests/pdf/**/*.test.mjs\" \"tests/unit/*.unit.mjs\"",
     "test:pdf": "node --test \"tests/pdf/**/*.test.mjs\"",
     "cy:open": "cypress open --e2e",
     "cy:run": "cypress run --e2e",
