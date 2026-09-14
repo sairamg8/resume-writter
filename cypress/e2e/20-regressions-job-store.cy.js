@@ -129,3 +129,40 @@ describe('regressions — one résumé store and one job store (M14)', () => {
     cy.contains('p', 'Career History').next().should('contain.text', 'Jordan Rivera');
   });
 });
+
+describe('regressions — the Add Job form and its saved interview stages', () => {
+  const STAGES_KEY = 'cpwtcv_job_stages_v1';
+
+  it('a full localStorage does not blank the form; a custom stage still applies to the job', () => {
+    cy.visit('/#/jobs', {
+      onBeforeLoad(win) {
+        win.localStorage.clear();
+        const original = win.Storage.prototype.setItem;
+        win.Storage.prototype.setItem = function setItem(key, value) {
+          if (key === STAGES_KEY) throw new win.DOMException('The quota has been exceeded.', 'QuotaExceededError');
+          return original.call(this, key, value);
+        };
+      },
+    });
+    cy.contains('button', 'Add Job').click();
+    cy.contains('h1', 'Add Job Application').should('be.visible');
+    formField('Company').type('Stripe');
+    cy.get('input[placeholder^="e.g."]').type('Culture Round');
+    cy.contains('button', /^\s*Add$/).click();
+    cy.contains('button', 'Culture Round').should('be.visible');
+    cy.contains('button', /^Add Job$/).click();
+    cy.contains('h1', 'Stripe').should('be.visible');
+    cy.jobStore().should((s) => expect(s.jobs.find((j) => j.company === 'Stripe').stage).to.eq('Culture Round'));
+  });
+
+  it('an unreadable saved stage list does not blank the form', () => {
+    cy.visit('/#/jobs/new', {
+      onBeforeLoad(win) {
+        win.localStorage.clear();
+        win.localStorage.setItem(STAGES_KEY, '{"not":"a list"}');
+      },
+    });
+    cy.contains('h1', 'Add Job Application').should('be.visible');
+    cy.contains('No custom stages yet').should('be.visible');
+  });
+});

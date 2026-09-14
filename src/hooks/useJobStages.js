@@ -19,11 +19,12 @@ export const PREDEFINED_STAGES = [
   'Negotiation',
 ];
 
+/** The saved custom stages; anything that is not a list of names reads as none. */
 function load() {
   try {
-    const s = localStorage.getItem(KEY);
-    if (s) return JSON.parse(s);
-  } catch {}
+    const saved = JSON.parse(localStorage.getItem(KEY));
+    if (Array.isArray(saved)) return saved.filter(s => typeof s === 'string' && s.trim());
+  } catch { /* unreadable: none */ }
   return [];
 }
 
@@ -31,7 +32,8 @@ export function useJobStages() {
   const [customStages, setCustomStages] = useState(load);
 
   useEffect(() => {
-    localStorage.setItem(KEY, JSON.stringify(customStages));
+    // Storage full: the stages just aren't remembered — the job being edited still gets its stage.
+    try { localStorage.setItem(KEY, JSON.stringify(customStages)); } catch { /* not remembered */ }
   }, [customStages]);
 
   function addCustomStage(label) {
