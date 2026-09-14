@@ -1,10 +1,11 @@
-import { Document, Page, View, Text, Image } from '@react-pdf/renderer';
+import { Document, Page, View, Text } from '@react-pdf/renderer';
 import { getPageStyle, getDocumentProps, getHeaderBorderStyle } from './shared/PdfPage';
 import { PdfContactRow } from './shared/PdfContact';
 import { SectionRouter, getEffectiveSpacing, getVisibleSections } from './shared/PdfSections';
 import { PdfRichText } from './shared/PdfRichText';
 import { hasRichText } from '@/utils/richText';
 import { getPdfPhotoStyle } from './shared/pdfPhoto';
+import { PdfPhoto } from './shared/PdfPhoto';
 import { HEADER_MARGIN_BOTTOM_PT } from './shared/pdfUnits';
 import { solid } from './shared/pdfColors';
 
@@ -82,7 +83,7 @@ export function MinimalTemplatePDF({ data }) {
             gap: 10,
           }}>
             {personal?.photo && !hidden.includes('photo') && (
-              <Image src={personal.photo} style={getPdfPhotoStyle(settings, accent, 'classic')} />
+              <PdfPhoto src={personal.photo} style={getPdfPhotoStyle(settings, accent, 'classic')} />
             )}
             <View style={centered ? { alignItems: 'center', alignSelf: 'stretch' } : { flex: 1 }}>
               {nameBlock}
