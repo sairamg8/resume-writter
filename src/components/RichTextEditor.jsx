@@ -8,11 +8,14 @@ export default function RichTextEditor({ label, value, onChange, placeholder, ro
   const ref = useRef(null);
   const isComposing = useRef(false);
 
+  // Adopt `value` whenever it changes from outside (another resume opened, an import, a cloud
+  // pull), but never while this editor has focus: there the DOM is the source of truth and
+  // rewriting innerHTML would reset the caret. Our own onChange round-trips an identical string.
   useEffect(() => {
-    if (ref.current) {
-      ref.current.innerHTML = value || '';
-    }
-  }, []); // only on mount — cursor resets if synced on every value change
+    const el = ref.current;
+    if (!el || document.activeElement === el) return;
+    if (el.innerHTML !== (value || '')) el.innerHTML = value || '';
+  }, [value]);
 
   function exec(cmd, val = null) {
     ref.current?.focus();

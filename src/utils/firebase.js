@@ -11,11 +11,18 @@ const firebaseConfig = {
   appId:             import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
-const app = initializeApp(firebaseConfig);
+/**
+ * Cloud sync is optional. A clone without VITE_FIREBASE_* values (the open-source default)
+ * gets `auth` and `db` as null and runs on localStorage alone; initializing Firebase with an
+ * empty config throws auth/invalid-api-key at import time and blanks the whole app.
+ */
+export const firebaseEnabled = Boolean(firebaseConfig.apiKey && firebaseConfig.projectId && firebaseConfig.appId);
 
-export const auth = getAuth(app);
+const app = firebaseEnabled ? initializeApp(firebaseConfig) : null;
+
+export const auth = app ? getAuth(app) : null;
 
 // Persistent IndexedDB cache — writes queue offline and flush on reconnect automatically
-export const db = initializeFirestore(app, {
-  localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
-});
+export const db = app
+  ? initializeFirestore(app, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) })
+  : null;

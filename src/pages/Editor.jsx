@@ -12,19 +12,23 @@ import {
   SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, arrayMove,
 } from '@dnd-kit/sortable';
 
-import { TEMPLATE_MAP, SECTION_GROUPS, FONT_SIZE_MAP } from '@/constants/resume';
-import { computeMargin, computeLineHeight, timeAgo } from '@/utils/resume';
+import { SECTION_GROUPS } from '@/constants/resume';
+import { timeAgo } from '@/utils/resume';
 import AuthBar from '@/components/AuthBar';
 import { LayoutToggle } from '@/components/LayoutToggle';
-import { PaginatedPreview } from '@/components/PaginatedPreview';
+import { PdfPreview } from '@/components/PdfPreview';
 import PersonalInfoEditor from '@/components/PersonalInfoEditor';
 import { SortableSection } from '@/components/SectionEditor';
 import DesignPanel from '@/components/DesignPanel';
 import CoverLetterPanel from '@/components/CoverLetterPanel';
 import { ExportDropdown } from '@/components/ExportDropdown';
-import ClassicTemplate from '@/templates/ClassicTemplate';
-import CoverLetterTemplate from '@/templates/CoverLetterTemplate';
-import { getFontById, loadGoogleFont, loadCustomGoogleFont } from '@/utils/fonts';
+import { downloadBlob } from '@/utils/download';
+
+// Module-level so their identity is stable: PdfPreview re-renders when `render` changes.
+const renderResumePreview = (resume) =>
+  import('@/utils/pdfExportReactPDF').then((m) => m.renderResumePdf(resume));
+const renderCoverLetterPreview = (resume) =>
+  import('@/utils/pdfExportReactPDF').then((m) => m.renderCoverLetterPdf(resume));
 
 function buildExportFilename(authUser, resume) {
   const name = (authUser?.displayName || resume?.personal?.name || 'resume').replace(/\s+/g, '_');
@@ -51,6 +55,7 @@ export function Editor({ store, auth, sync }) {
   const [personalOpen, setPersonalOpen] = useState(true);
   const [addSectionOpen, setAddSectionOpen] = useState(false);
   const [exporting, setExporting] = useState(null);
+  const [exportError, setExportError] = useState(null);
   const [resumeName, setResumeName] = useState(resume?.name || '');
   const [editingName, setEditingName] = useState(false);
   const [layoutMode, setLayoutMode] = useState('split');
@@ -103,23 +108,6 @@ export function Editor({ store, auth, sync }) {
     window.addEventListener('mouseup', onMouseUp);
   }
 
-  const ActiveTemplate = TEMPLATE_MAP[resume?.template] || ClassicTemplate;
-  const settings = resume?.settings || {};
-  const margin = computeMargin(settings);
-  const fontSize = FONT_SIZE_MAP[settings.fontSize] || '11px';
-  const lineHeight = computeLineHeight(settings);
-  const vMarginMm = parseFloat(margin.split(' ')[0]) || 14;
-  const pageContentMm = Math.max(100, 297 - vMarginMm * 2);
-
-  useEffect(() => {
-    const font = getFontById(settings.font);
-    if (font) loadGoogleFont(font);
-  }, [settings.font]);
-
-  useEffect(() => {
-    if (settings.customFont) loadCustomGoogleFont(settings.customFont);
-  }, [settings.customFont]);
-
   // Warm react-pdf fonts + template chunk so Export PDF feels instant
   useEffect(() => {
     if (!resume) return;
@@ -155,45 +143,43 @@ export function Editor({ store, auth, sync }) {
     }
   }
 
-  async function handleExportPDF() {
-    setExporting('pdf');
-    const filename = buildExportFilename(auth?.user, resume);
+  /** Run one export, keeping the button state and a visible error message honest. */
+  async function runExport(kind, label, fn) {
+    setExporting(kind);
+    setExportError(null);
     try {
+      await fn();
+    } catch (e) {
+      console.error(`${label} failed:`, e);
+      setExportError(`${label} failed${e?.message ? ` (${e.message})` : ''}. Check your connection and try again.`);
+    } finally {
+      setExporting(null);
+    }
+  }
+
+  function handleExportPDF() {
+    const filename = buildExportFilename(auth?.user, resume);
+    return runExport('pdf', 'PDF export', async () => {
       const { exportToPDFReact, exportCoverLetterPDFReact } = await import('@/utils/pdfExportReactPDF');
       if (activeTab === 'coverletter') {
         await exportCoverLetterPDFReact(resume, `${filename}_cover_letter.pdf`);
       } else {
         await exportToPDFReact(resume, `${filename}.pdf`);
       }
-    } catch (e) { console.error('PDF export failed:', e); }
-    setExporting(null);
+    });
   }
 
-  async function handleExportPDFLegacy() {
-    setExporting('pdf');
+  function handleExportWord() {
     const filename = buildExportFilename(auth?.user, resume);
-    const { exportToPDF } = await import('@/utils/pdfExport');
-    await exportToPDF(activeTab === 'coverletter' ? 'cover-letter-preview' : 'resume-preview', `${filename}.pdf`, margin);
-    setExporting(null);
-  }
-
-  async function handleExportWord() {
-    setExporting('word');
-    const filename = buildExportFilename(auth?.user, resume);
-    try {
+    return runExport('word', 'Word export', async () => {
       const { exportToWord } = await import('@/utils/wordExport');
       await exportToWord(resume, `${filename}.docx`);
-    } catch (e) { console.error('Word export failed:', e); }
-    setExporting(null);
+    });
   }
 
   function handleExportJSON() {
     const filename = buildExportFilename(auth?.user, resume);
-    const blob = new Blob([JSON.stringify(resume, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = `${filename}.json`; a.click();
-    URL.revokeObjectURL(url);
+    downloadBlob(new Blob([JSON.stringify(resume, null, 2)], { type: 'application/json' }), `${filename}.json`);
   }
 
   function commitName() {
@@ -205,10 +191,11 @@ export function Editor({ store, auth, sync }) {
   if (!resume) return null;
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#f5f3ef]">
+    /* fixed inset-0: never let document/body scroll (up or down) and tear the split layout */
+    <div className="fixed inset-0 z-20 flex overflow-hidden bg-[#f5f3ef]">
       <div
-        className={`${layoutMode === 'preview' ? 'hidden' : layoutMode === 'editor' ? 'flex-1' : ''} bg-white flex flex-col overflow-hidden shadow-sm`}
-        style={layoutMode === 'split' ? { width: panelWidth, minWidth: panelWidth, flexShrink: 0 } : undefined}
+        className={`${layoutMode === 'preview' ? 'hidden' : layoutMode === 'editor' ? 'flex-1 min-w-0' : ''} bg-white flex flex-col overflow-hidden shadow-sm min-h-0 h-full`}
+        style={layoutMode === 'split' ? { width: panelWidth, minWidth: panelWidth, maxWidth: panelWidth, flexShrink: 0 } : undefined}
       >
         {/* Header */}
         <div className="px-4 py-3 border-b border-gray-200 flex items-center gap-2 bg-white">
@@ -229,25 +216,38 @@ export function Editor({ store, auth, sync }) {
                 className="w-full text-sm font-semibold border-b border-blue-400 outline-none bg-transparent text-gray-800"
               />
             ) : (
-              <button onClick={() => setEditingName(true)} className="text-sm font-semibold text-gray-800 hover:text-gray-600 truncate w-full text-left">
+              <button onClick={() => setEditingName(true)} title="Rename resume" className="text-sm font-semibold text-gray-800 hover:text-gray-600 truncate w-full text-left">
                 {resume.name}
               </button>
             )}
           </div>
-          <LayoutToggle layoutMode={layoutMode} setLayoutMode={setLayoutMode} />
+          {/* In split and preview modes the preview toolbar carries the toggle; only editor-only needs one here. */}
+          {layoutMode === 'editor' && <LayoutToggle layoutMode={layoutMode} setLayoutMode={setLayoutMode} />}
           <div className="flex items-center gap-1.5 shrink-0">
             <ExportDropdown
               exporting={exporting}
               onExportPDF={handleExportPDF}
-              onExportPDFLegacy={handleExportPDFLegacy}
               onExportWord={handleExportWord}
               onExportJSON={handleExportJSON}
-              onImportJSON={data => { const newId = store.importResume(data); navigate(`/resume/${newId}`); }}
+              onImportJSON={data => { setExportError(null); const newId = store.importResume(data); navigate(`/resume/${newId}`); }}
+              onImportError={setExportError}
             />
             <div className="w-px h-4 bg-gray-200 self-center" />
-            <AuthBar {...auth} {...sync} />
+            <AuthBar {...auth} {...sync} compact />
           </div>
         </div>
+
+        {exportError && (
+          <div role="alert" className="px-4 py-2 text-xs text-red-700 bg-red-50 border-b border-red-200 flex items-start gap-2">
+            <span className="flex-1">{exportError}</span>
+            <button onClick={() => setExportError(null)} className="font-semibold hover:text-red-900 shrink-0">Dismiss</button>
+          </div>
+        )}
+        {store.persistError && (
+          <div role="alert" className="px-4 py-2 text-xs text-red-700 bg-red-50 border-b border-red-200">
+            Not saved: browser storage is full. Export JSON to keep a copy, or remove large photos.
+          </div>
+        )}
 
         {/* Mode bar */}
         <div className="flex items-center gap-2 px-3 py-3 border-b border-gray-200 bg-gray-50/60">
@@ -274,8 +274,11 @@ export function Editor({ store, auth, sync }) {
           </button>
         </div>
 
-        {/* Tab Content */}
-        <div className="flex-1 overflow-y-auto">
+        {/* Tab Content — independent scroll; overscroll-behavior blocks scroll chaining to body */}
+        <div
+          className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden"
+          style={{ overscrollBehavior: 'contain' }}
+        >
           {activeTab === 'resume' && (
             <div className="px-4 py-4 space-y-3">
               <div className="flex justify-end">
@@ -375,8 +378,11 @@ export function Editor({ store, auth, sync }) {
         <div onMouseDown={onDragHandleMouseDown} title="Drag to resize panel" className="w-1 shrink-0 bg-gray-200 hover:bg-blue-400 active:bg-blue-500 cursor-col-resize transition-colors z-10" />
       )}
 
-      <div className={`${layoutMode === 'editor' ? 'hidden' : 'flex-1'} overflow-auto bg-[#f5f3ef] flex flex-col items-center py-8`}>
-        <div className="mb-4 flex items-center gap-3">
+      <div
+        className={`${layoutMode === 'editor' ? 'hidden' : 'flex-1 min-w-0 min-h-0 h-full'} overflow-auto bg-[#f5f3ef] flex flex-col items-center py-8`}
+        style={{ overscrollBehavior: 'contain' }}
+      >
+        <div className="mb-4 flex items-center gap-3 shrink-0">
           <LayoutToggle layoutMode={layoutMode} setLayoutMode={setLayoutMode} />
           <span className="text-xs text-gray-300">·</span>
           <span className="text-xs text-gray-400 font-medium uppercase tracking-wider">
@@ -391,15 +397,17 @@ export function Editor({ store, auth, sync }) {
         </div>
 
         {activeTab === 'coverletter' ? (
-          <div id="cover-letter-preview" className="bg-white shadow-2xl" style={{ width: '210mm', minHeight: '297mm', padding: margin, fontSize, lineHeight }}>
-            <CoverLetterTemplate data={resume} />
-          </div>
+          <PdfPreview key="coverletter" title="Cover letter" textId="cover-letter-preview" input={resume} render={renderCoverLetterPreview} zoom={previewZoom} />
         ) : (
-          <PaginatedPreview resume={resume} ActiveTemplate={ActiveTemplate} margin={margin} fontSize={fontSize} lineHeight={lineHeight} pageContentMm={pageContentMm} zoom={previewZoom} />
+          <PdfPreview key="resume" title="Résumé" textId="resume-preview" input={resume} render={renderResumePreview} zoom={previewZoom} />
         )}
 
-        <div className="mt-6 flex items-center gap-3 text-xs text-gray-400">
-          <span>{lastSaved ? `Saved ${timeAgo(lastSaved)}` : 'Auto-saved to your browser'}</span>
+        <div className="mt-6 flex items-center gap-3 text-xs text-gray-400 shrink-0">
+          {store.persistError ? (
+            <span className="text-red-600 font-medium">Not saved</span>
+          ) : (
+            <span>{lastSaved ? `Saved ${timeAgo(lastSaved)}` : 'Auto-saved to your browser'}</span>
+          )}
           <span>·</span>
           <button onClick={() => navigate('/terms')} className="hover:text-gray-600 transition-colors">Terms</button>
           <button onClick={() => navigate('/privacy')} className="hover:text-gray-600 transition-colors">Privacy</button>

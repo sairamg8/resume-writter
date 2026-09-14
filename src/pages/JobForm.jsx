@@ -4,6 +4,7 @@ import { ArrowLeft } from 'lucide-react';
 import { useJobStore } from '@/hooks/useJobStore';
 import { useJobStages } from '@/hooks/useJobStages';
 import { useAppStore } from '@/hooks/useResumeStore';
+import { todayLocalISO } from '@/utils/dates';
 import { JOB_STATUSES } from '@/constants/jobs';
 import { InterviewStageSelector } from '@/components/job/InterviewStageSelector';
 
@@ -35,7 +36,7 @@ export function JobForm() {
     company: '', role: '', status: 'applied', stage: '',
     url: '', location: '', salary: '',
     contact: '', resumeId: '', notes: '',
-    appliedDate: new Date().toISOString().slice(0, 10), deadline: '',
+    appliedDate: todayLocalISO(), deadline: '',
     ...(existing || {}),
   }));
 

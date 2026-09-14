@@ -45,9 +45,16 @@ function load() {
 
 export function useJobStore() {
   const [state, setState] = useState(load);
+  // null when the last write reached localStorage; otherwise the error (usually QuotaExceededError).
+  const [persistError, setPersistError] = useState(null);
 
   useEffect(() => {
-    localStorage.setItem(KEY, JSON.stringify({ ...state, dataVersion: JOB_VERSION }));
+    try {
+      localStorage.setItem(KEY, JSON.stringify({ ...state, dataVersion: JOB_VERSION }));
+      setPersistError(null);
+    } catch (e) {
+      setPersistError(e);
+    }
   }, [state]);
 
   function addJob(data = {}) {
@@ -107,5 +114,5 @@ export function useJobStore() {
     setState({ jobs: [] });
   }
 
-  return { jobs: state.jobs, addJob, updateJob, deleteJob, importJobs, clearDemoData };
+  return { jobs: state.jobs, persistError, addJob, updateJob, deleteJob, importJobs, clearDemoData };
 }

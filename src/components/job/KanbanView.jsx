@@ -5,13 +5,12 @@ import {
   useDroppable, useDraggable,
 } from '@dnd-kit/core';
 import { JOB_STATUSES } from '@/constants/jobs';
+import { deadlineState } from '@/utils/dates';
 
 function KanbanCard({ job, onDelete, overlay = false }) {
-  const isDeadlineSoon = job.deadline && (() => {
-    const diff = new Date(job.deadline) - new Date();
-    return diff > 0 && diff < 3 * 24 * 60 * 60 * 1000;
-  })();
-  const isDeadlinePast = job.deadline && new Date(job.deadline) < new Date();
+  const deadline = deadlineState(job.deadline);
+  const isDeadlineSoon = deadline === 'soon';
+  const isDeadlinePast = deadline === 'past';
   const todos = job.todos || [];
   const todoDone = todos.filter(t => t.done).length;
   const allDone = todos.length > 0 && todoDone === todos.length;
@@ -83,6 +82,8 @@ function KanbanCard({ job, onDelete, overlay = false }) {
         <button
           onPointerDown={e => e.stopPropagation()}
           onClick={e => { e.stopPropagation(); onDelete(job.id); }}
+          title="Delete application"
+          aria-label="Delete application"
           className="p-1 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
         >
           <Trash2 size={11} />

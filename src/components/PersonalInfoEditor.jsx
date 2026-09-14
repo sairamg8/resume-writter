@@ -1,18 +1,19 @@
-import { useState } from 'react';
-import { User, Mail, Phone, MapPin, Globe, Link, Code, FileText, Eye, EyeOff } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { User, Mail, Phone, MapPin, Globe, Link, Code, FileText, Eye, EyeOff, ImagePlus, X } from 'lucide-react';
 import RichTextEditor from '@/components/RichTextEditor';
 import { HeaderCustomization } from '@/components/PersonalInfoEditorHeader';
 import { PhotoSection } from '@/components/PersonalInfoEditorPhoto';
+import { ContactIcon } from '@/utils/contactIcons';
 
 const FIELDS = [
   { key: 'name',     label: 'Full Name',  icon: User,     placeholder: 'John Doe',            required: true },
   { key: 'title',    label: 'Job Title',  icon: FileText, placeholder: 'Software Engineer',    required: true },
-  { key: 'email',    label: 'Email',      icon: Mail,     placeholder: 'john@email.com' },
-  { key: 'phone',    label: 'Phone',      icon: Phone,    placeholder: '+1 (555) 000-0000' },
-  { key: 'location', label: 'Location',   icon: MapPin,   placeholder: 'City, State' },
-  { key: 'website',  label: 'Website',    icon: Globe,    placeholder: 'yoursite.com', hasUrl: true },
-  { key: 'linkedin', label: 'LinkedIn',   icon: Link,     placeholder: 'linkedin.com/in/you', hasUrl: true },
-  { key: 'github',   label: 'GitHub',     icon: Code,     placeholder: 'github.com/you', hasUrl: true },
+  { key: 'email',    label: 'Email',      icon: Mail,     placeholder: 'john@email.com',      contactIcon: true },
+  { key: 'phone',    label: 'Phone',      icon: Phone,    placeholder: '+1 (555) 000-0000',   contactIcon: true },
+  { key: 'location', label: 'Location',   icon: MapPin,   placeholder: 'City, State',         contactIcon: true },
+  { key: 'website',  label: 'Website',    icon: Globe,    placeholder: 'yoursite.com', hasUrl: true, contactIcon: true },
+  { key: 'linkedin', label: 'LinkedIn',   icon: Link,     placeholder: 'linkedin.com/in/you', hasUrl: true, contactIcon: true },
+  { key: 'github',   label: 'GitHub',     icon: Code,     placeholder: 'github.com/you', hasUrl: true, contactIcon: true },
 ];
 
 export default function PersonalInfoEditor({ personal, updatePersonal, toggleFieldVisibility, settings, updateSetting, template }) {
@@ -24,6 +25,28 @@ export default function PersonalInfoEditor({ personal, updatePersonal, toggleFie
   const templateLabel = template ? template.charAt(0).toUpperCase() + template.slice(1) : 'Classic';
 
   function set(key, val) { updateSetting?.(key, val); }
+
+  function setCustomIcon(field, dataUrl) {
+    const prev = s.customContactIcons || {};
+    if (!dataUrl) {
+      const next = { ...prev };
+      delete next[field];
+      set('customContactIcons', next);
+      return;
+    }
+    set('customContactIcons', { ...prev, [field]: dataUrl });
+  }
+
+  function onPickIconFile(field, file) {
+    if (!file || !file.type.startsWith('image/')) return;
+    if (file.size > 400_000) {
+      alert('Icon image should be under 400KB.');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = ev => setCustomIcon(field, ev.target.result);
+    reader.readAsDataURL(file);
+  }
 
   return (
     <div className="space-y-5">
@@ -53,11 +76,13 @@ export default function PersonalInfoEditor({ personal, updatePersonal, toggleFie
         <p className="text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-3">Fields</p>
         <p className="text-[11px] text-gray-400 mb-3">Toggle eye icon to show/hide on resume</p>
         <div className="space-y-2.5">
-          {FIELDS.map(({ key, label, icon: Icon, placeholder, required, hasUrl }) => {
+          {FIELDS.map(({ key, label, icon: Icon, placeholder, required, hasUrl, contactIcon }) => {
             const isHidden = hidden.has(key);
             const urlKey = key + 'Url';
             const labelKey = key + 'Label';
             const hasValue = !!personal[key];
+            const customIcon = s.customContactIcons?.[key];
+            const showIconControls = contactIcon && (s.contactStyle === 'icon' || s.contactStyle === undefined);
             return (
               <div key={key}>
                 <div className="flex items-center justify-between mb-1">
@@ -86,6 +111,38 @@ export default function PersonalInfoEditor({ personal, updatePersonal, toggleFie
                   <div className="mt-1 flex gap-1.5">
                     <input type="text" value={personal[labelKey] || ''} onChange={e => updatePersonal(labelKey, e.target.value)} placeholder="Display label (optional)" className="flex-1 px-2 py-1 text-xs border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-400 bg-gray-50 text-gray-600 placeholder-gray-300" />
                     <input type="text" value={personal[urlKey] || ''} onChange={e => updatePersonal(urlKey, e.target.value)} placeholder="Link URL (e.g. https://...)" className="flex-1 px-2 py-1 text-xs border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-400 bg-gray-50 text-gray-600 placeholder-gray-300" />
+                  </div>
+                )}
+                {showIconControls && (
+                  <div className="mt-1.5 flex items-center gap-2">
+                    <span className="text-[10px] text-gray-400 shrink-0">Resume icon</span>
+                    <div className="flex items-center gap-1.5 px-1.5 py-1 rounded border border-gray-200 bg-gray-50">
+                      <ContactIcon field={key} settings={s} size={14} strokeWidth={2} className="text-gray-600" />
+                    </div>
+                    <label className="inline-flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-gray-600 border border-gray-200 rounded-md hover:bg-gray-50 cursor-pointer">
+                      <ImagePlus size={11} />
+                      {customIcon ? 'Replace' : 'Upload'}
+                      <input
+                        type="file"
+                        accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                        className="hidden"
+                        onChange={e => {
+                          const f = e.target.files?.[0];
+                          if (f) onPickIconFile(key, f);
+                          e.target.value = '';
+                        }}
+                      />
+                    </label>
+                    {customIcon && (
+                      <button
+                        type="button"
+                        onClick={() => setCustomIcon(key, null)}
+                        className="inline-flex items-center gap-0.5 px-1.5 py-1 text-[10px] text-red-500 hover:bg-red-50 rounded"
+                        title="Remove custom icon"
+                      >
+                        <X size={11} /> Clear
+                      </button>
+                    )}
                   </div>
                 )}
               </div>

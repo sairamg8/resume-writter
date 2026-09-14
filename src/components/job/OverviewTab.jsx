@@ -2,14 +2,16 @@ import { Lock, Briefcase, MapPin, DollarSign, Calendar, User, Link2, FileText, E
 import { Field } from '@/components/job/Field';
 import { Pipeline } from '@/components/job/Pipeline';
 import { StatusHistory } from '@/components/job/StatusHistory';
+import { deadlineState } from '@/utils/dates';
 
 const TERMINAL_READONLY = ['rejected', 'withdrawn'];
 
 export function OverviewTab({ job, set, resumes, navigate }) {
   const isTerminal = TERMINAL_READONLY.includes(job.status);
   const isOnHold = job.status === 'on_hold';
-  const isDeadlinePast = job.deadline && new Date(job.deadline) < new Date();
-  const isDeadlineSoon = job.deadline && !isDeadlinePast && (new Date(job.deadline) - new Date()) < 3 * 24 * 60 * 60 * 1000;
+  const deadline = deadlineState(job.deadline);
+  const isDeadlinePast = deadline === 'past';
+  const isDeadlineSoon = deadline === 'soon';
 
   return (
     <div className="grid grid-cols-2 gap-5">

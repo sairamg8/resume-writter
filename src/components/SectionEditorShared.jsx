@@ -102,7 +102,7 @@ export function ItemCard({ label, onRemove, onToggleVisibility, visible = true, 
               {visible ? <Eye size={12} /> : <EyeOff size={12} />}
             </button>
           )}
-          <button onClick={e => { e.stopPropagation(); onRemove(); }} className="p-1 text-gray-400 hover:text-red-500">
+          <button onClick={e => { e.stopPropagation(); onRemove(); }} title="Delete entry" aria-label="Delete entry" className="p-1 text-gray-400 hover:text-red-500">
             <Trash2 size={12} />
           </button>
           {open ? <ChevronUp size={13} className="text-gray-400" /> : <ChevronDown size={13} className="text-gray-400" />}

@@ -28,15 +28,35 @@ function seedResumes() {
   return { resumes, activeId: resumes[0].id, dataVersion: DATA_VERSION, deletedIds: [] };
 }
 
+/** Copy a value we are about to replace into its own key, so a bad load never destroys data. */
+function backupRaw(raw) {
+  try { localStorage.setItem(`${STORAGE_KEY}_backup_${Date.now()}`, raw); } catch { /* best effort */ }
+}
+
 function loadStore() {
+  let saved = null;
+  try { saved = localStorage.getItem(STORAGE_KEY); } catch { return seedResumes(); }
+  if (!saved) return seedResumes();
   try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      if (parsed.resumes && parsed.activeId && parsed.dataVersion === DATA_VERSION) return parsed;
+    const parsed = JSON.parse(saved);
+    const resumes = Array.isArray(parsed?.resumes) ? parsed.resumes.filter(r => r && r.id) : [];
+    if (!resumes.length) {
+      backupRaw(saved);
+      return seedResumes();
     }
-  } catch { }
-  return seedResumes();
+    // Any data version is kept: user resumes must survive an app upgrade (or downgrade).
+    // Version-specific migrations go here, keyed on parsed.dataVersion.
+    return {
+      ...parsed,
+      resumes,
+      activeId: resumes.some(r => r.id === parsed.activeId) ? parsed.activeId : resumes[0].id,
+      deletedIds: Array.isArray(parsed.deletedIds) ? parsed.deletedIds : [],
+      dataVersion: DATA_VERSION,
+    };
+  } catch {
+    backupRaw(saved);
+    return seedResumes();
+  }
 }
 
 const TEMPLATE_STYLE_DEFAULTS = {
@@ -49,9 +69,16 @@ const TEMPLATE_STYLE_DEFAULTS = {
 
 export function useAppStore() {
   const [appState, setAppState] = useState(loadStore);
+  // null when the last write reached localStorage; otherwise the error (usually QuotaExceededError).
+  const [persistError, setPersistError] = useState(null);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...appState, dataVersion: DATA_VERSION }));
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...appState, dataVersion: DATA_VERSION }));
+      setPersistError(null);
+    } catch (e) {
+      setPersistError(e);
+    }
   }, [appState]);
 
   const activeResume = appState.resumes.find(r => r.id === appState.activeId) || appState.resumes[0];
@@ -83,14 +110,14 @@ export function useAppStore() {
   function createResume(name = 'Untitled Resume') {
     const id = `resume_${Date.now()}`;
     const newResume = { ...JSON.parse(JSON.stringify(defaultResumeData)), id, name, updatedAt: Date.now(), settings: { ...ATS_DEFAULTS } };
-    setAppState(prev => ({ resumes: [...prev.resumes, newResume], activeId: id }));
+    setAppState(prev => ({ ...prev, resumes: [...prev.resumes, newResume], activeId: id }));
     return id;
   }
 
   function importResume(data) {
     const id = `resume_${Date.now()}`;
     const imported = { ...JSON.parse(JSON.stringify(data)), id, updatedAt: Date.now() };
-    setAppState(prev => ({ resumes: [...prev.resumes, imported], activeId: id }));
+    setAppState(prev => ({ ...prev, resumes: [...prev.resumes, imported], activeId: id }));
     return id;
   }
 
@@ -99,7 +126,7 @@ export function useAppStore() {
     if (!source) return;
     const newId = `resume_${Date.now()}`;
     const copy = { ...JSON.parse(JSON.stringify(source)), id: newId, name: `${source.name} (Copy)`, updatedAt: Date.now() };
-    setAppState(prev => ({ resumes: [...prev.resumes, copy], activeId: newId }));
+    setAppState(prev => ({ ...prev, resumes: [...prev.resumes, copy], activeId: newId }));
     return newId;
   }
 
@@ -156,6 +183,7 @@ export function useAppStore() {
 
   return {
     appState,
+    persistError,
     activeResume,
     setActiveId,
     loadResumes,

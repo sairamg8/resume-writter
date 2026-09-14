@@ -24,7 +24,7 @@ export default function MinimalTemplate({ data }) {
   const nameSize = baseSize + (st.fontSizeNameDelta ?? 8);
   const sectionSize = baseSize + (st.fontSizeSectionDelta ?? 1);
   const entrySize = baseSize + (st.fontSizeEntryDelta ?? 0);
-  const contactProps = { personal, hidden, contactStyle, contactLayout, iconSize: st.iconSize ?? 11 };
+  const contactProps = { personal, hidden, contactStyle, contactLayout, iconSize: st.iconSize ?? 11, settings: st };
 
   const NameTitle = () => headerLayout === 'inline' ? (
     <div className={`flex flex-wrap items-baseline ${centered ? 'justify-center' : ''}`} style={{ gap: `${st.headerInlineGap ?? 8}px` }}>

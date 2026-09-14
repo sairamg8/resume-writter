@@ -1,7 +1,7 @@
 import { useRef, useState, useEffect } from 'react';
 import { Download, FileText, Upload, ChevronDown } from 'lucide-react';
 
-export function ExportDropdown({ exporting, onExportPDF, onExportPDFLegacy, onExportWord, onExportJSON, onImportJSON }) {
+export function ExportDropdown({ exporting, onExportPDF, onExportWord, onExportJSON, onImportJSON, onImportError }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   const importRef = useRef(null);
@@ -39,13 +39,6 @@ export function ExportDropdown({ exporting, onExportPDF, onExportPDFLegacy, onEx
             <Download size={12} className="text-blue-500" /> Export PDF
           </button>
           <button
-            onClick={() => { onExportPDFLegacy(); setOpen(false); }}
-            disabled={!!exporting}
-            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-500 hover:bg-gray-50 hover:text-gray-700 disabled:opacity-50"
-          >
-            <Download size={12} className="text-gray-400" /> Export PDF (Legacy)
-          </button>
-          <button
             onClick={() => { onExportWord(); setOpen(false); }}
             disabled={!!exporting}
             className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 disabled:opacity-50"
@@ -78,10 +71,13 @@ export function ExportDropdown({ exporting, onExportPDF, onExportPDFLegacy, onEx
           if (!file) return;
           const reader = new FileReader();
           reader.onload = ev => {
-            try {
-              const parsed = JSON.parse(ev.target.result);
-              if (parsed.personal && Array.isArray(parsed.sections)) onImportJSON(parsed);
-            } catch {}
+            let parsed;
+            try { parsed = JSON.parse(ev.target.result); } catch {
+              onImportError?.("Could not parse file. Make sure it's a valid CPWT-CV JSON.");
+              return;
+            }
+            if (parsed?.personal && Array.isArray(parsed.sections)) onImportJSON(parsed);
+            else onImportError?.('Invalid resume file — missing required fields.');
           };
           reader.readAsText(file);
           e.target.value = '';

@@ -58,7 +58,11 @@ export function SortableSection({
     const props = {
       item,
       onUpdate: u => updateItem(section.id, item.id, () => u),
-      onRemove: () => removeItem(section.id, item.id),
+      onRemove: () => {
+        // An untouched new entry goes without asking; anything with content asks first.
+        const hasContent = Object.entries(item).some(([k, v]) => k !== 'id' && typeof v === 'string' && v.trim());
+        if (!hasContent || confirm('Delete this entry?')) removeItem(section.id, item.id);
+      },
     };
     switch (section.type) {
       case 'experience':     return <ExperienceItem     {...props} />;
@@ -126,7 +130,12 @@ export function SortableSection({
               </button>
               <div className="my-1 border-t border-gray-100" />
               <button
-                onClick={() => { removeSection(section.id); setMenuOpen(false); }}
+                onClick={() => {
+                  setMenuOpen(false);
+                  const n = section.items.length;
+                  const what = n ? ` and its ${n} ${n === 1 ? 'entry' : 'entries'}` : '';
+                  if (confirm(`Delete the "${section.title}" section${what}?`)) removeSection(section.id);
+                }}
                 className="w-full flex items-center gap-2 px-3 py-2 text-xs text-red-600 hover:bg-red-50"
               >
                 <Trash2 size={13} /> Delete section

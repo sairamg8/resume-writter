@@ -1,5 +1,4 @@
-import { Mail, Phone, MapPin, Globe } from 'lucide-react';
-import { LinkedinIcon, GithubIcon } from '@/utils/brandIcons';
+import { ContactIcon } from '@/utils/contactIcons';
 import { getFontById } from '@/utils/fonts';
 import { HeadingStyleContext } from '@/templates/headingStyle';
 import { SectionCaseContext } from '@/templates/sectionCase';
@@ -48,12 +47,12 @@ export default function ModernTemplate({ data }) {
             <h1 className="font-bold tracking-tight mb-0.5" style={{ color: nameColor, fontSize: 'var(--fs-name, 19pt)' }}>{personal.name || 'Your Name'}</h1>
             {personal.title && <p className="opacity-80 mb-2" style={{ color: jobTitleColor, fontSize: 'var(--fs-entry, 11pt)' }}>{personal.title}</p>}
             <div className="flex flex-wrap gap-x-4 gap-y-0.5 opacity-90" style={{ fontSize: baseSize + 'pt' }}>
-              {!hidden.has('email')    && personal.email    && <span className="flex items-center gap-1"><Mail     size={9} strokeWidth={2}/><ContactLink ckey="email"    val={personal.email}   >{personal.email}</ContactLink></span>}
-              {!hidden.has('phone')    && personal.phone    && <span className="flex items-center gap-1"><Phone    size={9} strokeWidth={2}/><ContactLink ckey="phone"    val={personal.phone}   >{personal.phone}</ContactLink></span>}
-              {!hidden.has('location') && personal.location && <span className="flex items-center gap-1"><MapPin   size={9} strokeWidth={2}/>{personal.location}</span>}
-              {!hidden.has('website')  && personal.website  && <span className="flex items-center gap-1"><Globe    size={9} strokeWidth={2}/><ContactLink ckey="website"  val={personal.website} >{personal.website}</ContactLink></span>}
-              {!hidden.has('linkedin') && personal.linkedin && <span className="flex items-center gap-1"><LinkedinIcon size={9} strokeWidth={2}/><ContactLink ckey="linkedin" val={personal.linkedin}>{personal.linkedin}</ContactLink></span>}
-              {!hidden.has('github')   && personal.github   && <span className="flex items-center gap-1"><GithubIcon   size={9} strokeWidth={2}/><ContactLink ckey="github"   val={personal.github}  >{personal.github}</ContactLink></span>}
+              {!hidden.has('email')    && personal.email    && <span className="flex items-center gap-1"><ContactIcon field="email" settings={st} size={9} strokeWidth={2}/><ContactLink ckey="email"    val={personal.email}   >{personal.email}</ContactLink></span>}
+              {!hidden.has('phone')    && personal.phone    && <span className="flex items-center gap-1"><ContactIcon field="phone" settings={st} size={9} strokeWidth={2}/><ContactLink ckey="phone"    val={personal.phone}   >{personal.phone}</ContactLink></span>}
+              {!hidden.has('location') && personal.location && <span className="flex items-center gap-1"><ContactIcon field="location" settings={st} size={9} strokeWidth={2}/>{personal.location}</span>}
+              {!hidden.has('website')  && personal.website  && <span className="flex items-center gap-1"><ContactIcon field="website" settings={st} size={9} strokeWidth={2}/><ContactLink ckey="website"  val={personal.website} >{personal.website}</ContactLink></span>}
+              {!hidden.has('linkedin') && personal.linkedin && <span className="flex items-center gap-1"><ContactIcon field="linkedin" settings={st} size={9} strokeWidth={2}/><ContactLink ckey="linkedin" val={personal.linkedin}>{personal.linkedin}</ContactLink></span>}
+              {!hidden.has('github')   && personal.github   && <span className="flex items-center gap-1"><ContactIcon field="github" settings={st} size={9} strokeWidth={2}/><ContactLink ckey="github"   val={personal.github}  >{personal.github}</ContactLink></span>}
             </div>
           </div>
         </div>

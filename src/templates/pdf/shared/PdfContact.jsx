@@ -1,16 +1,16 @@
 import { View, Text } from '@react-pdf/renderer';
-import { MailIcon, PhoneIcon, MapPinIcon, GlobeIcon, LinkedinPdfIcon, GithubPdfIcon } from './PdfIcons';
+import { PdfContactIcon } from './PdfContactIcon';
 import { pxToPt } from './pdfUnits';
 
 function buildItems(personal) {
   const hidden = personal?.hiddenFields || [];
   return [
-    { key: 'email',    Icon: MailIcon,        val: personal?.email,    display: personal?.email },
-    { key: 'phone',    Icon: PhoneIcon,       val: personal?.phone,    display: personal?.phone },
-    { key: 'location', Icon: MapPinIcon,      val: personal?.location, display: personal?.location },
-    { key: 'website',  Icon: GlobeIcon,       val: personal?.website,  display: personal?.websiteLabel || personal?.website },
-    { key: 'linkedin', Icon: LinkedinPdfIcon, val: personal?.linkedin, display: personal?.linkedinLabel || personal?.linkedin },
-    { key: 'github',   Icon: GithubPdfIcon,   val: personal?.github,   display: personal?.githubLabel  || personal?.github },
+    { key: 'email',    val: personal?.email,    display: personal?.email },
+    { key: 'phone',    val: personal?.phone,    display: personal?.phone },
+    { key: 'location', val: personal?.location, display: personal?.location },
+    { key: 'website',  val: personal?.website,  display: personal?.websiteLabel || personal?.website },
+    { key: 'linkedin', val: personal?.linkedin, display: personal?.linkedinLabel || personal?.linkedin },
+    { key: 'github',   val: personal?.github,   display: personal?.githubLabel  || personal?.github },
   ].filter(({ key, val }) => !hidden.includes(key) && val);
 }
 
@@ -18,20 +18,18 @@ export function PdfContactRow({ personal, settings, color }) {
   const contactStyle  = settings?.contactStyle  || 'icon';
   const contactLayout = settings?.contactLayout || 'justify';
   const baseSize = settings?.fontSizeBase || 11;
-  // Canvas icons use CSS px; convert so PDF contact row scale matches preview
   const iconPt   = Math.max(7, pxToPt(settings?.iconSize ?? 11));
   const c        = color || '#555555';
-  // Canvas contact text uses baseSize (pt), slightly smaller visual via gray color not size cut
   const textSize = Math.max(8, baseSize - 0.5);
 
   const items = buildItems(personal);
   if (!items.length) return null;
 
-  function renderItem({ key, Icon, display }) {
+  function renderItem({ key, display }) {
     if (contactStyle === 'icon') {
       return (
         <View key={key} style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
-          <Icon size={iconPt} color={c} />
+          <PdfContactIcon field={key} settings={settings} size={iconPt} color={c} />
           <Text style={{ fontSize: textSize, color: c }}>{display}</Text>
         </View>
       );
@@ -56,7 +54,6 @@ export function PdfContactRow({ personal, settings, color }) {
   }
 
   if (contactLayout === '2grid') {
-    // Canvas: gap '2px 24px'
     return (
       <View style={{ marginTop: 3, flexDirection: 'row', flexWrap: 'wrap', columnGap: pxToPt(24), rowGap: pxToPt(2) }}>
         {items.map(item => (
@@ -66,8 +63,6 @@ export function PdfContactRow({ personal, settings, color }) {
     );
   }
 
-  // justify (default) - wrap row
-  // HTML canvas: gap: '2px 16px' — 2px row gap, 16px column gap
   if (contactStyle === 'icon') {
     return (
       <View style={{ marginTop: 3, flexDirection: 'row', flexWrap: 'wrap', columnGap: pxToPt(16), rowGap: pxToPt(2) }}>
@@ -87,7 +82,6 @@ export function PdfContactRow({ personal, settings, color }) {
       </View>
     );
   }
-  // bar (plain) | separator — HTML canvas: mx-1.5 = 6px
   return (
     <View style={{ marginTop: 3, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center' }}>
       {items.map((item, i) => (
@@ -100,18 +94,18 @@ export function PdfContactRow({ personal, settings, color }) {
   );
 }
 
-// Compact stacked contact list for the sidebar template (light text on dark bg)
-export function PdfSidebarContact({ personal, accent, iconPt = 8 }) {
+export function PdfSidebarContact({ personal, settings, iconPt = 8 }) {
   const items = buildItems(personal);
   if (!items.length) return null;
   const textSize = 9;
-  const c = '#cbd5e1';
+  const muted = '#94a3b8';
+  const value = '#cbd5e1';
   return (
     <View style={{ gap: 4 }}>
-      {items.map(({ key, Icon, display }) => (
+      {items.map(({ key, display }) => (
         <View key={key} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-          <Icon size={iconPt} color={accent || '#94a3b8'} />
-          <Text style={{ fontSize: textSize, color: c, flex: 1 }}>{display}</Text>
+          <PdfContactIcon field={key} settings={settings} size={iconPt} color={muted} />
+          <Text style={{ fontSize: textSize, color: value, flex: 1 }}>{display}</Text>
         </View>
       ))}
     </View>

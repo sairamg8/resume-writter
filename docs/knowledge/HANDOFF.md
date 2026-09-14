@@ -1,5 +1,29 @@
 # Session Handoff — Resume Here
 
+> **Updated 2026-09-14.** Checkout moved to **`/mnt/Storage/Projects/flowcv`**, branch
+> **`audit/e2e-fidelity`**. The authoritative resume cursor lives outside the repo:
+> `/mnt/Storage/my-learning/claude/flowcv/START-HERE.md`.
+
+## 2026-09-14 — audit + Cypress (in progress)
+
+Goal (owner): free open-source FlowCV rival — FlowCV parity plus extras; fix canvas-vs-PDF drift;
+Cypress E2E suite.
+
+- `scripts/visual-compare.mjs` — canvas vs PDF composites (`qa-visual-compare/`, git-ignored).
+  Run against a build: `vite build --outDir <tmp>` → `vite preview --outDir <tmp> --port 5199`.
+- `cypress.config.js`, `cypress/support/*`, `cypress/e2e/00-smoke.cy.js` — scaffold; install
+  `cypress` (yarn) before running.
+- `.env` is git-ignored now; `.env.example` documents the optional Firebase keys.
+- Known mismatches (unverified list): page counts (Modern 4 vs 3, Sidebar 5 vs 4), bullet
+  indent, `,` vs `·` separators, date placement, pagination of lists, cover-letter recipient
+  fields not rendered, silent export failure.
+- The multi-agent audit hit the usage limit and returned nothing — re-run in small stages.
+
+---
+
+## Earlier handoff (2026-07-14)
+
+
 > **For the next human or AI session:** read this file first, then `AGENT_MEMORY.md`.  
 > **Saved:** 2026-07-14  
 > **Status:** React-PDF fidelity work **merged into `master`**.

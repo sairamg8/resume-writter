@@ -20,6 +20,10 @@ export const ATS_DEFAULTS = {
   headerLayout: 'stack',
   headerInlineGap: 8,
   contactStyle: 'icon',
+  /** Built-in pack: filled | lucide | refined | minimal | bold. Overridden per-field by customContactIcons. */
+  iconSet: 'filled',
+  /** Optional per-field icon images: { email, phone, location, website, linkedin, github } as data URLs */
+  customContactIcons: {},
   contactCols: 1,
   contactLayout: 'justify',
   photoShape: 'circle',
