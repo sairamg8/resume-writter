@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ExternalLink, Trash2, ChevronUp, ChevronDown } from 'lucide-react';
 import { StatusBadge } from '@/components/job/StatusBadge';
+import { deadlineState } from '@/utils/dates';
 
 function SortIcon({ active, dir }) {
   if (!active) return null;
@@ -83,8 +84,9 @@ export function ListView({ jobs, resumes, onNavigate, onDelete }) {
                 <td className="px-4 py-3 text-gray-500 text-xs">{job.appliedDate || '—'}</td>
                 <td className="px-4 py-3 text-xs">
                   {job.deadline ? (() => {
-                    const past = new Date(job.deadline) < new Date();
-                    const soon = !past && (new Date(job.deadline) - new Date()) < 3 * 24 * 60 * 60 * 1000;
+                    const state = deadlineState(job.deadline);
+                    const past = state === 'past';
+                    const soon = state === 'soon';
                     return (
                       <span className={past ? 'text-red-500 font-medium' : soon ? 'text-amber-500 font-medium' : 'text-gray-500'}>
                         {job.deadline}
