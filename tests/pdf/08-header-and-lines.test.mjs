@@ -20,6 +20,8 @@ const DOCUMENTS = [
 ];
 
 describe('header contacts', () => {
+  // Modern and Sidebar are the fix (b258eb6); Classic, Minimal, Executive and the letter linked
+  // their contacts since 559df80 (FIDA-26) — for them these are guards.
   for (const [name, make] of DOCUMENTS) {
     it(`${name}: contact lines are links (FIDA-26, FIDB-14)`, async () => {
       const pages = await read(await make(PERSONAL));

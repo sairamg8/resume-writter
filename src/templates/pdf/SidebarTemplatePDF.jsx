@@ -9,11 +9,9 @@ import { PdfPhoto } from './shared/PdfPhoto';
 import { CSS_PX_TO_PT, tracking } from './shared/pdfUnits';
 import { PdfContactIcon } from './shared/PdfContactIcon';
 import { ContactValue } from './shared/PdfContact';
-import { contactItems } from '@/utils/contacts';
+import { CONTACT_LABELS, contactItems } from '@/utils/contacts';
 import { SIDEBAR_TYPES, SideSectionTitle, renderSideSection, SidebarMainSectionRouter } from './shared/PdfSidebarSections';
 import { sidebarShades } from './shared/pdfColors';
-
-const CONTACT_LABELS = { email: 'Email', phone: 'Phone', location: 'Location', website: 'Website', linkedin: 'LinkedIn', github: 'GitHub' };
 
 /** A contact in the dark column: icon and label in the column's label colour, not the accent. */
 function SideContactRow({ field, label, value, href, iconPt, settings, shades }) {

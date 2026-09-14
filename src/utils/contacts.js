@@ -3,6 +3,9 @@ import { safeHref } from '@/utils/richText';
 /** Contact fields in the order every export prints them. */
 export const CONTACT_KEYS = ['email', 'phone', 'location', 'website', 'linkedin', 'github'];
 
+/** Each contact field's name, where a template prints one (the Sidebar's labels). */
+export const CONTACT_LABELS = { email: 'Email', phone: 'Phone', location: 'Location', website: 'Website', linkedin: 'LinkedIn', github: 'GitHub' };
+
 /**
  * Where a contact line should link to, or null. E-mail → mailto:, phone → tel:, website /
  * LinkedIn / GitHub → the "Link URL" override when set, else the value itself (https:// added

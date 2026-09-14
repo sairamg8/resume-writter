@@ -58,8 +58,11 @@ async function icons(bytes) {
   return out;
 }
 
+// Every document that draws contact icons (R1-5: Minimal and Executive too).
 const DOCUMENTS = [
   ['classic', (settings) => render(resume({ template: 'classic', settings, personal: PERSONAL }))],
+  ['minimal', (settings) => render(resume({ template: 'minimal', settings, personal: PERSONAL }))],
+  ['executive', (settings) => render(resume({ template: 'executive', settings, personal: PERSONAL }))],
   ['modern', (settings) => render(resume({ template: 'modern', settings, personal: PERSONAL }))],
   ['sidebar', (settings) => render(resume({ template: 'sidebar', settings, personal: PERSONAL }))],
   ['cover letter', (settings) => renderCover(resume({ settings, personal: PERSONAL }))],
@@ -97,6 +100,7 @@ describe('contact icon packs (FIDA-39, FIDB-07, FIDB-06)', () => {
     });
   }
 
+  // Modern is the fix (b6deb02, FIDB-06); the other documents already drew uploads — guards.
   for (const [name, make] of DOCUMENTS) {
     it(`${name}: an uploaded icon replaces that field's pack icon`, async () => {
       const bytes = await make({ iconSet: 'lucide', contactStyle: 'icon', customContactIcons: { email: RED_PNG } });

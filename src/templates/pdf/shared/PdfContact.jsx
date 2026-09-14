@@ -87,21 +87,3 @@ export function PdfContactRow({ personal, settings, color, hidden }) {
     </Text>
   );
 }
-
-export function PdfSidebarContact({ personal, settings, iconPt = 8 }) {
-  const items = contactItems(personal);
-  if (!items.length) return null;
-  const textSize = 9;
-  const muted = '#94a3b8';
-  const value = '#cbd5e1';
-  return (
-    <View style={{ gap: 4 }}>
-      {items.map((item) => (
-        <View key={item.key} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-          <PdfContactIcon field={item.key} settings={settings} size={iconPt} color={muted} />
-          <ContactValue value={item.value} href={item.href} style={{ fontSize: textSize, color: value, flex: 1 }} />
-        </View>
-      ))}
-    </View>
-  );
-}
