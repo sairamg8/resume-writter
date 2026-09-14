@@ -1,7 +1,7 @@
 // Section Options (the section editor's "Customize layout") as they print.
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { setup, teardown, resume, section, experience, render, renderDocx, read, itemsWith, allText, MM, TEMPLATES } from './harness.mjs';
+import { setup, teardown, resume, section, experience, render, renderDocx, read, itemsWith, allText, loadModule, MM, TEMPLATES } from './harness.mjs';
 
 before(setup);
 after(teardown);
@@ -149,4 +149,37 @@ describe('item spacing (FIDA-53)', () => {
       near(await pitch(template, 40, { spacing: 'relaxed', itemGap: 5 }) - base, (5 - 12) * 0.75, 'a section\'s own item gap (px) wins');
     });
   }
+});
+
+describe('the default gap between items (R2-1)', () => {
+  // With no "Between Items" set, entries sit 8 px (6 pt) apart, as every résumé printed before the
+  // slider worked (FIDA-53); Spacious is 14 px (10.5 pt), Tight 4 px (3 pt) — the old presets.
+  const pitch = async (template, sectionSettings = {}, settings = {}) => {
+    const pages = await read(await render(resume({ template, settings, sections: [experience([{}, {}, {}], sectionSettings)] })));
+    return first(pages, 'Role 1').y - first(pages, 'Role 2').y;
+  };
+  const near = (actual, expected, what) => assert.ok(Math.abs(actual - expected) < 0.3, `${what}: ${actual.toFixed(2)} pt, expected ${expected.toFixed(2)}`);
+
+  for (const template of TEMPLATES) {
+    it(`${template}: a new résumé prints the old presets' gaps — Normal 6 pt, Tight 3 pt, Spacious 10.5 pt`, async () => {
+      const none = await pitch(template, { itemGap: 0 });
+      near(await pitch(template) - none, 6, 'Normal');
+      near(await pitch(template, { spacing: 'compact' }) - none, 3, 'Tight');
+      near(await pitch(template, { spacing: 'relaxed' }) - none, 10.5, 'Spacious');
+    });
+  }
+
+  it('a résumé saved with the old 12 px default prints the 6 pt gap it always printed once loaded', async () => {
+    const { normalizeResume } = await loadModule('/src/utils/normalizeResume.js');
+    const saved = resume({ settings: { itemGap: 12 } });
+    delete saved.dataVersion;
+    const loaded = normalizeResume(saved);
+    assert.equal(loaded.settings.itemGap, 8);
+    const gapOf = async (r) => {
+      const pages = await read(await render({ ...r, sections: [experience([{}, {}])] }));
+      return first(pages, 'Role 1').y - first(pages, 'Role 2').y;
+    };
+    const none = await gapOf({ ...loaded, settings: { ...loaded.settings, itemGap: 0 } });
+    near(await gapOf(loaded) - none, 6, 'migrated');
+  });
 });

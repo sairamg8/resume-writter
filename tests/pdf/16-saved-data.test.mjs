@@ -118,3 +118,25 @@ describe('a photo saved in a format the PDF cannot draw (R1-1)', () => {
     });
   }
 });
+
+describe('Between Items saved at the old 12 px default (R2-1)', () => {
+  it('becomes 8 px for a résumé saved before data version 8; a value the user chose is kept', async () => {
+    const { normalizeResume, DATA_VERSION } = await normalizer();
+    const old = (settings, dataVersion) => {
+      const r = resume({ settings });
+      if (dataVersion === undefined) delete r.dataVersion; else r.dataVersion = dataVersion;
+      return r;
+    };
+    assert.equal(normalizeResume(old({ itemGap: 12 })).settings.itemGap, 8, 'no version: migrated');
+    assert.equal(normalizeResume(old({ itemGap: 12 }, 7)).settings.itemGap, 8, 'version 7: migrated');
+    assert.equal(normalizeResume(old({ itemGap: 20 })).settings.itemGap, 20, 'a chosen value is kept');
+    assert.equal(normalizeResume(old({ itemGap: 0 })).settings.itemGap, 0, 'zero is a chosen value');
+    const current = old({ itemGap: 12 }, DATA_VERSION);
+    assert.equal(normalizeResume(current), current, '12 px set on this build is the user\'s: untouched');
+    // Version 7's letter migration still runs alongside, and only once.
+    const both = normalizeResume({ ...old({ itemGap: 12 }), coverLetter: { ...OLD_DEFAULT, body: '<p>Hi</p>' } });
+    assert.deepEqual([both.settings.itemGap, both.coverLetter.recipientTitle, both.dataVersion], [8, '', DATA_VERSION]);
+    const v7 = normalizeResume({ ...old({ itemGap: 12 }, 7), coverLetter: { ...OLD_DEFAULT, body: '<p>Hi</p>' } });
+    assert.equal(v7.coverLetter.recipientTitle, 'Hiring Manager', 'a version-7 letter kept its title: v7 already ran on it');
+  });
+});

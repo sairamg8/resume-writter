@@ -1,7 +1,7 @@
 import { View, Text } from '@react-pdf/renderer';
 import { PdfSectionTitle } from './PdfSection';
 import { PdfRichText, NO_HYPHEN_BREAKS } from './PdfRichText';
-import { CSS_PX_TO_PT, SECTION_SPACING_PX } from './pdfUnits';
+import { CSS_PX_TO_PT, DEFAULT_ITEM_GAP_PX, SECTION_SPACING_PX } from './pdfUnits';
 import { tint, textShades } from './pdfColors';
 
 import {
@@ -212,7 +212,7 @@ export function SectionTitleOf({ section, settings, centered }) {
 export function SectionRouter({ section, settings, marginBottom, spaceBefore, itemGap, italicSubs = false }) {
   if (section.visible === false) return null;
   const mbVal = marginBottom ?? (settings?.sectionGap ?? 12);
-  const igVal = itemGap     ?? (settings?.itemGap     ?? 9);
+  const igVal = itemGap     ?? (settings?.itemGap     ?? DEFAULT_ITEM_GAP_PX * CSS_PX_TO_PT);
   const centered = section.settings?.alignment === 'center';
   const props = { section, settings, marginBottom: mbVal, spaceBefore, itemGap: igVal, italicSubs, centered };
 
@@ -245,7 +245,7 @@ export function SectionRouter({ section, settings, marginBottom, spaceBefore, it
 export function getEffectiveSpacing(section, settings, { isLast = false } = {}) {
   const ss = section.settings || {};
   const globalSecGap  = settings?.sectionGap ?? 12;
-  const globalItemGap = settings?.itemGap    ?? 9;
+  const globalItemGap = settings?.itemGap    ?? DEFAULT_ITEM_GAP_PX * CSS_PX_TO_PT;
   const preset = (SECTION_SPACING_PX[ss.spacing] ?? SECTION_SPACING_PX.normal) / SECTION_SPACING_PX.normal;
 
   const marginBottom = isLast

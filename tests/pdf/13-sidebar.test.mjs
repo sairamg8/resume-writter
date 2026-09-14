@@ -52,8 +52,8 @@ describe('Sidebar dark-column spacing (FIDB-38)', () => {
 
   it('the section\'s spacing preset sets the gap between items, as in the main column', async () => {
     // Same precedence as the main column (getEffectiveSpacing, FIDA-53): a preset scales Design →
-    // Between Items (default 12 px = 9 pt) by Tight 4 : Normal 8 : Spacious 14; an Item gap wins.
-    const between = 12 * 0.75;
+    // Between Items (default 8 px = 6 pt) by Tight 4 : Normal 8 : Spacious 14; an Item gap wins.
+    const between = 8 * 0.75;
     const compact = await skillGap({ spacing: 'compact' });
     const relaxed = await skillGap({ spacing: 'relaxed' });
     assert.ok(Math.abs(relaxed - compact - between * (14 - 4) / 8) < 0.2, `compact ${compact}, relaxed ${relaxed}`);

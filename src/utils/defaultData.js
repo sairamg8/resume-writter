@@ -39,7 +39,7 @@ export const ATS_DEFAULTS = {
   iconSize: 11,
   lineHeightValue: 1.5,
   sectionGap: 16,
-  itemGap: 12,
+  itemGap: 8, // px: the Normal preset's gap (R2-1)
   marginH: 18,
   marginV: 14,
   sidebarBg: '#1e293b',

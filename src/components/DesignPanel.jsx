@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { defaultSettings } from '@/utils/defaultData';
+import { ATS_DEFAULTS, defaultSettings } from '@/utils/defaultData';
 import { templateId } from '@/constants/templates';
 import { DesignSection, NumberRow } from '@/components/DesignPanelShared';
 import { ColorsSection } from '@/components/DesignPanelColors';
@@ -141,7 +141,7 @@ export default function DesignPanel({ resume, updateSetting, setTemplate, resetS
           <NumberRow label="Left / Right margin" value={settings.marginH ?? 18} onChange={v => updateSetting('marginH', v)} min={0} max={40} step={1} unit="mm" />
           <div className="h-px bg-gray-100" />
           <NumberRow label="Between Sections" value={settings.sectionGap ?? 16} onChange={v => updateSetting('sectionGap', v)} min={0} max={60} step={1} unit="px" />
-          <NumberRow label="Between Items" value={settings.itemGap ?? 12} onChange={v => updateSetting('itemGap', v)} min={0} max={40} step={1} unit="px" />
+          <NumberRow label="Between Items" value={settings.itemGap ?? ATS_DEFAULTS.itemGap} onChange={v => updateSetting('itemGap', v)} min={0} max={40} step={1} unit="px" />
         </div>
       </DesignSection>
 

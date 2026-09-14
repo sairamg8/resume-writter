@@ -9,7 +9,7 @@ import { withKnownTemplate } from '@/constants/templates';
  * it has had, so none runs twice on the same data — not after a sync, an import of an exported
  * file, or a stale tab of an older build writing the store back with its older store version.
  */
-export const DATA_VERSION = 7;
+export const DATA_VERSION = 8;
 
 const filled = (v) => typeof v === 'string' && v.trim() !== '';
 
@@ -26,6 +26,24 @@ function withoutDefaultRecipientTitle(cl) {
   return { ...cl, recipientTitle: '' };
 }
 
+/**
+ * v8 (R2-1): Design → Spacing "Between Items" did nothing until FIDA-53 (ec843e2) — every
+ * section printed its preset's fixed gap, Normal 8 px — and new résumés stored 12 px, the old
+ * default. Since FIDA-53 that stored 12 px prints, 50 % wider than anything the résumé ever
+ * showed. The untouched default becomes 8 px (the new default), so the résumé prints as it always
+ * did; any other value is one the user chose, and the slider now honours it.
+ */
+function withoutOldItemGapDefault(settings) {
+  if (!settings || settings.itemGap !== 12) return settings;
+  return { ...settings, itemGap: 8 };
+}
+
+/** One-time migrations: [the version that introduced it, résumé → résumé]. */
+const MIGRATIONS = [
+  [7, (r) => (r.coverLetter ? { ...r, coverLetter: withoutDefaultRecipientTitle(r.coverLetter) } : r)],
+  [8, (r) => (r.settings ? { ...r, settings: withoutOldItemGapDefault(r.settings) } : r)],
+];
+
 const versionOf = (r) => (Number.isFinite(r.dataVersion) ? r.dataVersion : 0);
 
 /**
@@ -38,8 +56,7 @@ const versionOf = (r) => (Number.isFinite(r.dataVersion) ? r.dataVersion : 0);
 export function normalizeResume(resume) {
   if (!resume || typeof resume !== 'object') return resume;
   const r = withKnownTemplate(resume);
-  if (versionOf(r) >= DATA_VERSION) return r;
-  const out = { ...r, dataVersion: DATA_VERSION };
-  if (r.coverLetter) out.coverLetter = withoutDefaultRecipientTitle(r.coverLetter);
-  return out;
+  const from = versionOf(r);
+  if (from >= DATA_VERSION) return r;
+  return MIGRATIONS.reduce((out, [version, migrate]) => (from < version ? migrate(out) : out), { ...r, dataVersion: DATA_VERSION });
 }

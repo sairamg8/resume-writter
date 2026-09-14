@@ -4,12 +4,12 @@
  * Key concepts:
  * - The app uses HashRouter, so all routes are /#/path
  * - Resume data lives in localStorage key `cpwtcv_v1`
- * - DATA_VERSION = 7 — the store's data version (src/utils/normalizeResume.js); any version loads
+ * - DATA_VERSION = 8 — the store's data version (src/utils/normalizeResume.js); any version loads
  * - Default seed produces 6 resumes: Classic, Executive, Modern, Minimal, Dark, Sidebar
  * - Test resumes are injected via addInitScript before page.goto()
  */
 
-export const DATA_VERSION = 7;
+export const DATA_VERSION = 8;
 export const STORAGE_KEY = 'cpwtcv_v1';
 
 /** Minimal ATS_DEFAULTS that matches the live app */
@@ -23,7 +23,7 @@ export const BASE_SETTINGS = {
   marginH: 18,
   marginV: 14,
   sectionGap: 16,
-  itemGap: 12,
+  itemGap: 8,
   accentColor: '#2563eb',
   textColor: '#111111',
   headingStyle: 'ruled',

@@ -28,9 +28,12 @@ export const HEADER_BORDER_PAD_PT = pxToPt(16); // 12
 export const MODERN_HEADER_PAD_X_PT = pxToPt(24); // 18
 export const MODERN_HEADER_PAD_Y_PT = pxToPt(20); // 15
 
-/** Default section / item gaps from ATS_DEFAULTS (CSS px). */
+/**
+ * Default section / item gaps from ATS_DEFAULTS (CSS px). Between Items is 8 px (6 pt): the
+ * Normal preset's gap, which every résumé printed before the slider worked (FIDA-53, R2-1).
+ */
 export const DEFAULT_SECTION_GAP_PX = 16;
-export const DEFAULT_ITEM_GAP_PX = 12;
+export const DEFAULT_ITEM_GAP_PX = 8;
 
 /**
  * A section's Spacing preset (Tight / Normal / Spacious). Only the proportions count: they
