@@ -1,7 +1,7 @@
 // The Sidebar template: links, fields, spacing, colours and styles of its two columns.
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { setup, teardown, resume, section, render, read, allText, itemsWith, drawState, loadModule } from './harness.mjs';
+import { setup, teardown, resume, section, render, renderDocx, read, allText, itemsWith, drawState, loadModule } from './harness.mjs';
 import { hasPdftotext, splitWords } from './extractors.mjs';
 import { contrast, readableOn } from '../../src/templates/pdf/shared/pdfColors.js';
 
@@ -168,5 +168,36 @@ describe('Sidebar labels extract as whole words (FIDB-68)', () => {
       }
     }
     assert.deepEqual(found, []);
+  });
+});
+
+describe('Sidebar skills', () => {
+  const STYLES = ['inline', 'stacked', 'bullet', 'tags', 'bars'];
+
+  for (const skillsStyle of STYLES) {
+    it(`${skillsStyle}: a group's hidden Skills or hidden Category stays out of the PDF (FIDB-74)`, async () => {
+      const text = allText(await read(await render(sidebar([section('skills', [
+        { category: 'Core Tech', skills: 'React, Next.js', hiddenFields: ['skills'] },
+        { category: 'Secret Group', skills: 'Golang, Rust', hiddenFields: ['category'] },
+        { category: 'Hidden Group', skills: 'Kotlin', visible: false },
+      ], { skillsStyle })]))));
+      assert.ok(text.includes('CORE TECH'), `the shown category: ${text}`);
+      assert.ok(!text.includes('React') && !text.includes('Next.js'), `hidden skills: ${text}`);
+      assert.ok(!/CORE TECH\s*[:–]/.test(text), `no separator left dangling: ${text}`);
+      assert.ok(text.includes('Golang') && text.includes('Rust'), `the shown skills: ${text}`);
+      assert.ok(!/secret group/i.test(text), `a hidden category: ${text}`);
+      assert.ok(!/kotlin|hidden group/i.test(text), `a hidden group: ${text}`);
+    });
+  }
+
+  it('a list of skills (imported data) is hidden too, in the PDF and in Word (FIDB-74)', async () => {
+    const groups = [{ category: 'Listed', skills: ['Haskell', 'Elm'], hiddenFields: ['skills'] }, { category: 'Shown', skills: ['Scala', 'OCaml'] }];
+    for (const skillsStyle of STYLES) {
+      const text = allText(await read(await render(sidebar([section('skills', groups, { skillsStyle })]))));
+      assert.ok(!/Haskell|Elm/.test(text) && text.includes('Scala') && text.includes('OCaml'), `${skillsStyle}: ${text}`);
+    }
+    const { texts } = await renderDocx(sidebar([section('skills', groups)]));
+    assert.ok(!texts.some((t) => /Haskell|Elm/.test(t)), texts.join(' | '));
+    assert.ok(texts.some((t) => t.includes('Scala, OCaml')), texts.join(' | '));
   });
 });

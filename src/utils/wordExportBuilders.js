@@ -105,7 +105,8 @@ export function buildSkills(section, accentHex) {
   const bulletStyle = s.skillsStyle === 'bullet';
   for (const item of shown(section)) {
     const category = field(item, 'category');
-    const skills = Array.isArray(item.skills) ? item.skills.join(', ') : field(item, 'skills');
+    const typed = field(item, 'skills'); // a list in some imported data
+    const skills = Array.isArray(typed) ? typed.join(', ') : typed;
     const children = [];
     if (category) children.push(bold(`${category}${skills ? sep : ''}`, { size: 20, color: accentHex }));
     if (skills) children.push(normal(skills, { size: 20 }));
