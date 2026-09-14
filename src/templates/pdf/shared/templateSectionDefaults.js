@@ -1,9 +1,9 @@
 /**
- * Per-template section defaults for PDF rendering.
+ * Per-template section defaults: what a template prints for a setting the user has not
+ * chosen. User customizations stored in section.settings always take precedence.
  *
- * These mirror exactly what each HTML template component uses as its implicit
- * default when the user has not customized that setting. User customizations
- * stored in section.settings always take precedence over these defaults.
+ * Plain data (no react-pdf): the PDF, the Word export and the section editor's controls all
+ * read it through resolveSection(), so a control shows what the PDF prints (FIDA-58).
  *
  * Only entries that differ from the shared PDF baseline need to be listed.
  * Shared PDF baseline: titleStyle='stacked', titleOrder='company'.
@@ -32,8 +32,8 @@ export const TEMPLATE_SECTION_DEFAULTS = {
  * Resolves a section's effective settings by merging template-level defaults
  * with user-stored settings. User settings always win.
  *
- * Call this once per section in pdfExportReactPDF before building the element
- * so every template renderer receives fully-resolved section data.
+ * pdfExportReactPDF and wordExport call this once per section before building the
+ * document; SectionCustomizer calls it so each control shows the effective value.
  */
 export function resolveSection(section, templateKey) {
   const templateDefaults =

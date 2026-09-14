@@ -77,6 +77,42 @@ describe('custom section', () => {
   });
 });
 
+describe('experience Order (FIDA-58 / FIDB-72)', () => {
+  // With no Order chosen a template prints its own default — the one the section editor shows.
+  const DEFAULT_ORDER = { classic: 'company', modern: 'company', minimal: 'company', executive: 'role', sidebar: 'role' };
+  const bold = (t) => /Bold/.test(t.font);
+  /** Which field leads the entry: the bold primary, printed before the other one. */
+  async function lead(template, titleOrder) {
+    const pages = await read(await render(resume({ template, sections: [experience([{ company: 'Acme Corp', role: 'Staff Engineer' }], titleOrder ? { titleOrder } : {})] })));
+    const [company, role] = [first(pages, 'Acme Corp'), first(pages, 'Staff Engineer')];
+    const text = allText(pages);
+    const order = text.indexOf('Staff Engineer') < text.indexOf('Acme Corp') ? 'role' : 'company';
+    assert.equal(bold(order === 'role' ? role : company), true, `${template}: the leading ${order} is bold`);
+    assert.equal(bold(order === 'role' ? company : role), false, `${template}: the other field is not`);
+    return order;
+  }
+
+  for (const template of TEMPLATES) {
+    it(`${template}: unset prints the template default; "Co. / Role" and "Role / Co." each change the PDF`, async () => {
+      assert.equal(await lead(template), DEFAULT_ORDER[template], 'no Order chosen');
+      assert.equal(await lead(template, 'company'), 'company', 'Co. / Role');
+      assert.equal(await lead(template, 'role'), 'role', 'Role / Co.');
+    });
+  }
+
+  it('Word follows the same order as the PDF', async () => {
+    const lineOf = async (template, settings = {}) => {
+      const { texts } = await renderDocx(resume({ template, sections: [experience([{ company: 'Acme Corp', role: 'Staff Engineer' }], settings)] }));
+      return texts.find((t) => t.includes('Acme Corp'));
+    };
+    for (const template of TEMPLATES) {
+      const line = await lineOf(template);
+      assert.equal(line.indexOf('Staff Engineer') < line.indexOf('Acme Corp') ? 'role' : 'company', DEFAULT_ORDER[template], `${template}: ${line}`);
+    }
+    assert.match(await lineOf('sidebar', { titleOrder: 'company' }), /^Acme Corp — Staff Engineer/);
+  });
+});
+
 describe('item spacing (FIDA-53)', () => {
   // Distance between two entries' matching lines: the entry's height plus the item gap.
   const pitch = async (template, itemGap, sectionSettings = {}) => {

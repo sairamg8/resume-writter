@@ -320,6 +320,7 @@ export function Editor({ store, auth, sync }) {
                     <SortableSection
                       key={section.id}
                       section={section}
+                      template={resume.template}
                       updateSection={store.updateSection}
                       updateSectionSettings={store.updateSectionSettings}
                       removeSection={store.removeSection}

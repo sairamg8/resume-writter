@@ -1,4 +1,6 @@
 import { AlignLeft, AlignCenter, RotateCcw } from 'lucide-react';
+import { resolveSection } from '@/templates/pdf/shared/templateSectionDefaults';
+import { templateId } from '@/constants/templates';
 
 export function ToggleRow({ label, value, onChange }) {
   return (
@@ -37,8 +39,10 @@ export function SegmentRow({ label, options, value, onChange }) {
   );
 }
 
-export function SectionCustomizer({ section, updateSectionSettings }) {
-  const s = section.settings || {};
+export function SectionCustomizer({ section, template, updateSectionSettings }) {
+  // What the PDF prints with: the section's own settings over its template's defaults (Executive
+  // and Sidebar lead with the role, …), so an unset control shows the template's choice (FIDA-58).
+  const s = resolveSection(section, templateId(template)).settings;
   const isSkills = section.type === 'skills';
   const hasLocation = ['experience', 'education', 'volunteering'].includes(section.type);
   const hasDates = !['skills', 'languages', 'references', 'interests'].includes(section.type);

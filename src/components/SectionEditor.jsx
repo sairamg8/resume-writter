@@ -10,7 +10,7 @@ import { SkillItem, LanguageItem, CertificationItem, AwardItem, ReferenceItem, I
 import { SectionCustomizer } from '@/components/SectionEditorCustomizer';
 
 export function SortableSection({
-  section, updateSection, updateSectionSettings,
+  section, template, updateSection, updateSectionSettings,
   removeSection, addItem, updateItem, removeItem, reorderItems,
   toggleSectionVisibility,
   forceOpen, forceOpenKey,
@@ -152,7 +152,7 @@ export function SortableSection({
       </div>
 
       {customizerOpen && (
-        <SectionCustomizer section={section} updateSectionSettings={updateSectionSettings} />
+        <SectionCustomizer section={section} template={template} updateSectionSettings={updateSectionSettings} />
       )}
 
       {sectionOpen && (
