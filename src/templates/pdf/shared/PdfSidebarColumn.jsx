@@ -1,7 +1,9 @@
 import { View, Text, Link } from '@react-pdf/renderer';
-import { safeHref } from '@/utils/richText';
+import { safeHref, hasRichText } from '@/utils/richText';
 import { SIDEBAR_COLUMN_TYPES } from '@/constants/templates';
 import { tracking } from './pdfUnits';
+import { PdfRichText } from './PdfRichText';
+import { RenderBullets } from './PdfSections';
 
 /**
  * The Sidebar template's dark column: its section title and the renderers of the sections that
@@ -59,6 +61,9 @@ export function SideEducation({ section, sectionGap, itemGap }) {
                 {item.startDate}{item.endDate ? ` – ${item.endDate}` : ''}
               </Text>
             )}
+            {/* Coursework, honours …: printed like the main column's, in the column's light text. */}
+            {hasRichText(item.description) ? <PdfRichText html={item.description} style={{ fontSize: 9, color: '#cbd5e1', lineHeight: 1.3, marginTop: 2 }} /> : null}
+            <RenderBullets bullets={item.bullets} style={{ fontSize: 9, color: '#cbd5e1', lineHeight: 1.3 }} />
           </View>
         ))}
       </View>

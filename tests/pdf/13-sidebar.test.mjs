@@ -227,6 +227,17 @@ describe('Sidebar skills', () => {
 });
 
 describe('Sidebar education', () => {
+  it('prints the description and legacy bullets, readable on the dark column', async () => {
+    const edu = [{ institution: 'IIT Madras', degree: 'BTech', description: '<p>EduDescText <strong>coursework</strong></p><ul><li>EduListItem</li></ul>', bullets: ['EduLegacyBullet'] }];
+    const bytes = await render(sidebar([section('education', edu)]));
+    const text = allText(await read(bytes));
+    for (const s of ['EduDescText coursework', 'EduListItem', 'EduLegacyBullet']) assert.ok(text.includes(s), `${s} in: ${text}`);
+    for (const s of ['EduDescText', 'EduListItem', 'EduLegacyBullet']) {
+      const [hit] = await drawState(bytes, s);
+      assert.ok(contrast(hit.fill, '#1e293b') >= 4.5, `${s}: ${hit.fill} on the sidebar fill`);
+    }
+  });
+
   it('prints the location, and "Show location" hides it', async () => {
     const edu = [{ institution: 'IIT Madras', degree: 'BTech', location: 'Chennai, India', startDate: '2015', endDate: '2019' }];
     const shown = allText(await read(await render(sidebar([section('education', edu)]))));
