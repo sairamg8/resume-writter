@@ -3,7 +3,7 @@
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { setup, teardown, loadModule } from './harness.mjs';
-import { deferred, fakeFirestore, syncPage, resumePath, settle, syncModules } from './fake-firestore.mjs';
+import { deferred, fakeFirestore, syncPage, resumePath, listPath, settle, syncModules } from './fake-firestore.mjs';
 
 let mods;
 before(async () => {
@@ -82,6 +82,43 @@ describe('signing out ends the account\'s queue (R8-5)', () => {
     await rename(p, 'resume_a', 'Edited as B', 3);
     await p.timers.fire();
     assert.equal(cloud.resumes('B').resume_a?.name, 'Edited as B');
+  });
+
+  it('A\'s edit and deletion waiting at sign-out never reach B: B\'s flush sends B\'s, and A\'s next sign-in the deletion (V2W1a-2)', async () => {
+    const cloud = fakeFirestore({ [resumePath('A', 'resume_a')]: cv('resume_a'), [resumePath('A', 'resume_r')]: cv('resume_r'), [resumePath('B', 'resume_b')]: cv('resume_b') });
+    const p = page(cloud, { resumes: [cv('resume_a'), cv('resume_r')] });
+    await signInAs(p, cloud, A);
+    await rename(p, 'resume_a', 'Renamed by A', 2);
+    await p.remove('resume_r'); // both within the 1.5 s pause
+    await signInAs(p, cloud, null);
+    await signInAs(p, cloud, B);
+    const before = cloud.commits.length;
+    await rename(p, 'resume_b', 'Edited by B', 5); // before any pause has ended
+    await p.timers.fire();
+    const sent = cloud.commits.slice(before).flat().map(([op, path]) => `${op} ${path}`);
+    assert.deepEqual(sent, ['set users/B/resumes/resume_b'], 'before (dropQueue removed): A\'s rename and deletion went out with B\'s flush');
+    assert.equal(cloud.doc(listPath('B')), undefined, 'R is not on B\'s deletion list');
+    assert.deepEqual([p.store.state.deletedIds, p.store.state.deletedInfo.resume_r?.owner], [['resume_r'], 'A'], 'the deletion waits for A');
+    await signInAs(p, cloud, null);
+    await signInAs(p, cloud, A);
+    assert.equal(cloud.resumes('A').resume_r, undefined, 'A\'s next sign-in removes R — before: it came back');
+    assert.deepEqual(cloud.doc(listPath('A')).ids, ['resume_r']);
+  });
+
+  it('A\'s pause ending after B signed in sends nothing, and leaves B\'s queue empty (a guard: sendPending\'s own check)', async () => {
+    // start() drops A's queue and timer; if a timer of A's still fired, sendPending clears what it
+    // holds before it bails out, so B's next flush cannot carry it. Removing both fails this test.
+    const cloud = fakeFirestore({ [resumePath('A', 'resume_a')]: cv('resume_a'), [resumePath('B', 'resume_b')]: cv('resume_b') });
+    const p = page(cloud, { resumes: [cv('resume_a')] });
+    await signInAs(p, cloud, A);
+    await rename(p, 'resume_a', 'Renamed by A', 2);
+    await signInAs(p, cloud, null);
+    await signInAs(p, cloud, B);
+    await p.timers.fire(); // A's pause, had it survived the sign-out
+    const before = cloud.commits.length;
+    await rename(p, 'resume_b', 'Edited by B', 5);
+    await p.timers.fire();
+    assert.deepEqual(cloud.commits.slice(before).flat().map(([op, path]) => `${op} ${path}`), ['set users/B/resumes/resume_b']);
   });
 
   it('a flush of an account signed out since that fails does not turn sync off for the next one', async () => {

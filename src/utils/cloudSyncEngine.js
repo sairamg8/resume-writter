@@ -239,13 +239,13 @@ export function createCloudSync({
   /** Send the changes waiting: handed to Firestore at once, in order (cloudSyncFlush.js). */
   async function sendPending(user) {
     const current = () => s.user?.uid === user.uid;
-    if (!current() || s.cloudDisabled || !io) return; // signed out or switched since (R8-5)
-
     const { kept, marked } = s.queue;
     const writes = [...s.queue.writes.values()];
     const deletes = [...s.queue.deletes];
     s.queue = emptyQueue();
-
+    // Signed out or switched since (R8-5): the queue is not sent — and not left for the next
+    // account's flush either, should start() not have dropped it (V2W1a-2).
+    if (!current() || s.cloudDisabled || !io) return;
     if (!writes.length && !deletes.length) return;
 
     const sentAt = now();
