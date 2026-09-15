@@ -119,6 +119,52 @@ describe('contact icon packs in the Design panel (FIDA-39, FIDB-07)', () => {
     cy.store().should((s) => expect(active(s).settings.iconSet).to.eq('minimal'));
     packs().filter(':contains("Minimal")').should('contain.text', 'Selected');
   });
+
+  // R9-4: Modern and Sidebar draw the pack whatever Contact style says, so a pick there leaves the
+  // style alone. Their Header Customization shows no Style chips, yet the letter follows that
+  // style (PDF = preview, and Word), and so does a later switch to Classic, Minimal or Executive.
+  const hint = () => cy.contains('p', 'Global icon style for the whole resume');
+  const pickMinimal = () => {
+    cy.get('button[title="Design & Customize"]').click();
+    packs().filter(':contains("Minimal")').click();
+  };
+  /** The email, then `mark` (the style's separator), then the phone — in a text with no spaces. */
+  const contactsWith = (mark) => (t) => expect(squash(t)).to.contain(`${EMAIL}${mark}${PHONE}`);
+
+  it('Modern: picking a pack keeps Contact style Bar — the letter and a switch to Classic still print | (R9-4)', () => {
+    cy.visitEditor('modern', { settings: { contactStyle: 'bar' } });
+    pickMinimal();
+    cy.store().should((s) => expect(active(s).settings).to.include({ iconSet: 'minimal', contactStyle: 'bar' }));
+    cy.contains('button', 'Cover Letter').click();
+    cy.previewReady();
+    letter().invoke('text').should(contactsWith('|'));
+    cy.get('button[title="Design & Customize"]').click();
+    cy.contains('button', 'Two-column header').click();
+    cy.store().should((s) => {
+      expect(active(s).template).to.eq('classic');
+      expect(active(s).settings.contactStyle).to.eq('bar');
+    });
+    cy.preview().invoke('text').should(contactsWith('|'));
+  });
+
+  it('Sidebar: picking a pack keeps Contact style Bullet — the letter still prints •, in the PDF and in Word (R9-4)', () => {
+    cy.visitEditor('sidebar', { settings: { contactStyle: 'bullet' } });
+    pickMinimal();
+    cy.store().should((s) => expect(active(s).settings).to.include({ iconSet: 'minimal', contactStyle: 'bullet' }));
+    cy.contains('button', 'Cover Letter').click();
+    cy.previewReady();
+    letter().invoke('text').should(contactsWith('•'));
+    cy.exportDocx().then((docx) => contactsWith('•')(docx.paragraphs.join(' ')));
+  });
+
+  it('Classic draws the pack only with the Icon style: its hint says a pick switches Bar to Icon, and a pick does (R9-4)', () => {
+    cy.visitEditor('classic', { settings: { contactStyle: 'bar' } });
+    cy.get('button[title="Design & Customize"]').click();
+    hint().should('contain.text', 'picking a pack switches it to Icon');
+    packs().filter(':contains("Minimal")').click();
+    cy.store().should((s) => expect(active(s).settings).to.include({ iconSet: 'minimal', contactStyle: 'icon' }));
+    hint().should('not.contain.text', 'switches');
+  });
 });
 
 describe('uploads in formats the PDF cannot draw are converted (R1-1)', () => {

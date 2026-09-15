@@ -22,6 +22,8 @@ const DATE_KEYS       = ['dateFormat'];
 export default function DesignPanel({ resume, updateSetting, setTemplate, resetSettings }) {
   const settings = resume.settings || {};
   const current = templateId(resume.template); // the template the PDF prints
+  // Modern and Sidebar draw the pack whatever Contact style says, the others only with Icon.
+  const drawsIcons = drawsContactIcons(current, settings);
   const [confirmReset, setConfirmReset] = useState(false);
 
   /** A section's reset: its settings back to the template's defaults (Sidebar's plain headings, …). */
@@ -72,7 +74,7 @@ export default function DesignPanel({ resume, updateSetting, setTemplate, resetS
           Global icon style for the whole resume.{' '}
           {current === 'modern' || current === 'sidebar'
             ? <>The {current === 'modern' ? 'Modern' : 'Sidebar'} template always shows them.</>
-            : <>Contact style must be <strong>Icon</strong> for these to show{drawsContactIcons(current, settings) ? '' : ' (it is not now)'}.</>}
+            : <>Contact style must be <strong>Icon</strong> for these to show{drawsIcons ? '' : '. It is not now: picking a pack switches it to Icon'}.</>}
           {' '}You can still upload a custom image per field under Personal Info → Fields.
         </p>
         <div className="space-y-2">
@@ -85,7 +87,9 @@ export default function DesignPanel({ resume, updateSetting, setTemplate, resetS
                 type="button"
                 onClick={() => {
                   updateSetting('iconSet', opt.id);
-                  if ((settings.contactStyle || 'icon') !== 'icon') updateSetting('contactStyle', 'icon');
+                  // Only where the style hides the pack. In Modern and Sidebar it is the letter's
+                  // style too, and the one a switch to Classic brings back: left alone (R9-4).
+                  if (!drawsIcons) updateSetting('contactStyle', 'icon');
                 }}
                 className={`w-full text-left px-3 py-2.5 rounded-lg border transition-all ${
                   active ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
