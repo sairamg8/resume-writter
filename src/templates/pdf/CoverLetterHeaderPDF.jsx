@@ -12,6 +12,7 @@ import { DOUBLE_RULE_GAP, LETTERHEAD_GAP, LETTERHEAD_PAD } from './shared/letter
 import { photoTextAlignItems } from '@/constants/templates';
 import { contactItems } from '@/utils/contacts';
 import { A4_WIDTH_PT, MM_TO_PT } from './shared/pdfUnits';
+import { opacityFor } from './shared/pdfColors';
 
 /** The band, the rule or rules, around the letterhead's content. */
 function Frame({ look, settings, children }) {
@@ -106,7 +107,7 @@ export function CoverLetterHeader({ look, personal, settings, cl, hidden, contac
       {personal?.title ? (
         <Text style={{
           fontSize: baseSize, color: look.title.color, marginTop: 1,
-          ...(look.title.opacity ? { opacity: look.title.opacity } : {}), ...align,
+          ...(look.title.opacity ? { opacity: opacityFor(look.title.color, look.title.opacity) } : {}), ...align,
         }}>
           {personal.title}
         </Text>

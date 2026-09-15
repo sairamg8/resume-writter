@@ -4,7 +4,7 @@ import { PdfRichText } from './PdfRichText';
 import { hasRichText } from '@/utils/richText';
 import { skillGroup, skillSeparator } from '@/utils/skills';
 import { dateRange } from '@/utils/dates';
-import { solid, tint } from './pdfColors';
+import { opacityFor, solid, tint } from './pdfColors';
 import { tracking } from './pdfUnits';
 import {
   SPACER,
@@ -105,7 +105,7 @@ export function SkillsSection({ section, settings, marginBottom, spaceBefore, it
                 ) : null}
                 {list.map((sk, i) => (
                   <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3 }}>
-                    <Text style={{ fontSize: entrySize - 1, width: 70, color: textColor, opacity: 0.8 }}>{sk}</Text>
+                    <Text style={{ fontSize: entrySize - 1, width: 70, color: textColor, opacity: opacityFor(textColor, 0.8) }}>{sk}</Text>
                     <View style={{ flex: 1, height: 3, borderRadius: 2, backgroundColor: tint(accent, 0x20 / 255) }}>
                       <View style={{ width: '80%', height: 3, borderRadius: 2, backgroundColor: tint(accent, 0xb3 / 255) }} />
                     </View>

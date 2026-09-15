@@ -201,6 +201,20 @@ describe('modern banner summary (FIDB-11)', () => {
   });
 });
 
+describe('modern banner job title', () => {
+  // react-pdf's opacity replaces a colour's own alpha; the title's 90 % must multiply it (R5-9).
+  it('prints at 90 % of its colour\'s own alpha, on the résumé and on its letter', async () => {
+    const cases = [[{}, 0.9], [{ jobTitleColor: 'rgba(255,255,255,0.5)' }, 0.45], [{ headerTextColor: 'rgba(0,0,0,0)' }, 0]];
+    for (const [settings, alpha] of cases) {
+      const r = resume({ template: 'modern', personal: { title: 'Staff Engineer' }, settings });
+      for (const [what, bytes] of [['résumé', await render(r)], ['letter', await renderCover(r)]]) {
+        const [hit] = await drawState(bytes, 'Staff Engineer');
+        assert.ok(Math.abs(hit.alpha - alpha) < 0.005, `${what} ${JSON.stringify(settings)}: alpha ${hit.alpha}, expected ${alpha}`);
+      }
+    }
+  });
+});
+
 describe('modern banner name (R7-0)', () => {
   // The name sits on the accent banner with the title and the contacts. It prints in the header
   // text colour as they do, never in a colour worked out against the Sidebar Background, which

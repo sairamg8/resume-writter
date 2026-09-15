@@ -62,6 +62,15 @@ export function textShades(text) {
   return { body: solid(text, 0.857), sub: solid(text, 0.72), meta: solid(text, 0.6), muted: solid(text, 0.4) };
 }
 
+/**
+ * The `opacity` to give a Text drawn in `color`: react-pdf's opacity replaces the colour's own
+ * alpha instead of multiplying it, so a translucent colour's alpha is multiplied in here, as CSS
+ * opacity would (FIDB-11, R5-9).
+ */
+export function opacityFor(color, opacity) {
+  return opacity * (parseColor(color)?.[3] ?? 1);
+}
+
 /** `color` at `alpha` as "#rrggbbaa", for fills. Unreadable colours pass through unchanged. */
 export function tint(color, alpha = 1) {
   const c = parseColor(color);

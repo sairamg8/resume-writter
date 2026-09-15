@@ -9,7 +9,7 @@ import { ContactValue } from './shared/PdfContact';
 import { contactItems } from '@/utils/contacts';
 import { getPdfPhotoStyle } from './shared/pdfPhoto';
 import { PdfPhoto } from './shared/PdfPhoto';
-import { parseColor } from './shared/pdfColors';
+import { opacityFor } from './shared/pdfColors';
 import { MODERN_HEADER_PAD_X_PT, MODERN_HEADER_PAD_Y_PT, pxToPt } from './shared/pdfUnits';
 import { photoTextAlignItems } from '@/constants/templates';
 
@@ -53,9 +53,9 @@ export function ModernTemplatePDF({ data }) {
   const entrySize = baseSize + (settings.fontSizeEntryDelta ?? 0);
   const hidden    = personal?.hiddenFields || [];
   const headerText = settings.headerTextColor || '#ffffff';
-  // The summary prints at 85% of the header text colour, however that colour is written (#fff,
-  // #FFFFFF, white, rgb(…)); a colour's own alpha multiplies in, as CSS opacity would (FIDB-11).
-  const summaryOpacity = 0.85 * (parseColor(headerText)?.[3] ?? 1);
+  // The summary prints at 85% of the header text colour, the title at 90% of its colour, however
+  // the colour is written (#fff, white, rgb(…)); its own alpha multiplies in (FIDB-11, R5-9).
+  const summaryOpacity = opacityFor(headerText, 0.85);
 
   const pageStyle = getPageStyle(settings);
 
@@ -80,7 +80,7 @@ export function ModernTemplatePDF({ data }) {
                 {personal?.name || 'Your Name'}
               </Text>
               {personal?.title && (
-                <Text style={{ fontSize: entrySize, color: jobTitleColor, marginBottom: 2, lineHeight: 1.2, opacity: 0.9 }}>
+                <Text style={{ fontSize: entrySize, color: jobTitleColor, marginBottom: 2, lineHeight: 1.2, opacity: opacityFor(jobTitleColor, 0.9) }}>
                   {personal.title}
                 </Text>
               )}
