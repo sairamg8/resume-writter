@@ -4,7 +4,7 @@
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { setup, teardown, loadModule } from './harness.mjs';
-import { fakeFirestore, syncPage, resumePath, settle } from './fake-firestore.mjs';
+import { deferred, fakeFirestore, syncPage, resumePath, settle } from './fake-firestore.mjs';
 
 let mods;
 let demo;
@@ -83,6 +83,26 @@ describe('a restore without the cloud\'s answer never overwrites the cloud (VM4-
     await laptop.restore(demo.buildDemoRestore(PRISTINE, new Map([['demo_a', cv('demo_a', 7, { name: 'Morning A' })]]), 1000));
     await laptop.timers.fire();
     assert.equal(cloud.resumes('u').demo_a.name, 'Edited on the phone', 'before: overwritten with the morning copy');
+  });
+});
+
+describe('the status while a first sync is owed', () => {
+  it('a flush answered after the cloud stopped answering does not say "synced"', async () => {
+    const cloud = fakeFirestore({ [resumePath('u', 'resume_a')]: cv('resume_a') });
+    const p = page(cloud, { resumes: [cv('resume_a')] });
+    p.sync.start(OWNER);
+    await settle();
+    const answer = deferred();
+    cloud.hold.commit = answer.promise;
+    await p.change({ resumes: [cv('resume_a', 2, { name: 'Renamed' })] });
+    await p.timers.fire(); // sent; the server has not answered
+    cloud.hold.commit = null;
+    cloud.fail.read = unavailable();
+    assert.equal(await p.sync.readCloudDemo(['demo_a']), null);
+    assert.equal(p.seen.status, 'error');
+    answer.resolve();
+    await settle();
+    assert.equal(p.seen.status, 'error', 'still owed a first sync: the retry says when it is synced');
   });
 });
 

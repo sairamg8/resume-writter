@@ -123,10 +123,10 @@ export function createCloudSync({
 
   /**
    * The cloud did not answer while signed in: nothing more is sent until a first sync gets
-   * through again. A sample restore made meanwhile from this browser's copies (VM4-6) then stays
-   * here: the flush wrote it unconditionally over the cloud's copies, newer edits from another
-   * device included. The retry's first sync merges by time and flag (planInitialSync), and the
-   * restore runs again from the cloud's copies.
+   * through again. A sample restore made meanwhile from this browser's copies stays here — the
+   * flush used to write it unconditionally over the cloud's copies, newer edits from another
+   * device included (VM4-6). The retry's first sync merges by time and flag (planInitialSync),
+   * and the restore runs again from the cloud's copies.
    */
   function unreachable() {
     s.initialSyncDone = false;
@@ -226,7 +226,8 @@ export function createCloudSync({
       // The cloud has them: the store stops keeping them for the next first sync, which would send
       // them again — over a restore another device made since (R8-1).
       if (deletes.length) store.forgetDeletions(deletes, sentAt);
-      if (!current()) return;
+      // Not "synced" while a first sync is still owed (offline, or the cloud stopped answering).
+      if (!current() || !s.initialSyncDone) return;
       report.status('synced');
       report.synced(new Date());
     } catch (e) {
