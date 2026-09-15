@@ -78,6 +78,12 @@ describe('design — settings', () => {
     renderedText().should('contain', 'PROFESSIONAL EXPERIENCE');
   });
 
+  it('on Classic, Section Headings has no Sidebar side-column note', () => {
+    openDesign('Section Headings');
+    cy.contains('button', /^Abc$/).should('be.visible');
+    cy.contains('The side column keeps its own').should('not.exist');
+  });
+
   it('heading style buttons store the chosen style', () => {
     openDesign('Section Headings');
     ['Boxed', 'Left bar', 'Underline', 'Plain', 'Line after', 'Ruled'].forEach((label) => {
@@ -124,6 +130,16 @@ describe('design — reset returns to the template\'s defaults (M16)', () => {
       expect(settingsOf(s)).to.include({ headingStyle: 'underline', sectionTitleCase: 'normal', accentColor: '#374151' });
     });
     renderedText().should('contain', 'Professional Experience').and('not.contain', 'PROFESSIONAL EXPERIENCE');
+  });
+
+  it('on Sidebar, Section Headings says what the side column keeps, and Title case reaches it (R6-4)', () => {
+    cy.visitEditor('sidebar');
+    renderedText().should('contain', 'CONTACT');
+    openDesign('Section Headings');
+    cy.contains('The side column keeps its own small headings and rule; only Title case applies there.').should('be.visible');
+    cy.contains('button', /^Abc$/).click();
+    cy.store().should((s) => expect(settingsOf(s).sectionTitleCase).to.eq('normal'));
+    renderedText().should('contain', 'Contact').and('not.contain', 'CONTACT');
   });
 
   it('Section Headings\' reset gives a Sidebar résumé Sidebar\'s plain headings', () => {

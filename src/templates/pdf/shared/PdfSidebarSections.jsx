@@ -11,9 +11,10 @@ import { SideSkills } from './PdfSidebarSkills';
 
 export { SIDEBAR_TYPES, SideSectionTitle };
 
-// Dark-column sections (PdfSidebarColumn.jsx, PdfSidebarSkills.jsx)
-export function renderSideSection(section, sectionGap, itemGap, accent, shades) {
-  const props = { section, sectionGap, itemGap, accent, shades };
+// Dark-column sections (PdfSidebarColumn.jsx, PdfSidebarSkills.jsx); titleCase is Design →
+// Section Headings → Title case.
+export function renderSideSection(section, sectionGap, itemGap, accent, shades, titleCase) {
+  const props = { section, sectionGap, itemGap, accent, shades, titleCase };
   switch (section.type) {
     case 'skills':         return <SideSkills         {...props} />;
     case 'education':      return <SideEducation      {...props} />;

@@ -234,3 +234,18 @@ describe('Sidebar education', () => {
     assert.ok(!hidden.includes('Chennai') && hidden.includes('IIT Madras'), hidden);
   });
 });
+
+describe('Sidebar side-column headings', () => {
+  it('follow Design → Title case: "As typed" prints them as typed; capitals stay the default (R6-4)', async () => {
+    const sections = () => [
+      section('skills', [{ category: 'Core', skills: 'React' }], {}, { title: 'Tech Skills' }),
+      section('languages', [{ language: 'English' }], {}, { title: 'Spoken Languages' }),
+    ];
+    const personal = { email: 'me@example.com' };
+    const typed = allText(await read(await render(sidebar(sections(), { settings: { sectionTitleCase: 'normal' }, personal }))));
+    assert.ok(['Tech Skills', 'Spoken Languages', 'Contact'].every((h) => typed.includes(h)), typed);
+    assert.ok(!/TECH SKILLS|SPOKEN LANGUAGES|CONTACT/.test(typed), typed);
+    const upper = allText(await read(await render(sidebar(sections(), { personal }))));
+    assert.ok(['TECH SKILLS', 'SPOKEN LANGUAGES', 'CONTACT'].every((h) => upper.includes(h)), upper);
+  });
+});

@@ -150,6 +150,11 @@ export default function DesignPanel({ resume, updateSetting, setTemplate, resetS
       </DesignSection>
 
       <DesignSection title="Section Headings" onReset={() => resetSection(HEADING_KEYS)}>
+        {current === 'sidebar' && (
+          <p className="text-[11px] text-gray-400 leading-relaxed">
+            These style the main column&apos;s headings. The side column keeps its own small headings and rule; only Title case applies there.
+          </p>
+        )}
         <div className="flex items-center justify-between">
           <span className="text-xs text-gray-500">Title case</span>
           <div className="flex gap-1">

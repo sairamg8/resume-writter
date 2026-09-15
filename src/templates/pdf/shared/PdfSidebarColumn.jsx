@@ -34,18 +34,24 @@ export function EntryLink({ url, label, style }) {
   );
 }
 
-export function SideSectionTitle({ title, shades = NAVY }) {
+/**
+ * A section title in the column: its own small letter-spaced heading and rule, whatever Design →
+ * Section Headings sets for the main column — but in capitals only when Title case says so
+ * ("As typed" prints it as typed, as the main column does, R6-4).
+ */
+export function SideSectionTitle({ title, shades = NAVY, titleCase = 'upper' }) {
+  const upper = titleCase !== 'normal';
   return (
     <View style={{ marginBottom: 6 }}>
-      <Text style={{ fontSize: 8.5, fontWeight: 'bold', color: shades.label, letterSpacing: tracking(8.5, 1.2), textTransform: 'uppercase', marginBottom: 2.5, lineHeight: 1.2 }}>
-        {title.toUpperCase()}
+      <Text style={{ fontSize: 8.5, fontWeight: 'bold', color: shades.label, letterSpacing: tracking(8.5, 1.2), textTransform: upper ? 'uppercase' : 'none', marginBottom: 2.5, lineHeight: 1.2 }}>
+        {upper ? title.toUpperCase() : title}
       </Text>
       <View style={{ height: 1, backgroundColor: shades.fill }} />
     </View>
   );
 }
 
-export function SideEducation({ section, sectionGap, itemGap, shades = NAVY }) {
+export function SideEducation({ section, sectionGap, itemGap, shades = NAVY, titleCase }) {
   const s        = section.settings || {};
   const showDates = s.showDates !== false;
   const showLoc   = s.showLocation !== false;
@@ -53,7 +59,7 @@ export function SideEducation({ section, sectionGap, itemGap, shades = NAVY }) {
 
   return (
     <View style={{ marginBottom: sectionGap }}>
-      <SideSectionTitle title={section.title} shades={shades} />
+      <SideSectionTitle title={section.title} shades={shades} titleCase={titleCase} />
       <View style={{ gap: itemGap }}>
         {visibleItems.map((item, i) => (
           <View key={i}>
@@ -75,11 +81,11 @@ export function SideEducation({ section, sectionGap, itemGap, shades = NAVY }) {
   );
 }
 
-export function SideLanguages({ section, sectionGap, itemGap, shades = NAVY }) {
+export function SideLanguages({ section, sectionGap, itemGap, shades = NAVY, titleCase }) {
   const visibleItems = (section.items || []).filter(i => i.visible !== false);
   return (
     <View style={{ marginBottom: sectionGap }}>
-      <SideSectionTitle title={section.title} shades={shades} />
+      <SideSectionTitle title={section.title} shades={shades} titleCase={titleCase} />
       <View style={{ gap: itemGap }}>
         {visibleItems.map((item, i) => (
           <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
@@ -92,14 +98,14 @@ export function SideLanguages({ section, sectionGap, itemGap, shades = NAVY }) {
   );
 }
 
-export function SideCertifications({ section, sectionGap, itemGap, shades = NAVY }) {
+export function SideCertifications({ section, sectionGap, itemGap, shades = NAVY, titleCase }) {
   const s        = section.settings || {};
   const showDates = s.showDates !== false;
   const visibleItems = (section.items || []).filter(i => i.visible !== false);
 
   return (
     <View style={{ marginBottom: sectionGap }}>
-      <SideSectionTitle title={section.title} shades={shades} />
+      <SideSectionTitle title={section.title} shades={shades} titleCase={titleCase} />
       <View style={{ gap: itemGap }}>
         {visibleItems.map((item, i) => {
           // Issued – expires, as the main column prints it ("– 03/2027" without an issue date).
@@ -127,7 +133,7 @@ const DEFAULT_ITEM_GAP_PT = DEFAULT_ITEM_GAP_PX * CSS_PX_TO_PT;
  * Items, or its own override) in proportion: 2.5 pt at the default 6 pt, as the column always
  * printed it — the controls used to do nothing here (R2-6).
  */
-export function SideInterests({ section, sectionGap, itemGap = DEFAULT_ITEM_GAP_PT, shades = NAVY }) {
+export function SideInterests({ section, sectionGap, itemGap = DEFAULT_ITEM_GAP_PT, shades = NAVY, titleCase }) {
   const visibleItems = (section.items || []).filter(i => i.visible !== false);
   const allInterests = visibleItems.flatMap(item =>
     (item.interests || '').split(',').map(s => s.trim()).filter(Boolean)
@@ -135,7 +141,7 @@ export function SideInterests({ section, sectionGap, itemGap = DEFAULT_ITEM_GAP_
 
   return (
     <View style={{ marginBottom: sectionGap }}>
-      <SideSectionTitle title={section.title} shades={shades} />
+      <SideSectionTitle title={section.title} shades={shades} titleCase={titleCase} />
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: (CHIP_GAP_PT * itemGap) / DEFAULT_ITEM_GAP_PT }}>
         {allInterests.map((interest, i) => (
           <View key={i} style={{ backgroundColor: shades.fill, borderRadius: 2, paddingHorizontal: 5, paddingVertical: 1.5 }}>
@@ -147,11 +153,11 @@ export function SideInterests({ section, sectionGap, itemGap = DEFAULT_ITEM_GAP_
   );
 }
 
-export function SideReferences({ section, sectionGap, itemGap, shades = NAVY }) {
+export function SideReferences({ section, sectionGap, itemGap, shades = NAVY, titleCase }) {
   const visibleItems = (section.items || []).filter(i => i.visible !== false);
   return (
     <View style={{ marginBottom: sectionGap }}>
-      <SideSectionTitle title={section.title} shades={shades} />
+      <SideSectionTitle title={section.title} shades={shades} titleCase={titleCase} />
       <View style={{ gap: itemGap }}>
         {visibleItems.map((item, i) => (
           <View key={i}>

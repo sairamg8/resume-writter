@@ -12,7 +12,7 @@ function shownGroup(item) {
   return { ...group, category: group.category.toUpperCase() };
 }
 
-export function SideSkills({ section, sectionGap, itemGap, accent, shades = sidebarShades() }) {
+export function SideSkills({ section, sectionGap, itemGap, accent, shades = sidebarShades(), titleCase }) {
   const s     = section.settings || {};
   const style = s.skillsStyle || 'inline';
   const sep   = skillSeparator(s); // as in the main column and Word
@@ -21,7 +21,7 @@ export function SideSkills({ section, sectionGap, itemGap, accent, shades = side
   if (style === 'bars') {
     return (
       <View style={{ marginBottom: sectionGap }}>
-        <SideSectionTitle title={section.title} shades={shades} />
+        <SideSectionTitle title={section.title} shades={shades} titleCase={titleCase} />
         <View style={{ gap: itemGap }}>
           {groups.map(({ category, list }, i) => (
             <View key={i}>
@@ -48,7 +48,7 @@ export function SideSkills({ section, sectionGap, itemGap, accent, shades = side
   if (style === 'tags') {
     return (
       <View style={{ marginBottom: sectionGap }}>
-        <SideSectionTitle title={section.title} shades={shades} />
+        <SideSectionTitle title={section.title} shades={shades} titleCase={titleCase} />
         <View style={{ gap: itemGap }}>
           {groups.map(({ category, list }, i) => (
             <View key={i}>
@@ -76,7 +76,7 @@ export function SideSkills({ section, sectionGap, itemGap, accent, shades = side
   if (style === 'stacked') {
     return (
       <View style={{ marginBottom: sectionGap }}>
-        <SideSectionTitle title={section.title} shades={shades} />
+        <SideSectionTitle title={section.title} shades={shades} titleCase={titleCase} />
         <View style={{ gap: itemGap }}>
           {groups.map(({ category, list }, i) => (
             <View key={i}>
@@ -98,7 +98,7 @@ export function SideSkills({ section, sectionGap, itemGap, accent, shades = side
   const bullet = style === 'bullet';
   return (
     <View style={{ marginBottom: sectionGap }}>
-      <SideSectionTitle title={section.title} shades={shades} />
+      <SideSectionTitle title={section.title} shades={shades} titleCase={titleCase} />
       <View style={{ gap: itemGap }}>
         {groups.map(({ category, skills }, i) => (
           <View key={i} style={bullet ? { flexDirection: 'row' } : undefined}>
