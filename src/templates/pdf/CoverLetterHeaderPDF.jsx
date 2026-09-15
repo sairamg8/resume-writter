@@ -5,14 +5,20 @@
 // header. What each template looks like is letterheadLook()'s (./shared/letterhead.js).
 import { View } from '@react-pdf/renderer';
 import { Text } from './shared/PdfText';
-import { PdfContactRow } from './shared/PdfContact';
+import { contactRowMinWidth, PdfContactRow } from './shared/PdfContact';
 import { PdfPhoto } from './shared/PdfPhoto';
 import { getPdfPhotoStyle } from './shared/pdfPhoto';
+import { widestWord } from './shared/pdfMeasure';
 import { DOUBLE_RULE_GAP, LETTERHEAD_GAP, LETTERHEAD_PAD } from './shared/letterhead';
 import { photoTextAlignItems } from '@/constants/templates';
 import { contactItems } from '@/utils/contacts';
 import { A4_WIDTH_PT, MM_TO_PT } from './shared/pdfUnits';
 import { opacityFor } from './shared/pdfColors';
+
+/** Space between the name side and the contacts on its right, pt. */
+const CONTACTS_GAP = 12;
+/** Room added to each measured width, pt: a word's kerning into the next space is not in it. */
+const SLACK = 1;
 
 /** The band, the rule or rules, around the letterhead's content. */
 function Frame({ look, settings, children }) {
@@ -66,16 +72,10 @@ export function CoverLetterHeader({ look, personal, settings, cl, hidden, contac
   // The panel's "Text Position (relative to photo)": the name block's place beside the photo.
   const photoAlign = photoTextAlignItems(cl); // the letter's own Text Position
 
-  const contactEl = (
-    <PdfContactRow
-      personal={personal}
-      hidden={hidden}
-      // Centred with the letterhead, never because a centred Classic header was left in the
-      // settings of a Modern or Sidebar résumé (their headers take no alignment).
-      settings={{ ...settings, headerAlign: centered ? 'center' : 'left', contactStyle: contacts.style, contactLayout: contacts.layout }}
-      color={look.contacts}
-    />
-  );
+  // Centred with the letterhead, never because a centred Classic header was left in the
+  // settings of a Modern or Sidebar résumé (their headers take no alignment).
+  const contactSettings = { ...settings, headerAlign: centered ? 'center' : 'left', contactStyle: contacts.style, contactLayout: contacts.layout };
+  const contactEl = <PdfContactRow personal={personal} hidden={hidden} settings={contactSettings} color={look.contacts} />;
 
   const [ring, ringOpts] = look.photo;
   const photoStyle = {
@@ -84,39 +84,46 @@ export function CoverLetterHeader({ look, personal, settings, cl, hidden, contac
   };
   const photoEl = photoSrc ? <PdfPhoto src={photoSrc} style={photoStyle} /> : null;
 
-  // Beside the contacts ('right', the default) the name and photo take at most 60 % of the
-  // header, so a long title wraps there instead of pushing the contacts past the margin (and,
-  // at a column of no width, making react-pdf throw on an icon). In points, on the name block:
-  // react-pdf lays text out once, at the first width it is measured with, so a cap on the row
-  // or a box that shrinks later does not re-wrap it. Modern's band pads the header on both sides.
-  const bandPad = look.band && !look.band.bleed ? look.band.padX : 0;
-  const headerWidth = A4_WIDTH_PT - 2 * (settings.marginH ?? 18) * MM_TO_PT - 2 * bandPad;
-  const nameCap = !centered && fieldsPos === 'right' && contactItems(personal, hidden).length
-    ? 0.6 * headerWidth - (photoEl ? photoStyle.width + photoStyle.marginRight : 0)
-    : undefined;
-
   const align = centered ? { textAlign: 'center' } : {};
+  const name = personal?.name || 'Your Name';
+  const nameStyle = {
+    fontSize: nameSize, fontWeight: look.name.weight, color: look.name.color, lineHeight: 1.2,
+    ...(look.name.letterSpacing ? { letterSpacing: look.name.letterSpacing } : {}), ...align,
+  };
+  const titleStyle = {
+    fontSize: baseSize, color: look.title.color, marginTop: 1,
+    ...(look.title.opacity ? { opacity: opacityFor(look.title.color, look.title.opacity) } : {}), ...align,
+  };
+
+  // Beside the contacts ('right', the default) the name side takes the room the contacts' widest
+  // item leaves (contactRowMinWidth), so a long title wraps there instead of pushing a contact
+  // past the margin (VM3-1) — and, at a column of no width, making react-pdf throw on an icon.
+  // A name or title word wider than that room cannot wrap, and ran over the contacts (VM3-0):
+  // then the contacts go under the name, as Below Name prints them. In points, on the name block:
+  // react-pdf lays text out once, at the first width it is measured with, so a cap on the row or
+  // a box that shrinks later does not re-wrap it. Modern's band pads the header on both sides.
+  let nameCap;
+  let layout = centered ? 'centered' : fieldsPos;
+  if (layout === 'right' && contactItems(personal, hidden).length) {
+    const bandPad = look.band && !look.band.bleed ? look.band.padX : 0;
+    const headerWidth = A4_WIDTH_PT - 2 * (settings.marginH ?? 18) * MM_TO_PT - 2 * bandPad;
+    const room = headerWidth - (photoEl ? photoStyle.width + photoStyle.marginRight : 0) - CONTACTS_GAP;
+    const font = { fontFamily: settings._pdfFontFamily };
+    const contactsNeed = contactRowMinWidth(personal, contactSettings, hidden) + SLACK;
+    const nameNeed = Math.max(widestWord(name, { ...font, ...nameStyle }), widestWord(personal?.title, { ...font, ...titleStyle })) + SLACK;
+    if (nameNeed + contactsNeed <= room) nameCap = room - contactsNeed;
+    else layout = 'below-name';
+  }
+
   const nameBlock = (
     <View style={{ minWidth: 0, maxWidth: nameCap, ...(centered ? { alignSelf: 'stretch' } : {}) }}>
-      <Text style={{
-        fontSize: nameSize, fontWeight: look.name.weight, color: look.name.color, lineHeight: 1.2,
-        ...(look.name.letterSpacing ? { letterSpacing: look.name.letterSpacing } : {}), ...align,
-      }}>
-        {personal?.name || 'Your Name'}
-      </Text>
-      {personal?.title ? (
-        <Text style={{
-          fontSize: baseSize, color: look.title.color, marginTop: 1,
-          ...(look.title.opacity ? { opacity: opacityFor(look.title.color, look.title.opacity) } : {}), ...align,
-        }}>
-          {personal.title}
-        </Text>
-      ) : null}
+      <Text style={nameStyle}>{name}</Text>
+      {personal?.title ? <Text style={titleStyle}>{personal.title}</Text> : null}
     </View>
   );
 
   function content() {
-    if (centered) {
+    if (layout === 'centered') {
       // A centred résumé header's stack: photo above the name, contacts under it.
       return (
         <View style={{ alignItems: 'center' }}>
@@ -126,7 +133,7 @@ export function CoverLetterHeader({ look, personal, settings, cl, hidden, contac
         </View>
       );
     }
-    if (fieldsPos === 'below-name') {
+    if (layout === 'below-name') {
       return (
         <View style={{ flexDirection: 'row', alignItems: photoAlign }}>
           {photoEl}
@@ -137,7 +144,7 @@ export function CoverLetterHeader({ look, personal, settings, cl, hidden, contac
         </View>
       );
     }
-    if (fieldsPos === 'below-all') {
+    if (layout === 'below-all') {
       // The name block takes the row's width left of the photo, so a long title wraps there
       // instead of running past the margin (it kept its one-line width).
       return (
@@ -150,14 +157,14 @@ export function CoverLetterHeader({ look, personal, settings, cl, hidden, contac
         </View>
       );
     }
-    // 'right' — default: name+photo on left (at most 60 %: nameCap), contact on right
+    // 'right' — default: name+photo on left (at most nameCap), contact on right
     return (
       <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' }}>
         <View style={{ flexDirection: 'row', alignItems: photoAlign }}>
           {photoEl}
           {nameBlock}
         </View>
-        {contactEl ? <View style={{ flex: 1, alignItems: 'flex-end', marginLeft: 12 }}>{contactEl}</View> : null}
+        {contactEl ? <View style={{ flex: 1, alignItems: 'flex-end', marginLeft: CONTACTS_GAP }}>{contactEl}</View> : null}
       </View>
     );
   }
