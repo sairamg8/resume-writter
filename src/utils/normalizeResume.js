@@ -10,14 +10,15 @@ import { DEFAULT_ITEM_GAP_PX, SECTION_SPACING_PX } from '@/templates/pdf/shared/
  * it has had, so none runs twice on the same data — not after a sync, an import of an exported
  * file, or a stale tab of an older build writing the store back with its older store version.
  */
-export const DATA_VERSION = 9;
+export const DATA_VERSION = 10;
 
 const filled = (v) => typeof v === 'string' && v.trim() !== '';
 
 /**
  * When 4bc56fe was pushed (2026-09-14 21:39:53 IST): the first deployed build with ec843e2 (Design →
- * Spacing "Between Items" prints), FIDB-38 (the Sidebar's dark column takes the section presets)
- * and bf0467f (the letter prints its recipient block). It stamped no data version on a résumé, and
+ * Spacing "Between Items" prints), FIDB-38 (the Sidebar's dark column takes the section presets),
+ * bf0467f (the letter prints its recipient block) and e0e243c (the letter's hidden contacts are its
+ * own list alone, FIDB-44). It stamped no data version on a résumé, and
  * nor did the builds before it, so `updatedAt` alone tells which of them a résumé was last edited
  * on (R7-2). The builds deployed from 0b83cb1 on ran v7 and v8 and stamped version 8.
  */
@@ -107,11 +108,31 @@ function withModernTextAtTop(r, from) {
   return { ...r, settings: { ...r.settings, photoTextAlign: 'top' } };
 }
 
+/**
+ * v10 (R5-0): the Cover Letter panel's "Visible Contact Fields" wrote the letter's own
+ * `hiddenFields` on every build, but until e0e243c the letter printed the résumé's hidden fields
+ * as well as that list, which held only what the letter hid besides them. Since then it prints its
+ * own list alone (FIDB-44), so a letter saved before with a list — even an empty one, hidden and
+ * shown again — would print a contact the user hid on the résumé. It gets the résumé's hidden
+ * fields added: it prints what it printed, and its panel shows those contacts hidden, for the user
+ * to switch on. A letter with no list follows the résumé's already; one edited since 4bc56fe went
+ * live printed its own list alone and showed it in its panel, and keeps it.
+ */
+function withResumeHiddenOnLetter(r) {
+  const cl = r.coverLetter;
+  if (!cl || !Array.isArray(cl.hiddenFields) || editedSince(r, SPACING_AND_RECIPIENT_LIVE)) return r;
+  const resumeHidden = Array.isArray(r.personal?.hiddenFields) ? r.personal.hiddenFields : [];
+  const added = [...new Set(resumeHidden)].filter((key) => !cl.hiddenFields.includes(key));
+  if (!added.length) return r;
+  return { ...r, coverLetter: { ...cl, hiddenFields: [...cl.hiddenFields, ...added] } };
+}
+
 /** One-time migrations: [the version that introduced it, (résumé, its own version) → résumé]. */
 const MIGRATIONS = [
   [7, (r) => (r.coverLetter && !editedSince(r, SPACING_AND_RECIPIENT_LIVE) ? { ...r, coverLetter: withoutDefaultRecipientTitle(r.coverLetter) } : r)],
   [8, withItemGapsAsPrinted],
   [9, withModernTextAtTop],
+  [10, withResumeHiddenOnLetter],
 ];
 
 const versionOf = (r) => (Number.isFinite(r.dataVersion) ? r.dataVersion : 0);

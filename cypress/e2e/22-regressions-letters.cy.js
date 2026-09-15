@@ -1,4 +1,4 @@
-// Regression tests for letters saved by earlier builds (review R1-0), moved out of
+// Regression tests for letters saved by earlier builds (reviews R1-0, R5-0), moved out of
 // 07-regressions-store.cy.js when it passed 300 lines. Each test sets the old data version
 // itself: the shared fixture résumé carries the current one (tests/helpers.js).
 import { buildTestState, DATA_VERSION } from '../../tests/helpers.js';
@@ -82,5 +82,44 @@ describe('regressions — letters saved with the old "Hiring Manager" default (R
     cy.previewReady();
     titleInput().should('have.value', 'Hiring Manager');
     letter().should('contain.text', 'Hiring Manager');
+  });
+});
+
+describe('regressions — a letter saved with its own hidden contacts before they were its own alone (R5-0, FIDB-44)', () => {
+  // Until e0e243c, first deployed in 4bc56fe, the letter printed the résumé's hidden contacts as
+  // well as the list its panel wrote. It stamped no data version on a résumé.
+  const LIVE = Date.UTC(2026, 8, 14, 16, 9, 53);
+  const squash = (s) => s.replace(/\s+/g, '').toLowerCase();
+  const PHONE = squash('+1 555 0100');
+  const letter = () => cy.get('#cover-letter-preview');
+  /** The résumé hides its phone; one eye click on the letter hid its GitHub. */
+  const saved = (updatedAt) => {
+    const state = buildTestState('classic');
+    const r = state.resumes[0];
+    delete r.dataVersion;
+    r.updatedAt = updatedAt;
+    r.personal = { ...r.personal, hiddenFields: ['phone'] };
+    r.coverLetter = { ...r.coverLetter, hiddenFields: ['github'] };
+    return state;
+  };
+
+  it('last edited before then: the phone the résumé hides stays off the letter, and its panel shows it hidden', () => {
+    cy.visitEditor('classic', { state: saved(LIVE - 86_400_000), tab: 'coverletter' });
+    letter().invoke('text').should((t) => {
+      expect(squash(t)).not.to.contain(PHONE);
+      expect(squash(t)).to.contain('alex@example.com');
+    });
+    cy.get('button[title="Show Phone on the cover letter"]').should('exist');
+    cy.store().should((s) => {
+      expect(s.resumes[0].coverLetter.hiddenFields).to.deep.eq(['github', 'phone']);
+      expect(s.resumes[0].personal.hiddenFields).to.deep.eq(['phone']);
+    });
+  });
+
+  // Guard: a letter edited since then printed its own list alone, and keeps it.
+  it('edited since then: the letter keeps printing the phone its own list shows', () => {
+    cy.visitEditor('classic', { state: saved(LIVE + 60_000), tab: 'coverletter' });
+    letter().invoke('text').should((t) => expect(squash(t)).to.contain(PHONE));
+    cy.store().should((s) => expect(s.resumes[0].coverLetter.hiddenFields).to.deep.eq(['github']));
   });
 });

@@ -60,6 +60,8 @@ describe('header contacts', () => {
 });
 
 describe('cover letter contact visibility (FIDB-44)', () => {
+  // resume() is data this build saved. A letter list saved before e0e243c, when the letter also
+  // printed the résumé's hidden fields, is migrated first (16-saved-data-letter-contacts, R5-0).
   /** Text of the letter and of the résumé for one résumé / letter hidden-fields pair. */
   const both = async (resumeHidden, coverLetter) => {
     const r = resume({ personal: { ...PERSONAL, hiddenFields: resumeHidden }, coverLetter });

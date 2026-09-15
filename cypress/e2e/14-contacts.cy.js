@@ -12,7 +12,11 @@ const EMAIL = 'alex@example.com';
 const letter = () => cy.get('#cover-letter-preview');
 const pdfText = (pdf) => squash(pdf.runs.map((r) => r.str).join(''));
 
-/** A seeded résumé hiding `resumeHidden`, whose letter has `coverLetter` merged over the test letter. */
+/**
+ * A seeded résumé hiding `resumeHidden`, whose letter has `coverLetter` merged over the test letter.
+ * It is data this build saved (buildTestState stamps DATA_VERSION); a letter list saved before
+ * e0e243c is migrated on load (22-regressions-letters, R5-0).
+ */
 function seeded(resumeHidden, coverLetter) {
   const state = buildTestState('classic');
   const r = active(state);
