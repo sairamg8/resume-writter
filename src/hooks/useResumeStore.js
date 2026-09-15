@@ -4,6 +4,7 @@ import { createSectionActions } from '@/hooks/useResumeSectionActions';
 import { newId } from '@/utils/ids';
 import { templateStyleDefaults } from '@/constants/templates';
 import { DATA_VERSION, normalizeResume } from '@/utils/normalizeResume';
+import { loadSavedList, pendingRecovery, rememberRecovery } from '@/utils/storageBackup';
 
 const STORAGE_KEY = 'cpwtcv_v1';
 
@@ -12,41 +13,46 @@ function emptyStore() {
   return { resumes: [], activeId: null, dataVersion: DATA_VERSION, deletedIds: [] };
 }
 
-/** Copy a value we are about to replace into its own key, so a bad load never destroys data. */
-function backupRaw(raw) {
-  try { localStorage.setItem(`${STORAGE_KEY}_backup_${Date.now()}`, raw); } catch { /* best effort */ }
-}
+const isResume = (r) => Boolean(r && typeof r === 'object' && !Array.isArray(r) && r.id);
 
+/**
+ * The saved store, as `{ state, recovery }`. Whatever cannot be read — the whole value or single
+ * résumés — is left out, after the raw value is copied to a backup key, and `recovery` says so
+ * (loadSavedList, shared with the job list). A résumé without an id used to be dropped with no
+ * copy and no word, and the next save replaced it (R4-6).
+ */
 function loadStore() {
-  let saved = null;
-  try { saved = localStorage.getItem(STORAGE_KEY); } catch { return emptyStore(); }
-  if (!saved) return emptyStore();
-  try {
-    const parsed = JSON.parse(saved);
-    if (!Array.isArray(parsed?.resumes)) {
-      backupRaw(saved);
-      return emptyStore();
-    }
-    // Any data version is kept: user resumes must survive an app upgrade (or downgrade). Each
-    // résumé is migrated from its own dataVersion (normalizeResume), not the store's.
-    const resumes = parsed.resumes.filter(r => r && r.id).map(normalizeResume);
-    return {
-      ...parsed,
+  const { saved, list, recovery } = loadSavedList(STORAGE_KEY, 'resumes', r => (isResume(r) ? r : null));
+  // Kept until dismissed: the repaired store is saved over at once, so a reload would lose it.
+  if (recovery) rememberRecovery(STORAGE_KEY, recovery);
+  if (!saved) return { state: emptyStore(), recovery };
+  // Any data version is kept: user resumes must survive an app upgrade (or downgrade). Each
+  // résumé is migrated from its own dataVersion (normalizeResume), not the store's.
+  const resumes = list.map(normalizeResume);
+  return {
+    state: {
+      ...saved,
       resumes,
-      activeId: resumes.some(r => r.id === parsed.activeId) ? parsed.activeId : (resumes[0]?.id ?? null),
-      deletedIds: Array.isArray(parsed.deletedIds) ? parsed.deletedIds : [],
+      activeId: resumes.some(r => r.id === saved.activeId) ? saved.activeId : (resumes[0]?.id ?? null),
+      deletedIds: Array.isArray(saved.deletedIds) ? saved.deletedIds : [],
       dataVersion: DATA_VERSION,
-    };
-  } catch {
-    backupRaw(saved);
-    return emptyStore();
-  }
+    },
+    recovery,
+  };
 }
 
 export function useAppStore() {
-  const [appState, setAppState] = useState(loadStore);
+  const [loaded] = useState(loadStore);
+  const [appState, setAppState] = useState(loaded.state);
   // null when the last write reached localStorage; otherwise the error (usually QuotaExceededError).
   const [persistError, setPersistError] = useState(null);
+  // Set when the saved store could not be read in full; the dashboard shows it until dismissed.
+  const [recovery, setRecovery] = useState(() => loaded.recovery || pendingRecovery(STORAGE_KEY));
+
+  function dismissRecovery() {
+    rememberRecovery(STORAGE_KEY, null);
+    setRecovery(null);
+  }
 
   useEffect(() => {
     try {
@@ -172,6 +178,8 @@ export function useAppStore() {
   return {
     appState,
     persistError,
+    recovery,
+    dismissRecovery,
     activeResume,
     setActiveId,
     loadResumes,

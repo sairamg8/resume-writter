@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react';
-import { backupRaw } from '@/utils/storageBackup';
+import { loadSavedList, pendingRecovery, rememberRecovery } from '@/utils/storageBackup';
 import { newId } from '@/utils/ids';
 
 const KEY = 'cpwtcv_jobs_v1';
@@ -29,50 +29,23 @@ const DEMO_JOBS = [
 
 const JOB_VERSION = 2;
 
+const isJobEntry = (j) => Boolean(j && typeof j === 'object' && !Array.isArray(j));
+
 /**
  * The saved job list, as `{ jobs, recovery }`. Whatever cannot be read — the whole value or single
  * entries — is left out, and the raw value is first copied to a backup key, because the next save
- * replaces it. `recovery` is then `{ backupKey }` (null when not even the copy could be written).
+ * replaces it (loadSavedList). `recovery` is then `{ backupKey }` (null when not even the copy
+ * could be written). Nothing saved yet: the demo job.
  */
 function load() {
-  const fresh = { jobs: DEMO_JOBS, recovery: null };
-  let saved = null;
-  try { saved = localStorage.getItem(KEY); } catch { return fresh; }
-  if (!saved) return fresh;
-  let parsed = null;
-  try { parsed = JSON.parse(saved); } catch { /* unreadable: handled below */ }
-  if (!Array.isArray(parsed?.jobs)) return { jobs: [], recovery: { backupKey: backupRaw(KEY, saved) } };
-
-  let jobs = parsed.jobs.filter(j => j && typeof j === 'object' && !Array.isArray(j));
-  const recovery = jobs.length < parsed.jobs.length ? { backupKey: backupRaw(KEY, saved) } : null;
+  const { saved, list, recovery } = loadSavedList(KEY, 'jobs', j => (isJobEntry(j) ? j : null));
+  if (!list) return { jobs: DEMO_JOBS, recovery: null };
+  if (!saved) return { jobs: [], recovery };
   // A job the router cannot address (no id, or a non-string one) gets an id rather than being dropped.
-  jobs = jobs.map(j => (typeof j.id === 'string' && j.id ? j : { ...j, id: newId('job') }));
+  let jobs = list.map(j => (typeof j.id === 'string' && j.id ? j : { ...j, id: newId('job') }));
   // Migrate: strip old demo_* jobs, keep user-created ones
-  if (parsed.dataVersion !== JOB_VERSION) jobs = [...DEMO_JOBS, ...jobs.filter(j => !j.id.startsWith('demo_'))];
+  if (saved.dataVersion !== JOB_VERSION) jobs = [...DEMO_JOBS, ...jobs.filter(j => !j.id.startsWith('demo_'))];
   return { jobs, recovery };
-}
-
-/**
- * The notice for a list that could not be read in full is kept in storage until the user
- * dismisses it: the list is repaired (and saved over) on whichever job page reads it first, and
- * only the tracker shows the notice — a reload of that page used to lose it for good (R4-0).
- */
-const RECOVERY_KEY = `${KEY}_recovery`;
-
-function pendingRecovery() {
-  try {
-    const v = JSON.parse(localStorage.getItem(RECOVERY_KEY));
-    return v && typeof v === 'object' ? { backupKey: typeof v.backupKey === 'string' ? v.backupKey : null } : null;
-  } catch {
-    return null;
-  }
-}
-
-function rememberRecovery(recovery) {
-  try {
-    if (recovery) localStorage.setItem(RECOVERY_KEY, JSON.stringify(recovery));
-    else localStorage.removeItem(RECOVERY_KEY);
-  } catch { /* best effort: the notice still shows for this visit */ }
 }
 
 /** Write the list; null when it reached localStorage, else the error (usually QuotaExceededError). */
@@ -95,9 +68,11 @@ const listeners = new Set();
 
 function snapshot() {
   if (!current) {
+    // The notice is kept until dismissed: the list is repaired (and saved over) on whichever job
+    // page reads it first, and only the tracker shows the notice (R4-0).
     const { jobs, recovery: found } = load();
-    if (found) rememberRecovery(found);
-    const recovery = found || pendingRecovery();
+    if (found) rememberRecovery(KEY, found);
+    const recovery = found || pendingRecovery(KEY);
     // Saved at once, as the page used to on opening: a migrated or repaired list replaces the
     // stored value (whose backup load() has kept).
     current = { jobs, recovery, persistError: persist(jobs) };
@@ -181,7 +156,7 @@ function clearDemoData() {
 
 // Set when the saved list could not be read in full; the tracker shows it until dismissed.
 function dismissRecovery() {
-  rememberRecovery(null);
+  rememberRecovery(KEY, null);
   update({ recovery: null });
 }
 

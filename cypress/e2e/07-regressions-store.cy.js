@@ -3,6 +3,11 @@ import { buildTestState, DATA_VERSION, STORAGE_KEY } from '../../tests/helpers.j
 import { CARD, IMPORT_INPUT } from '../support/selectors.js';
 import { dashboardState } from '../support/state.js';
 
+/** The résumé-store backups in localStorage, as { key: value }. */
+const resumeBackups = (win) => Object.fromEntries(Object.keys(win.localStorage)
+  .filter((k) => k.startsWith(`${STORAGE_KEY}_backup_`))
+  .map((k) => [k, win.localStorage.getItem(k)]));
+
 const visitWithRawStore = (raw) =>
   cy.visit('/#/', {
     onBeforeLoad(win) {
@@ -53,6 +58,29 @@ describe('regressions — resume store', () => {
       expect(backups).to.have.length(1);
       expect(win.localStorage.getItem(backups[0])).to.eq('{ this is not json');
     });
+  });
+
+  it('R4-6: a résumé that cannot be read is backed up, and the dashboard says so — after a reload, until dismissed', () => {
+    const state = buildTestState('minimal');
+    state.resumes[0].name = 'My Real CV';
+    state.resumes = [null, { name: 'Saved without an id' }, ...state.resumes];
+    const raw = JSON.stringify(state);
+    visitWithRawStore(raw);
+    cy.get(CARD).should('have.length', 1).and('contain.text', 'My Real CV');
+    cy.contains('[role="alert"]', 'résumés could not be read').should('be.visible');
+    cy.window().then((win) => {
+      const backups = resumeBackups(win);
+      expect(Object.values(backups)).to.deep.eq([raw], 'the whole original, the dropped entries included');
+      cy.contains('[role="alert"]', Object.keys(backups)[0]).should('be.visible');
+    });
+    cy.store().its('resumes').should('have.length', 1); // the repaired store replaced the original
+    cy.reload();
+    cy.contains('[role="alert"]', 'résumés could not be read').contains('button', 'Dismiss').click();
+    cy.contains('[role="alert"]', 'could not be read').should('not.exist');
+    cy.reload();
+    cy.get(CARD).should('have.length', 1);
+    cy.contains('[role="alert"]', 'could not be read').should('not.exist');
+    cy.window().then((win) => expect(Object.keys(resumeBackups(win))).to.have.length(1, 'one backup, made once'));
   });
 
   it('M3: a full localStorage does not crash the editor and says the change was not saved', () => {
