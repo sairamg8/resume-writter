@@ -87,16 +87,17 @@ describe('header spacing settings (header_spacing_spec.md)', () => {
 /**
  * Where an anchor prints on page 1: its x, its right end, or its baseline's distance from the page
  * top. A bullet less than about 12 pt before its value reads as one run with it ("• alex@…"), so
- * a value after a bullet is measured by its right end.
+ * a value after a bullet is measured by its right end. The section title prints in capitals on
+ * Classic and Minimal and as typed on Executive, each template's own title case (R5-7).
  */
 const A = {
   name: [P.name, 'y'], nameX: [P.name, 'x'], title: [P.title, 'y'], titleX: [P.title, 'x'],
   email: [P.email, 'y'], emailX: [P.email, 'x'], emailEnd: [P.email, 'end'], phone: [P.phone, 'y'], phoneX: [P.phone, 'x'],
-  row2: [P.github, 'y'], summary: ['Summary line', 'y'], section: ['EXPERIENCE', 'y'],
+  row2: [P.github, 'y'], summary: ['Summary line', 'y'], section: [/EXPERIENCE|Experience/, 'y'],
 };
 function at(pg, anchor) {
   const [needle, axis] = A[anchor];
-  const item = pg.items.find((t) => t.str.includes(needle));
+  const item = pg.items.find((t) => (needle instanceof RegExp ? needle.test(t.str) : t.str.includes(needle)));
   assert.ok(item, `"${needle}" prints`);
   return { x: item.x, end: item.x + item.w, y: pg.H - item.y }[axis];
 }

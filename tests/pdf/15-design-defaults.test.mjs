@@ -20,6 +20,18 @@ describe('design defaults (M16)', () => {
     assert.notEqual(defaultSettings('classic'), ATS_DEFAULTS, 'a copy, never the shared object');
   });
 
+  it('a new résumé of a template starts from that template\'s defaults, as picking it or Reset gives (R5-7)', async () => {
+    const { createBlankResume, defaultSettings } = await loadModule('/src/utils/defaultData.js');
+    const executive = createBlankResume({ id: 'r_exec', template: 'executive' });
+    executive.sections = [experience([{}])];
+    const text = allText(await read(await render(executive)));
+    assert.ok(text.includes('Professional Experience') && !text.includes('PROFESSIONAL EXPERIENCE'), `Executive prints its titles as typed: ${text}`);
+    for (const template of TEMPLATES) {
+      assert.deepEqual(createBlankResume({ id: `r_${template}`, template }).settings, defaultSettings(template), template);
+    }
+    assert.deepEqual(createBlankResume({ id: 'r' }).settings, defaultSettings('classic'), 'no template: Classic');
+  });
+
   it('an Executive résumé reset to its defaults prints its section titles as typed', async () => {
     const { defaultSettings } = await loadModule('/src/utils/defaultData.js');
     const r = resume({ template: 'executive', sections: [experience([{}])] });

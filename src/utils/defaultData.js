@@ -59,8 +59,9 @@ export function defaultSettings(template) {
 export { SECTION_TYPE_DEFAULTS } from '@/utils/defaultDataSectionTypes';
 
 /**
- * A fresh, empty résumé (Classic template, ATS-safe settings). It is current data, so it carries
- * DATA_VERSION: no migration ever runs on what its user types.
+ * A fresh, empty résumé (Classic unless `template` names another), with the ATS-safe settings and
+ * the heading style and title case its template brings — what picking it or Reset gives (R5-7).
+ * It is current data, so it carries DATA_VERSION: no migration ever runs on what its user types.
  */
 export function createBlankResume({ id, name = 'Untitled Resume', template = 'classic' } = {}) {
   return {
@@ -69,7 +70,7 @@ export function createBlankResume({ id, name = 'Untitled Resume', template = 'cl
     updatedAt: Date.now(),
     dataVersion: DATA_VERSION,
     template,
-    settings: { ...ATS_DEFAULTS },
+    settings: defaultSettings(template),
     personal: { ...BLANK_PERSONAL, hiddenFields: [] },
     sections: blankSections(),
     coverLetter: { ...BASE_COVER_LETTER },
