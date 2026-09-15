@@ -193,6 +193,7 @@ describe('the default gap between items (R2-1)', () => {
     const { normalizeResume } = await loadModule('/src/utils/normalizeResume.js');
     const saved = resume({ settings: { itemGap: 12 } });
     delete saved.dataVersion;
+    saved.updatedAt = Date.UTC(2026, 7, 20); // last edited before 4bc56fe; the rest: 16-saved-data-item-gaps
     const loaded = normalizeResume(saved);
     assert.equal(loaded.settings.itemGap, 8);
     const gapOf = async (r) => {

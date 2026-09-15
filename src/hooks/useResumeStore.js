@@ -93,11 +93,12 @@ export function useAppStore() {
 
   /**
    * A résumé from a file, as a new one. `keep`: marked as the account's original (useDemoSeed) —
-   * never because the file says so.
+   * never because the file says so. Made current against the file's own `updatedAt` — which build
+   * last saved it (normalizeResume) — before it is stamped as new here.
    */
   function importResume(data, { keep = false } = {}) {
     const id = newId('resume');
-    const imported = normalizeResume(withKeep({ ...JSON.parse(JSON.stringify(data)), id }, keep, Date.now()));
+    const imported = withKeep(normalizeResume({ ...JSON.parse(JSON.stringify(data)), id }), keep, Date.now());
     setAppState(prev => ({ ...prev, resumes: [...prev.resumes, imported], activeId: id }));
     return id;
   }

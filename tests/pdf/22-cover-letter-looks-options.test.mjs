@@ -135,7 +135,7 @@ describe('letters saved before the looks (FIDB-51)', () => {
     const r = letter(template, { coverLetter: { recipientTitle: 'Hiring Manager', recipientName: '', company: '', subject: '', date: '' } });
     for (const key of ['nameColor', 'jobTitleColor', 'headerTextColor', 'sidebarBg', 'showHeaderBorder', 'photoTextAlign', 'headerAlign']) delete r.settings[key];
     delete r.dataVersion;
-    return r;
+    return { ...r, updatedAt: Date.UTC(2026, 7, 20) }; // last edited before 4bc56fe: the title never printed
   };
 
   it('load, then print in the résumé template\'s look without an error, in the PDF and in Word', async () => {

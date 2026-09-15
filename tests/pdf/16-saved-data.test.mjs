@@ -12,11 +12,14 @@ after(teardown);
 /** The letter block every résumé created before bf0467f saved: a recipient title nobody typed. */
 const OLD_DEFAULT = { recipientName: '', recipientTitle: 'Hiring Manager', company: '', date: '', subject: '' };
 
-/** A résumé as a build before data version 7 saved it: the old letter default, no dataVersion. */
+/**
+ * A résumé as a build before data version 7 saved it: the old letter default, no dataVersion, last
+ * edited before 4bc56fe went live — when the letter never printed the title (see 16-saved-data-item-gaps).
+ */
 function legacy(coverLetter = {}) {
   const r = resume({ coverLetter: { ...OLD_DEFAULT, body: '<p>Hello</p>', ...coverLetter } });
   delete r.dataVersion;
-  return r;
+  return { ...r, updatedAt: Date.UTC(2026, 7, 20) };
 }
 
 const normalizer = () => loadModule('/src/utils/normalizeResume.js');
@@ -173,27 +176,5 @@ describe('a Modern résumé saved before its banner took Photo → Text Position
     assert.equal(normalizeResume(migrated), migrated, 'it runs once');
     const chosen = { ...migrated, settings: { ...migrated.settings, photoTextAlign: 'center' }, updatedAt: 1 };
     assert.equal(normalizeResume(JSON.parse(JSON.stringify(chosen))).settings.photoTextAlign, 'center', 'a Center chosen afterwards is the user\'s');
-  });
-});
-
-describe('Between Items saved at the old 12 px default (R2-1)', () => {
-  it('becomes 8 px for a résumé saved before data version 8; a value the user chose is kept', async () => {
-    const { normalizeResume, DATA_VERSION } = await normalizer();
-    const old = (settings, dataVersion) => {
-      const r = resume({ settings });
-      if (dataVersion === undefined) delete r.dataVersion; else r.dataVersion = dataVersion;
-      return r;
-    };
-    assert.equal(normalizeResume(old({ itemGap: 12 })).settings.itemGap, 8, 'no version: migrated');
-    assert.equal(normalizeResume(old({ itemGap: 12 }, 7)).settings.itemGap, 8, 'version 7: migrated');
-    assert.equal(normalizeResume(old({ itemGap: 20 })).settings.itemGap, 20, 'a chosen value is kept');
-    assert.equal(normalizeResume(old({ itemGap: 0 })).settings.itemGap, 0, 'zero is a chosen value');
-    const current = old({ itemGap: 12 }, DATA_VERSION);
-    assert.equal(normalizeResume(current), current, '12 px set on this build is the user\'s: untouched');
-    // Version 7's letter migration still runs alongside, and only once.
-    const both = normalizeResume({ ...old({ itemGap: 12 }), coverLetter: { ...OLD_DEFAULT, body: '<p>Hi</p>' } });
-    assert.deepEqual([both.settings.itemGap, both.coverLetter.recipientTitle, both.dataVersion], [8, '', DATA_VERSION]);
-    const v7 = normalizeResume({ ...old({ itemGap: 12 }, 7), coverLetter: { ...OLD_DEFAULT, body: '<p>Hi</p>' } });
-    assert.equal(v7.coverLetter.recipientTitle, 'Hiring Manager', 'a version-7 letter kept its title: v7 already ran on it');
   });
 });
