@@ -7,12 +7,14 @@ import { View } from '@react-pdf/renderer';
 import { Text } from './shared/PdfText';
 import { contactRowMinWidth, PdfContactRow } from './shared/PdfContact';
 import { PdfPhoto } from './shared/PdfPhoto';
+import { contentWidthPt, pageMargins } from './shared/PdfPage';
 import { getPdfPhotoStyle } from './shared/pdfPhoto';
 import { widestWord } from './shared/pdfMeasure';
 import { DOUBLE_RULE_GAP, LETTERHEAD_GAP, LETTERHEAD_PAD } from './shared/letterhead';
 import { photoTextAlignItems } from '@/constants/templates';
 import { contactItems } from '@/utils/contacts';
-import { A4_WIDTH_PT, MM_TO_PT } from './shared/pdfUnits';
+import { isDrawableImage } from '@/utils/imageUpload';
+import { MM_TO_PT } from './shared/pdfUnits';
 import { opacityFor } from './shared/pdfColors';
 
 /** Space between the name side and the contacts on its right, pt. */
@@ -26,8 +28,9 @@ function Frame({ look, settings, children }) {
   if (band?.bleed) {
     // The fill runs from the paper's top and side edges; the content keeps the page margins, so
     // it sits where every other letterhead's does.
-    const top = (settings.marginV ?? 14) * MM_TO_PT;
-    const side = (settings.marginH ?? 18) * MM_TO_PT;
+    const { v, h } = pageMargins(settings);
+    const top = v * MM_TO_PT;
+    const side = h * MM_TO_PT;
     return (
       <View style={{ paddingBottom: band.padY, marginBottom: LETTERHEAD_GAP }}>
         <View style={{ position: 'absolute', top: -top, left: -side, right: -side, bottom: 0, backgroundColor: band.color }} />
@@ -68,7 +71,9 @@ export function CoverLetterHeader({ look, personal, settings, cl, hidden, contac
   const fieldsPos = cl.fieldsPosition || 'right';
   const { centered } = look;
 
-  const photoSrc = cl.showPhoto !== false ? (cl.clPhoto || personal?.photo) : null;
+  // A photo the PDF cannot draw (PdfPhoto prints nothing for it) takes no room either (VM3-7).
+  const shownPhoto = cl.showPhoto !== false ? (cl.clPhoto || personal?.photo) : null;
+  const photoSrc = isDrawableImage(shownPhoto) ? shownPhoto : null;
   // The panel's "Text Position (relative to photo)": the name block's place beside the photo.
   const photoAlign = photoTextAlignItems(cl); // the letter's own Text Position
 
@@ -106,8 +111,7 @@ export function CoverLetterHeader({ look, personal, settings, cl, hidden, contac
   let layout = centered ? 'centered' : fieldsPos;
   if (layout === 'right' && contactItems(personal, hidden).length) {
     const bandPad = look.band && !look.band.bleed ? look.band.padX : 0;
-    const headerWidth = A4_WIDTH_PT - 2 * (settings.marginH ?? 18) * MM_TO_PT - 2 * bandPad;
-    const room = headerWidth - (photoEl ? photoStyle.width + photoStyle.marginRight : 0) - CONTACTS_GAP;
+    const room = contentWidthPt(settings) - 2 * bandPad - (photoEl ? photoStyle.width + photoStyle.marginRight : 0) - CONTACTS_GAP;
     const font = { fontFamily: settings._pdfFontFamily };
     const contactsNeed = contactRowMinWidth(personal, contactSettings, hidden) + SLACK;
     const nameNeed = Math.max(widestWord(name, { ...font, ...nameStyle }), widestWord(personal?.title, { ...font, ...titleStyle })) + SLACK;

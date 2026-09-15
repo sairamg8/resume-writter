@@ -1,11 +1,12 @@
 // The letterhead's name and contacts side by side (Fields Position "Right of Name", the default).
 // The name side had a fixed 60 % of the header and the contacts the rest, whatever either held:
-// a name word wider than its 60 % printed over the contacts (VM3-0), and a contact wider than its
-// 40 % ran past the right margin and a 2 Grid e-mail over the phone (VM3-1).
+// a name word wider than its 60 % printed over the contacts (VM3-0), a contact wider than its 40 %
+// ran past the right margin and a 2 Grid e-mail over the phone (VM3-1), and a photo the PDF cannot
+// draw still took its room from the title (VM3-7).
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { setup, teardown, resume, renderCover, read, overlaps, MM } from './harness.mjs';
-import { PNG_2X2 as PNG } from './extractors.mjs';
+import { drawing, PNG_2X2 as PNG } from './extractors.mjs';
 
 before(setup);
 after(teardown);
@@ -13,6 +14,7 @@ after(teardown);
 const T72 = 'Senior Software Engineer, Platform Infrastructure & Developer Experience';
 const EMAIL42 = 'alexandra.johnson-smith@examplecompany.com';
 const CONTACTS = { email: 'alexandra.johnson@example.com', phone: '+1 555 0100', location: 'San Francisco, CA', website: 'alexjohnson.dev', linkedin: 'linkedin.com/in/alexj' };
+const WEBP = 'data:image/webp;base64,UklGRiIAAABXRUJQVlA4IBYAAAAwAQCdASoBAAEADsD+JaQAA3AAAAAA';
 /** An icon (11 px = 8.25 pt) and the 2 pt gap before its value: where an icon contact starts. */
 const ICON = 8.25 + 2;
 
@@ -153,5 +155,18 @@ describe('2 Grid beside the name (VM3-1)', () => {
     const nameRight = Math.max(...h.name.map((t) => t.x + t.w));
     assert.ok(h.contacts.every((t) => t.x >= nameRight + 12 - 0.5), 'every contact right of the name');
     assert.deepEqual(crowded(h), []);
+  });
+});
+
+describe('a photo the PDF cannot draw takes no room (VM3-7)', () => {
+  // A WebP saved before uploads were converted prints no picture (PdfPhoto), but the name side
+  // still lost the photo's 48 pt: the title wrapped earlier than on a letter with no photo.
+  it('a letter with an old WebP photo prints exactly as one with no photo', async () => {
+    for (const title of [T72, 'Senior Software Engineer']) {
+      const page = async (photo) => drawing(await renderCover(resume({
+        personal: { name: 'Alexandra Johnson', title, photo, ...CONTACTS }, coverLetter: { body: '<p>Hello</p>' },
+      })));
+      assert.equal(await page(WEBP), await page(''), title);
+    }
   });
 });

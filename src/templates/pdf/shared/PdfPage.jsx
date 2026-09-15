@@ -1,6 +1,6 @@
 import { StyleSheet } from '@react-pdf/renderer';
 import { solid } from './pdfColors';
-import { HEADER_BORDER_PAD_PT } from './pdfUnits';
+import { A4_WIDTH_PT, HEADER_BORDER_PAD_PT, MM_TO_PT } from './pdfUnits';
 
 // The per-template fallbacks and resolveTemplateSettings live in the react-pdf-free
 // ./templateSettings, which the Word export reads too (FIDB-51); re-exported for the PDF code.
@@ -19,6 +19,12 @@ export function getHeaderBorderStyle(settings) {
   };
 }
 
+/** The page's margins in mm, as it prints them: `v` top and bottom, `h` left and right. */
+export const pageMargins = (settings) => ({ v: settings.marginV ?? 14, h: settings.marginH ?? 18 });
+
+/** The width between the page's left and right margins, in pt. */
+export const contentWidthPt = (settings) => A4_WIDTH_PT - 2 * pageMargins(settings).h * MM_TO_PT;
+
 export function getPageStyle(settings) {
   // Note: page-level lineHeight is intentionally omitted — it can inflate yoga
   // layout height beyond Text metrics and contribute to blank trailing pages.
@@ -27,8 +33,7 @@ export function getPageStyle(settings) {
   // paddingBottom: react-pdf's page wrap is sensitive to bottom padding when the
   // last block sits near the edge (github.com/diegomura/react-pdf/issues/739).
   // Keep visual margins equal via a 0.5mm epsilon only on the bottom.
-  const v = settings.marginV ?? 14;
-  const h = settings.marginH ?? 18;
+  const { v, h } = pageMargins(settings);
   const bottom = Math.max(0, v - 0.5);
 
   return StyleSheet.create({
