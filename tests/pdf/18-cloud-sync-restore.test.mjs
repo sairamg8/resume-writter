@@ -80,6 +80,22 @@ describe('a restore without the cloud\'s answer never overwrites the cloud (VM4-
     assert.deepEqual([laptop.seen.status, laptop.seen.waiting], ['synced', false]);
   });
 
+  it('the server cannot be reached: what the SDK cached is no answer (a guard: server-only reads, V2W1a-5)', async () => {
+    // getDoc answers from the persistent cache when the server cannot be reached; the restore
+    // then brought back the copy cached at the laptop's sync and wrote it over the phone's edit.
+    const cloud = fakeFirestore({ [resumePath('u', 'orig_a')]: orig('orig_a', 7, { name: 'Morning A' }) });
+    const laptop = page(cloud, { resumes: [orig('orig_a', 7, { name: 'Morning A' })] });
+    laptop.sync.start(OWNER);
+    await settle();
+    cloud.goOffline(); // the cache holds the account as the laptop synced it
+    cloud.data.set(resumePath('u', 'orig_a'), orig('orig_a', 20, { name: 'Edited on the phone' }));
+    await laptop.remove('orig_a');
+    await settle();
+    await laptop.timers.fire();
+    assert.deepEqual([names(laptop), laptop.seen.waiting], [[], true], 'with getDoc: the cached morning copy came back');
+    assert.equal(cloud.resumes('u').orig_a.name, 'Edited on the phone', 'with getDoc: written over the phone\'s edit');
+  });
+
   it('no answer within the time allowed: nothing comes back, nothing is sent', async () => {
     const { cloud, laptop } = await morning();
     cloud.hold.read = new Promise(() => {}); // the connection hangs
