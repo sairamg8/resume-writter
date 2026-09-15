@@ -1,17 +1,21 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { Copy, Trash2, Edit2, Check, Pin } from 'lucide-react';
 import { timeAgo } from '@/utils/resume';
 import { isOriginal } from '@/utils/demoSeed';
 
 const KEEP_HINT = 'Your originals come back whenever none of them is left';
+const LAST_ORIGINAL_HINT = 'Your last original always comes back. To delete it, choose "Stop keeping" first.';
 
 /**
  * A résumé on the dashboard. `onKeep(id, keep)` — only in a demo account, whose originals come
  * back (useDemoSeed) — adds "Keep as my original" / "Stop keeping" and the "Original" badge.
+ * `lastOriginal`: deleted, it would come straight back (demoSeed.comesStraightBack), so Delete is
+ * disabled and the card says why (V2OWNER-DATA-4).
  */
-export function ResumeCard({ resume, onOpen, onDuplicate, onDelete, onRename, onKeep }) {
+export function ResumeCard({ resume, onOpen, onDuplicate, onDelete, onRename, onKeep, lastOriginal = false }) {
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(resume.name);
+  const hintId = useId();
   const accent = resume.settings?.accentColor || '#2563eb';
 
   function commitRename() {
@@ -52,8 +56,8 @@ export function ResumeCard({ resume, onOpen, onDuplicate, onDelete, onRename, on
         </div>
       </div>
 
-      {/* Name */}
-      <div className="px-3 pt-3 pb-1">
+      {/* Name — grows, so every card in a row has its buttons at the bottom (the last original's hint is longer) */}
+      <div className="px-3 pt-3 pb-1 flex-1">
         {editing ? (
           <div className="flex items-center gap-1">
             <input
@@ -98,6 +102,7 @@ export function ResumeCard({ resume, onOpen, onDuplicate, onDelete, onRename, on
             <Pin size={10} aria-hidden="true" /> Keep as my original
           </button>
         ))}
+        {lastOriginal && <p id={hintId} className="mt-1 text-[11px] leading-snug text-gray-500">{LAST_ORIGINAL_HINT}</p>}
       </div>
 
       {/* Action buttons */}
@@ -118,7 +123,10 @@ export function ResumeCard({ resume, onOpen, onDuplicate, onDelete, onRename, on
         <div className="w-px bg-gray-100" />
         <button
           onClick={() => onDelete(resume.id)}
-          className="flex-1 flex items-center justify-center gap-1 py-2 text-xs font-medium text-gray-500 hover:bg-red-50 hover:text-red-600 transition-colors"
+          disabled={lastOriginal}
+          title={lastOriginal ? LAST_ORIGINAL_HINT : undefined}
+          aria-describedby={lastOriginal ? hintId : undefined}
+          className="flex-1 flex items-center justify-center gap-1 py-2 text-xs font-medium text-gray-500 enabled:hover:bg-red-50 enabled:hover:text-red-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
         >
           <Trash2 size={11} /> Delete
         </button>

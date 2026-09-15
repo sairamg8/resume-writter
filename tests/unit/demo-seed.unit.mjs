@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import * as seedRules from '../../src/utils/demoSeed.js';
 
 const {
-  parseAccountList, isDemoAccount, isOriginal, withKeep, needsRestore,
+  parseAccountList, isDemoAccount, isOriginal, withKeep, needsRestore, comesStraightBack,
   rememberCopies, originalsIn, buildRestore,
 } = seedRules;
 
@@ -49,6 +49,22 @@ test('needsRestore: a list without an original — empty, only samples, or only 
   assert.equal(needsRestore([resume('demo_classic', 1), resume('demo_modern', 1)]), true, 'only samples left');
   assert.equal(needsRestore([resume('resume_1', 1)]), true);
   assert.equal(needsRestore([resume('resume_1', 1), original('resume_2', 1)]), false);
+});
+
+test('comesStraightBack: the list\'s last original — deleted, the restore puts it back (V2OWNER-DATA-4)', () => {
+  const mine = original('resume_mine', 5, 'My CV');
+  const other = resume('resume_other', 6, 'Classic CV');
+  const list = [mine, other];
+  assert.equal(comesStraightBack(mine, list), true, 'the only original, other résumés left');
+  assert.equal(comesStraightBack(mine, [mine]), true, 'the only résumé');
+  // What the dashboard's Delete would do: the list left needs the restore, which brings it back.
+  const seen = rememberCopies(new Map(), list);
+  assert.equal(needsRestore([other]), true);
+  assert.deepEqual(names(buildRestore(seen, 1000)), ['My CV']);
+
+  assert.equal(comesStraightBack(mine, [mine, original('resume_2', 1)]), false, 'another original stays: it stays deleted');
+  assert.equal(comesStraightBack(other, list), false, 'not an original: deleted for good');
+  assert.equal(comesStraightBack(resume('resume_odd', 1, 'Odd', { keep: 'yes' }), [other]), false);
 });
 
 test('rememberCopies: keeps the newest copy of each résumé, and forgets nothing on deletion', () => {

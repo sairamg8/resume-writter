@@ -120,7 +120,7 @@ describe('regressions — one résumé store and one job store (M14)', () => {
       ...buildTestState('classic'), activeId: 'resume_mine',
       resumes: [
         { ...base, id: 'resume_mine', name: 'My CV', keep: true, personal: { ...base.personal, name: 'Sam Owner' } },
-        { ...base, id: 'resume_other', name: 'Classic CV' },
+        { ...base, id: 'resume_other', name: 'Classic CV', keep: true },
       ],
     };
     cy.visit('/#/', {
@@ -139,8 +139,12 @@ describe('regressions — one résumé store and one job store (M14)', () => {
       });
       cy.stub(win, 'confirm').returns(true);
     });
+    cy.contains(CARD, 'My CV').contains('button', 'Delete').click(); // Classic CV is still an original
+    cy.get(CARD).should('have.length', 1);
+    // "Stop keeping" on the last original leaves none: My CV comes back; then Classic CV can go.
+    cy.contains(CARD, 'Classic CV').contains('button', 'Stop keeping').click();
+    cy.contains(CARD, 'My CV').should('be.visible');
     cy.contains(CARD, 'Classic CV').contains('button', 'Delete').click();
-    cy.contains(CARD, 'My CV').contains('button', 'Delete').click(); // the last original: it comes back
     cy.get(CARD).should('have.length', 1).and('contain.text', 'My CV');
     cy.store().its('resumes').should('have.length', 2); // storage: the list from before
 

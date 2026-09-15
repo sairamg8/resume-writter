@@ -45,6 +45,16 @@ export function needsRestore(resumes) {
 }
 
 /**
+ * True when deleting `resume` from `resumes` would bring it straight back: it is their last
+ * original, so the list left needs the restore, which puts back the copy just deleted. The
+ * dashboard disables its Delete, which did nothing but move the card last (V2OWNER-DATA-4):
+ * "Stop keeping" comes first.
+ */
+export function comesStraightBack(resume, resumes) {
+  return isOriginal(resume) && needsRestore(resumes.filter((r) => r?.id !== resume.id));
+}
+
+/**
  * Record in `seen` (Map id → résumé) the newest copy of each résumé in `resumes`. A copy deleted
  * later stays in the map, so a restore brings back the edited version; a newer copy that is not
  * kept ("Stop keeping") takes the place of a kept one, so an older kept copy — from the cloud, or

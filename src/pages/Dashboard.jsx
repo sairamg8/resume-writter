@@ -6,12 +6,15 @@ import { ResumeCard } from '@/components/ResumeCard';
 import { CareerHistoryPanel } from '@/components/CareerHistoryPanel';
 import { RecoveryNotice } from '@/components/RecoveryNotice';
 import { ImportMenu } from '@/components/ImportMenu';
-import { isDemoAccount, isOriginal } from '@/utils/demoSeed';
+import { comesStraightBack, isDemoAccount, isOriginal } from '@/utils/demoSeed';
 import { DEMO_ACCOUNTS } from '@/utils/demoAccounts';
 
 const IMPORT_BUTTON = 'flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors shadow-sm';
 
-/** What Delete asks: an original in a demo account is not gone for good (useDemoSeed). */
+/**
+ * What Delete asks: an original in a demo account is not gone for good (useDemoSeed). The last
+ * one's Delete is disabled on its card instead: it would come straight back (comesStraightBack).
+ */
 function deletePrompt(resume, keeps) {
   if (keeps && isOriginal(resume)) {
     return `Delete "${resume.name}"? It is kept as your original, so it comes back once none of your originals is left. To delete it for good, choose "Stop keeping" first.`;
@@ -164,6 +167,7 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false }) {
                     }}
                     onRename={store.renameResume}
                     onKeep={keeps ? store.keepResume : undefined}
+                    lastOriginal={keeps && comesStraightBack(r, store.appState.resumes)}
                   />
                 ))}
                 <button

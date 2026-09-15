@@ -6,7 +6,8 @@
 // another device) runs in tests/pdf/18-cloud-sync-*.test.mjs, the rules in tests/unit/demo-seed.
 // Marking one — the cards' and the Import menus' controls: 11-demo-account-keep.cy.js.
 import {
-  OWNER, OTHER, visitAs, stateWith, okEveryConfirm, deleteCard, openCard, backToDashboard, expectCards, newResumeAndBack,
+  OWNER, OTHER, visitAs, stateWith, okEveryConfirm, deleteButton, deleteCard, openCard, stopKeeping, backToDashboard,
+  expectCards, newResumeAndBack,
 } from '../support/demoAccount.js';
 import { CARD } from '../support/selectors.js';
 
@@ -18,43 +19,54 @@ describe('demo account — the owner\'s originals come back, never the samples',
     expectCards(['Untitled Resume']); // before: the five "Sample · …" résumés
   });
 
-  it('deleting every résumé brings the original back, with its latest edits — and no sample', () => {
-    visitAs(OWNER, stateWith(['My CV', { keep: true }], ['Classic CV']));
+  // The last original's Delete waits for "Stop keeping" (V2OWNER-DATA-4: deleted, it came straight
+  // back), so an original comes back when "Stop keeping" leaves the list without one.
+  it('once no original is left, a deleted one comes back with its latest edits — and no sample', () => {
+    visitAs(OWNER, stateWith(['My CV', { keep: true }], ['Spare CV', { keep: true }], ['Classic CV']));
     openCard('My CV');
     cy.contains('label', 'Full Name').parent().next('input').clear().type('Sam Owner');
     backToDashboard();
     okEveryConfirm();
     deleteCard('Classic CV');
-    deleteCard('My CV');
-    expectCards(['My CV']);
+    deleteCard('My CV'); // Spare CV is still an original: My CV stays deleted for now
+    expectCards(['Spare CV']);
+    stopKeeping('Spare CV');
+    expectCards(['Spare CV', 'My CV']);
     cy.store().should((s) => {
-      expect(s.resumes).to.have.length(1);
-      expect(s.resumes[0].personal.name).to.eq('Sam Owner');
-      expect(s.resumes[0].keep).to.eq(true);
+      const mine = s.resumes.find((r) => r.id === 'resume_my_cv');
+      expect(mine.personal.name).to.eq('Sam Owner');
+      expect(mine.keep).to.eq(true);
       expect(s.deletedIds).to.deep.eq(['resume_classic_cv'], 'the original is not deleted any more');
     });
     cy.reload();
-    expectCards(['My CV']);
+    expectCards(['Spare CV', 'My CV']);
   });
 
-  it('only samples left: the original comes back next to them; a deleted sample stays deleted', () => {
-    visitAs(OWNER, stateWith(['My CV', { keep: true }], ['Sample · Classic', { id: 'demo_classic' }], ['Sample · Modern', { id: 'demo_modern' }]));
+  it('next to samples: the original comes back, and a deleted sample stays deleted', () => {
+    visitAs(OWNER, stateWith(
+      ['My CV', { keep: true }], ['Spare CV', { keep: true }],
+      ['Sample · Classic', { id: 'demo_classic' }], ['Sample · Modern', { id: 'demo_modern' }],
+    ));
     okEveryConfirm();
     deleteCard('Sample · Modern');
-    cy.get(CARD).should('have.length', 2);
     deleteCard('My CV');
-    expectCards(['Sample · Classic', 'My CV']);
+    expectCards(['Spare CV', 'Sample · Classic']);
+    stopKeeping('Spare CV'); // a sample and a résumé not kept: no original
+    expectCards(['Spare CV', 'Sample · Classic', 'My CV']);
     cy.reload();
-    expectCards(['Sample · Classic', 'My CV']); // before: every sample came back once none was left
+    expectCards(['Spare CV', 'Sample · Classic', 'My CV']);
   });
 
-  it('an original deleted while another remains stays deleted; with the last one, both come back', () => {
+  it('an original deleted while another remains stays deleted; "Stop keeping" on the last one brings it back', () => {
     visitAs(OWNER, stateWith(['First', { keep: true }], ['Second', { keep: true }], ['Other']));
     okEveryConfirm();
     deleteCard('First');
     expectCards(['Second', 'Other']);
-    deleteCard('Second');
-    expectCards(['Other', 'First', 'Second']);
+    deleteButton('Second').should('be.disabled'); // the last original; before: deleted, both came back
+    stopKeeping('Second');
+    expectCards(['Second', 'Other', 'First']);
+    cy.contains(CARD, 'First').should('contain.text', 'Stop keeping');
+    deleteButton('First').should('be.disabled');
   });
 
   it('a résumé not kept as an original does not come back', () => {

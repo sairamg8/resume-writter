@@ -78,7 +78,8 @@ signed-out visitor, deletes like anywhere and keeps the blank first run.
 | When | What happens |
 |------|--------------|
 | Signed in, account list known, **no original in it** (every résumé deleted, or only samples / others left) | every original comes back (`restoreResumes`), each as its **latest edited copy** |
-| Some originals deleted, another left | the deleted ones stay deleted (until the last one goes) |
+| Some originals deleted, another left | the deleted ones stay deleted (until the last one goes: "Stop keeping" on it) |
+| Delete on the list's **last** original | disabled, with a note on its card — it would come straight back (V2OWNER-DATA-4) |
 | The account has no original at all | nothing comes back — an empty dashboard stays empty |
 | An original edited | saved and synced like any résumé |
 | "Stop keeping", then Delete | deleted for good, like any résumé |
@@ -93,6 +94,9 @@ Marking one (demo accounts only):
   menu offers the same two (`ExportDropdown` `keeps`, `useEditorExports`); other accounts get
   the plain Import JSON in both places.
 - **Delete** on an original says it comes back, and to "Stop keeping" first to delete it for good.
+  On the list's last original it is disabled instead (`demoSeed.comesStraightBack`: the list left
+  would need the restore, which puts that very copy back), and the card says so: "Your last
+  original always comes back. To delete it, choose "Stop keeping" first."
 - **Dev server only — the owner's real résumé, automatically.** `private/sairam-resume.json`
   (git-ignored) is served by `vite-plugin-owner-resume.js` as `virtual:owner-resume` to the dev
   server, and as `null` to every build (production, e2e) without being read. On the dev server,

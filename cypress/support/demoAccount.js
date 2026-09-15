@@ -59,8 +59,13 @@ export function importFile(resume, { asOriginal }) {
 }
 
 export const okEveryConfirm = () => cy.window().then((win) => { cy.stub(win, 'confirm').returns(true); });
-export const deleteCard = (name) => cy.contains(CARD, name).contains('button', 'Delete').click();
+/** The Delete button of the card named `name`. */
+export const deleteButton = (name) => cy.contains(CARD, name).contains('button', 'Delete');
+export const deleteCard = (name) => deleteButton(name).click();
 export const openCard = (name) => cy.contains(CARD, name).contains('button', 'Edit').click();
+export const stopKeeping = (name) => cy.contains(CARD, name).contains('button', 'Stop keeping').click();
+/** What the last original's card says, and its disabled Delete (V2OWNER-DATA-4). */
+export const LAST_ORIGINAL_HINT = 'Your last original always comes back. To delete it, choose "Stop keeping" first.';
 export const backToDashboard = () => cy.get('button[title="Back to dashboard"]').click();
 /** Assert the card names, in dashboard order (retries until the dashboard settles). */
 export const expectCards = (names) => cy.get(CARD).should(($cards) => {
