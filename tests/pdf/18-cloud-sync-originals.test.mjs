@@ -105,3 +105,48 @@ describe('an original deleted for good stays deleted on every device (V2OWNER-DA
     assert.deepEqual(listed(cloud), ['orig_x'], 'before: taken off the list — back on every device');
   });
 });
+
+// The dev server's import of the owner's résumé from the private file (vite-plugin-owner-resume.js,
+// demoSeed.privateOriginal): once, as the account's original, and never after it was deleted for
+// good — which a reload or another browser learns only from the cloud's deletion list
+// (account.cloudDeleted: the store forgot the deletion once a flush sent it).
+describe('the dev import of the owner\'s private résumé (V2OWNER-DATA-1)', () => {
+  const FILE = { name: 'Mine', template: 'classic', settings: {}, personal: { name: 'Real Name', email: OWNER.email }, sections: [], coverLetter: {} };
+  const devPage = (cloud, state) => syncPage(mods, cloud, state, { isDemo: (u) => u.email === OWNER.email, demo: { accounts: [OWNER.email], ownerResume: FILE, now: () => 1000 } });
+
+  it('an account with no original gets it, and the cloud has it as the account\'s original', async () => {
+    const cloud = fakeFirestore({ [resumePath('u', 'resume_b')]: cv('resume_b') });
+    const p = devPage(cloud, { resumes: [] });
+    await signIn(p);
+    await p.timers.fire();
+    assert.deepEqual(ids(p), ['original_private', 'resume_b']);
+    const { name, keep } = cloud.resumes('u').original_private;
+    assert.deepEqual([name, keep], ['Mine', true]);
+  });
+
+  it('deleted for good, it is not imported again on a reload or in another browser', async () => {
+    const cloud = fakeFirestore({ [resumePath('u', 'resume_b')]: cv('resume_b') });
+    const p = devPage(cloud, { resumes: [] });
+    await signIn(p);
+    await p.timers.fire();
+    await deleteForGood(p, 'original_private', 2000);
+    assert.deepEqual([p.store.state.deletedIds, listed(cloud)], [[], ['original_private']], 'sent, so this browser forgot it');
+
+    for (const [label, state] of [['a reload', p.store.state], ['another browser', { resumes: [] }]]) {
+      const next = devPage(cloud, state);
+      await signIn(next);
+      await next.timers.fire();
+      assert.deepEqual(next.seen.account.cloudDeleted, ['original_private'], label);
+      assert.deepEqual(ids(next), ['resume_b'], `${label}: imported again`);
+      assert.equal(cloud.resumes('u').original_private, undefined, label);
+    }
+  });
+
+  it('an original deleted for good elsewhere is none the account has: the file comes in', async () => {
+    const cloud = fakeFirestore({ [listPath('u')]: { ids: ['orig_x'] } });
+    const laptop = devPage(cloud, { resumes: [orig('orig_x', 5, { name: 'X' })] }); // yesterday's kept copy
+    await signIn(laptop);
+    await laptop.timers.fire();
+    assert.deepEqual(ids(laptop), ['original_private'], 'not X, and the file since the account has no original');
+  });
+});
