@@ -10,7 +10,14 @@ const OWNER = { uid: 'e2e-owner', email: 'sairamgudiputi8@gmail.com', displayNam
 const OTHER = { uid: 'e2e-other', email: 'someone@example.com', displayName: 'Someone' };
 const SAMPLES = ['Sample · Classic', 'Sample · Modern', 'Sample · Minimal', 'Sample · Sidebar', 'Sample · Executive'];
 
-/** Open the dashboard signed in as `user` (null = signed out) with `state` as the résumé store. */
+/** The header's account button: it shows the signed-in user's first name, as after a Google sign-in. */
+const accountButton = (user) => cy.contains('button', user.displayName.split(' ')[0]);
+
+/**
+ * Open the dashboard signed in as `user` (null = signed out) with `state` as the résumé store,
+ * and check the header shows that account: the tests below claim what happens to a signed-in
+ * user, so each proves the fake sign-in happened (R4-9) — a broken seam leaves the page signed out.
+ */
 function visitAs(user, state = null) {
   cy.visit('/#/', {
     onBeforeLoad(win) {
@@ -20,6 +27,7 @@ function visitAs(user, state = null) {
     },
   });
   cy.contains('h1', 'My Resumes').should('be.visible');
+  if (user) accountButton(user).should('be.visible');
 }
 
 const okEveryConfirm = () => cy.window().then((win) => { cy.stub(win, 'confirm').returns(true); });
@@ -105,10 +113,21 @@ describe('demo account — the owner always has sample résumés', () => {
 });
 
 describe('demo account — nobody else gets sample résumés', () => {
+  // A restore runs as soon as the account's list is known, or right after the last sample goes.
+  // "Nothing appeared" checked at once could run before it; checked after making a résumé in
+  // the editor and coming back, the list is exactly what the account made — a demo account
+  // would have the five samples in it by then.
+  const newResumeAndBack = () => {
+    cy.contains('button', 'New Resume').click();
+    cy.contains('button', 'Export').should('be.visible');
+    cy.get('button[title="Back to dashboard"]').click();
+  };
+
   it('another account starts empty', () => {
     visitAs(OTHER);
-    cy.get(CARD).should('have.length', 0);
     cy.contains('No resumes yet').should('be.visible');
+    newResumeAndBack();
+    expectCards(['Untitled Resume']);
   });
 
   it('another account stays empty after deleting its last résumé', () => {
@@ -116,12 +135,15 @@ describe('demo account — nobody else gets sample résumés', () => {
     okEveryConfirm();
     deleteCard('Classic CV');
     cy.contains('No resumes yet').should('be.visible');
-    cy.store().its('resumes').should('have.length', 0);
+    newResumeAndBack();
+    expectCards(['Untitled Resume']);
+    cy.store().its('resumes').should('have.length', 1);
   });
 
-  it('a signed-out visitor starts empty', () => {
+  it('a signed-out visitor starts empty (a guard: no account, so nothing to restore)', () => {
     visitAs(null);
-    cy.get(CARD).should('have.length', 0);
     cy.contains('No resumes yet').should('be.visible');
+    newResumeAndBack();
+    expectCards(['Untitled Resume']);
   });
 });

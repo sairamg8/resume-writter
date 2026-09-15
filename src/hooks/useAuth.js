@@ -25,7 +25,10 @@ export function useAuth() {
 
   async function signOut() {
     if (auth) await fbSignOut(auth);
+    else setUser(null); // e2e's fake account (the only user a build without Firebase can have)
   }
 
-  return { user, authLoading, cloudAvailable: Boolean(auth), signInWithGoogle, signOut };
+  // Accounts exist with Firebase, or in an e2e page signed in to the fake account — whose header
+  // then shows it as after a Google sign-in, so a test can see the sign-in happened (R4-9).
+  return { user, authLoading, cloudAvailable: Boolean(auth || e2eUser), signInWithGoogle, signOut };
 }
