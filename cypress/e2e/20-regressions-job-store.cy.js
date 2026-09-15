@@ -2,10 +2,10 @@
 // main-loop note M14). Each page used to create its own copy of both, read from localStorage
 // when it opened, so a page only knew what storage held at that moment.
 import { buildTestState, STORAGE_KEY } from '../../tests/helpers.js';
+import { CARD } from '../support/selectors.js';
 
 const JOBS_KEY = 'cpwtcv_jobs_v1';
 const OWNER = { uid: 'e2e-owner', email: 'sairamgudiputi8@gmail.com', displayName: 'Owner' };
-const SAMPLES = ['Sample · Classic', 'Sample · Modern', 'Sample · Minimal', 'Sample · Sidebar', 'Sample · Executive'];
 
 const job = (id, company, role, status = 'applied') => ({
   id, company, role, status, url: '', location: '', salary: '', contact: '', resumeId: '', notes: '',
@@ -108,26 +108,46 @@ describe('regressions — one résumé store and one job store (M14)', () => {
     cy.jobStore().its('jobs').should((jobs) => expect(jobs.map((j) => j.company)).to.deep.eq(['Other Tab Inc']));
   });
 
-  it('M14: the job pages list the résumés the app holds, including ones it gets after the page opened', () => {
-    // A demo account's samples arrive once its (local-only, in e2e) sync is known — after the page mounted.
-    cy.visit('/#/jobs/new', {
+  it('M14: the job pages list the résumés the app holds — an original it put back since included — not what storage holds', () => {
+    // Until 2026-09-15 the owner's login got five samples once its sync was known, after the page
+    // opened; since OWNER-DATA it gets its originals back instead. Here storage refuses the
+    // résumé store's writes, so it keeps the list from before the deletes: a page reading storage
+    // when it opens lists both résumés; the app holds only the original it put back.
+    const base = buildTestState('classic').resumes[0];
+    const state = {
+      ...buildTestState('classic'), activeId: 'resume_mine',
+      resumes: [
+        { ...base, id: 'resume_mine', name: 'My CV', keep: true, personal: { ...base.personal, name: 'Sam Owner' } },
+        { ...base, id: 'resume_other', name: 'Classic CV' },
+      ],
+    };
+    cy.visit('/#/', {
       onBeforeLoad(win) {
         win.localStorage.clear();
+        win.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
         win.localStorage.setItem('cpwtcv_e2e_user', JSON.stringify(OWNER));
       },
     });
-    cy.store().its('resumes').should('have.length', SAMPLES.length);
-    formField('Resume Used').find('option').should(($o) => {
-      expect([...$o].map((o) => o.textContent)).to.deep.eq(['— Not linked yet —', ...SAMPLES]);
+    cy.contains(CARD, 'Classic CV').should('be.visible');
+    cy.window().then((win) => {
+      const original = win.Storage.prototype.setItem;
+      cy.stub(win.Storage.prototype, 'setItem').callsFake(function setItem(key, value) {
+        if (key === STORAGE_KEY) throw new win.DOMException('The quota has been exceeded.', 'QuotaExceededError');
+        return original.call(this, key, value);
+      });
+      cy.stub(win, 'confirm').returns(true);
     });
+    cy.contains(CARD, 'Classic CV').contains('button', 'Delete').click();
+    cy.contains(CARD, 'My CV').contains('button', 'Delete').click(); // the last original: it comes back
+    cy.get(CARD).should('have.length', 1).and('contain.text', 'My CV');
+    cy.store().its('resumes').should('have.length', 2); // storage: the list from before
 
-    cy.visit('/#/jobs', {
-      onBeforeLoad(win) {
-        win.localStorage.clear();
-        win.localStorage.setItem('cpwtcv_e2e_user', JSON.stringify(OWNER));
-      },
+    goTo('#/jobs/new');
+    formField('Resume Used').find('option').should(($o) => {
+      expect([...$o].map((o) => o.textContent)).to.deep.eq(['— Not linked yet —', 'My CV']);
     });
-    cy.contains('p', 'Career History').next().should('contain.text', 'Jordan Rivera');
+    goTo('#/jobs');
+    cy.contains('p', 'Career History').next().should('contain.text', 'Sam Owner');
   });
 });
 
