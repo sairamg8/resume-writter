@@ -3,7 +3,6 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, ExternalLink, Trash2, Info, LayoutList, AlignLeft, Pencil } from 'lucide-react';
 import { useJobStore } from '@/hooks/useJobStore';
 import { STATUS_MAP } from '@/constants/jobs';
-import { Pipeline } from '@/components/job/Pipeline';
 import { TasksTab } from '@/components/job/TasksTab';
 import { OverviewTab } from '@/components/job/OverviewTab';
 import { NotesTab } from '@/components/job/NotesTab';

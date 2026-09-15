@@ -43,7 +43,7 @@ export function resolveSection(section, templateKey) {
     ...section,
     settings: {
       ...templateDefaults,
-      ...(section.settings || {}),
+      ...section.settings,
     },
   };
 }

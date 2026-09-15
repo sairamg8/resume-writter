@@ -158,7 +158,7 @@ export function useAppStore() {
   }
 
   function updateSetting(key, value) {
-    patchActive(r => ({ ...r, settings: { ...(r.settings || {}), [key]: value } }));
+    patchActive(r => ({ ...r, settings: { ...r.settings, [key]: value } }));
   }
 
   /** Design → Reset: the ATS-safe defaults with the current template's heading style (M16). */
@@ -171,7 +171,7 @@ export function useAppStore() {
   }
 
   function updateCoverLetter(field, value) {
-    patchActive(r => ({ ...r, coverLetter: { ...(r.coverLetter || {}), [field]: value } }));
+    patchActive(r => ({ ...r, coverLetter: { ...r.coverLetter, [field]: value } }));
   }
 
   const sectionActions = createSectionActions(patchActive);

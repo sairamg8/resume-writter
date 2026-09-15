@@ -16,7 +16,7 @@ export function createSectionActions(patchActive) {
   function updateSectionSettings(sectionId, key, value) {
     updateSection(sectionId, s => ({
       ...s,
-      settings: { ...(s.settings || {}), [key]: value },
+      settings: { ...s.settings, [key]: value },
     }));
   }
 

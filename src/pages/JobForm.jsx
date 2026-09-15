@@ -38,7 +38,7 @@ export function JobForm({ store }) {
     url: '', location: '', salary: '',
     contact: '', resumeId: '', notes: '',
     appliedDate: todayLocalISO(), deadline: '',
-    ...(existing || {}),
+    ...existing,
   }));
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
