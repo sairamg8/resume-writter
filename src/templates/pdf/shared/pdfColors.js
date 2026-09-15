@@ -86,6 +86,12 @@ function luminance([r, g, b]) {
 }
 
 /**
+ * Whether light text is what reads on `background` (luminance below 0.18, where white and black
+ * contrast equally, both ≥ 4.58:1): the side readableOn lightens toward. Readable colours only.
+ */
+const takesLightText = (background) => luminance(parseColor(solid(background))) < 0.18;
+
+/**
  * WCAG contrast ratio (1–21) of `color` drawn on `background` (a translucent colour is blended
  * onto it first); null when either colour cannot be read.
  */
@@ -106,7 +112,7 @@ export function readableOn(color, background, min = 4.5) {
   const current = contrast(color, background);
   if (current == null || current >= min) return color;
   const base = solid(color, 1, background);
-  const toward = luminance(parseColor(solid(background))) < 0.18 ? '#ffffff' : '#000000';
+  const toward = takesLightText(background) ? '#ffffff' : '#000000';
   for (let step = 1; step < 50; step += 1) {
     const mixed = solid(toward, step / 50, base);
     if (contrast(mixed, background) >= min) return mixed;
@@ -127,12 +133,19 @@ const SIDEBAR_NAVY = '#1e293b';
  *   label   #94a3b8  section titles, contact labels and icons, institutions, issuers
  *   meta    #64748b  dates, GPA, proficiency, IDs, relationship, phone, skill categories
  *   fill    #334155  chips, skill-bar tracks, the rule under titles: one step off the background
- *   chip             chip text, readable on `fill`
+ *   chip             chip text, readable on `fill`, in the column's ink (light or dark)
+ * The fill steps toward the text's pole (lighter on a dark column) unless that step crosses to
+ * the other side of readableOn's threshold — a mid-tone such as the default accent #2563eb —
+ * where chip text would take the opposite ink from the rest of the column; there it steps the
+ * other way (R7-8).
  */
 export function sidebarShades(bg = SIDEBAR_NAVY) {
   const base = parseColor(solid(bg)) ? solid(bg) : SIDEBAR_NAVY;
-  const dark = luminance(parseColor(base)) < 0.18;
-  const fill = base === SIDEBAR_NAVY ? '#334155' : solid(dark ? '#ffffff' : '#000000', dark ? 0.1 : 0.07, base);
+  const dark = takesLightText(base);
+  const step = (pole) => solid(pole, dark ? 0.1 : 0.07, base);
+  const toward = step(dark ? '#ffffff' : '#000000');
+  const fill = base === SIDEBAR_NAVY ? '#334155'
+    : (takesLightText(toward) === dark ? toward : step(dark ? '#000000' : '#ffffff'));
   const value = readableOn('#cbd5e1', base, 4.5);
   return {
     strong: readableOn('#e2e8f0', base, 7),

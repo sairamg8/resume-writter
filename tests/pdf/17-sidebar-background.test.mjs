@@ -3,7 +3,8 @@
 // prints the colours it always printed (R2-2).
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { setup, teardown, resume, section, render, drawState } from './harness.mjs';
+import { setup, teardown, resume, section, render, drawState, read, itemsWith } from './harness.mjs';
+import { painted } from './extractors.mjs';
 // A namespace import: on older code a missing helper fails only the tests that use it, and the
 // self-contained FIDB-42 behaviour test below still runs (R2-8, R9-11).
 import * as colors from '../../src/templates/pdf/shared/pdfColors.js';
@@ -66,6 +67,51 @@ describe('the Sidebar column on its background (R2-2)', () => {
     for (const [needle, role] of RUNS) assert.equal(drawn[needle], expected[role], `${needle} (${role})`);
     const { name: _name, ...palette } = expected;
     assert.deepEqual(sidebarShades(), { ...palette, fill: '#334155' }, 'chips, tracks and rules keep #334155');
+  });
+});
+
+describe('the Sidebar column on a mid-tone background (R7-8)', () => {
+  // On a mid-tone no text colour reaches 7:1, so every run needs AA (4.5, meta 3); and the chips
+  // take the column's ink, light or dark, not the opposite one. #808080 already did (a guard).
+  const MID_TONES = ['#2563eb', '#6b7280', '#808080', '#dc2626', '#8b5cf6'];
+  const lum = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255)
+    .map((c) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4))
+    .reduce((sum, c, i) => sum + c * [0.2126, 0.7152, 0.0722][i], 0);
+  const light = (ink, on) => lum(ink) > lum(on);
+  /** The fill painted behind `needle` on page 1: the smallest filled box around it (the chip). */
+  async function paintedBehind(bytes, needle) {
+    const [t] = itemsWith(await read(bytes), needle);
+    const area = (p) => (p.x1 - p.x0) * (p.y1 - p.y0);
+    return (await painted(bytes))
+      .filter((p) => p.paint === 'fill' && p.x0 <= t.x && p.x1 >= t.x + t.w && p.y0 <= t.y + 1 && p.y1 >= t.y + 1)
+      .sort((a, b) => area(a) - area(b))[0]?.colour;
+  }
+  for (const bg of MID_TONES) {
+    it(`${bg}: every run reads, and the chips' ink is on the column's side (light or dark)`, async () => {
+      const bytes = await make(bg);
+      const drawn = await colours(bytes);
+      const fills = { Svelte: await paintedBehind(bytes, 'Svelte'), Chess: await paintedBehind(bytes, 'Chess') };
+      const wrong = [];
+      for (const [needle, role, min] of RUNS) {
+        const on = role === 'chip' ? fills[needle] : bg;
+        const ratio = contrast(drawn[needle], on);
+        if (!(ratio >= Math.min(min, 4.5))) wrong.push(`${needle} (${role}) ${drawn[needle]} on ${on}: ${ratio?.toFixed(2)}:1`);
+        if (role === 'chip') {
+          assert.equal(light(drawn[needle], on), light(drawn['pat@example.com'], bg), `chip ${drawn[needle]} on ${on}, value ${drawn['pat@example.com']} on ${bg}`);
+        }
+      }
+      assert.deepEqual(wrong, []);
+    });
+  }
+
+  it('on any background, chip text keeps the column\'s ink and reads on the chip', () => {
+    const wrong = [];
+    for (let r = 0; r < 256; r += 51) for (let g = 0; g < 256; g += 51) for (let b = 0; b < 256; b += 51) {
+      const bg = `#${[r, g, b].map((v) => v.toString(16).padStart(2, '0')).join('')}`;
+      const s = sidebarShades(bg);
+      if (light(s.chip, s.fill) !== light(s.value, bg) || !(contrast(s.chip, s.fill) >= 4.5)) wrong.push(`${bg}: chip ${s.chip} on ${s.fill}`);
+    }
+    assert.deepEqual(wrong, []);
   });
 });
 
