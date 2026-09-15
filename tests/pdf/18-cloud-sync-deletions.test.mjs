@@ -4,16 +4,12 @@
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { setup, teardown, loadModule } from './harness.mjs';
-import { deferred, fakeFirestore, syncPage, resumePath, listPath, settle } from './fake-firestore.mjs';
+import { deferred, fakeFirestore, syncPage, resumePath, listPath, settle, syncModules } from './fake-firestore.mjs';
 
 let mods;
 before(async () => {
   await setup();
-  mods = {
-    io: await loadModule('/src/utils/cloudSyncIo.js'),
-    engine: await loadModule('/src/utils/cloudSyncEngine.js'),
-    plan: await loadModule('/src/utils/cloudSyncPlan.js'),
-  };
+  mods = await syncModules(loadModule);
 });
 after(teardown);
 
@@ -145,7 +141,8 @@ describe('deletedIds holds what the cloud does not have yet (R8-1)', () => {
     // Put back meanwhile (restoreResumes forgets the deletion), then deleted again: a newer entry.
     // A guard for forgetting only what the flush sent (the store used to forget nothing).
     await laptop.change({ resumes: [orig('orig_a', 6), orig('orig_b', 5)], deletedIds: [], deletedInfo: {} });
-    laptop.store.deleteResume('orig_a', Date.now() + 60_000);
+    laptop.store.now = Date.now() + 60_000;
+    laptop.store.deleteResume('orig_a');
     ack.resolve();
     await settle();
     assert.deepEqual(laptop.store.state.deletedIds, ['orig_a'], 'the second deletion still has to be sent');

@@ -3,16 +3,12 @@
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { setup, teardown, loadModule } from './harness.mjs';
-import { deferred, fakeFirestore, syncPage, resumePath, settle } from './fake-firestore.mjs';
+import { deferred, fakeFirestore, syncPage, resumePath, settle, syncModules } from './fake-firestore.mjs';
 
 let mods;
 before(async () => {
   await setup();
-  mods = {
-    io: await loadModule('/src/utils/cloudSyncIo.js'),
-    engine: await loadModule('/src/utils/cloudSyncEngine.js'),
-    plan: await loadModule('/src/utils/cloudSyncPlan.js'),
-  };
+  mods = await syncModules(loadModule);
 });
 after(teardown);
 

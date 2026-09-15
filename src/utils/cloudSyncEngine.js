@@ -28,6 +28,19 @@ export function isCloudConfigError(e) {
 const isOfflineError = (e) => String(e?.message || '').toLowerCase().includes('client is offline');
 
 /**
+ * The résumé store as the engine reaches it: `latest()` → { appState, store } as of the last
+ * render (useCloudSync keeps it in a ref), read when the engine needs it — a first sync reads the
+ * state once the account is known, a flush's forgetDeletions reaches the store's own updater.
+ */
+export function liveStore(latest) {
+  return {
+    getState: () => latest().appState,
+    applyCloudSync: (result) => latest().store.applyCloudSync(result),
+    forgetDeletions: (ids, before) => latest().store.forgetDeletions(ids, before),
+  };
+}
+
+/**
  * createCloudSync({ io, store, report, isDemo, ... }):
  *   io        cloudIo(...) — null when this build has no cloud
  *   store     { getState() → the résumé store's state now, applyCloudSync(result) — a first

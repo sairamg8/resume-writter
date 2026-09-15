@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { createBlankResume, defaultSettings } from '@/utils/defaultData';
 import { createSectionActions } from '@/hooks/useResumeSectionActions';
+import { createSyncActions } from '@/hooks/useResumeSyncActions';
 import { newId } from '@/utils/ids';
 import { templateStyleDefaults } from '@/constants/templates';
 import { DATA_VERSION, normalizeResume } from '@/utils/normalizeResume';
 import { loadSavedList, pendingRecovery, rememberRecovery, setItemWithRoom } from '@/utils/storageBackup';
-import { savedDeletions, withDeletion, withoutDeletions } from '@/utils/localDeletions';
-import { afterSync } from '@/utils/cloudSyncPlan';
+import { savedDeletions } from '@/utils/localDeletions';
 import { withKeep } from '@/utils/demoSeed';
 
 const STORAGE_KEY = 'cpwtcv_v1';
@@ -82,18 +82,6 @@ export function useAppStore() {
     }));
   }
 
-  /** The cloud has these deletions now (sent by the sync at `before`): they are not kept any longer. */
-  function forgetDeletions(ids, before) {
-    setAppState(prev => (ids.some(id => (prev.deletedIds || []).includes(id))
-      ? { ...prev, ...withoutDeletions(prev, ids, before) }
-      : prev));
-  }
-
-  /** A first cloud sync's result, applied to the store as it is now (cloudSyncPlan.afterSync). */
-  function applyCloudSync(result) {
-    setAppState(prev => afterSync(prev, result));
-  }
-
   // ── Resume management ──────────────────────────────────────────────
 
   function createResume(name = 'Untitled Resume') {
@@ -114,20 +102,6 @@ export function useAppStore() {
     return id;
   }
 
-  /** Put résumés back (replacing any with the same id) and forget that they were deleted. */
-  function restoreResumes(list) {
-    const ids = new Set(list.map(r => r.id));
-    setAppState(prev => {
-      const resumes = [...prev.resumes.filter(r => !ids.has(r.id)), ...list.map(normalizeResume)];
-      return {
-        ...prev,
-        resumes,
-        activeId: resumes.some(r => r.id === prev.activeId) ? prev.activeId : (resumes[0]?.id ?? null),
-        ...withoutDeletions(prev, ids),
-      };
-    });
-  }
-
   function duplicateResume(id) {
     const source = appState.resumes.find(r => r.id === id);
     if (!source) return;
@@ -136,17 +110,6 @@ export function useAppStore() {
     const copy = withKeep({ ...JSON.parse(JSON.stringify(source)), id: copyId, name: `${source.name} (Copy)` }, false, Date.now());
     setAppState(prev => ({ ...prev, resumes: [...prev.resumes, copy], activeId: copyId }));
     return copyId;
-  }
-
-  /** Remove a résumé; the id and the version deleted are kept for the cloud sync (localDeletions). */
-  function deleteResume(id) {
-    setAppState(prev => {
-      const gone = prev.resumes.find(r => r.id === id);
-      if (!gone) return prev;
-      const remaining = prev.resumes.filter(r => r.id !== id);
-      const activeId = prev.activeId === id ? (remaining[0]?.id ?? null) : prev.activeId;
-      return { ...prev, resumes: remaining, activeId, ...withDeletion(prev, gone, Date.now()) };
-    });
   }
 
   /** "Keep as my original" (`keep` true) or "Stop keeping": a demo account's originals come back. */
@@ -195,6 +158,8 @@ export function useAppStore() {
   }
 
   const sectionActions = createSectionActions(patchActive);
+  // Delete, restore, a first sync's result, sent deletions forgotten — the sync tests run these too.
+  const syncActions = createSyncActions(setAppState);
 
   return {
     appState,
@@ -203,21 +168,18 @@ export function useAppStore() {
     dismissRecovery,
     activeResume,
     setActiveId,
-    applyCloudSync,
-    forgetDeletions,
     createResume,
     duplicateResume,
-    deleteResume,
     renameResume,
     keepResume,
     importResume,
-    restoreResumes,
     updatePersonal,
     toggleFieldVisibility,
     updateSetting,
     setTemplate,
     updateCoverLetter,
     resetSettings,
+    ...syncActions,
     ...sectionActions,
   };
 }

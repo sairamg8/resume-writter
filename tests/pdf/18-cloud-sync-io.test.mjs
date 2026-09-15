@@ -6,16 +6,14 @@
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { setup, teardown, loadModule } from './harness.mjs';
-import { fakeFirestore, syncPage, resumePath, listPath, settle } from './fake-firestore.mjs';
+import { fakeFirestore, syncPage, syncModules, resumePath, listPath, settle } from './fake-firestore.mjs';
 
+let mods;
 let io;
-let engine;
-let plan;
 before(async () => {
   await setup();
-  io = await loadModule('/src/utils/cloudSyncIo.js');
-  engine = await loadModule('/src/utils/cloudSyncEngine.js');
-  plan = await loadModule('/src/utils/cloudSyncPlan.js');
+  mods = await syncModules(loadModule);
+  ({ io } = mods);
 });
 after(teardown);
 
@@ -27,7 +25,7 @@ const ids = (list) => list.map((r) => r.id).toSorted();
 const USER = { uid: 'u', email: 'someone@example.com' };
 const OWNER = { uid: 'u', email: 'owner@example.com' };
 
-const page = (cloud, state) => syncPage({ io, engine, plan }, cloud, state, { isDemo: (u) => u.email === OWNER.email });
+const page = (cloud, state) => syncPage(mods, cloud, state, { isDemo: (u) => u.email === OWNER.email });
 
 const signIn = async (p, user = USER) => { p.sync.start(user); await settle(); };
 

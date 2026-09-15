@@ -1,7 +1,7 @@
 // A Firestore stand-in for the cloud-sync tests: the SDK functions cloudSyncIo.js calls
 // (collection, doc, getDocs, getDoc, writeBatch, …) over an in-memory map of document paths, plus
 // the timers, store and report the sync engine needs. The tests then run the app's own io,
-// engine and store rules — nothing here re-implements what they decide.
+// engine, store updaters and demo restore — nothing here re-implements what they decide.
 //
 // A batch is applied when commit() is CALLED — the order in which the server receives one
 // client's batches — and commit()'s promise settles when the test lets it (`cloud.hold`), as the
@@ -11,8 +11,6 @@
 // cannot reach the server, while getDocsFromServer/getDocFromServer fail. Set `cloud.auth` to the
 // signed-in uid (null: nobody) and the security rules apply: another account's documents are
 // permission-denied, as firestore.rules has it.
-
-import { withDeletion, withoutDeletions } from '../../src/utils/localDeletions.js';
 
 const clone = (v) => (v === undefined ? undefined : JSON.parse(JSON.stringify(v)));
 export const resumePath = (uid, id) => `users/${uid}/resumes/${id}`;
@@ -151,49 +149,73 @@ export function recorder() {
 }
 
 /**
- * The résumé store the engine talks to, holding `state`, with the store's own rules: deleteResume
- * as a click on Delete does it and forgetDeletions as the sync asks (src/utils/localDeletions.js),
- * applyCloudSync through the app's afterSync (`plan`, src/utils/cloudSyncPlan.js). `onChange`
- * runs after every change, a turn later — as React runs the watcher effect after the render.
+ * The app's sync modules, loaded through the harness's `loadModule` (Vite SSR, so `@/` imports
+ * work): the Firestore calls, the engine, the plans, the store's updaters and the demo restore.
  */
-export function fakeStore(state, plan) {
+export async function syncModules(loadModule) {
+  return {
+    io: await loadModule('/src/utils/cloudSyncIo.js'),
+    engine: await loadModule('/src/utils/cloudSyncEngine.js'),
+    plan: await loadModule('/src/utils/cloudSyncPlan.js'),
+    actions: await loadModule('/src/hooks/useResumeSyncActions.js'),
+    restore: await loadModule('/src/utils/demoRestore.js'),
+  };
+}
+
+/**
+ * The résumé store the engine talks to, holding `state`, with the store's own updaters
+ * (src/hooks/useResumeSyncActions.js, as useResumeStore makes them): Delete, restoreResumes,
+ * applyCloudSync, forgetDeletions. `store.now` (ms) stands in for the clock of a deletion.
+ * `onChange` runs after every change, a turn later — as React runs the effects after the render;
+ * an updater that returns the state unchanged changes nothing, as with React.
+ */
+export function fakeStore(state, mods) {
   const store = {
     state: { deletedIds: [], ...state },
+    now: null,
     onChange: () => {},
     getState: () => store.state,
     set(next) {
       store.state = next;
       queueMicrotask(() => store.onChange());
     },
-    applyCloudSync(result) { store.set(plan.afterSync(store.state, result)); },
-    forgetDeletions(ids, before) { store.set({ ...store.state, ...withoutDeletions(store.state, ids, before) }); },
-    /** As useResumeStore.restoreResumes: put back (replacing any with the same id), deletions forgotten. */
-    restoreResumes(list) {
-      const back = new Set(list.map((r) => r.id));
-      store.set({ ...store.state, resumes: [...store.state.resumes.filter((r) => !back.has(r.id)), ...list], ...withoutDeletions(store.state, back) });
-    },
-    deleteResume(id, at = Date.now()) {
-      const gone = store.state.resumes.find((r) => r.id === id);
-      store.set({ ...store.state, resumes: store.state.resumes.filter((r) => r.id !== id), ...withDeletion(store.state, gone, at) });
-    },
   };
-  return store;
+  const setAppState = (update) => { const next = update(store.state); if (next !== store.state) store.set(next); };
+  return Object.assign(store, mods.actions.createSyncActions(setAppState, () => store.now ?? Date.now()));
 }
 
 /**
- * A page: the app's sync engine (`mods.engine`) with its Firestore calls (`mods.io`) over `cloud`,
- * and `state` in its store (`mods.plan` for its afterSync). `page.sync.start(user)` signs in;
- * `page.change(next)` changes the store as a click would, `page.remove(id)` deletes a résumé —
- * the watcher runs after each, as React would.
+ * A page: the app's sync engine (`mods.engine`) with its Firestore calls (`mods.io`) over `cloud`
+ * and `state` in its store, wired as useCloudSync wires them (liveStore); with `demo`
+ * ({ accounts, ownerResume?, now? }) also the demo restore, run after every change as
+ * useDemoSeed runs it. `page.sync.start(user)` signs in; `page.change(next)` changes the store as
+ * a click would, `page.remove(id)` deletes a résumé — the effects run after each, as React's would.
  */
-export function syncPage(mods, cloud, state, { isDemo = () => false, online = () => true } = {}) {
-  const store = fakeStore(state, mods.plan);
+export function syncPage(mods, cloud, state, { isDemo = () => false, online = () => true, demo = null } = {}) {
+  const store = fakeStore(state, mods);
   const timers = manualTimers();
   const { seen, report } = recorder();
-  const sync = mods.engine.createCloudSync({ io: mods.io.cloudIo(cloud.fs, cloud.db), store, report, isDemo, online, timers });
-  store.onChange = () => sync.resumesChanged(store.state.resumes);
+  const restore = demo ? mods.restore.createDemoRestore(demo) : null;
+  let user = null;
+  // useDemoSeed's effect: after a render that changed the user, the account or the résumés.
+  let last = {};
+  const render = () => {
+    const deps = { user, account: seen.account, resumes: store.state.resumes };
+    if (!restore || Object.keys(deps).every((k) => deps[k] === last[k])) return;
+    last = deps;
+    restore.update({ user, account: seen.account, appState: store.state, sync, store });
+  };
+  const onAccount = report.account;
+  report.account = (a) => { onAccount(a); queueMicrotask(render); };
+  const sync = mods.engine.createCloudSync({
+    io: mods.io.cloudIo(cloud.fs, cloud.db), store: mods.engine.liveStore(() => ({ appState: store.state, store })),
+    report, isDemo, online, timers,
+  });
+  const start = sync.start;
+  sync.start = (u) => { user = u || null; start(u); queueMicrotask(render); };
+  store.onChange = () => { sync.resumesChanged(store.state.resumes); render(); };
   const change = async (next) => { store.set({ ...store.state, ...next }); await settle(1); };
   const remove = async (id) => { store.deleteResume(id); await settle(1); };
-  const restore = async (list) => { store.restoreResumes(list); await settle(1); };
-  return { store, timers, seen, sync, change, remove, restore };
+  const restoreList = async (list) => { store.restoreResumes(list); await settle(1); };
+  return { store, timers, seen, sync, change, remove, restore: restoreList };
 }

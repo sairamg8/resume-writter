@@ -6,7 +6,7 @@ import { db } from '@/utils/firebase';
 import { isDemoAccount } from '@/utils/demoSeed';
 import { DEMO_ACCOUNTS } from '@/utils/demoAccounts';
 import { cloudIo } from '@/utils/cloudSyncIo';
-import { createCloudSync } from '@/utils/cloudSyncEngine';
+import { createCloudSync, liveStore } from '@/utils/cloudSyncEngine';
 
 /** The real Firestore calls (cloudSyncIo); null in a build without a cloud. */
 const io = db
@@ -36,11 +36,7 @@ export function useCloudSync({ user, appState, store }) {
 
   const [sync] = useState(() => createCloudSync({
     io,
-    store: {
-      getState: () => latest.current.appState,
-      applyCloudSync: (result) => latest.current.store.applyCloudSync(result),
-      forgetDeletions: (ids, before) => latest.current.store.forgetDeletions(ids, before),
-    },
+    store: liveStore(() => latest.current),
     report: { status: setSyncStatus, synced: setLastSynced, account: setAccount },
     isDemo: (u) => isDemoAccount(u, DEMO_ACCOUNTS),
     online: () => navigator.onLine,
