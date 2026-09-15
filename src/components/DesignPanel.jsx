@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ATS_DEFAULTS, defaultSettings } from '@/utils/defaultData';
-import { drawsContactIcons, templateId } from '@/constants/templates';
+import { drawsContactIcons, TEMPLATE_PICKER, templateId } from '@/constants/templates';
 import { DesignSection, NumberRow } from '@/components/DesignPanelShared';
 import { ColorsSection } from '@/components/DesignPanelColors';
 import { TypographySection } from '@/components/DesignPanelTypography';
@@ -10,14 +10,6 @@ import {
   ContactIcon,
   getIconSetId,
 } from '@/utils/contactIcons';
-
-const TEMPLATES = [
-  { id: 'executive', label: 'Executive', desc: 'ATS-friendly · Clean accent headings · Vibrant', ats: true },
-  { id: 'classic',   label: 'Classic',   desc: 'ATS-friendly · Two-column header', ats: true },
-  { id: 'modern',    label: 'Modern',    desc: 'Bold accent header · Full-width layout' },
-  { id: 'minimal',   label: 'Minimal',   desc: 'ATS-friendly · Clean & whitespace-first', ats: true },
-  { id: 'sidebar',   label: 'Sidebar',   desc: 'Colored left sidebar layout' },
-];
 
 const COLOR_KEYS      = ['accentColor', 'textColor', 'sidebarBg', 'headerTextColor', 'nameColor', 'jobTitleColor'];
 const TYPOGRAPHY_KEYS = ['font', 'fontSize', 'fontSizeBase', 'fontSizeNameDelta', 'fontSizeSectionDelta', 'fontSizeEntryDelta', 'customFont', 'iconSize'];
@@ -41,7 +33,7 @@ export default function DesignPanel({ resume, updateSetting, setTemplate, resetS
 
       <DesignSection title="Template" defaultOpen>
         <div className="space-y-1.5">
-          {TEMPLATES.map(t => (
+          {TEMPLATE_PICKER.map(t => (
             <button
               key={t.id}
               onClick={() => setTemplate(t.id)}

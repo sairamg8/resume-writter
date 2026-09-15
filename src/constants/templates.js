@@ -4,28 +4,53 @@
 
 /**
  * Every template the app offers, one entry each — so a template cannot be added without its
- * header decisions (they were three more tables — R3-6):
+ * header decisions or its place in the picker (they were four more tables — R3-6, VM3-5):
  *   label           its name in the editor (the Cover Letter panel names the look its letter takes)
+ *   desc, ats       the Design panel's one-line description, and its ATS-friendly badge
  *   style           the heading style and title case it brings: set when it is picked and on Reset
  *   headerControls  Header Customization's alignment, name/title layout, rule and contact
  *                   controls apply (Modern prints a fixed banner, Sidebar a side panel)
  *   headerRule      it draws the header's bottom rule when a résumé has no `showHeaderBorder`
  *                   (older or imported data; new résumés store `false`): the Classic design
- * Two per-template tables stay with the code that reads them: DEFAULTS in templateSettings.js — the
- * PDF's fallbacks for unset colours, computed from other settings, and Classic's unset heading
- * is 'line', not the 'ruled' that picking Classic sets, so merging them would change what older
- * résumés print — and TEMPLATE_SECTION_DEFAULTS (templateSectionDefaults.js), per section type.
+ * Three per-template tables stay with the code that reads them, each pinned to TEMPLATE_IDS by
+ * tests/pdf/15-design-defaults: DEFAULTS in templateSettings.js — the PDF's fallbacks for unset
+ * colours, computed from other settings, and Classic's unset heading is 'line', not the 'ruled'
+ * that picking Classic sets, so merging them would change what older résumés print —
+ * TEMPLATE_SECTION_DEFAULTS (templateSectionDefaults.js), per section type, and the PDF
+ * components' LOADERS (pdfExportReactPDF.js), which are code-split imports.
  */
 const TEMPLATES = {
-  classic:   { label: 'Classic',   style: { headingStyle: 'ruled',     sectionTitleCase: 'upper' },  headerControls: true,  headerRule: true },
-  modern:    { label: 'Modern',    style: { headingStyle: 'line',      sectionTitleCase: 'upper' },  headerControls: false, headerRule: false },
-  minimal:   { label: 'Minimal',   style: { headingStyle: 'underline', sectionTitleCase: 'upper' },  headerControls: true,  headerRule: false },
-  executive: { label: 'Executive', style: { headingStyle: 'underline', sectionTitleCase: 'normal' }, headerControls: true,  headerRule: false },
-  sidebar:   { label: 'Sidebar',   style: { headingStyle: 'plain',     sectionTitleCase: 'upper' },  headerControls: false, headerRule: false },
+  classic: {
+    label: 'Classic', desc: 'ATS-friendly · Two-column header', ats: true,
+    style: { headingStyle: 'ruled', sectionTitleCase: 'upper' }, headerControls: true, headerRule: true,
+  },
+  modern: {
+    label: 'Modern', desc: 'Bold accent header · Full-width layout', ats: false,
+    style: { headingStyle: 'line', sectionTitleCase: 'upper' }, headerControls: false, headerRule: false,
+  },
+  minimal: {
+    label: 'Minimal', desc: 'ATS-friendly · Clean & whitespace-first', ats: true,
+    style: { headingStyle: 'underline', sectionTitleCase: 'upper' }, headerControls: true, headerRule: false,
+  },
+  executive: {
+    label: 'Executive', desc: 'ATS-friendly · Clean accent headings · Vibrant', ats: true,
+    style: { headingStyle: 'underline', sectionTitleCase: 'normal' }, headerControls: true, headerRule: false,
+  },
+  sidebar: {
+    label: 'Sidebar', desc: 'Colored left sidebar layout', ats: false,
+    style: { headingStyle: 'plain', sectionTitleCase: 'upper' }, headerControls: false, headerRule: false,
+  },
 };
 
-/** Every template the app offers (the Design panel lists these five). */
+/** Every template the app offers. */
 export const TEMPLATE_IDS = Object.keys(TEMPLATES);
+
+/** The order the Design panel lists them in; a template missing here is listed last, never left out. */
+const PICKER_FIRST = ['executive', 'classic', 'modern', 'minimal', 'sidebar'];
+
+/** The Design panel's template picker: { id, label, desc, ats } for every template, in its order. */
+export const TEMPLATE_PICKER = [...PICKER_FIRST, ...TEMPLATE_IDS.filter((id) => !PICKER_FIRST.includes(id))]
+  .map((id) => ({ id, label: TEMPLATES[id].label, desc: TEMPLATES[id].desc, ats: TEMPLATES[id].ats }));
 
 /**
  * The template a résumé prints with: its own when the app offers it, else Classic — what the

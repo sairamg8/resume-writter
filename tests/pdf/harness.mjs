@@ -10,9 +10,11 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import zlib from 'node:zlib';
 import { createServer } from 'vite';
+import { TEMPLATE_IDS } from '../../src/constants/templates.js';
 
 const ROOT = path.resolve(fileURLToPath(new URL('../..', import.meta.url)));
-export const TEMPLATES = ['classic', 'modern', 'minimal', 'executive', 'sidebar'];
+/** Every template the app offers (plain data, no aliases): a new one enters every per-template test. */
+export const TEMPLATES = TEMPLATE_IDS;
 export const MM = 72 / 25.4; // points per millimetre
 
 let ctx = null;
