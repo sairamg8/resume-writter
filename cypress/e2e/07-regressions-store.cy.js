@@ -1,4 +1,4 @@
-// Regression tests for resume-store bugs (audit main-loop notes M1–M3, M15; reviews R4, R8).
+// Regression tests for resume-store bugs (audit main-loop notes M1–M3, M15; reviews R4, R5, R8).
 // Letters saved with the old "Hiring Manager" default (R1-0): 22-regressions-letters.cy.js.
 import { buildTestState, DATA_VERSION, STORAGE_KEY } from '../../tests/helpers.js';
 import { CARD, IMPORT_INPUT } from '../support/selectors.js';
@@ -170,32 +170,41 @@ describe('regressions — resume store', () => {
     cy.contains('[role="alert"]', 'Not saved').should('be.visible');
   });
 
-  /** The Design panel's template list shows Classic, and only Classic, selected. */
-  const classicSelected = () => {
+  /** The Design panel's template list shows the one described `picked` ("Two-column header": Classic), and only it, selected. */
+  const selected = (picked = 'Two-column header') => {
     cy.get('button[title="Design & Customize"]').click();
     ['Clean accent headings', 'Two-column header', 'Full-width layout', 'whitespace-first', 'Colored left sidebar']
-      .forEach((desc) => cy.contains('button', desc)
-        .should(desc === 'Two-column header' ? 'have.class' : 'not.have.class', 'border-blue-500'));
+      .forEach((desc) => cy.contains('button', desc).should(desc === picked ? 'have.class' : 'not.have.class', 'border-blue-500'));
+  };
+  const importAs = (template, name) => {
+    cy.visitDashboard(dashboardState());
+    cy.get(IMPORT_INPUT).selectFile({
+      contents: Cypress.Buffer.from(JSON.stringify({ ...buildTestState('classic').resumes[0], template, name })),
+      fileName: 'imported.json',
+    }, { force: true });
+    cy.location('hash').should('match', /^#\/resume\//);
   };
 
-  it('M15: a saved résumé with a template the app does not offer (the old seed\'s "dark") opens as Classic, selected', () => {
+  it('M15, R5-5: a saved résumé with a template the app does not offer (the old seed\'s "dark") opens as Classic, selected, its white name back to the template\'s', () => {
     const state = buildTestState('classic');
     state.resumes[0].template = 'dark';
+    Object.assign(state.resumes[0].settings, { nameColor: '#ffffff', jobTitleColor: '#cbd5e1' });
     cy.visitEditor('classic', { state });
-    cy.store().should((s) => expect(s.resumes[0].template).to.eq('classic'));
+    cy.store().should((s) => expect([s.resumes[0].template, s.resumes[0].settings.nameColor, s.resumes[0].settings.jobTitleColor]).to.deep.eq(['classic', '', '']));
     cy.preview().should('contain.text', 'Alex Johnson');
-    classicSelected();
+    selected();
   });
 
   it('M15: importing a résumé with an unknown template opens it as Classic, selected', () => {
-    cy.visitDashboard(dashboardState());
-    cy.get(IMPORT_INPUT).selectFile({
-      contents: Cypress.Buffer.from(JSON.stringify({ ...buildTestState('classic').resumes[0], template: 'aurora', name: 'Aurora CV' })),
-      fileName: 'aurora.json',
-    }, { force: true });
-    cy.location('hash').should('match', /^#\/resume\//);
+    importAs('aurora', 'Aurora CV');
     cy.store().should((s) => expect(s.resumes.find((r) => r.name === 'Aurora CV').template).to.eq('classic'));
-    classicSelected();
+    selected();
+  });
+
+  it('R5-5: importing a résumé whose template is written "Modern " opens it as Modern, selected', () => {
+    importAs('Modern ', 'Imported Modern');
+    cy.store().should((s) => expect(s.resumes.find((r) => r.name === 'Imported Modern').template).to.eq('modern'));
+    selected('Full-width layout');
   });
 });
 

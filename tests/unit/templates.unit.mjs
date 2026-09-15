@@ -10,19 +10,23 @@ const {
   SIDEBAR_COLUMN_TYPES, inSidebarColumn, drawsContactIcons, photoTextAlignItems,
 } = templates;
 
-test('templateId: the five templates stay; any other id reads as Classic (M15)', () => {
+test('templateId: the five templates stay, however an imported file cases or spaces them; any other id reads as Classic (M15, R5-5)', () => {
   for (const id of TEMPLATE_IDS) assert.equal(templateId(id), id);
   assert.deepEqual(TEMPLATE_IDS.toSorted(), ['classic', 'executive', 'minimal', 'modern', 'sidebar']);
-  for (const id of ['dark', 'Modern', 'aurora', '', null, undefined, 42, {}]) assert.equal(templateId(id), 'classic', String(id));
+  for (const [written, id] of [['Modern', 'modern'], [' sidebar ', 'sidebar'], ['EXECUTIVE', 'executive'], ['Minimal\n', 'minimal'], ['Classic', 'classic']]) {
+    assert.equal(templateId(written), id, JSON.stringify(written));
+  }
+  for (const id of ['dark', 'Dark', 'aurora', '', '  ', null, undefined, 42, {}, ['modern']]) assert.equal(templateId(id), 'classic', String(id));
 });
 
-test('withKnownTemplate: an unknown or missing id becomes Classic, nothing else changes (M15)', () => {
+test('withKnownTemplate: an id in another case is the template it names; an unknown or missing id becomes Classic; nothing else changes (M15, R5-5)', () => {
   const dark = { id: 'resume_dark', name: 'Dark', template: 'dark', updatedAt: 5, settings: { accentColor: '#0f172a' } };
   const fixed = withKnownTemplate(dark);
   assert.deepEqual(fixed, { ...dark, template: 'classic' });
   assert.equal(dark.template, 'dark', 'the input is not mutated');
   assert.equal(fixed.updatedAt, 5, 'not a user edit: updatedAt is kept');
   assert.equal(withKnownTemplate({ id: 'r' }).template, 'classic');
+  assert.deepEqual(withKnownTemplate({ ...dark, template: 'Modern ' }), { ...dark, template: 'modern' }, 'an import\'s "Modern " is Modern');
 
   const sidebar = { id: 'r2', template: 'sidebar' };
   assert.equal(withKnownTemplate(sidebar), sidebar, 'a known template: the same object');

@@ -93,12 +93,18 @@ const PICKER_FIRST = ['executive', 'classic', 'modern', 'minimal', 'sidebar'];
 export const TEMPLATE_PICKER = [...PICKER_FIRST, ...TEMPLATE_IDS.filter((id) => !PICKER_FIRST.includes(id))]
   .map((id) => ({ id, label: TEMPLATES[id].label, desc: TEMPLATES[id].desc, ats: TEMPLATES[id].ats }));
 
+/** A stored id as the app writes it: an imported file's "Modern" or " sidebar " is Modern or Sidebar (R5-5). */
+const asWritten = (template) => (typeof template === 'string' ? template.trim().toLowerCase() : '');
+
+/** Does the app offer `template`, however an imported file cased or spaced it? */
+export const offersTemplate = (template) => TEMPLATE_IDS.includes(asWritten(template));
+
 /**
- * The template a résumé prints with: its own when the app offers it, else Classic — what the
- * PDF has always drawn for an id it does not know (the old seed's 'dark', a missing id, an
- * id from an imported file).
+ * The template a résumé prints with: its own when the app offers it (in any case, R5-5), else
+ * Classic — what the PDF has always drawn for an id it does not know (the old seed's 'dark', a
+ * missing id, an id from an imported file).
  */
-export const templateId = (template) => (TEMPLATE_IDS.includes(template) ? template : 'classic');
+export const templateId = (template) => (offersTemplate(template) ? asWritten(template) : 'classic');
 
 /** The template's name as the editor shows it ("Classic" for an id the app does not offer). */
 export const templateLabel = (template) => TEMPLATES[templateId(template)].label;
@@ -118,9 +124,10 @@ export const upperSectionTitles = (titleCase) => (titleCase || 'upper') === 'upp
 export const templateHeaderGaps = (template) => TEMPLATES[templateId(template)].headerGaps;
 
 /**
- * `resume` with a template the app offers, so the Design panel shows it selected and every
- * control reads the template the PDF prints. normalizeResume() applies it wherever résumés come
- * in: load, import, cloud sync, restore. The same object when nothing changes.
+ * `resume` with a template the app offers, as the app writes it ("Modern" is 'modern'), so the
+ * Design panel shows it selected and every control reads the template the PDF prints.
+ * normalizeResume() applies it wherever résumés come in: load, import, cloud sync, restore. The
+ * same object when nothing changes.
  */
 export function withKnownTemplate(resume) {
   if (!resume || resume.template === templateId(resume.template)) return resume;

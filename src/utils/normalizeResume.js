@@ -1,7 +1,8 @@
 // Résumé data from before this build — this browser's saved store, the cloud account, an
 // imported .json, the sample set — made current in ONE place. Every way a résumé comes in goes
 // through normalizeResume(): the store's load, import and restore, and the cloud sync's merge.
-import { inSidebarColumn, withKnownTemplate } from '@/constants/templates';
+import { inSidebarColumn, offersTemplate, withKnownTemplate } from '@/constants/templates';
+import { contrast } from '@/templates/pdf/shared/pdfColors';
 import { DEFAULT_ITEM_GAP_PX, SECTION_SPACING_PX } from '@/templates/pdf/shared/pdfUnits';
 
 /**
@@ -137,6 +138,24 @@ const MIGRATIONS = [
 
 const versionOf = (r) => (Number.isFinite(r.dataVersion) ? r.dataVersion : 0);
 
+/** Below WCAG's 3:1 for large text, a colour cannot be read on the white page. */
+const unreadableOnWhite = (color) => filled(color) && (contrast(color, '#ffffff') ?? 21) < 3;
+
+/**
+ * R5-5: an id the app does not offer — the old seed's 'dark', an imported file's — prints as
+ * Classic (withKnownTemplate), as it did on every build: on the white page. A name or job-title
+ * colour picked there for a dark header (the 'dark' seed's white name and #cbd5e1 title, which
+ * printed invisible) goes back to the template's own, as the Design panel's ↺ sets it; one that
+ * reads is kept. It runs as the id is rewritten, so once, whatever the data version.
+ */
+function withHeaderReadableOnClassic(r) {
+  const s = r.settings;
+  if (!s || typeof s !== 'object') return r;
+  const cleared = ['nameColor', 'jobTitleColor'].filter((key) => unreadableOnWhite(s[key]));
+  if (!cleared.length) return r;
+  return { ...r, settings: { ...s, ...Object.fromEntries(cleared.map((key) => [key, ''])) } };
+}
+
 /**
  * `resume` made current: a template the app offers (withKnownTemplate), then each one-time
  * migration newer than its own `dataVersion`, after which it carries DATA_VERSION. Never touches
@@ -146,7 +165,8 @@ const versionOf = (r) => (Number.isFinite(r.dataVersion) ? r.dataVersion : 0);
  */
 export function normalizeResume(resume) {
   if (!resume || typeof resume !== 'object') return resume;
-  const r = withKnownTemplate(resume);
+  const known = withKnownTemplate(resume);
+  const r = offersTemplate(resume.template) ? known : withHeaderReadableOnClassic(known);
   const from = versionOf(r);
   if (from >= DATA_VERSION) return r;
   return MIGRATIONS.reduce((out, [version, migrate]) => (from < version ? migrate(out, from) : out), { ...r, dataVersion: DATA_VERSION });
