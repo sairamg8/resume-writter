@@ -9,7 +9,7 @@ import {
   OWNER, OTHER, visitAs, stateWith, okEveryConfirm, deleteButton, deleteCard, openCard, stopKeeping, backToDashboard,
   expectCards, newResumeAndBack,
 } from '../support/demoAccount.js';
-import { CARD } from '../support/selectors.js';
+import { CARD, SYNC_STATUS } from '../support/selectors.js';
 
 describe('demo account — the owner\'s originals come back, never the samples', () => {
   it('an empty account stays empty: no sample résumé appears', () => {
@@ -114,5 +114,13 @@ describe('demo account — nobody else gets anything back', () => {
     cy.contains('No resumes yet').should('be.visible');
     newResumeAndBack();
     expectCards(['Untitled Resume']);
+  });
+
+  it('the sync icon says the sync is off on this page with no cloud — never "will retry" (V2VF1S-2)', () => {
+    // As for an account whose Firestore rules refuse it (tests/pdf/18-cloud-sync-retry.test.mjs).
+    visitAs(OTHER);
+    cy.get(SYNC_STATUS).trigger('mouseover');
+    cy.contains('Sync is off — changes are saved in this browser').should('be.visible');
+    cy.contains('Sync error').should('not.exist');
   });
 });

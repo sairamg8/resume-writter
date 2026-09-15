@@ -28,12 +28,15 @@ function SyncDot({ syncStatus, lastSynced, isOnline }) {
   } else if (syncStatus === 'stopped') {
     // The cloud refused a change for good (cloudSyncRetry.js) — most often a résumé over 1 MB.
     Icon = CloudAlert; color = '#ef4444'; label = 'Sync stopped (a large photo?) — saved in this browser';
+  } else if (syncStatus === 'off') {
+    // No access to the cloud (its rules, or no database): nothing is retried until a reload.
+    Icon = CloudOff; color = '#9ca3af'; label = 'Sync is off — changes are saved in this browser';
   } else {
     return null;
   }
 
   return (
-    <div className="relative" onMouseEnter={() => setTip(true)} onMouseLeave={() => setTip(false)}>
+    <div className="relative" data-testid="sync-status" onMouseEnter={() => setTip(true)} onMouseLeave={() => setTip(false)}>
       <Icon
         size={15}
         style={{ color }}

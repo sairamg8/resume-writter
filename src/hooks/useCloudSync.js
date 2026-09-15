@@ -21,7 +21,7 @@ const io = db
  */
 export function useCloudSync({ user, appState, store }) {
   // Hook order is fixed — never add/remove hooks conditionally.
-  const [syncStatus, setSyncStatus] = useState('idle'); // idle|syncing|synced|offline|error
+  const [syncStatus, setSyncStatus] = useState('idle'); // idle|syncing|synced|offline|error|stopped|off
   const [lastSynced, setLastSynced] = useState(null);
   const [isOnline, setIsOnline] = useState(
     typeof navigator !== 'undefined' ? navigator.onLine : true

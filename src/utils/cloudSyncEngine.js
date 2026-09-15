@@ -19,7 +19,7 @@ const emptyQueue = () => ({ writes: new Map(), deletes: new Set(), kept: new Set
  *   store     { getState() → the résumé store's state now, applyCloudSync(result) — a first
  *             sync's result (cloudSyncPlan.afterSync), forgetDeletions(ids, before) — the
  *             cloud has these deletions (localDeletions.js) }: useResumeSyncActions.liveStore
- *   report    { status('idle'|'syncing'|'synced'|'offline'|'error'|'stopped'), synced(Date), account(a) } —
+ *   report    { status('idle'|'syncing'|'synced'|'offline'|'error'|'stopped'|'off'), synced(Date), account(a) } —
  *             account: { uid, cloud, cloudOriginals, cloudDeleted } once the account's list is
  *             known, else null — whether a cloud holds it (false: this browser's list is the whole
  *             list), the cloud's originals (demoSeed.js), deleted ones included, and its deletion
@@ -82,7 +82,8 @@ export function createCloudSync({
     }
 
     if (!io || s.cloudDisabled) {
-      report.status('error');
+      // Off, not "will retry": nothing is tried again until a sign-out or a reload (V2VF1S-2).
+      report.status('off');
       // Nothing to wait for: this browser's résumés are the whole list.
       if (s.account?.uid !== user.uid) setAccount(noCloud(user));
       return;
@@ -144,7 +145,7 @@ export function createCloudSync({
     const kind = failureKind(e, online());
     if (kind === 'config') {
       s.cloudDisabled = true;
-      report.status('error');
+      report.status('off');
       setAccount(noCloud(user));
       // One clear message — app keeps working on localStorage only
       log(

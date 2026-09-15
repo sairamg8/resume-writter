@@ -10,5 +10,8 @@ export const CARD_RENAME = '.group\\/name button';
 /** The dashboard's hidden JSON import input. */
 export const IMPORT_INPUT = 'input[type="file"][accept=".json"]';
 
+/** The header's cloud-sync icon; hovering it shows what the sync is doing (AuthBar's SyncDot). */
+export const SYNC_STATUS = '[data-testid="sync-status"]';
+
 /** An entry's clickable header row in a section editor (it opens and closes the entry). */
 export const ENTRY_HEADER = 'div.cursor-pointer.select-none';
