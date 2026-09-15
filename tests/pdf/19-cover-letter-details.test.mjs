@@ -3,9 +3,9 @@
 // alike.
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { setup, teardown, resume, renderCover, read, allItems, allText, drawState, loadModule, readDocx, MM, TEMPLATES } from './harness.mjs';
-import { solid, textShades } from '../../src/templates/pdf/shared/pdfColors.js';
-import { PNG_2X2 as PNG } from './extractors.mjs';
+import { setup, teardown, resume, render, renderCover, read, allItems, allText, drawState, loadModule, readDocx, MM, TEMPLATES } from './harness.mjs';
+import { contrast, solid, textShades } from '../../src/templates/pdf/shared/pdfColors.js';
+import { painted, PNG_2X2 as PNG } from './extractors.mjs';
 
 before(setup);
 after(teardown);
@@ -15,6 +15,8 @@ async function coverDocx(r) {
   return readDocx(new Uint8Array(await (await renderCoverLetterDocx(r)).arrayBuffer()));
 }
 const letter = (coverLetter, settings = {}) => resume({ settings, coverLetter: { body: '<p>Hello</p>', ...coverLetter } });
+/** The colour of the Word run that prints `text`, as 'rrggbb'. */
+const colourOf = (xml, text) => (xml.split('</w:r>').find((run) => run.includes(`>${text}<`)) || '').match(/<w:color w:val="([0-9A-Fa-f]{6})"/)?.[1]?.toLowerCase();
 
 describe('the closing (R1-7, R9-9)', () => {
   it('a closing typed with its comma prints one comma, in the PDF and in Word', async () => {
@@ -131,7 +133,7 @@ describe('a long title in the default header, contacts on the right', () => {
 describe('the Text colour reaches every line of the letter (R1-13)', () => {
   it('names in the Text colour, contacts and the designation in its grey — PDF and Word', async () => {
     const textColor = '#1e3a8a';
-    const meta = textShades(textColor).meta;
+    const grey = textShades(textColor).sub; // the résumé header's contacts' shade (R9-13)
     const r = resume({
       settings: { textColor },
       personal: { name: 'Pat Sample', email: 'pat@example.com' },
@@ -139,11 +141,10 @@ describe('the Text colour reaches every line of the letter (R1-13)', () => {
     });
     const bytes = await renderCover(r);
     for (const needle of ['Pat Sample', 'Sarah Smith', 'Pat Signer']) assert.equal((await drawState(bytes, needle))[0]?.fill, textColor, needle);
-    for (const needle of ['pat@example.com', 'Staff Engineer']) assert.equal((await drawState(bytes, needle))[0]?.fill, meta, needle);
+    for (const needle of ['pat@example.com', 'Staff Engineer']) assert.equal((await drawState(bytes, needle))[0]?.fill, grey, needle);
     const { xml } = await coverDocx(r);
-    const colourOf = (text) => (xml.split('</w:r>').find((run) => run.includes(`>${text}<`)) || '').match(/<w:color w:val="([0-9A-Fa-f]{6})"/)?.[1]?.toLowerCase();
-    for (const text of ['Pat Sample', 'Sarah Smith', 'Pat Signer']) assert.equal(colourOf(text), textColor.slice(1), `Word ${text}`);
-    assert.equal(colourOf('Staff Engineer'), meta.slice(1), 'Word designation');
+    for (const text of ['Pat Sample', 'Sarah Smith', 'Pat Signer']) assert.equal(colourOf(xml, text), textColor.slice(1), `Word ${text}`);
+    assert.equal(colourOf(xml, 'Staff Engineer'), grey.slice(1), 'Word designation');
   });
 
   // Word read the stored Text colour with a fallback of its own, the PDF the resolved one: a
@@ -164,10 +165,55 @@ describe('the Text colour reaches every line of the letter (R1-13)', () => {
         else delete r.settings.textColor;
         const bytes = await renderCover(r);
         const { xml } = await coverDocx(r);
-        const colourOf = (text) => (xml.split('</w:r>').find((run) => run.includes(`>${text}<`)) || '').match(/<w:color w:val="([0-9A-Fa-f]{6})"/)?.[1]?.toLowerCase();
         for (const text of runs) {
           const { fill, alpha } = (await drawState(bytes, text))[0];
-          assert.equal(`#${colourOf(text)}`, solid(fill, alpha), `${template}, Text colour ${textColor}: "${text}"`);
+          assert.equal(`#${colourOf(xml, text)}`, solid(fill, alpha), `${template}, Text colour ${textColor}: "${text}"`);
+        }
+      }
+    }
+  });
+});
+
+/** The Text colours the Design panel offers (DesignPanelColors.jsx): Near Black, Dark Gray, Slate, Ink. */
+const TEXT_PRESETS = ['#1a1a1a', '#374151', '#334155', '#1e293b'];
+
+/** The colours page 1's contact icons are painted in: every shape under 12 pt (a rule is wider). */
+const iconColours = async (bytes) => [...new Set((await painted(bytes))
+  .filter((p) => (p.paint === 'fill' || p.paint === 'stroke') && p.x1 - p.x0 < 12 && p.y1 - p.y0 < 12)
+  .map((p) => p.colour))];
+
+describe('the letter\'s greys read, and match the résumé\'s header (R9-13)', () => {
+  // The letter printed its contacts, their icons and the designation in the Text colour's
+  // lightest reading grey (textShades().meta): 3.3:1 on white at Dark Gray and Slate, 4.0:1 at Ink
+  // and at Modern's and the Sidebar's default Text colours, below WCAG AA's 4.5:1 — and a shade
+  // lighter than the résumé's own header prints its contacts (sub), where the letterhead takes
+  // the résumé header's colours (FIDB-51). On Modern's and the Sidebar's band the contacts take
+  // the band's colours (21-cover-letter-looks); the designation is on the paper in every look.
+  it('at every Text colour preset and each template\'s default: the résumé header\'s colour, ≥ 4.5:1 on white — PDF and Word', async () => {
+    const fillOf = async (bytes, text) => (await drawState(bytes, text))[0]?.fill;
+    for (const template of TEMPLATES) {
+      for (const textColor of [...TEXT_PRESETS, undefined]) {
+        const at = `${template}, Text colour ${textColor ?? 'unset'}`;
+        const r = resume({
+          template,
+          personal: { name: 'Pat Sample', email: 'pat@example.com', hiddenFields: [] },
+          coverLetter: { body: '<p>Hello</p>', signatureName: 'Pat Signer', signatureDesignation: 'Staff Engineer', hiddenFields: [] },
+        });
+        if (textColor) r.settings.textColor = textColor;
+        else delete r.settings.textColor;
+        const bytes = await renderCover(r);
+        const { xml } = await coverDocx(r);
+        const onPaper = [['designation', await fillOf(bytes, 'Staff Engineer'), `#${colourOf(xml, 'Staff Engineer')}`]];
+        if (!['modern', 'sidebar'].includes(template)) {
+          const cv = await render(r);
+          const email = await fillOf(bytes, 'pat@example.com');
+          assert.equal(email, await fillOf(cv, 'pat@example.com'), `${at}: the contacts in the résumé header's colour`);
+          assert.deepEqual(await iconColours(bytes), await iconColours(cv), `${at}: the icons in the résumé header's colour`);
+          onPaper.push(['contacts', email, `#${colourOf(xml, 'pat@example.com')}`]);
+        }
+        for (const [what, pdf, word] of onPaper) {
+          assert.ok(contrast(pdf) >= 4.5, `${at}: the ${what} at ${contrast(pdf).toFixed(2)}:1 (${pdf})`);
+          assert.ok(contrast(word) >= 4.5, `${at}: Word's ${what} at ${contrast(word).toFixed(2)}:1 (${word})`);
         }
       }
     }

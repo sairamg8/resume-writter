@@ -14,8 +14,8 @@ import { accent2Hex, bold, normal, linked, descriptionToParagraphs } from '@/uti
 import { contactItems } from '@/utils/contacts';
 import { hasRichText } from '@/utils/richText';
 import { letterBlock, letterContactFormat, letterHiddenFields, letterSignature } from '@/utils/coverLetter';
-import { solid, textShades } from '@/templates/pdf/shared/pdfColors';
-import { letterheadLook, LETTERHEAD_GAP, LETTERHEAD_PAD } from '@/templates/pdf/shared/letterhead';
+import { solid } from '@/templates/pdf/shared/pdfColors';
+import { letterGrey, letterheadLook, LETTERHEAD_GAP, LETTERHEAD_PAD } from '@/templates/pdf/shared/letterhead';
 import { resolveTemplateSettings } from '@/templates/pdf/shared/templateSettings';
 import { templateId } from '@/constants/templates';
 const pt = (n) => Math.round(n * 20); // points → twips (paragraph spacing, indents)
@@ -89,9 +89,10 @@ export function buildCoverLetter(resume) {
   const s = resolveTemplateSettings(settings, templateId(template));
   const look = letterheadLook(template, s);
   const textHex = hexOn(s.textColor, '#ffffff', '1e293b');
-  // The PDF's colours: names in the Text colour, contacts and the designation in its grey (R1-13)
-  // — the grey of the Text colour itself, as the PDF's, not of its rounded Word hex (R9-0).
-  const colors = { text: textHex, meta: hexOn(textShades(s.textColor).meta, '#ffffff', '64748b') };
+  // The PDF's colours: names in the Text colour, contacts and the designation in its grey (R1-13,
+  // letterGrey: the résumé header's, R9-13) — the grey of the Text colour itself, as the PDF's,
+  // not of its rounded Word hex (R9-0).
+  const colors = { text: textHex, grey: hexOn(letterGrey(s.textColor), '#ffffff', '64748b') };
   const baseSize = s.fontSizeBase || 11;
   const sizes = {
     base: Math.round(baseSize * 2),
@@ -122,6 +123,6 @@ export function buildCoverLetter(resume) {
   // Closing and signature stay together on one page.
   paras.push(line([normal(sig.closing, text)], pt(sig.wide ? 24 : 8), { keepNext: true }));
   if (sig.name) paras.push(line([bold(sig.name, text)], 0, { keepNext: !!sig.designation }));
-  if (sig.designation) paras.push(line([normal(sig.designation, { ...text, color: colors.meta })]));
+  if (sig.designation) paras.push(line([normal(sig.designation, { ...text, color: colors.grey })]));
   return paras;
 }

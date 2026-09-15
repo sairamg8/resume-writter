@@ -2,8 +2,7 @@ import { Document, Page, View } from '@react-pdf/renderer';
 import { Text } from './shared/PdfText';
 import { getPageStyle, getDocumentProps } from './shared/PdfPage';
 import { PdfRichText } from './shared/PdfRichText';
-import { textShades } from './shared/pdfColors';
-import { letterheadLook } from './shared/letterhead';
+import { letterGrey, letterheadLook } from './shared/letterhead';
 import { CoverLetterHeader } from './CoverLetterHeaderPDF';
 import { letterBlock, letterContactFormat, letterHiddenFields, letterSignature } from '@/utils/coverLetter';
 import { hasRichText } from '@/utils/richText';
@@ -17,10 +16,10 @@ export function CoverLetterTemplatePDF({ data }) {
   const cl = coverLetter || {};
 
   const textColor = settings.textColor      || '#1e293b';
-  // The letter's text in the Text colour, the designation in its grey: a custom Text colour
-  // reaches every line of it (R1-13), as it does the résumé's sections (f37a9f5). The
-  // letterhead's colours are the résumé header's (letterheadLook).
-  const meta      = textShades(textColor).meta;
+  // The letter's text in the Text colour, the designation in its grey (the contacts', R9-13): a
+  // custom Text colour reaches every line of it (R1-13), as it does the résumé's sections
+  // (f37a9f5). The letterhead's colours are the résumé header's (letterheadLook).
+  const grey      = letterGrey(textColor);
   const baseSize  = settings.fontSizeBase   || 11;
   const lineH     = settings.lineHeightValue || 1.5;
 
@@ -93,7 +92,7 @@ export function CoverLetterTemplatePDF({ data }) {
               <Text style={{ fontSize: baseSize, fontWeight: 'bold', color: textColor, lineHeight: 1.3 }}>{sig.name}</Text>
             ) : null}
             {sig.designation ? (
-              <Text style={{ fontSize: baseSize, color: meta, lineHeight: 1.3 }}>{sig.designation}</Text>
+              <Text style={{ fontSize: baseSize, color: grey, lineHeight: 1.3 }}>{sig.designation}</Text>
             ) : null}
           </View>
         </View>

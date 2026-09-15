@@ -14,6 +14,15 @@ export const LETTERHEAD_GAP = 16;
 export const DOUBLE_RULE_GAP = 1.5;
 
 /**
+ * The letter's grey on the paper — its contacts under a rule, their icons, the signature's
+ * designation — for the Text colour `text`: the shade the résumé's header prints its contacts in
+ * (textShades().sub, PdfContactRow), so the letterhead matches the résumé's header. It reads at
+ * 4.58:1 or more on white at every Text colour the Design panel offers and every template's
+ * default; the lighter `meta` the letter used read at 3.3:1 at Dark Gray and Slate (R9-13).
+ */
+export const letterGrey = (text) => textShades(text || '#1e293b').sub;
+
+/**
  * The letterhead of a letter whose résumé prints with `template`, from the résumé's resolved
  * settings `s` (resolveTemplateSettings): the same fonts (the page's), accent, name and title
  * colours, header text colour and alignment as the résumé's header.
@@ -40,8 +49,8 @@ export function letterheadLook(template, s = {}) {
     centered: letterheadCentered(s, look),
     name: { color: s.nameColor || text, weight: 'bold' },
     title: { color: s.jobTitleColor || accent },
-    // Contacts in the Text colour's grey (R1-13), as the letter always printed them.
-    contacts: textShades(text).meta,
+    // Contacts in the Text colour's grey (R1-13): the résumé header's (letterGrey, R9-13).
+    contacts: letterGrey(text),
     band: null,
     rules: [],
     photo: [accent, {}],
