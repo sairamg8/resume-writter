@@ -1,8 +1,9 @@
 // A job application from this browser's saved list or an imported .json, made safe for every job
 // page — the tracker's board and list, a job's own page, the form. Both ways a job comes in go
-// through readJob() (useJobStore's load and importJobs), so they cannot disagree on what a job is
-// (R4-7), or on what a repair lost (VM4-5). No imports, so Node's test runner loads this file as it is
-// (tests/unit/normalize-job.unit.mjs).
+// through readJob() then completeJob() (useJobStore's load and importJobs), so they cannot
+// disagree on what a job is (R4-7), or on what a repair lost (VM4-5). Its one import has none of
+// its own, so Node's test runner loads this file as it is (tests/unit/normalize-job.unit.mjs).
+import { newId } from './ids.js';
 
 /** The fields the job pages print or search as text. */
 const TEXT_FIELDS = [
@@ -27,9 +28,24 @@ const asText = (v) => (isNumber(v) ? String(v) : '');
 /** The to-dos the Tasks tab can show; the same array when every one of them is readable. */
 function readableTodos(todos) {
   if (!Array.isArray(todos)) return [];
-  const kept = todos.filter((t) => isJobEntry(t) && (isText(t.text) || isNumber(t.text)))
-    .map((t) => (isText(t.text) ? t : { ...t, text: String(t.text) }));
+  const kept = todos.filter((t) => isJobEntry(t) && (typeof t.text === 'string' || isNumber(t.text)))
+    .map((t) => (typeof t.text === 'string' ? t : { ...t, text: String(t.text) }));
   return kept.length === todos.length && kept.every((t, i) => t === todos[i]) ? todos : kept;
+}
+
+/**
+ * The to-dos, each with an id no other one in the list has; the same array when they all do.
+ * The Tasks tab ticks, renames and deletes a to-do by its id: to-dos from a file with none
+ * shared `undefined`, so deleting one deleted them all (VM4-2).
+ */
+function addressableTodos(todos) {
+  const seen = new Set();
+  const out = todos.map((t) => {
+    const id = typeof t.id === 'string' && t.id && !seen.has(t.id) ? t.id : newId('td');
+    seen.add(id);
+    return id === t.id ? t : { ...t, id };
+  });
+  return out.every((t, i) => t === todos[i]) ? todos : out;
 }
 
 /** The status changes the history can show; the same array when every one is readable. */
@@ -44,8 +60,8 @@ function readableHistory(history) {
  *   a text field holding a number     → its digits; holding anything else (an object, a list,
  *                                        true) → ''; a status that is not text, or empty → 'saved'
  *                                        (the board shows a job only in its status's column)
- *   todos that are not a list          → []; to-dos that are not objects, or whose text is not
- *                                        text, are left out
+ *   todos that are not a list          → []; to-dos that are not objects, or have no text (or
+ *                                        text that is not text), are left out
  *   statusHistory that is not a list   → removed (the next status change starts a new one);
  *                                        entries without a status are left out
  * Missing fields stay missing: the pages already treat them as empty. A saved job with
@@ -90,4 +106,26 @@ export function readJob(job) {
     if (history !== job.statusHistory) set('statusHistory', history, true);
   }
   return { kept: out, lost };
+}
+
+/**
+ * `job` (readable: readJob) with what the pages address it by, where it has none — the same
+ * object when it has it all. Nothing is lost here, so it is not reported as a repair (a file from
+ * another tool has no ids of ours, and its import must not say something was left out):
+ *   no id, or not a string             → a new one (the router opens a job by its id)
+ *   a to-do with no id, or with one    → a new one (addressableTodos)
+ *   an earlier to-do already has
+ */
+export function completeJob(job) {
+  let out = job;
+  const set = (key, value) => {
+    if (out === job) out = { ...job };
+    out[key] = value;
+  };
+  if (typeof job.id !== 'string' || !job.id) set('id', newId('job'));
+  if (Array.isArray(job.todos)) {
+    const todos = addressableTodos(job.todos);
+    if (todos !== job.todos) set('todos', todos);
+  }
+  return out;
 }

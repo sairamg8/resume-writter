@@ -2,7 +2,7 @@
 // Run: yarn test:unit
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizeJob, readJob, isJobEntry } from '../../src/utils/normalizeJob.js';
+import { normalizeJob, readJob, completeJob, isJobEntry } from '../../src/utils/normalizeJob.js';
 
 const job = (extra = {}) => ({
   id: 'job_1', company: 'Acme', role: 'Dev', status: 'applied', url: '', location: 'Remote', salary: '',
@@ -33,6 +33,9 @@ test('only an object that is not a list is a job', () => {
 test('to-dos: a list of readable to-dos is kept; anything else is left out (the tracker threw on todos: [null])', () => {
   const t1 = { id: 't1', text: 'Call back', done: true };
   assert.deepEqual(normalizeJob(job({ todos: [null, t1, 'x', [1], { id: 't2', text: { b: 1 } }] })).todos, [t1]);
+  // No text at all: a blank row whose edit box threw on `undefined.trim()` (VM4-2). Left out: a loss.
+  assert.deepEqual(normalizeJob(job({ todos: [t1, { id: 't2', done: true }, { id: 't3', text: null }] })).todos, [t1]);
+  assert.equal(readJob(job({ todos: [t1, { id: 't2', done: true }] })).lost, true);
   assert.deepEqual(normalizeJob(job({ todos: 'x' })).todos, []);
   assert.deepEqual(normalizeJob(job({ todos: { 0: t1 } })).todos, []);
   assert.deepEqual(normalizeJob(job({ todos: [{ id: 't3', text: 42 }] })).todos, [{ id: 't3', text: '42' }]);
@@ -86,4 +89,33 @@ test('the input is never changed: a repaired job is a copy', () => {
   assert.notEqual(fixed, bad);
   assert.equal(JSON.stringify(bad), before);
   assert.deepEqual({ ...fixed, todos: [null], statusHistory: 'x', company: 5 }, bad, 'nothing else differs');
+});
+
+test('completeJob: to-dos with no id, or one an earlier to-do has, get their own — the Tasks tab addresses them by id (VM4-2)', () => {
+  const todos = [
+    { text: 'Call A' }, { id: 't1', text: 'Email B', done: true }, { id: 't1', text: 'Send CV' },
+    { id: 7, text: 'Ring C' }, { id: '', text: 'Book D' }, { id: 't2', text: 'Prep E' },
+  ];
+  const before = JSON.stringify(todos);
+  const done = completeJob(job({ todos }));
+  assert.deepEqual(done.todos.map((t) => t.text), ['Call A', 'Email B', 'Send CV', 'Ring C', 'Book D', 'Prep E']);
+  assert.equal(done.todos[1], todos[1], 'the first to-do with an id keeps it, untouched');
+  assert.equal(done.todos[5], todos[5]);
+  const ids = done.todos.map((t) => t.id);
+  assert.equal(new Set(ids).size, ids.length, `ids: ${ids}`);
+  for (const i of [0, 2, 3, 4]) assert.match(ids[i], /^td_./);
+  assert.equal(done.todos[1].done, true);
+  assert.equal(JSON.stringify(todos), before, 'the input is never changed');
+  // What the Tasks tab does on delete: before, every to-do without an id went with the first.
+  const removed = done.todos.filter((t) => t.id !== done.todos[0].id);
+  assert.deepEqual(removed.map((t) => t.text), ['Email B', 'Send CV', 'Ring C', 'Book D', 'Prep E']);
+});
+
+test('completeJob: a job with what the pages address it by comes back as the same object; else it gets it', () => {
+  const j = job();
+  assert.equal(completeJob(j), j);
+  assert.equal(completeJob(job({ todos: null })).todos, null, 'no to-dos: nothing to address');
+  const noId = completeJob({ company: 'Acme', status: 'saved' });
+  assert.match(noId.id, /^job_./, 'the router opens a job by its id');
+  assert.notEqual(completeJob({ id: 7, status: 'saved' }).id, 7);
 });

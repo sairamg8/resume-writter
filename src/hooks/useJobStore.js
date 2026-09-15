@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from 'react';
 import { loadSavedList, pendingRecovery, rememberRecovery, setItemWithRoom } from '@/utils/storageBackup';
 import { newId } from '@/utils/ids';
-import { readJob } from '@/utils/normalizeJob';
+import { completeJob, readJob } from '@/utils/normalizeJob';
 
 const KEY = 'cpwtcv_jobs_v1';
 
@@ -42,8 +42,9 @@ function load() {
   const { saved, list, recovery } = loadSavedList(KEY, 'jobs', readJob);
   if (!list) return { jobs: DEMO_JOBS, recovery: null };
   if (!saved) return { jobs: [], recovery };
-  // A job the router cannot address (no id, or a non-string one) gets an id rather than being dropped.
-  let jobs = list.map(j => (typeof j.id === 'string' && j.id ? j : { ...j, id: newId('job') }));
+  // A job, or a to-do, the pages cannot address (no id, or one another has) gets an id rather than
+  // being dropped; nothing is lost, so it is not a repair to report (completeJob).
+  let jobs = list.map(completeJob);
   // Migrate: strip old demo_* jobs, keep user-created ones
   if (saved.dataVersion !== JOB_VERSION) jobs = [...DEMO_JOBS, ...jobs.filter(j => !j.id.startsWith('demo_'))];
   return { jobs, recovery };
@@ -147,7 +148,7 @@ function deleteJob(id) {
  */
 function importJobs(incoming) {
   const read = incoming.map(readJob);
-  const stamped = read.map(r => r.kept).filter(Boolean).map(j => ({
+  const stamped = read.map(r => r.kept).filter(Boolean).map(j => completeJob({
     status: 'saved',
     todos: [],
     contact: '',
