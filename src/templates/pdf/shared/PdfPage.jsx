@@ -9,8 +9,9 @@ import {
 } from './pdfUnits';
 
 /**
- * Per-template fallbacks used only when the user has NOT set a value.
- * Keep these aligned with each HTML template's `st.x || fallback` chains.
+ * Per-template fallbacks used only when the user has NOT set a value. Not part of TEMPLATES in
+ * src/constants/templates.js: colours computed from other settings belong to the PDF, and an
+ * unset Classic heading prints 'line', not the 'ruled' that picking Classic stores (R3-6).
  */
 export const DEFAULTS = {
   classic: {

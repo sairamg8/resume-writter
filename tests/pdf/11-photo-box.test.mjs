@@ -75,7 +75,7 @@ async function drawnPhoto(bytes) {
       } : clip;
       return {
         box: size(box),
-        ring: ring.length ? round(Math.max(...ring.map((s) => s.lineWidth)) / 2) : 0,
+        ring: ring.length ? Math.max(...ring.map((s) => s.lineWidth)) / 2 : 0,
         colours: [...new Set(ring.map((s) => s.colour))],
         picture: size(clip),
         radius: round(clip.start - clip.x0),
@@ -119,6 +119,24 @@ describe('cover letter photo on the shared table (R3-5)', () => {
     const accent = await letter({ photoShape: 'circle', photoBorder: 'accent' });
     assert.deepEqual([accent.ring, accent.colours, accent.box], [1.5, ['#e11d48'], { w: 38, h: 38 }]);
   });
+});
+
+describe('the ring shows around the picture, read without a canvas (FIDA-43, R3-9)', () => {
+  // 11-photo paints the page to see the ring, so it skips where @napi-rs/canvas (pdf.js's
+  // optional dependency) is missing. This reads the same fact from the operator list: the
+  // picture is clipped inside the ring's strokes. Before FIDA-43 the ring was the Image's own
+  // border, and the picture, clipped to the whole box, painted over it.
+  for (const [template, ring] of [['classic', 1.125], ['minimal', 1.125], ['executive', 1.125], ['modern', 1.5], ['sidebar', 1.125], ['cover letter', 1.5]]) {
+    it(`${template}: the picture sits inside a ${ring} pt ring, whatever the shape`, async () => {
+      const cover = template === 'cover letter';
+      for (const photoShape of ['circle', 'rounded', 'square']) {
+        const r = resume({ template: cover ? 'classic' : template, personal: { photo: PNG }, settings: { photoShape, photoBorder: 'accent' } });
+        const p = await drawnPhoto(await (cover ? renderCover(r) : render(r)));
+        assert.equal(p.ring, ring, `${photoShape}: the ring`);
+        assert.deepEqual(p.picture, { w: round(p.box.w - 2 * ring), h: round(p.box.h - 2 * ring) }, `${photoShape}: the picture inside it`);
+      }
+    });
+  }
 });
 
 describe('a long name beside the photo (R3-4)', () => {

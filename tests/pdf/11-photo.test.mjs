@@ -98,6 +98,8 @@ describe('photo ring', { skip: canvasLib ? false : '@napi-rs/canvas is not insta
     });
   }
 
+  // Guard and the detector's soundness check (it passed before FIDA-43 too): where no ring is
+  // drawn, ringAround() finds none, so the cases above can fail.
   it('no ring when the photo border is "none"', async () => {
     const r = resume({ personal: { photo: photo() }, settings: { accentColor: ACCENT, photoBorder: 'none' } });
     const ring = ringAround(await paintTop(await render(r)), ACCENT);

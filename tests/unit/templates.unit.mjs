@@ -33,6 +33,22 @@ test('header helpers read an unknown id as Classic (M15)', () => {
   assert.equal(headerBorderOn({}, 'executive'), false);
 });
 
+test('the header helpers give each template the answers of the separate tables they replaced (R3-6)', () => {
+  // HEADER_CONTROL_TEMPLATES and HEADER_BORDER_WHEN_UNSET, as they were at 01e9118: a guard
+  // that folding them into TEMPLATES changed no answer.
+  const CONTROLS = { classic: true, modern: false, minimal: true, executive: true, sidebar: false };
+  const RULE_WHEN_UNSET = { classic: true, modern: false, minimal: false, executive: false, sidebar: false };
+  assert.deepEqual(TEMPLATE_IDS, ['classic', 'modern', 'minimal', 'executive', 'sidebar']);
+  for (const template of [...TEMPLATE_IDS, 'dark', '', undefined]) {
+    const t = templateId(template);
+    assert.equal(hasHeaderControls(template), CONTROLS[t], `${template}: controls`);
+    for (const settings of [undefined, {}, { showHeaderBorder: undefined }, { showHeaderBorder: null }, { showHeaderBorder: 'yes' }]) {
+      assert.equal(headerBorderOn(settings, template), RULE_WHEN_UNSET[t], `${template} ${JSON.stringify(settings)}: the rule when unset`);
+    }
+    for (const showHeaderBorder of [true, false]) assert.equal(headerBorderOn({ showHeaderBorder }, template), showHeaderBorder);
+  }
+});
+
 test('templateStyleDefaults: each template\'s heading style and title case; an unknown id gets Classic\'s (M16)', () => {
   assert.deepEqual(
     Object.fromEntries(TEMPLATE_IDS.map((t) => [t, templateStyleDefaults(t)])),
