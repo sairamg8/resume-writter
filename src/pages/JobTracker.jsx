@@ -38,9 +38,11 @@ export function JobTracker({ store }) {
         setImportError('Could not parse file. Make sure it is a job-tracker JSON export.');
         return;
       }
-      const arr = (Array.isArray(parsed) ? parsed : (parsed?.jobs || [])).filter(j => j && typeof j === 'object');
-      if (arr.length) { importJobs(arr); setImportError(null); }
-      else setImportError('No job applications found in that file.');
+      const list = Array.isArray(parsed) ? parsed : parsed?.jobs;
+      const { added, lossy } = importJobs(Array.isArray(list) ? list : []);
+      if (!added) setImportError('No job applications found in that file.');
+      else if (lossy) setImportError(`Imported ${added} job application${added === 1 ? '' : 's'}; what could not be read in the file was left out.`);
+      else setImportError(null);
     };
     reader.readAsText(file);
     e.target.value = '';

@@ -167,3 +167,66 @@ describe('regressions — the Add Job form and its saved interview stages', () =
     cy.contains('No custom stages yet').should('be.visible');
   });
 });
+
+describe('regressions — a job whose details cannot be read (R4-7)', () => {
+  const acme = { ...job('job_a', 'Acme', 'Developer'), todos: [null, { id: 't1', text: 'Call back', done: true }] };
+  const beta = { ...job('job_b', 'Beta', 'Designer'), todos: 'x', statusHistory: 'applied', contact: { name: 'Pat' } };
+  const gamma = job('job_c', 'Gamma', 'Tester');
+  const visitWithJobs = (raw) => cy.visit('/#/jobs', {
+    onBeforeLoad(win) {
+      win.localStorage.clear();
+      win.localStorage.setItem(JOBS_KEY, raw);
+    },
+  });
+
+  it('a saved job with unreadable to-dos or history opens on the board and on its page; the rest is kept', () => {
+    // Before: "Cannot read properties of null (reading 'done')" on every visit to the tracker.
+    const raw = JSON.stringify({ dataVersion: 2, jobs: [acme, beta, gamma] });
+    visitWithJobs(raw);
+    stat('Total').should('have.text', '3');
+    cy.contains('[role="alert"]', 'job list could not be read').should('be.visible');
+    cy.contains('1/1 tasks').should('be.visible'); // Acme's readable to-do
+    cy.jobStore().should((s) => {
+      const byId = Object.fromEntries(s.jobs.map((j) => [j.id, j]));
+      expect(byId.job_a.todos).to.deep.eq([acme.todos[1]]);
+      expect(byId.job_b.todos).to.deep.eq([]);
+      expect(byId.job_b).not.to.have.property('statusHistory');
+      expect(byId.job_b.contact).to.eq('');
+      expect(byId.job_c).to.deep.eq(gamma, 'a readable job is untouched');
+    });
+    cy.window().then((win) => {
+      const backups = Object.keys(win.localStorage).filter((k) => k.startsWith(`${JOBS_KEY}_backup_`));
+      expect(backups.map((k) => win.localStorage.getItem(k))).to.deep.eq([raw], 'the original is kept');
+    });
+    goTo('#/jobs/job_b');
+    cy.contains('h1', 'Beta').should('be.visible');
+    goTo('#/jobs/job_a');
+    cy.contains('h1', 'Acme').should('be.visible');
+    cy.contains('button', 'Tasks').click();
+    cy.contains('Call back').should('be.visible');
+  });
+
+  it('an imported file with unreadable details adds its jobs, repaired, and says something was left out', () => {
+    visitWithJobs(JSON.stringify({ dataVersion: 2, jobs: [] }));
+    stat('Total').should('have.text', '0');
+    const file = [
+      { company: 'Delta', role: 'Analyst', status: 'applied', todos: [null], statusHistory: [null, { status: 'applied', changedAt: 1 }] },
+      'junk',
+      ['a list is not a job'],
+      { company: 'Echo', role: 'QA' },
+    ];
+    cy.get('input[type="file"][accept=".json"]').selectFile({
+      contents: Cypress.Buffer.from(JSON.stringify(file)), fileName: 'jobs.json',
+    }, { force: true });
+    stat('Total').should('have.text', '2');
+    cy.contains('[role="alert"]', 'Imported 2 job applications; what could not be read in the file was left out').should('be.visible');
+    cy.contains('p', /^Delta$/).should('be.visible');
+    cy.contains('#kanban-col-saved', 'Echo').should('be.visible'); // no status in the file: on the board, as Saved
+    cy.jobStore().should((s) => {
+      const delta = s.jobs.find((j) => j.company === 'Delta');
+      expect(delta.todos).to.deep.eq([]);
+      expect(delta.statusHistory).to.deep.eq([{ status: 'applied', changedAt: 1 }]);
+      expect(s.jobs.find((j) => j.company === 'Echo').status).to.eq('saved');
+    });
+  });
+});
