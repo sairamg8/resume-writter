@@ -144,10 +144,11 @@ describe('a long name beside the photo (R3-4)', () => {
   // react-pdf shrinks its items. It read the photo's flexShrink: 0 as 1, so in the letter's
   // below-all header the ring narrowed to 42.86 pt while the picture kept its 45 pt, and a photo
   // without a ring was squeezed. Below-name and the résumé headers (a flex: 1 column beside the
-  // photo) were not squeezed before either: guards.
+  // photo) were not squeezed before either: guards. With contacts on the right (the default)
+  // such a name stopped the letter rendering at all, until the name side got its 60 % cap.
   const NAME = 'Wolfeschlegelsteinhausenbergerdorff'.repeat(3);
 
-  for (const fieldsPosition of ['below-name', 'below-all']) {
+  for (const fieldsPosition of ['right', 'below-name', 'below-all']) {
     it(`cover letter, contacts ${fieldsPosition}: the photo keeps its 48 pt box, the picture stays inside its ring`, async () => {
       for (const [photoBorder, picture] of [['accent', 45], ['none', 48]]) {
         const p = await drawnPhoto(await renderCover(resume({

@@ -8,6 +8,8 @@ import { getPdfPhotoStyle } from './shared/pdfPhoto';
 import { letterBlock, letterContactFormat, letterHiddenFields, letterSignature } from '@/utils/coverLetter';
 import { photoTextAlignItems } from '@/constants/templates';
 import { hasRichText } from '@/utils/richText';
+import { contactItems } from '@/utils/contacts';
+import { A4_WIDTH_PT, MM_TO_PT } from './shared/pdfUnits';
 
 /** Space under the date, the recipient block and the subject. */
 const BLOCK_GAP = 12;
@@ -53,12 +55,21 @@ export function CoverLetterTemplatePDF({ data }) {
     />
   );
 
-  const photoEl = photoSrc ? (
-    <PdfPhoto src={photoSrc} style={{ ...getPdfPhotoStyle(settings, accent, 'cover'), marginRight: 10 }} />
-  ) : null;
+  const photoStyle = { ...getPdfPhotoStyle(settings, accent, 'cover'), marginRight: 10 };
+  const photoEl = photoSrc ? <PdfPhoto src={photoSrc} style={photoStyle} /> : null;
+
+  // Beside the contacts ('right', the default) the name and photo take at most 60 % of the
+  // header, so a long title wraps there instead of pushing the contacts past the margin (and,
+  // at a column of no width, making react-pdf throw on an icon). In points, on the name block:
+  // react-pdf lays text out once, at the first width it is measured with, so a cap on the row
+  // or a box that shrinks later does not re-wrap it.
+  const headerWidth = A4_WIDTH_PT - 2 * (settings.marginH ?? 18) * MM_TO_PT;
+  const nameCap = fieldsPos === 'right' && contactItems(personal, hidden).length
+    ? 0.6 * headerWidth - (photoEl ? photoStyle.width + photoStyle.marginRight : 0)
+    : undefined;
 
   const nameBlock = (
-    <View style={{ minWidth: 0 }}>
+    <View style={{ minWidth: 0, maxWidth: nameCap }}>
       <Text style={{ fontSize: nameSize, fontWeight: 'bold', color: textColor, lineHeight: 1.2 }}>
         {personal?.name || 'Your Name'}
       </Text>
@@ -91,10 +102,10 @@ export function CoverLetterTemplatePDF({ data }) {
         </View>
       );
     }
-    // 'right' — default: name+photo on left, contact on right
+    // 'right' — default: name+photo on left (at most 60 %: nameCap), contact on right
     return (
       <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-        <View style={{ flexDirection: 'row', alignItems: photoAlign, flexShrink: 0 }}>
+        <View style={{ flexDirection: 'row', alignItems: photoAlign }}>
           {photoEl}
           {nameBlock}
         </View>

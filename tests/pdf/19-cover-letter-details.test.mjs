@@ -2,7 +2,7 @@
 // the signature kept with its closing, and the Text colour on every line — PDF and Word alike.
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { setup, teardown, resume, renderCover, read, allItems, allText, drawState, loadModule, readDocx } from './harness.mjs';
+import { setup, teardown, resume, renderCover, read, allItems, allText, drawState, loadModule, readDocx, MM } from './harness.mjs';
 import { textShades } from '../../src/templates/pdf/shared/pdfColors.js';
 
 before(setup);
@@ -58,6 +58,38 @@ describe('the signature stays with its closing (R1-6)', () => {
       if (page('Sincerely') !== page('Pat Signer') || page('Pat Signer') !== items.findLast((t) => t.str.includes('Engineer'))?.page) split += 1;
     }
     assert.equal(split, 0, `${split} body lengths split the closing from the signature`);
+  });
+});
+
+describe('a long title in the default header, contacts on the right', () => {
+  // The name side kept its one-line width and the contacts got what was left: from a title of
+  // about 60 characters they ran past the right margin (off the paper without a photo), and
+  // from about 85, with a photo and icon contacts, the letter did not render at all — react-pdf
+  // threw "unsupported number: Infinity" drawing an icon in a column of no width.
+  const PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAEElEQVR4nGP4z8AARAwQCgAf7gP9i18U1AAAAABJRU5ErkJggg==';
+  const T72 = 'Senior Software Engineer, Platform Infrastructure & Developer Experience';
+  const CONTACTS = { email: 'alexandra.johnson@example.com', phone: '+1 555 0100', location: 'San Francisco, CA', website: 'alexjohnson.dev', linkedin: 'linkedin.com/in/alexj' };
+
+  it('the title wraps beside the photo and the contacts keep a column of their own, inside the margin', async () => {
+    for (const title of [T72, `${T72} and Payments`, `${T72}: Payments, Risk and Fraud Detection Platform Group`]) {
+      for (const photo of [PNG, '']) {
+        for (const contactStyle of ['icon', 'bar']) {
+          const r = resume({ settings: { contactStyle }, personal: { name: 'Alexandra Johnson', title, photo, ...CONTACTS }, coverLetter: { body: '<p>Hello</p>' } });
+          const at = `${title.length} characters, ${photo ? 'photo' : 'no photo'}, ${contactStyle}`;
+          const pages = await read(await renderCover(r).catch((e) => assert.fail(`${at}: ${e.message}`)));
+          const right = pages[0].W - 18 * MM; // the default 18 mm margin
+          assert.deepEqual(pages[0].items.filter((t) => t.x + t.w > right + 0.5).map((t) => t.str), [], `${at}: text past the margin`);
+          const text = allText(pages).replace(/\s+/g, '');
+          for (const value of [title, ...Object.values(CONTACTS)]) assert.ok(text.includes(value.replace(/\s+/g, '')), `${at}: "${value}" is printed`);
+        }
+      }
+    }
+  });
+
+  it('a usual title keeps its one line beside the photo (guard)', async () => {
+    const r = resume({ personal: { name: 'Alexandra Johnson', title: 'Senior Software Engineer', photo: PNG, ...CONTACTS }, coverLetter: { body: '<p>Hello</p>' } });
+    const items = allItems(await read(await renderCover(r)));
+    for (const s of ['Alexandra Johnson', 'Senior Software Engineer']) assert.ok(items.some((t) => t.str === s), `"${s}" on one line`);
   });
 });
 

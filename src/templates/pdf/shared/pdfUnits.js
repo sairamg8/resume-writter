@@ -18,6 +18,10 @@ export function pxToPt(px) {
   return Number(px) * CSS_PX_TO_PT;
 }
 
+/** An A4 page's width, and a millimetre (page margins are stored in mm), in PDF points. */
+export const A4_WIDTH_PT = 595.28;
+export const MM_TO_PT = 72 / 25.4;
+
 /** Tailwind `mb-5` = 1.25rem = 20px at default root — used by classic/minimal/executive headers. */
 export const HEADER_MARGIN_BOTTOM_PT = pxToPt(20); // 15
 
