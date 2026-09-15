@@ -18,6 +18,7 @@ flowcv/
 │   │   ├── CareerHistoryPanel.jsx
 │   │   ├── CoverLetterPanel.jsx
 │   │   ├── DesignPanel*.jsx
+│   │   ├── EditorHeader|EditorResumeTab|EditorPreviewPane.jsx  # the Editor page's parts
 │   │   ├── ExportDropdown.jsx
 │   │   ├── LayoutToggle.jsx
 │   │   ├── PaginatedPreview.jsx
@@ -33,6 +34,7 @@ flowcv/
 │   ├── hooks/
 │   │   ├── useAuth.js
 │   │   ├── useCloudSync.js
+│   │   ├── useEditorExports.js, usePanelResize.js  # the Editor's export menu and panel drag
 │   │   ├── useResumeStore.js
 │   │   ├── useResumeSectionActions.js
 │   │   ├── useJobStore.js
