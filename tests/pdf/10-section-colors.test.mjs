@@ -11,7 +11,7 @@ const NAVY = '#1e3a8a';
 const sections = () => [
   experience([{ description: '<p>ExpDesc text</p>', bullets: ['BulletItem'], location: 'Cityville' }]),
   section('education', [{ institution: 'Uni', degree: 'BSc', description: '<p>EduDesc text</p>' }]),
-  section('projects', [{ name: 'Proj', technologies: 'TechStack', description: '<p>ProjDesc text</p>' }]),
+  section('projects', [{ name: 'Proj', technologies: 'TechStack', description: '<p>ProjDesc text</p>', startDate: '06/2021', endDate: '07/2022' }]),
   section('skills', [{ category: 'Cat', skills: 'SkillList, More' }]),
   section('certifications', [{ name: 'Cert', issuer: 'CertIssuer', credentialId: 'CRED-1', date: '2023' }]),
   section('languages', [{ language: 'English', proficiency: 'ProfLevel' }]),
@@ -35,14 +35,14 @@ function runsOf(template) {
   if (template === 'sidebar') {
     return {
       AwardIssuer: '#4b5563', AwardDesc: '#4b5563', VolTown: '#9ca3af', VolDesc: '#333333', CustDesc: '#333333', 'Spring 2024': '#9ca3af',
-      ExpDesc: '#333333', BulletItem: '#333333', ProjDesc: '#333333', '01/2020': '#9ca3af', // the experience and project cards
+      ExpDesc: '#333333', BulletItem: '#333333', ProjDesc: '#333333', '01/2020': '#9ca3af', '06/2021': '#9ca3af', // the experience and project cards
     };
   }
   const own = {
     classic: { VolOrg: '#4b5563', CustSub: '#4b5563', ...HEADER },
     modern: {},
-    minimal: { VolOrg: '#555555', CustSub: '#555555', 'Spring 2024': '#4b5563', ...HEADER, SummaryText: '#555555' },
-    executive: { VolOrg: '#4b5563', CustSub: '#4b5563', 'Spring 2024': '#4b5563', ...HEADER },
+    minimal: { VolOrg: '#555555', CustSub: '#555555', 'Spring 2024': '#4b5563', '06/2021': '#4b5563', ...HEADER, SummaryText: '#555555' },
+    executive: { VolOrg: '#4b5563', CustSub: '#4b5563', 'Spring 2024': '#4b5563', '06/2021': '#4b5563', ...HEADER },
   }[template];
   return { ...RUNS, ...own };
 }

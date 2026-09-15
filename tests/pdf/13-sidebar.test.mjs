@@ -132,10 +132,12 @@ describe('Sidebar labels extract as whole words (FIDB-68)', () => {
     section('references', [{ name: 'Jane' }]),
   ], { settings, personal: { email: 'me@example.com', phone: '+1 555 0100', location: 'Hyderabad', website: 'example.com', linkedin: 'linkedin.com/in/me', github: 'github.com/me' } });
 
-  it('pdf.js and every pdftotext mode read each label and heading as one word, at every base size', async (t) => {
+  // The column's labels and headings keep their own size (8 and 8.5 pt) at any base size, so the
+  // smallest and largest base size stand for all of them (R6-11: 9 sizes drew the same labels).
+  it('pdf.js and every pdftotext mode read each label and heading as one word, at the smallest and largest base size', async (t) => {
     if (!hasPdftotext) t.diagnostic('pdftotext not installed: Poppler not checked');
     const found = [];
-    for (let fontSizeBase = 8; fontSizeBase <= 16; fontSizeBase += 1) {
+    for (const fontSizeBase of [8, 16]) {
       for (const s of await splitWords(await render(labelled({ fontSizeBase })), WORDS)) found.push(`base ${fontSizeBase} pt, ${s}`);
     }
     assert.deepEqual(found, []);
