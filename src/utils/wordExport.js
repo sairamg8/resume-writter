@@ -4,8 +4,10 @@ import { buildPersonalSection, buildSection } from '@/utils/wordExportBuilders';
 import { buildCoverLetter } from '@/utils/wordExportCoverLetter';
 import { resolveSection } from '@/templates/pdf/shared/templateSectionDefaults';
 import { downloadBlob } from '@/utils/download';
+import { PAGE_SIZES, pageSizeOf } from '@/constants/pageSize';
 
-function buildDocument(children) {
+/** A one-section document on the résumé's paper (A4 or US Letter, PAR-01), 0.75 in margins on either. */
+function buildDocument(children, settings) {
   return new Document({
     styles: {
       default: {
@@ -18,6 +20,7 @@ function buildDocument(children) {
     sections: [{
       properties: {
         page: {
+          size: PAGE_SIZES[pageSizeOf(settings)].twips,
           margin: {
             top: convertInchesToTwip(0.75),
             right: convertInchesToTwip(0.75),
@@ -40,7 +43,7 @@ export async function renderResumeDocx(resume) {
     // Template defaults (e.g. Executive and Sidebar put the role first) apply as in the PDF.
     ...sections.flatMap((s) => buildSection(resolveSection(s, template), accentHex)),
   ];
-  return Packer.toBlob(buildDocument(children));
+  return Packer.toBlob(buildDocument(children, settings));
 }
 
 export async function exportToWord(resume, filename = 'resume.docx') {
@@ -49,7 +52,7 @@ export async function exportToWord(resume, filename = 'resume.docx') {
 
 /** The cover letter as a .docx Blob — the same content as the cover-letter PDF. */
 export async function renderCoverLetterDocx(resume) {
-  return Packer.toBlob(buildDocument(buildCoverLetter(resume)));
+  return Packer.toBlob(buildDocument(buildCoverLetter(resume), resume?.settings));
 }
 
 export async function exportCoverLetterToWord(resume, filename = 'cover-letter.docx') {

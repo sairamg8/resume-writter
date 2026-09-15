@@ -1,11 +1,12 @@
 // Page size (PAR-01): A4 or US Letter — one setting per résumé, `settings.pageSize`, that its
-// cover letter shares. Letter prints a 612 × 792 pt page in every template and the letter and lays
-// the content out to Letter's width; a résumé with no page size — every résumé saved before the
-// setting — or one this build does not know prints the A4 page it always printed.
+// cover letter shares. Letter prints a 612 × 792 pt page in every template and the letter, lays
+// the content out to Letter's width, and sizes both Word files; a résumé with no page size — every
+// résumé saved before the setting — or one this build does not know prints the A4 page it always
+// printed.
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  setup, teardown, resume, section, experience, render, renderCover, read, overlaps, allItems, MM, TEMPLATES,
+  setup, teardown, resume, section, experience, render, renderCover, renderDocx, read, readDocx, overlaps, allItems, loadModule, MM, TEMPLATES,
 } from './harness.mjs';
 import { drawing, painted, PNG_2X2 as PNG } from './extractors.mjs';
 
@@ -197,6 +198,43 @@ describe('page breaks on US Letter, swept over résumé length (PAR-01)', () => 
         if (printed < k) found.push(`k=${k}: ${printed}/${k} entry headers printed`);
       }
       assert.deepEqual(found, []);
+    });
+  }
+});
+
+describe('Word: the résumé and the letter .docx (PAR-01)', () => {
+  /** The .docx's page: its size and margins, as <w:sectPr> writes them. */
+  const sectPr = (xml) => {
+    const tags = xml.match(/<w:sectPr>.*?<\/w:sectPr>/g) || [];
+    assert.equal(tags.length, 1, 'one section');
+    const attr = (tag, name) => Number((tags[0].match(new RegExp(`<w:${tag} [^>]*w:${name}="(\\d+)"`)) || [])[1]);
+    return {
+      size: [attr('pgSz', 'w'), attr('pgSz', 'h')],
+      portrait: /<w:pgSz [^>]*w:orient="portrait"/.test(tags[0]),
+      margins: ['top', 'right', 'bottom', 'left'].map((side) => attr('pgMar', side)),
+    };
+  };
+  const letterDocx = async (r) => {
+    const { renderCoverLetterDocx } = await loadModule('/src/utils/wordExport.js');
+    return readDocx(new Uint8Array(await (await renderCoverLetterDocx(r)).arrayBuffer()));
+  };
+  const MARGINS = [1080, 1080, 1080, 1080]; // 0.75 in, whatever the paper
+
+  for (const [label, docx] of [['résumé', renderDocx], ['letter', letterDocx]]) {
+    it(`the ${label}: a US Letter page, 12240 × 15840 twips, with the same 0.75 in margins, under every template`, async () => {
+      for (const template of TEMPLATES) {
+        const page = sectPr((await docx(resume({ template, settings: { pageSize: 'LETTER' }, sections: [experience([{}])] }))).xml);
+        assert.deepEqual(page, { size: [12240, 15840], portrait: true, margins: MARGINS }, template);
+      }
+    });
+
+    it(`the ${label}: A4, 11906 × 16838 twips, for no page size (saved data), "A4" and an unknown size`, async () => {
+      for (const pageSize of [undefined, 'A4', 'Legal']) {
+        const r = resume({ settings: { pageSize }, sections: [experience([{}])] });
+        if (pageSize === undefined) delete r.settings.pageSize;
+        const page = sectPr((await docx(r)).xml);
+        assert.deepEqual(page, { size: [11906, 16838], portrait: true, margins: MARGINS }, String(pageSize));
+      }
     });
   }
 });
