@@ -5,7 +5,7 @@ import { createSyncActions } from '@/hooks/useResumeSyncActions';
 import { newId } from '@/utils/ids';
 import { templateStyleDefaults } from '@/constants/templates';
 import { DATA_VERSION, normalizeResume } from '@/utils/normalizeResume';
-import { loadSavedList, pendingRecovery, rememberRecovery, setItemWithRoom } from '@/utils/storageBackup';
+import { backupRaw, pendingRecovery, readSavedList, rememberRecovery, setItemWithRoom } from '@/utils/storageBackup';
 import { savedDeletions } from '@/utils/localDeletions';
 import { isOriginal, withKeep } from '@/utils/demoSeed';
 
@@ -19,16 +19,16 @@ function emptyStore() {
 const isResume = (r) => Boolean(r && typeof r === 'object' && !Array.isArray(r) && r.id);
 
 /**
- * The saved store, as `{ state, recovery }`. Whatever cannot be read — the whole value or single
- * résumés — is left out, after the raw value is copied to a backup key, and `recovery` says so
- * (loadSavedList, shared with the job list). A résumé without an id used to be dropped with no
- * copy and no word, and the next save replaced it (R4-6).
+ * The saved store, as `{ state, unreadable }` — read only. Whatever cannot be read — the whole
+ * value or single résumés — is left out, and `unreadable` is then the raw value, which useAppStore
+ * copies to a backup key before its first save replaces it (readSavedList, shared with the job
+ * list). A résumé without an id used to be dropped with no copy and no word, and the next save
+ * replaced it (R4-6). This is a useState initializer, which React's StrictMode runs twice in
+ * development: it used to make the backup and keep the notice itself (VM4-9).
  */
-function loadStore() {
-  const { saved, list, recovery: found } = loadSavedList(STORAGE_KEY, 'resumes', r => ({ kept: isResume(r) ? r : null }));
-  // Kept until dismissed: the repaired store is saved over at once, so a reload would lose it.
-  const recovery = found ? rememberRecovery(STORAGE_KEY, found) : null;
-  if (!saved) return { state: emptyStore(), recovery };
+function readStore() {
+  const { saved, list, unreadable } = readSavedList(STORAGE_KEY, 'resumes', r => ({ kept: isResume(r) ? r : null }));
+  if (!saved) return { state: emptyStore(), unreadable };
   // Any data version is kept: user resumes must survive an app upgrade (or downgrade). Each
   // résumé is migrated from its own dataVersion (normalizeResume), not the store's.
   const resumes = list.map(normalizeResume);
@@ -40,22 +40,31 @@ function loadStore() {
       ...savedDeletions(saved), // deletedIds, deletedInfo, syncedUid (a store saved before R8-0 has ids only)
       dataVersion: DATA_VERSION,
     },
-    recovery,
+    unreadable,
   };
 }
 
 export function useAppStore() {
-  const [loaded] = useState(loadStore);
+  const [loaded] = useState(readStore);
   const [appState, setAppState] = useState(loaded.state);
   // null when the last write reached localStorage; otherwise the error (usually QuotaExceededError).
   const [persistError, setPersistError] = useState(null);
   // Set when the saved store could not be read in full; the dashboard shows it until dismissed.
-  const [recovery, setRecovery] = useState(() => loaded.recovery || pendingRecovery(STORAGE_KEY));
+  const [recovery, setRecovery] = useState(() => pendingRecovery(STORAGE_KEY));
 
   function dismissRecovery() {
     rememberRecovery(STORAGE_KEY, null);
     setRecovery(null);
   }
+
+  // Before the save below replaces the stored value, what could not be read is copied, and the
+  // notice kept until dismissed: the repaired store is saved over at once, so a reload would lose
+  // it. An effect, so a render writes nothing (VM4-9); StrictMode runs this one twice as well,
+  // and a second copy of the same value is the first one's key (backupRaw).
+  useEffect(() => {
+    if (loaded.unreadable === null) return;
+    setRecovery(rememberRecovery(STORAGE_KEY, { backupKey: backupRaw(STORAGE_KEY, loaded.unreadable) }));
+  }, [loaded]);
 
   useEffect(() => {
     try {

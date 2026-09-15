@@ -91,28 +91,28 @@ export function readBackup(backupKey) {
 }
 
 /**
- * Read the list `field` of the object saved under `key`, as `{ saved, list, recovery }`:
- *   saved     the parsed object; null when nothing is saved or the value cannot be read
- *   list      the entries kept — `readEntry(entry)` returns `{ kept, lost }`: kept the entry, a
- *             repaired copy, or null to leave it out; lost whether that lost anything the entry
- *             held (when not said: whenever kept is not the entry itself). null when nothing is
- *             saved (or storage cannot be read at all)
- *   recovery  when the value could not be read, or something in it was lost: `{ backupKey }` —
- *             the raw value was first copied to that key (backupRaw), because the next save
- *             replaces it; backupKey null when storage refused the copy. Else null: a repair that
- *             loses nothing (the job list's numbers turned into their digits) needs no copy and no
- *             notice — it used to get both, the notice saying something was left out (VM4-5).
- * The résumé store and the job list both load through here (R4-6), so a list that cannot be
- * read in full is backed up and reported the same way for both.
+ * Read the list `field` of the object saved under `key`, writing nothing, as
+ * `{ saved, list, unreadable }`:
+ *   saved       the parsed object; null when nothing is saved or the value cannot be read
+ *   list        the entries kept — `readEntry(entry)` returns `{ kept, lost }`: kept the entry, a
+ *               repaired copy, or null to leave it out; lost whether that lost anything the entry
+ *               held (when not said: whenever kept is not the entry itself). null when nothing is
+ *               saved (or storage cannot be read at all)
+ *   unreadable  the raw value, when it could not be read or something in it was lost: it is to be
+ *               copied (backupRaw) before the next save replaces it. Else null: a repair that
+ *               loses nothing (the job list's numbers turned into their digits) needs no copy and
+ *               no notice — it used to get both, the notice saying something was left out (VM4-5).
+ * The résumé store reads through here in a render (useAppStore's useState initializer, which
+ * React's StrictMode runs twice in development), and backs up from an effect (VM4-9).
  */
-export function loadSavedList(key, field, readEntry) {
-  const none = { saved: null, list: null, recovery: null };
+export function readSavedList(key, field, readEntry) {
+  const none = { saved: null, list: null, unreadable: null };
   let raw = null;
   try { raw = localStorage.getItem(key); } catch { return none; }
   if (!raw) return none;
   let saved = null;
   try { saved = JSON.parse(raw); } catch { /* unreadable: handled below */ }
-  if (!Array.isArray(saved?.[field])) return { saved: null, list: [], recovery: { backupKey: backupRaw(key, raw) } };
+  if (!Array.isArray(saved?.[field])) return { saved: null, list: [], unreadable: raw };
 
   const list = [];
   let anyLost = false;
@@ -121,7 +121,19 @@ export function loadSavedList(key, field, readEntry) {
     if (lost) anyLost = true;
     if (kept) list.push(kept);
   }
-  return { saved, list, recovery: anyLost ? { backupKey: backupRaw(key, raw) } : null };
+  return { saved, list, unreadable: anyLost ? raw : null };
+}
+
+/**
+ * readSavedList, and what could not be read backed up at once, as `{ saved, list, recovery }`:
+ * recovery `{ backupKey }` when there was something — the key of the raw value's copy
+ * (backupRaw), null when storage refused it — else null. The job list loads through here, once
+ * per visit (useJobStore's snapshot); the résumé store reads the same way (R4-6), so a list that
+ * cannot be read in full is backed up and reported alike for both.
+ */
+export function loadSavedList(key, field, readEntry) {
+  const { saved, list, unreadable } = readSavedList(key, field, readEntry);
+  return { saved, list, recovery: unreadable === null ? null : { backupKey: backupRaw(key, unreadable) } };
 }
 
 /**

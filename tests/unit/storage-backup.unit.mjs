@@ -3,7 +3,7 @@
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  loadSavedList, pendingRecovery, rememberRecovery, backupRaw, setItemWithRoom, readBackup, BACKUPS_KEPT,
+  loadSavedList, readSavedList, pendingRecovery, rememberRecovery, backupRaw, setItemWithRoom, readBackup, BACKUPS_KEPT,
 } from '../../src/utils/storageBackup.js';
 import { readJob } from '../../src/utils/normalizeJob.js';
 
@@ -82,6 +82,17 @@ test('loadSavedList: a repair that loses nothing needs no backup and no notice â
   localStorage.setItem(JOBS, raw);
   const lossy = loadSavedList(JOBS, 'jobs', readJob);
   assert.equal(localStorage.getItem(lossy.recovery.backupKey), raw, 'a to-do left out still is a loss');
+});
+
+test('readSavedList reads the same way and writes nothing: the raw value is handed back to copy (VM4-9)', () => {
+  const raw = JSON.stringify({ resumes: [{ name: 'no id' }, { id: 'r2' }] });
+  localStorage.setItem(KEY, raw);
+  assert.deepEqual(readSavedList(KEY, 'resumes', keepWithId), { saved: JSON.parse(raw), list: [{ id: 'r2' }], unreadable: raw });
+  localStorage.setItem(KEY, '{ not json');
+  assert.deepEqual(readSavedList(KEY, 'resumes', keepWithId), { saved: null, list: [], unreadable: '{ not json' });
+  localStorage.setItem(KEY, JSON.stringify({ resumes: [{ id: 'r3' }] }));
+  assert.equal(readSavedList(KEY, 'resumes', keepWithId).unreadable, null);
+  assert.deepEqual([...localStorage.map.keys()], [KEY], 'no backup, no notice');
 });
 
 test('loadSavedList: storage that refuses the copy still reports the loss, with no key', () => {
