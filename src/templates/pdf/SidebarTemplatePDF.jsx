@@ -13,6 +13,7 @@ import { ContactValue } from './shared/PdfContact';
 import { CONTACT_LABELS, contactItems } from '@/utils/contacts';
 import { SIDEBAR_TYPES, SideSectionTitle, renderSideSection, SidebarMainSectionRouter } from './shared/PdfSidebarSections';
 import { sidebarShades } from './shared/pdfColors';
+import { pageSizeOf } from '@/constants/pageSize';
 
 /** A contact in the dark column: icon and label in the column's label colour, not the accent. */
 function SideContactRow({ field, label, value, href, iconPt, settings, shades }) {
@@ -93,7 +94,7 @@ export function SidebarTemplatePDF({ data }) {
 
   return (
     <Document {...getDocumentProps(personal)}>
-      <Page size="A4" style={pageStyle} wrap>
+      <Page size={pageSizeOf(settings)} style={pageStyle} wrap>
         <View style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '38%', backgroundColor: sidebarBg }} fixed />
 
         <View style={{

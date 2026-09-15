@@ -7,6 +7,7 @@ import { letterheadLook } from './shared/letterhead';
 import { CoverLetterHeader } from './CoverLetterHeaderPDF';
 import { letterBlock, letterContactFormat, letterHiddenFields, letterSignature } from '@/utils/coverLetter';
 import { hasRichText } from '@/utils/richText';
+import { pageSizeOf } from '@/constants/pageSize';
 
 /** Space under the date, the recipient block and the subject. */
 const BLOCK_GAP = 12;
@@ -43,7 +44,7 @@ export function CoverLetterTemplatePDF({ data }) {
       title={personal?.name ? `${personal.name} Cover Letter` : 'Cover Letter'}
       subject="Cover Letter"
     >
-      <Page size="A4" style={{ ...pageStyle, color: textColor }}>
+      <Page size={pageSizeOf(settings)} style={{ ...pageStyle, color: textColor }}>
         <CoverLetterHeader
           look={look}
           personal={personal}

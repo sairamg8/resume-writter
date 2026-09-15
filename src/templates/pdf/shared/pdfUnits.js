@@ -18,8 +18,10 @@ export function pxToPt(px) {
   return Number(px) * CSS_PX_TO_PT;
 }
 
-/** An A4 page's width, and a millimetre (page margins are stored in mm), in PDF points. */
-export const A4_WIDTH_PT = 595.28;
+/**
+ * A millimetre (page margins are stored in mm), in PDF points. The page's own size is the résumé's
+ * (A4 or US Letter): src/constants/pageSize.js.
+ */
 export const MM_TO_PT = 72 / 25.4;
 
 /**

@@ -9,6 +9,7 @@ import { getPdfPhotoStyle } from './shared/pdfPhoto';
 import { PdfPhoto } from './shared/PdfPhoto';
 import { solid, textShades } from './shared/pdfColors';
 import { photoTextAlignItems } from '@/constants/templates';
+import { pageSizeOf } from '@/constants/pageSize';
 
 
 export function MinimalTemplatePDF({ data }) {
@@ -73,7 +74,7 @@ export function MinimalTemplatePDF({ data }) {
 
   return (
     <Document {...getDocumentProps(personal)}>
-      <Page size="A4" style={pageStyle} wrap>
+      <Page size={pageSizeOf(settings)} style={pageStyle} wrap>
         <View style={[{ marginBottom: headerMb }, headerBorderStyle]} wrap={false}>
           <View style={{
             flexDirection: centered ? 'column' : 'row',

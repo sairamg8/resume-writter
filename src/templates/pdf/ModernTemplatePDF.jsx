@@ -12,6 +12,7 @@ import { PdfPhoto } from './shared/PdfPhoto';
 import { opacityFor } from './shared/pdfColors';
 import { MODERN_HEADER_PAD_X_PT, MODERN_HEADER_PAD_Y_PT, pxToPt } from './shared/pdfUnits';
 import { photoTextAlignItems } from '@/constants/templates';
+import { pageSizeOf } from '@/constants/pageSize';
 
 const CSS_ICON_SCALE = 0.9;
 
@@ -61,7 +62,7 @@ export function ModernTemplatePDF({ data }) {
 
   return (
     <Document {...getDocumentProps(personal)}>
-      <Page size="A4" style={pageStyle} wrap>
+      <Page size={pageSizeOf(settings)} style={pageStyle} wrap>
         <View style={{
           backgroundColor: accent,
           borderRadius: 2,
