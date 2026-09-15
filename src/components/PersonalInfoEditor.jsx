@@ -41,10 +41,8 @@ export default function PersonalInfoEditor({ personal, updatePersonal, toggleFie
 
   function onPickIconFile(field, file) {
     if (!file || !file.type.startsWith('image/')) return;
-    if (file.size > 400_000) {
-      alert('Icon image should be under 400KB.');
-      return;
-    }
+    // The 400 KB limit is readImageFile's, on the icon as stored: a big BMP or WebP converts to a
+    // few KB, so the upload's own size decides nothing (R7-15).
     readImageFile(file, { kind: 'icon' }).then(dataUrl => setCustomIcon(field, dataUrl), err => alert(err.message));
   }
 

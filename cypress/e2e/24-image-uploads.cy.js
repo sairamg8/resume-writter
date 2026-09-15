@@ -143,3 +143,48 @@ describe('every upload is scaled to what the PDF prints (R7-4)', () => {
       .should((img) => expect([img.width, img.height]).to.deep.equal([256, 256]));
   });
 });
+
+/** A `w`×`h` 24-bit BMP of one colour: a 54-byte header and 3 uncompressed bytes a pixel. */
+function bmp(w, h) {
+  const row = Math.ceil((w * 3) / 4) * 4;
+  const buf = Cypress.Buffer.alloc(54 + row * h);
+  buf.write('BM', 0, 'latin1');
+  buf.writeUInt32LE(buf.length, 2);
+  buf.writeUInt32LE(54, 10);
+  buf.writeUInt32LE(40, 14);
+  buf.writeInt32LE(w, 18);
+  buf.writeInt32LE(h, 22);
+  buf.writeUInt16LE(1, 26);
+  buf.writeUInt16LE(24, 28);
+  buf.writeUInt32LE(row * h, 34);
+  for (let y = 0; y < h; y += 1) {
+    for (let x = 0; x < w; x += 1) buf.set([0xeb, 0x63, 0x25], 54 + y * row + x * 3); // #2563eb, as BGR
+  }
+  return buf;
+}
+const icons = (s) => Object.values(active(s).settings.customContactIcons || {});
+
+describe('the 400 KB icon limit is on the icon as stored, not on the upload (R7-15)', () => {
+  beforeEach(() => {
+    cy.visitEditor('classic', { state: buildTestState('classic') });
+    cy.on('window:alert', cy.stub().as('alert'));
+  });
+
+  it('a 600 KB BMP icon is taken: stored as a PNG of a few KB', () => {
+    iconInput().selectFile({ contents: bmp(400, 500), fileName: 'mail.bmp', mimeType: 'image/bmp' }, { force: true });
+    cy.store().should((s) => {
+      expect(icons(s)).to.have.length(1);
+      expect(icons(s)[0]).to.match(/^data:image\/png;base64,/);
+      expect(bytesOf(icons(s)[0])).to.be.below(20_000);
+    });
+    cy.get('@alert').should('not.have.been.called');
+  });
+
+  // A guard: an SVG is stored as it is, so its upload is its stored size, and it was always refused.
+  it('an SVG icon over 400 KB is refused with a message, and nothing is stored', () => {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><!--${'x'.repeat(410_000)}--><circle cx="12" cy="12" r="10"/></svg>`;
+    iconInput().selectFile({ contents: Cypress.Buffer.from(svg), fileName: 'mail.svg', mimeType: 'image/svg+xml' }, { force: true });
+    cy.get('@alert').should('have.been.calledWithMatch', /400 ?KB/);
+    cy.store().should((s) => expect(icons(s)).to.have.length(0));
+  });
+});
