@@ -47,14 +47,17 @@ export function rememberDemo(seed, resumes) {
 
 /**
  * The sample set to put back: each résumé's latest copy from `seed`, else its built-in version
- * from `pristine`. Stamped `now` so it wins the sync merge over an older copy on another device.
+ * from `pristine`, stamped `now`. A copy keeps its own `updatedAt` (R4-4): the sync still writes
+ * every résumé that comes back, but a newer edit of it on another device wins the next merge
+ * and repairs the cloud. Stamped `now`, a stale device's copies used to beat that edit. A
+ * flagged cloud copy comes back without its deleted flag.
  */
 export function buildDemoRestore(pristine, seed, now) {
-  return pristine.map(p => ({
-    ...JSON.parse(JSON.stringify(seed.get(p.id) || p)),
-    id: p.id,
-    updatedAt: now,
-  }));
+  return pristine.map(p => {
+    const copy = seed.get(p.id);
+    const { deleted: _deleted, ...r } = JSON.parse(JSON.stringify(copy || p));
+    return { ...r, id: p.id, updatedAt: copy?.updatedAt || now };
+  });
 }
 
 /**

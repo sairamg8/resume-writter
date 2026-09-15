@@ -232,5 +232,19 @@ export function useCloudSync({ user, appState, store }) {
     }
   }
 
-  return { syncStatus, lastSynced, isOnline, account };
+  /**
+   * The account's sample résumés with these `ids` as the cloud holds them now, flagged ones
+   * included — a restore then brings back an edit another device made after this one's first
+   * sync (R4-4). null when there is no cloud to ask, or it gives no answer within 5 s.
+   */
+  function readCloudDemo(ids) {
+    const s = stateRef.current;
+    if (!user || !db || s.cloudDisabled || !s.initialSyncDone || !navigator.onLine) return Promise.resolve(null);
+    const read = Promise.all(ids.map(id => getDoc(resumeDoc(user.uid, id))))
+      .then(snaps => snaps.filter(d => d.exists()).map(d => ({ ...d.data(), id: d.id })));
+    const timeout = new Promise(resolve => { setTimeout(() => resolve(null), 5000); });
+    return Promise.race([read, timeout]).catch(() => null);
+  }
+
+  return { syncStatus, lastSynced, isOnline, account, readCloudDemo };
 }

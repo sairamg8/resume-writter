@@ -11,25 +11,39 @@ import { DEMO_ACCOUNTS, DEMO_RESUMES } from '@/utils/demoResumes';
 export function useDemoSeed({ user, appState, store, sync }) {
   const demo = isDemoAccount(user, DEMO_ACCOUNTS);
   const ready = demo && sync.account?.uid === user.uid;
-  // Latest copy of each sample seen for the signed-in account, deleted ones included.
-  const seedRef = useRef({ uid: null, copies: new Map() });
+  // Latest copy of each sample seen for the signed-in account, deleted ones included; `restoring`
+  // while the cloud is asked for its copies.
+  const seedRef = useRef({ uid: null, copies: new Map(), restoring: false });
+  // The account a restore may still be applied to: null once it signs out.
+  const liveRef = useRef(null);
 
-  function copiesFor(uid) {
-    if (seedRef.current.uid !== uid) seedRef.current = { uid, copies: new Map() };
-    return seedRef.current.copies;
+  function seedFor(uid) {
+    if (seedRef.current.uid !== uid) seedRef.current = { uid, copies: new Map(), restoring: false };
+    return seedRef.current;
   }
 
   useEffect(() => {
-    if (ready) rememberDemo(copiesFor(user.uid), sync.account.cloudDemo);
+    liveRef.current = ready ? user.uid : null;
+    if (ready) rememberDemo(seedFor(user.uid).copies, sync.account.cloudDemo);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, sync.account]);
 
   useEffect(() => {
     if (!demo) return;
-    const copies = rememberDemo(copiesFor(user.uid), appState.resumes);
-    if (ready && needsDemoRestore(appState.resumes)) {
-      store.restoreResumes(buildDemoRestore(DEMO_RESUMES, copies, Date.now()));
-    }
+    const seed = seedFor(user.uid);
+    rememberDemo(seed.copies, appState.resumes);
+    if (!ready || seed.restoring || !needsDemoRestore(appState.resumes)) return;
+    // The cloud's copies first: another device may have edited a sample since this one's first
+    // sync (R4-4). Without an answer, the copies this browser knows come back.
+    seed.restoring = true;
+    Promise.resolve(sync.readCloudDemo?.(DEMO_RESUMES.map(r => r.id)))
+      .catch(() => null)
+      .then((cloud) => {
+        seed.restoring = false;
+        if (seedRef.current !== seed || liveRef.current !== seed.uid) return; // signed out meanwhile
+        rememberDemo(seed.copies, cloud);
+        store.restoreResumes(buildDemoRestore(DEMO_RESUMES, seed.copies, Date.now()));
+      });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [demo, ready, user?.uid, appState.resumes]);
 }
