@@ -14,7 +14,6 @@ const spacer = (after = 60) => new Paragraph({ children: [], spacing: { after } 
 const shown = (section) => (section.items || []).filter((item) => item && item.visible !== false);
 /** A field of an entry, or '' when its eye toggle hides it. */
 const field = (item, key) => ((item.hiddenFields || []).includes(key) ? '' : (item[key] || ''));
-const range = dateRange;
 
 /** Description + legacy bullets of an entry. */
 function body(item) {
@@ -72,7 +71,7 @@ export function buildExperience(section, accentHex) {
     const [primary, secondary] = s.titleOrder === 'role' ? [role, company] : [company, role];
     const location = s.showLocation !== false ? field(item, 'location') : '';
     const end = field(item, 'endDate') && !item.current ? field(item, 'endDate') : '';
-    const dates = range(field(item, 'startDate'), item.current && !(item.hiddenFields || []).includes('endDate') ? 'Present' : end);
+    const dates = dateRange(field(item, 'startDate'), item.current && !(item.hiddenFields || []).includes('endDate') ? 'Present' : end);
     paras.push(dateRightPara([
       bold(primary, { size: 20 }),
       ...(secondary ? [normal(`${primary ? ' — ' : ''}${secondary}`, { size: 20 })] : []),
@@ -94,7 +93,7 @@ export function buildEducation(section, accentHex) {
       ...(item.institution && degree ? [normal(` — ${degree}`, { size: 20 })] : []),
       ...(item.gpa ? [normal(` · GPA: ${item.gpa}`, { size: 20, color: GREY })] : []),
       ...(location ? [normal(`, ${location}`, { size: 20, color: GREY })] : []),
-    ], s.showDates !== false ? range(item.startDate, item.endDate) : '', accentHex));
+    ], s.showDates !== false ? dateRange(item.startDate, item.endDate) : '', accentHex));
     paras.push(...body(item), spacer());
   }
   return paras;
@@ -129,7 +128,7 @@ export function buildProjects(section, accentHex) {
       bold(item.name || '', { size: 20 }),
       ...(item.technologies ? [normal(` · ${item.technologies}`, { size: 20, color: GREY })] : []),
       ...(item.url ? [normal(' · ', { size: 20, color: GREY }), linked(item.url, item.url, { size: 20, color: accentHex })] : []),
-    ], s.showDates !== false ? range(item.startDate, item.endDate) : '', accentHex));
+    ], s.showDates !== false ? dateRange(item.startDate, item.endDate) : '', accentHex));
     paras.push(...body(item), spacer());
   }
   return paras;
@@ -159,7 +158,7 @@ export function buildCertifications(section, accentHex) {
       ...(item.issuer ? [normal(` — ${item.issuer}`, { size: 20 })] : []),
       ...(item.credentialId ? [normal(` · ID: ${item.credentialId}`, { size: 20, color: GREY })] : []),
       ...(item.url ? [normal(' · ', { size: 20, color: GREY }), linked(item.urlLabel || item.url, item.url, { size: 20, color: accentHex })] : []),
-    ], s.showDates !== false ? range(item.date, item.expiry) : '', accentHex));
+    ], s.showDates !== false ? dateRange(item.date, item.expiry) : '', accentHex));
     paras.push(spacer(40));
   }
   return paras;
@@ -187,7 +186,7 @@ export function buildVolunteering(section, accentHex) {
       bold(item.role || item.org || '', { size: 20 }),
       ...(item.role && item.org ? [normal(` — ${item.org}`, { size: 20 })] : []),
       ...(location ? [normal(`, ${location}`, { size: 20, color: GREY })] : []),
-    ], s.showDates !== false ? range(item.startDate, item.endDate) : '', accentHex));
+    ], s.showDates !== false ? dateRange(item.startDate, item.endDate) : '', accentHex));
     paras.push(...body(item), spacer());
   }
   return paras;

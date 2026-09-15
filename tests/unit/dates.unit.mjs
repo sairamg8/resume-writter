@@ -9,5 +9,12 @@ test('dateRange: "start – end", either alone, an end alone keeps its dash (R2-
   assert.equal(dateRange('', '03/2027'), '– 03/2027');
   assert.equal(dateRange(undefined, undefined), '');
   assert.equal(dateRange('  05/2023 ', ' 05/2026 '), '05/2023 – 05/2026', 'trimmed');
-  assert.equal(dateRange(null, 7), '', 'not text: nothing');
+});
+
+test('dateRange: a year imported as a number prints as written; other values are nothing (R9-1)', () => {
+  assert.equal(dateRange(2019, 2021), '2019 – 2021');
+  assert.equal(dateRange(null, 7), '– 7');
+  assert.equal(dateRange(2019, '  '), '2019');
+  assert.equal(dateRange({}, NaN), '', 'not a date: nothing');
+  assert.equal(dateRange(true, ['2020']), '', 'not a date: nothing');
 });

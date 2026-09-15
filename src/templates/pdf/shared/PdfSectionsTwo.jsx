@@ -92,9 +92,7 @@ export function ProjectsSection({ section, settings, marginBottom, spaceBefore, 
         cols={cols}
         gap={itemGap}
         renderItem={(item) => {
-          const sd = item.startDate || '';
-          const ed = item.endDate   || '';
-          const dateStr = showDates && (sd || ed) ? `${sd}${ed ? ` – ${ed}` : ''}` : '';
+          const dateStr = showDates ? dateRange(item.startDate, item.endDate) : '';
           return (
             <View>
               <View style={{ alignItems: flexAlign, marginBottom: 2 }}>
@@ -207,9 +205,7 @@ export function VolunteeringSection({ section, settings, marginBottom, spaceBefo
         cols={cols}
         gap={itemGap}
         renderItem={(item) => {
-          const sd = item.startDate || '';
-          const ed = item.endDate   || '';
-          const dateStr = showDates && (sd || ed) ? `${sd}${ed ? ` – ${ed}` : ''}` : '';
+          const dateStr = showDates ? dateRange(item.startDate, item.endDate) : '';
           const loc = showLoc && item.location ? item.location : '';
           return (
             <View>

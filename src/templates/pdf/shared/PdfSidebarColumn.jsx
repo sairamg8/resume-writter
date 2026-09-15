@@ -62,11 +62,9 @@ export function SideEducation({ section, sectionGap, itemGap, shades = NAVY }) {
             {item.fieldOfStudy && <Text style={{ fontSize: 9, color: shades.label, lineHeight: 1.2 }}>{item.fieldOfStudy}</Text>}
             {showLoc && item.location ? <Text style={{ fontSize: 9, color: shades.meta, lineHeight: 1.2 }}>{item.location}</Text> : null}
             {item.gpa && <Text style={{ fontSize: 9, color: shades.meta, lineHeight: 1.2 }}>GPA: {item.gpa}</Text>}
-            {showDates && (item.startDate || item.endDate) && (
-              <Text style={{ fontSize: 9, color: shades.meta, lineHeight: 1.2 }}>
-                {item.startDate}{item.endDate ? ` – ${item.endDate}` : ''}
-              </Text>
-            )}
+            {showDates && dateRange(item.startDate, item.endDate) ? (
+              <Text style={{ fontSize: 9, color: shades.meta, lineHeight: 1.2 }}>{dateRange(item.startDate, item.endDate)}</Text>
+            ) : null}
             {/* Coursework, honours …: printed like the main column's, in the column's light text. */}
             {hasRichText(item.description) ? <PdfRichText html={item.description} style={{ fontSize: 9, color: shades.value, lineHeight: 1.3, marginTop: 2 }} /> : null}
             <RenderBullets bullets={item.bullets} style={{ fontSize: 9, color: shades.value, lineHeight: 1.3 }} />
@@ -121,14 +119,14 @@ export function SideCertifications({ section, sectionGap, itemGap, shades = NAVY
   );
 }
 
+const CHIP_GAP_PT = 2.5;
+const DEFAULT_ITEM_GAP_PT = DEFAULT_ITEM_GAP_PX * CSS_PX_TO_PT;
+
 /**
  * The interest chips' gap follows the section's item gap (its Spacing preset × Design → Between
  * Items, or its own override) in proportion: 2.5 pt at the default 6 pt, as the column always
  * printed it — the controls used to do nothing here (R2-6).
  */
-const CHIP_GAP_PT = 2.5;
-const DEFAULT_ITEM_GAP_PT = DEFAULT_ITEM_GAP_PX * CSS_PX_TO_PT;
-
 export function SideInterests({ section, sectionGap, itemGap = DEFAULT_ITEM_GAP_PT, shades = NAVY }) {
   const visibleItems = (section.items || []).filter(i => i.visible !== false);
   const allInterests = visibleItems.flatMap(item =>

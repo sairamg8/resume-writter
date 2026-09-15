@@ -3,6 +3,7 @@ import { Text } from './PdfText';
 import { PdfRichText } from './PdfRichText';
 import { hasRichText } from '@/utils/richText';
 import { skillGroup, skillSeparator } from '@/utils/skills';
+import { dateRange } from '@/utils/dates';
 import { solid, tint } from './pdfColors';
 import { tracking } from './pdfUnits';
 import {
@@ -41,9 +42,9 @@ export function ExperienceSection({ section, settings, marginBottom, spaceBefore
           const company = iH.includes('company') ? '' : (item.company || '');
           const role    = iH.includes('role')    ? '' : (item.role    || '');
           const loc  = !iH.includes('location') && showLoc ? (item.location || '') : '';
-          const sd   = iH.includes('startDate') ? '' : (item.startDate || '');
-          const ed   = iH.includes('endDate')   ? '' : (item.current   ? 'Present' : (item.endDate || ''));
-          const dateStr = showDates && (sd || ed) ? `${sd}${ed ? ` – ${ed}` : ''}` : '';
+          const sd   = iH.includes('startDate') ? '' : item.startDate;
+          const ed   = iH.includes('endDate')   ? '' : (item.current ? 'Present' : item.endDate);
+          const dateStr = showDates ? dateRange(sd, ed) : '';
           const mainTitle  = titleOrder === 'role' ? role    : company;
           const subTitle   = titleOrder === 'role' ? company : role;
           const desc = iH.includes('description') ? '' : item.description;
@@ -221,9 +222,7 @@ export function EducationSection({ section, settings, marginBottom, spaceBefore,
         cols={cols}
         gap={itemGap}
         renderItem={(item) => {
-          const sd = item.startDate || '';
-          const ed = item.endDate   || '';
-          const dateStr = showDates && (sd || ed) ? `${sd}${ed ? ` – ${ed}` : ''}` : '';
+          const dateStr = showDates ? dateRange(item.startDate, item.endDate) : '';
           const degree  = [item.degree, item.fieldOfStudy ? item.fieldOfStudy : ''].filter(Boolean).join(', ');
           const gpaPart = item.gpa ? ` · GPA: ${item.gpa}` : '';
           const subLine = degree + gpaPart;

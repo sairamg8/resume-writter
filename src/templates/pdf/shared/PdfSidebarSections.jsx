@@ -2,6 +2,7 @@ import { View } from '@react-pdf/renderer';
 import { Text } from './PdfText';
 import { PdfRichText } from './PdfRichText';
 import { hasRichText } from '@/utils/richText';
+import { dateRange } from '@/utils/dates';
 import { SectionTitleOf, RenderBullets, RenderColGrid, hexAlpha, SectionRouter, SPACER, ItemHeader, shadesOf } from './PdfSections';
 import {
   SIDEBAR_TYPES, SideSectionTitle, EntryLink, SideEducation, SideLanguages, SideCertifications, SideInterests, SideReferences,
@@ -79,9 +80,9 @@ export function SidebarMainExperience({ section, settings, marginBottom, spaceBe
           const company  = iH.includes('company')   ? '' : (item.company   || '');
           const role     = iH.includes('role')      ? '' : (item.role      || '');
           const loc      = !iH.includes('location') && showLoc ? (item.location || '') : '';
-          const sd = iH.includes('startDate') ? '' : (item.startDate || '');
-          const ed = iH.includes('endDate')   ? '' : (item.current   ? 'Present' : (item.endDate || ''));
-          const dateStr  = showDates && (sd || ed) ? `${sd}${ed ? ` – ${ed}` : ''}` : '';
+          const sd = iH.includes('startDate') ? '' : item.startDate;
+          const ed = iH.includes('endDate')   ? '' : (item.current ? 'Present' : item.endDate);
+          const dateStr  = showDates ? dateRange(sd, ed) : '';
           const primary  = titleOrder === 'role' ? role    : company;
           const secondary = titleOrder === 'role' ? company : role;
           const subLine  = [secondary, loc].filter(Boolean).join(' · ');
@@ -131,9 +132,7 @@ export function SidebarMainProjects({ section, settings, marginBottom, spaceBefo
         cols={s.columns || 1}
         gap={itemGap}
         renderItem={(item, idx) => {
-          const sd = item.startDate || '';
-          const ed = item.endDate   || '';
-          const dateStr = showDates && (sd || ed) ? `${sd}${ed ? ` – ${ed}` : ''}` : '';
+          const dateStr = showDates ? dateRange(item.startDate, item.endDate) : '';
           return (
             <CardItem key={idx}>
               <CardHeader centered={centered} entrySize={entrySize} lineH={lineH} dateStr={dateStr} dateStyle={dateStyle}>

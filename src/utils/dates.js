@@ -24,13 +24,17 @@ export function deadlineState(iso, now = new Date()) {
   return end - now < SOON_MS ? 'soon' : null;
 }
 
+/** A stored date as text: trimmed; a year imported as a number (2019) as written; else ''. */
+const dateText = (v) => (typeof v === 'string' ? v.trim() : (Number.isFinite(v) ? String(v) : ''));
+
 /**
  * A from–to range as the exports print it: "05/2023 – 05/2026", "05/2023" alone, "– 05/2026"
- * when only the end is known (a certificate's expiry), '' when neither is. One helper for the
- * PDF's two columns and Word, which each built it slightly differently (R2-7).
+ * when only the end is known (a certificate's expiry, a current job with no start: "– Present"),
+ * '' when neither is. The one rule for every dated section of the PDF's two columns and of Word,
+ * which each built it slightly differently (R2-7, R9-2).
  */
 export function dateRange(start, end) {
-  const [a, b] = [start, end].map((v) => (typeof v === 'string' ? v.trim() : ''));
+  const [a, b] = [start, end].map(dateText);
   if (a && b) return `${a} – ${b}`;
   return a || (b ? `– ${b}` : '');
 }
