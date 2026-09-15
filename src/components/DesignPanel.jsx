@@ -68,6 +68,7 @@ export default function DesignPanel({ resume, updateSetting, setTemplate, resetS
             </button>
           ))}
         </div>
+        <p className="text-[10px] text-gray-400 mt-2">The cover letter&apos;s header takes the template&apos;s look too.</p>
       </DesignSection>
 
       <ColorsSection resume={resume} settings={settings} updateSetting={updateSetting} onReset={() => resetSection(COLOR_KEYS)} />

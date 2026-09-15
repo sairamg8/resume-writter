@@ -1,8 +1,9 @@
 import { useRef } from 'react';
-import { Mail, Phone, MapPin, Globe, Link2, Code, Eye, EyeOff, Camera } from 'lucide-react';
+import { Mail, Phone, MapPin, Globe, Link2, Code, Eye, EyeOff, Camera, Palette } from 'lucide-react';
 import RichTextEditor from '@/components/RichTextEditor';
 import { Chip, Field, SectionBlock } from '@/components/CoverLetterPanelShared';
 import { letterContactFormat, letterHiddenFields, todayLetterDate } from '@/utils/coverLetter';
+import { letterheadCentered, templateLabel } from '@/constants/templates';
 import { readImageFile } from '@/utils/imageUpload';
 
 const CONTACT_FIELDS = [
@@ -14,10 +15,13 @@ const CONTACT_FIELDS = [
   { key: 'github',   label: 'GitHub',   Icon: Code   },
 ];
 
-export default function CoverLetterPanel({ coverLetter, personal, settings, updateCoverLetter }) {
+export default function CoverLetterPanel({ coverLetter, personal, settings, template, updateCoverLetter }) {
   const cl = coverLetter || {};
   const contacts = letterContactFormat(cl, settings); // what the letter prints until a chip sets its own
   const photoInputRef = useRef(null);
+  // The letterhead takes the résumé template's look; under a centred résumé header it is centred
+  // too, and Fields Position / Text Position have nothing to place (FIDB-51).
+  const centered = letterheadCentered(settings, template);
 
   function f(key) {
     return { value: cl[key], onChange: v => updateCoverLetter(key, v) };
@@ -47,6 +51,11 @@ export default function CoverLetterPanel({ coverLetter, personal, settings, upda
 
   return (
     <div className="space-y-4 py-2">
+
+      <p className="flex items-start gap-1.5 text-[11px] text-gray-500 leading-snug">
+        <Palette size={12} className="mt-0.5 shrink-0 text-gray-400" aria-hidden="true" />
+        <span>Header style follows your résumé template (<strong>{templateLabel(template)}</strong>). Change the template in Design.</span>
+      </p>
 
       {/* ── Photo ─────────────────────────────────────────────────────────── */}
       <SectionBlock title="Photo" defaultOpen={true}>
@@ -98,8 +107,11 @@ export default function CoverLetterPanel({ coverLetter, personal, settings, upda
           )}
         </div>
 
-        {/* Photo text position — only when photo is shown */}
-        {photoShown && hasPhoto && (
+        {/* Photo text position — only when photo is shown, beside the name */}
+        {photoShown && hasPhoto && centered && (
+          <p className="text-[11px] text-gray-400">Centred header: the photo sits above the name.</p>
+        )}
+        {photoShown && hasPhoto && !centered && (
           <div>
             <p className="text-xs font-semibold text-gray-700 mb-1.5">Text Position (relative to photo)</p>
             <div className="flex gap-2">
@@ -119,30 +131,37 @@ export default function CoverLetterPanel({ coverLetter, personal, settings, upda
 
       {/* ── Header Layout ─────────────────────────────────────────────────── */}
       <SectionBlock title="Header Layout" defaultOpen={true}>
-        {/* Fields position — 3 clear layout options */}
-        <div>
-          <p className="text-xs font-semibold text-gray-700 mb-2">Fields Position</p>
-          <div className="space-y-1.5">
-            {[
-              { val: 'right',      label: 'Right of Name',   desc: '[Photo · Name/Title] ··· [Fields →]' },
-              { val: 'below-name', label: 'Below Name',       desc: '[Photo] [Name/Title above · Fields below]' },
-              { val: 'below-all',  label: 'Below Everything', desc: '[Photo · Name/Title] then [Fields ↓]' },
-            ].map(({ val, label, desc }) => (
-              <button
-                key={val}
-                onClick={() => updateCoverLetter('fieldsPosition', val)}
-                className={`w-full text-left px-3 py-2 rounded border text-xs transition-all ${
-                  (cl.fieldsPosition || 'right') === val
-                    ? 'bg-blue-600 border-blue-600 text-white'
-                    : 'border-gray-200 text-gray-600 hover:border-blue-300 hover:text-blue-600'
-                }`}
-              >
-                <div className="font-medium">{label}</div>
-                <div className={`text-[10px] mt-0.5 font-mono ${(cl.fieldsPosition || 'right') === val ? 'text-blue-100' : 'text-gray-400'}`}>{desc}</div>
-              </button>
-            ))}
+        {/* Fields position — 3 clear layout options; a centred letterhead stacks them instead */}
+        {centered ? (
+          <p className="text-[11px] text-gray-500 leading-snug">
+            Centred like your résumé&apos;s header: photo, name and contacts on the centre line
+            (Personal Info → Header Customization → Text Alignment).
+          </p>
+        ) : (
+          <div>
+            <p className="text-xs font-semibold text-gray-700 mb-2">Fields Position</p>
+            <div className="space-y-1.5">
+              {[
+                { val: 'right',      label: 'Right of Name',   desc: '[Photo · Name/Title] ··· [Fields →]' },
+                { val: 'below-name', label: 'Below Name',       desc: '[Photo] [Name/Title above · Fields below]' },
+                { val: 'below-all',  label: 'Below Everything', desc: '[Photo · Name/Title] then [Fields ↓]' },
+              ].map(({ val, label, desc }) => (
+                <button
+                  key={val}
+                  onClick={() => updateCoverLetter('fieldsPosition', val)}
+                  className={`w-full text-left px-3 py-2 rounded border text-xs transition-all ${
+                    (cl.fieldsPosition || 'right') === val
+                      ? 'bg-blue-600 border-blue-600 text-white'
+                      : 'border-gray-200 text-gray-600 hover:border-blue-300 hover:text-blue-600'
+                  }`}
+                >
+                  <div className="font-medium">{label}</div>
+                  <div className={`text-[10px] mt-0.5 font-mono ${(cl.fieldsPosition || 'right') === val ? 'text-blue-100' : 'text-gray-400'}`}>{desc}</div>
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Contact Style */}
         <div>

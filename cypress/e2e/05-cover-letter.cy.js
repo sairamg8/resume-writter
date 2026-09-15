@@ -9,6 +9,31 @@ const squash = (s) => s.replace(/\s+/g, '').toLowerCase();
 const contactToggle = (label) =>
   cy.contains('p', 'Visible Contact Fields').next().contains('span', label).siblings('button');
 
+/** The letter preview's page 1: the canvas pdf.js paints the exported PDF into. */
+const letterPage = () => cy.get('[role="img"][aria-label^="Cover letter page 1"] canvas');
+
+/** One row of the painted page, `mm` from its top, as [r, g, b] pixels. */
+function pixelRow(canvas, mm) {
+  const y = Math.round((canvas.height * mm) / 297);
+  const { data } = canvas.getContext('2d').getImageData(0, y, canvas.width, 1);
+  return Array.from({ length: canvas.width }, (_, i) => [data[4 * i], data[4 * i + 1], data[4 * i + 2]]);
+}
+
+/** The share of a painted row, `mm` from the page's top, in the colour `hex`. */
+function shareOf(canvas, mm, hex) {
+  const want = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+  const row = pixelRow(canvas, mm);
+  return row.filter((px) => px.every((v, i) => Math.abs(v - want[i]) < 8)).length / row.length;
+}
+
+/** Pick a template in the Design tab (by its description), then go back to the Cover Letter tab. */
+function pickTemplate(description) {
+  cy.get('button[title="Design & Customize"]').click();
+  cy.contains('p', "The cover letter's header takes the template's look too.").should('be.visible');
+  cy.contains('button', description).click();
+  cy.contains('button', 'Cover Letter').click();
+}
+
 describe('cover letter', () => {
   beforeEach(() => cy.visitEditor('classic', { tab: 'coverletter' }));
 
@@ -110,5 +135,52 @@ describe('cover letter', () => {
     field('Closing Phrase').clear().type('Only in the letter');
     cy.contains('button', 'Resume').click();
     cy.preview().should('not.contain.text', 'Only in the letter');
+  });
+
+  it('the letterhead takes the résumé template\'s look: the panel names it, and a template switch restyles the preview (FIDB-51)', () => {
+    const note = () => cy.contains('p', 'Header style follows your résumé template');
+    // 16 mm: 2 mm into Modern's band, above its text; 7 mm: the top margin, where the Sidebar band bleeds.
+    note().should('contain.text', 'Classic');
+    letterPage().should(($c) => {
+      expect(shareOf($c[0], 16, '#2563eb'), 'Classic: no accent band').to.be.below(0.05);
+      expect(shareOf($c[0], 7, '#1e293b'), 'Classic: no dark band').to.be.below(0.05);
+    });
+
+    pickTemplate('Bold accent header');
+    note().should('contain.text', 'Modern');
+    cy.previewReady();
+    letterPage().should(($c) => expect(shareOf($c[0], 16, '#2563eb'), 'Modern: the accent band').to.be.above(0.6));
+    cy.store().should((s) => expect(active(s).template).to.eq('modern'));
+
+    pickTemplate('Colored left sidebar layout');
+    note().should('contain.text', 'Sidebar');
+    cy.previewReady();
+    letterPage().should(($c) => {
+      expect(shareOf($c[0], 7, '#1e293b'), 'Sidebar: the panel colour to the edges').to.be.above(0.95);
+      expect(shareOf($c[0], 16, '#2563eb'), 'Sidebar: no accent band').to.be.below(0.05);
+    });
+  });
+
+  it('a centred résumé header centres the letterhead; the panel says so instead of offering Fields Position (FIDB-51)', () => {
+    cy.contains('p', 'Fields Position').should('be.visible');
+    cy.contains('p', 'Centred like your résumé').should('not.exist');
+    // Resume → Personal Info → Header Customization → Text Alignment: Center.
+    cy.contains('button', 'Resume').click();
+    cy.contains('button', 'Header Customization').click();
+    cy.contains('button', /^Center$/).click();
+    cy.store().should((s) => expect(active(s).settings.headerAlign).to.eq('center'));
+    cy.contains('button', 'Cover Letter').click();
+    cy.contains('p', 'Header style follows your résumé template').should('contain.text', 'Classic');
+    cy.contains('p', 'Centred like your résumé').should('be.visible');
+    cy.contains('p', 'Fields Position').should('not.exist');
+    cy.previewReady();
+    // The name's ink, 19 mm from the top (through its lower-case letters), is centred on the page.
+    letterPage().should(($c) => {
+      const row = pixelRow($c[0], 19);
+      const ink = row.flatMap((px, x) => (px.every((v) => v < 120) ? [x] : []));
+      expect(ink.length, 'the name is painted there').to.be.above(10);
+      const centre = (ink[0] + ink.at(-1)) / 2;
+      expect(Math.abs(centre - row.length / 2) / row.length, 'the name is centred').to.be.below(0.02);
+    });
   });
 });
