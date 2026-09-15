@@ -1,18 +1,17 @@
-// Unique ids (M17): ids were `${prefix}_${Date.now()}`, so two made in the same millisecond collided.
+// The ids the app makes (M17): ids were `${prefix}_${Date.now()}`, so two made in the same
+// millisecond collided. newId itself is unit-tested in tests/unit/ids.unit.mjs; these load the
+// app's modules through the harness.
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { newId } from '../../src/utils/ids.js';
 import { setup, teardown, loadModule } from './harness.mjs';
 
 before(setup);
 after(teardown);
 
 const SRC = fileURLToPath(new URL('../../src', import.meta.url));
-const N = 20_000;
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 
 /** Run fn with the clock stopped, as when two adds land in the same millisecond. */
 function sameMillisecond(fn) {
@@ -21,45 +20,16 @@ function sameMillisecond(fn) {
   try { return fn(); } finally { Date.now = realNow; }
 }
 
-/** Run fn with globalThis.crypto replaced by `value` (a page without Web Crypto, or plain http). */
-function withCrypto(value, fn) {
-  const real = Object.getOwnPropertyDescriptor(globalThis, 'crypto');
-  Object.defineProperty(globalThis, 'crypto', { value, configurable: true, writable: true });
-  try { return fn(); } finally { Object.defineProperty(globalThis, 'crypto', real); }
-}
-
-const many = (prefix) => Array.from({ length: N }, () => newId(prefix));
 const assertUnique = (ids) => assert.equal(new Set(ids).size, ids.length, `duplicate ids among ${ids.length}`);
 
-describe('newId', () => {
-  it('is <prefix>_<uuid> where crypto.randomUUID exists; without a prefix, just the uuid', () => {
-    const id = newId('exp');
-    assert.ok(id.startsWith('exp_'), id);
-    assert.match(id.slice(4), UUID);
-    assert.match(newId(), UUID);
-  });
-
-  it(`never repeats: ${N} ids in a tight loop, in the same millisecond`, () => {
-    assertUnique(sameMillisecond(() => many('x')));
-  });
-
-  it('without randomUUID (a page served over plain http) it uses crypto.getRandomValues', () => {
-    const { crypto } = globalThis;
-    const ids = sameMillisecond(() => withCrypto({ getRandomValues: (a) => crypto.getRandomValues(a) }, () => many('x')));
-    for (const id of ids.slice(0, 50)) assert.match(id, /^x_[0-9a-f]{32}$/);
-    assertUnique(ids);
-  });
-
-  it('without Web Crypto, a stopped clock and a constant Math.random still give unique ids', () => {
-    const realRandom = Math.random;
-    Math.random = () => 0.5;
-    try {
-      const ids = sameMillisecond(() => withCrypto(undefined, () => many('x')));
-      for (const id of ids.slice(0, 50)) assert.ok(id.startsWith('x_'), id);
-      assertUnique(ids);
-    } finally { Math.random = realRandom; }
-  });
-});
+// The clock, and the value given to an id: `id: …` in an object, `id = …` / `…Id = …` in an
+// assignment (up to the next , ; or } outside a template's ${…}). A line of code that gives an
+// id a value built from the clock — `_${Date.now()}`, but also `id: Date.now()`,
+// `'x_' + Date.now()`, String(now) … (R4-12).
+const CLOCK = /Date\.now\(\)|\bnow\b|performance\.now\(\)|\.getTime\(\)/;
+const ID_VALUE = /(?:\bid\s*:|\b[\w$]*(?:Id|_id|ID)\s*=(?!=)|\bid\s*=(?!=))\s*((?:\$\{[^}]*\}|[^,;}\n])*)/g;
+const isComment = (line) => /^\s*(?:\*|\/\/|\/\*)/.test(line);
+const idFromClock = (line) => !isComment(line) && [...line.matchAll(ID_VALUE)].some((m) => CLOCK.test(m[1]));
 
 describe('the ids the app makes', () => {
   it('a new entry of every section type, twice in the same millisecond', async () => {
@@ -78,13 +48,27 @@ describe('the ids the app makes', () => {
     assertUnique(r.sections.map((s) => s.id));
   });
 
+  it('the scan below finds an id built from the clock, however it is written (R4-12)', () => {
+    // The first scan matched only `_${Date.now()}` and `_${now}`.
+    const built = [
+      "const id = `${prefix}_${Date.now()}`;", '{ id: Date.now(), text: t }', "id: 'x_' + Date.now(),",
+      'id: `td-${Date.now()}`,', 'id: String(Date.now()),', "const copyId = 'resume' + now;",
+      'const newId = Date.now().toString(36);', 'item.id = `${type}${now}`;', 'id: new Date().getTime(),',
+    ];
+    assert.deepEqual(built.filter((line) => !idFromClock(line)), []);
+    const fine = [
+      "{ id: newId('job'), createdAt: now, updatedAt: now }", 'updatedAt: Date.now(),',
+      'const backupKey = `${key}_backup_${at}`;', 'if (r.id === now) return;', '// id: Date.now() was the old way',
+      "const id = newId('resume');", 'setActiveId(id);',
+    ];
+    assert.deepEqual(fine.filter(idFromClock), []);
+  });
+
   it('no id in src/ is built from the clock (résumés, jobs, to-dos, imports)', () => {
     const files = fs.readdirSync(SRC, { recursive: true }).filter((f) => /\.jsx?$/.test(f));
-    // `_${Date.now()}` / `_${now}` in code (not comments); backup keys carry the time on purpose.
     const offenders = files.flatMap((f) => fs.readFileSync(path.join(SRC, f), 'utf8').split('\n')
       .map((line, i) => ({ where: `src/${f}:${i + 1}`, line }))
-      .filter(({ line }) => /_\$\{(?:Date\.now\(\)|now)\}/.test(line)
-        && !/^\s*(?:\*|\/\/|\/\*)/.test(line) && !/backup/i.test(line)));
+      .filter(({ line }) => idFromClock(line)));
     assert.deepEqual(offenders.map((o) => o.where), [], offenders.map((o) => o.line.trim()).join('\n'));
   });
 });
