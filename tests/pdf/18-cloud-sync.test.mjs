@@ -72,9 +72,10 @@ describe('first sync after sign-in (R4-1)', () => {
   });
 
   it('sends only what the cloud still holds: never-synced, already-listed and already-flagged ids change nothing', () => {
-    const cloud = [cv('resume_b'), { id: 'demo_minimal', deleted: true }];
+    // An original already flagged (a sample an older build flagged is settled apart: 18-cloud-sync-old-samples).
+    const cloud = [cv('resume_b'), { id: 'resume_o', deleted: true, keep: true }];
     const p = plan.planInitialSync({
-      local: [cv('resume_b')], deletions: del('resume_local_only', 'resume_old', 'demo_minimal', 'resume_local_only'),
+      local: [cv('resume_b')], deletions: del('resume_local_only', 'resume_old', 'resume_o', 'resume_local_only'),
       cloud, cloudDeleted: ['resume_old'], demoAccount: true,
     });
     assert.deepEqual([p.flags, p.hardDeletes, p.listAdd], [[], [], []]);

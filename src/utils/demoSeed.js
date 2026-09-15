@@ -9,8 +9,9 @@
 // deletion list, so a listed id was deleted for good ("Stop keeping", then Delete) and never
 // comes back, whatever copy of it a device still holds. Until 2026-09-15 what came back was five
 // fictional samples (demo_classic …); the owner asked for their own résumé instead. Samples
-// already in an account are ordinary résumés now: deleted, they are gone for good, and nothing
-// deletes one by itself (project_demo-account.md).
+// already in an account are ordinary résumés now: deleted, they are gone for good. One an older
+// build flagged when it was deleted is settled by the first sync: removed for good if nobody
+// edited it, back in the list if someone did (oldSamples.js, project_demo-account.md).
 
 /** "a@x.com, B@y.com" → ['a@x.com', 'b@y.com'] */
 export function parseAccountList(value) {

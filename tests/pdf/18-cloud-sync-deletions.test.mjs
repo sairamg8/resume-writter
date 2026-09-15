@@ -191,12 +191,6 @@ describe('a flag is a deletion of the version it carries', () => {
     assert.equal(cloud.doc(listPath('u')), undefined);
   });
 
-  it('a sample a demo account flagged before 2026-09-15 stays as it is: hidden, never removed by itself', async () => {
-    // It may hold the owner's edits; only an edit made since would bring it back (as above).
-    const cloud = fakeFirestore({ [resumePath('u', 'demo_a')]: cv('demo_a', 20, { name: 'Edited sample', deleted: true }) });
-    const p = page(cloud, { resumes: [] });
-    await signIn(p, OWNER);
-    assert.deepEqual([ids(p.store.state.resumes), cloud.resumes('u').demo_a.name, cloud.doc(listPath('u'))], [[], 'Edited sample', undefined]);
-    assert.deepEqual(p.seen.account.cloudOriginals, [], 'and it is no original: no restore brings it back');
-  });
+  // A sample a demo account flagged before 2026-09-15 — hidden for good until V2OWNER-DATA-8 — is
+  // settled by the first sync: 18-cloud-sync-old-samples.test.mjs.
 });

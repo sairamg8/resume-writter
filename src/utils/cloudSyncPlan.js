@@ -10,15 +10,18 @@
 // restore (project_demo-account.md). Any other account deletes an original like any résumé
 // (R4-11): a flag there kept content nothing would ever bring back — originals reach such an
 // account only through a shared browser, whose local résumés carry over to whoever signs in next.
-// Until 2026-09-15 a demo account flagged the fictional samples (demo_…) instead; one flagged then
-// stays flagged, and a sample deleted now is removed for good.
+// Until 2026-09-15 a demo account flagged the fictional samples (demo_…) instead: its first sync
+// now removes such a flag's copy for good when nobody edited it, and makes an edited one an
+// ordinary résumé again (oldSamples.js, V2OWNER-DATA-8). A sample deleted now is removed for good.
 import { isOriginal } from '@/utils/demoSeed';
+import { isSampleId, isUntouchedSample } from '@/utils/oldSamples';
 import { mergeResumeLists } from '@/utils/syncMerge';
 import { withoutDeletions } from '@/utils/localDeletions';
 
 const hasId = (r) => r && typeof r.id === 'string' && r.id !== '';
 /** A deletion entry (localDeletions.js); a bare id is an older build's, with no version. */
 const asEntry = (e) => (typeof e === 'string' ? { id: e, version: null } : e);
+const unflagged = ({ deleted: _deleted, ...r }) => r;
 
 /**
  * The first sync after sign-in (or after coming back online).
@@ -38,14 +41,16 @@ const asEntry = (e) => (typeof e === 'string' ? { id: e, version: null } : e);
  *   merged       the list to load: newer copy wins, deletions left out
  *   sets         the merged résumés the account lacks or holds an older copy of → write them.
  *                Only those: writing back a copy just read put it over an edit another device
- *                made before the batch arrived (R8-4)
+ *                made before the batch arrived (R8-4) — and an edited sample an older build
+ *                flagged, written back without its flag (below)
  *   flags        originals deleted here that the cloud still holds whole → flag them. Original:
  *                the copy deleted was (its entry's `keep`), else the cloud's copy is
  *   marks        the flags whose cloud copy is not marked an original: the mark was made here and
  *                never sent (a newer "Stop keeping" elsewhere made the copy newer, and is not sent
  *                over) → the flag marks it too
  *   hardDeletes  other résumés deleted here that the cloud still holds → remove them; outside
- *                a demo account also every flagged résumé (flagged before R4-11)
+ *                a demo account also every flagged résumé (flagged before R4-11), in one every
+ *                sample an older build flagged that nobody edited (below)
  *   listAdd      ids to add to the deletion list (the removals)
  *   handled      the ids of the deletions dealt with — the store forgets this account's entries
  *                of them (afterSync); another account's are left out of the merge and kept
@@ -58,13 +63,20 @@ const asEntry = (e) => (typeof e === 'string' ? { id: e, version: null } : e);
  * edited offline) brings it back — written whole, flag and all — instead of being dropped.
  * Before 53d6a3b no deletion was sent at all: the cloud kept the résumés, the store forgot the
  * deletions, and the next sync brought them back (R4-1).
+ * A sample a demo account's older build flagged (not an original; oldSamples.js) was hidden for
+ * good — nothing restores the samples now (V2OWNER-DATA-8). Not edited here since: one nobody
+ * edited is removed and listed, as if deleted for good; an edited one is a résumé again — its flag
+ * dropped, it is merged and written back like any, and a deletion made here still applies to it.
  */
 export function planInitialSync({ local = [], deletions = [], cloud = [], cloudDeleted = [], demoAccount = false, uid = null }) {
-  const docs = cloud.filter(hasId);
-  const byId = new Map(docs.map((r) => [r.id, r]));
-  const cloudDeletedSet = new Set(cloudDeleted);
   const localById = new Map(local.filter(hasId).map((r) => [r.id, r]));
   const editedSince = (doc) => (localById.get(doc.id)?.updatedAt ?? 0) > (doc.updatedAt ?? 0);
+  const oldSamples = demoAccount ? cloud.filter((r) => hasId(r) && r.deleted && isSampleId(r.id) && !isOriginal(r) && !editedSince(r)) : [];
+  const purged = oldSamples.filter(isUntouchedSample).map((r) => r.id);
+  const revived = new Set(oldSamples.filter((r) => !isUntouchedSample(r)).map((r) => r.id));
+  const docs = cloud.filter(hasId).map((r) => (revived.has(r.id) ? unflagged(r) : r));
+  const byId = new Map(docs.map((r) => [r.id, r]));
+  const cloudDeletedSet = new Set([...cloudDeleted, ...purged]);
   const flagged = docs.filter((r) => r.deleted && !editedSince(r)).map((r) => r.id);
   const excluded = new Set([...cloudDeletedSet, ...flagged]);
 
@@ -89,12 +101,12 @@ export function planInitialSync({ local = [], deletions = [], cloud = [], cloudD
   const marks = flags.filter((id) => !isOriginal(byId.get(id)));
   const hardDeletes = [
     ...unsent.filter((id) => !flags.includes(id)),
-    ...(demoAccount ? [] : flagged),
+    ...(demoAccount ? purged : flagged),
   ];
 
   const merged = mergeResumeLists(local, docs, excluded);
   // `!(>=)`: a copy with no time of its own, on either side, is written.
-  const sets = merged.filter((r) => { const c = byId.get(r.id); return !c || c.deleted || !(c.updatedAt >= r.updatedAt); });
+  const sets = merged.filter((r) => { const c = byId.get(r.id); return !c || c.deleted || revived.has(r.id) || !(c.updatedAt >= r.updatedAt); });
   return { merged, sets, flags, marks, hardDeletes, listAdd: hardDeletes, handled };
 }
 

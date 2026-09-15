@@ -94,7 +94,8 @@ signed-out visitor, deletes like anywhere and keeps the blank first run.
 | An original edited | saved and synced like any résumé |
 | "Stop keeping", then Delete | deleted for good, like any résumé |
 | A copy of an original ("Copy") | a new résumé, not an original |
-| **Samples already in the account** (from before 2026-09-15) | ordinary résumés: kept until the user deletes one, then removed for good. Samples flagged by the old build stay flagged and hidden in Firestore — nothing deletes them by itself (they may hold the owner's edits) |
+| **Samples already in the account** (from before 2026-09-15) | ordinary résumés: kept until the user deletes one, then removed for good |
+| **Samples the old build flagged** (deleted before 2026-09-15, hidden in Firestore since) | the account's first sync settles each (`oldSamples.js`, V2OWNER-DATA-8): **untouched** — its content is one an old build stored for the sample (a fingerprint baked into the app: 13 copies, re-derived from those builds' own code), or a flag with nothing under it — removed and listed, for good; **edited** (anything else) — back in the list as an ordinary résumé (flag dropped, written back normalised), to keep or delete |
 
 Marking one (demo accounts only):
 - **Card:** "Keep as my original" under the name; a kept one shows an **Original** badge and
