@@ -1,5 +1,6 @@
-// Cover-letter details from review R1: the closing's comma, impossible dates, an empty body,
-// the signature kept with its closing, and the Text colour on every line — PDF and Word alike.
+// Cover-letter details from reviews R1 and R9: the closing's comma, impossible dates, an empty
+// body, the signature kept with its closing, and the Text colour on every line — PDF and Word
+// alike.
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { setup, teardown, resume, renderCover, read, allItems, allText, drawState, loadModule, readDocx, MM, TEMPLATES } from './harness.mjs';
@@ -15,7 +16,7 @@ async function coverDocx(r) {
 }
 const letter = (coverLetter, settings = {}) => resume({ settings, coverLetter: { body: '<p>Hello</p>', ...coverLetter } });
 
-describe('the closing (R1-7)', () => {
+describe('the closing (R1-7, R9-9)', () => {
   it('a closing typed with its comma prints one comma, in the PDF and in Word', async () => {
     for (const closing of ['Best regards,', 'Best regards', 'Best regards , ', 'Best regards,,']) {
       const r = letter({ closing });
@@ -25,6 +26,23 @@ describe('the closing (R1-7)', () => {
     }
     const { letterSignature } = await loadModule('/src/utils/coverLetter.js');
     assert.equal(letterSignature({ closing: ' , ' }).closing, 'Sincerely,', 'nothing but a comma is no closing');
+  });
+
+  // A closing that ends in punctuation of its own got our comma after it: 'Thank you!' printed
+  // 'Thank you!,', 'Regards.' 'Regards.,', and a CJK or Arabic comma a second, Latin one (R9-9).
+  it('a closing that ends in its own punctuation gets no comma, in the PDF and in Word', async () => {
+    for (const [closing, printed] of [['Thank you!', 'Thank you!'], ['Regards.', 'Regards.'], ['With thanks…', 'With thanks…'], ['Thank you!, ', 'Thank you!']]) {
+      const r = letter({ closing });
+      const pdf = allText(await read(await renderCover(r)));
+      assert.ok(pdf.includes(printed) && !pdf.includes(`${printed},`), `${JSON.stringify(closing)}: ${pdf}`);
+      assert.ok((await coverDocx(r)).texts.includes(printed), `Word: ${JSON.stringify(closing)}`);
+    }
+    const { letterSignature } = await loadModule('/src/utils/coverLetter.js');
+    for (const closing of ['此致，', '敬具。', 'مع التحية،', 'Cordialement :', 'Why not?', 'Yours;']) {
+      assert.equal(letterSignature({ closing }).closing, closing, closing);
+    }
+    // A bracket, a quote or an emoji ends no clause: the comma follows it, as it would in a letter.
+    for (const closing of ['Best regards (Pat)', 'Cheers 🙂']) assert.equal(letterSignature({ closing }).closing, `${closing},`, closing);
   });
 });
 

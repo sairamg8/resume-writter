@@ -59,14 +59,21 @@ export function letterHiddenFields(cl = {}, personal = {}) {
 }
 
 /**
+ * A closing that already ends its clause: '!', '?', '.', ';', ':', '…', a CJK or Arabic comma or
+ * full stop (Unicode's terminal punctuation). A bracket, a quote or an emoji does not.
+ */
+const ENDS_ITS_CLAUSE = /[\p{Term}…]$/u;
+
+/**
  * The closing line and the signature. The closing gets one comma — also when the user typed
- * it with one ("Best regards," printed ",," — R1-7). The name and designation are the letter's
- * own once the user has set them (even to ''), else the résumé's name and title.
+ * it with one ("Best regards," printed ",," — R1-7) — unless it ends in punctuation of its own
+ * ("Thank you!" printed "Thank you!," — R9-9). The name and designation are the letter's own
+ * once the user has set them (even to ''), else the résumé's name and title.
  */
 export function letterSignature(cl = {}, personal = {}) {
   const closing = text(cl.closing).replace(/[\s,]+$/, '') || 'Sincerely';
   return {
-    closing: `${closing},`,
+    closing: ENDS_ITS_CLAUSE.test(closing) ? closing : `${closing},`,
     name: cl.signatureName != null ? cl.signatureName : (personal?.name || ''),
     designation: cl.signatureDesignation != null ? cl.signatureDesignation : (personal?.title || ''),
     wide: cl.signatureSpace === 'wide',
