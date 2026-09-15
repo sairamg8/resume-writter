@@ -171,6 +171,7 @@ describe('regressions — letters saved with the old "Hiring Manager" default (R
   const v6State = () => {
     const state = buildTestState('classic');
     state.dataVersion = 6;
+    state.resumes[0].dataVersion = 6; // saved under data version 6: the v7 migration is due
     state.resumes[0].coverLetter = { ...OLD_LETTER };
     return state;
   };
@@ -191,7 +192,9 @@ describe('regressions — letters saved with the old "Hiring Manager" default (R
 
   it('an imported file saved with the old default prints no "Hiring Manager" line', () => {
     cy.visitDashboard(dashboardState());
-    const old = { ...buildTestState('classic').resumes[0], name: 'Old Letter CV', coverLetter: OLD_LETTER };
+    // Exported by a build that stamped no data version on its résumés.
+    const { dataVersion: _current, ...fixture } = buildTestState('classic').resumes[0];
+    const old = { ...fixture, name: 'Old Letter CV', coverLetter: OLD_LETTER };
     cy.get(IMPORT_INPUT).selectFile({ contents: Cypress.Buffer.from(JSON.stringify(old)), fileName: 'old.json' }, { force: true });
     cy.location('hash').should('match', /^#\/resume\//);
     // Wait for the editor: the dashboard has a "Cover Letter" button of its own (a new letter).

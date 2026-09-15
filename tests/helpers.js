@@ -154,6 +154,9 @@ export function buildTestState(template = 'classic', settingsOverride = {}, sect
     name: `Test ${template.charAt(0).toUpperCase() + template.slice(1)}`,
     template,
     updatedAt: Date.now(),
+    // A résumé this build saved: its one-time migrations have run (normalizeResume.js), so no spec
+    // depends on them leaving the fixture alone. A spec about migrating sets an older version.
+    dataVersion: DATA_VERSION,
     settings,
     personal: TEST_PERSONAL,
     sections: sections ?? ALL_SECTION_TYPES,
