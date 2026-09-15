@@ -3,7 +3,7 @@
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { setup, teardown, resume, renderCover, read, allItems, allText, drawState, loadModule, readDocx, MM, TEMPLATES } from './harness.mjs';
-import { textShades } from '../../src/templates/pdf/shared/pdfColors.js';
+import { solid, textShades } from '../../src/templates/pdf/shared/pdfColors.js';
 import { PNG_2X2 as PNG } from './extractors.mjs';
 
 before(setup);
@@ -126,5 +126,32 @@ describe('the Text colour reaches every line of the letter (R1-13)', () => {
     const colourOf = (text) => (xml.split('</w:r>').find((run) => run.includes(`>${text}<`)) || '').match(/<w:color w:val="([0-9A-Fa-f]{6})"/)?.[1]?.toLowerCase();
     for (const text of ['Pat Sample', 'Sarah Smith', 'Pat Signer']) assert.equal(colourOf(text), textColor.slice(1), `Word ${text}`);
     assert.equal(colourOf('Staff Engineer'), meta.slice(1), 'Word designation');
+  });
+
+  // Word read the stored Text colour with a fallback of its own, the PDF the resolved one: a
+  // résumé that stores none (an import, older data) printed the template's default in the PDF and
+  // #1e293b in Word (R9-0; fixed by f059a96, this pins it). A translucent colour's designation
+  // grey came from Word's rounded hex, a shade off the PDF's. Word has no opacity: a translucent
+  // PDF run is compared as it shows on the white page.
+  it('a résumé that stores no Text colour, or a short or translucent one: Word prints the PDF\'s colours, in every template', async () => {
+    const runs = ['Pat Sample', 'pat@example.com', 'Sarah Smith', 'Hello', 'Pat Signer', 'Staff Engineer'];
+    for (const template of TEMPLATES) {
+      for (const textColor of [undefined, '#abc', '#11111180']) {
+        const r = resume({
+          template,
+          personal: { name: 'Pat Sample', email: 'pat@example.com', hiddenFields: [] },
+          coverLetter: { body: '<p>Hello</p>', recipientName: 'Sarah Smith', signatureName: 'Pat Signer', signatureDesignation: 'Staff Engineer', hiddenFields: [] },
+        });
+        if (textColor) r.settings.textColor = textColor;
+        else delete r.settings.textColor;
+        const bytes = await renderCover(r);
+        const { xml } = await coverDocx(r);
+        const colourOf = (text) => (xml.split('</w:r>').find((run) => run.includes(`>${text}<`)) || '').match(/<w:color w:val="([0-9A-Fa-f]{6})"/)?.[1]?.toLowerCase();
+        for (const text of runs) {
+          const { fill, alpha } = (await drawState(bytes, text))[0];
+          assert.equal(`#${colourOf(text)}`, solid(fill, alpha), `${template}, Text colour ${textColor}: "${text}"`);
+        }
+      }
+    }
   });
 });

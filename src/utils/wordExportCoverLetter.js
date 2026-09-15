@@ -89,8 +89,9 @@ export function buildCoverLetter(resume) {
   const s = resolveTemplateSettings(settings, templateId(template));
   const look = letterheadLook(template, s);
   const textHex = hexOn(s.textColor, '#ffffff', '1e293b');
-  // The PDF's colours: names in the Text colour, contacts and the designation in its grey (R1-13).
-  const colors = { text: textHex, meta: accent2Hex(textShades(`#${textHex}`).meta, '64748b') };
+  // The PDF's colours: names in the Text colour, contacts and the designation in its grey (R1-13)
+  // — the grey of the Text colour itself, as the PDF's, not of its rounded Word hex (R9-0).
+  const colors = { text: textHex, meta: hexOn(textShades(s.textColor).meta, '#ffffff', '64748b') };
   const baseSize = s.fontSizeBase || 11;
   const sizes = {
     base: Math.round(baseSize * 2),
