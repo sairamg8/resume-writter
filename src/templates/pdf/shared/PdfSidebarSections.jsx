@@ -1,4 +1,5 @@
-import { View, Text } from '@react-pdf/renderer';
+import { View } from '@react-pdf/renderer';
+import { Text } from './PdfText';
 import { PdfRichText } from './PdfRichText';
 import { hasRichText } from '@/utils/richText';
 import { SectionTitleOf, RenderBullets, RenderColGrid, hexAlpha, SectionRouter, SPACER, ItemHeader, shadesOf } from './PdfSections';

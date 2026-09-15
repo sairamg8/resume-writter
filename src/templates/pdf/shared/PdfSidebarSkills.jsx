@@ -1,4 +1,5 @@
-import { View, Text } from '@react-pdf/renderer';
+import { View } from '@react-pdf/renderer';
+import { Text } from './PdfText';
 import { hexAlpha } from './PdfSections';
 import { SideSectionTitle } from './PdfSidebarColumn';
 import { tracking } from './pdfUnits';

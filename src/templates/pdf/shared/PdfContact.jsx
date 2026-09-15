@@ -1,8 +1,8 @@
-import { View, Text, Link } from '@react-pdf/renderer';
+import { View, Link } from '@react-pdf/renderer';
+import { Text } from './PdfText';
 import { PdfContactIcon } from './PdfContactIcon';
 import { pxToPt } from './pdfUnits';
 import { contactItems } from '@/utils/contacts';
-import { NO_HYPHEN_BREAKS } from './PdfRichText';
 import { textShades } from './pdfColors';
 
 const NBSP = '\u00a0';
@@ -77,7 +77,7 @@ export function PdfContactRow({ personal, settings, color, hidden }) {
   const sep = contactStyle === 'bullet' ? '•' : '|';
   const sepColor = contactStyle === 'bullet' ? '#bbbbbb' : '#cccccc';
   return (
-    <Text {...NO_HYPHEN_BREAKS} style={{ ...text, marginTop: 3, textAlign: centered ? 'center' : 'left' }}>
+    <Text style={{ ...text, marginTop: 3, textAlign: centered ? 'center' : 'left' }}>
       {items.map((item, i) => (
         <Text key={item.key}>
           <ContactValue value={keepTogether(item.value)} href={item.href} style={text} />

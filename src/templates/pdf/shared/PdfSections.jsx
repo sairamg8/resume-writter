@@ -1,6 +1,7 @@
-import { View, Text } from '@react-pdf/renderer';
+import { View } from '@react-pdf/renderer';
+import { Text } from './PdfText';
 import { PdfSectionTitle } from './PdfSection';
-import { PdfRichText, NO_HYPHEN_BREAKS } from './PdfRichText';
+import { PdfRichText } from './PdfRichText';
 import { CSS_PX_TO_PT, DEFAULT_ITEM_GAP_PX, SECTION_SPACING_PX } from './pdfUnits';
 import { tint, textShades } from './pdfColors';
 
@@ -123,7 +124,7 @@ export function ItemHeader({ primary, sub, loc, dateStr, settings, titleStyle = 
   // in react-pdf, unlike HTML where sibling <span>s flow inline. Only the row-flex
   // 'sidebyside' branch below can safely keep them as separate Text siblings.
   const subLocLine = sub || loc
-    ? <Text {...NO_HYPHEN_BREAKS} style={subStyle}>{sub}{loc ? <Text style={locStyle}>{sub ? ' · ' : ''}{loc}</Text> : null}</Text>
+    ? <Text style={subStyle}>{sub}{loc ? <Text style={locStyle}>{sub ? ' · ' : ''}{loc}</Text> : null}</Text>
     : null;
   const locText    = loc ? <Text style={locStyle}>{sub ? ' · ' : ''}{loc}</Text> : null;
 
@@ -132,7 +133,7 @@ export function ItemHeader({ primary, sub, loc, dateStr, settings, titleStyle = 
     if (titleStyle === 'sidebyside' || titleStyle === 'inline') {
       return (
         <View {...keep} style={{ alignItems: 'center', marginBottom: 2 }}>
-          <Text {...NO_HYPHEN_BREAKS} style={{ fontSize: entrySize, color: textColor, textAlign: 'center' }}>
+          <Text style={{ fontSize: entrySize, color: textColor, textAlign: 'center' }}>
             <Text style={{ fontWeight: 'bold' }}>{primary}</Text>
             {sub ? <Text style={subStyle}>{italicSub ? `, ` : ' — '}{sub}</Text> : null}
             {locText}
@@ -167,7 +168,7 @@ export function ItemHeader({ primary, sub, loc, dateStr, settings, titleStyle = 
     return (
       <View {...keep} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <View style={{ flex: 1 }}>
-          <Text {...NO_HYPHEN_BREAKS} style={{ fontSize: entrySize, color: textColor }}>
+          <Text style={{ fontSize: entrySize, color: textColor }}>
             <Text style={{ fontWeight: 'bold' }}>{primary}</Text>
             {sub ? <Text style={subStyle}>{italicSub ? `, ` : ' — '}{sub}</Text> : null}
             {locText}

@@ -1,4 +1,5 @@
-import { Document, Page, View, Text, StyleSheet } from '@react-pdf/renderer';
+import { Document, Page, View, StyleSheet } from '@react-pdf/renderer';
+import { Text } from './shared/PdfText';
 import { PdfSectionTitle } from './shared/PdfSection';
 import { getEffectiveSpacing, SPACER } from './shared/PdfSections';
 import { PdfRichText } from './shared/PdfRichText';

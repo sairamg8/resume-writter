@@ -1,4 +1,5 @@
-import { View, Text } from '@react-pdf/renderer';
+import { View } from '@react-pdf/renderer';
+import { Text } from './PdfText';
 import { PdfRichText } from './PdfRichText';
 import { ContactValue } from './PdfContact';
 import { pxToPt } from './pdfUnits';

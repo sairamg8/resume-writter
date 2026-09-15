@@ -1,4 +1,5 @@
-import { View, Text } from '@react-pdf/renderer';
+import { View } from '@react-pdf/renderer';
+import { Text } from './PdfText';
 import { safeHref, hasRichText } from '@/utils/richText';
 import { contactHref } from '@/utils/contacts';
 import { dateRange } from '@/utils/dates';

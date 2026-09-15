@@ -75,7 +75,9 @@ const absolute = (url) => (/^https?:/.test(url) ? url : `${ORIGIN}${url}`);
  * A hyphenation callback that never hyphenates, but lets a long unbroken token — a URL, an
  * e-mail address — break after / . - _ @ ? & = # (or every `max` characters) instead of running
  * off the page. The break is a U+FEFF part: zero-width in every Fontsource font, and textkit
- * turns a part that trims to "" into ordinary glue — a break with no hyphen drawn.
+ * turns a part that trims to "" into ordinary glue — a break with no hyphen drawn. textkit also
+ * puts a hyphen penalty in front of that glue, and a break there draws a hyphen: every Text
+ * forbids it (./PdfText, R4-10), which leaves the glue.
  * Tokens up to `max` characters are left whole (so ordinary e-mails copy out intact).
  */
 export function breakLongWords(max) {

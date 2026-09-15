@@ -1,4 +1,5 @@
-import { Document, Page, View, Text } from '@react-pdf/renderer';
+import { Document, Page, View } from '@react-pdf/renderer';
+import { Text } from './shared/PdfText';
 import { getPageStyle, getDocumentProps, getHeaderBorderStyle } from './shared/PdfPage';
 import { PdfContactRow } from './shared/PdfContact';
 import { SectionRouter, getEffectiveSpacing, getVisibleSections } from './shared/PdfSections';
