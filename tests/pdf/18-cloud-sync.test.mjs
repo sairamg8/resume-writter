@@ -123,6 +123,24 @@ describe('the write queue and the flush (R4-2)', () => {
     assert.deepEqual([...q.kept], [], 'the copy deleted last was not an original');
   });
 
+  it('a flag marks the original only when this device\'s mark was never sent (V2OWNER-DATA-2)', () => {
+    const demo = (q) => ({ demoAccount: true, kept: q.kept, marked: q.marked });
+    // Kept since before the last flush: the cloud has the mark (or another device's "Stop keeping").
+    let q = plan.queueChanges(empty(), [orig('resume_o', 1)], [orig('resume_o', 2)]); // an edit
+    q = plan.queueChanges(q, [orig('resume_o', 2)], []);
+    assert.deepEqual(plan.planFlush([], [...q.deletes], demo(q)).marks, [], 'before: keep: true written over the cloud\'s copy');
+    // "Keep as my original" here, then Delete, within one pause: the mark never went on its own.
+    q = plan.queueChanges(empty(), [cv('resume_o', 1)], [orig('resume_o', 2)]);
+    q = plan.queueChanges(q, [orig('resume_o', 2)], []);
+    assert.deepEqual(plan.planFlush([], [...q.deletes], demo(q)).marks, ['resume_o']);
+    // Marked, then "Stop keeping": no unsent mark left.
+    q = plan.queueChanges(plan.queueChanges(empty(), [cv('resume_o', 1)], [orig('resume_o', 2)]), [orig('resume_o', 2)], [cv('resume_o', 3)]);
+    assert.deepEqual([...q.marked], []);
+    // The first sync: the copy deleted here was kept; the cloud's (not newer) copy is not marked.
+    const first = (cloudCopy) => plan.planInitialSync({ deletions: [{ id: 'resume_o', version: 5, keep: true }], cloud: [cloudCopy], demoAccount: true });
+    assert.deepEqual([first(cv('resume_o', 4)).marks, first(orig('resume_o', 5)).marks], [['resume_o'], []]);
+  });
+
   it('queues edits and deletions; a résumé deleted and put back before the flush is written, not deleted', () => {
     const a1 = cv('demo_a', 1);
     const b1 = cv('resume_b', 1);

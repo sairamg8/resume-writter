@@ -71,6 +71,7 @@ export function createCloudSync({
     pendingWrites: new Map(),
     pendingDeletes: new Set(),
     pendingKept: new Set(), // the pending deletes that were originals (queueChanges)
+    pendingMarked: new Set(), // originals whose mark is not sent yet (queueChanges)
     timer: null,
     retry: null,
     account: null,
@@ -122,6 +123,7 @@ export function createCloudSync({
     s.pendingWrites = new Map();
     s.pendingDeletes = new Set();
     s.pendingKept = new Set();
+    s.pendingMarked = new Set();
   }
 
   /** The account when there is no cloud to read: this browser's résumés are the whole list. */
@@ -212,11 +214,12 @@ export function createCloudSync({
   /** The store's résumés after every change: what changed is queued and sent after a pause. */
   function resumesChanged(current) {
     if (!s.user || !s.initialSyncDone || s.cloudDisabled || !io) return;
-    const queued = queueChanges({ writes: s.pendingWrites, deletes: s.pendingDeletes, kept: s.pendingKept }, s.prevResumes || [], current);
+    const queued = queueChanges({ writes: s.pendingWrites, deletes: s.pendingDeletes, kept: s.pendingKept, marked: s.pendingMarked }, s.prevResumes || [], current);
     if (!queued.dirty) return;
     s.pendingWrites = queued.writes;
     s.pendingDeletes = queued.deletes;
     s.pendingKept = queued.kept;
+    s.pendingMarked = queued.marked;
     s.prevResumes = current;
 
     timers.clear(s.timer);
@@ -233,9 +236,11 @@ export function createCloudSync({
     const writes = Array.from(s.pendingWrites.values());
     const deletes = Array.from(s.pendingDeletes);
     const kept = new Set(s.pendingKept);
+    const marked = new Set(s.pendingMarked);
     s.pendingWrites.clear();
     s.pendingDeletes.clear();
     s.pendingKept.clear();
+    s.pendingMarked.clear();
 
     if (!writes.length && !deletes.length) return;
 
@@ -244,7 +249,7 @@ export function createCloudSync({
       // In a demo account a deleted original is flagged, not removed: its last copy stays in the
       // cloud so that restoring the originals on any device brings back the edited version.
       // Writing it again (a restore) replaces the whole document, flag included.
-      await flushOnce({ uid: user.uid, writes, deletes, kept, demoAccount: isDemo(user) }, io);
+      await flushOnce({ uid: user.uid, writes, deletes, kept, marked, demoAccount: isDemo(user) }, io);
       // The cloud has them: the store stops keeping them for the next first sync, which would send
       // them again — over a restore another device made since (R8-1).
       if (deletes.length) store.forgetDeletions(deletes, sentAt);

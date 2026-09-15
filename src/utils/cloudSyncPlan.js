@@ -39,6 +39,9 @@ const asEntry = (e) => (typeof e === 'string' ? { id: e, version: null } : e);
  *                made before the batch arrived (R8-4)
  *   flags        originals deleted here that the cloud still holds whole → flag them. Original:
  *                the copy deleted was (its entry's `keep`), else the cloud's copy is
+ *   marks        the flags whose cloud copy is not marked an original: the mark was made here and
+ *                never sent (a newer "Stop keeping" elsewhere made the copy newer, and is not sent
+ *                over) → the flag marks it too
  *   hardDeletes  other résumés deleted here that the cloud still holds → remove them; outside
  *                a demo account also every flagged résumé (flagged before R4-11)
  *   listAdd      ids to add to the deletion list (the removals)
@@ -77,6 +80,7 @@ export function planInitialSync({ local = [], deletions = [], cloud = [], cloudD
     if (keep ?? isOriginal(doc)) kept.add(id);
   }
   const flags = demoAccount ? unsent.filter((id) => kept.has(id)) : [];
+  const marks = flags.filter((id) => !isOriginal(byId.get(id)));
   const hardDeletes = [
     ...unsent.filter((id) => !flags.includes(id)),
     ...(demoAccount ? [] : flagged),
@@ -85,7 +89,7 @@ export function planInitialSync({ local = [], deletions = [], cloud = [], cloudD
   const merged = mergeResumeLists(local, docs, excluded);
   // `!(>=)`: a copy with no time of its own, on either side, is written.
   const sets = merged.filter((r) => { const c = byId.get(r.id); return !c || c.deleted || !(c.updatedAt >= r.updatedAt); });
-  return { merged, sets, flags, hardDeletes, listAdd: hardDeletes, handled };
+  return { merged, sets, flags, marks, hardDeletes, listAdd: hardDeletes, handled };
 }
 
 /**
@@ -124,15 +128,17 @@ export function afterSync(state, { uid, snapshot, merged, handled, before }) {
 
 /**
  * The local changes since the last look, added to the queue waiting for the next flush.
- * `writes` (Map id → résumé), `deletes` (Set of ids) and `kept` (Set: the deletes whose copy
- * deleted was an original — flagged in a demo account, planFlush) come back as new objects, with
- * `dirty` true when anything changed. A résumé deleted and put back before the flush (a restored
- * original) is written, not deleted.
+ * `writes` (Map id → résumé), `deletes` (Set of ids), `kept` (Set: the deletes whose copy
+ * deleted was an original — flagged in a demo account, planFlush) and `marked` (Set: originals
+ * whose mark this device has not sent — marked, new or put back since the last flush) come back
+ * as new objects, with `dirty` true when anything changed. A résumé deleted and put back before
+ * the flush (a restored original) is written, not deleted.
  */
-export function queueChanges({ writes, deletes, kept = new Set() }, prev = [], current = []) {
+export function queueChanges({ writes, deletes, kept = new Set(), marked = new Set() }, prev = [], current = []) {
   const nextWrites = new Map(writes);
   const nextDeletes = new Set(deletes);
   const nextKept = new Set(kept);
+  const nextMarked = new Set(marked);
   let dirty = false;
   const currentIds = new Set(current.map((r) => r.id));
   for (const r of prev) {
@@ -151,22 +157,26 @@ export function queueChanges({ writes, deletes, kept = new Set() }, prev = [], c
     nextDeletes.delete(r.id);
     nextKept.delete(r.id);
     nextWrites.set(r.id, r);
+    if (!isOriginal(r)) nextMarked.delete(r.id);
+    else if (!isOriginal(p)) nextMarked.add(r.id);
     dirty = true;
   }
-  return { writes: nextWrites, deletes: nextDeletes, kept: nextKept, dirty };
+  return { writes: nextWrites, deletes: nextDeletes, kept: nextKept, marked: nextMarked, dirty };
 }
 
 /**
  * One flush of the queue: `sets` to write, the ids of deleted originals to `flag` (`kept`,
- * queueChanges; a demo account's only), other ids to remove and to add to the deletion list
- * (`listAdd`). Nothing comes off the list: a résumé written again stays listed, so a stale device
+ * queueChanges; a demo account's only) — `marks` the flags that mark it an original too, only
+ * for a mark this device never sent (`marked`): the cloud's copy may have been stopped keeping on
+ * another device since, and a stale tab's flag made it an original again (V2OWNER-DATA-2) —
+ * other ids to remove and to add to the deletion list (`listAdd`). Nothing comes off the list: a résumé written again stays listed, so a stale device
  * cannot resurrect it — an original neither. A demo account never lists an original it deletes
  * (it flags it), so a listed one was deleted for good ("Stop keeping", then Delete), and the flush
  * that took a stale device's kept copy of it off the list brought it back on every device
  * (V2OWNER-DATA-0).
  */
-export function planFlush(writes, deletes, { demoAccount = false, kept = new Set() } = {}) {
+export function planFlush(writes, deletes, { demoAccount = false, kept = new Set(), marked = new Set() } = {}) {
   const flags = demoAccount ? deletes.filter((id) => kept.has(id)) : [];
   const hardDeletes = deletes.filter((id) => !flags.includes(id));
-  return { sets: writes, flags, hardDeletes, listAdd: hardDeletes };
+  return { sets: writes, flags, marks: flags.filter((id) => marked.has(id)), hardDeletes, listAdd: hardDeletes };
 }

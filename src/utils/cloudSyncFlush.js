@@ -12,13 +12,13 @@ import { planFlush } from '@/utils/cloudSyncPlan';
 
 /**
  * Send one flush of account `uid`'s queue — `writes` (résumés), `deletes` (ids), `kept` (the
- * deletes that were originals), `demoAccount` (planFlush) — as ONE batch: io.commit(uid, plan).
- * Nothing is read first: the batch adds to the deletion list itself (R8-4), and io.commit is
- * called before anything is awaited — flushes started in order reach Firestore in order.
- * Resolves to the plan sent once the server has it.
+ * deletes that were originals), `marked` (originals whose mark was not sent yet), `demoAccount`
+ * (planFlush) — as ONE batch: io.commit(uid, plan). Nothing is read first: the batch adds to the
+ * deletion list itself (R8-4), and io.commit is called before anything is awaited — flushes
+ * started in order reach Firestore in order. Resolves to the plan sent once the server has it.
  */
-export async function flushOnce({ uid, writes, deletes, kept, demoAccount = false }, io) {
-  const plan = planFlush(writes, deletes, { demoAccount, kept });
+export async function flushOnce({ uid, writes, deletes, kept, marked, demoAccount = false }, io) {
+  const plan = planFlush(writes, deletes, { demoAccount, kept, marked });
   await io.commit(uid, plan);
   return plan;
 }

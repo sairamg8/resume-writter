@@ -75,6 +75,21 @@ describe('an original deleted for good stays deleted on every device (V2OWNER-DA
     assert.deepEqual(listed(cloud), ['orig_x']);
   });
 
+  it('a stale tab deleting an original another device stopped keeping does not mark it kept again (V2OWNER-DATA-2)', async () => {
+    const cloud = fakeFirestore({ [resumePath('u', 'orig_x')]: orig('orig_x', 5, { name: 'X' }), [resumePath('u', 'orig_y')]: orig('orig_y', 5, { name: 'Y' }) });
+    const laptop = page(cloud, { resumes: [orig('orig_x', 5, { name: 'X' }), orig('orig_y', 5, { name: 'Y' })] });
+    await signIn(laptop);
+    // The phone: "Stop keeping" on X, and an edit.
+    cloud.data.set(resumePath('u', 'orig_x'), cv('orig_x', 20, { name: 'X, edited, not kept' }));
+    await laptop.remove('orig_x'); // the laptop still shows it as an original: flagged
+    await laptop.timers.fire();
+    const { name, keep, deleted } = cloud.resumes('u').orig_x;
+    assert.deepEqual([name, keep, deleted], ['X, edited, not kept', undefined, true], 'before: keep: true written over the phone\'s "Stop keeping"');
+    const fresh = page(cloud, { resumes: [] });
+    await signIn(fresh);
+    assert.deepEqual(fresh.seen.account.cloudOriginals.map((r) => r.id), ['orig_y'], 'before: X was an original again, for the next restore');
+  });
+
   it('a kept copy written back after the deletion (a stale device\'s race) is no original of the account', async () => {
     const cloud = fakeFirestore({
       [resumePath('u', 'orig_x')]: orig('orig_x', 5, { name: 'X' }), [resumePath('u', 'orig_y')]: orig('orig_y', 5, { name: 'Y' }),

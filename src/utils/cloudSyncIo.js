@@ -37,14 +37,14 @@ export function cloudIo(fs, db) {
 
     /**
      * One batch: whole résumés written (`sets`), originals flagged (the rest of the document
-     * kept; marked an original too, for one marked here and deleted before a flush sent the
-     * mark), the rest removed, and their ids added to the deletion list (`listAdd`). Nothing ever
+     * kept; `marks` marked an original too — one marked here and deleted before the mark was
+     * sent), the rest removed, and their ids added to the deletion list (`listAdd`). Nothing ever
      * comes off the list: an id on it was deleted for good. Resolves when the server has it.
      */
-    commit(uid, { sets, flags, hardDeletes, listAdd = [] }) {
+    commit(uid, { sets, flags, marks = [], hardDeletes, listAdd = [] }) {
       const batch = fs.writeBatch(db);
       sets.forEach((r) => batch.set(resumeDoc(uid, r.id), r));
-      flags.forEach((id) => batch.set(resumeDoc(uid, id), { deleted: true, keep: true }, { merge: true }));
+      flags.forEach((id) => batch.set(resumeDoc(uid, id), marks.includes(id) ? { deleted: true, keep: true } : { deleted: true }, { merge: true }));
       hardDeletes.forEach((id) => batch.delete(resumeDoc(uid, id)));
       if (listAdd.length) batch.set(deletionsDoc(uid), { ids: fs.arrayUnion(...listAdd) }, { merge: true });
       return batch.commit();

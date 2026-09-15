@@ -59,7 +59,7 @@ describe('the batch the sync commits', () => {
       [resumePath('u', 'resume_b')]: cv('resume_b'),
     });
     cloud.data.set(listPath('u'), { ids: ['resume_old', 'orig_c'] });
-    await io.cloudIo(cloud.fs, cloud.db).commit('u', { sets: [cv('resume_x', 2)], flags: ['orig_a'], hardDeletes: ['resume_b'], listAdd: ['resume_b'] });
+    await io.cloudIo(cloud.fs, cloud.db).commit('u', { sets: [cv('resume_x', 2)], flags: ['orig_a'], marks: ['orig_a'], hardDeletes: ['resume_b'], listAdd: ['resume_b'] });
     assert.equal(cloud.commits.length, 1);
     assert.deepEqual(Object.keys(cloud.resumes('u')).toSorted(), ['orig_a', 'resume_x']);
     assert.deepEqual(cloud.resumes('u').orig_a, { ...orig('orig_a', 5, { name: 'My résumé' }), deleted: true }, 'flagged, and marked an original');
