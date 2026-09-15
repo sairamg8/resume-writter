@@ -5,13 +5,12 @@
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { setup, teardown, resume, renderCover, read, allItems, drawState, loadModule, MM, TEMPLATES } from './harness.mjs';
-import { painted } from './extractors.mjs';
+import { painted, PNG_2X2 as PNG } from './extractors.mjs';
 
 before(setup);
 after(teardown);
 
 const ACCENT = '#e11d48';
-const PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAEElEQVR4nGP4z8AARAwQCgAf7gP9i18U1AAAAABJRU5ErkJggg==';
 const CONTACTS = { email: 'pat@example.com', phone: '+1 555 0100', location: 'Berlin, Germany' };
 
 /** A letter on `template` with a full letterhead and business block; the options merge in. */

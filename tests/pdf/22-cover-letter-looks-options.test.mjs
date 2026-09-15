@@ -3,15 +3,13 @@
 // block — and letters saved before the looks existed.
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs';
 import { setup, teardown, resume, renderCover, read, allItems, allText, overlaps, loadModule, readDocx, MM, TEMPLATES } from './harness.mjs';
-import { painted, pdftotext } from './extractors.mjs';
+import { drawing, painted, pdftotext, PNG_2X2 as PNG } from './extractors.mjs';
 
 before(setup);
 after(teardown);
 
 const ACCENT = '#e11d48';
-const PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAEElEQVR4nGP4z8AARAwQCgAf7gP9i18U1AAAAABJRU5ErkJggg==';
 const CONTACTS = { email: 'pat@example.com', phone: '+1 555 0100', location: 'Berlin, Germany', website: 'pat.dev', linkedin: 'linkedin.com/in/pat' };
 const BLOCK = { body: '<p>Dear Sarah,</p>', date: '2026-01-15', recipientName: 'Sarah Smith', company: 'Globex Corp', subject: 'Re: the role' };
 
@@ -154,16 +152,10 @@ describe('letters saved before the looks (FIDB-51)', () => {
   });
 
   it('a template id the app does not offer ("dark", an import\'s) prints the Classic letter exactly', async () => {
-    const drawing = async (template) => {
-      const doc = await pdfjs.getDocument({ data: (await renderCover(legacy(template))).slice(), isEvalSupported: false, verbosity: 0 }).promise;
-      const ops = await (await doc.getPage(1)).getOperatorList();
-      await doc.loadingTask.destroy();
-      // pdf.js names fonts per document (g_d0_f1, g_d2_f1): made neutral, or no two renders compare equal.
-      const neutral = (_, v) => (typeof v === 'string' ? v.replace(/_d\d+_/g, '_d_') : v);
-      return ops.fnArray.map((fn, k) => `${fn} ${JSON.stringify(ops.argsArray[k], neutral)}`).join('\n');
-    };
-    const classic = await drawing('classic');
-    assert.notEqual(await drawing('modern'), classic, 'the comparison sees a different look');
-    for (const template of ['dark', 'aurora', '']) assert.equal(await drawing(template), classic, template);
+    // drawing() makes pdf.js's per-document font ids neutral, or no two renders compare equal.
+    const page = async (template) => drawing(await renderCover(legacy(template)));
+    const classic = await page('classic');
+    assert.notEqual(await page('modern'), classic, 'the comparison sees a different look');
+    for (const template of ['dark', 'aurora', '']) assert.equal(await page(template), classic, template);
   });
 });

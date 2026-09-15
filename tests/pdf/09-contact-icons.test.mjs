@@ -2,6 +2,7 @@
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { setup, teardown, resume, render, renderCover } from './harness.mjs';
+import { PNG_2X2 } from './extractors.mjs';
 
 let pdfjs;
 before(async () => { ({ pdfjs } = await setup()); });
@@ -69,7 +70,7 @@ const DOCUMENTS = [
 ];
 
 /** A 2×2 red PNG, as the Personal info "custom icon" upload stores it. */
-const RED_PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAEElEQVR4nGP4z8AARAwQCgAf7gP9i18U1AAAAABJRU5ErkJggg==';
+const RED_PNG = PNG_2X2;
 
 /** How many images page 1 paints. */
 async function images(bytes) {

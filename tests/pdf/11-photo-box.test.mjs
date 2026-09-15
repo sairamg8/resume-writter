@@ -4,33 +4,19 @@
 // résumé's shared table (R3-5).
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs';
 import { setup, teardown, resume, render, renderCover, loadModule } from './harness.mjs';
+import { painted, PNG_2X2 as PNG } from './extractors.mjs';
 
 before(setup);
 after(teardown);
 
-// A 2×2 PNG: the photo's box comes from the Size/Height settings, not from the image.
-const PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAEElEQVR4nGP4z8AARAwQCgAf7gP9i18U1AAAAABJRU5ErkJggg==';
 const round = (n) => Math.round(n * 100) / 100;
-
-/** [a, b, c, d, e, f] × [a, b, c, d, e, f]: `m` applied after `t`, as PDF's `cm` concatenates. */
-const times = (t, m) => [
-  t[0] * m[0] + t[1] * m[2], t[0] * m[1] + t[1] * m[3],
-  t[2] * m[0] + t[3] * m[2], t[2] * m[1] + t[3] * m[3],
-  t[4] * m[0] + t[5] * m[2] + m[4], t[4] * m[1] + t[5] * m[3] + m[5],
-];
-/** A path's box [x0, y0, x1, y1] on the page, through the transform `m`. */
-function onPage([x0, y0, x1, y1], m) {
-  const xs = [[x0, y0], [x1, y1]].map(([x, y]) => x * m[0] + y * m[2] + m[4]);
-  const ys = [[x0, y0], [x1, y1]].map(([x, y]) => x * m[1] + y * m[3] + m[5]);
-  return { x0: Math.min(...xs), y0: Math.min(...ys), x1: Math.max(...xs), y1: Math.max(...ys) };
-}
 const size = (b) => ({ w: round(b.x1 - b.x0), h: round(b.y1 - b.y0) });
 
 /**
- * Page 1's photo as drawn. react-pdf strokes each side of the ring along the box's edge at twice
- * the ring's width, clipped to the box, then clips the picture to the box inside the ring:
+ * Page 1's photo as drawn (painted(), in extractors.mjs). react-pdf strokes each side of the ring
+ * along the box's edge at twice the ring's width, clipped to the box, then clips the picture to
+ * the box inside the ring:
  *   box      the ring's outer box (the union of its strokes); the picture's without a ring
  *   ring     the ring's width in pt (half the stroke), 0 without one
  *   colours  the ring's stroke colours
@@ -39,51 +25,24 @@ const size = (b) => ({ w: round(b.x1 - b.x0), h: round(b.y1 - b.y0) });
  * The ring is the strokes drawn around the picture: a page-wide rule is not one of them.
  */
 async function drawnPhoto(bytes) {
-  const doc = await pdfjs.getDocument({ data: bytes.slice(), isEvalSupported: false, verbosity: 0 }).promise;
-  const { fnArray, argsArray } = await (await doc.getPage(1)).getOperatorList();
-  await doc.loadingTask.destroy();
-  const O = pdfjs.OPS;
-  const strokes = [];
-  const stack = [];
-  let m = [1, 0, 0, 1, 0, 0];
-  let colour = null;
-  let lineWidth = 0;
-  let clipping = false;
-  let clip = null;
-  for (let k = 0; k < fnArray.length; k += 1) {
-    const a = argsArray[k];
-    const fn = fnArray[k];
-    if (fn === O.save) stack.push(m);
-    else if (fn === O.restore) m = stack.pop();
-    else if (fn === O.transform) m = times(a, m);
-    else if (fn === O.setStrokeRGBColor) colour = a[0];
-    else if (fn === O.setLineWidth) lineWidth = a[0];
-    else if (fn === O.clip) clipping = true;
-    else if (fn === O.constructPath) {
-      const [paint, [path], bounds] = a;
-      if (clipping) {
-        clip = { ...onPage(bounds, m), start: onPage([path[1], path[2], path[1], path[2]], m).x0 };
-        clipping = false;
-      } else if (paint === O.stroke) {
-        strokes.push({ colour, lineWidth, ...onPage(bounds, m) });
-      }
-    } else if (fn === O.paintImageXObject) {
-      const near = (s) => s.x0 >= clip.x0 - 10 && s.x1 <= clip.x1 + 10 && s.y0 >= clip.y0 - 10 && s.y1 <= clip.y1 + 10;
-      const ring = strokes.filter(near);
-      const box = ring.length ? {
-        x0: Math.min(...ring.map((s) => s.x0)), y0: Math.min(...ring.map((s) => s.y0)),
-        x1: Math.max(...ring.map((s) => s.x1)), y1: Math.max(...ring.map((s) => s.y1)),
-      } : clip;
-      return {
-        box: size(box),
-        ring: ring.length ? Math.max(...ring.map((s) => s.lineWidth)) / 2 : 0,
-        colours: [...new Set(ring.map((s) => s.colour))],
-        picture: size(clip),
-        radius: round(clip.start - clip.x0),
-      };
-    }
-  }
-  return null;
+  const paths = await painted(bytes);
+  const at = paths.findIndex((p) => p.paint === 'image');
+  if (at < 0) return null;
+  const earlier = paths.slice(0, at);
+  const clip = earlier.findLast((p) => p.paint === 'clip');
+  const near = (s) => s.x0 >= clip.x0 - 10 && s.x1 <= clip.x1 + 10 && s.y0 >= clip.y0 - 10 && s.y1 <= clip.y1 + 10;
+  const ring = earlier.filter((p) => p.paint === 'stroke' && near(p));
+  const box = ring.length ? {
+    x0: Math.min(...ring.map((s) => s.x0)), y0: Math.min(...ring.map((s) => s.y0)),
+    x1: Math.max(...ring.map((s) => s.x1)), y1: Math.max(...ring.map((s) => s.y1)),
+  } : clip;
+  return {
+    box: size(box),
+    ring: ring.length ? Math.max(...ring.map((s) => s.width)) : 0,
+    colours: [...new Set(ring.map((s) => s.colour))],
+    picture: size(clip),
+    radius: round(clip.start - clip.x0),
+  };
 }
 
 describe('cover letter photo on the shared table (R3-5)', () => {

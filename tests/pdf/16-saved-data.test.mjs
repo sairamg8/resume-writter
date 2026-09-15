@@ -4,7 +4,7 @@
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { setup, teardown, resume, render, renderCover, read, allText, itemsWith, loadModule, readDocx } from './harness.mjs';
-import { drawing } from './extractors.mjs';
+import { drawing, PNG_2X2 as PNG } from './extractors.mjs';
 
 before(setup);
 after(teardown);
@@ -121,7 +121,6 @@ describe('a photo saved in a format the PDF cannot draw (R1-1)', () => {
 });
 
 describe('a Modern résumé saved before its banner took Photo → Text Position (R7-10)', () => {
-  const PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAEElEQVR4nGP4z8AARAwQCgAf7gP9i18U1AAAAABJRU5ErkJggg==';
   // The push of 0b83cb1, the first deployed build whose Modern banner printed the stored value.
   const LIVE = Date.UTC(2026, 8, 15, 2, 32, 51);
   /** A Modern résumé with a photo as a build saved it: `dataVersion` undefined = none stored. */

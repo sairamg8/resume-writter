@@ -3,7 +3,7 @@ import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs';
 import { setup, teardown, resume, render, renderCover, loadModule } from './harness.mjs';
-import { drawing } from './extractors.mjs';
+import { drawing, PNG_2X2 as PNG } from './extractors.mjs';
 
 before(setup);
 after(teardown);
@@ -109,9 +109,6 @@ describe('photo ring', { skip: canvasLib ? false : '@napi-rs/canvas is not insta
 });
 
 describe('Photo → Text Position (R3-0)', () => {
-  // A 2×2 PNG: the photo's box size comes from the Size/Height settings, not the image.
-  const PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAEElEQVR4nGP4z8AARAwQCgAf7gP9i18U1AAAAABJRU5ErkJggg==';
-
   const pages = (template, settings) => Promise.all(['top', 'center', 'bottom'].map(async (photoTextAlign) =>
     drawing(await render(resume({ template, personal: { photo: PNG, email: 'me@example.com' }, settings: { photoSize: 'lg', ...settings, photoTextAlign } })))));
 
@@ -138,7 +135,6 @@ describe('Photo → Text Position (R3-0)', () => {
 });
 
 describe('Sidebar photo height (R3-1)', () => {
-  const PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAEElEQVR4nGP4z8AARAwQCgAf7gP9i18U1AAAAABJRU5ErkJggg==';
   // The name sits right under the photo in the Sidebar column, so its baseline moves down by
   // exactly the photo box's extra height.
   const nameY = async (settings) => {

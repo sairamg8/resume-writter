@@ -41,15 +41,17 @@ export async function splitWords(bytes, words) {
 }
 
 /**
- * Page 1's drawing operations, as a string: equal strings draw the same page. pdf.js names fonts
- * per loaded document (g_d0_f1, g_d2_f1 …), so those ids are made document-neutral — without
- * that, any two renders compare "different".
+ * Page 1 as drawn: every operator with its arguments, numbers to 0.01 pt. Equal strings print the
+ * same page. pdf.js names fonts and images per loaded document (g_d0_f1, g_d2_f1 …), so those ids
+ * are made document-neutral — without that, any two renders compare "different".
  */
 export async function drawing(bytes) {
   const doc = await pdfjs.getDocument({ data: bytes.slice(), isEvalSupported: false, verbosity: 0 }).promise;
   const ops = await (await doc.getPage(1)).getOperatorList();
   await doc.loadingTask.destroy();
-  return JSON.stringify(ops.fnArray.map((fn, k) => [fn, ops.argsArray[k]])).replace(/g_d\d+_/g, 'g_');
+  const neutral = (_, v) => (typeof v === 'number' ? Math.round(v * 100) / 100
+    : typeof v === 'string' ? v.replace(/_d\d+_/g, '_d_') : v);
+  return ops.fnArray.map((fn, k) => `${fn} ${JSON.stringify(ops.argsArray[k], neutral)}`).join('\n');
 }
 
 const times = (t, m) => [
@@ -57,10 +59,15 @@ const times = (t, m) => [
   t[2] * m[1] + t[3] * m[3], t[4] * m[0] + t[5] * m[2] + m[4], t[4] * m[1] + t[5] * m[3] + m[5],
 ];
 
+/** A 2×2 PNG, for photos and icons: a photo's box comes from the Size/Height settings, not the image. */
+export const PNG_2X2 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAEElEQVR4nGP4z8AARAwQCgAf7gP9i18U1AAAAABJRU5ErkJggg==';
+
 /**
- * Page 1's painted paths and images, on the page: { paint: 'fill' | 'stroke' | 'image', colour,
- * width, x0, y0, x1, y1 }. react-pdf strokes a border at twice its width, clipped to the box, so
- * a stroke's `width` is half its line width: the rule's thickness as printed.
+ * Page 1's painted paths and images, and the clip paths between them, on the page, in drawing
+ * order: { paint: 'fill' | 'stroke' | 'image' | 'clip', colour, width, x0, y0, x1, y1 }.
+ * react-pdf strokes a border at twice its width, clipped to the box, so a stroke's `width` is
+ * half its line width: the rule's thickness as printed. A clip also has `start`, the x where its
+ * path starts: a rounded box's corner radius is start - x0.
  */
 export async function painted(bytes) {
   const doc = await pdfjs.getDocument({ data: bytes.slice(), isEvalSupported: false, verbosity: 0 }).promise;
@@ -86,7 +93,12 @@ export async function painted(bytes) {
     else if (fn === O.setLineWidth) g = { ...g, lw: a[0] };
     else if (fn === O.clip || fn === O.eoClip) clipping = true;
     else if (fn === O.constructPath) {
-      if (clipping) { clipping = false; return; }
+      if (clipping) {
+        clipping = false;
+        const [, [path]] = a;
+        out.push({ paint: 'clip', colour: null, width: 0, ...box(a[2], g.m), start: box([path[1], path[2], path[1], path[2]], g.m).x0 });
+        return;
+      }
       const stroke = a[0] === O.stroke;
       out.push({ paint: stroke ? 'stroke' : 'fill', colour: stroke ? g.stroke : g.fill, width: stroke ? g.lw / 2 : 0, ...box(a[2], g.m) });
     } else if (fn === O.paintImageXObject) out.push({ paint: 'image', ...box([0, 0, 1, 1], g.m) });

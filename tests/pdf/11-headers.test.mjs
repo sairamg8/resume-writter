@@ -1,8 +1,8 @@
 // Template headers: the header rule and the header controls, checked on real PDFs.
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs';
 import { setup, teardown, resume, render, renderCover, read, drawState, loadModule, TEMPLATES } from './harness.mjs';
+import { drawing, painted } from './extractors.mjs';
 
 before(setup);
 after(teardown);
@@ -13,20 +13,6 @@ const PERSONAL = {
   website: 'alexjohnson.dev', linkedin: 'linkedin.com/in/alexj', github: 'github.com/alexj',
   summary: '<p>An experienced engineer.</p>',
 };
-
-/**
- * Page 1 as drawn: every operator with its arguments (numbers to 0.01 pt, per-document
- * font/image ids made neutral). Two renders are equal exactly when they print the same.
- */
-async function drawing(bytes) {
-  const doc = await pdfjs.getDocument({ data: bytes.slice(), isEvalSupported: false, verbosity: 0 }).promise;
-  const ops = await (await doc.getPage(1)).getOperatorList();
-  const neutral = (_, v) => (typeof v === 'number' ? Math.round(v * 100) / 100
-    : typeof v === 'string' ? v.replace(/_d\d+_/g, '_d_') : v);
-  const out = ops.fnArray.map((fn, k) => `${fn} ${JSON.stringify(ops.argsArray[k], neutral)}`).join('\n');
-  await doc.loadingTask.destroy();
-  return out;
-}
 
 const pageOf = async (template, settings) =>
   drawing(await render(resume({ template, personal: PERSONAL, settings: { accentColor: ACCENT, ...settings } })));
@@ -114,22 +100,7 @@ async function headerRule(template, settings) {
  */
 async function ruleThickness(template, settings) {
   const bytes = await render(resume({ template, settings: { accentColor: ACCENT, showHeaderBorder: true, ...settings } }));
-  const doc = await pdfjs.getDocument({ data: bytes.slice(), isEvalSupported: false, verbosity: 0 }).promise;
-  const { fnArray, argsArray } = await (await doc.getPage(1)).getOperatorList();
-  await doc.loadingTask.destroy();
-  const O = pdfjs.OPS;
-  const out = new Set();
-  const stack = [];
-  let state = { colour: null, width: 1 };
-  fnArray.forEach((fn, k) => {
-    const a = argsArray[k];
-    if (fn === O.save) stack.push(state);
-    else if (fn === O.restore) state = stack.pop();
-    else if (fn === O.setStrokeRGBColor) state = { ...state, colour: a[0] };
-    else if (fn === O.setLineWidth) state = { ...state, width: a[0] };
-    else if (fn === O.constructPath && a[0] === O.stroke && state.colour === ACCENT) out.add(state.width / 2);
-  });
-  return [...out];
+  return [...new Set((await painted(bytes)).filter((p) => p.paint === 'stroke' && p.colour === ACCENT).map((p) => p.width))];
 }
 
 describe('header rule', () => {

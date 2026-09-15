@@ -4,6 +4,7 @@ import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { setup, teardown, resume, renderCover, read, allItems, allText, drawState, loadModule, readDocx, MM, TEMPLATES } from './harness.mjs';
 import { textShades } from '../../src/templates/pdf/shared/pdfColors.js';
+import { PNG_2X2 as PNG } from './extractors.mjs';
 
 before(setup);
 after(teardown);
@@ -66,7 +67,6 @@ describe('a long title in the default header, contacts on the right', () => {
   // about 60 characters they ran past the right margin (off the paper without a photo), and
   // from about 85, with a photo and icon contacts, the letter did not render at all — react-pdf
   // threw "unsupported number: Infinity" drawing an icon in a column of no width.
-  const PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAEElEQVR4nGP4z8AARAwQCgAf7gP9i18U1AAAAABJRU5ErkJggg==';
   const T72 = 'Senior Software Engineer, Platform Infrastructure & Developer Experience';
   const CONTACTS = { email: 'alexandra.johnson@example.com', phone: '+1 555 0100', location: 'San Francisco, CA', website: 'alexjohnson.dev', linkedin: 'linkedin.com/in/alexj' };
 
