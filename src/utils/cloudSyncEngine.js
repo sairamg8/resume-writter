@@ -1,6 +1,7 @@
 // The cloud sync itself — the first sync after sign-in, the write queue and its flushes, the
-// read-back of a demo account's originals — as a plain object with everything outside passed in: the Firestore calls
-// (`io`, cloudSyncIo.js; null without a cloud), the résumé store, the timers, the online flag.
+// read-back of a demo account's originals — as a plain object with everything outside passed
+// in: the Firestore calls (`io`, cloudSyncIo.js; null without a cloud), the résumé store, the
+// timers, the online flag.
 // No React and no Firebase, so the tests drive this very code (tests/pdf/18-cloud-sync-*.test.mjs);
 // useCloudSync only wires it to React state and the browser.
 import { isOriginal } from '@/utils/demoSeed';

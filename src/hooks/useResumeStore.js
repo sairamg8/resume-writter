@@ -103,7 +103,10 @@ export function useAppStore() {
     return id;
   }
 
-  /** A résumé from a file, as a new one; `keep`: marked as the account's original (useDemoSeed), never by the file itself. */
+  /**
+   * A résumé from a file, as a new one. `keep`: marked as the account's original (useDemoSeed) —
+   * never because the file says so.
+   */
   function importResume(data, { keep = false } = {}) {
     const id = newId('resume');
     const imported = normalizeResume(withKeep({ ...JSON.parse(JSON.stringify(data)), id }, keep, Date.now()));
@@ -146,7 +149,7 @@ export function useAppStore() {
     });
   }
 
-  /** "Keep as my original" (`keep` true) or "Stop keeping": a demo account's originals come back (useDemoSeed). */
+  /** "Keep as my original" (`keep` true) or "Stop keeping": a demo account's originals come back. */
   function keepResume(id, keep) {
     setAppState(prev => ({
       ...prev,
