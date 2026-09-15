@@ -72,19 +72,31 @@ const ORIGIN = typeof window !== 'undefined' && window.location?.origin ? window
 const absolute = (url) => (/^https?:/.test(url) ? url : `${ORIGIN}${url}`);
 
 /**
+ * A long token's break mark: a part with no characters that textkit still counts as a part.
+ * textkit (@react-pdf/textkit 6.3, wrapWords and getNodes) turns a part that trims to "" into a
+ * zero-width glue, and puts a hyphen penalty in front of it only when the part is truthy — an
+ * object, not the falsy ''. So the mark adds nothing to the text, and the penalty in front of it
+ * keeps the optimal line breaker off the mark (a glue after a penalty is no break there): a URL
+ * that fits on the next line moves there whole, and only its best-fit pass — for a token longer
+ * than its line — breaks at a mark, with no hyphen (every Text forbids the penalty itself, R4-10).
+ * It answers what textkit asks of a part: replaceAll (soft-hyphen removal), trim, length, and
+ * '' when joined into the string. 20-long-urls pins all of it, through pdf.js and pdftotext.
+ */
+export const BREAK_MARK = Object.freeze({ length: 0, trim: () => '', replaceAll() { return this; }, toString: () => '' });
+
+/**
  * A hyphenation callback that never hyphenates, but lets a long unbroken token — a URL, an
  * e-mail address — break after / . - _ @ ? & = # (or every `max` characters) instead of running
- * off the page. The break is a U+FEFF part: zero-width in every Fontsource font, and textkit
- * turns a part that trims to "" into ordinary glue — a break with no hyphen drawn. textkit also
- * puts a hyphen penalty in front of that glue, and a break there draws a hyphen: every Text
- * forbids it (./PdfText, R4-10), which leaves the glue.
- * Tokens up to `max` characters are left whole (so ordinary e-mails copy out intact).
+ * off the page, at BREAK_MARK. The mark used to be U+FEFF, which fontkit draws as a zero-width
+ * space glyph: pdf.js — and so pdf-parse and other ATS pipelines — read every one as a space,
+ * "github. com/ jordan- rivera- sample/". Now a URL reads as typed wherever it sits on one line.
+ * Tokens up to `max` characters are left whole.
  */
 export function breakLongWords(max) {
   return (word) => {
     if (word.length <= max) return [word];
     const parts = word.split(/(?<=[/.\-_@?&=#])/).flatMap((p) => p.match(new RegExp(`.{1,${max}}`, 'gsu')) || [p]);
-    return parts.flatMap((p, i) => (i ? ['\ufeff', p] : [p]));
+    return parts.flatMap((p, i) => (i ? [BREAK_MARK, p] : [p]));
   };
 }
 
