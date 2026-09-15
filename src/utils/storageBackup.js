@@ -28,20 +28,36 @@ const isQuotaError = (e) => e?.name === 'QuotaExceededError' || e?.name === 'NS_
 /**
  * localStorage.setItem, except that when storage is full the backups make room: they are
  * removed oldest first, one at a time, until the value fits (R4-8). A backup is a copy of
- * something that could not be read; the user's current work comes first. Throws the storage's
- * error when the value does not fit even without them (or storage refused it for another reason).
+ * something that could not be read; the user's current work comes first — but only a write that
+ * then fits is worth one. When the value does not fit even without them (or storage refused it
+ * for another reason), every backup removed for it is written back, then storage's error is
+ * thrown: they used to be gone for good, both lists' copies, for a save that still failed (VM4-0).
  */
 export function setItemWithRoom(key, value) {
   let backups = null; // listed only once a write has not fitted: this runs on every save
+  const removed = []; // [key, value] of each backup removed for this write
   for (;;) {
     try {
       localStorage.setItem(key, value);
       return;
     } catch (e) {
       backups ??= listBackups().filter((b) => b.key !== key);
-      if (!isQuotaError(e) || !backups.length) throw e;
-      remove(backups.shift().key);
+      if (!isQuotaError(e) || !backups.length) {
+        putBack(removed);
+        throw e;
+      }
+      const gone = backups.shift().key;
+      removed.push([gone, readBackup(gone)]);
+      remove(gone);
     }
+  }
+}
+
+/** Write back the backups a write removed and still did not fit: they all fitted before it. */
+function putBack(removed) {
+  for (const [key, value] of removed) {
+    if (value === null) continue;
+    try { localStorage.setItem(key, value); } catch { /* best effort */ }
   }
 }
 
@@ -51,7 +67,7 @@ export function setItemWithRoom(key, value) {
  * up for good in the ~5 MB quota. A value backed up already keeps that copy: React's StrictMode
  * loads the store twice in development, and the second copy was named an earlier repair
  * (V2W1a-9). Best effort: returns the backup's key, or null when storage refused the write even
- * after older backups made room.
+ * with no older backup left (they are all kept then: setItemWithRoom).
  */
 export function backupRaw(key, raw) {
   const mine = listBackups().filter((b) => b.of === key);

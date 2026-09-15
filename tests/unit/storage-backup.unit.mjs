@@ -133,13 +133,44 @@ test('setItemWithRoom: with no backup left to remove, or another error, storage\
   globalThis.localStorage = new MemoryStorage(30);
   localStorage.setItem(`${KEY}_backup_1`, 'small');
   assert.throws(() => setItemWithRoom(KEY, 'x'.repeat(100)), { name: 'QuotaExceededError' });
-  assert.equal(localStorage.getItem(`${KEY}_backup_1`), null, 'it tried');
+  assert.equal(localStorage.getItem(`${KEY}_backup_1`), 'small', 'a save that fails anyway removes nothing (VM4-0)');
 
   globalThis.localStorage = new MemoryStorage();
   localStorage.setItem(`${KEY}_backup_1`, 'kept');
   localStorage.setItem = () => { throw Object.assign(new Error('denied'), { name: 'SecurityError' }); };
   assert.throws(() => setItemWithRoom(KEY, 'x'), { name: 'SecurityError' });
   assert.equal(localStorage.getItem(`${KEY}_backup_1`), 'kept', 'a backup is only removed for room');
+});
+
+test('setItemWithRoom: a save that does not fit even without the backups keeps every backup, of both lists (VM4-0)', () => {
+  // Before: each backup was removed in turn, the save failed anyway, and the only copy of an
+  // unreadable store — the one the notice offers under "Download the copy" — was gone for good.
+  globalThis.localStorage = new MemoryStorage(1000);
+  localStorage.setItem(`${KEY}_backup_1000`, 'a'.repeat(300));
+  localStorage.setItem('cpwtcv_jobs_v1_backup_2000', 'b'.repeat(100));
+  localStorage.setItem(KEY, 'c'.repeat(200));
+  const before = new Map(localStorage.map);
+  assert.throws(() => setItemWithRoom(KEY, 'x'.repeat(995)), { name: 'QuotaExceededError' });
+  assert.deepEqual(new Map(localStorage.map), before, 'storage as it was: both backups, and the store saved last');
+});
+
+test('setItemWithRoom: when removing every backup is exactly enough, the save goes through', () => {
+  // Guard: putting backups back only for a save that still fails must not give up one too early.
+  globalThis.localStorage = new MemoryStorage(100);
+  localStorage.setItem(`${KEY}_backup_1`, 'a'.repeat(20 - `${KEY}_backup_1`.length));
+  localStorage.setItem('cpwtcv_jobs_v1_backup_2', 'b'.repeat(40 - 'cpwtcv_jobs_v1_backup_2'.length));
+  const value = 'x'.repeat(100 - KEY.length); // the whole quota
+  setItemWithRoom(KEY, value);
+  assert.deepEqual([...localStorage.map], [[KEY, value]]);
+});
+
+test('backupRaw: a copy that cannot fit even without older backups keeps them all (VM4-0)', () => {
+  globalThis.localStorage = new MemoryStorage(200);
+  localStorage.setItem('cpwtcv_jobs_v1_backup_5', 'o'.repeat(60));
+  localStorage.setItem(`${KEY}_backup_6`, 'p'.repeat(60));
+  assert.equal(backupRaw(KEY, 'n'.repeat(190)), null);
+  assert.equal(readBackup('cpwtcv_jobs_v1_backup_5'), 'o'.repeat(60), 'before: the job list\'s copy went too');
+  assert.equal(readBackup(`${KEY}_backup_6`), 'p'.repeat(60));
 });
 
 test('backupRaw: a full storage makes room from older backups for the newest copy', () => {
