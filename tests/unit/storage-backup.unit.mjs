@@ -74,12 +74,26 @@ test('loadSavedList: storage that refuses the copy still reports the loss, with 
 
 test('pendingRecovery / rememberRecovery: the notice is kept per list until dismissed', () => {
   rememberRecovery(KEY, { backupKey: `${KEY}_backup_1` });
-  assert.deepEqual(pendingRecovery(KEY), { backupKey: `${KEY}_backup_1` });
+  assert.deepEqual(pendingRecovery(KEY), { backupKey: `${KEY}_backup_1`, earlier: [] });
   assert.equal(pendingRecovery('cpwtcv_jobs_v1'), null, 'another list has its own');
   rememberRecovery(KEY, null);
   assert.equal(pendingRecovery(KEY), null);
   localStorage.setItem(`${KEY}_recovery`, '{ not json');
   assert.equal(pendingRecovery(KEY), null);
+  localStorage.setItem(`${KEY}_recovery`, JSON.stringify({ backupKey: `${KEY}_backup_7` })); // saved by an older build
+  assert.deepEqual(pendingRecovery(KEY), { backupKey: `${KEY}_backup_7`, earlier: [] });
+});
+
+test('rememberRecovery: another repair before the notice is dismissed keeps the first copy named (R8-10)', () => {
+  // Before, the second notice replaced the first: its backup was no longer named anywhere.
+  assert.deepEqual(rememberRecovery(KEY, { backupKey: `${KEY}_backup_1` }), { backupKey: `${KEY}_backup_1`, earlier: [] });
+  const second = rememberRecovery(KEY, { backupKey: `${KEY}_backup_2` });
+  assert.deepEqual(second, { backupKey: `${KEY}_backup_2`, earlier: [`${KEY}_backup_1`] });
+  assert.deepEqual(pendingRecovery(KEY), second, 'after a reload too');
+  // A third with storage too full for a copy: the earlier copies are still named.
+  assert.deepEqual(rememberRecovery(KEY, { backupKey: null }), { backupKey: null, earlier: [`${KEY}_backup_1`, `${KEY}_backup_2`] });
+  rememberRecovery(KEY, null);
+  assert.equal(pendingRecovery(KEY), null, 'dismissed: all of it');
 });
 
 test('backupRaw keeps the newest three backups of a key, however many loads fail (R4-8)', () => {

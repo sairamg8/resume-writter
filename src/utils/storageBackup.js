@@ -104,20 +104,35 @@ export function loadSavedList(key, field, readEntry) {
  * The notice for a list that could not be read in full is kept in storage (`<key>_recovery`)
  * until the user dismisses it: the list is repaired and saved over at once, and the page that
  * shows the notice may not be the one that read it — a reload used to lose it for good (R4-0).
+ * As `{ backupKey, earlier }`: `earlier` the backups of repairs made before this one while the
+ * notice was up (a notice saved by an older build has none).
  */
 export function pendingRecovery(key) {
   try {
     const v = JSON.parse(localStorage.getItem(`${key}_recovery`));
-    return v && typeof v === 'object' ? { backupKey: typeof v.backupKey === 'string' ? v.backupKey : null } : null;
+    if (!v || typeof v !== 'object') return null;
+    const earlier = Array.isArray(v.earlier) ? v.earlier.filter((k) => typeof k === 'string') : [];
+    return { backupKey: typeof v.backupKey === 'string' ? v.backupKey : null, earlier };
   } catch {
     return null;
   }
 }
 
-/** Keep `recovery` for pendingRecovery, or forget it (null) once dismissed. */
+/**
+ * Keep `recovery` for pendingRecovery, or forget it (null) once dismissed; returns the notice
+ * kept. A notice not yet dismissed stays in it: its copies become `earlier`. Another repair used
+ * to replace it, and the first backup — the only copy of what that repair left out — was no
+ * longer named anywhere (R8-10).
+ */
 export function rememberRecovery(key, recovery) {
+  const pending = recovery ? pendingRecovery(key) : null;
+  const notice = recovery && {
+    ...recovery,
+    earlier: [...new Set([...(pending?.earlier || []), pending?.backupKey])].filter((k) => k && k !== recovery.backupKey),
+  };
   try {
-    if (recovery) localStorage.setItem(`${key}_recovery`, JSON.stringify(recovery));
+    if (notice) localStorage.setItem(`${key}_recovery`, JSON.stringify(notice));
     else localStorage.removeItem(`${key}_recovery`);
   } catch { /* best effort: the notice still shows for this visit */ }
+  return notice || null;
 }

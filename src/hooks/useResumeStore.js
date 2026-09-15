@@ -24,9 +24,9 @@ const isResume = (r) => Boolean(r && typeof r === 'object' && !Array.isArray(r) 
  * copy and no word, and the next save replaced it (R4-6).
  */
 function loadStore() {
-  const { saved, list, recovery } = loadSavedList(STORAGE_KEY, 'resumes', r => (isResume(r) ? r : null));
+  const { saved, list, recovery: found } = loadSavedList(STORAGE_KEY, 'resumes', r => (isResume(r) ? r : null));
   // Kept until dismissed: the repaired store is saved over at once, so a reload would lose it.
-  if (recovery) rememberRecovery(STORAGE_KEY, recovery);
+  const recovery = found ? rememberRecovery(STORAGE_KEY, found) : null;
   if (!saved) return { state: emptyStore(), recovery };
   // Any data version is kept: user resumes must survive an app upgrade (or downgrade). Each
   // résumé is migrated from its own dataVersion (normalizeResume), not the store's.

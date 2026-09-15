@@ -93,6 +93,29 @@ describe('regressions — resume store', () => {
     });
   });
 
+  it('R8-10: repaired again before the notice is dismissed, the notice still names the first copy, and downloads it', () => {
+    cy.task('clearDownloads');
+    visitWithRawStore('{ first bad value');
+    cy.contains('[role="alert"]', 'résumés could not be read').should('be.visible');
+    cy.window().then((win) => {
+      const [first] = Object.keys(resumeBackups(win));
+      win.localStorage.setItem(STORAGE_KEY, '{ second bad value'); // broken again; the notice is still up
+      cy.reload();
+      cy.contains('[role="alert"]', 'could not be read').should('be.visible'); // read (and repaired) again
+      cy.window().then((again) => {
+        const second = Object.keys(resumeBackups(again)).find((k) => k !== first);
+        expect(second, 'a second backup').to.be.a('string');
+        cy.contains('[role="alert"]', second).should('be.visible');
+        cy.contains('[role="alert"]', first).should('be.visible'); // before: only the second was named
+        cy.contains('[role="alert"]', 'could not be read').contains('button', 'Download the earlier copy').click();
+        cy.task('waitForDownload', { ext: '.json' }).then((file) => {
+          expect(file).to.match(new RegExp(`${first}\\.json$`));
+          cy.task('readTextFile', file).should('eq', '{ first bad value');
+        });
+      });
+    });
+  });
+
   it('R4-8: when a save does not fit, old backups make room, oldest first, instead of "Not saved"', () => {
     cy.visitEditor('classic');
     cy.window().then((win) => {

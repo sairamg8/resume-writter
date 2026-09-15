@@ -74,8 +74,7 @@ function snapshot() {
     // The notice is kept until dismissed: the list is repaired (and saved over) on whichever job
     // page reads it first, and only the tracker shows the notice (R4-0).
     const { jobs, recovery: found } = load();
-    if (found) rememberRecovery(KEY, found);
-    const recovery = found || pendingRecovery(KEY);
+    const recovery = found ? rememberRecovery(KEY, found) : pendingRecovery(KEY);
     // Saved at once, as the page used to on opening: a migrated or repaired list replaces the
     // stored value (whose backup load() has kept).
     current = { jobs, recovery, persistError: persist(jobs) };
