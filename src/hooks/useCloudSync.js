@@ -3,12 +3,30 @@ import {
   collection, doc, getDocs, getDoc, writeBatch,
 } from 'firebase/firestore';
 import { db } from '@/utils/firebase';
-import { isDemoId, nextTombstones } from '@/utils/demoSeed';
-import { planFlush, planInitialSync, queueChanges } from '@/utils/cloudSyncPlan';
+import { isDemoId } from '@/utils/demoSeed';
+import { planInitialSync, queueChanges } from '@/utils/cloudSyncPlan';
+import { flushOnce, serialQueue } from '@/utils/cloudSyncFlush';
 
 function resumesCol(uid) { return collection(db, 'users', uid, 'resumes'); }
 function resumeDoc(uid, id) { return doc(db, 'users', uid, 'resumes', id); }
 function deletionsDoc(uid) { return doc(db, 'users', uid, 'meta', 'deletions'); }
+
+/** The Firestore calls behind a flush and the first sync (cloudSyncFlush's `io`). */
+const firestore = {
+  async readDeletions(uid) {
+    const snap = await getDoc(deletionsDoc(uid));
+    return snap.exists() ? (snap.data().ids || []) : [];
+  },
+  /** One batch: whole résumés written, samples flagged, the rest removed, the deletion list. */
+  commit(uid, { sets, flags, hardDeletes, tombstones }) {
+    const batch = writeBatch(db);
+    sets.forEach(r => batch.set(resumeDoc(uid, r.id), r));
+    flags.forEach(id => batch.set(resumeDoc(uid, id), { deleted: true }, { merge: true }));
+    hardDeletes.forEach(id => batch.delete(resumeDoc(uid, id)));
+    if (tombstones) batch.set(deletionsDoc(uid), { ids: tombstones });
+    return batch.commit();
+  },
+};
 
 /**
  * Errors that mean cloud sync cannot work until Firebase project/rules are fixed.
@@ -46,6 +64,7 @@ export function useCloudSync({ user, appState, store }) {
     pendingDeletes: new Set(),
     tombstones: new Set(), // the cloud deletion list as last read or written
     timer: null,
+    flushes: serialQueue(), // one flush at a time, in order (R4-3)
   });
 
   // ── Online / offline detection ────────────────────────────────────────────
@@ -93,27 +112,23 @@ export function useCloudSync({ user, appState, store }) {
     async function initialSync() {
       setSyncStatus('syncing');
       try {
-        const [snap, delSnap] = await Promise.all([
+        const [snap, cloudDeleted] = await Promise.all([
           getDocs(resumesCol(user.uid)),
-          getDoc(deletionsDoc(user.uid)),
+          firestore.readDeletions(user.uid),
         ]);
         if (cancelled) return;
 
         // The document id, not a field: a flagged sample the cloud never held is a bare stub.
         const cloudResumes = snap.docs.map(d => ({ ...d.data(), id: d.id }));
-        const cloudDeleted = delSnap.exists() ? (delSnap.data().ids || []) : [];
         const plan = planInitialSync({
           local: appState.resumes, localDeleted: appState.deletedIds || [], cloud: cloudResumes, cloudDeleted,
         });
 
         // Deletions this browser never sent reach the cloud in the same batch, before the store
         // forgets them (loadResumes clears deletedIds) — else the next sync restores them (R4-1).
-        const batch = writeBatch(db);
-        plan.merged.forEach(r => batch.set(resumeDoc(user.uid, r.id), r));
-        plan.flags.forEach(id => batch.set(resumeDoc(user.uid, id), { deleted: true }, { merge: true }));
-        plan.hardDeletes.forEach(id => batch.delete(resumeDoc(user.uid, id)));
-        if (plan.tombstones) batch.set(deletionsDoc(user.uid), { ids: plan.tombstones });
-        await batch.commit();
+        await firestore.commit(user.uid, {
+          sets: plan.merged, flags: plan.flags, hardDeletes: plan.hardDeletes, tombstones: plan.tombstones,
+        });
         if (cancelled) return;
 
         const { merged } = plan;
@@ -176,7 +191,12 @@ export function useCloudSync({ user, appState, store }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [appState.resumes, user]);
 
-  async function flushPending(uid) {
+  /** Queue a flush of the changes waiting by the time it runs (after any flush before it). */
+  function flushPending(uid) {
+    return stateRef.current.flushes(() => sendPending(uid));
+  }
+
+  async function sendPending(uid) {
     const s = stateRef.current;
     if (s.cloudDisabled || !db) return;
 
@@ -191,21 +211,7 @@ export function useCloudSync({ user, appState, store }) {
       // A deleted sample résumé is flagged, not removed: its last copy stays in the cloud so that
       // restoring the samples on any device brings back the edited version. Writing it again
       // (a restore) replaces the whole document, flag included.
-      const plan = planFlush(writes, deletes, s.tombstones);
-      const batch = writeBatch(db);
-      plan.sets.forEach(r => batch.set(resumeDoc(uid, r.id), r));
-      plan.flags.forEach(id => batch.set(resumeDoc(uid, id), { deleted: true }, { merge: true }));
-      plan.hardDeletes.forEach(id => batch.delete(resumeDoc(uid, id)));
-
-      let tombstones = null;
-      if (plan.rewriteTombstones) {
-        const delSnap = await getDoc(deletionsDoc(uid));
-        const existing = delSnap.exists() ? (delSnap.data().ids || []) : [];
-        tombstones = nextTombstones(existing, plan.hardDeletes, writes.map(r => r.id));
-        batch.set(deletionsDoc(uid), { ids: tombstones });
-      }
-
-      await batch.commit();
+      const tombstones = await flushOnce({ uid, writes, deletes, tombstones: s.tombstones }, firestore);
       if (tombstones) s.tombstones = new Set(tombstones);
       setSyncStatus('synced');
       setLastSynced(new Date());

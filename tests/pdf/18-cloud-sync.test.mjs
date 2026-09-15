@@ -7,9 +7,11 @@ import assert from 'node:assert/strict';
 import { setup, teardown, loadModule } from './harness.mjs';
 
 let plan;
+let flush;
 before(async () => {
   await setup();
   plan = await loadModule('/src/utils/cloudSyncPlan.js');
+  flush = await loadModule('/src/utils/cloudSyncFlush.js');
 });
 after(teardown);
 
@@ -105,5 +107,91 @@ describe('the write queue and the flush (R4-2)', () => {
     assert.deepEqual([f.flags, f.hardDeletes, f.rewriteTombstones], [['demo_a'], ['resume_b'], true]);
     assert.equal(plan.planFlush([cv('resume_x')], ['demo_a'], new Set()).rewriteTombstones, false, 'flags only');
     assert.equal(plan.planFlush([cv('demo_a')], [], new Set(['demo_a'])).rewriteTombstones, true, 'a restore revives a listed sample');
+  });
+});
+
+/**
+ * A cloud for flushOnce: `io` commits a batch the way useCloudSync's does. `readDeletions` waits
+ * for `hold` (a promise) when given — the network round trip the race needs.
+ */
+function fakeCloud(docs, { hold } = {}) {
+  const state = { docs: new Map(docs.map((r) => [r.id, r])), deleted: [], commits: [] };
+  const io = {
+    async readDeletions() {
+      await hold;
+      return [...state.deleted];
+    },
+    async commit(uid, { sets, flags, hardDeletes, tombstones }) {
+      for (const r of sets) state.docs.set(r.id, r);
+      for (const id of flags) state.docs.set(id, { ...state.docs.get(id), id, deleted: true });
+      for (const id of hardDeletes) state.docs.delete(id);
+      if (tombstones) state.deleted = tombstones;
+      state.commits.push(sets.length ? 'restore' : 'delete');
+    },
+  };
+  return { state, io };
+}
+
+describe('flushes run one at a time (R4-3)', () => {
+  const SAMPLES = ['demo_1', 'demo_2', 'demo_3', 'demo_4', 'demo_5'];
+  const deferred = () => {
+    let resolve;
+    const promise = new Promise((r) => { resolve = r; });
+    return { promise, resolve };
+  };
+  const ticks = async (n = 10) => { for (let i = 0; i < n; i++) await Promise.resolve(); };
+  // The owner deletes their résumé R and samples 1-4 (flush A: flags plus a removal, so it reads
+  // the deletion list first); then sample 5, which brings the whole set back (flush B: five writes).
+  const flushA = { uid: 'u', writes: [], deletes: ['resume_r', 'demo_1', 'demo_2', 'demo_3', 'demo_4'], tombstones: new Set() };
+  const flushB = { uid: 'u', writes: SAMPLES.map((id) => cv(id, 9, { name: `Restored ${id}` })), deletes: [], tombstones: new Set() };
+  const flagged = (state) => [...state.docs.values()].filter((r) => r.deleted).map((r) => r.id);
+
+  it('a flush still reading the deletion list commits before the next starts: the restored samples stay', async () => {
+    const network = deferred();
+    const { state, io } = fakeCloud([...SAMPLES.map((id) => cv(id)), cv('resume_r')], { hold: network.promise });
+    const run = flush.serialQueue();
+    const a = run(() => flush.flushOnce(flushA, io));
+    const b = run(() => flush.flushOnce(flushB, io));
+    await ticks(); // flush B would commit here if it did not wait for A
+    assert.deepEqual(state.commits, [], 'nothing commits while A waits on the network');
+    network.resolve();
+    await Promise.all([a, b]);
+    assert.deepEqual(state.commits, ['delete', 'restore'], 'in the order they were queued');
+    assert.deepEqual(flagged(state), [], 'no sample is left flagged as deleted');
+    assert.deepEqual(ids([...state.docs.values()]), SAMPLES);
+    assert.deepEqual(state.deleted, ['resume_r']);
+  });
+
+  it('the race is real: the same two flushes side by side leave four samples flagged (what happened before)', async () => {
+    const network = deferred();
+    const { state, io } = fakeCloud([...SAMPLES.map((id) => cv(id)), cv('resume_r')], { hold: network.promise });
+    const a = flush.flushOnce(flushA, io);
+    const b = flush.flushOnce(flushB, io);
+    await ticks();
+    network.resolve();
+    await Promise.all([a, b]);
+    assert.deepEqual(state.commits, ['restore', 'delete']);
+    assert.deepEqual(flagged(state), ['demo_1', 'demo_2', 'demo_3', 'demo_4']);
+  });
+
+  it('a failed flush does not stop the ones after it, and each settles as its own task did', async () => {
+    const run = flush.serialQueue();
+    const order = [];
+    const failed = run(async () => { order.push('a'); throw new Error('offline'); });
+    const next = run(async () => { order.push('b'); return 'sent'; });
+    await assert.rejects(failed, /offline/);
+    assert.equal(await next, 'sent');
+    assert.deepEqual(order, ['a', 'b']);
+  });
+
+  it('flushOnce reads the deletion list only when it changes, and writes it in the same batch', async () => {
+    const { state, io } = fakeCloud([cv('resume_x'), cv('demo_a')]);
+    let reads = 0;
+    const counted = { ...io, readDeletions: (uid) => { reads += 1; return io.readDeletions(uid); } };
+    assert.equal(await flush.flushOnce({ uid: 'u', writes: [cv('resume_x', 2)], deletes: ['demo_a'], tombstones: new Set() }, counted), null);
+    assert.equal(reads, 0, 'flags and writes only: no read');
+    assert.deepEqual(await flush.flushOnce({ uid: 'u', writes: [], deletes: ['resume_x'], tombstones: new Set() }, counted), ['resume_x']);
+    assert.equal(reads, 1);
+    assert.deepEqual([state.deleted, state.commits.length], [['resume_x'], 2]);
   });
 });
