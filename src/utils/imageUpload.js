@@ -15,8 +15,12 @@ const LABELS = { png: ['png'], jpeg: ['jpeg', 'jpg'], svg: ['svg+xml', 'svg'] };
 const MIME = { png: 'image/png', jpeg: 'image/jpeg', svg: 'image/svg+xml' };
 /** Enough of a file to tell its type: an SVG may open with an XML declaration, a comment, a DOCTYPE. */
 const HEAD_BYTES = 4096;
-/** An SVG document's start, past the prolog react-pdf's parser drops (declaration, DOCTYPE, comments). */
-const SVG_START = /^(?:\s|<\?[^>]*>|<!DOCTYPE[^[>]*(?:\[[^\]]*\])?\s*>|<!--[\s\S]*?-->)*<svg[\s/>]/i;
+/**
+ * An SVG document's start, past the prolog react-pdf's parser drops (declaration, DOCTYPE,
+ * comments). Each part matches one way only — a comment never runs past its first "-->" — so a
+ * prolog with no SVG after it fails at once instead of backtracking through every split of it.
+ */
+const SVG_START = /^(?:\s|<\?[^>]*>|<!DOCTYPE[^[>]*(?:\[[^\]]*\][^>]*)?>|<!--(?:[^-]|-(?!->))*-->)*<svg[\s/>]/i;
 
 /** The type of image `head` holds — a file's first bytes, one character per byte: 'png', 'jpeg', 'svg' or null. */
 function sniff(head) {

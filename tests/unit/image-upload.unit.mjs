@@ -42,6 +42,16 @@ describe('drawableImage: what the PDF draws from a saved image', () => {
     assert.equal(drawableImage(`data:image/png;base64,${b64(SVG_TEXT)}`), `data:image/svg+xml;base64,${b64(SVG_TEXT)}`);
   });
 
+  // Each comment matches one way only: a comment pattern that could end at any later "-->" tried
+  // every split of 40 empty comments (280 bytes) before failing, and froze the render (> 20 s).
+  test('an opening of many comments with no SVG after them is refused at once', () => {
+    const started = performance.now();
+    assert.equal(drawableImage(`data:image/svg+xml;base64,${b64(`${'<!---->'.repeat(585)}x`)}`), null);
+    assert.equal(drawableImage(`data:image/svg+xml;base64,${b64(`<!DOCTYPE svg${' '.repeat(4000)}x`)}`), null);
+    assert.ok(performance.now() - started < 500, `${Math.round(performance.now() - started)} ms`);
+    assert.equal(isDrawableImage(`data:image/svg+xml;base64,${b64('<!-- a -- b --><!----><svg/>')}`), true, 'a "--" inside a comment is fine');
+  });
+
   test('not an image: null; a plain URL: as it is (react-pdf fetches it and reads its bytes)', () => {
     for (const src of [undefined, null, '', 42, {}, 'data:image/png;base64,', 'data:image/png,iVBORw0KGgo',
       `data:text/plain;base64,${PNG_B64}`, `data:image/svg+xml;base64,${b64('<html><svg></svg></html>')}`, 'data:image/png;base64,!!!!']) {
