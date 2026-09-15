@@ -1,7 +1,7 @@
 // Résumé data from before this build — this browser's saved store, the cloud account, an
 // imported .json, the sample set — made current in ONE place. Every way a résumé comes in goes
 // through normalizeResume(): the store's load, import and restore, and the cloud sync's merge.
-import { withKnownTemplate } from '@/constants/templates';
+import { inSidebarColumn, withKnownTemplate } from '@/constants/templates';
 import { DEFAULT_ITEM_GAP_PX, SECTION_SPACING_PX } from '@/templates/pdf/shared/pdfUnits';
 
 /**
@@ -16,10 +16,10 @@ const filled = (v) => typeof v === 'string' && v.trim() !== '';
 
 /**
  * When 4bc56fe was pushed (2026-09-14 21:39:53 IST): the first deployed build with ec843e2 (Design →
- * Spacing "Between Items" prints) and bf0467f (the letter prints its recipient block). It stamped
- * no data version on a résumé, and nor did the builds before it, so `updatedAt` alone tells which
- * of them a résumé was last edited on (R7-2). The builds deployed from 0b83cb1 on ran v7 and v8
- * and stamped version 8.
+ * Spacing "Between Items" prints), FIDB-38 (the Sidebar's dark column takes the section presets)
+ * and bf0467f (the letter prints its recipient block). It stamped no data version on a résumé, and
+ * nor did the builds before it, so `updatedAt` alone tells which of them a résumé was last edited
+ * on (R7-2). The builds deployed from 0b83cb1 on ran v7 and v8 and stamped version 8.
  */
 const SPACING_AND_RECIPIENT_LIVE = Date.UTC(2026, 8, 14, 16, 9, 53);
 
@@ -47,16 +47,21 @@ const OLD_ITEM_GAP_PX = 12;
 const presetScale = (ss) => (SECTION_SPACING_PX[ss.spacing] ?? SECTION_SPACING_PX.normal) / SECTION_SPACING_PX.normal;
 
 /**
- * v8 (R2-1, R7-2): Design → Spacing "Between Items" (`itemGap`, px) now prints, times each
- * section's Spacing preset, unless the section sets its own Item gap. What it printed before
- * depends on the build the résumé was last edited on, and that is what it prints:
+ * v8 (R2-1, R7-1, R7-2): Design → Spacing "Between Items" (`itemGap`, px) now prints in both
+ * columns, times each section's Spacing preset, unless the section sets its own Item gap. What it
+ * printed before depends on the build the résumé was last edited on, and that is what it prints:
  * - before 4bc56fe went live: the main column printed each section's preset as a fixed gap (Normal
- *   8 px; Between Items only where a section had no preset — FIDA-53). Whatever it stored, Between
- *   Items becomes 8 px, which times a preset is that preset's old gap; a section with no preset,
- *   which would then move, gets the gap it printed as its own Item gap.
+ *   8 px; Between Items only in a section with no preset — FIDA-53), and the Sidebar's dark column
+ *   printed Between Items itself in every section, whatever its preset (until FIDB-38). Whatever
+ *   it stored, Between Items becomes 8 px, which times a preset is that preset's old gap; a
+ *   section that would then move — the dark column's, or one with no preset — gets the gap it
+ *   printed as its own Item gap.
  * - 4bc56fe, edited since it went live: what prints now. The value the user saw is kept; none
  *   stored printed 12 px, the default then.
- * A section's own Item gap is kept as the user typed it: it printed on every build.
+ * - either: the dark column's Interests chips sat a fixed 2.5 pt apart (until 8a3d8fc); an Item
+ *   gap of 8 px keeps them there.
+ * A section's own Item gap is kept as the user typed it: it printed on every build (except
+ * between the dark column's Interests chips, until 8a3d8fc).
  */
 function withItemGapsAsPrinted(r) {
   if (!r.settings || typeof r.settings !== 'object') return r;
@@ -66,8 +71,11 @@ function withItemGapsAsPrinted(r) {
   /** The px the section printed between its entries, when Between Items alone would not print it now. */
   const printed = (section) => {
     const ss = section.settings || {};
-    if (ss.itemGap != null || seen) return undefined;
-    return SECTION_SPACING_PX[ss.spacing] ?? stored;
+    if (ss.itemGap != null) return undefined;
+    const side = inSidebarColumn(r.template, section.type);
+    if (side && section.type === 'interests') return DEFAULT_ITEM_GAP_PX; // the chips' 2.5 pt
+    if (seen) return undefined;
+    return side ? stored : (SECTION_SPACING_PX[ss.spacing] ?? stored);
   };
   const sections = !Array.isArray(r.sections) ? r.sections : r.sections.map((section) => {
     if (!section || typeof section !== 'object') return section;

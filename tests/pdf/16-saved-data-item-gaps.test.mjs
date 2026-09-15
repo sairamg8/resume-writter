@@ -1,7 +1,7 @@
 // Résumés saved by the builds deployed before data version 8, which stamped no version on them:
 // Design → Spacing "Between Items" and the letter's recipient title print what they printed on the
-// build that last saved them (R2-1, R7-2). The expected gaps were measured on exports of 07154c8
-// (deployed before 4bc56fe) and 4bc56fe, rendering these very résumés.
+// build that last saved them (R2-1, R7-1, R7-2). The expected gaps were measured on exports of
+// 07154c8 (deployed before 4bc56fe) and 4bc56fe, rendering these very résumés.
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { setup, teardown, resume, section, render, renderCover, read, allItems, allText, loadModule } from './harness.mjs';
@@ -9,7 +9,7 @@ import { setup, teardown, resume, section, render, renderCover, read, allItems, 
 before(setup);
 after(teardown);
 
-/** The push of 4bc56fe: the first deployed build whose Between Items and recipient block printed. */
+/** The push of 4bc56fe: the first deployed build whose slider, dark-column presets and recipient block printed. */
 const LIVE = Date.UTC(2026, 8, 14, 16, 9, 53);
 const BEFORE = LIVE - 86_400_000;
 const SINCE = LIVE + 60_000;
@@ -65,7 +65,22 @@ const expect = (side, main, chips) => ({ ...Object.fromEntries(Object.keys(SIDE)
 const rows = ({ chips: _chips, ...gaps }) => gaps;
 const PRESET_PT = { normal: 6, relaxed: 10.5 };
 
-describe('Between Items on a résumé saved before data version 8 (R2-1, R7-2)', () => {
+describe('Between Items on a résumé saved before data version 8 (R2-1, R7-1, R7-2)', () => {
+  it('Sidebar, last edited before 4bc56fe went live: the dark column keeps the gap it printed, the main column its preset\'s (R7-1)', async () => {
+    const { normalizeResume } = await normalizer();
+    // The chips' gap was fixed then, as a new résumé's is now (Between Items 8 px, Normal).
+    const { chips } = await gapsOf(resume({ template: 'sidebar', sections: sections('normal') }));
+    for (const itemGap of [12, 10, 30, 0, undefined]) {
+      for (const spacing of ['normal', 'relaxed']) {
+        const r = normalizeResume(saved({ template: 'sidebar', itemGap, spacing, updatedAt: BEFORE }));
+        // The dark column printed Between Items in every section, presets ignored (before FIDB-38);
+        // none stored printed the old default, 12 px.
+        assert.deepEqual(await gapsOf(r), expect((itemGap ?? 12) * 0.75, PRESET_PT[spacing], chips), `${itemGap} px, ${spacing}`);
+        assert.equal(r.settings.itemGap, 8, `${itemGap} px, ${spacing}: Design shows the new default`);
+      }
+    }
+  });
+
   it('Classic, last edited before 4bc56fe went live: whatever Between Items stored never printed — the preset\'s gap is kept (R7-2)', async () => {
     const { normalizeResume } = await normalizer();
     for (const itemGap of [30, 10, 0]) {
@@ -83,11 +98,13 @@ describe('Between Items on a résumé saved before data version 8 (R2-1, R7-2)',
 
   it('last edited on 4bc56fe after it went live: the Between Items the user saw printing is kept (R7-2)', async () => {
     const { normalizeResume } = await normalizer();
+    const { chips } = await gapsOf(resume({ template: 'sidebar', sections: sections('normal') }));
     for (const [itemGap, pt] of [[12, 9], [20, 15], [0, 0], [undefined, 9]]) {
       const r = normalizeResume(saved({ template: 'sidebar', itemGap, updatedAt: SINCE }));
       // 4bc56fe printed Between Items × the preset in both columns; none stored printed 12 px.
       assert.equal(r.settings.itemGap, itemGap ?? 12, `${itemGap} px: kept`);
-      assert.deepEqual(rows(await gapsOf(r)), rows(expect(pt, pt)), `${itemGap} px`);
+      // …and the Interests chips at their fixed gap, which they only lost with 8a3d8fc (R7-1).
+      assert.deepEqual(await gapsOf(r), expect(pt, pt, chips), `${itemGap} px`);
     }
     const classic = normalizeResume(saved({ itemGap: 20, spacing: 'relaxed', updatedAt: SINCE }));
     assert.equal(classic.settings.itemGap, 20);
