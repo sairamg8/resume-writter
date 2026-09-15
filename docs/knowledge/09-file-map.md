@@ -68,6 +68,7 @@ flowcv/
 ├── playwright.config.js
 ├── README.md
 ├── TODO_RESOLVE_CONFLICTS.md
+├── vite-plugin-owner-resume.js  # the owner's private résumé on the dev server only
 └── vite.config.js
 ```
 
@@ -80,7 +81,8 @@ flowcv/
 
 | File | Role |
 |------|------|
-| `vite.config.js` | React, Tailwind, `@` alias, manualChunks |
+| `vite.config.js` | React, Tailwind, `@` alias, manualChunks, owner-résumé plugin |
+| `vite-plugin-owner-resume.js` | `virtual:owner-resume`: `private/sairam-resume.json` on the dev server, `null` in every build |
 | `jsconfig.json` | editor path alias |
 | `firestore.rules` | owner-only user subtree |
 | `playwright.config.js` | E2E server + browser defaults |

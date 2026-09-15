@@ -39,7 +39,11 @@ Helpers:
 yarn test:unit    # node --test tests/unit/*.unit.mjs
 ```
 
-`tests/unit/demo-seed.unit.mjs` covers the demo-account rules in `src/utils/demoSeed.js`.
+`tests/unit/demo-seed.unit.mjs` covers the demo-account rules in `src/utils/demoSeed.js` (which
+originals come back, and the dev-only import of the owner's private résumé).
+`tests/pdf/24-private-data.test.mjs` builds production and e2e and checks that no text of the
+git-ignored `private/sairam-resume.json` is in either bundle (skipped, with a message, where the
+file is absent); it also runs `vite-plugin-owner-resume.js` on a dev server and in a build.
 Files are `*.unit.mjs` so Playwright's default `*.test.*` / `*.spec.*` match in `tests/`
 never picks them up, and the module under test has no imports so Node loads it as it is.
 
@@ -51,7 +55,8 @@ user such as `{ "uid": "e2e-owner", "email": "…" }`) in localStorage at load s
 that user and **without Firebase**, so it never reaches a real project. Pages without the key
 keep the configured Firebase, so the real sign-in button still renders for the header tests. In
 a production build `e2eUser` is always null and the key does not appear in the bundle.
-`cypress/e2e/11-demo-account.cy.js` uses it for the owner / another account / signed out.
+`cypress/e2e/11-demo-account.cy.js` uses it for the owner / another account / signed out: the
+owner's originals come back (never the samples), "Keep as my original", "Import as my original".
 
 Run by hand: `npx vite build --mode e2e --outDir <scratch>/dist-e2e` →
 `npx vite preview --outDir <scratch>/dist-e2e --port 4173` → `npx cypress run --e2e`.
