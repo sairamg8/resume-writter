@@ -72,6 +72,17 @@ test('loadSavedList: storage that refuses the copy still reports the loss, with 
   assert.deepEqual(loadSavedList(KEY, 'resumes', keepWithId).recovery, { backupKey: null });
 });
 
+test('loadSavedList twice on the same value (React StrictMode in development): one copy, and no "repaired before" (V2W1a-9)', () => {
+  localStorage.setItem(KEY, '{ not json');
+  const first = loadSavedList(KEY, 'resumes', keepWithId).recovery;
+  const second = loadSavedList(KEY, 'resumes', keepWithId).recovery; // the same raw value, not saved over yet
+  assert.equal(second.backupKey, first.backupKey, 'before: a second backup of the same content');
+  assert.equal(backups().length, 1);
+  rememberRecovery(KEY, first);
+  assert.deepEqual(rememberRecovery(KEY, second).earlier, [], 'before: the first copy was named an earlier repair');
+  rememberRecovery(KEY, null);
+});
+
 test('pendingRecovery / rememberRecovery: the notice is kept per list until dismissed', () => {
   rememberRecovery(KEY, { backupKey: `${KEY}_backup_1` });
   assert.deepEqual(pendingRecovery(KEY), { backupKey: `${KEY}_backup_1`, earlier: [] });

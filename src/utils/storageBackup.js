@@ -48,11 +48,15 @@ export function setItemWithRoom(key, value) {
 /**
  * Copy a stored value we are about to replace into its own key (`<key>_backup_<ms>`), so a bad
  * load never destroys data, and keep only the newest BACKUPS_KEPT of that key: they used to pile
- * up for good in the ~5 MB quota. Best effort: returns the backup's key, or null when storage
- * refused the write even after older backups made room.
+ * up for good in the ~5 MB quota. A value backed up already keeps that copy: React's StrictMode
+ * loads the store twice in development, and the second copy was named an earlier repair
+ * (V2W1a-9). Best effort: returns the backup's key, or null when storage refused the write even
+ * after older backups made room.
  */
 export function backupRaw(key, raw) {
   const mine = listBackups().filter((b) => b.of === key);
+  const same = mine.find((b) => readBackup(b.key) === raw);
+  if (same) return same.key;
   // Never the key of an earlier backup: two in one millisecond would be one.
   const at = Math.max(Date.now(), ...mine.map((b) => b.at + 1));
   const backupKey = `${key}_backup_${at}`;

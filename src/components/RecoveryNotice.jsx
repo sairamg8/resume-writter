@@ -9,13 +9,15 @@ import { readBackup } from '@/utils/storageBackup';
  * `recovery.earlier` the copies of repairs made before this one while the notice was up (R8-10).
  * "Download the copy" saves that original as a file — the key alone only helped someone who
  * knows DevTools (R4-8). Storage that fills up later removes backups to save new changes, so the
- * notice checks each copy is still there.
+ * notice checks each copy is still there, and says so for one that is gone.
  */
 export function RecoveryNotice({ what, recovery, onDismiss }) {
   const [, setChecked] = useState(0);
   const { backupKey } = recovery;
   const kept = backupKey !== null && readBackup(backupKey) !== null;
   const earlier = (recovery.earlier || []).filter((k) => readBackup(k) !== null);
+  // Earlier copies removed since (BACKUPS_KEPT, or to make room): said, not left out (V2W1a-9).
+  const pruned = (recovery.earlier || []).length - earlier.length;
 
   function download(key) {
     const raw = readBackup(key);
@@ -32,6 +34,9 @@ export function RecoveryNotice({ what, recovery, onDismiss }) {
   const earlierCopy = earlier.length > 0 && (
     <> It was repaired before too: {earlier.length === 1 ? 'that copy is' : 'those copies are'} kept under {earlier.map((k) => `“${k}”`).join(', ')}.</>
   );
+  const prunedCopy = pruned > 0 && (
+    <> {pruned === 1 ? 'An earlier copy was' : `${pruned} earlier copies were`} later removed to make room.</>
+  );
   const earlierLabel = (i) => (earlier.length === 1 ? 'Download the earlier copy' : `Download earlier copy ${i + 1}`);
 
   return (
@@ -40,6 +45,7 @@ export function RecoveryNotice({ what, recovery, onDismiss }) {
         Your saved {what} could not be read in full, so what could not be read was left out.{' '}
         {copy}
         {earlierCopy}
+        {prunedCopy}
       </span>
       {kept && (
         <button onClick={() => download(backupKey)} className="font-semibold hover:text-red-800 whitespace-nowrap">Download the copy</button>

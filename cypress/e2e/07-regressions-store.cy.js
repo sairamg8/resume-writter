@@ -117,6 +117,22 @@ describe('regressions — resume store', () => {
     });
   });
 
+  it('V2W1a-9: an earlier copy removed to make room is said to be gone, not left out without a word', () => {
+    cy.visit('/#/', {
+      onBeforeLoad(win) {
+        win.localStorage.clear();
+        win.localStorage.setItem(`${STORAGE_KEY}_backup_3000`, '{ the latest bad value');
+        win.localStorage.setItem(`${STORAGE_KEY}_backup_2000`, '{ an earlier one');
+        // A notice still up after four repairs: the oldest backup was pruned (BACKUPS_KEPT).
+        win.localStorage.setItem(`${STORAGE_KEY}_recovery`, JSON.stringify({
+          backupKey: `${STORAGE_KEY}_backup_3000`, earlier: [`${STORAGE_KEY}_backup_1000`, `${STORAGE_KEY}_backup_2000`],
+        }));
+      },
+    });
+    cy.contains('[role="alert"]', 'could not be read').should('contain.text', `${STORAGE_KEY}_backup_2000`)
+      .and('contain.text', 'An earlier copy was later removed to make room'); // before: not a word about it
+  });
+
   it('R4-8: when a save does not fit, old backups make room, oldest first, instead of "Not saved"', () => {
     cy.visitEditor('classic');
     cy.window().then((win) => {
