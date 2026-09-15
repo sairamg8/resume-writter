@@ -197,12 +197,13 @@ export function fakeStore(state, mods) {
  * and `state` in its store, wired as useCloudSync wires them (liveStore; `hidden` () → whether the
  * tab is hidden); with `demo`
  * ({ accounts, ownerResume?, now? }) also the demo restore, run after every change as
- * useDemoSeed runs it. `page.sync.start(user)` signs in; `page.change(next)` changes the store as
+ * useDemoSeed runs it; with `ownTimers` the engine's default timers, as the app runs it. `page.sync.start(user)` signs in; `page.change(next)` changes the store as
  * a click would, `page.remove(id)` deletes a résumé — the effects run after each, as React's would.
  */
-export function syncPage(mods, cloud, state, { isDemo = () => false, online = () => true, hidden = () => false, demo = null } = {}) {
+export function syncPage(mods, cloud, state, { isDemo = () => false, online = () => true, hidden = () => false, demo = null, ownTimers = false } = {}) {
   const store = fakeStore(state, mods);
-  const timers = manualTimers();
+  // ownTimers: none passed in, as useCloudSync passes none — the engine then uses its own default.
+  const timers = ownTimers ? undefined : manualTimers();
   const { seen, report } = recorder();
   const restore = demo ? mods.restore.createDemoRestore({ ...demo, onWaiting: (v) => { seen.waiting = v; } }) : null;
   let user = null;

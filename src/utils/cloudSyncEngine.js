@@ -34,7 +34,9 @@ const emptyQueue = () => ({ writes: new Map(), deletes: new Set(), kept: new Set
  */
 export function createCloudSync({
   io, store, report, isDemo = () => false,
-  online = () => true, hidden = () => false, timers = { set: setTimeout, clear: clearTimeout },
+  // The default timers call the globals, never as methods of `timers`: a browser's setTimeout and
+  // clearTimeout throw "Illegal invocation" on any `this` but the window (the live site went blank).
+  online = () => true, hidden = () => false, timers = { set: (fn, ms) => setTimeout(fn, ms), clear: (id) => clearTimeout(id) },
   flushDelay = 1500, cloudTimeout = 5000, retryDelay = 30000, maxRetryDelay = 600000,
   now = () => Date.now(), log = () => {},
 }) {
