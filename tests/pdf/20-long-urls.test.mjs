@@ -76,6 +76,38 @@ describe('long URLs break without a hyphen (R4-10)', () => {
     });
   }
 
+  // A contact's Display label can put words before a long URL on one line. react-pdf wraps a
+  // contact's bare Link in a paragraph of its own, which no Text setting reaches (VM4-1).
+  for (const template of TEMPLATES) {
+    it(`${template}: a labelled contact with words before a long URL prints the URL as typed, wherever the line ends`, async () => {
+      const url = 'github.com/jordan-rivera-sample/a11y-check-action';
+      const wrong = [];
+      for (const contactStyle of ['icon', 'bullet']) {
+        for (let n = 1; n <= 11; n += 1) {
+          const words = Array.from({ length: n }, (_, i) => `w${i}`).join(' ');
+          const r = resume({ template, settings: { contactStyle }, personal: { website: `https://${url}`, websiteLabel: `${words} ${url}` } });
+          const text = flat(await read(await render(r)));
+          if (!text.includes(url)) wrong.push(`${contactStyle}, ${n} words: ${near(text, url)}`);
+        }
+      }
+      assert.deepEqual(wrong, []);
+    });
+  }
+
+  it('the cover letter, in every template\'s look: a labelled contact with words before a long URL prints it as typed (VM4-1)', async () => {
+    const url = 'github.com/jordan-rivera-sample/a11y-check-action';
+    const wrong = [];
+    for (const template of TEMPLATES) {
+      for (let n = 1; n <= 11; n += 1) {
+        const words = Array.from({ length: n }, (_, i) => `w${i}`).join(' ');
+        const r = resume({ template, personal: { website: `https://${url}`, websiteLabel: `${words} ${url}` } });
+        const text = flat(await read(await renderCover(r)));
+        if (!text.includes(url)) wrong.push(`${template}, ${n} words: ${near(text, url)}`);
+      }
+    }
+    assert.deepEqual(wrong, []);
+  });
+
   it('the cover letter: a long address in its contacts breaks with nothing added', async () => {
     const r = resume({ personal: { website: SITE, email: MAIL } });
     const text = flat(await read(await renderCover(r)));

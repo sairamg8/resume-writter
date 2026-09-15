@@ -12,10 +12,14 @@ const keepTogether = (s) => String(s).replace(/ /g, NBSP);
 /**
  * A contact value as printed: a link (same colour, no underline) when it has a target. Every
  * template's contacts go through here, with `value` and `href` from contactItems().
+ * The link's text is our own Text: react-pdf wraps a Link's bare string in a paragraph of its
+ * own, which carries none of Text's settings, so a long value on its own (a Display label with
+ * a URL in the Sidebar column) could break with a drawn hyphen (VM4-1). A Link holding a Text
+ * is not rewrapped; it lays out exactly as before.
  */
 export function ContactValue({ value, href, style }) {
   if (!href) return <Text style={style}>{value}</Text>;
-  return <Link src={href} style={{ ...style, textDecoration: 'none' }}>{value}</Link>;
+  return <Link src={href} style={{ ...style, textDecoration: 'none' }}><Text>{value}</Text></Link>;
 }
 
 /**
