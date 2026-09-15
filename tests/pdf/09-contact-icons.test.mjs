@@ -125,5 +125,16 @@ describe('an uploaded icon the PDF cannot draw (R1-1)', () => {
       assert.deepEqual(drawn.map((shapes) => shapes.map((x) => x.paint).join('')),
         [PACKS.lucide.shapes[0], ...PACKS.lucide.shapes.slice(2)], 'e-mail falls back to the pack icon');
     });
+
+    // The browser labels an upload by its file name, and react-pdf decodes by the label (R7-3).
+    it(`${name}: a WebP icon labelled PNG gets the pack's icon; a PNG labelled JPEG is drawn`, async () => {
+      const webpAsPng = WEBP.replace('image/webp', 'image/png');
+      const pngAsJpeg = RED_PNG.replace('image/png', 'image/jpeg');
+      const bytes = await make({ iconSet: 'lucide', contactStyle: 'icon', customContactIcons: { email: webpAsPng, phone: pngAsJpeg } });
+      assert.equal(await images(bytes), 1, 'the phone\'s PNG is drawn as an image');
+      const drawn = await icons(bytes);
+      assert.deepEqual(drawn.map((shapes) => shapes.map((x) => x.paint).join('')),
+        [PACKS.lucide.shapes[0], ...PACKS.lucide.shapes.slice(2)], 'e-mail falls back to the pack icon');
+    });
   }
 });

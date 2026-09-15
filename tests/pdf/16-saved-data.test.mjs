@@ -106,19 +106,33 @@ describe('cloud sync merge (R1-0)', () => {
 });
 
 describe('a photo saved in a format the PDF cannot draw (R1-1)', () => {
-  const WEBP = 'data:image/webp;base64,UklGRiIAAABXRUJQVlA4IBYAAAAwAQCdASoBAAEADsD+JaQAA3AAAAAA';
+  const WEBP_BYTES = 'UklGRiIAAABXRUJQVlA4IBYAAAAwAQCdASoBAAEADsD+JaQAA3AAAAAA';
+  /** A 2×2 grey JPEG. */
+  const JPEG_BYTES = '/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgMCAgMDAwMEAwMEBQgFBQQEBQoHBwYIDAoMDAsKCwsNDhIQDQ4RDgsLEBYQERMUFRUVDA8XGBYUGBIUFRT/wAALCAACAAIBAREA/8QAFAABAAAAAAAAAAAAAAAAAAAAB//EABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEAAD8AGn//2Q==';
   const PERSONAL = { name: 'Test Person', title: 'Engineer', email: 'me@example.com' };
   const docs = [
     ...['classic', 'modern', 'minimal', 'executive', 'sidebar'].map((t) => [t, (personal) => render(resume({ template: t, personal: { ...PERSONAL, ...personal }, settings: { photoBorder: 'accent' } }))]),
     ['cover letter', (personal) => renderCover(resume({ personal: { ...PERSONAL, ...personal }, settings: { photoBorder: 'accent' }, coverLetter: { body: '<p>Hello</p>' } }))],
   ];
   for (const [name, make] of docs) {
-    it(`${name}: a WebP photo prints as no photo — no empty ring, no gap before the name`, async () => {
-      const [withWebp, without] = await Promise.all([make({ photo: WEBP }), make({})]);
+    // The browser labels an upload by its file name: a WebP saved as "me.jpg" was stored as
+    // image/jpeg, unconverted, and react-pdf decodes by the label (R7-3).
+    it(`${name}: a WebP photo prints as no photo, whatever its label says — no empty ring, no gap before the name`, async () => {
+      const b = await read(await make({}));
       const pos = (pages) => itemsWith(pages, 'Test Person').map((t) => [Math.round(t.x), Math.round(t.y)]);
-      const [a, b] = [await read(withWebp), await read(without)];
-      assert.deepEqual(pos(a), pos(b), 'the name sits where it sits without a photo');
-      assert.deepEqual([...a[0].strokes].sort(), [...b[0].strokes].sort(), 'no ring is stroked');
+      for (const label of ['webp', 'jpeg', 'png']) {
+        const a = await read(await make({ photo: `data:image/${label};base64,${WEBP_BYTES}` }));
+        assert.deepEqual(pos(a), pos(b), `labelled image/${label}: the name sits where it sits without a photo`);
+        assert.deepEqual([...a[0].strokes].sort(), [...b[0].strokes].sort(), `labelled image/${label}: no ring is stroked`);
+      }
+    });
+
+    it(`${name}: a JPEG saved with a PNG label (a JPEG named .png) prints as the JPEG (R7-3)`, async () => {
+      const [mislabelled, labelled, none] = await Promise.all([
+        make({ photo: `data:image/png;base64,${JPEG_BYTES}` }), make({ photo: `data:image/jpeg;base64,${JPEG_BYTES}` }), make({}),
+      ].map(async (p) => drawing(await p)));
+      assert.ok(labelled !== none, 'the JPEG prints');
+      assert.ok(mislabelled === labelled, 'the same page as with the right label');
     });
   }
 });

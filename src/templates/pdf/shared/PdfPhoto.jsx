@@ -1,5 +1,5 @@
 import { View, Image } from '@react-pdf/renderer';
-import { isDrawableImage } from '@/utils/imageUpload';
+import { drawableImage } from '@/utils/imageUpload';
 
 /**
  * The profile photo, with its ring. `style` comes from getPdfPhotoStyle (plus any layout
@@ -10,10 +10,12 @@ import { isDrawableImage } from '@/utils/imageUpload';
  * and the picture sits inside it with its own, smaller corner radius.
  *
  * Nothing at all for a photo react-pdf cannot decode (a WebP or GIF saved before uploads were
- * converted): an empty ring, or an error on every render, is worse than no photo.
+ * converted): an empty ring, or an error on every render, is worse than no photo. A JPEG saved
+ * with a PNG label (or the reverse) is drawn with the label its bytes call for (R7-3).
  */
-export function PdfPhoto({ src, style }) {
-  if (!isDrawableImage(src)) return null;
+export function PdfPhoto({ src: saved, style }) {
+  const src = drawableImage(saved);
+  if (!src) return null;
   const { width, height, borderRadius = 0, borderWidth: ring = 0, borderColor, objectFit = 'cover', ...layout } = style;
   // minWidth/minHeight keep the box its size in a crowded row: react-pdf 4 reads flexShrink 0
   // as 1, so the old flexShrink: 0 let a long name squeeze the photo (R3-4).
