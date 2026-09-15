@@ -4,7 +4,11 @@
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { setup, teardown, resume, section, render, drawState } from './harness.mjs';
-import { contrast, readableOn, sidebarShades } from '../../src/templates/pdf/shared/pdfColors.js';
+// A namespace import: on older code a missing helper fails only the tests that use it, and the
+// self-contained FIDB-42 behaviour test below still runs (R2-8, R9-11).
+import * as colors from '../../src/templates/pdf/shared/pdfColors.js';
+
+const { contrast, readableOn, sidebarShades } = colors;
 
 before(setup);
 after(teardown);

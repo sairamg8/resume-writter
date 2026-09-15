@@ -1,10 +1,14 @@
 // Unit tests for the template table (src/constants/templates.js). Run: yarn test:unit
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import {
+// A namespace import, not named ones: on older code a helper that is missing is undefined and
+// fails only its own test, where a missing named import stops the whole file loading (R2-8, R9-11).
+import * as templates from '../../src/constants/templates.js';
+
+const {
   TEMPLATE_IDS, templateId, withKnownTemplate, hasHeaderControls, headerBorderOn, templateStyleDefaults,
   SIDEBAR_COLUMN_TYPES, inSidebarColumn, drawsContactIcons, photoTextAlignItems,
-} from '../../src/constants/templates.js';
+} = templates;
 
 test('templateId: the five templates stay; any other id reads as Classic (M15)', () => {
   for (const id of TEMPLATE_IDS) assert.equal(templateId(id), id);
