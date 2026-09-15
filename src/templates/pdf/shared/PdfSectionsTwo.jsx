@@ -57,8 +57,9 @@ export function CertificationsSection({ section, settings, marginBottom, spaceBe
           }
           return (
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              {/* flex: 1 (basis 0) keeps the date whole; react-pdf 4 reads flexShrink 0 as 1 (VM3-9). */}
               <View style={{ flex: 1 }}>{nameLine}</View>
-              {dateStr ? <Text style={{ fontSize: baseSize, color: dateColor, flexShrink: 0, marginLeft: 8, textAlign }}>{dateStr}</Text> : null}
+              {dateStr ? <Text style={{ fontSize: baseSize, color: dateColor, marginLeft: 8, textAlign }}>{dateStr}</Text> : null}
             </View>
           );
         }}

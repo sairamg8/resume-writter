@@ -4,7 +4,7 @@
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs';
-import { setup, teardown, resume, section, render, renderDocx, TEMPLATES } from './harness.mjs';
+import { setup, teardown, resume, section, render, renderDocx, read, itemsWith, overlaps, TEMPLATES } from './harness.mjs';
 
 before(setup);
 after(teardown);
@@ -81,4 +81,32 @@ describe('one date-range rule for every section, in the PDF and in Word', () => 
     const missing = expected.filter((want) => !texts.some((t) => t.endsWith(`\t${want}`)));
     assert.deepEqual(missing, [], texts.join(' | '));
   });
+});
+
+describe('a long title beside a date never squeezes it (VM3-9)', () => {
+  // Guard: the title column is flex: 1 (basis 0), so the date keeps its width and its place —
+  // not the flexShrink: 0 the date Texts carried, which react-pdf 4 reads as 1. Checked by
+  // mutation: with a title column of auto width the title's lines run under the date and push
+  // it past the right margin. Every header row with a date on the right.
+  const LONG = 'Principal Distinguished Staff Engineer for Platform Reliability, Developer Experience and Internal Tooling at Global Scale';
+  const entries = () => [ // built in the test: section() needs setup
+    section('experience', [{ company: 'Globex Corporation International', role: LONG, location: 'Springfield', startDate: '01/2020', endDate: '12/2021' }]),
+    section('certifications', [{ name: LONG, issuer: 'Acme', date: '01/2020', expiry: '12/2021' }]),
+  ];
+  for (const template of TEMPLATES) {
+    it(`${template}: Stacked, Inline and Side by side print "01/2020 – 12/2021" whole, on one line`, async () => {
+      const wrong = [];
+      for (const titleStyle of ['stacked', 'inline', 'sidebyside']) {
+        const sections = entries().map((s) => ({ ...s, settings: { ...s.settings, titleStyle } }));
+        const pages = await read(await render(resume({ template, sections })));
+        const hits = itemsWith(pages, '12/2021');
+        if (hits.length !== 2 || hits.some((t) => !t.str.includes('01/2020 – 12/2021'))) wrong.push(`${titleStyle}: ${JSON.stringify(hits.map((t) => t.str))}`);
+        const onDate = overlaps(pages[0]).filter((pair) => pair.some((str) => str.includes('12/2021')));
+        if (onDate.length) wrong.push(`${titleStyle}: overprinted ${JSON.stringify(onDate)}`);
+        const right = pages[0].W - Math.min(...pages[0].items.map((t) => t.x)); // the right margin
+        for (const t of hits) if (t.x + t.w > right + 0.5) wrong.push(`${titleStyle}: the date ends at ${(t.x + t.w).toFixed(1)}, past the margin at ${right.toFixed(1)}`);
+      }
+      assert.deepEqual(wrong, []);
+    });
+  }
 });

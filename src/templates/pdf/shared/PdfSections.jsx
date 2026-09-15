@@ -103,6 +103,8 @@ export function getDateColor(settings) {
 // `loc` renders in a distinctly lighter shade than `sub`, matching the Canvas templates'
 // two-tone convention (subtitle darker, location lighter) — keep it a separate prop rather
 // than folding it into `sub`, or the color distinction is lost.
+// The date keeps its width because the title beside it is flex: 1 (basis 0), not by a
+// flexShrink: 0 — react-pdf 4 reads that as 1 (VM3-9, as the photo in R3-4).
 export function ItemHeader({ primary, sub, loc, dateStr, settings, titleStyle = 'stacked', italicSub = false, centered = false }) {
   const textColor  = settings?.textColor  || '#1a1a1a';
   const accent     = settings?.accentColor || '#2563eb';
@@ -159,7 +161,7 @@ export function ItemHeader({ primary, sub, loc, dateStr, settings, titleStyle = 
           {sub ? <Text style={subStyle}>{sub}</Text> : null}
           {locText}
         </View>
-        {dateStr ? <Text style={{ fontSize: baseSize, color: dateColor, flexShrink: 0 }}>{dateStr}</Text> : null}
+        {dateStr ? <Text style={{ fontSize: baseSize, color: dateColor }}>{dateStr}</Text> : null}
       </View>
     );
   }
@@ -174,7 +176,7 @@ export function ItemHeader({ primary, sub, loc, dateStr, settings, titleStyle = 
             {locText}
           </Text>
         </View>
-        {dateStr ? <Text style={{ fontSize: baseSize, color: dateColor, flexShrink: 0, marginLeft: 8 }}>{dateStr}</Text> : null}
+        {dateStr ? <Text style={{ fontSize: baseSize, color: dateColor, marginLeft: 8 }}>{dateStr}</Text> : null}
       </View>
     );
   }
@@ -185,7 +187,7 @@ export function ItemHeader({ primary, sub, loc, dateStr, settings, titleStyle = 
         <Text style={{ fontSize: entrySize, fontWeight: 'bold', color: textColor }}>{primary}</Text>
         {subLocLine}
       </View>
-      {dateStr ? <Text style={{ fontSize: baseSize, color: dateColor, flexShrink: 0, marginLeft: 8 }}>{dateStr}</Text> : null}
+      {dateStr ? <Text style={{ fontSize: baseSize, color: dateColor, marginLeft: 8 }}>{dateStr}</Text> : null}
     </View>
   );
 }

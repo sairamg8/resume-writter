@@ -41,13 +41,14 @@ function CardItem({ children }) {
 /**
  * A card's header row: its title lines on the left and the date on the right — or, under
  * Section Options → Alignment "Center", all of it centred on the card, the date on a line of its
- * own, as ItemHeader centres the other templates' entries (R6-1).
+ * own, as ItemHeader centres the other templates' entries (R6-1). The date keeps its width
+ * because the title column is flex: 1 (basis 0); react-pdf 4 reads flexShrink 0 as 1 (VM3-9).
  */
 function CardHeader({ centered, entrySize, lineH, dateStr, dateStyle, children }) {
   return (
     <View wrap={false} minPresenceAhead={Math.round(entrySize * lineH * 2)} style={centered ? { alignItems: 'center' } : { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
       <View style={centered ? { alignItems: 'center' } : { flex: 1 }}>{children}</View>
-      {dateStr ? <Text style={{ ...dateStyle, ...(centered ? { marginTop: 1, textAlign: 'center' } : { flexShrink: 0, marginLeft: 6 }) }}>{dateStr}</Text> : null}
+      {dateStr ? <Text style={{ ...dateStyle, ...(centered ? { marginTop: 1, textAlign: 'center' } : { marginLeft: 6 }) }}>{dateStr}</Text> : null}
     </View>
   );
 }
