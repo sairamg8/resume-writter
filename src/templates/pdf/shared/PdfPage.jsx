@@ -6,13 +6,16 @@ import { HEADER_BORDER_PAD_PT } from './pdfUnits';
 // ./templateSettings, which the Word export reads too (FIDB-51); re-exported for the PDF code.
 export { DEFAULTS, resolveTemplateSettings } from './templateSettings';
 
-/** The header's bottom rule (Classic, Minimal, Executive) when the settings turn it on. */
+/**
+ * The header's bottom rule (Classic, Minimal, Executive) when the settings turn it on, below the
+ * header's Text ↔ Border gap: the résumé's own, else the template's (pb-4, 16 px).
+ */
 export function getHeaderBorderStyle(settings) {
   if (!settings.showHeaderBorder) return {};
   return {
     borderBottomWidth: settings.headerBorderWidth || 2,
     borderBottomColor: solid(settings.accentColor),
-    paddingBottom: HEADER_BORDER_PAD_PT,
+    paddingBottom: settings.headerGaps?.headerRuleGap ?? HEADER_BORDER_PAD_PT,
   };
 }
 

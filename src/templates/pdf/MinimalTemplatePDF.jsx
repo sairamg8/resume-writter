@@ -7,7 +7,6 @@ import { PdfRichText } from './shared/PdfRichText';
 import { hasRichText } from '@/utils/richText';
 import { getPdfPhotoStyle } from './shared/pdfPhoto';
 import { PdfPhoto } from './shared/PdfPhoto';
-import { HEADER_MARGIN_BOTTOM_PT } from './shared/pdfUnits';
 import { solid, textShades } from './shared/pdfColors';
 import { photoTextAlignItems } from '@/constants/templates';
 
@@ -21,7 +20,6 @@ export function MinimalTemplatePDF({ data }) {
     nameColor,
     jobTitleColor,
     lineHeightValue: lineH,
-    sectionGap,
   } = settings;
   const nameSize  = baseSize + (settings.fontSizeNameDelta  ?? 8);
   const entrySize = baseSize + (settings.fontSizeEntryDelta ?? 0);
@@ -30,7 +28,8 @@ export function MinimalTemplatePDF({ data }) {
   const headerAlign  = settings.headerAlign || 'left';
   const headerLayout = settings.headerLayout || 'stack';
   const centered     = headerAlign === 'center';
-  const headerMb     = Math.max(HEADER_MARGIN_BOTTOM_PT, sectionGap || 0);
+  const g            = settings.headerGaps; // the header's spacing, pt (TEMPLATES' headerGaps)
+  const headerMb     = g.headerGapBelow;
   // Off unless the user turns it on (the Minimal design has no header rule).
   const headerBorderStyle = getHeaderBorderStyle(settings);
 
@@ -61,7 +60,7 @@ export function MinimalTemplatePDF({ data }) {
       </Text>
       {personal?.title && (
         <Text style={{
-          fontSize: entrySize, color: jobTitleColor, marginTop: 1,
+          fontSize: entrySize, color: jobTitleColor, marginTop: g.nameTitleGap,
           textAlign: centered ? 'center' : 'left', lineHeight: 1.2,
         }}>
           {personal.title}
@@ -79,21 +78,21 @@ export function MinimalTemplatePDF({ data }) {
           <View style={{
             flexDirection: centered ? 'column' : 'row',
             alignItems: centered ? 'center' : alignItemsVal,
-            gap: 10,
+            gap: g.photoTextGap,
           }}>
             {personal?.photo && !hidden.includes('photo') && (
               <PdfPhoto src={personal.photo} style={getPdfPhotoStyle(settings, accent, 'classic')} />
             )}
             <View style={centered ? { alignItems: 'center', alignSelf: 'stretch' } : { flex: 1 }}>
               {nameBlock}
-              <PdfContactRow personal={personal} settings={settings} />
+              <PdfContactRow personal={personal} settings={settings} gaps={g} />
             </View>
           </View>
 
           {!hidden.includes('summary') && personal?.summary &&
            hasRichText(personal.summary) && (
             <View style={{
-              marginTop: 6,
+              marginTop: g.summaryGap,
               borderLeftWidth: 2,
               borderLeftColor: solid(accent, 0.4),
               paddingLeft: 8,

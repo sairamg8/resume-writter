@@ -7,7 +7,6 @@ import { PdfRichText } from './shared/PdfRichText';
 import { hasRichText } from '@/utils/richText';
 import { getPdfPhotoStyle } from './shared/pdfPhoto';
 import { PdfPhoto } from './shared/PdfPhoto';
-import { HEADER_MARGIN_BOTTOM_PT } from './shared/pdfUnits';
 import { textShades } from './shared/pdfColors';
 import { photoTextAlignItems } from '@/constants/templates';
 
@@ -20,7 +19,6 @@ export function ClassicTemplatePDF({ data }) {
     nameColor,
     jobTitleColor,
     lineHeightValue: lineH,
-    sectionGap,
   } = settings;
   const nameSize  = baseSize + (settings.fontSizeNameDelta  ?? 8);
   const entrySize = baseSize + (settings.fontSizeEntryDelta ?? 0);
@@ -35,8 +33,8 @@ export function ClassicTemplatePDF({ data }) {
 
   const alignItemsVal = photoTextAlignItems(settings); // Photo → Text Position
 
-  // Canvas classic header uses fixed mb-5 (20px); fall back to sectionGap if larger.
-  const headerMb = Math.max(HEADER_MARGIN_BOTTOM_PT, sectionGap || 0);
+  const g = settings.headerGaps; // the header's spacing, pt (TEMPLATES' headerGaps)
+  const headerMb = g.headerGapBelow;
 
   const nameBlock = headerLayout === 'inline' ? (
     <View style={{
@@ -65,7 +63,7 @@ export function ClassicTemplatePDF({ data }) {
       </Text>
       {personal?.title && (
         <Text style={{
-          fontSize: entrySize, color: jobTitleColor, marginTop: 1,
+          fontSize: entrySize, color: jobTitleColor, marginTop: g.nameTitleGap,
           textAlign: centered ? 'center' : 'left', lineHeight: 1.2,
         }}>
           {personal.title}
@@ -83,20 +81,20 @@ export function ClassicTemplatePDF({ data }) {
           <View style={{
             flexDirection: centered ? 'column' : 'row',
             alignItems: centered ? 'center' : alignItemsVal,
-            gap: 10,
+            gap: g.photoTextGap,
           }}>
             {personal?.photo && !hidden.includes('photo') && (
               <PdfPhoto src={personal.photo} style={getPdfPhotoStyle(settings, accent, 'classic')} />
             )}
             <View style={centered ? { alignItems: 'center', alignSelf: 'stretch' } : { flex: 1 }}>
               {nameBlock}
-              <PdfContactRow personal={personal} settings={settings} />
+              <PdfContactRow personal={personal} settings={settings} gaps={g} />
             </View>
           </View>
 
           {!hidden.includes('summary') && personal?.summary &&
            hasRichText(personal.summary) && (
-            <View style={{ marginTop: 8 }}>
+            <View style={{ marginTop: g.summaryGap }}>
               <PdfRichText
                 html={personal.summary}
                 style={{

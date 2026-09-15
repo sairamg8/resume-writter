@@ -58,6 +58,11 @@ Important keys (non-exhaustive):
 - Headings: `headingStyle`, `sectionTitleCase`, border widths/colors
 - Contact: `contactStyle`, `contactCols`, `contactLayout`, `iconSize`
 - Photo: `photoShape`, `photoSize`, `photoBorder`, …
+- Header spacing, CSS px, **not** in `ATS_DEFAULTS` — unset, each prints its template's own
+  (`TEMPLATES[t].headerGaps`, pt): `nameTitleGap`, `titleContactsGap`, `contactGapX`, `contactGapY`,
+  `iconTextGap`, `photoTextGap`, `summaryGap`, `headerRuleGap`, `headerGapBelow` (Classic, Minimal,
+  Executive print them); `headerPadY`/`headerPadX` and `contactsSideGap` are reserved. Keys, ranges
+  and resolution: `src/constants/headerSpacing.js`; `headerInlineGap` stays the Inline layout's.
 
 Template switch merges `TEMPLATE_STYLE_DEFAULTS` for heading style + title case.
 

@@ -22,10 +22,11 @@ export function pxToPt(px) {
 export const A4_WIDTH_PT = 595.28;
 export const MM_TO_PT = 72 / 25.4;
 
-/** Tailwind `mb-5` = 1.25rem = 20px at default root — used by classic/minimal/executive headers. */
-export const HEADER_MARGIN_BOTTOM_PT = pxToPt(20); // 15
-
-/** Tailwind `pb-4` = 1rem = 16px when header border is shown. */
+/**
+ * Tailwind `pb-4` = 1rem = 16px when header border is shown — for settings that carry no
+ * `headerGaps`. The header's spacing is each template's `headerGaps` (src/constants/templates.js),
+ * which the résumé's own settings override (resolveTemplateSettings).
+ */
 export const HEADER_BORDER_PAD_PT = pxToPt(16); // 12
 
 /** Modern accent band: px-6 py-5 → 24px / 20px */
