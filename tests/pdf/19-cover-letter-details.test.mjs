@@ -2,7 +2,7 @@
 // the signature kept with its closing, and the Text colour on every line — PDF and Word alike.
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { setup, teardown, resume, renderCover, read, allItems, allText, drawState, loadModule, readDocx, MM } from './harness.mjs';
+import { setup, teardown, resume, renderCover, read, allItems, allText, drawState, loadModule, readDocx, MM, TEMPLATES } from './harness.mjs';
 import { textShades } from '../../src/templates/pdf/shared/pdfColors.js';
 
 before(setup);
@@ -82,6 +82,23 @@ describe('a long title in the default header, contacts on the right', () => {
           const text = allText(pages).replace(/\s+/g, '');
           for (const value of [title, ...Object.values(CONTACTS)]) assert.ok(text.includes(value.replace(/\s+/g, '')), `${at}: "${value}" is printed`);
         }
+      }
+    }
+  });
+
+  // Below Everything put the name block beside the photo at its one-line width: from about 100
+  // characters with a photo the title ran past the right margin, in every look (found with
+  // FIDB-51; 0b83cb1 did it too). Below Name was never affected: a guard.
+  it('Below Name and Below Everything: a long title wraps beside the photo, inside the margin, in every look', async () => {
+    const title = `${T72}: Payments, Risk and Fraud Detection Platform Group`;
+    for (const template of TEMPLATES) {
+      for (const fieldsPosition of ['below-name', 'below-all']) {
+        const at = `${template}, ${fieldsPosition}`;
+        const r = resume({ template, personal: { name: 'Alexandra Johnson', title, photo: PNG, ...CONTACTS }, coverLetter: { body: '<p>Hello</p>', fieldsPosition } });
+        const pages = await read(await renderCover(r));
+        const right = pages[0].W - 18 * MM;
+        assert.deepEqual(pages[0].items.filter((t) => t.x + t.w > right + 0.5).map((t) => t.str), [], `${at}: text past the margin`);
+        assert.ok(allText(pages).replace(/\s+/g, '').includes(title.replace(/\s+/g, '')), `${at}: the whole title is printed`);
       }
     }
   });

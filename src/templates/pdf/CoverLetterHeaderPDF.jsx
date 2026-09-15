@@ -137,11 +137,13 @@ export function CoverLetterHeader({ look, personal, settings, cl, hidden, contac
       );
     }
     if (fieldsPos === 'below-all') {
+      // The name block takes the row's width left of the photo, so a long title wraps there
+      // instead of running past the margin (it kept its one-line width).
       return (
         <View>
           <View style={{ flexDirection: 'row', alignItems: photoAlign }}>
             {photoEl}
-            {nameBlock}
+            <View style={{ flex: 1, minWidth: 0 }}>{nameBlock}</View>
           </View>
           {contactEl ? <View style={{ marginTop: 5 }}>{contactEl}</View> : null}
         </View>
