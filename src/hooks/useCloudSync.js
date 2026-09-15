@@ -3,7 +3,8 @@ import {
   collection, doc, getDocs, getDoc, writeBatch,
 } from 'firebase/firestore';
 import { db } from '@/utils/firebase';
-import { isDemoId } from '@/utils/demoSeed';
+import { isDemoAccount, isDemoId } from '@/utils/demoSeed';
+import { DEMO_ACCOUNTS } from '@/utils/demoResumes';
 import { planInitialSync, queueChanges } from '@/utils/cloudSyncPlan';
 import { flushOnce, serialQueue } from '@/utils/cloudSyncFlush';
 
@@ -122,6 +123,7 @@ export function useCloudSync({ user, appState, store }) {
         const cloudResumes = snap.docs.map(d => ({ ...d.data(), id: d.id }));
         const plan = planInitialSync({
           local: appState.resumes, localDeleted: appState.deletedIds || [], cloud: cloudResumes, cloudDeleted,
+          demoAccount: isDemoAccount(user, DEMO_ACCOUNTS),
         });
 
         // Deletions this browser never sent reach the cloud in the same batch, before the store
@@ -208,10 +210,11 @@ export function useCloudSync({ user, appState, store }) {
     if (!writes.length && !deletes.length) return;
 
     try {
-      // A deleted sample résumé is flagged, not removed: its last copy stays in the cloud so that
-      // restoring the samples on any device brings back the edited version. Writing it again
-      // (a restore) replaces the whole document, flag included.
-      const tombstones = await flushOnce({ uid, writes, deletes, tombstones: s.tombstones }, firestore);
+      // In a demo account a deleted sample résumé is flagged, not removed: its last copy stays in
+      // the cloud so that restoring the samples on any device brings back the edited version.
+      // Writing it again (a restore) replaces the whole document, flag included.
+      const demoAccount = isDemoAccount(user, DEMO_ACCOUNTS);
+      const tombstones = await flushOnce({ uid, writes, deletes, tombstones: s.tombstones, demoAccount }, firestore);
       if (tombstones) s.tombstones = new Set(tombstones);
       setSyncStatus('synced');
       setLastSynced(new Date());

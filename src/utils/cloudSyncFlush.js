@@ -5,16 +5,18 @@ import { planFlush } from '@/utils/cloudSyncPlan';
 import { nextTombstones } from '@/utils/demoSeed';
 
 /**
- * Send one flush of account `uid`'s queue — `writes` (résumés), `deletes` (ids), and
- * `tombstones` (the deletion list as last read or written) — as ONE batch:
+ * Send one flush of account `uid`'s queue — `writes` (résumés), `deletes` (ids), `tombstones`
+ * (the deletion list as last read or written), `demoAccount` (planFlush) — as ONE batch:
  *   io.commit(uid, { sets, flags, hardDeletes, tombstones })   tombstones null = left alone
  * When the deletion list must change (planFlush) it is read first: io.readDeletions(uid) → ids.
  * Resolves to the deletion list written, or null.
  */
-export async function flushOnce({ uid, writes, deletes, tombstones }, io) {
-  const plan = planFlush(writes, deletes, tombstones);
+export async function flushOnce({ uid, writes, deletes, tombstones, demoAccount = false }, io) {
+  const plan = planFlush(writes, deletes, tombstones, { demoAccount });
+  // Only a demo account restores samples, so only there does writing one take it off the list.
+  const revived = demoAccount ? writes.map((r) => r.id) : [];
   const list = plan.rewriteTombstones
-    ? nextTombstones(await io.readDeletions(uid), plan.hardDeletes, writes.map((r) => r.id))
+    ? nextTombstones(await io.readDeletions(uid), plan.hardDeletes, revived)
     : null;
   await io.commit(uid, { sets: plan.sets, flags: plan.flags, hardDeletes: plan.hardDeletes, tombstones: list });
   return list;
