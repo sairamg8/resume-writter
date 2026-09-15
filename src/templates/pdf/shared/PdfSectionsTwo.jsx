@@ -4,7 +4,7 @@ import { PdfRichText } from './PdfRichText';
 import { ContactValue } from './PdfContact';
 import { pxToPt } from './pdfUnits';
 import { hasRichText, safeHref } from '@/utils/richText';
-import { dateRange } from '@/utils/dates';
+import { dateRange, formatDate } from '@/utils/dates';
 import {
   SPACER,
   SectionTitleOf,
@@ -38,7 +38,7 @@ export function CertificationsSection({ section, settings, marginBottom, spaceBe
         cols={cols}
         gap={itemGap}
         renderItem={(item) => {
-          const dateStr = showDates ? dateRange(item.date, item.expiry) : '';
+          const dateStr = showDates ? dateRange(item.date, item.expiry, settings) : '';
           const nameLine = (
             <Text style={{ fontSize: entrySize, color: textColor, textAlign }}>
               <Text style={{ fontWeight: 'bold' }}>{item.name || item.title}</Text>
@@ -93,7 +93,7 @@ export function ProjectsSection({ section, settings, marginBottom, spaceBefore, 
         cols={cols}
         gap={itemGap}
         renderItem={(item) => {
-          const dateStr = showDates ? dateRange(item.startDate, item.endDate) : '';
+          const dateStr = showDates ? dateRange(item.startDate, item.endDate, settings) : '';
           return (
             <View>
               <View style={{ alignItems: flexAlign, marginBottom: 2 }}>
@@ -173,7 +173,7 @@ export function AwardsSection({ section, settings, marginBottom, spaceBefore, it
             {item.issuer && (
               <Text style={{ fontSize: baseSize, color: sub, fontStyle: italicSubs ? 'italic' : 'normal', textAlign }}>{item.issuer}</Text>
             )}
-            {showDates && item.date ? <Text style={{ fontSize: baseSize, color: dateColor, marginTop: 1, textAlign }}>{item.date}</Text> : null}
+            {showDates && formatDate(item.date || '', settings) ? <Text style={{ fontSize: baseSize, color: dateColor, marginTop: 1, textAlign }}>{formatDate(item.date || '', settings)}</Text> : null}
             {hasRichText(item.description) && (
               <PdfRichText html={item.description} style={{ fontSize: baseSize, color: sub, lineHeight: lineH, marginTop: 1, textAlign }} />
             )}
@@ -206,7 +206,7 @@ export function VolunteeringSection({ section, settings, marginBottom, spaceBefo
         cols={cols}
         gap={itemGap}
         renderItem={(item) => {
-          const dateStr = showDates ? dateRange(item.startDate, item.endDate) : '';
+          const dateStr = showDates ? dateRange(item.startDate, item.endDate, settings) : '';
           const loc = showLoc && item.location ? item.location : '';
           return (
             <View>

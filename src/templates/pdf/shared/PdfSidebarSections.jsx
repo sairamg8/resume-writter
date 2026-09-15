@@ -2,7 +2,7 @@ import { View } from '@react-pdf/renderer';
 import { Text } from './PdfText';
 import { PdfRichText } from './PdfRichText';
 import { hasRichText } from '@/utils/richText';
-import { dateRange } from '@/utils/dates';
+import { dateRange, presentLabel } from '@/utils/dates';
 import { SectionTitleOf, RenderBullets, RenderColGrid, hexAlpha, SectionRouter, SPACER, ItemHeader, shadesOf } from './PdfSections';
 import {
   SIDEBAR_TYPES, SideSectionTitle, EntryLink, SideEducation, SideLanguages, SideCertifications, SideInterests, SideReferences,
@@ -12,9 +12,9 @@ import { SideSkills } from './PdfSidebarSkills';
 export { SIDEBAR_TYPES, SideSectionTitle };
 
 // Dark-column sections (PdfSidebarColumn.jsx, PdfSidebarSkills.jsx); titleCase is Design →
-// Section Headings → Title case.
-export function renderSideSection(section, sectionGap, itemGap, accent, shades, titleCase) {
-  const props = { section, sectionGap, itemGap, accent, shades, titleCase };
+// Section Headings → Title case, settings the résumé's (its dates print in its Date format).
+export function renderSideSection(section, sectionGap, itemGap, accent, shades, titleCase, settings) {
+  const props = { section, sectionGap, itemGap, accent, shades, titleCase, settings };
   switch (section.type) {
     case 'skills':         return <SideSkills         {...props} />;
     case 'education':      return <SideEducation      {...props} />;
@@ -83,8 +83,8 @@ export function SidebarMainExperience({ section, settings, marginBottom, spaceBe
           const role     = iH.includes('role')      ? '' : (item.role      || '');
           const loc      = !iH.includes('location') && showLoc ? (item.location || '') : '';
           const sd = iH.includes('startDate') ? '' : item.startDate;
-          const ed = iH.includes('endDate')   ? '' : (item.current ? 'Present' : item.endDate);
-          const dateStr  = showDates ? dateRange(sd, ed) : '';
+          const ed = iH.includes('endDate')   ? '' : (item.current ? presentLabel(settings) : item.endDate);
+          const dateStr  = showDates ? dateRange(sd, ed, settings) : '';
           const primary  = titleOrder === 'role' ? role    : company;
           const secondary = titleOrder === 'role' ? company : role;
           const subLine  = [secondary, loc].filter(Boolean).join(' · ');
@@ -134,7 +134,7 @@ export function SidebarMainProjects({ section, settings, marginBottom, spaceBefo
         cols={s.columns || 1}
         gap={itemGap}
         renderItem={(item, idx) => {
-          const dateStr = showDates ? dateRange(item.startDate, item.endDate) : '';
+          const dateStr = showDates ? dateRange(item.startDate, item.endDate, settings) : '';
           return (
             <CardItem key={idx}>
               <CardHeader centered={centered} entrySize={entrySize} lineH={lineH} dateStr={dateStr} dateStyle={dateStyle}>

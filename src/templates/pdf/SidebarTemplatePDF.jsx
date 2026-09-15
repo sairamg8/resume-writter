@@ -153,7 +153,7 @@ export function SidebarTemplatePDF({ data }) {
             return (
               <View key={section.id} style={spaceBefore != null ? { marginTop: spaceBefore } : undefined}>
                 {SPACER}
-                {renderSideSection(section, marginBottom, ig, accent, side, settings.sectionTitleCase)}
+                {renderSideSection(section, marginBottom, ig, accent, side, settings.sectionTitleCase, settings)}
               </View>
             );
           })}

@@ -99,7 +99,7 @@ export function buildCoverLetter(resume) {
     contact: Math.round(Math.max(8, baseSize - 0.5) * 2),
   };
   const text = { size: sizes.base, color: textHex };
-  const block = letterBlock(cl);
+  const block = letterBlock(cl, s);
   const sig = letterSignature(cl, personal);
   const gap = pt(12);
 

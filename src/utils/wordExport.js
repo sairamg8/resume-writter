@@ -41,7 +41,7 @@ export async function renderResumeDocx(resume) {
   const children = [
     ...buildPersonalSection(personal, settings),
     // Template defaults (e.g. Executive and Sidebar put the role first) apply as in the PDF.
-    ...sections.flatMap((s) => buildSection(resolveSection(s, template), accentHex)),
+    ...sections.flatMap((s) => buildSection(resolveSection(s, template), accentHex, settings)),
   ];
   return Packer.toBlob(buildDocument(children, settings));
 }

@@ -3,6 +3,7 @@ import { Text } from './PdfText';
 import { PdfRichText } from './PdfRichText';
 import { hasRichText } from '@/utils/richText';
 import { contactHref } from '@/utils/contacts';
+import { formatDate } from '@/utils/dates';
 import { tint } from './pdfColors';
 import { ContactValue } from './PdfContact';
 import {
@@ -95,7 +96,7 @@ export function CustomSection({ section, settings, marginBottom, spaceBefore, it
                 primary={item.title || ''}
                 sub={item.subtitle || undefined}
                 loc={item.location || undefined}
-                dateStr={showDates ? (item.date || '') : ''}
+                dateStr={showDates ? formatDate(item.date || '', settings) : ''}
                 settings={settings}
                 titleStyle={titleStyle}
                 italicSub={italicSubs}

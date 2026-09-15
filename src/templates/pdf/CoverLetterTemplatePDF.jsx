@@ -30,7 +30,7 @@ export function CoverLetterTemplatePDF({ data }) {
   const sig    = letterSignature(cl, personal);
   const sigGap = sig.wide ? 24 : 8;
 
-  const block     = letterBlock(cl);
+  const block     = letterBlock(cl, settings);
   const blockLine = { fontSize: baseSize, color: textColor, lineHeight: 1.3 };
 
   const pageStyle = getPageStyle({

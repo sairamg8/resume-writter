@@ -4,6 +4,7 @@ import { drawsContactIcons, TEMPLATE_PICKER, templateId, upperSectionTitles } fr
 import { DesignSection, NumberRow } from '@/components/DesignPanelShared';
 import { ColorsSection } from '@/components/DesignPanelColors';
 import { TypographySection } from '@/components/DesignPanelTypography';
+import { DatesSection } from '@/components/DesignPanelDates';
 import {
   ICON_SET_OPTIONS,
   CONTACT_ICON_FIELDS,
@@ -16,6 +17,7 @@ const TYPOGRAPHY_KEYS = ['font', 'fontSize', 'fontSizeBase', 'fontSizeNameDelta'
 const SPACING_KEYS    = ['lineHeightValue', 'marginV', 'marginH', 'sectionGap', 'itemGap'];
 const HEADING_KEYS    = ['headingStyle', 'sectionTitleCase', 'sectionBorderWidth', 'sectionBorderColor'];
 const ICON_KEYS       = ['iconSet', 'iconSize', 'contactStyle'];
+const DATE_KEYS       = ['dateFormat'];
 
 export default function DesignPanel({ resume, updateSetting, setTemplate, resetSettings }) {
   const settings = resume.settings || {};
@@ -212,6 +214,8 @@ export default function DesignPanel({ resume, updateSetting, setTemplate, resetS
           })}
         </div>
       </DesignSection>
+
+      <DatesSection settings={settings} updateSetting={updateSetting} onReset={() => resetSection(DATE_KEYS)} />
 
       <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl">
         <div className="flex items-start justify-between gap-3">

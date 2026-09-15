@@ -1,39 +1,30 @@
 // What a cover letter prints around its body, worked out once so the PDF and the Word export
 // cannot drift: the hidden contacts, the date line, the recipient block, the subject line, the
 // closing and the signature.
-import { todayLocalISO } from '@/utils/dates';
-
-const MONTHS = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
-];
+import { formatDayDate, todayLocalISO } from '@/utils/dates';
 
 const text = (v) => (typeof v === 'string' ? v.trim() : '');
 
 /**
- * A 'YYYY-MM-DD' date as "15 January 2026"; anything else — including a day the month does not
- * have, like 2026-02-31 (R1-12) — prints exactly as the user typed it.
+ * The letter's date as it prints, in the résumé's Design → Date format (`settings`, PAR-06): a
+ * day it reads — 'YYYY-MM-DD', or "15 January 2026" as Today writes it — as "15/01/2026",
+ * "2026-01-15" …; As entered (no format stored: every résumé before PAR-06) prints a 'YYYY-MM-DD'
+ * day as "15 January 2026" and anything else — a day the month does not have, like 2026-02-31
+ * (R1-12), included — exactly as the user typed it.
  */
-export function letterDate(value) {
-  const v = text(value);
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v);
-  if (!m) return v;
-  const [year, month, day] = [Number(m[1]), Number(m[2]), Number(m[3])];
-  const real = new Date(year, month - 1, day);
-  if (real.getFullYear() !== year || real.getMonth() !== month - 1 || real.getDate() !== day) return v;
-  return `${day} ${MONTHS[month - 1]} ${m[1]}`;
-}
+export const letterDate = (value, settings) => formatDayDate(value, settings);
 
-/** Today, written the way the letter prints a date. */
+/** Today as the Today button writes it: "15 January 2026", which each Date format then prints its way. */
 export const todayLetterDate = (now = new Date()) => letterDate(todayLocalISO(now));
 
 /**
  * The business-letter block between the letterhead and the body. Each value is '' when the
- * user left it empty, and an empty line prints nothing — no label, no gap.
+ * user left it empty, and an empty line prints nothing — no label, no gap. `settings`: the
+ * résumé's, whose Date format the date line takes.
  */
-export function letterBlock(cl = {}) {
+export function letterBlock(cl = {}, settings = {}) {
   return {
-    date: letterDate(cl.date),
+    date: letterDate(cl.date, settings),
     recipientName: text(cl.recipientName),
     recipientTitle: text(cl.recipientTitle),
     company: text(cl.company),

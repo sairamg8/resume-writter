@@ -51,7 +51,7 @@ export function SideSectionTitle({ title, shades = NAVY, titleCase = 'upper' }) 
   );
 }
 
-export function SideEducation({ section, sectionGap, itemGap, shades = NAVY, titleCase }) {
+export function SideEducation({ section, sectionGap, itemGap, shades = NAVY, titleCase, settings }) {
   const s        = section.settings || {};
   const showDates = s.showDates !== false;
   const showLoc   = s.showLocation !== false;
@@ -68,8 +68,8 @@ export function SideEducation({ section, sectionGap, itemGap, shades = NAVY, tit
             {item.fieldOfStudy && <Text style={{ fontSize: 9, color: shades.label, lineHeight: 1.2 }}>{item.fieldOfStudy}</Text>}
             {showLoc && item.location ? <Text style={{ fontSize: 9, color: shades.meta, lineHeight: 1.2 }}>{item.location}</Text> : null}
             {item.gpa && <Text style={{ fontSize: 9, color: shades.meta, lineHeight: 1.2 }}>GPA: {item.gpa}</Text>}
-            {showDates && dateRange(item.startDate, item.endDate) ? (
-              <Text style={{ fontSize: 9, color: shades.meta, lineHeight: 1.2 }}>{dateRange(item.startDate, item.endDate)}</Text>
+            {showDates && dateRange(item.startDate, item.endDate, settings) ? (
+              <Text style={{ fontSize: 9, color: shades.meta, lineHeight: 1.2 }}>{dateRange(item.startDate, item.endDate, settings)}</Text>
             ) : null}
             {/* Coursework, honours …: printed like the main column's, in the column's light text. */}
             {hasRichText(item.description) ? <PdfRichText html={item.description} style={{ fontSize: 9, color: shades.value, lineHeight: 1.3, marginTop: 2 }} /> : null}
@@ -98,7 +98,7 @@ export function SideLanguages({ section, sectionGap, itemGap, shades = NAVY, tit
   );
 }
 
-export function SideCertifications({ section, sectionGap, itemGap, shades = NAVY, titleCase }) {
+export function SideCertifications({ section, sectionGap, itemGap, shades = NAVY, titleCase, settings }) {
   const s        = section.settings || {};
   const showDates = s.showDates !== false;
   const visibleItems = (section.items || []).filter(i => i.visible !== false);
@@ -109,7 +109,7 @@ export function SideCertifications({ section, sectionGap, itemGap, shades = NAVY
       <View style={{ gap: itemGap }}>
         {visibleItems.map((item, i) => {
           // Issued – expires, as the main column prints it ("– 03/2027" without an issue date).
-          const dateStr = showDates ? dateRange(item.date, item.expiry) : '';
+          const dateStr = showDates ? dateRange(item.date, item.expiry, settings) : '';
           return (
             <View key={i}>
               <Text style={{ fontSize: 9, fontWeight: 'bold', color: shades.strong, lineHeight: 1.2 }}>{item.name}</Text>

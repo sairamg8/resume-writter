@@ -1,6 +1,7 @@
 import { BLANK_PERSONAL, blankSections, BASE_COVER_LETTER } from '@/utils/defaultDataContent';
 import { templateStyleDefaults } from '@/constants/templates';
 import { DATA_VERSION } from '@/utils/normalizeResume';
+import { DEFAULT_DATE_FORMAT } from '@/utils/dates';
 
 // ATS-safe defaults — proper dimensions, neutral colors, standard font
 export const ATS_DEFAULTS = {
@@ -16,6 +17,8 @@ export const ATS_DEFAULTS = {
   textColor: '#111111',
   headingStyle: 'ruled',
   sectionTitleCase: 'upper',
+  /** Design → Date format (src/utils/dates.js): As entered prints every date as stored, as before PAR-06. */
+  dateFormat: DEFAULT_DATE_FORMAT,
   sectionBorderWidth: 1,
   sectionBorderColor: '',
   headerAlign: 'left',
