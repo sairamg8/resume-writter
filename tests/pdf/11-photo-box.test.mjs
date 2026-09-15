@@ -1,6 +1,7 @@
 // The profile photo's box and ring as page 1 draws them, read from pdf.js's operator list (no
-// canvas needed): the ring's colour on the Sidebar panel (R3-3), a box a long name cannot
-// squeeze (R3-4), and the cover letter's photo on the résumé's shared table (R3-5).
+// canvas needed): the ring's colour on the Sidebar panel (R3-3) and on every coloured ground
+// (VM3-4), a box a long name cannot squeeze (R3-4), and the cover letter's photo on the
+// résumé's shared table (R3-5).
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs';
@@ -198,5 +199,50 @@ describe('Sidebar photo ring on the dark panel (R3-3)', () => {
     assert.deepEqual((await ring({ accentColor: '#374151', photoBorder: 'thin' })).colours, ['#565f6c']);
     const classic = await drawnPhoto(await render(resume({ personal: { photo: PNG }, settings: { accentColor: '#374151' } })));
     assert.deepEqual(classic.colours, ['#374151'], 'Classic on its white page');
+  });
+});
+
+describe('every ring shows on what it sits on (VM3-4)', () => {
+  // Rings on a coloured ground — the Sidebar panel, Modern's accent banner, and the letter in
+  // those looks — are checked against it: Accent at 3:1 (WCAG for a graphic), Thin at least as
+  // visible as Classic's Thin on the white page (#e5e7eb, 1.24:1). Only custom colours reach
+  // this: on every preset both rings already clear it (the guard below).
+  const photo = async (template, settings, cover = false) => {
+    const r = resume({ template, personal: { photo: PNG, email: 'me@example.com' }, settings: { photoShape: 'circle', ...settings } });
+    return drawnPhoto(await (cover ? renderCover(r) : render(r)));
+  };
+  const CASES = [
+    // [what, template, the ground it sits on as a setting]
+    ['Sidebar panel', 'sidebar', (bg) => ({ sidebarBg: bg })],
+    ['Modern banner', 'modern', (bg) => ({ accentColor: bg })],
+  ];
+
+  for (const cover of [false, true]) {
+    for (const [what, template, ground] of CASES) {
+      it(`${cover ? 'cover letter, ' : ''}${what}: Thin and Accent rings show on a light ground`, async () => {
+        const { contrast } = await loadModule('/src/templates/pdf/shared/pdfColors.js');
+        const thinMin = contrast('#e5e7eb', '#ffffff');
+        const wrong = [];
+        for (const bg of ['#f8fafc', '#fde68a', '#ffffff']) {
+          for (const [photoBorder, min] of [['thin', thinMin], ['accent', 3]]) {
+            // Sidebar's Accent is the accent: a light one, so it has to be moved to show.
+            const { colours } = await photo(template, { ...ground(bg), accentColor: template === 'sidebar' ? '#fef9c3' : bg, photoBorder }, cover);
+            const ratio = contrast(colours[0], bg);
+            if (colours.length !== 1 || !(ratio >= min - 1e-9)) wrong.push(`${photoBorder} ${colours} on ${bg}: ${ratio?.toFixed(2)}:1, needs ${min.toFixed(2)}`);
+          }
+        }
+        assert.deepEqual(wrong, []);
+      });
+    }
+  }
+
+  // Guard: on the presets every ring already showed, and prints as it did.
+  it('the presets keep their rings: white and half-white on Modern\'s accents, a quarter-white on the panels', async () => {
+    for (const accentColor of ['#2563eb', '#ea580c', '#0d9488']) {
+      assert.deepEqual((await photo('modern', { accentColor, photoBorder: 'accent' })).colours, ['#ffffff'], accentColor);
+    }
+    assert.deepEqual((await photo('modern', { accentColor: '#2563eb', photoBorder: 'thin' })).colours, ['#92b1f5']);
+    assert.deepEqual((await photo('sidebar', { sidebarBg: '#14532d', photoBorder: 'thin' })).colours, ['#4f7e62']);
+    assert.deepEqual((await photo('classic', { photoBorder: 'thin' })).colours, ['#e5e7eb'], 'Classic\'s Thin on white');
   });
 });
