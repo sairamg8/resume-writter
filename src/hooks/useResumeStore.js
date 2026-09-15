@@ -5,12 +5,13 @@ import { newId } from '@/utils/ids';
 import { templateStyleDefaults } from '@/constants/templates';
 import { DATA_VERSION, normalizeResume } from '@/utils/normalizeResume';
 import { loadSavedList, pendingRecovery, rememberRecovery, setItemWithRoom } from '@/utils/storageBackup';
+import { savedDeletions, withDeletion, withoutDeletions } from '@/utils/localDeletions';
 
 const STORAGE_KEY = 'cpwtcv_v1';
 
 /** First run: no résumés. The dashboard shows its "Create your first resume" state. */
 function emptyStore() {
-  return { resumes: [], activeId: null, dataVersion: DATA_VERSION, deletedIds: [] };
+  return { resumes: [], activeId: null, dataVersion: DATA_VERSION, deletedIds: [], deletedInfo: {} };
 }
 
 const isResume = (r) => Boolean(r && typeof r === 'object' && !Array.isArray(r) && r.id);
@@ -34,7 +35,7 @@ function loadStore() {
       ...saved,
       resumes,
       activeId: resumes.some(r => r.id === saved.activeId) ? saved.activeId : (resumes[0]?.id ?? null),
-      deletedIds: Array.isArray(saved.deletedIds) ? saved.deletedIds : [],
+      ...savedDeletions(saved), // deletedIds, deletedInfo (a store saved before R8-0 has ids only)
       dataVersion: DATA_VERSION,
     },
     recovery,
@@ -86,6 +87,7 @@ export function useAppStore() {
       resumes,
       activeId: resumes.find(r => r.id === prev.activeId) ? prev.activeId : (resumes[0]?.id || prev.activeId),
       deletedIds: [],
+      deletedInfo: {},
     }));
   }
 
@@ -114,7 +116,7 @@ export function useAppStore() {
         ...prev,
         resumes,
         activeId: resumes.some(r => r.id === prev.activeId) ? prev.activeId : (resumes[0]?.id ?? null),
-        deletedIds: (prev.deletedIds || []).filter(id => !ids.has(id)),
+        ...withoutDeletions(prev, ids),
       };
     });
   }
@@ -128,12 +130,14 @@ export function useAppStore() {
     return copyId;
   }
 
+  /** Remove a résumé; the id and the version deleted are kept for the cloud sync (localDeletions). */
   function deleteResume(id) {
     setAppState(prev => {
+      const gone = prev.resumes.find(r => r.id === id);
+      if (!gone) return prev;
       const remaining = prev.resumes.filter(r => r.id !== id);
-      const deletedIds = [...(prev.deletedIds || []), id];
       const activeId = prev.activeId === id ? (remaining[0]?.id ?? null) : prev.activeId;
-      return { ...prev, resumes: remaining, activeId, deletedIds };
+      return { ...prev, resumes: remaining, activeId, ...withDeletion(prev, gone, Date.now()) };
     });
   }
 

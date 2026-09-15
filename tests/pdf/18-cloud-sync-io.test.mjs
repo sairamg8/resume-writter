@@ -6,7 +6,7 @@
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { setup, teardown, loadModule } from './harness.mjs';
-import { fakeFirestore, manualTimers, recorder, resumePath, listPath, settle } from './fake-firestore.mjs';
+import { fakeFirestore, syncPage, resumePath, listPath, settle } from './fake-firestore.mjs';
 
 let io;
 let engine;
@@ -23,26 +23,7 @@ const ids = (list) => list.map((r) => r.id).toSorted();
 const USER = { uid: 'u', email: 'someone@example.com' };
 const OWNER = { uid: 'u', email: 'owner@example.com' };
 
-/** The résumé store the engine talks to: its state, and loadResumes as the store applies it. */
-function fakeStore(state) {
-  const store = {
-    state: { deletedIds: [], ...state },
-    getState: () => store.state,
-    loadResumes(list) { store.state = { ...store.state, resumes: list, deletedIds: [] }; },
-  };
-  return store;
-}
-
-/** A signed-in page: the engine over `cloud`, with `state` in its store. Call `page.sync.start(user)`. */
-function page(cloud, state, { isDemo = (u) => u.email === OWNER.email } = {}) {
-  const store = fakeStore(state);
-  const timers = manualTimers();
-  const { seen, report } = recorder();
-  const sync = engine.createCloudSync({ io: io.cloudIo(cloud.fs, cloud.db), store, report, isDemo, online: () => true, timers });
-  /** A change in the store, as React would run the watcher after it. */
-  const change = (next) => { store.state = { ...store.state, ...next }; sync.resumesChanged(store.state.resumes); };
-  return { store, timers, seen, sync, change };
-}
+const page = (cloud, state) => syncPage({ io, engine }, cloud, state, { isDemo: (u) => u.email === OWNER.email });
 
 const signIn = async (p, user = USER) => { p.sync.start(user); await settle(); };
 
@@ -86,7 +67,7 @@ describe('the batch the sync commits', () => {
 describe('the first sync through the real batch (R4-1)', () => {
   it('a résumé deleted while signed out is removed and listed; it stays gone after a reload and on another device', async () => {
     const cloud = fakeFirestore({ [resumePath('u', 'resume_a')]: cv('resume_a'), [resumePath('u', 'resume_b')]: cv('resume_b') });
-    const laptop = page(cloud, { resumes: [cv('resume_b')], deletedIds: ['resume_a'] });
+    const laptop = page(cloud, { resumes: [cv('resume_b')], deletedIds: ['resume_a'], deletedInfo: { resume_a: { version: 1, at: 1 } } });
     await signIn(laptop);
     assert.deepEqual(Object.keys(cloud.resumes('u')), ['resume_b'], 'removed from the cloud');
     assert.deepEqual(cloud.doc(listPath('u')).ids, ['resume_a'], 'and on the deletion list');
@@ -102,7 +83,7 @@ describe('the first sync through the real batch (R4-1)', () => {
 
   it('a sample deleted offline in a demo account is flagged, its edited copy kept for a restore', async () => {
     const cloud = fakeFirestore({ [resumePath('u', 'demo_classic')]: cv('demo_classic', 5, { name: 'Edited sample' }), [resumePath('u', 'resume_b')]: cv('resume_b') });
-    const p = page(cloud, { resumes: [cv('resume_b')], deletedIds: ['demo_classic'] });
+    const p = page(cloud, { resumes: [cv('resume_b')], deletedIds: ['demo_classic'], deletedInfo: { demo_classic: { version: 5, at: 1 } } });
     await signIn(p, OWNER);
     assert.equal(cloud.resumes('u').demo_classic.deleted, true);
     assert.equal(cloud.resumes('u').demo_classic.name, 'Edited sample');

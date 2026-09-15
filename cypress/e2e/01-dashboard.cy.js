@@ -91,15 +91,21 @@ describe('dashboard — with résumés', () => {
     cy.get(CARD).should('contain.text', 'Minimal — Frontend');
   });
 
-  it('Delete removes the card and records the id for cloud sync', () => {
+  it('Delete removes the card and records the id — and the version deleted — for cloud sync (R8-0)', () => {
     cy.store().then((s) => {
       const modern = s.resumes.find((r) => r.name === 'Modern CV');
       cy.contains(CARD, 'Modern CV').contains('button', 'Delete').click();
       cy.get(CARD).should('have.length', 2).and('not.contain.text', 'Modern CV');
-      cy.store().should((after) => {
+      const recorded = (after) => {
         expect(after.resumes.map((r) => r.id)).not.to.include(modern.id);
         expect(after.deletedIds).to.include(modern.id);
-      });
+        // The first sync sends it only if the account's copy is not newer than this one.
+        expect(after.deletedInfo[modern.id].version).to.eq(modern.updatedAt);
+      };
+      cy.store().should(recorded);
+      cy.reload();
+      cy.get(CARD).should('have.length', 2);
+      cy.store().should(recorded);
     });
   });
 

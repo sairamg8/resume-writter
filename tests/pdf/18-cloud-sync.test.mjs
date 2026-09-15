@@ -21,11 +21,13 @@ after(teardown);
 
 const cv = (id, updatedAt = 1, extra = {}) => ({ id, name: id, updatedAt, sections: [], dataVersion: 99, ...extra });
 const ids = (list) => list.map((r) => r.id).toSorted();
+/** Deleted in this browser at version 1 (cv's default updatedAt). */
+const del = (...list) => list.map((id) => ({ id, version: 1 }));
 
 describe('first sync after sign-in (R4-1)', () => {
   it('a résumé deleted while signed out is removed from the cloud and listed', () => {
-    // Signed out: resume_a deleted in this browser; the store remembers it in deletedIds.
-    const p = plan.planInitialSync({ local: [cv('resume_b')], localDeleted: ['resume_a'], cloud: [cv('resume_a'), cv('resume_b')], cloudDeleted: [] });
+    // Signed out: resume_a deleted in this browser; the store remembers it (localDeletions.js).
+    const p = plan.planInitialSync({ local: [cv('resume_b')], deletions: del('resume_a'), cloud: [cv('resume_a'), cv('resume_b')], cloudDeleted: [] });
     assert.deepEqual(ids(p.merged), ['resume_b']);
     assert.deepEqual(p.hardDeletes, ['resume_a']);
     assert.deepEqual(p.tombstones, ['resume_a']);
@@ -35,7 +37,7 @@ describe('first sync after sign-in (R4-1)', () => {
   });
 
   it('a sample deleted offline is flagged, not removed, so a restore can bring back its edits', () => {
-    const p = plan.planInitialSync({ local: [cv('resume_b')], localDeleted: ['demo_classic'], cloud: [cv('demo_classic', 5), cv('resume_b')], cloudDeleted: [], demoAccount: true });
+    const p = plan.planInitialSync({ local: [cv('resume_b')], deletions: [{ id: 'demo_classic', version: 5 }], cloud: [cv('demo_classic', 5), cv('resume_b')], cloudDeleted: [], demoAccount: true });
     assert.deepEqual(p.flags, ['demo_classic']);
     assert.deepEqual(p.hardDeletes, []);
     assert.equal(p.tombstones, null, 'samples never go on the deletion list');
@@ -46,7 +48,7 @@ describe('first sync after sign-in (R4-1)', () => {
   it('sends only what the cloud still holds: never-synced, already-listed and already-flagged ids change nothing', () => {
     const cloud = [cv('resume_b'), { id: 'demo_minimal', deleted: true }];
     const p = plan.planInitialSync({
-      local: [cv('resume_b')], localDeleted: ['resume_local_only', 'resume_old', 'demo_minimal', 'resume_local_only'],
+      local: [cv('resume_b')], deletions: del('resume_local_only', 'resume_old', 'demo_minimal', 'resume_local_only'),
       cloud, cloudDeleted: ['resume_old'], demoAccount: true,
     });
     assert.deepEqual([p.flags, p.hardDeletes, p.tombstones], [[], [], null]);
@@ -56,7 +58,7 @@ describe('first sync after sign-in (R4-1)', () => {
   it('keeps what nobody deleted: local and cloud résumés merge, the newer copy wins', () => {
     const p = plan.planInitialSync({
       local: [cv('resume_a', 10, { name: 'Local' }), cv('resume_local', 1)],
-      localDeleted: [],
+      deletions: [],
       cloud: [cv('resume_a', 20, { name: 'Cloud' }), cv('resume_cloud', 1)],
       cloudDeleted: [],
     });
@@ -185,7 +187,7 @@ describe('sample résumés in an account that is not a demo account (R4-11)', ()
 
   it('the first sync removes samples an older build flagged, and a sample deleted while signed out', () => {
     const cloud = [cv('demo_classic', 3, { deleted: true }), cv('demo_modern', 3), cv('resume_b')];
-    const p = plan.planInitialSync({ local: [cv('resume_b')], localDeleted: ['demo_modern'], cloud, cloudDeleted: [], demoAccount: false });
+    const p = plan.planInitialSync({ local: [cv('resume_b')], deletions: [{ id: 'demo_modern', version: 3 }], cloud, cloudDeleted: [], demoAccount: false });
     assert.deepEqual([p.flags, p.hardDeletes.toSorted(), p.tombstones.toSorted()], [[], ['demo_classic', 'demo_modern'], ['demo_classic', 'demo_modern']]);
     assert.deepEqual(ids(p.merged), ['resume_b']);
     const again = plan.planInitialSync({ local: p.merged, cloud: [cv('resume_b')], cloudDeleted: p.tombstones, demoAccount: false });

@@ -6,6 +6,7 @@
 import { isDemoId } from '@/utils/demoSeed';
 import { planInitialSync, queueChanges } from '@/utils/cloudSyncPlan';
 import { flushOnce, serialQueue } from '@/utils/cloudSyncFlush';
+import { deletionEntries } from '@/utils/localDeletions';
 
 /**
  * Errors that mean cloud sync cannot work until Firebase project/rules are fixed.
@@ -105,7 +106,7 @@ export function createCloudSync({
       if (gen !== s.gen) return;
 
       const plan = planInitialSync({
-        local: appState.resumes, localDeleted: appState.deletedIds || [], cloud: cloud.docs, cloudDeleted: cloud.deleted,
+        local: appState.resumes, deletions: deletionEntries(appState), cloud: cloud.docs, cloudDeleted: cloud.deleted,
         demoAccount: isDemo(user),
       });
 

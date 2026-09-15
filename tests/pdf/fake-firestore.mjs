@@ -125,3 +125,30 @@ export function recorder() {
     },
   };
 }
+
+/**
+ * The résumé store the engine talks to, holding `state`: what the app's store does after a first
+ * sync (loadResumes: the list replaced, the deletions forgotten).
+ */
+export function fakeStore(state) {
+  const store = {
+    state: { deletedIds: [], ...state },
+    getState: () => store.state,
+    loadResumes(list) { store.state = { ...store.state, resumes: list, deletedIds: [], deletedInfo: {} }; },
+  };
+  return store;
+}
+
+/**
+ * A page: the app's sync engine (`mods.engine`) with its Firestore calls (`mods.io`) over `cloud`,
+ * and `state` in its store. `page.sync.start(user)` signs in; `page.change(next)` changes the
+ * store as a click would, and runs the watcher as React would after it.
+ */
+export function syncPage(mods, cloud, state, { isDemo = () => false, online = () => true } = {}) {
+  const store = fakeStore(state);
+  const timers = manualTimers();
+  const { seen, report } = recorder();
+  const sync = mods.engine.createCloudSync({ io: mods.io.cloudIo(cloud.fs, cloud.db), store, report, isDemo, online, timers });
+  const change = (next) => { store.state = { ...store.state, ...next }; sync.resumesChanged(store.state.resumes); };
+  return { store, timers, seen, sync, change };
+}
