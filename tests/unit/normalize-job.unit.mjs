@@ -2,7 +2,8 @@
 // Run: yarn test:unit
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizeJob, readJob, completeJob, isJobEntry } from '../../src/utils/normalizeJob.js';
+import { normalizeJob, readJob, completeJob, isJobEntry, statusId } from '../../src/utils/normalizeJob.js';
+import { JOB_STATUSES } from '../../src/constants/jobs.js';
 
 const job = (extra = {}) => ({
   id: 'job_1', company: 'Acme', role: 'Dev', status: 'applied', url: '', location: 'Remote', salary: '',
@@ -118,4 +119,30 @@ test('completeJob: a job with what the pages address it by comes back as the sam
   const noId = completeJob({ company: 'Acme', status: 'saved' });
   assert.match(noId.id, /^job_./, 'the router opens a job by its id');
   assert.notEqual(completeJob({ id: 7, status: 'saved' }).id, 7);
+});
+
+test('status: one that names no status of the tracker becomes saved — the board showed the job on no column (VM4-4)', () => {
+  for (const s of ['ghosted', 'Accepted', 'phone']) {
+    assert.deepEqual(readJob(job({ status: s })), { kept: job({ status: 'saved' }), lost: true }, `${s}: replaced, a loss`);
+  }
+  assert.deepEqual(readJob(job({ status: '   ' })), { kept: job({ status: 'saved' }), lost: false }, 'it held nothing');
+  for (const { id } of JOB_STATUSES) {
+    const j = job({ status: id });
+    assert.equal(normalizeJob(j), j, `${id} is kept, untouched`);
+    assert.equal(completeJob(j), j);
+  }
+});
+
+test('status: one in other case or spacing is the status it names, and not reported; none is saved (VM4-4)', () => {
+  const named = { Applied: 'applied', 'Phone Screen': 'phone_screen', 'phone-screen': 'phone_screen', ' ON HOLD ': 'on_hold', OFFER: 'offer', Withdrawn: 'withdrawn' };
+  for (const [s, id] of Object.entries(named)) {
+    const j = job({ status: s });
+    assert.deepEqual(readJob(j), { kept: j, lost: false }, `${s}: nothing to report`);
+    assert.equal(readJob(j).kept, j);
+    assert.equal(completeJob(j).status, id, s);
+    assert.equal(statusId(s), id);
+  }
+  assert.equal(completeJob({ id: 'job_9', company: 'Golf' }).status, 'saved', 'imported with no status by an older build');
+  assert.equal(statusId(undefined), null);
+  assert.equal(statusId('ghosted'), null);
 });

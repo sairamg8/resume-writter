@@ -1,6 +1,7 @@
 // Regression tests: a job from an imported file (another tool's, a hand-made one) or from an older
-// build's save lacks what the job pages address it by — a to-do's id (VM4-2). Its to-dos used to
-// share one identity, so ticking or deleting one ticked or deleted them all.
+// build's save lacks what the job pages address it by — a to-do's id (VM4-2), a status the board
+// has a column for (VM4-4). Its to-dos used to share one identity, so ticking or deleting one
+// ticked or deleted them all; the job itself was on no column of the board.
 const JOBS_KEY = 'cpwtcv_jobs_v1';
 
 const stat = (label) => cy.contains('span', new RegExp(`^${label}$`)).prev('span');
@@ -75,5 +76,41 @@ describe('regressions — to-dos with no id, a shared id or no text (VM4-2)', ()
     // Before: a second, blank row (text undefined); leaving its edit box threw "reading 'trim'".
     pendingRows().should('have.length', 1).and('have.text', 'Call A');
     cy.jobStore().its('jobs.0.todos').should('deep.eq', [{ id: 't1', text: 'Call A' }]);
+  });
+});
+
+describe('regressions — a status the board has no column for (VM4-4)', () => {
+  it('saved jobs whose status is in another case, unknown or missing are on the board', () => {
+    visitWithJobs([
+      { id: 'job_a', company: 'Delta', role: 'Dev', status: 'Applied' },
+      { id: 'job_b', company: 'Echo', role: 'QA', status: 'Phone Screen' },
+      { id: 'job_c', company: 'Foxtrot', role: 'PM', status: 'ghosted' },
+      { id: 'job_d', company: 'Golf', role: 'Ops' }, // imported with no status by a build before this one
+    ]);
+    // Before: Total 4, and the board showed none of them.
+    stat('Total').should('have.text', '4');
+    cy.contains('#kanban-col-applied', 'Delta').should('be.visible');
+    cy.contains('#kanban-col-phone_screen', 'Echo').should('be.visible');
+    cy.contains('#kanban-col-saved', 'Foxtrot').should('be.visible');
+    cy.contains('#kanban-col-saved', 'Golf').should('be.visible');
+    cy.jobStore().should((s) => {
+      expect(s.jobs.map((j) => j.status)).to.deep.eq(['applied', 'phone_screen', 'saved', 'saved']);
+    });
+    // 'ghosted' was replaced: said, and the original kept.
+    cy.contains('[role="alert"]', 'job list could not be read').should('be.visible');
+    cy.window().then((win) => expect(backups(win)).to.have.length(1));
+  });
+
+  it('an imported job with a status in another case goes to its column; an unknown one to Saved, and the import says so', () => {
+    visitWithJobs([]);
+    importFile([{ company: 'Hotel', status: 'OFFER' }, { company: 'India', status: 'On Hold' }]);
+    stat('Total').should('have.text', '2');
+    cy.contains('#kanban-col-offer', 'Hotel').should('be.visible');
+    cy.contains('#kanban-col-on_hold', 'India').scrollIntoView().should('be.visible'); // the board scrolls sideways
+    cy.contains('[role="alert"]', 'left out').should('not.exist');
+    importFile([{ company: 'Juliet', status: 'ghosted' }]);
+    stat('Total').should('have.text', '3');
+    cy.contains('#kanban-col-saved', 'Juliet').scrollIntoView().should('be.visible');
+    cy.contains('[role="alert"]', 'Imported 1 job application; what could not be read in the file was left out').should('be.visible');
   });
 });
