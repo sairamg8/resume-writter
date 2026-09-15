@@ -6,6 +6,7 @@ import { templateStyleDefaults } from '@/constants/templates';
 import { DATA_VERSION, normalizeResume } from '@/utils/normalizeResume';
 import { loadSavedList, pendingRecovery, rememberRecovery, setItemWithRoom } from '@/utils/storageBackup';
 import { savedDeletions, withDeletion, withoutDeletions } from '@/utils/localDeletions';
+import { afterSync } from '@/utils/cloudSyncPlan';
 
 const STORAGE_KEY = 'cpwtcv_v1';
 
@@ -87,15 +88,9 @@ export function useAppStore() {
       : prev));
   }
 
-  function loadResumes(list) {
-    const resumes = list.map(normalizeResume);
-    setAppState(prev => ({
-      ...prev,
-      resumes,
-      activeId: resumes.find(r => r.id === prev.activeId) ? prev.activeId : (resumes[0]?.id || prev.activeId),
-      deletedIds: [],
-      deletedInfo: {},
-    }));
+  /** A first cloud sync's result, applied to the store as it is now (cloudSyncPlan.afterSync). */
+  function applyCloudSync(result) {
+    setAppState(prev => afterSync(prev, result));
   }
 
   // ── Resume management ──────────────────────────────────────────────
@@ -194,7 +189,7 @@ export function useAppStore() {
     dismissRecovery,
     activeResume,
     setActiveId,
-    loadResumes,
+    applyCloudSync,
     forgetDeletions,
     createResume,
     duplicateResume,

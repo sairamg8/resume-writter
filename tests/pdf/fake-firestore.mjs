@@ -129,19 +129,25 @@ export function recorder() {
 }
 
 /**
- * The résumé store the engine talks to, holding `state`, with the store's own deletion record
- * (src/utils/localDeletions.js): deleteResume as a click on Delete does it, forgetDeletions as the
- * sync asks; loadResumes as the store applies a first sync (the list replaced, deletions forgotten).
+ * The résumé store the engine talks to, holding `state`, with the store's own rules: deleteResume
+ * as a click on Delete does it and forgetDeletions as the sync asks (src/utils/localDeletions.js),
+ * applyCloudSync through the app's afterSync (`plan`, src/utils/cloudSyncPlan.js). `onChange`
+ * runs after every change, a turn later — as React runs the watcher effect after the render.
  */
-export function fakeStore(state) {
+export function fakeStore(state, plan) {
   const store = {
     state: { deletedIds: [], ...state },
+    onChange: () => {},
     getState: () => store.state,
-    loadResumes(list) { store.state = { ...store.state, resumes: list, deletedIds: [], deletedInfo: {} }; },
-    forgetDeletions(ids, before) { store.state = { ...store.state, ...withoutDeletions(store.state, ids, before) }; },
+    set(next) {
+      store.state = next;
+      queueMicrotask(() => store.onChange());
+    },
+    applyCloudSync(result) { store.set(plan.afterSync(store.state, result)); },
+    forgetDeletions(ids, before) { store.set({ ...store.state, ...withoutDeletions(store.state, ids, before) }); },
     deleteResume(id, at = Date.now()) {
       const gone = store.state.resumes.find((r) => r.id === id);
-      store.state = { ...store.state, resumes: store.state.resumes.filter((r) => r.id !== id), ...withDeletion(store.state, gone, at) };
+      store.set({ ...store.state, resumes: store.state.resumes.filter((r) => r.id !== id), ...withDeletion(store.state, gone, at) });
     },
   };
   return store;
@@ -149,16 +155,17 @@ export function fakeStore(state) {
 
 /**
  * A page: the app's sync engine (`mods.engine`) with its Firestore calls (`mods.io`) over `cloud`,
- * and `state` in its store. `page.sync.start(user)` signs in; `page.change(next)` changes the
- * store as a click would, and runs the watcher as React would after it.
+ * and `state` in its store (`mods.plan` for its afterSync). `page.sync.start(user)` signs in;
+ * `page.change(next)` changes the store as a click would, `page.remove(id)` deletes a résumé —
+ * the watcher runs after each, as React would.
  */
 export function syncPage(mods, cloud, state, { isDemo = () => false, online = () => true } = {}) {
-  const store = fakeStore(state);
+  const store = fakeStore(state, mods.plan);
   const timers = manualTimers();
   const { seen, report } = recorder();
   const sync = mods.engine.createCloudSync({ io: mods.io.cloudIo(cloud.fs, cloud.db), store, report, isDemo, online, timers });
-  const change = (next) => { store.state = { ...store.state, ...next }; sync.resumesChanged(store.state.resumes); };
-  /** Delete on the dashboard: the store records it, and the watcher queues it. */
-  const remove = (id) => { store.deleteResume(id); sync.resumesChanged(store.state.resumes); };
+  store.onChange = () => sync.resumesChanged(store.state.resumes);
+  const change = async (next) => { store.set({ ...store.state, ...next }); await settle(1); };
+  const remove = async (id) => { store.deleteResume(id); await settle(1); };
   return { store, timers, seen, sync, change, remove };
 }

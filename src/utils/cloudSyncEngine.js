@@ -29,8 +29,9 @@ const isOfflineError = (e) => String(e?.message || '').toLowerCase().includes('c
 /**
  * createCloudSync({ io, store, report, isDemo, ... }):
  *   io        cloudIo(...) — null when this build has no cloud
- *   store     { getState() → the résumé store's state now, loadResumes(list),
- *             forgetDeletions(ids, before) — the cloud has these deletions (localDeletions.js) }
+ *   store     { getState() → the résumé store's state now, applyCloudSync(result) — a first
+ *             sync's result (cloudSyncPlan.afterSync), forgetDeletions(ids, before) — the
+ *             cloud has these deletions (localDeletions.js) }
  *   report    { status('idle'|'syncing'|'synced'|'offline'|'error'), synced(Date), account(a) } —
  *             account: { uid, cloudDemo } once the account's list is known, else null
  *   isDemo    user → true for a demo account (its deleted samples are flagged, not removed)
@@ -86,13 +87,12 @@ export function createCloudSync({
     }
 
     if (!online()) {
-      s.prevResumes = store.getState().resumes;
       s.initialSyncDone = false;
       report.status('offline');
       return;
     }
 
-    initialSync(user, s.gen, store.getState());
+    initialSync(user, s.gen);
   }
 
   /** Drop the result of a first sync still running (the page is going away). */
@@ -100,25 +100,30 @@ export function createCloudSync({
     s.gen += 1;
   }
 
-  async function initialSync(user, gen, appState) {
+  async function initialSync(user, gen) {
     report.status('syncing');
     try {
       const cloud = await io.readCloud(user.uid);
       if (gen !== s.gen) return;
 
+      // The store as it is once the account is known: what was done while it was read counts.
+      const appState = store.getState();
+      const planAt = now();
       const plan = planInitialSync({
         local: appState.resumes, deletions: deletionEntries(appState), cloud: cloud.docs, cloudDeleted: cloud.deleted,
         demoAccount: isDemo(user),
       });
 
       // Deletions this browser never sent reach the cloud in the same batch, before the store
-      // forgets them (loadResumes clears deletedIds) — else the next sync restores them (R4-1).
+      // forgets them (afterSync) — else the next sync restores them (R4-1).
       await io.commit(user.uid, {
         sets: plan.merged, flags: plan.flags, hardDeletes: plan.hardDeletes, tombstones: plan.tombstones,
       });
       if (gen !== s.gen) return;
 
-      store.loadResumes(plan.merged);
+      // Applied to the store as it is now (R8-2). The watcher then compares it with the merged list,
+      // so it sends what was edited, added or deleted while the batch was on its way.
+      store.applyCloudSync({ snapshot: appState.resumes, merged: plan.merged, handled: plan.handled, before: planAt });
       s.prevResumes = plan.merged;
       s.tombstones = new Set(plan.tombstones || cloud.deleted);
       s.initialSyncDone = true;
@@ -131,7 +136,6 @@ export function createCloudSync({
       if (isCloudConfigError(e)) {
         s.cloudDisabled = true;
         s.initialSyncDone = false;
-        s.prevResumes = appState.resumes;
         report.status('error');
         setAccount({ uid: user.uid, cloudDemo: [] });
         // One clear message — app keeps working on localStorage only
@@ -143,7 +147,6 @@ export function createCloudSync({
         return;
       }
       // Offline / transient: do not enable write queue (avoids spam retries)
-      s.prevResumes = appState.resumes;
       s.initialSyncDone = false;
       const offline = !online() || isOfflineError(e);
       report.status(offline ? 'offline' : 'error');

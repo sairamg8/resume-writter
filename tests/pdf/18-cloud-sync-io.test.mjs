@@ -10,10 +10,12 @@ import { fakeFirestore, syncPage, resumePath, listPath, settle } from './fake-fi
 
 let io;
 let engine;
+let plan;
 before(async () => {
   await setup();
   io = await loadModule('/src/utils/cloudSyncIo.js');
   engine = await loadModule('/src/utils/cloudSyncEngine.js');
+  plan = await loadModule('/src/utils/cloudSyncPlan.js');
 });
 after(teardown);
 
@@ -23,7 +25,7 @@ const ids = (list) => list.map((r) => r.id).toSorted();
 const USER = { uid: 'u', email: 'someone@example.com' };
 const OWNER = { uid: 'u', email: 'owner@example.com' };
 
-const page = (cloud, state) => syncPage({ io, engine }, cloud, state, { isDemo: (u) => u.email === OWNER.email });
+const page = (cloud, state) => syncPage({ io, engine, plan }, cloud, state, { isDemo: (u) => u.email === OWNER.email });
 
 const signIn = async (p, user = USER) => { p.sync.start(user); await settle(); };
 
@@ -98,7 +100,7 @@ describe('the write queue through the real batch', () => {
     const p = page(cloud, { resumes: [cv('resume_a'), cv('resume_b')] });
     await signIn(p);
     const commitsBefore = cloud.commits.length;
-    p.change({ resumes: [cv('resume_a', 2, { name: 'Renamed' })], deletedIds: ['resume_b'] });
+    await p.change({ resumes: [cv('resume_a', 2, { name: 'Renamed' })], deletedIds: ['resume_b'] });
     assert.equal(p.seen.status, 'syncing');
     assert.equal(cloud.commits.length, commitsBefore, 'nothing is sent before the pause');
     await p.timers.fire();
@@ -113,7 +115,7 @@ describe('the write queue through the real batch', () => {
       const cloud = fakeFirestore({ [resumePath('u', 'demo_a')]: cv('demo_a', 3, { name: 'Owner content' }) });
       const p = page(cloud, { resumes: [cv('demo_a', 3, { name: 'Owner content' })] });
       await signIn(p, user);
-      p.change({ resumes: [], deletedIds: ['demo_a'] });
+      await p.change({ resumes: [], deletedIds: ['demo_a'] });
       await p.timers.fire();
       assert.equal(cloud.resumes('u').demo_a?.deleted, flagged ? true : undefined, user.email);
       assert.deepEqual(cloud.doc(listPath('u'))?.ids, flagged ? undefined : ['demo_a'], user.email);

@@ -35,7 +35,7 @@ export function useCloudSync({ user, appState, store }) {
     io,
     store: {
       getState: () => latest.current.appState,
-      loadResumes: (list) => latest.current.store.loadResumes(list),
+      applyCloudSync: (result) => latest.current.store.applyCloudSync(result),
       forgetDeletions: (ids, before) => latest.current.store.forgetDeletions(ids, before),
     },
     report: { status: setSyncStatus, synced: setLastSynced, account: setAccount },

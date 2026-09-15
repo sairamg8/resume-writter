@@ -68,6 +68,24 @@ describe('first sync after sign-in (R4-1)', () => {
   });
 });
 
+describe('the store after a first sync (afterSync, R8-2)', () => {
+  it('takes the merged copies of what did not change, keeps what changed meanwhile, forgets only handled deletions', () => {
+    const snapshot = [cv('resume_a', 1), cv('resume_gone', 1), cv('resume_kept', 1)];
+    // The plan left out resume_gone and resume_kept (deleted on another device), merged A with the cloud's.
+    const merged = [cv('resume_a', 5, { name: 'Cloud' }), cv('resume_cloud', 2)];
+    const now = {
+      resumes: [cv('resume_a', 1), cv('resume_gone', 1), cv('resume_kept', 3, { name: 'Edited meanwhile' })],
+      activeId: 'resume_gone',
+      deletedIds: ['resume_x', 'resume_y'],
+      deletedInfo: { resume_x: { version: 1, at: 10 }, resume_y: { version: 1, at: 99 } },
+    };
+    const next = plan.afterSync(now, { snapshot, merged, handled: ['resume_x', 'resume_y'], before: 50 });
+    assert.deepEqual(next.resumes.map((r) => [r.id, r.name]), [['resume_a', 'Cloud'], ['resume_cloud', 'resume_cloud'], ['resume_kept', 'Edited meanwhile']]);
+    assert.equal(next.activeId, 'resume_a', 'the open résumé went: the first one is open');
+    assert.deepEqual(next.deletedIds, ['resume_y'], 'deleted again after the plan read the store');
+  });
+});
+
 describe('the write queue and the flush (R4-2)', () => {
   const empty = () => ({ writes: new Map(), deletes: new Set() });
 

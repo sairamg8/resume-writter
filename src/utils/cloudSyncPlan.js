@@ -11,6 +11,7 @@
 // kept the owner's sample content in that account's cloud for good.
 import { isDemoId, nextTombstones } from '@/utils/demoSeed';
 import { mergeResumeLists } from '@/utils/syncMerge';
+import { withoutDeletions } from '@/utils/localDeletions';
 
 const hasId = (r) => r && typeof r.id === 'string' && r.id !== '';
 /** A deletion entry (localDeletions.js); a bare id is an older build's, with no version. */
@@ -33,6 +34,7 @@ const asEntry = (e) => (typeof e === 'string' ? { id: e, version: null } : e);
  *   hardDeletes  other résumés deleted here that the cloud still holds → remove them; outside
  *                a demo account also every flagged sample (flagged before R4-11)
  *   tombstones   the new deletion list when it changes, else null
+ *   handled      the ids of the deletions dealt with — the store forgets them (afterSync)
  * A deletion is sent only when the cloud's copy is not newer than the version deleted: one made
  * offline or signed out must never remove an edit made later on another device — that edit
  * wins, and the résumé comes back here (R8-0). An entry with no version is left out of this
@@ -66,6 +68,39 @@ export function planInitialSync({ local = [], deletions = [], cloud = [], cloudD
     flags,
     hardDeletes,
     tombstones: hardDeletes.length ? nextTombstones(cloudDeleted, hardDeletes, []) : null,
+    handled: deletions.map((e) => asEntry(e).id),
+  };
+}
+
+/**
+ * The résumé store after a first sync: its plan applied to the store as it is NOW, not as it was
+ * when the plan read it — the user may have typed, deleted or added a résumé while the sync read
+ * the account and waited for its batch (R8-2). `snapshot` the résumés the plan was made from,
+ * `merged` and `handled` from the plan, `before` when the plan read the store.
+ * A résumé unchanged since the snapshot takes its merged copy, or goes when the plan left it out;
+ * one edited or added meanwhile stays as it is, and one deleted meanwhile stays deleted — the
+ * watcher then sends those changes. Only the deletions the plan dealt with are forgotten. The
+ * merged order is kept (then what was added meanwhile). Before, the merged list replaced the
+ * store and every deletion was forgotten: an edit typed during the sync was lost, and a résumé
+ * deleted during it came back — the batch had just written it to the cloud again.
+ */
+export function afterSync(state, { snapshot, merged, handled, before }) {
+  const seen = new Map(snapshot.map((r) => [r.id, r.updatedAt]));
+  const current = new Map(state.resumes.map((r) => [r.id, r]));
+  const touched = (r) => !seen.has(r.id) || seen.get(r.id) !== r.updatedAt;
+  const resumes = [];
+  for (const m of merged) {
+    const now = current.get(m.id);
+    if (now) resumes.push(touched(now) ? now : m);
+    else if (!seen.has(m.id)) resumes.push(m);
+  }
+  const planned = new Set(merged.map((r) => r.id));
+  resumes.push(...state.resumes.filter((r) => !planned.has(r.id) && touched(r)));
+  return {
+    ...state,
+    resumes,
+    activeId: resumes.some((r) => r.id === state.activeId) ? state.activeId : (resumes[0]?.id ?? state.activeId),
+    ...withoutDeletions(state, handled, before),
   };
 }
 

@@ -12,6 +12,7 @@ before(async () => {
   mods = {
     io: await loadModule('/src/utils/cloudSyncIo.js'),
     engine: await loadModule('/src/utils/cloudSyncEngine.js'),
+    plan: await loadModule('/src/utils/cloudSyncPlan.js'),
   };
 });
 after(teardown);
@@ -80,7 +81,7 @@ describe('deletedIds holds what the cloud does not have yet (R8-1)', () => {
     const cloud = fakeFirestore({ [resumePath('u', 'demo_classic')]: cv('demo_classic', 5), [resumePath('u', 'demo_modern')]: cv('demo_modern', 5) });
     const laptop = page(cloud, { resumes: [cv('demo_classic', 5), cv('demo_modern', 5)] });
     await signIn(laptop, OWNER);
-    laptop.remove('demo_classic');
+    await laptop.remove('demo_classic');
     await laptop.timers.fire();
     assert.equal(cloud.resumes('u').demo_classic.deleted, true, 'the flush flagged it');
     assert.deepEqual([laptop.store.state.deletedIds, laptop.store.state.deletedInfo], [[], {}], 'before: kept for good');
@@ -99,7 +100,7 @@ describe('deletedIds holds what the cloud does not have yet (R8-1)', () => {
     const laptop = page(cloud, { resumes: [cv('resume_a', 5), cv('resume_b')] });
     await signIn(laptop);
     cloud.fail.commit = Object.assign(new Error('Failed to get document because the client is offline.'), { code: 'unavailable' });
-    laptop.remove('resume_a');
+    await laptop.remove('resume_a');
     await laptop.timers.fire();
     assert.deepEqual(laptop.store.state.deletedIds, ['resume_a'], 'not sent, so not forgotten');
     cloud.fail.commit = null;
@@ -113,13 +114,13 @@ describe('deletedIds holds what the cloud does not have yet (R8-1)', () => {
     const cloud = fakeFirestore({ [resumePath('u', 'demo_a')]: cv('demo_a', 5), [resumePath('u', 'demo_b')]: cv('demo_b', 5) });
     const laptop = page(cloud, { resumes: [cv('demo_a', 5), cv('demo_b', 5)] });
     await signIn(laptop, OWNER);
-    laptop.remove('demo_a');
+    await laptop.remove('demo_a');
     const ack = deferred();
     cloud.hold.commit = ack.promise;
     await laptop.timers.fire(); // sent; the server has not answered yet
     // Put back meanwhile (restoreResumes forgets the deletion), then deleted again: a newer entry.
     // A guard for forgetting only what the flush sent (the store used to forget nothing).
-    laptop.change({ resumes: [cv('demo_a', 6), cv('demo_b', 5)], deletedIds: [], deletedInfo: {} });
+    await laptop.change({ resumes: [cv('demo_a', 6), cv('demo_b', 5)], deletedIds: [], deletedInfo: {} });
     laptop.store.deleteResume('demo_a', Date.now() + 60_000);
     ack.resolve();
     await settle();
