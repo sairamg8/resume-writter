@@ -73,9 +73,21 @@ describe('the Word letter\'s letterhead takes the look too (FIDB-51)', () => {
   });
 
   it('Design → Name and Job title colours reach Word\'s letterhead in every look', async () => {
+    const { solid } = await loadModule('/src/templates/pdf/shared/pdfColors.js');
     for (const template of TEMPLATES) {
       const { head } = parts(await coverDocx(template, { nameColor: '#7c3aed', jobTitleColor: '#0d9488' }));
-      assert.deepEqual([colourOf(head[0], 'Pat Sample'), colourOf(head[1], 'Staff Engineer')], ['7c3aed', '0d9488'], template);
+      // Modern's title prints at 90 % on its band (below), the others as picked.
+      const title = template === 'modern' ? solid('#0d9488', 0.9, ACCENT).slice(1) : '0d9488';
+      assert.deepEqual([colourOf(head[0], 'Pat Sample'), colourOf(head[1], 'Staff Engineer')], ['7c3aed', title], template);
+    }
+  });
+
+  it('Modern: the title is the colour the PDF draws — 90 % of the title colour on the band, its own alpha multiplied in (R5-9)', async () => {
+    const { solid } = await loadModule('/src/templates/pdf/shared/pdfColors.js');
+    for (const jobTitleColor of ['', '#fde68a', 'rgba(255,255,255,0.5)']) {
+      const { head } = parts(await coverDocx('modern', { jobTitleColor }));
+      // react-pdf draws it at opacity 0.9 × its alpha over the accent band: that blend, opaque.
+      assert.equal(colourOf(head[1], 'Staff Engineer'), solid(jobTitleColor || '#ffffff', 0.9, ACCENT).slice(1), jobTitleColor || 'the header text colour');
     }
   });
 });

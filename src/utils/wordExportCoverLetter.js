@@ -23,8 +23,11 @@ const eighths = (n) => Math.round(n * 8); // points → Word's border widths
 
 const line = (children, after = 0, extra = {}) => new Paragraph({ children, spacing: { after }, ...extra });
 
-/** A colour as Word's 'rrggbb', opaque over `on` (the band a run sits on, else the white page). */
-const hexOn = (color, on = '#ffffff', fallback) => accent2Hex(solid(color, 1, on), fallback);
+/**
+ * A colour as Word's 'rrggbb', opaque over `on` (the band a run sits on, else the white page), at
+ * `alpha` times its own: what the PDF draws with that opacity (Word has none).
+ */
+const hexOn = (color, on = '#ffffff', fallback, alpha = 1) => accent2Hex(solid(color, alpha, on), fallback);
 
 /**
  * The paragraph formatting that frames the letterhead's rows: a band — each row shaded, with
@@ -60,10 +63,11 @@ function frame(look, last) {
 function letterhead(personal, s, cl, sizes, look) {
   // Runs on a band blend onto it; a colour Word cannot take is white there, ink on the page.
   const on = look.band ? look.band.color : '#ffffff';
-  const ink = (color) => hexOn(color, on, look.band ? 'ffffff' : '1e293b');
+  const ink = (color, alpha) => hexOn(color, on, look.band ? 'ffffff' : '1e293b', alpha);
   const nameRun = look.name.weight === 'bold' ? bold : normal;
   const rows = [{ runs: [nameRun(personal.name || 'Your Name', { size: sizes.name, color: ink(look.name.color) })], after: pt(1) }];
-  if (personal.title) rows.push({ runs: [normal(personal.title, { size: sizes.base, color: ink(look.title.color) })], after: pt(2) });
+  // Modern's title prints at 90 % on its band (look.title.opacity, R5-9): the same blend here.
+  if (personal.title) rows.push({ runs: [normal(personal.title, { size: sizes.base, color: ink(look.title.color, look.title.opacity) })], after: pt(2) });
   const contacts = contactItems(personal, letterHiddenFields(cl, personal));
   if (contacts.length) {
     const style = { size: sizes.contact, color: ink(look.contacts) };
