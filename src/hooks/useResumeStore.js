@@ -7,7 +7,7 @@ import { templateStyleDefaults } from '@/constants/templates';
 import { DATA_VERSION, normalizeResume } from '@/utils/normalizeResume';
 import { loadSavedList, pendingRecovery, rememberRecovery, setItemWithRoom } from '@/utils/storageBackup';
 import { savedDeletions } from '@/utils/localDeletions';
-import { withKeep } from '@/utils/demoSeed';
+import { isOriginal, withKeep } from '@/utils/demoSeed';
 
 const STORAGE_KEY = 'cpwtcv_v1';
 
@@ -116,7 +116,7 @@ export function useAppStore() {
   function keepResume(id, keep) {
     setAppState(prev => ({
       ...prev,
-      resumes: prev.resumes.map(r => (r.id === id && Boolean(r.keep) !== keep ? withKeep(r, keep, Date.now()) : r)),
+      resumes: prev.resumes.map(r => (r.id === id && isOriginal(r) !== keep ? withKeep(r, keep, Date.now()) : r)),
     }));
   }
 

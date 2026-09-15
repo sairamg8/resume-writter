@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Copy, Trash2, Edit2, Check, Pin } from 'lucide-react';
 import { timeAgo } from '@/utils/resume';
+import { isOriginal } from '@/utils/demoSeed';
 
 const KEEP_HINT = 'Your originals come back whenever none of them is left';
 
@@ -83,7 +84,7 @@ export function ResumeCard({ resume, onOpen, onDuplicate, onDelete, onRename, on
         <p className="text-[11px] text-gray-400 mt-0.5 capitalize">
           {resume.template || 'classic'} · {timeAgo(resume.updatedAt)}
         </p>
-        {onKeep && (resume.keep ? (
+        {onKeep && (isOriginal(resume) ? (
           <div className="flex items-center gap-2 mt-1">
             <span title={KEEP_HINT} className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-800 bg-amber-50 border border-amber-200 rounded px-1.5">
               <Pin size={10} aria-hidden="true" /> Original

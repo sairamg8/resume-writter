@@ -184,6 +184,19 @@ describe('demo account — "Keep as my original" and "Import as my original"', (
     expectCards(['My CV', 'Classic CV']);
   });
 
+  it('a résumé whose data says keep: "yes" is no original anywhere: no badge, the plain prompt, and it can be marked (V2OWNER-DATA-10)', () => {
+    const state = stateWith(['Odd CV'], ['Other CV']);
+    state.resumes[0].keep = 'yes'; // a hand-edited file or cloud document: the restore ignores it
+    visitAs(OWNER, state);
+    cy.contains(CARD, 'Odd CV').should('not.contain.text', 'Stop keeping'); // before: the Original badge
+    cy.window().then((win) => { cy.stub(win, 'confirm').as('confirm').returns(false); });
+    deleteCard('Odd CV');
+    cy.get('@confirm').should('have.been.calledWith', 'Delete "Odd CV"? This cannot be undone.');
+    cy.contains(CARD, 'Odd CV').contains('button', 'Keep as my original').click();
+    cy.contains(CARD, 'Odd CV').should('contain.text', 'Stop keeping');
+    cy.store().should((s) => expect(s.resumes[0].keep).to.eq(true));
+  });
+
   it('a copy of an original is a new résumé, not an original', () => {
     visitAs(OWNER, stateWith(['My CV', { keep: true }]));
     cy.contains(CARD, 'My CV').contains('button', 'Copy').click();
