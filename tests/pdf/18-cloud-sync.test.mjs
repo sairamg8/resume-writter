@@ -157,16 +157,6 @@ describe('flushes reach the server in the order they were made (R4-3)', () => {
     assert.deepEqual(state.deleted, ['resume_r']);
   });
 
-  it('a failed flush does not stop the ones after it, and each settles as its own task did', async () => {
-    const run = flush.serialQueue();
-    const order = [];
-    const failed = run(async () => { order.push('a'); throw new Error('offline'); });
-    const next = run(async () => { order.push('b'); return 'sent'; });
-    await assert.rejects(failed, /offline/);
-    assert.equal(await next, 'sent');
-    assert.deepEqual(order, ['a', 'b']);
-  });
-
   it('flushOnce adds removals to the deletion list and takes restored samples off it, in the same batch', async () => {
     const { state, cloud, io: cloudIo } = fakeCloud([cv('resume_x'), cv('demo_a')]);
     cloud.data.set(listPath('u'), { ids: ['demo_b', 'resume_old'] });

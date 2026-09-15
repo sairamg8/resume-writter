@@ -5,7 +5,7 @@
 // useCloudSync only wires it to React state and the browser.
 import { isDemoId } from '@/utils/demoSeed';
 import { planInitialSync, queueChanges } from '@/utils/cloudSyncPlan';
-import { flushOnce, serialQueue } from '@/utils/cloudSyncFlush';
+import { flushOnce } from '@/utils/cloudSyncFlush';
 import { deletionEntries } from '@/utils/localDeletions';
 
 /**
@@ -55,7 +55,6 @@ export function createCloudSync({
     pendingDeletes: new Set(),
     listed: new Set(), // the cloud deletion list as this browser knows it (read, then added to)
     timer: null,
-    flushes: serialQueue(), // one flush at a time, in order (R4-3)
     account: null,
   };
 
@@ -164,14 +163,10 @@ export function createCloudSync({
     timers.clear(s.timer);
     report.status('syncing');
     const { user } = s;
-    s.timer = timers.set(() => flushPending(user), flushDelay);
+    s.timer = timers.set(() => sendPending(user), flushDelay);
   }
 
-  /** Queue a flush of the changes waiting by the time it runs (after any flush before it). */
-  function flushPending(user) {
-    return s.flushes(() => sendPending(user));
-  }
-
+  /** Send the changes waiting: handed to Firestore at once, in order (cloudSyncFlush.js). */
   async function sendPending(user) {
     if (s.cloudDisabled || !io) return;
 
