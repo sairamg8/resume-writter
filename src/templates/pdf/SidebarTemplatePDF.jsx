@@ -58,8 +58,10 @@ export function SidebarTemplatePDF({ data }) {
 
   // Classic's photo scaled for the ~38% column by ONE factor, so every Photo → Height option
   // keeps its shape (Square 1:1, Tall 1:1.4, Portrait 1:1.8). Capping width and height
-  // separately at 90 pt made Tall and Portrait print the same box (R3-1). The width cap keeps a
-  // photo inside the column; a circle's radius follows the scaled width.
+  // separately at 90 pt made Tall and Portrait print the same box (R3-1). The 90 pt width cap
+  // cannot bind at today's sizes (Large: 150 pt × 0.55 = 82.5 pt): it keeps a larger size, if one
+  // is added, inside the column. A circle's radius follows the scaled width; Rounded and Square
+  // keep Classic's corners (7.5 / 2.25 pt), as every Sidebar photo has printed (R7-12).
   const classicPhoto = getPdfPhotoStyle(settings, accent, 'classic', { lightBorder: true });
   const photoScale = Math.min(0.55, 90 / classicPhoto.width);
   const sidePhoto = {
