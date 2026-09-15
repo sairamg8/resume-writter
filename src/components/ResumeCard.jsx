@@ -1,8 +1,14 @@
 import { useState } from 'react';
-import { Copy, Trash2, Edit2, Check } from 'lucide-react';
+import { Copy, Trash2, Edit2, Check, Pin } from 'lucide-react';
 import { timeAgo } from '@/utils/resume';
 
-export function ResumeCard({ resume, onOpen, onDuplicate, onDelete, onRename }) {
+const KEEP_HINT = 'Your originals come back whenever none of them is left';
+
+/**
+ * A résumé on the dashboard. `onKeep(id, keep)` — only in a demo account, whose originals come
+ * back (useDemoSeed) — adds "Keep as my original" / "Stop keeping" and the "Original" badge.
+ */
+export function ResumeCard({ resume, onOpen, onDuplicate, onDelete, onRename, onKeep }) {
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(resume.name);
   const accent = resume.settings?.accentColor || '#2563eb';
@@ -77,6 +83,20 @@ export function ResumeCard({ resume, onOpen, onDuplicate, onDelete, onRename }) 
         <p className="text-[11px] text-gray-400 mt-0.5 capitalize">
           {resume.template || 'classic'} · {timeAgo(resume.updatedAt)}
         </p>
+        {onKeep && (resume.keep ? (
+          <div className="flex items-center gap-2 mt-1">
+            <span title={KEEP_HINT} className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-800 bg-amber-50 border border-amber-200 rounded px-1.5">
+              <Pin size={10} aria-hidden="true" /> Original
+            </span>
+            <button onClick={() => onKeep(resume.id, false)} className="text-[11px] text-gray-500 hover:text-gray-800 hover:underline">
+              Stop keeping
+            </button>
+          </div>
+        ) : (
+          <button onClick={() => onKeep(resume.id, true)} title={KEEP_HINT} className="mt-1 inline-flex items-center gap-1 text-[11px] text-gray-500 hover:text-amber-800">
+            <Pin size={10} aria-hidden="true" /> Keep as my original
+          </button>
+        ))}
       </div>
 
       {/* Action buttons */}

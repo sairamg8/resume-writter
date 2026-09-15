@@ -5,7 +5,7 @@
 // without Firebase, so this is the local-only path; the cloud side (flags, the latest copy from
 // another device) runs in tests/pdf/18-cloud-sync-*.test.mjs, the rules in tests/unit/demo-seed.
 import { STORAGE_KEY } from '../../tests/helpers.js';
-import { CARD } from '../support/selectors.js';
+import { CARD, IMPORT_INPUT } from '../support/selectors.js';
 import { dashboardState } from '../support/state.js';
 
 const OWNER = { uid: 'e2e-owner', email: 'sairamgudiputi8@gmail.com', displayName: 'Owner' };
@@ -41,6 +41,16 @@ function stateWith(...list) {
     { ...base, id, name, ...(keep ? { keep: true } : {}) }
   ));
   return { ...dashboardState(['classic']), resumes, activeId: resumes[0].id };
+}
+
+/** Import `resume` from the dashboard, as the account's original or as a plain import. */
+function importFile(resume, { asOriginal }) {
+  cy.contains('button', /^\s*Import\s*$/).click();
+  cy.contains('button', asOriginal ? 'Import as my original' : 'Import JSON').click();
+  cy.get(IMPORT_INPUT).selectFile({
+    contents: Cypress.Buffer.from(JSON.stringify(resume)), fileName: 'mine.json', mimeType: 'application/json',
+  }, { force: true });
+  cy.contains('button', 'Export').should('be.visible'); // the editor opens it
 }
 
 const okEveryConfirm = () => cy.window().then((win) => { cy.stub(win, 'confirm').returns(true); });
@@ -120,6 +130,69 @@ describe('demo account — the owner\'s originals come back, never the samples',
   });
 });
 
+describe('demo account — "Keep as my original" and "Import as my original"', () => {
+  const file = (name, extra = {}) => ({ ...dashboardState(['sidebar']).resumes[0], id: 'from_the_file', name, ...extra });
+
+  it('imported as the original, the file comes back after deleting everything, with its latest edits', () => {
+    visitAs(OWNER, stateWith(['Classic CV']));
+    importFile(file('My real CV'), { asOriginal: true });
+    cy.contains('label', 'Full Name').parent().next('input').clear().type('Sam Owner');
+    backToDashboard();
+    cy.contains(CARD, 'My real CV').should('contain.text', 'Original').and('contain.text', 'Stop keeping');
+    okEveryConfirm();
+    deleteCard('Classic CV');
+    deleteCard('My real CV');
+    expectCards(['My real CV']);
+    cy.store().should((s) => {
+      expect(s.resumes[0].personal.name).to.eq('Sam Owner');
+      expect(s.resumes[0].keep).to.eq(true);
+      expect(s.resumes[0].id).to.match(/^resume_/);
+    });
+  });
+
+  it('a plain import is not an original, even from a file that says it is', () => {
+    visitAs(OWNER);
+    importFile(file('Exported CV', { keep: true }), { asOriginal: false });
+    backToDashboard();
+    cy.contains(CARD, 'Exported CV').should('not.contain.text', 'Stop keeping').contains('button', 'Keep as my original');
+    cy.store().should((s) => expect(s.resumes[0]).not.to.have.property('keep'));
+  });
+
+  it('"Keep as my original" on a card brings it back; after "Stop keeping" it stays deleted', () => {
+    visitAs(OWNER, stateWith(['Classic CV'], ['Other CV']));
+    cy.contains(CARD, 'Classic CV').contains('button', 'Keep as my original').click();
+    cy.contains(CARD, 'Classic CV').should('contain.text', 'Original');
+    okEveryConfirm();
+    deleteCard('Classic CV');
+    deleteCard('Other CV');
+    expectCards(['Classic CV']);
+    cy.contains(CARD, 'Classic CV').contains('button', 'Stop keeping').click();
+    cy.contains(CARD, 'Classic CV').contains('button', 'Keep as my original');
+    deleteCard('Classic CV');
+    cy.contains('No resumes yet').should('be.visible');
+    newResumeAndBack();
+    expectCards(['Untitled Resume']);
+  });
+
+  it('Delete says an original comes back, and how to delete it for good', () => {
+    visitAs(OWNER, stateWith(['My CV', { keep: true }], ['Classic CV']));
+    cy.window().then((win) => { cy.stub(win, 'confirm').as('confirm').returns(false); });
+    deleteCard('My CV');
+    cy.get('@confirm').should('have.been.calledWithMatch', /kept as your original, so it comes back .* choose "Stop keeping" first/);
+    deleteCard('Classic CV');
+    cy.get('@confirm').should('have.been.calledWith', 'Delete "Classic CV"? This cannot be undone.');
+    expectCards(['My CV', 'Classic CV']);
+  });
+
+  it('a copy of an original is a new résumé, not an original', () => {
+    visitAs(OWNER, stateWith(['My CV', { keep: true }]));
+    cy.contains(CARD, 'My CV').contains('button', 'Copy').click();
+    cy.contains('button', 'Export').should('be.visible');
+    backToDashboard();
+    cy.contains(CARD, 'My CV (Copy)').contains('button', 'Keep as my original');
+  });
+});
+
 // Guards: other accounts never got anything back, before 2026-09-15 or since.
 describe('demo account — nobody else gets anything back', () => {
   it('another account starts empty', () => {
@@ -138,6 +211,14 @@ describe('demo account — nobody else gets anything back', () => {
     newResumeAndBack();
     expectCards(['Untitled Resume']);
     cy.store().its('resumes').should('have.length', 1);
+  });
+
+  it('another account and a signed-out visitor get no keep controls, and the plain Import', () => {
+    [OTHER, null].forEach((user) => {
+      visitAs(user, stateWith(['My CV', { keep: true }]));
+      cy.contains(CARD, 'My CV').should('not.contain.text', 'Original').and('not.contain.text', 'Keep as my original');
+      cy.contains('button', /^\s*Import\s*$/).should('not.have.attr', 'aria-expanded');
+    });
   });
 
   it('a signed-out visitor starts empty (a guard: no account, so nothing to restore)', () => {

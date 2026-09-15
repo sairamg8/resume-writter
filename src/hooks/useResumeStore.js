@@ -7,6 +7,7 @@ import { DATA_VERSION, normalizeResume } from '@/utils/normalizeResume';
 import { loadSavedList, pendingRecovery, rememberRecovery, setItemWithRoom } from '@/utils/storageBackup';
 import { savedDeletions, withDeletion, withoutDeletions } from '@/utils/localDeletions';
 import { afterSync } from '@/utils/cloudSyncPlan';
+import { withKeep } from '@/utils/demoSeed';
 
 const STORAGE_KEY = 'cpwtcv_v1';
 
@@ -102,9 +103,10 @@ export function useAppStore() {
     return id;
   }
 
-  function importResume(data) {
+  /** A résumé from a file, as a new one; `keep`: marked as the account's original (useDemoSeed), never by the file itself. */
+  function importResume(data, { keep = false } = {}) {
     const id = newId('resume');
-    const imported = normalizeResume({ ...JSON.parse(JSON.stringify(data)), id, updatedAt: Date.now() });
+    const imported = normalizeResume(withKeep({ ...JSON.parse(JSON.stringify(data)), id }, keep, Date.now()));
     setAppState(prev => ({ ...prev, resumes: [...prev.resumes, imported], activeId: id }));
     return id;
   }
@@ -127,7 +129,8 @@ export function useAppStore() {
     const source = appState.resumes.find(r => r.id === id);
     if (!source) return;
     const copyId = newId('resume');
-    const copy = { ...JSON.parse(JSON.stringify(source)), id: copyId, name: `${source.name} (Copy)`, updatedAt: Date.now() };
+    // A copy is a new résumé: it does not come back with the originals unless marked itself.
+    const copy = withKeep({ ...JSON.parse(JSON.stringify(source)), id: copyId, name: `${source.name} (Copy)` }, false, Date.now());
     setAppState(prev => ({ ...prev, resumes: [...prev.resumes, copy], activeId: copyId }));
     return copyId;
   }
@@ -141,6 +144,14 @@ export function useAppStore() {
       const activeId = prev.activeId === id ? (remaining[0]?.id ?? null) : prev.activeId;
       return { ...prev, resumes: remaining, activeId, ...withDeletion(prev, gone, Date.now()) };
     });
+  }
+
+  /** "Keep as my original" (`keep` true) or "Stop keeping": a demo account's originals come back (useDemoSeed). */
+  function keepResume(id, keep) {
+    setAppState(prev => ({
+      ...prev,
+      resumes: prev.resumes.map(r => (r.id === id && Boolean(r.keep) !== keep ? withKeep(r, keep, Date.now()) : r)),
+    }));
   }
 
   function renameResume(id, name) {
@@ -195,6 +206,7 @@ export function useAppStore() {
     duplicateResume,
     deleteResume,
     renameResume,
+    keepResume,
     importResume,
     restoreResumes,
     updatePersonal,

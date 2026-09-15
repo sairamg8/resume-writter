@@ -5,11 +5,33 @@ import AuthBar from '@/components/AuthBar';
 import { ResumeCard } from '@/components/ResumeCard';
 import { CareerHistoryPanel } from '@/components/CareerHistoryPanel';
 import { RecoveryNotice } from '@/components/RecoveryNotice';
+import { ImportMenu } from '@/components/ImportMenu';
+import { isDemoAccount } from '@/utils/demoSeed';
+import { DEMO_ACCOUNTS } from '@/utils/demoAccounts';
+
+const IMPORT_BUTTON = 'flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors shadow-sm';
+
+/** What Delete asks: an original in a demo account is not gone for good (useDemoSeed). */
+function deletePrompt(resume, keeps) {
+  if (keeps && resume.keep) {
+    return `Delete "${resume.name}"? It is kept as your original, so it comes back once none of your originals is left. To delete it for good, choose "Stop keeping" first.`;
+  }
+  return `Delete "${resume.name}"? This cannot be undone.`;
+}
 
 export function Dashboard({ store, auth, sync }) {
   const navigate = useNavigate();
   const importRef = useRef(null);
   const [importError, setImportError] = useState(null);
+  // A demo account keeps originals: the cards and Import offer "Keep as my original".
+  const keeps = isDemoAccount(auth.user, DEMO_ACCOUNTS);
+  // Whether the file being picked is imported as an original (ImportMenu).
+  const importAsOriginal = useRef(false);
+
+  function pickImport(keep) {
+    importAsOriginal.current = keep;
+    importRef.current?.click();
+  }
 
   function handleImport(e) {
     const file = e.target.files?.[0];
@@ -19,7 +41,7 @@ export function Dashboard({ store, auth, sync }) {
       try {
         const parsed = JSON.parse(ev.target.result);
         if (parsed.personal && Array.isArray(parsed.sections)) {
-          const id = store.importResume(parsed);
+          const id = store.importResume(parsed, { keep: keeps && importAsOriginal.current });
           setImportError(null);
           navigate(`/resume/${id}`);
         } else {
@@ -48,12 +70,11 @@ export function Dashboard({ store, auth, sync }) {
           </div>
           <div className="flex items-center gap-2">
             <input ref={importRef} type="file" accept=".json" className="hidden" onChange={handleImport} />
-            <button
-              onClick={() => importRef.current?.click()}
-              className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors shadow-sm"
-            >
-              <Upload size={15} /> Import
-            </button>
+            {keeps ? <ImportMenu onPick={pickImport} className={IMPORT_BUTTON} /> : (
+              <button onClick={() => pickImport(false)} className={IMPORT_BUTTON}>
+                <Upload size={15} /> Import
+              </button>
+            )}
             <button
               onClick={() => navigate('/jobs')}
               className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors shadow-sm"
@@ -131,9 +152,10 @@ export function Dashboard({ store, auth, sync }) {
                     onOpen={id => navigate(`/resume/${id}`)}
                     onDuplicate={id => { const newId = store.duplicateResume(id); if (newId) navigate(`/resume/${newId}`); }}
                     onDelete={id => {
-                      if (confirm(`Delete "${r.name}"? This cannot be undone.`)) store.deleteResume(id);
+                      if (confirm(deletePrompt(r, keeps))) store.deleteResume(id);
                     }}
                     onRename={store.renameResume}
+                    onKeep={keeps ? store.keepResume : undefined}
                   />
                 ))}
                 <button
