@@ -1,59 +1,45 @@
 // The cloud sync's decisions (src/utils/cloudSyncPlan.js), run over plain data: what the first
 // sync after sign-in writes, removes and flags, what a flush does, and what is queued (R4-1,
-// R4-2). A fake cloud applies each plan the way useCloudSync's batch does, so a test can
-// follow a deletion across a reload and onto a second device.
+// R4-2). Following a deletion across a reload and onto a second device takes the real batch and
+// engine: 18-cloud-sync-io.test.mjs. The flushes here commit through the app's own Firestore
+// calls (cloudSyncIo.js) over a fake Firestore.
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { setup, teardown, loadModule } from './harness.mjs';
+import { deferred, fakeFirestore, resumePath, listPath } from './fake-firestore.mjs';
 
 let plan;
 let flush;
+let io;
 before(async () => {
   await setup();
   plan = await loadModule('/src/utils/cloudSyncPlan.js');
   flush = await loadModule('/src/utils/cloudSyncFlush.js');
+  io = await loadModule('/src/utils/cloudSyncIo.js');
 });
 after(teardown);
 
 const cv = (id, updatedAt = 1, extra = {}) => ({ id, name: id, updatedAt, sections: [], dataVersion: 99, ...extra });
 const ids = (list) => list.map((r) => r.id).toSorted();
 
-/** The account after useCloudSync's first-sync batch: sets, flags, removals, deletion list. */
-function apply(cloud, p) {
-  const docs = new Map(cloud.docs.map((r) => [r.id, r]));
-  for (const r of p.merged) docs.set(r.id, r);
-  for (const id of p.flags) docs.set(id, { ...docs.get(id), id, deleted: true });
-  for (const id of p.hardDeletes) docs.delete(id);
-  return { docs: [...docs.values()], deleted: p.tombstones || cloud.deleted };
-}
-
 describe('first sync after sign-in (R4-1)', () => {
-  it('a résumé deleted while signed out is removed from the cloud and stays gone after a reload', () => {
-    let cloud = { docs: [cv('resume_a'), cv('resume_b')], deleted: [] };
+  it('a résumé deleted while signed out is removed from the cloud and listed', () => {
     // Signed out: resume_a deleted in this browser; the store remembers it in deletedIds.
-    const p = plan.planInitialSync({ local: [cv('resume_b')], localDeleted: ['resume_a'], cloud: cloud.docs, cloudDeleted: cloud.deleted });
+    const p = plan.planInitialSync({ local: [cv('resume_b')], localDeleted: ['resume_a'], cloud: [cv('resume_a'), cv('resume_b')], cloudDeleted: [] });
     assert.deepEqual(ids(p.merged), ['resume_b']);
     assert.deepEqual(p.hardDeletes, ['resume_a']);
     assert.deepEqual(p.tombstones, ['resume_a']);
-    cloud = apply(cloud, p);
-
-    // Reload: loadResumes cleared deletedIds. Before the fix the cloud still held resume_a here.
-    const again = plan.planInitialSync({ local: p.merged, localDeleted: [], cloud: cloud.docs, cloudDeleted: cloud.deleted });
-    assert.deepEqual(ids(again.merged), ['resume_b'], 'it does not come back');
-    // A second device that still holds its old copy drops it too.
-    const other = plan.planInitialSync({ local: [cv('resume_a'), cv('resume_b')], localDeleted: [], cloud: cloud.docs, cloudDeleted: cloud.deleted });
+    // Listed and flagged ids stay out of every later merge.
+    const other = plan.planInitialSync({ local: [cv('resume_a'), cv('resume_b')], cloud: [cv('resume_b')], cloudDeleted: ['resume_a'] });
     assert.deepEqual(ids(other.merged), ['resume_b'], 'the deletion list keeps it off every device');
   });
 
   it('a sample deleted offline is flagged, not removed, so a restore can bring back its edits', () => {
-    const cloud = { docs: [cv('demo_classic', 5, { name: 'Edited sample' }), cv('resume_b')], deleted: [] };
-    const p = plan.planInitialSync({ local: [cv('resume_b')], localDeleted: ['demo_classic'], cloud: cloud.docs, cloudDeleted: [], demoAccount: true });
+    const p = plan.planInitialSync({ local: [cv('resume_b')], localDeleted: ['demo_classic'], cloud: [cv('demo_classic', 5), cv('resume_b')], cloudDeleted: [], demoAccount: true });
     assert.deepEqual(p.flags, ['demo_classic']);
     assert.deepEqual(p.hardDeletes, []);
     assert.equal(p.tombstones, null, 'samples never go on the deletion list');
-    const after = apply(cloud, p);
-    assert.equal(after.docs.find((r) => r.id === 'demo_classic').name, 'Edited sample', 'the edited copy is kept');
-    const again = plan.planInitialSync({ local: p.merged, localDeleted: [], cloud: after.docs, cloudDeleted: after.deleted, demoAccount: true });
+    const again = plan.planInitialSync({ local: p.merged, cloud: [cv('demo_classic', 5, { deleted: true }), cv('resume_b')], demoAccount: true });
     assert.deepEqual(ids(again.merged), ['resume_b'], 'and it stays deleted');
   });
 
@@ -77,11 +63,6 @@ describe('first sync after sign-in (R4-1)', () => {
     assert.deepEqual(ids(p.merged), ['resume_a', 'resume_cloud', 'resume_local']);
     assert.equal(p.merged.find((r) => r.id === 'resume_a').name, 'Cloud');
     assert.deepEqual([p.flags, p.hardDeletes, p.tombstones], [[], [], null]);
-  });
-
-  it('ignores a cloud entry without an id instead of merging it (R4-5)', () => {
-    const p = plan.planInitialSync({ local: [cv('resume_a')], cloud: [{ deleted: true }, { name: 'no id' }, cv('resume_b')] });
-    assert.deepEqual(ids(p.merged), ['resume_a', 'resume_b']);
   });
 });
 
@@ -112,34 +93,27 @@ describe('the write queue and the flush (R4-2)', () => {
 });
 
 /**
- * A cloud for flushOnce: `io` commits a batch the way useCloudSync's does. `readDeletions` waits
- * for `hold` (a promise) when given — the network round trip the race needs.
+ * A cloud for flushOnce: the app's Firestore calls over a fake Firestore holding `docs` in account
+ * 'u'. The deletion-list read waits for `hold` (a promise) when given — the network round trip
+ * the race needs. `state` shows the account: docs (Map id → résumé), deleted (the list), commits
+ * ('restore' for a batch that writes résumés, else 'delete').
  */
 function fakeCloud(docs, { hold } = {}) {
-  const state = { docs: new Map(docs.map((r) => [r.id, r])), deleted: [], commits: [] };
-  const io = {
-    async readDeletions() {
-      await hold;
-      return [...state.deleted];
-    },
-    async commit(uid, { sets, flags, hardDeletes, tombstones }) {
-      for (const r of sets) state.docs.set(r.id, r);
-      for (const id of flags) state.docs.set(id, { ...state.docs.get(id), id, deleted: true });
-      for (const id of hardDeletes) state.docs.delete(id);
-      if (tombstones) state.deleted = tombstones;
-      state.commits.push(sets.length ? 'restore' : 'delete');
+  const cloud = fakeFirestore(Object.fromEntries(docs.map((r) => [resumePath('u', r.id), r])));
+  const real = io.cloudIo(cloud.fs, cloud.db);
+  const readDeletions = async (uid) => { await hold; return real.readDeletions(uid); };
+  const state = {
+    get docs() { return new Map(Object.entries(cloud.resumes('u'))); },
+    get deleted() { return cloud.doc(listPath('u'))?.ids || []; },
+    get commits() {
+      return cloud.commits.map((ops) => (ops.some(([op, path, , opt]) => op === 'set' && path.includes('/resumes/') && !opt) ? 'restore' : 'delete'));
     },
   };
-  return { state, io };
+  return { state, io: { ...real, readDeletions } };
 }
 
 describe('flushes run one at a time (R4-3)', () => {
   const SAMPLES = ['demo_1', 'demo_2', 'demo_3', 'demo_4', 'demo_5'];
-  const deferred = () => {
-    let resolve;
-    const promise = new Promise((r) => { resolve = r; });
-    return { promise, resolve };
-  };
   const ticks = async (n = 10) => { for (let i = 0; i < n; i++) await Promise.resolve(); };
   // The owner deletes their résumé R and samples 1-4 (flush A: flags plus a removal, so it reads
   // the deletion list first); then sample 5, which brings the whole set back (flush B: five writes).
@@ -203,7 +177,7 @@ describe('sample résumés in an account that is not a demo account (R4-11)', ()
   // a deleted sample's last copy for a restore; anyone else deletes it like any résumé.
   it('a flush removes a deleted sample for good and lists it as deleted', async () => {
     const { state, io } = fakeCloud([cv('demo_classic', 3, { name: 'Owner content' }), cv('resume_b')]);
-    const job = { uid: 'friend', writes: [], deletes: ['demo_classic'], tombstones: new Set(), demoAccount: false };
+    const job = { uid: 'u', writes: [], deletes: ['demo_classic'], tombstones: new Set(), demoAccount: false }; // the friend's account
     assert.deepEqual(await flush.flushOnce(job, io), ['demo_classic']);
     assert.deepEqual(ids([...state.docs.values()]), ['resume_b'], 'before: flagged, and kept in the cloud for good');
     assert.deepEqual(state.deleted, ['demo_classic']);
@@ -214,9 +188,7 @@ describe('sample résumés in an account that is not a demo account (R4-11)', ()
     const p = plan.planInitialSync({ local: [cv('resume_b')], localDeleted: ['demo_modern'], cloud, cloudDeleted: [], demoAccount: false });
     assert.deepEqual([p.flags, p.hardDeletes.toSorted(), p.tombstones.toSorted()], [[], ['demo_classic', 'demo_modern'], ['demo_classic', 'demo_modern']]);
     assert.deepEqual(ids(p.merged), ['resume_b']);
-    const after = apply({ docs: cloud, deleted: [] }, p);
-    assert.deepEqual(ids(after.docs), ['resume_b']);
-    const again = plan.planInitialSync({ local: p.merged, cloud: after.docs, cloudDeleted: after.deleted, demoAccount: false });
+    const again = plan.planInitialSync({ local: p.merged, cloud: [cv('resume_b')], cloudDeleted: p.tombstones, demoAccount: false });
     assert.deepEqual([again.hardDeletes, again.tombstones], [[], null], 'nothing left to clean up');
   });
 

@@ -3,48 +3,19 @@ import {
   collection, doc, getDocs, getDoc, writeBatch,
 } from 'firebase/firestore';
 import { db } from '@/utils/firebase';
-import { isDemoAccount, isDemoId } from '@/utils/demoSeed';
+import { isDemoAccount } from '@/utils/demoSeed';
 import { DEMO_ACCOUNTS } from '@/utils/demoResumes';
-import { planInitialSync, queueChanges } from '@/utils/cloudSyncPlan';
-import { flushOnce, serialQueue } from '@/utils/cloudSyncFlush';
+import { cloudIo } from '@/utils/cloudSyncIo';
+import { createCloudSync } from '@/utils/cloudSyncEngine';
 
-function resumesCol(uid) { return collection(db, 'users', uid, 'resumes'); }
-function resumeDoc(uid, id) { return doc(db, 'users', uid, 'resumes', id); }
-function deletionsDoc(uid) { return doc(db, 'users', uid, 'meta', 'deletions'); }
-
-/** The Firestore calls behind a flush and the first sync (cloudSyncFlush's `io`). */
-const firestore = {
-  async readDeletions(uid) {
-    const snap = await getDoc(deletionsDoc(uid));
-    return snap.exists() ? (snap.data().ids || []) : [];
-  },
-  /** One batch: whole résumés written, samples flagged, the rest removed, the deletion list. */
-  commit(uid, { sets, flags, hardDeletes, tombstones }) {
-    const batch = writeBatch(db);
-    sets.forEach(r => batch.set(resumeDoc(uid, r.id), r));
-    flags.forEach(id => batch.set(resumeDoc(uid, id), { deleted: true }, { merge: true }));
-    hardDeletes.forEach(id => batch.delete(resumeDoc(uid, id)));
-    if (tombstones) batch.set(deletionsDoc(uid), { ids: tombstones });
-    return batch.commit();
-  },
-};
+/** The real Firestore calls (cloudSyncIo); null in a build without a cloud. */
+const io = db ? cloudIo({ collection, doc, getDocs, getDoc, writeBatch }, db) : null;
 
 /**
- * Errors that mean cloud sync cannot work until Firebase project/rules are fixed.
- * Not the same as temporary offline — we switch to local-only and stop retrying.
+ * The cloud sync (utils/cloudSyncEngine.js) wired to React: the signed-in user, the browser's
+ * online flag and every change of the résumé store go in; the sync's status, the time of the
+ * last sync and the account (once its list is known) come out.
  */
-function isCloudConfigError(e) {
-  const code = e?.code || '';
-  const msg = String(e?.message || e || '');
-  return (
-    code === 'permission-denied'
-    || code === 'PERMISSION_DENIED'
-    || msg.includes("Database '(default)' not found")
-    || msg.includes('permission-denied')
-    || msg.includes('Missing or insufficient permissions')
-  );
-}
-
 export function useCloudSync({ user, appState, store }) {
   // Hook order is fixed — never add/remove hooks conditionally.
   const [syncStatus, setSyncStatus] = useState('idle'); // idle|syncing|synced|offline|error
@@ -56,17 +27,21 @@ export function useCloudSync({ user, appState, store }) {
   // with): { uid, cloudDemo } — cloudDemo is the cloud's sample résumés, deleted ones included.
   const [account, setAccount] = useState(null);
 
-  // Single bag so we never change hook count when adding flags (HMR-safe pattern).
-  const stateRef = useRef({
-    initialSyncDone: false,
-    cloudDisabled: false,
-    prevResumes: null,
-    pendingWrites: new Map(),
-    pendingDeletes: new Set(),
-    tombstones: new Set(), // the cloud deletion list as last read or written
-    timer: null,
-    flushes: serialQueue(), // one flush at a time, in order (R4-3)
-  });
+  // The store as of the last render, for the sync to read and call when it needs to.
+  const latest = useRef({ appState, store });
+  useEffect(() => { latest.current = { appState, store }; });
+
+  const [sync] = useState(() => createCloudSync({
+    io,
+    store: {
+      getState: () => latest.current.appState,
+      loadResumes: (list) => latest.current.store.loadResumes(list),
+    },
+    report: { status: setSyncStatus, synced: setLastSynced, account: setAccount },
+    isDemo: (u) => isDemoAccount(u, DEMO_ACCOUNTS),
+    online: () => navigator.onLine,
+    log: (...args) => console.info(...args),
+  }));
 
   // ── Online / offline detection ────────────────────────────────────────────
   useEffect(() => {
@@ -80,174 +55,18 @@ export function useCloudSync({ user, appState, store }) {
     };
   }, []);
 
-  // ── Initial sync when user signs in ──────────────────────────────────────
+  // ── Initial sync when user signs in (or comes back online) ────────────────
   useEffect(() => {
-    const s = stateRef.current;
-
-    if (!user) {
-      s.initialSyncDone = false;
-      s.cloudDisabled = false;
-      s.prevResumes = null;
-      s.tombstones = new Set();
-      setSyncStatus('idle');
-      setAccount(null);
-      return;
-    }
-
-    if (!db || s.cloudDisabled) {
-      setSyncStatus('error');
-      // Nothing to wait for: this browser's résumés are the whole list.
-      setAccount(a => (a?.uid === user.uid ? a : { uid: user.uid, cloudDemo: [] }));
-      return;
-    }
-
-    if (!navigator.onLine) {
-      s.prevResumes = appState.resumes;
-      s.initialSyncDone = false;
-      setSyncStatus('offline');
-      return;
-    }
-
-    let cancelled = false;
-
-    async function initialSync() {
-      setSyncStatus('syncing');
-      try {
-        const [snap, cloudDeleted] = await Promise.all([
-          getDocs(resumesCol(user.uid)),
-          firestore.readDeletions(user.uid),
-        ]);
-        if (cancelled) return;
-
-        // The document id, not a field: a flagged sample the cloud never held is a bare stub.
-        const cloudResumes = snap.docs.map(d => ({ ...d.data(), id: d.id }));
-        const plan = planInitialSync({
-          local: appState.resumes, localDeleted: appState.deletedIds || [], cloud: cloudResumes, cloudDeleted,
-          demoAccount: isDemoAccount(user, DEMO_ACCOUNTS),
-        });
-
-        // Deletions this browser never sent reach the cloud in the same batch, before the store
-        // forgets them (loadResumes clears deletedIds) — else the next sync restores them (R4-1).
-        await firestore.commit(user.uid, {
-          sets: plan.merged, flags: plan.flags, hardDeletes: plan.hardDeletes, tombstones: plan.tombstones,
-        });
-        if (cancelled) return;
-
-        const { merged } = plan;
-        store.loadResumes(merged);
-        s.prevResumes = merged;
-        s.tombstones = new Set(plan.tombstones || cloudDeleted);
-        s.initialSyncDone = true;
-        const cloudDemo = cloudResumes.filter(r => isDemoId(r.id)).map(({ deleted: _deleted, ...r }) => r);
-        setAccount({ uid: user.uid, cloudDemo });
-        setSyncStatus('synced');
-        setLastSynced(new Date());
-      } catch (e) {
-        if (cancelled) return;
-        if (isCloudConfigError(e)) {
-          s.cloudDisabled = true;
-          s.initialSyncDone = false;
-          s.prevResumes = appState.resumes;
-          setSyncStatus('error');
-          setAccount({ uid: user.uid, cloudDemo: [] });
-          // One clear message — app keeps working on localStorage only
-          console.info(
-            '[CloudSync] Cloud sync disabled (local-only). '
-            + 'Signed-in user cannot read/write Firestore — check rules are published '
-            + 'and a "(default)" database exists. Resume data still saves in this browser.',
-          );
-          return;
-        }
-        // Offline / transient: do not enable write queue (avoids spam retries)
-        s.prevResumes = appState.resumes;
-        s.initialSyncDone = false;
-        const offline = !navigator.onLine
-          || String(e?.message || '').toLowerCase().includes('client is offline');
-        setSyncStatus(offline ? 'offline' : 'error');
-        if (!offline) {
-          console.info('[CloudSync] sync unavailable:', e?.code || e?.message || e);
-        }
-      }
-    }
-
-    initialSync();
-    return () => { cancelled = true; };
+    sync.start(user);
+    return () => sync.cancel();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.uid, isOnline]);
 
   // ── Watch for local mutations and debounce-write ──────────────────────────
   useEffect(() => {
-    const s = stateRef.current;
-    if (!user || !s.initialSyncDone || s.cloudDisabled || !db) return;
-
-    const current = appState.resumes;
-    const queued = queueChanges({ writes: s.pendingWrites, deletes: s.pendingDeletes }, s.prevResumes || [], current);
-    if (!queued.dirty) return;
-    s.pendingWrites = queued.writes;
-    s.pendingDeletes = queued.deletes;
-    s.prevResumes = current;
-
-    clearTimeout(s.timer);
-    setSyncStatus('syncing');
-    s.timer = setTimeout(() => flushPending(user.uid), 1500);
+    sync.resumesChanged(appState.resumes);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [appState.resumes, user]);
 
-  /** Queue a flush of the changes waiting by the time it runs (after any flush before it). */
-  function flushPending(uid) {
-    return stateRef.current.flushes(() => sendPending(uid));
-  }
-
-  async function sendPending(uid) {
-    const s = stateRef.current;
-    if (s.cloudDisabled || !db) return;
-
-    const writes = Array.from(s.pendingWrites.values());
-    const deletes = Array.from(s.pendingDeletes);
-    s.pendingWrites.clear();
-    s.pendingDeletes.clear();
-
-    if (!writes.length && !deletes.length) return;
-
-    try {
-      // In a demo account a deleted sample résumé is flagged, not removed: its last copy stays in
-      // the cloud so that restoring the samples on any device brings back the edited version.
-      // Writing it again (a restore) replaces the whole document, flag included.
-      const demoAccount = isDemoAccount(user, DEMO_ACCOUNTS);
-      const tombstones = await flushOnce({ uid, writes, deletes, tombstones: s.tombstones, demoAccount }, firestore);
-      if (tombstones) s.tombstones = new Set(tombstones);
-      setSyncStatus('synced');
-      setLastSynced(new Date());
-    } catch (e) {
-      if (isCloudConfigError(e)) {
-        s.cloudDisabled = true;
-        s.initialSyncDone = false;
-        setSyncStatus('error');
-        console.info('[CloudSync] Cloud sync disabled (local-only).');
-        return;
-      }
-      const offline = !navigator.onLine
-        || String(e?.message || '').toLowerCase().includes('client is offline');
-      setSyncStatus(offline ? 'offline' : 'error');
-      if (!offline) {
-        console.info('[CloudSync] flush unavailable:', e?.code || e?.message || e);
-      }
-    }
-  }
-
-  /**
-   * The account's sample résumés with these `ids` as the cloud holds them now, flagged ones
-   * included — a restore then brings back an edit another device made after this one's first
-   * sync (R4-4). null when there is no cloud to ask, or it gives no answer within 5 s.
-   */
-  function readCloudDemo(ids) {
-    const s = stateRef.current;
-    if (!user || !db || s.cloudDisabled || !s.initialSyncDone || !navigator.onLine) return Promise.resolve(null);
-    const read = Promise.all(ids.map(id => getDoc(resumeDoc(user.uid, id))))
-      .then(snaps => snaps.filter(d => d.exists()).map(d => ({ ...d.data(), id: d.id })));
-    const timeout = new Promise(resolve => { setTimeout(() => resolve(null), 5000); });
-    return Promise.race([read, timeout]).catch(() => null);
-  }
-
-  return { syncStatus, lastSynced, isOnline, account, readCloudDemo };
+  return { syncStatus, lastSynced, isOnline, account, readCloudDemo: sync.readCloudDemo };
 }
