@@ -7,6 +7,8 @@
 // client's batches — and commit()'s promise settles when the test lets it (`cloud.hold`), as the
 // server's acknowledgement does. A read can be held or failed the same way.
 
+import { withDeletion, withoutDeletions } from '../../src/utils/localDeletions.js';
+
 const clone = (v) => (v === undefined ? undefined : JSON.parse(JSON.stringify(v)));
 export const resumePath = (uid, id) => `users/${uid}/resumes/${id}`;
 export const listPath = (uid) => `users/${uid}/meta/deletions`;
@@ -127,14 +129,20 @@ export function recorder() {
 }
 
 /**
- * The résumé store the engine talks to, holding `state`: what the app's store does after a first
- * sync (loadResumes: the list replaced, the deletions forgotten).
+ * The résumé store the engine talks to, holding `state`, with the store's own deletion record
+ * (src/utils/localDeletions.js): deleteResume as a click on Delete does it, forgetDeletions as the
+ * sync asks; loadResumes as the store applies a first sync (the list replaced, deletions forgotten).
  */
 export function fakeStore(state) {
   const store = {
     state: { deletedIds: [], ...state },
     getState: () => store.state,
     loadResumes(list) { store.state = { ...store.state, resumes: list, deletedIds: [], deletedInfo: {} }; },
+    forgetDeletions(ids, before) { store.state = { ...store.state, ...withoutDeletions(store.state, ids, before) }; },
+    deleteResume(id, at = Date.now()) {
+      const gone = store.state.resumes.find((r) => r.id === id);
+      store.state = { ...store.state, resumes: store.state.resumes.filter((r) => r.id !== id), ...withDeletion(store.state, gone, at) };
+    },
   };
   return store;
 }
@@ -150,5 +158,7 @@ export function syncPage(mods, cloud, state, { isDemo = () => false, online = ()
   const { seen, report } = recorder();
   const sync = mods.engine.createCloudSync({ io: mods.io.cloudIo(cloud.fs, cloud.db), store, report, isDemo, online, timers });
   const change = (next) => { store.state = { ...store.state, ...next }; sync.resumesChanged(store.state.resumes); };
-  return { store, timers, seen, sync, change };
+  /** Delete on the dashboard: the store records it, and the watcher queues it. */
+  const remove = (id) => { store.deleteResume(id); sync.resumesChanged(store.state.resumes); };
+  return { store, timers, seen, sync, change, remove };
 }

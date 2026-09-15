@@ -6,9 +6,11 @@
 //   deletedInfo  id → { version, at }: `version` the updatedAt of the copy deleted, `at` when.
 //                A parallel map, so a store saved by an older build (ids only) still loads, and
 //                one saved by this build still loads in an older one.
-// The first sync sends a deletion only when the account's copy is not newer than the version
-// deleted: a deletion made offline must never remove an edit made later on another device
-// (R8-0). An entry with no version (an older build's) cannot be checked, so it is never sent.
+// An entry stays until the account's cloud has the deletion: a flush that sent it forgets it
+// (R8-1), and so does a restore. The first sync sends one only when the account's copy is not
+// newer than the version deleted: a deletion made offline must never remove an edit made later
+// on another device (R8-0). An entry with no version (an older build's) cannot be checked, so it
+// is never sent.
 
 const isInfo = (v) => Boolean(v && typeof v === 'object' && !Array.isArray(v));
 
@@ -36,10 +38,15 @@ export function withDeletion(state, resume, now) {
   };
 }
 
-/** The deletion fields without these `ids` (put back, or no longer to be sent). */
-export function withoutDeletions(state, ids) {
-  const drop = new Set(ids);
+/**
+ * The deletion fields without these `ids` (put back, or sent). With `before`, only an entry made
+ * at or before that time goes: a résumé deleted again after a flush took the queue — restored,
+ * then deleted — still has its newer deletion to send.
+ */
+export function withoutDeletions(state, ids, before = Infinity) {
   const info = isInfo(state.deletedInfo) ? state.deletedInfo : {};
+  const newer = (id) => Number.isFinite(info[id]?.at) && info[id].at > before;
+  const drop = new Set([...ids].filter((id) => !newer(id)));
   return {
     deletedIds: (state.deletedIds || []).filter((id) => !drop.has(id)),
     deletedInfo: Object.fromEntries(Object.entries(info).filter(([id]) => !drop.has(id))),

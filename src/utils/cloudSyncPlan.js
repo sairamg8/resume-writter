@@ -19,9 +19,11 @@ const asEntry = (e) => (typeof e === 'string' ? { id: e, version: null } : e);
 /**
  * The first sync after sign-in (or after coming back online).
  *   local         this browser's résumés
- *   deletions     résumés deleted in this browser (localDeletions.deletionEntries): { id,
- *                 version } — version the updatedAt of the copy deleted, null for an older
- *                 build's entry
+ *   deletions     résumés deleted in this browser that the cloud may not have yet — deleted
+ *                 signed out or offline, after a failed flush, or within the flush delay before a
+ *                 reload; a flush that sent one forgets it (R8-1). Entries { id, version }
+ *                 (localDeletions.deletionEntries): version the updatedAt of the copy deleted,
+ *                 null for an older build's entry
  *   cloud         the account's résumé documents, each with its document id
  *   cloudDeleted  the account's deletion list
  *   demoAccount   the account is a demo account (its deleted samples are flagged)

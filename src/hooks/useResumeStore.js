@@ -80,6 +80,13 @@ export function useAppStore() {
     }));
   }
 
+  /** The cloud has these deletions now (sent by the sync at `before`): they are not kept any longer. */
+  function forgetDeletions(ids, before) {
+    setAppState(prev => (ids.some(id => (prev.deletedIds || []).includes(id))
+      ? { ...prev, ...withoutDeletions(prev, ids, before) }
+      : prev));
+  }
+
   function loadResumes(list) {
     const resumes = list.map(normalizeResume);
     setAppState(prev => ({
@@ -188,6 +195,7 @@ export function useAppStore() {
     activeResume,
     setActiveId,
     loadResumes,
+    forgetDeletions,
     createResume,
     duplicateResume,
     deleteResume,

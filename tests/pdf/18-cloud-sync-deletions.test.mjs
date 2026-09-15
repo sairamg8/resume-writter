@@ -4,7 +4,7 @@
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { setup, teardown, loadModule } from './harness.mjs';
-import { fakeFirestore, syncPage, resumePath, listPath, settle } from './fake-firestore.mjs';
+import { deferred, fakeFirestore, syncPage, resumePath, listPath, settle } from './fake-firestore.mjs';
 
 let mods;
 before(async () => {
@@ -72,5 +72,57 @@ describe('a deletion the first sync sends carries the version deleted (R8-0)', (
     const laptop = page(cloud, { resumes: [], ...deleted({ demo_classic: 5 }) });
     await signIn(laptop, OWNER);
     assert.deepEqual(cloud.resumes('u').demo_classic, { ...cv('demo_classic', 5, { name: 'Edited sample' }), deleted: true });
+  });
+});
+
+describe('deletedIds holds what the cloud does not have yet (R8-1)', () => {
+  it('a deletion a flush sent is forgotten: a sample restored on another device is not flagged again', async () => {
+    const cloud = fakeFirestore({ [resumePath('u', 'demo_classic')]: cv('demo_classic', 5), [resumePath('u', 'demo_modern')]: cv('demo_modern', 5) });
+    const laptop = page(cloud, { resumes: [cv('demo_classic', 5), cv('demo_modern', 5)] });
+    await signIn(laptop, OWNER);
+    laptop.remove('demo_classic');
+    await laptop.timers.fire();
+    assert.equal(cloud.resumes('u').demo_classic.deleted, true, 'the flush flagged it');
+    assert.deepEqual([laptop.store.state.deletedIds, laptop.store.state.deletedInfo], [[], {}], 'before: kept for good');
+
+    // The phone deletes the other sample; none is left there, so it restores all of them (their
+    // own updatedAt kept, R4-4). Then the laptop comes back online and syncs again.
+    cloud.data.set(resumePath('u', 'demo_classic'), cv('demo_classic', 5));
+    laptop.sync.start(OWNER);
+    await settle();
+    assert.equal(cloud.resumes('u').demo_classic.deleted, undefined, 'before: flagged again, over the restore');
+    assert.deepEqual(ids(laptop.store.state.resumes), ['demo_classic', 'demo_modern']);
+  });
+
+  it('a flush that fails keeps the deletion, and the next first sync sends it', async () => {
+    const cloud = fakeFirestore({ [resumePath('u', 'resume_a')]: cv('resume_a', 5), [resumePath('u', 'resume_b')]: cv('resume_b') });
+    const laptop = page(cloud, { resumes: [cv('resume_a', 5), cv('resume_b')] });
+    await signIn(laptop);
+    cloud.fail.commit = Object.assign(new Error('Failed to get document because the client is offline.'), { code: 'unavailable' });
+    laptop.remove('resume_a');
+    await laptop.timers.fire();
+    assert.deepEqual(laptop.store.state.deletedIds, ['resume_a'], 'not sent, so not forgotten');
+    cloud.fail.commit = null;
+    laptop.sync.start(USER); // back online
+    await settle();
+    assert.deepEqual(Object.keys(cloud.resumes('u')), ['resume_b']);
+    assert.deepEqual(cloud.doc(listPath('u')).ids, ['resume_a']);
+  });
+
+  it('a résumé deleted again after the flush took the queue is not forgotten with it', async () => {
+    const cloud = fakeFirestore({ [resumePath('u', 'demo_a')]: cv('demo_a', 5), [resumePath('u', 'demo_b')]: cv('demo_b', 5) });
+    const laptop = page(cloud, { resumes: [cv('demo_a', 5), cv('demo_b', 5)] });
+    await signIn(laptop, OWNER);
+    laptop.remove('demo_a');
+    const ack = deferred();
+    cloud.hold.commit = ack.promise;
+    await laptop.timers.fire(); // sent; the server has not answered yet
+    // Put back meanwhile (restoreResumes forgets the deletion), then deleted again: a newer entry.
+    // A guard for forgetting only what the flush sent (the store used to forget nothing).
+    laptop.change({ resumes: [cv('demo_a', 6), cv('demo_b', 5)], deletedIds: [], deletedInfo: {} });
+    laptop.store.deleteResume('demo_a', Date.now() + 60_000);
+    ack.resolve();
+    await settle();
+    assert.deepEqual(laptop.store.state.deletedIds, ['demo_a'], 'the second deletion still has to be sent');
   });
 });

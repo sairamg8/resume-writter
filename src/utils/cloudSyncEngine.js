@@ -29,19 +29,20 @@ const isOfflineError = (e) => String(e?.message || '').toLowerCase().includes('c
 /**
  * createCloudSync({ io, store, report, isDemo, ... }):
  *   io        cloudIo(...) — null when this build has no cloud
- *   store     { getState() → the résumé store's state now, loadResumes(list) }
+ *   store     { getState() → the résumé store's state now, loadResumes(list),
+ *             forgetDeletions(ids, before) — the cloud has these deletions (localDeletions.js) }
  *   report    { status('idle'|'syncing'|'synced'|'offline'|'error'), synced(Date), account(a) } —
  *             account: { uid, cloudDemo } once the account's list is known, else null
  *   isDemo    user → true for a demo account (its deleted samples are flagged, not removed)
  *   online    () → whether the browser says it is online
  *   timers    { set(fn, ms) → id, clear(id) }; flushDelay (ms) before queued changes are sent;
- *             cloudTimeout (ms) readCloudDemo waits for an answer
+ *             cloudTimeout (ms) readCloudDemo waits for an answer; now() → ms
  * Returns { start(user), cancel(), resumesChanged(resumes), readCloudDemo(ids) }.
  */
 export function createCloudSync({
   io, store, report, isDemo = () => false,
   online = () => true, timers = { set: setTimeout, clear: clearTimeout },
-  flushDelay = 1500, cloudTimeout = 5000, log = () => {},
+  flushDelay = 1500, cloudTimeout = 5000, now = () => Date.now(), log = () => {},
 }) {
   const s = {
     user: null,
@@ -180,12 +181,16 @@ export function createCloudSync({
 
     if (!writes.length && !deletes.length) return;
 
+    const sentAt = now();
     try {
       // In a demo account a deleted sample résumé is flagged, not removed: its last copy stays in
       // the cloud so that restoring the samples on any device brings back the edited version.
       // Writing it again (a restore) replaces the whole document, flag included.
       const tombstones = await flushOnce({ uid: user.uid, writes, deletes, tombstones: s.tombstones, demoAccount: isDemo(user) }, io);
       if (tombstones) s.tombstones = new Set(tombstones);
+      // The cloud has them: the store stops keeping them for the next first sync, which would send
+      // them again — over a restore another device made since (R8-1).
+      if (deletes.length) store.forgetDeletions(deletes, sentAt);
       report.status('synced');
       report.synced(new Date());
     } catch (e) {

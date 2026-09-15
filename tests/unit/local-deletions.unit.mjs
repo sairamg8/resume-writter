@@ -38,6 +38,12 @@ test('withoutDeletions: forgets the ids given, with their versions', () => {
   assert.deepEqual(withoutDeletions({}, ['a']), { deletedIds: [], deletedInfo: {} });
 });
 
+test('withoutDeletions with `before`: an entry made after that time stays (deleted again since) (R8-1)', () => {
+  const state = { deletedIds: ['a', 'b', 'legacy'], deletedInfo: { a: { version: 1, at: 50 }, b: { version: 2, at: 150 } } };
+  // A flush that took the queue at 100 sent a, b and legacy: b was deleted again at 150.
+  assert.deepEqual(withoutDeletions(state, ['a', 'b', 'legacy'], 100), { deletedIds: ['b'], deletedInfo: { b: { version: 2, at: 150 } } });
+});
+
 test('savedDeletions: a store saved by an older build (ids only) loads with its ids kept', () => {
   assert.deepEqual(savedDeletions({ deletedIds: ['resume_a', 'resume_a'] }), { deletedIds: ['resume_a'], deletedInfo: {} });
   assert.deepEqual(savedDeletions({ deletedIds: 'junk', deletedInfo: 'junk' }), { deletedIds: [], deletedInfo: {} });
