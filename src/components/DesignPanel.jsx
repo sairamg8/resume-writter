@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ATS_DEFAULTS, defaultSettings } from '@/utils/defaultData';
-import { drawsContactIcons, TEMPLATE_PICKER, templateId } from '@/constants/templates';
+import { drawsContactIcons, TEMPLATE_PICKER, templateId, upperSectionTitles } from '@/constants/templates';
 import { DesignSection, NumberRow } from '@/components/DesignPanelShared';
 import { ColorsSection } from '@/components/DesignPanelColors';
 import { TypographySection } from '@/components/DesignPanelTypography';
@@ -155,7 +155,7 @@ export default function DesignPanel({ resume, updateSetting, setTemplate, resetS
                 key={opt.value}
                 onClick={() => updateSetting('sectionTitleCase', opt.value)}
                 className={`px-3 py-1 text-xs font-semibold rounded border transition-all ${
-                  (settings.sectionTitleCase || 'upper') === opt.value
+                  (upperSectionTitles(settings.sectionTitleCase) ? 'upper' : 'normal') === opt.value
                     ? 'bg-blue-600 border-blue-600 text-white'
                     : 'border-gray-200 text-gray-500 hover:border-blue-300'
                 }`}

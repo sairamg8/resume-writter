@@ -1,7 +1,7 @@
 // The Sidebar template: links, fields, spacing, colours and styles of its two columns.
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { setup, teardown, resume, section, render, renderDocx, read, allText, itemsWith, drawState, loadModule } from './harness.mjs';
+import { setup, teardown, resume, section, experience, render, renderDocx, read, allText, itemsWith, drawState, loadModule } from './harness.mjs';
 import { hasPdftotext, splitWords } from './extractors.mjs';
 
 before(setup);
@@ -249,5 +249,25 @@ describe('Sidebar side-column headings', () => {
     assert.ok(!/TECH SKILLS|SPOKEN LANGUAGES|CONTACT/.test(typed), typed);
     const upper = allText(await read(await render(sidebar(sections(), { personal }))));
     assert.ok(['TECH SKILLS', 'SPOKEN LANGUAGES', 'CONTACT'].every((h) => upper.includes(h)), upper);
+  });
+
+  // Both columns read Title case by one rule: capitals only for "ABC" ('upper', or none stored).
+  // The side column capitalised anything but 'normal', so an imported 'title' or 'lower' printed
+  // "Work History" in the main column beside "TECH SKILLS" and "CONTACT" (V2W2b-5).
+  it('Title case means the same in both columns, whatever an imported file stores (V2W2b-5)', async () => {
+    const sections = () => [
+      experience([{ role: 'Engineer' }]),
+      section('skills', [{ category: 'Core', skills: 'React' }], {}, { title: 'Tech Skills' }),
+    ];
+    const wrong = [];
+    for (const [sectionTitleCase, capitals] of [['upper', true], ['', true], ['normal', false], ['title', false], ['lower', false]]) {
+      const secs = sections();
+      secs[0].title = 'Work History';
+      const text = allText(await read(await render(sidebar(secs, { settings: { sectionTitleCase }, personal: { email: 'me@example.com' } }))));
+      const want = capitals ? ['WORK HISTORY', 'TECH SKILLS', 'CONTACT'] : ['Work History', 'Tech Skills', 'Contact'];
+      const missing = want.filter((h) => !text.includes(h));
+      if (missing.length) wrong.push(`'${sectionTitleCase}': no ${missing.join(', ')}`);
+    }
+    assert.deepEqual(wrong, []);
   });
 });

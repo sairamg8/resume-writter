@@ -3,7 +3,7 @@ import { Text } from './PdfText';
 import { safeHref, hasRichText } from '@/utils/richText';
 import { contactHref } from '@/utils/contacts';
 import { dateRange } from '@/utils/dates';
-import { SIDEBAR_COLUMN_TYPES } from '@/constants/templates';
+import { SIDEBAR_COLUMN_TYPES, upperSectionTitles } from '@/constants/templates';
 import { CSS_PX_TO_PT, DEFAULT_ITEM_GAP_PX, tracking } from './pdfUnits';
 import { sidebarShades } from './pdfColors';
 import { PdfRichText } from './PdfRichText';
@@ -36,11 +36,11 @@ export function EntryLink({ url, label, style }) {
 
 /**
  * A section title in the column: its own small letter-spaced heading and rule, whatever Design →
- * Section Headings sets for the main column — but in capitals only when Title case says so
- * ("As typed" prints it as typed, as the main column does, R6-4).
+ * Section Headings sets for the main column — but in capitals only when Title case says so, by
+ * the main column's rule (upperSectionTitles: "As typed" prints it as typed, R6-4, V2W2b-5).
  */
 export function SideSectionTitle({ title, shades = NAVY, titleCase = 'upper' }) {
-  const upper = titleCase !== 'normal';
+  const upper = upperSectionTitles(titleCase);
   return (
     <View style={{ marginBottom: 6 }}>
       <Text style={{ fontSize: 8.5, fontWeight: 'bold', color: shades.label, letterSpacing: tracking(8.5, 1.2), textTransform: upper ? 'uppercase' : 'none', marginBottom: 2.5, lineHeight: 1.2 }}>

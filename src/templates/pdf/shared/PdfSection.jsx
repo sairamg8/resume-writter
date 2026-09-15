@@ -2,6 +2,7 @@ import { View } from '@react-pdf/renderer';
 import { Text } from './PdfText';
 import { solid, tint } from './pdfColors';
 import { tracking } from './pdfUnits';
+import { upperSectionTitles } from '@/constants/templates';
 
 export function PdfSectionTitle({
   title,
@@ -16,7 +17,7 @@ export function PdfSectionTitle({
   lineHeightValue = 1.5,
   presence = 50,
 }) {
-  const label = sectionTitleCase === 'upper' ? title.toUpperCase() : title;
+  const label = upperSectionTitles(sectionTitleCase) ? title.toUpperCase() : title;
   const bc = borderColor || accent;
   const textAlignment = centered ? { textAlign: 'center' } : {};
   // 0.7 pt tracking, narrower below 11.7 pt so small titles still extract as words (tracking()).

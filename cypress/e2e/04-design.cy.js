@@ -163,3 +163,15 @@ describe('design — reset returns to the template\'s defaults (M16)', () => {
     });
   });
 });
+
+describe('design — Title case shows what the PDF prints (V2W2b-5)', () => {
+  // An imported file may store a Title case the panel does not offer ('title', 'lower'). Every
+  // column prints such titles as typed, so the panel marks "Abc"; it used to mark neither.
+  it('a stored "title" marks "Abc", and the PDF prints the titles as typed', () => {
+    cy.visitEditor('classic', { settings: { sectionTitleCase: 'title' } });
+    renderedText().should('contain', 'Professional Experience').and('not.contain', 'PROFESSIONAL EXPERIENCE');
+    openDesign('Section Headings');
+    cy.contains('button', /^Abc$/).should('have.class', 'bg-blue-600');
+    cy.contains('button', /^ABC$/).should('not.have.class', 'bg-blue-600');
+  });
+});

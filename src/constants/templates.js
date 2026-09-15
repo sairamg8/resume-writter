@@ -106,6 +106,14 @@ export const templateLabel = (template) => TEMPLATES[templateId(template)].label
 /** The heading style and title case a template brings: set when it is picked and on Reset. */
 export const templateStyleDefaults = (template) => ({ ...TEMPLATES[templateId(template)].style });
 
+/**
+ * Does Section Headings' Title case print section titles in capitals? Only "ABC" ('upper', and an
+ * unset one); "Abc" ('normal') and anything else an imported file carries ('title', 'lower')
+ * print the title as typed. One rule for the main column's headings, the Sidebar side column's
+ * and the panel's buttons: the side column capitalised all but 'normal' (V2W2b-5).
+ */
+export const upperSectionTitles = (titleCase) => (titleCase || 'upper') === 'upper';
+
 /** The template's header spacing where the résumé sets none (pt; STACKED_HEADER_GAPS above). */
 export const templateHeaderGaps = (template) => TEMPLATES[templateId(template)].headerGaps;
 
