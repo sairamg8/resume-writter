@@ -1,11 +1,16 @@
 // Header Customization per template: the controls a template's PDF honours are shown, and
 // only those (audit FIDA-50).
+import { buildTestState } from '../../tests/helpers.js';
+
 const active = (s) => s.resumes.find((r) => r.id === s.activeId);
 const openHeader = () => cy.contains('button', 'Header Customization').click();
 
 describe('header customization', () => {
   it('FIDA-50: Executive shows its header controls, not a "fixed banner" message, and they reach the PDF', () => {
-    cy.visitEditor('executive');
+    // No sections: the header rule is then the only line in the accent colour (R3-8).
+    const state = buildTestState('executive');
+    state.resumes[0].sections = [];
+    cy.visitEditor('executive', { state });
     openHeader();
     cy.contains('fixed banner header').should('not.exist');
     ['Text Alignment', 'Name & Title Layout', 'Header Bottom Border', 'Contact Details'].forEach((label) => {
@@ -13,21 +18,31 @@ describe('header customization', () => {
     });
 
     // The Executive design has no header rule: an unset setting shows as off, one click turns it on.
+    cy.previewReady();
+    cy.exportPdf().then((pdf) => expect(pdf.strokes, 'no rule yet').not.to.include('#2563eb'));
     cy.get('button[title="Show border"]').click();
     cy.store().should((s) => expect(active(s).settings.showHeaderBorder).to.eq(true));
     cy.get('button[title="Hide border"]').should('be.visible');
     cy.contains('span', 'Thickness').should('be.visible');
+    // The PDF prints the thickness in points, and the box says so — it said px (R3-7).
+    cy.get('input[aria-label="Header border thickness (pt)"]').should('have.value', '2');
+    cy.contains('span', /^pt$/).should('be.visible');
+    // …and the exported PDF draws it: the accent rule is a stroke in the résumé's accent (R3-8).
+    cy.previewReady();
+    cy.store().should((s) => expect(active(s).settings.accentColor.toLowerCase()).to.eq('#2563eb'));
+    cy.exportPdf().then((pdf) => expect(pdf.strokes, 'the accent rule is drawn').to.include('#2563eb'));
 
     cy.contains('button', /^Center$/).click();
     cy.store().should((s) => expect(active(s).settings.headerAlign).to.eq('center'));
     cy.previewReady();
     cy.exportPdf().then((pdf) => {
       const name = pdf.runs.find((r) => r.str.includes('Alex Johnson'));
-      expect(name, 'name run').to.exist;
+      expect(name, 'name run').to.be.an('object');
       expect(name.x, 'the name is centred, not at the 18 mm margin').to.be.greaterThan(150);
     });
   });
 
+  // Guard: Modern never offered these controls; the FIDA-50 fix was Executive's.
   it('FIDA-50: Modern keeps its banner note and shows no header controls', () => {
     cy.visitEditor('modern');
     openHeader();

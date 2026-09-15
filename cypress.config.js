@@ -78,15 +78,20 @@ export default defineConfig({
           }
           return null;
         },
-        /** Page count, text runs ({ page, str, x, y, fontSize, colorHex }) and document info. */
+        /**
+         * Page count, text runs ({ page, str, x, y, fontSize, colorHex }), document info, and the
+         * stroke colours page 1 draws with (a header rule is one — R3-8).
+         */
         async readPdf(file) {
           const buffer = fs.readFileSync(file);
           const doc = await pdfjsLib.getDocument({ data: new Uint8Array(buffer), isEvalSupported: false }).promise;
           const { info } = await doc.getMetadata();
           const page1 = await doc.getPage(1);
           const [, , width, height] = page1.view;
+          const ops = await page1.getOperatorList();
+          const strokes = [...new Set(ops.fnArray.flatMap((fn, k) => (fn === pdfjsLib.OPS.setStrokeRGBColor ? [ops.argsArray[k][0]] : [])))];
           const runs = await extractPdfTextRuns(buffer);
-          return { numPages: doc.numPages, width, height, info, runs, bytes: buffer.length };
+          return { numPages: doc.numPages, width, height, info, runs, strokes, bytes: buffer.length };
         },
         /** Paragraph texts of a .docx (word/document.xml), plus the file size. */
         readDocx(file) {

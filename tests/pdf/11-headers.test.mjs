@@ -2,7 +2,7 @@
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs';
-import { setup, teardown, resume, render, read, drawState } from './harness.mjs';
+import { setup, teardown, resume, render, read, drawState, loadModule, TEMPLATES } from './harness.mjs';
 
 before(setup);
 after(teardown);
@@ -28,12 +28,22 @@ async function drawing(bytes) {
   return out;
 }
 
-const drawn = async (template, settings) =>
+const pageOf = async (template, settings) =>
   drawing(await render(resume({ template, personal: PERSONAL, settings: { accentColor: ACCENT, ...settings } })));
+const drawnCache = new Map();
+/**
+ * Page 1 of a résumé with PERSONAL, drawn once per template and settings. The key keeps an
+ * undefined setting: { showHeaderBorder: undefined } unsets the new résumé's `false`.
+ */
+const drawn = (template, settings) => {
+  const key = `${template} ${JSON.stringify(settings, (_, v) => (v === undefined ? '(unset)' : v))}`;
+  if (!drawnCache.has(key)) drawnCache.set(key, pageOf(template, settings));
+  return drawnCache.get(key);
+};
 
 /**
- * Every control Header Customization shows for Classic, Minimal and Executive, as
- * [label, settings it starts from, settings the control sets].
+ * The controls Header Customization shows for Classic, Minimal and Executive and hides for
+ * Modern and Sidebar, as [label, settings it starts from, settings the control sets].
  */
 const HEADER_CONTROLS = [
   ['Text Alignment: Center', {}, { headerAlign: 'center' }],
@@ -45,31 +55,81 @@ const HEADER_CONTROLS = [
   ['Contact Layout: 2 Grid', {}, { contactLayout: '2grid' }],
   ['Contact Style: Bullet', {}, { contactStyle: 'bullet' }],
   ['Contact Style: Bar', {}, { contactStyle: 'bar' }],
+];
+/** Its icon controls, which the Design panel offers for every template too. */
+const ICON_CONTROLS = [
   ['Icon set: Classic', {}, { iconSet: 'lucide' }],
-  ['Icon set: Bold', {}, { iconSet: 'bold' }],
   ['Icon size', {}, { iconSize: 16 }],
 ];
+const changing = async (template, controls) => {
+  const out = [];
+  for (const [label, from, to] of controls) if (await drawn(template, from) !== await drawn(template, to)) out.push(label);
+  return out;
+};
 
 describe('header controls', () => {
+  // The comparison's soundness check, not a fix's proof: the same résumé twice must draw the
+  // same page, or every control below would seem to change it. (pdf.js names fonts per
+  // document — g_d0_f1, g_d2_f1 — which drawing() makes neutral.)
   it('a résumé rendered twice draws the same page (the comparison below is sound)', async () => {
-    assert.equal(await drawn('executive', {}), await drawn('executive', {}));
+    assert.equal(await pageOf('executive', {}), await pageOf('executive', {}));
   });
 
-  for (const template of ['executive', 'classic', 'minimal']) {
-    it(`${template}: every Header Customization control changes the PDF (FIDA-50, FIDA-20)`, async () => {
-      const unchanged = [];
-      for (const [label, from, to] of HEADER_CONTROLS) {
-        if (await drawn(template, from) === await drawn(template, to)) unchanged.push(label);
-      }
-      assert.deepEqual(unchanged, [], `controls with no effect on the ${template} PDF`);
+  // FIDA-50: the editor hid these controls for Executive, whose PDF honours every one; FIDA-20:
+  // it offered the rule for Minimal, whose PDF ignored it. hasHeaderControls() decides what the
+  // editor shows, and this pins it to the PDF: it fails if Executive's controls are hidden again
+  // or a template shows one its PDF ignores.
+  for (const template of TEMPLATES) {
+    it(`${template}: Header Customization shows its controls exactly where each one changes the PDF (FIDA-50, FIDA-20)`, async () => {
+      const { hasHeaderControls } = await loadModule('/src/constants/templates.js');
+      const shown = hasHeaderControls(template);
+      const all = HEADER_CONTROLS.map(([label]) => label);
+      assert.deepEqual(await changing(template, HEADER_CONTROLS), shown ? all : [],
+        shown ? `controls with no effect on the ${template} PDF` : `the ${template} PDF honours controls the editor hides`);
+      assert.deepEqual(await changing(template, ICON_CONTROLS), ICON_CONTROLS.map(([label]) => label), 'icon set and size');
     });
   }
+
+  // R3-12: the list above had two of the five packs. Every chip against every other: a pack
+  // mapped to another (as 0ac42b6 fixed) draws a page it shares. 09-contact-icons checks that
+  // each draws its own shapes.
+  it('each icon set the chips offer draws a page of its own', async () => {
+    const { ICON_SET_OPTIONS } = await loadModule('/src/utils/contactIcons.jsx');
+    for (const template of ['classic', 'minimal', 'executive']) {
+      const pages = await Promise.all(ICON_SET_OPTIONS.map(({ id }) => drawn(template, { iconSet: id })));
+      assert.equal(new Set(pages).size, ICON_SET_OPTIONS.length, `${template}: ${ICON_SET_OPTIONS.map(({ id }) => id)}`);
+    }
+  });
 });
 
 /** Does the header print its accent rule? No sections and no contacts: the rule is the only accent stroke. */
 async function headerRule(template, settings) {
   const pages = await read(await render(resume({ template, settings: { accentColor: ACCENT, ...settings } })));
   return pages[0].strokes.has(ACCENT);
+}
+
+/**
+ * How thick page 1 prints its accent rule, in pt: react-pdf strokes a border at twice its width
+ * and clips it to the box, so half the stroke's line width. [] without a rule.
+ */
+async function ruleThickness(template, settings) {
+  const bytes = await render(resume({ template, settings: { accentColor: ACCENT, showHeaderBorder: true, ...settings } }));
+  const doc = await pdfjs.getDocument({ data: bytes.slice(), isEvalSupported: false, verbosity: 0 }).promise;
+  const { fnArray, argsArray } = await (await doc.getPage(1)).getOperatorList();
+  await doc.loadingTask.destroy();
+  const O = pdfjs.OPS;
+  const out = new Set();
+  const stack = [];
+  let state = { colour: null, width: 1 };
+  fnArray.forEach((fn, k) => {
+    const a = argsArray[k];
+    if (fn === O.save) stack.push(state);
+    else if (fn === O.restore) state = stack.pop();
+    else if (fn === O.setStrokeRGBColor) state = { ...state, colour: a[0] };
+    else if (fn === O.setLineWidth) state = { ...state, width: a[0] };
+    else if (fn === O.constructPath && a[0] === O.stroke && state.colour === ACCENT) out.add(state.width / 2);
+  });
+  return [...out];
 }
 
 describe('header rule', () => {
@@ -85,9 +145,22 @@ describe('header rule', () => {
     assert.equal(await headerRule('minimal', { showHeaderBorder: true }), true, 'on');
   });
 
+  // Guard: Classic drew its rule for an unset setting before FIDA-18 too; the fix must keep it.
   it('classic: an unset setting keeps the rule (the Classic design), the toggle still turns it off', async () => {
     assert.equal(await headerRule('classic', { showHeaderBorder: undefined }), true, 'unset');
     assert.equal(await headerRule('classic', { showHeaderBorder: false }), false, 'off');
+  });
+
+  // R3-7: the Thickness box said "px", but the value prints as points. The label says "pt" now
+  // (Cypress 16-headers); this guard pins the unit — the PDF is unchanged, so a saved value prints
+  // as it always has.
+  it('Thickness prints in points, as its label says: a stored 1, 2, 6 or 12 is a rule that many pt thick', async () => {
+    for (const template of ['classic', 'minimal', 'executive']) {
+      for (const headerBorderWidth of [1, 2, 6, 12]) {
+        assert.deepEqual(await ruleThickness(template, { headerBorderWidth }), [headerBorderWidth], `${template} ${headerBorderWidth}`);
+      }
+      assert.deepEqual(await ruleThickness(template, { headerBorderWidth: undefined }), [2], `${template}: unset is 2 pt`);
+    }
   });
 });
 
