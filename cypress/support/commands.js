@@ -1,5 +1,4 @@
 import { buildTestState, STORAGE_KEY } from '../../tests/helpers.js';
-import { CARD } from './selectors.js';
 
 /** Visit `url` with localStorage replaced by `state` (or emptied when state is null). */
 Cypress.Commands.add('seedAndVisit', (url, state) => {
@@ -71,7 +70,10 @@ Cypress.Commands.add('exportFile', (label, ext) => {
   });
 });
 
-/** Export a PDF and resolve with it parsed: { numPages, width, height, info, runs, bytes, file }. */
+/**
+ * Export a PDF and resolve with it parsed (cypress.config.js readPdf): { numPages, width, height,
+ * info, runs, strokes, bytes, file } — strokes are the distinct stroke colours page 1 draws with.
+ */
 Cypress.Commands.add('exportPdf', (label = 'Export PDF') =>
   cy.exportFile(label, '.pdf').then((file) =>
     cy.task('readPdf', file, { timeout: 60_000 }).then((pdf) => ({ ...pdf, file }))));

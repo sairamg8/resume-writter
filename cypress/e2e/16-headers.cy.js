@@ -8,9 +8,7 @@ const openHeader = () => cy.contains('button', 'Header Customization').click();
 describe('header customization', () => {
   it('FIDA-50: Executive shows its header controls, not a "fixed banner" message, and they reach the PDF', () => {
     // No sections: the header rule is then the only line in the accent colour (R3-8).
-    const state = buildTestState('executive');
-    state.resumes[0].sections = [];
-    cy.visitEditor('executive', { state });
+    cy.visitEditor('executive', { sections: [] });
     openHeader();
     cy.contains('fixed banner header').should('not.exist');
     ['Text Alignment', 'Name & Title Layout', 'Header Bottom Border', 'Contact Details'].forEach((label) => {
