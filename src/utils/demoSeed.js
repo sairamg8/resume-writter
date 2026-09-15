@@ -75,3 +75,23 @@ export function buildRestore(seen, now) {
     return { ...r, updatedAt: copy.updatedAt || now };
   });
 }
+
+/** The id of the owner's résumé imported from the private file: one copy, however many tabs import it. */
+export const PRIVATE_ORIGINAL_ID = 'original_private';
+
+/**
+ * The owner's résumé from the git-ignored private file (`data`; the dev server only, useDemoSeed)
+ * as the account's original, or null. Only for the account whose e-mail the file carries, only
+ * while the account has no original — `seen`, deleted ones included — and only once: not when the
+ * list holds its id, nor when it was deleted for good (`deleted`: the cloud's deletion list and
+ * this browser's).
+ */
+export function privateOriginal(data, user, { resumes = [], seen = new Map(), deleted = [], now }) {
+  if (!data || typeof data !== 'object' || !data.personal || !Array.isArray(data.sections)) return null;
+  const email = emailOf(user?.email);
+  if (!email || email !== emailOf(data.personal.email)) return null;
+  if (originalsIn(seen).length || seen.has(PRIVATE_ORIGINAL_ID) || deleted.includes(PRIVATE_ORIGINAL_ID)) return null;
+  if (resumes.some((r) => r?.id === PRIVATE_ORIGINAL_ID)) return null;
+  const { deleted: _deleted, ...r } = JSON.parse(JSON.stringify(data));
+  return { ...r, id: PRIVATE_ORIGINAL_ID, keep: true, updatedAt: now };
+}

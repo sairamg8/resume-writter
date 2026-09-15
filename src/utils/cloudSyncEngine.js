@@ -33,8 +33,9 @@ const isOfflineError = (e) => String(e?.message || '').toLowerCase().includes('c
  *             sync's result (cloudSyncPlan.afterSync), forgetDeletions(ids, before) — the
  *             cloud has these deletions (localDeletions.js) }
  *   report    { status('idle'|'syncing'|'synced'|'offline'|'error'), synced(Date), account(a) } —
- *             account: { uid, cloudOriginals } once the account's list is known, else null —
- *             cloudOriginals: the cloud's originals (demoSeed.js), deleted ones included
+ *             account: { uid, cloudOriginals, cloudDeleted } once the account's list is known,
+ *             else null — the cloud's originals (demoSeed.js), deleted ones included, and its
+ *             deletion list, as the first sync read them
  *   isDemo    user → true for a demo account (its deleted originals are flagged, not removed)
  *   online    () → whether the browser says it is online
  *   timers    { set(fn, ms) → id, clear(id) }; flushDelay (ms) before queued changes are sent;
@@ -112,7 +113,7 @@ export function createCloudSync({
   }
 
   /** The account when there is no cloud to read: this browser's résumés are the whole list. */
-  const noCloud = (user) => ({ uid: user.uid, cloudOriginals: [] });
+  const noCloud = (user) => ({ uid: user.uid, cloudOriginals: [], cloudDeleted: [] });
 
   /** Drop the result of a first sync still running (the page is going away). */
   function cancel() {
@@ -166,7 +167,7 @@ export function createCloudSync({
       s.listed = new Set([...cloud.deleted, ...plan.listAdd]);
       s.initialSyncDone = true;
       const cloudOriginals = cloud.docs.filter(isOriginal).map(({ deleted: _deleted, ...r }) => r);
-      setAccount({ uid: user.uid, cloudOriginals });
+      setAccount({ uid: user.uid, cloudOriginals, cloudDeleted: [...cloud.deleted] });
       report.status('synced');
       report.synced(new Date());
     } catch (e) {

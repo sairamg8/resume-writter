@@ -26,7 +26,8 @@ export function useCloudSync({ user, appState, store }) {
     typeof navigator !== 'undefined' ? navigator.onLine : true
   );
   // Set once the signed-in account's résumé list is known (first sync done, or no cloud to sync
-  // with): { uid, cloudOriginals } — the cloud's originals (demoSeed.js), deleted ones included.
+  // with): { uid, cloudOriginals, cloudDeleted } — the cloud's originals (demoSeed.js), deleted
+  // ones included, and its deletion list.
   const [account, setAccount] = useState(null);
 
   // The store as of the last render, for the sync to read and call when it needs to.

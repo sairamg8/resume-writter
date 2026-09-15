@@ -1,12 +1,14 @@
 // Unit tests for the demo-account rules (src/utils/demoSeed.js): what a restore brings back.
 // Run: yarn test:unit. The same rules through the sync engine and a fake Firestore:
 // tests/pdf/18-cloud-sync-restore.test.mjs; in the app: cypress/e2e/11-demo-account.cy.js.
-import { test } from 'node:test';
+import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
-import {
+import * as seedRules from '../../src/utils/demoSeed.js';
+
+const {
   parseAccountList, isDemoAccount, isOriginal, withKeep, needsRestore,
   rememberCopies, originalsIn, buildRestore,
-} from '../../src/utils/demoSeed.js';
+} = seedRules;
 
 const resume = (id, updatedAt, name = id, extra = {}) => ({ id, name, updatedAt, sections: [], ...extra });
 const original = (id, updatedAt, name = id, extra = {}) => resume(id, updatedAt, name, { keep: true, ...extra });
@@ -103,4 +105,38 @@ test('buildRestore: a flagged cloud copy comes back without its deleted flag', (
   const [restored] = buildRestore(new Map([['resume_a', original('resume_a', 7, 'Flagged', { deleted: true })]]), 1000);
   assert.equal(restored.name, 'Flagged');
   assert.equal('deleted' in restored, false, 'else the sync writes the flag straight back and it stays hidden');
+});
+
+// The owner's résumé from the git-ignored private file, on the dev server (useDemoSeed with
+// vite-plugin-owner-resume.js). The file as it is saved: no id, no keep, no updatedAt.
+describe('privateOriginal: the private file becomes the owner\'s original once', () => {
+  const { privateOriginal, PRIVATE_ORIGINAL_ID } = seedRules;
+  const OWNER = { uid: 'u', email: 'Owner@Example.com' };
+  const FILE = { name: 'Mine — Classic', template: 'classic', settings: {}, personal: { name: 'Real Name', email: 'owner@example.com' }, sections: [{ id: 's', items: [] }], coverLetter: {} };
+  const into = (opts = {}) => privateOriginal?.(FILE, OWNER, { now: 500, ...opts });
+
+  test('an account with no original gets it, marked an original, under one fixed id', () => {
+    const own = into({ resumes: [resume('demo_classic', 1), resume('resume_b', 2)] });
+    assert.deepEqual([own?.id, own?.keep, own?.updatedAt, own?.name, own?.personal.name], [PRIVATE_ORIGINAL_ID, true, 500, 'Mine — Classic', 'Real Name']);
+    own.sections[0].items.push('x'); // a copy: the module's data stays as the file has it
+    assert.deepEqual(FILE.sections[0].items, []);
+  });
+
+  test('only into the account whose e-mail the file carries', () => {
+    assert.equal(privateOriginal?.(FILE, { uid: 'v', email: 'someone@example.com' }, { now: 1 }), null);
+    assert.equal(privateOriginal?.(FILE, { uid: 'v' }, { now: 1 }), null);
+    assert.equal(privateOriginal?.({ ...FILE, personal: { name: 'x' } }, OWNER, { now: 1 }), null, 'a file with no e-mail is nobody\'s');
+  });
+
+  test('nothing when there is no file (every build), or it is not a résumé', () => {
+    assert.equal(privateOriginal?.(null, OWNER, { now: 1 }), null);
+    assert.equal(privateOriginal?.({ hello: 'world' }, OWNER, { now: 1 }), null);
+  });
+
+  test('never while the account has an original — deleted ones included — nor twice, nor after it was deleted for good', () => {
+    assert.equal(into({ seen: rememberCopies(new Map(), [original('resume_a', 3)]) }), null, 'the account has one: it comes back instead');
+    assert.equal(into({ resumes: [resume(PRIVATE_ORIGINAL_ID, 3)] }), null, '"Stop keeping" left it an ordinary résumé: its edits stay');
+    assert.equal(into({ seen: rememberCopies(new Map(), [resume(PRIVATE_ORIGINAL_ID, 3)]) }), null);
+    assert.equal(into({ deleted: [PRIVATE_ORIGINAL_ID] }), null, 'deleted for good: not brought back by the next dev sign-in');
+  });
 });

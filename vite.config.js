@@ -2,9 +2,11 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { fileURLToPath, URL } from 'node:url'
+import { ownerResume } from './vite-plugin-owner-resume.js'
 
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
+  // ownerResume: the owner's git-ignored résumé on the dev server only; null in every build.
+  plugins: [react(), tailwindcss(), ownerResume()],
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
