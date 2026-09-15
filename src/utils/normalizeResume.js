@@ -61,11 +61,13 @@ const presetScale = (ss) => (SECTION_SPACING_PX[ss.spacing] ?? SECTION_SPACING_P
  * - either: the dark column's Interests chips sat a fixed 2.5 pt apart (until 8a3d8fc); an Item
  *   gap of 8 px keeps them there.
  * A section's own Item gap is kept as the user typed it: it printed on every build (except
- * between the dark column's Interests chips, until 8a3d8fc).
+ * between the dark column's Interests chips, until 8a3d8fc). A résumé with no settings at all (an
+ * imported file those builds stored as it came) printed their defaults, so it gets settings here.
  */
 function withItemGapsAsPrinted(r) {
-  if (!r.settings || typeof r.settings !== 'object') return r;
-  const stored = r.settings.itemGap ?? OLD_ITEM_GAP_PX;
+  if (r.settings != null && typeof r.settings !== 'object') return r;
+  const settings = r.settings || {};
+  const stored = settings.itemGap ?? OLD_ITEM_GAP_PX;
   const seen = editedSince(r, SPACING_AND_RECIPIENT_LIVE);
   const itemGap = seen ? stored : DEFAULT_ITEM_GAP_PX;
   /** The px the section printed between its entries, when Between Items alone would not print it now. */
@@ -83,7 +85,7 @@ function withItemGapsAsPrinted(r) {
     if (px === undefined || px === itemGap * presetScale(section.settings || {})) return section;
     return { ...section, settings: { ...section.settings, itemGap: px } };
   });
-  return { ...r, settings: { ...r.settings, itemGap }, sections };
+  return { ...r, settings: { ...settings, itemGap }, sections };
 }
 
 /** When 0b83cb1 was pushed (2026-09-15 08:02:51 IST): the first deployed build with dff28b7. */

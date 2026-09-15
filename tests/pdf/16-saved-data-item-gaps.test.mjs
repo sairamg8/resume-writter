@@ -111,6 +111,21 @@ describe('Between Items on a résumé saved before data version 8 (R2-1, R7-1, R
     assert.ok(classic.sections.every((s) => s.settings.itemGap === undefined), 'no section gets its own gap');
   });
 
+  it('a résumé with no settings at all (an imported file, stored as it came) prints the old default it printed', async () => {
+    const { normalizeResume } = await normalizer();
+    const bare = (template, updatedAt) => {
+      const r = saved({ template, updatedAt });
+      delete r.settings;
+      return r;
+    };
+    const { chips } = await gapsOf(resume({ template: 'sidebar', sections: sections('normal') }));
+    // Every build read it as its defaults: Between Items 12 px, the default until adbc5b9.
+    assert.deepEqual(await gapsOf(normalizeResume(bare('sidebar', BEFORE))), expect(9, 6, chips), 'Sidebar, before the push');
+    assert.deepEqual(rows(await gapsOf(normalizeResume(bare('classic', SINCE)))), rows(expect(9, 9)), 'Classic, since');
+    // v9 runs after v8, so it now reaches such a Modern résumé too (V2W2b-4, versions 0–7).
+    assert.equal(normalizeResume(bare('modern', BEFORE)).settings.photoTextAlign, 'top');
+  });
+
   it('runs once, is not an edit, and leaves a résumé the deployed version-8 builds saved alone', async () => {
     const { normalizeResume, DATA_VERSION } = await normalizer();
     const old = saved({ template: 'sidebar', itemGap: 12, updatedAt: BEFORE });
