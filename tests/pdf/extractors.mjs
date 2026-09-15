@@ -40,6 +40,18 @@ export async function splitWords(bytes, words) {
     .map((w) => `${name}: ${w}`));
 }
 
+/**
+ * Page 1's drawing operations, as a string: equal strings draw the same page. pdf.js names fonts
+ * per loaded document (g_d0_f1, g_d2_f1 …), so those ids are made document-neutral — without
+ * that, any two renders compare "different".
+ */
+export async function drawing(bytes) {
+  const doc = await pdfjs.getDocument({ data: bytes.slice(), isEvalSupported: false, verbosity: 0 }).promise;
+  const ops = await (await doc.getPage(1)).getOperatorList();
+  await doc.loadingTask.destroy();
+  return JSON.stringify(ops.fnArray.map((fn, k) => [fn, ops.argsArray[k]])).replace(/g_d\d+_/g, 'g_');
+}
+
 const times = (t, m) => [
   t[0] * m[0] + t[1] * m[2], t[0] * m[1] + t[1] * m[3], t[2] * m[0] + t[3] * m[2],
   t[2] * m[1] + t[3] * m[3], t[4] * m[0] + t[5] * m[2] + m[4], t[4] * m[1] + t[5] * m[3] + m[5],

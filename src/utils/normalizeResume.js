@@ -9,7 +9,7 @@ import { withKnownTemplate } from '@/constants/templates';
  * it has had, so none runs twice on the same data — not after a sync, an import of an exported
  * file, or a stale tab of an older build writing the store back with its older store version.
  */
-export const DATA_VERSION = 8;
+export const DATA_VERSION = 9;
 
 const filled = (v) => typeof v === 'string' && v.trim() !== '';
 
@@ -38,10 +38,30 @@ function withoutOldItemGapDefault(settings) {
   return { ...settings, itemGap: 8 };
 }
 
-/** One-time migrations: [the version that introduced it, résumé → résumé]. */
+/** When 0b83cb1 was pushed (2026-09-15 08:02:51 IST): the first deployed build with dff28b7. */
+const MODERN_TEXT_POSITION_LIVE = Date.UTC(2026, 8, 15, 2, 32, 51);
+
+/**
+ * v9 (R7-10): Modern's banner put the text beside the photo at the photo's top whatever Photo →
+ * Text Position stored, until dff28b7 made it take the setting — and every résumé stores the
+ * default, Center. A Modern résumé still at Center (or storing none, or a value the PDF reads as
+ * Center) gets Top, so it prints as it always did. Bottom is a choice (and one Classic, Minimal and
+ * Executive print), so it is kept. The builds deployed from 0b83cb1 on printed the stored Center
+ * and stamped version 8 on every résumé they loaded: one edited since then (`updatedAt`) was
+ * edited while its preview printed Center, and keeps it.
+ */
+function withModernTextAtTop(r, from) {
+  const align = r.settings?.photoTextAlign;
+  if (r.template !== 'modern' || !r.settings || align === 'top' || align === 'bottom') return r;
+  if (from >= 8 && !(r.updatedAt < MODERN_TEXT_POSITION_LIVE)) return r;
+  return { ...r, settings: { ...r.settings, photoTextAlign: 'top' } };
+}
+
+/** One-time migrations: [the version that introduced it, (résumé, its own version) → résumé]. */
 const MIGRATIONS = [
   [7, (r) => (r.coverLetter ? { ...r, coverLetter: withoutDefaultRecipientTitle(r.coverLetter) } : r)],
   [8, (r) => (r.settings ? { ...r, settings: withoutOldItemGapDefault(r.settings) } : r)],
+  [9, withModernTextAtTop],
 ];
 
 const versionOf = (r) => (Number.isFinite(r.dataVersion) ? r.dataVersion : 0);
@@ -58,5 +78,5 @@ export function normalizeResume(resume) {
   const r = withKnownTemplate(resume);
   const from = versionOf(r);
   if (from >= DATA_VERSION) return r;
-  return MIGRATIONS.reduce((out, [version, migrate]) => (from < version ? migrate(out) : out), { ...r, dataVersion: DATA_VERSION });
+  return MIGRATIONS.reduce((out, [version, migrate]) => (from < version ? migrate(out, from) : out), { ...r, dataVersion: DATA_VERSION });
 }

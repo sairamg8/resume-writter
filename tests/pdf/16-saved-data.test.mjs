@@ -4,6 +4,7 @@
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { setup, teardown, resume, render, renderCover, read, allText, itemsWith, loadModule, readDocx } from './harness.mjs';
+import { drawing } from './extractors.mjs';
 
 before(setup);
 after(teardown);
@@ -117,6 +118,63 @@ describe('a photo saved in a format the PDF cannot draw (R1-1)', () => {
       assert.deepEqual([...a[0].strokes].sort(), [...b[0].strokes].sort(), 'no ring is stroked');
     });
   }
+});
+
+describe('a Modern résumé saved before its banner took Photo → Text Position (R7-10)', () => {
+  const PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAEElEQVR4nGP4z8AARAwQCgAf7gP9i18U1AAAAABJRU5ErkJggg==';
+  // The push of 0b83cb1, the first deployed build whose Modern banner printed the stored value.
+  const LIVE = Date.UTC(2026, 8, 15, 2, 32, 51);
+  /** A Modern résumé with a photo as a build saved it: `dataVersion` undefined = none stored. */
+  const saved = (photoTextAlign, { dataVersion, updatedAt = LIVE - 60_000, template = 'modern', photoSize = 'md' } = {}) => {
+    const r = resume({ template, personal: { photo: PNG, email: 'me@example.com' }, settings: { photoSize, photoTextAlign } });
+    if (photoTextAlign === undefined) delete r.settings.photoTextAlign;
+    if (dataVersion === undefined) delete r.dataVersion; else r.dataVersion = dataVersion;
+    return { ...r, updatedAt };
+  };
+  // Every build before dff28b7 drew Modern's banner as Top draws it now, whatever was stored
+  // (checked on an export of 4bc56fe: same name, contacts and photo positions).
+  const asItPrinted = async (r) => drawing(await render({ ...r, settings: { ...r.settings, photoTextAlign: 'top' } }));
+
+  it('prints as it always did — the text at the photo\'s top — once it is loaded', async () => {
+    const { normalizeResume } = await normalizer();
+    for (const photoSize of ['md', 'lg']) {
+      for (const [label, old] of [
+        ['the stored default, Center, no version', saved('center', { photoSize })],
+        ['no Text Position stored', saved(undefined, { photoSize })],
+        ['a value the PDF never knew', saved('middle', { photoSize })],
+        ['version 8, last edited before the change went live', saved('center', { dataVersion: 8, photoSize })],
+      ]) {
+        const r = normalizeResume(old);
+        const [now, before] = [await drawing(await render(r)), await asItPrinted(old)];
+        assert.ok(now === before, `${photoSize}, ${label}: draws the page it drew before`);
+        assert.equal(r.settings.photoTextAlign, 'top', `${photoSize}, ${label}: the panel shows Top`);
+      }
+      // …which Center really does not draw: the comparison above can fail.
+      assert.notEqual(await drawing(await render(saved('center', { photoSize }))), await asItPrinted(saved('center', { photoSize })));
+    }
+  });
+
+  it('the Cypress fixtures are stamped with this build\'s data version, so no migration runs on them', async () => {
+    const { DATA_VERSION } = await normalizer();
+    const helpers = await import('../helpers.js');
+    assert.equal(helpers.DATA_VERSION, DATA_VERSION, 'tests/helpers.js');
+    assert.equal(helpers.buildTestState('modern').resumes[0].dataVersion, DATA_VERSION);
+  });
+
+  // Guard: nothing else was ever migrated; the fix is the test above.
+  it('keeps a Bottom, any other template, and Center on a résumé edited since it went live', async () => {
+    const { normalizeResume } = await normalizer();
+    assert.equal(normalizeResume(saved('bottom')).settings.photoTextAlign, 'bottom', 'Bottom: a choice (and one Classic prints)');
+    for (const template of ['classic', 'minimal', 'executive', 'sidebar']) {
+      assert.equal(normalizeResume(saved('center', { template })).settings.photoTextAlign, 'center', template);
+    }
+    const seen = saved('center', { dataVersion: 8, updatedAt: LIVE + 60_000 });
+    assert.equal(normalizeResume(seen).settings.photoTextAlign, 'center', 'edited while its preview printed Center');
+    const migrated = normalizeResume(saved('center'));
+    assert.equal(normalizeResume(migrated), migrated, 'it runs once');
+    const chosen = { ...migrated, settings: { ...migrated.settings, photoTextAlign: 'center' }, updatedAt: 1 };
+    assert.equal(normalizeResume(JSON.parse(JSON.stringify(chosen))).settings.photoTextAlign, 'center', 'a Center chosen afterwards is the user\'s');
+  });
 });
 
 describe('Between Items saved at the old 12 px default (R2-1)', () => {

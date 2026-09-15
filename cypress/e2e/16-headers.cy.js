@@ -56,6 +56,7 @@ describe('photo text position (R3-0)', () => {
   const chip = (label) => cy.contains('button', label);
   const note = () => cy.get('[data-testid="photo-text-position-note"]');
 
+  // Guards: the chips always stored the choice. What Modern prints for it is tests/pdf/11-photo.
   for (const template of ['classic', 'modern']) {
     it(`${template} offers Top / Center / Bottom and stores the choice`, () => {
       cy.visitEditor(template);
@@ -65,6 +66,23 @@ describe('photo text position (R3-0)', () => {
       cy.store().should((s) => expect(active(s).settings.photoTextAlign).to.eq('bottom'));
     });
   }
+
+  it('R7-10: a Modern résumé saved by an older build shows the Top its banner always printed', () => {
+    const state = buildTestState('modern', { photoTextAlign: 'center' });
+    delete state.resumes[0].dataVersion; // saved by a build that stamped none (production's 4bc56fe)
+    cy.visitEditor('modern', { state });
+    openPhoto();
+    chip('↑ Top').should('have.class', 'bg-blue-600');
+    chip('↕ Center').should('not.have.class', 'bg-blue-600');
+    cy.store().should((s) => expect(active(s).settings.photoTextAlign).to.eq('top'));
+    // A Center chosen now is the user's: the migration does not run again after a reload.
+    chip('↕ Center').click();
+    cy.store().should((s) => expect(active(s).settings.photoTextAlign).to.eq('center'));
+    cy.reload();
+    cy.previewReady();
+    openPhoto();
+    chip('↕ Center').should('have.class', 'bg-blue-600');
+  });
 
   it('Sidebar explains that the photo sits above the name instead of offering chips that do nothing', () => {
     cy.visitEditor('sidebar');

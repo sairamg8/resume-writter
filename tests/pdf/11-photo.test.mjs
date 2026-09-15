@@ -3,6 +3,7 @@ import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs';
 import { setup, teardown, resume, render, renderCover, loadModule } from './harness.mjs';
+import { drawing } from './extractors.mjs';
 
 before(setup);
 after(teardown);
@@ -111,19 +112,10 @@ describe('Photo → Text Position (R3-0)', () => {
   // A 2×2 PNG: the photo's box size comes from the Size/Height settings, not the image.
   const PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAEElEQVR4nGP4z8AARAwQCgAf7gP9i18U1AAAAABJRU5ErkJggg==';
 
-  /**
-   * Page 1's drawing operations, as a string: equal strings draw the same page. pdf.js names
-   * fonts per loaded document (g_d0_f1, g_d2_f1 …), so those ids are made document-neutral.
-   */
-  async function drawing(bytes) {
-    const doc = await pdfjs.getDocument({ data: bytes.slice(), isEvalSupported: false, verbosity: 0 }).promise;
-    const ops = await (await doc.getPage(1)).getOperatorList();
-    await doc.loadingTask.destroy();
-    return JSON.stringify(ops.fnArray.map((fn, k) => [fn, ops.argsArray[k]])).replace(/g_d\d+_/g, 'g_');
-  }
   const pages = (template, settings) => Promise.all(['top', 'center', 'bottom'].map(async (photoTextAlign) =>
-    drawing(await render(resume({ template, personal: { photo: PNG, email: 'me@example.com' }, settings: { photoSize: 'large', ...settings, photoTextAlign } })))));
+    drawing(await render(resume({ template, personal: { photo: PNG, email: 'me@example.com' }, settings: { photoSize: 'lg', ...settings, photoTextAlign } })))));
 
+  // Modern's two cases are the fix; Classic, Minimal and Executive always took the setting (guards).
   for (const [template, settings] of [['modern', {}], ['classic', {}], ['minimal', {}], ['executive', {}], ['modern', { headerAlign: 'center' }]]) {
     it(`${template}${settings.headerAlign ? ' (centred header)' : ''}: Top, Center and Bottom draw three different pages`, async () => {
       const [top, center, bottom] = await pages(template, settings);
