@@ -4,26 +4,18 @@ import { hexAlpha } from './PdfSections';
 import { SideSectionTitle } from './PdfSidebarColumn';
 import { tracking } from './pdfUnits';
 import { sidebarShades } from './pdfColors';
+import { skillGroup, skillSeparator } from '@/utils/skills';
 
-/**
- * A skill group as printed: its category in capitals and its skills as typed and as a list —
- * '' and [] for a field the editor's eye hid, so every style leaves it out (FIDB-74).
- */
+/** A group as printed (skillGroup), its category in the column's capitals. */
 function shownGroup(item) {
-  const iH = item.hiddenFields || [];
-  const raw = Array.isArray(item.skills) ? item.skills.join(', ') : (item.skills || '');
-  const skills = iH.includes('skills') ? '' : raw;
-  return {
-    category: item.category && !iH.includes('category') ? item.category.toUpperCase() : '',
-    skills,
-    list: skills.split(',').map(sk => sk.trim()).filter(Boolean),
-  };
+  const group = skillGroup(item);
+  return { ...group, category: group.category.toUpperCase() };
 }
 
 export function SideSkills({ section, sectionGap, itemGap, accent, shades = sidebarShades() }) {
   const s     = section.settings || {};
   const style = s.skillsStyle || 'inline';
-  const sep   = s.separator === 'dash' ? ' – ' : ': '; // as in the main column and Word
+  const sep   = skillSeparator(s); // as in the main column and Word
   const groups = (section.items || []).filter(i => i.visible !== false).map(shownGroup);
 
   if (style === 'bars') {

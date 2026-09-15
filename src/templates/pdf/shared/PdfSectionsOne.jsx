@@ -2,6 +2,7 @@ import { View } from '@react-pdf/renderer';
 import { Text } from './PdfText';
 import { PdfRichText } from './PdfRichText';
 import { hasRichText } from '@/utils/richText';
+import { skillGroup, skillSeparator } from '@/utils/skills';
 import { solid, tint } from './pdfColors';
 import { tracking } from './pdfUnits';
 import {
@@ -73,7 +74,7 @@ export function ExperienceSection({ section, settings, marginBottom, spaceBefore
 export function SkillsSection({ section, settings, marginBottom, spaceBefore, itemGap, centered }) {
   const s        = section.settings || {};
   const style    = s.skillsStyle || 'inline';
-  const sep      = s.separator === 'dash' ? ' – ' : ': ';
+  const sep      = skillSeparator(s);
   const isBullet = style === 'bullet';
   const textColor = settings?.textColor  || '#1a1a1a';
   const accent    = settings?.accentColor || '#2563eb';
@@ -95,16 +96,13 @@ export function SkillsSection({ section, settings, marginBottom, spaceBefore, it
           cols={cols}
           gap={itemGap}
           renderItem={(item) => {
-            const iH = item.hiddenFields || [];
-            const showCat = item.category && !iH.includes('category');
-            const showSk  = item.skills   && !iH.includes('skills');
-            const skills = showSk ? (item.skills || '').split(',').map(sk => sk.trim()).filter(Boolean) : [];
+            const { category, list } = skillGroup(item);
             return (
               <View>
-                {showCat && (
-                  <Text style={{ fontSize: entrySize, fontWeight: 'bold', color: accent, letterSpacing: tracking(entrySize, 0.5), textTransform: 'uppercase' }}>{item.category}</Text>
-                )}
-                {skills.map((sk, i) => (
+                {category ? (
+                  <Text style={{ fontSize: entrySize, fontWeight: 'bold', color: accent, letterSpacing: tracking(entrySize, 0.5), textTransform: 'uppercase' }}>{category}</Text>
+                ) : null}
+                {list.map((sk, i) => (
                   <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3 }}>
                     <Text style={{ fontSize: entrySize - 1, width: 70, color: textColor, opacity: 0.8 }}>{sk}</Text>
                     <View style={{ flex: 1, height: 3, borderRadius: 2, backgroundColor: tint(accent, 0x20 / 255) }}>
@@ -122,18 +120,16 @@ export function SkillsSection({ section, settings, marginBottom, spaceBefore, it
           cols={cols}
           gap={itemGap}
           renderItem={(item) => {
-            const iH = item.hiddenFields || [];
-            const showCat = item.category && !iH.includes('category');
-            const showSk  = item.skills   && !iH.includes('skills');
+            const { category, skills } = skillGroup(item);
             return (
               <View>
-                {showCat && (
+                {category ? (
                   <View style={{ marginBottom: 2 }}>
-                    <Text style={{ fontSize: entrySize, fontWeight: 'bold', color: isModern ? accent : textColor, textAlign: centered ? 'center' : 'left' }}>{item.category}</Text>
+                    <Text style={{ fontSize: entrySize, fontWeight: 'bold', color: isModern ? accent : textColor, textAlign: centered ? 'center' : 'left' }}>{category}</Text>
                     <View style={{ height: 0.5, backgroundColor: '#e5e7eb', marginTop: 1, marginBottom: 1 }} />
                   </View>
-                )}
-                {showSk && <Text style={{ fontSize: entrySize, color: shade.sub, lineHeight: lineH, textAlign: centered ? 'center' : 'left' }}>{item.skills}</Text>}
+                ) : null}
+                {skills ? <Text style={{ fontSize: entrySize, color: shade.sub, lineHeight: lineH, textAlign: centered ? 'center' : 'left' }}>{skills}</Text> : null}
               </View>
             );
           }}
@@ -144,17 +140,14 @@ export function SkillsSection({ section, settings, marginBottom, spaceBefore, it
           cols={cols}
           gap={itemGap}
           renderItem={(item) => {
-            const iH   = item.hiddenFields || [];
-            const showCat = item.category && !iH.includes('category');
-            const showSk  = item.skills   && !iH.includes('skills');
-            const tags = showSk ? (item.skills || '').split(',').map(sk => sk.trim()).filter(Boolean) : [];
+            const { category, list: tags } = skillGroup(item);
             return (
               <View style={{ alignItems: centered ? 'center' : 'flex-start' }}>
-                {showCat && (
+                {category ? (
                   <Text style={{ fontSize: entrySize, fontWeight: 'bold', color: accent, marginBottom: 4, letterSpacing: tracking(entrySize, 0.5), textAlign: centered ? 'center' : 'left' }}>
-                    {item.category.toUpperCase()}
+                    {category.toUpperCase()}
                   </Text>
-                )}
+                ) : null}
                 {tags.length > 0 && (
                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 3, justifyContent: centered ? 'center' : 'flex-start' }}>
                     {tags.map((tag, ti) => (
@@ -187,18 +180,15 @@ export function SkillsSection({ section, settings, marginBottom, spaceBefore, it
           cols={cols}
           gap={itemGap}
           renderItem={(item) => {
-            const iH = item.hiddenFields || [];
-            const showCat = item.category && !iH.includes('category');
-            const showSk  = item.skills   && !iH.includes('skills');
-            const skillStr = Array.isArray(item.skills) ? item.skills.join(', ') : (item.skills || '');
+            const { category, skills } = skillGroup(item);
             return (
               <View style={{ flexDirection: 'row', justifyContent: centered ? 'center' : 'flex-start' }} wrap={false}>
                 {isBullet && <Text style={{ color: shade.meta, fontSize: entrySize, marginRight: 4 }}>•</Text>}
                 <Text style={{ fontSize: entrySize, lineHeight: lineH, textAlign: centered ? 'center' : 'left' }}>
-                  {showCat && item.category
-                    ? <Text style={{ fontWeight: 'bold', color: isModern ? accent : textColor }}>{item.category}{showSk ? sep : ''}</Text>
+                  {category
+                    ? <Text style={{ fontWeight: 'bold', color: isModern ? accent : textColor }}>{category}{skills ? sep : ''}</Text>
                     : null}
-                  {showSk ? <Text style={{ color: shade.sub }}>{skillStr}</Text> : null}
+                  {skills ? <Text style={{ color: shade.sub }}>{skills}</Text> : null}
                 </Text>
               </View>
             );

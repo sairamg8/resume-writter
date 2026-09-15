@@ -5,6 +5,7 @@ import {
 import { contactItems } from '@/utils/contacts';
 import { hasRichText } from '@/utils/richText';
 import { dateRange } from '@/utils/dates';
+import { skillGroup, skillSeparator } from '@/utils/skills';
 
 const GREY = '6b7280';
 const spacer = (after = 60) => new Paragraph({ children: [], spacing: { after } });
@@ -102,12 +103,10 @@ export function buildEducation(section, accentHex) {
 export function buildSkills(section, accentHex) {
   const s = section.settings || {};
   const paras = [sectionHeading(section.title, accentHex)];
-  const sep = s.separator === 'dash' ? ' – ' : ': ';
+  const sep = skillSeparator(s);
   const bulletStyle = s.skillsStyle === 'bullet';
   for (const item of shown(section)) {
-    const category = field(item, 'category');
-    const typed = field(item, 'skills'); // a list in some imported data
-    const skills = Array.isArray(typed) ? typed.join(', ') : typed;
+    const { category, skills } = skillGroup(item);
     const children = [];
     if (category) children.push(bold(`${category}${skills ? sep : ''}`, { size: 20, color: accentHex }));
     if (skills) children.push(normal(skills, { size: 20 }));
