@@ -74,13 +74,15 @@ export function originalsIn(seen, gone = []) {
  * account's deletion list: a device that last saw a kept copy of one deleted for good elsewhere
  * wrote it back, V2OWNER-DATA-0). A copy keeps its own `updatedAt` (R4-4): the sync still writes
  * every résumé that comes back, but a newer edit of it on another device wins the next merge and
- * repairs the cloud. Stamped `now`, a stale device's copies used to beat that edit. A flagged
- * cloud copy comes back without its deleted flag.
+ * repairs the cloud. Stamped `now`, a stale device's copies used to beat that edit. So the version
+ * cannot tell a restored copy from the one deleted: `restoredAt: now` does — a deletion made
+ * before it on a device that has not sent it yet must not undo the restore (cloudSyncPlan,
+ * V2W1a-4). A flagged cloud copy comes back without its deleted flag.
  */
 export function buildRestore(seen, now, gone = []) {
   return originalsIn(seen, gone).map((copy) => {
     const { deleted: _deleted, ...r } = JSON.parse(JSON.stringify(copy));
-    return { ...r, updatedAt: copy.updatedAt || now };
+    return { ...r, updatedAt: copy.updatedAt || now, restoredAt: now };
   });
 }
 

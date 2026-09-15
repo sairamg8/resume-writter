@@ -49,12 +49,13 @@ const asEntry = (e) => (typeof e === 'string' ? { id: e, version: null } : e);
  *                another account's are left out of the merge and kept
  * A deletion is sent only when the cloud's copy is not newer than the version deleted: one made
  * offline or signed out must never remove an edit made later on another device — that edit
- * wins, and the résumé comes back here (R8-0). An entry with no version is left out of this
- * merge only, never sent, as before 53d6a3b. A flagged résumé is read the same way: the flag
- * deletes the version it carries, so a copy here edited since (restored, then edited offline)
- * brings it back — written whole, flag and all — instead of being dropped. Before 53d6a3b no
- * deletion was sent at all: the cloud kept the résumés, the store forgot the deletions, and the
- * next sync brought them back (R4-1).
+ * wins, and the résumé comes back here (R8-0) — nor a restore made since (`restoredAt` after the
+ * entry's `at`: a restored original keeps its version, V2W1a-4). An entry with no version is
+ * left out of this merge only, never sent, as before 53d6a3b. A flagged résumé is read the same
+ * way: the flag deletes the version it carries, so a copy here edited since (restored, then
+ * edited offline) brings it back — written whole, flag and all — instead of being dropped.
+ * Before 53d6a3b no deletion was sent at all: the cloud kept the résumés, the store forgot the
+ * deletions, and the next sync brought them back (R4-1).
  */
 export function planInitialSync({ local = [], deletions = [], cloud = [], cloudDeleted = [], demoAccount = false, uid = null }) {
   const docs = cloud.filter(hasId);
@@ -68,12 +69,13 @@ export function planInitialSync({ local = [], deletions = [], cloud = [], cloudD
   const unsent = [];
   const kept = new Set(); // the unsent that were originals
   const handled = [];
-  for (const { id, version, owner, keep = null } of deletions.map(asEntry)) {
+  for (const { id, version, at = 0, owner, keep = null } of deletions.map(asEntry)) {
     if (owner && uid && owner !== uid) { excluded.add(id); continue; } // deleted from another account
     handled.push(id);
     const doc = byId.get(id);
     const live = Boolean(doc) && !doc.deleted && !cloudDeletedSet.has(id);
-    if (live && version !== null && (doc.updatedAt ?? 0) > version) continue; // edited elsewhere since
+    // Edited or restored elsewhere since: that copy wins, and comes back here.
+    if (live && version !== null && ((doc.updatedAt ?? 0) > version || (doc.restoredAt ?? 0) > at)) continue;
     excluded.add(id);
     if (!live || version === null || unsent.includes(id)) continue;
     unsent.push(id);

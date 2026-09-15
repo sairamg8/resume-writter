@@ -20,6 +20,8 @@ const ids = (list) => list.map((r) => r.id).toSorted();
 const USER = { uid: 'u', email: 'someone@example.com' };
 const OWNER = { uid: 'u', email: 'owner@example.com' };
 const page = (cloud, state) => syncPage(mods, cloud, state, { isDemo: (u) => u.email === OWNER.email });
+/** A page whose demo restore runs too, as useDemoSeed runs it (restores at 1000). */
+const demoPage = (cloud, state) => syncPage(mods, cloud, state, { isDemo: (u) => u.email === OWNER.email, demo: { accounts: [OWNER.email], now: () => 1000 } });
 const signIn = async (p, user = USER) => { p.sync.start(user); await settle(); };
 /** A store that deleted these résumés here — id → the updatedAt of the copy deleted. */
 const deleted = (versions) => ({
@@ -98,6 +100,25 @@ describe('deletedIds holds what the cloud does not have yet (R8-1)', () => {
     await settle();
     assert.equal(cloud.resumes('u').orig_a.deleted, undefined, 'before R8-1: flagged again, over the restore');
     assert.deepEqual(ids(laptop.store.state.resumes), ['orig_a', 'orig_b']);
+  });
+
+  it('deleted here offline and never sent: a restore made since on another device is not undone (V2W1a-4)', async () => {
+    // The laptop deleted A offline at 100, at the version the cloud holds (5): its entry waits.
+    const cloud = fakeFirestore({ [resumePath('u', 'orig_a')]: orig('orig_a', 5, { name: 'A' }), [resumePath('u', 'orig_b')]: orig('orig_b', 5, { name: 'B' }) });
+    const laptop = demoPage(cloud, { resumes: [orig('orig_b', 5, { name: 'B' })], deletedIds: ['orig_a'], deletedInfo: { orig_a: { version: 5, at: 100, owner: 'u', keep: true } }, syncedUid: 'u' });
+    // Meanwhile the phone deletes A, then B: none left, so both come back (at 1000), each at its own version.
+    const phone = demoPage(cloud, { resumes: [] });
+    await signIn(phone, OWNER);
+    await phone.remove('orig_a');
+    await phone.timers.fire();
+    await phone.remove('orig_b');
+    await settle();
+    await phone.timers.fire();
+    assert.deepEqual([ids(phone.store.state.resumes), cloud.resumes('u').orig_a.updatedAt, cloud.resumes('u').orig_a.deleted], [['orig_a', 'orig_b'], 5, undefined]);
+
+    await signIn(laptop, OWNER);
+    assert.equal(cloud.resumes('u').orig_a.deleted, undefined, 'before: flagged over the restore — the version cannot tell a restored copy from the one deleted');
+    assert.deepEqual([ids(laptop.store.state.resumes), laptop.store.state.deletedIds], [['orig_a', 'orig_b'], []]);
   });
 
   it('marked an original and deleted before the flush: flagged, and marked in the cloud too', async () => {

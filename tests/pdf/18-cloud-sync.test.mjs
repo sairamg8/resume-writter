@@ -63,6 +63,14 @@ describe('first sync after sign-in (R4-1)', () => {
     assert.deepEqual(legacy.flags, ['resume_o']);
   });
 
+  it('a restore made after the deletion keeps the résumé; a deletion made after the restore is sent (V2W1a-4)', () => {
+    const restored = orig('resume_o', 5, { restoredAt: 1000 }); // put back elsewhere at its own version
+    const before = plan.planInitialSync({ deletions: [{ id: 'resume_o', version: 5, at: 100, keep: true }], cloud: [restored], demoAccount: true });
+    assert.deepEqual([before.flags, ids(before.merged), before.handled], [[], ['resume_o'], ['resume_o']], 'before: flagged over the restore');
+    const after = plan.planInitialSync({ deletions: [{ id: 'resume_o', version: 5, at: 2000, keep: true }], cloud: [restored], demoAccount: true });
+    assert.deepEqual([after.flags, ids(after.merged)], [['resume_o'], []]);
+  });
+
   it('sends only what the cloud still holds: never-synced, already-listed and already-flagged ids change nothing', () => {
     const cloud = [cv('resume_b'), { id: 'demo_minimal', deleted: true }];
     const p = plan.planInitialSync({

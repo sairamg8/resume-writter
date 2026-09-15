@@ -109,6 +109,11 @@ test('buildRestore / originalsIn: never one on the account\'s deletion list — 
   assert.deepEqual(names(buildRestore(seen, 1000)), ['X', 'Y'], 'nothing listed: every original');
 });
 
+test('buildRestore: each copy says when it was put back — its version cannot (V2W1a-4)', () => {
+  const [restored] = buildRestore(new Map([['resume_a', original('resume_a', 7, 'Morning', { restoredAt: 50 })]]), 1000);
+  assert.deepEqual([restored.updatedAt, restored.restoredAt], [7, 1000]);
+});
+
 test('buildRestore: a flagged cloud copy comes back without its deleted flag', () => {
   const [restored] = buildRestore(new Map([['resume_a', original('resume_a', 7, 'Flagged', { deleted: true })]]), 1000);
   assert.equal(restored.name, 'Flagged');
