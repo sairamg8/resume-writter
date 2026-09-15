@@ -32,12 +32,13 @@ const isQuotaError = (e) => e?.name === 'QuotaExceededError' || e?.name === 'NS_
  * error when the value does not fit even without them (or storage refused it for another reason).
  */
 export function setItemWithRoom(key, value) {
-  const backups = listBackups().filter((b) => b.key !== key);
+  let backups = null; // listed only once a write has not fitted: this runs on every save
   for (;;) {
     try {
       localStorage.setItem(key, value);
       return;
     } catch (e) {
+      backups ??= listBackups().filter((b) => b.key !== key);
       if (!isQuotaError(e) || !backups.length) throw e;
       remove(backups.shift().key);
     }
