@@ -1,6 +1,7 @@
 // What the cloud sync writes, decided as pure functions over plain data — no Firebase, so tests
-// run every rule directly (tests/pdf/18-cloud-sync.test.mjs). useCloudSync only reads the
-// cloud, applies these plans in one batch, and loads the result.
+// run every rule directly (tests/pdf/18-cloud-sync.test.mjs). The sync engine
+// (cloudSyncEngine.js) reads the cloud, commits each plan in one batch, and applies the result to
+// the store (afterSync).
 //
 // Deleting: an ordinary résumé is removed from the cloud and its id goes on the account's
 // deletion list (meta/deletions), so a device still holding a copy drops it instead of
@@ -22,7 +23,7 @@ const asEntry = (e) => (typeof e === 'string' ? { id: e, version: null } : e);
  *   local         this browser's résumés
  *   deletions     résumés deleted in this browser that the cloud may not have yet — deleted
  *                 signed out or offline, after a failed flush, or within the flush delay before a
- *                 reload; a flush that sent one forgets it (R8-1). Entries { id, version }
+ *                 reload; a flush that sent one forgets it (R8-1). Entries { id, version, owner }
  *                 (localDeletions.deletionEntries): version the updatedAt of the copy deleted,
  *                 null for an older build's entry; owner the account it was deleted from
  *   uid           the account signing in: another account's deletions are left for it (R8-6)
@@ -45,9 +46,9 @@ const asEntry = (e) => (typeof e === 'string' ? { id: e, version: null } : e);
  * wins, and the résumé comes back here (R8-0). An entry with no version is left out of this
  * merge only, never sent, as before 53d6a3b. A flagged sample is read the same way: the flag
  * deletes the version it carries, so a copy here edited since (restored, then edited offline)
- * brings it back — written whole, flag and all — instead of being dropped. Before 53d6a3b no deletion was sent at all: the
- * cloud kept the résumés, the store forgot the deletions, and the next sync brought them back
- * (R4-1).
+ * brings it back — written whole, flag and all — instead of being dropped. Before 53d6a3b no
+ * deletion was sent at all: the cloud kept the résumés, the store forgot the deletions, and the
+ * next sync brought them back (R4-1).
  */
 export function planInitialSync({ local = [], deletions = [], cloud = [], cloudDeleted = [], demoAccount = false, uid = null }) {
   const docs = cloud.filter(hasId);
