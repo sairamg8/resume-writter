@@ -113,6 +113,24 @@ describe('experience Order (FIDA-58 / FIDB-72)', () => {
     }
     assert.match(await lineOf('sidebar', { titleOrder: 'company' }), /^Acme Corp — Staff Engineer/);
   });
+
+  it('a stored null or empty Order (imported data) is no choice: the PDF, Word and the editor all take the template default (R6-5)', async () => {
+    const { resolveSection } = await loadModule('/src/templates/pdf/shared/templateSectionDefaults.js');
+    const order = (line) => (line.indexOf('Staff Engineer') < line.indexOf('Acme Corp') ? 'role' : 'company');
+    const wrong = [];
+    for (const template of TEMPLATES) {
+      for (const titleOrder of [null, '']) {
+        const r = resume({ template, sections: [experience([{ company: 'Acme Corp', role: 'Staff Engineer' }], { titleOrder })] });
+        const pdf = order(allText(await read(await render(r))));
+        const word = order((await renderDocx(r)).texts.find((t) => t.includes('Acme Corp')));
+        // What the Order control highlights (SectionEditorCustomizer: the resolved value, else Co. / Role).
+        const editor = resolveSection(r.sections[0], template).settings.titleOrder || 'company';
+        const got = { pdf, word, editor };
+        if (Object.values(got).some((v) => v !== DEFAULT_ORDER[template])) wrong.push(`${template} ${JSON.stringify(titleOrder)}: ${JSON.stringify(got)}`);
+      }
+    }
+    assert.deepEqual(wrong, []);
+  });
 });
 
 describe('entry Title layout', () => {

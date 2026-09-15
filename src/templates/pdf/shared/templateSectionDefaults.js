@@ -14,23 +14,24 @@ export const TEMPLATE_SECTION_DEFAULTS = {
   minimal: {},
 
   executive: {
-    // Executive HTML hardcodes an inline layout: "Role, Company  date→"
-    // and always shows role as the primary/bold field.
+    // Unset, Executive prints its entries inline, "Role, Company  date→", the role bold first.
     experience:   { titleStyle: 'inline', titleOrder: 'role' },
     education:    { titleStyle: 'inline' },
     volunteering: { titleStyle: 'inline' },
   },
 
   sidebar: {
-    // Sidebar HTML main-column experience always shows role bold (not company).
-    // Layout stays stacked — sidebar never uses inline/sidebyside.
+    // Unset, the Sidebar's main-column experience cards lead with the role, bold. Title
+    // "Inline" and "Side by side" print there too (27277e0); unset stays Stacked.
     experience: { titleOrder: 'role' },
   },
 };
 
 /**
  * Resolves a section's effective settings by merging template-level defaults
- * with user-stored settings. User settings always win.
+ * with user-stored settings. User settings always win; a stored null, undefined or ''
+ * (imported data) is no choice, so the template's default applies — the renderers read the
+ * resolved value and keep no default of their own that could disagree with it (R6-5).
  *
  * pdfExportReactPDF and wordExport call this once per section before building the
  * document; SectionCustomizer calls it so each control shows the effective value.
@@ -38,12 +39,15 @@ export const TEMPLATE_SECTION_DEFAULTS = {
 export function resolveSection(section, templateKey) {
   const templateDefaults =
     TEMPLATE_SECTION_DEFAULTS[templateKey]?.[section.type] || {};
+  const chosen = Object.fromEntries(
+    Object.entries(section.settings || {}).filter(([, value]) => value != null && value !== ''),
+  );
 
   return {
     ...section,
     settings: {
       ...templateDefaults,
-      ...section.settings,
+      ...chosen,
     },
   };
 }

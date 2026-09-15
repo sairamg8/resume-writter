@@ -54,7 +54,7 @@ function CardHeader({ centered, entrySize, lineH, dateStr, dateStyle, children }
 
 export function SidebarMainExperience({ section, settings, marginBottom, spaceBefore, itemGap }) {
   const s = section.settings || {};
-  const titleOrder = s.titleOrder || 'role';
+  const titleOrder = s.titleOrder; // resolved: the Sidebar's default is 'role' (templateSectionDefaults)
   const titleStyle = s.titleStyle || 'stacked';
   const showDates  = s.showDates  !== false;
   const showLoc    = s.showLocation !== false;
