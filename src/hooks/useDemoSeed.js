@@ -34,7 +34,9 @@ export function useDemoSeed({ user, appState, store, sync }) {
     rememberDemo(seed.copies, appState.resumes);
     if (!ready || seed.restoring || !needsDemoRestore(appState.resumes)) return;
     // The cloud's copies first: another device may have edited a sample since this one's first
-    // sync (R4-4). Without an answer, the copies this browser knows come back.
+    // sync (R4-4). Without an answer, the copies this browser knows come back here, and the sync
+    // sends nothing until a first sync gets through again — which brings back the cloud's own
+    // copies instead of writing these over them (VM4-6).
     seed.restoring = true;
     Promise.resolve(sync.readCloudDemo?.(DEMO_RESUMES.map(r => r.id)))
       .catch(() => null)

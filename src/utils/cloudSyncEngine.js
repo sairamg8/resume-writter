@@ -37,13 +37,14 @@ const isOfflineError = (e) => String(e?.message || '').toLowerCase().includes('c
  *   isDemo    user → true for a demo account (its deleted samples are flagged, not removed)
  *   online    () → whether the browser says it is online
  *   timers    { set(fn, ms) → id, clear(id) }; flushDelay (ms) before queued changes are sent;
- *             cloudTimeout (ms) readCloudDemo waits for an answer; now() → ms
+ *             cloudTimeout (ms) readCloudDemo waits for an answer; retryDelay (ms) before a
+ *             first sync that could not reach the cloud is tried again; now() → ms
  * Returns { start(user), cancel(), resumesChanged(resumes), readCloudDemo(ids) }.
  */
 export function createCloudSync({
   io, store, report, isDemo = () => false,
   online = () => true, timers = { set: setTimeout, clear: clearTimeout },
-  flushDelay = 1500, cloudTimeout = 5000, now = () => Date.now(), log = () => {},
+  flushDelay = 1500, cloudTimeout = 5000, retryDelay = 30000, now = () => Date.now(), log = () => {},
 }) {
   const s = {
     user: null,
@@ -55,6 +56,7 @@ export function createCloudSync({
     pendingDeletes: new Set(),
     listed: new Set(), // the cloud deletion list as this browser knows it (read, then added to)
     timer: null,
+    retry: null,
     account: null,
   };
 
@@ -66,6 +68,7 @@ export function createCloudSync({
   /** Whenever the signed-in user (or null) changes, or the browser goes online or offline. */
   function start(user) {
     s.gen += 1;
+    timers.clear(s.retry);
     // Signed out, or another account: the last one's queue is not sent — without its auth it was
     // refused, and that refusal turned sync off for whoever signed in next (R8-5). Nothing is
     // lost: the store keeps the edits and deletions for that account's next first sync.
@@ -108,6 +111,27 @@ export function createCloudSync({
   /** Drop the result of a first sync still running (the page is going away). */
   function cancel() {
     s.gen += 1;
+    timers.clear(s.retry);
+  }
+
+  /** Try the first sync again later — the sync icon says "will retry". */
+  function scheduleRetry() {
+    timers.clear(s.retry);
+    const { gen, user } = s;
+    s.retry = timers.set(() => { if (s.gen === gen && s.user === user) start(user); }, retryDelay);
+  }
+
+  /**
+   * The cloud did not answer while signed in: nothing more is sent until a first sync gets
+   * through again. A sample restore made meanwhile from this browser's copies (VM4-6) then stays
+   * here: the flush wrote it unconditionally over the cloud's copies, newer edits from another
+   * device included. The retry's first sync merges by time and flag (planInitialSync), and the
+   * restore runs again from the cloud's copies.
+   */
+  function unreachable() {
+    s.initialSyncDone = false;
+    report.status(online() ? 'error' : 'offline');
+    scheduleRetry();
   }
 
   async function initialSync(user, gen) {
@@ -154,11 +178,13 @@ export function createCloudSync({
         );
         return;
       }
-      // Offline / transient: do not enable write queue (avoids spam retries)
+      // Offline / transient: no write queue until a first sync gets through. Retried while the
+      // browser says it is online; going online again re-runs it anyway.
       s.initialSyncDone = false;
       const offline = !online() || isOfflineError(e);
       report.status(offline ? 'offline' : 'error');
       if (!offline) log('[CloudSync] sync unavailable:', e?.code || e?.message || e);
+      if (online()) scheduleRetry();
     }
   }
 
@@ -222,13 +248,19 @@ export function createCloudSync({
   /**
    * The account's sample résumés with these `ids` as the cloud holds them now, flagged ones
    * included — a restore then brings back an edit another device made after this one's first
-   * sync (R4-4). null when there is no cloud to ask, or it gives no answer within cloudTimeout.
+   * sync (R4-4). null when there is no cloud to ask, or it gives no answer within cloudTimeout —
+   * the sync then sends nothing until a first sync gets through again (unreachable, VM4-6).
+   * It stops before this resolves, so a restore made on a null answer is never queued.
    */
   function readCloudDemo(ids) {
     if (!s.user || !io || s.cloudDisabled || !s.initialSyncDone || !online()) return Promise.resolve(null);
-    const read = io.readDocs(s.user.uid, ids);
+    const { gen, user } = s;
+    const read = io.readDocs(user.uid, ids);
     const timeout = new Promise((resolve) => { timers.set(() => resolve(null), cloudTimeout); });
-    return Promise.race([read, timeout]).catch(() => null);
+    return Promise.race([read, timeout]).catch(() => null).then((answer) => {
+      if (answer === null && s.gen === gen && s.user === user && s.initialSyncDone) unreachable();
+      return answer;
+    });
   }
 
   return { start, cancel, resumesChanged, readCloudDemo };

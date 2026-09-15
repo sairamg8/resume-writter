@@ -167,6 +167,11 @@ export function fakeStore(state, plan) {
     },
     applyCloudSync(result) { store.set(plan.afterSync(store.state, result)); },
     forgetDeletions(ids, before) { store.set({ ...store.state, ...withoutDeletions(store.state, ids, before) }); },
+    /** As useResumeStore.restoreResumes: put back (replacing any with the same id), deletions forgotten. */
+    restoreResumes(list) {
+      const back = new Set(list.map((r) => r.id));
+      store.set({ ...store.state, resumes: [...store.state.resumes.filter((r) => !back.has(r.id)), ...list], ...withoutDeletions(store.state, back) });
+    },
     deleteResume(id, at = Date.now()) {
       const gone = store.state.resumes.find((r) => r.id === id);
       store.set({ ...store.state, resumes: store.state.resumes.filter((r) => r.id !== id), ...withDeletion(store.state, gone, at) });
@@ -189,5 +194,6 @@ export function syncPage(mods, cloud, state, { isDemo = () => false, online = ()
   store.onChange = () => sync.resumesChanged(store.state.resumes);
   const change = async (next) => { store.set({ ...store.state, ...next }); await settle(1); };
   const remove = async (id) => { store.deleteResume(id); await settle(1); };
-  return { store, timers, seen, sync, change, remove };
+  const restore = async (list) => { store.restoreResumes(list); await settle(1); };
+  return { store, timers, seen, sync, change, remove, restore };
 }

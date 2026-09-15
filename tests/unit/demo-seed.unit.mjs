@@ -64,18 +64,13 @@ test('buildDemoRestore: the latest edited copy where known, else the built-in sa
   assert.equal(PRISTINE[1].updatedAt, 0);
 });
 
-// The sync's merge rule (src/utils/syncMerge.js): the newer updatedAt wins, this browser's on a tie.
-const mergeWinner = (local, cloud) => (local.updatedAt >= cloud.updatedAt ? local : cloud);
-
-test('buildDemoRestore: a restored copy keeps its own time, so a newer edit on another device still wins (R4-4)', () => {
-  // The laptop last saw Sample A in the morning (7). The phone edited it later (20) and synced.
-  // Then the laptop deletes every sample, and the set comes back from what the laptop knew.
+test('buildDemoRestore: a restored copy keeps its own time (R4-4)', () => {
+  // The laptop last saw Sample A in the morning (7); the set comes back from what it knew. That a
+  // newer edit elsewhere then wins is the sync's merge: tests/pdf/18-cloud-sync-restore.test.mjs
+  // runs it with syncMerge.mergeResumeLists and the sync engine (VM4-6).
   const laptopSeed = new Map([['demo_a', resume('demo_a', 7, 'Morning A')]]);
   const [restoredA, pristineB] = buildDemoRestore(PRISTINE, laptopSeed, 1000);
   assert.equal(restoredA.updatedAt, 7, 'not stamped with the time of the restore');
-  // The restore reaches the cloud; the phone's next sync merges its own copy with it.
-  const phoneEdit = resume('demo_a', 20, 'Edited on the phone');
-  assert.equal(mergeWinner(phoneEdit, restoredA).name, 'Edited on the phone', 'the phone\'s edit is kept');
   // A sample of which no copy is known comes back as the built-in one, stamped now.
   assert.equal(pristineB.updatedAt, 1000);
 });
