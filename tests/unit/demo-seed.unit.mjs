@@ -1,6 +1,6 @@
 // Unit tests for the demo-account rules (src/utils/demoSeed.js): what a restore brings back.
 // Run: yarn test:unit. The same rules through the sync engine and a fake Firestore:
-// tests/pdf/18-cloud-sync-restore.test.mjs; in the app: cypress/e2e/11-demo-account.cy.js.
+// tests/pdf/18-cloud-sync-restore.test.mjs; in the app: cypress/e2e/11-demo-account*.cy.js.
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as seedRules from '../../src/utils/demoSeed.js';

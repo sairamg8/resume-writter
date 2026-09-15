@@ -55,8 +55,10 @@ user such as `{ "uid": "e2e-owner", "email": "…" }`) in localStorage at load s
 that user and **without Firebase**, so it never reaches a real project. Pages without the key
 keep the configured Firebase, so the real sign-in button still renders for the header tests. In
 a production build `e2eUser` is always null and the key does not appear in the bundle.
-`cypress/e2e/11-demo-account.cy.js` uses it for the owner / another account / signed out: the
-owner's originals come back (never the samples), "Keep as my original", "Import as my original".
+`cypress/e2e/11-demo-account.cy.js` uses it for the owner / another account / signed out — the
+owner's originals come back (never the samples) — and `11-demo-account-keep.cy.js` for the controls:
+"Keep as my original", "Import as my original", Delete on an original. Their steps (the fake
+sign-in, a store of named résumés) are in `cypress/support/demoAccount.js`.
 
 Run by hand: `npx vite build --mode e2e --outDir <scratch>/dist-e2e` →
 `npx vite preview --outDir <scratch>/dist-e2e --port 4173` → `npx cypress run --e2e`.

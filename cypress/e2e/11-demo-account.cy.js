@@ -4,74 +4,11 @@
 // --mode e2e`) signs in the fake account these specs put in localStorage and runs that page
 // without Firebase, so this is the local-only path; the cloud side (flags, the latest copy from
 // another device) runs in tests/pdf/18-cloud-sync-*.test.mjs, the rules in tests/unit/demo-seed.
-import { STORAGE_KEY } from '../../tests/helpers.js';
-import { CARD, IMPORT_INPUT } from '../support/selectors.js';
-import { dashboardState } from '../support/state.js';
-
-const OWNER = { uid: 'e2e-owner', email: 'sairamgudiputi8@gmail.com', displayName: 'Owner' };
-const OTHER = { uid: 'e2e-other', email: 'someone@example.com', displayName: 'Someone' };
-
-/** The header's account button: it shows the signed-in user's first name, as after a Google sign-in. */
-const accountButton = (user) => cy.contains('button', user.displayName.split(' ')[0]);
-
-/**
- * Open the dashboard signed in as `user` (null = signed out) with `state` as the résumé store,
- * and check the header shows that account: the tests below claim what happens to a signed-in
- * user, so each proves the fake sign-in happened (R4-9) — a broken seam leaves the page signed out.
- */
-function visitAs(user, state = null) {
-  cy.visit('/#/', {
-    onBeforeLoad(win) {
-      win.localStorage.clear();
-      if (state) win.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-      if (user) win.localStorage.setItem('cpwtcv_e2e_user', JSON.stringify(user));
-    },
-  });
-  cy.contains('h1', 'My Resumes').should('be.visible');
-  if (user) accountButton(user).should('be.visible');
-}
-
-/**
- * A store with these résumés: [name, { keep, id }] — keep: marked "Keep as my original"; an id
- * starting demo_ is one of the samples the owner's account used to get.
- */
-function stateWith(...list) {
-  const base = dashboardState(['classic']).resumes[0];
-  const resumes = list.map(([name, { keep = false, id = `resume_${name.replace(/\W+/g, '_').toLowerCase()}` } = {}]) => (
-    { ...base, id, name, ...(keep ? { keep: true } : {}) }
-  ));
-  return { ...dashboardState(['classic']), resumes, activeId: resumes[0].id };
-}
-
-/** Import `resume` from the dashboard, as the account's original or as a plain import. */
-function importFile(resume, { asOriginal }) {
-  cy.contains('button', /^\s*Import\s*$/).click();
-  cy.contains('button', asOriginal ? 'Import as my original' : 'Import JSON').click();
-  cy.get(IMPORT_INPUT).selectFile({
-    contents: Cypress.Buffer.from(JSON.stringify(resume)), fileName: 'mine.json', mimeType: 'application/json',
-  }, { force: true });
-  cy.contains('button', 'Export').should('be.visible'); // the editor opens it
-}
-
-const okEveryConfirm = () => cy.window().then((win) => { cy.stub(win, 'confirm').returns(true); });
-const deleteCard = (name) => cy.contains(CARD, name).contains('button', 'Delete').click();
-const openCard = (name) => cy.contains(CARD, name).contains('button', 'Edit').click();
-const backToDashboard = () => cy.get('button[title="Back to dashboard"]').click();
-/** Assert the card names, in dashboard order (retries until the dashboard settles). */
-const expectCards = (names) => cy.get(CARD).should(($cards) => {
-  expect([...$cards].map((c) => c.querySelector('.group\\/name p')?.textContent)).to.deep.equal(names);
-});
-/**
- * A restore runs as soon as the account's list is known, or right after the last original goes.
- * "Nothing came back" checked at once could run before it; checked after making a résumé in the
- * editor and coming back, the list is exactly what the account made — a restore would have put
- * the originals, or before 2026-09-15 the five samples, in it by then.
- */
-const newResumeAndBack = () => {
-  cy.contains('button', 'New Resume').click();
-  cy.contains('button', 'Export').should('be.visible');
-  backToDashboard();
-};
+// Marking one — the cards' and the Import menus' controls: 11-demo-account-keep.cy.js.
+import {
+  OWNER, OTHER, visitAs, stateWith, okEveryConfirm, deleteCard, openCard, backToDashboard, expectCards, newResumeAndBack,
+} from '../support/demoAccount.js';
+import { CARD } from '../support/selectors.js';
 
 describe('demo account — the owner\'s originals come back, never the samples', () => {
   it('an empty account stays empty: no sample résumé appears', () => {
@@ -127,82 +64,6 @@ describe('demo account — the owner\'s originals come back, never the samples',
     cy.contains('No resumes yet').should('be.visible');
     newResumeAndBack();
     expectCards(['Untitled Resume']);
-  });
-});
-
-describe('demo account — "Keep as my original" and "Import as my original"', () => {
-  const file = (name, extra = {}) => ({ ...dashboardState(['sidebar']).resumes[0], id: 'from_the_file', name, ...extra });
-
-  it('imported as the original, the file comes back after deleting everything, with its latest edits', () => {
-    visitAs(OWNER, stateWith(['Classic CV']));
-    importFile(file('My real CV'), { asOriginal: true });
-    cy.contains('label', 'Full Name').parent().next('input').clear().type('Sam Owner');
-    backToDashboard();
-    cy.contains(CARD, 'My real CV').should('contain.text', 'Original').and('contain.text', 'Stop keeping');
-    okEveryConfirm();
-    deleteCard('Classic CV');
-    deleteCard('My real CV');
-    expectCards(['My real CV']);
-    cy.store().should((s) => {
-      expect(s.resumes[0].personal.name).to.eq('Sam Owner');
-      expect(s.resumes[0].keep).to.eq(true);
-      expect(s.resumes[0].id).to.match(/^resume_/);
-    });
-  });
-
-  it('a plain import is not an original, even from a file that says it is', () => {
-    visitAs(OWNER);
-    importFile(file('Exported CV', { keep: true }), { asOriginal: false });
-    backToDashboard();
-    cy.contains(CARD, 'Exported CV').should('not.contain.text', 'Stop keeping').contains('button', 'Keep as my original');
-    cy.store().should((s) => expect(s.resumes[0]).not.to.have.property('keep'));
-  });
-
-  it('"Keep as my original" on a card brings it back; after "Stop keeping" it stays deleted', () => {
-    visitAs(OWNER, stateWith(['Classic CV'], ['Other CV']));
-    cy.contains(CARD, 'Classic CV').contains('button', 'Keep as my original').click();
-    cy.contains(CARD, 'Classic CV').should('contain.text', 'Original');
-    okEveryConfirm();
-    deleteCard('Classic CV');
-    deleteCard('Other CV');
-    expectCards(['Classic CV']);
-    cy.contains(CARD, 'Classic CV').contains('button', 'Stop keeping').click();
-    cy.contains(CARD, 'Classic CV').contains('button', 'Keep as my original');
-    deleteCard('Classic CV');
-    cy.contains('No resumes yet').should('be.visible');
-    newResumeAndBack();
-    expectCards(['Untitled Resume']);
-  });
-
-  it('Delete says an original comes back, and how to delete it for good', () => {
-    visitAs(OWNER, stateWith(['My CV', { keep: true }], ['Classic CV']));
-    cy.window().then((win) => { cy.stub(win, 'confirm').as('confirm').returns(false); });
-    deleteCard('My CV');
-    cy.get('@confirm').should('have.been.calledWithMatch', /kept as your original, so it comes back .* choose "Stop keeping" first/);
-    deleteCard('Classic CV');
-    cy.get('@confirm').should('have.been.calledWith', 'Delete "Classic CV"? This cannot be undone.');
-    expectCards(['My CV', 'Classic CV']);
-  });
-
-  it('a résumé whose data says keep: "yes" is no original anywhere: no badge, the plain prompt, and it can be marked (V2OWNER-DATA-10)', () => {
-    const state = stateWith(['Odd CV'], ['Other CV']);
-    state.resumes[0].keep = 'yes'; // a hand-edited file or cloud document: the restore ignores it
-    visitAs(OWNER, state);
-    cy.contains(CARD, 'Odd CV').should('not.contain.text', 'Stop keeping'); // before: the Original badge
-    cy.window().then((win) => { cy.stub(win, 'confirm').as('confirm').returns(false); });
-    deleteCard('Odd CV');
-    cy.get('@confirm').should('have.been.calledWith', 'Delete "Odd CV"? This cannot be undone.');
-    cy.contains(CARD, 'Odd CV').contains('button', 'Keep as my original').click();
-    cy.contains(CARD, 'Odd CV').should('contain.text', 'Stop keeping');
-    cy.store().should((s) => expect(s.resumes[0].keep).to.eq(true));
-  });
-
-  it('a copy of an original is a new résumé, not an original', () => {
-    visitAs(OWNER, stateWith(['My CV', { keep: true }]));
-    cy.contains(CARD, 'My CV').contains('button', 'Copy').click();
-    cy.contains('button', 'Export').should('be.visible');
-    backToDashboard();
-    cy.contains(CARD, 'My CV (Copy)').contains('button', 'Keep as my original');
   });
 });
 
