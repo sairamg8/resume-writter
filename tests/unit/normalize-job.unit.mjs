@@ -2,7 +2,7 @@
 // Run: yarn test:unit
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizeJob, isJobEntry } from '../../src/utils/normalizeJob.js';
+import { normalizeJob, readJob, isJobEntry } from '../../src/utils/normalizeJob.js';
 
 const job = (extra = {}) => ({
   id: 'job_1', company: 'Acme', role: 'Dev', status: 'applied', url: '', location: 'Remote', salary: '',
@@ -53,6 +53,30 @@ test('text fields: a number becomes its digits, anything else that is not text b
   assert.equal(normalizeJob(job({ status: { id: 'offer' } })).status, 'saved');
   assert.equal(normalizeJob(job({ status: '' })).status, 'saved');
   assert.equal(normalizeJob(job({ status: 'offer' })).status, 'offer');
+});
+
+test('readJob: a repair that keeps what the job held loses nothing — numbers as their digits, an empty status (VM4-5)', () => {
+  // Older builds' import saved jobs as they came (salary: 120000), and those displayed fine.
+  const { kept, lost } = readJob(job({ salary: 120000, appliedDate: 20260901, todos: [{ id: 't1', text: 42 }], status: '' }));
+  assert.equal(lost, false);
+  assert.deepEqual([kept.salary, kept.appliedDate, kept.todos[0].text, kept.status], ['120000', '20260901', '42', 'saved']);
+  assert.deepEqual(readJob(job({ status: null })), { kept: job({ status: 'saved' }), lost: false });
+  const readable = job();
+  assert.equal(readJob(readable).kept, readable);
+  assert.equal(readJob(readable).lost, false);
+  assert.deepEqual(readJob(null), { kept: null, lost: false }, 'an empty slot held nothing');
+});
+
+test('readJob: anything left out or blanked is a loss', () => {
+  for (const extra of [
+    { company: { name: 'Acme' } }, { salary: true }, { role: ['Dev'] }, { deadline: {} },
+    { status: 3 }, { status: { id: 'offer' } },
+    { todos: 'x' }, { todos: [null] }, { todos: [{ id: 't', text: { b: 1 } }] },
+    { statusHistory: 'applied' }, { statusHistory: [{ changedAt: 1 }] },
+  ]) assert.equal(readJob(job(extra)).lost, true, JSON.stringify(extra));
+  for (const v of ['junk', 5, true, [], [job()]]) assert.deepEqual(readJob(v), { kept: null, lost: true }, JSON.stringify(v));
+  // A lossless repair beside a lossy one: still a loss.
+  assert.equal(readJob(job({ salary: 120000, todos: [null] })).lost, true);
 });
 
 test('the input is never changed: a repaired job is a copy', () => {

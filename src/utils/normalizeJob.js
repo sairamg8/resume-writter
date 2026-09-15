@@ -1,7 +1,7 @@
 // A job application from this browser's saved list or an imported .json, made safe for every job
 // page — the tracker's board and list, a job's own page, the form. Both ways a job comes in go
-// through normalizeJob() (useJobStore's load and importJobs), so they cannot disagree on what a
-// job is (R4-7). No imports, so Node's test runner loads this file as it is
+// through readJob() (useJobStore's load and importJobs), so they cannot disagree on what a job is
+// (R4-7), or on what a repair lost (VM4-5). No imports, so Node's test runner loads this file as it is
 // (tests/unit/normalize-job.unit.mjs).
 
 /** The fields the job pages print or search as text. */
@@ -18,13 +18,16 @@ export function isJobEntry(j) {
 /** Text the pages can print as it is: a string, or nothing (null / undefined). */
 const isText = (v) => typeof v === 'string' || v == null;
 
+/** A number that reads back as its digits, and loses nothing as them. */
+const isNumber = (v) => typeof v === 'number' && Number.isFinite(v);
+
 /** A value that is not text, as text: a number as its digits, anything else ''. */
-const asText = (v) => (typeof v === 'number' && Number.isFinite(v) ? String(v) : '');
+const asText = (v) => (isNumber(v) ? String(v) : '');
 
 /** The to-dos the Tasks tab can show; the same array when every one of them is readable. */
 function readableTodos(todos) {
   if (!Array.isArray(todos)) return [];
-  const kept = todos.filter((t) => isJobEntry(t) && (isText(t.text) || typeof t.text === 'number'))
+  const kept = todos.filter((t) => isJobEntry(t) && (isText(t.text) || isNumber(t.text)))
     .map((t) => (isText(t.text) ? t : { ...t, text: String(t.text) }));
   return kept.length === todos.length && kept.every((t, i) => t === todos[i]) ? todos : kept;
 }
@@ -49,24 +52,42 @@ function readableHistory(history) {
  * todos: [null] used to throw on every visit to the tracker, until storage was cleared.
  */
 export function normalizeJob(job) {
-  if (!isJobEntry(job)) return null;
+  return readJob(job).kept;
+}
+
+/**
+ * normalizeJob, and whether its repair lost anything, as `{ kept, lost }`: kept what normalizeJob
+ * returns; lost false when the job was readable, or needed only repairs that keep what it held —
+ * a number (in a text field, or as a to-do's text) turned into its digits, an empty status
+ * (null or '') made 'saved'; an empty slot in the list (null) held nothing either. Older builds'
+ * import saved jobs as they came (salary: 120000), and they displayed fine: loading them needs no
+ * backup and no notice, and importing them does not say something was left out (VM4-5). lost is
+ * true when anything was left out, or replaced by '' or 'saved'.
+ */
+export function readJob(job) {
+  if (!isJobEntry(job)) return { kept: null, lost: job != null };
   let out = job;
-  const set = (key, value) => {
+  let lost = false;
+  const set = (key, value, loses) => {
     if (out === job) out = { ...job };
     if (value === undefined) delete out[key];
     else out[key] = value;
+    if (loses) lost = true;
   };
   for (const key of TEXT_FIELDS) {
-    if (!isText(job[key])) set(key, asText(job[key]));
+    if (!isText(job[key])) set(key, asText(job[key]), !isNumber(job[key]));
   }
-  if (job.status !== undefined && (typeof job.status !== 'string' || !job.status)) set('status', 'saved');
+  if (job.status !== undefined && (typeof job.status !== 'string' || !job.status)) {
+    set('status', 'saved', job.status !== null && job.status !== '');
+  }
   if (job.todos != null) {
     const todos = readableTodos(job.todos);
-    if (todos !== job.todos) set('todos', todos);
+    // Only a to-do left out is a loss: one whose text is a number keeps it, as its digits.
+    if (todos !== job.todos) set('todos', todos, !Array.isArray(job.todos) || todos.length < job.todos.length);
   }
   if (job.statusHistory != null) {
     const history = Array.isArray(job.statusHistory) ? readableHistory(job.statusHistory) : undefined;
-    if (history !== job.statusHistory) set('statusHistory', history);
+    if (history !== job.statusHistory) set('statusHistory', history, true);
   }
-  return out;
+  return { kept: out, lost };
 }

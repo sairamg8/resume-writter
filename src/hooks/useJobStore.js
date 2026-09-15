@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from 'react';
 import { loadSavedList, pendingRecovery, rememberRecovery, setItemWithRoom } from '@/utils/storageBackup';
 import { newId } from '@/utils/ids';
-import { normalizeJob } from '@/utils/normalizeJob';
+import { readJob } from '@/utils/normalizeJob';
 
 const KEY = 'cpwtcv_jobs_v1';
 
@@ -32,13 +32,14 @@ const JOB_VERSION = 2;
 
 /**
  * The saved job list, as `{ jobs, recovery }`. Whatever cannot be read — the whole value, single
- * entries, or details of one (normalizeJob: to-dos, history, text fields) — is left out, and the
+ * entries, or details of one (readJob: to-dos, history, text fields) — is left out, and the
  * raw value is first copied to a backup key, because the next save replaces it (loadSavedList).
- * `recovery` is then `{ backupKey }` (null when not even the copy could be written). Nothing
- * saved yet: the demo job.
+ * `recovery` is then `{ backupKey }` (null when not even the copy could be written). A repair
+ * that loses nothing — a number turned into its digits — gets neither (VM4-5). Nothing saved
+ * yet: the demo job.
  */
 function load() {
-  const { saved, list, recovery } = loadSavedList(KEY, 'jobs', normalizeJob);
+  const { saved, list, recovery } = loadSavedList(KEY, 'jobs', readJob);
   if (!list) return { jobs: DEMO_JOBS, recovery: null };
   if (!saved) return { jobs: [], recovery };
   // A job the router cannot address (no id, or a non-string one) gets an id rather than being dropped.
@@ -141,12 +142,12 @@ function deleteJob(id) {
 
 /**
  * Add the jobs of an imported file, each with a new id, made readable the way a saved job is
- * (normalizeJob). Returns `{ added, lossy }`: lossy when an entry, or a detail of one, could not
- * be read and was left out.
+ * (readJob). Returns `{ added, lossy }`: lossy when an entry, or a detail of one, could not
+ * be read and was left out — not for a number kept as its digits (VM4-5).
  */
 function importJobs(incoming) {
-  const readable = incoming.map(normalizeJob);
-  const stamped = readable.filter(Boolean).map(j => ({
+  const read = incoming.map(readJob);
+  const stamped = read.map(r => r.kept).filter(Boolean).map(j => ({
     status: 'saved',
     todos: [],
     contact: '',
@@ -157,7 +158,7 @@ function importJobs(incoming) {
     updatedAt: Date.now(),
   }));
   if (stamped.length) setJobs(jobs => [...jobs, ...stamped]);
-  return { added: stamped.length, lossy: readable.some((j, i) => j !== incoming[i]) };
+  return { added: stamped.length, lossy: read.some(r => r.lost) };
 }
 
 function clearDemoData() {

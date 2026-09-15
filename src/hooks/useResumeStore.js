@@ -25,7 +25,7 @@ const isResume = (r) => Boolean(r && typeof r === 'object' && !Array.isArray(r) 
  * copy and no word, and the next save replaced it (R4-6).
  */
 function loadStore() {
-  const { saved, list, recovery: found } = loadSavedList(STORAGE_KEY, 'resumes', r => (isResume(r) ? r : null));
+  const { saved, list, recovery: found } = loadSavedList(STORAGE_KEY, 'resumes', r => ({ kept: isResume(r) ? r : null }));
   // Kept until dismissed: the repaired store is saved over at once, so a reload would lose it.
   const recovery = found ? rememberRecovery(STORAGE_KEY, found) : null;
   if (!saved) return { state: emptyStore(), recovery };

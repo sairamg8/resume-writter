@@ -5,6 +5,7 @@ import assert from 'node:assert/strict';
 import {
   loadSavedList, pendingRecovery, rememberRecovery, backupRaw, setItemWithRoom, readBackup, BACKUPS_KEPT,
 } from '../../src/utils/storageBackup.js';
+import { readJob } from '../../src/utils/normalizeJob.js';
 
 /** A localStorage stand-in: the Storage methods the app uses, and a quota in characters. */
 class MemoryStorage {
@@ -24,7 +25,7 @@ class MemoryStorage {
 
 const KEY = 'cpwtcv_v1';
 const backups = () => [...globalThis.localStorage.map.keys()].filter((k) => k.startsWith(`${KEY}_backup_`));
-const keepWithId = (r) => (r && typeof r === 'object' && r.id ? r : null);
+const keepWithId = (r) => ({ kept: r && typeof r === 'object' && r.id ? r : null });
 
 beforeEach(() => { globalThis.localStorage = new MemoryStorage(); });
 
@@ -53,7 +54,7 @@ test('loadSavedList: one unreadable entry is left out, after the raw value is ba
 
 test('loadSavedList: a repaired entry counts too; a value that is not the list at all is backed up', () => {
   localStorage.setItem(KEY, JSON.stringify({ resumes: [{ id: 'a', todos: 'x' }] }));
-  const repaired = loadSavedList(KEY, 'resumes', (r) => ({ ...r, todos: [] }));
+  const repaired = loadSavedList(KEY, 'resumes', (r) => ({ kept: { ...r, todos: [] } })); // lost: not said
   assert.deepEqual(repaired.list, [{ id: 'a', todos: [] }]);
   assert.ok(repaired.recovery.backupKey);
 
@@ -64,6 +65,23 @@ test('loadSavedList: a repaired entry counts too; a value that is not the list a
     assert.deepEqual([saved, list], [null, []], raw);
     assert.equal(localStorage.getItem(recovery.backupKey), raw, raw);
   }
+});
+
+test('loadSavedList: a repair that loses nothing needs no backup and no notice — the job list\'s numbers (VM4-5)', () => {
+  // Older builds' import saved jobs as they came. Before: turning a number into its digits made a
+  // backup and the notice "what could not be read was left out", although nothing was.
+  const JOBS = 'cpwtcv_jobs_v1';
+  const numbers = { id: 'job_1', company: 'Acme', salary: 120000, appliedDate: 20260901, status: 'applied' };
+  localStorage.setItem(JOBS, JSON.stringify({ dataVersion: 2, jobs: [numbers] }));
+  const { list, recovery } = loadSavedList(JOBS, 'jobs', readJob);
+  assert.deepEqual(list, [{ ...numbers, salary: '120000', appliedDate: '20260901' }]);
+  assert.equal(recovery, null);
+  assert.deepEqual([...localStorage.map.keys()], [JOBS]);
+
+  const raw = JSON.stringify({ dataVersion: 2, jobs: [numbers, { id: 'job_2', company: 'Beta', todos: [null] }] });
+  localStorage.setItem(JOBS, raw);
+  const lossy = loadSavedList(JOBS, 'jobs', readJob);
+  assert.equal(localStorage.getItem(lossy.recovery.backupKey), raw, 'a to-do left out still is a loss');
 });
 
 test('loadSavedList: storage that refuses the copy still reports the loss, with no key', () => {

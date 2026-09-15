@@ -93,11 +93,15 @@ export function readBackup(backupKey) {
 /**
  * Read the list `field` of the object saved under `key`, as `{ saved, list, recovery }`:
  *   saved     the parsed object; null when nothing is saved or the value cannot be read
- *   list      the entries kept — `readEntry(entry)` returns the entry, a repaired copy, or null
- *             to leave it out; null when nothing is saved (or storage cannot be read at all)
- *   recovery  when the value could not be read, or an entry was left out or repaired:
- *             `{ backupKey }` — the raw value was first copied to that key (backupRaw), because
- *             the next save replaces it; backupKey null when storage refused the copy. Else null.
+ *   list      the entries kept — `readEntry(entry)` returns `{ kept, lost }`: kept the entry, a
+ *             repaired copy, or null to leave it out; lost whether that lost anything the entry
+ *             held (when not said: whenever kept is not the entry itself). null when nothing is
+ *             saved (or storage cannot be read at all)
+ *   recovery  when the value could not be read, or something in it was lost: `{ backupKey }` —
+ *             the raw value was first copied to that key (backupRaw), because the next save
+ *             replaces it; backupKey null when storage refused the copy. Else null: a repair that
+ *             loses nothing (the job list's numbers turned into their digits) needs no copy and no
+ *             notice — it used to get both, the notice saying something was left out (VM4-5).
  * The résumé store and the job list both load through here (R4-6), so a list that cannot be
  * read in full is backed up and reported the same way for both.
  */
@@ -111,13 +115,13 @@ export function loadSavedList(key, field, readEntry) {
   if (!Array.isArray(saved?.[field])) return { saved: null, list: [], recovery: { backupKey: backupRaw(key, raw) } };
 
   const list = [];
-  let changed = false;
+  let anyLost = false;
   for (const entry of saved[field]) {
-    const kept = readEntry(entry);
-    if (kept !== entry) changed = true;
+    const { kept, lost = kept !== entry } = readEntry(entry);
+    if (lost) anyLost = true;
     if (kept) list.push(kept);
   }
-  return { saved, list, recovery: changed ? { backupKey: backupRaw(key, raw) } : null };
+  return { saved, list, recovery: anyLost ? { backupKey: backupRaw(key, raw) } : null };
 }
 
 /**

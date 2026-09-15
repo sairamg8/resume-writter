@@ -249,4 +249,35 @@ describe('regressions — a job whose details cannot be read (R4-7)', () => {
       expect(s.jobs.find((j) => j.company === 'Echo').status).to.eq('saved');
     });
   });
+
+  // Older builds' import saved jobs as they came: numbers where the pages now keep text.
+  const numbers = { ...job('job_n', 'Numbers Inc', 'Engineer'), salary: 120000, appliedDate: 20260901, todos: [{ id: 't1', text: 42, done: false }] };
+
+  it('VM4-5: a saved job with numbers for its salary, date or a to-do opens as it was — no notice, no backup', () => {
+    // Before: turning them into their digits counted as a loss — a backup, and a red notice that
+    // said "what could not be read was left out". Nothing was.
+    visitWithJobs(JSON.stringify({ dataVersion: 2, jobs: [numbers, gamma] }));
+    stat('Total').should('have.text', '2');
+    cy.contains('#kanban-col-applied', 'Numbers Inc').should('contain.text', '120000');
+    cy.contains('[role="alert"]', 'could not be read').should('not.exist');
+    cy.jobStore().should((s) => {
+      const saved = s.jobs.find((j) => j.id === 'job_n');
+      expect([saved.salary, saved.appliedDate, saved.todos[0].text]).to.deep.eq(['120000', '20260901', '42']);
+      expect(s.jobs.find((j) => j.id === 'job_c')).to.deep.eq(gamma);
+    });
+    cy.window().then((win) => {
+      expect(Object.keys(win.localStorage).filter((k) => k.startsWith(`${JOBS_KEY}_backup_`))).to.deep.eq([]);
+    });
+  });
+
+  it('VM4-5: an imported file whose jobs only hold numbers where text goes adds them, and says nothing was left out', () => {
+    visitWithJobs(JSON.stringify({ dataVersion: 2, jobs: [] }));
+    cy.get('input[type="file"][accept=".json"]').selectFile({
+      contents: Cypress.Buffer.from(JSON.stringify([numbers])), fileName: 'jobs.json',
+    }, { force: true });
+    stat('Total').should('have.text', '1');
+    cy.contains('#kanban-col-applied', 'Numbers Inc').should('contain.text', '120000');
+    cy.contains('left out').should('not.exist'); // before: "Imported 1 job application; what could not be read …"
+    cy.jobStore().its('jobs.0').should((j) => expect([j.salary, j.appliedDate, j.todos[0].text]).to.deep.eq(['120000', '20260901', '42']));
+  });
 });
