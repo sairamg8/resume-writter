@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { ChevronDown, Pin, Upload } from 'lucide-react';
 
+/** What "Import as my original" means — under it here and in the editor's Export menu. */
+export const ORIGINALS_HINT = 'Your originals come back whenever none of them is left.';
+
 /**
  * The dashboard's Import in a demo account: a plain import, or one kept as the account's original
  * — it comes back whenever none of the originals is left (useDemoSeed). `onPick(keep)` then opens
@@ -38,9 +41,7 @@ export function ImportMenu({ onPick, className }) {
           <button onClick={() => pick(true)} className={item}>
             <Pin size={14} className="text-amber-700" aria-hidden="true" /> Import as my original
           </button>
-          <p className="px-3 pt-1 pb-2 text-[11px] text-gray-500">
-            Your originals come back whenever none of them is left.
-          </p>
+          <p className="px-3 pt-1 pb-2 text-[11px] text-gray-500">{ORIGINALS_HINT}</p>
         </div>
       )}
     </div>

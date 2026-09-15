@@ -2,7 +2,8 @@
 // keeping" on a card, "Import as my original", and what Delete does to an original. What comes
 // back, and to whom: 11-demo-account.cy.js. The e2e build's fake sign-in, no Firebase.
 import {
-  OWNER, visitAs, stateWith, file, importFile, okEveryConfirm, deleteCard, backToDashboard, expectCards, newResumeAndBack,
+  OWNER, OTHER, visitAs, stateWith, file, chooseFile, importFile, okEveryConfirm, deleteCard, openCard, backToDashboard,
+  expectCards, newResumeAndBack,
 } from '../support/demoAccount.js';
 import { CARD } from '../support/selectors.js';
 
@@ -77,5 +78,46 @@ describe('demo account — "Keep as my original" and "Import as my original"', (
     cy.contains('button', 'Export').should('be.visible');
     backToDashboard();
     cy.contains(CARD, 'My CV (Copy)').contains('button', 'Keep as my original');
+  });
+});
+
+// The editor's Export menu has Import JSON too: in a demo account it offers what the dashboard's
+// Import does (V2OWNER-DATA-3: until then only the dashboard could import an original).
+describe('demo account — the editor\'s Export → Import', () => {
+  const openExport = () => { openCard('Classic CV'); cy.contains('button', 'Export').click(); };
+  const editorShows = (name) => cy.contains('button[title="Rename resume"]', name).should('be.visible');
+
+  it('"Import as my original" there makes the file an original, with the dashboard\'s hint (V2OWNER-DATA-3)', () => {
+    visitAs(OWNER, stateWith(['Classic CV']));
+    openExport();
+    cy.contains('Your originals come back whenever none of them is left.').should('be.visible');
+    cy.contains('button', 'Import as my original').click(); // before: the menu had only "Import JSON"
+    chooseFile(file('From the editor'));
+    editorShows('From the editor');
+    cy.store().should((s) => {
+      const imported = s.resumes.find((r) => r.name === 'From the editor');
+      expect(imported.keep).to.eq(true);
+      expect(s.activeId).to.eq(imported.id);
+    });
+    backToDashboard();
+    cy.contains(CARD, 'From the editor').should('contain.text', 'Stop keeping');
+    cy.contains(CARD, 'Classic CV').contains('button', 'Keep as my original');
+  });
+
+  it('its Import JSON stays a plain import, even from a file that says it is an original', () => {
+    visitAs(OWNER, stateWith(['Classic CV']));
+    openExport();
+    cy.contains('button', 'Import JSON').click();
+    chooseFile(file('Plain', { keep: true }));
+    editorShows('Plain');
+    cy.store().should((s) => expect(s.resumes.find((r) => r.name === 'Plain')).not.to.have.property('keep'));
+  });
+
+  it('another account gets Import JSON alone (a guard)', () => {
+    visitAs(OTHER, stateWith(['Classic CV']));
+    openExport();
+    cy.contains('button', 'Import JSON').should('be.visible');
+    cy.contains('button', 'Import as my original').should('not.exist');
+    cy.contains('Your originals come back').should('not.exist');
   });
 });

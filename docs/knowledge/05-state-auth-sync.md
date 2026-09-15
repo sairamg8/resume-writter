@@ -89,8 +89,9 @@ Marking one (demo accounts only):
 - **Card:** "Keep as my original" under the name; a kept one shows an **Original** badge and
   "Stop keeping" (`store.keepResume` — an edit, so it syncs).
 - **Dashboard → Import** is a menu there: "Import JSON" or **"Import as my original"**
-  (`importResume(data, { keep })`; a file's own `keep` field is ignored). The editor's Export →
-  Import JSON is a plain import; mark it from its card.
+  (`importResume(data, { keep })`; a file's own `keep` field is ignored). The editor's **Export**
+  menu offers the same two (`ExportDropdown` `keeps`, `useEditorExports`); other accounts get
+  the plain Import JSON in both places.
 - **Delete** on an original says it comes back, and to "Stop keeping" first to delete it for good.
 - **Dev server only — the owner's real résumé, automatically.** `private/sairam-resume.json`
   (git-ignored) is served by `vite-plugin-owner-resume.js` as `virtual:owner-resume` to the dev

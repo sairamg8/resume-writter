@@ -1,10 +1,19 @@
 import { useRef, useState, useEffect } from 'react';
-import { Download, FileText, Upload, ChevronDown } from 'lucide-react';
+import { Download, FileText, Upload, ChevronDown, Pin } from 'lucide-react';
+import { ORIGINALS_HINT } from '@/components/ImportMenu';
 
-export function ExportDropdown({ exporting, onExportPDF, onExportWord, onExportJSON, onImportJSON, onImportError }) {
+/**
+ * The editor's Export menu, with Import JSON: `onImportJSON(data, asOriginal)`. `keeps` — a demo
+ * account, whose originals come back (useDemoSeed) — adds "Import as my original", as the
+ * dashboard's Import menu has (V2OWNER-DATA-3).
+ */
+export function ExportDropdown({ exporting, keeps = false, onExportPDF, onExportWord, onExportJSON, onImportJSON, onImportError }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   const importRef = useRef(null);
+  // Whether the file being picked is imported as the account's original.
+  const asOriginal = useRef(false);
+  const pickImport = (keep) => { asOriginal.current = keep; importRef.current?.click(); setOpen(false); };
 
   useEffect(() => {
     if (!open) return;
@@ -53,11 +62,19 @@ export function ExportDropdown({ exporting, onExportPDF, onExportWord, onExportJ
           </button>
           <div className="my-1 border-t border-gray-100" />
           <button
-            onClick={() => { importRef.current?.click(); setOpen(false); }}
+            onClick={() => pickImport(false)}
             className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-gray-50"
           >
             <Upload size={12} className="text-gray-400" /> Import JSON
           </button>
+          {keeps && (
+            <>
+              <button onClick={() => pickImport(true)} className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-gray-50">
+                <Pin size={12} className="text-amber-700" aria-hidden="true" /> Import as my original
+              </button>
+              <p className="px-3 pt-1 pb-2 text-[11px] text-gray-500">{ORIGINALS_HINT}</p>
+            </>
+          )}
         </div>
       )}
 
@@ -76,7 +93,7 @@ export function ExportDropdown({ exporting, onExportPDF, onExportWord, onExportJ
               onImportError?.("Could not parse file. Make sure it's a valid CPWT-CV JSON.");
               return;
             }
-            if (parsed?.personal && Array.isArray(parsed.sections)) onImportJSON(parsed);
+            if (parsed?.personal && Array.isArray(parsed.sections)) onImportJSON(parsed, asOriginal.current);
             else onImportError?.('Invalid resume file — missing required fields.');
           };
           reader.readAsText(file);
