@@ -160,3 +160,25 @@ describe('a deletion belongs to the account the list came from (R8-6)', () => {
     assert.deepEqual(p.store.state.deletedIds, []);
   });
 });
+
+describe('a flag is a deletion of the version it carries', () => {
+  // A demo account's deleted sample stays in the cloud flagged, with the copy that was deleted.
+  it('a sample restored here and edited since is kept at the next sync, and brought back in the cloud', async () => {
+    const cloud = fakeFirestore({ [resumePath('u', 'demo_a')]: cv('demo_a', 20, { deleted: true }), [resumePath('u', 'demo_b')]: cv('demo_b', 20, { deleted: true }) });
+    // Restored offline (their own times kept, R4-4), then demo_a edited at 30.
+    const laptop = page(cloud, { resumes: [cv('demo_a', 30, { name: 'Edited after the restore' }), cv('demo_b', 20)] });
+    await signIn(laptop, OWNER);
+    assert.deepEqual(ids(laptop.store.state.resumes), ['demo_a'], 'before: dropped — the cloud still had it flagged');
+    const { name, updatedAt, deleted: flag } = cloud.resumes('u').demo_a;
+    assert.deepEqual([name, updatedAt, flag], ['Edited after the restore', 30, undefined], 'written whole: the flag is gone');
+    assert.equal(cloud.resumes('u').demo_b.deleted, true, 'an unedited copy stays deleted');
+  });
+
+  it('outside a demo account too, an edit made after the flag keeps the résumé', async () => {
+    const cloud = fakeFirestore({ [resumePath('u', 'demo_a')]: cv('demo_a', 20, { deleted: true }) });
+    const p = page(cloud, { resumes: [cv('demo_a', 30)] });
+    await signIn(p, USER);
+    assert.deepEqual(Object.keys(cloud.resumes('u')), ['demo_a'], 'before: removed and listed');
+    assert.equal(cloud.doc(listPath('u')), undefined);
+  });
+});

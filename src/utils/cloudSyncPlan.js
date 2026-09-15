@@ -43,7 +43,9 @@ const asEntry = (e) => (typeof e === 'string' ? { id: e, version: null } : e);
  * A deletion is sent only when the cloud's copy is not newer than the version deleted: one made
  * offline or signed out must never remove an edit made later on another device — that edit
  * wins, and the résumé comes back here (R8-0). An entry with no version is left out of this
- * merge only, never sent, as before 53d6a3b. Before 53d6a3b no deletion was sent at all: the
+ * merge only, never sent, as before 53d6a3b. A flagged sample is read the same way: the flag
+ * deletes the version it carries, so a copy here edited since (restored, then edited offline)
+ * brings it back — written whole, flag and all — instead of being dropped. Before 53d6a3b no deletion was sent at all: the
  * cloud kept the résumés, the store forgot the deletions, and the next sync brought them back
  * (R4-1).
  */
@@ -51,7 +53,9 @@ export function planInitialSync({ local = [], deletions = [], cloud = [], cloudD
   const docs = cloud.filter(hasId);
   const byId = new Map(docs.map((r) => [r.id, r]));
   const cloudDeletedSet = new Set(cloudDeleted);
-  const flagged = docs.filter((r) => r.deleted).map((r) => r.id);
+  const localById = new Map(local.filter(hasId).map((r) => [r.id, r]));
+  const editedSince = (doc) => (localById.get(doc.id)?.updatedAt ?? 0) > (doc.updatedAt ?? 0);
+  const flagged = docs.filter((r) => r.deleted && !editedSince(r)).map((r) => r.id);
   const excluded = new Set([...cloudDeletedSet, ...flagged]);
 
   const unsent = [];
