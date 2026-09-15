@@ -77,8 +77,10 @@ describe('regressions — one résumé store and one job store (M14)', () => {
     formField('Company').type('Stripe');
     cy.contains('button', /^Add Job$/).click();
     cy.contains('h1', 'Stripe').should('be.visible');
+    cy.contains('[role="alert"]', 'not being saved').should('be.visible'); // R6-2: the job's page said nothing
 
     goTo('#/jobs/demo_1/edit');
+    cy.contains('[role="alert"]', 'not being saved').should('be.visible'); // nor did the form
     formField('Role / Position').clear().type('Staff Frontend Engineer');
     cy.contains('button', 'Save Changes').first().click();
     cy.contains('Staff Frontend Engineer').should('be.visible');

@@ -10,6 +10,7 @@ import { KanbanView } from '@/components/job/KanbanView';
 import { ListView } from '@/components/job/ListView';
 import { CareerHistoryPanel } from '@/components/CareerHistoryPanel';
 import { RecoveryNotice } from '@/components/RecoveryNotice';
+import { JobsNotSavedAlert } from '@/components/job/JobsNotSavedAlert';
 import { downloadBlob } from '@/utils/download';
 
 export function JobTracker({ store }) {
@@ -143,13 +144,7 @@ export function JobTracker({ store }) {
         </div>
       </div>
 
-      {persistError && (
-        <div className="max-w-7xl mx-auto px-6 pt-3">
-          <p role="alert" className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-            Changes are not being saved: browser storage is full. Export your applications to keep a copy.
-          </p>
-        </div>
-      )}
+      <JobsNotSavedAlert error={persistError} className="max-w-7xl mx-auto px-6 pt-3" />
       {recovery && (
         <div className="max-w-7xl mx-auto px-6 pt-3">
           <RecoveryNotice what="job list" recovery={recovery} onDismiss={dismissRecovery} />

@@ -2,6 +2,7 @@ import { useSyncExternalStore } from 'react';
 import { loadSavedList, pendingRecovery, rememberRecovery, setItemWithRoom } from '@/utils/storageBackup';
 import { newId } from '@/utils/ids';
 import { completeJob, readJob } from '@/utils/normalizeJob';
+import { keepUnsaved } from '@/utils/unsavedJobs';
 
 const KEY = 'cpwtcv_jobs_v1';
 
@@ -70,6 +71,8 @@ function persist(jobs) {
  */
 let current = null;
 const listeners = new Set();
+/** The list this tab last knew storage to hold: what it shows, but for what storage refused. */
+let stored = null;
 
 function snapshot() {
   if (!current) {
@@ -80,12 +83,27 @@ function snapshot() {
     // Saved at once, as the page used to on opening: a migrated or repaired list replaces the
     // stored value (whose backup load() has kept).
     current = { jobs, recovery, persistError: persist(jobs) };
-    // Another tab saved its list: take it, so a change here does not write over that tab's.
+    stored = jobs;
     window.addEventListener('storage', e => {
-      if (e.key === KEY && e.newValue) update({ jobs: load().jobs });
+      if (e.key === KEY && e.newValue) takeOtherTabsList();
     });
   }
   return current;
+}
+
+/**
+ * Another tab saved its list: take it, so a change here does not write over that tab's (M14) —
+ * but keep what storage refused here (keepUnsaved), and write that again. Taking the list as it
+ * was dropped a job this tab could not save, while the notice still said it was unsaved (R6-2).
+ */
+function takeOtherTabsList() {
+  const incoming = load().jobs;
+  const jobs = keepUnsaved(incoming, snapshot().jobs, stored);
+  stored = incoming;
+  // The same list: nothing here is unsaved any more. Else what storage refused is written again.
+  const persistError = jobs === incoming ? null : persist(jobs);
+  if (!persistError) stored = jobs;
+  update({ jobs, persistError });
 }
 
 function subscribe(listener) {
@@ -100,7 +118,9 @@ function update(patch) {
 
 function setJobs(change) {
   const jobs = change(snapshot().jobs);
-  update({ jobs, persistError: persist(jobs) });
+  const persistError = persist(jobs);
+  if (!persistError) stored = jobs;
+  update({ jobs, persistError });
 }
 
 function addJob(data = {}) {

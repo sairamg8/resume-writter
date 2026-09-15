@@ -6,6 +6,7 @@ import { STATUS_MAP } from '@/constants/jobs';
 import { TasksTab } from '@/components/job/TasksTab';
 import { OverviewTab } from '@/components/job/OverviewTab';
 import { NotesTab } from '@/components/job/NotesTab';
+import { JobsNotSavedAlert } from '@/components/job/JobsNotSavedAlert';
 import { safeHref } from '@/utils/richText';
 
 const TABS = [
@@ -17,7 +18,7 @@ const TABS = [
 export function JobDetail({ store }) {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { jobs, updateJob, deleteJob } = useJobStore();
+  const { jobs, persistError, updateJob, deleteJob } = useJobStore();
   const { appState } = store;
   const resumes = appState.resumes;
   const [activeTab, setActiveTab] = useState('tasks');
@@ -177,6 +178,8 @@ export function JobDetail({ store }) {
           </div>
         </div>
       </div>
+
+      <JobsNotSavedAlert error={persistError} className="max-w-5xl mx-auto px-6 pt-4" />
 
       {/* Tab content */}
       <div className="max-w-5xl mx-auto px-6 py-6">
