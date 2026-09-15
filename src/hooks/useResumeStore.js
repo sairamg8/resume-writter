@@ -12,7 +12,7 @@ const STORAGE_KEY = 'cpwtcv_v1';
 
 /** First run: no résumés. The dashboard shows its "Create your first resume" state. */
 function emptyStore() {
-  return { resumes: [], activeId: null, dataVersion: DATA_VERSION, deletedIds: [], deletedInfo: {} };
+  return { resumes: [], activeId: null, dataVersion: DATA_VERSION, deletedIds: [], deletedInfo: {}, syncedUid: null };
 }
 
 const isResume = (r) => Boolean(r && typeof r === 'object' && !Array.isArray(r) && r.id);
@@ -36,7 +36,7 @@ function loadStore() {
       ...saved,
       resumes,
       activeId: resumes.some(r => r.id === saved.activeId) ? saved.activeId : (resumes[0]?.id ?? null),
-      ...savedDeletions(saved), // deletedIds, deletedInfo (a store saved before R8-0 has ids only)
+      ...savedDeletions(saved), // deletedIds, deletedInfo, syncedUid (a store saved before R8-0 has ids only)
       dataVersion: DATA_VERSION,
     },
     recovery,

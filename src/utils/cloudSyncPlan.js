@@ -24,7 +24,8 @@ const asEntry = (e) => (typeof e === 'string' ? { id: e, version: null } : e);
  *                 signed out or offline, after a failed flush, or within the flush delay before a
  *                 reload; a flush that sent one forgets it (R8-1). Entries { id, version }
  *                 (localDeletions.deletionEntries): version the updatedAt of the copy deleted,
- *                 null for an older build's entry
+ *                 null for an older build's entry; owner the account it was deleted from
+ *   uid           the account signing in: another account's deletions are left for it (R8-6)
  *   cloud         the account's résumé documents, each with its document id
  *   cloudDeleted  the account's deletion list
  *   demoAccount   the account is a demo account (its deleted samples are flagged)
@@ -34,7 +35,8 @@ const asEntry = (e) => (typeof e === 'string' ? { id: e, version: null } : e);
  *   hardDeletes  other résumés deleted here that the cloud still holds → remove them; outside
  *                a demo account also every flagged sample (flagged before R4-11)
  *   tombstones   the new deletion list when it changes, else null
- *   handled      the ids of the deletions dealt with — the store forgets them (afterSync)
+ *   handled      the ids of the deletions dealt with — the store forgets them (afterSync);
+ *                another account's are left out of the merge and kept
  * A deletion is sent only when the cloud's copy is not newer than the version deleted: one made
  * offline or signed out must never remove an edit made later on another device — that edit
  * wins, and the résumé comes back here (R8-0). An entry with no version is left out of this
@@ -42,7 +44,7 @@ const asEntry = (e) => (typeof e === 'string' ? { id: e, version: null } : e);
  * cloud kept the résumés, the store forgot the deletions, and the next sync brought them back
  * (R4-1).
  */
-export function planInitialSync({ local = [], deletions = [], cloud = [], cloudDeleted = [], demoAccount = false }) {
+export function planInitialSync({ local = [], deletions = [], cloud = [], cloudDeleted = [], demoAccount = false, uid = null }) {
   const docs = cloud.filter(hasId);
   const byId = new Map(docs.map((r) => [r.id, r]));
   const cloudDeletedSet = new Set(cloudDeleted);
@@ -50,7 +52,10 @@ export function planInitialSync({ local = [], deletions = [], cloud = [], cloudD
   const excluded = new Set([...cloudDeletedSet, ...flagged]);
 
   const unsent = [];
-  for (const { id, version } of deletions.map(asEntry)) {
+  const handled = [];
+  for (const { id, version, owner } of deletions.map(asEntry)) {
+    if (owner && uid && owner !== uid) { excluded.add(id); continue; } // deleted from another account
+    handled.push(id);
     const doc = byId.get(id);
     const live = Boolean(doc) && !doc.deleted && !cloudDeletedSet.has(id);
     if (live && version !== null && (doc.updatedAt ?? 0) > version) continue; // edited elsewhere since
@@ -68,7 +73,7 @@ export function planInitialSync({ local = [], deletions = [], cloud = [], cloudD
     flags,
     hardDeletes,
     tombstones: hardDeletes.length ? nextTombstones(cloudDeleted, hardDeletes, []) : null,
-    handled: deletions.map((e) => asEntry(e).id),
+    handled,
   };
 }
 
@@ -76,7 +81,8 @@ export function planInitialSync({ local = [], deletions = [], cloud = [], cloudD
  * The résumé store after a first sync: its plan applied to the store as it is NOW, not as it was
  * when the plan read it — the user may have typed, deleted or added a résumé while the sync read
  * the account and waited for its batch (R8-2). `snapshot` the résumés the plan was made from,
- * `merged` and `handled` from the plan, `before` when the plan read the store.
+ * `merged` and `handled` from the plan, `before` when the plan read the store, `uid` the account
+ * the list is now synced with (`syncedUid`: whose a later deletion is, R8-6).
  * A résumé unchanged since the snapshot takes its merged copy, or goes when the plan left it out;
  * one edited or added meanwhile stays as it is, and one deleted meanwhile stays deleted — the
  * watcher then sends those changes. Only the deletions the plan dealt with are forgotten. The
@@ -84,7 +90,7 @@ export function planInitialSync({ local = [], deletions = [], cloud = [], cloudD
  * store and every deletion was forgotten: an edit typed during the sync was lost, and a résumé
  * deleted during it came back — the batch had just written it to the cloud again.
  */
-export function afterSync(state, { snapshot, merged, handled, before }) {
+export function afterSync(state, { uid, snapshot, merged, handled, before }) {
   const seen = new Map(snapshot.map((r) => [r.id, r.updatedAt]));
   const current = new Map(state.resumes.map((r) => [r.id, r]));
   const touched = (r) => !seen.has(r.id) || seen.get(r.id) !== r.updatedAt;
@@ -101,6 +107,7 @@ export function afterSync(state, { snapshot, merged, handled, before }) {
     resumes,
     activeId: resumes.some((r) => r.id === state.activeId) ? state.activeId : (resumes[0]?.id ?? state.activeId),
     ...withoutDeletions(state, handled, before),
+    syncedUid: uid ?? state.syncedUid ?? null,
   };
 }
 

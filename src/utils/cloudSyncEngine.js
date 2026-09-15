@@ -111,7 +111,7 @@ export function createCloudSync({
       const planAt = now();
       const plan = planInitialSync({
         local: appState.resumes, deletions: deletionEntries(appState), cloud: cloud.docs, cloudDeleted: cloud.deleted,
-        demoAccount: isDemo(user),
+        demoAccount: isDemo(user), uid: user.uid,
       });
 
       // Deletions this browser never sent reach the cloud in the same batch, before the store
@@ -123,7 +123,7 @@ export function createCloudSync({
 
       // Applied to the store as it is now (R8-2). The watcher then compares it with the merged list,
       // so it sends what was edited, added or deleted while the batch was on its way.
-      store.applyCloudSync({ snapshot: appState.resumes, merged: plan.merged, handled: plan.handled, before: planAt });
+      store.applyCloudSync({ uid: user.uid, snapshot: appState.resumes, merged: plan.merged, handled: plan.handled, before: planAt });
       s.prevResumes = plan.merged;
       s.tombstones = new Set(plan.tombstones || cloud.deleted);
       s.initialSyncDone = true;

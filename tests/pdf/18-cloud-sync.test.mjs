@@ -79,10 +79,11 @@ describe('the store after a first sync (afterSync, R8-2)', () => {
       deletedIds: ['resume_x', 'resume_y'],
       deletedInfo: { resume_x: { version: 1, at: 10 }, resume_y: { version: 1, at: 99 } },
     };
-    const next = plan.afterSync(now, { snapshot, merged, handled: ['resume_x', 'resume_y'], before: 50 });
+    const next = plan.afterSync(now, { uid: 'u', snapshot, merged, handled: ['resume_x', 'resume_y'], before: 50 });
     assert.deepEqual(next.resumes.map((r) => [r.id, r.name]), [['resume_a', 'Cloud'], ['resume_cloud', 'resume_cloud'], ['resume_kept', 'Edited meanwhile']]);
     assert.equal(next.activeId, 'resume_a', 'the open résumé went: the first one is open');
     assert.deepEqual(next.deletedIds, ['resume_y'], 'deleted again after the plan read the store');
+    assert.equal(next.syncedUid, 'u', 'the list is this account\'s now: a later deletion is too (R8-6)');
   });
 });
 
