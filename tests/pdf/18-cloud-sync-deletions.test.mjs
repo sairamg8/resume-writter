@@ -206,6 +206,24 @@ describe('a deletion belongs to the account the list came from (R8-6)', () => {
     assert.deepEqual([cloud.doc(listPath('B'))?.ids, p.store.state.deletedIds], [['resume_r'], []]);
   });
 
+  it('A\'s deletion of a sample does not hide B\'s own copy of it — sample ids are the same in every account (V2W1a-7)', async () => {
+    const cloud = fakeFirestore({
+      [resumePath('A', 'demo_classic')]: cv('demo_classic', 5, { name: 'A\'s copy' }),
+      [resumePath('B', 'demo_classic')]: cv('demo_classic', 5, { name: 'B\'s copy' }), [resumePath('B', 'resume_b')]: cv('resume_b'),
+    });
+    const p = page(cloud, { resumes: [] });
+    await signIn(p, A);
+    p.sync.start(null);
+    await p.remove('demo_classic'); // signed out: A's deletion, waiting for A
+    await signIn(p, B);
+    assert.deepEqual(p.store.state.resumes.map((r) => r.name).toSorted(), ['B\'s copy', 'resume_b'], 'before: B\'s copy hidden on this browser until A signs in here again');
+    assert.deepEqual(p.store.state.deletedIds, ['demo_classic'], 'A\'s deletion still waits for A');
+    p.sync.start(null);
+    await signIn(p, A);
+    assert.deepEqual([cloud.resumes('A').demo_classic, cloud.resumes('B').demo_classic?.name], [undefined, 'B\'s copy']);
+    assert.deepEqual(ids(p.store.state.resumes), ['resume_b'], 'and B\'s copy is not uploaded to A');
+  });
+
   it('deleted before any account synced this list, it goes to the first account that signs in', async () => {
     const cloud = fakeFirestore({ [resumePath('A', 'resume_r')]: cv('resume_r', 5) });
     const p = page(cloud, { resumes: [cv('resume_r', 5)] });

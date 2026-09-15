@@ -28,7 +28,8 @@ const asEntry = (e) => (typeof e === 'string' ? { id: e, version: null } : e);
  *                 reload; a flush that sent one forgets it (R8-1). Entries { id, version, owner }
  *                 (localDeletions.deletionEntries): version the updatedAt of the copy deleted,
  *                 null for an older build's entry; owner the account it was deleted from
- *   uid           the account signing in: another account's deletions are left for it (R8-6)
+ *   uid           the account signing in: another account's deletions are left for it (R8-6),
+ *                 without hiding this account's own copy of the id
  *   cloud         the account's résumé documents, each with its document id
  *   cloudDeleted  the account's deletion list
  *   demoAccount   the account is a demo account (its deleted originals are flagged)
@@ -70,7 +71,9 @@ export function planInitialSync({ local = [], deletions = [], cloud = [], cloudD
   const kept = new Set(); // the unsent that were originals
   const handled = [];
   for (const { id, version, at = 0, owner, keep = null } of deletions.map(asEntry)) {
-    if (owner && uid && owner !== uid) { excluded.add(id); continue; } // deleted from another account
+    // Deleted from another account: left for it, and its copy here out of this merge — but not
+    // this account's own copy of the same id (a sample's id is the same in every account, V2W1a-7).
+    if (owner && uid && owner !== uid) { if (!byId.has(id)) excluded.add(id); continue; }
     handled.push(id);
     const doc = byId.get(id);
     const live = Boolean(doc) && !doc.deleted && !cloudDeletedSet.has(id);
