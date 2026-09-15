@@ -4,29 +4,13 @@ import { PdfRichText } from './shared/PdfRichText';
 import { PdfContactRow } from './shared/PdfContact';
 import { solid, textShades } from './shared/pdfColors';
 import { PdfPhoto } from './shared/PdfPhoto';
+import { getPdfPhotoStyle } from './shared/pdfPhoto';
 import { letterBlock, letterContactFormat, letterHiddenFields, letterSignature } from '@/utils/coverLetter';
 import { photoTextAlignItems } from '@/constants/templates';
 import { hasRichText } from '@/utils/richText';
 
 /** Space under the date, the recipient block and the subject. */
 const BLOCK_GAP = 12;
-
-function getPhotoStyle(settings, accent) {
-  const sh = settings?.photoShape || 'circle';
-  const sz = settings?.photoSize  || 'md';
-  const br = settings?.photoBorder || 'accent';
-  const ph = settings?.photoHeight || 'match';
-  const w = sz === 'sm' ? 30 : sz === 'lg' ? 48 : 38;
-  const h = sh === 'circle' ? w : ph === 'tall' ? Math.round(w * 1.4) : ph === 'taller' ? Math.round(w * 1.8) : w;
-  return {
-    width: w, height: h,
-    borderRadius: sh === 'rounded' ? 5 : sh === 'square' ? 1 : w / 2,
-    borderWidth: br === 'none' ? 0 : 1.5,
-    borderColor: br === 'none' ? '#ffffff' : br === 'thin' ? '#e5e7eb' : solid(accent),
-    objectFit: 'cover',
-    marginRight: 10,
-  };
-}
 
 export function CoverLetterTemplatePDF({ data }) {
   const { personal = {}, settings = {}, coverLetter = {} } = data;
@@ -70,7 +54,7 @@ export function CoverLetterTemplatePDF({ data }) {
   );
 
   const photoEl = photoSrc ? (
-    <PdfPhoto src={photoSrc} style={getPhotoStyle(settings, accent)} />
+    <PdfPhoto src={photoSrc} style={{ ...getPdfPhotoStyle(settings, accent, 'cover'), marginRight: 10 }} />
   ) : null;
 
   const nameBlock = (

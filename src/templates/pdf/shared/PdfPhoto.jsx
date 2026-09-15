@@ -15,9 +15,12 @@ import { isDrawableImage } from '@/utils/imageUpload';
 export function PdfPhoto({ src, style }) {
   if (!isDrawableImage(src)) return null;
   const { width, height, borderRadius = 0, borderWidth: ring = 0, borderColor, objectFit = 'cover', ...layout } = style;
-  if (!ring) return <Image src={src} style={{ ...layout, width, height, borderRadius, objectFit }} />;
+  // minWidth/minHeight keep the box its size in a crowded row: react-pdf 4 reads flexShrink 0
+  // as 1, so the old flexShrink: 0 let a long name squeeze the photo (R3-4).
+  const keep = { minWidth: width, minHeight: height };
+  if (!ring) return <Image src={src} style={{ ...layout, width, height, ...keep, borderRadius, objectFit }} />;
   return (
-    <View style={{ ...layout, width, height, borderRadius, borderWidth: ring, borderColor, flexShrink: 0 }}>
+    <View style={{ ...layout, width, height, ...keep, borderRadius, borderWidth: ring, borderColor }}>
       <Image
         src={src}
         style={{ width: width - 2 * ring, height: height - 2 * ring, borderRadius: Math.max(0, borderRadius - ring), objectFit }}
