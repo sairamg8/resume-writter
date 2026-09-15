@@ -3,7 +3,7 @@
 // prints the colours it always printed (R2-2).
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { setup, teardown, resume, section, render, drawState, read, itemsWith } from './harness.mjs';
+import { setup, teardown, resume, section, render, renderCover, drawState, read, itemsWith } from './harness.mjs';
 import { painted } from './extractors.mjs';
 // A namespace import: on older code a missing helper fails only the tests that use it, and the
 // self-contained FIDB-42 behaviour test below still runs (R2-8, R9-11).
@@ -28,9 +28,12 @@ const column = () => [
 ];
 const PERSONAL = { name: 'Pat Sample', title: '', email: 'pat@example.com', phone: '+1 555 0199' };
 
-/** Each needle, the run it stands for, and the contrast it needs — against the chip for chips. */
+/**
+ * Each needle, the run it stands for, and the contrast it needs — against the chip for chips.
+ * The 19 pt bold name is WCAG large text: 3:1 (R7-13).
+ */
 const RUNS = [
-  ['Pat Sample', 'name', 4.5], ['BSc Physics', 'strong', 7], ['German', 'strong', 7], ['Cloud Architect', 'strong', 7], ['Jane Doe', 'strong', 7],
+  ['Pat Sample', 'name', 3], ['BSc Physics', 'strong', 7], ['German', 'strong', 7], ['Cloud Architect', 'strong', 7], ['Jane Doe', 'strong', 7],
   ['pat@example.com', 'value', 4.5], ['Coursework in optics', 'value', 4.5], ['View Credential', 'value', 4.5],
   ['Tech Institute', 'label', 4.5], ['Acme Certs', 'label', 4.5], ['Chief Officer', 'label', 4.5],
   ['3.9', 'meta', 3], ['Fluent', 'meta', 3], ['ABC-123', 'meta', 3], ['Former Manager', 'meta', 3], ['jane@acme.com', 'meta', 3], ['+1 555 0101', 'meta', 3],
@@ -112,6 +115,33 @@ describe('the Sidebar column on a mid-tone background (R7-8)', () => {
       if (light(s.chip, s.fill) !== light(s.value, bg) || !(contrast(s.chip, s.fill) >= 4.5)) wrong.push(`${bg}: chip ${s.chip} on ${s.fill}`);
     }
     assert.deepEqual(wrong, []);
+  });
+});
+
+describe('the Sidebar name in a Header Text Color the user picked (R7-13)', () => {
+  // The name is bold at Base + Full Name (19 pt by default): WCAG large text from 14 pt, where
+  // 3:1 is AA. A picked colour that reaches it prints as picked; one that does not (or a name
+  // below 14 pt that does not reach 4.5:1) prints the least-shifted tint that reaches 4.5:1.
+  const NAVY = '#1e293b';
+  const nameFill = async (settings, cover = false) => {
+    const r = resume({ template: 'sidebar', personal: { name: 'Pat Sample' }, settings: { sidebarBg: NAVY, ...settings } });
+    const [hit] = await drawState(await (cover ? renderCover(r) : render(r)), 'Pat Sample');
+    return hit.fill;
+  };
+
+  it('#3b82f6 on the navy (3.98:1) prints as picked, on the résumé and on its letter', async () => {
+    assert.equal(await nameFill({ headerTextColor: '#3b82f6' }), '#3b82f6');
+    assert.equal(await nameFill({ headerTextColor: '#3b82f6' }, true), '#3b82f6');
+    assert.equal(await nameFill({ headerTextColor: '#3b82f6', fontSizeNameDelta: 3 }), '#3b82f6', '14 pt is large text');
+  });
+
+  // Guard: what was already corrected stays corrected, to 4.5:1 as before.
+  it('a colour below 3:1, or a name smaller than 14 pt below 4.5:1, still prints a readable tint', async () => {
+    for (const [settings, label] of [[{ headerTextColor: '#475569' }, 'below 3:1'], [{ headerTextColor: '#3b82f6', fontSizeNameDelta: 2 }, '13 pt']]) {
+      const fill = await nameFill(settings);
+      assert.ok(fill !== settings.headerTextColor && contrast(fill, NAVY) >= 4.5, `${label}: ${fill}, ${contrast(fill, NAVY).toFixed(2)}:1`);
+    }
+    assert.equal(await nameFill({}), '#ffffff', 'the default white');
   });
 });
 

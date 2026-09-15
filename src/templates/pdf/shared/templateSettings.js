@@ -2,7 +2,7 @@
 // functions (no react-pdf): the templates, the cover letter and its Word export all read the
 // résumé's colours through here, so the letter's Word file prints what its PDF prints (FIDB-51).
 import { headerBorderOn } from '@/constants/templates';
-import { readableOn } from './pdfColors';
+import { contrast, readableOn } from './pdfColors';
 import { CSS_PX_TO_PT, DEFAULT_ITEM_GAP_PX, DEFAULT_SECTION_GAP_PX } from './pdfUnits';
 
 /**
@@ -50,8 +50,16 @@ export const DEFAULTS = {
     textColor: '#1e2937',
     // The header text colour (white by default) where it reads on the Sidebar Background; on a
     // light background, the least-darkened tint of it that does. A picked name colour wins (R2-2).
-    nameColor: (s) => s.nameColor
-      || readableOn(s.headerTextColor || '#ffffff', s.sidebarBg || DEFAULTS.sidebar.sidebarBg),
+    // The bold name is WCAG large text from 14 pt (19 by default), where 3:1 reads: a Header
+    // Text Color that reaches that prints as picked, as it did before R2-2; one that does not
+    // gets the tint that reaches 4.5:1, as since R2-2 (R7-13).
+    nameColor: (s) => {
+      if (s.nameColor) return s.nameColor;
+      const color = s.headerTextColor || '#ffffff';
+      const bg = s.sidebarBg || DEFAULTS.sidebar.sidebarBg;
+      const large = (s.fontSizeBase ?? 11) + (s.fontSizeNameDelta ?? 8) >= 14;
+      return contrast(color, bg) >= (large ? 3 : 4.5) ? color : readableOn(color, bg);
+    },
     // The accent on the dark sidebar only where it reads there; a dark accent (the default
     // #374151, or #111111) gets a light tint of itself instead (FIDB-42).
     jobTitleColor: (s) => s.jobTitleColor
