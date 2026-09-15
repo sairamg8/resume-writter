@@ -66,6 +66,10 @@ export function createCloudSync({
   /** Whenever the signed-in user (or null) changes, or the browser goes online or offline. */
   function start(user) {
     s.gen += 1;
+    // Signed out, or another account: the last one's queue is not sent — without its auth it was
+    // refused, and that refusal turned sync off for whoever signed in next (R8-5). Nothing is
+    // lost: the store keeps the edits and deletions for that account's next first sync.
+    if ((user?.uid ?? null) !== (s.user?.uid ?? null)) dropQueue();
     s.user = user || null;
 
     if (!user) {
@@ -92,6 +96,13 @@ export function createCloudSync({
     }
 
     initialSync(user, s.gen);
+  }
+
+  function dropQueue() {
+    timers.clear(s.timer);
+    s.timer = null;
+    s.pendingWrites = new Map();
+    s.pendingDeletes = new Set();
   }
 
   /** Drop the result of a first sync still running (the page is going away). */
@@ -168,7 +179,8 @@ export function createCloudSync({
 
   /** Send the changes waiting: handed to Firestore at once, in order (cloudSyncFlush.js). */
   async function sendPending(user) {
-    if (s.cloudDisabled || !io) return;
+    const current = () => s.user?.uid === user.uid;
+    if (!current() || s.cloudDisabled || !io) return; // signed out or switched since (R8-5)
 
     const writes = Array.from(s.pendingWrites.values());
     const deletes = Array.from(s.pendingDeletes);
@@ -188,9 +200,12 @@ export function createCloudSync({
       // The cloud has them: the store stops keeping them for the next first sync, which would send
       // them again — over a restore another device made since (R8-1).
       if (deletes.length) store.forgetDeletions(deletes, sentAt);
+      if (!current()) return;
       report.status('synced');
       report.synced(new Date());
     } catch (e) {
+      // An account signed out since: its refusal says nothing about the one signed in now (R8-5).
+      if (!current()) return;
       if (isCloudConfigError(e)) {
         s.cloudDisabled = true;
         s.initialSyncDone = false;

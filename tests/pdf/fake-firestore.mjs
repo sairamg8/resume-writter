@@ -8,7 +8,9 @@
 // server's acknowledgement does. A read can be held or failed the same way; `cloud.afterRead`
 // runs once a read has its answer (another device writing before this one's batch), and
 // `cloud.goOffline()` makes getDocs/getDoc answer from a stale cache, as the SDK does when it
-// cannot reach the server, while getDocsFromServer/getDocFromServer fail.
+// cannot reach the server, while getDocsFromServer/getDocFromServer fail. Set `cloud.auth` to the
+// signed-in uid (null: nobody) and the security rules apply: another account's documents are
+// permission-denied, as firestore.rules has it.
 
 import { withDeletion, withoutDeletions } from '../../src/utils/localDeletions.js';
 
@@ -48,8 +50,11 @@ export function fakeFirestore(docs = {}) {
     return { id: path.split('/').at(-1), exists: () => value !== undefined, data: () => clone(value), metadata: { fromCache } };
   };
   const unavailable = () => Object.assign(new Error('Failed to get documents from server. (However, these documents may exist in the local cache.)'), { code: 'unavailable' });
+  const denied = () => Object.assign(new Error('Missing or insufficient permissions.'), { code: 'permission-denied' });
+  const allowed = (path) => api.auth === undefined || (api.auth !== null && path.startsWith(`users/${api.auth}/`));
   async function read(path, get, { server = false } = {}) {
     reads.push(path);
+    if (!allowed(path)) throw denied();
     if (fail.read) throw fail.read;
     if (hold.read) await hold.read;
     if (fail.read) throw fail.read;
@@ -91,6 +96,7 @@ export function fakeFirestore(docs = {}) {
         set(ref, value, options) { ops.push(['set', ref.path, clone(value), options]); },
         delete(ref) { ops.push(['delete', ref.path]); },
         commit() {
+          if (ops.some(([, path]) => !allowed(path))) return Promise.reject(denied());
           if (fail.commit) return Promise.reject(fail.commit);
           ops.forEach(apply);
           commits.push(ops);
@@ -103,6 +109,7 @@ export function fakeFirestore(docs = {}) {
   const api = {
     fs, db, data, commits, reads, hold, fail,
     afterRead: null,
+    auth: undefined,
     /** From now on the server cannot be reached; the cache holds the account as it is now. */
     goOffline() { cache = new Map([...data].map(([p, v]) => [p, clone(v)])); },
     doc: (path) => clone(data.get(path)),
