@@ -5,22 +5,23 @@
 /**
  * Every template the app offers, one entry each — so a template cannot be added without its
  * header decisions (they were three more tables — R3-6):
+ *   label           its name in the editor (the Cover Letter panel names the look its letter takes)
  *   style           the heading style and title case it brings: set when it is picked and on Reset
  *   headerControls  Header Customization's alignment, name/title layout, rule and contact
  *                   controls apply (Modern prints a fixed banner, Sidebar a side panel)
  *   headerRule      it draws the header's bottom rule when a résumé has no `showHeaderBorder`
  *                   (older or imported data; new résumés store `false`): the Classic design
- * Two per-template tables stay with the code that reads them: DEFAULTS in PdfPage.jsx — the
+ * Two per-template tables stay with the code that reads them: DEFAULTS in templateSettings.js — the
  * PDF's fallbacks for unset colours, computed from other settings, and Classic's unset heading
  * is 'line', not the 'ruled' that picking Classic sets, so merging them would change what older
  * résumés print — and TEMPLATE_SECTION_DEFAULTS (templateSectionDefaults.js), per section type.
  */
 const TEMPLATES = {
-  classic:   { style: { headingStyle: 'ruled',     sectionTitleCase: 'upper' },  headerControls: true,  headerRule: true },
-  modern:    { style: { headingStyle: 'line',      sectionTitleCase: 'upper' },  headerControls: false, headerRule: false },
-  minimal:   { style: { headingStyle: 'underline', sectionTitleCase: 'upper' },  headerControls: true,  headerRule: false },
-  executive: { style: { headingStyle: 'underline', sectionTitleCase: 'normal' }, headerControls: true,  headerRule: false },
-  sidebar:   { style: { headingStyle: 'plain',     sectionTitleCase: 'upper' },  headerControls: false, headerRule: false },
+  classic:   { label: 'Classic',   style: { headingStyle: 'ruled',     sectionTitleCase: 'upper' },  headerControls: true,  headerRule: true },
+  modern:    { label: 'Modern',    style: { headingStyle: 'line',      sectionTitleCase: 'upper' },  headerControls: false, headerRule: false },
+  minimal:   { label: 'Minimal',   style: { headingStyle: 'underline', sectionTitleCase: 'upper' },  headerControls: true,  headerRule: false },
+  executive: { label: 'Executive', style: { headingStyle: 'underline', sectionTitleCase: 'normal' }, headerControls: true,  headerRule: false },
+  sidebar:   { label: 'Sidebar',   style: { headingStyle: 'plain',     sectionTitleCase: 'upper' },  headerControls: false, headerRule: false },
 };
 
 /** Every template the app offers (the Design panel lists these five). */
@@ -32,6 +33,9 @@ export const TEMPLATE_IDS = Object.keys(TEMPLATES);
  * id from an imported file).
  */
 export const templateId = (template) => (TEMPLATE_IDS.includes(template) ? template : 'classic');
+
+/** The template's name as the editor shows it ("Classic" for an id the app does not offer). */
+export const templateLabel = (template) => TEMPLATES[templateId(template)].label;
 
 /** The heading style and title case a template brings: set when it is picked and on Reset. */
 export const templateStyleDefaults = (template) => ({ ...TEMPLATES[templateId(template)].style });
@@ -57,6 +61,14 @@ export const inSidebarColumn = (template, type) => templateId(template) === 'sid
  * contact controls? Classic, Minimal and Executive; Modern prints a fixed banner, Sidebar a side panel.
  */
 export const hasHeaderControls = (template) => TEMPLATES[templateId(template)].headerControls;
+
+/**
+ * Is the cover letter's letterhead centred? Exactly when the résumé's header is: Text Alignment
+ * "Center" in a template that takes it (Classic, Minimal, Executive). The letter then stacks the
+ * photo, name and contacts on the centre line, so its Fields Position and Text Position have
+ * nothing to place — its panel says so instead of offering them (FIDB-51).
+ */
+export const letterheadCentered = (settings, template) => hasHeaderControls(template) && settings?.headerAlign === 'center';
 
 /**
  * Photo → Text Position lines the text beside the photo up with its top, centre or bottom. There

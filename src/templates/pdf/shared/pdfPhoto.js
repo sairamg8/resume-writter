@@ -31,6 +31,8 @@ const VARIANTS = {
  * @param {boolean} [opts.lightBorder] the photo sits on the dark Sidebar panel: an accent ring
  *   that would not show there (the default #374151 on navy is 1.4:1) takes the least-lightened
  *   tint that reaches 3:1, the WCAG figure for a graphic (R3-3)
+ * @param {boolean} [opts.onBanner] the photo sits on an accent banner (Modern's, or the cover
+ *   letter's in the Modern look): "thin" is Modern's half-white ring over the accent (FIDB-51)
  */
 export function getPdfPhotoStyle(settings, accent, variant = 'classic', opts = {}) {
   const sh = settings?.photoShape || 'circle';
@@ -53,7 +55,7 @@ export function getPdfPhotoStyle(settings, accent, variant = 'classic', opts = {
   if (br === 'thin') {
     borderWidth = v.ring;
     borderColor = opts.lightBorder ? solid('rgba(255,255,255,0.25)', 1, settings?.sidebarBg)
-      : variant === 'modern' ? solid('rgba(255,255,255,0.5)', 1, settings?.accentColor)
+      : variant === 'modern' || opts.onBanner ? solid('rgba(255,255,255,0.5)', 1, settings?.accentColor)
         : '#e5e7eb';
   } else if (br !== 'none') {
     borderWidth = v.ring;
