@@ -83,6 +83,39 @@ describe('regressions — resume store', () => {
     cy.window().then((win) => expect(Object.keys(resumeBackups(win))).to.have.length(1, 'one backup, made once'));
   });
 
+  it('R4-8: the notice saves the backed-up original as a file', () => {
+    cy.task('clearDownloads');
+    visitWithRawStore('{ this is not json');
+    cy.contains('[role="alert"]', 'résumés could not be read').contains('button', 'Download the copy').click();
+    cy.task('waitForDownload', { ext: '.json' }).then((file) => {
+      expect(file).to.match(new RegExp(`${STORAGE_KEY}_backup_\\d+\\.json$`));
+      cy.task('readTextFile', file).should('eq', '{ this is not json');
+    });
+  });
+
+  it('R4-8: when a save does not fit, old backups make room, oldest first, instead of "Not saved"', () => {
+    cy.visitEditor('classic');
+    cy.window().then((win) => {
+      win.localStorage.setItem(`${STORAGE_KEY}_backup_1000`, 'an old copy');
+      win.localStorage.setItem(`${STORAGE_KEY}_backup_2000`, 'a newer copy');
+      const original = win.Storage.prototype.setItem;
+      // Storage is "full" while the older backup is kept: the store fits once it is gone.
+      cy.stub(win.Storage.prototype, 'setItem').callsFake(function setItem(key, value) {
+        if (key === STORAGE_KEY && this.getItem(`${STORAGE_KEY}_backup_1000`) !== null) {
+          throw new win.DOMException('The quota has been exceeded.', 'QuotaExceededError');
+        }
+        return original.call(this, key, value);
+      });
+    });
+    cy.contains('label', 'Full Name').parent().next('input').clear().type('Still Saved');
+    cy.store().its('resumes.0.personal.name').should('eq', 'Still Saved');
+    cy.contains('[role="alert"]', 'Not saved').should('not.exist');
+    cy.window().then((win) => {
+      expect(win.localStorage.getItem(`${STORAGE_KEY}_backup_1000`)).to.eq(null, 'the oldest backup made room');
+      expect(win.localStorage.getItem(`${STORAGE_KEY}_backup_2000`)).to.eq('a newer copy', 'the newer one was not needed');
+    });
+  });
+
   it('M3: a full localStorage does not crash the editor and says the change was not saved', () => {
     cy.visitEditor('classic');
     cy.window().then((win) => {

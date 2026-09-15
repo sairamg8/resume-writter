@@ -4,7 +4,7 @@ import { createSectionActions } from '@/hooks/useResumeSectionActions';
 import { newId } from '@/utils/ids';
 import { templateStyleDefaults } from '@/constants/templates';
 import { DATA_VERSION, normalizeResume } from '@/utils/normalizeResume';
-import { loadSavedList, pendingRecovery, rememberRecovery } from '@/utils/storageBackup';
+import { loadSavedList, pendingRecovery, rememberRecovery, setItemWithRoom } from '@/utils/storageBackup';
 
 const STORAGE_KEY = 'cpwtcv_v1';
 
@@ -56,7 +56,8 @@ export function useAppStore() {
 
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...appState, dataVersion: DATA_VERSION }));
+      // When storage is full, old backups make room before the change is refused (R4-8).
+      setItemWithRoom(STORAGE_KEY, JSON.stringify({ ...appState, dataVersion: DATA_VERSION }));
       setPersistError(null);
     } catch (e) {
       setPersistError(e);

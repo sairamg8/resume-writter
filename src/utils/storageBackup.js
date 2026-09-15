@@ -2,19 +2,71 @@
 // ever destroying what cannot be read. No imports, so Node's test runner loads this file as it
 // is (tests/unit/storage-backup.unit.mjs).
 
+/** How many backups of one key are kept: older ones are removed as a new one is made (R4-8). */
+export const BACKUPS_KEPT = 3;
+const BACKUP_KEY = /^(.+)_backup_(\d+)$/;
+
+/** Every backup in storage, oldest first, as { key, of, at }: `of` the key it copies. */
+function listBackups() {
+  const found = [];
+  try {
+    for (let i = 0; i < localStorage.length; i += 1) {
+      const m = BACKUP_KEY.exec(localStorage.key(i) || '');
+      if (m) found.push({ key: m[0], of: m[1], at: Number(m[2]) });
+    }
+  } catch { /* storage cannot be read: nothing to list */ }
+  return found.sort((a, b) => a.at - b.at);
+}
+
+function remove(key) {
+  try { localStorage.removeItem(key); } catch { /* best effort */ }
+}
+
+const isQuotaError = (e) => e?.name === 'QuotaExceededError' || e?.name === 'NS_ERROR_DOM_QUOTA_REACHED'
+  || e?.code === 22 || e?.code === 1014;
+
+/**
+ * localStorage.setItem, except that when storage is full the backups make room: they are
+ * removed oldest first, one at a time, until the value fits (R4-8). A backup is a copy of
+ * something that could not be read; the user's current work comes first. Throws the storage's
+ * error when the value does not fit even without them (or storage refused it for another reason).
+ */
+export function setItemWithRoom(key, value) {
+  const backups = listBackups().filter((b) => b.key !== key);
+  for (;;) {
+    try {
+      localStorage.setItem(key, value);
+      return;
+    } catch (e) {
+      if (!isQuotaError(e) || !backups.length) throw e;
+      remove(backups.shift().key);
+    }
+  }
+}
+
 /**
  * Copy a stored value we are about to replace into its own key (`<key>_backup_<ms>`), so a bad
- * load never destroys data. Best effort: returns the backup's key, or null when storage refused
- * the write (usually because it is full).
+ * load never destroys data, and keep only the newest BACKUPS_KEPT of that key: they used to pile
+ * up for good in the ~5 MB quota. Best effort: returns the backup's key, or null when storage
+ * refused the write even after older backups made room.
  */
 export function backupRaw(key, raw) {
-  const backupKey = `${key}_backup_${Date.now()}`;
+  const mine = listBackups().filter((b) => b.of === key);
+  // Never the key of an earlier backup: two in one millisecond would be one.
+  const at = Math.max(Date.now(), ...mine.map((b) => b.at + 1));
+  const backupKey = `${key}_backup_${at}`;
   try {
-    localStorage.setItem(backupKey, raw);
-    return backupKey;
+    setItemWithRoom(backupKey, raw);
   } catch {
     return null;
   }
+  listBackups().filter((b) => b.of === key).slice(0, -BACKUPS_KEPT).forEach((b) => remove(b.key));
+  return backupKey;
+}
+
+/** A backup's value, or null when it is gone (removed to make room, or storage cannot be read). */
+export function readBackup(backupKey) {
+  try { return localStorage.getItem(backupKey); } catch { return null; }
 }
 
 /**

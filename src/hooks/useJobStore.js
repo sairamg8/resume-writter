@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react';
-import { loadSavedList, pendingRecovery, rememberRecovery } from '@/utils/storageBackup';
+import { loadSavedList, pendingRecovery, rememberRecovery, setItemWithRoom } from '@/utils/storageBackup';
 import { newId } from '@/utils/ids';
 import { normalizeJob } from '@/utils/normalizeJob';
 
@@ -48,10 +48,13 @@ function load() {
   return { jobs, recovery };
 }
 
-/** Write the list; null when it reached localStorage, else the error (usually QuotaExceededError). */
+/**
+ * Write the list — when storage is full, old backups make room first (R4-8); null when it
+ * reached localStorage, else the error (usually QuotaExceededError).
+ */
 function persist(jobs) {
   try {
-    localStorage.setItem(KEY, JSON.stringify({ jobs, dataVersion: JOB_VERSION }));
+    setItemWithRoom(KEY, JSON.stringify({ jobs, dataVersion: JOB_VERSION }));
     return null;
   } catch (e) {
     return e;

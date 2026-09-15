@@ -2,15 +2,23 @@
 // (src/utils/storageBackup.js), against an in-memory localStorage. Run: yarn test:unit
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { loadSavedList, pendingRecovery, rememberRecovery } from '../../src/utils/storageBackup.js';
+import {
+  loadSavedList, pendingRecovery, rememberRecovery, backupRaw, setItemWithRoom, readBackup, BACKUPS_KEPT,
+} from '../../src/utils/storageBackup.js';
 
-/** A localStorage stand-in: the Storage methods the app uses. */
+/** A localStorage stand-in: the Storage methods the app uses, and a quota in characters. */
 class MemoryStorage {
-  constructor() { this.map = new Map(); }
+  constructor(quota = Infinity) { this.map = new Map(); this.quota = quota; }
   get length() { return this.map.size; }
   key(i) { return [...this.map.keys()][i] ?? null; }
   getItem(k) { return this.map.has(k) ? this.map.get(k) : null; }
-  setItem(k, v) { this.map.set(k, String(v)); }
+  setItem(k, v) {
+    const used = [...this.map].reduce((n, [key, val]) => n + (key === k ? 0 : key.length + val.length), 0);
+    if (used + k.length + String(v).length > this.quota) {
+      throw Object.assign(new Error('The quota has been exceeded.'), { name: 'QuotaExceededError' });
+    }
+    this.map.set(k, String(v));
+  }
   removeItem(k) { this.map.delete(k); }
 }
 
@@ -72,4 +80,47 @@ test('pendingRecovery / rememberRecovery: the notice is kept per list until dism
   assert.equal(pendingRecovery(KEY), null);
   localStorage.setItem(`${KEY}_recovery`, '{ not json');
   assert.equal(pendingRecovery(KEY), null);
+});
+
+test('backupRaw keeps the newest three backups of a key, however many loads fail (R4-8)', () => {
+  // Before: every failed load added one for good, in the ~5 MB quota (photos are data URLs).
+  const jobsBackup = backupRaw('cpwtcv_jobs_v1', 'jobs copy');
+  const keys = ['one', 'two', 'three', 'four', 'five'].map((raw) => backupRaw(KEY, raw));
+  assert.equal(new Set(keys).size, 5, 'two backups in one millisecond are two keys');
+  assert.equal(BACKUPS_KEPT, 3);
+  assert.deepEqual(backups().map((k) => localStorage.getItem(k)), ['three', 'four', 'five']);
+  assert.equal(localStorage.getItem(jobsBackup), 'jobs copy', 'another key keeps its own');
+  assert.equal(readBackup(keys[4]), 'five');
+  assert.equal(readBackup(keys[0]), null);
+});
+
+test('setItemWithRoom: a save that does not fit removes backups, oldest first, until it does (R4-8)', () => {
+  globalThis.localStorage = new MemoryStorage(230); // the three backups below use 218
+  localStorage.setItem(`${KEY}_backup_1000`, 'a'.repeat(50));
+  localStorage.setItem('cpwtcv_jobs_v1_backup_2000', 'b'.repeat(50));
+  localStorage.setItem(`${KEY}_backup_3000`, 'c'.repeat(50));
+  setItemWithRoom(KEY, 'x'.repeat(100)); // fits once two of the three are gone
+  assert.equal(localStorage.getItem(KEY), 'x'.repeat(100));
+  assert.deepEqual([...localStorage.map.keys()].toSorted(), [KEY, `${KEY}_backup_3000`], 'the newest backup stays');
+});
+
+test('setItemWithRoom: with no backup left to remove, or another error, storage\'s error comes through', () => {
+  globalThis.localStorage = new MemoryStorage(30);
+  localStorage.setItem(`${KEY}_backup_1`, 'small');
+  assert.throws(() => setItemWithRoom(KEY, 'x'.repeat(100)), { name: 'QuotaExceededError' });
+  assert.equal(localStorage.getItem(`${KEY}_backup_1`), null, 'it tried');
+
+  globalThis.localStorage = new MemoryStorage();
+  localStorage.setItem(`${KEY}_backup_1`, 'kept');
+  localStorage.setItem = () => { throw Object.assign(new Error('denied'), { name: 'SecurityError' }); };
+  assert.throws(() => setItemWithRoom(KEY, 'x'), { name: 'SecurityError' });
+  assert.equal(localStorage.getItem(`${KEY}_backup_1`), 'kept', 'a backup is only removed for room');
+});
+
+test('backupRaw: a full storage makes room from older backups for the newest copy', () => {
+  globalThis.localStorage = new MemoryStorage(120);
+  localStorage.setItem('cpwtcv_jobs_v1_backup_5', 'o'.repeat(60));
+  const key = backupRaw(KEY, 'n'.repeat(60));
+  assert.equal(readBackup(key), 'n'.repeat(60));
+  assert.equal(localStorage.getItem('cpwtcv_jobs_v1_backup_5'), null);
 });
