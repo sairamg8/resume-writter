@@ -53,6 +53,8 @@ async function colours(bytes) {
 }
 
 describe('the Sidebar column on its background (R2-2)', () => {
+  // #14532d, #1e40af, #f1f5f9 and #ffffff are the fix (they failed before de61cd8); the navy and
+  // the other dark presets already read, and the navy test pins its colours: guards (R7 review).
   for (const bg of BACKGROUNDS) {
     it(`${bg}: every run in the column reads on it`, async () => {
       const fill = sidebarShades(bg).fill;
