@@ -163,9 +163,10 @@ describe('Sidebar photo ring on the dark panel (R3-3)', () => {
 
 describe('every ring shows on what it sits on (VM3-4)', () => {
   // Rings on a coloured ground — the Sidebar panel, Modern's accent banner, and the letter in
-  // those looks — are checked against it: Accent at 3:1 (WCAG for a graphic), Thin at least as
-  // visible as Classic's Thin on the white page (#e5e7eb, 1.24:1). Only custom colours reach
-  // this: on every preset both rings already clear it (the guard below).
+  // those looks — are checked against it: the Sidebar's Accent at 3:1 (WCAG for a graphic),
+  // Modern's white Accent at 1.5:1 (where it would vanish, V2W2b-0), Thin at least as visible as
+  // Classic's Thin on the white page (#e5e7eb, 1.24:1). Only custom colours reach this: on every
+  // preset the rings already clear it (the guard below).
   const photo = async (template, settings, cover = false) => {
     const r = resume({ template, personal: { photo: PNG, email: 'me@example.com' }, settings: { photoShape: 'circle', ...settings } });
     return drawnPhoto(await (cover ? renderCover(r) : render(r)));
@@ -183,7 +184,7 @@ describe('every ring shows on what it sits on (VM3-4)', () => {
         const thinMin = contrast('#e5e7eb', '#ffffff');
         const wrong = [];
         for (const bg of ['#f8fafc', '#fde68a', '#ffffff']) {
-          for (const [photoBorder, min] of [['thin', thinMin], ['accent', 3]]) {
+          for (const [photoBorder, min] of [['thin', thinMin], ['accent', template === 'sidebar' ? 3 : 1.5]]) {
             // Sidebar's Accent is the accent: a light one, so it has to be moved to show.
             const { colours } = await photo(template, { ...ground(bg), accentColor: template === 'sidebar' ? '#fef9c3' : bg, photoBorder }, cover);
             const ratio = contrast(colours[0], bg);
@@ -194,6 +195,21 @@ describe('every ring shows on what it sits on (VM3-4)', () => {
       });
     }
   }
+
+  // Modern's Accent ring is white, like the banner's name and contacts, and printed white on
+  // every accent until 73e5c3c held it to 3:1: on a mid-tone custom accent — white reads at
+  // 2.15 to 2.77:1 on these — it turned dark grey (#575757 on #22c55e), résumé and letter, with no
+  // edit. It moves only where it would vanish, a pastel below 1.5:1 (V2W2b-0).
+  it('Modern\'s white Accent ring stays white on a mid-tone accent, résumé and letter (V2W2b-0)', async () => {
+    const wrong = [];
+    for (const accentColor of ['#22c55e', '#0ea5e9', '#f59e0b', '#06b6d4', '#f472b6', '#60a5fa']) {
+      for (const cover of [false, true]) {
+        const { colours } = await photo('modern', { accentColor, photoBorder: 'accent' }, cover);
+        if (colours.join() !== '#ffffff') wrong.push(`${cover ? 'letter' : 'résumé'} on ${accentColor}: ${colours}`);
+      }
+    }
+    assert.deepEqual(wrong, []);
+  });
 
   // Guard: on the presets every ring already showed, and prints as it did.
   it('the presets keep their rings: white and half-white on Modern\'s accents, a quarter-white on the panels', async () => {

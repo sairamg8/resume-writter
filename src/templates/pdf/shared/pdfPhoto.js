@@ -5,6 +5,13 @@ import { contrast, readableOn, solid } from './pdfColors';
 const THIN_MIN = contrast('#e5e7eb', '#ffffff');
 
 /**
+ * Below this, the white Accent ring on an accent banner has vanished: on a pastel such as
+ * #fde68a it is 1.25:1, no more than a Thin ring. Above it — a mid-tone such as green #22c55e,
+ * 2.28:1, or sky #0ea5e9, 2.77:1 — it stays white, like the banner's name and contacts (V2W2b-0).
+ */
+const BANNER_RING_MIN = 1.5;
+
+/**
  * Each photo variant's numbers, in its own unit: the résumé templates' in CSS px on a 210 mm A4
  * page (converted to pt), the cover letter's in pt — one table and one code path, so a ring or
  * shape fix reaches every photo (the letter kept its own copy — R3-5).
@@ -27,13 +34,15 @@ const VARIANTS = {
  * translucent border colour wrongly — see pdfColors.js): the "thin" rings are white over the
  * background they sit on, Modern's accent banner or the Sidebar panel.
  *
- * On those two grounds every ring is checked against the ground (VM3-4): an Accent ring below
- * 3:1 — the WCAG figure for a graphic — takes the least-shifted tint that reaches it (readableOn),
- * and a Thin ring one that shows at least as much as Classic's Thin on white (THIN_MIN). That
- * includes an accent the user picked: Blue #2563eb rings the navy panel in #2e69ec, as the
- * Sidebar job title is lightened (FIDB-42). Every preset ground already clears both, so only
- * custom colours change: a light panel, a light banner. On the white page the accent is printed
- * as picked, like every other accent-coloured line there.
+ * On those two grounds every ring is checked against the ground (VM3-4), and one that does not
+ * show takes the least-shifted tint that does (readableOn). On the Sidebar panel the Accent ring
+ * is the accent, held to 3:1 — the WCAG figure for a graphic — as the Sidebar job title is
+ * lightened (FIDB-42): Blue #2563eb rings the navy panel in #2e69ec. On an accent banner it is
+ * white, the colour of the banner's text, and moves only where it would vanish, below
+ * BANNER_RING_MIN (V2W2b-0): 3:1 there turned it dark grey on every mid-tone accent. A Thin ring
+ * shows at least as much as Classic's Thin on white (THIN_MIN). Every preset ground already
+ * clears all three, so only custom colours change: a light panel, a pastel banner. On the white
+ * page the accent is printed as picked, like every other accent-coloured line there.
  *
  * @param {object} settings resolved resume settings
  * @param {string} accent ring colour of the "accent" option
@@ -72,7 +81,8 @@ export function getPdfPhotoStyle(settings, accent, variant = 'classic', opts = {
       : readableOn(solid(`rgba(255,255,255,${opts.lightBorder ? 0.25 : 0.5})`, 1, ground), ground, THIN_MIN);
   } else if (br !== 'none') {
     borderWidth = v.ring;
-    borderColor = ground ? readableOn(solid(accent), ground, 3) : solid(accent);
+    borderColor = !ground ? solid(accent)
+      : readableOn(solid(accent), ground, opts.lightBorder ? 3 : BANNER_RING_MIN);
   }
 
   return {
