@@ -5,10 +5,12 @@
 // marked "Keep as my original" (`keep: true`). When its list holds none of them (every résumé
 // deleted, or only others left) they all come back, each as its latest edited copy. Deleting an
 // original there flags its cloud copy instead of removing it (cloudSyncPlan.js), so a restore on
-// any device brings back the edited version. Until 2026-09-15 what came back was five fictional
-// samples (demo_classic …); the owner asked for their own résumé instead. Samples already in an
-// account are ordinary résumés now: deleted, they are gone for good, and nothing deletes one by
-// itself (project_demo-account.md).
+// any device brings back the edited version; every other deletion puts the id on the account's
+// deletion list, so a listed id was deleted for good ("Stop keeping", then Delete) and never
+// comes back, whatever copy of it a device still holds. Until 2026-09-15 what came back was five
+// fictional samples (demo_classic …); the owner asked for their own résumé instead. Samples
+// already in an account are ordinary résumés now: deleted, they are gone for good, and nothing
+// deletes one by itself (project_demo-account.md).
 
 /** "a@x.com, B@y.com" → ['a@x.com', 'b@y.com'] */
 export function parseAccountList(value) {
@@ -58,19 +60,25 @@ export function rememberCopies(seen, resumes) {
   return seen;
 }
 
-/** The originals among the copies `seen` (rememberCopies), deleted ones included. */
-export function originalsIn(seen) {
-  return [...seen.values()].filter(isOriginal);
+/**
+ * The originals among the copies `seen` (rememberCopies), deleted ones included — but none whose
+ * id is in `gone`: the account's deletion list, what was deleted for good.
+ */
+export function originalsIn(seen, gone = []) {
+  const forGood = new Set(gone);
+  return [...seen.values()].filter((r) => isOriginal(r) && !forGood.has(r.id));
 }
 
 /**
- * The originals to put back: each one's latest copy in `seen`, deep-copied. A copy keeps its own
- * `updatedAt` (R4-4): the sync still writes every résumé that comes back, but a newer edit of it
- * on another device wins the next merge and repairs the cloud. Stamped `now`, a stale device's
- * copies used to beat that edit. A flagged cloud copy comes back without its deleted flag.
+ * The originals to put back: each one's latest copy in `seen`, deep-copied — none in `gone` (the
+ * account's deletion list: a device that last saw a kept copy of one deleted for good elsewhere
+ * wrote it back, V2OWNER-DATA-0). A copy keeps its own `updatedAt` (R4-4): the sync still writes
+ * every résumé that comes back, but a newer edit of it on another device wins the next merge and
+ * repairs the cloud. Stamped `now`, a stale device's copies used to beat that edit. A flagged
+ * cloud copy comes back without its deleted flag.
  */
-export function buildRestore(seen, now) {
-  return originalsIn(seen).map((copy) => {
+export function buildRestore(seen, now, gone = []) {
+  return originalsIn(seen, gone).map((copy) => {
     const { deleted: _deleted, ...r } = JSON.parse(JSON.stringify(copy));
     return { ...r, updatedAt: copy.updatedAt || now };
   });
@@ -82,15 +90,15 @@ export const PRIVATE_ORIGINAL_ID = 'original_private';
 /**
  * The owner's résumé from the git-ignored private file (`data`; the dev server only, useDemoSeed)
  * as the account's original, or null. Only for the account whose e-mail the file carries, only
- * while the account has no original — `seen`, deleted ones included — and only once: not when the
- * list holds its id, nor when it was deleted for good (`deleted`: the cloud's deletion list and
- * this browser's).
+ * while the account has no original — `seen`, deleted ones included, none deleted for good (`gone`:
+ * the cloud's deletion list) — and only once: not when the list holds its id, nor when it was
+ * deleted (`deleted`: the cloud's deletion list and this browser's).
  */
-export function privateOriginal(data, user, { resumes = [], seen = new Map(), deleted = [], now }) {
+export function privateOriginal(data, user, { resumes = [], seen = new Map(), deleted = [], gone = [], now }) {
   if (!data || typeof data !== 'object' || !data.personal || !Array.isArray(data.sections)) return null;
   const email = emailOf(user?.email);
   if (!email || email !== emailOf(data.personal.email)) return null;
-  if (originalsIn(seen).length || seen.has(PRIVATE_ORIGINAL_ID) || deleted.includes(PRIVATE_ORIGINAL_ID)) return null;
+  if (originalsIn(seen, gone).length || seen.has(PRIVATE_ORIGINAL_ID) || deleted.includes(PRIVATE_ORIGINAL_ID)) return null;
   if (resumes.some((r) => r?.id === PRIVATE_ORIGINAL_ID)) return null;
   const { deleted: _deleted, ...r } = JSON.parse(JSON.stringify(data));
   return { ...r, id: PRIVATE_ORIGINAL_ID, keep: true, updatedAt: now };

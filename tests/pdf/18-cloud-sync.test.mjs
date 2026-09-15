@@ -137,13 +137,11 @@ describe('the write queue and the flush (R4-2)', () => {
     assert.deepEqual([...plan.queueChanges(empty(), [b1], [b1, fresh]).writes.keys()], ['resume_new'], 'a new résumé is written');
   });
 
-  it('a flush flags originals, removes the rest and lists them, and takes a restored original off the list', () => {
+  it('a flush flags originals, removes the rest and lists them', () => {
     const demo = { demoAccount: true, kept: new Set(['resume_o']) };
-    const f = plan.planFlush([cv('resume_x')], ['resume_o', 'resume_b', 'demo_a'], new Set(), demo);
-    assert.deepEqual([f.flags, f.hardDeletes, f.listAdd, f.listRemove], [['resume_o'], ['resume_b', 'demo_a'], ['resume_b', 'demo_a'], []], 'a sample is removed for good now');
-    assert.deepEqual(plan.planFlush([cv('resume_x')], ['resume_o'], new Set(), demo).listAdd, [], 'flags only');
-    assert.deepEqual(plan.planFlush([orig('resume_o'), cv('demo_b')], [], new Set(['resume_o', 'demo_b']), demo).listRemove, ['resume_o'], 'a restore revives a listed original, never a sample');
-    assert.deepEqual(plan.planFlush([cv('resume_1')], [], new Set(['resume_1']), demo).listRemove, [], 'a regular résumé written again stays deleted: a stale device cannot resurrect it');
+    const f = plan.planFlush([cv('resume_x')], ['resume_o', 'resume_b', 'demo_a'], demo);
+    assert.deepEqual([f.flags, f.hardDeletes, f.listAdd], [['resume_o'], ['resume_b', 'demo_a'], ['resume_b', 'demo_a']], 'a sample is removed for good now');
+    assert.deepEqual(plan.planFlush([cv('resume_x')], ['resume_o'], demo).listAdd, [], 'flags only');
   });
 });
 
@@ -169,8 +167,8 @@ describe('flushes reach the server in the order they were made (R4-3)', () => {
   // The owner deletes their résumé R and originals 1-4 (flush A: flags plus a removal); then
   // original 5, which brings them all back (flush B: five writes). A used to read the deletion
   // list first, and B committed while it waited: A's flags landed over the restore.
-  const flushA = { uid: 'u', writes: [], deletes: ['resume_r', ...ORIGINALS.slice(0, 4)], kept: new Set(ORIGINALS), listed: new Set(), demoAccount: true };
-  const flushB = { uid: 'u', writes: ORIGINALS.map((id) => orig(id, 9, { name: `Restored ${id}` })), deletes: [], listed: new Set(), demoAccount: true };
+  const flushA = { uid: 'u', writes: [], deletes: ['resume_r', ...ORIGINALS.slice(0, 4)], kept: new Set(ORIGINALS), demoAccount: true };
+  const flushB = { uid: 'u', writes: ORIGINALS.map((id) => orig(id, 9, { name: `Restored ${id}` })), deletes: [], demoAccount: true };
   const flagged = (state) => [...state.docs.values()].filter((r) => r.deleted).map((r) => r.id);
 
   it('a flush hands its batch over at once — nothing is read first — so the restored originals stay', async () => {
@@ -189,13 +187,14 @@ describe('flushes reach the server in the order they were made (R4-3)', () => {
     assert.deepEqual(state.deleted, ['resume_r']);
   });
 
-  it('flushOnce adds removals to the deletion list and takes restored originals off it, in the same batch', async () => {
+  it('flushOnce adds removals to the deletion list in the same batch; an original written again stays listed', async () => {
     const { state, cloud, io: cloudIo } = fakeCloud([cv('resume_x'), orig('orig_a')]);
     cloud.data.set(listPath('u'), { ids: ['orig_b', 'resume_old'] });
-    await flush.flushOnce({ uid: 'u', writes: [cv('resume_x', 2)], deletes: ['orig_a'], kept: new Set(['orig_a']), listed: new Set(), demoAccount: true }, cloudIo);
+    await flush.flushOnce({ uid: 'u', writes: [cv('resume_x', 2)], deletes: ['orig_a'], kept: new Set(['orig_a']), demoAccount: true }, cloudIo);
     assert.deepEqual(state.deleted, ['orig_b', 'resume_old'], 'flags and writes only: the list is left alone');
-    await flush.flushOnce({ uid: 'u', writes: [orig('orig_b', 3)], deletes: ['resume_x'], listed: new Set(['orig_b', 'resume_old']), demoAccount: true }, cloudIo);
-    assert.deepEqual(state.deleted, ['resume_old', 'resume_x'], 'before: orig_b stayed listed, and every device dropped it again');
+    // orig_b was deleted for good; a stale device writes its kept copy back.
+    await flush.flushOnce({ uid: 'u', writes: [orig('orig_b', 3)], deletes: ['resume_x'], demoAccount: true }, cloudIo);
+    assert.deepEqual(state.deleted, ['orig_b', 'resume_old', 'resume_x'], 'before: orig_b came off the list, back on every device (V2OWNER-DATA-0)');
     assert.deepEqual(state.commits.length, 2);
   });
 });
@@ -229,9 +228,8 @@ describe('the owner\'s résumés in an account that is not a demo account (R4-11
     assert.deepEqual([again.hardDeletes, again.listAdd], [[], []], 'nothing left to clean up');
   });
 
-  it('an original written again does not come off its deletion list (only a demo account restores originals)', () => {
-    const f = plan.planFlush([orig('resume_o'), cv('demo_a')], [], new Set(['resume_o', 'demo_a']), { demoAccount: false });
-    assert.deepEqual(f.listRemove, []);
-    assert.deepEqual(plan.planFlush([], ['resume_o'], new Set(), { kept: new Set(['resume_o']) }).flags, [], 'not a demo account unless told so');
+  it('a deleted original is removed, not flagged, unless the flush is told it is a demo account', () => {
+    assert.deepEqual(plan.planFlush([], ['resume_o'], { kept: new Set(['resume_o']) }).hardDeletes, ['resume_o']);
+    assert.deepEqual(plan.planFlush([], ['resume_o'], { kept: new Set(['resume_o']), demoAccount: false }).flags, []);
   });
 });

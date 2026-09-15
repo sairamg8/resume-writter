@@ -59,11 +59,11 @@ describe('the batch the sync commits', () => {
       [resumePath('u', 'resume_b')]: cv('resume_b'),
     });
     cloud.data.set(listPath('u'), { ids: ['resume_old', 'orig_c'] });
-    await io.cloudIo(cloud.fs, cloud.db).commit('u', { sets: [cv('resume_x', 2)], flags: ['orig_a'], hardDeletes: ['resume_b'], listAdd: ['resume_b'], listRemove: ['orig_c'] });
+    await io.cloudIo(cloud.fs, cloud.db).commit('u', { sets: [cv('resume_x', 2)], flags: ['orig_a'], hardDeletes: ['resume_b'], listAdd: ['resume_b'] });
     assert.equal(cloud.commits.length, 1);
     assert.deepEqual(Object.keys(cloud.resumes('u')).toSorted(), ['orig_a', 'resume_x']);
     assert.deepEqual(cloud.resumes('u').orig_a, { ...orig('orig_a', 5, { name: 'My résumé' }), deleted: true }, 'flagged, and marked an original');
-    assert.deepEqual(cloud.doc(listPath('u')).ids, ['resume_old', 'resume_b'], 'added to and taken off, never rewritten');
+    assert.deepEqual(cloud.doc(listPath('u')).ids, ['resume_old', 'orig_c', 'resume_b'], 'added to, never rewritten');
   });
 });
 
@@ -134,11 +134,14 @@ describe('the write queue through the real batch', () => {
 });
 
 describe('the originals read back for a restore (R4-4)', () => {
-  it('readCloudCopies returns the cloud copies with their ids, flagged ones included; null before the first sync', async () => {
+  it('readCloudCopies returns the cloud copies with their ids, flagged ones included, and the deletion list; null before the first sync', async () => {
     const cloud = fakeFirestore({ [resumePath('u', 'orig_a')]: { ...withoutId(orig('orig_a', 20)), deleted: true } });
     const p = page(cloud, { resumes: [] });
     assert.equal(await p.sync.readCloudCopies(['orig_a']), null, 'no account yet');
     await signIn(p, OWNER);
-    assert.deepEqual((await p.sync.readCloudCopies(['orig_a', 'orig_b'])).map((r) => [r.id, r.updatedAt, r.deleted]), [['orig_a', 20, true]]);
+    cloud.data.set(listPath('u'), { ids: ['orig_b'] }); // another device, since this one's first sync
+    const { docs, deleted } = await p.sync.readCloudCopies(['orig_a', 'orig_b']);
+    assert.deepEqual(docs.map((r) => [r.id, r.updatedAt, r.deleted]), [['orig_a', 20, true]]);
+    assert.deepEqual(deleted, ['orig_b'], 'read now, not as the first sync saw it (V2OWNER-DATA-0)');
   });
 });

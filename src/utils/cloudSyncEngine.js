@@ -71,7 +71,6 @@ export function createCloudSync({
     pendingWrites: new Map(),
     pendingDeletes: new Set(),
     pendingKept: new Set(), // the pending deletes that were originals (queueChanges)
-    listed: new Set(), // the cloud deletion list as this browser knows it (read, then added to)
     timer: null,
     retry: null,
     account: null,
@@ -96,7 +95,6 @@ export function createCloudSync({
       s.initialSyncDone = false;
       s.cloudDisabled = false;
       s.prevResumes = null;
-      s.listed = new Set();
       report.status('idle');
       setAccount(null);
       return;
@@ -178,9 +176,11 @@ export function createCloudSync({
       // so it sends what was edited, added or deleted while the batch was on its way.
       store.applyCloudSync({ uid: user.uid, snapshot: appState.resumes, merged: plan.merged, handled: plan.handled, before: planAt });
       s.prevResumes = plan.merged;
-      s.listed = new Set([...cloud.deleted, ...plan.listAdd]);
       s.initialSyncDone = true;
-      const cloudOriginals = cloud.docs.filter(isOriginal).map(({ deleted: _deleted, ...r }) => r);
+      // A listed id was deleted for good, whatever copy of it a stale device wrote back since
+      // (V2OWNER-DATA-0): it is none of the account's originals.
+      const listed = new Set(cloud.deleted);
+      const cloudOriginals = cloud.docs.filter((r) => isOriginal(r) && !listed.has(r.id)).map(({ deleted: _deleted, ...r }) => r);
       setAccount({ uid: user.uid, cloudOriginals, cloudDeleted: [...cloud.deleted] });
       report.status('synced');
       report.synced(new Date());
@@ -244,9 +244,7 @@ export function createCloudSync({
       // In a demo account a deleted original is flagged, not removed: its last copy stays in the
       // cloud so that restoring the originals on any device brings back the edited version.
       // Writing it again (a restore) replaces the whole document, flag included.
-      const sent = await flushOnce({ uid: user.uid, writes, deletes, kept, listed: s.listed, demoAccount: isDemo(user) }, io);
-      sent.listAdd.forEach((id) => s.listed.add(id));
-      sent.listRemove.forEach((id) => s.listed.delete(id));
+      await flushOnce({ uid: user.uid, writes, deletes, kept, demoAccount: isDemo(user) }, io);
       // The cloud has them: the store stops keeping them for the next first sync, which would send
       // them again — over a restore another device made since (R8-1).
       if (deletes.length) store.forgetDeletions(deletes, sentAt);
@@ -271,17 +269,18 @@ export function createCloudSync({
   }
 
   /**
-   * The account's résumés with these `ids` as the cloud holds them now, flagged ones included —
-   * a restore of the originals then brings back an edit another device made after this one's
-   * first sync (R4-4). null when there is no cloud to ask, or it gives no answer within
-   * cloudTimeout — the sync then sends nothing until a first sync gets through again
+   * `{ docs, deleted }`: the account's résumés with these `ids` as the cloud holds them now,
+   * flagged ones included — a restore of the originals then brings back an edit another device
+   * made after this one's first sync (R4-4) — and its deletion list now, so none deleted for good
+   * since comes back (V2OWNER-DATA-0). null when there is no cloud to ask, or it gives no answer
+   * within cloudTimeout — the sync then sends nothing until a first sync gets through again
    * (unreachable, VM4-6). It stops before this resolves, so a restore made on a null answer is
    * never queued.
    */
   function readCloudCopies(ids) {
     if (!s.user || !io || s.cloudDisabled || !s.initialSyncDone || !online()) return Promise.resolve(null);
     const { gen, user } = s;
-    const read = io.readDocs(user.uid, ids);
+    const read = io.readCopies(user.uid, ids);
     const timeout = new Promise((resolve) => { timers.set(() => resolve(null), cloudTimeout); });
     return Promise.race([read, timeout]).catch(() => null).then((answer) => {
       if (answer === null && s.gen === gen && s.user === user && s.initialSyncDone) unreachable();

@@ -101,6 +101,14 @@ test('buildRestore: a restored copy keeps its own time (R4-4); one with none is 
   assert.equal(timeless.updatedAt, 1000);
 });
 
+test('buildRestore / originalsIn: never one on the account\'s deletion list — it was deleted for good (V2OWNER-DATA-0)', () => {
+  // A device that last saw X kept still holds that copy after X was deleted for good elsewhere.
+  const seen = rememberCopies(new Map(), [original('resume_x', 5, 'X'), original('resume_y', 5, 'Y')]);
+  assert.deepEqual(names(buildRestore(seen, 1000, ['resume_x'])), ['Y'], 'before: X came back, and was written back');
+  assert.deepEqual(names(originalsIn(seen, new Set(['resume_x', 'resume_y']))), []);
+  assert.deepEqual(names(buildRestore(seen, 1000)), ['X', 'Y'], 'nothing listed: every original');
+});
+
 test('buildRestore: a flagged cloud copy comes back without its deleted flag', () => {
   const [restored] = buildRestore(new Map([['resume_a', original('resume_a', 7, 'Flagged', { deleted: true })]]), 1000);
   assert.equal(restored.name, 'Flagged');
@@ -138,5 +146,10 @@ describe('privateOriginal: the private file becomes the owner\'s original once',
     assert.equal(into({ resumes: [resume(PRIVATE_ORIGINAL_ID, 3)] }), null, '"Stop keeping" left it an ordinary résumé: its edits stay');
     assert.equal(into({ seen: rememberCopies(new Map(), [resume(PRIVATE_ORIGINAL_ID, 3)]) }), null);
     assert.equal(into({ deleted: [PRIVATE_ORIGINAL_ID] }), null, 'deleted for good: not brought back by the next dev sign-in');
+  });
+
+  test('an original deleted for good is none the account has: the file becomes its original', () => {
+    const seen = rememberCopies(new Map(), [original('resume_a', 3)]);
+    assert.equal(into({ seen, gone: ['resume_a'] })?.id, PRIVATE_ORIGINAL_ID, 'before: the stale kept copy counted');
   });
 });

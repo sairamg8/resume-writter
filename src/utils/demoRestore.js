@@ -15,14 +15,15 @@ import { buildRestore, isDemoAccount, needsRestore, originalsIn, privateOriginal
  */
 export function createDemoRestore({ accounts, ownerResume = null, now = () => Date.now() }) {
   // For the signed-in account: the latest copy of each résumé seen, deleted ones included (the
-  // restore takes the originals among them), the account object last taken in, `restoring` while
-  // the cloud is asked for its copies, `imported` once the private file was looked at (once).
+  // restore takes the originals among them), the ids on its deletion list (`gone`: deleted for
+  // good, never brought back), the account object last taken in, `restoring` while the cloud is
+  // asked for its copies, `imported` once the private file was looked at (once).
   let seed = null;
   // The account a restore may still be applied to: null once it signs out.
   let live = null;
 
   function seedFor(uid) {
-    if (seed?.uid !== uid) seed = { uid, account: null, copies: new Map(), restoring: false, imported: false };
+    if (seed?.uid !== uid) seed = { uid, account: null, copies: new Map(), gone: new Set(), restoring: false, imported: false };
     return seed;
   }
 
@@ -36,6 +37,7 @@ export function createDemoRestore({ accounts, ownerResume = null, now = () => Da
     if (ready && s.account !== account) {
       s.account = account;
       rememberCopies(s.copies, account.cloudOriginals);
+      (account.cloudDeleted || []).forEach((id) => s.gone.add(id));
     }
     rememberCopies(s.copies, appState.resumes);
     if (!ready || s.restoring) return;
@@ -43,24 +45,26 @@ export function createDemoRestore({ accounts, ownerResume = null, now = () => Da
     if (ownerResume && !s.imported) {
       s.imported = true;
       const deleted = [...(account.cloudDeleted || []), ...(appState.deletedIds || [])];
-      const own = privateOriginal(ownerResume, user, { resumes: appState.resumes, seen: s.copies, deleted, now: now() });
+      const own = privateOriginal(ownerResume, user, { resumes: appState.resumes, seen: s.copies, deleted, gone: [...s.gone], now: now() });
       if (own) { store.restoreResumes([own]); return; }
     }
     if (!needsRestore(appState.resumes)) return;
-    const originals = originalsIn(s.copies);
+    const originals = originalsIn(s.copies, s.gone);
     if (!originals.length) return;
     // The cloud's copies first: another device may have edited an original since this one's first
-    // sync (R4-4). Without an answer, the copies this browser knows come back here, and the sync
-    // sends nothing until a first sync gets through again — which brings back the cloud's own
-    // copies instead of writing these over them (VM4-6).
+    // sync (R4-4), or deleted one for good (V2OWNER-DATA-0). Without an answer, the copies this
+    // browser knows come back here, and the sync sends nothing until a first sync gets through
+    // again — which brings back the cloud's own copies instead of writing these over them (VM4-6).
     s.restoring = true;
     Promise.resolve(sync.readCloudCopies?.(originals.map((r) => r.id)))
       .catch(() => null)
       .then((cloud) => {
         s.restoring = false;
         if (seed !== s || live !== s.uid) return; // signed out meanwhile
-        rememberCopies(s.copies, cloud);
-        const back = buildRestore(s.copies, now()); // none, if another device stopped keeping them
+        rememberCopies(s.copies, cloud?.docs);
+        (cloud?.deleted || []).forEach((id) => s.gone.add(id));
+        // None, if another device stopped keeping them or deleted them for good.
+        const back = buildRestore(s.copies, now(), s.gone);
         if (back.length) store.restoreResumes(back);
       });
   }

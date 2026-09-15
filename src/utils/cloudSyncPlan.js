@@ -159,14 +159,14 @@ export function queueChanges({ writes, deletes, kept = new Set() }, prev = [], c
 /**
  * One flush of the queue: `sets` to write, the ids of deleted originals to `flag` (`kept`,
  * queueChanges; a demo account's only), other ids to remove and to add to the deletion list
- * (`listAdd`), and originals to take off it (`listRemove`): a demo account writing again an
- * original that is on the list (`listed`, as this browser knows it — deleted outright by an older
- * build, or while the account was not a demo account) restores it. A regular résumé written
- * again stays listed: a stale device cannot resurrect it — a sample neither, since 2026-09-15.
+ * (`listAdd`). Nothing comes off the list: a résumé written again stays listed, so a stale device
+ * cannot resurrect it — an original neither. A demo account never lists an original it deletes
+ * (it flags it), so a listed one was deleted for good ("Stop keeping", then Delete), and the flush
+ * that took a stale device's kept copy of it off the list brought it back on every device
+ * (V2OWNER-DATA-0).
  */
-export function planFlush(writes, deletes, listed = new Set(), { demoAccount = false, kept = new Set() } = {}) {
+export function planFlush(writes, deletes, { demoAccount = false, kept = new Set() } = {}) {
   const flags = demoAccount ? deletes.filter((id) => kept.has(id)) : [];
   const hardDeletes = deletes.filter((id) => !flags.includes(id));
-  const listRemove = demoAccount ? writes.filter((r) => isOriginal(r) && listed.has(r.id)).map((r) => r.id) : [];
-  return { sets: writes, flags, hardDeletes, listAdd: hardDeletes, listRemove };
+  return { sets: writes, flags, hardDeletes, listAdd: hardDeletes };
 }
