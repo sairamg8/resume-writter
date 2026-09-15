@@ -60,7 +60,17 @@ describe('vite-plugin-owner-resume: the dev server only', () => {
     const file = path.join(tmp, 'mine-build.json');
     fs.writeFileSync(file, JSON.stringify(FAKE));
     const { config } = project(file);
-    const text = await bundleText(config);
+    // Every read of the file during the build (the plugin's `fs` is this module object): a build
+    // that read it and then returned null passed the checks below (V2OWNER-DATA-9).
+    const { readFileSync } = fs;
+    const reads = [];
+    fs.readFileSync = function spy(p, ...rest) {
+      if (typeof p === 'string' && path.resolve(p) === file) reads.push(p);
+      return readFileSync.call(this, p, ...rest);
+    };
+    let text;
+    try { text = await bundleText(config); } finally { fs.readFileSync = readFileSync; }
+    assert.deepEqual(reads, [], 'the build read the private file');
     assert.match(text, /console\.log\(JSON\.stringify\(null\)\)/);
     for (const s of ['Pat Fixture', 'pat@example.com', '555 0199']) assert.equal(text.includes(s), false, s);
     // The control: the same build with the module handing over the file shows every one of them.
