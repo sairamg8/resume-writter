@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import {
-  collection, doc, getDocs, getDoc, writeBatch,
+  arrayRemove, arrayUnion, collection, doc, getDocFromServer, getDocsFromServer, writeBatch,
 } from 'firebase/firestore';
 import { db } from '@/utils/firebase';
 import { isDemoAccount } from '@/utils/demoSeed';
@@ -9,7 +9,9 @@ import { cloudIo } from '@/utils/cloudSyncIo';
 import { createCloudSync } from '@/utils/cloudSyncEngine';
 
 /** The real Firestore calls (cloudSyncIo); null in a build without a cloud. */
-const io = db ? cloudIo({ collection, doc, getDocs, getDoc, writeBatch }, db) : null;
+const io = db
+  ? cloudIo({ collection, doc, getDocsFromServer, getDocFromServer, writeBatch, arrayUnion, arrayRemove }, db)
+  : null;
 
 /**
  * The cloud sync (utils/cloudSyncEngine.js) wired to React: the signed-in user, the browser's

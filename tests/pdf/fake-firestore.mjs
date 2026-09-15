@@ -5,7 +5,10 @@
 //
 // A batch is applied when commit() is CALLED — the order in which the server receives one
 // client's batches — and commit()'s promise settles when the test lets it (`cloud.hold`), as the
-// server's acknowledgement does. A read can be held or failed the same way.
+// server's acknowledgement does. A read can be held or failed the same way; `cloud.afterRead`
+// runs once a read has its answer (another device writing before this one's batch), and
+// `cloud.goOffline()` makes getDocs/getDoc answer from a stale cache, as the SDK does when it
+// cannot reach the server, while getDocsFromServer/getDocFromServer fail.
 
 import { withDeletion, withoutDeletions } from '../../src/utils/localDeletions.js';
 
@@ -26,27 +29,39 @@ export async function settle(turns = 5) {
 }
 
 /**
- * `docs`: { path: data } to start with. Returns { fs, db, data, commits, hold, fail, doc(path),
- * resumes(uid) }: `hold.read` / `hold.commit` = a promise the next reads / commits wait for;
- * `fail.read` / `fail.commit` = an error they throw instead (cleared by the test).
+ * `docs`: { path: data } to start with. Returns { fs, db, data, commits, reads, hold, fail,
+ * afterRead, goOffline(), doc(path), resumes(uid) }: `hold.read` / `hold.commit` = a promise the
+ * next reads / commits wait for; `fail.read` / `fail.commit` = an error they throw instead
+ * (cleared by the test); `reads` = the paths read, in order.
  */
 export function fakeFirestore(docs = {}) {
   const data = new Map(Object.entries(docs).map(([p, v]) => [p, clone(v)]));
   const commits = [];
+  const reads = [];
   const hold = { read: null, commit: null };
   const fail = { read: null, commit: null };
   const db = { fake: true };
+  let cache = null; // set by goOffline(): what the SDK's cache holds
 
-  const snap = (path) => {
-    const value = data.get(path);
-    return { id: path.split('/').at(-1), exists: () => value !== undefined, data: () => clone(value), metadata: { fromCache: false } };
+  const snapFrom = (source, fromCache) => (path) => {
+    const value = source.get(path);
+    return { id: path.split('/').at(-1), exists: () => value !== undefined, data: () => clone(value), metadata: { fromCache } };
   };
-  async function read(get) {
+  const unavailable = () => Object.assign(new Error('Failed to get documents from server. (However, these documents may exist in the local cache.)'), { code: 'unavailable' });
+  async function read(path, get, { server = false } = {}) {
+    reads.push(path);
     if (fail.read) throw fail.read;
     if (hold.read) await hold.read;
     if (fail.read) throw fail.read;
-    return get();
+    if (cache && server) throw unavailable();
+    const answer = get(cache ? snapFrom(cache, true) : snapFrom(data, false), cache || data);
+    api.afterRead?.(path);
+    return answer;
   }
+  const queryDocs = (col) => (snap, source) => ({
+    docs: [...source.keys()].filter((p) => p.slice(0, p.lastIndexOf('/')) === col.path).map(snap),
+    metadata: { fromCache: Boolean(cache) },
+  });
   const transform = (current, value) => {
     if (!value || typeof value !== 'object' || !value.__transform) return clone(value);
     const list = Array.isArray(current) ? current : [];
@@ -64,11 +79,10 @@ export function fakeFirestore(docs = {}) {
   const fs = {
     collection: (_db, ...segs) => ({ path: segs.join('/') }),
     doc: (_db, ...segs) => ({ path: segs.join('/'), id: segs.at(-1) }),
-    getDocs: (col) => read(() => ({
-      docs: [...data.keys()].filter((p) => p.slice(0, p.lastIndexOf('/')) === col.path).map(snap),
-      metadata: { fromCache: false },
-    })),
-    getDoc: (ref) => read(() => snap(ref.path)),
+    getDocs: (col) => read(col.path, queryDocs(col)),
+    getDoc: (ref) => read(ref.path, (snap) => snap(ref.path)),
+    getDocsFromServer: (col) => read(col.path, queryDocs(col), { server: true }),
+    getDocFromServer: (ref) => read(ref.path, (snap) => snap(ref.path), { server: true }),
     arrayUnion: (...items) => ({ __transform: 'union', items }),
     arrayRemove: (...items) => ({ __transform: 'remove', items }),
     writeBatch: () => {
@@ -86,16 +100,17 @@ export function fakeFirestore(docs = {}) {
       };
     },
   };
-  fs.getDocsFromServer = fs.getDocs;
-  fs.getDocFromServer = fs.getDoc;
-
-  return {
-    fs, db, data, commits, hold, fail,
+  const api = {
+    fs, db, data, commits, reads, hold, fail,
+    afterRead: null,
+    /** From now on the server cannot be reached; the cache holds the account as it is now. */
+    goOffline() { cache = new Map([...data].map(([p, v]) => [p, clone(v)])); },
     doc: (path) => clone(data.get(path)),
     /** The account's résumé documents by id, e.g. { resume_a: {...} }. */
     resumes: (uid) => Object.fromEntries([...data].filter(([p]) => p.startsWith(`users/${uid}/resumes/`))
       .map(([p, v]) => [p.split('/').at(-1), clone(v)])),
   };
+  return api;
 }
 
 /** Timers the test fires by hand: `fire()` runs every one due, then lets the promises settle. */

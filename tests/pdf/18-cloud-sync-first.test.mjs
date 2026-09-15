@@ -68,3 +68,71 @@ describe('work done while the first sync runs is kept (R8-2)', () => {
     assert.equal(cloud.commits.length, before, 'and the watcher has nothing to send');
   });
 });
+
+describe('the first sync writes what it must, never back what it read (R8-4)', () => {
+  it('an entry another device puts on the deletion list meanwhile is kept, and its résumé stays deleted', async () => {
+    const cloud = fakeFirestore({
+      [resumePath('u', 'resume_r')]: cv('resume_r', 5), [resumePath('u', 'resume_s')]: cv('resume_s', 5),
+      [listPath('u')]: { ids: ['resume_x'] },
+    });
+    // The laptop deleted R offline, at the version the cloud holds.
+    const laptop = page(cloud, { resumes: [], deletedIds: ['resume_r'], deletedInfo: { resume_r: { version: 5, at: 1 } } });
+    // The phone deletes S once the laptop has read the account (both reads), before its batch.
+    let reads = 0;
+    cloud.afterRead = () => {
+      if ((reads += 1) !== 2) return;
+      cloud.data.delete(resumePath('u', 'resume_s'));
+      cloud.data.set(listPath('u'), { ids: ['resume_x', 'resume_s'] });
+    };
+    laptop.sync.start(USER);
+    await settle();
+    assert.deepEqual(cloud.doc(listPath('u')).ids.toSorted(), ['resume_r', 'resume_s', 'resume_x'], 'before: [x, r] — S fell off the list');
+    assert.equal(cloud.resumes('u').resume_s, undefined, 'before: the copy read was written back');
+  });
+
+  it('a résumé edited on another device after the read is not overwritten with the copy read', async () => {
+    const cloud = fakeFirestore({
+      [resumePath('u', 'resume_a')]: cv('resume_a', 5), [resumePath('u', 'resume_b')]: cv('resume_b', 3),
+    });
+    const laptop = page(cloud, { resumes: [cv('resume_a', 5), cv('resume_b', 7, { name: 'Newer here' }), cv('resume_c', 2)] });
+    cloud.afterRead = () => cloud.data.set(resumePath('u', 'resume_a'), cv('resume_a', 9, { name: 'Edited on the phone' }));
+    laptop.sync.start(USER);
+    await settle();
+    const docs = cloud.resumes('u');
+    assert.equal(docs.resume_a.name, 'Edited on the phone', 'before: the copy read at 5 was written over it');
+    assert.equal(docs.resume_b.name, 'Newer here', 'a newer copy here is written');
+    assert.ok(docs.resume_c, 'and one the account lacks');
+  });
+
+  it('a first sync that cannot reach the server plans nothing from the cache and writes nothing', async () => {
+    const cloud = fakeFirestore({
+      [resumePath('u', 'resume_a')]: cv('resume_a', 1), [resumePath('u', 'resume_r')]: cv('resume_r', 5),
+    });
+    cloud.goOffline(); // the cache holds the account as it was
+    cloud.data.set(resumePath('u', 'resume_a'), cv('resume_a', 9, { name: 'Edited on the phone' }));
+    cloud.data.set(listPath('u'), { ids: ['resume_s'] });
+    const laptop = page(cloud, { resumes: [cv('resume_a', 1)], deletedIds: ['resume_r'], deletedInfo: { resume_r: { version: 5, at: 1 } } });
+    laptop.sync.start(USER);
+    await settle();
+    assert.equal(cloud.commits.length, 0, 'before: planned from the cache and committed');
+    assert.equal(cloud.resumes('u').resume_a.name, 'Edited on the phone');
+    assert.deepEqual(cloud.doc(listPath('u')).ids, ['resume_s']);
+    assert.deepEqual(laptop.store.state.deletedIds, ['resume_r'], 'kept for the next sync');
+    assert.equal(laptop.seen.status, 'error');
+  });
+});
+
+describe('a flush adds to the deletion list without reading it (R8-4)', () => {
+  it('the list is never read, and an entry another device wrote is kept', async () => {
+    const cloud = fakeFirestore({ [resumePath('u', 'resume_a')]: cv('resume_a'), [listPath('u')]: { ids: ['resume_x'] } });
+    const laptop = page(cloud, { resumes: [cv('resume_a')] });
+    laptop.sync.start(USER);
+    await settle();
+    cloud.data.set(listPath('u'), { ids: ['resume_x', 'resume_s'] }); // the phone, since
+    const readsBefore = cloud.reads.length;
+    await laptop.remove('resume_a');
+    await laptop.timers.fire();
+    assert.deepEqual(cloud.reads.slice(readsBefore), [], 'before: read, then set whole — whatever landed in between was lost');
+    assert.deepEqual(cloud.doc(listPath('u')).ids, ['resume_x', 'resume_s', 'resume_a']);
+  });
+});

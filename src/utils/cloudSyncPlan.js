@@ -9,7 +9,7 @@
 // other account deletes a sample like any résumé (R4-11): the samples reach it only through a
 // shared browser — local résumés carry over to whichever account signs in next — and a flag
 // kept the owner's sample content in that account's cloud for good.
-import { isDemoId, nextTombstones } from '@/utils/demoSeed';
+import { isDemoId } from '@/utils/demoSeed';
 import { mergeResumeLists } from '@/utils/syncMerge';
 import { withoutDeletions } from '@/utils/localDeletions';
 
@@ -30,11 +30,14 @@ const asEntry = (e) => (typeof e === 'string' ? { id: e, version: null } : e);
  *   cloudDeleted  the account's deletion list
  *   demoAccount   the account is a demo account (its deleted samples are flagged)
  * Returns
- *   merged       the list to write and load: newer copy wins, deletions left out
+ *   merged       the list to load: newer copy wins, deletions left out
+ *   sets         the merged résumés the account lacks or holds an older copy of → write them.
+ *                Only those: writing back a copy just read put it over an edit another device
+ *                made before the batch arrived (R8-4)
  *   flags        samples deleted here that the cloud still holds whole → flag them
  *   hardDeletes  other résumés deleted here that the cloud still holds → remove them; outside
  *                a demo account also every flagged sample (flagged before R4-11)
- *   tombstones   the new deletion list when it changes, else null
+ *   listAdd      ids to add to the deletion list (the removals)
  *   handled      the ids of the deletions dealt with — the store forgets them (afterSync);
  *                another account's are left out of the merge and kept
  * A deletion is sent only when the cloud's copy is not newer than the version deleted: one made
@@ -68,13 +71,10 @@ export function planInitialSync({ local = [], deletions = [], cloud = [], cloudD
     ...(demoAccount ? [] : flagged),
   ];
 
-  return {
-    merged: mergeResumeLists(local, docs, excluded),
-    flags,
-    hardDeletes,
-    tombstones: hardDeletes.length ? nextTombstones(cloudDeleted, hardDeletes, []) : null,
-    handled,
-  };
+  const merged = mergeResumeLists(local, docs, excluded);
+  // `!(>=)`: a copy with no time of its own, on either side, is written.
+  const sets = merged.filter((r) => { const c = byId.get(r.id); return !c || c.deleted || !(c.updatedAt >= r.updatedAt); });
+  return { merged, sets, flags, hardDeletes, listAdd: hardDeletes, handled };
 }
 
 /**
@@ -141,18 +141,14 @@ export function queueChanges({ writes, deletes }, prev = [], current = []) {
 
 /**
  * One flush of the queue: `sets` to write, sample ids to `flag` (a demo account's only), other
- * ids to remove, and whether the deletion list must be read and rewritten — when something is
- * removed, or when a demo account writes again a sample on the list (deleted outright by an
- * older build): a restore takes it off (nextTombstones).
+ * ids to remove and to add to the deletion list (`listAdd`), and samples to take off it
+ * (`listRemove`): a demo account writing again a sample that is on the list (`listed`, as this
+ * browser knows it — deleted outright by an older build) restores it. A regular résumé written
+ * again stays listed: a stale device cannot resurrect it.
  */
-export function planFlush(writes, deletes, tombstones = new Set(), { demoAccount = false } = {}) {
+export function planFlush(writes, deletes, listed = new Set(), { demoAccount = false } = {}) {
   const flags = demoAccount ? deletes.filter(isDemoId) : [];
   const hardDeletes = deletes.filter((id) => !flags.includes(id));
-  return {
-    sets: writes,
-    flags,
-    hardDeletes,
-    rewriteTombstones: hardDeletes.length > 0
-      || (demoAccount && writes.some((r) => isDemoId(r.id) && tombstones.has(r.id))),
-  };
+  const listRemove = demoAccount ? writes.map((r) => r.id).filter((id) => isDemoId(id) && listed.has(id)) : [];
+  return { sets: writes, flags, hardDeletes, listAdd: hardDeletes, listRemove };
 }

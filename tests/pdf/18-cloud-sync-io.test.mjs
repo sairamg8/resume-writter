@@ -53,16 +53,17 @@ describe('reading the account (R4-5)', () => {
 });
 
 describe('the batch the sync commits', () => {
-  it('writes whole résumés, flags samples keeping their content, removes the rest, lists them — in one commit', async () => {
+  it('writes whole résumés, flags samples keeping their content, removes the rest, updates the list — in one commit', async () => {
     const cloud = fakeFirestore({
       [resumePath('u', 'demo_a')]: cv('demo_a', 5, { name: 'Edited sample' }),
       [resumePath('u', 'resume_b')]: cv('resume_b'),
     });
-    await io.cloudIo(cloud.fs, cloud.db).commit('u', { sets: [cv('resume_x', 2)], flags: ['demo_a'], hardDeletes: ['resume_b'], tombstones: ['resume_b'] });
+    cloud.data.set(listPath('u'), { ids: ['resume_old', 'demo_c'] });
+    await io.cloudIo(cloud.fs, cloud.db).commit('u', { sets: [cv('resume_x', 2)], flags: ['demo_a'], hardDeletes: ['resume_b'], listAdd: ['resume_b'], listRemove: ['demo_c'] });
     assert.equal(cloud.commits.length, 1);
     assert.deepEqual(Object.keys(cloud.resumes('u')).toSorted(), ['demo_a', 'resume_x']);
     assert.deepEqual(cloud.resumes('u').demo_a, { ...cv('demo_a', 5, { name: 'Edited sample' }), deleted: true });
-    assert.deepEqual(cloud.doc(listPath('u')).ids, ['resume_b']);
+    assert.deepEqual(cloud.doc(listPath('u')).ids, ['resume_old', 'resume_b'], 'added to and taken off, never rewritten');
   });
 });
 

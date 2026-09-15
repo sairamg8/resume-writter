@@ -30,7 +30,7 @@ describe('first sync after sign-in (R4-1)', () => {
     const p = plan.planInitialSync({ local: [cv('resume_b')], deletions: del('resume_a'), cloud: [cv('resume_a'), cv('resume_b')], cloudDeleted: [] });
     assert.deepEqual(ids(p.merged), ['resume_b']);
     assert.deepEqual(p.hardDeletes, ['resume_a']);
-    assert.deepEqual(p.tombstones, ['resume_a']);
+    assert.deepEqual(p.listAdd, ['resume_a']);
     // Listed and flagged ids stay out of every later merge.
     const other = plan.planInitialSync({ local: [cv('resume_a'), cv('resume_b')], cloud: [cv('resume_b')], cloudDeleted: ['resume_a'] });
     assert.deepEqual(ids(other.merged), ['resume_b'], 'the deletion list keeps it off every device');
@@ -40,7 +40,7 @@ describe('first sync after sign-in (R4-1)', () => {
     const p = plan.planInitialSync({ local: [cv('resume_b')], deletions: [{ id: 'demo_classic', version: 5 }], cloud: [cv('demo_classic', 5), cv('resume_b')], cloudDeleted: [], demoAccount: true });
     assert.deepEqual(p.flags, ['demo_classic']);
     assert.deepEqual(p.hardDeletes, []);
-    assert.equal(p.tombstones, null, 'samples never go on the deletion list');
+    assert.deepEqual(p.listAdd, [], 'samples never go on the deletion list');
     const again = plan.planInitialSync({ local: p.merged, cloud: [cv('demo_classic', 5, { deleted: true }), cv('resume_b')], demoAccount: true });
     assert.deepEqual(ids(again.merged), ['resume_b'], 'and it stays deleted');
   });
@@ -51,7 +51,7 @@ describe('first sync after sign-in (R4-1)', () => {
       local: [cv('resume_b')], deletions: del('resume_local_only', 'resume_old', 'demo_minimal', 'resume_local_only'),
       cloud, cloudDeleted: ['resume_old'], demoAccount: true,
     });
-    assert.deepEqual([p.flags, p.hardDeletes, p.tombstones], [[], [], null]);
+    assert.deepEqual([p.flags, p.hardDeletes, p.listAdd], [[], [], []]);
     assert.deepEqual(ids(p.merged), ['resume_b']);
   });
 
@@ -64,7 +64,8 @@ describe('first sync after sign-in (R4-1)', () => {
     });
     assert.deepEqual(ids(p.merged), ['resume_a', 'resume_cloud', 'resume_local']);
     assert.equal(p.merged.find((r) => r.id === 'resume_a').name, 'Cloud');
-    assert.deepEqual([p.flags, p.hardDeletes, p.tombstones], [[], [], null]);
+    assert.deepEqual([p.flags, p.hardDeletes, p.listAdd], [[], [], []]);
+    assert.deepEqual(ids(p.sets), ['resume_local'], 'only what the account lacks or holds older (R8-4)');
   });
 });
 
@@ -104,25 +105,23 @@ describe('the write queue and the flush (R4-2)', () => {
     assert.deepEqual([...plan.queueChanges(empty(), [b1], [b1, fresh]).writes.keys()], ['resume_new'], 'a new résumé is written');
   });
 
-  it('a flush flags samples, removes the rest, and rewrites the deletion list only when it must', () => {
+  it('a flush flags samples, removes the rest and lists them, and takes a restored sample off the list', () => {
     const demo = { demoAccount: true };
     const f = plan.planFlush([cv('resume_x')], ['demo_a', 'resume_b'], new Set(), demo);
-    assert.deepEqual([f.flags, f.hardDeletes, f.rewriteTombstones], [['demo_a'], ['resume_b'], true]);
-    assert.equal(plan.planFlush([cv('resume_x')], ['demo_a'], new Set(), demo).rewriteTombstones, false, 'flags only');
-    assert.equal(plan.planFlush([cv('demo_a')], [], new Set(['demo_a']), demo).rewriteTombstones, true, 'a restore revives a listed sample');
+    assert.deepEqual([f.flags, f.hardDeletes, f.listAdd, f.listRemove], [['demo_a'], ['resume_b'], ['resume_b'], []]);
+    assert.deepEqual(plan.planFlush([cv('resume_x')], ['demo_a'], new Set(), demo).listAdd, [], 'flags only');
+    assert.deepEqual(plan.planFlush([cv('demo_a'), cv('demo_b')], [], new Set(['demo_a']), demo).listRemove, ['demo_a'], 'a restore revives a listed sample');
+    assert.deepEqual(plan.planFlush([cv('resume_1')], [], new Set(['resume_1']), demo).listRemove, [], 'a regular résumé written again stays deleted: a stale device cannot resurrect it');
   });
 });
 
 /**
  * A cloud for flushOnce: the app's Firestore calls over a fake Firestore holding `docs` in account
- * 'u'. The deletion-list read waits for `hold` (a promise) when given — the network round trip
- * the race needs. `state` shows the account: docs (Map id → résumé), deleted (the list), commits
- * ('restore' for a batch that writes résumés, else 'delete').
+ * 'u'. `state` shows the account: docs (Map id → résumé), deleted (the list), commits ('restore'
+ * for a batch that writes résumés, else 'delete').
  */
-function fakeCloud(docs, { hold } = {}) {
+function fakeCloud(docs) {
   const cloud = fakeFirestore(Object.fromEntries(docs.map((r) => [resumePath('u', r.id), r])));
-  const real = io.cloudIo(cloud.fs, cloud.db);
-  const readDeletions = async (uid) => { await hold; return real.readDeletions(uid); };
   const state = {
     get docs() { return new Map(Object.entries(cloud.resumes('u'))); },
     get deleted() { return cloud.doc(listPath('u'))?.ids || []; },
@@ -130,44 +129,32 @@ function fakeCloud(docs, { hold } = {}) {
       return cloud.commits.map((ops) => (ops.some(([op, path, , opt]) => op === 'set' && path.includes('/resumes/') && !opt) ? 'restore' : 'delete'));
     },
   };
-  return { state, io: { ...real, readDeletions } };
+  return { state, cloud, io: io.cloudIo(cloud.fs, cloud.db) };
 }
 
-describe('flushes run one at a time (R4-3)', () => {
+describe('flushes reach the server in the order they were made (R4-3)', () => {
   const SAMPLES = ['demo_1', 'demo_2', 'demo_3', 'demo_4', 'demo_5'];
-  const ticks = async (n = 10) => { for (let i = 0; i < n; i++) await Promise.resolve(); };
-  // The owner deletes their résumé R and samples 1-4 (flush A: flags plus a removal, so it reads
-  // the deletion list first); then sample 5, which brings the whole set back (flush B: five writes).
-  const flushA = { uid: 'u', writes: [], deletes: ['resume_r', 'demo_1', 'demo_2', 'demo_3', 'demo_4'], tombstones: new Set(), demoAccount: true };
-  const flushB = { uid: 'u', writes: SAMPLES.map((id) => cv(id, 9, { name: `Restored ${id}` })), deletes: [], tombstones: new Set(), demoAccount: true };
+  // The owner deletes their résumé R and samples 1-4 (flush A: flags plus a removal); then sample
+  // 5, which brings the whole set back (flush B: five writes). A used to read the deletion list
+  // first, and B committed while it waited: A's flags landed over the restore.
+  const flushA = { uid: 'u', writes: [], deletes: ['resume_r', 'demo_1', 'demo_2', 'demo_3', 'demo_4'], listed: new Set(), demoAccount: true };
+  const flushB = { uid: 'u', writes: SAMPLES.map((id) => cv(id, 9, { name: `Restored ${id}` })), deletes: [], listed: new Set(), demoAccount: true };
   const flagged = (state) => [...state.docs.values()].filter((r) => r.deleted).map((r) => r.id);
 
-  it('a flush still reading the deletion list commits before the next starts: the restored samples stay', async () => {
-    const network = deferred();
-    const { state, io } = fakeCloud([...SAMPLES.map((id) => cv(id)), cv('resume_r')], { hold: network.promise });
-    const run = flush.serialQueue();
-    const a = run(() => flush.flushOnce(flushA, io));
-    const b = run(() => flush.flushOnce(flushB, io));
-    await ticks(); // flush B would commit here if it did not wait for A
-    assert.deepEqual(state.commits, [], 'nothing commits while A waits on the network');
-    network.resolve();
+  it('a flush hands its batch over at once — nothing is read first — so the restored samples stay', async () => {
+    const { state, cloud, io: cloudIo } = fakeCloud([...SAMPLES.map((id) => cv(id)), cv('resume_r')]);
+    const ack = deferred();
+    cloud.hold.commit = ack.promise; // the server answers later
+    const a = flush.flushOnce(flushA, cloudIo);
+    assert.deepEqual(state.commits, ['delete'], 'A is with the server before anything else runs');
+    const b = flush.flushOnce(flushB, cloudIo);
+    assert.deepEqual(state.commits, ['delete', 'restore'], 'in the order they were made');
+    assert.deepEqual(cloud.reads, [], 'no read, so no window between a read and a write');
+    ack.resolve();
     await Promise.all([a, b]);
-    assert.deepEqual(state.commits, ['delete', 'restore'], 'in the order they were queued');
     assert.deepEqual(flagged(state), [], 'no sample is left flagged as deleted');
     assert.deepEqual(ids([...state.docs.values()]), SAMPLES);
     assert.deepEqual(state.deleted, ['resume_r']);
-  });
-
-  it('the race is real: the same two flushes side by side leave four samples flagged (what happened before)', async () => {
-    const network = deferred();
-    const { state, io } = fakeCloud([...SAMPLES.map((id) => cv(id)), cv('resume_r')], { hold: network.promise });
-    const a = flush.flushOnce(flushA, io);
-    const b = flush.flushOnce(flushB, io);
-    await ticks();
-    network.resolve();
-    await Promise.all([a, b]);
-    assert.deepEqual(state.commits, ['restore', 'delete']);
-    assert.deepEqual(flagged(state), ['demo_1', 'demo_2', 'demo_3', 'demo_4']);
   });
 
   it('a failed flush does not stop the ones after it, and each settles as its own task did', async () => {
@@ -180,15 +167,14 @@ describe('flushes run one at a time (R4-3)', () => {
     assert.deepEqual(order, ['a', 'b']);
   });
 
-  it('flushOnce reads the deletion list only when it changes, and writes it in the same batch', async () => {
-    const { state, io } = fakeCloud([cv('resume_x'), cv('demo_a')]);
-    let reads = 0;
-    const counted = { ...io, readDeletions: (uid) => { reads += 1; return io.readDeletions(uid); } };
-    assert.equal(await flush.flushOnce({ uid: 'u', writes: [cv('resume_x', 2)], deletes: ['demo_a'], tombstones: new Set(), demoAccount: true }, counted), null);
-    assert.equal(reads, 0, 'flags and writes only: no read');
-    assert.deepEqual(await flush.flushOnce({ uid: 'u', writes: [], deletes: ['resume_x'], tombstones: new Set() }, counted), ['resume_x']);
-    assert.equal(reads, 1);
-    assert.deepEqual([state.deleted, state.commits.length], [['resume_x'], 2]);
+  it('flushOnce adds removals to the deletion list and takes restored samples off it, in the same batch', async () => {
+    const { state, cloud, io: cloudIo } = fakeCloud([cv('resume_x'), cv('demo_a')]);
+    cloud.data.set(listPath('u'), { ids: ['demo_b', 'resume_old'] });
+    await flush.flushOnce({ uid: 'u', writes: [cv('resume_x', 2)], deletes: ['demo_a'], listed: new Set(), demoAccount: true }, cloudIo);
+    assert.deepEqual(state.deleted, ['demo_b', 'resume_old'], 'flags and writes only: the list is left alone');
+    await flush.flushOnce({ uid: 'u', writes: [cv('demo_b', 3)], deletes: ['resume_x'], listed: new Set(['demo_b', 'resume_old']), demoAccount: true }, cloudIo);
+    assert.deepEqual(state.deleted, ['resume_old', 'resume_x']);
+    assert.deepEqual(state.commits.length, 2);
   });
 });
 
@@ -198,8 +184,8 @@ describe('sample résumés in an account that is not a demo account (R4-11)', ()
   // a deleted sample's last copy for a restore; anyone else deletes it like any résumé.
   it('a flush removes a deleted sample for good and lists it as deleted', async () => {
     const { state, io } = fakeCloud([cv('demo_classic', 3, { name: 'Owner content' }), cv('resume_b')]);
-    const job = { uid: 'u', writes: [], deletes: ['demo_classic'], tombstones: new Set(), demoAccount: false }; // the friend's account
-    assert.deepEqual(await flush.flushOnce(job, io), ['demo_classic']);
+    const job = { uid: 'u', writes: [], deletes: ['demo_classic'], listed: new Set(), demoAccount: false }; // the friend's account
+    assert.deepEqual((await flush.flushOnce(job, io)).listAdd, ['demo_classic']);
     assert.deepEqual(ids([...state.docs.values()]), ['resume_b'], 'before: flagged, and kept in the cloud for good');
     assert.deepEqual(state.deleted, ['demo_classic']);
   });
@@ -207,15 +193,15 @@ describe('sample résumés in an account that is not a demo account (R4-11)', ()
   it('the first sync removes samples an older build flagged, and a sample deleted while signed out', () => {
     const cloud = [cv('demo_classic', 3, { deleted: true }), cv('demo_modern', 3), cv('resume_b')];
     const p = plan.planInitialSync({ local: [cv('resume_b')], deletions: [{ id: 'demo_modern', version: 3 }], cloud, cloudDeleted: [], demoAccount: false });
-    assert.deepEqual([p.flags, p.hardDeletes.toSorted(), p.tombstones.toSorted()], [[], ['demo_classic', 'demo_modern'], ['demo_classic', 'demo_modern']]);
+    assert.deepEqual([p.flags, p.hardDeletes.toSorted(), p.listAdd.toSorted()], [[], ['demo_classic', 'demo_modern'], ['demo_classic', 'demo_modern']]);
     assert.deepEqual(ids(p.merged), ['resume_b']);
-    const again = plan.planInitialSync({ local: p.merged, cloud: [cv('resume_b')], cloudDeleted: p.tombstones, demoAccount: false });
-    assert.deepEqual([again.hardDeletes, again.tombstones], [[], null], 'nothing left to clean up');
+    const again = plan.planInitialSync({ local: p.merged, cloud: [cv('resume_b')], cloudDeleted: p.listAdd, demoAccount: false });
+    assert.deepEqual([again.hardDeletes, again.listAdd], [[], []], 'nothing left to clean up');
   });
 
   it('a sample written again does not come off its deletion list (only a demo account restores samples)', () => {
     const f = plan.planFlush([cv('demo_a')], [], new Set(['demo_a']), { demoAccount: false });
-    assert.equal(f.rewriteTombstones, false);
+    assert.deepEqual(f.listRemove, []);
     assert.deepEqual(plan.planFlush([], ['demo_a'], new Set()).flags, [], 'not a demo account unless told so');
   });
 });

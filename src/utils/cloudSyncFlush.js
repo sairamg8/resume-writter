@@ -2,24 +2,17 @@
 // and the queue that runs flushes one at a time. No Firebase here, so tests run both against a
 // fake cloud (tests/pdf/18-cloud-sync.test.mjs); useCloudSync passes the real calls.
 import { planFlush } from '@/utils/cloudSyncPlan';
-import { nextTombstones } from '@/utils/demoSeed';
 
 /**
- * Send one flush of account `uid`'s queue — `writes` (résumés), `deletes` (ids), `tombstones`
- * (the deletion list as last read or written), `demoAccount` (planFlush) — as ONE batch:
- *   io.commit(uid, { sets, flags, hardDeletes, tombstones })   tombstones null = left alone
- * When the deletion list must change (planFlush) it is read first: io.readDeletions(uid) → ids.
- * Resolves to the deletion list written, or null.
+ * Send one flush of account `uid`'s queue — `writes` (résumés), `deletes` (ids), `listed` (the
+ * deletion list as this browser knows it), `demoAccount` (planFlush) — as ONE batch:
+ * io.commit(uid, plan). Nothing is read first: the batch adds to and takes off the deletion list
+ * itself (R8-4). Resolves to the plan sent once the server has it.
  */
-export async function flushOnce({ uid, writes, deletes, tombstones, demoAccount = false }, io) {
-  const plan = planFlush(writes, deletes, tombstones, { demoAccount });
-  // Only a demo account restores samples, so only there does writing one take it off the list.
-  const revived = demoAccount ? writes.map((r) => r.id) : [];
-  const list = plan.rewriteTombstones
-    ? nextTombstones(await io.readDeletions(uid), plan.hardDeletes, revived)
-    : null;
-  await io.commit(uid, { sets: plan.sets, flags: plan.flags, hardDeletes: plan.hardDeletes, tombstones: list });
-  return list;
+export async function flushOnce({ uid, writes, deletes, listed, demoAccount = false }, io) {
+  const plan = planFlush(writes, deletes, listed, { demoAccount });
+  await io.commit(uid, plan);
+  return plan;
 }
 
 /**

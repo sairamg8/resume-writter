@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   isDemoId, parseAccountList, isDemoAccount, needsDemoRestore,
-  rememberDemo, buildDemoRestore, nextTombstones,
+  rememberDemo, buildDemoRestore,
 } from '../../src/utils/demoSeed.js';
 
 const resume = (id, updatedAt, name = id) => ({ id, name, updatedAt, sections: [] });
@@ -85,11 +85,4 @@ test('buildDemoRestore: a flagged cloud copy comes back without its deleted flag
   const [restored] = buildDemoRestore(PRISTINE, seed, 1000);
   assert.equal(restored.name, 'Flagged A');
   assert.equal('deleted' in restored, false, 'else the sync writes the flag straight back and it stays hidden');
-});
-
-test('nextTombstones: adds the deleted ids once, and takes restored samples off', () => {
-  assert.deepEqual(nextTombstones(['resume_1'], ['resume_2', 'resume_1'], []), ['resume_1', 'resume_2']);
-  assert.deepEqual(nextTombstones(['resume_1', 'demo_a'], [], ['demo_a']), ['resume_1']);
-  // A regular résumé written again stays deleted (a stale device cannot resurrect it).
-  assert.deepEqual(nextTombstones(['resume_1'], [], ['resume_1']), ['resume_1']);
 });

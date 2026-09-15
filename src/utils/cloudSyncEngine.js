@@ -53,7 +53,7 @@ export function createCloudSync({
     prevResumes: null,
     pendingWrites: new Map(),
     pendingDeletes: new Set(),
-    tombstones: new Set(), // the cloud deletion list as last read or written
+    listed: new Set(), // the cloud deletion list as this browser knows it (read, then added to)
     timer: null,
     flushes: serialQueue(), // one flush at a time, in order (R4-3)
     account: null,
@@ -73,7 +73,7 @@ export function createCloudSync({
       s.initialSyncDone = false;
       s.cloudDisabled = false;
       s.prevResumes = null;
-      s.tombstones = new Set();
+      s.listed = new Set();
       report.status('idle');
       setAccount(null);
       return;
@@ -116,16 +116,14 @@ export function createCloudSync({
 
       // Deletions this browser never sent reach the cloud in the same batch, before the store
       // forgets them (afterSync) — else the next sync restores them (R4-1).
-      await io.commit(user.uid, {
-        sets: plan.merged, flags: plan.flags, hardDeletes: plan.hardDeletes, tombstones: plan.tombstones,
-      });
+      await io.commit(user.uid, plan);
       if (gen !== s.gen) return;
 
       // Applied to the store as it is now (R8-2). The watcher then compares it with the merged list,
       // so it sends what was edited, added or deleted while the batch was on its way.
       store.applyCloudSync({ uid: user.uid, snapshot: appState.resumes, merged: plan.merged, handled: plan.handled, before: planAt });
       s.prevResumes = plan.merged;
-      s.tombstones = new Set(plan.tombstones || cloud.deleted);
+      s.listed = new Set([...cloud.deleted, ...plan.listAdd]);
       s.initialSyncDone = true;
       const cloudDemo = cloud.docs.filter((r) => isDemoId(r.id)).map(({ deleted: _deleted, ...r }) => r);
       setAccount({ uid: user.uid, cloudDemo });
@@ -189,8 +187,9 @@ export function createCloudSync({
       // In a demo account a deleted sample résumé is flagged, not removed: its last copy stays in
       // the cloud so that restoring the samples on any device brings back the edited version.
       // Writing it again (a restore) replaces the whole document, flag included.
-      const tombstones = await flushOnce({ uid: user.uid, writes, deletes, tombstones: s.tombstones, demoAccount: isDemo(user) }, io);
-      if (tombstones) s.tombstones = new Set(tombstones);
+      const sent = await flushOnce({ uid: user.uid, writes, deletes, listed: s.listed, demoAccount: isDemo(user) }, io);
+      sent.listAdd.forEach((id) => s.listed.add(id));
+      sent.listRemove.forEach((id) => s.listed.delete(id));
       // The cloud has them: the store stops keeping them for the next first sync, which would send
       // them again — over a restore another device made since (R8-1).
       if (deletes.length) store.forgetDeletions(deletes, sentAt);

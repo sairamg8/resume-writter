@@ -59,12 +59,3 @@ export function buildDemoRestore(pristine, seed, now) {
     return { ...r, id: p.id, updatedAt: copy?.updatedAt || now };
   });
 }
-
-/**
- * The cloud deletion list after a flush: the ids just deleted are added, and a sample résumé
- * written again (restored) is taken off — otherwise every later sync would hide it.
- */
-export function nextTombstones(existing, deletedIds, writtenIds) {
-  const revived = new Set(writtenIds.filter(isDemoId));
-  return [...new Set([...existing, ...deletedIds])].filter(id => !revived.has(id));
-}
