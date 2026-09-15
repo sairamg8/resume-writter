@@ -175,6 +175,27 @@ describe('per-field contact icons in the editor (R1-2, R1-4)', () => {
     iconRows().should('have.length', 0);
   });
 
+  // The letter draws the pack and the uploads with its own Contact Style "Icon", whatever the
+  // résumé's; the upload was offered only where the résumé drew icons, so an icon the letter
+  // printed could not be replaced or cleared under a Bar or Bullet résumé (R9-5).
+  it('Classic with Bar: once its letter takes the Icon style, the upload is offered as the cover letter\'s, and Clear removes it', () => {
+    const PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+    const state = withStyle('classic', 'bar');
+    active(state).settings.customContactIcons = { email: PNG };
+    const letterRows = () => cy.get('body').find('span:contains("Cover letter icon")');
+    cy.visitEditor('classic', { state });
+    cy.contains('label', 'Email').should('exist');
+    letterRows().should('have.length', 0); // the letter follows the résumé's Bar: no icon anywhere
+    cy.contains('button', 'Cover Letter').click();
+    cy.contains('p', 'Contact Style').next().contains('button', 'Icon').click();
+    cy.store().should((s) => expect(active(s).coverLetter.headerStyle).to.eq('icon'));
+    cy.contains('button', 'Resume').click();
+    iconRows().should('have.length', 0);
+    letterRows().should('have.length', 6);
+    letterRows().first().parent().contains('button', 'Clear').click();
+    cy.store().should((s) => expect(active(s).settings.customContactIcons).to.deep.eq({}));
+  });
+
   it('the "Resume icon" chip draws the pack with its own stroke width, as the PDF does', () => {
     cy.visitEditor('classic', { state: withStyle('classic', 'icon', 'minimal') });
     cy.contains('span', 'Resume icon').first().next().find('svg [stroke-width]').first()

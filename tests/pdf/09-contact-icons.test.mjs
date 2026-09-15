@@ -1,7 +1,10 @@
-// Contact icons: every pack the Design panel offers is drawn as that pack in the PDF.
+// Contact icons: every pack the Design panel offers is drawn as that pack in the PDF, and the
+// editor offers a field's upload wherever an icon prints.
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { setup, teardown, resume, render, renderCover } from './harness.mjs';
+import { createElement } from 'react';
+import { renderToString } from 'react-dom/server';
+import { setup, teardown, resume, render, renderCover, loadModule, TEMPLATES } from './harness.mjs';
 import { PNG_2X2 } from './extractors.mjs';
 
 let pdfjs;
@@ -137,4 +140,42 @@ describe('an uploaded icon the PDF cannot draw (R1-1)', () => {
         [PACKS.lucide.shapes[0], ...PACKS.lucide.shapes.slice(2)], 'e-mail falls back to the pack icon');
     });
   }
+});
+
+/** What Personal Info → Fields offers for the contact icons of `r`: its rows, as they are named. */
+async function iconUploadRows(r) {
+  const { EditorResumeTab } = await loadModule('/src/components/EditorResumeTab.jsx');
+  const noop = () => {};
+  const html = renderToString(createElement(EditorResumeTab, {
+    resume: r, store: new Proxy({}, { get: () => noop }), personalOpen: true, setPersonalOpen: noop,
+    allExpanded: false, forceOpenKey: 0, toggleAllSections: noop, addSectionOpen: false, setAddSectionOpen: noop,
+  }));
+  const count = (needle) => html.split(needle).length - 1;
+  return { resume: count('>Resume icon<'), letter: count('>Cover letter icon<'), clear: count('title="Remove custom icon"') };
+}
+
+// Personal Info → Fields offers a field's icon upload (Upload, Replace, Clear) wherever an icon
+// prints: the résumé's (drawsContactIcons, R1-2) or the letter's, whose own Contact Style "Icon"
+// draws the pack and the uploads whatever the résumé's style. The editor asked only the résumé,
+// so under a Bar or Bullet résumé the icon its letter printed could not be replaced or cleared
+// (R9-5). Each row is named for where it prints; nothing prints, no row.
+describe('Personal Info offers the icon upload exactly where an icon prints (R1-2, R9-5)', () => {
+  it('every template × the résumé\'s Contact Style × the letter\'s own: the editor\'s rows against the icons each PDF draws', async () => {
+    const drawn = async (bytes) => (await images(bytes)) + (await icons(bytes)).length;
+    for (const template of TEMPLATES) {
+      for (const contactStyle of [undefined, 'icon', 'bullet', 'bar']) {
+        const settings = { contactStyle, iconSet: 'lucide', customContactIcons: { email: RED_PNG } };
+        const onResume = await drawn(await render(resume({ template, settings, personal: PERSONAL })));
+        for (const headerStyle of [undefined, 'icon', 'bullet', 'bar']) {
+          const r = resume({ template, settings, personal: PERSONAL, coverLetter: { headerStyle } });
+          const onLetter = await drawn(await renderCover(r));
+          const at = `${template}, résumé ${contactStyle ?? 'unset'}, letter ${headerStyle ?? 'unset'}`;
+          assert.ok([0, 6].includes(onResume) && [0, 6].includes(onLetter), `${at}: ${onResume} and ${onLetter} icons`);
+          const want = onResume ? { resume: 6, letter: 0, clear: 1 }
+            : onLetter ? { resume: 0, letter: 6, clear: 1 } : { resume: 0, letter: 0, clear: 0 };
+          assert.deepEqual(await iconUploadRows(r), want, `${at}: the résumé draws ${onResume} icons, the letter ${onLetter}`);
+        }
+      }
+    }
+  });
 });

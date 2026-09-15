@@ -6,6 +6,7 @@ import { PhotoSection } from '@/components/PersonalInfoEditorPhoto';
 import { ContactIcon } from '@/utils/contactIcons';
 import { readImageFile } from '@/utils/imageUpload';
 import { drawsContactIcons } from '@/constants/templates';
+import { letterDrawsContactIcons } from '@/utils/coverLetter';
 
 const FIELDS = [
   { key: 'name',     label: 'Full Name',  icon: User,     placeholder: 'John Doe',            required: true },
@@ -18,9 +19,14 @@ const FIELDS = [
   { key: 'github',   label: 'GitHub',     icon: Code,     placeholder: 'github.com/you', hasUrl: true, contactIcon: true },
 ];
 
-export default function PersonalInfoEditor({ personal, updatePersonal, toggleFieldVisibility, settings, updateSetting, template }) {
+export default function PersonalInfoEditor({ personal, updatePersonal, toggleFieldVisibility, settings, updateSetting, template, coverLetter }) {
   const hidden = new Set(personal.hiddenFields || []);
   const s = settings || {};
+  // Where a field's icon prints: the résumé, or only the cover letter, whose own Contact Style
+  // "Icon" draws them under a Bar or Bullet résumé (R9-5). The upload is offered either way,
+  // named for where it prints; null when nothing draws icons.
+  const iconLabel = drawsContactIcons(template, s) ? 'Resume icon'
+    : letterDrawsContactIcons(coverLetter, s) ? 'Cover letter icon' : null;
   const [headerOpen, setHeaderOpen] = useState(false);
   const [photoOpen, setPhotoOpen] = useState(false);
   const uid = useId();
@@ -80,7 +86,7 @@ export default function PersonalInfoEditor({ personal, updatePersonal, toggleFie
             const labelKey = key + 'Label';
             const hasValue = !!personal[key];
             const customIcon = s.customContactIcons?.[key];
-            const showIconControls = contactIcon && drawsContactIcons(template, s);
+            const showIconControls = !!(contactIcon && iconLabel);
             return (
               <div key={key}>
                 <div className="flex items-center justify-between mb-1">
@@ -114,7 +120,7 @@ export default function PersonalInfoEditor({ personal, updatePersonal, toggleFie
                 )}
                 {showIconControls && (
                   <div className="mt-1.5 flex items-center gap-2">
-                    <span className="text-[10px] text-gray-400 shrink-0">Resume icon</span>
+                    <span className="text-[10px] text-gray-400 shrink-0">{iconLabel}</span>
                     <div className="flex items-center gap-1.5 px-1.5 py-1 rounded border border-gray-200 bg-gray-50">
                       <ContactIcon field={key} settings={s} size={14} className="text-gray-600" />
                     </div>

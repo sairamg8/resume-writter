@@ -61,6 +61,7 @@ export function EditorResumeTab({
               settings={resume.settings}
               updateSetting={store.updateSetting}
               template={resume.template}
+              coverLetter={resume.coverLetter}
             />
           </div>
         )}

@@ -46,6 +46,14 @@ export function letterContactFormat(cl = {}, settings = {}) {
   };
 }
 
+/**
+ * Does the letterhead draw contact icons — the chosen pack, or the image uploaded for a field?
+ * Exactly when its contact style is Icon, in every look: the letter's own style, whatever the
+ * résumé's. Personal Info offers the per-field upload then too, not only where the résumé draws
+ * icons (drawsContactIcons, R9-5).
+ */
+export const letterDrawsContactIcons = (cl, settings) => letterContactFormat(cl, settings).style === 'icon';
+
 const list = (v) => (Array.isArray(v) ? v : null);
 
 /**
