@@ -15,11 +15,11 @@ function AppRoutes() {
   const store = useAppStore();
   const auth  = useAuth();
   const sync  = useCloudSync({ user: auth.user, appState: store.appState, store });
-  useDemoSeed({ user: auth.user, appState: store.appState, store, sync });
+  const seed  = useDemoSeed({ user: auth.user, appState: store.appState, store, sync });
 
   return (
     <Routes>
-      <Route path="/"           element={<Dashboard store={store} auth={auth} sync={sync} />} />
+      <Route path="/"           element={<Dashboard store={store} auth={auth} sync={sync} originalsWaiting={seed.waiting} />} />
       <Route path="/resume/:id" element={<Editor    store={store} auth={auth} sync={sync} />} />
       <Route path="/jobs"          element={<JobTracker store={store} />} />
       <Route path="/jobs/new"      element={<JobForm    store={store} />} />

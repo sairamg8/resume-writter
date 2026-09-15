@@ -56,31 +56,49 @@ describe('a restore without the cloud\'s answer never overwrites the cloud (VM4-
     assert.deepEqual([cloud.resumes('u').orig_a.name, cloud.resumes('u').orig_a.deleted], ['Edited on the phone', undefined]);
   });
 
-  it('the read fails: the stale copy shows here, is not sent, and the next sync brings back the cloud\'s', async () => {
-    const { cloud, laptop } = await morning();
+  it('the read fails: nothing comes back from this browser\'s copies; the next sync brings the cloud\'s (V2W1a-0)', async () => {
+    const cloud = fakeFirestore({ [resumePath('u', 'orig_a')]: orig('orig_a', 7, { name: 'Morning A' }), [resumePath('u', 'orig_b')]: orig('orig_b', 7, { name: 'B' }) });
+    const laptop = page(cloud, { resumes: [orig('orig_a', 7, { name: 'Morning A' }), orig('orig_b', 7, { name: 'B' })] });
+    laptop.sync.start(OWNER);
+    await settle();
+    cloud.data.set(resumePath('u', 'orig_a'), orig('orig_a', 20, { name: 'Edited on the phone' }));
     cloud.fail.read = unavailable();
     await laptop.remove('orig_a');
+    await laptop.remove('orig_b'); // no original left: the restore asks the cloud, which cannot answer
     await settle();
-    assert.deepEqual(names(laptop), ['Morning A'], 'the original is back here at once');
-    await laptop.timers.fire(); // the pause (the deletion flagged), and a retry that still cannot read
-    assert.deepEqual([cloud.resumes('u').orig_a.name, cloud.resumes('u').orig_a.deleted], ['Edited on the phone', true], 'before: the morning copy was written over it');
+    assert.deepEqual(names(laptop), [], 'before: the morning copies came back here — and an edit typed into one was written over the phone\'s at the retry');
+    assert.equal(laptop.seen.waiting, true, 'the dashboard says they come back once the account answers');
+    await laptop.timers.fire(); // the pause (both flagged), and a retry that still cannot read
+    assert.deepEqual([cloud.resumes('u').orig_a.name, cloud.resumes('u').orig_a.deleted], ['Edited on the phone', true]);
     assert.equal(laptop.seen.status, 'error', 'says it will retry');
 
     cloud.fail.read = null;
-    await laptop.timers.fire(); // the retry gets through: the stale copy goes, the restore asks again
+    await laptop.timers.fire(); // the retry gets through: the restore asks again
     await laptop.timers.fire();
-    assert.deepEqual(names(laptop), ['Edited on the phone']);
-    assert.deepEqual([cloud.resumes('u').orig_a.name, cloud.resumes('u').orig_a.deleted], ['Edited on the phone', undefined]);
-    assert.equal(laptop.seen.status, 'synced');
+    assert.deepEqual(names(laptop).toSorted(), ['B', 'Edited on the phone'], 'before: only the edited morning copy was left');
+    assert.deepEqual([cloud.resumes('u').orig_a.name, cloud.resumes('u').orig_a.deleted, cloud.resumes('u').orig_b.deleted], ['Edited on the phone', undefined, undefined]);
+    assert.deepEqual([laptop.seen.status, laptop.seen.waiting], ['synced', false]);
   });
 
-  it('no answer within the time allowed: nothing is sent either', async () => {
+  it('no answer within the time allowed: nothing comes back, nothing is sent', async () => {
     const { cloud, laptop } = await morning();
     cloud.hold.read = new Promise(() => {}); // the connection hangs
     await laptop.remove('orig_a');
     await laptop.timers.fire(); // the pause, and the 5 s the restore waits for the cloud
     await laptop.timers.fire();
+    assert.deepEqual(names(laptop), [], 'before: the morning copy');
     assert.equal(cloud.resumes('u').orig_a.name, 'Edited on the phone', 'before: overwritten with the morning copy');
+  });
+});
+
+describe('a build with no cloud (the e2e build; a clone without Firebase config)', () => {
+  it('this browser\'s list is the whole list: the original comes back at once from its copy', async () => {
+    const laptop = page(null, { resumes: [orig('orig_a', 7, { name: 'Mine' }), cv('resume_b')] });
+    laptop.sync.start(OWNER);
+    await settle();
+    await laptop.remove('orig_a');
+    await settle();
+    assert.deepEqual([names(laptop), laptop.seen.waiting], [['resume_b', 'Mine'], false], 'nothing to wait for');
   });
 });
 

@@ -6,14 +6,16 @@
 import { buildRestore, isDemoAccount, needsRestore, originalsIn, privateOriginal, rememberCopies } from '@/utils/demoSeed';
 
 /**
- * createDemoRestore({ accounts, ownerResume, now }):
+ * createDemoRestore({ accounts, ownerResume, now, onWaiting }):
  *   accounts     the demo accounts' e-mails, lower-case (DEMO_ACCOUNTS)
  *   ownerResume  the owner's résumé from the private file — the dev server only — else null
  *   now          () → ms
+ *   onWaiting    (bool) → the originals are due back but the account's cloud has not answered:
+ *                they come back once it does (the dashboard says so)
  * Returns { update({ user, account, appState, sync, store }) }: run after every render that
  * changed the user, the account or the résumés (useDemoSeed's effect).
  */
-export function createDemoRestore({ accounts, ownerResume = null, now = () => Date.now() }) {
+export function createDemoRestore({ accounts, ownerResume = null, now = () => Date.now(), onWaiting = () => {} }) {
   // For the signed-in account: the latest copy of each résumé seen, deleted ones included (the
   // restore takes the originals among them), the ids on its deletion list (`gone`: deleted for
   // good, never brought back), the account object last taken in, `restoring` while the cloud is
@@ -21,6 +23,8 @@ export function createDemoRestore({ accounts, ownerResume = null, now = () => Da
   let seed = null;
   // The account a restore may still be applied to: null once it signs out.
   let live = null;
+  let waiting = false;
+  const setWaiting = (v) => { if (v !== waiting) { waiting = v; onWaiting(v); } };
 
   function seedFor(uid) {
     if (seed?.uid !== uid) seed = { uid, account: null, copies: new Map(), gone: new Set(), restoring: false, imported: false };
@@ -32,6 +36,7 @@ export function createDemoRestore({ accounts, ownerResume = null, now = () => Da
     // Waiting for the account's list matters: restoring before it could overwrite newer cloud copies.
     const ready = demo && account?.uid === user.uid;
     live = ready ? user.uid : null;
+    if (!ready) setWaiting(false);
     if (!demo) return;
     const s = seedFor(user.uid);
     if (ready && s.account !== account) {
@@ -48,21 +53,24 @@ export function createDemoRestore({ accounts, ownerResume = null, now = () => Da
       const own = privateOriginal(ownerResume, user, { resumes: appState.resumes, seen: s.copies, deleted, gone: [...s.gone], now: now() });
       if (own) { store.restoreResumes([own]); return; }
     }
-    if (!needsRestore(appState.resumes)) return;
-    const originals = originalsIn(s.copies, s.gone);
-    if (!originals.length) return;
+    const originals = needsRestore(appState.resumes) ? originalsIn(s.copies, s.gone) : [];
+    if (!originals.length) { setWaiting(false); return; }
     // The cloud's copies first: another device may have edited an original since this one's first
-    // sync (R4-4), or deleted one for good (V2OWNER-DATA-0). Without an answer, the copies this
-    // browser knows come back here, and the sync sends nothing until a first sync gets through
-    // again — which brings back the cloud's own copies instead of writing these over them (VM4-6).
+    // sync (R4-4), or deleted one for good (V2OWNER-DATA-0). An account with no cloud has this
+    // browser's list as its whole list, and nothing to ask.
     s.restoring = true;
-    Promise.resolve(sync.readCloudCopies?.(originals.map((r) => r.id)))
+    Promise.resolve(account.cloud ? sync.readCloudCopies?.(originals.map((r) => r.id)) : { docs: [], deleted: [] })
       .catch(() => null)
       .then((cloud) => {
         s.restoring = false;
         if (seed !== s || live !== s.uid) return; // signed out meanwhile
-        rememberCopies(s.copies, cloud?.docs);
-        (cloud?.deleted || []).forEach((id) => s.gone.add(id));
+        // No answer: nothing comes back from this browser's copies until the next first sync gets
+        // through (its account runs this again). Put back here, the stale copy could be edited, and
+        // that newer edit then beat the other device's newer copy at the retry (V2W1a-0).
+        setWaiting(!cloud);
+        if (!cloud) return;
+        rememberCopies(s.copies, cloud.docs);
+        (cloud.deleted || []).forEach((id) => s.gone.add(id));
         // None, if another device stopped keeping them or deleted them for good.
         const back = buildRestore(s.copies, now(), s.gone);
         if (back.length) store.restoreResumes(back);

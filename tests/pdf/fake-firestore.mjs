@@ -139,9 +139,12 @@ export function manualTimers() {
   };
 }
 
-/** What the engine reports, as the React state it would set: { status, account, synced }. */
+/**
+ * What the engine reports, as the React state it would set: { status, account, synced } — and
+ * `waiting`, the demo restore's (useDemoSeed's) "the originals come back once the cloud answers".
+ */
 export function recorder() {
-  const seen = { status: 'idle', statuses: [], account: null, synced: null };
+  const seen = { status: 'idle', statuses: [], account: null, synced: null, waiting: false };
   return {
     seen,
     report: {
@@ -190,6 +193,7 @@ export function fakeStore(state, mods) {
 
 /**
  * A page: the app's sync engine (`mods.engine`) with its Firestore calls (`mods.io`) over `cloud`
+ * (null: a build with no cloud)
  * and `state` in its store, wired as useCloudSync wires them (liveStore; `hidden` () → whether the
  * tab is hidden); with `demo`
  * ({ accounts, ownerResume?, now? }) also the demo restore, run after every change as
@@ -200,7 +204,7 @@ export function syncPage(mods, cloud, state, { isDemo = () => false, online = ()
   const store = fakeStore(state, mods);
   const timers = manualTimers();
   const { seen, report } = recorder();
-  const restore = demo ? mods.restore.createDemoRestore(demo) : null;
+  const restore = demo ? mods.restore.createDemoRestore({ ...demo, onWaiting: (v) => { seen.waiting = v; } }) : null;
   let user = null;
   // useDemoSeed's effect: after a render that changed the user, the account or the résumés.
   let last = {};
@@ -213,7 +217,7 @@ export function syncPage(mods, cloud, state, { isDemo = () => false, online = ()
   const onAccount = report.account;
   report.account = (a) => { onAccount(a); queueMicrotask(render); };
   const sync = mods.engine.createCloudSync({
-    io: mods.io.cloudIo(cloud.fs, cloud.db), store: mods.actions.liveStore(() => ({ appState: store.state, store })),
+    io: cloud ? mods.io.cloudIo(cloud.fs, cloud.db) : null, store: mods.actions.liveStore(() => ({ appState: store.state, store })),
     report, isDemo, online, hidden, timers,
   });
   const start = sync.start;

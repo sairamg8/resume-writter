@@ -20,9 +20,10 @@ const emptyQueue = () => ({ writes: new Map(), deletes: new Set(), kept: new Set
  *             sync's result (cloudSyncPlan.afterSync), forgetDeletions(ids, before) — the
  *             cloud has these deletions (localDeletions.js) }: useResumeSyncActions.liveStore
  *   report    { status('idle'|'syncing'|'synced'|'offline'|'error'|'stopped'), synced(Date), account(a) } —
- *             account: { uid, cloudOriginals, cloudDeleted } once the account's list is known,
- *             else null — the cloud's originals (demoSeed.js), deleted ones included, and its
- *             deletion list, as the first sync read them
+ *             account: { uid, cloud, cloudOriginals, cloudDeleted } once the account's list is
+ *             known, else null — whether a cloud holds it (false: this browser's list is the whole
+ *             list), the cloud's originals (demoSeed.js), deleted ones included, and its deletion
+ *             list, as the first sync read them
  *   isDemo    user → true for a demo account (its deleted originals are flagged, not removed)
  *   online    () → whether the browser says it is online; hidden () → whether the tab is hidden
  *   timers    { set(fn, ms) → id, clear(id) }; flushDelay (ms) before queued changes are sent;
@@ -101,7 +102,7 @@ export function createCloudSync({
   }
 
   /** The account when there is no cloud to read: this browser's résumés are the whole list. */
-  const noCloud = (user) => ({ uid: user.uid, cloudOriginals: [], cloudDeleted: [] });
+  const noCloud = (user) => ({ uid: user.uid, cloud: false, cloudOriginals: [], cloudDeleted: [] });
 
   /** Drop the result of a first sync still running (the page is going away). */
   function cancel() {
@@ -166,10 +167,10 @@ export function createCloudSync({
 
   /**
    * The cloud did not answer while signed in: nothing more is sent until a first sync gets
-   * through again. A restore made meanwhile from this browser's copies stays here — the
-   * flush used to write it unconditionally over the cloud's copies, newer edits from another
-   * device included (VM4-6). The retry's first sync merges by time and flag (planInitialSync),
-   * and the restore runs again from the cloud's copies.
+   * through again — the flush used to write a restore made meanwhile over the cloud's copies,
+   * newer edits from another device included (VM4-6). No restore is made without the answer
+   * (demoRestore.js, V2W1a-0): the retry's first sync reports the account again, and the restore
+   * runs from the cloud's copies.
    */
   function unreachable() {
     s.initialSyncDone = false;
@@ -205,7 +206,7 @@ export function createCloudSync({
       // (V2OWNER-DATA-0): it is none of the account's originals.
       const listed = new Set(cloud.deleted);
       const cloudOriginals = cloud.docs.filter((r) => isOriginal(r) && !listed.has(r.id)).map(({ deleted: _deleted, ...r }) => r);
-      setAccount({ uid: user.uid, cloudOriginals, cloudDeleted: [...cloud.deleted] });
+      setAccount({ uid: user.uid, cloud: true, cloudOriginals, cloudDeleted: [...cloud.deleted] });
       s.attempts = 0;
       report.status('synced');
       report.synced(new Date());

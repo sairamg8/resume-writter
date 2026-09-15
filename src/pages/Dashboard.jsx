@@ -19,7 +19,8 @@ function deletePrompt(resume, keeps) {
   return `Delete "${resume.name}"? This cannot be undone.`;
 }
 
-export function Dashboard({ store, auth, sync }) {
+/** `originalsWaiting`: a demo account's originals are due back once its cloud answers (useDemoSeed). */
+export function Dashboard({ store, auth, sync, originalsWaiting = false }) {
   const navigate = useNavigate();
   const importRef = useRef(null);
   const [importError, setImportError] = useState(null);
@@ -112,6 +113,13 @@ export function Dashboard({ store, auth, sync }) {
         {importError && (
           <div className="max-w-7xl mx-auto px-6 pb-3">
             <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{importError}</p>
+          </div>
+        )}
+        {originalsWaiting && (
+          <div className="max-w-7xl mx-auto px-6 pb-3">
+            <p role="status" className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+              Your originals come back as soon as your account can be reached again.
+            </p>
           </div>
         )}
       </div>
