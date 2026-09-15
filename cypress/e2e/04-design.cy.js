@@ -118,6 +118,18 @@ describe('design — settings', () => {
   });
 });
 
+describe('design — colours show what the PDF prints', () => {
+  // With no Text colour stored (an import, older data) the PDF prints the template's own default.
+  for (const [template, color] of [['modern', '#1f2937'], ['minimal', '#111111'], ['classic', '#1a1a1a']]) {
+    it(`${template}: with no stored Text colour the panel shows ${color}, the template's default (R9-7)`, () => {
+      cy.visitEditor(template, { settings: { textColor: '' } });
+      openDesign('Colors');
+      cy.get('input[aria-label="Custom text color"]').should('have.value', color);
+      cy.get('button[title="Near Black"]').should(color === '#1a1a1a' ? 'have.class' : 'not.have.class', 'border-blue-500');
+    });
+  }
+});
+
 describe('design — reset returns to the template\'s defaults (M16)', () => {
   it('Reset keeps an Executive résumé\'s heading style and normal-case titles', () => {
     cy.visitEditor('executive', { settings: { headingStyle: 'box', sectionTitleCase: 'upper', accentColor: '#0d9488' } });

@@ -1,5 +1,7 @@
 import { useId } from 'react';
 import { Label, DesignSection } from '@/components/DesignPanelShared';
+import { templateId } from '@/constants/templates';
+import { DEFAULTS } from '@/templates/pdf/shared/templateSettings';
 
 const ACCENT_PRESETS = [
   { label: 'Blue',    color: '#2563eb' },
@@ -32,6 +34,9 @@ const SIDEBAR_BG_PRESETS = [
 
 export function ColorsSection({ resume, settings, updateSetting, onReset }) {
   const uid = useId();
+  // The Text colour the PDF prints: the stored one, else the template's own default (Modern's
+  // slate, Minimal's #111111 …), not a panel-wide Near Black the PDF does not use (R9-7).
+  const textColor = settings.textColor || DEFAULTS[templateId(resume.template)].textColor;
   return (
     <DesignSection title="Colors" onReset={onReset}>
       <div>
@@ -62,15 +67,15 @@ export function ColorsSection({ resume, settings, updateSetting, onReset }) {
               key={p.color}
               onClick={() => updateSetting('textColor', p.color)}
               title={p.label}
-              className={`h-8 flex-1 rounded-md border-2 transition-all ${(settings.textColor || '#1a1a1a') === p.color ? 'border-blue-500 scale-105' : 'border-transparent hover:scale-105'}`}
+              className={`h-8 flex-1 rounded-md border-2 transition-all ${textColor === p.color ? 'border-blue-500 scale-105' : 'border-transparent hover:scale-105'}`}
               style={{ backgroundColor: p.color }}
             />
           ))}
         </div>
         <div className="flex items-center gap-2">
           <label htmlFor={uid + 'textColor'} className="text-xs text-gray-500">Custom:</label>
-          <input id={uid + 'textColor'} type="color" aria-label="Custom text color" value={settings.textColor || '#1a1a1a'} onChange={e => updateSetting('textColor', e.target.value)} className="h-7 w-16 rounded border border-gray-200 cursor-pointer p-0.5" />
-          <span className="text-xs text-gray-400 font-mono">{settings.textColor || '#1a1a1a'}</span>
+          <input id={uid + 'textColor'} type="color" aria-label="Custom text color" value={textColor} onChange={e => updateSetting('textColor', e.target.value)} className="h-7 w-16 rounded border border-gray-200 cursor-pointer p-0.5" />
+          <span className="text-xs text-gray-400 font-mono">{textColor}</span>
         </div>
       </div>
 
