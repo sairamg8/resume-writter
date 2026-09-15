@@ -36,6 +36,20 @@ function CardItem({ children }) {
   );
 }
 
+/**
+ * A card's header row: its title lines on the left and the date on the right — or, under
+ * Section Options → Alignment "Center", all of it centred on the card, the date on a line of its
+ * own, as ItemHeader centres the other templates' entries (R6-1).
+ */
+function CardHeader({ centered, entrySize, lineH, dateStr, dateStyle, children }) {
+  return (
+    <View wrap={false} minPresenceAhead={Math.round(entrySize * lineH * 2)} style={centered ? { alignItems: 'center' } : { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+      <View style={centered ? { alignItems: 'center' } : { flex: 1 }}>{children}</View>
+      {dateStr ? <Text style={{ ...dateStyle, ...(centered ? { marginTop: 1, textAlign: 'center' } : { flexShrink: 0, marginLeft: 6 }) }}>{dateStr}</Text> : null}
+    </View>
+  );
+}
+
 export function SidebarMainExperience({ section, settings, marginBottom, spaceBefore, itemGap }) {
   const s = section.settings || {};
   const titleOrder = s.titleOrder || 'role';
@@ -48,11 +62,14 @@ export function SidebarMainExperience({ section, settings, marginBottom, spaceBe
   const accent     = settings?.accentColor || '#2563eb';
   const shade      = shadesOf(settings); // body and date follow Design → Text colour
   const visibleItems = (section.items || []).filter(i => i.visible !== false);
+  const centered   = s.alignment === 'center';
+  const textAlign  = centered ? 'center' : 'left';
+  const dateStyle  = { fontSize: entrySize - 1.5, color: shade.muted };
 
   return (
     <View style={{ marginBottom, marginTop: spaceBefore }}>
       {SPACER}
-      <SectionTitleOf section={section} settings={settings} />
+      <SectionTitleOf section={section} settings={settings} centered={centered} />
       <RenderColGrid
         items={visibleItems}
         cols={s.columns || 1}
@@ -72,21 +89,18 @@ export function SidebarMainExperience({ section, settings, marginBottom, spaceBe
           return (
             <CardItem key={idx}>
               {titleStyle === 'stacked' ? (
-                <View wrap={false} minPresenceAhead={Math.round(entrySize * lineH * 2)} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <View style={{ flex: 1 }}>
-                    {primary ? <Text style={{ fontSize: entrySize, fontWeight: 'bold', color: textColor, lineHeight: 1.2 }}>{primary}</Text> : null}
-                    {subLine ? <Text style={{ fontSize: entrySize - 1, color: hexAlpha(accent, 0.8), lineHeight: 1.2 }}>{subLine}</Text> : null}
-                  </View>
-                  {dateStr ? <Text style={{ fontSize: entrySize - 1.5, color: shade.muted, flexShrink: 0, marginLeft: 6 }}>{dateStr}</Text> : null}
-                </View>
+                <CardHeader centered={centered} entrySize={entrySize} lineH={lineH} dateStr={dateStr} dateStyle={dateStyle}>
+                  {primary ? <Text style={{ fontSize: entrySize, fontWeight: 'bold', color: textColor, lineHeight: 1.2, textAlign }}>{primary}</Text> : null}
+                  {subLine ? <Text style={{ fontSize: entrySize - 1, color: hexAlpha(accent, 0.8), lineHeight: 1.2, textAlign }}>{subLine}</Text> : null}
+                </CardHeader>
               ) : (
                 // Title "Inline" / "Side by side": the shared one-line header, as the other templates print it.
-                <ItemHeader primary={primary} sub={secondary || undefined} loc={loc || undefined} dateStr={dateStr} settings={settings} titleStyle={titleStyle} />
+                <ItemHeader primary={primary} sub={secondary || undefined} loc={loc || undefined} dateStr={dateStr} settings={settings} titleStyle={titleStyle} centered={centered} />
               )}
               {hasRichText(desc) ? (
-                <PdfRichText html={desc} style={{ fontSize: entrySize - 0.5, color: shade.body, lineHeight: lineH, marginTop: 2 }} />
+                <PdfRichText html={desc} style={{ fontSize: entrySize - 0.5, color: shade.body, lineHeight: lineH, marginTop: 2, textAlign }} />
               ) : null}
-              <RenderBullets bullets={item.bullets} style={{ fontSize: entrySize - 0.5, color: shade.body, lineHeight: lineH }} accent={accent} isModern={false} template="sidebar" />
+              <RenderBullets bullets={item.bullets} style={{ fontSize: entrySize - 0.5, color: shade.body, lineHeight: lineH, textAlign }} accent={accent} isModern={false} template="sidebar" />
             </CardItem>
           );
         }}
@@ -104,11 +118,14 @@ export function SidebarMainProjects({ section, settings, marginBottom, spaceBefo
   const accent     = settings?.accentColor || '#2563eb';
   const shade      = shadesOf(settings); // body and date follow Design → Text colour
   const visibleItems = (section.items || []).filter(i => i.visible !== false);
+  const centered   = s.alignment === 'center';
+  const textAlign  = centered ? 'center' : 'left';
+  const dateStyle  = { fontSize: entrySize - 1.5, color: shade.muted };
 
   return (
     <View style={{ marginBottom, marginTop: spaceBefore }}>
       {SPACER}
-      <SectionTitleOf section={section} settings={settings} />
+      <SectionTitleOf section={section} settings={settings} centered={centered} />
       <RenderColGrid
         items={visibleItems}
         cols={s.columns || 1}
@@ -119,20 +136,17 @@ export function SidebarMainProjects({ section, settings, marginBottom, spaceBefo
           const dateStr = showDates && (sd || ed) ? `${sd}${ed ? ` – ${ed}` : ''}` : '';
           return (
             <CardItem key={idx}>
-              <View wrap={false} minPresenceAhead={Math.round(entrySize * lineH * 2)} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: entrySize, fontWeight: 'bold', color: textColor, lineHeight: 1.2 }}>
-                    {item.name}
-                    {item.technologies ? <Text style={{ fontSize: entrySize - 1, color: hexAlpha(accent, 0.7), fontWeight: 'normal' }}>{` · ${item.technologies}`}</Text> : null}
-                  </Text>
-                  {item.url ? <EntryLink url={item.url} style={{ fontSize: entrySize - 1.5, color: accent }} /> : null}
-                </View>
-                {dateStr ? <Text style={{ fontSize: entrySize - 1.5, color: shade.muted, flexShrink: 0, marginLeft: 6 }}>{dateStr}</Text> : null}
-              </View>
+              <CardHeader centered={centered} entrySize={entrySize} lineH={lineH} dateStr={dateStr} dateStyle={dateStyle}>
+                <Text style={{ fontSize: entrySize, fontWeight: 'bold', color: textColor, lineHeight: 1.2, textAlign }}>
+                  {item.name}
+                  {item.technologies ? <Text style={{ fontSize: entrySize - 1, color: hexAlpha(accent, 0.7), fontWeight: 'normal' }}>{` · ${item.technologies}`}</Text> : null}
+                </Text>
+                {item.url ? <EntryLink url={item.url} style={{ fontSize: entrySize - 1.5, color: accent, textAlign }} /> : null}
+              </CardHeader>
               {hasRichText(item.description) ? (
-                <PdfRichText html={item.description} style={{ fontSize: entrySize - 0.5, color: shade.body, lineHeight: lineH, marginTop: 2 }} />
+                <PdfRichText html={item.description} style={{ fontSize: entrySize - 0.5, color: shade.body, lineHeight: lineH, marginTop: 2, textAlign }} />
               ) : null}
-              <RenderBullets bullets={item.bullets} style={{ fontSize: entrySize - 0.5, color: shade.body, lineHeight: lineH }} accent={accent} isModern={false} template="sidebar" />
+              <RenderBullets bullets={item.bullets} style={{ fontSize: entrySize - 0.5, color: shade.body, lineHeight: lineH, textAlign }} accent={accent} isModern={false} template="sidebar" />
             </CardItem>
           );
         }}

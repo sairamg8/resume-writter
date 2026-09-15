@@ -185,3 +185,43 @@ describe('the default gap between items (R2-1)', () => {
     near(await gapOf(loaded) - none, 6, 'migrated');
   });
 });
+
+describe('Sidebar main column Alignment (R6-1)', () => {
+  // Experience and Projects in the Sidebar's main column print as cards; Center must centre
+  // their title, header, description and bullets on the card as SectionRouter does elsewhere.
+  const EXP = [{ company: 'AcmeCo', role: 'DevRole', location: 'Pune', startDate: '01/2020', endDate: '12/2021', description: '<p>ExpDesc short</p><ul><li>ExpBullet</li></ul>' }];
+  const PROJ = [{ name: 'ProjName', url: 'github.com/me/proj', startDate: '2021', endDate: '2022', description: '<p>ProjDesc short</p>' }];
+  const pagesOf = (type, items, settings) =>
+    render(resume({ template: 'sidebar', sections: [section(type, items, settings)] })).then(read);
+  /** Left and right ends of the printed line holding `needle`, in the main column. */
+  const line = (pages, needle) => {
+    const t = first(pages, needle);
+    const row = pages[0].items.filter((o) => Math.abs(o.y - t.y) < 1 && o.x > pages[0].W * 0.3);
+    return { x0: Math.min(...row.map((o) => o.x)), x1: Math.max(...row.map((o) => o.x + o.w)) };
+  };
+
+  for (const [type, items, needles, heading, date] of [
+    ['experience', EXP, ['DevRole', 'AcmeCo', '01/2020', 'ExpDesc'], 'EXPERIENCE', '01/2020'],
+    ['projects', PROJ, ['ProjName', 'github.com/me/proj', '2021', 'ProjDesc'], 'PROJECTS', '2021'],
+  ]) {
+    for (const titleStyle of type === 'experience' ? ['stacked', 'inline', 'sidebyside'] : ['stacked']) {
+      it(`${type} (${titleStyle}): Center centres the title, header and description on the card; Left keeps them at its left edge`, async () => {
+        const left = await pagesOf(type, items, { titleStyle });
+        const centre = await pagesOf(type, items, { titleStyle, alignment: 'center' });
+        const edge = first(left, needles[0]).x;
+        const right = left[0].W - 18 * MM;
+        const mid = (edge + right) / 2;
+        for (const needle of needles) {
+          // Left: each line starts at the card's edge; the date alone keeps to the right margin.
+          const [at, from] = needle === date ? [line(left, needle).x1, right] : [line(left, needle).x0, edge];
+          assert.ok(Math.abs(at - from) < 1.5, `left: "${needle}" at x ${at.toFixed(1)}, expected ${from.toFixed(1)}`);
+          const { x0, x1 } = line(centre, needle);
+          assert.ok(Math.abs((x0 + x1) / 2 - mid) < 1.5 && x0 > edge + 5, `center: "${needle}" at x ${x0.toFixed(1)}–${x1.toFixed(1)}, centred at ${((x0 + x1) / 2).toFixed(1)}; the card's centre ${mid.toFixed(1)}`);
+        }
+        const title = first(centre, heading);
+        assert.ok(title.x > first(left, heading).x + 20, `the section title moves too (x ${first(left, heading).x.toFixed(1)} → ${title.x.toFixed(1)})`);
+        if (type === 'experience') assert.ok(first(centre, 'ExpBullet').x > first(left, 'ExpBullet').x + 30, 'the bullet text moves to the centre');
+      });
+    }
+  }
+});

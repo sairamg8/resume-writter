@@ -120,11 +120,17 @@ describe('the Sidebar side column offers the options it prints (FIDB-75)', () =>
     text().should('contain', 'Frontend – React, TypeScript, CSS');
   });
 
-  it('the Sidebar main column keeps Alignment and Grids', () => {
+  it('the Sidebar main column keeps Alignment and Grids, and Center centres the experience card (R6-1)', () => {
     cy.visitEditor('sidebar', { sections: [EXPERIENCE] });
-    openOptions('Professional Experience');
-    row('Alignment').should('exist');
-    row('Grids').should('exist');
-    options().should('not.contain.text', HINT);
+    const roleX = () => cy.exportPdf().then((pdf) => pdf.runs.find((r) => r.str.includes('Senior Dev')).x);
+    roleX().then((leftX) => {
+      openOptions('Professional Experience');
+      row('Alignment').should('exist');
+      row('Grids').should('exist');
+      options().should('not.contain.text', HINT);
+      chip('Alignment', 'Center').click();
+      cy.store().should((s) => expect(settingsOf(s, 'experience').alignment).to.eq('center'));
+      roleX().should('be.greaterThan', leftX + 50);
+    });
   });
 });
