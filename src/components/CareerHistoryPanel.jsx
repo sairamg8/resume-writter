@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { Building2 } from 'lucide-react';
+import { dateRange, parseMonthYear, presentLabel } from '@/utils/dates';
 
 const AVATAR_COLORS = [
   { bg: '#eef2ff', text: '#4338ca' },
@@ -10,11 +11,14 @@ const AVATAR_COLORS = [
   { bg: '#fef9c3', text: '#92400e' },
 ];
 
-function parseDate(str) {
-  if (!str) return null;
-  const [m, y] = str.split('/');
-  if (!m || !y) return null;
-  return new Date(parseInt(y), parseInt(m) - 1);
+/**
+ * A stored date as the month it starts (a year alone: its January), or null: every shape the PDF
+ * reads (src/utils/dates.js). It read only "01/2020" — the picker's "Jan 2020" got no duration —
+ * and threw on a year imported as a number, which blanked the dashboard.
+ */
+function parseDate(value) {
+  const d = parseMonthYear(value);
+  return d ? new Date(d.y, (d.m || 1) - 1) : null;
 }
 
 function durationLabel(start, end) {
@@ -52,6 +56,7 @@ export function CareerHistoryPanel({ resumes, activeId, showJobTrackerLink = tru
   const expSection = active?.sections?.find(s => s.type === 'experience');
   const items = expSection?.items || [];
   const personal = active?.personal || {};
+  const settings = active?.settings || {}; // its Date format: the timeline prints dates as the PDF does
   const total = totalCareer(items);
 
   return (
@@ -86,7 +91,7 @@ export function CareerHistoryPanel({ resumes, activeId, showJobTrackerLink = tru
               {items.map((item, i) => {
                 const color = AVATAR_COLORS[i % AVATAR_COLORS.length];
                 const dur = durationLabel(item.startDate, item.current ? null : item.endDate);
-                const endLabel = item.current ? 'Present' : item.endDate;
+                const dates = dateRange(item.startDate, item.current ? presentLabel(settings) : item.endDate, settings);
 
                 return (
                   <div key={item.id} className="relative">
@@ -107,9 +112,7 @@ export function CareerHistoryPanel({ resumes, activeId, showJobTrackerLink = tru
                           )}
                         </div>
                       </div>
-                      <p className="text-[10px] text-gray-400 mt-0.5">
-                        {item.startDate}{endLabel ? ` – ${endLabel}` : ''}
-                      </p>
+                      <p className="text-[10px] text-gray-400 mt-0.5">{dates}</p>
                     </div>
                   </div>
                 );

@@ -3,6 +3,7 @@ import { Eye, EyeOff, Trash2, ChevronDown, ChevronUp, X, GripVertical } from 'lu
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { FieldIdsContext, useFieldIds } from '@/hooks/useFieldIds';
+import { parseMonthYear } from '@/utils/dates';
 
 export function InputField({ label, value, onChange, placeholder, type = 'text' }) {
   const { id } = useFieldIds(label);
@@ -28,9 +29,12 @@ export const YEARS = Array.from({ length: 55 }, (_, i) => CUR_YEAR + 5 - i);
 export function MonthPicker({ label, value, onChange, disabled }) {
   // The label names the month select; each select also says which half of the date it holds.
   const { id, label: name } = useFieldIds(label);
-  const parts = (value || '').split(' ');
-  const monthStr = MONTHS.includes(parts[0]) ? parts[0] : '';
-  const yearStr = parts[1] || '';
+  // Every month and year the PDF reads (src/utils/dates.js) — an imported "05/2023", "2019-05" or
+  // 2019 too, which showed empty (a number threw); else the picker's own "Jan 2024" or "Jan".
+  const date = parseMonthYear(value);
+  const parts = typeof value === 'string' ? value.split(' ') : [];
+  const monthStr = date ? (date.m ? MONTHS[date.m - 1] : '') : (MONTHS.includes(parts[0]) ? parts[0] : '');
+  const yearStr = date ? String(date.y) : (parts[1] || '');
 
   function update(m, y) {
     if (!m && !y) { onChange(''); return; }
