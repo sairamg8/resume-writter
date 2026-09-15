@@ -2,7 +2,7 @@
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs';
-import { setup, teardown, resume, render, read, drawState, loadModule, TEMPLATES } from './harness.mjs';
+import { setup, teardown, resume, render, renderCover, read, drawState, loadModule, TEMPLATES } from './harness.mjs';
 
 before(setup);
 after(teardown);
@@ -198,5 +198,27 @@ describe('modern banner summary (FIDB-11)', () => {
     const bytes = await render(resume({ template: 'modern', personal: { summary: SUMMARY }, settings: { headerTextColor: 'rgba(255,255,255,0.5)' } }));
     const [hit] = await drawState(bytes, 'SumPlain');
     assert.ok(Math.abs(hit.alpha - 0.425) < 0.005, `alpha ${hit.alpha}`);
+  });
+});
+
+describe('modern banner name (R7-0)', () => {
+  // The name sits on the accent banner with the title and the contacts. It prints in the header
+  // text colour as they do, never in a colour worked out against the Sidebar Background, which
+  // Modern does not draw (a value that survives from a Sidebar design, or the default navy).
+  it('prints in the header text colour, like the title and contacts, whatever Sidebar Background is stored', async () => {
+    const cases = [
+      [{ accentColor: '#fde68a', headerTextColor: '#111111' }, '#111111'],
+      [{ sidebarBg: '#ffffff' }, '#ffffff'],
+      [{ sidebarBg: '#f8fafc', headerTextColor: '#fef3c7' }, '#fef3c7'],
+    ];
+    const personal = { name: 'Pat Sample', title: 'Staff Engineer', email: 'pat@example.com' };
+    for (const [settings, ink] of cases) {
+      const r = resume({ template: 'modern', personal, settings });
+      for (const [what, bytes] of [['résumé', await render(r)], ['letter', await renderCover(r)]]) {
+        for (const s of ['Pat Sample', 'Staff Engineer', 'pat@example.com']) {
+          assert.equal((await drawState(bytes, s))[0]?.fill, ink, `${what} ${JSON.stringify(settings)}: "${s}"`);
+        }
+      }
+    }
   });
 });
