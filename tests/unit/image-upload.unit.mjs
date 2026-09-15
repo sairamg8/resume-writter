@@ -52,18 +52,35 @@ describe('drawableImage: what the PDF draws from a saved image', () => {
 });
 
 // ── A stand-in for the browser ───────────────────────────────────────────────────────────────
-// createImageBitmap "decodes" the sizes in a file's header (PNG IHDR, JPEG SOF, a 1×1 WebP or
-// GIF) and refuses anything else; a canvas records what it was asked to encode.
+// createImageBitmap "decodes" the size in a file's header (PNG IHDR, JPEG SOF; a WebP or GIF is
+// 1×1) and refuses anything else; a canvas records what it was asked to encode, and encodes
+// `detail` bytes per pixel (a noisy photo ~1, a flat one far less).
 
+/** What the stand-in sees in a file beyond its header: { detail, seeThrough }. */
+const looks = new WeakMap();
+function withLooks(file, { detail, seeThrough } = {}) {
+  looks.set(file, { detail, seeThrough });
+  return file;
+}
 /** A PNG header for a `width`×`height` image, padded to `bytes` bytes. */
-function pngFile(width, height, { bytes = 64, name = 'me.png', type = 'image/png' } = {}) {
+function pngFile(width, height, { bytes = 64, name = 'me.png', type = 'image/png', ...look } = {}) {
   const buf = Buffer.alloc(Math.max(bytes, 33));
   Buffer.from('89504e470d0a1a0a0000000d49484452', 'hex').copy(buf);
   buf.writeUInt32BE(width, 16);
   buf.writeUInt32BE(height, 20);
-  return new File([buf], name, { type });
+  return withLooks(new File([buf], name, { type }), look);
+}
+/** The 2×2 JPEG with `width`×`height` in its SOF, padded to `bytes` bytes. */
+function jpegFile(width, height, { bytes = 0, name = 'me.jpg', type = 'image/jpeg', ...look } = {}) {
+  const buf = Buffer.from(JPEG_B64, 'base64');
+  const sof = buf.indexOf(Buffer.from([0xff, 0xc0]));
+  buf.writeUInt16BE(height, sof + 5);
+  buf.writeUInt16BE(width, sof + 7);
+  return withLooks(new File([buf, Buffer.alloc(Math.max(0, bytes - buf.length))], name, { type }), look);
 }
 const fileOf = (b64data, name, type) => new File([Buffer.from(b64data, 'base64')], name, { type });
+/** Bytes a data URL holds. */
+const bytesOf = (url) => Buffer.from(url.slice(url.indexOf(',') + 1), 'base64').length;
 
 const encoded = [];
 function installBrowser() {
@@ -79,23 +96,36 @@ function installBrowser() {
   globalThis.createImageBitmap = async (file) => {
     const bytes = Buffer.from(await file.arrayBuffer());
     const head = bytes.toString('latin1', 0, 12);
-    if (head.startsWith('\x89PNG')) return { width: bytes.readUInt32BE(16), height: bytes.readUInt32BE(20), close() {} };
+    const bitmap = (width, height) => ({ width, height, ...looks.get(file), close() {} });
+    if (head.startsWith('\x89PNG')) return bitmap(bytes.readUInt32BE(16), bytes.readUInt32BE(20));
     if (head.startsWith('\xff\xd8\xff')) {
       const sof = bytes.indexOf(Buffer.from([0xff, 0xc0]));
-      return { width: bytes.readUInt16BE(sof + 7), height: bytes.readUInt16BE(sof + 5), close() {} };
+      return bitmap(bytes.readUInt16BE(sof + 7), bytes.readUInt16BE(sof + 5));
     }
-    if (head.startsWith('RIFF') || head.startsWith('GIF8')) return { width: 1, height: 1, close() {} };
+    if (head.startsWith('RIFF') || head.startsWith('GIF8') || head.startsWith('BM')) return bitmap(1, 1);
     throw new DOMException('The source image could not be decoded.', 'InvalidStateError');
   };
   globalThis.document = {
     createElement: () => {
+      let drawn = null;
+      const ctx = {
+        fillRect() {},
+        drawImage(bitmap) { drawn = bitmap; },
+        getImageData(x, y, w, h) {
+          const data = new Uint8ClampedArray(w * h * 4).fill(255);
+          if (drawn?.seeThrough) data[3] = 0;
+          return { data };
+        },
+      };
       const canvas = {
         width: 300,
         height: 150,
-        getContext: () => ({ fillRect() {}, drawImage() {}, getImageData: (x, y, w, h) => ({ data: new Uint8ClampedArray(w * h * 4).fill(255) }) }),
+        getContext: () => ctx,
         toDataURL(type) {
-          encoded.push({ type, width: canvas.width, height: canvas.height });
-          return `data:${type};base64,${type === 'image/png' ? PNG_B64 : JPEG_B64}`;
+          const bytes = Math.max(64, Math.round(canvas.width * canvas.height * (drawn?.detail ?? 0.05)));
+          encoded.push({ type, width: canvas.width, height: canvas.height, bytes });
+          const magic = Buffer.from(type === 'image/png' ? PNG_B64 : JPEG_B64, 'base64').subarray(0, 8);
+          return `data:${type};base64,${Buffer.concat([magic, Buffer.alloc(bytes - magic.length)]).toString('base64')}`;
         },
       };
       return canvas;
@@ -135,6 +165,55 @@ describe('readImageFile: what an upload is stored as', () => {
   test('a small PNG is kept as it is (a guard: nothing to scale)', async () => {
     const file = pngFile(800, 600, { bytes: 5000 });
     assert.equal(await readImageFile(file), `data:image/png;base64,${Buffer.from(await file.arrayBuffer()).toString('base64')}`);
+    assert.deepEqual(encoded, []);
+  });
+});
+
+describe('readImageFile: every upload is scaled to what the PDF prints (R7-4)', () => {
+  beforeEach(installBrowser);
+  const sizes = () => encoded.map(({ type, width, height }) => `${type.slice(6)} ${width}×${height}`);
+
+  test('a 3840×2160 camera JPEG is stored at 1024×576', async () => {
+    const url = await readImageFile(jpegFile(3840, 2160, { bytes: 2_000_000 }));
+    assert.match(url, /^data:image\/jpeg;base64,\/9j\//);
+    assert.deepEqual(sizes(), ['jpeg 1024×576']);
+  });
+
+  test('a PNG photo over 1024 px: a JPEG when it is opaque, a PNG when it has see-through pixels', async () => {
+    assert.match(await readImageFile(pngFile(2000, 1500)), /^data:image\/jpeg;/);
+    assert.match(await readImageFile(pngFile(1500, 2000, { seeThrough: true })), /^data:image\/png;/);
+    assert.deepEqual(sizes(), ['jpeg 1024×768', 'png 768×1024']);
+  });
+
+  test('a photo within 1024 px but over 300 KB is re-encoded at its own size', async () => {
+    const url = await readImageFile(jpegFile(800, 600, { bytes: 900_000 }));
+    assert.deepEqual(sizes(), ['jpeg 800×600']);
+    assert.ok(bytesOf(url) < 300_000, `${bytesOf(url)} bytes`);
+  });
+
+  test('a detailed photo is made a quarter smaller until it holds at most 300 KB', async () => {
+    const url = await readImageFile(jpegFile(3000, 3000, { bytes: 5_000_000, detail: 1 }));
+    assert.deepEqual(sizes(), ['jpeg 1024×1024', 'jpeg 768×768', 'jpeg 576×576', 'jpeg 432×432']);
+    assert.equal(bytesOf(url), 432 * 432);
+  });
+
+  test('an icon over 256 px is stored as a 256 px PNG, a JPEG one too', async () => {
+    assert.match(await readImageFile(pngFile(1000, 500), { kind: 'icon' }), /^data:image\/png;/);
+    assert.match(await readImageFile(jpegFile(600, 600), { kind: 'icon' }), /^data:image\/png;/);
+    assert.deepEqual(sizes(), ['png 256×128', 'png 256×256']);
+  });
+
+  test('an SVG photo over 300 KB is refused with a message; within it, it is kept', async () => {
+    const svg = (bytes) => new File([SVG_TEXT.replace('<circle', `<!--${'x'.repeat(bytes - SVG_TEXT.length)}--><circle`)], 'me.svg', { type: 'image/svg+xml' });
+    await assert.rejects(readImageFile(svg(310_000)), { message: /too large.*300 KB/ });
+    assert.match(await readImageFile(svg(290_000)), /^data:image\/svg\+xml;base64,/);
+  });
+
+  test('a PNG or JPEG within the side and the bytes is kept byte for byte (a guard)', async () => {
+    for (const file of [jpegFile(1024, 1024, { bytes: 290_000 }), pngFile(256, 256, { bytes: 390_000, name: 'icon.png' })]) {
+      const url = await readImageFile(file, { kind: file.name === 'icon.png' ? 'icon' : 'photo' });
+      assert.equal(bytesOf(url), file.size, file.name);
+    }
     assert.deepEqual(encoded, []);
   });
 });

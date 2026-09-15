@@ -5,7 +5,8 @@
 //
 // react-pdf picks its decoder by the data URL's label, and the browser labels a file by its name,
 // so the bytes decide what a file is, never the label: a WebP saved as "me.jpg" is converted too
-// (R7-3).
+// (R7-3). And every upload is scaled to what the PDF prints, whatever its format (R7-4): a phone
+// photo kept whole outgrew the browser's storage and the 1 MiB of a cloud document.
 
 /** A data URL as react-pdf reads one: `data:image/<label>;base64,<bytes>`. */
 const IMAGE_DATA_URL = /^data:image\/([\w.+-]+);base64,/i;
@@ -63,6 +64,20 @@ export function isDrawableImage(src) {
 }
 
 export const UNREADABLE_IMAGE = 'That image could not be read. Please upload a PNG, JPEG, WebP or GIF file.';
+const tooLarge = (maxBytes) => `That image is too large. Please upload one under ${maxBytes / 1000} KB.`;
+
+/**
+ * What each kind of upload is stored as: its format when it is converted, its longest side in px
+ * and the most bytes it keeps. The PDF prints a photo under 100 pt (1024 px is over 700 dpi) and an
+ * icon under 20 pt; two photos (the résumé's and the letter's) still leave most of a 1 MiB cloud
+ * document for the text. 400 KB is the icon limit the editor has always stated.
+ */
+const KINDS = {
+  photo: { as: 'jpeg', maxSide: 1024, maxBytes: 300_000 },
+  icon: { as: 'png', maxSide: 256, maxBytes: 400_000 },
+};
+/** Below this side a raster fits any limit above, so the shrinking stops (a guard). */
+const MIN_SIDE = 64;
 
 function readAsDataURL(blob) {
   return new Promise((resolve, reject) => {
@@ -77,43 +92,73 @@ async function readHead(file) {
   return String.fromCharCode(...new Uint8Array(await file.slice(0, HEAD_BYTES).arrayBuffer()));
 }
 
+/** Bytes held by a base64 data URL. */
+function dataUrlBytes(dataUrl) {
+  const b64 = dataUrl.slice(dataUrl.indexOf(',') + 1);
+  return Math.floor((b64.length * 3) / 4) - (b64.endsWith('==') ? 2 : b64.endsWith('=') ? 1 : 0);
+}
+
+/** True when a pixel of the canvas behind `ctx` is not fully opaque. */
+function seeThrough(ctx, { width, height }) {
+  const { data } = ctx.getImageData(0, 0, width, height);
+  for (let i = 3; i < data.length; i += 4) if (data[i] < 255) return true;
+  return false;
+}
+
 /**
- * `file` decoded by the browser and re-encoded: PNG keeps transparency (icons); JPEG is far
- * smaller for a photo, drawn on white because JPEG has no transparency. Scaled down so its
- * longer side is at most `maxSide` px — the PDF prints a photo under 100 pt and an icon under 20.
+ * `bitmap` drawn into a canvas and encoded: an icon as PNG; a photo as JPEG, or as PNG when it has
+ * see-through pixels (a cut-out keeps showing the banner or the side column behind it). Its longer
+ * side is at most `maxSide` px, and a quarter shorter each time until it holds at most `maxBytes`.
  */
-async function reencode(file, { as, maxSide }) {
-  const bitmap = await createImageBitmap(file);
-  try {
-    const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height));
-    const canvas = document.createElement('canvas');
-    canvas.width = Math.max(1, Math.round(bitmap.width * scale));
-    canvas.height = Math.max(1, Math.round(bitmap.height * scale));
-    const ctx = canvas.getContext('2d');
-    if (as === 'jpeg') {
+function encode(bitmap, { as, maxSide, maxBytes }) {
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  const longest = Math.max(bitmap.width, bitmap.height);
+  let mime = as === 'png' ? MIME.png : null;
+  for (let side = Math.min(maxSide, longest); ; side = Math.floor(side * 0.75)) {
+    canvas.width = Math.max(1, Math.round((bitmap.width * side) / longest)); // clears it, resets ctx
+    canvas.height = Math.max(1, Math.round((bitmap.height * side) / longest));
+    ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    mime ??= seeThrough(ctx, canvas) ? MIME.png : MIME.jpeg;
+    if (mime === MIME.jpeg) {
+      // JPEG has no transparency: an edge the scaling left see-through goes white, not black.
+      ctx.globalCompositeOperation = 'destination-over';
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
-    ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-    return canvas.toDataURL(as === 'jpeg' ? 'image/jpeg' : 'image/png', 0.9);
-  } finally {
-    bitmap.close?.();
+    const dataUrl = canvas.toDataURL(mime, 0.9);
+    if (dataUrlBytes(dataUrl) <= maxBytes) return dataUrl;
+    if (side <= MIN_SIDE) throw new Error(tooLarge(maxBytes));
   }
 }
 
 /**
- * The uploaded image `file` as a data URL the PDF can draw. What the file is comes from its bytes,
- * not its name: a PNG, JPEG or SVG comes back as it is, labelled as what it is; any other format
- * the browser decodes (WebP, GIF, AVIF, BMP …) is converted — to JPEG for `kind: 'photo'`, to PNG
- * for `kind: 'icon'`. Rejects with UNREADABLE_IMAGE when it is not an image the browser can decode.
+ * The uploaded image `file` as a data URL the PDF can draw, for `kind` 'photo' or 'icon' (see
+ * KINDS). What the file is comes from its bytes, not its name. A PNG or JPEG within the kind's
+ * side and bytes is kept as it is, and so is an SVG within its bytes (drawn as vectors, it has no
+ * side to scale); anything else the browser decodes (a bigger PNG or JPEG, WebP, GIF, AVIF, BMP …)
+ * is scaled and converted. Rejects with UNREADABLE_IMAGE when it is not an image the browser can
+ * decode, and with a "too large" message for an SVG over the kind's bytes.
  */
 export async function readImageFile(file, { kind = 'photo' } = {}) {
   if (!file || !file.type?.startsWith('image/')) throw new Error(UNREADABLE_IMAGE);
+  const limits = KINDS[kind] || KINDS.photo;
   const type = sniff(await readHead(file));
-  if (type) return labelled(await readAsDataURL(file), type);
+  if (type === 'svg') {
+    if (file.size > limits.maxBytes) throw new Error(tooLarge(limits.maxBytes));
+    return labelled(await readAsDataURL(file), type);
+  }
+  let bitmap;
   try {
-    return await reencode(file, kind === 'icon' ? { as: 'png', maxSide: 256 } : { as: 'jpeg', maxSide: 1024 });
+    bitmap = await createImageBitmap(file);
   } catch {
     throw new Error(UNREADABLE_IMAGE);
+  }
+  try {
+    const fits = Math.max(bitmap.width, bitmap.height) <= limits.maxSide && file.size <= limits.maxBytes;
+    if (type && fits) return labelled(await readAsDataURL(file), type);
+    return encode(bitmap, limits);
+  } finally {
+    bitmap.close?.();
   }
 }
