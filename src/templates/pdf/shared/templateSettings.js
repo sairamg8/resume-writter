@@ -2,6 +2,7 @@
 // functions (no react-pdf): the templates, the cover letter and its Word export all read the
 // résumé's colours through here, so the letter's Word file prints what its PDF prints (FIDB-51).
 import { headerBorderOn } from '@/constants/templates';
+import { headerGapsPt } from '@/constants/headerSpacing';
 import { contrast, readableOn } from './pdfColors';
 import { CSS_PX_TO_PT, DEFAULT_ITEM_GAP_PX, DEFAULT_SECTION_GAP_PX } from './pdfUnits';
 
@@ -131,6 +132,9 @@ export function resolveTemplateSettings(settings = {}, templateKey) {
   s.photoTextAlign = settings.photoTextAlign || 'center';
   // A boolean from here on: the stored choice, else the template's own default.
   s.showHeaderBorder = headerBorderOn(settings, templateKey);
+
+  // The header's spacing in pt: the résumé's own gaps, else the template's (header_spacing_spec.md).
+  s.headerGaps = headerGapsPt(settings, templateKey, { contactLayout: s.contactLayout, sectionGapPt: s.sectionGap });
 
   return s;
 }
