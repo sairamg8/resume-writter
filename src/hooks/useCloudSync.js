@@ -30,6 +30,8 @@ export function useCloudSync({ user, appState, store }) {
   // with): { uid, cloudOriginals, cloudDeleted } — the cloud's originals (demoSeed.js), deleted
   // ones included, and its deletion list.
   const [account, setAccount] = useState(null);
+  // The résumés the cloud will not take, held back on their own (cloudSyncHeld.js): [{ id, name }].
+  const [heldResumes, setHeldResumes] = useState([]);
 
   // The store as of the last render, for the sync to read and call when it needs to.
   const latest = useRef({ appState, store });
@@ -38,7 +40,7 @@ export function useCloudSync({ user, appState, store }) {
   const [sync] = useState(() => createCloudSync({
     io,
     store: liveStore(() => latest.current),
-    report: { status: setSyncStatus, synced: setLastSynced, account: setAccount },
+    report: { status: setSyncStatus, synced: setLastSynced, account: setAccount, held: setHeldResumes },
     isDemo: (u) => isDemoAccount(u, DEMO_ACCOUNTS),
     online: () => navigator.onLine,
     hidden: () => document.hidden,
@@ -73,5 +75,5 @@ export function useCloudSync({ user, appState, store }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [appState.resumes, user]);
 
-  return { syncStatus, lastSynced, isOnline, account, readCloudCopies: sync.readCloudCopies };
+  return { syncStatus, lastSynced, isOnline, account, heldResumes, readCloudCopies: sync.readCloudCopies };
 }

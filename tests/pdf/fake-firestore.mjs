@@ -10,7 +10,8 @@
 // `cloud.goOffline()` makes getDocs/getDoc answer from a stale cache, as the SDK does when it
 // cannot reach the server, while getDocsFromServer/getDocFromServer fail. Set `cloud.auth` to the
 // signed-in uid (null: nobody) and the security rules apply: another account's documents are
-// permission-denied, as firestore.rules has it.
+// permission-denied, as firestore.rules has it. `cloud.refuse` refuses chosen batches, as the
+// server refuses one writing a document over 1 MiB.
 
 const clone = (v) => (v === undefined ? undefined : JSON.parse(JSON.stringify(v)));
 export const resumePath = (uid, id) => `users/${uid}/resumes/${id}`;
@@ -30,13 +31,16 @@ export async function settle(turns = 5) {
 
 /**
  * `docs`: { path: data } to start with. Returns { fs, db, data, commits, reads, hold, fail,
- * afterRead, goOffline(), doc(path), resumes(uid) }: `hold.read` / `hold.commit` = a promise the
- * next reads / commits wait for; `fail.read` / `fail.commit` = an error they throw instead
- * (cleared by the test); `reads` = the paths read, in order.
+ * refuse, refused, afterRead, goOffline(), doc(path), resumes(uid) }: `hold.read` / `hold.commit`
+ * = a promise the next reads / commits wait for; `fail.read` / `fail.commit` = an error they throw
+ * instead (cleared by the test); `refuse` = (ops) → the error the server refuses that batch with,
+ * or null — held by `hold.commit` like an acknowledgement; `refused` = the batches refused;
+ * `reads` = the paths read, in order.
  */
 export function fakeFirestore(docs = {}) {
   const data = new Map(Object.entries(docs).map(([p, v]) => [p, clone(v)]));
   const commits = [];
+  const refused = [];
   const reads = [];
   const hold = { read: null, commit: null };
   const fail = { read: null, commit: null };
@@ -96,16 +100,22 @@ export function fakeFirestore(docs = {}) {
         commit() {
           if (ops.some(([, path]) => !allowed(path))) return Promise.reject(denied());
           if (fail.commit) return Promise.reject(fail.commit);
+          const ack = hold.commit;
+          const refusal = api.refuse?.(ops);
+          if (refusal) {
+            refused.push(ops);
+            return ack ? ack.then(() => { throw refusal; }) : Promise.reject(refusal);
+          }
           ops.forEach(apply);
           commits.push(ops);
-          const ack = hold.commit;
           return ack ? ack.then(() => undefined) : Promise.resolve();
         },
       };
     },
   };
   const api = {
-    fs, db, data, commits, reads, hold, fail,
+    fs, db, data, commits, reads, hold, fail, refused,
+    refuse: null,
     afterRead: null,
     auth: undefined,
     /** From now on the server cannot be reached; the cache holds the account as it is now. */
@@ -140,17 +150,18 @@ export function manualTimers() {
 }
 
 /**
- * What the engine reports, as the React state it would set: { status, account, synced } — and
- * `waiting`, the demo restore's (useDemoSeed's) "the originals come back once the cloud answers".
+ * What the engine reports, as the React state it would set: { status, account, synced, held } —
+ * and `waiting`, the demo restore's (useDemoSeed's) "the originals come back once the cloud answers".
  */
 export function recorder() {
-  const seen = { status: 'idle', statuses: [], account: null, synced: null, waiting: false };
+  const seen = { status: 'idle', statuses: [], account: null, synced: null, held: [], waiting: false };
   return {
     seen,
     report: {
       status: (v) => { seen.status = v; seen.statuses.push(v); },
       account: (v) => { seen.account = v; },
       synced: (v) => { seen.synced = v; },
+      held: (v) => { seen.held = v; },
     },
   };
 }

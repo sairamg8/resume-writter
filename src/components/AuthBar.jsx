@@ -12,7 +12,20 @@ function GoogleIcon() {
 }
 import { useState } from 'react';
 
-function SyncDot({ syncStatus, lastSynced, isOnline }) {
+const clip = (name) => (name.length > 32 ? `${name.slice(0, 31)}…` : name);
+
+/**
+ * While the cloud will not take a résumé — most often one over 1 MB, a large photo — it alone is
+ * held back and the rest syncs (cloudSyncHeld.js): the tip names it. Stopped with none held: a
+ * refused batch no résumé could be blamed for (cloudSyncRetry.js).
+ */
+function stoppedLabel(held = []) {
+  if (held.length === 1) return `“${clip(held[0].name || 'Untitled')}” not synced (a large photo?) — saved in this browser`;
+  if (held.length > 1) return `${held.length} résumés not synced (large photos?) — saved in this browser`;
+  return 'Sync stopped (a large photo?) — saved in this browser';
+}
+
+function SyncDot({ syncStatus, lastSynced, isOnline, heldResumes }) {
   const [tip, setTip] = useState(false);
 
   let Icon, color, label;
@@ -26,8 +39,7 @@ function SyncDot({ syncStatus, lastSynced, isOnline }) {
   } else if (syncStatus === 'error') {
     Icon = CloudAlert; color = '#ef4444'; label = 'Sync error — will retry';
   } else if (syncStatus === 'stopped') {
-    // The cloud refused a change for good (cloudSyncRetry.js) — most often a résumé over 1 MB.
-    Icon = CloudAlert; color = '#ef4444'; label = 'Sync stopped (a large photo?) — saved in this browser';
+    Icon = CloudAlert; color = '#ef4444'; label = stoppedLabel(heldResumes);
   } else if (syncStatus === 'off') {
     // No access to the cloud (its rules, or no database): nothing is retried until a reload.
     Icon = CloudOff; color = '#9ca3af'; label = 'Sync is off — changes are saved in this browser';
@@ -52,7 +64,9 @@ function SyncDot({ syncStatus, lastSynced, isOnline }) {
 }
 
 /** `compact` renders the signed-out state as an icon-only button, for narrow headers. */
-export default function AuthBar({ user, authLoading, cloudAvailable = true, signInWithGoogle, signOut, syncStatus, lastSynced, isOnline, compact = false }) {
+export default function AuthBar({
+  user, authLoading, cloudAvailable = true, signInWithGoogle, signOut, syncStatus, lastSynced, isOnline, heldResumes, compact = false,
+}) {
   const [signingIn, setSigningIn] = useState(false);
   const [menuOpen, setMenuOpen]   = useState(false);
 
@@ -86,7 +100,7 @@ export default function AuthBar({ user, authLoading, cloudAvailable = true, sign
 
   return (
     <div className="flex items-center gap-2">
-      <SyncDot syncStatus={syncStatus} lastSynced={lastSynced} isOnline={isOnline} />
+      <SyncDot syncStatus={syncStatus} lastSynced={lastSynced} isOnline={isOnline} heldResumes={heldResumes} />
 
       <div className="relative">
         <button

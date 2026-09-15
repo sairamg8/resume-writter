@@ -42,7 +42,14 @@ Requires valid `VITE_FIREBASE_*` env vars; without them Auth will error at runti
 
 ### Status values
 
-`idle | syncing | synced | offline | error` — shown in AuthBar cloud icon.
+`idle | syncing | synced | offline | error | stopped | off` — shown in AuthBar's cloud icon (its tip
+on hover); what a failure means: `src/utils/cloudSyncRetry.js`.
+
+| Status | Tip | Means |
+|--------|-----|-------|
+| `error` | Sync error — will retry | a temporary failure: the first sync is tried again after 30 s, 1 min … up to 10 min, not while the tab is hidden |
+| `stopped` | “My CV” not synced (a large photo?) — saved in this browser | the cloud will not take that résumé — over Firestore's 1 MiB document limit (counted before sending) or refused for good. It alone is held back until it changes or goes; every other résumé keeps syncing (`src/utils/cloudSyncHeld.js`, V2VF1S-0). With no résumé named: a refused batch none could be held for; the next change is tried |
+| `off` | Sync is off — changes are saved in this browser | permission-denied or no `(default)` database, or a build with no cloud: nothing is retried until a sign-out or a reload (V2VF1S-2) |
 
 ### Initial sync (on sign-in)
 
