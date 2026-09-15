@@ -104,19 +104,27 @@ export function CoverLetterHeader({ look, personal, settings, cl, hidden, contac
   // item leaves (contactRowMinWidth), so a long title wraps there instead of pushing a contact
   // past the margin (VM3-1) — and, at a column of no width, making react-pdf throw on an icon.
   // A name or title word wider than that room cannot wrap, and ran over the contacts (VM3-0):
-  // then the contacts go under the name, as Below Name prints them. In points, on the name block:
-  // react-pdf lays text out once, at the first width it is measured with, so a cap on the row or
-  // a box that shrinks later does not re-wrap it. Modern's band pads the header on both sides.
+  // then the contacts go under the name, as Below Name prints them. With no contacts it has the
+  // row beside the photo (uncapped, a long title ran past the margin by the photo's width). In
+  // points, on the name block: react-pdf lays text out once, at the first width it is measured
+  // with, so a cap on the row or a box that shrinks later does not re-wrap it. Modern's band
+  // pads the header on both sides.
+  const hasContacts = contactItems(personal, hidden).length > 0;
   let nameCap;
   let layout = centered ? 'centered' : fieldsPos;
-  if (layout === 'right' && contactItems(personal, hidden).length) {
+  if (layout === 'right') {
     const bandPad = look.band && !look.band.bleed ? look.band.padX : 0;
-    const room = contentWidthPt(settings) - 2 * bandPad - (photoEl ? photoStyle.width + photoStyle.marginRight : 0) - CONTACTS_GAP;
-    const font = { fontFamily: settings._pdfFontFamily };
-    const contactsNeed = contactRowMinWidth(personal, contactSettings, hidden) + SLACK;
-    const nameNeed = Math.max(widestWord(name, { ...font, ...nameStyle }), widestWord(personal?.title, { ...font, ...titleStyle })) + SLACK;
-    if (nameNeed + contactsNeed <= room) nameCap = room - contactsNeed;
-    else layout = 'below-name';
+    const beside = contentWidthPt(settings) - 2 * bandPad - (photoEl ? photoStyle.width + photoStyle.marginRight : 0);
+    if (!hasContacts) {
+      nameCap = beside;
+    } else {
+      const room = beside - CONTACTS_GAP;
+      const font = { fontFamily: settings._pdfFontFamily };
+      const contactsNeed = contactRowMinWidth(personal, contactSettings, hidden) + SLACK;
+      const nameNeed = Math.max(widestWord(name, { ...font, ...nameStyle }), widestWord(personal?.title, { ...font, ...titleStyle })) + SLACK;
+      if (nameNeed + contactsNeed <= room) nameCap = room - contactsNeed;
+      else layout = 'below-name';
+    }
   }
 
   const nameBlock = (
@@ -168,7 +176,7 @@ export function CoverLetterHeader({ look, personal, settings, cl, hidden, contac
           {photoEl}
           {nameBlock}
         </View>
-        {contactEl ? <View style={{ flex: 1, alignItems: 'flex-end', marginLeft: CONTACTS_GAP }}>{contactEl}</View> : null}
+        {hasContacts ? <View style={{ flex: 1, alignItems: 'flex-end', marginLeft: CONTACTS_GAP }}>{contactEl}</View> : null}
       </View>
     );
   }

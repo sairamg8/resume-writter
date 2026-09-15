@@ -2,10 +2,10 @@
 // The name side had a fixed 60 % of the header and the contacts the rest, whatever either held:
 // a name word wider than its 60 % printed over the contacts (VM3-0), a contact wider than its 40 %
 // ran past the right margin and a 2 Grid e-mail over the phone (VM3-1), and a photo the PDF cannot
-// draw still took its room from the title (VM3-7).
+// draw still took its room from the title (VM3-7). With no contacts the name side had no bound.
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { setup, teardown, resume, renderCover, read, overlaps, MM } from './harness.mjs';
+import { setup, teardown, resume, renderCover, read, overlaps, MM, TEMPLATES } from './harness.mjs';
 import { drawing, PNG_2X2 as PNG } from './extractors.mjs';
 
 before(setup);
@@ -168,5 +168,34 @@ describe('a photo the PDF cannot draw takes no room (VM3-7)', () => {
       })));
       assert.equal(await page(WEBP), await page(''), title);
     }
+  });
+});
+
+describe('a letter with no contacts (found with VM3-1)', () => {
+  // With no contact to show, the name block beside the photo had no cap at all: react-pdf laid
+  // the title out at the header's full width, so beside a photo a long title ran past the right
+  // margin by the photo's width (x 585.9 against 544.3 at 18 mm; a 72-character one at 30 mm).
+  const NONE = { email: '', phone: '', location: '', website: '', linkedin: '' };
+  const T123 = `${T72}: Payments, Risk and Fraud Detection Platform Group`;
+
+  it('a long title wraps beside the photo, inside the margin, in every look', async () => {
+    for (const template of TEMPLATES) {
+      for (const [title, marginH] of [[T123, 18], [T72, 30]]) {
+        for (const photo of [PNG, '']) {
+          const at = `${template}, ${title.length} characters, ${marginH} mm, ${photo ? 'photo' : 'no photo'}`;
+          const r = resume({ template, settings: { marginH }, personal: { name: 'Alexandra Johnson', title, photo, ...NONE }, coverLetter: { body: '<p>Hello</p>' } });
+          const [page] = await read(await renderCover(r));
+          const right = page.W - marginH * MM;
+          assert.deepEqual(page.items.filter((t) => t.x + t.w > right + 0.5).map((t) => t.str), [], `${at}: past the margin`);
+          assert.ok(page.text.replace(/\s+/g, '').includes(title.replace(/\s+/g, '')), `${at}: the whole title`);
+        }
+      }
+    }
+  });
+
+  it('a title that fits keeps its one line (guard)', async () => {
+    const r = resume({ personal: { name: 'Alexandra Johnson', title: T72, photo: PNG, ...NONE }, coverLetter: { body: '<p>Hello</p>' } });
+    const [page] = await read(await renderCover(r));
+    assert.ok(page.items.some((t) => t.str === T72), 'one line');
   });
 });
