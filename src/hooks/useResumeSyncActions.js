@@ -1,7 +1,8 @@
 // The résumé store's changes that the cloud sync and a demo account's restore depend on — Delete,
 // putting résumés back, a first sync's result, forgetting sent deletions — as updaters over the
-// store's state, made with its setAppState (useResumeStore). No React, so the sync tests build
-// their store from this very code (tests/pdf/fake-firestore.mjs): a change here is a change there.
+// store's state, made with its setAppState (useResumeStore), and the store as the sync engine
+// reaches it (liveStore, useCloudSync). No React, so the sync tests build their store from this
+// very code (tests/pdf/fake-firestore.mjs): a change here is a change there.
 import { normalizeResume } from '@/utils/normalizeResume';
 import { withDeletion, withoutDeletions } from '@/utils/localDeletions';
 import { afterSync } from '@/utils/cloudSyncPlan';
@@ -46,4 +47,17 @@ export function createSyncActions(setAppState, now = () => Date.now()) {
   }
 
   return { forgetDeletions, applyCloudSync, restoreResumes, deleteResume };
+}
+
+/**
+ * The résumé store as the sync engine reaches it: `latest()` → { appState, store } as of the last
+ * render (useCloudSync keeps it in a ref), read when the engine needs it — a first sync reads the
+ * state once the account is known, a flush's forgetDeletions reaches the store's own updater.
+ */
+export function liveStore(latest) {
+  return {
+    getState: () => latest().appState,
+    applyCloudSync: (result) => latest().store.applyCloudSync(result),
+    forgetDeletions: (ids, before) => latest().store.forgetDeletions(ids, before),
+  };
 }

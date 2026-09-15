@@ -118,16 +118,20 @@ export function fakeFirestore(docs = {}) {
   return api;
 }
 
-/** Timers the test fires by hand: `fire()` runs every one due, then lets the promises settle. */
+/**
+ * Timers the test fires by hand: `fire()` runs every one due, then lets the promises settle;
+ * `delays` are the pauses (ms) the waiting ones were set for, in the order they were set.
+ */
 export function manualTimers() {
   const due = new Map();
   let next = 1;
   return {
-    set(fn) { const id = next; next += 1; due.set(id, fn); return id; },
+    set(fn, ms) { const id = next; next += 1; due.set(id, { fn, ms }); return id; },
     clear(id) { due.delete(id); },
     get count() { return due.size; },
+    get delays() { return [...due.values()].map((t) => t.ms); },
     async fire() {
-      const fns = [...due.values()];
+      const fns = [...due.values()].map((t) => t.fn);
       due.clear();
       fns.forEach((fn) => fn());
       await settle();
@@ -186,12 +190,13 @@ export function fakeStore(state, mods) {
 
 /**
  * A page: the app's sync engine (`mods.engine`) with its Firestore calls (`mods.io`) over `cloud`
- * and `state` in its store, wired as useCloudSync wires them (liveStore); with `demo`
+ * and `state` in its store, wired as useCloudSync wires them (liveStore; `hidden` () → whether the
+ * tab is hidden); with `demo`
  * ({ accounts, ownerResume?, now? }) also the demo restore, run after every change as
  * useDemoSeed runs it. `page.sync.start(user)` signs in; `page.change(next)` changes the store as
  * a click would, `page.remove(id)` deletes a résumé — the effects run after each, as React's would.
  */
-export function syncPage(mods, cloud, state, { isDemo = () => false, online = () => true, demo = null } = {}) {
+export function syncPage(mods, cloud, state, { isDemo = () => false, online = () => true, hidden = () => false, demo = null } = {}) {
   const store = fakeStore(state, mods);
   const timers = manualTimers();
   const { seen, report } = recorder();
@@ -208,8 +213,8 @@ export function syncPage(mods, cloud, state, { isDemo = () => false, online = ()
   const onAccount = report.account;
   report.account = (a) => { onAccount(a); queueMicrotask(render); };
   const sync = mods.engine.createCloudSync({
-    io: mods.io.cloudIo(cloud.fs, cloud.db), store: mods.engine.liveStore(() => ({ appState: store.state, store })),
-    report, isDemo, online, timers,
+    io: mods.io.cloudIo(cloud.fs, cloud.db), store: mods.actions.liveStore(() => ({ appState: store.state, store })),
+    report, isDemo, online, hidden, timers,
   });
   const start = sync.start;
   sync.start = (u) => { user = u || null; start(u); queueMicrotask(render); };

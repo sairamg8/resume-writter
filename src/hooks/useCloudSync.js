@@ -6,7 +6,8 @@ import { db } from '@/utils/firebase';
 import { isDemoAccount } from '@/utils/demoSeed';
 import { DEMO_ACCOUNTS } from '@/utils/demoAccounts';
 import { cloudIo } from '@/utils/cloudSyncIo';
-import { createCloudSync, liveStore } from '@/utils/cloudSyncEngine';
+import { createCloudSync } from '@/utils/cloudSyncEngine';
+import { liveStore } from '@/hooks/useResumeSyncActions';
 
 /** The real Firestore calls (cloudSyncIo); null in a build without a cloud. */
 const io = db
@@ -40,20 +41,24 @@ export function useCloudSync({ user, appState, store }) {
     report: { status: setSyncStatus, synced: setLastSynced, account: setAccount },
     isDemo: (u) => isDemoAccount(u, DEMO_ACCOUNTS),
     online: () => navigator.onLine,
+    hidden: () => document.hidden,
     log: (...args) => console.info(...args),
   }));
 
-  // ── Online / offline detection ────────────────────────────────────────────
+  // ── Online / offline detection; a retry that came due while the tab was hidden ──
   useEffect(() => {
     const on = () => setIsOnline(true);
     const off = () => setIsOnline(false);
+    const visible = () => { if (!document.hidden) sync.shown(); };
     window.addEventListener('online', on);
     window.addEventListener('offline', off);
+    document.addEventListener('visibilitychange', visible);
     return () => {
       window.removeEventListener('online', on);
       window.removeEventListener('offline', off);
+      document.removeEventListener('visibilitychange', visible);
     };
-  }, []);
+  }, [sync]);
 
   // ── Initial sync when user signs in (or comes back online) ────────────────
   useEffect(() => {

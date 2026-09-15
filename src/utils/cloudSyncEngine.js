@@ -1,66 +1,41 @@
 // The cloud sync itself — the first sync after sign-in, the write queue and its flushes, the
 // read-back of a demo account's originals — as a plain object with everything outside passed
 // in: the Firestore calls (`io`, cloudSyncIo.js; null without a cloud), the résumé store, the
-// timers, the online flag.
+// timers, the online flag. What a failure means and when it is tried again: cloudSyncRetry.js.
 // No React and no Firebase, so the tests drive this very code (tests/pdf/18-cloud-sync-*.test.mjs);
 // useCloudSync only wires it to React state and the browser.
 import { isOriginal } from '@/utils/demoSeed';
 import { planInitialSync, queueChanges } from '@/utils/cloudSyncPlan';
 import { flushOnce } from '@/utils/cloudSyncFlush';
 import { deletionEntries } from '@/utils/localDeletions';
+import { backoff, failureKind } from '@/utils/cloudSyncRetry';
 
-/**
- * Errors that mean cloud sync cannot work until Firebase project/rules are fixed.
- * Not the same as temporary offline — we switch to local-only and stop retrying.
- */
-export function isCloudConfigError(e) {
-  const code = e?.code || '';
-  const msg = String(e?.message || e || '');
-  return (
-    code === 'permission-denied'
-    || code === 'PERMISSION_DENIED'
-    || msg.includes("Database '(default)' not found")
-    || msg.includes('permission-denied')
-    || msg.includes('Missing or insufficient permissions')
-  );
-}
-
-const isOfflineError = (e) => String(e?.message || '').toLowerCase().includes('client is offline');
-
-/**
- * The résumé store as the engine reaches it: `latest()` → { appState, store } as of the last
- * render (useCloudSync keeps it in a ref), read when the engine needs it — a first sync reads the
- * state once the account is known, a flush's forgetDeletions reaches the store's own updater.
- */
-export function liveStore(latest) {
-  return {
-    getState: () => latest().appState,
-    applyCloudSync: (result) => latest().store.applyCloudSync(result),
-    forgetDeletions: (ids, before) => latest().store.forgetDeletions(ids, before),
-  };
-}
+/** Nothing waiting to be sent: queueChanges adds to it, a flush takes it whole. */
+const emptyQueue = () => ({ writes: new Map(), deletes: new Set(), kept: new Set(), marked: new Set() });
 
 /**
  * createCloudSync({ io, store, report, isDemo, ... }):
  *   io        cloudIo(...) — null when this build has no cloud
  *   store     { getState() → the résumé store's state now, applyCloudSync(result) — a first
  *             sync's result (cloudSyncPlan.afterSync), forgetDeletions(ids, before) — the
- *             cloud has these deletions (localDeletions.js) }
- *   report    { status('idle'|'syncing'|'synced'|'offline'|'error'), synced(Date), account(a) } —
+ *             cloud has these deletions (localDeletions.js) }: useResumeSyncActions.liveStore
+ *   report    { status('idle'|'syncing'|'synced'|'offline'|'error'|'stopped'), synced(Date), account(a) } —
  *             account: { uid, cloudOriginals, cloudDeleted } once the account's list is known,
  *             else null — the cloud's originals (demoSeed.js), deleted ones included, and its
  *             deletion list, as the first sync read them
  *   isDemo    user → true for a demo account (its deleted originals are flagged, not removed)
- *   online    () → whether the browser says it is online
+ *   online    () → whether the browser says it is online; hidden () → whether the tab is hidden
  *   timers    { set(fn, ms) → id, clear(id) }; flushDelay (ms) before queued changes are sent;
  *             cloudTimeout (ms) readCloudCopies waits for an answer; retryDelay (ms) before a
- *             first sync that could not reach the cloud is tried again; now() → ms
- * Returns { start(user), cancel(), resumesChanged(resumes), readCloudCopies(ids) }.
+ *             first sync that failed for a moment is tried again, doubled after each failure up
+ *             to maxRetryDelay; now() → ms
+ * Returns { start(user), cancel(), shown(), resumesChanged(resumes), readCloudCopies(ids) }.
  */
 export function createCloudSync({
   io, store, report, isDemo = () => false,
-  online = () => true, timers = { set: setTimeout, clear: clearTimeout },
-  flushDelay = 1500, cloudTimeout = 5000, retryDelay = 30000, now = () => Date.now(), log = () => {},
+  online = () => true, hidden = () => false, timers = { set: setTimeout, clear: clearTimeout },
+  flushDelay = 1500, cloudTimeout = 5000, retryDelay = 30000, maxRetryDelay = 600000,
+  now = () => Date.now(), log = () => {},
 }) {
   const s = {
     user: null,
@@ -68,12 +43,12 @@ export function createCloudSync({
     initialSyncDone: false,
     cloudDisabled: false,
     prevResumes: null,
-    pendingWrites: new Map(),
-    pendingDeletes: new Set(),
-    pendingKept: new Set(), // the pending deletes that were originals (queueChanges)
-    pendingMarked: new Set(), // originals whose mark is not sent yet (queueChanges)
+    queue: emptyQueue(), // the changes since the last flush (queueChanges)
     timer: null,
     retry: null,
+    attempts: 0, // failed tries since the last first sync that got through (backoff)
+    retryOnShow: false, // a retry came due while the tab was hidden
+    stopped: null, // the résumés when a batch was refused for good: tried again once they change
     account: null,
   };
 
@@ -86,6 +61,8 @@ export function createCloudSync({
   function start(user) {
     s.gen += 1;
     timers.clear(s.retry);
+    s.retryOnShow = false;
+    s.stopped = null;
     // Signed out, or another account: the last one's queue is not sent — without its auth it was
     // refused, and that refusal turned sync off for whoever signed in next (R8-5). Nothing is
     // lost: the store keeps the edits and deletions for that account's next first sync.
@@ -120,10 +97,7 @@ export function createCloudSync({
   function dropQueue() {
     timers.clear(s.timer);
     s.timer = null;
-    s.pendingWrites = new Map();
-    s.pendingDeletes = new Set();
-    s.pendingKept = new Set();
-    s.pendingMarked = new Set();
+    s.queue = emptyQueue();
   }
 
   /** The account when there is no cloud to read: this browser's résumés are the whole list. */
@@ -135,11 +109,59 @@ export function createCloudSync({
     timers.clear(s.retry);
   }
 
-  /** Try the first sync again later — the sync icon says "will retry". */
-  function scheduleRetry() {
+  /**
+   * Try the first sync again later — the sync icon says "will retry": retryDelay after the first
+   * failure, twice as long after each next one (at most maxRetryDelay), and not while the tab is
+   * hidden: a retry due then runs once it is shown (V2W1a-1).
+   */
+  function scheduleRetry(delay) {
     timers.clear(s.retry);
+    const wait = delay ?? backoff(s.attempts++, retryDelay, maxRetryDelay);
     const { gen, user } = s;
-    s.retry = timers.set(() => { if (s.gen === gen && s.user === user) start(user); }, retryDelay);
+    s.retry = timers.set(() => {
+      if (s.gen !== gen || s.user !== user) return;
+      if (hidden()) s.retryOnShow = true;
+      else start(user);
+    }, wait);
+  }
+
+  /** The tab is shown again: a retry that came due while it was hidden runs now. */
+  function shown() {
+    if (s.retryOnShow && s.user) start(s.user);
+  }
+
+  /**
+   * A first sync or a flush of `user`'s account failed with `e` (cloudSyncRetry.failureKind).
+   * Nothing more is queued until a first sync gets through, and that one sends what failed: the
+   * store still has the edits, and the deletions a flush did not send. A failed flush used to
+   * say "will retry" while nothing was retried, and its queue was gone (V2W1a-1).
+   */
+  function failed(e, user, what) {
+    s.initialSyncDone = false;
+    const kind = failureKind(e, online());
+    if (kind === 'config') {
+      s.cloudDisabled = true;
+      report.status('error');
+      setAccount(noCloud(user));
+      // One clear message — app keeps working on localStorage only
+      log(
+        '[CloudSync] Cloud sync disabled (local-only). '
+        + 'Signed-in user cannot read/write Firestore — check rules are published '
+        + 'and a "(default)" database exists. Resume data still saves in this browser.',
+      );
+      return;
+    }
+    if (kind === 'stop') {
+      // The same batch fails the same way: nothing until the résumés change (resumesChanged).
+      s.stopped = store.getState().resumes;
+      report.status('stopped');
+      log(`[CloudSync] ${what} refused (${e?.code}); stopped until the next change:`, e?.message || e);
+      return;
+    }
+    report.status(kind === 'offline' ? 'offline' : 'error');
+    if (kind === 'retry') log(`[CloudSync] ${what} unavailable:`, e?.code || e?.message || e);
+    // Offline: going online again re-runs the first sync.
+    if (online()) scheduleRetry();
   }
 
   /**
@@ -184,42 +206,27 @@ export function createCloudSync({
       const listed = new Set(cloud.deleted);
       const cloudOriginals = cloud.docs.filter((r) => isOriginal(r) && !listed.has(r.id)).map(({ deleted: _deleted, ...r }) => r);
       setAccount({ uid: user.uid, cloudOriginals, cloudDeleted: [...cloud.deleted] });
+      s.attempts = 0;
       report.status('synced');
       report.synced(new Date());
     } catch (e) {
       if (gen !== s.gen) return;
-      if (isCloudConfigError(e)) {
-        s.cloudDisabled = true;
-        s.initialSyncDone = false;
-        report.status('error');
-        setAccount(noCloud(user));
-        // One clear message — app keeps working on localStorage only
-        log(
-          '[CloudSync] Cloud sync disabled (local-only). '
-          + 'Signed-in user cannot read/write Firestore — check rules are published '
-          + 'and a "(default)" database exists. Resume data still saves in this browser.',
-        );
-        return;
-      }
-      // Offline / transient: no write queue until a first sync gets through. Retried while the
-      // browser says it is online; going online again re-runs it anyway.
-      s.initialSyncDone = false;
-      const offline = !online() || isOfflineError(e);
-      report.status(offline ? 'offline' : 'error');
-      if (!offline) log('[CloudSync] sync unavailable:', e?.code || e?.message || e);
-      if (online()) scheduleRetry();
+      failed(e, user, 'sync');
     }
   }
 
   /** The store's résumés after every change: what changed is queued and sent after a pause. */
   function resumesChanged(current) {
+    if (s.stopped && s.user && current !== s.stopped) {
+      // Refused for good: a change (a photo taken out) is tried once, after the pause.
+      s.stopped = current;
+      scheduleRetry(flushDelay);
+      return;
+    }
     if (!s.user || !s.initialSyncDone || s.cloudDisabled || !io) return;
-    const queued = queueChanges({ writes: s.pendingWrites, deletes: s.pendingDeletes, kept: s.pendingKept, marked: s.pendingMarked }, s.prevResumes || [], current);
+    const queued = queueChanges(s.queue, s.prevResumes || [], current);
     if (!queued.dirty) return;
-    s.pendingWrites = queued.writes;
-    s.pendingDeletes = queued.deletes;
-    s.pendingKept = queued.kept;
-    s.pendingMarked = queued.marked;
+    s.queue = queued;
     s.prevResumes = current;
 
     timers.clear(s.timer);
@@ -233,14 +240,10 @@ export function createCloudSync({
     const current = () => s.user?.uid === user.uid;
     if (!current() || s.cloudDisabled || !io) return; // signed out or switched since (R8-5)
 
-    const writes = Array.from(s.pendingWrites.values());
-    const deletes = Array.from(s.pendingDeletes);
-    const kept = new Set(s.pendingKept);
-    const marked = new Set(s.pendingMarked);
-    s.pendingWrites.clear();
-    s.pendingDeletes.clear();
-    s.pendingKept.clear();
-    s.pendingMarked.clear();
+    const { kept, marked } = s.queue;
+    const writes = [...s.queue.writes.values()];
+    const deletes = [...s.queue.deletes];
+    s.queue = emptyQueue();
 
     if (!writes.length && !deletes.length) return;
 
@@ -260,16 +263,7 @@ export function createCloudSync({
     } catch (e) {
       // An account signed out since: its refusal says nothing about the one signed in now (R8-5).
       if (!current()) return;
-      if (isCloudConfigError(e)) {
-        s.cloudDisabled = true;
-        s.initialSyncDone = false;
-        report.status('error');
-        log('[CloudSync] Cloud sync disabled (local-only).');
-        return;
-      }
-      const offline = !online() || isOfflineError(e);
-      report.status(offline ? 'offline' : 'error');
-      if (!offline) log('[CloudSync] flush unavailable:', e?.code || e?.message || e);
+      failed(e, user, 'flush');
     }
   }
 
@@ -293,5 +287,5 @@ export function createCloudSync({
     });
   }
 
-  return { start, cancel, resumesChanged, readCloudCopies };
+  return { start, cancel, shown, resumesChanged, readCloudCopies };
 }

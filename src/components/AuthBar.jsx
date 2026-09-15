@@ -25,6 +25,9 @@ function SyncDot({ syncStatus, lastSynced, isOnline }) {
     label = lastSynced ? `Synced ${lastSynced.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'Synced';
   } else if (syncStatus === 'error') {
     Icon = CloudAlert; color = '#ef4444'; label = 'Sync error — will retry';
+  } else if (syncStatus === 'stopped') {
+    // The cloud refused a change for good (cloudSyncRetry.js) — most often a résumé over 1 MB.
+    Icon = CloudAlert; color = '#ef4444'; label = 'Sync stopped (a large photo?) — saved in this browser';
   } else {
     return null;
   }
