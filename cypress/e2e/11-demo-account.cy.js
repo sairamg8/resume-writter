@@ -208,6 +208,8 @@ describe('demo account — nobody else gets anything back', () => {
     okEveryConfirm();
     deleteCard('My CV');
     cy.contains('No resumes yet').should('be.visible');
+    // A deletion is the signed-in account's, even before its first sync (V2W1a-3).
+    cy.store().its('deletedInfo.resume_my_cv.owner').should('eq', OTHER.uid);
     newResumeAndBack();
     expectCards(['Untitled Resume']);
     cy.store().its('resumes').should('have.length', 1);

@@ -160,7 +160,7 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false }) {
                     onOpen={id => navigate(`/resume/${id}`)}
                     onDuplicate={id => { const newId = store.duplicateResume(id); if (newId) navigate(`/resume/${newId}`); }}
                     onDelete={id => {
-                      if (confirm(deletePrompt(r, keeps))) store.deleteResume(id);
+                      if (confirm(deletePrompt(r, keeps))) store.deleteResume(id, auth.user?.uid);
                     }}
                     onRename={store.renameResume}
                     onKeep={keeps ? store.keepResume : undefined}

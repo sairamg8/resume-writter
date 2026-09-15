@@ -172,6 +172,19 @@ describe('a deletion belongs to the account the list came from (R8-6)', () => {
     assert.equal(p.store.state.resumes.some((r) => r.id === 'resume_r'), false);
   });
 
+  it('deleted while signed in as B, before B\'s first sync got through, it is B\'s (V2W1a-3)', async () => {
+    // The list was last synced with A and still holds B's résumé R from B's earlier visit.
+    const cloud = fakeFirestore({ [resumePath('B', 'resume_r')]: cv('resume_r', 5), [resumePath('B', 'resume_s')]: cv('resume_s', 5) });
+    const p = page(cloud, { resumes: [cv('resume_r', 5)], syncedUid: 'A' });
+    cloud.fail.read = Object.assign(new Error('Failed to get documents from server.'), { code: 'unavailable' });
+    await signIn(p, B); // "Sync error — will retry"
+    await p.remove('resume_r');
+    cloud.fail.read = null;
+    await p.timers.fire(); // the retry gets through
+    assert.equal(cloud.resumes('B').resume_r, undefined, 'before: left for A, and B\'s phone kept R');
+    assert.deepEqual([cloud.doc(listPath('B'))?.ids, p.store.state.deletedIds], [['resume_r'], []]);
+  });
+
   it('deleted before any account synced this list, it goes to the first account that signs in', async () => {
     const cloud = fakeFirestore({ [resumePath('A', 'resume_r')]: cv('resume_r', 5) });
     const p = page(cloud, { resumes: [cv('resume_r', 5)] });

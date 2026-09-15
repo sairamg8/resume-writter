@@ -18,6 +18,12 @@ test('withDeletion: records the id, the version deleted (the copy\'s updatedAt),
   assert.deepEqual(withDeletion({}, { id: 'resume_c' }, 5).deletedInfo, { resume_c: { version: 0, at: 5, owner: null, keep: false } }, 'never synced: nobody\'s yet');
 });
 
+test('withDeletion: signed in, the deletion is that account\'s, whichever account the list was last synced with (V2W1a-3)', () => {
+  const state = { deletedIds: [], deletedInfo: {}, syncedUid: 'uid_a' };
+  assert.equal(withDeletion(state, { id: 'resume_r', updatedAt: 5 }, 10, 'uid_b').deletedInfo.resume_r.owner, 'uid_b', 'before: uid_a, whose sync never sends it');
+  assert.equal(withDeletion(state, { id: 'resume_r', updatedAt: 5 }, 10).deletedInfo.resume_r.owner, 'uid_a', 'signed out: it waits for the last account');
+});
+
 test('withDeletion: records that the copy deleted was one of the account\'s originals', () => {
   // The first sync then flags it in a demo account even when the cloud's copy is not marked yet:
   // kept and deleted before a flush sent the mark (tests/pdf/18-cloud-sync-deletions.test.mjs).

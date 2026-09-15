@@ -4,11 +4,11 @@
 //
 //   deletedIds   the ids, as every build has saved them
 //   deletedInfo  id → { version, at, owner, keep }: `version` the updatedAt of the copy deleted,
-//                `at` when, `owner` the account the list was last synced with (the store's
-//                `syncedUid`; null before any), `keep` whether that copy was one of the account's
-//                originals (demoSeed.js; missing in an older build's entry). A parallel map, so a
-//                store saved by an older build (ids only) still loads, and one saved by this build
-//                still loads in an older one.
+//                `at` when, `owner` the account signed in then — signed out, the one the list was
+//                last synced with (the store's `syncedUid`; null before any) — and `keep` whether
+//                that copy was one of the account's originals (demoSeed.js; missing in an older
+//                build's entry). A parallel map, so a store saved by an older build (ids only)
+//                still loads, and one saved by this build still loads in an older one.
 // The list stays in the browser when its account signs out, so a deletion made then is that
 // account's: another account's first sync leaves it for that one (R8-6).
 // An entry stays until the account's cloud has the deletion: a flush that sent it forgets it
@@ -38,14 +38,20 @@ export function deletionEntries(state) {
   });
 }
 
-/** The deletion fields after `resume` is deleted at `now`: its id, the version deleted, whose, kept or not. */
-export function withDeletion(state, resume, now) {
+/**
+ * The deletion fields after `resume` is deleted at `now` by account `uid` (signed in; none when
+ * signed out): its id, the version deleted, whose, kept or not. Signed in, the deletion is that
+ * account's even before its first sync got through — the list may still be the last account's
+ * (syncedUid), whose sync would never send it (V2W1a-3); signed out, it waits for that one.
+ */
+export function withDeletion(state, resume, now, uid = null) {
   const { id } = resume;
   const info = isInfo(state.deletedInfo) ? state.deletedInfo : {};
   const version = Number.isFinite(resume.updatedAt) ? resume.updatedAt : 0;
+  const owner = (typeof uid === 'string' && uid) || state.syncedUid || null;
   return {
     deletedIds: [...(state.deletedIds || []).filter((d) => d !== id), id],
-    deletedInfo: { ...info, [id]: { version, at: now, owner: state.syncedUid || null, keep: resume.keep === true } },
+    deletedInfo: { ...info, [id]: { version, at: now, owner, keep: resume.keep === true } },
   };
 }
 

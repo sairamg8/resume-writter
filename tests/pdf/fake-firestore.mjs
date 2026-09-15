@@ -224,7 +224,8 @@ export function syncPage(mods, cloud, state, { isDemo = () => false, online = ()
   sync.start = (u) => { user = u || null; start(u); queueMicrotask(render); };
   store.onChange = () => { sync.resumesChanged(store.state.resumes); render(); };
   const change = async (next) => { store.set({ ...store.state, ...next }); await settle(1); };
-  const remove = async (id) => { store.deleteResume(id); await settle(1); };
+  // Delete, as the dashboard calls it: with the account signed in (V2W1a-3).
+  const remove = async (id) => { store.deleteResume(id, user?.uid); await settle(1); };
   const restoreList = async (list) => { store.restoreResumes(list); await settle(1); };
   return { store, timers, seen, sync, change, remove, restore: restoreList };
 }

@@ -35,14 +35,17 @@ export function createSyncActions(setAppState, now = () => Date.now()) {
     });
   }
 
-  /** Remove a résumé; the id and the version deleted are kept for the cloud sync (localDeletions). */
-  function deleteResume(id) {
+  /**
+   * Remove a résumé; the id and the version deleted are kept for the cloud sync (localDeletions),
+   * as a deletion of account `uid` — the one signed in, if any.
+   */
+  function deleteResume(id, uid = null) {
     setAppState(prev => {
       const gone = prev.resumes.find(r => r.id === id);
       if (!gone) return prev;
       const remaining = prev.resumes.filter(r => r.id !== id);
       const activeId = prev.activeId === id ? (remaining[0]?.id ?? null) : prev.activeId;
-      return { ...prev, resumes: remaining, activeId, ...withDeletion(prev, gone, now()) };
+      return { ...prev, resumes: remaining, activeId, ...withDeletion(prev, gone, now(), uid) };
     });
   }
 
