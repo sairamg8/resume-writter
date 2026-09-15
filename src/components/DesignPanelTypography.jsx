@@ -5,7 +5,8 @@ import { Label, SizeRow, SegmentControl, DesignSection } from '@/components/Desi
 // The quick size buttons set the base size (pt) the PDF is laid out with.
 const SIZE_PRESETS = { small: 10, normal: 11, large: 12 };
 
-export function TypographySection({ settings, updateSetting, onReset }) {
+/** Design → Typography. `template`: the one the PDF prints (Sidebar's side column keeps its own sizes). */
+export function TypographySection({ settings, template, updateSetting, onReset }) {
   const [customFontInput, setCustomFontInput] = useState('');
   const [savedCustomFonts, setSavedCustomFonts] = useState(() => loadCustomFonts());
   const [checking, setChecking] = useState(false);
@@ -137,6 +138,12 @@ export function TypographySection({ settings, updateSetting, onReset }) {
             );
           })()}
         </div>
+        {/* Sidebar's side column prints its own small type, whatever these say (V2W2b-3). */}
+        {template === 'sidebar' && (
+          <p className="mt-2 text-[11px] text-gray-400 leading-relaxed">
+            Base and Section Title size the main column; the side column&apos;s sections keep their own small type (8.5 pt headings, 9 pt text).
+          </p>
+        )}
       </div>
     </DesignSection>
   );

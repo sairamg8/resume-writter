@@ -175,3 +175,21 @@ describe('design — Title case shows what the PDF prints (V2W2b-5)', () => {
     cy.contains('button', /^ABC$/).should('not.have.class', 'bg-blue-600');
   });
 });
+
+describe('design — Typography on Sidebar (V2W2b-3)', () => {
+  // Section Title and Base size the main column only; the side column keeps its own small type.
+  const NOTE = 'the side column\'s sections keep their own small type (8.5 pt headings, 9 pt text)';
+
+  it('on Sidebar, Typography says what the side column keeps', () => {
+    cy.visitEditor('sidebar');
+    openDesign('Typography');
+    cy.contains(NOTE).scrollIntoView().should('be.visible'); // the section is taller than the panel
+  });
+
+  it('on Classic, Typography has no Sidebar note', () => {
+    cy.visitEditor('classic');
+    openDesign('Typography');
+    cy.contains('Section Title').scrollIntoView().should('be.visible');
+    cy.contains(NOTE).should('not.exist');
+  });
+});

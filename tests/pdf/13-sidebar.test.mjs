@@ -270,4 +270,21 @@ describe('Sidebar side-column headings', () => {
     }
     assert.deepEqual(wrong, []);
   });
+
+  // Guard for Typography's Sidebar note (V2W2b-3): Base and Section Title size the main column;
+  // the side column's sections keep 8.5 pt headings and 9 pt text. If they ever follow, the note
+  // in DesignPanelTypography.jsx has to go.
+  it('keep their own 8.5 pt headings and 9 pt text at any Base and Section Title size (V2W2b-3)', async () => {
+    const wrong = [];
+    for (const [fontSizeBase, fontSizeSectionDelta] of [[11, 1], [16, 8], [8, -2]]) {
+      const secs = [experience([{ role: 'Engineer' }]), section('languages', [{ language: 'English', proficiency: 'Native' }], {}, { title: 'Spoken' })];
+      secs[0].title = 'Work History';
+      const pages = await read(await render(sidebar(secs, { settings: { fontSizeBase, fontSizeSectionDelta } })));
+      const h = (s) => Math.round(itemsWith(pages, s)[0].h * 10) / 10;
+      const got = { main: h('WORK HISTORY'), side: h('SPOKEN'), text: h('English') };
+      const want = { main: fontSizeBase + fontSizeSectionDelta, side: 8.5, text: 9 };
+      if (JSON.stringify(got) !== JSON.stringify(want)) wrong.push(`${fontSizeBase}+${fontSizeSectionDelta}: ${JSON.stringify(got)}`);
+    }
+    assert.deepEqual(wrong, []);
+  });
 });
