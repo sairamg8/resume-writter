@@ -44,11 +44,13 @@ export function letterBlock(cl = {}) {
 /**
  * The letterhead's contact style (icon | bullet | bar) and layout (single | justify | 2grid):
  * the letter's own once its panel sets them, else the résumé's. The panel's chips show these
- * same values.
+ * same values. A résumé that stores neither (an import, older data) prints icons, justified —
+ * the defaults resolveTemplateSettings gives the PDF and Word — so the panel, which reads the
+ * stored settings, marks those too; a 'bar' fallback marked Bar over a letter of icons (R9-3).
  */
 export function letterContactFormat(cl = {}, settings = {}) {
   return {
-    style: cl?.headerStyle || settings?.contactStyle || 'bar',
+    style: cl?.headerStyle || settings?.contactStyle || 'icon',
     layout: cl?.headerLayout || settings?.contactLayout || 'justify',
   };
 }

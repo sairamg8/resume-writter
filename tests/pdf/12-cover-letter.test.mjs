@@ -2,8 +2,9 @@
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  setup, teardown, resume, experience, renderCover, read, allItems, allText, loadModule, readDocx,
+  setup, teardown, resume, experience, renderCover, read, allItems, allText, loadModule, readDocx, TEMPLATES,
 } from './harness.mjs';
+import { drawing } from './extractors.mjs';
 
 before(setup);
 after(teardown);
@@ -121,14 +122,36 @@ describe('cover letter — contact style and layout', () => {
     const cv = { contactStyle: 'bullet', contactLayout: 'single' };
     assert.deepEqual(letterContactFormat({}, cv), { style: 'bullet', layout: 'single' });
     assert.deepEqual(letterContactFormat({ headerStyle: 'bar', headerLayout: '2grid' }, cv), { style: 'bar', layout: '2grid' });
-    assert.deepEqual(letterContactFormat({}, {}), { style: 'bar', layout: 'justify' });
-    assert.deepEqual(letterContactFormat(undefined, undefined), { style: 'bar', layout: 'justify' });
+    // Neither set: what the résumé prints for an unset style, icons (R9-3).
+    assert.deepEqual(letterContactFormat({}, {}), { style: 'icon', layout: 'justify' });
+    assert.deepEqual(letterContactFormat(undefined, undefined), { style: 'icon', layout: 'justify' });
 
     const r = resume({ settings: cv, personal: { email: 'me@example.com', phone: '+1 555 0100' } });
     const pdf = allText(await read(await renderCover(r)));
     assert.ok(pdf.includes('•'), `the résumé's bullet style: ${pdf}`);
     const doc = await renderCoverDocx(r);
     assert.ok(doc.texts.some((t) => t.includes('me@example.com  •  +1 555 0100')), doc.texts.join(' | '));
+  });
+
+  it('a résumé that stores no contact style (an import, older data): the chips the panel marks are what the letter prints (R1-8, R5-2, R9-3)', async () => {
+    const { letterContactFormat } = await loadModule('/src/utils/coverLetter.js');
+    const { resolveTemplateSettings } = await loadModule('/src/templates/pdf/shared/templateSettings.js');
+    for (const template of TEMPLATES) {
+      for (const stored of [{}, { contactLayout: 'single' }, { contactStyle: 'bullet' }]) {
+        const r = resume({ template, personal: { email: 'me@example.com', phone: '+1 555 0100', hiddenFields: [] } });
+        delete r.settings.contactStyle;
+        delete r.settings.contactLayout;
+        Object.assign(r.settings, stored);
+        const at = `${template} ${JSON.stringify(stored)}`;
+        // The panel reads the résumé's settings as stored (CoverLetterPanel), the PDF and Word resolved ones.
+        const marked = letterContactFormat(r.coverLetter, r.settings);
+        // Clicking the chips the panel marks active changes nothing in either export.
+        const clicked = { ...r, coverLetter: { ...r.coverLetter, headerStyle: marked.style, headerLayout: marked.layout } };
+        assert.equal(await drawing(await renderCover(clicked)), await drawing(await renderCover(r)), `${at}: the PDF`);
+        assert.deepEqual((await renderCoverDocx(clicked)).texts, (await renderCoverDocx(r)).texts, `${at}: Word`);
+        assert.deepEqual(marked, letterContactFormat(r.coverLetter, resolveTemplateSettings(r.settings, template)), at);
+      }
+    }
   });
 });
 

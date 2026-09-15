@@ -184,3 +184,18 @@ describe('cover letter', () => {
     });
   });
 });
+
+// Its own block: a second cy.visit of the same URL (the beforeEach's) does not reload the page,
+// so the seeded state would never load.
+describe('cover letter — a résumé that stores no contact style', () => {
+  it('an import or older data marks Icon, the style its letter prints — not Bar (R1-8, R9-3)', () => {
+    cy.visitEditor('classic', { tab: 'coverletter', settings: { contactStyle: undefined, contactLayout: undefined } });
+    cy.store().should((s) => expect(active(s).settings).not.to.have.any.keys('contactStyle', 'contactLayout'));
+    const chip = (row, label) => cy.contains('p', row).next().contains('button', label);
+    chip('Contact Style', 'Icon').should('have.class', 'bg-blue-600');
+    for (const label of ['Bullet', 'Bar']) chip('Contact Style', label).should('not.have.class', 'bg-blue-600');
+    chip('Contact Layout', 'Justify').should('have.class', 'bg-blue-600');
+    // The letter prints icons: no "|" between its contacts.
+    letter().should('contain.text', 'alex@example.com').and('not.contain.text', '|');
+  });
+});
