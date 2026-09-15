@@ -1,9 +1,9 @@
 // The cloud sync itself — the first sync after sign-in, the write queue and its flushes, the
-// sample read-back — as a plain object with everything outside passed in: the Firestore calls
+// read-back of a demo account's originals — as a plain object with everything outside passed in: the Firestore calls
 // (`io`, cloudSyncIo.js; null without a cloud), the résumé store, the timers, the online flag.
 // No React and no Firebase, so the tests drive this very code (tests/pdf/18-cloud-sync-*.test.mjs);
 // useCloudSync only wires it to React state and the browser.
-import { isDemoId } from '@/utils/demoSeed';
+import { isOriginal } from '@/utils/demoSeed';
 import { planInitialSync, queueChanges } from '@/utils/cloudSyncPlan';
 import { flushOnce } from '@/utils/cloudSyncFlush';
 import { deletionEntries } from '@/utils/localDeletions';
@@ -33,13 +33,14 @@ const isOfflineError = (e) => String(e?.message || '').toLowerCase().includes('c
  *             sync's result (cloudSyncPlan.afterSync), forgetDeletions(ids, before) — the
  *             cloud has these deletions (localDeletions.js) }
  *   report    { status('idle'|'syncing'|'synced'|'offline'|'error'), synced(Date), account(a) } —
- *             account: { uid, cloudDemo } once the account's list is known, else null
- *   isDemo    user → true for a demo account (its deleted samples are flagged, not removed)
+ *             account: { uid, cloudOriginals } once the account's list is known, else null —
+ *             cloudOriginals: the cloud's originals (demoSeed.js), deleted ones included
+ *   isDemo    user → true for a demo account (its deleted originals are flagged, not removed)
  *   online    () → whether the browser says it is online
  *   timers    { set(fn, ms) → id, clear(id) }; flushDelay (ms) before queued changes are sent;
- *             cloudTimeout (ms) readCloudDemo waits for an answer; retryDelay (ms) before a
+ *             cloudTimeout (ms) readCloudCopies waits for an answer; retryDelay (ms) before a
  *             first sync that could not reach the cloud is tried again; now() → ms
- * Returns { start(user), cancel(), resumesChanged(resumes), readCloudDemo(ids) }.
+ * Returns { start(user), cancel(), resumesChanged(resumes), readCloudCopies(ids) }.
  */
 export function createCloudSync({
   io, store, report, isDemo = () => false,
@@ -54,6 +55,7 @@ export function createCloudSync({
     prevResumes: null,
     pendingWrites: new Map(),
     pendingDeletes: new Set(),
+    pendingKept: new Set(), // the pending deletes that were originals (queueChanges)
     listed: new Set(), // the cloud deletion list as this browser knows it (read, then added to)
     timer: null,
     retry: null,
@@ -88,7 +90,7 @@ export function createCloudSync({
     if (!io || s.cloudDisabled) {
       report.status('error');
       // Nothing to wait for: this browser's résumés are the whole list.
-      if (s.account?.uid !== user.uid) setAccount({ uid: user.uid, cloudDemo: [] });
+      if (s.account?.uid !== user.uid) setAccount(noCloud(user));
       return;
     }
 
@@ -106,7 +108,11 @@ export function createCloudSync({
     s.timer = null;
     s.pendingWrites = new Map();
     s.pendingDeletes = new Set();
+    s.pendingKept = new Set();
   }
+
+  /** The account when there is no cloud to read: this browser's résumés are the whole list. */
+  const noCloud = (user) => ({ uid: user.uid, cloudOriginals: [] });
 
   /** Drop the result of a first sync still running (the page is going away). */
   function cancel() {
@@ -123,7 +129,7 @@ export function createCloudSync({
 
   /**
    * The cloud did not answer while signed in: nothing more is sent until a first sync gets
-   * through again. A sample restore made meanwhile from this browser's copies stays here — the
+   * through again. A restore made meanwhile from this browser's copies stays here — the
    * flush used to write it unconditionally over the cloud's copies, newer edits from another
    * device included (VM4-6). The retry's first sync merges by time and flag (planInitialSync),
    * and the restore runs again from the cloud's copies.
@@ -159,8 +165,8 @@ export function createCloudSync({
       s.prevResumes = plan.merged;
       s.listed = new Set([...cloud.deleted, ...plan.listAdd]);
       s.initialSyncDone = true;
-      const cloudDemo = cloud.docs.filter((r) => isDemoId(r.id)).map(({ deleted: _deleted, ...r }) => r);
-      setAccount({ uid: user.uid, cloudDemo });
+      const cloudOriginals = cloud.docs.filter(isOriginal).map(({ deleted: _deleted, ...r }) => r);
+      setAccount({ uid: user.uid, cloudOriginals });
       report.status('synced');
       report.synced(new Date());
     } catch (e) {
@@ -169,7 +175,7 @@ export function createCloudSync({
         s.cloudDisabled = true;
         s.initialSyncDone = false;
         report.status('error');
-        setAccount({ uid: user.uid, cloudDemo: [] });
+        setAccount(noCloud(user));
         // One clear message — app keeps working on localStorage only
         log(
           '[CloudSync] Cloud sync disabled (local-only). '
@@ -191,10 +197,11 @@ export function createCloudSync({
   /** The store's résumés after every change: what changed is queued and sent after a pause. */
   function resumesChanged(current) {
     if (!s.user || !s.initialSyncDone || s.cloudDisabled || !io) return;
-    const queued = queueChanges({ writes: s.pendingWrites, deletes: s.pendingDeletes }, s.prevResumes || [], current);
+    const queued = queueChanges({ writes: s.pendingWrites, deletes: s.pendingDeletes, kept: s.pendingKept }, s.prevResumes || [], current);
     if (!queued.dirty) return;
     s.pendingWrites = queued.writes;
     s.pendingDeletes = queued.deletes;
+    s.pendingKept = queued.kept;
     s.prevResumes = current;
 
     timers.clear(s.timer);
@@ -210,17 +217,19 @@ export function createCloudSync({
 
     const writes = Array.from(s.pendingWrites.values());
     const deletes = Array.from(s.pendingDeletes);
+    const kept = new Set(s.pendingKept);
     s.pendingWrites.clear();
     s.pendingDeletes.clear();
+    s.pendingKept.clear();
 
     if (!writes.length && !deletes.length) return;
 
     const sentAt = now();
     try {
-      // In a demo account a deleted sample résumé is flagged, not removed: its last copy stays in
-      // the cloud so that restoring the samples on any device brings back the edited version.
+      // In a demo account a deleted original is flagged, not removed: its last copy stays in the
+      // cloud so that restoring the originals on any device brings back the edited version.
       // Writing it again (a restore) replaces the whole document, flag included.
-      const sent = await flushOnce({ uid: user.uid, writes, deletes, listed: s.listed, demoAccount: isDemo(user) }, io);
+      const sent = await flushOnce({ uid: user.uid, writes, deletes, kept, listed: s.listed, demoAccount: isDemo(user) }, io);
       sent.listAdd.forEach((id) => s.listed.add(id));
       sent.listRemove.forEach((id) => s.listed.delete(id));
       // The cloud has them: the store stops keeping them for the next first sync, which would send
@@ -247,13 +256,14 @@ export function createCloudSync({
   }
 
   /**
-   * The account's sample résumés with these `ids` as the cloud holds them now, flagged ones
-   * included — a restore then brings back an edit another device made after this one's first
-   * sync (R4-4). null when there is no cloud to ask, or it gives no answer within cloudTimeout —
-   * the sync then sends nothing until a first sync gets through again (unreachable, VM4-6).
-   * It stops before this resolves, so a restore made on a null answer is never queued.
+   * The account's résumés with these `ids` as the cloud holds them now, flagged ones included —
+   * a restore of the originals then brings back an edit another device made after this one's
+   * first sync (R4-4). null when there is no cloud to ask, or it gives no answer within
+   * cloudTimeout — the sync then sends nothing until a first sync gets through again
+   * (unreachable, VM4-6). It stops before this resolves, so a restore made on a null answer is
+   * never queued.
    */
-  function readCloudDemo(ids) {
+  function readCloudCopies(ids) {
     if (!s.user || !io || s.cloudDisabled || !s.initialSyncDone || !online()) return Promise.resolve(null);
     const { gen, user } = s;
     const read = io.readDocs(user.uid, ids);
@@ -264,5 +274,5 @@ export function createCloudSync({
     });
   }
 
-  return { start, cancel, resumesChanged, readCloudDemo };
+  return { start, cancel, resumesChanged, readCloudCopies };
 }

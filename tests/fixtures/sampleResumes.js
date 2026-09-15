@@ -1,16 +1,11 @@
 import { ATS_DEFAULTS } from '@/utils/defaultData';
-import { parseAccountList } from '@/utils/demoSeed';
 
-// Sample résumés that demo accounts always have (useDemoSeed). The person, companies and school
-// are fictional; contact details use reserved example domains and a 555-01xx phone number.
-
-/**
- * Emails that get the sample set; everyone else starts with an empty dashboard. A build can
- * replace the list with VITE_DEMO_ACCOUNTS (comma-separated; set but empty = nobody).
- */
-export const DEMO_ACCOUNTS = parseAccountList(
-  import.meta.env.VITE_DEMO_ACCOUNTS ?? 'sairamgudiputi8@gmail.com',
-);
+// The five fictional sample résumés the owner's login got back after deleting everything, until
+// 2026-09-15 — the owner asked for their own résumé instead (src/utils/demoSeed.js), and the app
+// no longer carries them. Kept as test data: one résumé per template with every section filled
+// in (tests/pdf/20-long-urls.test.mjs). Load through the harness (loadModule) for the `@/` alias.
+// The person, companies and school are fictional; contact details use reserved example domains
+// and a 555-01xx phone number.
 
 const PERSONAL = {
   name: 'Jordan Rivera',
@@ -125,7 +120,7 @@ function sample(id, name, template, settings) {
   };
 }
 
-/** One sample résumé per template, in dashboard order. Ids must start with "demo_". */
+/** One sample résumé per template, with the ids and names the owner's account had (demo_…). */
 export const DEMO_RESUMES = [
   sample('demo_classic', 'Sample · Classic', 'classic',
     { accentColor: '#111111', textColor: '#111111', headingStyle: 'ruled', sectionTitleCase: 'upper' }),

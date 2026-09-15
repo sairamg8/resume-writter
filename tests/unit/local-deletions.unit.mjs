@@ -9,13 +9,20 @@ test('withDeletion: records the id, the version deleted (the copy\'s updatedAt),
   const next = withDeletion(state, { id: 'resume_b', updatedAt: 42 }, 1000);
   assert.deepEqual(next, {
     deletedIds: ['resume_a', 'resume_b'],
-    deletedInfo: { resume_a: { version: 3, at: 10, owner: null }, resume_b: { version: 42, at: 1000, owner: 'uid_1' } },
+    deletedInfo: { resume_a: { version: 3, at: 10, owner: null }, resume_b: { version: 42, at: 1000, owner: 'uid_1', keep: false } },
   });
   assert.deepEqual(state.deletedIds, ['resume_a'], 'the state it was given is left alone');
   // Deleted again after a restore: one entry, the latest version.
   assert.deepEqual(withDeletion(next, { id: 'resume_a', updatedAt: 7 }, 2000).deletedIds, ['resume_b', 'resume_a']);
   // A résumé with no time of its own deletes as the oldest version, never as "unknown".
-  assert.deepEqual(withDeletion({}, { id: 'resume_c' }, 5).deletedInfo, { resume_c: { version: 0, at: 5, owner: null } }, 'never synced: nobody\'s yet');
+  assert.deepEqual(withDeletion({}, { id: 'resume_c' }, 5).deletedInfo, { resume_c: { version: 0, at: 5, owner: null, keep: false } }, 'never synced: nobody\'s yet');
+});
+
+test('withDeletion: records that the copy deleted was one of the account\'s originals', () => {
+  // The first sync then flags it in a demo account even when the cloud's copy is not marked yet:
+  // kept and deleted before a flush sent the mark (tests/pdf/18-cloud-sync-deletions.test.mjs).
+  assert.equal(withDeletion({}, { id: 'resume_o', updatedAt: 9, keep: true }, 10).deletedInfo.resume_o.keep, true);
+  assert.equal(deletionEntries(withDeletion({}, { id: 'resume_o', updatedAt: 9, keep: true }, 10))[0].keep, true);
 });
 
 test('deletionEntries: one entry per id; an older build\'s id has no version', () => {
@@ -24,12 +31,12 @@ test('deletionEntries: one entry per id; an older build\'s id has no version', (
     deletedInfo: { resume_new: { version: 9, at: 100, owner: 'uid_1' }, resume_gone: { version: 1, at: 1 } },
   };
   assert.deepEqual(deletionEntries(state), [
-    { id: 'resume_old', version: null, at: 0, owner: null },
-    { id: 'resume_new', version: 9, at: 100, owner: 'uid_1' },
-  ]);
+    { id: 'resume_old', version: null, at: 0, owner: null, keep: null },
+    { id: 'resume_new', version: 9, at: 100, owner: 'uid_1', keep: null },
+  ], 'keep null: an entry saved before originals existed does not say');
   assert.deepEqual(deletionEntries({}), []);
-  assert.deepEqual(deletionEntries({ deletedIds: ['x'], deletedInfo: [] }), [{ id: 'x', version: null, at: 0, owner: null }]);
-  assert.deepEqual(deletionEntries({ deletedIds: ['x'], deletedInfo: { x: { version: 'nine', owner: 7 } } }), [{ id: 'x', version: null, at: 0, owner: null }]);
+  assert.deepEqual(deletionEntries({ deletedIds: ['x'], deletedInfo: [] }), [{ id: 'x', version: null, at: 0, owner: null, keep: null }]);
+  assert.deepEqual(deletionEntries({ deletedIds: ['x'], deletedInfo: { x: { version: 'nine', owner: 7, keep: 'yes' } } }), [{ id: 'x', version: null, at: 0, owner: null, keep: null }]);
 });
 
 test('withoutDeletions: forgets the ids given, with their versions', () => {
@@ -49,4 +56,6 @@ test('savedDeletions: a store saved by an older build (ids only) loads with its 
   assert.deepEqual(savedDeletions({ deletedIds: 'junk', deletedInfo: 'junk', syncedUid: 5 }), { deletedIds: [], deletedInfo: {}, syncedUid: null });
   const saved = { deletedIds: ['resume_b'], deletedInfo: { resume_b: { version: 4, at: 8, owner: 'uid_1' }, stray: { version: 1, at: 1 } }, syncedUid: 'uid_2' };
   assert.deepEqual(savedDeletions(saved), { deletedIds: ['resume_b'], deletedInfo: { resume_b: { version: 4, at: 8, owner: 'uid_1' } }, syncedUid: 'uid_2' });
+  const kept = { deletedIds: ['resume_o'], deletedInfo: { resume_o: { version: 4, at: 8, owner: null, keep: true } } };
+  assert.deepEqual(savedDeletions(kept).deletedInfo, kept.deletedInfo, 'an original\'s entry keeps saying so');
 });

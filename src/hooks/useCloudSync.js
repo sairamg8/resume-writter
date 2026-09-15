@@ -4,7 +4,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/utils/firebase';
 import { isDemoAccount } from '@/utils/demoSeed';
-import { DEMO_ACCOUNTS } from '@/utils/demoResumes';
+import { DEMO_ACCOUNTS } from '@/utils/demoAccounts';
 import { cloudIo } from '@/utils/cloudSyncIo';
 import { createCloudSync } from '@/utils/cloudSyncEngine';
 
@@ -26,7 +26,7 @@ export function useCloudSync({ user, appState, store }) {
     typeof navigator !== 'undefined' ? navigator.onLine : true
   );
   // Set once the signed-in account's résumé list is known (first sync done, or no cloud to sync
-  // with): { uid, cloudDemo } — cloudDemo is the cloud's sample résumés, deleted ones included.
+  // with): { uid, cloudOriginals } — the cloud's originals (demoSeed.js), deleted ones included.
   const [account, setAccount] = useState(null);
 
   // The store as of the last render, for the sync to read and call when it needs to.
@@ -71,5 +71,5 @@ export function useCloudSync({ user, appState, store }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [appState.resumes, user]);
 
-  return { syncStatus, lastSynced, isOnline, account, readCloudDemo: sync.readCloudDemo };
+  return { syncStatus, lastSynced, isOnline, account, readCloudCopies: sync.readCloudCopies };
 }

@@ -20,6 +20,8 @@ before(async () => {
 after(teardown);
 
 const cv = (id, updatedAt = 1, extra = {}) => ({ id, name: id, updatedAt, sections: [], dataVersion: 99, ...extra });
+/** One of a demo account's originals ("Keep as my original", src/utils/demoSeed.js). */
+const orig = (id, updatedAt = 1, extra = {}) => cv(id, updatedAt, { keep: true, ...extra });
 const withoutId = ({ id: _id, ...r }) => r;
 const ids = (list) => list.map((r) => r.id).toSorted();
 const USER = { uid: 'u', email: 'someone@example.com' };
@@ -53,16 +55,16 @@ describe('reading the account (R4-5)', () => {
 });
 
 describe('the batch the sync commits', () => {
-  it('writes whole résumés, flags samples keeping their content, removes the rest, updates the list — in one commit', async () => {
+  it('writes whole résumés, flags originals keeping their content, removes the rest, updates the list — in one commit', async () => {
     const cloud = fakeFirestore({
-      [resumePath('u', 'demo_a')]: cv('demo_a', 5, { name: 'Edited sample' }),
+      [resumePath('u', 'orig_a')]: cv('orig_a', 5, { name: 'My résumé' }), // marked here, the mark not sent yet
       [resumePath('u', 'resume_b')]: cv('resume_b'),
     });
-    cloud.data.set(listPath('u'), { ids: ['resume_old', 'demo_c'] });
-    await io.cloudIo(cloud.fs, cloud.db).commit('u', { sets: [cv('resume_x', 2)], flags: ['demo_a'], hardDeletes: ['resume_b'], listAdd: ['resume_b'], listRemove: ['demo_c'] });
+    cloud.data.set(listPath('u'), { ids: ['resume_old', 'orig_c'] });
+    await io.cloudIo(cloud.fs, cloud.db).commit('u', { sets: [cv('resume_x', 2)], flags: ['orig_a'], hardDeletes: ['resume_b'], listAdd: ['resume_b'], listRemove: ['orig_c'] });
     assert.equal(cloud.commits.length, 1);
-    assert.deepEqual(Object.keys(cloud.resumes('u')).toSorted(), ['demo_a', 'resume_x']);
-    assert.deepEqual(cloud.resumes('u').demo_a, { ...cv('demo_a', 5, { name: 'Edited sample' }), deleted: true });
+    assert.deepEqual(Object.keys(cloud.resumes('u')).toSorted(), ['orig_a', 'resume_x']);
+    assert.deepEqual(cloud.resumes('u').orig_a, { ...orig('orig_a', 5, { name: 'My résumé' }), deleted: true }, 'flagged, and marked an original');
     assert.deepEqual(cloud.doc(listPath('u')).ids, ['resume_old', 'resume_b'], 'added to and taken off, never rewritten');
   });
 });
@@ -84,14 +86,14 @@ describe('the first sync through the real batch (R4-1)', () => {
     assert.deepEqual(ids(phone.store.state.resumes), ['resume_b'], 'a device still holding a copy drops it');
   });
 
-  it('a sample deleted offline in a demo account is flagged, its edited copy kept for a restore', async () => {
-    const cloud = fakeFirestore({ [resumePath('u', 'demo_classic')]: cv('demo_classic', 5, { name: 'Edited sample' }), [resumePath('u', 'resume_b')]: cv('resume_b') });
-    const p = page(cloud, { resumes: [cv('resume_b')], deletedIds: ['demo_classic'], deletedInfo: { demo_classic: { version: 5, at: 1 } } });
+  it('an original deleted offline in a demo account is flagged, its edited copy kept for a restore', async () => {
+    const cloud = fakeFirestore({ [resumePath('u', 'resume_o')]: orig('resume_o', 5, { name: 'Edited original' }), [resumePath('u', 'resume_b')]: cv('resume_b') });
+    const p = page(cloud, { resumes: [cv('resume_b')], deletedIds: ['resume_o'], deletedInfo: { resume_o: { version: 5, at: 1 } } });
     await signIn(p, OWNER);
-    assert.equal(cloud.resumes('u').demo_classic.deleted, true);
-    assert.equal(cloud.resumes('u').demo_classic.name, 'Edited sample');
-    assert.equal(cloud.doc(listPath('u')), undefined, 'samples never go on the deletion list');
-    assert.deepEqual(p.seen.account.cloudDemo.map((r) => [r.id, r.name, 'deleted' in r]), [['demo_classic', 'Edited sample', false]]);
+    assert.equal(cloud.resumes('u').resume_o.deleted, true, 'before: removed for good');
+    assert.equal(cloud.resumes('u').resume_o.name, 'Edited original');
+    assert.equal(cloud.doc(listPath('u')), undefined, 'originals never go on the deletion list');
+    assert.deepEqual(p.seen.account.cloudOriginals.map((r) => [r.id, r.name, 'deleted' in r]), [['resume_o', 'Edited original', false]]);
   });
 });
 
@@ -111,25 +113,34 @@ describe('the write queue through the real batch', () => {
     assert.equal(p.seen.status, 'synced');
   });
 
-  it('a deleted sample is flagged in a demo account and removed in any other', async () => {
+  it('a deleted original is flagged in a demo account and removed in any other', async () => {
     for (const [user, flagged] of [[OWNER, true], [USER, false]]) {
-      const cloud = fakeFirestore({ [resumePath('u', 'demo_a')]: cv('demo_a', 3, { name: 'Owner content' }) });
-      const p = page(cloud, { resumes: [cv('demo_a', 3, { name: 'Owner content' })] });
+      const cloud = fakeFirestore({ [resumePath('u', 'resume_o')]: orig('resume_o', 3, { name: 'Owner content' }) });
+      const p = page(cloud, { resumes: [orig('resume_o', 3, { name: 'Owner content' })] });
       await signIn(p, user);
-      await p.change({ resumes: [], deletedIds: ['demo_a'] });
+      await p.remove('resume_o');
       await p.timers.fire();
-      assert.equal(cloud.resumes('u').demo_a?.deleted, flagged ? true : undefined, user.email);
-      assert.deepEqual(cloud.doc(listPath('u'))?.ids, flagged ? undefined : ['demo_a'], user.email);
+      assert.equal(cloud.resumes('u').resume_o?.deleted, flagged ? true : undefined, `${user.email} (before: removed for the owner too)`);
+      assert.deepEqual(cloud.doc(listPath('u'))?.ids, flagged ? undefined : ['resume_o'], user.email);
     }
+  });
+
+  it('a deleted sample is removed for good in a demo account too: the samples never come back now', async () => {
+    const cloud = fakeFirestore({ [resumePath('u', 'demo_a')]: cv('demo_a', 3, { name: 'Sample' }) });
+    const p = page(cloud, { resumes: [cv('demo_a', 3, { name: 'Sample' })] });
+    await signIn(p, OWNER);
+    await p.remove('demo_a');
+    await p.timers.fire();
+    assert.deepEqual([cloud.resumes('u'), cloud.doc(listPath('u'))?.ids], [{}, ['demo_a']], 'before: flagged, for a restore of the samples');
   });
 });
 
-describe('the samples read back for a restore (R4-4)', () => {
-  it('readCloudDemo returns the cloud copies with their ids, flagged ones included; null before the first sync', async () => {
-    const cloud = fakeFirestore({ [resumePath('u', 'demo_a')]: { ...withoutId(cv('demo_a', 20)), deleted: true } });
+describe('the originals read back for a restore (R4-4)', () => {
+  it('readCloudCopies returns the cloud copies with their ids, flagged ones included; null before the first sync', async () => {
+    const cloud = fakeFirestore({ [resumePath('u', 'orig_a')]: { ...withoutId(orig('orig_a', 20)), deleted: true } });
     const p = page(cloud, { resumes: [] });
-    assert.equal(await p.sync.readCloudDemo(['demo_a']), null, 'no account yet');
+    assert.equal(await p.sync.readCloudCopies(['orig_a']), null, 'no account yet');
     await signIn(p, OWNER);
-    assert.deepEqual((await p.sync.readCloudDemo(['demo_a', 'demo_b'])).map((r) => [r.id, r.updatedAt, r.deleted]), [['demo_a', 20, true]]);
+    assert.deepEqual((await p.sync.readCloudCopies(['orig_a', 'orig_b'])).map((r) => [r.id, r.updatedAt, r.deleted]), [['orig_a', 20, true]]);
   });
 });

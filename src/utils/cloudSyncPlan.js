@@ -5,12 +5,14 @@
 //
 // Deleting: an ordinary résumé is removed from the cloud and its id goes on the account's
 // deletion list (meta/deletions), so a device still holding a copy drops it instead of
-// uploading it again. In a demo account a sample résumé (demo_…) is flagged { deleted: true }
-// instead, keeping its last edited copy for a later restore (project_demo-account.md). Any
-// other account deletes a sample like any résumé (R4-11): the samples reach it only through a
-// shared browser — local résumés carry over to whichever account signs in next — and a flag
-// kept the owner's sample content in that account's cloud for good.
-import { isDemoId } from '@/utils/demoSeed';
+// uploading it again. In a demo account one of its originals (keep: true, demoSeed.js) is
+// flagged { deleted: true, keep: true } instead, keeping its last edited copy for a later
+// restore (project_demo-account.md). Any other account deletes an original like any résumé
+// (R4-11): a flag there kept content nothing would ever bring back — originals reach such an
+// account only through a shared browser, whose local résumés carry over to whoever signs in next.
+// Until 2026-09-15 a demo account flagged the fictional samples (demo_…) instead; one flagged then
+// stays flagged, and a sample deleted now is removed for good.
+import { isOriginal } from '@/utils/demoSeed';
 import { mergeResumeLists } from '@/utils/syncMerge';
 import { withoutDeletions } from '@/utils/localDeletions';
 
@@ -29,22 +31,23 @@ const asEntry = (e) => (typeof e === 'string' ? { id: e, version: null } : e);
  *   uid           the account signing in: another account's deletions are left for it (R8-6)
  *   cloud         the account's résumé documents, each with its document id
  *   cloudDeleted  the account's deletion list
- *   demoAccount   the account is a demo account (its deleted samples are flagged)
+ *   demoAccount   the account is a demo account (its deleted originals are flagged)
  * Returns
  *   merged       the list to load: newer copy wins, deletions left out
  *   sets         the merged résumés the account lacks or holds an older copy of → write them.
  *                Only those: writing back a copy just read put it over an edit another device
  *                made before the batch arrived (R8-4)
- *   flags        samples deleted here that the cloud still holds whole → flag them
+ *   flags        originals deleted here that the cloud still holds whole → flag them. Original:
+ *                the copy deleted was (its entry's `keep`), else the cloud's copy is
  *   hardDeletes  other résumés deleted here that the cloud still holds → remove them; outside
- *                a demo account also every flagged sample (flagged before R4-11)
+ *                a demo account also every flagged résumé (flagged before R4-11)
  *   listAdd      ids to add to the deletion list (the removals)
  *   handled      the ids of the deletions dealt with — the store forgets them (afterSync);
  *                another account's are left out of the merge and kept
  * A deletion is sent only when the cloud's copy is not newer than the version deleted: one made
  * offline or signed out must never remove an edit made later on another device — that edit
  * wins, and the résumé comes back here (R8-0). An entry with no version is left out of this
- * merge only, never sent, as before 53d6a3b. A flagged sample is read the same way: the flag
+ * merge only, never sent, as before 53d6a3b. A flagged résumé is read the same way: the flag
  * deletes the version it carries, so a copy here edited since (restored, then edited offline)
  * brings it back — written whole, flag and all — instead of being dropped. Before 53d6a3b no
  * deletion was sent at all: the cloud kept the résumés, the store forgot the deletions, and the
@@ -60,17 +63,20 @@ export function planInitialSync({ local = [], deletions = [], cloud = [], cloudD
   const excluded = new Set([...cloudDeletedSet, ...flagged]);
 
   const unsent = [];
+  const kept = new Set(); // the unsent that were originals
   const handled = [];
-  for (const { id, version, owner } of deletions.map(asEntry)) {
+  for (const { id, version, owner, keep = null } of deletions.map(asEntry)) {
     if (owner && uid && owner !== uid) { excluded.add(id); continue; } // deleted from another account
     handled.push(id);
     const doc = byId.get(id);
     const live = Boolean(doc) && !doc.deleted && !cloudDeletedSet.has(id);
     if (live && version !== null && (doc.updatedAt ?? 0) > version) continue; // edited elsewhere since
     excluded.add(id);
-    if (live && version !== null && !unsent.includes(id)) unsent.push(id);
+    if (!live || version === null || unsent.includes(id)) continue;
+    unsent.push(id);
+    if (keep ?? isOriginal(doc)) kept.add(id);
   }
-  const flags = demoAccount ? unsent.filter(isDemoId) : [];
+  const flags = demoAccount ? unsent.filter((id) => kept.has(id)) : [];
   const hardDeletes = [
     ...unsent.filter((id) => !flags.includes(id)),
     ...(demoAccount ? [] : flagged),
@@ -118,19 +124,24 @@ export function afterSync(state, { uid, snapshot, merged, handled, before }) {
 
 /**
  * The local changes since the last look, added to the queue waiting for the next flush.
- * `writes` (Map id → résumé) and `deletes` (Set of ids) come back as new objects, with `dirty`
- * true when anything changed. A résumé deleted and put back before the flush (a restored
- * sample) is written, not deleted.
+ * `writes` (Map id → résumé), `deletes` (Set of ids) and `kept` (Set: the deletes whose copy
+ * deleted was an original — flagged in a demo account, planFlush) come back as new objects, with
+ * `dirty` true when anything changed. A résumé deleted and put back before the flush (a restored
+ * original) is written, not deleted.
  */
-export function queueChanges({ writes, deletes }, prev = [], current = []) {
+export function queueChanges({ writes, deletes, kept = new Set() }, prev = [], current = []) {
   const nextWrites = new Map(writes);
   const nextDeletes = new Set(deletes);
+  const nextKept = new Set(kept);
   let dirty = false;
   const currentIds = new Set(current.map((r) => r.id));
   for (const r of prev) {
     if (currentIds.has(r.id)) continue;
     nextWrites.delete(r.id);
     nextDeletes.add(r.id);
+    // The copy deleted decides: marked and deleted before a flush, the cloud's copy is not marked.
+    if (isOriginal(r)) nextKept.add(r.id);
+    else nextKept.delete(r.id);
     dirty = true;
   }
   const before = new Map(prev.map((r) => [r.id, r]));
@@ -138,22 +149,24 @@ export function queueChanges({ writes, deletes }, prev = [], current = []) {
     const p = before.get(r.id);
     if (p && p.updatedAt === r.updatedAt) continue;
     nextDeletes.delete(r.id);
+    nextKept.delete(r.id);
     nextWrites.set(r.id, r);
     dirty = true;
   }
-  return { writes: nextWrites, deletes: nextDeletes, dirty };
+  return { writes: nextWrites, deletes: nextDeletes, kept: nextKept, dirty };
 }
 
 /**
- * One flush of the queue: `sets` to write, sample ids to `flag` (a demo account's only), other
- * ids to remove and to add to the deletion list (`listAdd`), and samples to take off it
- * (`listRemove`): a demo account writing again a sample that is on the list (`listed`, as this
- * browser knows it — deleted outright by an older build) restores it. A regular résumé written
- * again stays listed: a stale device cannot resurrect it.
+ * One flush of the queue: `sets` to write, the ids of deleted originals to `flag` (`kept`,
+ * queueChanges; a demo account's only), other ids to remove and to add to the deletion list
+ * (`listAdd`), and originals to take off it (`listRemove`): a demo account writing again an
+ * original that is on the list (`listed`, as this browser knows it — deleted outright by an older
+ * build, or while the account was not a demo account) restores it. A regular résumé written
+ * again stays listed: a stale device cannot resurrect it — a sample neither, since 2026-09-15.
  */
-export function planFlush(writes, deletes, listed = new Set(), { demoAccount = false } = {}) {
-  const flags = demoAccount ? deletes.filter(isDemoId) : [];
+export function planFlush(writes, deletes, listed = new Set(), { demoAccount = false, kept = new Set() } = {}) {
+  const flags = demoAccount ? deletes.filter((id) => kept.has(id)) : [];
   const hardDeletes = deletes.filter((id) => !flags.includes(id));
-  const listRemove = demoAccount ? writes.map((r) => r.id).filter((id) => isDemoId(id) && listed.has(id)) : [];
+  const listRemove = demoAccount ? writes.filter((r) => isOriginal(r) && listed.has(r.id)).map((r) => r.id) : [];
   return { sets: writes, flags, hardDeletes, listAdd: hardDeletes, listRemove };
 }

@@ -8,7 +8,7 @@
 // The deletion list is never read before it is written: ids are added and taken off in the
 // batch itself (arrayUnion / arrayRemove), so no entry another device adds meanwhile is lost.
 
-/** `{ ...data, id }` with the document's own id: a flagged sample stub holds no id field (R4-5). */
+/** `{ ...data, id }` with the document's own id: a flag stub holds no id field (R4-5). */
 const withId = (d) => ({ ...d.data(), id: d.id });
 
 export function cloudIo(fs, db) {
@@ -30,14 +30,15 @@ export function cloudIo(fs, db) {
     },
 
     /**
-     * One batch: whole résumés written (`sets`), samples flagged (the rest of the document kept),
-     * the rest removed, ids added to the deletion list (`listAdd`) and taken off it
-     * (`listRemove`, restored samples). Resolves when the server has it.
+     * One batch: whole résumés written (`sets`), originals flagged (the rest of the document
+     * kept; marked an original too, for one marked here and deleted before a flush sent the
+     * mark), the rest removed, ids added to the deletion list (`listAdd`) and taken off it
+     * (`listRemove`, restored originals). Resolves when the server has it.
      */
     commit(uid, { sets, flags, hardDeletes, listAdd = [], listRemove = [] }) {
       const batch = fs.writeBatch(db);
       sets.forEach((r) => batch.set(resumeDoc(uid, r.id), r));
-      flags.forEach((id) => batch.set(resumeDoc(uid, id), { deleted: true }, { merge: true }));
+      flags.forEach((id) => batch.set(resumeDoc(uid, id), { deleted: true, keep: true }, { merge: true }));
       hardDeletes.forEach((id) => batch.delete(resumeDoc(uid, id)));
       if (listAdd.length) batch.set(deletionsDoc(uid), { ids: fs.arrayUnion(...listAdd) }, { merge: true });
       if (listRemove.length) batch.set(deletionsDoc(uid), { ids: fs.arrayRemove(...listRemove) }, { merge: true });

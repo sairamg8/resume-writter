@@ -27,7 +27,7 @@ describe('long URLs break without a hyphen (R4-10)', () => {
   it('the sample résumés print their second project URL as typed, in every template', async () => {
     // 50 characters: above breakLongWords' 48. Before: "…/a11y--" / "check- action" in Classic,
     // Modern and Executive, "…sample/-" in Minimal.
-    const { DEMO_RESUMES } = await loadModule('/src/utils/demoResumes.js');
+    const { DEMO_RESUMES } = await loadModule('/tests/fixtures/sampleResumes.js');
     const url = 'github.com/jordan-rivera-sample/a11y-check-action';
     const wrong = [];
     for (const r of DEMO_RESUMES) {

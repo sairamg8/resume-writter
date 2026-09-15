@@ -3,11 +3,12 @@
 // (tests/unit/local-deletions.unit.mjs).
 //
 //   deletedIds   the ids, as every build has saved them
-//   deletedInfo  id → { version, at, owner }: `version` the updatedAt of the copy deleted, `at`
-//                when, `owner` the account the list was last synced with (the store's
-//                `syncedUid`; null before any). A parallel map, so a store saved by an older
-//                build (ids only) still loads, and one saved by this build still loads in an
-//                older one.
+//   deletedInfo  id → { version, at, owner, keep }: `version` the updatedAt of the copy deleted,
+//                `at` when, `owner` the account the list was last synced with (the store's
+//                `syncedUid`; null before any), `keep` whether that copy was one of the account's
+//                originals (demoSeed.js; missing in an older build's entry). A parallel map, so a
+//                store saved by an older build (ids only) still loads, and one saved by this build
+//                still loads in an older one.
 // The list stays in the browser when its account signs out, so a deletion made then is that
 // account's: another account's first sync leaves it for that one (R8-6).
 // An entry stays until the account's cloud has the deletion: a flush that sent it forgets it
@@ -18,7 +19,10 @@
 
 const isInfo = (v) => Boolean(v && typeof v === 'object' && !Array.isArray(v));
 
-/** The store's deletions as entries { id, version, at, owner } — version null for an older build's. */
+/**
+ * The store's deletions as entries { id, version, at, owner, keep } — version null for an older
+ * build's, keep null when the entry does not say (the cloud's copy decides, cloudSyncPlan.js).
+ */
 export function deletionEntries(state) {
   const info = isInfo(state?.deletedInfo) ? state.deletedInfo : {};
   const ids = Array.isArray(state?.deletedIds) ? state.deletedIds : [];
@@ -29,18 +33,19 @@ export function deletionEntries(state) {
       version: Number.isFinite(i.version) ? i.version : null,
       at: Number.isFinite(i.at) ? i.at : 0,
       owner: typeof i.owner === 'string' && i.owner ? i.owner : null,
+      keep: typeof i.keep === 'boolean' ? i.keep : null,
     };
   });
 }
 
-/** The deletion fields after `resume` is deleted at `now`: its id, the version deleted, whose. */
+/** The deletion fields after `resume` is deleted at `now`: its id, the version deleted, whose, kept or not. */
 export function withDeletion(state, resume, now) {
   const { id } = resume;
   const info = isInfo(state.deletedInfo) ? state.deletedInfo : {};
   const version = Number.isFinite(resume.updatedAt) ? resume.updatedAt : 0;
   return {
     deletedIds: [...(state.deletedIds || []).filter((d) => d !== id), id],
-    deletedInfo: { ...info, [id]: { version, at: now, owner: state.syncedUid || null } },
+    deletedInfo: { ...info, [id]: { version, at: now, owner: state.syncedUid || null, keep: resume.keep === true } },
   };
 }
 
@@ -67,7 +72,8 @@ export function savedDeletions(saved) {
   const entries = deletionEntries(saved);
   return {
     deletedIds: entries.map((e) => e.id),
-    deletedInfo: Object.fromEntries(entries.filter((e) => e.version !== null).map(({ id, ...info }) => [id, info])),
+    deletedInfo: Object.fromEntries(entries.filter((e) => e.version !== null)
+      .map(({ id, keep, ...info }) => [id, keep === null ? info : { ...info, keep }])),
     syncedUid: typeof saved?.syncedUid === 'string' && saved.syncedUid ? saved.syncedUid : null,
   };
 }
