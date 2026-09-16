@@ -1,6 +1,10 @@
-// Unit tests for what the cover letter's letterhead takes from the résumé template (FIDB-51):
+// Unit guards for what the cover letter's letterhead takes from the résumé template (FIDB-51):
 // the template's name the Cover Letter panel shows, and when the letterhead is centred. Their
 // own file, so the template table's older tests still load on code without these helpers.
+// Guards of the helpers' tables, not fail-before evidence: the helpers came with FIDB-51, so on
+// older code this file dies at import (V2FIDB-51-5). The behaviours they stand for are proved
+// through the Cover Letter panel, the PDF and the Word letter by
+// tests/pdf/21-cover-letter-looks-panel.test.mjs, which fails on them at 0b83cb1.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { TEMPLATE_IDS, templateLabel, letterheadCentered } from '../../src/constants/templates.js';
