@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ATS_DEFAULTS, defaultSettings } from '@/utils/defaultData';
 import { drawsContactIcons, TEMPLATE_PICKER, templateId } from '@/constants/templates';
+import { MARGIN_MM } from '@/constants/pageMargins';
 import { DesignSection, NumberRow } from '@/components/DesignPanelShared';
 import { HeadingsSection } from '@/components/DesignPanelHeadings';
 import { ColorsSection } from '@/components/DesignPanelColors';
@@ -140,8 +141,8 @@ export default function DesignPanel({ resume, updateSetting, setTemplate, resetS
         <div className="space-y-3">
           <NumberRow label="Line Height" value={settings.lineHeightValue ?? 1.5} onChange={v => updateSetting('lineHeightValue', v)} min={1.0} max={3.0} step={0.1} />
           <div className="h-px bg-gray-100" />
-          <NumberRow label="Top / Bottom margin" value={settings.marginV ?? 14} onChange={v => updateSetting('marginV', v)} min={0} max={40} step={1} unit="mm" />
-          <NumberRow label="Left / Right margin" value={settings.marginH ?? 18} onChange={v => updateSetting('marginH', v)} min={0} max={40} step={1} unit="mm" />
+          <NumberRow label="Top / Bottom margin" value={settings.marginV ?? 14} onChange={v => updateSetting('marginV', v)} min={MARGIN_MM.min} max={MARGIN_MM.max} step={1} unit="mm" />
+          <NumberRow label="Left / Right margin" value={settings.marginH ?? 18} onChange={v => updateSetting('marginH', v)} min={MARGIN_MM.min} max={MARGIN_MM.max} step={1} unit="mm" />
           <div className="h-px bg-gray-100" />
           <NumberRow label="Between Sections" value={settings.sectionGap ?? 16} onChange={v => updateSetting('sectionGap', v)} min={0} max={60} step={1} unit="px" />
           <NumberRow label="Between Items" value={settings.itemGap ?? ATS_DEFAULTS.itemGap} onChange={v => updateSetting('itemGap', v)} min={0} max={40} step={1} unit="px" />
