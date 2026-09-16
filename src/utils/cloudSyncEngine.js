@@ -4,7 +4,7 @@
 // timers, the online flag. What a failure means and when it is tried again: cloudSyncRetry.js; a
 // résumé the cloud will not take, held back on its own: cloudSyncHeld.js.
 // No React and no Firebase, so the tests drive this very code (tests/pdf/18-cloud-sync-*.test.mjs);
-// useCloudSync only wires it to React state and the browser.
+// cloudSyncBrowser.js wires it to the page (online flag, hidden tab), useCloudSync to React state.
 import { isOriginal } from '@/utils/demoSeed';
 import { planInitialSync, queueChanges } from '@/utils/cloudSyncPlan';
 import { flushOnce } from '@/utils/cloudSyncFlush';

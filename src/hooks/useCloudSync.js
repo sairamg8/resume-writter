@@ -6,7 +6,7 @@ import { db } from '@/utils/firebase';
 import { isDemoAccount } from '@/utils/demoSeed';
 import { DEMO_ACCOUNTS } from '@/utils/demoAccounts';
 import { cloudIo } from '@/utils/cloudSyncIo';
-import { createCloudSync } from '@/utils/cloudSyncEngine';
+import { browserCloudSync } from '@/utils/cloudSyncBrowser';
 import { liveStore } from '@/hooks/useResumeSyncActions';
 
 /** The real Firestore calls (cloudSyncIo); null in a build without a cloud. */
@@ -15,17 +15,15 @@ const io = db
   : null;
 
 /**
- * The cloud sync (utils/cloudSyncEngine.js) wired to React: the signed-in user, the browser's
- * online flag and every change of the résumé store go in; the sync's status, the time of the
- * last sync and the account (once its list is known) come out.
+ * The cloud sync (utils/cloudSyncEngine.js) in this page (utils/cloudSyncBrowser.js) wired to
+ * React: the signed-in user, the browser's online flag and every change of the résumé store go
+ * in; the sync's status, the time of the last sync and the account (once its list is known) come
+ * out. tests/pdf/18-cloud-sync-browser-events.test.mjs mounts it.
  */
 export function useCloudSync({ user, appState, store }) {
   // Hook order is fixed — never add/remove hooks conditionally.
   const [syncStatus, setSyncStatus] = useState('idle'); // idle|syncing|synced|offline|error|stopped|off
   const [lastSynced, setLastSynced] = useState(null);
-  const [isOnline, setIsOnline] = useState(
-    typeof navigator !== 'undefined' ? navigator.onLine : true
-  );
   // Set once the signed-in account's résumé list is known (first sync done, or no cloud to sync
   // with): { uid, cloudOriginals, cloudDeleted } — the cloud's originals (demoSeed.js), deleted
   // ones included, and its deletion list.
@@ -37,30 +35,19 @@ export function useCloudSync({ user, appState, store }) {
   const latest = useRef({ appState, store });
   useEffect(() => { latest.current = { appState, store }; });
 
-  const [sync] = useState(() => createCloudSync({
+  // The sync, reading this page's online flag and whether its tab is hidden.
+  const [page] = useState(() => browserCloudSync(window, {
     io,
     store: liveStore(() => latest.current),
     report: { status: setSyncStatus, synced: setLastSynced, account: setAccount, held: setHeldResumes },
     isDemo: (u) => isDemoAccount(u, DEMO_ACCOUNTS),
-    online: () => navigator.onLine,
-    hidden: () => document.hidden,
     log: (...args) => console.info(...args),
   }));
+  const { sync } = page;
+  const [isOnline, setIsOnline] = useState(() => page.online());
 
   // ── Online / offline detection; a retry that came due while the tab was hidden ──
-  useEffect(() => {
-    const on = () => setIsOnline(true);
-    const off = () => setIsOnline(false);
-    const visible = () => { if (!document.hidden) sync.shown(); };
-    window.addEventListener('online', on);
-    window.addEventListener('offline', off);
-    document.addEventListener('visibilitychange', visible);
-    return () => {
-      window.removeEventListener('online', on);
-      window.removeEventListener('offline', off);
-      document.removeEventListener('visibilitychange', visible);
-    };
-  }, [sync]);
+  useEffect(() => page.watch(setIsOnline), [page]);
 
   // ── Initial sync when user signs in (or comes back online) ────────────────
   useEffect(() => {

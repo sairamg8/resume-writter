@@ -10,7 +10,8 @@ flowcv/
 ├── public/                  # favicon, fonts, icons
 ├── src/
 │   ├── main.jsx
-│   ├── App.jsx
+│   ├── App.jsx              # the app's state: store, account, sync, demo restore
+│   ├── AppRoutes.jsx        # what each page gets from it
 │   ├── App.css, index.css
 │   ├── assets/
 │   ├── components/

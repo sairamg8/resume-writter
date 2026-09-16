@@ -40,7 +40,7 @@ Requires valid `VITE_FIREBASE_*` env vars; without them Auth will error at runti
 
 ## Cloud sync (`useCloudSync`)
 
-**File:** `src/hooks/useCloudSync.js`  
+**File:** `src/hooks/useCloudSync.js` (React state) over `src/utils/cloudSyncBrowser.js` (the page: its online flag, whether the tab is hidden, the online/offline/visibilitychange listeners) and `src/utils/cloudSyncEngine.js`  
 **Firebase init:** `src/utils/firebase.js`
 
 ### Status values

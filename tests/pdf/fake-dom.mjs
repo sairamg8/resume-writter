@@ -1,8 +1,10 @@
 // Just enough of a browser DOM for react-dom/client to mount, update and unmount a component in
 // Node: elements, text nodes, attributes, style, and a scrollTop that stays where it was set, as
-// a real scroll box's does. No layout, no events — a test calls a control's React handler itself
-// (reactProps) inside flushSync. Enough for editor behaviour that lives in effects and refs,
-// which the server renderer never runs.
+// a real scroll box's does. No layout, and no events on elements — a test calls a control's React
+// handler itself (reactProps) inside flushSync. The window and the document do keep their
+// listeners (withEvents): a test fires `online` or `visibilitychange` on them and counts what a
+// component left listening. Enough for behaviour that lives in effects and refs, which the server
+// renderer never runs.
 import { createElement } from 'react';
 import { createRoot } from 'react-dom/client';
 import { flushSync } from 'react-dom';
@@ -91,6 +93,40 @@ class FakeDocument extends FakeNode {
   createTextNode(text) { return new FakeText(this, text); }
 }
 
+/**
+ * `target` with addEventListener, removeEventListener and dispatchEvent over a plain registry, and
+ * `listeners(type)` → how many listeners of that type it holds.
+ */
+function withEvents(target) {
+  const registry = new Map();
+  return Object.assign(target, {
+    addEventListener(type, fn) {
+      if (!registry.has(type)) registry.set(type, new Set());
+      registry.get(type).add(fn);
+    },
+    removeEventListener(type, fn) { registry.get(type)?.delete(fn); },
+    dispatchEvent(event) {
+      // The listeners as the event is fired, as a browser takes them: one removed meanwhile still runs.
+      for (const fn of Array.from(registry.get(event.type) ?? [])) fn(event);
+      return true;
+    },
+    listeners: (type) => registry.get(type)?.size ?? 0,
+  });
+}
+
+/**
+ * A page with no component in it: a window (`navigator.onLine`, true) and its document
+ * (`hidden`, false), both keeping their listeners (withEvents). A test sets the two flags as the
+ * browser would before it fires the event.
+ */
+export function fakeWindow() {
+  const document = withEvents(new FakeDocument());
+  document.hidden = false;
+  const window = withEvents({ document, navigator: { onLine: true }, HTMLIFrameElement: class {}, location: { href: 'http://localhost/' } });
+  document.defaultView = window;
+  return window;
+}
+
 /** Every element under `node` (itself included), depth first. */
 export function* elements(node) {
   if (node.nodeType === 1) yield node;
@@ -104,15 +140,15 @@ export function reactProps(el) {
 }
 
 /**
- * Mount `component` with `props` into a fresh fake document; `window` and `document` exist for
- * as long as the mount does. Returns the container, `update(props)` (a synchronous re-render),
- * `act(fn)` (runs fn — a click handler, say — and commits what it set), and `await unmount()`.
+ * Mount `component` with `props` into a fresh fake page (fakeWindow); `window` and `document`
+ * exist for as long as the mount does. Returns the container, the `window` and `document`,
+ * `update(props)` (a synchronous re-render), `act(fn)` (runs fn — a click handler or an event,
+ * say — and commits what it set), and `await unmount()`.
  */
 export function mount(component, props) {
   const saved = { window: globalThis.window, document: globalThis.document };
-  const document = new FakeDocument();
-  const window = { document, HTMLIFrameElement: class {}, location: { href: 'http://localhost/' } };
-  document.defaultView = window;
+  const window = fakeWindow();
+  const { document } = window;
   Object.assign(globalThis, { window, document });
   const container = document.body.appendChild(document.createElement('div'));
   const root = createRoot(container);
@@ -121,6 +157,8 @@ export function mount(component, props) {
   update(props);
   return {
     container,
+    window,
+    document,
     update,
     act,
     async unmount() {
