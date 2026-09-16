@@ -135,8 +135,9 @@ describe('a Left / Right margin past the editor\'s 40 mm (VF2-3.2-NB1)', () => {
     const junk = normalizeResume({ ...asFile(resume()), settings: 'junk' });
     assert.equal(junk.settings, 'junk', 'settings that are not an object are left as they are');
     for (const stored of ['abc', '', true, {}]) {
-      const kept = normalizeResume(asFile(resume({ settings: { marginH: stored } })));
-      assert.deepEqual(kept.settings.marginH, stored, `${JSON.stringify(stored)}: not a number, left as it is`);
+      // Not a number: dropped, so the default prints (VF2-3.2-NB1-NB1, 16-saved-data-spacing).
+      const dropped = normalizeResume(asFile(resume({ settings: { marginH: stored } })));
+      assert.ok(!('marginH' in dropped.settings), `${JSON.stringify(stored)}: not a number, dropped`);
     }
   });
 });

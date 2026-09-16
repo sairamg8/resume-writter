@@ -2,7 +2,7 @@
 // imported .json, the sample set — made current in ONE place. Every way a résumé comes in goes
 // through normalizeResume(): the store's load, import and restore, and the cloud sync's merge.
 import { inSidebarColumn, offersTemplate, withKnownTemplate } from '@/constants/templates';
-import { withMarginsInRange } from '@/constants/pageMargins';
+import { withSpacingNumbers } from '@/constants/spacingNumbers';
 import { HEADER_READS, HEADER_SEEN, withHeaderColorsBack } from '@/templates/pdf/shared/headerColors';
 import { DEFAULT_ITEM_GAP_PX, SECTION_SPACING_PX } from '@/templates/pdf/shared/pdfUnits';
 
@@ -172,17 +172,17 @@ const versionOf = (r) => (Number.isFinite(r.dataVersion) ? r.dataVersion : 0);
 const withHeaderReadableOnClassic = (r) => withReadableHeaderColors(r, HEADER_READS);
 
 /**
- * `resume` made current: a template the app offers (withKnownTemplate) and margins the editor can
- * set (withMarginsInRange), whatever its version; then each one-time migration newer than its own
- * `dataVersion`, after which it carries DATA_VERSION. Never touches
- * `updatedAt` — this is not an edit, so it neither wins a sync merge nor triggers a cloud write
- * by itself. The same object when nothing changes; a value that is not an object comes back as
- * it is.
+ * `resume` made current: a template the app offers (withKnownTemplate) and Design → Spacing
+ * numbers stored as numbers, margins in the editor's range (withSpacingNumbers), whatever its
+ * version; then each one-time migration newer than its own `dataVersion`, after which it carries
+ * DATA_VERSION. Never touches `updatedAt` — this is not an edit, so it neither wins a sync merge
+ * nor triggers a cloud write by itself. The same object when nothing changes; a value that is not
+ * an object comes back as it is.
  */
 export function normalizeResume(resume) {
   if (!resume || typeof resume !== 'object') return resume;
   const known = withKnownTemplate(resume);
-  const r = withMarginsInRange(offersTemplate(resume.template) ? known : withHeaderReadableOnClassic(known));
+  const r = withSpacingNumbers(offersTemplate(resume.template) ? known : withHeaderReadableOnClassic(known));
   const from = versionOf(r);
   if (from >= DATA_VERSION) return r;
   return MIGRATIONS.reduce((out, [version, migrate]) => (from < version ? migrate(out, from) : out), { ...r, dataVersion: DATA_VERSION });

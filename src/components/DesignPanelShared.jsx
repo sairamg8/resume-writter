@@ -51,18 +51,21 @@ export function NumberRow({ label, value, onChange, min = 1, max = 200, step = 1
     setEditing(false);
   }
 
-  const display = editing ? raw : (Number.isInteger(value / step) && step >= 1 ? value + unit : value.toFixed(step < 1 ? 1 : 0) + unit);
+  // A value that is not a number (text, true, {}) shows and steps as `min` instead of crashing the
+  // editor on toFixed; normalizeResume drops one from saved data (VF2-3.2-NB1-NB1).
+  const current = Number.isFinite(value) ? value : min;
+  const display = editing ? raw : (Number.isInteger(current / step) && step >= 1 ? current + unit : current.toFixed(step < 1 ? 1 : 0) + unit);
 
   return (
     <div className="flex items-center justify-between">
       <span id={labelId} className="text-xs text-gray-600 w-28">{label}</span>
       <div className="flex items-center gap-1">
-        <button onClick={() => onChange(Math.max(min, Math.round((value - step) / step) * step))} className="w-6 h-6 flex items-center justify-center border border-gray-200 rounded text-gray-600 hover:bg-gray-100 text-base leading-none">−</button>
+        <button onClick={() => onChange(Math.max(min, Math.round((current - step) / step) * step))} className="w-6 h-6 flex items-center justify-center border border-gray-200 rounded text-gray-600 hover:bg-gray-100 text-base leading-none">−</button>
         <input
           type="text"
           aria-labelledby={labelId}
           value={display}
-          onFocus={() => { setEditing(true); setRaw(String(value)); }}
+          onFocus={() => { setEditing(true); setRaw(String(current)); }}
           onChange={e => setRaw(e.target.value)}
           onBlur={e => commit(e.target.value)}
           onKeyDown={e => {
@@ -71,7 +74,7 @@ export function NumberRow({ label, value, onChange, min = 1, max = 200, step = 1
           }}
           className="w-14 text-center text-xs font-medium text-gray-700 border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-400 focus:border-blue-400 h-6 cursor-text"
         />
-        <button onClick={() => onChange(Math.min(max, Math.round((value + step) / step) * step))} className="w-6 h-6 flex items-center justify-center border border-gray-200 rounded text-gray-600 hover:bg-gray-100 text-base leading-none">+</button>
+        <button onClick={() => onChange(Math.min(max, Math.round((current + step) / step) * step))} className="w-6 h-6 flex items-center justify-center border border-gray-200 rounded text-gray-600 hover:bg-gray-100 text-base leading-none">+</button>
       </div>
     </div>
   );
