@@ -1,7 +1,7 @@
 import { Document, Page, View } from '@react-pdf/renderer';
 import { Text } from './shared/PdfText';
 import { getPageStyle, getDocumentProps, getHeaderBorderStyle } from './shared/PdfPage';
-import { PdfContactRow } from './shared/PdfContact';
+import { headerRowWidth, PdfContactRow } from './shared/PdfContact';
 import { SectionRouter, getEffectiveSpacing, getVisibleSections } from './shared/PdfSections';
 import { PdfRichText } from './shared/PdfRichText';
 import { hasRichText } from '@/utils/richText';
@@ -35,6 +35,9 @@ export function ClassicTemplatePDF({ data }) {
   const alignItemsVal = photoTextAlignItems(settings); // Photo → Text Position
 
   const g = settings.headerGaps; // the header's spacing, pt (TEMPLATES' headerGaps)
+  const photoStyle = getPdfPhotoStyle(settings, accent, 'classic');
+  // The width the contacts are laid out in: what the photo beside them leaves (2 Grid sizes its cells with it).
+  const contactWidth = headerRowWidth(settings, personal, { photoWidth: photoStyle.width, gap: g.photoTextGap, centered });
   const headerMb = g.headerGapBelow;
 
   const nameBlock = headerLayout === 'inline' ? (
@@ -85,11 +88,11 @@ export function ClassicTemplatePDF({ data }) {
             gap: g.photoTextGap,
           }}>
             {personal?.photo && !hidden.includes('photo') && (
-              <PdfPhoto src={personal.photo} style={getPdfPhotoStyle(settings, accent, 'classic')} />
+              <PdfPhoto src={personal.photo} style={photoStyle} />
             )}
             <View style={centered ? { alignItems: 'center', alignSelf: 'stretch' } : { flex: 1 }}>
               {nameBlock}
-              <PdfContactRow personal={personal} settings={settings} gaps={g} />
+              <PdfContactRow personal={personal} settings={settings} gaps={g} width={contactWidth} />
             </View>
           </View>
 

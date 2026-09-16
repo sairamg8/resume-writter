@@ -120,8 +120,8 @@ describe('a long contact beside a long title (VM3-1)', () => {
             assert.deepEqual(pastMargin(h), [], `${at}: past the right margin`);
             assert.deepEqual(overprints(h), [], `${at}: the title over the contacts`);
             assert.deepEqual(hyphens(h), [], `${at}: a drawn hyphen`);
-            // 2 Grid: the test below (a value wider than a 46 % cell of the whole header still crowds).
-            if (headerLayout !== '2grid' && (headerStyle === 'icon' || headerLayout !== 'justify')) assert.deepEqual(crowded(h), [], `${at}: a contact over another`);
+            // Bar and Bullet, Justify: the values print as one line of text, one run of several.
+            if (headerStyle === 'icon' || headerLayout !== 'justify') assert.deepEqual(crowded(h), [], `${at}: a contact over another`);
             assert.ok(h.contacts.some((t) => t.str.includes(email)), `${at}: the e-mail printed whole`);
           }
         }
@@ -133,9 +133,8 @@ describe('a long contact beside a long title (VM3-1)', () => {
 describe('2 Grid beside the name (VM3-1)', () => {
   // A 2 Grid cell is 46 % of the contacts' column. Beside the name that column held two cells of
   // about 113 pt, and a 29-character e-mail (165 pt) printed over the phone in the next cell. Now
-  // the grid is as wide as its widest item needs, or it goes under the name. Still open, in every
-  // 2 Grid (the résumé's too): a value wider than 46 % of the whole header — a 42-character e-mail,
-  // or 40 mm margins — crowds its neighbour (PdfContactRow's fixed cells, reported separately).
+  // the grid is as wide as its widest item needs, or it goes under the name — where a value wider
+  // than its cell takes the whole row (28-contact-grid, W2a-1).
   it('no contact prints over the next, none past the margin', async () => {
     for (const marginH of [18, 30]) {
       for (const photo of [PNG, '']) {

@@ -1,9 +1,11 @@
 import { View, Link } from '@react-pdf/renderer';
 import { Text } from './PdfText';
 import { PdfContactIcon } from './PdfContactIcon';
+import { contentWidthPt } from './PdfPage';
 import { pxToPt } from './pdfUnits';
-import { textWidth } from './pdfMeasure';
+import { textWidth, widestWord } from './pdfMeasure';
 import { contactItems } from '@/utils/contacts';
+import { isDrawableImage } from '@/utils/imageUpload';
 import { textShades } from './pdfColors';
 
 const NBSP = '\u00a0';
@@ -12,13 +14,40 @@ const keepTogether = (s) => String(s).replace(/ /g, NBSP);
 
 /** Space between an item's icon or bullet and its value, pt. */
 const ITEM_GAP = 2;
-/** A 2 Grid cell's share of the row. */
+/** A 2 Grid cell's share of the row, and the column gap between two cells, pt. */
 const GRID_CELL = 0.46;
+const GRID_GAP = pxToPt(24);
 
 /** The contacts' type: the values' size (half a point under the body's) and the icons'. */
 function rowSizes(settings) {
   const baseSize = settings?.fontSizeBase || 11;
   return { textSize: Math.max(8, baseSize - 0.5), iconPt: Math.max(7, pxToPt(settings?.iconSize ?? 11)) };
+}
+
+/**
+ * What a layout needs to measure an item before react-pdf lays it out: `style` the contacts'
+ * type, `width` a text's width in it, and `mark` the width of what each value is printed after \u2014
+ * an icon or a bullet, and the `iconGap` between it and the value.
+ */
+function rowMetrics(settings, iconGap) {
+  const { textSize, iconPt } = rowSizes(settings);
+  const style = { fontFamily: settings?._pdfFontFamily, fontSize: textSize };
+  const width = (s) => textWidth(s, style);
+  const contactStyle = settings?.contactStyle || 'icon';
+  const mark = contactStyle === 'icon' ? iconPt + iconGap : contactStyle === 'bullet' ? width('\u2022') + iconGap : 0;
+  return { style, width, mark };
+}
+
+/**
+ * The width PdfContactRow is laid out at in the Classic, Minimal and Executive header, pt: the
+ * page's content width, less the photo beside it and the gap after it. A photo react-pdf cannot
+ * draw prints nothing and takes no room (PdfPhoto), and a centred header stacks the photo above
+ * the text, so there the row has the whole width.
+ */
+export function headerRowWidth(settings, personal, { photoWidth = 0, gap = 0, centered = false } = {}) {
+  const hidden = personal?.hiddenFields || [];
+  const beside = !centered && personal?.photo && !hidden.includes('photo') && isDrawableImage(personal.photo);
+  return contentWidthPt(settings) - (beside ? photoWidth + gap : 0);
 }
 
 /** The separator glued to each value but the last, when the contacts print as one line of text. */
@@ -37,14 +66,11 @@ export function contactRowMinWidth(personal, settings, hidden, gaps = {}) {
   const items = contactItems(personal, hidden ?? (personal?.hiddenFields || []));
   const contactStyle  = settings?.contactStyle  || 'icon';
   const contactLayout = settings?.contactLayout || 'justify';
-  const { textSize, iconPt } = rowSizes(settings);
-  const width = (s) => textWidth(s, { fontFamily: settings?._pdfFontFamily, fontSize: textSize });
+  const { width, mark } = rowMetrics(settings, gaps.iconTextGap ?? ITEM_GAP);
   if (contactLayout === 'justify' && contactStyle !== 'icon') {
     const sep = width(`${separator(contactStyle)} `);
     return Math.max(0, ...items.map((item, i) => width(keepTogether(item.value)) + (i < items.length - 1 ? sep : 0)));
   }
-  const gap = gaps.iconTextGap ?? ITEM_GAP;
-  const mark = contactStyle === 'icon' ? iconPt + gap : contactStyle === 'bullet' ? width('•') + gap : 0;
   const widest = Math.max(0, ...items.map((item) => mark + width(item.value)));
   return contactLayout === '2grid' ? widest / GRID_CELL : widest;
 }
@@ -66,9 +92,11 @@ export function ContactValue({ value, href, style }) {
  * The header's contact line(s). `hidden` overrides the résumé's hidden fields (the cover
  * letter has its own). With a centred header the contacts are centred too. `gaps`: the
  * header's spacing in pt (resolved settings' `headerGaps`); a gap it does not give prints as it
- * always has — the cover letter passes none, its letterhead keeps its own spacing.
+ * always has — the cover letter passes none, its letterhead keeps its own spacing. `width`: the
+ * width the row is laid out at, pt, where its caller knows it (headerRowWidth) — 2 Grid sizes
+ * its cells with it.
  */
-export function PdfContactRow({ personal, settings, color, hidden, gaps = {} }) {
+export function PdfContactRow({ personal, settings, color, hidden, gaps = {}, width }) {
   const contactStyle  = settings?.contactStyle  || 'icon';
   const contactLayout = settings?.contactLayout || 'justify';
   const centered = settings?.headerAlign === 'center';
@@ -102,10 +130,31 @@ export function PdfContactRow({ personal, settings, color, hidden, gaps = {} }) 
   }
 
   if (contactLayout === '2grid') {
+    // The cells were 46 % whatever a value needed, so one wider than its cell printed over the
+    // next cell's value (W2a-1): a 42-character e-mail, or an ordinary one at 40 mm margins.
+    // Where the caller knows the row's width, an item the cell and the column gap beside it
+    // cannot hold takes the whole row, and keeps its value on one line clear of every other.
+    // Measured on the value's widest unbreakable piece — textkit breaks a value at its spaces,
+    // and inside a long token at the marks breakLongWords puts in it — so a value that wraps
+    // inside its cell, and one that spills into the gap, where nothing sits, print as they
+    // always have.
+    const { style, mark } = rowMetrics(settings, iconGap);
+    const cellPt = GRID_CELL * (width || 0);
+    // The room beside a cell: the column gap for a left-hand one, and for a right-hand one what
+    // the row leaves past it. Centred, the line's slack is split between its two ends and an
+    // item's overflow between its two sides, so either cell has room for half of each.
+    const slack = Math.max(0, (width || 0) - 2 * cellPt - GRID_GAP);
+    const room = (col) => (centered ? Math.min(2 * GRID_GAP, slack) : col === 0 ? GRID_GAP : slack);
+    let col = 0;
+    const cells = items.map((item) => {
+      const full = !!width && mark + widestWord(item.value, style) > cellPt + room(col);
+      col = full ? 0 : (col + 1) % 2; // a full row leaves the next item at the left again
+      return full ? '100%' : `${GRID_CELL * 100}%`;
+    });
     return (
-      <View style={{ marginTop: top, flexDirection: 'row', flexWrap: 'wrap', columnGap: pxToPt(24), rowGap, justifyContent: centered ? 'center' : 'flex-start' }}>
-        {items.map((item) => (
-          <View key={item.key} style={{ width: `${GRID_CELL * 100}%`, paddingBottom: 1, alignItems: centered ? 'center' : 'flex-start' }}>{renderItem(item)}</View>
+      <View style={{ marginTop: top, flexDirection: 'row', flexWrap: 'wrap', columnGap: GRID_GAP, rowGap, justifyContent: centered ? 'center' : 'flex-start' }}>
+        {items.map((item, i) => (
+          <View key={item.key} style={{ width: cells[i], paddingBottom: 1, alignItems: centered ? 'center' : 'flex-start' }}>{renderItem(item)}</View>
         ))}
       </View>
     );
