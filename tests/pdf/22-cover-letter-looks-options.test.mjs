@@ -3,6 +3,8 @@
 // block — and letters saved before the looks existed.
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import { createElement } from 'react';
+import { renderToString } from 'react-dom/server';
 import { setup, teardown, resume, renderCover, read, allItems, allText, overlaps, loadModule, readDocx, MM, TEMPLATES } from './harness.mjs';
 import { drawing, painted, pdftotext, PNG_2X2 as PNG } from './extractors.mjs';
 
@@ -157,5 +159,55 @@ describe('letters saved before the looks (FIDB-51)', () => {
     const classic = await page('classic');
     assert.notEqual(await page('modern'), classic, 'the comparison sees a different look');
     for (const template of ['dark', 'aurora', '']) assert.equal(await page(template), classic, template);
+  });
+});
+
+describe('a Fields Position the panel does not offer (V2FIDB-51-1)', () => {
+  // An import's or a hand-edited file's ("Right of Name", "RIGHT", "below"): no build ever wrote
+  // one, but the letterhead drew Right of Name for it without the cap on the name side, so with a
+  // photo, a long title and icons the contacts got no width and react-pdf threw on the first icon
+  // — no preview and no PDF — and without a photo the contacts ran past the right margin.
+  const TITLE = 'Principal Distinguished Staff Engineer, Platform Infrastructure and Developer Tooling';
+  const UNKNOWN = ['Right of Name', 'RIGHT', 'below', 42];
+  const long = (template, fieldsPosition, photo) => letter(template, {
+    personal: { title: TITLE, photo }, coverLetter: { fieldsPosition, headerStyle: 'icon', headerLayout: 'justify' },
+  });
+
+  it('prints the Right of Name letterhead exactly, in every look, with and without a photo — and Word the same letter', async () => {
+    const { renderCoverLetterDocx } = await loadModule('/src/utils/wordExport.js');
+    const word = async (r) => readDocx(new Uint8Array(await (await renderCoverLetterDocx(r)).arrayBuffer())).texts;
+    for (const template of TEMPLATES) {
+      for (const photo of [PNG, '']) {
+        const right = await renderCover(long(template, 'right', photo));
+        const page = await drawing(right);
+        const [first] = await read(right);
+        const margin = first.W - 18 * MM;
+        assert.deepEqual(first.items.filter((t) => t.x + t.w > margin + 0.5).map((t) => t.str), [], `${template}: Right of Name keeps inside the margin`);
+        for (const fieldsPosition of UNKNOWN) {
+          const at = `${template}, ${photo ? 'photo' : 'no photo'}, ${JSON.stringify(fieldsPosition)}`;
+          const bytes = await renderCover(long(template, fieldsPosition, photo)).catch((e) => assert.fail(`${at}: ${e.message}`));
+          assert.equal(await drawing(bytes), page, `${at}: the PDF`);
+        }
+      }
+      assert.deepEqual(await word(long(template, 'Right of Name', PNG)), await word(long(template, 'right', PNG)), `${template}: Word`);
+    }
+    // The comparison sees a different layout.
+    assert.notEqual(await drawing(await renderCover(long('classic', 'below-all', PNG))), await drawing(await renderCover(long('classic', 'right', PNG))));
+  });
+
+  it('the panel marks Right of Name for it — the layout it prints — and each offered position for itself', async () => {
+    const { default: CoverLetterPanel } = await loadModule('/src/components/CoverLetterPanel.jsx');
+    const marked = (fieldsPosition) => {
+      const out = renderToString(createElement(CoverLetterPanel, {
+        coverLetter: { fieldsPosition }, personal: { name: 'Pat Sample', ...CONTACTS }, settings: {}, template: 'classic', updateCoverLetter: () => {},
+      }));
+      return [...out.matchAll(/<button class="w-full text-left[^"]*"><div class="font-medium">([^<]*)<\/div>/g)]
+        .map((m) => (m[0].includes('bg-blue-600') ? `[${m[1]}]` : m[1]));
+    };
+    assert.deepEqual(marked('below-all'), ['Right of Name', 'Below Name', '[Below Everything]'], 'the three options, in order');
+    assert.deepEqual(marked('below-name'), ['Right of Name', '[Below Name]', 'Below Everything']);
+    for (const fieldsPosition of ['right', undefined, '', ...UNKNOWN]) {
+      assert.deepEqual(marked(fieldsPosition), ['[Right of Name]', 'Below Name', 'Below Everything'], JSON.stringify(fieldsPosition));
+    }
   });
 });

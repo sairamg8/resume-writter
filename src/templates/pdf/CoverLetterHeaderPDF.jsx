@@ -13,6 +13,7 @@ import { widestWord } from './shared/pdfMeasure';
 import { DOUBLE_RULE_GAP, LETTERHEAD_GAP, LETTERHEAD_PAD } from './shared/letterhead';
 import { photoTextAlignItems } from '@/constants/templates';
 import { contactItems } from '@/utils/contacts';
+import { letterFieldsPosition } from '@/utils/coverLetter';
 import { isDrawableImage } from '@/utils/imageUpload';
 import { MM_TO_PT } from './shared/pdfUnits';
 import { opacityFor } from './shared/pdfColors';
@@ -68,7 +69,9 @@ function Frame({ look, settings, children }) {
 export function CoverLetterHeader({ look, personal, settings, cl, hidden, contacts }) {
   const baseSize  = settings.fontSizeBase || 11;
   const nameSize  = baseSize + (settings.fontSizeNameDelta ?? 8);
-  const fieldsPos = cl.fieldsPosition || 'right';
+  // One of the three the panel offers: content()'s layouts and the cap below are keyed on the
+  // exact string, so a stored value the panel never wrote prints as 'right' (letterFieldsPosition).
+  const fieldsPos = letterFieldsPosition(cl);
   const { centered } = look;
 
   // The letter's own photo, else the résumé's — the first the PDF can draw. One it cannot draw

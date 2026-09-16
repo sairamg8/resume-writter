@@ -2,7 +2,7 @@ import { useRef } from 'react';
 import { Mail, Phone, MapPin, Globe, Link2, Code, Eye, EyeOff, Camera, Palette } from 'lucide-react';
 import RichTextEditor from '@/components/RichTextEditor';
 import { Chip, Field, SectionBlock } from '@/components/CoverLetterPanelShared';
-import { letterContactFormat, letterHiddenFields, todayLetterDate } from '@/utils/coverLetter';
+import { letterContactFormat, letterFieldsPosition, letterHiddenFields, todayLetterDate } from '@/utils/coverLetter';
 import { letterheadCentered, templateLabel } from '@/constants/templates';
 import { readImageFile } from '@/utils/imageUpload';
 import { CONTACT_FIELDS } from '@/utils/contacts';
@@ -18,6 +18,8 @@ export default function CoverLetterPanel({ coverLetter, personal, settings, temp
   // The letterhead takes the résumé template's look; under a centred résumé header it is centred
   // too, and Fields Position / Text Position have nothing to place (FIDB-51).
   const centered = letterheadCentered(settings, template);
+  // The Fields Position the letterhead prints: a stored value it does not offer marks Right of Name.
+  const fieldsPosition = letterFieldsPosition(cl);
 
   function f(key) {
     return { value: cl[key], onChange: v => updateCoverLetter(key, v) };
@@ -147,13 +149,13 @@ export default function CoverLetterPanel({ coverLetter, personal, settings, temp
                   key={val}
                   onClick={() => updateCoverLetter('fieldsPosition', val)}
                   className={`w-full text-left px-3 py-2 rounded border text-xs transition-all ${
-                    (cl.fieldsPosition || 'right') === val
+                    fieldsPosition === val
                       ? 'bg-blue-600 border-blue-600 text-white'
                       : 'border-gray-200 text-gray-600 hover:border-blue-300 hover:text-blue-600'
                   }`}
                 >
                   <div className="font-medium">{label}</div>
-                  <div className={`text-[10px] mt-0.5 font-mono ${(cl.fieldsPosition || 'right') === val ? 'text-blue-100' : 'text-gray-400'}`}>{desc}</div>
+                  <div className={`text-[10px] mt-0.5 font-mono ${fieldsPosition === val ? 'text-blue-100' : 'text-gray-400'}`}>{desc}</div>
                 </button>
               ))}
             </div>

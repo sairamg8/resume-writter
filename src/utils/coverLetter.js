@@ -46,6 +46,22 @@ export function letterContactFormat(cl = {}, settings = {}) {
   };
 }
 
+/** The Fields Positions the panel offers, in its order; the first is the default. */
+const FIELDS_POSITIONS = ['right', 'below-name', 'below-all'];
+
+/**
+ * Where the letterhead puts the contacts — the panel's "Fields Position". A value the panel never
+ * wrote (an import's, a file edited by hand: "Right of Name", "RIGHT", "below") reads as 'right',
+ * exactly as templateId() reads an unknown template id: the letterhead's layouts are keyed on the
+ * exact string, so an unknown one drew the right-hand layout with the guard that caps the name
+ * side switched off — the contacts column collapsed to no width and react-pdf threw "unsupported
+ * number: Infinity" on the first contact icon, leaving the letter with no preview and no PDF at
+ * all (and, with no photo, the contacts past the right margin) — V2FIDB-51-1. The panel reads it
+ * here too, so the option it marks is always the layout that prints.
+ */
+export const letterFieldsPosition = (cl = {}) =>
+  (FIELDS_POSITIONS.includes(cl?.fieldsPosition) ? cl.fieldsPosition : FIELDS_POSITIONS[0]);
+
 /**
  * Does the letterhead draw contact icons — the chosen pack, or the image uploaded for a field?
  * Exactly when its contact style is Icon, in every look: the letter's own style, whatever the
