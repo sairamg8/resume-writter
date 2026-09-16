@@ -34,18 +34,19 @@ test('withSpacingNumbers: a value that is no number at all is dropped, so the de
   assert.deepEqual(Object.keys(all.settings), ['font'], 'all five at once');
 });
 
-test('withSpacingNumbers: text that is a number is that number; only the margins have a range', () => {
+test('withSpacingNumbers: text that is a number is that number, clamped to its control\'s range (VF2-3.2-NB1-NB1-NB2)', () => {
   const cases = [
-    ['lineHeightValue', '1.8', 1.8], ['lineHeightValue', ' 2 ', 2], ['sectionGap', '20', 20], ['sectionGap', '-3', -3],
-    ['itemGap', '0', 0], ['itemGap', '12.5', 12.5], ['itemGap', '90', 90], ['marginH', '12', 12], ['marginV', '60', 40],
+    ['lineHeightValue', '1.8', 1.8], ['lineHeightValue', ' 2 ', 2], ['lineHeightValue', '50', 3], ['lineHeightValue', 0.5, 1],
+    ['sectionGap', '20', 20], ['sectionGap', '-3', 0], ['sectionGap', 999, 60],
+    ['itemGap', '0', 0], ['itemGap', '12.5', 12.5], ['itemGap', '90', 40], ['itemGap', -4, 0], ['marginH', '12', 12], ['marginV', '60', 40],
   ];
   for (const [key, stored, kept] of cases) {
     assert.equal(withSpacingNumbers(withSettings({ [key]: stored })).settings[key], kept, `${key} ${JSON.stringify(stored)}`);
   }
 });
 
-test('withSpacingNumbers: the same object for numbers, none stored, null, or settings that are not an object', () => {
-  const numbers = [{ lineHeightValue: 1.5, marginV: 14, marginH: 18, sectionGap: 16, itemGap: 8 }, { lineHeightValue: 0.5, sectionGap: 999, itemGap: -4 }, {}, { lineHeightValue: null, sectionGap: undefined, itemGap: null }];
+test('withSpacingNumbers: the same object for numbers in range, none stored, null, or settings that are not an object', () => {
+  const numbers = [{ lineHeightValue: 1.5, marginV: 14, marginH: 18, sectionGap: 16, itemGap: 8 }, { lineHeightValue: 3, sectionGap: 60, itemGap: 0 }, {}, { lineHeightValue: null, sectionGap: undefined, itemGap: null }];
   for (const settings of numbers) {
     const r = withSettings(settings);
     assert.equal(withSpacingNumbers(r), r, JSON.stringify(settings));

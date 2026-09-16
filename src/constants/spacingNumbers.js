@@ -7,12 +7,22 @@
 //   Right margin of "abc" at the paper's edge, and a Between Items of "abc" made the Sidebar's render
 //   throw (VF2-3.2-NB1-NB1);
 // - a margin past the editor's 40 mm ran the Sidebar column off its dark panel, a margin wider than
-//   half the paper made the render throw and a tall one never finished (VF2-3.2-NB1).
+//   half the paper made the render throw and a tall one never finished (VF2-3.2-NB1); a Line Height
+//   or gap past its control's range printed pages of it (VF2-3.2-NB1-NB1-NB2).
 // normalizeResume() runs withSpacingNumbers() wherever résumés come in.
 import { MARGIN_MM } from './pageMargins.js';
 
-/** Each Spacing number's key, and the range a stored one is brought into: the margins' alone. */
-const SPACING_NUMBERS = { lineHeightValue: null, marginV: MARGIN_MM, marginH: MARGIN_MM, sectionGap: null, itemGap: null };
+/** Line Height (times the font size), Between Sections and Between Items (px): the panel's ranges. */
+export const LINE_HEIGHT = { min: 1, max: 3 };
+export const SECTION_GAP_PX = { min: 0, max: 60 };
+export const ITEM_GAP_PX = { min: 0, max: 40 };
+
+/**
+ * Each Spacing number's key, and the range a stored one is brought into — its control's, on every
+ * build: past it Line Height 50 ran a page to three, Between Sections -200 pulled a section over the
+ * header and lost text, 5000 made three pages (VF2-3.2-NB1-NB1-NB2).
+ */
+const SPACING_NUMBERS = { lineHeightValue: LINE_HEIGHT, marginV: MARGIN_MM, marginH: MARGIN_MM, sectionGap: SECTION_GAP_PX, itemGap: ITEM_GAP_PX };
 
 /**
  * `value` as the number the PDF reads it as: a finite number, or text that is one (" 20 " prints
@@ -25,8 +35,8 @@ export function storedNumber(value) {
 
 /**
  * `resume` with each Spacing number stored as a number, whatever its data version (an import of
- * this build's own file can carry anything): text that is a number becomes that number, a margin
- * is clamped to MARGIN_MM, and a value that is no number at all is dropped, so the default prints
+ * this build's own file can carry anything): text that is a number becomes that number, each is
+ * clamped to its control's range, and a value that is no number at all is dropped, so the default prints
  * and the panel shows it, as for a résumé that stores none. None stored (or null) is left: the
  * default prints. The same object when nothing changes; settings that are not an object are left.
  */
