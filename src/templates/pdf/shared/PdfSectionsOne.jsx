@@ -2,7 +2,7 @@ import { View } from '@react-pdf/renderer';
 import { Text } from './PdfText';
 import { PdfRichText } from './PdfRichText';
 import { hasRichText } from '@/utils/richText';
-import { skillGroup, skillSeparator } from '@/utils/skills';
+import { skillCategory, skillGroup, skillSeparator } from '@/utils/skills';
 import { dateRange, presentLabel } from '@/utils/dates';
 import { opacityFor, solid, tint } from './pdfColors';
 import { tracking } from './pdfUnits';
@@ -101,7 +101,7 @@ export function SkillsSection({ section, settings, marginBottom, spaceBefore, it
             return (
               <View>
                 {category ? (
-                  <Text style={{ fontSize: entrySize, fontWeight: 'bold', color: accent, letterSpacing: tracking(entrySize, 0.5), textTransform: 'uppercase' }}>{category}</Text>
+                  <Text style={{ fontSize: entrySize, fontWeight: 'bold', color: accent, letterSpacing: tracking(entrySize, 0.5) }}>{skillCategory(category, { style })}</Text>
                 ) : null}
                 {list.map((sk, i) => (
                   <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3 }}>
@@ -146,7 +146,7 @@ export function SkillsSection({ section, settings, marginBottom, spaceBefore, it
               <View style={{ alignItems: centered ? 'center' : 'flex-start' }}>
                 {category ? (
                   <Text style={{ fontSize: entrySize, fontWeight: 'bold', color: accent, marginBottom: 4, letterSpacing: tracking(entrySize, 0.5), textAlign: centered ? 'center' : 'left' }}>
-                    {category.toUpperCase()}
+                    {skillCategory(category, { style })}
                   </Text>
                 ) : null}
                 {tags.length > 0 && (

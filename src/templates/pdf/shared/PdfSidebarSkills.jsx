@@ -4,12 +4,12 @@ import { hexAlpha } from './PdfSections';
 import { SideSectionTitle } from './PdfSidebarColumn';
 import { tracking } from './pdfUnits';
 import { sidebarShades } from './pdfColors';
-import { skillGroup, skillSeparator } from '@/utils/skills';
+import { skillCategory, skillGroup, skillSeparator } from '@/utils/skills';
 
-/** A group as printed (skillGroup), its category in the column's capitals. */
+/** A group as printed (skillGroup), its category in the column's capitals (skillCategory). */
 function shownGroup(item) {
   const group = skillGroup(item);
-  return { ...group, category: group.category.toUpperCase() };
+  return { ...group, category: skillCategory(group.category, { sideColumn: true }) };
 }
 
 export function SideSkills({ section, sectionGap, itemGap, accent, shades = sidebarShades(), titleCase }) {

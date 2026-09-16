@@ -6,7 +6,7 @@ import { inSidebarColumn, templateId, upperSectionTitles } from '@/constants/tem
 import { resolveTemplateSettings } from '@/templates/pdf/shared/templateSettings';
 import { hasRichText } from '@/utils/richText';
 import { dateRange, formatDate, presentLabel } from '@/utils/dates';
-import { skillGroup, skillSeparator } from '@/utils/skills';
+import { skillCategory, skillGroup, skillSeparator } from '@/utils/skills';
 
 const GREY = '6b7280';
 
@@ -61,13 +61,15 @@ export function buildEducation(section, accentHex, settings, centered) {
   return paras;
 }
 
-export function buildSkills(section, accentHex, settings, centered) {
+/** Skill groups, each category cased as the PDF prints it (skillCategory; `sideColumn`: the Sidebar's). */
+export function buildSkills(section, accentHex, settings, centered, sideColumn = false) {
   const s = section.settings || {};
   const paras = [sectionHeading(section.title, accentHex, centered)];
   const sep = skillSeparator(s);
   const bulletStyle = s.skillsStyle === 'bullet';
   for (const item of shown(section)) {
-    const { category, skills } = skillGroup(item);
+    const { category: typed, skills } = skillGroup(item);
+    const category = skillCategory(typed, { style: s.skillsStyle, sideColumn });
     const children = [];
     if (category) children.push(bold(`${category}${skills ? sep : ''}`, { size: 20, color: accentHex }));
     if (skills) children.push(normal(skills, { size: 20 }));
@@ -214,7 +216,7 @@ export function buildSection(section, accentHex, settings, template) {
   switch (section.type) {
     case 'experience':     return buildExperience(...args);
     case 'education':      return buildEducation(...args);
-    case 'skills':         return buildSkills(...args);
+    case 'skills':         return buildSkills(...args, inSidebarColumn(template, section.type));
     case 'projects':       return buildProjects(...args);
     case 'languages':      return buildLanguages(...args);
     case 'certifications': return buildCertifications(...args);

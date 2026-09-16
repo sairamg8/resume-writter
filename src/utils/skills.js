@@ -25,5 +25,15 @@ export function skillGroup(item = {}) {
   };
 }
 
+/**
+ * A group's `category` in the case it prints in: in capitals in the Sidebar's side column
+ * (`sideColumn`, every style) and in the main column's Tags and Bars (`style`, the stored Skills
+ * style); as typed in Inline, Bullet, Stacked and a style the app does not offer, which prints as
+ * Inline. The PDF and Word read it here, so the .docx cases a category as the preview (ONB-2-NB1).
+ */
+export function skillCategory(category, { style, sideColumn = false } = {}) {
+  return sideColumn || style === 'tags' || style === 'bars' ? category.toUpperCase() : category;
+}
+
 /** The separator between a group's category and its skills (Inline and Bullet; Word). */
 export const skillSeparator = (settings = {}) => (settings.separator === 'dash' ? ' – ' : ': ');
