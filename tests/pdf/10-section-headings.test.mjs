@@ -54,13 +54,14 @@ const noop = () => {};
  */
 async function designPanel(template = 'classic', settings = {}) {
   const { default: DesignPanel } = await loadModule('/src/components/DesignPanel.jsx');
-  let tree = null;
+  let nodes = null;
   function Capture() {
-    tree = DesignPanel({ resume: resume({ template, settings }), updateSetting: noop, setTemplate: noop, resetSettings: noop });
+    const tree = DesignPanel({ resume: resume({ template, settings }), updateSetting: noop, setTemplate: noop, resetSettings: noop });
+    nodes = [...walk(tree)];   // walked inside the render pass: walk() calls child components, whose hooks need one
     return null;
   }
   renderToString(createElement(Capture));
-  return [...walk(tree)];
+  return nodes;
 }
 
 /** Every element of a React tree, outermost first. */
@@ -68,6 +69,11 @@ function* walk(node) {
   if (Array.isArray(node)) { for (const child of node) yield* walk(child); return; }
   if (!node || typeof node !== 'object' || !node.props) return;
   yield node;
+  // A block split into its own component (DesignPanelHeadings, DesignPanelColors, …) is an element
+  // whose children do not exist until it is called — call it, as DesignPanel itself is called above.
+  if (typeof node.type === 'function') {
+    try { yield* walk(node.type(node.props)); } catch { /* a component this walk cannot render: its own elements still counted */ }
+  }
   yield* walk(node.props.children);
 }
 
