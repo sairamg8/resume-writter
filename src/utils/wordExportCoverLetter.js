@@ -7,7 +7,7 @@
 // The letterhead takes the look the PDF's does (letterheadLook, FIDB-51): its colours and
 // alignment, Modern's accent band and the Sidebar panel's colour as a shaded band, Classic's
 // rule, Minimal's hairline and Executive's double rule as the last line's bottom border. Word
-// keeps the band inside the page margins (the PDF runs the Sidebar band to the paper's edges)
+// runs the Sidebar band 15 pt into the page margins, not to the paper's edges as the PDF does,
 // and prints the name in Word's own weights (Minimal's light name is regular).
 import { Paragraph, BorderStyle, ShadingType, AlignmentType } from 'docx';
 import { accent2Hex, bold, normal, linked, descriptionToParagraphs } from '@/utils/wordExportUtils';
@@ -39,13 +39,19 @@ function frame(look, last) {
   if (look.band) {
     const fill = hexOn(look.band.color, '#ffffff', look.look === 'sidebar' ? '1e293b' : '2563eb');
     const edge = (space) => ({ style: BorderStyle.SINGLE, size: 4, color: fill, space });
-    const padX = look.band.padX || look.band.padY;
+    // The text sits where the PDF's does: inset by Modern's padding; on the page margin, flush
+    // with the letter below, on the Sidebar's band (bleed), whose padX is 0 — `0 || padY` inset
+    // it 15 pt (VFIDB-51-4). Word draws a side border its space outside the indent and shades up
+    // to it, so the fill runs past the text: to the margins on Modern, padY into them on the
+    // Sidebar (Word's border space stops at 31 pt; the PDF's fill reaches the paper's edges).
+    const { padX, padY, bleed } = look.band;
+    const inset = bleed ? 0 : padX;
+    const side = bleed ? padY : padX;
     return {
       ...align,
       shading: { type: ShadingType.CLEAR, color: 'auto', fill },
-      border: { top: edge(look.band.padY), bottom: edge(look.band.padY), left: edge(padX), right: edge(padX) },
-      // The band sits inside the margins: the text is inset by the padding, as in the PDF.
-      indent: { left: pt(padX), right: pt(padX) },
+      border: { top: edge(padY), bottom: edge(padY), left: edge(side), right: edge(side) },
+      ...(inset ? { indent: { left: pt(inset), right: pt(inset) } } : {}),
     };
   }
   const [rule, second] = look.rules;

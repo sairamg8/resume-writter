@@ -3,7 +3,8 @@
 // Executive's rules as the last line's bottom border.
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { setup, teardown, resume, loadModule, readDocx, TEMPLATES } from './harness.mjs';
+import { setup, teardown, resume, loadModule, readDocx, renderCover, read, itemsWith, MM, TEMPLATES } from './harness.mjs';
+import { painted } from './extractors.mjs';
 
 before(setup);
 after(teardown);
@@ -35,6 +36,13 @@ describe('the Word letter\'s letterhead takes the look too (FIDB-51)', () => {
     const m = /<w:bottom ([^>]*)\/>/.exec(xml.split('</w:pBdr>')[0]);
     return m && Object.fromEntries([...m[1].matchAll(/w:(\w+)="([^"]*)"/g)].map(([, k, v]) => [k, v]));
   };
+  /** A paragraph's left and right indents and its side borders' space, pt (0 where unset). */
+  const sides = (xml) => {
+    const ind = /<w:ind ([^>]*)\/>/.exec(xml)?.[1] || '';
+    const indent = (k) => Number(new RegExp(`w:${k}="(-?\\d+)"`).exec(ind)?.[1] || 0) / 20;
+    const space = (k) => Number(new RegExp(`<w:${k} [^>]*w:space="(\\d+)"`).exec(xml.split('</w:pBdr>')[0])?.[1] || 0);
+    return { indent: [indent('left'), indent('right')], space: [space('left'), space('right')] };
+  };
 
   it('Modern and Sidebar: the letterhead is one shaded band in the accent or the panel colour, its text in the band\'s colours', async () => {
     const { sidebarShades } = await loadModule('/src/templates/pdf/shared/pdfColors.js');
@@ -44,6 +52,31 @@ describe('the Word letter\'s letterhead takes the look too (FIDB-51)', () => {
       assert.doesNotMatch(date, /<w:shd /, `${template}: the date is not in the band`);
       assert.equal(colourOf(head[0], 'Pat Sample'), 'ffffff', `${template}: the name`);
       assert.equal(colourOf(head[2], 'pat@example.com'), contact, `${template}: the contacts`);
+    }
+  });
+
+  it('Modern and Sidebar: the band\'s text sits where the PDF\'s does — inset by Modern\'s padding, on the page margin on the Sidebar\'s, as the letter below (VFIDB-51-4)', async () => {
+    for (const [template, fill] of [['modern', ACCENT], ['sidebar', '#1e293b']]) {
+      const bytes = await renderCover(letter(template));
+      const pages = await read(bytes);
+      const x = (text) => itemsWith(pages, text)[0].x;
+      // The PDF: the name's inset from the letter's left edge (the date), and the band's left
+      // edge from the page margin (0 on Modern; the Sidebar's runs to the paper's edge).
+      const inset = Math.round(x('Pat Sample') - x('15 January 2026'));
+      const [band] = (await painted(bytes)).filter((p) => p.paint === 'fill' && p.colour === fill && p.x1 - p.x0 > 100);
+      const bleeds = band.x0 < 18 * MM - 0.5;
+      const { head, date } = parts(await coverDocx(template));
+      assert.deepEqual(sides(date).indent, [0, 0], `${template}: the date on the margin`);
+      for (const xml of head) {
+        const { indent, space } = sides(xml);
+        assert.deepEqual(indent, [inset, inset], `${template}: the letterhead's text inset as in the PDF`);
+        // Word draws a side border `space` outside the indent, and the shading reaches it: the
+        // fill runs past the text on both sides — to the margin on Modern, into it on the Sidebar.
+        for (const i of [0, 1]) {
+          assert.ok(space[i] > 0, `${template}: the band runs past the text`);
+          assert.equal(Math.sign(indent[i] - space[i]), bleeds ? -1 : 0, `${template}: the band's edge ${indent[i] - space[i]} pt from the margin`);
+        }
+      }
     }
   });
 
