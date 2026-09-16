@@ -129,8 +129,9 @@ describe('cover letter — contact style and layout', () => {
     const r = resume({ settings: cv, personal: { email: 'me@example.com', phone: '+1 555 0100' } });
     const pdf = allText(await read(await renderCover(r)));
     assert.ok(pdf.includes('•'), `the résumé's bullet style: ${pdf}`);
+    // Word lays the résumé's Single out as the PDF does: a bulleted line a contact (FIDB-51-VF1-NB1-NB2-NB1).
     const doc = await renderCoverDocx(r);
-    assert.ok(doc.texts.some((t) => t.includes('me@example.com  •  +1 555 0100')), doc.texts.join(' | '));
+    assert.ok(doc.texts.includes('• me@example.com') && doc.texts.includes('• +1 555 0100'), doc.texts.join(' | '));
   });
 
   it('a résumé that stores no contact style (an import, older data): the chips the panel marks are what the letter prints (R1-8, R5-2, R9-3)', async () => {

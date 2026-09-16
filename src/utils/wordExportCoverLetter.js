@@ -11,7 +11,8 @@
 // as the PDF does, and prints the name and title in Word's own weights (Minimal's light name and
 // an Inline title's medium are regular).
 import { Paragraph, BorderStyle, ShadingType, AlignmentType } from 'docx';
-import { accent2Hex, bold, normal, linked, contactSeparator, descriptionToParagraphs, eighths, inlineGap } from '@/utils/wordExportUtils';
+import { accent2Hex, bold, normal, descriptionToParagraphs, eighths, inlineGap } from '@/utils/wordExportUtils';
+import { contactRows } from '@/utils/wordExportContacts';
 import { contactItems } from '@/utils/contacts';
 import { hasRichText } from '@/utils/richText';
 import { letterBlock, letterContactFormat, letterHiddenFields, letterSignature } from '@/utils/coverLetter';
@@ -95,9 +96,14 @@ function letterhead(personal, s, cl, sizes, look) {
   const contacts = contactItems(personal, letterHiddenFields(cl, personal));
   if (contacts.length) {
     const style = { size: sizes.contact, color: ink(look.contacts) };
-    // The PDF's marks: a band's (letterheadLook's marks), else the page's greys (FIDB-51-VF1-NB1).
-    const sep = () => contactSeparator(letterContactFormat(cl, s).style, style, look.marks && ink(look.marks));
-    rows.push({ runs: contacts.flatMap((c, i) => [...(i ? [sep()] : []), linked(c.value, c.href, style)]) });
+    // Cover Letter → Contact Style and Layout (letterContactFormat) as the letter's PDF lays them out
+    // (FIDB-51-VF1-NB1-NB2-NB1), in the band's marks where there is one, else the page's greys
+    // (FIDB-51-VF1-NB1). A centred 2 Grid row is centred by its tab stops, not as a whole.
+    const { style: contactStyle, layout } = letterContactFormat(cl, s);
+    const marks = look.marks && ink(look.marks);
+    for (const row of contactRows(contacts, { contactStyle, layout, centered: look.centered, settings: s, style, markColor: marks })) {
+      rows.push({ runs: row.runs, extra: look.centered && !row.centred ? { ...row.extra, alignment: undefined } : row.extra });
+    }
   }
   // A band's rows touch (no white gap inside it). Word puts a bottom border's space between the
   // text and the border, so the gap under the letterhead is the PDF's: 16 pt below the rule or band
@@ -105,7 +111,7 @@ function letterhead(personal, s, cl, sizes, look) {
   const below = LETTERHEAD_GAP + (look.band || look.rules.length ? 0 : look.ruleGap);
   return rows.map((r, i) => {
     const last = i === rows.length - 1;
-    return line(r.runs, last ? pt(below) : look.band ? 0 : r.after, frame(look, last));
+    return line(r.runs, last ? pt(below) : look.band ? 0 : r.after, { ...frame(look, last), ...r.extra });
   });
 }
 
