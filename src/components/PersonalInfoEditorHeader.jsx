@@ -1,5 +1,5 @@
 import { ChevronDown, ChevronRight, Eye, EyeOff } from 'lucide-react';
-import { hasHeaderControls, headerBorderOn } from '@/constants/templates';
+import { drawsContactIcons, hasHeaderControls, headerBorderOn } from '@/constants/templates';
 import { ICON_SET_OPTIONS, getIconSetId } from '@/utils/contactIcons';
 
 function LayoutPreview({ type }) {
@@ -146,7 +146,9 @@ export function HeaderCustomization({ s, set, template, templateLabel, open, onT
                     <Chip key={val} active={(s.contactStyle || 'icon') === val} onClick={() => set('contactStyle', val)}>{label}</Chip>
                   ))}
                 </div>
-                {(s.contactStyle === 'icon' || s.contactStyle === undefined) && (
+                {/* The header draws the pack exactly as the Style chip above reads it: a blank
+                    style an imported file stored ('' or null) is Icon, so these two show (R9-10). */}
+                {drawsContactIcons(template, s) && (
                   <div className="space-y-2">
                     <p className="text-[11px] text-gray-400 mb-1">Icon set</p>
                     <div className="flex flex-wrap gap-2 mb-1">

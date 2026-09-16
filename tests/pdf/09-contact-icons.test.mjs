@@ -179,3 +179,42 @@ describe('Personal Info offers the icon upload exactly where an icon prints (R1-
     }
   });
 });
+
+/** Header Customization for `settings` on `template`, open: its Style chips and its icon controls. */
+async function headerPanel(template, settings) {
+  const { HeaderCustomization } = await loadModule('/src/components/PersonalInfoEditorHeader.jsx');
+  const noop = () => {};
+  const html = renderToString(createElement(HeaderCustomization, {
+    s: settings, set: noop, template, templateLabel: template, open: true, onToggle: noop,
+  }));
+  const style = {};
+  // The three Style chips, by their "⊕ Icon" / "• Bullet" / "| Bar" labels; true = the active one.
+  for (const [, cls, label] of html.matchAll(/<button class="([^"]*)">[⊕•|] ([A-Za-z]+)<\/button>/g)) {
+    style[label] = cls.includes('bg-blue-600');
+  }
+  return { style, iconControls: html.includes('>Icon set<') && html.includes('>Icon size<') };
+}
+
+// Header Customization's Icon set chips and Icon size drive the pack the header draws, so they
+// belong exactly where it draws one. The panel asked `contactStyle === undefined`, while the
+// Style chip beside it, the PDF (PdfContact) and Personal Info all read `contactStyle || 'icon'`
+// — so an imported file storing '' or null showed Icon active and printed the pack with the two
+// controls that drive it hidden (R9-10/R1-2).
+describe('Header Customization offers Icon set and Icon size exactly where the pack prints (R9-10)', () => {
+  it('every header-control template × a blank, Icon, Bullet or Bar Contact Style: the panel against the PDF', async () => {
+    const { hasHeaderControls } = await loadModule('/src/constants/templates.js');
+    for (const template of TEMPLATES.filter(hasHeaderControls)) {
+      for (const contactStyle of [undefined, '', null, 'icon', 'bullet', 'bar']) {
+        const settings = { contactStyle, iconSet: 'lucide' };
+        const drawn = (await icons(await render(resume({ template, settings, personal: PERSONAL })))).length;
+        const panel = await headerPanel(template, settings);
+        const at = `${template}, style ${JSON.stringify(contactStyle)}`;
+        assert.ok([0, 6].includes(drawn), `${at}: ${drawn} icons drawn`);
+        assert.equal(panel.iconControls, drawn > 0, `${at}: the PDF draws ${drawn} icons`);
+        assert.deepEqual(panel.style,
+          { Icon: drawn > 0, Bullet: contactStyle === 'bullet', Bar: contactStyle === 'bar' },
+          `${at}: the Style chips`);
+      }
+    }
+  });
+});
