@@ -2,7 +2,7 @@ import { View } from '@react-pdf/renderer';
 import { Text } from './PdfText';
 import { solid, tint } from './pdfColors';
 import { tracking } from './pdfUnits';
-import { upperSectionTitles } from '@/constants/templates';
+import { headingBorderExtraPt, upperSectionTitles } from '@/constants/templates';
 
 export function PdfSectionTitle({
   title,
@@ -76,7 +76,8 @@ export function PdfSectionTitle({
   if (headingStyle === 'leftbar') {
     return (
       <View {...keepWithNext} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: centered ? 'center' : 'flex-start', marginBottom: 6 }}>
-        <View style={{ width: sectionBorderWidth + 2, backgroundColor: bc, alignSelf: 'stretch', marginRight: 6 }} />
+        {/* The bar prints wider than the stored thickness; the panel shows that width (headingBorderExtraPt) */}
+        <View style={{ width: sectionBorderWidth + headingBorderExtraPt(headingStyle), backgroundColor: bc, alignSelf: 'stretch', marginRight: 6 }} />
         <Text style={titleText}>{label}</Text>
       </View>
     );

@@ -120,6 +120,14 @@ export const templateStyleDefaults = (template) => ({ ...TEMPLATES[templateId(te
  */
 export const upperSectionTitles = (titleCase) => (titleCase || 'upper') === 'upper';
 
+/**
+ * How many pt wider than Section Headings' Border thickness a heading style prints its rule. Ruled,
+ * Line after and Underline print the stored value; Left bar's bar is 2 pt wider (a 1 pt bar beside
+ * bold capitals is a hairline). One rule for the PDF's bar and the panel, which shows and sets the
+ * printed width — the stored value keeps its look, so every saved résumé prints as it did (ONB-12).
+ */
+export const headingBorderExtraPt = (headingStyle) => (headingStyle === 'leftbar' ? 2 : 0);
+
 /** The template's header spacing where the résumé sets none (pt; STACKED_HEADER_GAPS above). */
 export const templateHeaderGaps = (template) => TEMPLATES[templateId(template)].headerGaps;
 

@@ -107,3 +107,91 @@ describe('Design → Section Headings names its units (VM3-3)', () => {
     }
   });
 });
+
+/** Widths of page 1's BORDER fills, in pt: what a Left bar heading's bar prints. */
+const fillWidths = async (bytes) => [...new Set((await painted(bytes))
+  .filter((p) => p.paint === 'fill' && p.colour === BORDER)
+  .map((p) => Math.round((p.x1 - p.x0) * 100) / 100))];
+
+/** Design → Section Headings' elements for `settings`, and every value its Border thickness row stores. */
+async function headingControls(settings, template = 'classic') {
+  const { HeadingControls } = await loadModule('/src/components/DesignPanelHeadings.jsx');
+  const stored = [];
+  const updateSetting = (key, value) => { if (key === 'sectionBorderWidth') stored.push(value); };
+  const nodes = [...walk(HeadingControls({ settings, template, updateSetting }))];
+  const row = nodes.find((n) => textOf(n).startsWith('Border thickness'));
+  const rowNodes = [...walk(row)];
+  return {
+    text: nodes.map(textOf).join('\n'),
+    input: rowNodes.find((n) => n.type === 'input'),
+    button: (label) => rowNodes.find((n) => n.type === 'button' && textOf(n) === label),
+    stored,
+  };
+}
+
+describe('Left bar: Border thickness says the width the bar prints (ONB-12)', () => {
+  // The bar is 2 pt wider than the stored thickness (a 1 pt bar beside bold capitals is a hairline),
+  // so a panel showing the stored "1 pt" printed a 3 pt bar and "8 pt" a 10 pt one. The print is
+  // kept — every saved Left bar résumé looks as it did — and the panel says, and sets, what it prints.
+  for (const template of TEMPLATES) {
+    it(`${template}: a stored unset, 1, 2, 4 or 8 prints a 3, 3, 4, 6 or 10 pt bar, as it always has`, async () => {
+      for (const [width, pt] of [[undefined, 3], [1, 3], [2, 4], [4, 6], [8, 10]]) {
+        assert.deepEqual(await fillWidths(await ruled(template, 'leftbar', width)), [pt], `${template} left bar ${width}`);
+      }
+    });
+  }
+
+  it('the stepper shows the bar\'s printed width in pt, measured off the PDF, from 3 to 10', async () => {
+    for (const width of [undefined, 1, 2, 4, 8]) {
+      const [printed] = await fillWidths(await ruled('classic', 'leftbar', width));
+      const { input } = await headingControls({ headingStyle: 'leftbar', sectionBorderWidth: width });
+      assert.equal(input.props.value, printed, `stored ${width}: the box says what the PDF prints`);
+      assert.equal(input.props.min, 3, 'the thinnest bar is 3 pt');
+      assert.equal(input.props.max, 10, 'the thickest bar is 10 pt');
+    }
+  });
+
+  it('a Left bar width typed or stepped prints at that width: it stores 2 pt less, within 1–8', async () => {
+    const at = async (sectionBorderWidth) => headingControls({ headingStyle: 'leftbar', sectionBorderWidth });
+    for (const [typed, stores] of [['6', 4], ['3', 1], ['10', 8], ['2', 1], ['1', 1], ['99', 8]]) {
+      const c = await at(4);
+      c.input.props.onChange({ target: { value: typed } });
+      assert.deepEqual(c.stored, [stores], `typed ${typed}`);
+      const [printed] = await fillWidths(await ruled('classic', 'leftbar', stores));
+      assert.equal(printed, Math.min(10, Math.max(3, Number(typed))), `typed ${typed} prints that width, within 3–10`);
+    }
+    const thinnest = await at(1);
+    thinnest.button('−').props.onClick();
+    thinnest.button('+').props.onClick();
+    assert.deepEqual(thinnest.stored, [1, 2], 'at 3 pt, − stays at 3 pt and + gives 4 pt');
+    const thickest = await at(8);
+    thickest.button('+').props.onClick();
+    thickest.button('−').props.onClick();
+    assert.deepEqual(thickest.stored, [8, 7], 'at 10 pt, + stays at 10 pt and − gives 9 pt');
+  });
+
+  it('says why a Left bar starts at 3 pt, and only under Left bar', async () => {
+    assert.match((await headingControls({ headingStyle: 'leftbar' })).text, /left bar is 2 pt wider/i);
+    for (const headingStyle of ['ruled', 'line', 'underline', undefined]) {
+      assert.doesNotMatch((await headingControls({ headingStyle })).text, /left bar is 2 pt wider/i, `${headingStyle}`);
+    }
+  });
+
+  it('the other styles still show and store Border thickness as the pt their rule prints', async () => {
+    for (const headingStyle of ['ruled', 'line', 'underline']) {
+      for (const width of [undefined, 1, 4, 8]) {
+        const { input } = await headingControls({ headingStyle, sectionBorderWidth: width });
+        assert.equal(input.props.value, width ?? 1, `${headingStyle} ${width}`);
+        assert.deepEqual([input.props.min, input.props.max], [1, 8], `${headingStyle} range`);
+      }
+      const c = await headingControls({ headingStyle, sectionBorderWidth: 4 });
+      c.input.props.onChange({ target: { value: '6' } });
+      c.button('−').props.onClick();
+      c.button('+').props.onClick();
+      assert.deepEqual(c.stored, [6, 3, 5], `${headingStyle}: typed 6, − and + from 4`);
+    }
+    // With nothing stored the panel marks, and the PDF prints, the template's own style (R5-3).
+    const { input } = await headingControls({}, 'sidebar');
+    assert.equal(input.props.value, 1, 'Sidebar with no stored style prints plain headings');
+  });
+});

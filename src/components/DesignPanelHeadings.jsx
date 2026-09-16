@@ -1,5 +1,5 @@
 import { DesignSection } from '@/components/DesignPanelShared';
-import { upperSectionTitles } from '@/constants/templates';
+import { headingBorderExtraPt, upperSectionTitles } from '@/constants/templates';
 import { DEFAULTS } from '@/templates/pdf/shared/templateSettings';
 
 /** The heading styles the panel offers, in the order it lays them out. */
@@ -27,6 +27,11 @@ export function HeadingControls({ settings, template, updateSetting }) {
   const headingStyle = settings.headingStyle || DEFAULTS[template].headingStyle;
   const titleCase = upperSectionTitles(settings.sectionTitleCase || DEFAULTS[template].sectionTitleCase)
     ? 'upper' : 'normal';
+  // Border thickness in the pt this style prints: Left bar's bar is 2 pt wider than the stored 1–8,
+  // so there it shows and sets 3–10 pt, and the stored value keeps its look (ONB-12).
+  const extraPt = headingBorderExtraPt(headingStyle);
+  const borderPt = Number(settings.sectionBorderWidth ?? 1) + extraPt;
+  const setBorderPt = (pt) => updateSetting('sectionBorderWidth', Math.min(8, Math.max(1, pt - extraPt)));
 
   return (
     <>
@@ -55,13 +60,16 @@ export function HeadingControls({ settings, template, updateSetting }) {
       <div className="flex items-center justify-between">
         <span className="text-xs text-gray-500">Border thickness</span>
         <div className="flex items-center gap-1">
-          <button onClick={() => updateSetting('sectionBorderWidth', Math.max(1, (settings.sectionBorderWidth ?? 1) - 1))} className="w-6 h-6 flex items-center justify-center border border-gray-200 rounded text-gray-600 hover:bg-gray-100 text-base leading-none">−</button>
-          <input type="number" aria-label="Section border thickness (pt)" min={1} max={8} value={settings.sectionBorderWidth ?? 1} onChange={e => { const v = parseInt(e.target.value, 10); if (!isNaN(v)) updateSetting('sectionBorderWidth', Math.min(8, Math.max(1, v))); }} className="w-10 text-center text-xs font-medium text-gray-700 border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-400 h-6" />
-          <button onClick={() => updateSetting('sectionBorderWidth', Math.min(8, (settings.sectionBorderWidth ?? 1) + 1))} className="w-6 h-6 flex items-center justify-center border border-gray-200 rounded text-gray-600 hover:bg-gray-100 text-base leading-none">+</button>
+          <button onClick={() => setBorderPt(borderPt - 1)} className="w-6 h-6 flex items-center justify-center border border-gray-200 rounded text-gray-600 hover:bg-gray-100 text-base leading-none">−</button>
+          <input type="number" aria-label="Section border thickness (pt)" min={1 + extraPt} max={8 + extraPt} value={borderPt} onChange={e => { const v = parseInt(e.target.value, 10); if (!isNaN(v)) setBorderPt(v); }} className="w-10 text-center text-xs font-medium text-gray-700 border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-400 h-6" />
+          <button onClick={() => setBorderPt(borderPt + 1)} className="w-6 h-6 flex items-center justify-center border border-gray-200 rounded text-gray-600 hover:bg-gray-100 text-base leading-none">+</button>
           {/* Points, as the PDF prints it — every saved value keeps its look (VM3-3, as R3-7) */}
           <span className="text-[11px] text-gray-400 ml-1">pt</span>
         </div>
       </div>
+      {extraPt > 0 && (
+        <p className="text-[11px] text-gray-400 leading-relaxed">A left bar is {extraPt} pt wider than a rule, so it starts at {1 + extraPt} pt.</p>
+      )}
 
       <div className="flex items-center justify-between">
         <span className="text-xs text-gray-500">Border color</span>
