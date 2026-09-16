@@ -94,15 +94,17 @@ export function ContactValue({ value, href, style }) {
  * header's spacing in pt (resolved settings' `headerGaps`); a gap it does not give prints as it
  * always has — the cover letter passes none, its letterhead keeps its own spacing. `width`: the
  * width the row is laid out at, pt, where its caller knows it (headerRowWidth) — 2 Grid sizes
- * its cells with it.
+ * its cells with it. `markColor`: the Bar and Bullet marks' colour — the letterhead's on a band
+ * (letterheadLook's marks); by default the light greys they print in on the white page.
  */
-export function PdfContactRow({ personal, settings, color, hidden, gaps = {}, width }) {
+export function PdfContactRow({ personal, settings, color, markColor, hidden, gaps = {}, width }) {
   const contactStyle  = settings?.contactStyle  || 'icon';
   const contactLayout = settings?.contactLayout || 'justify';
   const centered = settings?.headerAlign === 'center';
   const { textSize, iconPt } = rowSizes(settings);
   const c        = color || textShades(settings?.textColor || '#1a1a1a').sub;
   const text = { fontSize: textSize, color: c };
+  const bulletColor = markColor || '#bbbbbb';
   const top     = gaps.titleContactsGap ?? 3;   // title (or name) ↔ the contacts
   const iconGap = gaps.iconTextGap ?? ITEM_GAP; // icon (or bullet) ↔ value
   const colGap  = gaps.contactGapX ?? pxToPt(16);
@@ -115,7 +117,7 @@ export function PdfContactRow({ personal, settings, color, hidden, gaps = {}, wi
     return (
       <View key={item.key} style={{ flexDirection: 'row', alignItems: 'center', gap: iconGap, maxWidth: '100%' }}>
         {contactStyle === 'icon' && <PdfContactIcon field={item.key} settings={settings} size={iconPt} color={c} />}
-        {contactStyle === 'bullet' && <Text style={{ fontSize: textSize, color: '#bbbbbb' }}>•</Text>}
+        {contactStyle === 'bullet' && <Text style={{ fontSize: textSize, color: bulletColor }}>•</Text>}
         <ContactValue value={item.value} href={item.href} style={{ ...text, flexShrink: 1 }} />
       </View>
     );
@@ -171,7 +173,7 @@ export function PdfContactRow({ personal, settings, color, hidden, gaps = {}, wi
   // "a | b | c" or "a • b • c" as one line of text. Each value and the separator before the next
   // are glued with no-break spaces, so a wrapped line always starts with a value, never with a
   // dangling separator (FIDA-10).
-  const sepColor = contactStyle === 'bullet' ? '#bbbbbb' : '#cccccc';
+  const sepColor = contactStyle === 'bullet' ? bulletColor : markColor || '#cccccc';
   return (
     <Text style={{ ...text, marginTop: top, textAlign: centered ? 'center' : 'left' }}>
       {items.map((item, i) => (

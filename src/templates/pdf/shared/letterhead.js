@@ -3,7 +3,7 @@
 // to print Classic's letterhead under every template, so a Modern or Sidebar résumé and its
 // letter never read as a set. Plain data (no react-pdf).
 import { letterheadCentered, templateId } from '@/constants/templates';
-import { sidebarShades, solid, textShades } from './pdfColors';
+import { contrast, sidebarShades, solid, textShades } from './pdfColors';
 import { MODERN_HEADER_PAD_X_PT, MODERN_HEADER_PAD_Y_PT } from './pdfUnits';
 
 /** Space under the letterhead's text, above its rule — and the gap under the letterhead. */
@@ -22,6 +22,28 @@ export const DOUBLE_RULE_GAP = 1.5;
  */
 export const letterGrey = (text) => textShades(text || '#1e293b').sub;
 
+/** The contacts' colour's share in the marks on a band — the opacity Modern's banner prints its summary at. */
+const MARK_ALPHA = 0.85;
+/** WCAG's floor for a graphic: a mark below 3:1 on its band is not seen. */
+const MARK_READS = 3;
+
+/**
+ * The Bar "|" and Bullet "•" marks' colour on a band: the contacts' colour `contacts` over the
+ * band's `ground` at MARK_ALPHA — a step lighter than the values, as the page's light greys are
+ * (PdfContactRow) — or at the least more of it that reads 3:1 there. Contacts that read less
+ * than that themselves (a Header text colour picked for another accent) give their own colour:
+ * a mark never stands out over the values. A colour it cannot read passes through.
+ */
+function bandMarks(contacts, ground) {
+  const own = contrast(contacts, ground);
+  if (own == null) return contacts;
+  for (let alpha = MARK_ALPHA; own >= MARK_READS && alpha < 1; alpha += 0.05) {
+    const mark = solid(contacts, alpha, ground);
+    if (contrast(mark, ground) >= MARK_READS) return mark;
+  }
+  return solid(contacts, 1, ground);
+}
+
 /**
  * The letterhead of a letter whose résumé prints with `template`, from the résumé's resolved
  * settings `s` (resolveTemplateSettings): the same fonts (the page's), accent, name and title
@@ -31,6 +53,8 @@ export const letterGrey = (text) => textShades(text || '#1e293b').sub;
  *   name      { color, weight, letterSpacing? }: Design → Name color, else the template's own
  *   title     { color, opacity? }: Design → Job title color, else the template's own
  *   contacts  the colour of the contact icons and values
+ *   marks     the colour of the Bar and Bullet marks on a band (bandMarks), else null: the
+ *             page's light greys, as the résumé's header prints them
  *   band      null, or the filled band the letterhead sits in: { color, padX, padY, radius?, bleed? }
  *             — Modern's accent banner inside the margins; the Sidebar panel's colour to the page
  *             edges (bleed: the content keeps the page margins, the fill runs to the paper's edge)
@@ -51,26 +75,32 @@ export function letterheadLook(template, s = {}) {
     title: { color: s.jobTitleColor || accent },
     // Contacts in the Text colour's grey (R1-13): the résumé header's (letterGrey, R9-13).
     contacts: letterGrey(text),
+    marks: null,
     band: null,
     rules: [],
     photo: [accent, {}],
   };
   switch (look) {
-    case 'modern':
+    case 'modern': {
       // Modern's banner: the accent, its padding and corners; everything on it in the header text colour.
+      const headerText = s.headerTextColor || '#ffffff';
       return {
         ...base,
         title: { ...base.title, opacity: 0.9 },
-        contacts: s.headerTextColor || '#ffffff',
+        contacts: headerText,
+        marks: bandMarks(headerText, solid(accent)),
         band: { color: accent, padX: MODERN_HEADER_PAD_X_PT, padY: MODERN_HEADER_PAD_Y_PT, radius: 2 },
         photo: ['#ffffff', { onBanner: true }],
       };
+    }
     case 'sidebar': {
       // The Sidebar column's background and its colours on it (sidebarShades, R2-2).
       const bg = s.sidebarBg || '#1e293b';
+      const { value } = sidebarShades(bg);
       return {
         ...base,
-        contacts: sidebarShades(bg).value,
+        contacts: value,
+        marks: bandMarks(value, solid(bg)),
         band: { color: bg, padX: 0, padY: MODERN_HEADER_PAD_Y_PT, bleed: true },
         photo: [accent, { lightBorder: true }],
       };

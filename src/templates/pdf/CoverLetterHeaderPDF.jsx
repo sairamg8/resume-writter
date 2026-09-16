@@ -135,7 +135,7 @@ export function CoverLetterHeader({ look, personal, settings, cl, hidden, contac
       else { layout = 'below-name'; contactsWidth = beside; }
     }
   }
-  const contactEl = <PdfContactRow personal={personal} hidden={hidden} settings={contactSettings} color={look.contacts} width={contactsWidth} />;
+  const contactEl = <PdfContactRow personal={personal} hidden={hidden} settings={contactSettings} color={look.contacts} markColor={look.marks} width={contactsWidth} />;
   // A name word wider even than the room the name ends up with (a 35-letter surname at 28 pt) has
   // nowhere to break, and react-pdf drew it past the margin, off the paper: it prints at the
   // largest size that holds it. Beside the contacts it always fits (nameNeed).

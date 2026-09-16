@@ -77,8 +77,10 @@ function letterhead(personal, s, cl, sizes, look) {
   const contacts = contactItems(personal, letterHiddenFields(cl, personal));
   if (contacts.length) {
     const style = { size: sizes.contact, color: ink(look.contacts) };
+    // The separators in the PDF's marks on a band (letterheadLook's marks), else the contacts' colour.
+    const sepStyle = { ...style, color: ink(look.marks || look.contacts) };
     const sep = letterContactFormat(cl, s).style === 'bullet' ? '  •  ' : '  |  ';
-    rows.push({ runs: contacts.flatMap((c, i) => [...(i ? [normal(sep, style)] : []), linked(c.value, c.href, style)]) });
+    rows.push({ runs: contacts.flatMap((c, i) => [...(i ? [normal(sep, sepStyle)] : []), linked(c.value, c.href, style)]) });
   }
   // A band's rows touch (no white gap inside it). Word puts a bottom border's space between the
   // text and the border, so the gap under the letterhead is the PDF's: 16 pt below the rule or band.

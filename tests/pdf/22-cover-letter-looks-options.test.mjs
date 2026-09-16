@@ -5,7 +5,7 @@ import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { createElement } from 'react';
 import { renderToString } from 'react-dom/server';
-import { setup, teardown, resume, renderCover, read, allItems, allText, overlaps, loadModule, readDocx, MM, TEMPLATES } from './harness.mjs';
+import { setup, teardown, resume, render, renderCover, read, allItems, allText, drawState, overlaps, loadModule, readDocx, MM, TEMPLATES } from './harness.mjs';
 import { drawing, painted, pdftotext, PNG_2X2 as PNG } from './extractors.mjs';
 
 before(setup);
@@ -109,6 +109,62 @@ describe('the letter\'s options under every look (FIDB-51)', () => {
     assert.deepEqual(await ring('modern', { photoBorder: 'thin' }), [solid('rgba(255,255,255,0.5)', 1, ACCENT)], 'Modern: Thin');
     assert.deepEqual(await ring('sidebar', { photoBorder: 'accent', accentColor: '#374151' }), [readableOn('#374151', '#1e293b', 3)], 'Sidebar: a dark accent lightened');
     assert.deepEqual(await ring('classic', { photoBorder: 'accent' }), [ACCENT], 'Classic: the accent');
+  });
+});
+
+describe('the Bar and Bullet marks on a band take its colours (VFIDB-51-0)', () => {
+  // The marks were the white page's greys (#cccccc bars, #bbbbbb bullets) on every band: 1.47:1
+  // on a light Sidebar panel and 1.29:1 on a light Modern accent — gone — while the letter's
+  // Word export printed them in the contacts' colour.
+  const MARKS = [['bar', 'justify', '|'], ['bullet', 'justify', '•'], ['bullet', 'single', '•'], ['bullet', '2grid', '•']];
+  const BANDS = [
+    ['sidebar', { sidebarBg: '#f1f5f9' }, '#f1f5f9'],
+    ['sidebar', {}, '#1e293b'],
+    ['modern', { accentColor: '#fde68a', headerTextColor: '#1e293b' }, '#fde68a'],
+    ['modern', { accentColor: '#2563eb' }, '#2563eb'],
+    ['modern', { accentColor: '#ea580c' }, '#ea580c'], // white values at 3.56:1
+  ];
+  /** The distinct colours of the runs Word prints `mark` in. */
+  const wordMarks = (doc, mark) => [...new Set(doc.xml.split('</w:r>')
+    .filter((run) => new RegExp(`>\\s*\\${mark}\\s*<`).test(run))
+    .map((run) => run.match(/<w:color w:val="([0-9a-fA-F]{6})"/)?.[1]?.toLowerCase()))];
+
+  it('Modern and Sidebar: every mark reads on the band (3:1 or more), no stronger than the values, in the colour Word prints', async () => {
+    const { contrast } = await loadModule('/src/templates/pdf/shared/pdfColors.js');
+    const { renderCoverLetterDocx } = await loadModule('/src/utils/wordExport.js');
+    for (const [template, settings, band] of BANDS) {
+      for (const [headerStyle, headerLayout, mark] of MARKS) {
+        const at = `${template} ${JSON.stringify(settings)}, ${headerStyle}/${headerLayout}`;
+        const r = letter(template, { settings, coverLetter: { headerStyle, headerLayout } });
+        const bytes = await renderCover(r);
+        const drawn = [...new Set((await drawState(bytes, mark)).map((h) => h.fill))];
+        assert.equal(drawn.length, 1, `${at}: one colour for every mark (${drawn})`);
+        const k = contrast(drawn[0], band);
+        assert.ok(k >= 3, `${at}: ${drawn[0]} on the band reads ${k.toFixed(2)}:1`);
+        const [value] = await drawState(bytes, 'pat@example.com');
+        assert.ok(k <= contrast(value.fill, band), `${at}: ${drawn[0]} no stronger than the values' ${value.fill}`);
+        const doc = readDocx(new Uint8Array(await (await renderCoverLetterDocx(r)).arrayBuffer()));
+        assert.deepEqual(wordMarks(doc, mark), [drawn[0].slice(1)], `${at}: Word's marks`);
+      }
+    }
+  });
+
+  // Guard: on the white page the marks keep the light greys every letter and résumé header printed.
+  it('Classic, Minimal and Executive letters and every résumé header keep the page\'s greys', async () => {
+    const personal = { name: 'Pat Sample', ...CONTACTS, hiddenFields: [] };
+    for (const template of TEMPLATES) {
+      for (const [style, layout, mark, grey] of [['bar', 'justify', '|', '#cccccc'], ['bullet', 'justify', '•', '#bbbbbb'], ['bullet', '2grid', '•', '#bbbbbb']]) {
+        const at = `${template}, ${style}/${layout}`;
+        if (!['modern', 'sidebar'].includes(template)) {
+          const bytes = await renderCover(letter(template, { coverLetter: { headerStyle: style, headerLayout: layout } }));
+          assert.deepEqual([...new Set((await drawState(bytes, mark)).map((h) => h.fill))], [grey], `${at}: the letter`);
+        }
+        const cv = await render(resume({ template, settings: { accentColor: ACCENT, contactStyle: style, contactLayout: layout }, personal }));
+        const drawn = [...new Set((await drawState(cv, mark)).map((h) => h.fill))];
+        // Modern's banner and the Sidebar column draw no marks.
+        assert.deepEqual(drawn, ['modern', 'sidebar'].includes(template) ? [] : [grey], `${at}: the résumé`);
+      }
+    }
   });
 });
 
