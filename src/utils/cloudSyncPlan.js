@@ -27,7 +27,8 @@ const asEntry = (e) => (typeof e === 'string' ? { id: e, version: null } : e);
  *                 signed out or offline, after a failed flush, or within the flush delay before a
  *                 reload; a flush that sent one forgets it (R8-1). Entries { id, version, owner }
  *                 (localDeletions.deletionEntries): version the updatedAt of the copy deleted,
- *                 null for an older build's entry; owner the account it was deleted from
+ *                 null for an older build's entry; owner the account it was deleted from — an id
+ *                 has one entry per account at most, the latest first (V2VF1S-1)
  *   uid           the account signing in: another account's deletions are left for it (R8-6),
  *                 without hiding this account's own copy of the id
  *   cloud         the account's résumé documents, each with its document id
@@ -46,8 +47,8 @@ const asEntry = (e) => (typeof e === 'string' ? { id: e, version: null } : e);
  *   hardDeletes  other résumés deleted here that the cloud still holds → remove them; outside
  *                a demo account also every flagged résumé (flagged before R4-11)
  *   listAdd      ids to add to the deletion list (the removals)
- *   handled      the ids of the deletions dealt with — the store forgets them (afterSync);
- *                another account's are left out of the merge and kept
+ *   handled      the ids of the deletions dealt with — the store forgets this account's entries
+ *                of them (afterSync); another account's are left out of the merge and kept
  * A deletion is sent only when the cloud's copy is not newer than the version deleted: one made
  * offline or signed out must never remove an edit made later on another device — that edit
  * wins, and the résumé comes back here (R8-0) — nor a restore made since (`restoredAt` after the
@@ -105,8 +106,9 @@ export function planInitialSync({ local = [], deletions = [], cloud = [], cloudD
  * the list is now synced with (`syncedUid`: whose a later deletion is, R8-6).
  * A résumé unchanged since the snapshot takes its merged copy, or goes when the plan left it out;
  * one edited or added meanwhile stays as it is, and one deleted meanwhile stays deleted — the
- * watcher then sends those changes. Only the deletions the plan dealt with are forgotten. The
- * merged order is kept (then what was added meanwhile). Before, the merged list replaced the
+ * watcher then sends those changes. Only the deletions the plan dealt with are forgotten — `uid`'s
+ * entries: another account's deletion of the same id still waits (V2VF1S-1). The merged order is
+ * kept (then what was added meanwhile). Before, the merged list replaced the
  * store and every deletion was forgotten: an edit typed during the sync was lost, and a résumé
  * deleted during it came back — the batch had just written it to the cloud again.
  */
@@ -126,7 +128,7 @@ export function afterSync(state, { uid, snapshot, merged, handled, before }) {
     ...state,
     resumes,
     activeId: resumes.some((r) => r.id === state.activeId) ? state.activeId : (resumes[0]?.id ?? state.activeId),
-    ...withoutDeletions(state, handled, before),
+    ...withoutDeletions(state, handled, before, uid ?? undefined),
     syncedUid: uid ?? state.syncedUid ?? null,
   };
 }

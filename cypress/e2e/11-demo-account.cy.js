@@ -4,7 +4,8 @@
 // --mode e2e`) signs in the fake account these specs put in localStorage and runs that page
 // without Firebase, so this is the local-only path; the cloud side (flags, the latest copy from
 // another device) runs in tests/pdf/18-cloud-sync-*.test.mjs, the rules in tests/unit/demo-seed.
-// Marking one — the cards' and the Import menus' controls: 11-demo-account-keep.cy.js.
+// Marking one — the cards' and the Import menus' controls: 11-demo-account-keep.cy.js. Last, what
+// a shared browser keeps when two accounts delete the same id.
 import {
   OWNER, OTHER, visitAs, stateWith, okEveryConfirm, deleteButton, deleteCard, openCard, stopKeeping, backToDashboard,
   expectCards, newResumeAndBack,
@@ -122,5 +123,27 @@ describe('demo account — nobody else gets anything back', () => {
     cy.get(SYNC_STATUS).trigger('mouseover');
     cy.contains('Sync is off — changes are saved in this browser').should('be.visible');
     cy.contains('Sync error').should('not.exist');
+  });
+});
+
+// A shared browser: the list stays when an account signs out, and its deletions wait for it.
+describe('a shared browser — one account\'s deletion of an id never replaces another\'s', () => {
+  it('another account deleting its own copy keeps the deletion still waiting for the last one (V2VF1S-1)', () => {
+    // The last account deleted "My CV" signed out; this one's own copy of that id came in with its
+    // sign-in (a sample's id is the same in every account). The cloud side: 18-cloud-sync-accounts.
+    const waiting = { version: 1, at: 5, owner: 'e2e-last', keep: false };
+    visitAs(OTHER, { ...stateWith(['My CV']), deletedIds: ['resume_my_cv'], deletedInfo: { resume_my_cv: waiting }, syncedUid: 'e2e-last' });
+    okEveryConfirm();
+    deleteCard('My CV');
+    cy.contains('No resumes yet').should('be.visible');
+    const both = (s) => {
+      expect(s.deletedIds).to.deep.eq(['resume_my_cv']);
+      expect(s.deletedInfo.resume_my_cv.owner, 'the latest, as every build reads it').to.eq(OTHER.uid);
+      expect(s.deletedInfo.resume_my_cv.also, 'before: none — this account\'s had replaced it').to.deep.eq([waiting]);
+    };
+    cy.store().should(both);
+    cy.reload(); // and saved: a reload keeps both
+    cy.contains('No resumes yet').should('be.visible');
+    cy.store().should(both);
   });
 });

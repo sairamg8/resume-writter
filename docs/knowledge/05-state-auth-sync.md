@@ -23,7 +23,10 @@
 | `updateCoverLetter` | cover letter fields |
 | section actions | add/remove/reorder sections & items |
 
-`deleteResume` appends id to `deletedIds` so sync will not resurrect remote copies.
+`deleteResume` appends id to `deletedIds` so sync will not resurrect remote copies. `deletedInfo`
+records each deletion's version, time and account (`src/utils/localDeletions.js`): another
+account's sync leaves it for that account, and on a shared browser an id keeps one deletion per
+account — one account's deletion of it never replaces, nor forgets, another's (V2VF1S-1).
 
 ## Auth (`useAuth`)
 

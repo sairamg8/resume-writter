@@ -9,10 +9,13 @@ import { afterSync } from '@/utils/cloudSyncPlan';
 
 /** `setAppState(prev => next)` as React's; `now()` → ms, when a deletion is made. */
 export function createSyncActions(setAppState, now = () => Date.now()) {
-  /** The cloud has these deletions now (sent by the sync at `before`): they are not kept any longer. */
-  function forgetDeletions(ids, before) {
+  /**
+   * Account `uid`'s cloud has these deletions now (sent by the sync at `before`): its entries are
+   * not kept any longer — another account's of the same id still are (localDeletions.js).
+   */
+  function forgetDeletions(ids, before, uid) {
     setAppState(prev => (ids.some(id => (prev.deletedIds || []).includes(id))
-      ? { ...prev, ...withoutDeletions(prev, ids, before) }
+      ? { ...prev, ...withoutDeletions(prev, ids, before, uid) }
       : prev));
   }
 
@@ -61,6 +64,6 @@ export function liveStore(latest) {
   return {
     getState: () => latest().appState,
     applyCloudSync: (result) => latest().store.applyCloudSync(result),
-    forgetDeletions: (ids, before) => latest().store.forgetDeletions(ids, before),
+    forgetDeletions: (ids, before, uid) => latest().store.forgetDeletions(ids, before, uid),
   };
 }

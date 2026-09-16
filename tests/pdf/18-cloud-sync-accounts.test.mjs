@@ -1,5 +1,6 @@
-// The write queue across slow acknowledgements, sign-outs and account switches, as the app runs
-// it (the engine, its Firestore calls, the store's own rules) over a fake Firestore.
+// The write queue across slow acknowledgements, sign-outs and account switches — and whose a
+// deletion is when accounts share a browser — as the app runs it (the engine, its Firestore
+// calls, the store's own rules) over a fake Firestore.
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { setup, teardown, loadModule } from './harness.mjs';
@@ -18,6 +19,7 @@ const B = { uid: 'B', email: 'b@example.com' };
 const page = (cloud, state) => syncPage(mods, cloud, state);
 const signIn = async (p, user) => { p.sync.start(user); await settle(); };
 const rename = (p, id, name, updatedAt) => p.change({ resumes: p.store.state.resumes.map((r) => (r.id === id ? { ...r, name, updatedAt } : r)) });
+const ids = (list) => list.map((r) => r.id).toSorted();
 
 describe('a flush never waits for the one before it to be acknowledged (VM4-3)', () => {
   it('an acknowledgement that does not come holds back no later flush', async () => {
@@ -138,5 +140,129 @@ describe('signing out ends the account\'s queue (R8-5)', () => {
     await rename(p, 'resume_b', 'Edited by B', 5);
     await p.timers.fire();
     assert.equal(cloud.resumes('B').resume_b.name, 'Edited by B');
+  });
+});
+
+describe('a deletion belongs to the account the list came from (R8-6)', () => {
+  it('deleted after signing out of A, it waits for A: B signing in does not take it', async () => {
+    const cloud = fakeFirestore({ [resumePath('A', 'resume_r')]: cv('resume_r', 5), [resumePath('A', 'resume_s')]: cv('resume_s', 5) });
+    const p = page(cloud, { resumes: [] });
+    await signIn(p, A); // the list is A's now
+    p.sync.start(null); // signed out: the list stays in the browser
+    await p.remove('resume_r');
+
+    await signIn(p, B);
+    assert.deepEqual(p.store.state.deletedIds, ['resume_r'], 'before: B\'s sync forgot it');
+    assert.equal(cloud.resumes('B').resume_r, undefined, 'and it is not uploaded to B');
+
+    p.sync.start(null);
+    await signIn(p, A);
+    assert.deepEqual(Object.keys(cloud.resumes('A')), ['resume_s'], 'before: A kept it, and it came back');
+    assert.deepEqual(cloud.doc(listPath('A')).ids, ['resume_r']);
+    assert.deepEqual(p.store.state.deletedIds, []);
+    assert.equal(p.store.state.resumes.some((r) => r.id === 'resume_r'), false);
+  });
+
+  it('deleted while signed in as B, before B\'s first sync got through, it is B\'s (V2W1a-3)', async () => {
+    // The list was last synced with A and still holds B's résumé R from B's earlier visit.
+    const cloud = fakeFirestore({ [resumePath('B', 'resume_r')]: cv('resume_r', 5), [resumePath('B', 'resume_s')]: cv('resume_s', 5) });
+    const p = page(cloud, { resumes: [cv('resume_r', 5)], syncedUid: 'A' });
+    cloud.fail.read = Object.assign(new Error('Failed to get documents from server.'), { code: 'unavailable' });
+    await signIn(p, B); // "Sync error — will retry"
+    await p.remove('resume_r');
+    cloud.fail.read = null;
+    await p.timers.fire(); // the retry gets through
+    assert.equal(cloud.resumes('B').resume_r, undefined, 'before: left for A, and B\'s phone kept R');
+    assert.deepEqual([cloud.doc(listPath('B'))?.ids, p.store.state.deletedIds], [['resume_r'], []]);
+  });
+
+  it('A\'s deletion of a sample does not hide B\'s own copy of it — sample ids are the same in every account (V2W1a-7)', async () => {
+    const cloud = fakeFirestore({
+      [resumePath('A', 'demo_classic')]: cv('demo_classic', 5, { name: 'A\'s copy' }),
+      [resumePath('B', 'demo_classic')]: cv('demo_classic', 5, { name: 'B\'s copy' }), [resumePath('B', 'resume_b')]: cv('resume_b'),
+    });
+    const p = page(cloud, { resumes: [] });
+    await signIn(p, A);
+    p.sync.start(null);
+    await p.remove('demo_classic'); // signed out: A's deletion, waiting for A
+    await signIn(p, B);
+    assert.deepEqual(p.store.state.resumes.map((r) => r.name).toSorted(), ['B\'s copy', 'resume_b'], 'before: B\'s copy hidden on this browser until A signs in here again');
+    assert.deepEqual(p.store.state.deletedIds, ['demo_classic'], 'A\'s deletion still waits for A');
+    p.sync.start(null);
+    await signIn(p, A);
+    assert.deepEqual([cloud.resumes('A').demo_classic, cloud.resumes('B').demo_classic?.name], [undefined, 'B\'s copy']);
+    assert.deepEqual(ids(p.store.state.resumes), ['resume_b'], 'and B\'s copy is not uploaded to A');
+  });
+
+  it('B then deleting its own copy of that id does not take A\'s deletion with it (V2VF1S-1)', async () => {
+    const cloud = fakeFirestore({
+      [resumePath('A', 'demo_classic')]: cv('demo_classic', 5, { name: 'A\'s copy' }),
+      [resumePath('B', 'demo_classic')]: cv('demo_classic', 5, { name: 'B\'s copy' }),
+    });
+    const p = page(cloud, { resumes: [] });
+    await signIn(p, A);
+    p.sync.start(null);
+    await p.remove('demo_classic'); // signed out: A's deletion, waiting for A
+    await signIn(p, B);
+    await p.remove('demo_classic'); // B's own copy, signed in: B's
+    await p.timers.fire();
+    assert.equal(cloud.resumes('B').demo_classic, undefined, 'B\'s deletion reached B\'s cloud');
+    assert.deepEqual(p.store.state.deletedIds, ['demo_classic'], 'before: [] — B\'s flush forgot A\'s deletion with its own');
+    p.sync.start(null);
+    await signIn(p, A);
+    assert.deepEqual([cloud.resumes('A').demo_classic, ids(p.store.state.resumes)], [undefined, []], 'before: A\'s copy came back, though A deleted it');
+    assert.deepEqual([p.store.state.deletedIds, cloud.doc(listPath('A')).ids], [[], ['demo_classic']]);
+  });
+
+  it('B\'s deletion of that id sent by B\'s next first sync, not a flush: A\'s still waits (V2VF1S-1)', async () => {
+    const cloud = fakeFirestore({
+      [resumePath('A', 'demo_classic')]: cv('demo_classic', 5, { name: 'A\'s copy' }),
+      [resumePath('B', 'demo_classic')]: cv('demo_classic', 5, { name: 'B\'s copy' }),
+    });
+    const p = page(cloud, { resumes: [] });
+    await signIn(p, A);
+    p.sync.start(null);
+    await p.remove('demo_classic');
+    await signIn(p, B);
+    cloud.fail.commit = Object.assign(new Error('Failed to get document because the client is offline.'), { code: 'unavailable' });
+    await p.remove('demo_classic');
+    await p.timers.fire(); // the flush fails: B's deletion stays for B's next first sync
+    cloud.fail.commit = null;
+    await p.timers.fire(); // the retry
+    assert.deepEqual([cloud.resumes('B').demo_classic, p.store.state.deletedIds], [undefined, ['demo_classic']], 'before: B\'s deletion had replaced A\'s');
+    p.sync.start(null);
+    await signIn(p, A);
+    assert.deepEqual([cloud.resumes('A').demo_classic, p.store.state.deletedIds], [undefined, []]);
+  });
+
+  it('B signed out before its deletion of that id got through: A\'s sync sends A\'s, and B\'s waits for B (V2VF1S-1)', async () => {
+    const cloud = fakeFirestore({
+      [resumePath('A', 'demo_classic')]: cv('demo_classic', 5, { name: 'A\'s copy' }),
+      [resumePath('B', 'demo_classic')]: cv('demo_classic', 5, { name: 'B\'s copy' }),
+    });
+    const p = page(cloud, { resumes: [] });
+    await signIn(p, A);
+    p.sync.start(null);
+    await p.remove('demo_classic');
+    await signIn(p, B);
+    cloud.fail.commit = Object.assign(new Error('Failed to get document because the client is offline.'), { code: 'unavailable' });
+    await p.remove('demo_classic');
+    await p.timers.fire(); // the flush fails
+    p.sync.start(null); // signed out before the retry
+    cloud.fail.commit = null;
+    await signIn(p, A);
+    assert.deepEqual([cloud.resumes('A').demo_classic, cloud.resumes('B').demo_classic?.name], [undefined, 'B\'s copy'], 'before: A\'s copy came back — only B\'s deletion was left');
+    p.sync.start(null);
+    await signIn(p, B);
+    assert.deepEqual([cloud.resumes('B').demo_classic, p.store.state.deletedIds], [undefined, []]);
+  });
+
+  it('deleted before any account synced this list, it goes to the first account that signs in', async () => {
+    const cloud = fakeFirestore({ [resumePath('A', 'resume_r')]: cv('resume_r', 5) });
+    const p = page(cloud, { resumes: [cv('resume_r', 5)] });
+    await p.remove('resume_r');
+    await signIn(p, A);
+    assert.deepEqual(cloud.resumes('A'), {});
+    assert.deepEqual(p.store.state.deletedIds, []);
   });
 });

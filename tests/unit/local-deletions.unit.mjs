@@ -65,3 +65,39 @@ test('savedDeletions: a store saved by an older build (ids only) loads with its 
   const kept = { deletedIds: ['resume_o'], deletedInfo: { resume_o: { version: 4, at: 8, owner: null, keep: true } } };
   assert.deepEqual(savedDeletions(kept).deletedInfo, kept.deletedInfo, 'an original\'s entry keeps saying so');
 });
+
+test('withDeletion: another account\'s deletion of the same id still waiting is kept with it, never replaced (V2VF1S-1)', () => {
+  // A deleted demo_x signed out (A's, waiting for A); B, signed in, deletes its own copy of that id.
+  const a = withDeletion({ deletedIds: [], deletedInfo: {}, syncedUid: 'uid_a' }, { id: 'demo_x', updatedAt: 5 }, 10);
+  const both = withDeletion({ ...a, syncedUid: 'uid_b' }, { id: 'demo_x', updatedAt: 7 }, 20, 'uid_b');
+  assert.deepEqual(both.deletedIds, ['demo_x']);
+  assert.deepEqual(deletionEntries(both).map((e) => [e.owner, e.version]), [['uid_b', 7], ['uid_a', 5]], 'before: [[uid_b, 7]] — A\'s deletion gone');
+  assert.equal(both.deletedInfo.demo_x.owner, 'uid_b', 'deletedInfo[id] is the latest, as every build reads it');
+  // The same account deleting it again replaces its own entry; the other's stays.
+  const again = withDeletion(both, { id: 'demo_x', updatedAt: 9 }, 30, 'uid_b');
+  assert.deepEqual(deletionEntries(again).map((e) => [e.owner, e.version]), [['uid_b', 9], ['uid_a', 5]]);
+});
+
+test('withoutDeletions with the account: only its entries — and nobody\'s — go; another account\'s stays (V2VF1S-1)', () => {
+  const state = {
+    deletedIds: ['demo_x'],
+    deletedInfo: { demo_x: { version: 7, at: 20, owner: 'uid_b', keep: false, also: [{ version: 5, at: 10, owner: 'uid_a', keep: false }] } },
+  };
+  const left = withoutDeletions(state, ['demo_x'], Infinity, 'uid_b');
+  assert.deepEqual(left, { deletedIds: ['demo_x'], deletedInfo: { demo_x: { version: 5, at: 10, owner: 'uid_a', keep: false } } }, 'before: nothing left — A\'s went with B\'s');
+  assert.deepEqual(withoutDeletions(left, ['demo_x'], Infinity, 'uid_a'), { deletedIds: [], deletedInfo: {} });
+  assert.deepEqual(withoutDeletions(state, ['demo_x'], 15, 'uid_b'), withoutDeletions(state, [], 15, 'uid_b'), 'made after `before`: B\'s stays too');
+  assert.deepEqual(withoutDeletions(state, ['demo_x']), { deletedIds: [], deletedInfo: {} }, 'no account given (a restore): every entry of the id goes');
+});
+
+test('deletionEntries and savedDeletions read the entries kept with another account\'s: one per account (V2VF1S-1)', () => {
+  const also = [{ version: 5, at: 10, owner: 'uid_a', keep: true }, { version: 4, at: 9, owner: 'uid_b' }, 'junk', { at: 3, owner: 'uid_c' }, { version: 2, at: 1 }];
+  const saved = { deletedIds: ['demo_x'], deletedInfo: { demo_x: { version: 7, at: 20, owner: 'uid_b', also } } };
+  assert.deepEqual(deletionEntries(saved), [
+    { id: 'demo_x', version: 7, at: 20, owner: 'uid_b', keep: null },
+    { id: 'demo_x', version: 5, at: 10, owner: 'uid_a', keep: true },
+  ], 'B\'s older one, one with no version or no account, and junk are left out');
+  assert.deepEqual(savedDeletions(saved), {
+    deletedIds: ['demo_x'], deletedInfo: { demo_x: { version: 7, at: 20, owner: 'uid_b', also: [{ version: 5, at: 10, owner: 'uid_a', keep: true }] } }, syncedUid: null,
+  });
+});

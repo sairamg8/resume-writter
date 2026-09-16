@@ -19,8 +19,8 @@ const emptyQueue = () => ({ writes: new Map(), deletes: new Set(), kept: new Set
  * createCloudSync({ io, store, report, isDemo, ... }):
  *   io        cloudIo(...) — null when this build has no cloud
  *   store     { getState() → the résumé store's state now, applyCloudSync(result) — a first
- *             sync's result (cloudSyncPlan.afterSync), forgetDeletions(ids, before) — the
- *             cloud has these deletions (localDeletions.js) }: useResumeSyncActions.liveStore
+ *             sync's result (cloudSyncPlan.afterSync), forgetDeletions(ids, before, uid) — that
+ *             account's cloud has these deletions (localDeletions.js) }: useResumeSyncActions.liveStore
  *   report    { status('idle'|'syncing'|'synced'|'offline'|'error'|'stopped'|'off'), synced(Date), account(a),
  *             held([{ id, name }]) } — held: the résumés the cloud will not take ('stopped' while any);
  *             account: { uid, cloud, cloudOriginals, cloudDeleted } once the account's list is
@@ -264,7 +264,7 @@ export function createCloudSync({
       await flushOnce(flush, { commit: (uid, plan) => held.commit(uid, plan, source, current) });
       // The cloud has them: the store stops keeping them for the next first sync, which would send
       // them again — over a restore another device made since (R8-1).
-      if (deletes.length) store.forgetDeletions(deletes, sentAt);
+      if (deletes.length) store.forgetDeletions(deletes, sentAt, user.uid);
       // Not "synced" while a first sync is still owed (offline, or the cloud stopped answering).
       if (!current() || !s.initialSyncDone) return;
       settled();
