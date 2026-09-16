@@ -2,7 +2,7 @@
 // Run: yarn test:unit
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizeJob, readJob, completeJob, isJobEntry, statusId } from '../../src/utils/normalizeJob.js';
+import { normalizeJob, readJob, completeJob, addressableJobs, isJobEntry, statusId } from '../../src/utils/normalizeJob.js';
 import { JOB_STATUSES } from '../../src/constants/jobs.js';
 
 const job = (extra = {}) => ({
@@ -119,6 +119,31 @@ test('completeJob: a job with what the pages address it by comes back as the sam
   const noId = completeJob({ company: 'Acme', status: 'saved' });
   assert.match(noId.id, /^job_./, 'the router opens a job by its id');
   assert.notEqual(completeJob({ id: 7, status: 'saved' }).id, 7);
+});
+
+test('addressableJobs: a job with the id an earlier job has gets its own; the first keeps it (ONB-5)', () => {
+  // Builds before 65e981d made a job's id the millisecond: two added in the same one shared it,
+  // and deleting one deleted both.
+  const jobs = [job(), job({ company: 'Beta' }), job({ id: 'job_2', company: 'Gamma' }), job({ company: 'Delta' })];
+  const before = JSON.stringify(jobs);
+  const done = addressableJobs(jobs);
+  assert.equal(done[0], jobs[0], 'the first with the id keeps it, untouched — the one a link opens');
+  assert.equal(done[2], jobs[2]);
+  const ids = done.map((j) => j.id);
+  assert.equal(new Set(ids).size, ids.length, `ids: ${ids}`);
+  for (const i of [1, 3]) {
+    assert.match(ids[i], /^job_./);
+    assert.deepEqual({ ...done[i], id: 'job_1' }, jobs[i], 'nothing else differs');
+  }
+  assert.equal(JSON.stringify(jobs), before, 'the input is never changed');
+  // What the tracker does on delete: before, both jobs with 'job_1' went.
+  assert.deepEqual(done.filter((j) => j.id !== 'job_1').map((j) => j.company), ['Beta', 'Gamma', 'Delta']);
+});
+
+test('addressableJobs: a list whose ids are all their own comes back as the same array', () => {
+  const jobs = [job(), job({ id: 'job_2' }), job({ id: 'demo_1' })];
+  assert.equal(addressableJobs(jobs), jobs);
+  assert.deepEqual(addressableJobs([]), []);
 });
 
 test('status: one that names no status of the tracker becomes saved — the board showed the job on no column (VM4-4)', () => {

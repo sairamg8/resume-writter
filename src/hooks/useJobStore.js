@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from 'react';
 import { loadSavedList, pendingRecovery, rememberRecovery, setItemWithRoom } from '@/utils/storageBackup';
 import { newId } from '@/utils/ids';
-import { completeJob, readJob } from '@/utils/normalizeJob';
+import { addressableJobs, completeJob, readJob } from '@/utils/normalizeJob';
 import { keepUnsaved } from '@/utils/unsavedJobs';
 
 const KEY = 'cpwtcv_jobs_v1';
@@ -44,11 +44,11 @@ function load() {
   if (!list) return { jobs: DEMO_JOBS, recovery: null };
   if (!saved) return { jobs: [], recovery };
   // A job, or a to-do, the pages cannot address (no id, or one another has) gets an id rather than
-  // being dropped; nothing is lost, so it is not a repair to report (completeJob).
+  // being dropped; nothing is lost, so it is not a repair to report (completeJob, addressableJobs).
   let jobs = list.map(completeJob);
   // Migrate: strip old demo_* jobs, keep user-created ones
   if (saved.dataVersion !== JOB_VERSION) jobs = [...DEMO_JOBS, ...jobs.filter(j => !j.id.startsWith('demo_'))];
-  return { jobs, recovery };
+  return { jobs: addressableJobs(jobs), recovery };
 }
 
 /**

@@ -48,18 +48,19 @@ function readableTodos(todos) {
 }
 
 /**
- * The to-dos, each with an id no other one in the list has; the same array when they all do.
- * The Tasks tab ticks, renames and deletes a to-do by its id: to-dos from a file with none
- * shared `undefined`, so deleting one deleted them all (VM4-2).
+ * `entries` (objects), each with an id no other one in the list has — a new `<prefix>_…` one where
+ * it has none, or one an earlier entry already has; the same array when they all do. The pages
+ * address a job, and the Tasks tab a to-do, by its id: to-dos from a file with none shared
+ * `undefined`, so deleting one deleted them all (VM4-2).
  */
-function addressableTodos(todos) {
+function withOwnIds(entries, prefix) {
   const seen = new Set();
-  const out = todos.map((t) => {
-    const id = typeof t.id === 'string' && t.id && !seen.has(t.id) ? t.id : newId('td');
+  const out = entries.map((e) => {
+    const id = typeof e.id === 'string' && e.id && !seen.has(e.id) ? e.id : newId(prefix);
     seen.add(id);
-    return id === t.id ? t : { ...t, id };
+    return id === e.id ? e : { ...e, id };
   });
-  return out.every((t, i) => t === todos[i]) ? todos : out;
+  return out.every((e, i) => e === entries[i]) ? entries : out;
 }
 
 /** The status changes the history can show; the same array when every one is readable. */
@@ -133,8 +134,9 @@ export function readJob(job) {
  *   no status                          → 'saved' (a build before this one imported a job with
  *                                        none; the board showed it on no column)
  *   a status in other case or spacing  → the id it names ('Applied' → 'applied', statusId)
- *   a to-do with no id, or with one    → a new one (addressableTodos)
+ *   a to-do with no id, or with one    → a new one (withOwnIds)
  *   an earlier to-do already has
+ * One job does not see the others: an id an earlier job has is replaced over the list (addressableJobs).
  */
 export function completeJob(job) {
   let out = job;
@@ -146,8 +148,19 @@ export function completeJob(job) {
   const status = statusId(job.status) || 'saved';
   if (status !== job.status) set('status', status);
   if (Array.isArray(job.todos)) {
-    const todos = addressableTodos(job.todos);
+    const todos = withOwnIds(job.todos, 'td');
     if (todos !== job.todos) set('todos', todos);
   }
   return out;
+}
+
+/**
+ * `jobs` (each completeJob's), each with an id no earlier job has — the first keeps it, the one a
+ * link to it opens; the same array when they all do. The pages open, edit and delete a job by its
+ * id, and the board keys its cards by it: builds before 65e981d made it the millisecond, so two
+ * jobs added in the same one — or a hand-edited list — shared an id, and deleting one deleted
+ * both (ONB-5). Nothing is lost, so it is not a repair to report.
+ */
+export function addressableJobs(jobs) {
+  return withOwnIds(jobs, 'job');
 }
