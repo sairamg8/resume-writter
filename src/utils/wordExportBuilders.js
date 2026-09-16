@@ -33,21 +33,26 @@ function body(item, centered) {
  * in the Text colour's grey — the template's own Text colour when none is stored — and the marks
  * of Design → Contact Style where the header takes it (`template`: Classic, Minimal, Executive).
  * Modern's banner and the Sidebar column draw icons, and Word prints icons as bars.
+ * Header alignment "Center" centres all four where the PDF does — in those same three templates;
+ * a summary block aligned in the editor keeps its own alignment, as in the PDF (ONB-3).
  */
 export function buildPersonalSection(personal = {}, settings = {}, template = 'classic') {
   const hidden = new Set(personal.hiddenFields || []);
   const accentHex = settings?.accentColor?.replace('#', '') || '2563eb';
+  const centered = hasHeaderControls(template) && settings?.headerAlign === 'center';
   const paragraphs = [];
 
   paragraphs.push(new Paragraph({
     children: [new TextRun({ text: personal.name || 'Your Name', bold: true, size: 40, color: '0f172a' })],
     spacing: { after: 40 },
+    ...centredIf(centered),
   }));
 
   if (personal.title) {
     paragraphs.push(new Paragraph({
       children: [new TextRun({ text: personal.title, size: 24, color: accentHex })],
       spacing: { after: 60 },
+      ...centredIf(centered),
     }));
   }
 
@@ -62,12 +67,13 @@ export function buildPersonalSection(personal = {}, settings = {}, template = 'c
         linked(c.value, c.href, style),
       ]),
       spacing: { after: 80 },
+      ...centredIf(centered),
     }));
   }
 
   if (!hidden.has('summary') && hasRichText(personal.summary)) {
     paragraphs.push(separator());
-    paragraphs.push(...descriptionToParagraphs(personal.summary, { size: 20, color: '374151', italics: true }));
+    paragraphs.push(...descriptionToParagraphs(personal.summary, { size: 20, color: '374151', italics: true }, centered ? 'center' : null));
     paragraphs.push(spacer(80));
   }
 
