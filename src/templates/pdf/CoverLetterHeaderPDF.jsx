@@ -10,7 +10,7 @@ import { PdfPhoto } from './shared/PdfPhoto';
 import { contentWidthPt, pageMargins } from './shared/PdfPage';
 import { getPdfPhotoStyle } from './shared/pdfPhoto';
 import { fitFontSize, textWidth, widestWord } from './shared/pdfMeasure';
-import { DOUBLE_RULE_GAP, LETTERHEAD_GAP, LETTERHEAD_PAD } from './shared/letterhead';
+import { DOUBLE_RULE_GAP, LETTERHEAD_GAP } from './shared/letterhead';
 import { photoTextAlignItems } from '@/constants/templates';
 import { contactItems } from '@/utils/contacts';
 import { letterFieldsPosition } from '@/utils/coverLetter';
@@ -25,7 +25,7 @@ const SLACK = 1;
 
 /** The band, the rule or rules, around the letterhead's content. */
 function Frame({ look, settings, children }) {
-  const { band, rules: [rule, second] } = look;
+  const { band, rules: [rule, second], ruleGap } = look;
   if (band?.bleed) {
     // The fill runs from the paper's top and side edges; the content keeps the page margins, so
     // it sits where every other letterhead's does.
@@ -49,9 +49,10 @@ function Frame({ look, settings, children }) {
       </View>
     );
   }
+  // The rule sits the résumé header's Text ↔ Border gap under the text, as the résumé's (ruleGap).
   const ruled = rule
-    ? { borderBottomWidth: rule.width, borderBottomColor: rule.color, paddingBottom: LETTERHEAD_PAD }
-    : { paddingBottom: LETTERHEAD_PAD };
+    ? { borderBottomWidth: rule.width, borderBottomColor: rule.color, paddingBottom: ruleGap }
+    : { paddingBottom: ruleGap };
   if (!second) return <View style={{ ...ruled, marginBottom: LETTERHEAD_GAP }}>{children}</View>;
   return (
     <View style={{ marginBottom: LETTERHEAD_GAP }}>

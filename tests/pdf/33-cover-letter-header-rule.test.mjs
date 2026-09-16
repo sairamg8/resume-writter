@@ -147,3 +147,87 @@ describe('the letterhead\'s rule follows Header Bottom Border and its Thickness 
     }
   });
 });
+
+/** Page 1's first rule, top down: how far under the lowest line of text above it it is drawn, pt. */
+async function ruleUnderText(bytes) {
+  const [rule] = (await painted(bytes)).filter((p) => p.paint === 'stroke' && p.x1 - p.x0 > 400 && p.y1 - p.y0 < 1).sort((a, b) => b.y0 - a.y0);
+  const above = allItems(await read(bytes)).filter((t) => t.page === 1 && t.str.trim() && t.y > rule.y0);
+  return Math.min(...above.map((t) => t.y)) - rule.y0;
+}
+
+/** The letter's date: its baseline, pt from the page's foot. */
+const dateY = async (bytes) => allItems(await read(bytes)).find((t) => t.str === '15 January 2026').y;
+
+// FIDB-51-VF3-NB3: the letterhead drew the résumé's rule, but always 12 pt (LETTERHEAD_PAD) under
+// its text, while the résumé's rule sits its header's Text ↔ Border gap (headerRuleGap, header
+// spacing) under it: a gap an imported résumé sets moved the résumé's rule and not the letter's.
+describe('the letterhead\'s rule sits the résumé header\'s Text ↔ Border gap under its text (FIDB-51-VF3-NB3)', () => {
+  it('border on: a set gap moves the letter\'s rule from its text exactly as it moves the résumé\'s, and the letter under it with it', async () => {
+    for (const template of RULE_LOOKS) {
+      const unset = make(template, ON(2));
+      const [resume0, letterBytes0] = [await ruleUnderText(await render(unset)), await renderCover(unset)];
+      const [letter0, date0] = [await ruleUnderText(letterBytes0), await dateY(letterBytes0)];
+      for (const px of [0, 8, 24, 40]) {
+        const at = `${template}, Text ↔ Border ${px} px`;
+        const r = make(template, { ...ON(2), headerRuleGap: px });
+        const want = px * 0.75 - 12;
+        const bytes = await renderCover(r);
+        const moved = { resume: await ruleUnderText(await render(r)) - resume0, letter: await ruleUnderText(bytes) - letter0, date: date0 - await dateY(bytes) };
+        assert.ok(Math.abs(moved.resume - want) < 0.02, `${at}: the résumé's rule moved ${moved.resume.toFixed(2)} pt, want ${want}`);
+        assert.ok(Math.abs(moved.letter - want) < 0.02, `${at}: the letter's rule moved ${moved.letter.toFixed(2)} pt from its text, want ${want}`);
+        assert.ok(Math.abs(moved.date - want) < 0.02, `${at}: the letter's date moved ${moved.date.toFixed(2)} pt, want ${want}`);
+      }
+    }
+  });
+
+  // An imported Thickness the résumé draws no rule at still pads its header by the gap
+  // (getHeaderBorderStyle): the letter's space under its text follows, over Classic's no rule and
+  // Minimal's and Executive's own mark.
+  it('border on at a Thickness no rule is drawn at (-3): the letter\'s space under its text is still the résumé\'s gap', async () => {
+    for (const template of RULE_LOOKS) {
+      const date = async (settings) => dateY(await renderCover(make(template, { ...ON(-3), ...settings })));
+      const moved = await date({}) - await date({ headerRuleGap: 40 });
+      assert.ok(Math.abs(moved - 18) < 0.02, `${template}: the date moved ${moved.toFixed(2)} pt, want 18`);
+    }
+  });
+
+  // Guard: unset prints what every letter printed (12 pt, the template's own 16 px); an imported
+  // gap prints as the résumé prints it (storedGapPx, header_spacing_spec.md D9).
+  it('unset and the template\'s own 16 px print the same letter; an imported gap is clamped to 0–40 px, one that is not a number prints as unset', async () => {
+    const letter = async (template, settings) => drawing(await renderCover(make(template, { ...ON(2), ...settings })));
+    for (const template of RULE_LOOKS) {
+      assert.ok(await letter(template, { headerRuleGap: 16 }) === await letter(template, {}), `${template}: 16 px = unset`);
+    }
+    const unset = await letter('classic', {});
+    assert.ok(await letter('classic', { headerRuleGap: 40 }) !== unset, '40 px is not unset');
+    assert.ok(await letter('classic', { headerRuleGap: 10000 }) === await letter('classic', { headerRuleGap: 40 }), '10000 px prints as 40');
+    assert.ok(await letter('classic', { headerRuleGap: -5 }) === await letter('classic', { headerRuleGap: 0 }), '-5 px prints as 0');
+    for (const junk of ['20', null, true]) assert.ok(await letter('classic', { headerRuleGap: junk }) === unset, `${JSON.stringify(junk)} prints as unset`);
+  });
+
+  // Guard: the résumé prints no Text ↔ Border gap with its border off, on Modern's banner or in the
+  // Sidebar panel — nor does the letter, which keeps its own 12 pt there.
+  it('where the résumé prints no Text ↔ Border gap — border off, Modern, Sidebar — a set one changes neither the résumé nor the letter', async () => {
+    for (const template of TEMPLATES) {
+      for (const settings of RULE_LOOKS.includes(template) ? [OFF(), OFF(6)] : [ON(6), OFF()]) {
+        const at = `${template} ${JSON.stringify(settings)}`;
+        const set = make(template, { ...settings, headerRuleGap: 40 });
+        assert.ok(await drawing(await render(set)) === await drawing(await render(make(template, settings))), `${at}: the résumé`);
+        assert.ok(await drawing(await renderCover(set)) === await drawing(await renderCover(make(template, settings))), `${at}: the letter`);
+      }
+    }
+  });
+
+  it('Word: the letterhead\'s bottom border is spaced the résumé\'s gap in whole points; with no rule drawn, the gap under the letterhead takes it', async () => {
+    for (const template of RULE_LOOKS) {
+      const got = lastLine(await docx(template, { ...ON(2), headerRuleGap: 40 }));
+      assert.deepEqual([got.border?.space, got.after], ['30', 16], `${template} on, 40 px`);
+    }
+    assert.equal(lastLine(await docx('classic', { ...ON(2), headerRuleGap: 22 })).border.space, '17', '22 px = 16.5 pt: Word\'s nearest whole point');
+    assert.equal(lastLine(await docx('classic', { ...ON(2), headerRuleGap: 0 })).border.space, '0', '0 px');
+    assert.equal(lastLine(await docx('classic', { ...ON(2), headerRuleGap: 16 })).border.space, '12', 'the template\'s own');
+    assert.deepEqual(lastLine(await docx('classic', { ...ON(-3), headerRuleGap: 40 })), { border: null, after: 46 }, 'no rule drawn at -3: the PDF\'s 30 pt gap and 16 pt under it');
+    assert.deepEqual(lastLine(await docx('classic', { ...OFF(), headerRuleGap: 40 })), { border: null, after: 28 }, 'classic off: the letter\'s own 12 pt');
+    assert.equal(lastLine(await docx('minimal', { ...OFF(), headerRuleGap: 40 })).border.space, '12', 'minimal off: its hairline at its own 12 pt');
+  });
+});

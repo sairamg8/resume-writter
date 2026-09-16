@@ -8,8 +8,12 @@ import { contrast, sidebarShades, solid, textShades } from './pdfColors';
 import { CSS_PX_TO_PT, MODERN_HEADER_PAD_X_PT, MODERN_HEADER_PAD_Y_PT } from './pdfUnits';
 import { DEFAULTS } from './templateSettings';
 
-/** Space under the letterhead's text, above its rule — and the gap under the letterhead. */
-export const LETTERHEAD_PAD = 12;
+/**
+ * Space under the letterhead's text, above its rule (or the gap under the letterhead, with none),
+ * where the résumé's header prints no Text ↔ Border gap of its own (letterheadLook's ruleGap) —
+ * and the gap under the letterhead.
+ */
+const LETTERHEAD_PAD = 12;
 export const LETTERHEAD_GAP = 16;
 
 /** Space between the two lines of Executive's double rule, pt. */
@@ -128,6 +132,9 @@ export const LOOKS = {
  *   rules     the rules under the letterhead, top down, [{ width, color }] — two are a double rule:
  *             the résumé header's rule wherever the résumé prints one (Header Customization →
  *             Header Bottom Border and its Thickness, V2FIDB-51-2), else the look's own mark
+ *   ruleGap   the space under the text, above the rules — with none, added to the gap under the
+ *             letterhead — in pt: the résumé header's Text ↔ Border gap wherever its header prints
+ *             one (Header Bottom Border on: headerGaps.headerRuleGap, FIDB-51-VF3-NB3), else 12
  *   photo     [the ring colour of Photo → Border "Accent", getPdfPhotoStyle options]: a ring that
  *             shows on the band, as on the résumé's (white on Modern's accent, a readable accent
  *             on the Sidebar panel)
@@ -150,6 +157,10 @@ export function letterheadLook(template, s = {}) {
     marks: null,
     band: null,
     rules: [],
+    // The résumé pads its header by its Text ↔ Border gap wherever the border is on, a Thickness it
+    // draws no rule at included (getHeaderBorderStyle); the letter's rule sat 12 pt under its text
+    // whatever that gap. Modern's banner and the Sidebar panel have none (null): 12, unused there.
+    ruleGap: headerBorderOn(s, look) ? s.headerGaps?.headerRuleGap ?? LETTERHEAD_PAD : LETTERHEAD_PAD,
     photo: [accent, {}],
   };
   // The résumé header's rule, as getHeaderBorderStyle (PdfPage.jsx) draws it: on where the résumé
