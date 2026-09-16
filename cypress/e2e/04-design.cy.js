@@ -126,6 +126,18 @@ describe('design — settings', () => {
     cy.store().should((s) => expect(settingsOf(s).headingStyle).to.eq('ruled'));
   });
 
+  // The PDF prints Border thickness as points (tests/pdf/10-section-headings), and the box says
+  // so — it said px, so an "8 px" rule came out 10.7 px (VM3-3, as the header rule did in R3-7).
+  it('Border thickness says the unit it prints in, pt, and its stepper stores the value', () => {
+    openDesign('Section Headings');
+    cy.contains('span', 'Border thickness').parent().as('thickness');
+    cy.get('@thickness').contains('span', /^pt$/).should('be.visible');
+    cy.get('@thickness').contains('span', /^px$/).should('not.exist');
+    cy.get('@thickness').find('input[aria-label="Section border thickness (pt)"]').should('have.value', '1');
+    cy.get('@thickness').contains('button', '+').click().click();
+    cy.store().should((s) => expect(settingsOf(s).sectionBorderWidth).to.eq(3));
+  });
+
   it('spacing steppers change the stored values within their limits', () => {
     openDesign('Spacing');
     cy.contains('span', 'Between Sections').parent().as('gap');

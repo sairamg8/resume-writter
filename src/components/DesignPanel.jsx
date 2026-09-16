@@ -174,9 +174,10 @@ export default function DesignPanel({ resume, updateSetting, setTemplate, resetS
           <span className="text-xs text-gray-500">Border thickness</span>
           <div className="flex items-center gap-1">
             <button onClick={() => updateSetting('sectionBorderWidth', Math.max(1, (settings.sectionBorderWidth ?? 1) - 1))} className="w-6 h-6 flex items-center justify-center border border-gray-200 rounded text-gray-600 hover:bg-gray-100 text-base leading-none">−</button>
-            <input type="number" aria-label="Section border thickness (px)" min={1} max={8} value={settings.sectionBorderWidth ?? 1} onChange={e => { const v = parseInt(e.target.value, 10); if (!isNaN(v)) updateSetting('sectionBorderWidth', Math.min(8, Math.max(1, v))); }} className="w-10 text-center text-xs font-medium text-gray-700 border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-400 h-6" />
+            <input type="number" aria-label="Section border thickness (pt)" min={1} max={8} value={settings.sectionBorderWidth ?? 1} onChange={e => { const v = parseInt(e.target.value, 10); if (!isNaN(v)) updateSetting('sectionBorderWidth', Math.min(8, Math.max(1, v))); }} className="w-10 text-center text-xs font-medium text-gray-700 border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-400 h-6" />
             <button onClick={() => updateSetting('sectionBorderWidth', Math.min(8, (settings.sectionBorderWidth ?? 1) + 1))} className="w-6 h-6 flex items-center justify-center border border-gray-200 rounded text-gray-600 hover:bg-gray-100 text-base leading-none">+</button>
-            <span className="text-[11px] text-gray-400 ml-1">px</span>
+            {/* Points, as the PDF prints it — every saved value keeps its look (VM3-3, as R3-7) */}
+            <span className="text-[11px] text-gray-400 ml-1">pt</span>
           </div>
         </div>
 
