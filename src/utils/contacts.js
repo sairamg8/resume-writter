@@ -22,6 +22,12 @@ export const CONTACT_KEYS = CONTACT_FIELDS.map(({ key }) => key);
 /** Each contact field's name, where a template prints one (the Sidebar's labels). */
 export const CONTACT_LABELS = Object.fromEntries(CONTACT_FIELDS.map(({ key, label }) => [key, label]));
 
+/**
+ * Design → Contact Layout "2 Grid": each cell's share of the row and the gap between the two cells,
+ * CSS px — the PDF's cells (PdfContactRow) and the Word résumé's tab stops (wordExportHeader.js).
+ */
+export const CONTACT_GRID = { cell: 0.46, gapPx: 24 };
+
 const LINK_FIELDS = new Set(CONTACT_FIELDS.filter(({ link }) => link).map(({ key }) => key));
 
 /**

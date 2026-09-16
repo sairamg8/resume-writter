@@ -1,5 +1,5 @@
 import { Document, Packer, convertInchesToTwip } from 'docx';
-import { accent2Hex } from '@/utils/wordExportUtils';
+import { accent2Hex, WORD_MARGIN_IN } from '@/utils/wordExportUtils';
 import { buildSection } from '@/utils/wordExportBuilders';
 import { buildPersonalSection } from '@/utils/wordExportHeader';
 import { buildCoverLetter } from '@/utils/wordExportCoverLetter';
@@ -7,7 +7,7 @@ import { resolveSection } from '@/templates/pdf/shared/templateSectionDefaults';
 import { downloadBlob } from '@/utils/download';
 import { PAGE_SIZES, pageSizeOf } from '@/constants/pageSize';
 
-/** A one-section document on the résumé's paper (A4 or US Letter, PAR-01), 0.75 in margins on either. */
+/** A one-section document on the résumé's paper (A4 or US Letter, PAR-01), WORD_MARGIN_IN margins on either. */
 function buildDocument(children, settings) {
   return new Document({
     styles: {
@@ -23,10 +23,10 @@ function buildDocument(children, settings) {
         page: {
           size: PAGE_SIZES[pageSizeOf(settings)].twips,
           margin: {
-            top: convertInchesToTwip(0.75),
-            right: convertInchesToTwip(0.75),
-            bottom: convertInchesToTwip(0.75),
-            left: convertInchesToTwip(0.75),
+            top: convertInchesToTwip(WORD_MARGIN_IN),
+            right: convertInchesToTwip(WORD_MARGIN_IN),
+            bottom: convertInchesToTwip(WORD_MARGIN_IN),
+            left: convertInchesToTwip(WORD_MARGIN_IN),
           },
         },
       },

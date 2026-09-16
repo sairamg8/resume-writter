@@ -4,6 +4,9 @@ import {
 import { parseRichText, safeHref } from '@/utils/richText';
 import { PAGE_MARKS } from '@/templates/pdf/shared/pdfColors';
 
+/** The .docx page margins, every side, in (wordExport.js buildDocument). */
+export const WORD_MARGIN_IN = 0.75;
+
 /** A '#rrggbb' colour as Word's 'rrggbb'; anything else gives `fallback`. */
 export function accent2Hex(color, fallback = '2563eb') {
   const hex = String(color || '').replace('#', '');

@@ -4,7 +4,7 @@ import { PdfContactIcon } from './PdfContactIcon';
 import { contentWidthPt } from './PdfPage';
 import { pxToPt } from './pdfUnits';
 import { textWidth, widestWord } from './pdfMeasure';
-import { contactItems } from '@/utils/contacts';
+import { CONTACT_GRID, contactItems } from '@/utils/contacts';
 import { isDrawableImage } from '@/utils/imageUpload';
 import { PAGE_MARKS, textShades } from './pdfColors';
 
@@ -15,8 +15,8 @@ const keepTogether = (s) => String(s).replace(/ /g, NBSP);
 /** Space between an item's icon or bullet and its value, pt. */
 const ITEM_GAP = 2;
 /** A 2 Grid cell's share of the row, and the column gap between two cells, pt. */
-const GRID_CELL = 0.46;
-const GRID_GAP = pxToPt(24);
+const GRID_CELL = CONTACT_GRID.cell;
+const GRID_GAP = pxToPt(CONTACT_GRID.gapPx);
 
 /** The contacts' type: the values' size (half a point under the body's) and the icons'. */
 function rowSizes(settings) {

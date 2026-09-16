@@ -1,10 +1,14 @@
 // The Word résumé's header: name, job title, contact line and summary (buildPersonalSection), in the
 // colours, alignment and layout the PDF's header prints them in.
-import { Paragraph, TextRun } from 'docx';
-import { accent2Hex, linked, separator, descriptionToParagraphs, centredIf, contactSeparator, inlineGap, spacer } from '@/utils/wordExportUtils';
-import { contactItems } from '@/utils/contacts';
+import { Paragraph, TabStopType, TextRun } from 'docx';
+import {
+  accent2Hex, linked, normal, separator, descriptionToParagraphs, centredIf, contactSeparator, inlineGap, spacer, WORD_MARGIN_IN,
+} from '@/utils/wordExportUtils';
+import { CONTACT_GRID, contactItems } from '@/utils/contacts';
 import { hasHeaderControls, templateId } from '@/constants/templates';
-import { solid, textShades } from '@/templates/pdf/shared/pdfColors';
+import { PAGE_SIZES, pageSizeOf } from '@/constants/pageSize';
+import { PAGE_MARKS, solid, textShades } from '@/templates/pdf/shared/pdfColors';
+import { pxToPt } from '@/templates/pdf/shared/pdfUnits';
 import { headerColorsOnPage } from '@/templates/pdf/shared/headerColors';
 import { inlineLayout } from '@/templates/pdf/shared/letterhead';
 import { resolveTemplateSettings } from '@/templates/pdf/shared/templateSettings';
@@ -25,8 +29,53 @@ function headerInk(settings, template) {
   return { name: hex('nameColor', '111111'), title: hex('jobTitleColor', '2563eb') };
 }
 
+const twips = (pt) => Math.round(pt * 20);
+
 /**
- * Name, title, contact line and summary. The contact line is the PDF's (PdfContactRow): its values
+ * The contacts' paragraphs in Design → Contact Layout (FIDB-51-VF1-NB1-NB2), as PdfContactRow lays
+ * them out where the header takes it (`styled`: Classic, Minimal, Executive; Modern's banner and the
+ * Sidebar's column print one line). Justify: one line, the values joined by the Contact Style's
+ * marks (Icon prints bars). Single: a paragraph a value. 2 Grid: a paragraph a row of two, the second
+ * at a tab stop where the PDF's second cell starts on Word's page — centred, centre tab stops at the
+ * two cells' centres, and an odd last value centred on the line as its lone cell is. Word has no
+ * cells: a value wider than its cell pushes the next one along, where the PDF gives it a row of its
+ * own. Under Single and 2 Grid, Bullet prints a bullet before each value; Icon and Bar nothing.
+ */
+function contactParagraphs(items, s, styled, style, centered) {
+  const contactStyle = styled ? s.contactStyle : 'icon';
+  const layout = styled ? s.contactLayout : 'justify';
+  const after = (i, n) => ({ spacing: { after: i === n - 1 ? 80 : 20 } });
+  if (layout !== 'single' && layout !== '2grid') {
+    return [new Paragraph({
+      children: items.flatMap((c, i) => [...(i ? [contactSeparator(contactStyle, style)] : []), linked(c.value, c.href, style)]),
+      ...after(0, 1),
+      ...centredIf(centered),
+    })];
+  }
+  const mark = contactStyle === 'bullet' ? [normal('• ', { ...style, color: accent2Hex(PAGE_MARKS.bullet) })] : [];
+  const cell = (item) => [...mark, linked(item.value, item.href, style)];
+  if (layout === 'single') {
+    return items.map((item, i) => new Paragraph({ children: cell(item), ...after(i, items.length), ...centredIf(centered) }));
+  }
+  const width = PAGE_SIZES[pageSizeOf(s)].twips.width / 20 - 144 * WORD_MARGIN_IN;
+  const cellPt = CONTACT_GRID.cell * width;
+  const gap = pxToPt(CONTACT_GRID.gapPx);
+  const left = (width - (2 * cellPt + gap)) / 2;
+  const stops = centered
+    ? [left + cellPt / 2, left + cellPt + gap + cellPt / 2].map((pt) => ({ type: TabStopType.CENTER, position: twips(pt) }))
+    : [{ type: TabStopType.LEFT, position: twips(cellPt + gap) }];
+  const tab = () => normal('\t', style);
+  const rows = [];
+  for (let i = 0; i < items.length; i += 2) rows.push(items.slice(i, i + 2));
+  return rows.map((row, i) => {
+    if (row.length === 1) return new Paragraph({ children: cell(row[0]), ...after(i, rows.length), ...centredIf(centered) });
+    const children = centered ? [tab(), ...cell(row[0]), tab(), ...cell(row[1])] : [...cell(row[0]), tab(), ...cell(row[1])];
+    return new Paragraph({ children, tabStops: stops, ...after(i, rows.length) });
+  });
+}
+
+/**
+ * Name, title, contacts and summary. The contacts are the PDF's (PdfContactRow): its values
  * in the Text colour's grey — the template's own Text colour when none is stored — and the marks
  * of Design → Contact Style where the header takes it (`template`: Classic, Minimal, Executive).
  * Modern's banner and the Sidebar column draw icons, and Word prints icons as bars.
@@ -62,15 +111,7 @@ export function buildPersonalSection(personal = {}, settings = {}, template = 'c
   const contacts = contactItems(personal);
   if (contacts.length) {
     const style = { size: 18, color: accent2Hex(textShades(s.textColor).sub, '64748b') };
-    const contactStyle = hasHeaderControls(template) ? s.contactStyle : 'icon';
-    paragraphs.push(new Paragraph({
-      children: contacts.flatMap((c, i) => [
-        ...(i ? [contactSeparator(contactStyle, style)] : []),
-        linked(c.value, c.href, style),
-      ]),
-      spacing: { after: 80 },
-      ...centredIf(centered),
-    }));
+    paragraphs.push(...contactParagraphs(contacts, s, hasHeaderControls(template), style, centered));
   }
 
   if (!hidden.has('summary') && hasRichText(personal.summary)) {

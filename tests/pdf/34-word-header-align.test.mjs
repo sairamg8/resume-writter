@@ -77,10 +77,16 @@ describe('Word résumé: Design → Header alignment "Center" centres what the P
 
   it('Name & Title "Inline", one contact per line, no title or no summary: whatever the header prints is centred', async () => {
     for (const template of STYLED) {
-      for (const settings of [{ headerLayout: 'inline' }, { contactLayout: 'single' }, { contactLayout: '2grid' }]) {
+      for (const settings of [{ headerLayout: 'inline' }, { contactLayout: 'single' }]) {
         const aligns = await wordAligns(cv(template, { headerAlign: 'center', ...settings }));
         assert.deepEqual(aligns, all('center'), `${template} ${JSON.stringify(settings)}`);
       }
+      // 2 Grid centres each value on its cell's centre, by centre tab stops (FIDB-51-VF1-NB1-NB2,
+      // 35-word-contact-layout): its rows are not centred as a whole, the rest of the header is.
+      const grid = await renderDocx(cv(template, { headerAlign: 'center', contactLayout: '2grid' }));
+      assert.deepEqual([NAME, TITLE, SUMMARY].map((n) => jc(para(grid, n))), ['center', 'center', 'center'], `${template} 2grid: the rest`);
+      const row = para(grid, EMAIL);
+      assert.equal((row.xml.match(/<w:tab w:val="center"/g) || []).length, 2, `${template} 2grid: the contacts' row centres on its two cells`);
       const doc = await renderDocx(cv(template, { headerAlign: 'center' }, { title: '', summary: '' }));
       assert.equal(doc.paragraphs.some((p) => p.text.includes(SUMMARY) || p.text.includes(TITLE)), false, `${template}: nothing to print`);
       assert.deepEqual([jc(para(doc, NAME)), jc(para(doc, EMAIL))], ['center', 'center'], `${template}: name and contacts, no title or summary`);
