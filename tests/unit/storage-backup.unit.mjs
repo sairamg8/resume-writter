@@ -209,3 +209,57 @@ test('backupRaw: a full storage makes room from older backups for the newest cop
   assert.equal(readBackup(key), 'n'.repeat(60));
   assert.equal(localStorage.getItem('cpwtcv_jobs_v1_backup_5'), null);
 });
+
+/** Characters in use, as MemoryStorage counts them. */
+const used = () => [...globalThis.localStorage.map].reduce((n, [k, v]) => n + k.length + v.length, 0);
+
+test('backupRaw: a copy another list\'s notice still offers is not removed to make room for this one (ONB-4)', () => {
+  // Before: the job list's copies went, oldest first, for the résumé store's — and the tracker's
+  // notice then said its copy "was later removed to make room for your changes", although it made
+  // room for another copy. One copy was lost either way; now it is not the one a notice offers.
+  const JOBS = 'cpwtcv_jobs_v1';
+  localStorage.setItem(`${JOBS}_backup_1`, 'j'.repeat(80));
+  localStorage.setItem(`${JOBS}_backup_2`, 'k'.repeat(80));
+  rememberRecovery(JOBS, { backupKey: `${JOBS}_backup_1` });
+  rememberRecovery(JOBS, { backupKey: `${JOBS}_backup_2` }); // the first copy is offered as the earlier one
+  localStorage.setItem('cpwtcv_job_stages_v1_backup_3', 's'.repeat(40)); // no notice offers it
+  localStorage.quota = used() + 60; // a résumé copy of 60 needs 90: the stages' copy makes room
+
+  const copy = backupRaw(KEY, 'n'.repeat(60));
+  assert.equal(readBackup(`${JOBS}_backup_1`), 'j'.repeat(80), 'before: the job list\'s earlier copy was removed');
+  assert.equal(readBackup(`${JOBS}_backup_2`), 'k'.repeat(80));
+  assert.equal(readBackup(copy), 'n'.repeat(60));
+  assert.equal(readBackup('cpwtcv_job_stages_v1_backup_3'), null, 'a copy no notice offers still makes room');
+
+  // A copy that fits only without the job list's: none is made, and storage is left as it was.
+  const before = new Map(localStorage.map);
+  assert.equal(backupRaw(KEY, 'm'.repeat(150)), null, 'before: made, the job list\'s copies removed for it');
+  assert.deepEqual(new Map(localStorage.map), before, 'the résumé store\'s own older copy is put back too (VM4-0)');
+  assert.deepEqual(pendingRecovery(JOBS), { backupKey: `${JOBS}_backup_2`, earlier: [`${JOBS}_backup_1`] });
+});
+
+test('backupRaw: its own list\'s older copies still make room, offered or not; a dismissed notice offers none', () => {
+  // Guard: the newest copy of a list is kept over its older ones, as BACKUPS_KEPT does; the notice
+  // names the older one an earlier copy, "later removed to make room" (V2W1a-9).
+  localStorage.setItem(`${KEY}_backup_1`, 'o'.repeat(80));
+  rememberRecovery(KEY, { backupKey: `${KEY}_backup_1` });
+  localStorage.setItem('cpwtcv_jobs_v1_backup_2', 'd'.repeat(80));
+  rememberRecovery('cpwtcv_jobs_v1', { backupKey: 'cpwtcv_jobs_v1_backup_2' });
+  rememberRecovery('cpwtcv_jobs_v1', null); // dismissed
+  localStorage.quota = used();
+  const copy = backupRaw(KEY, 'n'.repeat(120));
+  assert.equal(readBackup(copy), 'n'.repeat(120));
+  assert.deepEqual(backups(), [copy]);
+  assert.equal(readBackup('cpwtcv_jobs_v1_backup_2'), null);
+});
+
+test('setItemWithRoom: a save still makes room from a copy a notice offers — the user\'s work comes first (R4-8)', () => {
+  // Guard: only a copy is kept from taking another notice's copy; the notice then says it was
+  // removed "to make room for your changes", which is so.
+  localStorage.setItem('cpwtcv_jobs_v1_backup_1', 'j'.repeat(80));
+  rememberRecovery('cpwtcv_jobs_v1', { backupKey: 'cpwtcv_jobs_v1_backup_1' });
+  localStorage.quota = used() + 20;
+  setItemWithRoom(KEY, 'x'.repeat(90));
+  assert.equal(localStorage.getItem(KEY), 'x'.repeat(90));
+  assert.equal(readBackup('cpwtcv_jobs_v1_backup_1'), null);
+});

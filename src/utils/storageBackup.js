@@ -32,8 +32,9 @@ const isQuotaError = (e) => e?.name === 'QuotaExceededError' || e?.name === 'NS_
  * then fits is worth one. When the value does not fit even without them (or storage refused it
  * for another reason), every backup removed for it is written back, then storage's error is
  * thrown: they used to be gone for good, both lists' copies, for a save that still failed (VM4-0).
+ * `spare(backup)` — `{ key, of, at }`, as listBackups lists one — true keeps it from making room.
  */
-export function setItemWithRoom(key, value) {
+export function setItemWithRoom(key, value, spare = () => false) {
   let backups = null; // listed only once a write has not fitted: this runs on every save
   const removed = []; // [key, value] of each backup removed for this write
   for (;;) {
@@ -41,7 +42,7 @@ export function setItemWithRoom(key, value) {
       localStorage.setItem(key, value);
       return;
     } catch (e) {
-      backups ??= listBackups().filter((b) => b.key !== key);
+      backups ??= listBackups().filter((b) => b.key !== key && !spare(b));
       if (!isQuotaError(e) || !backups.length) {
         putBack(removed);
         throw e;
@@ -66,8 +67,11 @@ function putBack(removed) {
  * load never destroys data, and keep only the newest BACKUPS_KEPT of that key: they used to pile
  * up for good in the ~5 MB quota. A value backed up already keeps that copy: React's StrictMode
  * loads the store twice in development, and the second copy was named an earlier repair
- * (V2W1a-9). Best effort: returns the backup's key, or null when storage refused the write even
- * with no older backup left (they are all kept then: setItemWithRoom).
+ * (V2W1a-9). Storage full: older backups make room for the copy, except another list's that its
+ * notice still offers — the only copy of what that list lost. It went for this one, and that
+ * notice then said it "was later removed to make room for your changes" (ONB-4). Best effort:
+ * returns the backup's key, or null when storage refused the write even with every backup it may
+ * take gone (they are all kept then: setItemWithRoom).
  */
 export function backupRaw(key, raw) {
   const mine = listBackups().filter((b) => b.of === key);
@@ -77,12 +81,18 @@ export function backupRaw(key, raw) {
   const at = Math.max(Date.now(), ...mine.map((b) => b.at + 1));
   const backupKey = `${key}_backup_${at}`;
   try {
-    setItemWithRoom(backupKey, raw);
+    setItemWithRoom(backupKey, raw, (b) => b.of !== key && offered(b));
   } catch {
     return null;
   }
   listBackups().filter((b) => b.of === key).slice(0, -BACKUPS_KEPT).forEach((b) => remove(b.key));
   return backupKey;
+}
+
+/** Whether a notice not yet dismissed offers this backup, as its copy or an earlier one (pendingRecovery). */
+function offered({ key, of }) {
+  const notice = pendingRecovery(of);
+  return notice !== null && (notice.backupKey === key || notice.earlier.includes(key));
 }
 
 /** A backup's value, or null when it is gone (removed to make room, or storage cannot be read). */
