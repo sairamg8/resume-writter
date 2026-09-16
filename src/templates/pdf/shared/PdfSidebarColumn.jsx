@@ -4,7 +4,9 @@ import { safeHref, hasRichText } from '@/utils/richText';
 import { contactHref } from '@/utils/contacts';
 import { dateRange } from '@/utils/dates';
 import { SIDEBAR_COLUMN_TYPES, upperSectionTitles } from '@/constants/templates';
-import { CSS_PX_TO_PT, DEFAULT_ITEM_GAP_PX, tracking } from './pdfUnits';
+import { CSS_PX_TO_PT, DEFAULT_ITEM_GAP_PX, MM_TO_PT, tracking } from './pdfUnits';
+import { breakToFit } from './pdfMeasure';
+import { pageBoxPt } from '@/constants/pageSize';
 import { sidebarShades } from './pdfColors';
 import { PdfRichText } from './PdfRichText';
 import { RenderBullets } from './PdfSections';
@@ -21,14 +23,29 @@ const NAVY = sidebarShades();
 // Sections that live in the dark sidebar column (the section editor reads the same list)
 export const SIDEBAR_TYPES = new Set(SIDEBAR_COLUMN_TYPES);
 
+/** The dark column: its share of the paper, and its padding on the main column's side, pt. */
+export const SIDE_COL = 0.38;
+export const SIDE_PAD_RIGHT = 10;
+
+/** The width the column's text is laid out in, pt: its share of the paper inside its padding. */
+export const sideColumnRoom = (settings) => pageBoxPt(settings).width * SIDE_COL - (settings?.marginH ?? 18) * MM_TO_PT - SIDE_PAD_RIGHT;
+
+/**
+ * Where an e-mail address or URL in the column (`style`: its type) may break: one of 48
+ * characters or fewer wider than the column ran out of it, over the main column (breakToFit).
+ */
+export const sideBreaks = (settings, style, inset = 0) =>
+  breakToFit({ fontFamily: settings?._pdfFontFamily, ...style }, sideColumnRoom(settings) - inset);
+
 /**
  * An entry's URL as printed: `label` (else the URL) linking to it when safeHref accepts it —
  * same colour, no underline — else plain text: the main column's ContactValue inside the line,
- * so only the words are clickable, not the rest of the column.
+ * so only the words are clickable, not the rest of the column. `hyphenationCallback`: where it
+ * may break (sideBreaks in the dark column).
  */
-export function EntryLink({ url, label, style }) {
+export function EntryLink({ url, label, style, hyphenationCallback }) {
   return (
-    <Text style={style}>
+    <Text style={style} hyphenationCallback={hyphenationCallback}>
       <ContactValue value={label || url} href={safeHref(url)} style={{ color: style.color }} />
     </Text>
   );
@@ -116,7 +133,7 @@ export function SideCertifications({ section, sectionGap, itemGap, shades = NAVY
               {item.issuer && <Text style={{ fontSize: 9, color: shades.label, lineHeight: 1.2 }}>{item.issuer}</Text>}
               {dateStr ? <Text style={{ fontSize: 9, color: shades.meta, lineHeight: 1.2 }}>{dateStr}</Text> : null}
               {item.credentialId && <Text style={{ fontSize: 9, color: shades.meta, lineHeight: 1.2 }}>ID: {item.credentialId}</Text>}
-              {item.url && <EntryLink url={item.url} label={item.urlLabel} style={{ fontSize: 9, color: shades.value, lineHeight: 1.2 }} />}
+              {item.url && <EntryLink url={item.url} label={item.urlLabel} style={{ fontSize: 9, color: shades.value, lineHeight: 1.2 }} hyphenationCallback={sideBreaks(settings, { fontSize: 9 })} />}
             </View>
           );
         })}
@@ -153,7 +170,7 @@ export function SideInterests({ section, sectionGap, itemGap = DEFAULT_ITEM_GAP_
   );
 }
 
-export function SideReferences({ section, sectionGap, itemGap, shades = NAVY, titleCase }) {
+export function SideReferences({ section, sectionGap, itemGap, shades = NAVY, titleCase, settings }) {
   const visibleItems = (section.items || []).filter(i => i.visible !== false);
   return (
     <View style={{ marginBottom: sectionGap }}>
@@ -166,7 +183,7 @@ export function SideReferences({ section, sectionGap, itemGap, shades = NAVY, ti
             {item.company && <Text style={{ fontSize: 9, color: shades.label, lineHeight: 1.2 }}>{item.company}</Text>}
             {item.relationship && <Text style={{ fontSize: 9, color: shades.meta, fontStyle: 'italic', lineHeight: 1.2 }}>{item.relationship}</Text>}
             {/* mailto: / tel: links, as the main-column templates and the Word export print them (R2-3). */}
-            {item.email && <Text style={{ fontSize: 9, color: shades.meta, lineHeight: 1.2 }}><ContactValue value={item.email} href={contactHref('email', item)} style={{ color: shades.meta }} /></Text>}
+            {item.email && <Text style={{ fontSize: 9, color: shades.meta, lineHeight: 1.2 }} hyphenationCallback={sideBreaks(settings, { fontSize: 9 })}><ContactValue value={item.email} href={contactHref('email', item)} style={{ color: shades.meta }} /></Text>}
             {item.phone && <Text style={{ fontSize: 9, color: shades.meta, lineHeight: 1.2 }}><ContactValue value={item.phone} href={contactHref('phone', item)} style={{ color: shades.meta }} /></Text>}
           </View>
         ))}

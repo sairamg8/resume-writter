@@ -84,6 +84,9 @@ const absolute = (url) => (/^https?:/.test(url) ? url : `${ORIGIN}${url}`);
  */
 export const BREAK_MARK = Object.freeze({ length: 0, trim: () => '', replaceAll() { return this; }, toString: () => '' });
 
+/** Where a long token may break: after each of / . - _ @ ? & = # (a String.split separator). */
+export const BREAK_AFTER = /(?<=[/.\-_@?&=#])/;
+
 /**
  * A hyphenation callback that never hyphenates, but lets a long unbroken token — a URL, an
  * e-mail address — break after / . - _ @ ? & = # (or every `max` characters) instead of running
@@ -95,7 +98,7 @@ export const BREAK_MARK = Object.freeze({ length: 0, trim: () => '', replaceAll(
 export function breakLongWords(max) {
   return (word) => {
     if (word.length <= max) return [word];
-    const parts = word.split(/(?<=[/.\-_@?&=#])/).flatMap((p) => p.match(new RegExp(`.{1,${max}}`, 'gsu')) || [p]);
+    const parts = word.split(BREAK_AFTER).flatMap((p) => p.match(new RegExp(`.{1,${max}}`, 'gsu')) || [p]);
     return parts.flatMap((p, i) => (i ? [BREAK_MARK, p] : [p]));
   };
 }

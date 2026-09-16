@@ -5,6 +5,7 @@
 // the word runs out of it, over whatever sits beside it. The fonts are the ones the render uses:
 // resolvePdfFonts has loaded every face of the page's families before a template renders.
 import { Font } from '@react-pdf/renderer';
+import { BREAK_AFTER, BREAK_MARK } from './pdfFontLoader';
 
 const WEIGHTS = { light: 300, normal: 400, medium: 500, bold: 700 };
 
@@ -91,4 +92,45 @@ export function fitFontSize(text, style, maxWidth) {
     return perPt > 0 ? Math.min(smallest, (maxWidth - FIT_SLACK - tracked) / perPt) : smallest;
   }, size);
   return Math.max(MIN_FIT_PT, fit);
+}
+
+/**
+ * How far textkit closes up a line wider than its box, pt: 11/256 pt either side of each glyph
+ * (its SHRINK_CHAR_FACTOR), none before the first or after the last.
+ */
+const squeeze = (s) => Math.max(0, 2 * [...s].length - 2) * (11 / 256);
+/** How far past its box a closed-up word may still print, pt: nothing a reader sees. */
+const OVERHANG = 0.5;
+
+/**
+ * A hyphenation callback for a Text laid out `maxWidth` pt wide in `style` — a value in the
+ * Sidebar's dark column. The registered callback (breakLongWords) marks a token only past 48
+ * characters, so a shorter e-mail address or URL wider than a narrow box had nowhere to break and
+ * ran out of it, over the main column ("alexandra.johnson-smith@examplecompany.com", 205 pt at
+ * 9 pt in a 146 pt column). A word that prints inside the box is split only as the registered
+ * callback splits it — one a little wider, which textkit closes up to fit, too: the sample
+ * résumé's "linkedin.com/in/jordan-rivera-sample" keeps its one line. A wider one is marked after
+ * / . - _ @ …, and a piece still wider than the box between the longest runs of its characters
+ * that fit. textkit takes a mark only for a word wider than its line, with no hyphen, and the text
+ * reads as typed (BREAK_MARK).
+ */
+export function breakToFit(style, maxWidth) {
+  const registered = Font.getHyphenationCallback() || ((word) => [word]);
+  const fits = (s) => textWidth(s, style) <= maxWidth - FIT_SLACK;
+  return (word) => {
+    if (!(maxWidth > 0) || textWidth(word, style) - squeeze(word) <= maxWidth + OVERHANG) return registered(word);
+    const parts = word.split(BREAK_AFTER).flatMap((part) => (fits(part) ? [part] : runsThatFit(part, fits)));
+    return parts.flatMap((part, i) => (i ? [BREAK_MARK, part] : [part]));
+  };
+}
+
+/** `part` cut into the longest runs of characters that `fits` (one character at the least). */
+function runsThatFit(part, fits) {
+  const runs = [''];
+  for (const ch of part) {
+    const last = runs.length - 1;
+    if (runs[last] && !fits(runs[last] + ch)) runs.push(ch);
+    else runs[last] += ch;
+  }
+  return runs;
 }

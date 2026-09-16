@@ -7,20 +7,20 @@ import { hasRichText } from '@/utils/richText';
 import { getDocumentProps } from './shared/PdfPage';
 import { getPdfPhotoStyle } from './shared/pdfPhoto';
 import { PdfPhoto } from './shared/PdfPhoto';
-import { CSS_PX_TO_PT, MM_TO_PT, tracking } from './shared/pdfUnits';
+import { CSS_PX_TO_PT, tracking } from './shared/pdfUnits';
 import { fitFontSize } from './shared/pdfMeasure';
 import { PdfContactIcon } from './shared/PdfContactIcon';
 import { ContactValue } from './shared/PdfContact';
 import { CONTACT_LABELS, contactItems } from '@/utils/contacts';
 import { SIDEBAR_TYPES, SideSectionTitle, renderSideSection, SidebarMainSectionRouter } from './shared/PdfSidebarSections';
+import { SIDE_COL, SIDE_PAD_RIGHT, sideBreaks, sideColumnRoom } from './shared/PdfSidebarColumn';
 import { sidebarShades } from './shared/pdfColors';
-import { pageBoxPt, pageSizeOf } from '@/constants/pageSize';
+import { pageSizeOf } from '@/constants/pageSize';
 
-/** The dark column: its share of the paper, and its padding on the main column's side, pt. */
-const SIDE_COL = 0.38;
-const SIDE_PAD_RIGHT = 10;
-
-/** A contact in the dark column: icon and label in the column's label colour, not the accent. */
+/**
+ * A contact in the dark column: icon and label in the column's label colour, not the accent. The
+ * value, under its label and in line with it, breaks inside the column (sideBreaks).
+ */
 function SideContactRow({ field, label, value, href, iconPt, settings, shades }) {
   return (
     <View style={{ marginBottom: 6 }}>
@@ -30,7 +30,12 @@ function SideContactRow({ field, label, value, href, iconPt, settings, shades })
           {label.toUpperCase()}
         </Text>
       </View>
-      <ContactValue value={value} href={href} style={{ fontSize: 9, color: shades.value, paddingLeft: iconPt + 3.5, lineHeight: 1.2 }} />
+      <ContactValue
+        value={value}
+        href={href}
+        style={{ fontSize: 9, color: shades.value, paddingLeft: iconPt + 3.5, lineHeight: 1.2 }}
+        hyphenationCallback={sideBreaks(settings, { fontSize: 9 }, iconPt + 3.5)}
+      />
     </View>
   );
 }
@@ -80,11 +85,13 @@ export function SidebarTemplatePDF({ data }) {
 
   const contacts = contactItems(personal);
 
-  // The name's room: the column inside its padding. A word of it wider than that has nowhere to
-  // break, and react-pdf drew it out of the column over the main one (a 35-letter surname even at
-  // the default 19 pt): it prints at the largest size that holds it.
-  const nameRoom = pageBoxPt(settings).width * SIDE_COL - hMm * MM_TO_PT - SIDE_PAD_RIGHT;
-  const nameFit = fitFontSize(personal?.name, { fontFamily: settings._pdfFontFamily, fontSize: nameSize, fontWeight: 'bold' }, nameRoom);
+  // The name's and the job title's room: the column inside its padding. A word of either wider
+  // than that has nowhere to break, and react-pdf drew it out of the column over the main one (a
+  // 35-letter surname even at the default 19 pt, "Softwareentwicklungsingenieurin" at 11 pt): each
+  // prints at the largest size that holds it.
+  const room = sideColumnRoom(settings);
+  const nameFit = fitFontSize(personal?.name, { fontFamily: settings._pdfFontFamily, fontSize: nameSize, fontWeight: 'bold' }, room);
+  const titleFit = fitFontSize(personal?.title, { fontFamily: settings._pdfFontFamily, fontSize: entrySize }, room);
 
   // Top and bottom margins belong to the page, so react-pdf repeats them on every page; a
   // column's own padding applies only where the column starts and ends (pages 2+ used to print
@@ -127,7 +134,7 @@ export function SidebarTemplatePDF({ data }) {
             </Text>
             {personal?.title && (
               <Text style={{
-                fontSize: entrySize, color: jobTitleColor,
+                fontSize: titleFit, color: jobTitleColor,
                 textAlign: 'center', marginBottom: 6, lineHeight: 1.2,
               }}>
                 {personal.title}
