@@ -59,17 +59,27 @@ const separator = (contactStyle) => `${NBSP}${NBSP}${contactStyle === 'bullet' ?
  * Bullet, Justify), its widest value with the separator glued to it and the space after that:
  * textkit's best-fit pass counts that space before it breaks there, and in a line too short for
  * it breaks between the value and its separator instead, with a drawn hyphen. A 2 Grid cell is
- * 46 % of the row. In the page's font (settings._pdfFontFamily); 0 with no contacts. `gaps` as
- * PdfContactRow's.
+ * 46 % of the row, so its widest item needs the row 2.2 times as wide — or, `folded`, only as
+ * wide as the grid needs to print every value whole at all: a row narrower than two cells and
+ * the gap stacks them, and a value of one unbreakable piece (an e-mail, a URL) that its cell
+ * cannot hold spills into the room beside it or takes the whole row (PdfContactRow), so only a
+ * value that can wrap (a phone, a place) needs its cell. In the page's font
+ * (settings._pdfFontFamily); 0 with no contacts. `gaps` as PdfContactRow's.
  */
-export function contactRowMinWidth(personal, settings, hidden, gaps = {}) {
+export function contactRowMinWidth(personal, settings, hidden, gaps = {}, { folded = false } = {}) {
   const items = contactItems(personal, hidden ?? (personal?.hiddenFields || []));
   const contactStyle  = settings?.contactStyle  || 'icon';
   const contactLayout = settings?.contactLayout || 'justify';
-  const { width, mark } = rowMetrics(settings, gaps.iconTextGap ?? ITEM_GAP);
+  const { style, width, mark } = rowMetrics(settings, gaps.iconTextGap ?? ITEM_GAP);
   if (contactLayout === 'justify' && contactStyle !== 'icon') {
     const sep = width(`${separator(contactStyle)} `);
     return Math.max(0, ...items.map((item, i) => width(keepTogether(item.value)) + (i < items.length - 1 ? sep : 0)));
+  }
+  if (contactLayout === '2grid' && folded) {
+    return Math.max(0, ...items.map((item) => {
+      const whole = mark + width(item.value);
+      return mark + widestWord(item.value, style) < whole - 0.01 ? whole / GRID_CELL : whole;
+    }));
   }
   const widest = Math.max(0, ...items.map((item) => mark + width(item.value)));
   return contactLayout === '2grid' ? widest / GRID_CELL : widest;

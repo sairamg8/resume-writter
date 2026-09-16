@@ -9,7 +9,7 @@ import { contactRowMinWidth, PdfContactRow } from './shared/PdfContact';
 import { PdfPhoto } from './shared/PdfPhoto';
 import { contentWidthPt, pageMargins } from './shared/PdfPage';
 import { getPdfPhotoStyle } from './shared/pdfPhoto';
-import { fitFontSize, widestWord } from './shared/pdfMeasure';
+import { fitFontSize, textWidth, widestWord } from './shared/pdfMeasure';
 import { DOUBLE_RULE_GAP, LETTERHEAD_GAP, LETTERHEAD_PAD } from './shared/letterhead';
 import { photoTextAlignItems } from '@/constants/templates';
 import { contactItems } from '@/utils/contacts';
@@ -114,7 +114,11 @@ export function CoverLetterHeader({ look, personal, settings, cl, hidden, contac
   // row beside the photo (uncapped, a long title ran past the margin by the photo's width). In
   // points, on the name block: react-pdf lays text out once, at the first width it is measured
   // with, so a cap on the row or a box that shrinks later does not re-wrap it. Modern's band
-  // pads the header on both sides.
+  // pads the header on both sides. A 2 Grid beside the name gets cells as wide as its widest
+  // item (2.2 times it) — but not at the cost of wrapping a name and title that fit on their
+  // lines beside the grid folded to what it needs to print every value whole (contactRowMinWidth,
+  // `folded`): beside two short contacts the title wrapped, and with a large photo the name,
+  // where they had printed on one line before 089d03c (VM3-2).
   const hasContacts = contactItems(personal, hidden).length > 0;
   const bandPad = look.band && !look.band.bleed ? look.band.padX : 0;
   const headerWidth = contentWidthPt(settings) - 2 * bandPad;
@@ -134,8 +138,14 @@ export function CoverLetterHeader({ look, personal, settings, cl, hidden, contac
       const contactsNeed = contactRowMinWidth(personal, contactSettings, hidden) + SLACK;
       const nameNeed = Math.max(widestWord(name, { ...font, ...nameStyle }), widestWord(personal?.title, { ...font, ...titleStyle })) + SLACK;
       // Beside the name the contacts get at least what their widest item needs; under it, the row.
-      if (nameNeed + contactsNeed <= room) { nameCap = room - contactsNeed; contactsWidth = contactsNeed; }
-      else { layout = 'below-name'; contactsWidth = beside; }
+      if (nameNeed + contactsNeed <= room) {
+        // Each on one line: a line's last glyph has no space after it to kern into.
+        const nameLine = Math.max(textWidth(name, { ...font, ...nameStyle }), textWidth(personal?.title, { ...font, ...titleStyle }));
+        const folded = contactRowMinWidth(personal, contactSettings, hidden, {}, { folded: true }) + SLACK;
+        const need = nameLine + contactsNeed > room && nameLine + folded <= room ? folded : contactsNeed;
+        nameCap = room - need;
+        contactsWidth = need;
+      } else { layout = 'below-name'; contactsWidth = beside; }
     }
   }
   const contactEl = <PdfContactRow personal={personal} hidden={hidden} settings={contactSettings} color={look.contacts} markColor={look.marks} width={contactsWidth} />;
