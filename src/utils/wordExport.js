@@ -40,8 +40,9 @@ export async function renderResumeDocx(resume) {
   const accentHex = accent2Hex(settings.accentColor);
   const children = [
     ...buildPersonalSection(personal, settings),
-    // Template defaults (e.g. Executive and Sidebar put the role first) apply as in the PDF.
-    ...sections.flatMap((s) => buildSection(resolveSection(s, template), accentHex, settings)),
+    // Template defaults (e.g. Executive and Sidebar put the role first) apply as in the PDF, and
+    // so does Section Options → Alignment (never in the Sidebar's side column).
+    ...sections.flatMap((s) => buildSection(resolveSection(s, template), accentHex, settings, template)),
   ];
   return Packer.toBlob(buildDocument(children, settings));
 }

@@ -93,15 +93,16 @@ export default defineConfig({
           const runs = await extractPdfTextRuns(buffer);
           return { numPages: doc.numPages, width, height, info, runs, strokes, bytes: buffer.length };
         },
-        /** Paragraph texts of a .docx (word/document.xml), plus the file size. */
+        /** Paragraph texts of a .docx (word/document.xml), each one's alignment ('center', … or null), plus the file size. */
         readDocx(file) {
           const buffer = fs.readFileSync(file);
           const xml = readZipEntry(buffer, 'word/document.xml') || '';
-          const paragraphs = xml.split('</w:p>').map((p) =>
-            [...p.matchAll(/<w:t(?:\s[^>]*)?>([^<]*)<\/w:t>/g)].map((m) => m[1]).join('')
-              .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'"))
-            .filter(Boolean);
-          return { bytes: buffer.length, paragraphs };
+          const all = xml.split('</w:p>').map((p) => ({
+            text: [...p.matchAll(/<w:t(?:\s[^>]*)?>([^<]*)<\/w:t>/g)].map((m) => m[1]).join('')
+              .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'"),
+            align: /<w:jc w:val="(\w+)"\/>/.exec(p)?.[1] || null,
+          })).filter((p) => p.text);
+          return { bytes: buffer.length, paragraphs: all.map((p) => p.text), aligns: all.map((p) => p.align) };
         },
         readTextFile(file) {
           return fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : null;

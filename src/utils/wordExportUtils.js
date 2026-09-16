@@ -31,21 +31,26 @@ export function separator() {
   });
 }
 
-export function sectionHeading(title, accentHex) {
+/** A paragraph's options that centre it when `centered` (Section Options → Alignment "Center"). */
+export const centredIf = (centered) => (centered ? { alignment: AlignmentType.CENTER } : {});
+
+export function sectionHeading(title, accentHex, centered = false) {
   return new Paragraph({
     children: [new TextRun({ text: String(title || '').toUpperCase(), bold: true, size: 20, color: accentHex })],
     border: { bottom: { style: BorderStyle.SINGLE, size: 4, color: accentHex, space: 4 } },
     spacing: { before: 180, after: 60 },
     keepNext: true,
+    ...centredIf(centered),
   });
 }
 
-export function bulletPoint(text) {
+export function bulletPoint(text, centered = false) {
   return new Paragraph({
     children: [new TextRun({ text: String(text || ''), size: 20 })],
     bullet: { level: 0 },
     spacing: { before: 20, after: 20 },
     indent: { left: 360 },
+    ...centredIf(centered),
   });
 }
 
@@ -80,12 +85,13 @@ function runsToDocx(runs, base) {
 /**
  * The editor's HTML as Word paragraphs — the same parse the PDF uses, so line breaks, blank
  * lines, nested and numbered lists, marks, alignment and links match the PDF.
- * `base` sets size (half-points), colour and whole-block bold/italics.
+ * `base` sets size (half-points), colour and whole-block bold/italics; `align` is the alignment
+ * of a block the editor did not align (a centred section's: 'center'), as in the PDF.
  */
-export function descriptionToParagraphs(html, base = { size: 20, color: '374151' }) {
+export function descriptionToParagraphs(html, base = { size: 20, color: '374151' }, align = null) {
   return parseRichText(html).map((block) => {
     const children = runsToDocx(block.runs, base);
-    const options = { spacing: { before: 20, after: 20 }, alignment: ALIGN[block.align] };
+    const options = { spacing: { before: 20, after: 20 }, alignment: ALIGN[block.align || align] };
     if (block.marker) {
       const level = Math.max(0, block.indent - 1);
       if (block.marker.length === 1) {
@@ -108,12 +114,20 @@ export function descriptionToParagraphs(html, base = { size: 20, color: '374151'
   });
 }
 
-export function dateRightPara(leftChildren, rightText, accentHex) {
+/**
+ * An entry's title line, its date at the right margin — or, `centered` (Section Options →
+ * Alignment "Center"), the line centred and the date centred on a line of its own below it, as
+ * the PDF's centred entries print it. Empty parts (null, false, '') are left out, so a line with
+ * nothing but a date prints the date alone.
+ */
+export function dateRightPara(leftChildren, rightText, accentHex, centered = false) {
+  const left = leftChildren.filter(Boolean);
+  const date = (extra) => (rightText ? [new TextRun({ text: String(rightText), color: accentHex, size: 20, ...extra })] : []);
+  if (centered) {
+    return new Paragraph({ children: [...left, ...date(left.length ? { break: 1 } : {})], keepNext: true, ...centredIf(true) });
+  }
   return new Paragraph({
-    children: [
-      ...leftChildren,
-      ...(rightText ? [new TextRun({ text: '\t' }), new TextRun({ text: String(rightText), color: accentHex, size: 20 })] : []),
-    ],
+    children: [...left, ...(rightText ? [new TextRun({ text: '\t' })] : []), ...date()],
     tabStops: [{ type: TabStopType.RIGHT, position: 9000 }],
     keepNext: true,
   });

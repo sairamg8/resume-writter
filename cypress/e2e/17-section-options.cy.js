@@ -134,3 +134,38 @@ describe('the Sidebar side column offers the options it prints (FIDB-75)', () =>
     });
   });
 });
+
+describe('Word prints Section Options → Alignment as the PDF does', () => {
+  const EDUCATION = ALL_SECTION_TYPES.find((s) => s.type === 'education'); // MIT
+  const centred = (section) => ({ ...section, settings: { ...section.settings, alignment: 'center' } });
+  /** The .docx paragraph holding `needle`: its text and alignment ('center' or null). */
+  const para = (docx, needle) => {
+    const i = docx.paragraphs.findIndex((p) => p.includes(needle));
+    expect(i, `"${needle}" in the .docx`).to.be.greaterThan(-1);
+    return { text: docx.paragraphs[i], align: docx.aligns[i] };
+  };
+
+  it('Center centres the section in the .docx, the date on a line of its own; Left keeps the date at the right margin', () => {
+    cy.visitEditor('classic', { sections: [EXPERIENCE] });
+    cy.exportDocx().then((docx) => {
+      ['PROFESSIONAL EXPERIENCE', 'Acme Corp', 'Built amazing products.'].forEach((needle) => expect(para(docx, needle).align, needle).to.eq(null));
+      expect(para(docx, 'Acme Corp').text).to.contain('\t01/2023');
+    });
+    openOptions('Professional Experience');
+    chip('Alignment', 'Center').click();
+    cy.store().should((s) => expect(settingsOf(s, 'experience').alignment).to.eq('center'));
+    cy.exportDocx().then((docx) => {
+      ['PROFESSIONAL EXPERIENCE', 'Acme Corp', 'Built amazing products.'].forEach((needle) => expect(para(docx, needle).align, needle).to.eq('center'));
+      expect(para(docx, 'Acme Corp').text).to.contain('01/2023').and.not.contain('\t');
+    });
+  });
+
+  it('Sidebar: a centred main-column section is centred in the .docx; the side column stays left whatever it stores', () => {
+    cy.visitEditor('sidebar', { sections: [centred(EXPERIENCE), centred(EDUCATION)] });
+    cy.exportDocx().then((docx) => {
+      expect(para(docx, 'Acme Corp').align).to.eq('center');
+      expect(para(docx, 'MIT').align).to.eq(null);
+      expect(para(docx, 'MIT').text).to.contain('\t09/2015');
+    });
+  });
+});

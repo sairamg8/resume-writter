@@ -1,8 +1,9 @@
 import { Paragraph, TextRun } from 'docx';
 import {
-  bold, normal, linked, separator, sectionHeading, bulletPoint, descriptionToParagraphs, dateRightPara,
+  bold, normal, linked, separator, sectionHeading, bulletPoint, descriptionToParagraphs, dateRightPara, centredIf,
 } from '@/utils/wordExportUtils';
 import { contactItems } from '@/utils/contacts';
+import { inSidebarColumn } from '@/constants/templates';
 import { hasRichText } from '@/utils/richText';
 import { dateRange, formatDate, presentLabel } from '@/utils/dates';
 import { skillGroup, skillSeparator } from '@/utils/skills';
@@ -15,12 +16,12 @@ const shown = (section) => (section.items || []).filter((item) => item && item.v
 /** A field of an entry, or '' when its eye toggle hides it. */
 const field = (item, key) => ((item.hiddenFields || []).includes(key) ? '' : (item[key] || ''));
 
-/** Description + legacy bullets of an entry. */
-function body(item) {
+/** Description + legacy bullets of an entry, centred in a centred section. */
+function body(item, centered) {
   const paras = [];
   const description = field(item, 'description');
-  if (hasRichText(description)) paras.push(...descriptionToParagraphs(description));
-  for (const b of item.bullets || []) if (b) paras.push(bulletPoint(b));
+  if (hasRichText(description)) paras.push(...descriptionToParagraphs(description, undefined, centered ? 'center' : null));
+  for (const b of item.bullets || []) if (b) paras.push(bulletPoint(b, centered));
   return paras;
 }
 
@@ -62,9 +63,9 @@ export function buildPersonalSection(personal = {}, settings = {}) {
   return paragraphs;
 }
 
-export function buildExperience(section, accentHex, settings) {
+export function buildExperience(section, accentHex, settings, centered) {
   const s = section.settings || {};
-  const paras = [sectionHeading(section.title, accentHex)];
+  const paras = [sectionHeading(section.title, accentHex, centered)];
   for (const item of shown(section)) {
     const company = field(item, 'company');
     const role = field(item, 'role');
@@ -73,35 +74,35 @@ export function buildExperience(section, accentHex, settings) {
     const end = field(item, 'endDate') && !item.current ? field(item, 'endDate') : '';
     const dates = dateRange(field(item, 'startDate'), item.current && !(item.hiddenFields || []).includes('endDate') ? presentLabel(settings) : end, settings);
     paras.push(dateRightPara([
-      bold(primary, { size: 20 }),
+      primary && bold(primary, { size: 20 }),
       ...(secondary ? [normal(`${primary ? ' — ' : ''}${secondary}`, { size: 20 })] : []),
       ...(location ? [normal(`, ${location}`, { size: 20, color: GREY })] : []),
-    ], s.showDates !== false ? dates : '', accentHex));
-    paras.push(...body(item), spacer());
+    ], s.showDates !== false ? dates : '', accentHex, centered));
+    paras.push(...body(item, centered), spacer());
   }
   return paras;
 }
 
-export function buildEducation(section, accentHex, settings) {
+export function buildEducation(section, accentHex, settings, centered) {
   const s = section.settings || {};
-  const paras = [sectionHeading(section.title, accentHex)];
+  const paras = [sectionHeading(section.title, accentHex, centered)];
   for (const item of shown(section)) {
     const degree = [item.degree, item.fieldOfStudy].filter(Boolean).join(', ');
     const location = s.showLocation !== false ? item.location : '';
     paras.push(dateRightPara([
-      bold(item.institution || degree, { size: 20 }),
+      (item.institution || degree) && bold(item.institution || degree, { size: 20 }),
       ...(item.institution && degree ? [normal(` — ${degree}`, { size: 20 })] : []),
       ...(item.gpa ? [normal(` · GPA: ${item.gpa}`, { size: 20, color: GREY })] : []),
       ...(location ? [normal(`, ${location}`, { size: 20, color: GREY })] : []),
-    ], s.showDates !== false ? dateRange(item.startDate, item.endDate, settings) : '', accentHex));
-    paras.push(...body(item), spacer());
+    ], s.showDates !== false ? dateRange(item.startDate, item.endDate, settings) : '', accentHex, centered));
+    paras.push(...body(item, centered), spacer());
   }
   return paras;
 }
 
-export function buildSkills(section, accentHex) {
+export function buildSkills(section, accentHex, settings, centered) {
   const s = section.settings || {};
-  const paras = [sectionHeading(section.title, accentHex)];
+  const paras = [sectionHeading(section.title, accentHex, centered)];
   const sep = skillSeparator(s);
   const bulletStyle = s.skillsStyle === 'bullet';
   for (const item of shown(section)) {
@@ -114,28 +115,29 @@ export function buildSkills(section, accentHex) {
         children,
         spacing: { after: 40 },
         ...(bulletStyle ? { bullet: { level: 0 }, indent: { left: 360 } } : {}),
+        ...centredIf(centered),
       }));
     }
   }
   return paras;
 }
 
-export function buildProjects(section, accentHex, settings) {
+export function buildProjects(section, accentHex, settings, centered) {
   const s = section.settings || {};
-  const paras = [sectionHeading(section.title, accentHex)];
+  const paras = [sectionHeading(section.title, accentHex, centered)];
   for (const item of shown(section)) {
     paras.push(dateRightPara([
-      bold(item.name || '', { size: 20 }),
+      item.name && bold(item.name, { size: 20 }),
       ...(item.technologies ? [normal(` · ${item.technologies}`, { size: 20, color: GREY })] : []),
       ...(item.url ? [normal(' · ', { size: 20, color: GREY }), linked(item.url, item.url, { size: 20, color: accentHex })] : []),
-    ], s.showDates !== false ? dateRange(item.startDate, item.endDate, settings) : '', accentHex));
-    paras.push(...body(item), spacer());
+    ], s.showDates !== false ? dateRange(item.startDate, item.endDate, settings) : '', accentHex, centered));
+    paras.push(...body(item, centered), spacer());
   }
   return paras;
 }
 
-export function buildLanguages(section, accentHex) {
-  const paras = [sectionHeading(section.title, accentHex)];
+export function buildLanguages(section, accentHex, settings, centered) {
+  const paras = [sectionHeading(section.title, accentHex, centered)];
   for (const item of shown(section)) {
     if (!item.language && !item.proficiency) continue;
     paras.push(new Paragraph({
@@ -144,57 +146,58 @@ export function buildLanguages(section, accentHex) {
         ...(item.proficiency ? [normal(`${item.language ? ' — ' : ''}${item.proficiency}`, { size: 20, color: GREY })] : []),
       ],
       spacing: { after: 40 },
+      ...centredIf(centered),
     }));
   }
   return paras;
 }
 
-export function buildCertifications(section, accentHex, settings) {
+export function buildCertifications(section, accentHex, settings, centered) {
   const s = section.settings || {};
-  const paras = [sectionHeading(section.title, accentHex)];
+  const paras = [sectionHeading(section.title, accentHex, centered)];
   for (const item of shown(section)) {
     paras.push(dateRightPara([
-      bold(item.name || item.title || '', { size: 20 }),
+      (item.name || item.title) && bold(item.name || item.title, { size: 20 }),
       ...(item.issuer ? [normal(` — ${item.issuer}`, { size: 20 })] : []),
       ...(item.credentialId ? [normal(` · ID: ${item.credentialId}`, { size: 20, color: GREY })] : []),
       ...(item.url ? [normal(' · ', { size: 20, color: GREY }), linked(item.urlLabel || item.url, item.url, { size: 20, color: accentHex })] : []),
-    ], s.showDates !== false ? dateRange(item.date, item.expiry, settings) : '', accentHex));
+    ], s.showDates !== false ? dateRange(item.date, item.expiry, settings) : '', accentHex, centered));
     paras.push(spacer(40));
   }
   return paras;
 }
 
-export function buildAwards(section, accentHex, settings) {
+export function buildAwards(section, accentHex, settings, centered) {
   const s = section.settings || {};
-  const paras = [sectionHeading(section.title, accentHex)];
+  const paras = [sectionHeading(section.title, accentHex, centered)];
   for (const item of shown(section)) {
     paras.push(dateRightPara([
-      bold(item.title || '', { size: 20 }),
+      item.title && bold(item.title, { size: 20 }),
       ...(item.issuer ? [normal(` — ${item.issuer}`, { size: 20 })] : []),
-    ], s.showDates !== false ? formatDate(item.date || '', settings) : '', accentHex));
-    paras.push(...body(item), spacer(40));
+    ], s.showDates !== false ? formatDate(item.date || '', settings) : '', accentHex, centered));
+    paras.push(...body(item, centered), spacer(40));
   }
   return paras;
 }
 
-export function buildVolunteering(section, accentHex, settings) {
+export function buildVolunteering(section, accentHex, settings, centered) {
   const s = section.settings || {};
-  const paras = [sectionHeading(section.title, accentHex)];
+  const paras = [sectionHeading(section.title, accentHex, centered)];
   for (const item of shown(section)) {
     const location = s.showLocation !== false ? item.location : '';
     paras.push(dateRightPara([
-      bold(item.role || item.org || '', { size: 20 }),
+      (item.role || item.org) && bold(item.role || item.org, { size: 20 }),
       ...(item.role && item.org ? [normal(` — ${item.org}`, { size: 20 })] : []),
       ...(location ? [normal(`, ${location}`, { size: 20, color: GREY })] : []),
-    ], s.showDates !== false ? dateRange(item.startDate, item.endDate, settings) : '', accentHex));
-    paras.push(...body(item), spacer());
+    ], s.showDates !== false ? dateRange(item.startDate, item.endDate, settings) : '', accentHex, centered));
+    paras.push(...body(item, centered), spacer());
   }
   return paras;
 }
 
-export function buildReferences(section, accentHex) {
-  const paras = [sectionHeading(section.title, accentHex)];
-  const line = (children, after = 20) => new Paragraph({ children, spacing: { after } });
+export function buildReferences(section, accentHex, settings, centered) {
+  const paras = [sectionHeading(section.title, accentHex, centered)];
+  const line = (children, after = 20) => new Paragraph({ children, spacing: { after }, ...centredIf(centered) });
   for (const item of shown(section)) {
     paras.push(line([bold(item.name, { size: 20 })]));
     const role = [item.jobTitle, item.company].filter(Boolean).join(', ');
@@ -210,43 +213,49 @@ export function buildReferences(section, accentHex) {
   return paras;
 }
 
-export function buildInterests(section, accentHex) {
+export function buildInterests(section, accentHex, settings, centered) {
   const allInterests = shown(section).map((i) => i.interests).filter(Boolean).join(', ');
   if (!allInterests) return [];
   return [
-    sectionHeading(section.title, accentHex),
-    new Paragraph({ children: [normal(allInterests, { size: 20 })], spacing: { after: 60 } }),
+    sectionHeading(section.title, accentHex, centered),
+    new Paragraph({ children: [normal(allInterests, { size: 20 })], spacing: { after: 60 }, ...centredIf(centered) }),
   ];
 }
 
-export function buildCustom(section, accentHex, settings) {
+export function buildCustom(section, accentHex, settings, centered) {
   const s = section.settings || {};
-  const paras = [sectionHeading(section.title, accentHex)];
+  const paras = [sectionHeading(section.title, accentHex, centered)];
   for (const item of shown(section)) {
     paras.push(dateRightPara([
       ...(item.title ? [bold(item.title, { size: 20 })] : []),
       ...(item.subtitle ? [normal(`${item.title ? ' — ' : ''}${item.subtitle}`, { size: 20 })] : []),
       ...(item.location ? [normal(`, ${item.location}`, { size: 20, color: GREY })] : []),
-    ], s.showDates !== false ? formatDate(item.date || '', settings) : '', accentHex));
-    paras.push(...body(item), spacer());
+    ], s.showDates !== false ? formatDate(item.date || '', settings) : '', accentHex, centered));
+    paras.push(...body(item, centered), spacer());
   }
   return paras;
 }
 
-/** A section's paragraphs; `settings` are the résumé's (its dates print in its Date format). */
-export function buildSection(section, accentHex, settings) {
+/**
+ * A section's paragraphs; `settings` are the résumé's (its dates print in its Date format).
+ * Section Options → Alignment "Center" centres it as the PDF does: everywhere but the Sidebar's
+ * side column (`template`), which prints one left-aligned column whatever the section stores.
+ */
+export function buildSection(section, accentHex, settings, template) {
   if (section.visible === false || !shown(section).length) return [];
+  const centered = section.settings?.alignment === 'center' && !inSidebarColumn(template, section.type);
+  const args = [section, accentHex, settings, centered];
   switch (section.type) {
-    case 'experience':     return buildExperience(section, accentHex, settings);
-    case 'education':      return buildEducation(section, accentHex, settings);
-    case 'skills':         return buildSkills(section, accentHex);
-    case 'projects':       return buildProjects(section, accentHex, settings);
-    case 'languages':      return buildLanguages(section, accentHex);
-    case 'certifications': return buildCertifications(section, accentHex, settings);
-    case 'awards':         return buildAwards(section, accentHex, settings);
-    case 'volunteering':   return buildVolunteering(section, accentHex, settings);
-    case 'references':     return buildReferences(section, accentHex);
-    case 'interests':      return buildInterests(section, accentHex);
-    default:               return buildCustom(section, accentHex, settings);
+    case 'experience':     return buildExperience(...args);
+    case 'education':      return buildEducation(...args);
+    case 'skills':         return buildSkills(...args);
+    case 'projects':       return buildProjects(...args);
+    case 'languages':      return buildLanguages(...args);
+    case 'certifications': return buildCertifications(...args);
+    case 'awards':         return buildAwards(...args);
+    case 'volunteering':   return buildVolunteering(...args);
+    case 'references':     return buildReferences(...args);
+    case 'interests':      return buildInterests(...args);
+    default:               return buildCustom(...args);
   }
 }

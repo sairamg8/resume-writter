@@ -1,0 +1,111 @@
+// Section Options → Alignment "Center" in the Word résumé: it centres what the PDF centres — the
+// section title, every entry with its date on a line of its own below the title line, the entry's
+// text and bullets — in every template, and nothing of the Sidebar's side column, which the PDF
+// prints as one left-aligned column whatever the section stores.
+import { before, after, describe, it } from 'node:test';
+import assert from 'node:assert/strict';
+import { setup, teardown, resume, section, render, renderDocx, read, itemsWith, TEMPLATES } from './harness.mjs';
+
+before(setup);
+after(teardown);
+
+/** One entry of every section type; `word` is the first word of its title line, `date` of its date. */
+const TYPES = {
+  experience: { word: 'ExpCo', date: '01/2020', items: [{ company: 'ExpCo', role: 'ExpRole', location: 'ExpCity', startDate: '01/2020', endDate: '12/2021', description: '<p>ExpText</p><ul><li>ExpBullet</li></ul>', bullets: ['ExpLegacy'] }] },
+  education: { word: 'EduUni', date: '2012', items: [{ institution: 'EduUni', degree: 'EduDeg', location: 'EduCity', startDate: '2012', endDate: '2016', description: '<p>EduText</p>' }] },
+  skills: { word: 'SkillCat', items: [{ category: 'SkillCat', skills: 'SkillList' }] },
+  projects: { word: 'ProjName', date: '2021', items: [{ name: 'ProjName', technologies: 'ProjTech', startDate: '2021', endDate: '2022', description: '<p>ProjText</p>' }] },
+  languages: { word: 'LangName', items: [{ language: 'LangName', proficiency: 'LangLevel' }] },
+  certifications: { word: 'CertName', date: '2020', items: [{ name: 'CertName', issuer: 'CertIssuer', date: '2020' }] },
+  awards: { word: 'AwardName', date: '2019', items: [{ title: 'AwardName', issuer: 'AwardIssuer', date: '2019', description: '<p>AwardText</p>' }] },
+  volunteering: { word: 'VolRole', date: '2018', items: [{ role: 'VolRole', org: 'VolOrg', location: 'VolCity', startDate: '2018', endDate: '2019', description: '<p>VolText</p>' }] },
+  references: { word: 'RefName', items: [{ name: 'RefName', jobTitle: 'RefJob', company: 'RefCo', relationship: 'RefRel', email: 'ref@example.com', phone: '+1 555 0100' }] },
+  interests: { word: 'IntOne', items: [{ interests: 'IntOne, IntTwo' }] },
+  custom: { word: 'CustTitle', date: '2017', items: [{ title: 'CustTitle', subtitle: 'CustSub', location: 'CustCity', date: '2017', description: '<p>CustText</p>' }] },
+};
+const heading = (type) => `HEAD${type.toUpperCase()}`;
+/** A résumé with a section of every type, each at `alignment`. */
+const everyType = (template, alignment) => resume({
+  template,
+  sections: Object.entries(TYPES).map(([type, { items }]) => section(type, items, { alignment }, { title: heading(type) })),
+});
+
+const jc = (xml) => /<w:jc w:val="(\w+)"\/>/.exec(xml)?.[1] || null;
+/** The Word paragraphs of each section, by type: those from its title to the next one's. */
+function byType(doc) {
+  const out = {};
+  let at = null;
+  for (const p of doc.paragraphs) {
+    const type = Object.keys(TYPES).find((t) => p.text === heading(t));
+    if (type) out[at = type] = [];
+    if (at) out[at].push(p);
+  }
+  return out;
+}
+
+describe('Word: Section Options → Alignment "Center" centres what the PDF centres', () => {
+  for (const template of TEMPLATES) {
+    it(`${template}: every paragraph of a centred section is centred, as its PDF is — none of the Sidebar's side column`, async () => {
+      const { SIDEBAR_COLUMN_TYPES } = await import('../../src/constants/templates.js');
+      const [left, centre] = await Promise.all(['left', 'center'].map(async (a) => read(await render(everyType(template, a)))));
+      const doc = byType(await renderDocx(everyType(template, 'center')));
+      for (const type of Object.keys(TYPES)) {
+        // The PDF centres a section when its title moves to the middle of the column.
+        const x = (pages) => itemsWith(pages, heading(type))[0].x;
+        const pdfCentred = x(centre) - x(left) > 20;
+        const side = template === 'sidebar' && SIDEBAR_COLUMN_TYPES.includes(type);
+        assert.equal(pdfCentred, !side, `${template} ${type}: the PDF ${side ? 'keeps the side column left' : 'centres it'}`);
+        assert.ok(doc[type]?.length > 1, `${template} ${type}: printed in Word`);
+        for (const p of doc[type]) assert.equal(jc(p.xml), pdfCentred ? 'center' : null, `${template} ${type}: ${JSON.stringify(p.text)}`);
+      }
+    });
+
+    it(`${template}: a centred entry prints its date centred on a line of its own below its title line, as the PDF does`, async () => {
+      const { SIDEBAR_COLUMN_TYPES } = await import('../../src/constants/templates.js');
+      const doc = byType(await renderDocx(everyType(template, 'center')));
+      for (const [type, { word, date }] of Object.entries(TYPES)) {
+        if (!date) continue;
+        const text = doc[type].find((p) => p.text.includes(word)).text;
+        if (template === 'sidebar' && SIDEBAR_COLUMN_TYPES.includes(type)) {
+          assert.ok(text.includes(`\t${date}`) && !text.includes('\n'), `${template} ${type}: the side column keeps the date at the right margin: ${JSON.stringify(text)}`);
+          continue;
+        }
+        const lines = text.split('\n');
+        assert.equal(lines.length, 2, `${template} ${type}: ${JSON.stringify(text)}`);
+        assert.ok(lines[0].includes(word) && lines[1].startsWith(date) && !text.includes('\t'), `${template} ${type}: no right-tab date: ${JSON.stringify(text)}`);
+      }
+    });
+  }
+
+  it('in a centred section, rich text blocks and legacy bullets are centred; a block aligned in the editor keeps its alignment', async () => {
+    const description = '<p>Plain</p><p style="text-align: right;">Righty</p><ul><li>Listed</li></ul><ol><li>Numbered</li></ol>';
+    const items = [{ company: 'Acme', role: 'Lead', startDate: '2020', description, bullets: ['Legacy'] }];
+    const aligned = async (alignment) => {
+      const doc = await renderDocx(resume({ sections: [section('experience', items, { alignment })] }));
+      return Object.fromEntries(['Plain', 'Righty', 'Listed', '1.\tNumbered', 'Legacy'].map((t) => [t, jc(doc.paragraphs.find((p) => p.text === t).xml)]));
+    };
+    assert.deepEqual(await aligned('center'), { Plain: 'center', Righty: 'right', Listed: 'center', '1.\tNumbered': 'center', Legacy: 'center' });
+    // Guard: left, only what the editor aligned is aligned (as before).
+    assert.deepEqual(await aligned('left'), { Plain: null, Righty: 'right', Listed: null, '1.\tNumbered': null, Legacy: null });
+  });
+
+  it('a centred entry with nothing but its dates prints the dates alone — no empty line above them', async () => {
+    for (const [type, item] of [['experience', { startDate: '01/2020', endDate: '12/2021' }], ['projects', { startDate: '2021' }], ['awards', { date: '2019' }]]) {
+      const doc = await renderDocx(resume({ sections: [section(type, [item], { alignment: 'center' }, { title: 'Dated' })] }));
+      const p = doc.paragraphs[doc.texts.indexOf('DATED') + 1];
+      assert.ok(/^\d/.test(p.text) && !/[\n\t]/.test(p.text), `${type}: ${JSON.stringify(p.text)}`);
+      assert.equal(jc(p.xml), 'center', type);
+    }
+  });
+
+  // Guard: unset, Left, or a value the app never writes (imported JSON) print left, as the PDF does.
+  it('unset, "left" or an unknown alignment centres nothing and keeps each date at the right margin (guard)', async () => {
+    for (const alignment of [undefined, 'left', 'right']) {
+      const doc = byType(await renderDocx(everyType('classic', alignment)));
+      for (const [type, { word, date }] of Object.entries(TYPES)) {
+        for (const p of doc[type]) assert.equal(jc(p.xml), null, `${alignment} ${type}: ${JSON.stringify(p.text)}`);
+        if (date) assert.ok(doc[type].find((p) => p.text.includes(word)).text.includes(`\t${date}`), `${alignment} ${type}`);
+      }
+    }
+  });
+});

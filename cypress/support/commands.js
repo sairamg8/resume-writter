@@ -78,7 +78,7 @@ Cypress.Commands.add('exportPdf', (label = 'Export PDF') =>
   cy.exportFile(label, '.pdf').then((file) =>
     cy.task('readPdf', file, { timeout: 60_000 }).then((pdf) => ({ ...pdf, file }))));
 
-/** Export Word and resolve with { paragraphs, bytes, file }. */
+/** Export Word and resolve with { paragraphs, aligns, bytes, file } (aligns[i]: paragraph i's alignment or null). */
 Cypress.Commands.add('exportDocx', () =>
   cy.exportFile('Export Word', '.docx').then((file) =>
     cy.task('readDocx', file).then((docx) => ({ ...docx, file }))));
