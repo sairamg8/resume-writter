@@ -150,12 +150,15 @@ describe('modern banner summary (FIDB-11)', () => {
   const SUMMARY = '<p>SumPlain <strong>SumBold</strong></p><ul><li>SumItem</li></ul>';
 
   it('prints at 85% of the header text colour, however the colour is written', async () => {
+    // A dark one on a light accent, where it reads: on the new résumé's dark banner it prints a
+    // readable tint (34-modern-banner-text, ONB-1).
     const cases = [
       ['#ffffff', '#ffffff'], ['#fff', '#ffffff'], ['#FFF', '#ffffff'], ['#FFFFFF', '#ffffff'], ['white', '#ffffff'],
-      ['rgb(255,255,255)', '#ffffff'], ['#1e293b', '#1e293b'], ['#F8FAFC', '#f8fafc'],
+      ['rgb(255,255,255)', '#ffffff'], ['#1e293b', '#1e293b', '#fde68a'], ['#F8FAFC', '#f8fafc'],
     ];
-    for (const [headerTextColor, fill] of cases) {
-      const bytes = await render(resume({ template: 'modern', personal: { summary: SUMMARY }, settings: { headerTextColor } }));
+    for (const [headerTextColor, fill, accentColor] of cases) {
+      const settings = accentColor ? { headerTextColor, accentColor } : { headerTextColor };
+      const bytes = await render(resume({ template: 'modern', personal: { summary: SUMMARY }, settings }));
       for (const word of ['SumPlain', 'SumBold', 'SumItem']) {
         const hits = await drawState(bytes, word);
         assert.equal(hits.length, 1, `${headerTextColor}: "${word}" drawn once`);
@@ -175,7 +178,9 @@ describe('modern banner summary (FIDB-11)', () => {
 describe('modern banner job title', () => {
   // react-pdf's opacity replaces a colour's own alpha; the title's 90 % must multiply it (R5-9).
   it('prints at 90 % of its colour\'s own alpha, on the résumé and on its letter', async () => {
-    const cases = [[{}, 0.9], [{ jobTitleColor: 'rgba(255,255,255,0.5)' }, 0.45], [{ headerTextColor: 'rgba(0,0,0,0)' }, 0]];
+    // A header text colour at 60 % (a fully transparent one does not read on the banner, and prints
+    // a readable tint: 34-modern-banner-text, ONB-1).
+    const cases = [[{}, 0.9], [{ jobTitleColor: 'rgba(255,255,255,0.5)' }, 0.45], [{ headerTextColor: 'rgba(255,255,255,0.6)' }, 0.54]];
     for (const [settings, alpha] of cases) {
       const r = resume({ template: 'modern', personal: { title: 'Staff Engineer' }, settings });
       for (const [what, bytes] of [['résumé', await render(r)], ['letter', await renderCover(r)]]) {

@@ -83,7 +83,7 @@ export function ColorsSection({ resume, settings, updateSetting, onReset }) {
         <div className="pt-1 border-t border-gray-100">
           <Label>Header Text Color</Label>
           <p className="text-[10px] text-gray-400 mb-2">
-            {resume.template === 'sidebar' ? 'Color for name text in the sidebar header. One too faint on the Sidebar Background prints a readable tint of it.' : 'Color for name & text in the colored header banner.'}
+            {resume.template === 'sidebar' ? 'Color for name text in the sidebar header. One too faint on the Sidebar Background prints a readable tint of it.' : 'Color for name & text in the colored header banner. One too faint on the Accent Color prints a readable tint of it.'}
           </p>
           <div className="flex items-center gap-2">
             <label htmlFor={uid + 'headerTextColor'} className="text-xs text-gray-500">Color:</label>

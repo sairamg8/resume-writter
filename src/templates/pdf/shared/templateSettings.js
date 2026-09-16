@@ -7,6 +7,16 @@ import { contrast, readableOn } from './pdfColors';
 import { CSS_PX_TO_PT, DEFAULT_ITEM_GAP_PX, DEFAULT_SECTION_GAP_PX } from './pdfUnits';
 
 /**
+ * Design → Header Text Color (white when unset) on `ground`, the colour its template prints it on:
+ * as picked where it reaches `min`:1 there, else the least-shifted tint of it that reaches 4.5:1
+ * (readableOn). Idempotent: resolved settings resolved again print the same.
+ */
+function headerTextOn(s, ground, min) {
+  const color = s.headerTextColor || '#ffffff';
+  return contrast(color, ground) >= min ? color : readableOn(color, ground);
+}
+
+/**
  * Per-template fallbacks used only when the user has NOT set a value. Not part of TEMPLATES in
  * src/constants/templates.js: colours computed from other settings belong to the PDF, and an
  * unset Classic heading prints 'line', not the 'ruled' that picking Classic stores (R3-6).
@@ -23,10 +33,17 @@ export const DEFAULTS = {
   modern: {
     accentColor: '#2563eb',
     textColor: '#1f2937',
-    // The name sits on the accent banner with the title and contacts: the header text colour, as
-    // they print it. Not Sidebar's rule — Modern draws no Sidebar Background (R7-0).
-    nameColor: (s) => s.nameColor || s.headerTextColor || '#ffffff',
-    jobTitleColor: (s) => s.jobTitleColor || s.headerTextColor || '#ffffff',
+    // Everything on the accent banner — the name, title, contacts and their icons, the summary, and
+    // the letter's band — prints the header text colour where it reads on the accent, else one
+    // readable tint of it: a dark one on a dark accent, or the default white on a light accent,
+    // printed invisible (ONB-1). Measured on the accent, never on the Sidebar Background, which
+    // Modern does not draw (R7-0). The banner's text is one colour, so the name's size does not
+    // decide it: 3:1, where a header's name and title read (HEADER_READS) — the Orange and Teal
+    // presets' white (3.6:1, 3.7:1) prints white at any name size. A picked Name or Job title
+    // colour wins, as on the Sidebar.
+    headerTextColor: (s) => headerTextOn(s, s.accentColor, 3),
+    nameColor: (s) => s.nameColor || s.headerTextColor,
+    jobTitleColor: (s) => s.jobTitleColor || s.headerTextColor,
     headingStyle: 'line',
     sectionTitleCase: 'upper',
   },
@@ -50,17 +67,12 @@ export const DEFAULTS = {
     accentColor: '#2563eb',
     textColor: '#1e2937',
     // The header text colour (white by default) where it reads on the Sidebar Background; on a
-    // light background, the least-darkened tint of it that does. A picked name colour wins (R2-2).
-    // The bold name is WCAG large text from 14 pt (19 by default), where 3:1 reads: a Header
-    // Text Color that reaches that prints as picked, as it did before R2-2; one that does not
-    // gets the tint that reaches 4.5:1, as since R2-2 (R7-13).
-    nameColor: (s) => {
-      if (s.nameColor) return s.nameColor;
-      const color = s.headerTextColor || '#ffffff';
-      const bg = s.sidebarBg || DEFAULTS.sidebar.sidebarBg;
-      const large = (s.fontSizeBase ?? 11) + (s.fontSizeNameDelta ?? 8) >= 14;
-      return contrast(color, bg) >= (large ? 3 : 4.5) ? color : readableOn(color, bg);
-    },
+    // light background, the least-darkened tint of it that does (headerTextOn). A picked name
+    // colour wins (R2-2). The bold name is WCAG large text from 14 pt (19 by default), where 3:1
+    // reads: a Header Text Color that reaches that prints as picked, as it did before R2-2; one
+    // that does not gets the tint that reaches 4.5:1, as since R2-2 (R7-13).
+    nameColor: (s) => s.nameColor || headerTextOn(s, s.sidebarBg || DEFAULTS.sidebar.sidebarBg,
+      (s.fontSizeBase ?? 11) + (s.fontSizeNameDelta ?? 8) >= 14 ? 3 : 4.5),
     // The accent on the dark sidebar only where it reads there; a dark accent (the default
     // #374151, or #111111) gets a light tint of itself instead (FIDB-42).
     jobTitleColor: (s) => s.jobTitleColor
@@ -86,6 +98,8 @@ export function resolveTemplateSettings(settings = {}, templateKey) {
   s.headingStyle = settings.headingStyle || tConfig.headingStyle;
   s.sectionTitleCase = settings.sectionTitleCase || tConfig.sectionTitleCase;
   s.headerTextColor = settings.headerTextColor || '#ffffff';
+  // Modern's banner text: the header text colour as it reads on the accent (DEFAULTS.modern).
+  if (typeof tConfig.headerTextColor === 'function') s.headerTextColor = tConfig.headerTextColor(s);
 
   s.nameColor = settings.nameColor
     || (typeof tConfig.nameColor === 'function' ? tConfig.nameColor(s) : tConfig.nameColor);

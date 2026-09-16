@@ -107,8 +107,7 @@ describe('Design → a template: Name & Title Colors picked for the old header (
       ['sidebar', 'modern', SIDEBAR_SEED],
       // A light name picked for Modern's banner reads on the Sidebar column.
       ['modern', 'sidebar', { nameColor: '#fde68a', jobTitleColor: '#ffffff' }],
-      // On a light accent Modern's own (the header text colour, white) reads no better than the pick.
-      ['sidebar', 'modern', { nameColor: '#ffffff', jobTitleColor: '#ffffff', accentColor: '#fde047' }],
+      // (White on a light accent went: Modern's own is a readable tint there since ONB-1, 34-modern-banner-text.)
     ];
     for (const [from, to, settings] of keep) {
       const r = await switched(resume({ template: from, settings }), to);

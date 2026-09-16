@@ -74,8 +74,7 @@ describe('Name & Title Colors a template switch left unreadable, as older builds
       ['executive', { nameColor: '#10b981', jobTitleColor: '#94a3b8' }],
       ['sidebar', { nameColor: '#ffffff', jobTitleColor: '#475569', sidebarBg: '#0f172a' }], // 2.4:1 on that column
       ['modern', { nameColor: '#ffffff', jobTitleColor: '#fde68a' }],
-      // Modern's own name (the header text colour, white) reads no better on a light accent.
-      ['modern', { nameColor: '#ffffff', jobTitleColor: '', accentColor: '#fde047' }],
+      // (White on a light accent goes: Modern's own is a readable tint there since ONB-1, 34-modern-banner-text.)
     ];
     for (const [template, settings] of keep) {
       const r = normalizeResume(saved(resume({ template, settings }), 10));
