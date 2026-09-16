@@ -1,21 +1,14 @@
-import { Paragraph, TextRun } from 'docx';
+import { Paragraph } from 'docx';
 import {
-  accent2Hex, bold, normal, linked, separator, sectionHeading, bulletPoint, descriptionToParagraphs, dateRightPara, centredIf,
-  contactSeparator, inlineGap,
+  bold, normal, linked, sectionHeading, bulletPoint, descriptionToParagraphs, dateRightPara, centredIf, spacer,
 } from '@/utils/wordExportUtils';
-import { contactItems } from '@/utils/contacts';
-import { hasHeaderControls, inSidebarColumn, templateId, upperSectionTitles } from '@/constants/templates';
-import { textShades } from '@/templates/pdf/shared/pdfColors';
-import { inlineLayout } from '@/templates/pdf/shared/letterhead';
+import { inSidebarColumn, templateId, upperSectionTitles } from '@/constants/templates';
 import { resolveTemplateSettings } from '@/templates/pdf/shared/templateSettings';
 import { hasRichText } from '@/utils/richText';
 import { dateRange, formatDate, presentLabel } from '@/utils/dates';
 import { skillGroup, skillSeparator } from '@/utils/skills';
 
 const GREY = '6b7280';
-/** The job title's size, half-points. */
-const TITLE_SIZE = 24;
-const spacer = (after = 60) => new Paragraph({ children: [], spacing: { after } });
 
 /** Items the user has not hidden (the eye toggle on an entry). */
 const shown = (section) => (section.items || []).filter((item) => item && item.visible !== false);
@@ -29,63 +22,6 @@ function body(item, centered) {
   if (hasRichText(description)) paras.push(...descriptionToParagraphs(description, undefined, centered ? 'center' : null));
   for (const b of item.bullets || []) if (b) paras.push(bulletPoint(b, centered));
   return paras;
-}
-
-/**
- * Name, title, contact line and summary. The contact line is the PDF's (PdfContactRow): its values
- * in the Text colour's grey — the template's own Text colour when none is stored — and the marks
- * of Design → Contact Style where the header takes it (`template`: Classic, Minimal, Executive).
- * Modern's banner and the Sidebar column draw icons, and Word prints icons as bars.
- * Header alignment "Center" centres all four where the PDF does — in those same three templates;
- * a summary block aligned in the editor keeps its own alignment, as in the PDF (ONB-3). Name &
- * Title Layout "Inline" prints the title on the name's line, at the PDF's gap, in those three too.
- */
-export function buildPersonalSection(personal = {}, settings = {}, template = 'classic') {
-  const hidden = new Set(personal.hiddenFields || []);
-  const accentHex = settings?.accentColor?.replace('#', '') || '2563eb';
-  const centered = hasHeaderControls(template) && settings?.headerAlign === 'center';
-  const s = resolveTemplateSettings(settings, templateId(template));
-  const paragraphs = [];
-
-  const name = new TextRun({ text: personal.name || 'Your Name', bold: true, size: 40, color: '0f172a' });
-  const title = personal.title ? new TextRun({ text: personal.title, size: TITLE_SIZE, color: accentHex }) : null;
-  // Name & Title Layout "Inline" (ONB-3-NB1): one line, as the PDF's nameBlock and the letter's letterhead print it.
-  const inline = title && inlineLayout(templateId(template), s);
-  paragraphs.push(new Paragraph({
-    children: inline ? [name, inlineGap(inline.gap, TITLE_SIZE), title] : [name],
-    spacing: { after: inline ? 60 : 40 },
-    ...centredIf(centered),
-  }));
-
-  if (title && !inline) {
-    paragraphs.push(new Paragraph({
-      children: [title],
-      spacing: { after: 60 },
-      ...centredIf(centered),
-    }));
-  }
-
-  const contacts = contactItems(personal);
-  if (contacts.length) {
-    const style = { size: 18, color: accent2Hex(textShades(s.textColor).sub, '64748b') };
-    const contactStyle = hasHeaderControls(template) ? s.contactStyle : 'icon';
-    paragraphs.push(new Paragraph({
-      children: contacts.flatMap((c, i) => [
-        ...(i ? [contactSeparator(contactStyle, style)] : []),
-        linked(c.value, c.href, style),
-      ]),
-      spacing: { after: 80 },
-      ...centredIf(centered),
-    }));
-  }
-
-  if (!hidden.has('summary') && hasRichText(personal.summary)) {
-    paragraphs.push(separator());
-    paragraphs.push(...descriptionToParagraphs(personal.summary, { size: 20, color: '374151', italics: true }, centered ? 'center' : null));
-    paragraphs.push(spacer(80));
-  }
-
-  return paragraphs;
 }
 
 export function buildExperience(section, accentHex, settings, centered) {

@@ -63,3 +63,23 @@ export function withHeaderColorsBack(settings, template, { below, from } = {}) {
  */
 export const headerColorsOnSwitch = (settings, from, to) =>
   withHeaderColorsBack(settings, to, { below: HEADER_READS, from: templateId(from) });
+
+/**
+ * The Name and Job title colours `template`'s header prints in on the white page, from a résumé's
+ * stored `settings`: the Word résumé's, which draws no band. Classic's, Minimal's and Executive's
+ * header is the page: the colours their PDF prints, picked or the template's own. Modern's banner
+ * and the Sidebar's column are bands: their header prints on the page as a switch to Classic
+ * prints it (headerColorsOnSwitch) — a picked colour where it reads there, or reads no worse than
+ * on the band; else the page's own, Classic's, from the template's Text colour and accent (its
+ * own where none is stored): the Text colour for the name, the accent for the title. The band's
+ * own colours (Header Text Color, the Sidebar's readable accent) are the band's, as its contact
+ * colours are. CSS colours, as stored: a caller converts them.
+ */
+export function headerColorsOnPage(settings, template) {
+  const t = templateId(template);
+  const s = resolveTemplateSettings(settings || {}, t);
+  if (!letterheadLook(t, s).band) return { nameColor: s.nameColor, jobTitleColor: s.jobTitleColor };
+  const onPage = headerColorsOnSwitch({ ...settings, textColor: s.textColor, accentColor: s.accentColor }, t, 'classic');
+  const page = resolveTemplateSettings(onPage, 'classic');
+  return { nameColor: page.nameColor, jobTitleColor: page.jobTitleColor };
+}

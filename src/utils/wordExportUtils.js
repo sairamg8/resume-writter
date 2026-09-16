@@ -47,6 +47,9 @@ export function inlineGap(gap, size) {
   return normal(' ', { size, characterSpacing: Math.round((gap - SPACE_EM * (size / 2)) * 20) });
 }
 
+/** An empty paragraph: `after` twips of space. */
+export const spacer = (after = 60) => new Paragraph({ children: [], spacing: { after } });
+
 export function separator() {
   return new Paragraph({
     border: { bottom: { style: BorderStyle.SINGLE, size: 4, color: '94a3b8', space: 4 } },

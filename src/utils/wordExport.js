@@ -1,6 +1,7 @@
 import { Document, Packer, convertInchesToTwip } from 'docx';
 import { accent2Hex } from '@/utils/wordExportUtils';
-import { buildPersonalSection, buildSection } from '@/utils/wordExportBuilders';
+import { buildSection } from '@/utils/wordExportBuilders';
+import { buildPersonalSection } from '@/utils/wordExportHeader';
 import { buildCoverLetter } from '@/utils/wordExportCoverLetter';
 import { resolveSection } from '@/templates/pdf/shared/templateSectionDefaults';
 import { downloadBlob } from '@/utils/download';
