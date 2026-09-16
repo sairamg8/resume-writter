@@ -33,7 +33,6 @@ Under `src/components/job/`:
 | `Pipeline` | Visual pipeline |
 | `StatusBadge` / `StatusHistory` | Status UI + audit trail |
 | `InterviewStageSelector` | Stage controls |
-| `CareerTimeline` | Career duration visuals |
 | `Field` | Form field helper |
 
 Also: `JobModal.jsx` at components root for modal flows.
