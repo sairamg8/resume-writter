@@ -163,12 +163,20 @@ export function letterheadLook(template, s = {}) {
     ruleGap: headerBorderOn(s, look) ? s.headerGaps?.headerRuleGap ?? LETTERHEAD_PAD : LETTERHEAD_PAD,
     photo: [accent, {}],
   };
-  // The résumé header's rule, as getHeaderBorderStyle (PdfPage.jsx) draws it: on where the résumé
-  // stores it on, or stores nothing and its template draws one (headerBorderOn), at its Thickness,
-  // in the accent. It replaces Minimal's hairline and Executive's double rule — one rule under a
-  // header, as on the résumé; Modern's banner and the Sidebar panel take none. A Thickness the
-  // résumé draws no rule at (an import's -3 or "abc") is none here either — and no width Word rejects.
+  // The résumé header's rule (headerRule) replaces Minimal's hairline and Executive's double rule —
+  // one rule under a header, as on the résumé; Modern's banner and the Sidebar panel take none.
+  const drawn = headerRule(s, look);
+  return (LOOKS[look] || LOOKS.classic)(base, { s, accent, rule: drawn ? [drawn] : null });
+}
+
+/**
+ * The résumé header's bottom rule as getHeaderBorderStyle (PdfPage.jsx) draws it, `{ width, color }`
+ * in pt, or null: on where the résumé (resolved `s`) stores it on, or stores nothing and `template`
+ * draws one (headerBorderOn), at its Thickness, in the accent. A Thickness it draws no rule at (an
+ * import's -3 or "abc") is none — and no width Word rejects. The letterhead and the Word résumé
+ * (FIDB-51-VF3-NB2) draw it from here; only Classic, Minimal and Executive draw it on the résumé.
+ */
+export function headerRule(s, template) {
   const width = Number(s.headerBorderWidth || 2);
-  const rule = headerBorderOn(s, look) && Number.isFinite(width) && width > 0 ? [{ width, color: solid(accent) }] : null;
-  return (LOOKS[look] || LOOKS.classic)(base, { s, accent, rule });
+  return headerBorderOn(s, template) && Number.isFinite(width) && width > 0 ? { width, color: solid(s.accentColor || '#2563eb') } : null;
 }

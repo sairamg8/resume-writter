@@ -11,7 +11,7 @@
 // as the PDF does, and prints the name and title in Word's own weights (Minimal's light name and
 // an Inline title's medium are regular).
 import { Paragraph, BorderStyle, ShadingType, AlignmentType } from 'docx';
-import { accent2Hex, bold, normal, linked, contactSeparator, descriptionToParagraphs, inlineGap } from '@/utils/wordExportUtils';
+import { accent2Hex, bold, normal, linked, contactSeparator, descriptionToParagraphs, eighths, inlineGap } from '@/utils/wordExportUtils';
 import { contactItems } from '@/utils/contacts';
 import { hasRichText } from '@/utils/richText';
 import { letterBlock, letterContactFormat, letterHiddenFields, letterSignature } from '@/utils/coverLetter';
@@ -20,7 +20,6 @@ import { letterGrey, letterheadLook, LETTERHEAD_GAP } from '@/templates/pdf/shar
 import { resolveTemplateSettings } from '@/templates/pdf/shared/templateSettings';
 import { templateId } from '@/constants/templates';
 const pt = (n) => Math.round(n * 20); // points → twips (paragraph spacing, indents)
-const eighths = (n) => Math.min(96, Math.max(2, Math.round(n * 8))); // points → Word's border widths (¼–12 pt)
 
 const line = (children, after = 0, extra = {}) => new Paragraph({ children, spacing: { after }, ...extra });
 

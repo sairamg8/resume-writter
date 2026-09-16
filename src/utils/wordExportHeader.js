@@ -1,16 +1,17 @@
 // The Word résumé's header: name, job title, contact line and summary (buildPersonalSection), in the
 // colours, alignment and layout the PDF's header prints them in.
-import { Paragraph, TabStopType, TextRun } from 'docx';
+import { BorderStyle, LineRuleType, Paragraph, TabStopType, TextRun } from 'docx';
 import {
-  accent2Hex, linked, normal, separator, descriptionToParagraphs, centredIf, contactSeparator, inlineGap, spacer, WORD_MARGIN_IN,
+  accent2Hex, linked, normal, descriptionToParagraphs, centredIf, contactSeparator, eighths, inlineGap, spacer, WORD_MARGIN_IN,
 } from '@/utils/wordExportUtils';
 import { CONTACT_GRID, contactItems } from '@/utils/contacts';
-import { hasHeaderControls, templateId } from '@/constants/templates';
+import { hasHeaderControls, headerBorderOn, templateId } from '@/constants/templates';
 import { PAGE_SIZES, pageSizeOf } from '@/constants/pageSize';
 import { PAGE_MARKS, solid, textShades } from '@/templates/pdf/shared/pdfColors';
 import { pxToPt } from '@/templates/pdf/shared/pdfUnits';
 import { headerColorsOnPage } from '@/templates/pdf/shared/headerColors';
-import { inlineLayout } from '@/templates/pdf/shared/letterhead';
+import { headerRule, inlineLayout } from '@/templates/pdf/shared/letterhead';
+import { HEADER_BORDER_PAD_PT } from '@/templates/pdf/shared/pdfUnits';
 import { resolveTemplateSettings } from '@/templates/pdf/shared/templateSettings';
 import { hasRichText } from '@/utils/richText';
 
@@ -75,7 +76,7 @@ function contactParagraphs(items, s, styled, style, centered) {
 }
 
 /**
- * Name, title, contacts and summary. The contacts are the PDF's (PdfContactRow): its values
+ * Name, title, contacts and summary, closed by the header's rule (headerEnd). The contacts are the PDF's (PdfContactRow): its values
  * in the Text colour's grey — the template's own Text colour when none is stored — and the marks
  * of Design → Contact Style where the header takes it (`template`: Classic, Minimal, Executive).
  * Modern's banner and the Sidebar column draw icons, and Word prints icons as bars.
@@ -115,11 +116,31 @@ export function buildPersonalSection(personal = {}, settings = {}, template = 'c
   }
 
   if (!hidden.has('summary') && hasRichText(personal.summary)) {
-    paragraphs.push(separator());
     paragraphs.push(...descriptionToParagraphs(personal.summary, { size: 20, color: '374151', italics: true }, centered ? 'center' : null));
-    paragraphs.push(spacer(80));
   }
 
+  paragraphs.push(headerEnd(s, template));
   return paragraphs;
+}
+
+/**
+ * What closes the header: Header Customization → Header Bottom Border, as the PDF draws it under
+ * the whole header — name, title, contacts and summary — in Classic, Minimal and Executive
+ * (FIDB-51-VF3-NB2): a rule in the accent at its Thickness, the header's Text ↔ Border gap under
+ * the text (headerRule; a Thickness no rule is drawn at keeps the gap). Else — the border off,
+ * Modern's banner, the Sidebar's column — a little space, and no line: no PDF draws one there.
+ */
+function headerEnd(s, template) {
+  const on = hasHeaderControls(template) && headerBorderOn(s, template);
+  if (!on) return spacer(80);
+  const gap = twips(s.headerGaps?.headerRuleGap ?? HEADER_BORDER_PAD_PT);
+  const rule = headerRule(s, template);
+  if (!rule) return spacer(gap + 80);
+  return new Paragraph({
+    children: [],
+    border: { bottom: { style: BorderStyle.SINGLE, size: eighths(rule.width), color: accent2Hex(rule.color), space: 0 } },
+    // A 1 pt line: the rule sits the gap under the text above it, not a whole empty line under it.
+    spacing: { before: gap, after: 80, line: 20, lineRule: LineRuleType.EXACT },
+  });
 }
 

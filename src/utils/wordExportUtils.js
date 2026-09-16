@@ -53,12 +53,8 @@ export function inlineGap(gap, size) {
 /** An empty paragraph: `after` twips of space. */
 export const spacer = (after = 60) => new Paragraph({ children: [], spacing: { after } });
 
-export function separator() {
-  return new Paragraph({
-    border: { bottom: { style: BorderStyle.SINGLE, size: 4, color: '94a3b8', space: 4 } },
-    spacing: { after: 60 },
-  });
-}
+/** Points as Word's border widths: eighths of a point, ¼–12 pt. */
+export const eighths = (n) => Math.min(96, Math.max(2, Math.round(n * 8)));
 
 /** A paragraph's options that centre it when `centered` (Section Options → Alignment "Center"). */
 export const centredIf = (centered) => (centered ? { alignment: AlignmentType.CENTER } : {});
