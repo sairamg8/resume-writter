@@ -3,6 +3,7 @@
 import { BorderStyle, LineRuleType, Paragraph, TextRun } from 'docx';
 import { accent2Hex, descriptionToParagraphs, centredIf, eighths, inlineGap, spacer } from '@/utils/wordExportUtils';
 import { contactRows } from '@/utils/wordExportContacts';
+import { buildSectionTitle } from '@/utils/wordExportBuilders';
 import { contactItems } from '@/utils/contacts';
 import { hasHeaderControls, headerBorderOn, templateId } from '@/constants/templates';
 import { solid, textShades } from '@/templates/pdf/shared/pdfColors';
@@ -80,6 +81,8 @@ export function buildPersonalSection(personal = {}, settings = {}, template = 'c
   }
 
   if (!hidden.has('summary') && hasRichText(personal.summary)) {
+    // The Sidebar prints its summary under an "About Me" section title at the top of its main column (FIDB-51-VF3-NB2-NB1-NB1).
+    if (templateId(template) === 'sidebar') paragraphs.push(buildSectionTitle('About Me', settings, template));
     const { run, frame } = summaryLook(s, template);
     paragraphs.push(...descriptionToParagraphs(personal.summary, { size: 20, ...run }, centered ? 'center' : null, frame));
   }

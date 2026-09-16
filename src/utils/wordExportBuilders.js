@@ -36,6 +36,16 @@ function headingOf(s, template) {
   return { color };
 }
 
+/**
+ * A section title as the PDF prints it in the main column: Design → Title case and Section Headings
+ * (headingOf). The Sidebar's "About Me" over its summary reads it too (FIDB-51-VF3-NB2-NB1-NB1).
+ */
+export function buildSectionTitle(title, settings, template) {
+  const s = resolveTemplateSettings(settings, templateId(template));
+  const text = String(title || '');
+  return sectionHeading(upperSectionTitles(s.sectionTitleCase) ? text.toUpperCase() : text, accent2Hex(settings?.accentColor), false, headingOf(s, template));
+}
+
 /** Items the user has not hidden (the eye toggle on an entry). */
 const shown = (section) => (section.items || []).filter((item) => item && item.visible !== false);
 /** A field of an entry, or '' when its eye toggle hides it. */
