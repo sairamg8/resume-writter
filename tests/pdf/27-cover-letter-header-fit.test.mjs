@@ -161,6 +161,8 @@ describe('2 Grid beside the name (VM3-1)', () => {
 describe('a photo the PDF cannot draw takes no room (VM3-7)', () => {
   // A WebP saved before uploads were converted prints no picture (PdfPhoto), but the name side
   // still lost the photo's 48 pt: the title wrapped earlier than on a letter with no photo.
+  // Nothing here decodes a WebP, so none is converted (R7-7): this is the guard for a photo no
+  // copy can be made of, which still prints nothing.
   it('a letter with an old WebP photo prints exactly as one with no photo', async () => {
     for (const title of [T72, 'Senior Software Engineer']) {
       const page = async (photo) => drawing(await renderCover(resume({

@@ -105,7 +105,9 @@ describe('cloud sync merge (R1-0)', () => {
   });
 });
 
-describe('a photo saved in a format the PDF cannot draw (R1-1)', () => {
+// Nothing here decodes a WebP, so no copy can be made of one (16-saved-data-photos: the browser
+// makes one, and then it prints — R7-7). These are the guards for a photo no copy can be made of.
+describe('a photo no copy can be made of, saved in a format the PDF cannot draw (R1-1)', () => {
   const WEBP_BYTES = 'UklGRiIAAABXRUJQVlA4IBYAAAAwAQCdASoBAAEADsD+JaQAA3AAAAAA';
   /** A 2×2 grey JPEG. */
   const JPEG_BYTES = '/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgMCAgMDAwMEAwMEBQgFBQQEBQoHBwYIDAoMDAsKCwsNDhIQDQ4RDgsLEBYQERMUFRUVDA8XGBYUGBIUFRT/wAALCAACAAIBAREA/8QAFAABAAAAAAAAAAAAAAAAAAAAB//EABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEAAD8AGn//2Q==';

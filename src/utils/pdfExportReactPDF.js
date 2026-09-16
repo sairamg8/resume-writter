@@ -4,6 +4,7 @@ import { resolvePdfFonts, collectText } from '@/templates/pdf/shared/pdfFontLoad
 import { resolveTemplateSettings } from '@/templates/pdf/shared/PdfPage';
 import { resolveSection } from '@/templates/pdf/shared/templateSectionDefaults';
 import { downloadBlob } from '@/utils/download';
+import { withPrintablePhotos } from '@/utils/printableImage';
 import { templateId } from '@/constants/templates';
 
 /** Each template's PDF component, code-split. Pinned to TEMPLATE_IDS (15-design-defaults, VM3-5). */
@@ -49,17 +50,23 @@ export async function warmPdfExport(resume) {
     loadTemplate(key).catch(() => null),
     // Cover letter is small; warm in background when user may need it
     import('@/templates/pdf/CoverLetterTemplatePDF').catch(() => null),
+    // The copy the PDF prints for a photo saved as a WebP or GIF (R7-7): made once a session.
+    withPrintablePhotos(resume).catch(() => null),
   ]);
 }
 
-/** Render the résumé exactly as it is exported. Used by the live preview and by Export PDF. */
+/**
+ * Render the résumé exactly as it is exported. Used by the live preview and by Export PDF. A photo
+ * saved as WebP or GIF, before uploads were converted, prints as a converted copy (R7-7).
+ */
 export async function renderResumePdf(resume) {
   const key = templateId(resume?.template);
-  const [{ fontFamily }, TemplatePDF] = await Promise.all([
+  const [{ fontFamily }, TemplatePDF, printable] = await Promise.all([
     resolvePdfFonts(resume?.settings, collectText(resume)),
     loadTemplate(key),
+    withPrintablePhotos(resume),
   ]);
-  const data = prepareResumeData(resume, fontFamily, key);
+  const data = prepareResumeData(printable, fontFamily, key);
   const instance = pdf(React.createElement(TemplatePDF, { data }));
   const blob = await instance.toBlob();
   // Free internal resources when the API supports it
@@ -69,13 +76,15 @@ export async function renderResumePdf(resume) {
 
 /**
  * Render the cover letter exactly as it is exported. `preview: true` adds the grey writing
- * hint an empty letter shows in the editor; exports never carry it.
+ * hint an empty letter shows in the editor; exports never carry it. Its photos print as the
+ * résumé's do (renderResumePdf).
  */
 export async function renderCoverLetterPdf(resume, { preview = false } = {}) {
   const templateKey = templateId(resume?.template);
-  const [{ fontFamily }, mod] = await Promise.all([
+  const [{ fontFamily }, mod, printable] = await Promise.all([
     resolvePdfFonts(resume?.settings, collectText({ personal: resume?.personal, coverLetter: resume?.coverLetter })),
     import('@/templates/pdf/CoverLetterTemplatePDF'),
+    withPrintablePhotos(resume),
   ]);
   const resolvedSettings = resolveTemplateSettings({
     ...resume?.settings,
@@ -83,7 +92,7 @@ export async function renderCoverLetterPdf(resume, { preview = false } = {}) {
     _template: templateKey,
   }, templateKey);
 
-  const data = { ...resume, settings: resolvedSettings, _preview: preview };
+  const data = { ...printable, settings: resolvedSettings, _preview: preview };
   const instance = pdf(React.createElement(mod.CoverLetterTemplatePDF, { data }));
   const blob = await instance.toBlob();
   try { instance.reset?.(); } catch { /* no-op */ }

@@ -72,7 +72,8 @@ Cypress.Commands.add('exportFile', (label, ext) => {
 
 /**
  * Export a PDF and resolve with it parsed (cypress.config.js readPdf): { numPages, width, height,
- * info, runs, strokes, bytes, file } — strokes are the distinct stroke colours page 1 draws with.
+ * info, runs, strokes, images, bytes, file } — strokes are the distinct stroke colours page 1
+ * draws with, images the count of pictures it draws.
  */
 Cypress.Commands.add('exportPdf', (label = 'Export PDF') =>
   cy.exportFile(label, '.pdf').then((file) =>

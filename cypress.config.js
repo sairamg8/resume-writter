@@ -79,8 +79,9 @@ export default defineConfig({
           return null;
         },
         /**
-         * Page count, text runs ({ page, str, x, y, fontSize, colorHex }), document info, and the
-         * stroke colours page 1 draws with (a header rule is one — R3-8).
+         * Page count, text runs ({ page, str, x, y, fontSize, colorHex }), document info, the
+         * stroke colours page 1 draws with (a header rule is one — R3-8) and `images`, the count
+         * of pictures it draws (a photo is one; the icon packs are vectors — R7-7).
          */
         async readPdf(file) {
           const buffer = fs.readFileSync(file);
@@ -90,8 +91,9 @@ export default defineConfig({
           const [, , width, height] = page1.view;
           const ops = await page1.getOperatorList();
           const strokes = [...new Set(ops.fnArray.flatMap((fn, k) => (fn === pdfjsLib.OPS.setStrokeRGBColor ? [ops.argsArray[k][0]] : [])))];
+          const images = ops.fnArray.filter((fn) => fn === pdfjsLib.OPS.paintImageXObject).length;
           const runs = await extractPdfTextRuns(buffer);
-          return { numPages: doc.numPages, width, height, info, runs, strokes, bytes: buffer.length };
+          return { numPages: doc.numPages, width, height, info, runs, strokes, images, bytes: buffer.length };
         },
         /** Paragraph texts of a .docx (word/document.xml), each one's alignment ('center', … or null), plus the file size. */
         readDocx(file) {

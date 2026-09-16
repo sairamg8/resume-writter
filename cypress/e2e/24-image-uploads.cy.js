@@ -42,6 +42,46 @@ describe('an upload is stored as what its bytes are, whatever its name says (R7-
   });
 });
 
+// ── Photos saved before uploads were converted (R7-7) ──────────────────────────────────────────
+
+/** Bytes no browser decodes, under a WebP label: a saved photo no copy can be made of. */
+const BROKEN = `data:image/webp;base64,${Cypress.Buffer.from('not an image at all').toString('base64')}`;
+/** A saved résumé holding `photo` under Personal info and `clPhoto` on its letter. */
+const saved = (photo, clPhoto) => {
+  const state = buildTestState('classic');
+  const r = active(state);
+  r.personal = { ...r.personal, photo };
+  r.coverLetter = { ...r.coverLetter, clPhoto };
+  return state;
+};
+
+describe('a photo saved as a WebP, before uploads were converted, still prints (R7-7)', () => {
+  it('the résumé photo is drawn — the panel says "Added", and the saved résumé keeps its WebP', () => {
+    const photo = `data:image/webp;base64,${WEBP}`;
+    cy.visitEditor('classic', { state: saved(photo, null) });
+    cy.contains('button', /^Photo/).click();
+    cy.contains('span', 'Added').should('be.visible');
+    cy.get('[data-testid=photo-unprintable]').should('not.exist');
+    cy.exportPdf().then((pdf) => expect(pdf.images, 'the photo is drawn').to.be.at.least(1));
+    cy.store().should((s) => expect(active(s).personal.photo, 'stored unchanged').to.equal(photo));
+  });
+
+  it('one this browser cannot decode either prints nothing, and the panel says so', () => {
+    cy.visitEditor('classic', { state: saved(BROKEN, null) });
+    cy.contains('button', /^Photo/).click();
+    cy.contains('span', 'Not printed').should('be.visible');
+    cy.get('[data-testid=photo-unprintable]').should('contain', 'PNG or JPEG');
+    cy.contains('span', 'Added').should('not.exist');
+    cy.exportPdf().then((pdf) => expect(pdf.images, 'nothing is drawn').to.equal(0));
+  });
+
+  it("the letter's own undecodable photo gives way to the résumé photo instead of hiding it", () => {
+    cy.visitEditor('classic', { state: saved(`data:image/webp;base64,${WEBP}`, BROKEN), tab: 'coverletter' });
+    cy.get('[data-testid=letter-photo-note]').should('contain', 'uses your résumé photo');
+    cy.exportPdf().then((pdf) => expect(pdf.images, 'the résumé photo is drawn').to.be.at.least(1));
+  });
+});
+
 // ── Images drawn in the page, as a camera or an editor would save them ─────────────────────────
 
 /** `paint(ctx, w, h)` drawn on a `w`×`h` canvas and saved as `type`: the file's bytes. */

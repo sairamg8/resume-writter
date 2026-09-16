@@ -2,10 +2,15 @@ import { useRef } from 'react';
 import { Camera, ChevronDown, ChevronRight, Eye, EyeOff } from 'lucide-react';
 import { Chip } from '@/components/PersonalInfoEditorHeader';
 import { readImageFile } from '@/utils/imageUpload';
+import { UNPRINTABLE_PHOTO, usePrintableImage } from '@/hooks/usePrintableImage';
 import { photoTextPositionApplies, templateId } from '@/constants/templates';
 
 export function PhotoSection({ personal, updatePersonal, toggleFieldVisibility, hidden, s, set, template, open, onToggle }) {
   const photoInputRef = useRef(null);
+  // A photo saved as WebP or GIF, before uploads were converted, prints as a converted copy; one
+  // this browser cannot read either prints nothing, and the panel says so instead of "Added" (R7-7).
+  const printable = usePrintableImage(personal.photo);
+  const unprintable = Boolean(personal.photo) && printable === null;
 
   function handlePhotoChange(e) {
     const file = e.target.files?.[0];
@@ -19,9 +24,11 @@ export function PhotoSection({ personal, updatePersonal, toggleFieldVisibility, 
       <button onClick={onToggle} className="w-full flex items-center justify-between p-3 text-left">
         <div className="flex items-center gap-2">
           <p className="text-[11px] font-bold text-gray-500 uppercase tracking-widest">Photo</p>
-          {personal.photo && !hidden.has('photo') && (
+          {personal.photo && !hidden.has('photo') && (unprintable ? (
+            <span className="text-[9px] font-medium text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded-full">Not printed</span>
+          ) : (
             <span className="text-[9px] font-medium text-blue-500 bg-blue-50 px-1.5 py-0.5 rounded-full">Added</span>
-          )}
+          ))}
         </div>
         <div className="flex items-center gap-1">
           {personal.photo && (
@@ -57,6 +64,7 @@ export function PhotoSection({ personal, updatePersonal, toggleFieldVisibility, 
             <div className="flex-1 min-w-0">
               <p className="text-xs font-medium text-gray-700">Profile Photo</p>
               <p className="text-[11px] text-gray-400 mt-0.5">Optional. Click to upload.</p>
+              {unprintable && <p className="text-[11px] text-amber-700 mt-1" data-testid="photo-unprintable">{UNPRINTABLE_PHOTO}</p>}
               {personal.photo && (
                 <button onClick={() => updatePersonal('photo', null)} className="text-[11px] text-red-500 hover:text-red-600 mt-1">Remove photo</button>
               )}

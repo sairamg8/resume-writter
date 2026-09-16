@@ -71,9 +71,10 @@ export function CoverLetterHeader({ look, personal, settings, cl, hidden, contac
   const fieldsPos = cl.fieldsPosition || 'right';
   const { centered } = look;
 
-  // A photo the PDF cannot draw (PdfPhoto prints nothing for it) takes no room either (VM3-7).
-  const shownPhoto = cl.showPhoto !== false ? (cl.clPhoto || personal?.photo) : null;
-  const photoSrc = isDrawableImage(shownPhoto) ? shownPhoto : null;
+  // The letter's own photo, else the résumé's — the first the PDF can draw. One it cannot draw
+  // (PdfPhoto prints nothing for it) takes no room (VM3-7), and an own photo saved in a format no
+  // copy could be made of (withPrintablePhotos) no longer hides a résumé photo that prints (R7-7).
+  const photoSrc = cl.showPhoto === false ? null : [cl.clPhoto, personal?.photo].find(isDrawableImage) ?? null;
   // The panel's "Text Position (relative to photo)": the name block's place beside the photo.
   const photoAlign = photoTextAlignItems(cl); // the letter's own Text Position
 

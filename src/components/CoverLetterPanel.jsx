@@ -6,6 +6,7 @@ import { letterContactFormat, letterHiddenFields, todayLetterDate } from '@/util
 import { letterheadCentered, templateLabel } from '@/constants/templates';
 import { readImageFile } from '@/utils/imageUpload';
 import { CONTACT_FIELDS } from '@/utils/contacts';
+import { useLetterPhoto } from '@/hooks/usePrintableImage';
 
 /** This panel's lucide icon per field — the names and their order come from CONTACT_FIELDS. */
 const ICONS = { email: Mail, phone: Phone, location: MapPin, website: Globe, linkedin: Link2, github: Code };
@@ -41,7 +42,8 @@ export default function CoverLetterPanel({ coverLetter, personal, settings, temp
     readImageFile(file).then(dataUrl => updateCoverLetter('clPhoto', dataUrl), err => alert(err.message));
   }
 
-  const hasPhoto = !!cl.clPhoto || !!personal?.photo;
+  // Whether the letter prints a photo, and the line saying which one, or why none (R7-7).
+  const { hasPhoto, note: photoNote } = useLetterPhoto(cl, personal);
   const photoShown = cl.showPhoto !== false;
 
   return (
@@ -75,8 +77,8 @@ export default function CoverLetterPanel({ coverLetter, personal, settings, temp
 
           <div className="flex-1 min-w-0">
             <p className="text-xs font-medium text-gray-700">Cover Letter Photo</p>
-            <p className="text-[11px] text-gray-400 mt-0.5">
-              {cl.clPhoto ? 'Using own photo' : personal?.photo ? 'Using resume photo (faded = preview)' : 'No photo — upload or add to resume'}
+            <p className={`text-[11px] mt-0.5 ${photoNote.warn ? 'text-amber-700' : 'text-gray-400'}`} data-testid="letter-photo-note">
+              {photoNote.text}
             </p>
             <div className="flex gap-2 mt-1.5">
               {cl.clPhoto && (
