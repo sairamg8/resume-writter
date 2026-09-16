@@ -24,6 +24,8 @@ function dragBy(dx) {
 const zoomIn = () => cy.contains('button', /^\+$/);
 const zoomLabel = () => zoomIn().prev('span');
 const resumeTab = () => cy.contains('button', /^\s*Resume\s*$/);
+/** The editor panel's scroll box, which every tab shows in. */
+const scrollBox = () => panel().children('.overflow-y-auto');
 
 describe('editor — panels and layout (guards for the Editor split)', () => {
   beforeEach(() => cy.visitEditor('classic'));
@@ -59,10 +61,31 @@ describe('editor — panels and layout (guards for the Editor split)', () => {
     cy.get('#cover-letter-preview').should('exist');
     resumeTab().click();
 
-    cy.contains('button', 'Expand All').should('exist'); // the panel keeps its scroll, so not 'visible'
+    cy.contains('button', 'Expand All').should('be.visible'); // each tab opens at its top (NB-4)
     cy.get('input[placeholder="John Doe"]').should('not.exist'); // Personal Info still closed
     cy.contains('button', 'Add Experience').should('not.exist'); // sections still collapsed
     cy.contains('button', 'Custom Section').should('exist'); // the picker is still open
+  });
+
+  it('each tab opens at its top: Design after a scrolled Résumé, the Résumé after a scrolled Design (NB-4)', () => {
+    cy.contains('button', 'Add Section').click();
+    scrollBox().scrollTo('bottom', { ensureScrollable: false });
+    scrollBox().its('0.scrollTop').should('be.gt', 100); // the Résumé really is scrolled down
+
+    cy.get('button[title="Design & Customize"]').click();
+    cy.contains('button', 'Template').should('be.visible');
+    scrollBox().its('0.scrollTop').should('eq', 0);
+
+    scrollBox().scrollTo('bottom', { ensureScrollable: false });
+    scrollBox().its('0.scrollTop').should('be.gt', 100);
+    resumeTab().click();
+    cy.contains('button', 'Collapse All').should('be.visible');
+    scrollBox().its('0.scrollTop').should('eq', 0);
+
+    scrollBox().scrollTo('bottom', { ensureScrollable: false });
+    cy.contains('button', 'Cover Letter').click();
+    cy.get('#cover-letter-preview').should('exist');
+    scrollBox().its('0.scrollTop').should('eq', 0);
   });
 
   it('the preview zoom stays put across the cover letter and an editor-only trip', () => {

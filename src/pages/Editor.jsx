@@ -5,6 +5,7 @@ import DesignPanel from '@/components/DesignPanel';
 import CoverLetterPanel from '@/components/CoverLetterPanel';
 import { EditorHeader, EditorAlerts, EditorModeBar } from '@/components/EditorHeader';
 import { EditorResumeTab } from '@/components/EditorResumeTab';
+import { EditorTabContent } from '@/components/EditorTabContent';
 import { EditorPreviewPane } from '@/components/EditorPreviewPane';
 import { useEditorExports } from '@/hooks/useEditorExports';
 import { usePanelResize } from '@/hooks/usePanelResize';
@@ -89,11 +90,7 @@ export function Editor({ store, auth, sync }) {
         <EditorAlerts exportError={exportMenu.exportError} onDismiss={() => exportMenu.setExportError(null)} persistError={store.persistError} />
         <EditorModeBar activeTab={activeTab} setActiveTab={setActiveTab} />
 
-        {/* Tab Content — independent scroll; overscroll-behavior blocks scroll chaining to body */}
-        <div
-          className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden"
-          style={{ overscrollBehavior: 'contain' }}
-        >
+        <EditorTabContent activeTab={activeTab}>
           {activeTab === 'resume' && (
             <EditorResumeTab
               resume={resume}
@@ -119,7 +116,7 @@ export function Editor({ store, auth, sync }) {
               <CoverLetterPanel coverLetter={resume.coverLetter} personal={resume.personal} settings={resume.settings} template={resume.template} updateCoverLetter={store.updateCoverLetter} />
             </div>
           )}
-        </div>
+        </EditorTabContent>
       </div>
 
       {layoutMode === 'split' && (
