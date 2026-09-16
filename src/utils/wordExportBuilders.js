@@ -4,7 +4,7 @@ import {
   contactSeparator,
 } from '@/utils/wordExportUtils';
 import { contactItems } from '@/utils/contacts';
-import { hasHeaderControls, inSidebarColumn, templateId } from '@/constants/templates';
+import { hasHeaderControls, inSidebarColumn, templateId, upperSectionTitles } from '@/constants/templates';
 import { textShades } from '@/templates/pdf/shared/pdfColors';
 import { resolveTemplateSettings } from '@/templates/pdf/shared/templateSettings';
 import { hasRichText } from '@/utils/richText';
@@ -257,11 +257,16 @@ export function buildCustom(section, accentHex, settings, centered) {
  * A section's paragraphs; `settings` are the résumé's (its dates print in its Date format).
  * Section Options → Alignment "Center" centres it as the PDF does: everywhere but the Sidebar's
  * side column (`template`), which prints one left-aligned column whatever the section stores.
+ * Its title prints in Design → Title case as the PDF prints it, in both of the Sidebar's columns:
+ * in capitals for "ABC", as typed for "Abc" — the template's own when none is stored (Executive's
+ * is "Abc").
  */
 export function buildSection(section, accentHex, settings, template) {
   if (section.visible === false || !shown(section).length) return [];
   const centered = section.settings?.alignment === 'center' && !inSidebarColumn(template, section.type);
-  const args = [section, accentHex, settings, centered];
+  const { sectionTitleCase } = resolveTemplateSettings(settings, templateId(template));
+  const title = String(section.title || '');
+  const args = [{ ...section, title: upperSectionTitles(sectionTitleCase) ? title.toUpperCase() : title }, accentHex, settings, centered];
   switch (section.type) {
     case 'experience':     return buildExperience(...args);
     case 'education':      return buildEducation(...args);

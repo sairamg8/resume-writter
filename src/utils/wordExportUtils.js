@@ -45,9 +45,10 @@ export function separator() {
 /** A paragraph's options that centre it when `centered` (Section Options → Alignment "Center"). */
 export const centredIf = (centered) => (centered ? { alignment: AlignmentType.CENTER } : {});
 
+/** A section's title paragraph; `title` prints as given (buildSection applies Design → Title case). */
 export function sectionHeading(title, accentHex, centered = false) {
   return new Paragraph({
-    children: [new TextRun({ text: String(title || '').toUpperCase(), bold: true, size: 20, color: accentHex })],
+    children: [new TextRun({ text: String(title || ''), bold: true, size: 20, color: accentHex })],
     border: { bottom: { style: BorderStyle.SINGLE, size: 4, color: accentHex, space: 4 } },
     spacing: { before: 180, after: 60 },
     keepNext: true,
