@@ -179,18 +179,42 @@ describe('a Modern résumé saved before its banner took Photo → Text Position
     assert.equal(helpers.buildTestState('modern').resumes[0].dataVersion, DATA_VERSION);
   });
 
-  // Guard: nothing else was ever migrated; the fix is the test above.
-  it('keeps a Bottom, any other template, and Center on a résumé edited since it went live', async () => {
+  it('a stored Bottom, which that banner printed as Top as well, prints Top once it is loaded (V2W2b-1)', async () => {
     const { normalizeResume } = await normalizer();
-    assert.equal(normalizeResume(saved('bottom')).settings.photoTextAlign, 'bottom', 'Bottom: a choice (and one Classic prints)');
-    for (const template of ['classic', 'minimal', 'executive', 'sidebar']) {
-      assert.equal(normalizeResume(saved('center', { template })).settings.photoTextAlign, 'center', template);
+    for (const photoSize of ['sm', 'md', 'lg']) {
+      for (const [label, old] of [
+        ['no version', saved('bottom', { photoSize })],
+        ['version 8, last edited before the change went live', saved('bottom', { dataVersion: 8, photoSize })],
+      ]) {
+        const r = normalizeResume(old);
+        const [now, before] = [await drawing(await render(r)), await asItPrinted(old)];
+        assert.ok(now === before, `${photoSize}, Bottom, ${label}: draws the page it drew before`);
+        assert.equal(r.settings.photoTextAlign, 'top', `${photoSize}, Bottom, ${label}: the panel shows Top`);
+      }
+      // …which Bottom really does not draw: the comparison above can fail.
+      assert.notEqual(await drawing(await render(saved('bottom', { photoSize }))), await asItPrinted(saved('bottom', { photoSize })));
     }
-    const seen = saved('center', { dataVersion: 8, updatedAt: LIVE + 60_000 });
-    assert.equal(normalizeResume(seen).settings.photoTextAlign, 'center', 'edited while its preview printed Center');
-    const migrated = normalizeResume(saved('center'));
+  });
+
+  // Guard: nothing else was ever migrated; the fixes are the two tests above.
+  it('keeps Center and Bottom wherever they printed: any other template, a résumé edited since it went live, one a version-9 build saved', async () => {
+    const { normalizeResume } = await normalizer();
+    for (const align of ['center', 'bottom']) {
+      for (const template of ['classic', 'minimal', 'executive', 'sidebar']) {
+        assert.equal(normalizeResume(saved(align, { template })).settings.photoTextAlign, align, `${template}, ${align}`);
+      }
+      const seen = saved(align, { dataVersion: 8, updatedAt: LIVE + 60_000 });
+      assert.equal(normalizeResume(seen).settings.photoTextAlign, align, `edited while its preview printed ${align}`);
+      // 0566bbc and 5dd34da stamped version 9 and printed the stored value, whenever it was last edited.
+      for (const dataVersion of [9, 11]) {
+        assert.equal(normalizeResume(saved(align, { dataVersion })).settings.photoTextAlign, align, `version ${dataVersion}, ${align}`);
+      }
+    }
+    const migrated = normalizeResume(saved('bottom'));
     assert.equal(normalizeResume(migrated), migrated, 'it runs once');
-    const chosen = { ...migrated, settings: { ...migrated.settings, photoTextAlign: 'center' }, updatedAt: 1 };
-    assert.equal(normalizeResume(JSON.parse(JSON.stringify(chosen))).settings.photoTextAlign, 'center', 'a Center chosen afterwards is the user\'s');
+    for (const align of ['center', 'bottom']) {
+      const chosen = { ...migrated, settings: { ...migrated.settings, photoTextAlign: align }, updatedAt: 1 };
+      assert.equal(normalizeResume(JSON.parse(JSON.stringify(chosen))).settings.photoTextAlign, align, `a ${align} chosen afterwards is the user's`);
+    }
   });
 });

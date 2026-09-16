@@ -96,15 +96,15 @@ const MODERN_TEXT_POSITION_LIVE = Date.UTC(2026, 8, 15, 2, 32, 51);
 /**
  * v9 (R7-10): Modern's banner put the text beside the photo at the photo's top whatever Photo →
  * Text Position stored, until dff28b7 made it take the setting — and every résumé stores the
- * default, Center. A Modern résumé still at Center (or storing none, or a value the PDF reads as
- * Center) gets Top, so it prints as it always did. Bottom is a choice (and one Classic, Minimal and
- * Executive print), so it is kept. The builds deployed from 0b83cb1 on printed the stored Center
- * and stamped version 8 on every résumé they loaded: one edited since then (`updatedAt`) was
- * edited while its preview printed Center, and keeps it.
+ * default, Center. A Modern résumé storing anything but Top — Center, none, a value the PDF reads
+ * as Center, and Bottom too (picked on Classic before a switch, or on Modern while the chips did
+ * nothing: it printed Top all the same, V2W2b-1) — gets Top, so it prints as it always did. The
+ * builds deployed from 0b83cb1 on printed the stored value and stamped version 8 on every résumé
+ * they loaded: one edited since then (`updatedAt`) was edited while its preview printed that value,
+ * and keeps it; so does every résumé a version-9 build saved.
  */
 function withModernTextAtTop(r, from) {
-  const align = r.settings?.photoTextAlign;
-  if (r.template !== 'modern' || !r.settings || align === 'top' || align === 'bottom') return r;
+  if (r.template !== 'modern' || !r.settings || r.settings.photoTextAlign === 'top') return r;
   if (from >= 8 && !(r.updatedAt < MODERN_TEXT_POSITION_LIVE)) return r;
   return { ...r, settings: { ...r.settings, photoTextAlign: 'top' } };
 }
