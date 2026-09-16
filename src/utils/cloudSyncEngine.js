@@ -228,7 +228,7 @@ export function createCloudSync({
       return;
     }
     if (!s.user || !s.initialSyncDone || s.cloudDisabled || !io) return;
-    const queued = queueChanges(s.queue, s.prevResumes || [], current);
+    const queued = queueChanges(s.queue, s.prevResumes || [], current, held.replaced(s.user.uid, current));
     if (!queued.dirty) return;
     s.queue = queued;
     s.prevResumes = current;

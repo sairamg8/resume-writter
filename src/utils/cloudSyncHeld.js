@@ -1,11 +1,12 @@
 // A résumé the cloud will not take — over Firestore's 1 MiB document limit (a photo stored whole
 // by a build before a4a1f85, or several large contact icons), or refused for good for another
 // reason — is held: left out of every batch while it stays as it is, and tried again once it
-// changes (the photo taken out) or goes. Every other résumé keeps syncing. Until V2VF1S-0 one
-// such résumé stopped the whole sync: each later change read the account again and re-sent it,
-// no other résumé's edit reached the cloud until it was fixed, and a demo account's originals
-// waited for an answer the account could give. Plain functions, no Firebase: the engine
-// (cloudSyncEngine.js) runs them, and tests/pdf/18-cloud-sync-held.test.mjs runs the engine.
+// changes (the photo taken out, or made smaller by the store: smallerPhotos.js) or goes. Every
+// other résumé keeps syncing. Until V2VF1S-0 one such résumé stopped the whole sync: each later
+// change read the account again and re-sent it, no other résumé's edit reached the cloud until it
+// was fixed, and a demo account's originals waited for an answer the account could give. Plain
+// functions, no Firebase: the engine (cloudSyncEngine.js) runs them, and
+// tests/pdf/18-cloud-sync-held.test.mjs runs the engine.
 import { failureKind } from '@/utils/cloudSyncRetry';
 
 /** Firestore's limit on one document, counted as docSize counts it. */
@@ -37,15 +38,22 @@ export const docSize = (segments, data) => segments.reduce((n, seg) => n + strin
  * The résumés held back from an account's sync, for one visit (id → the copy held), with the
  * engine's `io`, `report` (held([{ id, name }]) after each change of them: the icon names them),
  * `online` and `resumes()` (the store's now):
- *   sendable(uid, list)          `list` without the copies held; one too large for a document is
- *                                held first, and never sent
+ *   sendable(uid, list)          `list` as the store holds it now (below), without the copies held;
+ *                                one too large for a document is held first, and never sent
  *   commit(uid, plan, source, live)  io.commit, refused résumés held (commitHolding)
  *   hold(r), release(list)       let go of those changed or gone in `list`: tried again
+ *   replaced(uid, list)          the copies held that `list` holds replaced in place and that now fit
+ *                                in a document: let go, and returned to be sent (below)
  *   size, clear()
+ * Replaced in place: the same version (`updatedAt`) as another object — the store made its photo
+ * smaller (smallerPhotos.js, ONB-10), which is no edit, so neither the queue nor release sees it.
+ * Held until then, a résumé over 1 MiB for a photo an older build stored whole waited for its next
+ * edit or the next visit, and one queued before its photo was made smaller was sent (and held) as
+ * it was queued.
  */
 export function createHeld({ io = null, report = {}, online = () => true, resumes = () => [] } = {}) {
   const held = new Map();
-  const isHeld = (r) => held.has(r.id) && held.get(r.id).updatedAt === r.updatedAt;
+  const isHeld = (r) => held.get(r.id) === r;
   const changed = () => report.held?.([...held.values()].map(({ id, name }) => ({ id, name })));
   function hold(r) {
     if (isHeld(r)) return;
@@ -57,12 +65,36 @@ export function createHeld({ io = null, report = {}, online = () => true, resume
     get size() { return held.size; },
     commit: (uid, plan, source, live) => commitHolding(io, uid, plan, { held: api, source, resumes, online, live }),
     sendable(uid, list) {
-      return list.filter((r) => {
+      // The store's copy of the same version: one made smaller since the queue or the plan took it.
+      // A copy with no time of its own (a cloud stub) has no version to match: it goes as it is.
+      const now = new Map(resumes().map((r) => [r.id, r]));
+      const current = (r) => {
+        const c = now.get(r.id);
+        return c && Number.isFinite(r.updatedAt) && c.updatedAt === r.updatedAt ? c : r;
+      };
+      return list.map(current).filter((r) => {
         if (isHeld(r)) return false;
-        if (docSize(['users', uid, 'resumes', r.id], r) <= MAX_DOC_BYTES) return true;
-        hold(r);
-        return false;
+        if (docSize(['users', uid, 'resumes', r.id], r) > MAX_DOC_BYTES) {
+          hold(r);
+          return false;
+        }
+        if (held.delete(r.id)) changed(); // an older copy held: this one goes
+        return true;
       });
+    },
+    replaced(uid, list) {
+      if (!held.size) return [];
+      const again = [];
+      for (const r of list) {
+        const was = held.get(r.id);
+        if (!was || was === r || !Number.isFinite(r.updatedAt) || was.updatedAt !== r.updatedAt) continue;
+        held.set(r.id, r); // held as the store holds it, while it is still too large
+        if (docSize(['users', uid, 'resumes', r.id], r) > MAX_DOC_BYTES) continue;
+        held.delete(r.id);
+        again.push(r);
+      }
+      if (again.length) changed();
+      return again;
     },
     release(list) {
       const now = new Map(list.map((r) => [r.id, r.updatedAt]));

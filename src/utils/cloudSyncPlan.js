@@ -151,9 +151,10 @@ export function afterSync(state, { uid, snapshot, merged, handled, before }) {
  * deleted was an original — flagged in a demo account, planFlush) and `marked` (Set: originals
  * whose mark this device has not sent — marked, new or put back since the last flush) come back
  * as new objects, with `dirty` true when anything changed. A résumé deleted and put back before
- * the flush (a restored original) is written, not deleted.
+ * the flush (a restored original) is written, not deleted. `again`: résumés to write though their
+ * version was seen — a held copy the store replaced in place (cloudSyncHeld.replaced).
  */
-export function queueChanges({ writes, deletes, kept = new Set(), marked = new Set() }, prev = [], current = []) {
+export function queueChanges({ writes, deletes, kept = new Set(), marked = new Set() }, prev = [], current = [], again = []) {
   const nextWrites = new Map(writes);
   const nextDeletes = new Set(deletes);
   const nextKept = new Set(kept);
@@ -178,6 +179,10 @@ export function queueChanges({ writes, deletes, kept = new Set(), marked = new S
     nextWrites.set(r.id, r);
     if (!isOriginal(r)) nextMarked.delete(r.id);
     else if (!isOriginal(p)) nextMarked.add(r.id);
+    dirty = true;
+  }
+  for (const r of again) {
+    nextWrites.set(r.id, r);
     dirty = true;
   }
   return { writes: nextWrites, deletes: nextDeletes, kept: nextKept, marked: nextMarked, dirty };

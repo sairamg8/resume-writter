@@ -10,10 +10,12 @@ import { deferred, fakeFirestore, syncPage, syncModules, resumePath, listPath, s
 
 let mods;
 let heldMod;
+let smaller;
 before(async () => {
   await setup();
   mods = await syncModules(loadModule);
   heldMod = await loadModule('/src/utils/cloudSyncHeld.js');
+  smaller = await loadModule('/src/utils/smallerPhotos.js');
 });
 after(teardown);
 
@@ -114,6 +116,89 @@ describe('a résumé too large for a document (V2VF1S-0)', () => {
     next.sync.start(USER);
     await settle();
     assert.deepEqual([cloud.refused.length, next.seen.status, cloud.resumes('u').resume_a.name], [0, 'stopped', 'resume_a']);
+  });
+
+  // ONB-10: a photo an older build stored at camera size is made smaller by the store once it has it
+  // (useSmallerPhotos), in place — the same version, so neither a merge nor the queue saw a change.
+  /** What useSmallerPhotos does once the copy of `from` is made. */
+  const madeSmaller = (p, from, to) => p.change(smaller.withPhotoReplaced(p.store.state, from, to));
+  const LETTER_BIG = `data:image/jpeg;base64,${'B'.repeat(1_100_000)}`;
+
+  it('held for its photo: sent in the same visit once the store has made the photo smaller, with no edit (ONB-10)', async () => {
+    const cloud = fakeFirestore({ [resumePath('u', 'resume_a')]: cv('resume_a'), [resumePath('u', 'resume_b')]: cv('resume_b') });
+    bySize(cloud);
+    const p = syncPage(mods, cloud, { resumes: [cv('resume_a', 2, { name: 'Camera photo', personal: { photo: BIG } }), cv('resume_b')] });
+    p.sync.start(USER);
+    await settle();
+    assert.deepEqual([p.seen.status, p.seen.held.map((r) => r.id), cloud.resumes('u').resume_a.updatedAt], ['stopped', ['resume_a'], 1]);
+    await madeSmaller(p, BIG, PHOTO);
+    await p.timers.fire();
+    const a = cloud.resumes('u').resume_a;
+    assert.deepEqual([a.personal?.photo, a.updatedAt, p.seen.status, p.seen.held], [PHOTO, 2, 'synced', []], 'before: held until its next edit, or the next visit');
+    assert.equal(cloud.refused.length, 0);
+  });
+
+  it('still too large once one photo is smaller: held as it was, nothing tried, the icon unchanged (a guard)', async () => {
+    const cloud = fakeFirestore({ [resumePath('u', 'resume_a')]: cv('resume_a') });
+    bySize(cloud);
+    const p = syncPage(mods, cloud, { resumes: [cv('resume_a', 2, { personal: { photo: BIG }, coverLetter: { clPhoto: LETTER_BIG } })] });
+    p.sync.start(USER);
+    await settle();
+    const [commits, heldReports] = [cloud.commits.length, []];
+    let held = p.seen.held;
+    Object.defineProperty(p.seen, 'held', { get: () => held, set: (v) => { held = v; heldReports.push(v); } });
+    await madeSmaller(p, BIG, PHOTO);
+    await p.timers.fire();
+    assert.deepEqual([cloud.commits.length - commits, cloud.refused.length, heldReports, p.seen.status], [0, 0, [], 'stopped'], 'not let go and held again: the icon would flicker');
+    await madeSmaller(p, LETTER_BIG, PHOTO); // and then the letter's
+    await p.timers.fire();
+    assert.deepEqual([cloud.resumes('u').resume_a.coverLetter?.clPhoto, p.seen.status], [PHOTO, 'synced']);
+  });
+
+  it('a résumé that came in with such a photo (an import): the flush sends the smaller copy the store has by then (ONB-10)', async () => {
+    const cloud = fakeFirestore({ [resumePath('u', 'resume_b')]: cv('resume_b') });
+    bySize(cloud);
+    const p = syncPage(mods, cloud, { resumes: [cv('resume_b')] });
+    p.sync.start(USER);
+    await settle();
+    await p.change({ resumes: [...p.store.state.resumes, cv('resume_i', 5, { personal: { photo: BIG } })] });
+    await madeSmaller(p, BIG, PHOTO); // before the pause is over
+    await p.timers.fire();
+    assert.deepEqual([cloud.resumes('u').resume_i?.personal.photo, p.seen.held, p.seen.status], [PHOTO, [], 'synced'], 'before: the queued 1.1 MB copy was held back');
+  });
+
+  it('made smaller while offline: the first sync on coming back sends it (ONB-10)', async () => {
+    const cloud = fakeFirestore({ [resumePath('u', 'resume_a')]: cv('resume_a') });
+    bySize(cloud);
+    let online = true;
+    const p = syncPage(mods, cloud, { resumes: [cv('resume_a', 2, { personal: { photo: BIG } })] }, { online: () => online });
+    p.sync.start(USER);
+    await settle();
+    online = false;
+    p.sync.start(USER); // the page went offline
+    await madeSmaller(p, BIG, PHOTO);
+    online = true;
+    p.sync.start(USER);
+    await settle();
+    assert.deepEqual([cloud.resumes('u').resume_a.personal?.photo, p.seen.status, p.seen.held, p.timers.count], [PHOTO, 'synced', [], 0], 'before: the plan\'s copy is the held version, so it was left out');
+  });
+
+  it('made smaller while the first sync\'s batch is on its way: that sync puts its copy back, and the next replacement is sent (ONB-10)', async () => {
+    const cloud = fakeFirestore({ [resumePath('u', 'resume_b')]: cv('resume_b') });
+    bySize(cloud);
+    const p = syncPage(mods, cloud, { resumes: [cv('resume_a', 2, { personal: { photo: BIG } }), cv('resume_b', 2, { name: 'B 2' })] });
+    const answer = deferred();
+    cloud.hold.commit = answer.promise;
+    p.sync.start(USER);
+    await settle();
+    await madeSmaller(p, BIG, PHOTO); // not yet synced: nothing is queued, A stays held
+    cloud.hold.commit = null;
+    answer.resolve();
+    await settle();
+    assert.deepEqual([p.store.state.resumes.find((r) => r.id === 'resume_a').personal.photo, p.seen.held.map((r) => r.id)], [BIG, ['resume_a']], 'the merged copy, as the plan read it');
+    await madeSmaller(p, BIG, PHOTO); // the store's effect runs again on that change
+    await p.timers.fire();
+    assert.deepEqual([cloud.resumes('u').resume_a?.personal.photo, cloud.resumes('u').resume_b.name, p.seen.status], [PHOTO, 'B 2', 'synced']);
   });
 
   it('docSize counts as Firestore does: its own example is 147 bytes; a résumé just over 1 MiB is too large', () => {
