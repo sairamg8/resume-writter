@@ -80,10 +80,11 @@ describe('the Word letter\'s letterhead takes the look too (FIDB-51)', () => {
     }
   });
 
-  it('Classic keeps its 2.5 pt accent rule; Minimal has a 0.75 pt pale rule and a regular name; Executive a double rule', async () => {
+  // Classic's rule is the résumé header's: none on a new résumé, its border off (V2FIDB-51-2).
+  it('Classic draws the résumé\'s rule, none with the border off; Minimal has a 0.75 pt pale rule and a regular name; Executive a double rule', async () => {
     const { solid } = await loadModule('/src/templates/pdf/shared/pdfColors.js');
     const expected = {
-      classic: { val: 'single', sz: '20', color: ACCENT.slice(1), space: '12' },
+      classic: null,
       minimal: { val: 'single', sz: '6', color: solid(ACCENT, 0.4).slice(1), space: '12' },
       executive: { val: 'double', sz: '6', color: ACCENT.slice(1), space: '12' },
     };

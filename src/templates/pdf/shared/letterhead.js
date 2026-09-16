@@ -2,7 +2,7 @@
 // the résumé's own resolved colours, for the letter's PDF and its Word export: the letter used
 // to print Classic's letterhead under every template, so a Modern or Sidebar résumé and its
 // letter never read as a set. Plain data (no react-pdf).
-import { letterheadCentered, templateId } from '@/constants/templates';
+import { headerBorderOn, letterheadCentered, templateId } from '@/constants/templates';
 import { contrast, sidebarShades, solid, textShades } from './pdfColors';
 import { MODERN_HEADER_PAD_X_PT, MODERN_HEADER_PAD_Y_PT } from './pdfUnits';
 
@@ -58,11 +58,15 @@ function bandMarks(contacts, ground) {
  *   band      null, or the filled band the letterhead sits in: { color, padX, padY, radius?, bleed? }
  *             — Modern's accent banner inside the margins; the Sidebar panel's colour to the page
  *             edges (bleed: the content keeps the page margins, the fill runs to the paper's edge)
- *   rules     the rules under the letterhead, top down, [{ width, color }] — two are a double rule
+ *   rules     the rules under the letterhead, top down, [{ width, color }] — two are a double rule:
+ *             the résumé header's rule wherever the résumé prints one (Header Customization →
+ *             Header Bottom Border and its Thickness, V2FIDB-51-2), else the look's own mark
  *   photo     [the ring colour of Photo → Border "Accent", getPdfPhotoStyle options]: a ring that
  *             shows on the band, as on the résumé's (white on Modern's accent, a readable accent
  *             on the Sidebar panel)
- * Classic is the letterhead every letter printed before: a 2.5 pt accent rule.
+ * Classic is the letterhead every letter printed before, less its fixed 2.5 pt accent rule: its
+ * rule is the résumé's, so a résumé with the border off (every new one's) pairs with a letter
+ * without one, and a Thickness reaches both.
  */
 export function letterheadLook(template, s = {}) {
   const look = templateId(template);
@@ -80,6 +84,13 @@ export function letterheadLook(template, s = {}) {
     rules: [],
     photo: [accent, {}],
   };
+  // The résumé header's rule, as getHeaderBorderStyle (PdfPage.jsx) draws it: on where the résumé
+  // stores it on, or stores nothing and its template draws one (headerBorderOn), at its Thickness,
+  // in the accent. It replaces Minimal's hairline and Executive's double rule — one rule under a
+  // header, as on the résumé; Modern's banner and the Sidebar panel take none. A Thickness the
+  // résumé draws no rule at (an import's -3 or "abc") is none here either — and no width Word rejects.
+  const width = Number(s.headerBorderWidth || 2);
+  const rule = headerBorderOn(s, look) && Number.isFinite(width) && width > 0 ? [{ width, color: solid(accent) }] : null;
   switch (look) {
     case 'modern': {
       // Modern's banner: the accent, its padding and corners; everything on it in the header text colour.
@@ -110,11 +121,11 @@ export function letterheadLook(template, s = {}) {
       return {
         ...base,
         name: { ...base.name, weight: 300, letterSpacing: -0.3 },
-        rules: [{ width: 0.75, color: solid(accent, 0.4) }],
+        rules: rule || [{ width: 0.75, color: solid(accent, 0.4) }],
       };
     case 'executive':
-      return { ...base, rules: [{ width: 0.75, color: solid(accent) }, { width: 0.75, color: solid(accent) }] };
+      return { ...base, rules: rule || [{ width: 0.75, color: solid(accent) }, { width: 0.75, color: solid(accent) }] };
     default:
-      return { ...base, rules: [{ width: 2.5, color: solid(accent) }] };
+      return { ...base, rules: rule || [] };
   }
 }

@@ -1,7 +1,8 @@
 // The cover letter's letterhead takes the résumé template's look (FIDB-51): Modern's accent
 // band, the Sidebar panel's colour to the paper's edges, Minimal's hairline, Executive's double
-// rule, Classic's accent rule as every letter printed it — with the résumé's name and title
-// colours and its header alignment. Before, every template printed Classic's letterhead.
+// rule, Classic's letterhead as every letter printed it — with the résumé's name and title
+// colours and its header alignment. Before, every template printed Classic's letterhead. The
+// rule under Classic's is the résumé header's (33-cover-letter-header-rule, V2FIDB-51-2).
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { setup, teardown, resume, renderCover, read, allItems, drawState, loadModule, MM, TEMPLATES } from './harness.mjs';
@@ -44,13 +45,15 @@ function assertInside(items, b, at) {
 describe('the letterhead takes the résumé template\'s look (FIDB-51)', () => {
   // Guard: the Classic letterhead is the one every letter printed before (checked against
   // 0b83cb1 over 320 option combinations: the same page wherever the résumé header is left-aligned
-  // and has no picked name or job title colour).
-  it('Classic: a 2.5 pt accent rule under name, title and contacts; no band', async () => {
-    const bytes = await renderCover(letter('classic'));
+  // and has no picked name or job title colour) — but for its rule, which is now the résumé's:
+  // none with Header Bottom Border off (a new résumé's), 2 pt with it on (V2FIDB-51-2).
+  it('Classic: name, title and contacts on the page, under them the résumé\'s rule; no band', async () => {
+    assert.deepEqual(rules(await painted(await renderCover(letter('classic'))), ACCENT), [], 'the border off: no rule');
+    const bytes = await renderCover(letter('classic', { settings: { showHeaderBorder: true } }));
     const paths = await painted(bytes);
     const [rule, ...more] = rules(paths, ACCENT);
-    assert.ok(rule && !more.length, 'one accent rule');
-    assert.equal(rule.width, 2.5);
+    assert.ok(rule && !more.length, 'the border on: one accent rule');
+    assert.equal(rule.width, 2);
     assert.deepEqual(bands(paths, ACCENT), [], 'no band');
     const [name] = letterheadItems(await read(bytes));
     assert.ok(near(name.x, 18 * MM), `the name at the left margin (x ${name.x})`);

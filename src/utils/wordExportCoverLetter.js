@@ -5,10 +5,10 @@
 // layout (R1-10), Icon printing as Bar.
 //
 // The letterhead takes the look the PDF's does (letterheadLook, FIDB-51): its colours and
-// alignment, Modern's accent band and the Sidebar panel's colour as a shaded band, Classic's
-// rule, Minimal's hairline and Executive's double rule as the last line's bottom border. Word
-// runs the Sidebar band 15 pt into the page margins, not to the paper's edges as the PDF does,
-// and prints the name in Word's own weights (Minimal's light name is regular).
+// alignment, Modern's accent band and the Sidebar panel's colour as a shaded band, the résumé
+// header's rule (else Minimal's hairline, Executive's double rule) as the last line's bottom
+// border. Word runs the Sidebar band 15 pt into the page margins, not to the paper's edges as the
+// PDF does, and prints the name in Word's own weights (Minimal's light name is regular).
 import { Paragraph, BorderStyle, ShadingType, AlignmentType } from 'docx';
 import { accent2Hex, bold, normal, linked, contactSeparator, descriptionToParagraphs } from '@/utils/wordExportUtils';
 import { contactItems } from '@/utils/contacts';
@@ -19,7 +19,7 @@ import { letterGrey, letterheadLook, LETTERHEAD_GAP, LETTERHEAD_PAD } from '@/te
 import { resolveTemplateSettings } from '@/templates/pdf/shared/templateSettings';
 import { templateId } from '@/constants/templates';
 const pt = (n) => Math.round(n * 20); // points → twips (paragraph spacing, indents)
-const eighths = (n) => Math.round(n * 8); // points → Word's border widths
+const eighths = (n) => Math.min(96, Math.max(2, Math.round(n * 8))); // points → Word's border widths (¼–12 pt)
 
 const line = (children, after = 0, extra = {}) => new Paragraph({ children, spacing: { after }, ...extra });
 
@@ -82,10 +82,12 @@ function letterhead(personal, s, cl, sizes, look) {
     rows.push({ runs: contacts.flatMap((c, i) => [...(i ? [sep()] : []), linked(c.value, c.href, style)]) });
   }
   // A band's rows touch (no white gap inside it). Word puts a bottom border's space between the
-  // text and the border, so the gap under the letterhead is the PDF's: 16 pt below the rule or band.
+  // text and the border, so the gap under the letterhead is the PDF's: 16 pt below the rule or band
+  // — and, with neither (a Classic résumé's border off, V2FIDB-51-2), the PDF's pad above it too.
+  const below = LETTERHEAD_GAP + (look.band || look.rules.length ? 0 : LETTERHEAD_PAD);
   return rows.map((r, i) => {
     const last = i === rows.length - 1;
-    return line(r.runs, last ? pt(LETTERHEAD_GAP) : look.band ? 0 : r.after, frame(look, last));
+    return line(r.runs, last ? pt(below) : look.band ? 0 : r.after, frame(look, last));
   });
 }
 
