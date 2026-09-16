@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { timeAgo } from '@/utils/resume';
 import { LayoutToggle } from '@/components/LayoutToggle';
 import { PdfPreview } from '@/components/PdfPreview';
+import { PAGE_SIZES, pageSizeOf } from '@/constants/pageSize';
 
 // Module-level so their identity is stable: PdfPreview re-renders when `render` changes.
 const renderResumePreview = (resume) =>
@@ -44,7 +45,7 @@ export function EditorPreviewPane({ resume, activeTab, layoutMode, setLayoutMode
         <LayoutToggle layoutMode={layoutMode} setLayoutMode={setLayoutMode} />
         <span className="text-xs text-gray-300">·</span>
         <span className="text-xs text-gray-400 font-medium uppercase tracking-wider">
-          {activeTab === 'coverletter' ? 'Cover Letter' : 'Résumé'} · A4
+          {activeTab === 'coverletter' ? 'Cover Letter' : 'Résumé'} · {PAGE_SIZES[pageSizeOf(resume?.settings)].label}
         </span>
         <span className="text-xs text-gray-300">·</span>
         <div className="flex items-center gap-0.5 bg-gray-100 rounded-lg p-0.5">
