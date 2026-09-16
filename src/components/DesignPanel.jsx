@@ -7,10 +7,10 @@ import { TypographySection } from '@/components/DesignPanelTypography';
 import { DatesSection } from '@/components/DesignPanelDates';
 import {
   ICON_SET_OPTIONS,
-  CONTACT_ICON_FIELDS,
   ContactIcon,
   getIconSetId,
 } from '@/utils/contactIcons';
+import { CONTACT_FIELDS } from '@/utils/contacts';
 
 const COLOR_KEYS      = ['accentColor', 'textColor', 'sidebarBg', 'headerTextColor', 'nameColor', 'jobTitleColor'];
 const TYPOGRAPHY_KEYS = ['font', 'fontSize', 'fontSizeBase', 'fontSizeNameDelta', 'fontSizeSectionDelta', 'fontSizeEntryDelta', 'customFont', 'iconSize'];
@@ -103,9 +103,9 @@ export default function DesignPanel({ resume, updateSetting, setTemplate, resetS
                   {active && <span className="text-[10px] font-semibold text-blue-600">Selected</span>}
                 </div>
                 <div className={`flex items-center gap-2.5 ${active ? 'text-blue-700' : 'text-gray-600'}`}>
-                  {CONTACT_ICON_FIELDS.map(field => (
-                    <span key={field} className="inline-flex w-5 h-5 items-center justify-center" title={field}>
-                      <ContactIcon field={field} settings={previewSettings} size={16} />
+                  {CONTACT_FIELDS.map(({ key, label }) => (
+                    <span key={key} className="inline-flex w-5 h-5 items-center justify-center" title={label}>
+                      <ContactIcon field={key} settings={previewSettings} size={16} />
                     </span>
                   ))}
                 </div>

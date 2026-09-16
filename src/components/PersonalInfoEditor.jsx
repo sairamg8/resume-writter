@@ -7,16 +7,24 @@ import { ContactIcon } from '@/utils/contactIcons';
 import { readImageFile } from '@/utils/imageUpload';
 import { drawsContactIcons } from '@/constants/templates';
 import { letterDrawsContactIcons } from '@/utils/coverLetter';
+import { CONTACT_FIELDS } from '@/utils/contacts';
 
+/** This editor's lucide icon and placeholder per contact field; the names come from CONTACT_FIELDS. */
+const CONTACT_INPUTS = {
+  email:    { icon: Mail,   placeholder: 'john@email.com' },
+  phone:    { icon: Phone,  placeholder: '+1 (555) 000-0000' },
+  location: { icon: MapPin, placeholder: 'City, State' },
+  website:  { icon: Globe,  placeholder: 'yoursite.com' },
+  linkedin: { icon: Link,   placeholder: 'linkedin.com/in/you' },
+  github:   { icon: Code,   placeholder: 'github.com/you' },
+};
+
+// Name and title first — always printed — then the contact fields in the order every export
+// prints them; a link field also offers a display label and a link URL.
 const FIELDS = [
-  { key: 'name',     label: 'Full Name',  icon: User,     placeholder: 'John Doe',            required: true },
-  { key: 'title',    label: 'Job Title',  icon: FileText, placeholder: 'Software Engineer',    required: true },
-  { key: 'email',    label: 'Email',      icon: Mail,     placeholder: 'john@email.com',      contactIcon: true },
-  { key: 'phone',    label: 'Phone',      icon: Phone,    placeholder: '+1 (555) 000-0000',   contactIcon: true },
-  { key: 'location', label: 'Location',   icon: MapPin,   placeholder: 'City, State',         contactIcon: true },
-  { key: 'website',  label: 'Website',    icon: Globe,    placeholder: 'yoursite.com', hasUrl: true, contactIcon: true },
-  { key: 'linkedin', label: 'LinkedIn',   icon: Link,     placeholder: 'linkedin.com/in/you', hasUrl: true, contactIcon: true },
-  { key: 'github',   label: 'GitHub',     icon: Code,     placeholder: 'github.com/you', hasUrl: true, contactIcon: true },
+  { key: 'name',  label: 'Full Name', icon: User,     placeholder: 'John Doe',            required: true },
+  { key: 'title', label: 'Job Title', icon: FileText, placeholder: 'Software Engineer',   required: true },
+  ...CONTACT_FIELDS.map(({ key, label, link }) => ({ key, label, ...CONTACT_INPUTS[key], hasUrl: !!link, contactIcon: true })),
 ];
 
 export default function PersonalInfoEditor({ personal, updatePersonal, toggleFieldVisibility, settings, updateSetting, template, coverLetter }) {

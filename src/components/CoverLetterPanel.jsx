@@ -5,15 +5,10 @@ import { Chip, Field, SectionBlock } from '@/components/CoverLetterPanelShared';
 import { letterContactFormat, letterHiddenFields, todayLetterDate } from '@/utils/coverLetter';
 import { letterheadCentered, templateLabel } from '@/constants/templates';
 import { readImageFile } from '@/utils/imageUpload';
+import { CONTACT_FIELDS } from '@/utils/contacts';
 
-const CONTACT_FIELDS = [
-  { key: 'email',    label: 'Email',    Icon: Mail   },
-  { key: 'phone',    label: 'Phone',    Icon: Phone  },
-  { key: 'location', label: 'Location', Icon: MapPin },
-  { key: 'website',  label: 'Website',  Icon: Globe  },
-  { key: 'linkedin', label: 'LinkedIn', Icon: Link2  },
-  { key: 'github',   label: 'GitHub',   Icon: Code   },
-];
+/** This panel's lucide icon per field — the names and their order come from CONTACT_FIELDS. */
+const ICONS = { email: Mail, phone: Phone, location: MapPin, website: Globe, linkedin: Link2, github: Code };
 
 export default function CoverLetterPanel({ coverLetter, personal, settings, template, updateCoverLetter }) {
   const cl = coverLetter || {};
@@ -199,7 +194,8 @@ export default function CoverLetterPanel({ coverLetter, personal, settings, temp
         <div>
           <p className="text-xs font-semibold text-gray-700 mb-2">Visible Contact Fields</p>
           <div className="space-y-1.5">
-            {CONTACT_FIELDS.map(({ key, label, Icon }) => {
+            {CONTACT_FIELDS.map(({ key, label }) => {
+              const Icon = ICONS[key];
               const val = personal?.[key];
               const isHidden = hiddenSet.has(key);
               return (

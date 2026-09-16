@@ -1,10 +1,28 @@
 import { safeHref } from '@/utils/richText';
 
-/** Contact fields in the order every export prints them. */
-export const CONTACT_KEYS = ['email', 'phone', 'location', 'website', 'linkedin', 'github'];
+/**
+ * The contact fields, in the order every export prints them — the one table every place that
+ * names a field reads: Personal info's labels, the cover letter's visibility toggles, the Design
+ * panel's icon previews and the Sidebar's printed labels. `link` marks the fields that carry a
+ * "Display label" and a "Link URL" override and print as a bare domain. An editor adds only its
+ * own lucide icon and placeholder, by key (R1-3, R9-6).
+ */
+export const CONTACT_FIELDS = [
+  { key: 'email',    label: 'Email'    },
+  { key: 'phone',    label: 'Phone'    },
+  { key: 'location', label: 'Location' },
+  { key: 'website',  label: 'Website',  link: true },
+  { key: 'linkedin', label: 'LinkedIn', link: true },
+  { key: 'github',   label: 'GitHub',   link: true },
+];
+
+/** Their keys, in the same order. */
+export const CONTACT_KEYS = CONTACT_FIELDS.map(({ key }) => key);
 
 /** Each contact field's name, where a template prints one (the Sidebar's labels). */
-export const CONTACT_LABELS = { email: 'Email', phone: 'Phone', location: 'Location', website: 'Website', linkedin: 'LinkedIn', github: 'GitHub' };
+export const CONTACT_LABELS = Object.fromEntries(CONTACT_FIELDS.map(({ key, label }) => [key, label]));
+
+const LINK_FIELDS = new Set(CONTACT_FIELDS.filter(({ link }) => link).map(({ key }) => key));
 
 /**
  * Where a contact line should link to, or null. E-mail → mailto:, phone → tel:, website /
@@ -37,8 +55,6 @@ export function contactItems(personal, hidden = personal?.hiddenFields || []) {
       return { key, value: label || (LINK_FIELDS.has(key) ? displayUrl(raw) : raw), href: contactHref(key, personal) };
     });
 }
-
-const LINK_FIELDS = new Set(['website', 'linkedin', 'github']);
 
 /** A URL as a résumé prints it: "https://www.linkedin.com/in/me/" → "linkedin.com/in/me". */
 export function displayUrl(url) {

@@ -9,8 +9,6 @@ import { isDrawableImage } from '@/utils/imageUpload';
 
 export { getCustomContactIcon, getIconSetId };
 
-export const CONTACT_ICON_FIELDS = ['email', 'phone', 'location', 'website', 'linkedin', 'github'];
-
 /** Global icon style options shown in Design panel */
 export const ICON_SET_OPTIONS = [
   { id: 'filled',  label: 'Filled',   desc: 'Solid marks · premium ATS look' },
