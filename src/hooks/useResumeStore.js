@@ -4,6 +4,7 @@ import { createSectionActions } from '@/hooks/useResumeSectionActions';
 import { createSyncActions } from '@/hooks/useResumeSyncActions';
 import { newId } from '@/utils/ids';
 import { templateStyleDefaults } from '@/constants/templates';
+import { headerColorsOnSwitch } from '@/templates/pdf/shared/headerColors';
 import { DATA_VERSION, normalizeResume } from '@/utils/normalizeResume';
 import { backupRaw, pendingRecovery, readSavedList, rememberRecovery, setItemWithRoom } from '@/utils/storageBackup';
 import { savedDeletions } from '@/utils/localDeletions';
@@ -159,8 +160,16 @@ export function useAppStore() {
     patchActive(r => ({ ...r, settings: defaultSettings(r.template) }));
   }
 
+  /**
+   * Design → a template: the heading style and title case it brings, and a Name or Job title
+   * colour picked for the old header that does not read on the new one back to its own (NB-1).
+   */
   function setTemplate(template) {
-    patchActive(r => ({ ...r, template, settings: { ...r.settings, ...templateStyleDefaults(template) } }));
+    patchActive(r => ({
+      ...r,
+      template,
+      settings: headerColorsOnSwitch({ ...r.settings, ...templateStyleDefaults(template) }, r.template, template),
+    }));
   }
 
   function updateCoverLetter(field, value) {

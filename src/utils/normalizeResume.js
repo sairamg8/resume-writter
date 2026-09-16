@@ -2,7 +2,7 @@
 // imported .json, the sample set — made current in ONE place. Every way a résumé comes in goes
 // through normalizeResume(): the store's load, import and restore, and the cloud sync's merge.
 import { inSidebarColumn, offersTemplate, withKnownTemplate } from '@/constants/templates';
-import { contrast } from '@/templates/pdf/shared/pdfColors';
+import { HEADER_READS, HEADER_SEEN, withHeaderColorsBack } from '@/templates/pdf/shared/headerColors';
 import { DEFAULT_ITEM_GAP_PX, SECTION_SPACING_PX } from '@/templates/pdf/shared/pdfUnits';
 
 /**
@@ -11,7 +11,7 @@ import { DEFAULT_ITEM_GAP_PX, SECTION_SPACING_PX } from '@/templates/pdf/shared/
  * it has had, so none runs twice on the same data — not after a sync, an import of an exported
  * file, or a stale tab of an older build writing the store back with its older store version.
  */
-export const DATA_VERSION = 10;
+export const DATA_VERSION = 11;
 
 const filled = (v) => typeof v === 'string' && v.trim() !== '';
 
@@ -128,33 +128,47 @@ function withResumeHiddenOnLetter(r) {
   return { ...r, coverLetter: { ...cl, hiddenFields: [...cl.hiddenFields, ...added] } };
 }
 
+/**
+ * `r` with a name or job-title colour that reads below `below`:1 on its template's header back to
+ * the template's own, where that reads better (withHeaderColorsBack). The same object when none is.
+ */
+function withReadableHeaderColors(r, below) {
+  const settings = withHeaderColorsBack(r.settings, r.template, { below });
+  return settings === r.settings ? r : { ...r, settings };
+}
+
+/**
+ * v11 (NB-1): picking a template kept a Name or Job title colour picked for the old one's header,
+ * on every build before this one: the Sidebar column's white name printed white on Classic's,
+ * Minimal's or Executive's page, Classic's ink name vanished on the dark Sidebar column. The old
+ * seed's "Dark" résumé is one too: builds from 4bc56fe on stored it as Classic, white name and
+ * all, so R5-5 (below, as the id is rewritten) never reaches it. A colour that can hardly be seen
+ * on its template's header (below 2:1, HEADER_SEEN) goes back to the template's own; a faint one
+ * (2:1 up to 3:1) may be the user's pick there — a vivid orange title on Classic is 2.8:1 — and is
+ * kept. The switch itself now does this (headerColorsOnSwitch).
+ */
+const withHeaderColorsSeen = (r) => withReadableHeaderColors(r, HEADER_SEEN);
+
 /** One-time migrations: [the version that introduced it, (résumé, its own version) → résumé]. */
 const MIGRATIONS = [
   [7, (r) => (r.coverLetter && !editedSince(r, SPACING_AND_RECIPIENT_LIVE) ? { ...r, coverLetter: withoutDefaultRecipientTitle(r.coverLetter) } : r)],
   [8, withItemGapsAsPrinted],
   [9, withModernTextAtTop],
   [10, withResumeHiddenOnLetter],
+  [11, withHeaderColorsSeen],
 ];
 
 const versionOf = (r) => (Number.isFinite(r.dataVersion) ? r.dataVersion : 0);
-
-/** Below WCAG's 3:1 for large text, a colour cannot be read on the white page. */
-const unreadableOnWhite = (color) => filled(color) && (contrast(color, '#ffffff') ?? 21) < 3;
 
 /**
  * R5-5: an id the app does not offer — the old seed's 'dark', an imported file's — prints as
  * Classic (withKnownTemplate), as it did on every build: on the white page. A name or job-title
  * colour picked there for a dark header (the 'dark' seed's white name and #cbd5e1 title, which
- * printed invisible) goes back to the template's own, as the Design panel's ↺ sets it; one that
- * reads is kept. It runs as the id is rewritten, so once, whatever the data version.
+ * printed invisible) goes back to the template's own, as the Design panel's ↺ sets it, where that
+ * reads better; one that reads (3:1, HEADER_READS) is kept. It runs as the id is rewritten, so
+ * once, whatever the data version.
  */
-function withHeaderReadableOnClassic(r) {
-  const s = r.settings;
-  if (!s || typeof s !== 'object') return r;
-  const cleared = ['nameColor', 'jobTitleColor'].filter((key) => unreadableOnWhite(s[key]));
-  if (!cleared.length) return r;
-  return { ...r, settings: { ...s, ...Object.fromEntries(cleared.map((key) => [key, ''])) } };
-}
+const withHeaderReadableOnClassic = (r) => withReadableHeaderColors(r, HEADER_READS);
 
 /**
  * `resume` made current: a template the app offers (withKnownTemplate), then each one-time

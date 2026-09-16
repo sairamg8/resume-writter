@@ -51,6 +51,40 @@ describe('design — templates', () => {
     cy.contains('button', 'Clean & whitespace-first').should('have.class', 'border-blue-500');
     cy.contains('button', 'Two-column header').should('not.have.class', 'border-blue-500');
   });
+
+  /** Set the colour input labelled `label` to `color`, as its picker does (React reads the input event). */
+  const pickColor = (label, color) => cy.get(`input[aria-label="${label}"]`).then(($input) => {
+    const input = $input[0];
+    const win = input.ownerDocument.defaultView;
+    Object.getOwnPropertyDescriptor(win.HTMLInputElement.prototype, 'value').set.call(input, color);
+    input.dispatchEvent(new win.Event('input', { bubbles: true }));
+  });
+
+  it('NB-1: a white Name color picked for the Sidebar column goes back to Classic\'s own when Classic is picked, and the name prints', () => {
+    cy.visitEditor('sidebar');
+    openDesign('Colors');
+    pickColor('Name color', '#ffffff');
+    cy.store().should((s) => expect(settingsOf(s).nameColor).to.eq('#ffffff'));
+    cy.contains('button', 'Two-column header').click();
+    cy.store().should((s) => expect([active(s).template, settingsOf(s).nameColor]).to.deep.eq(['classic', '']));
+    cy.get('input[aria-label="Name color"]').parent().should('contain.text', 'Template default');
+    cy.previewReady();
+    cy.exportPdf().then((pdf) => {
+      // Classic prints the name in the Text colour; it was drawn #ffffff on the white page.
+      expect(pdf.runs.find((r) => r.str.includes('Alex')).colorHex).to.eq('#111111');
+    });
+  });
+
+  it('NB-1: an ink Name color picked on Classic goes back to the Sidebar\'s own on its dark column', () => {
+    cy.visitEditor('classic', { settings: { nameColor: '#1a1a1a' } });
+    openDesign();
+    cy.contains('button', 'Colored left sidebar layout').click();
+    cy.store().should((s) => expect([active(s).template, settingsOf(s).nameColor]).to.deep.eq(['sidebar', '']));
+    cy.exportPdf().then((pdf) => {
+      // The header text colour on the navy column; #1a1a1a vanished there (1.2:1).
+      expect(pdf.runs.find((r) => r.str.includes('Alex')).colorHex).to.eq('#ffffff');
+    });
+  });
 });
 
 describe('design — settings', () => {
