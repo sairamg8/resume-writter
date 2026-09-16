@@ -11,7 +11,7 @@
 // as the PDF does, and prints the name and title in Word's own weights (Minimal's light name and
 // an Inline title's medium are regular).
 import { Paragraph, BorderStyle, ShadingType, AlignmentType } from 'docx';
-import { accent2Hex, bold, normal, linked, contactSeparator, descriptionToParagraphs } from '@/utils/wordExportUtils';
+import { accent2Hex, bold, normal, linked, contactSeparator, descriptionToParagraphs, inlineGap } from '@/utils/wordExportUtils';
 import { contactItems } from '@/utils/contacts';
 import { hasRichText } from '@/utils/richText';
 import { letterBlock, letterContactFormat, letterHiddenFields, letterSignature } from '@/utils/coverLetter';
@@ -23,9 +23,6 @@ const pt = (n) => Math.round(n * 20); // points → twips (paragraph spacing, in
 const eighths = (n) => Math.min(96, Math.max(2, Math.round(n * 8))); // points → Word's border widths (¼–12 pt)
 
 const line = (children, after = 0, extra = {}) => new Paragraph({ children, spacing: { after }, ...extra });
-
-/** Calibri's space, em (463 of its 2048 units): the document's font (buildDocument). */
-const SPACE_EM = 463 / 2048;
 
 /**
  * A colour as Word's 'rrggbb', opaque over `on` (the band a run sits on, else the white page), at
@@ -80,9 +77,8 @@ function letterhead(personal, s, cl, sizes, look) {
   const title = personal.title ? normal(personal.title, { size: sizes.base, color: ink(look.title.color, look.title.opacity) }) : null;
   if (title && look.inline) {
     // Name & Title Layout "Inline" (V2FIDB-51-3): the title on the name's line, after a real space
-    // (the line reads and copies as words) widened to the PDF's gap.
-    const spacing = pt(look.inline.gap - SPACE_EM * (sizes.base / 2));
-    rows[0] = { runs: [...rows[0].runs, normal(' ', { size: sizes.base, characterSpacing: spacing }), title], after: pt(2) };
+    // (the line reads and copies as words) widened to the PDF's gap — as the résumé's (inlineGap).
+    rows[0] = { runs: [...rows[0].runs, inlineGap(look.inline.gap, sizes.base), title], after: pt(2) };
   } else if (title) {
     rows.push({ runs: [title], after: pt(2) });
   }

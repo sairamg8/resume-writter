@@ -35,6 +35,18 @@ export function contactSeparator(contactStyle, style, markColor) {
   return normal(mark === 'bullet' ? '  •  ' : '  |  ', { ...style, color: markColor || accent2Hex(PAGE_MARKS[mark]) });
 }
 
+/** Calibri's space, em (463 of its 2048 units): the documents' font (wordExport.js buildDocument). */
+const SPACE_EM = 463 / 2048;
+
+/**
+ * The run between the name and the title on one line (Name & Title Layout "Inline", inlineLayout):
+ * a real space — the line reads and copies as words — widened to the PDF's `gap` (pt), at the
+ * title's `size` (half-points). The résumé's header and the letter's letterhead print it alike.
+ */
+export function inlineGap(gap, size) {
+  return normal(' ', { size, characterSpacing: Math.round((gap - SPACE_EM * (size / 2)) * 20) });
+}
+
 export function separator() {
   return new Paragraph({
     border: { bottom: { style: BorderStyle.SINGLE, size: 4, color: '94a3b8', space: 4 } },

@@ -46,14 +46,14 @@ function bandMarks(contacts, ground) {
 }
 
 /**
- * Header Customization → Name & Title Layout "Inline" on the letterhead (V2FIDB-51-3): null where
- * the résumé's header stacks them — Stack, a layout the panel never writes, Modern's banner and the
- * Sidebar's column (no header controls) — else `{ gap }`, the résumé's Name & Title Spacing in pt
- * (resolved `s`). A stored value outside its range prints at the range's end, one that is not a
- * number as the template's own (header_spacing_spec.md D9): the letter keeps printing whatever an
- * imported file carries.
+ * Header Customization → Name & Title Layout "Inline" on the letterhead (V2FIDB-51-3) and in the
+ * Word résumé (ONB-3-NB1): null where the résumé's header stacks them — Stack, a layout the panel
+ * never writes, Modern's banner and the Sidebar's column (no header controls) — else `{ gap }`, the
+ * résumé's Name & Title Spacing in pt (resolved `s`). A stored value outside its range prints at the
+ * range's end, one that is not a number as the template's own (header_spacing_spec.md D9): the
+ * letter and the .docx keep printing whatever an imported file carries.
  */
-function inlineLayout(look, s) {
+export function inlineLayout(look, s) {
   if (!hasHeaderControls(look) || s.headerLayout !== 'inline') return null;
   const { min, max } = HEADER_GAPS.headerInlineGap;
   const gap = Number.isFinite(s.headerInlineGap)

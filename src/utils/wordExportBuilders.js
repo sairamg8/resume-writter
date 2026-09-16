@@ -1,17 +1,20 @@
 import { Paragraph, TextRun } from 'docx';
 import {
   accent2Hex, bold, normal, linked, separator, sectionHeading, bulletPoint, descriptionToParagraphs, dateRightPara, centredIf,
-  contactSeparator,
+  contactSeparator, inlineGap,
 } from '@/utils/wordExportUtils';
 import { contactItems } from '@/utils/contacts';
 import { hasHeaderControls, inSidebarColumn, templateId, upperSectionTitles } from '@/constants/templates';
 import { textShades } from '@/templates/pdf/shared/pdfColors';
+import { inlineLayout } from '@/templates/pdf/shared/letterhead';
 import { resolveTemplateSettings } from '@/templates/pdf/shared/templateSettings';
 import { hasRichText } from '@/utils/richText';
 import { dateRange, formatDate, presentLabel } from '@/utils/dates';
 import { skillGroup, skillSeparator } from '@/utils/skills';
 
 const GREY = '6b7280';
+/** The job title's size, half-points. */
+const TITLE_SIZE = 24;
 const spacer = (after = 60) => new Paragraph({ children: [], spacing: { after } });
 
 /** Items the user has not hidden (the eye toggle on an entry). */
@@ -34,23 +37,29 @@ function body(item, centered) {
  * of Design → Contact Style where the header takes it (`template`: Classic, Minimal, Executive).
  * Modern's banner and the Sidebar column draw icons, and Word prints icons as bars.
  * Header alignment "Center" centres all four where the PDF does — in those same three templates;
- * a summary block aligned in the editor keeps its own alignment, as in the PDF (ONB-3).
+ * a summary block aligned in the editor keeps its own alignment, as in the PDF (ONB-3). Name &
+ * Title Layout "Inline" prints the title on the name's line, at the PDF's gap, in those three too.
  */
 export function buildPersonalSection(personal = {}, settings = {}, template = 'classic') {
   const hidden = new Set(personal.hiddenFields || []);
   const accentHex = settings?.accentColor?.replace('#', '') || '2563eb';
   const centered = hasHeaderControls(template) && settings?.headerAlign === 'center';
+  const s = resolveTemplateSettings(settings, templateId(template));
   const paragraphs = [];
 
+  const name = new TextRun({ text: personal.name || 'Your Name', bold: true, size: 40, color: '0f172a' });
+  const title = personal.title ? new TextRun({ text: personal.title, size: TITLE_SIZE, color: accentHex }) : null;
+  // Name & Title Layout "Inline" (ONB-3-NB1): one line, as the PDF's nameBlock and the letter's letterhead print it.
+  const inline = title && inlineLayout(templateId(template), s);
   paragraphs.push(new Paragraph({
-    children: [new TextRun({ text: personal.name || 'Your Name', bold: true, size: 40, color: '0f172a' })],
-    spacing: { after: 40 },
+    children: inline ? [name, inlineGap(inline.gap, TITLE_SIZE), title] : [name],
+    spacing: { after: inline ? 60 : 40 },
     ...centredIf(centered),
   }));
 
-  if (personal.title) {
+  if (title && !inline) {
     paragraphs.push(new Paragraph({
-      children: [new TextRun({ text: personal.title, size: 24, color: accentHex })],
+      children: [title],
       spacing: { after: 60 },
       ...centredIf(centered),
     }));
@@ -58,7 +67,6 @@ export function buildPersonalSection(personal = {}, settings = {}, template = 'c
 
   const contacts = contactItems(personal);
   if (contacts.length) {
-    const s = resolveTemplateSettings(settings, templateId(template));
     const style = { size: 18, color: accent2Hex(textShades(s.textColor).sub, '64748b') };
     const contactStyle = hasHeaderControls(template) ? s.contactStyle : 'icon';
     paragraphs.push(new Paragraph({
