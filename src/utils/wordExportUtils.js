@@ -2,6 +2,7 @@ import {
   Paragraph, TextRun, BorderStyle, TabStopType, ExternalHyperlink, AlignmentType,
 } from 'docx';
 import { parseRichText, safeHref } from '@/utils/richText';
+import { PAGE_MARKS } from '@/templates/pdf/shared/pdfColors';
 
 /** A '#rrggbb' colour as Word's 'rrggbb'; anything else gives `fallback`. */
 export function accent2Hex(color, fallback = '2563eb') {
@@ -22,6 +23,16 @@ export function linked(text, href, extra = {}) {
   const link = href && safeHref(href);
   const run = new TextRun({ text: String(text || ''), ...extra });
   return link ? new ExternalHyperlink({ link, children: [run] }) : run;
+}
+
+/**
+ * The run between two contact values in Contact Style `contactStyle`, `style` the values' run
+ * style: the PDF's Bullet "•", else its Bar "|" — Icon prints as Bar, Word draws no icons — in
+ * `markColor` ('rrggbb', a band's marks), else in the page's greys the PDF draws them in.
+ */
+export function contactSeparator(contactStyle, style, markColor) {
+  const mark = contactStyle === 'bullet' ? 'bullet' : 'bar';
+  return normal(mark === 'bullet' ? '  •  ' : '  |  ', { ...style, color: markColor || accent2Hex(PAGE_MARKS[mark]) });
 }
 
 export function separator() {

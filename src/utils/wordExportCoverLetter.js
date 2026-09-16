@@ -2,7 +2,7 @@
 // cover-letter PDF — letterhead (name, title, contacts in the résumé template's look), date,
 // recipient block, subject, body, closing and signature. Sizes follow the letter's base font
 // size. It is a text document: no photo, and the contacts are one line whatever the PDF's
-// layout (R1-10).
+// layout (R1-10), Icon printing as Bar.
 //
 // The letterhead takes the look the PDF's does (letterheadLook, FIDB-51): its colours and
 // alignment, Modern's accent band and the Sidebar panel's colour as a shaded band, Classic's
@@ -10,7 +10,7 @@
 // runs the Sidebar band 15 pt into the page margins, not to the paper's edges as the PDF does,
 // and prints the name in Word's own weights (Minimal's light name is regular).
 import { Paragraph, BorderStyle, ShadingType, AlignmentType } from 'docx';
-import { accent2Hex, bold, normal, linked, descriptionToParagraphs } from '@/utils/wordExportUtils';
+import { accent2Hex, bold, normal, linked, contactSeparator, descriptionToParagraphs } from '@/utils/wordExportUtils';
 import { contactItems } from '@/utils/contacts';
 import { hasRichText } from '@/utils/richText';
 import { letterBlock, letterContactFormat, letterHiddenFields, letterSignature } from '@/utils/coverLetter';
@@ -77,10 +77,9 @@ function letterhead(personal, s, cl, sizes, look) {
   const contacts = contactItems(personal, letterHiddenFields(cl, personal));
   if (contacts.length) {
     const style = { size: sizes.contact, color: ink(look.contacts) };
-    // The separators in the PDF's marks on a band (letterheadLook's marks), else the contacts' colour.
-    const sepStyle = { ...style, color: ink(look.marks || look.contacts) };
-    const sep = letterContactFormat(cl, s).style === 'bullet' ? '  •  ' : '  |  ';
-    rows.push({ runs: contacts.flatMap((c, i) => [...(i ? [normal(sep, sepStyle)] : []), linked(c.value, c.href, style)]) });
+    // The PDF's marks: a band's (letterheadLook's marks), else the page's greys (FIDB-51-VF1-NB1).
+    const sep = () => contactSeparator(letterContactFormat(cl, s).style, style, look.marks && ink(look.marks));
+    rows.push({ runs: contacts.flatMap((c, i) => [...(i ? [sep()] : []), linked(c.value, c.href, style)]) });
   }
   // A band's rows touch (no white gap inside it). Word puts a bottom border's space between the
   // text and the border, so the gap under the letterhead is the PDF's: 16 pt below the rule or band.

@@ -6,7 +6,7 @@ import { pxToPt } from './pdfUnits';
 import { textWidth, widestWord } from './pdfMeasure';
 import { contactItems } from '@/utils/contacts';
 import { isDrawableImage } from '@/utils/imageUpload';
-import { textShades } from './pdfColors';
+import { PAGE_MARKS, textShades } from './pdfColors';
 
 const NBSP = '\u00a0';
 /** A contact value never breaks across lines ("+1 555 0100", "New York, NY"). */
@@ -104,7 +104,7 @@ export function PdfContactRow({ personal, settings, color, markColor, hidden, ga
   const { textSize, iconPt } = rowSizes(settings);
   const c        = color || textShades(settings?.textColor || '#1a1a1a').sub;
   const text = { fontSize: textSize, color: c };
-  const bulletColor = markColor || '#bbbbbb';
+  const bulletColor = markColor || PAGE_MARKS.bullet;
   const top     = gaps.titleContactsGap ?? 3;   // title (or name) ↔ the contacts
   const iconGap = gaps.iconTextGap ?? ITEM_GAP; // icon (or bullet) ↔ value
   const colGap  = gaps.contactGapX ?? pxToPt(16);
@@ -173,7 +173,7 @@ export function PdfContactRow({ personal, settings, color, markColor, hidden, ga
   // "a | b | c" or "a • b • c" as one line of text. Each value and the separator before the next
   // are glued with no-break spaces, so a wrapped line always starts with a value, never with a
   // dangling separator (FIDA-10).
-  const sepColor = contactStyle === 'bullet' ? bulletColor : markColor || '#cccccc';
+  const sepColor = contactStyle === 'bullet' ? bulletColor : markColor || PAGE_MARKS.bar;
   return (
     <Text style={{ ...text, marginTop: top, textAlign: centered ? 'center' : 'left' }}>
       {items.map((item, i) => (

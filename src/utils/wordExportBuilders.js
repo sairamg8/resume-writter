@@ -1,9 +1,12 @@
 import { Paragraph, TextRun } from 'docx';
 import {
-  bold, normal, linked, separator, sectionHeading, bulletPoint, descriptionToParagraphs, dateRightPara, centredIf,
+  accent2Hex, bold, normal, linked, separator, sectionHeading, bulletPoint, descriptionToParagraphs, dateRightPara, centredIf,
+  contactSeparator,
 } from '@/utils/wordExportUtils';
 import { contactItems } from '@/utils/contacts';
-import { inSidebarColumn } from '@/constants/templates';
+import { hasHeaderControls, inSidebarColumn, templateId } from '@/constants/templates';
+import { textShades } from '@/templates/pdf/shared/pdfColors';
+import { resolveTemplateSettings } from '@/templates/pdf/shared/templateSettings';
 import { hasRichText } from '@/utils/richText';
 import { dateRange, formatDate, presentLabel } from '@/utils/dates';
 import { skillGroup, skillSeparator } from '@/utils/skills';
@@ -25,7 +28,13 @@ function body(item, centered) {
   return paras;
 }
 
-export function buildPersonalSection(personal = {}, settings = {}) {
+/**
+ * Name, title, contact line and summary. The contact line is the PDF's (PdfContactRow): its values
+ * in the Text colour's grey — the template's own Text colour when none is stored — and the marks
+ * of Design → Contact Style where the header takes it (`template`: Classic, Minimal, Executive).
+ * Modern's banner and the Sidebar column draw icons, and Word prints icons as bars.
+ */
+export function buildPersonalSection(personal = {}, settings = {}, template = 'classic') {
   const hidden = new Set(personal.hiddenFields || []);
   const accentHex = settings?.accentColor?.replace('#', '') || '2563eb';
   const paragraphs = [];
@@ -44,10 +53,12 @@ export function buildPersonalSection(personal = {}, settings = {}) {
 
   const contacts = contactItems(personal);
   if (contacts.length) {
-    const style = { size: 18, color: '64748b' };
+    const s = resolveTemplateSettings(settings, templateId(template));
+    const style = { size: 18, color: accent2Hex(textShades(s.textColor).sub, '64748b') };
+    const contactStyle = hasHeaderControls(template) ? s.contactStyle : 'icon';
     paragraphs.push(new Paragraph({
       children: contacts.flatMap((c, i) => [
-        ...(i ? [normal('  |  ', style)] : []),
+        ...(i ? [contactSeparator(contactStyle, style)] : []),
         linked(c.value, c.href, style),
       ]),
       spacing: { after: 80 },

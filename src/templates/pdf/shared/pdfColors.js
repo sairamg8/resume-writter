@@ -63,6 +63,14 @@ export function textShades(text) {
 }
 
 /**
+ * The Bar "|" and Bullet "•" contact marks' colours on the white page: the light greys the
+ * contact line has always drawn them in, a step lighter than its values (PdfContactRow). The
+ * Word exports print their marks in the same (contactSeparator); a band has its own
+ * (letterheadLook's marks).
+ */
+export const PAGE_MARKS = { bar: '#cccccc', bullet: '#bbbbbb' };
+
+/**
  * The `opacity` to give a Text drawn in `color`: react-pdf's opacity replaces the colour's own
  * alpha instead of multiplying it, so a translucent colour's alpha is multiplied in here, as CSS
  * opacity would (FIDB-11, R5-9).
