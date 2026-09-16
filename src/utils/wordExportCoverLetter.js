@@ -31,6 +31,14 @@ const line = (children, after = 0, extra = {}) => new Paragraph({ children, spac
 const hexOn = (color, on = '#ffffff', fallback, alpha = 1) => accent2Hex(solid(color, alpha, on), fallback);
 
 /**
+ * The fill Word shades the letterhead's band in: the colour the PDF paints (a translucent one as it
+ * shows over the white page), else — a colour Word cannot take — the look's own band colour
+ * (letterheadLook's band.fallback), so a template's band brings its fallback with it: Word chose it
+ * by the look's name, the Sidebar's slate or else Modern's blue (FIDB-51-VF7-NB2).
+ */
+const bandFill = (band) => hexOn(band.color, '#ffffff', hexOn(band.fallback));
+
+/**
  * The paragraph formatting that frames the letterhead's rows: a band — each row shaded, with
  * borders of the band's own colour as its padding, so Word joins the rows into one block — or
  * the rule(s) under the last row.
@@ -38,7 +46,7 @@ const hexOn = (color, on = '#ffffff', fallback, alpha = 1) => accent2Hex(solid(c
 function frame(look, last) {
   const align = look.centered ? { alignment: AlignmentType.CENTER } : {};
   if (look.band) {
-    const fill = hexOn(look.band.color, '#ffffff', look.look === 'sidebar' ? '1e293b' : '2563eb');
+    const fill = bandFill(look.band);
     const edge = (space) => ({ style: BorderStyle.SINGLE, size: 4, color: fill, space });
     // The text sits where the PDF's does: inset by Modern's padding; on the page margin, flush
     // with the letter below, on the Sidebar's band (bleed), whose padX is 0 — `0 || padY` inset
@@ -68,8 +76,10 @@ function frame(look, last) {
 
 /** Name, title and contact line in the résumé template's look (letterheadLook). */
 function letterhead(personal, s, cl, sizes, look) {
-  // Runs on a band blend onto it; a colour Word cannot take is white there, ink on the page.
-  const on = look.band ? look.band.color : '#ffffff';
+  // Runs on a band blend onto the fill Word shades (bandFill), as the PDF's onto the band it paints —
+  // not onto a colour Word cannot take (the white page) or a translucent band's colour at full
+  // strength; a colour Word cannot take is white there, ink on the page.
+  const on = look.band ? `#${bandFill(look.band)}` : '#ffffff';
   const ink = (color, alpha) => hexOn(color, on, look.band ? 'ffffff' : '1e293b', alpha);
   const nameRun = look.name.weight === 'bold' ? bold : normal;
   const rows = [{ runs: [nameRun(personal.name || 'Your Name', { size: sizes.name, color: ink(look.name.color) })], after: pt(1) }];

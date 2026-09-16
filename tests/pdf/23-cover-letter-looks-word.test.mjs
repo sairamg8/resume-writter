@@ -3,7 +3,7 @@
 // Executive's rules as the last line's bottom border.
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { setup, teardown, resume, loadModule, readDocx, renderCover, read, itemsWith, MM, TEMPLATES } from './harness.mjs';
+import { setup, teardown, resume, loadModule, readDocx, renderCover, read, itemsWith, drawState, MM, TEMPLATES } from './harness.mjs';
 import { painted } from './extractors.mjs';
 
 before(setup);
@@ -122,6 +122,57 @@ describe('the Word letter\'s letterhead takes the look too (FIDB-51)', () => {
       const { head } = parts(await coverDocx('modern', { jobTitleColor }));
       // react-pdf draws it at opacity 0.9 × its alpha over the accent band: that blend, opaque.
       assert.equal(colourOf(head[1], 'Staff Engineer'), solid(jobTitleColor || '#ffffff', 0.9, ACCENT).slice(1), jobTitleColor || 'the header text colour');
+    }
+  });
+
+  /** The fill of each letterhead paragraph's shading. */
+  const fills = (head) => head.map((xml) => /<w:shd [^>]*w:fill="([0-9a-fA-F]{6})"/.exec(xml)?.[1]?.toLowerCase());
+
+  it('a band colour Word cannot take prints in the look\'s own band colour, whichever template has the band (FIDB-51-VF7-NB2)', async () => {
+    // Word picked that colour by the look's name — the Sidebar's slate, else Modern's blue — outside
+    // the LOOKS table: a template added with a band printed Modern's blue. Each entry swapped for a
+    // sixth template's banner, teal where the résumé stores no colour, must print teal.
+    const { LOOKS } = await loadModule('/src/templates/pdf/shared/letterhead.js');
+    const own = { ...LOOKS };
+    try {
+      for (const id of TEMPLATES) {
+        LOOKS[id] = (base, { s }) => ({ ...base, band: { color: s.bannerColor || '#0f766e', fallback: '#0f766e', padX: 10, padY: 10 } });
+      }
+      for (const id of TEMPLATES) {
+        for (const bannerColor of ['', 'not-a-colour', '#12345']) {
+          assert.deepEqual(fills(parts(await coverDocx(id, { bannerColor })).head), Array(3).fill('0f766e'), `${id}: ${bannerColor || 'none stored'}`);
+        }
+      }
+    } finally {
+      Object.assign(LOOKS, own);
+    }
+    // Modern's and the Sidebar's own: the band the résumé prints with no colour stored.
+    for (const [template, key, fill] of [['modern', 'accentColor', '2563eb'], ['sidebar', 'sidebarBg', '1e293b']]) {
+      for (const value of ['', 'not-a-colour', '#12345']) {
+        assert.deepEqual(fills(parts(await coverDocx(template, { [key]: value })).head), Array(3).fill(fill), `${template}: ${value || 'none stored'}`);
+      }
+    }
+  });
+
+  it('the band\'s text blends onto the fill Word shades, as the PDF\'s onto the band it paints — an unreadable or a translucent band colour (FIDB-51-VF7-NB2)', async () => {
+    const { solid } = await loadModule('/src/templates/pdf/shared/pdfColors.js');
+    // [template, the band's setting, the title colour, the band Word prints (its fill), the title as
+    // the PDF draws it: its colour at an opacity — Modern's 90 % (R5-9) times its own alpha]
+    for (const [template, band, jobTitleColor, ground, pdfTitle] of [
+      ['modern', { accentColor: 'not-a-colour' }, '#1e3a8a', '#2563eb', ['#1e3a8a', 0.9]],
+      ['modern', { accentColor: '#e11d4880' }, '#1e3a8a', solid('#e11d4880'), ['#1e3a8a', 0.9]],
+      ['sidebar', { sidebarBg: 'not-a-colour' }, 'rgba(255,255,255,0.5)', '#1e293b', ['#ffffff', 0.5]],
+      ['sidebar', { sidebarBg: '#1e293b80' }, 'rgba(255,255,255,0.5)', solid('#1e293b80'), ['#ffffff', 0.5]],
+    ]) {
+      const at = `${template} ${JSON.stringify(band)}`;
+      const { head } = parts(await coverDocx(template, { ...band, jobTitleColor }));
+      assert.deepEqual(fills(head), Array(3).fill(ground.slice(1)), `${at}: the band`);
+      const [drawn] = await drawState(await renderCover(letter(template, { settings: { ...band, jobTitleColor } })), 'Staff Engineer');
+      // The PDF stores an opacity in 255ths: 50 % is 128/255.
+      assert.ok(drawn.fill === pdfTitle[0] && Math.abs(drawn.alpha - pdfTitle[1]) < 0.005, `${at}: the PDF's title ${drawn.fill} @ ${drawn.alpha}`);
+      // Word's run is that blend, opaque, on the band Word prints — not on the colour it cannot take
+      // (the white page's) or on a translucent band's own colour at full strength.
+      assert.equal(colourOf(head[1], 'Staff Engineer'), solid(...pdfTitle, ground).slice(1), `${at}: the title`);
     }
   });
 });

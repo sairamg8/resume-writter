@@ -6,6 +6,7 @@ import { hasHeaderControls, headerBorderOn, letterheadCentered, templateId } fro
 import { HEADER_GAPS, templateGapPt } from '@/constants/headerSpacing';
 import { contrast, sidebarShades, solid, textShades } from './pdfColors';
 import { CSS_PX_TO_PT, MODERN_HEADER_PAD_X_PT, MODERN_HEADER_PAD_Y_PT } from './pdfUnits';
+import { DEFAULTS } from './templateSettings';
 
 /** Space under the letterhead's text, above its rule — and the gap under the letterhead. */
 export const LETTERHEAD_PAD = 12;
@@ -79,7 +80,7 @@ export const LOOKS = {
       title: { ...base.title, opacity: 0.9 },
       contacts: headerText,
       marks: bandMarks(headerText, solid(accent)),
-      band: { color: accent, padX: MODERN_HEADER_PAD_X_PT, padY: MODERN_HEADER_PAD_Y_PT, radius: 2 },
+      band: { color: accent, fallback: DEFAULTS.modern.accentColor, padX: MODERN_HEADER_PAD_X_PT, padY: MODERN_HEADER_PAD_Y_PT, radius: 2 },
       photo: ['#ffffff', { onBanner: true }],
     };
   },
@@ -101,7 +102,7 @@ export const LOOKS = {
       ...base,
       contacts: value,
       marks: bandMarks(value, solid(bg)),
-      band: { color: bg, padX: 0, padY: MODERN_HEADER_PAD_Y_PT, bleed: true },
+      band: { color: bg, fallback: DEFAULTS.sidebar.sidebarBg, padX: 0, padY: MODERN_HEADER_PAD_Y_PT, bleed: true },
       photo: [accent, { lightBorder: true }],
     };
   },
@@ -119,9 +120,11 @@ export const LOOKS = {
  *   contacts  the colour of the contact icons and values
  *   marks     the colour of the Bar and Bullet marks on a band (bandMarks), else null: the
  *             page's light greys, as the résumé's header prints them
- *   band      null, or the filled band the letterhead sits in: { color, padX, padY, radius?, bleed? }
+ *   band      null, or the filled band the letterhead sits in: { color, fallback, padX, padY, radius?, bleed? }
  *             — Modern's accent banner inside the margins; the Sidebar panel's colour to the page
- *             edges (bleed: the content keeps the page margins, the fill runs to the paper's edge)
+ *             edges (bleed: the content keeps the page margins, the fill runs to the paper's edge).
+ *             `fallback` is the look's own band colour (its template's default), which Word prints
+ *             where it cannot take `color` (a colour name, an import's "#12345", FIDB-51-VF7-NB2)
  *   rules     the rules under the letterhead, top down, [{ width, color }] — two are a double rule:
  *             the résumé header's rule wherever the résumé prints one (Header Customization →
  *             Header Bottom Border and its Thickness, V2FIDB-51-2), else the look's own mark
