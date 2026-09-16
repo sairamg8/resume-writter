@@ -3,6 +3,7 @@
 // and the editor and the PDF (= the preview) both read what is stored. normalizeResume() runs
 // withDesignNumbers() wherever résumés come in: Design → Spacing's numbers (spacingNumbers.js) and
 // the ones below, each stored as a number in its control's range or dropped so the default prints.
+import { HEADER_GAPS } from './headerSpacing.js';
 import { withSpacingNumbers, withStoredNumbers } from './spacingNumbers.js';
 
 /**
@@ -20,7 +21,13 @@ export const SECTION_BORDER_PT = { min: 1, max: 8 };
  */
 export const HEADER_BORDER_PT = { min: 1, max: 12, zeroIsUnset: true };
 
-const DESIGN_NUMBERS = { sectionBorderWidth: SECTION_BORDER_PT, headerBorderWidth: HEADER_BORDER_PT };
+const DESIGN_NUMBERS = {
+  sectionBorderWidth: SECTION_BORDER_PT,
+  headerBorderWidth: HEADER_BORDER_PT,
+  // Header Customization → Name & Title Spacing, px (HEADER_GAPS: 2–48). The résumé's PDF reads it
+  // unchecked under Inline: "abc" threw (no PDF), 1000 flung the title off the header (FIDB-51-VF4-NB1).
+  headerInlineGap: HEADER_GAPS.headerInlineGap,
+};
 
 /** `resume` with every Design number stored as a number in its control's range (see above). */
 export const withDesignNumbers = (resume) => withStoredNumbers(withSpacingNumbers(resume), DESIGN_NUMBERS);
