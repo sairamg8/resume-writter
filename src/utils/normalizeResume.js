@@ -1,6 +1,8 @@
 // Résumé data from before this build — this browser's saved store, the cloud account, an
 // imported .json, the sample set — made current in ONE place. Every way a résumé comes in goes
 // through normalizeResume(): the store's load, import and restore, and the cloud sync's merge.
+// A photo stored larger than an upload keeps is the one change made later, as decoding an image
+// takes a promise: the store makes it smaller once it has it (smallerPhotos.js).
 import { inSidebarColumn, offersTemplate, withKnownTemplate } from '@/constants/templates';
 import { withSpacingNumbers } from '@/constants/spacingNumbers';
 import { HEADER_READS, HEADER_SEEN, withHeaderColorsBack } from '@/templates/pdf/shared/headerColors';

@@ -185,6 +185,27 @@ describe('every upload is scaled to what the PDF prints (R7-4)', () => {
   });
 });
 
+// Every build before a4a1f85 stored a PNG or JPEG photo whole: a saved one stays in storage at its
+// size until the store makes it what an upload of it is (ONB-10, src/utils/smallerPhotos.js).
+describe('a photo an older build saved at camera size is made the size an upload is (ONB-10)', () => {
+  it("the résumé's and the letter's photos: under 300 KB within 1024 px, updatedAt kept, and the PDF exports small", () => {
+    cy.visitEditor('classic', { state: buildTestState('classic') });
+    drawnFile(1600, 1200, 'image/jpeg', noise).then((camera) => drawnFile(900, 900, 'image/jpeg', noise).then((letter) => {
+      expect([camera.length, letter.length].every((n) => n > 400_000), 'both photos over what an upload keeps').to.equal(true);
+      const state = saved(`data:image/jpeg;base64,${camera.toString('base64')}`, `data:image/jpeg;base64,${letter.toString('base64')}`);
+      cy.seedAndVisit(`/#/resume/${state.activeId}`, state);
+      cy.store().should((s) => {
+        expect(bytesOf(photoOf(s)), 'the résumé photo').to.be.at.most(300_000);
+        expect(bytesOf(active(s).coverLetter.clPhoto), 'the letter photo').to.be.at.most(300_000);
+        expect(active(s).updatedAt, 'not an edit').to.equal(active(state).updatedAt);
+      });
+      cy.store().then((s) => decoded(photoOf(s))).should((img) => expect(Math.max(img.width, img.height)).to.be.at.most(1024));
+      cy.previewReady();
+      cy.exportPdf().then((pdf) => expect(pdf.bytes, 'the PDF carries the smaller photo').to.be.below(1_000_000));
+    }));
+  });
+});
+
 /** A 1×1 GIF whose one pixel is see-through (its colour index 0 is marked transparent). */
 const CLEAR_GIF = 'R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
 /** A 400×400 cut-out saved by the browser as a WebP, as a selectFile file. */

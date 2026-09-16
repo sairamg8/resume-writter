@@ -31,7 +31,10 @@ type Resume = {
 ### Personal (high level)
 
 Seeded from `SAIRAM_PERSONAL` in `defaultDataContent.js` (demo content for the author).  
-Includes name, title, contact fields, optional photo, `hiddenFields[]`.
+Includes name, title, contact fields, optional photo, `hiddenFields[]`.  
+A photo (and the letter's `clPhoto`) is a data URL: an upload is stored at most 1024 px and 300 KB
+(`readImageFile`); one an older build stored larger is replaced by that copy once the store has it,
+`updatedAt` untouched (`src/utils/smallerPhotos.js`, ONB-10).
 
 ### Section
 

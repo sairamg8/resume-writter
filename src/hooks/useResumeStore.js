@@ -9,6 +9,7 @@ import { DATA_VERSION, normalizeResume } from '@/utils/normalizeResume';
 import { backupRaw, pendingRecovery, readSavedList, rememberRecovery, setItemWithRoom } from '@/utils/storageBackup';
 import { savedDeletions } from '@/utils/localDeletions';
 import { isOriginal, withKeep } from '@/utils/demoSeed';
+import { useSmallerPhotos } from '@/hooks/useSmallerPhotos';
 
 const STORAGE_KEY = 'cpwtcv_v1';
 
@@ -76,6 +77,9 @@ export function useAppStore() {
       setPersistError(e);
     }
   }, [appState]);
+
+  // A photo an older build stored at camera size is made what an upload of it is now, once (ONB-10).
+  useSmallerPhotos(appState.resumes, setAppState);
 
   const activeResume = appState.resumes.find(r => r.id === appState.activeId) || appState.resumes[0];
 

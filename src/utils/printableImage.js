@@ -2,16 +2,16 @@
 // editor, where the browser decodes it, but react-pdf cannot draw it: the preview and the PDF
 // printed no photo, and nothing said why (R7-7). The PDF prints a copy of it instead, converted as
 // an upload of it is (readImageFile) and made once a session. The saved résumé keeps what it
-// holds, so old data loads unchanged, and stored data still changes only through normalizeResume,
-// which cannot decode an image. A photo this browser cannot decode either still prints none, and
-// the editor says so (usePrintableImage).
+// holds, so old data loads unchanged — unless it is larger than any upload stores, when the store
+// keeps the same copy in its place (smallerPhotos.js). A photo this browser cannot decode either
+// still prints none, and the editor says so (usePrintableImage).
 import { drawableImage, readImageFile } from './imageUpload.js';
 
 /** Copies made (null: none could be), by saved data URL, oldest first. */
 const made = new Map();
 /** Copies being made, by saved data URL. */
 const making = new Map();
-/** Copies kept: the résumé's photo and the letter's, for the few résumés one session opens. */
+/** Copies kept: the résumé's photo and the letter's, for the few résumés one session opens (and the store's, smallerPhotos.js). */
 const KEEP = 8;
 const listeners = new Set();
 
@@ -63,7 +63,16 @@ export function printableNow(src) {
 /** What the PDF prints for the saved image `src` (see printableNow), making its copy the first time. */
 export function printableImage(src) {
   const now = printableNow(src);
-  if (now !== undefined) return Promise.resolve(now);
+  return now !== undefined ? Promise.resolve(now) : imageCopy(src);
+}
+
+/**
+ * The copy of the saved data URL `src` made as an upload of it is (null when none can be), made
+ * once a session and shared by all who ask: the PDF's copy of a WebP (printableImage) and the
+ * store's smaller photo in place of one saved at camera size (smallerPhotos.js).
+ */
+export function imageCopy(src) {
+  if (made.has(src)) return Promise.resolve(made.get(src));
   if (!making.has(src)) {
     making.set(src, copyOf(src).then((copy) => {
       made.set(src, copy);

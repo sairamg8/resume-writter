@@ -76,7 +76,7 @@ const tooLarge = (maxBytes) => `That image is too large. Please upload one under
  * icon under 20 pt; two photos (the résumé's and the letter's) still leave most of a 1 MiB cloud
  * document for the text. 400 KB is the icon limit the editor has always stated.
  */
-const KINDS = {
+export const KINDS = {
   photo: { as: 'jpeg', maxSide: 1024, maxBytes: 300_000 },
   icon: { as: 'png', maxSide: 256, maxBytes: 400_000 },
 };
