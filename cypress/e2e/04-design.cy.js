@@ -239,3 +239,46 @@ describe('design — Typography on Sidebar (V2W2b-3)', () => {
     cy.contains(NOTE).should('not.exist');
   });
 });
+
+describe('design — Section Headings shows what the PDF prints (R5-3)', () => {
+  // With no heading style or title case stored (an import, older data) the PDF prints the
+  // template's own fallback — Classic 'line', Executive normal case. The panel used to mark
+  // "Ruled" and "ABC" for every template, so clicking the marked chip changed the PDF.
+  const UNSET = { settings: { headingStyle: '', sectionTitleCase: '' } };
+
+  for (const [template, label] of [['classic', 'Line after'], ['modern', 'Line after'],
+    ['minimal', 'Underline'], ['executive', 'Underline'], ['sidebar', 'Plain']]) {
+    it(`${template}: with no stored heading style the panel marks ${label}, not Ruled`, () => {
+      cy.visitEditor(template, UNSET);
+      openDesign('Section Headings');
+      cy.contains('button', label).should('have.class', 'border-blue-500');
+      cy.contains('button', 'Ruled').should('not.have.class', 'border-blue-500');
+    });
+  }
+
+  it('classic: the marked "Line after" is the style the PDF prints — an accent section title', () => {
+    cy.visitEditor('classic', { settings: { headingStyle: '', sectionTitleCase: '', accentColor: '#e11d48' } });
+    openDesign('Section Headings');
+    cy.contains('button', 'Line after').should('have.class', 'border-blue-500');
+    // 'line' prints the title in the accent colour; 'ruled' prints it neutral grey (#374151).
+    cy.exportPdf().then((pdf) => {
+      const title = pdf.runs.find((r) => r.str.includes('ROFESSIONAL'));
+      expect(title && title.colorHex, 'the section title\'s colour').to.eq('#e11d48');
+    });
+  });
+
+  it('executive: with no stored title case the panel marks "Abc", and the PDF prints titles as typed', () => {
+    cy.visitEditor('executive', UNSET);
+    renderedText().should('contain', 'Professional Experience').and('not.contain', 'PROFESSIONAL EXPERIENCE');
+    openDesign('Section Headings');
+    cy.contains('button', /^Abc$/).should('have.class', 'bg-blue-600');
+    cy.contains('button', /^ABC$/).should('not.have.class', 'bg-blue-600');
+  });
+
+  it('classic: with no stored title case the panel keeps "ABC", as the PDF upper-cases', () => {
+    cy.visitEditor('classic', UNSET);
+    renderedText().should('contain', 'PROFESSIONAL EXPERIENCE');
+    openDesign('Section Headings');
+    cy.contains('button', /^ABC$/).should('have.class', 'bg-blue-600');
+  });
+});

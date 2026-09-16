@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { ATS_DEFAULTS, defaultSettings } from '@/utils/defaultData';
-import { drawsContactIcons, TEMPLATE_PICKER, templateId, upperSectionTitles } from '@/constants/templates';
+import { drawsContactIcons, TEMPLATE_PICKER, templateId } from '@/constants/templates';
 import { DesignSection, NumberRow } from '@/components/DesignPanelShared';
+import { HeadingsSection } from '@/components/DesignPanelHeadings';
 import { ColorsSection } from '@/components/DesignPanelColors';
 import { TypographySection } from '@/components/DesignPanelTypography';
 import { DatesSection } from '@/components/DesignPanelDates';
@@ -147,78 +148,7 @@ export default function DesignPanel({ resume, updateSetting, setTemplate, resetS
         </div>
       </DesignSection>
 
-      <DesignSection title="Section Headings" onReset={() => resetSection(HEADING_KEYS)}>
-        {current === 'sidebar' && (
-          <p className="text-[11px] text-gray-400 leading-relaxed">
-            These style the main column&apos;s headings. The side column keeps its own small headings and rule; only Title case applies there.
-          </p>
-        )}
-        <div className="flex items-center justify-between">
-          <span className="text-xs text-gray-500">Title case</span>
-          <div className="flex gap-1">
-            {[{ value: 'upper', label: 'ABC' }, { value: 'normal', label: 'Abc' }].map(opt => (
-              <button
-                key={opt.value}
-                onClick={() => updateSetting('sectionTitleCase', opt.value)}
-                className={`px-3 py-1 text-xs font-semibold rounded border transition-all ${
-                  (upperSectionTitles(settings.sectionTitleCase) ? 'upper' : 'normal') === opt.value
-                    ? 'bg-blue-600 border-blue-600 text-white'
-                    : 'border-gray-200 text-gray-500 hover:border-blue-300'
-                }`}
-              >{opt.label}</button>
-            ))}
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between">
-          <span className="text-xs text-gray-500">Border thickness</span>
-          <div className="flex items-center gap-1">
-            <button onClick={() => updateSetting('sectionBorderWidth', Math.max(1, (settings.sectionBorderWidth ?? 1) - 1))} className="w-6 h-6 flex items-center justify-center border border-gray-200 rounded text-gray-600 hover:bg-gray-100 text-base leading-none">−</button>
-            <input type="number" aria-label="Section border thickness (pt)" min={1} max={8} value={settings.sectionBorderWidth ?? 1} onChange={e => { const v = parseInt(e.target.value, 10); if (!isNaN(v)) updateSetting('sectionBorderWidth', Math.min(8, Math.max(1, v))); }} className="w-10 text-center text-xs font-medium text-gray-700 border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-400 h-6" />
-            <button onClick={() => updateSetting('sectionBorderWidth', Math.min(8, (settings.sectionBorderWidth ?? 1) + 1))} className="w-6 h-6 flex items-center justify-center border border-gray-200 rounded text-gray-600 hover:bg-gray-100 text-base leading-none">+</button>
-            {/* Points, as the PDF prints it — every saved value keeps its look (VM3-3, as R3-7) */}
-            <span className="text-[11px] text-gray-400 ml-1">pt</span>
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between">
-          <span className="text-xs text-gray-500">Border color</span>
-          <div className="flex items-center gap-2">
-            <input type="color" value={settings.sectionBorderColor || settings.accentColor || '#374151'} onChange={e => updateSetting('sectionBorderColor', e.target.value)} className="h-6 w-10 rounded border border-gray-200 cursor-pointer p-0.5" title="Pick border color" aria-label="Section border color" />
-            <span className="text-[11px] text-gray-400 font-mono">{settings.sectionBorderColor || 'accent'}</span>
-            {settings.sectionBorderColor && (
-              <button onClick={() => updateSetting('sectionBorderColor', '')} className="text-[11px] text-gray-400 hover:text-gray-600" title="Reset to accent color">↺</button>
-            )}
-          </div>
-        </div>
-
-        <div className="grid grid-cols-3 gap-1.5">
-          {[
-            { value: 'ruled',     label: 'Ruled' },
-            { value: 'leftbar',   label: 'Left bar' },
-            { value: 'line',      label: 'Line after' },
-            { value: 'underline', label: 'Underline' },
-            { value: 'box',       label: 'Boxed' },
-            { value: 'plain',     label: 'Plain' },
-          ].map(opt => {
-            const active = (settings.headingStyle || 'ruled') === opt.value;
-            const accent = settings.accentColor || '#374151';
-            return (
-              <button key={opt.value} onClick={() => updateSetting('headingStyle', opt.value)} className={`px-2 py-2 rounded-lg border text-left transition-all ${active ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}`}>
-                <div className="mb-1">
-                  {opt.value === 'ruled'     && <div><span className="text-[8px] font-bold uppercase tracking-wider" style={{ color: '#374151' }}>ABC</span><div className="h-px mt-0.5" style={{ backgroundColor: '#e5e7eb' }} /></div>}
-                  {opt.value === 'leftbar'   && <div className="flex items-center gap-1"><div className="w-0.5 self-stretch rounded-full" style={{ backgroundColor: accent }} /><span className="text-[8px] font-bold uppercase tracking-wider" style={{ color: '#374151' }}>ABC</span></div>}
-                  {opt.value === 'line'      && <div className="flex items-center gap-1"><span className="text-[8px] font-bold uppercase tracking-wider" style={{ color: accent }}>ABC</span><span className="flex-1 h-px" style={{ backgroundColor: accent + '60' }} /></div>}
-                  {opt.value === 'underline' && <div className="pb-0.5 inline-block" style={{ borderBottom: `1.5px solid ${accent}` }}><span className="text-[8px] font-bold uppercase tracking-wider" style={{ color: accent }}>ABC</span></div>}
-                  {opt.value === 'box'       && <span className="text-[8px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded" style={{ color: accent, backgroundColor: accent + '18' }}>ABC</span>}
-                  {opt.value === 'plain'     && <span className="text-[8px] font-bold uppercase tracking-wider" style={{ color: accent }}>ABC</span>}
-                </div>
-                <span className={`text-[10px] ${active ? 'text-blue-700 font-medium' : 'text-gray-500'}`}>{opt.label}</span>
-              </button>
-            );
-          })}
-        </div>
-      </DesignSection>
+      <HeadingsSection settings={settings} template={current} updateSetting={updateSetting} onReset={() => resetSection(HEADING_KEYS)} />
 
       <DatesSection settings={settings} updateSetting={updateSetting} onReset={() => resetSection(DATE_KEYS)} />
 
