@@ -158,7 +158,7 @@ export default function DesignPanel({ resume, updateSetting, setTemplate, resetS
             <p className="text-xs font-semibold text-amber-800">Reset Design Settings</p>
             <p className="text-[10px] text-amber-600 mt-0.5">
               {confirmReset
-                ? 'This will reset all design settings to this template\'s ATS-safe defaults. Resume content is kept.'
+                ? 'This will reset all design settings to this template\'s ATS-safe defaults. Resume content and uploaded contact icons are kept.'
                 : 'Resets font, colors, spacing, and layout settings to this template\'s ATS-safe defaults.'}
             </p>
           </div>

@@ -190,6 +190,20 @@ describe('design — reset returns to the template\'s defaults (M16)', () => {
     renderedText().should('contain', 'Professional Experience').and('not.contain', 'PROFESSIONAL EXPERIENCE');
   });
 
+  // The icons uploaded under Personal Info → Fields live in settings; Reset deleted them (R5-6).
+  it('Reset keeps the contact icons the user uploaded', () => {
+    const PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+    cy.visitEditor('classic', { settings: { accentColor: '#0d9488', iconSet: 'bold', customContactIcons: { email: PNG } } });
+    openDesign();
+    cy.contains('button', /^Reset$/).click();
+    cy.contains('Resume content and uploaded contact icons are kept.').should('be.visible');
+    cy.contains('button', 'Yes, Reset').click();
+    cy.store().should((s) => {
+      expect(settingsOf(s)).to.include({ accentColor: '#374151', iconSet: 'filled' });
+      expect(settingsOf(s).customContactIcons).to.deep.eq({ email: PNG });
+    });
+  });
+
   it('on Sidebar, Section Headings says what the side column keeps, and Title case reaches it (R6-4)', () => {
     cy.visitEditor('sidebar');
     renderedText().should('contain', 'CONTACT');

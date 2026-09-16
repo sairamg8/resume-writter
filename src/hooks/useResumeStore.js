@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { createBlankResume, defaultSettings } from '@/utils/defaultData';
+import { createBlankResume, resetDesignSettings } from '@/utils/defaultData';
 import { createSectionActions } from '@/hooks/useResumeSectionActions';
 import { createSyncActions } from '@/hooks/useResumeSyncActions';
 import { newId } from '@/utils/ids';
@@ -155,9 +155,9 @@ export function useAppStore() {
     patchActive(r => ({ ...r, settings: { ...r.settings, [key]: value } }));
   }
 
-  /** Design → Reset: the ATS-safe defaults with the current template's heading style (M16). */
+  /** Design → Reset: the ATS-safe defaults with the current template's heading style (M16); uploaded icons stay (R5-6). */
   function resetSettings() {
-    patchActive(r => ({ ...r, settings: defaultSettings(r.template) }));
+    patchActive(r => ({ ...r, settings: resetDesignSettings(r.settings, r.template) }));
   }
 
   /**

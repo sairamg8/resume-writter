@@ -59,6 +59,18 @@ export function defaultSettings(template) {
   return { ...ATS_DEFAULTS, ...templateStyleDefaults(template) };
 }
 
+/**
+ * Design → Reset: `settings` back to the template's defaults, keeping the contact icons uploaded
+ * under Personal Info → Fields. They are stored with the design settings but are the user's own
+ * images, and Reset deleted them with no undo (R5-6). A value that is not a map of them (none in
+ * older data) resets to none.
+ */
+export function resetDesignSettings(settings, template) {
+  const icons = settings?.customContactIcons;
+  const uploads = icons && typeof icons === 'object' && !Array.isArray(icons) ? { ...icons } : {};
+  return { ...defaultSettings(template), customContactIcons: uploads };
+}
+
 export { SECTION_TYPE_DEFAULTS } from '@/utils/defaultDataSectionTypes';
 
 /**

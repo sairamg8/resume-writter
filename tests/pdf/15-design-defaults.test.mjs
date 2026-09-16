@@ -3,7 +3,8 @@ import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { createElement } from 'react';
 import { renderToString } from 'react-dom/server';
-import { setup, teardown, resume, experience, render, read, allText, drawState, loadModule, TEMPLATES } from './harness.mjs';
+import { setup, teardown, resume, experience, render, renderCover, read, allText, drawState, loadModule, TEMPLATES } from './harness.mjs';
+import { painted, PNG_2X2 } from './extractors.mjs';
 
 before(setup);
 after(teardown);
@@ -40,6 +41,74 @@ describe('design defaults (M16)', () => {
     r.settings = defaultSettings('executive');
     const text = allText(await read(await render(r)));
     assert.ok(text.includes('Professional Experience') && !text.includes('PROFESSIONAL EXPERIENCE'), text);
+  });
+});
+
+// The icons uploaded under Personal Info → Fields are stored in settings, next to the design
+// settings Reset returns to their defaults. Reset replaced the whole settings object, so it deleted
+// every upload with no undo, while its confirmation said the résumé's content was kept (R5-6).
+describe('Design → Reset keeps the contact icons the user uploaded (R5-6)', () => {
+  const KEY = 'cpwtcv_v1';
+  const PERSONAL = { email: 'me@example.com', phone: '+1 555 0100', github: 'github.com/me' };
+
+  /** The app's own store over `saved` (one résumé), after Design → Reset: the résumé it leaves. */
+  async function afterReset(saved) {
+    const { useAppStore } = await loadModule('/src/hooks/useResumeStore.js');
+    const map = new Map([[KEY, JSON.stringify({ resumes: [saved], activeId: saved.id })]]);
+    globalThis.localStorage = {
+      get length() { return map.size; },
+      key: (i) => [...map.keys()][i] ?? null,
+      getItem: (k) => (map.has(k) ? map.get(k) : null),
+      setItem: (k, v) => map.set(k, String(v)),
+      removeItem: (k) => map.delete(k),
+    };
+    let store = null;
+    let pressed = false;
+    // The server renderer applies an update made while its own component renders, and renders
+    // again: Reset is pressed once, and the second render's store holds its result.
+    function Probe() {
+      store = useAppStore();
+      if (!pressed) { pressed = true; store.resetSettings(); }
+      return null;
+    }
+    try {
+      renderToString(createElement(Probe));
+      return store.activeResume;
+    } finally {
+      delete globalThis.localStorage;
+    }
+  }
+
+  const images = async (bytes) => (await painted(bytes)).filter((p) => p.paint === 'image').length;
+
+  it('every template: the design settings go back to its defaults, the uploads stay, and its PDF and letter still draw them', async () => {
+    const { defaultSettings } = await loadModule('/src/utils/defaultData.js');
+    const uploads = { email: PNG_2X2, github: PNG_2X2 };
+    for (const template of TEMPLATES) {
+      const saved = resume({ template, personal: PERSONAL, settings: {
+        accentColor: '#0d9488', iconSet: 'bold', contactStyle: 'bar', marginH: 30, customContactIcons: uploads,
+      } });
+      const r = await afterReset(saved);
+      assert.deepEqual(r.settings, { ...defaultSettings(template), customContactIcons: uploads }, template);
+      // Before: customContactIcons {}, and each PDF drew the pack's icons instead.
+      assert.equal(await images(await render(r)), 2, `${template}: the résumé draws both uploads`);
+      assert.equal(await images(await renderCover(r)), 2, `${template}: the cover letter draws both uploads`);
+    }
+  });
+
+  it('old saved data: uploads saved with no dataVersion stay; none stored, or a value that is not a map, resets to none', async () => {
+    const { defaultSettings } = await loadModule('/src/utils/defaultData.js');
+    const withUploads = resume({ settings: { accentColor: '#0d9488', customContactIcons: { phone: PNG_2X2 } } });
+    delete withUploads.dataVersion; // as 4bc56fe stored every résumé
+    assert.deepEqual((await afterReset(withUploads)).settings, { ...defaultSettings('classic'), customContactIcons: { phone: PNG_2X2 } });
+    const old = resume({ settings: { accentColor: '#0d9488' } });
+    delete old.settings.customContactIcons;
+    delete old.dataVersion;
+    assert.deepEqual((await afterReset(old)).settings, defaultSettings('classic'));
+    for (const junk of [null, 'data:image/png;base64,AAAA', [PNG_2X2]]) {
+      const r = await afterReset(resume({ settings: { customContactIcons: junk } }));
+      assert.deepEqual(r.settings, defaultSettings('classic'), JSON.stringify(junk));
+    }
   });
 });
 
