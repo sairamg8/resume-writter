@@ -63,10 +63,55 @@ function inlineLayout(look, s) {
 }
 
 /**
+ * Each template's letterhead (V2FIDB-51-6): the look's changes to letterheadLook()'s shared `base`,
+ * given the résumé's resolved settings `s`, its `accent` and the résumé header's rule `rule` (null
+ * where the résumé prints none). One entry per template the app offers, pinned to TEMPLATE_IDS by
+ * tests/pdf/15-design-defaults: it was a switch whose `default:` was Classic's, so a template added
+ * to TEMPLATES without its letterhead printed Classic's letter with every test green.
+ */
+export const LOOKS = {
+  classic: (base, { rule }) => ({ ...base, rules: rule || [] }),
+  modern: (base, { s, accent }) => {
+    // Modern's banner: the accent, its padding and corners; everything on it in the header text colour.
+    const headerText = s.headerTextColor || '#ffffff';
+    return {
+      ...base,
+      title: { ...base.title, opacity: 0.9 },
+      contacts: headerText,
+      marks: bandMarks(headerText, solid(accent)),
+      band: { color: accent, padX: MODERN_HEADER_PAD_X_PT, padY: MODERN_HEADER_PAD_Y_PT, radius: 2 },
+      photo: ['#ffffff', { onBanner: true }],
+    };
+  },
+  // Minimal's light name and a hairline in its summary bar's pale accent.
+  minimal: (base, { accent, rule }) => ({
+    ...base,
+    name: { ...base.name, weight: 300, letterSpacing: -0.3 },
+    rules: rule || [{ width: 0.75, color: solid(accent, 0.4) }],
+  }),
+  executive: (base, { accent, rule }) => ({
+    ...base,
+    rules: rule || [{ width: 0.75, color: solid(accent) }, { width: 0.75, color: solid(accent) }],
+  }),
+  sidebar: (base, { s, accent }) => {
+    // The Sidebar column's background and its colours on it (sidebarShades, R2-2).
+    const bg = s.sidebarBg || '#1e293b';
+    const { value } = sidebarShades(bg);
+    return {
+      ...base,
+      contacts: value,
+      marks: bandMarks(value, solid(bg)),
+      band: { color: bg, padX: 0, padY: MODERN_HEADER_PAD_Y_PT, bleed: true },
+      photo: [accent, { lightBorder: true }],
+    };
+  },
+};
+
+/**
  * The letterhead of a letter whose résumé prints with `template`, from the résumé's resolved
  * settings `s` (resolveTemplateSettings): the same fonts (the page's), accent, name and title
  * colours, header text colour and alignment as the résumé's header.
- *   look      the template whose look it takes (an id the app does not offer is Classic)
+ *   look      the template whose look it takes (LOOKS; an id the app does not offer is Classic)
  *   centered  the résumé's header is centred (letterheadCentered): photo, name and contacts on the centre line
  *   inline    null, or { gap }: the résumé's header prints the title on the name's line (inlineLayout)
  *   name      { color, weight, letterSpacing? }: Design → Name color, else the template's own
@@ -111,41 +156,5 @@ export function letterheadLook(template, s = {}) {
   // résumé draws no rule at (an import's -3 or "abc") is none here either — and no width Word rejects.
   const width = Number(s.headerBorderWidth || 2);
   const rule = headerBorderOn(s, look) && Number.isFinite(width) && width > 0 ? [{ width, color: solid(accent) }] : null;
-  switch (look) {
-    case 'modern': {
-      // Modern's banner: the accent, its padding and corners; everything on it in the header text colour.
-      const headerText = s.headerTextColor || '#ffffff';
-      return {
-        ...base,
-        title: { ...base.title, opacity: 0.9 },
-        contacts: headerText,
-        marks: bandMarks(headerText, solid(accent)),
-        band: { color: accent, padX: MODERN_HEADER_PAD_X_PT, padY: MODERN_HEADER_PAD_Y_PT, radius: 2 },
-        photo: ['#ffffff', { onBanner: true }],
-      };
-    }
-    case 'sidebar': {
-      // The Sidebar column's background and its colours on it (sidebarShades, R2-2).
-      const bg = s.sidebarBg || '#1e293b';
-      const { value } = sidebarShades(bg);
-      return {
-        ...base,
-        contacts: value,
-        marks: bandMarks(value, solid(bg)),
-        band: { color: bg, padX: 0, padY: MODERN_HEADER_PAD_Y_PT, bleed: true },
-        photo: [accent, { lightBorder: true }],
-      };
-    }
-    case 'minimal':
-      // Minimal's light name and a hairline in its summary bar's pale accent.
-      return {
-        ...base,
-        name: { ...base.name, weight: 300, letterSpacing: -0.3 },
-        rules: rule || [{ width: 0.75, color: solid(accent, 0.4) }],
-      };
-    case 'executive':
-      return { ...base, rules: rule || [{ width: 0.75, color: solid(accent) }, { width: 0.75, color: solid(accent) }] };
-    default:
-      return { ...base, rules: rule || [] };
-  }
+  return (LOOKS[look] || LOOKS.classic)(base, { s, accent, rule });
 }

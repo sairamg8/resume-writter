@@ -48,12 +48,13 @@ const SIDEBAR_HEADER_GAPS = {
  *   headerRule      it draws the header's bottom rule when a résumé has no `showHeaderBorder`
  *                   (older or imported data; new résumés store `false`): the Classic design
  *   headerGaps      the header's spacing where the résumé sets none (below)
- * Three per-template tables stay with the code that reads them, each pinned to TEMPLATE_IDS by
+ * Four per-template tables stay with the code that reads them, each pinned to TEMPLATE_IDS by
  * tests/pdf/15-design-defaults: DEFAULTS in templateSettings.js — the PDF's fallbacks for unset
  * colours, computed from other settings, and Classic's unset heading is 'line', not the 'ruled'
  * that picking Classic sets, so merging them would change what older résumés print —
- * TEMPLATE_SECTION_DEFAULTS (templateSectionDefaults.js), per section type, and the PDF
- * components' LOADERS (pdfExportReactPDF.js), which are code-split imports.
+ * TEMPLATE_SECTION_DEFAULTS (templateSectionDefaults.js), per section type, the PDF
+ * components' LOADERS (pdfExportReactPDF.js), which are code-split imports, and the cover
+ * letter's LOOKS (templates/pdf/shared/letterhead.js), computed from the résumé's colours.
  */
 const TEMPLATES = {
   classic: {

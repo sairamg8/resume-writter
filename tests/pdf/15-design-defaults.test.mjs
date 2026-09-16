@@ -115,7 +115,8 @@ describe('Design → Reset keeps the contact icons the user uploaded (R5-6)', ()
 describe('every per-template table covers every template (VM3-5)', () => {
   // Guards, each checked by mutation (a template dropped from one table fails its line): a
   // template missing from one of these tables silently printed Classic's colour fallbacks
-  // (DEFAULTS[t] || DEFAULTS.classic) or Classic's component (LOADERS), or was not offered.
+  // (DEFAULTS[t] || DEFAULTS.classic), Classic's component (LOADERS) or Classic's cover letter
+  // letterhead (LOOKS, V2FIDB-51-6: a switch whose `default:` was Classic's), or was not offered.
   it('the PDF\'s fallbacks, section defaults and components, and the Design panel\'s list, name exactly the templates the app offers', async () => {
     const { TEMPLATE_IDS, TEMPLATE_PICKER, templateLabel } = await loadModule('/src/constants/templates.js');
     const ids = TEMPLATE_IDS.toSorted();
@@ -123,6 +124,7 @@ describe('every per-template table covers every template (VM3-5)', () => {
       'DEFAULTS (templateSettings.js)': (await loadModule('/src/templates/pdf/shared/templateSettings.js')).DEFAULTS,
       'TEMPLATE_SECTION_DEFAULTS': (await loadModule('/src/templates/pdf/shared/templateSectionDefaults.js')).TEMPLATE_SECTION_DEFAULTS,
       'LOADERS (pdfExportReactPDF.js)': (await loadModule('/src/utils/pdfExportReactPDF.js')).LOADERS,
+      'LOOKS (letterhead.js)': (await loadModule('/src/templates/pdf/shared/letterhead.js')).LOOKS,
     };
     for (const [name, table] of Object.entries(tables)) assert.deepEqual(Object.keys(table).toSorted(), ids, name);
     assert.deepEqual(TEMPLATE_PICKER.map((t) => t.id).toSorted(), ids, 'the Design panel\'s picker');
@@ -139,6 +141,21 @@ describe('every per-template table covers every template (VM3-5)', () => {
     const { LOADERS } = await loadModule('/src/utils/pdfExportReactPDF.js');
     const names = Object.fromEntries(await Promise.all(Object.entries(LOADERS).map(async ([id, load]) => [id, (await load()).name])));
     assert.deepEqual(names, Object.fromEntries(TEMPLATES.map((id) => [id, `${id[0].toUpperCase()}${id.slice(1)}TemplatePDF`])));
+  });
+
+  it('each LOOKS entry is the letterhead letterheadLook() gives that template; an id the app does not offer takes Classic\'s (V2FIDB-51-6)', async () => {
+    // Swaps each entry for a marker: no other branch may answer for a template in the table.
+    const { LOOKS, letterheadLook } = await loadModule('/src/templates/pdf/shared/letterhead.js');
+    const s = { accentColor: '#e11d48', showHeaderBorder: true };
+    const own = { ...LOOKS };
+    try {
+      for (const id of Object.keys(own)) LOOKS[id] = (base) => ({ ...base, from: id });
+      for (const id of TEMPLATES) assert.equal(letterheadLook(id, s).from, id, id);
+      for (const id of ['dark', 'Modern', undefined]) assert.equal(letterheadLook(id, s).from, id === 'Modern' ? 'modern' : 'classic', String(id));
+    } finally {
+      Object.assign(LOOKS, own);
+    }
+    for (const id of TEMPLATES) assert.equal(letterheadLook(id, s).look, id, `${id}: restored`);
   });
 });
 
