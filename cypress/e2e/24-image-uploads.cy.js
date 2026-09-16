@@ -1,7 +1,8 @@
 // Uploaded images — the profile photo, the letter's photo, a contact field's icon — in the real
-// browser: what a file is comes from its bytes, never its name (R7-3), and every upload is scaled
-// to what the PDF prints (R7-4). src/utils/imageUpload.js; tests/unit/image-upload.unit.mjs runs
-// the same rules against a stand-in browser.
+// browser: what a file is comes from its bytes, never its name (R7-3), every upload is scaled to
+// what the PDF prints (R7-4), and a see-through photo keeps its transparency (R7-6).
+// src/utils/imageUpload.js; tests/unit/image-upload.unit.mjs runs the same rules against a
+// stand-in browser.
 import { buildTestState } from '../../tests/helpers.js';
 
 /** Resume the store marks active. */
@@ -141,6 +142,49 @@ describe('every upload is scaled to what the PDF prints (R7-4)', () => {
     cy.store().should((s) => expect(Object.values(active(s).settings.customContactIcons || {})).to.have.length(1));
     cy.store().then((s) => decoded(Object.values(active(s).settings.customContactIcons)[0]))
       .should((img) => expect([img.width, img.height]).to.deep.equal([256, 256]));
+  });
+});
+
+/** A 1×1 GIF whose one pixel is see-through (its colour index 0 is marked transparent). */
+const CLEAR_GIF = 'R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+/** A 400×400 cut-out saved by the browser as a WebP, as a selectFile file. */
+const cutOutWebp = () => drawnFile(400, 400, 'image/webp', cutOut).then((contents) => {
+  expect(contents.toString('latin1', 8, 12), 'the browser saved a WebP').to.equal('WEBP');
+  return { contents, fileName: 'cut-out.webp', mimeType: 'image/webp' };
+});
+
+// A cut-out portrait saved as WebP or GIF was stored as a JPEG on white, so it printed a white
+// disc on the Sidebar panel or Modern's banner, where the same cut-out as a PNG showed the ground
+// through it — fixed with R7-4's scaling (a4a1f85), which only a PNG source covered. An AVIF takes
+// the same path; the browser cannot save one to test here (the unit test has it).
+// tests/pdf/11-photo.test.mjs checks that the PDF shows the ground through a stored PNG.
+describe('a see-through photo stays see-through, whatever its format (R7-6)', () => {
+  it('profile photo: a cut-out WebP is stored as a PNG whose ground shows through', () => {
+    cy.visitEditor('sidebar', { state: buildTestState('sidebar') });
+    cy.contains('button', /^Photo/).click();
+    cutOutWebp().then((f) => inputNear('Profile Photo').selectFile(f, { force: true }));
+    cy.store().should((s) => expect(photoOf(s)).to.match(/^data:image\/png;base64,/));
+    cy.store().then((s) => decoded(photoOf(s))).should((img) => {
+      expect([img.width, img.height]).to.deep.equal([400, 400]);
+      expect(img.cornerAlpha, 'the corner shows through').to.equal(0);
+    });
+  });
+
+  it('profile photo: a GIF with a see-through pixel is stored as a PNG that keeps it', () => {
+    cy.visitEditor('modern', { state: buildTestState('modern') });
+    cy.contains('button', /^Photo/).click();
+    inputNear('Profile Photo').selectFile(file(CLEAR_GIF, 'clear.gif', 'image/gif'), { force: true });
+    cy.store().should((s) => expect(photoOf(s)).to.match(/^data:image\/png;base64,/));
+    cy.store().then((s) => decoded(photoOf(s)))
+      .should((img) => expect([img.width, img.height, img.cornerAlpha]).to.deep.equal([1, 1, 0]));
+  });
+
+  it('letter photo: a cut-out WebP is stored as a PNG whose ground shows through', () => {
+    cy.visitEditor('modern', { state: buildTestState('modern'), tab: 'coverletter' });
+    cutOutWebp().then((f) => inputNear('Cover Letter Photo').selectFile(f, { force: true }));
+    cy.store().should((s) => expect(active(s).coverLetter.clPhoto).to.match(/^data:image\/png;base64,/));
+    cy.store().then((s) => decoded(active(s).coverLetter.clPhoto))
+      .should((img) => expect(img.cornerAlpha, 'the corner shows through').to.equal(0));
   });
 });
 

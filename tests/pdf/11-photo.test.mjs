@@ -1,4 +1,5 @@
-// The profile photo's ring, checked on the page as pdf.js paints it (FIDA-43).
+// The profile photo's ring, checked on the page as pdf.js paints it (FIDA-43), and what shows
+// through a see-through photo (R7-6).
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs';
@@ -25,6 +26,25 @@ function photo() {
   return `data:image/png;base64,${c.toBuffer('image/png').toString('base64')}`;
 }
 
+/**
+ * A 64×64 cut-out — a disc of the photo colour, radius 12, on a see-through ground — as an upload
+ * stores it, a PNG; `onWhite`: as a JPEG on white, the way uploads stored a WebP or GIF one (R7-6).
+ */
+function cutOut({ onWhite = false } = {}) {
+  const c = canvasLib.createCanvas(64, 64);
+  const ctx = c.getContext('2d');
+  if (onWhite) {
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, 64, 64);
+  }
+  ctx.fillStyle = `rgb(${PHOTO_RGB.join(',')})`;
+  ctx.beginPath();
+  ctx.arc(32, 32, 12, 0, 2 * Math.PI);
+  ctx.fill();
+  const type = onWhite ? 'image/jpeg' : 'image/png';
+  return `data:${type};base64,${c.toBuffer(type).toString('base64')}`;
+}
+
 /** The top 40 % of page 1, painted: { w, h, data } (RGBA bytes). */
 async function paintTop(bytes) {
   const doc = await pdfjs.getDocument({ data: bytes.slice(), isEvalSupported: false, verbosity: 0 }).promise;
@@ -46,11 +66,8 @@ const distAt = ({ w, data }, x, y, c) => {
   return Math.hypot(data[i] - c[0], data[i + 1] - c[1], data[i + 2] - c[2]);
 };
 
-/**
- * The colours just outside the photo, on the middle of each side: for each side, the painted
- * pixel (1 to 6 px out) closest to `expected`, and its distance from it.
- */
-function ringAround(page, expected) {
+/** The box around every pixel painted in the photo colour: { x0, y0, x1, y1 }. */
+function photoColourBox(page) {
   let x0 = Infinity; let y0 = Infinity; let x1 = -1; let y1 = -1;
   for (let y = 0; y < page.h; y += 1) {
     for (let x = 0; x < page.w; x += 1) {
@@ -59,6 +76,15 @@ function ringAround(page, expected) {
       }
     }
   }
+  return { x0, y0, x1, y1 };
+}
+
+/**
+ * The colours just outside the photo, on the middle of each side: for each side, the painted
+ * pixel (1 to 6 px out) closest to `expected`, and its distance from it.
+ */
+function ringAround(page, expected) {
+  const { x0, y0, x1, y1 } = photoColourBox(page);
   assert.ok(x1 > x0 + 50, 'the photo is painted');
   const cx = Math.round((x0 + x1) / 2);
   const cy = Math.round((y0 + y1) / 2);
@@ -105,6 +131,40 @@ describe('photo ring', { skip: canvasLib ? false : '@napi-rs/canvas is not insta
     const r = resume({ personal: { photo: photo() }, settings: { accentColor: ACCENT, photoBorder: 'none' } });
     const ring = ringAround(await paintTop(await render(r)), ACCENT);
     for (const [side, d] of Object.entries(ring)) assert.ok(d > 100, `${side}: an accent pixel ${d} away`);
+  });
+});
+
+describe('a see-through photo shows the ground it sits on (R7-6)', { skip: canvasLib ? false : '@napi-rs/canvas is not installed' }, () => {
+  /** What page 1 paints beside the cut-out's disc (1.5 radii from its centre, inside the photo). */
+  const besideDisc = async (template, src, cover = false) => {
+    const r = resume({ template, personal: { photo: src }, settings: { accentColor: ACCENT, sidebarBg: '#1e293b' } });
+    const page = await paintTop(await (cover ? renderCover(r) : render(r)));
+    const { x0, y0, x1, y1 } = photoColourBox(page);
+    assert.ok(x1 > x0 + 20, 'the disc is painted');
+    const i = (Math.round((y0 + y1) / 2) * page.w + Math.round(x1 + (x1 - x0) / 4)) * 4;
+    return Array.from(page.data.slice(i, i + 3)); // a Uint8ClampedArray; deepEqual wants an array
+  };
+
+  // Guards: react-pdf always drew a PNG's see-through pixels, and a4a1f85 made an upload that has
+  // see-through pixels store them (R7-6 — cypress/e2e/24-image-uploads.cy.js and
+  // tests/unit/image-upload.unit.mjs, which fail on the module before it). These hold the printed
+  // half: the last case, a cut-out flattened onto white the way a WebP or GIF one was, shows that
+  // the check does see such a photo.
+  for (const [where, template, cover, ground] of [
+    ['Sidebar: the panel', 'sidebar', false, '#1e293b'],
+    ['Modern: the banner', 'modern', false, ACCENT],
+    ['cover letter in the Sidebar look: the panel', 'sidebar', true, '#1e293b'],
+    ['cover letter in the Modern look: the band', 'modern', true, ACCENT],
+  ]) {
+    it(`${where} shows through a cut-out PNG`, async () => {
+      const seen = await besideDisc(template, cutOut(), cover);
+      const [r, g, b] = rgb(ground);
+      assert.ok(Math.hypot(seen[0] - r, seen[1] - g, seen[2] - b) < 16, `[${seen}] beside the disc, expected ${ground}`);
+    });
+  }
+
+  it('a cut-out stored as a JPEG on white prints a white disc on the Sidebar panel', async () => {
+    assert.deepEqual(await besideDisc('sidebar', cutOut({ onWhite: true })), [255, 255, 255]);
   });
 });
 

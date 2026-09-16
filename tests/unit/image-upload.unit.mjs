@@ -11,6 +11,8 @@ const JPEG_B64 = '/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgMCAgMDAwMEAwMEBQgFBQQEBQ
 const WEBP_B64 = 'UklGRiIAAABXRUJQVlA4IBYAAAAwAQCdASoBAAEADsD+JaQAA3AAAAAA';
 const GIF_B64 = 'R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
 const b64 = (text) => Buffer.from(text).toString('base64');
+/** An AVIF's opening box ("ftyp", brand "avif"): all the stand-in browser reads of one. */
+const AVIF_B64 = b64('\x00\x00\x00\x1cftypavif\x00\x00\x00\x00avifmif1miaf');
 /** An SVG as Illustrator writes one: XML declaration, generator comment, DOCTYPE, then the root. */
 const SVG_TEXT = '﻿<?xml version="1.0" encoding="utf-8"?>\n<!-- Generator: Adobe Illustrator 27.0 -->\n'
   + '<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">\n'
@@ -62,9 +64,9 @@ describe('drawableImage: what the PDF draws from a saved image', () => {
 });
 
 // ── A stand-in for the browser ───────────────────────────────────────────────────────────────
-// createImageBitmap "decodes" the size in a file's header (PNG IHDR, JPEG SOF; a WebP or GIF is
-// 1×1) and refuses anything else; a canvas records what it was asked to encode, and encodes
-// `detail` bytes per pixel (a noisy photo ~1, a flat one far less).
+// createImageBitmap "decodes" the size in a file's header (PNG IHDR, JPEG SOF; a WebP, GIF, AVIF
+// or BMP is 1×1) and refuses anything else; a canvas records what it was asked to encode, and
+// encodes `detail` bytes per pixel (a noisy photo ~1, a flat one far less).
 
 /** What the stand-in sees in a file beyond its header: { detail, seeThrough }. */
 const looks = new WeakMap();
@@ -112,7 +114,7 @@ function installBrowser() {
       const sof = bytes.indexOf(Buffer.from([0xff, 0xc0]));
       return bitmap(bytes.readUInt16BE(sof + 7), bytes.readUInt16BE(sof + 5));
     }
-    if (head.startsWith('RIFF') || head.startsWith('GIF8') || head.startsWith('BM')) return bitmap(1, 1);
+    if (head.startsWith('RIFF') || head.startsWith('GIF8') || head.startsWith('BM') || head.slice(4) === 'ftypavif') return bitmap(1, 1);
     throw new DOMException('The source image could not be decoded.', 'InvalidStateError');
   };
   globalThis.document = {
@@ -193,6 +195,19 @@ describe('readImageFile: every upload is scaled to what the PDF prints (R7-4)', 
     assert.match(await readImageFile(pngFile(2000, 1500)), /^data:image\/jpeg;/);
     assert.match(await readImageFile(pngFile(1500, 2000, { seeThrough: true })), /^data:image\/png;/);
     assert.deepEqual(sizes(), ['jpeg 1024×768', 'png 768×1024']);
+  });
+
+  // R7-6: a cut-out portrait saved as WebP, GIF or AVIF was stored as a JPEG on white, so it
+  // printed a white disc on Modern's banner or the Sidebar panel, where the same cut-out as a PNG
+  // showed the ground through it. The alpha check came in with R7-4's scaling (a4a1f85) and only
+  // a PNG source covered it; this fails on 49bd696, the module before it, with a JPEG data URL.
+  test('a WebP, GIF or AVIF photo with see-through pixels is stored as a PNG, an opaque one as a JPEG (R7-6)', async () => {
+    for (const [bytes, type] of [[WEBP_B64, 'image/webp'], [GIF_B64, 'image/gif'], [AVIF_B64, 'image/avif']]) {
+      const name = `me.${type.slice(6)}`;
+      assert.match(await readImageFile(withLooks(fileOf(bytes, name, type), { seeThrough: true })), /^data:image\/png;base64,iVBORw0KGgo/, `${name}, cut out`);
+      assert.match(await readImageFile(fileOf(bytes, name, type)), /^data:image\/jpeg;base64,\/9j\//, `${name}, opaque`);
+    }
+    assert.deepEqual(sizes(), ['png 1×1', 'jpeg 1×1', 'png 1×1', 'jpeg 1×1', 'png 1×1', 'jpeg 1×1']);
   });
 
   test('a photo within 1024 px but over 300 KB is re-encoded at its own size', async () => {
