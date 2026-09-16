@@ -40,6 +40,26 @@ describe('a first sync that keeps failing for a moment', () => {
     assert.deepEqual(p.timers.delays, [30 * SECOND]);
   });
 
+  it('another account starts from 30 s again: one account\'s failures never delay the next one\'s retry (V2VF1S-5)', async () => {
+    const OTHER = { uid: 'v', email: 'other@example.com' };
+    for (const signOut of [true, false]) {
+      const cloud = fakeFirestore({ [resumePath('u', 'resume_a')]: cv('resume_a'), [resumePath('v', 'resume_b')]: cv('resume_b') });
+      const p = syncPage(mods, cloud, { resumes: [] });
+      cloud.fail.read = failure('unavailable');
+      p.sync.start(USER);
+      await settle();
+      for (let i = 0; i < 4; i += 1) await p.timers.fire();
+      assert.deepEqual(p.timers.delays, [8 * MINUTE], 'the first account failed five times');
+      if (signOut) { p.sync.start(null); await settle(); }
+      p.sync.start(OTHER); // signed out and another account in, or switched straight to it
+      await settle();
+      assert.deepEqual([p.seen.status, p.timers.delays], ['error', [30 * SECOND]], `before: the other account's first retry after 10 min (signOut ${signOut})`);
+      cloud.fail.read = null;
+      await p.timers.fire();
+      assert.deepEqual([p.seen.status, p.seen.account?.uid], ['synced', 'v']);
+    }
+  });
+
   it('is not tried while the tab is hidden: the retry runs once it is shown', async () => {
     let hidden = false;
     const cloud = fakeFirestore({ [resumePath('u', 'resume_a')]: cv('resume_a') });

@@ -52,7 +52,7 @@ export function createCloudSync({
     queue: emptyQueue(), // the changes since the last flush (queueChanges)
     timer: null,
     retry: null,
-    attempts: 0, // failed tries since the last first sync that got through (backoff)
+    attempts: 0, // failed tries since this account's last first sync that got through (backoff)
     retryOnShow: false, // a retry came due while the tab was hidden
     stopped: null, // the résumés when a batch no résumé can be held for was refused for good
     account: null,
@@ -73,8 +73,9 @@ export function createCloudSync({
     s.stopped = null;
     // Signed out, or another account: the last one's queue is not sent — without its auth it was
     // refused, and that refusal turned sync off for whoever signed in next (R8-5). Nothing is
-    // lost: the store keeps the edits and deletions for that account's next first sync.
-    if ((user?.uid ?? null) !== (s.user?.uid ?? null)) { dropQueue(); held.clear(); }
+    // lost: the store keeps the edits and deletions for that account's next first sync. Nor do its
+    // failures put off the next account's retry: that one starts from retryDelay (V2VF1S-5).
+    if ((user?.uid ?? null) !== (s.user?.uid ?? null)) { dropQueue(); held.clear(); s.attempts = 0; }
     s.user = user || null;
 
     if (!user) {
