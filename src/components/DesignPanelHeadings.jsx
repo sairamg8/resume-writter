@@ -1,4 +1,5 @@
 import { DesignSection } from '@/components/DesignPanelShared';
+import { SECTION_BORDER_PT } from '@/constants/designNumbers';
 import { headingBorderExtraPt, upperSectionTitles } from '@/constants/templates';
 import { DEFAULTS } from '@/templates/pdf/shared/templateSettings';
 
@@ -31,7 +32,7 @@ export function HeadingControls({ settings, template, updateSetting }) {
   // so there it shows and sets 3–10 pt, and the stored value keeps its look (ONB-12).
   const extraPt = headingBorderExtraPt(headingStyle);
   const borderPt = Number(settings.sectionBorderWidth ?? 1) + extraPt;
-  const setBorderPt = (pt) => updateSetting('sectionBorderWidth', Math.min(8, Math.max(1, pt - extraPt)));
+  const setBorderPt = (pt) => updateSetting('sectionBorderWidth', Math.min(SECTION_BORDER_PT.max, Math.max(SECTION_BORDER_PT.min, pt - extraPt)));
 
   return (
     <>

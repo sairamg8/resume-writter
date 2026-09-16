@@ -18,7 +18,7 @@ const SPACING_NUMBERS = { lineHeightValue: null, marginV: MARGIN_MM, marginH: MA
  * `value` as the number the PDF reads it as: a finite number, or text that is one (" 20 " prints
  * as 20). `undefined` for anything else — "abc", "", "12px", true, {}, NaN.
  */
-function storedNumber(value) {
+export function storedNumber(value) {
   const n = typeof value === 'string' && value.trim() !== '' ? Number(value) : value;
   return typeof n === 'number' && Number.isFinite(n) ? n : undefined;
 }
@@ -30,11 +30,18 @@ function storedNumber(value) {
  * and the panel shows it, as for a résumé that stores none. None stored (or null) is left: the
  * default prints. The same object when nothing changes; settings that are not an object are left.
  */
-export function withSpacingNumbers(resume) {
+export const withSpacingNumbers = (resume) => withStoredNumbers(resume, SPACING_NUMBERS);
+
+/**
+ * `resume` with each number `table` names ({ key: { min, max } | null }) stored as a number: text
+ * that is a number becomes it, one with a range is clamped into it, one that is no number is dropped.
+ * None stored (or null) is left. The same object when nothing changes. (designNumbers.js reads it too.)
+ */
+export function withStoredNumbers(resume, table) {
   const settings = resume?.settings;
   if (!settings || typeof settings !== 'object') return resume;
   let next = null;
-  for (const [key, range] of Object.entries(SPACING_NUMBERS)) {
+  for (const [key, range] of Object.entries(table)) {
     if (settings[key] == null) continue;
     const n = storedNumber(settings[key]);
     const kept = n === undefined || !range ? n : Math.min(range.max, Math.max(range.min, n));

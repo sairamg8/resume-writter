@@ -4,7 +4,7 @@
 // A photo stored larger than an upload keeps is the one change made later, as decoding an image
 // takes a promise: the store makes it smaller once it has it (smallerPhotos.js).
 import { inSidebarColumn, offersTemplate, withKnownTemplate } from '@/constants/templates';
-import { withSpacingNumbers } from '@/constants/spacingNumbers';
+import { withDesignNumbers } from '@/constants/designNumbers';
 import { HEADER_READS, HEADER_SEEN, withHeaderColorsBack } from '@/templates/pdf/shared/headerColors';
 import { DEFAULT_ITEM_GAP_PX, SECTION_SPACING_PX } from '@/templates/pdf/shared/pdfUnits';
 
@@ -174,8 +174,8 @@ const versionOf = (r) => (Number.isFinite(r.dataVersion) ? r.dataVersion : 0);
 const withHeaderReadableOnClassic = (r) => withReadableHeaderColors(r, HEADER_READS);
 
 /**
- * `resume` made current: a template the app offers (withKnownTemplate) and Design → Spacing
- * numbers stored as numbers, margins in the editor's range (withSpacingNumbers), whatever its
+ * `resume` made current: a template the app offers (withKnownTemplate) and the Design panel's
+ * numbers stored as numbers in their controls' ranges (withDesignNumbers), whatever its
  * version; then each one-time migration newer than its own `dataVersion`, after which it carries
  * DATA_VERSION. Never touches `updatedAt` — this is not an edit, so it neither wins a sync merge
  * nor triggers a cloud write by itself. The same object when nothing changes; a value that is not
@@ -184,7 +184,7 @@ const withHeaderReadableOnClassic = (r) => withReadableHeaderColors(r, HEADER_RE
 export function normalizeResume(resume) {
   if (!resume || typeof resume !== 'object') return resume;
   const known = withKnownTemplate(resume);
-  const r = withSpacingNumbers(offersTemplate(resume.template) ? known : withHeaderReadableOnClassic(known));
+  const r = withDesignNumbers(offersTemplate(resume.template) ? known : withHeaderReadableOnClassic(known));
   const from = versionOf(r);
   if (from >= DATA_VERSION) return r;
   return MIGRATIONS.reduce((out, [version, migrate]) => (from < version ? migrate(out, from) : out), { ...r, dataVersion: DATA_VERSION });
