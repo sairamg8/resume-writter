@@ -2,6 +2,7 @@ import { Document, Page, View } from '@react-pdf/renderer';
 import { Text } from './shared/PdfText';
 import { getPageStyle, getDocumentProps, getHeaderBorderStyle } from './shared/PdfPage';
 import { headerRowWidth, PdfContactRow } from './shared/PdfContact';
+import { fitFontSize } from './shared/pdfMeasure';
 import { SectionRouter, getEffectiveSpacing, getVisibleSections } from './shared/PdfSections';
 import { PdfRichText } from './shared/PdfRichText';
 import { hasRichText } from '@/utils/richText';
@@ -38,6 +39,10 @@ export function ClassicTemplatePDF({ data }) {
   const photoStyle = getPdfPhotoStyle(settings, accent, 'classic');
   // The width the contacts are laid out in: what the photo beside them leaves (2 Grid sizes its cells with it).
   const contactWidth = headerRowWidth(settings, personal, { photoWidth: photoStyle.width, gap: g.photoTextGap, centered });
+  // The name has the same row. A word of it wider than the row has nowhere to break, and
+  // react-pdf drew it past the margin, off the paper: it prints at the largest size that holds it.
+  const name = personal?.name || 'Your Name';
+  const nameFit = fitFontSize(name, { fontFamily: settings._pdfFontFamily, fontSize: nameSize, fontWeight: 'bold' }, contactWidth);
   const headerMb = g.headerGapBelow;
 
   const nameBlock = headerLayout === 'inline' ? (
@@ -48,8 +53,8 @@ export function ClassicTemplatePDF({ data }) {
       gap: settings.headerInlineGap ?? 6,
       justifyContent: centered ? 'center' : 'flex-start',
     }}>
-      <Text style={{ fontSize: nameSize, fontWeight: 'bold', color: nameColor, lineHeight: 1.2 }}>
-        {personal?.name || 'Your Name'}
+      <Text style={{ fontSize: nameFit, fontWeight: 'bold', color: nameColor, lineHeight: 1.2 }}>
+        {name}
       </Text>
       {personal?.title && (
         <Text style={{ fontSize: entrySize, color: jobTitleColor, fontWeight: 500, lineHeight: 1.2 }}>
@@ -60,10 +65,10 @@ export function ClassicTemplatePDF({ data }) {
   ) : (
     <View style={centered ? { alignSelf: 'stretch' } : undefined}>
       <Text style={{
-        fontSize: nameSize, fontWeight: 'bold', color: nameColor,
+        fontSize: nameFit, fontWeight: 'bold', color: nameColor,
         textAlign: centered ? 'center' : 'left', lineHeight: 1.2,
       }}>
-        {personal?.name || 'Your Name'}
+        {name}
       </Text>
       {personal?.title && (
         <Text style={{

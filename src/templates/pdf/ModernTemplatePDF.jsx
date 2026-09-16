@@ -5,7 +5,8 @@ import { SectionRouter, getEffectiveSpacing, getVisibleSections } from './shared
 import { PdfRichText } from './shared/PdfRichText';
 import { hasRichText } from '@/utils/richText';
 import { PdfContactIcon } from './shared/PdfContactIcon';
-import { ContactValue } from './shared/PdfContact';
+import { ContactValue, headerRowWidth } from './shared/PdfContact';
+import { fitFontSize } from './shared/pdfMeasure';
 import { contactItems } from '@/utils/contacts';
 import { getPdfPhotoStyle } from './shared/pdfPhoto';
 import { PdfPhoto } from './shared/PdfPhoto';
@@ -58,6 +59,14 @@ export function ModernTemplatePDF({ data }) {
   // the colour is written (#fff, white, rgb(…)); its own alpha multiplies in (FIDB-11, R5-9).
   const summaryOpacity = opacityFor(headerText, 0.85);
 
+  const photoStyle = getPdfPhotoStyle(settings, '#ffffff', 'modern');
+  // The name's row on the banner: what the photo beside it and the banner's padding leave. A word
+  // of it wider than that has nowhere to break, and react-pdf drew it off the banner and the
+  // paper: it prints at the largest size that holds it.
+  const name = personal?.name || 'Your Name';
+  const nameRow = headerRowWidth(settings, personal, { photoWidth: photoStyle.width, gap: pxToPt(16) }) - 2 * MODERN_HEADER_PAD_X_PT;
+  const nameFit = fitFontSize(name, { fontFamily: settings._pdfFontFamily, fontSize: nameSize, fontWeight: 'bold' }, nameRow);
+
   const pageStyle = getPageStyle(settings);
 
   return (
@@ -74,11 +83,11 @@ export function ModernTemplatePDF({ data }) {
           {/* Photo → Text Position, as Classic, Minimal and Executive take it (R3-0). */}
           <View style={{ flexDirection: 'row', alignItems: photoTextAlignItems(settings), gap: pxToPt(16) }}>
             {personal?.photo && !hidden.includes('photo') && (
-              <PdfPhoto src={personal.photo} style={getPdfPhotoStyle(settings, '#ffffff', 'modern')} />
+              <PdfPhoto src={personal.photo} style={photoStyle} />
             )}
             <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: nameSize, fontWeight: 'bold', color: nameColor, marginBottom: 1, lineHeight: 1.2 }}>
-                {personal?.name || 'Your Name'}
+              <Text style={{ fontSize: nameFit, fontWeight: 'bold', color: nameColor, marginBottom: 1, lineHeight: 1.2 }}>
+                {name}
               </Text>
               {personal?.title && (
                 <Text style={{ fontSize: entrySize, color: jobTitleColor, marginBottom: 2, lineHeight: 1.2, opacity: opacityFor(jobTitleColor, 0.9) }}>

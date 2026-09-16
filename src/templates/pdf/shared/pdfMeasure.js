@@ -54,15 +54,41 @@ export function textWidth(text, { fontFamily, fontSize = 12, fontWeight, letterS
  * the last piece (a separator that may not start a line).
  */
 export function widestWord(text, style, tail = 0) {
+  const all = pieces(text);
+  return all.reduce((widest, part, i) => Math.max(widest, textWidth(part, style) + (i === all.length - 1 ? tail : 0)), 0);
+}
+
+/** `text`'s unbreakable pieces, in order: its words, split where breakLongWords marks a long one. */
+function pieces(text) {
   const split = Font.getHyphenationCallback() || ((word) => [word]);
-  const words = String(text ?? '').split(/ +/).filter(Boolean);
-  let widest = 0;
-  words.forEach((word, i) => {
-    const parts = split(word).map(String).filter(Boolean); // a break mark reads as ''
-    parts.forEach((part, j) => {
-      const last = i === words.length - 1 && j === parts.length - 1;
-      widest = Math.max(widest, textWidth(part, style) + (last ? tail : 0));
-    });
-  });
-  return widest;
+  return String(text ?? '').split(/ +/).filter(Boolean)
+    .flatMap((word) => split(word).map(String).filter(Boolean)); // a break mark reads as ''
+}
+
+/** Room left under a fitted width, pt: a word's kerning into the next space is not in it. */
+const FIT_SLACK = 1;
+/** The smallest size fitFontSize returns, pt. */
+export const MIN_FIT_PT = 1;
+
+/**
+ * The font size `text` prints at in a box `maxWidth` pt wide with no word running out of it — a
+ * header's name, which textkit breaks only at its spaces: `style.fontSize` when its widest piece
+ * fits (every usual name, which prints exactly as it always has), else the largest size at which
+ * every piece does. A name of one long word ("Wolfeschlegelsteinhausenbergerdorff" at 28 pt) has
+ * nowhere to break, and react-pdf drew it out of its box — past the margin, off the paper, over the
+ * Sidebar's main column. A piece is `size × its width at 1 pt` plus a letterSpacing that does not
+ * scale, so the size is solved for, not guessed. No readable floor, which would let the name out
+ * again: MIN_FIT_PT only keeps the size a size.
+ */
+export function fitFontSize(text, style, maxWidth) {
+  const size = style?.fontSize ?? 12;
+  if (!(maxWidth > 0) || widestWord(text, style) <= maxWidth) return size;
+  const spacing = style?.letterSpacing ?? 0;
+  const unit = { ...style, fontSize: 1, letterSpacing: 0 };
+  const fit = pieces(text).reduce((smallest, part) => {
+    const perPt = textWidth(part, unit);
+    const tracked = spacing * Math.max(0, [...part].length - 1);
+    return perPt > 0 ? Math.min(smallest, (maxWidth - FIT_SLACK - tracked) / perPt) : smallest;
+  }, size);
+  return Math.max(MIN_FIT_PT, fit);
 }

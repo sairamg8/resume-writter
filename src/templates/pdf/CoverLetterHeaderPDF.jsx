@@ -9,7 +9,7 @@ import { contactRowMinWidth, PdfContactRow } from './shared/PdfContact';
 import { PdfPhoto } from './shared/PdfPhoto';
 import { contentWidthPt, pageMargins } from './shared/PdfPage';
 import { getPdfPhotoStyle } from './shared/pdfPhoto';
-import { widestWord } from './shared/pdfMeasure';
+import { fitFontSize, widestWord } from './shared/pdfMeasure';
 import { DOUBLE_RULE_GAP, LETTERHEAD_GAP, LETTERHEAD_PAD } from './shared/letterhead';
 import { photoTextAlignItems } from '@/constants/templates';
 import { contactItems } from '@/utils/contacts';
@@ -117,6 +117,7 @@ export function CoverLetterHeader({ look, personal, settings, cl, hidden, contac
   const headerWidth = contentWidthPt(settings) - 2 * bandPad;
   // The row beside the photo — where one sits and the letterhead is not centred (then it is above).
   const beside = headerWidth - (photoEl && !centered ? photoStyle.width + photoStyle.marginRight : 0);
+  const font = { fontFamily: settings._pdfFontFamily };
   let nameCap;
   // The width the contacts are laid out in (2 Grid sizes its cells with it): the whole header
   // under a centred letterhead and under Below All, what the photo leaves under Below Name.
@@ -127,7 +128,6 @@ export function CoverLetterHeader({ look, personal, settings, cl, hidden, contac
       nameCap = beside;
     } else {
       const room = beside - CONTACTS_GAP;
-      const font = { fontFamily: settings._pdfFontFamily };
       const contactsNeed = contactRowMinWidth(personal, contactSettings, hidden) + SLACK;
       const nameNeed = Math.max(widestWord(name, { ...font, ...nameStyle }), widestWord(personal?.title, { ...font, ...titleStyle })) + SLACK;
       // Beside the name the contacts get at least what their widest item needs; under it, the row.
@@ -136,10 +136,14 @@ export function CoverLetterHeader({ look, personal, settings, cl, hidden, contac
     }
   }
   const contactEl = <PdfContactRow personal={personal} hidden={hidden} settings={contactSettings} color={look.contacts} width={contactsWidth} />;
+  // A name word wider even than the room the name ends up with (a 35-letter surname at 28 pt) has
+  // nowhere to break, and react-pdf drew it past the margin, off the paper: it prints at the
+  // largest size that holds it. Beside the contacts it always fits (nameNeed).
+  const nameFit = { ...nameStyle, fontSize: fitFontSize(name, { ...font, ...nameStyle }, nameCap ?? beside) };
 
   const nameBlock = (
     <View style={{ minWidth: 0, maxWidth: nameCap, ...(centered ? { alignSelf: 'stretch' } : {}) }}>
-      <Text style={nameStyle}>{name}</Text>
+      <Text style={nameFit}>{name}</Text>
       {personal?.title ? <Text style={titleStyle}>{personal.title}</Text> : null}
     </View>
   );
