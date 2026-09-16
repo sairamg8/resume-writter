@@ -54,10 +54,9 @@ describe('regressions — resume store', () => {
   it('M2: an unreadable store is backed up before the app starts empty', () => {
     visitWithRawStore('{ this is not json');
     cy.contains('No resumes yet').should('be.visible');
-    cy.window().then((win) => {
-      const backups = Object.keys(win.localStorage).filter((k) => k.startsWith(`${STORAGE_KEY}_backup_`));
-      expect(backups).to.have.length(1);
-      expect(win.localStorage.getItem(backups[0])).to.eq('{ this is not json');
+    // Retried: the empty dashboard is drawn before the effect that makes the backup has run.
+    cy.window().should((win) => {
+      expect(Object.values(resumeBackups(win))).to.deep.eq(['{ this is not json']);
     });
   });
 
@@ -103,9 +102,11 @@ describe('regressions — resume store', () => {
       win.localStorage.setItem(STORAGE_KEY, '{ second bad value'); // broken again; the notice is still up
       cy.reload();
       cy.contains('[role="alert"]', 'could not be read').should('be.visible'); // read (and repaired) again
-      cy.window().then((again) => {
-        const second = Object.keys(resumeBackups(again)).find((k) => k !== first);
-        expect(second, 'a second backup').to.be.a('string');
+      // The first repair's notice is up at once; the second backup is made by an effect after that
+      // first render, so storage is read until it is there, not once.
+      const secondOf = (again) => Object.keys(resumeBackups(again)).find((k) => k !== first);
+      cy.window().should((again) => { expect(secondOf(again), 'a second backup').to.be.a('string'); }).then((again) => {
+        const second = secondOf(again);
         cy.contains('[role="alert"]', second).should('be.visible');
         cy.contains('[role="alert"]', first).should('be.visible'); // before: only the second was named
         cy.contains('[role="alert"]', 'could not be read').contains('button', 'Download the earlier copy').click();
