@@ -98,8 +98,11 @@ export function CoverLetterHeader({ look, personal, settings, cl, hidden, contac
     fontSize: nameSize, fontWeight: look.name.weight, color: look.name.color, lineHeight: 1.2,
     ...(look.name.letterSpacing ? { letterSpacing: look.name.letterSpacing } : {}), ...align,
   };
+  // Name & Title Layout "Inline" (look.inline, V2FIDB-51-3): the title on the name's line in the
+  // medium weight the résumé's Inline header prints it in, baselines aligned; else under the name.
   const titleStyle = {
-    fontSize: baseSize, color: look.title.color, marginTop: 1,
+    fontSize: baseSize, color: look.title.color,
+    ...(look.inline ? { fontWeight: 500, lineHeight: 1.2 } : { marginTop: 1 }),
     ...(look.title.opacity ? { opacity: opacityFor(look.title.color, look.title.opacity) } : {}), ...align,
   };
 
@@ -141,8 +144,13 @@ export function CoverLetterHeader({ look, personal, settings, cl, hidden, contac
   // largest size that holds it. Beside the contacts it always fits (nameNeed).
   const nameFit = { ...nameStyle, fontSize: fitFontSize(name, { ...font, ...nameStyle }, nameCap ?? beside) };
 
+  // Inline, as Classic's, Minimal's and Executive's headers: a row the title wraps onto the next
+  // line of when the room left beside the name cannot hold it, centred with the letterhead.
+  const row = look.inline
+    ? { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'baseline', gap: look.inline.gap, justifyContent: centered ? 'center' : 'flex-start' }
+    : {};
   const nameBlock = (
-    <View style={{ minWidth: 0, maxWidth: nameCap, ...(centered ? { alignSelf: 'stretch' } : {}) }}>
+    <View style={{ minWidth: 0, maxWidth: nameCap, ...(centered ? { alignSelf: 'stretch' } : {}), ...row }}>
       <Text style={nameFit}>{name}</Text>
       {personal?.title ? <Text style={titleStyle}>{personal.title}</Text> : null}
     </View>

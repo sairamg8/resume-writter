@@ -2,9 +2,10 @@
 // the résumé's own resolved colours, for the letter's PDF and its Word export: the letter used
 // to print Classic's letterhead under every template, so a Modern or Sidebar résumé and its
 // letter never read as a set. Plain data (no react-pdf).
-import { headerBorderOn, letterheadCentered, templateId } from '@/constants/templates';
+import { hasHeaderControls, headerBorderOn, letterheadCentered, templateId } from '@/constants/templates';
+import { HEADER_GAPS, templateGapPt } from '@/constants/headerSpacing';
 import { contrast, sidebarShades, solid, textShades } from './pdfColors';
-import { MODERN_HEADER_PAD_X_PT, MODERN_HEADER_PAD_Y_PT } from './pdfUnits';
+import { CSS_PX_TO_PT, MODERN_HEADER_PAD_X_PT, MODERN_HEADER_PAD_Y_PT } from './pdfUnits';
 
 /** Space under the letterhead's text, above its rule — and the gap under the letterhead. */
 export const LETTERHEAD_PAD = 12;
@@ -45,11 +46,29 @@ function bandMarks(contacts, ground) {
 }
 
 /**
+ * Header Customization → Name & Title Layout "Inline" on the letterhead (V2FIDB-51-3): null where
+ * the résumé's header stacks them — Stack, a layout the panel never writes, Modern's banner and the
+ * Sidebar's column (no header controls) — else `{ gap }`, the résumé's Name & Title Spacing in pt
+ * (resolved `s`). A stored value outside its range prints at the range's end, one that is not a
+ * number as the template's own (header_spacing_spec.md D9): the letter keeps printing whatever an
+ * imported file carries.
+ */
+function inlineLayout(look, s) {
+  if (!hasHeaderControls(look) || s.headerLayout !== 'inline') return null;
+  const { min, max } = HEADER_GAPS.headerInlineGap;
+  const gap = Number.isFinite(s.headerInlineGap)
+    ? Math.min(max * CSS_PX_TO_PT, Math.max(min * CSS_PX_TO_PT, s.headerInlineGap))
+    : templateGapPt(look, 'headerInlineGap');
+  return { gap };
+}
+
+/**
  * The letterhead of a letter whose résumé prints with `template`, from the résumé's resolved
  * settings `s` (resolveTemplateSettings): the same fonts (the page's), accent, name and title
  * colours, header text colour and alignment as the résumé's header.
  *   look      the template whose look it takes (an id the app does not offer is Classic)
  *   centered  the résumé's header is centred (letterheadCentered): photo, name and contacts on the centre line
+ *   inline    null, or { gap }: the résumé's header prints the title on the name's line (inlineLayout)
  *   name      { color, weight, letterSpacing? }: Design → Name color, else the template's own
  *   title     { color, opacity? }: Design → Job title color, else the template's own
  *   contacts  the colour of the contact icons and values
@@ -75,6 +94,7 @@ export function letterheadLook(template, s = {}) {
   const base = {
     look,
     centered: letterheadCentered(s, look),
+    inline: inlineLayout(look, s),
     name: { color: s.nameColor || text, weight: 'bold' },
     title: { color: s.jobTitleColor || accent },
     // Contacts in the Text colour's grey (R1-13): the résumé header's (letterGrey, R9-13).
