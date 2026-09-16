@@ -1,4 +1,5 @@
 import { ChevronDown, ChevronRight, Eye, EyeOff } from 'lucide-react';
+import { HEADER_BORDER_PT } from '@/constants/designNumbers';
 import { drawsContactIcons, hasHeaderControls, headerBorderOn } from '@/constants/templates';
 import { ICON_SET_OPTIONS, getIconSetId } from '@/utils/contactIcons';
 
@@ -122,9 +123,9 @@ export function HeaderCustomization({ s, set, template, templateLabel, open, onT
                   <div className="flex items-center justify-between mt-1.5">
                     <span className="text-[11px] text-gray-400">Thickness</span>
                     <div className="flex items-center gap-1">
-                      <button onClick={() => set('headerBorderWidth', Math.max(1, (s.headerBorderWidth || 2) - 1))} className="w-6 h-6 flex items-center justify-center border border-gray-200 rounded text-gray-600 hover:bg-gray-100 text-base leading-none">−</button>
-                      <input type="number" aria-label="Header border thickness (pt)" min={1} max={12} value={s.headerBorderWidth || 2} onChange={e => { const v = parseInt(e.target.value, 10); if (!isNaN(v)) set('headerBorderWidth', Math.min(12, Math.max(1, v))); }} className="w-14 text-center text-xs font-medium text-gray-700 border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-400 h-6" />
-                      <button onClick={() => set('headerBorderWidth', Math.min(12, (s.headerBorderWidth || 2) + 1))} className="w-6 h-6 flex items-center justify-center border border-gray-200 rounded text-gray-600 hover:bg-gray-100 text-base leading-none">+</button>
+                      <button onClick={() => set('headerBorderWidth', Math.max(HEADER_BORDER_PT.min, (s.headerBorderWidth || 2) - 1))} className="w-6 h-6 flex items-center justify-center border border-gray-200 rounded text-gray-600 hover:bg-gray-100 text-base leading-none">−</button>
+                      <input type="number" aria-label="Header border thickness (pt)" min={HEADER_BORDER_PT.min} max={HEADER_BORDER_PT.max} value={s.headerBorderWidth || 2} onChange={e => { const v = parseInt(e.target.value, 10); if (!isNaN(v)) set('headerBorderWidth', Math.min(HEADER_BORDER_PT.max, Math.max(HEADER_BORDER_PT.min, v))); }} className="w-14 text-center text-xs font-medium text-gray-700 border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-400 h-6" />
+                      <button onClick={() => set('headerBorderWidth', Math.min(HEADER_BORDER_PT.max, (s.headerBorderWidth || 2) + 1))} className="w-6 h-6 flex items-center justify-center border border-gray-200 rounded text-gray-600 hover:bg-gray-100 text-base leading-none">+</button>
                       {/* Points, as the PDF prints it — every saved value keeps its look (R3-7) */}
                       <span className="text-[11px] text-gray-400 ml-1">pt</span>
                     </div>

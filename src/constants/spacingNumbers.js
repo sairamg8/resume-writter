@@ -33,9 +33,11 @@ export function storedNumber(value) {
 export const withSpacingNumbers = (resume) => withStoredNumbers(resume, SPACING_NUMBERS);
 
 /**
- * `resume` with each number `table` names ({ key: { min, max } | null }) stored as a number: text
- * that is a number becomes it, one with a range is clamped into it, one that is no number is dropped.
- * None stored (or null) is left. The same object when nothing changes. (designNumbers.js reads it too.)
+ * `resume` with each number `table` names ({ key: { min, max, zeroIsUnset? } | null }) stored as a
+ * number: text that is a number becomes it, one with a range is clamped into it, one that is no
+ * number is dropped — and so is a 0 the PDF reads as unset (`zeroIsUnset`: `width || 2`), which
+ * would otherwise print differently once clamped. None stored (or null) is left. The same object
+ * when nothing changes. (designNumbers.js reads it too.)
  */
 export function withStoredNumbers(resume, table) {
   const settings = resume?.settings;
@@ -44,7 +46,7 @@ export function withStoredNumbers(resume, table) {
   for (const [key, range] of Object.entries(table)) {
     if (settings[key] == null) continue;
     const n = storedNumber(settings[key]);
-    const kept = n === undefined || !range ? n : Math.min(range.max, Math.max(range.min, n));
+    const kept = n === undefined || !range ? n : n === 0 && range.zeroIsUnset ? undefined : Math.min(range.max, Math.max(range.min, n));
     if (kept === settings[key]) continue;
     next ??= { ...settings };
     if (kept === undefined) delete next[key]; // dropped, not stored as undefined: Firestore refuses one

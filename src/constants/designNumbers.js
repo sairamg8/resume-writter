@@ -12,7 +12,15 @@ import { withSpacingNumbers, withStoredNumbers } from './spacingNumbers.js';
  */
 export const SECTION_BORDER_PT = { min: 1, max: 8 };
 
-const DESIGN_NUMBERS = { sectionBorderWidth: SECTION_BORDER_PT };
+/**
+ * Header Customization → Header Bottom Border's Thickness, pt: the panel sets 1–12
+ * (PersonalInfoEditorHeader.jsx). Unchecked, 50 printed a 50 pt rule under the header and its
+ * letter's, and -3 or "abc" none with the border on (FIDB-51-VF3-NB1). Every build prints a 0 as
+ * the 2 pt default (`headerBorderWidth || 2`): it is dropped, not clamped to 1.
+ */
+export const HEADER_BORDER_PT = { min: 1, max: 12, zeroIsUnset: true };
+
+const DESIGN_NUMBERS = { sectionBorderWidth: SECTION_BORDER_PT, headerBorderWidth: HEADER_BORDER_PT };
 
 /** `resume` with every Design number stored as a number in its control's range (see above). */
 export const withDesignNumbers = (resume) => withStoredNumbers(withSpacingNumbers(resume), DESIGN_NUMBERS);
