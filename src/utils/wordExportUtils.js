@@ -120,10 +120,10 @@ function runsToDocx(runs, base) {
  * `base` sets size (half-points), colour and whole-block bold/italics; `align` is the alignment
  * of a block the editor did not align (a centred section's: 'center'), as in the PDF.
  */
-export function descriptionToParagraphs(html, base = { size: 20, color: '374151' }, align = null) {
+export function descriptionToParagraphs(html, base = { size: 20, color: '374151' }, align = null, frame = {}) {
   return parseRichText(html).map((block) => {
     const children = runsToDocx(block.runs, base);
-    const options = { spacing: { before: 20, after: 20 }, alignment: ALIGN[block.align || align] };
+    const options = { spacing: { before: 20, after: 20 }, alignment: ALIGN[block.align || align], ...frame };
     if (block.marker) {
       const level = Math.max(0, block.indent - 1);
       if (block.marker.length === 1) {

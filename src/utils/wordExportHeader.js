@@ -116,11 +116,30 @@ export function buildPersonalSection(personal = {}, settings = {}, template = 'c
   }
 
   if (!hidden.has('summary') && hasRichText(personal.summary)) {
-    paragraphs.push(...descriptionToParagraphs(personal.summary, { size: 20, color: '374151', italics: true }, centered ? 'center' : null));
+    const { run, frame } = summaryLook(s, template);
+    paragraphs.push(...descriptionToParagraphs(personal.summary, { size: 20, ...run }, centered ? 'center' : null, frame));
   }
 
   paragraphs.push(headerEnd(s, template));
   return paragraphs;
+}
+
+/**
+ * The summary as the PDF prints it on the page (FIDB-51-VF3-NB2-NB1): Classic and Executive upright
+ * in the Text colour's body shade; Minimal italic in its sub shade, beside a 2 pt bar of the accent
+ * at 40 % (a left border, which Word joins down the paragraphs); the Sidebar's main column upright in
+ * the Text colour itself. Modern prints it on its banner in the header text colour; Word draws no
+ * banner, so it prints as Classic's on the page, as Modern's name and title do (headerColorsOnPage).
+ */
+function summaryLook(s, template) {
+  const t = templateId(template);
+  const ink = (c) => accent2Hex(c, '374151');
+  if (t === 'minimal') {
+    const bar = { style: BorderStyle.SINGLE, size: eighths(2), color: accent2Hex(solid(s.accentColor || '#2563eb', 0.4), '2563eb'), space: 8 };
+    return { run: { color: ink(textShades(s.textColor).sub), italics: true }, frame: { border: { left: bar } } };
+  }
+  if (t === 'sidebar') return { run: { color: ink(solid(s.textColor)) }, frame: {} };
+  return { run: { color: ink(textShades(s.textColor).body) }, frame: {} };
 }
 
 /**
