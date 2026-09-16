@@ -1,14 +1,40 @@
-import { Paragraph } from 'docx';
+import { BorderStyle, Paragraph, ShadingType } from 'docx';
 import {
-  bold, normal, linked, sectionHeading, bulletPoint, descriptionToParagraphs, dateRightPara, centredIf, spacer,
+  accent2Hex, bold, normal, linked, sectionHeading, bulletPoint, descriptionToParagraphs, dateRightPara, centredIf, eighths, spacer,
 } from '@/utils/wordExportUtils';
-import { inSidebarColumn, templateId, upperSectionTitles } from '@/constants/templates';
+import { headingBorderExtraPt, inSidebarColumn, templateId, upperSectionTitles } from '@/constants/templates';
+import { solid } from '@/templates/pdf/shared/pdfColors';
+import { sectionHeadingLook } from '@/templates/pdf/shared/sectionHeadingLook';
 import { resolveTemplateSettings } from '@/templates/pdf/shared/templateSettings';
 import { hasRichText } from '@/utils/richText';
 import { dateRange, formatDate, presentLabel } from '@/utils/dates';
 import { skillCategory, skillGroup, skillSeparator } from '@/utils/skills';
 
 const GREY = '6b7280';
+
+/**
+ * Design → Section Headings in Word, as PdfSectionTitle draws them (ONB-12-NB1), from the résumé's
+ * resolved settings `s`: the title in the template's colour for the style (sectionHeadingLook), and
+ * Ruled, Underline and Line as a bottom border, Left bar as a left border, Boxed as the paragraph's
+ * shading — at the stored Thickness (Left bar's the wider bar the PDF prints) and Border colour.
+ * Word has no rule beside a title: Line's rules print under it. Plain, and a style the app does not
+ * offer (the PDF's plain), print the title alone; so does a Thickness no rule is drawn at.
+ */
+function headingOf(s, template) {
+  const look = sectionHeadingLook({ template: templateId(template), headingStyle: s.headingStyle, accent: s.accentColor || '#2563eb', borderColor: s.sectionBorderColor || '' });
+  const hex = (c) => accent2Hex(solid(c), accent2Hex(solid(s.accentColor), '2563eb'));
+  const width = Number(s.sectionBorderWidth);
+  const drawn = Number.isFinite(width) && width > 0;
+  const rule = (side, color, pt, space) => ({ border: { [side]: { style: BorderStyle.SINGLE, size: eighths(pt), color: hex(color), space } } });
+  const color = hex(look.text);
+  if (s.headingStyle === 'box') return { color, shading: { type: ShadingType.CLEAR, color: 'auto', fill: hex(look.box) } };
+  if (!drawn) return { color };
+  if (s.headingStyle === 'ruled') return { color, ...rule('bottom', look.ruled, width, 2) };
+  if (s.headingStyle === 'underline') return { color, ...rule('bottom', look.underline, width, 2) };
+  if (s.headingStyle === 'line') return { color, ...rule('bottom', look.line, width, 2) };
+  if (s.headingStyle === 'leftbar') return { color, ...rule('left', look.bar, width + headingBorderExtraPt('leftbar'), 6) };
+  return { color };
+}
 
 /** Items the user has not hidden (the eye toggle on an entry). */
 const shown = (section) => (section.items || []).filter((item) => item && item.visible !== false);
@@ -26,7 +52,7 @@ function body(item, centered) {
 
 export function buildExperience(section, accentHex, settings, centered) {
   const s = section.settings || {};
-  const paras = [sectionHeading(section.title, accentHex, centered)];
+  const paras = [sectionHeading(section.title, accentHex, centered, section.heading)];
   for (const item of shown(section)) {
     const company = field(item, 'company');
     const role = field(item, 'role');
@@ -46,7 +72,7 @@ export function buildExperience(section, accentHex, settings, centered) {
 
 export function buildEducation(section, accentHex, settings, centered) {
   const s = section.settings || {};
-  const paras = [sectionHeading(section.title, accentHex, centered)];
+  const paras = [sectionHeading(section.title, accentHex, centered, section.heading)];
   for (const item of shown(section)) {
     const degree = [item.degree, item.fieldOfStudy].filter(Boolean).join(', ');
     const location = s.showLocation !== false ? item.location : '';
@@ -64,7 +90,7 @@ export function buildEducation(section, accentHex, settings, centered) {
 /** Skill groups, each category cased as the PDF prints it (skillCategory; `sideColumn`: the Sidebar's). */
 export function buildSkills(section, accentHex, settings, centered, sideColumn = false) {
   const s = section.settings || {};
-  const paras = [sectionHeading(section.title, accentHex, centered)];
+  const paras = [sectionHeading(section.title, accentHex, centered, section.heading)];
   const sep = skillSeparator(s);
   const bulletStyle = s.skillsStyle === 'bullet';
   for (const item of shown(section)) {
@@ -87,7 +113,7 @@ export function buildSkills(section, accentHex, settings, centered, sideColumn =
 
 export function buildProjects(section, accentHex, settings, centered) {
   const s = section.settings || {};
-  const paras = [sectionHeading(section.title, accentHex, centered)];
+  const paras = [sectionHeading(section.title, accentHex, centered, section.heading)];
   for (const item of shown(section)) {
     paras.push(dateRightPara([
       item.name && bold(item.name, { size: 20 }),
@@ -100,7 +126,7 @@ export function buildProjects(section, accentHex, settings, centered) {
 }
 
 export function buildLanguages(section, accentHex, settings, centered) {
-  const paras = [sectionHeading(section.title, accentHex, centered)];
+  const paras = [sectionHeading(section.title, accentHex, centered, section.heading)];
   for (const item of shown(section)) {
     if (!item.language && !item.proficiency) continue;
     paras.push(new Paragraph({
@@ -117,7 +143,7 @@ export function buildLanguages(section, accentHex, settings, centered) {
 
 export function buildCertifications(section, accentHex, settings, centered) {
   const s = section.settings || {};
-  const paras = [sectionHeading(section.title, accentHex, centered)];
+  const paras = [sectionHeading(section.title, accentHex, centered, section.heading)];
   for (const item of shown(section)) {
     paras.push(dateRightPara([
       (item.name || item.title) && bold(item.name || item.title, { size: 20 }),
@@ -132,7 +158,7 @@ export function buildCertifications(section, accentHex, settings, centered) {
 
 export function buildAwards(section, accentHex, settings, centered) {
   const s = section.settings || {};
-  const paras = [sectionHeading(section.title, accentHex, centered)];
+  const paras = [sectionHeading(section.title, accentHex, centered, section.heading)];
   for (const item of shown(section)) {
     paras.push(dateRightPara([
       item.title && bold(item.title, { size: 20 }),
@@ -145,7 +171,7 @@ export function buildAwards(section, accentHex, settings, centered) {
 
 export function buildVolunteering(section, accentHex, settings, centered) {
   const s = section.settings || {};
-  const paras = [sectionHeading(section.title, accentHex, centered)];
+  const paras = [sectionHeading(section.title, accentHex, centered, section.heading)];
   for (const item of shown(section)) {
     const location = s.showLocation !== false ? item.location : '';
     paras.push(dateRightPara([
@@ -159,7 +185,7 @@ export function buildVolunteering(section, accentHex, settings, centered) {
 }
 
 export function buildReferences(section, accentHex, settings, centered) {
-  const paras = [sectionHeading(section.title, accentHex, centered)];
+  const paras = [sectionHeading(section.title, accentHex, centered, section.heading)];
   const line = (children, after = 20) => new Paragraph({ children, spacing: { after }, ...centredIf(centered) });
   for (const item of shown(section)) {
     paras.push(line([bold(item.name, { size: 20 })]));
@@ -180,14 +206,14 @@ export function buildInterests(section, accentHex, settings, centered) {
   const allInterests = shown(section).map((i) => i.interests).filter(Boolean).join(', ');
   if (!allInterests) return [];
   return [
-    sectionHeading(section.title, accentHex, centered),
+    sectionHeading(section.title, accentHex, centered, section.heading),
     new Paragraph({ children: [normal(allInterests, { size: 20 })], spacing: { after: 60 }, ...centredIf(centered) }),
   ];
 }
 
 export function buildCustom(section, accentHex, settings, centered) {
   const s = section.settings || {};
-  const paras = [sectionHeading(section.title, accentHex, centered)];
+  const paras = [sectionHeading(section.title, accentHex, centered, section.heading)];
   for (const item of shown(section)) {
     paras.push(dateRightPara([
       ...(item.title ? [bold(item.title, { size: 20 })] : []),
@@ -209,10 +235,12 @@ export function buildCustom(section, accentHex, settings, centered) {
  */
 export function buildSection(section, accentHex, settings, template) {
   if (section.visible === false || !shown(section).length) return [];
-  const centered = section.settings?.alignment === 'center' && !inSidebarColumn(template, section.type);
-  const { sectionTitleCase } = resolveTemplateSettings(settings, templateId(template));
+  const side = inSidebarColumn(template, section.type);
+  const centered = section.settings?.alignment === 'center' && !side;
+  const s = resolveTemplateSettings(settings, templateId(template));
   const title = String(section.title || '');
-  const args = [{ ...section, title: upperSectionTitles(sectionTitleCase) ? title.toUpperCase() : title }, accentHex, settings, centered];
+  const heading = side ? null : headingOf(s, template);
+  const args = [{ ...section, title: upperSectionTitles(s.sectionTitleCase) ? title.toUpperCase() : title, heading }, accentHex, settings, centered];
   switch (section.type) {
     case 'experience':     return buildExperience(...args);
     case 'education':      return buildEducation(...args);
