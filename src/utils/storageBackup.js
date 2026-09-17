@@ -81,6 +81,7 @@ export function setItemWithRoom(key, value, spare = () => false) {
   for (;;) {
     try {
       localStorage.setItem(key, value);
+      flushUnpersistedNotices();
       return;
     } catch (e) {
       backups ??= listBackups().filter((b) => b.key !== key && !spare(b));
@@ -187,6 +188,28 @@ export function loadSavedList(key, field, readEntry) {
   return { saved, list, recovery: unreadable === null ? null : { backupKey: backupRaw(key, unreadable) } };
 }
 
+/** Notices whose storage write failed (e.g. quota full): retried when a save frees room (ONB-4-NB1). */
+const unpersistedNotices = new Map();
+
+/**
+ * Flush any in-memory recovery notices to localStorage once a save frees room (ONB-4-NB1).
+ */
+export function flushUnpersistedNotices() {
+  for (const [key, notice] of unpersistedNotices) {
+    try {
+      localStorage.setItem(`${key}_recovery`, JSON.stringify(notice));
+      unpersistedNotices.delete(key);
+    } catch {
+      /* still no room: keep in memory until next save */
+    }
+  }
+}
+
+/** Reset in-memory unpersisted notices (for tests). */
+export function _resetUnpersistedNotices() {
+  unpersistedNotices.clear();
+}
+
 /**
  * The notice for a list that could not be read in full is kept in storage (`<key>_recovery`)
  * until the user dismisses it: the list is repaired and saved over at once, and the page that
@@ -196,30 +219,44 @@ export function loadSavedList(key, field, readEntry) {
  */
 export function pendingRecovery(key) {
   try {
-    const v = JSON.parse(localStorage.getItem(`${key}_recovery`));
-    if (!v || typeof v !== 'object') return null;
-    const earlier = Array.isArray(v.earlier) ? v.earlier.filter((k) => typeof k === 'string') : [];
-    return { backupKey: typeof v.backupKey === 'string' ? v.backupKey : null, earlier };
+    const raw = localStorage.getItem(`${key}_recovery`);
+    if (raw) {
+      const v = JSON.parse(raw);
+      if (v && typeof v === 'object') {
+        const earlier = Array.isArray(v.earlier) ? v.earlier.filter((k) => typeof k === 'string') : [];
+        return { backupKey: typeof v.backupKey === 'string' ? v.backupKey : null, earlier };
+      }
+    }
   } catch {
-    return null;
+    /* storage cannot be read */
   }
+  return unpersistedNotices.get(key) || null;
 }
 
 /**
  * Keep `recovery` for pendingRecovery, or forget it (null) once dismissed; returns the notice
  * kept. A notice not yet dismissed stays in it: its copies become `earlier`. Another repair used
  * to replace it, and the first backup — the only copy of what that repair left out — was no
- * longer named anywhere (R8-10).
+ * longer named anywhere (R8-10). When storage has room for the backup but not the notice, the
+ * notice is kept in memory and retried on the next save that frees room (ONB-4-NB1).
  */
 export function rememberRecovery(key, recovery) {
-  const pending = recovery ? pendingRecovery(key) : null;
-  const notice = recovery && {
+  if (!recovery) {
+    unpersistedNotices.delete(key);
+    remove(`${key}_recovery`);
+    return null;
+  }
+  const pending = pendingRecovery(key);
+  const notice = {
     ...recovery,
     earlier: [...new Set([...(pending?.earlier || []), pending?.backupKey])].filter((k) => k && k !== recovery.backupKey),
   };
   try {
-    if (notice) localStorage.setItem(`${key}_recovery`, JSON.stringify(notice));
-    else localStorage.removeItem(`${key}_recovery`);
-  } catch { /* best effort: the notice still shows for this visit */ }
-  return notice || null;
+    localStorage.setItem(`${key}_recovery`, JSON.stringify(notice));
+    unpersistedNotices.delete(key);
+  } catch {
+    unpersistedNotices.set(key, notice);
+  }
+  return notice;
 }
+

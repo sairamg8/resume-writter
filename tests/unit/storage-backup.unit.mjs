@@ -4,7 +4,7 @@ import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   loadSavedList, readSavedList, pendingRecovery, rememberRecovery, backupRaw, setItemWithRoom, readBackup, BACKUPS_KEPT,
-  isQuotaError, notSavedReason, notSavedMessage,
+  isQuotaError, notSavedReason, notSavedMessage, _resetUnpersistedNotices,
 } from '../../src/utils/storageBackup.js';
 import { readJob } from '../../src/utils/normalizeJob.js';
 
@@ -28,7 +28,7 @@ const KEY = 'cpwtcv_v1';
 const backups = () => [...globalThis.localStorage.map.keys()].filter((k) => k.startsWith(`${KEY}_backup_`));
 const keepWithId = (r) => ({ kept: r && typeof r === 'object' && r.id ? r : null });
 
-beforeEach(() => { globalThis.localStorage = new MemoryStorage(); });
+beforeEach(() => { globalThis.localStorage = new MemoryStorage(); _resetUnpersistedNotices(); });
 
 test('loadSavedList: nothing saved gives no list and no notice', () => {
   assert.deepEqual(loadSavedList(KEY, 'resumes', keepWithId), { saved: null, list: null, recovery: null });
