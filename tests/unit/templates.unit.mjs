@@ -8,7 +8,7 @@ import { buildTestState } from '../helpers.js';
 
 const {
   TEMPLATE_IDS, templateId, withKnownTemplate, hasHeaderControls, headerBorderOn, templateStyleDefaults,
-  SIDEBAR_COLUMN_TYPES, inSidebarColumn, drawsContactIcons, photoTextAlignItems,
+  SIDEBAR_COLUMN_TYPES, inSidebarColumn, drawsContactIcons, photoTextAlignItems, headerControlTemplateLabels,
 } = templates;
 
 test('templateId: the five templates stay, however an imported file cases or spaces them; any other id reads as Classic (M15, R5-5)', () => {
@@ -108,4 +108,20 @@ test('buildTestState: headingStyle and sectionTitleCase match templateStyleDefau
     assert.equal(r.settings.sectionTitleCase, expected.sectionTitleCase, `${t} sectionTitleCase`);
   }
 });
+
+test('headerControlTemplateLabels: returns templates with headerControls in order (FIDB-51-VF7-NB1)', () => {
+  assert.deepEqual(headerControlTemplateLabels(), ['Classic', 'Minimal', 'Executive']);
+
+  // Custom table with extra template prevents drift when new templates are added
+  const customTable = {
+    classic: { label: 'Classic', headerControls: true },
+    modern: { label: 'Modern', headerControls: false },
+    minimal: { label: 'Minimal', headerControls: true },
+    executive: { label: 'Executive', headerControls: true },
+    sidebar: { label: 'Sidebar', headerControls: false },
+    compact: { label: 'Compact', headerControls: true },
+  };
+  assert.deepEqual(headerControlTemplateLabels(customTable), ['Classic', 'Minimal', 'Executive', 'Compact']);
+});
+
 

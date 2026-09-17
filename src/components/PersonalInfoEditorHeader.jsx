@@ -1,6 +1,6 @@
 import { ChevronDown, ChevronRight, Eye, EyeOff } from 'lucide-react';
 import { HEADER_BORDER_PT } from '@/constants/designNumbers';
-import { drawsContactIcons, hasHeaderControls, headerBorderOn } from '@/constants/templates';
+import { drawsContactIcons, hasHeaderControls, headerBorderOn, headerControlTemplateLabels } from '@/constants/templates';
 import { ICON_SET_OPTIONS, getIconSetId } from '@/utils/contactIcons';
 
 function LayoutPreview({ type }) {
@@ -181,7 +181,17 @@ export function HeaderCustomization({ s, set, template, templateLabel, open, onT
           ) : (
             <div className="rounded-lg bg-slate-50 border border-slate-200 p-3 space-y-1.5">
               <p className="text-xs font-semibold text-slate-700">{templateLabel} template header</p>
-              <p className="text-[11px] text-slate-500 leading-relaxed">The {templateLabel} template uses a fixed banner header — alignment, border, and contact layout controls apply to the <strong>Classic</strong>, <strong>Minimal</strong> and <strong>Executive</strong> templates.</p>
+              <p className="text-[11px] text-slate-500 leading-relaxed">
+                The {templateLabel} template uses a fixed banner header — alignment, border, and contact layout controls apply to the {(() => {
+                  const labels = headerControlTemplateLabels();
+                  return labels.map((l, i) => (
+                    <span key={l}>
+                      {i > 0 && (i === labels.length - 1 ? ' and ' : ', ')}
+                      <strong>{l}</strong>
+                    </span>
+                  ));
+                })()} templates.
+              </p>
               <p className="text-[11px] text-slate-500 leading-relaxed">To change header text color, name color, or job title color, open the <strong>Design</strong> tab → <strong>Colors</strong>.</p>
             </div>
           )}

@@ -155,6 +155,10 @@ export const inSidebarColumn = (template, type) => templateId(template) === 'sid
  */
 export const hasHeaderControls = (template) => TEMPLATES[templateId(template)].headerControls;
 
+/** The labels of the templates whose headers offer Header Customization controls, in order. */
+export const headerControlTemplateLabels = (table = TEMPLATES) =>
+  Object.keys(table).filter((id) => table[id].headerControls).map((id) => table[id].label);
+
 /**
  * Is the cover letter's letterhead centred? Exactly when the résumé's header is: Text Alignment
  * "Center" in a template that takes it (Classic, Minimal, Executive). The letter then stacks the

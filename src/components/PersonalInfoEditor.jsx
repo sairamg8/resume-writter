@@ -5,7 +5,7 @@ import { HeaderCustomization } from '@/components/PersonalInfoEditorHeader';
 import { PhotoSection } from '@/components/PersonalInfoEditorPhoto';
 import { ContactIcon } from '@/utils/contactIcons';
 import { readImageFile } from '@/utils/imageUpload';
-import { drawsContactIcons } from '@/constants/templates';
+import { drawsContactIcons, templateLabel as getTemplateLabel } from '@/constants/templates';
 import { letterDrawsContactIcons } from '@/utils/coverLetter';
 import { CONTACT_FIELDS } from '@/utils/contacts';
 
@@ -38,7 +38,7 @@ export default function PersonalInfoEditor({ personal, updatePersonal, toggleFie
   const [headerOpen, setHeaderOpen] = useState(false);
   const [photoOpen, setPhotoOpen] = useState(false);
   const uid = useId();
-  const templateLabel = template ? template.charAt(0).toUpperCase() + template.slice(1) : 'Classic';
+  const templateLabel = getTemplateLabel(template);
 
   function set(key, val) { updateSetting?.(key, val); }
 
