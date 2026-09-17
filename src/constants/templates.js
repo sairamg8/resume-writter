@@ -206,6 +206,41 @@ export function drawsContactIcons(template, settings) {
   return t === 'modern' || t === 'sidebar' || (settings?.contactStyle || 'icon') === 'icon';
 }
 
+/**
+ * Does the cover letter draw contact icons (the pack's, or a field's uploaded image)?
+ * Exactly when its contact style is 'icon'.
+ */
+export const letterDrawsContactIcons = (cl, settings) =>
+  (cl?.headerStyle || settings?.contactStyle || 'icon') === 'icon';
+
+/**
+ * Does either the résumé or the cover letter draw contact icons?
+ * Personal Info → Fields offers custom icon uploads when this is true (R1-2, R9-5).
+ */
+export function anyDrawsContactIcons(template, settings, cl) {
+  return drawsContactIcons(template, settings) || letterDrawsContactIcons(cl, settings);
+}
+
+/**
+ * Design → Contact icons explanatory hint: tells the user where and when contact icons
+ * are used, and accurately states when custom image uploads per field appear (ONB-8).
+ */
+export function contactIconHint(template, settings, cl) {
+  const resumeIcons = drawsContactIcons(template, settings);
+  const anyIcons = anyDrawsContactIcons(template, settings, cl);
+
+  const usage = (templateId(template) === 'modern' || templateId(template) === 'sidebar')
+    ? `The ${templateId(template) === 'modern' ? 'Modern' : 'Sidebar'} template always shows them; the cover letter shows them when its contact style is Icon.`
+    : `Used by the résumé when Contact style is Icon (Modern and Sidebar always) and by the cover letter when its contact style is Icon.${resumeIcons ? '' : ' Picking a pack switches the résumé to Icon.'}`;
+
+  const upload = anyIcons
+    ? 'Custom images per field appear under Personal Info → Fields.'
+    : 'Custom images per field appear under Personal Info → Fields while icons are shown.';
+
+  return `${usage} ${upload}`;
+}
+
+
 /** Text Position as a flex alignment for the photo's row (Center when unset). */
 export const photoTextAlignItems = (settings) =>
   ({ top: 'flex-start', bottom: 'flex-end' })[settings?.photoTextAlign] || 'center';

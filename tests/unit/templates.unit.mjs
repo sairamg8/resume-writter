@@ -9,7 +9,7 @@ import { buildTestState } from '../helpers.js';
 const {
   TEMPLATE_IDS, templateId, withKnownTemplate, hasHeaderControls, headerBorderOn, templateStyleDefaults,
   SIDEBAR_COLUMN_TYPES, inSidebarColumn, drawsContactIcons, photoTextAlignItems, headerControlTemplateLabels,
-  headingBorderControls,
+  headingBorderControls, anyDrawsContactIcons, contactIconHint,
 } = templates;
 
 test('templateId: the five templates stay, however an imported file cases or spaces them; any other id reads as Classic (M15, R5-5)', () => {
@@ -135,6 +135,42 @@ test('headingBorderControls: thickness and color applicability per heading style
     assert.deepEqual(headingBorderControls(unknown), { thickness: false, color: false }, String(unknown));
   }
 });
+
+test('anyDrawsContactIcons: true if resume or letter draws icons (ONB-8)', () => {
+  // Classic Bar + letter Bar: false
+  assert.equal(anyDrawsContactIcons('classic', { contactStyle: 'bar' }, { headerStyle: 'bar' }), false);
+  // Classic Bar + letter Icon: true
+  assert.equal(anyDrawsContactIcons('classic', { contactStyle: 'bar' }, { headerStyle: 'icon' }), true);
+  // Modern: true
+  assert.equal(anyDrawsContactIcons('modern', { contactStyle: 'bar' }, { headerStyle: 'bar' }), true);
+  // Sidebar: true
+  assert.equal(anyDrawsContactIcons('sidebar', { contactStyle: 'bar' }, { headerStyle: 'bar' }), true);
+  // Letter with no headerStyle inherits settings.contactStyle
+  assert.equal(anyDrawsContactIcons('classic', { contactStyle: 'bar' }, {}), false);
+  assert.equal(anyDrawsContactIcons('classic', { contactStyle: 'icon' }, {}), true);
+});
+
+test('contactIconHint: explains icon usage and when custom icon uploads appear (ONB-8)', () => {
+  // When icons are not shown anywhere: notes "while icons are shown" and "Picking a pack switches"
+  const hidden = contactIconHint('classic', { contactStyle: 'bar' }, { headerStyle: 'bar' });
+  assert.match(hidden, /Used by the résumé when Contact style is Icon/);
+  assert.match(hidden, /Picking a pack switches the résumé to Icon/);
+  assert.match(hidden, /Custom images per field appear under Personal Info → Fields while icons are shown\./);
+
+  // When letter draws icons: uploads ARE shown, so no "while icons are shown" qualifier
+  const letterShows = contactIconHint('classic', { contactStyle: 'bar' }, { headerStyle: 'icon' });
+  assert.match(letterShows, /Custom images per field appear under Personal Info → Fields\./);
+  assert.doesNotMatch(letterShows, /while icons are shown/);
+
+  // Modern / Sidebar: always shows them
+  for (const t of ['modern', 'sidebar']) {
+    const hint = contactIconHint(t, { contactStyle: 'bar' }, {});
+    assert.match(hint, new RegExp(`${t === 'modern' ? 'Modern' : 'Sidebar'} template always shows them`));
+    assert.match(hint, /Custom images per field appear under Personal Info → Fields\./);
+    assert.doesNotMatch(hint, /while icons are shown/);
+  }
+});
+
 
 
 

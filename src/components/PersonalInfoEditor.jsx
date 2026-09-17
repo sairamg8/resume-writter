@@ -5,8 +5,7 @@ import { HeaderCustomization } from '@/components/PersonalInfoEditorHeader';
 import { PhotoSection } from '@/components/PersonalInfoEditorPhoto';
 import { ContactIcon } from '@/utils/contactIcons';
 import { readImageFile } from '@/utils/imageUpload';
-import { drawsContactIcons, templateLabel as getTemplateLabel } from '@/constants/templates';
-import { letterDrawsContactIcons } from '@/utils/coverLetter';
+import { anyDrawsContactIcons, drawsContactIcons, templateLabel as getTemplateLabel } from '@/constants/templates';
 import { CONTACT_FIELDS } from '@/utils/contacts';
 
 /** This editor's lucide icon and placeholder per contact field; the names come from CONTACT_FIELDS. */
@@ -32,9 +31,9 @@ export default function PersonalInfoEditor({ personal, updatePersonal, toggleFie
   const s = settings || {};
   // Where a field's icon prints: the résumé, or only the cover letter, whose own Contact Style
   // "Icon" draws them under a Bar or Bullet résumé (R9-5). The upload is offered either way,
-  // named for where it prints; null when nothing draws icons.
-  const iconLabel = drawsContactIcons(template, s) ? 'Resume icon'
-    : letterDrawsContactIcons(coverLetter, s) ? 'Cover letter icon' : null;
+  // named for where it prints; null when nothing draws icons (ONB-8).
+  const iconLabel = !anyDrawsContactIcons(template, s, coverLetter) ? null
+    : drawsContactIcons(template, s) ? 'Resume icon' : 'Cover letter icon';
   const [headerOpen, setHeaderOpen] = useState(false);
   const [photoOpen, setPhotoOpen] = useState(false);
   const uid = useId();

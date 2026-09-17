@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ATS_DEFAULTS, defaultSettings } from '@/utils/defaultData';
-import { drawsContactIcons, TEMPLATE_PICKER, templateId } from '@/constants/templates';
+import { contactIconHint, drawsContactIcons, TEMPLATE_PICKER, templateId } from '@/constants/templates';
 import { MARGIN_MM } from '@/constants/pageMargins';
 import { ITEM_GAP_PX, LINE_HEIGHT, SECTION_GAP_PX } from '@/constants/spacingNumbers';
 import { DesignSection, NumberRow } from '@/components/DesignPanelShared';
@@ -74,11 +74,7 @@ export default function DesignPanel({ resume, updateSetting, setTemplate, resetS
 
       <DesignSection title="Contact icons" defaultOpen onReset={() => resetSection(ICON_KEYS)}>
         <p className="text-[11px] text-gray-400 mb-2 leading-relaxed">
-          Global icon style for the whole resume.{' '}
-          {current === 'modern' || current === 'sidebar'
-            ? <>The {current === 'modern' ? 'Modern' : 'Sidebar'} template always shows them.</>
-            : <>Contact style must be <strong>Icon</strong> for these to show{drawsIcons ? '' : '. It is not now: picking a pack switches it to Icon'}.</>}
-          {' '}You can still upload a custom image per field under Personal Info → Fields.
+          {contactIconHint(current, settings, resume?.coverLetter)}
         </p>
         <div className="space-y-2">
           {ICON_SET_OPTIONS.map(opt => {

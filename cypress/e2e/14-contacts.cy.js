@@ -247,4 +247,20 @@ describe('per-field contact icons in the editor (R1-2, R1-4)', () => {
     cy.contains('span', 'Resume icon').first().next().find('svg [stroke-width]').first()
       .should('have.attr', 'stroke-width', '1.5');
   });
+
+  it('ONB-8: Design -> Contact icons hint accurately reflects whether icons are shown', () => {
+    // Classic with Bar: neither draws icons
+    cy.visitEditor('classic', { state: withStyle('classic', 'bar') });
+    cy.get('button[title="Design & Customize"]').click();
+    cy.contains('p', 'Contact style must be Icon').should('not.exist');
+    cy.contains('p', 'while icons are shown').should('be.visible');
+
+    // Switch letter to Icon: custom images appear
+    cy.contains('button', 'Cover Letter').click();
+    cy.contains('p', 'Contact Style').next().contains('button', 'Icon').click();
+    cy.get('button[title="Design & Customize"]').click();
+    cy.contains('p', 'while icons are shown').should('not.exist');
+    cy.contains('p', 'Custom images per field appear under Personal Info → Fields.').should('be.visible');
+  });
 });
+
