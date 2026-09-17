@@ -34,6 +34,8 @@ describe('cover letter contacts follow the letter\'s own visibility (FIDB-44)', 
     cy.exportDocx().then((docx) => expect(squash(docx.paragraphs.join(' '))).to.contain(PHONE));
   });
 
+  // Guard / selector note: hiding on the letter already worked before e0e243c; this test fails
+  // on ffb7cfd only at selector level because the title attribute was added in e0e243c.
   it('hiding it on the letter hides it there only; the résumé keeps printing it', () => {
     cy.visitEditor('classic', { state: seeded([], { hiddenFields: [] }), tab: 'coverletter' });
     letter().invoke('text').should((t) => expect(squash(t)).to.contain(PHONE));
@@ -55,6 +57,8 @@ describe('cover letter contacts follow the letter\'s own visibility (FIDB-44)', 
     cy.preview().invoke('text').should((t) => expect(squash(t)).to.contain(PHONE).and.to.contain(EMAIL));
   });
 
+  // Guard / selector note: following the résumé's list already worked before e0e243c; this test
+  // fails on ffb7cfd only at selector level because the title attribute was added in e0e243c.
   it('a letter with no list of its own shows the résumé\'s hidden fields, and its first toggle makes it its own', () => {
     cy.visitEditor('classic', { state: seeded(['phone'], { hiddenFields: undefined }), tab: 'coverletter' });
     cy.get('button[title="Show Phone on the cover letter"]').should('exist');

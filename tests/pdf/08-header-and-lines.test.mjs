@@ -68,19 +68,23 @@ describe('cover letter contact visibility (FIDB-44)', () => {
     return { letter: allText(await read(await renderCover(r))), cv: allText(await read(await render(r))) };
   };
 
-  it('the letter\'s own list decides, both ways; the résumé keeps its own', async () => {
+  it('a field hidden on the résumé prints on a letter that shows it (FIDB-44)', async () => {
     const shown = await both(['phone', 'github'], { hiddenFields: [] });
     assert.ok(shown.letter.includes('+1 555 0100'), `hidden on the résumé, shown on the letter: ${shown.letter}`);
     assert.ok(shown.letter.includes('github.com/firstname'), `hidden on the résumé, shown on the letter: ${shown.letter}`);
     assert.ok(!shown.cv.includes('+1 555 0100') && !shown.cv.includes('github.com/firstname'), `the résumé keeps hiding them: ${shown.cv}`);
+  });
 
+  // Guard: hiding on the letter alone already worked before e0e243c; the fix was showing a field the résumé hid.
+  it('guard: hiding on the letter only hides it there; the résumé keeps showing it', async () => {
     const hidden = await both([], { hiddenFields: ['phone'] });
     assert.ok(!hidden.letter.includes('+1 555 0100'), `shown on the résumé, hidden on the letter: ${hidden.letter}`);
     assert.ok(hidden.letter.includes('github.com/firstname'), hidden.letter);
     assert.ok(hidden.cv.includes('+1 555 0100'), `the résumé keeps showing it: ${hidden.cv}`);
   });
 
-  it('a letter that never set its own list follows the résumé\'s (older data; the panel shows the same)', async () => {
+  // Guard: a letter with no list of its own already followed the résumé's hidden fields.
+  it('guard: a letter that never set its own list follows the résumé\'s (older data; the panel shows the same)', async () => {
     const { letter } = await both(['phone'], {});
     assert.ok(!letter.includes('+1 555 0100'), letter);
     assert.ok(letter.includes('github.com/firstname'), letter);
