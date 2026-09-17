@@ -1,8 +1,8 @@
 import { useSyncExternalStore } from 'react';
-import { loadSavedList, notSavedReason, pendingRecovery, rememberRecovery, setItemWithRoom } from '@/utils/storageBackup';
-import { newId } from '@/utils/ids';
-import { addressableJobs, completeJob, readJob } from '@/utils/normalizeJob';
-import { keepUnsaved } from '@/utils/unsavedJobs';
+import { loadSavedList, notSavedReason, pendingRecovery, readSavedList, rememberRecovery, setItemWithRoom } from '../utils/storageBackup.js';
+import { newId } from '../utils/ids.js';
+import { addressableJobs, completeJob, readJob } from '../utils/normalizeJob.js';
+import { keepUnsaved } from '../utils/unsavedJobs.js';
 
 const KEY = 'cpwtcv_jobs_v1';
 
@@ -73,22 +73,47 @@ let current = null;
 const listeners = new Set();
 /** The list this tab last knew storage to hold: what it shows, but for what storage refused. */
 let stored = null;
+let initialized = false;
+
+/**
+ * Pure read of the stored jobs (writing nothing, no listeners added) so getSnapshot
+ * is completely free of side effects during React render (NB-6).
+ */
+function peek() {
+  const { saved, list } = readSavedList(KEY, 'jobs', readJob);
+  let jobs;
+  if (!list) jobs = DEMO_JOBS;
+  else if (!saved) jobs = [];
+  else {
+    jobs = list.map(completeJob);
+    if (saved.dataVersion !== JOB_VERSION) jobs = [...DEMO_JOBS, ...jobs.filter(j => !j.id.startsWith('demo_'))];
+    jobs = addressableJobs(jobs);
+  }
+  return { jobs, recovery: pendingRecovery(KEY), persistError: null };
+}
+
+/**
+ * Initial load + repair + backup + persist, invoked on subscribe or first mutation (NB-6).
+ */
+function init() {
+  if (initialized) return;
+  initialized = true;
+  const { jobs, recovery: found } = load();
+  const recovery = found ? rememberRecovery(KEY, found) : pendingRecovery(KEY);
+  stored = jobs;
+  const persistError = persist(jobs);
+  current = { jobs, recovery, persistError };
+}
 
 function snapshot() {
   if (!current) {
-    // The notice is kept until dismissed: the list is repaired (and saved over) on whichever job
-    // page reads it first, and only the tracker shows the notice (R4-0).
-    const { jobs, recovery: found } = load();
-    const recovery = found ? rememberRecovery(KEY, found) : pendingRecovery(KEY);
-    // Saved at once, as the page used to on opening: a migrated or repaired list replaces the
-    // stored value (whose backup load() has kept).
-    current = { jobs, recovery, persistError: persist(jobs) };
-    stored = jobs;
-    window.addEventListener('storage', e => {
-      if (e.key === KEY && e.newValue) takeOtherTabsList();
-    });
+    current = peek();
   }
   return current;
+}
+
+function onStorage(e) {
+  if (e.key === KEY && e.newValue) takeOtherTabsList();
 }
 
 /**
@@ -107,8 +132,24 @@ function takeOtherTabsList() {
 }
 
 function subscribe(listener) {
+  const wasEmpty = listeners.size === 0;
   listeners.add(listener);
-  return () => listeners.delete(listener);
+
+  if (!initialized) {
+    init();
+    listener();
+  }
+
+  if (wasEmpty && typeof window !== 'undefined') {
+    window.addEventListener('storage', onStorage);
+  }
+
+  return () => {
+    listeners.delete(listener);
+    if (listeners.size === 0 && typeof window !== 'undefined') {
+      window.removeEventListener('storage', onStorage);
+    }
+  };
 }
 
 function update(patch) {
@@ -117,6 +158,7 @@ function update(patch) {
 }
 
 function setJobs(change) {
+  if (!initialized) init();
   const jobs = change(snapshot().jobs);
   const persistError = persist(jobs);
   if (!persistError) stored = jobs;
@@ -188,12 +230,23 @@ function clearDemoData() {
 
 // Set when the saved list could not be read in full; the tracker shows it until dismissed.
 function dismissRecovery() {
+  if (!initialized) init();
   rememberRecovery(KEY, null);
   update({ recovery: null });
 }
+
+export function _resetJobStoreForTest() {
+  current = null;
+  stored = null;
+  initialized = false;
+  listeners.clear();
+}
+
+export { snapshot, subscribe };
 
 export function useJobStore() {
   const { jobs, persistError, recovery } = useSyncExternalStore(subscribe, snapshot);
   const persistReason = notSavedReason(persistError);
   return { jobs, persistError, persistReason, recovery, dismissRecovery, addJob, updateJob, deleteJob, importJobs, clearDemoData };
 }
+
