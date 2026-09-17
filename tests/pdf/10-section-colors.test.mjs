@@ -90,7 +90,7 @@ describe('text colour', () => {
     });
 
     it(`${template}: every body and secondary run is one of the Text colour's shades (R2-5)`, async () => {
-      const { resolveTemplateSettings } = await loadModule('/src/templates/pdf/shared/PdfPage.jsx');
+      const { resolveTemplateSettings } = await loadModule('/src/templates/pdf/shared/templateSettings.js');
       const { textShades } = await loadModule('/src/templates/pdf/shared/pdfColors.js');
       const hex = (c) => `#${c.map((v) => Math.round(v).toString(16).padStart(2, '0')).join('')}`;
       for (const textColor of ['#111111', '#1a1a1a', undefined]) {

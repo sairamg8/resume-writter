@@ -3,9 +3,6 @@ import { solid } from './pdfColors';
 import { HEADER_BORDER_PAD_PT, MM_TO_PT } from './pdfUnits';
 import { pageBoxPt } from '@/constants/pageSize';
 
-// The per-template fallbacks and resolveTemplateSettings live in the react-pdf-free
-// ./templateSettings, which the Word export reads too (FIDB-51); re-exported for the PDF code.
-export { DEFAULTS, resolveTemplateSettings } from './templateSettings';
 
 /**
  * The header's bottom rule (Classic, Minimal, Executive) when the settings turn it on, below the

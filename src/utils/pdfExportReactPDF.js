@@ -1,7 +1,7 @@
 import React from 'react';
 import { pdf } from '@react-pdf/renderer';
 import { resolvePdfFonts, collectText } from '@/templates/pdf/shared/pdfFontLoader';
-import { resolveTemplateSettings } from '@/templates/pdf/shared/PdfPage';
+import { resolveTemplateSettings } from '@/templates/pdf/shared/templateSettings';
 import { resolveSection } from '@/templates/pdf/shared/templateSectionDefaults';
 import { downloadBlob } from '@/utils/download';
 import { withPrintablePhotos } from '@/utils/printableImage';
