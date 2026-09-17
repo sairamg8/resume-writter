@@ -103,6 +103,40 @@ describe('cloud sync merge (R1-0)', () => {
     const tie = mergeResumeLists([{ ...localOlder, updatedAt: 20 }], [cloudNewer], new Set());
     assert.equal(tie[0].coverLetter.closing, 'Local', 'this browser wins a tie');
   });
+
+  it('planInitialSync migrates legacy cloud and local résumés in plan.merged (W1b-5.3)', async () => {
+    const { planInitialSync } = await loadModule('/src/utils/cloudSyncPlan.js');
+    const { DATA_VERSION } = await normalizer();
+    const legacyCloud = { ...legacy(), id: 'cloud_legacy', updatedAt: 10, settings: { itemGap: 12 } };
+    const legacyLocal = { ...legacy({ closing: 'Local' }), id: 'local_legacy', updatedAt: 20, settings: { itemGap: 12 } };
+    const plan = planInitialSync({ local: [legacyLocal], cloud: [legacyCloud] });
+    assert.equal(plan.merged.length, 2);
+    for (const r of plan.merged) {
+      assert.equal(r.coverLetter.recipientTitle, '', `${r.id}: recipientTitle migrated`);
+      assert.equal(r.dataVersion, DATA_VERSION, `${r.id}: stamped with DATA_VERSION`);
+      assert.equal(r.settings.itemGap, 8, `${r.id}: itemGap migrated`);
+    }
+  });
+});
+
+describe('restoreResumes migrates older data (W1b-5.3)', () => {
+  it('restoring résumés migrates old letter defaults, dataVersion and spacing numbers', async () => {
+    const { createSyncActions } = await loadModule('/src/hooks/useResumeSyncActions.js');
+    const { DATA_VERSION } = await normalizer();
+    let state = { resumes: [], activeId: null, deletedIds: [] };
+    const setAppState = (updater) => {
+      state = typeof updater === 'function' ? updater(state) : updater;
+    };
+    const { restoreResumes } = createSyncActions(setAppState);
+    const oldDoc = { ...legacy({ closing: 'Restored' }), id: 'restored_1', settings: { itemGap: 12 } };
+    restoreResumes([oldDoc]);
+    assert.equal(state.resumes.length, 1);
+    const restored = state.resumes[0];
+    assert.equal(restored.coverLetter.recipientTitle, '', 'recipientTitle migrated');
+    assert.equal(restored.dataVersion, DATA_VERSION, 'stamped with DATA_VERSION');
+    assert.equal(restored.settings.itemGap, 8, 'itemGap migrated');
+    assert.equal(restored.coverLetter.closing, 'Restored');
+  });
 });
 
 // Nothing here decodes a WebP, so no copy can be made of one (16-saved-data-photos: the browser
@@ -164,7 +198,6 @@ describe('a Modern résumé saved before its banner took Photo → Text Position
         ['version 8, last edited before the change went live', saved('center', { dataVersion: 8, photoSize })],
       ]) {
         const r = normalizeResume(old);
-        console.log('LABEL:', label, 'R.SETTINGS:', r.settings);
         assert.equal(r.settings?.photoTextAlign, 'top', label);
         const [now, before] = [await drawing(await render(r)), await asItPrinted(old)];
         assert.ok(now === before, `${photoSize}, ${label}: draws the page it drew before`);
