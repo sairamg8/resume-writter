@@ -22,18 +22,57 @@ export const SECTION_BORDER_PT = { min: 1, max: 8 };
 export const HEADER_BORDER_PT = { min: 1, max: 12, zeroIsUnset: true };
 
 
-/** Typography (DesignPanelTypography.jsx). Deltas are added to fontSizeBase. */
+/**
+ * Design → Typography, pt (DesignPanelTypography.jsx): Base 8–16 and Contact Icons 8–20, stored as
+ * set. Unchecked, "abc" dropped the PDF's text, "12" printed 128 pt ("12" + 8) and 50 ran pages of it
+ * (VF2-3.2-NB1-NB1-NB1).
+ */
 export const FONT_SIZE_BASE = { min: 8, max: 16 };
-export const FONT_SIZE_NAME_DELTA = { min: 0, max: 28 };
-export const FONT_SIZE_SECTION_DELTA = { min: -10, max: 16 };
-export const FONT_SIZE_ENTRY_DELTA = { min: -10, max: 16 };
 export const ICON_SIZE = { min: 8, max: 20 };
+
+/** The base a résumé that stores none prints at (defaultData.js, every PDF's `?? 11`). */
+const DEFAULT_FONT_SIZE_BASE = 11;
+
+/**
+ * Full Name, Section Title and Entry Header: stored as deltas added to the base, but their rows offer
+ * the size that prints — Full Name from the base to 36 pt, the other two 6–24 pt. A delta in range for
+ * one base is not for another: base 8 with a Section Title delta of -10 printed -2 pt headings, and
+ * base 16 with a Full Name delta of 28 a 44 pt name, so each is clamped against its résumé's base.
+ */
+export const TYPE_SIZE_PT = {
+  fontSizeNameDelta: (base) => ({ min: base, max: 36 }),
+  fontSizeSectionDelta: () => ({ min: 6, max: 24 }),
+  fontSizeEntryDelta: () => ({ min: 6, max: 24 }),
+};
+
+/** `delta` (a number) for `key` moved so that `base` + it prints within that row's range. */
+export function deltaInRange(key, delta, base) {
+  const { min, max } = TYPE_SIZE_PT[key](base);
+  return Math.min(max - base, Math.max(min - base, delta));
+}
+
+/** `resume` with each stored size delta clamped against its base (see TYPE_SIZE_PT). */
+function withTypeSizes(resume) {
+  const settings = resume?.settings;
+  if (!settings || typeof settings !== 'object') return resume;
+  const base = settings.fontSizeBase ?? DEFAULT_FONT_SIZE_BASE;
+  let next = null;
+  for (const key of Object.keys(TYPE_SIZE_PT)) {
+    if (typeof settings[key] !== 'number') continue;
+    const kept = deltaInRange(key, settings[key], base);
+    if (kept === settings[key]) continue;
+    next ??= { ...settings };
+    next[key] = kept;
+  }
+  return next ? { ...resume, settings: next } : resume;
+}
 
 const DESIGN_NUMBERS = {
   fontSizeBase: FONT_SIZE_BASE,
-  fontSizeNameDelta: FONT_SIZE_NAME_DELTA,
-  fontSizeSectionDelta: FONT_SIZE_SECTION_DELTA,
-  fontSizeEntryDelta: FONT_SIZE_ENTRY_DELTA,
+  // Numbers, clamped against the base after it is (withTypeSizes).
+  fontSizeNameDelta: null,
+  fontSizeSectionDelta: null,
+  fontSizeEntryDelta: null,
   iconSize: ICON_SIZE,
   sectionBorderWidth: SECTION_BORDER_PT,
   headerBorderWidth: HEADER_BORDER_PT,
@@ -43,4 +82,4 @@ const DESIGN_NUMBERS = {
 };
 
 /** `resume` with every Design number stored as a number in its control's range (see above). */
-export const withDesignNumbers = (resume) => withStoredNumbers(withSpacingNumbers(resume), DESIGN_NUMBERS);
+export const withDesignNumbers = (resume) => withTypeSizes(withStoredNumbers(withSpacingNumbers(resume), DESIGN_NUMBERS));

@@ -9,32 +9,37 @@ const cv = (template, settings) => ({
   ...resume({ template, settings, sections: [experience([{}, {}]), section('skills', [{ category: 'Tools', skills: 'Git, SQL' }])] }),
   updatedAt: 5,
 });
-const texts = (pages) => pages.flatMap((p) => p.items.map((i) => i.str)).filter((s) => s.trim()).sort();
+/** Each printed text with the size it printed at (pdf.js reads a -2 pt run as 2 pt high). */
+const sized = (pages) => pages.flatMap((p) => p.items.filter((i) => i.str.trim()).map((i) => `${i.str}@${i.h.toFixed(1)}`)).sort();
 
 describe('stored Typography numbers print within the panel\'s ranges (VF2-3.2-NB1-NB1-NB1)', () => {
-  it('out of range is clamped to that end, and prints as the panel\'s end does: the same pages, every text', async () => {
+  it('each size alone: no number is dropped, text that is one becomes it, out of range is clamped (base 11)', async () => {
     const { normalizeResume } = await loadModule('/src/utils/normalizeResume.js');
+    // [key, stored, stored as, prints as]: the rows print Full Name base–36, Section Title and Entry Header 6–24.
     const cases = [
       ['fontSizeBase', 'abc', undefined, 11],
+      ['fontSizeBase', true, undefined, 11],
+      ['fontSizeBase', {}, undefined, 11],
       ['fontSizeBase', '12', 12, 12],
+      ['fontSizeBase', ' 12 ', 12, 12],
       ['fontSizeBase', 50, 16, 16],
       ['fontSizeBase', 2, 8, 8],
-      
+
       ['fontSizeNameDelta', 'abc', undefined, 8],
       ['fontSizeNameDelta', '12', 12, 12],
-      ['fontSizeNameDelta', 50, 28, 28], // max size 36, min base 8 -> max delta 28
-      ['fontSizeNameDelta', -50, 0, 0], // min size 8, max base 16 -> min delta -8
-      
+      ['fontSizeNameDelta', 50, 25, 25], // 36 pt on base 11
+      ['fontSizeNameDelta', -50, 0, 0], // the base
+
       ['fontSizeSectionDelta', 'abc', undefined, 1],
       ['fontSizeSectionDelta', '5', 5, 5],
-      ['fontSizeSectionDelta', 50, 16, 16], // max size 24, min base 8 -> max delta 16
-      ['fontSizeSectionDelta', -50, -10, -10], // min size 6, max base 16 -> min delta -10
-      
+      ['fontSizeSectionDelta', 50, 13, 13], // 24 pt
+      ['fontSizeSectionDelta', -50, -5, -5], // 6 pt
+
       ['fontSizeEntryDelta', 'abc', undefined, 0],
       ['fontSizeEntryDelta', '5', 5, 5],
-      ['fontSizeEntryDelta', 50, 16, 16],
-      ['fontSizeEntryDelta', -50, -10, -10],
-      
+      ['fontSizeEntryDelta', 50, 13, 13],
+      ['fontSizeEntryDelta', -50, -5, -5],
+
       ['iconSize', 'abc', undefined, 11],
       ['iconSize', '12', 12, 12],
       ['iconSize', 50, 20, 20],
@@ -47,22 +52,48 @@ describe('stored Typography numbers print within the panel\'s ranges (VF2-3.2-NB
         const r = normalizeResume(cv(template, { [key]: stored }));
         assert.equal(r.settings[key], kept, `${at}: stored as`);
         assert.equal(r.updatedAt, 5, `${at}: not an edit`);
-        const [pages, end] = [
-          await read(await render(r)), 
-          await read(await render(normalizeResume(cv(template, { [key]: printedAs }))))
-        ];
+        const [pages, end] = [await read(await render(r)), await read(await render(normalizeResume(cv(template, { [key]: printedAs }))))];
         assert.equal(pages.length, end.length, `${at}: pages`);
-        assert.deepEqual(texts(pages), texts(end), `${at}: every text`);
+        assert.deepEqual(sized(pages), sized(end), `${at}: every text, at the size the panel's end prints`);
       }
     }
   });
 
-  it('the same résumé for values the panel can set (guard)', async () => {
+  it('a size delta is clamped against its own résumé\'s base: base 8 with Section Title -10 printed -2 pt headings', async () => {
     const { normalizeResume } = await loadModule('/src/utils/normalizeResume.js');
-    for (const settings of [{ fontSizeBase: 11, fontSizeNameDelta: 8, fontSizeSectionDelta: 1, fontSizeEntryDelta: 0, iconSize: 11 }, { fontSizeBase: 16, fontSizeNameDelta: 20, fontSizeSectionDelta: 5, fontSizeEntryDelta: 5, iconSize: 20 }]) {
-      const r = normalizeResume(cv('classic', settings));
-      assert.equal(normalizeResume(r), r, JSON.stringify(settings));
-      for (const [key, v] of Object.entries(settings)) assert.equal(r.settings[key], v, `${JSON.stringify(settings)} ${key}`);
+    // [stored, stored as — a key it does not name keeps the harness résumé's own]
+    const cases = [
+      [{ fontSizeBase: 8, fontSizeSectionDelta: -10, fontSizeEntryDelta: -10 }, { fontSizeBase: 8, fontSizeSectionDelta: -2, fontSizeEntryDelta: -2 }],
+      [{ fontSizeBase: 16, fontSizeNameDelta: 28, fontSizeSectionDelta: 16, fontSizeEntryDelta: 16 }, { fontSizeBase: 16, fontSizeNameDelta: 20, fontSizeSectionDelta: 8, fontSizeEntryDelta: 8 }],
+      [{ fontSizeBase: '8', fontSizeNameDelta: '-5' }, { fontSizeBase: 8, fontSizeNameDelta: 0 }],
+      [{ fontSizeBase: 'abc', fontSizeSectionDelta: -10 }, { fontSizeBase: undefined, fontSizeSectionDelta: -5 }],
+      [{ fontSizeBase: 50, fontSizeNameDelta: 25 }, { fontSizeBase: 16, fontSizeNameDelta: 20 }],
+    ];
+    for (const template of ['classic', 'sidebar']) {
+      for (const [stored, keptAs] of cases) {
+        const at = `${template} ${JSON.stringify(stored)}`;
+        const r = normalizeResume(cv(template, stored));
+        const [pages, end] = [await read(await render(r)), await read(await render(cv(template, keptAs)))];
+        assert.equal(pages.length, end.length, `${at}: pages`);
+        assert.deepEqual(sized(pages), sized(end), `${at}: every text, at the size the rows' ends print`);
+        for (const key of ['fontSizeBase', 'fontSizeNameDelta', 'fontSizeSectionDelta', 'fontSizeEntryDelta']) {
+          const expected = key in keptAs ? keptAs[key] : cv(template, {}).settings[key];
+          assert.equal(r.settings[key], expected, `${at}: ${key} stored as`);
+        }
+        assert.equal(r.updatedAt, 5, `${at}: not an edit`);
+      }
+    }
+  });
+
+  it('the same résumé for sizes the panel can set, at each end of the base (guard)', async () => {
+    const { normalizeResume } = await loadModule('/src/utils/normalizeResume.js');
+    for (const settings of [
+      { fontSizeBase: 11, fontSizeNameDelta: 8, fontSizeSectionDelta: 1, fontSizeEntryDelta: 0, iconSize: 11 },
+      { fontSizeBase: 8, fontSizeNameDelta: 28, fontSizeSectionDelta: -2, fontSizeEntryDelta: 16, iconSize: 8 },
+      { fontSizeBase: 16, fontSizeNameDelta: 0, fontSizeSectionDelta: 8, fontSizeEntryDelta: -10, iconSize: 20 },
+    ]) {
+      const stored = { ...cv('classic', settings), dataVersion: 99 };
+      assert.equal(normalizeResume(stored), stored, JSON.stringify(settings));
     }
   });
 });

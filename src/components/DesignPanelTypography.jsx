@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { FONTS, loadPreviewFont, loadCustomFonts, saveCustomFont, removeCustomFont, checkFont } from '@/utils/fonts';
 import { Label, SizeRow, SegmentControl, DesignSection } from '@/components/DesignPanelShared';
-import { FONT_SIZE_BASE, FONT_SIZE_NAME_DELTA, FONT_SIZE_SECTION_DELTA, FONT_SIZE_ENTRY_DELTA, ICON_SIZE } from '@/constants/designNumbers';
-
+import { FONT_SIZE_BASE, ICON_SIZE, TYPE_SIZE_PT, deltaInRange } from '@/constants/designNumbers';
 
 // The quick size buttons set the base size (pt) the PDF is laid out with.
 const SIZE_PRESETS = { small: 10, normal: 11, large: 12 };
@@ -46,6 +45,17 @@ export function TypographySection({ settings, template, updateSetting, onReset }
   // No font set (older or imported résumés) prints in Noto Sans, so that is what is selected.
   const activeFont = settings.customFont ? null : (FONTS.some((f) => f.id === settings.font) ? settings.font : 'notosans');
   const sizePreset = Object.keys(SIZE_PRESETS).find((k) => SIZE_PRESETS[k] === base) || '';
+
+  // A new base keeps each stored size delta printing within its row's range (TYPE_SIZE_PT): Section
+  // Title 6 pt on base 16 is a delta of -10, which on base 8 would print -2 pt.
+  function setBase(next) {
+    updateSetting('fontSizeBase', next);
+    for (const key of Object.keys(TYPE_SIZE_PT)) {
+      if (typeof settings[key] !== 'number') continue;
+      const kept = deltaInRange(key, settings[key], next);
+      if (kept !== settings[key]) updateSetting(key, kept);
+    }
+  }
 
   return (
     <DesignSection title="Typography" onReset={onReset}>
@@ -117,7 +127,7 @@ export function TypographySection({ settings, template, updateSetting, onReset }
         <Label>Font Size</Label>
         <SegmentControl
           value={sizePreset}
-          onChange={v => updateSetting('fontSizeBase', SIZE_PRESETS[v])}
+          onChange={v => setBase(SIZE_PRESETS[v])}
           options={[{ label: 'Small', value: 'small' }, { label: 'Normal', value: 'normal' }, { label: 'Large', value: 'large' }]}
         />
       </div>
@@ -131,10 +141,10 @@ export function TypographySection({ settings, template, updateSetting, onReset }
             const entryDelta = settings.fontSizeEntryDelta ?? 0;
             return (
               <>
-                <SizeRow label="Base" value={base} onChange={v => updateSetting('fontSizeBase', v)} min={FONT_SIZE_BASE.min} max={FONT_SIZE_BASE.max} />
-                <SizeRow label="Full Name" value={base + nameDelta} onChange={v => updateSetting('fontSizeNameDelta', v - base)} min={base + FONT_SIZE_NAME_DELTA.min} max={FONT_SIZE_BASE.min + FONT_SIZE_NAME_DELTA.max} />
-                <SizeRow label="Section Title" value={base + sectionDelta} onChange={v => updateSetting('fontSizeSectionDelta', v - base)} min={FONT_SIZE_BASE.max + FONT_SIZE_SECTION_DELTA.min} max={FONT_SIZE_BASE.min + FONT_SIZE_SECTION_DELTA.max} />
-                <SizeRow label="Entry Header" value={base + entryDelta} onChange={v => updateSetting('fontSizeEntryDelta', v - base)} min={FONT_SIZE_BASE.max + FONT_SIZE_ENTRY_DELTA.min} max={FONT_SIZE_BASE.min + FONT_SIZE_ENTRY_DELTA.max} />
+                <SizeRow label="Base" value={base} onChange={setBase} min={FONT_SIZE_BASE.min} max={FONT_SIZE_BASE.max} />
+                <SizeRow label="Full Name" value={base + nameDelta} onChange={v => updateSetting('fontSizeNameDelta', v - base)} {...TYPE_SIZE_PT.fontSizeNameDelta(base)} />
+                <SizeRow label="Section Title" value={base + sectionDelta} onChange={v => updateSetting('fontSizeSectionDelta', v - base)} {...TYPE_SIZE_PT.fontSizeSectionDelta(base)} />
+                <SizeRow label="Entry Header" value={base + entryDelta} onChange={v => updateSetting('fontSizeEntryDelta', v - base)} {...TYPE_SIZE_PT.fontSizeEntryDelta(base)} />
                 <SizeRow label="Contact Icons" value={settings.iconSize ?? 11} onChange={v => updateSetting('iconSize', v)} min={ICON_SIZE.min} max={ICON_SIZE.max} />
               </>
             );
