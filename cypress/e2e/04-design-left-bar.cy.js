@@ -32,4 +32,26 @@ describe('design — Left bar\'s Border thickness is the width the bar prints (O
     cy.get('@thickness').find('input').should('have.value', '2').and('have.attr', 'min', '1');
     cy.contains('A left bar is 2 pt wider').should('not.exist');
   });
+
+  it('ONB-13: Boxed disables thickness with a note; Plain disables thickness and color', () => {
+    cy.visitEditor('classic');
+    openDesign('Section Headings');
+    cy.contains('button', 'Boxed').click();
+    cy.contains('span', 'Border thickness').parent().as('thickness');
+    cy.get('@thickness').find('input[aria-label="Section border thickness (pt)"]').should('be.disabled');
+    cy.get('@thickness').contains('button', '−').should('be.disabled');
+    cy.get('@thickness').contains('button', '+').should('be.disabled');
+    cy.contains('p', 'Boxed has no border line.').should('be.visible');
+    cy.get('input[aria-label="Section border color"]').should('not.be.disabled');
+
+    cy.contains('button', 'Plain').click();
+    cy.get('@thickness').find('input[aria-label="Section border thickness (pt)"]').should('be.disabled');
+    cy.contains('p', 'Plain has no border.').should('be.visible');
+    cy.get('input[aria-label="Section border color"]').should('be.disabled');
+
+    cy.contains('button', 'Ruled').click();
+    cy.get('@thickness').find('input[aria-label="Section border thickness (pt)"]').should('not.be.disabled');
+    cy.get('input[aria-label="Section border color"]').should('not.be.disabled');
+  });
 });
+

@@ -1,6 +1,6 @@
 import { DesignSection } from '@/components/DesignPanelShared';
 import { SECTION_BORDER_PT } from '@/constants/designNumbers';
-import { headingBorderExtraPt, upperSectionTitles } from '@/constants/templates';
+import { headingBorderControls, headingBorderExtraPt, upperSectionTitles } from '@/constants/templates';
 import { DEFAULTS } from '@/templates/pdf/shared/templateSettings';
 
 /** The heading styles the panel offers, in the order it lays them out. */
@@ -28,6 +28,7 @@ export function HeadingControls({ settings, template, updateSetting }) {
   const headingStyle = settings.headingStyle || DEFAULTS[template].headingStyle;
   const titleCase = upperSectionTitles(settings.sectionTitleCase || DEFAULTS[template].sectionTitleCase)
     ? 'upper' : 'normal';
+  const borderControls = headingBorderControls(headingStyle);
   // Border thickness in the pt this style prints: Left bar's bar is 2 pt wider than the stored 1–8,
   // so there it shows and sets 3–10 pt, and the stored value keeps its look (ONB-12).
   const extraPt = headingBorderExtraPt(headingStyle);
@@ -58,12 +59,31 @@ export function HeadingControls({ settings, template, updateSetting }) {
         </div>
       </div>
 
-      <div className="flex items-center justify-between">
+      <div className={`flex items-center justify-between ${!borderControls.thickness ? 'opacity-40' : ''}`}>
         <span className="text-xs text-gray-500">Border thickness</span>
         <div className="flex items-center gap-1">
-          <button onClick={() => setBorderPt(borderPt - 1)} className="w-6 h-6 flex items-center justify-center border border-gray-200 rounded text-gray-600 hover:bg-gray-100 text-base leading-none">−</button>
-          <input type="number" aria-label="Section border thickness (pt)" min={1 + extraPt} max={8 + extraPt} value={borderPt} onChange={e => { const v = parseInt(e.target.value, 10); if (!isNaN(v)) setBorderPt(v); }} className="w-10 text-center text-xs font-medium text-gray-700 border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-400 h-6" />
-          <button onClick={() => setBorderPt(borderPt + 1)} className="w-6 h-6 flex items-center justify-center border border-gray-200 rounded text-gray-600 hover:bg-gray-100 text-base leading-none">+</button>
+          <button
+            type="button"
+            disabled={!borderControls.thickness}
+            onClick={() => setBorderPt(borderPt - 1)}
+            className="w-6 h-6 flex items-center justify-center border border-gray-200 rounded text-gray-600 enabled:hover:bg-gray-100 disabled:cursor-not-allowed text-base leading-none"
+          >−</button>
+          <input
+            type="number"
+            disabled={!borderControls.thickness}
+            aria-label="Section border thickness (pt)"
+            min={1 + extraPt}
+            max={8 + extraPt}
+            value={borderPt}
+            onChange={e => { const v = parseInt(e.target.value, 10); if (!isNaN(v)) setBorderPt(v); }}
+            className="w-10 text-center text-xs font-medium text-gray-700 border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-400 disabled:bg-gray-50 disabled:cursor-not-allowed h-6"
+          />
+          <button
+            type="button"
+            disabled={!borderControls.thickness}
+            onClick={() => setBorderPt(borderPt + 1)}
+            className="w-6 h-6 flex items-center justify-center border border-gray-200 rounded text-gray-600 enabled:hover:bg-gray-100 disabled:cursor-not-allowed text-base leading-none"
+          >+</button>
           {/* Points, as the PDF prints it — every saved value keeps its look (VM3-3, as R3-7) */}
           <span className="text-[11px] text-gray-400 ml-1">pt</span>
         </div>
@@ -71,14 +91,34 @@ export function HeadingControls({ settings, template, updateSetting }) {
       {extraPt > 0 && (
         <p className="text-[11px] text-gray-400 leading-relaxed">A left bar is {extraPt} pt wider than a rule, so it starts at {1 + extraPt} pt.</p>
       )}
+      {!borderControls.thickness && headingStyle === 'box' && (
+        <p className="text-[11px] text-gray-400 leading-relaxed">Boxed has no border line.</p>
+      )}
+      {!borderControls.thickness && headingStyle === 'plain' && (
+        <p className="text-[11px] text-gray-400 leading-relaxed">Plain has no border.</p>
+      )}
 
-      <div className="flex items-center justify-between">
+      <div className={`flex items-center justify-between ${!borderControls.color ? 'opacity-40' : ''}`}>
         <span className="text-xs text-gray-500">Border color</span>
         <div className="flex items-center gap-2">
-          <input type="color" value={settings.sectionBorderColor || settings.accentColor || '#374151'} onChange={e => updateSetting('sectionBorderColor', e.target.value)} className="h-6 w-10 rounded border border-gray-200 cursor-pointer p-0.5" title="Pick border color" aria-label="Section border color" />
+          <input
+            type="color"
+            disabled={!borderControls.color}
+            value={settings.sectionBorderColor || settings.accentColor || '#374151'}
+            onChange={e => updateSetting('sectionBorderColor', e.target.value)}
+            className="h-6 w-10 rounded border border-gray-200 cursor-pointer disabled:cursor-not-allowed p-0.5"
+            title="Pick border color"
+            aria-label="Section border color"
+          />
           <span className="text-[11px] text-gray-400 font-mono">{settings.sectionBorderColor || 'accent'}</span>
           {settings.sectionBorderColor && (
-            <button onClick={() => updateSetting('sectionBorderColor', '')} className="text-[11px] text-gray-400 hover:text-gray-600" title="Reset to accent color">↺</button>
+            <button
+              type="button"
+              disabled={!borderControls.color}
+              onClick={() => updateSetting('sectionBorderColor', '')}
+              className="text-[11px] text-gray-400 enabled:hover:text-gray-600 disabled:cursor-not-allowed"
+              title="Reset to accent color"
+            >↺</button>
           )}
         </div>
       </div>

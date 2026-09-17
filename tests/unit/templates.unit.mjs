@@ -9,6 +9,7 @@ import { buildTestState } from '../helpers.js';
 const {
   TEMPLATE_IDS, templateId, withKnownTemplate, hasHeaderControls, headerBorderOn, templateStyleDefaults,
   SIDEBAR_COLUMN_TYPES, inSidebarColumn, drawsContactIcons, photoTextAlignItems, headerControlTemplateLabels,
+  headingBorderControls,
 } = templates;
 
 test('templateId: the five templates stay, however an imported file cases or spaces them; any other id reads as Classic (M15, R5-5)', () => {
@@ -123,5 +124,17 @@ test('headerControlTemplateLabels: returns templates with headerControls in orde
   };
   assert.deepEqual(headerControlTemplateLabels(customTable), ['Classic', 'Minimal', 'Executive', 'Compact']);
 });
+
+test('headingBorderControls: thickness and color applicability per heading style (ONB-13)', () => {
+  for (const style of ['ruled', 'leftbar', 'line', 'underline']) {
+    assert.deepEqual(headingBorderControls(style), { thickness: true, color: true }, style);
+  }
+  assert.deepEqual(headingBorderControls('box'), { thickness: false, color: true });
+  assert.deepEqual(headingBorderControls('plain'), { thickness: false, color: false });
+  for (const unknown of [undefined, null, '', 'unknown']) {
+    assert.deepEqual(headingBorderControls(unknown), { thickness: false, color: false }, String(unknown));
+  }
+});
+
 
 

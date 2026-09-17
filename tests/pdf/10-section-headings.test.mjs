@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { createElement } from 'react';
 import { renderToString } from 'react-dom/server';
 import { setup, teardown, resume, experience, render, loadModule, TEMPLATES } from './harness.mjs';
-import { painted } from './extractors.mjs';
+import { painted, drawing } from './extractors.mjs';
 
 before(setup);
 after(teardown);
@@ -195,3 +195,47 @@ describe('Left bar: Border thickness says the width the bar prints (ONB-12)', ()
     assert.equal(input.props.value, 1, 'Sidebar with no stored style prints plain headings');
   });
 });
+
+describe('inert controls under Boxed and Plain (ONB-13)', () => {
+  it('box and plain: sectionBorderWidth 1 vs 8 produce identical drawings; ruled differs', async () => {
+    assert.equal(
+      await drawing(await ruled('classic', 'box', 1)),
+      await drawing(await ruled('classic', 'box', 8)),
+      'box: thickness 1 and 8 are identical',
+    );
+    assert.equal(
+      await drawing(await ruled('classic', 'plain', 1)),
+      await drawing(await ruled('classic', 'plain', 8)),
+      'plain: thickness 1 and 8 are identical',
+    );
+    assert.notEqual(
+      await drawing(await ruled('classic', 'ruled', 1)),
+      await drawing(await ruled('classic', 'ruled', 8)),
+      'ruled: thickness 1 and 8 differ',
+    );
+  });
+
+  it('disables inert controls and shows hints under Boxed and Plain', async () => {
+    // Boxed: thickness disabled, hint shown
+    const boxed = await headingControls({ headingStyle: 'box' });
+    assert.equal(boxed.input.props.disabled, true, 'boxed: thickness input disabled');
+    assert.equal(boxed.button('−').props.disabled, true, 'boxed: minus button disabled');
+    assert.equal(boxed.button('+').props.disabled, true, 'boxed: plus button disabled');
+    assert.match(boxed.text, /Boxed has no border line/i, 'boxed hint');
+
+    // Plain: thickness and color disabled, hint shown
+    const plain = await headingControls({ headingStyle: 'plain' });
+    assert.equal(plain.input.props.disabled, true, 'plain: thickness input disabled');
+    assert.equal(plain.button('−').props.disabled, true, 'plain: minus button disabled');
+    assert.equal(plain.button('+').props.disabled, true, 'plain: plus button disabled');
+    assert.match(plain.text, /Plain has no border/i, 'plain hint');
+
+    // Ruled: enabled, no inert hint
+    const ruledControls = await headingControls({ headingStyle: 'ruled' });
+    assert.equal(ruledControls.input.props.disabled, false, 'ruled: thickness input enabled');
+    assert.equal(ruledControls.button('−').props.disabled, false, 'ruled: minus button enabled');
+    assert.equal(ruledControls.button('+').props.disabled, false, 'ruled: plus button enabled');
+    assert.doesNotMatch(ruledControls.text, /no border/i, 'ruled: no inert hint');
+  });
+});
+

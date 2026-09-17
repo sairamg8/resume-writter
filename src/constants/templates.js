@@ -129,6 +129,23 @@ export const upperSectionTitles = (titleCase) => (titleCase || 'upper') === 'upp
  */
 export const headingBorderExtraPt = (headingStyle) => (headingStyle === 'leftbar' ? 2 : 0);
 
+/**
+ * Which border controls in Design → Section Headings affect the heading in the PDF and Word:
+ * - Ruled, Left bar, Line after and Underline take both Border thickness and Border color.
+ * - Boxed draws a filled background tinted by Border color, but no border rule (thickness is inert).
+ * - Plain draws the title alone with no border or background (both are inert).
+ * Anything unknown falls through to Plain in the PDF, so neither applies.
+ */
+export function headingBorderControls(headingStyle) {
+  if (headingStyle === 'box') return { thickness: false, color: true };
+  if (headingStyle === 'plain') return { thickness: false, color: false };
+  if (['ruled', 'leftbar', 'line', 'underline'].includes(headingStyle)) {
+    return { thickness: true, color: true };
+  }
+  return { thickness: false, color: false };
+}
+
+
 /** The template's header spacing where the résumé sets none (pt; STACKED_HEADER_GAPS above). */
 export const templateHeaderGaps = (template) => TEMPLATES[templateId(template)].headerGaps;
 
