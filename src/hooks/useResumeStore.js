@@ -6,7 +6,7 @@ import { newId } from '@/utils/ids';
 import { templateStyleDefaults } from '@/constants/templates';
 import { headerColorsOnSwitch } from '@/templates/pdf/shared/headerColors';
 import { DATA_VERSION, normalizeResume } from '@/utils/normalizeResume';
-import { backupRaw, pendingRecovery, readSavedList, rememberRecovery, setItemWithRoom } from '@/utils/storageBackup';
+import { backupRaw, notSavedReason, pendingRecovery, readSavedList, rememberRecovery, setItemWithRoom } from '@/utils/storageBackup';
 import { savedDeletions } from '@/utils/localDeletions';
 import { isOriginal, withKeep } from '@/utils/demoSeed';
 import { useSmallerPhotos } from '@/hooks/useSmallerPhotos';
@@ -187,6 +187,7 @@ export function useAppStore() {
   return {
     appState,
     persistError,
+    persistReason: notSavedReason(persistError),
     recovery,
     dismissRecovery,
     activeResume,

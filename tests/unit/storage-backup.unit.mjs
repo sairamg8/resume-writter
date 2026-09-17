@@ -4,6 +4,7 @@ import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   loadSavedList, readSavedList, pendingRecovery, rememberRecovery, backupRaw, setItemWithRoom, readBackup, BACKUPS_KEPT,
+  isQuotaError, notSavedReason, notSavedMessage,
 } from '../../src/utils/storageBackup.js';
 import { readJob } from '../../src/utils/normalizeJob.js';
 
@@ -263,3 +264,33 @@ test('setItemWithRoom: a save still makes room from a copy a notice offers — t
   assert.equal(localStorage.getItem(KEY), 'x'.repeat(90));
   assert.equal(readBackup('cpwtcv_jobs_v1_backup_1'), null);
 });
+
+test('isQuotaError: identifies QuotaExceededError, NS_ERROR_DOM_QUOTA_REACHED, and code 22/1014 (ONB-6)', () => {
+  assert.equal(isQuotaError({ name: 'QuotaExceededError' }), true);
+  assert.equal(isQuotaError({ name: 'NS_ERROR_DOM_QUOTA_REACHED' }), true);
+  assert.equal(isQuotaError({ code: 22 }), true);
+  assert.equal(isQuotaError({ code: 1014 }), true);
+  assert.equal(isQuotaError({ name: 'SecurityError' }), false);
+  assert.equal(isQuotaError(new Error('fail')), false);
+  assert.equal(isQuotaError(null), false);
+});
+
+test('notSavedReason: full for quota errors, blocked for SecurityError or generic errors (ONB-6)', () => {
+  assert.equal(notSavedReason({ name: 'QuotaExceededError' }), 'full');
+  assert.equal(notSavedReason({ name: 'NS_ERROR_DOM_QUOTA_REACHED' }), 'full');
+  assert.equal(notSavedReason({ code: 22 }), 'full');
+  assert.equal(notSavedReason({ name: 'SecurityError' }), 'blocked');
+  assert.equal(notSavedReason(new Error('localStorage disabled')), 'blocked');
+  assert.equal(notSavedReason(null), null);
+});
+
+test('notSavedMessage: returns tailored copy for full and blocked storage across contexts (ONB-6)', () => {
+  for (const ctx of ['jobs', 'editor', 'dashboard']) {
+    const full = notSavedMessage(ctx, { name: 'QuotaExceededError' });
+    const blocked = notSavedMessage(ctx, { name: 'SecurityError' });
+    assert.match(full, /browser storage is full/);
+    assert.match(blocked, /this browser is blocking site storage/);
+    assert.doesNotMatch(blocked, /storage is full/);
+  }
+});
+

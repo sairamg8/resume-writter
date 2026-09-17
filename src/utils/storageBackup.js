@@ -22,8 +22,49 @@ function remove(key) {
   try { localStorage.removeItem(key); } catch { /* best effort */ }
 }
 
-const isQuotaError = (e) => e?.name === 'QuotaExceededError' || e?.name === 'NS_ERROR_DOM_QUOTA_REACHED'
+export const isQuotaError = (e) => e?.name === 'QuotaExceededError' || e?.name === 'NS_ERROR_DOM_QUOTA_REACHED'
   || e?.code === 22 || e?.code === 1014;
+
+/**
+ * Why saving to storage failed: 'full' (quota reached) or 'blocked' (security, disabled, private mode, generic).
+ * null when there is no error.
+ */
+export function notSavedReason(err) {
+  if (!err) return null;
+  return isQuotaError(err) ? 'full' : 'blocked';
+}
+
+/**
+ * The messages displayed when saving changes failed, by context and reason (ONB-6).
+ * One table so messages across Job Tracker, Editor, and Dashboard cannot drift.
+ */
+export const NOT_SAVED_MESSAGES = {
+  jobs: {
+    full: 'Changes are not being saved: browser storage is full. Export your applications from the Job Tracker to keep a copy.',
+    blocked: 'Changes are not being saved: this browser is blocking site storage. Export your applications from the Job Tracker to keep a copy.',
+  },
+  editor: {
+    full: 'Not saved: browser storage is full. Export JSON to keep a copy, or remove large photos.',
+    blocked: 'Not saved: this browser is blocking site storage. Export JSON to keep a copy.',
+  },
+  dashboard: {
+    full: 'Changes are not being saved: browser storage is full. Remove large photos or export your resumes as JSON.',
+    blocked: 'Changes are not being saved: this browser is blocking site storage. Export your resumes as JSON.',
+  },
+};
+
+/**
+ * The message to display when saving changes failed.
+ * `context`: 'jobs' | 'editor' | 'dashboard'
+ * `err`: error object or reason string ('full' | 'blocked')
+ */
+export function notSavedMessage(context, err) {
+  const reason = typeof err === 'string' ? err : notSavedReason(err);
+  const table = NOT_SAVED_MESSAGES[context];
+  if (!table) return '';
+  return table[reason] || table.full;
+}
+
 
 /**
  * localStorage.setItem, except that when storage is full the backups make room: they are

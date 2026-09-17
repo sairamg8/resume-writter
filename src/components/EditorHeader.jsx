@@ -3,6 +3,7 @@ import { User, ArrowLeft, Mail as MailIcon, Palette } from 'lucide-react';
 import AuthBar from '@/components/AuthBar';
 import { LayoutToggle } from '@/components/LayoutToggle';
 import { ExportDropdown } from '@/components/ExportDropdown';
+import { notSavedMessage } from '@/utils/storageBackup';
 
 /**
  * The editor panel's header: back to the dashboard, the résumé's name (click to rename), the
@@ -69,7 +70,7 @@ export function EditorAlerts({ exportError, onDismiss, persistError }) {
       )}
       {persistError && (
         <div role="alert" className="px-4 py-2 text-xs text-red-700 bg-red-50 border-b border-red-200">
-          Not saved: browser storage is full. Export JSON to keep a copy, or remove large photos.
+          {notSavedMessage('editor', persistError)}
         </div>
       )}
     </>

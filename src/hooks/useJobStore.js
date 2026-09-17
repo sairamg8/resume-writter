@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react';
-import { loadSavedList, pendingRecovery, rememberRecovery, setItemWithRoom } from '@/utils/storageBackup';
+import { loadSavedList, notSavedReason, pendingRecovery, rememberRecovery, setItemWithRoom } from '@/utils/storageBackup';
 import { newId } from '@/utils/ids';
 import { addressableJobs, completeJob, readJob } from '@/utils/normalizeJob';
 import { keepUnsaved } from '@/utils/unsavedJobs';
@@ -194,5 +194,6 @@ function dismissRecovery() {
 
 export function useJobStore() {
   const { jobs, persistError, recovery } = useSyncExternalStore(subscribe, snapshot);
-  return { jobs, persistError, recovery, dismissRecovery, addJob, updateJob, deleteJob, importJobs, clearDemoData };
+  const persistReason = notSavedReason(persistError);
+  return { jobs, persistError, persistReason, recovery, dismissRecovery, addJob, updateJob, deleteJob, importJobs, clearDemoData };
 }
