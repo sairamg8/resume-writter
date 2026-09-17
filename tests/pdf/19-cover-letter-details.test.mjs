@@ -103,11 +103,19 @@ describe('a long title in the default header, contacts on the right', () => {
   // about 60 characters they ran past the right margin (off the paper without a photo), and
   // from about 85, with a photo and icon contacts, the letter did not render at all — react-pdf
   // threw "unsupported number: Infinity" drawing an icon in a column of no width.
-  const T72 = 'Senior Software Engineer, Platform Infrastructure & Developer Experience';
+  //
+  // Lengths tested: 72 chars (pushes contacts past margin before fix), 85 chars (throws Infinity
+  // with photo before fix), 109 chars and 124 chars (throw Infinity even without a photo).
+  // Commit 089d03c's message claimed 85/109/124 with 72 only before the fix, but 72 was in fact
+  // in the test array while 109 was omitted; we now test all four lengths explicitly (W2a-4.3).
+  const T72 = 'Senior Software Engineer, Platform Infrastructure & Developer Experience'; // 72
+  const T85 = `${T72} and Payments`; // 85
+  const T109 = `${T72}: Payments, Risk & Core Services Team`; // 109
+  const T124 = `${T72}: Payments, Risk and Fraud Detection Platforms Group`; // 124
   const CONTACTS = { email: 'alexandra.johnson@example.com', phone: '+1 555 0100', location: 'San Francisco, CA', website: 'alexjohnson.dev', linkedin: 'linkedin.com/in/alexj' };
 
-  it('the title wraps beside the photo and the contacts keep a column of their own, inside the margin', async () => {
-    for (const title of [T72, `${T72} and Payments`, `${T72}: Payments, Risk and Fraud Detection Platform Group`]) {
+  it('the title wraps beside the photo and the contacts keep a column of their own, inside the margin (72, 85, 109, 124 chars)', async () => {
+    for (const title of [T72, T85, T109, T124]) {
       for (const photo of [PNG, '']) {
         for (const contactStyle of ['icon', 'bar']) {
           const r = resume({ settings: { contactStyle }, personal: { name: 'Alexandra Johnson', title, photo, ...CONTACTS }, coverLetter: { body: '<p>Hello</p>' } });
@@ -126,7 +134,7 @@ describe('a long title in the default header, contacts on the right', () => {
   // characters with a photo the title ran past the right margin, in every look (found with
   // FIDB-51; 0b83cb1 did it too). Below Name was never affected: a guard.
   it('Below Name and Below Everything: a long title wraps beside the photo, inside the margin, in every look', async () => {
-    const title = `${T72}: Payments, Risk and Fraud Detection Platform Group`;
+    const title = T124;
     for (const template of TEMPLATES) {
       for (const fieldsPosition of ['below-name', 'below-all']) {
         const at = `${template}, ${fieldsPosition}`;
