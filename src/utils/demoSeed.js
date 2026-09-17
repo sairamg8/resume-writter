@@ -90,9 +90,9 @@ export function originalsIn(seen, gone = []) {
  * before it on a device that has not sent it yet must not undo the restore (cloudSyncPlan,
  * V2W1a-4). A flagged cloud copy comes back without its deleted flag.
  */
-export function buildRestore(seen, now, gone = []) {
+export function buildRestore(seen, now, gone = [], normalize = r => r) {
   return originalsIn(seen, gone).map((copy) => {
-    const { deleted: _deleted, ...r } = JSON.parse(JSON.stringify(copy));
+    const { deleted: _deleted, ...r } = normalize(JSON.parse(JSON.stringify(copy)));
     return { ...r, updatedAt: copy.updatedAt || now, restoredAt: now };
   });
 }
@@ -107,12 +107,12 @@ export const PRIVATE_ORIGINAL_ID = 'original_private';
  * the cloud's deletion list) — and only once: not when the list holds its id, nor when it was
  * deleted (`deleted`: the cloud's deletion list and this browser's).
  */
-export function privateOriginal(data, user, { resumes = [], seen = new Map(), deleted = [], gone = [], now }) {
+export function privateOriginal(data, user, { resumes = [], seen = new Map(), deleted = [], gone = [], now, normalize = r => r }) {
   if (!data || typeof data !== 'object' || !data.personal || !Array.isArray(data.sections)) return null;
   const email = emailOf(user?.email);
   if (!email || email !== emailOf(data.personal.email)) return null;
   if (originalsIn(seen, gone).length || seen.has(PRIVATE_ORIGINAL_ID) || deleted.includes(PRIVATE_ORIGINAL_ID)) return null;
   if (resumes.some((r) => r?.id === PRIVATE_ORIGINAL_ID)) return null;
-  const { deleted: _deleted, ...r } = JSON.parse(JSON.stringify(data));
+  const { deleted: _deleted, ...r } = normalize(JSON.parse(JSON.stringify(data)));
   return { ...r, id: PRIVATE_ORIGINAL_ID, keep: true, updatedAt: now };
 }

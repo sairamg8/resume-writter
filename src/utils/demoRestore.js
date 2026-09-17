@@ -4,6 +4,7 @@
 // sync's readCloudCopies. No React, so the tests drive this very code over the sync engine and a
 // fake Firestore (tests/pdf/18-cloud-sync-restore.test.mjs); useDemoSeed only wires it to React.
 import { buildRestore, isDemoAccount, needsRestore, originalsIn, privateOriginal, rememberCopies } from '@/utils/demoSeed';
+import { normalizeResume } from '@/utils/normalizeResume';
 
 /**
  * createDemoRestore({ accounts, ownerResume, now, onWaiting }):
@@ -50,7 +51,7 @@ export function createDemoRestore({ accounts, ownerResume = null, now = () => Da
     if (ownerResume && !s.imported) {
       s.imported = true;
       const deleted = [...(account.cloudDeleted || []), ...(appState.deletedIds || [])];
-      const own = privateOriginal(ownerResume, user, { resumes: appState.resumes, seen: s.copies, deleted, gone: [...s.gone], now: now() });
+      const own = privateOriginal(ownerResume, user, { resumes: appState.resumes, seen: s.copies, deleted, gone: [...s.gone], now: now(), normalize: normalizeResume });
       if (own) { store.restoreResumes([own]); return; }
     }
     const originals = needsRestore(appState.resumes) ? originalsIn(s.copies, s.gone) : [];
@@ -72,7 +73,7 @@ export function createDemoRestore({ accounts, ownerResume = null, now = () => Da
         rememberCopies(s.copies, cloud.docs);
         (cloud.deleted || []).forEach((id) => s.gone.add(id));
         // None, if another device stopped keeping them or deleted them for good.
-        const back = buildRestore(s.copies, now(), s.gone);
+        const back = buildRestore(s.copies, now(), s.gone, normalizeResume);
         if (back.length) store.restoreResumes(back);
       });
   }
