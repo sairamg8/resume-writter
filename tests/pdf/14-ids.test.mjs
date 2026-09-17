@@ -27,7 +27,7 @@ const assertUnique = (ids) => assert.equal(new Set(ids).size, ids.length, `dupli
 // id a value built from the clock — `_${Date.now()}`, but also `id: Date.now()`,
 // `'x_' + Date.now()`, String(now) … (R4-12).
 const CLOCK = /Date\.now\(\)|\bnow\b|performance\.now\(\)|\.getTime\(\)/;
-const ID_VALUE = /(?:\bid\s*:|\b[\w$]*(?:Id|_id|ID)\s*=(?!=)|\bid\s*=(?!=))\s*((?:\$\{[^}]*\}|[^,;}\n])*)/g;
+const ID_VALUE = /(?:\b(?:id|\$id|_id|[a-z0-9$]+(?:Id|ID)|[a-z0-9$]+_id)\s*:|\b[\w$]*(?:Id|_id|ID)\s*=(?!=)|\bid\s*=(?!=))\s*((?:\$\{[^}]*\}|[^,;}\n])*)/g;
 const isComment = (line) => /^\s*(?:\*|\/\/|\/\*)/.test(line);
 const idFromClock = (line) => !isComment(line) && [...line.matchAll(ID_VALUE)].some((m) => CLOCK.test(m[1]));
 
@@ -54,12 +54,14 @@ describe('the ids the app makes', () => {
       "const id = `${prefix}_${Date.now()}`;", '{ id: Date.now(), text: t }', "id: 'x_' + Date.now(),",
       'id: `td-${Date.now()}`,', 'id: String(Date.now()),', "const copyId = 'resume' + now;",
       'const newId = Date.now().toString(36);', 'item.id = `${type}${now}`;', 'id: new Date().getTime(),',
+      "{ sectionId: `s_${Date.now()}` }", 'todoId: Date.now(),',
     ];
     assert.deepEqual(built.filter((line) => !idFromClock(line)), []);
     const fine = [
       "{ id: newId('job'), createdAt: now, updatedAt: now }", 'updatedAt: Date.now(),',
       'const backupKey = `${key}_backup_${at}`;', 'if (r.id === now) return;', '// id: Date.now() was the old way',
       "const id = newId('resume');", 'setActiveId(id);',
+      'valid: true,', 'paid: now,', 'grid: now,', 'solid: now,',
     ];
     assert.deepEqual(fine.filter(idFromClock), []);
   });
