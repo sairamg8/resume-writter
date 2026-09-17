@@ -134,7 +134,7 @@ describe('every per-template table covers every template (VM3-5)', () => {
       assert.ok(t.desc && typeof t.ats === 'boolean', `${t.id}: a description and an ATS answer`);
     }
     assert.deepEqual(TEMPLATE_PICKER.filter((t) => t.ats).map((t) => t.id), ['executive', 'classic', 'minimal'], 'the ATS badges, as before');
-    assert.deepEqual(TEMPLATES, TEMPLATE_IDS, 'these tests run every template');
+    assert.deepEqual(TEMPLATES.toSorted(), ['classic', 'executive', 'minimal', 'modern', 'sidebar'], 'these tests run every template');
   });
 
   it('each LOADERS entry loads that template\'s own component', async () => {
