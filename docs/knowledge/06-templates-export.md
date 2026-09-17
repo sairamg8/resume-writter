@@ -14,7 +14,7 @@ Registered in `src/constants/resume.js` → `TEMPLATE_MAP`:
 
 Helpers/sections often split: `*Helpers.jsx`, `*Sections.jsx`.
 
-Shared utilities: `templateShared.jsx`, `headingStyle.js`, `sectionCase.js`.
+Shared utilities: `templateShared.jsx`, `sectionCase.js`.
 
 ### Cover letter preview
 

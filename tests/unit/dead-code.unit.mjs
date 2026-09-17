@@ -14,7 +14,7 @@ const ENTRY = path.join(SRC, 'main.jsx');
 const MODULE = /\.(m?jsx?)$/;
 
 // Dead modules each reported as their own task; delete the entry together with the file.
-const KNOWN_DEAD = ['src/templates/headingStyle.js'];
+const KNOWN_DEAD = [];
 
 const rel = (file) => path.relative(ROOT, file).split(path.sep).join('/');
 

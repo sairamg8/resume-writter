@@ -51,7 +51,7 @@ flowcv/
 │   ├── templates/
 │   │   ├── Classic|Modern|Minimal|Sidebar|Executive*.jsx
 │   │   ├── CoverLetterTemplate*.jsx
-│   │   ├── headingStyle.js, sectionCase.js, templateShared.jsx
+│   │   ├── sectionCase.js, templateShared.jsx
 │   │   └── pdf/             # react-pdf templates + shared/
 │   └── utils/
 │       ├── defaultData*.js
