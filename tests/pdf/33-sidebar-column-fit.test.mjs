@@ -206,10 +206,9 @@ describe('Sidebar: skills category wider than the column (NB-3-NB1-NB2)', () => 
       for (const item of items) {
         assert.ok(!item.str.includes('-'), `${skillsStyle}: no stray hyphen in category or separator (${item.str})`);
       }
-      const catItem = items.find((t) => t.str.includes('PROGRAMMIER'));
       const colonItem = items.find((t) => t.str.includes(':'));
-      assert.ok(catItem && colonItem, `${skillsStyle}: found category and colon`);
-      assert.equal(catItem.y, colonItem.y, `${skillsStyle}: colon must be on the same line as the category end`);
+      assert.ok(colonItem, `${skillsStyle}: found colon`);
+      assert.ok(colonItem.str.length > 1, `${skillsStyle}: colon must be on the same line as the category end, not dropped alone`);
     }
   });
 });

@@ -5,7 +5,7 @@ import { contactHref } from '@/utils/contacts';
 import { dateRange } from '@/utils/dates';
 import { SIDEBAR_COLUMN_TYPES, upperSectionTitles } from '@/constants/templates';
 import { CSS_PX_TO_PT, DEFAULT_ITEM_GAP_PX, MM_TO_PT, tracking } from './pdfUnits';
-import { breakToFit } from './pdfMeasure';
+import { breakToFit, textWidth } from './pdfMeasure';
 import { pageBoxPt } from '@/constants/pageSize';
 import { pageMargins } from '@/constants/pageMargins';
 import { sidebarShades } from './pdfColors';
@@ -74,6 +74,8 @@ export function SideEducation({ section, sectionGap, itemGap, shades = NAVY, tit
   const showDates = s.showDates !== false;
   const showLoc   = s.showLocation !== false;
   const visibleItems = (section.items || []).filter(i => i.visible !== false);
+  const degreeBreaks = sideBreaks(settings, { fontSize: 10, fontWeight: 'bold' });
+  const textBreaks = sideBreaks(settings, { fontSize: 9 });
 
   return (
     <View style={{ marginBottom: sectionGap }}>
@@ -81,9 +83,9 @@ export function SideEducation({ section, sectionGap, itemGap, shades = NAVY, tit
       <View style={{ gap: itemGap }}>
         {visibleItems.map((item, i) => (
           <View key={i}>
-            <Text style={{ fontSize: 10, fontWeight: 'bold', color: shades.strong, lineHeight: 1.2 }}>{item.degree}</Text>
-            {item.institution && <Text style={{ fontSize: 9, color: shades.label, lineHeight: 1.2 }}>{item.institution}</Text>}
-            {item.fieldOfStudy && <Text style={{ fontSize: 9, color: shades.label, lineHeight: 1.2 }}>{item.fieldOfStudy}</Text>}
+            <Text style={{ fontSize: 10, fontWeight: 'bold', color: shades.strong, lineHeight: 1.2 }} hyphenationCallback={degreeBreaks}>{item.degree}</Text>
+            {item.institution && <Text style={{ fontSize: 9, color: shades.label, lineHeight: 1.2 }} hyphenationCallback={textBreaks}>{item.institution}</Text>}
+            {item.fieldOfStudy && <Text style={{ fontSize: 9, color: shades.label, lineHeight: 1.2 }} hyphenationCallback={textBreaks}>{item.fieldOfStudy}</Text>}
             {showLoc && item.location ? <Text style={{ fontSize: 9, color: shades.meta, lineHeight: 1.2 }}>{item.location}</Text> : null}
             {item.gpa && <Text style={{ fontSize: 9, color: shades.meta, lineHeight: 1.2 }}>GPA: {item.gpa}</Text>}
             {showDates && dateRange(item.startDate, item.endDate, settings) ? (
@@ -99,18 +101,26 @@ export function SideEducation({ section, sectionGap, itemGap, shades = NAVY, tit
   );
 }
 
-export function SideLanguages({ section, sectionGap, itemGap, shades = NAVY, titleCase }) {
+export function SideLanguages({ section, sectionGap, itemGap, shades = NAVY, titleCase, settings }) {
   const visibleItems = (section.items || []).filter(i => i.visible !== false);
+  const room = sideColumnRoom(settings);
+  const textBreaks = sideBreaks(settings, { fontSize: 9 });
   return (
     <View style={{ marginBottom: sectionGap }}>
       <SideSectionTitle title={section.title} shades={shades} titleCase={titleCase} />
       <View style={{ gap: itemGap }}>
-        {visibleItems.map((item, i) => (
-          <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-            <Text style={{ fontSize: 9, color: shades.strong, lineHeight: 1.2 }}>{item.language}</Text>
-            <Text style={{ fontSize: 9, color: shades.meta, lineHeight: 1.2 }}>{item.proficiency}</Text>
-          </View>
-        ))}
+        {visibleItems.map((item, i) => {
+          const font = { fontFamily: settings?._pdfFontFamily, fontSize: 9 };
+          const fitsTogether = !item.proficiency || (textWidth(item.language, font) + textWidth(item.proficiency, font) + 8 <= room);
+          return (
+            <View key={i} style={fitsTogether ? { flexDirection: 'row', justifyContent: 'space-between' } : undefined}>
+              <Text style={{ fontSize: 9, color: shades.strong, lineHeight: 1.2 }} hyphenationCallback={textBreaks}>{item.language}</Text>
+              {item.proficiency ? (
+                <Text style={{ fontSize: 9, color: shades.meta, lineHeight: 1.2 }} hyphenationCallback={textBreaks}>{item.proficiency}</Text>
+              ) : null}
+            </View>
+          );
+        })}
       </View>
     </View>
   );
@@ -120,6 +130,8 @@ export function SideCertifications({ section, sectionGap, itemGap, shades = NAVY
   const s        = section.settings || {};
   const showDates = s.showDates !== false;
   const visibleItems = (section.items || []).filter(i => i.visible !== false);
+  const nameBreaks = sideBreaks(settings, { fontSize: 9, fontWeight: 'bold' });
+  const textBreaks = sideBreaks(settings, { fontSize: 9 });
 
   return (
     <View style={{ marginBottom: sectionGap }}>
@@ -130,11 +142,11 @@ export function SideCertifications({ section, sectionGap, itemGap, shades = NAVY
           const dateStr = showDates ? dateRange(item.date, item.expiry, settings) : '';
           return (
             <View key={i}>
-              <Text style={{ fontSize: 9, fontWeight: 'bold', color: shades.strong, lineHeight: 1.2 }}>{item.name}</Text>
-              {item.issuer && <Text style={{ fontSize: 9, color: shades.label, lineHeight: 1.2 }}>{item.issuer}</Text>}
+              <Text style={{ fontSize: 9, fontWeight: 'bold', color: shades.strong, lineHeight: 1.2 }} hyphenationCallback={nameBreaks}>{item.name}</Text>
+              {item.issuer && <Text style={{ fontSize: 9, color: shades.label, lineHeight: 1.2 }} hyphenationCallback={textBreaks}>{item.issuer}</Text>}
               {dateStr ? <Text style={{ fontSize: 9, color: shades.meta, lineHeight: 1.2 }}>{dateStr}</Text> : null}
-              {item.credentialId && <Text style={{ fontSize: 9, color: shades.meta, lineHeight: 1.2 }}>ID: {item.credentialId}</Text>}
-              {item.url && <EntryLink url={item.url} label={item.urlLabel} style={{ fontSize: 9, color: shades.value, lineHeight: 1.2 }} hyphenationCallback={sideBreaks(settings, { fontSize: 9 })} />}
+              {item.credentialId && <Text style={{ fontSize: 9, color: shades.meta, lineHeight: 1.2 }} hyphenationCallback={textBreaks}>ID: {item.credentialId}</Text>}
+              {item.url && <EntryLink url={item.url} label={item.urlLabel} style={{ fontSize: 9, color: shades.value, lineHeight: 1.2 }} hyphenationCallback={textBreaks} />}
             </View>
           );
         })}
