@@ -9,6 +9,8 @@
  * - Test resumes are injected via addInitScript before page.goto()
  */
 
+import { templateStyleDefaults } from '../src/constants/templates.js';
+
 export const DATA_VERSION = 11;
 export const STORAGE_KEY = 'cpwtcv_v1';
 
@@ -131,19 +133,9 @@ export const TEST_COVER_LETTER = {
  * @param {array} sections - use ALL_SECTION_TYPES or a subset
  */
 export function buildTestState(template = 'classic', settingsOverride = {}, sections = null) {
-  const TEMPLATE_HEADING = {
-    classic: 'ruled', modern: 'line', minimal: 'underline',
-    sidebar: 'plain', executive: 'underline',
-  };
-  const TEMPLATE_CASE = {
-    classic: 'upper', modern: 'upper', minimal: 'upper',
-    sidebar: 'upper', executive: 'normal',
-  };
-
   const settings = {
     ...BASE_SETTINGS,
-    headingStyle: TEMPLATE_HEADING[template] || 'ruled',
-    sectionTitleCase: TEMPLATE_CASE[template] || 'upper',
+    ...templateStyleDefaults(template),
     ...(template === 'sidebar' ? { sidebarBg: '#1e40af', headerTextColor: '#ffffff' } : {}),
     ...(template === 'modern'  ? { accentColor: '#1d4ed8', headerTextColor: '#ffffff' } : {}),
     ...settingsOverride,

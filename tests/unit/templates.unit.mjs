@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 // A namespace import, not named ones: on older code a helper that is missing is undefined and
 // fails only its own test, where a missing named import stops the whole file loading (R2-8, R9-11).
 import * as templates from '../../src/constants/templates.js';
+import { buildTestState } from '../helpers.js';
 
 const {
   TEMPLATE_IDS, templateId, withKnownTemplate, hasHeaderControls, headerBorderOn, templateStyleDefaults,
@@ -98,3 +99,13 @@ test('photoTextAlignItems: Top / Center / Bottom as a flex alignment, Center whe
     ['flex-start', 'center', 'flex-end', 'center', 'center']);
   assert.equal(photoTextAlignItems(undefined), 'center');
 });
+
+test('buildTestState: headingStyle and sectionTitleCase match templateStyleDefaults for all templates (NB-8)', () => {
+  for (const t of TEMPLATE_IDS) {
+    const r = buildTestState(t).resumes[0];
+    const expected = templateStyleDefaults(t);
+    assert.equal(r.settings.headingStyle, expected.headingStyle, `${t} headingStyle`);
+    assert.equal(r.settings.sectionTitleCase, expected.sectionTitleCase, `${t} sectionTitleCase`);
+  }
+});
+
