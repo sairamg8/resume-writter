@@ -2,7 +2,7 @@
 // useDemoSeed makes it their account's original there — and never a build: the site is public
 // and so is its bundle (OWNER-DATA, 2026-09-15). vite-plugin-owner-resume.js serves the file as
 // `virtual:owner-resume` to the dev server and `null` to every build, without reading it.
-import { after, describe, it } from 'node:test';
+import { after, describe, it, mock } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -60,19 +60,51 @@ describe('vite-plugin-owner-resume: the dev server only', () => {
     const file = path.join(tmp, 'mine-build.json');
     fs.writeFileSync(file, JSON.stringify(FAKE));
     const { config } = project(file);
-    // Every read of the file during the build (the plugin's `fs` is this module object): a build
-    // that read it and then returned null passed the checks below (V2OWNER-DATA-9).
-    const { readFileSync } = fs;
-    const reads = [];
-    fs.readFileSync = function spy(p, ...rest) {
-      if (typeof p === 'string' && path.resolve(p) === file) reads.push(p);
-      return readFileSync.call(this, p, ...rest);
+
+    // Track every read of the file during build across sync, async, callback and promises APIs,
+    // as well as named imports (readFileSync calls fs.openSync) (VF1S.4).
+    const sOpenSync = mock.method(fs, 'openSync');
+    const sOpen = mock.method(fs, 'open');
+    const sReadFile = mock.method(fs, 'readFile');
+    const sPromisesReadFile = mock.method(fs.promises, 'readFile');
+    const sPromisesOpen = mock.method(fs.promises, 'open');
+
+    // Also make the file unreadable at the OS level (chmod 000) so any read attempt would
+    // fail with EACCES and warn/throw, and capture Rollup warnings (Option B, VF1S.4).
+    fs.chmodSync(file, 0);
+    const warnings = [];
+    const buildConfig = {
+      ...config,
+      build: {
+        ...config.build,
+        rollupOptions: {
+          ...config.build?.rollupOptions,
+          onwarn(w) { warnings.push(w.message || String(w)); },
+        },
+      },
     };
+
     let text;
-    try { text = await bundleText(config); } finally { fs.readFileSync = readFileSync; }
-    assert.deepEqual(reads, [], 'the build read the private file');
+    try {
+      text = await bundleText(buildConfig);
+    } finally {
+      fs.chmodSync(file, 0o600);
+      mock.reset();
+    }
+
+    const fileReads = [
+      ...sOpenSync.mock.calls,
+      ...sOpen.mock.calls,
+      ...sReadFile.mock.calls,
+      ...sPromisesReadFile.mock.calls,
+      ...sPromisesOpen.mock.calls,
+    ].filter((c) => typeof c.arguments[0] === 'string' && path.resolve(c.arguments[0]) === file);
+
+    assert.deepEqual(fileReads, [], 'the build read the private file');
+    assert.deepEqual(warnings, [], 'the build warned attempting to read the private file');
     assert.match(text, /console\.log\(JSON\.stringify\(null\)\)/);
     for (const s of ['Pat Fixture', 'pat@example.com', '555 0199']) assert.equal(text.includes(s), false, s);
+
     // The control: the same build with the module handing over the file shows every one of them.
     const leak = { name: 'leak', enforce: 'pre', resolveId: (id) => (id === OWNER_RESUME_MODULE ? '\0leak' : null), load: (id) => (id === '\0leak' ? `export default ${JSON.stringify(FAKE)};` : null) };
     const leaked = await bundleText({ ...config, plugins: [leak, ...config.plugins] });
