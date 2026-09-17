@@ -187,7 +187,7 @@ export function SkillsSection({ section, settings, marginBottom, spaceBefore, it
                 {isBullet && <Text style={{ color: shade.meta, fontSize: entrySize, marginRight: 4 }}>•</Text>}
                 <Text style={{ fontSize: entrySize, lineHeight: lineH, textAlign: centered ? 'center' : 'left' }}>
                   {category
-                    ? <Text style={{ fontWeight: 'bold', color: isModern ? accent : textColor }}>{category}{skills ? sep : ''}</Text>
+                    ? <Text style={{ fontWeight: 'bold', color: isModern ? accent : textColor }}>{`${category}${skills ? sep : ''}`}</Text>
                     : null}
                   {skills ? <Text style={{ color: shade.sub }}>{skills}</Text> : null}
                 </Text>

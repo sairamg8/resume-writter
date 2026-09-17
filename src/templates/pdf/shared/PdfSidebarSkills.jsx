@@ -104,7 +104,7 @@ export function SideSkills({ section, sectionGap, itemGap, accent, shades = side
           <View key={i} style={bullet ? { flexDirection: 'row' } : undefined}>
             {bullet ? <Text style={{ fontSize: 9, lineHeight: 1.2, color: shades.label, width: 8 }}>•</Text> : null}
             <Text style={{ fontSize: 9, lineHeight: 1.2, flex: bullet ? 1 : undefined }}>
-              {category ? <Text style={{ fontSize: 8.5, fontWeight: 'bold', color: shades.meta }}>{category}{skills ? sep : ''}</Text> : null}
+              {category ? <Text style={{ fontSize: 8.5, fontWeight: 'bold', color: shades.meta }}>{`${category}${skills ? sep : ''}`}</Text> : null}
               {skills ? <Text style={{ color: shades.value }}>{skills}</Text> : null}
             </Text>
           </View>

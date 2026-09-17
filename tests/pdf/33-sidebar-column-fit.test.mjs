@@ -188,3 +188,29 @@ describe('Sidebar: an e-mail or URL in a dark-column section', () => {
     }
   });
 });
+
+describe('Sidebar: skills category wider than the column (NB-3-NB1-NB2)', () => {
+  it('Inline and Bullet: no stray hyphen and colon is on the same line as the category', async () => {
+    for (const skillsStyle of ['inline', 'bullet']) {
+      const [page] = await read(await render(resume({
+        template: 'sidebar',
+        settings: { pageSize: 'A4', marginH: 18 },
+        personal: { name: 'Alexandra Johnson' },
+        sections: [
+          section('skills', [
+            { category: 'Programmiersprachenentwicklung', skills: 'Kubernetesadministrationsverfahren, Go' },
+          ], { skillsStyle }),
+        ],
+      })));
+      const items = page.items.filter((t) => t.str.includes('PROGRAMMIER') || t.str.includes(':'));
+      for (const item of items) {
+        assert.ok(!item.str.includes('-'), `${skillsStyle}: no stray hyphen in category or separator (${item.str})`);
+      }
+      const catItem = items.find((t) => t.str.includes('PROGRAMMIER'));
+      const colonItem = items.find((t) => t.str.includes(':'));
+      assert.ok(catItem && colonItem, `${skillsStyle}: found category and colon`);
+      assert.equal(catItem.y, colonItem.y, `${skillsStyle}: colon must be on the same line as the category end`);
+    }
+  });
+});
+
