@@ -35,12 +35,26 @@ describe('design defaults (M16)', () => {
     assert.deepEqual(createBlankResume({ id: 'r' }).settings, defaultSettings('classic'), 'no template: Classic');
   });
 
-  it('an Executive résumé reset to its defaults prints its section titles as typed', async () => {
-    const { defaultSettings } = await loadModule('/src/utils/defaultData.js');
-    const r = resume({ template: 'executive', sections: [experience([{}])] });
-    r.settings = defaultSettings('executive');
+  it('an Executive résumé reset to its defaults prints its section titles as typed (W1b-6.2)', async () => {
+    const { settingsAfterReset, sectionReset } = await loadModule('/src/utils/defaultData.js');
+    const r = resume({
+      template: 'executive',
+      settings: { sectionTitleCase: 'upper', headingStyle: 'box', customContactIcons: { phone: 'data:img' } },
+      sections: [experience([{}])],
+    });
+    r.settings = settingsAfterReset(r);
+    assert.equal(r.settings.sectionTitleCase, 'normal', 'Executive reset gives normal case section titles');
+    assert.equal(r.settings.headingStyle, 'underline', 'Executive reset gives underline heading style');
+    assert.deepEqual(r.settings.customContactIcons, { phone: 'data:img' }, 'custom contact icons are preserved');
     const text = allText(await read(await render(r)));
     assert.ok(text.includes('Professional Experience') && !text.includes('PROFESSIONAL EXPERIENCE'), text);
+
+    const typography = sectionReset('executive', ['sectionTitleCase', 'headingStyle'], { sectionTitleCase: 'upper', headingStyle: 'ruled' });
+    assert.equal(typography.sectionTitleCase, 'normal');
+    assert.equal(typography.headingStyle, 'underline');
+
+    const sidebarHeadings = sectionReset('sidebar', ['headingStyle'], { headingStyle: 'box' });
+    assert.equal(sidebarHeadings.headingStyle, 'plain');
   });
 });
 

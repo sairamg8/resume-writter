@@ -71,6 +71,26 @@ export function resetDesignSettings(settings, template) {
   return { ...defaultSettings(template), customContactIcons: uploads };
 }
 
+/**
+ * Design → Reset for a résumé: returns settings back to its template's defaults,
+ * preserving any custom contact icon uploads (R5-6, W1b-6.2).
+ */
+export function settingsAfterReset(resume) {
+  return resetDesignSettings(resume?.settings, resume?.template);
+}
+
+/**
+ * A section's reset: its settings keys back to the template's defaults (W1b-6.2).
+ */
+export function sectionReset(template, keys, settings = {}) {
+  const defaults = defaultSettings(template);
+  const next = { ...settings };
+  for (const k of keys) {
+    if (k in defaults) next[k] = defaults[k];
+  }
+  return next;
+}
+
 export { SECTION_TYPE_DEFAULTS } from '@/utils/defaultDataSectionTypes';
 
 /**

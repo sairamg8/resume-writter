@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ATS_DEFAULTS, defaultSettings } from '@/utils/defaultData';
+import { ATS_DEFAULTS, defaultSettings, sectionReset } from '@/utils/defaultData';
 import { contactIconHint, drawsContactIcons, TEMPLATE_PICKER, templateId } from '@/constants/templates';
 import { MARGIN_MM } from '@/constants/pageMargins';
 import { ITEM_GAP_PX, LINE_HEIGHT, SECTION_GAP_PX } from '@/constants/spacingNumbers';
@@ -31,8 +31,8 @@ export default function DesignPanel({ resume, updateSetting, setTemplate, resetS
 
   /** A section's reset: its settings back to the template's defaults (Sidebar's plain headings, …). */
   function resetSection(keys) {
-    const defaults = defaultSettings(resume.template);
-    keys.forEach(k => { if (k in defaults) updateSetting(k, defaults[k]); });
+    const updated = sectionReset(resume.template, keys, settings);
+    keys.forEach(k => { if (k in updated) updateSetting(k, updated[k]); });
   }
 
   return (
