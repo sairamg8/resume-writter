@@ -160,9 +160,12 @@ describe('a Modern résumé saved before its banner took Photo → Text Position
         ['the stored default, Center, no version', saved('center', { photoSize })],
         ['no Text Position stored', saved(undefined, { photoSize })],
         ['a value the PDF never knew', saved('middle', { photoSize })],
+        ['no settings object at all', (() => { const r = saved(undefined, { photoSize }); delete r.settings; return r; })()],
         ['version 8, last edited before the change went live', saved('center', { dataVersion: 8, photoSize })],
       ]) {
         const r = normalizeResume(old);
+        console.log('LABEL:', label, 'R.SETTINGS:', r.settings);
+        assert.equal(r.settings?.photoTextAlign, 'top', label);
         const [now, before] = [await drawing(await render(r)), await asItPrinted(old)];
         assert.ok(now === before, `${photoSize}, ${label}: draws the page it drew before`);
         assert.equal(r.settings.photoTextAlign, 'top', `${photoSize}, ${label}: the panel shows Top`);

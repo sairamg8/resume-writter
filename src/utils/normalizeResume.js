@@ -107,7 +107,7 @@ const MODERN_TEXT_POSITION_LIVE = Date.UTC(2026, 8, 15, 2, 32, 51);
  * and keeps it; so does every résumé a version-9 build saved.
  */
 function withModernTextAtTop(r, from) {
-  if (r.template !== 'modern' || !r.settings || r.settings.photoTextAlign === 'top') return r;
+  if (r.template !== 'modern' || r.settings?.photoTextAlign === 'top') return r;
   if (from >= 8 && !(r.updatedAt < MODERN_TEXT_POSITION_LIVE)) return r;
   return { ...r, settings: { ...r.settings, photoTextAlign: 'top' } };
 }
