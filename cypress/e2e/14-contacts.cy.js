@@ -113,12 +113,20 @@ describe('contact icon packs in the Design panel (FIDA-39, FIDB-07)', () => {
       expect($b.find('svg')).to.have.length(6);
       $b.find('svg').each((_, svg) => expect(svg.querySelectorAll('path, rect, circle').length).to.be.greaterThan(0));
     });
-    // The phone (second icon) is a handset in Classic and Bold, a smartphone in Modern and Minimal.
+    // The phone (second icon) is a handset in Filled, Classic and Bold, a smartphone in Modern and Minimal.
     const phone = (label) => packs().filter(`:contains("${label}")`).find('svg').eq(1);
+    phone('Filled').find('path').first().should('have.attr', 'd').and('match', /^M7\.05 2\.6/);
     phone('Classic').find('path').first().should('have.attr', 'd').and('match', /^M13\.832 16\.568/);
     phone('Modern').find('rect').should('have.attr', 'x', '7');
     phone('Minimal').find('path').first().should('have.attr', 'd').and('match', /^M7 3\.5h10/);
     phone('Bold').find('path').first().should('have.attr', 'stroke-width', '2.6');
+
+    // All five packs' phone icons render pairwise distinct SVG markup (W3-5.3)
+    packs().then(($buttons) => {
+      const phones = [...$buttons].map((b) => b.querySelectorAll('svg')[1].innerHTML);
+      expect(new Set(phones).size).to.eq(5);
+    });
+
     packs().filter(':contains("Minimal")').click();
     cy.store().should((s) => expect(active(s).settings.iconSet).to.eq('minimal'));
     packs().filter(':contains("Minimal")').should('contain.text', 'Selected');
