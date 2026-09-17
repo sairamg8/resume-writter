@@ -48,9 +48,10 @@ function markerWidth(chars, fontSize) {
  * list item, returned as siblings so the page can break between any two of them.
  *
  * `style` is the text style (font size, colour, line height, alignment); its marginTop and
- * marginBottom apply once, above the first block and below the last.
+ * marginBottom apply once, above the first block and below the last. `breaks(inset)`: where a word
+ * of a block whose text starts `inset` pt in may break (sideBreaks in the Sidebar's dark column).
  */
-export function PdfRichText({ html, style = {} }) {
+export function PdfRichText({ html, style = {}, breaks }) {
   const blocks = parseRichText(html);
   if (!blocks.length) return null;
   const { marginTop, marginBottom, ...textStyle } = style;
@@ -79,7 +80,7 @@ export function PdfRichText({ html, style = {} }) {
       // Body text, or a further paragraph of a list item aligned with that item's text.
       const left = block.indent > 0 ? (textStart[block.indent] ?? block.indent * INDENT) : 0;
       return (
-        <Text key={i} style={{ ...textStyle, ...edges, textAlign: align, marginLeft: left || undefined }}>
+        <Text key={i} style={{ ...textStyle, ...edges, textAlign: align, marginLeft: left || undefined }} hyphenationCallback={breaks?.(left)}>
           <Runs runs={block.runs} color={color} />
         </Text>
       );
@@ -97,7 +98,7 @@ export function PdfRichText({ html, style = {} }) {
         style={{ ...edges, flexDirection: 'row', marginLeft: left || undefined }}
       >
         <Text style={{ ...textStyle, textAlign: 'left', width }}>{block.marker}</Text>
-        <Text style={{ ...textStyle, textAlign: align, flex: 1 }}>
+        <Text style={{ ...textStyle, textAlign: align, flex: 1 }} hyphenationCallback={breaks?.(left + width)}>
           <Runs runs={block.runs} color={color} />
         </Text>
       </View>

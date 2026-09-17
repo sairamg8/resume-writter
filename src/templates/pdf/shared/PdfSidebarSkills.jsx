@@ -18,6 +18,9 @@ export function SideSkills({ section, sectionGap, itemGap, accent, shades = side
   const sep   = skillSeparator(s); // as in the main column and Word
   const groups = (section.items || []).filter(i => i.visible !== false).map(shownGroup);
   const catBreaks = sideBreaks(settings, { fontSize: 8.5, fontWeight: 'bold' });
+  // Bars' and Tags' categories are letter-spaced: measured so, a word that fits unspaced still breaks.
+  const trackedCat = { fontSize: 8.5, fontWeight: 'bold', letterSpacing: tracking(8.5, 0.5) };
+  const trackedCatBreaks = sideBreaks(settings, trackedCat);
   const valBreaks = sideBreaks(settings, { fontSize: 8.5 });
   const inlineBreaks = (inset = 0) => {
     const cb = sideBreaks(settings, { fontSize: 9 }, inset);
@@ -31,12 +34,12 @@ export function SideSkills({ section, sectionGap, itemGap, accent, shades = side
   if (style === 'bars') {
     return (
       <View style={{ marginBottom: sectionGap }}>
-        <SideSectionTitle title={section.title} shades={shades} titleCase={titleCase} />
+        <SideSectionTitle title={section.title} shades={shades} titleCase={titleCase} settings={settings} />
         <View style={{ gap: itemGap }}>
           {groups.map(({ category, list }, i) => (
             <View key={i}>
               {category ? (
-                <Text style={{ fontSize: 8.5, fontWeight: 'bold', color: shades.meta, letterSpacing: tracking(8.5, 0.5), marginBottom: 2, lineHeight: 1.2 }} hyphenationCallback={catBreaks}>
+                <Text style={{ ...trackedCat, color: shades.meta, marginBottom: 2, lineHeight: 1.2 }} hyphenationCallback={trackedCatBreaks}>
                   {category}
                 </Text>
               ) : null}
@@ -58,12 +61,12 @@ export function SideSkills({ section, sectionGap, itemGap, accent, shades = side
   if (style === 'tags') {
     return (
       <View style={{ marginBottom: sectionGap }}>
-        <SideSectionTitle title={section.title} shades={shades} titleCase={titleCase} />
+        <SideSectionTitle title={section.title} shades={shades} titleCase={titleCase} settings={settings} />
         <View style={{ gap: itemGap }}>
           {groups.map(({ category, list }, i) => (
             <View key={i}>
               {category ? (
-                <Text style={{ fontSize: 8.5, fontWeight: 'bold', color: shades.meta, letterSpacing: tracking(8.5, 0.5), marginBottom: 2, lineHeight: 1.2 }} hyphenationCallback={catBreaks}>
+                <Text style={{ ...trackedCat, color: shades.meta, marginBottom: 2, lineHeight: 1.2 }} hyphenationCallback={trackedCatBreaks}>
                   {category}
                 </Text>
               ) : null}
@@ -86,7 +89,7 @@ export function SideSkills({ section, sectionGap, itemGap, accent, shades = side
   if (style === 'stacked') {
     return (
       <View style={{ marginBottom: sectionGap }}>
-        <SideSectionTitle title={section.title} shades={shades} titleCase={titleCase} />
+        <SideSectionTitle title={section.title} shades={shades} titleCase={titleCase} settings={settings} />
         <View style={{ gap: itemGap }}>
           {groups.map(({ category, list }, i) => (
             <View key={i}>
@@ -108,7 +111,7 @@ export function SideSkills({ section, sectionGap, itemGap, accent, shades = side
   const bullet = style === 'bullet';
   return (
     <View style={{ marginBottom: sectionGap }}>
-      <SideSectionTitle title={section.title} shades={shades} titleCase={titleCase} />
+      <SideSectionTitle title={section.title} shades={shades} titleCase={titleCase} settings={settings} />
       <View style={{ gap: itemGap }}>
         {groups.map(({ category, skills }, i) => (
           <View key={i} style={bullet ? { flexDirection: 'row' } : undefined}>

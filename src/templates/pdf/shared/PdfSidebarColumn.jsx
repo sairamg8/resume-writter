@@ -32,8 +32,10 @@ export const SIDE_PAD_RIGHT = 10;
 export const sideColumnRoom = (settings) => pageBoxPt(settings).width * SIDE_COL - pageMargins(settings).h * MM_TO_PT - SIDE_PAD_RIGHT;
 
 /**
- * Where an e-mail address or URL in the column (`style`: its type) may break: one of 48
- * characters or fewer wider than the column ran out of it, over the main column (breakToFit).
+ * Where a word in the column (`style`: its type, letterSpacing included) may break, `inset` pt in
+ * from its edges: one of 48 characters or fewer wider than the column ran out of it, over the main
+ * column (breakToFit) — an e-mail address or URL, and as much an ordinary long word in any field
+ * (NB-3-NB1-NB1).
  */
 export const sideBreaks = (settings, style, inset = 0) =>
   breakToFit({ fontFamily: settings?._pdfFontFamily, ...style }, sideColumnRoom(settings) - inset);
@@ -57,11 +59,12 @@ export function EntryLink({ url, label, style, hyphenationCallback }) {
  * Section Headings sets for the main column — but in capitals only when Title case says so, by
  * the main column's rule (upperSectionTitles: "As typed" prints it as typed, R6-4, V2W2b-5).
  */
-export function SideSectionTitle({ title, shades = NAVY, titleCase = 'upper' }) {
+export function SideSectionTitle({ title, shades = NAVY, titleCase = 'upper', settings }) {
   const upper = upperSectionTitles(titleCase);
+  const type = { fontSize: 8.5, fontWeight: 'bold', letterSpacing: tracking(8.5, 1.2) };
   return (
     <View style={{ marginBottom: 6 }}>
-      <Text style={{ fontSize: 8.5, fontWeight: 'bold', color: shades.label, letterSpacing: tracking(8.5, 1.2), textTransform: upper ? 'uppercase' : 'none', marginBottom: 2.5, lineHeight: 1.2 }}>
+      <Text style={{ ...type, color: shades.label, textTransform: upper ? 'uppercase' : 'none', marginBottom: 2.5, lineHeight: 1.2 }} hyphenationCallback={sideBreaks(settings, type)}>
         {upper ? title.toUpperCase() : title}
       </Text>
       <View style={{ height: 1, backgroundColor: shades.fill }} />
@@ -76,24 +79,27 @@ export function SideEducation({ section, sectionGap, itemGap, shades = NAVY, tit
   const visibleItems = (section.items || []).filter(i => i.visible !== false);
   const degreeBreaks = sideBreaks(settings, { fontSize: 10, fontWeight: 'bold' });
   const textBreaks = sideBreaks(settings, { fontSize: 9 });
+  // Rich text past its list marker or indent. A break sees the word, not its run: measured as bold, so
+  // a bold run breaks inside the column too (a mark in a word that fits is never taken).
+  const listBreaks = (inset) => sideBreaks(settings, { fontSize: 9, fontWeight: 'bold' }, inset);
 
   return (
     <View style={{ marginBottom: sectionGap }}>
-      <SideSectionTitle title={section.title} shades={shades} titleCase={titleCase} />
+      <SideSectionTitle title={section.title} shades={shades} titleCase={titleCase} settings={settings} />
       <View style={{ gap: itemGap }}>
         {visibleItems.map((item, i) => (
           <View key={i}>
             <Text style={{ fontSize: 10, fontWeight: 'bold', color: shades.strong, lineHeight: 1.2 }} hyphenationCallback={degreeBreaks}>{item.degree}</Text>
             {item.institution && <Text style={{ fontSize: 9, color: shades.label, lineHeight: 1.2 }} hyphenationCallback={textBreaks}>{item.institution}</Text>}
             {item.fieldOfStudy && <Text style={{ fontSize: 9, color: shades.label, lineHeight: 1.2 }} hyphenationCallback={textBreaks}>{item.fieldOfStudy}</Text>}
-            {showLoc && item.location ? <Text style={{ fontSize: 9, color: shades.meta, lineHeight: 1.2 }}>{item.location}</Text> : null}
-            {item.gpa && <Text style={{ fontSize: 9, color: shades.meta, lineHeight: 1.2 }}>GPA: {item.gpa}</Text>}
+            {showLoc && item.location ? <Text style={{ fontSize: 9, color: shades.meta, lineHeight: 1.2 }} hyphenationCallback={textBreaks}>{item.location}</Text> : null}
+            {item.gpa && <Text style={{ fontSize: 9, color: shades.meta, lineHeight: 1.2 }} hyphenationCallback={textBreaks}>GPA: {item.gpa}</Text>}
             {showDates && dateRange(item.startDate, item.endDate, settings) ? (
               <Text style={{ fontSize: 9, color: shades.meta, lineHeight: 1.2 }}>{dateRange(item.startDate, item.endDate, settings)}</Text>
             ) : null}
             {/* Coursework, honours …: printed like the main column's, in the column's light text. */}
-            {hasRichText(item.description) ? <PdfRichText html={item.description} style={{ fontSize: 9, color: shades.value, lineHeight: 1.3, marginTop: 2 }} /> : null}
-            <RenderBullets bullets={item.bullets} style={{ fontSize: 9, color: shades.value, lineHeight: 1.3 }} />
+            {hasRichText(item.description) ? <PdfRichText html={item.description} style={{ fontSize: 9, color: shades.value, lineHeight: 1.3, marginTop: 2 }} breaks={listBreaks} /> : null}
+            <RenderBullets bullets={item.bullets} style={{ fontSize: 9, color: shades.value, lineHeight: 1.3 }} breaks={listBreaks} />
           </View>
         ))}
       </View>
@@ -107,7 +113,7 @@ export function SideLanguages({ section, sectionGap, itemGap, shades = NAVY, tit
   const textBreaks = sideBreaks(settings, { fontSize: 9 });
   return (
     <View style={{ marginBottom: sectionGap }}>
-      <SideSectionTitle title={section.title} shades={shades} titleCase={titleCase} />
+      <SideSectionTitle title={section.title} shades={shades} titleCase={titleCase} settings={settings} />
       <View style={{ gap: itemGap }}>
         {visibleItems.map((item, i) => {
           const font = { fontFamily: settings?._pdfFontFamily, fontSize: 9 };
@@ -135,7 +141,7 @@ export function SideCertifications({ section, sectionGap, itemGap, shades = NAVY
 
   return (
     <View style={{ marginBottom: sectionGap }}>
-      <SideSectionTitle title={section.title} shades={shades} titleCase={titleCase} />
+      <SideSectionTitle title={section.title} shades={shades} titleCase={titleCase} settings={settings} />
       <View style={{ gap: itemGap }}>
         {visibleItems.map((item, i) => {
           // Issued – expires, as the main column prints it ("– 03/2027" without an issue date).
@@ -163,19 +169,20 @@ const DEFAULT_ITEM_GAP_PT = DEFAULT_ITEM_GAP_PX * CSS_PX_TO_PT;
  * Items, or its own override) in proportion: 2.5 pt at the default 6 pt, as the column always
  * printed it — the controls used to do nothing here (R2-6).
  */
-export function SideInterests({ section, sectionGap, itemGap = DEFAULT_ITEM_GAP_PT, shades = NAVY, titleCase }) {
+export function SideInterests({ section, sectionGap, itemGap = DEFAULT_ITEM_GAP_PT, shades = NAVY, titleCase, settings }) {
   const visibleItems = (section.items || []).filter(i => i.visible !== false);
   const allInterests = visibleItems.flatMap(item =>
     (item.interests || '').split(',').map(s => s.trim()).filter(Boolean)
   );
+  const chipBreaks = sideBreaks(settings, { fontSize: 8.5 }, 10); // inside the chip's padding
 
   return (
     <View style={{ marginBottom: sectionGap }}>
-      <SideSectionTitle title={section.title} shades={shades} titleCase={titleCase} />
+      <SideSectionTitle title={section.title} shades={shades} titleCase={titleCase} settings={settings} />
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: (CHIP_GAP_PT * itemGap) / DEFAULT_ITEM_GAP_PT }}>
         {allInterests.map((interest, i) => (
           <View key={i} style={{ backgroundColor: shades.fill, borderRadius: 2, paddingHorizontal: 5, paddingVertical: 1.5 }}>
-            <Text style={{ fontSize: 8.5, color: shades.chip, lineHeight: 1.2 }}>{interest}</Text>
+            <Text style={{ fontSize: 8.5, color: shades.chip, lineHeight: 1.2 }} hyphenationCallback={chipBreaks}>{interest}</Text>
           </View>
         ))}
       </View>
@@ -185,18 +192,20 @@ export function SideInterests({ section, sectionGap, itemGap = DEFAULT_ITEM_GAP_
 
 export function SideReferences({ section, sectionGap, itemGap, shades = NAVY, titleCase, settings }) {
   const visibleItems = (section.items || []).filter(i => i.visible !== false);
+  const nameBreaks = sideBreaks(settings, { fontSize: 9, fontWeight: 'bold' });
+  const textBreaks = sideBreaks(settings, { fontSize: 9 });
   return (
     <View style={{ marginBottom: sectionGap }}>
-      <SideSectionTitle title={section.title} shades={shades} titleCase={titleCase} />
+      <SideSectionTitle title={section.title} shades={shades} titleCase={titleCase} settings={settings} />
       <View style={{ gap: itemGap }}>
         {visibleItems.map((item, i) => (
           <View key={i}>
-            <Text style={{ fontSize: 9, fontWeight: 'bold', color: shades.strong, lineHeight: 1.2 }}>{item.name}</Text>
-            {item.jobTitle && <Text style={{ fontSize: 9, color: shades.label, lineHeight: 1.2 }}>{item.jobTitle}</Text>}
-            {item.company && <Text style={{ fontSize: 9, color: shades.label, lineHeight: 1.2 }}>{item.company}</Text>}
-            {item.relationship && <Text style={{ fontSize: 9, color: shades.meta, fontStyle: 'italic', lineHeight: 1.2 }}>{item.relationship}</Text>}
+            <Text style={{ fontSize: 9, fontWeight: 'bold', color: shades.strong, lineHeight: 1.2 }} hyphenationCallback={nameBreaks}>{item.name}</Text>
+            {item.jobTitle && <Text style={{ fontSize: 9, color: shades.label, lineHeight: 1.2 }} hyphenationCallback={textBreaks}>{item.jobTitle}</Text>}
+            {item.company && <Text style={{ fontSize: 9, color: shades.label, lineHeight: 1.2 }} hyphenationCallback={textBreaks}>{item.company}</Text>}
+            {item.relationship && <Text style={{ fontSize: 9, color: shades.meta, fontStyle: 'italic', lineHeight: 1.2 }} hyphenationCallback={textBreaks}>{item.relationship}</Text>}
             {/* mailto: / tel: links, as the main-column templates and the Word export print them (R2-3). */}
-            {item.email && <Text style={{ fontSize: 9, color: shades.meta, lineHeight: 1.2 }} hyphenationCallback={sideBreaks(settings, { fontSize: 9 })}><ContactValue value={item.email} href={contactHref('email', item)} style={{ color: shades.meta }} /></Text>}
+            {item.email && <Text style={{ fontSize: 9, color: shades.meta, lineHeight: 1.2 }} hyphenationCallback={textBreaks}><ContactValue value={item.email} href={contactHref('email', item)} style={{ color: shades.meta }} /></Text>}
             {item.phone && <Text style={{ fontSize: 9, color: shades.meta, lineHeight: 1.2 }}><ContactValue value={item.phone} href={contactHref('phone', item)} style={{ color: shades.meta }} /></Text>}
           </View>
         ))}

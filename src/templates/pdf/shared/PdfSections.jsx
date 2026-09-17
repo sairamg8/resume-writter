@@ -50,11 +50,11 @@ export const hexAlpha = (color, opacity) => tint(color, opacity);
 export const shadesOf = (settings) => textShades(settings?.textColor || '#1a1a1a');
 
 /** Legacy / imported `bullets[]` strings, printed like a rich-text list. */
-export function RenderBullets({ bullets, style }) {
+export function RenderBullets({ bullets, style, breaks }) {
   const list = (bullets || []).filter((b) => b && String(b).trim());
   if (!list.length) return null;
   const esc = (t) => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  return <PdfRichText html={`<ul>${list.map((b) => `<li>${esc(b)}</li>`).join('')}</ul>`} style={{ ...style, marginTop: 2 }} />;
+  return <PdfRichText html={`<ul>${list.map((b) => `<li>${esc(b)}</li>`).join('')}</ul>`} style={{ ...style, marginTop: 2 }} breaks={breaks} />;
 }
 
 /** An entry's content in a breakable View led by SPACER; a rendered <View> is unwrapped into it. */

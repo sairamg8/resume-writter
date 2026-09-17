@@ -143,7 +143,7 @@ export function SidebarTemplatePDF({ data }) {
 
           {contacts.length > 0 && (
             <View style={{ marginBottom: sideSectionGap }}>
-              <SideSectionTitle title="Contact" shades={side} titleCase={settings.sectionTitleCase} />
+              <SideSectionTitle title="Contact" shades={side} titleCase={settings.sectionTitleCase} settings={settings} />
               <View style={{ marginTop: 2 }}>
                 {contacts.map(item => (
                   <SideContactRow

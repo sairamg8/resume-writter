@@ -202,13 +202,15 @@ describe('Sidebar: skills category wider than the column (NB-3-NB1-NB2)', () => 
           ], { skillsStyle }),
         ],
       })));
-      const items = page.items.filter((t) => t.str.includes('PROGRAMMIER') || t.str.includes(':'));
-      for (const item of items) {
-        assert.ok(!item.str.includes('-'), `${skillsStyle}: no stray hyphen in category or separator (${item.str})`);
+      for (const item of inColumn(page)) {
+        assert.ok(!item.str.includes('-'), `${skillsStyle}: no stray hyphen in the column (${item.str})`);
       }
-      const colonItem = items.find((t) => t.str.includes(':'));
-      assert.ok(colonItem, `${skillsStyle}: found colon`);
-      assert.ok(colonItem.str.length > 1, `${skillsStyle}: colon must be on the same line as the category end, not dropped alone`);
+      // The category may break inside the column (NB-3-NB1-NB1), but its ':' prints on the line with
+      // its last letters — never alone, nor at the head of the skills' line.
+      const colon = inColumn(page).find((t) => t.str.includes(':'));
+      assert.ok(colon, `${skillsStyle}: the category's colon prints`);
+      const tail = colon.str.slice(0, colon.str.indexOf(':')).trim();
+      assert.ok(tail && 'PROGRAMMIERSPRACHENENTWICKLUNG'.endsWith(tail), `${skillsStyle}: ":" follows the category's last letters on one line ("${colon.str}")`);
     }
   });
 });
