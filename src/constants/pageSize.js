@@ -32,3 +32,20 @@ export function pageSizeOf(settings) {
 
 /** The résumé's page box in pt: { width, height }. */
 export const pageBoxPt = (settings) => PAGE_SIZES[pageSizeOf(settings)].pt;
+
+/**
+ * Dimensions for the editor's PDF preview: the 100 % fit width in CSS pixels (at 96 dpi)
+ * and the page's aspect ratio (height / width) for the placeholder before pdf.js paints.
+ * A4 keeps its established 794 px and 1.4142 ratio; Letter uses 816 px (8.5 in) and 792/612.
+ */
+export function previewBox(settings) {
+  const resolved = settings && typeof settings.pageSize === 'undefined' && settings.settings
+    ? settings.settings
+    : settings;
+  const id = pageSizeOf(resolved);
+  if (id === 'LETTER') {
+    return { widthPx: 816, ratio: 792 / 612 };
+  }
+  return { widthPx: 794, ratio: 1.4142 };
+}
+

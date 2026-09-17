@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { previewBox } from '@/constants/pageSize';
 
 /**
  * The editor preview IS the exported PDF: `render(input)` builds the same react-pdf document
@@ -11,7 +12,6 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
  * - Page text goes into a visually hidden element (`textId`) for screen readers and tests.
  */
 
-const A4_WIDTH_PX = 794; // 210 mm at 96 dpi — the largest "100 %" width
 const GUTTER_PX = 48;    // breathing room either side of the page
 const DEBOUNCE_MS = 350;
 
@@ -95,9 +95,10 @@ export function PdfPreview({ render, input, zoom = 1, textId, title = 'Résumé'
   const generation = useRef(0);
   const docRef = useRef(null);
   const rootRef = useRef(null);
-  const [available, setAvailable] = useState(A4_WIDTH_PX + GUTTER_PX);
-  // 100 % = fit the column (never wider than true A4 size); the zoom buttons scale from there.
-  const fitWidth = Math.max(240, Math.min(A4_WIDTH_PX, available - GUTTER_PX));
+  const box = previewBox(input?.settings || input);
+  const [available, setAvailable] = useState(() => box.widthPx + GUTTER_PX);
+  // 100 % = fit the column (never wider than true page size); the zoom buttons scale from there.
+  const fitWidth = Math.max(240, Math.min(box.widthPx, available - GUTTER_PX));
   const cssWidth = Math.round(fitWidth * zoom);
   const widthRef = useRef(cssWidth);
   widthRef.current = cssWidth;
@@ -179,7 +180,7 @@ export function PdfPreview({ render, input, zoom = 1, textId, title = 'Résumé'
       {!view && status !== 'error' && (
         <div
           className="mx-auto bg-white shadow-2xl shrink-0 flex items-center justify-center text-xs text-gray-400"
-          style={{ width: cssWidth, height: Math.round(cssWidth * 1.4142) }}
+          style={{ width: cssWidth, height: Math.round(cssWidth * box.ratio) }}
         >
           Rendering preview…
         </div>
