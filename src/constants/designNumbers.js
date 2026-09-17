@@ -21,7 +21,20 @@ export const SECTION_BORDER_PT = { min: 1, max: 8 };
  */
 export const HEADER_BORDER_PT = { min: 1, max: 12, zeroIsUnset: true };
 
+
+/** Typography (DesignPanelTypography.jsx). Deltas are added to fontSizeBase. */
+export const FONT_SIZE_BASE = { min: 8, max: 16 };
+export const FONT_SIZE_NAME_DELTA = { min: 0, max: 28 };
+export const FONT_SIZE_SECTION_DELTA = { min: -10, max: 16 };
+export const FONT_SIZE_ENTRY_DELTA = { min: -10, max: 16 };
+export const ICON_SIZE = { min: 8, max: 20 };
+
 const DESIGN_NUMBERS = {
+  fontSizeBase: FONT_SIZE_BASE,
+  fontSizeNameDelta: FONT_SIZE_NAME_DELTA,
+  fontSizeSectionDelta: FONT_SIZE_SECTION_DELTA,
+  fontSizeEntryDelta: FONT_SIZE_ENTRY_DELTA,
+  iconSize: ICON_SIZE,
   sectionBorderWidth: SECTION_BORDER_PT,
   headerBorderWidth: HEADER_BORDER_PT,
   // Header Customization → Name & Title Spacing, px (HEADER_GAPS: 2–48). The résumé's PDF reads it

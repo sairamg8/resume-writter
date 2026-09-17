@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { FONTS, loadPreviewFont, loadCustomFonts, saveCustomFont, removeCustomFont, checkFont } from '@/utils/fonts';
 import { Label, SizeRow, SegmentControl, DesignSection } from '@/components/DesignPanelShared';
+import { FONT_SIZE_BASE, FONT_SIZE_NAME_DELTA, FONT_SIZE_SECTION_DELTA, FONT_SIZE_ENTRY_DELTA, ICON_SIZE } from '@/constants/designNumbers';
+
 
 // The quick size buttons set the base size (pt) the PDF is laid out with.
 const SIZE_PRESETS = { small: 10, normal: 11, large: 12 };
@@ -129,11 +131,11 @@ export function TypographySection({ settings, template, updateSetting, onReset }
             const entryDelta = settings.fontSizeEntryDelta ?? 0;
             return (
               <>
-                <SizeRow label="Base" value={base} onChange={v => updateSetting('fontSizeBase', v)} min={8} max={16} />
-                <SizeRow label="Full Name" value={base + nameDelta} onChange={v => updateSetting('fontSizeNameDelta', v - base)} min={base} max={36} />
-                <SizeRow label="Section Title" value={base + sectionDelta} onChange={v => updateSetting('fontSizeSectionDelta', v - base)} min={6} max={24} />
-                <SizeRow label="Entry Header" value={base + entryDelta} onChange={v => updateSetting('fontSizeEntryDelta', v - base)} min={6} max={24} />
-                <SizeRow label="Contact Icons" value={settings.iconSize ?? 11} onChange={v => updateSetting('iconSize', v)} min={8} max={20} />
+                <SizeRow label="Base" value={base} onChange={v => updateSetting('fontSizeBase', v)} min={FONT_SIZE_BASE.min} max={FONT_SIZE_BASE.max} />
+                <SizeRow label="Full Name" value={base + nameDelta} onChange={v => updateSetting('fontSizeNameDelta', v - base)} min={base + FONT_SIZE_NAME_DELTA.min} max={FONT_SIZE_BASE.min + FONT_SIZE_NAME_DELTA.max} />
+                <SizeRow label="Section Title" value={base + sectionDelta} onChange={v => updateSetting('fontSizeSectionDelta', v - base)} min={FONT_SIZE_BASE.max + FONT_SIZE_SECTION_DELTA.min} max={FONT_SIZE_BASE.min + FONT_SIZE_SECTION_DELTA.max} />
+                <SizeRow label="Entry Header" value={base + entryDelta} onChange={v => updateSetting('fontSizeEntryDelta', v - base)} min={FONT_SIZE_BASE.max + FONT_SIZE_ENTRY_DELTA.min} max={FONT_SIZE_BASE.min + FONT_SIZE_ENTRY_DELTA.max} />
+                <SizeRow label="Contact Icons" value={settings.iconSize ?? 11} onChange={v => updateSetting('iconSize', v)} min={ICON_SIZE.min} max={ICON_SIZE.max} />
               </>
             );
           })()}
