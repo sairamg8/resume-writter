@@ -69,16 +69,32 @@ describe('an empty body (R1-11)', () => {
 });
 
 describe('the signature stays with its closing (R1-6)', () => {
-  it('whatever the body\'s length, "Sincerely," and the name are on the same page', async () => {
+  // Walking marginV across the page break in 0.5 mm steps moves the page bottom through the
+  // signature block in small increments (~1.4 pt), covering both split windows: designation
+  // orphan (name | designation) and headline R1-6 orphan (closing | name) (W2a-4.2).
+  it('walking across the page break, "Sincerely,", name and designation stay together', async () => {
     const para = '<p>I led the migration of our billing platform and shipped the new onboarding flow, working closely with design and support.</p>';
-    let split = 0;
-    for (let n = 24; n <= 44; n += 1) {
-      const pages = await read(await renderCover(letter({ body: para.repeat(n), signatureName: 'Pat Signer', signatureDesignation: 'Engineer' })));
+    let reachedBreak = false;
+    for (let mv = 16; mv <= 21; mv += 0.5) {
+      const r = letter({
+        body: para.repeat(38),
+        signatureName: 'Pat Signer',
+        signatureDesignation: 'Engineer',
+        signatureSpace: 'wide',
+      }, { marginV: mv });
+      const pages = await read(await renderCover(r));
       const items = allItems(pages);
       const page = (s) => items.find((t) => t.str.includes(s))?.page;
-      if (page('Sincerely') !== page('Pat Signer') || page('Pat Signer') !== items.findLast((t) => t.str.includes('Engineer'))?.page) split += 1;
+      const sincPage = page('Sincerely');
+      const namePage = page('Pat Signer');
+      const desigPage = items.findLast((t) => t.str.includes('Engineer'))?.page;
+      assert.equal(sincPage, namePage, `marginV ${mv}mm: closing and name split`);
+      assert.equal(namePage, desigPage, `marginV ${mv}mm: name and designation split`);
+      const bodyItems = items.filter((t) => t.str.includes('billing platform'));
+      const lastBodyPage = bodyItems[bodyItems.length - 1]?.page;
+      if (sincPage > lastBodyPage) reachedBreak = true;
     }
-    assert.equal(split, 0, `${split} body lengths split the closing from the signature`);
+    assert.ok(reachedBreak, 'the walk proved the signature block broke cleanly to a new page as a unit');
   });
 });
 
