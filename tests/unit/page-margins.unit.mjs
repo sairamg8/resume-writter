@@ -6,7 +6,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { MARGIN_MM } from '../../src/constants/pageMargins.js';
+import { MARGIN_MM, pageMargins } from '../../src/constants/pageMargins.js';
 import { withSpacingNumbers } from '../../src/constants/spacingNumbers.js';
 
 const withMargins = (settings) => ({ id: 'r1', template: 'sidebar', updatedAt: 5, settings: { font: 'Inter', ...settings } });
@@ -38,3 +38,22 @@ test('withSpacingNumbers: the same object for margins the editor can set, or non
   }
   for (const r of [null, undefined, {}, { settings: null }, { settings: 'junk' }]) assert.equal(withSpacingNumbers(r), r, JSON.stringify(r));
 });
+
+test('pageMargins: defaults to 14 mm top/bottom, 18 mm left/right when unset', () => {
+  assert.deepEqual(pageMargins({}), { v: 14, h: 18 });
+  assert.deepEqual(pageMargins(null), { v: 14, h: 18 });
+  assert.deepEqual(pageMargins({ marginV: 20, marginH: 25 }), { v: 20, h: 25 });
+});
+
+test('drift guard: no raw margin[VH] ?? fallbacks in src/templates', () => {
+  const walk = (dir) => fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
+    const full = `${dir}/${e.name}`;
+    return e.isDirectory() ? walk(full) : e.name.endsWith('.js') || e.name.endsWith('.jsx') ? [full] : [];
+  });
+  const files = walk(new URL('../../src/templates', import.meta.url).pathname);
+  for (const f of files) {
+    const content = fs.readFileSync(f, 'utf8');
+    assert.ok(!/margin[VH]\s*\?\?/.test(content), `${f} has raw margin fallback: use pageMargins()`);
+  }
+});
+

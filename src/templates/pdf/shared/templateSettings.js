@@ -3,6 +3,7 @@
 // résumé's colours through here, so the letter's Word file prints what its PDF prints (FIDB-51).
 import { headerBorderOn } from '@/constants/templates';
 import { headerGapsPt } from '@/constants/headerSpacing';
+import { pageMargins } from '@/constants/pageMargins';
 import { contrast, readableOn } from './pdfColors';
 import { CSS_PX_TO_PT, DEFAULT_ITEM_GAP_PX, DEFAULT_SECTION_GAP_PX } from './pdfUnits';
 
@@ -119,8 +120,9 @@ export function resolveTemplateSettings(settings = {}, templateKey) {
   s.iconSize = settings.iconSize ?? 11;
 
   // Page margins (mm — used as mm in getPageStyle)
-  s.marginV = settings.marginV ?? 14;
-  s.marginH = settings.marginH ?? 18;
+  const margins = pageMargins(settings);
+  s.marginV = margins.v;
+  s.marginH = margins.h;
 
   // Spacing: convert CSS px → PDF pt exactly once
   const sectionGapPx = settings.sectionGap ?? DEFAULT_SECTION_GAP_PX;

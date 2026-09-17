@@ -4,7 +4,7 @@ import { PdfSectionTitle } from './shared/PdfSection';
 import { getEffectiveSpacing, SPACER } from './shared/PdfSections';
 import { PdfRichText } from './shared/PdfRichText';
 import { hasRichText } from '@/utils/richText';
-import { getDocumentProps } from './shared/PdfPage';
+import { getDocumentProps, pageMargins } from './shared/PdfPage';
 import { getPdfPhotoStyle } from './shared/pdfPhoto';
 import { PdfPhoto } from './shared/PdfPhoto';
 import { CSS_PX_TO_PT, tracking } from './shared/pdfUnits';
@@ -50,8 +50,7 @@ export function SidebarTemplatePDF({ data }) {
     jobTitleColor,
     lineHeightValue: lineH,
   } = settings;
-  const vMm        = settings.marginV ?? 14;
-  const hMm        = settings.marginH ?? 18;
+  const { v: vMm, h: hMm } = pageMargins(settings);
   const sidebarBg  = settings.sidebarBg || '#1e293b';
   const side       = sidebarShades(sidebarBg); // the column's colours on its background (R2-2)
   const nameSize   = baseSize + (settings.fontSizeNameDelta ?? 8);

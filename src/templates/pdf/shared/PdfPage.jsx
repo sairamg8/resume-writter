@@ -17,8 +17,8 @@ export function getHeaderBorderStyle(settings) {
   };
 }
 
-/** The page's margins in mm, as it prints them: `v` top and bottom, `h` left and right. */
-export const pageMargins = (settings) => ({ v: settings.marginV ?? 14, h: settings.marginH ?? 18 });
+export { pageMargins } from '@/constants/pageMargins';
+import { pageMargins } from '@/constants/pageMargins';
 
 /** The width between the page's left and right margins, in pt, on the résumé's paper (A4 or US Letter). */
 export const contentWidthPt = (settings) => pageBoxPt(settings).width - 2 * pageMargins(settings).h * MM_TO_PT;

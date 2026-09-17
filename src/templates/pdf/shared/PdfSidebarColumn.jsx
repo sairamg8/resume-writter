@@ -7,6 +7,7 @@ import { SIDEBAR_COLUMN_TYPES, upperSectionTitles } from '@/constants/templates'
 import { CSS_PX_TO_PT, DEFAULT_ITEM_GAP_PX, MM_TO_PT, tracking } from './pdfUnits';
 import { breakToFit } from './pdfMeasure';
 import { pageBoxPt } from '@/constants/pageSize';
+import { pageMargins } from '@/constants/pageMargins';
 import { sidebarShades } from './pdfColors';
 import { PdfRichText } from './PdfRichText';
 import { RenderBullets } from './PdfSections';
@@ -28,7 +29,7 @@ export const SIDE_COL = 0.38;
 export const SIDE_PAD_RIGHT = 10;
 
 /** The width the column's text is laid out in, pt: its share of the paper inside its padding. */
-export const sideColumnRoom = (settings) => pageBoxPt(settings).width * SIDE_COL - (settings?.marginH ?? 18) * MM_TO_PT - SIDE_PAD_RIGHT;
+export const sideColumnRoom = (settings) => pageBoxPt(settings).width * SIDE_COL - pageMargins(settings).h * MM_TO_PT - SIDE_PAD_RIGHT;
 
 /**
  * Where an e-mail address or URL in the column (`style`: its type) may break: one of 48

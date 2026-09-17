@@ -9,3 +9,7 @@
 
 /** The margins the editor offers, in mm: its Top / Bottom and Left / Right inputs' bounds. */
 export const MARGIN_MM = { min: 0, max: 40 };
+
+/** The page's margins in mm, as it prints them: `v` top and bottom, `h` left and right. */
+export const pageMargins = (settings) => ({ v: settings?.marginV ?? 14, h: settings?.marginH ?? 18 });
+
