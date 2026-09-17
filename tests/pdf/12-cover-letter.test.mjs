@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import {
   setup, teardown, resume, experience, renderCover, read, allItems, allText, loadModule, readDocx, TEMPLATES,
 } from './harness.mjs';
-import { drawing } from './extractors.mjs';
+import { drawing, painted } from './extractors.mjs';
 
 before(setup);
 after(teardown);
@@ -160,28 +160,11 @@ describe('cover letter — contact style and layout', () => {
 
 const PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
 
-/** Bottom y and height of each image drawn on page 1 (the CTM in effect when it is painted). */
-async function imageBoxes(bytes) {
-  const { pdfjs } = await setup();
-  const doc = await pdfjs.getDocument({ data: bytes.slice(), isEvalSupported: false, verbosity: 0 }).promise;
-  const O = pdfjs.OPS;
-  const ops = await (await doc.getPage(1)).getOperatorList();
-  const mul = (m, n) => [
-    m[0] * n[0] + m[1] * n[2], m[0] * n[1] + m[1] * n[3], m[2] * n[0] + m[3] * n[2],
-    m[2] * n[1] + m[3] * n[3], m[4] * n[0] + m[5] * n[2] + n[4], m[4] * n[1] + m[5] * n[3] + n[5],
-  ];
-  let ctm = [1, 0, 0, 1, 0, 0];
-  const stack = [];
-  const boxes = [];
-  ops.fnArray.forEach((fn, k) => {
-    if (fn === O.save) stack.push(ctm);
-    else if (fn === O.restore) ctm = stack.pop() || ctm;
-    else if (fn === O.transform) ctm = mul(ops.argsArray[k], ctm);
-    else if (fn === O.paintImageXObject || fn === O.paintInlineImageXObject) boxes.push({ y: ctm[5], h: ctm[3] });
-  });
-  await doc.loadingTask.destroy();
-  return boxes;
-}
+/** Bottom y and height of each image drawn on page 1. */
+const imageBoxes = async (bytes) => (await painted(bytes))
+  .filter((p) => p.paint === 'image')
+  .map((p) => ({ y: p.y0, h: p.y1 - p.y0 }));
+
 
 describe('cover letter — photo ↔ text alignment (FIDB-76)', () => {
   for (const fieldsPosition of ['right', 'below-name', 'below-all']) {

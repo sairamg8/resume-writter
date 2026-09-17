@@ -101,7 +101,7 @@ export async function painted(bytes) {
       }
       const stroke = a[0] === O.stroke;
       out.push({ paint: stroke ? 'stroke' : 'fill', colour: stroke ? g.stroke : g.fill, width: stroke ? g.lw / 2 : 0, ...box(a[2], g.m) });
-    } else if (fn === O.paintImageXObject) out.push({ paint: 'image', ...box([0, 0, 1, 1], g.m) });
+    } else if (fn === O.paintImageXObject || fn === O.paintInlineImageXObject) out.push({ paint: 'image', ...box([0, 0, 1, 1], g.m) });
   });
   return out;
 }
