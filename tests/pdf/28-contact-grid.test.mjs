@@ -169,3 +169,35 @@ describe('2 Grid: the grid itself is unchanged (guard)', () => {
     assert.ok(Math.abs(phone.x - (email.x + 0.46 * row + 18)) < 0.5, `the phone's cell at ${(phone.x - email.x).toFixed(1)} pt, not ${(0.46 * row + 18).toFixed(1)}`);
   });
 });
+
+describe('2 Grid: a value spilling into column gap leaves visible gap and reads separately (W2a-4.1-NB1)', () => {
+  it('Classic 18 mm Bar 2 Grid with 42-char email: email and phone are separate items', async () => {
+    const h = await header({ template: 'classic', style: 'bar', photo: '', marginH: 18, email: EMAIL42 });
+    const emailRun = h.runs.find((t) => t.str.includes(EMAIL42));
+    const phoneRun = h.runs.find((t) => t.str.includes(CONTACTS.phone));
+    assert.ok(emailRun, 'email is its own run');
+    assert.ok(phoneRun, 'phone is its own run');
+    assert.ok(!emailRun.str.includes(CONTACTS.phone), 'email run does not merge with phone');
+    if (Math.abs(emailRun.y - phoneRun.y) < 1) {
+      assert.ok(phoneRun.x - (emailRun.x + emailRun.w) >= 6, 'visible gap >= 6 pt on same row');
+    }
+  });
+
+  it('cover letter 18 mm Bar 2 Grid with 42-char email: email and phone are separate items', async () => {
+    const h = await letterhead({ style: 'bar', photo: '', marginH: 18, email: EMAIL42 });
+    const emailRun = h.runs.find((t) => t.str.includes(EMAIL42));
+    const phoneRun = h.runs.find((t) => t.str.includes(CONTACTS.phone));
+    assert.ok(emailRun, 'email is its own run');
+    assert.ok(phoneRun, 'phone is its own run');
+    assert.ok(!emailRun.str.includes(CONTACTS.phone), 'email run does not merge with phone');
+  });
+
+  it('guard: 29-char email with photo stays on row beside phone at same y', async () => {
+    const h = await header({ template: 'classic', style: 'bullet', photo: PNG, marginH: 18, email: EMAIL29 });
+    const emailRun = h.runs.find((t) => t.str.includes(EMAIL29));
+    const phoneRun = h.runs.find((t) => t.str.includes(CONTACTS.phone));
+    assert.ok(Math.abs(emailRun.y - phoneRun.y) < 1, 'email and phone share the row');
+    assert.ok(phoneRun.x - (emailRun.x + emailRun.w) >= 6, 'gap between email and phone is >= 6 pt');
+  });
+});
+

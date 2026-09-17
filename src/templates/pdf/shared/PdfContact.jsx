@@ -153,11 +153,14 @@ export function PdfContactRow({ personal, settings, color, markColor, hidden, ga
     // always have.
     const { style, mark } = rowMetrics(settings, iconGap);
     const cellPt = GRID_CELL * (width || 0);
-    // The room beside a cell: the column gap for a left-hand one, and for a right-hand one what
-    // the row leaves past it. Centred, the line's slack is split between its two ends and an
-    // item's overflow between its two sides, so either cell has room for half of each.
+    // The room beside a cell: the column gap for a left-hand one (leaving at least colGap / 2
+    // so a long value cannot run right up to the next value and read as one run, W2a-4.1-NB1),
+    // and for a right-hand one what the row leaves past it. Centred, the line's slack is split
+    // between its two ends and an item's overflow between its two sides, so either cell has room
+    // for half of each.
     const slack = Math.max(0, (width || 0) - 2 * cellPt - GRID_GAP);
-    const room = (col) => (centered ? Math.min(2 * GRID_GAP, slack) : col === 0 ? GRID_GAP : slack);
+    const gapRoom = Math.max(0, GRID_GAP - colGap / 2);
+    const room = (col) => (centered ? Math.min(2 * gapRoom, slack) : col === 0 ? gapRoom : slack);
     let col = 0;
     const cells = items.map((item) => {
       const full = !!width && mark + widestWord(item.value, style) > cellPt + room(col);
