@@ -196,9 +196,12 @@ describe('a Modern résumé saved before its banner took Photo → Text Position
         ['a value the PDF never knew', saved('middle', { photoSize })],
         ['no settings object at all', (() => { const r = saved(undefined, { photoSize }); delete r.settings; return r; })()],
         ['version 8, last edited before the change went live', saved('center', { dataVersion: 8, photoSize })],
+        // Unversioned, the item-gap migration (v8) gives it a settings object first; at version 8 none
+        // runs before this one, which returned it untouched: Center (VF2-2.3).
+        ['version 8, no settings object at all', (() => { const r = saved(undefined, { dataVersion: 8, photoSize }); delete r.settings; return r; })()],
       ]) {
         const r = normalizeResume(old);
-        assert.equal(r.settings?.photoTextAlign, 'top', label);
+        assert.equal(r.settings?.photoTextAlign, 'top', `${photoSize}, ${label}: stored as Top`);
         const [now, before] = [await drawing(await render(r)), await asItPrinted(old)];
         assert.ok(now === before, `${photoSize}, ${label}: draws the page it drew before`);
         assert.equal(r.settings.photoTextAlign, 'top', `${photoSize}, ${label}: the panel shows Top`);
