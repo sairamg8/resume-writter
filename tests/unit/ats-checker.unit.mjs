@@ -38,6 +38,8 @@ const sampleAtsResume = {
       id: 'sec_exp',
       type: 'experience',
       title: 'Professional Experience',
+      titleOrder: 'role',
+      settings: { titleOrder: 'role' },
       visible: true,
       items: [
         {
@@ -147,16 +149,36 @@ test('Standard ATS Headings: identifies standard vs custom section titles', () =
   assert.equal(isStandardAtsTitle({ type: 'skills', title: 'My Superpowers' }), false);
 });
 
-test('standardizeSectionsForAts: converts non-standard titles to canonical Workday headings', () => {
+test('standardizeSectionsForAts: converts non-standard titles to canonical Workday headings and sets titleOrder to role', () => {
   const customSections = [
-    { id: '1', type: 'experience', title: 'Where I Worked' },
+    { id: '1', type: 'experience', title: 'Where I Worked', settings: { titleOrder: 'company' } },
     { id: '2', type: 'education', title: 'My College' },
     { id: '3', type: 'skills', title: 'What I Know' },
   ];
   const standardized = standardizeSectionsForAts(customSections);
   assert.equal(standardized[0].title, 'Professional Experience');
+  assert.equal(standardized[0].titleOrder, 'role');
+  assert.equal(standardized[0].settings?.titleOrder, 'role');
   assert.equal(standardized[1].title, 'Education');
   assert.equal(standardized[2].title, 'Skills');
+});
+
+test('analyzeAtsScore: flags company-leading experience title order and passes role-leading order', () => {
+  const companyLeadingResume = {
+    ...sampleAtsResume,
+    sections: sampleAtsResume.sections.map(s => s.type === 'experience' ? { ...s, titleOrder: 'company', settings: { titleOrder: 'company' } } : s),
+  };
+  const reportWarn = analyzeAtsScore(companyLeadingResume);
+  const expItemWarn = reportWarn.categories.experience.items.find(i => i.id === 'exp_title_order');
+  assert.ok(expItemWarn, 'exp_title_order item should exist');
+  assert.equal(expItemWarn.status, 'warn');
+  assert.equal(expItemWarn.fixable, true);
+  assert.equal(expItemWarn.action, 'set_title_order_role');
+
+  const reportPass = analyzeAtsScore(sampleAtsResume);
+  const expItemPass = reportPass.categories.experience.items.find(i => i.id === 'exp_title_order');
+  assert.ok(expItemPass, 'exp_title_order item should exist');
+  assert.equal(expItemPass.status, 'pass');
 });
 
 test('analyzeAtsScore: computes top-tier score for well-structured resume', () => {
@@ -368,3 +390,94 @@ test('extractJobKeywords: returns frequency sorted list of technical terms', () 
   assert.deepEqual(extractJobKeywords(''), []);
   assert.deepEqual(extractJobKeywords(null), []);
 });
+
+test('extractBulletsFromItem: extracts bullets from html, unicode bullets, and legacy arrays', async () => {
+  const { extractBulletsFromItem } = await import('../../src/utils/atsChecker.js');
+
+  // HTML unordered list (RichTextEditor standard)
+  const htmlItem = {
+    description: '<ul><li>Spearheaded redesign of checkout flow, cutting drop-off by 18%.</li><li>Architected cloud microservices handling 50k RPS.</li></ul>',
+    bullets: [],
+  };
+  const htmlBullets = extractBulletsFromItem(htmlItem);
+  assert.equal(htmlBullets.length, 2);
+  assert.equal(htmlBullets[0], 'Spearheaded redesign of checkout flow, cutting drop-off by 18%.');
+  assert.equal(htmlBullets[1], 'Architected cloud microservices handling 50k RPS.');
+
+  // Text with bullet characters
+  const textBulletsItem = {
+    description: '<p>• Spearheaded migration to Kubernetes</p><p>• Optimized query performance by 40%</p>',
+  };
+  const textBullets = extractBulletsFromItem(textBulletsItem);
+  assert.equal(textBullets.length, 2);
+  assert.equal(textBullets[0], 'Spearheaded migration to Kubernetes');
+  assert.equal(textBullets[1], 'Optimized query performance by 40%');
+
+  // Legacy array fallback
+  const legacyItem = {
+    bullets: ['Engineered scalable search engine.', 'Mentored 4 junior engineers.'],
+  };
+  const legacyBullets = extractBulletsFromItem(legacyItem);
+  assert.equal(legacyBullets.length, 2);
+  assert.equal(legacyBullets[0], 'Engineered scalable search engine.');
+});
+
+test('analyzeAtsScore: recognizes HTML bullet points in experience roles without bullets_count failure', () => {
+  const resumeWithHtmlBullets = {
+    id: 'res_html_bullets',
+    template: 'classic',
+    personal: {
+      name: 'Alex Morgan',
+      title: 'Full Stack Engineer',
+      email: 'alex@example.com',
+      phone: '+1 555 123 4567',
+      location: 'New York, NY',
+    },
+    sections: [
+      {
+        id: 'sec_exp',
+        type: 'experience',
+        title: 'Work Experience',
+        visible: true,
+        items: [
+          {
+            id: 'exp1',
+            company: 'Tech Corp',
+            role: 'Senior Software Engineer',
+            location: 'New York, NY',
+            startDate: '2020-01',
+            endDate: 'Present',
+            current: true,
+            description: '<ul><li>Spearheaded payment microservice migration, reducing latency by 45%.</li><li>Architected real-time event streaming pipeline processing 10M events daily.</li><li>Mentored 5 junior engineers and established team coding standards.</li><li>Automated CI/CD deployment pipelines, cutting cycle time by 60%.</li></ul>',
+            bullets: [],
+          },
+        ],
+      },
+      {
+        id: 'sec_edu',
+        type: 'education',
+        title: 'Education',
+        visible: true,
+        items: [{ institution: 'MIT', degree: 'BS', fieldOfStudy: 'CS', startDate: '2015', endDate: '2019' }],
+      },
+      {
+        id: 'sec_skills',
+        type: 'skills',
+        title: 'Technical Skills',
+        visible: true,
+        items: [{ category: 'Languages', skills: 'JavaScript, TypeScript, Python, Go, Rust, Java, SQL, C++' }],
+      },
+    ],
+  };
+
+  const results = analyzeAtsScore(resumeWithHtmlBullets);
+  const bulletCheck = results.categories.experience.items.find(i => i.id === 'bullets_count');
+  assert.ok(bulletCheck == null || bulletCheck.status === 'pass', `Expected no bullets_count failure, but got: ${JSON.stringify(bulletCheck)}`);
+  
+  const actionVerbCheck = results.categories.experience.items.find(i => i.id === 'action_verbs');
+  assert.ok(actionVerbCheck && actionVerbCheck.status === 'pass', 'Action verbs check should pass');
+  
+  const metricsCheck = results.categories.experience.items.find(i => i.id === 'metrics');
+  assert.ok(metricsCheck && metricsCheck.status === 'pass', 'Metrics check should pass');
+});
+

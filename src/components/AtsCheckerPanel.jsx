@@ -38,6 +38,19 @@ export default function AtsCheckerPanel({ resume, store }) {
     store.updateSections(updated);
   }
 
+  function handleOptimizeExperienceOrder() {
+    if (!resume || !Array.isArray(resume.sections)) return;
+    const updated = resume.sections.map(s => {
+      if (s.type !== 'experience') return s;
+      return {
+        ...s,
+        titleOrder: 'role',
+        settings: { ...s.settings, titleOrder: 'role' },
+      };
+    });
+    store.updateSections(updated);
+  }
+
   function handleSwitchToClassic() {
     if (!store?.setTemplate) return;
     store.setTemplate('classic');
@@ -99,6 +112,7 @@ export default function AtsCheckerPanel({ resume, store }) {
 
   const hasNonStandardHeadings = categories.headings.items.some(i => i.id === 'std_headings' && i.status === 'warn');
   const hasSidebarWarning = categories.layout.items.some(i => i.id === 'template' && i.status === 'warn');
+  const hasCompanyTitleOrder = categories.experience.items.some(i => i.id === 'exp_title_order' && i.status === 'warn');
 
   return (
     <div className="space-y-5 text-gray-800 pb-12">
@@ -140,8 +154,16 @@ export default function AtsCheckerPanel({ resume, store }) {
         </div>
 
         {/* One-Click Quick Fixes */}
-        {(hasNonStandardHeadings || hasSidebarWarning) && (
+        {(hasNonStandardHeadings || hasSidebarWarning || hasCompanyTitleOrder) && (
           <div className="pt-3 border-t border-gray-100 flex flex-wrap gap-2">
+            {hasCompanyTitleOrder && (
+              <button
+                onClick={handleOptimizeExperienceOrder}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-purple-700 bg-purple-50 hover:bg-purple-100 rounded-xl border border-purple-200 transition-colors"
+              >
+                <Sparkles size={13} /> Put Job Title First (Role / Co.)
+              </button>
+            )}
             {hasNonStandardHeadings && (
               <button
                 onClick={handleStandardizeHeadings}

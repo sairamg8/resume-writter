@@ -45,10 +45,23 @@ function CardItem({ children }) {
  * because the title column is flex: 1 (basis 0); react-pdf 4 reads flexShrink 0 as 1 (VM3-9).
  */
 function CardHeader({ centered, entrySize, lineH, dateStr, dateStyle, children }) {
+  if (centered) {
+    return (
+      <View wrap={false} minPresenceAhead={Math.round(entrySize * lineH * 2)} style={{ alignItems: 'center' }}>
+        <View style={{ alignItems: 'center' }}>{children}</View>
+        {dateStr ? <Text style={{ ...dateStyle, marginTop: 1, textAlign: 'center' }}>{dateStr}</Text> : null}
+      </View>
+    );
+  }
+  const childList = (Array.isArray(children) ? children : [children]).filter(Boolean);
+  const [first, ...rest] = childList;
   return (
-    <View wrap={false} minPresenceAhead={Math.round(entrySize * lineH * 2)} style={centered ? { alignItems: 'center' } : { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-      <View style={centered ? { alignItems: 'center' } : { flex: 1 }}>{children}</View>
-      {dateStr ? <Text style={{ ...dateStyle, ...(centered ? { marginTop: 1, textAlign: 'center' } : { marginLeft: 6 }) }}>{dateStr}</Text> : null}
+    <View wrap={false} minPresenceAhead={Math.round(entrySize * lineH * 2)}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <View style={{ flex: 1 }}>{first}</View>
+        {dateStr ? <Text style={{ ...dateStyle, marginLeft: 6 }}>{dateStr}</Text> : null}
+      </View>
+      {rest}
     </View>
   );
 }

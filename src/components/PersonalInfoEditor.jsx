@@ -1,6 +1,7 @@
 import { useState, useId } from 'react';
-import { User, Mail, Phone, MapPin, Globe, Link, Code, FileText, Eye, EyeOff, ImagePlus, X } from 'lucide-react';
+import { User, Mail, Phone, MapPin, Globe, Link, Code, FileText, Eye, EyeOff, ImagePlus, X, Sparkles } from 'lucide-react';
 import RichTextEditor from '@/components/RichTextEditor';
+import HeaderIconPickerModal from '@/components/HeaderIconPickerModal';
 import { HeaderCustomization } from '@/components/PersonalInfoEditorHeader';
 import { PhotoSection } from '@/components/PersonalInfoEditorPhoto';
 import { ContactIcon } from '@/utils/contactIcons';
@@ -27,16 +28,31 @@ const FIELDS = [
   ...CONTACT_FIELDS.map(({ key, label, link }) => ({ key, label, ...CONTACT_INPUTS[key], hasUrl: !!link, contactIcon: true })),
 ];
 
-function CustomIconControl({ fieldKey, iconLabel, customIcon, s, onPickIconFile, setCustomIcon }) {
-  const printable = usePrintableImage(customIcon, { kind: 'icon' });
-  const unprintable = Boolean(customIcon) && printable === null;
+function CustomIconControl({ fieldKey, iconLabel, customIcon, s, onPickIconFile, setCustomIcon, onOpenPicker }) {
+  const isImage = typeof customIcon === 'string' && (customIcon.startsWith('data:image/') || customIcon.startsWith('http'));
+  const printable = usePrintableImage(isImage ? customIcon : null, { kind: 'icon' });
+  const unprintable = isImage && printable === null;
   return (
     <div>
-      <div className="mt-1.5 flex items-center gap-2">
+      <div className="mt-1.5 flex items-center gap-2 flex-wrap">
         <span className="text-[10px] text-gray-400 shrink-0">{iconLabel}</span>
-        <div className="flex items-center gap-1.5 px-1.5 py-1 rounded border border-gray-200 bg-gray-50">
+        <button
+          type="button"
+          onClick={() => onOpenPicker?.(fieldKey)}
+          title="Click to choose icon"
+          className="flex items-center gap-1.5 px-1.5 py-1 rounded border border-gray-200 bg-gray-50 hover:bg-blue-50/50 hover:border-blue-300 transition-colors cursor-pointer"
+        >
           <ContactIcon field={fieldKey} settings={s} size={14} className="text-gray-600" />
-        </div>
+        </button>
+        <button
+          type="button"
+          onClick={() => onOpenPicker?.(fieldKey)}
+          className="inline-flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-md transition-colors cursor-pointer"
+          title="Select from header icon library"
+        >
+          <Sparkles size={11} className="text-blue-600" />
+          Choose Icon
+        </button>
         <label className="inline-flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-gray-600 border border-gray-200 rounded-md hover:bg-gray-50 cursor-pointer">
           <ImagePlus size={11} />
           {customIcon ? 'Replace' : 'Upload'}
@@ -55,7 +71,7 @@ function CustomIconControl({ fieldKey, iconLabel, customIcon, s, onPickIconFile,
           <button
             type="button"
             onClick={() => setCustomIcon(fieldKey, null)}
-            className="inline-flex items-center gap-0.5 px-1.5 py-1 text-[10px] text-red-500 hover:bg-red-50 rounded"
+            className="inline-flex items-center gap-0.5 px-1.5 py-1 text-[10px] text-red-500 hover:bg-red-50 rounded cursor-pointer"
             title="Remove custom icon"
           >
             <X size={11} /> Clear
@@ -81,6 +97,8 @@ export default function PersonalInfoEditor({ personal, updatePersonal, toggleFie
     : drawsContactIcons(template, s) ? 'Resume icon' : 'Cover letter icon';
   const [headerOpen, setHeaderOpen] = useState(false);
   const [photoOpen, setPhotoOpen] = useState(false);
+  const [pickerField, setPickerField] = useState(null);
+  const activePickerField = FIELDS.find(f => f.key === pickerField);
   const uid = useId();
   const templateLabel = getTemplateLabel(template);
 
@@ -179,6 +197,7 @@ export default function PersonalInfoEditor({ personal, updatePersonal, toggleFie
                     s={s}
                     onPickIconFile={onPickIconFile}
                     setCustomIcon={setCustomIcon}
+                    onOpenPicker={setPickerField}
                   />
                 )}
               </div>
@@ -200,6 +219,18 @@ export default function PersonalInfoEditor({ personal, updatePersonal, toggleFie
         </div>
         <RichTextEditor ariaLabel="Professional summary" value={personal.summary || ''} onChange={v => updatePersonal('summary', v)} placeholder="Brief professional summary highlighting your experience, skills, and goals..." rows={4} />
       </div>
+
+      <HeaderIconPickerModal
+        isOpen={Boolean(pickerField)}
+        onClose={() => setPickerField(null)}
+        fieldKey={pickerField}
+        fieldLabel={activePickerField?.label}
+        currentCustomIcon={pickerField ? s.customContactIcons?.[pickerField] : null}
+        settings={s}
+        onSelectIcon={iconId => setCustomIcon(pickerField, iconId)}
+        onPickIconFile={file => onPickIconFile(pickerField, file)}
+        onClearIcon={() => setCustomIcon(pickerField, null)}
+      />
     </div>
   );
 }

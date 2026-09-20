@@ -9,7 +9,8 @@ import { drawableImage } from '@/utils/imageUpload';
  * icon too, rather than an empty slot; a PNG saved with a JPEG label is drawn as the PNG (R7-3).
  */
 export function PdfContactIcon({ field, settings, size = 9, color = '#555555' }) {
-  const custom = drawableImage(getCustomContactIcon(field, settings));
+  const rawCustom = getCustomContactIcon(field, settings);
+  const custom = drawableImage(rawCustom);
   if (custom) {
     return (
       <Image
@@ -18,5 +19,6 @@ export function PdfContactIcon({ field, settings, size = 9, color = '#555555' })
       />
     );
   }
-  return <PdfIcon setId={getIconSetId(settings)} field={field} size={size} color={color} />;
+  return <PdfIcon custom={rawCustom} setId={getIconSetId(settings)} field={field} size={size} color={color} />;
 }
+

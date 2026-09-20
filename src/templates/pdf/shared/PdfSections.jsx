@@ -182,12 +182,14 @@ export function ItemHeader({ primary, sub, loc, dateStr, settings, titleStyle = 
   }
 
   return (
-    <View {...keep} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-      <View style={{ flex: 1 }}>
-        <Text style={{ fontSize: entrySize, fontWeight: 'bold', color: textColor }}>{primary}</Text>
-        {subLocLine}
+    <View {...keep}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontSize: entrySize, fontWeight: 'bold', color: textColor }}>{primary}</Text>
+        </View>
+        {dateStr ? <Text style={{ fontSize: baseSize, color: dateColor, marginLeft: 8 }}>{dateStr}</Text> : null}
       </View>
-      {dateStr ? <Text style={{ fontSize: baseSize, color: dateColor, marginLeft: 8 }}>{dateStr}</Text> : null}
+      {subLocLine}
     </View>
   );
 }

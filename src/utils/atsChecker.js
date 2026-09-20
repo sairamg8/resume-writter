@@ -1,7 +1,68 @@
+import { decodeEntities } from './richText.js';
+
 /**
- * ATS (Applicant Tracking System) Score Checker & Resume Optimizer Engine
- * Validates resumes against parsing rules used by Workday, Taleo, Greenhouse, Lever, iCIMS, and BambooHR.
+ * Extracts bullet points from a resume item.
+ * Supports both legacy/explicit `item.bullets` array and `item.description`
+ * rich text (HTML lists <li>, bullet characters • / -, or multi-line achievements).
  */
+export function extractBulletsFromItem(item) {
+  if (!item || typeof item !== 'object') return [];
+  const bullets = [];
+
+  // 1. Direct bullets array (if populated)
+  if (Array.isArray(item.bullets)) {
+    for (const b of item.bullets) {
+      const clean = String(b || '').replace(/<[^>]+>/g, '').trim();
+      if (clean) bullets.push(clean);
+    }
+  }
+
+  // 2. Rich text / HTML / plain-text description
+  if (item.description && typeof item.description === 'string') {
+    const desc = item.description;
+
+    // Check for <li> tags
+    const liMatches = [...desc.matchAll(/<li[^>]*>([\s\S]*?)<\/li>/gi)];
+    if (liMatches.length > 0) {
+      for (const m of liMatches) {
+        const clean = decodeEntities(m[1].replace(/<[^>]+>/g, '')).trim();
+        if (clean && !bullets.includes(clean)) {
+          bullets.push(clean);
+        }
+      }
+    } else {
+      // Look for bullet characters or line breaks (<br>, </p>, </div>, \n)
+      const textWithNewlines = desc
+        .replace(/<br\s*\/?>/gi, '\n')
+        .replace(/<\/(p|div|h[1-6]|tr|blockquote)>/gi, '\n')
+        .replace(/<[^>]+>/g, '');
+      const decoded = decodeEntities(textWithNewlines);
+      const lines = decoded
+        .split(/[\r\n]+/)
+        .map(l => l.trim())
+        .filter(Boolean);
+
+      const hasBulletMarkers = lines.some(l => /^[\s•\-*–—◦▪▸‣⁃]/.test(l) || /^\d+[.)]\s/.test(l));
+
+      if (hasBulletMarkers) {
+        for (const line of lines) {
+          const stripped = line.replace(/^[\s•\-*–—◦▪▸‣⁃]+/, '').replace(/^\d+[.)]\s*/, '').trim();
+          if (stripped && !bullets.includes(stripped)) {
+            bullets.push(stripped);
+          }
+        }
+      } else if (lines.length > 1) {
+        for (const line of lines) {
+          if (line && !bullets.includes(line)) {
+            bullets.push(line);
+          }
+        }
+      }
+    }
+  }
+
+  return bullets;
+}
 
 // ── 1. High-Impact Action Verbs Dictionary (150+ categorized power verbs) ──
 export const ACTION_VERBS = new Set([
@@ -286,9 +347,15 @@ export function matchResumeWithJob(resume, jobDescriptionText) {
 export function standardizeSectionsForAts(sections) {
   if (!Array.isArray(sections)) return sections;
   return sections.map((s) => {
-    if (!s || !s.type || !ATS_STANDARD_SECTIONS[s.type]) return s;
-    const std = ATS_STANDARD_SECTIONS[s.type].canonical;
-    return { ...s, title: std };
+    if (!s || !s.type) return s;
+    const spec = ATS_STANDARD_SECTIONS[s.type];
+    const std = spec ? spec.canonical : s.title;
+    const updated = { ...s, title: std };
+    if (s.type === 'experience') {
+      updated.titleOrder = 'role';
+      updated.settings = { ...s.settings, titleOrder: 'role' };
+    }
+    return updated;
   });
 }
 
@@ -359,11 +426,14 @@ export function generateAtsPlainText(resume) {
 
         if (titleLine) lines.push(titleLine);
         if (dateLoc) lines.push(dateLoc);
-        if (item.description) lines.push(item.description);
-        if (Array.isArray(item.bullets)) {
-          for (const b of item.bullets) {
-            if (b && b.trim()) lines.push(`* ${b.trim()}`);
+        const itemBullets = extractBulletsFromItem(item);
+        if (itemBullets.length > 0) {
+          for (const b of itemBullets) {
+            lines.push(`* ${b}`);
           }
+        } else if (item.description) {
+          const plain = decodeEntities(item.description.replace(/<[^>]+>/g, '')).trim();
+          if (plain) lines.push(plain);
         }
         lines.push('');
       } else if (s.type === 'education') {
@@ -376,11 +446,14 @@ export function generateAtsPlainText(resume) {
 
         if (degInst) lines.push(degInst);
         if (dateLoc) lines.push(dateLoc);
-        if (item.description) lines.push(item.description);
-        if (Array.isArray(item.bullets)) {
-          for (const b of item.bullets) {
-            if (b && b.trim()) lines.push(`* ${b.trim()}`);
+        const itemBullets = extractBulletsFromItem(item);
+        if (itemBullets.length > 0) {
+          for (const b of itemBullets) {
+            lines.push(`* ${b}`);
           }
+        } else if (item.description) {
+          const plain = decodeEntities(item.description.replace(/<[^>]+>/g, '')).trim();
+          if (plain) lines.push(plain);
         }
         lines.push('');
       } else if (s.type === 'skills') {
@@ -393,11 +466,14 @@ export function generateAtsPlainText(resume) {
         const projHeader = [item.name, item.technologies ? `(${item.technologies})` : ''].filter(Boolean).join(' ');
         if (projHeader) lines.push(projHeader);
         if (item.url) lines.push(`Link: ${item.url}`);
-        if (item.description) lines.push(item.description);
-        if (Array.isArray(item.bullets)) {
-          for (const b of item.bullets) {
-            if (b && b.trim()) lines.push(`* ${b.trim()}`);
+        const itemBullets = extractBulletsFromItem(item);
+        if (itemBullets.length > 0) {
+          for (const b of itemBullets) {
+            lines.push(`* ${b}`);
           }
+        } else if (item.description) {
+          const plain = decodeEntities(item.description.replace(/<[^>]+>/g, '')).trim();
+          if (plain) lines.push(plain);
         }
         lines.push('');
       } else if (s.type === 'certifications') {
@@ -447,6 +523,7 @@ export function analyzeAtsScore(resume, jobDescriptionText = '') {
   const p = resume.personal || {};
   const sections = Array.isArray(resume.sections) ? resume.sections : [];
   const settings = resume.settings || {};
+  const currentTemplate = resume.template || 'classic';
 
   // ── 1. Contact Information Analysis (20 pts) ──────────────────────
   let contactPts = 0;
@@ -689,8 +766,30 @@ export function analyzeAtsScore(resume, jobDescriptionText = '') {
       });
     }
 
-    // 3. Bullet points & Action Verbs analysis (9 pts)
-    const allBullets = allExpItems.flatMap(i => (Array.isArray(i.bullets) ? i.bullets : []))
+    // 3. Title Order check (Job Title leads Role / Co. for 100% ATS indexing) (3 pts)
+    const hasCompanyLeading = expSections.some(s => {
+      const explicit = s.settings?.titleOrder || s.titleOrder;
+      const effectiveOrder = explicit || (['executive', 'sidebar'].includes(currentTemplate) ? 'role' : 'company');
+      return effectiveOrder === 'company';
+    });
+
+    if (!hasCompanyLeading) {
+      expPts += 3;
+      results.categories.experience.items.push({
+        id: 'exp_title_order', status: 'pass', text: 'Job Title leads Experience entries (Role / Co.)',
+        detail: 'Leading with Job Title ensures Workday, Taleo, and Greenhouse parse your seniority and title accurately.',
+      });
+    } else {
+      results.categories.experience.items.push({
+        id: 'exp_title_order', status: 'warn', text: 'Company Name leads Experience entries instead of Job Title',
+        detail: 'Workday and Taleo parse the primary bold heading as the job title. Leading with Company causes parsers to mistake the company name for your job title.',
+        fixable: true,
+        action: 'set_title_order_role',
+      });
+    }
+
+    // 4. Bullet points & Action Verbs analysis (12 pts)
+    const allBullets = allExpItems.flatMap(i => extractBulletsFromItem(i))
       .map(b => String(b || '').trim())
       .filter(Boolean);
 
@@ -891,7 +990,6 @@ export function analyzeAtsScore(resume, jobDescriptionText = '') {
 
   // ── 6. ATS Layout & Parser Safety (10 pts) ────────────────────────
   let layoutPts = 0;
-  const currentTemplate = resume.template || 'classic';
 
   // Template check (5 pts)
   if (currentTemplate === 'classic' || currentTemplate === 'minimal' || currentTemplate === 'executive') {

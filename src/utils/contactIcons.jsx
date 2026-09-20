@@ -25,22 +25,25 @@ export const ICON_SET_OPTIONS = [
  */
 export function ContactIcon({ field, settings, size = 11, strokeWidth, className = '', style }) {
   const custom = getCustomContactIcon(field, settings);
-  const printable = usePrintableImage(custom, { kind: 'icon' });
-  const src = isDrawableImage(printable) ? printable : (isDrawableImage(custom) ? custom : null);
-  if (src) {
-    return (
-      <img
-        src={src}
-        alt=""
-        width={size}
-        height={size}
-        className={className}
-        style={{ width: size, height: size, objectFit: 'contain', flexShrink: 0, ...style }}
-        draggable={false}
-      />
-    );
+  const isImage = typeof custom === 'string' && (custom.startsWith('data:image/') || custom.startsWith('http://') || custom.startsWith('https://'));
+  if (isImage) {
+    const printable = usePrintableImage(custom, { kind: 'icon' });
+    const src = isDrawableImage(printable) ? printable : (isDrawableImage(custom) ? custom : null);
+    if (src) {
+      return (
+        <img
+          src={src}
+          alt=""
+          width={size}
+          height={size}
+          className={className}
+          style={{ width: size, height: size, objectFit: 'contain', flexShrink: 0, ...style }}
+          draggable={false}
+        />
+      );
+    }
   }
-  const shapes = iconShapes(getIconSetId(settings), field, { color: 'currentColor', strokeWidth });
+  const shapes = iconShapes(getIconSetId(settings), field, { color: 'currentColor', strokeWidth, custom });
   if (!shapes) return null;
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" className={className} style={style} aria-hidden>
