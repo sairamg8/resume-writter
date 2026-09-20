@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, Plus, Download, Upload, LayoutGrid, List,
-  Briefcase, Search, X, Eraser,
+  Briefcase, Search, X, Eraser, FileSpreadsheet,
 } from 'lucide-react';
 import { useJobStore } from '@/hooks/useJobStore';
 import { JOB_STATUSES } from '@/constants/jobs';
@@ -12,6 +12,7 @@ import { CareerHistoryPanel } from '@/components/CareerHistoryPanel';
 import { RecoveryNotice } from '@/components/RecoveryNotice';
 import { JobsNotSavedAlert } from '@/components/job/JobsNotSavedAlert';
 import { downloadBlob } from '@/utils/download';
+import { jobsToCsv } from '@/utils/jobCsv';
 
 export function JobTracker({ store }) {
   const navigate = useNavigate();
@@ -27,6 +28,11 @@ export function JobTracker({ store }) {
 
   function handleExport() {
     downloadBlob(new Blob([JSON.stringify(jobs, null, 2)], { type: 'application/json' }), 'job_applications.json');
+  }
+
+  function handleExportCsv() {
+    const csv = jobsToCsv(jobs);
+    downloadBlob(new Blob([csv], { type: 'text/csv;charset=utf-8;' }), 'job_applications.csv');
   }
 
   function handleImport(e) {
@@ -135,8 +141,16 @@ export function JobTracker({ store }) {
             <button
               onClick={handleExport}
               className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+              title="Export as JSON backup"
             >
-              <Download size={13} /> Export
+              <Download size={13} /> Export JSON
+            </button>
+            <button
+              onClick={handleExportCsv}
+              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 transition-colors"
+              title="Export as spreadsheet CSV for Excel or Google Sheets"
+            >
+              <FileSpreadsheet size={13} className="text-emerald-600" /> Export CSV
             </button>
             <input ref={importRef} type="file" accept=".json" className="hidden" onChange={handleImport} />
             <button

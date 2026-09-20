@@ -50,6 +50,7 @@ export function EditorHeader({ resume, rename, layoutMode, setLayoutMode, export
           onExportJSON={exportMenu.handleExportJSON}
           onExportMarkdown={exportMenu.handleExportMarkdown}
           onExportAtsText={exportMenu.handleExportAtsText}
+          onExportJsonResume={exportMenu.handleExportJsonResume}
           onImportJSON={exportMenu.handleImportJSON}
           onImportError={exportMenu.setExportError}
         />
@@ -104,7 +105,7 @@ export function EditorModeBar({ activeTab, setActiveTab }) {
         </button>
       </div>
       <button
-        onClick={() => setActiveTab(prev => (typeof prev === 'function' ? prev : () => (prev === 'design' ? 'resume' : 'design')))}
+        onClick={() => setActiveTab(prev => (prev === 'design' ? 'resume' : 'design'))}
         title="Design & Customize"
         className={`p-2 sm:p-2.5 rounded-xl border transition-all shrink-0 ${activeTab === 'design' ? 'bg-amber-50 border-amber-300 text-amber-600 shadow-sm' : 'border-gray-200 bg-white text-gray-400 hover:text-gray-700 hover:border-gray-300 hover:bg-gray-50'}`}
       >

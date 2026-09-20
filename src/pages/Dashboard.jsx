@@ -10,6 +10,7 @@ import StarterTemplateModal from '@/components/StarterTemplateModal';
 import { notSavedMessage } from '@/utils/storageBackup';
 import { comesStraightBack, isDemoAccount, isOriginal } from '@/utils/demoSeed';
 import { DEMO_ACCOUNTS } from '@/utils/demoAccounts';
+import { isJsonResume, jsonResumeToCpwtResume } from '@/utils/jsonResume';
 
 const IMPORT_BUTTON = 'flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 bg-white border border-gray-200 text-gray-700 rounded-lg text-xs sm:text-sm font-semibold hover:bg-gray-50 transition-colors shadow-sm whitespace-nowrap';
 
@@ -59,16 +60,21 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false }) {
     reader.onload = ev => {
       try {
         const parsed = JSON.parse(ev.target.result);
-        if (parsed.personal && Array.isArray(parsed.sections)) {
+        if (parsed?.personal && Array.isArray(parsed?.sections)) {
           const id = store.importResume(parsed, { keep: keeps && importAsOriginal.current });
           setImportError(null);
           navigate(`/resume/${id}`);
+        } else if (isJsonResume(parsed)) {
+          const converted = jsonResumeToCpwtResume(parsed);
+          const id = store.importResume(converted, { keep: keeps && importAsOriginal.current });
+          setImportError(null);
+          navigate(`/resume/${id}`);
         } else {
-          setImportError('Invalid resume file — missing required fields.');
+          setImportError('Invalid resume file — must be a CPWT-CV backup or standard JSON Resume (.json).');
           setTimeout(() => setImportError(null), 4000);
         }
       } catch {
-        setImportError('Could not parse file. Make sure it\'s a valid CPWT-CV JSON.');
+        setImportError('Could not parse file. Make sure it\'s a valid CPWT-CV or standard JSON Resume (.json).');
         setTimeout(() => setImportError(null), 4000);
       }
     };

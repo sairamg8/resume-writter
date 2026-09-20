@@ -9,6 +9,7 @@ import {
   generateAtsPlainText
 } from '@/utils/atsChecker';
 import { downloadBlob } from '@/utils/download';
+import { newId } from '@/utils/ids';
 
 export default function AtsCheckerPanel({ resume, store }) {
   const [jobDescription, setJobDescription] = useState('');
@@ -68,7 +69,7 @@ export default function AtsCheckerPanel({ resume, store }) {
         const existing = firstItem.skills ? `${firstItem.skills}, ${keyword}` : keyword;
         store.updateItem(skillSec.id, firstItem.id, i => ({ ...i, skills: existing }));
       } else {
-        store.addItem(skillSec.id, { id: `sk_${Date.now()}`, category: 'Core Skills', skills: keyword });
+        store.addItem(skillSec.id, { id: newId('skill'), category: 'Core Skills', skills: keyword });
       }
     } else {
       store.addSection('skills');

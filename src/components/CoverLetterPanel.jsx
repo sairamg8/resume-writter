@@ -1,5 +1,5 @@
-import { useRef } from 'react';
-import { Mail, Phone, MapPin, Globe, Link2, Code, Eye, EyeOff, Camera, Palette } from 'lucide-react';
+import { useRef, useState } from 'react';
+import { Mail, Phone, MapPin, Globe, Link2, Code, Eye, EyeOff, Camera, Palette, Sparkles } from 'lucide-react';
 import RichTextEditor from '@/components/RichTextEditor';
 import { Chip, Field, SectionBlock } from '@/components/CoverLetterPanelShared';
 import { letterContactFormat, letterFieldsPosition, letterHiddenFields, todayLetterDate } from '@/utils/coverLetter';
@@ -7,11 +7,13 @@ import { letterheadCentered, templateLabel } from '@/constants/templates';
 import { readImageFile } from '@/utils/imageUpload';
 import { CONTACT_FIELDS } from '@/utils/contacts';
 import { useLetterPhoto } from '@/hooks/usePrintableImage';
+import CoverLetterGeneratorModal from '@/components/CoverLetterGeneratorModal';
 
 /** This panel's lucide icon per field — the names and their order come from CONTACT_FIELDS. */
 const ICONS = { email: Mail, phone: Phone, location: MapPin, website: Globe, linkedin: Link2, github: Code };
 
-export default function CoverLetterPanel({ coverLetter, personal, settings, template, updateCoverLetter }) {
+export default function CoverLetterPanel({ resume, coverLetter, personal, settings, template, updateCoverLetter }) {
+  const [generatorOpen, setGeneratorOpen] = useState(false);
   const cl = coverLetter || {};
   const contacts = letterContactFormat(cl, settings); // what the letter prints until a chip sets its own
   const photoInputRef = useRef(null);
@@ -49,8 +51,29 @@ export default function CoverLetterPanel({ coverLetter, personal, settings, temp
   const { hasPhoto, note: photoNote } = useLetterPhoto(cl, personal);
   const photoShown = cl.showPhoto !== false;
 
+  function handleApplyGenerated(gen) {
+    if (!gen) return;
+    if (gen.recipientName) updateCoverLetter('recipientName', gen.recipientName);
+    if (gen.recipientTitle) updateCoverLetter('recipientTitle', gen.recipientTitle);
+    if (gen.company) updateCoverLetter('company', gen.company);
+    if (gen.subject) updateCoverLetter('subject', gen.subject);
+    if (gen.body) updateCoverLetter('body', gen.body);
+    if (gen.closing) updateCoverLetter('closing', gen.closing);
+    if (gen.signatureName) updateCoverLetter('signatureName', gen.signatureName);
+    if (gen.signatureDesignation) updateCoverLetter('signatureDesignation', gen.signatureDesignation);
+  }
+
+  const effectiveResume = resume || { personal, settings, template, coverLetter: cl };
+
   return (
     <div className="space-y-4 py-2">
+
+      <CoverLetterGeneratorModal
+        isOpen={generatorOpen}
+        onClose={() => setGeneratorOpen(false)}
+        resume={effectiveResume}
+        onApply={handleApplyGenerated}
+      />
 
       <p className="flex items-start gap-1.5 text-[11px] text-gray-500 leading-snug">
         <Palette size={12} className="mt-0.5 shrink-0 text-gray-400" aria-hidden="true" />
@@ -245,7 +268,17 @@ export default function CoverLetterPanel({ coverLetter, personal, settings, temp
 
       {/* ── Letter Body ───────────────────────────────────────────────────── */}
       <div>
-        <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-3">Letter Body</p>
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">Letter Body</p>
+          <button
+            type="button"
+            onClick={() => setGeneratorOpen(true)}
+            className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition-colors shadow-xs"
+          >
+            <Sparkles size={13} className="text-blue-600" />
+            <span>Auto-Generate from Resume</span>
+          </button>
+        </div>
         <RichTextEditor
           label="Body"
           value={cl.body || ''}

@@ -1,13 +1,14 @@
 import { useRef, useState, useEffect } from 'react';
-import { Download, FileText, Upload, ChevronDown, Pin, FileCode } from 'lucide-react';
+import { Download, FileText, Upload, ChevronDown, Pin, FileCode, FileJson } from 'lucide-react';
 import { ORIGINALS_HINT } from '@/components/ImportMenu';
+import { isJsonResume, jsonResumeToCpwtResume } from '@/utils/jsonResume';
 
 /**
  * The editor's Export menu, with Import JSON: `onImportJSON(data, asOriginal)`. `keeps` — a demo
  * account, whose originals come back (useDemoSeed) — adds "Import as my original", as the
  * dashboard's Import menu has (V2OWNER-DATA-3).
  */
-export function ExportDropdown({ exporting, keeps = false, onExportPDF, onExportWord, onExportJSON, onExportMarkdown, onExportAtsText, onImportJSON, onImportError }) {
+export function ExportDropdown({ exporting, keeps = false, onExportPDF, onExportWord, onExportJSON, onExportMarkdown, onExportAtsText, onExportJsonResume, onImportJSON, onImportError }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   const importRef = useRef(null);
@@ -67,10 +68,16 @@ export function ExportDropdown({ exporting, keeps = false, onExportPDF, onExport
             <FileText size={12} className="text-purple-500" /> Export ATS Text (.txt)
           </button>
           <button
+            onClick={() => { onExportJsonResume?.(); setOpen(false); }}
+            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-cyan-50 hover:text-cyan-800"
+          >
+            <FileJson size={12} className="text-cyan-600" /> Export JSON Resume (.json)
+          </button>
+          <button
             onClick={() => { onExportJSON(); setOpen(false); }}
             className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-gray-50"
           >
-            <Download size={12} className="text-gray-400" /> Export JSON
+            <Download size={12} className="text-gray-400" /> Export Backup JSON
           </button>
           <div className="my-1 border-t border-gray-100" />
           <button
@@ -102,11 +109,16 @@ export function ExportDropdown({ exporting, keeps = false, onExportPDF, onExport
           reader.onload = ev => {
             let parsed;
             try { parsed = JSON.parse(ev.target.result); } catch {
-              onImportError?.("Could not parse file. Make sure it's a valid CPWT-CV JSON.");
+              onImportError?.("Could not parse file. Make sure it's a valid CPWT-CV or standard JSON Resume (.json).");
               return;
             }
-            if (parsed?.personal && Array.isArray(parsed.sections)) onImportJSON(parsed, asOriginal.current);
-            else onImportError?.('Invalid resume file — missing required fields.');
+            if (parsed?.personal && Array.isArray(parsed.sections)) {
+              onImportJSON(parsed, asOriginal.current);
+            } else if (isJsonResume(parsed)) {
+              onImportJSON(jsonResumeToCpwtResume(parsed), asOriginal.current);
+            } else {
+              onImportError?.('Invalid resume file — must be a CPWT-CV backup or standard JSON Resume (.json).');
+            }
           };
           reader.readAsText(file);
           e.target.value = '';

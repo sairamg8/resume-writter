@@ -4,6 +4,7 @@ import { isDemoAccount } from '@/utils/demoSeed';
 import { DEMO_ACCOUNTS } from '@/utils/demoAccounts';
 import { generateAtsPlainText } from '@/utils/atsChecker';
 import { generateMarkdownResume } from '@/utils/markdownExport';
+import { isJsonResume, jsonResumeToCpwtResume, cpwtResumeToJsonResume } from '@/utils/jsonResume';
 
 function buildExportFilename(authUser, resume) {
   const name = (authUser?.displayName || resume?.personal?.name || 'resume').replace(/\s+/g, '_');
@@ -76,15 +77,22 @@ export function useEditorExports({ resume, activeTab, authUser, importResume, na
     downloadBlob(new Blob([text], { type: 'text/plain;charset=utf-8' }), `${filename}_ATS.txt`);
   }
 
+  function handleExportJsonResume() {
+    const filename = buildExportFilename(authUser, resume);
+    const schemaObj = cpwtResumeToJsonResume(resume);
+    downloadBlob(new Blob([JSON.stringify(schemaObj, null, 2)], { type: 'application/json' }), `${filename}_resume.json`);
+  }
+
   /** A file as a new résumé — `asOriginal`: marked the account's original, in a demo account only. */
   function handleImportJSON(data, asOriginal = false) {
     setExportError(null);
-    const newId = importResume(data, { keep: keeps && asOriginal });
+    const resumeData = isJsonResume(data) ? jsonResumeToCpwtResume(data) : data;
+    const newId = importResume(resumeData, { keep: keeps && asOriginal });
     navigate(`/resume/${newId}`);
   }
 
   return {
     exporting, exportError, setExportError, keeps,
-    handleExportPDF, handleExportWord, handleExportJSON, handleExportMarkdown, handleExportAtsText, handleImportJSON,
+    handleExportPDF, handleExportWord, handleExportJSON, handleExportMarkdown, handleExportAtsText, handleExportJsonResume, handleImportJSON,
   };
 }
