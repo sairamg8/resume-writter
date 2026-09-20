@@ -1,17 +1,16 @@
 # FlowCV Bug Tracker & Status Index
 
 > Location: `/mnt/Storage/Projects/flowcv/bug-status.md`
-> Total prompt tasks: 33 | **Closed: 31** | **Open: 2**
+> Total prompt tasks: 33 | **Closed: 32** | **Open: 1**
 
 ## Summary
 
 - **Total Tracked Bugs in prompts:** 33
-- **Closed / Fixed:** 31 (latest: `ONB-7` landed in `236626d` and owner resume persistence in `cdea2fe`)
-- **Remaining Open:** 2
+- **Closed / Fixed:** 32 (latest: `ONB-10-NB1` landed in `951e600`)
+- **Remaining Open:** 1
 
 ### Remaining Open Bugs (Next in Queue)
 
-- [ ] **`ONB-10-NB1`** (Storage / uploads / UI / major) — Upload limits allow a résumé over Firestore's 1 MiB document: two photos plus one large contact icon exceed it, and the résumé is held back from sync for good (`prompts/14-ONB-10-NB1.md`)
 - [ ] **`ONB-11`** (Storage / uploads / UI / minor) — A contact icon uploaded before c7b1aa6 (WebP/GIF) is silently replaced by the icon pack's shape (`prompts/15-ONB-11.md`)
 
 ---
@@ -33,7 +32,7 @@
 | 11 | `ONB-9-NB1` | PDF / layout | minor (cosmetic) | ✅ Closed | `e9661ab` | tests/unit/page-size.unit.mjs | The preview's placeholder and 100% width assume A4 for a US Letter résumé |
 | 12 | `ONB-6` | Storage / uploads / UI | minor | ✅ Closed | `cd19247` | tests/unit/storage-backup.unit.mjs | The not-saved alert says 'browser storage is full' for any failed write |
 | 13 | `ONB-4-NB1` | Storage / uploads / UI | minor | ✅ Closed | `7b831b8` | tests/unit/storage-recovery-durability.unit.mjs, tests/unit/storage-backup.unit.mjs | A repair's notice is not kept when storage has room for the backup but not the notice: after a reload the copy is kept but named nowhere |
-| 14 | `ONB-10-NB1` | Storage / uploads / UI | major | ⏳ **OPEN** | `—` | — | Upload limits allow a résumé over Firestore's 1 MiB document: two photos plus one large contact icon exceed it, and the résumé is held back from sync for good |
+| 14 | `ONB-10-NB1` | Storage / uploads / UI | major | ✅ Closed | `951e600` | tests/unit/image-upload.unit.mjs, tests/pdf/18-cloud-sync-held.test.mjs | Upload limits allow a résumé over Firestore's 1 MiB document: two photos plus one large contact icon exceed it, and the résumé is held back from sync for good |
 | 15 | `ONB-11` | Storage / uploads / UI | minor | ⏳ **OPEN** | `—` | — | A contact icon uploaded before c7b1aa6 (WebP/GIF) is silently replaced by the icon pack's shape |
 | 16 | `ONB-8` | Storage / uploads / UI | minor | ✅ Closed | `ba46f48` | tests/unit/templates.unit.mjs | Design → Contact icons says 'You can still upload a custom image per field under Personal Info → Fields' where Personal Info offers no upload |
 | 17 | `FIDB-51-VF7-NB1` | Storage / uploads / UI | minor | ✅ Closed | `61ffed7` | tests/unit/templates.unit.mjs | Header Customization's banner hint hard-codes 'Classic, Minimal and Executive' and builds the template label by hand instead of from TEMPLATES |
