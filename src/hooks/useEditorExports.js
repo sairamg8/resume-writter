@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { downloadBlob } from '@/utils/download';
 import { isDemoAccount } from '@/utils/demoSeed';
 import { DEMO_ACCOUNTS } from '@/utils/demoAccounts';
+import { generateAtsPlainText } from '@/utils/atsChecker';
 
 function buildExportFilename(authUser, resume) {
   const name = (authUser?.displayName || resume?.personal?.name || 'resume').replace(/\s+/g, '_');
@@ -62,6 +63,12 @@ export function useEditorExports({ resume, activeTab, authUser, importResume, na
     downloadBlob(new Blob([JSON.stringify(resume, null, 2)], { type: 'application/json' }), `${filename}.json`);
   }
 
+  function handleExportAtsText() {
+    const filename = buildExportFilename(authUser, resume);
+    const text = generateAtsPlainText(resume);
+    downloadBlob(new Blob([text], { type: 'text/plain;charset=utf-8' }), `${filename}_ATS.txt`);
+  }
+
   /** A file as a new résumé — `asOriginal`: marked the account's original, in a demo account only. */
   function handleImportJSON(data, asOriginal = false) {
     setExportError(null);
@@ -71,6 +78,6 @@ export function useEditorExports({ resume, activeTab, authUser, importResume, na
 
   return {
     exporting, exportError, setExportError, keeps,
-    handleExportPDF, handleExportWord, handleExportJSON, handleImportJSON,
+    handleExportPDF, handleExportWord, handleExportJSON, handleExportAtsText, handleImportJSON,
   };
 }

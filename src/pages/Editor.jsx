@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 
 import DesignPanel from '@/components/DesignPanel';
 import CoverLetterPanel from '@/components/CoverLetterPanel';
+import AtsCheckerPanel from '@/components/AtsCheckerPanel';
 import { EditorHeader, EditorAlerts, EditorModeBar } from '@/components/EditorHeader';
 import { EditorResumeTab } from '@/components/EditorResumeTab';
 import { EditorTabContent } from '@/components/EditorTabContent';
@@ -114,6 +115,12 @@ export function Editor({ store, auth, sync }) {
           {activeTab === 'coverletter' && (
             <div className="px-4 py-4">
               <CoverLetterPanel coverLetter={resume.coverLetter} personal={resume.personal} settings={resume.settings} template={resume.template} updateCoverLetter={store.updateCoverLetter} />
+            </div>
+          )}
+
+          {activeTab === 'ats' && (
+            <div className="px-4 py-4">
+              <AtsCheckerPanel resume={resume} store={store} />
             </div>
           )}
         </EditorTabContent>

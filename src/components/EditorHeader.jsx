@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { User, ArrowLeft, Mail as MailIcon, Palette } from 'lucide-react';
+import { User, ArrowLeft, Mail as MailIcon, Palette, ShieldCheck } from 'lucide-react';
 import AuthBar from '@/components/AuthBar';
 import { LayoutToggle } from '@/components/LayoutToggle';
 import { ExportDropdown } from '@/components/ExportDropdown';
@@ -48,6 +48,7 @@ export function EditorHeader({ resume, rename, layoutMode, setLayoutMode, export
           onExportPDF={exportMenu.handleExportPDF}
           onExportWord={exportMenu.handleExportWord}
           onExportJSON={exportMenu.handleExportJSON}
+          onExportAtsText={exportMenu.handleExportAtsText}
           onImportJSON={exportMenu.handleImportJSON}
           onImportError={exportMenu.setExportError}
         />
@@ -77,22 +78,28 @@ export function EditorAlerts({ exportError, onDismiss, persistError }) {
   );
 }
 
-/** Résumé | Cover Letter, and the Design button (a toggle back to the résumé). */
+/** Résumé | Cover Letter | ATS Check, and the Design button (a toggle back to the résumé). */
 export function EditorModeBar({ activeTab, setActiveTab }) {
   return (
     <div className="flex items-center gap-2 px-3 py-3 border-b border-gray-200 bg-gray-50/60">
       <div className="flex gap-1 flex-1 bg-white border border-gray-200 rounded-xl p-1">
         <button
           onClick={() => setActiveTab('resume')}
-          className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-sm font-semibold transition-all ${activeTab === 'resume' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+          className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-semibold transition-all ${activeTab === 'resume' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
         >
-          <User size={14} /> Resume
+          <User size={13} /> Resume
         </button>
         <button
           onClick={() => setActiveTab('coverletter')}
-          className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-sm font-semibold transition-all ${activeTab === 'coverletter' ? 'bg-violet-600 text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+          className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-semibold transition-all ${activeTab === 'coverletter' ? 'bg-violet-600 text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
         >
-          <MailIcon size={14} /> Cover Letter
+          <MailIcon size={13} /> Cover Letter
+        </button>
+        <button
+          onClick={() => setActiveTab('ats')}
+          className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-semibold transition-all ${activeTab === 'ats' ? 'bg-emerald-600 text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+        >
+          <ShieldCheck size={13} /> ATS Check
         </button>
       </div>
       <button
