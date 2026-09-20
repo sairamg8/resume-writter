@@ -1,17 +1,17 @@
 # FlowCV Bug Tracker & Status Index
 
 > Location: `/mnt/Storage/Projects/flowcv/bug-status.md`
-> Total prompt tasks: 33 | **Closed: 32** | **Open: 1**
+> Total prompt tasks: 33 | **Closed: 33** | **Open: 0**
 
 ## Summary
 
 - **Total Tracked Bugs in prompts:** 33
-- **Closed / Fixed:** 32 (latest: `ONB-10-NB1` landed in `951e600`)
-- **Remaining Open:** 1
+- **Closed / Fixed:** 33 (latest: `ONB-11` landed in `8a5d782`)
+- **Remaining Open:** 0
 
 ### Remaining Open Bugs (Next in Queue)
 
-- [ ] **`ONB-11`** (Storage / uploads / UI / minor) — A contact icon uploaded before c7b1aa6 (WebP/GIF) is silently replaced by the icon pack's shape (`prompts/15-ONB-11.md`)
+*None — all 33 tracked bug tasks are fixed and closed!*
 
 ---
 
@@ -33,7 +33,7 @@
 | 12 | `ONB-6` | Storage / uploads / UI | minor | ✅ Closed | `cd19247` | tests/unit/storage-backup.unit.mjs | The not-saved alert says 'browser storage is full' for any failed write |
 | 13 | `ONB-4-NB1` | Storage / uploads / UI | minor | ✅ Closed | `7b831b8` | tests/unit/storage-recovery-durability.unit.mjs, tests/unit/storage-backup.unit.mjs | A repair's notice is not kept when storage has room for the backup but not the notice: after a reload the copy is kept but named nowhere |
 | 14 | `ONB-10-NB1` | Storage / uploads / UI | major | ✅ Closed | `951e600` | tests/unit/image-upload.unit.mjs, tests/pdf/18-cloud-sync-held.test.mjs | Upload limits allow a résumé over Firestore's 1 MiB document: two photos plus one large contact icon exceed it, and the résumé is held back from sync for good |
-| 15 | `ONB-11` | Storage / uploads / UI | minor | ⏳ **OPEN** | `—` | — | A contact icon uploaded before c7b1aa6 (WebP/GIF) is silently replaced by the icon pack's shape |
+| 15 | `ONB-11` | Storage / uploads / UI | minor | ✅ Closed | `8a5d782` | tests/pdf/39-contact-icons-webp.test.mjs | A contact icon uploaded before c7b1aa6 (WebP/GIF) is silently replaced by the icon pack's shape |
 | 16 | `ONB-8` | Storage / uploads / UI | minor | ✅ Closed | `ba46f48` | tests/unit/templates.unit.mjs | Design → Contact icons says 'You can still upload a custom image per field under Personal Info → Fields' where Personal Info offers no upload |
 | 17 | `FIDB-51-VF7-NB1` | Storage / uploads / UI | minor | ✅ Closed | `61ffed7` | tests/unit/templates.unit.mjs | Header Customization's banner hint hard-codes 'Classic, Minimal and Executive' and builds the template label by hand instead of from TEMPLATES |
 | 18 | `W1b-5.2-NB1` | Storage / uploads / UI | nit | ✅ Closed | `4a39390` | tests/unit/dead-code.unit.mjs | Dead code: src/templates/headingStyle.js (HeadingStyleContext) is imported nowhere |
