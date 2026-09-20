@@ -87,7 +87,7 @@ export async function renderCoverLetterPdf(resume, { preview = false } = {}) {
     withPrintablePhotos(resume),
   ]);
   const resolvedSettings = resolveTemplateSettings({
-    ...resume?.settings,
+    ...printable?.settings,
     _pdfFontFamily: fontFamily,
     _template: templateKey,
   }, templateKey);

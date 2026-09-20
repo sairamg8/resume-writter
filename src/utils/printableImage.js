@@ -11,8 +11,8 @@ import { drawableImage, readImageFile } from './imageUpload.js';
 const made = new Map();
 /** Copies being made, by saved data URL. */
 const making = new Map();
-/** Copies kept: the résumé's photo and the letter's, for the few résumés one session opens (and the store's, smallerPhotos.js). */
-const KEEP = 8;
+/** Copies kept: the résumé's photo and the letter's, and custom contact icons (and the store's, smallerPhotos.js). */
+const KEEP = 64;
 const listeners = new Set();
 
 /** The bytes data URL `src` holds, as a Blob of its image type; null when it names none, or holds none. */
@@ -38,11 +38,11 @@ function blobOf(src) {
 }
 
 /** A copy of data URL `src` the PDF can draw, made as an upload of it would be; null when there is none. */
-async function copyOf(src) {
+async function copyOf(src, { kind = 'photo' } = {}) {
   const blob = blobOf(src);
   if (!blob) return null;
   try {
-    return drawableImage(await readImageFile(blob, { kind: 'photo' }));
+    return drawableImage(await readImageFile(blob, { kind }));
   } catch {
     return null; // the browser cannot decode it (nor can Node, where the PDF tests render)
   }
@@ -54,16 +54,17 @@ async function copyOf(src) {
  * or null when it prints nothing (no image, or no copy could be made). Undefined while the copy of
  * a data URL react-pdf cannot draw has not been made yet (printableImage makes it).
  */
-export function printableNow(src) {
+export function printableNow(src, { kind = 'photo' } = {}) {
   if (drawableImage(src)) return src;
   if (typeof src !== 'string' || !src.startsWith('data:')) return null;
-  return made.has(src) ? made.get(src) : undefined;
+  const key = `${kind}:${src}`;
+  return made.has(key) ? made.get(key) : undefined;
 }
 
 /** What the PDF prints for the saved image `src` (see printableNow), making its copy the first time. */
-export function printableImage(src) {
-  const now = printableNow(src);
-  return now !== undefined ? Promise.resolve(now) : imageCopy(src);
+export function printableImage(src, { kind = 'photo' } = {}) {
+  const now = printableNow(src, { kind });
+  return now !== undefined ? Promise.resolve(now) : imageCopy(src, { kind });
 }
 
 /**
@@ -71,18 +72,19 @@ export function printableImage(src) {
  * once a session and shared by all who ask: the PDF's copy of a WebP (printableImage) and the
  * store's smaller photo in place of one saved at camera size (smallerPhotos.js).
  */
-export function imageCopy(src) {
-  if (made.has(src)) return Promise.resolve(made.get(src));
-  if (!making.has(src)) {
-    making.set(src, copyOf(src).then((copy) => {
-      made.set(src, copy);
+export function imageCopy(src, { kind = 'photo' } = {}) {
+  const key = `${kind}:${src}`;
+  if (made.has(key)) return Promise.resolve(made.get(key));
+  if (!making.has(key)) {
+    making.set(key, copyOf(src, { kind }).then((copy) => {
+      made.set(key, copy);
       if (made.size > KEEP) made.delete(made.keys().next().value);
-      making.delete(src);
+      making.delete(key);
       listeners.forEach((fn) => fn());
       return copy;
     }));
   }
-  return making.get(src);
+  return making.get(key);
 }
 
 /** Calls `fn` each time a copy has been made (or found impossible). Returns the unsubscribe function. */
@@ -92,19 +94,48 @@ export function onPrintableChange(fn) {
 }
 
 /**
- * `resume` as its PDF prints it: the photo and the letter's own photo each replaced by the copy
- * made of it (printableImage) when react-pdf cannot draw it. A photo no copy could be made of stays
- * as it is — PdfPhoto prints nothing for it, and the letter takes the résumé's photo instead. The
- * résumé itself is never changed; it comes back as it is when there is nothing to replace.
+ * `resume` as its PDF prints it: the photo, the letter's own photo, and any custom contact icons
+ * each replaced by the copy made of it (printableImage) when react-pdf cannot draw it. A photo or
+ * icon no copy could be made of stays as it is — PdfPhoto prints nothing for it, and PdfContactIcon
+ * falls back to the pack icon. The résumé itself is never changed; it comes back as it is when
+ * there is nothing to replace.
  */
 export async function withPrintablePhotos(resume) {
   const photo = resume?.personal?.photo;
   const own = resume?.coverLetter?.clPhoto;
-  const [photoCopy, ownCopy] = await Promise.all([photo, own].map(async (src) => (await printableImage(src)) || src));
-  if (photoCopy === photo && ownCopy === own) return resume;
+  const customIcons = resume?.settings?.customContactIcons;
+
+  const [photoCopy, ownCopy] = await Promise.all([
+    (photo && await printableImage(photo, { kind: 'photo' })) || photo,
+    (own && await printableImage(own, { kind: 'photo' })) || own,
+  ]);
+
+  let iconsCopy = customIcons;
+  if (customIcons && typeof customIcons === 'object') {
+    const entries = Object.entries(customIcons);
+    if (entries.length > 0) {
+      const converted = await Promise.all(
+        entries.map(async ([field, src]) => {
+          if (!src) return [field, src];
+          const copy = await printableImage(src, { kind: 'icon' });
+          return [field, copy || src];
+        })
+      );
+      let changed = false;
+      const next = {};
+      for (const [field, src] of converted) {
+        next[field] = src;
+        if (src !== customIcons[field]) changed = true;
+      }
+      if (changed) iconsCopy = next;
+    }
+  }
+
+  if (photoCopy === photo && ownCopy === own && iconsCopy === customIcons) return resume;
   return {
     ...resume,
     ...(photoCopy !== photo && { personal: { ...resume.personal, photo: photoCopy } }),
     ...(ownCopy !== own && { coverLetter: { ...resume.coverLetter, clPhoto: ownCopy } }),
+    ...(iconsCopy !== customIcons && { settings: { ...resume.settings, customContactIcons: iconsCopy } }),
   };
 }

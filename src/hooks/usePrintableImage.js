@@ -10,16 +10,17 @@ import { onPrintableChange, printableImage, printableNow } from '@/utils/printab
  * The same reader serves a server render (31-contact-fields renders the panels): it reads the copies
  * made so far, and no copy is started there — useEffect does that, in the browser.
  */
-export function usePrintableImage(src) {
-  const read = () => printableNow(src);
+export function usePrintableImage(src, { kind = 'photo' } = {}) {
+  const read = () => printableNow(src, { kind });
   const now = useSyncExternalStore(onPrintableChange, read, read);
   useEffect(() => {
-    if (now === undefined) printableImage(src);
-  }, [src, now]);
+    if (now === undefined) printableImage(src, { kind });
+  }, [src, now, kind]);
   return now;
 }
 
 const REUPLOAD = 'Upload it again as a PNG or JPEG.';
+export const UNPRINTABLE_ICON = "This icon can't be printed; upload a PNG or JPEG";
 
 /**
  * The letter's photo as the Cover Letter panel describes it: `hasPhoto` when the letter prints one

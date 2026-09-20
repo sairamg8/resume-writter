@@ -5,6 +5,7 @@ import { HeaderCustomization } from '@/components/PersonalInfoEditorHeader';
 import { PhotoSection } from '@/components/PersonalInfoEditorPhoto';
 import { ContactIcon } from '@/utils/contactIcons';
 import { readImageFile } from '@/utils/imageUpload';
+import { usePrintableImage, UNPRINTABLE_ICON } from '@/hooks/usePrintableImage';
 import { anyDrawsContactIcons, drawsContactIcons, templateLabel as getTemplateLabel } from '@/constants/templates';
 import { CONTACT_FIELDS } from '@/utils/contacts';
 
@@ -25,6 +26,50 @@ const FIELDS = [
   { key: 'title', label: 'Job Title', icon: FileText, placeholder: 'Software Engineer',   required: true },
   ...CONTACT_FIELDS.map(({ key, label, link }) => ({ key, label, ...CONTACT_INPUTS[key], hasUrl: !!link, contactIcon: true })),
 ];
+
+function CustomIconControl({ fieldKey, iconLabel, customIcon, s, onPickIconFile, setCustomIcon }) {
+  const printable = usePrintableImage(customIcon, { kind: 'icon' });
+  const unprintable = Boolean(customIcon) && printable === null;
+  return (
+    <div>
+      <div className="mt-1.5 flex items-center gap-2">
+        <span className="text-[10px] text-gray-400 shrink-0">{iconLabel}</span>
+        <div className="flex items-center gap-1.5 px-1.5 py-1 rounded border border-gray-200 bg-gray-50">
+          <ContactIcon field={fieldKey} settings={s} size={14} className="text-gray-600" />
+        </div>
+        <label className="inline-flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-gray-600 border border-gray-200 rounded-md hover:bg-gray-50 cursor-pointer">
+          <ImagePlus size={11} />
+          {customIcon ? 'Replace' : 'Upload'}
+          <input
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={e => {
+              const f = e.target.files?.[0];
+              if (f) onPickIconFile(fieldKey, f);
+              e.target.value = '';
+            }}
+          />
+        </label>
+        {customIcon && (
+          <button
+            type="button"
+            onClick={() => setCustomIcon(fieldKey, null)}
+            className="inline-flex items-center gap-0.5 px-1.5 py-1 text-[10px] text-red-500 hover:bg-red-50 rounded"
+            title="Remove custom icon"
+          >
+            <X size={11} /> Clear
+          </button>
+        )}
+      </div>
+      {unprintable && (
+        <p className="text-[11px] text-amber-700 mt-1" data-testid="icon-unprintable">
+          {UNPRINTABLE_ICON}
+        </p>
+      )}
+    </div>
+  );
+}
 
 export default function PersonalInfoEditor({ personal, updatePersonal, toggleFieldVisibility, settings, updateSetting, template, coverLetter }) {
   const hidden = new Set(personal.hiddenFields || []);
@@ -127,36 +172,14 @@ export default function PersonalInfoEditor({ personal, updatePersonal, toggleFie
                   </div>
                 )}
                 {showIconControls && (
-                  <div className="mt-1.5 flex items-center gap-2">
-                    <span className="text-[10px] text-gray-400 shrink-0">{iconLabel}</span>
-                    <div className="flex items-center gap-1.5 px-1.5 py-1 rounded border border-gray-200 bg-gray-50">
-                      <ContactIcon field={key} settings={s} size={14} className="text-gray-600" />
-                    </div>
-                    <label className="inline-flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-gray-600 border border-gray-200 rounded-md hover:bg-gray-50 cursor-pointer">
-                      <ImagePlus size={11} />
-                      {customIcon ? 'Replace' : 'Upload'}
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={e => {
-                          const f = e.target.files?.[0];
-                          if (f) onPickIconFile(key, f);
-                          e.target.value = '';
-                        }}
-                      />
-                    </label>
-                    {customIcon && (
-                      <button
-                        type="button"
-                        onClick={() => setCustomIcon(key, null)}
-                        className="inline-flex items-center gap-0.5 px-1.5 py-1 text-[10px] text-red-500 hover:bg-red-50 rounded"
-                        title="Remove custom icon"
-                      >
-                        <X size={11} /> Clear
-                      </button>
-                    )}
-                  </div>
+                  <CustomIconControl
+                    fieldKey={key}
+                    iconLabel={iconLabel}
+                    customIcon={customIcon}
+                    s={s}
+                    onPickIconFile={onPickIconFile}
+                    setCustomIcon={setCustomIcon}
+                  />
                 )}
               </div>
             );

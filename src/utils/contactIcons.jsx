@@ -6,6 +6,7 @@
  */
 import { getCustomContactIcon, getIconSetId, iconShapes } from '@/utils/contactIconPaths';
 import { isDrawableImage } from '@/utils/imageUpload';
+import { usePrintableImage } from '@/hooks/usePrintableImage';
 
 export { getCustomContactIcon, getIconSetId };
 
@@ -24,10 +25,12 @@ export const ICON_SET_OPTIONS = [
  */
 export function ContactIcon({ field, settings, size = 11, strokeWidth, className = '', style }) {
   const custom = getCustomContactIcon(field, settings);
-  if (isDrawableImage(custom)) {
+  const printable = usePrintableImage(custom, { kind: 'icon' });
+  const src = isDrawableImage(printable) ? printable : (isDrawableImage(custom) ? custom : null);
+  if (src) {
     return (
       <img
-        src={custom}
+        src={src}
         alt=""
         width={size}
         height={size}
