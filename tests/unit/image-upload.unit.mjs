@@ -4,7 +4,8 @@
 // Run: yarn test:unit
 import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { drawableImage, isDrawableImage, readImageFile, UNREADABLE_IMAGE } from '../../src/utils/imageUpload.js';
+import { drawableImage, isDrawableImage, readImageFile, UNREADABLE_IMAGE, RESUME_IMAGES_TOO_LARGE } from '../../src/utils/imageUpload.js';
+import { docSize, MAX_DOC_BYTES } from '../../src/utils/cloudSyncHeld.js';
 
 const PNG_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAEElEQVR4nGP4z8AARAwQCgAf7gP9i18U1AAAAABJRU5ErkJggg==';
 const JPEG_B64 = '/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgMCAgMDAwMEAwMEBQgFBQQEBQoHBwYIDAoMDAsKCwsNDhIQDQ4RDgsLEBYQERMUFRUVDA8XGBYUGBIUFRT/wAALCAACAAIBAREA/8QAFAABAAAAAAAAAAAAAAAAAAAAB//EABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEAAD8AGn//2Q==';
@@ -240,5 +241,51 @@ describe('readImageFile: every upload is scaled to what the PDF prints (R7-4)', 
       assert.equal(bytesOf(url), file.size, file.name);
     }
     assert.deepEqual(encoded, []);
+  });
+});
+
+describe('readImageFile: per-résumé image budget (ONB-10-NB1)', () => {
+  beforeEach(installBrowser);
+
+  test('a résumé with no images accepts a max photo unchanged (guard)', async () => {
+    const resume = { id: 'r1', personal: {}, settings: {}, sections: [] };
+    const file = jpegFile(800, 600, { bytes: 290_000 });
+    const url = await readImageFile(file, { kind: 'photo', resume });
+    assert.equal(bytesOf(url), 290_000);
+    assert.ok(docSize(['users', 'u', 'resumes', 'r1'], { ...resume, personal: { photo: url } }) <= MAX_DOC_BYTES);
+  });
+
+  test('a résumé already holding two max photos encodes a new icon under remaining budget', async () => {
+    const bigDataUrl = `data:image/jpeg;base64,${JPEG_B64.padEnd(350_000, 'A')}`;
+    const resume = {
+      id: 'r1',
+      personal: { photo: bigDataUrl },
+      coverLetter: { clPhoto: bigDataUrl },
+      settings: {},
+      sections: [],
+    };
+    const iconFile = pngFile(256, 256, { bytes: 350_000, detail: 1 });
+    const url = await readImageFile(iconFile, { kind: 'icon', resume });
+    const resultingDoc = {
+      ...resume,
+      settings: { customContactIcons: { email: url } },
+    };
+    const size = docSize(['users', 'u', 'resumes', 'r1'], resultingDoc);
+    assert.ok(size <= MAX_DOC_BYTES, `docSize ${size} must be <= ${MAX_DOC_BYTES}`);
+  });
+
+  test('refuses with clear message when remaining budget cannot fit even MIN_SIDE', async () => {
+    const hugeDataUrl = `data:image/jpeg;base64,${JPEG_B64.padEnd(950_000, 'A')}`;
+    const resume = {
+      id: 'r1',
+      personal: { photo: hugeDataUrl },
+      settings: {},
+      sections: [],
+    };
+    const iconFile = pngFile(256, 256, { bytes: 50_000 });
+    await assert.rejects(
+      readImageFile(iconFile, { kind: 'icon', resume }),
+      { message: RESUME_IMAGES_TOO_LARGE }
+    );
   });
 });

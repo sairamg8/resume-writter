@@ -54,9 +54,9 @@ export default function PersonalInfoEditor({ personal, updatePersonal, toggleFie
 
   function onPickIconFile(field, file) {
     if (!file || !file.type.startsWith('image/')) return;
-    // The 400 KB limit is readImageFile's, on the icon as stored: a big BMP or WebP converts to a
-    // few KB, so the upload's own size decides nothing (R7-15).
-    readImageFile(file, { kind: 'icon' }).then(dataUrl => setCustomIcon(field, dataUrl), err => alert(err.message));
+    const prev = s.customContactIcons || {};
+    const resume = { personal, settings: s, template, coverLetter };
+    readImageFile(file, { kind: 'icon', resume, replacing: prev[field] }).then(dataUrl => setCustomIcon(field, dataUrl), err => alert(err.message));
   }
 
   return (
@@ -79,6 +79,7 @@ export default function PersonalInfoEditor({ personal, updatePersonal, toggleFie
         s={s}
         set={set}
         template={template}
+        coverLetter={coverLetter}
         open={photoOpen}
         onToggle={() => setPhotoOpen(o => !o)}
       />

@@ -67,7 +67,10 @@ export function isDrawableImage(src) {
   return drawableImage(src) !== null;
 }
 
+import { remainingImageBudget } from './cloudSyncHeld.js';
+
 export const UNREADABLE_IMAGE = 'That image could not be read. Please upload a PNG, JPEG, WebP or GIF file.';
+export const RESUME_IMAGES_TOO_LARGE = "This résumé's images are too large to sync — remove or replace another photo/icon";
 const tooLarge = (maxBytes) => `That image is too large. Please upload one under ${maxBytes / 1000} KB.`;
 
 /**
@@ -114,7 +117,7 @@ function seeThrough(ctx, { width, height }) {
  * see-through pixels (a cut-out keeps showing the banner or the side column behind it). Its longer
  * side is at most `maxSide` px, and a quarter shorter each time until it holds at most `maxBytes`.
  */
-function encode(bitmap, { as, maxSide, maxBytes }) {
+function encode(bitmap, { as, maxSide, maxBytes }, isBudgetConstrained = false) {
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
   const longest = Math.max(bitmap.width, bitmap.height);
@@ -132,7 +135,10 @@ function encode(bitmap, { as, maxSide, maxBytes }) {
     }
     const dataUrl = canvas.toDataURL(mime, 0.9);
     if (dataUrlBytes(dataUrl) <= maxBytes) return dataUrl;
-    if (side <= MIN_SIDE) throw new Error(tooLarge(maxBytes));
+    if (side <= MIN_SIDE) {
+      if (isBudgetConstrained) throw new Error(RESUME_IMAGES_TOO_LARGE);
+      throw new Error(tooLarge(maxBytes));
+    }
   }
 }
 
@@ -143,13 +149,24 @@ function encode(bitmap, { as, maxSide, maxBytes }) {
  * side to scale); anything else the browser decodes (a bigger PNG or JPEG, WebP, GIF, AVIF, BMP …)
  * is scaled and converted. Rejects with UNREADABLE_IMAGE when it is not an image the browser can
  * decode, and with a "too large" message for an SVG over the kind's bytes.
+ * When `resume` is passed, `remainingImageBudget` limits the stored bytes so total document size
+ * stays within Firestore's 1 MiB limit (ONB-10-NB1).
  */
-export async function readImageFile(file, { kind = 'photo' } = {}) {
+export async function readImageFile(file, { kind = 'photo', resume, replacing, maxBytes } = {}) {
   if (!file || !file.type?.startsWith('image/')) throw new Error(UNREADABLE_IMAGE);
   const limits = KINDS[kind] || KINDS.photo;
+  const budget = resume ? remainingImageBudget(resume, replacing) : Infinity;
+  const effectiveMaxBytes = Math.min(limits.maxBytes, maxBytes ?? Infinity, budget);
+  const isBudgetConstrained = Number.isFinite(effectiveMaxBytes) && effectiveMaxBytes < limits.maxBytes;
+
+  if (effectiveMaxBytes <= 0) throw new Error(RESUME_IMAGES_TOO_LARGE);
+
   const type = sniff(await readHead(file));
   if (type === 'svg') {
-    if (file.size > limits.maxBytes) throw new Error(tooLarge(limits.maxBytes));
+    if (file.size > effectiveMaxBytes) {
+      if (isBudgetConstrained) throw new Error(RESUME_IMAGES_TOO_LARGE);
+      throw new Error(tooLarge(limits.maxBytes));
+    }
     return labelled(await readAsDataURL(file), type);
   }
   let bitmap;
@@ -159,9 +176,9 @@ export async function readImageFile(file, { kind = 'photo' } = {}) {
     throw new Error(UNREADABLE_IMAGE);
   }
   try {
-    const fits = Math.max(bitmap.width, bitmap.height) <= limits.maxSide && file.size <= limits.maxBytes;
+    const fits = Math.max(bitmap.width, bitmap.height) <= limits.maxSide && file.size <= effectiveMaxBytes;
     if (type && fits) return labelled(await readAsDataURL(file), type);
-    return encode(bitmap, limits);
+    return encode(bitmap, { ...limits, maxBytes: effectiveMaxBytes }, isBudgetConstrained);
   } finally {
     bitmap.close?.();
   }

@@ -5,7 +5,7 @@ import { readImageFile } from '@/utils/imageUpload';
 import { UNPRINTABLE_PHOTO, usePrintableImage } from '@/hooks/usePrintableImage';
 import { photoTextPositionApplies, templateId } from '@/constants/templates';
 
-export function PhotoSection({ personal, updatePersonal, toggleFieldVisibility, hidden, s, set, template, open, onToggle }) {
+export function PhotoSection({ personal, updatePersonal, toggleFieldVisibility, hidden, s, set, template, open, onToggle, coverLetter }) {
   const photoInputRef = useRef(null);
   // A photo saved as WebP or GIF, before uploads were converted, prints as a converted copy; one
   // this browser cannot read either prints nothing, and the panel says so instead of "Added" (R7-7).
@@ -16,7 +16,8 @@ export function PhotoSection({ personal, updatePersonal, toggleFieldVisibility, 
     const file = e.target.files?.[0];
     e.target.value = '';
     if (!file) return;
-    readImageFile(file).then((dataUrl) => updatePersonal('photo', dataUrl), (err) => alert(err.message));
+    const resume = { personal, settings: s, template, coverLetter };
+    readImageFile(file, { kind: 'photo', resume, replacing: personal.photo }).then((dataUrl) => updatePersonal('photo', dataUrl), (err) => alert(err.message));
   }
 
   return (

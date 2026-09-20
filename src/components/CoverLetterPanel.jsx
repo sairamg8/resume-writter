@@ -41,7 +41,8 @@ export default function CoverLetterPanel({ coverLetter, personal, settings, temp
     const file = e.target.files?.[0];
     e.target.value = '';
     if (!file) return;
-    readImageFile(file).then(dataUrl => updateCoverLetter('clPhoto', dataUrl), err => alert(err.message));
+    const resume = { personal, settings, template, coverLetter: cl };
+    readImageFile(file, { kind: 'photo', resume, replacing: cl.clPhoto }).then(dataUrl => updateCoverLetter('clPhoto', dataUrl), err => alert(err.message));
   }
 
   // Whether the letter prints a photo, and the line saying which one, or why none (R7-7).

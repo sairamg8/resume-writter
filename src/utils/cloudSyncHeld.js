@@ -7,10 +7,15 @@
 // was fixed, and a demo account's originals waited for an answer the account could give. Plain
 // functions, no Firebase: the engine (cloudSyncEngine.js) runs them, and
 // tests/pdf/18-cloud-sync-held.test.mjs runs the engine.
-import { failureKind } from '@/utils/cloudSyncRetry';
+import { failureKind } from './cloudSyncRetry.js';
 
 /** Firestore's limit on one document, counted as docSize counts it. */
 export const MAX_DOC_BYTES = 1_048_576;
+
+/** Headroom reserved for text and structure so images never push a document over Firestore's limit (ONB-10-NB1). */
+export const TEXT_RESERVE_BYTES = 100_000;
+
+export const MAX_IMAGE_DOC_BYTES = MAX_DOC_BYTES - TEXT_RESERVE_BYTES;
 
 const encoder = new TextEncoder();
 const stringSize = (s) => encoder.encode(s).length + 1;
@@ -33,6 +38,20 @@ export function storedSize(v) {
 
 /** A document's size: its path's segments (as strings) + 16, its fields, and 32 more. */
 export const docSize = (segments, data) => segments.reduce((n, seg) => n + stringSize(String(seg)), 16) + storedSize(data) + 32;
+
+/**
+ * Maximum raw image bytes an upload may take in `resume` without exceeding Firestore's 1 MiB limit (ONB-10-NB1).
+ * `replacing`: the image data URL being replaced, if any.
+ */
+export function remainingImageBudget(resume, replacing = null) {
+  if (!resume || typeof resume !== 'object') return Math.floor(MAX_IMAGE_DOC_BYTES * 3 / 4);
+  const current = docSize(['users', 'uid', 'resumes', resume.id || 'resume'], resume);
+  const freed = replacing && typeof replacing === 'string' ? storedSize(replacing) : 0;
+  const baseSize = current - freed;
+  const remainingDocBytes = MAX_IMAGE_DOC_BYTES - baseSize;
+  if (remainingDocBytes <= 0) return 0;
+  return Math.max(0, Math.floor((remainingDocBytes - 40) * 3 / 4));
+}
 
 /**
  * The résumés held back from an account's sync, for one visit (id → the copy held), with the
