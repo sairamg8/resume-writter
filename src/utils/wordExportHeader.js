@@ -8,13 +8,10 @@ import { contactItems } from '@/utils/contacts';
 import { hasHeaderControls, headerBorderOn, templateId } from '@/constants/templates';
 import { solid, textShades } from '@/templates/pdf/shared/pdfColors';
 import { headerColorsOnPage } from '@/templates/pdf/shared/headerColors';
-import { headerRule, inlineLayout } from '@/templates/pdf/shared/letterhead';
+import { headerRule, headerTitleSize, inlineLayout } from '@/templates/pdf/shared/letterhead';
 import { HEADER_BORDER_PAD_PT } from '@/templates/pdf/shared/pdfUnits';
 import { resolveTemplateSettings } from '@/templates/pdf/shared/templateSettings';
 import { hasRichText } from '@/utils/richText';
-
-/** The job title's size, half-points. */
-const TITLE_SIZE = 24;
 
 /**
  * The name's and the job title's Word colours, 'rrggbb' opaque on the white page: the colours the
@@ -53,15 +50,16 @@ export function buildPersonalSection(personal = {}, settings = {}, template = 'c
   const hidden = new Set(personal.hiddenFields || []);
   const centered = hasHeaderControls(template) && settings?.headerAlign === 'center';
   const s = resolveTemplateSettings(settings, templateId(template));
+  const titleSize = Math.round(headerTitleSize(s) * 2);
   const paragraphs = [];
 
   const ink = headerInk(settings, template);
   const name = new TextRun({ text: personal.name || 'Your Name', bold: true, size: 40, color: ink.name });
-  const title = personal.title ? new TextRun({ text: personal.title, size: TITLE_SIZE, color: ink.title }) : null;
+  const title = personal.title ? new TextRun({ text: personal.title, size: titleSize, color: ink.title }) : null;
   // Name & Title Layout "Inline" (ONB-3-NB1): one line, as the PDF's nameBlock and the letter's letterhead print it.
   const inline = title && inlineLayout(templateId(template), s);
   paragraphs.push(new Paragraph({
-    children: inline ? [name, inlineGap(inline.gap, TITLE_SIZE), title] : [name],
+    children: inline ? [name, inlineGap(inline.gap, titleSize), title] : [name],
     spacing: { after: inline ? 60 : 40 },
     ...centredIf(centered),
   }));

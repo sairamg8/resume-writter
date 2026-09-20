@@ -85,11 +85,11 @@ function letterhead(personal, s, cl, sizes, look) {
   const nameRun = look.name.weight === 'bold' ? bold : normal;
   const rows = [{ runs: [nameRun(personal.name || 'Your Name', { size: sizes.name, color: ink(look.name.color) })], after: pt(1) }];
   // Modern's title prints at 90 % on its band (look.title.opacity, R5-9): the same blend here.
-  const title = personal.title ? normal(personal.title, { size: sizes.base, color: ink(look.title.color, look.title.opacity) }) : null;
+  const title = personal.title ? normal(personal.title, { size: sizes.title, color: ink(look.title.color, look.title.opacity) }) : null;
   if (title && look.inline) {
     // Name & Title Layout "Inline" (V2FIDB-51-3): the title on the name's line, after a real space
     // (the line reads and copies as words) widened to the PDF's gap — as the résumé's (inlineGap).
-    rows[0] = { runs: [...rows[0].runs, inlineGap(look.inline.gap, sizes.base), title], after: pt(2) };
+    rows[0] = { runs: [...rows[0].runs, inlineGap(look.inline.gap, sizes.title), title], after: pt(2) };
   } else if (title) {
     rows.push({ runs: [title], after: pt(2) });
   }
@@ -130,6 +130,7 @@ export function buildCoverLetter(resume) {
   const sizes = {
     base: Math.round(baseSize * 2),
     name: Math.round((baseSize + (s.fontSizeNameDelta ?? 8)) * 2),
+    title: Math.round((look.title?.size || (baseSize + (s.fontSizeEntryDelta ?? 0))) * 2),
     contact: Math.round(Math.max(8, baseSize - 0.5) * 2),
   };
   const text = { size: sizes.base, color: textHex };

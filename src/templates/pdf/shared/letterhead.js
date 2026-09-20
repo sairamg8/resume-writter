@@ -142,6 +142,15 @@ export const LOOKS = {
  * rule is the résumé's, so a résumé with the border off (every new one's) pairs with a letter
  * without one, and a Thickness reaches both.
  */
+/**
+ * The job title's font size, pt: Design → Font sizes → Entry Header (fontSizeEntryDelta) over
+ * the base font size. The résumé header and the cover letter's letterhead print the title at this
+ * size (FIDB-51-VF4-NB2).
+ */
+export function headerTitleSize(settings = {}) {
+  return (settings?.fontSizeBase || 11) + (settings?.fontSizeEntryDelta ?? 0);
+}
+
 export function letterheadLook(template, s = {}) {
   const look = templateId(template);
   const accent = s.accentColor || '#2563eb';
@@ -151,7 +160,7 @@ export function letterheadLook(template, s = {}) {
     centered: letterheadCentered(s, look),
     inline: inlineLayout(look, s),
     name: { color: s.nameColor || text, weight: 'bold' },
-    title: { color: s.jobTitleColor || accent },
+    title: { color: s.jobTitleColor || accent, size: headerTitleSize(s) },
     // Contacts in the Text colour's grey (R1-13): the résumé header's (letterGrey, R9-13).
     contacts: letterGrey(text),
     marks: null,

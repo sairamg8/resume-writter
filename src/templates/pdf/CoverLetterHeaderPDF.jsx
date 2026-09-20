@@ -101,8 +101,9 @@ export function CoverLetterHeader({ look, personal, settings, cl, hidden, contac
   };
   // Name & Title Layout "Inline" (look.inline, V2FIDB-51-3): the title on the name's line in the
   // medium weight the résumé's Inline header prints it in, baselines aligned; else under the name.
+  const titleSize = look.title?.size || (baseSize + (settings.fontSizeEntryDelta ?? 0));
   const titleStyle = {
-    fontSize: baseSize, color: look.title.color,
+    fontSize: titleSize, color: look.title.color,
     ...(look.inline ? { fontWeight: 500, lineHeight: 1.2 } : { marginTop: 1 }),
     ...(look.title.opacity ? { opacity: opacityFor(look.title.color, look.title.opacity) } : {}), ...align,
   };
