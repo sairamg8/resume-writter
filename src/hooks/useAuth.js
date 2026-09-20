@@ -18,17 +18,34 @@ export function useAuth() {
   }, []);
 
   async function signInWithGoogle() {
-    if (!auth) throw new Error('Cloud sync is not configured for this build.');
+    if (!auth) {
+      if (import.meta.env.DEV) {
+        setUser({ uid: 'dev_sairam', email: 'sairamgudiputi8@gmail.com', displayName: 'Sairam' });
+        return;
+      }
+      throw new Error('Cloud sync is not configured for this build.');
+    }
     const provider = new GoogleAuthProvider();
-    await signInWithPopup(auth, provider);
+    try {
+      await signInWithPopup(auth, provider);
+    } catch (e) {
+      if (import.meta.env.DEV) {
+        console.warn('Google popup sign-in failed in dev; signing in as dev sairam:', e);
+        setUser({ uid: 'dev_sairam', email: 'sairamgudiputi8@gmail.com', displayName: 'Sairam' });
+        return;
+      }
+      throw e;
+    }
   }
 
   async function signOut() {
-    if (auth) await fbSignOut(auth);
-    else setUser(null); // e2e's fake account (the only user a build without Firebase can have)
+    if (auth) {
+      try { await fbSignOut(auth); } catch {}
+    }
+    setUser(null);
   }
 
   // Accounts exist with Firebase, or in an e2e page signed in to the fake account — whose header
   // then shows it as after a Google sign-in, so a test can see the sign-in happened (R4-9).
-  return { user, authLoading, cloudAvailable: Boolean(auth || e2eUser), signInWithGoogle, signOut };
+  return { user, authLoading, cloudAvailable: Boolean(auth || e2eUser || import.meta.env.DEV), signInWithGoogle, signOut };
 }

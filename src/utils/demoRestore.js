@@ -3,8 +3,9 @@
 // list is known (useCloudSync's `account`), the résumé store's state and restoreResumes, the
 // sync's readCloudCopies. No React, so the tests drive this very code over the sync engine and a
 // fake Firestore (tests/pdf/18-cloud-sync-restore.test.mjs); useDemoSeed only wires it to React.
-import { buildRestore, isDemoAccount, needsRestore, originalsIn, privateOriginal, rememberCopies } from '@/utils/demoSeed';
+import { buildRestore, isDemoAccount, needsRestore, originalsIn, privateOriginal, rememberCopies, PRIVATE_ORIGINAL_ID } from '@/utils/demoSeed';
 import { normalizeResume } from '@/utils/normalizeResume';
+import { getOwnerResumeFor } from '@/utils/ownerDataPayload';
 
 /**
  * createDemoRestore({ accounts, ownerResume, now, onWaiting }):
@@ -48,11 +49,25 @@ export function createDemoRestore({ accounts, ownerResume = null, now = () => Da
     rememberCopies(s.copies, appState.resumes);
     if (!ready || s.restoring) return;
 
-    if (ownerResume && !s.imported) {
+    const activeOwnerResume = ownerResume || getOwnerResumeFor(user?.email);
+    const isReset = appState.resumes.length === 0;
+    if (activeOwnerResume && (!s.imported || isReset)) {
       s.imported = true;
-      const deleted = [...(account.cloudDeleted || []), ...(appState.deletedIds || [])];
-      const own = privateOriginal(ownerResume, user, { resumes: appState.resumes, seen: s.copies, deleted, gone: [...s.gone], now: now(), normalize: normalizeResume });
-      if (own) { store.restoreResumes([own]); return; }
+      const deleted = isReset ? [] : [...(account.cloudDeleted || []), ...(appState.deletedIds || [])];
+      const gone = isReset ? [] : [...s.gone];
+      const own = privateOriginal(activeOwnerResume, user, {
+        resumes: appState.resumes,
+        seen: isReset ? new Map() : s.copies,
+        deleted,
+        gone,
+        now: now(),
+        normalize: normalizeResume,
+      });
+      if (own) {
+        if (isReset) s.gone.delete(PRIVATE_ORIGINAL_ID);
+        store.restoreResumes([own]);
+        return;
+      }
     }
     const originals = needsRestore(appState.resumes) ? originalsIn(s.copies, s.gone) : [];
     if (!originals.length) { setWaiting(false); return; }
