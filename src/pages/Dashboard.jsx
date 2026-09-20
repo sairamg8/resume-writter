@@ -6,6 +6,7 @@ import { ResumeCard } from '@/components/ResumeCard';
 import { CareerHistoryPanel } from '@/components/CareerHistoryPanel';
 import { RecoveryNotice } from '@/components/RecoveryNotice';
 import { ImportMenu } from '@/components/ImportMenu';
+import StarterTemplateModal from '@/components/StarterTemplateModal';
 import { notSavedMessage } from '@/utils/storageBackup';
 import { comesStraightBack, isDemoAccount, isOriginal } from '@/utils/demoSeed';
 import { DEMO_ACCOUNTS } from '@/utils/demoAccounts';
@@ -28,6 +29,7 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false }) {
   const navigate = useNavigate();
   const importRef = useRef(null);
   const [importError, setImportError] = useState(null);
+  const [starterModalOpen, setStarterModalOpen] = useState(false);
   // A demo account keeps originals: the cards and Import offer "Keep as my original".
   const keeps = isDemoAccount(auth.user, DEMO_ACCOUNTS);
   // Whether the file being picked is imported as an original (ImportMenu).
@@ -36,6 +38,18 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false }) {
   function pickImport(keep) {
     importAsOriginal.current = keep;
     importRef.current?.click();
+  }
+
+  function handleSelectStarter(starterId) {
+    setStarterModalOpen(false);
+    const id = store.createResume('Untitled Resume', starterId);
+    navigate(`/resume/${id}`);
+  }
+
+  function handleSelectBlank() {
+    setStarterModalOpen(false);
+    const id = store.createResume();
+    navigate(`/resume/${id}`);
   }
 
   function handleImport(e) {
@@ -98,7 +112,7 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false }) {
               <MailIcon size={14} /> New Cover
             </button>
             <button
-              onClick={() => { const id = store.createResume(); navigate(`/resume/${id}`); }}
+              onClick={() => setStarterModalOpen(true)}
               className="flex items-center gap-1.5 px-2.5 sm:px-4 py-1.5 sm:py-2 bg-blue-600 text-white rounded-lg text-xs sm:text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm whitespace-nowrap"
             >
               <Plus size={14} /> New Resume
@@ -156,7 +170,7 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false }) {
                 <h2 className="text-lg font-semibold text-gray-700 mb-2">No resumes yet</h2>
                 <p className="text-gray-400 text-sm mb-6">Create your first resume to get started</p>
                 <button
-                  onClick={() => { const id = store.createResume(); navigate(`/resume/${id}`); }}
+                  onClick={() => setStarterModalOpen(true)}
                   className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700"
                 >
                   <Plus size={15} /> Create Resume
@@ -179,7 +193,7 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false }) {
                   />
                 ))}
                 <button
-                  onClick={() => { const id = store.createResume(); navigate(`/resume/${id}`); }}
+                  onClick={() => setStarterModalOpen(true)}
                   className="h-full min-h-[180px] sm:min-h-[220px] border-2 border-dashed border-gray-200 rounded-2xl flex flex-col items-center justify-center gap-3 text-gray-400 hover:text-blue-500 hover:border-blue-300 hover:bg-blue-50/50 transition-all cursor-pointer p-4"
                 >
                   <div className="w-12 h-12 rounded-xl border-2 border-current flex items-center justify-center">
@@ -230,6 +244,13 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false }) {
           </div>
         </div>
       </div>
+
+      <StarterTemplateModal
+        isOpen={starterModalOpen}
+        onClose={() => setStarterModalOpen(false)}
+        onSelectStarter={handleSelectStarter}
+        onSelectBlank={handleSelectBlank}
+      />
     </div>
   );
 }

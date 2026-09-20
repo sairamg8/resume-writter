@@ -48,6 +48,7 @@ export function EditorHeader({ resume, rename, layoutMode, setLayoutMode, export
           onExportPDF={exportMenu.handleExportPDF}
           onExportWord={exportMenu.handleExportWord}
           onExportJSON={exportMenu.handleExportJSON}
+          onExportMarkdown={exportMenu.handleExportMarkdown}
           onExportAtsText={exportMenu.handleExportAtsText}
           onImportJSON={exportMenu.handleImportJSON}
           onImportError={exportMenu.setExportError}

@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { ATS_DEFAULTS, defaultSettings, sectionReset } from '@/utils/defaultData';
+import { Sparkles } from 'lucide-react';
+import { ATS_DEFAULTS, sectionReset } from '@/utils/defaultData';
 import { contactIconHint, drawsContactIcons, TEMPLATE_PICKER, templateId } from '@/constants/templates';
 import { MARGIN_MM } from '@/constants/pageMargins';
 import { ITEM_GAP_PX, LINE_HEIGHT, SECTION_GAP_PX } from '@/constants/spacingNumbers';
@@ -136,6 +137,57 @@ export default function DesignPanel({ resume, updateSetting, setTemplate, resetS
 
       <DesignSection title="Spacing" onReset={() => resetSection(SPACING_KEYS)}>
         <div className="space-y-3">
+          {/* Smart Page Fit Presets */}
+          <div className="p-2.5 bg-blue-50/60 border border-blue-100 rounded-xl space-y-1.5">
+            <div className="flex items-center justify-between text-[11px] font-semibold text-blue-900">
+              <span className="flex items-center gap-1.5"><Sparkles size={12} className="text-blue-600" /> Smart Page Fit Presets</span>
+            </div>
+            <div className="grid grid-cols-3 gap-1.5">
+              <button
+                type="button"
+                onClick={() => {
+                  updateSetting('marginV', 10);
+                  updateSetting('marginH', 14);
+                  updateSetting('sectionGap', 10);
+                  updateSetting('itemGap', 5);
+                  updateSetting('lineHeightValue', 1.35);
+                }}
+                title="Fit more onto 1 page by safely tightening margins and line heights"
+                className="px-2 py-1.5 text-[11px] font-medium rounded-lg bg-white border border-blue-200 text-blue-700 hover:bg-blue-100/70 shadow-2xs transition-all text-center cursor-pointer"
+              >
+                📄 1-Page Fit
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  updateSetting('marginV', 14);
+                  updateSetting('marginH', 18);
+                  updateSetting('sectionGap', 16);
+                  updateSetting('itemGap', 8);
+                  updateSetting('lineHeightValue', 1.5);
+                }}
+                title="Standard ATS-optimized balanced spacing"
+                className="px-2 py-1.5 text-[11px] font-medium rounded-lg bg-white border border-gray-200 text-gray-700 hover:bg-gray-100 shadow-2xs transition-all text-center cursor-pointer"
+              >
+                ⚖️ Balanced
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  updateSetting('marginV', 20);
+                  updateSetting('marginH', 22);
+                  updateSetting('sectionGap', 22);
+                  updateSetting('itemGap', 12);
+                  updateSetting('lineHeightValue', 1.65);
+                }}
+                title="Generous spacing for 2-page or senior resumes"
+                className="px-2 py-1.5 text-[11px] font-medium rounded-lg bg-white border border-gray-200 text-gray-700 hover:bg-gray-100 shadow-2xs transition-all text-center cursor-pointer"
+              >
+                📑 Spacious
+              </button>
+            </div>
+          </div>
+
           <NumberRow label="Line Height" value={settings.lineHeightValue ?? 1.5} onChange={v => updateSetting('lineHeightValue', v)} min={LINE_HEIGHT.min} max={LINE_HEIGHT.max} step={0.1} />
           <div className="h-px bg-gray-100" />
           <NumberRow label="Top / Bottom margin" value={settings.marginV ?? 14} onChange={v => updateSetting('marginV', v)} min={MARGIN_MM.min} max={MARGIN_MM.max} step={1} unit="mm" />

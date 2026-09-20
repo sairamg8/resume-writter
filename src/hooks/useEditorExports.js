@@ -3,6 +3,7 @@ import { downloadBlob } from '@/utils/download';
 import { isDemoAccount } from '@/utils/demoSeed';
 import { DEMO_ACCOUNTS } from '@/utils/demoAccounts';
 import { generateAtsPlainText } from '@/utils/atsChecker';
+import { generateMarkdownResume } from '@/utils/markdownExport';
 
 function buildExportFilename(authUser, resume) {
   const name = (authUser?.displayName || resume?.personal?.name || 'resume').replace(/\s+/g, '_');
@@ -63,6 +64,12 @@ export function useEditorExports({ resume, activeTab, authUser, importResume, na
     downloadBlob(new Blob([JSON.stringify(resume, null, 2)], { type: 'application/json' }), `${filename}.json`);
   }
 
+  function handleExportMarkdown() {
+    const filename = buildExportFilename(authUser, resume);
+    const md = generateMarkdownResume(resume);
+    downloadBlob(new Blob([md], { type: 'text/markdown;charset=utf-8' }), `${filename}.md`);
+  }
+
   function handleExportAtsText() {
     const filename = buildExportFilename(authUser, resume);
     const text = generateAtsPlainText(resume);
@@ -78,6 +85,6 @@ export function useEditorExports({ resume, activeTab, authUser, importResume, na
 
   return {
     exporting, exportError, setExportError, keeps,
-    handleExportPDF, handleExportWord, handleExportJSON, handleExportAtsText, handleImportJSON,
+    handleExportPDF, handleExportWord, handleExportJSON, handleExportMarkdown, handleExportAtsText, handleImportJSON,
   };
 }

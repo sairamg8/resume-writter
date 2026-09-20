@@ -1,10 +1,11 @@
-import { useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   Bold, Italic, Underline, List, ListOrdered,
-  AlignLeft, AlignCenter, AlignRight, AlignJustify, Link,
+  AlignLeft, AlignCenter, AlignRight, AlignJustify, Link, Sparkles,
 } from 'lucide-react';
 import { sanitizeRichText, sanitizeForInsert, plainTextToHtml, safeHref } from '@/utils/richText';
 import { useFieldIds } from '@/hooks/useFieldIds';
+import BulletOptimizerModal from '@/components/BulletOptimizerModal';
 
 /**
  * `label` draws a label above the editor; without one, the editor is named by the FieldRow it
@@ -14,6 +15,7 @@ export default function RichTextEditor({ label, ariaLabel, value, onChange, plac
   const ref = useRef(null);
   const ids = useFieldIds(label);
   const isComposing = useRef(false);
+  const [optimizerOpen, setOptimizerOpen] = useState(false);
 
   // Adopt `value` whenever it changes from outside (another resume opened, an import, a cloud
   // pull), but never while this editor has focus: there the DOM is the source of truth and
@@ -54,6 +56,17 @@ export default function RichTextEditor({ label, ariaLabel, value, onChange, plac
     document.execCommand('insertHTML', false, html ? sanitizeForInsert(html) : plainTextToHtml(text));
     emit();
     return true;
+  }
+
+  function handleApplyOptimizedText(optimizedText) {
+    if (!optimizedText) return;
+    ref.current?.focus();
+    if (!ref.current?.innerText.trim()) {
+      document.execCommand('insertHTML', false, `<ul><li>${optimizedText}</li></ul>`);
+    } else {
+      document.execCommand('insertHTML', false, optimizedText);
+    }
+    emit();
   }
 
   // Pasted and dropped content is reduced to what the editor itself can produce — no colours,
@@ -115,6 +128,20 @@ export default function RichTextEditor({ label, ariaLabel, value, onChange, plac
           <Btn title="Align center" onExec={() => exec('justifyCenter')}><AlignCenter size={12} /></Btn>
           <Btn title="Align right" onExec={() => exec('justifyRight')}><AlignRight size={12} /></Btn>
           <Btn title="Justify" onExec={() => exec('justifyFull')}><AlignJustify size={12} /></Btn>
+
+          {/* AI / STAR Optimizer */}
+          <button
+            type="button"
+            title="Bullet Optimizer & STAR Formula Helper"
+            onMouseDown={e => {
+              e.preventDefault();
+              setOptimizerOpen(true);
+            }}
+            className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-semibold text-amber-700 bg-amber-50 hover:bg-amber-100 hover:text-amber-800 transition-colors ml-auto cursor-pointer"
+          >
+            <Sparkles size={11} className="text-amber-600" />
+            <span className="hidden sm:inline">STAR Optimizer</span>
+          </button>
         </div>
 
         {/* Editable area */}
@@ -137,6 +164,13 @@ export default function RichTextEditor({ label, ariaLabel, value, onChange, plac
           data-placeholder={placeholder}
         />
       </div>
+
+      <BulletOptimizerModal
+        isOpen={optimizerOpen}
+        onClose={() => setOptimizerOpen(false)}
+        initialText={ref.current?.innerText.trim() || ''}
+        onApply={handleApplyOptimizedText}
+      />
     </div>
   );
 }

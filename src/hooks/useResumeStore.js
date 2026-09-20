@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { createBlankResume, settingsAfterReset } from '@/utils/defaultData';
+import { buildResumeFromStarter } from '@/utils/starterTemplates';
 import { createSectionActions } from '@/hooks/useResumeSectionActions';
 import { createSyncActions } from '@/hooks/useResumeSyncActions';
 import { newId } from '@/utils/ids';
@@ -98,9 +99,11 @@ export function useAppStore() {
 
   // ── Resume management ──────────────────────────────────────────────
 
-  function createResume(name = 'Untitled Resume') {
+  function createResume(name = 'Untitled Resume', starterId = null) {
     const id = newId('resume');
-    const newResume = createBlankResume({ id, name });
+    const newResume = starterId
+      ? buildResumeFromStarter(starterId, id)
+      : createBlankResume({ id, name });
     setAppState(prev => ({ ...prev, resumes: [...prev.resumes, newResume], activeId: id }));
     return id;
   }

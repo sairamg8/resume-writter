@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect } from 'react';
-import { Download, FileText, Upload, ChevronDown, Pin } from 'lucide-react';
+import { Download, FileText, Upload, ChevronDown, Pin, FileCode } from 'lucide-react';
 import { ORIGINALS_HINT } from '@/components/ImportMenu';
 
 /**
@@ -7,7 +7,7 @@ import { ORIGINALS_HINT } from '@/components/ImportMenu';
  * account, whose originals come back (useDemoSeed) — adds "Import as my original", as the
  * dashboard's Import menu has (V2OWNER-DATA-3).
  */
-export function ExportDropdown({ exporting, keeps = false, onExportPDF, onExportWord, onExportJSON, onExportAtsText, onImportJSON, onImportError }) {
+export function ExportDropdown({ exporting, keeps = false, onExportPDF, onExportWord, onExportJSON, onExportMarkdown, onExportAtsText, onImportJSON, onImportError }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   const importRef = useRef(null);
@@ -53,6 +53,12 @@ export function ExportDropdown({ exporting, keeps = false, onExportPDF, onExport
             className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 disabled:opacity-50"
           >
             <FileText size={12} className="text-emerald-500" /> Export Word
+          </button>
+          <button
+            onClick={() => { onExportMarkdown?.(); setOpen(false); }}
+            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-amber-50 hover:text-amber-700"
+          >
+            <FileCode size={12} className="text-amber-600" /> Export Markdown (.md)
           </button>
           <button
             onClick={() => { onExportAtsText?.(); setOpen(false); }}
