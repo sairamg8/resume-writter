@@ -3,59 +3,19 @@
 // a name word wider than its 60 % printed over the contacts (VM3-0), a contact wider than its 40 %
 // ran past the right margin and a 2 Grid e-mail over the phone (VM3-1), and a photo the PDF cannot
 // draw still took its room from the title (VM3-7). With no contacts the name side had no bound.
-// A 2 Grid asked 2.2 times its widest item, and wrapped a title beside two short contacts (VM3-2).
+// The 2 Grid beside the name (VM3-1, VM3-2, W2a-4.1-NB2): 27-cover-letter-grid-fit.test.mjs.
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { setup, teardown, resume, renderCover, read, overlaps, MM, TEMPLATES } from './harness.mjs';
-import { drawing, PNG_2X2 as PNG } from './extractors.mjs';
+import { setup, teardown, resume, renderCover, read, MM, TEMPLATES } from './harness.mjs';
+import { drawing } from './extractors.mjs';
+import { CONTACTS, letterhead, overprints, pastMargin, hyphens, crowded, PNG } from './letterhead-runs.mjs';
 
 before(setup);
 after(teardown);
 
 const T72 = 'Senior Software Engineer, Platform Infrastructure & Developer Experience';
 const EMAIL42 = 'alexandra.johnson-smith@examplecompany.com';
-const CONTACTS = { email: 'alexandra.johnson@example.com', phone: '+1 555 0100', location: 'San Francisco, CA', website: 'alexjohnson.dev', linkedin: 'linkedin.com/in/alexj' };
 const WEBP = 'data:image/webp;base64,UklGRiIAAABXRUJQVlA4IBYAAAAwAQCdASoBAAEADsD+JaQAA3AAAAAA';
-/** An icon (11 px = 8.25 pt) and the 2 pt gap before its value: where an icon contact starts. */
-const ICON = 8.25 + 2;
-
-/**
- * The letterhead as printed: `contacts` the runs above the body ("Hello") made of the contact
- * values and separators, each widened to the left by its icon when the contacts have icons;
- * `name` the others — the name and title, also a word cut off at the paper's edge.
- */
-async function letterhead({ name, title, photo = PNG, settings = {}, personal = {}, coverLetter = {}, template }) {
-  const p = { name, title, photo, ...CONTACTS, ...personal };
-  const [page] = await read(await renderCover(resume({ template, settings, personal: p, coverLetter: { body: '<p>Hello</p>', ...coverLetter } })));
-  const body = page.items.find((t) => t.str === 'Hello');
-  const head = page.items.filter((t) => t.y > body.y + 5);
-  const values = `${Object.keys(CONTACTS).map((k) => p[k]).join(' ')} | •`;
-  const isContact = (t) => t.str.split(/\s+/).every((w) => values.includes(w.replace(/-$/, '')));
-  const icons = (settings.contactStyle || 'icon') === 'icon';
-  return {
-    page,
-    right: page.W - (settings.marginH ?? 18) * MM,
-    values: Object.keys(CONTACTS).map((k) => p[k]).filter(Boolean),
-    name: head.filter((t) => !isContact(t)),
-    contacts: head.filter(isContact).map((t) => (icons ? { ...t, x: t.x - ICON, w: t.w + ICON } : t)),
-  };
-}
-
-/** "a" over "b" for each name run that overprints a contact run (icon included). */
-const overprints = (h) => overlaps({ items: [...h.name, ...h.contacts] })
-  .filter(([a, b]) => h.name.some((t) => t.str === a) !== h.name.some((t) => t.str === b));
-const pastMargin = (h) => [...h.name, ...h.contacts].filter((t) => t.x + t.w > h.right + 0.5).map((t) => `${t.str} (to x ${(t.x + t.w).toFixed(1)}, margin ${h.right.toFixed(1)})`);
-/**
- * Contacts printed over one another, where each value is a text of its own (not Bar or Bullet on
- * one line): two runs over each other, or one run holding two values — pdf.js reads a value drawn
- * over the next as one run.
- */
-const crowded = (h) => [
-  ...overlaps({ items: h.contacts }).map(([a, b]) => `${a} over ${b}`),
-  ...h.contacts.filter((t) => h.values.filter((v) => t.str.includes(v)).length > 1).map((t) => t.str),
-];
-/** Runs ending in a hyphen none of the letterhead's texts has: textkit's break inside a glued token. */
-const hyphens = (h) => [...h.name, ...h.contacts].filter((t) => t.str.endsWith('-')).map((t) => t.str);
 
 describe('a long name word beside the contacts (VM3-0)', () => {
   // Default settings and a photo: "Venkataramanasubramaniam" ran from x 99 to 380 over the
@@ -124,121 +84,6 @@ describe('a long contact beside a long title (VM3-1)', () => {
             // Bar and Bullet, Justify: the values print as one line of text, one run of several.
             if (headerStyle === 'icon' || headerLayout !== 'justify') assert.deepEqual(crowded(h), [], `${at}: a contact over another`);
             assert.ok(h.contacts.some((t) => t.str.includes(email)), `${at}: the e-mail printed whole`);
-          }
-        }
-      }
-    }
-  });
-});
-
-describe('2 Grid beside the name (VM3-1)', () => {
-  // A 2 Grid cell is 46 % of the contacts' column. Beside the name that column held two cells of
-  // about 113 pt, and a 29-character e-mail (165 pt) printed over the phone in the next cell. Now
-  // the grid is as wide as its widest item needs, or it goes under the name — where a value wider
-  // than its cell takes the whole row (28-contact-grid, W2a-1).
-  it('no contact prints over the next, none past the margin', async () => {
-    for (const marginH of [18, 30]) {
-      for (const photo of [PNG, '']) {
-        for (const style of ['icon', 'bullet', 'bar']) {
-          const at = `${marginH} mm, ${photo ? 'photo' : 'no photo'}, ${style}`;
-          const h = await letterhead({ name: 'Alexandra Johnson', title: 'Senior Software Engineer', photo, settings: { marginH, contactStyle: style }, coverLetter: { headerStyle: style, headerLayout: '2grid' } });
-          assert.deepEqual(crowded(h), [], `${at}: a contact over another`);
-          assert.deepEqual(overprints(h), [], `${at}: the name over the contacts`);
-          assert.deepEqual(pastMargin(h), [], `${at}: past the right margin`);
-        }
-      }
-    }
-  });
-
-  it('a grid that fits beside the name stays there (guard)', async () => {
-    const h = await letterhead({ name: 'Alexandra Johnson', title: 'Product Designer', personal: { email: 'maria@studio.io' }, coverLetter: { headerLayout: '2grid' } });
-    const nameRight = Math.max(...h.name.map((t) => t.x + t.w));
-    assert.ok(h.contacts.every((t) => t.x >= nameRight + 12 - 0.5), 'every contact right of the name');
-    assert.deepEqual(crowded(h), []);
-  });
-});
-
-describe('a title beside contacts that need little room (VM3-2)', () => {
-  // 089d03c gave the name side a fixed 60 %: a 49-character title beside one short e-mail wrapped
-  // though it had fitted (x 109-363.7 at 01e9118). dcec50d sized the split to the contacts'
-  // widest item, but a 2 Grid asked 2.2 times it (a cell is 46 % of the row) — also where the
-  // grid, folded to one column, fits beside the title on its line, as it printed before 089d03c.
-  // Beside two short contacts the title wrapped, and at 30 mm with a large photo even the name.
-  const T24 = 'Senior Software Engineer';
-  const T49 = 'Senior Software Engineer, Platform Infrastructure';
-  const T57 = 'Principal Engineer, Payments Platform and Developer Tools';
-  const NONE = { email: '', phone: '', location: '', website: '', linkedin: '' };
-  const TWO = { ...NONE, email: 'maria@studio.io', phone: '+1 555 0100' };
-  const WEB = { ...NONE, website: 'alexjohnson.dev', linkedin: 'linkedin.com/in/alexj' };
-  const LOC = { ...TWO, location: 'San Francisco, CA' };
-  /** Modern's band pads its content 18 pt (24 px) on each side. */
-  const inner = (h, template) => h.right - (template === 'modern' ? 18 : 0);
-  const pastEdge = (h, template) => [...h.name, ...h.contacts].filter((t) => t.x + t.w > inner(h, template) + 0.5).map((t) => t.str);
-  const oneLine = (h, text) => h.name.some((t) => t.str === text);
-
-  it("the finding's title beside one short e-mail keeps its line, in every look (guard)", async () => {
-    for (const template of TEMPLATES) {
-      const h = await letterhead({ name: 'Alexandra Johnson', title: T49, settings: { photoSize: 'lg' }, personal: { ...NONE, email: 'a@b.co' }, coverLetter: {}, template });
-      assert.ok(oneLine(h, T49), `${template}: the title on one line`);
-    }
-  });
-
-  it('a name and title that fit beside a short 2 Grid keep their lines, the grid beside them', async () => {
-    // Each wrapped before: the title, or at 30 mm with a large photo (Modern: 18 mm, medium) the
-    // name. Modern's band takes 36 pt of the row, so there a phone — which can wrap, and so
-    // needs its whole cell — leaves the title the room only without a photo.
-    const FLAT = TEMPLATES.filter((t) => t !== 'modern');
-    const cases = [
-      [TEMPLATES, 18, '', T57, WEB, 'icon'],
-      [FLAT, 18, 'md', T49, TWO, 'icon'], [FLAT, 18, 'md', T49, TWO, 'bullet'], [FLAT, 30, 'lg', T24, TWO, 'icon'],
-      [['modern'], 18, '', T49, TWO, 'icon'], [['modern'], 18, 'md', T24, WEB, 'icon'],
-    ];
-    for (const [looks, marginH, photoSize, title, personal, style] of cases) {
-      for (const template of looks) {
-        const at = `${template}, ${marginH} mm, ${photoSize || 'no'} photo, ${title.length} characters, ${Object.keys(personal).filter((k) => personal[k]).join('+')}, ${style}`;
-        const h = await letterhead({
-          template, name: 'Alexandra Johnson', title, photo: photoSize ? PNG : '', personal,
-          settings: { marginH, ...(photoSize ? { photoSize } : {}), contactStyle: style }, coverLetter: { headerStyle: style, headerLayout: '2grid' },
-        });
-        assert.ok(oneLine(h, 'Alexandra Johnson'), `${at}: the name on one line`);
-        assert.ok(oneLine(h, title), `${at}: the title on one line`);
-        const nameRight = Math.max(...h.name.map((t) => t.x + t.w));
-        assert.ok(h.contacts.every((t) => t.x >= nameRight + 12 - 0.5), `${at}: every contact right of the title`);
-        assert.deepEqual(crowded(h), [], `${at}: a contact over another`);
-        assert.deepEqual(pastEdge(h, template), [], `${at}: past the margin`);
-      }
-    }
-  });
-
-  it('a 2 Grid with room for its cells beside the title keeps its two columns (guard)', async () => {
-    // It folds only where its cells would wrap the name or the title.
-    for (const template of TEMPLATES) {
-      const h = await letterhead({ template, name: 'Alexandra Johnson', title: T24, photo: '', personal: TWO, coverLetter: { headerLayout: '2grid' } });
-      const [email, phone] = ['maria@studio.io', '+1 555 0100'].map((v) => h.contacts.find((t) => t.str.includes(v)));
-      assert.ok(oneLine(h, T24), `${template}: the title on one line`);
-      assert.ok(Math.abs(email.y - phone.y) < 0.5 && phone.x > email.x + email.w, `${template}: the phone beside the e-mail`);
-    }
-  });
-
-  it('a 2 Grid folded beside a title on its line prints every value whole, clear of the others, inside the margin (guard)', async () => {
-    for (const template of ['classic', 'modern']) {
-      for (const marginH of [18, 30]) {
-        for (const photo of [PNG, '']) {
-          for (const [set, personal] of Object.entries({ TWO, WEB, LOC })) {
-            for (const title of [T49, T57]) {
-              for (const style of ['icon', 'bullet']) {
-                const at = `${template}, ${marginH} mm, ${photo ? 'photo' : 'no photo'}, ${set}, ${title.length} characters, ${style}`;
-                const h = await letterhead({
-                  template, name: 'Alexandra Johnson', title, photo, personal,
-                  settings: { marginH, photoSize: 'lg', contactStyle: style }, coverLetter: { headerStyle: style, headerLayout: '2grid' },
-                });
-                assert.deepEqual(crowded(h), [], `${at}: a contact over another`);
-                assert.deepEqual(overprints(h), [], `${at}: the title over the contacts`);
-                assert.deepEqual(pastEdge(h, template), [], `${at}: past the margin`);
-                assert.deepEqual(hyphens(h), [], `${at}: a drawn hyphen`);
-                for (const v of h.values) assert.ok(h.contacts.some((t) => t.str.includes(v)), `${at}: "${v}" whole on its line`);
-              }
-            }
           }
         }
       }

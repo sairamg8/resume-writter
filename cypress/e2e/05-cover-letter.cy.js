@@ -183,6 +183,17 @@ describe('cover letter', () => {
       expect(Math.abs(centre - row.length / 2) / row.length, 'the name is centred').to.be.below(0.02);
     });
   });
+
+  it('Contact Layout "2 Grid" beside the name switches headerLayout to 2grid and updates preview and store (W2a-4.1-NB2)', () => {
+    const chip = (row, label) => cy.contains('p', row).next().contains('button', label);
+    chip('Contact Layout', '2 Grid').click();
+    chip('Contact Layout', '2 Grid').should('have.class', 'bg-blue-600');
+    cy.store().should((s) => {
+      expect(active(s).coverLetter.headerLayout).to.eq('2grid');
+    });
+    cy.previewReady();
+    letter().should('contain.text', 'alex@example.com');
+  });
 });
 
 // Its own block: a second cy.visit of the same URL (the beforeEach's) does not reload the page,

@@ -17,6 +17,8 @@ const ITEM_GAP = 2;
 /** A 2 Grid cell's share of the row, and the column gap between two cells, pt. */
 const GRID_CELL = CONTACT_GRID.cell;
 const GRID_GAP = pxToPt(CONTACT_GRID.gapPx);
+/** The narrowest row two cells and the gap sit side by side in, pt (225 pt at 46 % and 18 pt). */
+const GRID_TWO_COLUMNS = GRID_GAP / (1 - 2 * GRID_CELL);
 
 /** The contacts' type: the values' size (half a point under the body's) and the icons'. */
 function rowSizes(settings) {
@@ -59,11 +61,11 @@ const separator = (contactStyle) => `${NBSP}${NBSP}${contactStyle === 'bullet' ?
  * Bullet, Justify), its widest value with the separator glued to it and the space after that:
  * textkit's best-fit pass counts that space before it breaks there, and in a line too short for
  * it breaks between the value and its separator instead, with a drawn hyphen. A 2 Grid cell is
- * 46 % of the row, so its widest item needs the row 2.2 times as wide — or, `folded`, only as
- * wide as the grid needs to print every value whole at all: a row narrower than two cells and
- * the gap stacks them, and a value of one unbreakable piece (an e-mail, a URL) that its cell
- * cannot hold spills into the room beside it or takes the whole row (PdfContactRow), so only a
- * value that can wrap (a phone, a place) needs its cell. In the page's font
+ * 46 % of the row, so its widest item needs the row 2.2 times as wide — and never less than the
+ * row two cells and the gap between them sit side by side in (GRID_TWO_COLUMNS): in a narrower
+ * one they wrap onto rows of their own, and the grid printed as Single (W2a-4.1-NB2). A lone
+ * contact has no second column: `folded`, it needs only what prints its value whole — itself, or
+ * for one that can wrap (a phone, a place) its cell. In the page's font
  * (settings._pdfFontFamily); 0 with no contacts. `gaps` as PdfContactRow's.
  */
 export function contactRowMinWidth(personal, settings, hidden, gaps = {}, { folded = false } = {}) {
@@ -75,14 +77,13 @@ export function contactRowMinWidth(personal, settings, hidden, gaps = {}, { fold
     const sep = width(`${separator(contactStyle)} `);
     return Math.max(0, ...items.map((item, i) => width(keepTogether(item.value)) + (i < items.length - 1 ? sep : 0)));
   }
-  if (contactLayout === '2grid' && folded) {
-    return Math.max(0, ...items.map((item) => {
-      const whole = mark + width(item.value);
-      return mark + widestWord(item.value, style) < whole - 0.01 ? whole / GRID_CELL : whole;
-    }));
+  if (contactLayout === '2grid' && folded && items.length === 1) {
+    const whole = mark + width(items[0].value);
+    return mark + widestWord(items[0].value, style) < whole - 0.01 ? whole / GRID_CELL : whole;
   }
   const widest = Math.max(0, ...items.map((item) => mark + width(item.value)));
-  return contactLayout === '2grid' ? widest / GRID_CELL : widest;
+  if (contactLayout !== '2grid') return widest;
+  return items.length > 1 ? Math.max(widest / GRID_CELL, GRID_TWO_COLUMNS) : widest / GRID_CELL;
 }
 
 /**
