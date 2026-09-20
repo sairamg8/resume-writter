@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { PenLine, Eye } from 'lucide-react';
 
 import DesignPanel from '@/components/DesignPanel';
 import CoverLetterPanel from '@/components/CoverLetterPanel';
@@ -10,6 +11,7 @@ import { EditorTabContent } from '@/components/EditorTabContent';
 import { EditorPreviewPane } from '@/components/EditorPreviewPane';
 import { useEditorExports } from '@/hooks/useEditorExports';
 import { usePanelResize } from '@/hooks/usePanelResize';
+import { useIsMobile } from '@/hooks/useMediaQuery';
 
 export function Editor({ store, auth, sync }) {
   const { id } = useParams();
@@ -26,6 +28,8 @@ export function Editor({ store, auth, sync }) {
   }, [id]);
 
   const resume = store.activeResume;
+  const isMobile = useIsMobile(768);
+  const [mobileTab, setMobileTab] = useState('editor'); // 'editor' | 'preview'
   const [activeTab, setActiveTab] = useState(initialTab);
   // What is open on the Résumé tab lives here, so it survives a trip to Design or the letter.
   const [personalOpen, setPersonalOpen] = useState(true);
@@ -47,6 +51,13 @@ export function Editor({ store, auth, sync }) {
     setAllExpanded(next);
     setPersonalOpen(next);
     setForceOpenKey(k => k + 1);
+  }
+
+  function handleModeTabChange(tab) {
+    setActiveTab(tab);
+    if (isMobile) {
+      setMobileTab('editor');
+    }
   }
 
   // Warm react-pdf fonts + template chunk so Export PDF feels instant
@@ -76,8 +87,12 @@ export function Editor({ store, auth, sync }) {
     /* fixed inset-0: never let document/body scroll (up or down) and tear the split layout */
     <div className="fixed inset-0 z-20 flex overflow-hidden bg-[#f5f3ef]">
       <div
-        className={`${layoutMode === 'preview' ? 'hidden' : layoutMode === 'editor' ? 'flex-1 min-w-0' : ''} bg-white flex flex-col overflow-hidden shadow-sm min-h-0 h-full`}
-        style={layoutMode === 'split' ? { width: panelWidth, minWidth: panelWidth, maxWidth: panelWidth, flexShrink: 0 } : undefined}
+        className={`${
+          isMobile
+            ? (mobileTab === 'editor' ? 'flex-1 min-w-0 flex flex-col' : 'hidden')
+            : (layoutMode === 'preview' ? 'hidden' : layoutMode === 'editor' ? 'flex-1 min-w-0 flex flex-col' : 'flex flex-col')
+        } bg-white overflow-hidden shadow-sm min-h-0 h-full`}
+        style={!isMobile && layoutMode === 'split' ? { width: panelWidth, minWidth: panelWidth, maxWidth: panelWidth, flexShrink: 0 } : undefined}
       >
         <EditorHeader
           resume={resume}
@@ -87,9 +102,10 @@ export function Editor({ store, auth, sync }) {
           exportMenu={exportMenu}
           auth={auth}
           sync={sync}
+          isMobile={isMobile}
         />
         <EditorAlerts exportError={exportMenu.exportError} onDismiss={() => exportMenu.setExportError(null)} persistError={store.persistError} />
-        <EditorModeBar activeTab={activeTab} setActiveTab={setActiveTab} />
+        <EditorModeBar activeTab={activeTab} setActiveTab={handleModeTabChange} />
 
         <EditorTabContent activeTab={activeTab}>
           {activeTab === 'resume' && (
@@ -126,19 +142,48 @@ export function Editor({ store, auth, sync }) {
         </EditorTabContent>
       </div>
 
-      {layoutMode === 'split' && (
+      {!isMobile && layoutMode === 'split' && (
         <div onMouseDown={onDragHandleMouseDown} title="Drag to resize panel" className="w-1 shrink-0 bg-gray-200 hover:bg-blue-400 active:bg-blue-500 cursor-col-resize transition-colors z-10" />
       )}
 
       <EditorPreviewPane
         resume={resume}
         activeTab={activeTab}
-        layoutMode={layoutMode}
+        layoutMode={isMobile ? (mobileTab === 'preview' ? 'preview' : 'editor') : layoutMode}
         setLayoutMode={setLayoutMode}
         previewZoom={previewZoom}
         setPreviewZoom={setPreviewZoom}
         persistError={store.persistError}
+        isMobile={isMobile}
       />
+
+      {/* Floating Mobile Toggle Switch */}
+      {isMobile && (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 flex items-center bg-gray-900/90 backdrop-blur-md text-white p-1 rounded-full shadow-2xl border border-white/10 text-xs font-semibold">
+          <button
+            onClick={() => setMobileTab('editor')}
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full transition-all ${
+              mobileTab === 'editor'
+                ? 'bg-blue-600 text-white shadow'
+                : 'text-gray-300 hover:text-white'
+            }`}
+          >
+            <PenLine size={13} />
+            <span>Edit</span>
+          </button>
+          <button
+            onClick={() => setMobileTab('preview')}
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full transition-all ${
+              mobileTab === 'preview'
+                ? 'bg-blue-600 text-white shadow'
+                : 'text-gray-300 hover:text-white'
+            }`}
+          >
+            <Eye size={13} />
+            <span>Preview</span>
+          </button>
+        </div>
+      )}
     </div>
   );
 }

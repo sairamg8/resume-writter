@@ -54,10 +54,10 @@ export function JobDetail({ store }) {
 
       {/* Header */}
       <div className="bg-white border-b border-gray-200 sticky top-0 z-20">
-        <div className="max-w-5xl mx-auto px-6">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6">
 
           {/* Top row */}
-          <div className="flex items-center gap-4 py-3 border-b border-gray-100">
+          <div className="flex items-center gap-2 sm:gap-4 py-2.5 sm:py-3 border-b border-gray-100">
             <button
               onClick={() => navigate('/jobs')}
               className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors shrink-0"
@@ -66,29 +66,29 @@ export function JobDetail({ store }) {
             </button>
 
             <div
-              className="w-9 h-9 rounded-xl flex items-center justify-center text-base font-bold text-white shrink-0 shadow-sm"
+              className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center text-sm sm:text-base font-bold text-white shrink-0 shadow-sm"
               style={{ backgroundColor: s.color }}
             >
               {(job.company || '?')[0].toUpperCase()}
             </div>
 
             <div className="flex-1 min-w-0">
-              <h1 className="font-bold text-gray-900 text-base leading-tight truncate">
+              <h1 className="font-bold text-gray-900 text-sm sm:text-base leading-tight truncate">
                 {job.company || 'Untitled Company'}
               </h1>
-              <p className="text-xs text-gray-500 truncate">{job.role || 'No role specified'}</p>
+              <p className="text-[11px] sm:text-xs text-gray-500 truncate">{job.role || 'No role specified'}</p>
             </div>
 
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center gap-1 sm:gap-2 shrink-0">
               <span
-                className="text-xs font-semibold px-3 py-1 rounded-full"
+                className="text-[10px] sm:text-xs font-semibold px-2 sm:px-3 py-0.5 sm:py-1 rounded-full"
                 style={{ color: s.text, backgroundColor: s.bg, border: `1px solid ${s.color}40` }}
               >
                 {s.label}
               </span>
 
               {todos.length > 0 && (
-                <div className="flex items-center gap-1.5 px-2.5 py-1 bg-gray-50 border border-gray-200 rounded-full">
+                <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 bg-gray-50 border border-gray-200 rounded-full">
                   <div className="w-16 h-1.5 bg-gray-200 rounded-full overflow-hidden">
                     <div className={`h-full rounded-full ${pct === 100 ? 'bg-indigo-500' : 'bg-indigo-400'}`} style={{ width: `${pct}%` }} />
                   </div>
@@ -97,7 +97,7 @@ export function JobDetail({ store }) {
               )}
 
               {/* Global application counts */}
-              <div className="flex items-center gap-1.5 pl-2 border-l border-gray-200">
+              <div className="hidden sm:flex items-center gap-1.5 pl-2 border-l border-gray-200">
                 <div className="flex items-baseline gap-0.5">
                   <span className="text-sm font-bold text-gray-800">{totalApps}</span>
                   <span className="text-[10px] text-gray-400 font-medium">Apps</span>

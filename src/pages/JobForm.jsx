@@ -69,13 +69,13 @@ export function JobForm({ store }) {
         </div>
       </div>
 
-      <JobsNotSavedAlert error={persistError} className="max-w-3xl mx-auto px-6 pt-6" />
+      <JobsNotSavedAlert error={persistError} className="max-w-3xl mx-auto px-4 sm:px-6 pt-4 sm:pt-6" />
 
-      <div className="max-w-3xl mx-auto px-6 py-8 space-y-5">
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-5">
 
-        <section className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
+        <section className="bg-white rounded-2xl border border-gray-100 p-4 sm:p-6 space-y-4">
           <h2 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Basic Info</h2>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field id={uid + 'company'} label="Company" required>
               <input id={uid + 'company'} autoFocus value={form.company} onChange={e => set('company', e.target.value)} placeholder="Google, Stripe, Notion…" className={INPUT} />
             </Field>
@@ -88,7 +88,7 @@ export function JobForm({ store }) {
             <Field id={uid + 'salary'} label="Salary / Comp">
               <input id={uid + 'salary'} value={form.salary} onChange={e => set('salary', e.target.value)} placeholder="$150k – $200k" className={INPUT} />
             </Field>
-            <div className="col-span-2">
+            <div className="col-span-1 sm:col-span-2">
               <Field id={uid + 'url'} label="Job Posting URL">
                 <input id={uid + 'url'} value={form.url} onChange={e => set('url', e.target.value)} placeholder="https://jobs.company.com/…" className={INPUT} />
               </Field>
@@ -96,9 +96,9 @@ export function JobForm({ store }) {
           </div>
         </section>
 
-        <section className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
+        <section className="bg-white rounded-2xl border border-gray-100 p-4 sm:p-6 space-y-4">
           <h2 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Status & Dates</h2>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <Field id={uid + 'status'} label="Application Status">
               <select id={uid + 'status'} value={form.status} onChange={e => set('status', e.target.value)} className={INPUT + ' bg-white cursor-pointer'}>
                 {JOB_STATUSES.map((s, i) => (
@@ -123,9 +123,9 @@ export function JobForm({ store }) {
           removeCustomStage={removeCustomStage}
         />
 
-        <section className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
+        <section className="bg-white rounded-2xl border border-gray-100 p-4 sm:p-6 space-y-4">
           <h2 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Contact & Resume</h2>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field id={uid + 'contact'} label="Contact Person">
               <input id={uid + 'contact'} value={form.contact} onChange={e => set('contact', e.target.value)} placeholder="Recruiter name, email…" className={INPUT} />
             </Field>

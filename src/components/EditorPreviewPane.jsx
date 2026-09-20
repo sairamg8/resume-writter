@@ -33,17 +33,21 @@ function SaveStatus({ resume, persistError }) {
  * The preview column: layout toggle, zoom, the PDF itself (résumé or cover letter, whichever tab
  * is open) and the save status. Hidden, never unmounted, in editor-only mode.
  */
-export function EditorPreviewPane({ resume, activeTab, layoutMode, setLayoutMode, previewZoom, setPreviewZoom, persistError }) {
+export function EditorPreviewPane({ resume, activeTab, layoutMode, setLayoutMode, previewZoom, setPreviewZoom, persistError, isMobile = false }) {
   const navigate = useNavigate();
 
   return (
     <div
-      className={`${layoutMode === 'editor' ? 'hidden' : 'flex-1 min-w-0 min-h-0 h-full'} overflow-auto bg-[#f5f3ef] flex flex-col items-center py-8`}
+      className={`${layoutMode === 'editor' ? 'hidden' : 'flex-1 min-w-0 min-h-0 h-full'} overflow-auto bg-[#f5f3ef] flex flex-col items-center py-4 sm:py-8 px-2 sm:px-4 pb-24 sm:pb-8`}
       style={{ overscrollBehavior: 'contain' }}
     >
-      <div className="mb-4 flex items-center gap-3 shrink-0">
-        <LayoutToggle layoutMode={layoutMode} setLayoutMode={setLayoutMode} />
-        <span className="text-xs text-gray-300">·</span>
+      <div className="mb-3 sm:mb-4 flex flex-wrap items-center justify-center gap-2 sm:gap-3 shrink-0">
+        {!isMobile && (
+          <>
+            <LayoutToggle layoutMode={layoutMode} setLayoutMode={setLayoutMode} />
+            <span className="text-xs text-gray-300">·</span>
+          </>
+        )}
         <span className="text-xs text-gray-400 font-medium uppercase tracking-wider">
           {activeTab === 'coverletter' ? 'Cover Letter' : 'Résumé'} · {PAGE_SIZES[pageSizeOf(resume?.settings)].label}
         </span>
@@ -61,7 +65,7 @@ export function EditorPreviewPane({ resume, activeTab, layoutMode, setLayoutMode
         <PdfPreview key="resume" title="Résumé" textId="resume-preview" input={resume} render={renderResumePreview} zoom={previewZoom} />
       )}
 
-      <div className="mt-6 flex items-center gap-3 text-xs text-gray-400 shrink-0">
+      <div className="mt-6 flex flex-wrap items-center justify-center gap-2 sm:gap-3 text-xs text-gray-400 shrink-0">
         <SaveStatus resume={resume} persistError={persistError} />
         <span>·</span>
         <button onClick={() => navigate('/terms')} className="hover:text-gray-600 transition-colors">Terms</button>

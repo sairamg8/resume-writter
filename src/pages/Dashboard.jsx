@@ -10,7 +10,7 @@ import { notSavedMessage } from '@/utils/storageBackup';
 import { comesStraightBack, isDemoAccount, isOriginal } from '@/utils/demoSeed';
 import { DEMO_ACCOUNTS } from '@/utils/demoAccounts';
 
-const IMPORT_BUTTON = 'flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors shadow-sm';
+const IMPORT_BUTTON = 'flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 bg-white border border-gray-200 text-gray-700 rounded-lg text-xs sm:text-sm font-semibold hover:bg-gray-50 transition-colors shadow-sm whitespace-nowrap';
 
 /**
  * What Delete asks: an original in a demo account is not gone for good (useDemoSeed). The last
@@ -66,61 +66,68 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false }) {
     <div className="min-h-screen bg-[#f5f3ef]">
       {/* Nav */}
       <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-              <FileText size={16} className="text-white" />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+          <div className="flex items-center justify-between w-full md:w-auto">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+                <FileText size={16} className="text-white" />
+              </div>
+              <span className="text-xl font-bold text-gray-900">CPWT-CV</span>
             </div>
-            <span className="text-xl font-bold text-gray-900">CPWT-CV</span>
+            <div className="md:hidden flex items-center gap-2">
+              <AuthBar {...auth} {...sync} compact />
+            </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
             <input ref={importRef} type="file" accept=".json" className="hidden" onChange={handleImport} />
             {keeps ? <ImportMenu onPick={pickImport} className={IMPORT_BUTTON} /> : (
               <button onClick={() => pickImport(false)} className={IMPORT_BUTTON}>
-                <Upload size={15} /> Import
+                <Upload size={14} /> Import
               </button>
             )}
             <button
               onClick={() => navigate('/jobs')}
-              className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors shadow-sm"
+              className="flex items-center gap-1.5 px-2.5 sm:px-4 py-1.5 sm:py-2 bg-white border border-gray-200 text-gray-700 rounded-lg text-xs sm:text-sm font-semibold hover:bg-gray-50 transition-colors shadow-sm whitespace-nowrap"
             >
-              <Briefcase size={15} /> Job Tracker
+              <Briefcase size={14} /> Job Tracker
             </button>
             <button
               onClick={() => { const id = store.createResume('Cover Letter'); navigate(`/resume/${id}?tab=coverletter`); }}
-              className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors shadow-sm"
+              className="flex items-center gap-1.5 px-2.5 sm:px-4 py-1.5 sm:py-2 bg-white border border-gray-200 text-gray-700 rounded-lg text-xs sm:text-sm font-semibold hover:bg-gray-50 transition-colors shadow-sm whitespace-nowrap"
             >
-              <MailIcon size={15} /> New Cover
+              <MailIcon size={14} /> New Cover
             </button>
             <button
               onClick={() => { const id = store.createResume(); navigate(`/resume/${id}`); }}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm"
+              className="flex items-center gap-1.5 px-2.5 sm:px-4 py-1.5 sm:py-2 bg-blue-600 text-white rounded-lg text-xs sm:text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm whitespace-nowrap"
             >
-              <Plus size={15} /> New Resume
+              <Plus size={14} /> New Resume
             </button>
-            <div className="w-px h-5 bg-gray-200" />
-            <AuthBar {...auth} {...sync} />
+            <div className="w-px h-5 bg-gray-200 hidden md:block" />
+            <div className="hidden md:block">
+              <AuthBar {...auth} {...sync} />
+            </div>
           </div>
         </div>
         {store.persistError && (
-          <div className="max-w-7xl mx-auto px-6 pb-3">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-3">
             <p role="alert" className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
               {notSavedMessage('dashboard', store.persistError)}
             </p>
           </div>
         )}
         {store.recovery && (
-          <div className="max-w-7xl mx-auto px-6 pb-3">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-3">
             <RecoveryNotice what="résumés" recovery={store.recovery} onDismiss={store.dismissRecovery} />
           </div>
         )}
         {importError && (
-          <div className="max-w-7xl mx-auto px-6 pb-3">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-3">
             <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{importError}</p>
           </div>
         )}
         {originalsWaiting && (
-          <div className="max-w-7xl mx-auto px-6 pb-3">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-3">
             <p role="status" className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
               Your originals come back as soon as your account can be reached again.
             </p>
@@ -129,20 +136,20 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false }) {
       </div>
 
       {/* Body: main + sidebar */}
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        <div className="flex gap-7 items-start">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+        <div className="flex flex-col lg:flex-row gap-6 lg:gap-7 items-start">
 
           {/* Main — resumes grid */}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between mb-6">
-              <h1 className="text-2xl font-bold text-gray-900">My Resumes</h1>
-              <p className="text-sm text-gray-400">
+          <div className="flex-1 min-w-0 w-full">
+            <div className="flex items-center justify-between mb-4 sm:mb-6">
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900">My Resumes</h1>
+              <p className="text-xs sm:text-sm text-gray-400">
                 {store.appState.resumes.length} resume{store.appState.resumes.length !== 1 ? 's' : ''}
               </p>
             </div>
 
             {store.appState.resumes.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-24 text-center">
+              <div className="flex flex-col items-center justify-center py-20 text-center bg-white rounded-2xl border border-gray-200 p-6">
                 <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mb-4">
                   <FileText size={28} className="text-gray-400" />
                 </div>
@@ -156,7 +163,7 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false }) {
                 </button>
               </div>
             ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
                 {store.appState.resumes.map(r => (
                   <ResumeCard
                     key={r.id}
@@ -173,7 +180,7 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false }) {
                 ))}
                 <button
                   onClick={() => { const id = store.createResume(); navigate(`/resume/${id}`); }}
-                  className="h-full min-h-[220px] border-2 border-dashed border-gray-200 rounded-2xl flex flex-col items-center justify-center gap-3 text-gray-400 hover:text-blue-500 hover:border-blue-300 hover:bg-blue-50/50 transition-all cursor-pointer"
+                  className="h-full min-h-[180px] sm:min-h-[220px] border-2 border-dashed border-gray-200 rounded-2xl flex flex-col items-center justify-center gap-3 text-gray-400 hover:text-blue-500 hover:border-blue-300 hover:bg-blue-50/50 transition-all cursor-pointer p-4"
                 >
                   <div className="w-12 h-12 rounded-xl border-2 border-current flex items-center justify-center">
                     <Plus size={22} />
@@ -182,7 +189,7 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false }) {
                 </button>
                 <button
                   onClick={() => { const id = store.createResume('Cover Letter'); navigate(`/resume/${id}?tab=coverletter`); }}
-                  className="h-full min-h-[220px] border-2 border-dashed border-gray-200 rounded-2xl flex flex-col items-center justify-center gap-3 text-gray-400 hover:text-purple-500 hover:border-purple-300 hover:bg-purple-50/50 transition-all cursor-pointer"
+                  className="h-full min-h-[180px] sm:min-h-[220px] border-2 border-dashed border-gray-200 rounded-2xl flex flex-col items-center justify-center gap-3 text-gray-400 hover:text-purple-500 hover:border-purple-300 hover:bg-purple-50/50 transition-all cursor-pointer p-4"
                 >
                   <div className="w-12 h-12 rounded-xl border-2 border-current flex items-center justify-center">
                     <MailIcon size={22} />
@@ -194,7 +201,7 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false }) {
           </div>
 
           {/* Sidebar — career history */}
-          <div className="w-72 shrink-0 sticky top-6">
+          <div className="w-full lg:w-72 shrink-0 lg:sticky lg:top-6 mt-4 lg:mt-0">
             <div className="mb-3 flex items-center justify-between">
               <h2 className="text-sm font-bold text-gray-700">Career History</h2>
               <button

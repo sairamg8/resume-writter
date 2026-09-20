@@ -20,7 +20,7 @@ export function ExperienceItem({ item, onUpdate, onRemove }) {
       <FieldRow label="Location" field="location" hiddenSet={itemHidden} onToggle={toggleField}>
         <InputField value={item.location} onChange={v => u('location', v)} placeholder="City, State" />
       </FieldRow>
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         <FieldRow label="Start Date" field="startDate" hiddenSet={itemHidden} onToggle={toggleField}>
           <MonthPicker value={item.startDate} onChange={v => u('startDate', v)} />
         </FieldRow>
@@ -48,7 +48,7 @@ export function EducationItem({ item, onUpdate, onRemove }) {
       <InputField label="Degree" value={item.degree} onChange={v => u('degree', v)} placeholder="B.S. Computer Science" />
       <InputField label="Field of Study" value={item.fieldOfStudy} onChange={v => u('fieldOfStudy', v)} placeholder="Computer Science" />
       <InputField label="Location" value={item.location} onChange={v => u('location', v)} placeholder="City, State" />
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         <MonthPicker label="Start Date" value={item.startDate} onChange={v => u('startDate', v)} />
         <MonthPicker label="End Date" value={item.endDate} onChange={v => u('endDate', v)} />
       </div>
@@ -66,7 +66,7 @@ export function ProjectItem({ item, onUpdate, onRemove }) {
       <InputField label="Project Name" value={item.name} onChange={v => u('name', v)} placeholder="My Awesome Project" />
       <InputField label="URL (optional)" value={item.url} onChange={v => u('url', v)} placeholder="github.com/you/project" />
       <InputField label="Technologies" value={item.technologies} onChange={v => u('technologies', v)} placeholder="React, Node.js, PostgreSQL" />
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         <MonthPicker label="Start Date" value={item.startDate} onChange={v => u('startDate', v)} />
         <MonthPicker label="End Date" value={item.endDate} onChange={v => u('endDate', v)} />
       </div>
@@ -83,7 +83,7 @@ export function VolunteeringItem({ item, onUpdate, onRemove }) {
       <InputField label="Organization" value={item.org} onChange={v => u('org', v)} placeholder="Non-profit Organization" />
       <InputField label="Role" value={item.role} onChange={v => u('role', v)} placeholder="Volunteer Coordinator" />
       <InputField label="Location" value={item.location} onChange={v => u('location', v)} placeholder="City, State" />
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         <MonthPicker label="Start Date" value={item.startDate} onChange={v => u('startDate', v)} />
         <MonthPicker label="End Date" value={item.endDate} onChange={v => u('endDate', v)} />
       </div>
@@ -99,7 +99,7 @@ export function CustomItem({ item, onUpdate, onRemove }) {
     <ItemCard label={item.title} onRemove={onRemove} visible={visible} onToggleVisibility={() => onUpdate({ ...item, visible: !visible })}>
       <InputField label="Title" value={item.title} onChange={v => u('title', v)} placeholder="Entry Title" />
       <InputField label="Subtitle" value={item.subtitle} onChange={v => u('subtitle', v)} placeholder="Organization or Context" />
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         <MonthPicker label="Date / Period" value={item.date} onChange={v => u('date', v)} />
         <InputField label="Location" value={item.location} onChange={v => u('location', v)} placeholder="City, State" />
       </div>
