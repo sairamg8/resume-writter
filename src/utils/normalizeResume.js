@@ -5,6 +5,7 @@
 // takes a promise: the store makes it smaller once it has it (smallerPhotos.js).
 import { inSidebarColumn, offersTemplate, withKnownTemplate } from '@/constants/templates';
 import { withDesignNumbers } from '@/constants/designNumbers';
+import { normalizeHexColor } from '@/utils/colors';
 import { HEADER_READS, HEADER_SEEN, withHeaderColorsBack } from '@/templates/pdf/shared/headerColors';
 import { DEFAULT_ITEM_GAP_PX, SECTION_SPACING_PX } from '@/templates/pdf/shared/pdfUnits';
 
@@ -173,18 +174,63 @@ const versionOf = (r) => (Number.isFinite(r.dataVersion) ? r.dataVersion : 0);
  */
 const withHeaderReadableOnClassic = (r) => withReadableHeaderColors(r, HEADER_READS);
 
+const SETTINGS_COLOR_KEYS = [
+  'accentColor',
+  'textColor',
+  'sidebarBg',
+  'headerTextColor',
+  'nameColor',
+  'jobTitleColor',
+  'sectionBorderColor',
+];
+
 /**
- * `resume` made current: a template the app offers (withKnownTemplate) and the Design panel's
- * numbers stored as numbers in their controls' ranges (withDesignNumbers), whatever its
- * version; then each one-time migration newer than its own `dataVersion`, after which it carries
- * DATA_VERSION. Never touches `updatedAt` — this is not an edit, so it neither wins a sync merge
+ * Normalizes colors in `resume.settings` to standard 6-digit hex '#rrggbb' (ONB-7).
+ * Converts CSS named colors, rgb(), hsl() to hex; drops unreadable strings (e.g. 'banana',
+ * '#12345') so defaults take over. Empty string resets (nameColor, jobTitleColor,
+ * sectionBorderColor) are preserved. Preserves object identity when unchanged.
+ */
+export function withNormalizedColors(resume) {
+  const settings = resume?.settings;
+  if (!settings || typeof settings !== 'object') return resume;
+  let next = null;
+  for (const key of SETTINGS_COLOR_KEYS) {
+    if (!(key in settings) || settings[key] == null) continue;
+    const val = settings[key];
+    if (typeof val === 'string' && val.trim() === '') {
+      if (val !== '') {
+        next ??= { ...settings };
+        next[key] = '';
+      }
+      continue;
+    }
+    const hex = normalizeHexColor(val);
+    if (hex) {
+      if (hex !== val) {
+        next ??= { ...settings };
+        next[key] = hex;
+      }
+    } else {
+      next ??= { ...settings };
+      delete next[key];
+    }
+  }
+  return next ? { ...resume, settings: next } : resume;
+}
+
+/**
+ * `resume` made current: a template the app offers (withKnownTemplate), the Design panel's
+ * numbers stored as numbers in their controls' ranges (withDesignNumbers) and valid colors
+ * stored as '#rrggbb' (withNormalizedColors), whatever its version; then each one-time
+ * migration newer than its own `dataVersion`, after which it carries DATA_VERSION.
+ * Never touches `updatedAt` — this is not an edit, so it neither wins a sync merge
  * nor triggers a cloud write by itself. The same object when nothing changes; a value that is not
  * an object comes back as it is.
  */
 export function normalizeResume(resume) {
   if (!resume || typeof resume !== 'object') return resume;
   const known = withKnownTemplate(resume);
-  const r = withDesignNumbers(offersTemplate(resume.template) ? known : withHeaderReadableOnClassic(known));
+  const r = withNormalizedColors(withDesignNumbers(offersTemplate(resume.template) ? known : withHeaderReadableOnClassic(known)));
   const from = versionOf(r);
   if (from >= DATA_VERSION) return r;
   return MIGRATIONS.reduce((out, [version, migrate]) => (from < version ? migrate(out, from) : out), { ...r, dataVersion: DATA_VERSION });
