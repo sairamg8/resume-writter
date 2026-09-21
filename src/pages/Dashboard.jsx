@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FileText, Plus, Upload, Mail as MailIcon, Briefcase } from 'lucide-react';
+import { FileText, Plus, Upload, Mail as MailIcon, Briefcase, Columns2 } from 'lucide-react';
 import AuthBar from '@/components/AuthBar';
 import { ResumeCard } from '@/components/ResumeCard';
 import { CareerHistoryPanel } from '@/components/CareerHistoryPanel';
@@ -110,6 +110,12 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false }) {
               className="flex items-center gap-1.5 px-2.5 sm:px-4 py-1.5 sm:py-2 bg-white border border-gray-200 text-gray-700 rounded-lg text-xs sm:text-sm font-semibold hover:bg-gray-50 transition-colors shadow-sm whitespace-nowrap"
             >
               <Briefcase size={14} /> Job Tracker
+            </button>
+            <button
+              onClick={() => navigate('/boards')}
+              className="flex items-center gap-1.5 px-2.5 sm:px-4 py-1.5 sm:py-2 bg-white border border-gray-200 text-gray-700 rounded-lg text-xs sm:text-sm font-semibold hover:bg-gray-50 transition-colors shadow-sm whitespace-nowrap"
+            >
+              <Columns2 size={14} /> Boards
             </button>
             <button
               onClick={() => { const id = store.createResume('Cover Letter'); navigate(`/resume/${id}?tab=coverletter`); }}

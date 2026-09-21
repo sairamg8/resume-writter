@@ -4,6 +4,8 @@ import { Editor } from '@/pages/Editor';
 import { JobTracker } from '@/pages/JobTracker';
 import { JobDetail } from '@/pages/JobDetail';
 import { JobForm } from '@/pages/JobForm';
+import { Boards } from '@/pages/Boards';
+import { Board } from '@/pages/Board';
 import TermsPage from '@/pages/TermsPage';
 import PrivacyPage from '@/pages/PrivacyPage';
 
@@ -21,6 +23,8 @@ export function AppRoutes({ store, auth, sync, seed }) {
       <Route path="/jobs/new"      element={<JobForm    store={store} />} />
       <Route path="/jobs/:id/edit" element={<JobForm    store={store} />} />
       <Route path="/jobs/:id"      element={<JobDetail  store={store} />} />
+      <Route path="/boards"        element={<Boards />} />
+      <Route path="/boards/:id"    element={<Board />} />
       <Route path="/terms"      element={<TermsPage />} />
       <Route path="/privacy"    element={<PrivacyPage />} />
       <Route path="*"           element={<Navigate to="/" replace />} />
