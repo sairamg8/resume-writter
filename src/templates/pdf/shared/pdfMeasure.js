@@ -102,6 +102,9 @@ const squeeze = (s) => Math.max(0, 2 * [...s].length - 2) * (11 / 256);
 /** How far past its box a closed-up word may still print, pt: nothing a reader sees. */
 const OVERHANG = 0.5;
 
+/** Whether `text` prints on one line `maxWidth` pt wide: as wide as that, or closed up to it by textkit (a line a little wider than its box). */
+export const fitsOnLine = (text, style, maxWidth) => !(maxWidth > 0) || textWidth(text, style) - squeeze(text) <= maxWidth + OVERHANG;
+
 /**
  * A hyphenation callback for a Text laid out `maxWidth` pt wide in `style` — a value in the
  * Sidebar's dark column. The registered callback (breakLongWords) marks a token only past 48
@@ -118,7 +121,7 @@ export function breakToFit(style, maxWidth) {
   const registered = Font.getHyphenationCallback() || ((word) => [word]);
   const fits = (s) => textWidth(s, style) <= maxWidth - FIT_SLACK;
   return (word) => {
-    if (!(maxWidth > 0) || textWidth(word, style) - squeeze(word) <= maxWidth + OVERHANG) return registered(word);
+    if (fitsOnLine(word, style, maxWidth)) return registered(word);
     const parts = word.split(BREAK_AFTER).flatMap((part) => (fits(part) ? [part] : runsThatFit(part, fits)));
     return parts.flatMap((part, i) => (i ? [BREAK_MARK, part] : [part]));
   };

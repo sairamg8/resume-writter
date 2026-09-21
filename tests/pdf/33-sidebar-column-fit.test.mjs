@@ -8,6 +8,9 @@
 // contact, a reference's e-mail and a certificate's link break inside the column instead — after
 // / . - _ @ …, and a piece with none of those into runs of characters that fit (breakToFit) —
 // with nothing added to the text. Found by task NB-3 (fix2_NB-3 new_bugs[0]); task NB-3-NB1.
+// A parser matches an e-mail, a profile link or a website as one token, so a value that fits the
+// column at a readable size (wholeValue, 6 pt at the least) now prints whole on one line at the
+// largest size that holds it; only one too long even for that breaks as above (tests/pdf/41).
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { setup, teardown, resume, section, render, read, MM } from './harness.mjs';
@@ -116,10 +119,15 @@ describe('Sidebar: a contact value wider than the dark column', () => {
           assert.deepEqual(broken, [], `${at}: ${address} broke inside a piece that fits the column`);
         }
       }
-      // Each of these is wider than the column, so it had to break (else this proves nothing).
-      for (const address of [MAIL, LINKEDIN, TOWN, ...(marginH === 40 ? [SITE] : [])]) {
-        assert.ok(linesOf(page, address).length > 1, `${at}: ${address} printed on one line`);
+      // Each prints whole at a readable size, or — too long even at the floor — was broken as above.
+      for (const address of [MAIL, LINKEDIN, SITE, TOWN]) {
+        const lines = linesOf(page, address);
+        if (lines.length === 1) assert.ok(lines[0].h >= 5.9, `${at}: ${address} shrank to ${lines[0].h.toFixed(2)} pt`);
       }
+      // Both branches are exercised: the wide column holds them whole, the narrow one breaks the long ones.
+      const oneLine = [MAIL, LINKEDIN, SITE, TOWN].filter((address) => linesOf(page, address).length === 1);
+      if (marginH === 18) assert.equal(oneLine.length, 4, `${at}: whole on one line: ${oneLine.length} of 4`);
+      if (marginH === 40) assert.ok(linesOf(page, MAIL).length > 1 && linesOf(page, TOWN).length > 1, `${at}: the long ones break`);
       const urls = page.links.map((l) => l.url);
       assert.ok(urls.includes(`mailto:${MAIL}`) && urls.includes(`https://${LINKEDIN}`), `${at}: links ${urls.join(', ')}`);
     }
@@ -145,9 +153,10 @@ describe('Sidebar: a contact value wider than the dark column', () => {
     // textkit closes up the letters of a line a little wider than its box (11/256 pt a side): the
     // sample résumés' "linkedin.com/in/jordan-rivera-sample" is 156.9 pt at 9 pt in the 153.7 pt
     // box beside an 11 px icon at 18 mm, and has always printed on one line there, 3 pt closer set.
-    // At 20 mm (the Minimal sample's margin) it ran 5.9 pt out of its box: that one breaks.
+    // At 20 mm (the Minimal sample's margin) it ran 5.9 pt out of its box: it printed broken, and now
+    // prints whole at the largest size that holds it (8.7 pt), still on one line.
     const value = 'linkedin.com/in/jordan-rivera-sample';
-    for (const [marginH, count] of [[18, 1], [20, 2]]) {
+    for (const [marginH, count] of [[18, 1], [20, 1]]) {
       const [page] = await read(await render(resume({
         template: 'sidebar',
         settings: { marginH, iconSize: 11 },
@@ -156,6 +165,8 @@ describe('Sidebar: a contact value wider than the dark column', () => {
       const lines = linesOf(page, value);
       assert.equal(lines.length, count, `${marginH} mm: ${value} on ${lines.length} lines: ${JSON.stringify(inColumn(page).map((t) => t.str))}`);
       assert.deepEqual(outside(page, marginH), [], `${marginH} mm: outside the column`);
+      // 18 mm: closed up by textkit at its 9 pt; 20 mm: set smaller, never below the readable floor.
+      assert.ok(lines[0].h >= (marginH === 18 ? 8.95 : 6), `${marginH} mm: printed at ${lines[0].h.toFixed(2)} pt`);
     }
   });
 });
@@ -164,7 +175,7 @@ describe('Sidebar: an e-mail or URL in a dark-column section', () => {
   const MAIL = 'jane.doe-longname@referencecompany.com';           // 38 characters
   const CREDENTIAL = 'credentials.example.org/verify/abc-def-ghi';   // 42
 
-  it("a reference's e-mail and a certificate's link break inside the column and read as typed", async () => {
+  it("a reference's e-mail and a certificate's link print whole, or — too long for the floor — break inside the column and read as typed", async () => {
     for (const [pageSize, marginH] of PAPERS) {
       const at = `${pageSize} ${marginH} mm`;
       const [page] = await read(await render(resume({
@@ -179,9 +190,13 @@ describe('Sidebar: an e-mail or URL in a dark-column section', () => {
       assert.deepEqual(outside(page, marginH), [], `${at}: outside the column`);
       for (const address of [MAIL, CREDENTIAL]) {
         const lines = linesOf(page, address);
-        assert.ok(lines.length > 1, `${at}: ${address} → ${JSON.stringify(inColumn(page).map((t) => t.str))}`);
+        assert.ok(lines.length >= 1, `${at}: ${address} → ${JSON.stringify(inColumn(page).map((t) => t.str))}`);
+        if (lines.length === 1) assert.ok(lines[0].h >= 5.9, `${at}: ${address} shrank to ${lines[0].h.toFixed(2)} pt`);
         const broken = lines.slice(0, -1).filter((t) => !PUNCT.test(t.str)).map((t) => t.str);
         assert.deepEqual(broken, [], `${at}: ${address} broke inside a piece that fits the column`);
+        // 18 mm holds them whole; 40 mm cannot (a 103 pt column), so they break there.
+        if (marginH === 18) assert.equal(lines.length, 1, `${at}: ${address} on ${lines.length} lines`);
+        if (marginH === 40) assert.ok(lines.length > 1, `${at}: ${address} printed on one line`);
       }
       const urls = page.links.map((l) => l.url);
       assert.ok(urls.includes(`mailto:${MAIL}`) && urls.includes(`https://${CREDENTIAL}`), `${at}: links ${urls.join(', ')}`);

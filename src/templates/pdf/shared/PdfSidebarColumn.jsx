@@ -5,7 +5,7 @@ import { contactHref } from '@/utils/contacts';
 import { dateRange } from '@/utils/dates';
 import { SIDEBAR_COLUMN_TYPES, upperSectionTitles } from '@/constants/templates';
 import { CSS_PX_TO_PT, DEFAULT_ITEM_GAP_PX, MM_TO_PT, tracking } from './pdfUnits';
-import { breakToFit, textWidth } from './pdfMeasure';
+import { breakToFit, fitsOnLine, textWidth } from './pdfMeasure';
 import { pageBoxPt } from '@/constants/pageSize';
 import { pageMargins } from '@/constants/pageMargins';
 import { sidebarShades } from './pdfColors';
@@ -40,15 +40,58 @@ export const sideColumnRoom = (settings) => pageBoxPt(settings).width * SIDE_COL
 export const sideBreaks = (settings, style, inset = 0) =>
   breakToFit({ fontFamily: settings?._pdfFontFamily, ...style }, sideColumnRoom(settings) - inset);
 
+/** The smallest size a value that must stay whole is fitted down to, pt. */
+export const WHOLE_VALUE_MIN_PT = 6;
+
+/**
+ * A value a résumé parser matches as ONE token — a contact, an e-mail address, a link — as it prints
+ * in the column: on one line, at `style.fontSize` when it fits (every usual value) and otherwise at
+ * the largest size that holds it, never below WHOLE_VALUE_MIN_PT. Broken at a hyphen or slash it
+ * extracts as "linkedin.com/in/jordan-rivera- sample", a profile link that no longer matches. Whole on
+ * a line it cannot wrap at a space either, so its spaces stay plain ones (a no-break space would
+ * reach a parser as U+00A0). A value too long even for the floor prints as it always did: marked
+ * where it may break inside the column (sideBreaks). `inset`: what sits before it in the line.
+ * → { fontSize, breaks }.
+ */
+export function wholeValue(settings, value, style, inset = 0) {
+  const text = String(value ?? '');
+  const font = { fontFamily: settings?._pdfFontFamily, ...style };
+  const room = sideColumnRoom(settings) - inset;
+  // A value textkit closes up to its line keeps its size, as it always has; a wider one is set at the
+  // largest size that holds it (a width is linear in the size), down to the floor.
+  const fitted = fitsOnLine(text, font, room) ? style.fontSize : (style.fontSize * (room - 1)) / textWidth(text, font);
+  const fontSize = Math.min(style.fontSize, Math.max(fitted, WHOLE_VALUE_MIN_PT));
+  return { fontSize, breaks: sideBreaks(settings, { ...style, fontSize }, inset) };
+}
+
+/**
+ * A contact-like value in the column (an e-mail, a phone, a link): whole on one line when it fits at a
+ * readable size. `inline`: inside a Text of its own, so only the words are the link, not the rest of the
+ * line (a reference's e-mail, R2-3); by default the value is its own block, as a contact's is.
+ */
+export function SideValue({ settings, value, href, style, inset = 0, inline = false }) {
+  const v = wholeValue(settings, value, style, inset);
+  if (inline) {
+    return (
+      <Text style={{ ...style, fontSize: v.fontSize }} hyphenationCallback={v.breaks}>
+        <ContactValue value={value} href={href} style={{ color: style.color }} />
+      </Text>
+    );
+  }
+  return <ContactValue value={value} href={href} style={{ ...style, fontSize: v.fontSize }} hyphenationCallback={v.breaks} />;
+}
+
 /**
  * An entry's URL as printed: `label` (else the URL) linking to it when safeHref accepts it —
  * same colour, no underline — else plain text: the main column's ContactValue inside the line,
  * so only the words are clickable, not the rest of the column. `hyphenationCallback`: where it
- * may break (sideBreaks in the dark column).
+ * may break (sideBreaks in the dark column). `settings`, given in the dark column: the URL prints
+ * whole on one line when it fits at a readable size (wholeValue).
  */
-export function EntryLink({ url, label, style, hyphenationCallback }) {
+export function EntryLink({ url, label, style, hyphenationCallback, settings }) {
+  const whole = settings ? wholeValue(settings, label || url, { fontSize: style.fontSize }) : null;
   return (
-    <Text style={style} hyphenationCallback={hyphenationCallback}>
+    <Text style={whole ? { ...style, fontSize: whole.fontSize } : style} hyphenationCallback={whole ? whole.breaks : hyphenationCallback}>
       <ContactValue value={label || url} href={safeHref(url)} style={{ color: style.color }} />
     </Text>
   );
@@ -152,7 +195,7 @@ export function SideCertifications({ section, sectionGap, itemGap, shades = NAVY
               {item.issuer && <Text style={{ fontSize: 9, color: shades.label, lineHeight: 1.2 }} hyphenationCallback={textBreaks}>{item.issuer}</Text>}
               {dateStr ? <Text style={{ fontSize: 9, color: shades.meta, lineHeight: 1.2 }}>{dateStr}</Text> : null}
               {item.credentialId && <Text style={{ fontSize: 9, color: shades.meta, lineHeight: 1.2 }} hyphenationCallback={textBreaks}>ID: {item.credentialId}</Text>}
-              {item.url && <EntryLink url={item.url} label={item.urlLabel} style={{ fontSize: 9, color: shades.value, lineHeight: 1.2 }} hyphenationCallback={textBreaks} />}
+              {item.url && <EntryLink url={item.url} label={item.urlLabel} style={{ fontSize: 9, color: shades.value, lineHeight: 1.2 }} settings={settings} />}
             </View>
           );
         })}
@@ -205,8 +248,8 @@ export function SideReferences({ section, sectionGap, itemGap, shades = NAVY, ti
             {item.company && <Text style={{ fontSize: 9, color: shades.label, lineHeight: 1.2 }} hyphenationCallback={textBreaks}>{item.company}</Text>}
             {item.relationship && <Text style={{ fontSize: 9, color: shades.meta, fontStyle: 'italic', lineHeight: 1.2 }} hyphenationCallback={textBreaks}>{item.relationship}</Text>}
             {/* mailto: / tel: links, as the main-column templates and the Word export print them (R2-3). */}
-            {item.email && <Text style={{ fontSize: 9, color: shades.meta, lineHeight: 1.2 }} hyphenationCallback={textBreaks}><ContactValue value={item.email} href={contactHref('email', item)} style={{ color: shades.meta }} /></Text>}
-            {item.phone && <Text style={{ fontSize: 9, color: shades.meta, lineHeight: 1.2 }}><ContactValue value={item.phone} href={contactHref('phone', item)} style={{ color: shades.meta }} /></Text>}
+            {item.email && <SideValue inline settings={settings} value={item.email} href={contactHref('email', item)} style={{ fontSize: 9, color: shades.meta, lineHeight: 1.2 }} />}
+            {item.phone && <SideValue inline settings={settings} value={item.phone} href={contactHref('phone', item)} style={{ fontSize: 9, color: shades.meta, lineHeight: 1.2 }} />}
           </View>
         ))}
       </View>

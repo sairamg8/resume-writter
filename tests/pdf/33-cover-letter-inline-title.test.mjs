@@ -30,11 +30,11 @@ const inline = (settings) => ({ headerLayout: 'inline', ...settings });
  * name's end to the title, `dy` from the name's baseline down to the title's, `mid` the centre of
  * the line they make.
  */
-async function nameLine(bytes) {
+async function nameLine(bytes, titleWord = 'Staff') {
   const pages = await read(bytes);
   const items = allItems(pages);
   const name = items.find((t) => t.str.includes('Pat'));
-  const title = items.find((t) => t.str.includes('Staff'));
+  const title = items.find((t) => t.str.includes(titleWord));
   return { page: pages[0], name, title, dx: title.x - (name.x + name.w), dy: name.y - title.y, mid: (name.x + title.x + title.w) / 2 };
 }
 const near = (a, b, tol) => Math.abs(a - b) <= tol;
@@ -69,10 +69,13 @@ describe('Name & Title Layout "Inline" reaches the letterhead (V2FIDB-51-3)', ()
   it('Name & Title Spacing moves the letter\'s title exactly as it moves the résumé\'s', async () => {
     for (const template of STACKED) {
       const dx = {};
+      // "Lead Engineer": at the 48 px maximum the letter's inline title fits its room by under a point,
+      // so a title a glyph wider (the "ff" of "Staff" once drew narrower as a ligature) wraps there.
+      const personal = { title: 'Lead Engineer' };
       for (const headerInlineGap of [2, 16, 24, 48]) {
         const settings = inline({ headerInlineGap });
-        const cv = await nameLine(await render(make(template, { settings })));
-        const cl = await nameLine(await renderCover(make(template, { settings })));
+        const cv = await nameLine(await render(make(template, { settings, personal })), 'Lead');
+        const cl = await nameLine(await renderCover(make(template, { settings, personal })), 'Lead');
         assert.ok(near(cl.dx, cv.dx, 0.05), `${template} ${headerInlineGap} px: the letter's ${cl.dx.toFixed(2)} pt, the résumé's ${cv.dx.toFixed(2)}`);
         dx[headerInlineGap] = cl.dx;
       }

@@ -10,16 +10,16 @@ import { PdfPhoto } from './shared/PdfPhoto';
 import { CSS_PX_TO_PT, tracking } from './shared/pdfUnits';
 import { fitFontSize } from './shared/pdfMeasure';
 import { PdfContactIcon } from './shared/PdfContactIcon';
-import { ContactValue } from './shared/PdfContact';
 import { CONTACT_LABELS, contactItems } from '@/utils/contacts';
 import { SIDEBAR_TYPES, SideSectionTitle, renderSideSection, SidebarMainSectionRouter } from './shared/PdfSidebarSections';
-import { SIDE_COL, SIDE_PAD_RIGHT, sideBreaks, sideColumnRoom } from './shared/PdfSidebarColumn';
+import { SIDE_COL, SIDE_PAD_RIGHT, SideValue, sideColumnRoom } from './shared/PdfSidebarColumn';
 import { sidebarShades } from './shared/pdfColors';
 import { pageSizeOf } from '@/constants/pageSize';
 
 /**
  * A contact in the dark column: icon and label in the column's label colour, not the accent. The
- * value, under its label and in line with it, breaks inside the column (sideBreaks).
+ * value, under its label and in line with it, prints whole on one line (wholeValue): a profile link
+ * broken at a hyphen no longer matches as a link to a parser.
  */
 function SideContactRow({ field, label, value, href, iconPt, settings, shades }) {
   return (
@@ -30,11 +30,12 @@ function SideContactRow({ field, label, value, href, iconPt, settings, shades })
           {label.toUpperCase()}
         </Text>
       </View>
-      <ContactValue
+      <SideValue
+        settings={settings}
         value={value}
         href={href}
         style={{ fontSize: 9, color: shades.value, paddingLeft: iconPt + 3.5, lineHeight: 1.2 }}
-        hyphenationCallback={sideBreaks(settings, { fontSize: 9 }, iconPt + 3.5)}
+        inset={iconPt + 3.5}
       />
     </View>
   );

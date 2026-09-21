@@ -228,6 +228,18 @@ export async function resolvePdfFonts(settings, text = '') {
 const primedFonts = new WeakSet();
 
 /**
+ * What every layout asks of a font that asks nothing (textkit passes no features): ligatures off.
+ * A ligature glyph — "ff", "fi", "ffi", "ffl" — is one glyph for two or three letters, and it is
+ * in the PDF's ToUnicode only if the glyph object fontkit cached for it carries those letters.
+ * That cache keeps the first request, and other lookups create glyphs with no characters, so in a
+ * long session a ligature could reach the PDF with no entry at all: "staff" was read as "sta\x1f"
+ * by pdf.js and "sta\ufffd" by MuPDF, and react-pdf's own tracker has the same report for "ff" and
+ * "fi" in registered fonts (#915, #3009). Without ligatures every glyph is one character, and
+ * kerning is untouched.
+ */
+const noLigatures = () => ({ liga: false, clig: false }); // a new object each call: fontkit adds features to it
+
+/**
  * Load every registered face of `families` and get their fontkit fonts ready to render;
  * returns the families that can be used, in order. Call before every render.
  *
@@ -239,6 +251,7 @@ const primedFonts = new WeakSet();
  * 2. Give each fallback font its own PostScript name. Every subset file of a typeface carries
  *    the same name ("NotoSans-Regular"), and the PDF writer reuses an embedded font by name,
  *    so Cyrillic glyph ids were written into the Latin font ("Привет" printed as "Пeивеg").
+ * 3. Lay every face out with ligatures off (noLigatures), so no glyph stands for several letters.
  */
 export async function prepareFonts(families) {
   const store = Font.getRegisteredFonts();
@@ -261,6 +274,10 @@ export async function prepareFonts(families) {
     for (const { data: font } of sources) {
       if (!font || primedFonts.has(font) || typeof font.glyphForCodePoint !== 'function') continue;
       for (const codePoint of font.characterSet || []) font.glyphForCodePoint(codePoint);
+      if (typeof font.layout === 'function') {
+        const layout = font.layout.bind(font);
+        font.layout = (string, features, ...rest) => layout(string, features ?? noLigatures(), ...rest);
+      }
       if (fallbackFamilies.has(family)) {
         const name = `${font.postscriptName}-${family.replace(/[^A-Za-z0-9]+/g, '')}`;
         Object.defineProperty(font, 'postscriptName', { value: name, configurable: true });
