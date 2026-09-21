@@ -72,12 +72,20 @@ export const DEFAULTS = {
     // colour wins (R2-2). The bold name is WCAG large text from 14 pt (19 by default), where 3:1
     // reads: a Header Text Color that reaches that prints as picked, as it did before R2-2; one
     // that does not gets the tint that reaches 4.5:1, as since R2-2 (R7-13).
-    nameColor: (s) => s.nameColor || headerTextOn(s, s.sidebarBg || DEFAULTS.sidebar.sidebarBg,
-      (s.fontSizeBase ?? 11) + (s.fontSizeNameDelta ?? 8) >= 14 ? 3 : 4.5),
+    // The ATS-safe single column (sidebarSingleColumn) prints on white, not the dark band, so it
+    // falls back dark-on-white like Classic — the light-on-dark tint would be invisible there.
+    nameColor: (s) => s.nameColor
+      || (s.sidebarSingleColumn
+        ? (s.textColor || '#1a1a1a')
+        : headerTextOn(s, s.sidebarBg || DEFAULTS.sidebar.sidebarBg,
+          (s.fontSizeBase ?? 11) + (s.fontSizeNameDelta ?? 8) >= 14 ? 3 : 4.5)),
     // The accent on the dark sidebar only where it reads there; a dark accent (the default
-    // #374151, or #111111) gets a light tint of itself instead (FIDB-42).
+    // #374151, or #111111) gets a light tint of itself instead (FIDB-42). On white (single column)
+    // the accent prints as picked.
     jobTitleColor: (s) => s.jobTitleColor
-      || readableOn(s.accentColor || '#2563eb', s.sidebarBg || DEFAULTS.sidebar.sidebarBg),
+      || (s.sidebarSingleColumn
+        ? (s.accentColor || '#2563eb')
+        : readableOn(s.accentColor || '#2563eb', s.sidebarBg || DEFAULTS.sidebar.sidebarBg)),
     headingStyle: 'plain',
     sectionTitleCase: 'upper',
     sidebarBg: '#1e293b',

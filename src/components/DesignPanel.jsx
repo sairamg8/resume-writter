@@ -4,7 +4,7 @@ import { ATS_DEFAULTS, sectionReset } from '@/utils/defaultData';
 import { contactIconHint, drawsContactIcons, TEMPLATE_PICKER, templateId } from '@/constants/templates';
 import { MARGIN_MM } from '@/constants/pageMargins';
 import { ITEM_GAP_PX, LINE_HEIGHT, SECTION_GAP_PX } from '@/constants/spacingNumbers';
-import { DesignSection, NumberRow } from '@/components/DesignPanelShared';
+import { DesignSection, NumberRow, Label, SegmentControl } from '@/components/DesignPanelShared';
 import { HeadingsSection } from '@/components/DesignPanelHeadings';
 import { ColorsSection } from '@/components/DesignPanelColors';
 import { TypographySection } from '@/components/DesignPanelTypography';
@@ -68,6 +68,22 @@ export default function DesignPanel({ resume, updateSetting, setTemplate, resetS
             </button>
           ))}
         </div>
+        {current === 'sidebar' && (
+          <div className="mt-3 pt-3 border-t border-gray-100">
+            <Label>Layout</Label>
+            <SegmentControl
+              options={[
+                { label: 'Two columns', value: false },
+                { label: 'Single · ATS-safe', value: true },
+              ]}
+              value={!!settings.sidebarSingleColumn}
+              onChange={v => updateSetting('sidebarSingleColumn', v)}
+            />
+            <p className="text-[10px] text-gray-400 mt-2">
+              Single column reads cleanly in every applicant-tracking system. The two-column look can interleave when a portal parses it.
+            </p>
+          </div>
+        )}
         <p className="text-[10px] text-gray-400 mt-2">The cover letter&apos;s header takes the template&apos;s look too.</p>
       </DesignSection>
 

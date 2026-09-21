@@ -15,6 +15,7 @@ import { SIDEBAR_TYPES, SideSectionTitle, renderSideSection, SidebarMainSectionR
 import { SIDE_COL, SIDE_PAD_RIGHT, SideValue, sideColumnRoom } from './shared/PdfSidebarColumn';
 import { sidebarShades } from './shared/pdfColors';
 import { pageSizeOf } from '@/constants/pageSize';
+import { ClassicTemplatePDF } from './ClassicTemplatePDF';
 
 /**
  * A contact in the dark column: icon and label in the column's label colour, not the accent. The
@@ -43,6 +44,16 @@ function SideContactRow({ field, label, value, href, iconPt, settings, shades })
 
 export function SidebarTemplatePDF({ data }) {
   const { personal, sections = [], settings = {} } = data;
+
+  // ATS-safe layout: a two-column page is read by y-position, so geometry-based extractors
+  // (Poppler, and most applicant-tracking pipelines) interleave the dark column with the main one.
+  // react-pdf v4 emits no tagged structure tree to carry a separate reading order, so the only fix
+  // is a single linear column — the proven, parse-clean Classic layout, in the résumé's own colours
+  // (nameColor/jobTitleColor resolve dark-on-white in this mode, see templateSettings.js).
+  if (settings.sidebarSingleColumn) {
+    return <ClassicTemplatePDF data={data} />;
+  }
+
   const {
     accentColor: accent,
     textColor,

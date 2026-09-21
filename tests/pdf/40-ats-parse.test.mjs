@@ -9,7 +9,8 @@
 // Known limits are `todo`, not silent: they print in every run until they are fixed or accepted.
 //   • Poppler's -raw mode splits words by geometry, not by the space glyphs that are there, so a font with
 //     a narrow space (Lato, Source Sans 3, Literata) — or a line textkit closes up — reads glued.
-//   • The Sidebar template is two columns; Poppler's reading order and -layout modes interleave them.
+//   • The Sidebar template's styled two columns interleave under Poppler's reading-order and -layout
+//     modes; its Layout → "Single · ATS-safe" toggle collapses it to one linear column that parses whole.
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { setup, teardown, resume, section, experience, render, loadModule, TEMPLATES } from './harness.mjs';
@@ -87,6 +88,29 @@ describe('the stress résumé parses whole in every template', () => {
   }
 });
 
+describe('the Sidebar ATS-safe single column reads whole in every parser', () => {
+  // The Layout → "Single · ATS-safe" toggle (settings.sidebarSingleColumn) collapses the two-column
+  // Sidebar to one linear column, so geometry-based extractors read it in order — no interleaving.
+  const single = (r) => ({ ...r, settings: { ...r.settings, sidebarSingleColumn: true } });
+
+  it('sample résumé: parses whole under pdf.js and Poppler reading-order + -layout', async (t) => {
+    if (!hasPdftotext) { t.skip('pdftotext not installed'); return; }
+    const { DEMO_RESUMES } = await loadModule('/tests/fixtures/sampleResumes.js');
+    const r = single(DEMO_RESUMES.find((x) => x.template === 'sidebar'));
+    const found = (await readers(await render(r))).filter(([n]) => GOOD(n))
+      .flatMap(([n, text]) => problems(n, score(truthBlocks(r), text)));
+    assert.deepEqual(found, []);
+  });
+
+  it('stress résumé: accents, symbols and long contacts parse whole under pdf.js and Poppler', async (t) => {
+    if (!hasPdftotext) { t.skip('pdftotext not installed'); return; }
+    const r = single(stress('sidebar'));
+    const found = (await readers(await render(r))).filter(([n]) => GOOD(n))
+      .flatMap(([n, text]) => problems(n, score(truthBlocks(r), text)));
+    assert.deepEqual(found, []);
+  });
+});
+
 describe('known limits (todo: reported until fixed or accepted)', () => {
   it('Poppler -raw reads every template whole', { todo: "Poppler's -raw splits words by geometry: narrow-space fonts and lines textkit closes up read glued" }, async () => {
     const { DEMO_RESUMES } = await loadModule('/tests/fixtures/sampleResumes.js');
@@ -98,7 +122,7 @@ describe('known limits (todo: reported until fixed or accepted)', () => {
     assert.deepEqual(found, []);
   });
 
-  it('the Sidebar template reads whole under Poppler reading order and -layout', { todo: 'two columns: Greenhouse lists columned layouts as a parsing risk; Poppler interleaves them' }, async () => {
+  it('the styled two-column Sidebar reads whole under Poppler reading order and -layout', { todo: 'two columns: Greenhouse lists columned layouts as a parsing risk; Poppler interleaves them. The ATS-safe fix is the single-column toggle (tested above), not tagged PDF, which react-pdf v4 cannot emit' }, async () => {
     const { DEMO_RESUMES } = await loadModule('/tests/fixtures/sampleResumes.js');
     const r = DEMO_RESUMES.find((x) => x.template === 'sidebar');
     const found = (await readers(await render(r))).filter(([n]) => GOOD(n) && n !== 'pdf.js').flatMap(([n, text]) => problems(n, score(truthBlocks(r), text)));
