@@ -240,6 +240,40 @@ const primedFonts = new WeakSet();
 const noLigatures = () => ({ liga: false, clig: false }); // a new object each call: fontkit adds features to it
 
 /**
+ * Poppler's `pdftotext -raw` groups glyphs into words by the visual gap between them, not the space
+ * characters that are there (it drops the U+0020 and re-derives words from geometry), and merges two
+ * words across a space narrower than ~0.21 em — "Builtthecheckoutflow". Measured over the picker:
+ * only Lato (0.193 em), Source Sans 3 and Literata (0.200 em) fall under it; the next-narrowest font,
+ * IBM Plex Sans (0.236 em), and every wider one (Roboto 0.248, Noto Sans 0.260, Inter 0.281) read
+ * clean. MIN_SPACE_EM sits in that gap: widenNarrowSpace() lifts a too-narrow space to it in the
+ * laid-out run — clearing the threshold with margin — while leaving every already-clean font (≥ 0.236)
+ * untouched. The glyph still maps to U+0020 in the ToUnicode; the extra under 0.3 pt at a 10 pt body
+ * is below notice, and flooring the run's xAdvance (not the font metric) keeps it robust to kerning.
+ */
+const MIN_SPACE_EM = 0.22;
+
+/**
+ * Wrap font.layout so a run's space glyphs advance at least MIN_SPACE_EM, without touching any other
+ * glyph. Returns the wrapper; when the font's space already clears the bar it returns `layout`
+ * unchanged, so nothing is measured per run.
+ */
+function widenNarrowSpace(font, layout) {
+  const space = typeof font.glyphForCodePoint === 'function' ? font.glyphForCodePoint(0x20) : null;
+  const minAdvance = MIN_SPACE_EM * (font.unitsPerEm || 1000);
+  if (!space || space.advanceWidth >= minAdvance) return layout;
+  return (string, features, ...rest) => {
+    const run = layout(string, features, ...rest);
+    if (run && run.glyphs && run.positions) {
+      for (let i = 0; i < run.glyphs.length; i += 1) {
+        const pos = run.positions[i];
+        if (run.glyphs[i] && run.glyphs[i].id === space.id && pos && pos.xAdvance < minAdvance) pos.xAdvance = minAdvance;
+      }
+    }
+    return run;
+  };
+}
+
+/**
  * Load every registered face of `families` and get their fontkit fonts ready to render;
  * returns the families that can be used, in order. Call before every render.
  *
@@ -252,6 +286,8 @@ const noLigatures = () => ({ liga: false, clig: false }); // a new object each c
  *    the same name ("NotoSans-Regular"), and the PDF writer reuses an embedded font by name,
  *    so Cyrillic glyph ids were written into the Latin font ("Привет" printed as "Пeивеg").
  * 3. Lay every face out with ligatures off (noLigatures), so no glyph stands for several letters.
+ * 4. Widen a too-narrow space in the laid-out run (widenNarrowSpace), so `pdftotext -raw` reads the
+ *    narrow-space fonts' words apart instead of glued.
  */
 export async function prepareFonts(families) {
   const store = Font.getRegisteredFonts();
@@ -275,8 +311,9 @@ export async function prepareFonts(families) {
       if (!font || primedFonts.has(font) || typeof font.glyphForCodePoint !== 'function') continue;
       for (const codePoint of font.characterSet || []) font.glyphForCodePoint(codePoint);
       if (typeof font.layout === 'function') {
-        const layout = font.layout.bind(font);
-        font.layout = (string, features, ...rest) => layout(string, features ?? noLigatures(), ...rest);
+        const base = font.layout.bind(font);
+        const noLig = (string, features, ...rest) => base(string, features ?? noLigatures(), ...rest);
+        font.layout = widenNarrowSpace(font, noLig);
       }
       if (fallbackFamilies.has(family)) {
         const name = `${font.postscriptName}-${family.replace(/[^A-Za-z0-9]+/g, '')}`;

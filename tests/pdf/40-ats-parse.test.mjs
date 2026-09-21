@@ -7,8 +7,9 @@
 // unclear sections) and these checks cover the text stage all of them start with.
 //
 // Known limits are `todo`, not silent: they print in every run until they are fixed or accepted.
-//   • Poppler's -raw mode splits words by geometry, not by the space glyphs that are there, so a font with
-//     a narrow space (Lato, Source Sans 3, Literata) — or a line textkit closes up — reads glued.
+//   • Poppler's -raw mode re-derives words from geometry, not from the space glyphs that are there. A
+//     narrow-space font (Lato, Source Sans 3, Literata) is now handled — prepareFonts widens its space —
+//     but a near-full line react-pdf draws as one contiguous glyph run still reads glued, in any font.
 //   • The Sidebar template's styled two columns interleave under Poppler's reading-order and -layout
 //     modes; its Layout → "Single · ATS-safe" toggle collapses it to one linear column that parses whole.
 import { before, after, describe, it } from 'node:test';
@@ -111,8 +112,34 @@ describe('the Sidebar ATS-safe single column reads whole in every parser', () =>
   });
 });
 
+describe('narrow-space fonts read whole under Poppler -raw', () => {
+  // Lato (0.193 em), Source Sans 3 and Literata (0.200 em) ship a space narrower than -raw's
+  // word-break threshold, so it used to glue their words ("Builtthecheckoutflow"). prepareFonts now
+  // widens a too-narrow space (pdfFontLoader.js), so every reader reads the words apart.
+  for (const font of ['lato', 'sourcesans', 'literata']) {
+    it(`${font}: bullets, summary and skills parse whole in -raw`, async (t) => {
+      if (!hasPdftotext) { t.skip('pdftotext not installed'); return; }
+      const r = resume({
+        template: 'classic', settings: { font, fontSizeBase: 10, lineHeightValue: 1.3 },
+        personal: {
+          name: 'Jordan Rivera', title: 'Senior Frontend Engineer', email: 'jordan@example.com',
+          phone: '+1 555 0142', location: 'Austin, TX', linkedin: 'linkedin.com/in/jordan-rivera',
+          summary: '<p>Engineer with twelve years building fast reliable web apps for millions of users.</p>',
+        },
+        sections: [
+          experience([{ company: 'Northwind Traders Inc.', role: 'Staff Engineer', location: 'Austin, TX', startDate: '03/2021', endDate: '', current: true,
+            description: '<ul><li>Built the checkout flow for two million customers across Europe.</li><li>Reduced page load from 3.9 s to 1.6 s for a large public sector customer.</li></ul>' }]),
+          section('skills', [{ category: 'Languages', skills: 'TypeScript, JavaScript, Python, SQL' }], { skillsStyle: 'inline', separator: 'colon' }),
+        ],
+      });
+      const raw = pdftotext(await render(r)).find(([n]) => n.includes('-raw'));
+      assert.deepEqual(problems(`${font} ${raw[0]}`, score(truthBlocks(r), raw[1])), []);
+    });
+  }
+});
+
 describe('known limits (todo: reported until fixed or accepted)', () => {
-  it('Poppler -raw reads every template whole', { todo: "Poppler's -raw splits words by geometry: narrow-space fonts and lines textkit closes up read glued" }, async () => {
+  it('every demo résumé reads whole under Poppler -raw', { todo: "a near-full line react-pdf draws as one contiguous glyph run reads glued under -raw, even in normal-width fonts: the space chars are there (ToUnicode maps them to U+0020) but -raw re-derives words from geometry and keeps the run whole. Narrow-space fonts are handled (tested above); this needs react-pdf to split the run, which its text layer does not expose" }, async () => {
     const { DEMO_RESUMES } = await loadModule('/tests/fixtures/sampleResumes.js');
     const found = [];
     for (const r of DEMO_RESUMES) {
