@@ -139,7 +139,7 @@ describe('narrow-space fonts read whole under Poppler -raw', () => {
 });
 
 describe('known limits (todo: reported until fixed or accepted)', () => {
-  it('every demo résumé reads whole under Poppler -raw', { todo: "a near-full line react-pdf draws as one contiguous glyph run reads glued under -raw, even in normal-width fonts: the space chars are there (ToUnicode maps them to U+0020) but -raw re-derives words from geometry and keeps the run whole. Narrow-space fonts are handled (tested above); this needs react-pdf to split the run, which its text layer does not expose" }, async () => {
+  it('every demo résumé reads whole under Poppler -raw', { todo: "a near-full line react-pdf draws as one contiguous glyph run reads glued under -raw, even in normal-width fonts: the space chars are there (ToUnicode maps them to U+0020) but -raw drops them and re-derives words from geometry, and its word-break gap is ~0.29 em — above the ~0.26 em a normal space renders. Splitting the run does not help (measured: Poppler ignores the split and keeps merging under the gap); the only lever is widening every space to ~0.29 em globally, declined — it loosens the default font for one CLI flag when pdf.js, pdftotext default, -layout, PDFBox and Tika all read these lines whole. Narrow-space fonts (Lato/Source Sans 3/Literata) are handled (tested above)" }, async () => {
     const { DEMO_RESUMES } = await loadModule('/tests/fixtures/sampleResumes.js');
     const found = [];
     for (const r of DEMO_RESUMES) {
