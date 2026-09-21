@@ -1,8 +1,8 @@
 /**
  * Reads what tests/pdf/ats-fuzz.mjs wrote.
  *
- *   node tests/pdf/ats-fuzz-report.mjs <run.jsonl>                what failed, per reader and per class of lost fact
- *   node tests/pdf/ats-fuzz-report.mjs <before.jsonl> <after.jsonl>  A/B over the same seeds — refuses to compare a run with errors
+ *   node tests/pdf/ats-fuzz-report.mjs <run.jsonl>                what failed — text survival per reader/class, then field extraction
+ *   node tests/pdf/ats-fuzz-report.mjs <before.jsonl> <after.jsonl>  A/B over the same seeds (survival + field loss) — refuses a run with errors
  *
  * Errored cases are reported first and never silently dropped: a run whose renders all threw compares as "empty
  * and clean" otherwise (that happened once, when a font patch broke rendering).
@@ -52,6 +52,40 @@ function single(rows) {
   console.log('\ncases with garbage or letter-spaced text (not -raw):', g.length ? g.join(', ') : 'none');
 }
 
+/**
+ * Field extraction (ats-fields.mjs): per reader, how many cases lose a field a parser must recover.
+ * Split by "all" and "single-column only" — a two-column Sidebar is expected to scramble the
+ * title↔company↔date association, so a single-column loss is the surprising one worth chasing.
+ */
+function fields(rows) {
+  const ok = rows.filter((r) => !r.error && r.fields);
+  if (!ok.length) { console.log('\n(no field data — rerun the fuzz to populate row.fields)'); return; }
+  console.log('\nfield loss per reader            all / n   single-col   [name email phone links sections exp dateDet swapped skills]');
+  for (const rd of [...GOOD, RAW]) {
+    const present = ok.filter((r) => r.fields.some((x) => x.reader === rd));
+    if (!present.length) continue;
+    const get = (r) => r.fields.find((x) => x.reader === rd);
+    const all = present.filter((r) => get(r).problems > 0).length;
+    const sc = present.filter((r) => r.cfg.template !== 'sidebar');
+    const scFail = sc.filter((r) => get(r).problems > 0).length;
+    const c = (pred) => sc.filter((r) => pred(get(r))).length;
+    const cls = [
+      c((x) => x.name === false), c((x) => x.email === false), c((x) => x.phone === false),
+      c((x) => x.linksLost > 0), c((x) => x.sectionsLost > 0), c((x) => x.expLost > 0),
+      c((x) => x.dateDetached > 0), c((x) => x.swapped > 0), c((x) => x.skillsLost > 0),
+    ];
+    console.log(`${rd.padEnd(28)} ${String(all).padStart(5)} / ${String(present.length).padEnd(4)} ${String(scFail).padStart(6)}       [${cls.join(' ')}]`);
+  }
+  // The surprising failures: a single-column template losing a field under a GOOD reader (a two-column
+  // Sidebar and the -raw mode are documented to degrade, so they are not "bugs to chase").
+  const bugs = ok.filter((r) => r.cfg.template !== 'sidebar' && r.fields.some((x) => GOOD.includes(x.reader) && x.problems > 0));
+  console.log(`\nsingle-column cases losing a field under a GOOD reader (investigate): ${bugs.length}`);
+  for (const r of bugs.slice(0, 12)) {
+    const bad = r.fields.filter((x) => GOOD.includes(x.reader) && x.problems > 0).map((x) => x.reader);
+    console.log(`   seed ${r.seed}: ${r.cfg.template} font=${r.cfg.font} — [${bad.join(', ')}]`);
+  }
+}
+
 function compare(A, B) {
   if (A.length !== B.length) { console.log('NOT COMPARABLE: different case counts.'); process.exit(2); }
   const sum = (rows) => Object.fromEntries(GOOD.map((rd) => {
@@ -66,12 +100,23 @@ function compare(A, B) {
   }));
   console.log('\nA', JSON.stringify(sum(A)));
   console.log('B', JSON.stringify(sum(B)));
+  // Field loss over single-column cases (the surprising ones): a fix should not raise these.
+  const fsum = (rows) => Object.fromEntries([...GOOD, RAW].map((rd) => {
+    let loss = 0;
+    for (const r of rows) {
+      if (r.error || !r.fields || r.cfg.template === 'sidebar') continue;
+      if (r.fields.find((x) => x.reader === rd)?.problems > 0) loss += 1;
+    }
+    return [rd, loss];
+  }));
+  console.log('\nfield loss (single-column) A', JSON.stringify(fsum(A)));
+  console.log('field loss (single-column) B', JSON.stringify(fsum(B)));
   console.log('cases whose page count changed:', A.filter((r, i) => r.pages !== B[i].pages).length, '(layout drift)');
 }
 
 const A = load(fileA);
 const bad = errors(A, 'A');
-if (!fileB) { single(A); process.exit(bad ? 1 : 0); }
+if (!fileB) { single(A); fields(A); process.exit(bad ? 1 : 0); }
 const B = load(fileB);
 const badB = errors(B, 'B');
 if (bad || badB) { console.log('NOT COMPARABLE: fix the errored cases first.'); process.exit(2); }

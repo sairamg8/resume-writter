@@ -65,17 +65,24 @@ const EMAIL_RE = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g;
 const PHONE_RE = /(?<![A-Za-z0-9])\+?\d(?:[\d\s().-]{5,}\d)(?![A-Za-z0-9])/g;
 const URL_RE = /(?:https?:\/\/)?(?:[a-z0-9-]+\.)+[a-z]{2,}(?:\/[^\s]*)?/gi;
 
-/** The candidate name a first-line parser reads: the first line that looks like a person's name. */
+// A name word: letters, apostrophes, hyphens and dots (initials, "Jr.", "Núñez-Ramírez", "III").
+const NAME_WORD = /^[\p{L}][\p{L}'’.-]*$/u;
+
+/**
+ * The candidate name a first-line parser reads: the LEADING run of name words on the first line that
+ * starts with one. Taking the leading run, not the whole line, means an inline header that runs the
+ * name into a job title with a symbol in it ("Alexandria … Director of Product Design & Research")
+ * still yields the name — the parser reads "Alexandria …" and stops where the shape breaks.
+ */
 export function extractName(lines) {
   for (const raw of lines.slice(0, 6)) {
     const t = raw.trim();
-    if (!t || t.includes('@') || /\d/.test(t)) continue;
-    // A header, or a contact/skills line, is not a name.
-    if (t.length > 45) continue;
-    const words = t.split(/\s+/).filter(Boolean);
-    if (words.length < 1 || words.length > 6) continue;
-    // Names are letters, spaces, hyphens, apostrophes and dots (initials, "Jr.").
-    if (words.every((w) => /^[\p{L}][\p{L}'’.-]*$/u.test(w))) return norm(t);
+    if (!t || t.includes('@') || /\d/.test(t.split(/\s+/)[0])) continue;
+    const lead = [];
+    for (const w of t.split(/\s+/)) { if (NAME_WORD.test(w)) lead.push(w); else break; }
+    // The first six leading words hold any real name (and the start of an inline title); the caller
+    // matches by prefix, so an over-long name+title line is truncated here, not rejected.
+    if (lead.length) return norm(lead.slice(0, 6).join(' '));
   }
   return null;
 }
@@ -87,6 +94,24 @@ export function extractContacts(text) {
     phones: (norm(text).match(PHONE_RE) || []).map((p) => digits(p)).filter((d) => d.length >= 7 && d.length <= 15),
     urls: (norm(text).match(URL_RE) || []).map((u) => lower(u.replace(/^https?:\/\//, '').replace(/\/$/, ''))),
   };
+}
+
+/**
+ * Reading-order lines rebuilt from pdf.js items by their y-band — the line structure a real parser
+ * reconstructs from the text layer, which the harness's flat allText() drops. `pages` is what the
+ * harness read() returns: [{ items: [{ str, x, y }] }]. Field detection (first-line name, section
+ * headers) needs lines, so pass this, not allText, when scoring pdf.js.
+ */
+export function pdfjsLineText(pages) {
+  return pages.map((p) => {
+    const rows = [];
+    for (const it of p.items) {
+      const row = rows.find((r) => Math.abs(r.y - it.y) <= 2);
+      if (row) row.items.push(it); else rows.push({ y: it.y, items: [it] });
+    }
+    return rows.sort((a, b) => b.y - a.y)
+      .map((r) => r.items.sort((a, b) => a.x - b.x).map((t) => t.str).join(' ')).join('\n');
+  }).join('\n');
 }
 
 /** The line index of every section header, by matching a header synonym or the résumé's own titles. */
@@ -126,14 +151,16 @@ function occurrences(low, needle) {
 }
 
 /**
- * Within `hay`, is there a window of `window` characters that holds an occurrence of EVERY needle?
- * Considers every occurrence, not the first, so a title that also appears in the summary ("Senior
- * Frontend Engineer" vs the entry's "Frontend Engineer") is still matched where it sits by its job.
+ * The start index of the tightest window of `window` characters in `hay` that holds an occurrence of
+ * EVERY needle, or -1. Considers every occurrence, not the first, so a title that also appears in the
+ * summary ("Senior Frontend Engineer" vs the entry's "Frontend Engineer") is matched where it sits by
+ * its own job, and the returned position anchors that entry for the order check — robust to a résumé
+ * that reuses a title or company across two entries (the cluster near each entry's own data wins).
  */
-function coLocated(hay, needles, window) {
+function locateCluster(hay, needles, window) {
   const low = hay.toLowerCase();
   const lists = needles.map((n) => occurrences(low, n));
-  if (lists.some((l) => l.length === 0)) return false;
+  if (lists.some((l) => l.length === 0)) return -1;
   const events = lists.flatMap((list, id) => list.map((pos) => ({ pos, id }))).sort((a, b) => a.pos - b.pos);
   const count = Array.from({ length: needles.length }, () => 0);
   let have = 0;
@@ -141,10 +168,11 @@ function coLocated(hay, needles, window) {
   for (let rIdx = 0; rIdx < events.length; rIdx += 1) {
     if (count[events[rIdx].id]++ === 0) have += 1;
     while (events[rIdx].pos - events[l].pos > window) { if (--count[events[l].id] === 0) have -= 1; l += 1; }
-    if (have === needles.length) return true;
+    if (have === needles.length) return events[l].pos;
   }
-  return false;
+  return -1;
 }
+const coLocated = (hay, needles, window) => locateCluster(hay, needles, window) >= 0;
 
 /**
  * Score one reader's text against the résumé's fields.
@@ -158,7 +186,6 @@ function coLocated(hay, needles, window) {
  */
 export function scoreFields(truth, rawText) {
   const text = norm(rawText);
-  const low = text.toLowerCase();
   const lines = String(rawText).split('\n').map((l) => l.trim()).filter(Boolean);
   const contacts = extractContacts(rawText);
 
@@ -174,18 +201,26 @@ export function scoreFields(truth, rawText) {
   // Sections
   const sectionsFound = truth.sectionTitles.filter((t) => headerLines(lines, truth.sectionTitles).map((i) => lower(lines[i]).replace(/[:.\s]+$/, '')).includes(lower(t)));
 
-  // Work history: anchor each entry on its year, inside the detected experience section.
+  // Work history: anchor each entry on the cluster where its title, company and year co-locate,
+  // inside the detected experience section. The cluster start (not the first title occurrence) is the
+  // entry's position, so a title reused across two jobs — or echoed in the header — does not mis-order.
   const expText = sectionText(lines, truth.sectionTitles, SECTION_SYNONYMS.experience) || text;
+  const expLow = expText.toLowerCase();
   const entries = truth.experience.map((e) => {
     const needles = [e.title, e.company, e.startYear].filter(Boolean);
-    const recovered = coLocated(expText, needles, 240);
-    const dateAttached = e.startYear ? coLocated(expText, [e.title, e.startYear], 160) : true;
-    return { ...e, recovered, dateAttached };
+    const at = locateCluster(expLow, needles, 240);
+    const dateAttached = e.startYear ? coLocated(expLow, [e.title, e.startYear], 160) : true;
+    return { ...e, recovered: at >= 0, at, dateAttached };
   });
-  // Order: the entries' title positions must be non-decreasing (no two jobs swapped).
-  const positions = truth.experience.map((e) => low.indexOf(e.title.toLowerCase())).filter((i) => i >= 0);
+  // Order: recovered entries' cluster positions must be non-decreasing — but only between entries a
+  // parser can tell apart. Two jobs with the same title AND company (a promotion, or two stints) read
+  // as one block; a crossed position there is ambiguity in the résumé, not a mis-ordering to report.
+  const sig = (e) => `${e.title}|${e.company}`.toLowerCase();
+  const sigCount = {};
+  entries.forEach((e) => { sigCount[sig(e)] = (sigCount[sig(e)] || 0) + 1; });
+  const ordered = entries.filter((e) => e.at >= 0 && sigCount[sig(e)] === 1).map((e) => e.at);
   let swapped = 0;
-  for (let i = 1; i < positions.length; i += 1) if (positions[i] < positions[i - 1]) swapped += 1;
+  for (let i = 1; i < ordered.length; i += 1) if (ordered[i] < ordered[i - 1]) swapped += 1;
 
   // Skills
   const skillsText = sectionText(lines, truth.sectionTitles, SECTION_SYNONYMS.skills) || text;

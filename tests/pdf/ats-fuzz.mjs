@@ -1,7 +1,11 @@
 /**
- * A seeded fuzz over the settings the app offers plus stress content, scored by ats-parse.mjs with every
- * reader available (pdf.js, Poppler in three modes, and MuPDF when `mupdf` is installed — it is optional,
- * not a dependency: `npm i mupdf --no-save` in a scratch directory and NODE_PATH it, or skip it).
+ * A seeded fuzz over the settings the app offers plus stress content, scored two ways with every reader
+ * available (pdf.js, Poppler in three modes, and MuPDF when `mupdf` is installed — it is optional, not a
+ * dependency: `npm i mupdf --no-save` in a scratch directory and NODE_PATH it, or skip it):
+ *   - text survival (ats-parse.mjs): did every fact survive extraction, whole and contiguous?
+ *   - field extraction (ats-fields.mjs): can a parser recover the name, contacts, each job as a
+ *     {title, company, dates} record, the sections and the skills? — the stage a portal actually files by.
+ * pdf.js is scored flat for survival and line-rebuilt (pdfjsLineText) for fields, as a real parser reads it.
  *
  *   node tests/pdf/ats-fuzz.mjs <seed> <count> [out.jsonl]      one JSON line per case (default: the temp dir)
  *   node tests/pdf/ats-fuzz-report.mjs <out.jsonl> [after.jsonl]  what failed, and by how much (A/B with a second run)
@@ -14,8 +18,10 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { setup, teardown, render, resume, section, experience, loadModule, TEMPLATES } from './harness.mjs';
-import { truthBlocks, readers, score } from './ats-parse.mjs';
+import { setup, teardown, render, read, allText, resume, section, loadModule, TEMPLATES } from './harness.mjs';
+import { truthBlocks, score } from './ats-parse.mjs';
+import { pdftotext } from './extractors.mjs';
+import { truthFields, scoreFields, fieldProblems, pdfjsLineText } from './ats-fields.mjs';
 
 const mupdf = await import('mupdf').catch(() => null);
 const [seed0, count, outFile] = [Number(process.argv[2] || 1), Number(process.argv[3] || 40), process.argv[4] || path.join(os.tmpdir(), 'ats-fuzz.jsonl')];
@@ -103,24 +109,41 @@ try {
     try {
       const bytes = await render(r);
       const blocks = truthBlocks(r);
-      const rd = await readers(bytes);
+      const truth = truthFields(r);
+      // One parse each: pdf.js pages and Poppler. pdf.js is flat for survival, line-rebuilt for fields;
+      // Poppler and MuPDF already carry line breaks, so both scorers read the same text.
+      const pages = await read(bytes);
+      const poppler = pdftotext(bytes);
+      const survivalRd = [['pdf.js', allText(pages)], ...poppler];
+      const fieldRd = [['pdf.js', pdfjsLineText(pages)], ...poppler];
       row.pages = 0;
       if (mupdf) {
         const doc = mupdf.Document.openDocument(Buffer.from(bytes), 'application/pdf');
         let text = '';
         for (let i = 0; i < doc.countPages(); i += 1) text += doc.loadPage(i).toStructuredText('preserve-whitespace').asText() + '\n';
-        rd.push(['MuPDF', text]);
+        survivalRd.push(['MuPDF', text]);
+        fieldRd.push(['MuPDF', text]);
         row.pages = doc.countPages();
       }
       if ((process.env.DUMP || '').split(',').includes(String(seed))) {
         fs.mkdirSync(DUMP_DIR, { recursive: true });
         fs.writeFileSync(path.join(DUMP_DIR, `${seed}.pdf`), bytes);
-        rd.forEach(([nm, tx]) => fs.writeFileSync(path.join(DUMP_DIR, `${seed}.${nm.replace(/[^a-z-]/gi, '_')}.txt`), tx));
-        fs.writeFileSync(path.join(DUMP_DIR, `${seed}.cfg.json`), JSON.stringify({ cfg, blocks }, null, 1));
+        fieldRd.forEach(([nm, tx]) => fs.writeFileSync(path.join(DUMP_DIR, `${seed}.${nm.replace(/[^a-z-]/gi, '_')}.txt`), tx));
+        fs.writeFileSync(path.join(DUMP_DIR, `${seed}.cfg.json`), JSON.stringify({ cfg, blocks, truth }, null, 1));
       }
-      row.results = rd.map(([reader, text]) => {
+      row.results = survivalRd.map(([reader, text]) => {
         const s = score(blocks, text);
         return { reader, recall: s.recall, missing: s.missing.slice(0, 5), overlaps: s.overlaps.length, overlapEx: s.overlaps.slice(0, 2), garbage: s.garbage, spaced: s.spaced, glued: s.glued };
+      });
+      row.fields = fieldRd.map(([reader, text]) => {
+        const s = scoreFields(truth, text);
+        return {
+          reader, problems: fieldProblems(reader, s).length,
+          name: s.name, email: s.email, phone: s.phone,
+          linksLost: s.links.total - s.links.found, sectionsLost: s.sections.total - s.sections.found,
+          expLost: s.experience.total - s.experience.recovered, dateDetached: s.experience.total - s.experience.dateAttached,
+          swapped: s.experience.swapped, skillsLost: s.skills.total - s.skills.found,
+        };
       });
     } catch (e) { row.error = String((e && e.message) || e).slice(0, 200); }
     fs.writeSync(out, JSON.stringify(row) + '\n');

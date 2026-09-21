@@ -14,26 +14,12 @@ import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { setup, teardown, read, render, loadModule, TEMPLATES } from './harness.mjs';
 import { hasPdftotext, pdftotext } from './extractors.mjs';
-import { truthFields, scoreFields, fieldProblems, extractName } from './ats-fields.mjs';
+import { truthFields, scoreFields, fieldProblems, extractName, pdfjsLineText } from './ats-fields.mjs';
 
 before(setup);
 after(teardown);
 
 const SINGLE_COLUMN = TEMPLATES.filter((t) => t !== 'sidebar');
-
-/** Reading-order lines from pdf.js items, grouped by their y-band — the line structure a real parser
- *  reconstructs from the text layer (the harness's flat allText drops it). */
-function pdfjsLineText(pages) {
-  return pages.map((p) => {
-    const rows = [];
-    for (const it of p.items) {
-      const row = rows.find((r) => Math.abs(r.y - it.y) <= 2);
-      if (row) row.items.push(it); else rows.push({ y: it.y, items: [it] });
-    }
-    return rows.sort((a, b) => b.y - a.y)
-      .map((r) => r.items.sort((a, b) => a.x - b.x).map((t) => t.str).join(' ')).join('\n');
-  }).join('\n');
-}
 
 /** The readers a field parser sees, all line-structured: pdf.js (rebuilt) and every Poppler mode. */
 async function readersForFields(bytes) {
