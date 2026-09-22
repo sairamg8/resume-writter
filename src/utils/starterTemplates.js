@@ -1,7 +1,7 @@
 import { BASE_COVER_LETTER } from './defaultDataContent.js';
 import { templateStyleDefaults } from '../constants/templates.js';
+import { DATA_VERSION } from './dataVersion.js';
 
-export const STARTER_DATA_VERSION = 1;
 
 export function getStarterSettings(template) {
   return {
@@ -305,7 +305,9 @@ export function buildResumeFromStarter(starterId, newId) {
     id: newId,
     name: starter.name,
     updatedAt: Date.now(),
-    dataVersion: STARTER_DATA_VERSION,
+    // Current data, like a blank résumé: no migration runs on it. It was stamped 1, so the next load
+    // ran every migration since — v9 moved the Modern starter's photo text from Center to Top.
+    dataVersion: DATA_VERSION,
     template,
     settings: getStarterSettings(template),
     personal: JSON.parse(JSON.stringify(starter.personal)),

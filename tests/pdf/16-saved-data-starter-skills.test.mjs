@@ -38,3 +38,18 @@ describe('starter résumés print their skills', () => {
     }
   });
 });
+
+describe('a starter résumé loads as it was made', () => {
+  it('no migration changes it on the next load — the Modern starter keeps its photo text Center', async () => {
+    const { STARTER_TEMPLATES, buildResumeFromStarter } = await loadModule('/src/utils/starterTemplates.js');
+    const { normalizeResume } = await loadModule('/src/utils/normalizeResume.js');
+    for (const t of STARTER_TEMPLATES) {
+      const made = buildResumeFromStarter(t.id, `r_${t.id}`);
+      const reloaded = normalizeResume(JSON.parse(JSON.stringify(made))); // what the next page load does
+      assert.deepEqual(reloaded.settings, made.settings, `${t.id} (${t.template})`);
+    }
+    const modern = STARTER_TEMPLATES.find((t) => t.template === 'modern');
+    const r = normalizeResume(JSON.parse(JSON.stringify(buildResumeFromStarter(modern.id, 'm'))));
+    assert.equal(r.settings.photoTextAlign, 'center');
+  });
+});

@@ -1,6 +1,7 @@
 import { newId } from './ids.js';
 import { BASE_COVER_LETTER } from './defaultDataContent.js';
-import { getStarterSettings, STARTER_DATA_VERSION } from './starterTemplates.js';
+import { getStarterSettings } from './starterTemplates.js';
+import { DATA_VERSION } from './dataVersion.js';
 import { isText, storedText } from './storedText.js';
 import { parseMonthYear } from './dates.js';
 import { parseRichText, plainTextToHtml } from './richText.js';
@@ -238,7 +239,7 @@ export function jsonResumeToCpwtResume(jsonResume, customId) {
     id,
     name: personal.name ? `${personal.name} Resume` : 'Imported Resume',
     updatedAt: Date.now(),
-    dataVersion: STARTER_DATA_VERSION,
+    dataVersion: DATA_VERSION, // built now, from a file with no app history: no migration applies
     template: 'classic',
     settings: getStarterSettings('classic'),
     personal,

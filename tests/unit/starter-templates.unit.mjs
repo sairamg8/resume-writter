@@ -35,3 +35,12 @@ test('every starter’s skills print: its Skills groups hold skills, as the edit
     for (const item of skills.items) assert.equal(item.name, undefined, `${t.id}: no old name label`);
   }
 });
+
+// A résumé built from a starter is current data, like a blank one: it was stamped dataVersion 1, so
+// the next load ran every migration since — v9 moved the Modern starter's photo text Center → Top.
+test('a starter résumé and a JSON Resume import carry the data version this build writes', async () => {
+  const { DATA_VERSION } = await import('../../src/utils/dataVersion.js');
+  const { jsonResumeToCpwtResume } = await import('../../src/utils/jsonResume.js');
+  for (const t of STARTER_TEMPLATES) assert.equal(buildResumeFromStarter(t.id, 'r').dataVersion, DATA_VERSION, t.id);
+  assert.equal(jsonResumeToCpwtResume({ basics: { name: 'X' } }).dataVersion, DATA_VERSION);
+});
