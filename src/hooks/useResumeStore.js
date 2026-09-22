@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { createBlankResume, settingsAfterReset } from '@/utils/defaultData';
 import { buildResumeFromStarter } from '@/utils/starterTemplates';
 import { createSectionActions } from '@/hooks/useResumeSectionActions';
@@ -11,6 +11,7 @@ import { backupRaw, notSavedReason, pendingRecovery, readSavedList, rememberReco
 import { savedDeletions } from '@/utils/localDeletions';
 import { isOriginal, withKeep } from '@/utils/demoSeed';
 import { useSmallerPhotos } from '@/hooks/useSmallerPhotos';
+import { keepUnsaved } from '@/utils/unsavedJobs';
 
 const STORAGE_KEY = 'cpwtcv_v1';
 
@@ -47,6 +48,28 @@ function readStore() {
   };
 }
 
+/**
+ * This tab's state once another tab has saved `incoming` (readStore of the value it wrote): its
+ * résumés, but for what this tab changed that storage has not seen (keepUnsaved against `stored`,
+ * the list this tab last knew storage to hold — as the job and board stores do); its deletions, and
+ * any made here that it does not list yet; the résumé open here stays open here. Each tab saved its
+ * whole list on every change and never read the other's: a résumé created in one tab was erased by
+ * the next edit in the other, and an edit made there undone (bug audit 2026-09-22). Pure: React may
+ * run it twice. The same arrays as `incoming` where nothing of this tab's is kept.
+ */
+function withOtherTabsSave(prev, incoming, stored) {
+  const resumes = keepUnsaved(incoming.resumes, prev.resumes, stored);
+  const ids = new Set(resumes.map((r) => r.id));
+  const mine = (prev.deletedIds || []).filter((id) => !incoming.deletedIds.includes(id));
+  const listed = mine.length ? [...incoming.deletedIds, ...mine] : incoming.deletedIds;
+  const deletedIds = listed.some((id) => ids.has(id)) ? listed.filter((id) => !ids.has(id)) : listed;
+  const deletedInfo = mine.length
+    ? { ...incoming.deletedInfo, ...Object.fromEntries(mine.filter((id) => prev.deletedInfo?.[id]).map((id) => [id, prev.deletedInfo[id]])) }
+    : incoming.deletedInfo;
+  const activeId = ids.has(prev.activeId) ? prev.activeId : (ids.has(incoming.activeId) ? incoming.activeId : resumes[0]?.id ?? null);
+  return { ...incoming, resumes, deletedIds, deletedInfo, activeId };
+}
+
 export function useAppStore() {
   const [loaded] = useState(readStore);
   const [appState, setAppState] = useState(loaded.state);
@@ -69,15 +92,43 @@ export function useAppStore() {
     setRecovery(rememberRecovery(STORAGE_KEY, { backupKey: backupRaw(STORAGE_KEY, loaded.unreadable) }));
   }, [loaded]);
 
+  // The résumés this tab last knew storage to hold (loaded, saved, or taken from another tab), and
+  // another tab's save just taken — storage holds it already.
+  const stored = useRef(loaded.state.resumes);
+  const taken = useRef(null);
+
   useEffect(() => {
+    const other = taken.current;
+    taken.current = null;
+    // Only another tab's save was taken: not written back, or two tabs would answer each other's
+    // saves for ever (each keeps its own open résumé, so their stores never read the same).
+    if (other && appState.resumes === other.resumes && appState.deletedIds === other.deletedIds) {
+      stored.current = appState.resumes;
+      return;
+    }
     try {
       // When storage is full, old backups make room before the change is refused (R4-8).
       setItemWithRoom(STORAGE_KEY, JSON.stringify({ ...appState, dataVersion: DATA_VERSION }));
+      stored.current = appState.resumes;
       setPersistError(null);
     } catch (e) {
       setPersistError(e);
     }
   }, [appState]);
+
+  // Another tab saved the store: take its save (withOtherTabsSave). A value that cannot be read in
+  // full is not taken over this tab's — its own load backs such a value up (readStore).
+  useEffect(() => {
+    function onStorage(e) {
+      if (e.key !== STORAGE_KEY || e.newValue == null) return;
+      const { state: incoming, unreadable } = readStore();
+      if (unreadable !== null) return;
+      taken.current = incoming;
+      setAppState((prev) => withOtherTabsSave(prev, incoming, stored.current));
+    }
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
 
   // A photo an older build stored at camera size is made what an upload of it is now, once (ONB-10).
   useSmallerPhotos(appState.resumes, setAppState);
