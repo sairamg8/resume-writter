@@ -106,12 +106,14 @@ export function analyzeBullet(text = '') {
   const allVerbs = Object.values(ACTION_VERBS_BY_CATEGORY).flat().map(v => v.toLowerCase());
   const hasActionVerb = allVerbs.includes(firstWord.toLowerCase());
 
-  // Check weak phrases
+  // Check weak phrases. String#match with a copy of the pattern: `wp.match` is global, and
+  // RegExp#test on a global pattern starts where its last match ended (lastIndex), so the same text
+  // was found weak on one call and not on the next — the modal re-runs this on every render, and
+  // its badge, score and Auto-Fix flickered (bug audit 2026-09-22). `phrase`: the words it found.
   const detectedWeakPhrases = [];
   for (const wp of WEAK_PHRASE_REPLACEMENTS) {
-    if (wp.match.test(clean)) {
-      detectedWeakPhrases.push(wp);
-    }
+    const found = clean.match(new RegExp(wp.match.source, 'i'));
+    if (found) detectedWeakPhrases.push({ ...wp, phrase: found[0] });
   }
 
   // Calculate bullet quality score (0 to 100)

@@ -125,7 +125,7 @@ export default function BulletOptimizerModal({ isOpen, onClose, initialText = ''
           {weakPhrases.length > 0 && (
             <div className="p-3 bg-red-50/80 border border-red-200 rounded-xl flex items-center justify-between gap-3 text-xs">
               <span className="text-red-700">
-                Detected weak phrase: <strong>{weakPhrases[0].match.source.replace(/\\b/g, '')}</strong>. Replace with power verb?
+                Detected weak phrase: <strong>&ldquo;{weakPhrases[0].phrase}&rdquo;</strong>. Replace with power verb?
               </span>
               <button
                 onClick={handleAutoFix}

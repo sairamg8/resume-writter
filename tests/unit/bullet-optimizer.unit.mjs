@@ -46,3 +46,21 @@ test('GOOGLE_XYZ_TEMPLATES: covers multiple career paths', () => {
     assert.ok(t.template.includes(']'));
   }
 });
+
+// The weak-phrase patterns are global, and RegExp#test on a global pattern starts where its last
+// match ended: the same statement was weak on one call and not on the next. The modal runs
+// analyzeBullet on every render, so its badge, score and Auto-Fix flickered (bug audit 2026-09-22).
+test('analyzeBullet: the same text gets the same verdict every time it is read', () => {
+  const text = 'Was responsible for the payments team of 5 engineers and 3 designers';
+  const runs = [1, 2, 3, 4, 5].map(() => analyzeBullet(text));
+  assert.deepEqual(runs.map((r) => r.weakPhrases.length), [1, 1, 1, 1, 1]);
+  assert.deepEqual(new Set(runs.map((r) => r.score)).size, 1);
+  // And after reading another statement in between.
+  analyzeBullet('Worked on the ledger and handled refunds');
+  assert.equal(analyzeBullet(text).weakPhrases.length, 1);
+});
+
+test('analyzeBullet: names the words it found weak, as written', () => {
+  assert.deepEqual(analyzeBullet('Was responsible for the payments team').weakPhrases.map((w) => w.phrase), ['Was responsible for']);
+  assert.deepEqual(analyzeBullet('Helped with onboarding and worked on the API').weakPhrases.map((w) => w.phrase), ['worked on', 'Helped with']);
+});
