@@ -2,7 +2,7 @@
 // offers, top to bottom as the header prints them, each only where it prints. Plain data (no React):
 // the panel and tests read it.
 import { HEADER_GAPS, storedGapPx, templateGapPt } from '@/constants/headerSpacing';
-import { hasHeaderControls, templateId } from '@/constants/templates';
+import { hasHeaderControls, headerTemplateId } from '@/constants/templates';
 import { isDrawableImage } from '@/utils/imageUpload';
 import { CSS_PX_TO_PT } from '@/templates/pdf/shared/pdfUnits';
 
@@ -35,7 +35,7 @@ function gapRow(key, template, settings) {
  *                  else `nameTitleGap` under it (Stack, and always in Modern and Sidebar) (spec D3)
  */
 export function headerGapRows(template, settings = {}, personal = {}) {
-  const t = templateId(template);
+  const t = headerTemplateId(template, settings); // the Sidebar's single column prints Classic's header
   const hidden = personal?.hiddenFields || [];
   const rows = [];
   if (!hidden.includes('photo') && isDrawableImage(personal?.photo)) rows.push(gapRow('photoTextGap', t, settings));

@@ -1,7 +1,7 @@
 // The PDF's per-template fallbacks and the settings every PDF renders with. Plain data and
 // functions (no react-pdf): the templates, the cover letter and its Word export all read the
 // résumé's colours through here, so the letter's Word file prints what its PDF prints (FIDB-51).
-import { headerBorderOn } from '@/constants/templates';
+import { headerBorderOn, headerTemplateId } from '@/constants/templates';
 import { headerGapsPt } from '@/constants/headerSpacing';
 import { pageMargins } from '@/constants/pageMargins';
 import { contrast, readableOn } from './pdfColors';
@@ -157,8 +157,9 @@ export function resolveTemplateSettings(settings = {}, templateKey) {
   // A boolean from here on: the stored choice, else the template's own default.
   s.showHeaderBorder = headerBorderOn(settings, templateKey);
 
-  // The header's spacing in pt: the résumé's own gaps, else the template's (header_spacing_spec.md).
-  s.headerGaps = headerGapsPt(settings, templateKey, { contactLayout: s.contactLayout, sectionGapPt: s.sectionGap });
+  // The header's spacing in pt: the résumé's own gaps, else the template's (header_spacing_spec.md) —
+  // Classic's for the Sidebar's single column, which prints Classic's page (headerTemplateId).
+  s.headerGaps = headerGapsPt(settings, headerTemplateId(templateKey, settings), { contactLayout: s.contactLayout, sectionGapPt: s.sectionGap });
 
   return s;
 }

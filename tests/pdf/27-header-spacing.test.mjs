@@ -208,3 +208,27 @@ describe('Classic, Minimal and Executive print the header gaps (header_spacing_s
     }
   });
 });
+
+// The Sidebar's ATS-safe single column (Design → Layout "Single · ATS-safe") prints Classic's page
+// (SidebarTemplatePDF), but its header took the Sidebar column's spacing: the second contact row 4.5 pt
+// low (6 pt between rows, not 1.5), the summary on the contacts (no summary gap), and the first
+// section 15 pt → Between Sections under the header.
+describe('the Sidebar\'s single column prints Classic\'s header spacing', () => {
+  const pos = async (template, settings) => {
+    const pg = await page(template, { headingStyle: 'plain', ...settings });
+    return Object.fromEntries(['name', 'title', 'email', 'row2', 'summary', 'section'].map((a) => [a, Math.round(at(pg, a) * 100) / 100]));
+  };
+
+  for (const settings of [{}, { nameTitleGap: 20, contactGapY: 10, summaryGap: 30 }, { contactLayout: 'single' }]) {
+    it(`as Classic prints it: ${JSON.stringify(settings)}`, async () => {
+      assert.deepEqual(await pos('sidebar', { ...settings, sidebarSingleColumn: true }), await pos('classic', settings));
+    });
+  }
+
+  it('its Header spacing rows are Classic\'s; the two-column Sidebar keeps its own', async () => {
+    const { headerGapRows } = await loadModule('/src/utils/headerSpacingRows.js');
+    const rows = (template, s) => headerGapRows(template, s, { ...P, photo: PNG_2X2 }).map((r) => [r.key, Math.round(r.valuePx * 10) / 10]);
+    assert.deepEqual(rows('sidebar', { sidebarSingleColumn: true }), rows('classic', {}));
+    assert.deepEqual(rows('sidebar', {}).find(([k]) => k === 'nameTitleGap'), ['nameTitleGap', 2.7], 'the column\'s own 2 pt');
+  });
+});

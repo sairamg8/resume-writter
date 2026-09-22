@@ -150,6 +150,16 @@ export function headingBorderControls(headingStyle) {
 export const templateHeaderGaps = (template) => TEMPLATES[templateId(template)].headerGaps;
 
 /**
+ * The template whose header a résumé's page prints: its own, but Classic for the Sidebar's ATS-safe
+ * single column (Design → Layout "Single · ATS-safe", `sidebarSingleColumn`), which SidebarTemplatePDF
+ * prints as Classic's page — so its header takes Classic's spacing, not the Sidebar column's.
+ */
+export const headerTemplateId = (template, settings) => {
+  const t = templateId(template);
+  return t === 'sidebar' && settings?.sidebarSingleColumn ? 'classic' : t;
+};
+
+/**
  * `resume` with a template the app offers, as the app writes it ("Modern" is 'modern'), so the
  * Design panel shows it selected and every control reads the template the PDF prints.
  * normalizeResume() applies it wherever résumés come in: load, import, cloud sync, restore. The
