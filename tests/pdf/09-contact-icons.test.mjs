@@ -133,6 +133,41 @@ describe('an icon chosen in the header icon picker', () => {
       assert.deepEqual(drawn.slice(2).map((shapes) => shapes.map((x) => x.paint).join('')), PACKS.lucide.shapes.slice(2), 'the rest keep the chosen pack');
     });
   }
+
+  it('every one of the picker\'s icons prints as itself: its shapes, paint, stroke width and first point', async () => {
+    const { HEADER_ICONS } = await loadModule('/src/utils/contactIconPaths.js');
+    const FIELDS = ['email', 'phone', 'location', 'website', 'linkedin', 'github'];
+    const ids = Object.keys(HEADER_ICONS);
+    const firstPoint = (d) => /^[Mm]\s*(-?\d*\.?\d+)[\s,]*(-?\d*\.?\d+)/.exec(d)?.slice(1, 3).map((v) => Math.round(Number(v) * 1000) / 1000);
+    for (let at = 0; at < ids.length; at += FIELDS.length) {
+      const chunk = ids.slice(at, at + FIELDS.length);
+      const customContactIcons = Object.fromEntries(chunk.map((id, i) => [FIELDS[i], `icon:${id}`]));
+      const bytes = await render(resume({ template: 'classic', settings: { iconSet: 'filled', contactStyle: 'icon', customContactIcons }, personal: PERSONAL }));
+      assert.equal(await images(bytes), 0, `${chunk}: no image drawn`);
+      const drawn = await icons(bytes);
+      chunk.forEach((id, i) => {
+        const item = HEADER_ICONS[id];
+        const shapes = drawn[i];
+        const fill = (item.paint || 'stroke') === 'fill';
+        assert.equal(shapes?.map((x) => x.paint).join(''), (fill ? 'F' : 'S').repeat(item.shapes.length), `${id}: one ${fill ? 'fill' : 'stroke'} per shape`);
+        if (!fill) for (const s of shapes) assert.equal(s.width, item.strokeWidth ?? 2, `${id}: stroke width`);
+        if (item.shapes[0][0] === 'path') assert.deepEqual(shapes[0].start, firstPoint(item.shapes[0][1].d), `${id}: starts where its path does`);
+      });
+    }
+  });
+
+  it('the editor draws a picked icon or pack as vector shapes, and only an upload as an image', async () => {
+    const { ContactIcon } = await loadModule('/src/utils/contactIcons.jsx');
+    const draw = (field, custom) => renderToString(createElement(ContactIcon, { field, settings: { iconSet: 'lucide', customContactIcons: custom ? { [field]: custom } : {} } }));
+    const send = draw('email', 'icon:send');
+    assert.match(send, /<svg[^>]*viewBox="0 0 24 24"/);
+    assert.ok(send.includes('d="m22 2-7 20-4-9-9-4Z"') && send.includes('d="M22 2 11 13"'), 'the paper plane\'s paths');
+    assert.doesNotMatch(send, /<img/);
+    assert.equal(draw('phone', 'pack:filled'), renderToString(createElement(ContactIcon, { field: 'phone', settings: { iconSet: 'filled' } })), 'a picked pack draws as that pack');
+    const upload = draw('email', RED_PNG);
+    assert.match(upload, /<img[^>]*src="data:image\/png/);
+    assert.doesNotMatch(upload, /<svg/);
+  });
 });
 
 /** A WebP data URL, as uploads were stored before they were converted: react-pdf cannot decode it. */

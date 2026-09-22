@@ -5,6 +5,7 @@ import HeaderIconPickerModal from '@/components/HeaderIconPickerModal';
 import { HeaderCustomization } from '@/components/PersonalInfoEditorHeader';
 import { PhotoSection } from '@/components/PersonalInfoEditorPhoto';
 import { ContactIcon } from '@/utils/contactIcons';
+import { isContactIconImage } from '@/utils/contactIconPaths';
 import { readImageFile } from '@/utils/imageUpload';
 import { usePrintableImage, UNPRINTABLE_ICON } from '@/hooks/usePrintableImage';
 import { anyDrawsContactIcons, drawsContactIcons, templateLabel as getTemplateLabel } from '@/constants/templates';
@@ -29,7 +30,7 @@ const FIELDS = [
 ];
 
 function CustomIconControl({ fieldKey, iconLabel, customIcon, s, onPickIconFile, setCustomIcon, onOpenPicker }) {
-  const isImage = typeof customIcon === 'string' && (customIcon.startsWith('data:image/') || customIcon.startsWith('http'));
+  const isImage = isContactIconImage(customIcon);
   const printable = usePrintableImage(isImage ? customIcon : null, { kind: 'icon' });
   const unprintable = isImage && printable === null;
   return (

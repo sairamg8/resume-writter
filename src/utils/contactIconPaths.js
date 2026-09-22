@@ -758,8 +758,8 @@ export function resolveIconShapes({ custom, field, setId = 'lucide', color = 'cu
   if (custom && typeof custom === 'string') {
     const trimmed = custom.trim();
     if (trimmed.startsWith('pack:')) {
-      const packId = trimmed.slice(5);
-      const pack = ICON_PACKS[packId] || ICON_PACKS.lucide;
+      // A pack the app no longer has falls through to the chosen pack below, as an unknown icon does.
+      const pack = ICON_PACKS[trimmed.slice(5)];
       shapes = pack?.icons?.[field];
       packPaint = pack?.paint;
       defaultSw = pack?.strokeWidth ?? 2;

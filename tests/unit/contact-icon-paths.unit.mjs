@@ -136,3 +136,65 @@ test('a picked icon resolves to its own shapes, a picked pack to that pack\'s fi
   const phone = iconShapes('lucide', 'phone', { color: '#000000', custom: 'pack:filled' });
   assert.deepEqual(phone, iconShapes('filled', 'phone', { color: '#000000' }));
 });
+
+// The header icon picker offers every HEADER_ICONS icon for every field (All Icons) and every pack
+// (Style Packs). Each choice must resolve to its own shapes whatever the field and the global pack.
+const { HEADER_ICONS, getSelectableIcons, isContactIconImage } = contactIconPaths;
+
+test('every picker icon, on every field and over every pack, resolves to its own shapes and paint', () => {
+  for (const [id, item] of Object.entries(HEADER_ICONS)) {
+    for (const field of FIELDS) {
+      for (const setId of PACK_IDS) {
+        const shapes = iconShapes(setId, field, { color: '#123456', custom: `icon:${id}` });
+        assert.equal(shapes?.length, item.shapes.length, `${id} on ${field} over ${setId}`);
+        shapes.forEach((s, i) => {
+          const [tag, attrs] = item.shapes[i];
+          assert.equal(s.tag, tag, `${id} shape ${i} tag`);
+          for (const [k, v] of Object.entries(attrs)) assert.equal(s.props[k], v, `${id} shape ${i} ${k}`);
+          if ((item.paint || 'stroke') === 'fill') {
+            assert.equal(s.props.fill, '#123456'); assert.equal(s.props.stroke, 'none');
+          } else {
+            assert.equal(s.props.stroke, '#123456'); assert.equal(s.props.fill, 'none');
+            assert.equal(s.props.strokeWidth, item.strokeWidth ?? 2, `${id} stroke width`);
+          }
+        });
+      }
+    }
+  }
+});
+
+test('every Style Packs choice, on every field, is that pack\'s icon for the field', () => {
+  for (const packId of PACK_IDS) {
+    for (const field of FIELDS) {
+      for (const setId of PACK_IDS) {
+        assert.deepEqual(
+          iconShapes(setId, field, { color: '#000000', custom: `pack:${packId}` }),
+          iconShapes(packId, field, { color: '#000000' }),
+          `pack:${packId} on ${field} over ${setId}`,
+        );
+      }
+    }
+  }
+});
+
+test('a pick the app no longer knows falls back to the global pack icon, never to nothing', () => {
+  for (const custom of ['icon:removed-icon', 'pack:removed-pack', 'removed', 'icon:', 'pack:']) {
+    for (const field of FIELDS) {
+      assert.deepEqual(iconShapes('bold', field, { color: '#000000', custom }), iconShapes('bold', field, { color: '#000000' }), `${custom} on ${field}`);
+    }
+  }
+});
+
+test('the picker catalogue: unique ids, only shapes both renderers draw, known fields, recommendations for every field', () => {
+  const DRAWN = new Set(['path', 'rect', 'circle']); // PdfIcons.jsx SHAPES; the editor draws the same tags as <svg> children
+  for (const [id, item] of Object.entries(HEADER_ICONS)) {
+    assert.equal(item.id, id);
+    assert.ok(item.label, `${id} has a label`);
+    assert.ok(item.shapes.length > 0, `${id} has shapes`);
+    for (const [tag] of item.shapes) assert.ok(DRAWN.has(tag), `${id}: <${tag}> is not drawn by the PDF`);
+    for (const f of item.fields || []) assert.ok(FIELDS.includes(f), `${id}: unknown field ${f}`);
+    assert.equal(isContactIconImage(`icon:${id}`), false);
+  }
+  for (const field of FIELDS) assert.ok(getSelectableIcons(field).recommended.length > 0, `${field} has recommended icons`);
+  assert.equal(getSelectableIcons().all.length, Object.keys(HEADER_ICONS).length);
+});
