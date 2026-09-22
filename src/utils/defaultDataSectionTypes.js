@@ -1,12 +1,12 @@
 export const SECTION_TYPE_DEFAULTS = {
   experience: (id) => ({
     id, type: 'experience', title: 'Professional Experience',
-    settings: { spacing: 'normal', columns: 1, showDates: true, showLocation: true, titleStyle: 'stacked' },
+    settings: { spacing: 'normal', columns: 1, showDates: true, showLocation: true },
     items: [{ id: `${id}_item1`, company: '', role: '', location: '', startDate: '', endDate: '', current: false, description: '', bullets: [] }],
   }),
   education: (id) => ({
     id, type: 'education', title: 'Education',
-    settings: { spacing: 'normal', columns: 1, showDates: true, showLocation: true, titleStyle: 'stacked' },
+    settings: { spacing: 'normal', columns: 1, showDates: true, showLocation: true },
     items: [{ id: `${id}_item1`, institution: '', degree: '', fieldOfStudy: '', location: '', startDate: '', endDate: '', gpa: '', description: '', bullets: [] }],
   }),
   skills: (id) => ({
@@ -16,7 +16,7 @@ export const SECTION_TYPE_DEFAULTS = {
   }),
   projects: (id) => ({
     id, type: 'projects', title: 'Projects',
-    settings: { spacing: 'normal', columns: 1, showDates: true, titleStyle: 'stacked' },
+    settings: { spacing: 'normal', columns: 1, showDates: true },
     items: [{ id: `${id}_item1`, name: '', url: '', technologies: '', startDate: '', endDate: '', description: '', bullets: [] }],
   }),
   languages: (id) => ({
@@ -36,7 +36,7 @@ export const SECTION_TYPE_DEFAULTS = {
   }),
   volunteering: (id) => ({
     id, type: 'volunteering', title: 'Volunteering',
-    settings: { spacing: 'normal', showDates: true, showLocation: true, titleStyle: 'stacked' },
+    settings: { spacing: 'normal', showDates: true, showLocation: true },
     items: [{ id: `${id}_item1`, org: '', role: '', location: '', startDate: '', endDate: '', description: '', bullets: [] }],
   }),
   references: (id) => ({
@@ -51,7 +51,7 @@ export const SECTION_TYPE_DEFAULTS = {
   }),
   custom: (id) => ({
     id, type: 'custom', title: 'Custom Section',
-    settings: { spacing: 'normal', columns: 1, titleStyle: 'stacked' },
+    settings: { spacing: 'normal', columns: 1 },
     items: [{ id: `${id}_item1`, title: '', subtitle: '', date: '', location: '', description: '', bullets: [] }],
   }),
 };

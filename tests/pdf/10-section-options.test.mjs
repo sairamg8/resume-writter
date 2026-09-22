@@ -137,7 +137,7 @@ describe('entry Title layout', () => {
   // Stacked puts the second field under the first; Inline and Side by side keep them on one line.
   async function lineOf(template, type, titleStyle) {
     const items = type === 'experience' ? [{ company: 'Acme Corp', role: 'Staff Engineer', location: 'Pune' }] : [{ org: 'Acme Corp', role: 'Staff Engineer', location: 'Pune' }];
-    const pages = await read(await render(resume({ template, sections: [section(type, items, { titleStyle })] })));
+    const pages = await read(await render(resume({ template, sections: [section(type, items, titleStyle !== undefined ? { titleStyle } : {})] })));
     return Math.abs(first(pages, 'Acme Corp').y - first(pages, 'Staff Engineer').y) < 1 ? 'one line' : 'two lines';
   }
 
@@ -150,6 +150,45 @@ describe('entry Title layout', () => {
       }
     });
   }
+
+  it('AUD-21: Executive default titleStyle is inline (one line); Classic default is stacked (two lines)', async () => {
+    assert.equal(await lineOf('executive', 'experience'), 'one line', 'executive experience default is inline');
+    assert.equal(await lineOf('executive', 'volunteering'), 'one line', 'executive volunteering default is inline');
+    assert.equal(await lineOf('classic', 'experience'), 'two lines', 'classic experience default is stacked');
+    assert.equal(await lineOf('classic', 'volunteering'), 'two lines', 'classic volunteering default is stacked');
+  });
+
+  it('AUD-21: SECTION_TYPE_DEFAULTS and blankSections do not hardcode titleStyle: stacked', async () => {
+    const { SECTION_TYPE_DEFAULTS } = await loadModule('/src/utils/defaultDataSectionTypes.js');
+    const { blankSections } = await loadModule('/src/utils/defaultDataContent.js');
+    for (const [type, factory] of Object.entries(SECTION_TYPE_DEFAULTS)) {
+      const sec = factory('test_id');
+      assert.equal(sec.settings?.titleStyle, undefined, `${type} factory should not store titleStyle`);
+    }
+    for (const sec of blankSections()) {
+      assert.equal(sec.settings?.titleStyle, undefined, `blankSections ${sec.type} should not store titleStyle`);
+    }
+  });
+
+  it('AUD-21: Reset style clears custom titleStyle: stacked so Executive inline default takes effect', async () => {
+    const { SECTION_TYPE_DEFAULTS } = await loadModule('/src/utils/defaultDataSectionTypes.js');
+    const { resolveSection } = await loadModule('/src/templates/pdf/shared/templateSectionDefaults.js');
+
+    const customSection = {
+      id: 'exp1',
+      type: 'experience',
+      settings: { spacing: 'normal', columns: 1, showDates: true, showLocation: true, titleStyle: 'stacked' },
+    };
+    assert.equal(resolveSection(customSection, 'executive').settings.titleStyle, 'stacked', 'customized to stacked');
+
+    const factory = SECTION_TYPE_DEFAULTS[customSection.type] || SECTION_TYPE_DEFAULTS.custom;
+    const fresh = factory(customSection.id);
+    const resetSection = { ...customSection, settings: { ...fresh.settings } };
+
+    assert.equal(resetSection.settings.titleStyle, undefined, 'reset section has no titleStyle stored');
+    assert.equal(resolveSection(resetSection, 'executive').settings.titleStyle, 'inline', 'resolves to executive inline');
+    assert.equal(resolveSection(resetSection, 'classic').settings.titleStyle, undefined, 'classic resolves to unset (stacked fallback)');
+  });
 });
 
 describe('item spacing (FIDA-53)', () => {

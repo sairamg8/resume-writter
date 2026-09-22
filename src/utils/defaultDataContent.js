@@ -20,17 +20,17 @@ export function blankSections() {
   return [
     {
       id: 'experience', type: 'experience', title: 'Professional Experience', visible: true,
-      settings: { spacing: 'normal', columns: 1, showDates: true, showLocation: true, titleStyle: 'stacked' },
+      settings: { spacing: 'normal', columns: 1, showDates: true, showLocation: true },
       items: [],
     },
     {
       id: 'education', type: 'education', title: 'Education', visible: true,
-      settings: { spacing: 'normal', columns: 1, showDates: true, showLocation: true, titleStyle: 'stacked' },
+      settings: { spacing: 'normal', columns: 1, showDates: true, showLocation: true },
       items: [],
     },
     {
       id: 'skills', type: 'skills', title: 'Skills', visible: true,
-      settings: { spacing: 'normal', columns: 1, skillsStyle: 'inline', separator: 'colon', titleStyle: 'inline' },
+      settings: { spacing: 'normal', columns: 1, skillsStyle: 'inline', separator: 'colon' },
       items: [],
     },
   ];
