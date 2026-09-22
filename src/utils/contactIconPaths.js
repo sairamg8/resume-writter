@@ -136,12 +136,24 @@ export function getIconSetId(settings) {
   return ICON_PACKS[id] ? id : 'lucide';
 }
 
-/** The image the user uploaded for this field (a data URL), or null. */
+/**
+ * What the user set for this field's icon, or null: an uploaded image (a data URL), or a vector
+ * choice from the header icon picker — `icon:<id>` (HEADER_ICONS) or `pack:<id>` (ICON_PACKS).
+ */
 export function getCustomContactIcon(field, settings) {
   const map = settings?.customContactIcons;
   if (!map || typeof map !== 'object') return null;
   const src = map[field];
   return typeof src === 'string' && src.trim() ? src.trim() : null;
+}
+
+/**
+ * True when a field's icon (getCustomContactIcon) is an image to draw — a data URL or a web
+ * address — rather than a picker choice drawn from the shapes. The editor and the PDF both ask
+ * this, so a picked icon cannot be taken for an image address in one and not the other.
+ */
+export function isContactIconImage(src) {
+  return typeof src === 'string' && /^(data:image\/|https?:\/\/)/.test(src);
 }
 
 /**

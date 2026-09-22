@@ -1,10 +1,11 @@
 /**
  * Contact icons in the editor (Design panel previews, Personal info fields).
  * settings.iconSet: 'filled' | 'lucide' | 'refined' | 'minimal' | 'bold'
- * settings.customContactIcons: optional per-field image overrides (data URLs)
+ * settings.customContactIcons: optional per-field overrides — an uploaded image (data URL), or a
+ * header icon picker choice (`icon:<id>`, `pack:<id>`)
  * The shapes come from contactIconPaths.js — the table the PDF draws from too.
  */
-import { getCustomContactIcon, getIconSetId, iconShapes } from '@/utils/contactIconPaths';
+import { getCustomContactIcon, getIconSetId, iconShapes, isContactIconImage } from '@/utils/contactIconPaths';
 import { isDrawableImage } from '@/utils/imageUpload';
 import { usePrintableImage } from '@/hooks/usePrintableImage';
 
@@ -25,9 +26,11 @@ export const ICON_SET_OPTIONS = [
  */
 export function ContactIcon({ field, settings, size = 11, strokeWidth, className = '', style }) {
   const custom = getCustomContactIcon(field, settings);
-  const isImage = typeof custom === 'string' && (custom.startsWith('data:image/') || custom.startsWith('http://') || custom.startsWith('https://'));
+  const isImage = isContactIconImage(custom);
+  // Asked on every render (null when no image): swapping an upload for a picked icon must not
+  // change how many hooks this component calls.
+  const printable = usePrintableImage(isImage ? custom : null, { kind: 'icon' });
   if (isImage) {
-    const printable = usePrintableImage(custom, { kind: 'icon' });
     const src = isDrawableImage(printable) ? printable : (isDrawableImage(custom) ? custom : null);
     if (src) {
       return (

@@ -116,6 +116,25 @@ describe('contact icon packs (FIDA-39, FIDB-07, FIDB-06)', () => {
   }
 });
 
+// The header icon picker stores a library icon as `icon:<id>` and a style pack as `pack:<id>` in
+// customContactIcons — the same map as uploads. The PDF took any string that was not a data URL
+// for an image address, drew `<Image src="icon:send">`, and the icon vanished from the canvas.
+describe('an icon chosen in the header icon picker', () => {
+  for (const [name, make] of DOCUMENTS) {
+    it(`${name}: a library icon and a style pack print as those vector icons, not an empty image`, async () => {
+      const bytes = await make({ iconSet: 'lucide', contactStyle: 'icon', customContactIcons: { email: 'icon:send', phone: 'pack:filled' } });
+      assert.equal(await images(bytes), 0, 'no image is drawn for a vector choice');
+      const drawn = await icons(bytes);
+      assert.equal(drawn.length, 6, 'all six fields keep an icon');
+      assert.equal(drawn[0].map((x) => x.paint).join(''), 'SS', 'e-mail: the paper plane\'s two strokes');
+      assert.deepEqual(drawn[0][0].start, [22, 2], 'e-mail: the paper plane starts at its tip');
+      assert.equal(drawn[1].map((x) => x.paint).join(''), 'F', 'phone: the Filled pack\'s solid handset');
+      assert.deepEqual(drawn[1][0].start, PACKS.filled.phoneStart);
+      assert.deepEqual(drawn.slice(2).map((shapes) => shapes.map((x) => x.paint).join('')), PACKS.lucide.shapes.slice(2), 'the rest keep the chosen pack');
+    });
+  }
+});
+
 /** A WebP data URL, as uploads were stored before they were converted: react-pdf cannot decode it. */
 const WEBP = 'data:image/webp;base64,UklGRiIAAABXRUJQVlA4IBYAAAAwAQCdASoBAAEADsD+JaQAA3AAAAAA';
 

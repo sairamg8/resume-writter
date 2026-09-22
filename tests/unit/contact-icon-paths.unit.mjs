@@ -119,3 +119,20 @@ test('getSelectableIcons provides recommended icons for all six contact fields',
 });
 
 
+
+test('isContactIconImage: uploads are images; header icon picker choices are not', () => {
+  const { isContactIconImage } = contactIconPaths;
+  for (const src of ['data:image/png;base64,AAAA', 'data:image/svg+xml;base64,AAAA', 'https://example.com/i.png', 'http://example.com/i.png']) {
+    assert.equal(isContactIconImage(src), true, src);
+  }
+  for (const src of ['icon:send', 'pack:filled', 'send', 'filled', '', null, undefined, 42, { src: 'data:image/png' }]) {
+    assert.equal(isContactIconImage(src), false, String(src));
+  }
+});
+
+test('a picked icon resolves to its own shapes, a picked pack to that pack\'s field icon', () => {
+  const send = iconShapes('lucide', 'email', { color: '#000000', custom: 'icon:send' });
+  assert.deepEqual(send.map((s) => s.props.d), ['m22 2-7 20-4-9-9-4Z', 'M22 2 11 13']);
+  const phone = iconShapes('lucide', 'phone', { color: '#000000', custom: 'pack:filled' });
+  assert.deepEqual(phone, iconShapes('filled', 'phone', { color: '#000000' }));
+});
