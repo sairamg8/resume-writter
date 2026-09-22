@@ -35,5 +35,27 @@ export function skillCategory(category, { style, sideColumn = false } = {}) {
   return sideColumn || style === 'tags' || style === 'bars' ? category.toUpperCase() : category;
 }
 
+/**
+ * `r` with each skill group that holds nothing but the old `name` label holding it as its skills
+ * instead. The role starters (1f08531) saved every skill that way, and the editor, the PDF, Word and
+ * the exports read `category` and `skills`, so a résumé made from one printed an empty Skills
+ * section. normalizeResume() runs this wherever résumés come in. The same object when none is.
+ */
+export function withSkillNames(r) {
+  if (!Array.isArray(r?.sections)) return r;
+  const heal = (item) => {
+    const { name, ...rest } = item || {};
+    return typeof name === 'string' && name.trim() && !asText(item.skills) && !asText(item.category)
+      ? { ...rest, skills: name.trim() }
+      : item;
+  };
+  const sections = r.sections.map((s) => {
+    if (s?.type !== 'skills' || !Array.isArray(s.items)) return s;
+    const items = s.items.map(heal);
+    return items.some((item, i) => item !== s.items[i]) ? { ...s, items } : s;
+  });
+  return sections.some((s, i) => s !== r.sections[i]) ? { ...r, sections } : r;
+}
+
 /** The separator between a group's category and its skills (Inline and Bullet; Word). */
 export const skillSeparator = (settings = {}) => (settings.separator === 'dash' ? ' – ' : ': ');

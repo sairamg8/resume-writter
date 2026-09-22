@@ -23,3 +23,15 @@ test('buildResumeFromStarter: creates full resume object with unique ID', () => 
   assert.ok(resume.settings, 'has settings');
   assert.ok(resume.coverLetter, 'has base cover letter');
 });
+
+// Every starter printed an empty Skills section: its skills were stored as { id, name }, and the
+// editor, the PDF, Word and the exports read a group's `category` and `skills` (bug audit 2026-09-22).
+test('every starter’s skills print: its Skills groups hold skills, as the editor writes them', async () => {
+  const { skillGroup } = await import('../../src/utils/skills.js');
+  for (const t of STARTER_TEMPLATES) {
+    const skills = buildResumeFromStarter(t.id, 'r').sections.find((s) => s.type === 'skills');
+    const listed = skills.items.flatMap((item) => skillGroup(item).list);
+    assert.ok(listed.length >= 6, `${t.id}: ${JSON.stringify(skills.items)}`);
+    for (const item of skills.items) assert.equal(item.name, undefined, `${t.id}: no old name label`);
+  }
+});

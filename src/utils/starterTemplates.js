@@ -104,14 +104,7 @@ export const STARTER_TEMPLATES = [
         title: 'Skills',
         visible: true,
         items: [
-          { id: 'sk-1', name: 'TypeScript / JavaScript' },
-          { id: 'sk-2', name: 'React & Next.js' },
-          { id: 'sk-3', name: 'Node.js & Go' },
-          { id: 'sk-4', name: 'PostgreSQL & Redis' },
-          { id: 'sk-5', name: 'Docker & Kubernetes' },
-          { id: 'sk-6', name: 'AWS & Cloud Architecture' },
-          { id: 'sk-7', name: 'GraphQL & REST APIs' },
-          { id: 'sk-8', name: 'CI/CD & DevOps' }
+          { id: 'sk-1', category: '', skills: 'TypeScript / JavaScript, React & Next.js, Node.js & Go, PostgreSQL & Redis, Docker & Kubernetes, AWS & Cloud Architecture, GraphQL & REST APIs, CI/CD & DevOps' }
         ]
       },
       {
@@ -204,14 +197,7 @@ export const STARTER_TEMPLATES = [
         title: 'Skills & Competencies',
         visible: true,
         items: [
-          { id: 'sk-1', name: 'Product Strategy & Vision' },
-          { id: 'sk-2', name: 'Agile & Scrum Methodologies' },
-          { id: 'sk-3', name: 'User Research & Discovery' },
-          { id: 'sk-4', name: 'A/B Testing & Experimentation' },
-          { id: 'sk-5', name: 'Mixpanel & Amplitude Analytics' },
-          { id: 'sk-6', name: 'SQL & Data Analysis' },
-          { id: 'sk-7', name: 'Go-to-Market (GTM) Strategy' },
-          { id: 'sk-8', name: 'Stakeholder Management' }
+          { id: 'sk-1', category: '', skills: 'Product Strategy & Vision, Agile & Scrum Methodologies, User Research & Discovery, A/B Testing & Experimentation, Mixpanel & Amplitude Analytics, SQL & Data Analysis, Go-to-Market (GTM) Strategy, Stakeholder Management' }
         ]
       },
       {
@@ -287,14 +273,7 @@ export const STARTER_TEMPLATES = [
         title: 'Skills & Technologies',
         visible: true,
         items: [
-          { id: 'sk-1', name: 'Python & R' },
-          { id: 'sk-2', name: 'PyTorch & TensorFlow' },
-          { id: 'sk-3', name: 'SQL & Snowflake' },
-          { id: 'sk-4', name: 'LLM Fine-Tuning & Prompt Engineering' },
-          { id: 'sk-5', name: 'AWS SageMaker & MLflow' },
-          { id: 'sk-6', name: 'Data Pipelines & Airflow' },
-          { id: 'sk-7', name: 'Statistical Modeling & A/B Testing' },
-          { id: 'sk-8', name: 'Docker & Kubernetes' }
+          { id: 'sk-1', category: '', skills: 'Python & R, PyTorch & TensorFlow, SQL & Snowflake, LLM Fine-Tuning & Prompt Engineering, AWS SageMaker & MLflow, Data Pipelines & Airflow, Statistical Modeling & A/B Testing, Docker & Kubernetes' }
         ]
       },
       {
