@@ -1,17 +1,17 @@
 # FlowCV Bug Tracker & Status Index
 
 > Location: `/mnt/Storage/Projects/flowcv/bug-status.md`
-> Updated: 2026-09-22 21:44 · `origin/master` (deployed) = `2a7d728` · fixed but not pushed: `fd7ecca`, `4ee5ede`, `f829ce3`, `e2dffbf`, `b5068d0`
-> **Open: 24** | Fixed, not pushed: 6 | **Closed: 44**
+> Updated: 2026-09-22 21:56 · `origin/master` (deployed) = `2a7d728` · fixed but not pushed: `fd7ecca`, `4ee5ede`, `f829ce3`, `e2dffbf`, `b5068d0`, `b99c04d`
+> **Open: 22** | Fixed, not pushed: 8 | **Closed: 44**
 
 ## Summary
 
 | List | Found | ✅ Fixed and pushed | ⏸ Fixed, local only | 🔴 Open |
 |---|---|---|---|---|
-| Bug audit, 2026-09-22 (`AUD-`) | 35 (34 + one follow-up) | 11 | 6 | **18** |
+| Bug audit, 2026-09-22 (`AUD-`) | 35 (34 + one follow-up) | 11 | 8 | **16** |
 | ATS parsing defects (`ATS-`) | 6 | 0 | 0 | **6** |
 | Prompt tasks, 2026-09-14 → 09-21 | 33 | 33 | 0 | 0 |
-| **Total** | **74** | **44** | **6** | **24** |
+| **Total** | **74** | **44** | **8** | **22** |
 
 - **Status:** ✅ fixed and pushed (on `origin/master`, so deployed) · ⏸ fixed and committed, not pushed · 🔴 open.
 - **Severity (audit):** High = data loss, or a feature that does not work · Medium = a wrong result, no data loss ·
@@ -22,12 +22,12 @@
 
 ### Next in queue
 
-1. **AUD-14 + AUD-15** — ATS checker: C++, C#, "5+" keywords, casing, and adding to empty Skills.
-2. AUD-17 → AUD-19 → AUD-21 → AUD-22 → AUD-23 → AUD-24 → the Low rows,
+1. **AUD-17** — Sidebar · Single ATS-safe
+2. AUD-19 → AUD-21 → AUD-22 → AUD-23 → AUD-24 → the Low rows,
    AUD-25 … AUD-34.
 3. ATS-1 … ATS-6 — no order set yet; ATS-6 waits on a decision.
 
-⏸ **Not pushed yet:** AUD-09 (`fd7ecca`), AUD-16 (`4ee5ede`), AUD-10 and AUD-11 (`f829ce3`), AUD-12 (`e2dffbf`), AUD-13 (`b5068d0`) wait for the owner's go. The push gate runs every test,
+⏸ **Not pushed yet:** AUD-09 (`fd7ecca`), AUD-16 (`4ee5ede`), AUD-10 and AUD-11 (`f829ce3`), AUD-12 (`e2dffbf`), AUD-13 (`b5068d0`), AUD-14 and AUD-15 (`b99c04d`) wait for the owner's go. The push gate runs every test,
 a production build and a private-data scan; a push deploys.
 
 **Each fix:** a test that fails before the fix → the fix → commit → set its row here to ⏸ with the commit and the
@@ -56,8 +56,8 @@ existing test caught any of these; several unit tests asserted the same wrong da
 | AUD-11 | ATS text export · HTML | High | ⏸ Local only | `f829ce3` | tests/unit/ats-checker.unit.mjs | Prints raw HTML: the summary (`src/utils/atsChecker.js:402`) and every other section's description (`:487`, e.g. Awards) come out as `<p>Won <em>gold</em></p>` and `&amp;`. | Ran |
 | AUD-12 | Hidden data · letter, ATS score | High | ⏸ Local only | `e2dffbf` | tests/unit/cover-letter-generator.unit.mjs, tests/unit/ats-checker.unit.mjs | Hidden entries and the photo are still used: the cover-letter generator writes about a hidden job (`src/utils/coverLetterGenerator.js:49`); the ATS score counts hidden entries and takes 3 points off for a photo the user hid (`src/utils/atsChecker.js:1034`). | Ran |
 | AUD-13 | Markdown export | High | ⏸ Local only | `b5068d0` | tests/unit/markdown-export.unit.mjs | Skills print empty — it reads `i.name` (`src/utils/markdownExport.js:126`); Languages print nothing and Volunteering loses its organisation — the generic branch reads `title`, `name`, `role`, `organization`, never `language` or `org` (`:134`); dates print raw, ignoring Date format; per-entry hidden fields still print. `tests/unit/markdown-export.unit.mjs` uses the same wrong `{ name }` shape. | Ran, Known A6 |
-| AUD-14 | ATS checker · job match | Medium | 🔴 Open | — | — | Reports C++, C# and "5+" as missing: `\b…\b` never matches a keyword ending in `+` or `#` (`src/utils/atsChecker.js:324`), and "5+ years" yields the keyword "5+". | Ran |
-| AUD-15 | ATS checker · add keyword | Medium | 🔴 Open | — | — | "+" (add a missing keyword) writes it lowercase — "aws", "sql" — because every keyword is lowercased (`src/utils/atsChecker.js:277`); with no Skills section it adds only an empty section, not the keyword (`src/components/AtsCheckerPanel.jsx:88`), while the button shows done. | Code |
+| AUD-14 | ATS checker · job match | Medium | ⏸ Local only | `b99c04d` | tests/unit/ats-checker.unit.mjs | Reports C++, C# and "5+" as missing: `\b…\b` never matches a keyword ending in `+` or `#` (`src/utils/atsChecker.js:324`), and "5+ years" yields the keyword "5+". | Ran |
+| AUD-15 | ATS checker · add keyword | Medium | ⏸ Local only | `b99c04d` | tests/unit/ats-checker.unit.mjs | "+" (add a missing keyword) writes it lowercase — "aws", "sql" — because every keyword is lowercased (`src/utils/atsChecker.js:277`); with no Skills section it adds only an empty section, not the keyword (`src/components/AtsCheckerPanel.jsx:88`), while the button shows done. | Code |
 | AUD-16 | Editor · STAR Optimizer | Medium | ⏸ Local only | `4ee5ede` | tests/unit/bullet-optimizer.unit.mjs | The weak-phrase check flickered: global regexes kept `lastIndex`, so the same text scored 1, 0, 1, 0 weak phrases on successive renders. | Ran |
 | AUD-17 | Sidebar · Single ATS-safe | Medium | 🔴 Open | — | — | The Single · ATS-safe mode prints Classic's page, but the rest of the app still treats it as two columns: Header Customization hides Classic's controls and says they "don't apply" (`src/components/PersonalInfoEditorHeader.jsx:167`); Section Options hides Alignment, Grids and Title for the side-column sections (`inSidebarColumn`, `src/components/SectionEditorCustomizer.jsx:51`); Word prints them as side-column sections and never centres the header (`src/utils/wordExport.js:46`, `src/utils/wordExportHeader.js:52`); the ATS score still warns "Multi-column / Sidebar layout detected" (`src/utils/atsChecker.js:1011`). | Code |
 | AUD-18 | Starters · data version | Medium | ✅ Fixed | `c3c7579` | tests/pdf/16-saved-data-starter-skills.test.mjs, tests/unit/starter-templates.unit.mjs | Starters and JSON Resume imports were stamped `dataVersion: 1`, so the next load re-ran old migrations and moved the Modern starter's photo text from centre to top. They now carry the current version (`src/utils/dataVersion.js`). | Ran |
