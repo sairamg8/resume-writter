@@ -54,6 +54,7 @@ export function ModernTemplatePDF({ data }) {
   const nameSize  = baseSize + (settings.fontSizeNameDelta  ?? 8);
   const entrySize = baseSize + (settings.fontSizeEntryDelta ?? 0);
   const hidden    = personal?.hiddenFields || [];
+  const g         = settings.headerGaps; // the header's spacing, pt (TEMPLATES' headerGaps)
   const headerText = settings.headerTextColor || '#ffffff';
   // The summary prints at 85% of the header text colour, the title at 90% of its colour, however
   // the colour is written (#fff, white, rgb(…)); its own alpha multiplies in (FIDB-11, R5-9).
@@ -86,7 +87,7 @@ export function ModernTemplatePDF({ data }) {
               <PdfPhoto src={personal.photo} style={photoStyle} />
             )}
             <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: nameFit, fontWeight: 'bold', color: nameColor, marginBottom: 1, lineHeight: 1.2 }}>
+              <Text style={{ fontSize: nameFit, fontWeight: 'bold', color: nameColor, marginBottom: personal?.title ? g.nameTitleGap : 1, lineHeight: 1.2 }}>
                 {name}
               </Text>
               {personal?.title && (

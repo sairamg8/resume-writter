@@ -20,6 +20,7 @@ import { solid } from '@/templates/pdf/shared/pdfColors';
 import { letterGrey, letterheadLook, LETTERHEAD_GAP } from '@/templates/pdf/shared/letterhead';
 import { resolveTemplateSettings } from '@/templates/pdf/shared/templateSettings';
 import { templateId } from '@/constants/templates';
+import { setGapPt } from '@/constants/headerSpacing';
 const pt = (n) => Math.round(n * 20); // points → twips (paragraph spacing, indents)
 
 const line = (children, after = 0, extra = {}) => new Paragraph({ children, spacing: { after }, ...extra });
@@ -83,7 +84,10 @@ function letterhead(personal, s, cl, sizes, look) {
   const on = look.band ? `#${bandFill(look.band)}` : '#ffffff';
   const ink = (color, alpha) => hexOn(color, on, look.band ? 'ffffff' : '1e293b', alpha);
   const nameRun = look.name.weight === 'bold' ? bold : normal;
-  const rows = [{ runs: [nameRun(personal.name || 'Your Name', { size: sizes.name, color: ink(look.name.color) })], after: pt(1) }];
+  // The name's space after: Name ↔ Title as the letter's PDF prints it (the résumé's set value, else 1 pt).
+  // A set value holds on a band too (`kept`), where rows otherwise print with none between them.
+  const nameGap = personal.title && !look.inline ? setGapPt(s, 'nameTitleGap') : null;
+  const rows = [{ runs: [nameRun(personal.name || 'Your Name', { size: sizes.name, color: ink(look.name.color) })], after: pt(nameGap ?? 1), kept: nameGap != null }];
   // Modern's title prints at 90 % on its band (look.title.opacity, R5-9): the same blend here.
   const title = personal.title ? normal(personal.title, { size: sizes.title, color: ink(look.title.color, look.title.opacity) }) : null;
   if (title && look.inline) {
@@ -111,7 +115,7 @@ function letterhead(personal, s, cl, sizes, look) {
   const below = LETTERHEAD_GAP + (look.band || look.rules.length ? 0 : look.ruleGap);
   return rows.map((r, i) => {
     const last = i === rows.length - 1;
-    return line(r.runs, last ? pt(below) : look.band ? 0 : r.after, { ...frame(look, last), ...r.extra });
+    return line(r.runs, last ? pt(below) : look.band && !r.kept ? 0 : r.after, { ...frame(look, last), ...r.extra });
   });
 }
 

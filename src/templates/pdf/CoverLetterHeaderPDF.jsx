@@ -12,6 +12,7 @@ import { getPdfPhotoStyle } from './shared/pdfPhoto';
 import { fitFontSize, textWidth, widestWord } from './shared/pdfMeasure';
 import { DOUBLE_RULE_GAP, LETTERHEAD_GAP } from './shared/letterhead';
 import { photoTextAlignItems } from '@/constants/templates';
+import { setGapPt } from '@/constants/headerSpacing';
 import { contactItems } from '@/utils/contacts';
 import { letterFieldsPosition } from '@/utils/coverLetter';
 import { isDrawableImage } from '@/utils/imageUpload';
@@ -104,7 +105,8 @@ export function CoverLetterHeader({ look, personal, settings, cl, hidden, contac
   const titleSize = look.title?.size || (baseSize + (settings.fontSizeEntryDelta ?? 0));
   const titleStyle = {
     fontSize: titleSize, color: look.title.color,
-    ...(look.inline ? { fontWeight: 500, lineHeight: 1.2 } : { marginTop: 1 }),
+    // Stacked: Personal Info → Header spacing → Name ↔ Title when the résumé sets it, else the letterhead's 1 pt.
+    ...(look.inline ? { fontWeight: 500, lineHeight: 1.2 } : { marginTop: setGapPt(settings, 'nameTitleGap') ?? 1 }),
     ...(look.title.opacity ? { opacity: opacityFor(look.title.color, look.title.opacity) } : {}), ...align,
   };
 

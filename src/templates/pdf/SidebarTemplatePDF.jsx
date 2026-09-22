@@ -139,7 +139,7 @@ export function SidebarTemplatePDF({ data }) {
             )}
             <Text style={{
               fontSize: nameFit, fontWeight: 'bold', color: nameColor,
-              textAlign: 'center', marginBottom: 2, lineHeight: 1.2,
+              textAlign: 'center', marginBottom: personal?.title ? settings.headerGaps.nameTitleGap : 2, lineHeight: 1.2,
             }}>
               {personal?.name}
             </Text>

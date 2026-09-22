@@ -2,6 +2,8 @@ import { ChevronDown, ChevronRight, Eye, EyeOff } from 'lucide-react';
 import { HEADER_BORDER_PT } from '@/constants/designNumbers';
 import { drawsContactIcons, hasHeaderControls, headerBorderOn, headerControlTemplateLabels } from '@/constants/templates';
 import { ICON_SET_OPTIONS, getIconSetId } from '@/utils/contactIcons';
+import { headerGapRows } from '@/utils/headerSpacingRows';
+import { HeaderSpacingGroup } from '@/components/HeaderSpacingControls';
 
 function LayoutPreview({ type }) {
   const bar = (w) => <div className="h-1 bg-gray-300 rounded-sm" style={{ width: w }} />;
@@ -65,7 +67,7 @@ export function Chip({ active, onClick, children }) {
   );
 }
 
-export function HeaderCustomization({ s, set, template, templateLabel, open, onToggle }) {
+export function HeaderCustomization({ s, set, clear, personal, template, templateLabel, open, onToggle }) {
   // The rule's state as the PDF prints it: an unset setting follows the template's design.
   const borderOn = headerBorderOn(s, template);
   return (
@@ -94,19 +96,6 @@ export function HeaderCustomization({ s, set, template, templateLabel, open, onT
                   <PresetCard active={(s.headerLayout || 'stack') === 'inline'} onClick={() => set('headerLayout', 'inline')} label="Inline" previewType="inline" />
                 </div>
               </div>
-
-              {(s.headerLayout || 'stack') === 'inline' && (
-                <div>
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs font-semibold text-gray-700">Name &amp; Title Spacing</p>
-                    <div className="flex items-center gap-1">
-                      <button onClick={() => set('headerInlineGap', Math.max(2, (s.headerInlineGap ?? 8) - 2))} className="w-6 h-6 flex items-center justify-center border border-gray-200 rounded text-gray-600 hover:bg-gray-100 text-base leading-none">−</button>
-                      <span className="w-14 text-center text-xs font-medium text-gray-700 border border-gray-200 rounded h-6 flex items-center justify-center">{s.headerInlineGap ?? 8}px</span>
-                      <button onClick={() => set('headerInlineGap', Math.min(48, (s.headerInlineGap ?? 8) + 2))} className="w-6 h-6 flex items-center justify-center border border-gray-200 rounded text-gray-600 hover:bg-gray-100 text-base leading-none">+</button>
-                    </div>
-                  </div>
-                </div>
-              )}
 
               <div>
                 <div className="flex items-center justify-between">
@@ -195,6 +184,16 @@ export function HeaderCustomization({ s, set, template, templateLabel, open, onT
               <p className="text-[11px] text-slate-500 leading-relaxed">To change header text color, name color, or job title color, open the <strong>Design</strong> tab → <strong>Colors</strong>.</p>
             </div>
           )}
+
+          {/* Every template: the gaps its header prints (header_spacing_spec.md). */}
+          <div className="pt-3 border-t border-gray-200">
+            <HeaderSpacingGroup
+              rows={headerGapRows(template, s, personal)}
+              onChange={set}
+              onClear={(keys) => clear?.(keys)}
+              empty="Add a job title to set the space between your name and title."
+            />
+          </div>
         </div>
       )}
     </div>

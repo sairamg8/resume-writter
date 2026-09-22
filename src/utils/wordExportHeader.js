@@ -10,6 +10,7 @@ import { solid, textShades } from '@/templates/pdf/shared/pdfColors';
 import { headerColorsOnPage } from '@/templates/pdf/shared/headerColors';
 import { headerRule, headerTitleSize, inlineLayout } from '@/templates/pdf/shared/letterhead';
 import { HEADER_BORDER_PAD_PT } from '@/templates/pdf/shared/pdfUnits';
+import { setGapPt } from '@/constants/headerSpacing';
 import { resolveTemplateSettings } from '@/templates/pdf/shared/templateSettings';
 import { hasRichText } from '@/utils/richText';
 
@@ -60,7 +61,8 @@ export function buildPersonalSection(personal = {}, settings = {}, template = 'c
   const inline = title && inlineLayout(templateId(template), s);
   paragraphs.push(new Paragraph({
     children: inline ? [name, inlineGap(inline.gap, titleSize), title] : [name],
-    spacing: { after: inline ? 60 : 40 },
+    // A stacked title follows Personal Info → Header spacing → Name ↔ Title when set; else Word's own 2 pt.
+    spacing: { after: inline ? 60 : title && setGapPt(settings, 'nameTitleGap') != null ? Math.round(setGapPt(settings, 'nameTitleGap') * 20) : 40 },
     ...centredIf(centered),
   }));
 

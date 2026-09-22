@@ -60,6 +60,7 @@ export function EditorResumeTab({
               toggleFieldVisibility={store.toggleFieldVisibility}
               settings={resume.settings}
               updateSetting={store.updateSetting}
+              clearSettings={store.clearSettings}
               template={resume.template}
               coverLetter={resume.coverLetter}
             />

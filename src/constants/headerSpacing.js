@@ -40,6 +40,15 @@ export function storedGapPx(settings, key) {
 }
 
 /**
+ * The gap `key` the résumé set, in pt; null when it set none. For what follows a set value but keeps
+ * its own spacing otherwise: the cover letter's letterhead (header_spacing_spec D5) and Word (D6).
+ */
+export function setGapPt(settings, key) {
+  const px = storedGapPx(settings, key);
+  return px == null ? null : px * CSS_PX_TO_PT;
+}
+
+/**
  * The template's own `key` gap in pt, or null where the template has none. A map is by Contact
  * Layout, read as PdfContactRow lays it out (any value but Single and 2 Grid is Justify); a
  * function takes Between Sections in pt.

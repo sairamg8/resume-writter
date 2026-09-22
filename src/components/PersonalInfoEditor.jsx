@@ -88,7 +88,7 @@ function CustomIconControl({ fieldKey, iconLabel, customIcon, s, onPickIconFile,
   );
 }
 
-export default function PersonalInfoEditor({ personal, updatePersonal, toggleFieldVisibility, settings, updateSetting, template, coverLetter }) {
+export default function PersonalInfoEditor({ personal, updatePersonal, toggleFieldVisibility, settings, updateSetting, clearSettings, template, coverLetter }) {
   const hidden = new Set(personal.hiddenFields || []);
   const s = settings || {};
   // Where a field's icon prints: the résumé, or only the cover letter, whose own Contact Style
@@ -129,6 +129,8 @@ export default function PersonalInfoEditor({ personal, updatePersonal, toggleFie
       <HeaderCustomization
         s={s}
         set={set}
+        clear={(keys) => clearSettings?.(keys)}
+        personal={personal}
         template={template}
         templateLabel={templateLabel}
         open={headerOpen}

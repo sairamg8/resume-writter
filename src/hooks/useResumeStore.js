@@ -162,6 +162,18 @@ export function useAppStore() {
     patchActive(r => ({ ...r, settings: { ...r.settings, [key]: value } }));
   }
 
+  /**
+   * Remove settings keys, so each prints as its template decides again (Personal Info → Header
+   * spacing's resets). Deleted, never set to undefined: Firestore refuses an undefined field.
+   */
+  function clearSettings(keys) {
+    patchActive(r => {
+      const settings = { ...r.settings };
+      for (const k of keys) delete settings[k];
+      return { ...r, settings };
+    });
+  }
+
   /** Design → Reset: the ATS-safe defaults with the current template's heading style (M16); uploaded icons stay (R5-6). */
   function resetSettings() {
     patchActive(r => ({ ...r, settings: settingsAfterReset(r) }));
@@ -203,6 +215,7 @@ export function useAppStore() {
     updatePersonal,
     toggleFieldVisibility,
     updateSetting,
+    clearSettings,
     setTemplate,
     updateCoverLetter,
     resetSettings,
