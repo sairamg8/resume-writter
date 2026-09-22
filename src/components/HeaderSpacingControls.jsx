@@ -65,10 +65,10 @@ export function GapStepper({ row, onChange, onReset }) {
 }
 
 /**
- * The group: a heading, its Reset (every row back to the template's), the rows — or `empty`, the
- * line saying why there is nothing to adjust yet.
+ * The group: a heading, its Reset (every row back to the template's), `note` — a line saying why a
+ * gap is not offered yet — and the rows.
  */
-export function HeaderSpacingGroup({ title = 'Header spacing', rows, onChange, onClear, empty }) {
+export function HeaderSpacingGroup({ title = 'Header spacing', rows, onChange, onClear, note }) {
   const titleId = useId();
   const anySet = rows.some((r) => r.set);
   return (
@@ -79,7 +79,7 @@ export function HeaderSpacingGroup({ title = 'Header spacing', rows, onChange, o
           <RotateCcw size={10} aria-hidden="true" /> Reset
         </button>
       </div>
-      {rows.length === 0 && empty && <p className="text-[10px] text-gray-400 leading-snug">{empty}</p>}
+      {note && <p className="text-[10px] text-gray-400 leading-snug">{note}</p>}
       {rows.map((row) => (
         <GapStepper key={row.key} row={row} onChange={(v) => onChange(row.key, v)} onReset={() => onClear([row.key])} />
       ))}

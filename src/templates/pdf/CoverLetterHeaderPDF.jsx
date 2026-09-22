@@ -88,9 +88,12 @@ export function CoverLetterHeader({ look, personal, settings, cl, hidden, contac
   const contactSettings = { ...settings, headerAlign: centered ? 'center' : 'left', contactStyle: contacts.style, contactLayout: contacts.layout };
 
   const [ring, ringOpts] = look.photo;
+  // Photo ↔ Text: the résumé's set value (Personal Info → Header spacing), else the letterhead's
+  // own — 6 pt above a centred name, 10 pt beside one (spec D5).
+  const photoGap = setGapPt(settings, 'photoTextGap');
   const photoStyle = {
     ...getPdfPhotoStyle(settings, ring, 'cover', ringOpts),
-    ...(centered ? { marginBottom: 6 } : { marginRight: 10 }),
+    ...(centered ? { marginBottom: photoGap ?? 6 } : { marginRight: photoGap ?? 10 }),
   };
   const photoEl = photoSrc ? <PdfPhoto src={photoSrc} style={photoStyle} /> : null;
 

@@ -69,6 +69,7 @@ export function SidebarTemplatePDF({ data }) {
   const entrySize  = baseSize + (settings.fontSizeEntryDelta ?? 0);
   const sectionGap = settings.sectionGap ?? 12;
   const hidden     = personal?.hiddenFields || [];
+  const g          = settings.headerGaps; // the header's spacing, pt (TEMPLATES' headerGaps)
 
   const visibleSections = sections.filter(s => s.visible !== false);
   const sidebarSections = visibleSections.filter(s => SIDEBAR_TYPES.has(s.type));
@@ -91,7 +92,7 @@ export function SidebarTemplatePDF({ data }) {
     width: classicPhoto.width * photoScale,
     height: classicPhoto.height * photoScale,
     borderRadius: Math.min(classicPhoto.borderRadius, (classicPhoto.width * photoScale) / 2),
-    marginBottom: 10,
+    marginBottom: g.photoTextGap, // Photo ↔ Text: the photo sits above the name
   };
 
   const contacts = contactItems(personal);
@@ -139,7 +140,7 @@ export function SidebarTemplatePDF({ data }) {
             )}
             <Text style={{
               fontSize: nameFit, fontWeight: 'bold', color: nameColor,
-              textAlign: 'center', marginBottom: personal?.title ? settings.headerGaps.nameTitleGap : 2, lineHeight: 1.2,
+              textAlign: 'center', marginBottom: personal?.title ? g.nameTitleGap : 2, lineHeight: 1.2,
             }}>
               {personal?.name}
             </Text>

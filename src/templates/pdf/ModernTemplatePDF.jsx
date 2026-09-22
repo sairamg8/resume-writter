@@ -65,7 +65,7 @@ export function ModernTemplatePDF({ data }) {
   // of it wider than that has nowhere to break, and react-pdf drew it off the banner and the
   // paper: it prints at the largest size that holds it.
   const name = personal?.name || 'Your Name';
-  const nameRow = headerRowWidth(settings, personal, { photoWidth: photoStyle.width, gap: pxToPt(16) }) - 2 * MODERN_HEADER_PAD_X_PT;
+  const nameRow = headerRowWidth(settings, personal, { photoWidth: photoStyle.width, gap: g.photoTextGap }) - 2 * MODERN_HEADER_PAD_X_PT;
   const nameFit = fitFontSize(name, { fontFamily: settings._pdfFontFamily, fontSize: nameSize, fontWeight: 'bold' }, nameRow);
 
   const pageStyle = getPageStyle(settings);
@@ -82,7 +82,7 @@ export function ModernTemplatePDF({ data }) {
           marginBottom: sectionGap,
         }} wrap={false}>
           {/* Photo → Text Position, as Classic, Minimal and Executive take it (R3-0). */}
-          <View style={{ flexDirection: 'row', alignItems: photoTextAlignItems(settings), gap: pxToPt(16) }}>
+          <View style={{ flexDirection: 'row', alignItems: photoTextAlignItems(settings), gap: g.photoTextGap }}>
             {personal?.photo && !hidden.includes('photo') && (
               <PdfPhoto src={personal.photo} style={photoStyle} />
             )}

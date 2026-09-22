@@ -191,7 +191,7 @@ export function HeaderCustomization({ s, set, clear, personal, template, templat
               rows={headerGapRows(template, s, personal)}
               onChange={set}
               onClear={(keys) => clear?.(keys)}
-              empty="Add a job title to set the space between your name and title."
+              note={personal?.title ? null : 'Add a job title to set the space between your name and title.'}
             />
           </div>
         </div>
