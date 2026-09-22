@@ -41,14 +41,16 @@ export function SegmentRow({ label, options, value, onChange }) {
   );
 }
 
-export function SectionCustomizer({ section, template, updateSectionSettings }) {
+export function SectionCustomizer({ section, template, updateSectionSettings, settings }) {
   // What the PDF prints with: the section's own settings over its template's defaults (Executive
   // and Sidebar lead with the role, …), so an unset control shows the template's choice (FIDA-58).
-  const s = resolveSection(section, templateId(template)).settings;
+  const effectiveTemplate = (templateId(template) === 'sidebar' && settings?.sidebarSingleColumn) ? 'classic' : templateId(template);
+  const s = resolveSection(section, effectiveTemplate).settings;
   const isSkills = section.type === 'skills';
   // Sidebar prints skills, education, … in its narrow side column: one left-aligned column, so
   // alignment, grids and title layouts cannot apply there and are not offered (FIDB-75).
-  const sideColumn = inSidebarColumn(template, section.type);
+  // In Single · ATS-safe mode, all sections print in the main column.
+  const sideColumn = inSidebarColumn(template, section.type, settings);
   const hasLocation = ['experience', 'education', 'volunteering'].includes(section.type);
   const hasDates = !['skills', 'languages', 'references', 'interests'].includes(section.type);
   const hasCols = !sideColumn && !['interests'].includes(section.type);

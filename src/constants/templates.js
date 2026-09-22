@@ -174,13 +174,18 @@ export function withKnownTemplate(resume) {
 export const SIDEBAR_COLUMN_TYPES = ['skills', 'education', 'languages', 'certifications', 'interests', 'references'];
 
 /** Does a `type` section print in the Sidebar's side column — one narrow, left-aligned column? */
-export const inSidebarColumn = (template, type) => templateId(template) === 'sidebar' && SIDEBAR_COLUMN_TYPES.includes(type);
+export const inSidebarColumn = (template, type, settings) =>
+  templateId(template) === 'sidebar' && !settings?.sidebarSingleColumn && SIDEBAR_COLUMN_TYPES.includes(type);
 
 /**
  * Does the template's header take Header Customization's alignment, name/title layout, rule and
  * contact controls? Classic, Minimal and Executive; Modern prints a fixed banner, Sidebar a side panel.
+ * Sidebar in Single · ATS-safe mode prints Classic's page and header.
  */
-export const hasHeaderControls = (template) => TEMPLATES[templateId(template)].headerControls;
+export const hasHeaderControls = (template, settings) => {
+  const t = headerTemplateId(template, settings);
+  return TEMPLATES[t].headerControls;
+};
 
 /** The labels of the templates whose headers offer Header Customization controls, in order. */
 export const headerControlTemplateLabels = (table = TEMPLATES) =>
@@ -192,7 +197,7 @@ export const headerControlTemplateLabels = (table = TEMPLATES) =>
  * photo, name and contacts on the centre line, so its Fields Position and Text Position have
  * nothing to place — its panel says so instead of offering them (FIDB-51).
  */
-export const letterheadCentered = (settings, template) => hasHeaderControls(template) && settings?.headerAlign === 'center';
+export const letterheadCentered = (settings, template) => hasHeaderControls(template, settings) && settings?.headerAlign === 'center';
 
 /**
  * Photo → Text Position lines the text beside the photo up with its top, centre or bottom. There
@@ -201,7 +206,7 @@ export const letterheadCentered = (settings, template) => hasHeaderControls(temp
  * rather than offer one that does nothing (R3-0). Modern's banner always has the text beside it.
  */
 export function photoTextPositionApplies(settings, template) {
-  const t = templateId(template);
+  const t = headerTemplateId(template, settings);
   if (t === 'sidebar') return false;
   return t === 'modern' || settings?.headerAlign !== 'center';
 }
@@ -212,7 +217,7 @@ export function photoTextPositionApplies(settings, template) {
  * default). The editor offers the per-field icon upload exactly then (R1-2).
  */
 export function drawsContactIcons(template, settings) {
-  const t = templateId(template);
+  const t = headerTemplateId(template, settings);
   return t === 'modern' || t === 'sidebar' || (settings?.contactStyle || 'icon') === 'icon';
 }
 
@@ -261,5 +266,6 @@ export const photoTextAlignItems = (settings) =>
  */
 export function headerBorderOn(settings, template) {
   const v = settings?.showHeaderBorder;
-  return typeof v === 'boolean' ? v : TEMPLATES[templateId(template)].headerRule;
+  const t = headerTemplateId(template, settings);
+  return typeof v === 'boolean' ? v : TEMPLATES[t].headerRule;
 }

@@ -758,4 +758,20 @@ test('AUD-15: addSection supports initialItem for populating missing skill secti
   assert.equal(resume.sections[0].items[0].category, 'Core Skills');
 });
 
+test('AUD-17: analyzeAtsScore recognizes Sidebar Single · ATS-safe layout as passing layout score', () => {
+  const sidebarSingleResume = {
+    ...sampleAtsResume,
+    template: 'sidebar',
+    settings: {
+      ...sampleAtsResume.settings,
+      sidebarSingleColumn: true,
+    },
+  };
+  const report = analyzeAtsScore(sidebarSingleResume);
+  assert.equal(report.categories.layout.score, 10, 'Sidebar single column should receive full layout score (10)');
+  assert.ok(report.categories.layout.items.some(i => i.id === 'template' && i.status === 'pass'));
+  assert.ok(!report.categories.layout.items.some(i => i.id === 'template' && i.status === 'warn'));
+});
+
+
 

@@ -75,6 +75,7 @@ export function EditorResumeTab({
               key={section.id}
               section={section}
               template={resume.template}
+              settings={resume.settings}
               updateSection={store.updateSection}
               updateSectionSettings={store.updateSectionSettings}
               removeSection={store.removeSection}

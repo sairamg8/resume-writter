@@ -1055,10 +1055,12 @@ export function analyzeAtsScore(resume, jobDescriptionText = '') {
   let layoutPts = 0;
 
   // Template check (5 pts)
-  if (currentTemplate === 'classic' || currentTemplate === 'minimal' || currentTemplate === 'executive') {
+  const isSidebarSingle = currentTemplate === 'sidebar' && Boolean(settings.sidebarSingleColumn);
+  if (currentTemplate === 'classic' || currentTemplate === 'minimal' || currentTemplate === 'executive' || isSidebarSingle) {
     layoutPts += 5;
+    const label = isSidebarSingle ? 'SIDEBAR (SINGLE · ATS-SAFE)' : currentTemplate.toUpperCase();
     results.categories.layout.items.push({
-      id: 'template', status: 'pass', text: `ATS-Certified Template: "${currentTemplate.toUpperCase()}"`,
+      id: 'template', status: 'pass', text: `ATS-Certified Template: "${label}"`,
       detail: 'Single-column text flow ensures 100% sequential parsing on Workday, Taleo, and Greenhouse.',
     });
   } else if (currentTemplate === 'modern') {

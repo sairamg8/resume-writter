@@ -14,6 +14,7 @@ export function SortableSection({
   removeSection, addItem, updateItem, removeItem, reorderItems,
   toggleSectionVisibility,
   forceOpen, forceOpenKey,
+  settings,
 }) {
   const [customizerOpen, setCustomizerOpen] = useState(false);
   const [sectionOpen, setSectionOpen] = useState(true);
@@ -153,7 +154,7 @@ export function SortableSection({
       </div>
 
       {customizerOpen && (
-        <SectionCustomizer section={section} template={template} updateSectionSettings={updateSectionSettings} />
+        <SectionCustomizer section={section} template={template} updateSectionSettings={updateSectionSettings} settings={settings} />
       )}
 
       {sectionOpen && (

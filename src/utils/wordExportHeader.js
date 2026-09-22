@@ -49,7 +49,7 @@ function contactParagraphs(items, s, styled, style, centered) {
  */
 export function buildPersonalSection(personal = {}, settings = {}, template = 'classic') {
   const hidden = new Set(personal.hiddenFields || []);
-  const centered = hasHeaderControls(template) && settings?.headerAlign === 'center';
+  const centered = hasHeaderControls(template, settings) && settings?.headerAlign === 'center';
   const s = resolveTemplateSettings(settings, templateId(template));
   const titleSize = Math.round(headerTitleSize(s) * 2);
   const paragraphs = [];
@@ -83,7 +83,7 @@ export function buildPersonalSection(personal = {}, settings = {}, template = 'c
 
   if (contacts.length) {
     const style = { size: 18, color: accent2Hex(textShades(s.textColor).sub, '64748b') };
-    paragraphs.push(...contactParagraphs(contacts, s, hasHeaderControls(template), style, centered));
+    paragraphs.push(...contactParagraphs(contacts, s, hasHeaderControls(template, settings), style, centered));
   }
 
   if (!hidden.has('summary') && hasRichText(personal.summary)) {
@@ -123,7 +123,7 @@ function summaryLook(s, template) {
  * Modern's banner, the Sidebar's column — a little space, and no line: no PDF draws one there.
  */
 function headerEnd(s, template) {
-  const on = hasHeaderControls(template) && headerBorderOn(s, template);
+  const on = hasHeaderControls(template, s) && headerBorderOn(s, template);
   if (!on) return spacer(80);
   const gap = twips(s.headerGaps?.headerRuleGap ?? HEADER_BORDER_PAD_PT);
   const rule = headerRule(s, template);

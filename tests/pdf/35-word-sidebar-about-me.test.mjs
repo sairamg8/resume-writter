@@ -48,4 +48,14 @@ describe('the Word résumé prints the Sidebar\'s "About Me" over its summary, a
       assert.equal(doc.texts.some((t) => /about me/i.test(t)), false, JSON.stringify(personal));
     }
   });
+
+  it('AUD-17: Sidebar in Single · ATS-safe mode prints no "About Me" and centres the header when headerAlign is center', async () => {
+    const r = cv('sidebar', { sidebarSingleColumn: true, headerAlign: 'center' });
+    const doc = await renderDocx(r);
+    assert.equal(doc.texts.some((t) => /about me/i.test(t)), false, 'no About Me in single column');
+    const nameP = doc.paragraphs.find((p) => p.text.includes('Pat Sample'));
+    assert.ok(nameP, 'name paragraph exists');
+    assert.ok(/<w:jc w:val="center"\/>/.test(nameP.xml), 'name paragraph should be centred in Word');
+  });
 });
+

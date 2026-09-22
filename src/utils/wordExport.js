@@ -6,6 +6,7 @@ import { buildCoverLetter } from '@/utils/wordExportCoverLetter';
 import { resolveSection } from '@/templates/pdf/shared/templateSectionDefaults';
 import { downloadBlob } from '@/utils/download';
 import { PAGE_SIZES, pageSizeOf } from '@/constants/pageSize';
+import { templateId } from '@/constants/templates';
 
 /** A one-section document on the résumé's paper (A4 or US Letter, PAR-01), WORD_MARGIN_IN margins on either. */
 function buildDocument(children, settings) {
@@ -39,11 +40,12 @@ function buildDocument(children, settings) {
 export async function renderResumeDocx(resume) {
   const { personal = {}, sections = [], settings = {}, template = 'classic' } = resume || {};
   const accentHex = accent2Hex(settings.accentColor);
+  const effectiveTemplate = (templateId(template) === 'sidebar' && settings.sidebarSingleColumn) ? 'classic' : template;
   const children = [
-    ...buildPersonalSection(personal, settings, template),
-    // Template defaults (e.g. Executive and Sidebar put the role first) apply as in the PDF, and
+    ...buildPersonalSection(personal, settings, effectiveTemplate),
+    // Template defaults (e.g. Executive and Sidebar lead with the role, …) apply as in the PDF, and
     // so does Section Options → Alignment (never in the Sidebar's side column).
-    ...sections.flatMap((s) => buildSection(resolveSection(s, template), accentHex, settings, template)),
+    ...sections.flatMap((s) => buildSection(resolveSection(s, effectiveTemplate), accentHex, settings, effectiveTemplate)),
   ];
   return Packer.toBlob(buildDocument(children, settings));
 }

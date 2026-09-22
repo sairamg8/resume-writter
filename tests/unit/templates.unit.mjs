@@ -171,6 +171,16 @@ test('contactIconHint: explains icon usage and when custom icon uploads appear (
   }
 });
 
+test('AUD-17: Sidebar Single · ATS-safe mode enables header controls and disables side column', () => {
+  const singleSettings = { sidebarSingleColumn: true };
 
+  // hasHeaderControls is true in single column mode
+  assert.equal(hasHeaderControls('sidebar', singleSettings), true);
+  // headerBorderOn defaults to Classic's rule (true) in single column mode
+  assert.equal(headerBorderOn(singleSettings, 'sidebar'), true);
 
-
+  // inSidebarColumn is false in single column mode
+  for (const type of SIDEBAR_COLUMN_TYPES) {
+    assert.equal(inSidebarColumn('sidebar', type, singleSettings), false, `${type} in single column`);
+  }
+});

@@ -79,7 +79,7 @@ export function HeaderCustomization({ s, set, clear, personal, template, templat
 
       {open && (
         <div className="space-y-4 px-3 pb-3">
-          {hasHeaderControls(template) ? (
+          {hasHeaderControls(template, s) ? (
             <>
               <div>
                 <p className="text-xs font-semibold text-gray-700 mb-2">Text Alignment</p>
