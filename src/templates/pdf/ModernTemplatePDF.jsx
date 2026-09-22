@@ -30,7 +30,7 @@ function HeaderContact({ personal, settings, textColor, gaps }) {
   if (!items.length) return null;
   // Canvas: gap-x-4 gap-y-0.5 → 16px / 2px
   return (
-    <View style={{ flexDirection: 'row', flexWrap: 'wrap', columnGap: pxToPt(16), rowGap: pxToPt(2), marginTop: gaps.titleContactsGap }}>
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', columnGap: gaps.contactGapX, rowGap: pxToPt(2), marginTop: gaps.titleContactsGap }}>
       {items.map(({ key, value, href }) => (
         <View key={key} style={{ flexDirection: 'row', alignItems: 'center', gap: gaps.iconTextGap }}>
           <PdfContactIcon field={key} settings={settings} size={iconPt} color={textColor} />

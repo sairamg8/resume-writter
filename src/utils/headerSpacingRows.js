@@ -14,6 +14,7 @@ const TEXT = {
   headerInlineGap: ['Name ↔ Title', 'Name to title spacing'],
   titleContactsGap: ['Title ↔ Contacts', 'Title to contacts spacing'],
   iconTextGap: ['Icon ↔ Text', 'Icon to text spacing'],
+  contactGapX: ['Between contacts', 'Space between contacts'],
 };
 /** Without a title the contacts follow the name, and Title ↔ Contacts is the name's gap. */
 const NAME_CONTACTS = ['Name ↔ Contacts', 'Name to contacts spacing'];
@@ -44,6 +45,9 @@ function gapRow(key, template, settings, [label, name] = TEXT[key]) {
  *   Icon ↔ Text       a contact prints with a mark before it: Modern's and the Sidebar's icons, or
  *                     Contact Style Icon — or Bullet, one contact to a cell (Single, 2 Grid): in a
  *                     Justify line a bullet is text between two values ("Bullet ↔ Text")
+ *   Between contacts  two contacts or more side by side in a flowing row: Modern's, and Icon with
+ *                     Justify (a Bar or Bullet line spaces them with its separator, a 2 Grid's
+ *                     columns are its own — spec D7)
  */
 export function headerGapRows(template, settings = {}, personal = {}) {
   const t = headerTemplateId(template, settings); // the Sidebar's single column prints Classic's header
@@ -62,5 +66,7 @@ export function headerGapRows(template, settings = {}, personal = {}) {
   const style = hc ? settings?.contactStyle || 'icon' : 'icon';
   const inCells = ['single', '2grid'].includes(settings?.contactLayout);
   if (contacts && (style === 'icon' || (style === 'bullet' && inCells))) rows.push(gapRow('iconTextGap', t, settings, style === 'bullet' ? BULLET_TEXT : undefined));
+  const flowing = t === 'modern' || (hc && style === 'icon' && !inCells); // icons in a row that wraps
+  if (contacts > 1 && flowing) rows.push(gapRow('contactGapX', t, settings));
   return rows;
 }
