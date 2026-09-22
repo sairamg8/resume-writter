@@ -232,4 +232,34 @@ describe('the Sidebar\'s single column prints Classic\'s header spacing', () => 
     assert.deepEqual(rows('sidebar', { sidebarSingleColumn: true }), rows('classic', {}));
     assert.deepEqual(rows('sidebar', {}).find(([k]) => k === 'nameTitleGap'), ['nameTitleGap', 2.7], 'the column\'s own 2 pt');
   });
+
+  it('AUD-19: Reset clears all HEADER_GAP_KEYS, not just the visible rows', async () => {
+    const { HeaderSpacingGroup } = await loadModule('/src/components/HeaderSpacingControls.jsx');
+    const { HEADER_GAP_KEYS } = await loadModule('/src/constants/headerSpacing.js');
+    const { mount, elements, reactProps } = await import('./fake-dom.mjs');
+
+    let clearedKeys = null;
+    const dummyRows = [{ key: 'nameTitleGap', label: 'Name ↔ Title', name: 'Name to title spacing', valuePx: 10, defaultPx: 1.33, set: true, min: 0, max: 40 }];
+
+    const view = mount(HeaderSpacingGroup, {
+      rows: dummyRows,
+      onChange: () => {},
+      onClear: (keys) => { clearedKeys = keys; },
+    });
+
+    try {
+      const all = [...elements(view.container)];
+      const resetBtn = all.find((el) => el.tagName === 'BUTTON' && el.textContent.includes('Reset'));
+      assert.ok(resetBtn, 'Reset button exists');
+      view.act(() => reactProps(resetBtn).onClick());
+
+      assert.ok(Array.isArray(clearedKeys), 'onClear was called with an array of keys');
+      assert.ok(clearedKeys.includes('photoTextGap'), 'Reset must clear photoTextGap even if photo is hidden');
+      assert.ok(clearedKeys.includes('headerInlineGap'), 'Reset must clear headerInlineGap');
+      assert.deepEqual(clearedKeys.toSorted(), HEADER_GAP_KEYS.toSorted(), 'Reset clears all HEADER_GAP_KEYS');
+    } finally {
+      view.unmount();
+    }
+  });
 });
+

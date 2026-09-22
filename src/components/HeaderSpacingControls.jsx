@@ -3,6 +3,7 @@
 // arrow. The rows come from headerGapRows (src/utils/headerSpacingRows.js).
 import { useId, useState } from 'react';
 import { RotateCcw } from 'lucide-react';
+import { HEADER_GAP_KEYS } from '@/constants/headerSpacing';
 
 /** A px value as the stepper shows it: whole numbers plain, a template's 1.33 px as "1.3". */
 export const formatPx = (px) => String(Math.round(px * 10) / 10);
@@ -68,14 +69,17 @@ export function GapStepper({ row, onChange, onReset }) {
  * The group: a heading, its Reset (every row back to the template's), `note` — a line saying why a
  * gap is not offered yet — and the rows.
  */
-export function HeaderSpacingGroup({ title = 'Header spacing', rows, onChange, onClear, note }) {
+export function HeaderSpacingGroup({ title = 'Header spacing', rows, onChange, onClear, note, allKeys = HEADER_GAP_KEYS, settings }) {
   const titleId = useId();
-  const anySet = rows.some((r) => r.set);
+  const anySet = rows.some((r) => r.set) || (settings && allKeys.some((k) => {
+    if (k === 'headerInlineGap') return settings[k] != null && settings[k] !== 8;
+    return settings[k] != null;
+  }));
   return (
     <div role="group" aria-labelledby={titleId} className="space-y-2" data-testid="header-spacing">
       <div className="flex items-center justify-between">
         <p id={titleId} className="text-xs font-semibold text-gray-700">{title}</p>
-        <button type="button" onClick={() => onClear(rows.map((r) => r.key))} disabled={!anySet} aria-label="Reset header spacing to the template's" className="flex items-center gap-1 px-2 py-0.5 text-[11px] text-gray-500 border border-gray-200 rounded hover:text-indigo-600 hover:border-indigo-300 disabled:opacity-40 disabled:hover:text-gray-500 disabled:hover:border-gray-200">
+        <button type="button" onClick={() => onClear(allKeys)} disabled={!anySet} aria-label="Reset header spacing to the template's" className="flex items-center gap-1 px-2 py-0.5 text-[11px] text-gray-500 border border-gray-200 rounded hover:text-indigo-600 hover:border-indigo-300 disabled:opacity-40 disabled:hover:text-gray-500 disabled:hover:border-gray-200">
           <RotateCcw size={10} aria-hidden="true" /> Reset
         </button>
       </div>
