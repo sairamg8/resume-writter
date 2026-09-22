@@ -104,3 +104,15 @@ test('round trip: each bullet and paragraph comes back once', () => {
   assert.deepEqual(printed(back.sections.find((s) => s.type === 'experience').items[0].description), ['Led payments.', '• Cut cost by 30% & latency', '• Led team']);
   assert.deepEqual(printed(back.sections.find((s) => s.type === 'projects').items[0].description), ['A tool', '• Fast']);
 });
+
+test("a project's link is its url, both ways (the editor, PDF, Word and Markdown all read url)", () => {
+  const out = cpwtResumeToJsonResume(resumeWith([{ type: 'projects', items: [
+    { name: 'Typed', url: 'github.com/ada/engine' },
+    { name: 'Imported by an older build', link: 'https://old.example.com' },
+  ] }]));
+  assert.deepEqual(out.projects.map((p) => p.url), ['github.com/ada/engine', 'https://old.example.com']);
+  const r = jsonResumeToCpwtResume({ basics: { name: 'X' }, projects: [{ name: 'Engine', url: 'https://github.com/ada/engine' }] });
+  const item = r.sections.find((s) => s.type === 'projects').items[0];
+  assert.equal(item.url, 'https://github.com/ada/engine');
+  assert.equal(item.link, undefined);
+});

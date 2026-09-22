@@ -220,10 +220,29 @@ export function withNormalizedColors(resume) {
 }
 
 /**
+ * A project's link where the app reads it. The JSON Resume import stored a project's URL as `link`,
+ * which nothing prints or edits: the editor, the PDF, Word and Markdown read `url`, so every imported
+ * project lost its link. A project with a `link` and no `url` gets it as its `url`. Whatever its data
+ * version (an import stamps its own); the same object when there is none to move.
+ */
+function withProjectUrls(r) {
+  if (!Array.isArray(r.sections)) return r;
+  const moved = (item) => item && typeof item === 'object' && typeof item.link === 'string' && item.link.trim()
+    && !(typeof item.url === 'string' && item.url.trim());
+  let changed = false;
+  const sections = r.sections.map((s) => {
+    if (s?.type !== 'projects' || !Array.isArray(s.items) || !s.items.some(moved)) return s;
+    changed = true;
+    return { ...s, items: s.items.map((item) => (moved(item) ? (({ link, ...rest }) => ({ ...rest, url: link }))(item) : item)) };
+  });
+  return changed ? { ...r, sections } : r;
+}
+
+/**
  * `resume` made current: a template the app offers (withKnownTemplate), the Design panel's
  * numbers stored as numbers in their controls' ranges (withDesignNumbers), valid colors
- * stored as '#rrggbb' (withNormalizedColors) and text wherever it keeps text (withTextFields),
- * whatever its version; then each one-time migration newer than its own `dataVersion`, after
+ * stored as '#rrggbb' (withNormalizedColors), text wherever it keeps text (withTextFields) and a
+ * project's link as its `url` (withProjectUrls), whatever its version; then each one-time migration newer than its own `dataVersion`, after
  * which it carries DATA_VERSION.
  * Never touches `updatedAt` — this is not an edit, so it neither wins a sync merge
  * nor triggers a cloud write by itself. The same object when nothing changes; a value that is not
@@ -232,7 +251,7 @@ export function withNormalizedColors(resume) {
 export function normalizeResume(resume) {
   if (!resume || typeof resume !== 'object') return resume;
   const known = withKnownTemplate(resume);
-  const r = withTextFields(withNormalizedColors(withDesignNumbers(offersTemplate(resume.template) ? known : withHeaderReadableOnClassic(known))));
+  const r = withProjectUrls(withTextFields(withNormalizedColors(withDesignNumbers(offersTemplate(resume.template) ? known : withHeaderReadableOnClassic(known)))));
   const from = versionOf(r);
   if (from >= DATA_VERSION) return r;
   return MIGRATIONS.reduce((out, [version, migrate]) => (from < version ? migrate(out, from) : out), { ...r, dataVersion: DATA_VERSION });

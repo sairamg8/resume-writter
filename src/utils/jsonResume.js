@@ -180,7 +180,7 @@ export function jsonResumeToCpwtResume(jsonResume, customId) {
         return {
           id: newId('proj'),
           name: storedText(p.name),
-          link: storedText(p.url),
+          url: storedText(p.url), // the field the editor, PDF, Word and Markdown read (it was stored as `link`)
           role: Array.isArray(p.roles) ? joined(p.roles) : storedText(p.roles),
           startDate: month(p.startDate),
           endDate: month(p.endDate),
@@ -336,7 +336,7 @@ export function cpwtResumeToJsonResume(resume) {
           name: item.name || '',
           description: summary,
           highlights,
-          url: item.link || '',
+          url: item.url || item.link || '', // `link`: what earlier builds' import stored
           roles: item.role ? [item.role] : [],
           startDate: isoDate(item.startDate),
           endDate: isoDate(item.endDate),
