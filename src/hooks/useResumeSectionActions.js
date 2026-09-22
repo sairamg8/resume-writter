@@ -1,5 +1,5 @@
-import { SECTION_TYPE_DEFAULTS } from '@/utils/defaultData';
-import { newId } from '@/utils/ids';
+import { SECTION_TYPE_DEFAULTS } from '../utils/defaultDataSectionTypes.js';
+import { newId } from '../utils/ids.js';
 
 export function createSectionActions(patchActive) {
   function updateSections(sections) {
@@ -27,10 +27,14 @@ export function createSectionActions(patchActive) {
     });
   }
 
-  function addSection(type) {
+  function addSection(type, initialItem) {
     const id = newId(type);
     const factory = SECTION_TYPE_DEFAULTS[type] || SECTION_TYPE_DEFAULTS.custom;
-    patchActive(r => ({ ...r, sections: [...r.sections, factory(id)] }));
+    const section = factory(id);
+    if (initialItem) {
+      section.items = [initialItem];
+    }
+    patchActive(r => ({ ...r, sections: [...r.sections, section] }));
   }
 
   function removeSection(sectionId) {

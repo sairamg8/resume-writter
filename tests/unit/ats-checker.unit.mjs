@@ -260,11 +260,11 @@ test('Job Description Matcher: extracts keywords and calculates match score', ()
   const match = matchResumeWithJob(sampleAtsResume, sampleJd);
   assert.ok(match !== null);
   assert.ok(match.matchPercentage >= 70, `Expected match >= 70%, got ${match.matchPercentage}%`);
-  assert.ok(match.matchedKeywords.includes('react'));
-  assert.ok(match.matchedKeywords.includes('typescript'));
-  assert.ok(match.matchedKeywords.includes('kubernetes'));
-  assert.ok(match.matchedKeywords.includes('docker'));
-  assert.ok(match.matchedKeywords.includes('aws'));
+  assert.ok(match.matchedKeywords.includes('React'));
+  assert.ok(match.matchedKeywords.includes('TypeScript'));
+  assert.ok(match.matchedKeywords.includes('Kubernetes'));
+  assert.ok(match.matchedKeywords.includes('Docker'));
+  assert.ok(match.matchedKeywords.includes('AWS'));
 });
 
 test('generateAtsPlainText: outputs parser-perfect text with headers and bullets', () => {
@@ -324,9 +324,9 @@ test('Job Description Matcher: handles empty input and correctly identifies miss
   const specializedJd = 'Looking for an expert in Rust, Elixir, WebAssembly, and Solana blockchain architecture.';
   const match = matchResumeWithJob(sampleAtsResume, specializedJd);
   assert.ok(match !== null);
-  assert.ok(match.missingKeywords.includes('rust'));
-  assert.ok(match.missingKeywords.includes('elixir'));
-  assert.ok(match.missingKeywords.includes('solana'));
+  assert.ok(match.missingKeywords.includes('Rust'));
+  assert.ok(match.missingKeywords.includes('Elixir'));
+  assert.ok(match.missingKeywords.includes('Solana'));
   assert.ok(match.matchPercentage < 40);
 });
 
@@ -385,7 +385,7 @@ test('extractResumeCorpus: extracts all searchable text from resume fields', () 
 test('extractJobKeywords: returns frequency sorted list of technical terms', () => {
   const keywords = extractJobKeywords('TypeScript React Node.js React React Docker Kubernetes');
   assert.ok(keywords.length >= 4);
-  assert.equal(keywords[0].keyword, 'react');
+  assert.equal(keywords[0].keyword, 'React');
   assert.equal(keywords[0].count, 3);
   assert.deepEqual(extractJobKeywords(''), []);
   assert.deepEqual(extractJobKeywords(null), []);
@@ -689,4 +689,73 @@ test('AUD-12: analyzeAtsScore does not penalize a photo hidden by the user and i
   // Education should pass 100% since incomplete entry is hidden
   assert.equal(report.categories.education.score, 15, 'Hidden incomplete edu entry should not reduce education score');
 });
+
+test('AUD-14: matchResumeWithJob matches C++ and C# and ignores 5+ in keywords', () => {
+  const jd = 'Looking for a Senior Software Engineer with 5+ years experience in C++, C#, and Python.';
+  const keywords = extractJobKeywords(jd);
+  const kwList = keywords.map(k => k.keyword);
+
+  // "5+" should NOT be extracted as a keyword
+  assert.ok(!kwList.includes('5+'), '"5+" should not be extracted as keyword');
+  assert.ok(!kwList.includes('5'), '"5" should not be extracted as keyword');
+
+  // C++ and C# should be extracted
+  assert.ok(kwList.includes('C++') || kwList.includes('c++'), 'C++ should be extracted');
+  assert.ok(kwList.includes('C#') || kwList.includes('c#'), 'C# should be extracted');
+
+  const resumeWithCpp = {
+    ...sampleAtsResume,
+    sections: [
+      {
+        id: 'sec_skills',
+        type: 'skills',
+        title: 'Skills',
+        visible: true,
+        items: [
+          {
+            id: 'sk1',
+            category: 'Languages',
+            skills: 'C++, C#, Python, JavaScript',
+          },
+        ],
+      },
+    ],
+  };
+
+  const match = matchResumeWithJob(resumeWithCpp, jd);
+  assert.ok(match !== null);
+  // C++ and C# should be in matchedKeywords, not missingKeywords
+  assert.ok(match.matchedKeywords.some(k => /c\+\+/i.test(k)), 'C++ should be in matchedKeywords');
+  assert.ok(match.matchedKeywords.some(k => /c#/i.test(k)), 'C# should be in matchedKeywords');
+  assert.ok(!match.missingKeywords.some(k => /c\+\+/i.test(k)), 'C++ should not be in missingKeywords');
+  assert.ok(!match.missingKeywords.some(k => /c#/i.test(k)), 'C# should not be in missingKeywords');
+  assert.ok(!match.missingKeywords.includes('5+'), '"5+" should not be in missingKeywords');
+});
+
+test('AUD-15: extractJobKeywords preserves acronym/tech casing (AWS, SQL, React)', () => {
+  const jd = 'Seeking AWS, SQL, and Docker engineers with experience in React and GraphQL.';
+  const keywords = extractJobKeywords(jd);
+  const kwList = keywords.map(k => k.keyword);
+
+  assert.ok(kwList.includes('AWS'), `Expected AWS with uppercase, got: ${kwList.join(', ')}`);
+  assert.ok(kwList.includes('SQL'), `Expected SQL with uppercase, got: ${kwList.join(', ')}`);
+  assert.ok(kwList.includes('Docker'), `Expected Docker with TitleCase, got: ${kwList.join(', ')}`);
+  assert.ok(kwList.includes('React'), `Expected React with TitleCase, got: ${kwList.join(', ')}`);
+  assert.ok(kwList.includes('GraphQL'), `Expected GraphQL with mixed case, got: ${kwList.join(', ')}`);
+});
+
+test('AUD-15: addSection supports initialItem for populating missing skill section', async () => {
+  const { createSectionActions } = await import('../../src/hooks/useResumeSectionActions.js');
+  let resume = { sections: [] };
+  const actions = createSectionActions(patch => { resume = patch(resume); });
+
+  // Adding with initialItem should populate that item
+  actions.addSection('skills', { id: 'skill_1', category: 'Core Skills', skills: 'AWS' });
+  assert.equal(resume.sections.length, 1);
+  assert.equal(resume.sections[0].type, 'skills');
+  assert.equal(resume.sections[0].items.length, 1);
+  assert.equal(resume.sections[0].items[0].skills, 'AWS');
+  assert.equal(resume.sections[0].items[0].category, 'Core Skills');
+});
+
 

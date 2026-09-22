@@ -85,7 +85,7 @@ export default function AtsCheckerPanel({ resume, store }) {
         store.addItem(skillSec.id, { id: newId('skill'), category: 'Core Skills', skills: keyword });
       }
     } else {
-      store.addSection('skills');
+      store.addSection('skills', { id: newId('skill'), category: 'Core Skills', skills: keyword });
     }
 
     setCopiedKeyword(keyword);

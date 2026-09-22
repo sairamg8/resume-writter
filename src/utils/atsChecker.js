@@ -251,6 +251,19 @@ export function extractResumeCorpus(resume) {
   return parts.join(' ');
 }
 
+function chooseBestCasing(newWord, oldWord) {
+  if (!oldWord) return newWord;
+  if (newWord === oldWord) return oldWord;
+  const oldHasUpper = /[A-Z]/.test(oldWord);
+  const newHasUpper = /[A-Z]/.test(newWord);
+  if (!oldHasUpper && newHasUpper) return newWord;
+  if (oldHasUpper && !newHasUpper) return oldWord;
+  const newIsUpper = newWord === newWord.toUpperCase();
+  const oldIsUpper = oldWord === oldWord.toUpperCase();
+  if (newIsUpper && !oldIsUpper && newWord.length <= 5) return newWord;
+  return oldWord;
+}
+
 /**
  * Extracts keywords & tech terms from a job description
  */
@@ -263,6 +276,7 @@ export function extractJobKeywords(jobDescriptionText) {
 
   const tokens = clean.split(' ');
   const counts = new Map();
+  const casingMap = new Map();
 
   for (let raw of tokens) {
     let word = raw.trim();
@@ -271,11 +285,11 @@ export function extractJobKeywords(jobDescriptionText) {
     if (word.length < 2 || word.length > 30) continue;
     const lower = word.toLowerCase();
     if (COMMON_STOP_WORDS.has(lower)) continue;
-    if (/^\d+$/.test(lower)) continue; // skip pure numbers
+    if (/^\d+\+?$/.test(lower)) continue; // skip pure numbers and numbers with + (e.g. 5+)
 
     // Keep capitalization if it looks like an acronym or tech (AWS, SQL, CI/CD, React)
-    const key = lower;
-    counts.set(key, (counts.get(key) || 0) + 1);
+    counts.set(lower, (counts.get(lower) || 0) + 1);
+    casingMap.set(lower, chooseBestCasing(word, casingMap.get(lower)));
   }
 
   // Also check for common multi-word technical phrases
@@ -290,8 +304,11 @@ export function extractJobKeywords(jobDescriptionText) {
 
   const lowerJd = jobDescriptionText.toLowerCase();
   for (const phrase of multiWordPhrases) {
-    if (lowerJd.includes(phrase)) {
+    const idx = lowerJd.indexOf(phrase);
+    if (idx !== -1) {
       counts.set(phrase, Math.max(counts.get(phrase) || 0, 2));
+      const actual = jobDescriptionText.slice(idx, idx + phrase.length);
+      casingMap.set(phrase, actual || phrase);
     }
   }
 
@@ -299,7 +316,7 @@ export function extractJobKeywords(jobDescriptionText) {
   return [...counts.entries()]
     .sort((a, b) => b[1] - a[1])
     .slice(0, 40)
-    .map(([keyword, count]) => ({ keyword, count }));
+    .map(([lowerKey, count]) => ({ keyword: casingMap.get(lowerKey) || lowerKey, count }));
 }
 
 /**
@@ -316,12 +333,16 @@ export function matchResumeWithJob(resume, jobDescriptionText) {
 
   for (const item of jdKeywords) {
     const kw = item.keyword;
+    const lowerKw = kw.toLowerCase();
     // Word boundary regex for single words, direct include for phrases
     let isPresent = false;
-    if (kw.includes(' ') || kw.includes('/') || kw.includes('.')) {
-      isPresent = resumeCorpus.includes(kw);
+    if (lowerKw.includes(' ') || lowerKw.includes('/') || lowerKw.includes('.')) {
+      isPresent = resumeCorpus.includes(lowerKw);
     } else {
-      const regex = new RegExp(`\\b${kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+      const esc = lowerKw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const lead = /^\w/.test(lowerKw) ? '(?<!\\w)' : '(?<!\\S)';
+      const trail = /\w$/.test(lowerKw) ? '(?!\\w)' : '(?![\\w+#])';
+      const regex = new RegExp(`${lead}${esc}${trail}`, 'i');
       isPresent = regex.test(resumeCorpus);
     }
 
