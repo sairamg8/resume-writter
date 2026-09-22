@@ -13,11 +13,18 @@ export function createSectionActions(patchActive) {
     }));
   }
 
+  /**
+   * One of a section's settings; `undefined` removes it (Section Options → Spacing Override's box
+   * emptied, or its ↺), so the section prints as its template decides again. Removed, never stored
+   * as undefined: Firestore refuses a document holding one, and the résumé stopped syncing.
+   */
   function updateSectionSettings(sectionId, key, value) {
-    updateSection(sectionId, s => ({
-      ...s,
-      settings: { ...s.settings, [key]: value },
-    }));
+    updateSection(sectionId, s => {
+      const settings = { ...s.settings };
+      if (value === undefined) delete settings[key];
+      else settings[key] = value;
+      return { ...s, settings };
+    });
   }
 
   function addSection(type) {

@@ -11,9 +11,20 @@
 // cannot reach the server, while getDocsFromServer/getDocFromServer fail. Set `cloud.auth` to the
 // signed-in uid (null: nobody) and the security rules apply: another account's documents are
 // permission-denied, as firestore.rules has it. `cloud.refuse` refuses chosen batches, as the
-// server refuses one writing a document over 1 MiB.
+// server refuses one writing a document over 1 MiB. As the SDK, set() throws on a value holding
+// `undefined` (invalid-argument).
 
 const clone = (v) => (v === undefined ? undefined : JSON.parse(JSON.stringify(v)));
+
+/** Does `v` hold `undefined` anywhere — a field, or an item of a list? */
+const holdsUndefined = (v) => v === undefined
+  || (Array.isArray(v) ? v.some(holdsUndefined) : Boolean(v) && typeof v === 'object' && Object.values(v).some(holdsUndefined));
+/**
+ * What the SDK throws, synchronously, from set() given a value with `undefined` in it — the app's
+ * Firestore is not created with ignoreUndefinedProperties. The fake used to drop such fields as it
+ * cloned them, so no test saw a résumé the real server would never take.
+ */
+const undefinedField = (path) => Object.assign(new Error(`Function WriteBatch.set() called with invalid data. Unsupported field value: undefined (found in document ${path})`), { code: 'invalid-argument' });
 export const resumePath = (uid, id) => `users/${uid}/resumes/${id}`;
 export const listPath = (uid) => `users/${uid}/meta/deletions`;
 
@@ -95,7 +106,10 @@ export function fakeFirestore(docs = {}) {
     writeBatch: () => {
       const ops = [];
       return {
-        set(ref, value, options) { ops.push(['set', ref.path, clone(value), options]); },
+        set(ref, value, options) {
+          if (holdsUndefined(value)) throw undefinedField(ref.path);
+          ops.push(['set', ref.path, clone(value), options]);
+        },
         delete(ref) { ops.push(['delete', ref.path]); },
         commit() {
           if (ops.some(([, path]) => !allowed(path))) return Promise.reject(denied());

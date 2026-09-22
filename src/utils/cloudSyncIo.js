@@ -11,6 +11,13 @@
 /** `{ ...data, id }` with the document's own id: a flag stub holds no id field (R4-5). */
 const withId = (d) => ({ ...d.data(), id: d.id });
 
+/**
+ * A résumé as the server takes it: what its JSON holds — as this browser saves it. A field holding
+ * `undefined` is left out: the SDK refuses a document with one (invalid-argument), and the résumé
+ * was held back until a reload dropped the key (a cleared Spacing Override stored one).
+ */
+const asStored = (r) => JSON.parse(JSON.stringify(r));
+
 export function cloudIo(fs, db) {
   const resumesCol = (uid) => fs.collection(db, 'users', uid, 'resumes');
   const resumeDoc = (uid, id) => fs.doc(db, 'users', uid, 'resumes', id);
@@ -43,7 +50,7 @@ export function cloudIo(fs, db) {
      */
     commit(uid, { sets, flags, marks = [], hardDeletes, listAdd = [] }) {
       const batch = fs.writeBatch(db);
-      sets.forEach((r) => batch.set(resumeDoc(uid, r.id), r));
+      sets.forEach((r) => batch.set(resumeDoc(uid, r.id), asStored(r)));
       flags.forEach((id) => batch.set(resumeDoc(uid, id), marks.includes(id) ? { deleted: true, keep: true } : { deleted: true }, { merge: true }));
       hardDeletes.forEach((id) => batch.delete(resumeDoc(uid, id)));
       if (listAdd.length) batch.set(deletionsDoc(uid), { ids: fs.arrayUnion(...listAdd) }, { merge: true });
