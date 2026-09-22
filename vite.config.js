@@ -12,6 +12,11 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
+  server: {
+    // Not app source: scratch renders, gate exports, cloned tools and agent worktrees. Watching them used up the
+    // system's inotify watches (ENOSPC) and crashed `yarn dev`.
+    watch: { ignored: ['**/qa-visual-compare/**', '**/.claude/**', '**/graphify-out/**', '**/dist/**'] },
+  },
   build: {
     rollupOptions: {
       output: {
