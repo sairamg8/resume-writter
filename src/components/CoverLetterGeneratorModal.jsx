@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { Sparkles, X, Check, ArrowRight, Building, User, Briefcase } from 'lucide-react';
 import { COVER_LETTER_ARCHETYPES, generateCoverLetter } from '@/utils/coverLetterGenerator';
+import { sanitizeRichText } from '@/utils/richText';
 
 export default function CoverLetterGeneratorModal({ isOpen, onClose, resume, onApply }) {
   const [archetype, setArchetype] = useState('impact');
@@ -138,7 +139,7 @@ export default function CoverLetterGeneratorModal({ isOpen, onClose, resume, onA
             </div>
             <div
               className="prose prose-sm max-w-none text-xs text-gray-700 leading-relaxed max-h-56 overflow-y-auto space-y-2 bg-white p-3.5 rounded-lg border border-gray-200"
-              dangerouslySetInnerHTML={{ __html: generated.body }}
+              dangerouslySetInnerHTML={{ __html: sanitizeRichText(generated.body) }}
             />
           </div>
 

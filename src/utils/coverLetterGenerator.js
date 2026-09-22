@@ -4,6 +4,8 @@
  * to create high-converting, tailored cover letters.
  */
 
+import { plainTextToHtml } from './richText.js';
+
 export const COVER_LETTER_ARCHETYPES = [
   {
     id: 'impact',
@@ -114,7 +116,10 @@ export function generateCoverLetter({
     ];
   }
 
-  const htmlBody = paragraphs.map(p => `<p>${p}</p>`).join('');
+  // Every value above is text — résumé fields can come from an imported file — so each paragraph
+  // is escaped before it is wrapped: a name like `<img onerror=…>` prints as typed, never as markup.
+  // A line break inside a field reads as a space, as it did in the unescaped HTML, not as a <br>.
+  const htmlBody = paragraphs.map(p => `<p>${plainTextToHtml(p.replace(/\s*[\r\n]+\s*/g, ' '))}</p>`).join('');
 
   return {
     recipientName: recipientName.trim() || 'Hiring Manager',
