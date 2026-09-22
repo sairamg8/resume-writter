@@ -370,6 +370,15 @@ export function isStandardAtsTitle(section) {
   return spec.aliases.includes(current);
 }
 
+function toPlainText(html = '') {
+  if (!html) return '';
+  const textWithNewlines = String(html)
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/(p|div|h[1-6]|li|tr|blockquote)>/gi, '\n')
+    .replace(/<[^>]+>/g, '');
+  return decodeEntities(textWithNewlines).trim();
+}
+
 /**
  * Generates ATS-optimized Plain Text (perfect for pasting into Workday / Taleo forms)
  */
@@ -377,6 +386,7 @@ export function generateAtsPlainText(resume) {
   if (!resume) return '';
   const lines = [];
   const p = resume.personal || {};
+  const hiddenPersonal = new Set(p.hiddenFields || []);
 
   // Header
   if (p.name) lines.push(p.name.toUpperCase());
@@ -384,30 +394,33 @@ export function generateAtsPlainText(resume) {
 
   // Contacts line
   const contacts = [];
-  if (p.email) contacts.push(p.email);
-  if (p.phone) contacts.push(p.phone);
-  if (p.location) contacts.push(p.location);
-  if (p.linkedin) contacts.push(p.linkedin);
-  if (p.website) contacts.push(p.website);
-  if (p.github) contacts.push(p.github);
+  if (p.email && !hiddenPersonal.has('email')) contacts.push(p.email);
+  if (p.phone && !hiddenPersonal.has('phone')) contacts.push(p.phone);
+  if (p.location && !hiddenPersonal.has('location')) contacts.push(p.location);
+  if (p.linkedin && !hiddenPersonal.has('linkedin')) contacts.push(p.linkedin);
+  if (p.website && !hiddenPersonal.has('website')) contacts.push(p.website);
+  if (p.github && !hiddenPersonal.has('github')) contacts.push(p.github);
   if (contacts.length) {
     lines.push(contacts.join(' | '));
   }
   lines.push('');
 
   // Summary
-  if (p.summary && p.summary.trim()) {
-    lines.push('PROFESSIONAL SUMMARY');
-    lines.push('----------------------------------------');
-    lines.push(p.summary.trim());
-    lines.push('');
+  if (p.summary && !hiddenPersonal.has('summary')) {
+    const cleanSummary = toPlainText(p.summary);
+    if (cleanSummary) {
+      lines.push('PROFESSIONAL SUMMARY');
+      lines.push('----------------------------------------');
+      lines.push(cleanSummary);
+      lines.push('');
+    }
   }
 
   // Sections
   const sections = Array.isArray(resume.sections) ? resume.sections : [];
   for (const s of sections) {
     if (s.visible === false) continue;
-    const items = Array.isArray(s.items) ? s.items : [];
+    const items = (Array.isArray(s.items) ? s.items : []).filter(item => item && item.visible !== false);
     if (!items.length) continue;
 
     const heading = (s.title || s.type).toUpperCase();
@@ -416,75 +429,104 @@ export function generateAtsPlainText(resume) {
 
     for (const item of items) {
       if (!item) continue;
+      const iH = new Set(item.hiddenFields || []);
+      const f = (k) => (iH.has(k) ? '' : (item[k] || ''));
 
       if (s.type === 'experience' || s.type === 'volunteering') {
-        const titleLine = [item.role, item.company || item.org].filter(Boolean).join(' - ');
+        const titleLine = [f('role'), f('company') || f('org')].filter(Boolean).join(' - ');
+        const end = iH.has('endDate') ? '' : (item.current ? 'Present' : item.endDate);
         const dateLoc = [
-          [item.startDate, item.current ? 'Present' : item.endDate].filter(Boolean).join(' - '),
-          item.location,
+          [f('startDate'), end].filter(Boolean).join(' - '),
+          f('location'),
         ].filter(Boolean).join(' | ');
 
         if (titleLine) lines.push(titleLine);
         if (dateLoc) lines.push(dateLoc);
-        const itemBullets = extractBulletsFromItem(item);
+        const itemObj = iH.has('description') ? { ...item, description: '' } : item;
+        const itemBullets = extractBulletsFromItem(itemObj);
         if (itemBullets.length > 0) {
           for (const b of itemBullets) {
             lines.push(`* ${b}`);
           }
-        } else if (item.description) {
-          const plain = decodeEntities(item.description.replace(/<[^>]+>/g, '')).trim();
+        } else if (!iH.has('description') && item.description) {
+          const plain = toPlainText(item.description);
           if (plain) lines.push(plain);
         }
         lines.push('');
       } else if (s.type === 'education') {
-        const degInst = [item.degree, item.fieldOfStudy ? `in ${item.fieldOfStudy}` : '', item.institution].filter(Boolean).join(' - ');
+        const degInst = [f('degree'), f('fieldOfStudy') ? `in ${f('fieldOfStudy')}` : '', f('institution')].filter(Boolean).join(' - ');
         const dateLoc = [
-          [item.startDate, item.endDate].filter(Boolean).join(' - '),
-          item.location,
-          item.gpa ? `GPA: ${item.gpa}` : '',
+          [f('startDate'), f('endDate')].filter(Boolean).join(' - '),
+          f('location'),
+          f('gpa') ? `GPA: ${f('gpa')}` : '',
         ].filter(Boolean).join(' | ');
 
         if (degInst) lines.push(degInst);
         if (dateLoc) lines.push(dateLoc);
-        const itemBullets = extractBulletsFromItem(item);
+        const itemObj = iH.has('description') ? { ...item, description: '' } : item;
+        const itemBullets = extractBulletsFromItem(itemObj);
         if (itemBullets.length > 0) {
           for (const b of itemBullets) {
             lines.push(`* ${b}`);
           }
-        } else if (item.description) {
-          const plain = decodeEntities(item.description.replace(/<[^>]+>/g, '')).trim();
+        } else if (!iH.has('description') && item.description) {
+          const plain = toPlainText(item.description);
           if (plain) lines.push(plain);
         }
         lines.push('');
       } else if (s.type === 'skills') {
-        if (item.category) {
-          lines.push(`${item.category}: ${item.skills || ''}`);
-        } else if (item.skills) {
-          lines.push(item.skills);
+        const cat = f('category');
+        const skl = f('skills');
+        if (cat && skl) {
+          lines.push(`${cat}: ${skl}`);
+        } else if (skl) {
+          lines.push(skl);
+        } else if (cat) {
+          lines.push(cat);
         }
       } else if (s.type === 'projects') {
-        const projHeader = [item.name, item.technologies ? `(${item.technologies})` : ''].filter(Boolean).join(' ');
+        const name = f('name');
+        const tech = f('technologies');
+        const projHeader = [name, tech ? `(${tech})` : ''].filter(Boolean).join(' ');
         if (projHeader) lines.push(projHeader);
-        if (item.url) lines.push(`Link: ${item.url}`);
-        const itemBullets = extractBulletsFromItem(item);
+        const url = f('url');
+        if (url) lines.push(`Link: ${url}`);
+        const itemObj = iH.has('description') ? { ...item, description: '' } : item;
+        const itemBullets = extractBulletsFromItem(itemObj);
         if (itemBullets.length > 0) {
           for (const b of itemBullets) {
             lines.push(`* ${b}`);
           }
-        } else if (item.description) {
-          const plain = decodeEntities(item.description.replace(/<[^>]+>/g, '')).trim();
+        } else if (!iH.has('description') && item.description) {
+          const plain = toPlainText(item.description);
           if (plain) lines.push(plain);
         }
         lines.push('');
       } else if (s.type === 'certifications') {
-        const certLine = [item.name, item.issuer, item.date].filter(Boolean).join(' - ');
+        const certLine = [f('name'), f('issuer'), f('date')].filter(Boolean).join(' - ');
         if (certLine) lines.push(certLine);
       } else if (s.type === 'languages') {
-        lines.push(`${item.language || ''}: ${item.proficiency || ''}`);
+        const lang = f('language');
+        const prof = f('proficiency');
+        if (lang && prof) {
+          lines.push(`${lang}: ${prof}`);
+        } else if (lang) {
+          lines.push(lang);
+        }
       } else {
         // Generic fallback
-        if (item.title) lines.push(item.title);
-        if (item.description) lines.push(item.description);
+        const title = f('title') || f('name');
+        if (title) lines.push(title);
+        const itemObj = iH.has('description') ? { ...item, description: '' } : item;
+        const itemBullets = extractBulletsFromItem(itemObj);
+        if (itemBullets.length > 0) {
+          for (const b of itemBullets) {
+            lines.push(`* ${b}`);
+          }
+        } else if (!iH.has('description') && item.description) {
+          const plain = toPlainText(item.description);
+          if (plain) lines.push(plain);
+        }
       }
     }
     lines.push('');

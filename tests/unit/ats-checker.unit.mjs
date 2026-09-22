@@ -481,3 +481,117 @@ test('analyzeAtsScore: recognizes HTML bullet points in experience roles without
   assert.ok(metricsCheck && metricsCheck.status === 'pass', 'Metrics check should pass');
 });
 
+test('AUD-10: generateAtsPlainText respects hidden contacts, hidden entries, and per-entry hidden fields', () => {
+  const resume = {
+    personal: {
+      name: 'Jane Doe',
+      title: 'Software Engineer',
+      email: 'jane@example.com',
+      phone: '+1 555-0199',
+      location: 'New York, NY',
+      linkedin: 'https://linkedin.com/in/janedoe',
+      summary: 'Experienced developer',
+      hiddenFields: ['phone', 'location', 'summary'],
+    },
+    sections: [
+      {
+        id: 'sec_exp',
+        type: 'experience',
+        title: 'Work Experience',
+        visible: true,
+        items: [
+          {
+            id: 'exp1',
+            role: 'Senior Developer',
+            company: 'Secret Corp',
+            location: 'Remote',
+            startDate: '2020-01',
+            endDate: '2023-01',
+            description: 'Built scalable APIs',
+            hiddenFields: ['company', 'location'],
+            visible: true,
+          },
+          {
+            id: 'exp2',
+            role: 'Junior Developer',
+            company: 'Hidden Company',
+            startDate: '2018-01',
+            endDate: '2019-12',
+            description: 'Fixed bugs',
+            visible: false,
+          },
+        ],
+      },
+      {
+        id: 'sec_skills',
+        type: 'skills',
+        title: 'Skills',
+        visible: true,
+        items: [
+          {
+            category: 'Languages',
+            skills: 'JavaScript, TypeScript',
+            hiddenFields: ['category'],
+            visible: true,
+          },
+          {
+            category: 'Secret Skills',
+            skills: 'Hacking',
+            visible: false,
+          },
+        ],
+      },
+    ],
+  };
+
+  const text = generateAtsPlainText(resume);
+  // Hidden contacts
+  assert.ok(!text.includes('+1 555-0199'), 'Hidden phone should not appear');
+  assert.ok(!text.includes('New York, NY'), 'Hidden location should not appear');
+  assert.ok(text.includes('jane@example.com'), 'Visible email should appear');
+  // Hidden summary
+  assert.ok(!text.includes('PROFESSIONAL SUMMARY'), 'Hidden summary heading should not appear');
+  assert.ok(!text.includes('Experienced developer'), 'Hidden summary text should not appear');
+  // Hidden entry
+  assert.ok(!text.includes('Junior Developer'), 'Hidden entry role should not appear');
+  assert.ok(!text.includes('Hidden Company'), 'Hidden entry company should not appear');
+  assert.ok(!text.includes('Secret Skills'), 'Hidden skills category should not appear');
+  assert.ok(!text.includes('Hacking'), 'Hidden skills item should not appear');
+  // Per-entry hidden fields
+  assert.ok(!text.includes('Secret Corp'), 'Hidden field (company) should not appear');
+  assert.ok(!text.includes('Remote'), 'Hidden field (location) should not appear');
+  assert.ok(text.includes('Senior Developer'), 'Visible field (role) should appear');
+  assert.ok(!text.includes('Languages:'), 'Hidden category should not appear with colon');
+  assert.ok(text.includes('JavaScript, TypeScript'), 'Visible skills should appear');
+});
+
+test('AUD-11: generateAtsPlainText cleans HTML and decodes entities in summary and generic descriptions', () => {
+  const resume = {
+    personal: {
+      name: 'Jane Doe',
+      summary: '<p>Won <em>gold</em> &amp; silver awards for <strong>high-scale</strong> systems.</p>',
+    },
+    sections: [
+      {
+        id: 'sec_awards',
+        type: 'awards',
+        title: 'Awards & Honors',
+        visible: true,
+        items: [
+          {
+            title: 'Top Performer',
+            description: '<p>Awarded for <em>excellence</em> &amp; innovation in engineering.</p>',
+          },
+        ],
+      },
+    ],
+  };
+
+  const text = generateAtsPlainText(resume);
+  assert.ok(!text.includes('<p>'), 'Raw <p> tag should not appear');
+  assert.ok(!text.includes('<em>'), 'Raw <em> tag should not appear');
+  assert.ok(!text.includes('&amp;'), '&amp; should be decoded to &');
+  assert.ok(text.includes('Won gold & silver awards for high-scale systems.'), 'Summary text should be stripped of HTML and decoded');
+  assert.ok(text.includes('Awarded for excellence & innovation in engineering.'), 'Award description should be stripped of HTML and decoded');
+});
+
