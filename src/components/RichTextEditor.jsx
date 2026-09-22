@@ -16,6 +16,10 @@ export default function RichTextEditor({ label, ariaLabel, value, onChange, plac
   const ids = useFieldIds(label);
   const isComposing = useRef(false);
   const [optimizerOpen, setOptimizerOpen] = useState(false);
+  // The STAR Optimizer's statement as it opened (optimizerText), and the Range its result replaces:
+  // the selection, else the bullet or line the caret is in; null to add the result as a new bullet.
+  const [optimizerText, setOptimizerText] = useState('');
+  const optimizerTarget = useRef(null);
 
   // Adopt `value` whenever it changes from outside (another resume opened, an import, a cloud
   // pull), but never while this editor has focus: there the DOM is the source of truth and
@@ -58,13 +62,34 @@ export default function RichTextEditor({ label, ariaLabel, value, onChange, plac
     return true;
   }
 
+  /**
+   * Open the STAR Optimizer on the statement being edited: the text selected in this editor, else
+   * the bullet (or line) the caret is in (statementRange). It used to open on the text the editor
+   * held at its first render — none — and Apply inserted the result at the caret as HTML, the
+   * original left as it was (bug audit 2026-09-22).
+   */
+  function openOptimizer() {
+    const range = statementRange(ref.current);
+    optimizerTarget.current = range;
+    setOptimizerText(range ? range.toString().replace(/\s+/g, ' ').trim() : '');
+    setOptimizerOpen(true);
+  }
+
+  /** The optimizer's result in place of the statement it opened on, as text; with none, a new bullet. */
   function handleApplyOptimizedText(optimizedText) {
-    if (!optimizedText) return;
-    ref.current?.focus();
-    if (!ref.current?.innerText.trim()) {
-      document.execCommand('insertHTML', false, `<ul><li>${optimizedText}</li></ul>`);
+    const el = ref.current;
+    const text = String(optimizedText || '').trim();
+    const range = optimizerTarget.current;
+    optimizerTarget.current = null;
+    if (!el || !text) return;
+    el.focus();
+    if (range && el.contains(range.commonAncestorContainer)) {
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+      document.execCommand('insertText', false, text);
     } else {
-      document.execCommand('insertHTML', false, optimizedText);
+      el.innerHTML = sanitizeRichText(`${el.innerHTML}<ul><li>${plainTextToHtml(text)}</li></ul>`);
     }
     emit();
   }
@@ -134,8 +159,8 @@ export default function RichTextEditor({ label, ariaLabel, value, onChange, plac
             type="button"
             title="Bullet Optimizer & STAR Formula Helper"
             onMouseDown={e => {
-              e.preventDefault();
-              setOptimizerOpen(true);
+              e.preventDefault(); // keeps the caret and selection in the editor for openOptimizer
+              openOptimizer();
             }}
             className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-semibold text-amber-700 bg-amber-50 hover:bg-amber-100 hover:text-amber-800 transition-colors ml-auto cursor-pointer"
           >
@@ -165,14 +190,53 @@ export default function RichTextEditor({ label, ariaLabel, value, onChange, plac
         />
       </div>
 
-      <BulletOptimizerModal
-        isOpen={optimizerOpen}
-        onClose={() => setOptimizerOpen(false)}
-        initialText={ref.current?.innerText.trim() || ''}
-        onApply={handleApplyOptimizedText}
-      />
+      {/* Mounted only while open: its statement starts from the one it opens on, every time. */}
+      {optimizerOpen && (
+        <BulletOptimizerModal
+          isOpen
+          onClose={() => setOptimizerOpen(false)}
+          initialText={optimizerText}
+          onApply={handleApplyOptimizedText}
+        />
+      )}
     </div>
   );
+}
+
+/** The elements a statement can be: a list item or a paragraph (Chrome writes a new line as a div). */
+const STATEMENTS = new Set(['LI', 'P', 'DIV', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'BLOCKQUOTE']);
+const BLOCKS = new Set([...STATEMENTS, 'UL', 'OL']);
+/** A node that sits inside a line of text: text, or an inline element other than <br>. */
+const inLine = (n) => n.nodeType === 3 || (n.nodeType === 1 && !BLOCKS.has(n.nodeName) && n.nodeName !== 'BR');
+
+/**
+ * The statement being edited in `el`, as a Range: the selection when it is inside `el` and not
+ * empty; else, around the caret, the list item or paragraph it is in — or, in text that is not
+ * in one (the first line Chrome leaves bare, lines split by <br>), the run of text between line
+ * breaks. null when the caret is not in `el`, or sits on no text.
+ */
+function statementRange(el) {
+  const sel = window.getSelection?.();
+  if (!el || !sel || !sel.rangeCount || !el.contains(sel.anchorNode)) return null;
+  const at = sel.getRangeAt(0);
+  if (!at.collapsed && at.toString().trim()) return at.cloneRange();
+  const range = document.createRange();
+  for (let n = at.startContainer; n && n !== el; n = n.parentNode) {
+    if (n.nodeType === 1 && STATEMENTS.has(n.nodeName)) {
+      range.selectNodeContents(n);
+      return range.toString().trim() ? range : null;
+    }
+  }
+  let node = at.startContainer === el ? el.childNodes[at.startOffset] || el.lastChild : at.startContainer;
+  while (node && node.parentNode !== el) node = node.parentNode;
+  if (!node || !inLine(node)) return null;
+  let first = node;
+  let last = node;
+  while (first.previousSibling && inLine(first.previousSibling)) first = first.previousSibling;
+  while (last.nextSibling && inLine(last.nextSibling)) last = last.nextSibling;
+  range.setStartBefore(first);
+  range.setEndAfter(last);
+  return range.toString().trim() ? range : null;
 }
 
 function Btn({ title, onExec, children }) {
