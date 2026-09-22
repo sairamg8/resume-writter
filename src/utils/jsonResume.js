@@ -3,6 +3,7 @@ import { BASE_COVER_LETTER } from './defaultDataContent.js';
 import { getStarterSettings, STARTER_DATA_VERSION } from './starterTemplates.js';
 import { isText, storedText } from './storedText.js';
 import { parseMonthYear } from './dates.js';
+import { parseRichText } from './richText.js';
 
 /**
  * Checks if a parsed JSON object matches the JSON Resume standard (jsonresume.org).
@@ -239,31 +240,33 @@ export function jsonResumeToCpwtResume(jsonResume, customId) {
   };
 }
 
-/**
- * Strips HTML tags to plain text for highlight/summary export.
- */
-function stripHtml(html) {
-  if (!html) return '';
-  return html
-    .replace(/<li[^>]*>(.*?)<\/li>/gi, '$1\n')
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<[^>]+>/g, '')
-    .trim();
-}
+/** A bullet typed as text at the start of a paragraph: "• …", "- …", "* …", "– …". */
+const TYPED_BULLET = /^[•\-*–—◦▪]\s+/;
+
+/** One block of rich text as plain text (a <br> inside it stays a line break). */
+const blockText = (b) => b.runs.map((r) => r.text).join('').trim();
 
 /**
- * Extracts highlights from an HTML description containing <li> tags.
+ * An entry's rich-text description as JSON Resume holds it: `highlights`, one per list item — or
+ * per paragraph typed as a bullet ("• …") — and `summary`, the other paragraphs as plain text, one
+ * per line, entities decoded. Every line once: the summary used to repeat every bullet as well
+ * (and was cut at 300 characters), so an export imported back printed each bullet twice.
  */
-function extractHighlights(html) {
-  if (!html) return [];
-  const matches = [...html.matchAll(/<li[^>]*>(.*?)<\/li>/gi)];
-  if (matches.length > 0) {
-    return matches.map(m => m[1].replace(/<[^>]+>/g, '').trim()).filter(Boolean);
+function describe(html) {
+  const summary = [];
+  const highlights = [];
+  for (const b of parseRichText(html)) {
+    const text = blockText(b);
+    if (!text) continue;
+    if (b.marker) highlights.push(text);
+    else if (TYPED_BULLET.test(text)) highlights.push(text.replace(TYPED_BULLET, '').trim());
+    else summary.push(text);
   }
-  // If lines separated by newline or bullet characters
-  const lines = html.split(/[\r\n]+/).map(l => l.replace(/^[\s•\-*]+/, '').trim()).filter(Boolean);
-  return lines.length > 1 ? lines : [];
+  return { summary: summary.join('\n'), highlights };
 }
+
+/** Rich text (the summary, an award's description) as plain text: one line per paragraph or list item. */
+const plain = (html) => parseRichText(html).map(blockText).filter(Boolean).join('\n');
 
 /**
  * Converts a CPWT-CV resume object to official JSON Resume standard (jsonresume.org).
@@ -291,14 +294,15 @@ export function cpwtResumeToJsonResume(resume) {
     const items = Array.isArray(s.items) ? s.items : [];
     if (s.type === 'experience') {
       for (const item of items) {
+        const { summary, highlights } = describe(item.description);
         work.push({
           name: item.company || '',
           position: item.role || '',
           location: item.location || '',
           startDate: isoDate(item.startDate),
           endDate: item.current ? '' : isoDate(item.endDate),
-          summary: stripHtml(item.description || '').slice(0, 300),
-          highlights: extractHighlights(item.description || ''),
+          summary,
+          highlights,
         });
       }
     } else if (s.type === 'education') {
@@ -327,10 +331,11 @@ export function cpwtResumeToJsonResume(resume) {
       }
     } else if (s.type === 'projects') {
       for (const item of items) {
+        const { summary, highlights } = describe(item.description);
         projects.push({
           name: item.name || '',
-          description: stripHtml(item.description || ''),
-          highlights: extractHighlights(item.description || ''),
+          description: summary,
+          highlights,
           url: item.link || '',
           roles: item.role ? [item.role] : [],
           startDate: isoDate(item.startDate),
@@ -352,7 +357,7 @@ export function cpwtResumeToJsonResume(resume) {
           title: item.title || '',
           awarder: item.issuer || '',
           date: isoDate(item.date),
-          summary: item.description || '',
+          summary: plain(item.description),
         });
       }
     }
@@ -367,7 +372,7 @@ export function cpwtResumeToJsonResume(resume) {
       email: p.email || '',
       phone: p.phone || '',
       url: p.website || '',
-      summary: p.summary || '',
+      summary: plain(p.summary),
       location: {
         address: p.location || '',
       },

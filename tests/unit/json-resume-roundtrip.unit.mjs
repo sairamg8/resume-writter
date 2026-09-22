@@ -5,7 +5,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { jsonResumeToCpwtResume, cpwtResumeToJsonResume } from '../../src/utils/jsonResume.js';
+import { parseRichText } from '../../src/utils/richText.js';
 import { formatDate } from '../../src/utils/dates.js';
+
+/** The text each block of rich text prints, list items marked with their bullet. */
+const printed = (html) => parseRichText(html).map((b) => `${b.marker ? `${b.marker} ` : ''}${b.runs.map((r) => r.text).join('')}`);
 
 const MMM = { dateFormat: 'MMM YYYY' };
 
@@ -62,4 +66,41 @@ test('round trip: every date prints the same after export → import', () => {
   const items = back.sections.find((s) => s.type === 'experience').items;
   assert.deepEqual(items.map((i) => formatDate(i.startDate, MMM)), dates.map((d) => formatDate(d, MMM)));
   assert.deepEqual(items.map((i) => formatDate(i.endDate, MMM)), dates.map((d) => formatDate(d, MMM)));
+});
+
+test('export: bullets go out once, as highlights; summary holds only the text outside the list — plain text, whole', () => {
+  const long = `Owned the payments platform end to end. ${'Scaled it across regions. '.repeat(15)}`.trim();
+  const resume = resumeWith([
+    { type: 'experience', items: [
+      { company: 'Acme', role: 'Eng', description: `<p>${long}</p><ul><li>Cut cost by 30% &amp; latency</li><li>Led a <strong>team</strong> of 5</li></ul>` },
+      { company: 'Bolt', role: 'Eng', description: '<ul><li>Only bullets</li></ul>' },
+      { company: 'Core', role: 'Eng', description: '<p>First paragraph</p><p>Second &lt;paragraph&gt;</p>' },
+    ] },
+    { type: 'projects', items: [{ name: 'P', description: '<p>A tool</p><ul><li>Fast &amp; small</li></ul>' }] },
+    { type: 'awards', items: [{ title: 'Best', description: '<p>Won <em>gold</em> &amp; silver</p>' }] },
+  ], { summary: '<p>Builds <strong>R&amp;D</strong> tools</p><p>Second line</p>' });
+  const out = cpwtResumeToJsonResume(resume);
+  assert.equal(out.work[0].summary, long, 'the summary is not cut at 300 characters');
+  assert.deepEqual(out.work[0].highlights, ['Cut cost by 30% & latency', 'Led a team of 5']);
+  assert.deepEqual([out.work[1].summary, out.work[1].highlights], ['', ['Only bullets']]);
+  assert.deepEqual([out.work[2].summary, out.work[2].highlights], ['First paragraph\nSecond <paragraph>', []]);
+  assert.deepEqual([out.projects[0].description, out.projects[0].highlights], ['A tool', ['Fast & small']]);
+  assert.equal(out.awards[0].summary, 'Won gold & silver');
+  assert.equal(out.basics.summary, 'Builds R&D tools\nSecond line');
+});
+
+test('export: a paragraph typed as a bullet ("• …", "- …") is a highlight too', () => {
+  const resume = resumeWith([{ type: 'experience', items: [{ company: 'A', role: 'R', description: '<p>• Did X</p><p>- Did Y</p>' }] }]);
+  const out = cpwtResumeToJsonResume(resume);
+  assert.deepEqual([out.work[0].summary, out.work[0].highlights], ['', ['Did X', 'Did Y']]);
+});
+
+test('round trip: each bullet and paragraph comes back once', () => {
+  const resume = resumeWith([
+    { type: 'experience', items: [{ company: 'Acme', role: 'Eng', startDate: 'Jan 2020', description: '<p>Led payments.</p><ul><li>Cut cost by 30% &amp; latency</li><li>Led team</li></ul>' }] },
+    { type: 'projects', items: [{ name: 'P', description: '<p>A tool</p><ul><li>Fast</li></ul>' }] },
+  ]);
+  const back = jsonResumeToCpwtResume(JSON.parse(JSON.stringify(cpwtResumeToJsonResume(resume))));
+  assert.deepEqual(printed(back.sections.find((s) => s.type === 'experience').items[0].description), ['Led payments.', '• Cut cost by 30% & latency', '• Led team']);
+  assert.deepEqual(printed(back.sections.find((s) => s.type === 'projects').items[0].description), ['A tool', '• Fast']);
 });
