@@ -1,21 +1,102 @@
 # FlowCV Bug Tracker & Status Index
 
 > Location: `/mnt/Storage/Projects/flowcv/bug-status.md`
-> Total prompt tasks: 33 | **Closed: 33** | **Open: 0**
+> Updated: 2026-09-22 21:27 · `origin/master` (deployed) = `2a7d728` · fixed but not pushed: `fd7ecca`, `4ee5ede`
+> **Open: 28** | Fixed, not pushed: 2 | **Closed: 44**
 
 ## Summary
 
-- **Total Tracked Bugs in prompts:** 33
-- **Closed / Fixed:** 33 (latest: `ONB-11` landed in `8a5d782`)
-- **Remaining Open:** 0
+| List | Found | ✅ Fixed and pushed | ⏸ Fixed, local only | 🔴 Open |
+|---|---|---|---|---|
+| Bug audit, 2026-09-22 (`AUD-`) | 35 (34 + one follow-up) | 11 | 2 | **22** |
+| ATS parsing defects (`ATS-`) | 6 | 0 | 0 | **6** |
+| Prompt tasks, 2026-09-14 → 09-21 | 33 | 33 | 0 | 0 |
+| **Total** | **74** | **44** | **2** | **28** |
 
-### Remaining Open Bugs (Next in Queue)
+- **Status:** ✅ fixed and pushed (on `origin/master`, so deployed) · ⏸ fixed and committed, not pushed · 🔴 open.
+- **Severity (audit):** High = data loss, or a feature that does not work · Medium = a wrong result, no data loss ·
+  Low = an edge case or cosmetic.
+- **Verified:** Ran = reproduced by running the code · Code = confirmed by reading it · Known = also on the
+  2026-09-22 gap list as A1–A6.
+- Every open row was re-checked against the code at `4ee5ede` on 2026-09-22; its `file:line` is current there.
 
-*None — all 33 tracked bug tasks are fixed and closed!*
+### Next in queue
+
+1. **AUD-10 + AUD-11** — the ATS text export leaks hidden data and prints raw HTML.
+2. AUD-12 → AUD-13 → AUD-14 + AUD-15 → AUD-17 → AUD-19 → AUD-21 → AUD-22 → AUD-23 → AUD-24 → the Low rows,
+   AUD-25 … AUD-34.
+3. ATS-1 … ATS-6 — no order set yet; ATS-6 waits on a decision.
+
+⏸ **Not pushed yet:** AUD-09 (`fd7ecca`) and AUD-16 (`4ee5ede`) wait for the owner's go. The push gate runs every test,
+a production build and a private-data scan; a push deploys.
+
+**Each fix:** a test that fails before the fix → the fix → commit → set its row here to ⏸ with the commit and the
+tests → ✅ once pushed, and update the counts above.
 
 ---
 
-## Complete Bug Tasks Index
+## Bug audit — 2026-09-22 (`AUD-`)
+
+A read-only audit of `master` at `ba0874c`. The whole suite was green at the time (1496 pass, 0 fail, 2 todo), so no
+existing test caught any of these; several unit tests asserted the same wrong data shape as the code.
+
+| ID | Area | Severity | Status | Commit | Tests | Bug — where | Verified |
+|---|---|---|---|---|---|---|---|
+| AUD-01 | Storage · two tabs | High | ✅ Fixed | `9ec28e9` | tests/pdf/16-saved-data-two-tabs.test.mjs | Two open tabs erased each other's résumés: each change wrote the whole in-memory store and nothing listened for `storage` events, so a résumé made in tab 2 vanished when tab 1 saved (`src/hooks/useResumeStore.js`). The store now takes other tabs' saves without writing them back. | Code |
+| AUD-01b | Editor · open résumé | High | ✅ Fixed | `2a7d728` | tests/pdf/52-editor-route.test.mjs | Found while fixing AUD-01: a résumé deleted in another tab left the editor showing the next résumé — and taking its edits — under the deleted one's address. `useOpenResume` now returns to the dashboard. | Ran |
+| AUD-02 | JSON Resume · dates | High | ✅ Fixed | `5954e4d` | tests/unit/json-resume-roundtrip.unit.mjs | Export → import corrupted every date: export wrote the picker's "Jan 2024" instead of ISO `YYYY-MM`, and import kept 7 characters ("Jan 202", "Septemb"). | Ran |
+| AUD-03 | JSON Resume · bullets | High | ✅ Fixed | `4c1875d` | tests/unit/json-resume-roundtrip.unit.mjs | A round trip doubled every bullet (exported in both `summary` and `highlights`) and leaked HTML and entities (`<p>`, `&amp;`). | Ran |
+| AUD-04 | JSON Resume · projects | High | ✅ Fixed | `b64133f` | tests/pdf/16-saved-data-project-link.test.mjs, tests/unit/json-resume-roundtrip.unit.mjs | Project URLs were lost both ways: import stored `link` and export read `link`, while the editor, PDF, Word, Markdown and ATS text use `url`. Old `link` values are healed. | Code |
+| AUD-05 | JSON Resume · import | High | ✅ Fixed | `05a602f` | tests/unit/json-resume-roundtrip.unit.mjs | Imported text was treated as HTML: `Owned the <ingest> pipeline` printed "Owned the pipeline", and `<b>cost</b>` turned bold. | Ran |
+| AUD-06 | Starters · skills | High | ✅ Fixed | `bee22a2` | tests/pdf/16-saved-data-starter-skills.test.mjs, tests/unit/skill-names.unit.mjs, tests/unit/starter-templates.unit.mjs | A résumé made from a role starter printed an empty Skills section: starters stored `{ id, name }`, everything reads `{ category, skills }`. Stored `{ name }` groups are healed on load (`withSkillNames`). | Ran, Known A6 |
+| AUD-07 | Sync · spacing override | High | ✅ Fixed | `e25f6ff` | tests/pdf/18-cloud-sync-undefined.test.mjs (the fake Firestore now throws on `undefined`, as the real one does) | Clearing a section's Spacing Override stored `undefined`; Firestore rejects it, so that résumé stopped syncing until a reload. | Ran (real Firebase SDK) |
+| AUD-08 | Jobs · CSV export | High | ✅ Fixed | `888661a` | tests/unit/job-csv.unit.mjs (rewritten on the real job shape) | The CSV read fields no job has: Position, Applied Date and Source were always empty, and Status printed its id (`phone_screen`). It now writes Position, Status (its label), Stage, Applied Date and Contact; Source is gone. | Code |
+| AUD-09 | Editor · STAR Optimizer | High | ⏸ Local only | `fd7ecca` | tests/playwright/bullet-optimizer.spec.mjs (needs a fresh `vite build`) | The optimizer never loaded the bullet being edited — it read the editor's ref on the first render, while it was still null — and Apply inserted unescaped HTML at the caret without replacing the bullet. It now opens on the caret's bullet and Apply replaces it as text. | Code |
+| AUD-10 | ATS text export · hidden data | High | 🔴 Open | — | — | Prints what the user hid: hidden contacts (phone, location), hidden entries (`visible: false`) and per-entry hidden fields such as the company. `generateAtsPlainText`, `src/utils/atsChecker.js:376`. | Ran |
+| AUD-11 | ATS text export · HTML | High | 🔴 Open | — | — | Prints raw HTML: the summary (`src/utils/atsChecker.js:402`) and every other section's description (`:487`, e.g. Awards) come out as `<p>Won <em>gold</em></p>` and `&amp;`. | Ran |
+| AUD-12 | Hidden data · letter, ATS score | High | 🔴 Open | — | — | Hidden entries and the photo are still used: the cover-letter generator writes about a hidden job (`src/utils/coverLetterGenerator.js:49`); the ATS score counts hidden entries and takes 3 points off for a photo the user hid (`src/utils/atsChecker.js:1034`). | Ran |
+| AUD-13 | Markdown export | High | 🔴 Open | — | — | Skills print empty — it reads `i.name` (`src/utils/markdownExport.js:126`); Languages print nothing and Volunteering loses its organisation — the generic branch reads `title`, `name`, `role`, `organization`, never `language` or `org` (`:134`); dates print raw, ignoring Date format; per-entry hidden fields still print. `tests/unit/markdown-export.unit.mjs` uses the same wrong `{ name }` shape. | Ran, Known A6 |
+| AUD-14 | ATS checker · job match | Medium | 🔴 Open | — | — | Reports C++, C# and "5+" as missing: `\b…\b` never matches a keyword ending in `+` or `#` (`src/utils/atsChecker.js:324`), and "5+ years" yields the keyword "5+". | Ran |
+| AUD-15 | ATS checker · add keyword | Medium | 🔴 Open | — | — | "+" (add a missing keyword) writes it lowercase — "aws", "sql" — because every keyword is lowercased (`src/utils/atsChecker.js:277`); with no Skills section it adds only an empty section, not the keyword (`src/components/AtsCheckerPanel.jsx:88`), while the button shows done. | Code |
+| AUD-16 | Editor · STAR Optimizer | Medium | ⏸ Local only | `4ee5ede` | tests/unit/bullet-optimizer.unit.mjs | The weak-phrase check flickered: global regexes kept `lastIndex`, so the same text scored 1, 0, 1, 0 weak phrases on successive renders. | Ran |
+| AUD-17 | Sidebar · Single ATS-safe | Medium | 🔴 Open | — | — | The Single · ATS-safe mode prints Classic's page, but the rest of the app still treats it as two columns: Header Customization hides Classic's controls and says they "don't apply" (`src/components/PersonalInfoEditorHeader.jsx:167`); Section Options hides Alignment, Grids and Title for the side-column sections (`inSidebarColumn`, `src/components/SectionEditorCustomizer.jsx:51`); Word prints them as side-column sections and never centres the header (`src/utils/wordExport.js:46`, `src/utils/wordExportHeader.js:52`); the ATS score still warns "Multi-column / Sidebar layout detected" (`src/utils/atsChecker.js:1011`). | Code |
+| AUD-18 | Starters · data version | Medium | ✅ Fixed | `c3c7579` | tests/pdf/16-saved-data-starter-skills.test.mjs, tests/unit/starter-templates.unit.mjs | Starters and JSON Resume imports were stamped `dataVersion: 1`, so the next load re-ran old migrations and moved the Modern starter's photo text from centre to top. They now carry the current version (`src/utils/dataVersion.js`). | Ran |
+| AUD-19 | Header spacing · Reset | Medium | 🔴 Open | — | — | Reset clears only the rows on screen (`onClear(rows…)`, `src/components/HeaderSpacingControls.jsx:78`): a gap set for a row now hidden (photo removed, Stack ↔ Inline) survives Reset, can't be cleared from the UI, and still prints in the cover letter. | Code |
+| AUD-20 | Section options · spacing | Medium | ✅ Fixed | `f776e0f` | tests/pdf/51-section-spacing-override.test.mjs | The Spacing Override had no clamp: Before/After `-500` hid sections and Item gap `-30` overlapped entries. It is now held to 0–80 px in the PDF and the panel. | Ran, Known A1/A2 |
+| AUD-21 | Section options · Reset style | Medium | 🔴 Open | — | — | Reset style and new sections store `titleStyle: 'stacked'`, which overrides Executive's inline default (`src/utils/defaultDataSectionTypes.js:4`, `src/components/SectionEditor.jsx:123`). | Ran, Known A3 |
+| AUD-22 | Word export · fonts and sizes | Medium | 🔴 Open | — | — | Word ignores the Design font and sizes: the name is always 20 pt (`src/utils/wordExportHeader.js:58`), section titles 10 pt (`src/utils/wordExportUtils.js:71`), the font Calibri; entry dates are always the accent colour (`src/utils/wordExportUtils.js:157`) while the PDF prints them grey on Minimal, Executive and Sidebar. | Ran, Known A4 |
+| AUD-23 | Exports · errors | Medium | 🔴 Open | — | — | Three exports fail silently: Markdown, ATS text and JSON Resume aren't wrapped in `runExport` (`src/hooks/useEditorExports.js:68`, `:74`, `:80`), and the editor's JSON Resume import converts outside any `try` (`src/components/ExportDropdown.jsx:118`), so an error shows nothing. | Code |
+| AUD-24 | Jobs · edit | Medium | 🔴 Open | — | — | Editing an imported job whose company or role is `null` crashes the page: `form.company.trim()` (`src/pages/JobForm.jsx:46`), and there is no error boundary anywhere in `src`. | Code |
+| AUD-25 | Photo · import | Low | 🔴 Open | — | — | An imported photo with an unknown shape or height (e.g. `'oval'`) is not clamped to the offered options (`getPdfPhotoStyle`, `src/templates/pdf/shared/pdfPhoto.js:57`). | Ran, Known A5 |
+| AUD-26 | Storage · migrations | Low | 🔴 Open | — | — | A file stamped `dataVersion` 11 or higher (e.g. 999) skips every migration forever (`src/utils/normalizeResume.js:255`). | Code |
+| AUD-27 | ATS checker · score | Low | 🔴 Open | — | — | The "Multi-column contact header" check reads `settings.contactCols`, which no control writes (the control is `contactLayout: '2grid'`), so it always passes (`src/utils/atsChecker.js:1019`). | Code |
+| AUD-28 | Editor · month picker | Low | 🔴 Open | — | — | The years stop at the current year − 49 (`src/components/SectionEditorShared.jsx:27`): a 1975 date shows blank in the editor though the PDF prints it. | Code |
+| AUD-29 | Career history panel | Low | 🔴 Open | — | — | A past job with no end date counts up to today (`src/components/CareerHistoryPanel.jsx:26`); "N companies" counts entries (`:78`); the total ignores gaps and hidden entries. | Code |
+| AUD-30 | Exports · file name | Low | 🔴 Open | — | — | Export file names use the Google account's display name, not the résumé's name (`src/hooks/useEditorExports.js:10`). | Code |
+| AUD-31 | Cover letter · generator | Low | 🔴 Open | — | — | The generator stores recipient "Hiring Manager" and title "Hiring Team", and both print in the recipient block (`src/utils/coverLetterGenerator.js:132`). | Code |
+| AUD-32 | STAR Optimizer · verbs | Low | 🔴 Open | — | — | "Co-authored" can never count as an action verb: the hyphen is stripped before the lookup (`src/utils/bulletOptimizer.js:105`). | Code |
+| AUD-33 | Mobile · touch | Low | 🔴 Open | — | — | Hover-only controls (`opacity-0 group-hover`) are invisible on phones: entry drag grips (`src/components/SectionEditorShared.jsx:141`) and the dashboard rename pencil (`src/components/ResumeCard.jsx:82`). The same pattern, found by search and not checked on a device: `src/components/job/Field.jsx:57`, `src/components/job/TodoItem.jsx:53`, `src/components/job/KanbanView.jsx:82`, `src/pages/Boards.jsx:80`. | Code |
+| AUD-34 | Header spacing · defaults | Low | 🔴 Open | — | — | Every new résumé shows Name ↔ Title (Inline) as user-set: the defaults and the starters store `headerInlineGap: 8` (`src/utils/defaultData.js:26`, `src/utils/starterTemplates.js:25`), so the row reads as set (`set: stored != null`, `src/utils/headerSpacingRows.js:34`) and shows a dark value and ↺ on a résumé nobody touched. | Ran |
+
+---
+
+## ATS parsing defects (`ATS-`)
+
+From the ATS parsing work of 2026-09-21 → 09-22: text extraction with Poppler (`pdftotext`), pdf.js and MuPDF, a
+field-level scorer and a 300-case fuzz, plus OpenResume's parser run locally. No commercial ATS has been run yet.
+
+| ID | Where | State | Defect | Found with |
+|---|---|---|---|---|
+| ATS-1 | Experience · every template | 🔴 Open | The work location is glued to the job title (Classic, Modern, Minimal) or to the company (Executive, Sidebar) with " · " (`src/templates/pdf/shared/PdfSections.jsx:130`, `:132`; `src/templates/pdf/shared/PdfSidebarSections.jsx:103`), so a parser reads the title as "Senior Frontend Engineer · Austin, TX". | OpenResume, at `46505ec` |
+| ATS-2 | Experience · no bullet glyph | 🔴 Open | An entry described in paragraphs, with no bullet glyph, loses its date: OpenResume takes only the first 2 lines as the entry's header, so a date on the 3rd line becomes description text. | OpenResume |
+| ATS-3 | Sidebar · two columns | 🔴 Open — no fix in react-pdf v4 | Poppler's reading order and `-layout` mode interleave the two columns (reading order 97.5 %, 3 entries interleaved; `-layout` 86.1 %, 11 facts lost). Only a tagged PDF would fix it, and react-pdf v4 can't write one; the Single · ATS-safe mode (`3818b7a`) avoids it. | Poppler — a `todo` test, `tests/pdf/40-ats-parse.test.mjs:152` |
+| ATS-4 | PDF text · `pdftotext -raw` | 🔴 Open | Poppler's `-raw` mode splits words by position and ignores the space glyphs, so words on a line the layout squeezes read glued. Narrow-space fonts (Lato, Source Sans 3, Literata) were fixed in `0765939`; squeezed lines are still open. pdf.js, MuPDF and Poppler's other modes read them fine. | Poppler — a `todo` test, `tests/pdf/40-ats-parse.test.mjs:142` |
+| ATS-5 | Experience · long role | 🔴 Open, latent | A long role that wraps beside a right-aligned date: Poppler's layout modes put the date inside the title (3 of 300 fuzz cases: Classic or Minimal, a large entry font, 28 mm margins). | ATS fuzz |
+| ATS-6 | Word export · headings | 🔴 Open — needs a decision | Section headings are not Word Heading styles (Microsoft's guidance; not proven to matter to an ATS). | Microsoft's guidance |
+
+---
+
+## Prompt tasks, 2026-09-14 → 09-21 — all 33 closed (latest: `ONB-11` in `8a5d782`)
 
 | # | Task ID | Category | Severity | Status | Commit | Tests | Description |
 |---|---|---|---|---|---|---|---|
