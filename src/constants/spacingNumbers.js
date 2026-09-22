@@ -42,6 +42,21 @@ export function storedNumber(value) {
  */
 export const withSpacingNumbers = (resume) => withStoredNumbers(resume, SPACING_NUMBERS);
 
+/** Section Options → Spacing Override (Before, After, Item gap), CSS px: its inputs' range. */
+export const SECTION_OVERRIDE_PX = { min: 0, max: 80 };
+
+/**
+ * A section's Spacing Override as the PDF prints it and the panel shows it: a number (or text that
+ * is one) clamped into SECTION_OVERRIDE_PX; undefined — none: the section's own spacing — for
+ * anything else. Unclamped, a Before of -500 pulled the section over the ones above it and Skills
+ * off page 1, an Item gap of -30 printed an entry over the one before it, and 'abc' made the panel
+ * log a React error (MISSED A1/A2).
+ */
+export function sectionOverridePx(value) {
+  const n = storedNumber(value);
+  return n === undefined ? undefined : Math.min(SECTION_OVERRIDE_PX.max, Math.max(SECTION_OVERRIDE_PX.min, n));
+}
+
 /**
  * `resume` with each number `table` names ({ key: { min, max, zeroIsUnset? } | null }) stored as a
  * number: text that is a number becomes it, one with a range is clamped into it, one that is no

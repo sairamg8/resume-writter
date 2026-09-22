@@ -3,6 +3,7 @@ import { Text } from './PdfText';
 import { PdfSectionTitle } from './PdfSection';
 import { PdfRichText } from './PdfRichText';
 import { CSS_PX_TO_PT, DEFAULT_ITEM_GAP_PX, SECTION_SPACING_PX } from './pdfUnits';
+import { sectionOverridePx } from '@/constants/spacingNumbers';
 import { tint, textShades } from './pdfColors';
 
 import {
@@ -239,7 +240,8 @@ export function SectionRouter({ section, settings, marginBottom, spaceBefore, it
 /**
  * Per-section spacing overrides.
  * - Global sectionGap/itemGap on settings are already PDF points (from resolveTemplateSettings).
- * - Per-section spaceAfter / spaceBefore / itemGap are stored as CSS px → convert once.
+ * - Per-section spaceAfter / spaceBefore / itemGap are stored as CSS px → clamped to the inputs'
+ *   0–80 px (sectionOverridePx), then converted once.
  * - The gap between entries is Design → Spacing → "Between Items", scaled by the section's
  *   Spacing preset in SECTION_SPACING_PX's proportions (Tight ½×, Normal 1×, Spacious 1¾×),
  *   unless the section sets its own item gap. Every section is created with a preset, so
@@ -253,14 +255,18 @@ export function getEffectiveSpacing(section, settings, { isLast = false } = {}) 
   const globalItemGap = settings?.itemGap    ?? DEFAULT_ITEM_GAP_PX * CSS_PX_TO_PT;
   const preset = (SECTION_SPACING_PX[ss.spacing] ?? SECTION_SPACING_PX.normal) / SECTION_SPACING_PX.normal;
 
+  // Section Options → Spacing Override, clamped to its inputs' range (sectionOverridePx).
+  const after = sectionOverridePx(ss.spaceAfter);
+  const before = sectionOverridePx(ss.spaceBefore);
+  const gap = sectionOverridePx(ss.itemGap);
   const marginBottom = isLast
     ? 0
-    : (ss.spaceAfter != null ? ss.spaceAfter * CSS_PX_TO_PT : globalSecGap);
+    : (after !== undefined ? after * CSS_PX_TO_PT : globalSecGap);
 
   return {
     marginBottom,
-    spaceBefore:  ss.spaceBefore != null ? ss.spaceBefore * CSS_PX_TO_PT : undefined,
-    itemGap: ss.itemGap != null ? ss.itemGap * CSS_PX_TO_PT : globalItemGap * preset,
+    spaceBefore:  before !== undefined ? before * CSS_PX_TO_PT : undefined,
+    itemGap: gap !== undefined ? gap * CSS_PX_TO_PT : globalItemGap * preset,
   };
 }
 

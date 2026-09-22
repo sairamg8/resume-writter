@@ -2,6 +2,7 @@ import { useId } from 'react';
 import { AlignLeft, AlignCenter, RotateCcw } from 'lucide-react';
 import { resolveSection } from '@/templates/pdf/shared/templateSectionDefaults';
 import { templateId, inSidebarColumn } from '@/constants/templates';
+import { SECTION_OVERRIDE_PX, sectionOverridePx } from '@/constants/spacingNumbers';
 
 export function ToggleRow({ label, value, onChange }) {
   return (
@@ -154,14 +155,17 @@ export function SectionCustomizer({ section, template, updateSectionSettings }) 
                 <input
                   id={uid + key}
                   type="number"
-                  min={0}
-                  max={80}
+                  min={SECTION_OVERRIDE_PX.min}
+                  max={SECTION_OVERRIDE_PX.max}
                   title={title}
-                  value={s[key] ?? ''}
+                  value={sectionOverridePx(s[key]) ?? ''}
                   placeholder="—"
                   onChange={e => {
-                    const v = e.target.value === '' ? undefined : Number(e.target.value);
-                    set(key, v);
+                    // Empty: none (removed). Otherwise stored within the inputs' range, as it prints;
+                    // a half-typed "-" is no number yet and changes nothing.
+                    if (e.target.value === '') { set(key, undefined); return; }
+                    const v = sectionOverridePx(e.target.value);
+                    if (v !== undefined) set(key, v);
                   }}
                   className="w-full text-xs border border-gray-200 rounded px-1.5 py-1 text-center outline-none focus:border-blue-400 bg-white"
                 />
