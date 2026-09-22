@@ -12,6 +12,7 @@ import { EditorPreviewPane } from '@/components/EditorPreviewPane';
 import { useEditorExports } from '@/hooks/useEditorExports';
 import { usePanelResize } from '@/hooks/usePanelResize';
 import { useIsMobile } from '@/hooks/useMediaQuery';
+import { useOpenResume } from '@/hooks/useOpenResume';
 
 export function Editor({ store, auth, sync }) {
   const { id } = useParams();
@@ -19,13 +20,7 @@ export function Editor({ store, auth, sync }) {
   const searchParams = new URLSearchParams(window.location.hash.split('?')[1] || '');
   const initialTab = searchParams.get('tab') || 'resume';
 
-  useEffect(() => {
-    if (id && store.appState.activeId !== id) {
-      const exists = store.appState.resumes.some(r => r.id === id);
-      if (exists) store.setActiveId(id);
-      else navigate('/', { replace: true });
-    }
-  }, [id]);
+  useOpenResume(store, id);
 
   const resume = store.activeResume;
   const isMobile = useIsMobile(768);
