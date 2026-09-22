@@ -1,6 +1,7 @@
 import { newId } from './ids.js';
 import { BASE_COVER_LETTER } from './defaultDataContent.js';
 import { getStarterSettings, STARTER_DATA_VERSION } from './starterTemplates.js';
+import { isText, storedText } from './storedText.js';
 
 /**
  * Checks if a parsed JSON object matches the JSON Resume standard (jsonresume.org).
@@ -12,8 +13,20 @@ export function isJsonResume(obj) {
   return false;
 }
 
+/** A list's entries that are objects: a null (or other value) in one of the file's lists is skipped. */
+const entries = (list) => (Array.isArray(list) ? list.filter((v) => Boolean(v) && typeof v === 'object' && !Array.isArray(v)) : []);
+
+/** A list's text and numbers joined with ', ' as they are, which is what the import always stored for a list of text. */
+const joined = (list) => list.filter(isText).join(', ');
+
+/** A date as the import stores it: its first 7 characters, 'YYYY-MM' of an ISO date. */
+const month = (v) => storedText(v).slice(0, 7);
+
 /**
- * Converts a standard JSON Resume (jsonresume.org schema) to a CPWT-CV resume object.
+ * Converts a standard JSON Resume (jsonresume.org schema) to a CPWT-CV resume object. Each value
+ * is stored as text (storedText): a file written by hand or by another tool can hold a number, a
+ * list or an object where the schema has text. Such a value either stopped the import here or was
+ * stored as it came, and the cover letter generator threw on it later.
  */
 export function jsonResumeToCpwtResume(jsonResume, customId) {
   const id = customId || newId('resume');
@@ -24,59 +37,60 @@ export function jsonResumeToCpwtResume(jsonResume, customId) {
   if (typeof b.location === 'string') {
     locStr = b.location;
   } else if (b.location && typeof b.location === 'object') {
-    const parts = [b.location.city, b.location.region, b.location.countryCode].filter(Boolean);
-    locStr = parts.length > 0 ? parts.join(', ') : (b.location.address || '');
+    const parts = [b.location.city, b.location.region, b.location.countryCode].map(storedText).filter(Boolean);
+    locStr = parts.length > 0 ? parts.join(', ') : storedText(b.location.address);
   }
 
   // Extract profiles
   let linkedin = '';
   let github = '';
-  if (Array.isArray(b.profiles)) {
-    for (const p of b.profiles) {
-      const net = (p.network || '').toLowerCase();
-      const url = p.url || '';
-      if (!linkedin && (net.includes('linkedin') || url.includes('linkedin.com'))) linkedin = url;
-      if (!github && (net.includes('github') || url.includes('github.com'))) github = url;
-    }
+  for (const p of entries(b.profiles)) {
+    const net = storedText(p.network).toLowerCase();
+    const url = storedText(p.url);
+    if (!linkedin && (net.includes('linkedin') || url.includes('linkedin.com'))) linkedin = url;
+    if (!github && (net.includes('github') || url.includes('github.com'))) github = url;
   }
 
   const personal = {
-    name: b.name || '',
-    title: b.label || '',
-    email: b.email || '',
-    phone: b.phone || '',
+    name: storedText(b.name),
+    title: storedText(b.label),
+    email: storedText(b.email),
+    phone: storedText(b.phone),
     location: locStr,
-    website: b.url || '',
+    website: storedText(b.url),
     linkedin,
     github,
-    summary: b.summary || '',
-    photo: b.image || null,
+    summary: storedText(b.summary),
+    photo: typeof b.image === 'string' && b.image ? b.image : null,
     hiddenFields: [],
   };
 
   const sections = [];
 
   // Work / Experience
-  if (Array.isArray(jsonResume.work) && jsonResume.work.length > 0) {
+  const work = entries(jsonResume.work);
+  if (work.length > 0) {
     sections.push({
       id: newId('sec'),
       type: 'experience',
       title: 'Professional Experience',
       visible: true,
-      items: jsonResume.work.map(w => {
-        let desc = w.summary || '';
+      items: work.map(w => {
+        let desc = storedText(w.summary);
         if (Array.isArray(w.highlights) && w.highlights.length > 0) {
-          const list = w.highlights.map(h => `<li>${h}</li>`).join('');
+          const list = w.highlights.map(h => `<li>${storedText(h)}</li>`).join('');
           desc = desc ? `<p>${desc}</p><ul>${list}</ul>` : `<ul>${list}</ul>`;
         }
+        const startDate = month(w.startDate);
+        const endDate = month(w.endDate);
         return {
           id: newId('exp'),
-          company: w.name || '',
-          role: w.position || '',
-          location: w.location || '',
-          startDate: (w.startDate || '').slice(0, 7),
-          endDate: (w.endDate || '').slice(0, 7),
-          current: !w.endDate && Boolean(w.startDate),
+          company: storedText(w.name),
+          role: storedText(w.position),
+          location: storedText(w.location),
+          startDate,
+          endDate,
+          current: !endDate && Boolean(startDate),
           description: desc,
         };
       }),
@@ -84,26 +98,27 @@ export function jsonResumeToCpwtResume(jsonResume, customId) {
   }
 
   // Education
-  if (Array.isArray(jsonResume.education) && jsonResume.education.length > 0) {
+  const education = entries(jsonResume.education);
+  if (education.length > 0) {
     sections.push({
       id: newId('sec'),
       type: 'education',
       title: 'Education',
       visible: true,
-      items: jsonResume.education.map(ed => {
+      items: education.map(ed => {
         let desc = '';
         if (Array.isArray(ed.courses) && ed.courses.length > 0) {
-          desc = `Relevant courses: ${ed.courses.join(', ')}`;
+          desc = `Relevant courses: ${joined(ed.courses)}`;
         }
         return {
           id: newId('edu'),
-          institution: ed.institution || '',
-          degree: ed.studyType || '',
-          fieldOfStudy: ed.area || '',
-          location: ed.location || '',
-          startDate: (ed.startDate || '').slice(0, 7),
-          endDate: (ed.endDate || '').slice(0, 7),
-          gpa: ed.score || '',
+          institution: storedText(ed.institution),
+          degree: storedText(ed.studyType),
+          fieldOfStudy: storedText(ed.area),
+          location: storedText(ed.location),
+          startDate: month(ed.startDate),
+          endDate: month(ed.endDate),
+          gpa: storedText(ed.score),
           description: desc,
         };
       }),
@@ -111,40 +126,42 @@ export function jsonResumeToCpwtResume(jsonResume, customId) {
   }
 
   // Skills
-  if (Array.isArray(jsonResume.skills) && jsonResume.skills.length > 0) {
+  const skills = entries(jsonResume.skills);
+  if (skills.length > 0) {
     sections.push({
       id: newId('sec'),
       type: 'skills',
       title: 'Skills',
       visible: true,
-      items: jsonResume.skills.map(sk => ({
+      items: skills.map(sk => ({
         id: newId('sk'),
-        category: sk.name || 'Technical Skills',
-        skills: Array.isArray(sk.keywords) ? sk.keywords.join(', ') : (sk.keywords || ''),
+        category: storedText(sk.name) || 'Technical Skills',
+        skills: Array.isArray(sk.keywords) ? joined(sk.keywords) : storedText(sk.keywords),
       })),
     });
   }
 
   // Projects
-  if (Array.isArray(jsonResume.projects) && jsonResume.projects.length > 0) {
+  const projects = entries(jsonResume.projects);
+  if (projects.length > 0) {
     sections.push({
       id: newId('sec'),
       type: 'projects',
       title: 'Projects',
       visible: true,
-      items: jsonResume.projects.map(p => {
-        let desc = p.description || '';
+      items: projects.map(p => {
+        let desc = storedText(p.description);
         if (Array.isArray(p.highlights) && p.highlights.length > 0) {
-          const list = p.highlights.map(h => `<li>${h}</li>`).join('');
+          const list = p.highlights.map(h => `<li>${storedText(h)}</li>`).join('');
           desc = desc ? `<p>${desc}</p><ul>${list}</ul>` : `<ul>${list}</ul>`;
         }
         return {
           id: newId('proj'),
-          name: p.name || '',
-          link: p.url || '',
-          role: Array.isArray(p.roles) ? p.roles.join(', ') : (p.roles || ''),
-          startDate: (p.startDate || '').slice(0, 7),
-          endDate: (p.endDate || '').slice(0, 7),
+          name: storedText(p.name),
+          link: storedText(p.url),
+          role: Array.isArray(p.roles) ? joined(p.roles) : storedText(p.roles),
+          startDate: month(p.startDate),
+          endDate: month(p.endDate),
           description: desc,
         };
       }),
@@ -152,36 +169,38 @@ export function jsonResumeToCpwtResume(jsonResume, customId) {
   }
 
   // Certificates
-  if (Array.isArray(jsonResume.certificates) && jsonResume.certificates.length > 0) {
+  const certificates = entries(jsonResume.certificates);
+  if (certificates.length > 0) {
     sections.push({
       id: newId('sec'),
       type: 'certifications',
       title: 'Certifications',
       visible: true,
-      items: jsonResume.certificates.map(c => ({
+      items: certificates.map(c => ({
         id: newId('cert'),
-        name: c.name || '',
-        issuer: c.issuer || '',
-        date: (c.date || '').slice(0, 7),
-        url: c.url || '',
+        name: storedText(c.name),
+        issuer: storedText(c.issuer),
+        date: month(c.date),
+        url: storedText(c.url),
         description: '',
       })),
     });
   }
 
   // Awards
-  if (Array.isArray(jsonResume.awards) && jsonResume.awards.length > 0) {
+  const awards = entries(jsonResume.awards);
+  if (awards.length > 0) {
     sections.push({
       id: newId('sec'),
       type: 'awards',
       title: 'Awards & Honors',
       visible: true,
-      items: jsonResume.awards.map(a => ({
+      items: awards.map(a => ({
         id: newId('awd'),
-        title: a.title || '',
-        issuer: a.awarder || '',
-        date: (a.date || '').slice(0, 7),
-        description: a.summary || '',
+        title: storedText(a.title),
+        issuer: storedText(a.awarder),
+        date: month(a.date),
+        description: storedText(a.summary),
       })),
     });
   }

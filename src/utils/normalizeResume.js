@@ -8,6 +8,7 @@ import { withDesignNumbers } from '@/constants/designNumbers';
 import { normalizeHexColor } from '@/utils/colors';
 import { HEADER_READS, HEADER_SEEN, withHeaderColorsBack } from '@/templates/pdf/shared/headerColors';
 import { DEFAULT_ITEM_GAP_PX, SECTION_SPACING_PX } from '@/templates/pdf/shared/pdfUnits';
+import { withTextFields } from '@/utils/textFields';
 
 /**
  * The data version this build writes: the store's `dataVersion`, and each résumé's own once it
@@ -220,9 +221,10 @@ export function withNormalizedColors(resume) {
 
 /**
  * `resume` made current: a template the app offers (withKnownTemplate), the Design panel's
- * numbers stored as numbers in their controls' ranges (withDesignNumbers) and valid colors
- * stored as '#rrggbb' (withNormalizedColors), whatever its version; then each one-time
- * migration newer than its own `dataVersion`, after which it carries DATA_VERSION.
+ * numbers stored as numbers in their controls' ranges (withDesignNumbers), valid colors
+ * stored as '#rrggbb' (withNormalizedColors) and text wherever it keeps text (withTextFields),
+ * whatever its version; then each one-time migration newer than its own `dataVersion`, after
+ * which it carries DATA_VERSION.
  * Never touches `updatedAt` — this is not an edit, so it neither wins a sync merge
  * nor triggers a cloud write by itself. The same object when nothing changes; a value that is not
  * an object comes back as it is.
@@ -230,7 +232,7 @@ export function withNormalizedColors(resume) {
 export function normalizeResume(resume) {
   if (!resume || typeof resume !== 'object') return resume;
   const known = withKnownTemplate(resume);
-  const r = withNormalizedColors(withDesignNumbers(offersTemplate(resume.template) ? known : withHeaderReadableOnClassic(known)));
+  const r = withTextFields(withNormalizedColors(withDesignNumbers(offersTemplate(resume.template) ? known : withHeaderReadableOnClassic(known))));
   const from = versionOf(r);
   if (from >= DATA_VERSION) return r;
   return MIGRATIONS.reduce((out, [version, migrate]) => (from < version ? migrate(out, from) : out), { ...r, dataVersion: DATA_VERSION });

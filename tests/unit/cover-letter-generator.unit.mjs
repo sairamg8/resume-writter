@@ -133,3 +133,87 @@ test('generateCoverLetter: a line break inside a field reads as a space, not a h
   const plain = richTextToPlain(body);
   for (const s of ['Staff Engineer', 'Lead Dev', 'Acme Inc', 'Globex Corp']) assert.ok(plain.includes(s), `"${s}" in: ${plain}`);
 });
+
+// Values that are not text. A skill group's skills can be stored as a list, a number or an object
+// (a JSON Resume `keywords` that is not a list, a native .json, a résumé already saved that way);
+// the generator split them as text and threw "….split is not a function". It runs as the Cover
+// Letter tab renders, so the whole editor went blank. `{"toString":"x"}` is an object JSON.parse
+// gives that cannot even be printed: a name like it threw "Cannot convert object to primitive value".
+const SHADOW = JSON.parse('{"toString":"x"}');
+
+/** A résumé whose one skill group stores `skills` (plus `extra`, e.g. the old `name` label). */
+const withSkills = (skills, extra = {}) => ({
+  personal: { name: 'Ada Lovelace', title: 'Engineer' },
+  sections: [
+    { type: 'experience', items: [{ role: 'Lead', company: 'Acme' }] },
+    { type: 'skills', items: [{ category: 'Tools', skills, ...extra }] },
+  ],
+});
+
+test('extractResumeHighlights: skills that are not text never throw — a list gives its text and numbers, a number its digits, anything else nothing', () => {
+  const cases = [
+    [['React', 'SQL'], ['React', 'SQL']],
+    [[' React ', 7, { a: 1 }, null, true, SHADOW, 'SQL'], ['React', '7', 'SQL']],
+    [12345, ['12345']],
+    [[], []],
+    [{ a: 1 }, []],
+    [{}, []],
+    [true, []],
+    [SHADOW, []],
+  ];
+  for (const [skills, want] of cases) {
+    assert.deepEqual(extractResumeHighlights(withSkills(skills)).topSkills, want, JSON.stringify(skills));
+    // A group with no skills falls back to its `name`, read the same way.
+    assert.deepEqual(extractResumeHighlights(withSkills('', { name: skills })).topSkills, want, `name: ${JSON.stringify(skills)}`);
+  }
+});
+
+test('generateCoverLetter: a résumé whose skills are not text writes its letter in every archetype, never "[object Object]"', () => {
+  for (const skills of [12345, ['React', 'SQL'], { a: 1 }, true, SHADOW]) {
+    for (const archetype of ['impact', 'leadership', 'growth']) {
+      const plain = richTextToPlain(generateCoverLetter({ resume: withSkills(skills), archetype, company: 'Globex' }).body);
+      assert.ok(!/\[object Object\]|\btrue\b/.test(plain), `${JSON.stringify(skills)}, ${archetype}: ${plain}`);
+    }
+  }
+  const skillsLine = (skills) => /utilizing ([^.]*)\./.exec(richTextToPlain(generateCoverLetter({ resume: withSkills(skills) }).body))?.[1];
+  assert.equal(skillsLine(['React', 'SQL']), 'React, SQL');
+  assert.equal(skillsLine(12345), '12345');
+  assert.equal(skillsLine({ a: 1 }), 'modern best practices', 'no skills: the letter\'s own words');
+});
+
+test('generateCoverLetter: a name, title, role or company that is not text prints as text or not at all — no throw, no "[object Object]"', () => {
+  const r = (personal, item) => ({ personal, sections: [{ type: 'experience', items: [item] }] });
+  // A list reads as its entries, comma-separated; a number as its digits.
+  let letter = generateCoverLetter({ resume: r({ name: ['Ada', 'Lovelace'], title: 7 }, { role: ['Lead', 'Dev'], company: 2024 }) });
+  assert.equal(letter.subject, 'Application for 7 — Ada, Lovelace');
+  assert.ok(richTextToPlain(letter.body).includes('During my tenure as Lead, Dev at 2024,'), letter.body);
+  // The signature is text too: the panel's Apply saves it into the letter's own fields.
+  assert.equal(letter.signatureName, 'Ada, Lovelace');
+  assert.equal(letter.signatureDesignation, '7');
+  // An object, true or a list with no text is no value: the letter an empty field gives.
+  const blank = (archetype) => generateCoverLetter({ resume: r({ name: '', title: '' }, { role: '', company: '' }), archetype, company: 'Globex' });
+  for (const v of [{ a: 1 }, {}, true, SHADOW, [SHADOW], [{ a: 1 }]]) {
+    for (const archetype of ['impact', 'leadership', 'growth']) {
+      letter = generateCoverLetter({ resume: r({ name: v, title: v }, { role: v, company: v }), archetype, company: 'Globex' });
+      assert.deepEqual(letter, blank(archetype), `${JSON.stringify(v)}, ${archetype}`);
+    }
+  }
+  assert.equal(blank('impact').signatureName, 'Candidate');
+  assert.equal(blank('impact').signatureDesignation, 'Professional');
+});
+
+test('extractResumeHighlights: a section or an entry that is not an object (null in a native .json or stored data) is skipped', () => {
+  const h = extractResumeHighlights({
+    personal: { name: 'Ada' },
+    sections: [
+      null,
+      { type: 'experience', items: [null, { role: 'Lead', company: 'Acme' }] },
+      { type: 'skills', items: [null, 7, { skills: 'SQL' }] },
+    ],
+  });
+  assert.deepEqual(h.topExperiences, [{ role: 'Lead', company: 'Acme', description: '' }]);
+  assert.deepEqual(h.topSkills, ['SQL']);
+  for (const sections of [[null], [{ type: 'experience', items: [null] }], [{ type: 'skills', items: [null] }]]) {
+    assert.doesNotThrow(() => generateCoverLetter({ resume: { personal: { name: 'Ada' }, sections } }), JSON.stringify(sections));
+  }
+});

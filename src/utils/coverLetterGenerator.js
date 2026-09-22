@@ -5,6 +5,7 @@
  */
 
 import { plainTextToHtml } from './richText.js';
+import { storedText } from './storedText.js';
 
 export const COVER_LETTER_ARCHETYPES = [
   {
@@ -27,39 +28,45 @@ export const COVER_LETTER_ARCHETYPES = [
   },
 ];
 
+/** A section or entry: an object. A null (or other value) in a native .json or stored data is skipped. */
+const isEntry = (v) => Boolean(v) && typeof v === 'object' && !Array.isArray(v);
+
 /**
- * Extracts top accomplishments and skills from resume state.
+ * Extracts top accomplishments and skills from resume state. Every value is read as text
+ * (storedText), whether or not the résumé has been through normalizeResume(): a skill group's
+ * skills stored as a list, a number or an object threw here as the Cover Letter tab rendered, and
+ * blanked the editor.
  */
 export function extractResumeHighlights(resume) {
   const p = resume?.personal || {};
-  const sections = Array.isArray(resume?.sections) ? resume.sections : [];
+  const sections = Array.isArray(resume?.sections) ? resume.sections.filter(isEntry) : [];
 
   const expSec = sections.find(s => s.type === 'experience' && s.visible !== false);
   const skillsSec = sections.find(s => s.type === 'skills' && s.visible !== false);
 
   const topExperiences = [];
   if (expSec && Array.isArray(expSec.items)) {
-    for (const item of expSec.items.slice(0, 2)) {
+    for (const item of expSec.items.filter(isEntry).slice(0, 2)) {
       topExperiences.push({
-        role: item.role || '',
-        company: item.company || '',
-        description: item.description || '',
+        role: storedText(item.role),
+        company: storedText(item.company),
+        description: storedText(item.description),
       });
     }
   }
 
   const topSkills = [];
   if (skillsSec && Array.isArray(skillsSec.items)) {
-    for (const item of skillsSec.items) {
-      const list = (item.skills || item.name || '').split(/[,•;]+/).map(s => s.trim()).filter(Boolean);
+    for (const item of skillsSec.items.filter(isEntry)) {
+      const list = (storedText(item.skills) || storedText(item.name)).split(/[,•;]+/).map(s => s.trim()).filter(Boolean);
       topSkills.push(...list);
     }
   }
 
   return {
-    candidateName: p.name || 'Candidate',
-    candidateTitle: p.title || 'Professional',
-    summary: p.summary || '',
+    candidateName: storedText(p.name) || 'Candidate',
+    candidateTitle: storedText(p.title) || 'Professional',
+    summary: storedText(p.summary),
     topExperiences,
     topSkills: topSkills.slice(0, 8),
   };

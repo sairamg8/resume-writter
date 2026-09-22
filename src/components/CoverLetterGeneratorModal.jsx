@@ -9,7 +9,10 @@ export default function CoverLetterGeneratorModal({ isOpen, onClose, resume, onA
   const [role, setRole] = useState('');
   const [recipient, setRecipient] = useState('Hiring Manager');
 
+  // The Cover Letter panel mounts this closed: the letter is written only while it is open, not on
+  // every render of the tab (a throw here used to blank the editor before the generator was opened).
   const generated = useMemo(() => {
+    if (!isOpen) return null;
     return generateCoverLetter({
       resume,
       archetype,
@@ -17,7 +20,7 @@ export default function CoverLetterGeneratorModal({ isOpen, onClose, resume, onA
       role,
       recipientName: recipient,
     });
-  }, [resume, archetype, company, role, recipient]);
+  }, [isOpen, resume, archetype, company, role, recipient]);
 
   if (!isOpen) return null;
 
