@@ -79,3 +79,113 @@ test('generateMarkdownResume: handles empty resume safely', () => {
   assert.equal(generateMarkdownResume(null), '');
   assert.equal(generateMarkdownResume({}), '');
 });
+
+test('AUD-13: generateMarkdownResume formats skills ({ category, skills }), languages, volunteering with org, formatted dates, and respects hiddenFields', () => {
+  const resume = {
+    settings: {
+      dateFormat: 'MMM YYYY',
+    },
+    personal: {
+      name: 'Ada Lovelace',
+      title: 'Computing Pioneer',
+    },
+    sections: [
+      {
+        id: 'sec_exp',
+        type: 'experience',
+        title: 'Work Experience',
+        visible: true,
+        items: [
+          {
+            role: 'Lead Mathematician',
+            company: 'Babbage Analytics',
+            location: 'London, UK',
+            startDate: '2021-01',
+            endDate: '2023-06',
+            hiddenFields: ['location'],
+            visible: true,
+          },
+          {
+            role: 'Secret Role',
+            company: 'Secret Co',
+            visible: false,
+          },
+        ],
+      },
+      {
+        id: 'sec_vol',
+        type: 'volunteering',
+        title: 'Volunteering',
+        visible: true,
+        items: [
+          {
+            role: 'Mentor',
+            org: 'Girls Who Code',
+            startDate: '2020-03',
+            endDate: '2020-12',
+            description: '<p>Taught algorithms</p>',
+            visible: true,
+          },
+        ],
+      },
+      {
+        id: 'sec_skills',
+        type: 'skills',
+        title: 'Skills',
+        visible: true,
+        items: [
+          {
+            category: 'Languages & Tools',
+            skills: 'Python, Julia, C++',
+            visible: true,
+          },
+          {
+            skills: 'Analytical Thinking',
+            visible: true,
+          },
+        ],
+      },
+      {
+        id: 'sec_lang',
+        type: 'languages',
+        title: 'Languages',
+        visible: true,
+        items: [
+          {
+            language: 'English',
+            proficiency: 'Native',
+            visible: true,
+          },
+          {
+            language: 'French',
+            proficiency: 'Fluent',
+            visible: true,
+          },
+        ],
+      },
+    ],
+  };
+
+  const md = generateMarkdownResume(resume);
+
+  // Skills
+  assert.ok(md.includes('- **Languages & Tools:** Python, Julia, C++'), 'Skill category and skills should be formatted');
+  assert.ok(md.includes('- Analytical Thinking'), 'Skill without category should be formatted');
+
+  // Languages
+  assert.ok(md.includes('- **English:** Native'), 'Language and proficiency should be formatted');
+  assert.ok(md.includes('- **French:** Fluent'), 'Language and proficiency should be formatted');
+
+  // Volunteering
+  assert.ok(md.includes('**Mentor** — *Girls Who Code*'), 'Volunteering role and organization should appear');
+  assert.ok(md.includes('Taught algorithms'), 'Volunteering description should appear');
+
+  // Date format MMM YYYY (e.g. Jan 2021 – Jun 2023 instead of raw 2021-01 – 2023-06)
+  assert.ok(md.includes('Jan 2021 – Jun 2023'), 'Dates should be formatted according to settings.dateFormat');
+  assert.ok(!md.includes('2021-01 – 2023-06'), 'Raw unformatted dates should not appear');
+
+  // Hidden field (location) and hidden entry (Secret Role)
+  assert.ok(!md.includes('London, UK'), 'Hidden field (location) should not appear');
+  assert.ok(!md.includes('Secret Role'), 'Hidden entry should not appear');
+  assert.ok(!md.includes('Secret Co'), 'Hidden entry should not appear');
+});
