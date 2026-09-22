@@ -3,7 +3,7 @@ import { BASE_COVER_LETTER } from './defaultDataContent.js';
 import { getStarterSettings, STARTER_DATA_VERSION } from './starterTemplates.js';
 import { isText, storedText } from './storedText.js';
 import { parseMonthYear } from './dates.js';
-import { parseRichText } from './richText.js';
+import { parseRichText, plainTextToHtml } from './richText.js';
 
 /**
  * Checks if a parsed JSON object matches the JSON Resume standard (jsonresume.org).
@@ -20,6 +20,13 @@ const entries = (list) => (Array.isArray(list) ? list.filter((v) => Boolean(v) &
 
 /** A list's text and numbers joined with ', ' as they are, which is what the import always stored for a list of text. */
 const joined = (list) => list.filter(isText).join(', ');
+
+/**
+ * A JSON Resume text value (a summary, a highlight, a course list) as the rich text the app stores:
+ * escaped, a line break as <br>. It went in as it was, and the editor, the PDF and Word read it as
+ * HTML: "Owned the <ingest> pipeline" printed "Owned the pipeline", "<b>cost</b>" printed bold.
+ */
+const richText = (v) => plainTextToHtml(storedText(v));
 
 /**
  * A date as the import stores it: an ISO day or time as its month ('2021-03-01' → '2021-03'), and
@@ -82,7 +89,7 @@ export function jsonResumeToCpwtResume(jsonResume, customId) {
     website: storedText(b.url),
     linkedin,
     github,
-    summary: storedText(b.summary),
+    summary: richText(b.summary),
     photo: typeof b.image === 'string' && b.image ? b.image : null,
     hiddenFields: [],
   };
@@ -98,9 +105,9 @@ export function jsonResumeToCpwtResume(jsonResume, customId) {
       title: 'Professional Experience',
       visible: true,
       items: work.map(w => {
-        let desc = storedText(w.summary);
+        let desc = richText(w.summary);
         if (Array.isArray(w.highlights) && w.highlights.length > 0) {
-          const list = w.highlights.map(h => `<li>${storedText(h)}</li>`).join('');
+          const list = w.highlights.map(h => `<li>${richText(h)}</li>`).join('');
           desc = desc ? `<p>${desc}</p><ul>${list}</ul>` : `<ul>${list}</ul>`;
         }
         const startDate = month(w.startDate);
@@ -130,7 +137,7 @@ export function jsonResumeToCpwtResume(jsonResume, customId) {
       items: education.map(ed => {
         let desc = '';
         if (Array.isArray(ed.courses) && ed.courses.length > 0) {
-          desc = `Relevant courses: ${joined(ed.courses)}`;
+          desc = richText(`Relevant courses: ${joined(ed.courses)}`);
         }
         return {
           id: newId('edu'),
@@ -172,9 +179,9 @@ export function jsonResumeToCpwtResume(jsonResume, customId) {
       title: 'Projects',
       visible: true,
       items: projects.map(p => {
-        let desc = storedText(p.description);
+        let desc = richText(p.description);
         if (Array.isArray(p.highlights) && p.highlights.length > 0) {
-          const list = p.highlights.map(h => `<li>${storedText(h)}</li>`).join('');
+          const list = p.highlights.map(h => `<li>${richText(h)}</li>`).join('');
           desc = desc ? `<p>${desc}</p><ul>${list}</ul>` : `<ul>${list}</ul>`;
         }
         return {
@@ -222,7 +229,7 @@ export function jsonResumeToCpwtResume(jsonResume, customId) {
         title: storedText(a.title),
         issuer: storedText(a.awarder),
         date: month(a.date),
-        description: storedText(a.summary),
+        description: richText(a.summary),
       })),
     });
   }

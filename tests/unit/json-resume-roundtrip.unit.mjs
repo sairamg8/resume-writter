@@ -10,6 +10,8 @@ import { formatDate } from '../../src/utils/dates.js';
 
 /** The text each block of rich text prints, list items marked with their bullet. */
 const printed = (html) => parseRichText(html).map((b) => `${b.marker ? `${b.marker} ` : ''}${b.runs.map((r) => r.text).join('')}`);
+/** Is any run of the rich text bold? */
+const anyBold = (html) => parseRichText(html).some((b) => b.runs.some((r) => r.bold));
 
 const MMM = { dateFormat: 'MMM YYYY' };
 
@@ -115,4 +117,22 @@ test("a project's link is its url, both ways (the editor, PDF, Word and Markdown
   const item = r.sections.find((s) => s.type === 'projects').items[0];
   assert.equal(item.url, 'https://github.com/ada/engine');
   assert.equal(item.link, undefined);
+});
+
+test('import: text prints as typed — "<", ">" and "&" are text, never markup', () => {
+  const file = {
+    basics: { name: 'X', summary: 'R&D lead for <core> systems\nSecond line' },
+    work: [{ name: 'A', position: 'P', summary: 'Owned the <ingest> pipeline', highlights: ['Reduced p99 <200ms & cut <b>cost</b> by 5%', '<img src=x onerror=alert(1)>'] }],
+    education: [{ institution: 'MIT', courses: ['C++ & <Algorithms>'] }],
+    projects: [{ name: 'P', description: 'Uses <canvas> & WebGL', highlights: ['a < b'] }],
+    awards: [{ title: 'Best', summary: 'Top 1% <of> 500' }],
+  };
+  const r = jsonResumeToCpwtResume(file);
+  const exp = r.sections.find((s) => s.type === 'experience').items[0].description;
+  assert.deepEqual(printed(exp), ['Owned the <ingest> pipeline', '• Reduced p99 <200ms & cut <b>cost</b> by 5%', '• <img src=x onerror=alert(1)>']);
+  assert.equal(anyBold(exp), false);
+  assert.deepEqual(printed(r.personal.summary), ['R&D lead for <core> systems\nSecond line']);
+  assert.deepEqual(printed(r.sections.find((s) => s.type === 'education').items[0].description), ['Relevant courses: C++ & <Algorithms>']);
+  assert.deepEqual(printed(r.sections.find((s) => s.type === 'projects').items[0].description), ['Uses <canvas> & WebGL', '• a < b']);
+  assert.deepEqual(printed(r.sections.find((s) => s.type === 'awards').items[0].description), ['Top 1% <of> 500']);
 });
