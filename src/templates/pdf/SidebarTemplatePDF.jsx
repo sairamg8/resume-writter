@@ -20,12 +20,13 @@ import { ClassicTemplatePDF } from './ClassicTemplatePDF';
 /**
  * A contact in the dark column: icon and label in the column's label colour, not the accent. The
  * value, under its label and in line with it, prints whole on one line (wholeValue): a profile link
- * broken at a hyphen no longer matches as a link to a parser.
+ * broken at a hyphen no longer matches as a link to a parser. `iconGap`: Icon ↔ Text, pt — between
+ * the icon and the label, and the value's indent past the icon.
  */
-function SideContactRow({ field, label, value, href, iconPt, settings, shades }) {
+function SideContactRow({ field, label, value, href, iconPt, iconGap, settings, shades }) {
   return (
     <View style={{ marginBottom: 6 }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3.5, marginBottom: 1 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: iconGap, marginBottom: 1 }}>
         <PdfContactIcon field={field} settings={settings} size={iconPt} color={shades.label} />
         <Text style={{ fontSize: 8, fontWeight: 'bold', color: shades.label, letterSpacing: tracking(8, 0.8), lineHeight: 1.2 }}>
           {label.toUpperCase()}
@@ -35,8 +36,8 @@ function SideContactRow({ field, label, value, href, iconPt, settings, shades })
         settings={settings}
         value={value}
         href={href}
-        style={{ fontSize: 9, color: shades.value, paddingLeft: iconPt + 3.5, lineHeight: 1.2 }}
-        inset={iconPt + 3.5}
+        style={{ fontSize: 9, color: shades.value, paddingLeft: iconPt + iconGap, lineHeight: 1.2 }}
+        inset={iconPt + iconGap}
       />
     </View>
   );
@@ -166,6 +167,7 @@ export function SidebarTemplatePDF({ data }) {
                     value={item.value}
                     href={item.href}
                     iconPt={sideIconPt}
+                    iconGap={g.iconTextGap}
                     settings={settings}
                     shades={side}
                   />

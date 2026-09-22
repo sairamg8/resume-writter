@@ -32,7 +32,7 @@ function HeaderContact({ personal, settings, textColor, gaps }) {
   return (
     <View style={{ flexDirection: 'row', flexWrap: 'wrap', columnGap: pxToPt(16), rowGap: pxToPt(2), marginTop: gaps.titleContactsGap }}>
       {items.map(({ key, value, href }) => (
-        <View key={key} style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+        <View key={key} style={{ flexDirection: 'row', alignItems: 'center', gap: gaps.iconTextGap }}>
           <PdfContactIcon field={key} settings={settings} size={iconPt} color={textColor} />
           <ContactValue value={value} href={href} style={{ fontSize: textSize, color: textColor, lineHeight: 1.2 }} />
         </View>

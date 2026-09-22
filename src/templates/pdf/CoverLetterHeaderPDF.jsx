@@ -86,6 +86,10 @@ export function CoverLetterHeader({ look, personal, settings, cl, hidden, contac
   // Centred with the letterhead, never because a centred Classic header was left in the
   // settings of a Modern or Sidebar résumé (their headers take no alignment).
   const contactSettings = { ...settings, headerAlign: centered ? 'center' : 'left', contactStyle: contacts.style, contactLayout: contacts.layout };
+  // The contact row's own spacing: the résumé's set Icon ↔ Text (Personal Info → Header spacing),
+  // else PdfContactRow's (spec D5) — measured with the same gaps it prints with.
+  const rowGaps = {};
+  if (setGapPt(settings, 'iconTextGap') != null) rowGaps.iconTextGap = setGapPt(settings, 'iconTextGap');
 
   const [ring, ringOpts] = look.photo;
   // Photo ↔ Text: the résumé's set value (Personal Info → Header spacing), else the letterhead's
@@ -142,14 +146,14 @@ export function CoverLetterHeader({ look, personal, settings, cl, hidden, contac
       nameCap = beside;
     } else {
       const room = beside - CONTACTS_GAP;
-      const contactsNeed = contactRowMinWidth(personal, contactSettings, hidden) + SLACK;
+      const contactsNeed = contactRowMinWidth(personal, contactSettings, hidden, rowGaps) + SLACK;
       const nameNeed = Math.max(widestWord(name, { ...font, ...nameStyle }), widestWord(personal?.title, { ...font, ...titleStyle })) + SLACK;
       // Beside the name the contacts get at least what their widest item needs; under it, the row.
       // Each on one line: a line's last glyph has no space after it to kern into.
       const nameLine = Math.max(textWidth(name, { ...font, ...nameStyle }), textWidth(personal?.title, { ...font, ...titleStyle }));
       const twoCells = contacts.layout === '2grid' && contactItems(personal, hidden).length > 1;
       // A lone grid contact beside a name and title on their lines takes only what prints it whole.
-      const folded = twoCells ? contactsNeed : contactRowMinWidth(personal, contactSettings, hidden, {}, { folded: true }) + SLACK;
+      const folded = twoCells ? contactsNeed : contactRowMinWidth(personal, contactSettings, hidden, rowGaps, { folded: true }) + SLACK;
       const need = nameLine + contactsNeed > room && nameLine + folded <= room ? folded : contactsNeed;
       if (nameNeed + contactsNeed <= room && !(twoCells && nameLine + need > room)) {
         nameCap = room - need;
@@ -160,7 +164,7 @@ export function CoverLetterHeader({ look, personal, settings, cl, hidden, contac
   // Title ↔ Contacts (Name ↔ Contacts without a title) under the name: the résumé's set value, else
   // the letterhead's own 4 pt (5 under Below All) — its contact row keeps its own 3 pt above that (D5).
   const toContacts = setGapPt(settings, 'titleContactsGap');
-  const contactEl = <PdfContactRow personal={personal} hidden={hidden} settings={contactSettings} color={look.contacts} markColor={look.marks} width={contactsWidth} />;
+  const contactEl = <PdfContactRow personal={personal} hidden={hidden} settings={contactSettings} gaps={rowGaps} color={look.contacts} markColor={look.marks} width={contactsWidth} />;
   // A name word wider even than the room the name ends up with (a 35-letter surname at 28 pt) has
   // nowhere to break, and react-pdf drew it past the margin, off the paper: it prints at the
   // largest size that holds it. Beside the contacts it always fits (nameNeed).

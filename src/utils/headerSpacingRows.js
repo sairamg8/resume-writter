@@ -13,9 +13,12 @@ const TEXT = {
   nameTitleGap: ['Name ↔ Title', 'Name to title spacing'],
   headerInlineGap: ['Name ↔ Title', 'Name to title spacing'],
   titleContactsGap: ['Title ↔ Contacts', 'Title to contacts spacing'],
+  iconTextGap: ['Icon ↔ Text', 'Icon to text spacing'],
 };
 /** Without a title the contacts follow the name, and Title ↔ Contacts is the name's gap. */
 const NAME_CONTACTS = ['Name ↔ Contacts', 'Name to contacts spacing'];
+/** Contact Style "Bullet" prints a bullet where "Icon" prints an icon. */
+const BULLET_TEXT = ['Bullet ↔ Text', 'Bullet to text spacing'];
 
 /**
  * One stepper row, in CSS px like Between Sections: `valuePx` is what prints — the résumé's value
@@ -38,18 +41,26 @@ function gapRow(key, template, settings, [label, name] = TEXT[key]) {
  *                     else `nameTitleGap` under it (Stack, and always in Modern and Sidebar) (spec D3)
  *   Title ↔ Contacts  a contact prints, in a header that has the gap (not the Sidebar column, whose
  *                     contacts are a section of their own); "Name ↔ Contacts" without a title
+ *   Icon ↔ Text       a contact prints with a mark before it: Modern's and the Sidebar's icons, or
+ *                     Contact Style Icon — or Bullet, one contact to a cell (Single, 2 Grid): in a
+ *                     Justify line a bullet is text between two values ("Bullet ↔ Text")
  */
 export function headerGapRows(template, settings = {}, personal = {}) {
   const t = headerTemplateId(template, settings); // the Sidebar's single column prints Classic's header
   const hidden = personal?.hiddenFields || [];
+  const hc = hasHeaderControls(t); // Classic, Minimal, Executive: the header controls apply
   const rows = [];
   if (!hidden.includes('photo') && isDrawableImage(personal?.photo)) rows.push(gapRow('photoTextGap', t, settings));
   if (personal?.title) {
-    const inline = hasHeaderControls(t) && settings?.headerLayout === 'inline';
+    const inline = hc && settings?.headerLayout === 'inline';
     rows.push(gapRow(inline ? 'headerInlineGap' : 'nameTitleGap', t, settings));
   }
   const contacts = contactItems(personal || {}).length;
   const has = (key) => templateGapPt(t, key) != null;
   if (contacts && has('titleContactsGap')) rows.push(gapRow('titleContactsGap', t, settings, personal?.title ? undefined : NAME_CONTACTS));
+  // Contact Style and Layout as PdfContactRow reads them, in the templates that take them.
+  const style = hc ? settings?.contactStyle || 'icon' : 'icon';
+  const inCells = ['single', '2grid'].includes(settings?.contactLayout);
+  if (contacts && (style === 'icon' || (style === 'bullet' && inCells))) rows.push(gapRow('iconTextGap', t, settings, style === 'bullet' ? BULLET_TEXT : undefined));
   return rows;
 }
