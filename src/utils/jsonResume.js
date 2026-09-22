@@ -2,6 +2,7 @@ import { newId } from './ids.js';
 import { BASE_COVER_LETTER } from './defaultDataContent.js';
 import { getStarterSettings, STARTER_DATA_VERSION } from './starterTemplates.js';
 import { isText, storedText } from './storedText.js';
+import { parseMonthYear } from './dates.js';
 
 /**
  * Checks if a parsed JSON object matches the JSON Resume standard (jsonresume.org).
@@ -19,8 +20,28 @@ const entries = (list) => (Array.isArray(list) ? list.filter((v) => Boolean(v) &
 /** A list's text and numbers joined with ', ' as they are, which is what the import always stored for a list of text. */
 const joined = (list) => list.filter(isText).join(', ');
 
-/** A date as the import stores it: its first 7 characters, 'YYYY-MM' of an ISO date. */
-const month = (v) => storedText(v).slice(0, 7);
+/**
+ * A date as the import stores it: an ISO day or time as its month ('2021-03-01' → '2021-03'), and
+ * anything else whole — a year, 'YYYY-MM', the month picker's "Jan 2024" (what earlier builds
+ * exported) or other text. It used to keep the first 7 characters of every date: "Jan 2024" came
+ * back as "Jan 202" and "September 2023" as "Septemb".
+ */
+function month(v) {
+  const text = storedText(v).trim();
+  const iso = /^(\d{4}-\d{2})-\d{2}(?:[T ].*)?$/.exec(text);
+  return iso ? iso[1] : text;
+}
+
+/**
+ * A stored date as JSON Resume writes one — ISO 8601: 'YYYY-MM', or 'YYYY' for a year alone —
+ * whatever form the app stored it in ("Jan 2024", "05/2023", 2019; src/utils/dates.js). Text that is
+ * no month and year ("Summer 2020") goes out as it is: the schema wants ISO, but nothing is dropped.
+ */
+function isoDate(v) {
+  const d = parseMonthYear(v);
+  if (!d) return storedText(v).trim();
+  return d.m ? `${d.y}-${String(d.m).padStart(2, '0')}` : String(d.y);
+}
 
 /**
  * Converts a standard JSON Resume (jsonresume.org schema) to a CPWT-CV resume object. Each value
@@ -274,8 +295,8 @@ export function cpwtResumeToJsonResume(resume) {
           name: item.company || '',
           position: item.role || '',
           location: item.location || '',
-          startDate: item.startDate || '',
-          endDate: item.current ? '' : (item.endDate || ''),
+          startDate: isoDate(item.startDate),
+          endDate: item.current ? '' : isoDate(item.endDate),
           summary: stripHtml(item.description || '').slice(0, 300),
           highlights: extractHighlights(item.description || ''),
         });
@@ -287,8 +308,8 @@ export function cpwtResumeToJsonResume(resume) {
           area: item.fieldOfStudy || '',
           studyType: item.degree || '',
           location: item.location || '',
-          startDate: item.startDate || '',
-          endDate: item.endDate || '',
+          startDate: isoDate(item.startDate),
+          endDate: isoDate(item.endDate),
           score: item.gpa || '',
           courses: [],
         });
@@ -312,8 +333,8 @@ export function cpwtResumeToJsonResume(resume) {
           highlights: extractHighlights(item.description || ''),
           url: item.link || '',
           roles: item.role ? [item.role] : [],
-          startDate: item.startDate || '',
-          endDate: item.endDate || '',
+          startDate: isoDate(item.startDate),
+          endDate: isoDate(item.endDate),
         });
       }
     } else if (s.type === 'certifications') {
@@ -321,7 +342,7 @@ export function cpwtResumeToJsonResume(resume) {
         certificates.push({
           name: item.name || '',
           issuer: item.issuer || '',
-          date: item.date || '',
+          date: isoDate(item.date),
           url: item.url || '',
         });
       }
@@ -330,7 +351,7 @@ export function cpwtResumeToJsonResume(resume) {
         awards.push({
           title: item.title || '',
           awarder: item.issuer || '',
-          date: item.date || '',
+          date: isoDate(item.date),
           summary: item.description || '',
         });
       }
