@@ -218,7 +218,7 @@ export function extractResumeCorpus(resume) {
   for (const s of sections) {
     if (s.visible === false) continue;
     if (s.title) parts.push(s.title);
-    const items = Array.isArray(s.items) ? s.items : [];
+    const items = (Array.isArray(s.items) ? s.items : []).filter(item => item && item.visible !== false);
     for (const item of items) {
       if (!item || typeof item !== 'object') continue;
       // Experience / Volunteering
@@ -768,7 +768,7 @@ export function analyzeAtsScore(resume, jobDescriptionText = '') {
   // ── 3. Work Experience & Action Verbs (25 pts) ─────────────────────
   let expPts = 0;
   const expSections = visibleSections.filter(s => s.type === 'experience');
-  const allExpItems = expSections.flatMap(s => (Array.isArray(s.items) ? s.items : []));
+  const allExpItems = expSections.flatMap(s => (Array.isArray(s.items) ? s.items.filter(i => i && i.visible !== false) : []));
 
   if (allExpItems.length === 0) {
     results.categories.experience.items.push({
@@ -921,7 +921,7 @@ export function analyzeAtsScore(resume, jobDescriptionText = '') {
   // ── 4. Education & Credentials (15 pts) ───────────────────────────
   let eduPts = 0;
   const eduSections = visibleSections.filter(s => s.type === 'education');
-  const allEduItems = eduSections.flatMap(s => (Array.isArray(s.items) ? s.items : []));
+  const allEduItems = eduSections.flatMap(s => (Array.isArray(s.items) ? s.items.filter(i => i && i.visible !== false) : []));
 
   if (allEduItems.length === 0) {
     results.categories.education.items.push({
@@ -983,7 +983,7 @@ export function analyzeAtsScore(resume, jobDescriptionText = '') {
   // ── 5. Skills & Keyword Density (10 pts) ──────────────────────────
   let skillsPts = 0;
   const skillSections = visibleSections.filter(s => s.type === 'skills');
-  const allSkillItems = skillSections.flatMap(s => (Array.isArray(s.items) ? s.items : []));
+  const allSkillItems = skillSections.flatMap(s => (Array.isArray(s.items) ? s.items.filter(i => i && i.visible !== false) : []));
 
   // Count individual skills
   const skillsSet = new Set();
@@ -1073,7 +1073,9 @@ export function analyzeAtsScore(resume, jobDescriptionText = '') {
   }
 
   // Photo check (3 pts) - US/UK ATS recommend no photo
-  if (!p.photo) {
+  const photoHidden = (p.hiddenFields || []).includes('photo');
+  const hasPhoto = Boolean(p.photo) && !photoHidden;
+  if (!hasPhoto) {
     layoutPts += 3;
     results.categories.layout.items.push({
       id: 'photo', status: 'pass', text: 'No photo attached (ATS Standard)',

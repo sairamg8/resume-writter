@@ -595,3 +595,98 @@ test('AUD-11: generateAtsPlainText cleans HTML and decodes entities in summary a
   assert.ok(text.includes('Awarded for excellence & innovation in engineering.'), 'Award description should be stripped of HTML and decoded');
 });
 
+test('AUD-12: analyzeAtsScore does not penalize a photo hidden by the user and ignores hidden entries', () => {
+  const resume = {
+    ...sampleAtsResume,
+    personal: {
+      ...sampleAtsResume.personal,
+      photo: 'data:image/png;base64,12345',
+      hiddenFields: ['photo'],
+    },
+    sections: [
+      {
+        id: 'sec_exp',
+        type: 'experience',
+        title: 'Professional Experience',
+        visible: true,
+        items: [
+          {
+            id: 'exp1',
+            company: 'Acme Cloud',
+            role: 'Staff Engineer',
+            startDate: '2021-01',
+            endDate: 'Present',
+            current: true,
+            bullets: [
+              'Architected distributed microservices handling 250k rps.',
+              'Spearheaded the migration to Kubernetes, saving $1.2M.',
+              'Engineered automated CI/CD pipelines reducing cycle time.',
+            ],
+            visible: true,
+          },
+          {
+            id: 'exp_hidden',
+            company: 'Hidden Company',
+            role: 'Secret Role',
+            startDate: '2019-01',
+            endDate: '2020-12',
+            bullets: [
+              'Responsible for helping with manual data entry', // weak passive phrase
+            ],
+            visible: false,
+          },
+        ],
+      },
+      {
+        id: 'sec_edu',
+        type: 'education',
+        title: 'Education',
+        visible: true,
+        items: [
+          {
+            id: 'edu1',
+            institution: 'UC Berkeley',
+            degree: 'BS',
+            fieldOfStudy: 'CS',
+            startDate: '2015',
+            endDate: '2019',
+            visible: true,
+          },
+          {
+            id: 'edu_hidden',
+            institution: 'Incomplete University',
+            visible: false,
+          },
+        ],
+      },
+      {
+        id: 'sec_skills',
+        type: 'skills',
+        title: 'Skills',
+        visible: true,
+        items: [
+          {
+            id: 'sk1',
+            category: 'Languages',
+            skills: 'TypeScript, JavaScript, Python, Go, Java, SQL, Rust, C++',
+            visible: true,
+          },
+        ],
+      },
+    ],
+  };
+
+  const report = analyzeAtsScore(resume);
+  const photoItem = report.categories.layout.items.find(i => i.id === 'photo');
+  assert.ok(photoItem);
+  assert.equal(photoItem.status, 'pass', 'Hidden photo should pass ATS layout check');
+  assert.equal(report.categories.layout.score, 10, 'Hidden photo should get full 10 layout points on classic');
+
+  // Weak phrase in hidden role should NOT be reported
+  const weakItem = report.categories.experience.items.find(i => i.id === 'weak_phrases');
+  assert.equal(weakItem, undefined, 'Weak phrase from hidden role should not be reported');
+
+  // Education should pass 100% since incomplete entry is hidden
+  assert.equal(report.categories.education.score, 15, 'Hidden incomplete edu entry should not reduce education score');
+});
+

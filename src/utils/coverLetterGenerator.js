@@ -46,7 +46,7 @@ export function extractResumeHighlights(resume) {
 
   const topExperiences = [];
   if (expSec && Array.isArray(expSec.items)) {
-    for (const item of expSec.items.filter(isEntry).slice(0, 2)) {
+    for (const item of expSec.items.filter(i => isEntry(i) && i.visible !== false).slice(0, 2)) {
       topExperiences.push({
         role: storedText(item.role),
         company: storedText(item.company),
@@ -57,7 +57,7 @@ export function extractResumeHighlights(resume) {
 
   const topSkills = [];
   if (skillsSec && Array.isArray(skillsSec.items)) {
-    for (const item of skillsSec.items.filter(isEntry)) {
+    for (const item of skillsSec.items.filter(i => isEntry(i) && i.visible !== false)) {
       const list = (storedText(item.skills) || storedText(item.name)).split(/[,•;]+/).map(s => s.trim()).filter(Boolean);
       topSkills.push(...list);
     }

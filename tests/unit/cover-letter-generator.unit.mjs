@@ -217,3 +217,36 @@ test('extractResumeHighlights: a section or an entry that is not an object (null
     assert.doesNotThrow(() => generateCoverLetter({ resume: { personal: { name: 'Ada' }, sections } }), JSON.stringify(sections));
   }
 });
+
+test('AUD-12: extractResumeHighlights ignores hidden entries (visible: false)', () => {
+  const resume = {
+    personal: { name: 'Ada', title: 'Senior Engineer' },
+    sections: [
+      {
+        type: 'experience',
+        items: [
+          { role: 'Hidden Lead', company: 'Secret Co', visible: false },
+          { role: 'Visible Staff', company: 'Visible Co', visible: true },
+        ],
+      },
+      {
+        type: 'skills',
+        items: [
+          { skills: 'SecretSkill', visible: false },
+          { skills: 'React, Node.js', visible: true },
+        ],
+      },
+    ],
+  };
+  const h = extractResumeHighlights(resume);
+  assert.equal(h.topExperiences[0]?.role, 'Visible Staff');
+  assert.equal(h.topExperiences[0]?.company, 'Visible Co');
+  assert.ok(!h.topSkills.includes('SecretSkill'));
+  assert.ok(h.topSkills.includes('React'));
+
+  const letter = generateCoverLetter({ resume, company: 'TargetCo' });
+  assert.ok(!letter.body.includes('Secret Co'));
+  assert.ok(!letter.body.includes('Hidden Lead'));
+  assert.ok(!letter.body.includes('SecretSkill'));
+  assert.ok(letter.body.includes('Visible Co'));
+});
