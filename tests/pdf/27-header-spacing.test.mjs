@@ -196,10 +196,10 @@ describe('Classic, Minimal and Executive print the header gaps (header_spacing_s
   // D5 — this test then becomes its "follows the résumé" test): the letterhead keeps its own
   // spacing. PdfContactRow takes gaps only from its `gaps` prop, never from the résumé's resolved
   // settings the letter passes it — they carry the résumé's Contact Layout, not the letter's.
-  // Name ↔ Title and Photo ↔ Text follow the résumé (D5, 45-header-name-title-gap and
-  // 46-header-photo-text-gap); the rest keep the letterhead's spacing until their rows land.
+  // Name ↔ Title, Photo ↔ Text and Title ↔ Contacts follow the résumé (D5; 45-, 46- and
+  // 47-header-*-gap); the rest keep the letterhead's spacing until their rows land.
   it('the cover letter keeps its letterhead\'s spacing whatever other header gaps the résumé sets', async () => {
-    const SET = { titleContactsGap: 20, contactGapX: 30, contactGapY: 12, iconTextGap: 10, headerGapBelow: 60, headerRuleGap: 30 };
+    const SET = { contactGapX: 30, contactGapY: 12, iconTextGap: 10, headerGapBelow: 60, headerRuleGap: 30 };
     for (const template of [...STACKED, 'modern', 'sidebar']) {
       for (const coverLetter of [{ fieldsPosition: 'below-name', headerLayout: 'single' }, { fieldsPosition: 'right' }]) {
         const letter = async (settings) => drawing(await renderCover(make(template, settings, { photo: PNG_2X2 }, coverLetter)));

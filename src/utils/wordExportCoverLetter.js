@@ -84,20 +84,24 @@ function letterhead(personal, s, cl, sizes, look) {
   const on = look.band ? `#${bandFill(look.band)}` : '#ffffff';
   const ink = (color, alpha) => hexOn(color, on, look.band ? 'ffffff' : '1e293b', alpha);
   const nameRun = look.name.weight === 'bold' ? bold : normal;
-  // The name's space after: Name ↔ Title as the letter's PDF prints it (the résumé's set value, else 1 pt).
-  // A set value holds on a band too (`kept`), where rows otherwise print with none between them.
+  const contacts = contactItems(personal, letterHiddenFields(cl, personal));
+  // A row's space after is the gap to the next: Name ↔ Title and Title ↔ Contacts (Name ↔ Contacts
+  // without a title) as the letter's PDF prints them — the résumé's set value (Personal Info → Header
+  // spacing), else Word's own 1 / 2 pt. A set value holds on a band too (`kept`), where rows otherwise
+  // print with none between them.
   const nameGap = personal.title && !look.inline ? setGapPt(s, 'nameTitleGap') : null;
-  const rows = [{ runs: [nameRun(personal.name || 'Your Name', { size: sizes.name, color: ink(look.name.color) })], after: pt(nameGap ?? 1), kept: nameGap != null }];
+  const toContacts = contacts.length ? setGapPt(s, 'titleContactsGap') : null;
+  const afterName = personal.title && !look.inline ? nameGap : toContacts;
+  const rows = [{ runs: [nameRun(personal.name || 'Your Name', { size: sizes.name, color: ink(look.name.color) })], after: pt(afterName ?? (look.inline && personal.title ? 2 : 1)), kept: afterName != null }];
   // Modern's title prints at 90 % on its band (look.title.opacity, R5-9): the same blend here.
   const title = personal.title ? normal(personal.title, { size: sizes.title, color: ink(look.title.color, look.title.opacity) }) : null;
   if (title && look.inline) {
     // Name & Title Layout "Inline" (V2FIDB-51-3): the title on the name's line, after a real space
     // (the line reads and copies as words) widened to the PDF's gap — as the résumé's (inlineGap).
-    rows[0] = { runs: [...rows[0].runs, inlineGap(look.inline.gap, sizes.title), title], after: pt(2) };
+    rows[0] = { ...rows[0], runs: [...rows[0].runs, inlineGap(look.inline.gap, sizes.title), title] };
   } else if (title) {
-    rows.push({ runs: [title], after: pt(2) });
+    rows.push({ runs: [title], after: pt(toContacts ?? 2), kept: toContacts != null });
   }
-  const contacts = contactItems(personal, letterHiddenFields(cl, personal));
   if (contacts.length) {
     const style = { size: sizes.contact, color: ink(look.contacts) };
     // Cover Letter → Contact Style and Layout (letterContactFormat) as the letter's PDF lays them out

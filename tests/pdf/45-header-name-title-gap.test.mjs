@@ -102,7 +102,8 @@ describe('Name ↔ Title in Word', () => {
 describe('the Header spacing row (Personal Info → Header Customization)', () => {
   it('Name ↔ Title writes the gap of the layout the header prints, starting from the template\'s own', async () => {
     const { headerGapRows } = await loadModule('/src/utils/headerSpacingRows.js');
-    const only = (rows) => { assert.equal(rows.length, 1); return rows[0]; };
+    // The Name ↔ Title row (the group has others: 46-, 47-…); none when there is none.
+    const only = (rows) => { const r = rows.filter((row) => ['nameTitleGap', 'headerInlineGap'].includes(row.key)); assert.ok(r.length <= 1); return r[0]; };
     for (const t of TEMPLATES) {
       const r = only(headerGapRows(t, {}, PERSONAL));
       assert.deepEqual([r.key, r.label, r.set, r.min, r.max], ['nameTitleGap', 'Name ↔ Title', false, 0, 40], t);
@@ -110,7 +111,7 @@ describe('the Header spacing row (Personal Info → Header Customization)', () =
       const s = only(headerGapRows(t, { nameTitleGap: 12 }, PERSONAL));
       assert.deepEqual([s.valuePx, s.set], [12, true], `${t}: set`);
       assert.equal(only(headerGapRows(t, { nameTitleGap: 100 }, PERSONAL)).valuePx, 40, `${t}: clamped`);
-      assert.deepEqual(headerGapRows(t, {}, { ...PERSONAL, title: '' }), [], `${t}: no title, no row`);
+      assert.equal(only(headerGapRows(t, {}, { ...PERSONAL, title: '' })), undefined, `${t}: no title, no row`);
     }
     for (const t of ['classic', 'minimal', 'executive']) {
       const r = only(headerGapRows(t, { headerLayout: 'inline' }, PERSONAL));

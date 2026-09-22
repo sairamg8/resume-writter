@@ -19,9 +19,9 @@ const CSS_ICON_SCALE = 0.9;
 
 /**
  * The banner's contact row: the same values, links and icons (the chosen pack, or the image
- * uploaded for a field) as every other template.
+ * uploaded for a field) as every other template. `gaps`: the header's spacing, pt (headerGaps).
  */
-function HeaderContact({ personal, settings, textColor }) {
+function HeaderContact({ personal, settings, textColor, gaps }) {
   const baseSize = settings?.fontSizeBase || 11;
   const iconPt   = Math.max(7, Math.round((settings?.iconSize ?? 9) * CSS_ICON_SCALE));
   const textSize = baseSize - 1.5;
@@ -30,7 +30,7 @@ function HeaderContact({ personal, settings, textColor }) {
   if (!items.length) return null;
   // Canvas: gap-x-4 gap-y-0.5 → 16px / 2px
   return (
-    <View style={{ flexDirection: 'row', flexWrap: 'wrap', columnGap: pxToPt(16), rowGap: pxToPt(2), marginTop: 4 }}>
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', columnGap: pxToPt(16), rowGap: pxToPt(2), marginTop: gaps.titleContactsGap }}>
       {items.map(({ key, value, href }) => (
         <View key={key} style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
           <PdfContactIcon field={key} settings={settings} size={iconPt} color={textColor} />
@@ -95,7 +95,7 @@ export function ModernTemplatePDF({ data }) {
                   {personal.title}
                 </Text>
               )}
-              <HeaderContact personal={personal} settings={settings} textColor={headerText} />
+              <HeaderContact personal={personal} settings={settings} textColor={headerText} gaps={g} />
             </View>
           </View>
           {!hidden.includes('summary') && personal?.summary &&

@@ -59,22 +59,28 @@ export function buildPersonalSection(personal = {}, settings = {}, template = 'c
   const title = personal.title ? new TextRun({ text: personal.title, size: titleSize, color: ink.title }) : null;
   // Name & Title Layout "Inline" (ONB-3-NB1): one line, as the PDF's nameBlock and the letter's letterhead print it.
   const inline = title && inlineLayout(templateId(template), s);
+  const contacts = contactItems(personal);
+  // Personal Info → Header spacing, where the résumé set a gap its template prints (a paragraph's
+  // space after is the gap to what follows it); unset, Word keeps its own spacing (spec D6).
+  const setTwips = (key) => (s.headerGaps?.[key] != null && setGapPt(settings, key) != null ? twips(setGapPt(settings, key)) : null);
+  const toContacts = contacts.length ? setTwips('titleContactsGap') : null; // Title (or Name) ↔ Contacts
+  const stacked = title && !inline;
   paragraphs.push(new Paragraph({
     children: inline ? [name, inlineGap(inline.gap, titleSize), title] : [name],
-    // A stacked title follows Personal Info → Header spacing → Name ↔ Title when set; else Word's own 2 pt.
-    spacing: { after: inline ? 60 : title && setGapPt(settings, 'nameTitleGap') != null ? Math.round(setGapPt(settings, 'nameTitleGap') * 20) : 40 },
+    // A stacked title follows Name ↔ Title when set, else Word's own 2 pt; the contacts after the name
+    // (no title, or Inline) Title ↔ Contacts.
+    spacing: { after: stacked ? setTwips('nameTitleGap') ?? 40 : toContacts ?? (inline ? 60 : 40) },
     ...centredIf(centered),
   }));
 
-  if (title && !inline) {
+  if (stacked) {
     paragraphs.push(new Paragraph({
       children: [title],
-      spacing: { after: 60 },
+      spacing: { after: toContacts ?? 60 },
       ...centredIf(centered),
     }));
   }
 
-  const contacts = contactItems(personal);
   if (contacts.length) {
     const style = { size: 18, color: accent2Hex(textShades(s.textColor).sub, '64748b') };
     paragraphs.push(...contactParagraphs(contacts, s, hasHeaderControls(template), style, centered));

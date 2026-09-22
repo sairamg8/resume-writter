@@ -157,6 +157,9 @@ export function CoverLetterHeader({ look, personal, settings, cl, hidden, contac
       } else { layout = 'below-name'; contactsWidth = beside; }
     }
   }
+  // Title ↔ Contacts (Name ↔ Contacts without a title) under the name: the résumé's set value, else
+  // the letterhead's own 4 pt (5 under Below All) — its contact row keeps its own 3 pt above that (D5).
+  const toContacts = setGapPt(settings, 'titleContactsGap');
   const contactEl = <PdfContactRow personal={personal} hidden={hidden} settings={contactSettings} color={look.contacts} markColor={look.marks} width={contactsWidth} />;
   // A name word wider even than the room the name ends up with (a 35-letter surname at 28 pt) has
   // nowhere to break, and react-pdf drew it past the margin, off the paper: it prints at the
@@ -182,7 +185,7 @@ export function CoverLetterHeader({ look, personal, settings, cl, hidden, contac
         <View style={{ alignItems: 'center' }}>
           {photoEl}
           {nameBlock}
-          <View style={{ marginTop: 4, alignSelf: 'stretch' }}>{contactEl}</View>
+          <View style={{ marginTop: toContacts ?? 4, alignSelf: 'stretch' }}>{contactEl}</View>
         </View>
       );
     }
@@ -192,7 +195,7 @@ export function CoverLetterHeader({ look, personal, settings, cl, hidden, contac
           {photoEl}
           <View style={{ flex: 1, minWidth: 0 }}>
             {nameBlock}
-            {contactEl ? <View style={{ marginTop: 4 }}>{contactEl}</View> : null}
+            {contactEl ? <View style={{ marginTop: toContacts ?? 4 }}>{contactEl}</View> : null}
           </View>
         </View>
       );
@@ -206,7 +209,7 @@ export function CoverLetterHeader({ look, personal, settings, cl, hidden, contac
             {photoEl}
             <View style={{ flex: 1, minWidth: 0 }}>{nameBlock}</View>
           </View>
-          {contactEl ? <View style={{ marginTop: 5 }}>{contactEl}</View> : null}
+          {contactEl ? <View style={{ marginTop: toContacts ?? 5 }}>{contactEl}</View> : null}
         </View>
       );
     }
