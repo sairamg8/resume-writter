@@ -86,12 +86,13 @@ export function CoverLetterHeader({ look, personal, settings, cl, hidden, contac
   // Centred with the letterhead, never because a centred Classic header was left in the
   // settings of a Modern or Sidebar résumé (their headers take no alignment).
   const contactSettings = { ...settings, headerAlign: centered ? 'center' : 'left', contactStyle: contacts.style, contactLayout: contacts.layout };
-  // The contact row's own spacing: the résumé's set Icon ↔ Text and Between contacts (Personal Info →
-  // Header spacing), else PdfContactRow's (spec D5) — measured with the same gaps it prints with.
-  // Between contacts is Justify's (a 2 Grid's column gap is its own, as on the résumé).
+  // The contact row's own spacing: the résumé's set Icon ↔ Text, Between contacts and Between contact
+  // rows (Personal Info → Header spacing), else PdfContactRow's (spec D5) — measured with the same gaps
+  // it prints with. Between contacts is Justify's (a 2 Grid's column gap is its own, as on the résumé).
   const rowGaps = {};
   if (setGapPt(settings, 'iconTextGap') != null) rowGaps.iconTextGap = setGapPt(settings, 'iconTextGap');
   if (setGapPt(settings, 'contactGapX') != null && !['single', '2grid'].includes(contacts.layout)) rowGaps.contactGapX = setGapPt(settings, 'contactGapX');
+  if (setGapPt(settings, 'contactGapY') != null) rowGaps.contactGapY = setGapPt(settings, 'contactGapY');
 
   const [ring, ringOpts] = look.photo;
   // Photo ↔ Text: the résumé's set value (Personal Info → Header spacing), else the letterhead's

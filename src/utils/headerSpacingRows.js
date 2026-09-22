@@ -15,6 +15,7 @@ const TEXT = {
   titleContactsGap: ['Title ↔ Contacts', 'Title to contacts spacing'],
   iconTextGap: ['Icon ↔ Text', 'Icon to text spacing'],
   contactGapX: ['Between contacts', 'Space between contacts'],
+  contactGapY: ['Between contact rows', 'Space between contact rows'],
 };
 /** Without a title the contacts follow the name, and Title ↔ Contacts is the name's gap. */
 const NAME_CONTACTS = ['Name ↔ Contacts', 'Name to contacts spacing'];
@@ -28,7 +29,7 @@ const BULLET_TEXT = ['Bullet ↔ Text', 'Bullet to text spacing'];
  */
 function gapRow(key, template, settings, [label, name] = TEXT[key]) {
   const { min, max } = HEADER_GAPS[key];
-  const defaultPx = templateGapPt(template, key) / CSS_PX_TO_PT;
+  const defaultPx = templateGapPt(template, key, { contactLayout: settings?.contactLayout }) / CSS_PX_TO_PT;
   const stored = storedGapPx(settings, key);
   return { key, label, name, valuePx: stored ?? defaultPx, defaultPx, set: stored != null, min, max };
 }
@@ -48,6 +49,8 @@ function gapRow(key, template, settings, [label, name] = TEXT[key]) {
  *   Between contacts  two contacts or more side by side in a flowing row: Modern's, and Icon with
  *                     Justify (a Bar or Bullet line spaces them with its separator, a 2 Grid's
  *                     columns are its own — spec D7)
+ *   Between contact    two contacts or more on rows of their own: Modern's and Icon + Justify's once
+ *   rows               they wrap, the Sidebar column's, Single's; a 2 Grid's from the third
  */
 export function headerGapRows(template, settings = {}, personal = {}) {
   const t = headerTemplateId(template, settings); // the Sidebar's single column prints Classic's header
@@ -68,5 +71,7 @@ export function headerGapRows(template, settings = {}, personal = {}) {
   if (contacts && (style === 'icon' || (style === 'bullet' && inCells))) rows.push(gapRow('iconTextGap', t, settings, style === 'bullet' ? BULLET_TEXT : undefined));
   const flowing = t === 'modern' || (hc && style === 'icon' && !inCells); // icons in a row that wraps
   if (contacts > 1 && flowing) rows.push(gapRow('contactGapX', t, settings));
+  const layout = hc ? settings?.contactLayout : null;
+  if ((contacts > 1 && (flowing || t === 'sidebar' || layout === 'single')) || (contacts > 2 && layout === '2grid')) rows.push(gapRow('contactGapY', t, settings));
   return rows;
 }

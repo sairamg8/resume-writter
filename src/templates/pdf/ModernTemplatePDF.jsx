@@ -11,7 +11,7 @@ import { contactItems } from '@/utils/contacts';
 import { getPdfPhotoStyle } from './shared/pdfPhoto';
 import { PdfPhoto } from './shared/PdfPhoto';
 import { opacityFor } from './shared/pdfColors';
-import { MODERN_HEADER_PAD_X_PT, MODERN_HEADER_PAD_Y_PT, pxToPt } from './shared/pdfUnits';
+import { MODERN_HEADER_PAD_X_PT, MODERN_HEADER_PAD_Y_PT } from './shared/pdfUnits';
 import { photoTextAlignItems } from '@/constants/templates';
 import { pageSizeOf } from '@/constants/pageSize';
 
@@ -28,9 +28,9 @@ function HeaderContact({ personal, settings, textColor, gaps }) {
   const items = contactItems(personal);
 
   if (!items.length) return null;
-  // Canvas: gap-x-4 gap-y-0.5 → 16px / 2px
+  // Canvas: gap-x-4 gap-y-0.5 → 16px / 2px, the template's own Between contacts / rows (headerGaps)
   return (
-    <View style={{ flexDirection: 'row', flexWrap: 'wrap', columnGap: gaps.contactGapX, rowGap: pxToPt(2), marginTop: gaps.titleContactsGap }}>
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', columnGap: gaps.contactGapX, rowGap: gaps.contactGapY, marginTop: gaps.titleContactsGap }}>
       {items.map(({ key, value, href }) => (
         <View key={key} style={{ flexDirection: 'row', alignItems: 'center', gap: gaps.iconTextGap }}>
           <PdfContactIcon field={key} settings={settings} size={iconPt} color={textColor} />

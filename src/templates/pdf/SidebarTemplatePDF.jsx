@@ -21,11 +21,11 @@ import { ClassicTemplatePDF } from './ClassicTemplatePDF';
  * A contact in the dark column: icon and label in the column's label colour, not the accent. The
  * value, under its label and in line with it, prints whole on one line (wholeValue): a profile link
  * broken at a hyphen no longer matches as a link to a parser. `iconGap`: Icon ↔ Text, pt — between
- * the icon and the label, and the value's indent past the icon.
+ * the icon and the label, and the value's indent past the icon. `below`: the space under it, pt.
  */
-function SideContactRow({ field, label, value, href, iconPt, iconGap, settings, shades }) {
+function SideContactRow({ field, label, value, href, iconPt, iconGap, below, settings, shades }) {
   return (
-    <View style={{ marginBottom: 6 }}>
+    <View style={{ marginBottom: below }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: iconGap, marginBottom: 1 }}>
         <PdfContactIcon field={field} settings={settings} size={iconPt} color={shades.label} />
         <Text style={{ fontSize: 8, fontWeight: 'bold', color: shades.label, letterSpacing: tracking(8, 0.8), lineHeight: 1.2 }}>
@@ -159,7 +159,7 @@ export function SidebarTemplatePDF({ data }) {
             <View style={{ marginBottom: sideSectionGap }}>
               <SideSectionTitle title="Contact" shades={side} titleCase={settings.sectionTitleCase} settings={settings} />
               <View style={{ marginTop: 2 }}>
-                {contacts.map(item => (
+                {contacts.map((item, i) => (
                   <SideContactRow
                     key={item.key}
                     field={item.key}
@@ -168,6 +168,8 @@ export function SidebarTemplatePDF({ data }) {
                     href={item.href}
                     iconPt={sideIconPt}
                     iconGap={g.iconTextGap}
+                    // Between contact rows; the last one's 6 pt is the Contact block's own, above the next section.
+                    below={i < contacts.length - 1 ? g.contactGapY : 6}
                     settings={settings}
                     shades={side}
                   />
