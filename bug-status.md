@@ -1,17 +1,17 @@
 # FlowCV Bug Tracker & Status Index
 
 > Location: `/mnt/Storage/Projects/flowcv/bug-status.md`
-> Updated: 2026-09-22 21:27 · `origin/master` (deployed) = `2a7d728` · fixed but not pushed: `fd7ecca`, `4ee5ede`
-> **Open: 28** | Fixed, not pushed: 2 | **Closed: 44**
+> Updated: 2026-09-22 21:38 · `origin/master` (deployed) = `2a7d728` · fixed but not pushed: `fd7ecca`, `4ee5ede`, `f829ce3`
+> **Open: 26** | Fixed, not pushed: 4 | **Closed: 44**
 
 ## Summary
 
 | List | Found | ✅ Fixed and pushed | ⏸ Fixed, local only | 🔴 Open |
 |---|---|---|---|---|
-| Bug audit, 2026-09-22 (`AUD-`) | 35 (34 + one follow-up) | 11 | 2 | **22** |
+| Bug audit, 2026-09-22 (`AUD-`) | 35 (34 + one follow-up) | 11 | 4 | **20** |
 | ATS parsing defects (`ATS-`) | 6 | 0 | 0 | **6** |
 | Prompt tasks, 2026-09-14 → 09-21 | 33 | 33 | 0 | 0 |
-| **Total** | **74** | **44** | **2** | **28** |
+| **Total** | **74** | **44** | **4** | **26** |
 
 - **Status:** ✅ fixed and pushed (on `origin/master`, so deployed) · ⏸ fixed and committed, not pushed · 🔴 open.
 - **Severity (audit):** High = data loss, or a feature that does not work · Medium = a wrong result, no data loss ·
@@ -22,12 +22,12 @@
 
 ### Next in queue
 
-1. **AUD-10 + AUD-11** — the ATS text export leaks hidden data and prints raw HTML.
-2. AUD-12 → AUD-13 → AUD-14 + AUD-15 → AUD-17 → AUD-19 → AUD-21 → AUD-22 → AUD-23 → AUD-24 → the Low rows,
+1. **AUD-12** — hidden entries and photo leak into cover-letter generator and ATS score calculation.
+2. AUD-13 → AUD-14 + AUD-15 → AUD-17 → AUD-19 → AUD-21 → AUD-22 → AUD-23 → AUD-24 → the Low rows,
    AUD-25 … AUD-34.
 3. ATS-1 … ATS-6 — no order set yet; ATS-6 waits on a decision.
 
-⏸ **Not pushed yet:** AUD-09 (`fd7ecca`) and AUD-16 (`4ee5ede`) wait for the owner's go. The push gate runs every test,
+⏸ **Not pushed yet:** AUD-09 (`fd7ecca`), AUD-16 (`4ee5ede`), AUD-10 and AUD-11 (`f829ce3`) wait for the owner's go. The push gate runs every test,
 a production build and a private-data scan; a push deploys.
 
 **Each fix:** a test that fails before the fix → the fix → commit → set its row here to ⏸ with the commit and the
@@ -52,8 +52,8 @@ existing test caught any of these; several unit tests asserted the same wrong da
 | AUD-07 | Sync · spacing override | High | ✅ Fixed | `e25f6ff` | tests/pdf/18-cloud-sync-undefined.test.mjs (the fake Firestore now throws on `undefined`, as the real one does) | Clearing a section's Spacing Override stored `undefined`; Firestore rejects it, so that résumé stopped syncing until a reload. | Ran (real Firebase SDK) |
 | AUD-08 | Jobs · CSV export | High | ✅ Fixed | `888661a` | tests/unit/job-csv.unit.mjs (rewritten on the real job shape) | The CSV read fields no job has: Position, Applied Date and Source were always empty, and Status printed its id (`phone_screen`). It now writes Position, Status (its label), Stage, Applied Date and Contact; Source is gone. | Code |
 | AUD-09 | Editor · STAR Optimizer | High | ⏸ Local only | `fd7ecca` | tests/playwright/bullet-optimizer.spec.mjs (needs a fresh `vite build`) | The optimizer never loaded the bullet being edited — it read the editor's ref on the first render, while it was still null — and Apply inserted unescaped HTML at the caret without replacing the bullet. It now opens on the caret's bullet and Apply replaces it as text. | Code |
-| AUD-10 | ATS text export · hidden data | High | 🔴 Open | — | — | Prints what the user hid: hidden contacts (phone, location), hidden entries (`visible: false`) and per-entry hidden fields such as the company. `generateAtsPlainText`, `src/utils/atsChecker.js:376`. | Ran |
-| AUD-11 | ATS text export · HTML | High | 🔴 Open | — | — | Prints raw HTML: the summary (`src/utils/atsChecker.js:402`) and every other section's description (`:487`, e.g. Awards) come out as `<p>Won <em>gold</em></p>` and `&amp;`. | Ran |
+| AUD-10 | ATS text export · hidden data | High | ⏸ Local only | `f829ce3` | tests/unit/ats-checker.unit.mjs | Prints what the user hid: hidden contacts (phone, location), hidden entries (`visible: false`) and per-entry hidden fields such as the company. `generateAtsPlainText`, `src/utils/atsChecker.js:376`. | Ran |
+| AUD-11 | ATS text export · HTML | High | ⏸ Local only | `f829ce3` | tests/unit/ats-checker.unit.mjs | Prints raw HTML: the summary (`src/utils/atsChecker.js:402`) and every other section's description (`:487`, e.g. Awards) come out as `<p>Won <em>gold</em></p>` and `&amp;`. | Ran |
 | AUD-12 | Hidden data · letter, ATS score | High | 🔴 Open | — | — | Hidden entries and the photo are still used: the cover-letter generator writes about a hidden job (`src/utils/coverLetterGenerator.js:49`); the ATS score counts hidden entries and takes 3 points off for a photo the user hid (`src/utils/atsChecker.js:1034`). | Ran |
 | AUD-13 | Markdown export | High | 🔴 Open | — | — | Skills print empty — it reads `i.name` (`src/utils/markdownExport.js:126`); Languages print nothing and Volunteering loses its organisation — the generic branch reads `title`, `name`, `role`, `organization`, never `language` or `org` (`:134`); dates print raw, ignoring Date format; per-entry hidden fields still print. `tests/unit/markdown-export.unit.mjs` uses the same wrong `{ name }` shape. | Ran, Known A6 |
 | AUD-14 | ATS checker · job match | Medium | 🔴 Open | — | — | Reports C++, C# and "5+" as missing: `\b…\b` never matches a keyword ending in `+` or `#` (`src/utils/atsChecker.js:324`), and "5+ years" yields the keyword "5+". | Ran |
