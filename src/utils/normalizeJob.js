@@ -4,6 +4,7 @@
 // disagree on what a job is (R4-7), or on what a repair lost (VM4-5). Its imports have none of
 // their own, so Node's test runner loads this file as it is (tests/unit/normalize-job.unit.mjs).
 import { newId } from './ids.js';
+import { plainTextToHtml } from './richText.js';
 import { JOB_STATUSES } from '../constants/jobs.js';
 
 /** The fields the job pages print or search as text. */
@@ -37,6 +38,25 @@ const STATUS_IDS = new Map(JOB_STATUSES.flatMap((s) => [[statusKey(s.id), s.id],
  */
 export function statusId(value) {
   return typeof value === 'string' ? STATUS_IDS.get(statusKey(value)) ?? null : null;
+}
+
+/**
+ * An element the rich-text editor writes (or a browser's contentEditable, or a paste), or an
+ * entity: notes holding one are HTML. Plain text that merely looks like a tag ('<tbd>') is not.
+ */
+const HTML_NOTES = /<\/?(p|div|br|ul|ol|li|strong|b|em|i|u|s|strike|del|ins|a|span|font|h[1-6]|blockquote|pre|code|sub|sup|hr)(\s[^>]*)?\/?>|&(amp|lt|gt|quot|nbsp|#\d+|#x[0-9a-f]+);/i;
+
+/**
+ * Notes as the rich-text editor's HTML (J-03). The job form saved notes as plain text and the
+ * Notes tab as HTML, so a plain note lost its line breaks and anything tag-like ('<tbd>') on the
+ * card, and was saved that way on the first keystroke in the Notes tab. Plain text becomes the
+ * same text as HTML (escaped, a <br> per line: richTextToPlain reads it back unchanged); HTML and
+ * blank notes come back as they are. null / undefined → ''.
+ */
+export function notesToHtml(notes) {
+  if (typeof notes !== 'string') return '';
+  if (!notes.trim() || HTML_NOTES.test(notes)) return notes;
+  return plainTextToHtml(notes);
 }
 
 /** The to-dos the Tasks tab can show; the same array when every one of them is readable. */
@@ -136,6 +156,8 @@ export function readJob(job) {
  *   a status in other case or spacing  → the id it names ('Applied' → 'applied', statusId)
  *   a to-do with no id, or with one    → a new one (withOwnIds)
  *   an earlier to-do already has
+ *   notes in plain text (the form's    → the same text as editor HTML, once (notesToHtml, J-03)
+ *   old textarea)
  * One job does not see the others: an id an earlier job has is replaced over the list (addressableJobs).
  */
 export function completeJob(job) {
@@ -150,6 +172,10 @@ export function completeJob(job) {
   if (Array.isArray(job.todos)) {
     const todos = withOwnIds(job.todos, 'td');
     if (todos !== job.todos) set('todos', todos);
+  }
+  if (typeof job.notes === 'string') {
+    const notes = notesToHtml(job.notes);
+    if (notes !== job.notes) set('notes', notes);
   }
   return out;
 }

@@ -28,7 +28,7 @@ title: Job Tracker — verified bugs, High and Medium (J-01…J-15)
 - **Fail-first test:** Extract a pure formPatch(initial, form) from JobForm and assert it returns only the changed editable keys (e.g. {role}) and never todos, statusHistory or status when those were not edited. Store test: after an external write adds a to-do, updateJob(id, {role:'X'}) keeps the to-do and the status.
 - **Owner:** JOBS-FIX · **Fix commit:** — · **Test:** —
 
-### J-03 · Medium · data-loss · 🔴 Open · links **R2-035**
+### J-03 · Medium · data-loss · ⏸ Fixed · links **R2-035**
 **Job notes have two incompatible editors: text typed in the form is merged and stripped, then saved that way from the Notes tab. The form shows raw HTML.**
 - **Where:** `src/pages/JobForm.jsx` : 149 (with src/components/job/NotesTab.jsx:7-13, src/components/RichTextEditor.jsx:28-37, src/components/job/KanbanView.jsx:59-63)
 - **Repro:** 1. Click Add Job and type two lines in Notes, the second containing '<tbd>'. Save. 2. On /jobs the card preview shows the lines merged, and '<tbd>' is gone. 3. Open the job's Notes tab and type one character: the stripped version is saved over the original text. 4. Or: bold a word in the Notes tab, then click the Edit pencil: the Notes textarea shows <p> and <strong> tags.
@@ -36,7 +36,8 @@ title: Job Tracker — verified bugs, High and Medium (J-01…J-15)
 - **Fix hint:** Use RichTextEditor in JobForm, or remove Notes from the form and link to the Notes tab. When loading a job whose notes contain no tags, migrate them once with plainTextToHtml.
 - **Verified (WF-1):** Ran verify-jobs/v-pure.mjs against the real src/utils/richText.js. richTextToPlain('Round 1: recruiter call\nSalary <tbd> & equity') returned 'Round 1: recruiter call Salary & equity' (this is the card preview). sanitizeRichText of the same text returned '<p>Round 1: recruiter call Salary &amp; equity</p>'. RichTextEditor.jsx:28-33 puts that HTML into the editor, and emit() (36) saves innerHTML on the first keystroke.
 - **Fail-first test:** Node test for a new notesToHtml(notes) migration helper: a plain text with a newline and '<tbd>' becomes HTML with <br> and &lt;tbd&gt;, and richTextToPlain of the result returns the original text.
-- **Owner:** JOBS-FIX · **Fix commit:** — · **Test:** —
+- **Now:** Notes are rich-text HTML everywhere. The job form edits them with the Notes tab's RichTextEditor instead of a textarea, and `completeJob` (every load and import) converts plain notes once with `notesToHtml` → `plainTextToHtml` (escaped, a <br> per line), so `richTextToPlain` reads the original text back and nothing tag-like is lost. HTML and blank notes are untouched. Fail-first: the three J-03 tests in normalize-job.unit.mjs failed at HEAD (`# fail 3`), pass now.
+- **Owner:** JOBS-FIX · **Fix commit:** this commit (`fix(jobs): one notes format — the form uses the rich-text editor, plain notes convert once (J-03)`) · **Test:** tests/unit/normalize-job.unit.mjs
 
 ### J-04 · Medium · bug · 🔴 Open
 **Importing the tracker's own JSON backup duplicates every job, and a successful import shows no message**

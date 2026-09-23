@@ -7,6 +7,7 @@ import { todayLocalISO } from '@/utils/dates';
 import { JOB_STATUSES } from '@/constants/jobs';
 import { InterviewStageSelector } from '@/components/job/InterviewStageSelector';
 import { JobsNotSavedAlert } from '@/components/job/JobsNotSavedAlert';
+import RichTextEditor from '@/components/RichTextEditor';
 
 /** A labelled control: `id` is the control's, so the label names it (M8). */
 function Field({ id, label, required, children }) {
@@ -146,7 +147,8 @@ export function JobForm({ store }) {
 
         <section className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
           <h2 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Notes</h2>
-          <textarea aria-label="Notes" value={form.notes} onChange={e => set('notes', e.target.value)} rows={4} placeholder="Key contacts, interview format, compensation details, next steps…" className={INPUT + ' resize-none'} />
+          {/* The Notes tab's editor and format: plain text here was stripped there (J-03). */}
+          <RichTextEditor ariaLabel="Notes" value={form.notes} onChange={html => set('notes', html)} rows={4} placeholder="Key contacts, interview format, compensation details, next steps…" />
         </section>
 
         <div className="flex justify-end gap-3 pb-8">

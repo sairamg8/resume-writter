@@ -171,3 +171,40 @@ test('status: one in other case or spacing is the status it names, and not repor
   assert.equal(statusId(undefined), null);
   assert.equal(statusId('ghosted'), null);
 });
+
+// ── J-03: one notes format ───────────────────────────────────────────────────────────────────
+// The form saved notes as plain text, the Notes tab as rich-text HTML: a plain note's line breaks
+// and anything that looked like a tag ('<tbd>') were lost on the card and saved that way on the
+// first keystroke in the Notes tab. Notes are HTML everywhere now; plain ones are converted once.
+import * as normalize from '../../src/utils/normalizeJob.js';
+import { richTextToPlain, sanitizeRichText } from '../../src/utils/richText.js';
+
+test('J-03: notesToHtml turns plain notes into editor HTML that reads back as the same text', () => {
+  const { notesToHtml } = normalize;
+  assert.equal(typeof notesToHtml, 'function');
+  const plain = 'Round 1: recruiter call\nSalary <tbd> & equity';
+  const html = notesToHtml(plain);
+  assert.equal(html, 'Round 1: recruiter call<br>Salary &lt;tbd&gt; &amp; equity');
+  assert.equal(richTextToPlain(html), plain);
+  assert.equal(richTextToPlain(sanitizeRichText(html)), plain, 'what the Notes tab loads and saves keeps it too');
+  assert.equal(notesToHtml('a\r\nb'), 'a<br>b');
+});
+
+test('J-03: notes that are HTML already, or blank, are left as they are', () => {
+  const { notesToHtml } = normalize;
+  for (const html of ['<p>Hi</p>', '<p>a <strong>b</strong></p>', 'line<br>next', '<div>chrome line</div>', '<ul><li>x</li></ul>', 'Tom &amp; Jerry']) {
+    assert.equal(notesToHtml(html), html, html);
+  }
+  for (const v of ['', '   ', null, undefined]) assert.equal(notesToHtml(v), v ?? '', String(v));
+});
+
+test('J-03: a saved or imported job with plain notes gets them as HTML — once, losing nothing', () => {
+  const j = job({ notes: 'Referred by Ana\nL5 <level?>' });
+  const done = completeJob(j);
+  assert.equal(done.notes, 'Referred by Ana<br>L5 &lt;level?&gt;');
+  assert.equal(richTextToPlain(done.notes), 'Referred by Ana\nL5 <level?>');
+  assert.equal(completeJob(done), done, 'converted once: HTML is not converted again');
+  assert.equal(readJob(j).lost, false, 'not a loss');
+  const html = job();
+  assert.equal(completeJob(html), html, 'HTML notes: the same object');
+});
