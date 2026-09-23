@@ -5,6 +5,7 @@ import { DATA_VERSION } from './dataVersion.js';
 import { isText, storedText } from './storedText.js';
 import { parseMonthYear } from './dates.js';
 import { parseRichText, plainTextToHtml } from './richText.js';
+import { templateId } from '../constants/templates.js';
 
 /**
  * Checks if a parsed JSON object matches the JSON Resume standard (jsonresume.org).
@@ -235,13 +236,27 @@ export function jsonResumeToCpwtResume(jsonResume, customId) {
     });
   }
 
+  /**
+   * The template the file names, as the app writes it: the export puts it in the schema's `meta`
+   * (TUI-4), and templateId reads it however another tool cased or spaced it (" Modern " is Modern,
+   * R5-5). Classic when the file names none — every file written by hand or by another tool — or one
+   * the app does not offer, which is what every import landed on before, including the exports of
+   * Modern, Sidebar, Executive and Minimal résumés, silently.
+   *
+   * Its starter settings, not always Classic's: a Modern file would otherwise open with Classic's
+   * ruled headings under Modern's banner. That is the whole of what the template brings here —
+   * JSON Resume carries no design settings of its own, so the rest of an exported résumé's design
+   * (its colours, fonts and spacing) is still not in the file to restore.
+   */
+  const template = templateId(jsonResume?.meta?.template);
+
   return {
     id,
     name: personal.name ? `${personal.name} Resume` : 'Imported Resume',
     updatedAt: Date.now(),
     dataVersion: DATA_VERSION, // built now, from a file with no app history: no migration applies
-    template: 'classic',
-    settings: getStarterSettings('classic'),
+    template,
+    settings: getStarterSettings(template),
     personal,
     sections,
     coverLetter: { ...BASE_COVER_LETTER },
@@ -392,5 +407,11 @@ export function cpwtResumeToJsonResume(resume) {
     projects,
     certificates,
     awards,
+    // The template the résumé prints with, in `meta` — the schema's own home for "any other tooling
+    // configuration", so the file stays valid JSON Resume and every other tool ignores it. The import
+    // reads it back (TUI-4): until it was written, an exported Modern, Sidebar, Executive or Minimal
+    // résumé came back Classic. templateId: what the PDF actually drew, so a résumé holding an id the
+    // app no longer offers exports as the Classic it was printing as, not as that dead id.
+    meta: { template: templateId(resume.template) },
   };
 }

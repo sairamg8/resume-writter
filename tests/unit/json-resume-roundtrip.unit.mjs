@@ -7,6 +7,8 @@ import assert from 'node:assert/strict';
 import { jsonResumeToCpwtResume, cpwtResumeToJsonResume } from '../../src/utils/jsonResume.js';
 import { parseRichText } from '../../src/utils/richText.js';
 import { formatDate } from '../../src/utils/dates.js';
+import { TEMPLATE_IDS } from '../../src/constants/templates.js';
+import { getStarterSettings } from '../../src/utils/starterTemplates.js';
 
 /** The text each block of rich text prints, list items marked with their bullet. */
 const printed = (html) => parseRichText(html).map((b) => `${b.marker ? `${b.marker} ` : ''}${b.runs.map((r) => r.text).join('')}`);
@@ -15,8 +17,8 @@ const anyBold = (html) => parseRichText(html).some((b) => b.runs.some((r) => r.b
 
 const MMM = { dateFormat: 'MMM YYYY' };
 
-function resumeWith(sections, personal = {}) {
-  return { personal: { name: 'Ada Lovelace', ...personal }, template: 'classic', settings: {}, sections };
+function resumeWith(sections, personal = {}, template = 'classic') {
+  return { personal: { name: 'Ada Lovelace', ...personal }, template, settings: {}, sections };
 }
 
 test('export: dates are ISO 8601 (YYYY-MM, or YYYY for a year alone) — what JSON Resume requires', () => {
@@ -135,4 +137,42 @@ test('import: text prints as typed — "<", ">" and "&" are text, never markup',
   assert.deepEqual(printed(r.sections.find((s) => s.type === 'education').items[0].description), ['Relevant courses: C++ & <Algorithms>']);
   assert.deepEqual(printed(r.sections.find((s) => s.type === 'projects').items[0].description), ['Uses <canvas> & WebGL', '• a < b']);
   assert.deepEqual(printed(r.sections.find((s) => s.type === 'awards').items[0].description), ['Top 1% <of> 500']);
+});
+
+// The template a résumé prints with (TUI-4). JSON Resume has no field for it, so the export writes
+// it into the schema's `meta` — where the standard puts "any other tooling configuration" — and the
+// import reads it back. The import used to hardcode Classic, so exporting a Modern, Sidebar,
+// Executive or Minimal résumé and importing the file handed back a Classic one, with its heading
+// style reset to Classic's, and said nothing. Every id, not a hand-written list: a template added to
+// TEMPLATE_IDS without a home in `meta` fails here.
+
+test('round trip: every template comes back as itself — the file names it in the schema\'s meta (TUI-4)', () => {
+  for (const id of TEMPLATE_IDS) {
+    const resume = resumeWith([{ type: 'experience', items: [{ company: 'Acme', role: 'Eng', startDate: 'Jan 2020' }] }], {}, id);
+    const file = JSON.parse(JSON.stringify(cpwtResumeToJsonResume(resume)));
+    assert.equal(file.meta?.template, id, `${id}: the export names it`);
+    assert.equal(jsonResumeToCpwtResume(file).template, id, `${id}: the import reads it back`);
+  }
+});
+
+/** The résumé a JSON Resume file carrying this `meta` is imported as (null: a file with no `meta` at all). */
+const importedWith = (meta) => jsonResumeToCpwtResume({ basics: { name: 'X' }, ...(meta ? { meta } : {}) });
+
+test('import: a file naming no template, or one the app does not offer, is Classic exactly as before (TUI-4)', () => {
+  assert.equal(importedWith(null).template, 'classic', 'no meta: every file another tool wrote');
+  assert.equal(importedWith({}).template, 'classic', 'meta, but nothing about a template');
+  assert.equal(importedWith({ template: '' }).template, 'classic');
+  assert.equal(importedWith({ template: 'dark' }).template, 'classic', 'a template the app does not offer');
+  assert.equal(importedWith({ template: 42 }).template, 'classic', 'not text');
+  // Cased and spaced as another tool wrote it: templateId() reads it, here as everywhere (R5-5).
+  assert.equal(importedWith({ template: ' Modern ' }).template, 'modern');
+  assert.equal(importedWith({ template: 'SIDEBAR' }).template, 'sidebar');
+});
+
+test('import: the design settings are the starter settings of the template the file resolved to (TUI-4)', () => {
+  assert.deepEqual(importedWith(null).settings, getStarterSettings('classic'), 'unchanged: Classic\'s, as every import got');
+  assert.deepEqual(importedWith({ template: 'dark' }).settings, getStarterSettings('classic'));
+  // Modern's heading style is 'line', not Classic's 'ruled': a Modern import no longer opens with
+  // Classic's headings under Modern's banner.
+  assert.deepEqual(importedWith({ template: ' Modern ' }).settings, getStarterSettings('modern'));
 });
