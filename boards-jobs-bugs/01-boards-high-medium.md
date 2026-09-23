@@ -7,7 +7,7 @@ title: Boards — verified bugs, High and Medium (B-01…B-13)
 > Part of [README.md](README.md). Status: 🔴 open · ⏸ fixed on `boards-jobs-ui` (not merged) · ✅ merged to master · ✖ not a bug.
 > Set the row (status + commit + test) in the SAME commit as the fix. Found by WF-1 `wf_a523cc8e-2ca` at `8409472`, 2026-09-23.
 
-### B-01 · High · data-loss · 🔴 Open
+### B-01 · High · data-loss · ⏸ Fixed
 **After you leave the board pages, the store stops listening to other tabs. When you come back it shows a stale list, and the next edit overwrites boards another tab saved**
 - **Where:** `src/hooks/useBoardStore.js` : 101-120 (subscribe), 79-82 (snapshot), 127-133 (setBoards)
 - **Repro:** 1) Tab A: open /#/boards, then click the back arrow to the dashboard. 2) Tab B: open /#/boards, click New board and add a card to it. 3) Tab A: click Boards. B's board is missing. 4) Tab A: rename any board. 5) B's board is removed from storage and from tab B. Reloading either tab does not bring it back, and there is no backup or notice.
@@ -15,7 +15,8 @@ title: Boards — verified bugs, High and Medium (B-01…B-13)
 - **Fix hint:** In subscribe(), when wasEmpty && initialized, call takeOtherTabsList() (or reload current from load()) before re-adding the listener. Alternatively, add the storage listener once in init() and never remove it. useJobStore.js has the same subscribe/init shape, so fix it the same way.
 - **Verified (WF-1):** Code read at useBoardStore.js:101-120: init() runs only while !initialized. The 'storage' listener is removed when listeners.size hits 0, but `current` and `initialized` stay as they are, so a later subscribe re-adds the listener without re-reading storage. grep shows only Boards.jsx and Board.jsx import useBoardStore, so any visit to the dashboard, editor or jobs leaves the store deaf. Ran scratchpad/audit/verify-boards/v1-stale.mjs: two module instances (two tabs) share one fake localStorage that fires storage events to the other tab's window, with react stubbed. Printed: "storage after B adds a board : ['Product launch','Made in B']", "tab A shows on return : ['Product launch']", "storage after one edit in A : ['Renamed in A']", "tab B now shows : ['Renamed in A']".
 - **Fail-first test:** tests/unit/board-store.unit.mjs: register a react stub with node:module register, then import useBoardStore.js twice with different ?tab queries sharing one fake localStorage that dispatches storage events to the other tab's window stub. A subscribes and unsubscribes, B calls addBoard, A subscribes again. Assert A.snapshot().boards contains B's board. Then call A.updateBoard and assert the stored JSON still holds B's board. Fails today.
-- **Owner:** BOARDS-MODEL · **Fix commit:** — · **Test:** —
+- **Now:** When the first board page subscribes again after none was open, the store compares storage with the value it last wrote or took, and when another tab saved in between it takes that list through the same path as a 'storage' event (keepUnsaved keeps anything storage refused here). Unchanged storage keeps the very same snapshot, so a StrictMode remount costs no re-render. The v2 store keeps this. useJobStore.js has the same shape; it belongs to JOBS-FIX and was not touched here. Fail-first: the row's two-tab test printed `tab A shows ["Product launch"]` at HEAD.
+- **Owner:** BOARDS-MODEL · **Fix commit:** this commit (`fix(boards): a tab coming back to the boards takes what other tabs saved (B-01)`) · **Test:** tests/unit/board-store.unit.mjs
 
 ### B-02 · Medium · crash · ⏸ Fixed · links **R2-041**
 **A saved list whose cards array is missing or null passes normalisation and crashes /boards and /boards/:id on every load, with no backup or recovery notice**

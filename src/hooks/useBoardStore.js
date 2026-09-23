@@ -38,7 +38,9 @@ function load() {
  */
 function persist(boards) {
   try {
-    setItemWithRoom(KEY, JSON.stringify({ boards, dataVersion: BOARD_VERSION }));
+    const raw = JSON.stringify({ boards, dataVersion: BOARD_VERSION });
+    setItemWithRoom(KEY, raw);
+    lastRaw = raw;
     return null;
   } catch (e) {
     return e;
@@ -50,6 +52,8 @@ const listeners = new Set();
 /** The list this tab last knew storage to hold: what it shows, but for what storage refused. */
 let stored = null;
 let initialized = false;
+/** The stored value this tab last wrote or took: a tab coming back compares it with storage (B-01). */
+let lastRaw = null;
 
 /** Pure read of the stored boards (writing nothing, no listeners) so getSnapshot is side-effect free. */
 function peek() {
@@ -90,12 +94,18 @@ function onStorage(e) {
  * what storage refused here (keepUnsaved), and write that again.
  */
 function takeOtherTabsList() {
+  lastRaw = readRaw();
   const incoming = load().boards;
   const boards = keepUnsaved(incoming, snapshot().boards, stored);
   stored = incoming;
   const persistError = boards === incoming ? null : persist(boards);
   if (!persistError) stored = boards;
   update({ boards, persistError });
+}
+
+/** The value storage holds for the board list now; null when there is none or it cannot be read. */
+function readRaw() {
+  try { return localStorage.getItem(KEY); } catch { return null; }
 }
 
 function subscribe(listener) {
@@ -105,6 +115,12 @@ function subscribe(listener) {
   if (!initialized) {
     init();
     listener();
+  } else if (wasEmpty) {
+    // No board page was open, so no 'storage' event reached this tab: another tab may have saved
+    // since. Take its list now — the next edit here used to write the stale one over it (B-01).
+    // Nothing there (or unreadable) is not another tab's list: the storage event ignores it too.
+    const raw = readRaw();
+    if (raw && raw !== lastRaw) takeOtherTabsList();
   }
 
   if (wasEmpty && typeof window !== 'undefined') {
@@ -260,6 +276,7 @@ function dismissRecovery() {
 export function _resetBoardStoreForTest() {
   current = null;
   stored = null;
+  lastRaw = null;
   initialized = false;
   listeners.clear();
 }

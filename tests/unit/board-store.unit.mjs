@@ -74,6 +74,38 @@ beforeEach(() => {
   globalThis.localStorage = storage;
 });
 
+test('B-01: a tab that left the board pages re-reads storage when it comes back, and its next edit keeps the other tab\'s board', async () => {
+  const A = await openTab();
+  const B = await openTab();
+  const leaveA = A.run((m) => m.subscribe(() => {})); // A opens /boards …
+  A.run(() => leaveA()); // … and goes to the dashboard: no board page is subscribed
+  assert.equal(A.win.listeners.size, 0);
+
+  B.run((m) => m.subscribe(() => {}));
+  B.run(() => B.store().addBoard({ title: 'Made in B' }));
+  assert.ok(savedBoards().some((b) => b.title === 'Made in B'));
+
+  A.run((m) => m.subscribe(() => {})); // A comes back to /boards
+  const titles = A.run((m) => m.snapshot().boards.map((b) => b.title));
+  assert.ok(titles.includes('Made in B'), `tab A shows ${JSON.stringify(titles)}`);
+
+  const first = A.run((m) => m.snapshot().boards[0]);
+  A.run(() => A.store().updateBoard(first.id, { title: 'Renamed in A' }));
+  const saved = savedBoards().map((b) => b.title);
+  assert.ok(saved.includes('Made in B'), `storage after A's edit: ${JSON.stringify(saved)}`);
+  assert.ok(saved.includes('Renamed in A'));
+  assert.ok(B.run((m) => m.snapshot().boards.some((b) => b.title === 'Made in B')), 'tab B keeps its board');
+});
+
+test('B-01: coming back when no other tab saved keeps the very same list (no re-read, no re-render)', async () => {
+  const A = await openTab();
+  const leave = A.run((m) => m.subscribe(() => {}));
+  const before = A.run((m) => m.snapshot());
+  A.run(() => leave()); // React StrictMode unmounts and mounts again, the same way
+  A.run((m) => m.subscribe(() => {}));
+  assert.equal(A.run((m) => m.snapshot()), before);
+});
+
 test('B-15: moving one of two cards that were saved with the same id leaves the other in place', async () => {
   const card = (id, title) => ({ id, title, checklist: [] });
   const board = {
