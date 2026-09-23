@@ -2,8 +2,8 @@
 
 > Location: `/mnt/Storage/Projects/flowcv/bug-status.md`
 > Updated: 2026-09-23 · every row **verified independently at `d495cb2`** (see Verification pass) ·
-> `origin/master` (deployed) = `968d1dd` · **nothing is waiting to be pushed**
-> **Open: 170** (0 here + 170 from the full audit in [bug-status-r2/](bug-status-r2/README.md)) | Fixed, not pushed: 0 | **Closed: 82** (80 fixed + 2 ✖ without a code fix)
+> `origin/master` (deployed) = `cc919de` · **nothing is waiting to be pushed**
+> **Open: 168** (0 here + 168 from the full audit in [bug-status-r2/](bug-status-r2/README.md)) | Fixed, not pushed: 0 | **Closed: 84** (81 fixed + 3 ✖ without a code fix)
 
 ## Summary
 
@@ -13,9 +13,9 @@
 | ATS parsing defects (`ATS-`) | 7 (ATS-7 was TUI-6) | 5 | 0 | 2 | 0 |
 | Templates UI audit, 2026-09-23 (`TUI-`) | 6 (+ TUI-6, filed as ATS-7) | 6 | 0 | 0 | 0 |
 | Prompt tasks, 2026-09-14 → 09-21 | 33 | 33 | 0 | 0 | 0 |
-| Full audit, 2026-09-23 — defects (`R2-001`…`R2-134`, [bug-status-r2/](bug-status-r2/README.md)) | 134 | 1 | 0 | 0 | **133** |
+| Full audit, 2026-09-23 — defects (`R2-001`…`R2-134`, [bug-status-r2/](bug-status-r2/README.md)) | 134 | 2 | 0 | 1 | **131** |
 | Full audit, 2026-09-23 — features and test gaps (`R2-135`…`R2-171`) | 37 | 0 | 0 | 0 | **37** |
-| **Total** | **252** | **80** | **0** | **2** | **170** |
+| **Total** | **252** | **81** | **0** | **3** | **168** |
 
 - **Status:** ✅ fixed and pushed (on `origin/master`, so deployed) · ⏸ fixed and committed, not pushed · 🔴 open ·
   ✖ closed without a code fix (won't fix: a known limit; not a bug; a duplicate) — the proof is in the row, and it counts as closed.
@@ -32,9 +32,9 @@
 2. ATS-4 is ✅ (`58f4f96`), ATS-6 is ✅ (`32a5972`; PENDING-ALL D3 closed: Heading styles, look unchanged). ATS-1/2/5 are ✅ (`417db1e`, one entry-header layout). TUI-6 is filed as ATS-7; ATS-3 and ATS-7 are ✖ known limits (`c950ae7`, `a67caa3`). The ATS list is closed.
 3. The TUI list is closed (TUI-6 filed as ATS-7).
 
-✅ **Deployed:** `origin/master` = `968d1dd` (R2-001: the ATS text prints everything the PDF prints, `8409472` + the gate's repair `968d1dd`). Gate on that exact tree, 2026-09-23 22:37:
-**1832 tests, 1830 pass, 0 fail, 2 todo** (the two accepted limits' `todo`s, ATS-3 and ATS-7), a green production build, and a
-private-data scan of all 73 bundle files with no hits. Per the owner (2026-09-23, *"keep pushing after
+✅ **Deployed:** `origin/master` = `cc919de` (R2-002: JSON Resume keeps every section both ways, `784c375` + the gate's repair `cc919de`; R2-003 ✖ duplicate of R2-001; the tree also holds the other lane's Timeline template, `cbe5edf`, `d70c145`). Gate on that exact tree, 2026-09-23 23:15:
+**1969 tests, 1965 pass, 0 fail, 4 todo** (the accepted limits' `todo`s), a green production build, and a
+private-data scan of all 75 bundle files with no hits. Per the owner (2026-09-23, *"keep pushing after
 each bug"*) every finished bug lands → gates → pushes, unasked.
 
 🔴 **Read a gate's output, do not skim it.** Earlier the same day it printed `private scan: 0 files,
