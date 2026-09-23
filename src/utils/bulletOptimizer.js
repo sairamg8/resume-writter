@@ -101,10 +101,14 @@ export function analyzeBullet(text = '') {
   const metricRegex = /\b(\d+(?:\.\d+)?%|\$\d+(?:,\d{3})*(?:\.\d+)?[KkMmBb]?|\d+\+?|\b\d+\s*(?:hours|days|weeks|months|years|ms|seconds|users|clients|teams|projects))\b/i;
   const hasMetric = metricRegex.test(clean);
 
-  // Check first word for strong action verb
-  const firstWord = clean.split(/\s+/)[0].replace(/[^a-zA-Z]/g, '');
-  const allVerbs = Object.values(ACTION_VERBS_BY_CATEGORY).flat().map(v => v.toLowerCase());
-  const hasActionVerb = allVerbs.includes(firstWord.toLowerCase());
+  // Check first word for strong action verb. Only punctuation at the edges is trimmed ('Led,',
+  // '•Engineered'), and both sides of the lookup go through the same key: the first word used to
+  // lose every non-letter while the list kept its hyphens, so 'Co-authored' — a verb this module
+  // offers — could never match and the modal said "Verb Missing" right after inserting it (AUD-32).
+  const firstWord = clean.split(/\s+/)[0].replace(/^[^a-zA-Z]+|[^a-zA-Z]+$/g, '');
+  const verbKey = (w) => w.toLowerCase().replace(/[^a-z]/g, '');
+  const allVerbs = new Set(Object.values(ACTION_VERBS_BY_CATEGORY).flat().map(verbKey));
+  const hasActionVerb = firstWord !== '' && allVerbs.has(verbKey(firstWord));
 
   // Check weak phrases. String#match with a copy of the pattern: `wp.match` is global, and
   // RegExp#test on a global pattern starts where its last match ended (lastIndex), so the same text

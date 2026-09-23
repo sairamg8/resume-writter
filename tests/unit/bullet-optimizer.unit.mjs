@@ -64,3 +64,19 @@ test('analyzeBullet: names the words it found weak, as written', () => {
   assert.deepEqual(analyzeBullet('Was responsible for the payments team').weakPhrases.map((w) => w.phrase), ['Was responsible for']);
   assert.deepEqual(analyzeBullet('Helped with onboarding and worked on the API').weakPhrases.map((w) => w.phrase), ['worked on', 'Helped with']);
 });
+
+// AUD-32: the bullet's first word had every non-letter stripped ('Co-authored' → 'coauthored')
+// while the verb list kept its hyphens, so the 'Co-authored' chip the optimizer itself offers was
+// read as "Verb Missing" the moment it was inserted. Both sides are now normalised the same way.
+test('analyzeBullet: every verb the optimizer offers counts as an action verb, hyphenated ones too', () => {
+  const coAuthored = analyzeBullet('Co-authored the API design spec adopted by 12 teams across the org');
+  assert.equal(coAuthored.hasActionVerb, true);
+  assert.equal(coAuthored.score, 100);
+  const rejected = Object.values(ACTION_VERBS_BY_CATEGORY).flat()
+    .filter((verb) => !analyzeBullet(`${verb} the quarterly roadmap for 5 teams`).hasActionVerb);
+  assert.deepEqual(rejected, []);
+  // Punctuation at the edges of the first word still does not stop the match.
+  assert.equal(analyzeBullet('"Co-authored," the quarterly roadmap for 5 teams').hasActionVerb, true);
+  assert.equal(analyzeBullet('•Engineered the quarterly roadmap for 5 teams').hasActionVerb, true);
+  assert.equal(analyzeBullet('Was responsible for the quarterly roadmap for 5 teams').hasActionVerb, false);
+});
