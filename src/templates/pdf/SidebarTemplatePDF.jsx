@@ -48,8 +48,9 @@ export function SidebarTemplatePDF({ data }) {
 
   // ATS-safe layout: a two-column page is read by y-position, so geometry-based extractors
   // (Poppler, and most applicant-tracking pipelines) interleave the dark column with the main one.
-  // react-pdf v4 emits no tagged structure tree to carry a separate reading order, so the only fix
-  // is a single linear column — the proven, parse-clean Classic layout, in the résumé's own colours
+  // Poppler orders text by where it sits and nothing else — the drawing order and a tagged PDF's
+  // structure tree are both ignored (ATS-3, measured) — so the only fix is geometric: a single linear
+  // column — the proven, parse-clean Classic layout, in the résumé's own colours
   // (nameColor/jobTitleColor resolve dark-on-white in this mode, see templateSettings.js).
   if (settings.sidebarSingleColumn) {
     return <ClassicTemplatePDF data={data} />;

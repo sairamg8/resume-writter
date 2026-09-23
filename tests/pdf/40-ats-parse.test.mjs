@@ -11,9 +11,12 @@
 // narrow-space font (Lato, Source Sans 3, Literata — prepareFonts widens its space) and a line react-pdf
 // closes up to fit its box, or tracks negatively (ATS-4 — the textkit patch floors every word gap).
 //
-// Known limits are `todo`, not silent: they print in every run until they are fixed or accepted.
+// Known limits are `todo`, not silent: they print in every run, accepted ones too.
 //   • The Sidebar template's styled two columns interleave under Poppler's reading-order and -layout
-//     modes; its Layout → "Single · ATS-safe" toggle collapses it to one linear column that parses whole.
+//     modes (ATS-3, accepted): Poppler orders text by where it sits on the page and nothing else — not
+//     the drawing order, not a tagged PDF's structure tree — and -layout sorts every line of a page by
+//     height, so two columns side by side always interleave. Its Layout → "Single · ATS-safe" toggle
+//     collapses it to one linear column that parses whole.
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { setup, teardown, resume, section, experience, render, loadModule, TEMPLATES } from './harness.mjs';
@@ -163,7 +166,7 @@ describe('closed-up lines read whole under Poppler -raw (ATS-4)', () => {
 });
 
 describe('known limits (todo: reported until fixed or accepted)', () => {
-  it('the styled two-column Sidebar reads whole under Poppler reading order and -layout', { todo: 'two columns: Greenhouse lists columned layouts as a parsing risk; Poppler interleaves them. The ATS-safe fix is the single-column toggle (tested above), not tagged PDF, which react-pdf v4 cannot emit' }, async () => {
+  it('the styled two-column Sidebar reads whole under Poppler reading order and -layout', { todo: 'ATS-3, accepted: two columns side by side. Poppler orders text by position alone (it ignores tags, and redrawing column by column changes nothing) and -layout sorts every line by height, so the columns interleave. Greenhouse lists columned layouts as a parsing risk; the fix is the Single · ATS-safe toggle (tested above)' }, async () => {
     const { DEMO_RESUMES } = await loadModule('/tests/fixtures/sampleResumes.js');
     const r = DEMO_RESUMES.find((x) => x.template === 'sidebar');
     const found = (await readers(await render(r))).filter(([n]) => GOOD(n) && n !== 'pdf.js').flatMap(([n, text]) => problems(n, score(truthBlocks(r), text)));
