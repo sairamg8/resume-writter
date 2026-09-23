@@ -64,7 +64,7 @@ function parseCsv(text) {
   out.at(-1).push(cell);
   return out;
 }
-const csvRows = (csv) => parseCsv(csv.replace(/^﻿/, ''));
+const csvRows = (csv) => parseCsv(csv.replace(/^\uFEFF/, ''));
 const cellOf = (csv, column, row = 1) => {
   const rowsOf = csvRows(csv);
   return rowsOf[row][rowsOf[0].indexOf(column)];

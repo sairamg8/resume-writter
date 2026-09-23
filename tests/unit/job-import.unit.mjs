@@ -90,7 +90,7 @@ test('J-04: importMessage — counts in a status message; nothing found is an er
   assert.deepEqual(importMessage({ added: 0, updated: 0, skipped: 4, lossy: false }),
     { kind: 'success', text: 'Nothing new: the 4 job applications in that file are already in the tracker.' });
   assert.deepEqual(importMessage({ added: 1, updated: 0, skipped: 0, lossy: true }),
-    { kind: 'warning', text: 'Imported 1 job application. What could not be read in the file was left out.' });
+    { kind: 'warning', text: 'Imported 1 job application; what could not be read in the file was left out.' });
   assert.deepEqual(importMessage({ added: 0, updated: 2, skipped: 1, lossy: false }),
     { kind: 'success', text: 'Updated 2 job applications, skipped 1 already in the tracker.' });
   assert.equal(importMessage({ added: 0, updated: 0, skipped: 1 }).text, 'Nothing new: the job application in that file is already in the tracker.');

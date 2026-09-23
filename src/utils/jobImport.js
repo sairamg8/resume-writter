@@ -99,8 +99,9 @@ export function mergeImport(current, incoming, now = Date.now()) {
 const plural = (n) => `${n} job application${n === 1 ? '' : 's'}`;
 
 /**
- * What the tracker says after an import, as `{ kind, text }` — kind 'success', 'warning' (some of
- * the file could not be read) or 'error' (nothing in it). A successful import said nothing (J-04).
+ * What the tracker says after an import, as `{ kind, text }` — kind 'success' (a status),
+ * 'warning' (some of the file could not be read: an alert) or 'error' (nothing in it, an alert). A
+ * successful import said nothing (J-04).
  */
 export function importMessage({ added = 0, updated = 0, skipped = 0, lossy = false }) {
   if (!added && !updated && !skipped) return { kind: 'error', text: 'No job applications found in that file.' };
@@ -116,6 +117,7 @@ export function importMessage({ added = 0, updated = 0, skipped = 0, lossy = fal
     if (skipped) parts.push(`skipped ${skipped} already in the tracker`);
     text = `${parts.join(', ')}.`;
   }
-  if (lossy) return { kind: 'warning', text: `${text} What could not be read in the file was left out.` };
+  // The wording the tracker has always used for a partial import (the Cypress regressions check it).
+  if (lossy) return { kind: 'warning', text: `${text.slice(0, -1)}; what could not be read in the file was left out.` };
   return { kind: 'success', text };
 }
