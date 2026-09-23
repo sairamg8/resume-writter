@@ -270,6 +270,7 @@ const xmlText = (s) => s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&q
 export function readDocx(bytes) {
   const buffer = Buffer.from(bytes);
   const xml = unzipEntry(buffer, 'word/document.xml') || '';
+  const stylesXml = unzipEntry(buffer, 'word/styles.xml') || '';
   const rels = unzipEntry(buffer, 'word/_rels/document.xml.rels') || '';
   const targets = {};
   for (const [, attrs] of rels.matchAll(/<Relationship\s([^>]*)\/?>/g)) {
@@ -283,7 +284,7 @@ export function readDocx(bytes) {
       .map((m) => (m[1] !== undefined ? xmlText(m[1]) : (m[2] === 'br' ? '\n' : '\t'))).join(''),
   })).filter((p) => p.text);
   const links = [...xml.matchAll(/<w:hyperlink [^>]*r:id="([^"]+)"/g)].map((m) => targets[m[1]]);
-  return { paragraphs, texts: paragraphs.map((p) => p.text), links, xml };
+  return { paragraphs, texts: paragraphs.map((p) => p.text), links, xml, stylesXml };
 }
 
 export async function renderDocx(r) {

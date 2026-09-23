@@ -7,14 +7,23 @@ import { resolveSection } from '@/templates/pdf/shared/templateSectionDefaults';
 import { downloadBlob } from '@/utils/download';
 import { PAGE_SIZES, pageSizeOf } from '@/constants/pageSize';
 import { templateId } from '@/constants/templates';
+import { FONTS } from '@/utils/fonts';
+
+export function resolveWordFont(settings = {}) {
+  if (settings?.customFont?.trim()) return settings.customFont.trim();
+  const fontObj = FONTS.find((f) => f.id === settings?.font);
+  return fontObj?.label || fontObj?.name || 'Noto Sans';
+}
 
 /** A one-section document on the résumé's paper (A4 or US Letter, PAR-01), WORD_MARGIN_IN margins on either. */
 function buildDocument(children, settings) {
+  const font = resolveWordFont(settings);
+  const baseSize = Math.round((settings?.fontSizeBase ?? 11) * 2);
   return new Document({
     styles: {
       default: {
         document: {
-          run: { font: 'Calibri', size: 20 },
+          run: { font, size: baseSize },
           paragraph: { spacing: { after: 40 } },
         },
       },

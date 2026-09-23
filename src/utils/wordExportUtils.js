@@ -66,9 +66,13 @@ export const centredIf = (centered) => (centered ? { alignment: AlignmentType.CE
  * Section Headings), the accent over an accent underline.
  */
 export function sectionHeading(title, accentHex, centered = false, heading = null) {
-  const { color, ...frame } = heading || { color: accentHex, border: { bottom: { style: BorderStyle.SINGLE, size: 4, color: accentHex, space: 4 } } };
+  const base = heading?.color
+    ? heading
+    : { color: accentHex, border: { bottom: { style: BorderStyle.SINGLE, size: 4, color: accentHex, space: 4 } }, ...heading };
+  const { color, size, ...frame } = base;
+  const titleSize = size ?? 24;
   return new Paragraph({
-    children: [new TextRun({ text: String(title || ''), bold: true, size: 20, color })],
+    children: [new TextRun({ text: String(title || ''), bold: true, size: titleSize, color })],
     ...frame,
     spacing: { before: 180, after: 60 },
     keepNext: true,
@@ -152,9 +156,9 @@ export function descriptionToParagraphs(html, base = { size: 20, color: '374151'
  * the PDF's centred entries print it. Empty parts (null, false, '') are left out, so a line with
  * nothing but a date prints the date alone.
  */
-export function dateRightPara(leftChildren, rightText, accentHex, centered = false) {
+export function dateRightPara(leftChildren, rightText, colorHex, centered = false, size = 20) {
   const left = leftChildren.filter(Boolean);
-  const date = (extra) => (rightText ? [new TextRun({ text: String(rightText), color: accentHex, size: 20, ...extra })] : []);
+  const date = (extra) => (rightText ? [new TextRun({ text: String(rightText), color: colorHex, size, ...extra })] : []);
   if (centered) {
     return new Paragraph({ children: [...left, ...date(left.length ? { break: 1 } : {})], keepNext: true, ...centredIf(true) });
   }

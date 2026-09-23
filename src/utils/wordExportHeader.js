@@ -51,11 +51,13 @@ export function buildPersonalSection(personal = {}, settings = {}, template = 'c
   const hidden = new Set(personal.hiddenFields || []);
   const centered = hasHeaderControls(template, settings) && settings?.headerAlign === 'center';
   const s = resolveTemplateSettings(settings, templateId(template));
+  const baseSize = s.fontSizeBase ?? 11;
+  const nameSize = Math.round((baseSize + (s.fontSizeNameDelta ?? 8)) * 2);
   const titleSize = Math.round(headerTitleSize(s) * 2);
   const paragraphs = [];
 
   const ink = headerInk(settings, template);
-  const name = new TextRun({ text: personal.name || 'Your Name', bold: true, size: 40, color: ink.name });
+  const name = new TextRun({ text: personal.name || 'Your Name', bold: true, size: nameSize, color: ink.name });
   const title = personal.title ? new TextRun({ text: personal.title, size: titleSize, color: ink.title }) : null;
   // Name & Title Layout "Inline" (ONB-3-NB1): one line, as the PDF's nameBlock and the letter's letterhead print it.
   const inline = title && inlineLayout(templateId(template), s);
@@ -90,7 +92,7 @@ export function buildPersonalSection(personal = {}, settings = {}, template = 'c
     // The Sidebar prints its summary under an "About Me" section title at the top of its main column (FIDB-51-VF3-NB2-NB1-NB1).
     if (templateId(template) === 'sidebar') paragraphs.push(buildSectionTitle('About Me', settings, template));
     const { run, frame } = summaryLook(s, template);
-    paragraphs.push(...descriptionToParagraphs(personal.summary, { size: 20, ...run }, centered ? 'center' : null, frame));
+    paragraphs.push(...descriptionToParagraphs(personal.summary, { size: Math.round(baseSize * 2), ...run }, centered ? 'center' : null, frame));
   }
 
   paragraphs.push(headerEnd(s, template));
