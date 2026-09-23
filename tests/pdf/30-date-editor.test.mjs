@@ -89,7 +89,8 @@ describe('the Career History timeline', () => {
   it('measures the picker\'s dates: "Jan 2020 – Mar 2023" is 3yr 2mo', async () => {
     const text = await timeline([PICKED]);
     assert.match(text, /Initech Lead 3yr 2mo Jan 2020 – Mar 2023/);
-    assert.ok(text.includes(' total · 1 companies'), `the career total: ${text}`);
+    // AUD-29: the total ends where the job does, and one company is "1 company".
+    assert.ok(text.includes('3 yrs 2 mos total · 1 company'), `the career total: ${text}`);
   });
 
   it('a year imported as a number prints and measures like one typed', async () => {

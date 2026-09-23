@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { Building2 } from 'lucide-react';
-import { dateRange, parseMonthYear, presentLabel } from '@/utils/dates';
+import { dateRange, presentLabel } from '@/utils/dates';
+import { careerItems, careerMonths, companiesLabel, companyCount, entryLabel, entrySpan, totalLabel } from '@/utils/careerHistory';
 
 const AVATAR_COLORS = [
   { bg: '#eef2ff', text: '#4338ca' },
@@ -11,53 +12,17 @@ const AVATAR_COLORS = [
   { bg: '#fef9c3', text: '#92400e' },
 ];
 
-/**
- * A stored date as the month it starts (a year alone: its January), or null: every shape the PDF
- * reads (src/utils/dates.js). It read only "01/2020" — the picker's "Jan 2020" got no duration —
- * and threw on a year imported as a number, which blanked the dashboard.
- */
-function parseDate(value) {
-  const d = parseMonthYear(value);
-  return d ? new Date(d.y, (d.m || 1) - 1) : null;
-}
-
-function durationLabel(start, end) {
-  const s = parseDate(start);
-  const e = end ? parseDate(end) : new Date();
-  if (!s || !e) return '';
-  let months = (e.getFullYear() - s.getFullYear()) * 12 + (e.getMonth() - s.getMonth());
-  if (months <= 0) return '';
-  const yrs = Math.floor(months / 12);
-  const mos = months % 12;
-  if (yrs === 0) return `${mos}mo`;
-  if (mos === 0) return `${yrs}yr`;
-  return `${yrs}yr ${mos}mo`;
-}
-
-function totalCareer(items) {
-  if (!items.length) return '';
-  const oldest = items.reduce((min, item) => {
-    const d = parseDate(item.startDate);
-    return d && (!min || d < min) ? d : min;
-  }, null);
-  if (!oldest) return '';
-  const now = new Date();
-  const months = (now.getFullYear() - oldest.getFullYear()) * 12 + (now.getMonth() - oldest.getMonth());
-  const yrs = Math.floor(months / 12);
-  const mos = months % 12;
-  if (yrs === 0) return `${mos} months`;
-  if (mos === 0) return `${yrs} years`;
-  return `${yrs} yrs ${mos} mos`;
-}
-
 export function CareerHistoryPanel({ resumes, activeId, showJobTrackerLink = true }) {
   const navigate = useNavigate();
   const active = resumes?.find(r => r.id === activeId) || resumes?.[0];
-  const expSection = active?.sections?.find(s => s.type === 'experience');
-  const items = expSection?.items || [];
+  // What the résumé prints: every visible experience section's visible entries (AUD-29).
+  const items = careerItems(active);
   const personal = active?.personal || {};
   const settings = active?.settings || {}; // its Date format: the timeline prints dates as the PDF does
-  const total = totalCareer(items);
+  // Months worked (overlaps once, gaps not at all) and distinct companies, from those entries.
+  const total = totalLabel(careerMonths(items));
+  const companies = companiesLabel(companyCount(items));
+  const header = [total && `${total} total`, companies].filter(Boolean).join(' · ');
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
@@ -72,10 +37,10 @@ export function CareerHistoryPanel({ resumes, activeId, showJobTrackerLink = tru
             <p className="text-[11px] text-gray-400 truncate">{personal.title || ''}</p>
           </div>
         </div>
-        {total && (
+        {header && (
           <div className="mt-2 flex items-center gap-1.5">
             <Building2 size={11} className="text-gray-400" />
-            <span className="text-[11px] text-gray-400">{total} total · {items.length} companies</span>
+            <span className="text-[11px] text-gray-400">{header}</span>
           </div>
         )}
       </div>
@@ -90,7 +55,9 @@ export function CareerHistoryPanel({ resumes, activeId, showJobTrackerLink = tru
             <div className="space-y-4">
               {items.map((item, i) => {
                 const color = AVATAR_COLORS[i % AVATAR_COLORS.length];
-                const dur = durationLabel(item.startDate, item.current ? null : item.endDate);
+                // A past job with no end date has no length: the PDF prints its start alone.
+                const span = entrySpan(item);
+                const dur = span ? entryLabel(span[1] - span[0]) : '';
                 const dates = dateRange(item.startDate, item.current ? presentLabel(settings) : item.endDate, settings);
 
                 return (
