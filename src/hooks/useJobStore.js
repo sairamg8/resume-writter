@@ -3,7 +3,7 @@ import { loadSavedList, notSavedReason, pendingRecovery, readSavedList, remember
 import { newId } from '../utils/ids.js';
 import { addressableJobs, completeJob, readJob, statusId } from '../utils/normalizeJob.js';
 import { keepUnsaved } from '../utils/unsavedJobs.js';
-import { applyEdits, demoJobs, newJobDefaults } from '../utils/jobEdits.js';
+import { applyEdits, demoJobs, moveInList, newJobDefaults } from '../utils/jobEdits.js';
 import { mergeImport } from '../utils/jobImport.js';
 
 const KEY = 'cpwtcv_jobs_v1';
@@ -181,8 +181,45 @@ function updateJob(id, updates) {
   return true;
 }
 
+/** Job `id` as it is and where, `{ job, index }` — what Undo needs — or null when there is none. */
+function placeOf(id) {
+  if (!initialized) init();
+  const index = snapshot().jobs.findIndex(j => j.id === id);
+  return index < 0 ? null : { job: snapshot().jobs[index], index };
+}
+
+/**
+ * Move job `id` on the board: to `status` (a status change like any other — one history entry)
+ * and before job `beforeId`, or last (moveInList: the array order is the rank). Returns the job
+ * as it was and where, for restoreJob to undo it; null when no job has that id.
+ */
+function moveJob(id, { status, beforeId = null } = {}) {
+  const was = placeOf(id);
+  if (!was) return null;
+  const jobs = moveInList(snapshot().jobs, id, { status, beforeId }, Date.now());
+  if (jobs !== snapshot().jobs) setJobs(() => jobs);
+  return was;
+}
+
+/** Delete job `id`; returns it and its place, `{ job, index }`, for restoreJob (Undo) — null when there was none. */
 function deleteJob(id) {
-  setJobs(jobs => jobs.filter(j => j.id !== id));
+  const was = placeOf(id);
+  if (was) setJobs(jobs => jobs.filter(j => j.id !== id));
+  return was;
+}
+
+/**
+ * Put `job` back at `index` (past the end: last), replacing a job with its id — Undo for
+ * deleteJob and moveJob with what they returned. An undone move leaves no history entry: the job
+ * comes back exactly as it was.
+ */
+function restoreJob(job, index) {
+  if (!job?.id) return;
+  setJobs(jobs => {
+    const rest = jobs.filter(j => j.id !== job.id);
+    const at = Number.isInteger(index) ? Math.max(0, Math.min(index, rest.length)) : rest.length;
+    return [...rest.slice(0, at), job, ...rest.slice(at)];
+  });
 }
 
 /**
@@ -217,11 +254,14 @@ export function _resetJobStoreForTest() {
 }
 
 // The actions as plain functions too: node tests drive the store without React.
-export { snapshot, subscribe, addJob, updateJob, deleteJob, importJobs, clearDemoData, dismissRecovery };
+export { snapshot, subscribe, addJob, updateJob, moveJob, deleteJob, restoreJob, importJobs, clearDemoData, dismissRecovery };
 
 export function useJobStore() {
   const { jobs, persistError, recovery } = useSyncExternalStore(subscribe, snapshot);
   const persistReason = notSavedReason(persistError);
-  return { jobs, persistError, persistReason, recovery, dismissRecovery, addJob, updateJob, deleteJob, importJobs, clearDemoData };
+  return {
+    jobs, persistError, persistReason, recovery, dismissRecovery,
+    addJob, updateJob, moveJob, deleteJob, restoreJob, importJobs, clearDemoData,
+  };
 }
 

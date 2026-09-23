@@ -134,3 +134,31 @@ test('J-04: an incoming id that is free is kept; a newer copy of a job here repl
   assert.deepEqual([older.added, older.updated, older.skipped], [0, 0, 1]);
   assert.equal(byId('j').company, 'Acme Robotics', 'an older backup never overwrites a newer edit');
 });
+
+// ── moveJob · deleteJob · restoreJob (the board's drag, and Undo) ─────────────────────────────
+
+test('moveJob: to a status and before a job; history once; returns the job as it was and where, for Undo', () => {
+  open([job('a', 'A'), job('b', 'B'), job('c', 'C', { status: 'saved', appliedDate: '', statusHistory: [{ status: 'saved', changedAt: 1 }] })]);
+  const was = store.moveJob('c', { status: 'applied', beforeId: 'a' });
+  assert.deepEqual(stored().map((j) => j.id), ['c', 'a', 'b']);
+  const c = byId('c');
+  assert.deepEqual([c.status, c.statusHistory.map((h) => h.status), c.appliedDate], ['applied', ['saved', 'applied'], todayLocalISO()]);
+  assert.equal(was.index, 2);
+  assert.equal(was.job.status, 'saved');
+  store.restoreJob(was.job, was.index); // Undo
+  assert.deepEqual(stored().map((j) => [j.id, j.status]), [['a', 'applied'], ['b', 'applied'], ['c', 'saved']]);
+  assert.deepEqual(byId('c').statusHistory.map((h) => h.status), ['saved'], 'an undone move leaves no history entry');
+  assert.equal(store.moveJob('nope', { status: 'offer' }), null);
+});
+
+test('deleteJob returns the job and its place; restoreJob puts it back there (Undo)', () => {
+  open([job('a', 'A'), job('b', 'B'), job('c', 'C')]);
+  const gone = store.deleteJob('b');
+  assert.deepEqual([gone.job.company, gone.index], ['B', 1]);
+  assert.deepEqual(stored().map((j) => j.id), ['a', 'c']);
+  store.restoreJob(gone.job, gone.index);
+  assert.deepEqual(stored().map((j) => j.id), ['a', 'b', 'c']);
+  assert.equal(store.deleteJob('nope'), null);
+  store.restoreJob(job('z', 'Z'), 99);
+  assert.deepEqual(stored().map((j) => j.id), ['a', 'b', 'c', 'z'], 'an index past the end: last');
+});

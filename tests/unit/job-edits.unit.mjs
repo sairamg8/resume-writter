@@ -140,3 +140,24 @@ test('J-29: the demo job\'s dates agree with each other and with today — histo
   const later = demoJobs(new Date(2027, 0, 5));
   assert.equal(deadlineState(later[0].deadline, new Date(2027, 0, 5)), null, 'relative to the day it is made');
 });
+
+// ── moveInList: the board's drag (array order is the rank) ───────────────────────────────────
+
+test('moveInList: before another job, or last; a status change adds one history entry; nothing moved is the same array', () => {
+  const { moveInList } = edits;
+  const list = ['a', 'b', 'c', 'd'].map((id) => job({ id, company: id, status: 'applied', statusHistory: [{ status: 'applied', changedAt: 1 }] }));
+  const ids = (l) => l.map((j) => j.id);
+  assert.deepEqual(ids(moveInList(list, 'd', { beforeId: 'b' }, T)), ['a', 'd', 'b', 'c']);
+  assert.deepEqual(ids(moveInList(list, 'a', { beforeId: 'd' }, T)), ['b', 'c', 'a', 'd']);
+  assert.deepEqual(ids(moveInList(list, 'b', { beforeId: null }, T)), ['a', 'c', 'd', 'b'], 'no beforeId: last');
+  assert.deepEqual(ids(moveInList(list, 'b', { beforeId: 'nope' }, T)), ['a', 'c', 'd', 'b'], 'an unknown beforeId: last');
+  assert.equal(moveInList(list, 'b', { beforeId: 'c' }, T), list, 'already there: the same array');
+  assert.equal(moveInList(list, 'd', {}, T), list, 'already last');
+  assert.equal(moveInList(list, 'zzz', { status: 'offer' }, T), list, 'no such job');
+  const moved = moveInList(list, 'c', { status: 'interview', beforeId: 'a' }, T);
+  assert.deepEqual(ids(moved), ['c', 'a', 'b', 'd']);
+  assert.deepEqual(moved[0].statusHistory.map((h) => h.status), ['applied', 'interview']);
+  assert.equal(moved[0].updatedAt, T);
+  const reordered = moveInList(list, 'c', { status: 'applied', beforeId: 'a' }, T);
+  assert.equal(reordered[0], list[2], 'the same status: the job itself, untouched — a reorder is not an edit');
+});

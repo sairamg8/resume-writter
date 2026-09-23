@@ -106,6 +106,24 @@ export function formPatch(start, form) {
 }
 
 /**
+ * `jobs` with job `id` moved on the board, where the array order is the rank: to `status` when one
+ * is given (applyStatusChange — one history entry, the applied date) and placed before job
+ * `beforeId`, or last when that is null, unknown or the job itself. The same array when nothing
+ * moves; a reorder within the status keeps the job object as it is — it is not an edit.
+ */
+export function moveInList(jobs, id, { status, beforeId = null } = {}, now = Date.now()) {
+  const from = jobs.findIndex((j) => j.id === id);
+  if (from < 0) return jobs;
+  const job = jobs[from];
+  const moved = status === undefined ? job : applyStatusChange(job, status, now);
+  const rest = jobs.filter((_, i) => i !== from);
+  const before = beforeId != null && beforeId !== id ? rest.findIndex((j) => j.id === beforeId) : -1;
+  const to = before < 0 ? rest.length : before;
+  if (moved === job && to === from) return jobs;
+  return [...rest.slice(0, to), moved, ...rest.slice(to)];
+}
+
+/**
  * `todos` with a new, open to-do reading `text` (trimmed); the same list when there is no text. A
  * text another to-do has — even a completed one — is added too: a recurring follow-up is normal,
  * and the Tasks tab ignored it without a word (J-26). Ids keep the two apart.
