@@ -80,6 +80,17 @@ existing test caught any of these; several unit tests asserted the same wrong da
 
 ---
 
+## Templates UI audit — 2026-09-23 (`TUI-`)
+
+Found by Phase 1 of `templates-ui-plan.md` (a read-only UI audit, 4 agents + a live-app pass). The full
+write-up, including the rows not yet filed here, is in the `templates-ui-audit` worktree's
+`templates-ui-bugs.md`.
+
+| ID | Area | Severity | Status | Commit | Tests | Bug — where | Verified |
+|---|---|---|---|---|---|---|---|
+| TUI-1 | Sidebar · Single ATS-safe · colours | **High** | ⏸ Local only | `PENDING` | tests/pdf/31-template-switch-colors.test.mjs | **A résumé exported in Single · ATS-safe had no name on it.** That mode prints Classic's white page, but `headerGround` resolved with `templateId()` (`src/templates/pdf/shared/headerColors.js:29`) — the only one of seven header callers that was not single-column aware — so the colour rescue measured a picked colour against the dark column that is no longer drawn and kept it: a white name at **1.00:1** on white, a `#bfdbfe` title at 1.42:1. Flipping the Layout toggle also never re-checked the colours, because `updateSetting` (`src/hooks/useResumeStore.js:212`) is generic where `setTemplate` runs `headerColorsOnSwitch`. Only bites a résumé with an explicitly stored Name/Title colour — which is exactly what a two-column Sidebar user has. | Ran (render) |
+| TUI-2 | Sidebar · Single ATS-safe · letter | Medium | ⏸ Local only | `PENDING` | tests/pdf/31-template-switch-colors.test.mjs | Same root cause, second site: `letterheadLook` resolved with `templateId()` (`src/templates/pdf/shared/letterhead.js:155`), so that mode's cover letter kept the Sidebar's dark full-bleed band while its page was Classic's. **Had to land with TUI-1** — fixing the ground alone moves the fault to the letter, where the newly-dark name lands on the still-dark band. | Ran |
+
 ## ATS parsing defects (`ATS-`)
 
 From the ATS parsing work of 2026-09-21 → 09-22: text extraction with Poppler (`pdftotext`), pdf.js and MuPDF, a

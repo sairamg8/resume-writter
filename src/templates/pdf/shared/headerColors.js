@@ -3,7 +3,7 @@
 // Classic's white page, Classic's ink name on the dark Sidebar column, a blue title on Modern's
 // blue banner. Plain data and functions (no react-pdf): the store's template switch and the
 // saved-data normaliser read it.
-import { templateId } from '@/constants/templates';
+import { headerTemplateId, templateId } from '@/constants/templates';
 import { letterheadLook } from './letterhead';
 import { contrast } from './pdfColors';
 import { resolveTemplateSettings } from './templateSettings';
@@ -27,7 +27,9 @@ export const HEADER_SEEN = 2;
  * template added with a banner brings its ground with it.
  */
 export function headerGround(settings, template) {
-  const t = templateId(template);
+  // headerTemplateId, not templateId: the Sidebar's single column prints on the white page, and a
+  // ground read from the column it no longer draws kept a white name white on white (TUI-1).
+  const t = headerTemplateId(template, settings);
   return letterheadLook(t, resolveTemplateSettings(settings || {}, t)).band?.color || '#ffffff';
 }
 

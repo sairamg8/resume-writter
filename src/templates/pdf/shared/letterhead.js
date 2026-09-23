@@ -2,7 +2,7 @@
 // the résumé's own resolved colours, for the letter's PDF and its Word export: the letter used
 // to print Classic's letterhead under every template, so a Modern or Sidebar résumé and its
 // letter never read as a set. Plain data (no react-pdf).
-import { hasHeaderControls, headerBorderOn, letterheadCentered, templateId } from '@/constants/templates';
+import { hasHeaderControls, headerBorderOn, headerTemplateId, letterheadCentered, templateId } from '@/constants/templates';
 import { HEADER_GAPS, templateGapPt } from '@/constants/headerSpacing';
 import { contrast, sidebarShades, solid, textShades } from './pdfColors';
 import { CSS_PX_TO_PT, MODERN_HEADER_PAD_X_PT, MODERN_HEADER_PAD_Y_PT } from './pdfUnits';
@@ -152,7 +152,11 @@ export function headerTitleSize(settings = {}) {
 }
 
 export function letterheadLook(template, s = {}) {
-  const look = templateId(template);
+  // The Sidebar's ATS-safe single column prints Classic's page, so its letter takes Classic's
+  // letterhead too — headerTemplateId, as every other header caller resolves it (TUI-2). With
+  // templateId here the page lost its column while the letter kept the column's dark band, and
+  // headerGround (which reads this look) told the colour rescue the name sat on that band.
+  const look = headerTemplateId(template, s);
   const accent = s.accentColor || '#2563eb';
   const text = s.textColor || '#1e293b';
   const base = {

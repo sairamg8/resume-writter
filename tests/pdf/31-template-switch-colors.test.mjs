@@ -54,6 +54,28 @@ async function switched(r, to) {
   return store.appState.resumes[0];
 }
 
+/** `r` after Design → Template → Layout → Single · ATS-safe, as the store's updateSetting stores it. */
+async function toggledSingle(r, value = true) {
+  const { useAppStore } = await loadModule('/src/hooks/useResumeStore.js');
+  globalThis.localStorage = new MemoryStorage([['cpwtcv_v1', JSON.stringify({ resumes: [r], activeId: r.id })]]);
+  let store = null;
+  let flipped = false;
+  function Probe() {
+    store = useAppStore();
+    if (!flipped) {
+      flipped = true;
+      store.updateSetting('sidebarSingleColumn', value);
+    }
+    return null;
+  }
+  try {
+    renderToString(createElement(Probe));
+  } finally {
+    delete globalThis.localStorage;
+  }
+  return store.appState.resumes[0];
+}
+
 /** The colour of the Word run that prints `text` in `xml`, as "#rrggbb". */
 const wordColour = (xml, text) => `#${(xml.split('</w:r>').find((run) => run.includes(`>${text}<`)) || '').match(/<w:color w:val="([0-9a-fA-F]{6})"/)?.[1]?.toLowerCase()}`;
 
@@ -144,5 +166,50 @@ describe('Design → a template: Name & Title Colors picked for the old header (
         }
       }
     }
+  });
+});
+
+/**
+ * TUI-1 / TUI-2 — Sidebar → Layout → "Single · ATS-safe" prints Classic's page, on the white paper,
+ * not the dark column. A Name or Job title colour picked for that column (white, a pale blue) was
+ * carried straight onto the white page and printed at 1.0:1 — a résumé exported with no name on it.
+ *
+ * Two causes, one shape: headerGround() and letterheadLook() both resolved with templateId(), which
+ * does not know about the single column, where every other caller uses headerTemplateId(). So the
+ * colour rescue measured the pick against a dark band that is not drawn and kept it, and the letter
+ * drew that band for real. They are one fix: correcting only the ground moves the fault to the cover
+ * letter, where the now-dark name would land on the still-dark band — which is why assertReadable
+ * checks the résumé, the letter and the letter's Word file together.
+ */
+describe('Sidebar → Single · ATS-safe: colours picked for the dark column (TUI-1, TUI-2)', () => {
+  it('the white name and pale title go back to the template\'s own, readable on the white page', async () => {
+    const r = await toggledSingle(resume({ template: 'sidebar', settings: SIDEBAR_SEED }));
+    assert.equal(r.template, 'sidebar', 'still the Sidebar — only its Layout changed');
+    assert.equal(r.settings.sidebarSingleColumn, true);
+    await assertReadable(r, WHITE, 'sidebar → single column');
+    assert.deepEqual(
+      [r.settings.nameColor, r.settings.jobTitleColor], ['', ''],
+      'the template\'s own, as the Design panel\'s ↺ sets them',
+    );
+  });
+
+  it('the letterhead drops the Sidebar\'s band in single column, as the page drops the column', async () => {
+    const { letterheadLook } = await loadModule('/src/templates/pdf/shared/letterhead.js');
+    const { resolveTemplateSettings } = await loadModule('/src/templates/pdf/shared/templateSettings.js');
+    const single = { ...SIDEBAR_SEED, sidebarSingleColumn: true };
+    assert.equal(
+      letterheadLook('sidebar', resolveTemplateSettings(single, 'sidebar')).band, null,
+      'no band: the single column prints Classic\'s letterhead',
+    );
+    assert.equal(
+      letterheadLook('sidebar', resolveTemplateSettings(SIDEBAR_SEED, 'sidebar')).band?.color, NAVY,
+      'two columns keep the Sidebar\'s band',
+    );
+  });
+
+  it('headerGround reads the white page in single column, the column in two (the rescue\'s input)', async () => {
+    const { headerGround } = await loadModule('/src/templates/pdf/shared/headerColors.js');
+    assert.equal(headerGround({ sidebarSingleColumn: true }, 'sidebar'), WHITE);
+    assert.equal(headerGround({}, 'sidebar'), NAVY);
   });
 });
