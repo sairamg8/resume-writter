@@ -3,7 +3,7 @@
 > Location: `/mnt/Storage/Projects/flowcv/bug-status.md`
 > Updated: 2026-09-23 · every row **verified independently at `d495cb2`** (see Verification pass) ·
 > `origin/master` (deployed) = `5b6ecc0` · **nothing is waiting to be pushed**
-> **Open: 9** | Fixed, not pushed: 0 | **Closed: 72**
+> **Open: 180** (9 here + 171 from the full audit in [bug-status-r2/](bug-status-r2/README.md)) | Fixed, not pushed: 0 | **Closed: 72**
 
 ## Summary
 
@@ -13,7 +13,9 @@
 | ATS parsing defects (`ATS-`) | 6 | 0 | 0 | **6** |
 | Templates UI audit, 2026-09-23 (`TUI-`) | 7 | 6 | 0 | **1** |
 | Prompt tasks, 2026-09-14 → 09-21 | 33 | 33 | 0 | 0 |
-| **Total** | **81** | **72** | **0** | **9** |
+| Full audit, 2026-09-23 — defects (`R2-001`…`R2-134`, [bug-status-r2/](bug-status-r2/README.md)) | 134 | 0 | 0 | **134** |
+| Full audit, 2026-09-23 — features and test gaps (`R2-135`…`R2-171`) | 37 | 0 | 0 | **37** |
+| **Total** | **252** | **72** | **0** | **180** |
 
 - **Status:** ✅ fixed and pushed (on `origin/master`, so deployed) · ⏸ fixed and committed, not pushed · 🔴 open.
 - **Severity (audit):** High = data loss, or a feature that does not work · Medium = a wrong result, no data loss ·
