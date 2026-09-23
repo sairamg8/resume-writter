@@ -208,3 +208,43 @@ test('J-03: a saved or imported job with plain notes gets them as HTML — once,
   const html = job();
   assert.equal(completeJob(html), html, 'HTML notes: the same object');
 });
+
+// ── J-19: imported status history and to-dos are read like the job ───────────────────────────
+// A history entry 'Rejected' (a label) matched no status: no 'Rejected 1×', no 'Current'. An entry
+// 'ghosted' was kept, 'yesterday' printed 'Invalid Date', and done: 'false' counted as done.
+
+test('J-19: history statuses are the tracker\'s ids — a label in any case is mapped, not reported', () => {
+  const j = job({ status: 'Rejected', statusHistory: [{ status: 'Applied', changedAt: 1 }, { status: 'Rejected', changedAt: 2 }] });
+  assert.equal(readJob(j).lost, false);
+  const done = completeJob(readJob(j).kept);
+  assert.deepEqual(done.statusHistory, [{ status: 'applied', changedAt: 1 }, { status: 'rejected', changedAt: 2 }]);
+  assert.equal(done.status, 'rejected');
+  const clean = job();
+  assert.equal(completeJob(clean).statusHistory, clean.statusHistory, 'ids already: the same array');
+});
+
+test('J-19: a history entry naming no status is left out, and that is a loss', () => {
+  const { kept, lost } = readJob(job({ statusHistory: [{ status: 'applied', changedAt: 1 }, { status: 'ghosted', changedAt: 5 }] }));
+  assert.equal(lost, true);
+  assert.deepEqual(kept.statusHistory, [{ status: 'applied', changedAt: 1 }]);
+});
+
+test('J-19: changedAt is kept only as a time — a date text becomes its time, anything else is dropped (a loss)', () => {
+  const iso = '2025-06-09T10:00:00.000Z';
+  const read = readJob(job({ statusHistory: [{ status: 'saved', changedAt: iso }, { status: 'applied', changedAt: '1749514800000' }] }));
+  assert.equal(read.lost, false, 'a date or a number as text loses nothing');
+  assert.deepEqual(read.kept.statusHistory.map((h) => h.changedAt), [Date.parse(iso), 1749514800000]);
+  const bad = readJob(job({ statusHistory: [{ status: 'applied', changedAt: 'yesterday' }, { status: 'offer', changedAt: { t: 1 } }] }));
+  assert.equal(bad.lost, true);
+  assert.deepEqual(bad.kept.statusHistory, [{ status: 'applied' }, { status: 'offer' }]);
+  const noTime = job({ statusHistory: [{ status: 'applied' }] });
+  assert.equal(readJob(noTime).kept, noTime, 'no time at all: nothing to repair');
+});
+
+test('J-19: a to-do\'s done is a boolean — "false" is not done', () => {
+  const { kept, lost } = readJob(job({ todos: [{ id: 'a', text: 'x', done: 'false' }, { id: 'b', text: 'y', done: 'true' }, { id: 'c', text: 'z', done: 0 }, { id: 'd', text: 'w', done: 1 }] }));
+  assert.equal(lost, false);
+  assert.deepEqual(kept.todos.map((t) => t.done), [false, true, false, true]);
+  const fine = job({ todos: [{ id: 'a', text: 'x', done: false }, { id: 'b', text: 'y' }] });
+  assert.equal(readJob(fine).kept, fine, 'booleans, or no done at all: untouched');
+});

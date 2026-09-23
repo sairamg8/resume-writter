@@ -38,7 +38,7 @@ title: Job Tracker — verified bugs, Low (J-16…J-41)
 - **Fail-first test:** Extract the comparator to src/utils/jobSort.js. Test status in JOB_STATUSES order, blanks last in both directions, and $90k < $120,000 < $180k.
 - **Owner:** JOBS-FIX · **Fix commit:** — · **Test:** —
 
-### J-19 · Low · bug · 🔴 Open
+### J-19 · Low · bug · ⏸ Fixed
 **Imported status history and to-dos are not normalised like the job: wrong rejection count, no 'Current', 'Invalid Date', and done:'false' counted as done**
 - **Where:** `src/utils/normalizeJob.js` : 42-48, 66-70, 122-125 (rendered by src/components/job/StatusHistory.jsx:15, 42-43, 62, 77-79)
 - **Repro:** 1. Import [{"company":"X","status":"Rejected","statusHistory":[{"status":"Applied","changedAt":"yesterday"},{"status":"Rejected"}],"todos":[{"text":"a","done":"false"}]}]. 2. Open X, then Overview: there is no 'Rejected 1×' badge and no 'Current', and 'Invalid Date' appears under Applied. 3. On Tasks, task 'a' is listed as completed.
@@ -46,7 +46,8 @@ title: Job Tracker — verified bugs, Low (J-16…J-41)
 - **Fix hint:** In readJob/completeJob, map history entries with statusId(), drop unknown ones and set lost, keep changedAt only when Number.isFinite, and set done = done === true.
 - **Verified (WF-1):** Ran verify-jobs/v-pure.mjs with the real readJob and completeJob. The job status became 'rejected' and lost was false. The history was kept as [{"status":"Applied","changedAt":"yesterday"},{"status":"Rejected"},{"status":"ghosted","changedAt":5}], and todo.done stayed "false". STATUS_MAP['Rejected'] is undefined, so StatusHistory counts 0 rejections and never shows 'Current'. fmt('yesterday') returned 'Invalid Date', and Boolean('false') is true.
 - **Fail-first test:** normalize-job.unit.mjs: completeJob maps history 'Rejected' to 'rejected', drops 'ghosted' with lost=true, drops changedAt 'yesterday', and turns done:'false' into false.
-- **Owner:** JOBS-FIX · **Fix commit:** — · **Test:** —
+- **Now:** `readJob` keeps a history entry only when it names a tracker status (in any case; 'ghosted' is left out, a loss), turns a date or number written as text into its time and drops a `changedAt` that is no time (a loss); a to-do's non-boolean `done` becomes true only for true/'true'/1 (not a loss). `completeJob` maps the history's statuses to ids ('Rejected' → 'rejected'), so the Rejected count and 'Current' work. Fail-first: the four J-19 tests failed at HEAD (`# fail 4`), pass now.
+- **Owner:** JOBS-FIX · **Fix commit:** this commit (`fix(jobs): imported history and to-dos are read like the job — status ids, real times, boolean done (J-19)`) · **Test:** tests/unit/normalize-job.unit.mjs
 
 ### J-20 · Low · bug · 🔴 Open · links **R2-101**
 **Status history labels an On Hold that was later closed as Rejected or Withdrawn '→ reopened'**

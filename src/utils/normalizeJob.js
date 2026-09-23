@@ -59,11 +59,20 @@ export function notesToHtml(notes) {
   return plainTextToHtml(notes);
 }
 
+/**
+ * A to-do the Tasks tab can show: its text as text, and `done` a boolean — an imported "false"
+ * counted as done (J-19); "true" and 1 are done, anything else is not. The same object when it is.
+ */
+function readableTodo(t) {
+  let out = typeof t.text === 'string' ? t : { ...t, text: String(t.text) };
+  if (t.done != null && typeof t.done !== 'boolean') out = { ...out, done: t.done === 'true' || t.done === 1 };
+  return out;
+}
+
 /** The to-dos the Tasks tab can show; the same array when every one of them is readable. */
 function readableTodos(todos) {
   if (!Array.isArray(todos)) return [];
-  const kept = todos.filter((t) => isJobEntry(t) && (typeof t.text === 'string' || isNumber(t.text)))
-    .map((t) => (typeof t.text === 'string' ? t : { ...t, text: String(t.text) }));
+  const kept = todos.filter((t) => isJobEntry(t) && (typeof t.text === 'string' || isNumber(t.text))).map(readableTodo);
   return kept.length === todos.length && kept.every((t, i) => t === todos[i]) ? todos : kept;
 }
 
@@ -83,10 +92,38 @@ function withOwnIds(entries, prefix) {
   return out.every((e, i) => e === entries[i]) ? entries : out;
 }
 
-/** The status changes the history can show; the same array when every one is readable. */
+/** A history time as the pages print it — ms; a date or a number written as text → its ms; else null. */
+function historyTime(v) {
+  if (isNumber(v)) return v;
+  if (typeof v !== 'string' || !v.trim()) return null;
+  const ms = /^\d+$/.test(v.trim()) ? Number(v) : Date.parse(v);
+  return Number.isFinite(ms) ? ms : null;
+}
+
+/**
+ * The status changes the history can show, as `{ history, lost }`; the same array when every one
+ * is readable (J-19). An entry must name a tracker status (in any case — completeJob makes it the
+ * id); one that names none ('ghosted') is left out. A `changedAt` that is no time ('yesterday'
+ * printed 'Invalid Date') is dropped from its entry; a date written as text becomes its time.
+ */
 function readableHistory(history) {
-  const kept = history.filter((h) => isJobEntry(h) && typeof h.status === 'string');
-  return kept.length === history.length ? history : kept;
+  let lost = false;
+  const kept = [];
+  for (const h of history) {
+    if (!isJobEntry(h) || !statusId(h.status)) { lost = true; continue; }
+    if (h.changedAt == null) { kept.push(h); continue; }
+    const at = historyTime(h.changedAt);
+    if (at === h.changedAt) kept.push(h);
+    else if (at !== null) kept.push({ ...h, changedAt: at });
+    else {
+      lost = true;
+      const rest = { ...h };
+      delete rest.changedAt;
+      kept.push(rest);
+    }
+  }
+  const same = kept.length === history.length && kept.every((h, i) => h === history[i]);
+  return { history: same ? history : kept, lost };
 }
 
 /**
@@ -99,7 +136,9 @@ function readableHistory(history) {
  *   todos that are not a list          → []; to-dos that are not objects, or have no text (or
  *                                        text that is not text), are left out
  *   statusHistory that is not a list   → removed (the next status change starts a new one);
- *                                        entries without a status are left out
+ *                                        entries naming no status are left out, a changedAt
+ *                                        that is no time is dropped (readableHistory, J-19)
+ *   a to-do's done that is not boolean → true for true / "true" / 1, else false (J-19)
  * Missing fields stay missing: the pages already treat them as empty. A saved job with
  * todos: [null] used to throw on every visit to the tracker, until storage was cleared.
  */
@@ -140,8 +179,11 @@ export function readJob(job) {
     if (todos !== job.todos) set('todos', todos, !Array.isArray(job.todos) || todos.length < job.todos.length);
   }
   if (job.statusHistory != null) {
-    const history = Array.isArray(job.statusHistory) ? readableHistory(job.statusHistory) : undefined;
-    if (history !== job.statusHistory) set('statusHistory', history, true);
+    if (!Array.isArray(job.statusHistory)) set('statusHistory', undefined, true);
+    else {
+      const { history, lost: some } = readableHistory(job.statusHistory);
+      if (history !== job.statusHistory) set('statusHistory', history, some);
+    }
   }
   return { kept: out, lost };
 }
@@ -153,7 +195,8 @@ export function readJob(job) {
  *   no id, or not a string             → a new one (the router opens a job by its id)
  *   no status                          → 'saved' (a build before this one imported a job with
  *                                        none; the board showed it on no column)
- *   a status in other case or spacing  → the id it names ('Applied' → 'applied', statusId)
+ *   a status in other case or spacing  → the id it names ('Applied' → 'applied', statusId);
+ *                                        the history's statuses too (J-19)
  *   a to-do with no id, or with one    → a new one (withOwnIds)
  *   an earlier to-do already has
  *   notes in plain text (the form's    → the same text as editor HTML, once (notesToHtml, J-03)
@@ -172,6 +215,14 @@ export function completeJob(job) {
   if (Array.isArray(job.todos)) {
     const todos = withOwnIds(job.todos, 'td');
     if (todos !== job.todos) set('todos', todos);
+  }
+  if (Array.isArray(job.statusHistory)) {
+    // 'Rejected' → 'rejected': the history counts and labels by id (J-19).
+    const history = job.statusHistory.map((h) => {
+      const id = isJobEntry(h) ? statusId(h.status) : null;
+      return id && id !== h.status ? { ...h, status: id } : h;
+    });
+    if (history.some((h, i) => h !== job.statusHistory[i])) set('statusHistory', history);
   }
   if (typeof job.notes === 'string') {
     const notes = notesToHtml(job.notes);
