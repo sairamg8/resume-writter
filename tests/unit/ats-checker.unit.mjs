@@ -152,7 +152,7 @@ test('Standard ATS Headings: identifies standard vs custom section titles', () =
   assert.equal(isStandardAtsTitle({ type: 'skills', title: 'My Superpowers' }), false);
 });
 
-test('standardizeSectionsForAts: converts non-standard titles to canonical Workday headings and sets titleOrder to role', () => {
+test('standardizeSectionsForAts: converts non-standard titles to canonical Workday headings and leaves titleOrder alone', () => {
   const customSections = [
     { id: '1', type: 'experience', title: 'Where I Worked', settings: { titleOrder: 'company' } },
     { id: '2', type: 'education', title: 'My College' },
@@ -160,8 +160,8 @@ test('standardizeSectionsForAts: converts non-standard titles to canonical Workd
   ];
   const standardized = standardizeSectionsForAts(customSections);
   assert.equal(standardized[0].title, 'Professional Experience');
-  assert.equal(standardized[0].titleOrder, 'role');
-  assert.equal(standardized[0].settings?.titleOrder, 'role');
+  assert.equal(standardized[0].titleOrder, undefined);
+  assert.equal(standardized[0].settings?.titleOrder, 'company');
   assert.equal(standardized[1].title, 'Education');
   assert.equal(standardized[2].title, 'Skills');
 });

@@ -2,8 +2,8 @@
 
 > Location: `/mnt/Storage/Projects/flowcv/bug-status.md`
 > Updated: 2026-09-23 · every row **verified independently at `d495cb2`** (see Verification pass) ·
-> `origin/master` (deployed) = `67828ff` · **nothing is waiting to be pushed**
-> **Open: 15** | Fixed, not pushed: 0 | **Closed: 66**
+> `origin/master` (deployed) = `5aafca8` · **TUI-7 is fixed and waiting to be pushed**
+> **Open: 14** | Fixed, not pushed: 1 | **Closed: 66**
 
 ## Summary
 
@@ -11,9 +11,9 @@
 |---|---|---|---|---|
 | Bug audit, 2026-09-22 (`AUD-`) | 35 (34 + one follow-up) | 28 | 0 | **7** |
 | ATS parsing defects (`ATS-`) | 6 | 0 | 0 | **6** |
-| Templates UI audit, 2026-09-23 (`TUI-`) | 7 | 5 | 0 | **2** |
+| Templates UI audit, 2026-09-23 (`TUI-`) | 7 | 5 | 1 | **1** |
 | Prompt tasks, 2026-09-14 → 09-21 | 33 | 33 | 0 | 0 |
-| **Total** | **81** | **66** | **0** | **15** |
+| **Total** | **81** | **66** | **1** | **14** |
 
 - **Status:** ✅ fixed and pushed (on `origin/master`, so deployed) · ⏸ fixed and committed, not pushed · 🔴 open.
 - **Severity (audit):** High = data loss, or a feature that does not work · Medium = a wrong result, no data loss ·
@@ -30,7 +30,7 @@
 2. ATS-1 … ATS-6 — no order set yet; ATS-6 waits on a decision.
 3. TUI-3, TUI-4, TUI-6 — TUI-6 to be filed as ATS-7.
 
-✅ **All fixes are pushed.** `origin/master` = `67828ff`. Gate on that exact tree, 2026-09-23 08:40:
+✅ **Every fix but TUI-7 (⏸, local) is pushed.** Gate on the exact tree of `67828ff`, 2026-09-23 08:40:
 **1611 tests, 1609 pass, 0 fail, 2 todo** (the two known ATS `todo`s), a green production build, and a
 private-data scan of all 73 bundle files with no hits. Per the owner (2026-09-23, *"keep pushing after
 each bug"*) every finished bug lands → gates → pushes, unasked.
@@ -150,7 +150,7 @@ bypassing `templateLabel()`) — is in the `templates-ui-audit` worktree's `temp
 | TUI-4 | JSON Resume · template | Medium | ✅ Fixed | `658dea9` | tests/unit/json-resume-roundtrip.unit.mjs | Export → import reset any Modern/Sidebar/Executive/Minimal résumé to Classic, silently: `jsonResumeToCpwtResume` hardcoded `template: 'classic'` (`jsonResume.js:243`) and the export never wrote the template out (`:282`). The export now puts it in the schema's `meta` and the import reads it back through `templateId()`; a file naming none, or an unknown one, still lands on Classic byte-identically. Colours, fonts, margins and spacing are still lost — the schema carries none of them. | Ran |
 | TUI-5 | ATS checker · template list | Medium | ✅ Fixed | `68605dd` | tests/unit/ats-rating.unit.mjs, tests/pdf/15-design-defaults.test.mjs, tests/unit/ats-checker.unit.mjs | "Is this template ATS-safe" was answered in **four** hardcoded places nothing compared, and two had drifted: the picker showed no badge on **Modern** while the ATS Check tab scored it `pass`, and none on **Sidebar-single** while the checker called it `ATS-Certified` 10/10. Now one settings-aware `atsRating(template, settings)` (`src/constants/templates.js`) with three tiers — certified 5 / good 4 / risky 2 — read by the picker, the checker's points and its copy; the tests assert the wiring, not the answer. Also fixed `atsChecker.js:589` reading `resume.template` raw, which scored an imported `" Modern "` as a Sidebar. **Modern now carries a badge** — forced by having one source of truth, and the project's own battery has always read it clean. | Ran |
 | TUI-6 | ATS · page-break glue | Medium | 🔴 Open | — | — | `pdftotext -raw` emits no newline around the `\f`, so a section heading landing first on a new page stops being a heading (`"…Docker, Figma\fPROJECTS"`). Not font-specific — sweeping `sectionGap` 10→24 on default Classic glued at every value. Latent in **every** template; whether it costs a header is a lottery on résumé length. Distinct from ATS-4 (intra-line squeeze) — suggest filing as **ATS-7**. | Ran (extraction) |
-| TUI-7 | ATS panel · Standardize Headings | **High** | 🔴 Open | — | — | **Two defects behind one label**, on the panel's most prominent button ("Standardize All Section Headings", `AtsCheckerPanel.jsx:172`, and "Standardize Headings Now", `:334`). (a) `standardizeSectionsForAts` unconditionally sets `titleOrder: 'role'` on every experience section (`atsChecker.js:376-379`) — every job entry's bold line flips from company-first to role-first, overwriting a Section Options choice the label never mentions, permanently. (b) It rewrites **every** typed section's title regardless of `isStandardAtsTitle`, and maps over all sections while the report only inspects `visibleSections` (`:721`) — so titles the report itself passed, and hidden sections' titles, are destroyed. `tests/unit/ats-checker.unit.mjs:155` currently *pins* the titleOrder coupling, so fixing it means inverting that test. Found by the panel audit alongside TUI-3. | Code |
+| TUI-7 | ATS panel · Standardize Headings | **High** | ⏸ Fixed, local | this commit | tests/pdf/58-ats-standardize-headings.test.mjs, tests/unit/ats-standardize-headings.unit.mjs, tests/unit/ats-checker.unit.mjs | **Two defects behind one label**, on the panel's most prominent button ("Standardize All Section Headings", `AtsCheckerPanel.jsx:172`, and "Standardize Headings Now", `:334`). (a) `standardizeSectionsForAts` unconditionally sets `titleOrder: 'role'` on every experience section (`atsChecker.js:376-379`) — every job entry's bold line flips from company-first to role-first, overwriting a Section Options choice the label never mentions, permanently. (b) It rewrites **every** typed section's title regardless of `isStandardAtsTitle`, and maps over all sections while the report only inspects `visibleSections` (`:721`) — so titles the report itself passed, and hidden sections' titles, are destroyed. `tests/unit/ats-checker.unit.mjs:155` currently *pins* the titleOrder coupling, so fixing it means inverting that test. Found by the panel audit alongside TUI-3. **Now** both buttons rename only the headings the report lists — one rule, `needsAtsTitle` (shown and not on the alias list), is read by the report's `std_headings` item and by `standardizeSectionsForAts` — so passed titles and hidden sections are returned untouched, and no title order is written: that stays the separate "Put Job Title First" fix, still offered afterwards. The pinned test at `ats-checker.unit.mjs:155` is inverted; the panel test's 8 title/order/warning checks (4 per button) and 7 of the unit file's 8 fail on the code before. | Code |
 
 ## ATS parsing defects (`ATS-`)
 

@@ -65,6 +65,11 @@ export default function AtsCheckerPanel({ resume, store }) {
     setExpandedCats(prev => ({ ...prev, [catKey]: !prev[catKey] }));
   }
 
+  /**
+   * Both "Standardize" buttons: renames the headings the std_headings warning lists, and nothing
+   * else — not the titles it passed, not hidden sections, not the experience title order, which is
+   * "Put Job Title First" below (TUI-7).
+   */
   function handleStandardizeHeadings() {
     if (!resume || !Array.isArray(resume.sections)) return;
     const updated = standardizeSectionsForAts(resume.sections);
