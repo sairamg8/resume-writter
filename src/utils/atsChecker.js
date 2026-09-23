@@ -1,4 +1,5 @@
 import { decodeEntities } from './richText.js';
+import { atsRating, templateId, templateLabel } from '../constants/templates.js';
 
 /**
  * Extracts bullet points from a resume item.
@@ -586,7 +587,9 @@ export function analyzeAtsScore(resume, jobDescriptionText = '') {
   const p = resume.personal || {};
   const sections = Array.isArray(resume.sections) ? resume.sections : [];
   const settings = resume.settings || {};
-  const currentTemplate = resume.template || 'classic';
+  // templateId, not the raw field: an imported file carries "Modern" or " sidebar ", and an
+  // un-normalised id used to fall through to the Sidebar branch and be scored as two columns.
+  const currentTemplate = templateId(resume.template);
 
   // ── 1. Contact Information Analysis (20 pts) ──────────────────────
   let contactPts = 0;
@@ -1054,24 +1057,24 @@ export function analyzeAtsScore(resume, jobDescriptionText = '') {
   // ── 6. ATS Layout & Parser Safety (10 pts) ────────────────────────
   let layoutPts = 0;
 
-  // Template check (5 pts)
+  // Template check (5 pts). The rating is the app's single answer (atsRating, TUI-5) — the Design
+  // panel's badge reads the same one, so the two surfaces cannot say different things about a
+  // template again. It is settings-aware: the Sidebar's Single · ATS-safe prints Classic's page.
   const isSidebarSingle = currentTemplate === 'sidebar' && Boolean(settings.sidebarSingleColumn);
-  if (currentTemplate === 'classic' || currentTemplate === 'minimal' || currentTemplate === 'executive' || isSidebarSingle) {
-    layoutPts += 5;
-    const label = isSidebarSingle ? 'SIDEBAR (SINGLE · ATS-SAFE)' : currentTemplate.toUpperCase();
+  const rating = atsRating(currentTemplate, settings);
+  layoutPts += rating.points;
+  if (rating.tier === 'certified') {
+    const label = isSidebarSingle ? 'SIDEBAR (SINGLE · ATS-SAFE)' : templateLabel(currentTemplate).toUpperCase();
     results.categories.layout.items.push({
       id: 'template', status: 'pass', text: `ATS-Certified Template: "${label}"`,
       detail: 'Single-column text flow ensures 100% sequential parsing on Workday, Taleo, and Greenhouse.',
     });
-  } else if (currentTemplate === 'modern') {
-    layoutPts += 4;
+  } else if (rating.tier === 'good') {
     results.categories.layout.items.push({
-      id: 'template', status: 'pass', text: 'Modern Single-Column Layout',
+      id: 'template', status: 'pass', text: `${templateLabel(currentTemplate)} Single-Column Layout`,
       detail: 'Single-column body parses reliably. Ensure header contrast remains legible.',
     });
   } else {
-    // Sidebar template
-    layoutPts += 2;
     results.categories.layout.items.push({
       id: 'template', status: 'warn', text: 'Multi-column / Sidebar layout detected',
       detail: 'While modern AI parsers handle sidebars, older Workday/Taleo systems may interleave columns. Switch to "Classic" or "Minimal" for guaranteed 100% parse safety.',

@@ -63,7 +63,10 @@ await setup();
 try {
   const { DEMO_RESUMES } = await loadModule('/tests/fixtures/sampleResumes.js');
   const cases = [];
-  for (const t of ['classic', 'modern', 'minimal', 'executive']) cases.push([t, DEMO_RESUMES.find((x) => x.template === t)]);
+  // Derived, so a template added is validated without touching this line (TUI-5). The Sidebar is
+  // listed separately below because it is the one template with two Layouts to check.
+  const { TEMPLATE_IDS } = await loadModule('/src/constants/templates.js');
+  for (const t of TEMPLATE_IDS.filter((t) => t !== 'sidebar')) cases.push([t, DEMO_RESUMES.find((x) => x.template === t)]);
   const sb = DEMO_RESUMES.find((x) => x.template === 'sidebar');
   cases.push(['sidebar (2-col)', sb]);
   cases.push(['sidebar (ATS-safe)', { ...sb, settings: { ...sb.settings, sidebarSingleColumn: true } }]);

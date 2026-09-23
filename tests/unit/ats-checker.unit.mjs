@@ -1,5 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import * as templatesForAts from '../../src/constants/templates.js';
+
+const { TEMPLATE_IDS, atsRating } = templatesForAts;
 import {
   ACTION_VERBS,
   WEAK_PHRASES,
@@ -303,8 +306,9 @@ test('analyzeAtsScore: respects section visibility (visible: false is ignored)',
   assert.ok(report.categories.headings.items.some(i => i.id === 'has_skills' && i.status === 'fail'));
 });
 
-test('Template ATS ratings: Classic, Minimal, Executive pass; Sidebar alerts', () => {
-  for (const tmpl of ['classic', 'minimal', 'executive']) {
+test('Template ATS ratings: the certified templates pass; the two-column Sidebar alerts', () => {
+  // The trio used to be written out here and in three other places; it now comes from atsRating (TUI-5).
+  for (const tmpl of TEMPLATE_IDS.filter((t) => atsRating(t).tier === 'certified')) {
     const r = { ...sampleAtsResume, template: tmpl };
     const report = analyzeAtsScore(r);
     assert.equal(report.categories.layout.score, 10, `${tmpl} should receive 10 layout points`);

@@ -132,7 +132,7 @@ describe('every per-template table covers every template (VM3-5)', () => {
   // (DEFAULTS[t] || DEFAULTS.classic), Classic's component (LOADERS) or Classic's cover letter
   // letterhead (LOOKS, V2FIDB-51-6: a switch whose `default:` was Classic's), or was not offered.
   it('the PDF\'s fallbacks, section defaults and components, and the Design panel\'s list, name exactly the templates the app offers', async () => {
-    const { TEMPLATE_IDS, TEMPLATE_PICKER, templateLabel } = await loadModule('/src/constants/templates.js');
+    const { TEMPLATE_IDS, TEMPLATE_PICKER, templateLabel, atsRating } = await loadModule('/src/constants/templates.js');
     const ids = TEMPLATE_IDS.toSorted();
     const tables = {
       'DEFAULTS (templateSettings.js)': (await loadModule('/src/templates/pdf/shared/templateSettings.js')).DEFAULTS,
@@ -147,7 +147,17 @@ describe('every per-template table covers every template (VM3-5)', () => {
       assert.equal(t.label, templateLabel(t.id), t.id);
       assert.ok(t.desc && typeof t.ats === 'boolean', `${t.id}: a description and an ATS answer`);
     }
-    assert.deepEqual(TEMPLATE_PICKER.filter((t) => t.ats).map((t) => t.id), ['executive', 'classic', 'minimal'], 'the ATS badges, as before');
+    // Derived, never a literal: the badge and the ATS Check tab read one atsRating (TUI-5), so this
+    // pins the wiring rather than the answer — a template added brings its own tier and is badged by it.
+    assert.deepEqual(
+      TEMPLATE_PICKER.filter((t) => t.ats).map((t) => t.id),
+      TEMPLATE_PICKER.filter((t) => atsRating(t.id).safe).map((t) => t.id),
+      'the ATS badges come from atsRating',
+    );
+    assert.deepEqual(
+      TEMPLATE_PICKER.filter((t) => t.ats).map((t) => t.id), ['executive', 'classic', 'modern', 'minimal'],
+      'today that is the four single-column templates; the Sidebar earns it only in its Single Layout',
+    );
     assert.deepEqual(TEMPLATES.toSorted(), ['classic', 'executive', 'minimal', 'modern', 'sidebar'], 'these tests run every template');
   });
 

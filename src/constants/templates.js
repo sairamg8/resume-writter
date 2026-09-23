@@ -58,27 +58,27 @@ const SIDEBAR_HEADER_GAPS = {
  */
 const TEMPLATES = {
   classic: {
-    label: 'Classic', desc: 'ATS-friendly · Two-column header', ats: true,
+    label: 'Classic', desc: 'ATS-friendly · Two-column header', atsTier: 'certified',
     style: { headingStyle: 'ruled', sectionTitleCase: 'upper' }, headerControls: true, headerRule: true,
     headerGaps: STACKED_HEADER_GAPS,
   },
   modern: {
-    label: 'Modern', desc: 'Bold accent header · Full-width layout', ats: false,
+    label: 'Modern', desc: 'Bold accent header · Full-width layout', atsTier: 'good',
     style: { headingStyle: 'line', sectionTitleCase: 'upper' }, headerControls: false, headerRule: false,
     headerGaps: MODERN_HEADER_GAPS,
   },
   minimal: {
-    label: 'Minimal', desc: 'ATS-friendly · Clean & whitespace-first', ats: true,
+    label: 'Minimal', desc: 'ATS-friendly · Clean & whitespace-first', atsTier: 'certified',
     style: { headingStyle: 'underline', sectionTitleCase: 'upper' }, headerControls: true, headerRule: false,
     headerGaps: { ...STACKED_HEADER_GAPS, summaryGap: 6 },
   },
   executive: {
-    label: 'Executive', desc: 'ATS-friendly · Clean accent headings · Vibrant', ats: true,
+    label: 'Executive', desc: 'ATS-friendly · Clean accent headings · Vibrant', atsTier: 'certified',
     style: { headingStyle: 'underline', sectionTitleCase: 'normal' }, headerControls: true, headerRule: false,
     headerGaps: { ...STACKED_HEADER_GAPS, summaryGap: 6 },
   },
   sidebar: {
-    label: 'Sidebar', desc: 'Colored left sidebar layout', ats: false,
+    label: 'Sidebar', desc: 'Colored left sidebar layout', atsTier: 'risky',
     style: { headingStyle: 'plain', sectionTitleCase: 'upper' }, headerControls: false, headerRule: false,
     headerGaps: SIDEBAR_HEADER_GAPS,
   },
@@ -89,10 +89,6 @@ export const TEMPLATE_IDS = Object.keys(TEMPLATES);
 
 /** The order the Design panel lists them in; a template missing here is listed last, never left out. */
 const PICKER_FIRST = ['executive', 'classic', 'modern', 'minimal', 'sidebar'];
-
-/** The Design panel's template picker: { id, label, desc, ats } for every template, in its order. */
-export const TEMPLATE_PICKER = [...PICKER_FIRST, ...TEMPLATE_IDS.filter((id) => !PICKER_FIRST.includes(id))]
-  .map((id) => ({ id, label: TEMPLATES[id].label, desc: TEMPLATES[id].desc, ats: TEMPLATES[id].ats }));
 
 /** A stored id as the app writes it: an imported file's "Modern" or " sidebar " is Modern or Sidebar (R5-5). */
 const asWritten = (template) => (typeof template === 'string' ? template.trim().toLowerCase() : '');
@@ -145,7 +141,6 @@ export function headingBorderControls(headingStyle) {
   return { thickness: false, color: false };
 }
 
-
 /** The template's header spacing where the résumé sets none (pt; STACKED_HEADER_GAPS above). */
 export const templateHeaderGaps = (template) => TEMPLATES[templateId(template)].headerGaps;
 
@@ -158,6 +153,33 @@ export const headerTemplateId = (template, settings) => {
   const t = templateId(template);
   return t === 'sidebar' && settings?.sidebarSingleColumn ? 'classic' : t;
 };
+
+/**
+ * How well `template` parses, as ONE answer for the whole app (TUI-5): the Design panel's ATS badge and
+ * the ATS Check tab's template verdict both read this, so they cannot drift apart again. They used to be
+ * two hardcoded lists and had already disagreed about two of five templates.
+ *
+ * - `certified` (5 pts) — one linear column on the white page; every Poppler mode and pdf.js read it whole
+ *   (`tests/pdf/40-ats-parse.test.mjs`, `42-ats-fields.test.mjs`).
+ * - `good` (4 pts) — the same single-column body under a coloured banner (Modern). It parses clean in the
+ *   same battery; the notch is its header ground, not its text flow.
+ * - `risky` (2 pts) — two columns a portal may interleave (ATS-3). Only the Sidebar, and only in its
+ *   two-column Layout.
+ *
+ * `settings` matters: the Sidebar's "Single · ATS-safe" prints Classic's page (headerTemplateId), so it is
+ * rated as Classic. An id the app does not offer is rated as the template it prints as, Classic.
+ */
+export const ATS_TIER_POINTS = { certified: 5, good: 4, risky: 2 };
+
+export function atsRating(template, settings) {
+  const t = headerTemplateId(template, settings);
+  const tier = TEMPLATES[t].atsTier;
+  return { tier, points: ATS_TIER_POINTS[tier], safe: tier !== 'risky' };
+}
+
+/** The Design panel's template picker: { id, label, desc, ats } for every template, in its order. */
+export const TEMPLATE_PICKER = [...PICKER_FIRST, ...TEMPLATE_IDS.filter((id) => !PICKER_FIRST.includes(id))]
+  .map((id) => ({ id, label: TEMPLATES[id].label, desc: TEMPLATES[id].desc, ats: atsRating(id).safe }));
 
 /**
  * `resume` with a template the app offers, as the app writes it ("Modern" is 'modern'), so the
@@ -254,7 +276,6 @@ export function contactIconHint(template, settings, cl) {
 
   return `${usage} ${upload}`;
 }
-
 
 /** Text Position as a flex alignment for the photo's row (Center when unset). */
 export const photoTextAlignItems = (settings) =>
