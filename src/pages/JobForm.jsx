@@ -4,6 +4,7 @@ import { ArrowLeft } from 'lucide-react';
 import { useJobStore } from '@/hooks/useJobStore';
 import { useJobStages } from '@/hooks/useJobStages';
 import { formPatch, jobFormValues, withFormStatus } from '@/utils/jobEdits';
+import { linkedResume } from '@/utils/jobQuery';
 import { JOB_STATUSES } from '@/constants/jobs';
 import { InterviewStageSelector } from '@/components/job/InterviewStageSelector';
 import { JobsNotSavedAlert } from '@/components/job/JobsNotSavedAlert';
@@ -160,6 +161,7 @@ export function JobForm({ store }) {
             <Field id={uid + 'resumeId'} label="Resume Used">
               <select id={uid + 'resumeId'} value={form.resumeId} onChange={e => set('resumeId', e.target.value)} className={INPUT + ' bg-white cursor-pointer'}>
                 <option value="">— Not linked yet —</option>
+                {linkedResume(form, resumes).state === 'deleted' && <option value={form.resumeId}>Résumé deleted</option>}
                 {resumes.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
               </select>
             </Field>

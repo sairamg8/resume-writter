@@ -2,6 +2,7 @@
 // writes — so the store and the pages share one tested rule for each. No React and no path aliases:
 // Node's test runner loads this file as it is (tests/unit/job-edits.unit.mjs).
 import { todayLocalISO } from './dates.js';
+import { newId } from './ids.js';
 import { statusId } from './normalizeJob.js';
 import { PIPELINE_STATUSES } from '../constants/jobs.js';
 
@@ -102,4 +103,63 @@ export function formPatch(start, form) {
     if (key in form && form[key] !== start[key]) patch[key] = form[key];
   }
   return patch;
+}
+
+/**
+ * `todos` with a new, open to-do reading `text` (trimmed); the same list when there is no text. A
+ * text another to-do has — even a completed one — is added too: a recurring follow-up is normal,
+ * and the Tasks tab ignored it without a word (J-26). Ids keep the two apart.
+ */
+export function addTodo(todos, text) {
+  const t = String(text ?? '').trim();
+  return t ? [...todos, { id: newId('td'), text: t, done: false }] : todos;
+}
+
+/**
+ * `todos` with to-do `id` ticked or unticked: ticking stamps `completedAt` (now), so the Tasks tab
+ * lists it first among the completed ones (visibleDone, J-27); unticking removes it.
+ */
+export function toggleTodo(todos, id, now = Date.now()) {
+  return todos.map((t) => {
+    if (t.id !== id) return t;
+    if (t.done) {
+      const open = { ...t, done: false };
+      delete open.completedAt;
+      return open;
+    }
+    return { ...t, done: true, completedAt: now };
+  });
+}
+
+const DAY = 24 * 60 * 60 * 1000;
+
+/**
+ * The demo job a first visit shows, dated from `now`: applied ten days ago, the steps since on the
+ * days after, the next deadline five days ahead. Fixed dates in 2025/2026 contradicted each other
+ * and showed 'Deadline passed' to every new user (J-29). The id stays 'demo_1'.
+ */
+export function demoJobs(now = new Date()) {
+  const appliedDay = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 10);
+  const at = (days, hour) => new Date(appliedDay.getFullYear(), appliedDay.getMonth(), appliedDay.getDate() + days, hour).getTime();
+  const history = [
+    { status: 'saved', changedAt: at(0, 9) },
+    { status: 'applied', changedAt: at(0, 11) },
+    { status: 'phone_screen', changedAt: at(3, 15) },
+    { status: 'interview', changedAt: Math.min(at(7, 10), now.getTime()) },
+  ];
+  return [{
+    id: 'demo_1', company: 'Google', role: 'Senior Frontend Engineer', status: 'interview',
+    url: '', location: 'Mountain View, CA', salary: '$180k – $250k',
+    appliedDate: todayLocalISO(appliedDay), deadline: todayLocalISO(new Date(now.getTime() + 5 * DAY)),
+    contact: 'Sarah Kim (Recruiter) · sarah@google.com',
+    notes: '<p>Referred by college contact. L5 level. Focus on systems design round.</p>',
+    todos: [
+      { id: 't1', text: 'Research recent Google products & announcements', done: true },
+      { id: 't2', text: 'Prepare system design (YouTube, Google Drive)', done: true },
+      { id: 't3', text: 'Practice LeetCode hard — trees & graphs', done: false },
+      { id: 't4', text: 'Send thank you email after interview', done: false },
+    ],
+    statusHistory: history,
+    createdAt: history[0].changedAt, updatedAt: history.at(-1).changedAt,
+  }];
 }

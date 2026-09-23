@@ -1,7 +1,8 @@
 import { useState, useRef } from 'react';
 import { Plus, CheckSquare } from 'lucide-react';
 import { TodoItem } from '@/components/job/TodoItem';
-import { newId } from '@/utils/ids';
+import { addTodo as withTodo, toggleTodo } from '@/utils/jobEdits';
+import { visibleDone } from '@/utils/jobQuery';
 
 const DONE_PAGE_SIZE = 5;
 
@@ -11,19 +12,21 @@ export function TasksTab({ todos, onChange }) {
   const inputRef = useRef(null);
 
   const pending = todos.filter(t => !t.done);
-  const done = todos.filter(t => t.done);
-  const visibleDone = showAllDone ? done : done.slice(0, DONE_PAGE_SIZE);
+  // Newest completed first: the task just ticked never hides behind 'Show more' (J-27).
+  const done = visibleDone(todos);
+  const shownDone = showAllDone ? done : done.slice(0, DONE_PAGE_SIZE);
   const pct = todos.length ? Math.round((done.length / todos.length) * 100) : 0;
 
+  // A text another task has — even a done one — is added: it was ignored without a word (J-26).
   function addTodo(text) {
-    const t = text.trim();
-    if (!t || todos.some(td => td.text === t)) return;
-    onChange([...todos, { id: newId('td'), text: t, done: false }]);
+    const next = withTodo(todos, text);
+    if (next === todos) return;
+    onChange(next);
     setInput('');
     inputRef.current?.focus();
   }
 
-  function toggle(id) { onChange(todos.map(t => t.id === id ? { ...t, done: !t.done } : t)); }
+  function toggle(id) { onChange(toggleTodo(todos, id)); }
   function remove(id) { onChange(todos.filter(t => t.id !== id)); }
   function rename(id, text) { onChange(todos.map(t => t.id === id ? { ...t, text } : t)); }
 
@@ -99,7 +102,7 @@ export function TasksTab({ todos, onChange }) {
             Completed ({done.length})
           </p>
           <div className="space-y-2">
-            {visibleDone.map(t => (
+            {shownDone.map(t => (
               <TodoItem
                 key={t.id}
                 todo={t}

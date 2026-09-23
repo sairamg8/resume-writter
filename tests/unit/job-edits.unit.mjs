@@ -98,3 +98,45 @@ test('applyEdits: fields merge, updatedAt moves, id / createdAt / history cannot
   assert.deepEqual(out.statusHistory.map((h) => h.status), ['saved', 'applied']);
   assert.deepEqual(out.todos, j.todos, 'what the edit did not name is kept');
 });
+
+// ── J-26 · J-27: tasks ───────────────────────────────────────────────────────────────────────
+
+test('J-26: a task whose text matches another — even a completed one — is added (recurring follow-ups)', () => {
+  const { addTodo } = edits;
+  const todos = [{ id: 't1', text: 'Send thank-you email', done: true }];
+  const next = addTodo(todos, '  Send thank-you email ');
+  assert.equal(next.length, 2);
+  assert.deepEqual([next[1].text, next[1].done], ['Send thank-you email', false]);
+  assert.notEqual(next[1].id, 't1');
+  assert.equal(addTodo(todos, '   '), todos, 'nothing typed: the same list');
+});
+
+test('J-27: toggleTodo stamps completedAt when a task is ticked and clears it when unticked', () => {
+  const { toggleTodo } = edits;
+  const todos = [{ id: 'a', text: 'x', done: false }, { id: 'b', text: 'y', done: true, completedAt: 5 }];
+  const ticked = toggleTodo(todos, 'a', T);
+  assert.deepEqual(ticked[0], { id: 'a', text: 'x', done: true, completedAt: T });
+  const unticked = toggleTodo(ticked, 'b', T);
+  assert.deepEqual(unticked[1], { id: 'b', text: 'y', done: false });
+  assert.equal(unticked[0], ticked[0], 'the other task is the same object');
+});
+
+// ── J-29: the demo job ───────────────────────────────────────────────────────────────────────
+import { deadlineState, endOfLocalDay } from '../../src/utils/dates.js';
+
+test('J-29: the demo job\'s dates agree with each other and with today — history after the applied day, a deadline ahead', () => {
+  const { demoJobs } = edits;
+  const [demo] = demoJobs(NOW);
+  assert.equal(demo.id, 'demo_1', 'the id links and tests open it by');
+  assert.equal(deadlineState(demo.deadline, NOW), null, 'not overdue on the first visit (nor "due soon")');
+  const appliedStart = endOfLocalDay(demo.appliedDate).getTime() - 24 * 60 * 60 * 1000 + 1;
+  const times = demo.statusHistory.map((h) => h.changedAt);
+  for (const t of times) assert.ok(t >= appliedStart && t <= T, `${new Date(t).toISOString()} between the applied day and now`);
+  assert.deepEqual(times, [...times].sort((a, b) => a - b), 'in order');
+  assert.deepEqual(demo.statusHistory.map((h) => h.status), ['saved', 'applied', 'phone_screen', 'interview']);
+  assert.equal(demo.createdAt, times[0]);
+  assert.equal(demo.updatedAt, times.at(-1));
+  assert.match(demo.notes, /^<p>/, 'notes in the editor\'s format (J-03)');
+  const later = demoJobs(new Date(2027, 0, 5));
+  assert.equal(deadlineState(later[0].deadline, new Date(2027, 0, 5)), null, 'relative to the day it is made');
+});

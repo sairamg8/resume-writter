@@ -12,13 +12,8 @@ export function Pipeline({ status, onChange }) {
   const nextId = PIPELINE[activeIdx + 1];
   const nextStatus = nextId ? STATUS_MAP[nextId] : null;
 
-  function confirmReopen(id) {
-    const s = STATUS_MAP[id];
-    const ok = window.confirm(
-      `Reopen this application as "${s.label}"?\n\nThis will restart the pipeline from "${s.label}".`
-    );
-    if (ok) onChange(id);
-  }
+  // Restarting a closed job is a status change like any other — the history records it, no
+  // window.confirm: the Edit form and a board drag never asked, so only this path did (J-24).
 
   if (isTerminal) {
     const t = STATUS_MAP[status];
@@ -39,7 +34,7 @@ export function Pipeline({ status, onChange }) {
               return (
                 <button
                   key={id}
-                  onClick={() => confirmReopen(id)}
+                  onClick={() => onChange(id)}
                   className="text-[11px] px-3 py-1.5 rounded-full border font-semibold transition-all hover:scale-105"
                   style={{ color: s.text, backgroundColor: s.bg, borderColor: s.color + '60' }}
                 >

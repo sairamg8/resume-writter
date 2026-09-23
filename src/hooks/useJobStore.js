@@ -3,34 +3,12 @@ import { loadSavedList, notSavedReason, pendingRecovery, readSavedList, remember
 import { newId } from '../utils/ids.js';
 import { addressableJobs, completeJob, readJob, statusId } from '../utils/normalizeJob.js';
 import { keepUnsaved } from '../utils/unsavedJobs.js';
-import { applyEdits, newJobDefaults } from '../utils/jobEdits.js';
+import { applyEdits, demoJobs, newJobDefaults } from '../utils/jobEdits.js';
 import { mergeImport } from '../utils/jobImport.js';
 
 const KEY = 'cpwtcv_jobs_v1';
 
-const DEMO_JOBS = [
-  {
-    id: 'demo_1', company: 'Google', role: 'Senior Frontend Engineer', status: 'interview',
-    url: '', location: 'Mountain View, CA', salary: '$180k – $250k',
-    appliedDate: '2026-06-10', deadline: '2026-06-30',
-    contact: 'Sarah Kim (Recruiter) · sarah@google.com',
-    notes: 'Referred by college contact. L5 level. Focus on systems design round.',
-    todos: [
-      { id: 't1', text: 'Research recent Google products & announcements', done: true },
-      { id: 't2', text: 'Prepare system design (YouTube, Google Drive)', done: true },
-      { id: 't3', text: 'Practice LeetCode hard — trees & graphs', done: false },
-      { id: 't4', text: 'Send thank you email after interview', done: false },
-    ],
-    statusHistory: [
-      { status: 'saved', changedAt: 1749500000000 },
-      { status: 'applied', changedAt: 1749514800000 },
-      { status: 'phone_screen', changedAt: 1749600000000 },
-      { status: 'interview', changedAt: 1749686400000 },
-    ],
-    createdAt: 1749500000000, updatedAt: 1749686400000,
-  },
-];
-
+// Not bumped for the new optional fields: a version change re-adds the demo job (load, peek).
 const JOB_VERSION = 2;
 
 /**
@@ -39,17 +17,17 @@ const JOB_VERSION = 2;
  * raw value is first copied to a backup key, because the next save replaces it (loadSavedList).
  * `recovery` is then `{ backupKey }` (null when not even the copy could be written). A repair
  * that loses nothing — a number turned into its digits — gets neither (VM4-5). Nothing saved
- * yet: the demo job.
+ * yet: the demo job, dated from today (demoJobs, J-29).
  */
 function load() {
   const { saved, list, recovery } = loadSavedList(KEY, 'jobs', readJob);
-  if (!list) return { jobs: DEMO_JOBS, recovery: null };
+  if (!list) return { jobs: demoJobs(), recovery: null };
   if (!saved) return { jobs: [], recovery };
   // A job, or a to-do, the pages cannot address (no id, or one another has) gets an id rather than
   // being dropped; nothing is lost, so it is not a repair to report (completeJob, addressableJobs).
   let jobs = list.map(completeJob);
   // Migrate: strip old demo_* jobs, keep user-created ones
-  if (saved.dataVersion !== JOB_VERSION) jobs = [...DEMO_JOBS, ...jobs.filter(j => !j.id.startsWith('demo_'))];
+  if (saved.dataVersion !== JOB_VERSION) jobs = [...demoJobs(), ...jobs.filter(j => !j.id.startsWith('demo_'))];
   return { jobs: addressableJobs(jobs), recovery };
 }
 
@@ -84,11 +62,11 @@ let initialized = false;
 function peek() {
   const { saved, list } = readSavedList(KEY, 'jobs', readJob);
   let jobs;
-  if (!list) jobs = DEMO_JOBS;
+  if (!list) jobs = demoJobs();
   else if (!saved) jobs = [];
   else {
     jobs = list.map(completeJob);
-    if (saved.dataVersion !== JOB_VERSION) jobs = [...DEMO_JOBS, ...jobs.filter(j => !j.id.startsWith('demo_'))];
+    if (saved.dataVersion !== JOB_VERSION) jobs = [...demoJobs(), ...jobs.filter(j => !j.id.startsWith('demo_'))];
     jobs = addressableJobs(jobs);
   }
   return { jobs, recovery: pendingRecovery(KEY), persistError: null };

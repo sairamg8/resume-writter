@@ -176,3 +176,41 @@ test('funnelCounts: jobs that reached each step or a later one, with the convers
   ]);
   assert.deepEqual(funnelCounts([]).map((f) => [f.count, f.rate]), [[0, null], [0, null], [0, null], [0, null]]);
 });
+
+// ── J-20: the history's "reopened" ───────────────────────────────────────────────────────────
+import { historyLabels, linkedResume, visibleDone } from '../../src/utils/jobQuery.js';
+
+test('J-20: a closed status is "reopened" only when a pipeline status follows it — On Hold then Rejected is not', () => {
+  const entries = historyLabels([{ status: 'applied', changedAt: 1 }, { status: 'on_hold', changedAt: 2 }, { status: 'rejected', changedAt: 3 }]);
+  assert.deepEqual(entries.map((e) => [e.status, e.reopened, e.current]), [['applied', false, false], ['on_hold', false, false], ['rejected', false, true]]);
+  const back = historyLabels([{ status: 'rejected', changedAt: 1 }, { status: 'applied', changedAt: 2 }]);
+  assert.deepEqual(back.map((e) => e.reopened), [true, false]);
+  assert.deepEqual(historyLabels([{ status: 'on_hold' }, { status: 'interview' }]).map((e) => e.reopened), [true, false], 'on hold, resumed');
+  assert.deepEqual(historyLabels([{ status: 'offer', changedAt: 5 }]).map((e) => [e.label, e.at, e.closed]), [['Offer', 5, false]]);
+  assert.equal(historyLabels([{ status: 'saved', changedAt: 'yesterday' }])[0].at, null, 'no time: none printed, not "Invalid Date"');
+  assert.deepEqual(historyLabels(undefined), []);
+});
+
+// ── J-21: a linked résumé that was deleted ───────────────────────────────────────────────────
+
+test('J-21: linkedResume tells a deleted résumé from none', () => {
+  const resumes = [{ id: 'r1', name: 'Frontend CV' }];
+  assert.deepEqual(linkedResume({ resumeId: 'r1' }, resumes), { state: 'linked', resume: resumes[0] });
+  assert.deepEqual(linkedResume({ resumeId: 'gone' }, resumes), { state: 'deleted', resume: null });
+  assert.deepEqual(linkedResume({ resumeId: '' }, resumes), { state: 'none', resume: null });
+  assert.deepEqual(linkedResume({}, undefined), { state: 'none', resume: null });
+});
+
+// ── J-27: the task just ticked stays in sight ────────────────────────────────────────────────
+
+test('J-27: visibleDone lists completed tasks newest first, so the one just ticked is never behind "Show more"', () => {
+  const todos = [
+    ...[1, 2, 3, 4, 5].map((n) => ({ id: `t${n}`, text: `Task ${n}`, done: true })), // older builds: no completedAt
+    { id: 't6', text: 'Task 6', done: false },
+    { id: 't7', text: 'Task 7', done: true, completedAt: 200 },
+    { id: 't8', text: 'Task 8', done: true, completedAt: 100 },
+  ];
+  assert.deepEqual(visibleDone(todos, 5).map((t) => t.id), ['t7', 't8', 't1', 't2', 't3']);
+  assert.deepEqual(visibleDone(todos).map((t) => t.id), ['t7', 't8', 't1', 't2', 't3', 't4', 't5']);
+  assert.deepEqual(visibleDone([]), []);
+});

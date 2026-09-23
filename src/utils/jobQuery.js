@@ -3,7 +3,7 @@
 // sorted every column as text (J-18). No React and no path aliases, so Node's test runner loads this
 // file as it is (tests/unit/job-query.unit.mjs, with a fixed `now`).
 import {
-  JOB_STATUSES, STATUS_MAP, PIPELINE_STATUSES, ACTIVE_STATUSES, INTERVIEWING_STATUSES,
+  JOB_STATUSES, STATUS_MAP, PIPELINE_STATUSES, CLOSED_STATUSES, ACTIVE_STATUSES, INTERVIEWING_STATUSES,
 } from '../constants/jobs.js';
 import { todayLocalISO } from './dates.js';
 
@@ -11,7 +11,7 @@ const ISO_DAY = /^(\d{4})-(\d{2})-(\d{2})$/;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 /** Text as search compares it: lower case, accents aside ('Zürich' finds 'zurich'). */
-const fold = (v) => String(v ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+const fold = (v) => String(v ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
 /** The fields a search looks in. */
 const SEARCH_FIELDS = ['company', 'role', 'location', 'contact', 'stage', 'salary'];
@@ -193,4 +193,53 @@ export function funnelCounts(jobs) {
     prev = count;
     return { id, label: STATUS_MAP[id].label, count, rate };
   });
+}
+
+/**
+ * A job's status history as the timeline prints it, oldest first: `[{ status, label, at, closed,
+ * current, reopened }]` — `at` the time in ms or null (none printed, not 'Invalid Date'), `closed`
+ * on hold / rejected / withdrawn, `current` the last entry. `reopened` only when a pipeline status
+ * follows a closed one: an On Hold later closed as Rejected read '→ reopened' (J-20).
+ */
+export function historyLabels(history) {
+  const list = (Array.isArray(history) ? history : []).filter((h) => STATUS_MAP[h?.status]);
+  return list.map((h, i) => {
+    const closed = CLOSED_STATUSES.includes(h.status);
+    const next = list[i + 1];
+    return {
+      status: h.status,
+      label: STATUS_MAP[h.status].label,
+      at: Number.isFinite(h.changedAt) ? h.changedAt : null,
+      closed,
+      current: i === list.length - 1,
+      reopened: closed && Boolean(next) && PIPELINE_STATUSES.includes(next.status),
+    };
+  });
+}
+
+/**
+ * The résumé a job is linked to: `{ state: 'linked', resume }`, `{ state: 'none' }` with no link,
+ * or `{ state: 'deleted' }` when the résumé is gone — it read 'Not linked yet' beside an Open
+ * button that bounced to the dashboard (J-21). `resume` is null unless linked.
+ */
+export function linkedResume(job, resumes = []) {
+  const id = job?.resumeId;
+  if (!id) return { state: 'none', resume: null };
+  const resume = (resumes || []).find((r) => r.id === id);
+  return resume ? { state: 'linked', resume } : { state: 'deleted', resume: null };
+}
+
+/**
+ * A job's completed to-dos, the most recently completed first (`completedAt`; ones from before it
+ * was kept follow, in their order), at most `limit` of them. The Tasks tab showed the first five in
+ * list order, so with five done the task just ticked vanished behind 'Show more' (J-27).
+ */
+export function visibleDone(todos, limit = Infinity) {
+  const when = (t) => (Number.isFinite(t.completedAt) ? t.completedAt : -Infinity);
+  return (todos || [])
+    .map((t, i) => ({ t, i }))
+    .filter(({ t }) => t.done)
+    .sort((a, b) => when(b.t) - when(a.t) || a.i - b.i)
+    .slice(0, limit)
+    .map(({ t }) => t);
 }
