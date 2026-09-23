@@ -7,6 +7,7 @@
 // (a certificate's expiry, an education's description) goes out under the app's name and comes
 // back. A custom section has no key in the schema: the export keeps it in `meta` (jsonResumeExport.js).
 import { newId } from './ids.js';
+import { SECTION_TYPE_DEFAULTS } from './defaultDataSectionTypes.js';
 import { isText, storedText } from './storedText.js';
 import { describe, entries, isoDate, joined, listOf, listText, month, plain, richDescription, richText } from './jsonResumeText.js';
 
@@ -40,8 +41,11 @@ function interestName(e) {
   return name && more ? `${name} (${more})` : name || more;
 }
 
-/** The fields of a reference the app writes, which the export keeps on the entry beside the schema's text. */
-const REFERENCE_FIELDS = ['jobTitle', 'company', 'relationship', 'email', 'phone'];
+/**
+ * The fields of a reference the app writes beyond its name — the editor's own, from its blank entry —
+ * which the export keeps on the entry beside the schema's text.
+ */
+const REFERENCE_FIELDS = Object.keys(SECTION_TYPE_DEFAULTS.references('ref').items[0]).filter((k) => k !== 'id' && k !== 'name');
 
 /** The section types the schema has a key for, in the order an import with no `meta` lays them out. */
 export const SECTION_KEYS = {
