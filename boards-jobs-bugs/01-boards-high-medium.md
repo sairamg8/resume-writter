@@ -17,7 +17,7 @@ title: Boards — verified bugs, High and Medium (B-01…B-13)
 - **Fail-first test:** tests/unit/board-store.unit.mjs: register a react stub with node:module register, then import useBoardStore.js twice with different ?tab queries sharing one fake localStorage that dispatches storage events to the other tab's window stub. A subscribes and unsubscribes, B calls addBoard, A subscribes again. Assert A.snapshot().boards contains B's board. Then call A.updateBoard and assert the stored JSON still holds B's board. Fails today.
 - **Owner:** BOARDS-MODEL · **Fix commit:** — · **Test:** —
 
-### B-02 · Medium · crash · 🔴 Open · links **R2-041**
+### B-02 · Medium · crash · ⏸ Fixed · links **R2-041**
 **A saved list whose cards array is missing or null passes normalisation and crashes /boards and /boards/:id on every load, with no backup or recovery notice**
 - **Where:** `src/utils/normalizeBoard.js` : 118, 178 (crash sites: src/pages/Boards.jsx:68, src/pages/Board.jsx:196 and 99-100, src/components/board/BoardColumn.jsx:24, src/hooks/useBoardStore.js:213)
 - **Repro:** 1) In DevTools set localStorage cpwtcv_boards_v1 to {"boards":[{"id":"b","title":"B","lists":[{"id":"l","title":"x"}]}],"dataVersion":1}. 2) Open /#/boards: the ErrorBoundary replaces the page. 3) Reload: it crashes again. 4) /#/boards/b crashes as well.
@@ -25,7 +25,8 @@ title: Boards — verified bugs, High and Medium (B-01…B-13)
 - **Fix hint:** In readList, when !Array.isArray(list.cards), set cards to [] (mark it lost only when list.cards != null). In completeLists, also default cards to [], as completeBoard already does for lists.
 - **Verified (WF-1):** Code read: readList repairs cards only when list.cards != null (normalizeBoard.js:118), and completeLists skips non-arrays (L178). Ran verify-boards/v2-nocards.mjs with lists [{id:'l'},{id:'m',cards:null}]. Printed: 'recovery notice: null'. Storage was rewritten unchanged by init. 'backup keys: []', 'Boards.jsx:68 expression throws: Cannot read properties of undefined (reading 'length')', 'useBoardStore addCard throws: l.cards is not iterable'. The throw is caught by the ErrorBoundary in AppRoutes.jsx:20.
 - **Fail-first test:** tests/unit/normalize-board.unit.mjs (the file normalizeBoard.js:6 already cites): completeBoard(readBoard({id:'b',lists:[{id:'l'},{id:'m',cards:null}]}).kept).lists.every(l => Array.isArray(l.cards)) must be true. Fails today.
-- **Owner:** BOARDS-MODEL · **Fix commit:** — · **Test:** —
+- **Now:** readList repairs a missing, null or non-list `cards` to `[]` (a loss only when it held something that is not a list), and completeLists defaults it for any other caller. The v2 reader keeps this for v1 data (the migration reads v1 lists through it). Fail-first: the row's own assertion was `false` at HEAD (`# fail 1`), passes now.
+- **Owner:** BOARDS-MODEL · **Fix commit:** this commit (`fix(boards): a list with no cards reads as an empty list (B-02)`) · **Test:** tests/unit/normalize-board.unit.mjs
 
 ### B-03 · Medium · data-loss · 🔴 Open · links **R2-037**
 **The board page never shows the storage-full alert or the recovery notice, so edits made there are lost on reload without warning**

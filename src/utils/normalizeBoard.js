@@ -115,12 +115,12 @@ function readList(list) {
     if (loses) lost = true;
   };
   if (!isText(list.title)) set('title', asText(list.title), !isNumber(list.title));
-  if (list.cards != null) {
-    if (!Array.isArray(list.cards)) set('cards', [], true);
-    else {
-      const { value, lost: l } = readEntries(list.cards, readCard);
-      if (value !== list.cards) set('cards', value, l);
-    }
+  // No cards (missing or null) is an empty list, and held nothing: every page iterates
+  // list.cards, and both board pages crashed on it at every load (B-02).
+  if (!Array.isArray(list.cards)) set('cards', [], list.cards != null);
+  else {
+    const { value, lost: l } = readEntries(list.cards, readCard);
+    if (value !== list.cards) set('cards', value, l);
   }
   return { kept: out, lost };
 }
@@ -175,7 +175,7 @@ function completeCards(cards) {
 function completeLists(lists) {
   const withIds = withOwnIds(lists, 'list');
   const out = withIds.map((l) => {
-    if (!Array.isArray(l.cards)) return l;
+    if (!Array.isArray(l.cards)) return { ...l, cards: [] }; // B-02: what readList repairs, for any caller
     const cards = completeCards(l.cards);
     return cards === l.cards ? l : { ...l, cards };
   });
