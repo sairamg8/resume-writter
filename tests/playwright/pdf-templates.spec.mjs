@@ -1,7 +1,37 @@
 import { test, expect } from '@playwright/test';
-import { visitEditor, exportPdf, findRun } from './pw-helpers.js';
+import { visitEditor, exportPdf, findRun, openDesignPanel } from './pw-helpers.js';
 
-test.describe('Exported PDF — All 5 Templates', () => {
+/**
+ * The tallest column of the preview's first page painted in the Timeline rail's colour, px: the accent
+ * #2563eb at 35 % on white (timelineRail.js), rgb(179, 200, 248). The rail is a vertical line, so one
+ * column holds many such pixels; a heading rule or a tag in a similar tint is horizontal and holds few.
+ * The preview is the PDF drawn by pdf.js onto a canvas, so the rail shows there exactly when the PDF draws it.
+ */
+async function railPixels(page) {
+  const canvas = page.locator('[data-preview-status="ready"] canvas').first();
+  await expect(canvas).toBeVisible();
+  return canvas.evaluate((c) => {
+    const { data } = c.getContext('2d').getImageData(0, 0, c.width, c.height);
+    const columns = new Array(c.width).fill(0);
+    for (let i = 0; i < data.length; i += 4) {
+      if (Math.abs(data[i] - 179) <= 6 && Math.abs(data[i + 1] - 200) <= 6 && Math.abs(data[i + 2] - 248) <= 6) columns[(i / 4) % c.width] += 1;
+    }
+    return Math.max(...columns);
+  });
+}
+
+/** The exported PDF's Experience entry: its date run ("01/2023 – ", the first) sits above its role (PDF y grows upward), both starting at one x. */
+function expectDateAboveTitle(runs) {
+  const date = findRun(runs, '01/2023');
+  const role = findRun(runs, 'Senior Dev');
+  expect(date).toBeDefined();
+  expect(role).toBeDefined();
+  expect(date.y).toBeGreaterThan(role.y + 5);
+  expect(Math.abs(date.x - role.x)).toBeLessThan(0.5);
+  expect(date.colorHex).toBe('#2563eb');
+}
+
+test.describe('Exported PDF — every template', () => {
 
   test('Classic template: exports all sections, header, and entries into PDF', async ({ page }) => {
     await visitEditor(page, 'classic');
@@ -66,6 +96,32 @@ test.describe('Exported PDF — All 5 Templates', () => {
     const upperText = text.toUpperCase();
     expect(upperText).toContain('CONTACT');
     expect(upperText).toContain('EMAIL');
+  });
+
+  test('Timeline template: the preview draws the rail, and the export sets each date above its title', async ({ page }) => {
+    await visitEditor(page, 'timeline');
+    expect(await railPixels(page)).toBeGreaterThan(120);
+
+    const { runs, text } = await exportPdf(page);
+    expect(text).toContain('Alex Johnson');
+    expect(text).toContain('Acme Corp');
+    expect(text).toContain('MIT');
+    expect(text).toContain('My App');
+    expect(text).toContain('Red Cross');
+    expectDateAboveTitle(runs);
+  });
+
+  test('Timeline is offered in the Design panel; picking it redraws the preview and the export', async ({ page }) => {
+    await visitEditor(page, 'classic');
+    // Measured: Classic's tallest such column 12 px (a tag's edge), Timeline's rail 268 px.
+    expect(await railPixels(page)).toBeLessThan(40);
+
+    await openDesignPanel(page);
+    await page.locator('button:has-text("Timeline")').first().click();
+    await expect.poll(() => railPixels(page), { timeout: 20_000 }).toBeGreaterThan(120);
+
+    const { runs } = await exportPdf(page);
+    expectDateAboveTitle(runs);
   });
 
 });
