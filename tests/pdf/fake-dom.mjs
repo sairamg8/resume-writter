@@ -80,6 +80,104 @@ class FakeElement extends FakeNode {
   blur() {}
 }
 
+/**
+ * Enough of Range and Selection for the editors' own DOM work: the STAR Optimizer reads the
+ * statement the caret is in and puts its result back in its place (RichTextEditor, AUD-09), which
+ * no other test could reach without a browser. A boundary point is (container, offset) as the DOM
+ * defines it, compared as a path of child indices, so the text between two points is well defined
+ * without layout. Chromium remains the real check — tests/playwright/bullet-optimizer.spec.mjs.
+ */
+const pathOf = (node) => {
+  const path = [];
+  for (let n = node; n.parentNode; n = n.parentNode) path.unshift(n.parentNode.childNodes.indexOf(n));
+  return path;
+};
+/** A boundary point as a path: an element's offset counts children, a text node's counts characters. */
+const pointOf = (container, offset) => [...pathOf(container), offset];
+const comparePoints = (a, b) => {
+  for (let i = 0; i < Math.max(a.length, b.length); i += 1) {
+    const x = a[i] ?? -1;
+    const y = b[i] ?? -1;
+    if (x !== y) return x < y ? -1 : 1;
+  }
+  return 0;
+};
+function* walk(node) {
+  yield node;
+  for (const child of [...node.childNodes]) yield* walk(child);
+}
+const lengthOf = (node) => (node.nodeType === 3 ? node.nodeValue.length : node.childNodes.length);
+
+class FakeRange {
+  constructor(doc) {
+    this.ownerDocument = doc;
+    this.setStart(doc, 0);
+    this.setEnd(doc, 0);
+  }
+  setStart(container, offset) { this.startContainer = container; this.startOffset = offset; }
+  setEnd(container, offset) { this.endContainer = container; this.endOffset = offset; }
+  setStartBefore(node) { this.setStart(node.parentNode, node.parentNode.childNodes.indexOf(node)); }
+  setEndAfter(node) { this.setEnd(node.parentNode, node.parentNode.childNodes.indexOf(node) + 1); }
+  selectNodeContents(node) { this.setStart(node, 0); this.setEnd(node, lengthOf(node)); }
+  cloneRange() {
+    const copy = new FakeRange(this.ownerDocument);
+    copy.setStart(this.startContainer, this.startOffset);
+    copy.setEnd(this.endContainer, this.endOffset);
+    return copy;
+  }
+  get collapsed() { return comparePoints(this.start, this.end) === 0; }
+  get start() { return pointOf(this.startContainer, this.startOffset); }
+  get end() { return pointOf(this.endContainer, this.endOffset); }
+  get commonAncestorContainer() {
+    const ancestors = new Set();
+    for (let n = this.startContainer; n; n = n.parentNode) ancestors.add(n);
+    for (let n = this.endContainer; n; n = n.parentNode) if (ancestors.has(n)) return n;
+    return this.ownerDocument;
+  }
+  /** Every text node the range covers, with the slice of it that falls inside. */
+  *slices() {
+    const [from, to] = [this.start, this.end];
+    for (const node of walk(this.ownerDocument)) {
+      if (node.nodeType !== 3) continue;
+      const a = node === this.startContainer ? this.startOffset : 0;
+      const b = node === this.endContainer ? this.endOffset : node.nodeValue.length;
+      if (comparePoints(pointOf(node, node.nodeValue.length), from) <= 0) continue;
+      if (comparePoints(pointOf(node, 0), to) >= 0) continue;
+      yield [node, a, b];
+    }
+  }
+  toString() { return [...this.slices()].map(([n, a, b]) => n.nodeValue.slice(a, b)).join(''); }
+  /** The covered text removed, and every element left empty by it — what insertText replaces. */
+  deleteContents() {
+    const covered = [...this.slices()];
+    for (const [node, a, b] of covered) node.nodeValue = node.nodeValue.slice(0, a) + node.nodeValue.slice(b);
+    const first = covered[0]?.[0] ?? null;
+    for (const [node] of covered) if (!node.nodeValue && node !== first) node.parentNode?.removeChild(node);
+    return first;
+  }
+}
+
+class FakeSelection {
+  constructor(doc) { this.ownerDocument = doc; this.ranges = []; }
+  get rangeCount() { return this.ranges.length; }
+  get anchorNode() { return this.ranges[0]?.startContainer ?? null; }
+  getRangeAt(i) { return this.ranges[i]; }
+  removeAllRanges() { this.ranges = []; }
+  addRange(range) { this.ranges = [range]; }
+  /** A caret at `offset` in `node`, or the whole of `node` with no offset — what a test sets up. */
+  collapse(node, offset = 0) {
+    const range = new FakeRange(this.ownerDocument);
+    range.setStart(node, offset);
+    range.setEnd(node, offset);
+    this.addRange(range);
+  }
+  selectAllChildren(node) {
+    const range = new FakeRange(this.ownerDocument);
+    range.selectNodeContents(node);
+    this.addRange(range);
+  }
+}
+
 class FakeDocument extends FakeNode {
   constructor() {
     super(null, 9, '#document');
@@ -88,10 +186,32 @@ class FakeDocument extends FakeNode {
     this.documentElement = this.appendChild(this.createElement('html'));
     this.body = this.documentElement.appendChild(this.createElement('body'));
     this.activeElement = this.body;
+    this.selection = new FakeSelection(this);
   }
   createElement(tag) { return new FakeElement(this, tag); }
   createElementNS(ns, tag) { return new FakeElement(this, tag, ns); }
   createTextNode(text) { return new FakeText(this, text); }
+  createRange() { return new FakeRange(this); }
+  getSelection() { return this.selection; }
+  /**
+   * `insertText` only — the one command the editors run outside a browser (RichTextEditor's Apply,
+   * AUD-09): the selection's text replaced by `text`, left as text, and the caret after it. Every
+   * other command returns false rather than pretending.
+   */
+  execCommand(command, _ui, text) {
+    if (command !== 'insertText') return false;
+    const range = this.selection.getRangeAt(0);
+    if (!range) return false;
+    const at = range.deleteContents() ?? range.startContainer;
+    if (at.nodeType === 3) {
+      const cut = at === range.startContainer ? range.startOffset : at.nodeValue.length;
+      at.nodeValue = at.nodeValue.slice(0, cut) + String(text) + at.nodeValue.slice(cut);
+    } else {
+      at.insertBefore(this.createTextNode(String(text)), at.childNodes[range.startOffset] ?? null);
+    }
+    this.selection.removeAllRanges();
+    return true;
+  }
 }
 
 /**
@@ -123,7 +243,7 @@ function withEvents(target) {
 export function fakeWindow() {
   const document = withEvents(new FakeDocument());
   document.hidden = false;
-  const window = withEvents({ document, navigator: { onLine: true }, HTMLIFrameElement: class {}, location: { href: 'http://localhost/' } });
+  const window = withEvents({ document, navigator: { onLine: true }, HTMLIFrameElement: class {}, location: { href: 'http://localhost/' }, getSelection: () => document.getSelection() });
   document.defaultView = window;
   return window;
 }

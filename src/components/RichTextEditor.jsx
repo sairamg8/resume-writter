@@ -214,8 +214,10 @@ const inLine = (n) => n.nodeType === 3 || (n.nodeType === 1 && !BLOCKS.has(n.nod
  * empty; else, around the caret, the list item or paragraph it is in — or, in text that is not
  * in one (the first line Chrome leaves bare, lines split by <br>), the run of text between line
  * breaks. null when the caret is not in `el`, or sits on no text.
+ * Exported for tests/pdf/57-optimizer-statement: which statement the optimizer opens on is the
+ * half of this fix a browser is not needed to check (AUD-09).
  */
-function statementRange(el) {
+export function statementRange(el) {
   const sel = window.getSelection?.();
   if (!el || !sel || !sel.rangeCount || !el.contains(sel.anchorNode)) return null;
   const at = sel.getRangeAt(0);
