@@ -142,4 +142,47 @@ describe('AUD-23: Export error handling and JSON Resume import safety', () => {
       view.unmount();
     }
   });
+
+  it('ExportDropdown: a file the browser cannot read says so instead of nothing (AUD-23 residual)', async () => {
+    // The import path caught a bad JSON and a failed conversion, but never `reader.onerror` — a
+    // file the browser refuses to read (a permission error, a removed drive, a directory) ran the
+    // whole handler and showed the user nothing at all, the very silence this row is about.
+    const { ExportDropdown } = await loadModule('/src/components/ExportDropdown.jsx');
+    const { mount, elements, reactProps } = await import('./fake-dom.mjs');
+
+    let importError = null;
+    let imported = false;
+    const view = mount(ExportDropdown, {
+      exporting: null,
+      onExportPDF: () => {},
+      onExportWord: () => {},
+      onExportJSON: () => {},
+      onExportMarkdown: () => {},
+      onExportAtsText: () => {},
+      onExportJsonResume: () => {},
+      onImportJSON: () => { imported = true; },
+      onImportError: (err) => { importError = err; },
+    });
+
+    try {
+      const fileInput = [...elements(view.container)].find((el) => el.tagName === 'INPUT' && el.type === 'file');
+      const origFileReader = globalThis.FileReader;
+      globalThis.FileReader = class UnreadableFileReader {
+        readAsText() {
+          setTimeout(() => { this.onerror?.({ target: { error: new Error('NotReadableError') } }); }, 0);
+        }
+      };
+      try {
+        reactProps(fileInput).onChange({ target: { files: [{ name: 'resume.json' }], value: '' } });
+        await new Promise((resolve) => setTimeout(resolve, 50));
+        assert.ok(importError, 'onImportError is called when the file cannot be read');
+        assert.match(importError, /could not be read|Could not read/i);
+        assert.equal(imported, false, 'nothing is imported from a file that never arrived');
+      } finally {
+        globalThis.FileReader = origFileReader;
+      }
+    } finally {
+      view.unmount();
+    }
+  });
 });

@@ -129,6 +129,11 @@ export function ExportDropdown({ exporting, keeps = false, onExportPDF, onExport
               onImportError?.(`Could not import file${err?.message ? `: ${err.message}` : ''}.`);
             }
           };
+          // A file the browser will not hand over — a permission error, a removed drive, a folder
+          // dropped in — never reaches onload, and without this the whole import said nothing (AUD-23).
+          reader.onerror = () => {
+            onImportError?.('That file could not be read. Check it is still there and try again.');
+          };
           reader.readAsText(file);
           e.target.value = '';
         }}
