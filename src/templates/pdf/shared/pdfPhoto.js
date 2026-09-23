@@ -53,11 +53,16 @@ const VARIANTS = {
  * @param {boolean} [opts.onBanner] the photo sits on an accent banner (Modern's, or the cover
  *   letter's in the Modern look): "thin" is Modern's half-white ring over the accent (FIDB-51)
  */
+const VALID_PHOTO_SHAPES = new Set(['circle', 'rounded', 'square']);
+const VALID_PHOTO_SIZES = new Set(['sm', 'md', 'lg']);
+const VALID_PHOTO_BORDERS = new Set(['none', 'thin', 'accent']);
+const VALID_PHOTO_HEIGHTS = new Set(['match', 'tall', 'taller']);
+
 export function getPdfPhotoStyle(settings, accent, variant = 'classic', opts = {}) {
-  const sh = settings?.photoShape || 'circle';
-  const sz = settings?.photoSize || 'md';
-  const br = settings?.photoBorder || 'accent';
-  const ph = settings?.photoHeight || 'match';
+  const sh = VALID_PHOTO_SHAPES.has(settings?.photoShape) ? settings.photoShape : 'circle';
+  const sz = VALID_PHOTO_SIZES.has(settings?.photoSize) ? settings.photoSize : 'md';
+  const br = VALID_PHOTO_BORDERS.has(settings?.photoBorder) ? settings.photoBorder : 'accent';
+  const ph = VALID_PHOTO_HEIGHTS.has(settings?.photoHeight) ? settings.photoHeight : 'match';
   const v = VARIANTS[variant] || VARIANTS.classic;
   const toPt = v.unit === 'px' ? pxToPt : (n) => n;
   const wUnits = v.sizes[sz] || v.sizes.md;

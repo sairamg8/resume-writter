@@ -92,6 +92,12 @@ export const DEFAULTS = {
   },
 };
 
+const VALID_PHOTO_SHAPES = new Set(['circle', 'rounded', 'square']);
+const VALID_PHOTO_SIZES = new Set(['sm', 'md', 'lg']);
+const VALID_PHOTO_BORDERS = new Set(['none', 'thin', 'accent']);
+const VALID_PHOTO_HEIGHTS = new Set(['match', 'tall', 'taller']);
+const VALID_PHOTO_TEXT_ALIGNS = new Set(['top', 'center', 'bottom']);
+
 /**
  * Resolve design settings for PDF export.
  * - User-provided settings always win.
@@ -149,11 +155,11 @@ export function resolveTemplateSettings(settings = {}, templateKey) {
   s.headerInlineGap = (settings.headerInlineGap ?? 8) * CSS_PX_TO_PT;
   s.contactStyle = settings.contactStyle || 'icon';
   s.contactLayout = settings.contactLayout || 'justify';
-  s.photoShape = settings.photoShape || 'circle';
-  s.photoSize = settings.photoSize || 'md';
-  s.photoBorder = settings.photoBorder || 'accent';
-  s.photoHeight = settings.photoHeight || 'match';
-  s.photoTextAlign = settings.photoTextAlign || 'center';
+  s.photoShape = VALID_PHOTO_SHAPES.has(settings.photoShape) ? settings.photoShape : 'circle';
+  s.photoSize = VALID_PHOTO_SIZES.has(settings.photoSize) ? settings.photoSize : 'md';
+  s.photoBorder = VALID_PHOTO_BORDERS.has(settings.photoBorder) ? settings.photoBorder : 'accent';
+  s.photoHeight = VALID_PHOTO_HEIGHTS.has(settings.photoHeight) ? settings.photoHeight : 'match';
+  s.photoTextAlign = VALID_PHOTO_TEXT_ALIGNS.has(settings.photoTextAlign) ? settings.photoTextAlign : 'center';
   // A boolean from here on: the stored choice, else the template's own default.
   s.showHeaderBorder = headerBorderOn(settings, templateKey);
 
