@@ -1,5 +1,5 @@
 import { decodeEntities } from './richText.js';
-import { atsRating, templateId, templateLabel } from '../constants/templates.js';
+import { atsRating, templateId, templateLabel, TEMPLATE_PICKER } from '../constants/templates.js';
 
 /**
  * Extracts bullet points from a resume item.
@@ -1075,11 +1075,24 @@ export function analyzeAtsScore(resume, jobDescriptionText = '') {
       detail: 'Single-column body parses reliably. Ensure header contrast remains legible.',
     });
   } else {
+    // Which fixes the ATS Check tab can offer, cheapest first — the checker names them by id, the
+    // panel words them (TUI-3). The Layout toggle is named only where it would really make this
+    // résumé safe, and that is asked of atsRating itself, with the toggle on: the same single
+    // answer the tier above came from, so no second list of templates decides it (TUI-5). Today
+    // only the Sidebar's two columns reach this branch and the toggle always applies, but a
+    // template rated risky without one would still get an honest list.
+    const singleColumnFixesIt = atsRating(currentTemplate, { ...settings, sidebarSingleColumn: true }).safe;
+    const safeLabels = TEMPLATE_PICKER.filter(t => t.ats).map(t => t.label);
     results.categories.layout.items.push({
       id: 'template', status: 'warn', text: 'Multi-column / Sidebar layout detected',
-      detail: 'While modern AI parsers handle sidebars, older Workday/Taleo systems may interleave columns. Switch to "Classic" or "Minimal" for guaranteed 100% parse safety.',
+      detail: [
+        'While modern AI parsers handle sidebars, older Workday/Taleo systems may interleave columns.',
+        // The advice is the buttons' order: the toggle keeps the résumé's design, the switch does not.
+        singleColumnFixesIt && `${templateLabel(currentTemplate)}'s single-column Layout parses like the certified templates and keeps the template, its heading style and its title case.`,
+        `Switching template — ${safeLabels.join(', ')} — replaces all three.`,
+      ].filter(Boolean).join(' '),
       fixable: true,
-      action: 'switch_to_classic',
+      actions: [...(singleColumnFixesIt ? ['sidebar_single_column'] : []), 'switch_to_classic'],
     });
   }
 

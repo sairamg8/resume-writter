@@ -320,6 +320,31 @@ test('Template ATS ratings: the certified templates pass; the two-column Sidebar
   assert.ok(sidebarReport.categories.layout.items.some(i => i.id === 'template' && i.status === 'warn'));
 });
 
+/**
+ * TUI-3 — the layout warning carries which fixes apply, cheapest first, so the ATS Check tab can
+ * offer the Sidebar's own Layout toggle before the one that replaces the template. Ids only: the
+ * panel owns the wording, and tests/pdf/56-ats-layout-fix-buttons.test.mjs holds it to it.
+ */
+test('TUI-3: the layout warning names its fixes, the non-destructive Layout toggle first', () => {
+  const item = analyzeAtsScore({ ...sampleAtsResume, template: 'sidebar' })
+    .categories.layout.items.find(i => i.id === 'template');
+  assert.equal(item.status, 'warn');
+  assert.equal(item.fixable, true);
+  assert.deepEqual(item.actions, ['sidebar_single_column', 'switch_to_classic']);
+  // The toggle is named because atsRating says it really would fix it — not because a list here
+  // knows the Sidebar has one (TUI-5).
+  assert.equal(atsRating('sidebar', { sidebarSingleColumn: true }).safe, true);
+
+  // Nothing left to fix once it is on: the item passes and carries no fix at all.
+  const fixed = analyzeAtsScore({
+    ...sampleAtsResume, template: 'sidebar',
+    settings: { ...sampleAtsResume.settings, sidebarSingleColumn: true },
+  }).categories.layout.items.find(i => i.id === 'template');
+  assert.equal(fixed.status, 'pass');
+  assert.equal(fixed.actions, undefined);
+  assert.equal(fixed.fixable, undefined);
+});
+
 test('Job Description Matcher: handles empty input and correctly identifies missing keywords', () => {
   assert.equal(matchResumeWithJob(sampleAtsResume, ''), null);
   assert.equal(matchResumeWithJob(sampleAtsResume, '   '), null);

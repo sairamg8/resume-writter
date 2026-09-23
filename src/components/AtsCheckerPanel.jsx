@@ -1,15 +1,48 @@
 import { useState, useMemo } from 'react';
 import {
   ShieldCheck, AlertTriangle, XCircle, CheckCircle2, ChevronDown,
-  Sparkles, Copy, Download, Briefcase, FileText, Target, Plus, Check
+  Sparkles, Copy, Download, Briefcase, Columns2, FileText, Target, Plus, Check
 } from 'lucide-react';
 import {
   analyzeAtsScore,
   standardizeSectionsForAts,
   generateAtsPlainText
 } from '@/utils/atsChecker';
+import { templateLabel } from '@/constants/templates';
 import { downloadBlob } from '@/utils/download';
 import { newId } from '@/utils/ids';
+
+/**
+ * The template the panel's costly layout fix moves a risky résumé to. One id, read both by the
+ * handler and by the button's label (templateLabel) — the button that promised one thing and did
+ * another is exactly what TUI-3 was, and a name typed into the label can drift from the id below.
+ */
+const ATS_FALLBACK_TEMPLATE = 'classic';
+
+/** The fixes a checker item offers, as it named them (`actions`, or a single `action`). */
+const itemFixes = (item) => (item?.fixable ? (item.actions || [item.action]).filter(Boolean) : []);
+
+/**
+ * The layout warning's fixes, worded here — the checker only names them (atsChecker's `actions`,
+ * TUI-3). In the order it lists them: the Sidebar's own Layout toggle first, because it reaches the
+ * same ATS-safe page while keeping the résumé's template, heading style and title case, and the
+ * template switch after it, in a neutral tone rather than the recommended green, because it
+ * replaces all three and nothing in the app undoes it. Every template name is templateLabel()'s.
+ */
+const LAYOUT_FIXES = {
+  sidebar_single_column: {
+    Icon: Columns2,
+    tone: 'text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border-emerald-200',
+    label: (r) => `Keep ${templateLabel(r?.template)} · switch to Single column`,
+    title: (r) => `Design → Template → Layout. Keeps the ${templateLabel(r?.template)} template, its heading style and its title case.`,
+  },
+  switch_to_classic: {
+    Icon: Briefcase,
+    tone: 'text-gray-700 bg-white hover:bg-gray-100 border-gray-300',
+    label: () => `Switch to ${templateLabel(ATS_FALLBACK_TEMPLATE)}`,
+    title: (r) => `Replaces the ${templateLabel(r?.template)} template, its heading style and its title case. There is no undo.`,
+  },
+};
 
 export default function AtsCheckerPanel({ resume, store }) {
   const [jobDescription, setJobDescription] = useState('');
@@ -51,9 +84,49 @@ export default function AtsCheckerPanel({ resume, store }) {
     store.updateSections(updated);
   }
 
+  /**
+   * The layout warning's cheap fix: the Sidebar's own Layout toggle, the one Design → Template →
+   * Layout offers. It prints the certified single-column page (atsRating rates it so, TUI-5) and
+   * writes this one key — the template, its heading style and its title case all stay, which is the
+   * whole point of offering it before the switch below (TUI-3).
+   */
+  function handleSingleColumnLayout() {
+    if (!store?.updateSetting) return;
+    store.updateSetting('sidebarSingleColumn', true);
+  }
+
+  /**
+   * The costly fix: a different template. setTemplate() overwrites the résumé's heading style and
+   * title case with the new template's (useResumeStore.js), and nothing in the app undoes any of
+   * it — so this is offered second, in a neutral tone, under a label that names the template it
+   * leaves behind. It used to be the panel's *only* layout fix, labelled with the name of the
+   * Layout toggle above: a Sidebar user clicking it to become ATS-safe lost the Sidebar (TUI-3).
+   */
   function handleSwitchToClassic() {
     if (!store?.setTemplate) return;
-    store.setTemplate('classic');
+    store.setTemplate(ATS_FALLBACK_TEMPLATE);
+  }
+
+  /** Each layout fix's handler, by the id the checker names it with. */
+  const layoutFixHandlers = {
+    sidebar_single_column: handleSingleColumnLayout,
+    switch_to_classic: handleSwitchToClassic,
+  };
+
+  /** One layout fix as a button; `className` and `iconSize` are the site's, the tone comes with the fix. */
+  function layoutFixButton(action, className, iconSize) {
+    const fix = LAYOUT_FIXES[action];
+    if (!fix) return null;
+    return (
+      <button
+        key={action}
+        onClick={layoutFixHandlers[action]}
+        title={fix.title(resume)}
+        className={`${className} ${fix.tone}`}
+      >
+        <fix.Icon size={iconSize} /> {fix.label(resume)}
+      </button>
+    );
   }
 
   function handleCopyPlainText() {
@@ -111,7 +184,8 @@ export default function AtsCheckerPanel({ resume, store }) {
     : 'bg-red-500';
 
   const hasNonStandardHeadings = categories.headings.items.some(i => i.id === 'std_headings' && i.status === 'warn');
-  const hasSidebarWarning = categories.layout.items.some(i => i.id === 'template' && i.status === 'warn');
+  // The fixes the layout warning offers, in the checker's order — empty while the layout parses.
+  const layoutFixes = itemFixes(categories.layout.items.find(i => i.id === 'template' && i.status === 'warn'));
   const hasCompanyTitleOrder = categories.experience.items.some(i => i.id === 'exp_title_order' && i.status === 'warn');
 
   return (
@@ -154,7 +228,7 @@ export default function AtsCheckerPanel({ resume, store }) {
         </div>
 
         {/* One-Click Quick Fixes */}
-        {(hasNonStandardHeadings || hasSidebarWarning || hasCompanyTitleOrder) && (
+        {(hasNonStandardHeadings || layoutFixes.length > 0 || hasCompanyTitleOrder) && (
           <div className="pt-3 border-t border-gray-100 flex flex-wrap gap-2">
             {hasCompanyTitleOrder && (
               <button
@@ -172,14 +246,11 @@ export default function AtsCheckerPanel({ resume, store }) {
                 <Sparkles size={13} /> Standardize All Section Headings
               </button>
             )}
-            {hasSidebarWarning && (
-              <button
-                onClick={handleSwitchToClassic}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-xl border border-emerald-200 transition-colors"
-              >
-                <Briefcase size={13} /> Switch to Single-Column ATS Layout
-              </button>
-            )}
+            {layoutFixes.map(action => layoutFixButton(
+              action,
+              'flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl border transition-colors',
+              13,
+            ))}
           </div>
         )}
       </div>
@@ -334,13 +405,17 @@ export default function AtsCheckerPanel({ resume, store }) {
                               <Sparkles size={11} /> Standardize Headings Now
                             </button>
                           )}
-                          {item.fixable && item.action === 'switch_to_classic' && (
-                            <button
-                              onClick={handleSwitchToClassic}
-                              className="mt-2 inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 bg-white border border-emerald-300 rounded-lg hover:bg-emerald-50 transition-colors shadow-2xs"
-                            >
-                              <Briefcase size={11} /> Switch to Classic ATS Layout
-                            </button>
+                          {/* The warning's own fixes, the same ones the quick-fix row offers: one
+                              wording for both sites, so the honest label cannot be left on just one
+                              of them — it was, and the other read as the Layout toggle (TUI-3). */}
+                          {itemFixes(item).some(a => LAYOUT_FIXES[a]) && (
+                            <div className="flex flex-wrap gap-2">
+                              {itemFixes(item).map(action => layoutFixButton(
+                                action,
+                                'mt-2 inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold rounded-lg border transition-colors shadow-2xs',
+                                11,
+                              ))}
+                            </div>
                           )}
                         </div>
                       </div>
