@@ -34,16 +34,22 @@ export function JobForm({ store }) {
   const isEdit = !!id;
   const existing = isEdit ? jobs.find(j => j.id === id) : null;
 
-  const [form, setForm] = useState(() => ({
-    company: '', role: '', status: 'applied', stage: '',
-    url: '', location: '', salary: '',
-    contact: '', resumeId: '', notes: '',
-    appliedDate: todayLocalISO(), deadline: '',
-    ...existing,
-  }));
+  const [form, setForm] = useState(() => {
+    const base = {
+      company: '', role: '', status: 'applied', stage: '',
+      url: '', location: '', salary: '',
+      contact: '', resumeId: '', notes: '',
+      appliedDate: todayLocalISO(), deadline: '',
+      ...existing,
+    };
+    for (const key of ['company', 'role', 'status', 'stage', 'url', 'location', 'salary', 'contact', 'resumeId', 'notes', 'appliedDate', 'deadline']) {
+      if (base[key] == null) base[key] = '';
+    }
+    return base;
+  });
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
-  const canSave = form.company.trim() || form.role.trim();
+  const canSave = Boolean((form.company || '').trim() || (form.role || '').trim());
   const backPath = isEdit ? `/jobs/${id}` : '/jobs';
 
   function handleSave() {

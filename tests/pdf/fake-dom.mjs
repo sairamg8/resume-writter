@@ -75,6 +75,7 @@ class FakeElement extends FakeNode {
   removeAttribute(name) { this.attributes.delete(name); }
   get className() { return this.getAttribute('class') ?? ''; }
   set className(value) { this.setAttribute('class', value); }
+  get options() { return this.childNodes.filter((c) => c.tagName === 'OPTION'); }
   focus() {}
   blur() {}
 }

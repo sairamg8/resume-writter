@@ -8,6 +8,7 @@ import { Boards } from '@/pages/Boards';
 import { Board } from '@/pages/Board';
 import TermsPage from '@/pages/TermsPage';
 import PrivacyPage from '@/pages/PrivacyPage';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 /**
  * What each page gets from the app's state (App.jsx): the résumé store, the account, the cloud
@@ -16,18 +17,20 @@ import PrivacyPage from '@/pages/PrivacyPage';
  */
 export function AppRoutes({ store, auth, sync, seed }) {
   return (
-    <Routes>
-      <Route path="/"           element={<Dashboard store={store} auth={auth} sync={sync} originalsWaiting={seed.waiting} />} />
-      <Route path="/resume/:id" element={<Editor    store={store} auth={auth} sync={sync} />} />
-      <Route path="/jobs"          element={<JobTracker store={store} />} />
-      <Route path="/jobs/new"      element={<JobForm    store={store} />} />
-      <Route path="/jobs/:id/edit" element={<JobForm    store={store} />} />
-      <Route path="/jobs/:id"      element={<JobDetail  store={store} />} />
-      <Route path="/boards"        element={<Boards />} />
-      <Route path="/boards/:id"    element={<Board />} />
-      <Route path="/terms"      element={<TermsPage />} />
-      <Route path="/privacy"    element={<PrivacyPage />} />
-      <Route path="*"           element={<Navigate to="/" replace />} />
-    </Routes>
+    <ErrorBoundary>
+      <Routes>
+        <Route path="/"           element={<Dashboard store={store} auth={auth} sync={sync} originalsWaiting={seed.waiting} />} />
+        <Route path="/resume/:id" element={<Editor    store={store} auth={auth} sync={sync} />} />
+        <Route path="/jobs"          element={<JobTracker store={store} />} />
+        <Route path="/jobs/new"      element={<JobForm    store={store} />} />
+        <Route path="/jobs/:id/edit" element={<JobForm    store={store} />} />
+        <Route path="/jobs/:id"      element={<JobDetail  store={store} />} />
+        <Route path="/boards"        element={<Boards />} />
+        <Route path="/boards/:id"    element={<Board />} />
+        <Route path="/terms"      element={<TermsPage />} />
+        <Route path="/privacy"    element={<PrivacyPage />} />
+        <Route path="*"           element={<Navigate to="/" replace />} />
+      </Routes>
+    </ErrorBoundary>
   );
 }
