@@ -79,7 +79,7 @@ function KanbanCard({ job, onDelete, overlay = false }) {
         </div>
       )}
 
-      <div className="flex items-center justify-between mt-2 opacity-0 group-hover/card:opacity-100 transition-opacity">
+      <div className="flex items-center justify-between mt-2 opacity-0 group-hover/card:opacity-100 no-hover:opacity-100 transition-opacity">
         <span className="text-[10px] text-indigo-400 font-medium">Open →</span>
         <button
           onPointerDown={e => e.stopPropagation()}

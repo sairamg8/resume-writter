@@ -50,7 +50,7 @@ export function TodoItem({ todo, onToggle, onDelete, onRename }) {
 
       <button
         onClick={onDelete}
-        className="shrink-0 p-1 text-gray-200 hover:text-red-400 hover:bg-red-50 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
+        className="shrink-0 p-1 text-gray-200 hover:text-red-400 hover:bg-red-50 rounded-lg opacity-0 group-hover:opacity-100 no-hover:opacity-100 transition-all"
       >
         <X size={13} />
       </button>

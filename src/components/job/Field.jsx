@@ -54,7 +54,7 @@ export function Field({ label, value, onChange, type = 'text', icon: Icon, place
           </span>
           <button
             onClick={() => setEditing(true)}
-            className="opacity-0 group-hover/field:opacity-100 p-1 text-gray-300 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
+            className="opacity-0 group-hover/field:opacity-100 no-hover:opacity-100 p-1 text-gray-300 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
             title="Edit"
           >
             <Pencil size={12} />

@@ -1,5 +1,13 @@
 @import "tailwindcss";
 
+/* `no-hover:` is the exact opposite of the gate Tailwind puts on every hover variant,
+   `@media (hover: hover)`. A control revealed with `group-hover:opacity-100` also carries
+   `no-hover:opacity-100`, so a phone or tablet shows it always and a desktop still shows it on
+   hover — before, touch screens never matched the hover gate and those controls stayed at 0%
+   (AUD-33, tests/unit/touch-reveal.unit.mjs). Write the class out in full: Tailwind only
+   generates class names it finds in the source. */
+@custom-variant no-hover (@media (hover: none));
+
 * {
   box-sizing: border-box;
 }

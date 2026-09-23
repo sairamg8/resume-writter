@@ -149,7 +149,7 @@ export function SortableItemWrapper({ id, children }) {
       <button
         {...attributes}
         {...listeners}
-        className="mt-2.5 cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-400 opacity-0 group-hover/item:opacity-100 transition-opacity shrink-0 touch-none"
+        className="mt-2.5 cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-400 opacity-0 group-hover/item:opacity-100 no-hover:opacity-100 transition-opacity shrink-0 touch-none"
         tabIndex={-1}
       >
         <GripVertical size={13} />

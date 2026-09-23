@@ -77,7 +77,7 @@ export function Boards() {
                     <span className="flex-1 text-sm font-semibold text-gray-900 truncate">{b.title || 'Untitled board'}</span>
                     <button
                       onClick={(e) => confirmDelete(e, b)}
-                      className="p-1 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded opacity-0 group-hover:opacity-100 transition-all shrink-0"
+                      className="p-1 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded opacity-0 group-hover:opacity-100 no-hover:opacity-100 transition-all shrink-0"
                       title="Delete board"
                       aria-label="Delete board"
                     >

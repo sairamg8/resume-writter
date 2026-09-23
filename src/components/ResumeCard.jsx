@@ -79,7 +79,7 @@ export function ResumeCard({ resume, onOpen, onDuplicate, onDelete, onRename, on
             <p className="text-sm font-semibold text-gray-800 truncate flex-1">{resume.name}</p>
             <button
               onClick={() => setEditing(true)}
-              className="opacity-0 group-hover/name:opacity-100 p-0.5 text-gray-400 hover:text-gray-600 transition-opacity shrink-0"
+              className="opacity-0 group-hover/name:opacity-100 no-hover:opacity-100 p-0.5 text-gray-400 hover:text-gray-600 transition-opacity shrink-0"
             >
               <Edit2 size={11} />
             </button>

@@ -73,7 +73,7 @@ export function ListView({ jobs, resumes, onNavigate, onDelete }) {
                         onClick={e => e.stopPropagation()}
                         title="Open job posting"
                         aria-label={`Open the ${job.company || 'job'} posting`}
-                        className="text-gray-300 hover:text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="text-gray-300 hover:text-blue-500 opacity-0 group-hover:opacity-100 no-hover:opacity-100 transition-opacity"
                       >
                         <ExternalLink size={11} />
                       </a>
@@ -125,7 +125,7 @@ export function ListView({ jobs, resumes, onNavigate, onDelete }) {
                   }
                 </td>
                 <td className="px-4 py-3">
-                  <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 no-hover:opacity-100 transition-opacity">
                     <button
                       onClick={e => { e.stopPropagation(); onDelete(job.id); }}
                       title="Delete application"
