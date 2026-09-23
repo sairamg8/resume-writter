@@ -3,7 +3,7 @@
 > Location: `/mnt/Storage/Projects/flowcv/bug-status.md`
 > Updated: 2026-09-23 · every row **verified independently at `d495cb2`** (see Verification pass) ·
 > `origin/master` (deployed) = `79eadb1` · **nothing is waiting to be pushed**
-> **Open: 19** | Fixed, not pushed: 0 | **Closed: 61**
+> **Open: 18** | Fixed, not pushed: 0 | **Closed: 62**
 
 ## Summary
 
@@ -11,9 +11,9 @@
 |---|---|---|---|---|
 | Bug audit, 2026-09-22 (`AUD-`) | 35 (34 + one follow-up) | 26 | 0 | **9** |
 | ATS parsing defects (`ATS-`) | 6 | 0 | 0 | **6** |
-| Templates UI audit, 2026-09-23 (`TUI-`) | 6 | 2 | 0 | **4** |
+| Templates UI audit, 2026-09-23 (`TUI-`) | 6 | 3 | 0 | **3** |
 | Prompt tasks, 2026-09-14 → 09-21 | 33 | 33 | 0 | 0 |
-| **Total** | **80** | **61** | **0** | **19** |
+| **Total** | **80** | **62** | **0** | **18** |
 
 - **Status:** ✅ fixed and pushed (on `origin/master`, so deployed) · ⏸ fixed and committed, not pushed · 🔴 open.
 - **Severity (audit):** High = data loss, or a feature that does not work · Medium = a wrong result, no data loss ·
@@ -141,7 +141,7 @@ bypassing `templateLabel()`) — is in the `templates-ui-audit` worktree's `temp
 | TUI-2 | Sidebar · Single ATS-safe · letter | Medium | ✅ Fixed | `d495cb2` | tests/pdf/31-template-switch-colors.test.mjs | Same root cause, second site: `letterheadLook` resolved with `templateId()` (`src/templates/pdf/shared/letterhead.js:155`), so that mode's cover letter kept the Sidebar's dark full-bleed band while its page was Classic's. **Had to land with TUI-1** — fixing the ground alone moves the fault to the letter, where the newly-dark name lands on the still-dark band. | Ran |
 | TUI-3 | ATS panel · switch button | Medium | 🔴 Open | — | — | The button reads **"Switch to Single-Column ATS Layout"** — the name of the Sidebar's own toggle — but `handleSwitchToClassic()` calls `store.setTemplate('classic')` (`src/components/AtsCheckerPanel.jsx:54`, label `:180`). A Sidebar user clicking it to become ATS-safe loses the Sidebar entirely, plus its heading style and title case, with no undo anywhere. `:342` labels the same handler honestly. | Code |
 | TUI-4 | JSON Resume · template | Medium | 🔴 Open | — | — | Export → import resets any template to Classic: `src/utils/jsonResume.js:243-244` hardcodes `template: 'classic'`, and `cpwtResumeToJsonResume` (`:282`) never writes it out (the schema's `meta` is unused). `tests/unit/json-resume-roundtrip.unit.mjs:19` only ever uses `template: 'classic'`, so its fixture cannot catch it. | Code |
-| TUI-5 | ATS checker · template list | Medium | 🔴 Open | — | — | A live `FIDB-51-VF7-NB1` survivor: `src/utils/atsChecker.js:1059` hardcodes `'classic' \|\| 'minimal' \|\| 'executive'` and never reads `TEMPLATES[id].ats`; `:1077` hardcodes the names again in prose. The picker and the ATS Check tab now disagree for **Modern** (no badge, but scores `pass` 4/5) and **Sidebar-single** (no badge, but `ATS-Certified` 5/5). Four hand-maintained copies of the trio exist (`templates.js`, `15-design-defaults.test.mjs:150`, `ats-checker.unit.mjs:306`, `ats-validate.mjs:66`) and none cross-checks the others. **Fix before adding any template.** | Code |
+| TUI-5 | ATS checker · template list | Medium | ✅ Fixed | `68605dd` | tests/unit/ats-rating.unit.mjs, tests/pdf/15-design-defaults.test.mjs, tests/unit/ats-checker.unit.mjs | "Is this template ATS-safe" was answered in **four** hardcoded places nothing compared, and two had drifted: the picker showed no badge on **Modern** while the ATS Check tab scored it `pass`, and none on **Sidebar-single** while the checker called it `ATS-Certified` 10/10. Now one settings-aware `atsRating(template, settings)` (`src/constants/templates.js`) with three tiers — certified 5 / good 4 / risky 2 — read by the picker, the checker's points and its copy; the tests assert the wiring, not the answer. Also fixed `atsChecker.js:589` reading `resume.template` raw, which scored an imported `" Modern "` as a Sidebar. **Modern now carries a badge** — forced by having one source of truth, and the project's own battery has always read it clean. | Ran |
 | TUI-6 | ATS · page-break glue | Medium | 🔴 Open | — | — | `pdftotext -raw` emits no newline around the `\f`, so a section heading landing first on a new page stops being a heading (`"…Docker, Figma\fPROJECTS"`). Not font-specific — sweeping `sectionGap` 10→24 on default Classic glued at every value. Latent in **every** template; whether it costs a header is a lottery on résumé length. Distinct from ATS-4 (intra-line squeeze) — suggest filing as **ATS-7**. | Ran (extraction) |
 
 ## ATS parsing defects (`ATS-`)
