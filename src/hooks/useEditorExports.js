@@ -6,9 +6,17 @@ import { generateAtsPlainText } from '@/utils/atsChecker';
 import { generateMarkdownResume } from '@/utils/markdownExport';
 import { isJsonResume, jsonResumeToCpwtResume, cpwtResumeToJsonResume } from '@/utils/jsonResume';
 
-function buildExportFilename(authUser, resume) {
-  const name = (authUser?.displayName || resume?.personal?.name || 'resume').replace(/\s+/g, '_');
-  const title = (resume?.personal?.title || '').replace(/\s+/g, '_');
+/** `value` trimmed with its inner runs of whitespace as one `_`; '' for anything not text. */
+const filePart = (value) => (typeof value === 'string' ? value.trim().replace(/\s+/g, '_') : '');
+
+/**
+ * An exported file's name, without its suffix: the résumé's name and title, as `Name_Title`. It
+ * follows the résumé, never the signed-in account (AUD-30): a demo account, or anyone keeping a CV
+ * for someone else, exports each résumé under the name printed on it. 'resume' when it has none.
+ */
+function buildExportFilename(resume) {
+  const name = filePart(resume?.personal?.name) || 'resume';
+  const title = filePart(resume?.personal?.title);
   return title ? `${name}_${title}` : name;
 }
 
@@ -37,7 +45,7 @@ export function useEditorExports({ resume, activeTab, authUser, importResume, na
   }
 
   function handleExportPDF() {
-    const filename = buildExportFilename(authUser, resume);
+    const filename = buildExportFilename(resume);
     return runExport('pdf', 'PDF export', async () => {
       const { exportToPDFReact, exportCoverLetterPDFReact } = await import('@/utils/pdfExportReactPDF');
       if (activeTab === 'coverletter') {
@@ -49,7 +57,7 @@ export function useEditorExports({ resume, activeTab, authUser, importResume, na
   }
 
   function handleExportWord() {
-    const filename = buildExportFilename(authUser, resume);
+    const filename = buildExportFilename(resume);
     return runExport('word', 'Word export', async () => {
       const { exportToWord, exportCoverLetterToWord } = await import('@/utils/wordExport');
       if (activeTab === 'coverletter') {
@@ -61,14 +69,14 @@ export function useEditorExports({ resume, activeTab, authUser, importResume, na
   }
 
   function handleExportJSON() {
-    const filename = buildExportFilename(authUser, resume);
+    const filename = buildExportFilename(resume);
     return runExport('json', 'JSON export', async () => {
       downloadBlob(new Blob([JSON.stringify(resume, null, 2)], { type: 'application/json' }), `${filename}.json`);
     });
   }
 
   function handleExportMarkdown() {
-    const filename = buildExportFilename(authUser, resume);
+    const filename = buildExportFilename(resume);
     return runExport('markdown', 'Markdown export', async () => {
       const md = generateMarkdownResume(resume);
       downloadBlob(new Blob([md], { type: 'text/markdown;charset=utf-8' }), `${filename}.md`);
@@ -76,7 +84,7 @@ export function useEditorExports({ resume, activeTab, authUser, importResume, na
   }
 
   function handleExportAtsText() {
-    const filename = buildExportFilename(authUser, resume);
+    const filename = buildExportFilename(resume);
     return runExport('atstext', 'ATS text export', async () => {
       const text = generateAtsPlainText(resume);
       downloadBlob(new Blob([text], { type: 'text/plain;charset=utf-8' }), `${filename}_ATS.txt`);
@@ -84,7 +92,7 @@ export function useEditorExports({ resume, activeTab, authUser, importResume, na
   }
 
   function handleExportJsonResume() {
-    const filename = buildExportFilename(authUser, resume);
+    const filename = buildExportFilename(resume);
     return runExport('jsonresume', 'JSON Resume export', async () => {
       const schemaObj = cpwtResumeToJsonResume(resume);
       downloadBlob(new Blob([JSON.stringify(schemaObj, null, 2)], { type: 'application/json' }), `${filename}_resume.json`);
