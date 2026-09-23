@@ -4,6 +4,23 @@ import { Chip } from '@/components/PersonalInfoEditorHeader';
 import { readImageFile } from '@/utils/imageUpload';
 import { UNPRINTABLE_PHOTO, usePrintableImage } from '@/hooks/usePrintableImage';
 import { photoTextPositionApplies, templateId } from '@/constants/templates';
+import { PHOTO_OPTIONS, photoOption } from '@/constants/photoOptions';
+
+/**
+ * One photo control's chips, from the list the PDF clamps to (src/constants/photoOptions.js): the
+ * panel offers exactly what the PDF draws, so neither can gain an option the other does not
+ * (AUD-25). The active chip is the stored value as the PDF resolves it — an imported file's
+ * unknown value shows the default that prints, not a chip nobody picked.
+ */
+function PhotoChips({ control, s, set }) {
+  return (
+    <div className="flex gap-2">
+      {PHOTO_OPTIONS[control].map(({ val, label }) => (
+        <Chip key={val} active={photoOption(control, s[control]) === val} onClick={() => set(control, val)}>{label}</Chip>
+      ))}
+    </div>
+  );
+}
 
 export function PhotoSection({ personal, updatePersonal, toggleFieldVisibility, hidden, s, set, template, open, onToggle, coverLetter }) {
   const photoInputRef = useRef(null);
@@ -74,50 +91,30 @@ export function PhotoSection({ personal, updatePersonal, toggleFieldVisibility, 
 
           <div>
             <p className="text-xs font-semibold text-gray-700 mb-1.5">Shape</p>
-            <div className="flex gap-2">
-              {[{ val: 'circle', label: 'Circle' }, { val: 'rounded', label: 'Rounded' }, { val: 'square', label: 'Square' }].map(({ val, label }) => (
-                <Chip key={val} active={(s.photoShape || 'circle') === val} onClick={() => set('photoShape', val)}>{label}</Chip>
-              ))}
-            </div>
+            <PhotoChips control="photoShape" s={s} set={set} />
           </div>
 
           <div>
             <p className="text-xs font-semibold text-gray-700 mb-1.5">Size</p>
-            <div className="flex gap-2">
-              {[{ val: 'sm', label: 'Small' }, { val: 'md', label: 'Medium' }, { val: 'lg', label: 'Large' }].map(({ val, label }) => (
-                <Chip key={val} active={(s.photoSize || 'md') === val} onClick={() => set('photoSize', val)}>{label}</Chip>
-              ))}
-            </div>
+            <PhotoChips control="photoSize" s={s} set={set} />
           </div>
 
           <div>
             <p className="text-xs font-semibold text-gray-700 mb-1.5">Border</p>
-            <div className="flex gap-2">
-              {[{ val: 'none', label: 'None' }, { val: 'thin', label: 'Thin' }, { val: 'accent', label: 'Accent' }].map(({ val, label }) => (
-                <Chip key={val} active={(s.photoBorder || 'accent') === val} onClick={() => set('photoBorder', val)}>{label}</Chip>
-              ))}
-            </div>
+            <PhotoChips control="photoBorder" s={s} set={set} />
           </div>
 
           {(s.photoShape || 'circle') !== 'circle' && (
             <div>
               <p className="text-xs font-semibold text-gray-700 mb-1.5">Height</p>
-              <div className="flex gap-2">
-                {[{ val: 'match', label: 'Square' }, { val: 'tall', label: 'Tall' }, { val: 'taller', label: 'Portrait' }].map(({ val, label }) => (
-                  <Chip key={val} active={(s.photoHeight || 'match') === val} onClick={() => set('photoHeight', val)}>{label}</Chip>
-                ))}
-              </div>
+              <PhotoChips control="photoHeight" s={s} set={set} />
             </div>
           )}
 
           <div>
             <p className="text-xs font-semibold text-gray-700 mb-1.5">Text Position</p>
             {photoTextPositionApplies(s, template) ? (
-              <div className="flex gap-2">
-                {[{ val: 'top', label: '↑ Top' }, { val: 'center', label: '↕ Center' }, { val: 'bottom', label: '↓ Bottom' }].map(({ val, label }) => (
-                  <Chip key={val} active={(s.photoTextAlign || 'center') === val} onClick={() => set('photoTextAlign', val)}>{label}</Chip>
-                ))}
-              </div>
+              <PhotoChips control="photoTextAlign" s={s} set={set} />
             ) : (
               <p className="text-[11px] text-gray-400" data-testid="photo-text-position-note">
                 {templateId(template) === 'sidebar'

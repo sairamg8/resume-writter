@@ -8,6 +8,7 @@ import { readImageFile } from '@/utils/imageUpload';
 import { CONTACT_FIELDS } from '@/utils/contacts';
 import { useLetterPhoto } from '@/hooks/usePrintableImage';
 import CoverLetterGeneratorModal from '@/components/CoverLetterGeneratorModal';
+import { PHOTO_OPTIONS, photoOption } from '@/constants/photoOptions';
 
 /** This panel's lucide icon per field — the names and their order come from CONTACT_FIELDS. */
 const ICONS = { email: Mail, phone: Phone, location: MapPin, website: Globe, linkedin: Link2, github: Code };
@@ -137,13 +138,10 @@ export default function CoverLetterPanel({ resume, coverLetter, personal, settin
         {photoShown && hasPhoto && !centered && (
           <div>
             <p className="text-xs font-semibold text-gray-700 mb-1.5">Text Position (relative to photo)</p>
+            {/* The same list the résumé's panel offers and the PDF draws (AUD-25). */}
             <div className="flex gap-2">
-              {[
-                { val: 'top',    label: '↑ Top'    },
-                { val: 'center', label: '↕ Center' },
-                { val: 'bottom', label: '↓ Bottom' },
-              ].map(({ val, label }) => (
-                <Chip key={val} active={(cl.photoTextAlign || 'center') === val} onClick={() => updateCoverLetter('photoTextAlign', val)}>
+              {PHOTO_OPTIONS.photoTextAlign.map(({ val, label }) => (
+                <Chip key={val} active={photoOption('photoTextAlign', cl.photoTextAlign) === val} onClick={() => updateCoverLetter('photoTextAlign', val)}>
                   {label}
                 </Chip>
               ))}

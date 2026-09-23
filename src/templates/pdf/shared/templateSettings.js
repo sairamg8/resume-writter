@@ -4,6 +4,7 @@
 import { headerBorderOn, headerTemplateId } from '@/constants/templates';
 import { headerGapsPt } from '@/constants/headerSpacing';
 import { pageMargins } from '@/constants/pageMargins';
+import { PHOTO_OPTIONS, photoOption } from '@/constants/photoOptions';
 import { contrast, readableOn } from './pdfColors';
 import { CSS_PX_TO_PT, DEFAULT_ITEM_GAP_PX, DEFAULT_SECTION_GAP_PX } from './pdfUnits';
 
@@ -92,11 +93,8 @@ export const DEFAULTS = {
   },
 };
 
-const VALID_PHOTO_SHAPES = new Set(['circle', 'rounded', 'square']);
-const VALID_PHOTO_SIZES = new Set(['sm', 'md', 'lg']);
-const VALID_PHOTO_BORDERS = new Set(['none', 'thin', 'accent']);
-const VALID_PHOTO_HEIGHTS = new Set(['match', 'tall', 'taller']);
-const VALID_PHOTO_TEXT_ALIGNS = new Set(['top', 'center', 'bottom']);
+/** The photo controls resolveTemplateSettings clamps, from the one list the panel offers. */
+const PHOTO_KEYS = Object.keys(PHOTO_OPTIONS);
 
 /**
  * Resolve design settings for PDF export.
@@ -155,11 +153,8 @@ export function resolveTemplateSettings(settings = {}, templateKey) {
   s.headerInlineGap = (settings.headerInlineGap ?? 8) * CSS_PX_TO_PT;
   s.contactStyle = settings.contactStyle || 'icon';
   s.contactLayout = settings.contactLayout || 'justify';
-  s.photoShape = VALID_PHOTO_SHAPES.has(settings.photoShape) ? settings.photoShape : 'circle';
-  s.photoSize = VALID_PHOTO_SIZES.has(settings.photoSize) ? settings.photoSize : 'md';
-  s.photoBorder = VALID_PHOTO_BORDERS.has(settings.photoBorder) ? settings.photoBorder : 'accent';
-  s.photoHeight = VALID_PHOTO_HEIGHTS.has(settings.photoHeight) ? settings.photoHeight : 'match';
-  s.photoTextAlign = VALID_PHOTO_TEXT_ALIGNS.has(settings.photoTextAlign) ? settings.photoTextAlign : 'center';
+  // Each photo control's stored value when the panel offers it, else that control's default (AUD-25).
+  for (const key of PHOTO_KEYS) s[key] = photoOption(key, settings[key]);
   // A boolean from here on: the stored choice, else the template's own default.
   s.showHeaderBorder = headerBorderOn(settings, templateKey);
 

@@ -1,4 +1,5 @@
 import { pxToPt } from './pdfUnits';
+import { photoOption } from '@/constants/photoOptions';
 import { contrast, readableOn, solid } from './pdfColors';
 
 /** The least a Thin ring shows on its ground: Classic's Thin, #e5e7eb, on the white page (1.24:1). */
@@ -53,16 +54,13 @@ const VARIANTS = {
  * @param {boolean} [opts.onBanner] the photo sits on an accent banner (Modern's, or the cover
  *   letter's in the Modern look): "thin" is Modern's half-white ring over the accent (FIDB-51)
  */
-const VALID_PHOTO_SHAPES = new Set(['circle', 'rounded', 'square']);
-const VALID_PHOTO_SIZES = new Set(['sm', 'md', 'lg']);
-const VALID_PHOTO_BORDERS = new Set(['none', 'thin', 'accent']);
-const VALID_PHOTO_HEIGHTS = new Set(['match', 'tall', 'taller']);
-
 export function getPdfPhotoStyle(settings, accent, variant = 'classic', opts = {}) {
-  const sh = VALID_PHOTO_SHAPES.has(settings?.photoShape) ? settings.photoShape : 'circle';
-  const sz = VALID_PHOTO_SIZES.has(settings?.photoSize) ? settings.photoSize : 'md';
-  const br = VALID_PHOTO_BORDERS.has(settings?.photoBorder) ? settings.photoBorder : 'accent';
-  const ph = VALID_PHOTO_HEIGHTS.has(settings?.photoHeight) ? settings.photoHeight : 'match';
+  // Only what Personal Info → Photo offers is drawn: an imported file's 'oval' shape or a height no
+  // build ever offered prints as that control's default (AUD-25), from the one list both read.
+  const sh = photoOption('photoShape', settings?.photoShape);
+  const sz = photoOption('photoSize', settings?.photoSize);
+  const br = photoOption('photoBorder', settings?.photoBorder);
+  const ph = photoOption('photoHeight', settings?.photoHeight);
   const v = VARIANTS[variant] || VARIANTS.classic;
   const toPt = v.unit === 'px' ? pxToPt : (n) => n;
   const wUnits = v.sizes[sz] || v.sizes.md;
