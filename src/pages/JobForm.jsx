@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { useJobStore } from '@/hooks/useJobStore';
 import { useJobStages } from '@/hooks/useJobStages';
-import { todayLocalISO } from '@/utils/dates';
+import { formPatch, jobFormValues, withFormStatus } from '@/utils/jobEdits';
 import { JOB_STATUSES } from '@/constants/jobs';
 import { InterviewStageSelector } from '@/components/job/InterviewStageSelector';
 import { JobsNotSavedAlert } from '@/components/job/JobsNotSavedAlert';
@@ -34,29 +34,42 @@ export function JobForm({ store }) {
 
   const isEdit = !!id;
   const existing = isEdit ? jobs.find(j => j.id === id) : null;
-
-  const [form, setForm] = useState(() => {
-    const base = {
-      company: '', role: '', status: 'applied', stage: '',
-      url: '', location: '', salary: '',
-      contact: '', resumeId: '', notes: '',
-      appliedDate: todayLocalISO(), deadline: '',
-      ...existing,
-    };
-    for (const key of ['company', 'role', 'status', 'stage', 'url', 'location', 'salary', 'contact', 'resumeId', 'notes', 'appliedDate', 'deadline']) {
-      if (base[key] == null) base[key] = '';
-    }
-    return base;
-  });
+  // The job and the form's values as it opened: a save writes only what changed since (J-02).
+  const [opened] = useState(() => existing ?? null);
+  const [start] = useState(() => jobFormValues(existing));
+  const [form, setForm] = useState(start);
+  // Deleted in another tab while this form was open: keep the input, offer it as a new job (J-16).
+  const gone = isEdit && Boolean(opened) && !existing;
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+  // A new job's untouched applied date follows the status: none for Saved (J-10).
+  const setStatus = v => setForm(f => withFormStatus(f, v, { isNew: !isEdit }));
   const canSave = Boolean((form.company || '').trim() || (form.role || '').trim());
-  const backPath = isEdit ? `/jobs/${id}` : '/jobs';
+  const backPath = isEdit && existing ? `/jobs/${id}` : '/jobs';
 
   function handleSave() {
     if (!canSave) return;
-    if (isEdit) { updateJob(id, form); navigate(`/jobs/${id}`); }
-    else { const newId = addJob(form); navigate(`/jobs/${newId}`); }
+    if (!isEdit) { navigate(`/jobs/${addJob(form)}`); return; }
+    // The whole form wrote its stale to-dos, history and status over another tab's (J-02).
+    if (updateJob(id, formPatch(start, form))) navigate(`/jobs/${id}`);
+  }
+
+  function saveAsNew() {
+    if (canSave) navigate(`/jobs/${addJob(form)}`);
+  }
+
+  // An unknown id is not a blank form whose Save throws the input away (J-16).
+  if (isEdit && !opened) {
+    return (
+      <div className="min-h-screen bg-[#f5f3ef] flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-gray-500 mb-3">Job not found.</p>
+          <button onClick={() => navigate('/jobs')} className="text-indigo-600 text-sm font-medium hover:underline">
+            ← Back to Job Tracker
+          </button>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -69,7 +82,7 @@ export function JobForm({ store }) {
           <h1 className="text-base font-bold text-gray-900">{isEdit ? 'Edit Job Application' : 'Add Job Application'}</h1>
           <div className="ml-auto flex gap-2">
             <button onClick={() => navigate(backPath)} className="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">Cancel</button>
-            <button onClick={handleSave} disabled={!canSave} className="px-5 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed shadow-sm">
+            <button onClick={handleSave} disabled={!canSave || gone} className="px-5 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed shadow-sm">
               {isEdit ? 'Save Changes' : 'Add Job'}
             </button>
           </div>
@@ -77,6 +90,14 @@ export function JobForm({ store }) {
       </div>
 
       <JobsNotSavedAlert error={persistError} className="max-w-3xl mx-auto px-4 sm:px-6 pt-4 sm:pt-6" />
+      {gone && (
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 pt-4 sm:pt-6">
+          <p role="alert" className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 flex flex-wrap items-center gap-2">
+            <span className="flex-1">This job was deleted in another tab. What you typed is still here.</span>
+            <button type="button" onClick={saveAsNew} disabled={!canSave} className="font-semibold underline hover:text-amber-900 disabled:opacity-40">Save as a new job</button>
+          </p>
+        </div>
+      )}
 
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-5">
 
@@ -107,7 +128,7 @@ export function JobForm({ store }) {
           <h2 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Status & Dates</h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <Field id={uid + 'status'} label="Application Status">
-              <select id={uid + 'status'} value={form.status} onChange={e => set('status', e.target.value)} className={INPUT + ' bg-white cursor-pointer'}>
+              <select id={uid + 'status'} value={form.status} onChange={e => setStatus(e.target.value)} className={INPUT + ' bg-white cursor-pointer'}>
                 {JOB_STATUSES.map((s, i) => (
                   <option key={s.id} value={s.id}>{i + 1}. {s.label}</option>
                 ))}
@@ -153,7 +174,7 @@ export function JobForm({ store }) {
 
         <div className="flex justify-end gap-3 pb-8">
           <button onClick={() => navigate(backPath)} className="px-5 py-2.5 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors">Cancel</button>
-          <button onClick={handleSave} disabled={!canSave} className="px-6 py-2.5 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition-colors disabled:opacity-40 disabled:cursor-not-allowed shadow-sm">
+          <button onClick={handleSave} disabled={!canSave || gone} className="px-6 py-2.5 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition-colors disabled:opacity-40 disabled:cursor-not-allowed shadow-sm">
             {isEdit ? 'Save Changes' : 'Add Job'}
           </button>
         </div>

@@ -7,7 +7,7 @@ title: Job Tracker — verified bugs, Low (J-16…J-41)
 > Part of [README.md](README.md). Status: 🔴 open · ⏸ fixed on `boards-jobs-ui` (not merged) · ✅ merged to master · ✖ not a bug.
 > Set the row (status + commit + test) in the SAME commit as the fix. Found by WF-1 `wf_a523cc8e-2ca` at `8409472`, 2026-09-23.
 
-### J-16 · Low · data-loss · 🔴 Open · links **R2-075**
+### J-16 · Low · data-loss · ⏸ Fixed · links **R2-075**
 **/jobs/:id/edit for an unknown or deleted job shows an editable form whose Save discards the input without a message**
 - **Where:** `src/pages/JobForm.jsx` : 34-35, 55-58
 - **Repro:** 1. Visit /#/jobs/nope/edit. 2. Fill in Company and Role and click Save Changes. 3. 'Job not found.' appears, and what was typed is gone. The same happens when another tab deletes the job while its edit form is open.
@@ -15,7 +15,8 @@ title: Job Tracker — verified bugs, Low (J-16…J-41)
 - **Fix hint:** When isEdit && !existing, render the not-found view. In handleSave, check again that the job exists and offer 'Save as new job'.
 - **Verified (WF-1):** Read the code: isEdit comes from the URL param alone (34), and existing is undefined for an unknown id. Ran verify-jobs/v-store.mjs: updateJob('nope', {...}) left storage as ['Acme'] with no 'nope' job. The navigate at 57 then lands on JobDetail's 'Job not found.' view (JobDetail.jsx:28-38).
 - **Fail-first test:** Store test: updateJob('missing', {...}) returns false (or reports not found). Cypress: /#/jobs/nope/edit shows a not-found state and no inputs.
-- **Owner:** JOBS-FIX · **Fix commit:** — · **Test:** —
+- **Now:** `updateJob` returns false and writes nothing when the job is gone. The form renders 'Job not found' for an unknown id (no inputs); when the job is deleted while its form is open it keeps the input, says so (role=alert) and offers 'Save as a new job'. Fail-first: both J-16 tests in 67-job-form-save.test.mjs failed at HEAD (the form rendered for /jobs/nope/edit; Save threw the input away), and the store test got undefined; all pass now.
+- **Owner:** JOBS-FIX · **Fix commit:** this commit (`fix(jobs): the job form saves only what it edited, keeps input for a deleted job, and dates follow the status (J-02, J-10, J-16)`) · **Test:** tests/pdf/67-job-form-save.test.mjs, tests/unit/job-store-edits.unit.mjs
 
 ### J-17 · Low · security · ⏸ Fixed · links **R2-102**
 **CSV export does not neutralise formula cells (CSV/formula injection)**

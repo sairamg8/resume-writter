@@ -1,8 +1,9 @@
 import { useSyncExternalStore } from 'react';
 import { loadSavedList, notSavedReason, pendingRecovery, readSavedList, rememberRecovery, setItemWithRoom } from '../utils/storageBackup.js';
 import { newId } from '../utils/ids.js';
-import { addressableJobs, completeJob, readJob } from '../utils/normalizeJob.js';
+import { addressableJobs, completeJob, readJob, statusId } from '../utils/normalizeJob.js';
 import { keepUnsaved } from '../utils/unsavedJobs.js';
+import { applyEdits, newJobDefaults } from '../utils/jobEdits.js';
 
 const KEY = 'cpwtcv_jobs_v1';
 
@@ -169,38 +170,36 @@ function setJobs(change) {
   update({ jobs, persistError });
 }
 
+/**
+ * Add a job with `data` over a new job's defaults (newJobDefaults: an applied date only past Saved,
+ * J-10) and return its id. The id, the history (one entry, its status) and the times are always
+ * its own; notes in plain text become HTML (completeJob).
+ */
 function addJob(data = {}) {
   const now = Date.now();
-  const initialStatus = data.status || 'saved';
-  const job = {
-    id: newId('job'),
-    company: '', role: '', status: 'saved',
-    url: '', location: '', salary: '',
-    contact: '', resumeId: '', notes: '',
-    appliedDate: '', deadline: '',
-    todos: [],
-    statusHistory: [{ status: initialStatus, changedAt: now }],
-    createdAt: now, updatedAt: now,
+  const status = statusId(data.status) || 'saved';
+  const job = completeJob({
+    ...newJobDefaults(status, new Date(now)),
     ...data,
-    // ensure statusHistory always exists (imports may lack it)
-  };
-  if (!job.statusHistory) {
-    job.statusHistory = [{ status: job.status, changedAt: job.createdAt || now }];
-  }
+    id: newId('job'), status,
+    statusHistory: [{ status, changedAt: now }],
+    createdAt: now, updatedAt: now,
+  });
   setJobs(jobs => [...jobs, job]);
   return job.id;
 }
 
+/**
+ * Merge `updates` into job `id` (applyEdits: a status change adds one history entry and may fill
+ * the applied date; id and history are never overwritten). False — nothing written — when no job
+ * has that id any more: its edit form was open while another tab deleted it (J-16).
+ */
 function updateJob(id, updates) {
-  setJobs(jobs => jobs.map(j => {
-    if (j.id !== id) return j;
-    const updated = { ...j, ...updates, updatedAt: Date.now() };
-    if (updates.status && updates.status !== j.status) {
-      const prev = j.statusHistory || [{ status: j.status, changedAt: j.createdAt || Date.now() }];
-      updated.statusHistory = [...prev, { status: updates.status, changedAt: Date.now() }];
-    }
-    return updated;
-  }));
+  if (!initialized) init();
+  if (!snapshot().jobs.some(j => j.id === id)) return false;
+  const now = Date.now();
+  setJobs(jobs => jobs.map(j => (j.id === id ? applyEdits(j, updates, now) : j)));
+  return true;
 }
 
 function deleteJob(id) {

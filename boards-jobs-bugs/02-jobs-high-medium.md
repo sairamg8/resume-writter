@@ -18,7 +18,7 @@ title: Job Tracker — verified bugs, High and Medium (J-01…J-15)
 - **Now:** subscribe() reads storage again (takeOtherTabsList, which still keeps what this tab could not save) when the first job page opens after none was open, and tells the page. The store also exports its actions as plain functions so node tests drive it without React. Fail-first: all four tests failed at HEAD (`# fail 4`), pass now.
 - **Owner:** JOBS-FIX · **Fix commit:** this commit (`fix(jobs): a job page opened again reads what other tabs saved meanwhile (J-01)`) · **Test:** tests/unit/job-store-resync.unit.mjs
 
-### J-02 · Medium · data-loss · 🔴 Open · links **R2-040**
+### J-02 · Medium · data-loss · ⏸ Fixed · links **R2-040**
 **Save Changes writes back a stale copy of the whole job: another tab's tasks are deleted, its status is reverted and a false history entry is added**
 - **Where:** `src/pages/JobForm.jsx` : 37-49, 57 (with src/hooks/useJobStore.js:190-199)
 - **Repro:** 1. Open the same job in two tabs. 2. Tab A: click the Edit pencil. 3. Tab B: on the Tasks tab add 'Prep system design', then on Overview click Move to Phone Screen (or any status). 4. Tab A: change Role and click Save Changes. 5. In either tab the task is gone, the status is back to the old one, and Application History shows an extra entry for the old status.
@@ -26,7 +26,8 @@ title: Job Tracker — verified bugs, High and Medium (J-01…J-15)
 - **Fix hint:** Keep the initial form values. On save, pass updateJob only the editable keys whose value changed. Never send id, todos, statusHistory, createdAt or updatedAt from the form. If the job no longer exists at save time, see J-16.
 - **Verified (WF-1):** Read the code: the form state is {...defaults, ...existing} (43) and save calls updateJob(id, form) (57). updateJob spreads every key and adds a history entry when updates.status !== j.status (193-197). Ran verify-jobs/v-store.mjs. After Tab B's write, A's store held '["Prep system design"] interview', so the store had the change but the form did not. Saving the stale form printed 'role Senior Dev \| status applied \| todos 0 \| history applied,interview,applied'.
 - **Fail-first test:** Extract a pure formPatch(initial, form) from JobForm and assert it returns only the changed editable keys (e.g. {role}) and never todos, statusHistory or status when those were not edited. Store test: after an external write adds a to-do, updateJob(id, {role:'X'}) keeps the to-do and the status.
-- **Owner:** JOBS-FIX · **Fix commit:** — · **Test:** —
+- **Now:** The form keeps its values as it opened (`jobFormValues`) and saves `formPatch(start, form)` — only the form fields whose value changed; to-dos, history, id and an unedited status are never sent. `updateJob` goes through `applyEdits`, which never takes id/createdAt/statusHistory from an edit and routes a status through `applyStatusChange` (one history entry). Fail-first: tests/pdf/67-job-form-save.test.mjs (real JobForm + store, fake DOM) saved status 'applied' over the other tab's 'interview' at HEAD; job-edits.unit.mjs could not load. Both pass now.
+- **Owner:** JOBS-FIX · **Fix commit:** this commit (`fix(jobs): the job form saves only what it edited, keeps input for a deleted job, and dates follow the status (J-02, J-10, J-16)`) · **Test:** tests/pdf/67-job-form-save.test.mjs, tests/unit/job-edits.unit.mjs, tests/unit/job-store-edits.unit.mjs
 
 ### J-03 · Medium · data-loss · ⏸ Fixed · links **R2-035**
 **Job notes have two incompatible editors: text typed in the form is merged and stripped, then saved that way from the Notes tab. The form shows raw HTML.**
@@ -101,7 +102,7 @@ title: Job Tracker — verified bugs, High and Medium (J-01…J-15)
 - **Now:** `jobsToCsv` starts the file with U+FEFF, so Excel reads it as UTF-8 (the existing tests strip it). Fail-first: the J-09 test failed at HEAD, passes now.
 - **Owner:** JOBS-FIX · **Fix commit:** this commit (`fix(jobs): the CSV export opens clean in Excel — plain-text notes, a BOM, formulas as text (J-08, J-09, J-17)`) · **Test:** tests/unit/job-csv.unit.mjs
 
-### J-10 · Medium · bug · 🔴 Open
+### J-10 · Medium · bug · ⏸ Fixed
 **Applied Date is prefilled with today even for a Saved job, and is never set when the job actually moves to Applied**
 - **Where:** `src/pages/JobForm.jsx` : 39-42 (with src/hooks/useJobStore.js:190-199, src/components/job/KanbanView.jsx:49-51, src/utils/jobCsv.js:27)
 - **Repro:** 1. Click Add Job, set Status to '1. Saved' and save. 2. On the /jobs kanban, the card in the Saved column reads 'Applied <today>'. 3. Later, drag it to Applied (or click Move to Applied): the date still shows the day the job was saved. 4. Export CSV: Applied Date is the save day.
@@ -109,7 +110,8 @@ title: Job Tracker — verified bugs, High and Medium (J-01…J-15)
 - **Fix hint:** Default appliedDate to '' when the status is 'saved', and clear the prefill when the user picks Saved. In updateJob, when the status moves from saved to any later pipeline status and appliedDate is empty, set todayLocalISO().
 - **Verified (WF-1):** Read the code. base.appliedDate = todayLocalISO() is set whatever the status (42), and the status select only calls set('status'). updateJob (190-199) changes only statusHistory on a status change. KanbanCard prints 'Applied {appliedDate}' in any column (49-51).
 - **Fail-first test:** Extract applyStatusChange(job, status, today) from the store. Test that saved→applied with a blank appliedDate sets today, and that newJobDefaults('saved').appliedDate === ''.
-- **Owner:** JOBS-FIX · **Fix commit:** — · **Test:** —
+- **Now:** `newJobDefaults(status)` gives an applied date only past Saved (the store's `addJob` uses it; a date the caller clears stays clear). `applyStatusChange` fills a blank applied date with that day when a job moves past Saved. On a new job's form the untouched date follows the status picked (`withFormStatus`: blank for Saved). Fail-first: the J-10 store tests failed at HEAD (added-as-Applied had no date; saved→applied left it blank), and the pure ones could not load; all pass now.
+- **Owner:** JOBS-FIX · **Fix commit:** this commit (`fix(jobs): the job form saves only what it edited, keeps input for a deleted job, and dates follow the status (J-02, J-10, J-16)`) · **Test:** tests/unit/job-edits.unit.mjs, tests/unit/job-store-edits.unit.mjs
 
 ### J-11 · Medium · mobile · 🔴 Open
 **On phones the list view is clipped: columns after about Status, including Delete, cannot be reached**
