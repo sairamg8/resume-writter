@@ -23,7 +23,7 @@ const sampleAtsResume = {
   template: 'classic',
   settings: {
     font: 'notosans',
-    contactCols: 1,
+    contactLayout: 'justify',
   },
   personal: {
     name: 'Sarah Connor',

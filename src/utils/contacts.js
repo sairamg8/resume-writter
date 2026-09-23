@@ -1,4 +1,4 @@
-import { safeHref } from '@/utils/richText';
+import { safeHref } from './richText.js'; // relative: the plain-node unit tests load it via atsChecker.js
 
 /**
  * The contact fields, in the order every export prints them — the one table every place that

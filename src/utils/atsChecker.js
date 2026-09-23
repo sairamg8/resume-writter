@@ -1,5 +1,6 @@
 import { decodeEntities } from './richText.js';
-import { atsRating, templateId, templateLabel, TEMPLATE_PICKER } from '../constants/templates.js';
+import { contactItems } from './contacts.js';
+import { atsRating, hasHeaderControls, templateId, templateLabel, TEMPLATE_PICKER } from '../constants/templates.js';
 
 /**
  * Extracts bullet points from a resume item.
@@ -1099,8 +1100,13 @@ export function analyzeAtsScore(resume, jobDescriptionText = '') {
     });
   }
 
-  // Contact layout columns check (2 pts)
-  if (settings.contactCols === 1 || settings.contactCols == null) {
+  // Contact layout columns check (2 pts). Read the header as PdfContactRow prints it (AUD-27): only
+  // Contact Details → Layout "2 Grid" sets contacts in two columns, only the templates whose header
+  // takes the Layout (hasHeaderControls) print it, and a lone visible contact fills one cell. The
+  // check used to read `contactCols`, which no control writes, so it passed every grid.
+  const gridContacts = hasHeaderControls(currentTemplate, settings)
+    && settings.contactLayout === '2grid' && contactItems(p).length > 1;
+  if (!gridContacts) {
     layoutPts += 2;
     results.categories.layout.items.push({
       id: 'contact_layout', status: 'pass', text: 'Linear contact formatting',
@@ -1110,7 +1116,7 @@ export function analyzeAtsScore(resume, jobDescriptionText = '') {
     layoutPts += 1;
     results.categories.layout.items.push({
       id: 'contact_layout', status: 'warn', text: 'Multi-column contact header',
-      detail: 'Single-column contact header is safest for primitive parsers.',
+      detail: 'Contact Details → Layout "Single" or "Justify" is safest for primitive parsers.',
     });
   }
 

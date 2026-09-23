@@ -17,7 +17,7 @@ import { analyzeAtsScore } from '../../src/utils/atsChecker.js';
 
 /** Enough of a résumé for analyzeAtsScore to reach the layout category. */
 const sample = {
-  id: 'ats_rating', name: 'Sample', template: 'classic', settings: { contactCols: 1 },
+  id: 'ats_rating', name: 'Sample', template: 'classic', settings: { contactLayout: 'justify' },
   personal: {
     name: 'Sarah Connor', title: 'Senior Full Stack Engineer', email: 'sarah@example.com',
     phone: '+1 (555) 234-5678', location: 'San Francisco, CA',

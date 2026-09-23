@@ -2,18 +2,18 @@
 
 > Location: `/mnt/Storage/Projects/flowcv/bug-status.md`
 > Updated: 2026-09-23 · every row **verified independently at `d495cb2`** (see Verification pass) ·
-> `origin/master` (deployed) = `642fe6e` · **nothing is waiting to be pushed**
-> **Open: 14** | Fixed, not pushed: 0 | **Closed: 67**
+> `origin/master` (deployed) = `40501e9` · **AUD-27 is fixed and waiting to be pushed**
+> **Open: 13** | Fixed, not pushed: 1 | **Closed: 67**
 
 ## Summary
 
 | List | Found | ✅ Fixed and pushed | ⏸ Fixed, local only | 🔴 Open |
 |---|---|---|---|---|
-| Bug audit, 2026-09-22 (`AUD-`) | 35 (34 + one follow-up) | 28 | 0 | **7** |
+| Bug audit, 2026-09-22 (`AUD-`) | 35 (34 + one follow-up) | 28 | 1 | **6** |
 | ATS parsing defects (`ATS-`) | 6 | 0 | 0 | **6** |
 | Templates UI audit, 2026-09-23 (`TUI-`) | 7 | 6 | 0 | **1** |
 | Prompt tasks, 2026-09-14 → 09-21 | 33 | 33 | 0 | 0 |
-| **Total** | **81** | **67** | **0** | **14** |
+| **Total** | **81** | **67** | **1** | **13** |
 
 - **Status:** ✅ fixed and pushed (on `origin/master`, so deployed) · ⏸ fixed and committed, not pushed · 🔴 open.
 - **Severity (audit):** High = data loss, or a feature that does not work · Medium = a wrong result, no data loss ·
@@ -25,12 +25,11 @@
 
 ### Next in queue
 
-1. The Low rows left: **AUD-27** (ATS score reads `settings.contactCols`, which no control writes),
-   AUD-28 … AUD-33.
+1. The Low rows left: AUD-28 … AUD-33 (AUD-27 is ⏸, local).
 2. ATS-1 … ATS-6 — no order set yet; ATS-6 waits on a decision.
 3. TUI-3, TUI-4, TUI-6 — TUI-6 to be filed as ATS-7.
 
-✅ **All fixes are pushed.** `origin/master` = `642fe6e` (TUI-7). Gate on that exact tree, 2026-09-23 15:31:
+✅ **Every fix but AUD-27 (⏸, local) is pushed.** Gate on the exact tree of `642fe6e` (TUI-7), 2026-09-23 15:31:
 **1629 tests, 1627 pass, 0 fail, 2 todo** (the two known ATS `todo`s), a green production build, and a
 private-data scan of all 73 bundle files with no hits. Per the owner (2026-09-23, *"keep pushing after
 each bug"*) every finished bug lands → gates → pushes, unasked.
@@ -124,7 +123,7 @@ existing test caught any of these; several unit tests asserted the same wrong da
 | AUD-24 | Jobs · edit | Medium | ✅ Fixed | `be8b7f3` | tests/pdf/54-job-form-null-crash.test.mjs | Editing an imported job whose company or role is `null` crashes the page: `form.company.trim()` (`src/pages/JobForm.jsx:46`), and there is no error boundary anywhere in `src`. Defaulted null/undefined job form values to empty strings with safe trimming, added reusable ErrorBoundary component and wrapped application routes. | Code |
 | AUD-25 | Photo · import | Low | ✅ Fixed | `9c8ed05` | tests/pdf/55-photo-import-clamp.test.mjs, tests/unit/photo-options.unit.mjs | An imported photo with an unknown shape or height (e.g. `'oval'`) is not clamped to the offered options (`getPdfPhotoStyle`, `src/templates/pdf/shared/pdfPhoto.js:57`). Clamped photoShape, photoHeight, photoSize, and photoBorder to offered options in getPdfPhotoStyle and resolveTemplateSettings. ✅ **One list since `b5c2ba6`** (2026-09-23): `src/constants/photoOptions.js` is read by the chips that offer the options and by both clamps, so the panel and the PDF cannot drift apart. A fourth restated copy — the cover letter's Text Position — was found by the new test and folded in. `tests/unit/photo-options.unit.mjs` scans `src/` for another. | Ran, Known A5 |
 | AUD-26 | Storage · migrations | Low | ✅ Fixed | `01ce1d1` | tests/pdf/56-data-version-ahead.test.mjs | A file stamped `dataVersion` above DATA_VERSION (e.g. 999) skipped every migration for ever, including ones not yet written, because 999 stays above every future DATA_VERSION (`src/utils/normalizeResume.js:255`). **Fixed in `01ce1d1`:** a version this build never issued is kept, not trusted — the résumé is stamped with what this build is at so a later migration will run, none of this build's migrations run on it (a newer build has had them all), and the claim is kept in `dataVersionAhead` for the build that can check it, absorbed and dropped once DATA_VERSION catches up. ⚠︎ An earlier uncommitted attempt that only clamped the stamp was **not** this fix: it lowers what a newer build wrote, so that build re-migrates its own data. The 15 test files writing `dataVersion: 99` to mean "current" now say DATA_VERSION, which is what they meant. | Ran
-| AUD-27 | ATS checker · score | Low | 🔴 Open | — | — | The "Multi-column contact header" check reads `settings.contactCols`, which no control writes (the control is `contactLayout: '2grid'`), so it always passes (`src/utils/atsChecker.js:1084`; the row said `:1019`, which the fixes since have moved). | Code |
+| AUD-27 | ATS checker · score | Low | ⏸ Fixed, local | this commit | tests/unit/ats-contact-layout.unit.mjs, tests/unit/ats-checker.unit.mjs, tests/unit/ats-rating.unit.mjs | The "Multi-column contact header" check reads `settings.contactCols`, which no control writes (the control is `contactLayout: '2grid'`), so it always passes (`src/utils/atsChecker.js:1084`; the row said `:1019`, which the fixes since have moved). The reverse also held: a stale `contactCols: 2` in an imported file warned (layout 8/10 instead of 10/10) on a header that prints no grid, and nothing in the app could clear it. **Now** the check reads the header as `PdfContactRow` prints it: it warns only when the template's header takes Contact Layout (`hasHeaderControls` — Classic, Minimal, Executive, and the Sidebar's Single · ATS-safe mode), the Layout is "2 Grid" (the only multi-column value) and more than one contact is visible (`contactItems`, so hidden and blank fields count as the header counts them); `contactCols` is no longer read. `src/utils/contacts.js` imports `./richText.js` instead of the `@/` alias so the plain-node unit tests can load it through `atsChecker.js`; the two unit fixtures that set `contactCols: 1` now set `contactLayout: 'justify'`. 2 of the new file's 5 tests fail on the code before (2 Grid passes; a stale `contactCols` warns). | Code |
 | AUD-28 | Editor · month picker | Low | 🔴 Open | — | — | The years stop at the current year − 49 (`src/components/SectionEditorShared.jsx:27`): a 1975 date shows blank in the editor though the PDF prints it. | Code |
 | AUD-29 | Career history panel | Low | 🔴 Open | — | — | A past job with no end date counts up to today (`src/components/CareerHistoryPanel.jsx:26`); "N companies" counts entries (`:78`); the total ignores gaps and hidden entries. | Code |
 | AUD-30 | Exports · file name | Low | 🔴 Open | — | — | Export file names use the Google account's display name, not the résumé's name (`src/hooks/useEditorExports.js:10`). | Code |
