@@ -1,8 +1,8 @@
 # FlowCV Bug Tracker & Status Index
 
 > Location: `/mnt/Storage/Projects/flowcv/bug-status.md`
-> Updated: 2026-09-23 06:16 · `origin/master` (deployed) = `2a7d728` · fixed but not pushed: `fd7ecca`, `4ee5ede`, `f829ce3`, `e2dffbf`, `b5068d0`, `b99c04d`, `b5b8e86`, `d720439`, `6e07a5f`, `3dcd018`, `da91e31`, `be8b7f3`, `9c8ed05`
-> **Open: 15** | Fixed, not pushed: 15 | **Closed: 44**
+> Updated: 2026-09-23 06:52 · `origin/master` (deployed) = `2a7d728` · fixed but not pushed: `fd7ecca`, `4ee5ede`, `f829ce3`, `e2dffbf`, `b5068d0`, `b99c04d`, `b5b8e86`, `d720439`, `6e07a5f`, `3dcd018`, `da91e31`, `be8b7f3`, `9c8ed05`, `d495cb2`
+> **Open: 19** | Fixed, not pushed: 17 | **Closed: 44**
 
 ## Summary
 
@@ -10,8 +10,9 @@
 |---|---|---|---|---|
 | Bug audit, 2026-09-22 (`AUD-`) | 35 (34 + one follow-up) | 11 | 15 | **9** |
 | ATS parsing defects (`ATS-`) | 6 | 0 | 0 | **6** |
+| Templates UI audit, 2026-09-23 (`TUI-`) | 6 | 0 | 2 | **4** |
 | Prompt tasks, 2026-09-14 → 09-21 | 33 | 33 | 0 | 0 |
-| **Total** | **74** | **44** | **15** | **15** |
+| **Total** | **80** | **44** | **17** | **19** |
 
 - **Status:** ✅ fixed and pushed (on `origin/master`, so deployed) · ⏸ fixed and committed, not pushed · 🔴 open.
 - **Severity (audit):** High = data loss, or a feature that does not work · Medium = a wrong result, no data loss ·
@@ -83,13 +84,18 @@ existing test caught any of these; several unit tests asserted the same wrong da
 ## Templates UI audit — 2026-09-23 (`TUI-`)
 
 Found by Phase 1 of `templates-ui-plan.md` (a read-only UI audit, 4 agents + a live-app pass). The full
-write-up, including the rows not yet filed here, is in the `templates-ui-audit` worktree's
-`templates-ui-bugs.md`.
+write-up — these six plus four lower-value rows (pixel-identical dashboard cards, the .docx dropping
+Modern's and Sidebar's header band, the starter modal's untrue "ATS-optimized" claim, `ResumeCard`
+bypassing `templateLabel()`) — is in the `templates-ui-audit` worktree's `templates-ui-bugs.md`.
 
 | ID | Area | Severity | Status | Commit | Tests | Bug — where | Verified |
 |---|---|---|---|---|---|---|---|
-| TUI-1 | Sidebar · Single ATS-safe · colours | **High** | ⏸ Local only | `PENDING` | tests/pdf/31-template-switch-colors.test.mjs | **A résumé exported in Single · ATS-safe had no name on it.** That mode prints Classic's white page, but `headerGround` resolved with `templateId()` (`src/templates/pdf/shared/headerColors.js:29`) — the only one of seven header callers that was not single-column aware — so the colour rescue measured a picked colour against the dark column that is no longer drawn and kept it: a white name at **1.00:1** on white, a `#bfdbfe` title at 1.42:1. Flipping the Layout toggle also never re-checked the colours, because `updateSetting` (`src/hooks/useResumeStore.js:212`) is generic where `setTemplate` runs `headerColorsOnSwitch`. Only bites a résumé with an explicitly stored Name/Title colour — which is exactly what a two-column Sidebar user has. | Ran (render) |
-| TUI-2 | Sidebar · Single ATS-safe · letter | Medium | ⏸ Local only | `PENDING` | tests/pdf/31-template-switch-colors.test.mjs | Same root cause, second site: `letterheadLook` resolved with `templateId()` (`src/templates/pdf/shared/letterhead.js:155`), so that mode's cover letter kept the Sidebar's dark full-bleed band while its page was Classic's. **Had to land with TUI-1** — fixing the ground alone moves the fault to the letter, where the newly-dark name lands on the still-dark band. | Ran |
+| TUI-1 | Sidebar · Single ATS-safe · colours | **High** | ⏸ Local only | `d495cb2` | tests/pdf/31-template-switch-colors.test.mjs | **A résumé exported in Single · ATS-safe had no name on it.** That mode prints Classic's white page, but `headerGround` resolved with `templateId()` (`src/templates/pdf/shared/headerColors.js:29`) — the only one of seven header callers that was not single-column aware — so the colour rescue measured a picked colour against the dark column that is no longer drawn and kept it: a white name at **1.00:1** on white, a `#bfdbfe` title at 1.42:1. Flipping the Layout toggle also never re-checked the colours, because `updateSetting` (`src/hooks/useResumeStore.js:212`) is generic where `setTemplate` runs `headerColorsOnSwitch`. Only bites a résumé with an explicitly stored Name/Title colour — which is exactly what a two-column Sidebar user has. | Ran (render) |
+| TUI-2 | Sidebar · Single ATS-safe · letter | Medium | ⏸ Local only | `d495cb2` | tests/pdf/31-template-switch-colors.test.mjs | Same root cause, second site: `letterheadLook` resolved with `templateId()` (`src/templates/pdf/shared/letterhead.js:155`), so that mode's cover letter kept the Sidebar's dark full-bleed band while its page was Classic's. **Had to land with TUI-1** — fixing the ground alone moves the fault to the letter, where the newly-dark name lands on the still-dark band. | Ran |
+| TUI-3 | ATS panel · switch button | Medium | 🔴 Open | — | — | The button reads **"Switch to Single-Column ATS Layout"** — the name of the Sidebar's own toggle — but `handleSwitchToClassic()` calls `store.setTemplate('classic')` (`src/components/AtsCheckerPanel.jsx:54`, label `:180`). A Sidebar user clicking it to become ATS-safe loses the Sidebar entirely, plus its heading style and title case, with no undo anywhere. `:342` labels the same handler honestly. | Code |
+| TUI-4 | JSON Resume · template | Medium | 🔴 Open | — | — | Export → import resets any template to Classic: `src/utils/jsonResume.js:243-244` hardcodes `template: 'classic'`, and `cpwtResumeToJsonResume` (`:282`) never writes it out (the schema's `meta` is unused). `tests/unit/json-resume-roundtrip.unit.mjs:19` only ever uses `template: 'classic'`, so its fixture cannot catch it. | Code |
+| TUI-5 | ATS checker · template list | Medium | 🔴 Open | — | — | A live `FIDB-51-VF7-NB1` survivor: `src/utils/atsChecker.js:1059` hardcodes `'classic' \|\| 'minimal' \|\| 'executive'` and never reads `TEMPLATES[id].ats`; `:1077` hardcodes the names again in prose. The picker and the ATS Check tab now disagree for **Modern** (no badge, but scores `pass` 4/5) and **Sidebar-single** (no badge, but `ATS-Certified` 5/5). Four hand-maintained copies of the trio exist (`templates.js`, `15-design-defaults.test.mjs:150`, `ats-checker.unit.mjs:306`, `ats-validate.mjs:66`) and none cross-checks the others. **Fix before adding any template.** | Code |
+| TUI-6 | ATS · page-break glue | Medium | 🔴 Open | — | — | `pdftotext -raw` emits no newline around the `\f`, so a section heading landing first on a new page stops being a heading (`"…Docker, Figma\fPROJECTS"`). Not font-specific — sweeping `sectionGap` 10→24 on default Classic glued at every value. Latent in **every** template; whether it costs a header is a lottery on résumé length. Distinct from ATS-4 (intra-line squeeze) — suggest filing as **ATS-7**. | Ran (extraction) |
 
 ## ATS parsing defects (`ATS-`)
 
