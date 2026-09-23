@@ -28,7 +28,7 @@ title: Job Tracker — verified bugs, Low (J-16…J-41)
 - **Now:** `escapeCsvField` prefixes an apostrophe when a value starts with = + - @, a tab or a carriage return, then quotes it as before. Fail-first: the J-17 test failed at HEAD, passes now.
 - **Owner:** JOBS-FIX · **Fix commit:** this commit (`fix(jobs): the CSV export opens clean in Excel — plain-text notes, a BOM, formulas as text (J-08, J-09, J-17)`) · **Test:** tests/unit/job-csv.unit.mjs
 
-### J-18 · Low · bug · 🔴 Open
+### J-18 · Low · bug · ⏸ Fixed
 **List view sorts every column as text: Status by internal id, Salary as a string, and blank dates first**
 - **Where:** `src/components/job/ListView.jsx` : 13-23
 - **Repro:** 1. On /jobs switch to List view. 2. Click Status: Phone Screen sorts after Offer and On Hold. 3. Click Salary: $90k sorts above $180k. 4. Click Deadline: rows without a deadline come first. 5. After clicking any header, the default order (last updated) cannot be chosen again.
@@ -36,7 +36,8 @@ title: Job Tracker — verified bugs, Low (J-16…J-41)
 - **Fix hint:** Give each column its own comparator: status by its JOB_STATUSES index, dates with blanks last, salary by the first number parsed (with k/m suffixes). Add an 'Updated' column or sort option.
 - **Verified (WF-1):** Ran verify-jobs/v-pure.mjs with the comparator copied verbatim from ListView.jsx:19-23. Status ascending gave 'applied < interview < offer < on_hold < phone_screen < rejected < saved < withdrawn'. Salary ascending gave '"" < "$120,000" < "$180k – $250k" < "$90k"'. Deadline ascending put "" first.
 - **Fail-first test:** Extract the comparator to src/utils/jobSort.js. Test status in JOB_STATUSES order, blanks last in both directions, and $90k < $120,000 < $180k.
-- **Owner:** JOBS-FIX · **Fix commit:** — · **Test:** —
+- **Now:** The list view sorts through `sortJobs(jobs, key, dir)` in `src/utils/jobQuery.js`: status in pipeline order (then the closed ones), dates as dates, salary by its first amount (`salaryValue`: k / m / LPA / lakh / Cr), text with a base-sensitivity collator; blanks last in both directions, ties keep the list's order. A third click on a header returns to the default order (last updated). Fail-first: the test file could not load at HEAD (no module), and the old comparator, run verbatim on the same fixtures in scratch, gave 'applied < interview < offer < on_hold < phone_screen …', '"" < $120,000 < $180k – $250k < $90k' and a blank deadline first; the J-18 tests pass now.
+- **Owner:** JOBS-FIX · **Fix commit:** this commit (`feat(jobs): jobQuery — tested filters, sorting, KPI stats and funnel; the list sorts each column by its kind (J-18)`) · **Test:** tests/unit/job-query.unit.mjs
 
 ### J-19 · Low · bug · ⏸ Fixed
 **Imported status history and to-dos are not normalised like the job: wrong rejection count, no 'Current', 'Invalid Date', and done:'false' counted as done**

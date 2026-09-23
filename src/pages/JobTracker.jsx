@@ -13,6 +13,7 @@ import { RecoveryNotice } from '@/components/RecoveryNotice';
 import { JobsNotSavedAlert } from '@/components/job/JobsNotSavedAlert';
 import { downloadBlob } from '@/utils/download';
 import { jobsToCsv } from '@/utils/jobCsv';
+import { filterJobs, jobStats } from '@/utils/jobQuery';
 
 export function JobTracker({ store }) {
   const navigate = useNavigate();
@@ -64,21 +65,18 @@ export function JobTracker({ store }) {
     setFilterStatus(prev => prev === id ? '' : id);
   }
 
-  const filteredJobs = jobs.filter(j => {
-    const q = search.toLowerCase();
-    const matchSearch = !q || j.company?.toLowerCase().includes(q) || j.role?.toLowerCase().includes(q) || j.location?.toLowerCase().includes(q);
-    const matchStatus = !filterStatus || j.status === filterStatus;
-    return matchSearch && matchStatus;
-  });
+  const filteredJobs = filterJobs(jobs, { q: search, statuses: filterStatus ? [filterStatus] : [] });
 
-  const rejectedCount  = jobs.filter(j => j.status === 'rejected').length;
-  const withdrawnCount = jobs.filter(j => j.status === 'withdrawn').length;
+  // The definitions live in jobStats (src/utils/jobQuery.js), where they are tested.
+  const counts = jobStats(jobs);
+  const rejectedCount  = counts.rejected;
+  const withdrawnCount = counts.withdrawn;
 
   const stats = [
-    { label: 'Total',      value: jobs.length,                                                                                color: 'text-gray-900' },
-    { label: 'Active',     value: jobs.filter(j => !['rejected', 'withdrawn', 'offer', 'on_hold'].includes(j.status)).length, color: 'text-blue-600' },
-    { label: 'Interviews', value: jobs.filter(j => ['phone_screen', 'interview'].includes(j.status)).length,                  color: 'text-amber-600' },
-    { label: 'Offers',     value: jobs.filter(j => j.status === 'offer').length,                                              color: 'text-green-600' },
+    { label: 'Total',      value: counts.total,        color: 'text-gray-900' },
+    { label: 'Active',     value: counts.active,       color: 'text-blue-600' },
+    { label: 'Interviews', value: counts.interviewing, color: 'text-amber-600' },
+    { label: 'Offers',     value: counts.offers,       color: 'text-green-600' },
   ];
 
   return (

@@ -3,6 +3,10 @@ import { ExternalLink, Trash2, ChevronUp, ChevronDown } from 'lucide-react';
 import { StatusBadge } from '@/components/job/StatusBadge';
 import { deadlineState } from '@/utils/dates';
 import { safeHref } from '@/utils/richText';
+import { sortJobs } from '@/utils/jobQuery';
+
+/** Last updated first: the order the list opens in, and the one a third header click returns to. */
+const DEFAULT_SORT = { key: 'updatedAt', dir: 'desc' };
 
 function SortIcon({ active, dir }) {
   if (!active) return null;
@@ -10,17 +14,15 @@ function SortIcon({ active, dir }) {
 }
 
 export function ListView({ jobs, resumes, onNavigate, onDelete }) {
-  const [sort, setSort] = useState({ key: 'updatedAt', dir: 'desc' });
+  const [sort, setSort] = useState(DEFAULT_SORT);
 
+  // asc → desc → the default order again, which no header click used to reach (J-18).
   function toggleSort(key) {
-    setSort(s => s.key === key ? { key, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'asc' });
+    setSort(s => s.key !== key ? { key, dir: 'asc' } : s.dir === 'asc' ? { key, dir: 'desc' } : DEFAULT_SORT);
   }
 
-  const sorted = [...jobs].sort((a, b) => {
-    const av = a[sort.key] ?? '', bv = b[sort.key] ?? '';
-    const cmp = typeof av === 'number' ? av - bv : String(av).localeCompare(String(bv));
-    return sort.dir === 'asc' ? cmp : -cmp;
-  });
+  // Each column by its own kind — status in pipeline order, salary by amount, blanks last (J-18).
+  const sorted = sortJobs(jobs, sort.key, sort.dir);
 
   const cols = [
     { key: 'company',     label: 'Company' },
