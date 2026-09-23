@@ -5,12 +5,13 @@
 // their own, so Node's test runner loads this file as it is (tests/unit/normalize-job.unit.mjs).
 import { newId } from './ids.js';
 import { plainTextToHtml } from './richText.js';
+import { readOptionalFields, sourceId, workModeId } from './jobFields.js';
 import { JOB_STATUSES } from '../constants/jobs.js';
 
 /** The fields the job pages print or search as text. */
 const TEXT_FIELDS = [
   'company', 'role', 'location', 'salary', 'contact', 'notes', 'url',
-  'appliedDate', 'deadline', 'resumeId', 'stage',
+  'appliedDate', 'deadline', 'resumeId', 'stage', 'followUpDate',
 ];
 
 /** True when `j` can be a job at all: an object that is not an array. */
@@ -139,6 +140,8 @@ function readableHistory(history) {
  *                                        entries naming no status are left out, a changedAt
  *                                        that is no time is dropped (readableHistory, J-19)
  *   a to-do's done that is not boolean → true for true / "true" / 1, else false (J-19)
+ *   source, workMode, excitement,      → as readOptionalFields (jobFields.js) reads them
+ *   interviews
  * Missing fields stay missing: the pages already treat them as empty. A saved job with
  * todos: [null] used to throw on every visit to the tracker, until storage was cleared.
  */
@@ -185,6 +188,7 @@ export function readJob(job) {
       if (history !== job.statusHistory) set('statusHistory', history, some);
     }
   }
+  readOptionalFields(job, set);
   return { kept: out, lost };
 }
 
@@ -201,6 +205,8 @@ export function readJob(job) {
  *   an earlier to-do already has
  *   notes in plain text (the form's    → the same text as editor HTML, once (notesToHtml, J-03)
  *   old textarea)
+ *   source / workMode in other words   → the choice's id ('LinkedIn' → 'linkedin')
+ *   an interview with no id            → a new one (withOwnIds)
  * One job does not see the others: an id an earlier job has is replaced over the list (addressableJobs).
  */
 export function completeJob(job) {
@@ -227,6 +233,15 @@ export function completeJob(job) {
   if (typeof job.notes === 'string') {
     const notes = notesToHtml(job.notes);
     if (notes !== job.notes) set('notes', notes);
+  }
+  // A choice named in other words ('LinkedIn', 'On-site') → its id; an interview → an id of its own.
+  const source = sourceId(job.source);
+  if (source !== null && source !== job.source) set('source', source);
+  const workMode = workModeId(job.workMode);
+  if (workMode !== null && workMode !== job.workMode) set('workMode', workMode);
+  if (Array.isArray(job.interviews)) {
+    const interviews = withOwnIds(job.interviews, 'iv');
+    if (interviews !== job.interviews) set('interviews', interviews);
   }
   return out;
 }

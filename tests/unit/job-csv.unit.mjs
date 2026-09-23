@@ -20,18 +20,26 @@ const APPLE = {
   id: 'job_1', company: 'Apple', role: 'Senior iOS Engineer', status: 'phone_screen', stage: 'Technical Round 1',
   location: 'Cupertino, CA', salary: '$190,000 - $220,000', appliedDate: '2026-09-18', deadline: '2026-10-15',
   url: 'https://apple.com/jobs/123', contact: 'Jane Doe', notes: 'Passed recruiter screen', resumeId: 'resume_x',
+  followUpDate: '2026-09-25', workMode: 'hybrid', source: 'referral', excitement: 4,
+  interviews: [{ id: 'iv1', date: '2026-09-24', time: '10:00', kind: 'HR Round', notes: '' }],
   todos: [], statusHistory: [], createdAt: 1, updatedAt: 2,
 };
 
 test('jobsToCsv: every column holds the job’s own field, the status as its label', () => {
   const [header, apple] = rows(jobsToCsv([APPLE]));
-  assert.deepEqual(header, ['Company', 'Position', 'Status', 'Stage', 'Location', 'Salary', 'Applied Date', 'Deadline', 'URL', 'Contact', 'Notes']);
-  assert.deepEqual(apple, ['Apple', 'Senior iOS Engineer', 'Phone Screen', 'Technical Round 1', 'Cupertino, CA', '$190,000 - $220,000', '2026-09-18', '2026-10-15', 'https://apple.com/jobs/123', 'Jane Doe', 'Passed recruiter screen']);
+  assert.deepEqual(header, [
+    'Company', 'Position', 'Status', 'Stage', 'Location', 'Salary', 'Applied Date', 'Deadline', 'URL', 'Contact',
+    'Follow-up Date', 'Work Mode', 'Source', 'Excitement', 'Interviews', 'Notes',
+  ]);
+  assert.deepEqual(apple, [
+    'Apple', 'Senior iOS Engineer', 'Phone Screen', 'Technical Round 1', 'Cupertino, CA', '$190,000 - $220,000', '2026-09-18', '2026-10-15', 'https://apple.com/jobs/123', 'Jane Doe',
+    '2026-09-25', 'Hybrid', 'Referral', '4', '2026-09-24 10:00 HR Round', 'Passed recruiter screen',
+  ]);
 });
 
 test('jobsToCsv: a job with fields missing prints empty cells, and a status it does not know as stored', () => {
   const [, row] = rows(jobsToCsv([{ company: 'Meta', status: 'ghosted' }]));
-  assert.deepEqual(row, ['Meta', '', 'ghosted', '', '', '', '', '', '', '', '']);
+  assert.deepEqual(row, ['Meta', '', 'ghosted', '', '', '', '', '', '', '', '', '', '', '', '', '']);
   // A list from another tool that names them position / appliedAt still reads.
   const [, other] = rows(jobsToCsv([{ company: 'X', position: 'Staff SWE', appliedAt: '2026-09-19', status: 'applied' }]));
   assert.deepEqual(other.slice(0, 3).concat(other[6]), ['X', 'Staff SWE', 'Applied', '2026-09-19']);
@@ -93,4 +101,13 @@ test('J-17: a cell a spreadsheet would run as a formula is written as text', () 
   assert.equal(cellOf(csv, 'Company'), '\'=HYPERLINK("http://evil.example","Click")');
   // Ordinary text is untouched.
   for (const v of ['Google', '$120k', 'a=b', 'Remote - EU']) assert.equal(escapeCsvField(v), `"${v}"`);
+});
+
+test('the optional fields: labels for work mode and source, excitement 0 as blank, one interview per line', () => {
+  const csv = jobsToCsv([{
+    ...APPLE, workMode: 'onsite', source: 'board', excitement: 0,
+    interviews: [{ date: '2026-09-24', time: '10:00', kind: 'HR Round' }, { date: '2026-09-30', kind: 'Final Round' }, { kind: '' }],
+  }]);
+  assert.deepEqual(['Work Mode', 'Source', 'Excitement', 'Interviews'].map((c) => cellOf(csv, c)),
+    ['On-site', 'Job board', '', '2026-09-24 10:00 HR Round\n2026-09-30 Final Round']);
 });
