@@ -17,7 +17,7 @@ title: Job Tracker — verified bugs, Low (J-16…J-41)
 - **Fail-first test:** Store test: updateJob('missing', {...}) returns false (or reports not found). Cypress: /#/jobs/nope/edit shows a not-found state and no inputs.
 - **Owner:** JOBS-FIX · **Fix commit:** — · **Test:** —
 
-### J-17 · Low · security · 🔴 Open · links **R2-102**
+### J-17 · Low · security · ⏸ Fixed · links **R2-102**
 **CSV export does not neutralise formula cells (CSV/formula injection)**
 - **Where:** `src/utils/jobCsv.js` : 8-12
 - **Repro:** 1. Import a job JSON whose company is '=HYPERLINK("http://evil.example","Click")', or type it. 2. Export CSV and open the file in Excel or Sheets: the cell is evaluated as a formula or link.
@@ -25,7 +25,8 @@ title: Job Tracker — verified bugs, Low (J-16…J-41)
 - **Fix hint:** In escapeCsvField, when /^[=+\-@\t\r]/ matches, prefix a single quote before quoting.
 - **Verified (WF-1):** Ran verify-jobs/v-pure.mjs: the row was written as "=HYPERLINK(""http://evil.example"",""Click"")","+SUM(1,1)", unchanged apart from the quote doubling.
 - **Fail-first test:** job-csv.unit.mjs: escapeCsvField('=1+1') === "\"'=1+1\"", and the same for values starting with +, -, @, \t and \r.
-- **Owner:** JOBS-FIX · **Fix commit:** — · **Test:** —
+- **Now:** `escapeCsvField` prefixes an apostrophe when a value starts with = + - @, a tab or a carriage return, then quotes it as before. Fail-first: the J-17 test failed at HEAD, passes now.
+- **Owner:** JOBS-FIX · **Fix commit:** this commit (`fix(jobs): the CSV export opens clean in Excel — plain-text notes, a BOM, formulas as text (J-08, J-09, J-17)`) · **Test:** tests/unit/job-csv.unit.mjs
 
 ### J-18 · Low · bug · 🔴 Open
 **List view sorts every column as text: Status by internal id, Salary as a string, and blank dates first**

@@ -79,7 +79,7 @@ title: Job Tracker — verified bugs, High and Medium (J-01…J-15)
 - **Fail-first test:** If jobs stay local-only: a Cypress assertion that /jobs shows the 'stored only in this browser' note. If they sync: a node test on the cloud sync plan that includes the job list.
 - **Owner:** BOARDS-UI-B (PrivacyPage.jsx wording, both features) · **Fix commit:** — · **Test:** —
 
-### J-08 · Medium · bug · 🔴 Open · links **R2-036**
+### J-08 · Medium · bug · ⏸ Fixed · links **R2-036**
 **CSV export writes the Notes column as raw HTML with entities**
 - **Where:** `src/utils/jobCsv.js` : 31
 - **Repro:** 1. In a job's Notes tab, write two lines and bold one word. 2. On /jobs click Export CSV. 3. Open the file: the Notes cell contains <p>, <strong> and &amp;.
@@ -87,9 +87,10 @@ title: Job Tracker — verified bugs, High and Medium (J-01…J-15)
 - **Fix hint:** Change the column to ['Notes', (j) => richTextToPlain(j.notes)]. richText.js has no aliases, so it also loads under node --test.
 - **Verified (WF-1):** Ran verify-jobs/v-pure.mjs: jobsToCsv with notes '<p>Round <strong>1</strong> &amp; HR</p><p>Next: 2nd</p>' wrote that exact string into the Notes cell.
 - **Fail-first test:** job-csv.unit.mjs: notes '<p>a <strong>b</strong> &amp; c</p><p>d</p>' export as the cell "a b & c\nd".
-- **Owner:** JOBS-FIX · **Fix commit:** — · **Test:** —
+- **Now:** The Notes column is `richTextToPlain(notesToHtml(notes))`: the text with its line breaks, no tags or entities (legacy plain notes keep '<tbd>'). Fail-first: the J-08 test failed at HEAD, passes now.
+- **Owner:** JOBS-FIX · **Fix commit:** this commit (`fix(jobs): the CSV export opens clean in Excel — plain-text notes, a BOM, formulas as text (J-08, J-09, J-17)`) · **Test:** tests/unit/job-csv.unit.mjs
 
-### J-09 · Medium · bug · 🔴 Open · links **R2-042**
+### J-09 · Medium · bug · ⏸ Fixed · links **R2-042**
 **CSV export has no UTF-8 BOM, so Excel shows mojibake for non-ASCII text, including the demo job's salary and contact**
 - **Where:** `src/utils/jobCsv.js` : 34-42 (with src/pages/JobTracker.jsx:33-36)
 - **Repro:** 1. With the demo job, click Export CSV. 2. Double-click the file in Excel on Windows: the salary shows 'â€“' and the contact 'Â·'.
@@ -97,7 +98,8 @@ title: Job Tracker — verified bugs, High and Medium (J-01…J-15)
 - **Fix hint:** Prefix '﻿' in handleExportCsv or in jobsToCsv, and update job-csv.unit.mjs.
 - **Verified (WF-1):** Ran verify-jobs/v-pure.mjs: the output's first character code is 0x22, not 0xfeff, and the row contains '–' and '·'.
 - **Fail-first test:** job-csv.unit.mjs, or a csvFileText() helper: assert the output starts with '﻿'.
-- **Owner:** JOBS-FIX · **Fix commit:** — · **Test:** —
+- **Now:** `jobsToCsv` starts the file with U+FEFF, so Excel reads it as UTF-8 (the existing tests strip it). Fail-first: the J-09 test failed at HEAD, passes now.
+- **Owner:** JOBS-FIX · **Fix commit:** this commit (`fix(jobs): the CSV export opens clean in Excel — plain-text notes, a BOM, formulas as text (J-08, J-09, J-17)`) · **Test:** tests/unit/job-csv.unit.mjs
 
 ### J-10 · Medium · bug · 🔴 Open
 **Applied Date is prefilled with today even for a Saved job, and is never set when the job actually moves to Applied**
