@@ -62,33 +62,46 @@ export function useEditorExports({ resume, activeTab, authUser, importResume, na
 
   function handleExportJSON() {
     const filename = buildExportFilename(authUser, resume);
-    downloadBlob(new Blob([JSON.stringify(resume, null, 2)], { type: 'application/json' }), `${filename}.json`);
+    return runExport('json', 'JSON export', async () => {
+      downloadBlob(new Blob([JSON.stringify(resume, null, 2)], { type: 'application/json' }), `${filename}.json`);
+    });
   }
 
   function handleExportMarkdown() {
     const filename = buildExportFilename(authUser, resume);
-    const md = generateMarkdownResume(resume);
-    downloadBlob(new Blob([md], { type: 'text/markdown;charset=utf-8' }), `${filename}.md`);
+    return runExport('markdown', 'Markdown export', async () => {
+      const md = generateMarkdownResume(resume);
+      downloadBlob(new Blob([md], { type: 'text/markdown;charset=utf-8' }), `${filename}.md`);
+    });
   }
 
   function handleExportAtsText() {
     const filename = buildExportFilename(authUser, resume);
-    const text = generateAtsPlainText(resume);
-    downloadBlob(new Blob([text], { type: 'text/plain;charset=utf-8' }), `${filename}_ATS.txt`);
+    return runExport('atstext', 'ATS text export', async () => {
+      const text = generateAtsPlainText(resume);
+      downloadBlob(new Blob([text], { type: 'text/plain;charset=utf-8' }), `${filename}_ATS.txt`);
+    });
   }
 
   function handleExportJsonResume() {
     const filename = buildExportFilename(authUser, resume);
-    const schemaObj = cpwtResumeToJsonResume(resume);
-    downloadBlob(new Blob([JSON.stringify(schemaObj, null, 2)], { type: 'application/json' }), `${filename}_resume.json`);
+    return runExport('jsonresume', 'JSON Resume export', async () => {
+      const schemaObj = cpwtResumeToJsonResume(resume);
+      downloadBlob(new Blob([JSON.stringify(schemaObj, null, 2)], { type: 'application/json' }), `${filename}_resume.json`);
+    });
   }
 
   /** A file as a new résumé — `asOriginal`: marked the account's original, in a demo account only. */
   function handleImportJSON(data, asOriginal = false) {
     setExportError(null);
-    const resumeData = isJsonResume(data) ? jsonResumeToCpwtResume(data) : data;
-    const newId = importResume(resumeData, { keep: keeps && asOriginal });
-    navigate(`/resume/${newId}`);
+    try {
+      const resumeData = isJsonResume(data) ? jsonResumeToCpwtResume(data) : data;
+      const newId = importResume(resumeData, { keep: keeps && asOriginal });
+      navigate(`/resume/${newId}`);
+    } catch (e) {
+      console.error('Import failed:', e);
+      setExportError(`Import failed${e?.message ? ` (${e.message})` : ''}. Check the file and try again.`);
+    }
   }
 
   return {

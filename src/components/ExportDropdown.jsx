@@ -57,25 +57,29 @@ export function ExportDropdown({ exporting, keeps = false, onExportPDF, onExport
           </button>
           <button
             onClick={() => { onExportMarkdown?.(); setOpen(false); }}
-            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-amber-50 hover:text-amber-700"
+            disabled={!!exporting}
+            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-amber-50 hover:text-amber-700 disabled:opacity-50"
           >
             <FileCode size={12} className="text-amber-600" /> Export Markdown (.md)
           </button>
           <button
             onClick={() => { onExportAtsText?.(); setOpen(false); }}
-            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-purple-50 hover:text-purple-700"
+            disabled={!!exporting}
+            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-purple-50 hover:text-purple-700 disabled:opacity-50"
           >
             <FileText size={12} className="text-purple-500" /> Export ATS Text (.txt)
           </button>
           <button
             onClick={() => { onExportJsonResume?.(); setOpen(false); }}
-            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-cyan-50 hover:text-cyan-800"
+            disabled={!!exporting}
+            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-cyan-50 hover:text-cyan-800 disabled:opacity-50"
           >
             <FileJson size={12} className="text-cyan-600" /> Export JSON Resume (.json)
           </button>
           <button
             onClick={() => { onExportJSON(); setOpen(false); }}
-            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-gray-50"
+            disabled={!!exporting}
+            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 disabled:opacity-50"
           >
             <Download size={12} className="text-gray-400" /> Export Backup JSON
           </button>
@@ -112,12 +116,17 @@ export function ExportDropdown({ exporting, keeps = false, onExportPDF, onExport
               onImportError?.("Could not parse file. Make sure it's a valid CPWT-CV or standard JSON Resume (.json).");
               return;
             }
-            if (parsed?.personal && Array.isArray(parsed.sections)) {
-              onImportJSON(parsed, asOriginal.current);
-            } else if (isJsonResume(parsed)) {
-              onImportJSON(jsonResumeToCpwtResume(parsed), asOriginal.current);
-            } else {
-              onImportError?.('Invalid resume file — must be a CPWT-CV backup or standard JSON Resume (.json).');
+            try {
+              if (parsed?.personal && Array.isArray(parsed.sections)) {
+                onImportJSON(parsed, asOriginal.current);
+              } else if (isJsonResume(parsed)) {
+                onImportJSON(jsonResumeToCpwtResume(parsed), asOriginal.current);
+              } else {
+                onImportError?.('Invalid resume file — must be a CPWT-CV backup or standard JSON Resume (.json).');
+              }
+            } catch (err) {
+              console.error('Import failed:', err);
+              onImportError?.(`Could not import file${err?.message ? `: ${err.message}` : ''}.`);
             }
           };
           reader.readAsText(file);
