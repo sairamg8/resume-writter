@@ -2,18 +2,18 @@
 
 > Location: `/mnt/Storage/Projects/flowcv/bug-status.md`
 > Updated: 2026-09-23 · every row **verified independently at `d495cb2`** (see Verification pass) ·
-> `origin/master` (deployed) = `79eadb1` · fixed but not pushed: `01ce1d1`, `b5c2ba6`, `57ff610`, `e077aaa`, `46639f2`
-> **Open: 15** | Fixed, not pushed: 2 | **Closed: 64**
+> `origin/master` (deployed) = `67828ff` · **nothing is waiting to be pushed**
+> **Open: 15** | Fixed, not pushed: 0 | **Closed: 66**
 
 ## Summary
 
 | List | Found | ✅ Fixed and pushed | ⏸ Fixed, local only | 🔴 Open |
 |---|---|---|---|---|
-| Bug audit, 2026-09-22 (`AUD-`) | 35 (34 + one follow-up) | 26 | 2 | **7** |
+| Bug audit, 2026-09-22 (`AUD-`) | 35 (34 + one follow-up) | 28 | 0 | **7** |
 | ATS parsing defects (`ATS-`) | 6 | 0 | 0 | **6** |
 | Templates UI audit, 2026-09-23 (`TUI-`) | 7 | 5 | 0 | **2** |
 | Prompt tasks, 2026-09-14 → 09-21 | 33 | 33 | 0 | 0 |
-| **Total** | **81** | **64** | **2** | **15** |
+| **Total** | **81** | **66** | **0** | **15** |
 
 - **Status:** ✅ fixed and pushed (on `origin/master`, so deployed) · ⏸ fixed and committed, not pushed · 🔴 open.
 - **Severity (audit):** High = data loss, or a feature that does not work · Medium = a wrong result, no data loss ·
@@ -30,12 +30,17 @@
 2. ATS-1 … ATS-6 — no order set yet; ATS-6 waits on a decision.
 3. TUI-3, TUI-4, TUI-6 — TUI-6 to be filed as ATS-7.
 
-⏸ **Five fixes wait on the gate:** `01ce1d1` (AUD-26), `b5c2ba6` (AUD-25), `57ff610` (AUD-23), `e077aaa`
-(AUD-34 + AUD-19) and `46639f2` (AUD-09). Before them, everything was pushed:
-`origin/master` = `79eadb1`, pushed 2026-09-23 06:58 as `2a7d728..79eadb1`
-(28 commits) after a green gate: 1574 tests / 0 fail / 2 todo on a clean `git archive HEAD` export,
-a production build, and a private-data scan of all 73 bundle files. Per the owner (2026-09-23,
-*"keep pushing after each bug"*) every finished bug now lands → gates → pushes, unasked.
+✅ **All fixes are pushed.** `origin/master` = `67828ff`. Gate on that exact tree, 2026-09-23 08:40:
+**1611 tests, 1609 pass, 0 fail, 2 todo** (the two known ATS `todo`s), a green production build, and a
+private-data scan of all 73 bundle files with no hits. Per the owner (2026-09-23, *"keep pushing after
+each bug"*) every finished bug lands → gates → pushes, unasked.
+
+🔴 **Read a gate's output, do not skim it.** Earlier the same day it printed `private scan: 0 files,
+hits=none` and nothing else — no suite line, no build line — because `flock` could not take
+`/tmp/flowcv-heavy.lock` (two forgotten background test runs held it for 78 minutes) and nothing checked
+`flock`'s exit; the scan then walked an empty `dist` and reported no hits. **A gate that did not run looked
+exactly like a gate that passed.** `wip/pushgate.sh` in the memory store now checks the lock (`flock -E 9`),
+asserts the scan scanned something, and uses one directory per run.
 
 **Each fix:** a test that fails before the fix → the fix → commit → set its row here to ⏸ with the commit and the
 tests → ✅ once pushed, and update the counts above.
@@ -118,7 +123,7 @@ existing test caught any of these; several unit tests asserted the same wrong da
 | AUD-23 | Exports · errors | Medium | ✅ Fixed | `da91e31` | tests/pdf/53-export-error-handling.test.mjs | Three exports fail silently: Markdown, ATS text and JSON Resume aren't wrapped in `runExport` (`src/hooks/useEditorExports.js:68`, `:74`, `:80`), and the editor's JSON Resume import converts outside any `try` (`src/components/ExportDropdown.jsx:118`), so an error shows nothing. Wrapped all exports in runExport, added try-catch to handleImportJSON and FileReader processing in ExportDropdown, and disabled export buttons when exporting. ✅ **The last silent path is closed since `57ff610`** (2026-09-23): `reader.onerror` now reports, so a file the browser will not hand over — a permission error, a removed drive, a folder — says so instead of nothing. | Code |
 | AUD-24 | Jobs · edit | Medium | ✅ Fixed | `be8b7f3` | tests/pdf/54-job-form-null-crash.test.mjs | Editing an imported job whose company or role is `null` crashes the page: `form.company.trim()` (`src/pages/JobForm.jsx:46`), and there is no error boundary anywhere in `src`. Defaulted null/undefined job form values to empty strings with safe trimming, added reusable ErrorBoundary component and wrapped application routes. | Code |
 | AUD-25 | Photo · import | Low | ✅ Fixed | `9c8ed05` | tests/pdf/55-photo-import-clamp.test.mjs, tests/unit/photo-options.unit.mjs | An imported photo with an unknown shape or height (e.g. `'oval'`) is not clamped to the offered options (`getPdfPhotoStyle`, `src/templates/pdf/shared/pdfPhoto.js:57`). Clamped photoShape, photoHeight, photoSize, and photoBorder to offered options in getPdfPhotoStyle and resolveTemplateSettings. ✅ **One list since `b5c2ba6`** (2026-09-23): `src/constants/photoOptions.js` is read by the chips that offer the options and by both clamps, so the panel and the PDF cannot drift apart. A fourth restated copy — the cover letter's Text Position — was found by the new test and folded in. `tests/unit/photo-options.unit.mjs` scans `src/` for another. | Ran, Known A5 |
-| AUD-26 | Storage · migrations | Low | ⏸ Local only | `01ce1d1` | tests/pdf/56-data-version-ahead.test.mjs | A file stamped `dataVersion` above DATA_VERSION (e.g. 999) skipped every migration for ever, including ones not yet written, because 999 stays above every future DATA_VERSION (`src/utils/normalizeResume.js:255`). **Fixed in `01ce1d1`:** a version this build never issued is kept, not trusted — the résumé is stamped with what this build is at so a later migration will run, none of this build's migrations run on it (a newer build has had them all), and the claim is kept in `dataVersionAhead` for the build that can check it, absorbed and dropped once DATA_VERSION catches up. ⚠︎ An earlier uncommitted attempt that only clamped the stamp was **not** this fix: it lowers what a newer build wrote, so that build re-migrates its own data. The 15 test files writing `dataVersion: 99` to mean "current" now say DATA_VERSION, which is what they meant. | Ran
+| AUD-26 | Storage · migrations | Low | ✅ Fixed | `01ce1d1` | tests/pdf/56-data-version-ahead.test.mjs | A file stamped `dataVersion` above DATA_VERSION (e.g. 999) skipped every migration for ever, including ones not yet written, because 999 stays above every future DATA_VERSION (`src/utils/normalizeResume.js:255`). **Fixed in `01ce1d1`:** a version this build never issued is kept, not trusted — the résumé is stamped with what this build is at so a later migration will run, none of this build's migrations run on it (a newer build has had them all), and the claim is kept in `dataVersionAhead` for the build that can check it, absorbed and dropped once DATA_VERSION catches up. ⚠︎ An earlier uncommitted attempt that only clamped the stamp was **not** this fix: it lowers what a newer build wrote, so that build re-migrates its own data. The 15 test files writing `dataVersion: 99` to mean "current" now say DATA_VERSION, which is what they meant. | Ran
 | AUD-27 | ATS checker · score | Low | 🔴 Open | — | — | The "Multi-column contact header" check reads `settings.contactCols`, which no control writes (the control is `contactLayout: '2grid'`), so it always passes (`src/utils/atsChecker.js:1084`; the row said `:1019`, which the fixes since have moved). | Code |
 | AUD-28 | Editor · month picker | Low | 🔴 Open | — | — | The years stop at the current year − 49 (`src/components/SectionEditorShared.jsx:27`): a 1975 date shows blank in the editor though the PDF prints it. | Code |
 | AUD-29 | Career history panel | Low | 🔴 Open | — | — | A past job with no end date counts up to today (`src/components/CareerHistoryPanel.jsx:26`); "N companies" counts entries (`:78`); the total ignores gaps and hidden entries. | Code |
@@ -126,7 +131,7 @@ existing test caught any of these; several unit tests asserted the same wrong da
 | AUD-31 | Cover letter · generator | Low | 🔴 Open | — | — | The generator stores recipient "Hiring Manager" and title "Hiring Team", and both print in the recipient block (`src/utils/coverLetterGenerator.js:132`). | Code |
 | AUD-32 | STAR Optimizer · verbs | Low | 🔴 Open | — | — | "Co-authored" can never count as an action verb: the hyphen is stripped before the lookup (`src/utils/bulletOptimizer.js:105`). | Code |
 | AUD-33 | Mobile · touch | Low | 🔴 Open | — | — | Hover-only controls (`opacity-0 group-hover`) are invisible on phones: entry drag grips (`src/components/SectionEditorShared.jsx:141`) and the dashboard rename pencil (`src/components/ResumeCard.jsx:82`). The same pattern, found by search and not checked on a device: `src/components/job/Field.jsx:57`, `src/components/job/TodoItem.jsx:53`, `src/components/job/KanbanView.jsx:82`, `src/pages/Boards.jsx:80`. | Code |
-| AUD-34 | Header spacing · defaults | Low | ⏸ Local only | `e077aaa` | tests/pdf/27-header-spacing.test.mjs | Every new résumé showed Name ↔ Title (Inline) as user-set: the defaults and the starters store `headerInlineGap: 8` (`src/utils/defaultData.js:26`, `src/utils/starterTemplates.js:25`), which is every template's own 6 pt, and the row read `set: stored != null` (`src/utils/headerSpacingRows.js:34`) — a dark value and a ↺ on a résumé nobody had touched. **Fixed in `e077aaa`:** `gapIsSet` reads set as "a value the template would not print by itself", which also removed the `!== 8` AUD-19's fix had to hardcode. The stored default is left alone — nothing had to be migrated. | Ran
+| AUD-34 | Header spacing · defaults | Low | ✅ Fixed | `e077aaa` | tests/pdf/27-header-spacing.test.mjs | Every new résumé showed Name ↔ Title (Inline) as user-set: the defaults and the starters store `headerInlineGap: 8` (`src/utils/defaultData.js:26`, `src/utils/starterTemplates.js:25`), which is every template's own 6 pt, and the row read `set: stored != null` (`src/utils/headerSpacingRows.js:34`) — a dark value and a ↺ on a résumé nobody had touched. **Fixed in `e077aaa`:** `gapIsSet` reads set as "a value the template would not print by itself", which also removed the `!== 8` AUD-19's fix had to hardcode. The stored default is left alone — nothing had to be migrated. | Ran
 
 ---
 
