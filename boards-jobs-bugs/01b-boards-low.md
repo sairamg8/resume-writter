@@ -17,7 +17,7 @@ title: Boards — verified bugs, Low (B-14…B-31)
 - **Fail-first test:** tests/unit/board-store.unit.mjs: seed storage with the demo board renamed plus an extra card, and dataVersion 0. After init, assert the title and the card are kept, and that a deleted demo is not re-added. Fails today.
 - **Owner:** BOARDS-MODEL · **Fix commit:** — · **Test:** —
 
-### B-15 · Low · data-loss · 🔴 Open · links **R2-098**
+### B-15 · Low · data-loss · ⏸ Fixed · links **R2-098**
 **Card ids are made unique only within one list, so moving one of two same-id cards in different lists deletes the other**
 - **Where:** `src/hooks/useBoardStore.js` : 233-251 (src/utils/normalizeBoard.js:164-165, 175-183)
 - **Repro:** 1) Using hand-edited or merged data, put a card with id 'dup' in list One and another with id 'dup' in list Two. 2) Drag either card. 3) The other card disappears.
@@ -25,7 +25,8 @@ title: Boards — verified bugs, Low (B-14…B-31)
 - **Fix hint:** In completeBoard, run withOwnIds over every card of the board with one shared `seen` set that also holds the list ids. In moveCard, strip the card only from its source list.
 - **Verified (WF-1):** Ran verify-boards/v4-dupid.mjs. After load: 'l1:[Card in One] l2:[Card in Two, Z] x:[Card sharing the list id]', so the duplicates and the list id equal to a card id both survive normalisation. After moveCard(dup → l2, index 1): 'l1:[] l2:[Z, Card in Two]'. Reachable only with hand-edited or merged data, since newId prefixes list_ and card_.
 - **Fail-first test:** normalize-board.unit.mjs: completeBoard of the v4 input yields card ids unique across the board and disjoint from list ids. board-store.unit.mjs: after the move, both cards still exist. Fails today.
-- **Owner:** BOARDS-MODEL · **Fix commit:** — · **Test:** —
+- **Now:** completeBoard makes every id unique across the board with one shared set: the lists claim theirs first, then the cards and their checklist items in board order, so the first holder keeps its id (a link still opens it). moveCard takes the card out of its own list only. The v2 normaliser keeps the rule board-wide for issues, columns, labels, sprints, checklist items and comments. Fail-first: both tests failed at HEAD (the duplicate ids survived normalisation, and the store test's move lost a card).
+- **Owner:** BOARDS-MODEL · **Fix commit:** this commit (`fix(boards): card ids are unique across the whole board (B-15)`) · **Test:** tests/unit/normalize-board.unit.mjs, tests/unit/board-store.unit.mjs
 
 ### B-16 · Low · data-loss · 🔴 Open
 **Delete card permanently removes the card, its description and its checklist in one tap, with no confirm and no undo**

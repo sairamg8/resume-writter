@@ -14,3 +14,23 @@ test('B-02: a list whose cards are missing or null reads as an empty list, and n
   // A value that is not a list at all did hold something: that is a loss (backed up, reported).
   assert.equal(readBoard({ id: 'b', lists: [{ id: 'l', cards: 'junk' }] }).lost, true);
 });
+
+test('B-15: card ids are unique across the whole board, and never a list\'s id', () => {
+  const card = (id, title) => ({ id, title, checklist: [] });
+  const raw = {
+    id: 'b',
+    lists: [
+      { id: 'l1', title: 'One', cards: [card('dup', 'Card in One')] },
+      { id: 'l2', title: 'Two', cards: [card('dup', 'Card in Two'), card('z', 'Z')] },
+      { id: 'x', title: 'X', cards: [card('x', 'Card sharing the list id')] },
+    ],
+  };
+  const board = completeBoard(readBoard(raw).kept);
+  const cardIds = board.lists.flatMap((l) => l.cards.map((c) => c.id));
+  const listIds = board.lists.map((l) => l.id);
+  assert.equal(new Set(cardIds).size, cardIds.length, cardIds.join());
+  assert.ok(cardIds.every((id) => !listIds.includes(id)), `${cardIds} vs ${listIds}`);
+  assert.equal(board.lists[0].cards[0].id, 'dup', 'the first holder keeps its id (a link to it still opens it)');
+  assert.deepEqual(listIds, ['l1', 'l2', 'x'], 'lists keep theirs');
+  assert.deepEqual(board.lists.flatMap((l) => l.cards.map((c) => c.title)), ['Card in One', 'Card in Two', 'Z', 'Card sharing the list id']);
+});

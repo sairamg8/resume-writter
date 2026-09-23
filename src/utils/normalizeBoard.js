@@ -21,13 +21,12 @@ const isNumber = (v) => typeof v === 'number' && Number.isFinite(v);
 const asText = (v) => (isNumber(v) ? String(v) : '');
 
 /**
- * `entries` (objects), each with an id no earlier one in the same list has — a new `<prefix>_…`
- * where it has none or one already taken; the same array when they all do. Cards, lists and
- * checklist items are addressed and dragged by id, so two sharing one id (a hand-edited file, or
- * ids minted in the same millisecond by an old build) would move or delete together.
+ * `entries` (objects), each with an id no earlier one has — a new `<prefix>_…` where it has none
+ * or one already taken; the same array when they all do. `seen` holds the ids taken so far: one
+ * set for the whole board (B-15), because cards are moved by id across lists, and two cards in
+ * different lists sharing one (a hand-edited or merged file) moved or deleted together.
  */
-function withOwnIds(entries, prefix) {
-  const seen = new Set();
+function withOwnIds(entries, prefix, seen = new Set()) {
   const out = entries.map((e) => {
     const id = typeof e.id === 'string' && e.id && !seen.has(e.id) ? e.id : newId(prefix);
     seen.add(id);
@@ -161,22 +160,27 @@ export function normalizeBoard(board) {
 }
 
 /** Cards (readable) each with an id, and each with a checklist whose items each have an id. */
-function completeCards(cards) {
-  const withIds = withOwnIds(cards, 'card');
+function completeCards(cards, seen) {
+  const withIds = withOwnIds(cards, 'card', seen);
   const out = withIds.map((c) => {
     if (!Array.isArray(c.checklist)) return c;
-    const checklist = withOwnIds(c.checklist, 'chk');
+    const checklist = withOwnIds(c.checklist, 'chk', seen);
     return checklist === c.checklist ? c : { ...c, checklist };
   });
   return out.every((c, i) => c === withIds[i]) ? withIds : out;
 }
 
-/** Lists (readable) each with an id, and each with cards made addressable (completeCards). */
+/**
+ * Lists (readable) each with an id, and each with cards made addressable (completeCards). Every
+ * id is unique across the board: the lists claim theirs first, then the cards and their
+ * checklist items in board order, so the first holder of an id keeps it (B-15).
+ */
 function completeLists(lists) {
-  const withIds = withOwnIds(lists, 'list');
+  const seen = new Set();
+  const withIds = withOwnIds(lists, 'list', seen);
   const out = withIds.map((l) => {
     if (!Array.isArray(l.cards)) return { ...l, cards: [] }; // B-02: what readList repairs, for any caller
-    const cards = completeCards(l.cards);
+    const cards = completeCards(l.cards, seen);
     return cards === l.cards ? l : { ...l, cards };
   });
   return out.every((l, i) => l === withIds[i]) ? withIds : out;

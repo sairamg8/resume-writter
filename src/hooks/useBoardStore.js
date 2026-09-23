@@ -229,16 +229,16 @@ function deleteCard(boardId, listId, cardId) {
 /**
  * Move a card to `toListId` at `toIndex` — reordering within a list (same list) or across lists.
  * `toIndex` null appends. Finds the card wherever it is, so the caller need only say where it goes.
+ * Only that one card leaves its list: ids are unique board-wide once loaded (completeBoard), and
+ * a second card sharing the id used to be deleted by the move (B-15).
  */
 function moveCard(boardId, { cardId, toListId, toIndex }) {
   setBoards((boards) => mapBoard(boards, boardId, (b) => {
-    let moved = null;
-    const stripped = b.lists.map((l) => {
-      if (!l.cards.some((c) => c.id === cardId)) return l;
-      moved = l.cards.find((c) => c.id === cardId);
-      return { ...l, cards: l.cards.filter((c) => c.id !== cardId) };
-    });
-    if (!moved) return b;
+    const from = b.lists.findIndex((l) => l.cards.some((c) => c.id === cardId));
+    if (from === -1) return b;
+    const at = b.lists[from].cards.findIndex((c) => c.id === cardId);
+    const moved = b.lists[from].cards[at];
+    const stripped = b.lists.map((l, i) => (i === from ? { ...l, cards: l.cards.filter((_, j) => j !== at) } : l));
     const lists = stripped.map((l) => {
       if (l.id !== toListId) return l;
       const cards = [...l.cards];
