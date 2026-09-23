@@ -139,3 +139,17 @@ test('storage full: the stage is still offered for this job, and the saved value
   assert.deepEqual(stages.stagesSnapshot(), ['Culture Round'], 'the form shows it — it just is not remembered');
   assert.equal(stored(), null);
 });
+
+// ── J-28: a stage that differs only in case ──────────────────────────────────────────────────
+// Adding 'hr round' added nothing, yet the job got 'hr round' — matching no item in either list.
+
+test('J-28: addCustomStage returns the stage the job gets — an existing one in its own case, else the new one', async () => {
+  localStorage.setItem(KEY, JSON.stringify(['Founder Chat']));
+  const stages = await openApp();
+  assert.equal(stages.addCustomStage('hr round'), 'HR Round', 'the predefined stage');
+  assert.equal(stages.addCustomStage('  founder CHAT '), 'Founder Chat', 'the custom stage');
+  assert.deepEqual(stages.stagesSnapshot(), ['Founder Chat'], 'nothing added');
+  assert.equal(stages.addCustomStage(' Culture Round '), 'Culture Round', 'a new one, trimmed');
+  assert.deepEqual(stages.stagesSnapshot(), ['Founder Chat', 'Culture Round']);
+  assert.equal(stages.addCustomStage('   '), '', 'nothing to add');
+});

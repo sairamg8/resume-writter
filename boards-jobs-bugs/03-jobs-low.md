@@ -132,7 +132,7 @@ title: Job Tracker — verified bugs, Low (J-16…J-41)
 - **Fail-first test:** Pure helper visibleDone(todos, 5), sorted by completedAt descending: the task just ticked is first.
 - **Owner:** JOBS-FIX · **Fix commit:** — · **Test:** —
 
-### J-28 · Low · bug · 🔴 Open
+### J-28 · Low · bug · ⏸ Fixed
 **A custom stage that differs from an existing one only in case is not added, but the job still gets the text as typed**
 - **Where:** `src/components/job/InterviewStageSelector.jsx` : 9-15 (with src/utils/jobStages.js:93-98)
 - **Repro:** 1. Click Add Job, then under Interview Stage enter 'hr round' in Add Custom Stage and click Add. 2. The badge shows 'hr round', but neither 'HR Round' nor any custom stage is selected.
@@ -140,7 +140,8 @@ title: Job Tracker — verified bugs, Low (J-16…J-41)
 - **Fix hint:** Have addCustomStage return the canonical label (the existing one, or the new one) and pass that to onStageChange.
 - **Verified (WF-1):** Ran verify-jobs/v-stages.mjs with the real src/utils/jobStages.js, replaying handleAddStage. It printed custom stages [], job stage "hr round", predefined item active false, custom item active false.
 - **Fail-first test:** job-stages.unit.mjs: addCustomStage('hr round') returns 'HR Round' and leaves the custom list unchanged.
-- **Owner:** JOBS-FIX · **Fix commit:** — · **Test:** —
+- **Now:** `addCustomStage(label)` returns the stage the job is to get: the existing one (predefined or custom) when it differs only in case or spacing, else the new one (trimmed); '' for a blank label. InterviewStageSelector passes that to `onStageChange`. Fail-first: the J-28 test failed at HEAD (`addCustomStage` returned undefined), passes now.
+- **Owner:** JOBS-FIX · **Fix commit:** this commit (`fix(jobs): a custom stage that differs only in case selects the existing one (J-28)`) · **Test:** tests/unit/job-stages.unit.mjs
 
 ### J-29 · Low · bug · 🔴 Open
 **The demo job's dates contradict each other: history in June 2025, applied in June 2026, and a deadline already past**

@@ -90,15 +90,21 @@ function persist(stages) {
   } catch { /* not remembered */ }
 }
 
+/**
+ * Add `label` to the custom stages and return the stage the job is to get: the existing one when a
+ * stage differs from it only in case ('hr round' → 'HR Round'), else the new one; '' for a blank
+ * label. The form gave the job the text as typed, which matched no stage in either list (J-28).
+ */
 export function addCustomStage(label) {
-  const trimmed = label.trim();
-  if (!trimmed) return;
+  const trimmed = String(label ?? '').trim();
+  if (!trimmed) return '';
   const stages = stagesSnapshot();
-  const allLower = [...PREDEFINED_STAGES, ...stages].map(s => s.toLowerCase());
-  if (allLower.includes(trimmed.toLowerCase())) return;
+  const existing = [...PREDEFINED_STAGES, ...stages].find(s => s.toLowerCase() === trimmed.toLowerCase());
+  if (existing) return existing;
   const next = [...stages, trimmed];
   persist(next);
   update(next);
+  return trimmed;
 }
 
 export function removeCustomStage(label) {
