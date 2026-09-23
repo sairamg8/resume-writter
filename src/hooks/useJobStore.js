@@ -138,6 +138,10 @@ function subscribe(listener) {
   if (!initialized) {
     init();
     listener();
+  } else if (wasEmpty) {
+    // Back on a job page after none was open: nothing listened to other tabs meanwhile, so read
+    // storage again — the list of the first visit, written back, erased their jobs (J-01).
+    takeOtherTabsList();
   }
 
   if (wasEmpty && typeof window !== 'undefined') {
@@ -242,7 +246,8 @@ export function _resetJobStoreForTest() {
   listeners.clear();
 }
 
-export { snapshot, subscribe };
+// The actions as plain functions too: node tests drive the store without React.
+export { snapshot, subscribe, addJob, updateJob, deleteJob, importJobs, clearDemoData, dismissRecovery };
 
 export function useJobStore() {
   const { jobs, persistError, recovery } = useSyncExternalStore(subscribe, snapshot);

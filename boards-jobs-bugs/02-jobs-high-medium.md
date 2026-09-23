@@ -7,7 +7,7 @@ title: Job Tracker — verified bugs, High and Medium (J-01…J-15)
 > Part of [README.md](README.md). Status: 🔴 open · ⏸ fixed on `boards-jobs-ui` (not merged) · ✅ merged to master · ✖ not a bug.
 > Set the row (status + commit + test) in the SAME commit as the fix. Found by WF-1 `wf_a523cc8e-2ca` at `8409472`, 2026-09-23.
 
-### J-01 · High · data-loss · 🔴 Open
+### J-01 · High · data-loss · ⏸ Fixed
 **The job store stops listening to other tabs once the user leaves the job pages, then writes its stale list over theirs**
 - **Where:** `src/hooks/useJobStore.js` : 98-106, 134-153, 160-166
 - **Repro:** 1. Tab A: open /#/jobs. 2. Tab A: click the back arrow to the dashboard. 3. Tab B: open /#/jobs, click Add Job and save 'Stripe'. 4. Tab A: click 'Job Tracker'. Stripe is missing. 5. Tab A: add a job or drag any card to another column. 6. Tab B: Stripe disappears. Reload either tab: Stripe is gone for good.
@@ -15,7 +15,8 @@ title: Job Tracker — verified bugs, High and Medium (J-01…J-15)
 - **Fix hint:** In subscribe(), when wasEmpty && initialized, call takeOtherTabsList() before returning. It already merges with keepUnsaved. Alternatively, register the storage listener once in init() and never remove it. src/hooks/useBoardStore.js:101-120 has the same subscribe/unsubscribe code and needs the same fix (Boards area).
 - **Verified (WF-1):** Read the code. init() runs once, guarded by `initialized` (99). subscribe() adds the listener again at 143-145 but never reads storage again. The unsubscribe removes the listener at 147-151. A grep shows that only JobTracker, JobDetail and JobForm call useJobStore. Ran verify-jobs/v-store.mjs, which loads the real store with a localStorage/window stub. It printed 'listeners after leaving job pages 0'. After the other tab saved Stripe it printed 'A back on /jobs sees [ 'Acme' ]', and after A added Meta, 'storage after A adds Meta [ 'Acme', 'Meta' ]'. Refutation attempt: Tab B's keepUnsaved cannot keep Stripe. B had saved it, so B's stored list === current, and B takes the incoming list as it is.
 - **Fail-first test:** tests/unit/job-store-resync.unit.mjs: stub localStorage and window, then _resetJobStoreForTest(). Seed [Acme]. Run unsub = subscribe(); unsub(). Write [Acme, Stripe] to storage (no listener is registered to fire). subscribe() again and assert snapshot().jobs contains Stripe. Then addJob({company:'Meta'}) and assert storage holds Acme, Stripe and Meta. The first assert fails today.
-- **Owner:** JOBS-FIX · **Fix commit:** — · **Test:** —
+- **Now:** subscribe() reads storage again (takeOtherTabsList, which still keeps what this tab could not save) when the first job page opens after none was open, and tells the page. The store also exports its actions as plain functions so node tests drive it without React. Fail-first: all four tests failed at HEAD (`# fail 4`), pass now.
+- **Owner:** JOBS-FIX · **Fix commit:** this commit (`fix(jobs): a job page opened again reads what other tabs saved meanwhile (J-01)`) · **Test:** tests/unit/job-store-resync.unit.mjs
 
 ### J-02 · Medium · data-loss · 🔴 Open · links **R2-040**
 **Save Changes writes back a stale copy of the whole job: another tab's tasks are deleted, its status is reverted and a false history entry is added**
