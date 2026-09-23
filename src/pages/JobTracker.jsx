@@ -11,48 +11,44 @@ import { ListView } from '@/components/job/ListView';
 import { CareerHistoryPanel } from '@/components/CareerHistoryPanel';
 import { RecoveryNotice } from '@/components/RecoveryNotice';
 import { JobsNotSavedAlert } from '@/components/job/JobsNotSavedAlert';
+import { ImportNotice } from '@/components/job/ImportNotice';
 import { downloadBlob } from '@/utils/download';
 import { jobsToCsv } from '@/utils/jobCsv';
 import { filterJobs, jobStats } from '@/utils/jobQuery';
+import { importMessage, jobsFromText, readImportFile } from '@/utils/jobImport';
 
 export function JobTracker({ store }) {
   const navigate = useNavigate();
   const { jobs, persistError, recovery, dismissRecovery, updateJob, deleteJob, importJobs, clearDemoData } = useJobStore();
   const { appState } = store;
-  const resumes = appState.resumes;
+  const { resumes } = appState;
 
   const [view, setView] = useState('kanban');
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const importRef = useRef(null);
-  const [importError, setImportError] = useState(null);
+  const [importNotice, setImportNotice] = useState(null); // { kind, text } (importMessage)
 
   function handleExport() {
     downloadBlob(new Blob([JSON.stringify(jobs, null, 2)], { type: 'application/json' }), 'job_applications.json');
   }
 
   function handleExportCsv() {
-    const csv = jobsToCsv(jobs);
-    downloadBlob(new Blob([csv], { type: 'text/csv;charset=utf-8;' }), 'job_applications.csv');
+    downloadBlob(new Blob([jobsToCsv(jobs)], { type: 'text/csv;charset=utf-8;' }), 'job_applications.csv');
   }
 
   function handleImport(e) {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = ev => {
-      let parsed;
-      try { parsed = JSON.parse(ev.target.result); } catch {
-        setImportError('Could not parse file. Make sure it is a job-tracker JSON export.');
-        return;
-      }
-      const list = Array.isArray(parsed) ? parsed : parsed?.jobs;
-      const { added, lossy } = importJobs(Array.isArray(list) ? list : []);
-      if (!added) setImportError('No job applications found in that file.');
-      else if (lossy) setImportError(`Imported ${added} job application${added === 1 ? '' : 's'}; what could not be read in the file was left out.`);
-      else setImportError(null);
-    };
-    reader.readAsText(file);
+    readImportFile(file, {
+      // A file the browser could not read said nothing (J-23).
+      onError: text => setImportNotice({ kind: 'error', text }),
+      onText: text => {
+        const { list, error } = jobsFromText(text);
+        // Counts, not silence, after an import that worked (J-04).
+        setImportNotice(error ? { kind: 'error', text: error } : importMessage(importJobs(list)));
+      },
+    });
     e.target.value = '';
   }
 
@@ -61,17 +57,12 @@ export function JobTracker({ store }) {
     if (confirm(`Delete ${job?.company || 'this job'}?`)) deleteJob(id);
   }
 
-  function handleFilterStatus(id) {
-    setFilterStatus(prev => prev === id ? '' : id);
-  }
+  const handleFilterStatus = id => setFilterStatus(prev => prev === id ? '' : id);
 
   const filteredJobs = filterJobs(jobs, { q: search, statuses: filterStatus ? [filterStatus] : [] });
 
-  // The definitions live in jobStats (src/utils/jobQuery.js), where they are tested.
-  const counts = jobStats(jobs);
-  const rejectedCount  = counts.rejected;
-  const withdrawnCount = counts.withdrawn;
-
+  const counts = jobStats(jobs); // the definitions, tested: src/utils/jobQuery.js
+  const { rejected: rejectedCount, withdrawn: withdrawnCount } = counts;
   const stats = [
     { label: 'Total',      value: counts.total,        color: 'text-gray-900' },
     { label: 'Active',     value: counts.active,       color: 'text-blue-600' },
@@ -180,14 +171,7 @@ export function JobTracker({ store }) {
           <RecoveryNotice what="job list" recovery={recovery} onDismiss={dismissRecovery} />
         </div>
       )}
-      {importError && (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-3">
-          <p role="alert" className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 flex items-start gap-2">
-            <span className="flex-1">{importError}</span>
-            <button onClick={() => setImportError(null)} className="font-semibold hover:text-red-800">Dismiss</button>
-          </p>
-        </div>
-      )}
+      <ImportNotice notice={importNotice} onDismiss={() => setImportNotice(null)} className="max-w-7xl mx-auto px-4 sm:px-6 pt-3" />
 
       {/* Stats bar */}
       <div className="bg-white border-b border-gray-100">

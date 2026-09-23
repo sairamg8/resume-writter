@@ -40,7 +40,7 @@ title: Job Tracker — verified bugs, High and Medium (J-01…J-15)
 - **Now:** Notes are rich-text HTML everywhere. The job form edits them with the Notes tab's RichTextEditor instead of a textarea, and `completeJob` (every load and import) converts plain notes once with `notesToHtml` → `plainTextToHtml` (escaped, a <br> per line), so `richTextToPlain` reads the original text back and nothing tag-like is lost. HTML and blank notes are untouched. Fail-first: the three J-03 tests in normalize-job.unit.mjs failed at HEAD (`# fail 3`), pass now.
 - **Owner:** JOBS-FIX · **Fix commit:** this commit (`fix(jobs): one notes format — the form uses the rich-text editor, plain notes convert once (J-03)`) · **Test:** tests/unit/normalize-job.unit.mjs
 
-### J-04 · Medium · bug · 🔴 Open
+### J-04 · Medium · bug · ⏸ Fixed
 **Importing the tracker's own JSON backup duplicates every job, and a successful import shows no message**
 - **Where:** `src/hooks/useJobStore.js` : 211-225 (newId at 219); src/pages/JobTracker.jsx:48-52
 - **Repro:** 1. On /jobs click Export JSON (its title is 'Export as JSON backup'). 2. Click Import and choose that file. 3. Every job now appears twice, and nothing says an import happened. Import again and the list triples.
@@ -48,7 +48,8 @@ title: Job Tracker — verified bugs, High and Medium (J-01…J-15)
 - **Fix hint:** Keep an incoming id when it is not taken. For ids already present, skip identical entries and ask about entries that differ, or offer a 'Replace all' restore. Show 'Imported N, skipped M duplicates' in a status region that is not an error.
 - **Verified (WF-1):** Ran verify-jobs/v-store.mjs: importJobs() on its own export printed { added: 1, lossy: false }, and the list became [Acme:j, Acme:job_bf6f]. JobTracker.jsx:52 only calls setImportError(null) on success.
 - **Fail-first test:** Store unit test: seed [A with id 'j'], then importJobs([{...A}]). Assert jobs.length stays 1 and the result reports skipped: 1.
-- **Owner:** JOBS-FIX · **Fix commit:** — · **Test:** —
+- **Now:** `importJobs` merges through `mergeImport` (src/utils/jobImport.js): an incoming id that is free is kept; the same job already here is skipped; a newer copy (`updatedAt`) replaces it in place; an older copy is skipped (a backup never overwrites a later edit); a different job with no time to compare is added as a copy with a new id (nothing dropped). It returns `{ added, updated, skipped, lossy }` and the tracker shows `importMessage` — e.g. 'Nothing new: the 3 job applications in that file are already in the tracker.' — in a role=status notice (errors stay role=alert). Fail-first: the two J-04 store tests failed at HEAD (the list doubled), the pure ones could not load; all pass now.
+- **Owner:** JOBS-FIX · **Fix commit:** this commit (`fix(jobs): re-importing a backup never duplicates jobs, an import reports its counts, a read error says so (J-04, J-23)`) · **Test:** tests/unit/job-store-edits.unit.mjs, tests/unit/job-import.unit.mjs
 
 ### J-05 · Medium · a11y · 🔴 Open · links **R2-039**
 **The tracker is mouse-only: focusable role=button cards ignore Enter and Space, and list rows and sort headers cannot be reached by keyboard**

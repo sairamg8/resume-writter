@@ -81,7 +81,7 @@ title: Job Tracker — verified bugs, Low (J-16…J-41)
 - **Fail-first test:** Cypress: remove the anchor's target attribute, click the kanban posting icon, and assert the hash stays '#/jobs'.
 - **Owner:** JOBS-UI · **Fix commit:** — · **Test:** —
 
-### J-23 · Low · bug · 🔴 Open · links **R2-117**
+### J-23 · Low · bug · ⏸ Fixed · links **R2-117**
 **Job Tracker import shows no message when the browser cannot read the file**
 - **Where:** `src/pages/JobTracker.jsx` : 38-56
 - **Repro:** 1. Click Import and pick a file on a removable or network drive that is then unavailable, or revoke read access. 2. Nothing happens and no error is shown.
@@ -89,7 +89,8 @@ title: Job Tracker — verified bugs, Low (J-16…J-41)
 - **Fix hint:** reader.onerror = reader.onabort = () => setImportError('Could not read that file.').
 - **Verified (WF-1):** Read the code: only reader.onload is set (42-53). There is no onerror or onabort.
 - **Fail-first test:** Extract readImportFile(file, {onText, onError}) and test it with a fake FileReader that fires 'error': onError is called.
-- **Owner:** JOBS-FIX · **Fix commit:** — · **Test:** —
+- **Now:** The tracker reads the file through `readImportFile(file, { onText, onError })`, which handles `onerror`, `onabort` and a reader that throws with 'Could not read that file.' Fail-first: the J-23 test (a fake FileReader that fires error/abort/throws) could not load at HEAD — no such helper, and JobTracker set only `onload`; passes now.
+- **Owner:** JOBS-FIX · **Fix commit:** this commit (`fix(jobs): re-importing a backup never duplicates jobs, an import reports its counts, a read error says so (J-04, J-23)`) · **Test:** tests/unit/job-import.unit.mjs
 
 ### J-24 · Low · ux-defect · 🔴 Open
 **The 'read-only' lock on Rejected/Withdrawn jobs is bypassed by the Edit form and by a kanban drag, and the reopen confirmation guards only one of three paths**

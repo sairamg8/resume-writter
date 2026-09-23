@@ -108,3 +108,29 @@ test('J-10: moving a Saved job to Applied (or later) fills a blank applied date 
   assert.equal(byId('a').statusHistory.length, 2, 'the same status again: no second entry');
   assert.equal(stored()[0].appliedDate, today);
 });
+
+// ── J-04: importing the tracker's own backup ─────────────────────────────────────────────────
+
+test('J-04: importing the tracker\'s own export adds nothing and says what it skipped', () => {
+  const a = job('j', 'Acme', { notes: '<p>Hi</p>', todos: [{ id: 't1', text: 'Prep', done: true }] });
+  open([a, job('k', 'Beta')]);
+  const exported = JSON.parse(JSON.stringify(shown())); // what Export JSON writes
+  const result = store.importJobs(exported);
+  assert.equal(shown().length, 2, 'no duplicates');
+  assert.deepEqual([result.added, result.skipped, result.lossy], [0, 2, false]);
+  assert.equal(store.importJobs(exported).skipped, 2, 'and again: still nothing added');
+  assert.equal(stored().length, 2);
+});
+
+test('J-04: an incoming id that is free is kept; a newer copy of a job here replaces it; an older one is skipped', () => {
+  open([job('j', 'Acme', { updatedAt: 10 })]);
+  const result = store.importJobs([
+    job('new', 'Fresh'),
+    job('j', 'Acme Robotics', { updatedAt: 20 }),
+  ]);
+  assert.deepEqual([result.added, result.updated, result.skipped], [1, 1, 0]);
+  assert.deepEqual(shown().map((j) => [j.id, j.company]), [['j', 'Acme Robotics'], ['new', 'Fresh']]);
+  const older = store.importJobs([job('j', 'Acme (old backup)', { updatedAt: 5 })]);
+  assert.deepEqual([older.added, older.updated, older.skipped], [0, 0, 1]);
+  assert.equal(byId('j').company, 'Acme Robotics', 'an older backup never overwrites a newer edit');
+});

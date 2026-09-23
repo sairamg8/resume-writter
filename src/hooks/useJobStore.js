@@ -4,6 +4,7 @@ import { newId } from '../utils/ids.js';
 import { addressableJobs, completeJob, readJob, statusId } from '../utils/normalizeJob.js';
 import { keepUnsaved } from '../utils/unsavedJobs.js';
 import { applyEdits, newJobDefaults } from '../utils/jobEdits.js';
+import { mergeImport } from '../utils/jobImport.js';
 
 const KEY = 'cpwtcv_jobs_v1';
 
@@ -207,24 +208,16 @@ function deleteJob(id) {
 }
 
 /**
- * Add the jobs of an imported file, each with a new id, made readable the way a saved job is
- * (readJob). Returns `{ added, lossy }`: lossy when an entry, or a detail of one, could not
- * be read and was left out — not for a number kept as its digits (VM4-5).
+ * Merge the jobs of an imported file (mergeImport: a job already here is skipped or, from a newer
+ * copy, replaced — never duplicated, J-04). Returns `{ added, updated, skipped, lossy }`: lossy
+ * when an entry, or a detail of one, could not be read and was left out (VM4-5); importMessage
+ * turns it into what the tracker says.
  */
 function importJobs(incoming) {
-  const read = incoming.map(readJob);
-  const stamped = read.map(r => r.kept).filter(Boolean).map(j => completeJob({
-    status: 'saved',
-    todos: [],
-    contact: '',
-    deadline: '',
-    ...j,
-    id: newId('job'),
-    createdAt: j.createdAt || Date.now(),
-    updatedAt: Date.now(),
-  }));
-  if (stamped.length) setJobs(jobs => [...jobs, ...stamped]);
-  return { added: stamped.length, lossy: read.some(r => r.lost) };
+  if (!initialized) init();
+  const { jobs, added, updated, skipped, lossy } = mergeImport(snapshot().jobs, incoming, Date.now());
+  if (added || updated) setJobs(() => addressableJobs(jobs));
+  return { added, updated, skipped, lossy };
 }
 
 function clearDemoData() {
