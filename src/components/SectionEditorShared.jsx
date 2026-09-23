@@ -23,8 +23,19 @@ export function InputField({ label, value, onChange, placeholder, type = 'text' 
 }
 
 export const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-export const CUR_YEAR = new Date().getFullYear();
-export const YEARS = Array.from({ length: 55 }, (_, i) => CUR_YEAR + 5 - i);
+
+/**
+ * The year select's choices, newest first: five years ahead of `now` down to 49 back, plus
+ * `stored` in its place when it is a 4-digit year outside them. The PDF prints any year
+ * parseMonthYear reads (1000–9999), so a 1975 start or an expiry ten years out must be offered
+ * too, or the select has no option for it and shows blank (AUD-28). `now` is read at each render,
+ * not once when the module loads, so a tab left open over New Year moves on.
+ */
+export function yearOptions(stored, now = new Date().getFullYear()) {
+  const years = Array.from({ length: 55 }, (_, i) => String(now + 5 - i));
+  if (!/^\d{4}$/.test(stored) || years.includes(stored)) return years;
+  return [...years, stored].sort((a, b) => b - a);
+}
 
 export function MonthPicker({ label, value, onChange, disabled }) {
   // The label names the month select; each select also says which half of the date it holds.
@@ -64,7 +75,7 @@ export function MonthPicker({ label, value, onChange, disabled }) {
           className="flex-1 px-2 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
         >
           <option value="">Year</option>
-          {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
+          {yearOptions(yearStr).map(y => <option key={y} value={y}>{y}</option>)}
         </select>
         {value && (
           <button onClick={() => onChange('')} className="p-1 text-gray-400 hover:text-red-500 shrink-0">

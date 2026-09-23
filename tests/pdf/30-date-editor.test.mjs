@@ -13,6 +13,8 @@ import { setup, teardown, loadModule } from './harness.mjs';
 before(setup);
 after(teardown);
 
+const NOW = new Date().getFullYear();
+
 /** The month and the year a MonthPicker holding `value` shows selected. */
 async function picked(value) {
   const { MonthPicker } = await loadModule('/src/components/SectionEditorShared.jsx');
@@ -33,12 +35,44 @@ describe('the month picker shows every stored month and year', () => {
     ['January 2020', ['Jan', '2020']],
     ['2019', ['', '2019']],
     [2019, ['', '2019']],
+    // AUD-28: a year outside the list's window (5 ahead, 49 back) showed blank; the PDF prints it.
+    ['Jan 1975', ['Jan', '1975']],
+    [1975, ['', '1975']],
+    ['05/1970', ['May', '1970']],
+    ['Summer 1975', ['', '1975']], // as 'Summer 2020' reads
+    [`Jun ${NOW + 10}`, ['Jun', String(NOW + 10)]], // a certificate that expires in ten years
   ];
   for (const [stored, want] of CASES) {
     it(`${JSON.stringify(stored)} shows ${JSON.stringify(want)}`, async () => {
       assert.deepEqual(await picked(stored), want);
     });
   }
+});
+
+/** The year select's choices, in order, for a MonthPicker holding `value`. */
+async function yearsOffered(value) {
+  const { MonthPicker } = await loadModule('/src/components/SectionEditorShared.jsx');
+  const html = renderToString(createElement(MonthPicker, { label: 'Start Date', value, onChange() {} }));
+  return [...html.slice(html.lastIndexOf('<select')).matchAll(/<option value="([^"]+)"/g)].map((m) => m[1]);
+}
+
+describe('the year list (AUD-28)', () => {
+  const WINDOW = Array.from({ length: 55 }, (_, i) => String(NOW + 5 - i));
+
+  it('a year in the window, or none: five years ahead down to 49 back, as before', async () => {
+    for (const v of ['Jan 2024', '', 'Q1 FY24']) assert.deepEqual(await yearsOffered(v), WINDOW, v);
+  });
+
+  it('a stored year outside the window is added in its place, newest first', async () => {
+    assert.deepEqual(await yearsOffered('Jan 1975'), [...WINDOW, '1975']);
+    assert.deepEqual(await yearsOffered(`Jun ${NOW + 10}`), [String(NOW + 10), ...WINDOW]);
+  });
+
+  it('counts from the year it is rendered in, not the year the page loaded', async () => {
+    const { yearOptions } = await loadModule('/src/components/SectionEditorShared.jsx');
+    assert.deepEqual([yearOptions('', 2030).at(0), yearOptions('', 2030).at(-1)], ['2035', '1981']);
+    assert.deepEqual(yearOptions('1980', 2030).slice(-2), ['1981', '1980']);
+  });
 });
 
 /** The Career History panel's text for one résumé holding `items` as its experience. */
