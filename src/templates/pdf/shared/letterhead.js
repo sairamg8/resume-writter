@@ -7,6 +7,7 @@ import { HEADER_GAPS, templateGapPt } from '@/constants/headerSpacing';
 import { contrast, sidebarShades, solid, textShades } from './pdfColors';
 import { CSS_PX_TO_PT, MODERN_HEADER_PAD_X_PT, MODERN_HEADER_PAD_Y_PT } from './pdfUnits';
 import { DEFAULTS } from './templateSettings';
+import { railColor, TIMELINE_RAIL } from './timelineRail';
 
 /**
  * Space under the letterhead's text, above its rule (or the gap under the letterhead, with none),
@@ -110,6 +111,11 @@ export const LOOKS = {
       photo: [accent, { lightBorder: true }],
     };
   },
+  // Timeline's rail laid flat: a line in the rail's colour and width (PdfTimeline.jsx) under the letterhead.
+  timeline: (base, { accent, rule }) => ({
+    ...base,
+    rules: rule || [{ width: TIMELINE_RAIL.width, color: railColor(accent) }],
+  }),
 };
 
 /**

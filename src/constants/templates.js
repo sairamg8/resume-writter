@@ -82,6 +82,13 @@ const TEMPLATES = {
     style: { headingStyle: 'plain', sectionTitleCase: 'upper' }, headerControls: false, headerRule: false,
     headerGaps: SIDEBAR_HEADER_GAPS,
   },
+  // History on an accent line, a dot per entry, dates above titles (TimelineTemplatePDF.jsx). Its header
+  // is Classic's stacked one, so it takes every header control and Classic's spacing.
+  timeline: {
+    label: 'Timeline', desc: 'ATS-friendly · Dated entries on an accent line', atsTier: 'certified',
+    style: { headingStyle: 'plain', sectionTitleCase: 'upper' }, headerControls: true, headerRule: false,
+    headerGaps: STACKED_HEADER_GAPS,
+  },
 };
 
 /** Every template the app offers. */
@@ -201,7 +208,7 @@ export const inSidebarColumn = (template, type, settings) =>
 
 /**
  * Does the template's header take Header Customization's alignment, name/title layout, rule and
- * contact controls? Classic, Minimal and Executive; Modern prints a fixed banner, Sidebar a side panel.
+ * contact controls? Classic, Minimal, Executive and Timeline; Modern prints a fixed banner, Sidebar a side panel.
  * Sidebar in Single · ATS-safe mode prints Classic's page and header.
  */
 export const hasHeaderControls = (template, settings) => {

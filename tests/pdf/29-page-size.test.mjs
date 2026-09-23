@@ -92,11 +92,14 @@ describe('US Letter: the page (PAR-01)', () => {
 describe('US Letter: the layout takes Letter\'s width (PAR-01)', () => {
   for (const template of TEMPLATES) {
     it(`${template}: a date ends at Letter's right margin; the text starts where it did on A4`, async () => {
-      const make = (settings) => resume({ template, settings, personal: { email: 'me@example.com' }, sections: [experience([{ description: '<p>Did things</p>' }])] });
+      // Timeline sets the date above the title, at the left: its field at the right margin is the
+      // location, at the end of the sub line in Title Stacked.
+      const timeline = template === 'timeline';
+      const make = (settings) => resume({ template, settings, personal: { email: 'me@example.com' }, sections: [experience([{ description: '<p>Did things</p>' }], timeline ? { titleStyle: 'stacked' } : {})] });
       const [a4] = await read(await render(make({})));
       const [letter] = await read(await render(make({ pageSize: 'LETTER' })));
       const wider = LETTER[0] - A4[0];
-      const date = (page) => page.items.find((t) => t.str.includes('01/2020'));
+      const date = (page) => page.items.find((t) => t.str.includes(timeline ? 'City' : '01/2020'));
       assert.ok(Math.abs(date(letter).x + date(letter).w - (LETTER[0] - 18 * MM)) < 0.5, `ends at ${date(letter).x + date(letter).w}, Letter's margin at ${LETTER[0] - 18 * MM}`);
       assert.ok(Math.abs(date(letter).x - date(a4).x - wider) < 0.5, 'the date moves right by the difference in width');
       // At the left margin; Sidebar's main column starts 38 % of the page in, so it moves by 38 % of it.

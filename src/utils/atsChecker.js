@@ -1,6 +1,7 @@
 import { decodeEntities } from './richText.js';
 import { contactItems } from './contacts.js';
 import { atsRating, hasHeaderControls, templateId, templateLabel, TEMPLATE_PICKER } from '../constants/templates.js';
+import { TEMPLATE_SECTION_DEFAULTS } from '../templates/pdf/shared/templateSectionDefaults.js';
 
 // The ATS plain-text export lives in its own module; the ATS tab and Export menu import it from here.
 export { generateAtsPlainText } from './atsPlainText.js';
@@ -677,7 +678,8 @@ export function analyzeAtsScore(resume, jobDescriptionText = '') {
     // 3. Title Order check (Job Title leads Role / Co. for 100% ATS indexing) (3 pts)
     const hasCompanyLeading = expSections.some(s => {
       const explicit = s.settings?.titleOrder || s.titleOrder;
-      const effectiveOrder = explicit || (['executive', 'sidebar'].includes(currentTemplate) ? 'role' : 'company');
+      // Unset, the template's own order (Executive, Sidebar and Timeline lead with the role): the one table the PDF reads.
+      const effectiveOrder = explicit || TEMPLATE_SECTION_DEFAULTS[currentTemplate]?.experience?.titleOrder || 'company';
       return effectiveOrder === 'company';
     });
 

@@ -91,6 +91,15 @@ export const DEFAULTS = {
     sectionTitleCase: 'upper',
     sidebarBg: '#1e293b',
   },
+  // The white page, as Classic: the name in the Text colour, the title in the accent the rail is drawn in.
+  timeline: {
+    accentColor: '#2563eb',
+    textColor: '#1a1a1a',
+    nameColor: (s) => s.nameColor || s.textColor || '#1a1a1a',
+    jobTitleColor: (s) => s.jobTitleColor || s.accentColor || '#2563eb',
+    headingStyle: 'plain',
+    sectionTitleCase: 'upper',
+  },
 };
 
 /** The photo controls resolveTemplateSettings clamps, from the one list the panel offers. */

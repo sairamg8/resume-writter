@@ -14,6 +14,7 @@ export const LOADERS = {
   minimal:   () => import('@/templates/pdf/MinimalTemplatePDF').then(m => m.MinimalTemplatePDF),
   sidebar:   () => import('@/templates/pdf/SidebarTemplatePDF').then(m => m.SidebarTemplatePDF),
   executive: () => import('@/templates/pdf/ExecutiveTemplatePDF').then(m => m.ExecutiveTemplatePDF),
+  timeline:  () => import('@/templates/pdf/TimelineTemplatePDF').then(m => m.TimelineTemplatePDF),
 };
 
 /** Cache loaded template components so repeat exports skip network/chunk parse. */

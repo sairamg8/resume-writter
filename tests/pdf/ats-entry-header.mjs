@@ -59,12 +59,34 @@ export function headerCut(entryLines, cap) {
   return cap;
 }
 
+const MONTH_WORDS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'sept', 'oct', 'nov', 'dec',
+  'january', 'february', 'march', 'april', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
+const DATE_WORDS = [...MONTH_WORDS, 'present', 'current', 'now', 'spring', 'summer', 'fall', 'autumn', 'winter'];
+const DATE_TOKEN = /^(?:\d{4}|\d{1,2}[/.]\d{4}|\d{4}[-/.]\d{1,2})$/;
+
+/**
+ * Is `runs` a line that is nothing but a date or date range — "03/2022 – Present", "Mar 2019 – Feb
+ * 2022", "2017" — one run of month words, years and dashes with a year or "Present" in it?
+ */
+export function dateOnly(runs) {
+  if (runs.length !== 1) return false;
+  const tokens = runs[0].text.toLowerCase().split(/[\s–—-]+/).filter(Boolean);
+  return tokens.length > 0 && tokens.some((t) => DATE_TOKEN.test(t) || t === 'present')
+    && tokens.every((t) => DATE_TOKEN.test(t) || DATE_WORDS.includes(t.replace(/\.$/, '')));
+}
+
 /**
  * Each entry's lines: from the line holding a run that starts with its `anchor` (the entry's first
- * text, e.g. its company or name) up to the next entry's anchor, or `tail` lines when it is the
+ * text, e.g. its company or name) up to the next entry's start, or `tail` lines when it is the
  * last. The search starts after the line whose run reads `after` (the section title, any case), so
  * a job title that is also the résumé's own title is found in its entry. An anchor that is never
  * found gives null for that entry.
+ *
+ * An entry whose date prints alone on the line directly above its anchor (the Timeline template sets
+ * the date above the title) starts at that date line: OpenResume starts an entry at a line set off
+ * by a wide gap, or at a bold line after a plain one, and the Timeline's date is both. Only a line
+ * that is nothing but a date (dateOnly) is taken, and never the previous entry's anchor line or the
+ * section title, so an entry whose date prints on its first line reads exactly as before.
  */
 export function blocks(allLines, anchors, { after = null, tail = 8 } = {}) {
   const at = [];
@@ -76,10 +98,16 @@ export function blocks(allLines, anchors, { after = null, tail = 8 } = {}) {
     at.push(i);
     if (i >= 0) from = i + 1;
   }
-  return at.map((i, k) => {
-    if (i < 0) return null;
-    const next = at.slice(k + 1).find((j) => j > i);
-    return allLines.slice(i, next ?? i + tail);
+  const floor = after == null ? 0 : allLines.findIndex((runs) => runs.some((r) => r.text.toLowerCase() === after.toLowerCase())) + 1;
+  const start = at.map((i, k) => {
+    if (i < 0) return i;
+    const prev = Math.max(floor - 1, ...at.slice(0, k).filter((j) => j >= 0));
+    return i - 1 > prev && dateOnly(allLines[i - 1]) ? i - 1 : i;
+  });
+  return start.map((s, k) => {
+    if (s < 0) return null;
+    const next = start.slice(k + 1).find((j) => j > s);
+    return allLines.slice(s, next ?? at[k] + tail);
   });
 }
 

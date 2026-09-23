@@ -142,7 +142,8 @@ describe('every per-template table covers every template (VM3-5)', () => {
     };
     for (const [name, table] of Object.entries(tables)) assert.deepEqual(Object.keys(table).toSorted(), ids, name);
     assert.deepEqual(TEMPLATE_PICKER.map((t) => t.id).toSorted(), ids, 'the Design panel\'s picker');
-    assert.deepEqual(TEMPLATE_PICKER.map((t) => t.id), ['executive', 'classic', 'modern', 'minimal', 'sidebar'], 'in its order');
+    // Templates added since (T6 on) are listed after the first five, in TEMPLATE_IDS' order.
+    assert.deepEqual(TEMPLATE_PICKER.map((t) => t.id), ['executive', 'classic', 'modern', 'minimal', 'sidebar', 'timeline'], 'in its order');
     for (const t of TEMPLATE_PICKER) {
       assert.equal(t.label, templateLabel(t.id), t.id);
       assert.ok(t.desc && typeof t.ats === 'boolean', `${t.id}: a description and an ATS answer`);
@@ -155,10 +156,10 @@ describe('every per-template table covers every template (VM3-5)', () => {
       'the ATS badges come from atsRating',
     );
     assert.deepEqual(
-      TEMPLATE_PICKER.filter((t) => t.ats).map((t) => t.id), ['executive', 'classic', 'modern', 'minimal'],
-      'today that is the four single-column templates; the Sidebar earns it only in its Single Layout',
+      TEMPLATE_PICKER.filter((t) => t.ats).map((t) => t.id), ['executive', 'classic', 'modern', 'minimal', 'timeline'],
+      'today that is the single-column templates; the Sidebar earns it only in its Single Layout',
     );
-    assert.deepEqual(TEMPLATES.toSorted(), ['classic', 'executive', 'minimal', 'modern', 'sidebar'], 'these tests run every template');
+    assert.deepEqual(TEMPLATES.toSorted(), ['classic', 'executive', 'minimal', 'modern', 'sidebar', 'timeline'], 'these tests run every template');
   });
 
   it('each LOADERS entry loads that template\'s own component', async () => {

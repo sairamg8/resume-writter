@@ -25,6 +25,15 @@ export const TEMPLATE_SECTION_DEFAULTS = {
     // "Inline" and "Side by side" print there too (27277e0); unset stays Stacked.
     experience: { titleOrder: 'role' },
   },
+
+  timeline: {
+    // Unset, a job on the Timeline's rail reads: its date, then "Role  Company" side by side (two
+    // runs), then its location. Line 2 holds both, so a parser that gives a job without bullets a
+    // 2-line header still reads the company (Stacked puts it on line 3); Inline would join the two
+    // into one run (PdfTimeline.jsx). Volunteering is laid out the same way.
+    experience:   { titleOrder: 'role', titleStyle: 'sidebyside' },
+    volunteering: { titleStyle: 'sidebyside' },
+  },
 };
 
 /**

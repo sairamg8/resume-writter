@@ -81,7 +81,7 @@ describe('custom section', () => {
 
 describe('experience Order (FIDA-58 / FIDB-72)', () => {
   // With no Order chosen a template prints its own default — the one the section editor shows.
-  const DEFAULT_ORDER = { classic: 'company', modern: 'company', minimal: 'company', executive: 'role', sidebar: 'role' };
+  const DEFAULT_ORDER = { classic: 'company', modern: 'company', minimal: 'company', executive: 'role', sidebar: 'role', timeline: 'role' };
   const bold = (t) => /Bold/.test(t.font);
   /** Which field leads the entry: the bold primary, printed before the other one. */
   async function lead(template, titleOrder) {

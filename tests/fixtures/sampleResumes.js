@@ -132,4 +132,9 @@ export const DEMO_RESUMES = [
     { accentColor: '#1e40af', textColor: '#1a1a1a', headingStyle: 'plain', sectionTitleCase: 'upper', sidebarBg: '#1e40af', headerTextColor: '#ffffff', nameColor: '#ffffff', jobTitleColor: '#bfdbfe', sectionGap: 14, itemGap: 8 }),
   sample('demo_executive', 'Sample · Executive', 'executive',
     { accentColor: '#2563eb', textColor: '#111111', headingStyle: 'underline', sectionTitleCase: 'normal', fontSizeNameDelta: 9, sectionGap: 16, itemGap: 8 }),
+  // Templates added since have no account copy: their sample takes the template's own style (T6 on).
+  // Line height 1.35: at 1.5 page 2 opens with the Projects heading, which pdftotext -raw joins to the
+  // last line of page 1 (ATS-7, 66-ats-page-top-heading) — a limit the field tests are not about.
+  sample('demo_timeline', 'Sample · Timeline', 'timeline',
+    { accentColor: '#0f766e', textColor: '#1a1a1a', headingStyle: 'plain', sectionTitleCase: 'upper', sectionGap: 16, itemGap: 8, lineHeightValue: 1.35 }),
 ];

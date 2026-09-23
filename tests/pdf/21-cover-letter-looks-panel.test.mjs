@@ -19,7 +19,7 @@ before(setup);
 after(teardown);
 
 /** Each template's name as the editor shows it, written out rather than read from the table under test. */
-const NAMES = { classic: 'Classic', modern: 'Modern', minimal: 'Minimal', executive: 'Executive', sidebar: 'Sidebar' };
+const NAMES = { classic: 'Classic', modern: 'Modern', minimal: 'Minimal', executive: 'Executive', sidebar: 'Sidebar', timeline: 'Timeline' };
 /** Template ids the app does not offer: each prints Classic's letter (22-cover-letter-looks-options). */
 const UNKNOWN = ['dark', 'aurora', ''];
 /** Text Alignment as the résumé stores it: Center, Left, and unset (Left) in a résumé that never picked one. */

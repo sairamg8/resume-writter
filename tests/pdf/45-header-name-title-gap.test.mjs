@@ -13,7 +13,7 @@ after(teardown);
 
 const PERSONAL = { name: 'Jordan Rivera', title: 'Staff Engineer', email: 'jordan@example.com', phone: '+1 555 0100' };
 /** The templates' own Name ↔ Title, pt (TEMPLATES' headerGaps.nameTitleGap). */
-const OWN = { classic: 1, minimal: 1, executive: 1, modern: 1, sidebar: 2 };
+const OWN = { classic: 1, minimal: 1, executive: 1, modern: 1, sidebar: 2, timeline: 1 };
 const near = (a, b, at) => assert.ok(Math.abs(a - b) < 0.01, `${at}: ${a} vs ${b}`);
 
 /** Page 1's baselines (pt from the page bottom) of the name, the title and the first contact. */
@@ -57,7 +57,7 @@ describe('Name ↔ Title in the résumé PDF', () => {
     });
   }
 
-  for (const template of ['classic', 'minimal', 'executive']) {
+  for (const template of ['classic', 'minimal', 'executive', 'timeline']) {
     it(`${template}: Inline prints the title beside the name, whatever the stacked gap`, async () => {
       const a = await header(await render(cv(template, { headerLayout: 'inline' })));
       const b = await header(await render(cv(template, { headerLayout: 'inline', nameTitleGap: 40 })));
@@ -113,7 +113,7 @@ describe('the Header spacing row (Personal Info → Header Customization)', () =
       assert.equal(only(headerGapRows(t, { nameTitleGap: 100 }, PERSONAL)).valuePx, 40, `${t}: clamped`);
       assert.equal(only(headerGapRows(t, {}, { ...PERSONAL, title: '' })), undefined, `${t}: no title, no row`);
     }
-    for (const t of ['classic', 'minimal', 'executive']) {
+    for (const t of ['classic', 'minimal', 'executive', 'timeline']) {
       const r = only(headerGapRows(t, { headerLayout: 'inline' }, PERSONAL));
       assert.deepEqual([r.key, r.min, r.max, r.valuePx], ['headerInlineGap', 2, 48, 8], `${t}: Inline`);
     }

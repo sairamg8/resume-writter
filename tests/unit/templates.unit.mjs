@@ -12,10 +12,10 @@ const {
   headingBorderControls, anyDrawsContactIcons, contactIconHint,
 } = templates;
 
-test('templateId: the five templates stay, however an imported file cases or spaces them; any other id reads as Classic (M15, R5-5)', () => {
+test('templateId: every template stays, however an imported file cases or spaces them; any other id reads as Classic (M15, R5-5)', () => {
   for (const id of TEMPLATE_IDS) assert.equal(templateId(id), id);
-  assert.deepEqual(TEMPLATE_IDS.toSorted(), ['classic', 'executive', 'minimal', 'modern', 'sidebar']);
-  for (const [written, id] of [['Modern', 'modern'], [' sidebar ', 'sidebar'], ['EXECUTIVE', 'executive'], ['Minimal\n', 'minimal'], ['Classic', 'classic']]) {
+  assert.deepEqual(TEMPLATE_IDS.toSorted(), ['classic', 'executive', 'minimal', 'modern', 'sidebar', 'timeline']);
+  for (const [written, id] of [['Modern', 'modern'], [' sidebar ', 'sidebar'], ['EXECUTIVE', 'executive'], ['Minimal\n', 'minimal'], ['Classic', 'classic'], [' Timeline', 'timeline']]) {
     assert.equal(templateId(written), id, JSON.stringify(written));
   }
   for (const id of ['dark', 'Dark', 'aurora', '', '  ', null, undefined, 42, {}, ['modern']]) assert.equal(templateId(id), 'classic', String(id));
@@ -46,9 +46,10 @@ test('header helpers read an unknown id as Classic (M15)', () => {
 test('the header helpers give each template the answers of the separate tables they replaced (R3-6)', () => {
   // HEADER_CONTROL_TEMPLATES and HEADER_BORDER_WHEN_UNSET, as they were at 01e9118: a guard
   // that folding them into TEMPLATES changed no answer.
-  const CONTROLS = { classic: true, modern: false, minimal: true, executive: true, sidebar: false };
-  const RULE_WHEN_UNSET = { classic: true, modern: false, minimal: false, executive: false, sidebar: false };
-  assert.deepEqual(TEMPLATE_IDS, ['classic', 'modern', 'minimal', 'executive', 'sidebar']);
+  // Templates added since (T6 on) state their own answers: Timeline's header is Classic's stacked one, no rule.
+  const CONTROLS = { classic: true, modern: false, minimal: true, executive: true, sidebar: false, timeline: true };
+  const RULE_WHEN_UNSET = { classic: true, modern: false, minimal: false, executive: false, sidebar: false, timeline: false };
+  assert.deepEqual(TEMPLATE_IDS, ['classic', 'modern', 'minimal', 'executive', 'sidebar', 'timeline']);
   for (const template of [...TEMPLATE_IDS, 'dark', '', undefined]) {
     const t = templateId(template);
     assert.equal(hasHeaderControls(template), CONTROLS[t], `${template}: controls`);
@@ -68,6 +69,7 @@ test('templateStyleDefaults: each template\'s heading style and title case; an u
       minimal: { headingStyle: 'underline', sectionTitleCase: 'upper' },
       executive: { headingStyle: 'underline', sectionTitleCase: 'normal' },
       sidebar: { headingStyle: 'plain', sectionTitleCase: 'upper' },
+      timeline: { headingStyle: 'plain', sectionTitleCase: 'upper' },
     },
   );
   assert.deepEqual(templateStyleDefaults('dark'), templateStyleDefaults('classic'));
@@ -111,7 +113,7 @@ test('buildTestState: headingStyle and sectionTitleCase match templateStyleDefau
 });
 
 test('headerControlTemplateLabels: returns templates with headerControls in order (FIDB-51-VF7-NB1)', () => {
-  assert.deepEqual(headerControlTemplateLabels(), ['Classic', 'Minimal', 'Executive']);
+  assert.deepEqual(headerControlTemplateLabels(), ['Classic', 'Minimal', 'Executive', 'Timeline']);
 
   // Custom table with extra template prevents drift when new templates are added
   const customTable = {

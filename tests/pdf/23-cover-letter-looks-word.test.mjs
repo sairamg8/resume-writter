@@ -81,12 +81,13 @@ describe('the Word letter\'s letterhead takes the look too (FIDB-51)', () => {
   });
 
   // Classic's rule is the résumé header's: none on a new résumé, its border off (V2FIDB-51-2).
-  it('Classic draws the résumé\'s rule, none with the border off; Minimal has a 0.75 pt pale rule and a regular name; Executive a double rule', async () => {
+  it('Classic draws the résumé\'s rule, none with the border off; Minimal has a 0.75 pt pale rule and a regular name; Executive a double rule; Timeline its 1.5 pt rail', async () => {
     const { solid } = await loadModule('/src/templates/pdf/shared/pdfColors.js');
     const expected = {
       classic: null,
       minimal: { val: 'single', sz: '6', color: solid(ACCENT, 0.4).slice(1), space: '12' },
       executive: { val: 'double', sz: '6', color: ACCENT.slice(1), space: '12' },
+      timeline: { val: 'single', sz: '12', color: solid(ACCENT, 0.35).slice(1), space: '12' },
     };
     for (const [template, rule] of Object.entries(expected)) {
       const { head } = parts(await coverDocx(template));
@@ -100,7 +101,7 @@ describe('the Word letter\'s letterhead takes the look too (FIDB-51)', () => {
   it('a centred résumé header centres Word\'s letterhead too; Modern and Sidebar take no alignment', async () => {
     for (const template of TEMPLATES) {
       const { head, date } = parts(await coverDocx(template, { headerAlign: 'center' }));
-      const centred = ['classic', 'minimal', 'executive'].includes(template);
+      const centred = !['modern', 'sidebar'].includes(template);
       for (const xml of head) assert.equal(/<w:jc w:val="center"\/>/.test(xml), centred, template);
       assert.doesNotMatch(date, /<w:jc w:val="center"\/>/, `${template}: the letter itself stays left`);
     }
