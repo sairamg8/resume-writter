@@ -1,17 +1,17 @@
 # FlowCV Bug Tracker & Status Index
 
 > Location: `/mnt/Storage/Projects/flowcv/bug-status.md`
-> Updated: 2026-09-23 06:12 · `origin/master` (deployed) = `2a7d728` · fixed but not pushed: `fd7ecca`, `4ee5ede`, `f829ce3`, `e2dffbf`, `b5068d0`, `b99c04d`, `b5b8e86`, `d720439`, `6e07a5f`, `3dcd018`, `da91e31`
-> **Open: 17** | Fixed, not pushed: 13 | **Closed: 44**
+> Updated: 2026-09-23 06:14 · `origin/master` (deployed) = `2a7d728` · fixed but not pushed: `fd7ecca`, `4ee5ede`, `f829ce3`, `e2dffbf`, `b5068d0`, `b99c04d`, `b5b8e86`, `d720439`, `6e07a5f`, `3dcd018`, `da91e31`, `be8b7f3`
+> **Open: 16** | Fixed, not pushed: 14 | **Closed: 44**
 
 ## Summary
 
 | List | Found | ✅ Fixed and pushed | ⏸ Fixed, local only | 🔴 Open |
 |---|---|---|---|---|
-| Bug audit, 2026-09-22 (`AUD-`) | 35 (34 + one follow-up) | 11 | 13 | **11** |
+| Bug audit, 2026-09-22 (`AUD-`) | 35 (34 + one follow-up) | 11 | 14 | **10** |
 | ATS parsing defects (`ATS-`) | 6 | 0 | 0 | **6** |
 | Prompt tasks, 2026-09-14 → 09-21 | 33 | 33 | 0 | 0 |
-| **Total** | **74** | **44** | **13** | **17** |
+| **Total** | **74** | **44** | **14** | **16** |
 
 - **Status:** ✅ fixed and pushed (on `origin/master`, so deployed) · ⏸ fixed and committed, not pushed · 🔴 open.
 - **Severity (audit):** High = data loss, or a feature that does not work · Medium = a wrong result, no data loss ·
@@ -22,12 +22,12 @@
 
 ### Next in queue
 
-1. **AUD-24** — Jobs · edit
+1. **AUD-25** — Photo · import
 2. The Low rows,
-   AUD-25 … AUD-34.
+   AUD-26 … AUD-34.
 3. ATS-1 … ATS-6 — no order set yet; ATS-6 waits on a decision.
 
-⏸ **Not pushed yet:** AUD-09 (`fd7ecca`), AUD-16 (`4ee5ede`), AUD-10 and AUD-11 (`f829ce3`), AUD-12 (`e2dffbf`), AUD-13 (`b5068d0`), AUD-14 and AUD-15 (`b99c04d`), AUD-17 (`b5b8e86`), AUD-19 (`d720439`), AUD-21 (`6e07a5f`), AUD-22 (`3dcd018`), AUD-23 (`da91e31`) wait for the owner's go. The push gate runs every test,
+⏸ **Not pushed yet:** AUD-09 (`fd7ecca`), AUD-16 (`4ee5ede`), AUD-10 and AUD-11 (`f829ce3`), AUD-12 (`e2dffbf`), AUD-13 (`b5068d0`), AUD-14 and AUD-15 (`b99c04d`), AUD-17 (`b5b8e86`), AUD-19 (`d720439`), AUD-21 (`6e07a5f`), AUD-22 (`3dcd018`), AUD-23 (`da91e31`), AUD-24 (`be8b7f3`) wait for the owner's go. The push gate runs every test,
 a production build and a private-data scan; a push deploys.
 
 **Each fix:** a test that fails before the fix → the fix → commit → set its row here to ⏸ with the commit and the
@@ -66,7 +66,7 @@ existing test caught any of these; several unit tests asserted the same wrong da
 | AUD-21 | Section options · Reset style | Medium | ⏸ Local only | `6e07a5f` | tests/pdf/10-section-options.test.mjs | Reset style and new sections store `titleStyle: 'stacked'`, which overrides Executive's inline default (`src/utils/defaultDataSectionTypes.js:4`, `src/components/SectionEditor.jsx:123`). Removed hardcoded titleStyle: 'stacked' from SECTION_TYPE_DEFAULTS and blankSections so template defaults resolve cleanly via resolveSection. | Ran, Known A3 |
 | AUD-22 | Word export · fonts and sizes | Medium | ⏸ Local only | `3dcd018` | tests/pdf/38-word-fonts-and-sizes.test.mjs | Word ignores the Design font and sizes: the name is always 20 pt (`src/utils/wordExportHeader.js:58`), section titles 10 pt (`src/utils/wordExportUtils.js:71`), the font Calibri; entry dates are always the accent colour (`src/utils/wordExportUtils.js:157`) while the PDF prints them grey on Minimal, Executive and Sidebar. Resolved font mapping via FONTS table, dynamic half-point font sizes for base, name, entry, section headings, and template-aware dateHex via getDateColor. | Ran, Known A4 |
 | AUD-23 | Exports · errors | Medium | ⏸ Local only | `da91e31` | tests/pdf/53-export-error-handling.test.mjs | Three exports fail silently: Markdown, ATS text and JSON Resume aren't wrapped in `runExport` (`src/hooks/useEditorExports.js:68`, `:74`, `:80`), and the editor's JSON Resume import converts outside any `try` (`src/components/ExportDropdown.jsx:118`), so an error shows nothing. Wrapped all exports in runExport, added try-catch to handleImportJSON and FileReader processing in ExportDropdown, and disabled export buttons when exporting. | Code |
-| AUD-24 | Jobs · edit | Medium | 🔴 Open | — | — | Editing an imported job whose company or role is `null` crashes the page: `form.company.trim()` (`src/pages/JobForm.jsx:46`), and there is no error boundary anywhere in `src`. | Code |
+| AUD-24 | Jobs · edit | Medium | ⏸ Local only | `be8b7f3` | tests/pdf/54-job-form-null-crash.test.mjs | Editing an imported job whose company or role is `null` crashes the page: `form.company.trim()` (`src/pages/JobForm.jsx:46`), and there is no error boundary anywhere in `src`. Defaulted null/undefined job form values to empty strings with safe trimming, added reusable ErrorBoundary component and wrapped application routes. | Code |
 | AUD-25 | Photo · import | Low | 🔴 Open | — | — | An imported photo with an unknown shape or height (e.g. `'oval'`) is not clamped to the offered options (`getPdfPhotoStyle`, `src/templates/pdf/shared/pdfPhoto.js:57`). | Ran, Known A5 |
 | AUD-26 | Storage · migrations | Low | 🔴 Open | — | — | A file stamped `dataVersion` 11 or higher (e.g. 999) skips every migration forever (`src/utils/normalizeResume.js:255`). | Code |
 | AUD-27 | ATS checker · score | Low | 🔴 Open | — | — | The "Multi-column contact header" check reads `settings.contactCols`, which no control writes (the control is `contactLayout: '2grid'`), so it always passes (`src/utils/atsChecker.js:1019`). | Code |
