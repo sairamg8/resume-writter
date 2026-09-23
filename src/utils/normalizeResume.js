@@ -161,7 +161,36 @@ const MIGRATIONS = [
   [11, withHeaderColorsSeen],
 ];
 
-const versionOf = (r) => (Number.isFinite(r.dataVersion) ? r.dataVersion : 0);
+/**
+ * Which of this build's one-time migrations `r` has had: its own stamp, and the version a newer
+ * build claimed (`dataVersionAhead`) once this build has caught up with that claim — so a migration
+ * added later does not run a second time on data the build that wrote it already migrated. A stamp
+ * that is not a number is no evidence and counts as none, as it always has; one above this build's
+ * never reaches here (aheadOf takes it first).
+ */
+const versionOf = (r) => Math.max(
+  Number.isFinite(r.dataVersion) ? r.dataVersion : 0,
+  Number.isFinite(r.dataVersionAhead) && r.dataVersionAhead <= DATA_VERSION ? r.dataVersionAhead : 0,
+);
+
+/**
+ * The version `r` claims that this build has not reached, or null. Either a newer build of the app
+ * wrote it, or the number is bad — a hand-edited backup, a corrupt file — and this build cannot
+ * tell the two apart, so it treats both the same (see normalizeResume).
+ */
+function aheadOf(r) {
+  const claims = [r.dataVersion, r.dataVersionAhead].filter((v) => Number.isFinite(v) && v > DATA_VERSION);
+  return claims.length ? Math.max(...claims) : null;
+}
+
+/** `r` stamped with this build's version, carrying `ahead` if there is still a claim to keep. */
+function stamped(r, ahead) {
+  const { dataVersionAhead: _absorbed, ...rest } = r;
+  const out = { ...rest, dataVersion: DATA_VERSION };
+  // `undefined` is not the same as absent here: Firestore refuses a write holding one (AUD-07).
+  if (ahead != null) out.dataVersionAhead = ahead;
+  return out;
+}
 
 /**
  * R5-5: an id the app does not offer — the old seed's 'dark', an imported file's — prints as
@@ -246,12 +275,24 @@ function withProjectUrls(r) {
  * Never touches `updatedAt` — this is not an edit, so it neither wins a sync merge
  * nor triggers a cloud write by itself. The same object when nothing changes; a value that is not
  * an object comes back as it is.
+ *
+ * A version this build never issued (AUD-26) is a claim it cannot check: a newer build of the app
+ * wrote it, or the number is bad — a hand-edited backup, a corrupt file. Trusting it froze the
+ * résumé past every migration this app will ever ship, because a stamp of 999 stays above every
+ * future DATA_VERSION and `from >= DATA_VERSION` stays true for good. Such a résumé is stamped with
+ * what this build is at and none of this build's migrations run on it — a newer build has had them
+ * all, and running them backwards on its data is the one thing `dataVersion` exists to prevent —
+ * while the claim itself is kept in `dataVersionAhead` for the build that can check it: versionOf
+ * reads it back as the version once DATA_VERSION has caught up (so that build does not migrate its
+ * own data twice) and goes on ignoring one it never will.
  */
 export function normalizeResume(resume) {
   if (!resume || typeof resume !== 'object') return resume;
   const known = withKnownTemplate(resume);
   const r = withSkillNames(withProjectUrls(withTextFields(withNormalizedColors(withDesignNumbers(offersTemplate(resume.template) ? known : withHeaderReadableOnClassic(known))))));
+  const ahead = aheadOf(r);
   const from = versionOf(r);
-  if (from >= DATA_VERSION) return r;
-  return MIGRATIONS.reduce((out, [version, migrate]) => (from < version ? migrate(out, from) : out), { ...r, dataVersion: DATA_VERSION });
+  if (ahead != null) return r.dataVersion === DATA_VERSION && r.dataVersionAhead === ahead ? r : stamped(r, ahead);
+  if (from >= DATA_VERSION) return 'dataVersionAhead' in r ? stamped(r, null) : r;
+  return MIGRATIONS.reduce((out, [version, migrate]) => (from < version ? migrate(out, from) : out), stamped(r, null));
 }

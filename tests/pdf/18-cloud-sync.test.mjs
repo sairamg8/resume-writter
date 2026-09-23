@@ -7,6 +7,7 @@ import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { setup, teardown, loadModule } from './harness.mjs';
 import { deferred, fakeFirestore, resumePath, listPath } from './fake-firestore.mjs';
+import { DATA_VERSION } from '../../src/utils/dataVersion.js';
 
 let plan;
 let flush;
@@ -19,7 +20,7 @@ before(async () => {
 });
 after(teardown);
 
-const cv = (id, updatedAt = 1, extra = {}) => ({ id, name: id, updatedAt, sections: [], dataVersion: 99, ...extra });
+const cv = (id, updatedAt = 1, extra = {}) => ({ id, name: id, updatedAt, sections: [], dataVersion: DATA_VERSION, ...extra });
 /** One of a demo account's originals ("Keep as my original", src/utils/demoSeed.js). */
 const orig = (id, updatedAt = 1, extra = {}) => cv(id, updatedAt, { keep: true, ...extra });
 const ids = (list) => list.map((r) => r.id).toSorted();

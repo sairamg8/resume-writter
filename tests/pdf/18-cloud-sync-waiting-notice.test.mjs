@@ -12,6 +12,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { setup, teardown, loadModule } from './harness.mjs';
 import { settle } from './fake-firestore.mjs';
 import { elements, mount } from './fake-dom.mjs';
+import { DATA_VERSION } from '../../src/utils/dataVersion.js';
 
 // The demo accounts of this test's build (VITE_DEMO_ACCOUNTS): a made-up one, never the owner's,
 // so the owner's private résumé on a dev checkout never takes part. Read when setup() starts Vite.
@@ -28,7 +29,7 @@ before(async () => {
 after(teardown);
 
 const NOTICE = 'Your originals come back as soon as your account can be reached again.';
-const cv = (id, updatedAt = 1, extra = {}) => ({ id, name: id, updatedAt, sections: [], dataVersion: 99, template: 'classic', ...extra });
+const cv = (id, updatedAt = 1, extra = {}) => ({ id, name: id, updatedAt, sections: [], dataVersion: DATA_VERSION, template: 'classic', ...extra });
 /** One of a demo account's originals ("Keep as my original", src/utils/demoSeed.js). */
 const orig = (id, updatedAt = 1, extra = {}) => cv(id, updatedAt, { keep: true, ...extra });
 

@@ -5,6 +5,7 @@ import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { setup, teardown, loadModule } from './harness.mjs';
 import { deferred, fakeFirestore, syncPage, resumePath, listPath, settle, syncModules } from './fake-firestore.mjs';
+import { DATA_VERSION } from '../../src/utils/dataVersion.js';
 
 let mods;
 before(async () => {
@@ -13,7 +14,7 @@ before(async () => {
 });
 after(teardown);
 
-const cv = (id, updatedAt = 1, extra = {}) => ({ id, name: id, updatedAt, sections: [], dataVersion: 99, ...extra });
+const cv = (id, updatedAt = 1, extra = {}) => ({ id, name: id, updatedAt, sections: [], dataVersion: DATA_VERSION, ...extra });
 const A = { uid: 'A', email: 'a@example.com' };
 const B = { uid: 'B', email: 'b@example.com' };
 const page = (cloud, state) => syncPage(mods, cloud, state);

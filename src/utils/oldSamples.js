@@ -31,7 +31,7 @@ export const UNTOUCHED = {
 };
 
 /** What the sync or a restore stamps on a copy, not what anyone wrote in it. */
-const STAMPS = new Set(['id', 'updatedAt', 'restoredAt', 'deleted', 'dataVersion']);
+const STAMPS = new Set(['id', 'updatedAt', 'restoredAt', 'deleted', 'dataVersion', 'dataVersionAhead']);
 
 /** `value` as JSON with every object's keys sorted: Firestore hands a document's fields back in its own order. */
 function canonical(value) {

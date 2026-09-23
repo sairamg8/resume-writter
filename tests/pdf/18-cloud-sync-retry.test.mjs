@@ -5,6 +5,7 @@ import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { setup, teardown, loadModule } from './harness.mjs';
 import { fakeFirestore, syncPage, syncModules, resumePath, settle } from './fake-firestore.mjs';
+import { DATA_VERSION } from '../../src/utils/dataVersion.js';
 
 let mods;
 before(async () => {
@@ -13,7 +14,7 @@ before(async () => {
 });
 after(teardown);
 
-const cv = (id, updatedAt = 1, extra = {}) => ({ id, name: id, updatedAt, sections: [], dataVersion: 99, template: 'classic', ...extra });
+const cv = (id, updatedAt = 1, extra = {}) => ({ id, name: id, updatedAt, sections: [], dataVersion: DATA_VERSION, template: 'classic', ...extra });
 const USER = { uid: 'u', email: 'someone@example.com' };
 const failure = (code) => Object.assign(new Error(`${code}: refused`), { code });
 const rename = (p, name, updatedAt) => p.change({ resumes: p.store.state.resumes.map((r) => (r.id === 'resume_a' ? { ...r, name, updatedAt } : r)) });

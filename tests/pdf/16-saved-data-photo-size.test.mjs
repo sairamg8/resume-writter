@@ -16,6 +16,7 @@ import { createElement, StrictMode } from 'react';
 import { setup, teardown, loadModule, resume, render, TEMPLATES } from './harness.mjs';
 import { painted, PNG_2X2 } from './extractors.mjs';
 import { mount } from './fake-dom.mjs';
+import { DATA_VERSION } from '../../src/utils/dataVersion.js';
 
 const KEY = 'cpwtcv_v1';
 
@@ -125,7 +126,7 @@ after(async () => {
  */
 async function openApp(resumes) {
   const { useAppStore } = await loadModule('/src/hooks/useResumeStore.js');
-  globalThis.localStorage = new MemoryStorage([[KEY, JSON.stringify({ resumes, activeId: resumes[0]?.id ?? null, dataVersion: 99 })]]);
+  globalThis.localStorage = new MemoryStorage([[KEY, JSON.stringify({ resumes, activeId: resumes[0]?.id ?? null, dataVersion: DATA_VERSION })]]);
   let current = null;
   function Probe() {
     current = useAppStore();
@@ -153,7 +154,7 @@ async function until(done, turns = 400) {
 }
 
 const saved = (id, extra = {}) => ({
-  id, name: id, template: 'classic', dataVersion: 99, updatedAt: 1_700_000_000_000, settings: {}, sections: [],
+  id, name: id, template: 'classic', dataVersion: DATA_VERSION, updatedAt: 1_700_000_000_000, settings: {}, sections: [],
   personal: { name: 'Sam Doe', photo: null }, coverLetter: { body: '<p>Hello</p>' }, ...extra,
 });
 

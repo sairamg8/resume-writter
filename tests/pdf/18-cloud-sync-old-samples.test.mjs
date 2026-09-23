@@ -9,6 +9,7 @@ import assert from 'node:assert/strict';
 import { setup, teardown, loadModule, render, read, allItems, renderDocx } from './harness.mjs';
 import { fakeFirestore, syncPage, syncModules, resumePath, listPath, settle } from './fake-firestore.mjs';
 import { oldSampleCopies } from '../fixtures/oldSampleCopies.js';
+import { DATA_VERSION } from '../../src/utils/dataVersion.js';
 
 let mods;
 before(async () => {
@@ -17,7 +18,7 @@ before(async () => {
 });
 after(teardown);
 
-const cv = (id, updatedAt = 1, extra = {}) => ({ id, name: id, updatedAt, sections: [], dataVersion: 99, ...extra });
+const cv = (id, updatedAt = 1, extra = {}) => ({ id, name: id, updatedAt, sections: [], dataVersion: DATA_VERSION, ...extra });
 const OWNER = { uid: 'u', email: 'owner@example.com' };
 const page = (cloud, state) => syncPage(mods, cloud, state, { isDemo: (u) => u.email === OWNER.email });
 const signIn = async (p) => { p.sync.start(OWNER); await settle(); };

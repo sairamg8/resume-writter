@@ -1,6 +1,7 @@
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { setup, teardown, resume, experience, section, render, read, loadModule } from './harness.mjs';
+import { DATA_VERSION } from '../../src/utils/dataVersion.js';
 
 before(setup);
 after(teardown);
@@ -92,7 +93,7 @@ describe('stored Typography numbers print within the panel\'s ranges (VF2-3.2-NB
       { fontSizeBase: 8, fontSizeNameDelta: 28, fontSizeSectionDelta: -2, fontSizeEntryDelta: 16, iconSize: 8 },
       { fontSizeBase: 16, fontSizeNameDelta: 0, fontSizeSectionDelta: 8, fontSizeEntryDelta: -10, iconSize: 20 },
     ]) {
-      const stored = { ...cv('classic', settings), dataVersion: 99 };
+      const stored = { ...cv('classic', settings), dataVersion: DATA_VERSION };
       assert.equal(normalizeResume(stored), stored, JSON.stringify(settings));
     }
   });

@@ -10,6 +10,7 @@ import { createElement } from 'react';
 import { setup, teardown, loadModule } from './harness.mjs';
 import { fakeFirestore, fakeStore, manualTimers, recorder, syncModules, resumePath, settle } from './fake-firestore.mjs';
 import { fakeWindow, mount } from './fake-dom.mjs';
+import { DATA_VERSION } from '../../src/utils/dataVersion.js';
 
 // No Firebase in this test's build, whatever .env holds: useCloudSync's module then has no
 // Firestore (a clone without the config), so mounting it never reaches a real project. Read when
@@ -25,7 +26,7 @@ before(async () => {
 });
 after(teardown);
 
-const cv = (id, updatedAt = 1) => ({ id, name: id, updatedAt, sections: [], dataVersion: 99, template: 'classic' });
+const cv = (id, updatedAt = 1) => ({ id, name: id, updatedAt, sections: [], dataVersion: DATA_VERSION, template: 'classic' });
 const USER = { uid: 'u', email: 'someone@example.com' };
 const unavailable = () => Object.assign(new Error('unavailable: refused'), { code: 'unavailable' });
 const SECOND = 1000;
