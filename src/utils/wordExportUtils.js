@@ -1,5 +1,5 @@
 import {
-  Paragraph, TextRun, BorderStyle, TabStopType, ExternalHyperlink, AlignmentType,
+  Paragraph, TextRun, BorderStyle, TabStopType, ExternalHyperlink, AlignmentType, HeadingLevel,
 } from 'docx';
 import { parseRichText, safeHref } from '@/utils/richText';
 import { PAGE_MARKS } from '@/templates/pdf/shared/pdfColors';
@@ -64,6 +64,10 @@ export const centredIf = (centered) => (centered ? { alignment: AlignmentType.CE
  * `heading`: Design → Section Headings as the PDF draws them (buildSection's headingOf, ONB-12-NB1)
  * — `{ color, border?, shading? }`; without one (the Sidebar's side column, whose titles take no
  * Section Headings), the accent over an accent underline.
+ * The title is a Word Heading 1 (Microsoft's guidance: the Navigation pane, screen readers and
+ * parsers find the sections, ATS-6). Its whole look is still the direct formatting below, and the
+ * Heading 1 style (wordExport.js buildDocument) sets only the document font and outline level, so
+ * the style changes nothing on the page.
  */
 export function sectionHeading(title, accentHex, centered = false, heading = null) {
   const base = heading?.color
@@ -72,6 +76,7 @@ export function sectionHeading(title, accentHex, centered = false, heading = nul
   const { color, size, ...frame } = base;
   const titleSize = size ?? 24;
   return new Paragraph({
+    heading: HeadingLevel.HEADING_1,
     children: [new TextRun({ text: String(title || ''), bold: true, size: titleSize, color })],
     ...frame,
     spacing: { before: 180, after: 60 },

@@ -26,6 +26,17 @@ function buildDocument(children, settings) {
           run: { font, size: baseSize },
           paragraph: { spacing: { after: 40 } },
         },
+        // Section titles are Heading 1 (sectionHeading, ATS-6); this replaces docx's own Heading 1
+        // (2E74B5, 16 pt). It sets only outline level 1 and the document font: every visible
+        // property of a title is its direct formatting, so the page looks as it did. Measured in
+        // LibreOffice, which maps Heading 1 onto its own heading style:
+        // - the font is here because a Heading 1 naming none prints in LibreOffice's heading font
+        //   (Liberation Sans);
+        // - it is based on no style: based on the "Normal" this file does not define, it inherits
+        //   LibreOffice's "Heading", whose sans-serif class then picks the stand-in for a font the
+        //   reader has not installed (Inter, Roboto, a Custom font…) — a sans where the body text
+        //   around it gets a serif. Word resolves both from docDefaults either way.
+        heading1: { basedOn: undefined, run: { font }, paragraph: { outlineLevel: 0 } },
       },
     },
     sections: [{

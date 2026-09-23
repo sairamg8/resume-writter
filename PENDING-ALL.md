@@ -17,7 +17,7 @@
 |---|---|---|---|
 | D1 | **Push policy.** Keep pushing after each finished bug (each push deploys the site), or push only on your word? The gate = all node tests + production build + private-data scan, then `git push` of exactly that commit. | Owed since 2026-09-22 22:20, when you stopped a push: *"Kill existing agenet i am not in hurry to gate ( i am not sure what it is ) and for push"* | **19 unpushed commits, 12 bug fixes, none deployed** |
 | D2 | **Templates UI — 5 decisions** (`templates-ui-plan.md` §7): audit scope · presets-first vs the 10 new layouts · preview-then-Apply vs apply+Undo · thumbnails as built images + declare `@napi-rs/canvas` · start now or after the bugs | 2026-09-22 ~21:50 | All 16 templates-UI suggestions (A1–F1) |
-| D3 | **ATS-6** — should Word section headings become real Word Heading styles? Microsoft advises it; not proven to matter to any ATS. | 2026-09-22 | ATS-6 only |
+| D3 | ✅ **Closed 2026-09-23** — ~~**ATS-6** — should Word section headings become real Word Heading styles? Microsoft advises it; not proven to matter to any ATS.~~ Yes, Heading styles, look unchanged (owner away, ordered the recommended action): built only because the .docx is measured identical — see ATS-6 in `bug-status.md`. | 2026-09-22 | — |
 | D4 | **Accessibility** — excluded by you on 2026-09-16 (A11Y-1…6). Still excluded? | 2026-09-16 | 6 tasks + every `a11y:` finding |
 | D5 | **Housekeeping calls** — declare `@napi-rs/canvas` (used by 11-photo tests, undeclared); drop unused `file-saver`. | 2026-09-21 | Trivial, but yours |
 
@@ -28,7 +28,7 @@
 See **[bug-status.md](bug-status.md)**. Summary only:
 
 - **12 AUD** — AUD-23, AUD-24 (Medium) then AUD-25…AUD-34 (Low). Next in queue: **AUD-23**.
-- **6 ATS** — ATS-1…ATS-6, no order set. ATS-3 has no fix in react-pdf v4; ATS-6 waits on **D3**.
+- **6 ATS** — ATS-1…ATS-6, no order set. ATS-3 has no fix in react-pdf v4; ATS-6 is fixed (D3 closed).
 - **12 fixed but unpushed** (AUD-09…AUD-22) — waits on **D1**.
 
 ---
