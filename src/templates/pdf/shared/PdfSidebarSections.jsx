@@ -4,6 +4,7 @@ import { PdfRichText } from './PdfRichText';
 import { hasRichText } from '@/utils/richText';
 import { dateRange, presentLabel } from '@/utils/dates';
 import { SectionTitleOf, RenderBullets, RenderColGrid, hexAlpha, SectionRouter, SPACER, ItemHeader, shadesOf } from './PdfSections';
+import { CentredLine, EndRow, endField, fieldGap, onBaselineOf } from './PdfItemHeader';
 import {
   SIDEBAR_TYPES, SideSectionTitle, EntryLink, SideEducation, SideLanguages, SideCertifications, SideInterests, SideReferences,
 } from './PdfSidebarColumn';
@@ -39,31 +40,43 @@ function CardItem({ children }) {
 }
 
 /**
- * A card's header row: its title lines on the left and the date on the right — or, under
- * Section Options → Alignment "Center", all of it centred on the card, the date on a line of its
- * own, as ItemHeader centres the other templates' entries (R6-1). The date keeps its width
- * because the title column is flex: 1 (basis 0); react-pdf 4 reads flexShrink 0 as 1 (VM3-9).
+ * A card's header, laid out as ItemHeader lays out the other templates' (PdfItemHeader.jsx — ATS-1,
+ * ATS-2, ATS-5): the bold `first` line with the date at its right end, on its last line; under it the
+ * `details` line with the location at its right end; then `extra` (a project's link). Under Section
+ * Options → Alignment "Center" all of it is centred on the card (R6-1): the date after the first
+ * line's " · ", the location on a line of its own.
  */
-function CardHeader({ centered, entrySize, lineH, dateStr, dateStyle, children }) {
+function CardHeader({ centered, entrySize, lineH, first, details, loc, locStyle, extra, dateStr, dateStyle, sepColor }) {
+  const keep = { wrap: false, minPresenceAhead: Math.round(entrySize * lineH * 2) };
   if (centered) {
     return (
-      <View wrap={false} minPresenceAhead={Math.round(entrySize * lineH * 2)} style={{ alignItems: 'center' }}>
-        <View style={{ alignItems: 'center' }}>{children}</View>
-        {dateStr ? <Text style={{ ...dateStyle, marginTop: 1, textAlign: 'center' }}>{dateStr}</Text> : null}
+      <View {...keep} style={{ alignItems: 'center' }}>
+        <CentredLine first={first} date={dateStr} dateStyle={dateStyle} sepColor={sepColor} gap={fieldGap(dateStyle.fontSize)} />
+        {details}
+        {loc ? <Text style={{ ...locStyle, textAlign: 'center' }}>{loc}</Text> : null}
+        {extra}
       </View>
     );
   }
-  const childList = (Array.isArray(children) ? children : [children]).filter(Boolean);
-  const [first, ...rest] = childList;
   return (
-    <View wrap={false} minPresenceAhead={Math.round(entrySize * lineH * 2)}>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <View style={{ flex: 1 }}>{first}</View>
-        {dateStr ? <Text style={{ ...dateStyle, marginLeft: 6 }}>{dateStr}</Text> : null}
-      </View>
-      {rest}
+    <View {...keep}>
+      <EndRow left={first}>{endField(dateStr, dateStyle, 6)}</EndRow>
+      {details || loc ? <EndRow left={details}>{loc ? endField(loc, locStyle, fieldGap(locStyle.fontSize)) : null}</EndRow> : null}
+      {extra}
     </View>
   );
+}
+
+/**
+ * A card's date: a little smaller than its title, on the baseline of the title's last line (ATS-5).
+ * It inherited the page's taller line box, which set it 1.6 pt above a one-line title's baseline
+ * and 4.9 pt above a wrapped one's.
+ */
+function cardDateStyle(settings, entrySize, color) {
+  const font = settings?._pdfFontFamily;
+  const title = { fontFamily: font, fontSize: entrySize, fontWeight: 'bold', lineHeight: entrySize * 1.2 };
+  const date = { fontFamily: font, fontSize: entrySize - 1.5 };
+  return { fontSize: date.fontSize, color, lineHeight: onBaselineOf(title, date) };
 }
 
 export function SidebarMainExperience({ section, settings, marginBottom, spaceBefore, itemGap }) {
@@ -80,7 +93,7 @@ export function SidebarMainExperience({ section, settings, marginBottom, spaceBe
   const visibleItems = (section.items || []).filter(i => i.visible !== false);
   const centered   = s.alignment === 'center';
   const textAlign  = centered ? 'center' : 'left';
-  const dateStyle  = { fontSize: entrySize - 1.5, color: shade.muted };
+  const dateStyle  = cardDateStyle(settings, entrySize, shade.muted);
 
   return (
     <View style={{ marginBottom, marginTop: spaceBefore }}>
@@ -100,15 +113,16 @@ export function SidebarMainExperience({ section, settings, marginBottom, spaceBe
           const dateStr  = showDates ? dateRange(sd, ed, settings) : '';
           const primary  = titleOrder === 'role' ? role    : company;
           const secondary = titleOrder === 'role' ? company : role;
-          const subLine  = [secondary, loc].filter(Boolean).join(' · ');
           const desc = iH.includes('description') ? '' : item.description;
           return (
             <CardItem key={idx}>
               {titleStyle === 'stacked' ? (
-                <CardHeader centered={centered} entrySize={entrySize} lineH={lineH} dateStr={dateStr} dateStyle={dateStyle}>
-                  {primary ? <Text style={{ fontSize: entrySize, fontWeight: 'bold', color: textColor, lineHeight: 1.2, textAlign }}>{primary}</Text> : null}
-                  {subLine ? <Text style={{ fontSize: entrySize - 1, color: hexAlpha(accent, 0.8), lineHeight: 1.2, textAlign }}>{subLine}</Text> : null}
-                </CardHeader>
+                <CardHeader
+                  centered={centered} entrySize={entrySize} lineH={lineH} dateStr={dateStr} dateStyle={dateStyle} sepColor={shade.muted}
+                  first={primary ? <Text style={{ fontSize: entrySize, fontWeight: 'bold', color: textColor, lineHeight: 1.2, textAlign }}>{primary}</Text> : null}
+                  details={secondary ? <Text style={{ fontSize: entrySize - 1, color: hexAlpha(accent, 0.8), lineHeight: 1.2, textAlign }}>{secondary}</Text> : null}
+                  loc={loc} locStyle={{ fontSize: entrySize - 1, color: shade.muted, lineHeight: 1.2 }}
+                />
               ) : (
                 // Title "Inline" / "Side by side": the shared one-line header, as the other templates print it.
                 <ItemHeader primary={primary} sub={secondary || undefined} loc={loc || undefined} dateStr={dateStr} settings={settings} titleStyle={titleStyle} centered={centered} />
@@ -136,7 +150,7 @@ export function SidebarMainProjects({ section, settings, marginBottom, spaceBefo
   const visibleItems = (section.items || []).filter(i => i.visible !== false);
   const centered   = s.alignment === 'center';
   const textAlign  = centered ? 'center' : 'left';
-  const dateStyle  = { fontSize: entrySize - 1.5, color: shade.muted };
+  const dateStyle  = cardDateStyle(settings, entrySize, shade.muted);
 
   return (
     <View style={{ marginBottom, marginTop: spaceBefore }}>
@@ -150,13 +164,12 @@ export function SidebarMainProjects({ section, settings, marginBottom, spaceBefo
           const dateStr = showDates ? dateRange(item.startDate, item.endDate, settings) : '';
           return (
             <CardItem key={idx}>
-              <CardHeader centered={centered} entrySize={entrySize} lineH={lineH} dateStr={dateStr} dateStyle={dateStyle}>
-                <Text style={{ fontSize: entrySize, fontWeight: 'bold', color: textColor, lineHeight: 1.2, textAlign }}>
-                  {item.name}
-                  {item.technologies ? <Text style={{ fontSize: entrySize - 1, color: hexAlpha(accent, 0.7), fontWeight: 'normal' }}>{` · ${item.technologies}`}</Text> : null}
-                </Text>
-                {item.url ? <EntryLink url={item.url} style={{ fontSize: entrySize - 1.5, color: accent, textAlign }} /> : null}
-              </CardHeader>
+              <CardHeader
+                centered={centered} entrySize={entrySize} lineH={lineH} dateStr={dateStr} dateStyle={dateStyle} sepColor={shade.muted}
+                first={item.name ? <Text style={{ fontSize: entrySize, fontWeight: 'bold', color: textColor, lineHeight: 1.2, textAlign }}>{item.name}</Text> : null}
+                details={item.technologies ? <Text style={{ fontSize: entrySize - 1, color: hexAlpha(accent, 0.7), lineHeight: 1.2, textAlign }}>{item.technologies}</Text> : null}
+                extra={item.url ? <EntryLink url={item.url} style={{ fontSize: entrySize - 1.5, color: accent, textAlign }} /> : null}
+              />
               {hasRichText(item.description) ? (
                 <PdfRichText html={item.description} style={{ fontSize: entrySize - 0.5, color: shade.body, lineHeight: lineH, marginTop: 2, textAlign }} />
               ) : null}

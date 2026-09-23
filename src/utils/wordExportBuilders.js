@@ -53,6 +53,12 @@ const shown = (section) => (section.items || []).filter((item) => item && item.v
 /** A field of an entry, or '' when its eye toggle hides it. */
 const field = (item, key) => ((item.hiddenFields || []).includes(key) ? '' : (item[key] || ''));
 
+/**
+ * An entry's location for dateRightPara: a line of its own under the date, in the date's size and
+ * grey — the PDF prints it with the date, never in the title's text (ATS-1).
+ */
+const place = (text, sizes) => (text ? { text, color: GREY, size: sizes.base } : null);
+
 /** Description + legacy bullets of an entry, centred in a centred section. */
 function body(item, centered, baseSize = 22) {
   const paras = [];
@@ -75,8 +81,7 @@ export function buildExperience(section, accentHex, settings, centered, dateHex 
     paras.push(dateRightPara([
       primary && bold(primary, { size: sizes.entry }),
       ...(secondary ? [normal(`${primary ? ' — ' : ''}${secondary}`, { size: sizes.entry })] : []),
-      ...(location ? [normal(`, ${location}`, { size: sizes.entry, color: GREY })] : []),
-    ], s.showDates !== false ? dates : '', dateHex, centered, sizes.base));
+    ], s.showDates !== false ? dates : '', dateHex, centered, sizes.base, place(location, sizes)));
     paras.push(...body(item, centered, sizes.base), spacer());
   }
   return paras;
@@ -92,8 +97,7 @@ export function buildEducation(section, accentHex, settings, centered, dateHex =
       (item.institution || degree) && bold(item.institution || degree, { size: sizes.entry }),
       ...(item.institution && degree ? [normal(` — ${degree}`, { size: sizes.entry })] : []),
       ...(item.gpa ? [normal(` · GPA: ${item.gpa}`, { size: sizes.entry, color: GREY })] : []),
-      ...(location ? [normal(`, ${location}`, { size: sizes.entry, color: GREY })] : []),
-    ], s.showDates !== false ? dateRange(item.startDate, item.endDate, settings) : '', dateHex, centered, sizes.base));
+    ], s.showDates !== false ? dateRange(item.startDate, item.endDate, settings) : '', dateHex, centered, sizes.base, place(location, sizes)));
     paras.push(...body(item, centered, sizes.base), spacer());
   }
   return paras;
@@ -189,8 +193,7 @@ export function buildVolunteering(section, accentHex, settings, centered, dateHe
     paras.push(dateRightPara([
       (item.role || item.org) && bold(item.role || item.org, { size: sizes.entry }),
       ...(item.role && item.org ? [normal(` — ${item.org}`, { size: sizes.entry })] : []),
-      ...(location ? [normal(`, ${location}`, { size: sizes.entry, color: GREY })] : []),
-    ], s.showDates !== false ? dateRange(item.startDate, item.endDate, settings) : '', dateHex, centered, sizes.base));
+    ], s.showDates !== false ? dateRange(item.startDate, item.endDate, settings) : '', dateHex, centered, sizes.base, place(location, sizes)));
     paras.push(...body(item, centered, sizes.base), spacer());
   }
   return paras;
@@ -230,8 +233,7 @@ export function buildCustom(section, accentHex, settings, centered, dateHex = ac
     paras.push(dateRightPara([
       ...(item.title ? [bold(item.title, { size: sizes.entry })] : []),
       ...(item.subtitle ? [normal(`${item.title ? ' — ' : ''}${item.subtitle}`, { size: sizes.entry })] : []),
-      ...(item.location ? [normal(`, ${item.location}`, { size: sizes.entry, color: GREY })] : []),
-    ], s.showDates !== false ? formatDate(item.date || '', settings) : '', dateHex, centered, sizes.base));
+    ], s.showDates !== false ? formatDate(item.date || '', settings) : '', dateHex, centered, sizes.base, place(item.location, sizes)));
     paras.push(...body(item, centered, sizes.base), spacer());
   }
   return paras;

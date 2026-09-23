@@ -48,6 +48,25 @@ export function textWidth(text, { fontFamily, fontSize = 12, fontWeight, letterS
   return width + letterSpacing * Math.max(0, chars.length - 1);
 }
 
+/** Noto Sans's vertical metrics per em (hhea), for a family with no loaded face. */
+const NOTO_METRICS = { ascent: 1.069, descent: -0.293, lineGap: 0 };
+
+/**
+ * The line box textkit gives one line of text in `style` ({ fontFamily, fontSize, fontWeight,
+ * lineHeight }), pt: its `height` — `lineHeight` (absolute pt) when the text has one, else the
+ * face's ascent − descent + lineGap — and the `ascent` its baseline sits below the box's top
+ * (react-pdf draws a line's baseline its ascent down, whatever its lineHeight). Several styles:
+ * a line holding a run of each, whose box is the largest of theirs.
+ */
+export function lineBox(styles) {
+  return [].concat(styles).reduce((box, { fontFamily, fontSize = 12, fontWeight, lineHeight } = {}) => {
+    const [face] = faces(fontFamily, fontWeight);
+    const m = face ? { ascent: face.ascent / face.unitsPerEm, descent: face.descent / face.unitsPerEm, lineGap: (face.lineGap || 0) / face.unitsPerEm } : NOTO_METRICS;
+    const height = lineHeight ?? (m.ascent - m.descent + m.lineGap) * fontSize;
+    return { height: Math.max(box.height, height), ascent: Math.max(box.ascent, m.ascent * fontSize) };
+  }, { height: 0, ascent: 0 });
+}
+
 /**
  * The narrowest box `text` prints in with no word running out of it: the width of its widest
  * unbreakable piece in `style`. textkit breaks a line only at spaces, and inside a long token at

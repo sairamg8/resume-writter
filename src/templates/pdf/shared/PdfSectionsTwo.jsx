@@ -15,6 +15,7 @@ import {
   getDateColor,
   shadesOf,
 } from './PdfSections';
+import { CentredLine, EndRow, endField, fieldGap, onBaselineOf } from './PdfItemHeader';
 
 export function CertificationsSection({ section, settings, marginBottom, spaceBefore, itemGap, italicSubs, centered }) {
   const s        = section.settings || {};
@@ -39,6 +40,8 @@ export function CertificationsSection({ section, settings, marginBottom, spaceBe
         gap={itemGap}
         renderItem={(item) => {
           const dateStr = showDates ? dateRange(item.date, item.expiry, settings) : '';
+          const font = settings?._pdfFontFamily;
+          const onName = onBaselineOf([{ fontFamily: font, fontSize: entrySize, fontWeight: 'bold' }, { fontFamily: font, fontSize: entrySize }], { fontFamily: font, fontSize: baseSize });
           const nameLine = (
             <Text style={{ fontSize: entrySize, color: textColor, textAlign }}>
               <Text style={{ fontWeight: 'bold' }}>{item.name || item.title}</Text>
@@ -56,11 +59,8 @@ export function CertificationsSection({ section, settings, marginBottom, spaceBe
             );
           }
           return (
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              {/* flex: 1 (basis 0) keeps the date whole; react-pdf 4 reads flexShrink 0 as 1 (VM3-9). */}
-              <View style={{ flex: 1 }}>{nameLine}</View>
-              {dateStr ? <Text style={{ fontSize: baseSize, color: dateColor, marginLeft: 8, textAlign }}>{dateStr}</Text> : null}
-            </View>
+            // The date on the name line's LAST line and its baseline, so a name that wraps reads whole (ATS-5).
+            <EndRow left={nameLine}>{endField(dateStr, { fontSize: baseSize, color: dateColor, textAlign, lineHeight: onName }, 8)}</EndRow>
           );
         }}
       />
@@ -78,7 +78,8 @@ export function ProjectsSection({ section, settings, marginBottom, spaceBefore, 
   const lineH      = settings?.lineHeightValue || 1.5;
   const visibleItems = (section.items || []).filter(i => i.visible !== false);
   const cols       = s.columns || 1;
-  const flexAlign  = centered ? 'center' : 'flex-start';
+  // Left: stretched, so the date row spans the entry and puts the date at its right end.
+  const flexAlign  = centered ? 'center' : 'stretch';
   const textAlign  = centered ? 'center' : 'left';
   const isModern   = settings?._template === 'modern';
   const dateColor  = getDateColor(settings);
@@ -94,15 +95,24 @@ export function ProjectsSection({ section, settings, marginBottom, spaceBefore, 
         gap={itemGap}
         renderItem={(item) => {
           const dateStr = showDates ? dateRange(item.startDate, item.endDate, settings) : '';
+          // The name alone on the first line with the date, as a job's header prints it: a parser reads
+          // a project's header as its first line (ATS-2). Technologies and link on the line under it.
+          // Unbreakable and kept with two lines of what follows, as ItemHeader keeps a job's header.
+          const name = <Text style={{ fontSize: entrySize, fontWeight: 'bold', color: textColor, textAlign }}>{item.name}</Text>;
+          const font = settings?._pdfFontFamily;
+          const dateStyle = { fontSize: baseSize, color: dateColor, lineHeight: onBaselineOf({ fontFamily: font, fontSize: entrySize, fontWeight: 'bold' }, { fontFamily: font, fontSize: baseSize }) };
           return (
             <View>
-              <View style={{ alignItems: flexAlign, marginBottom: 2 }}>
-                <Text style={{ fontSize: entrySize, fontWeight: 'bold', color: textColor, textAlign }}>
-                  {item.name}
-                  {item.technologies ? <Text style={{ fontSize: baseSize, color: shade.meta, fontWeight: 'normal' }}>{` · ${item.technologies}`}</Text> : null}
-                  {item.url          ? <Text style={{ fontSize: baseSize, color: accent,    fontWeight: 'normal' }}>{' · '}<ContactValue value={item.url} href={safeHref(item.url)} style={{ color: accent }} /></Text> : null}
-                </Text>
-                {dateStr ? <Text style={{ fontSize: baseSize, color: dateColor, marginTop: 1, textAlign }}>{dateStr}</Text> : null}
+              <View wrap={false} minPresenceAhead={Math.round(baseSize * (settings?.lineHeightValue ?? 1.5) * 2)} style={{ alignItems: flexAlign, marginBottom: 2 }}>
+                {centered
+                  ? <CentredLine first={item.name ? name : null} date={dateStr} dateStyle={dateStyle} sepColor={shade.muted} gap={fieldGap(baseSize)} />
+                  : <EndRow left={name}>{endField(dateStr, dateStyle, fieldGap(baseSize))}</EndRow>}
+                {item.technologies || item.url ? (
+                  <Text style={{ fontSize: baseSize, color: shade.meta, textAlign }}>
+                    {item.technologies}
+                    {item.url ? <Text style={{ color: accent }}>{item.technologies ? ' · ' : ''}<ContactValue value={item.url} href={safeHref(item.url)} style={{ color: accent }} /></Text> : null}
+                  </Text>
+                ) : null}
               </View>
               {hasRichText(item.description) && (
                 <PdfRichText html={item.description} style={{ fontSize: entrySize - 0.5, color: shade.body, lineHeight: lineH, marginTop: 2, textAlign }} />

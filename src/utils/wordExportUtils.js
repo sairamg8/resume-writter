@@ -157,18 +157,23 @@ export function descriptionToParagraphs(html, base = { size: 20, color: '374151'
 
 /**
  * An entry's title line, its date at the right margin — or, `centered` (Section Options →
- * Alignment "Center"), the line centred and the date centred on a line of its own below it, as
- * the PDF's centred entries print it. Empty parts (null, false, '') are left out, so a line with
- * nothing but a date prints the date alone.
+ * Alignment "Center"), the line centred and the date centred on a line of its own below it.
+ * Empty parts (null, false, '') are left out, so a line with nothing but a date prints the date
+ * alone. `place` ({ text, color, size }: the entry's location) prints on a line of its own under
+ * the date — at the same right tab, or centred — never in the title's text, where a parser reads
+ * it as part of the job title or the company (ATS-1), as the PDF keeps it a field of its own.
  */
-export function dateRightPara(leftChildren, rightText, colorHex, centered = false, size = 20) {
+export function dateRightPara(leftChildren, rightText, colorHex, centered = false, size = 20, place = null) {
   const left = leftChildren.filter(Boolean);
   const date = (extra) => (rightText ? [new TextRun({ text: String(rightText), color: colorHex, size, ...extra })] : []);
+  const where = place?.text ? String(place.text) : '';
   if (centered) {
-    return new Paragraph({ children: [...left, ...date(left.length ? { break: 1 } : {})], keepNext: true, ...centredIf(true) });
+    const under = where ? [new TextRun({ text: where, color: place.color, size: place.size, ...(left.length || rightText ? { break: 1 } : {}) })] : [];
+    return new Paragraph({ children: [...left, ...date(left.length ? { break: 1 } : {}), ...under], keepNext: true, ...centredIf(true) });
   }
+  const under = where ? [new TextRun({ text: '\t', ...(left.length || rightText ? { break: 1 } : {}) }), new TextRun({ text: where, color: place.color, size: place.size })] : [];
   return new Paragraph({
-    children: [...left, ...(rightText ? [new TextRun({ text: '\t' })] : []), ...date()],
+    children: [...left, ...(rightText ? [new TextRun({ text: '\t' })] : []), ...date(), ...under],
     tabStops: [{ type: TabStopType.RIGHT, position: 9000 }],
     keepNext: true,
   });
