@@ -6,10 +6,12 @@
 // Greenhouse documents what breaks its parser (columns, header/footer contacts, letter-spaced words, images,
 // unclear sections) and these checks cover the text stage all of them start with.
 //
+// Poppler's -raw mode re-derives words from geometry, not from the space glyphs that are there, so a
+// word gap under ~0.2 em reads glued. Both ways a gap got that narrow are handled and tested below: a
+// narrow-space font (Lato, Source Sans 3, Literata — prepareFonts widens its space) and a line react-pdf
+// closes up to fit its box, or tracks negatively (ATS-4 — the textkit patch floors every word gap).
+//
 // Known limits are `todo`, not silent: they print in every run until they are fixed or accepted.
-//   • Poppler's -raw mode re-derives words from geometry, not from the space glyphs that are there. A
-//     narrow-space font (Lato, Source Sans 3, Literata) is now handled — prepareFonts widens its space —
-//     but a near-full line react-pdf draws as one contiguous glyph run still reads glued, in any font.
 //   • The Sidebar template's styled two columns interleave under Poppler's reading-order and -layout
 //     modes; its Layout → "Single · ATS-safe" toggle collapses it to one linear column that parses whole.
 import { before, after, describe, it } from 'node:test';
@@ -138,17 +140,29 @@ describe('narrow-space fonts read whole under Poppler -raw', () => {
   }
 });
 
-describe('known limits (todo: reported until fixed or accepted)', () => {
-  it('every demo résumé reads whole under Poppler -raw', { todo: "a near-full line react-pdf draws as one contiguous glyph run reads glued under -raw, even in normal-width fonts: the space chars are there (ToUnicode maps them to U+0020) but -raw drops them and re-derives words from geometry, and its word-break gap is ~0.29 em — above the ~0.26 em a normal space renders. Splitting the run does not help (measured: Poppler ignores the split and keeps merging under the gap); the only lever is widening every space to ~0.29 em globally, declined — it loosens the default font for one CLI flag when pdf.js, pdftotext default, -layout, PDFBox and Tika all read these lines whole. Narrow-space fonts (Lato/Source Sans 3/Literata) are handled (tested above)" }, async () => {
-    const { DEMO_RESUMES } = await loadModule('/tests/fixtures/sampleResumes.js');
-    const found = [];
-    for (const r of DEMO_RESUMES) {
-      const raw = pdftotext(await render(r)).find(([n]) => n.includes('-raw'));
-      if (raw) found.push(...problems(`${r.template} ${raw[0]}`, score(truthBlocks(r), raw[1])));
-    }
-    assert.deepEqual(found, []);
-  });
+describe('closed-up lines read whole under Poppler -raw (ATS-4)', () => {
+  // react-pdf fits a line a little too wide for its box by narrowing its word gaps — left, centred and
+  // justified text alike — down to 2/3 of a space: 0.173 em in Noto Sans, under -raw's ~0.201 em word
+  // break, so "Led design-system and performance work for pro…" read "Leddesign-systemandperformanceworkforpro".
+  // The textkit patch floors every word gap of a laid-out line at 0.22 em (41-word-gaps reads the gaps
+  // themselves). Lato and Roboto glued the most; Lato also glued Minimal's name ("JordanRivera"), whose
+  // letterSpacing −0.3 narrows its one gap.
+  for (const font of [undefined, 'lato', 'roboto']) {
+    it(`every demo résumé reads whole under -raw, ${font || 'in its own font'}`, async (t) => {
+      if (!hasPdftotext) { t.skip('pdftotext not installed'); return; }
+      const { DEMO_RESUMES } = await loadModule('/tests/fixtures/sampleResumes.js');
+      const found = [];
+      for (const demo of DEMO_RESUMES) {
+        const r = font ? { ...demo, settings: { ...demo.settings, font } } : demo;
+        const raw = pdftotext(await render(r)).find(([n]) => n.includes('-raw'));
+        found.push(...problems(`${r.template} ${raw[0]}`, score(truthBlocks(r), raw[1])));
+      }
+      assert.deepEqual(found, []);
+    });
+  }
+});
 
+describe('known limits (todo: reported until fixed or accepted)', () => {
   it('the styled two-column Sidebar reads whole under Poppler reading order and -layout', { todo: 'two columns: Greenhouse lists columned layouts as a parsing risk; Poppler interleaves them. The ATS-safe fix is the single-column toggle (tested above), not tagged PDF, which react-pdf v4 cannot emit' }, async () => {
     const { DEMO_RESUMES } = await loadModule('/tests/fixtures/sampleResumes.js');
     const r = DEMO_RESUMES.find((x) => x.template === 'sidebar');

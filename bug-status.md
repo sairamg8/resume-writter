@@ -2,20 +2,20 @@
 
 > Location: `/mnt/Storage/Projects/flowcv/bug-status.md`
 > Updated: 2026-09-23 · every row **verified independently at `d495cb2`** (see Verification pass) ·
-> `origin/master` (deployed) = `68b3855` · **nothing is waiting to be pushed**
-> **Open: 178** (7 here + 171 from the full audit in [bug-status-r2/](bug-status-r2/README.md)) | Fixed, not pushed: 0 | **Closed: 74**
+> `origin/master` (deployed) = `68b3855` · **ATS-4 is fixed and waiting to be pushed**
+> **Open: 177** (6 here + 171 from the full audit in [bug-status-r2/](bug-status-r2/README.md)) | Fixed, not pushed: 1 | **Closed: 74**
 
 ## Summary
 
 | List | Found | ✅ Fixed and pushed | ⏸ Fixed, local only | 🔴 Open |
 |---|---|---|---|---|
 | Bug audit, 2026-09-22 (`AUD-`) | 35 (34 + one follow-up) | 35 | 0 | 0 |
-| ATS parsing defects (`ATS-`) | 6 | 0 | 0 | **6** |
+| ATS parsing defects (`ATS-`) | 6 | 0 | 1 | **5** |
 | Templates UI audit, 2026-09-23 (`TUI-`) | 7 | 6 | 0 | **1** |
 | Prompt tasks, 2026-09-14 → 09-21 | 33 | 33 | 0 | 0 |
 | Full audit, 2026-09-23 — defects (`R2-001`…`R2-134`, [bug-status-r2/](bug-status-r2/README.md)) | 134 | 0 | 0 | **134** |
 | Full audit, 2026-09-23 — features and test gaps (`R2-135`…`R2-171`) | 37 | 0 | 0 | **37** |
-| **Total** | **252** | **74** | **0** | **178** |
+| **Total** | **252** | **74** | **1** | **177** |
 
 - **Status:** ✅ fixed and pushed (on `origin/master`, so deployed) · ⏸ fixed and committed, not pushed · 🔴 open.
 - **Severity (audit):** High = data loss, or a feature that does not work · Medium = a wrong result, no data loss ·
@@ -28,7 +28,7 @@
 ### Next in queue
 
 1. The AUD list is done: every row is ✅ (AUD-32 and AUD-33 last).
-2. ATS-1 … ATS-6 — no order set yet; ATS-6 waits on a decision.
+2. ATS-4 is ⏸, local. Then ATS-6, ATS-1/2/5 (the R2 execution run's order); ATS-6 waits on a decision.
 3. TUI-3, TUI-4, TUI-6 — TUI-6 to be filed as ATS-7.
 
 ✅ **All fixes are pushed.** `origin/master` = `68b3855` (AUD-33). Gate on that exact tree, 2026-09-23 20:44:
@@ -162,8 +162,8 @@ field-level scorer and a 300-case fuzz, plus OpenResume's parser run locally. No
 |---|---|---|---|---|
 | ATS-1 | Experience · every template | 🔴 Open | The work location is glued to the job title (Classic, Modern, Minimal) or to the company (Executive, Sidebar) with " · " (`src/templates/pdf/shared/PdfSections.jsx:130`, `:132`; `src/templates/pdf/shared/PdfSidebarSections.jsx:103`), so a parser reads the title as "Senior Frontend Engineer · Austin, TX". | OpenResume, at `46505ec` |
 | ATS-2 | Experience · no bullet glyph | 🔴 Open | An entry described in paragraphs, with no bullet glyph, loses its date: OpenResume takes only the first 2 lines as the entry's header, so a date on the 3rd line becomes description text. | OpenResume |
-| ATS-3 | Sidebar · two columns | 🔴 Open — no fix in react-pdf v4 | Poppler's reading order and `-layout` mode interleave the two columns (reading order 97.5 %, 3 entries interleaved; `-layout` 86.1 %, 11 facts lost). Only a tagged PDF would fix it, and react-pdf v4 can't write one; the Single · ATS-safe mode (`3818b7a`) avoids it. | Poppler — a `todo` test, `tests/pdf/40-ats-parse.test.mjs:152` |
-| ATS-4 | PDF text · `pdftotext -raw` | 🔴 Open | Poppler's `-raw` mode splits words by position and ignores the space glyphs, so words on a line the layout squeezes read glued. Narrow-space fonts (Lato, Source Sans 3, Literata) were fixed in `0765939`; squeezed lines are still open. pdf.js, MuPDF and Poppler's other modes read them fine. | Poppler — a `todo` test, `tests/pdf/40-ats-parse.test.mjs:142` |
+| ATS-3 | Sidebar · two columns | 🔴 Open — no fix in react-pdf v4 | Poppler's reading order and `-layout` mode interleave the two columns (reading order 97.5 %, 3 entries interleaved; `-layout` 86.1 %, 11 facts lost). Only a tagged PDF would fix it, and react-pdf v4 can't write one; the Single · ATS-safe mode (`3818b7a`) avoids it. | Poppler — a `todo` test, `tests/pdf/40-ats-parse.test.mjs:166` |
+| ATS-4 | PDF text · `pdftotext -raw` | ⏸ Fixed, local — this commit | Poppler's `-raw` mode splits words by position and ignores the space glyphs, so words on a line the layout squeezes read glued. Narrow-space fonts (Lato, Source Sans 3, Literata) were fixed in `0765939`; squeezed lines were still open: textkit's line breaker lets any line (left, centred or justified) run up to a third of its spaces wider than its box, and `justifyLine` closes it up out of the spaces first, down to 0.173 em in Noto Sans; a negative letterSpacing (Minimal's name `src/templates/pdf/MinimalTemplatePDF.jsx:53`, `:65`; its letterhead `src/templates/pdf/shared/letterhead.js:94`) narrows them too. -raw breaks words at ~0.201 em (measured, Poppler 26.01 — not the ~0.29 em the old todo said), so the demo résumés read "Leddesign-systemandperformanceworkforpro" (6 problems in the default font; Roboto and Lato worse, Lato also "JordanRivera"). **Now** a Yarn patch on `@react-pdf/textkit` 6.3.0 (`.yarn/patches/@react-pdf-textkit-npm-6.3.0-1e829976be.patch`, `resolutions` in `package.json`) runs `keepWordGaps` after every line's justification: each word gap under `KEEP_SPACE_EM` = 0.22 em (the twin of `MIN_SPACE_EM` in `pdfFontLoader.js`, which says to keep them equal) is widened to it and the same amount is taken back evenly from the gaps between letters (at most 0.05 em a letter), so line breaks, line widths and pages do not move. Owner away — took the diagnosis's recommended option (the textkit floor) because no in-repo fix exists: the engines in `@react-pdf/layout` are private, its `shrinkWhitespaceFactor` is hard-coded and `font.layout` runs before line breaking; the alternatives visibly change the page (capping the breaker's shrink rewraps lines and can change page counts; a global ~0.30 em space was declined before). Measured over 13 fonts × 5 templates × résumé + cover letter (130 PDFs), before → after: -raw problems 97 → 0, word gaps under 0.201 em 2103 → 0 (narrowest 0.125 → 0.220 em); page counts and `pdftotext -layout` text identical in all 130; the start and end of every one of 4971 baselines unchanged; glyphs inside a line move ≤ 0.71 pt and letters tighten ≤ 0.017 em. The preview is pdf.js painting the same PDF, so it matches. A react-pdf upgrade must re-make the patch (`yarn install` fails loudly if it no longer applies). pdf.js, MuPDF and Poppler's other modes read these lines fine before and after. | Poppler. Tests: `tests/pdf/40-ats-parse.test.mjs` ("closed-up lines read whole under Poppler -raw", own font + Lato + Roboto — was the `todo` at `:142`), `tests/pdf/41-word-gaps.test.mjs` (every word gap ≥ 0.21 em from pdf.js's operator list, no Poppler needed: 5 templates × 3 fonts, a justified summary, the Minimal letterhead in Lato; 14 of 18 failed before) |
 | ATS-5 | Experience · long role | 🔴 Open, latent | A long role that wraps beside a right-aligned date: Poppler's layout modes put the date inside the title (3 of 300 fuzz cases: Classic or Minimal, a large entry font, 28 mm margins). | ATS fuzz |
 | ATS-6 | Word export · headings | 🔴 Open — needs a decision | Section headings are not Word Heading styles (Microsoft's guidance; not proven to matter to an ATS). | Microsoft's guidance |
 

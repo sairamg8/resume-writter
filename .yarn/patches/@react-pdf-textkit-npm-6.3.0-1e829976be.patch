@@ -1,0 +1,103 @@
+diff --git a/lib/textkit.js b/lib/textkit.js
+index 0b8b6fa636c48ef0ac9cecb27040d2bac9303ce8..d338a5fd329c1e78628f33ff0ce3633c0156b944 100644
+--- a/lib/textkit.js
++++ b/lib/textkit.js
+@@ -1610,6 +1610,89 @@ const adjustOverflow = (line) => {
+     const box = Object.assign({}, line.box, { x, width });
+     return Object.assign({}, line, { box, overflowLeft, overflowRight });
+ };
++/**
++ * flowcv patch (ATS-4): the narrowest word gap a laid-out line keeps, in ems of the font size.
++ * Keep it equal to MIN_SPACE_EM in flowcv's src/templates/pdf/shared/pdfFontLoader.js.
++ */
++const KEEP_SPACE_EM = 0.22;
++/** flowcv patch (ATS-4): at most this much (em) comes off any one letter to pay for a wider gap. */
++const MAX_LETTER_TAKE_EM = 0.05;
++/**
++ * flowcv patch (ATS-4): keep every word gap of a line at least KEEP_SPACE_EM wide.
++ *
++ * The line breaker lets a line run up to a third of its spaces wider than its box (every
++ * paragraph, not only justified ones), and justifyLine closes such a line up by taking the
++ * squeeze out of the spaces first; a negative characterSpacing narrows them as well. Poppler's
++ * `pdftotext -raw` ignores the space glyphs and breaks words by the visible gap alone, at about
++ * 0.2 em, so such a line read "Leddesign-systemandperformancework". This widens each gap under the
++ * floor — measured from the end of the glyph before it (its own advance) to the glyph after it —
++ * and takes the same amount back evenly from the gaps between letters, so the line's width, its
++ * breaks and the page do not move. A line whose gaps all clear the floor is returned untouched.
++ *
++ * @param line - Line
++ * @returns Line
++ */
++const keepWordGaps = (line) => {
++    const cells = [];
++    for (const run of line.runs || []) {
++        const glyphs = run.glyphs || [];
++        const positions = run.positions || [];
++        const font = run.attributes?.font;
++        const unitsPerEm = typeof font === 'string' ? null : font?.[0]?.unitsPerEm;
++        const fontSize = run.attributes?.fontSize || 12;
++        for (let i = 0; i < glyphs.length; i += 1) {
++            const glyph = glyphs[i];
++            const position = positions[i];
++            if (!glyph || !position)
++                return line;
++            const natural = unitsPerEm && Number.isFinite(glyph.advanceWidth)
++                ? (glyph.advanceWidth * fontSize) / unitsPerEm
++                : null;
++            cells.push({ space: isWhiteSpace$1(glyph), mark: !!glyph.isMark, position, fontSize, natural });
++        }
++    }
++    let lastInk = cells.length - 1;
++    while (lastInk >= 0 && cells[lastInk].space)
++        lastInk -= 1;
++    const widen = [];
++    const letters = [];
++    let added = 0;
++    let minSize = Infinity;
++    for (let i = 0; i < lastInk; i += 1) {
++        const cell = cells[i];
++        if (cell.space)
++            continue; // leading whitespace is not a word gap
++        const next = cells[i + 1];
++        if (!next.space) {
++            if (!cell.mark && !next.mark) {
++                letters.push(cell);
++                minSize = Math.min(minSize, cell.fontSize);
++            }
++            continue;
++        }
++        let j = i + 1;
++        let gap = cell.natural === null ? Infinity : cell.position.xAdvance - cell.natural;
++        while (j < lastInk && cells[j].space) {
++            gap += cells[j].position.xAdvance;
++            j += 1;
++        }
++        const floor = KEEP_SPACE_EM * cell.fontSize;
++        if (gap < floor - 1e-6) {
++            widen.push([cells[j - 1], floor - gap]);
++            added += floor - gap;
++        }
++        i = j - 1;
++    }
++    if (added === 0 || letters.length === 0)
++        return line;
++    // A line of very short words has few letters to take from: keep each letter's share small.
++    const share = Math.min(1, (MAX_LETTER_TAKE_EM * minSize * letters.length) / added);
++    for (const [cell, amount] of widen)
++        cell.position.xAdvance += amount * share;
++    for (const cell of letters)
++        cell.position.xAdvance -= (added * share) / letters.length;
++    return line;
++};
+ /**
+  * Performs line justification by calling appropiate engine
+  *
+@@ -1630,7 +1713,7 @@ const justifyLine$1 = (engines, options, align) => {
+         const x = line.box.x + remainingWidth * alignFactor;
+         const box = Object.assign({}, line.box, { x });
+         const newLine = Object.assign({}, line, { box });
+-        return shouldJustify ? engines.justification(options)(newLine) : newLine;
++        return keepWordGaps(shouldJustify ? engines.justification(options)(newLine) : newLine);
+     };
+ };
+ const finalizeLine = (line) => {

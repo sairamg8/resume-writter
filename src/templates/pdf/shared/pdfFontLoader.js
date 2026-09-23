@@ -240,15 +240,15 @@ const primedFonts = new WeakSet();
 const noLigatures = () => ({ liga: false, clig: false }); // a new object each call: fontkit adds features to it
 
 /**
- * Poppler's `pdftotext -raw` groups glyphs into words by the visual gap between them, not the space
- * characters that are there (it drops the U+0020 and re-derives words from geometry), and merges two
- * words across a space narrower than ~0.21 em — "Builtthecheckoutflow". Measured over the picker:
- * only Lato (0.193 em), Source Sans 3 and Literata (0.200 em) fall under it; the next-narrowest font,
- * IBM Plex Sans (0.236 em), and every wider one (Roboto 0.248, Noto Sans 0.260, Inter 0.281) read
- * clean. MIN_SPACE_EM sits in that gap: widenNarrowSpace() lifts a too-narrow space to it in the
- * laid-out run — clearing the threshold with margin — while leaving every already-clean font (≥ 0.236)
- * untouched. The glyph still maps to U+0020 in the ToUnicode; the extra under 0.3 pt at a 10 pt body
- * is below notice, and flooring the run's xAdvance (not the font metric) keeps it robust to kerning.
+ * Poppler's `pdftotext -raw` drops the U+0020 glyphs and re-derives words from the visual gap, merging
+ * two words across a gap of ~0.201 em or less (Poppler 26.01) — "Builtthecheckoutflow". Of the picker,
+ * Lato (0.193 em), Source Sans 3 and Literata (0.200 em) ship a space under it; IBM Plex Sans (0.236)
+ * and every wider font (Roboto 0.248, Noto Sans 0.260, Inter 0.281) do not. widenNarrowSpace() lifts a
+ * too-narrow space to MIN_SPACE_EM in the laid-out run (the glyph still maps to U+0020; under 0.3 pt at
+ * 10 pt; the run's xAdvance, not the metric, so kerning cannot undo it). That is before line breaking:
+ * a line react-pdf closes up to fit, or a negative letterSpacing, narrows gaps after it. The textkit
+ * patch (.yarn/patches/@react-pdf-textkit-*.patch, ATS-4) floors every laid-out word gap at its
+ * KEEP_SPACE_EM, taken from the letters so breaks and widths hold. Keep the two equal.
  */
 const MIN_SPACE_EM = 0.22;
 
