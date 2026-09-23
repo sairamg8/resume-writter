@@ -142,8 +142,13 @@ export function generateAtsPlainText(resume) {
   if (p.title) lines.push(p.title);
 
   // Contacts line
-  const contacts = ['email', 'phone', 'location', 'linkedin', 'website', 'github']
-    .filter((k) => p[k] && !hiddenPersonal.has(k)).map((k) => p[k]);
+  const contacts = [];
+  if (p.email && !hiddenPersonal.has('email')) contacts.push(p.email);
+  if (p.phone && !hiddenPersonal.has('phone')) contacts.push(p.phone);
+  if (p.location && !hiddenPersonal.has('location')) contacts.push(p.location);
+  if (p.linkedin && !hiddenPersonal.has('linkedin')) contacts.push(p.linkedin);
+  if (p.website && !hiddenPersonal.has('website')) contacts.push(p.website);
+  if (p.github && !hiddenPersonal.has('github')) contacts.push(p.github);
   if (contacts.length) lines.push(contacts.join(' | '));
   lines.push('');
 
