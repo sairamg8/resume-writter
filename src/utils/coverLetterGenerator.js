@@ -85,7 +85,8 @@ export function generateCoverLetter({
   const highlights = extractResumeHighlights(resume);
   const targetCompany = company.trim() || '[Company Name]';
   const targetRole = role.trim() || highlights.candidateTitle || 'the position';
-  const recipient = recipientName.trim() || 'Hiring Team';
+  const typedRecipient = recipientName.trim();
+  const recipient = typedRecipient || 'Hiring Team';
   const skillsStr = highlights.topSkills.length > 0 ? highlights.topSkills.slice(0, 4).join(', ') : 'modern best practices';
 
   const mostRecent = highlights.topExperiences[0] || {
@@ -128,9 +129,12 @@ export function generateCoverLetter({
   // A line break inside a field reads as a space, as it did in the unescaped HTML, not as a <br>.
   const htmlBody = paragraphs.map(p => `<p>${plainTextToHtml(p.replace(/\s*[\r\n]+\s*/g, ' '))}</p>`).join('');
 
+  // The recipient block holds only what the user typed (AUD-31): the letter prints every filled
+  // line, so a generic 'Hiring Manager' for a blank name sat above "Dear Hiring Team,", and the
+  // modal asks for no title, so any title here was one the user never gave ('Hiring Team').
   return {
-    recipientName: recipientName.trim() || 'Hiring Manager',
-    recipientTitle: 'Hiring Team',
+    recipientName: typedRecipient,
+    recipientTitle: '',
     company: targetCompany === '[Company Name]' ? '' : targetCompany,
     subject,
     body: htmlBody,

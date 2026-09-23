@@ -54,8 +54,13 @@ export default function CoverLetterPanel({ resume, coverLetter, personal, settin
 
   function handleApplyGenerated(gen) {
     if (!gen) return;
-    if (gen.recipientName) updateCoverLetter('recipientName', gen.recipientName);
-    if (gen.recipientTitle) updateCoverLetter('recipientTitle', gen.recipientTitle);
+    // The recipient block is written whole, so it names whom the body greets (AUD-31): a blank
+    // name clears the last letter's (the body says "Dear Hiring Team,"), and a new name drops the
+    // last person's title. A title typed for this same person stays; the generator asks for none.
+    const name = gen.recipientName ?? '';
+    const samePerson = name !== '' && name === String(cl.recipientName ?? '').trim();
+    updateCoverLetter('recipientName', name);
+    if (gen.recipientTitle || !samePerson) updateCoverLetter('recipientTitle', gen.recipientTitle ?? '');
     if (gen.company) updateCoverLetter('company', gen.company);
     if (gen.subject) updateCoverLetter('subject', gen.subject);
     if (gen.body) updateCoverLetter('body', gen.body);

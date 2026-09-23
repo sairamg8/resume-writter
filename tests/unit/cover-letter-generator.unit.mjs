@@ -250,3 +250,12 @@ test('AUD-12: extractResumeHighlights ignores hidden entries (visible: false)', 
   assert.ok(!letter.body.includes('SecretSkill'));
   assert.ok(letter.body.includes('Visible Co'));
 });
+
+test('AUD-31: generateCoverLetter returns only the recipient typed — no "Hiring Manager" name, no "Hiring Team" title', () => {
+  const resume = { personal: { name: 'Ada', title: 'Engineer' }, sections: [] };
+  const blank = generateCoverLetter({ resume, recipientName: '  ' });
+  assert.deepEqual([blank.recipientName, blank.recipientTitle], ['', '']);
+  assert.ok(blank.body.includes('Dear Hiring Team,'), 'a blank recipient is still greeted generically');
+  const named = generateCoverLetter({ resume, recipientName: ' Jo Bennett ' });
+  assert.deepEqual([named.recipientName, named.recipientTitle], ['Jo Bennett', '']);
+});
