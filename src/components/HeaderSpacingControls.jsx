@@ -66,15 +66,16 @@ export function GapStepper({ row, onChange, onReset }) {
 }
 
 /**
- * The group: a heading, its Reset (every row back to the template's), `note` — a line saying why a
- * gap is not offered yet — and the rows.
+ * The group: a heading, its Reset (every row back to the template's, `allKeys` — not just the rows
+ * on screen), `note` — a line saying why a gap is not offered yet — and the rows. `setKeys`: the
+ * gaps this résumé has set, which is what Reset is offered for.
  */
-export function HeaderSpacingGroup({ title = 'Header spacing', rows, onChange, onClear, note, allKeys = HEADER_GAP_KEYS, settings }) {
+export function HeaderSpacingGroup({ title = 'Header spacing', rows, onChange, onClear, note, allKeys = HEADER_GAP_KEYS, setKeys }) {
   const titleId = useId();
-  const anySet = rows.some((r) => r.set) || (settings && allKeys.some((k) => {
-    if (k === 'headerInlineGap') return settings[k] != null && settings[k] !== 8;
-    return settings[k] != null;
-  }));
+  // Reset is live when anything is set, including a gap whose row the header does not show now
+  // (AUD-19) — `setKeys`, from headerGapKeysSet, which is the one rule for what "set" means. The
+  // rows' own flags are the same rule, and stand in where a caller passes no keys.
+  const anySet = (setKeys ?? rows.filter((r) => r.set).map((r) => r.key)).length > 0;
   return (
     <div role="group" aria-labelledby={titleId} className="space-y-2" data-testid="header-spacing">
       <div className="flex items-center justify-between">

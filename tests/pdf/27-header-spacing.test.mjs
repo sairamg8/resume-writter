@@ -261,5 +261,59 @@ describe('the Sidebar\'s single column prints Classic\'s header spacing', () => 
       view.unmount();
     }
   });
-});
 
+  it('AUD-34: a résumé nobody has touched has no gap set — not even Name ↔ Title', async () => {
+    // The defaults and the starters store `headerInlineGap: 8`, which is every template's own 6 pt.
+    // Read as `stored != null`, that marked the row user-set on a brand-new résumé: a dark value and
+    // a ↺ that changed nothing. A stored value equal to what the template already prints is not a
+    // choice anyone made.
+    const { headerGapRows, headerGapKeysSet } = await loadModule('/src/utils/headerSpacingRows.js');
+    const { createBlankResume } = await loadModule('/src/utils/defaultData.js');
+    const starters = await loadModule('/src/utils/starterTemplates.js');
+
+    const fresh = createBlankResume({ id: 'r1', name: 'New', template: 'classic' });
+    assert.equal(fresh.settings.headerInlineGap, 8, 'the default this row is about is still stored');
+    const made = (starters.STARTER_TEMPLATES || starters.STARTERS || []).map((t) => t.resume || t);
+    assert.ok(made.length, 'the starters loaded');
+    for (const r of [fresh, ...made]) {
+      const settings = r.settings || {};
+      const template = r.template || 'classic';
+      const rows = headerGapRows(template, settings, { ...P, ...(r.personal || {}) });
+      assert.deepEqual(rows.filter((row) => row.set).map((row) => row.key), [], `${r.name || template}: no row reads as user-set`);
+      assert.deepEqual(headerGapKeysSet(template, settings), [], `${r.name || template}: nothing to reset`);
+    }
+  });
+
+  it('AUD-34: a gap the user really set still reads as set, and 8 px is not special', async () => {
+    const { headerGapRows, headerGapKeysSet } = await loadModule('/src/utils/headerSpacingRows.js');
+    const nameTitle = (s) => headerGapRows('classic', { headerLayout: 'inline', ...s }, P).find((r) => r.key === 'headerInlineGap');
+
+    assert.equal(nameTitle({ headerInlineGap: 20 }).set, true, 'a value of its own');
+    assert.equal(nameTitle({ headerInlineGap: 2 }).set, true, "the range's low end");
+    assert.equal(nameTitle({ headerInlineGap: 8 }).set, false, 'what the template prints anyway');
+    // Reset is offered for a gap stored on a row the header does not show — the AUD-19 case — by
+    // that same rule, with no number written into the component.
+    assert.deepEqual(headerGapKeysSet('classic', { photoTextGap: 30 }), ['photoTextGap'], "a hidden row's gap");
+    assert.deepEqual(headerGapKeysSet('classic', { headerInlineGap: 8 }), [], 'the default alone is not a reset');
+  });
+
+  it('AUD-19: Reset is offered by that one rule, with no value hardcoded in the component', async () => {
+    const fs = await import('node:fs/promises');
+    const { mount, elements, reactProps } = await import('./fake-dom.mjs');
+    const { HeaderSpacingGroup } = await loadModule('/src/components/HeaderSpacingControls.jsx');
+    const source = await fs.readFile(new URL('../../src/components/HeaderSpacingControls.jsx', import.meta.url), 'utf8');
+    assert.doesNotMatch(source, /headerInlineGap/, 'the component knows no gap by name, nor a value of one');
+
+    const resetDisabled = (props) => {
+      const view = mount(HeaderSpacingGroup, { rows: [], onChange: () => {}, onClear: () => {}, ...props });
+      try {
+        const btn = [...elements(view.container)].find((el) => el.tagName === 'BUTTON' && el.textContent.includes('Reset'));
+        return reactProps(btn).disabled;
+      } finally {
+        view.unmount();
+      }
+    };
+    assert.equal(resetDisabled({ setKeys: [] }), true, 'nothing set: nothing to reset');
+    assert.equal(resetDisabled({ setKeys: ['photoTextGap'] }), false, 'a gap set on a row not shown: Reset is live');
+  });
+});

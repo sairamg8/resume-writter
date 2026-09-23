@@ -1,7 +1,7 @@
 // Personal Info → Header Customization → Header spacing (header_spacing_spec.md, 03-ui): the gaps it
 // offers, top to bottom as the header prints them, each only where it prints. Plain data (no React):
 // the panel and tests read it.
-import { HEADER_GAPS, storedGapPx, templateGapPt } from '@/constants/headerSpacing';
+import { HEADER_GAPS, HEADER_GAP_KEYS, storedGapPx, templateGapPt } from '@/constants/headerSpacing';
 import { hasHeaderControls, headerTemplateId } from '@/constants/templates';
 import { contactItems } from '@/utils/contacts';
 import { isDrawableImage } from '@/utils/imageUpload';
@@ -31,8 +31,33 @@ function gapRow(key, template, settings, [label, name] = TEXT[key]) {
   const { min, max } = HEADER_GAPS[key];
   const defaultPx = templateGapPt(template, key, { contactLayout: settings?.contactLayout }) / CSS_PX_TO_PT;
   const stored = storedGapPx(settings, key);
-  return { key, label, name, valuePx: stored ?? defaultPx, defaultPx, set: stored != null, min, max };
+  return { key, label, name, valuePx: stored ?? defaultPx, defaultPx, set: gapIsSet(key, template, settings), min, max };
 }
+
+/**
+ * Has this résumé set `key`, or is it only carrying the gap its template prints anyway? A stored
+ * value the template would print by itself is not a choice anyone made: the defaults and the role
+ * starters store `headerInlineGap: 8`, which is every template's own 6 pt, so reading "set" as
+ * `stored != null` showed Name ↔ Title as user-set — a dark value and a ↺ that changed nothing — on
+ * a résumé nobody had touched (AUD-34), and Reset could only tell the difference by hardcoding
+ * that 8 (AUD-19). A gap the template does not have is junk a stored value left behind: set, so
+ * Reset can clear it, which is the row the header never shows (AUD-19).
+ */
+export function gapIsSet(key, template, settings) {
+  const stored = storedGapPx(settings, key);
+  if (stored == null) return false;
+  const ownPt = templateGapPt(headerTemplateId(template, settings), key, { contactLayout: settings?.contactLayout });
+  if (ownPt == null) return true;
+  // Compared as the stepper shows them (formatPx, one decimal): 1 pt is 1.33 px, never whole.
+  return Math.round(stored * 10) !== Math.round((ownPt / CSS_PX_TO_PT) * 10);
+}
+
+/**
+ * Every header gap this résumé has set — including ones whose row the header does not show now
+ * (a photo since removed, Stack ↔ Inline), which is what Reset exists to clear (AUD-19).
+ */
+export const headerGapKeysSet = (template, settings = {}) =>
+  HEADER_GAP_KEYS.filter((key) => gapIsSet(key, template, settings));
 
 /**
  * The header's spacing rows for `template` with `settings` and `personal`:
