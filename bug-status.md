@@ -1,7 +1,8 @@
 # FlowCV Bug Tracker & Status Index
 
 > Location: `/mnt/Storage/Projects/flowcv/bug-status.md`
-> Updated: 2026-09-23 06:52 · `origin/master` (deployed) = `2a7d728` · fixed but not pushed: `fd7ecca`, `4ee5ede`, `f829ce3`, `e2dffbf`, `b5068d0`, `b99c04d`, `b5b8e86`, `d720439`, `6e07a5f`, `3dcd018`, `da91e31`, `be8b7f3`, `9c8ed05`, `d495cb2`
+> Updated: 2026-09-23 · every row **verified independently at `d495cb2`** (see Verification pass) ·
+> `origin/master` (deployed) = `2a7d728` · fixed but not pushed: `fd7ecca`, `4ee5ede`, `f829ce3`, `e2dffbf`, `b5068d0`, `b99c04d`, `b5b8e86`, `d720439`, `6e07a5f`, `3dcd018`, `da91e31`, `be8b7f3`, `9c8ed05`, `d495cb2`
 > **Open: 19** | Fixed, not pushed: 17 | **Closed: 44**
 
 ## Summary
@@ -19,7 +20,8 @@
   Low = an edge case or cosmetic.
 - **Verified:** Ran = reproduced by running the code · Code = confirmed by reading it · Known = also on the
   2026-09-22 gap list as A1–A6.
-- Every open row was re-checked against the code at `4ee5ede` on 2026-09-22; its `file:line` is current there.
+- Every open row was re-checked against the code at `d495cb2` on 2026-09-23 and every one still reproduces; its
+  `file:line` is current there (only AUD-27's had drifted). See **Verification pass** below.
 
 ### Next in queue
 
@@ -33,6 +35,35 @@ a production build and a private-data scan; a push deploys.
 
 **Each fix:** a test that fails before the fix → the fix → commit → set its row here to ⏸ with the commit and the
 tests → ✅ once pushed, and update the counts above.
+
+### Verification pass — 2026-09-23
+
+Every claim in this file was re-checked independently at `d495cb2`. Each local fix was put through a
+**fail-first** test: at HEAD, that commit's `src/` files alone were reverted to their parent and the row's own
+tests re-run. **No row is a false ✅ or a false ⏸, and no open row is stale.**
+
+| What was checked | How | Result |
+|---|---|---|
+| The 11 AUD rows marked ✅, and all 33 prompt-task commits | `git merge-base --is-ancestor <commit> origin/master` | all 44 are on `origin/master` — **✅ is true** |
+| The 15 AUD + 2 TUI rows marked ⏸ | same, against `master` and `origin/master` | all 14 commits are on `master`, none on `origin/master` — **⏸ is true** |
+| Do the named tests actually catch the bug? | revert the commit's `src/` files to its parent at HEAD, re-run its tests | **13 of 14 commits fail without their fix.** Fails seen: AUD-10/11 9 · AUD-12 8 · AUD-13 1 · AUD-14/15 7 · AUD-16 2 · AUD-17 3 · AUD-19 1 · AUD-21 3 · AUD-22 5 · AUD-23 3 · AUD-24 2 · AUD-25 2 · TUI-1/2 3. The 14th is AUD-09 — **not runnable in the gate**, see its row |
+| The 9 AUD + 6 ATS rows marked 🔴 | read the code at each row's `file:line` | every one still reproduces; only AUD-27's line had drifted (`:1019` → `:1084`) |
+| The suite on a clean `d495cb2` | `yarn test` in a detached worktree | **green** — 1577 tests, 2 todo (the two known ATS `todo`s, ATS-3 and ATS-4) |
+| The suite on the working tree as it stands | `yarn test` | **3 failures**, all from the uncommitted AUD-26 attempt — see that row |
+
+**Four ✅/⏸ fixes leave something behind** (⚠︎ on their rows, none of them a wrong fix):
+
+- **AUD-09** — real fix, but `yarn test` never runs its Playwright spec, so the push gate does not cover it.
+- **AUD-19** — real fix, but it hardcodes `headerInlineGap !== 8` to route around AUD-34, and contradicts
+  `headerSpacingRows.js:34`. Fixing AUD-34 must delete it.
+- **AUD-23** — real fix, but `reader.onerror` is still silent.
+- **AUD-25** — real fix, but the clamp restates the offered options instead of sharing them with the UI.
+
+**One open row has a wrong fix sitting in the tree: AUD-26.** It relabels rather than migrates, and it breaks
+three passing tests. It is uncommitted and belongs to another session; nothing here touched it.
+
+Not re-derived in this pass: the 33 prompt tasks' *content* (only that their commits are pushed), and the
+`ATS-` rows beyond confirming their `file:line` still reproduces.
 
 ---
 
@@ -52,7 +83,7 @@ existing test caught any of these; several unit tests asserted the same wrong da
 | AUD-06 | Starters · skills | High | ✅ Fixed | `bee22a2` | tests/pdf/16-saved-data-starter-skills.test.mjs, tests/unit/skill-names.unit.mjs, tests/unit/starter-templates.unit.mjs | A résumé made from a role starter printed an empty Skills section: starters stored `{ id, name }`, everything reads `{ category, skills }`. Stored `{ name }` groups are healed on load (`withSkillNames`). | Ran, Known A6 |
 | AUD-07 | Sync · spacing override | High | ✅ Fixed | `e25f6ff` | tests/pdf/18-cloud-sync-undefined.test.mjs (the fake Firestore now throws on `undefined`, as the real one does) | Clearing a section's Spacing Override stored `undefined`; Firestore rejects it, so that résumé stopped syncing until a reload. | Ran (real Firebase SDK) |
 | AUD-08 | Jobs · CSV export | High | ✅ Fixed | `888661a` | tests/unit/job-csv.unit.mjs (rewritten on the real job shape) | The CSV read fields no job has: Position, Applied Date and Source were always empty, and Status printed its id (`phone_screen`). It now writes Position, Status (its label), Stage, Applied Date and Contact; Source is gone. | Code |
-| AUD-09 | Editor · STAR Optimizer | High | ⏸ Local only | `fd7ecca` | tests/playwright/bullet-optimizer.spec.mjs (needs a fresh `vite build`) | The optimizer never loaded the bullet being edited — it read the editor's ref on the first render, while it was still null — and Apply inserted unescaped HTML at the caret without replacing the bullet. It now opens on the caret's bullet and Apply replaces it as text. | Code |
+| AUD-09 | Editor · STAR Optimizer | High | ⏸ Local only | `fd7ecca` | tests/playwright/bullet-optimizer.spec.mjs (needs a fresh `vite build`) | The optimizer never loaded the bullet being edited — it read the editor's ref on the first render, while it was still null — and Apply inserted unescaped HTML at the caret without replacing the bullet. It now opens on the caret's bullet and Apply replaces it as text. ⚠︎ **Verified 2026-09-23 — the fix holds, the coverage does not.** Its only test is a Playwright spec, and `yarn test` (node `--test` over `tests/pdf` + `tests/unit`) never runs `tests/playwright`, so the push gate does not cover this fix at all. Needs a node test, or `yarn test:pw` added to the gate. | Code |
 | AUD-10 | ATS text export · hidden data | High | ⏸ Local only | `f829ce3` | tests/unit/ats-checker.unit.mjs | Prints what the user hid: hidden contacts (phone, location), hidden entries (`visible: false`) and per-entry hidden fields such as the company. `generateAtsPlainText`, `src/utils/atsChecker.js:376`. | Ran |
 | AUD-11 | ATS text export · HTML | High | ⏸ Local only | `f829ce3` | tests/unit/ats-checker.unit.mjs | Prints raw HTML: the summary (`src/utils/atsChecker.js:402`) and every other section's description (`:487`, e.g. Awards) come out as `<p>Won <em>gold</em></p>` and `&amp;`. | Ran |
 | AUD-12 | Hidden data · letter, ATS score | High | ⏸ Local only | `e2dffbf` | tests/unit/cover-letter-generator.unit.mjs, tests/unit/ats-checker.unit.mjs | Hidden entries and the photo are still used: the cover-letter generator writes about a hidden job (`src/utils/coverLetterGenerator.js:49`); the ATS score counts hidden entries and takes 3 points off for a photo the user hid (`src/utils/atsChecker.js:1034`). | Ran |
@@ -62,15 +93,15 @@ existing test caught any of these; several unit tests asserted the same wrong da
 | AUD-16 | Editor · STAR Optimizer | Medium | ⏸ Local only | `4ee5ede` | tests/unit/bullet-optimizer.unit.mjs | The weak-phrase check flickered: global regexes kept `lastIndex`, so the same text scored 1, 0, 1, 0 weak phrases on successive renders. | Ran |
 | AUD-17 | Sidebar · Single ATS-safe | Medium | ⏸ Local only | `b5b8e86` | tests/unit/templates.unit.mjs, tests/unit/ats-checker.unit.mjs, tests/pdf/35-word-sidebar-about-me.test.mjs | The Single · ATS-safe mode prints Classic's page, but the rest of the app still treats it as two columns: Header Customization hides Classic's controls and says they "don't apply" (`src/components/PersonalInfoEditorHeader.jsx:167`); Section Options hides Alignment, Grids and Title for the side-column sections (`inSidebarColumn`, `src/components/SectionEditorCustomizer.jsx:51`); Word prints them as side-column sections and never centres the header (`src/utils/wordExport.js:46`, `src/utils/wordExportHeader.js:52`); the ATS score still warns "Multi-column / Sidebar layout detected" (`src/utils/atsChecker.js:1011`). | Code |
 | AUD-18 | Starters · data version | Medium | ✅ Fixed | `c3c7579` | tests/pdf/16-saved-data-starter-skills.test.mjs, tests/unit/starter-templates.unit.mjs | Starters and JSON Resume imports were stamped `dataVersion: 1`, so the next load re-ran old migrations and moved the Modern starter's photo text from centre to top. They now carry the current version (`src/utils/dataVersion.js`). | Ran |
-| AUD-19 | Header spacing · Reset | Medium | ⏸ Local only | `d720439` | tests/pdf/27-header-spacing.test.mjs | Reset clears only the rows on screen (`onClear(rows…)`, `src/components/HeaderSpacingControls.jsx:78`): a gap set for a row now hidden (photo removed, Stack ↔ Inline) survives Reset, can't be cleared from the UI, and still prints in the cover letter. HeaderSpacingGroup now passes all HEADER_GAP_KEYS to onClear. | Code |
+| AUD-19 | Header spacing · Reset | Medium | ⏸ Local only | `d720439` | tests/pdf/27-header-spacing.test.mjs | Reset clears only the rows on screen (`onClear(rows…)`, `src/components/HeaderSpacingControls.jsx:78`): a gap set for a row now hidden (photo removed, Stack ↔ Inline) survives Reset, can't be cleared from the UI, and still prints in the cover letter. HeaderSpacingGroup now passes all HEADER_GAP_KEYS to onClear. ⚠︎ **Verified 2026-09-23 — fail-first passes, but the fix works around AUD-34 instead of fixing it.** The Reset button's enabled state hardcodes `settings.headerInlineGap !== 8` (`src/components/HeaderSpacingControls.jsx:76`), which contradicts `set: stored != null` (`src/utils/headerSpacingRows.js:34`): set Name ↔ Title to 8 px deliberately and the row shows as set (dark value + ↺) while Reset is greyed out. **Fixing AUD-34 must delete that `!== 8`.** | Code |
 | AUD-20 | Section options · spacing | Medium | ✅ Fixed | `f776e0f` | tests/pdf/51-section-spacing-override.test.mjs | The Spacing Override had no clamp: Before/After `-500` hid sections and Item gap `-30` overlapped entries. It is now held to 0–80 px in the PDF and the panel. | Ran, Known A1/A2 |
 | AUD-21 | Section options · Reset style | Medium | ⏸ Local only | `6e07a5f` | tests/pdf/10-section-options.test.mjs | Reset style and new sections store `titleStyle: 'stacked'`, which overrides Executive's inline default (`src/utils/defaultDataSectionTypes.js:4`, `src/components/SectionEditor.jsx:123`). Removed hardcoded titleStyle: 'stacked' from SECTION_TYPE_DEFAULTS and blankSections so template defaults resolve cleanly via resolveSection. | Ran, Known A3 |
 | AUD-22 | Word export · fonts and sizes | Medium | ⏸ Local only | `3dcd018` | tests/pdf/38-word-fonts-and-sizes.test.mjs | Word ignores the Design font and sizes: the name is always 20 pt (`src/utils/wordExportHeader.js:58`), section titles 10 pt (`src/utils/wordExportUtils.js:71`), the font Calibri; entry dates are always the accent colour (`src/utils/wordExportUtils.js:157`) while the PDF prints them grey on Minimal, Executive and Sidebar. Resolved font mapping via FONTS table, dynamic half-point font sizes for base, name, entry, section headings, and template-aware dateHex via getDateColor. | Ran, Known A4 |
-| AUD-23 | Exports · errors | Medium | ⏸ Local only | `da91e31` | tests/pdf/53-export-error-handling.test.mjs | Three exports fail silently: Markdown, ATS text and JSON Resume aren't wrapped in `runExport` (`src/hooks/useEditorExports.js:68`, `:74`, `:80`), and the editor's JSON Resume import converts outside any `try` (`src/components/ExportDropdown.jsx:118`), so an error shows nothing. Wrapped all exports in runExport, added try-catch to handleImportJSON and FileReader processing in ExportDropdown, and disabled export buttons when exporting. | Code |
+| AUD-23 | Exports · errors | Medium | ⏸ Local only | `da91e31` | tests/pdf/53-export-error-handling.test.mjs | Three exports fail silently: Markdown, ATS text and JSON Resume aren't wrapped in `runExport` (`src/hooks/useEditorExports.js:68`, `:74`, `:80`), and the editor's JSON Resume import converts outside any `try` (`src/components/ExportDropdown.jsx:118`), so an error shows nothing. Wrapped all exports in runExport, added try-catch to handleImportJSON and FileReader processing in ExportDropdown, and disabled export buttons when exporting. ⚠︎ **Verified 2026-09-23 — fail-first passes; one residual.** `reader.onerror` is still unhandled (`src/components/ExportDropdown.jsx:113`), so a file the browser cannot read shows nothing — the same silent failure this row is about, one layer out. | Code |
 | AUD-24 | Jobs · edit | Medium | ⏸ Local only | `be8b7f3` | tests/pdf/54-job-form-null-crash.test.mjs | Editing an imported job whose company or role is `null` crashes the page: `form.company.trim()` (`src/pages/JobForm.jsx:46`), and there is no error boundary anywhere in `src`. Defaulted null/undefined job form values to empty strings with safe trimming, added reusable ErrorBoundary component and wrapped application routes. | Code |
-| AUD-25 | Photo · import | Low | ⏸ Local only | `9c8ed05` | tests/pdf/55-photo-import-clamp.test.mjs | An imported photo with an unknown shape or height (e.g. `'oval'`) is not clamped to the offered options (`getPdfPhotoStyle`, `src/templates/pdf/shared/pdfPhoto.js:57`). Clamped photoShape, photoHeight, photoSize, and photoBorder to offered options in getPdfPhotoStyle and resolveTemplateSettings. | Ran, Known A5 |
-| AUD-26 | Storage · migrations | Low | 🔴 Open | — | — | A file stamped `dataVersion` 11 or higher (e.g. 999) skips every migration forever (`src/utils/normalizeResume.js:255`). | Code |
-| AUD-27 | ATS checker · score | Low | 🔴 Open | — | — | The "Multi-column contact header" check reads `settings.contactCols`, which no control writes (the control is `contactLayout: '2grid'`), so it always passes (`src/utils/atsChecker.js:1019`). | Code |
+| AUD-25 | Photo · import | Low | ⏸ Local only | `9c8ed05` | tests/pdf/55-photo-import-clamp.test.mjs | An imported photo with an unknown shape or height (e.g. `'oval'`) is not clamped to the offered options (`getPdfPhotoStyle`, `src/templates/pdf/shared/pdfPhoto.js:57`). Clamped photoShape, photoHeight, photoSize, and photoBorder to offered options in getPdfPhotoStyle and resolveTemplateSettings. ⚠︎ **Verified 2026-09-23 — fail-first passes; the clamp is not tied to the options it clamps to.** The four lists are now written out twice more (`src/templates/pdf/shared/pdfPhoto.js:56-59`, `src/templates/pdf/shared/templateSettings.js:95-99`) beside the chips that offer them (`src/components/PersonalInfoEditorPhoto.jsx:78-112`), with nothing shared between them: add a shape, size, border or height to the UI and the PDF silently clamps it away. | Ran, Known A5 |
+| AUD-26 | Storage · migrations | Low | 🔴 Open | — | — | A file stamped `dataVersion` 11 or higher (e.g. 999) skips every migration forever (`src/utils/normalizeResume.js:255`). ⚠︎ **2026-09-23 — an uncommitted attempt is in the working tree and does not fix this bug.** `src/utils/normalizeResume.js:255` plus untracked `tests/pdf/56-storage-migrations-version-clamp.test.mjs` rewrite the stamp to `DATA_VERSION` but still take the early return, so **no migration runs** — it relabels a file written by a newer build rather than migrating it, and its test asserts only the new stamp, never that a migration ran. It also turns 3 green tests red (`ONB-10`, `VF2-3.2-NB1-NB1-NB1`, `V2VF1S-0`), because `dataVersion: 99` is a "run no migration" sentinel in 10 test files. Clean `d495cb2` is green. Decide first: leave the stored version alone and run only the migrations the résumé has not had, or keep a clamp and move those fixtures off a version number. | Code |
+| AUD-27 | ATS checker · score | Low | 🔴 Open | — | — | The "Multi-column contact header" check reads `settings.contactCols`, which no control writes (the control is `contactLayout: '2grid'`), so it always passes (`src/utils/atsChecker.js:1084`; the row said `:1019`, which the fixes since have moved). | Code |
 | AUD-28 | Editor · month picker | Low | 🔴 Open | — | — | The years stop at the current year − 49 (`src/components/SectionEditorShared.jsx:27`): a 1975 date shows blank in the editor though the PDF prints it. | Code |
 | AUD-29 | Career history panel | Low | 🔴 Open | — | — | A past job with no end date counts up to today (`src/components/CareerHistoryPanel.jsx:26`); "N companies" counts entries (`:78`); the total ignores gaps and hidden entries. | Code |
 | AUD-30 | Exports · file name | Low | 🔴 Open | — | — | Export file names use the Google account's display name, not the résumé's name (`src/hooks/useEditorExports.js:10`). | Code |
