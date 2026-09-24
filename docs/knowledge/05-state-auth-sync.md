@@ -67,7 +67,34 @@ on hover); what a failure means: `src/utils/cloudSyncRetry.js`.
 - Diff previous vs current resumes by id / `updatedAt`
 - Queue writes and deletes
 - Debounce ~1.5s then flush
-- Offline: Firestore persistent cache queues writes (`persistentLocalCache` + multi-tab manager)
+- Each flush first reads the server's copies of the résumés it sends (never the deletion list, R8-4)
+- Offline, or a flush that failed: the résumé store keeps the edits and deletions, and the next first
+  sync sends them. Firestore's cache is in memory only (`memoryLocalCache`, R2-005): nothing reads it
+  (every read asks the server), and a persistent one kept every account's résumés on disk after sign-out
+
+### Another device's edit (R2-004)
+
+`src/utils/cloudSyncLineage.js`, `src/utils/cloudSyncQueue.js`. Each page remembers which copies of each
+résumé it has seen (read from or sent to the cloud, or held in its store) — by `updatedAt`, compared for
+equality only, never by clock. The store keeps the cloud's versions it last knew (`cloudVersions`).
+
+| When | What happens |
+|------|--------------|
+| A flush finds a copy in the cloud this page never saw (another device edited it since) | both kept: this page's copy under its id, the other one as a new résumé **"<name> (conflict copy)"** — on every device |
+| A deletion made from a copy older than the cloud's | not sent: the newer copy comes back (as R8-0 at a first sync) |
+| First sync: the copy here is one the cloud had, the cloud's is newer | the cloud's loads, whatever the clocks say |
+| First sync: changed on both sides (an offline edit, even across a reload) | both kept, as above |
+| The tab is shown again ≥ 10 s after the account was read | the account is read again, so the next edit starts from the other device's copy |
+
+### Signing out on a shared browser (R2-005)
+
+`src/utils/cloudSyncLeave.js`. The list belongs to the account it was last synced with (`syncedUid`).
+When that account signs out — or another signs in while the list is still the last one's — the list
+leaves the browser: what the account's cloud holds goes (its next sign-in brings it back); a change
+that cloud lacks (typed within the pause, offline, or held back as too large) is kept aside for it
+(`stashed[uid]`), off the dashboard and out of every other account's sync, and sent at its next
+first sync. Its waiting deletions stay (they are its own). A list no account synced (made signed
+out) still joins whoever signs in; a build with no cloud keeps its list (its only copy).
 
 ## Demo accounts — the owner's ORIGINAL résumés always come back
 
