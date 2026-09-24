@@ -22,7 +22,7 @@ const ENTRY_TEXT = [
   'issuer', 'credentialId', 'title', 'subtitle', 'jobTitle', 'relationship', 'phone', 'email', 'interests',
 ];
 const LETTER_TEXT = ['recipientName', 'recipientTitle', 'company', 'subject', 'body', 'closing'];
-/** The letter's signature: none stored signs with the résumé's name and title (letterSignature), '' with none. */
+/** The letter's signature: none stored, or '', signs with the résumé's name and title (letterSignature). */
 const SIGNATURE_TEXT = ['signatureName', 'signatureDesignation'];
 
 const isRecord = (v) => Boolean(v) && typeof v === 'object' && !Array.isArray(v);
