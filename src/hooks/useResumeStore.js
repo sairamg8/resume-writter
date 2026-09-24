@@ -155,11 +155,19 @@ export function useAppStore() {
       const { state: incoming, unreadable } = readStore();
       if (unreadable !== null) return;
       taken.current = incoming;
-      setAppState((prev) => withOtherTabsSave(prev, incoming, stored.current));
+      // Storage holds the other tab's save from now on, whether or not a save of this tab's is held
+      // (R2-077): a second save of the other tab before that one is written is weighed against this
+      // one, not against this tab's last write — which counted every résumé taken from the first as
+      // changed here and undid the second. The held save is not written until the state it would
+      // write has taken this one in (the effect above schedules it again).
+      const knew = stored.current;
+      stored.current = incoming.resumes;
+      saver.hold();
+      setAppState((prev) => withOtherTabsSave(prev, incoming, knew));
     }
     window.addEventListener('storage', onStorage);
     return () => window.removeEventListener('storage', onStorage);
-  }, []);
+  }, [saver]);
 
   // A photo an older build stored at camera size is made what an upload of it is now, once (ONB-10).
   useSmallerPhotos(appState.resumes, setAppState);
