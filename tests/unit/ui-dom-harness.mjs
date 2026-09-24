@@ -4,6 +4,7 @@
 // commas — no combinators), closest(), isConnected, and animation frames. Added to fake-dom's
 // element and document prototypes for this test process only; fake-dom itself is untouched.
 // Also: the Vite SSR loader for the kit's JSX, event objects shaped like React's, and a wait.
+import assert from 'node:assert/strict';
 import { createServer } from 'vite';
 import { fileURLToPath } from 'node:url';
 import { fakeWindow, elements, reactProps } from '../pdf/fake-dom.mjs';
@@ -101,3 +102,20 @@ export function byText(root, text, tag = 'BUTTON') {
 }
 
 export const wait = (ms) => new Promise((resolve) => { setTimeout(resolve, ms); });
+
+/** A node in a line: its tag, id or role, and the start of its text. */
+function describeNode(node) {
+  if (!node || typeof node !== 'object') return String(node);
+  const mark = node.getAttribute?.('id') ? `#${node.getAttribute('id')}` : node.getAttribute?.('role') ? `[role=${node.getAttribute('role')}]` : '';
+  return `<${node.tagName ?? node.nodeName}${mark}> "${(node.textContent ?? '').slice(0, 40)}"`;
+}
+
+/**
+ * `actual` is the very node `expected` (focus, say). Not assert.equal: on a failure its message
+ * inspects both nodes to a depth of 1000 with getters, and a fake-dom node reaches the whole tree
+ * and React's fibers along many paths — the report runs the process out of memory instead of
+ * failing (R3-005: CI killed this file after 60 s).
+ */
+export function assertSame(actual, expected, message = 'not the same node') {
+  assert.ok(actual === expected, `${message}: got ${describeNode(actual)}, expected ${describeNode(expected)}`);
+}

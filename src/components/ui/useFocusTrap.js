@@ -19,29 +19,26 @@ const stack = [];
 export function useFocusTrap(containerRef, active, { initialFocusRef, restoreFocus = true } = {}) {
   const token = useRef(null);
   if (!token.current) token.current = {};
+  const opener = useRef(null);
 
   useLayoutEffect(() => {
     if (!active || typeof document === 'undefined') return undefined;
     const container = containerRef.current;
-    const previous = document.activeElement;
+    opener.current = document.activeElement;
     const me = token.current;
     stack.push(me);
     if (container && !container.contains(document.activeElement)) {
       const target = initialFocusRef?.current || container.querySelector('[data-autofocus]') || container;
       target.focus?.({ preventScroll: true });
     }
-    return () => {
-      stack.splice(stack.indexOf(me), 1);
-      if (restoreFocus && previous?.isConnected && typeof previous.focus === 'function') {
-        previous.focus({ preventScroll: true });
-      }
-    };
-    // initialFocusRef and restoreFocus are read once per activation, as the dialog opens.
+    return () => { stack.splice(stack.indexOf(me), 1); };
+    // initialFocusRef is read once per activation, as the dialog opens.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active, containerRef]);
 
   useEffect(() => {
     if (!active || typeof document === 'undefined') return undefined;
+    const previous = opener.current;
     const onFocusIn = (event) => {
       const container = containerRef.current;
       if (stack.at(-1) !== token.current || !container) return;
@@ -50,7 +47,17 @@ export function useFocusTrap(containerRef, active, { initialFocusRef, restoreFoc
       container.focus?.({ preventScroll: true });
     };
     document.addEventListener('focusin', onFocusIn);
-    return () => document.removeEventListener('focusin', onFocusIn);
+    return () => {
+      document.removeEventListener('focusin', onFocusIn);
+      // Focus goes back here, after the commit, not in the layout effect's cleanup: React runs that
+      // during its commit and then puts back the focus it saw before it (R3-005) — onto the dialog,
+      // which stays mounted for its exit animation, and is gone with it 150 ms later.
+      if (restoreFocus && previous?.isConnected && typeof previous.focus === 'function') {
+        previous.focus({ preventScroll: true });
+      }
+    };
+    // restoreFocus is read once per activation, as the dialog opens.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active, containerRef]);
 
   return useCallback((event) => {
