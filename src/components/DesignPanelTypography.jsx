@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { FONTS, loadPreviewFont, loadCustomFonts, saveCustomFont, removeCustomFont, checkFont } from '@/utils/fonts';
 import { Label, SizeRow, SegmentControl, DesignSection } from '@/components/DesignPanelShared';
 import { FONT_SIZE_BASE, ICON_SIZE, TYPE_SIZE_PT, deltaInRange } from '@/constants/designNumbers';
+import { headerTemplateId } from '@/constants/templates';
 
 // The quick size buttons set the base size (pt) the PDF is laid out with.
 const SIZE_PRESETS = { small: 10, normal: 11, large: 12 };
@@ -145,13 +146,15 @@ export function TypographySection({ settings, template, updateSetting, onReset }
                 <SizeRow label="Full Name" value={base + nameDelta} onChange={v => updateSetting('fontSizeNameDelta', v - base)} {...TYPE_SIZE_PT.fontSizeNameDelta(base)} />
                 <SizeRow label="Section Title" value={base + sectionDelta} onChange={v => updateSetting('fontSizeSectionDelta', v - base)} {...TYPE_SIZE_PT.fontSizeSectionDelta(base)} />
                 <SizeRow label="Entry Header" value={base + entryDelta} onChange={v => updateSetting('fontSizeEntryDelta', v - base)} {...TYPE_SIZE_PT.fontSizeEntryDelta(base)} />
-                <SizeRow label="Contact Icons" value={settings.iconSize ?? 11} onChange={v => updateSetting('iconSize', v)} min={ICON_SIZE.min} max={ICON_SIZE.max} />
+                {/* Stored in px, as Contact icons and Header Customization show it — not pt (R2-123). */}
+                <SizeRow label="Contact Icons" value={settings.iconSize ?? 11} onChange={v => updateSetting('iconSize', v)} min={ICON_SIZE.min} max={ICON_SIZE.max} unit="px" />
               </>
             );
           })()}
         </div>
-        {/* Sidebar's side column prints its own small type, whatever these say (V2W2b-3). */}
-        {template === 'sidebar' && (
+        {/* Sidebar's side column prints its own small type, whatever these say (V2W2b-3). Its
+            Single · ATS-safe Layout prints no side column: Classic's page, every size from here (R2-082). */}
+        {headerTemplateId(template, settings) === 'sidebar' && (
           <p className="mt-2 text-[11px] text-gray-400 leading-relaxed">
             Base and Section Title size the main column; the side column&apos;s sections keep their own small type (8.5 pt headings, 9 pt text).
           </p>

@@ -3,6 +3,7 @@ import { Sparkles } from 'lucide-react';
 import { ATS_DEFAULTS, sectionReset } from '@/utils/defaultData';
 import { atsRating, contactIconHint, drawsContactIcons, TEMPLATE_PICKER, templateId } from '@/constants/templates';
 import { MARGIN_MM } from '@/constants/pageMargins';
+import { ICON_SIZE } from '@/constants/designNumbers';
 import { ITEM_GAP_PX, LINE_HEIGHT, SECTION_GAP_PX } from '@/constants/spacingNumbers';
 import { DesignSection, NumberRow, Label, SegmentControl } from '@/components/DesignPanelShared';
 import { HeadingsSection } from '@/components/DesignPanelHeadings';
@@ -20,7 +21,8 @@ const COLOR_KEYS      = ['accentColor', 'textColor', 'sidebarBg', 'headerTextCol
 const TYPOGRAPHY_KEYS = ['font', 'fontSize', 'fontSizeBase', 'fontSizeNameDelta', 'fontSizeSectionDelta', 'fontSizeEntryDelta', 'customFont', 'iconSize'];
 const SPACING_KEYS    = ['lineHeightValue', 'marginV', 'marginH', 'sectionGap', 'itemGap'];
 const HEADING_KEYS    = ['headingStyle', 'sectionTitleCase', 'sectionBorderWidth', 'sectionBorderColor'];
-const ICON_KEYS       = ['iconSet', 'iconSize', 'contactStyle'];
+// Not contactStyle: Header Customization's, and the ↺ here turned a Bar or Bullet header to Icon (R2-090).
+const ICON_KEYS       = ['iconSet', 'iconSize'];
 const DATE_KEYS       = ['dateFormat'];
 
 export default function DesignPanel({ resume, updateSetting, setTemplate, resetSettings }) {
@@ -44,7 +46,8 @@ export default function DesignPanel({ resume, updateSetting, setTemplate, resetS
           {TEMPLATE_PICKER.map(t => (
             <button
               key={t.id}
-              onClick={() => setTemplate(t.id)}
+              // The card already selected is no switch: it would reset the headings (R2-087).
+              onClick={() => { if (t.id !== current) setTemplate(t.id); }}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border text-left transition-all ${
                 current === t.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
               }`}
@@ -147,7 +150,7 @@ export default function DesignPanel({ resume, updateSetting, setTemplate, resetS
           <div className="flex items-center gap-1">
             <button
               type="button"
-              onClick={() => updateSetting('iconSize', Math.max(8, (settings.iconSize ?? 11) - 1))}
+              onClick={() => updateSetting('iconSize', Math.max(ICON_SIZE.min, (settings.iconSize ?? 11) - 1))}
               className="w-6 h-6 flex items-center justify-center border border-gray-200 rounded text-gray-600 hover:bg-gray-100 text-base leading-none"
             >−</button>
             <span className="w-10 text-center text-xs font-medium text-gray-700 border border-gray-200 rounded h-6 flex items-center justify-center">
@@ -155,7 +158,7 @@ export default function DesignPanel({ resume, updateSetting, setTemplate, resetS
             </span>
             <button
               type="button"
-              onClick={() => updateSetting('iconSize', Math.min(20, (settings.iconSize ?? 11) + 1))}
+              onClick={() => updateSetting('iconSize', Math.min(ICON_SIZE.max, (settings.iconSize ?? 11) + 1))}
               className="w-6 h-6 flex items-center justify-center border border-gray-200 rounded text-gray-600 hover:bg-gray-100 text-base leading-none"
             >+</button>
           </div>

@@ -187,14 +187,17 @@ export function anyDrawsContactIcons(template, settings, cl) {
 /**
  * Design → Contact icons explanatory hint: tells the user where and when contact icons
  * are used, and accurately states when custom image uploads per field appear (ONB-8).
+ * It reads the page the résumé prints (headerTemplateId), as drawsContactIcons does: the Sidebar's
+ * Single · ATS-safe prints Classic's header, whose icons follow Contact style (R2-096).
  */
 export function contactIconHint(template, settings, cl) {
   const resumeIcons = drawsContactIcons(template, settings);
   const anyIcons = anyDrawsContactIcons(template, settings, cl);
+  const page = headerTemplateId(template, settings);
 
-  const usage = (templateId(template) === 'modern' || templateId(template) === 'sidebar')
-    ? `The ${templateId(template) === 'modern' ? 'Modern' : 'Sidebar'} template always shows them; the cover letter shows them when its contact style is Icon.`
-    : `Used by the résumé when Contact style is Icon (Modern and Sidebar always) and by the cover letter when its contact style is Icon.${resumeIcons ? '' : ' Picking a pack switches the résumé to Icon.'}`;
+  const usage = (page === 'modern' || page === 'sidebar')
+    ? `The ${page === 'modern' ? 'Modern' : 'Sidebar'} template always shows them; the cover letter shows them when its contact style is Icon.`
+    : `Used by the résumé when Contact style is Icon (Modern and the two-column Sidebar always) and by the cover letter when its contact style is Icon.${resumeIcons ? '' : ' Picking a pack switches the résumé to Icon.'}`;
 
   const upload = anyIcons
     ? 'Custom images per field appear under Personal Info → Fields.'

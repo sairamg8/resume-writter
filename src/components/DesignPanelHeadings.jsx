@@ -1,8 +1,8 @@
 import { DesignSection } from '@/components/DesignPanelShared';
 import { SECTION_BORDER_PT } from '@/constants/designNumbers';
-import { headingBorderControls, headingBorderExtraPt, upperSectionTitles } from '@/constants/templates';
+import { headerTemplateId, headingBorderControls, headingBorderExtraPt, upperSectionTitles } from '@/constants/templates';
 import { DEFAULTS } from '@/templates/pdf/shared/templateSettings';
-import { sectionHeadingLook } from '@/templates/pdf/shared/sectionHeadingLook';
+import { headingBorderDefault, sectionHeadingLook } from '@/templates/pdf/shared/sectionHeadingLook';
 
 /** The heading styles the panel offers, in the order it lays them out. */
 const HEADING_STYLES = [
@@ -41,10 +41,14 @@ export function HeadingControls({ settings, template, updateSetting }) {
   const ruledLook = sectionHeadingLook({ template, headingStyle: 'ruled', accent: settings.accentColor || '#2563eb', borderColor: settings.sectionBorderColor || '' });
   // Line after as the PDF prints it on this template: Compact's short rule after the title (T9).
   const lineLook = sectionHeadingLook({ template, headingStyle: 'line', accent: settings.accentColor || '#2563eb', borderColor: settings.sectionBorderColor || '' });
+  // Border colour with none picked: what this style prints on this template — the accent, or the
+  // template's own rule (Classic's Ruled a light grey), which the panel called "accent" (R2-088).
+  const borderDefault = headingBorderDefault({ template, headingStyle, accent: settings.accentColor || '#2563eb' });
 
   return (
     <>
-      {template === 'sidebar' && (
+      {/* Only the two-column page has a side column: Single · ATS-safe prints Classic's (R2-082). */}
+      {headerTemplateId(template, settings) === 'sidebar' && (
         <p className="text-[11px] text-gray-400 leading-relaxed">
           These style the main column&apos;s headings. The side column keeps its own small headings and rule; only Title case applies there.
         </p>
@@ -113,20 +117,20 @@ export function HeadingControls({ settings, template, updateSetting }) {
           <input
             type="color"
             disabled={!borderControls.color}
-            value={settings.sectionBorderColor || settings.accentColor || '#374151'}
+            value={settings.sectionBorderColor || borderDefault?.color || settings.accentColor || '#374151'}
             onChange={e => updateSetting('sectionBorderColor', e.target.value)}
             className="h-6 w-10 rounded border border-gray-200 cursor-pointer disabled:cursor-not-allowed p-0.5"
             title="Pick border color"
             aria-label="Section border color"
           />
-          <span className="text-[11px] text-gray-400 font-mono">{settings.sectionBorderColor || 'accent'}</span>
+          <span className="text-[11px] text-gray-400 font-mono">{settings.sectionBorderColor || (borderDefault && !borderDefault.accent ? 'template' : 'accent')}</span>
           {settings.sectionBorderColor && (
             <button
               type="button"
               disabled={!borderControls.color}
               onClick={() => updateSetting('sectionBorderColor', '')}
               className="text-[11px] text-gray-400 enabled:hover:text-gray-600 disabled:cursor-not-allowed"
-              title="Reset to accent color"
+              title={borderDefault && !borderDefault.accent ? "Reset to the template's color" : 'Reset to accent color'}
             >↺</button>
           )}
         </div>

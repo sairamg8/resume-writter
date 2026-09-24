@@ -7,6 +7,7 @@ import { resolveSection } from '@/templates/pdf/shared/templateSectionDefaults';
 import { downloadBlob } from '@/utils/download';
 import { PAGE_SIZES, pageSizeOf } from '@/constants/pageSize';
 import { templateId } from '@/constants/templates';
+import { resolveTemplateSettings } from '@/templates/pdf/shared/templateSettings';
 import { FONTS } from '@/utils/fonts';
 
 export function resolveWordFont(settings = {}) {
@@ -61,19 +62,26 @@ export async function renderResumeDocx(resume) {
   const accentHex = accent2Hex(settings.accentColor);
   const effectiveTemplate = (templateId(template) === 'sidebar' && settings.sidebarSingleColumn) ? 'classic' : template;
   // Template defaults (e.g. Executive and Sidebar lead with the role, …) apply as in the PDF, and
-  // so does Section Options → Alignment (never in the Sidebar's side column). A section's defaults are
-  // the résumé's own template's in every Layout: the Sidebar's Single · ATS-safe prints Classic's page
-  // (effectiveTemplate) but still leads a job with the role, as its PDF does (R2-012).
+  // so does Section Options → Alignment (never in the Sidebar's side column). A section's defaults and
+  // its entries' look are the résumé's own template's in every Layout: the Sidebar's Single · ATS-safe
+  // prints Classic's page and header (effectiveTemplate), no side column (buildSection reads the
+  // Layout), but still leads a job with the role (R2-012) and prints its dates in grey and its second
+  // field in the accent, as its PDF does (R2-121).
+  const own = templateId(template);
   const printed = sections
-    .map((s) => resolveSection(s, templateId(template)))
-    .map((section) => ({ section, paras: buildSection(section, accentHex, settings, effectiveTemplate) }))
+    .map((s) => resolveSection(s, own))
+    .map((section) => ({ section, paras: buildSection(section, accentHex, settings, own) }))
     .filter(({ paras }) => paras.length);
+  // The header is Classic's, in the Sidebar's Text colour: its PDF resolves the page's settings as the
+  // Sidebar's, so an unset Text colour prints the name and contacts in its slate, not Classic's black.
+  const headerSettings = effectiveTemplate === template ? settings
+    : { ...settings, textColor: resolveTemplateSettings(settings, own).textColor };
   const children = [
-    ...buildPersonalSection(personal, settings, effectiveTemplate),
+    ...buildPersonalSection(personal, headerSettings, effectiveTemplate),
     // Between Sections under every section but the last, as the PDF's: space under the last one
     // could only push a blank page (R2-062).
     ...printed.flatMap(({ section, paras }, i) => (i < printed.length - 1
-      ? [...paras, ...sectionSpaceAfter(section, settings, effectiveTemplate)]
+      ? [...paras, ...sectionSpaceAfter(section, settings, own)]
       : paras)),
   ];
   return Packer.toBlob(buildDocument(children, settings));

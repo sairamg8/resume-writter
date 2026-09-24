@@ -12,6 +12,7 @@ import { savedDeletions } from '@/utils/localDeletions';
 import { isOriginal, withKeep } from '@/utils/demoSeed';
 import { useSmallerPhotos } from '@/hooks/useSmallerPhotos';
 import { keepUnsaved } from '@/utils/unsavedJobs';
+import { templateId } from '@/constants/templates';
 
 const STORAGE_KEY = 'cpwtcv_v1';
 
@@ -139,12 +140,15 @@ export function useAppStore() {
     setAppState(prev => ({ ...prev, activeId: id }));
   }
 
+  /** The active résumé as `updater` returns it, stamped as an edit — unless it returns the same résumé: nothing changed. */
   function patchActive(updater) {
     setAppState(prev => ({
       ...prev,
-      resumes: prev.resumes.map(r =>
-        r.id === prev.activeId ? { ...updater(r), updatedAt: Date.now() } : r
-      ),
+      resumes: prev.resumes.map(r => {
+        if (r.id !== prev.activeId) return r;
+        const next = updater(r);
+        return next === r ? r : { ...next, updatedAt: Date.now() };
+      }),
     }));
   }
 
@@ -249,10 +253,11 @@ export function useAppStore() {
    * Academic's type and spacing — which leave with it where the user kept them), and a Name or Job
    * title colour picked for the old header that does not read on the new one back to its own (NB-1);
    * a section's Grids its template's own where the section kept the one it was created with (Compact's
-   * grid, T9 — sectionsOnSwitch).
+   * grid, T9 — sectionsOnSwitch). The template it is on already is no switch: picking it again
+   * would put back the heading style and title case the user changed since (R2-087).
    */
   function setTemplate(template) {
-    patchActive(r => ({
+    patchActive(r => (templateId(r.template) === templateId(template) ? r : {
       ...r,
       template,
       settings: headerColorsOnSwitch(styleOnSwitch(r.settings, r.template, template), r.template, template),

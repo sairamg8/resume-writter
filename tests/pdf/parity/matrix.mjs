@@ -80,7 +80,7 @@ export async function checkControl(variant, control, { spec, customise }) {
   const base = baseResume(variant.template, variant.settings, { compact: !types, types });
   const before = applyWrites(base, control.context, control.sectionId);
   const b = await shot(before);
-  if (control.reset) return checkReset(variant, control, { base, before, b, customise, fail });
+  if (control.reset) return checkReset(variant, control, { base, before, b, customise, fail, spec });
   const runs = [];
   for (const a of control.actions) {
     const state = applyWrites(before, a.writes, control.sectionId);
@@ -110,10 +110,14 @@ export async function checkControl(variant, control, { spec, customise }) {
   return fail;
 }
 
-async function checkReset(variant, control, { base, before, b, customise, fail }) {
+async function checkReset(variant, control, { base, before, b, customise, fail, spec }) {
+  // What a reset deliberately keeps (its spec's `keeps`): Reset Design Settings keeps the Sidebar's
+  // Single · ATS-safe Layout (R2-089), so customising it first is not undone by the reset.
+  const keeps = new Set(control.keys.flatMap((k) => spec(k)?.keeps || []));
   for (const a of control.actions) {
     // Customise what the reset puts back (unless the state it was offered in already did), then reset.
-    const extra = control.context.length ? [] : a.writes.flatMap((w) => (w.kind === 'resetAll' ? customise('*') : w.kind === 'clear' ? w.keys.flatMap((k) => customise(`setting.${k}`)) : customise(writeKey(w))));
+    const extra = (control.context.length ? [] : a.writes.flatMap((w) => (w.kind === 'resetAll' ? customise('*') : w.kind === 'clear' ? w.keys.flatMap((k) => customise(`setting.${k}`)) : customise(writeKey(w)))))
+      .filter((w) => !keeps.has(writeKey(w)));
     const custom = applyWrites(before, extra, control.sectionId);
     const c = await shot(custom);
     const after = await shot(applyWrites(custom, a.writes, control.sectionId));

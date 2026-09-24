@@ -83,7 +83,8 @@ export const DESIGN = {
       return out;
     },
   },
-  resetAll: { family: 'resets' },
+  // Reset Design Settings keeps the Sidebar's Single · ATS-safe Layout: the ATS-safe page it promises (R2-089).
+  resetAll: { family: 'resets', keeps: ['setting.sidebarSingleColumn'] },
   'setting.sidebarSingleColumn': {
     family: 'template',
     check: ({ runs }) => runs.flatMap((r) => {
