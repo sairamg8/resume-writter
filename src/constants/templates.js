@@ -160,6 +160,21 @@ export function photoTextPositionApplies(settings, template) {
 }
 
 /**
+ * Header Customization → Contact Details' Style and Layout as the PDF and Word print them, so the
+ * panel's active chip is what prints (R2-095). None stored ('' or null too, R9-10) is Icon and
+ * Justify; a value no build offered (an imported 'dots') prints its separators as Bar and lays out
+ * as Justify (PdfContact, wordExportContacts).
+ */
+export function contactStyleOf(settings) {
+  const style = settings?.contactStyle || 'icon';
+  return style === 'icon' || style === 'bullet' ? style : 'bar';
+}
+export function contactLayoutOf(settings) {
+  const layout = settings?.contactLayout;
+  return layout === 'single' || layout === '2grid' ? layout : 'justify';
+}
+
+/**
  * Does the header draw contact icons (the pack's, or a field's uploaded image)? Modern's banner
  * and the Sidebar column always do; the other templates only with Contact Style "Icon" (the
  * default). The editor offers the per-field icon upload exactly then (R1-2).

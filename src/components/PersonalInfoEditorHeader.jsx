@@ -1,9 +1,10 @@
 import { ChevronDown, ChevronRight, Eye, EyeOff } from 'lucide-react';
 import { HEADER_BORDER_PT, ICON_SIZE } from '@/constants/designNumbers';
-import { drawsContactIcons, hasHeaderControls, headerBorderOn, headerControlTemplateLabels } from '@/constants/templates';
+import { contactLayoutOf, contactStyleOf, drawsContactIcons, hasHeaderControls, headerBorderOn, headerControlTemplateLabels } from '@/constants/templates';
 import { ICON_SET_OPTIONS, getIconSetId } from '@/utils/contactIcons';
 import { headerGapRows, headerGapKeysSet } from '@/utils/headerSpacingRows';
 import { HeaderSpacingGroup } from '@/components/HeaderSpacingControls';
+import { usePrintableImage } from '@/hooks/usePrintableImage';
 
 function LayoutPreview({ type }) {
   const bar = (w) => <div className="h-1 bg-gray-300 rounded-sm" style={{ width: w }} />;
@@ -70,6 +71,10 @@ export function Chip({ active, onClick, children }) {
 export function HeaderCustomization({ s, set, clear, personal, template, templateLabel, open, onToggle }) {
   // The rule's state as the PDF prints it: an unset setting follows the template's design.
   const borderOn = headerBorderOn(s, template);
+  // The photo as the PDF prints it: the copy fetched of one stored as a URL, or made of a WebP (R2-093,
+  // R7-7), so Photo ↔ Text shows exactly when the header prints a photo beside the text.
+  const photo = usePrintableImage(personal?.photo);
+  const printed = photo && photo !== personal?.photo ? { ...personal, photo } : personal;
   return (
     <div className="bg-gray-50 rounded-xl border border-gray-100">
       <button onClick={onToggle} className="w-full flex items-center justify-between p-3 text-left">
@@ -127,13 +132,13 @@ export function HeaderCustomization({ s, set, clear, personal, template, templat
                 <p className="text-[11px] text-gray-400 mb-1.5">Layout</p>
                 <div className="flex gap-2 mb-3">
                   {[{ val: 'single', label: 'Single' }, { val: 'justify', label: 'Justify' }, { val: '2grid', label: '2 Grid' }].map(({ val, label }) => (
-                    <Chip key={val} active={(s.contactLayout || 'justify') === val} onClick={() => set('contactLayout', val)}>{label}</Chip>
+                    <Chip key={val} active={contactLayoutOf(s) === val} onClick={() => set('contactLayout', val)}>{label}</Chip>
                   ))}
                 </div>
                 <p className="text-[11px] text-gray-400 mb-1.5">Style</p>
                 <div className="flex gap-2 mb-2">
                   {[{ val: 'icon', label: '⊕ Icon' }, { val: 'bullet', label: '• Bullet' }, { val: 'bar', label: '| Bar' }].map(({ val, label }) => (
-                    <Chip key={val} active={(s.contactStyle || 'icon') === val} onClick={() => set('contactStyle', val)}>{label}</Chip>
+                    <Chip key={val} active={contactStyleOf(s) === val} onClick={() => set('contactStyle', val)}>{label}</Chip>
                   ))}
                 </div>
                 {/* The header draws the pack exactly as the Style chip above reads it: a blank
@@ -188,7 +193,7 @@ export function HeaderCustomization({ s, set, clear, personal, template, templat
           {/* Every template: the gaps its header prints (header_spacing_spec.md). */}
           <div className="pt-3 border-t border-gray-200">
             <HeaderSpacingGroup
-              rows={headerGapRows(template, s, personal)}
+              rows={headerGapRows(template, s, printed)}
               setKeys={headerGapKeysSet(template, s)}
               onChange={set}
               onClear={(keys) => clear?.(keys)}

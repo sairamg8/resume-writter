@@ -10,6 +10,7 @@ import { HEADER_READS, HEADER_SEEN, withHeaderColorsBack } from '@/templates/pdf
 import { DEFAULT_ITEM_GAP_PX, SECTION_SPACING_PX } from '@/templates/pdf/shared/pdfUnits';
 import { withTextFields } from '@/utils/textFields';
 import { withSkillNames } from '@/utils/skills';
+import { withSectionShapes } from '@/utils/sectionShapes';
 
 import { DATA_VERSION } from '@/utils/dataVersion';
 
@@ -290,8 +291,9 @@ function withProjectUrls(r) {
 }
 
 /**
- * `resume` made current: a template the app offers (withKnownTemplate), the Design panel's
- * numbers stored as numbers in their controls' ranges (withDesignNumbers), valid colors
+ * `resume` made current: a template the app offers (withKnownTemplate), sections and entries that
+ * are objects with unique ids, a title and Grids Section Options offers (withSectionShapes), the
+ * Design panel's numbers stored as numbers in their controls' ranges (withDesignNumbers), valid colors
  * stored as '#rrggbb' (withNormalizedColors), text wherever it keeps text (withTextFields), a
  * project's link as its `url` (withProjectUrls) and its skill groups as skills (withSkillNames),
  * whatever its version; then each one-time migration newer than its own `dataVersion`, after
@@ -312,7 +314,7 @@ function withProjectUrls(r) {
  */
 export function normalizeResume(resume) {
   if (!resume || typeof resume !== 'object') return resume;
-  const known = withKnownTemplate(resume);
+  const known = withSectionShapes(withKnownTemplate(resume));
   const r = withSkillNames(withProjectUrls(withTextFields(withNormalizedColors(withDesignNumbers(offersTemplate(resume.template) ? known : withHeaderReadableOnClassic(known))))));
   const ahead = aheadOf(r);
   const from = versionOf(r);

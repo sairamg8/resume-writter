@@ -88,7 +88,7 @@ describe('a value that is not text, where a résumé keeps text, is text once lo
     const sections = Object.keys(SECTION_TYPE_DEFAULTS).map((type) => {
       const blank = SECTION_TYPE_DEFAULTS[type]('x').items[0];
       const typed = Object.fromEntries(Object.entries(blank).map(([k, v]) => [k, typeof v === 'string' ? `${type} ${k}` : v]));
-      return section(type, [{ ...typed, hiddenFields: [] }, { ...blank }]);
+      return section(type, [{ ...typed, hiddenFields: [] }, { ...blank, id: `${type}_blank` }]); // ids unique, as loading makes them (R2-055)
     });
     sections[0].items[0].startDate = 2019;
     const current = resume({

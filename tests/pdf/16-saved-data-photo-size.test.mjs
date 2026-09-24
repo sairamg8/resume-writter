@@ -110,13 +110,28 @@ class MemoryStorage {
   removeItem(k) { this.map.delete(k); }
 }
 
+/**
+ * The network, for a photo saved as a URL (resume_c below): the app fetches one for the PDF's copy
+ * (R2-093), and a test never reaches the real network, so it fails as an unreachable server does.
+ * The fonts the PDF loads come from the local test server and go to the real fetch.
+ */
+const realFetch = globalThis.fetch;
+function installNetwork() {
+  globalThis.fetch = async (url, ...rest) => {
+    if (/^(file:|data:|http:\/\/(127\.0\.0\.1|localhost)[:/])/.test(String(url))) return realFetch(url, ...rest);
+    throw new TypeError('Failed to fetch');
+  };
+}
+
 before(async () => {
   await setup();
   installDecoder();
+  installNetwork();
 });
 after(async () => {
   delete globalThis.createImageBitmap;
   delete globalThis.FileReader;
+  globalThis.fetch = realFetch;
   await teardown();
 });
 

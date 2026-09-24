@@ -94,10 +94,11 @@ describe('a photo saved as WebP or GIF, before uploads were converted, prints (R
 describe('printableImage: the copy the PDF prints (R7-7)', () => {
   const printable = () => loadModule('/src/utils/printableImage.js');
 
-  it('a PNG, JPEG or SVG, or a plain URL, prints as it is; no image prints nothing — nothing is decoded for them', async () => {
+  // A plain URL is fetched for a copy now (R2-093): tests/pdf/80-photo-url.test.mjs.
+  it('a PNG, JPEG or SVG prints as it is; no image prints nothing — nothing is decoded for them', async () => {
     const { printableNow, printableImage } = await printable();
     const before = decodes.length;
-    for (const src of [PNG_2X2, JPEG_2X2, 'https://example.com/me.webp']) {
+    for (const src of [PNG_2X2, JPEG_2X2]) {
       assert.equal(printableNow(src), src);
       assert.equal(await printableImage(src), src);
     }

@@ -47,11 +47,12 @@ const labelled = (dataUrl, type) => `data:${MIME[type]};base64,${dataUrl.slice(d
  * `src` as the PDF can draw it, or null. react-pdf decodes a data URL by its label, so a PNG, JPEG
  * or SVG whose label names another type — saved from a file whose name said so, before uploads were
  * sniffed — comes back labelled by its bytes, and any other bytes (a WebP or GIF, whatever its
- * label says) give null. A plain URL comes back as it is: react-pdf fetches it and reads its bytes.
+ * label says) give null. So does a plain URL or path (a JSON Resume file's basics.image): react-pdf
+ * fetched it, and one it could not fetch printed an empty ring beside a name pushed aside (R2-093).
+ * The PDF prints the copy fetched of it instead, when one can be (printableImage.js).
  */
 export function drawableImage(src) {
-  if (typeof src !== 'string' || !src) return null;
-  if (!src.startsWith('data:')) return src;
+  if (typeof src !== 'string' || !src.startsWith('data:')) return null;
   const label = IMAGE_DATA_URL.exec(src)?.[1].toLowerCase();
   const type = label && sniff(decodeHead(src.slice(src.indexOf(',') + 1)));
   if (!type) return null;
@@ -59,8 +60,8 @@ export function drawableImage(src) {
 }
 
 /**
- * True when the PDF can draw `src` (see drawableImage): a PNG, JPEG or SVG data URL, or a plain
- * URL. False for other data URLs — a WebP or GIF saved before uploads were converted — and for
+ * True when the PDF can draw `src` (see drawableImage): a PNG, JPEG or SVG data URL. False for other
+ * data URLs — a WebP or GIF saved before uploads were converted — for a plain URL or path, and for
  * anything that is not a non-empty string.
  */
 export function isDrawableImage(src) {

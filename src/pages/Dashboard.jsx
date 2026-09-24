@@ -78,6 +78,12 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false }) {
         setTimeout(() => setImportError(null), 4000);
       }
     };
+    // A file the browser will not hand over — a permission error, a removed drive, a folder — never
+    // reaches onload, and without this the import said nothing (R2-085; the editor's: AUD-23).
+    reader.onerror = reader.onabort = () => {
+      setImportError('That file could not be read. Check it is still there and try again.');
+      setTimeout(() => setImportError(null), 4000);
+    };
     reader.readAsText(file);
     e.target.value = '';
   }

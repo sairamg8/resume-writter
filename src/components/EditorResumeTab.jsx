@@ -55,6 +55,7 @@ export function EditorResumeTab({
         {personalOpen && (
           <div className="p-4 border-t border-gray-100">
             <PersonalInfoEditor
+              resume={resume}
               personal={resume.personal}
               updatePersonal={store.updatePersonal}
               toggleFieldVisibility={store.toggleFieldVisibility}

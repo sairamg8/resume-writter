@@ -2,7 +2,7 @@ import { useRef } from 'react';
 import { Camera, ChevronDown, ChevronRight, Eye, EyeOff } from 'lucide-react';
 import { Chip } from '@/components/PersonalInfoEditorHeader';
 import { readImageFile } from '@/utils/imageUpload';
-import { UNPRINTABLE_PHOTO, usePrintableImage } from '@/hooks/usePrintableImage';
+import { UNLOADABLE_PHOTO, UNPRINTABLE_PHOTO, usePrintableImage } from '@/hooks/usePrintableImage';
 import { photoTextPositionApplies, templateId } from '@/constants/templates';
 import { PHOTO_OPTIONS, photoOption } from '@/constants/photoOptions';
 
@@ -22,7 +22,7 @@ function PhotoChips({ control, s, set }) {
   );
 }
 
-export function PhotoSection({ personal, updatePersonal, toggleFieldVisibility, hidden, s, set, template, open, onToggle, coverLetter }) {
+export function PhotoSection({ resume: whole, personal, updatePersonal, toggleFieldVisibility, hidden, s, set, template, open, onToggle, coverLetter }) {
   const photoInputRef = useRef(null);
   // A photo saved as WebP or GIF, before uploads were converted, prints as a converted copy; one
   // this browser cannot read either prints nothing, and the panel says so instead of "Added" (R7-7).
@@ -33,7 +33,8 @@ export function PhotoSection({ personal, updatePersonal, toggleFieldVisibility, 
     const file = e.target.files?.[0];
     e.target.value = '';
     if (!file) return;
-    const resume = { personal, settings: s, template, coverLetter };
+    // The whole résumé, sections and all: an upload may take only what its cloud document has left (R2-097).
+    const resume = { ...whole, personal, settings: s, template, coverLetter };
     readImageFile(file, { kind: 'photo', resume, replacing: personal.photo }).then((dataUrl) => updatePersonal('photo', dataUrl), (err) => alert(err.message));
   }
 
@@ -83,7 +84,11 @@ export function PhotoSection({ personal, updatePersonal, toggleFieldVisibility, 
             <div className="flex-1 min-w-0">
               <p className="text-xs font-medium text-gray-700">Profile Photo</p>
               <p className="text-[11px] text-gray-400 mt-0.5">Optional. Click to upload.</p>
-              {unprintable && <p className="text-[11px] text-amber-700 mt-1" data-testid="photo-unprintable">{UNPRINTABLE_PHOTO}</p>}
+              {unprintable && (
+                <p className="text-[11px] text-amber-700 mt-1" data-testid="photo-unprintable">
+                  {typeof personal.photo === 'string' && !personal.photo.startsWith('data:') ? UNLOADABLE_PHOTO : UNPRINTABLE_PHOTO}
+                </p>
+              )}
               {personal.photo && (
                 <button onClick={() => updatePersonal('photo', null)} className="text-[11px] text-red-500 hover:text-red-600 mt-1">Remove photo</button>
               )}
@@ -105,7 +110,8 @@ export function PhotoSection({ personal, updatePersonal, toggleFieldVisibility, 
             <PhotoChips control="photoBorder" s={s} set={set} />
           </div>
 
-          {(s.photoShape || 'circle') !== 'circle' && (
+          {/* A circle takes no Height, and an imported shape the PDF does not draw ('oval') is one (R2-094). */}
+          {photoOption('photoShape', s.photoShape) !== 'circle' && (
             <div>
               <p className="text-xs font-semibold text-gray-700 mb-1.5">Height</p>
               <PhotoChips control="photoHeight" s={s} set={set} />
