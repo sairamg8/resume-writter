@@ -6,9 +6,10 @@ import { isJsonResume, jsonResumeToCpwtResume } from '@/utils/jsonResume';
 /**
  * The editor's Export menu, with Import JSON: `onImportJSON(data, asOriginal)`. `keeps` — a demo
  * account, whose originals come back (useDemoSeed) — adds "Import as my original", as the
- * dashboard's Import menu has (V2OWNER-DATA-3).
+ * dashboard's Import menu has (V2OWNER-DATA-3). `letter`: the Cover Letter tab is open, where PDF
+ * and Word export the letter and the text exports still the résumé — each item says which (R2-131).
  */
-export function ExportDropdown({ exporting, keeps = false, onExportPDF, onExportWord, onExportJSON, onExportMarkdown, onExportAtsText, onExportJsonResume, onImportJSON, onImportError }) {
+export function ExportDropdown({ exporting, keeps = false, letter = false, onExportPDF, onExportWord, onExportJSON, onExportMarkdown, onExportAtsText, onExportJsonResume, onImportJSON, onImportError }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   const importRef = useRef(null);
@@ -40,41 +41,41 @@ export function ExportDropdown({ exporting, keeps = false, onExportPDF, onExport
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-1 w-52 bg-white border border-gray-200 rounded-lg shadow-lg z-20 py-1">
+        <div className={`absolute right-0 top-full mt-1 ${letter ? 'w-72' : 'w-52'} bg-white border border-gray-200 rounded-lg shadow-lg z-20 py-1`}>
           <button
             onClick={() => { onExportPDF(); setOpen(false); }}
             disabled={!!exporting}
             className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-blue-50 hover:text-blue-700 disabled:opacity-50"
           >
-            <Download size={12} className="text-blue-500" /> Export PDF
+            <Download size={12} className="text-blue-500" /> {letter ? 'Export Cover Letter PDF' : 'Export PDF'}
           </button>
           <button
             onClick={() => { onExportWord(); setOpen(false); }}
             disabled={!!exporting}
             className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 disabled:opacity-50"
           >
-            <FileText size={12} className="text-emerald-500" /> Export Word
+            <FileText size={12} className="text-emerald-500" /> {letter ? 'Export Cover Letter Word' : 'Export Word'}
           </button>
           <button
             onClick={() => { onExportMarkdown?.(); setOpen(false); }}
             disabled={!!exporting}
             className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-amber-50 hover:text-amber-700 disabled:opacity-50"
           >
-            <FileCode size={12} className="text-amber-600" /> Export Markdown (.md)
+            <FileCode size={12} className="text-amber-600" /> {letter ? 'Export Résumé as Markdown (.md)' : 'Export Markdown (.md)'}
           </button>
           <button
             onClick={() => { onExportAtsText?.(); setOpen(false); }}
             disabled={!!exporting}
             className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-purple-50 hover:text-purple-700 disabled:opacity-50"
           >
-            <FileText size={12} className="text-purple-500" /> Export ATS Text (.txt)
+            <FileText size={12} className="text-purple-500" /> {letter ? 'Export Résumé as ATS Text (.txt)' : 'Export ATS Text (.txt)'}
           </button>
           <button
             onClick={() => { onExportJsonResume?.(); setOpen(false); }}
             disabled={!!exporting}
             className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-cyan-50 hover:text-cyan-800 disabled:opacity-50"
           >
-            <FileJson size={12} className="text-cyan-600" /> Export JSON Resume (.json)
+            <FileJson size={12} className="text-cyan-600" /> {letter ? 'Export Résumé as JSON Resume (.json)' : 'Export JSON Resume (.json)'}
           </button>
           <button
             onClick={() => { onExportJSON(); setOpen(false); }}

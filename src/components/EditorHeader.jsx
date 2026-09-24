@@ -45,6 +45,7 @@ export function EditorHeader({ resume, rename, layoutMode, setLayoutMode, export
         <ExportDropdown
           exporting={exportMenu.exporting}
           keeps={exportMenu.keeps}
+          letter={exportMenu.letterTab}
           onExportPDF={exportMenu.handleExportPDF}
           onExportWord={exportMenu.handleExportWord}
           onExportJSON={exportMenu.handleExportJSON}
