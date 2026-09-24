@@ -95,6 +95,44 @@ describe('the split view’s resize handle (R2-144)', () => {
     } finally { await view.unmount(); }
   });
 
+  it('captures the pointer on the handle, and ends the drag if the capture is lost', async () => {
+    const store = memoryStorage();
+    const { view, hook, props } = mountHook();
+    // The handle as a browser gives it: pointer capture, and its own listeners.
+    const captured = [];
+    const listeners = new Map();
+    const handle = {
+      setPointerCapture: (id) => captured.push(id),
+      hasPointerCapture: (id) => captured.includes(id),
+      addEventListener: (type, fn) => listeners.set(type, fn),
+      removeEventListener: (type, fn) => { if (listeners.get(type) === fn) listeners.delete(type); },
+    };
+    try {
+      view.act(() => props().onPointerDown({ preventDefault() {}, clientX: 500, pointerType: 'pen', button: 0, pointerId: 3, currentTarget: handle }));
+      assert.deepEqual(captured, [3], 'before: the pointer was not captured');
+      view.act(() => view.window.dispatchEvent({ type: 'pointermove', clientX: 540, pointerId: 3 }));
+      assert.equal(hook().panelWidth, 400);
+      // The browser takes the capture away without a pointerup (a system gesture, say).
+      view.act(() => listeners.get('lostpointercapture')?.({ type: 'lostpointercapture', clientX: 540, pointerId: 3 }));
+      assert.equal(view.window.listeners('pointermove'), 0, 'the drag outlives a lost capture');
+      assert.equal(listeners.size, 0, 'the handle keeps a listener');
+      assert.equal(view.document.body.style.cursor, '');
+      assert.equal(store.get(KEY), '400');
+    } finally { await view.unmount(); }
+  });
+
+  it('a handle that refuses the capture (no active pointer) still drags', async () => {
+    memoryStorage();
+    const { view, hook, props } = mountHook();
+    const handle = { setPointerCapture() { throw Object.assign(new Error('No active pointer'), { name: 'NotFoundError' }); }, addEventListener() {}, removeEventListener() {} };
+    try {
+      view.act(() => props().onPointerDown({ preventDefault() {}, clientX: 500, pointerType: 'mouse', button: 0, pointerId: 1, currentTarget: handle }));
+      view.act(() => view.window.dispatchEvent({ type: 'pointermove', clientX: 520, pointerId: 1 }));
+      view.act(() => view.window.dispatchEvent({ type: 'pointerup', clientX: 520, pointerId: 1 }));
+      assert.equal(hook().panelWidth, 380);
+    } finally { await view.unmount(); }
+  });
+
   it('a mouse’s right button does not start a drag', async () => {
     memoryStorage();
     const { view, props } = mountHook();
