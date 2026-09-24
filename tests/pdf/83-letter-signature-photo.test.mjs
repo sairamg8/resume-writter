@@ -176,3 +176,22 @@ describe('the generated letter prints its paragraphs apart (R2-130)', () => {
     assert.ok(at >= 0 && texts[at + 1].trim() === '' && texts[at + 2].startsWith('I am writing'), texts.join(' | '));
   });
 });
+
+// R2-092 follow-up: the Personal Info photo eye still said "Hide photo from resume", though hiding
+// it now takes it off the cover letter too.
+describe('the Personal Info photo eye says what it hides (R2-092)', () => {
+  it('its tooltip names the résumé and the cover letter, shown or hidden', async () => {
+    const { PhotoSection } = await loadModule('/src/components/PersonalInfoEditorPhoto.jsx');
+    const { renderToString } = await import('react-dom/server');
+    const noop = () => {};
+    const eye = (hidden) => {
+      const html = renderToString(createElement(PhotoSection, {
+        personal: { photo: PNG }, updatePersonal: noop, toggleFieldVisibility: noop, hidden: new Set(hidden),
+        s: {}, set: noop, template: 'classic', open: true, onToggle: noop,
+      }));
+      return /title="((?:Hide|Show) photo[^"]*)"/.exec(html)?.[1];
+    };
+    assert.match(eye([]) || '', /^Hide photo from the résumé and cover letter/, eye([]));
+    assert.match(eye(['photo']) || '', /^Show photo on the résumé and cover letter/, eye(['photo']));
+  });
+});
