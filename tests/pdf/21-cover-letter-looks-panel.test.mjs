@@ -19,7 +19,7 @@ before(setup);
 after(teardown);
 
 /** Each template's name as the editor shows it, written out rather than read from the table under test. */
-const NAMES = { classic: 'Classic', modern: 'Modern', minimal: 'Minimal', executive: 'Executive', sidebar: 'Sidebar', timeline: 'Timeline', banner: 'Banner', academic: 'Academic' };
+const NAMES = { classic: 'Classic', modern: 'Modern', minimal: 'Minimal', executive: 'Executive', sidebar: 'Sidebar', timeline: 'Timeline', banner: 'Banner', academic: 'Academic', compact: 'Compact' };
 /** Template ids the app does not offer: each prints Classic's letter (22-cover-letter-looks-options). */
 const UNKNOWN = ['dark', 'aurora', ''];
 /** Text Alignment as the résumé stores it: Center, Left, and unset (Left) in a résumé that never picked one. */
@@ -27,9 +27,10 @@ const ALIGNS = ['center', 'left', undefined];
 /** Is a letter on `template` centred under `headerAlign`? Where its résumé's header is: Modern and Sidebar take no alignment. */
 const centres = (template, headerAlign) => headerAlign === 'center' && !['modern', 'sidebar'].includes(template);
 
+// The name and title stacked, as every template stacks them but Compact, which prints them Inline (T9).
 const letter = (template, headerAlign, photo = PNG) => resume({
   template,
-  settings: { headerAlign },
+  settings: { headerAlign, headerLayout: 'stack' },
   personal: { name: 'Pat Sample', title: 'Staff Engineer', email: 'pat@example.com', phone: '+1 555 0100', photo, hiddenFields: [] },
   coverLetter: { body: '<p>Dear Sarah,</p>', date: '2026-01-15' },
 });

@@ -17,6 +17,9 @@
 //     the drawing order, not a tagged PDF's structure tree — and -layout sorts every line of a page by
 //     height, so two columns side by side always interleave. Its Layout → "Single · ATS-safe" toggle
 //     collapses it to one linear column that parses whole.
+//   • Compact's grid of short sections (T9, accepted) sets two items on a row: under -layout an item that
+//     wraps in its cell reads interleaved with the one beside it. Its experience is one column and reads
+//     whole in every mode; the stream-order readers (pdf.js, -raw) read the grid item by item.
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { setup, teardown, resume, section, experience, render, loadModule, TEMPLATES } from './harness.mjs';
@@ -28,6 +31,8 @@ after(teardown);
 
 const SINGLE_COLUMN = TEMPLATES.filter((t) => t !== 'sidebar');
 const GOOD = (name) => name === 'pdf.js' || name === 'pdftotext (reading order)' || name === 'pdftotext -layout';
+/** The sections Compact lays out two to a row (TEMPLATE_SECTION_DEFAULTS.compact, T9). */
+const COMPACT_GRID = ['skills', 'certifications', 'awards', 'languages', 'references'];
 
 /** The résumé with accents, symbols and long contacts every template has to carry. */
 function stress(template) {
@@ -74,7 +79,19 @@ describe('the sample résumé of every template parses whole', () => {
       if (!hasPdftotext) { t.skip('pdftotext not installed'); return; }
       const { DEMO_RESUMES } = await loadModule('/tests/fixtures/sampleResumes.js');
       const r = DEMO_RESUMES.find((x) => x.template === template);
-      const found = (await readers(await render(r))).filter(([n]) => GOOD(n)).flatMap(([n, text]) => problems(n, score(truthBlocks(r), text)));
+      const found = [];
+      const cells = [];
+      for (const [n, text] of (await readers(await render(r))).filter(([name]) => GOOD(name))) {
+        const s = score(truthBlocks(r), text);
+        // Compact's grid (T9, accepted): -layout sets a row's two cells on one line, so an item that wraps
+        // in its cell interleaves with the one beside it — why Compact is rated good, not certified. Two
+        // entries of one grid section only; every other pair, and every other reader, must read whole.
+        const typeOf = (id) => r.sections.find((x) => x.id === id.split(':')[0])?.type;
+        const side = ([a, b]) => template === 'compact' && n === 'pdftotext -layout' && a.split(':')[0] === b.split(':')[0] && COMPACT_GRID.includes(typeOf(a));
+        cells.push(...s.overlaps.filter(side).map((pair) => pair.join('×')));
+        found.push(...problems(n, { ...s, overlaps: s.overlaps.filter((pair) => !side(pair)) }));
+      }
+      if (cells.length) t.diagnostic(`known limit (Compact's grid under -layout): ${cells.join(', ')}`);
       assert.deepEqual(found, []);
     });
   }

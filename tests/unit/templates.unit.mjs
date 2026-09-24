@@ -14,8 +14,8 @@ const {
 
 test('templateId: every template stays, however an imported file cases or spaces them; any other id reads as Classic (M15, R5-5)', () => {
   for (const id of TEMPLATE_IDS) assert.equal(templateId(id), id);
-  assert.deepEqual(TEMPLATE_IDS.toSorted(), ['academic', 'banner', 'classic', 'executive', 'minimal', 'modern', 'sidebar', 'timeline']);
-  for (const [written, id] of [['Modern', 'modern'], [' sidebar ', 'sidebar'], ['EXECUTIVE', 'executive'], ['Minimal\n', 'minimal'], ['Classic', 'classic'], [' Timeline', 'timeline'], ['BANNER ', 'banner'], ['Academic', 'academic']]) {
+  assert.deepEqual(TEMPLATE_IDS.toSorted(), ['academic', 'banner', 'classic', 'compact', 'executive', 'minimal', 'modern', 'sidebar', 'timeline']);
+  for (const [written, id] of [['Modern', 'modern'], [' sidebar ', 'sidebar'], ['EXECUTIVE', 'executive'], ['Minimal\n', 'minimal'], ['Classic', 'classic'], [' Timeline', 'timeline'], ['BANNER ', 'banner'], ['Academic', 'academic'], [' COMPACT', 'compact']]) {
     assert.equal(templateId(written), id, JSON.stringify(written));
   }
   for (const id of ['dark', 'Dark', 'aurora', '', '  ', null, undefined, 42, {}, ['modern']]) assert.equal(templateId(id), 'classic', String(id));
@@ -47,10 +47,11 @@ test('the header helpers give each template the answers of the separate tables t
   // HEADER_CONTROL_TEMPLATES and HEADER_BORDER_WHEN_UNSET, as they were at 01e9118: a guard
   // that folding them into TEMPLATES changed no answer.
   // Templates added since (T6 on) state their own answers: Timeline's header is Classic's stacked one, no rule;
-  // Banner's is that header in its band (T7), no rule; Academic's is Classic's, centred where it is picked (T8), no rule.
-  const CONTROLS = { classic: true, modern: false, minimal: true, executive: true, sidebar: false, timeline: true, banner: true, academic: true };
-  const RULE_WHEN_UNSET = { classic: true, modern: false, minimal: false, executive: false, sidebar: false, timeline: false, banner: false, academic: false };
-  assert.deepEqual(TEMPLATE_IDS, ['classic', 'modern', 'minimal', 'executive', 'sidebar', 'timeline', 'banner', 'academic']);
+  // Banner's is that header in its band (T7), no rule; Academic's is Classic's, centred where it is picked (T8), no rule;
+  // Compact's is Classic's, the title on the name's line where it is picked (T9), no rule.
+  const CONTROLS = { classic: true, modern: false, minimal: true, executive: true, sidebar: false, timeline: true, banner: true, academic: true, compact: true };
+  const RULE_WHEN_UNSET = { classic: true, modern: false, minimal: false, executive: false, sidebar: false, timeline: false, banner: false, academic: false, compact: false };
+  assert.deepEqual(TEMPLATE_IDS, ['classic', 'modern', 'minimal', 'executive', 'sidebar', 'timeline', 'banner', 'academic', 'compact']);
   for (const template of [...TEMPLATE_IDS, 'dark', '', undefined]) {
     const t = templateId(template);
     assert.equal(hasHeaderControls(template), CONTROLS[t], `${template}: controls`);
@@ -77,6 +78,12 @@ test('templateStyleDefaults: each template\'s heading style and title case; an u
       academic: {
         headingStyle: 'ruled', sectionTitleCase: 'upper', font: 'sourceserif', headerAlign: 'center',
         fontSizeSectionDelta: 0, lineHeightValue: 1.35, sectionGap: 12, itemGap: 6,
+      },
+      // Compact brings its density (T9): 9 pt text, the title on the name's line, a one-page measure and
+      // narrow margins; its titles are followed by a short rule (Line after).
+      compact: {
+        headingStyle: 'line', sectionTitleCase: 'upper', headerLayout: 'inline',
+        fontSizeBase: 9, lineHeightValue: 1.3, sectionGap: 10, itemGap: 5, marginH: 12, marginV: 10,
       },
     },
   );
@@ -121,7 +128,7 @@ test('buildTestState: headingStyle and sectionTitleCase match templateStyleDefau
 });
 
 test('headerControlTemplateLabels: returns templates with headerControls in order (FIDB-51-VF7-NB1)', () => {
-  assert.deepEqual(headerControlTemplateLabels(), ['Classic', 'Minimal', 'Executive', 'Timeline', 'Banner', 'Academic']);
+  assert.deepEqual(headerControlTemplateLabels(), ['Classic', 'Minimal', 'Executive', 'Timeline', 'Banner', 'Academic', 'Compact']);
 
   // Custom table with extra template prevents drift when new templates are added
   const customTable = {

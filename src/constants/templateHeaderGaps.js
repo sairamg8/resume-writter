@@ -52,3 +52,12 @@ export const ACADEMIC_HEADER_GAPS = {
   ...STACKED_HEADER_GAPS, nameTitleGap: 2, summaryGap: 6,
   headerGapBelow: (sectionGapPt) => Math.max(12, sectionGapPt || 0),
 };
+/**
+ * Compact's header is Classic's stacked one set tight for a one-page résumé (CompactTemplatePDF.jsx):
+ * the title on the name's line where it is picked (templates.js COMPACT style, Inline), the summary 5 pt
+ * under the contacts, and 10 pt (or Between Sections when wider) under the header, where Classic keeps 15.
+ */
+export const COMPACT_HEADER_GAPS = {
+  ...STACKED_HEADER_GAPS, summaryGap: 5,
+  headerGapBelow: (sectionGapPt) => Math.max(10, sectionGapPt || 0),
+};

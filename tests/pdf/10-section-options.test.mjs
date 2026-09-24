@@ -81,7 +81,7 @@ describe('custom section', () => {
 
 describe('experience Order (FIDA-58 / FIDB-72)', () => {
   // With no Order chosen a template prints its own default — the one the section editor shows.
-  const DEFAULT_ORDER = { classic: 'company', modern: 'company', minimal: 'company', executive: 'role', sidebar: 'role', timeline: 'role', banner: 'role', academic: 'role' };
+  const DEFAULT_ORDER = { classic: 'company', modern: 'company', minimal: 'company', executive: 'role', sidebar: 'role', timeline: 'role', banner: 'role', academic: 'role', compact: 'role' };
   const bold = (t) => /Bold/.test(t.font);
   /** Which field leads the entry: the bold primary, printed before the other one. */
   async function lead(template, titleOrder) {
@@ -219,8 +219,8 @@ describe('the default gap between items (R2-1)', () => {
   };
   const near = (actual, expected, what) => assert.ok(Math.abs(actual - expected) < 0.3, `${what}: ${actual.toFixed(2)} pt, expected ${expected.toFixed(2)}`);
 
-  // Academic brings a denser Between Items, 6 px (T8): its presets keep the same proportions.
-  const OWN_PT = { academic: 4.5 };
+  // Academic brings a denser Between Items, 6 px (T8), Compact 5 px (T9): their presets keep the same proportions.
+  const OWN_PT = { academic: 4.5, compact: 3.75 };
   for (const template of TEMPLATES) {
     const own = OWN_PT[template] ?? 6;
     it(`${template}: a new résumé prints the old presets' gaps — Normal ${own} pt, Tight ${own / 2} pt, Spacious ${own * 1.75} pt`, async () => {

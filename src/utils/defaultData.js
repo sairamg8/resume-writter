@@ -1,5 +1,6 @@
 import { BLANK_PERSONAL, blankSections, BASE_COVER_LETTER } from '@/utils/defaultDataContent';
 import { templateStyleDefaults } from '@/constants/templates';
+import { sectionsOnSwitch } from '@/templates/pdf/shared/templateSectionDefaults';
 import { DATA_VERSION } from '@/utils/normalizeResume';
 import { DEFAULT_DATE_FORMAT } from '@/utils/dates';
 
@@ -126,7 +127,8 @@ export function createBlankResume({ id, name = 'Untitled Resume', template = 'cl
     template,
     settings: defaultSettings(template),
     personal: { ...BLANK_PERSONAL, hiddenFields: [] },
-    sections: blankSections(),
+    // In its template's own Grids where it has one (Compact's grid, T9), as a section added on it is.
+    sections: sectionsOnSwitch(blankSections(), null, template),
     coverLetter: { ...BASE_COVER_LETTER },
   };
 }

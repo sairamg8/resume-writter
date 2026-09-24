@@ -975,7 +975,7 @@ export function analyzeAtsScore(resume, jobDescriptionText = '') {
   } else if (rating.tier === 'good') {
     results.categories.layout.items.push({
       id: 'template', status: 'pass', text: `${templateLabel(currentTemplate)} Single-Column Layout`,
-      detail: 'Single-column body parses reliably. Ensure header contrast remains legible.',
+      detail: rating.note || 'Single-column body parses reliably. Ensure header contrast remains legible.',
     });
   } else {
     // Which fixes the ATS Check tab can offer, cheapest first — the checker names them by id, the

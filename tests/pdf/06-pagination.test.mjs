@@ -57,8 +57,10 @@ describe('page breaks, swept over résumé length', () => {
     it(`${template}: 1–16 entries — no overprint, no margin overflow, no orphans, nothing lost`, async () => {
       const found = [];
       for (let k = 1; k <= 16; k += 1) {
-        const pages = await read(await render(longResume(template, k)));
-        for (const p of problems(pages)) found.push(`k=${k} ${p}`);
+        const r = longResume(template, k);
+        const pages = await read(await render(r));
+        // The résumé's own margins: Compact brings 10 mm (T9), every other template the 14 mm default.
+        for (const p of problems(pages, { marginV: r.settings.marginV ?? 14 })) found.push(`k=${k} ${p}`);
         const printed = allItems(pages).filter((t) => t.str.includes('Role ')).length;
         if (printed < k) found.push(`k=${k}: ${printed}/${k} entry headers printed`);
       }

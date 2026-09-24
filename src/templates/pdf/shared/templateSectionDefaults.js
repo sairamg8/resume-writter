@@ -1,3 +1,5 @@
+import { SECTION_TYPE_DEFAULTS } from '../../../utils/defaultDataSectionTypes.js';
+
 /**
  * Per-template section defaults: what a template prints for a setting the user has not
  * chosen. User customizations stored in section.settings always take precedence.
@@ -47,6 +49,20 @@ export const TEMPLATE_SECTION_DEFAULTS = {
     // lists appointments — and the job title is what an ATS indexes first (atsChecker's title order).
     experience: { titleOrder: 'role' },
   },
+
+  compact: {
+    // Unset, a job leads with the role, bold, its dates flush right; the company and location on the
+    // line under it (Stacked) — the experience stays one ATS-exact column. The short sections print in
+    // a grid of whole items, two to a row: a skill group (its category next to its skills), a
+    // certification, an award, a language, a reference. Grids is still theirs to change; a section that
+    // stores the Grids it was created with takes these on a switch (gridsOnSwitch).
+    experience:     { titleOrder: 'role' },
+    skills:         { columns: 2 },
+    certifications: { columns: 2 },
+    awards:         { columns: 2 },
+    languages:      { columns: 2 },
+    references:     { columns: 2 },
+  },
 };
 
 /**
@@ -73,3 +89,37 @@ export function resolveSection(section, templateKey) {
     },
   };
 }
+
+/** The Grids a new section of `type` stores (SECTION_TYPE_DEFAULTS), or undefined where it stores none. */
+const createdColumns = (type) => (SECTION_TYPE_DEFAULTS[type] || SECTION_TYPE_DEFAULTS.custom)('grid').settings.columns;
+
+/**
+ * A section's Grids for template `to`, coming from `from`: every section is created storing a Grids
+ * (SECTION_TYPE_DEFAULTS: 1, 2 for Languages and References), so a template's own (Compact's grid,
+ * TEMPLATE_SECTION_DEFAULTS) would never print. Where `to` lays the section's type out in its own
+ * and the section still holds the Grids it was created with, or the one `from` brought, the stored
+ * value is dropped and `to`'s prints (resolveSection); where `from` brought one `to` does not and the
+ * section still holds it, it is dropped too and the section prints as it was created. A Grids the
+ * user picked stays theirs — as styleOnSwitch treats the design settings (T8). The same section when
+ * nothing changes.
+ */
+export function sectionGridOnSwitch(section, from, to) {
+  const was = TEMPLATE_SECTION_DEFAULTS[from]?.[section?.type]?.columns;
+  const next = TEMPLATE_SECTION_DEFAULTS[to]?.[section?.type]?.columns;
+  const stored = section?.settings?.columns;
+  if (was === next || stored == null) return section;
+  if (stored !== was && (next === undefined || stored !== createdColumns(section.type))) return section;
+  const settings = { ...section.settings };
+  delete settings.columns;
+  return { ...section, settings };
+}
+
+/** `sections` on a switch from `from` to `to` (useResumeStore.setTemplate): sectionGridOnSwitch on each; the same array when none changes. */
+export function sectionsOnSwitch(sections, from, to) {
+  if (!Array.isArray(sections)) return sections;
+  const out = sections.map((s) => sectionGridOnSwitch(s, from, to));
+  return out.some((s, i) => s !== sections[i]) ? out : sections;
+}
+
+/** A section as it is created (SECTION_TYPE_DEFAULTS) on `template`: in the template's own Grids where it has one. */
+export const newSectionGrid = (section, template) => sectionGridOnSwitch(section, null, template);

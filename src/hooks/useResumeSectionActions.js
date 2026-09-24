@@ -1,5 +1,6 @@
 import { SECTION_TYPE_DEFAULTS } from '../utils/defaultDataSectionTypes.js';
 import { newId } from '../utils/ids.js';
+import { newSectionGrid } from '../templates/pdf/shared/templateSectionDefaults.js';
 
 export function createSectionActions(patchActive) {
   function updateSections(sections) {
@@ -27,6 +28,7 @@ export function createSectionActions(patchActive) {
     });
   }
 
+  /** A new section, laid out in its template's own Grids where it has one (Compact's grid, T9: newSectionGrid). */
   function addSection(type, initialItem) {
     const id = newId(type);
     const factory = SECTION_TYPE_DEFAULTS[type] || SECTION_TYPE_DEFAULTS.custom;
@@ -34,7 +36,7 @@ export function createSectionActions(patchActive) {
     if (initialItem) {
       section.items = [initialItem];
     }
-    patchActive(r => ({ ...r, sections: [...r.sections, section] }));
+    patchActive(r => ({ ...r, sections: [...r.sections, newSectionGrid(section, r.template)] }));
   }
 
   function removeSection(sectionId) {

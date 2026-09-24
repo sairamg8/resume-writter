@@ -1,5 +1,6 @@
 import { ATS_DEFAULTS } from '@/utils/defaultData';
 import { templateStyleDefaults } from '@/constants/templates';
+import { sectionsOnSwitch } from '@/templates/pdf/shared/templateSectionDefaults';
 
 // The five fictional sample résumés the owner's login got back after deleting everything, until
 // 2026-09-15 — the owner asked for their own résumé instead (src/utils/demoSeed.js), and the app
@@ -150,6 +151,18 @@ function academic() {
   return r;
 }
 
+/**
+ * Compact's sample: the template's own type and spacing (TEMPLATES.compact.style) and its sections as
+ * picking the template leaves them — the short ones in its grid, where they kept the Grids they were
+ * created with (sectionsOnSwitch, T9). It must fit one page, at A4 and at Letter.
+ */
+function compact() {
+  const r = sample('demo_compact', 'Sample · Compact', 'compact',
+    { ...templateStyleDefaults('compact'), accentColor: '#155e75', textColor: '#1a1a1a' });
+  r.sections = sectionsOnSwitch(r.sections, 'classic', 'compact');
+  return r;
+}
+
 /** One sample résumé per template, with the ids and names the owner's account had (demo_…). */
 export const DEMO_RESUMES = [
   sample('demo_classic', 'Sample · Classic', 'classic',
@@ -170,4 +183,5 @@ export const DEMO_RESUMES = [
   sample('demo_banner', 'Sample · Banner', 'banner',
     { accentColor: '#1e3a8a', textColor: '#1a1a1a', headingStyle: 'box', sectionTitleCase: 'upper', sectionGap: 16, itemGap: 8 }),
   academic(),
+  compact(),
 ];

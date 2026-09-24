@@ -24,9 +24,12 @@ import { truthFields, scoreFields, fieldProblems, pdfjsLineText } from './ats-fi
 before(setup);
 after(teardown);
 
-/** Every single-column page: the four templates and the Sidebar's Single · ATS-safe mode. */
+/**
+ * Every single-column page: the four templates and the Sidebar's Single · ATS-safe mode. `from`: the bullet
+ * count its sweep starts at — Compact's 9 pt page holds some 60 of them (T9), the others some 35.
+ */
 const CASES = [
-  ...TEMPLATES.filter((t) => t !== 'sidebar').map((template) => ({ label: template, template, settings: {} })),
+  ...TEMPLATES.filter((t) => t !== 'sidebar').map((template) => ({ label: template, template, settings: {}, from: template === 'compact' ? 50 : 28 })),
   { label: 'sidebar single column', template: 'sidebar', settings: { sidebarSingleColumn: true } },
 ];
 
@@ -49,7 +52,8 @@ function build(c, n) {
  * is the first thing drawn), with its PDF — or null. Two pages only: past that the sweep has overshot.
  */
 async function pageTopHeading(c) {
-  for (let n = 28; n <= 44; n += 1) {
+  const from = c.from ?? 28;
+  for (let n = from; n <= from + 16; n += 1) {
     const r = build(c, n);
     const bytes = await render(r);
     const pages = await read(bytes);
@@ -75,7 +79,7 @@ const sweep = (c) => {
  */
 async function headingsLostAt(c, keep) {
   const hit = await sweep(c);
-  assert.ok(hit, `${c.label}: no bullet count from 28 to 44 put Skills first on page 2 — re-tune the sweep`);
+  assert.ok(hit, `${c.label}: no bullet count from ${c.from ?? 28} to ${(c.from ?? 28) + 16} put Skills first on page 2 — re-tune the sweep`);
   const readers = [['pdf.js', pdfjsLineText(hit.pages)], ...pdftotext(hit.bytes)].filter(([name]) => keep(name));
   const truth = truthFields(hit.r);
   return readers.flatMap(([name, text]) => fieldProblems(`${c.label} (${hit.n} bullets) ${name}`, scoreFields(truth, text)))

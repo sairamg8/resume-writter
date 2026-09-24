@@ -23,11 +23,14 @@ describe('the Word letter\'s letterhead takes the look too (FIDB-51)', () => {
     const { renderCoverLetterDocx } = await loadModule('/src/utils/wordExport.js');
     return readDocx(new Uint8Array(await (await renderCoverLetterDocx(letter(template, { settings }))).arrayBuffer()));
   };
-  /** The letterhead's paragraphs (name, title, contacts) and the date's, as XML. */
+  /**
+   * The letterhead's paragraphs (name, title, contacts — the name and title one line where the résumé prints
+   * them Inline, Compact's default, T9) and the date's, as XML.
+   */
   const parts = (doc) => {
     const at = doc.texts.indexOf('15 January 2026');
-    assert.equal(at, 3, doc.texts.join(' | '));
-    return { head: doc.paragraphs.slice(0, 3).map((p) => p.xml), date: doc.paragraphs[3].xml };
+    assert.ok(at === 3 || at === 2, doc.texts.join(' | '));
+    return { head: doc.paragraphs.slice(0, at).map((p) => p.xml), date: doc.paragraphs[at].xml };
   };
   /** The colour of the run that prints `text`. */
   const colourOf = (xml, text) => (xml.split('</w:r>').find((run) => run.includes(`>${text}<`)) || '').match(/<w:color w:val="([0-9a-fA-F]{6})"/)?.[1]?.toLowerCase();
@@ -81,7 +84,7 @@ describe('the Word letter\'s letterhead takes the look too (FIDB-51)', () => {
   });
 
   // Classic's rule is the résumé header's: none on a new résumé, its border off (V2FIDB-51-2).
-  it('Classic draws the résumé\'s rule, none with the border off; Minimal has a 0.75 pt pale rule and a regular name; Executive a double rule; Timeline its 1.5 pt rail; Academic its hairline', async () => {
+  it('Classic draws the résumé\'s rule, none with the border off; Minimal has a 0.75 pt pale rule and a regular name; Executive a double rule; Timeline its 1.5 pt rail; Academic its hairline; Compact a 1 pt rule', async () => {
     const { solid } = await loadModule('/src/templates/pdf/shared/pdfColors.js');
     const expected = {
       classic: null,
@@ -89,11 +92,12 @@ describe('the Word letter\'s letterhead takes the look too (FIDB-51)', () => {
       executive: { val: 'double', sz: '6', color: ACCENT.slice(1), space: '12' },
       timeline: { val: 'single', sz: '12', color: solid(ACCENT, 0.35).slice(1), space: '12' },
       academic: { val: 'single', sz: '6', color: solid(ACCENT, 0.55).slice(1), space: '12' }, // its titles' hairline (T8)
+      compact: { val: 'single', sz: '8', color: ACCENT.slice(1), space: '12' }, // its titles' short rule, full width (T9)
     };
     for (const [template, rule] of Object.entries(expected)) {
       const { head } = parts(await coverDocx(template));
-      assert.deepEqual(bottom(head[2]), rule, `${template}: the rule under the contacts`);
-      assert.deepEqual([bottom(head[0]), bottom(head[1])], [null, null], `${template}: only under the last line`);
+      assert.deepEqual(bottom(head.at(-1)), rule, `${template}: the rule under the contacts`);
+      assert.deepEqual(head.slice(0, -1).map(bottom), head.slice(0, -1).map(() => null), `${template}: only under the last line`);
       assert.equal(/<w:b\/>/.test(head[0]), template !== 'minimal', `${template}: bold name`);
       assert.doesNotMatch(head.join(''), /<w:shd /, `${template}: no band`);
     }
@@ -114,7 +118,9 @@ describe('the Word letter\'s letterhead takes the look too (FIDB-51)', () => {
       const { head } = parts(await coverDocx(template, { nameColor: '#7c3aed', jobTitleColor: '#0d9488' }));
       // Modern's title prints at 90 % on its band (below), the others as picked.
       const title = template === 'modern' ? solid('#0d9488', 0.9, ACCENT).slice(1) : '0d9488';
-      assert.deepEqual([colourOf(head[0], 'Pat Sample'), colourOf(head[1], 'Staff Engineer')], ['7c3aed', title], template);
+      // On the name's line where the letterhead prints the title Inline (Compact's default, T9).
+      const titleLine = head.find((xml) => xml.includes('>Staff Engineer<'));
+      assert.deepEqual([colourOf(head[0], 'Pat Sample'), colourOf(titleLine, 'Staff Engineer')], ['7c3aed', title], template);
     }
   });
 
@@ -142,7 +148,8 @@ describe('the Word letter\'s letterhead takes the look too (FIDB-51)', () => {
       }
       for (const id of TEMPLATES) {
         for (const bannerColor of ['', 'not-a-colour', '#12345']) {
-          assert.deepEqual(fills(parts(await coverDocx(id, { bannerColor })).head), Array(3).fill('0f766e'), `${id}: ${bannerColor || 'none stored'}`);
+          const { head } = parts(await coverDocx(id, { bannerColor }));
+          assert.deepEqual(fills(head), head.map(() => '0f766e'), `${id}: ${bannerColor || 'none stored'}`);
         }
       }
     } finally {

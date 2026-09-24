@@ -92,6 +92,11 @@ export default function DesignPanel({ resume, updateSetting, setTemplate, resetS
             Academic brings its own type and spacing: a serif, a centred header, section titles at the body&apos;s size and tighter Spacing. Every one of them can be changed below.
           </p>
         )}
+        {current === 'compact' && (
+          <p className="text-[10px] text-gray-400 mt-2">
+            Compact brings its own type and spacing: 9 pt text, narrow margins, the job title beside the name and tighter Spacing, and lays skills, certifications, awards, languages and references out two to a row (each section&apos;s Grids). Every one of them can be changed.
+          </p>
+        )}
         <p className="text-[10px] text-gray-400 mt-2">The cover letter&apos;s header takes the template&apos;s look too.</p>
       </DesignSection>
 

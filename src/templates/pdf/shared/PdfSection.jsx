@@ -1,6 +1,6 @@
 import { View } from '@react-pdf/renderer';
 import { Text } from './PdfText';
-import { sectionHeadingLook } from './sectionHeadingLook';
+import { sectionHeadingLook, SHORT_RULE_EM } from './sectionHeadingLook';
 import { tracking } from './pdfUnits';
 import { headingBorderExtraPt, upperSectionTitles } from '@/constants/templates';
 
@@ -67,6 +67,17 @@ export function PdfSectionTitle({
     return (
       <View {...keepWithNext} style={{ backgroundColor: look.box, paddingVertical: 3, paddingHorizontal: 6, marginBottom: 6, borderRadius: 2 }}>
         <Text style={titleText}>{label}</Text>
+      </View>
+    );
+  }
+  if (headingStyle === 'line' && look.short) {
+    // Compact: a short rule after the title on its line (both sides of a centred one), not to the column's end.
+    const rule = <View style={{ width: sectionSize * SHORT_RULE_EM, height: sectionBorderWidth, backgroundColor: look.line }} />;
+    return (
+      <View {...keepWithNext} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: centered ? 'center' : 'flex-start', gap: 6, marginBottom: 6 }}>
+        {centered && rule}
+        <Text style={{ ...titleText, flexShrink: 1 }}>{label}</Text>
+        {rule}
       </View>
     );
   }

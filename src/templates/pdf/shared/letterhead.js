@@ -139,10 +139,20 @@ export const LOOKS = {
     title: { ...base.title, italic: true },
     rules: rule || [{ width: ACADEMIC_HAIRLINE, color: solid(s.sectionBorderColor || accent, s.sectionBorderColor ? 1 : 0.55) }],
   }),
+  // Compact's letterhead: its résumé's header — the title on the name's line where the résumé prints it
+  // Inline (its default; `inline`) — over a 1 pt rule in the colour of its section titles' short rules
+  // (a picked Border colour, else the accent), where the résumé's header rule is off.
+  compact: (base, { s, accent, rule }) => ({
+    ...base,
+    rules: rule || [{ width: COMPACT_RULE, color: solid(s.sectionBorderColor || accent) }],
+  }),
 };
 
 /** The hairline under Academic's letterhead, pt: Minimal's. */
 export const ACADEMIC_HAIRLINE = 0.75;
+
+/** The rule under Compact's letterhead, pt: its section titles' short rule at the default Border thickness. */
+export const COMPACT_RULE = 1;
 
 /**
  * The letterhead of a letter whose résumé prints with `template`, from the résumé's resolved

@@ -42,16 +42,15 @@ describe('the letter\'s options under every look (FIDB-51)', () => {
         for (const photo of [PNG, '']) {
           const [headerStyle, headerLayout] = STYLES[(k + (photo ? 1 : 0)) % 3];
           const at = `${fieldsPosition}, ${photo ? 'photo' : 'no photo'}, ${headerStyle}/${headerLayout}`;
-          const bytes = await renderCover(letter(template, {
-            personal: { photo }, coverLetter: { fieldsPosition, headerStyle, headerLayout, hiddenFields: ['phone'] },
-          })).catch((e) => assert.fail(`${at}: ${e.message}`));
+          const r = letter(template, { personal: { photo }, coverLetter: { fieldsPosition, headerStyle, headerLayout, hiddenFields: ['phone'] } });
+          const bytes = await renderCover(r).catch((e) => assert.fail(`${at}: ${e.message}`));
           const pages = await read(bytes);
           const text = squash(allText(pages));
           for (const s of ['Pat Sample', 'Staff Engineer', 'pat@example.com', 'Berlin, Germany', 'pat.dev', 'linkedin.com/in/pat', '15 January 2026', 'Sarah Smith', 'Globex Corp', 'Re: the role', 'Dear Sarah,']) {
             assert.ok(text.includes(squash(s)), `${at}: "${s}" is printed`);
           }
           assert.ok(!text.includes('5550100'), `${at}: the phone the letter hides`);
-          const right = pages[0].W - 18 * MM;
+          const right = pages[0].W - (r.settings.marginH ?? 18) * MM; // the résumé's margins: Compact's 12 mm (T9)
           assert.deepEqual(pages[0].items.filter((t) => t.x + t.w > right + 0.5).map((t) => t.str), [], `${at}: text past the margin`);
           assert.deepEqual(overlaps(pages[0]), [], `${at}: overlapping text`);
           const paths = await painted(bytes);
@@ -215,7 +214,8 @@ describe('letters saved before the looks (FIDB-51)', () => {
       assert.equal(allText(await read(bytes)), 'Pat Sample Staff Engineer pat@example.com +1 555 0100 Berlin, Germany pat.dev linkedin.com/in/pat Dear Sarah, Sincerely, Pat Sample Staff Engineer', template);
       if (BANDED.includes(template)) assert.ok(bandOf(template, await painted(bytes)), `${template}: its band, from the defaults`);
       const doc = readDocx(new Uint8Array(await (await renderCoverLetterDocx(r)).arrayBuffer()));
-      assert.equal(doc.texts[0], 'Pat Sample', `${template}: Word`);
+      // The name alone on its line, or with the title beside it where the header prints them Inline (Compact's own, T9).
+      assert.equal(doc.texts[0], r.settings.headerLayout === 'inline' ? 'Pat Sample Staff Engineer' : 'Pat Sample', `${template}: Word`);
     }
   });
 
@@ -244,10 +244,11 @@ describe('a Fields Position the panel does not offer (V2FIDB-51-1)', () => {
     const word = async (r) => readDocx(new Uint8Array(await (await renderCoverLetterDocx(r)).arrayBuffer())).texts;
     for (const template of TEMPLATES) {
       for (const photo of [PNG, '']) {
-        const right = await renderCover(long(template, 'right', photo));
+        const letterOf = long(template, 'right', photo);
+        const right = await renderCover(letterOf);
         const page = await drawing(right);
         const [first] = await read(right);
-        const margin = first.W - 18 * MM;
+        const margin = first.W - (letterOf.settings.marginH ?? 18) * MM; // the résumé's margins: Compact's 12 mm (T9)
         assert.deepEqual(first.items.filter((t) => t.x + t.w > margin + 0.5).map((t) => t.str), [], `${template}: Right of Name keeps inside the margin`);
         for (const fieldsPosition of UNKNOWN) {
           const at = `${template}, ${photo ? 'photo' : 'no photo'}, ${JSON.stringify(fieldsPosition)}`;

@@ -5,6 +5,7 @@ import { createSectionActions } from '@/hooks/useResumeSectionActions';
 import { createSyncActions } from '@/hooks/useResumeSyncActions';
 import { newId } from '@/utils/ids';
 import { HEADER_READS, headerColorsOnSwitch, withHeaderColorsBack } from '@/templates/pdf/shared/headerColors';
+import { sectionsOnSwitch } from '@/templates/pdf/shared/templateSectionDefaults';
 import { DATA_VERSION, normalizeResume } from '@/utils/normalizeResume';
 import { backupRaw, notSavedReason, pendingRecovery, readSavedList, rememberRecovery, setItemWithRoom } from '@/utils/storageBackup';
 import { savedDeletions } from '@/utils/localDeletions';
@@ -246,13 +247,16 @@ export function useAppStore() {
   /**
    * Design → a template: the style it brings (styleOnSwitch: its heading style and title case, and
    * Academic's type and spacing — which leave with it where the user kept them), and a Name or Job
-   * title colour picked for the old header that does not read on the new one back to its own (NB-1).
+   * title colour picked for the old header that does not read on the new one back to its own (NB-1);
+   * a section's Grids its template's own where the section kept the one it was created with (Compact's
+   * grid, T9 — sectionsOnSwitch).
    */
   function setTemplate(template) {
     patchActive(r => ({
       ...r,
       template,
       settings: headerColorsOnSwitch(styleOnSwitch(r.settings, r.template, template), r.template, template),
+      sections: sectionsOnSwitch(r.sections, r.template, template),
     }));
   }
 

@@ -66,20 +66,23 @@ function misplaced(pages, { marginH = 18, marginV = 14 } = {}) {
 describe('US Letter: the page (PAR-01)', () => {
   for (const template of TEMPLATES) {
     it(`${template}: every page is 612 × 792 pt, and nothing prints outside its margins`, async () => {
-      const pages = await read(await render(longResume(template, 8, { pageSize: 'LETTER' })));
+      const r = longResume(template, 8, { pageSize: 'LETTER' });
+      const pages = await read(await render(r));
       assert.ok(pages.length >= 2, `${pages.length} page(s): the test needs a second one`);
       assert.deepEqual(boxes(pages), pages.map(() => LETTER));
-      assert.deepEqual(misplaced(pages), []);
+      // The résumé's own margins: 18 / 14 mm, Compact's 12 / 10 mm (T9).
+      assert.deepEqual(misplaced(pages, { marginH: r.settings.marginH, marginV: r.settings.marginV }), []);
     });
   }
 
   it('the cover letter: every page is 612 × 792 pt under every template, nothing outside its margins', async () => {
     for (const template of TEMPLATES) {
       const r = longResume(template, 1, { pageSize: 'LETTER' });
-      const pages = await read(await renderCover({ ...r, coverLetter: { ...r.coverLetter, body: LONG_BODY } }));
+      // Twice the body: Compact's 9 pt letter holds the once-long body on one page (T9).
+      const pages = await read(await renderCover({ ...r, coverLetter: { ...r.coverLetter, body: LONG_BODY + LONG_BODY } }));
       assert.ok(pages.length >= 2, `${template}: ${pages.length} page(s), the test needs a second one`);
       assert.deepEqual(boxes(pages), pages.map(() => LETTER), template);
-      assert.deepEqual(misplaced(pages), [], template);
+      assert.deepEqual(misplaced(pages, { marginH: r.settings.marginH, marginV: r.settings.marginV }), [], template);
     }
   });
 
@@ -100,7 +103,8 @@ describe('US Letter: the layout takes Letter\'s width (PAR-01)', () => {
       const [letter] = await read(await render(make({ pageSize: 'LETTER' })));
       const wider = LETTER[0] - A4[0];
       const date = (page) => page.items.find((t) => t.str.includes(timeline ? 'City' : '01/2020'));
-      assert.ok(Math.abs(date(letter).x + date(letter).w - (LETTER[0] - 18 * MM)) < 0.5, `ends at ${date(letter).x + date(letter).w}, Letter's margin at ${LETTER[0] - 18 * MM}`);
+      const margin = LETTER[0] - (make({}).settings.marginH ?? 18) * MM; // 18 mm, Compact's own 12 mm (T9)
+      assert.ok(Math.abs(date(letter).x + date(letter).w - margin) < 0.5, `ends at ${date(letter).x + date(letter).w}, Letter's margin at ${margin}`);
       assert.ok(Math.abs(date(letter).x - date(a4).x - wider) < 0.5, 'the date moves right by the difference in width');
       // At the left margin; Sidebar's main column starts 38 % of the page in, so it moves by 38 % of it.
       const body = (page) => page.items.find((t) => t.str.includes('Did things'));
@@ -194,9 +198,10 @@ describe('page breaks on US Letter, swept over résumé length (PAR-01)', () => 
     it(`${template}: 1–16 entries`, async () => {
       const found = [];
       for (const k of [1, 4, 7, 10, 13, 16]) {
-        const pages = await read(await render(longResume(template, k, { pageSize: 'LETTER' })));
+        const r = longResume(template, k, { pageSize: 'LETTER' });
+        const pages = await read(await render(r));
         if (boxes(pages).some(([w, h]) => w !== LETTER[0] || h !== LETTER[1])) found.push(`k=${k}: not a Letter page`);
-        for (const p of misplaced(pages)) found.push(`k=${k} ${p}`);
+        for (const p of misplaced(pages, { marginH: r.settings.marginH, marginV: r.settings.marginV })) found.push(`k=${k} ${p}`);
         const printed = allItems(pages).filter((t) => t.str.includes('Role ')).length;
         if (printed < k) found.push(`k=${k}: ${printed}/${k} entry headers printed`);
       }
@@ -222,14 +227,18 @@ describe('Word: the résumé and the letter .docx (PAR-01)', () => {
     return readDocx(new Uint8Array(await (await renderCoverLetterDocx(r)).arrayBuffer()));
   };
   // Design → Spacing's default margins, whatever the paper: 14 mm top and bottom, 18 mm left and
-  // right (R2-062; tests/pdf/69-word-spacing sets other ones).
+  // right (R2-062; tests/pdf/69-word-spacing sets other ones) — Compact's own 10 and 12 mm (T9).
   const MARGINS = [794, 1020, 794, 1020];
+  const twips = (mm) => Math.round((mm * 1440) / 25.4);
 
   for (const [label, docx] of [['résumé', renderDocx], ['letter', letterDocx]]) {
     it(`the ${label}: a US Letter page, 12240 × 15840 twips, with the same default margins, under every template`, async () => {
       for (const template of TEMPLATES) {
-        const page = sectPr((await docx(resume({ template, settings: { pageSize: 'LETTER' }, sections: [experience([{}])] }))).xml);
-        assert.deepEqual(page, { size: [12240, 15840], portrait: true, margins: MARGINS }, template);
+        const r = resume({ template, settings: { pageSize: 'LETTER' }, sections: [experience([{}])] });
+        const { marginV: v, marginH: h } = r.settings;
+        const page = sectPr((await docx(r)).xml);
+        assert.deepEqual(page, { size: [12240, 15840], portrait: true, margins: [twips(v), twips(h), twips(v), twips(h)] }, template);
+        if (template !== 'compact') assert.deepEqual(page.margins, MARGINS, `${template}: the default margins`);
       }
     });
 

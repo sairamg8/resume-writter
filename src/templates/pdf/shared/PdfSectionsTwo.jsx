@@ -134,9 +134,11 @@ export function LanguagesSection({ section, settings, marginBottom, spaceBefore,
   const sub       = shadesOf(settings).sub;
   const visibleItems = (section.items || []).filter(i => i.visible !== false);
   // Centred: each "English  Native" pair is centred in its column. Left: the language at the
-  // left edge, the proficiency at the right. Rows are spaced by the item gap alone.
+  // left edge, the proficiency at the right — on Compact beside it, a grid cell of one item with its
+  // label (T9), two runs a field's gap apart. Rows are spaced by the item gap alone.
   const pair = centered
     ? { justifyContent: 'center', gap: pxToPt(8) }
+    : settings?._template === 'compact' ? { justifyContent: 'flex-start', gap: fieldGap(baseSize) }
     : { justifyContent: 'space-between', paddingRight: 12 };
 
   return (

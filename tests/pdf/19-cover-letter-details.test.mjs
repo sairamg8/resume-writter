@@ -140,7 +140,8 @@ describe('a long title in the default header, contacts on the right', () => {
         const at = `${template}, ${fieldsPosition}`;
         const r = resume({ template, personal: { name: 'Alexandra Johnson', title, photo: PNG, ...CONTACTS }, coverLetter: { body: '<p>Hello</p>', fieldsPosition } });
         const pages = await read(await renderCover(r));
-        const right = pages[0].W - 18 * MM;
+        // The letter keeps its résumé's margins: 18 mm, Compact's own 12 mm (T9).
+        const right = pages[0].W - (r.settings.marginH ?? 18) * MM;
         assert.deepEqual(pages[0].items.filter((t) => t.x + t.w > right + 0.5).map((t) => t.str), [], `${at}: text past the margin`);
         assert.ok(allText(pages).replace(/\s+/g, '').includes(title.replace(/\s+/g, '')), `${at}: the whole title is printed`);
       }

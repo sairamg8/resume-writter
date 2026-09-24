@@ -88,8 +88,10 @@ describe('Word: the page margins are Design → Spacing\'s (R2-062)', () => {
     it(`the ${label}: Top / Bottom and Left / Right, in mm, on every template`, async () => {
       const wrong = [];
       for (const template of TEMPLATES) {
+        // Unset: the template's own — 14 and 18 mm, Compact's 10 and 12 mm (T9).
+        const own = template === 'compact' ? [mm(10), mm(12), mm(10), mm(12)] : [mm(14), mm(18), mm(14), mm(18)];
         for (const [set, want] of [
-          [{}, [mm(14), mm(18), mm(14), mm(18)]],
+          [{}, own],
           [{ marginV: 35, marginH: 35 }, [mm(35), mm(35), mm(35), mm(35)]],
           [{ marginV: 0, marginH: 40 }, [0, mm(40), 0, mm(40)]],
           [PRESETS['1-Page Fit'], [mm(10), mm(14), mm(10), mm(14)]],

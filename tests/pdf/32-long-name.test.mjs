@@ -45,6 +45,8 @@ function fills(item, size, right, at) {
 }
 
 const SIZES = [19, 28, 36]; // Design → Font sizes → Full Name (base 11 + delta)
+/** What SIZES and the margins are measured from: Base 11 and 18 mm — every template's own but Compact's 9 pt and 12 mm (T9). */
+const AT_11 = { fontSizeBase: 11, marginH: 18 };
 
 describe('a name word wider than the header (résumé)', () => {
   it('stays whole inside the margins, in every template, at every Full Name size', async () => {
@@ -54,7 +56,7 @@ describe('a name word wider than the header (résumé)', () => {
           const at = `${template}, ${size} pt, ${photo ? 'photo' : 'no photo'}`;
           const r = resume({
             template,
-            settings: { fontSizeNameDelta: size - 11 },
+            settings: { ...AT_11, fontSizeNameDelta: size - 11 },
             personal: { name: LONG, title: 'Engineer', photo, ...CONTACTS },
           });
           const [page] = await read(await render(r));
@@ -130,7 +132,7 @@ describe('a name word wider than the header (résumé)', () => {
       for (const size of sizes) {
         const r = resume({
           template,
-          settings: { fontSizeNameDelta: size - 11 },
+          settings: { ...AT_11, fontSizeNameDelta: size - 11 },
           personal: { name, title: 'Engineer', photo: PNG, ...CONTACTS },
         });
         const [page] = await read(await render(r));
@@ -151,7 +153,7 @@ describe('a name word wider than the letterhead (cover letter)', () => {
             const at = `${template}, ${size} pt, ${fieldsPosition}, ${contacts.email ? 'contacts' : 'no contacts'}`;
             const r = resume({
               template,
-              settings: { fontSizeNameDelta: size - 11 },
+              settings: { ...AT_11, fontSizeNameDelta: size - 11 },
               personal: { name: LONG, title: 'Engineer', photo: PNG, email: '', phone: '', location: '', ...contacts },
               coverLetter: { body: '<p>Hello</p>', fieldsPosition },
             });
@@ -188,7 +190,7 @@ describe('a name word wider than the letterhead (cover letter)', () => {
       for (const fieldsPosition of ['right', 'below-name', 'below-all']) {
         const r = resume({
           template,
-          settings: { fontSizeNameDelta: 17 },
+          settings: { ...AT_11, fontSizeNameDelta: 17 },
           personal: { name: 'Alexandra Johnson-Whitfield', title: 'Engineer', photo: PNG, ...CONTACTS },
           coverLetter: { body: '<p>Hello</p>', fieldsPosition },
         });

@@ -15,10 +15,10 @@ after(teardown);
 const PHOTO = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
 const PERSONAL = { name: 'Jordan Rivera', title: 'Staff Engineer', email: 'jordan@example.com', phone: '+1 555 0100', photo: PHOTO };
 /** The templates' own Photo ↔ Text, pt (TEMPLATES' headerGaps.photoTextGap). */
-const OWN = { classic: 10, minimal: 10, executive: 10, modern: 12, sidebar: 10, timeline: 10, banner: 10, academic: 10 };
+const OWN = { classic: 10, minimal: 10, executive: 10, modern: 12, sidebar: 10, timeline: 10, banner: 10, academic: 10, compact: 10 };
 /** Where the text sits against the photo: beside it (x), or under it (y) — the Sidebar column's photo is above the name. */
 // Academic's header is centred where it is picked (T8): its photo stands above the text.
-const AXIS = { classic: 'x', minimal: 'x', executive: 'x', modern: 'x', sidebar: 'y', timeline: 'x', banner: 'x', academic: 'y' };
+const AXIS = { classic: 'x', minimal: 'x', executive: 'x', modern: 'x', sidebar: 'y', timeline: 'x', banner: 'x', academic: 'y', compact: 'x' };
 const near = (a, b, at) => assert.ok(Math.abs(a - b) < 0.01, `${at}: ${a} vs ${b}`);
 
 /** Page 1's name, title and first contact: x from the left, y down from the top, pt. */
@@ -62,7 +62,7 @@ describe('Photo ↔ Text in the résumé PDF', () => {
     });
   }
 
-  for (const template of ['classic', 'minimal', 'executive', 'timeline', 'banner', 'academic']) {
+  for (const template of ['classic', 'minimal', 'executive', 'timeline', 'banner', 'academic', 'compact']) {
     it(`${template}: a centred header stacks the photo above the text, and the gap moves the text down`, async () => {
       const unset = await header(await render(cv(template, { headerAlign: 'center' })));
       const set = await header(await render(cv(template, { headerAlign: 'center', photoTextGap: 40 })));

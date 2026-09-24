@@ -18,7 +18,7 @@ const PERSONAL = {
 };
 const NO_CONTACTS = { ...PERSONAL, email: '', phone: '' };
 /** The templates' own Title ↔ Contacts, pt (TEMPLATES' headerGaps.titleContactsGap); the Sidebar has none. */
-const OWN = { classic: 3, minimal: 3, executive: 3, modern: 4, sidebar: null, timeline: 3, banner: 3, academic: 3 };
+const OWN = { classic: 3, minimal: 3, executive: 3, modern: 4, sidebar: null, timeline: 3, banner: 3, academic: 3, compact: 3 };
 const WITH_GAP = TEMPLATES.filter((t) => OWN[t] != null);
 const near = (a, b, at) => assert.ok(Math.abs(a - b) < 0.01, `${at}: ${a} vs ${b}`);
 
@@ -28,7 +28,8 @@ async function header(bytes) {
   const y = (s) => { const t = page.items.find((i) => i.str.includes(s)); return t && page.H - t.y; };
   return { name: y('Jordan Rivera'), title: y('Staff Engineer'), contact: y('jordan@example.com'), summary: y('Summary line') };
 }
-const cv = (template, settings = {}, personal = PERSONAL, coverLetter = {}) => resume({ template, settings, personal, coverLetter });
+// Stacked, as every template stacks the name and title but Compact, which prints them Inline where it is picked (T9).
+const cv = (template, settings = {}, personal = PERSONAL, coverLetter = {}) => resume({ template, settings: { headerLayout: 'stack', ...settings }, personal, coverLetter });
 
 describe('Title ↔ Contacts in the résumé PDF', () => {
   it('pins the templates\' own gaps the row starts from', async () => {
@@ -75,7 +76,7 @@ describe('Title ↔ Contacts in the résumé PDF', () => {
     assert.deepEqual(await header(await render(cv('sidebar', { titleContactsGap: 40 }))), await header(await render(cv('sidebar'))));
   });
 
-  for (const template of ['classic', 'minimal', 'executive', 'timeline', 'banner', 'academic']) {
+  for (const template of ['classic', 'minimal', 'executive', 'timeline', 'banner', 'academic', 'compact']) {
     it(`${template}: Inline — the contacts under the name and title's line move by the change`, async () => {
       const unset = await header(await render(cv(template, { headerLayout: 'inline' })));
       const set = await header(await render(cv(template, { headerLayout: 'inline', titleContactsGap: 20 })));
@@ -142,7 +143,7 @@ describe('Title ↔ Contacts in Word', () => {
     assert.equal(spaceAfter(await renderDocx(cv('sidebar', { titleContactsGap: 20 })), 'Staff Engineer'), 60);
   });
 
-  for (const template of ['classic', 'minimal', 'executive', 'timeline', 'banner', 'academic']) {
+  for (const template of ['classic', 'minimal', 'executive', 'timeline', 'banner', 'academic', 'compact']) {
     it(`${template}: Inline — the name and title's paragraph takes it`, async () => {
       assert.equal(spaceAfter(await renderDocx(cv(template, { headerLayout: 'inline' })), 'Jordan Rivera'), 60);
       assert.equal(spaceAfter(await renderDocx(cv(template, { headerLayout: 'inline', titleContactsGap: 20 })), 'Jordan Rivera'), 300);

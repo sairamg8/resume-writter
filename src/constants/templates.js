@@ -2,88 +2,10 @@
 // editor UI, the store and the PDF code all read it, and it must not pull react-pdf into the
 // editor bundle.
 
-import {
-  ACADEMIC_HEADER_GAPS, BANNER_HEADER_GAPS, MODERN_HEADER_GAPS, SIDEBAR_HEADER_GAPS, STACKED_HEADER_GAPS,
-} from './templateHeaderGaps.js';
+import { TEMPLATES } from './templateTable.js';
 
-// The header's spacing where the résumé sets none, per template, in pt: ./templateHeaderGaps.js.
-
-/**
- * Every template the app offers, one entry each — so a template cannot be added without its
- * header decisions or its place in the picker (they were four more tables — R3-6, VM3-5):
- *   label           its name in the editor (the Cover Letter panel names the look its letter takes)
- *   desc, ats       the Design panel's one-line description, and its ATS-friendly badge
- *   style           the heading style and title case it brings: set when it is picked and on Reset
- *                   (Academic brings its serif, centred header and dense Spacing as well)
- *   headerControls  Header Customization's alignment, name/title layout, rule and contact
- *                   controls apply (Modern prints a fixed banner, Sidebar a side panel)
- *   headerRule      it draws the header's bottom rule when a résumé has no `showHeaderBorder`
- *                   (older or imported data; new résumés store `false`): the Classic design
- *   headerGaps      the header's spacing where the résumé sets none (below)
- * Four per-template tables stay with the code that reads them, each pinned to TEMPLATE_IDS by
- * tests/pdf/15-design-defaults: DEFAULTS in templateSettings.js — the PDF's fallbacks for unset
- * colours, computed from other settings, and Classic's unset heading is 'line', not the 'ruled'
- * that picking Classic sets, so merging them would change what older résumés print —
- * TEMPLATE_SECTION_DEFAULTS (templateSectionDefaults.js), per section type, the PDF
- * components' LOADERS (pdfExportReactPDF.js), which are code-split imports, and the cover
- * letter's LOOKS (templates/pdf/shared/letterhead.js), computed from the résumé's colours.
- */
-const TEMPLATES = {
-  classic: {
-    label: 'Classic', desc: 'ATS-friendly · Two-column header', atsTier: 'certified',
-    style: { headingStyle: 'ruled', sectionTitleCase: 'upper' }, headerControls: true, headerRule: true,
-    headerGaps: STACKED_HEADER_GAPS,
-  },
-  modern: {
-    label: 'Modern', desc: 'Bold accent header · Full-width layout', atsTier: 'good',
-    style: { headingStyle: 'line', sectionTitleCase: 'upper' }, headerControls: false, headerRule: false,
-    headerGaps: MODERN_HEADER_GAPS,
-  },
-  minimal: {
-    label: 'Minimal', desc: 'ATS-friendly · Clean & whitespace-first', atsTier: 'certified',
-    style: { headingStyle: 'underline', sectionTitleCase: 'upper' }, headerControls: true, headerRule: false,
-    headerGaps: { ...STACKED_HEADER_GAPS, summaryGap: 6 },
-  },
-  executive: {
-    label: 'Executive', desc: 'ATS-friendly · Clean accent headings · Vibrant', atsTier: 'certified',
-    style: { headingStyle: 'underline', sectionTitleCase: 'normal' }, headerControls: true, headerRule: false,
-    headerGaps: { ...STACKED_HEADER_GAPS, summaryGap: 6 },
-  },
-  sidebar: {
-    label: 'Sidebar', desc: 'Colored left sidebar layout', atsTier: 'risky',
-    style: { headingStyle: 'plain', sectionTitleCase: 'upper' }, headerControls: false, headerRule: false,
-    headerGaps: SIDEBAR_HEADER_GAPS,
-  },
-  // History on an accent line, a dot per entry, dates above titles (TimelineTemplatePDF.jsx). Its header
-  // is Classic's stacked one, so it takes every header control and Classic's spacing.
-  timeline: {
-    label: 'Timeline', desc: 'ATS-friendly · Dated entries on an accent line', atsTier: 'certified',
-    style: { headingStyle: 'plain', sectionTitleCase: 'upper' }, headerControls: true, headerRule: false,
-    headerGaps: STACKED_HEADER_GAPS,
-  },
-  // A full-bleed accent band holding the name, title and contacts in reversed colour, filled heading
-  // chips, one column (BannerTemplatePDF.jsx). Its band takes every header control; rated as Modern's
-  // banner is: the same clean text flow, under a coloured header ground.
-  banner: {
-    label: 'Banner', desc: 'Full-bleed colour band · Filled section tags', atsTier: 'good',
-    style: { headingStyle: 'box', sectionTitleCase: 'upper' }, headerControls: true, headerRule: false,
-    headerGaps: BANNER_HEADER_GAPS,
-  },
-  // A scholarly CV (AcademicTemplatePDF.jsx): serif, the name centred, section titles in small capitals
-  // (capitals at the body's size) over a hairline, italic institutions, dense. Picking it (and Reset)
-  // brings that type, header and spacing — they are settings, so every control still changes them; the
-  // Design panel says so under the picker. Its contacts keep Icon: Bar and Bullet glue a value's words
-  // under pdftotext -raw in the narrow-space fonts (R3-003), so they are no template's default.
-  academic: {
-    label: 'Academic', desc: 'ATS-friendly · Scholarly CV · Serif, centred', atsTier: 'certified',
-    style: {
-      headingStyle: 'ruled', sectionTitleCase: 'upper', font: 'sourceserif', headerAlign: 'center',
-      fontSizeSectionDelta: 0, lineHeightValue: 1.35, sectionGap: 12, itemGap: 6,
-    },
-    headerControls: true, headerRule: false,
-    headerGaps: ACADEMIC_HEADER_GAPS,
-  },
-};
+// Every template's decisions — label, ATS tier, the style it brings, its header — are one table:
+// TEMPLATES in ./templateTable.js. Everything below reads it.
 
 /** Every template the app offers. */
 export const TEMPLATE_IDS = Object.keys(TEMPLATES);
@@ -163,7 +85,8 @@ export const headerTemplateId = (template, settings) => {
  * - `certified` (5 pts) — one linear column on the white page; every Poppler mode and pdf.js read it whole
  *   (`tests/pdf/40-ats-parse.test.mjs`, `42-ats-fields.test.mjs`).
  * - `good` (4 pts) — the same single-column body under a coloured banner (Modern, Banner). It parses clean in the
- *   same battery; the notch is its header ground, not its text flow.
+ *   same battery; the notch is its header ground, not its text flow. Compact's experience is that one column too;
+ *   its notch is its grid of short sections, whose cells share a line a line-reading parser takes whole.
  * - `risky` (2 pts) — two columns a portal may interleave (ATS-3). Only the Sidebar, and only in its
  *   two-column Layout.
  *
@@ -175,7 +98,8 @@ export const ATS_TIER_POINTS = { certified: 5, good: 4, risky: 2 };
 export function atsRating(template, settings) {
   const t = headerTemplateId(template, settings);
   const tier = TEMPLATES[t].atsTier;
-  return { tier, points: ATS_TIER_POINTS[tier], safe: tier !== 'risky' };
+  // `note`: what the ATS Check says of a template below certified, where its own reason differs (Compact's grid).
+  return { tier, points: ATS_TIER_POINTS[tier], safe: tier !== 'risky', ...(TEMPLATES[t].atsNote ? { note: TEMPLATES[t].atsNote } : {}) };
 }
 
 /** The Design panel's template picker: { id, label, desc, ats } for every template, in its order. */
@@ -202,7 +126,7 @@ export const inSidebarColumn = (template, type, settings) =>
 
 /**
  * Does the template's header take Header Customization's alignment, name/title layout, rule and
- * contact controls? Classic, Minimal, Executive, Timeline, Banner (in its band) and Academic; Modern
+ * contact controls? Classic, Minimal, Executive, Timeline, Banner (in its band), Academic and Compact; Modern
  * prints a fixed banner, Sidebar a side panel.
  * Sidebar in Single · ATS-safe mode prints Classic's page and header.
  */

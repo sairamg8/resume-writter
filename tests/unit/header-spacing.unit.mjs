@@ -38,6 +38,8 @@ const EXPECTED = {
   // Academic sets Classic's header tighter: its italic title 2 pt under the name, the summary 6 pt under
   // the contacts (T8); its gap under the header is below.
   academic: { ...STACKED, nameTitleGap: 2, summaryGap: 6 },
+  // Compact sets it tight for one page: the summary 5 pt under the contacts (T9); its gap under the header is below.
+  compact: { ...STACKED, summaryGap: 5 },
 };
 
 test('each template\'s header gaps are the constants it printed before they became settings (header_spacing_spec.md)', () => {
@@ -66,6 +68,12 @@ test('header ↔ first section: Academic keeps 12 pt, a dense CV\'s, until Betwe
   const below = templateHeaderGaps('academic').headerGapBelow;
   for (const [sectionGapPt, want] of [[9, 12], [12, 12], [30, 30], [0, 12]]) assert.equal(below(sectionGapPt), want, `at ${sectionGapPt} pt`);
   for (const junk of [NaN, undefined, null]) assert.equal(below(junk), 12, `at ${junk}`);
+});
+
+test('header ↔ first section: Compact keeps 10 pt, a one-pager\'s, until Between Sections is wider (T9)', () => {
+  const below = templateHeaderGaps('compact').headerGapBelow;
+  for (const [sectionGapPt, want] of [[7.5, 10], [10, 10], [30, 30], [0, 10]]) assert.equal(below(sectionGapPt), want, `at ${sectionGapPt} pt`);
+  for (const junk of [NaN, undefined, null]) assert.equal(below(junk), 10, `at ${junk}`);
 });
 
 test('an id the app does not offer gets Classic\'s header gaps, as it prints Classic (M15)', () => {

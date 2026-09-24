@@ -31,9 +31,9 @@ const shadesOf = (settings) => textShades(settings?.textColor || '#1a1a1a');
 
 export function getDateColor(settings) {
   const template = settings?._template;
-  // Banner's colour is its band and heading chips, Academic's its section titles: their entries'
-  // dates are the Text colour's grey.
-  if (['minimal', 'executive', 'banner', 'academic'].includes(template)) return shadesOf(settings).sub;
+  // Banner's colour is its band and heading chips, Academic's and Compact's their section titles:
+  // their entries' dates are the Text colour's grey.
+  if (['minimal', 'executive', 'banner', 'academic', 'compact'].includes(template)) return shadesOf(settings).sub;
   if (template === 'sidebar') return shadesOf(settings).muted;
   return settings?.accentColor || '#2563eb';
 }

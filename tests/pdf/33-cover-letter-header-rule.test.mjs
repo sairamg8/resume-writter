@@ -14,8 +14,8 @@ after(teardown);
 
 const ACCENT = '#e11d48';
 // The templates whose header takes Header Bottom Border (Timeline's is Classic's stacked header, T6;
-// Academic's is Classic's too, centred, T8).
-const RULE_LOOKS = ['classic', 'minimal', 'executive', 'timeline', 'academic'];
+// Academic's is Classic's too, centred, T8; Compact's is Classic's with the title on the name's line, T9).
+const RULE_LOOKS = ['classic', 'minimal', 'executive', 'timeline', 'academic', 'compact'];
 // Banner's band takes it too, drawn on the band in its text colour on the résumé and the letter alike
 // (T7): its own tests are 68-banner-letter.test.mjs.
 const BAND_RULE = ['banner'];
@@ -75,6 +75,7 @@ describe('the letterhead\'s rule follows Header Bottom Border and its Thickness 
     const own = {
       classic: [], minimal: [`${solid(ACCENT, 0.4)}/0.75`], executive: [`${ACCENT}/0.75`, `${ACCENT}/0.75`], timeline: [`${solid(ACCENT, 0.35)}/1.5`],
       academic: [`${solid(ACCENT, 0.55)}/0.75`], // the hairline its section titles print on
+      compact: [`${ACCENT}/1`], // its section titles' short rule, across the letterhead (T9)
     };
     for (const template of RULE_LOOKS) {
       for (const width of [undefined, 6]) {
@@ -90,7 +91,7 @@ describe('the letterhead\'s rule follows Header Bottom Border and its Thickness 
   it('a résumé stored without the setting: the letter draws what its résumé draws', async () => {
     const unset = { showHeaderBorder: undefined, headerBorderWidth: undefined };
     assert.deepEqual(await both('classic', unset), { resume: [`${ACCENT}/2`], letter: [`${ACCENT}/2`] }, 'classic');
-    for (const template of ['minimal', 'executive', 'timeline', 'academic']) {
+    for (const template of ['minimal', 'executive', 'timeline', 'academic', 'compact']) {
       assert.deepEqual((await both(template, unset)).letter, (await both(template, OFF())).letter, `${template}: its own mark, as with the border off`);
     }
   });
@@ -106,8 +107,8 @@ describe('the letterhead\'s rule follows Header Bottom Border and its Thickness 
       assert.deepEqual(got.letter, got.resume, `${at}: the letter`);
       assert.equal(lastLine(await docx('classic', ON(width))).border?.sz ?? null, sz, `${at}: Word`);
     }
-    // Minimal, Executive and Academic keep their own mark where the résumé draws no rule.
-    for (const template of ['minimal', 'executive', 'academic']) {
+    // Minimal, Executive, Academic and Compact keep their own mark where the résumé draws no rule.
+    for (const template of ['minimal', 'executive', 'academic', 'compact']) {
       assert.deepEqual((await both(template, ON(-3))).letter, (await both(template, OFF())).letter, `${template}: -3`);
     }
   });
@@ -122,7 +123,7 @@ describe('the letterhead\'s rule follows Header Bottom Border and its Thickness 
         const contact = allItems(pages).find((t) => t.str.includes('pat@example.com'));
         const [rule] = (await painted(bytes)).filter((p) => p.paint === 'stroke' && p.x1 - p.x0 > 400);
         assert.ok(rule.y1 < contact.y && rule.y0 > dateY(pages), `${template} ${width}: the rule (y ${rule.y0.toFixed(1)}) under the contacts (${contact.y.toFixed(1)}), above the date (${dateY(pages).toFixed(1)})`);
-        const shift = { classic: width, minimal: width - 0.75, executive: width - (0.75 + 1.5 + 0.75), timeline: width - 1.5, academic: width - 0.75 }[template];
+        const shift = { classic: width, minimal: width - 0.75, executive: width - (0.75 + 1.5 + 0.75), timeline: width - 1.5, academic: width - 0.75, compact: width - 1 }[template];
         assert.ok(Math.abs(dateY(off) - dateY(pages) - shift) < 0.05, `${template} ${width}: the date moves ${(dateY(off) - dateY(pages)).toFixed(2)} pt, expected ${shift}`);
       }
     }
@@ -152,6 +153,7 @@ describe('the letterhead\'s rule follows Header Bottom Border and its Thickness 
     assert.deepEqual(lastLine(await docx('executive', OFF(6))), { border: rule('double', 6, ACCENT), after: 16 }, 'executive off: its double rule');
     assert.deepEqual(lastLine(await docx('timeline', OFF(6))), { border: rule('single', 12, solid(ACCENT, 0.35)), after: 16 }, 'timeline off: its rail, 1.5 pt');
     assert.deepEqual(lastLine(await docx('academic', OFF(6))), { border: rule('single', 6, solid(ACCENT, 0.55)), after: 16 }, 'academic off: its hairline');
+    assert.deepEqual(lastLine(await docx('compact', OFF(6))), { border: rule('single', 8, ACCENT), after: 16 }, 'compact off: its 1 pt rule');
     for (const template of TEMPLATES.filter((t) => !RULE_LOOKS.includes(t))) {
       assert.equal(lastLine(await docx(template, ON(6))).border.color, lastLine(await docx(template, OFF())).border.color, `${template}: the band, not a rule`);
     }

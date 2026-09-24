@@ -2,6 +2,7 @@ import { BASE_COVER_LETTER } from './defaultDataContent.js';
 import { DATA_VERSION } from './dataVersion.js';
 import { getStarterSettings } from './starterSettings.js';
 import { ACADEMIC_STARTER } from './starterAcademic.js';
+import { COMPACT_STARTER } from './starterCompact.js';
 
 // The design settings a starter (or a JSON Resume import) starts with: ./starterSettings.js.
 export { getStarterSettings };
@@ -253,6 +254,7 @@ export const STARTER_TEMPLATES = [
     ]
   },
   ACADEMIC_STARTER,
+  COMPACT_STARTER,
 ];
 
 export function buildResumeFromStarter(starterId, newId) {

@@ -122,6 +122,16 @@ export const DEFAULTS = {
     headingStyle: 'ruled',
     sectionTitleCase: 'upper',
   },
+  // A dense page on white, as Classic: the name in the Text colour, the title on its line in the accent
+  // the section titles and their short rules print in.
+  compact: {
+    accentColor: '#1d4ed8',
+    textColor: '#1a1a1a',
+    nameColor: (s) => s.nameColor || s.textColor || '#1a1a1a',
+    jobTitleColor: (s) => s.jobTitleColor || s.accentColor || '#1d4ed8',
+    headingStyle: 'line',
+    sectionTitleCase: 'upper',
+  },
 };
 
 /** The photo controls resolveTemplateSettings clamps, from the one list the panel offers. */

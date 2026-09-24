@@ -8,6 +8,8 @@ import { SortableItemWrapper } from '@/components/SectionEditorShared';
 import { ExperienceItem, EducationItem, ProjectItem, VolunteeringItem, CustomItem } from '@/components/SectionEditorEntryItems';
 import { SkillItem, LanguageItem, CertificationItem, AwardItem, ReferenceItem, InterestItem, NEW_ITEM, ADD_LABEL } from '@/components/SectionEditorLeafItems';
 import { SectionCustomizer } from '@/components/SectionEditorCustomizer';
+import { newSectionGrid } from '@/templates/pdf/shared/templateSectionDefaults';
+import { templateId } from '@/constants/templates';
 
 export function SortableSection({
   section, template, updateSection, updateSectionSettings,
@@ -122,7 +124,8 @@ export function SortableSection({
               <button
                 onClick={() => {
                   const factory = SECTION_TYPE_DEFAULTS[section.type] || SECTION_TYPE_DEFAULTS.custom;
-                  const fresh = factory(section.id);
+                  // In its template's own Grids where it has one (Compact's grid, T9), as a new section is.
+                  const fresh = newSectionGrid(factory(section.id), templateId(template));
                   updateSection(section.id, s => ({ ...s, settings: { ...fresh.settings } }));
                   setMenuOpen(false);
                 }}

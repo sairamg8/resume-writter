@@ -21,7 +21,8 @@ const near = (text, address) => {
   return `${address} → ${at < 0 ? '(its end not found)' : text.slice(Math.max(0, at - address.length - 4), at + 8)}`;
 };
 
-const REPO = 'github.com/some-owner/a-rather-long-repository-name-with-many-hyphens/tree/main/packages/ui-kit';
+// Longer than a line on every template — Compact's 9 pt line across 12 mm margins holds some 125 of its characters (T9).
+const REPO = 'github.com/some-owner/a-rather-long-repository-name-with-many-hyphens/tree/main/packages/ui-kit/src/components/buttons/primary-button';
 const SITE = 'example-portfolio-site-with-a-long-name.example.com/projects/2026/case-studies/checkout';
 const MAIL = 'a.really.long.address.for.testing.line-breaks@example-company-domain.com';
 

@@ -17,6 +17,7 @@ export const LOADERS = {
   timeline:  () => import('@/templates/pdf/TimelineTemplatePDF').then(m => m.TimelineTemplatePDF),
   banner:    () => import('@/templates/pdf/BannerTemplatePDF').then(m => m.BannerTemplatePDF),
   academic:  () => import('@/templates/pdf/AcademicTemplatePDF').then(m => m.AcademicTemplatePDF),
+  compact:   () => import('@/templates/pdf/CompactTemplatePDF').then(m => m.CompactTemplatePDF),
 };
 
 /** Cache loaded template components so repeat exports skip network/chunk parse. */

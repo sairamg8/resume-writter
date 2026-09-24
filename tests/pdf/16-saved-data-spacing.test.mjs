@@ -148,7 +148,7 @@ describe('a Design → Spacing number stored as something that is not a number (
       const resumeDefault = await drawing(await render(asDefault));
       const letterDefault = await drawing(await renderCover(asDefault));
       for (const key of KEYS) {
-        // A template that brings its own Spacing (Academic's denser one, T8): a dropped value prints the
+        // A template that brings its own Spacing (Academic's denser one, T8, Compact's, T9): a dropped value prints the
         // app's default, the number the panel then shows — not the template's.
         const own = asDefault.settings[key] === SPACING[key].number ? null : normalizeResume(asFile(withSpacing(template, { [key]: SPACING[key].number })));
         const want = own ? { resume: await drawing(await render(own)), letter: await drawing(await renderCover(own)) } : { resume: resumeDefault, letter: letterDefault };
@@ -157,7 +157,8 @@ describe('a Design → Spacing number stored as something that is not a number (
           const r = normalizeResume(asFile(withSpacing(template, { [key]: stored })));
           const bytes = await render(r);
           const minX = Math.min(...allItems(await read(bytes)).map((t) => t.x));
-          assert.ok(minX > 40, `${at}: text at x ${minX.toFixed(1)}`);
+          // Inside the page's margin, never at its edge: 18 mm is 51 pt, Compact's own 12 mm 34 pt (T9).
+          assert.ok(minX > 30, `${at}: text at x ${minX.toFixed(1)}`);
           assert.ok(await drawing(bytes) === want.resume, `${at}: the résumé prints as with ${SPACING[key].number}`);
           assert.ok(await drawing(await renderCover(r)) === want.letter, `${at}: the letter prints as with ${SPACING[key].number}`);
         }

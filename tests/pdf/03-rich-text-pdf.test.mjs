@@ -116,10 +116,11 @@ describe('formatting', () => {
 
 describe('page breaks', () => {
   // Shift where the page break falls (0–7 lead-in lines) so that some break lands after the
-  // first line of a two-line bullet — the case that used to leave the bullet behind.
+  // first line of a two-line bullet — the case that used to leave the bullet behind. Long enough to
+  // wrap in Compact's 9 pt type across its 12 mm margins too (T9), where the shorter one fit a line.
   for (const template of TEMPLATES) {
     it(`${template}: a bullet never stays behind at the bottom of a page (FIDA-13 / FIDB-04)`, async () => {
-      const lis = Array.from({ length: 50 }, (_, i) => `<li>Bullet number ${i + 1} with enough words to wrap onto a second line in a narrow column of text</li>`).join('');
+      const lis = Array.from({ length: 50 }, (_, i) => `<li>Bullet number ${i + 1} with enough words to wrap onto a second line in a narrow column of text, and in the small type of a wide page as well</li>`).join('');
       for (let lead = 0; lead < 8; lead += 1) {
         const intro = Array.from({ length: lead }, (_, i) => `<p>Lead line ${i + 1}</p>`).join('');
         const { pages } = await renderDesc(`${intro}<ul>${lis}</ul>`, { template });

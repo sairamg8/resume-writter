@@ -6,7 +6,7 @@ import { templateId } from '@/constants/templates';
 
 const baseOf = (settings) => settings?.fontSizeBase || 11;
 
-/** PdfContactRow's values — Classic, Minimal, Executive, Timeline, Banner, Academic, the letterhead: half a point under Base, never under 8 pt. */
+/** PdfContactRow's values — Classic, Minimal, Executive, Timeline, Banner, Academic, Compact, the letterhead: half a point under Base, never under 8 pt. */
 export const rowContactPt = (settings) => Math.max(8, baseOf(settings) - 0.5);
 
 /** Modern's banner row: 1.5 pt under Base. */
