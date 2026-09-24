@@ -1,0 +1,40 @@
+{
+  "cluster": "app-shell",
+  "branch": "claude/wf-app-shell",
+  "base": "9c3589a",
+  "rows": [
+    { "id": "R2-050", "outcome": "duplicate", "commits": [], "tests": ["tests/unit/panel-resize-storage.unit.mjs"],
+      "summary": "Duplicate of R2-015, fixed in a15b045: usePanelResize reads the stored width in try/catch (blocked storage opens at 360 px) and lets go of the drag before a best-effort setItem (full storage no longer leaves the panel following the pointer). panel-resize-storage passes at HEAD (now driven by pointer events, see R2-144).", "remaining": "" },
+    { "id": "R2-071", "outcome": "fixed", "commits": ["a20572b", "bfa4e14"], "tests": ["tests/pdf/89-rename-fresh-name.test.mjs"],
+      "summary": "The editor header's rename box (useRename) opens on the name the résumé has at that moment, and leaving it writes nothing unless the name was changed: a rename made in another tab is never written back over. Same root cause as R2-084.", "remaining": "" },
+    { "id": "R2-072", "outcome": "fixed", "commits": ["ab44531"], "tests": ["tests/pdf/89-app-routes.test.mjs"],
+      "summary": "The page-wide ErrorBoundary takes the path as resetKey (AppRoutes → RouteFrame), so Back or any link away from a page that crashed shows the next page instead of 'Something went wrong'.", "remaining": "" },
+    { "id": "R2-073", "outcome": "fixed", "commits": ["ab44531", "b8c4a38"], "tests": ["tests/pdf/89-app-routes.test.mjs"],
+      "summary": "A new path reached by a link scrolls the window to the top (RouteFrame), so Privacy and Terms open at their start. Back/Forward leave the scroll to the browser, and a search-only change (?tab=) does not move it. The workspace pages keep their own <main> scroll memory (useScrollMemory).", "remaining": "" },
+    { "id": "R2-074", "outcome": "fixed", "commits": ["795377a"], "tests": ["tests/pdf/89-app-routes.test.mjs"],
+      "summary": "The Terms and Privacy back arrow (useBackOrHome) goes to the dashboard when no app page is behind it (location.key 'default': a direct visit or a link from another site), otherwise back. The icon-only arrow is labelled 'Back'.", "remaining": "" },
+    { "id": "R2-076", "outcome": "fixed", "commits": ["ace9ed0"], "tests": ["tests/pdf/89-editor-tab-link.test.mjs", "tests/pdf/32-editor-tab-scroll.test.mjs"],
+      "summary": "useEditorTab reads ?tab= from the router and validates it: an unknown value opens the Résumé tab and is removed from the address. Picking a tab replaces ?tab= (no history entry per click), so a reload reopens it.", "remaining": "" },
+    { "id": "R2-077", "outcome": "fixed", "commits": ["27bc9d1", "544decb"], "tests": ["tests/pdf/89-store-save-coalesced.test.mjs", "tests/pdf/16-saved-data-two-tabs.test.mjs", "tests/pdf/16-saved-data-photo-size.test.mjs"],
+      "summary": "Store saves are coalesced (coalescedWriter): a change after a quiet spell is written at once; later keystrokes are written together 300 ms after the last one, and at least every 2 s. pagehide, beforeunload, a hidden tab and unmount flush what is held. persistError reporting and recovery are unchanged. Other tabs' saves (even two in a row while a save is held, 544decb) are taken without undoing either tab's changes. 20 keystrokes now cost ≤2 whole-store writes instead of 20.", "remaining": "" },
+    { "id": "R2-084", "outcome": "fixed", "commits": ["a20572b", "bfa4e14"], "tests": ["tests/pdf/89-rename-fresh-name.test.mjs"],
+      "summary": "Dashboard cards and the editor header share useRename: the draft is primed when the box opens, and onRename fires only for a changed, non-empty name that is neither the name the box opened on nor the current one. The store's renameResume ignores an unchanged name (no updatedAt, no save, no sync).", "remaining": "" },
+    { "id": "R2-086", "outcome": "fixed", "commits": ["ec7c2e1"], "tests": ["tests/pdf/89-sign-in-errors.test.mjs"],
+      "summary": "A failed Google sign-in shows a dismissable role=alert under the button that says what to do: allow pop-ups, this address is not set up for sign-in, no connection, blocked storage, too many tries, or 'Sign-in failed (code)'. The alert clears on the next try. Closing the popup (popup-closed-by-user, cancelled-popup-request, user-cancelled) shows nothing.", "remaining": "" },
+    { "id": "R2-144", "outcome": "fixed", "commits": ["2561233", "e0ab2e3"], "tests": ["tests/unit/panel-resize-separator.unit.mjs", "tests/unit/panel-resize-storage.unit.mjs"],
+      "summary": "The split-view handle is a focusable role=separator with aria-orientation=vertical, aria-valuenow/min/max and a label. Arrow keys move it 16 px and Home/End go to 240/640. It drags with pointer events (mouse, pen or finger; pointercancel ends the drag), with touch-action: none and a wider hit area over the preview. Checked in real Chromium with touch, mouse and keyboard.", "remaining": "" }
+  ],
+  "review": {
+    "issues": [
+      "R2-077 (Medium): at 27bc9d1, two saves from another tab while this tab held a save made the second one's edits undone and deletions come back (stored ref only advanced on this tab's writes)",
+      "R2-084 (Low): box opened, then renamed in another tab, then left untouched still wrote the old name back",
+      "R2-073: no test pinned that Back (POP) leaves the scroll alone",
+      "Not fixed, minor: a pagehide landing between another tab's storage event and the re-render can still write the stale held state (very narrow window); the editor's 'Saved' label can lead the actual write by up to ~2 s; the resize handle does not use pointer capture (as before)"
+    ],
+    "fixedByReviewer": ["544decb (R2-077 two-tab second save)", "bfa4e14 (R2-084 opened-on name)", "b8c4a38 (R2-073 POP test)"]
+  },
+  "baselineFailures": [
+    "tests/playwright/parity-ui-controls.spec.mjs 'classic: Design panel' flags the Inter/Literata font buttons as inert. It fails the same way on the base build in this container (web fonts unreachable); the other 9 specs in the file pass."
+  ],
+  "notes": "Existing tests whose harness (not assertions) changed: tests/unit/panel-resize-storage.unit.mjs and cypress/e2e/23-editor-panels.cy.js now drive the drag with pointer events (R2-144; Cypress not run here); tests/pdf/32-editor-tab-scroll.test.mjs gives its MemoryRouter the address it used to put on window.location.hash (R2-076); tests/pdf/16-saved-data-two-tabs.test.mjs reads storage after a pagehide, tests/pdf/16-saved-data-photo-size.test.mjs's until() also polls in real time, and tests/playwright/parity-ui-controls.spec.mjs's saved() dispatches pagehide (R2-077). Any future test that reads cpwtcv_v1 right after a second quick change must flush (pagehide) or wait ~300 ms. EditorHeader's `rename` prop now takes useRename's shape; usePanelResize returns separatorProps instead of onDragHandleMouseDown. R2-072 and R2-073 share one commit (ab44531) because both live in the new RouteFrame. Commit trailers use this session's URL (session_01S681bgs4qE2ric3C7MivaC)."
+}
