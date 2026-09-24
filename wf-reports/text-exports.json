@@ -3,35 +3,157 @@
   "branch": "claude/wf-text-exports",
   "base": "9c3589a",
   "rows": [
-    { "id": "R2-064", "outcome": "fixed", "commits": ["4a6f968", "54f270f"],
-      "tests": ["tests/unit/text-exports-section-options.unit.mjs"],
-      "summary": "Markdown and the ATS text follow Section Options as the PDF and Word do: Show dates off prints no date on any dated section (experience, education, volunteering, projects, a certificate's date and expiry, awards, custom), Show location off no location on experience, education and volunteering (a custom entry's location prints whatever the options, as in the PDF), and an experience section's Order puts the company or the role first — unset, the résumé template's default through resolveSection. The ATS text prints every date in Design → Date format (formatDate) and a current job's end as presentLabel. Fail-first: 7 of 10 tests failed before 4a6f968; the template-Order tests failed before 54f270f." },
-    { "id": "R2-054", "outcome": "duplicate", "commits": ["4a6f968", "54f270f"], "tests": ["tests/unit/text-exports-section-options.unit.mjs"],
-      "summary": "Duplicate of R2-064 (Markdown and ATS text ignored Show dates / Show location); fixed there." },
-    { "id": "R2-058", "outcome": "duplicate", "commits": ["4a6f968", "54f270f"], "tests": ["tests/unit/text-exports-section-options.unit.mjs"],
-      "summary": "Duplicate of R2-064 (ATS text ignored Date format, Show dates and Show location); fixed there." },
-    { "id": "R2-060", "outcome": "duplicate", "commits": ["4a6f968", "54f270f"], "tests": ["tests/unit/text-exports-section-options.unit.mjs"],
-      "summary": "Duplicate of R2-064, Order included: an experience section's Order (Co. / Role, Role / Co., or the template's default when unset) now applies in Markdown and the ATS text." },
-    { "id": "R2-122", "outcome": "duplicate", "commits": ["4a6f968"], "tests": ["tests/unit/text-exports-section-options.unit.mjs"],
-      "summary": "Duplicate of R2-064: the ATS text prints every date in Design → Date format and 'Present' through presentLabel." },
-    { "id": "R2-129", "outcome": "fixed", "commits": ["828025a"], "tests": ["tests/unit/markdown-export-contacts.unit.mjs"],
-      "summary": "The Markdown contact line is built from contactItems/contactHref, the PDF's contact lines: a website, LinkedIn or GitHub prints its Display label (else its address without the scheme) and links through safeHref, so a javascript: Link URL is no link and a bare-domain one links https://. The 'Email:'/'Phone:'/'Location:' prefixes are gone and a phone links tel:, as in the PDF. Fail-first: 3 of 4 tests failed before the fix." },
-    { "id": "R2-131", "outcome": "fixed", "commits": ["aced50a"], "tests": ["tests/pdf/78-letter-export-menu.test.mjs"],
-      "summary": "On the Cover Letter tab the Export menu says what each item exports: 'Export Cover Letter PDF / Word', and 'Export Résumé as Markdown (.md) / ATS Text (.txt) / JSON Resume (.json)' (useEditorExports returns letterTab; EditorHeader passes it). The résumé tab's menu is unchanged. Fail-first: 3 of 4 tests failed before the fix.",
-      "remaining": "The letter has no plain-text export of its own (the row allowed the smaller honest fix)." },
-    { "id": "R2-026", "outcome": "already-fixed", "commits": ["9c4bdce"], "tests": ["tests/unit/markdown-export-sections.unit.mjs"],
-      "summary": "Fixed by R2-009 (9c4bdce): at HEAD the Markdown prints Interests as one list, a reference's job title, company, e-mail and phone, and a custom entry's subtitle and location (checked with a script)." },
-    { "id": "R2-034", "outcome": "already-fixed", "commits": ["677c6ca"], "tests": ["tests/unit/json-resume-hidden.unit.mjs"],
-      "summary": "Fixed by R2-007/R2-006 (677c6ca): at HEAD a hidden phone, photo and summary are not in the JSON Resume file, and the LinkedIn Display label and Link URL come back on import (checked with a script)." },
-    { "id": "R2-052", "outcome": "already-fixed", "commits": ["784c375", "cc919de"], "tests": ["tests/unit/json-resume-sections.unit.mjs"],
-      "summary": "Fixed by R2-002: Languages, Volunteering, Interests, References and custom sections go out and come back (checked with a script at HEAD)." },
-    { "id": "R2-053", "outcome": "already-fixed", "commits": ["9c4bdce", "8409472"], "tests": ["tests/unit/markdown-export-sections.unit.mjs", "tests/unit/ats-plain-text.unit.mjs"],
-      "summary": "Markdown half fixed by R2-009 (9c4bdce), ATS half by R2-001 (8409472): Interests, reference details, custom subtitle and location, and an award's issuer and date print in both (checked with a script at HEAD)." }
+    {
+      "id": "R2-064",
+      "outcome": "fixed",
+      "commits": [
+        "4a6f968",
+        "54f270f"
+      ],
+      "tests": [
+        "tests/unit/text-exports-section-options.unit.mjs"
+      ],
+      "summary": "Markdown and the ATS text follow Section Options as the PDF and Word do: Show dates off prints no date on any dated section (experience, education, volunteering, projects, a certificate's date and expiry, awards, custom), Show location off no location on experience, education and volunteering (a custom entry's location prints whatever the options, as in the PDF), and an experience section's Order puts the company or the role first — unset, the résumé template's default through resolveSection. The ATS text prints every date in Design → Date format (formatDate) and a current job's end as presentLabel. Fail-first: 7 of 10 tests failed before 4a6f968; the template-Order tests failed before 54f270f."
+    },
+    {
+      "id": "R2-054",
+      "outcome": "duplicate",
+      "commits": [
+        "4a6f968",
+        "54f270f"
+      ],
+      "tests": [
+        "tests/unit/text-exports-section-options.unit.mjs"
+      ],
+      "summary": "Duplicate of R2-064 (Markdown and ATS text ignored Show dates / Show location); fixed there."
+    },
+    {
+      "id": "R2-058",
+      "outcome": "duplicate",
+      "commits": [
+        "4a6f968",
+        "54f270f"
+      ],
+      "tests": [
+        "tests/unit/text-exports-section-options.unit.mjs"
+      ],
+      "summary": "Duplicate of R2-064 (ATS text ignored Date format, Show dates and Show location); fixed there."
+    },
+    {
+      "id": "R2-060",
+      "outcome": "duplicate",
+      "commits": [
+        "4a6f968",
+        "54f270f"
+      ],
+      "tests": [
+        "tests/unit/text-exports-section-options.unit.mjs"
+      ],
+      "summary": "Duplicate of R2-064, Order included: an experience section's Order (Co. / Role, Role / Co., or the template's default when unset) now applies in Markdown and the ATS text."
+    },
+    {
+      "id": "R2-122",
+      "outcome": "duplicate",
+      "commits": [
+        "4a6f968"
+      ],
+      "tests": [
+        "tests/unit/text-exports-section-options.unit.mjs"
+      ],
+      "summary": "Duplicate of R2-064: the ATS text prints every date in Design → Date format and 'Present' through presentLabel."
+    },
+    {
+      "id": "R2-129",
+      "outcome": "fixed",
+      "commits": [
+        "828025a"
+      ],
+      "tests": [
+        "tests/unit/markdown-export-contacts.unit.mjs"
+      ],
+      "summary": "The Markdown contact line is built from contactItems/contactHref, the PDF's contact lines: a website, LinkedIn or GitHub prints its Display label (else its address without the scheme) and links through safeHref, so a javascript: Link URL is no link and a bare-domain one links https://. The 'Email:'/'Phone:'/'Location:' prefixes are gone and a phone links tel:, as in the PDF. Fail-first: 3 of 4 tests failed before the fix."
+    },
+    {
+      "id": "R2-131",
+      "outcome": "fixed",
+      "commits": [
+        "aced50a",
+        "ab74277"
+      ],
+      "tests": [
+        "tests/pdf/78-letter-export-menu.test.mjs"
+      ],
+      "summary": "On the Cover Letter tab the Export menu says what each item exports ('Export Cover Letter PDF / Word', 'Export Résumé as Markdown / ATS Text / JSON Resume') and offers 'Export Cover Letter Text (.txt)': the letter as plain text in the order its PDF and Word print it — name, title, the contacts the letter shows, the date in the Date format, recipient block, subject, body (paragraphs, line breaks, list items), closing and signature (src/utils/coverLetterText.js, built on coverLetter.js's letterBlock / letterSignature / letterHiddenFields). The résumé tab's menu is unchanged. Fail-first: the menu, hook-download and generator tests failed before each commit."
+    },
+    {
+      "id": "R2-026",
+      "outcome": "already-fixed",
+      "commits": [
+        "9c4bdce"
+      ],
+      "tests": [
+        "tests/unit/markdown-export-sections.unit.mjs"
+      ],
+      "summary": "Fixed by R2-009 (9c4bdce): at HEAD the Markdown prints Interests as one list, a reference's job title, company, e-mail and phone, and a custom entry's subtitle and location (checked with a script)."
+    },
+    {
+      "id": "R2-034",
+      "outcome": "already-fixed",
+      "commits": [
+        "677c6ca"
+      ],
+      "tests": [
+        "tests/unit/json-resume-hidden.unit.mjs"
+      ],
+      "summary": "Fixed by R2-007/R2-006 (677c6ca): at HEAD a hidden phone, photo and summary are not in the JSON Resume file, and the LinkedIn Display label and Link URL come back on import (checked with a script)."
+    },
+    {
+      "id": "R2-052",
+      "outcome": "already-fixed",
+      "commits": [
+        "784c375",
+        "cc919de"
+      ],
+      "tests": [
+        "tests/unit/json-resume-sections.unit.mjs"
+      ],
+      "summary": "Fixed by R2-002: Languages, Volunteering, Interests, References and custom sections go out and come back (checked with a script at HEAD)."
+    },
+    {
+      "id": "R2-053",
+      "outcome": "already-fixed",
+      "commits": [
+        "9c4bdce",
+        "8409472"
+      ],
+      "tests": [
+        "tests/unit/markdown-export-sections.unit.mjs",
+        "tests/unit/ats-plain-text.unit.mjs"
+      ],
+      "summary": "Markdown half fixed by R2-009 (9c4bdce), ATS half by R2-001 (8409472): Interests, reference details, custom subtitle and location, and an award's issuer and date print in both (checked with a script at HEAD)."
+    },
+    {
+      "id": "(new) JSON Resume Date format",
+      "outcome": "fixed",
+      "commits": [
+        "751b732"
+      ],
+      "tests": [
+        "tests/unit/json-resume-date-format.unit.mjs"
+      ],
+      "summary": "Found while fixing R2-064/R2-122: a JSON Resume round trip reset Design → Date format to the starter's (Classic's MMM YYYY), so a résumé printing its dates As entered or MM/YYYY came back printing 'Mar 2021'. The export now writes the effective format to meta.dateFormat and the import restores it when this build knows it. Fail-first: 2 of 3 tests failed before the fix."
+    }
   ],
   "review": {
-    "issues": ["4a6f968 read section.settings raw, so an unset Order printed the company first on Executive, Sidebar, Timeline, Banner, Academic and Compact, where the PDF and Word lead with the role (TEMPLATE_SECTION_DEFAULTS)."],
-    "fixedByReviewer": ["54f270f: both text exporters resolve each section with resolveSection(section, templateId(resume.template)), with tests per exporter."]
+    "issues": [
+      "4a6f968 read section.settings raw, so an unset Order printed the company first on Executive, Sidebar, Timeline, Banner, Academic and Compact, where the PDF and Word lead with the role (TEMPLATE_SECTION_DEFAULTS)."
+    ],
+    "fixedByReviewer": [
+      "54f270f: both text exporters resolve each section with resolveSection(section, templateId(resume.template)), with tests per exporter."
+    ]
   },
-  "baselineFailures": ["tests/unit/ats-checker.unit.mjs: 5 '# TODO R2-020' tests fail by design (ats cluster)"],
-  "notes": "Changed existing assertions (the rows ask for it): role-first pins in tests/unit/ats-plain-text.unit.mjs, markdown-export-sections.unit.mjs, markdown-export.unit.mjs and tests/pdf/70-markdown-parity.test.mjs now expect Classic's company-first default; tests/unit/json-resume-hidden.unit.mjs and json-resume-reprint.unit.mjs give the original résumé settings.dateFormat 'MMM YYYY' because they compare ATS text across the JSON Resume trip, and the import gives a résumé the Classic starter's Date format. That shows a real limit: a JSON Resume file carries no Date format, so a résumé set to As entered comes back as MMM YYYY. Touched outside the listed files for R2-131: src/components/ExportDropdown.jsx and src/components/EditorHeader.jsx (labels and one prop)."
+  "baselineFailures": [
+    "tests/unit/ats-checker.unit.mjs: 5 '# TODO R2-020' tests fail by design (ats cluster)"
+  ],
+  "notes": "Changed existing assertions (the rows ask for it): role-first pins in tests/unit/ats-plain-text.unit.mjs, markdown-export-sections.unit.mjs, markdown-export.unit.mjs and tests/pdf/70-markdown-parity.test.mjs now expect Classic's company-first default. tests/unit/json-resume-hidden.unit.mjs and json-resume-reprint.unit.mjs were temporarily changed and are back to their base versions (751b732 fixed the Date format round trip they exposed). Touched outside the listed files for R2-131: src/components/ExportDropdown.jsx, src/components/EditorHeader.jsx, and the new src/utils/coverLetterText.js. The owner asked for working features over label-only fixes, so R2-131 now has a real letter text export."
 }
