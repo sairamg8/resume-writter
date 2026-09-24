@@ -2,8 +2,8 @@
 
 > Location: `/mnt/Storage/Projects/flowcv/bug-status.md`
 > Updated: 2026-09-24 · every row **verified independently at `d495cb2`** (see Verification pass) ·
-> `origin/master` (deployed) = `a163871` · **nothing is waiting to be pushed**
-> **Open: 167** (0 here + 167 from the full audit in [bug-status-r2/](bug-status-r2/README.md)) | Fixed, not pushed: 0 | **Closed: 85** (82 fixed + 3 ✖ without a code fix)
+> `origin/master` (deployed) = `9fdaf81` · **nothing is waiting to be pushed**
+> **Open: 165** (0 here + 165 from the full audit in [bug-status-r2/](bug-status-r2/README.md)) | Fixed, not pushed: 0 | **Closed: 87** (84 fixed + 3 ✖ without a code fix)
 
 ## Summary
 
@@ -13,9 +13,9 @@
 | ATS parsing defects (`ATS-`) | 7 (ATS-7 was TUI-6) | 5 | 0 | 2 | 0 |
 | Templates UI audit, 2026-09-23 (`TUI-`) | 6 (+ TUI-6, filed as ATS-7) | 6 | 0 | 0 | 0 |
 | Prompt tasks, 2026-09-14 → 09-21 | 33 | 33 | 0 | 0 | 0 |
-| Full audit, 2026-09-23 — defects (`R2-001`…`R2-134`, [bug-status-r2/](bug-status-r2/README.md)) | 134 | 3 | 0 | 1 | **130** |
+| Full audit, 2026-09-23 — defects (`R2-001`…`R2-134`, [bug-status-r2/](bug-status-r2/README.md)) | 134 | 5 | 0 | 1 | **128** |
 | Full audit, 2026-09-23 — features and test gaps (`R2-135`…`R2-171`) | 37 | 0 | 0 | 0 | **37** |
-| **Total** | **252** | **82** | **0** | **3** | **167** |
+| **Total** | **252** | **84** | **0** | **3** | **165** |
 
 - **Status:** ✅ fixed and pushed (on `origin/master`, so deployed) · ⏸ fixed and committed, not pushed · 🔴 open ·
   ✖ closed without a code fix (won't fix: a known limit; not a bug; a duplicate) — the proof is in the row, and it counts as closed.
@@ -32,10 +32,8 @@
 2. ATS-4 is ✅ (`58f4f96`), ATS-6 is ✅ (`32a5972`; PENDING-ALL D3 closed: Heading styles, look unchanged). ATS-1/2/5 are ✅ (`417db1e`, one entry-header layout). TUI-6 is filed as ATS-7; ATS-3 and ATS-7 are ✖ known limits (`c950ae7`, `a67caa3`). The ATS list is closed.
 3. The TUI list is closed (TUI-6 filed as ATS-7).
 
-✅ **Deployed:** `origin/master` = `a163871` (R2-010: CJK, Korean, Arabic, Hebrew, Thai and emoji print as themselves in
-every template and the cover letter, `a163871`; the tree also holds the other lane's R2-004 commit `ef067e9` and the CI
-workflow `856a449`). Gate on that exact tree, GitHub Actions run 35952210126, 2026-09-24 09:12:
-**1998 tests, 1993 pass, 0 fail, 4 todo** (the accepted limits' `todo`s; 1 skipped: the private-résumé scan, whose file
+✅ **Deployed:** `origin/master` = `9fdaf81` (R2-004: a page left open no longer writes its stale copy over another device's edit, `ef067e9`; R2-005: signing out takes the account's résumés off a shared browser, `66a3da9`; the knowledge notes `9fdaf81`; the tree also holds the other lane's R2-010 `a163871`). Gate on that exact tree, GitHub Actions run 35952612367, 2026-09-24 09:17:
+**2013 tests, 2008 pass, 0 fail, 4 todo** (the accepted limits' `todo`s; 1 skipped: the private-résumé scan, whose file
 is not on CI), a green production build, Playwright green, and a private-data scan of all 75 bundle files with no hits.
 Per the owner (2026-09-23, *"keep pushing after each bug"*) every finished bug lands → gates → pushes, unasked.
 
