@@ -44,11 +44,30 @@ export function sectionHeadingLook({ template, headingStyle, accent = '#2563eb',
       : (borderColor || tint(accent, 0x40 / 255)), // classic, sidebar
     underline: solid(template === 'minimal' ? (borderColor || '#e5e7eb') : bc),
     bar: bc,
+    // Modern's box took the accent whatever the Border colour, under a control that stayed enabled
+    // (R2-119): it tints the Border colour as the others do — the accent's tint while none is picked.
     box: chip ? solid(bc)
-      : template === 'modern' ? tint(accent, 0x14 / 255)
       : template === 'minimal' ? tint(bc, 0x12 / 255)
-      : tint(bc, 0x14 / 255), // executive, classic, sidebar
+      : tint(bc, 0x14 / 255), // executive, classic, sidebar, modern
   };
+}
+
+/** The part of the look Border colour sets under each style; Plain has none. */
+const BORDER_PART = { ruled: 'ruled', line: 'line', underline: 'underline', leftbar: 'bar', box: 'box' };
+
+/**
+ * What Section Headings → Border colour shows while none is picked (R2-088): the colour that, picked,
+ * prints what the heading prints now — the accent where the style draws in it (`accent: true`),
+ * else the template's own rule, opaque on the white page (Classic's Ruled is a light grey, not the
+ * accent). `null` under Plain, which draws no border.
+ */
+export function headingBorderDefault({ template, headingStyle, accent = '#2563eb' }) {
+  const part = BORDER_PART[headingStyle];
+  if (!part) return null;
+  const own = sectionHeadingLook({ template, headingStyle, accent })[part];
+  const base = solid(accent);
+  const isAccent = solid(sectionHeadingLook({ template, headingStyle, accent, borderColor: base })[part]) === solid(own);
+  return { color: isAccent ? base : solid(own), accent: isAccent };
 }
 
 /** Compact's short rule after a section title (Line after), in multiples of the title's font size. */
