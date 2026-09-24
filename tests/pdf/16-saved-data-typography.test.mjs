@@ -44,7 +44,7 @@ describe('stored Typography numbers print within the panel\'s ranges (VF2-3.2-NB
       ['iconSize', 'abc', undefined, 11],
       ['iconSize', '12', 12, 12],
       ['iconSize', 50, 20, 20],
-      ['iconSize', 2, 8, 8],
+      ['iconSize', 2, 9, 9], // Contact Icons starts at 9 px: 8 printed as 9 does (R2-123)
     ];
 
     for (const template of ['classic', 'sidebar']) {
@@ -90,7 +90,7 @@ describe('stored Typography numbers print within the panel\'s ranges (VF2-3.2-NB
     const { normalizeResume } = await loadModule('/src/utils/normalizeResume.js');
     for (const settings of [
       { fontSizeBase: 11, fontSizeNameDelta: 8, fontSizeSectionDelta: 1, fontSizeEntryDelta: 0, iconSize: 11 },
-      { fontSizeBase: 8, fontSizeNameDelta: 28, fontSizeSectionDelta: -2, fontSizeEntryDelta: 16, iconSize: 8 },
+      { fontSizeBase: 8, fontSizeNameDelta: 28, fontSizeSectionDelta: -2, fontSizeEntryDelta: 16, iconSize: 9 },
       { fontSizeBase: 16, fontSizeNameDelta: 0, fontSizeSectionDelta: 8, fontSizeEntryDelta: -10, iconSize: 20 },
     ]) {
       const stored = { ...cv('classic', settings), dataVersion: DATA_VERSION };

@@ -79,7 +79,8 @@ export function SidebarTemplatePDF({ data }) {
   const mainSections    = visibleSections.filter(s => !SIDEBAR_TYPES.has(s.type));
 
   // Canvas: SideContact uses `st.iconSize ?? 8` as CSS px; PDF points ≈ px * 0.75
-  const sideIconPt     = Math.max(6, Math.round((settings?.iconSize ?? 8) * CSS_PX_TO_PT));
+  // Not rounded to whole points: 10 and 11 px both printed 8 pt, a step that changed nothing (R2-123).
+  const sideIconPt     = Math.max(6, (settings?.iconSize ?? 8) * CSS_PX_TO_PT);
   const sideSectionGap = sectionGap;
 
   // Classic's photo scaled for the ~38% column by ONE factor, so every Photo → Height option

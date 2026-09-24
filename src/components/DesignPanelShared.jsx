@@ -9,11 +9,11 @@ export function Label({ children }) {
 // SizeRow and NumberRow write a typed value on Enter or on leaving the box, and only when it differs
 // from the one shown; Escape writes nothing (useTypedNumber, R2-032). Clicking in and out used to
 // store the shown value — Contact Icons with nothing stored became a stored 11, Line Height 1.15 a 1.1.
-export function SizeRow({ label, value, onChange, min = 6, max = 40 }) {
+export function SizeRow({ label, value, onChange, min = 6, max = 40, unit = 'pt' }) {
   const labelId = useId();
   const current = Number.isFinite(value) ? value : min;
   const typed = useTypedNumber({
-    shown: current + 'pt',
+    shown: current + unit,
     editText: String(current),
     commit: (str) => {
       const n = parseInt(str, 10);

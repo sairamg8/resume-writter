@@ -23,12 +23,14 @@ export const HEADER_BORDER_PT = { min: 1, max: 12, zeroIsUnset: true };
 
 
 /**
- * Design → Typography, pt (DesignPanelTypography.jsx): Base 8–16 and Contact Icons 8–20, stored as
- * set. Unchecked, "abc" dropped the PDF's text, "12" printed 128 pt ("12" + 8) and 50 ran pages of it
- * (VF2-3.2-NB1-NB1-NB1).
+ * Design → Typography: Base 8–16 pt and Contact Icons 9–20 px, stored as set. Unchecked, "abc"
+ * dropped the PDF's text, "12" printed 128 pt ("12" + 8) and 50 ran pages of it (VF2-3.2-NB1-NB1-NB1).
+ * Contact Icons starts at 9 px: most templates never print an icon under 7 pt, so 8 px (6 pt) printed
+ * what 9 px (6.75 pt) prints — a step that changed nothing (R2-123). A stored 8 is brought to 9,
+ * which prints the same there.
  */
 export const FONT_SIZE_BASE = { min: 8, max: 16 };
-export const ICON_SIZE = { min: 8, max: 20 };
+export const ICON_SIZE = { min: 9, max: 20 };
 
 /** The base a résumé that stores none prints at (defaultData.js, every PDF's `?? 11`). */
 const DEFAULT_FONT_SIZE_BASE = 11;

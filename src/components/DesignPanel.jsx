@@ -3,6 +3,7 @@ import { Sparkles } from 'lucide-react';
 import { ATS_DEFAULTS, sectionReset } from '@/utils/defaultData';
 import { atsRating, contactIconHint, drawsContactIcons, TEMPLATE_PICKER, templateId } from '@/constants/templates';
 import { MARGIN_MM } from '@/constants/pageMargins';
+import { ICON_SIZE } from '@/constants/designNumbers';
 import { ITEM_GAP_PX, LINE_HEIGHT, SECTION_GAP_PX } from '@/constants/spacingNumbers';
 import { DesignSection, NumberRow, Label, SegmentControl } from '@/components/DesignPanelShared';
 import { HeadingsSection } from '@/components/DesignPanelHeadings';
@@ -149,7 +150,7 @@ export default function DesignPanel({ resume, updateSetting, setTemplate, resetS
           <div className="flex items-center gap-1">
             <button
               type="button"
-              onClick={() => updateSetting('iconSize', Math.max(8, (settings.iconSize ?? 11) - 1))}
+              onClick={() => updateSetting('iconSize', Math.max(ICON_SIZE.min, (settings.iconSize ?? 11) - 1))}
               className="w-6 h-6 flex items-center justify-center border border-gray-200 rounded text-gray-600 hover:bg-gray-100 text-base leading-none"
             >−</button>
             <span className="w-10 text-center text-xs font-medium text-gray-700 border border-gray-200 rounded h-6 flex items-center justify-center">
@@ -157,7 +158,7 @@ export default function DesignPanel({ resume, updateSetting, setTemplate, resetS
             </span>
             <button
               type="button"
-              onClick={() => updateSetting('iconSize', Math.min(20, (settings.iconSize ?? 11) + 1))}
+              onClick={() => updateSetting('iconSize', Math.min(ICON_SIZE.max, (settings.iconSize ?? 11) + 1))}
               className="w-6 h-6 flex items-center justify-center border border-gray-200 rounded text-gray-600 hover:bg-gray-100 text-base leading-none"
             >+</button>
           </div>

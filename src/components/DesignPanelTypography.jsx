@@ -146,7 +146,8 @@ export function TypographySection({ settings, template, updateSetting, onReset }
                 <SizeRow label="Full Name" value={base + nameDelta} onChange={v => updateSetting('fontSizeNameDelta', v - base)} {...TYPE_SIZE_PT.fontSizeNameDelta(base)} />
                 <SizeRow label="Section Title" value={base + sectionDelta} onChange={v => updateSetting('fontSizeSectionDelta', v - base)} {...TYPE_SIZE_PT.fontSizeSectionDelta(base)} />
                 <SizeRow label="Entry Header" value={base + entryDelta} onChange={v => updateSetting('fontSizeEntryDelta', v - base)} {...TYPE_SIZE_PT.fontSizeEntryDelta(base)} />
-                <SizeRow label="Contact Icons" value={settings.iconSize ?? 11} onChange={v => updateSetting('iconSize', v)} min={ICON_SIZE.min} max={ICON_SIZE.max} />
+                {/* Stored in px, as Contact icons and Header Customization show it — not pt (R2-123). */}
+                <SizeRow label="Contact Icons" value={settings.iconSize ?? 11} onChange={v => updateSetting('iconSize', v)} min={ICON_SIZE.min} max={ICON_SIZE.max} unit="px" />
               </>
             );
           })()}

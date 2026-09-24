@@ -1,5 +1,5 @@
 import { ChevronDown, ChevronRight, Eye, EyeOff } from 'lucide-react';
-import { HEADER_BORDER_PT } from '@/constants/designNumbers';
+import { HEADER_BORDER_PT, ICON_SIZE } from '@/constants/designNumbers';
 import { drawsContactIcons, hasHeaderControls, headerBorderOn, headerControlTemplateLabels } from '@/constants/templates';
 import { ICON_SET_OPTIONS, getIconSetId } from '@/utils/contactIcons';
 import { headerGapRows, headerGapKeysSet } from '@/utils/headerSpacingRows';
@@ -152,9 +152,9 @@ export function HeaderCustomization({ s, set, clear, personal, template, templat
                     <div className="flex items-center justify-between pt-1">
                       <span className="text-[11px] text-gray-400">Icon size</span>
                       <div className="flex items-center gap-1">
-                        <button onClick={() => set('iconSize', Math.max(8, (s.iconSize ?? 11) - 1))} className="w-6 h-6 flex items-center justify-center border border-gray-200 rounded text-gray-600 hover:bg-gray-100 text-base leading-none">−</button>
+                        <button onClick={() => set('iconSize', Math.max(ICON_SIZE.min, (s.iconSize ?? 11) - 1))} className="w-6 h-6 flex items-center justify-center border border-gray-200 rounded text-gray-600 hover:bg-gray-100 text-base leading-none">−</button>
                         <span className="w-10 text-center text-xs font-medium text-gray-700 border border-gray-200 rounded h-6 flex items-center justify-center">{s.iconSize ?? 11}px</span>
-                        <button onClick={() => set('iconSize', Math.min(20, (s.iconSize ?? 11) + 1))} className="w-6 h-6 flex items-center justify-center border border-gray-200 rounded text-gray-600 hover:bg-gray-100 text-base leading-none">+</button>
+                        <button onClick={() => set('iconSize', Math.min(ICON_SIZE.max, (s.iconSize ?? 11) + 1))} className="w-6 h-6 flex items-center justify-center border border-gray-200 rounded text-gray-600 hover:bg-gray-100 text-base leading-none">+</button>
                       </div>
                     </div>
                   </div>

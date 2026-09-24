@@ -23,7 +23,8 @@ const CSS_ICON_SCALE = 0.9;
  * uploaded for a field) as every other template. `gaps`: the header's spacing, pt (headerGaps).
  */
 function HeaderContact({ personal, settings, textColor, gaps }) {
-  const iconPt   = Math.max(7, Math.round((settings?.iconSize ?? 9) * CSS_ICON_SCALE));
+  // Not rounded to whole points: 15 and 16 px both printed 14 pt, a step that changed nothing (R2-123).
+  const iconPt   = Math.max(7, (settings?.iconSize ?? 9) * CSS_ICON_SCALE);
   const textSize = bannerContactPt(settings); // the Word export's contact size on Modern too
   const items = contactItems(personal);
 
