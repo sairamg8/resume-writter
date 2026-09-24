@@ -9,10 +9,11 @@ import { Boards } from '@/pages/Boards';
 import { Board } from '@/pages/Board';
 import { Backlog } from '@/pages/Backlog';
 import { BoardSettings } from '@/pages/BoardSettings';
+import { YourWork } from '@/pages/YourWork';
 import TermsPage from '@/pages/TermsPage';
 import PrivacyPage from '@/pages/PrivacyPage';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
-import { WorkspaceLayout, sidebarProjects, YourWorkPlaceholder } from '@/components/shell';
+import { WorkspaceLayout, sidebarProjects } from '@/components/shell';
 import { useBoardStore } from '@/hooks/useBoardStore';
 
 /**
@@ -32,9 +33,8 @@ export function WorkspaceRoute() {
  * account's cloud (seed.waiting). tests/pdf/18-cloud-sync-waiting-notice.test.mjs renders it.
  *
  * The Job Tracker and Boards pages sit inside the workspace shell (WorkspaceRoute); the résumé and
- * legal pages keep their own full-page layouts. /work shows a placeholder in the shell until its
- * own page replaces it (docs/tracking/boards-jobs-plan/01, Routes); tests/unit/ui-shell.unit.mjs
- * checks which paths are inside the shell.
+ * legal pages keep their own full-page layouts. tests/unit/ui-shell.unit.mjs checks which paths
+ * are inside the shell.
  */
 export function AppRoutes({ store, auth, sync, seed }) {
   return (
@@ -48,7 +48,7 @@ export function AppRoutes({ store, auth, sync, seed }) {
           <Route path="/jobs/:id/edit"       element={<JobForm    store={store} />} />
           <Route path="/jobs/:id"            element={<JobDetail  store={store} />} />
           <Route path="/boards"              element={<Boards />} />
-          <Route path="/work"                element={<YourWorkPlaceholder />} />
+          <Route path="/work"                element={<YourWork />} />
           <Route path="/boards/:id"          element={<Board />} />
           <Route path="/boards/:id/backlog"  element={<Backlog />} />
           <Route path="/boards/:id/settings" element={<BoardSettings />} />

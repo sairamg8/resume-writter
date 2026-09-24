@@ -41,6 +41,11 @@ function epicOf(board, issue) {
   return epic ? { id: epic.id, title: epic.title } : null;
 }
 
+/** `issue` as a card shows it: with `labels` for its labelIds and `epic` for its epicId. */
+export function boardCard(board, issue) {
+  return { ...issue, labels: labelsOf(board, issue), epic: epicOf(board, issue) };
+}
+
 /**
  * The project's columns in order, each as `{ id, title, limit, wip, cards }`: the issues the board
  * shows in that column in rank order, each as a card — the issue with `labels` for its labelIds
@@ -56,7 +61,7 @@ export function boardLists(board, { now = Date.now() } = {}) {
     title: column.title,
     limit: counts[column.id].limit,
     wip: counts[column.id].state,
-    cards: list.map((i) => ({ ...i, labels: labelsOf(board, i), epic: epicOf(board, i) })),
+    cards: list.map((i) => boardCard(board, i)),
   }));
 }
 

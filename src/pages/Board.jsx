@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, ListTodo, Plus, Trash2, X } from 'lucide-react';
 import {
   DndContext, DragOverlay, MouseSensor, TouchSensor, useSensor, useSensors, closestCorners,
@@ -11,8 +11,10 @@ import { CardView } from '@/components/board/BoardCard';
 import { BOARD_DRAG_INSTRUCTIONS } from '@/utils/cardKeys';
 import { CardDetailSheet } from '@/components/board/CardDetailSheet';
 import { BoardStorageNotice } from '@/components/board/BoardStorageNotice';
-import { boardLists, boardSprint, dropTarget, hiddenDoneCount } from '@/utils/boardView';
+import { boardCard, boardLists, boardSprint, dropTarget, hiddenDoneCount } from '@/utils/boardView';
 import { epicsOf } from '@/utils/boardQuery';
+import { findIssueByKey, statusColumn } from '@/utils/boardModel';
+import { withSearchParam } from '@/hooks/useUrlState';
 
 /** The "Add list" column at the right edge of the board (and its own scroll-snap target on mobile). */
 function AddListColumn({ onAdd }) {
@@ -79,7 +81,13 @@ export function Board() {
   const board = store.boards.find((b) => b.id === id);
 
   const [active, setActive] = useState(null); // { type, id } of the dragged item
-  const [open, setOpen] = useState(null); // { cardId, listId } of the card whose sheet is open
+  const location = useLocation();
+  // { cardId } of the card whose sheet is open — at first the one `?issue=KEY-N` names (a link from
+  // Your work, or a shared one), when it is on this board.
+  const [open, setOpen] = useState(() => {
+    const found = findIssueByKey(store.boards, new URLSearchParams(location.search).get('issue'));
+    return found && found.board.id === id ? { cardId: found.issue.id } : null;
+  });
   const [titleEditing, setTitleEditing] = useState(false);
   const [titleDraft, setTitleDraft] = useState('');
 
@@ -107,9 +115,18 @@ export function Board() {
   const hiddenDone = hiddenDoneCount(board, { now });
   const activeCard = active?.type === 'card' ? lists.flatMap((l) => l.cards).find((c) => c.id === active.id) : null;
   const activeList = active?.type === 'list' ? lists.find((l) => l.id === active.id) : null;
-  // Found by id alone: a move made elsewhere (another tab) may have changed its column meanwhile.
-  const openList = open ? lists.find((l) => l.cards.some((c) => c.id === open.cardId)) : null;
-  const openCard = openList?.cards.find((c) => c.id === open.cardId) || null;
+  // Found by id on the whole board, so a card off it (an old done one, one in another sprint) opens
+  // too; and after a move made elsewhere (another tab) it shows its column now.
+  const openIssue = open ? board.issues.find((i) => i.id === open.cardId && i.type !== 'epic') : null;
+  const openCard = openIssue ? boardCard(board, openIssue) : null;
+  const openList = openIssue ? statusColumn(board, openIssue) : null;
+
+  /** Close the sheet; the `?issue=` that opened it goes too, so a reload does not open it again. */
+  function closeCard() {
+    setOpen(null);
+    const search = withSearchParam(location.search, 'issue', null);
+    if (search !== location.search) navigate({ pathname: location.pathname, search }, { replace: true });
+  }
 
   function onDragStart({ active: a }) {
     setActive({ type: a.data.current?.type, id: a.id });
@@ -286,9 +303,9 @@ export function Board() {
           card={openCard}
           listTitle={openList?.title}
           epics={epicsOf(board).map((e) => ({ id: e.id, title: e.title }))}
-          onClose={() => setOpen(null)}
+          onClose={closeCard}
           onChange={(patch) => changeCard(openCard.id, patch)}
-          onDelete={() => { store.deleteIssue(board.id, openCard.id); setOpen(null); }}
+          onDelete={() => { store.deleteIssue(board.id, openCard.id); closeCard(); }}
         />
       )}
     </div>
