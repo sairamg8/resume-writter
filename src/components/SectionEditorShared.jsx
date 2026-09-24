@@ -47,11 +47,10 @@ export function MonthPicker({ label, value, onChange, disabled }) {
   const monthStr = date ? (date.m ? MONTHS[date.m - 1] : '') : (MONTHS.includes(parts[0]) ? parts[0] : '');
   const yearStr = date ? String(date.y) : (parts[1] || '');
 
+  // Both halves as the selects now hold them: a blank 'Month' or 'Year' clears its half, so
+  // 'Jan 2024' can become '2024' (R2-108) — putting the stored half back undid the choice.
   function update(m, y) {
-    if (!m && !y) { onChange(''); return; }
-    if (m && y) { onChange(`${m} ${y}`); return; }
-    if (m) { onChange(yearStr ? `${m} ${yearStr}` : m); return; }
-    onChange(monthStr ? `${monthStr} ${y}` : y);
+    onChange([m, y].filter(Boolean).join(' '));
   }
 
   return (
