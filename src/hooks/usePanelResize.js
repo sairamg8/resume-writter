@@ -27,7 +27,7 @@ function remember(width) {
  * The editor panel's width in split mode: dragged by its right edge, remembered in localStorage.
  * `separatorProps` go on the handle (R2-144): a focusable role="separator" with its value and
  * range, moved by the arrow keys (16 px) and Home / End, and dragged with pointer events, so a
- * finger on a tablet in split view drags it as a mouse does.
+ * finger on a tablet in split view drags it as a mouse does; the handle captures the pointer.
  */
 export function usePanelResize() {
   const [panelWidth, setPanelWidth] = useState(storedWidth);
@@ -39,6 +39,11 @@ export function usePanelResize() {
     dragState.current = { startX: e.clientX, startW: panelWidth, pointerId: e.pointerId };
     document.body.style.cursor = 'col-resize';
     document.body.style.userSelect = 'none';
+    // The handle holds the pointer until it is released: the drag keeps following it over the
+    // preview or out of the window, and a capture the browser takes away ends the drag. Best-effort:
+    // a pointer that is no longer down refuses it, and the window's listeners drag all the same.
+    const handle = e.currentTarget;
+    try { handle?.setPointerCapture?.(e.pointerId); } catch { /* no active pointer: uncaptured */ }
 
     const ours = (e) => dragState.current && (e.pointerId === undefined || e.pointerId === dragState.current.pointerId);
 
@@ -48,7 +53,8 @@ export function usePanelResize() {
       setPanelWidth(clamp(dragState.current.startW + delta));
     }
 
-    // A release, or a touch the browser took over (pointercancel): the drag ends where it was.
+    // A release, a touch the browser took over (pointercancel) or a capture lost: the drag ends
+    // where it was.
     function onPointerUp(e) {
       if (dragState.current && !ours(e)) return;
       const drag = dragState.current;
@@ -60,6 +66,7 @@ export function usePanelResize() {
       window.removeEventListener('pointermove', onPointerMove);
       window.removeEventListener('pointerup', onPointerUp);
       window.removeEventListener('pointercancel', onPointerUp);
+      handle?.removeEventListener?.('lostpointercapture', onPointerUp);
       if (!drag) return;
       const final = clamp(drag.startW + (e.clientX - drag.startX));
       setPanelWidth(final);
@@ -69,6 +76,7 @@ export function usePanelResize() {
     window.addEventListener('pointermove', onPointerMove);
     window.addEventListener('pointerup', onPointerUp);
     window.addEventListener('pointercancel', onPointerUp);
+    handle?.addEventListener?.('lostpointercapture', onPointerUp);
   }
 
   function onKeyDown(e) {
