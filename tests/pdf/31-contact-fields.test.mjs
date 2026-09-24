@@ -89,8 +89,12 @@ describe('one contact-field table (R1-3, R9-6)', () => {
   // A deliberate structural guard: the four copies drifting apart is the bug R1-3/R9-6 report,
   // and only a source scan can catch a fifth copy being added.
   it('no other file in src/ writes out the contacts\' names or their list of keys', () => {
-    const files = fs.readdirSync(SRC, { recursive: true }).filter((f) => /\.jsx?$/.test(f) && f !== path.join('utils', 'contacts.js'));
-    // "LinkedIn" and "GitHub" name nothing but contact fields, so any second table spells them;
+    // The Job Tracker names LinkedIn as a place a job was found (JOB_SOURCES, source: 'linkedin') — a job
+    // board, not a contact field — so its three source files are not contact tables.
+    const JOB_SOURCE_FILES = [['constants', 'jobs.js'], ['utils', 'jobFields.js'], ['utils', 'normalizeJob.js']].map((p) => path.join(...p));
+    const files = fs.readdirSync(SRC, { recursive: true }).filter((f) => /\.jsx?$/.test(f)
+      && f !== path.join('utils', 'contacts.js') && !JOB_SOURCE_FILES.includes(f));
+    // Elsewhere "LinkedIn" and "GitHub" name nothing but contact fields, so any second table spells them;
     // a list of the keys starts 'email', 'phone'.
     const copy = /(['"`])(?:LinkedIn|GitHub)\1|(['"])email\2\s*,\s*(['"])phone\3/;
     const offenders = files.flatMap((f) => fs.readFileSync(path.join(SRC, f), 'utf8').split('\n')

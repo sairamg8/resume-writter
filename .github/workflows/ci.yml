@@ -1,12 +1,12 @@
 # The heavy checks run here, not on the owner's laptop: the full node suite (sharded), the production
 # build and the Playwright browser suite. A local run of all three at once, beside several agents, ran the
-# laptop out of memory on 2026-09-24. Lanes push the exact commit they want gated to a scratch branch
-# ci/<lane>; the gate script waits for this run and reads its results. master is checked on every push too.
+# laptop out of memory on 2026-09-24. It runs on every push to master — the only branch on GitHub (the
+# owner, 2026-09-24: no other branches are pushed) — and a red run is fixed forward on master at once.
 name: ci
 
 on:
   push:
-    branches: [master, 'ci/**', boards-jobs-ui]
+    branches: [master]
   workflow_dispatch:
 
 concurrency:

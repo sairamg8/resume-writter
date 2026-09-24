@@ -14,7 +14,12 @@ const ENTRY = path.join(SRC, 'main.jsx');
 const MODULE = /\.(m?jsx?)$/;
 
 // Dead modules each reported as their own task; delete the entry together with the file.
-const KNOWN_DEAD = [];
+const KNOWN_DEAD = [
+  // Lane C's board export/import (.json), unit-tested in tests/unit/board-transfer.unit.mjs and merged with
+  // the rest of the lane on 2026-09-24 before its Boards page imports it (docs/tracking/boards-jobs-plan/).
+  // The test below fails the day it is wired in — then drop it from here.
+  'src/utils/boardTransfer.js',
+];
 
 const rel = (file) => path.relative(ROOT, file).split(path.sep).join('/');
 
