@@ -48,7 +48,10 @@ const find = (pages, word) => allItems(pages).find((t) => t.str.toUpperCase().in
  * they have with every Item gap at 0, so entry heights do not count. `chips`: the Interests chips'
  * distance, left edge to left edge.
  */
-async function gapsOf(r) {
+async function gapsOf(saved) {
+  // Smaller type and margins keep every pair on page 1: an entry's header moves to the next page whole
+  // (R2-049), so a pair across a page break has no gap to measure. The gaps do not change with them.
+  const r = { ...saved, settings: { ...saved.settings, fontSizeBase: 8, marginV: 6 } };
   const zero = { ...r, sections: r.sections.map((s) => ({ ...s, settings: { ...s.settings, itemGap: 0 } })) };
   const [pages, flat] = [await read(await render(r)), await read(await render(zero))];
   const out = {};

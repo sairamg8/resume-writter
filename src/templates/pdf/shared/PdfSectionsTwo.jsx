@@ -187,9 +187,10 @@ export function AwardsSection({ section, settings, marginBottom, spaceBefore, it
         gap={itemGap}
         renderItem={(item) => (
           <View style={{ alignItems: flexAlign }}>
-            {/* Title, issuer and date unbreakable and kept with two lines of what follows, as ItemHeader
-                keeps a job's header: an award's title is never left alone at a page foot (R2-049). */}
-            <View wrap={false} minPresenceAhead={Math.round(baseSize * (settings?.lineHeightValue ?? 1.5) * 2)} style={{ alignItems: flexAlign }}>
+            {/* Title, issuer and date unbreakable and kept with two lines of a description, as ItemHeader
+                keeps a job's header: an award's title is never left alone at a page foot (R2-049). With
+                none, no keep: react-pdf would move the block to make room for lines that never come. */}
+            <View wrap={false} minPresenceAhead={hasRichText(item.description) ? Math.round(baseSize * (settings?.lineHeightValue ?? 1.5) * 2) : 0} style={{ alignItems: flexAlign }}>
               <Text style={{ fontSize: entrySize, fontWeight: 'bold', color: textColor, textAlign }}>{item.title}</Text>
               {item.issuer && (
                 <Text style={{ fontSize: baseSize, color: sub, fontStyle: italicSubs ? 'italic' : 'normal', textAlign }}>{item.issuer}</Text>
