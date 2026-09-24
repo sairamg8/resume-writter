@@ -6,8 +6,9 @@ import { previewBox } from '@/constants/pageSize';
  * that Export PDF downloads, and pdf.js paints its pages. One renderer, so preview and PDF
  * cannot drift apart.
  *
- * - Re-renders `DEBOUNCE_MS` after the last change to `input`; the previous pages stay on
- *   screen (double-buffered) until the new ones are painted, so typing never flashes blank.
+ * - Re-renders `DEBOUNCE_MS` after the last change to `input` — also before the first page
+ *   appears and after a failed build; the previous pages stay on screen (double-buffered) until
+ *   the new ones are painted, so typing never flashes blank.
  * - A stale render is dropped when a newer one has started.
  * - `active` false (the column is hidden: "Editor only", or a phone's Edit tab) builds and paints
  *   nothing: the preview only notes it is behind (status 'paused') and builds once, with the latest
@@ -117,8 +118,12 @@ export function PdfPreview({ render, input, zoom = 1, textId, title = 'Résumé'
     if (!active) { setStatus('paused'); return undefined; }
     const gen = ++generation.current;
     setStatus('rendering');
-    // Typing is debounced; a preview just shown builds at once (nobody is typing into it).
-    const delay = docRef.current && !revealed ? DEBOUNCE_MS : 0;
+    // Every change after the first build has STARTED waits for a pause in typing — not only once a
+    // build has succeeded: a cold open (fonts and template still loading) or a failed build would
+    // otherwise start one full build per keystroke (R2-017). At once: the first build, a Retry, and
+    // a preview just shown (nobody is typing into it).
+    const retried = last && last.retry !== retry;
+    const delay = last && !revealed && !retried ? DEBOUNCE_MS : 0;
     const timer = setTimeout(async () => {
       built.current = { input, render, retry };
       try {

@@ -78,13 +78,16 @@ describe('a hidden preview builds nothing until it is shown (R2-016)', () => {
     } finally { await view.unmount(); }
   });
 
-  it('shown (the default) it builds after every edit, as before', async () => {
+  it('shown (the default) it builds after every edit, as before (once typing pauses: R2-017)', async () => {
     const [v0, v1, v2] = versions();
     const { calls, build } = countingBuild();
     const { view, set } = await preview({ render: build, input: v0 });
+    const pause = () => new Promise((r) => { setTimeout(r, 400); }); // past the 350 ms debounce
     try {
       await set({ render: build, input: v1 });
+      await pause();
       await set({ render: build, input: v2 });
+      await pause();
       assert.deepEqual(calls, [v0, v1, v2]);
     } finally { await view.unmount(); }
   });
