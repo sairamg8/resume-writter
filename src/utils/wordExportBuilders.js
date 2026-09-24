@@ -1,7 +1,7 @@
 import { BorderStyle, Paragraph, ShadingType } from 'docx';
 import {
   accent2Hex, bold, normal, linked, sectionHeading, bulletPoint, descriptionToParagraphs, dateRightPara, centredIf, eighths,
-  gapPara, inlineGap, lineSpacing, twips,
+  gapPara, gridTable, inlineGap, lineSpacing, twips,
 } from '@/utils/wordExportUtils';
 import { sectionLook } from '@/utils/wordExportLook';
 import { headingBorderExtraPt, inSidebarColumn, templateId, upperSectionTitles } from '@/constants/templates';
@@ -57,18 +57,14 @@ const field = (item, key) => ((item.hiddenFields || []).includes(key) ? '' : (it
 
 /**
  * The entries of `section` the user has not hidden, each as `build` makes it (its paragraphs), with
- * the look's gap between two (Design → Between Items), as the PDF spaces them. An entry that prints
- * nothing takes no gap. `look` is sectionLook's: sizes, spacing and colours.
+ * the look's gap between two (Design → Between Items), as the PDF spaces them — or, in Grids of two
+ * or more, a table of them (gridTable, R2-070). An entry that prints nothing takes no gap and no
+ * cell. `look` is sectionLook's: sizes, spacing, grid and colours.
  */
 function entries(section, look, build) {
-  const out = [];
-  for (const item of shown(section)) {
-    const paras = build(item).filter(Boolean);
-    if (!paras.length) continue;
-    if (out.length) out.push(...gapPara(look.gap));
-    out.push(...paras);
-  }
-  return out;
+  const cells = shown(section).map((item) => build(item).filter(Boolean)).filter((paras) => paras.length);
+  if (look.grid && cells.length) return [gridTable(cells, look.grid, look.gap)];
+  return cells.flatMap((paras, i) => (i ? [...gapPara(look.gap), ...paras] : paras));
 }
 
 /**

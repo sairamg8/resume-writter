@@ -3,7 +3,7 @@
 import { accent2Hex, wordContentTwips } from '@/utils/wordExportUtils';
 import { templateId } from '@/constants/templates';
 import { solid, textShades } from '@/templates/pdf/shared/pdfColors';
-import { getEffectiveSpacing } from '@/templates/pdf/shared/PdfSections';
+import { getColumnWidth, getEffectiveSpacing } from '@/templates/pdf/shared/PdfSections';
 
 /**
  * The colours of a section's entries, 'rrggbb', as the PDF prints them on the white page, from the
@@ -70,11 +70,27 @@ function entrySizes(section, s, tid, side) {
 }
 
 /**
+ * Section Options → Grids as the PDF lays the section out on a text column `width` twips wide
+ * (R2-070): `cols` entries to a row — the section's Grids; unset, Languages and References two, the
+ * rest one — each `cell` twips wide (getColumnWidth's 48 %, 31 % or 23 %), the cells spread from edge
+ * to edge (`starts`: where each begins). Null for one column; the Sidebar's side column is always one.
+ */
+function gridOf(section, width, side) {
+  const cols = side ? 1 : Number(section.settings?.columns) || (['languages', 'references'].includes(section.type) ? 2 : 1);
+  const share = parseFloat(getColumnWidth(cols)) / 100;
+  if (cols < 2 || share >= 1) return null;
+  const cell = Math.round(width * share);
+  const gap = (width - cols * cell) / (cols - 1);
+  return { cols, cell, width, starts: Array.from({ length: cols }, (_, i) => Math.round(i * (cell + gap))) };
+}
+
+/**
  * The `look` buildSection's builders print `section` in, from the résumé's `settings` and their
  * resolved `s`:
  * - `base`, `entry`, `sub`, `place`, `date`, `link` and `body` — the sizes of its fields,
  *   half-points (entrySizes);
- * - `tab` — the dates' right tab, twips: the right margin (wordContentTwips);
+ * - `grid` — Section Options → Grids (gridOf), or null for one entry to a row;
+ * - `tab` — the dates' right tab, twips: the right margin (wordContentTwips), or in a grid its cell's;
  * - `line` — Design → Line Height;
  * - `gap` — the space between two entries, pt: Design → Between Items scaled by the section's
  *   Spacing preset, or its own Item gap (getEffectiveSpacing, R2-062);
@@ -85,9 +101,11 @@ function entrySizes(section, s, tid, side) {
  */
 export function sectionLook(section, settings, s, template, side) {
   const tid = templateId(template);
+  const grid = gridOf(section, wordContentTwips(settings), side);
   return {
     ...entrySizes(section, s, tid, side),
-    tab: wordContentTwips(settings),
+    grid,
+    tab: grid ? grid.cell : wordContentTwips(settings),
     line: s.lineHeightValue,
     gap: getEffectiveSpacing(section, s).itemGap,
     title: (!side && section.settings?.titleStyle) || 'stacked',

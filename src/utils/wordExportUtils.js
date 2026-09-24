@@ -1,5 +1,6 @@
 import {
   Paragraph, TextRun, BorderStyle, TabStopType, ExternalHyperlink, AlignmentType, HeadingLevel, LineRuleType,
+  Table, TableBorders, TableCell, TableLayoutType, TableRow, WidthType,
 } from 'docx';
 import { parseRichText, safeHref } from '@/utils/richText';
 import { PAGE_MARKS } from '@/templates/pdf/shared/pdfColors';
@@ -44,6 +45,32 @@ export const lineSpacing = (lineHeight, size) => (lineHeight > 0 && size > 0
 export const gapPara = (pt) => (pt > 0
   ? [new Paragraph({ children: [], spacing: { before: 0, after: 0, line: Math.max(1, twips(pt)), lineRule: LineRuleType.EXACT } })]
   : []);
+
+/**
+ * A section's entries in Section Options → Grids (R2-070): a borderless table of `grid`'s columns
+ * (sectionLook's), `cells` (each an entry's paragraphs) in reading order, row by row, as the PDF's
+ * RenderColGrid lays them out. Each column starts where the PDF's cell does; its text is as wide as the
+ * PDF's cell, the gap to the next cell its right margin. Rows after the first stand `gapPt` below
+ * the one above (Between Items), and a short last row is filled with empty cells.
+ */
+export function gridTable(cells, { cols, cell, starts, width }, gapPt) {
+  const widths = starts.map((x, i) => (starts[i + 1] ?? width) - x);
+  const rows = [];
+  for (let i = 0; i < cells.length; i += cols) rows.push(cells.slice(i, i + cols));
+  return new Table({
+    width: { size: width, type: WidthType.DXA },
+    columnWidths: widths,
+    layout: TableLayoutType.FIXED,
+    borders: TableBorders.NONE,
+    rows: rows.map((row, r) => new TableRow({
+      children: widths.map((w, c) => new TableCell({
+        children: row[c] || [new Paragraph({ children: [] })],
+        width: { size: w, type: WidthType.DXA },
+        margins: { marginUnitType: WidthType.DXA, top: r ? twips(gapPt) : 0, bottom: 0, left: 0, right: w - cell },
+      })),
+    })),
+  });
+}
 
 /** A '#rrggbb' colour as Word's 'rrggbb'; anything else gives `fallback`. */
 export function accent2Hex(color, fallback = '2563eb') {
