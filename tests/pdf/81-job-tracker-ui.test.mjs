@@ -121,6 +121,10 @@ it('R2-038: a kanban card drags on touch (TouchSensor) as well as with a mouse',
     const p = page.props(card('Acme'));
     assert.equal(typeof p.onTouchStart, 'function', 'a touch starts the (press-and-hold) drag');
     assert.equal(typeof p.onMouseDown, 'function', 'a mouse still drags');
+    assert.equal(p.onPointerDown, undefined, 'no pointer sensor: it would take the touch first, and lose it to the scroll');
+    // A press-and-hold, as on the boards: a plain swipe still scrolls the columns.
+    const touch = dndContextProps(card('Acme')).sensors.find((s) => s.sensor.name === 'TouchSensor');
+    assert.equal(touch?.options?.activationConstraint?.delay, 200);
   } finally {
     await page.view.unmount();
   }
@@ -138,6 +142,10 @@ it('R2-099: the "Open job posting" icon opens the posting only — its click doe
     // Pressing on it starts no drag either (the sensors listen on the card for mouse and touch).
     assert.ok(page.fire(link, 'onMouseDown').propagationStopped);
     assert.ok(page.fire(link, 'onTouchStart').propagationStopped);
+    const del = page.all().find((el) => el.getAttribute('aria-label') === 'Delete application');
+    assert.ok(page.fire(del, 'onMouseDown').propagationStopped, 'nor does pressing delete');
+    assert.ok(page.fire(del, 'onTouchStart').propagationStopped);
+    assert.match(del.parentNode.getAttribute('class'), /focus-within:opacity-100/, 'a focused delete is seen');
   } finally {
     await page.view.unmount();
   }
@@ -183,6 +191,11 @@ it('R2-039: every list row has a button, reachable by Tab, that opens its job', 
     const click = page.fire(open('Beta'), 'onClick');
     assert.deepEqual(calls.navigate, ['b']);
     assert.ok(click.propagationStopped, 'the row\'s own click does not open the job a second time');
+    // The row's other Tab stops, shown only on hover, show while focused too.
+    const del = page.all().find((el) => el.getAttribute('aria-label') === 'Delete application');
+    assert.match(del.parentNode.getAttribute('class'), /focus-within:opacity-100/);
+    const posting = page.all().find((el) => el.tagName === 'A');
+    assert.match(posting.getAttribute('class'), /focus-visible:opacity-100/);
   } finally {
     await page.view.unmount();
   }
@@ -240,7 +253,7 @@ it('R2-039: the board page tells a screen reader what Enter does, and promises n
   assert.match(source, /<DndContext[^>]*accessibility=\{\{ screenReaderInstructions: BOARD_DRAG_INSTRUCTIONS \}\}/);
   assert.doesNotMatch(source, /KeyboardSensor/, 'no keyboard drag: the text must not promise one');
   assert.doesNotMatch(BOARD_DRAG_INSTRUCTIONS.draggable, /space bar|arrow keys/i);
-  assert.match(BOARD_DRAG_INSTRUCTIONS.draggable, /Enter/);
+  assert.match(BOARD_DRAG_INSTRUCTIONS.draggable, /On a card, press Enter/, 'a list\'s drag handle hears it too, and Enter opens only a card');
 });
 
 // ── The job page ─────────────────────────────────────────────────────────────────────────────

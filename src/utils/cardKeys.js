@@ -21,6 +21,8 @@ export const JOB_DRAG_INSTRUCTIONS = {
   draggable: 'Press Enter to open this job. To move it to another status, drag it with a mouse, or press and hold it on a touch screen, or open the job and pick its status there.',
 };
 
+// One text for the board's cards and its lists' drag handles (one DndContext): Enter opens a card
+// only, so it says so.
 export const BOARD_DRAG_INSTRUCTIONS = {
-  draggable: 'Press Enter to open a card. To move a card or a list, drag it with a mouse, or press and hold it on a touch screen.',
+  draggable: 'On a card, press Enter to open it. To move a card or a list, drag it with a mouse, or press and hold it on a touch screen.',
 };
