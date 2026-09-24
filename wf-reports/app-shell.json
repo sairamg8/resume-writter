@@ -124,13 +124,14 @@
       "outcome": "fixed",
       "commits": [
         "2561233",
-        "e0ab2e3"
+        "e0ab2e3",
+        "40a2df8"
       ],
       "tests": [
         "tests/unit/panel-resize-separator.unit.mjs",
         "tests/unit/panel-resize-storage.unit.mjs"
       ],
-      "summary": "The split-view handle is a focusable role=separator with aria-orientation=vertical, aria-valuenow/min/max and a label. Arrow keys move it 16 px and Home/End go to 240/640. It drags with pointer events (mouse, pen or finger; pointercancel ends the drag), with touch-action: none and a wider hit area over the preview. Checked in real Chromium with touch, mouse and keyboard.",
+      "summary": "The split-view handle is a focusable role=separator with aria-orientation=vertical, aria-valuenow/min/max and a label. Arrow keys move it 16 px and Home/End go to 240/640. It drags with pointer events (mouse, pen or finger; pointercancel ends the drag), with touch-action: none and a wider hit area over the preview. Checked in real Chromium with touch, mouse and keyboard. The handle captures the pointer while dragged, and a lost capture ends the drag (40a2df8).",
       "remaining": ""
     }
   ],
@@ -140,7 +141,8 @@
       "R2-084 (Low): box opened, then renamed in another tab, then left untouched still wrote the old name back",
       "R2-073: no test pinned that Back (POP) leaves the scroll alone",
       "Fixed after review in d718ad6: a pagehide landing between another tab's storage event and the re-render wrote the stale held state. Not fixed, minor: the resize handle does not use pointer capture (as before)",
-      "Fixed after review in 13a0eb5: the editor's 'Saved' label could lead the actual write by up to ~2 s"
+      "Fixed after review in 13a0eb5: the editor's 'Saved' label could lead the actual write by up to ~2 s",
+      "Added after review in 40a2df8: the resize handle captures the pointer while dragged"
     ],
     "fixedByReviewer": [
       "544decb (R2-077 two-tab second save)",
