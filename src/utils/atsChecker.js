@@ -1,7 +1,9 @@
-import { decodeEntities } from './richText.js';
+import { decodeEntities, hasRichText, parseRichText } from './richText.js';
 import { contactItems } from './contacts.js';
-import { atsRating, hasHeaderControls, templateId, templateLabel, TEMPLATE_PICKER } from '../constants/templates.js';
-import { TEMPLATE_SECTION_DEFAULTS } from '../templates/pdf/shared/templateSectionDefaults.js';
+import { skillGroup } from './skills.js';
+import { ACTION_VERBS, hasMetric, leadsWithActionVerb } from './bulletOptimizer.js';
+import { ATS_TIER_POINTS, atsRating, hasHeaderControls, inSidebarColumn, templateId, templateLabel, TEMPLATE_PICKER } from '../constants/templates.js';
+import { resolveSection } from '../templates/pdf/shared/templateSectionDefaults.js';
 
 // The ATS plain-text export lives in its own module; the ATS tab and Export menu import it from here.
 export { generateAtsPlainText } from './atsPlainText.js';
@@ -70,47 +72,8 @@ export function extractBulletsFromItem(item) {
   return bullets;
 }
 
-// ── 1. High-Impact Action Verbs Dictionary (150+ categorized power verbs) ──
-export const ACTION_VERBS = new Set([
-  // Leadership & Management
-  'accelerated', 'achieved', 'administered', 'advocated', 'aligned', 'allocated', 'appointed',
-  'approved', 'assigned', 'authorized', 'chaired', 'championed', 'coached', 'consolidated',
-  'contracted', 'coordinated', 'delegated', 'directed', 'empowered', 'enabled', 'enforced',
-  'ensured', 'established', 'executed', 'facilitated', 'fostered', 'founded', 'governed',
-  'guided', 'headed', 'hired', 'hosted', 'inspired', 'instituted', 'instructed', 'led',
-  'leveraged', 'managed', 'mentored', 'mobilized', 'motivated', 'navigated', 'orchestrated',
-  'organized', 'overhauled', 'oversaw', 'partnered', 'pioneered', 'planned', 'prioritized',
-  'produced', 'recruited', 'reorganized', 'restructured', 'revamped', 'spearheaded', 'steered',
-  'supervised', 'trained', 'transformed', 'unified',
-
-  // Technical, Development & Engineering
-  'architected', 'automated', 'built', 'coded', 'compiled', 'computed', 'configured',
-  'constructed', 'debugged', 'deployed', 'designed', 'developed', 'devised', 'discovered',
-  'engineered', 'enhanced', 'implemented', 'installed', 'integrated', 'invented', 'maintained',
-  'migrated', 'modeled', 'modernized', 'optimized', 'programmed', 'prototyped', 'refactored',
-  're-engineered', 'resolved', 'scaled', 'secured', 'simulated', 'standardized', 'streamlined',
-  'tested', 'troubleshot', 'upgraded', 'validated',
-
-  // Research, Analysis & Problem Solving
-  'analyzed', 'assessed', 'audited', 'benchmarked', 'calculated', 'clarified', 'collected',
-  'compared', 'conducted', 'critiqued', 'deduced', 'diagnosed', 'evaluated', 'examined',
-  'explored', 'forecasted', 'formulated', 'identified', 'inspected', 'interpreted', 'interviewed',
-  'investigated', 'measured', 'modeled', 'monitored', 'quantified', 'researched', 'reviewed',
-  'surveyed', 'synthesized', 'tracked',
-
-  // Execution, Growth & Financial Impact
-  'acquired', 'boosted', 'budgeted', 'captured', 'closed', 'curtailed', 'cut', 'decreased',
-  'delivered', 'doubled', 'earned', 'exceeded', 'expanded', 'expedited', 'generated', 'grew',
-  'halved', 'improved', 'increased', 'maximized', 'minimized', 'negotiated', 'outperformed',
-  'procured', 'profitably', 'raised', 'reduced', 'saved', 'slashed', 'surpassed', 'tripled',
-  'yielded',
-
-  // Communication, Creative & Writing
-  'addressed', 'authored', 'briefed', 'collaborated', 'composed', 'conveyed', 'corresponded',
-  'created', 'customized', 'documented', 'drafted', 'edited', 'illustrated', 'influenced',
-  'moderated', 'negotiated', 'persuaded', 'presented', 'promoted', 'publicized', 'published',
-  'represented', 'spoke', 'translated', 'wrote',
-]);
+// ── 1. High-Impact Action Verbs: the one list the score and the STAR Optimizer read (R2-025) ──
+export { ACTION_VERBS };
 
 // Weak or passive phrases that hurt ATS score and recruiter impression
 export const WEAK_PHRASES = [
@@ -207,6 +170,8 @@ const COMMON_STOP_WORDS = new Set([
   'qualifications', 'requirements', 'preferred', 'required', 'plus', 'opportunity', 'company', 'job',
   'position', 'join', 'looking', 'equal', 'employment', 'status', 'race', 'color', 'religion', 'seeking',
   'big', 'expertise', 'strong', 'solid', 'demonstrated', 'familiarity', 'proficient', 'knowledge',
+  // Abbreviations with one dot, which LETTER_ABBREVIATION does not catch (R2-023).
+  'etc', 'vs',
 ]);
 
 /**
@@ -221,13 +186,25 @@ const shownField = (p, key) => ((Array.isArray(p?.hiddenFields) && p.hiddenField
 const hiddenByUser = (p, key) => !shownField(p, key) && Boolean(String(p?.[key] || '').trim());
 
 /**
+ * Rich text (the summary, a description) as the words it prints: parseRichText, the parse the PDF
+ * and Word print from, so no tag, list marker or entity is read as a word, and a cleared editor
+ * ('<p><br></p>') reads as nothing (R2-020).
+ */
+const printedText = (html) => parseRichText(html).map((b) => b.runs.map((r) => r.text).join('')).join('\n');
+
+/** The fields Section Options → Show dates takes off an entry, and the types Show location applies to. */
+const DATE_FIELDS = ['startDate', 'endDate', 'date', 'expiry'];
+const LOCATION_TYPES = new Set(['experience', 'education', 'volunteering']);
+
+/**
  * An entry as it prints: each field hidden with the eye beside it (`item.hiddenFields`: Company, Job
  * Title, Location, dates, Description, a skill group's title or skills) blanked, and a hidden End
  * Date is no end — not "Present" — as the PDF and Word print it. The corpus and the score read
- * entries through this, as they read the personal fields through shownField (R2-033).
+ * entries through this, as they read the personal fields through shownField (R2-033). `off`: the
+ * fields its section's options take off every entry (sectionOff).
  */
-function printedItem(item) {
-  const hidden = Array.isArray(item?.hiddenFields) ? item.hiddenFields : [];
+function printedItem(item, off = []) {
+  const hidden = [...(Array.isArray(item?.hiddenFields) ? item.hiddenFields : []), ...off];
   if (!hidden.length) return item;
   const out = { ...item };
   for (const key of hidden) out[key] = '';
@@ -235,14 +212,51 @@ function printedItem(item) {
   return out;
 }
 
-/** A section's shown entries, as they print (printedItem). */
-const shownItems = (s) => (Array.isArray(s?.items) ? s.items : [])
-  .filter((item) => item && typeof item === 'object' && item.visible !== false)
-  .map(printedItem);
+/** Whether Section Options → Show dates is off on `s`, as the PDF and Word resolve it on `template`. */
+const datesOff = (s, template) => resolveSection(s, template).settings.showDates === false;
+
+/**
+ * The fields a section's options take off all its entries on `template`: Show dates off prints no
+ * dates, nor "Present", on any template, and Show location off no location on a job, a degree or a
+ * volunteer role — in the PDF and in Word (R2-020).
+ */
+function sectionOff(s, template) {
+  const { showLocation } = resolveSection(s, template).settings;
+  return [
+    ...(datesOff(s, template) ? DATE_FIELDS : []),
+    ...(showLocation === false && LOCATION_TYPES.has(s.type) ? ['location'] : []),
+  ];
+}
+
+/** A section's shown entries, as they print on `template` (printedItem, sectionOff). */
+function shownItems(s, template) {
+  const off = sectionOff(s, template);
+  return (Array.isArray(s?.items) ? s.items : [])
+    .filter((item) => item && typeof item === 'object' && item.visible !== false)
+    .map((item) => printedItem(item, off));
+}
+
+/**
+ * The fields an entry prints as they are, whatever its type (the PDF's and Word's): a job's or
+ * volunteer role's company / org, role and location; a degree's institution, degree, field and GPA;
+ * a project's name and technologies; a certificate's name, issuer and ID; an award's or a custom
+ * entry's title and subtitle; a language and its proficiency; a reference's name, job title,
+ * company, relationship, email and phone; interests. A link, the description, bullets and a skill
+ * group are read apart; dates are left out, as the matcher reads no numbers.
+ */
+const PRINTED_FIELDS = [
+  'company', 'org', 'role', 'location', 'institution', 'degree', 'fieldOfStudy', 'gpa',
+  'name', 'technologies', 'issuer', 'credentialId', 'title', 'subtitle',
+  'language', 'proficiency', 'jobTitle', 'relationship', 'email', 'phone', 'interests',
+];
+
+/** A stored field as text: a number from imported data as written, anything else not text as ''. */
+const fieldText = (v) => (typeof v === 'string' || typeof v === 'number' ? String(v) : '');
 
 /**
  * Extracts searchable text corpus from an entire resume object — what it prints: no hidden entry,
- * section or summary (R2-033).
+ * section or field (R2-033), every field an export prints, the header's contact lines as it prints
+ * them, and rich text as its words, never its markup (R2-022).
  */
 export function extractResumeCorpus(resume) {
   if (!resume) return '';
@@ -250,42 +264,28 @@ export function extractResumeCorpus(resume) {
   const p = resume.personal || {};
   if (p.name) parts.push(p.name);
   if (p.title) parts.push(p.title);
-  if (shownField(p, 'summary')) parts.push(p.summary);
+  for (const { value } of contactItems(p)) parts.push(value);
+  parts.push(printedText(shownField(p, 'summary')));
 
   const sections = Array.isArray(resume.sections) ? resume.sections : [];
+  const template = templateId(resume.template);
   for (const s of sections) {
     if (s.visible === false) continue;
     if (s.title) parts.push(s.title);
-    for (const item of shownItems(s)) {
-      if (!item || typeof item !== 'object') continue;
-      // Experience / Volunteering
-      if (item.company) parts.push(item.company);
-      if (item.org) parts.push(item.org);
-      if (item.role) parts.push(item.role);
-      if (item.location) parts.push(item.location);
-      if (item.description) parts.push(item.description);
-      if (Array.isArray(item.bullets)) parts.push(...item.bullets);
-
-      // Education
-      if (item.institution) parts.push(item.institution);
-      if (item.degree) parts.push(item.degree);
-      if (item.fieldOfStudy) parts.push(item.fieldOfStudy);
-
-      // Skills / Interests
-      if (item.category) parts.push(item.category);
-      if (item.skills) parts.push(item.skills);
-      if (item.interests) parts.push(item.interests);
-
-      // Projects
-      if (item.name) parts.push(item.name);
-      if (item.technologies) parts.push(item.technologies);
-
-      // Certifications / Awards
-      if (item.issuer) parts.push(item.issuer);
-      if (item.title) parts.push(item.title);
+    for (const item of shownItems(s, template)) {
+      if (s.type === 'skills') {
+        const { category, skills } = skillGroup(item);
+        parts.push(category, skills);
+        continue;
+      }
+      parts.push(...PRINTED_FIELDS.map((key) => fieldText(item[key])));
+      // A certificate prints its link's label where it has one, a project its link.
+      parts.push(fieldText(item.urlLabel) || fieldText(item.url));
+      parts.push(printedText(fieldText(item.description)));
+      if (Array.isArray(item.bullets)) parts.push(...item.bullets.map(fieldText));
     }
   }
-  return parts.join(' ');
+  return parts.filter(Boolean).join(' ');
 }
 
 function chooseBestCasing(newWord, oldWord) {
@@ -302,13 +302,23 @@ function chooseBestCasing(newWord, oldWord) {
 }
 
 /**
- * Extracts keywords & tech terms from a job description
+ * An abbreviation of single letters and dots — "e.g", "i.e", "U.S", "a.m" once the trailing dot is
+ * trimmed — which is no keyword: it used to be listed as a missing one, and "+" wrote it into
+ * Skills (R2-023). "Ph.D", "Node.js" and "ASP.NET" have longer parts and stay.
+ */
+const LETTER_ABBREVIATION = /^(?:\p{L}\.)+\p{L}?$/u;
+
+/**
+ * Extracts keywords & tech terms from a job description. A word is Unicode letters, their marks and
+ * digits: `\w` is ASCII, and read with it "München" was the keyword "nchen" (R2-023). The text is
+ * read composed (NFC), and a combining mark is part of its word: pasted from a PDF or a Mac, "ü" is
+ * often "u" + U+0308, and a Hindi or Tamil word holds vowel signs no composed letter replaces.
  */
 export function extractJobKeywords(jobDescriptionText) {
   if (!jobDescriptionText || typeof jobDescriptionText !== 'string') return [];
   // Tokenize words, normalizing punctuation
-  const clean = jobDescriptionText
-    .replace(/[^\w\s+#.-]/g, ' ')
+  const clean = jobDescriptionText.normalize('NFC')
+    .replace(/[^\p{L}\p{M}\p{N}_\s+#.-]/gu, ' ')
     .replace(/\s+/g, ' ');
 
   const tokens = clean.split(' ');
@@ -318,8 +328,9 @@ export function extractJobKeywords(jobDescriptionText) {
   for (let raw of tokens) {
     let word = raw.trim();
     // Strip trailing periods/commas
-    word = word.replace(/^[^\w+#]+|[^\w+#]+$/g, '');
+    word = word.replace(/^[^\p{L}\p{M}\p{N}_+#]+|[^\p{L}\p{M}\p{N}_+#]+$/gu, '');
     if (word.length < 2 || word.length > 30) continue;
+    if (LETTER_ABBREVIATION.test(word)) continue;
     const lower = word.toLowerCase();
     if (COMMON_STOP_WORDS.has(lower)) continue;
     if (/^\d+\+?$/.test(lower)) continue; // skip pure numbers and numbers with + (e.g. 5+)
@@ -364,7 +375,8 @@ export function matchResumeWithJob(resume, jobDescriptionText) {
   const jdKeywords = extractJobKeywords(jobDescriptionText);
   if (!jdKeywords.length) return null;
 
-  const resumeCorpus = extractResumeCorpus(resume).toLowerCase();
+  // Composed, as the keywords are read (extractJobKeywords).
+  const resumeCorpus = extractResumeCorpus(resume).normalize('NFC').toLowerCase();
   const matched = [];
   const missing = [];
 
@@ -376,10 +388,12 @@ export function matchResumeWithJob(resume, jobDescriptionText) {
     if (lowerKw.includes(' ') || lowerKw.includes('/') || lowerKw.includes('.')) {
       isPresent = resumeCorpus.includes(lowerKw);
     } else {
+      // Boundaries of Unicode letters, as the keywords are read: with `\w` the keyword "rich" was
+      // found inside "Zürich" (R2-023).
       const esc = lowerKw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const lead = /^\w/.test(lowerKw) ? '(?<!\\w)' : '(?<!\\S)';
-      const trail = /\w$/.test(lowerKw) ? '(?!\\w)' : '(?![\\w+#])';
-      const regex = new RegExp(`${lead}${esc}${trail}`, 'i');
+      const lead = /^[\p{L}\p{M}\p{N}_]/u.test(lowerKw) ? '(?<![\\p{L}\\p{M}\\p{N}_])' : '(?<!\\S)';
+      const trail = /[\p{L}\p{M}\p{N}_]$/u.test(lowerKw) ? '(?![\\p{L}\\p{M}\\p{N}_])' : '(?![\\p{L}\\p{M}\\p{N}_+#])';
+      const regex = new RegExp(`${lead}${esc}${trail}`, 'iu');
       isPresent = regex.test(resumeCorpus);
     }
 
@@ -422,6 +436,77 @@ export function standardizeSectionsForAts(sections) {
     const spec = needsAtsTitle(s) && ATS_STANDARD_SECTIONS[s.type];
     return spec ? { ...s, title: spec.canonical } : s;
   });
+}
+
+/**
+ * Whether `section` is one the report's exp_title_order item reads as leading with the company: a
+ * shown experience section whose title order, as the PDF resolves it on `template` (its own setting,
+ * else the template's — Executive, Sidebar and Timeline lead with the role), is not Role / Co. The
+ * one rule of the item and of its fix, jobTitleFirst, so the button cannot rewrite a section the
+ * report never read — a hidden one, before R2-079.
+ */
+function leadsWithCompany(section, template) {
+  return !!section && section.visible !== false && section.type === 'experience'
+    && resolveSection(section, template).settings.titleOrder !== 'role';
+}
+
+/**
+ * "Put Job Title First": Role / Co. on each section leadsWithCompany names, and nothing else. Every
+ * other section is returned as the same object.
+ */
+export function jobTitleFirst(sections, template) {
+  if (!Array.isArray(sections)) return sections;
+  const t = templateId(template);
+  return sections.map((s) => (leadsWithCompany(s, t) ? { ...s, settings: { ...s.settings, titleOrder: 'role' } } : s));
+}
+
+/**
+ * The types whose entries run to several lines — a heading, dates, a description. Printed two or
+ * more to a row (Section Options → Grids), their lines sit side by side, and a parser that reads a
+ * page line by line interleaves them. A skill group, a language, a certificate, an award or a
+ * reference card is one short cell: a grid of those is the template tier's business (Compact's).
+ */
+const MULTI_LINE_TYPES = new Set(['experience', 'education', 'projects', 'volunteering', 'custom']);
+
+/**
+ * Whether `section` prints two or more of its entries side by side, as the PDF lays it out on
+ * `template`: shown, of a multi-line type, in the main column (the Sidebar's side column prints one
+ * column whatever Grids says), its Grids above 1 (resolveSection, as the PDF reads it) and more than
+ * one shown entry to fill a row. The one rule of the layout report's section_grids item and of its
+ * fix, entriesInOneColumn (R2-021).
+ */
+function printsSideBySide(section, template, settings) {
+  return !!section && section.visible !== false && MULTI_LINE_TYPES.has(section.type)
+    && !inSidebarColumn(template, section.type, settings)
+    && Number(resolveSection(section, template).settings.columns || 1) > 1
+    && shownItems(section, template).length > 1;
+}
+
+/**
+ * The layout warning's fix: Section Options → Grids 1 on each section that prints its entries side
+ * by side (printsSideBySide), and nothing else. Every other section is returned as the same object.
+ */
+export function entriesInOneColumn(sections, template, settings) {
+  if (!Array.isArray(sections)) return sections;
+  const t = templateId(template);
+  return sections.map((s) => (printsSideBySide(s, t, settings) ? { ...s, settings: { ...s.settings, columns: 1 } } : s));
+}
+
+/**
+ * Where the job scanner's "+" writes a missing keyword so that it prints: `{ section, item }`, the
+ * first skill group that prints its skills — shown, its Skills not hidden with the eye — in a shown
+ * Skills section; `{ section }` when a shown Skills section has no such group (a new group goes
+ * there); null when no Skills section is shown. It wrote into the first group whatever it was: into a
+ * hidden one the keyword never printed and stayed missing (R2-024).
+ */
+export function keywordSkillTarget(sections) {
+  const shown = (Array.isArray(sections) ? sections : []).filter((s) => s?.type === 'skills' && s.visible !== false);
+  for (const section of shown) {
+    const item = (Array.isArray(section.items) ? section.items : [])
+      .find((i) => i && typeof i === 'object' && i.visible !== false && !(i.hiddenFields || []).includes('skills'));
+    if (item) return { section, item };
+  }
+  return shown.length ? { section: shown[0] } : null;
 }
 
 /**
@@ -588,8 +673,8 @@ export function analyzeAtsScore(resume, jobDescriptionText = '') {
     });
   }
 
-  // Summary / Objective check (3 pts)
-  const summaryWords = String(shown('summary') || '').trim().split(/\s+/).filter(Boolean);
+  // Summary / Objective check (3 pts) — its words as they print, not its markup (R2-020)
+  const summaryWords = printedText(shown('summary')).split(/\s+/).filter(Boolean);
   if (summaryWords.length >= 25 && summaryWords.length <= 150) {
     contactPts += 3;
     results.categories.contact.items.push({
@@ -608,7 +693,7 @@ export function analyzeAtsScore(resume, jobDescriptionText = '') {
       id: 'summary', status: 'warn', text: 'Brief summary',
       detail: 'Expand your summary to 2-3 impactful sentences highlighting your core value.',
     });
-  } else if (hiddenByUser(p, 'summary')) {
+  } else if (hiddenByUser(p, 'summary') && hasRichText(p.summary)) {
     results.categories.contact.items.push({
       id: 'summary', status: 'warn', text: 'Professional Summary is hidden on the résumé',
       detail: `A strong summary helps parsers index your seniority and primary domain immediately. ${HIDDEN_DETAIL}`,
@@ -694,7 +779,11 @@ export function analyzeAtsScore(resume, jobDescriptionText = '') {
   // ── 3. Work Experience & Action Verbs (25 pts) ─────────────────────
   let expPts = 0;
   const expSections = visibleSections.filter(s => s.type === 'experience');
-  const allExpItems = expSections.flatMap(shownItems);
+  const allExpItems = expSections.flatMap(s => shownItems(s, currentTemplate));
+  // "…" names of the sections whose Show dates is off and that print an entry: those entries print
+  // no dates (R2-020). An empty one is not why a role lacks its dates.
+  const datesOffTitles = (secs) => secs.filter(s => datesOff(s, currentTemplate) && shownItems(s, currentTemplate).length)
+    .map(s => `"${String(s.title || '').trim() || ATS_STANDARD_SECTIONS[s.type]?.canonical}"`).join(', ');
 
   if (allExpItems.length === 0) {
     results.categories.experience.items.push({
@@ -728,19 +817,18 @@ export function analyzeAtsScore(resume, jobDescriptionText = '') {
       });
     } else {
       expPts += 2;
+      const off = datesOffTitles(expSections);
       results.categories.experience.items.push({
-        id: 'exp_dates', status: 'warn', text: 'Missing employment dates on some roles',
-        detail: 'Parsers use employment dates to calculate total years of experience.',
+        id: 'exp_dates', status: 'warn',
+        text: off ? 'Employment dates are not printed (Show dates is off)' : 'Missing employment dates on some roles',
+        detail: off
+          ? `Section Options → Show dates is off on ${off}, so the PDF and Word print no dates for those roles. Parsers use employment dates to calculate total years of experience: turn Show dates on.`
+          : 'Parsers use employment dates to calculate total years of experience.',
       });
     }
 
     // 3. Title Order check (Job Title leads Role / Co. for 100% ATS indexing) (3 pts)
-    const hasCompanyLeading = expSections.some(s => {
-      const explicit = s.settings?.titleOrder || s.titleOrder;
-      // Unset, the template's own order (Executive, Sidebar and Timeline lead with the role): the one table the PDF reads.
-      const effectiveOrder = explicit || TEMPLATE_SECTION_DEFAULTS[currentTemplate]?.experience?.titleOrder || 'company';
-      return effectiveOrder === 'company';
-    });
+    const hasCompanyLeading = expSections.some(s => leadsWithCompany(s, currentTemplate));
 
     if (!hasCompanyLeading) {
       expPts += 3;
@@ -780,9 +868,8 @@ export function analyzeAtsScore(resume, jobDescriptionText = '') {
 
       for (const bullet of allBullets) {
         const lower = bullet.toLowerCase();
-        // Check first word for action verb
-        const firstWord = lower.replace(/^[^\w]+/, '').split(/\s+/)[0];
-        if (ACTION_VERBS.has(firstWord)) {
+        // Check first word for action verb — the STAR Optimizer's own check (R2-025)
+        if (leadsWithActionVerb(bullet)) {
           actionVerbCount++;
         }
         // Check for weak phrases
@@ -792,8 +879,8 @@ export function analyzeAtsScore(resume, jobDescriptionText = '') {
             break;
           }
         }
-        // Check for numbers / quantifiable metrics
-        if (/(\d+[%$€£kmbx]?|\$[\d,]+|\b\d+\b)/i.test(bullet) && !/^\d{4}$/.test(bullet.trim())) {
+        // Check for numbers / quantifiable metrics — the optimizer's rule too (R2-025)
+        if (hasMetric(bullet)) {
           metricCount++;
         }
       }
@@ -848,7 +935,7 @@ export function analyzeAtsScore(resume, jobDescriptionText = '') {
   // ── 4. Education & Credentials (15 pts) ───────────────────────────
   let eduPts = 0;
   const eduSections = visibleSections.filter(s => s.type === 'education');
-  const allEduItems = eduSections.flatMap(shownItems);
+  const allEduItems = eduSections.flatMap(s => shownItems(s, currentTemplate));
 
   if (allEduItems.length === 0) {
     results.categories.education.items.push({
@@ -898,9 +985,13 @@ export function analyzeAtsScore(resume, jobDescriptionText = '') {
       });
     } else {
       eduPts += 2;
+      const off = datesOffTitles(eduSections);
       results.categories.education.items.push({
-        id: 'edu_dates', status: 'warn', text: 'Missing graduation year',
-        detail: 'Specify the year of graduation or expected graduation.',
+        id: 'edu_dates', status: 'warn',
+        text: off ? 'Graduation year is not printed (Show dates is off)' : 'Missing graduation year',
+        detail: off
+          ? `Section Options → Show dates is off on ${off}, so the PDF and Word print no year for those degrees: turn Show dates on.`
+          : 'Specify the year of graduation or expected graduation.',
       });
     }
   }
@@ -910,14 +1001,14 @@ export function analyzeAtsScore(resume, jobDescriptionText = '') {
   // ── 5. Skills & Keyword Density (10 pts) ──────────────────────────
   let skillsPts = 0;
   const skillSections = visibleSections.filter(s => s.type === 'skills');
-  const allSkillItems = skillSections.flatMap(shownItems);
+  // Each group as every export reads it (skillGroup): skills stored as a list (imported data) are
+  // its skills too — reading them as a string threw, and the ATS Check tab went down (R2-020).
+  const allSkillItems = skillSections.flatMap(s => shownItems(s, currentTemplate)).map(skillGroup);
 
   // Count individual skills
   const skillsSet = new Set();
   for (const item of allSkillItems) {
-    if (item.skills) {
-      item.skills.split(/[,;\n•|]+/).map(s => s.trim()).filter(Boolean).forEach(s => skillsSet.add(s.toLowerCase()));
-    }
+    item.skills.split(/[,;\n•|]+/).map(s => s.trim()).filter(Boolean).forEach(s => skillsSet.add(s.toLowerCase()));
   }
 
   if (skillsSet.size >= 8) {
@@ -940,7 +1031,7 @@ export function analyzeAtsScore(resume, jobDescriptionText = '') {
   }
 
   // Skills categorized (3 pts)
-  const hasCategories = allSkillItems.some(i => i.category && i.category.trim());
+  const hasCategories = allSkillItems.some(i => i.category);
   if (hasCategories) {
     skillsPts += 3;
     results.categories.skills.items.push({
@@ -965,12 +1056,17 @@ export function analyzeAtsScore(resume, jobDescriptionText = '') {
   // template again. It is settings-aware: the Sidebar's Single · ATS-safe prints Classic's page.
   const isSidebarSingle = currentTemplate === 'sidebar' && Boolean(settings.sidebarSingleColumn);
   const rating = atsRating(currentTemplate, settings);
-  layoutPts += rating.points;
+  // Section Options → Grids prints a section's entries side by side on any template, and those are
+  // two columns whatever the template is: the text flow then earns what two columns do (R2-021).
+  const sideBySide = sections.filter(s => printsSideBySide(s, currentTemplate, settings));
+  layoutPts += sideBySide.length ? Math.min(rating.points, ATS_TIER_POINTS.risky) : rating.points;
   if (rating.tier === 'certified') {
     const label = isSidebarSingle ? 'SIDEBAR (SINGLE · ATS-SAFE)' : templateLabel(currentTemplate).toUpperCase();
     results.categories.layout.items.push({
       id: 'template', status: 'pass', text: `ATS-Certified Template: "${label}"`,
-      detail: 'Single-column text flow ensures 100% sequential parsing on Workday, Taleo, and Greenhouse.',
+      detail: sideBySide.length
+        ? 'The template prints one column of text, which Workday, Taleo, and Greenhouse parse in order — but not the entries printed side by side below.'
+        : 'Single-column text flow ensures 100% sequential parsing on Workday, Taleo, and Greenhouse.',
     });
   } else if (rating.tier === 'good') {
     results.categories.layout.items.push({
@@ -996,6 +1092,19 @@ export function analyzeAtsScore(resume, jobDescriptionText = '') {
       ].filter(Boolean).join(' '),
       fixable: true,
       actions: [...(singleColumnFixesIt ? ['sidebar_single_column'] : []), 'switch_to_classic'],
+    });
+  }
+
+  // The sections that print entries side by side, each by name, with their fix: Grids 1 on exactly
+  // these (entriesInOneColumn). The template item above stays the template's own verdict, the one the
+  // Design panel's badge shows (TUI-5).
+  if (sideBySide.length) {
+    const names = sideBySide.map(s => `"${String(s.title || '').trim() || ATS_STANDARD_SECTIONS[s.type]?.canonical || s.type}"`).join(', ');
+    results.categories.layout.items.push({
+      id: 'section_grids', status: 'warn', text: `Entries printed side by side: ${names}`,
+      detail: 'Section Options → Grids prints these entries two or more to a row. Poppler and older Workday/Taleo parsers read a page line by line, across the row, so the entries\' lines interleave. Grids 1 prints them one under another.',
+      fixable: true,
+      actions: ['grids_one_column'],
     });
   }
 

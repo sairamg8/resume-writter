@@ -1,14 +1,19 @@
 import { useState, useMemo } from 'react';
 import {
   ShieldCheck, AlertTriangle, XCircle, CheckCircle2, ChevronDown,
-  Sparkles, Copy, Download, Briefcase, Columns2, FileText, Target, Plus, Check
+  Sparkles, Copy, Download, Briefcase, Columns2, FileText, Target, Plus, Check, Rows3
 } from 'lucide-react';
 import {
   analyzeAtsScore,
+  entriesInOneColumn,
+  jobTitleFirst,
+  keywordSkillTarget,
   standardizeSectionsForAts,
   generateAtsPlainText
 } from '@/utils/atsChecker';
 import { templateLabel } from '@/constants/templates';
+import { skillGroup } from '@/utils/skills';
+import { copyText } from '@/utils/clipboard';
 import { downloadBlob } from '@/utils/download';
 import { newId } from '@/utils/ids';
 
@@ -42,11 +47,19 @@ const LAYOUT_FIXES = {
     label: () => `Switch to ${templateLabel(ATS_FALLBACK_TEMPLATE)}`,
     title: (r) => `Replaces the ${templateLabel(r?.template)} template, its heading style and its title case. There is no undo.`,
   },
+  // The section_grids warning's fix (R2-021): Grids 1 on the sections it names, nothing else.
+  grids_one_column: {
+    Icon: Rows3,
+    tone: 'text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border-emerald-200',
+    label: () => 'Print entries one under another (Grids 1)',
+    title: () => 'Section Options → Grids 1 on the sections printed side by side. The template and every other setting stay.',
+  },
 };
 
 export default function AtsCheckerPanel({ resume, store }) {
   const [jobDescription, setJobDescription] = useState('');
-  const [copiedText, setCopiedText] = useState(false);
+  // Copy Text's outcome, shown on the button for a moment: 'done', 'failed' or null.
+  const [copiedText, setCopiedText] = useState(null);
   const [copiedKeyword, setCopiedKeyword] = useState(null);
   const [expandedCats, setExpandedCats] = useState({
     contact: true,
@@ -76,17 +89,13 @@ export default function AtsCheckerPanel({ resume, store }) {
     store.updateSections(updated);
   }
 
+  /**
+   * "Put Job Title First": Role / Co. on the sections the exp_title_order warning read as leading with
+   * the company (jobTitleFirst) — not a hidden section, nor one that already leads with the role (R2-079).
+   */
   function handleOptimizeExperienceOrder() {
     if (!resume || !Array.isArray(resume.sections)) return;
-    const updated = resume.sections.map(s => {
-      if (s.type !== 'experience') return s;
-      return {
-        ...s,
-        titleOrder: 'role',
-        settings: { ...s.settings, titleOrder: 'role' },
-      };
-    });
-    store.updateSections(updated);
+    store.updateSections(jobTitleFirst(resume.sections, resume.template));
   }
 
   /**
@@ -112,10 +121,21 @@ export default function AtsCheckerPanel({ resume, store }) {
     store.setTemplate(ATS_FALLBACK_TEMPLATE);
   }
 
+  /**
+   * The section_grids warning's fix: Grids 1 on the sections that print their entries side by side,
+   * by the checker's own rule (entriesInOneColumn), so it changes just the sections the warning
+   * names (R2-021).
+   */
+  function handleGridsOneColumn() {
+    if (!resume || !Array.isArray(resume.sections)) return;
+    store.updateSections(entriesInOneColumn(resume.sections, resume.template, resume.settings));
+  }
+
   /** Each layout fix's handler, by the id the checker names it with. */
   const layoutFixHandlers = {
     sidebar_single_column: handleSingleColumnLayout,
     switch_to_classic: handleSwitchToClassic,
+    grids_one_column: handleGridsOneColumn,
   };
 
   /** One layout fix as a button; `className` and `iconSize` are the site's, the tone comes with the fix. */
@@ -134,11 +154,12 @@ export default function AtsCheckerPanel({ resume, store }) {
     );
   }
 
+  /** Copy Text: says Copied!, or Copy failed where the browser refuses the clipboard (R2-080). */
   function handleCopyPlainText() {
     const text = generateAtsPlainText(resume);
-    navigator.clipboard.writeText(text).then(() => {
-      setCopiedText(true);
-      setTimeout(() => setCopiedText(false), 2500);
+    copyText(text).then(() => 'done', () => 'failed').then((outcome) => {
+      setCopiedText(outcome);
+      setTimeout(() => setCopiedText(null), 2500);
     });
   }
 
@@ -148,20 +169,16 @@ export default function AtsCheckerPanel({ resume, store }) {
     downloadBlob(new Blob([text], { type: 'text/plain;charset=utf-8' }), `${candidateName}_ATS.txt`);
   }
 
+  /** "+" on a missing keyword: into the first skill group that prints (keywordSkillTarget, R2-024). */
   function handleAddMissingSkill(keyword) {
     if (!keyword) return;
-    const sections = Array.isArray(resume?.sections) ? resume.sections : [];
-    const skillSec = sections.find(s => s.type === 'skills' && s.visible !== false);
+    const target = keywordSkillTarget(resume?.sections);
 
-    if (skillSec) {
-      const items = Array.isArray(skillSec.items) ? skillSec.items : [];
-      if (items.length > 0) {
-        const firstItem = items[0];
-        const existing = firstItem.skills ? `${firstItem.skills}, ${keyword}` : keyword;
-        store.updateItem(skillSec.id, firstItem.id, i => ({ ...i, skills: existing }));
-      } else {
-        store.addItem(skillSec.id, { id: newId('skill'), category: 'Core Skills', skills: keyword });
-      }
+    if (target?.item) {
+      const { skills } = skillGroup(target.item);
+      store.updateItem(target.section.id, target.item.id, i => ({ ...i, skills: skills ? `${skills}, ${keyword}` : keyword }));
+    } else if (target) {
+      store.addItem(target.section.id, { id: newId('skill'), category: 'Core Skills', skills: keyword });
     } else {
       store.addSection('skills', { id: newId('skill'), category: 'Core Skills', skills: keyword });
     }
@@ -189,8 +206,10 @@ export default function AtsCheckerPanel({ resume, store }) {
     : 'bg-red-500';
 
   const hasNonStandardHeadings = categories.headings.items.some(i => i.id === 'std_headings' && i.status === 'warn');
-  // The fixes the layout warning offers, in the checker's order — empty while the layout parses.
-  const layoutFixes = itemFixes(categories.layout.items.find(i => i.id === 'template' && i.status === 'warn'));
+  // The fixes the layout warnings offer, in the checker's order — empty while the layout parses:
+  // the template's, then the side-by-side sections' (R2-021).
+  const layoutFixes = ['template', 'section_grids']
+    .flatMap(id => itemFixes(categories.layout.items.find(i => i.id === id && i.status === 'warn')));
   const hasCompanyTitleOrder = categories.experience.items.some(i => i.id === 'exp_title_order' && i.status === 'warn');
 
   return (
@@ -273,10 +292,12 @@ export default function AtsCheckerPanel({ resume, store }) {
         <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
           <button
             onClick={handleCopyPlainText}
+            title={copiedText === 'failed' ? 'The browser did not allow copying to the clipboard. Download the .txt file instead.' : undefined}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-gray-700 bg-white hover:bg-gray-100 border border-gray-300 rounded-xl shadow-sm transition-all"
           >
-            {copiedText ? <Check size={13} className="text-emerald-600" /> : <Copy size={13} />}
-            {copiedText ? 'Copied!' : 'Copy Text'}
+            {copiedText === 'done' && <><Check size={13} className="text-emerald-600" /> Copied!</>}
+            {copiedText === 'failed' && <><XCircle size={13} className="text-red-600" /> Copy failed</>}
+            {!copiedText && <><Copy size={13} /> Copy Text</>}
           </button>
           <button
             onClick={handleDownloadPlainText}

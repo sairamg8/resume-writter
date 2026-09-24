@@ -43,6 +43,83 @@ export const WEAK_PHRASE_REPLACEMENTS = [
   { match: /\b(in charge of)\b/gi, replacement: 'Oversaw', alternatives: ['Led', 'Directed', 'Headed'] },
 ];
 
+// ── The one verb list: high-impact action verbs (150+), the ATS score's and the optimizer's ──
+// It was the ATS checker's alone, and the optimizer checked its own 60: a statement Auto-Fix had just
+// opened with "Led" read "Verb Missing" here and strong in the score (R2-025). It holds every verb the
+// optimizer offers (ACTION_VERBS_BY_CATEGORY) and every verb Auto-Fix writes (WEAK_PHRASE_REPLACEMENTS),
+// and no verb the optimizer calls weak ("ensured" is Auto-Fix's to replace).
+export const ACTION_VERBS = new Set([
+  // Leadership & Management
+  'accelerated', 'achieved', 'administered', 'advocated', 'aligned', 'allocated', 'appointed',
+  'approved', 'assigned', 'authorized', 'chaired', 'championed', 'coached', 'consolidated',
+  'contracted', 'coordinated', 'delegated', 'directed', 'empowered', 'enabled', 'enforced',
+  'established', 'executed', 'facilitated', 'fostered', 'founded', 'governed',
+  'guided', 'headed', 'hired', 'hosted', 'inspired', 'instituted', 'instructed', 'led',
+  'leveraged', 'managed', 'mentored', 'mobilized', 'motivated', 'navigated', 'orchestrated',
+  'organized', 'overhauled', 'oversaw', 'partnered', 'pioneered', 'planned', 'prioritized',
+  'produced', 'recruited', 'reorganized', 'restructured', 'revamped', 'spearheaded', 'steered',
+  'supervised', 'trained', 'transformed', 'unified',
+
+  // Technical, Development & Engineering
+  'architected', 'automated', 'built', 'coded', 'compiled', 'computed', 'configured',
+  'constructed', 'debugged', 'deployed', 'designed', 'developed', 'devised', 'discovered',
+  'engineered', 'enhanced', 'implemented', 'installed', 'integrated', 'invented', 'maintained',
+  'migrated', 'modeled', 'modernized', 'optimized', 'programmed', 'prototyped', 'refactored',
+  're-engineered', 'resolved', 'scaled', 'secured', 'simulated', 'standardized', 'streamlined',
+  'tested', 'troubleshot', 'upgraded', 'validated',
+
+  // Research, Analysis & Problem Solving
+  'analyzed', 'assessed', 'audited', 'benchmarked', 'calculated', 'clarified', 'collected',
+  'compared', 'conducted', 'critiqued', 'deduced', 'diagnosed', 'evaluated', 'examined',
+  'explored', 'forecasted', 'formulated', 'identified', 'inspected', 'interpreted', 'interviewed',
+  'investigated', 'measured', 'monitored', 'quantified', 'researched', 'reviewed',
+  'surveyed', 'synthesized', 'tracked',
+
+  // Execution, Growth & Financial Impact
+  'acquired', 'boosted', 'budgeted', 'captured', 'closed', 'curtailed', 'cut', 'decreased',
+  'delivered', 'doubled', 'earned', 'exceeded', 'expanded', 'expedited', 'generated', 'grew',
+  'halved', 'improved', 'increased', 'maximized', 'minimized', 'negotiated', 'outperformed',
+  'procured', 'profitably', 'raised', 'reduced', 'saved', 'slashed', 'surpassed', 'tripled',
+  'yielded',
+
+  // Communication, Creative & Writing
+  'addressed', 'authored', 'briefed', 'collaborated', 'composed', 'conveyed', 'corresponded',
+  'created', 'customized', 'documented', 'drafted', 'edited', 'illustrated', 'influenced',
+  'moderated', 'persuaded', 'presented', 'promoted', 'publicized', 'published',
+  'represented', 'spoke', 'translated', 'wrote',
+
+  // The optimizer's chips and Auto-Fix's replacements, each by its first word
+  ...Object.values(ACTION_VERBS_BY_CATEGORY).flat().map((v) => v.toLowerCase()),
+  ...WEAK_PHRASE_REPLACEMENTS.map(({ replacement }) => replacement.split(' ')[0].toLowerCase()),
+]);
+
+/**
+ * A verb as it is looked up: lowercase letters only, on both sides, so 'Co-authored' is found
+ * however it is punctuated (AUD-32).
+ */
+const verbKey = (w) => w.toLowerCase().replace(/[^a-z]/g, '');
+const VERB_KEYS = new Set([...ACTION_VERBS].map(verbKey));
+
+/**
+ * Whether plain `text` opens with a strong action verb — the one check the optimizer's badge and
+ * the ATS score both make (R2-025). Only punctuation at the edges of the first word is trimmed
+ * ('Led,', '•Engineered', '"Co-authored,"').
+ */
+export function leadsWithActionVerb(text) {
+  const firstWord = String(text || '').trim().split(/\s+/)[0].replace(/^[^a-zA-Z]+|[^a-zA-Z]+$/g, '');
+  return firstWord !== '' && VERB_KEYS.has(verbKey(firstWord));
+}
+
+/**
+ * Whether plain `text` quantifies its result — the one metric rule of the optimizer and the ATS
+ * score (R2-025): a number that stands as one ("12", "45%", "$1.2M", "10k", "3x", "200ms"), not the
+ * digit in a name such as "S3", "EC2" or "Web3", and not a statement that is only a year.
+ */
+export function hasMetric(text) {
+  const clean = String(text || '').trim();
+  return /(?<!\p{L})\d/u.test(clean) && !/^\d{4}$/.test(clean);
+}
+
 export const GOOGLE_XYZ_TEMPLATES = [
   {
     role: 'Engineering & Tech',
@@ -97,18 +174,10 @@ export function analyzeBullet(text = '') {
     };
   }
 
-  // Detect numbers / percentages / currency / metrics
-  const metricRegex = /\b(\d+(?:\.\d+)?%|\$\d+(?:,\d{3})*(?:\.\d+)?[KkMmBb]?|\d+\+?|\b\d+\s*(?:hours|days|weeks|months|years|ms|seconds|users|clients|teams|projects))\b/i;
-  const hasMetric = metricRegex.test(clean);
-
-  // Check first word for strong action verb. Only punctuation at the edges is trimmed ('Led,',
-  // '•Engineered'), and both sides of the lookup go through the same key: the first word used to
-  // lose every non-letter while the list kept its hyphens, so 'Co-authored' — a verb this module
-  // offers — could never match and the modal said "Verb Missing" right after inserting it (AUD-32).
+  // Metric and verb: the ATS score's own rules, so the badges here say what the score will (R2-025).
+  const metric = hasMetric(clean);
   const firstWord = clean.split(/\s+/)[0].replace(/^[^a-zA-Z]+|[^a-zA-Z]+$/g, '');
-  const verbKey = (w) => w.toLowerCase().replace(/[^a-z]/g, '');
-  const allVerbs = new Set(Object.values(ACTION_VERBS_BY_CATEGORY).flat().map(verbKey));
-  const hasActionVerb = firstWord !== '' && allVerbs.has(verbKey(firstWord));
+  const hasActionVerb = leadsWithActionVerb(clean);
 
   // Check weak phrases. String#match with a copy of the pattern: `wp.match` is global, and
   // RegExp#test on a global pattern starts where its last match ended (lastIndex), so the same text
@@ -123,7 +192,7 @@ export function analyzeBullet(text = '') {
   // Calculate bullet quality score (0 to 100)
   let score = 40;
   if (hasActionVerb) score += 30;
-  if (hasMetric) score += 30;
+  if (metric) score += 30;
   if (detectedWeakPhrases.length > 0) score = Math.max(20, score - (detectedWeakPhrases.length * 15));
   if (clean.length > 200) score -= 10; // Too verbose
   if (clean.length < 35) score -= 15;  // Too brief
@@ -132,17 +201,20 @@ export function analyzeBullet(text = '') {
   if (!hasActionVerb) {
     suggestions.push(`Start with a strong action verb (e.g. "${ACTION_VERBS_BY_CATEGORY['Leadership & Execution'][0]}" or "${ACTION_VERBS_BY_CATEGORY['Technical & Engineering'][0]}") instead of passive voice.`);
   }
-  if (!hasMetric) {
+  if (!metric) {
     suggestions.push('Add quantifiable metrics (e.g. %, $, time saved, team size, scale) to prove tangible business impact.');
   }
   if (detectedWeakPhrases.length > 0) {
-    suggestions.push(`Replace weak phrases like "${detectedWeakPhrases[0].alternatives[0]}" to demonstrate leadership.`);
+    // The words it found, and what they could be instead: it used to quote the first alternative as
+    // the weak phrase — "Resolved" on a statement that said "handled" (R2-078).
+    const { phrase, replacement, alternatives } = detectedWeakPhrases[0];
+    suggestions.push(`Replace the weak phrase "${phrase}" with a power verb such as "${replacement}" or "${alternatives[0]}" to demonstrate leadership.`);
   }
 
   return {
     clean,
     hasActionVerb,
-    hasMetric,
+    hasMetric: metric,
     firstWord,
     weakPhrases: detectedWeakPhrases,
     score: Math.min(100, Math.max(0, score)),
@@ -151,12 +223,26 @@ export function analyzeBullet(text = '') {
 }
 
 /**
- * Replaces weak phrases in text with their strongest alternatives.
+ * Whether the text before a phrase ends where a sentence starts: nothing, or a line break or a
+ * sentence's end (". ", "! ", "? "), then only spaces, bullet marks or opening quotes.
+ */
+const SENTENCE_START = /(?:^|[.!?]\s|\n)[\s•\-*–—◦▪▸‣⁃"'“‘(]*$/;
+
+/**
+ * Replaces weak phrases in text with their strongest alternatives — capitalised where a sentence
+ * starts, in lowercase inside one: "Engineered 4 APIs; handled QA" becomes "…; managed QA", not
+ * "…; Managed QA" (R2-078).
  */
 export function autoFixWeakPhrases(text = '') {
   let result = text;
   for (const wp of WEAK_PHRASE_REPLACEMENTS) {
-    result = result.replace(wp.match, wp.replacement);
+    // Each pattern has one group, so the offset and the whole text are the last two arguments.
+    result = result.replace(wp.match, (...args) => {
+      const [offset, whole] = args.slice(-2);
+      return SENTENCE_START.test(whole.slice(0, offset))
+        ? wp.replacement
+        : wp.replacement[0].toLowerCase() + wp.replacement.slice(1);
+    });
   }
   return result;
 }
