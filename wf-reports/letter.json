@@ -34,12 +34,13 @@
       "id": "R2-092",
       "outcome": "fixed",
       "commits": [
-        "8c8f99f"
+        "8c8f99f",
+        "dcef059"
       ],
       "tests": [
         "tests/pdf/83-letter-signature-photo.test.mjs"
       ],
-      "summary": "A résumé photo hidden under Personal Info → Photo no longer prints on the letter in any template (letterResumePhoto). The panel no longer shows it faded or says 'Using resume photo'; it says 'Résumé photo hidden — upload one for the letter'. The letter's own photo still prints."
+      "summary": "A résumé photo hidden under Personal Info → Photo no longer prints on the letter in any template (letterResumePhoto). The panel no longer shows it faded or says 'Using resume photo'; it says 'Résumé photo hidden — upload one for the letter'. The letter's own photo still prints. The Personal Info photo eye's tooltip now says it hides the photo from the résumé and the cover letter, and that a photo uploaded for the letter stays (dcef059)."
     },
     {
       "id": "R2-103",
@@ -106,5 +107,5 @@
     "fixedByReviewer": []
   },
   "baselineFailures": [],
-  "notes": "Assertions changed because the rows call the old behaviour a bug: cover-letter-generator.unit.mjs (the generator no longer returns signature fields; the body's tags now include <br>, but only as blank-line paragraphs; there are no 'Candidate' / 'Professional' placeholders) and 43-cover-letter-generator-escape (the preview's tag list includes <br>). tests/pdf/83-letter-signature-photo.test.mjs was committed with 0617247 but covers 90811f8, 8c8f99f and e0dfd2e too. Fixed at the owner's request, though no row filed it (ca99d05, test in tests/unit/letter-generator-sentences.unit.mjs): the generator wrote 'as a Engineer'. It now picks 'a' or 'an' by the title's first sound ('an Engineer', 'an IT Manager', 'a UX Designer', 'a University Lecturer'). Cosmetic: the Personal Info photo eye still says 'Hide photo from resume', although it now hides the photo from the letter too. 28b15c6 bumps DATA_VERSION 11 → 12 (src/utils/dataVersion.js and tests/helpers.js) for a one-time letter migration. When this was pushed no other claude/wf-* branch touched those files; if another cluster also adds a v12 migration, the merge must renumber one of them. ecd3df4 adds src/components/ResumeThumbnail.jsx and changes only ResumeCard's thumbnail block and its imports. It was trial-merged with claude/wf-app-shell (which rewrites ResumeCard's rename code), wf-sections and wf-import-data: no conflicts."
+  "notes": "Assertions changed because the rows call the old behaviour a bug: cover-letter-generator.unit.mjs (the generator no longer returns signature fields; the body's tags now include <br>, but only as blank-line paragraphs; there are no 'Candidate' / 'Professional' placeholders) and 43-cover-letter-generator-escape (the preview's tag list includes <br>). tests/pdf/83-letter-signature-photo.test.mjs was committed with 0617247 but covers 90811f8, 8c8f99f and e0dfd2e too. Fixed at the owner's request, though no row filed it (ca99d05, test in tests/unit/letter-generator-sentences.unit.mjs): the generator wrote 'as a Engineer'. It now picks 'a' or 'an' by the title's first sound ('an Engineer', 'an IT Manager', 'a UX Designer', 'a University Lecturer'). 28b15c6 bumps DATA_VERSION 11 → 12 (src/utils/dataVersion.js and tests/helpers.js) for a one-time letter migration. When this was pushed no other claude/wf-* branch touched those files; if another cluster also adds a v12 migration, the merge must renumber one of them. ecd3df4 adds src/components/ResumeThumbnail.jsx and changes only ResumeCard's thumbnail block and its imports. It was trial-merged with claude/wf-app-shell (which rewrites ResumeCard's rename code), wf-sections and wf-import-data: no conflicts. Every commit was trial-merged against all 13 other claude/wf-* branches as of this push: no conflicts."
 }
