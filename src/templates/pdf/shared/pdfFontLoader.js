@@ -1,7 +1,7 @@
 import { Font } from '@react-pdf/renderer';
 import { decodeEntities } from '@/utils/richText';
 import { FONTSOURCE_CDN as CDN, fetchMetadata, fontsourceId } from '@/utils/fontsource';
-import { extraCodePoints, isPresentationForm, needsOf, scriptCandidates, scriptClaims } from './pdfFontCoverage';
+import { glyphCodePoints, isPresentationForm, needsOf, scriptCandidates, scriptClaims, STAND_INS } from './pdfFontCoverage';
 
 /**
  * Fonts for the PDF (which is also the editor preview).
@@ -80,6 +80,16 @@ export function breakLongWords(max) {
     return parts.flatMap((p, i) => (i ? [BREAK_MARK, p] : [p]));
   };
 }
+
+/**
+ * The break callback of a line that holds a link in a box narrower than a long URL — a Projects or
+ * Certifications card in a 2- to 4-column grid, the Sidebar's main-column card. The registered one
+ * marks only tokens past 48 characters, and a 43-character URL is wider than a half-width card: it
+ * ran over the card beside it (R2-105). This one marks every token past 16 characters, which any
+ * card holds; textkit breaks at a mark only a token wider than its line, so a URL that fits its line
+ * — or the next — prints whole, as typed.
+ */
+export const breakLinks = breakLongWords(16);
 
 let hyphenationSet = false;
 /** Words are never hyphenated — résumé text should read as typed. Very long tokens may break. */
@@ -193,14 +203,17 @@ function undrawn(cps, families) {
  * so the two never register different files under one name.
  */
 async function scriptFallbacks(text, usable) {
-  let missing = undrawn(extraCodePoints(text), usable);
+  let missing = undrawn(glyphCodePoints(text), usable);
   const added = [];
   for (const font of missing.length ? scriptCandidates(missing, text) : []) {
     if (!missing.some((cp) => scriptClaims(font, cp))) continue;
     const meta = await fetchMetadata(font.pkg);
-    if (!meta?.subsets?.includes(font.subset)) continue;
-    const [family] = await prepareFonts([registerCdn(`${font.family} ${font.subset}`, font.pkg, meta, font.subset, { fallback: true })]);
+    // A symbol font is taken as pass 1 takes it: Noto Sans Math's metadata lists no 'math' subset,
+    // though its math files are there.
+    if (!meta || (!font.name && !meta.subsets?.includes(font.subset))) continue;
+    const [family] = await prepareFonts([registerCdn(font.name || `${font.family} ${font.subset}`, font.pkg, meta, font.subset, { fallback: true })]);
     if (!family) continue; // offline, or blocked: the characters stay undrawn, the PDF still renders
+    if (usable.includes(family) || added.includes(family)) continue;
     added.push(family);
     missing = undrawn(missing, [family]);
     if (!missing.length) break;
@@ -253,22 +266,50 @@ const MIN_SPACE_EM = 0.22;
 
 /**
  * Wrap font.layout so a run's space glyphs advance at least MIN_SPACE_EM, without touching any other
- * glyph. Returns the wrapper; when the font's space already clears the bar it returns `layout`
+ * glyph. Returns the wrapper; when the font's spaces already clear the bar it returns `layout`
  * unchanged, so nothing is measured per run.
+ *
+ * The no-break space too: a contact value's words are joined with U+00A0 so it never wraps
+ * (PdfContact.jsx keepTogether), and Lato's and Literata's own U+00A0 glyph is as narrow as their
+ * space, so Contact style Bar or Bullet read "+15550142" and "Austin,TX" under `pdftotext -raw` (R3-003).
  */
 function widenNarrowSpace(font, layout) {
-  const space = typeof font.glyphForCodePoint === 'function' ? font.glyphForCodePoint(0x20) : null;
   const minAdvance = MIN_SPACE_EM * (font.unitsPerEm || 1000);
-  if (!space || space.advanceWidth >= minAdvance) return layout;
+  // A subset file can map a code point to a glyph it does not hold (IBM Plex Sans Arabic's U+00A0):
+  // reading its advance throws, and that face is not widened for it.
+  const advance = (glyph) => { try { return glyph.advanceWidth; } catch { return Infinity; } };
+  const narrow = new Set(typeof font.glyphForCodePoint !== 'function' ? [] : [0x20, 0xa0]
+    .filter((cp) => font.hasGlyphForCodePoint?.(cp))
+    .map((cp) => font.glyphForCodePoint(cp))
+    .filter((glyph) => glyph && advance(glyph) < minAdvance)
+    .map((glyph) => glyph.id));
+  if (!narrow.size) return layout;
   return (string, features, ...rest) => {
     const run = layout(string, features, ...rest);
     if (run && run.glyphs && run.positions) {
       for (let i = 0; i < run.glyphs.length; i += 1) {
         const pos = run.positions[i];
-        if (run.glyphs[i] && run.glyphs[i].id === space.id && pos && pos.xAdvance < minAdvance) pos.xAdvance = minAdvance;
+        if (run.glyphs[i] && narrow.has(run.glyphs[i].id) && pos && pos.xAdvance < minAdvance) pos.xAdvance = minAdvance;
       }
     }
     return run;
+  };
+}
+
+/**
+ * Draw a character the face lacks with its stand-in (STAND_INS: ‐ as '-', U+202F as ' '), when the
+ * face has that. It answers through the face's cmap, so textkit picks this face for the character,
+ * layout draws the stand-in's glyph, and that glyph — seeded from the cmap first — keeps the
+ * stand-in's text in the PDF's ToUnicode.
+ */
+function addStandIns(font) {
+  const cmap = font._cmapProcessor;
+  if (!cmap || typeof cmap.lookup !== 'function') return;
+  const lookup = cmap.lookup.bind(cmap);
+  cmap.lookup = (codePoint, variationSelector) => {
+    const glyph = lookup(codePoint, variationSelector);
+    if (glyph || variationSelector || !STAND_INS.has(codePoint)) return glyph;
+    return lookup(STAND_INS.get(codePoint));
   };
 }
 
@@ -287,6 +328,7 @@ function widenNarrowSpace(font, layout) {
  * 3. Lay every face out with ligatures off (noLigatures), so no glyph stands for several letters.
  * 4. Widen a too-narrow space in the laid-out run (widenNarrowSpace), so `pdftotext -raw` reads the
  *    narrow-space fonts' words apart instead of glued.
+ * 5. Draw a dash or space the face lacks with its stand-in (addStandIns), after the seeding in 1.
  */
 export async function prepareFonts(families) {
   const store = Font.getRegisteredFonts();
@@ -309,6 +351,7 @@ export async function prepareFonts(families) {
     for (const { data: font } of sources) {
       if (!font || primedFonts.has(font) || typeof font.glyphForCodePoint !== 'function') continue;
       for (const codePoint of font.characterSet || []) if (!isPresentationForm(codePoint)) font.glyphForCodePoint(codePoint);
+      addStandIns(font);
       if (typeof font.layout === 'function') {
         const base = font.layout.bind(font);
         const noLig = (string, features, ...rest) => base(string, features ?? noLigatures(), ...rest);

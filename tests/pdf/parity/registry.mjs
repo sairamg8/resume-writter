@@ -38,11 +38,7 @@ export const familyOf = (control) => (control.reset ? 'resets' : spec(control.ke
  * one of these is reported as TODO (it still runs, and turns green when the fix lands — then delete the
  * entry). { variant, key (the control's first key), match (a failure line), id (the tracker row) }.
  */
-export const KNOWN = [
-  // R3-002: an entry title's word wider than the room its date leaves prints over the date (EndRow).
-  { variant: 'sidebar', key: 'section.columns', match: /^2: text overlaps — p\d+: "(Ledgerline|Queuebird)" × "\d\d\/\d{4} – \d\d\/\d{4}"$/, id: 'R3-002' },
-  { variant: 'sidebar', key: 'setting.fontSizeEntryDelta', match: /^13: text overlaps — p\d+: "Engineer" × "\d\d\/\d{4} – (\d\d\/\d{4}|Present)"$/, id: 'R3-002' },
-];
+export const KNOWN = [];
 
 /** The filed defects `failures` of `control` on `variant` are all accounted for by: [] when some is not. */
 export function knownFor(variant, control, failures) {

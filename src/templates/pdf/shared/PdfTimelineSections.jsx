@@ -3,6 +3,7 @@ import { View } from '@react-pdf/renderer';
 import { Text } from './PdfText';
 import { PdfRichText } from './PdfRichText';
 import { ContactValue } from './PdfContact';
+import { breakLinks } from './pdfFontLoader';
 import { hasRichText, safeHref } from '@/utils/richText';
 import { dateRange, endDateOf, formatDate, presentLabel } from '@/utils/dates';
 import { SPACER, SectionTitleOf, SectionRouter, RenderBullets, shadesOf } from './PdfSections';
@@ -77,12 +78,12 @@ const FIELDS = {
   }),
 };
 
-/** A project's "technologies · link" line, or null. */
+/** A project's "technologies · link" line, or null. A link that does not fit its line (a 2-column grid) breaks inside it (R2-105). */
 function projectLine(item, settings) {
   if (!item.technologies && !item.url) return null;
   const accent = settings?.accentColor || '#2563eb';
   return (
-    <Text style={{ fontSize: settings?.fontSizeBase || 11, color: shadesOf(settings).meta }}>
+    <Text style={{ fontSize: settings?.fontSizeBase || 11, color: shadesOf(settings).meta }} hyphenationCallback={item.url ? breakLinks : undefined}>
       {item.technologies}
       {item.url ? <Text style={{ color: accent }}>{item.technologies ? ' · ' : ''}<ContactValue value={item.url} href={safeHref(item.url)} style={{ color: accent }} /></Text> : null}
     </Text>

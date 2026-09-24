@@ -60,8 +60,8 @@ const times = (t, m) => [
 ];
 
 /**
- * Every word gap the pages draw — one space between two non-space glyphs on one baseline, left to
- * right — as { em, at }: the distance from the end of the left glyph's own advance to the start of the
+ * Every word gap the pages draw — one space (or no-break space, `nbsp`) between two non-space glyphs
+ * on one baseline, left to right — as { em, at, nbsp }: the distance from the end of the left glyph's own advance to the start of the
  * right glyph, in ems of the left glyph's font size, and the text around it. That distance is all
  * Poppler's `pdftotext -raw` reads a word break from (it drops the U+0020 glyph and re-derives words
  * from geometry), and it joins two words across a gap under ~0.2 em. Positions follow pdf.js's
@@ -110,9 +110,9 @@ export async function wordGaps(bytes) {
     const oneLine = (a, b) => Math.abs(a.y - b.y) < 0.5 && b.x0 > a.x0;
     glyphs.forEach((g, i) => {
       const [l, r] = [glyphs[i - 1], glyphs[i + 1]];
-      if (g.ch !== ' ' || !ink(l) || !ink(r) || !oneLine(l, r)) return;
+      if ((g.ch !== ' ' && g.ch !== '\u00a0') || !ink(l) || !ink(r) || !oneLine(l, r)) return;
       const at = glyphs.slice(Math.max(0, i - 14), i + 15).filter((n) => Math.abs(n.y - g.y) < 0.5).map((n) => n.ch).join('');
-      out.push({ em: (r.x0 - l.x1) / l.em, at: `p${p} "${at}"` });
+      out.push({ em: (r.x0 - l.x1) / l.em, at: `p${p} "${at}"`, nbsp: g.ch === '\u00a0' });
     });
   }
   await doc.loadingTask.destroy();

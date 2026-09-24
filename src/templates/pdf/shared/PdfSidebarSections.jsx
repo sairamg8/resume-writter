@@ -4,11 +4,12 @@ import { PdfRichText } from './PdfRichText';
 import { hasRichText } from '@/utils/richText';
 import { dateRange, endDateOf, presentLabel } from '@/utils/dates';
 import { SectionTitleOf, RenderBullets, RenderColGrid, hexAlpha, SectionRouter, SPACER, ItemHeader, shadesOf } from './PdfSections';
-import { CentredLine, EndRow, endField, fieldGap, onBaselineOf } from './PdfItemHeader';
+import { CentredLine, EndRow, endField, fieldGap, onBaselineOf, wordRoom } from './PdfItemHeader';
 import {
   SIDEBAR_TYPES, SideSectionTitle, EntryLink, SideEducation, SideLanguages, SideCertifications, SideInterests, SideReferences,
 } from './PdfSidebarColumn';
 import { SideSkills } from './PdfSidebarSkills';
+import { breakLinks } from './pdfFontLoader';
 
 export { SIDEBAR_TYPES, SideSectionTitle };
 
@@ -44,9 +45,10 @@ function CardItem({ children }) {
  * ATS-2, ATS-5): the bold `first` line with the date at its right end, on its last line; under it the
  * `details` line with the location at its right end; then `extra` (a project's link). Under Section
  * Options → Alignment "Center" all of it is centred on the card (R6-1): the date after the first
- * line's " · ", the location on a line of its own.
+ * line's " · ", the location on a line of its own. `firstMin` / `detailsMin`: their widest words
+ * (cardWordRooms), which the date and the location wrap under rather than print over (R3-002).
  */
-function CardHeader({ centered, entrySize, lineH, first, details, loc, locStyle, extra, dateStr, dateStyle, sepColor }) {
+function CardHeader({ centered, entrySize, lineH, first, firstMin, details, detailsMin, loc, locStyle, extra, dateStr, dateStyle, sepColor }) {
   const keep = { wrap: false, minPresenceAhead: Math.round(entrySize * lineH * 2) };
   if (centered) {
     return (
@@ -60,8 +62,8 @@ function CardHeader({ centered, entrySize, lineH, first, details, loc, locStyle,
   }
   return (
     <View {...keep}>
-      <EndRow left={first}>{endField(dateStr, dateStyle, 6)}</EndRow>
-      {details || loc ? <EndRow left={details}>{loc ? endField(loc, locStyle, fieldGap(locStyle.fontSize)) : null}</EndRow> : null}
+      <EndRow left={first} leftMin={firstMin}>{endField(dateStr, dateStyle, 6)}</EndRow>
+      {details || loc ? <EndRow left={details} leftMin={detailsMin}>{loc ? endField(loc, locStyle, fieldGap(locStyle.fontSize)) : null}</EndRow> : null}
       {extra}
     </View>
   );
@@ -77,6 +79,15 @@ function cardDateStyle(settings, entrySize, color) {
   const title = { fontFamily: font, fontSize: entrySize, fontWeight: 'bold', lineHeight: entrySize * 1.2 };
   const date = { fontFamily: font, fontSize: entrySize - 1.5 };
   return { fontSize: date.fontSize, color, lineHeight: onBaselineOf(title, date) };
+}
+
+/** A card's `firstMin` and `detailsMin` (CardHeader): the widest word of its bold title and of its details line. */
+function cardWordRooms(settings, entrySize, first, details) {
+  const font = settings?._pdfFontFamily;
+  return {
+    firstMin: wordRoom([first, { fontFamily: font, fontSize: entrySize, fontWeight: 'bold' }]),
+    detailsMin: wordRoom([details, { fontFamily: font, fontSize: entrySize - 1 }]),
+  };
 }
 
 export function SidebarMainExperience({ section, settings, marginBottom, spaceBefore, itemGap }) {
@@ -119,6 +130,7 @@ export function SidebarMainExperience({ section, settings, marginBottom, spaceBe
               {titleStyle === 'stacked' ? (
                 <CardHeader
                   centered={centered} entrySize={entrySize} lineH={lineH} dateStr={dateStr} dateStyle={dateStyle} sepColor={shade.muted}
+                  {...cardWordRooms(settings, entrySize, primary, secondary)}
                   first={primary ? <Text style={{ fontSize: entrySize, fontWeight: 'bold', color: textColor, lineHeight: 1.2, textAlign }}>{primary}</Text> : null}
                   details={secondary ? <Text style={{ fontSize: entrySize - 1, color: hexAlpha(accent, 0.8), lineHeight: 1.2, textAlign }}>{secondary}</Text> : null}
                   loc={loc} locStyle={{ fontSize: entrySize - 1, color: shade.muted, lineHeight: 1.2 }}
@@ -166,9 +178,10 @@ export function SidebarMainProjects({ section, settings, marginBottom, spaceBefo
             <CardItem key={idx}>
               <CardHeader
                 centered={centered} entrySize={entrySize} lineH={lineH} dateStr={dateStr} dateStyle={dateStyle} sepColor={shade.muted}
+                {...cardWordRooms(settings, entrySize, item.name, item.technologies)}
                 first={item.name ? <Text style={{ fontSize: entrySize, fontWeight: 'bold', color: textColor, lineHeight: 1.2, textAlign }}>{item.name}</Text> : null}
                 details={item.technologies ? <Text style={{ fontSize: entrySize - 1, color: hexAlpha(accent, 0.7), lineHeight: 1.2, textAlign }}>{item.technologies}</Text> : null}
-                extra={item.url ? <EntryLink url={item.url} style={{ fontSize: entrySize - 1.5, color: accent, textAlign }} /> : null}
+                extra={item.url ? <EntryLink url={item.url} style={{ fontSize: entrySize - 1.5, color: accent, textAlign }} hyphenationCallback={breakLinks} /> : null}
               />
               {hasRichText(item.description) ? (
                 <PdfRichText html={item.description} style={{ fontSize: entrySize - 0.5, color: shade.body, lineHeight: lineH, marginTop: 2, textAlign }} />
