@@ -120,7 +120,9 @@ export function buildExperience(section, accentHex, settings, centered, dateHex,
   return [sectionHeading(section.title, accentHex, centered, section.heading), ...entries(section, look, (item) => {
     const company = field(item, 'company');
     const role = field(item, 'role');
-    const [primary, secondary] = s.titleOrder === 'role' ? [role, company] : [company, role];
+    // An empty leading field: the next one leads, bold, as the PDF prints it (R2-111).
+    const [lead, next] = s.titleOrder === 'role' ? [role, company] : [company, role];
+    const [primary, secondary] = lead ? [lead, next] : [next, ''];
     const location = s.showLocation !== false ? field(item, 'location') : '';
     const end = field(item, 'endDate') && !item.current ? field(item, 'endDate') : '';
     const dates = dateRange(field(item, 'startDate'), item.current && !(item.hiddenFields || []).includes('endDate') ? presentLabel(settings) : end, settings);
@@ -283,7 +285,8 @@ export function buildInterests(section, accentHex, settings, centered, dateHex, 
 export function buildCustom(section, accentHex, settings, centered, dateHex, look) {
   const s = section.settings || {};
   return [sectionHeading(section.title, accentHex, centered, section.heading), ...entries(section, look, (item) => [
-    header(item.title, item.subtitle, s.showDates !== false ? formatDate(item.date || '', settings) : '', dateHex, centered, look, place(item.location, look)),
+    // An empty title: the subtitle leads, bold, as the PDF prints it (R2-111).
+    header(item.title || item.subtitle, item.title ? item.subtitle : '', s.showDates !== false ? formatDate(item.date || '', settings) : '', dateHex, centered, look, place(item.location, look)),
     ...body(item, centered, look),
   ])];
 }

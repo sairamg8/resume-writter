@@ -81,9 +81,10 @@ export function ModernTemplatePDF({ data }) {
           paddingBottom: MODERN_HEADER_PAD_Y_PT,
           paddingHorizontal: MODERN_HEADER_PAD_X_PT,
           marginBottom: sectionGap,
-        }} wrap={false}>
-          {/* Photo → Text Position, as Classic, Minimal and Executive take it (R3-0). */}
-          <View style={{ flexDirection: 'row', alignItems: photoTextAlignItems(settings), gap: g.photoTextGap }}>
+        }}>
+          {/* Breakable: a summary longer than a page continues on the next, on the banner's colour (R2-046);
+              the name row never splits. Photo → Text Position, as Classic, Minimal and Executive take it (R3-0). */}
+          <View style={{ flexDirection: 'row', alignItems: photoTextAlignItems(settings), gap: g.photoTextGap }} wrap={false}>
             {personal?.photo && !hidden.includes('photo') && (
               <PdfPhoto src={personal.photo} style={photoStyle} />
             )}

@@ -127,7 +127,11 @@ export function CentredLine({ first, date, dateStyle, sepColor, gap }) {
 // Reusable item header: bold primary + optional sub-line + location + date. Supports centering.
 // `loc` renders in a distinctly lighter shade than `sub`, matching the Canvas templates' two-tone
 // convention (subtitle darker, location lighter); it is its own run wherever it prints (see top).
-export function ItemHeader({ primary, sub, loc, dateStr, settings, titleStyle = 'stacked', italicSub = false, centered = false }) {
+export function ItemHeader({ primary: first, sub: second, loc, dateStr, settings, titleStyle = 'stacked', italicSub = false, centered = false }) {
+  // An empty leading field (a job with no company): the next one leads, bold, on the date's line, as
+  // Word prints it — not an empty title line holding only the date (R2-111).
+  const primary = first || second;
+  const sub = first ? second : undefined;
   const textColor  = settings?.textColor  || '#1a1a1a';
   const accent     = settings?.accentColor || '#2563eb';
   const baseSize   = settings?.fontSizeBase || 11;

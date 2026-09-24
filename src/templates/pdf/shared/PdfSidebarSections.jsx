@@ -109,8 +109,9 @@ export function SidebarMainExperience({ section, settings, marginBottom, spaceBe
   return (
     <View style={{ marginBottom, marginTop: spaceBefore }}>
       {SPACER}
-      <SectionTitleOf section={section} settings={settings} centered={centered} />
       <RenderColGrid
+        title={<SectionTitleOf section={section} settings={settings} centered={centered} />}
+        settings={settings}
         items={visibleItems}
         cols={s.columns || 1}
         gap={itemGap}
@@ -122,8 +123,10 @@ export function SidebarMainExperience({ section, settings, marginBottom, spaceBe
           const sd = iH.includes('startDate') ? '' : item.startDate;
           const ed = iH.includes('endDate')   ? '' : (item.current ? presentLabel(settings) : item.endDate);
           const dateStr  = showDates ? dateRange(sd, ed, settings) : '';
-          const primary  = titleOrder === 'role' ? role    : company;
-          const secondary = titleOrder === 'role' ? company : role;
+          const [lead, next] = titleOrder === 'role' ? [role, company] : [company, role];
+          // An empty leading field: the next one leads, bold, on the date's line (R2-111).
+          const primary  = lead || next;
+          const secondary = lead ? next : '';
           const desc = iH.includes('description') ? '' : item.description;
           return (
             <CardItem key={idx}>
@@ -167,8 +170,9 @@ export function SidebarMainProjects({ section, settings, marginBottom, spaceBefo
   return (
     <View style={{ marginBottom, marginTop: spaceBefore }}>
       {SPACER}
-      <SectionTitleOf section={section} settings={settings} centered={centered} />
       <RenderColGrid
+        title={<SectionTitleOf section={section} settings={settings} centered={centered} />}
+        settings={settings}
         items={visibleItems}
         cols={s.columns || 1}
         gap={itemGap}

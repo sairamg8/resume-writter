@@ -81,9 +81,14 @@ export function resolveSection(section, templateKey) {
     Object.entries(section.settings || {}).filter(([, value]) => value != null && value !== ''),
   );
 
+  // Under both, the Grids the type is created with: an imported Languages or References that stores
+  // none prints in two columns (the renderers' fallback), and the Grids control shows 2, not 1 (R2-109).
+  const created = createdColumns(section.type);
+
   return {
     ...section,
     settings: {
+      ...(created ? { columns: created } : {}),
       ...templateDefaults,
       ...chosen,
     },
