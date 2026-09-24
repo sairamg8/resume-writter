@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Plus, ChevronDown, ChevronUp, GripVertical, Settings2, Eye, EyeOff, MoreHorizontal, RotateCcw, Trash2 } from 'lucide-react';
+import { Plus, ChevronDown, ChevronUp, GripVertical, Settings2, Eye, EyeOff, MoreHorizontal, RotateCcw, Trash2, Copy } from 'lucide-react';
 import { SECTION_TYPE_DEFAULTS } from '@/utils/defaultData';
 import { DndContext, closestCenter, PointerSensor, KeyboardSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
@@ -14,7 +14,7 @@ import { templateId } from '@/constants/templates';
 export function SortableSection({
   section, template, updateSection, updateSectionSettings,
   removeSection, addItem, updateItem, removeItem, reorderItems,
-  toggleSectionVisibility,
+  toggleSectionVisibility, duplicateSection, duplicateItem,
   forceOpen, forceOpenKey,
   settings,
 }) {
@@ -66,6 +66,7 @@ export function SortableSection({
         const hasContent = Object.entries(item).some(([k, v]) => k !== 'id' && typeof v === 'string' && v.trim());
         if (!hasContent || confirm('Delete this entry?')) removeItem(section.id, item.id);
       },
+      onDuplicate: duplicateItem && (() => duplicateItem(section.id, item.id)),
     };
     switch (section.type) {
       case 'experience':     return <ExperienceItem     {...props} />;
@@ -133,6 +134,14 @@ export function SortableSection({
               >
                 <RotateCcw size={13} /> Reset style
               </button>
+              {duplicateSection && (
+                <button
+                  onClick={() => { duplicateSection(section.id); setMenuOpen(false); }}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-gray-50"
+                >
+                  <Copy size={13} /> Duplicate section
+                </button>
+              )}
               <div className="my-1 border-t border-gray-100" />
               <button
                 onClick={() => {

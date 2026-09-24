@@ -91,6 +91,8 @@ export function EditorResumeTab({
               removeItem={store.removeItem}
               reorderItems={store.reorderItems}
               toggleSectionVisibility={store.toggleSectionVisibility}
+              duplicateSection={store.duplicateSection}
+              duplicateItem={store.duplicateItem}
               forceOpen={allExpanded}
               forceOpenKey={forcedIds.has(section.id) ? forceOpenKey : 0}
             />

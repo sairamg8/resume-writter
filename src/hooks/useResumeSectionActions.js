@@ -2,6 +2,12 @@ import { SECTION_TYPE_DEFAULTS } from '../utils/defaultDataSectionTypes.js';
 import { newId } from '../utils/ids.js';
 import { newSectionGrid } from '../templates/pdf/shared/templateSectionDefaults.js';
 
+/** An entry's deep copy under a fresh id, with the prefix of the one it copies ('exp_…' → 'exp_…'). */
+function copyOfItem(item) {
+  const prefix = String(item.id || '').split('_')[0] || 'item';
+  return { ...structuredClone(item), id: newId(prefix) };
+}
+
 export function createSectionActions(patchActive) {
   function updateSections(sections) {
     patchActive(r => ({ ...r, sections }));
@@ -65,6 +71,33 @@ export function createSectionActions(patchActive) {
     }));
   }
 
+  /**
+   * A copy of an entry right after it (R2-151): the same content, deep, under a fresh id of its own,
+   * so editing or deleting the copy never reaches the original.
+   */
+  function duplicateItem(sectionId, itemId) {
+    updateSection(sectionId, s => {
+      const at = s.items.findIndex(i => i.id === itemId);
+      if (at === -1) return s;
+      const items = [...s.items];
+      items.splice(at + 1, 0, copyOfItem(s.items[at]));
+      return { ...s, items };
+    });
+  }
+
+  /** A copy of a section right after it (R2-151): its settings and entries, every id fresh. */
+  function duplicateSection(sectionId) {
+    patchActive(r => {
+      const at = r.sections.findIndex(s => s.id === sectionId);
+      if (at === -1) return r;
+      const source = r.sections[at];
+      const copy = { ...structuredClone(source), id: newId(source.type), items: (source.items || []).map(copyOfItem) };
+      const sections = [...r.sections];
+      sections.splice(at + 1, 0, copy);
+      return { ...r, sections };
+    });
+  }
+
   function reorderItems(sectionId, oldIndex, newIndex) {
     updateSection(sectionId, s => {
       const items = [...s.items];
@@ -78,5 +111,6 @@ export function createSectionActions(patchActive) {
     updateSections, updateSection, updateSectionSettings,
     addSection, removeSection, toggleSectionVisibility,
     addItem, updateItem, removeItem, reorderItems,
+    duplicateItem, duplicateSection,
   };
 }

@@ -1,5 +1,5 @@
 import { useState, useId } from 'react';
-import { Eye, EyeOff, Trash2, ChevronDown, ChevronUp, X, GripVertical } from 'lucide-react';
+import { Eye, EyeOff, Trash2, ChevronDown, ChevronUp, X, GripVertical, Copy } from 'lucide-react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { FieldIdsContext, useFieldIds } from '@/hooks/useFieldIds';
@@ -108,7 +108,7 @@ export function FieldRow({ label, field, hiddenSet, onToggle, children }) {
   );
 }
 
-export function ItemCard({ label, onRemove, onToggleVisibility, visible = true, defaultOpen = false, children }) {
+export function ItemCard({ label, onRemove, onDuplicate, onToggleVisibility, visible = true, defaultOpen = false, children }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
     <div className={`border rounded-lg overflow-hidden ${visible ? 'border-gray-200' : 'border-gray-100 opacity-60'}`}>
@@ -125,6 +125,11 @@ export function ItemCard({ label, onRemove, onToggleVisibility, visible = true, 
               title={visible ? 'Hide entry' : 'Show entry'}
             >
               {visible ? <Eye size={12} /> : <EyeOff size={12} />}
+            </button>
+          )}
+          {onDuplicate && (
+            <button onClick={e => { e.stopPropagation(); onDuplicate(); }} title="Duplicate entry" aria-label="Duplicate entry" className="p-1 text-gray-400 hover:text-blue-600">
+              <Copy size={12} />
             </button>
           )}
           <button onClick={e => { e.stopPropagation(); onRemove(); }} title="Delete entry" aria-label="Delete entry" className="p-1 text-gray-400 hover:text-red-500">
