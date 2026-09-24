@@ -193,7 +193,9 @@ describe('a photo an older build saved at camera size is made the size an upload
     drawnFile(1600, 1200, 'image/jpeg', noise).then((camera) => drawnFile(900, 900, 'image/jpeg', noise).then((letter) => {
       expect([camera.length, letter.length].every((n) => n > 400_000), 'both photos over what an upload keeps').to.equal(true);
       const state = saved(`data:image/jpeg;base64,${camera.toString('base64')}`, `data:image/jpeg;base64,${letter.toString('base64')}`);
-      cy.seedAndVisit(`/#/resume/${state.activeId}`, state);
+      // A new page, so the seeded store is what it loads: a second visit to the same URL — only its
+      // hash after the first — is no page load, and seedAndVisit's onBeforeLoad would never run.
+      cy.seedAndVisit(`/?onb10#/resume/${state.activeId}`, state);
       cy.store().should((s) => {
         expect(bytesOf(photoOf(s)), 'the résumé photo').to.be.at.most(300_000);
         expect(bytesOf(active(s).coverLetter.clPhoto), 'the letter photo').to.be.at.most(300_000);
