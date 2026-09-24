@@ -61,10 +61,15 @@ jobs:
         shell: bash
     steps:
       - name: System packages
+        # The 26.04 mirrors are sometimes mid-sync (a listed package 404s: run 36015200631): try three times,
+        # re-reading the index each time, before calling it a failure.
         run: |
-          apt-get update -qq
-          DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends \
-            git ca-certificates curl xz-utils poppler-utils mupdf-tools > /dev/null
+          for i in 1 2 3; do
+            apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends \
+              git ca-certificates curl xz-utils poppler-utils mupdf-tools > /dev/null && break
+            echo "apt attempt $i failed"; sleep $((i * 15))
+          done
+          command -v pdftotext > /dev/null && command -v mutool > /dev/null || { echo "::error::apt failed three times"; exit 1; }
           pdftotext -v 2>&1 | head -1; mutool -v 2>&1 | head -1
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -97,10 +102,16 @@ jobs:
       TESTS: ${{ inputs.tests }}
     steps:
       - name: System packages
+        # The 26.04 mirrors are sometimes mid-sync (a listed package 404s: run 36015200631): try three times,
+        # re-reading the index each time, before calling it a failure.
         run: |
-          apt-get update -qq
-          DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends \
-            git ca-certificates curl xz-utils poppler-utils mupdf-tools > /dev/null
+          for i in 1 2 3; do
+            apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends \
+              git ca-certificates curl xz-utils poppler-utils mupdf-tools > /dev/null && break
+            echo "apt attempt $i failed"; sleep $((i * 15))
+          done
+          command -v pdftotext > /dev/null && command -v mutool > /dev/null || { echo "::error::apt failed three times"; exit 1; }
+          pdftotext -v 2>&1 | head -1; mutool -v 2>&1 | head -1
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
@@ -132,10 +143,16 @@ jobs:
       FAILFIRST: ${{ inputs.failfirst }}
     steps:
       - name: System packages
+        # The 26.04 mirrors are sometimes mid-sync (a listed package 404s: run 36015200631): try three times,
+        # re-reading the index each time, before calling it a failure.
         run: |
-          apt-get update -qq
-          DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends \
-            git ca-certificates curl xz-utils poppler-utils mupdf-tools > /dev/null
+          for i in 1 2 3; do
+            apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends \
+              git ca-certificates curl xz-utils poppler-utils mupdf-tools > /dev/null && break
+            echo "apt attempt $i failed"; sleep $((i * 15))
+          done
+          command -v pdftotext > /dev/null && command -v mutool > /dev/null || { echo "::error::apt failed three times"; exit 1; }
+          pdftotext -v 2>&1 | head -1; mutool -v 2>&1 | head -1
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
