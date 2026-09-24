@@ -1,13 +1,15 @@
 // An exported file is named after the résumé, not after whoever is signed in (AUD-30).
 //
 // Every Export-menu download (PDF, Word, JSON, Markdown, ATS text, JSON Resume, and the cover
-// letter's PDF and Word) took its file name from buildExportFilename() in
-// src/hooks/useEditorExports.js, which put the signed-in account's `displayName` ahead of the
-// résumé's own `personal.name`. The résumé's name was only a fallback, and a Google sign-in always
-// has a display name, so every file followed the account: the owner's demo account ("Sairam") saved
-// "Alex Developer"'s résumé as Sairam_Data_Engineer.pdf, and anyone keeping a CV for someone else,
-// or whose Google name differs from the name on the CV, got the wrong name on every file. The ATS
-// tab's own "Download .txt" already used the résumé's name, so the same text file was named two ways.
+// letter's PDF and Word) took its file name from buildExportFilename() (then in
+// src/hooks/useEditorExports.js, now src/utils/exportFilename.js), which put the signed-in
+// account's `displayName` ahead of the résumé's own `personal.name`. The résumé's name was only a
+// fallback, and a Google sign-in always has a display name, so every file followed the account: the
+// owner's demo account ("Sairam") saved "Alex Developer"'s résumé as Sairam_Data_Engineer.pdf, and
+// anyone keeping a CV for someone else, or whose Google name differs from the name on the CV, got
+// the wrong name on every file. The ATS tab's own "Download .txt" already used the résumé's name,
+// so the same text file was named two ways (it now takes this same name:
+// tests/pdf/77-ats-panel.test.mjs).
 // The file name now comes from the résumé alone: its name (trimmed, 'resume' when blank) and title.
 //
 // The hook is mounted as Editor.jsx mounts it (react-dom/client through tests/pdf/fake-dom.mjs) and

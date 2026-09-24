@@ -1,25 +1,12 @@
 import { useState } from 'react';
 import { downloadBlob } from '@/utils/download';
+import { buildExportFilename } from '@/utils/exportFilename';
 import { isDemoAccount } from '@/utils/demoSeed';
 import { DEMO_ACCOUNTS } from '@/utils/demoAccounts';
 import { generateAtsPlainText } from '@/utils/atsChecker';
 import { generateMarkdownResume } from '@/utils/markdownExport';
 import { generateCoverLetterPlainText } from '@/utils/coverLetterText';
 import { isJsonResume, jsonResumeToCpwtResume, cpwtResumeToJsonResume } from '@/utils/jsonResume';
-
-/** `value` trimmed with its inner runs of whitespace as one `_`; '' for anything not text. */
-const filePart = (value) => (typeof value === 'string' ? value.trim().replace(/\s+/g, '_') : '');
-
-/**
- * An exported file's name, without its suffix: the résumé's name and title, as `Name_Title`. It
- * follows the résumé, never the signed-in account (AUD-30): a demo account, or anyone keeping a CV
- * for someone else, exports each résumé under the name printed on it. 'resume' when it has none.
- */
-function buildExportFilename(resume) {
-  const name = filePart(resume?.personal?.name) || 'resume';
-  const title = filePart(resume?.personal?.title);
-  return title ? `${name}_${title}` : name;
-}
 
 /**
  * The editor's Export menu: PDF and Word of the tab on screen (résumé or cover letter), the

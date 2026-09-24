@@ -15,6 +15,7 @@ import { templateLabel } from '@/constants/templates';
 import { skillGroup } from '@/utils/skills';
 import { copyText } from '@/utils/clipboard';
 import { downloadBlob } from '@/utils/download';
+import { buildExportFilename } from '@/utils/exportFilename';
 import { newId } from '@/utils/ids';
 
 /**
@@ -163,10 +164,10 @@ export default function AtsCheckerPanel({ resume, store }) {
     });
   }
 
+  /** The .txt, named as Export → ATS text names the same file: `<Name>_<Title>_ATS.txt`. */
   function handleDownloadPlainText() {
     const text = generateAtsPlainText(resume);
-    const candidateName = (resume?.personal?.name || 'resume').replace(/\s+/g, '_');
-    downloadBlob(new Blob([text], { type: 'text/plain;charset=utf-8' }), `${candidateName}_ATS.txt`);
+    downloadBlob(new Blob([text], { type: 'text/plain;charset=utf-8' }), `${buildExportFilename(resume)}_ATS.txt`);
   }
 
   /** "+" on a missing keyword: into the first skill group that prints (keywordSkillTarget, R2-024). */

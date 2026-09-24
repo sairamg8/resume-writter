@@ -301,8 +301,12 @@ describe('ATS Plain Text: Copy Text and the .txt download (R2-080, R2-166)', () 
     });
   }
 
-  it('Download saves the ATS plain text as <name>_ATS.txt', async () => {
-    const tab = await atsTab(plain());
+  /**
+   * Clicks the tab's "Download .txt" over `r`: resolves with `clicks` (each download link's href and
+   * file name), `blobs` (what each one saved) and the résumé the store holds.
+   */
+  async function downloadFromTab(r) {
+    const tab = await atsTab(r);
     const saved = { create: URL.createObjectURL, revoke: URL.revokeObjectURL };
     const blobs = [];
     const clicks = [];
@@ -312,17 +316,39 @@ describe('ATS Plain Text: Copy Text and the .txt download (R2-080, R2-166)', () 
     const createElement = document.createElement.bind(document);
     document.createElement = (tag) => Object.assign(createElement(tag), tag === 'a' ? { click() { clicks.push({ href: this.href, download: this.download }); } } : {});
     try {
-      const { generateAtsPlainText } = await loadModule('/src/utils/atsChecker.js');
       const button = [...elements(tab.view.container)].find((el) => el.getAttribute?.('title') === 'Download .txt');
       tab.view.act(() => reactProps(button).onClick());
-      assert.deepEqual(clicks, [{ href: 'blob:ats', download: 'Jonas_Weber_ATS.txt' }]);
-      assert.equal(blobs[0].type, 'text/plain;charset=utf-8');
-      assert.equal(await blobs[0].text(), generateAtsPlainText(tab.saved()));
+      return { clicks, blobs, saved: tab.saved() };
     } finally {
       Object.assign(URL, { createObjectURL: saved.create, revokeObjectURL: saved.revoke });
       await tab.unmount();
     }
+  }
+
+  it('Download saves the ATS plain text, named as Export → ATS text names it: <Name>_<Title>_ATS.txt', async () => {
+    const { generateAtsPlainText } = await loadModule('/src/utils/atsChecker.js');
+    const { clicks, blobs, saved } = await downloadFromTab(plain());
+    assert.deepEqual(clicks, [{ href: 'blob:ats', download: 'Jonas_Weber_Engineer_ATS.txt' }]);
+    assert.equal(blobs[0].type, 'text/plain;charset=utf-8');
+    assert.equal(await blobs[0].text(), generateAtsPlainText(saved));
   });
+
+  // The same text file was named two ways: the tab's own download as `<name>_ATS.txt`, its spaces
+  // made `_` and nothing trimmed, Export → ATS text as `<Name>_<Title>_ATS.txt` (buildExportFilename,
+  // tests/pdf/60-export-filename.test.mjs). The tab now names it as the Export menu does, in each of
+  // the cases 60 pins for the menu.
+  for (const [personal, name, why] of [
+    [{ name: '', title: 'Data Engineer' }, 'resume_Data_Engineer_ATS.txt', 'no name: "resume"'],
+    [{ name: '   ', title: 'Data Engineer' }, 'resume_Data_Engineer_ATS.txt', 'a blank name: "resume", not "_"'],
+    [{ name: '  Jonas   Weber ', title: ' Data Engineer  ' }, 'Jonas_Weber_Data_Engineer_ATS.txt', 'spaces around the name and title: no stray "_"'],
+    [{ name: 'Jonas Weber', title: '' }, 'Jonas_Weber_ATS.txt', 'no title: the name alone'],
+  ]) {
+    it(`Download: ${why}, as the Export menu names it`, async () => {
+      const r = plain();
+      const { clicks } = await downloadFromTab({ ...r, personal: { ...r.personal, ...personal } });
+      assert.deepEqual(clicks.map((c) => c.download), [name]);
+    });
+  }
 });
 
 describe('STAR Optimizer → Copy: a refused clipboard is said, not silent (R2-080)', () => {
