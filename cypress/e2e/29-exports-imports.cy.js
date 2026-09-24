@@ -22,7 +22,8 @@ describe('résumé exports: Markdown and JSON Resume', () => {
         expect(lines[1]).to.eq('**Full Stack Engineer**');
         expect(md).to.contain('[alex@example.com](mailto:alex@example.com)');
         ['## Professional Summary', '## Professional Experience', '## Education', '## Skills'].forEach((h) => expect(lines).to.include(h));
-        expect(md).to.contain('### **Senior Dev** — *Acme Corp*');
+        // A job leads with the company, as Classic's PDF prints it with no Order set (R2-064).
+        expect(md).to.contain('### **Acme Corp** — *Senior Dev*');
         expect(md).not.to.match(/<\/?(p|ul|li|strong|em)>/); // the rich text is Markdown, not HTML
       });
     });
