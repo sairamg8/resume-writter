@@ -468,6 +468,23 @@ export function entriesInOneColumn(sections, template, settings) {
 }
 
 /**
+ * Where the job scanner's "+" writes a missing keyword so that it prints: `{ section, item }`, the
+ * first skill group that prints its skills — shown, its Skills not hidden with the eye — in a shown
+ * Skills section; `{ section }` when a shown Skills section has no such group (a new group goes
+ * there); null when no Skills section is shown. It wrote into the first group whatever it was: into a
+ * hidden one the keyword never printed and stayed missing (R2-024).
+ */
+export function keywordSkillTarget(sections) {
+  const shown = (Array.isArray(sections) ? sections : []).filter((s) => s?.type === 'skills' && s.visible !== false);
+  for (const section of shown) {
+    const item = (Array.isArray(section.items) ? section.items : [])
+      .find((i) => i && typeof i === 'object' && i.visible !== false && !(i.hiddenFields || []).includes('skills'));
+    if (item) return { section, item };
+  }
+  return shown.length ? { section: shown[0] } : null;
+}
+
+/**
  * Checks whether a section title is ATS-friendly for its section type
  */
 export function isStandardAtsTitle(section) {

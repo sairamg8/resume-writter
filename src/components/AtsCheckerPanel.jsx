@@ -6,10 +6,12 @@ import {
 import {
   analyzeAtsScore,
   entriesInOneColumn,
+  keywordSkillTarget,
   standardizeSectionsForAts,
   generateAtsPlainText
 } from '@/utils/atsChecker';
 import { templateLabel } from '@/constants/templates';
+import { skillGroup } from '@/utils/skills';
 import { downloadBlob } from '@/utils/download';
 import { newId } from '@/utils/ids';
 
@@ -167,20 +169,16 @@ export default function AtsCheckerPanel({ resume, store }) {
     downloadBlob(new Blob([text], { type: 'text/plain;charset=utf-8' }), `${candidateName}_ATS.txt`);
   }
 
+  /** "+" on a missing keyword: into the first skill group that prints (keywordSkillTarget, R2-024). */
   function handleAddMissingSkill(keyword) {
     if (!keyword) return;
-    const sections = Array.isArray(resume?.sections) ? resume.sections : [];
-    const skillSec = sections.find(s => s.type === 'skills' && s.visible !== false);
+    const target = keywordSkillTarget(resume?.sections);
 
-    if (skillSec) {
-      const items = Array.isArray(skillSec.items) ? skillSec.items : [];
-      if (items.length > 0) {
-        const firstItem = items[0];
-        const existing = firstItem.skills ? `${firstItem.skills}, ${keyword}` : keyword;
-        store.updateItem(skillSec.id, firstItem.id, i => ({ ...i, skills: existing }));
-      } else {
-        store.addItem(skillSec.id, { id: newId('skill'), category: 'Core Skills', skills: keyword });
-      }
+    if (target?.item) {
+      const { skills } = skillGroup(target.item);
+      store.updateItem(target.section.id, target.item.id, i => ({ ...i, skills: skills ? `${skills}, ${keyword}` : keyword }));
+    } else if (target) {
+      store.addItem(target.section.id, { id: newId('skill'), category: 'Core Skills', skills: keyword });
     } else {
       store.addSection('skills', { id: newId('skill'), category: 'Core Skills', skills: keyword });
     }
