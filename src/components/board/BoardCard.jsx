@@ -5,7 +5,7 @@ import { deadlineState } from '@/utils/dates';
 import { openOnKey } from '@/utils/cardKeys';
 
 /**
- * A card's face — labels, title, and a meta row (due date coloured by how close it is, checklist
+ * A card's face — labels, its epic (boardView's `card.epic`), title, and a meta row (due date coloured by how close it is, checklist
  * progress). Presentational, so it doubles as the DragOverlay while a card is dragged (`overlay`).
  * Mirrors the Job Tracker's KanbanCard look so the two boards feel like one app.
  */
@@ -24,6 +24,11 @@ export function CardView({ card, overlay = false }) {
             <span key={i} className="h-1.5 w-7 rounded-full" style={{ backgroundColor: l.color }} title={l.name} />
           ))}
         </div>
+      )}
+      {card.epic && (
+        <span className="inline-block max-w-full truncate mb-1 text-[10px] font-semibold text-violet-700 bg-violet-50 rounded px-1.5 py-0.5" title={`Epic: ${card.epic.title}`}>
+          {card.epic.title}
+        </span>
       )}
       <p className="text-sm text-gray-800 leading-snug break-words">{card.title || 'Untitled'}</p>
       {(card.due || checklist.length > 0) && (

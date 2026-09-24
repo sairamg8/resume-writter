@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Plus, Trash2, X } from 'lucide-react';
+import { ArrowLeft, ListTodo, Plus, Trash2, X } from 'lucide-react';
 import {
   DndContext, DragOverlay, MouseSensor, TouchSensor, useSensor, useSensors, closestCorners,
 } from '@dnd-kit/core';
@@ -11,7 +11,8 @@ import { CardView } from '@/components/board/BoardCard';
 import { BOARD_DRAG_INSTRUCTIONS } from '@/utils/cardKeys';
 import { CardDetailSheet } from '@/components/board/CardDetailSheet';
 import { BoardStorageNotice } from '@/components/board/BoardStorageNotice';
-import { boardLists, dropTarget } from '@/utils/boardView';
+import { boardLists, boardSprint, dropTarget, hiddenDoneCount } from '@/utils/boardView';
+import { epicsOf } from '@/utils/boardQuery';
 
 /** The "Add list" column at the right edge of the board (and its own scroll-snap target on mobile). */
 function AddListColumn({ onAdd }) {
@@ -99,7 +100,11 @@ export function Board() {
     );
   }
 
-  const lists = boardLists(board);
+  // One time for the render and its drops: which done cards hideDoneAfterDays keeps off the board.
+  const now = Date.now();
+  const lists = boardLists(board, { now });
+  const sprint = boardSprint(board);
+  const hiddenDone = hiddenDoneCount(board, { now });
   const activeCard = active?.type === 'card' ? lists.flatMap((l) => l.cards).find((c) => c.id === active.id) : null;
   const activeList = active?.type === 'list' ? lists.find((l) => l.id === active.id) : null;
   // Found by id alone: a move made elsewhere (another tab) may have changed its column meanwhile.
@@ -112,7 +117,7 @@ export function Board() {
 
   function onDragEnd({ active: a, over }) {
     setActive(null);
-    const move = dropTarget(board, { id: a.id, type: a.data.current?.type }, over && { id: over.id, data: over.data.current });
+    const move = dropTarget(board, { id: a.id, type: a.data.current?.type }, over && { id: over.id, data: over.data.current }, { now });
     if (move?.kind === 'column') store.moveColumn(board.id, move.columnId, move.toIndex);
     if (move?.kind === 'issue') store.moveIssue(board.id, move.issueId, move.target);
   }
@@ -200,8 +205,15 @@ export function Board() {
             </button>
           )}
           <button
-            onClick={() => { if (confirm(`Delete "${board.title || 'this board'}"?`)) { store.deleteBoard(board.id); navigate('/boards'); } }}
-            className="ml-auto p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors shrink-0"
+            onClick={() => navigate(`/boards/${encodeURIComponent(board.id)}/backlog`)}
+            className="ml-auto flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors shrink-0"
+            title="Plan sprints in the backlog"
+          >
+            <ListTodo size={14} /> Backlog
+          </button>
+          <button
+            onClick={() => { if (confirm(`Delete "${board.title || 'this board'}"?`)) { navigate('/boards'); store.deleteBoard(board.id); } }}
+            className="p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors shrink-0"
             title="Delete board"
             aria-label="Delete board"
           >
@@ -211,6 +223,14 @@ export function Board() {
       </div>
 
       <BoardStorageNotice persistError={store.persistError} recovery={store.recovery} onDismissRecovery={store.dismissRecovery} className="px-3 sm:px-5 pt-3 shrink-0" />
+
+      {(sprint || board.mode === 'scrum' || hiddenDone > 0) && (
+        <p className="px-3 sm:px-5 pt-2 text-xs text-gray-500 shrink-0">
+          {sprint && <>Sprint: <span className="font-semibold text-gray-700">{sprint.name}</span>{sprint.endDate && <> · ends {sprint.endDate}</>}. New cards join it.</>}
+          {!sprint && board.mode === 'scrum' && <>No sprint is active, so every card is shown. Start one from the backlog.</>}
+          {hiddenDone > 0 && <> {hiddenDone} done card{hiddenDone === 1 ? ' is' : 's are'} hidden: resolved more than {board.hideDoneAfterDays} days ago.</>}
+        </p>
+      )}
 
       {/* Mobile list tabs — tap to scroll a column into view */}
       {lists.length > 0 && (
@@ -239,13 +259,14 @@ export function Board() {
                   key={list.id}
                   list={list}
                   onOpenCard={(cardId, listId) => setOpen({ cardId, listId })}
-                  onAddCard={(listId, title) => store.addIssue(board.id, { title, columnId: listId })}
+                  onAddCard={(listId, title) => store.addIssue(board.id, { title, columnId: listId, sprintId: sprint?.id ?? null })}
                   onRenameList={(title) => store.updateColumn(board.id, list.id, { title })}
                   onDeleteList={() => deleteList(list)}
                 />
               ))}
             </SortableContext>
-            <AddListColumn onAdd={(title) => store.addColumn(board.id, { title })} />
+            {/* At the end, where the button is: the store's default puts a new column before Done. */}
+            <AddListColumn onAdd={(title) => store.addColumn(board.id, { title, index: board.columns.length })} />
           </div>
         </div>
 
@@ -264,6 +285,7 @@ export function Board() {
         <CardDetailSheet
           card={openCard}
           listTitle={openList?.title}
+          epics={epicsOf(board).map((e) => ({ id: e.id, title: e.title }))}
           onClose={() => setOpen(null)}
           onChange={(patch) => changeCard(openCard.id, patch)}
           onDelete={() => { store.deleteIssue(board.id, openCard.id); setOpen(null); }}

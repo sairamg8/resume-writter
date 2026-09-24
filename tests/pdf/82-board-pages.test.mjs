@@ -165,6 +165,7 @@ async function mountBoard(path) {
     card: (title) => under(view.container).find((el) => el.tagName === 'DIV' && String(el.getAttribute('class')).includes('cursor-pointer') && el.textContent === title),
     click: (el) => view.act(() => dom.reactProps(el).onClick(ev)),
     type: (el, value) => view.act(() => dom.reactProps(el).onChange({ ...ev, target: { value } })),
+    change: (el, value) => view.act(() => dom.reactProps(el).onChange({ ...ev, target: { value } })),
   };
 }
 
@@ -273,5 +274,72 @@ it('the only list is never deleted (the store would refuse): the page says why; 
     delete globalThis.alert;
     delete globalThis.confirm;
     await page.view.unmount();
+  }
+});
+
+it('the board shows what it should: a WIP count, done cards past hideDoneAfterDays hidden and said so, a scrum board its active sprint', () => {
+  const day = 24 * 60 * 60 * 1000;
+  const done = (id, number, title, daysAgo) => issue(id, number, title, 'c3', { resolvedAt: Date.now() - daysAgo * day });
+  open([saved([project({
+    columns: [col('c1', 'To Do'), { ...col('c2', 'Doing', 'inprogress'), wipLimit: 1 }, col('c3', 'Done', 'done')],
+    issues: [...project().issues, issue('i6', 6, 'Stain the deck', 'c2'), done('i4', 4, 'Old chore', 30), done('i5', 5, 'Fresh chore', 1)],
+    hideDoneAfterDays: 14,
+  })])]);
+  let html = page('/boards/p1');
+  const columns = html.split('id="board-col-').slice(1).map((c) => text(`<${c}`));
+  assert.match(columns[1], /^ Doing 2\/1 /, 'the WIP count');
+  assert.match(html, /text-red-700 bg-red-100"[^>]*>2\/1/, 'over its limit: red');
+  assert.match(columns[2], /Fresh chore/);
+  assert.doesNotMatch(html, /Old chore/);
+  assert.match(text(html), /1 done card is hidden: resolved more than 14 days ago/);
+
+  store._resetBoardStoreForTest();
+  const sprints = [{ id: 's1', name: 'Sprint 1', goal: '', startDate: '2026-09-21', endDate: '2026-10-05', state: 'active' }];
+  open([saved([project({ mode: 'scrum', sprints, issues: project().issues.map((i) => (i.id === 'i2' ? { ...i, sprintId: 's1' } : i)) })])]);
+  html = text(page('/boards/p1'));
+  assert.match(html, /Sprint: Sprint 1 · ends 2026-10-05/);
+  assert.match(html, /Paint the fence/);
+  assert.doesNotMatch(html, /Fix the tap|Buy nails/, 'not in the sprint: off the board');
+  assert.ok(store.boardActions.addIssue('p1', { title: 'Sand the fence', columnId: 'c1', sprintId: 's1' }));
+  assert.match(text(page('/boards/p1')), /Sand the fence/);
+
+  store._resetBoardStoreForTest();
+  open([saved([project({ mode: 'scrum' })])]);
+  html = text(page('/boards/p1'));
+  assert.match(html, /No sprint is active, so every card is shown/);
+  assert.match(html, /Fix the tap.*Buy nails.*Paint the fence/);
+});
+
+it('epics: not cards on the board; a child card names its epic; the sheet sets a card\'s type and epic; a new list goes at the end', async () => {
+  open([saved([project({
+    issues: [
+      issue('e1', 9, 'Garden makeover', 'c1', { type: 'epic' }),
+      ...project().issues.map((i) => (i.id === 'i1' ? { ...i, epicId: 'e1' } : i)),
+    ],
+    nextNumber: 10,
+  })])]);
+  const html = page('/boards/p1');
+  const columns = html.split('id="board-col-').slice(1).map((c) => text(`<${c}`));
+  assert.match(columns[0], /^ To Do 2 Garden makeover Fix the tap .*Buy nails/, 'the epic is a chip on its child, not a card');
+  assert.match(html, /title="Epic: Garden makeover"/);
+
+  const view = await mountBoard('/boards/p1');
+  try {
+    view.click(view.card('Paint the fence'));
+    view.change(view.byLabel('Card epic'), 'e1');
+    view.change(view.byLabel('Card type'), 'bug');
+    const painted = boardNow().issues.find((i) => i.id === 'i2');
+    assert.deepEqual([painted.epicId, painted.type], ['e1', 'bug']);
+    assert.ok(![...view.byLabel('Card type').childNodes].some((o) => o.getAttribute('value') === 'epic'), 'an epic is made on the backlog page');
+    view.change(view.byLabel('Card epic'), '');
+    assert.equal(boardNow().issues.find((i) => i.id === 'i2').epicId, null);
+    view.click(view.byLabel('Close'));
+
+    view.click(view.button('Add list'));
+    view.change(view.byLabel('List title'), 'Waiting');
+    view.click(view.button('Add list'));
+    assert.deepEqual(boardNow().columns.map((c) => c.title), ['To Do', 'Doing', 'Done', 'Waiting'], 'where the button is: at the end');
+  } finally {
+    await view.view.unmount();
   }
 });
