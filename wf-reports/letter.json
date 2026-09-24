@@ -7,15 +7,16 @@
       "id": "R2-043",
       "outcome": "fixed",
       "commits": [
-        "0617247"
+        "0617247",
+        "28b15c6"
       ],
       "tests": [
         "tests/pdf/83-letter-signature-photo.test.mjs",
         "tests/unit/letter-generator-sentences.unit.mjs",
-        "tests/unit/cover-letter-generator.unit.mjs"
+        "tests/unit/cover-letter-generator.unit.mjs",
+        "tests/pdf/83-letter-old-placeholders.test.mjs"
       ],
-      "summary": "The generator writes no signature and no 'Candidate' / 'Professional' placeholder (the subject reads 'Application for <role>' with no name). Apply clears the letter's own Signature Name and Designation, so the signature follows the résumé's name and title as they print, including edits made after Apply, and a signature an earlier Apply stored stops pinning it.",
-      "remaining": "Letters saved by an earlier Apply still hold 'Candidate' until the user applies again or edits the field. These can't be told apart from a typed name, so there is no migration."
+      "summary": "The generator writes no signature and no 'Candidate' / 'Professional' placeholder (the subject reads 'Application for <role>' with no name). Apply clears the letter's own Signature Name and Designation, so the signature follows the résumé's name and title as they print, including edits made after Apply, and a signature an earlier Apply stored stops pinning it. Letters saved before the fix are cleaned once on load (data version 12, 28b15c6): a stored 'Candidate' signature name is cleared; 'Professional' is cleared where the old generator wrote it (next to 'Candidate', or when the body says 'as a Professional'); and the subject drops ' — Candidate'. A designation the user typed, and letters saved by this build, are left alone."
     },
     {
       "id": "R2-044",
@@ -104,5 +105,5 @@
     "fixedByReviewer": []
   },
   "baselineFailures": [],
-  "notes": "Assertions changed because the rows call the old behaviour a bug: cover-letter-generator.unit.mjs (the generator no longer returns signature fields; the body's tags now include <br>, but only as blank-line paragraphs; there are no 'Candidate' / 'Professional' placeholders) and 43-cover-letter-generator-escape (the preview's tag list includes <br>). tests/pdf/83-letter-signature-photo.test.mjs was committed with 0617247 but covers 90811f8, 8c8f99f and e0dfd2e too. Fixed at the owner's request, though no row filed it (ca99d05, test in tests/unit/letter-generator-sentences.unit.mjs): the generator wrote 'as a Engineer'. It now picks 'a' or 'an' by the title's first sound ('an Engineer', 'an IT Manager', 'a UX Designer', 'a University Lecturer'). Cosmetic: the Personal Info photo eye still says 'Hide photo from resume', although it now hides the photo from the letter too."
+  "notes": "Assertions changed because the rows call the old behaviour a bug: cover-letter-generator.unit.mjs (the generator no longer returns signature fields; the body's tags now include <br>, but only as blank-line paragraphs; there are no 'Candidate' / 'Professional' placeholders) and 43-cover-letter-generator-escape (the preview's tag list includes <br>). tests/pdf/83-letter-signature-photo.test.mjs was committed with 0617247 but covers 90811f8, 8c8f99f and e0dfd2e too. Fixed at the owner's request, though no row filed it (ca99d05, test in tests/unit/letter-generator-sentences.unit.mjs): the generator wrote 'as a Engineer'. It now picks 'a' or 'an' by the title's first sound ('an Engineer', 'an IT Manager', 'a UX Designer', 'a University Lecturer'). Cosmetic: the Personal Info photo eye still says 'Hide photo from resume', although it now hides the photo from the letter too. 28b15c6 bumps DATA_VERSION 11 → 12 (src/utils/dataVersion.js and tests/helpers.js) for a one-time letter migration. When this was pushed no other claude/wf-* branch touched those files; if another cluster also adds a v12 migration, the merge must renumber one of them."
 }
