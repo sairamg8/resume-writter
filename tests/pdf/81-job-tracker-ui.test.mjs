@@ -205,12 +205,34 @@ it('R2-156: the list sorts by a column header, and a third click returns to the 
   const { page } = await list();
   try {
     const order = () => page.all().filter((el) => el.tagName === 'TR').map((el) => el.textContent).filter((t) => /Acme|Beta/.test(t)).map((t) => (t.includes('Acme') ? 'Acme' : 'Beta'));
-    const header = page.all().find((el) => el.tagName === 'TH' && el.textContent.trim() === 'Company');
+    const header = page.all().find((el) => el.tagName === 'BUTTON' && el.parentNode.tagName === 'TH' && el.textContent.trim() === 'Company');
     page.fire(header, 'onClick');
     assert.deepEqual(order(), ['Acme', 'Beta']);
     page.fire(header, 'onClick');
     assert.deepEqual(order(), ['Beta', 'Acme']);
     assert.match(page.text(), /Applied/);
+  } finally {
+    await page.view.unmount();
+  }
+});
+
+it('the list\'s sort headers are buttons Tab reaches, and each header says how it sorts (aria-sort)', async () => {
+  const { page } = await list();
+  try {
+    const th = (label) => page.all().find((el) => el.tagName === 'TH' && el.textContent.trim() === label);
+    const button = (label) => [...th(label).childNodes].find((el) => el.tagName === 'BUTTON');
+    assert.ok(button('Company'), 'a native button in the header: Tab reaches it, Enter and Space press it');
+    assert.equal(button('Company').getAttribute('type'), 'button');
+    assert.equal(typeof page.props(th('Company')).onClick, 'undefined', 'the button sorts, not a click on the cell');
+    assert.equal(th('Company').getAttribute('aria-sort'), 'none');
+    page.fire(button('Company'), 'onClick');
+    assert.equal(th('Company').getAttribute('aria-sort'), 'ascending');
+    page.fire(button('Company'), 'onClick');
+    assert.equal(th('Company').getAttribute('aria-sort'), 'descending');
+    assert.equal(th('Role').getAttribute('aria-sort'), 'none');
+    page.fire(button('Company'), 'onClick');
+    assert.equal(th('Company').getAttribute('aria-sort'), 'none', 'the third press returns to the default order');
+    assert.equal(th('Tasks').getAttribute('aria-sort'), null, 'a column that does not sort says nothing');
   } finally {
     await page.view.unmount();
   }

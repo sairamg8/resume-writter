@@ -43,11 +43,18 @@ export function ListView({ jobs, resumes, onNavigate, onDelete }) {
             {cols.map(col => (
               <th
                 key={col.key}
-                onClick={() => toggleSort(col.key)}
-                className="text-left px-4 py-3 text-xs font-semibold text-gray-500 cursor-pointer hover:text-gray-800 select-none whitespace-nowrap"
+                aria-sort={sort.key !== col.key ? 'none' : sort.dir === 'asc' ? 'ascending' : 'descending'}
+                className="text-left px-4 py-3 text-xs font-semibold text-gray-500 whitespace-nowrap"
               >
-                {col.label}
-                <SortIcon active={sort.key === col.key} dir={sort.dir} />
+                {/* A button, not a click on the cell: Tab never reached a header, so the list could not be sorted from the keyboard. */}
+                <button
+                  type="button"
+                  onClick={() => toggleSort(col.key)}
+                  className="font-semibold cursor-pointer hover:text-gray-800 select-none rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                >
+                  {col.label}
+                  <SortIcon active={sort.key === col.key} dir={sort.dir} />
+                </button>
               </th>
             ))}
             <th className="px-4 py-3 text-xs font-semibold text-gray-500 whitespace-nowrap">Tasks</th>
