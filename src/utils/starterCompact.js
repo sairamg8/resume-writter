@@ -1,8 +1,9 @@
 // The Compact one-pager starter (T9): the long career the Compact template is built for — five roles,
 // six skill groups, four certifications, two awards, three languages — on one page. Its short sections
 // store no Grids, so they print in Compact's grid (TEMPLATE_SECTION_DEFAULTS.compact) and in each other
-// template's own layout after a switch. A fictional engineering leader; contact details use reserved
-// example domains and a 555-01xx number.
+// template's own layout after a switch. Its job titles carry no comma: OpenResume reads a title such as
+// "Engineering Manager, Payments" as the company; without one it reads every job here exact. A fictional
+// engineering leader; contact details use reserved example domains and a 555-01xx number.
 
 /** An experience entry of the starter's: a role, its employer, place and dates, and its bullets. */
 const job = (id, role, company, location, startDate, endDate, bullets) => ({
@@ -37,11 +38,11 @@ export const COMPACT_STARTER = {
           'Cut cloud spend by 34% ($4.1M a year) with capacity planning, spot fleets and a cost dashboard per team.',
           'Took deploys from weekly release trains to 300+ a day behind progressive delivery and automated rollback.',
         ]),
-        job('exp-2', 'Senior Engineering Manager, Infrastructure', 'Brightwater Health', 'Chicago, IL', '2017-08', '2021-03', [
+        job('exp-2', 'Senior Engineering Manager', 'Brightwater Health', 'Chicago, IL', '2017-08', '2021-03', [
           'Built the Kubernetes platform that moved 120 services off hand-managed VMs in 18 months.',
           'Set up the on-call and incident review practice; availability rose from 99.5% to 99.95%.',
         ]),
-        job('exp-3', 'Engineering Manager, Payments', 'Quillfield Commerce', 'Milwaukee, WI', '2014-06', '2017-07', [
+        job('exp-3', 'Engineering Manager', 'Quillfield Commerce', 'Milwaukee, WI', '2014-06', '2017-07', [
           'Managed 12 engineers through a PCI DSS Level 1 certification and a card-processor migration.',
           'Hired and grew four engineers into tech leads; two now manage teams of their own.',
         ]),
