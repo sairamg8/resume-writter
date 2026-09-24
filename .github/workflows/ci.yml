@@ -20,7 +20,7 @@ permissions:
 
 jobs:
   suite:
-    name: suite (${{ matrix.shard }}/4)
+    name: suite (${{ matrix.shard }}/6)
     runs-on: ubuntu-latest
     # The PDF tests read text through Poppler and MuPDF, and some measure what Poppler 26.01 does
     # (pdftotext -raw word gaps): run them on the same Ubuntu release the project is developed on.
@@ -29,7 +29,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4]
+        shard: [1, 2, 3, 4, 5, 6]
     defaults:
       run:
         shell: bash
@@ -46,10 +46,10 @@ jobs:
           node-version: 22
       - name: Install
         run: corepack enable && yarn install --immutable
-      - name: node --test (shard ${{ matrix.shard }}/4)
+      - name: node --test (shard ${{ matrix.shard }}/6)
         run: |
           set -o pipefail
-          node --test --test-shard=${{ matrix.shard }}/4 --test-concurrency=4 \
+          node --test --test-shard=${{ matrix.shard }}/6 --test-concurrency=4 \
             "tests/pdf/**/*.test.mjs" "tests/unit/*.unit.mjs" 2>&1 | tee suite.log
           echo "suite exit $?"
       - name: Summary
@@ -76,10 +76,16 @@ jobs:
           path: dist
           retention-days: 3
 
+  # Split across machines like the suite: one browser suite on one machine was the run's longest job.
   playwright:
+    name: playwright (${{ matrix.shard }}/3)
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -94,11 +100,11 @@ jobs:
       - name: Chromium
         run: ./node_modules/.bin/playwright install --with-deps chromium
       - name: Playwright
-        run: ./node_modules/.bin/playwright test
+        run: ./node_modules/.bin/playwright test --shard=${{ matrix.shard }}/3
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
-          name: playwright-report
+          name: playwright-report-${{ matrix.shard }}
           path: test-results
           retention-days: 3
 
@@ -117,9 +123,15 @@ jobs:
 
   # Cypress end to end against the e2e build (docs/knowledge/08-testing.md: its fake sign-in seam).
   # It was never run by the gate before (R2-152), so a spec that goes stale now shows here.
+  # Cypress has no sharding of its own: each machine runs every 4th spec file, in name order.
   cypress:
+    name: cypress (${{ matrix.shard }}/4)
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -129,11 +141,16 @@ jobs:
         run: corepack enable && yarn install --immutable
       - name: Cypress binary
         run: ./node_modules/.bin/cypress install && ./node_modules/.bin/cypress verify
-      - name: Cypress
-        run: yarn test:e2e
+      - name: Cypress (shard ${{ matrix.shard }}/4)
+        run: |
+          SPECS=$(find cypress/e2e -name '*.cy.js' | sort | awk -v n=4 -v k=${{ matrix.shard }} '(NR - 1) % n == k - 1' | paste -sd, -)
+          echo "specs: $SPECS"
+          ./node_modules/.bin/vite build --mode e2e
+          ./node_modules/.bin/start-server-and-test "./node_modules/.bin/vite preview --host 127.0.0.1 --port 4173 --strictPort" \
+            http://127.0.0.1:4173 "./node_modules/.bin/cypress run --e2e --spec $SPECS"
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
-          name: cypress-screenshots
+          name: cypress-screenshots-${{ matrix.shard }}
           path: cypress/screenshots
           retention-days: 3
