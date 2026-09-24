@@ -145,13 +145,15 @@
       "outcome": "fixed",
       "commits": [
         "addbb40",
-        "79afdf1"
+        "79afdf1",
+        "2d095c1"
       ],
       "tests": [
-        "tests/pdf/81-job-tracker-ui.test.mjs"
+        "tests/pdf/81-job-tracker-ui.test.mjs",
+        "tests/pdf/81-job-tracker-page.test.mjs"
       ],
-      "summary": "The kanban (columns, tasks, notes text, open, delete, keys, sensors), list (open button, sorting), status history, Tasks tab and the job page's tabs are tested on the real components over fake-dom.",
-      "remaining": "Pipeline, InterviewStageSelector, TodoItem and JobTracker's filters have no fake-dom test of their own yet (Pipeline and Field partly via 68-job-overview)."
+      "summary": "The job tracker's UI is tested on the real components over fake-dom: kanban (columns, tasks, open, delete, keys, sensors), list (open, sorting), status history, Tasks tab, the job page's tabs, and the tracker page's search, status filter, delete-with-confirm and CSV export, a to-do's tick/delete/rename, and the interview-stage picker.",
+      "remaining": "None in this cluster: Pipeline and the Tasks tab's drag are covered by the boards cluster's tests/pdf/82-job-pipeline-tasks.test.mjs (d164686)."
     }
   ],
   "review": {
@@ -165,5 +167,5 @@
     ]
   },
   "baselineFailures": [],
-  "notes": "src/pages/Board.jsx and src/pages/Boards.jsx cannot render at this base: they read v1 `board.lists` / `list.cards` while useBoardStore now holds v2 boards (columns, issues) — for the boards cluster. Hence the board-page instruction test checks Board.jsx's source. Touched src/pages/Board.jsx (one DndContext prop) and src/components/board/BoardCard.jsx (onKeyDown) for R2-039 — small merge-conflict risk with the boards cluster. Beyond the rows: ListView's sort headers were not keyboard-operable (<th onClick>); fixed in b34b16b — each header is a button with aria-sort, tested in tests/pdf/81-job-tracker-ui.test.mjs. Commit trailers use this session's URL (session_01TxTRPE1CXJu54unwVCNutZ) rather than the one in the protocol."
+  "notes": "src/pages/Board.jsx and Boards.jsx cannot render at this base (v1 `board.lists` on a v2 store); claude/wf-boards fixes that (b181e7c). Hence the board-page instruction test checks Board.jsx's source. Checked: claude/wf-jobs and claude/wf-boards merge with no conflict, and 81-job-tracker-ui, 81-job-tracker-page's neighbours, 82-job-pipeline-tasks and 82-board-pages all pass (29/29) on the merge. Touched src/pages/Board.jsx (one DndContext prop) and src/components/board/BoardCard.jsx (onKeyDown) for R2-039 — small merge-conflict risk with the boards cluster. Beyond the rows: ListView's sort headers were not keyboard-operable (<th onClick>); fixed in b34b16b — each header is a button with aria-sort, tested in tests/pdf/81-job-tracker-ui.test.mjs. Commit trailers use this session's URL (session_01TxTRPE1CXJu54unwVCNutZ) rather than the one in the protocol."
 }
