@@ -5,7 +5,7 @@ import { isText, storedText } from './storedText.js';
 import { entries, flattened } from './jsonResumeText.js';
 import { customEntry, SECTION_KEYS } from './jsonResumeSections.js';
 import { CONTACT_FIELDS } from './contacts.js';
-import { templateId } from '../constants/templates.js';
+import { headerTemplateId, templateId } from '../constants/templates.js';
 import { dateFormatOf } from './dates.js';
 
 const isRecord = (v) => Boolean(v) && typeof v === 'object' && !Array.isArray(v);
@@ -106,10 +106,13 @@ export function cpwtResumeToJsonResume(resume) {
     // app no longer offers exports as the Classic it was printing as, not as that dead id.
     // The sections' layout rides beside it (above; read back by jsonResumeImport.js), and the Date
     // format, which changes what every date prints as: without it a résumé "As entered" came back
-    // in the starter's "Jan 2024" form.
+    // in the starter's "Jan 2024" form. So does the Sidebar's Layout "Single · ATS-safe", which
+    // decides the page itself: without it the import reopened the two columns a portal may
+    // interleave. Written only where it prints (headerTemplateId).
     meta: {
       template: templateId(resume.template),
       dateFormat: dateFormatOf(resume.settings),
+      ...(headerTemplateId(resume.template, resume.settings) !== templateId(resume.template) ? { layout: 'single' } : {}),
       sections: layout,
     },
   };

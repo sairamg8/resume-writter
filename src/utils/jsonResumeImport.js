@@ -142,11 +142,13 @@ export function jsonResumeToCpwtResume(jsonResume, customId) {
    * Its starter settings, not always Classic's: a Modern file would otherwise open with Classic's
    * ruled headings under Modern's banner. That is the whole of what the template brings here —
    * JSON Resume carries no design settings of its own, so the rest of an exported résumé's design
-   * (its colours, fonts and spacing) is still not in the file to restore.
+   * (its colours, fonts and spacing) is still not in the file to restore. The Sidebar's Layout is:
+   * the export writes `meta.layout: 'single'` for Single · ATS-safe, a page of its own.
    */
   const template = templateId(jsonResume?.meta?.template);
   // The Date format the export wrote (one this build knows), over the starter's.
   const dateFormat = jsonResume?.meta?.dateFormat;
+  const single = template === 'sidebar' && jsonResume?.meta?.layout === 'single';
 
   return {
     id,
@@ -154,7 +156,7 @@ export function jsonResumeToCpwtResume(jsonResume, customId) {
     updatedAt: Date.now(),
     dataVersion: DATA_VERSION, // built now, from a file with no app history: no migration applies
     template,
-    settings: { ...getStarterSettings(template), ...(DATE_FORMATS.includes(dateFormat) ? { dateFormat } : {}) },
+    settings: { ...getStarterSettings(template), ...(DATE_FORMATS.includes(dateFormat) ? { dateFormat } : {}), ...(single ? { sidebarSingleColumn: true } : {}) },
     personal,
     sections: sectionsOf(jsonResume),
     coverLetter: { ...BASE_COVER_LETTER },
