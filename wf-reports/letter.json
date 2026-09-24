@@ -3,31 +3,106 @@
   "branch": "claude/wf-letter",
   "base": "9c3589a",
   "rows": [
-    { "id": "R2-043", "outcome": "fixed", "commits": ["0617247"],
-      "tests": ["tests/pdf/83-letter-signature-photo.test.mjs", "tests/unit/letter-generator-sentences.unit.mjs", "tests/unit/cover-letter-generator.unit.mjs"],
+    {
+      "id": "R2-043",
+      "outcome": "fixed",
+      "commits": [
+        "0617247"
+      ],
+      "tests": [
+        "tests/pdf/83-letter-signature-photo.test.mjs",
+        "tests/unit/letter-generator-sentences.unit.mjs",
+        "tests/unit/cover-letter-generator.unit.mjs"
+      ],
       "summary": "The generator writes no signature and no 'Candidate' / 'Professional' placeholder (the subject reads 'Application for <role>' with no name). Apply clears the letter's own Signature Name and Designation, so the signature follows the résumé's name and title as they print, including edits made after Apply, and a signature an earlier Apply stored stops pinning it.",
-      "remaining": "Letters saved by an earlier Apply still hold 'Candidate' until the user applies again or edits the field. These can't be told apart from a typed name, so there is no migration." },
-    { "id": "R2-044", "outcome": "fixed", "commits": ["e0dfd2e"], "tests": ["tests/pdf/83-letter-signature-photo.test.mjs"],
+      "remaining": "Letters saved by an earlier Apply still hold 'Candidate' until the user applies again or edits the field. These can't be told apart from a typed name, so there is no migration."
+    },
+    {
+      "id": "R2-044",
+      "outcome": "fixed",
+      "commits": [
+        "e0dfd2e"
+      ],
+      "tests": [
+        "tests/pdf/83-letter-signature-photo.test.mjs"
+      ],
       "summary": "A Signature Name or Designation that is blank ('' or only spaces) prints the résumé's name or title (letterSignature), matching the panel's placeholder and the untouched field, in both PDF and Word. A signature the user typed still prints as typed.",
-      "remaining": "By design, a deliberately empty signature name can no longer print while the résumé has a name." },
-    { "id": "R2-092", "outcome": "fixed", "commits": ["8c8f99f"], "tests": ["tests/pdf/83-letter-signature-photo.test.mjs"],
-      "summary": "A résumé photo hidden under Personal Info → Photo no longer prints on the letter in any template (letterResumePhoto). The panel no longer shows it faded or says 'Using resume photo'; it says 'Résumé photo hidden — upload one for the letter'. The letter's own photo still prints." },
-    { "id": "R2-103", "outcome": "fixed", "commits": ["0617247"], "tests": ["tests/unit/letter-generator-sentences.unit.mjs"],
-      "summary": "The generator cites the first job that has a role or a company, and builds a clause from what is filled in ('as Lead at Acme', 'as Lead', 'at Acme', or none). A blank or half-filled job or an empty résumé no longer prints 'as  at Acme', 'at ,', 'at prior roles' or 'the  role', in any archetype." },
-    { "id": "R2-130", "outcome": "fixed", "commits": ["0617247"], "tests": ["tests/pdf/83-letter-signature-photo.test.mjs", "tests/unit/letter-generator-sentences.unit.mjs", "tests/pdf/43-cover-letter-generator-escape.test.mjs"],
-      "summary": "Generated paragraphs are separated by the editor's blank line (<p><br></p>), so the PDF and Word print a blank line between the salutation and each paragraph. The modal's Live Letter Preview no longer adds its own spacing (space-y-2), so it shows the same thing." },
-    { "id": "R2-134", "outcome": "fixed", "commits": ["90811f8"], "tests": ["tests/pdf/83-letter-signature-photo.test.mjs"],
-      "summary": "The empty-letter preview hint no longer signs off 'Best regards, <name>'. The only sign-off in the preview is the closing and signature that Export PDF prints." },
-    { "id": "R2-068", "outcome": "already-fixed", "commits": ["21d64d1"], "tests": ["tests/pdf/69-word-spacing.test.mjs"],
-      "summary": "Fixed by R2-062 (21d64d1). renderCoverLetterDocx builds through buildDocument, which applies wordMargins(settings). The letter's body and closing use Line Height (lineSpacing). 69-word-spacing checks the letter's margins on every template and its line height at 1.2, 1.5 and 2, and passes." },
-    { "id": "R2-133", "outcome": "partial", "commits": ["b7a5e21"], "tests": ["tests/pdf/83-templates-ui-leftovers.test.mjs"],
+      "remaining": "By design, a deliberately empty signature name can no longer print while the résumé has a name."
+    },
+    {
+      "id": "R2-092",
+      "outcome": "fixed",
+      "commits": [
+        "8c8f99f"
+      ],
+      "tests": [
+        "tests/pdf/83-letter-signature-photo.test.mjs"
+      ],
+      "summary": "A résumé photo hidden under Personal Info → Photo no longer prints on the letter in any template (letterResumePhoto). The panel no longer shows it faded or says 'Using resume photo'; it says 'Résumé photo hidden — upload one for the letter'. The letter's own photo still prints."
+    },
+    {
+      "id": "R2-103",
+      "outcome": "fixed",
+      "commits": [
+        "0617247"
+      ],
+      "tests": [
+        "tests/unit/letter-generator-sentences.unit.mjs"
+      ],
+      "summary": "The generator cites the first job that has a role or a company, and builds a clause from what is filled in ('as Lead at Acme', 'as Lead', 'at Acme', or none). A blank or half-filled job or an empty résumé no longer prints 'as  at Acme', 'at ,', 'at prior roles' or 'the  role', in any archetype."
+    },
+    {
+      "id": "R2-130",
+      "outcome": "fixed",
+      "commits": [
+        "0617247"
+      ],
+      "tests": [
+        "tests/pdf/83-letter-signature-photo.test.mjs",
+        "tests/unit/letter-generator-sentences.unit.mjs",
+        "tests/pdf/43-cover-letter-generator-escape.test.mjs"
+      ],
+      "summary": "Generated paragraphs are separated by the editor's blank line (<p><br></p>), so the PDF and Word print a blank line between the salutation and each paragraph. The modal's Live Letter Preview no longer adds its own spacing (space-y-2), so it shows the same thing."
+    },
+    {
+      "id": "R2-134",
+      "outcome": "fixed",
+      "commits": [
+        "90811f8"
+      ],
+      "tests": [
+        "tests/pdf/83-letter-signature-photo.test.mjs"
+      ],
+      "summary": "The empty-letter preview hint no longer signs off 'Best regards, <name>'. The only sign-off in the preview is the closing and signature that Export PDF prints."
+    },
+    {
+      "id": "R2-068",
+      "outcome": "already-fixed",
+      "commits": [
+        "21d64d1"
+      ],
+      "tests": [
+        "tests/pdf/69-word-spacing.test.mjs"
+      ],
+      "summary": "Fixed by R2-062 (21d64d1). renderCoverLetterDocx builds through buildDocument, which applies wordMargins(settings). The letter's body and closing use Line Height (lineSpacing). 69-word-spacing checks the letter's margins on every template and its line height at 1.2, 1.5 and 2, and passes."
+    },
+    {
+      "id": "R2-133",
+      "outcome": "partial",
+      "commits": [
+        "b7a5e21"
+      ],
+      "tests": [
+        "tests/pdf/83-templates-ui-leftovers.test.mjs"
+      ],
       "summary": "Of the four audit leftovers (templates-ui-bugs.md, 'lower value'): the dashboard card now names its template with templateLabel(), so an unknown id reads 'Classic' as it opens; Export Word has a tooltip saying the .docx has no photo and the résumé prints without its banner or coloured column; and the starter modal's 'ATS-optimized' claim is obsolete, because Modern is now atsTier 'good' and atsRating('modern').safe is true.",
-      "remaining": "Dashboard thumbnails are still identical: the mock is drawn from the accent colour alone and every creation path writes #374151. Making the thumbnail follow the template is a design job." }
+      "remaining": "Dashboard thumbnails are still identical: the mock is drawn from the accent colour alone and every creation path writes #374151. Making the thumbnail follow the template is a design job."
+    }
   ],
   "review": {
     "issues": [],
     "fixedByReviewer": []
   },
   "baselineFailures": [],
-  "notes": "Assertions changed because the rows call the old behaviour a bug: cover-letter-generator.unit.mjs (the generator no longer returns signature fields; the body's tags now include <br>, but only as blank-line paragraphs; there are no 'Candidate' / 'Professional' placeholders) and 43-cover-letter-generator-escape (the preview's tag list includes <br>). tests/pdf/83-letter-signature-photo.test.mjs was committed with 0617247 but covers 90811f8, 8c8f99f and e0dfd2e too. Pre-existing issue not filed by any row: the generator writes 'as a Engineer' for a title that starts with a vowel. Cosmetic: the Personal Info photo eye still says 'Hide photo from resume', although it now hides the photo from the letter too."
+  "notes": "Assertions changed because the rows call the old behaviour a bug: cover-letter-generator.unit.mjs (the generator no longer returns signature fields; the body's tags now include <br>, but only as blank-line paragraphs; there are no 'Candidate' / 'Professional' placeholders) and 43-cover-letter-generator-escape (the preview's tag list includes <br>). tests/pdf/83-letter-signature-photo.test.mjs was committed with 0617247 but covers 90811f8, 8c8f99f and e0dfd2e too. Fixed at the owner's request, though no row filed it (ca99d05, test in tests/unit/letter-generator-sentences.unit.mjs): the generator wrote 'as a Engineer'. It now picks 'a' or 'an' by the title's first sound ('an Engineer', 'an IT Manager', 'a UX Designer', 'a University Lecturer'). Cosmetic: the Personal Info photo eye still says 'Hide photo from resume', although it now hides the photo from the letter too."
 }
