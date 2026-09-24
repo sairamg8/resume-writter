@@ -1,7 +1,7 @@
 import { BorderStyle, Paragraph, ShadingType } from 'docx';
 import {
   accent2Hex, bold, normal, linked, sectionHeading, bulletPoint, descriptionToParagraphs, dateRightPara, centredIf, eighths,
-  gapPara, lineSpacing, twips,
+  gapPara, inlineGap, lineSpacing, twips,
 } from '@/utils/wordExportUtils';
 import { sectionLook } from '@/utils/wordExportLook';
 import { headingBorderExtraPt, inSidebarColumn, templateId, upperSectionTitles } from '@/constants/templates';
@@ -9,6 +9,7 @@ import { solid } from '@/templates/pdf/shared/pdfColors';
 import { sectionHeadingLook } from '@/templates/pdf/shared/sectionHeadingLook';
 import { resolveTemplateSettings } from '@/templates/pdf/shared/templateSettings';
 import { getDateColor, getEffectiveSpacing } from '@/templates/pdf/shared/PdfSections';
+import { fieldGap } from '@/templates/pdf/shared/PdfItemHeader';
 import { hasRichText } from '@/utils/richText';
 import { dateRange, formatDate, presentLabel } from '@/utils/dates';
 import { skillCategory, skillGroup, skillSeparator } from '@/utils/skills';
@@ -77,8 +78,8 @@ function entries(section, look, build) {
  */
 const place = (text, look) => (text ? { text, color: look.ink.place, size: look.place } : null);
 
-/** An entry's title line (dateRightPara) with its `date` in `dateHex`, at the look's right tab. */
-const titleLine = (left, date, dateHex, centered, look, where = null) => dateRightPara(left, date, { color: dateHex, centered, size: look.date, place: where, tab: look.tab });
+/** An entry's title line (dateRightPara) with its `date` in `dateHex`, at the look's right tab; `under` the line under it. */
+const titleLine = (left, date, dateHex, centered, look, where = null, under = []) => dateRightPara(left, date, { color: dateHex, centered, size: look.date, place: where, tab: look.tab, under });
 
 /**
  * An entry's first field, bold in the Text colour at Entry Header, and its second in the PDF's
@@ -86,6 +87,24 @@ const titleLine = (left, date, dateHex, centered, look, where = null) => dateRig
  */
 const first = (text, look) => text && bold(text, { size: look.entry, color: look.ink.text });
 const second = (text, look, color = look.ink.second, size = look.sub) => normal(text, { size, color });
+
+/**
+ * The header of an entry with a Title (Section Options → Title, `look.title`; R2-070) — a job, a
+ * school, a volunteer role, a custom entry — laid out as the PDF's ItemHeader lays it out: "Stacked"
+ * the first field with the date and the second on the line under it, with the location; "Inline"
+ * "first — second" with the date; "Side by side" both with the date, a field's gap apart (centred,
+ * joined as Inline, as the PDF centres them). Under a one-line title the location has a line of its
+ * own (ATS-1). Word printed every entry Inline.
+ */
+function header(primary, secondary, date, dateHex, centered, look, where) {
+  const lead = [first(primary, look)];
+  if (secondary && look.title === 'stacked') return titleLine(lead, date, dateHex, centered, look, where, [second(secondary, look)]);
+  // Side by side: ItemHeader's 6 pt between the two, the Timeline's field gap.
+  const apart = primary && look.title === 'sidebyside' && !centered;
+  const gap = apart ? [inlineGap(look.template === 'timeline' ? fieldGap(look.base / 2) : 6, look.sub)] : [];
+  const rest = secondary ? [...gap, second(`${primary && !apart ? ' — ' : ''}${secondary}`, look)] : [];
+  return titleLine([...lead, ...rest], date, dateHex, centered, look, where);
+}
 
 /**
  * Description + legacy bullets of an entry, centred in a centred section, at Design → Line Height,
@@ -109,10 +128,7 @@ export function buildExperience(section, accentHex, settings, centered, dateHex,
     const location = s.showLocation !== false ? field(item, 'location') : '';
     const end = field(item, 'endDate') && !item.current ? field(item, 'endDate') : '';
     const dates = dateRange(field(item, 'startDate'), item.current && !(item.hiddenFields || []).includes('endDate') ? presentLabel(settings) : end, settings);
-    return [titleLine([
-      first(primary, look),
-      ...(secondary ? [second(`${primary ? ' — ' : ''}${secondary}`, look)] : []),
-    ], s.showDates !== false ? dates : '', dateHex, centered, look, place(location, look)), ...body(item, centered, look)];
+    return [header(primary, secondary, s.showDates !== false ? dates : '', dateHex, centered, look, place(location, look)), ...body(item, centered, look)];
   })];
 }
 
@@ -121,11 +137,9 @@ export function buildEducation(section, accentHex, settings, centered, dateHex, 
   return [sectionHeading(section.title, accentHex, centered, section.heading), ...entries(section, look, (item) => {
     const degree = [item.degree, item.fieldOfStudy].filter(Boolean).join(', ');
     const location = s.showLocation !== false ? item.location : '';
-    return [titleLine([
-      first(item.institution || degree, look),
-      ...(item.institution && degree ? [second(` — ${degree}`, look)] : []),
-      ...(item.gpa ? [second(` · GPA: ${item.gpa}`, look)] : []),
-    ], s.showDates !== false ? dateRange(item.startDate, item.endDate, settings) : '', dateHex, centered, look, place(location, look)), ...body(item, centered, look)];
+    // The degree and GPA are the second field, the PDF's sub line; without a school the degree leads.
+    const sub = [item.institution ? degree : '', item.gpa ? `GPA: ${item.gpa}` : ''].filter(Boolean).join(' · ');
+    return [header(item.institution || degree, sub, s.showDates !== false ? dateRange(item.startDate, item.endDate, settings) : '', dateHex, centered, look, place(location, look)), ...body(item, centered, look)];
   })];
 }
 
@@ -212,10 +226,7 @@ export function buildVolunteering(section, accentHex, settings, centered, dateHe
   const s = section.settings || {};
   return [sectionHeading(section.title, accentHex, centered, section.heading), ...entries(section, look, (item) => {
     const location = s.showLocation !== false ? item.location : '';
-    return [titleLine([
-      first(item.role || item.org, look),
-      ...(item.role && item.org ? [second(` — ${item.org}`, look)] : []),
-    ], s.showDates !== false ? dateRange(item.startDate, item.endDate, settings) : '', dateHex, centered, look, place(location, look)), ...body(item, centered, look)];
+    return [header(item.role || item.org, item.role ? item.org : '', s.showDates !== false ? dateRange(item.startDate, item.endDate, settings) : '', dateHex, centered, look, place(location, look)), ...body(item, centered, look)];
   })];
 }
 
@@ -250,10 +261,7 @@ export function buildInterests(section, accentHex, settings, centered, dateHex, 
 export function buildCustom(section, accentHex, settings, centered, dateHex, look) {
   const s = section.settings || {};
   return [sectionHeading(section.title, accentHex, centered, section.heading), ...entries(section, look, (item) => [
-    titleLine([
-      first(item.title, look),
-      ...(item.subtitle ? [second(`${item.title ? ' — ' : ''}${item.subtitle}`, look)] : []),
-    ], s.showDates !== false ? formatDate(item.date || '', settings) : '', dateHex, centered, look, place(item.location, look)),
+    header(item.title, item.subtitle, s.showDates !== false ? formatDate(item.date || '', settings) : '', dateHex, centered, look, place(item.location, look)),
     ...body(item, centered, look),
   ])];
 }

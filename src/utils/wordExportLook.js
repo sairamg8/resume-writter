@@ -78,6 +78,8 @@ function entrySizes(section, s, tid, side) {
  * - `line` — Design → Line Height;
  * - `gap` — the space between two entries, pt: Design → Between Items scaled by the section's
  *   Spacing preset, or its own Item gap (getEffectiveSpacing, R2-062);
+ * - `title` — Section Options → Title: 'stacked' (unset), 'inline' or 'sidebyside'; the Sidebar's
+ *   side column offers none and stacks its entries (R2-070);
  * - `side` — the section is in the Sidebar's side column; `template` — the template's id;
  * - `ink` — the entries' colours (entryInk).
  */
@@ -88,6 +90,7 @@ export function sectionLook(section, settings, s, template, side) {
     tab: wordContentTwips(settings),
     line: s.lineHeightValue,
     gap: getEffectiveSpacing(section, s).itemGap,
+    title: (!side && section.settings?.titleStyle) || 'stacked',
     side,
     template: tid,
     ink: entryInk(s, tid),
