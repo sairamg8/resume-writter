@@ -74,6 +74,17 @@ test('Show dates off on Education leaves Experience\'s dates alone, and the reve
   assert.equal(item(sample({ exp: { showDates: false } }), 'education', 'edu_dates').status, 'pass');
 });
 
+test('an empty section with Show dates off is not named as why a role lacks its dates (review of R2-020)', () => {
+  const r = sample();
+  delete r.sections[0].items[1].endDate; // Initech: no end date typed in
+  r.sections.splice(1, 0, { id: 'exp2', type: 'experience', title: 'Internships', visible: true, settings: { showDates: false }, items: [] });
+  const got = item(r, 'experience', 'exp_dates');
+  assert.equal(got.status, 'warn');
+  assert.equal(got.text, 'Missing employment dates on some roles', `${got.text} / ${got.detail}`);
+  r.sections[1].items = [{ id: 'i1', company: 'Hooli', role: 'Intern', startDate: '2016-06', endDate: '2016-09' }];
+  assert.match(item(r, 'experience', 'exp_dates').detail, /"Internships"/, 'a section that prints a role without its dates is named');
+});
+
 // ── 2. The summary as it prints ──────────────────────────────────────────────────────────────
 
 test('a cleared summary editor prints nothing and scores as no summary', () => {

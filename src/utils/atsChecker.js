@@ -780,8 +780,9 @@ export function analyzeAtsScore(resume, jobDescriptionText = '') {
   let expPts = 0;
   const expSections = visibleSections.filter(s => s.type === 'experience');
   const allExpItems = expSections.flatMap(s => shownItems(s, currentTemplate));
-  // "…" names of the sections whose Show dates is off: their entries print no dates (R2-020).
-  const datesOffTitles = (secs) => secs.filter(s => datesOff(s, currentTemplate))
+  // "…" names of the sections whose Show dates is off and that print an entry: those entries print
+  // no dates (R2-020). An empty one is not why a role lacks its dates.
+  const datesOffTitles = (secs) => secs.filter(s => datesOff(s, currentTemplate) && shownItems(s, currentTemplate).length)
     .map(s => `"${String(s.title || '').trim() || ATS_STANDARD_SECTIONS[s.type]?.canonical}"`).join(', ');
 
   if (allExpItems.length === 0) {
