@@ -1,14 +1,14 @@
 // The Word résumé's header: name, job title, contact line and summary (buildPersonalSection), in the
 // colours, alignment and layout the PDF's header prints them in.
 import { BorderStyle, LineRuleType, Paragraph, TextRun } from 'docx';
-import { accent2Hex, descriptionToParagraphs, centredIf, eighths, inlineGap, spacer } from '@/utils/wordExportUtils';
+import { accent2Hex, bold, descriptionToParagraphs, centredIf, eighths, inlineGap, normal, spacer } from '@/utils/wordExportUtils';
 import { contactRows } from '@/utils/wordExportContacts';
 import { buildSectionTitle } from '@/utils/wordExportBuilders';
 import { contactItems } from '@/utils/contacts';
 import { hasHeaderControls, headerBorderOn, templateId } from '@/constants/templates';
 import { solid, textShades } from '@/templates/pdf/shared/pdfColors';
 import { headerColorsOnPage } from '@/templates/pdf/shared/headerColors';
-import { headerRule, headerTitleSize, inlineLayout } from '@/templates/pdf/shared/letterhead';
+import { headerRule, headerTitleSize, inlineLayout, letterheadLook } from '@/templates/pdf/shared/letterhead';
 import { HEADER_BORDER_PAD_PT } from '@/templates/pdf/shared/pdfUnits';
 import { setGapPt } from '@/constants/headerSpacing';
 import { resolveTemplateSettings } from '@/templates/pdf/shared/templateSettings';
@@ -58,7 +58,10 @@ export function buildPersonalSection(personal = {}, settings = {}, template = 'c
   const paragraphs = [];
 
   const ink = headerInk(settings, template);
-  const name = new TextRun({ text: personal.name || 'Your Name', bold: true, size: nameSize, color: ink.name });
+  // In the weight the PDF prints it, as the letter's letterhead takes it (letterheadLook): Minimal's
+  // light name regular — Word has no light weight to give it — every other template's bold (R2-128).
+  const nameRun = letterheadLook(template, s).name.weight === 'bold' ? bold : normal;
+  const name = nameRun(personal.name || 'Your Name', { size: nameSize, color: ink.name });
   // Academic prints the job title in italic, the position under the name (AcademicTemplatePDF.jsx).
   const italics = templateId(template) === 'academic' ? { italics: true } : {};
   const title = personal.title ? new TextRun({ text: personal.title, size: titleSize, color: ink.title, ...italics }) : null;
