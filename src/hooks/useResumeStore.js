@@ -186,7 +186,7 @@ export function useAppStore() {
   const activeResume = appState.resumes.find(r => r.id === appState.activeId) || appState.resumes[0];
 
   function setActiveId(id) {
-    setAppState(prev => ({ ...prev, activeId: id }));
+    setAppState(prev => (prev.activeId === id ? prev : { ...prev, activeId: id }));
   }
 
   /** The active résumé as `updater` returns it, stamped as an edit — unless it returns the same résumé: nothing changed. */
@@ -250,9 +250,12 @@ export function useAppStore() {
   }
 
   // ── Personal Info & Settings ───────────────────────────────────────
+  // A field or setting set to the value it holds already (an option clicked again, a colour picker
+  // or a number box handing back what it shows) is not an edit: no new updatedAt, no store write, no
+  // preview build, nothing to sync (R2-142) — as the same name is no rename (R2-084).
 
   function updatePersonal(field, value) {
-    patchActive(r => ({ ...r, personal: { ...r.personal, [field]: value } }));
+    patchActive(r => (r.personal?.[field] === value ? r : { ...r, personal: { ...r.personal, [field]: value } }));
   }
 
   function toggleFieldVisibility(field) {
@@ -270,6 +273,7 @@ export function useAppStore() {
    */
   function updateSetting(key, value) {
     patchActive(r => {
+      if (r.settings?.[key] === value) return r;
       const settings = { ...r.settings, [key]: value };
       return {
         ...r,
@@ -286,6 +290,7 @@ export function useAppStore() {
    */
   function clearSettings(keys) {
     patchActive(r => {
+      if (!keys.some(k => k in (r.settings || {}))) return r;
       const settings = { ...r.settings };
       for (const k of keys) delete settings[k];
       return { ...r, settings };
@@ -315,7 +320,7 @@ export function useAppStore() {
   }
 
   function updateCoverLetter(field, value) {
-    patchActive(r => ({ ...r, coverLetter: { ...r.coverLetter, [field]: value } }));
+    patchActive(r => (r.coverLetter?.[field] === value ? r : { ...r, coverLetter: { ...r.coverLetter, [field]: value } }));
   }
 
   const sectionActions = createSectionActions(patchActive);
