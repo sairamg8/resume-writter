@@ -1,0 +1,88 @@
+{
+ "branch": "claude/wf-cypress",
+ "worktree": "/home/user/resume-writter/.claude/worktrees/wf_f5efdc0c-440-1",
+ "rows": [
+  {
+   "id": "R2-152",
+   "outcome": "fixed",
+   "commits": [
+    "7007dd3",
+    "f00c26e",
+    "dd6325e",
+    "94d0ba9"
+   ],
+   "tests": [
+    "cypress/e2e/01-dashboard.cy.js",
+    "cypress/e2e/03-export.cy.js",
+    "cypress/e2e/06-job-tracker.cy.js",
+    "cypress/e2e/07-regressions-store.cy.js",
+    "cypress/e2e/09-regressions-deletes.cy.js",
+    "cypress/e2e/11-demo-account.cy.js",
+    "cypress/e2e/11-demo-account-keep.cy.js",
+    "cypress/support/demoAccount.js",
+    "cypress/e2e/14-contacts.cy.js",
+    "cypress/e2e/19-regressions-ids.cy.js",
+    "cypress/e2e/20-regressions-job-shape.cy.js",
+    "cypress/e2e/20-regressions-job-store.cy.js",
+    "cypress/e2e/20-regressions-job-unsaved.cy.js",
+    "cypress/e2e/21-a11y.cy.js",
+    "cypress/e2e/24-image-uploads.cy.js",
+    "cypress.config.js"
+   ],
+   "summary": "**Now:** the whole Cypress suite (33 specs, 314 tests) passes against the e2e build, with retries off. At 504b313, 12 specs failed with 36 failing tests. Every failure was a stale spec: the app had changed on purpose (the starter picker, the second compact header for phones, the renamed export buttons, J-04's import merge, the reworded icon hint, taller panels). One spec had its own bug (ONB-10's second cy.visit never loaded the page). One spec had a race (R6-2 filled storage before the demo job was saved). No app bug was hidden: every assertion about app behaviour was kept or updated to the intended behaviour. The download tasks now use the configured downloadsFolder, so two runs can go side by side."
+  },
+  {
+   "id": "R2-161",
+   "outcome": "fixed",
+   "commits": [
+    "e5750f9",
+    "32bd830"
+   ],
+   "tests": [
+    "cypress/e2e/26-mobile-layout.cy.js",
+    "cypress/e2e/27-ats-checker.cy.js",
+    "cypress/e2e/28-writing-helpers.cy.js",
+    "cypress/e2e/29-exports-imports.cy.js",
+    "cypress/e2e/30-starters-and-design.cy.js"
+   ],
+   "summary": "**Now:** each feature from 09-17…09-20 has an end-to-end smoke spec. Each one opens the feature and checks what it shows and what it writes to the store, the PDF or the downloaded file: the ATS tab (score, categories, job-ad scanner, keyword to Skills, Copy Text, .txt), the STAR optimiser, the cover-letter generator, Markdown export, JSON Resume export and import (editor and dashboard), the jobs CSV, the starter templates, the 1-Page Fit / Balanced / Spacious presets (the store, the controls and the PDF margin) and the header icon picker. The mobile layout is covered in 26-mobile-layout. All 23 new tests pass."
+  },
+  {
+   "id": "R2-162",
+   "outcome": "fixed",
+   "commits": [
+    "372cbac",
+    "32bd830"
+   ],
+   "tests": [
+    "tests/unit/media-query.unit.mjs",
+    "cypress/e2e/26-mobile-layout.cy.js"
+   ],
+   "summary": "**Now:** tests/unit/media-query.unit.mjs mounts useMediaQuery and useIsMobile over fake-dom, using a matchMedia fake that fires change events. It covers 375, 767, 768 and 1440 px, a resize across 768 px in both directions, a changed breakpoint (the old listener is removed), listener cleanup on unmount, and false with no window or no matchMedia. Mutating the hook turns the tests red. 26-mobile-layout.cy.js is the suite's first cy.viewport(375, 812) spec (5/5 pass). It covers the Edit tab (preview hidden and 'paused'), the Preview tab (PDF with the latest edits), no drag handle or layout toggle, Design and ATS tabs on a phone, live resizing to 1024 px and back, and a dashboard with no sideways scroll. The usePanelResize failure paths were left to their owner; they are already covered by tests/unit/panel-resize-storage.unit.mjs (R2-015)."
+  }
+ ],
+ "baselineFailures": [
+  "cypress/e2e/01-dashboard.cy.js: 2/13 failing at 504b313 (stale: starter picker) — fixed 7007dd3",
+  "cypress/e2e/03-export.cy.js: 1/11 failing (stale: 'Export Backup JSON') — fixed 7007dd3",
+  "cypress/e2e/06-job-tracker.cy.js: 2/10 failing (stale: two List view toggles; 'Export JSON'; J-04 import merge) — fixed 7007dd3",
+  "cypress/e2e/07-regressions-store.cy.js: 1/17 failing (stale: starter picker) — fixed 7007dd3",
+  "cypress/e2e/09-regressions-deletes.cy.js: 1/4 failing (stale: two List view toggles) — fixed 7007dd3",
+  "cypress/e2e/11-demo-account-keep.cy.js: 10/10 failing (stale: account button found in the hidden phone header) — fixed 7007dd3",
+  "cypress/e2e/11-demo-account.cy.js: 11/11 failing (same, plus two sync icons) — fixed 7007dd3",
+  "cypress/e2e/14-contacts.cy.js: 5/16 failing (stale: reworded Contact icons hint, taller Design tab) — fixed f00c26e",
+  "cypress/e2e/19-regressions-ids.cy.js: M17 uses New Resume (starter picker); fixed before its first run here (3/3)",
+  "cypress/e2e/20-regressions-job-shape.cy.js: 1/5 failing (Offer column off-screen) — fixed dd6325e",
+  "cypress/e2e/20-regressions-job-store.cy.js: 1/12 failing (added stage below the fold) — fixed dd6325e",
+  "cypress/e2e/20-regressions-job-unsaved.cy.js: flaky (0/1 once under load, 1/1 otherwise; race) — fixed 94d0ba9",
+  "cypress/e2e/21-a11y.cy.js: 1/11 failing (two List view toggles) — fixed f00c26e",
+  "cypress/e2e/24-image-uploads.cy.js: 1/16 failing (ONB-10 second visit is no page load) — fixed dd6325e"
+ ],
+ "notes": "No src/ change. docs/tracking was not touched. Commits: 372cbac, 32bd830, e5750f9, 7007dd3, f00c26e, dd6325e, 94d0ba9. The tree is clean and the preview server on 4180 is stopped. oxlint is clean on every changed file. It still warns about no-unused-expressions in 04-design.cy.js:101 and 13-regressions-fonts.cy.js:58, both pre-existing and not touched.\n\nFINAL CYPRESS RUN (e2e build, 2 parallel lanes each with its own downloadsFolder, retries 0), pass/total:\n00-smoke 2/2 · 01-dashboard 13/13 · 02-editor 19/19 · 03-export 11/11 · 04-design-left-bar 2/2 · 04-design 30/30 · 05-cover-letter 13/13 · 06-job-tracker 10/10 · 07-regressions-store 17/17 · 08-regressions-editor 6/6 · 09-regressions-deletes 4/4 · 10-regressions-dates 2/2 · 11-demo-account-keep 10/10 · 11-demo-account 11/11 · 12-regressions-security 4/4 · 13-regressions-fonts 4/4 · 14-contacts 16/16 · 16-headers 7/7 · 17-section-options 10/10 · 19-regressions-ids 3/3 · 20-regressions-job-shape 5/5 · 20-regressions-job-store 12/12 · 20-regressions-job-unsaved 1/1 (0/1 in the full run before 94d0ba9, then 3 of 3 runs green) · 21-a11y 11/11 · 22-regressions-letters 6/6 · 23-editor-panels 5/5 · 24-image-uploads 16/16 · 25-date-format 5/5 · 26-mobile-layout 5/5 (new) · 27-ats-checker 4/4 (new) · 28-writing-helpers 4/4 (new) · 29-exports-imports 4/4 (new) · 30-starters-and-design 6/6 (new). Total: 314 tests, all passing.\n\nHow the stale specs were judged: most git log -S searches end at the history root (40501e9 / the 66a3da9 import), so each change was confirmed as intended in the source instead.\n- Starter picker: StarterTemplateModal, from Dashboard.jsx.\n- Phone header: md:hidden AuthBar in Dashboard.jsx; md:hidden view toggle in JobTracker.jsx.\n- Export labels: ExportDropdown 'Export Backup JSON'; JobTracker 'Export JSON' / 'Export CSV'.\n- J-04 merge: mergeImport in src/utils/jobImport.js, where the same job is skipped.\n- Icon hint: contactIconHint in src/constants/templates.js, pinned by a unit test.\n\nNEW FINDINGS (app bugs, not fixed, since src/ belongs to other agents):\n1. Bullet optimiser: Auto-Fix writes a verb the analyser does not know. Steps: in an Experience description with the bullet 'Was responsible for the payments team of 5', select it, click STAR Optimizer, then Auto-Fix. Expected: 'Strong Action Verb' and the score rises. Actual: the text becomes 'Led the payments team of 5', but the modal still says 'Verb Missing' and Quality stays 55/100, with the tip 'Start with a strong action verb'. Cause: WEAK_PHRASE_REPLACEMENTS in src/utils/bulletOptimizer.js:35-43 offers Led, Oversaw, Built, Managed, Resolved, Delivered, Conducted, Guaranteed, Maintained, Enforced, Drove, Co-developed and others, none of which are in ACTION_VERBS_BY_CATEGORY, which analyzeBullet (:108-111) checks. 28-writing-helpers therefore uses 'Spearheaded' from the list rather than asserting the broken verdict.\n2. Page Fit presets: the Line Height control shows a rounded value. After 1-Page Fit it shows '1.4' while the store and PDF use 1.35; after Spacious it shows '1.6' for 1.65. NumberRow (src/components/DesignPanelShared.jsx:47) uses toFixed(1) with step 0.1; the presets are set in src/components/DesignPanel.jsx:181 and :209.\n3. ATS job-ad scanner: ordinary words count as missing keywords. Paste 'We need React, TypeScript, Kubernetes and Terraform experience. GraphQL is a plus.' and 'need' is listed. COMMON_STOP_WORDS in extractJobKeywords (src/utils/atsChecker.js:307-330) lacks it.\n4. Cover-letter generator, Impact archetype: the letter says 'With over several years of hands-on experience' (src/utils/coverLetterGenerator.js:120), which is ungrammatical and ignores the résumé's own years.\nChecked and not a bug: the ONB-10 photo shrink works once the spec really seeds the photos.\n\nPROPOSED CI JOB (not added). Add it to .github/workflows/ci.yml:\n  cypress:\n    runs-on: ubuntu-latest\n    timeout-minutes: 40\n    strategy: { fail-fast: false, matrix: { specs: ['cypress/e2e/0*.cy.js,cypress/e2e/10-*.cy.js,cypress/e2e/11-*.cy.js', 'cypress/e2e/1[2-9]-*.cy.js,cypress/e2e/2[0-3]-*.cy.js', 'cypress/e2e/2[4-9]-*.cy.js,cypress/e2e/3*.cy.js'] } }\n    steps:\n      - uses: actions/checkout@v4\n      - uses: actions/setup-node@v4\n        with: { node-version: 22 }\n      - uses: actions/cache@v4\n        with: { path: ~/.cache/Cypress, key: cypress-${{ runner.os }}-${{ hashFiles('yarn.lock') }} }\n      - run: corepack enable && yarn install --immutable && ./node_modules/.bin/cypress install\n        # yarn disables build scripts, so the Cypress binary must be installed explicitly\n      - run: ./node_modules/.bin/vite build --mode e2e --outDir dist --emptyOutDir\n      - run: ./node_modules/.bin/start-server-and-test \"vite preview --outDir dist --host 127.0.0.1 --port 4173 --strictPort\" http://127.0.0.1:4173 \"cypress run --e2e --spec '${{ matrix.specs }}'\"\n      - uses: actions/upload-artifact@v4\n        if: failure()\n        with: { name: cypress-screenshots-${{ strategy.job-index }}, path: cypress/screenshots, retention-days: 3 }\nThe job needs no Firebase secrets (the e2e build's fake sign-in). Three shards take about 10 minutes each on a 2-CPU runner. Keep retries runMode 1 as in cypress.config.js.\n\nSpeed and resumability: the specs ran in parallel lanes, and the runner script skips specs already recorded. Progress was committed as each row passed (7 commits) and logged in the scratchpad progress file.",
+ "cluster": "cypress",
+ "base": "504b313",
+ "review": {
+  "issues": [],
+  "fixedByReviewer": [],
+  "note": "The reviewer stage was stopped part-way at the owner's reboot (2026-09-24 ~13:45 UTC): review this branch before it merges."
+ }
+}
