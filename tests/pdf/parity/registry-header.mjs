@@ -74,13 +74,16 @@ const CONTACTS = [PERSONAL.email, PERSONAL.phone, PERSONAL.location, PERSONAL.we
 const hidesField = (field) => ({ family: 'visibility', hides: () => [PERSONAL[field]].filter(Boolean), check: ({ runs }) => runs.filter((r) => prints(r.snap, PERSONAL[field])).map(() => `hidden ${field} still prints`) });
 
 export const HEADER_CONTROLS = {
+  // The name's line is centred: the name, or the name and the title beside it where the header prints them
+  // Inline (Compact's own layout, T9) — the line centred as one.
   'setting.headerAlign': {
     family: 'header',
     check: ({ runs }) => runs.flatMap((r) => {
-      const n = item(r.snap, PERSONAL.name);
+      const [n, t] = [item(r.snap, PERSONAL.name), item(r.snap, PERSONAL.title)];
+      const end = t && Math.abs(n.y - t.y) < n.h * 0.8 && t.x > n.x ? t.x + t.w : n.x + n.w;
       const W = r.snap.pages[0].W;
-      const centred = Math.abs(n.x + n.w / 2 - W / 2) < 2;
-      return centred === (valueOf(r, 'setting.headerAlign') === 'center') ? [] : [`${valueOf(r, 'setting.headerAlign')}: the name's centre is at ${(n.x + n.w / 2).toFixed(1)} of ${W.toFixed(1)}`];
+      const centred = Math.abs((n.x + end) / 2 - W / 2) < 2;
+      return centred === (valueOf(r, 'setting.headerAlign') === 'center') ? [] : [`${valueOf(r, 'setting.headerAlign')}: the name's line's centre is at ${((n.x + end) / 2).toFixed(1)} of ${W.toFixed(1)}`];
     }),
   },
   'setting.headerLayout': {

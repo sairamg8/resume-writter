@@ -5,6 +5,7 @@
 // after that click.
 import { loadModule, resume, section } from '../harness.mjs';
 import { inSidebarColumn } from '../../../src/constants/templates.js';
+import { sectionsOnSwitch } from '../../../src/templates/pdf/shared/templateSectionDefaults.js';
 import { PNG_2X2 } from '../extractors.mjs';
 
 export const PERSONAL = {
@@ -31,7 +32,9 @@ export const SECTION_ITEMS = {
     { institution: 'University of Coimbra', degree: 'MSc Computer Science', location: 'Coimbra', startDate: 'Sep 2013', endDate: '06/2015', description: '<p>Thesis on distributed consensus.</p>' },
     { institution: 'Porto Polytechnic', degree: 'BSc Informatics', location: 'Faro', startDate: '09/2010', endDate: '06/2013', description: '' },
   ],
-  skills: [{ category: 'Coding', skills: 'TypeScript, Go, SQL' }, { category: 'Platforms', skills: 'Kubernetes, Postgres, Kafka' }],
+  // A third skill group, certification and award: Compact lays them out two to a row (T9), and a row gap
+  // needs a second row to space.
+  skills: [{ category: 'Coding', skills: 'TypeScript, Go, SQL' }, { category: 'Platforms', skills: 'Kubernetes, Postgres, Kafka' }, { category: 'Tooling', skills: 'Bazel, Terraform' }],
   projects: [
     { name: 'Ledgerline', url: 'github.com/jordanr/ledgerline', technologies: 'Go', startDate: '02/2022', endDate: '08/2022', description: '<p>An open-source double-entry ledger.</p>' },
     { name: 'Queuebird', url: '', technologies: 'Rust', startDate: '01/2020', endDate: '06/2020', description: '<p>A tiny durable queue.</p>' },
@@ -40,10 +43,12 @@ export const SECTION_ITEMS = {
   certifications: [
     { name: 'Certified Kubernetes Administrator', issuer: 'CNCF', date: '05/2023' },
     { name: 'AWS Solutions Architect', issuer: 'Amazon', date: '02/2021' },
+    { name: 'Google Cloud Architect', issuer: 'Google', date: '07/2019' },
   ],
   awards: [
     { title: 'Engineering Excellence Award', issuer: 'Northwind Labs', date: '11/2022', description: '<p>For the ledger migration.</p>' },
     { title: 'Hackathon Winner', issuer: 'Web Summit', date: '11/2018', description: '' },
+    { title: 'Open Source Grant', issuer: 'Sovereign Tech Fund', date: '03/2017', description: '' },
   ],
   volunteering: [
     { org: 'Code for Lisbon', role: 'Mentor', location: 'Lisbon', startDate: '01/2019', endDate: '', current: true, description: '<p>Weekly mentoring sessions.</p>' },
@@ -83,16 +88,16 @@ export const SECTION_TYPES = Object.keys(SECTION_ITEMS);
  * Per section type: its first and second entries' marks, the first entry's date and its own location (one
  * no other entry prints); `cells`: the marks that open each entry's cell in a grid (a skill wraps under
  * its category in a narrow one); `seq`: every entry's mark in order, where two share a row (a grid of
- * two by default) or a line (Interests' chips).
+ * two by default — Languages and References, and Awards on Compact, T9) or a line (Interests' chips).
  */
 export const TYPE_MARKS = {
   experience: { first: 'Northwind Labs', second: 'Contoso Retail', date: '01/2021', location: 'Braga', title: 'Staff Engineer' },
   education: { first: 'University of Coimbra', second: 'Porto Polytechnic', date: 'Sep 2013', location: 'Faro', title: 'MSc Computer Science' },
-  skills: { first: 'TypeScript', second: 'Kubernetes', label: 'Coding', cells: ['Coding', 'Platforms'] },
+  skills: { first: 'TypeScript', second: 'Kubernetes', label: 'Coding', cells: ['Coding', 'Platforms'], seq: ['Coding', 'Platforms', 'Tooling'] },
   projects: { first: 'Ledgerline', second: 'Queuebird', date: '02/2022' },
   languages: { first: 'Portuguese', second: 'English', seq: ['Portuguese', 'English', 'Spanish'] },
-  certifications: { first: 'Certified Kubernetes', second: 'AWS Solutions Architect', date: '05/2023' },
-  awards: { first: 'Engineering Excellence Award', second: 'Hackathon Winner', date: '11/2022' },
+  certifications: { first: 'Certified Kubernetes', second: 'AWS Solutions Architect', date: '05/2023', seq: ['Certified Kubernetes', 'AWS Solutions Architect', 'Google Cloud Architect'] },
+  awards: { first: 'Engineering Excellence Award', second: 'Hackathon Winner', date: '11/2022', seq: ['Engineering Excellence Award', 'Hackathon Winner', 'Open Source Grant'] },
   volunteering: { first: 'Code for Lisbon', second: 'Food Bank Porto', date: '01/2019', location: 'Aveiro', title: 'Mentor' },
   references: { first: 'Morgan Blake', second: 'Riley Chen', seq: ['Morgan Blake', 'Riley Chen', 'Sam Okafor'] },
   interests: { first: 'Trail running', second: 'Chess', seq: ['Trail running', 'Film photography', 'Chess'] },
@@ -113,8 +118,10 @@ export function baseResume(template, settings = {}, { compact = false, types: on
     personal: PERSONAL,
     sections: types.map((type) => section(type, SECTION_ITEMS[type])),
   });
-  // Stable ids: an action's section write names its section by type.
-  r.sections = r.sections.map((s) => ({ ...s, id: `sec_${s.type}` }));
+  // Stable ids: an action's section write names its section by type. Each section as the app creates it
+  // on `template` — in its own Grids where it has one (Compact's grid, T9: newSectionGrid), as a résumé
+  // started there prints and a switch to it leaves (sectionsOnSwitch).
+  r.sections = sectionsOnSwitch(r.sections.map((s) => ({ ...s, id: `sec_${s.type}` })), null, template);
   r.settings = { ...r.settings, ...settings };
   return r;
 }
@@ -133,13 +140,14 @@ export function aroundTypes(template, settings, type) {
 let helpers = null;
 export async function loadStore() {
   if (helpers) return helpers;
-  const [colors, templates, data, sectionActions] = await Promise.all([
+  const [colors, templates, data, sectionActions, sectionDefaults] = await Promise.all([
     loadModule('/src/templates/pdf/shared/headerColors.js'),
     loadModule('/src/constants/templates.js'),
     loadModule('/src/utils/defaultData.js'),
     loadModule('/src/hooks/useResumeSectionActions.js'),
+    loadModule('/src/templates/pdf/shared/templateSectionDefaults.js'),
   ]);
-  helpers = { colors, templates, data, sectionActions };
+  helpers = { colors, templates, data, sectionActions, sectionDefaults };
   return helpers;
 }
 
@@ -148,7 +156,7 @@ export async function loadStore() {
  * belongs to. Needs loadStore() first.
  */
 export function applyWrites(r, writes, sectionId = null) {
-  const { colors, templates, data, sectionActions } = helpers;
+  const { colors, data, sectionActions, sectionDefaults } = helpers;
   let out = r;
   const patchActive = (fn) => { out = fn(out); };
   const sections = sectionActions.createSectionActions(patchActive);
@@ -166,8 +174,12 @@ export function applyWrites(r, writes, sectionId = null) {
       for (const k of w.keys) delete settings[k];
       out = { ...out, settings };
     } else if (w.kind === 'template') {
-      // As useResumeStore.setTemplate: the style the template brings, and what the old one brought leaving with it (T8).
-      out = { ...out, template: w.value, settings: colors.headerColorsOnSwitch(data.styleOnSwitch(out.settings, out.template, w.value), out.template, w.value) };
+      // As useResumeStore.setTemplate: the style the template brings, and what the old one brought leaving with it (T8);
+      // a section's Grids its template's own where it kept the one it was created with (Compact's grid, T9).
+      out = {
+        ...out, template: w.value, settings: colors.headerColorsOnSwitch(data.styleOnSwitch(out.settings, out.template, w.value), out.template, w.value),
+        sections: sectionDefaults.sectionsOnSwitch(out.sections, out.template, w.value),
+      };
     } else if (w.kind === 'resetAll') {
       out = { ...out, settings: data.settingsAfterReset(out) };
     } else if (w.kind === 'personal') {
