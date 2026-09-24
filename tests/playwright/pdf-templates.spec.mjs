@@ -20,6 +20,24 @@ async function railPixels(page) {
   });
 }
 
+/**
+ * The share of the preview's first page painted in the Banner band's colour along its top edge: the
+ * accent #2563eb, rgb(37, 99, 235), on the canvas's third pixel row. The band runs from the paper's
+ * edges, so nearly the whole row is the accent; on a white-page template it is white.
+ */
+async function topRowAccent(page) {
+  const canvas = page.locator('[data-preview-status="ready"] canvas').first();
+  await expect(canvas).toBeVisible();
+  return canvas.evaluate((c) => {
+    const { data } = c.getContext('2d').getImageData(0, 2, c.width, 1);
+    let hits = 0;
+    for (let i = 0; i < data.length; i += 4) {
+      if (Math.abs(data[i] - 37) <= 8 && Math.abs(data[i + 1] - 99) <= 8 && Math.abs(data[i + 2] - 235) <= 8) hits += 1;
+    }
+    return hits / c.width;
+  });
+}
+
 /** The exported PDF's Experience entry: its date run ("01/2023 – ", the first) sits above its role (PDF y grows upward), both starting at one x. */
 function expectDateAboveTitle(runs) {
   const date = findRun(runs, '01/2023');
@@ -122,6 +140,34 @@ test.describe('Exported PDF — every template', () => {
 
     const { runs } = await exportPdf(page);
     expectDateAboveTitle(runs);
+  });
+
+  test('Banner template: the preview paints the band edge to edge; the export reverses the header and the chips\' titles out of it', async ({ page }) => {
+    await visitEditor(page, 'banner');
+    expect(await topRowAccent(page)).toBeGreaterThan(0.95);
+
+    const { runs, text } = await exportPdf(page);
+    expect(text).toContain('Alex Johnson');
+    expect(text).toContain('Acme Corp');
+    expect(text).toContain('MIT');
+    expect(findRun(runs, 'Alex Johnson').colorHex).toBe('#ffffff');
+    expect(findRun(runs, 'alex@example.com').colorHex).toBe('#ffffff');
+    // Boxed on Banner: a filled chip, the title reversed out of it; the entries on the white page.
+    expect(findRun(runs, 'PROFESSIONAL').colorHex).toBe('#ffffff');
+    expect(findRun(runs, 'Acme Corp').colorHex).not.toBe('#ffffff');
+  });
+
+  test('Banner is offered in the Design panel; picking it paints the band in the preview and the export', async ({ page }) => {
+    await visitEditor(page, 'classic');
+    expect(await topRowAccent(page)).toBeLessThan(0.05);
+
+    await openDesignPanel(page);
+    await page.locator('button:has-text("Banner")').first().click();
+    await expect.poll(() => topRowAccent(page), { timeout: 20_000 }).toBeGreaterThan(0.95);
+
+    const { runs } = await exportPdf(page);
+    expect(findRun(runs, 'Alex Johnson').colorHex).toBe('#ffffff');
+    expect(findRun(runs, 'PROFESSIONAL').colorHex).toBe('#ffffff');
   });
 
 });
