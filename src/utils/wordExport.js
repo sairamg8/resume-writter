@@ -7,6 +7,7 @@ import { resolveSection } from '@/templates/pdf/shared/templateSectionDefaults';
 import { downloadBlob } from '@/utils/download';
 import { PAGE_SIZES, pageSizeOf } from '@/constants/pageSize';
 import { templateId } from '@/constants/templates';
+import { resolveTemplateSettings } from '@/templates/pdf/shared/templateSettings';
 import { FONTS } from '@/utils/fonts';
 
 export function resolveWordFont(settings = {}) {
@@ -71,8 +72,12 @@ export async function renderResumeDocx(resume) {
     .map((s) => resolveSection(s, own))
     .map((section) => ({ section, paras: buildSection(section, accentHex, settings, own) }))
     .filter(({ paras }) => paras.length);
+  // The header is Classic's, in the Sidebar's Text colour: its PDF resolves the page's settings as the
+  // Sidebar's, so an unset Text colour prints the name and contacts in its slate, not Classic's black.
+  const headerSettings = effectiveTemplate === template ? settings
+    : { ...settings, textColor: resolveTemplateSettings(settings, own).textColor };
   const children = [
-    ...buildPersonalSection(personal, settings, effectiveTemplate),
+    ...buildPersonalSection(personal, headerSettings, effectiveTemplate),
     // Between Sections under every section but the last, as the PDF's: space under the last one
     // could only push a blank page (R2-062).
     ...printed.flatMap(({ section, paras }, i) => (i < printed.length - 1

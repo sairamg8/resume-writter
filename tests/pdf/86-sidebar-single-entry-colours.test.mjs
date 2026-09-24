@@ -121,6 +121,24 @@ describe('Sidebar Single · ATS-safe: Word prints every entry in the PDF\'s colo
     assert.deepEqual(wrong, []);
   });
 
+  it('the header too: an unset Text colour prints the name, contacts and summary in the Sidebar\'s slate, as the PDF does', async () => {
+    const wrong = [];
+    for (const textColor of ['', '#1e3a8a']) {
+      const r = resume({
+        template: 'sidebar',
+        settings: { accentColor: ACCENT, sidebarSingleColumn: true, textColor },
+        personal: { name: 'Patsample Namey', title: 'Engineertitle', email: 'patmail@example.com', location: 'Placetown', summary: '<p>Summaryword here.</p>' },
+        sections: [experience([{ company: 'Acmecorp', role: 'Stafflead', startDate: '2011', endDate: '2012' }])],
+      });
+      const [bytes, docx] = [await render(r), await renderDocx(r)];
+      for (const word of ['Patsample', 'Engineertitle', 'patmail', 'Placetown', 'Summaryword']) {
+        const [pdf, docxInk] = [await pdfInk(bytes, word), wordInk(docx.xml, word)];
+        if (!near(pdf, docxInk)) wrong.push(`${textColor || 'unset'} ${word}: pdf ${pdf} ≠ word ${docxInk}`);
+      }
+    }
+    assert.deepEqual(wrong, []);
+  });
+
   it('Two columns keeps its own look: the main column\'s dates and second fields match Word too (guard)', async () => {
     const r = cv({ sidebarSingleColumn: false, textColor: '#1e3a8a' });
     const [bytes, docx] = [await render(r), await renderDocx(r)];
