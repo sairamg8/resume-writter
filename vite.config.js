@@ -18,18 +18,22 @@ export default defineConfig({
     watch: { ignored: ['**/qa-visual-compare/**', '**/.claude/**', '**/graphify-out/**', '**/dist/**'] },
   },
   build: {
-    rollupOptions: {
+    rolldownOptions: {
       output: {
-        manualChunks(id) {
-          if (id.includes('@react-pdf/renderer') || id.includes('pdfkit') || id.includes('fontkit')) {
-            return 'react-pdf';
-          }
-          if (id.includes('docx') || id.includes('pizzip') || id.includes('jszip')) {
-            return 'docx';
-          }
-          if (id.includes('firebase')) {
-            return 'firebase';
-          }
+        // Named vendor chunks (R2-014). Rolldown pulls a group's dependencies into its chunk, so the
+        // old manualChunks put React inside react-pdf-*.js: the entry imported React from there and
+        // every page — the Dashboard, #/terms — downloaded the 1.4 MB PDF engine before its first
+        // paint. React gets its own group, claimed first; the others only name libraries that
+        // nothing on the start-up path imports (react-pdf, docx) or that it needs anyway (firebase).
+        // tests/pdf/71-startup-chunks.test.mjs builds and walks the start-up path.
+        codeSplitting: {
+          groups: [
+            // react-dom's own scheduler is nested under it; the top-level one is react-pdf's reconciler's.
+            { name: 'react', test: /node_modules[\\/](react|react-dom)[\\/]/, priority: 30 },
+            { name: 'react-pdf', test: /node_modules[\\/](@react-pdf|fontkit|yoga-layout)[\\/]/, priority: 20 },
+            { name: 'docx', test: /node_modules[\\/](docx|pizzip|jszip)[\\/]/, priority: 10 },
+            { name: 'firebase', test: /node_modules[\\/](firebase|@firebase)[\\/]/, priority: 10 },
+          ],
         },
       },
     },
