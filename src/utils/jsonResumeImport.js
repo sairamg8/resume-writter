@@ -10,6 +10,7 @@ import { entries, richFrom } from './jsonResumeText.js';
 import { customItem, fileEntries, PUBLICATIONS, SECTION_KEYS } from './jsonResumeSections.js';
 import { CONTACT_FIELDS } from './contacts.js';
 import { templateId } from '../constants/templates.js';
+import { DATE_FORMATS } from './dates.js';
 
 const isRecord = (v) => Boolean(v) && typeof v === 'object' && !Array.isArray(v);
 
@@ -144,6 +145,8 @@ export function jsonResumeToCpwtResume(jsonResume, customId) {
    * (its colours, fonts and spacing) is still not in the file to restore.
    */
   const template = templateId(jsonResume?.meta?.template);
+  // The Date format the export wrote (one this build knows), over the starter's.
+  const dateFormat = jsonResume?.meta?.dateFormat;
 
   return {
     id,
@@ -151,7 +154,7 @@ export function jsonResumeToCpwtResume(jsonResume, customId) {
     updatedAt: Date.now(),
     dataVersion: DATA_VERSION, // built now, from a file with no app history: no migration applies
     template,
-    settings: getStarterSettings(template),
+    settings: { ...getStarterSettings(template), ...(DATE_FORMATS.includes(dateFormat) ? { dateFormat } : {}) },
     personal,
     sections: sectionsOf(jsonResume),
     coverLetter: { ...BASE_COVER_LETTER },

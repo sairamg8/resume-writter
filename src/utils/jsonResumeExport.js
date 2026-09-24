@@ -6,6 +6,7 @@ import { entries, flattened } from './jsonResumeText.js';
 import { customEntry, SECTION_KEYS } from './jsonResumeSections.js';
 import { CONTACT_FIELDS } from './contacts.js';
 import { templateId } from '../constants/templates.js';
+import { dateFormatOf } from './dates.js';
 
 const isRecord = (v) => Boolean(v) && typeof v === 'object' && !Array.isArray(v);
 
@@ -103,7 +104,13 @@ export function cpwtResumeToJsonResume(resume) {
     // reads it back (TUI-4): until it was written, an exported Modern, Sidebar, Executive or Minimal
     // résumé came back Classic. templateId: what the PDF actually drew, so a résumé holding an id the
     // app no longer offers exports as the Classic it was printing as, not as that dead id.
-    // The sections' layout rides beside it (above; read back by jsonResumeImport.js).
-    meta: { template: templateId(resume.template), sections: layout },
+    // The sections' layout rides beside it (above; read back by jsonResumeImport.js), and the Date
+    // format, which changes what every date prints as: without it a résumé "As entered" came back
+    // in the starter's "Jan 2024" form.
+    meta: {
+      template: templateId(resume.template),
+      dateFormat: dateFormatOf(resume.settings),
+      sections: layout,
+    },
   };
 }
