@@ -1,11 +1,10 @@
 import { useState, useMemo } from 'react';
 import {
   ShieldCheck, AlertTriangle, XCircle, CheckCircle2, ChevronDown,
-  Sparkles, Copy, Download, Briefcase, Columns2, FileText, Target, Plus, Check, Rows3
+  Sparkles, Copy, Download, Briefcase, Columns2, FileText, Target, Plus, Check
 } from 'lucide-react';
 import {
   analyzeAtsScore,
-  entriesInOneColumn,
   standardizeSectionsForAts,
   generateAtsPlainText
 } from '@/utils/atsChecker';
@@ -42,13 +41,6 @@ const LAYOUT_FIXES = {
     tone: 'text-gray-700 bg-white hover:bg-gray-100 border-gray-300',
     label: () => `Switch to ${templateLabel(ATS_FALLBACK_TEMPLATE)}`,
     title: (r) => `Replaces the ${templateLabel(r?.template)} template, its heading style and its title case. There is no undo.`,
-  },
-  // The section_grids warning's fix (R2-021): Grids 1 on the sections it names, nothing else.
-  grids_one_column: {
-    Icon: Rows3,
-    tone: 'text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border-emerald-200',
-    label: () => 'Print entries one under another (Grids 1)',
-    title: () => 'Section Options → Grids 1 on the sections printed side by side. The template and every other setting stay.',
   },
 };
 
@@ -120,21 +112,10 @@ export default function AtsCheckerPanel({ resume, store }) {
     store.setTemplate(ATS_FALLBACK_TEMPLATE);
   }
 
-  /**
-   * The section_grids warning's fix: Grids 1 on the sections that print their entries side by side,
-   * by the checker's own rule (entriesInOneColumn), so it changes just the sections the warning
-   * names (R2-021).
-   */
-  function handleGridsOneColumn() {
-    if (!resume || !Array.isArray(resume.sections)) return;
-    store.updateSections(entriesInOneColumn(resume.sections, resume.template, resume.settings));
-  }
-
   /** Each layout fix's handler, by the id the checker names it with. */
   const layoutFixHandlers = {
     sidebar_single_column: handleSingleColumnLayout,
     switch_to_classic: handleSwitchToClassic,
-    grids_one_column: handleGridsOneColumn,
   };
 
   /** One layout fix as a button; `className` and `iconSize` are the site's, the tone comes with the fix. */
@@ -208,10 +189,8 @@ export default function AtsCheckerPanel({ resume, store }) {
     : 'bg-red-500';
 
   const hasNonStandardHeadings = categories.headings.items.some(i => i.id === 'std_headings' && i.status === 'warn');
-  // The fixes the layout warnings offer, in the checker's order — empty while the layout parses:
-  // the template's, then the side-by-side sections' (R2-021).
-  const layoutFixes = ['template', 'section_grids']
-    .flatMap(id => itemFixes(categories.layout.items.find(i => i.id === id && i.status === 'warn')));
+  // The fixes the layout warning offers, in the checker's order — empty while the layout parses.
+  const layoutFixes = itemFixes(categories.layout.items.find(i => i.id === 'template' && i.status === 'warn'));
   const hasCompanyTitleOrder = categories.experience.items.some(i => i.id === 'exp_title_order' && i.status === 'warn');
 
   return (

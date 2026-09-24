@@ -2,7 +2,7 @@ import { decodeEntities, hasRichText, parseRichText } from './richText.js';
 import { contactItems } from './contacts.js';
 import { skillGroup } from './skills.js';
 import { ACTION_VERBS, hasMetric, leadsWithActionVerb } from './bulletOptimizer.js';
-import { ATS_TIER_POINTS, atsRating, hasHeaderControls, inSidebarColumn, templateId, templateLabel, TEMPLATE_PICKER } from '../constants/templates.js';
+import { atsRating, hasHeaderControls, templateId, templateLabel, TEMPLATE_PICKER } from '../constants/templates.js';
 import { TEMPLATE_SECTION_DEFAULTS, resolveSection } from '../templates/pdf/shared/templateSectionDefaults.js';
 
 // The ATS plain-text export lives in its own module; the ATS tab and Export menu import it from here.
@@ -433,38 +433,6 @@ export function standardizeSectionsForAts(sections) {
     const spec = needsAtsTitle(s) && ATS_STANDARD_SECTIONS[s.type];
     return spec ? { ...s, title: spec.canonical } : s;
   });
-}
-
-/**
- * The types whose entries run to several lines — a heading, dates, a description. Printed two or
- * more to a row (Section Options → Grids), their lines sit side by side, and a parser that reads a
- * page line by line interleaves them. A skill group, a language, a certificate, an award or a
- * reference card is one short cell: a grid of those is the template tier's business (Compact's).
- */
-const MULTI_LINE_TYPES = new Set(['experience', 'education', 'projects', 'volunteering', 'custom']);
-
-/**
- * Whether `section` prints two or more of its entries side by side, as the PDF lays it out on
- * `template`: shown, of a multi-line type, in the main column (the Sidebar's side column prints one
- * column whatever Grids says), its Grids above 1 (resolveSection, as the PDF reads it) and more than
- * one shown entry to fill a row. The one rule of the layout report's section_grids item and of its
- * fix, entriesInOneColumn (R2-021).
- */
-function printsSideBySide(section, template, settings) {
-  return !!section && section.visible !== false && MULTI_LINE_TYPES.has(section.type)
-    && !inSidebarColumn(template, section.type, settings)
-    && Number(resolveSection(section, template).settings.columns || 1) > 1
-    && shownItems(section, template).length > 1;
-}
-
-/**
- * The layout warning's fix: Section Options → Grids 1 on each section that prints its entries side
- * by side (printsSideBySide), and nothing else. Every other section is returned as the same object.
- */
-export function entriesInOneColumn(sections, template, settings) {
-  if (!Array.isArray(sections)) return sections;
-  const t = templateId(template);
-  return sections.map((s) => (printsSideBySide(s, t, settings) ? { ...s, settings: { ...s.settings, columns: 1 } } : s));
 }
 
 /**
@@ -1018,17 +986,12 @@ export function analyzeAtsScore(resume, jobDescriptionText = '') {
   // template again. It is settings-aware: the Sidebar's Single · ATS-safe prints Classic's page.
   const isSidebarSingle = currentTemplate === 'sidebar' && Boolean(settings.sidebarSingleColumn);
   const rating = atsRating(currentTemplate, settings);
-  // Section Options → Grids prints a section's entries side by side on any template, and those are
-  // two columns whatever the template is: the text flow then earns what two columns do (R2-021).
-  const sideBySide = sections.filter(s => printsSideBySide(s, currentTemplate, settings));
-  layoutPts += sideBySide.length ? Math.min(rating.points, ATS_TIER_POINTS.risky) : rating.points;
+  layoutPts += rating.points;
   if (rating.tier === 'certified') {
     const label = isSidebarSingle ? 'SIDEBAR (SINGLE · ATS-SAFE)' : templateLabel(currentTemplate).toUpperCase();
     results.categories.layout.items.push({
       id: 'template', status: 'pass', text: `ATS-Certified Template: "${label}"`,
-      detail: sideBySide.length
-        ? 'The template prints one column of text, which Workday, Taleo, and Greenhouse parse in order — but not the entries printed side by side below.'
-        : 'Single-column text flow ensures 100% sequential parsing on Workday, Taleo, and Greenhouse.',
+      detail: 'Single-column text flow ensures 100% sequential parsing on Workday, Taleo, and Greenhouse.',
     });
   } else if (rating.tier === 'good') {
     results.categories.layout.items.push({
@@ -1054,19 +1017,6 @@ export function analyzeAtsScore(resume, jobDescriptionText = '') {
       ].filter(Boolean).join(' '),
       fixable: true,
       actions: [...(singleColumnFixesIt ? ['sidebar_single_column'] : []), 'switch_to_classic'],
-    });
-  }
-
-  // The sections that print entries side by side, each by name, with their fix: Grids 1 on exactly
-  // these (entriesInOneColumn). The template item above stays the template's own verdict, the one the
-  // Design panel's badge shows (TUI-5).
-  if (sideBySide.length) {
-    const names = sideBySide.map(s => `"${String(s.title || '').trim() || ATS_STANDARD_SECTIONS[s.type]?.canonical || s.type}"`).join(', ');
-    results.categories.layout.items.push({
-      id: 'section_grids', status: 'warn', text: `Entries printed side by side: ${names}`,
-      detail: 'Section Options → Grids prints these entries two or more to a row. Poppler and older Workday/Taleo parsers read a page line by line, across the row, so the entries\' lines interleave. Grids 1 prints them one under another.',
-      fixable: true,
-      actions: ['grids_one_column'],
     });
   }
 
