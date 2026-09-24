@@ -31,14 +31,16 @@ function SaveStatus({ resume, persistError }) {
 
 /**
  * The preview column: layout toggle, zoom, the PDF itself (résumé or cover letter, whichever tab
- * is open) and the save status. Hidden, never unmounted, in editor-only mode.
+ * is open) and the save status. Hidden, never unmounted, in editor-only mode (and on a phone's Edit
+ * tab, which Editor.jsx passes as 'editor'); hidden, its PDF is not built until it is shown (R2-016).
  */
 export function EditorPreviewPane({ resume, activeTab, layoutMode, setLayoutMode, previewZoom, setPreviewZoom, persistError, isMobile = false }) {
   const navigate = useNavigate();
+  const shown = layoutMode !== 'editor';
 
   return (
     <div
-      className={`${layoutMode === 'editor' ? 'hidden' : 'flex-1 min-w-0 min-h-0 h-full'} overflow-auto bg-[#f5f3ef] flex flex-col items-center py-4 sm:py-8 px-2 sm:px-4 pb-24 sm:pb-8`}
+      className={`${shown ? 'flex-1 min-w-0 min-h-0 h-full' : 'hidden'} overflow-auto bg-[#f5f3ef] flex flex-col items-center py-4 sm:py-8 px-2 sm:px-4 pb-24 sm:pb-8`}
       style={{ overscrollBehavior: 'contain' }}
     >
       <div className="mb-3 sm:mb-4 flex flex-wrap items-center justify-center gap-2 sm:gap-3 shrink-0">
@@ -60,9 +62,9 @@ export function EditorPreviewPane({ resume, activeTab, layoutMode, setLayoutMode
       </div>
 
       {activeTab === 'coverletter' ? (
-        <PdfPreview key="coverletter" title="Cover letter" textId="cover-letter-preview" input={resume} render={renderCoverLetterPreview} zoom={previewZoom} />
+        <PdfPreview key="coverletter" title="Cover letter" textId="cover-letter-preview" input={resume} render={renderCoverLetterPreview} zoom={previewZoom} active={shown} />
       ) : (
-        <PdfPreview key="resume" title="Résumé" textId="resume-preview" input={resume} render={renderResumePreview} zoom={previewZoom} />
+        <PdfPreview key="resume" title="Résumé" textId="resume-preview" input={resume} render={renderResumePreview} zoom={previewZoom} active={shown} />
       )}
 
       <div className="mt-6 flex flex-wrap items-center justify-center gap-2 sm:gap-3 text-xs text-gray-400 shrink-0">

@@ -9,6 +9,9 @@ import { previewBox } from '@/constants/pageSize';
  * - Re-renders `DEBOUNCE_MS` after the last change to `input`; the previous pages stay on
  *   screen (double-buffered) until the new ones are painted, so typing never flashes blank.
  * - A stale render is dropped when a newer one has started.
+ * - `active` false (the column is hidden: "Editor only", or a phone's Edit tab) builds and paints
+ *   nothing: the preview only notes it is behind (status 'paused') and builds once, with the latest
+ *   input, when it is shown again. Shown again with nothing changed, it keeps what it has.
  * - Page text goes into a visually hidden element (`textId`) for screen readers and tests.
  */
 
@@ -87,12 +90,14 @@ function PageCanvas({ canvas, width, height, label }) {
   );
 }
 
-export function PdfPreview({ render, input, zoom = 1, textId, title = 'Résumé' }) {
+export function PdfPreview({ render, input, zoom = 1, textId, title = 'Résumé', active = true }) {
   const [view, setView] = useState(null); // { pages, painted: [{ canvas, cssHeight }], cssWidth }
-  const [status, setStatus] = useState('rendering');
+  const [status, setStatus] = useState(active ? 'rendering' : 'paused');
   const [error, setError] = useState(null);
   const [retry, setRetry] = useState(0);
   const generation = useRef(0);
+  const built = useRef(null); // { input, render, retry } of the last build that started
+  const wasActive = useRef(active);
   const docRef = useRef(null);
   const rootRef = useRef(null);
   const box = previewBox(input?.settings || input);
@@ -103,12 +108,19 @@ export function PdfPreview({ render, input, zoom = 1, textId, title = 'Résumé'
   const widthRef = useRef(cssWidth);
   widthRef.current = cssWidth;
 
-  // Build + paint a new document whenever the input changes.
+  // Build + paint a new document whenever the input changes — only while the preview can be seen.
   useEffect(() => {
+    const revealed = active && !wasActive.current;
+    wasActive.current = active;
+    const last = built.current;
+    if (last && last.input === input && last.render === render && last.retry === retry) return undefined;
+    if (!active) { setStatus('paused'); return undefined; }
     const gen = ++generation.current;
     setStatus('rendering');
-    const delay = docRef.current ? DEBOUNCE_MS : 0;
+    // Typing is debounced; a preview just shown builds at once (nobody is typing into it).
+    const delay = docRef.current && !revealed ? DEBOUNCE_MS : 0;
     const timer = setTimeout(async () => {
+      built.current = { input, render, retry };
       try {
         const [blob, pdfjs] = await Promise.all([render(input), loadPdfjs()]);
         if (gen !== generation.current) return;
@@ -136,17 +148,18 @@ export function PdfPreview({ render, input, zoom = 1, textId, title = 'Résumé'
       }
     }, delay);
     return () => clearTimeout(timer);
-  }, [input, render, retry]);
+  }, [input, render, retry, active]);
 
-  // Repaint the current document when the zoom changes.
+  // Repaint the current document when the zoom (or the column's width) changes — not while hidden,
+  // where the column measures 0 and the pages would be painted at the 240 px floor for nobody.
   useEffect(() => {
-    if (!view || view.cssWidth === cssWidth) return;
+    if (!active || !view || view.cssWidth === cssWidth) return undefined;
     let cancelled = false;
     paint(view.pages, cssWidth).then((painted) => {
       if (!cancelled) setView((v) => (v && v.pages === view.pages ? { ...v, painted, cssWidth } : v));
     }).catch(() => { /* the next render repaints */ });
     return () => { cancelled = true; };
-  }, [cssWidth, view]);
+  }, [active, cssWidth, view]);
 
   useEffect(() => () => { release(docRef.current); }, []);
 
