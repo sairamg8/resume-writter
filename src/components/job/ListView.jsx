@@ -66,7 +66,14 @@ export function ListView({ jobs, resumes, onNavigate, onDelete }) {
               >
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-1.5">
-                    <span className="font-medium text-gray-900">{job.company || '—'}</span>
+                    {/* The row's click is the mouse's; this button is Tab's and Enter's — a row is not focusable (R2-039). */}
+                    <button
+                      type="button"
+                      onClick={e => { e.stopPropagation(); onNavigate(job.id); }}
+                      className="font-medium text-gray-900 text-left hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded"
+                    >
+                      {job.company || '—'}
+                    </button>
                     {safeHref(job.url) && (
                       <a
                         href={safeHref(job.url)}
@@ -75,7 +82,7 @@ export function ListView({ jobs, resumes, onNavigate, onDelete }) {
                         onClick={e => e.stopPropagation()}
                         title="Open job posting"
                         aria-label={`Open the ${job.company || 'job'} posting`}
-                        className="text-gray-300 hover:text-blue-500 opacity-0 group-hover:opacity-100 no-hover:opacity-100 transition-opacity"
+                        className="text-gray-300 hover:text-blue-500 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 no-hover:opacity-100 transition-opacity"
                       >
                         <ExternalLink size={11} />
                       </a>
@@ -127,7 +134,7 @@ export function ListView({ jobs, resumes, onNavigate, onDelete }) {
                   }
                 </td>
                 <td className="px-4 py-3">
-                  <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 no-hover:opacity-100 transition-opacity">
+                  <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 no-hover:opacity-100 transition-opacity">
                     <button
                       onClick={e => { e.stopPropagation(); onDelete(job.id); }}
                       title="Delete application"

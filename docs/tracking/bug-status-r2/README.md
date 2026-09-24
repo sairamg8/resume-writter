@@ -6,8 +6,8 @@ refuted, 1 duplicate of an existing row**; the other 71 were not re-checked (ses
 
 | File | What | Rows |
 |---|---|---|
-| [01-high-medium.md](01-high-medium.md) | defects, High then Medium | 74 (R3 rows: found by the build lanes, 2026-09-24) |
-| [02-low.md](02-low.md) | defects, Low | 65 (R3 rows: found by the build lanes, 2026-09-24) |
+| [01-high-medium.md](01-high-medium.md) | defects, High then Medium | 75 (R3 rows: found by the build lanes, 2026-09-24) |
+| [02-low.md](02-low.md) | defects, Low | 66 (R3 rows: found by the build lanes, 2026-09-24) |
 | [03-features-and-test-gaps.md](03-features-and-test-gaps.md) | features asked for and not built; controls with no test | 37 |
 
 Defects: **134** — High 10, Medium 60, Low 64 (regressions, bugs and preview/PDF/Word parity).
