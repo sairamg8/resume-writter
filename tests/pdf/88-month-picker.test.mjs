@@ -1,6 +1,7 @@
 // The month picker's two selects (Section editor → any Start/End Date). Choosing the blank 'Month'
 // or 'Year' option did nothing: the picker put the stored half back, so 'Jan 2024' could not become
-// the year alone (R2-108).
+// the year alone (R2-108). And the year list stopped five years ahead, too near for a certificate's
+// expiry or an expected graduation (R2-116): it now reaches fifteen years ahead.
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { setup, teardown, loadModule } from './harness.mjs';
@@ -8,6 +9,8 @@ import { mount, elements, reactProps } from './fake-dom.mjs';
 
 before(setup);
 after(teardown);
+
+const NOW = new Date().getFullYear();
 
 /** What the picker holding `value` stores when its month (0) or year (1) select is set to `choice`. */
 async function choose(value, which, choice) {
@@ -33,5 +36,13 @@ describe('blanking one half of a date (R2-108)', () => {
     assert.deepEqual(await choose('Jan 2024', 0, 'Mar'), ['Mar 2024']);
     assert.deepEqual(await choose('Jan 2024', 1, '2020'), ['Jan 2020']);
     assert.deepEqual(await choose('', 1, '2020'), ['2020']);
+  });
+});
+
+describe('the year list reaches far enough ahead (R2-116)', () => {
+  it('offers fifteen years ahead of this one', async () => {
+    const { yearOptions } = await loadModule('/src/components/SectionEditorShared.jsx');
+    assert.equal(yearOptions('').at(0), String(NOW + 15));
+    assert.ok(yearOptions('').includes(String(NOW + 10)), 'a ten-year certificate expiry');
   });
 });

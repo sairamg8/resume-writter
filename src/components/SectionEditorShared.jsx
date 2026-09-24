@@ -25,14 +25,15 @@ export function InputField({ label, value, onChange, placeholder, type = 'text' 
 export const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
 /**
- * The year select's choices, newest first: five years ahead of `now` down to 49 back, plus
+ * The year select's choices, newest first: fifteen years ahead of `now` down to 49 back, plus
  * `stored` in its place when it is a 4-digit year outside them. The PDF prints any year
  * parseMonthYear reads (1000–9999), so a 1975 start or an expiry ten years out must be offered
  * too, or the select has no option for it and shows blank (AUD-28). `now` is read at each render,
- * not once when the module loads, so a tab left open over New Year moves on.
+ * not once when the module loads, so a tab left open over New Year moves on. Fifteen ahead, not
+ * five, so a certificate's expiry or an expected graduation can be picked (R2-116).
  */
 export function yearOptions(stored, now = new Date().getFullYear()) {
-  const years = Array.from({ length: 55 }, (_, i) => String(now + 5 - i));
+  const years = Array.from({ length: 65 }, (_, i) => String(now + 15 - i));
   if (!/^\d{4}$/.test(stored) || years.includes(stored)) return years;
   return [...years, stored].sort((a, b) => b - a);
 }

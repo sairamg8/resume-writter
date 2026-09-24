@@ -57,20 +57,21 @@ async function yearsOffered(value) {
 }
 
 describe('the year list (AUD-28)', () => {
-  const WINDOW = Array.from({ length: 55 }, (_, i) => String(NOW + 5 - i));
+  // Fifteen years ahead since R2-116 (was five).
+  const WINDOW = Array.from({ length: 65 }, (_, i) => String(NOW + 15 - i));
 
-  it('a year in the window, or none: five years ahead down to 49 back, as before', async () => {
+  it('a year in the window, or none: fifteen years ahead down to 49 back', async () => {
     for (const v of ['Jan 2024', '', 'Q1 FY24']) assert.deepEqual(await yearsOffered(v), WINDOW, v);
   });
 
   it('a stored year outside the window is added in its place, newest first', async () => {
     assert.deepEqual(await yearsOffered('Jan 1975'), [...WINDOW, '1975']);
-    assert.deepEqual(await yearsOffered(`Jun ${NOW + 10}`), [String(NOW + 10), ...WINDOW]);
+    assert.deepEqual(await yearsOffered(`Jun ${NOW + 20}`), [String(NOW + 20), ...WINDOW]);
   });
 
   it('counts from the year it is rendered in, not the year the page loaded', async () => {
     const { yearOptions } = await loadModule('/src/components/SectionEditorShared.jsx');
-    assert.deepEqual([yearOptions('', 2030).at(0), yearOptions('', 2030).at(-1)], ['2035', '1981']);
+    assert.deepEqual([yearOptions('', 2030).at(0), yearOptions('', 2030).at(-1)], ['2045', '1981']);
     assert.deepEqual(yearOptions('1980', 2030).slice(-2), ['1981', '1980']);
   });
 });
