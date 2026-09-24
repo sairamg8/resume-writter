@@ -51,9 +51,10 @@ export function CertificationsSection({ section, settings, marginBottom, spaceBe
               {item.url ? <Text style={{ color: accent }}>{' · '}<ContactValue value={item.urlLabel || item.url} href={safeHref(item.url)} style={{ color: accent }} /></Text> : null}
             </Text>
           );
+          // Unbreakable: a name that wraps never leaves its date on the page before it (R2-049).
           if (centered) {
             return (
-              <View style={{ alignItems: 'center' }}>
+              <View wrap={false} style={{ alignItems: 'center' }}>
                 {nameLine}
                 {dateStr ? <Text style={{ fontSize: baseSize, color: dateColor, marginTop: 1, textAlign }}>{dateStr}</Text> : null}
               </View>
@@ -61,7 +62,9 @@ export function CertificationsSection({ section, settings, marginBottom, spaceBe
           }
           return (
             // The date on the name line's LAST line and its baseline, so a name that wraps reads whole (ATS-5).
-            <EndRow left={nameLine}>{endField(dateStr, { fontSize: baseSize, color: dateColor, textAlign, lineHeight: onName }, 8)}</EndRow>
+            <View wrap={false}>
+              <EndRow left={nameLine}>{endField(dateStr, { fontSize: baseSize, color: dateColor, textAlign, lineHeight: onName }, 8)}</EndRow>
+            </View>
           );
         }}
       />
@@ -184,11 +187,15 @@ export function AwardsSection({ section, settings, marginBottom, spaceBefore, it
         gap={itemGap}
         renderItem={(item) => (
           <View style={{ alignItems: flexAlign }}>
-            <Text style={{ fontSize: entrySize, fontWeight: 'bold', color: textColor, textAlign }}>{item.title}</Text>
-            {item.issuer && (
-              <Text style={{ fontSize: baseSize, color: sub, fontStyle: italicSubs ? 'italic' : 'normal', textAlign }}>{item.issuer}</Text>
-            )}
-            {showDates && formatDate(item.date || '', settings) ? <Text style={{ fontSize: baseSize, color: dateColor, marginTop: 1, textAlign }}>{formatDate(item.date || '', settings)}</Text> : null}
+            {/* Title, issuer and date unbreakable and kept with two lines of what follows, as ItemHeader
+                keeps a job's header: an award's title is never left alone at a page foot (R2-049). */}
+            <View wrap={false} minPresenceAhead={Math.round(baseSize * (settings?.lineHeightValue ?? 1.5) * 2)} style={{ alignItems: flexAlign }}>
+              <Text style={{ fontSize: entrySize, fontWeight: 'bold', color: textColor, textAlign }}>{item.title}</Text>
+              {item.issuer && (
+                <Text style={{ fontSize: baseSize, color: sub, fontStyle: italicSubs ? 'italic' : 'normal', textAlign }}>{item.issuer}</Text>
+              )}
+              {showDates && formatDate(item.date || '', settings) ? <Text style={{ fontSize: baseSize, color: dateColor, marginTop: 1, textAlign }}>{formatDate(item.date || '', settings)}</Text> : null}
+            </View>
             {hasRichText(item.description) && (
               <PdfRichText html={item.description} style={{ fontSize: baseSize, color: sub, lineHeight: lineH, marginTop: 1, textAlign }} />
             )}

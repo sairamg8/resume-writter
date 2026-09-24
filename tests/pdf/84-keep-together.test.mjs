@@ -1,10 +1,12 @@
-// R2-047, R2-048: what must travel together across a page break. A section is placed after a
+// R2-047, R2-048, R2-049: what must travel together across a page break. A section is placed after a
 // run of filler bullets and slid down the page 1.5 pt at a time, so its title and first entry cross
 // the page foot at every offset:
 //   - a section title never ends a page without the first line of its content (R2-047): 2-column
 //     grids, References cards, the Sidebar's Experience and Projects cards;
 //   - a 2-column grid keeps its reading order: a row's left entry never prints after its right one
-//     (R2-048).
+//     (R2-048);
+//   - a certification's date prints on the page of its name, an award's title is never left alone at
+//     a page foot (R2-049). Each is its section's second entry: the title's own keep covers the first.
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { setup, teardown, resume, section, experience, render, read, allItems } from './harness.mjs';
@@ -69,6 +71,34 @@ const projects = () => section('projects', [
   { name: 'Project Alpha', technologies: 'React, Node.js', url: 'https://example.com/alpha', startDate: '2020', description: '<p>Built it.</p>' },
 ], {}, { title: 'Projects' });
 
+// Centred (Section Options → Alignment), a certification prints its date on a line under its name.
+const certifications = (settings = {}) => () => section('certifications', [
+  { name: 'First Certificate', issuer: 'Org', date: '2020' },
+  { name: 'AWS Certified Solutions Architect Professional with a very long certification name that wraps onto more lines', issuer: 'Amazon Web Services', credentialId: 'ABC-123', date: '2021' },
+], settings, { title: 'Certifications' });
+
+/** The certification's date on the page that prints the end of its name. */
+function certDateWithName(items) {
+  const date = items.find((i) => i.str.trim() === '2021');
+  const name = items.filter((i) => /Architect|wraps onto|more lines|Amazon|ABC-123/.test(i.str));
+  if (!date || !name.length) return ['certification not printed'];
+  const pagesOfName = new Set(name.map((i) => i.page));
+  return pagesOfName.size > 1 || !pagesOfName.has(date.page) ? [`name on page(s) ${[...pagesOfName]}, date on page ${date.page}`] : [];
+}
+
+const awards = () => section('awards', [
+  { title: 'First Prize', issuer: 'Org', date: '2019' },
+  { title: 'Best Engineer Award', issuer: 'Acme Corporation', date: '2020', description: '<p>For shipping things on time, every time.</p>' },
+], {}, { title: 'Awards' });
+
+/** The award's title never the last line of a page. */
+function awardNotAlone(items, pageCount) {
+  const title = items.find((i) => i.str.includes('Best Engineer Award'));
+  if (!title) return ['award not printed'];
+  const below = items.filter((i) => i.page === title.page && i.y < title.y - 1);
+  return !below.length && title.page < pageCount ? [`the award's title ends page ${title.page}`] : [];
+}
+
 describe('a section title keeps the first line of its content (R2-047)', () => {
   for (const template of ['classic', 'modern', 'compact']) {
     it(`${template}: a 2-column Education grid`, async () => {
@@ -93,6 +123,19 @@ describe('a 2-column grid keeps its reading order across a page break (R2-048)',
     });
     it(`${template}: Education in two columns`, async () => {
       assert.deepEqual(await sweep(template, education2, inOrder([['Northfield', 'Southgate']])), []);
+    });
+  }
+});
+
+describe('an entry keeps its date and its title with it (R2-049)', () => {
+  for (const template of ['classic', 'executive']) {
+    for (const alignment of ['left', 'center']) {
+      it(`${template}: a certification's date stays with its name (${alignment})`, async () => {
+        assert.deepEqual(await sweep(template, certifications({ alignment }), both(certDateWithName, titleNotAlone)), []);
+      });
+    }
+    it(`${template}: an award's title is never alone at a page foot`, async () => {
+      assert.deepEqual(await sweep(template, awards, both(awardNotAlone, titleNotAlone)), []);
     });
   }
 });
