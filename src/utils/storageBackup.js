@@ -36,7 +36,7 @@ export function notSavedReason(err) {
 
 /**
  * The messages displayed when saving changes failed, by context and reason (ONB-6).
- * One table so messages across Job Tracker, Editor, and Dashboard cannot drift.
+ * One table so messages across Job Tracker, Editor, Dashboard and Boards cannot drift.
  */
 export const NOT_SAVED_MESSAGES = {
   jobs: {
@@ -51,11 +51,15 @@ export const NOT_SAVED_MESSAGES = {
     full: 'Changes are not being saved: browser storage is full. Remove large photos or export your resumes as JSON.',
     blocked: 'Changes are not being saved: this browser is blocking site storage. Export your resumes as JSON.',
   },
+  boards: {
+    full: 'Changes are not being saved: browser storage is full. Your latest edits may be lost on reload.',
+    blocked: 'Changes are not being saved: this browser is blocking site storage. Your latest edits may be lost on reload.',
+  },
 };
 
 /**
  * The message to display when saving changes failed.
- * `context`: 'jobs' | 'editor' | 'dashboard'
+ * `context`: 'jobs' | 'editor' | 'dashboard' | 'boards'
  * `err`: error object or reason string ('full' | 'blocked')
  */
 export function notSavedMessage(context, err) {

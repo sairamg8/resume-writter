@@ -9,6 +9,8 @@ import { useBoardStore } from '@/hooks/useBoardStore';
 import { BoardColumn } from '@/components/board/BoardColumn';
 import { CardView } from '@/components/board/BoardCard';
 import { CardDetailSheet } from '@/components/board/CardDetailSheet';
+import { BoardStorageNotice } from '@/components/board/BoardStorageNotice';
+import { boardLists, dropTarget } from '@/utils/boardView';
 
 /** The "Add list" column at the right edge of the board (and its own scroll-snap target on mobile). */
 function AddListColumn({ onAdd }) {
@@ -62,11 +64,11 @@ function AddListColumn({ onAdd }) {
 }
 
 /**
- * One board — its lists and cards, with drag to reorder cards (within and across lists) and to
- * reorder lists. A single DndContext handles both: a draggable carries `data.type` ('card' or
- * 'list'), and onDragEnd branches on it. Card moves are computed end-only (no live onDragOver),
- * which keeps the store's per-board updates cheap; the index maths matches arrayMove because the
- * store's moveCard strips the card then inserts at the over card's index.
+ * One board (a v2 project) — its columns as lists and its issues as cards, with drag to reorder
+ * cards (within and across lists) and to reorder lists. A single DndContext handles both: a
+ * draggable carries `data.type` ('card' or 'list'). Moves are computed end-only (no live
+ * onDragOver), which keeps the store's per-board updates cheap; where a drop lands is
+ * boardView.dropTarget's, which the store's moveColumn / moveIssue then make.
  */
 export function Board() {
   const { id } = useParams();
@@ -96,10 +98,11 @@ export function Board() {
     );
   }
 
-  const findListOf = (cardId) => board.lists.find((l) => l.cards.some((c) => c.id === cardId));
-  const activeCard = active?.type === 'card' ? board.lists.flatMap((l) => l.cards).find((c) => c.id === active.id) : null;
-  const activeList = active?.type === 'list' ? board.lists.find((l) => l.id === active.id) : null;
-  const openList = open ? board.lists.find((l) => l.id === open.listId) : null;
+  const lists = boardLists(board);
+  const activeCard = active?.type === 'card' ? lists.flatMap((l) => l.cards).find((c) => c.id === active.id) : null;
+  const activeList = active?.type === 'list' ? lists.find((l) => l.id === active.id) : null;
+  // Found by id alone: a move made elsewhere (another tab) may have changed its column meanwhile.
+  const openList = open ? lists.find((l) => l.cards.some((c) => c.id === open.cardId)) : null;
   const openCard = openList?.cards.find((c) => c.id === open.cardId) || null;
 
   function onDragStart({ active: a }) {
@@ -108,31 +111,42 @@ export function Board() {
 
   function onDragEnd({ active: a, over }) {
     setActive(null);
-    if (!over) return;
-    const type = a.data.current?.type;
+    const move = dropTarget(board, { id: a.id, type: a.data.current?.type }, over && { id: over.id, data: over.data.current });
+    if (move?.kind === 'column') store.moveColumn(board.id, move.columnId, move.toIndex);
+    if (move?.kind === 'issue') store.moveIssue(board.id, move.issueId, move.target);
+  }
 
-    if (type === 'list') {
-      if (a.id === over.id) return;
-      const overListId = over.data.current?.type === 'list' ? over.id : over.data.current?.listId;
-      const toIndex = board.lists.findIndex((l) => l.id === overListId);
-      if (toIndex !== -1) store.moveList(board.id, a.id, toIndex);
+  /**
+   * Delete a list. Its cards are never lost: they move to the list beside it (the store refuses
+   * to delete a list that holds cards without a target, and never deletes the last one).
+   */
+  function deleteList(list) {
+    const index = lists.indexOf(list);
+    const target = lists[index + 1] ?? lists[index - 1];
+    if (!target) {
+      alert('A board needs at least one list.');
       return;
     }
-
-    // A card.
-    const fromList = findListOf(a.id);
-    if (!fromList) return;
-    if (over.data.current?.type === 'card') {
-      const toListId = over.data.current.listId;
-      if (fromList.id === toListId && over.id === a.id) return;
-      const toList = board.lists.find((l) => l.id === toListId);
-      const toIndex = toList.cards.findIndex((c) => c.id === over.id);
-      store.moveCard(board.id, { cardId: a.id, toListId, toIndex });
-    } else {
-      // Dropped on a list's empty space (over is the column) → append there.
-      const toListId = over.data.current?.type === 'list' ? over.id : fromList.id;
-      store.moveCard(board.id, { cardId: a.id, toListId, toIndex: null });
+    const n = list.cards.length;
+    if (n === 0 || confirm(`Delete "${list.title || 'this list'}"? Its ${n} card${n === 1 ? '' : 's'} will move to "${target.title || 'Untitled'}".`)) {
+      store.deleteColumn(board.id, list.id, target.id);
     }
+  }
+
+  /**
+   * The card sheet's change as an issue patch: the sheet picks labels by colour ({ name, color }),
+   * an issue holds the ids of the board's labels — a colour the board has no label for yet gets one.
+   */
+  function changeCard(cardId, patch) {
+    if (!('labels' in patch)) {
+      store.updateIssue(board.id, cardId, patch);
+      return;
+    }
+    const { labels, ...rest } = patch;
+    const labelIds = labels
+      .map((l) => (l.id ? l : board.labels.find((x) => x.color === l.color) ?? store.addLabel(board.id, l))?.id)
+      .filter(Boolean);
+    store.updateIssue(board.id, cardId, { ...rest, labelIds });
   }
 
   function commitTitle() {
@@ -183,11 +197,13 @@ export function Board() {
         </div>
       </div>
 
+      <BoardStorageNotice persistError={store.persistError} recovery={store.recovery} onDismissRecovery={store.dismissRecovery} className="px-3 sm:px-5 pt-3 shrink-0" />
+
       {/* Mobile list tabs — tap to scroll a column into view */}
-      {board.lists.length > 0 && (
+      {lists.length > 0 && (
         <div className="md:hidden bg-white border-b border-gray-100 overflow-x-auto shrink-0">
           <div className="flex gap-1.5 px-3 py-2">
-            {board.lists.map((l) => (
+            {lists.map((l) => (
               <button
                 key={l.id}
                 onClick={() => document.getElementById(`board-col-${l.id}`)?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' })}
@@ -204,19 +220,19 @@ export function Board() {
       <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={onDragStart} onDragEnd={onDragEnd} onDragCancel={() => setActive(null)}>
         <div className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden">
           <div className="flex gap-3 items-start px-3 sm:px-5 py-4 h-full snap-x snap-mandatory md:snap-none">
-            <SortableContext items={board.lists.map((l) => l.id)} strategy={horizontalListSortingStrategy}>
-              {board.lists.map((list) => (
+            <SortableContext items={lists.map((l) => l.id)} strategy={horizontalListSortingStrategy}>
+              {lists.map((list) => (
                 <BoardColumn
                   key={list.id}
                   list={list}
                   onOpenCard={(cardId, listId) => setOpen({ cardId, listId })}
-                  onAddCard={(listId, title) => store.addCard(board.id, listId, { title })}
-                  onRenameList={(title) => store.updateList(board.id, list.id, { title })}
-                  onDeleteList={() => { if (list.cards.length === 0 || confirm(`Delete "${list.title || 'this list'}" and its ${list.cards.length} card(s)?`)) store.deleteList(board.id, list.id); }}
+                  onAddCard={(listId, title) => store.addIssue(board.id, { title, columnId: listId })}
+                  onRenameList={(title) => store.updateColumn(board.id, list.id, { title })}
+                  onDeleteList={() => deleteList(list)}
                 />
               ))}
             </SortableContext>
-            <AddListColumn onAdd={(title) => store.addList(board.id, title)} />
+            <AddListColumn onAdd={(title) => store.addColumn(board.id, { title })} />
           </div>
         </div>
 
@@ -236,8 +252,8 @@ export function Board() {
           card={openCard}
           listTitle={openList?.title}
           onClose={() => setOpen(null)}
-          onChange={(patch) => store.updateCard(board.id, open.listId, open.cardId, patch)}
-          onDelete={() => { store.deleteCard(board.id, open.listId, open.cardId); setOpen(null); }}
+          onChange={(patch) => changeCard(openCard.id, patch)}
+          onDelete={() => { store.deleteIssue(board.id, openCard.id); setOpen(null); }}
         />
       )}
     </div>
