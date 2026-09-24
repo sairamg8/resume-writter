@@ -22,7 +22,7 @@ The owner approved the temporary `claude/wf-*` branches on 2026-09-24 12:47.
 
 | Cluster | Rows | Session | State |
 |---|---|---|---|
-| ats | R2-020 021 022 023 024 025 027 078 079 080 081 163 166 | session_01GG1ULRf3BEFijyNRzXNJoT | running (5 fixes carried over) |
+| ats | R2-020 021 022 023 024 025 027 078 079 080 081 163 166 | session_01GG1ULRf3BEFijyNRzXNJoT | **merged** 32beacf |
 | pdf-pagination | R2-046 047 048 049 104 109 111 | session_013Hg3VSwaVkaQmNCkotTNsb | running |
 | design-sidebar | R2-013 051 059 082 083 087 088 089 090 096 119 120 121 123 | session_014y3tSMD21g1ji9Ct73pZQh | running (4 fixes carried over) |
 | word | R2-061 065 066 070 114 118 124 125 126 128 132 | session_01Kms1vF1NWaaH7yWz6e2UWr | running (2 fixes carried over) |
@@ -33,8 +33,8 @@ The owner approved the temporary `claude/wf-*` branches on 2026-09-24 12:47.
 | preview | R2-106 107 170 165, R3-005 | session_01JqQBbPVCVC4WNbFTi77bQ2 | running |
 | import-data | R2-031 055 056 110 085 091 117 093 094 095 097 | session_01174H7ZETLrGKWfVVXQdWmd | running |
 | sections | R2-057 069 127 108 112 113 115 116 150 151 | session_01WXhjKL5tbvAFuBeRpZ6c4d | running |
-| sync | R2-028 029 030 | session_01CkkXUYrb8NXsPv4VYVH4MX | running |
-| letter | R2-043 044 092 103 130 134 068 133 | session_019D9Rn4N2nqJnTSeZgxodBg | running |
+| sync | R2-028 029 030 | session_01CkkXUYrb8NXsPv4VYVH4MX | **merged** 0cd44d8 |
+| letter | R2-043 044 092 103 130 134 068 133 | session_019D9Rn4N2nqJnTSeZgxodBg | **merged** 84099fa |
 | pdf-text | R2-045 105, R3-002 003 004 | session_01SUaj4fLPe8rVZ9g2kGSu6H | running |
 | cypress | R2-152 161 162 | coordinator's own machine (workflow wf_f5efdc0c-440, local branch `wf/cypress`) | running |
 
