@@ -8,8 +8,9 @@
 // uploading it again. In a demo account one of its originals (keep: true, demoSeed.js) is
 // flagged { deleted: true, keep: true } instead, keeping its last edited copy for a later
 // restore (project_demo-account.md). Any other account deletes an original like any résumé
-// (R4-11): a flag there kept content nothing would ever bring back — originals reach such an
-// account only through a shared browser, whose local résumés carry over to whoever signs in next.
+// (R4-11): a flag there kept content nothing would ever bring back — originals reached such an
+// account through a shared browser, whose list carried over to whoever signed in next (until
+// R2-005: an account's list now leaves the browser with it, cloudSyncLeave.js).
 // Until 2026-09-15 a demo account flagged the fictional samples (demo_…) instead: its first sync
 // now removes such a flag's copy for good when nobody edited it, and makes an edited one an
 // ordinary résumé again (oldSamples.js, V2OWNER-DATA-8). A sample deleted now is removed for good.
@@ -18,6 +19,7 @@ import { isSampleId, isUntouchedSample } from '@/utils/oldSamples';
 import { mergeResumeLists } from '@/utils/syncMerge';
 import { withoutDeletions } from '@/utils/localDeletions';
 import { sortOut } from '@/utils/cloudSyncLineage';
+import { withoutStash } from '@/utils/cloudSyncLeave';
 
 const hasId = (r) => r && typeof r.id === 'string' && r.id !== '';
 /** A deletion entry (localDeletions.js); a bare id is an older build's, with no version. */
@@ -123,7 +125,9 @@ export function planInitialSync({ local = [], deletions = [], cloud = [], cloudD
  * the account and waited for its batch (R8-2). `snapshot` the résumés the plan was made from,
  * `merged` and `handled` from the plan, `before` when the plan read the store, `uid` the account
  * the list is now synced with (`syncedUid`: whose a later deletion is, R8-6), `versions` the
- * copies its cloud holds now ({ id: updatedAt }: `cloudVersions`, the next visit's lineage base, R2-004).
+ * copies its cloud holds now ({ id: updatedAt }: `cloudVersions`, the next visit's lineage base, R2-004),
+ * `unstash` the plan took in the résumés kept aside for `uid` at its last sign-out: they are in its
+ * list now (cloudSyncLeave.js, R2-005).
  * A résumé unchanged since the snapshot takes its merged copy, or goes when the plan left it out;
  * one edited or added meanwhile stays as it is, and one deleted meanwhile stays deleted — the
  * watcher then sends those changes. Only the deletions the plan dealt with are forgotten — `uid`'s
@@ -132,7 +136,7 @@ export function planInitialSync({ local = [], deletions = [], cloud = [], cloudD
  * store and every deletion was forgotten: an edit typed during the sync was lost, and a résumé
  * deleted during it came back — the batch had just written it to the cloud again.
  */
-export function afterSync(state, { uid, snapshot, merged, handled, before, versions = {} }) {
+export function afterSync(state, { uid, snapshot, merged, handled, before, versions = {}, unstash = false }) {
   const seen = new Map(snapshot.map((r) => [r.id, r.updatedAt]));
   const current = new Map(state.resumes.map((r) => [r.id, r]));
   const touched = (r) => !seen.has(r.id) || seen.get(r.id) !== r.updatedAt;
@@ -151,6 +155,7 @@ export function afterSync(state, { uid, snapshot, merged, handled, before, versi
     ...withoutDeletions(state, handled, before, uid ?? undefined),
     syncedUid: uid ?? state.syncedUid ?? null,
     cloudVersions: versions,
+    ...(unstash && uid ? withoutStash(state, uid) : {}),
   };
 }
 

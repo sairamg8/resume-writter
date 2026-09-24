@@ -1,6 +1,7 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'firebase/firestore';
+import { initializeFirestore, memoryLocalCache } from 'firebase/firestore';
+import { forgetOldCache } from '@/utils/firestoreOldCache';
 
 const firebaseConfig = {
   apiKey:            import.meta.env.VITE_FIREBASE_API_KEY,
@@ -33,7 +34,8 @@ const app = firebaseEnabled ? initializeApp(firebaseConfig) : null;
 
 export const auth = app ? getAuth(app) : null;
 
-// Persistent IndexedDB cache — writes queue offline and flush on reconnect automatically
-export const db = app
-  ? initializeFirestore(app, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) })
-  : null;
+// The cache in memory only: a persistent one kept every account's résumés on disk after it signed
+// out (R2-005). Nothing reads it — every read asks the server, and the résumé store keeps what a
+// flush could not send for the next first sync — and the one an earlier build left is deleted.
+export const db = app ? initializeFirestore(app, { localCache: memoryLocalCache() }) : null;
+if (db) forgetOldCache(globalThis.indexedDB, firebaseConfig.projectId);

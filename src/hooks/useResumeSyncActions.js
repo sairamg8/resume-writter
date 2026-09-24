@@ -6,6 +6,7 @@
 import { normalizeResume } from '@/utils/normalizeResume';
 import { withDeletion, withoutDeletions } from '@/utils/localDeletions';
 import { afterSync } from '@/utils/cloudSyncPlan';
+import { leaveAccount as leaving } from '@/utils/cloudSyncLeave';
 
 /** `setAppState(prev => next)` as React's; `now()` → ms, when a deletion is made. */
 export function createSyncActions(setAppState, now = () => Date.now()) {
@@ -69,7 +70,16 @@ export function createSyncActions(setAppState, now = () => Date.now()) {
     });
   }
 
-  return { forgetDeletions, applyCloudSync, restoreResumes, deleteResume, noteCloudVersions };
+  /**
+   * Account `uid` signed out, or another one signs in: its list leaves this browser — what its
+   * cloud does not have yet kept aside for it (cloudSyncLeave.js, R2-005). Nothing when the list
+   * is not that account's.
+   */
+  function leaveAccount(uid) {
+    setAppState(prev => leaving(prev, uid));
+  }
+
+  return { forgetDeletions, applyCloudSync, restoreResumes, deleteResume, noteCloudVersions, leaveAccount };
 }
 
 /**
@@ -84,5 +94,6 @@ export function liveStore(latest) {
     forgetDeletions: (ids, before, uid) => latest().store.forgetDeletions(ids, before, uid),
     restoreResumes: (list) => latest().store.restoreResumes(list),
     noteCloudVersions: (uid, versions) => latest().store.noteCloudVersions(uid, versions),
+    leaveAccount: (uid) => latest().store.leaveAccount(uid),
   };
 }

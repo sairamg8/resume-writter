@@ -13,6 +13,7 @@ import { backoff, failureReport } from '@/utils/cloudSyncRetry';
 import { createHeld } from '@/utils/cloudSyncHeld';
 import { createQueue, emptyQueue } from '@/utils/cloudSyncQueue';
 import { createLineage } from '@/utils/cloudSyncLineage';
+import { stashOf } from '@/utils/cloudSyncLeave';
 
 /**
  * createCloudSync({ io, store, report, isDemo, ... }):
@@ -21,7 +22,8 @@ import { createLineage } from '@/utils/cloudSyncLineage';
  *             sync's result (cloudSyncPlan.afterSync), forgetDeletions(ids, before, uid) — that
  *             account's cloud has these deletions (localDeletions.js), restoreResumes(list),
  *             noteCloudVersions(uid, { id: version | null }) — the copies the cloud holds now
- *             (cloudSyncLineage.js) }: useResumeSyncActions.liveStore
+ *             (cloudSyncLineage.js), leaveAccount(uid) — its list leaves this browser
+ *             (cloudSyncLeave.js) }: useResumeSyncActions.liveStore
  *   report    { status('idle'|'syncing'|'synced'|'offline'|'error'|'stopped'|'off'), synced(Date), account(a),
  *             held([{ id, name }]) } — held: the résumés the cloud will not take ('stopped' while any);
  *             account: { uid, cloud, cloudOriginals, cloudDeleted } once the account's list is
@@ -83,7 +85,21 @@ export function createCloudSync({
     // refused, and that refusal turned sync off for whoever signed in next (R8-5). Nothing is
     // lost: the store keeps the edits and deletions for that account's next first sync. Nor do its
     // failures put off the next account's retry: that one starts from retryDelay (V2VF1S-5).
-    if ((user?.uid ?? null) !== (s.user?.uid ?? null)) { dropQueue(); held.clear(); s.attempts = 0; s.lineage.reset(); }
+    // Nor is the next account's list compared with the last one's: a change made before its own
+    // first sync got through waits for that sync — else the last list leaving the store (R2-005)
+    // was queued as the next account's deletions.
+    if ((user?.uid ?? null) !== (s.user?.uid ?? null)) {
+      dropQueue(); held.clear(); s.attempts = 0; s.lineage.reset();
+      s.initialSyncDone = false;
+      s.prevResumes = null;
+    }
+    // Signed out, or another account signing in while the list is still the last one's: that
+    // list leaves this browser, what its cloud lacks kept aside for it (R2-005). It stayed on
+    // screen for whoever came next, and their first sync merged it into their own cloud.
+    // Without a cloud the list is its only copy, and stays.
+    const owner = store.getState().syncedUid;
+    if (io && s.user && !user) store.leaveAccount(s.user.uid);
+    else if (io && user && owner && owner !== user.uid) store.leaveAccount(owner);
     s.user = user || null;
 
     if (!user) {
@@ -196,18 +212,26 @@ export function createCloudSync({
       if (gen !== s.gen) return;
 
       // The store as it is once the account is known: what was done while it was read counts.
+      // A list still another account's is none of this one's (R2-005: start() had it leave); what
+      // this account's list kept aside at its last sign-out is (cloudSyncLeave.js).
       const appState = store.getState();
       const planAt = now();
+      const other = appState.syncedUid && appState.syncedUid !== user.uid ? appState.syncedUid : null;
+      if (other) store.leaveAccount(other);
+      const own = other ? [] : appState.resumes;
+      const stash = stashOf(appState, user.uid);
+      const local = stash ? [...own, ...stash.resumes.filter((r) => !own.some((o) => o.id === r.id))] : own;
       if (appState.syncedUid === user.uid) s.lineage.base(appState.cloudVersions);
+      if (stash) s.lineage.base(stash.versions);
       const plan = planInitialSync({
-        local: appState.resumes, deletions: deletionEntries(appState), cloud: cloud.docs, cloudDeleted: cloud.deleted,
+        local, deletions: deletionEntries(appState), cloud: cloud.docs, cloudDeleted: cloud.deleted,
         demoAccount: isDemo(user), uid: user.uid, lineage: s.lineage,
       });
 
       // Deletions this browser never sent reach the cloud in the same batch, before the store
       // forgets them (afterSync) — else the next sync restores them (R4-1). A résumé too large
       // for a document is never sent; one refused is held and the rest sent without it.
-      await held.commit(user.uid, { ...plan, sets: held.sendable(user.uid, plan.sets) }, appState.resumes, () => gen === s.gen);
+      await held.commit(user.uid, { ...plan, sets: held.sendable(user.uid, plan.sets) }, own, () => gen === s.gen);
       if (gen !== s.gen) return;
       s.lineage.synced(cloud.docs);
       s.lineage.synced(plan.sets);
@@ -219,7 +243,7 @@ export function createCloudSync({
       const cloudCopy = new Map(cloud.docs.map((r) => [r.id, r.updatedAt]));
       const versions = Object.fromEntries(plan.merged.map((r) => [r.id, held.has(r.id) ? cloudCopy.get(r.id) : r.updatedAt])
         .filter(([, v]) => Number.isFinite(v)));
-      store.applyCloudSync({ uid: user.uid, snapshot: appState.resumes, merged: plan.merged, handled: plan.handled, before: planAt, versions });
+      store.applyCloudSync({ uid: user.uid, snapshot: own, merged: plan.merged, handled: plan.handled, before: planAt, versions, unstash: Boolean(stash) });
       s.prevResumes = plan.merged;
       s.initialSyncDone = true;
       // A listed id was deleted for good, whatever copy of it a stale device wrote back since

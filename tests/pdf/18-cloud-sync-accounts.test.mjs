@@ -21,6 +21,12 @@ const page = (cloud, state) => syncPage(mods, cloud, state);
 const signIn = async (p, user) => { p.sync.start(user); await settle(); };
 const rename = (p, id, name, updatedAt) => p.change({ resumes: p.store.state.resumes.map((r) => (r.id === id ? { ...r, name, updatedAt } : r)) });
 const ids = (list) => list.map((r) => r.id).toSorted();
+/**
+ * A page loaded signed out with a list synced with `uid` — an earlier build's sign-out left it, or
+ * the account's session ended with the page closed (this build's sign-out takes it away, R2-005):
+ * a deletion made now is that account's, waiting for it (R8-6).
+ */
+const leftBy = (uid, resumes) => ({ resumes, syncedUid: uid });
 
 describe('a flush never waits for the one before it to be acknowledged (VM4-3)', () => {
   it('an acknowledgement that does not come holds back no later flush', async () => {
@@ -82,9 +88,11 @@ describe('signing out ends the account\'s queue (R8-5)', () => {
     await signInAs(p, cloud, B);
     await p.timers.fire();
     assert.equal(p.seen.status, 'synced', 'before: A\'s flush was denied under B, and B\'s sync turned off');
-    await rename(p, 'resume_a', 'Edited as B', 3);
-    await p.timers.fire();
-    assert.equal(cloud.resumes('B').resume_a?.name, 'Edited as B');
+    // A's résumé left with A, its rename kept aside for A (R2-005).
+    assert.deepEqual([p.store.state.resumes, cloud.resumes('B')], [[], {}], 'before (R2-005): A\'s résumé in B\'s list, and written to B\'s cloud');
+    await signInAs(p, cloud, null);
+    await signInAs(p, cloud, A);
+    assert.equal(cloud.resumes('A').resume_a.name, 'Renamed by A', 'A\'s next sign-in sends it');
   });
 
   it('A\'s edit and deletion waiting at sign-out never reach B: B\'s flush sends B\'s, and A\'s next sign-in the deletion (V2W1a-2)', async () => {
@@ -147,9 +155,7 @@ describe('signing out ends the account\'s queue (R8-5)', () => {
 describe('a deletion belongs to the account the list came from (R8-6)', () => {
   it('deleted after signing out of A, it waits for A: B signing in does not take it', async () => {
     const cloud = fakeFirestore({ [resumePath('A', 'resume_r')]: cv('resume_r', 5), [resumePath('A', 'resume_s')]: cv('resume_s', 5) });
-    const p = page(cloud, { resumes: [] });
-    await signIn(p, A); // the list is A's now
-    p.sync.start(null); // signed out: the list stays in the browser
+    const p = page(cloud, leftBy('A', [cv('resume_r', 5), cv('resume_s', 5)]));
     await p.remove('resume_r');
 
     await signIn(p, B);
@@ -164,16 +170,19 @@ describe('a deletion belongs to the account the list came from (R8-6)', () => {
     assert.equal(p.store.state.resumes.some((r) => r.id === 'resume_r'), false);
   });
 
-  it('deleted while signed in as B, before B\'s first sync got through, it is B\'s (V2W1a-3)', async () => {
-    // The list was last synced with A and still holds B's résumé R from B's earlier visit.
+  it('signed in as B before B\'s first sync got through: A\'s list is not there to delete from; B\'s R, once there, is B\'s to delete (V2W1a-3, R2-005)', async () => {
+    // The list was last synced with A and holds a copy of R. Before R2-005 it stayed on screen
+    // under B, and a deletion of R was A's — B's phone kept R (V2W1a-3).
     const cloud = fakeFirestore({ [resumePath('B', 'resume_r')]: cv('resume_r', 5), [resumePath('B', 'resume_s')]: cv('resume_s', 5) });
-    const p = page(cloud, { resumes: [cv('resume_r', 5)], syncedUid: 'A' });
+    const p = page(cloud, leftBy('A', [cv('resume_r', 5)]));
     cloud.fail.read = Object.assign(new Error('Failed to get documents from server.'), { code: 'unavailable' });
     await signIn(p, B); // "Sync error — will retry"
-    await p.remove('resume_r');
+    assert.deepEqual(p.store.state.resumes, [], 'before (R2-005): A\'s list on screen under B');
     cloud.fail.read = null;
-    await p.timers.fire(); // the retry gets through
-    assert.equal(cloud.resumes('B').resume_r, undefined, 'before: left for A, and B\'s phone kept R');
+    await p.timers.fire(); // the retry gets through: B's list
+    await p.remove('resume_r');
+    await p.timers.fire();
+    assert.equal(cloud.resumes('B').resume_r, undefined);
     assert.deepEqual([cloud.doc(listPath('B'))?.ids, p.store.state.deletedIds], [['resume_r'], []]);
   });
 
@@ -182,9 +191,7 @@ describe('a deletion belongs to the account the list came from (R8-6)', () => {
       [resumePath('A', 'demo_classic')]: cv('demo_classic', 5, { name: 'A\'s copy' }),
       [resumePath('B', 'demo_classic')]: cv('demo_classic', 5, { name: 'B\'s copy' }), [resumePath('B', 'resume_b')]: cv('resume_b'),
     });
-    const p = page(cloud, { resumes: [] });
-    await signIn(p, A);
-    p.sync.start(null);
+    const p = page(cloud, leftBy('A', [cv('demo_classic', 5, { name: 'A\'s copy' })]));
     await p.remove('demo_classic'); // signed out: A's deletion, waiting for A
     await signIn(p, B);
     assert.deepEqual(p.store.state.resumes.map((r) => r.name).toSorted(), ['B\'s copy', 'resume_b'], 'before: B\'s copy hidden on this browser until A signs in here again');
@@ -192,7 +199,7 @@ describe('a deletion belongs to the account the list came from (R8-6)', () => {
     p.sync.start(null);
     await signIn(p, A);
     assert.deepEqual([cloud.resumes('A').demo_classic, cloud.resumes('B').demo_classic?.name], [undefined, 'B\'s copy']);
-    assert.deepEqual(ids(p.store.state.resumes), ['resume_b'], 'and B\'s copy is not uploaded to A');
+    assert.deepEqual([ids(p.store.state.resumes), Object.keys(cloud.resumes('A'))], [[], []], 'and B\'s copy is not uploaded to A — B\'s list left with B (R2-005)');
   });
 
   it('B then deleting its own copy of that id does not take A\'s deletion with it (V2VF1S-1)', async () => {
@@ -200,9 +207,7 @@ describe('a deletion belongs to the account the list came from (R8-6)', () => {
       [resumePath('A', 'demo_classic')]: cv('demo_classic', 5, { name: 'A\'s copy' }),
       [resumePath('B', 'demo_classic')]: cv('demo_classic', 5, { name: 'B\'s copy' }),
     });
-    const p = page(cloud, { resumes: [] });
-    await signIn(p, A);
-    p.sync.start(null);
+    const p = page(cloud, leftBy('A', [cv('demo_classic', 5, { name: 'A\'s copy' })]));
     await p.remove('demo_classic'); // signed out: A's deletion, waiting for A
     await signIn(p, B);
     await p.remove('demo_classic'); // B's own copy, signed in: B's
@@ -220,9 +225,7 @@ describe('a deletion belongs to the account the list came from (R8-6)', () => {
       [resumePath('A', 'demo_classic')]: cv('demo_classic', 5, { name: 'A\'s copy' }),
       [resumePath('B', 'demo_classic')]: cv('demo_classic', 5, { name: 'B\'s copy' }),
     });
-    const p = page(cloud, { resumes: [] });
-    await signIn(p, A);
-    p.sync.start(null);
+    const p = page(cloud, leftBy('A', [cv('demo_classic', 5, { name: 'A\'s copy' })]));
     await p.remove('demo_classic');
     await signIn(p, B);
     cloud.fail.commit = Object.assign(new Error('Failed to get document because the client is offline.'), { code: 'unavailable' });
@@ -241,9 +244,7 @@ describe('a deletion belongs to the account the list came from (R8-6)', () => {
       [resumePath('A', 'demo_classic')]: cv('demo_classic', 5, { name: 'A\'s copy' }),
       [resumePath('B', 'demo_classic')]: cv('demo_classic', 5, { name: 'B\'s copy' }),
     });
-    const p = page(cloud, { resumes: [] });
-    await signIn(p, A);
-    p.sync.start(null);
+    const p = page(cloud, leftBy('A', [cv('demo_classic', 5, { name: 'A\'s copy' })]));
     await p.remove('demo_classic');
     await signIn(p, B);
     cloud.fail.commit = Object.assign(new Error('Failed to get document because the client is offline.'), { code: 'unavailable' });
