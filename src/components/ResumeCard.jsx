@@ -2,6 +2,7 @@ import { useId, useState } from 'react';
 import { Copy, Trash2, Edit2, Check, Pin } from 'lucide-react';
 import { timeAgo } from '@/utils/resume';
 import { isOriginal } from '@/utils/demoSeed';
+import { templateLabel } from '@/constants/templates';
 
 const KEEP_HINT = 'Your originals come back whenever none of them is left';
 const LAST_ORIGINAL_HINT = 'Your last original always comes back. To delete it, choose "Stop keeping" first.';
@@ -85,8 +86,9 @@ export function ResumeCard({ resume, onOpen, onDuplicate, onDelete, onRename, on
             </button>
           </div>
         )}
-        <p className="text-[11px] text-gray-400 mt-0.5 capitalize">
-          {resume.template || 'classic'} · {timeAgo(resume.updatedAt)}
+        {/* The template's name as the editor shows it: an id the app does not offer opens as Classic (R2-133). */}
+        <p className="text-[11px] text-gray-400 mt-0.5">
+          {templateLabel(resume.template)} · {timeAgo(resume.updatedAt)}
         </p>
         {onKeep && (isOriginal(resume) ? (
           <div className="flex items-center gap-2 mt-1">
