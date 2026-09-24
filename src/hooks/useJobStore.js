@@ -35,9 +35,11 @@ function load() {
  * Write the list — when storage is full, old backups make room first (R4-8); null when it
  * reached localStorage, else the error (usually QuotaExceededError).
  */
+const serialize = (jobs) => JSON.stringify({ jobs, dataVersion: JOB_VERSION });
+
 function persist(jobs) {
   try {
-    setItemWithRoom(KEY, JSON.stringify({ jobs, dataVersion: JOB_VERSION }));
+    setItemWithRoom(KEY, serialize(jobs));
     return null;
   } catch (e) {
     return e;
@@ -106,9 +108,21 @@ function takeOtherTabsList() {
   const jobs = keepUnsaved(incoming, snapshot().jobs, stored);
   stored = incoming;
   // The same list: nothing here is unsaved any more. Else what storage refused is written again.
-  const persistError = jobs === incoming ? null : persist(jobs);
+  // Also written when reading it repaired something — ids given to a job or to-do stored without
+  // one: unwritten, the next re-read gave them new ids, and a job page open on one lost it.
+  const persistError = jobs === incoming && !repairedOnRead(incoming) ? null : persist(jobs);
   if (!persistError) stored = jobs;
   update({ jobs, persistError });
+}
+
+/** Whether `jobs`, just read from storage, differ from what storage holds (the read repaired them). */
+function repairedOnRead(jobs) {
+  try {
+    const raw = localStorage.getItem(KEY);
+    return raw !== null && raw !== serialize(jobs);
+  } catch {
+    return false;
+  }
 }
 
 function subscribe(listener) {

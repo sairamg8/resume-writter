@@ -108,3 +108,37 @@ test('J-01: a job this tab could not save survives coming back (keepUnsaved stil
   assert.deepEqual(storedCompanies(), ['Acme', 'Stripe', 'Beta'], 'written again, now that there is room');
   back();
 });
+
+// ── Ids given on a re-read are kept ──────────────────────────────────────────────────────────
+// A job or a to-do stored without an id (a hand edit, an older build in another tab) gets one when
+// it is read (completeJob, addressableJobs). The first read wrote the repaired list back; a re-read
+// — another tab's save, or coming back to a job page — did not, so every re-read gave new ids, and a
+// job page open on one of them said "Job not found" after the next navigation.
+
+test('a job and a to-do another tab stored with no id keep the ids they got here, re-read after re-read', () => {
+  save([job('a', 'Acme')]);
+  const leave = store.subscribe(() => {});
+  otherTabSaves([job('a', 'Acme'), { company: 'Nomad', role: 'Dev', status: 'applied', todos: [{ text: 'Call' }] }]);
+  const first = store.snapshot().jobs.find((j) => j.company === 'Nomad');
+  assert.ok(first.id && first.todos[0].id);
+  leave();
+  store.subscribe(() => {})(); // back on a job page, and away again
+  const back = store.subscribe(() => {});
+  const again = store.snapshot().jobs.find((j) => j.company === 'Nomad');
+  assert.equal(again.id, first.id, 'the job page\'s id still finds the job');
+  assert.equal(again.todos[0].id, first.todos[0].id);
+  const saved = JSON.parse(localStorage.getItem(KEY)).jobs.find((j) => j.company === 'Nomad');
+  assert.equal(saved.id, first.id, 'written back, as the first read does');
+  back();
+});
+
+test('a re-read that repairs nothing writes nothing', () => {
+  save([job('a', 'Acme')]);
+  const leave = store.subscribe(() => {});
+  let writes = 0;
+  const setItem = localStorage.setItem.bind(localStorage);
+  localStorage.setItem = (k, v) => { if (k === KEY) writes += 1; setItem(k, v); };
+  otherTabSaves([job('a', 'Acme'), job('s', 'Stripe')]);
+  assert.equal(writes, 1, 'only the other tab\'s own save');
+  leave();
+});
