@@ -309,14 +309,16 @@ function chooseBestCasing(newWord, oldWord) {
 const LETTER_ABBREVIATION = /^(?:\p{L}\.)+\p{L}?$/u;
 
 /**
- * Extracts keywords & tech terms from a job description. A word is Unicode letters and digits:
- * `\w` is ASCII, and read with it "München" was the keyword "nchen" (R2-023).
+ * Extracts keywords & tech terms from a job description. A word is Unicode letters, their marks and
+ * digits: `\w` is ASCII, and read with it "München" was the keyword "nchen" (R2-023). The text is
+ * read composed (NFC), and a combining mark is part of its word: pasted from a PDF or a Mac, "ü" is
+ * often "u" + U+0308, and a Hindi or Tamil word holds vowel signs no composed letter replaces.
  */
 export function extractJobKeywords(jobDescriptionText) {
   if (!jobDescriptionText || typeof jobDescriptionText !== 'string') return [];
   // Tokenize words, normalizing punctuation
-  const clean = jobDescriptionText
-    .replace(/[^\p{L}\p{N}_\s+#.-]/gu, ' ')
+  const clean = jobDescriptionText.normalize('NFC')
+    .replace(/[^\p{L}\p{M}\p{N}_\s+#.-]/gu, ' ')
     .replace(/\s+/g, ' ');
 
   const tokens = clean.split(' ');
@@ -326,7 +328,7 @@ export function extractJobKeywords(jobDescriptionText) {
   for (let raw of tokens) {
     let word = raw.trim();
     // Strip trailing periods/commas
-    word = word.replace(/^[^\p{L}\p{N}_+#]+|[^\p{L}\p{N}_+#]+$/gu, '');
+    word = word.replace(/^[^\p{L}\p{M}\p{N}_+#]+|[^\p{L}\p{M}\p{N}_+#]+$/gu, '');
     if (word.length < 2 || word.length > 30) continue;
     if (LETTER_ABBREVIATION.test(word)) continue;
     const lower = word.toLowerCase();
@@ -373,7 +375,8 @@ export function matchResumeWithJob(resume, jobDescriptionText) {
   const jdKeywords = extractJobKeywords(jobDescriptionText);
   if (!jdKeywords.length) return null;
 
-  const resumeCorpus = extractResumeCorpus(resume).toLowerCase();
+  // Composed, as the keywords are read (extractJobKeywords).
+  const resumeCorpus = extractResumeCorpus(resume).normalize('NFC').toLowerCase();
   const matched = [];
   const missing = [];
 
@@ -388,8 +391,8 @@ export function matchResumeWithJob(resume, jobDescriptionText) {
       // Boundaries of Unicode letters, as the keywords are read: with `\w` the keyword "rich" was
       // found inside "Zürich" (R2-023).
       const esc = lowerKw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const lead = /^[\p{L}\p{N}_]/u.test(lowerKw) ? '(?<![\\p{L}\\p{N}_])' : '(?<!\\S)';
-      const trail = /[\p{L}\p{N}_]$/u.test(lowerKw) ? '(?![\\p{L}\\p{N}_])' : '(?![\\p{L}\\p{N}_+#])';
+      const lead = /^[\p{L}\p{M}\p{N}_]/u.test(lowerKw) ? '(?<![\\p{L}\\p{M}\\p{N}_])' : '(?<!\\S)';
+      const trail = /[\p{L}\p{M}\p{N}_]$/u.test(lowerKw) ? '(?![\\p{L}\\p{M}\\p{N}_])' : '(?![\\p{L}\\p{M}\\p{N}_+#])';
       const regex = new RegExp(`${lead}${esc}${trail}`, 'iu');
       isPresent = regex.test(resumeCorpus);
     }
