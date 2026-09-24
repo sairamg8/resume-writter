@@ -179,6 +179,15 @@ describe('useConfirm', () => {
     } finally { await view.unmount(); }
   });
 
+  it('unmounted while an answered question animates out: nothing of it runs afterwards', async () => {
+    const { view, ask, dialog } = confirmPage();
+    const answered = ask({ title: 'Delete?' });
+    view.act(() => reactProps(byText(dialog(), 'Confirm')).onClick(ev()));
+    assert.equal(await answered, true);
+    await view.unmount(); // the page left (a route change) inside the 160 ms hand-off to the next question
+    await wait(200);      // a timer left behind would fire here, into a page that is gone, and fail this test
+  });
+
   it('throws without a ConfirmProvider rather than answering for the user', async () => {
     const errors = [];
     const original = console.error;
