@@ -17,7 +17,7 @@ another machine. The cluster protocol is `docs/tracking/CLUSTER-PROTOCOL.md` on
 
 ```bash
 git fetch origin claude/wf-pdf-pagination && git checkout claude/wf-pdf-pagination
-git log --oneline 249cf3f..HEAD        # anything after 249cf3f came from the unfinished reviewer: check it
+git log --oneline 1d8b96c..HEAD        # anything after this handoff's commit (1d8b96c) came from the unfinished reviewer: check it
 corepack enable && yarn install --immutable
 # pdftotext / mutool (Linux: apt-get install -y poppler-utils mupdf-tools; macOS: brew install poppler mupdf-tools)
 node --test --test-concurrency=4 tests/pdf/84-*.test.mjs        # a few minutes: 84-keep-together sweeps ~1000 renders
