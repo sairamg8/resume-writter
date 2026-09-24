@@ -40,6 +40,8 @@ describe('typing that never pauses still repaints the preview (R2-142)', () => {
       let at = first.typed;
       const mid = p.calls[1].input;
       assert.ok(keys.indexOf(mid) >= 0 && keys.indexOf(mid) < at, 'it builds what was typed by then');
+      // Typing goes on while it builds.
+      at += (await type(p, keys.slice(at, at + 2))).typed;
       p.calls[1].finish();
       await settle();
       assert.deepEqual([p.shown(), p.status()], [name(mid), 'rendering'], 'its pages go up; the typing since is still on its way');
