@@ -85,7 +85,7 @@ export function PhotoSection({ resume: whole, personal, updatePersonal, toggleFi
               <p className="text-[11px] text-gray-400 mt-0.5">Optional. Click to upload.</p>
               {unprintable && (
                 <p className="text-[11px] text-amber-700 mt-1" data-testid="photo-unprintable">
-                  {personal.photo.startsWith('data:') ? UNPRINTABLE_PHOTO : UNLOADABLE_PHOTO}
+                  {typeof personal.photo === 'string' && !personal.photo.startsWith('data:') ? UNLOADABLE_PHOTO : UNPRINTABLE_PHOTO}
                 </p>
               )}
               {personal.photo && (

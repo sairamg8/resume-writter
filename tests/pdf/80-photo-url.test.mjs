@@ -109,5 +109,22 @@ describe('a photo stored as a URL or a path', () => {
     assert.doesNotMatch(html, />Added</);
     assert.match(html, /could not be loaded/i, 'and why: the link, not the format');
     assert.match(panel('https://img.example.com/me.webp'), />Added</);
+    // A photo stored as neither text nor null (a hand-written file's 5) prints none; the panel says so, and does not throw.
+    for (const photo of [5, { url: 'x' }]) assert.match(panel(photo), /Not printed/, JSON.stringify(photo));
+  });
+
+  it('Header Customization offers Photo ↔ Text for one that prints (its fetched copy), and not for one that cannot be fetched', async () => {
+    const { printableImage } = await loadModule('/src/utils/printableImage.js');
+    const { HeaderCustomization } = await loadModule('/src/components/PersonalInfoEditorHeader.jsx');
+    const panel = (photo) => renderToString(createElement(HeaderCustomization, {
+      s: { headerAlign: 'left' }, set: () => {}, clear: () => {}, personal: { name: 'A', photo }, template: 'classic', templateLabel: 'Classic', open: true, onToggle: () => {},
+    }));
+    const prints = 'https://img.example.com/me.webp';
+    const fails = 'https://no-cors.example.com/header.jpg';
+    await printableImage(prints);
+    await printableImage(fails);
+    assert.match(panel(JPEG_2X2), /Photo ↔ Text/, 'an uploaded photo');
+    assert.match(panel(prints), /Photo ↔ Text/, 'the PDF prints its copy, beside the text');
+    assert.doesNotMatch(panel(fails), /Photo ↔ Text/, 'the PDF prints no photo');
   });
 });
