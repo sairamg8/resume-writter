@@ -4,7 +4,7 @@ import { PdfRichText } from './PdfRichText';
 import { hasRichText } from '@/utils/richText';
 import { dateRange, presentLabel } from '@/utils/dates';
 import { SectionTitleOf, RenderBullets, RenderColGrid, hexAlpha, SectionRouter, SPACER, ItemHeader, shadesOf } from './PdfSections';
-import { CentredLine, EndRow, endField, fieldGap, onBaselineOf } from './PdfItemHeader';
+import { CentredLine, EndRow, endField, fieldGap, headPresence, itemHeadPresence, onBaselineOf } from './PdfItemHeader';
 import {
   SIDEBAR_TYPES, SideSectionTitle, EntryLink, SideEducation, SideLanguages, SideCertifications, SideInterests, SideReferences,
 } from './PdfSidebarColumn';
@@ -47,7 +47,7 @@ function CardItem({ children }) {
  * line's " · ", the location on a line of its own.
  */
 function CardHeader({ centered, entrySize, lineH, first, details, loc, locStyle, extra, dateStr, dateStyle, sepColor }) {
-  const keep = { wrap: false, minPresenceAhead: Math.round(entrySize * lineH * 2) };
+  const keep = { wrap: false, minPresenceAhead: cardKeep(entrySize, lineH) };
   if (centered) {
     return (
       <View {...keep} style={{ alignItems: 'center' }}>
@@ -66,6 +66,21 @@ function CardHeader({ centered, entrySize, lineH, first, details, loc, locStyle,
     </View>
   );
 }
+
+/** What a card's unbreakable header keeps under it, pt: two lines of its text. */
+const cardKeep = (entrySize, lineH) => Math.round(entrySize * lineH * 2);
+
+/**
+ * What a card section's title keeps under it (SectionTitleOf's `presence`): its first card's header,
+ * `lines` of it (CardHeader's, at the title's line height) and what the header keeps — or the title
+ * stayed at the foot of a page while that header moved to the next, its own three lines met by the
+ * dot and border the card draws before its header (R2-047).
+ */
+const cardPresence = (settings, entrySize, lineH, lines) => headPresence({
+  lines,
+  styles: [{ fontFamily: settings?._pdfFontFamily, fontSize: entrySize, fontWeight: 'bold', lineHeight: entrySize * 1.2 }],
+  keep: cardKeep(entrySize, lineH),
+});
 
 /**
  * A card's date: a little smaller than its title, on the baseline of the title's last line (ATS-5).
@@ -94,29 +109,42 @@ export function SidebarMainExperience({ section, settings, marginBottom, spaceBe
   const centered   = s.alignment === 'center';
   const textAlign  = centered ? 'center' : 'left';
   const dateStyle  = cardDateStyle(settings, entrySize, shade.muted);
+  // A card's header fields.
+  const head = (item) => {
+    const iH = item.hiddenFields || [];
+    const company  = iH.includes('company')   ? '' : (item.company   || '');
+    const role     = iH.includes('role')      ? '' : (item.role      || '');
+    const sd = iH.includes('startDate') ? '' : item.startDate;
+    const ed = iH.includes('endDate')   ? '' : (item.current ? presentLabel(settings) : item.endDate);
+    const [lead, next] = titleOrder === 'role' ? [role, company] : [company, role];
+    return {
+      // An empty leading field: the next one leads, bold, on the date's line (R2-111).
+      primary: lead || next,
+      secondary: lead ? next : '',
+      loc: !iH.includes('location') && showLoc ? (item.location || '') : '',
+      dateStr: showDates ? dateRange(sd, ed, settings) : '',
+    };
+  };
+  // The title keeps the first card's header and the lines it keeps with it (R2-047). Stacked, the
+  // header is CardHeader's: its title line, then its details and location (centred, a line each).
+  const firstHead  = visibleItems.length ? head(visibleItems[0]) : null;
+  const cardLines  = (h) => 1 + (centered ? [h.secondary, h.loc].filter(Boolean).length : (h.secondary || h.loc ? 1 : 0));
+  const presence   = !firstHead ? 0
+    : titleStyle === 'stacked' ? cardPresence(settings, entrySize, lineH, cardLines(firstHead))
+    : itemHeadPresence({ primary: firstHead.primary, sub: firstHead.secondary || undefined, loc: firstHead.loc || undefined, settings, titleStyle, centered });
 
   return (
     <View style={{ marginBottom, marginTop: spaceBefore }}>
       {SPACER}
       <RenderColGrid
-        title={<SectionTitleOf section={section} settings={settings} centered={centered} />}
+        title={<SectionTitleOf section={section} settings={settings} centered={centered} presence={presence} />}
         settings={settings}
         items={visibleItems}
         cols={s.columns || 1}
         gap={itemGap}
         renderItem={(item, idx) => {
-          const iH = item.hiddenFields || [];
-          const company  = iH.includes('company')   ? '' : (item.company   || '');
-          const role     = iH.includes('role')      ? '' : (item.role      || '');
-          const loc      = !iH.includes('location') && showLoc ? (item.location || '') : '';
-          const sd = iH.includes('startDate') ? '' : item.startDate;
-          const ed = iH.includes('endDate')   ? '' : (item.current ? presentLabel(settings) : item.endDate);
-          const dateStr  = showDates ? dateRange(sd, ed, settings) : '';
-          const [lead, next] = titleOrder === 'role' ? [role, company] : [company, role];
-          // An empty leading field: the next one leads, bold, on the date's line (R2-111).
-          const primary  = lead || next;
-          const secondary = lead ? next : '';
-          const desc = iH.includes('description') ? '' : item.description;
+          const { primary, secondary, loc, dateStr } = head(item);
+          const desc = (item.hiddenFields || []).includes('description') ? '' : item.description;
           return (
             <CardItem key={idx}>
               {titleStyle === 'stacked' ? (
@@ -154,12 +182,16 @@ export function SidebarMainProjects({ section, settings, marginBottom, spaceBefo
   const centered   = s.alignment === 'center';
   const textAlign  = centered ? 'center' : 'left';
   const dateStyle  = cardDateStyle(settings, entrySize, shade.muted);
+  // The title keeps the first card's header — its name and date, technologies, link — and the lines it
+  // keeps with it (R2-047).
+  const first      = visibleItems[0];
+  const presence   = first ? cardPresence(settings, entrySize, lineH, 1 + [first.technologies, first.url].filter(Boolean).length) : 0;
 
   return (
     <View style={{ marginBottom, marginTop: spaceBefore }}>
       {SPACER}
       <RenderColGrid
-        title={<SectionTitleOf section={section} settings={settings} centered={centered} />}
+        title={<SectionTitleOf section={section} settings={settings} centered={centered} presence={presence} />}
         settings={settings}
         items={visibleItems}
         cols={s.columns || 1}

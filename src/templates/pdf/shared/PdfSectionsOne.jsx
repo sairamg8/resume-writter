@@ -14,6 +14,7 @@ import {
   RenderBullets,
   shadesOf,
 } from './PdfSections';
+import { itemHeadPresence } from './PdfItemHeader';
 
 export function ExperienceSection({ section, settings, marginBottom, spaceBefore, itemGap, italicSubs, centered }) {
   const s = section.settings || {};
@@ -28,34 +29,39 @@ export function ExperienceSection({ section, settings, marginBottom, spaceBefore
   const accent     = settings?.accentColor || '#2563eb';
   const isModern   = settings?._template === 'modern';
   const body       = shadesOf(settings).body;
+  // An entry's header fields, as ItemHeader prints them.
+  const head = (item) => {
+    const iH  = item.hiddenFields || [];
+    const company = iH.includes('company') ? '' : (item.company || '');
+    const role    = iH.includes('role')    ? '' : (item.role    || '');
+    const loc  = !iH.includes('location') && showLoc ? (item.location || '') : '';
+    const sd   = iH.includes('startDate') ? '' : item.startDate;
+    const ed   = iH.includes('endDate')   ? '' : (item.current ? presentLabel(settings) : item.endDate);
+    return {
+      primary: titleOrder === 'role' ? role : company,
+      sub: (titleOrder === 'role' ? company : role) || undefined,
+      loc: loc || undefined,
+      dateStr: showDates ? dateRange(sd, ed, settings) : '',
+    };
+  };
+  // The title keeps the first entry's header and the lines it keeps with it (R2-047).
+  const presence = visibleItems.length ? itemHeadPresence({ ...head(visibleItems[0]), settings, titleStyle, centered }) : 0;
 
   return (
     <View style={{ marginBottom, marginTop: spaceBefore }}>
       {SPACER}
       <RenderColGrid
-        title={<SectionTitleOf section={section} settings={settings} centered={centered} />}
+        title={<SectionTitleOf section={section} settings={settings} centered={centered} presence={presence} />}
         settings={settings}
         items={visibleItems}
         cols={cols}
         gap={itemGap}
         renderItem={(item) => {
-          const iH  = item.hiddenFields || [];
-          const company = iH.includes('company') ? '' : (item.company || '');
-          const role    = iH.includes('role')    ? '' : (item.role    || '');
-          const loc  = !iH.includes('location') && showLoc ? (item.location || '') : '';
-          const sd   = iH.includes('startDate') ? '' : item.startDate;
-          const ed   = iH.includes('endDate')   ? '' : (item.current ? presentLabel(settings) : item.endDate);
-          const dateStr = showDates ? dateRange(sd, ed, settings) : '';
-          const mainTitle  = titleOrder === 'role' ? role    : company;
-          const subTitle   = titleOrder === 'role' ? company : role;
-          const desc = iH.includes('description') ? '' : item.description;
+          const desc = (item.hiddenFields || []).includes('description') ? '' : item.description;
           return (
             <View>
               <ItemHeader
-                primary={mainTitle}
-                sub={subTitle || undefined}
-                loc={loc || undefined}
-                dateStr={dateStr}
+                {...head(item)}
                 settings={settings}
                 titleStyle={titleStyle}
                 italicSub={italicSubs}
@@ -222,29 +228,34 @@ export function EducationSection({ section, settings, marginBottom, spaceBefore,
   const accent     = settings?.accentColor || '#2563eb';
   const isModern   = settings?._template === 'modern';
   const body       = shadesOf(settings).body;
+  // An entry's header fields, as ItemHeader prints them.
+  const head = (item) => {
+    const degree  = [item.degree, item.fieldOfStudy ? item.fieldOfStudy : ''].filter(Boolean).join(', ');
+    const gpaPart = item.gpa ? ` · GPA: ${item.gpa}` : '';
+    return {
+      primary: item.institution,
+      sub: (degree + gpaPart) || undefined,
+      loc: (showLoc && item.location ? item.location : '') || undefined,
+      dateStr: showDates ? dateRange(item.startDate, item.endDate, settings) : '',
+    };
+  };
+  // The title keeps the first entry's header and the lines it keeps with it (R2-047).
+  const presence = visibleItems.length ? itemHeadPresence({ ...head(visibleItems[0]), settings, titleStyle, centered }) : 0;
 
   return (
     <View style={{ marginBottom, marginTop: spaceBefore }}>
       {SPACER}
       <RenderColGrid
-        title={<SectionTitleOf section={section} settings={settings} centered={centered} />}
+        title={<SectionTitleOf section={section} settings={settings} centered={centered} presence={presence} />}
         settings={settings}
         items={visibleItems}
         cols={cols}
         gap={itemGap}
         renderItem={(item) => {
-          const dateStr = showDates ? dateRange(item.startDate, item.endDate, settings) : '';
-          const degree  = [item.degree, item.fieldOfStudy ? item.fieldOfStudy : ''].filter(Boolean).join(', ');
-          const gpaPart = item.gpa ? ` · GPA: ${item.gpa}` : '';
-          const subLine = degree + gpaPart;
-          const loc     = showLoc && item.location ? item.location : '';
           return (
             <View>
               <ItemHeader
-                primary={item.institution}
-                sub={subLine || undefined}
-                loc={loc || undefined}
-                dateStr={dateStr}
+                {...head(item)}
                 settings={settings}
                 titleStyle={titleStyle}
                 italicSub={italicSubs}

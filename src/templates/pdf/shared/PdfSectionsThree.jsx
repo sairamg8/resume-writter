@@ -7,6 +7,7 @@ import { formatDate } from '@/utils/dates';
 import { tint } from './pdfColors';
 import { ContactValue } from './PdfContact';
 import { lineBox } from './pdfMeasure';
+import { itemHeadPresence } from './PdfItemHeader';
 import {
   SPACER,
   SectionTitleOf,
@@ -87,12 +88,21 @@ export function CustomSection({ section, settings, marginBottom, spaceBefore, it
   const accent     = settings?.accentColor || '#2563eb';
   const isModern   = settings?._template === 'modern';
   const body       = shadesOf(settings).body;
+  // An entry's header fields, as ItemHeader prints them.
+  const head = (item) => ({
+    primary: item.title || '',
+    sub: item.subtitle || undefined,
+    loc: item.location || undefined,
+    dateStr: showDates ? formatDate(item.date || '', settings) : '',
+  });
+  // The title keeps the first entry's header and the lines it keeps with it (R2-047).
+  const presence = visibleItems.length ? itemHeadPresence({ ...head(visibleItems[0]), settings, titleStyle, centered }) : 0;
 
   return (
     <View style={{ marginBottom, marginTop: spaceBefore }}>
       {SPACER}
       <RenderColGrid
-        title={<SectionTitleOf section={section} settings={settings} centered={centered} />}
+        title={<SectionTitleOf section={section} settings={settings} centered={centered} presence={presence} />}
         settings={settings}
         items={visibleItems}
         cols={cols}
@@ -101,10 +111,7 @@ export function CustomSection({ section, settings, marginBottom, spaceBefore, it
           return (
             <View>
               <ItemHeader
-                primary={item.title || ''}
-                sub={item.subtitle || undefined}
-                loc={item.location || undefined}
-                dateStr={showDates ? formatDate(item.date || '', settings) : ''}
+                {...head(item)}
                 settings={settings}
                 titleStyle={titleStyle}
                 italicSub={italicSubs}

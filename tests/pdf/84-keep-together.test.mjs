@@ -2,11 +2,15 @@
 // run of filler bullets and slid down the page 1.5 pt at a time, so its title and first entry cross
 // the page foot at every offset:
 //   - a section title never ends a page without the first line of its content (R2-047): 2-column
-//     grids, References cards, the Sidebar's Experience and Projects cards;
+//     grids, References cards, the Sidebar's Experience and Projects cards, and a single column's
+//     first entry, whose unbreakable header and the two lines it keeps are taller than the title's
+//     own three-line keep;
 //   - a 2-column grid keeps its reading order: a row's left entry never prints after its right one
 //     (R2-048);
 //   - a certification's date prints on the page of its name, an award's title is never left alone at
-//     a page foot (R2-049). Each is its section's second entry: the title's own keep covers the first.
+//     a page foot (R2-049) — nor, when the award is its section's first, the section's title.
+// Each sweep ends where its section's title (or `needle`) is first pushed to page 2 — templates fill a
+// page with different numbers of bullets — and fails if it never crosses the page foot.
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { setup, teardown, resume, section, experience, render, read, allItems } from './harness.mjs';
@@ -14,19 +18,49 @@ import { setup, teardown, resume, section, experience, render, read, allItems } 
 before(setup);
 after(teardown);
 
-/** Each layout of `target()` after `n` filler bullets and a gap of `px`, over the sweep; `check` returns its problems. */
-async function sweep(template, target, check, { from = 27, to = 32, settings = {} } = {}) {
+const layout = async (template, settings, t, n, px) => {
+  const lis = Array.from({ length: n }, (_, i) => `<li>Filler bullet ${i + 1}</li>`).join('');
+  const lead = experience([{ description: `<ul>${lis}</ul>` }]);
+  lead.settings = { ...lead.settings, spaceAfter: px };
+  return read(await render(resume({ template, settings, sections: [lead, t] })));
+};
+
+const titleOf = (items, t) => items.find((i) => i.str.trim().toUpperCase() === t.title.toUpperCase());
+const needleOf = (items, t, needle) => (needle ? items.find((i) => i.str.includes(needle)) : titleOf(items, t));
+
+/** The fewest filler bullets that print `target()`'s title (or `needle`) on page 2. */
+async function footOf(template, target, settings, needle) {
+  const page = async (n) => {
+    const t = target();
+    return needleOf(allItems(await layout(template, settings, t, n, 0)), t, needle)?.page ?? 0;
+  };
+  let [lo, hi] = [1, 160];
+  if (await page(hi) < 2) throw new Error(`${template}: "${needle || target().title}" never reaches page 2`);
+  while (hi - lo > 1) {
+    const mid = (lo + hi) >> 1;
+    if (await page(mid) > 1) hi = mid; else lo = mid;
+  }
+  return hi;
+}
+
+/**
+ * Each layout of `target()` after n filler bullets and a gap of px, n over the six counts that end
+ * where the title (or `needle`) is first pushed to page 2; `check` returns its problems.
+ */
+async function sweep(template, target, check, { settings = {}, needle } = {}) {
+  const to = await footOf(template, target, settings, needle);
   const found = [];
-  for (let n = from; n <= to; n += 1) {
+  const pagesOf = new Set();
+  for (let n = to - 5; n <= to; n += 1) {
     for (let px = 0; px <= 22; px += 2) {
-      const lis = Array.from({ length: n }, (_, i) => `<li>Filler bullet ${i + 1}</li>`).join('');
-      const lead = experience([{ description: `<ul>${lis}</ul>` }]);
-      lead.settings = { ...lead.settings, spaceAfter: px };
       const t = target();
-      const pages = await read(await render(resume({ template, settings, sections: [lead, t] })));
-      for (const p of check(allItems(pages), pages.length, t)) found.push(`n=${n} px=${px}: ${p}`);
+      const pages = await layout(template, settings, t, n, px);
+      const items = allItems(pages);
+      pagesOf.add(needleOf(items, t, needle)?.page);
+      for (const p of check(items, pages.length, t)) found.push(`n=${n} px=${px}: ${p}`);
     }
   }
+  if (!pagesOf.has(1) || !pagesOf.has(2)) found.push(`the sweep never crossed the page foot (pages ${[...pagesOf]})`);
   return found;
 }
 
@@ -91,6 +125,22 @@ const awards = () => section('awards', [
   { title: 'Best Engineer Award', issuer: 'Acme Corporation', date: '2020', description: '<p>For shipping things on time, every time.</p>' },
 ], {}, { title: 'Awards' });
 
+// The award with a description first: its block and the two lines it keeps are taller than the
+// section title's own three-line keep.
+const awardsFirst = () => section('awards', [
+  { title: 'Best Engineer Award', issuer: 'Acme Corporation', date: '2020', description: '<p>For shipping things on time, every time.</p><p>And again the next year.</p>' },
+  { title: 'Second Prize', issuer: 'Org', date: '2019' },
+], {}, { title: 'Awards' });
+
+// One column: the first entry's header (two lines, unbreakable) and the two lines it keeps.
+const experience1 = (settings = {}) => () => section('experience', [
+  { company: 'Onecol Corp', role: 'Platform Engineer', location: 'Pune', startDate: '2019', endDate: '2021', description: '<ul><li>Built the platform</li><li>Ran it</li><li>Grew it</li></ul>' },
+], settings, { title: 'Target Zone' });
+
+const education1 = () => section('education', [
+  { institution: 'Northfield University', degree: 'B.Sc.', fieldOfStudy: 'Computer Science', location: 'Pune', startDate: '2012', endDate: '2016', description: '<p>Thesis on distributed systems and more.</p><p>Second line.</p>' },
+], {}, { title: 'Education' });
+
 /** The award's title never the last line of a page. */
 function awardNotAlone(items, pageCount) {
   const title = items.find((i) => i.str.includes('Best Engineer Award'));
@@ -111,9 +161,24 @@ describe('a section title keeps the first line of its content (R2-047)', () => {
   it('sidebar: an Experience card', async () => {
     assert.deepEqual(await sweep('sidebar', cards, titleNotAlone), []);
   });
+  it('sidebar: an Experience card, Title "Inline"', async () => {
+    assert.deepEqual(await sweep('sidebar', experience1({ titleStyle: 'inline' }), titleNotAlone), []);
+  });
   it('sidebar: a Projects card', async () => {
     assert.deepEqual(await sweep('sidebar', projects, titleNotAlone), []);
   });
+  for (const template of ['classic', 'modern', 'executive', 'academic']) {
+    it(`${template}: a one-column Experience entry`, async () => {
+      assert.deepEqual(await sweep(template, experience1(), titleNotAlone), []);
+    });
+  }
+  it('classic: a one-column Experience entry, centred', async () => {
+    assert.deepEqual(await sweep('classic', experience1({ alignment: 'center' }), titleNotAlone), []);
+  });
+  it('classic: a one-column Education entry', async () => {
+    assert.deepEqual(await sweep('classic', education1, titleNotAlone), []);
+  });
+
 });
 
 describe('a 2-column grid keeps its reading order across a page break (R2-048)', () => {
@@ -121,10 +186,15 @@ describe('a 2-column grid keeps its reading order across a page break (R2-048)',
     it(`${template}: Experience in two columns`, async () => {
       assert.deepEqual(await sweep(template, experience2, both(titleNotAlone, inOrder([['Leftco', 'Rightco']]))), []);
     });
-    it(`${template}: Education in two columns`, async () => {
-      assert.deepEqual(await sweep(template, education2, inOrder([['Northfield', 'Southgate']])), []);
-    });
   }
+  it('classic: Education in two columns', async () => {
+    assert.deepEqual(await sweep('classic', education2, inOrder([['Northfield', 'Southgate']])), []);
+  });
+  // The Sidebar's two-column page prints Education in its dark column, an entry under another; its
+  // Single · ATS-safe page prints it in a grid.
+  it('sidebar: Education in two columns', async () => {
+    assert.deepEqual(await sweep('sidebar', education2, inOrder([['Northfield', 'Southgate']]), { settings: { sidebarSingleColumn: true } }), []);
+  });
 });
 
 describe('an entry keeps its date and its title with it (R2-049)', () => {
@@ -136,6 +206,9 @@ describe('an entry keeps its date and its title with it (R2-049)', () => {
     }
     it(`${template}: an award's title is never alone at a page foot`, async () => {
       assert.deepEqual(await sweep(template, awards, both(awardNotAlone, titleNotAlone)), []);
+    });
+    it(`${template}: the section's title is never alone above its first award`, async () => {
+      assert.deepEqual(await sweep(template, awardsFirst, titleNotAlone), []);
     });
   }
 });

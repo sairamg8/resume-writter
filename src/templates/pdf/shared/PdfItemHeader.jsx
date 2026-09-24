@@ -108,6 +108,42 @@ export function CentredLine({ first, date, dateStyle, sepColor, gap }) {
   );
 }
 
+/** What an entry's unbreakable header keeps under it, pt: two lines of body text (react-pdf moves it otherwise). */
+export const headerKeep = (settings) => Math.round((settings?.fontSizeBase || 11) * (settings?.lineHeightValue ?? 1.5) * 2);
+
+/** ItemHeader's title run and sub run as lineBox styles. */
+function headerBoxes(settings) {
+  const baseSize = settings?.fontSizeBase || 11;
+  const entrySize = baseSize + (settings?.fontSizeEntryDelta ?? 0);
+  // The two-column Sidebar's page (not its ATS-safe single column, which prints Classic's) sets a
+  // lineHeight every text without one inherits: lineHeightValue at the base size.
+  const sidebarPage = headerTemplateId(settings?._template, settings) === 'sidebar';
+  const pageLine = sidebarPage ? baseSize * (settings?.lineHeightValue ?? 1.5) : undefined;
+  const font = settings?._pdfFontFamily;
+  return {
+    primaryBox: { fontFamily: font, fontSize: entrySize, fontWeight: 'bold', lineHeight: pageLine },
+    subBox: { fontFamily: font, fontSize: baseSize, lineHeight: pageLine },
+  };
+}
+
+/**
+ * How much of its section a title keeps under it (SectionTitleOf's `presence`, pt) so that its first
+ * entry's header prints on the title's page: the header, unbreakable — `lines` of it in the tallest of
+ * `styles` (lineBox), one more for a field that wraps — the `keep` pt it keeps under it, and `extra` pt
+ * of its own margins. A title's own three lines are less than a job's two-line header and the two lines
+ * it keeps: the title stayed alone at the foot of a page while the header moved to the next (R2-047).
+ */
+export const headPresence = ({ lines, styles, keep = 0, extra = 0 }) => Math.ceil((lines + 1) * lineBox(styles).height + keep + extra);
+
+/** headPresence of the header ItemHeader prints for these props (its lines as it lays them out below). */
+export function itemHeadPresence({ primary, sub, loc, settings, titleStyle = 'stacked', centered = false }) {
+  const second = primary ? sub : undefined; // an empty leading field: the next one leads (R2-111)
+  const oneLine = titleStyle === 'sidebyside' || titleStyle === 'inline';
+  const under = oneLine ? [loc] : centered ? [second, loc] : [second || loc];
+  const { primaryBox, subBox } = headerBoxes(settings);
+  return headPresence({ lines: 1 + under.filter(Boolean).length, styles: [primaryBox, subBox], keep: headerKeep(settings), extra: centered ? 2 : 0 });
+}
+
 // Reusable item header: bold primary + optional sub-line + location + date. Supports centering.
 // `loc` renders in a distinctly lighter shade than `sub`, matching the Canvas templates' two-tone
 // convention (subtitle darker, location lighter); it is its own run wherever it prints (see top).
@@ -129,13 +165,8 @@ export function ItemHeader({ primary: first, sub: second, loc, dateStr, settings
   const textAlign  = centered ? 'center' : 'left';
   const fontStyle  = italicSub ? 'italic' : 'normal';
   const oneLine = titleStyle === 'sidebyside' || titleStyle === 'inline';
-  // The two-column Sidebar's page (not its ATS-safe single column, which prints Classic's) sets a
-  // lineHeight every text without one inherits: lineHeightValue at the base size.
-  const sidebarPage = headerTemplateId(settings?._template, settings) === 'sidebar';
-  const pageLine   = sidebarPage ? baseSize * (settings?.lineHeightValue ?? 1.5) : undefined;
+  const { primaryBox, subBox } = headerBoxes(settings);
   const font       = settings?._pdfFontFamily;
-  const primaryBox = { fontFamily: font, fontSize: entrySize, fontWeight: 'bold', lineHeight: pageLine };
-  const subBox     = { fontFamily: font, fontSize: baseSize, lineHeight: pageLine };
   const fieldBox   = { fontFamily: font, fontSize: baseSize };
   // A field on the title's line (the date) and on the sub's (the location).
   const onTitle    = onBaselineOf(oneLine ? [primaryBox, subBox] : primaryBox, fieldBox);
@@ -147,7 +178,7 @@ export function ItemHeader({ primary: first, sub: second, loc, dateStr, settings
   const dateStyle  = { fontSize: baseSize, color: getDateColor(settings), lineHeight: onTitle };
   const gap        = fieldGap(baseSize);
   // Keep the header with at least two lines of what follows it (react-pdf moves it otherwise).
-  const keep = { wrap: false, minPresenceAhead: Math.round(baseSize * (settings?.lineHeightValue ?? 1.5) * 2) };
+  const keep = { wrap: false, minPresenceAhead: headerKeep(settings) };
   const primaryText = <Text style={{ fontSize: entrySize, fontWeight: 'bold', color: textColor, textAlign }}>{primary}</Text>;
   // Title "Inline": the primary, then the sub after " — " (", " for an italic sub), in one text.
   const inlineText = primary || sub ? (
