@@ -1370,13 +1370,13 @@ __metadata:
 
 "@react-pdf/textkit@patch:@react-pdf/textkit@npm%3A6.3.0#~/.yarn/patches/@react-pdf-textkit-npm-6.3.0-1e829976be.patch":
   version: 6.3.0
-  resolution: "@react-pdf/textkit@patch:@react-pdf/textkit@npm%3A6.3.0#~/.yarn/patches/@react-pdf-textkit-npm-6.3.0-1e829976be.patch::version=6.3.0&hash=7dbd07"
+  resolution: "@react-pdf/textkit@patch:@react-pdf/textkit@npm%3A6.3.0#~/.yarn/patches/@react-pdf-textkit-npm-6.3.0-1e829976be.patch::version=6.3.0&hash=c79910"
   dependencies:
     "@react-pdf/fns": "npm:3.1.3"
     bidi-js: "npm:^1.0.2"
     hyphen: "npm:^1.6.4"
     unicode-properties: "npm:^1.4.1"
-  checksum: 10c0/f5099d13ccdce0a724c01946291a23e990ef496eab69304f917a4daac544c8f3b9dbe0f257528ad5192c4774c8c59b663de879f22814c68b93d817273ab25994
+  checksum: 10c0/5d3f6bbf9154e68322e7395b38ea899419713cf1202d04ae2b2552cc47dfb632997c61d9caf40bf8709148137023fc517b297f674b8eb5a66ee8e66e75a28c1f
   languageName: node
   linkType: hard
 

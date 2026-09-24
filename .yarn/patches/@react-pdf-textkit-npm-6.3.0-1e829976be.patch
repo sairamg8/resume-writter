@@ -196,7 +196,7 @@ index 0b8b6fa..b2dacca 100644
      return Object.assign({}, run, { positions });
  };
  /**
-@@ -1610,6 +1693,89 @@ const adjustOverflow = (line) => {
+@@ -1610,6 +1693,95 @@ const adjustOverflow = (line) => {
      const box = Object.assign({}, line.box, { x, width });
      return Object.assign({}, line, { box, overflowLeft, overflowRight });
  };
@@ -207,6 +207,12 @@ index 0b8b6fa..b2dacca 100644
 +const KEEP_SPACE_EM = 0.22;
 +/** flowcv patch (ATS-4): at most this much (em) comes off any one letter to pay for a wider gap. */
 +const MAX_LETTER_TAKE_EM = 0.05;
++/**
++ * flowcv patch (R3-003): a word gap's glyph — a space, or a no-break space. A contact value's words
++ * are joined with U+00A0 so it never wraps; counted as a letter, a closed-up line took from it too
++ * (0.215 em in Lato), where it must stay as wide as a space for `pdftotext -raw`.
++ */
++const isWordGap = (glyph) => (glyph?.codePoints || []).some((cp) => cp === SPACE_CODE || cp === 0xa0);
 +/**
 + * flowcv patch (ATS-4): keep every word gap of a line at least KEEP_SPACE_EM wide.
 + *
@@ -238,7 +244,7 @@ index 0b8b6fa..b2dacca 100644
 +            const natural = unitsPerEm && Number.isFinite(glyph.advanceWidth)
 +                ? (glyph.advanceWidth * fontSize) / unitsPerEm
 +                : null;
-+            cells.push({ space: isWhiteSpace$1(glyph), mark: !!glyph.isMark, position, fontSize, natural });
++            cells.push({ space: isWordGap(glyph), mark: !!glyph.isMark, position, fontSize, natural });
 +        }
 +    }
 +    let lastInk = cells.length - 1;
@@ -286,7 +292,7 @@ index 0b8b6fa..b2dacca 100644
  /**
   * Performs line justification by calling appropiate engine
   *
-@@ -1630,7 +1796,7 @@ const justifyLine$1 = (engines, options, align) => {
+@@ -1630,7 +1802,7 @@ const justifyLine$1 = (engines, options, align) => {
          const x = line.box.x + remainingWidth * alignFactor;
          const box = Object.assign({}, line.box, { x });
          const newLine = Object.assign({}, line, { box });
@@ -295,7 +301,7 @@ index 0b8b6fa..b2dacca 100644
      };
  };
  const finalizeLine = (line) => {
-@@ -3048,6 +3214,29 @@ const pickFontFromFontStack = (codePoint, fontStack, lastFont) => {
+@@ -3048,6 +3220,29 @@ const pickFontFromFontStack = (codePoint, fontStack, lastFont) => {
      }
      return fontStack.at(-1);
  };
@@ -325,7 +331,7 @@ index 0b8b6fa..b2dacca 100644
  const fontSubstitution = () => ({ string, runs }) => {
      let lastFont = null;
      let lastFontSize = null;
-@@ -3065,11 +3254,17 @@ const fontSubstitution = () => ({ string, runs }) => {
+@@ -3065,11 +3260,17 @@ const fontSubstitution = () => ({ string, runs }) => {
              break;
          }
          const chars = string.slice(run.start, run.end);

@@ -266,19 +266,30 @@ const MIN_SPACE_EM = 0.22;
 
 /**
  * Wrap font.layout so a run's space glyphs advance at least MIN_SPACE_EM, without touching any other
- * glyph. Returns the wrapper; when the font's space already clears the bar it returns `layout`
+ * glyph. Returns the wrapper; when the font's spaces already clear the bar it returns `layout`
  * unchanged, so nothing is measured per run.
+ *
+ * The no-break space too: a contact value's words are joined with U+00A0 so it never wraps
+ * (PdfContact.jsx keepTogether), and Lato's and Literata's own U+00A0 glyph is as narrow as their
+ * space, so Contact style Bar or Bullet read "+15550142" and "Austin,TX" under `pdftotext -raw` (R3-003).
  */
 function widenNarrowSpace(font, layout) {
-  const space = typeof font.glyphForCodePoint === 'function' ? font.glyphForCodePoint(0x20) : null;
   const minAdvance = MIN_SPACE_EM * (font.unitsPerEm || 1000);
-  if (!space || space.advanceWidth >= minAdvance) return layout;
+  // A subset file can map a code point to a glyph it does not hold (IBM Plex Sans Arabic's U+00A0):
+  // reading its advance throws, and that face is not widened for it.
+  const advance = (glyph) => { try { return glyph.advanceWidth; } catch { return Infinity; } };
+  const narrow = new Set(typeof font.glyphForCodePoint !== 'function' ? [] : [0x20, 0xa0]
+    .filter((cp) => font.hasGlyphForCodePoint?.(cp))
+    .map((cp) => font.glyphForCodePoint(cp))
+    .filter((glyph) => glyph && advance(glyph) < minAdvance)
+    .map((glyph) => glyph.id));
+  if (!narrow.size) return layout;
   return (string, features, ...rest) => {
     const run = layout(string, features, ...rest);
     if (run && run.glyphs && run.positions) {
       for (let i = 0; i < run.glyphs.length; i += 1) {
         const pos = run.positions[i];
-        if (run.glyphs[i] && run.glyphs[i].id === space.id && pos && pos.xAdvance < minAdvance) pos.xAdvance = minAdvance;
+        if (run.glyphs[i] && narrow.has(run.glyphs[i].id) && pos && pos.xAdvance < minAdvance) pos.xAdvance = minAdvance;
       }
     }
     return run;
