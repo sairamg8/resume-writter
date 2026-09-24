@@ -1,0 +1,156 @@
+{
+  "cluster": "word",
+  "branch": "claude/wf-word",
+  "base": "504b313",
+  "rows": [
+    {
+      "id": "R2-061",
+      "outcome": "fixed",
+      "commits": [
+        "0b708c8",
+        "0cd1767"
+      ],
+      "tests": [
+        "tests/pdf/87-word-title-layout.test.mjs",
+        "tests/pdf/87-word-grids.test.mjs",
+        "tests/pdf/69-word-spacing.test.mjs"
+      ],
+      "summary": "Word follows Design → Spacing (margins, Line Height, Between Sections/Items, Spacing Override; 21d64d1) and now Section Options → Title (0b708c8) and Grids (0cd1767), as the PDF lays them out."
+    },
+    {
+      "id": "R2-065",
+      "outcome": "already-fixed",
+      "commits": [
+        "d92c1ec"
+      ],
+      "tests": [
+        "tests/pdf/69-word-text-colour.test.mjs"
+      ],
+      "summary": "Fixed by d92c1ec (R2-063): entry text prints in the Text colour's shades and skill categories in the Text colour (the accent only on Modern and in Tags/Bars). 69-word-text-colour fails 9 of 9 on the code before d92c1ec."
+    },
+    {
+      "id": "R2-066",
+      "outcome": "duplicate",
+      "commits": [
+        "21d64d1"
+      ],
+      "tests": [
+        "tests/pdf/69-word-spacing.test.mjs"
+      ],
+      "summary": "Duplicate of R2-062, fixed by 21d64d1: Word takes the margins, Line Height and section/item gaps of Design → Spacing."
+    },
+    {
+      "id": "R2-070",
+      "outcome": "fixed",
+      "commits": [
+        "0b708c8",
+        "0cd1767",
+        "2769446",
+        "c707bd8"
+      ],
+      "tests": [
+        "tests/pdf/87-word-title-layout.test.mjs",
+        "tests/pdf/87-word-grids.test.mjs",
+        "tests/pdf/87-word-skills-stacked.test.mjs"
+      ],
+      "summary": "Spacing and Spacing Override were fixed by 21d64d1. An entry's header now follows Title (Stacked, Inline or Side by side) as ItemHeader. Grids print as a borderless fixed table with cells at the PDF's 48/31/23 % (equal cells over 4); Languages and References are 2 across when unset; the Sidebar's side column stays 1; dates sit at the cell's right edge. Stacked skills print the category on its own line over a thin rule (the side column prints one skill per line)."
+    },
+    {
+      "id": "R2-114",
+      "outcome": "already-fixed",
+      "commits": [
+        "21d64d1"
+      ],
+      "tests": [
+        "tests/pdf/69-word-spacing.test.mjs"
+      ],
+      "summary": "Fixed by 21d64d1: the dates' right tab is the paper width minus both Left/Right margins (wordContentTwips), tested on A4 and US Letter at 18, 35 and 0 mm; in a grid it is the cell's width."
+    },
+    {
+      "id": "R2-125",
+      "outcome": "duplicate",
+      "commits": [
+        "21d64d1"
+      ],
+      "tests": [
+        "tests/pdf/69-word-spacing.test.mjs"
+      ],
+      "summary": "Duplicate of R2-114 (the hard-coded 9000-twip tab), fixed by 21d64d1."
+    },
+    {
+      "id": "R2-132",
+      "outcome": "duplicate",
+      "commits": [
+        "21d64d1"
+      ],
+      "tests": [
+        "tests/pdf/69-word-spacing.test.mjs"
+      ],
+      "summary": "Duplicate of R2-114 (the hard-coded 9000-twip tab), fixed by 21d64d1."
+    },
+    {
+      "id": "R2-118",
+      "outcome": "fixed",
+      "commits": [
+        "6d802b9"
+      ],
+      "tests": [
+        "tests/pdf/87-word-entry-sizes.test.mjs"
+      ],
+      "summary": "Descriptions and bullets print at Entry Header (half a point under it except a job's); the second field, location and dates print at Base, as the PDF; the Sidebar page's cards use their own sizes."
+    },
+    {
+      "id": "R2-124",
+      "outcome": "fixed",
+      "commits": [
+        "6d802b9"
+      ],
+      "tests": [
+        "tests/pdf/87-word-entry-sizes.test.mjs",
+        "tests/pdf/38-word-contact-size.test.mjs"
+      ],
+      "summary": "Entry text follows Entry Header as in the PDF (6d802b9); the contact line follows Base since 4203257 (R2-067)."
+    },
+    {
+      "id": "R2-126",
+      "outcome": "fixed",
+      "commits": [
+        "b17a64b",
+        "f545a0a",
+        "3d16977"
+      ],
+      "tests": [
+        "tests/pdf/87-word-photo.test.mjs",
+        "tests/pdf/46-header-photo-text-gap.test.mjs"
+      ],
+      "summary": "Word prints the photo where the PDF does: the PDF's box, a Circle as an ellipse, Rounded/Square with the PDF's corners, cropped to fill the box, and the Thin/Accent ring as an outline. It sits beside the name in a borderless table row (Photo ↔ Text, Text Position), or above the name in a centred header and on the Sidebar. A hidden or undrawable photo prints nothing; a WebP's printable copy and a plain URL's picture print too.",
+      "remaining": "An SVG photo prints nothing in Word: Word needs a raster copy, and the export can't make one."
+    },
+    {
+      "id": "R2-128",
+      "outcome": "fixed",
+      "commits": [
+        "0ad38dc"
+      ],
+      "tests": [
+        "tests/pdf/87-word-name-weight.test.mjs"
+      ],
+      "summary": "Minimal's light name prints regular in the Word résumé, as in its PDF and Word letter; every other template's name stays bold."
+    }
+  ],
+  "review": {
+    "issues": [
+      "A stored photo with a stray character in its base64 made the Word export throw (strict atob).",
+      "Word printed no photo for a plain https URL (JSON Resume image) or a pre-conversion WebP/GIF, which the PDF prints.",
+      "A stored Grids over 4 printed as one column in Word; the PDF prints equal cells side by side.",
+      "Not fixed, outside the rows: Executive's and Academic's PDFs print an entry's second field and location in italic, and Inline joins with ', '; Word prints them upright with ' — ' (as on the base)."
+    ],
+    "fixedByReviewer": [
+      "f545a0a",
+      "3d16977",
+      "c707bd8"
+    ]
+  },
+  "baselineFailures": [],
+  "notes": "Existing test assertions changed, each justified by a row: 04-word-export, 10-section-options, 10-section-alignment-word, 26-dates and 29-date-format (R2-070 Stacked title); 35-word-skill-category-case (R2-070 Stacked skills); 46-header-photo-text-gap (R2-126: it pinned 'Word prints no photo'); 69-word-spacing (6d802b9, the Sidebar job's own size). 7a751d5 (the stopped agent's wip) was reverted by 3d51158 and re-landed as 0b708c8 and 0cd1767. contactRows (wordExportContacts.js, shared with the letter) takes an optional width; the letter doesn't pass one, so it is unchanged. Grids and the photo print as borderless tables in the .docx. Checked in LibreOffice 24.2."
+}
