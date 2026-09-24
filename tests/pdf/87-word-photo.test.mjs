@@ -59,6 +59,16 @@ describe('Word: the résumé prints the photo, as the PDF does (R2-126)', () => 
     }
   });
 
+  it('a stored photo with a stray character in its base64 prints, as the PDF prints it; one cut short prints none — neither stops the export', async () => {
+    const stray = `${JPEG_2X2.slice(0, 80)}@@ \n${JPEG_2X2.slice(80)}`;
+    const [pic] = pictures((await renderDocx(cv('classic', { photo: stray }))).xml);
+    assert.ok(pic, 'the photo prints');
+    assert.equal(pic.w, pic.h);
+    for (const photo of [JPEG_2X2.slice(0, 121), 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUg', 'data:image/jpeg;base64,/9j/!!!']) {
+      assert.equal(pictures((await renderDocx(cv('classic', { photo }))).xml).length, 0, photo.slice(0, 40));
+    }
+  });
+
   it('a PNG prints too; the shape, height and ring follow Personal Info → Photo', async () => {
     const [circle] = pictures((await renderDocx(cv('classic', { photo: PNG_4X2 }, { photoShape: 'circle', photoBorder: 'none' }))).xml);
     assert.equal(circle.shape, 'ellipse');

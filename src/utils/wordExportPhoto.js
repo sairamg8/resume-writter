@@ -9,6 +9,22 @@ import { accent2Hex } from '@/utils/wordExportUtils';
 const EMU_PER_PT = 12700;
 const PX_PER_PT = 96 / 72; // docx sizes an image in px at 96 dpi
 
+/**
+ * The bytes of base64 `payload`, read as react-pdf reads a photo's (Buffer.from): a character that is
+ * not base64 is skipped, base64url's "-" and "_" read as "+" and "/", and a lone last character is
+ * dropped; null when nothing is left. A stored photo can hold anything: atob threw on a stray
+ * character, and the whole Word export failed where the PDF printed the photo.
+ */
+function base64Bytes(payload) {
+  const b64 = payload.replace(/[^\w+/-]/g, '').replace(/-/g, '+').replace(/_/g, '/');
+  try {
+    const bin = atob(b64.length % 4 === 1 ? b64.slice(0, -1) : b64);
+    return bin.length ? Uint8Array.from(bin, (c) => c.charCodeAt(0)) : null;
+  } catch {
+    return null;
+  }
+}
+
 /** A PNG's or a JPEG's size in px, { w, h }, from its bytes; null when they hold neither. */
 function imageSize(bytes) {
   const at = (i) => (bytes[i] << 8) | bytes[i + 1];
@@ -79,8 +95,8 @@ export function wordPhoto(personal = {}, s = {}, template = 'classic') {
   const src = drawableImage(personal.photo);
   const match = /^data:image\/(png|jpeg|jpg);base64,(.*)$/is.exec(src || '');
   if (!match) return null;
-  const bytes = Uint8Array.from(atob(match[2].replace(/\s/g, '')), (c) => c.charCodeAt(0));
-  const size = imageSize(bytes);
+  const bytes = base64Bytes(match[2]);
+  const size = bytes && imageSize(bytes);
   if (!size?.w || !size?.h) return null;
   const tid = templateId(template);
   const accent = s.accentColor || '#2563eb';
