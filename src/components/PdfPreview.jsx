@@ -40,6 +40,11 @@ function loadPdfjs() {
   return pdfjsPromise;
 }
 
+/** For tests/pdf/90-preview-*: a stand-in `{ lib, worker }` for pdf.js, or null to load the real one again. */
+export function _setPdfjsForTest(pdfjs) {
+  pdfjsPromise = pdfjs ? Promise.resolve(pdfjs) : null;
+}
+
 /**
  * Reading-order text of one page, for screen readers and tests: runs that sit apart get a
  * space, and line ends become spaces too (a wrapped sentence reads as one sentence).
