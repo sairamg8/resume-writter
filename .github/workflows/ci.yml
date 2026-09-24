@@ -2,6 +2,8 @@
 # build and the Playwright browser suite. A local run of all three at once, beside several agents, ran the
 # laptop out of memory on 2026-09-24. It runs on every push to master — the only branch on GitHub (the
 # owner, 2026-09-24: no other branches are pushed) — and a red run is fixed forward on master at once.
+# A working branch is gated by hand before it merges (Actions → ci → Run workflow, or workflow_dispatch
+# on that ref), so its full suite, build, Playwright, lint and Cypress run here and not on a 4-CPU box.
 name: ci
 
 on:
@@ -98,4 +100,40 @@ jobs:
         with:
           name: playwright-report
           path: test-results
+          retention-days: 3
+
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install
+        run: corepack enable && yarn install --immutable
+      - name: oxlint
+        run: ./node_modules/.bin/oxlint src tests cypress
+
+  # Cypress end to end against the e2e build (docs/knowledge/08-testing.md: its fake sign-in seam).
+  # It was never run by the gate before (R2-152), so a spec that goes stale now shows here.
+  cypress:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install
+        run: corepack enable && yarn install --immutable
+      - name: Cypress binary
+        run: ./node_modules/.bin/cypress install && ./node_modules/.bin/cypress verify
+      - name: Cypress
+        run: yarn test:e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: cypress-screenshots
+          path: cypress/screenshots
           retention-days: 3
