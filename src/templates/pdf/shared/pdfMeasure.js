@@ -21,11 +21,30 @@ function faces(fontFamily, fontWeight) {
   }).filter((face) => typeof face?.layout === 'function' && face.unitsPerEm);
 }
 
+const SPACES = [0x20, 0xa0];
+const pick = (stack, cp) => stack.find((f) => f.hasGlyphForCodePoint?.(cp)) || stack[0];
+
+/**
+ * Does the space at `chars[i]` stay in `face`, the face of the text before it? textkit's patch
+ * (R2-010, .yarn/patches/@react-pdf-textkit-*.patch, keepsFontForSpace) keeps a space between two
+ * characters of one fallback face — two Hebrew or CJK words — in that face, unless its space is
+ * wider than half an em.
+ */
+function keepsFace(chars, i, face, stack) {
+  const cp = chars[i].codePointAt(0);
+  if (!face || !SPACES.includes(cp) || !face.hasGlyphForCodePoint?.(cp)) return false;
+  if (face.glyphForCodePoint(cp).advanceWidth > face.unitsPerEm / 2) return false;
+  let j = i + 1;
+  while (j < chars.length && SPACES.includes(chars[j].codePointAt(0))) j += 1;
+  return j < chars.length && pick(stack, chars[j].codePointAt(0)) === face;
+}
+
 /**
  * The width in pt of `text` on one line in `style` ({ fontFamily, fontSize, fontWeight,
  * letterSpacing }), as textkit sets it: each character in the first face of the family list that
- * has it, kerned. With no loaded face (never the case in a render) a wide estimate, 0.62 em a
- * character, so a layout errs on the side of room.
+ * has it (a space between two characters of one face in that face, keepsFace), kerned. With no
+ * loaded face (never the case in a render) a wide estimate, 0.62 em a character, so a layout errs
+ * on the side of room.
  */
 export function textWidth(text, { fontFamily, fontSize = 12, fontWeight, letterSpacing = 0 } = {}) {
   const chars = [...String(text ?? '')];
@@ -38,12 +57,11 @@ export function textWidth(text, { fontFamily, fontSize = 12, fontWeight, letterS
     if (run) width += (face.layout(run).advanceWidth * fontSize) / face.unitsPerEm;
     run = '';
   };
-  for (const ch of chars) {
-    const cp = ch.codePointAt(0);
-    const next = stack.find((f) => f.hasGlyphForCodePoint?.(cp)) || stack[0];
+  chars.forEach((ch, i) => {
+    const next = keepsFace(chars, i, face, stack) ? face : pick(stack, ch.codePointAt(0));
     if (next !== face) { flush(); face = next; }
     run += ch;
-  }
+  });
   flush();
   return width + letterSpacing * Math.max(0, chars.length - 1);
 }

@@ -1,6 +1,7 @@
 import { Font } from '@react-pdf/renderer';
 import { decodeEntities } from '@/utils/richText';
 import { FONTSOURCE_CDN as CDN, fetchMetadata, fontsourceId } from '@/utils/fontsource';
+import { extraCodePoints, isPresentationForm, needsOf, scriptCandidates, scriptClaims } from './pdfFontCoverage';
 
 /**
  * Fonts for the PDF (which is also the editor preview).
@@ -14,7 +15,9 @@ import { FONTSOURCE_CDN as CDN, fetchMetadata, fontsourceId } from '@/utils/font
  * - Characters the chosen font lacks are drawn by a fallback font, added only when the text
  *   needs it: the same font's latin-ext / cyrillic / greek / vietnamese subset when it has one,
  *   else Noto Sans's (bundled; devanagari too); arrows and maths from Noto Sans Math; ✓ ★ ☎ and
- *   other symbols from Noto Sans Symbols 2.
+ *   other symbols from Noto Sans Symbols 2. A script no bundled face draws — CJK, Korean, Arabic,
+ *   Hebrew, Thai, Indic … — comes from the chosen font's own subset when it has one (Noto Sans JP's
+ *   japanese), else from that script's Noto font; emoji from Noto Emoji (pdfFontCoverage.js, R2-010).
  */
 
 /** settings.font id → Fontsource package. Georgia is not a web font: Gelasio is its metric twin. */
@@ -33,31 +36,6 @@ export const FONT_MAP = {
   ptserif:     { pkg: 'pt-serif',       family: 'PT Serif' },
   literata:    { pkg: 'literata',       family: 'Literata' },
 };
-
-// Google Fonts subset ranges (shared by every Fontsource font). Latin is the primary face.
-const SUBSETS = {
-  'latin-ext': 'U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF',
-  cyrillic: 'U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116',
-  'cyrillic-ext': 'U+0460-052F,U+1C80-1C8A,U+20B4,U+2DE0-2DFF,U+A640-A69F,U+FE2E-FE2F',
-  greek: 'U+0370-0377,U+037A-037F,U+0384-038A,U+038C,U+038E-03A1,U+03A3-03FF',
-  'greek-ext': 'U+1F00-1FFF',
-  vietnamese: 'U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+1EA0-1EF9,U+20AB',
-  devanagari: 'U+0900-097F,U+1CD0-1CF9,U+200C-200D,U+20A8,U+20B9,U+20F0,U+25CC,U+A830-A839,U+A8E0-A8FF,U+11B00-11B09',
-};
-const LATIN = 'U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD';
-const SYMBOL_FONTS = [
-  { family: 'Noto Sans Math', pkg: 'noto-sans-math', subset: 'math', ranges: 'U+2190-22FF,U+27C0-27FF,U+2900-2AFF' },
-  { family: 'Noto Sans Symbols 2', pkg: 'noto-sans-symbols-2', subset: 'symbols', ranges: 'U+2300-23FF,U+25A0-27BF,U+2B00-2BFF' },
-];
-
-const parseRanges = (s) => s.split(',').map((r) => {
-  const [a, b] = r.replace('U+', '').split('-');
-  return [parseInt(a, 16), parseInt(b || a, 16)];
-});
-const inRanges = (cp, ranges) => ranges.some(([a, b]) => cp >= a && cp <= b);
-const LATIN_RANGES = parseRanges(LATIN);
-const SUBSET_RANGES = Object.entries(SUBSETS).map(([subset, r]) => [subset, parseRanges(r)]);
-const SYMBOL_RANGES = SYMBOL_FONTS.map((f) => [f, parseRanges(f.ranges)]);
 
 // Every Noto Sans face that ships with the app, by "<subset>-<weight>-<style>".
 const NOTO_FILES = Object.fromEntries(Object.entries(
@@ -182,32 +160,52 @@ export function collectText(value) {
   return decodeEntities(parts.join('\n'));
 }
 
-/** Fallback families for the characters in `text` that the primary (latin) face lacks. */
+/** Fallback families, by range, for the characters in `text` that the primary (latin) face lacks. */
 async function fallbacksFor(text, primary) {
-  const subsets = new Set();
-  const symbols = new Set();
-  for (const ch of new Set(text)) {
-    const cp = ch.codePointAt(0);
-    if (cp < 0x80 || inRanges(cp, LATIN_RANGES)) continue;
-    const subset = SUBSET_RANGES.find(([, ranges]) => inRanges(cp, ranges));
-    if (subset) { subsets.add(subset[0]); continue; }
-    const symbol = SYMBOL_RANGES.find(([, ranges]) => inRanges(cp, ranges));
-    if (symbol) symbols.add(symbol[0]);
-  }
+  const { subsets, symbols, own } = needsOf(text, primary?.meta.subsets || []);
   const families = [];
-  for (const subset of Object.keys(SUBSETS)) {
-    if (!subsets.has(subset)) continue;
+  for (const subset of subsets) {
     if (primary?.meta.subsets?.includes(subset)) {
       families.push(registerCdn(`${primary.family} ${subset}`, primary.pkg, primary.meta, subset, { fallback: true }));
     }
     if (NOTO_FILES[`${subset}-400-normal`]) families.push(registerNoto(subset));
   }
-  for (const font of SYMBOL_FONTS) {
-    if (!symbols.has(font)) continue;
+  // The chosen font's own script subsets: Noto Sans JP draws Japanese in Noto Sans JP.
+  for (const subset of own) families.push(registerCdn(`${primary.family} ${subset}`, primary.pkg, primary.meta, subset, { fallback: true }));
+  for (const font of symbols) {
     const meta = await fetchMetadata(font.pkg);
     if (meta) families.push(registerCdn(font.family, font.pkg, meta, font.subset, { fallback: true }));
   }
   return families;
+}
+
+/** The code points in `cps` that no loaded face of `families` draws. */
+function undrawn(cps, families) {
+  const store = Font.getRegisteredFonts();
+  const faces = families.map((f) => (store[f]?.sources || []).find((s) => s.data)?.data).filter(Boolean);
+  return cps.filter((cp) => !faces.some((font) => typeof font.hasGlyphForCodePoint === 'function' && font.hasGlyphForCodePoint(cp)));
+}
+
+/**
+ * Pass 2, by glyph: for the characters no face of `usable` draws, the Noto font of their script,
+ * loaded one at a time until each is drawn or no candidate is left (pdfFontCoverage.js). A family
+ * is named for its package and subset — "Noto Sans JP japanese" — as a chosen font's own subset is,
+ * so the two never register different files under one name.
+ */
+async function scriptFallbacks(text, usable) {
+  let missing = undrawn(extraCodePoints(text), usable);
+  const added = [];
+  for (const font of missing.length ? scriptCandidates(missing, text) : []) {
+    if (!missing.some((cp) => scriptClaims(font, cp))) continue;
+    const meta = await fetchMetadata(font.pkg);
+    if (!meta?.subsets?.includes(font.subset)) continue;
+    const [family] = await prepareFonts([registerCdn(`${font.family} ${font.subset}`, font.pkg, meta, font.subset, { fallback: true })]);
+    if (!family) continue; // offline, or blocked: the characters stay undrawn, the PDF still renders
+    added.push(family);
+    missing = undrawn(missing, [family]);
+    if (!missing.length) break;
+  }
+  return added;
 }
 
 /**
@@ -222,6 +220,7 @@ export async function resolvePdfFonts(settings, text = '') {
   let usable = await prepareFonts(families);
   // The chosen font could not be loaded at all (offline, blocked): Noto Sans takes its place.
   if (primary && usable[0] !== primary.family) usable = await prepareFonts(['NotoSans', ...usable]);
+  usable = [...usable, ...(await scriptFallbacks(text, usable))];
   return { fontFamily: usable.length > 1 ? usable : usable[0] };
 }
 
@@ -309,7 +308,7 @@ export async function prepareFonts(families) {
     });
     for (const { data: font } of sources) {
       if (!font || primedFonts.has(font) || typeof font.glyphForCodePoint !== 'function') continue;
-      for (const codePoint of font.characterSet || []) font.glyphForCodePoint(codePoint);
+      for (const codePoint of font.characterSet || []) if (!isPresentationForm(codePoint)) font.glyphForCodePoint(codePoint);
       if (typeof font.layout === 'function') {
         const base = font.layout.bind(font);
         const noLig = (string, features, ...rest) => base(string, features ?? noLigatures(), ...rest);

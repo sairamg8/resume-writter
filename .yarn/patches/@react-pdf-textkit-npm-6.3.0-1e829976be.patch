@@ -1,8 +1,202 @@
 diff --git a/lib/textkit.js b/lib/textkit.js
-index 0b8b6fa636c48ef0ac9cecb27040d2bac9303ce8..d338a5fd329c1e78628f33ff0ce3633c0156b944 100644
+index 0b8b6fa..b2dacca 100644
 --- a/lib/textkit.js
 +++ b/lib/textkit.js
-@@ -1610,6 +1610,89 @@ const adjustOverflow = (line) => {
+@@ -1009,46 +1009,121 @@ const getItemAtIndex = (runs, objectName, index) => {
+     }
+     throw new Error(`index ${index} out of range`);
+ };
++/**
++ * flowcv patch (R2-010): turn a run right-to-left — every glyph in reverse order, as rule L2
++ * reverses characters, so a reader that reverses the run back (pdf.js) reads each mark after its
++ * letter again. A mark's offset was measured from the pen after its letter (a cluster: a base glyph
++ * and the marks after it), so within a cluster each glyph's offset is recomputed to keep it where
++ * it was drawn. Offsets are in thousandths of an em (scalePositions), advances in points. A
++ * ligature (Arabic lam-alef, and في or شر in some fonts) carries its letters in drawing order too,
++ * in a copy of the glyph, so the run's text is the typed text reversed: read back, 'في' was 'يف'.
++ */
++const visualGlyph = (glyph) => (glyph?.codePoints?.length > 1
++    ? Object.create(glyph, { codePoints: { value: [...glyph.codePoints].reverse(), enumerable: true } })
++    : glyph);
++const reverseGlyphs = (glyphs, positions, fontSize) => {
++    const toOffset = 1000 / (fontSize || 12);
++    const clusters = [];
++    for (let i = 0; i < glyphs.length; i += 1) {
++        if (!clusters.length || !glyphs[i]?.isMark)
++            clusters.push([]);
++        clusters[clusters.length - 1].push(i);
++    }
++    const out = { glyphs: [], positions: [] };
++    for (const cluster of clusters.reverse()) {
++        let pen = 0;
++        const x = cluster.map((i) => {
++            const at = pen + (positions[i].xOffset || 0) / toOffset;
++            pen += positions[i].xAdvance || 0;
++            return at;
++        });
++        pen = 0;
++        for (let k = cluster.length - 1; k >= 0; k -= 1) {
++            const i = cluster[k];
++            out.glyphs.push(visualGlyph(glyphs[i]));
++            out.positions.push(Object.assign({}, positions[i], { xOffset: (x[k] - pen) * toOffset }));
++            pen += positions[i].xAdvance || 0;
++        }
++    }
++    return out;
++};
++/**
++ * flowcv patch (R2-010): bidi reordering (UAX #9, rule L2) by runs. A line's runs already split
++ * at every change of bidi level and of font, so from the highest level down to the lowest odd one
++ * each maximal sequence of runs at that level or above is reversed, and a run reversed an odd
++ * number of times has its glyph clusters reversed. textkit 6.3 instead reordered the line's
++ * characters and pulled each glyph into the run slot its new index fell in — with the glyph ids of
++ * one font drawn in another font's run whenever a right-to-left line mixed fonts (every Hebrew or
++ * Arabic line: its spaces come from the Latin font), so 'אוניברסיטת תל אביב' printed as overlapping
++ * wrong glyphs.
++ *
++ * @param line - Line
++ * @returns Line
++ */
+ const reorderLine = (line) => {
+-    const levels = getBidiLevels$1(line.runs);
+-    const direction = line.runs[0]?.attributes.direction;
+-    const level = direction === 'rtl' ? 1 : 0;
+-    const end = length$1(line) - 1;
+-    const paragraphs = [{ start: 0, end, level }];
+-    const embeddingLevels = { paragraphs, levels };
+-    const segments = bidi$2.getReorderSegments(line.string, embeddingLevels);
+-    // No need for bidi reordering
+-    if (segments.length === 0)
++    let runs = line.runs || [];
++    const base = runs[0]?.attributes.direction === 'rtl' ? 1 : 0;
++    if (Math.max(base, ...runs.map((run) => run.attributes.bidiLevel ?? base)) === 0)
+         return line;
+-    const indices = getReorderedIndices(line.string, segments);
+-    const updatedString = bidi$2.getReorderedString(line.string, embeddingLevels);
+-    const updatedRuns = line.runs.map((run) => {
+-        const selectedIndices = indices.slice(run.start, run.end);
+-        const updatedGlyphs = [];
+-        const updatedPositions = [];
+-        const addedGlyphs = new Set();
+-        for (let i = 0; i < selectedIndices.length; i += 1) {
+-            const index = selectedIndices[i];
+-            const glyph = getItemAtIndex(line.runs, 'glyphs', index);
+-            if (addedGlyphs.has(glyph.id))
++    // Rule L1: the whitespace that ends a line takes the paragraph's level, so a line that breaks
++    // inside right-to-left text does not carry its last space to the far side of its words.
++    const lineString = line.string || '';
++    const cut = lineString.trimEnd().length;
++    if (cut > 0 && cut < lineString.length) {
++        const tail = slice(cut, lineString.length, line).runs.map((run) => Object.assign({}, run, {
++            start: run.start + cut,
++            end: run.end + cut,
++            attributes: Object.assign({}, run.attributes, { bidiLevel: base }),
++        }));
++        runs = [...slice(0, cut, line).runs, ...tail];
++    }
++    const levels = runs.map((run) => run.attributes.bidiLevel ?? base);
++    const maxLevel = Math.max(base, ...levels);
++    if (maxLevel === 0)
++        return Object.assign({}, line, { runs });
++    const minLevel = Math.min(base, ...levels);
++    const lowestOdd = minLevel % 2 === 1 ? minLevel : minLevel + 1;
++    let order = runs.map((run, i) => ({ run, level: levels[i], flips: 0 }));
++    for (let level = maxLevel; level >= lowestOdd; level -= 1) {
++        const next = [];
++        let i = 0;
++        while (i < order.length) {
++            if (order[i].level < level) {
++                next.push(order[i]);
++                i += 1;
+                 continue;
+-            updatedGlyphs.push(glyph);
+-            updatedPositions.push(getItemAtIndex(line.runs, 'positions', index));
+-            if (glyph.isLigature) {
+-                addedGlyphs.add(glyph.id);
+             }
++            let j = i;
++            while (j < order.length && order[j].level >= level)
++                j += 1;
++            next.push(...order.slice(i, j).reverse().map((item) => ({ ...item, flips: item.flips + 1 })));
++            i = j;
+         }
+-        return {
+-            ...run,
+-            glyphs: updatedGlyphs,
+-            positions: updatedPositions,
+-        };
++        order = next;
++    }
++    let offset = 0;
++    let string = '';
++    const updatedRuns = order.map(({ run, flips }) => {
++        const text = line.string.slice(run.start, run.end);
++        const length = run.end - run.start;
++        const start = offset;
++        offset += length;
++        if (flips % 2 === 0) {
++            string += text;
++            return Object.assign({}, run, { start, end: start + length });
++        }
++        string += Array.from(text).reverse().join('');
++        const { glyphs, positions } = reverseGlyphs(run.glyphs || [], run.positions || [], run.attributes.fontSize);
++        return Object.assign({}, run, {
++            start,
++            end: start + length,
++            glyphs,
++            positions,
++            stringIndices: resolve$1(glyphs),
++            glyphIndices: resolve(glyphs),
++        });
+     });
+-    return {
+-        box: line.box,
+-        runs: updatedRuns,
+-        string: updatedString,
+-    };
++    return Object.assign({}, line, { runs: updatedRuns, string });
+ };
+ const reorderParagraph = (paragraph) => paragraph.map(reorderLine);
+ /**
+@@ -1120,14 +1195,20 @@ const getCharacterSpacing = (run) => {
+ const scalePositions = (run, positions) => {
+     const runScale = scale(run);
+     const characterSpacing = getCharacterSpacing(run);
++    // flowcv patch (R2-010): a glyph's offsets stay in thousandths of an em, the unit
++    // @react-pdf/render draws them in (it multiplies them by fontSize / 1000, as resolveYOffset's
++    // sub/superscript shift expects). Scaled to points here, they reached the page fontSize / 1000
++    // as large — about nothing — so every positioned mark (Hebrew points, Arabic vowels, the shadda)
++    // was drawn after its letter instead of on it.
++    const offsetScale = 1000 / (run.attributes?.font?.[0]?.unitsPerEm || 1000);
+     return positions.map((position, i) => {
+         const isLast = i === positions.length;
+         const xSpacing = isLast ? 0 : characterSpacing;
+         return Object.assign({}, position, {
+             xAdvance: position.xAdvance * runScale + xSpacing,
+             yAdvance: position.yAdvance * runScale,
+-            xOffset: position.xOffset * runScale,
+-            yOffset: position.yOffset * runScale,
++            xOffset: position.xOffset * offsetScale,
++            yOffset: position.yOffset * offsetScale,
+         });
+     });
+ };
+@@ -1194,9 +1275,11 @@ const generateGlyphs = () => {
+ const resolveRunYOffset = (run) => {
+     if (!run.positions)
+         return run;
+-    const unitsPerEm = run.attributes?.font?.[0]?.unitsPerEm || 0;
+-    const yOffset = (run.attributes?.yOffset || 0) * unitsPerEm;
+-    const positions = run.positions.map((p) => Object.assign({}, p, { yOffset }));
++    // flowcv patch (R2-010): add the sub/superscript shift (in thousandths of an em, see
++    // scalePositions) to each glyph's own offset instead of replacing it, which dropped the height
++    // the font gives a mark.
++    const shift = (run.attributes?.yOffset || 0) * 1000;
++    const positions = run.positions.map((p) => Object.assign({}, p, { yOffset: (p.yOffset || 0) + shift }));
+     return Object.assign({}, run, { positions });
+ };
+ /**
+@@ -1610,6 +1693,89 @@ const adjustOverflow = (line) => {
      const box = Object.assign({}, line.box, { x, width });
      return Object.assign({}, line, { box, overflowLeft, overflowRight });
  };
@@ -92,7 +286,7 @@ index 0b8b6fa636c48ef0ac9cecb27040d2bac9303ce8..d338a5fd329c1e78628f33ff0ce3633c
  /**
   * Performs line justification by calling appropiate engine
   *
-@@ -1630,7 +1713,7 @@ const justifyLine$1 = (engines, options, align) => {
+@@ -1630,7 +1796,7 @@ const justifyLine$1 = (engines, options, align) => {
          const x = line.box.x + remainingWidth * alignFactor;
          const box = Object.assign({}, line.box, { x });
          const newLine = Object.assign({}, line, { box });
@@ -101,3 +295,55 @@ index 0b8b6fa636c48ef0ac9cecb27040d2bac9303ce8..d338a5fd329c1e78628f33ff0ce3633c
      };
  };
  const finalizeLine = (line) => {
+@@ -3048,6 +3214,29 @@ const pickFontFromFontStack = (codePoint, fontStack, lastFont) => {
+     }
+     return fontStack.at(-1);
+ };
++/**
++ * flowcv patch (R2-010): a space or no-break space between two characters of one fallback font —
++ * two Hebrew, Arabic or CJK words — is drawn in that font, so the words and the space are one run.
++ * Split at every space into the Latin font's spaces, a right-to-left line was read back (pdf.js,
++ * and the ATS parsers built on it) word by word in visual order: 'כהן דוד' for 'דוד כהן'. A space
++ * next to anything else, or one wider than half an em (Noto Emoji's is 1.27 em), keeps its font.
++ */
++const SPACE_CODE_POINTS = [0x20, 0xa0];
++const keepsFontForSpace = (codePoint, chars, next, fontStack, lastFont) => {
++    if (!SPACE_CODE_POINTS.includes(codePoint) || !lastFont || !fontStack.includes(lastFont))
++        return false;
++    if (!lastFont.hasGlyphForCodePoint?.(codePoint))
++        return false;
++    const space = lastFont.glyphForCodePoint?.(codePoint);
++    if (!space || space.advanceWidth > (lastFont.unitsPerEm || 1000) / 2)
++        return false;
++    let j = next;
++    while (j < chars.length && SPACE_CODE_POINTS.includes(chars.codePointAt(j)))
++        j += 1;
++    if (j >= chars.length)
++        return false;
++    return pickFontFromFontStack(chars.codePointAt(j), fontStack, lastFont) === lastFont;
++};
+ const fontSubstitution = () => ({ string, runs }) => {
+     let lastFont = null;
+     let lastFontSize = null;
+@@ -3065,11 +3254,17 @@ const fontSubstitution = () => ({ string, runs }) => {
+             break;
+         }
+         const chars = string.slice(run.start, run.end);
+-        for (let j = 0; j < chars.length; j += 1) {
+-            const char = chars[j];
+-            const codePoint = char.codePointAt(0);
++        // flowcv patch (R2-010): one character at a time, not one UTF-16 unit. An emoji or a CJK
++        // Extension B ideograph is two surrogates that no font has, so textkit 6.3 gave each half
++        // the last resort, Helvetica, and printed 'Rocket 🚀 Star' as 'Rocket =€' over 'Star'.
++        for (let j = 0; j < chars.length;) {
++            const codePoint = chars.codePointAt(j);
++            const char = String.fromCodePoint(codePoint);
++            j += char.length;
+             // If the default font does not have a glyph and the fallback font does, we use it
+-            const font = pickFontFromFontStack(codePoint, run.attributes.font, lastFont);
++            const font = keepsFontForSpace(codePoint, chars, j, run.attributes.font, lastFont)
++                ? lastFont
++                : pickFontFromFontStack(codePoint, run.attributes.font, lastFont);
+             const fontSize = getFontSize(run);
+             // If anything that would impact res has changed, update it
+             if (font !== lastFont ||
