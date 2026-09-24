@@ -146,6 +146,8 @@ export function Editor({ store, auth, sync }) {
         previewZoom={previewZoom}
         setPreviewZoom={setPreviewZoom}
         persistError={store.persistError}
+        saving={store.saving}
+        savedAt={store.savedAt}
         isMobile={isMobile}
       />
 

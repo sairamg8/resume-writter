@@ -82,6 +82,10 @@ export function useAppStore() {
   const [appState, setAppState] = useState(loaded.state);
   // null when the last write reached localStorage; otherwise the error (usually QuotaExceededError).
   const [persistError, setPersistError] = useState(null);
+  // What the editor's save status reads: a change held until its coalesced write (`saving`), and
+  // when the last write reached storage (`savedAt`) — not when the résumé last changed.
+  const [saving, setSaving] = useState(false);
+  const [savedAt, setSavedAt] = useState(null);
   // Set when the saved store could not be read in full; the dashboard shows it until dismissed.
   const [recovery, setRecovery] = useState(() => pendingRecovery(STORAGE_KEY));
 
@@ -113,9 +117,11 @@ export function useAppStore() {
       setItemWithRoom(STORAGE_KEY, JSON.stringify({ ...state, dataVersion: DATA_VERSION }));
       stored.current = state.resumes;
       setPersistError(null);
+      setSavedAt(Date.now());
     } catch (e) {
       setPersistError(e);
     }
+    setSaving(false);
   }, { wait: SAVE_WAIT_MS, maxWait: SAVE_MAX_WAIT_MS }));
 
   useEffect(() => {
@@ -127,9 +133,11 @@ export function useAppStore() {
     if (other && appState.resumes === other.resumes && appState.deletedIds === other.deletedIds) {
       stored.current = appState.resumes;
       if (saver.pending()) saver.schedule(appState);
+      setSaving(saver.pending());
       return;
     }
     saver.schedule(appState);
+    setSaving(saver.pending());
   }, [appState, saver]);
 
   // Nothing typed is lost: leaving or hiding the page, or the store going away, writes what is
@@ -161,9 +169,11 @@ export function useAppStore() {
       // one, not against this tab's last write — which counted every résumé taken from the first as
       // changed here and undid the second. The held save is not written until the state it would
       // write has taken this one in (the effect above schedules it again).
+      // Leaving the page before that render (pagehide) writes the held save with this one taken in
+      // too, not as it was: that would put back what the other tab just changed.
       const knew = stored.current;
       stored.current = incoming.resumes;
-      saver.hold();
+      saver.hold((held) => withOtherTabsSave(held, incoming, knew));
       setAppState((prev) => withOtherTabsSave(prev, incoming, knew));
     }
     window.addEventListener('storage', onStorage);
@@ -316,6 +326,8 @@ export function useAppStore() {
     appState,
     persistError,
     persistReason: notSavedReason(persistError),
+    saving,
+    savedAt,
     recovery,
     dismissRecovery,
     activeResume,

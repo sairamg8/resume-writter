@@ -11,22 +11,22 @@ const renderResumePreview = (resume) =>
 const renderCoverLetterPreview = (resume) =>
   import('@/utils/pdfExportReactPDF').then((m) => m.renderCoverLetterPdf(resume, { preview: true }));
 
-/** "Saved 2 min ago" under the preview; it owns the 30 s tick that keeps that time current. */
-function SaveStatus({ resume, persistError }) {
-  const [lastSaved, setLastSaved] = useState(null);
+/**
+ * "Saved 2 min ago" under the preview; it owns the 30 s tick that keeps that time current. It reads
+ * the store's writes, not the résumé's changes: a keystroke's write is held a moment (R2-077), and
+ * "Saved" before storage held it was not true. "Saving…" while one waits.
+ */
+export function SaveStatus({ persistError, saving = false, savedAt = null }) {
   const [, refreshTick] = useState(0);
 
-  useEffect(() => { if (resume) setLastSaved(Date.now()); }, [resume]);
   useEffect(() => {
     const id = setInterval(() => refreshTick(n => n + 1), 30_000);
     return () => clearInterval(id);
   }, []);
 
-  return persistError ? (
-    <span className="text-red-600 font-medium">Not saved</span>
-  ) : (
-    <span>{lastSaved ? `Saved ${timeAgo(lastSaved)}` : 'Auto-saved to your browser'}</span>
-  );
+  if (persistError) return <span className="text-red-600 font-medium">Not saved</span>;
+  if (saving) return <span>Saving…</span>;
+  return <span>{savedAt ? `Saved ${timeAgo(savedAt)}` : 'Auto-saved to your browser'}</span>;
 }
 
 /**
@@ -34,7 +34,7 @@ function SaveStatus({ resume, persistError }) {
  * is open) and the save status. Hidden, never unmounted, in editor-only mode (and on a phone's Edit
  * tab, which Editor.jsx passes as 'editor'); hidden, its PDF is not built until it is shown (R2-016).
  */
-export function EditorPreviewPane({ resume, activeTab, layoutMode, setLayoutMode, previewZoom, setPreviewZoom, persistError, isMobile = false }) {
+export function EditorPreviewPane({ resume, activeTab, layoutMode, setLayoutMode, previewZoom, setPreviewZoom, persistError, saving, savedAt, isMobile = false }) {
   const navigate = useNavigate();
   const shown = layoutMode !== 'editor';
 
@@ -68,7 +68,7 @@ export function EditorPreviewPane({ resume, activeTab, layoutMode, setLayoutMode
       )}
 
       <div className="mt-6 flex flex-wrap items-center justify-center gap-2 sm:gap-3 text-xs text-gray-400 shrink-0">
-        <SaveStatus resume={resume} persistError={persistError} />
+        <SaveStatus persistError={persistError} saving={saving} savedAt={savedAt} />
         <span>·</span>
         <button onClick={() => navigate('/terms')} className="hover:text-gray-600 transition-colors">Terms</button>
         <button onClick={() => navigate('/privacy')} className="hover:text-gray-600 transition-colors">Privacy</button>
