@@ -42,19 +42,22 @@ export function filterJobs(jobs, { q = '', statuses = [], followUpDue = false, n
   });
 }
 
-const SALARY = /(\d[\d,]*(?:\.\d+)?)\s*(k|mn|m|lpa|lakhs?|lacs?|l|crores?|cr)?(?![a-z])/i;
+const UNIT = '(k|mn|m|lpa|lakhs?|lacs?|l|crores?|cr)';
+// An amount and its unit, then maybe a range's second amount ('-', '–', 'to', a currency sign):
+// '$120-150k' writes the unit once, after the second number (the first read as 120).
+const SALARY = new RegExp(`(\\d[\\d,]*(?:\\.\\d+)?)\\s*${UNIT}?(?![a-z])(?:\\s*(?:-|–|—|to)\\s*[^\\d\\s]{0,3}\\s*\\d[\\d,]*(?:\\.\\d+)?\\s*${UNIT}?(?![a-z]))?`, 'i');
 const SALARY_UNIT = { k: 1e3, m: 1e6, mn: 1e6, lpa: 1e5, lakh: 1e5, lakhs: 1e5, lac: 1e5, lacs: 1e5, l: 1e5, cr: 1e7, crore: 1e7, crores: 1e7 };
 
 /**
  * The first amount in a salary as the user wrote it — '$150k – $200k' → 150000, '$120,000' →
- * 120000, '₹30 LPA' → 3000000 — or null when it names none ('Competitive'). Currencies are not
+ * 120000, '₹30 LPA' → 3000000, '$120-150k' → 120000 (a range's one unit) — or null when it names none ('Competitive'). Currencies are not
  * converted: it orders a list, it does not compare offers.
  */
 export function salaryValue(text) {
   const m = SALARY.exec(String(text ?? ''));
   if (!m) return null;
   const n = Number.parseFloat(m[1].replace(/,/g, ''));
-  return Number.isFinite(n) ? n * (SALARY_UNIT[(m[2] || '').toLowerCase()] || 1) : null;
+  return Number.isFinite(n) ? n * (SALARY_UNIT[(m[2] || m[3] || '').toLowerCase()] || 1) : null;
 }
 
 const collator = new Intl.Collator(undefined, { sensitivity: 'base', numeric: true });
