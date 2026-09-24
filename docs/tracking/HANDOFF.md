@@ -26,7 +26,7 @@ The owner approved the temporary `claude/wf-*` branches on 2026-09-24 12:47.
 | Cluster | Rows | Session | State |
 |---|---|---|---|
 | ats | R2-020 021 022 023 024 025 027 078 079 080 081 163 166 | session_01GG1ULRf3BEFijyNRzXNJoT | **merged** |
-| pdf-pagination | R2-046 047 048 049 104 109 111 | session_013Hg3VSwaVkaQmNCkotTNsb | **merged** (a933db1) from its pushed branch — its session ran out before its review; the coordinator runs that review (read-only reviewers + CI fail-first) before the rows are set |
+| pdf-pagination | R2-046 047 048 049 104 109 111 | session_013Hg3VSwaVkaQmNCkotTNsb | **merged** (a933db1 + its reviewer's 4 fixes, a982b26) and **deployed**; the coordinator's read-only review and CI fail-first were still running at the deploy — their findings are fixed forward |
 | design-sidebar | R2-013 051 059 082 083 087 088 089 090 096 119 120 121 123 | session_014y3tSMD21g1ji9Ct73pZQh | **merged** (with the JSON Resume / Backup follow-up) |
 | word | R2-061 065 066 070 114 118 124 125 126 128 132 | session_01Kms1vF1NWaaH7yWz6e2UWr | **merged** |
 | text-exports | R2-026 034 052 053 054 058 060 064 122 129 131 | session_01YUpaiGLx34s4T8huDzmJNW | **merged** (with follow-up: the letter's text export) |
@@ -53,27 +53,35 @@ Round 2 — features and test gaps not in a cluster: R2-135 136 137 138 139 140 
 **Owner, 2026-09-24 12:35:** once the running clusters finish, start nothing new — the owner restarts the
 session first. Round 2 begins only after that restart.
 
-### State now (2026-09-24 ~14:50 UTC, coordinator session_01UaZc6yUjHdoanpnUfTnzFF)
+### State now (2026-09-24 ~15:35 UTC, coordinator session_01UaZc6yUjHdoanpnUfTnzFF)
 
-Work branch `claude/confident-goldberg-2uig8b`: **all 15 Round 1 clusters are merged** (preview, sections,
-pdf-text, word, the design-sidebar follow-up, cypress and pdf-pagination by this coordinator; the rest before
-the reboot). Tracker: 29 open before pdf-pagination's 7 rows are set. Also on the branch since the takeover:
-- CI fixes found by the first gate (run 36009975344): R2-045's thin space (0eab18a), the contact-field guard
-  (0eab18a), the touch-reveal guard (2d61cbe); stale browser specs for R2-131 / R2-064 / R2-092 (62958f5,
-  3edbba1, 73725f7); the Cypress review's six findings + the ATS tab's file name (02a6ab8).
-- CI: the suite on 6 machines, Playwright on 3, Cypress on 4 (53cb635); dispatch inputs `tests`,
-  `failfirst`, `playwright`, `cypress` (ea9d31f); apt retried three times (1331c80).
+**Round 1 is deployed.** `master` = `9a49f83` (fast-forwarded from `504b313`, 250 commits): all 15 clusters, the
+coordinator's merge fixes and the CI work. Gate on that exact commit: CI run 36018983145, every job green (suite on 6
+machines, Playwright on 3, Cypress on 4, build, lint). Tracker: **215 fixed · 22 ✖ · 22 open** — the 22 open rows are
+all Round 2 (features and test gaps, R2-135…171). Every ✅ row's commits were checked to be on `master`.
 
-**The owner's rules since the reboot:** merge every cloud agent's work into master once CI is green; **tests
-run only on the CI pipeline** — never on this machine, a cloud session's or an agent's worktree (use the
-dispatch inputs; CLUSTER-PROTOCOL.md says how); go fast without dropping quality.
+Rules since the owner's reboot (also in the repo's `CLAUDE.md`, which every session reads first):
+- Tests run **only on CI** — dispatch `ci.yml` with `tests` / `failfirst` / `playwright` / `cypress` inputs
+  (CLUSTER-PROTOCOL.md "Set-up"). Nothing runs locally.
+- `master` moves only on a green full gate on that exact commit.
+- Work in parallel (cloud sessions, several small workflows); keep this machine under 80% CPU/memory.
+- A Stop hook (`.claude/hooks/handoff-fresh.sh`) refuses to end a turn while this file is behind the code.
 
-Open before master moves: (1) pdf-pagination's review — read-only reviewers (workflow) + a CI fail-first
-dispatch of its 7 fix commits; then set its rows from the draft report in its handoff
-(`git show origin/claude/wf-pdf-pagination:HANDOFF-pdf-pagination.md`); (2) a full CI run green on the head;
-(3) then fast-forward master to the work branch, mark every ⏸ row ✅ and re-total. After that: Round 2 — the
-22 feature / test-gap rows, split into clusters by a scoping workflow, one cloud session each, all testing on
-CI.
+Still open from Round 1, none blocking:
+1. pdf-pagination's review by the coordinator (read-only reviewers + skeptics, two workflows) was running at the
+   deploy; confirmed findings get fixed forward. Known already: `f6cb390` (an award without a description is not
+   moved) has no test that fails without it — add one.
+2. ATS-7 (a heading that opens a page is glued to the page before under `pdftotext -raw`, accepted as a known limit)
+   now hits the demo résumés on Modern, Minimal and Banner, because R2-047 moves a title with its entry; the field
+   test reports it as an ATS-7 diagnostic (9a49f83). The owner may want to revisit ATS-7's option A (a running
+   "Name · Page 2" header).
+3. Two small defects seen by the sections cluster, not yet filed: the ATS checker still counts a section whose
+   entries are all hidden; the PDF and Word ignore a hidden end date on imported education/projects/volunteering.
+
+Round 2 (the 22 open rows) is handed to a separate session by the owner (the prompt the owner was given names this
+branch, the CI-only rule, `claude/wf-<cluster>` branches and `wf-reports/<cluster>.json`). This coordinator merges
+each reported branch, sets the rows, gates on CI and fast-forwards `master`. A scoping workflow's cluster plan goes to
+`docs/tracking/ROUND2-PLAN.md` when it lands.
 
 ### If this session was cut off
 
