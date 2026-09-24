@@ -7,9 +7,10 @@ import { isJsonResume, jsonResumeToCpwtResume } from '@/utils/jsonResume';
  * The editor's Export menu, with Import JSON: `onImportJSON(data, asOriginal)`. `keeps` — a demo
  * account, whose originals come back (useDemoSeed) — adds "Import as my original", as the
  * dashboard's Import menu has (V2OWNER-DATA-3). `letter`: the Cover Letter tab is open, where PDF
- * and Word export the letter and the text exports still the résumé — each item says which (R2-131).
+ * and Word export the letter, Cover Letter Text the letter as plain text (`onExportLetterText`), and
+ * the other text exports still the résumé — each item says which (R2-131).
  */
-export function ExportDropdown({ exporting, keeps = false, letter = false, onExportPDF, onExportWord, onExportJSON, onExportMarkdown, onExportAtsText, onExportJsonResume, onImportJSON, onImportError }) {
+export function ExportDropdown({ exporting, keeps = false, letter = false, onExportPDF, onExportWord, onExportJSON, onExportMarkdown, onExportAtsText, onExportJsonResume, onExportLetterText, onImportJSON, onImportError }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   const importRef = useRef(null);
@@ -56,6 +57,15 @@ export function ExportDropdown({ exporting, keeps = false, letter = false, onExp
           >
             <FileText size={12} className="text-emerald-500" /> {letter ? 'Export Cover Letter Word' : 'Export Word'}
           </button>
+          {letter && (
+            <button
+              onClick={() => { onExportLetterText?.(); setOpen(false); }}
+              disabled={!!exporting}
+              className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-purple-50 hover:text-purple-700 disabled:opacity-50"
+            >
+              <FileText size={12} className="text-purple-500" /> Export Cover Letter Text (.txt)
+            </button>
+          )}
           <button
             onClick={() => { onExportMarkdown?.(); setOpen(false); }}
             disabled={!!exporting}

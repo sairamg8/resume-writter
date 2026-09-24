@@ -4,6 +4,7 @@ import { isDemoAccount } from '@/utils/demoSeed';
 import { DEMO_ACCOUNTS } from '@/utils/demoAccounts';
 import { generateAtsPlainText } from '@/utils/atsChecker';
 import { generateMarkdownResume } from '@/utils/markdownExport';
+import { generateCoverLetterPlainText } from '@/utils/coverLetterText';
 import { isJsonResume, jsonResumeToCpwtResume, cpwtResumeToJsonResume } from '@/utils/jsonResume';
 
 /** `value` trimmed with its inner runs of whitespace as one `_`; '' for anything not text. */
@@ -23,7 +24,8 @@ function buildExportFilename(resume) {
 /**
  * The editor's Export menu: PDF and Word of the tab on screen (résumé or cover letter), the
  * résumé as Markdown, ATS text, JSON Resume and JSON whichever tab is open — `letterTab` tells the
- * menu to say so on the letter's tab (R2-131) — and Import JSON — with the busy state and a visible error message. `keeps`: a
+ * menu to say so on the letter's tab, where it also offers the letter as plain text (R2-131) — and
+ * Import JSON — with the busy state and a visible error message. `keeps`: a
  * demo account, which can import a file as its original (useDemoSeed), as from the dashboard.
  */
 export function useEditorExports({ resume, activeTab, authUser, importResume, navigate }) {
@@ -84,6 +86,15 @@ export function useEditorExports({ resume, activeTab, authUser, importResume, na
     });
   }
 
+  /** The cover letter as plain text, for an application form's letter box (R2-131). */
+  function handleExportLetterText() {
+    const filename = buildExportFilename(resume);
+    return runExport('lettertext', 'Cover letter text export', async () => {
+      const text = generateCoverLetterPlainText(resume);
+      downloadBlob(new Blob([text], { type: 'text/plain;charset=utf-8' }), `${filename}_cover_letter.txt`);
+    });
+  }
+
   function handleExportAtsText() {
     const filename = buildExportFilename(resume);
     return runExport('atstext', 'ATS text export', async () => {
@@ -115,6 +126,6 @@ export function useEditorExports({ resume, activeTab, authUser, importResume, na
 
   return {
     exporting, exportError, setExportError, keeps, letterTab: activeTab === 'coverletter',
-    handleExportPDF, handleExportWord, handleExportJSON, handleExportMarkdown, handleExportAtsText, handleExportJsonResume, handleImportJSON,
+    handleExportPDF, handleExportWord, handleExportJSON, handleExportMarkdown, handleExportAtsText, handleExportJsonResume, handleExportLetterText, handleImportJSON,
   };
 }
