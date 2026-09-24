@@ -2,7 +2,9 @@ import { useId, useState } from 'react';
 import { Copy, Trash2, Edit2, Check, Pin } from 'lucide-react';
 import { timeAgo } from '@/utils/resume';
 import { isOriginal } from '@/utils/demoSeed';
+
 import { templateLabel } from '@/constants/templates';
+import ResumeThumbnail from '@/components/ResumeThumbnail';
 
 const KEEP_HINT = 'Your originals come back whenever none of them is left';
 const LAST_ORIGINAL_HINT = 'Your last original always comes back. To delete it, choose "Stop keeping" first.';
@@ -33,22 +35,7 @@ export function ResumeCard({ resume, onOpen, onDuplicate, onDelete, onRename, on
         style={{ background: `linear-gradient(135deg, ${accent}18 0%, ${accent}08 100%)` }}
         onClick={() => onOpen(resume.id)}
       >
-        <div
-          className="w-20 h-28 rounded shadow-md flex flex-col overflow-hidden"
-          style={{ border: `2px solid ${accent}30` }}
-        >
-          <div className="h-7 flex items-center px-2" style={{ backgroundColor: accent }}>
-            <div className="space-y-0.5 w-full">
-              <div className="h-1 bg-white/70 rounded-sm w-4/5" />
-              <div className="h-0.5 bg-white/40 rounded-sm w-1/2" />
-            </div>
-          </div>
-          <div className="flex-1 bg-white p-1.5 space-y-1">
-            {[0.9, 0.7, 0.85, 0.6, 0.75].map((w, i) => (
-              <div key={i} className="h-1 rounded-sm" style={{ width: `${w * 100}%`, backgroundColor: `${accent}25` }} />
-            ))}
-          </div>
-        </div>
+        <ResumeThumbnail resume={resume} accent={accent} />
 
         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
           <span className="px-4 py-2 bg-white rounded-lg shadow-md text-sm font-semibold text-gray-700">
