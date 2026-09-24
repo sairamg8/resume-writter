@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Plus, Trash2, X } from 'lucide-react';
+import { ArrowLeft, ListTodo, Plus, Trash2, X } from 'lucide-react';
 import {
   DndContext, DragOverlay, MouseSensor, TouchSensor, useSensor, useSensors, closestCorners,
 } from '@dnd-kit/core';
@@ -203,8 +203,15 @@ export function Board() {
             </button>
           )}
           <button
+            onClick={() => navigate(`/boards/${encodeURIComponent(board.id)}/backlog`)}
+            className="ml-auto flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors shrink-0"
+            title="Plan sprints in the backlog"
+          >
+            <ListTodo size={14} /> Backlog
+          </button>
+          <button
             onClick={() => { if (confirm(`Delete "${board.title || 'this board'}"?`)) { store.deleteBoard(board.id); navigate('/boards'); } }}
-            className="ml-auto p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors shrink-0"
+            className="p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors shrink-0"
             title="Delete board"
             aria-label="Delete board"
           >
@@ -218,7 +225,7 @@ export function Board() {
       {(sprint || board.mode === 'scrum' || hiddenDone > 0) && (
         <p className="px-3 sm:px-5 pt-2 text-xs text-gray-500 shrink-0">
           {sprint && <>Sprint: <span className="font-semibold text-gray-700">{sprint.name}</span>{sprint.endDate && <> · ends {sprint.endDate}</>}. New cards join it.</>}
-          {!sprint && board.mode === 'scrum' && <>No sprint is active, so every card is shown.</>}
+          {!sprint && board.mode === 'scrum' && <>No sprint is active, so every card is shown. Start one from the backlog.</>}
           {hiddenDone > 0 && <> {hiddenDone} done card{hiddenDone === 1 ? ' is' : 's are'} hidden: resolved more than {board.hideDoneAfterDays} days ago.</>}
         </p>
       )}
