@@ -192,8 +192,9 @@ test.describe('every design control changes the preview, through the UI', () => 
       const so = [...document.querySelectorAll('p')].find((p) => p.textContent.trim() === 'Section Options');
       so.parentNode.dataset.pwRoot = 'section';
     });
-    // Uploads, the icon picker, and removing or hiding the photo (the photo's own controls come after).
-    const range = await tag(page, '[data-pw-root]', 'Choose Icon|choose icon|Remove photo|photo from resume|photo on resume|Clear|^(Header Customization|Photo)');
+    // Uploads, the icon picker, and removing or hiding the photo (the photo's own controls come after):
+    // its eye reads "Hide photo from the résumé and cover letter" since R2-092.
+    const range = await tag(page, '[data-pw-root]', 'Choose Icon|choose icon|Remove photo|photo from the résumé|photo on the résumé|Clear|^(Header Customization|Photo)');
     const { inert, used } = await useEach(page, range);
     expect(inert, 'controls that changed the résumé but not the preview').toEqual([]);
     expect(used).toBeGreaterThan(15);
