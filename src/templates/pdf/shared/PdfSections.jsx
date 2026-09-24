@@ -72,24 +72,51 @@ function entry(el, style, key) {
 }
 
 /**
- * Entries of a section, one per row or `cols` per row. Returned as siblings of the section
- * title (no wrapper View), so every entry, and every row of a grid, can move or split on its
- * own at a page break. Grid rows split cell by cell: a cell taller than a page continues on
- * the next page instead of being cut off.
+ * How far down a page, in lines of body text, a grid row may start and still split there: one that
+ * does not fit in less room moves to the next page whole. Room for the tallest entry header of a row
+ * and two lines under it (ItemHeader's keep), so a row that splits prints every cell's header on the
+ * page it starts on. The first row's room holds its section title too: two lines more.
  */
-export function RenderColGrid({ items, cols, gap, renderItem }) {
+const GRID_ROW_KEEP_LINES = 8;
+const GRID_TITLE_LINES = 2;
+
+/**
+ * The section `title` and its entries, one per row or `cols` per row, as siblings (no wrapper View),
+ * so every entry, and every row of a grid, can move or split on its own at a page break.
+ *
+ * A grid row splits cell by cell, and a cell whose header did not fit moved to the next page while
+ * the cell beside it stayed: the right entry printed before the left one (R2-048), and a first row
+ * left its section title alone at the page foot (R2-047). So a row is led by a zero-height mark that
+ * keeps GRID_ROW_KEEP_LINES of it on its page (minPresenceAhead; SPACER gives it the previous sibling
+ * that needs), in a View of its own, the first one's with the title: with less room left than that,
+ * a row that does not fit moves to the next page whole, its title with it. A row taller than that
+ * room splits where it starts, so a cell taller than a page continues on the next page instead of
+ * being cut off.
+ */
+export function RenderColGrid({ items, cols, gap, renderItem, title = null, settings }) {
   if (cols > 1) {
     const rows = [];
     for (let i = 0; i < items.length; i += cols) rows.push(items.slice(i, i + cols));
     const width = getColumnWidth(cols);
+    const line = (settings?.fontSizeBase || 11) * (settings?.lineHeightValue ?? 1.5);
     return rows.map((row, r) => (
-      <View key={r} style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: r ? gap : 0 }}>
-        {row.map((item, c) => entry(renderItem(item, r * cols + c), { width }, c))}
-        {Array.from({ length: cols - row.length }, (_, f) => <View key={`fill${f}`} style={{ width }} />)}
+      <View key={r} style={{ marginTop: r ? gap : 0 }}>
+        {SPACER}
+        <View minPresenceAhead={Math.round(line * (GRID_ROW_KEEP_LINES + (r || !title ? 0 : GRID_TITLE_LINES)))} />
+        {r ? null : title}
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+          {row.map((item, c) => entry(renderItem(item, r * cols + c), { width }, c))}
+          {Array.from({ length: cols - row.length }, (_, f) => <View key={`fill${f}`} style={{ width }} />)}
+        </View>
       </View>
     ));
   }
-  return items.map((item, i) => entry(renderItem(item, i), i ? { marginTop: gap } : null, i));
+  return (
+    <>
+      {title}
+      {items.map((item, i) => entry(renderItem(item, i), i ? { marginTop: gap } : null, i))}
+    </>
+  );
 }
 
 // The entry header and the date colour live in PdfItemHeader.jsx (ATS-1, ATS-2, ATS-5); the

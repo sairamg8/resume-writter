@@ -32,8 +32,9 @@ export function ExperienceSection({ section, settings, marginBottom, spaceBefore
   return (
     <View style={{ marginBottom, marginTop: spaceBefore }}>
       {SPACER}
-      <SectionTitleOf section={section} settings={settings} centered={centered} />
       <RenderColGrid
+        title={<SectionTitleOf section={section} settings={settings} centered={centered} />}
+        settings={settings}
         items={visibleItems}
         cols={cols}
         gap={itemGap}
@@ -86,13 +87,16 @@ export function SkillsSection({ section, settings, marginBottom, spaceBefore, it
   const isModern   = settings?._template === 'modern';
   const isMinimal  = settings?._template === 'minimal';
   const shade      = shadesOf(settings);
+  // Printed by the grid, with its first row (RenderColGrid).
+  const title      = <SectionTitleOf section={section} settings={settings} centered={centered} />;
 
   return (
     <View style={{ marginBottom, marginTop: spaceBefore }}>
       {SPACER}
-      <SectionTitleOf section={section} settings={settings} centered={centered} />
       {style === 'bars' ? (
         <RenderColGrid
+          title={title}
+          settings={settings}
           items={visibleItems}
           cols={cols}
           gap={itemGap}
@@ -117,6 +121,8 @@ export function SkillsSection({ section, settings, marginBottom, spaceBefore, it
         />
       ) : style === 'stacked' ? (
         <RenderColGrid
+          title={title}
+          settings={settings}
           items={visibleItems}
           cols={cols}
           gap={itemGap}
@@ -137,6 +143,8 @@ export function SkillsSection({ section, settings, marginBottom, spaceBefore, it
         />
       ) : style === 'tags' ? (
         <RenderColGrid
+          title={title}
+          settings={settings}
           items={visibleItems}
           cols={cols}
           gap={itemGap}
@@ -177,6 +185,8 @@ export function SkillsSection({ section, settings, marginBottom, spaceBefore, it
       ) : (
         // inline or bullet — respects cols setting via RenderColGrid
         <RenderColGrid
+          title={title}
+          settings={settings}
           items={visibleItems}
           cols={cols}
           gap={itemGap}
@@ -216,8 +226,9 @@ export function EducationSection({ section, settings, marginBottom, spaceBefore,
   return (
     <View style={{ marginBottom, marginTop: spaceBefore }}>
       {SPACER}
-      <SectionTitleOf section={section} settings={settings} centered={centered} />
       <RenderColGrid
+        title={<SectionTitleOf section={section} settings={settings} centered={centered} />}
+        settings={settings}
         items={visibleItems}
         cols={cols}
         gap={itemGap}

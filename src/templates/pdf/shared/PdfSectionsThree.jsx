@@ -91,8 +91,9 @@ export function CustomSection({ section, settings, marginBottom, spaceBefore, it
   return (
     <View style={{ marginBottom, marginTop: spaceBefore }}>
       {SPACER}
-      <SectionTitleOf section={section} settings={settings} centered={centered} />
       <RenderColGrid
+        title={<SectionTitleOf section={section} settings={settings} centered={centered} />}
+        settings={settings}
         items={visibleItems}
         cols={cols}
         gap={itemGap}

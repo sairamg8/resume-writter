@@ -98,8 +98,9 @@ export function SidebarMainExperience({ section, settings, marginBottom, spaceBe
   return (
     <View style={{ marginBottom, marginTop: spaceBefore }}>
       {SPACER}
-      <SectionTitleOf section={section} settings={settings} centered={centered} />
       <RenderColGrid
+        title={<SectionTitleOf section={section} settings={settings} centered={centered} />}
+        settings={settings}
         items={visibleItems}
         cols={s.columns || 1}
         gap={itemGap}
@@ -157,8 +158,9 @@ export function SidebarMainProjects({ section, settings, marginBottom, spaceBefo
   return (
     <View style={{ marginBottom, marginTop: spaceBefore }}>
       {SPACER}
-      <SectionTitleOf section={section} settings={settings} centered={centered} />
       <RenderColGrid
+        title={<SectionTitleOf section={section} settings={settings} centered={centered} />}
+        settings={settings}
         items={visibleItems}
         cols={s.columns || 1}
         gap={itemGap}

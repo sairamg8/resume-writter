@@ -33,8 +33,9 @@ export function CertificationsSection({ section, settings, marginBottom, spaceBe
   return (
     <View style={{ marginBottom, marginTop: spaceBefore }}>
       {SPACER}
-      <SectionTitleOf section={section} settings={settings} centered={centered} />
       <RenderColGrid
+        title={<SectionTitleOf section={section} settings={settings} centered={centered} />}
+        settings={settings}
         items={visibleItems}
         cols={cols}
         gap={itemGap}
@@ -88,8 +89,9 @@ export function ProjectsSection({ section, settings, marginBottom, spaceBefore, 
   return (
     <View style={{ marginBottom, marginTop: spaceBefore }}>
       {SPACER}
-      <SectionTitleOf section={section} settings={settings} centered={centered} />
       <RenderColGrid
+        title={<SectionTitleOf section={section} settings={settings} centered={centered} />}
+        settings={settings}
         items={visibleItems}
         cols={cols}
         gap={itemGap}
@@ -174,8 +176,9 @@ export function AwardsSection({ section, settings, marginBottom, spaceBefore, it
   return (
     <View style={{ marginBottom, marginTop: spaceBefore }}>
       {SPACER}
-      <SectionTitleOf section={section} settings={settings} centered={centered} />
       <RenderColGrid
+        title={<SectionTitleOf section={section} settings={settings} centered={centered} />}
+        settings={settings}
         items={visibleItems}
         cols={cols}
         gap={itemGap}
@@ -212,8 +215,9 @@ export function VolunteeringSection({ section, settings, marginBottom, spaceBefo
   return (
     <View style={{ marginBottom, marginTop: spaceBefore }}>
       {SPACER}
-      <SectionTitleOf section={section} settings={settings} centered={centered} />
       <RenderColGrid
+        title={<SectionTitleOf section={section} settings={settings} centered={centered} />}
+        settings={settings}
         items={visibleItems}
         cols={cols}
         gap={itemGap}
