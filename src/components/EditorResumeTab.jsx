@@ -27,10 +27,11 @@ export function EditorResumeTab({
   );
 
   // Collapse/Expand All reaches the sections there when it was pressed (and every one when the tab
-  // mounts, so a trip to Design keeps them as they were). One added since opens, as a new section
-  // does: it collapsed after Collapse All, hiding its entry and its Add button (R2-113).
+  // mounts, so a trip to Design keeps them as they were, or another résumé opens in the Editor, which
+  // stays mounted from one to the next). One added since opens, as a new section does: it collapsed
+  // after Collapse All, hiding its entry and its Add button (R2-113).
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const forcedIds = useMemo(() => new Set(resume.sections.map(s => s.id)), [forceOpenKey]);
+  const forcedIds = useMemo(() => new Set(resume.sections.map(s => s.id)), [forceOpenKey, resume.id]);
 
   function handleSectionDragEnd(event) {
     const { active, over } = event;

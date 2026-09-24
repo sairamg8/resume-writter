@@ -40,4 +40,23 @@ describe('a section added after Collapse All opens (R2-113)', () => {
       assert.ok(!view.container.textContent.includes('Add Award'), 'a later Collapse All reaches it');
     } finally { await view.unmount(); }
   });
+
+  it('another résumé opened after Collapse All still opens collapsed', async () => {
+    // The Editor stays mounted from one /resume/:id to the next (an import opens the new one there).
+    const { EditorResumeTab } = await loadModule('/src/components/EditorResumeTab.jsx');
+    const r = resume({ sections: [section('experience', [{ role: 'Quillwright' }])] });
+    const props = {
+      resume: r, store, personalOpen: false, setPersonalOpen() {}, allExpanded: true, forceOpenKey: 0,
+      toggleAllSections() {}, addSectionOpen: false, setAddSectionOpen() {},
+    };
+    const view = mount(EditorResumeTab, props);
+    try {
+      view.update({ ...props, allExpanded: false, forceOpenKey: 1 }); // Collapse All
+      await settle();
+      const other = { ...resume({ sections: [section('awards', [])] }), id: 'resume_other' };
+      view.update({ ...props, resume: other, allExpanded: false, forceOpenKey: 1 });
+      await settle();
+      assert.ok(!view.container.textContent.includes('Add Award'), 'its sections follow Collapse All');
+    } finally { await view.unmount(); }
+  });
 });
