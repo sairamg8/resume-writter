@@ -2,7 +2,8 @@
 
 The open rows in this folder's trackers are split into **clusters**, one per subsystem. Each cluster is
 fixed by one cloud session on its own branch `claude/wf-<cluster>`; a coordinator session merges every
-branch into `claude/beautiful-heisenberg-x3bsvo`, updates the tracker rows and totals, runs the full CI on
+branch into the work branch `claude/confident-goldberg-2uig8b` (it was `claude/beautiful-heisenberg-x3bsvo` in
+Round 1, until `859c3c7`), updates the tracker rows and totals, runs the full CI on
 GitHub (Actions → ci → Run workflow on that branch), and deletes the `claude/wf-*` branch once merged.
 The cluster list and its state: [HANDOFF.md](HANDOFF.md).
 
@@ -53,8 +54,11 @@ The rows live in `docs/tracking/bug-status-r2/01-high-medium.md` (High/Medium), 
 
    ```
    Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
-   Claude-Session: https://claude.ai/code/session_01PdF933BaDvYDh7KFAJpkKi
+   Claude-Session: https://claude.ai/code/<your own session id>
    ```
+
+   Use the Claude-Session line your own session's instructions give you; if they give none, use the
+   coordinator's, `https://claude.ai/code/session_01UaZc6yUjHdoanpnUfTnzFF`.
 
 ## Rules
 
