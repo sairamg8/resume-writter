@@ -121,13 +121,27 @@ describe('R2-056: a section with no title, or no items', () => {
 describe('R2-110: Grids stored as text or out of range', () => {
   it('are stored as a whole number from 1 to 4; none, or no number, prints the default', async () => {
     const { normalizeResume } = await normalizer();
-    const cases = [['2', 2], [' 3 ', 3], [2.4, 2], [7, 4], [0, 1], [-2, 1], ['abc', undefined], [true, undefined], [null, undefined], [3, 3]];
+    const cases = [['2', 2], [' 3 ', 3], [2.4, 2], [7, 4], [0, undefined], ['0', undefined], [-2, 1], ['abc', undefined], [true, undefined], [null, undefined], [3, 3]];
     for (const [stored, want] of cases) {
       const raw = asFile(resume({ sections: [section('skills', [{}], { columns: stored })] }));
       const settings = normalizeResume(raw).sections[0].settings;
       assert.equal(settings.columns, want, JSON.stringify(stored));
       if (want === undefined) assert.ok(!('columns' in settings), `${JSON.stringify(stored)}: dropped`);
     }
+  });
+
+  it('0, which every reader took as none, still prints the default: Languages two to a row', async () => {
+    const { normalizeResume } = await normalizer();
+    const items = ['Alpha', 'Bravo', 'Charlie', 'Delta'].map((language) => ({ language, proficiency: 'Fluent' }));
+    const ys = async (r) => {
+      const pages = await read(await render(r));
+      return ['Alpha', 'Bravo', 'Charlie', 'Delta'].map((n) => Math.round(pages[0].items.find((t) => t.str.includes(n)).y));
+    };
+    const none = await ys(resume({ sections: [section('languages', items)] }));
+    assert.equal(new Set(none).size, 2, 'two to a row: two rows');
+    const raw = asFile(resume({ sections: [section('languages', items, { columns: 0 })] }));
+    assert.deepEqual(await ys(raw), none, 'as it printed before any load');
+    assert.deepEqual(await ys(normalizeResume(raw)), none, 'and after one');
   });
 
   it('"2" on a section of five entries prints two to a row, as 2 does', async () => {

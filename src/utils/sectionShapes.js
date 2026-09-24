@@ -18,14 +18,16 @@ const MAX_COLUMNS = 4;
 
 /**
  * `settings` with its Grids a whole number from 1 to MAX_COLUMNS, or none (the default prints) where
- * it stores no number. Settings that are not an object read as none. The same object when it is.
+ * it stores no number, or 0 — which every reader (`s.columns || 2`) has always printed as none, so
+ * Languages and References keep their two. Settings that are not an object read as none. The same
+ * object when it is.
  */
 function withColumns(settings) {
   if (!isRecord(settings)) return settings === undefined ? settings : undefined;
   if (!('columns' in settings)) return settings;
   const v = settings.columns;
   const n = typeof v === 'number' ? v : typeof v === 'string' && v.trim() !== '' ? Number(v) : NaN;
-  if (Number.isFinite(n)) {
+  if (Number.isFinite(n) && n !== 0) {
     const columns = Math.min(MAX_COLUMNS, Math.max(1, Math.round(n)));
     return columns === v ? settings : { ...settings, columns };
   }
