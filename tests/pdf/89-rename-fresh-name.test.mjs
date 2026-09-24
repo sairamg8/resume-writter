@@ -45,6 +45,16 @@ describe('a dashboard card’s rename (R2-084)', () => {
     } finally { await view.unmount(); }
   });
 
+  it('renamed in another tab while the box is open: leaving it untouched writes nothing back', async () => {
+    const { view, renames, show } = await card('Old name');
+    try {
+      call(view, byTitle(view, 'Rename'), 'onClick');
+      show(cv('Renamed elsewhere'));
+      call(view, input(view), 'onBlur');
+      assert.deepEqual(renames, [], 'the other tab’s rename undone by a box nobody typed in');
+    } finally { await view.unmount(); }
+  });
+
   it('a real rename still reaches the store, trimmed; an empty one does not', async () => {
     const { view, renames } = await card('Old name');
     try {

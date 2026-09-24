@@ -5,14 +5,18 @@ import { useState } from 'react';
  * from the name the résumé has when the box opens, never the one it mounted with: another tab's
  * rename reaches this one through the store, and a stale draft wrote the old name back over it
  * when the box was left (R2-071, R2-084). `onRename(name)` gets the trimmed name, and only when it
- * changes: an empty one keeps the name, and the same name is not an edit.
+ * changes: an empty one keeps the name, and the same name is not an edit — neither the name the box
+ * opened on (renamed elsewhere while it was open, the box left untouched keeps that rename) nor the
+ * name the résumé has now.
  */
 export function useRename(resume, onRename) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState('');
+  const [openedOn, setOpenedOn] = useState('');
 
   function start() {
     setDraft(resume.name || '');
+    setOpenedOn((resume.name || '').trim());
     setEditing(true);
   }
 
@@ -20,7 +24,7 @@ export function useRename(resume, onRename) {
     if (!editing) return; // Enter's commit, then the blur of the box it unmounts
     setEditing(false);
     const name = draft.trim();
-    if (name && name !== resume.name) onRename(name);
+    if (name && name !== openedOn && name !== resume.name) onRename(name);
   }
 
   function cancel() {
