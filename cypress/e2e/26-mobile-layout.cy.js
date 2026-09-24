@@ -27,19 +27,29 @@ const fitsTheScreen = () =>
     expect(doc.documentElement.scrollWidth, 'page width').to.be.at.most(PHONE[0]);
   });
 
+/** The editor's tab box (EditorTabContent): the form, Design and ATS Check scroll in it. */
+const TAB_BOX = '.overflow-y-auto.overflow-x-hidden';
+/** The preview pane (EditorPreviewPane): the box the PDF's pages sit and scroll in. */
+const previewPane = () => cy.get('[data-preview-status]').parent();
+
 /**
- * The same in the editor, a fixed layer that never scrolls the page: its tab box hides what is wider
- * (EditorTabContent, overflow-x-hidden), so that box is measured — content wider than it would be
- * cut off at the right edge, not scrolled to.
+ * The same in the editor. The page itself cannot scroll there — the editor is a fixed layer that
+ * hides its own overflow (Editor.jsx, fixed inset-0 overflow-hidden), so fitsTheScreen() would pass
+ * whatever it held — and so the boxes that scroll are measured: the tab box on Edit, where content
+ * wider than it is cut off at the right edge (overflow-x-hidden), and the preview pane on Preview,
+ * where it would scroll sideways (overflow-auto). Only a box on screen counts: the one a tab hides
+ * is display:none, 0 wide inside and out, and passes whatever it holds.
  */
-const editorFitsTheScreen = () => {
-  fitsTheScreen();
-  cy.get('.overflow-y-auto.overflow-x-hidden').should(($boxes) => {
-    $boxes.each((_, box) => {
-      expect(box.scrollWidth, 'the tab content, not cut off at the right').to.be.at.most(box.clientWidth);
+const editorFitsTheScreen = () =>
+  cy.document().should((doc) => {
+    const pane = doc.querySelector('[data-preview-status]')?.parentElement;
+    const boxes = [...doc.querySelectorAll(TAB_BOX), ...(pane ? [pane] : [])].filter((box) => Cypress.dom.isVisible(box));
+    expect(boxes, 'a box on screen, measured').to.have.length.at.least(1);
+    boxes.forEach((box) => {
+      const what = box === pane ? 'the preview pane' : 'the tab box';
+      expect(box.scrollWidth, `${what}: nothing in it wider than it`).to.be.at.most(box.clientWidth);
     });
   });
-};
 
 describe('editor on a phone (375 × 812)', () => {
   beforeEach(visitOnPhone);
@@ -73,6 +83,9 @@ describe('editor on a phone (375 × 812)', () => {
     cy.get(NAME).should('not.be.visible');
     cy.contains('span', /^\s*Résumé · /).should('be.visible'); // the preview's own caption
     cy.get('button[title="Preview only"]').should('not.exist');
+    // The pane has the screen to itself, and the page fits it: no sideways scroll to reach its edge.
+    cy.get(TAB_BOX).should('not.be.visible');
+    previewPane().should('be.visible').invoke('outerWidth').should('eq', PHONE[0]);
     editorFitsTheScreen();
 
     switchButton('Edit').click();
@@ -81,11 +94,14 @@ describe('editor on a phone (375 × 812)', () => {
   });
 
   it('the Design and ATS Check tabs open on the phone, full width', () => {
+    const fullWidth = () => cy.get(`${TAB_BOX}:visible`).should('have.length', 1).invoke('outerWidth').should('eq', PHONE[0]);
     cy.get('button[title="Design & Customize"]').click();
     cy.contains('button', 'Template').should('be.visible');
+    fullWidth();
     editorFitsTheScreen();
     cy.contains('button', 'ATS Check').click();
     cy.contains('h2', 'ATS Score & Parser Checker').should('be.visible');
+    fullWidth();
     editorFitsTheScreen();
   });
 
