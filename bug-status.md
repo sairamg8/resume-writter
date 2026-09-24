@@ -2,8 +2,8 @@
 
 > Location: `/mnt/Storage/Projects/flowcv/bug-status.md`
 > Updated: 2026-09-24 · every row **verified independently at `d495cb2`** (see Verification pass) ·
-> `origin/master` (deployed) = `e4ae706` · 1 commit(s) on `master` wait for their gate
-> **Open: 157** (0 here + 157 from the full audit in [bug-status-r2/](bug-status-r2/README.md)) | Fixed, not pushed: 0 | **Closed: 97** (93 fixed + 4 ✖ without a code fix)
+> `origin/master` (deployed) = `179fb59` · 1 commit(s) on `master` wait for their gate
+> **Open: 154** (0 here + 154 from the full audit in [bug-status-r2/](bug-status-r2/README.md)) | Fixed, not pushed: 0 | **Closed: 100** (96 fixed + 4 ✖ without a code fix)
 
 ## Summary
 
@@ -13,10 +13,10 @@
 | ATS parsing defects (`ATS-`) | 7 (ATS-7 was TUI-6) | 5 | 0 | 2 | 0 |
 | Templates UI audit, 2026-09-23 (`TUI-`) | 6 (+ TUI-6, filed as ATS-7) | 6 | 0 | 0 | 0 |
 | Prompt tasks, 2026-09-14 → 09-21 | 33 | 33 | 0 | 0 | 0 |
-| Full audit, 2026-09-23 — defects (`R2-001`…`R2-134`, [bug-status-r2/](bug-status-r2/README.md)) | 134 | 14 | 0 | 2 | **118** |
+| Full audit, 2026-09-23 — defects (`R2-001`…`R2-134`, [bug-status-r2/](bug-status-r2/README.md)) | 134 | 17 | 0 | 2 | **115** |
 | Full audit, 2026-09-23 — features and test gaps (`R2-135`…`R2-171`) | 37 | 0 | 0 | 0 | **37** |
 | Found by the build lanes, 2026-09-24 (`R3-`, in [bug-status-r2/](bug-status-r2/README.md)) | 2 | 0 | 0 | 0 | **2** |
-| **Total** | **254** | **93** | **0** | **4** | **157** |
+| **Total** | **254** | **96** | **0** | **4** | **154** |
 
 - **Status:** ✅ fixed and pushed (on `origin/master`, so deployed) · ⏸ fixed and committed, not pushed · 🔴 open ·
   ✖ closed without a code fix (won't fix: a known limit; not a bug; a duplicate) — the proof is in the row, and it counts as closed.
@@ -33,8 +33,8 @@
 2. ATS-4 is ✅ (`58f4f96`), ATS-6 is ✅ (`32a5972`; PENDING-ALL D3 closed: Heading styles, look unchanged). ATS-1/2/5 are ✅ (`417db1e`, one entry-header layout). TUI-6 is filed as ATS-7; ATS-3 and ATS-7 are ✖ known limits (`c950ae7`, `a67caa3`). The ATS list is closed.
 3. The TUI list is closed (TUI-6 filed as ATS-7).
 
-✅ **Deployed:** `origin/master` = `e4ae706` (R2-014: pages no longer download the PDF engine before they paint — React in its own chunk, react-pdf off the start-up path, `e4ae706`; R2-015: the editor opens, and a panel drag ends, when the browser refuses storage, `a15b045`; R2-016: a hidden preview — Editor only, a phone's Edit tab — builds nothing until it is shown, `fdaed6b`; the tree also holds the other lane's R2-012 `c06a9de` and R2-032 `64b6ec4`). Gate on that exact tree, GitHub Actions run 35956352377, 2026-09-24 10:09:
-**2239 tests, 2234 pass, 0 fail, 4 todo** (the accepted limits' `todo`s; 1 skipped: the private-résumé scan, whose file
+✅ **Deployed:** `origin/master` = `179fb59` (R2-012: Sidebar Single · ATS-safe leads a job with the role in the PDF, Word and Section Options alike, `c06a9de`; R2-032: a stepper's typed box — Header spacing, Design's sizes and spacing — writes only what was typed, focus and leave writes nothing, Escape cancels, `64b6ec4`; R2-033: the ATS score and job match skip the contacts, summary and entry fields the user hid, `179fb59`; the tree also holds the other lanes' R2-015 `a15b045`, R2-016 `fdaed6b` and R2-014 `e4ae706`). Gate on that exact tree, GitHub Actions run 35956391977, 2026-09-24 10:10:
+**2246 tests, 2241 pass, 0 fail, 4 todo** (the accepted limits' `todo`s; 1 skipped: the private-résumé scan, whose file
 is not on CI), a green production build, Playwright green, and a private-data scan of all 77 bundle files with no hits.
 Per the owner (2026-09-23, *"keep pushing after each bug"*) every finished bug lands → gates → pushes, unasked.
 
