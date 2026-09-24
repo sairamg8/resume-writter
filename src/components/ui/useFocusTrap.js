@@ -3,6 +3,8 @@ import { tabbables } from './compose.js';
 
 /** The traps that are active, innermost last: only the top one moves focus. */
 const stack = [];
+/** Each trap's container, from activation until it has handed focus back (after it left `stack`). */
+const containers = new Map();
 
 /**
  * Keeps keyboard focus inside `containerRef` while `active` — a modal dialog or the mobile
@@ -14,7 +16,8 @@ const stack = [];
  * - Tab and Shift+Tab wrap around inside (attach the returned `onKeyDown` to the container);
  * - focus that lands on the page behind (not in the container, not in another portal layer such
  *   as a menu opened from inside) is brought back;
- * - on deactivation focus returns to the element that had it before — the button that opened it.
+ * - on deactivation focus returns to the element that had it before — the button that opened it —
+ *   unless something else took focus as it closed.
  */
 export function useFocusTrap(containerRef, active, { initialFocusRef, restoreFocus = true } = {}) {
   const token = useRef(null);
@@ -39,6 +42,8 @@ export function useFocusTrap(containerRef, active, { initialFocusRef, restoreFoc
   useEffect(() => {
     if (!active || typeof document === 'undefined') return undefined;
     const previous = opener.current;
+    const me = token.current;
+    containers.set(me, containerRef.current);
     const onFocusIn = (event) => {
       const container = containerRef.current;
       if (stack.at(-1) !== token.current || !container) return;
@@ -51,8 +56,14 @@ export function useFocusTrap(containerRef, active, { initialFocusRef, restoreFoc
       document.removeEventListener('focusin', onFocusIn);
       // Focus goes back here, after the commit, not in the layout effect's cleanup: React runs that
       // during its commit and then puts back the focus it saw before it (R3-005) — onto the dialog,
-      // which stays mounted for its exit animation, and is gone with it 150 ms later.
-      if (restoreFocus && previous?.isConnected && typeof previous.focus === 'function') {
+      // which stays mounted for its exit animation, and is gone with it 150 ms later. Only from there
+      // — nowhere, or inside a trap that is closing (this one, or a dialog opened from it that closes
+      // in the same commit) — not from wherever else the commit put it, e.g. an autoFocus field.
+      const here = document.activeElement;
+      const stranded = !here || here === document.body
+        || [...containers].some(([trap, box]) => !stack.includes(trap) && box?.contains(here));
+      containers.delete(me);
+      if (restoreFocus && stranded && previous?.isConnected && typeof previous.focus === 'function') {
         previous.focus({ preventScroll: true });
       }
     };

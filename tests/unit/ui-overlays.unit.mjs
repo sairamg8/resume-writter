@@ -60,6 +60,42 @@ describe('Dialog', () => {
     } finally { await view.unmount(); }
   });
 
+  it('a field that takes focus as the dialog closes keeps it (not pulled back to the opener)', async () => {
+    function Page({ open, next }) {
+      return h('div', null,
+        h('button', { id: 'opener' }, 'Open'),
+        next && h('input', { id: 'next', autoFocus: true }),
+        h(ui.Dialog, { open, onClose: () => {}, title: 'Add' }, h('button', { 'data-autofocus': true }, 'Inner')));
+    }
+    const view = mount(Page, { open: false, next: false });
+    try {
+      byAttr(view.container, 'id', 'opener')[0].focus();
+      view.update({ open: true, next: false });
+      assert.equal(view.document.activeElement.textContent, 'Inner');
+      view.update({ open: false, next: true }); // closed, and the field it added appears with autoFocus
+      assertSame(view.document.activeElement, byAttr(view.container, 'id', 'next')[0], 'the new field keeps focus');
+    } finally { await view.unmount(); }
+  });
+
+  it('a dialog opened from another, both closing at once: focus goes to the first opener', async () => {
+    function Page({ outer, inner }) {
+      return h('div', null,
+        h('button', { id: 'opener' }, 'Open'),
+        h(ui.Dialog, { open: outer, onClose: () => {}, title: 'Outer' }, h('button', { 'data-autofocus': true }, 'Ask')),
+        h(ui.Dialog, { open: inner, onClose: () => {}, title: 'Inner' }, h('button', { 'data-autofocus': true }, 'Yes')));
+    }
+    const view = mount(Page, { outer: false, inner: false });
+    try {
+      const opener = byAttr(view.container, 'id', 'opener')[0];
+      opener.focus();
+      view.update({ outer: true, inner: false });
+      view.update({ outer: true, inner: true });
+      assert.equal(view.document.activeElement.textContent, 'Yes');
+      view.update({ outer: false, inner: false }); // "Yes" answered, and the outer dialog closes with it
+      assertSame(view.document.activeElement, opener, 'not the closing outer dialog\'s Ask button');
+    } finally { await view.unmount(); }
+  });
+
   it('Tab and Shift+Tab wrap inside; focus that lands behind it is brought back', async () => {
     const { view, opener, panel } = dialogPage();
     try {
