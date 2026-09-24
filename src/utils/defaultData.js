@@ -83,12 +83,15 @@ export function styleOnSwitch(settings, from, to) {
  * Design → Reset: `settings` back to the template's defaults, keeping the contact icons uploaded
  * under Personal Info → Fields. They are stored with the design settings but are the user's own
  * images, and Reset deleted them with no undo (R5-6). A value that is not a map of them (none in
- * older data) resets to none.
+ * older data) resets to none. The Sidebar's Layout "Single · ATS-safe" is kept too: it is the
+ * ATS-safe page Reset promises, and dropping it printed the two columns a portal may interleave
+ * (R2-089). Kept on every template, as a template switch keeps it.
  */
 export function resetDesignSettings(settings, template) {
   const icons = settings?.customContactIcons;
   const uploads = icons && typeof icons === 'object' && !Array.isArray(icons) ? { ...icons } : {};
-  return { ...defaultSettings(template), customContactIcons: uploads };
+  const layout = settings?.sidebarSingleColumn === true ? { sidebarSingleColumn: true } : {};
+  return { ...defaultSettings(template), ...layout, customContactIcons: uploads };
 }
 
 /**
