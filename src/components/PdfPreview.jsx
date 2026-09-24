@@ -8,7 +8,9 @@ import { previewBox } from '@/constants/pageSize';
  *
  * - Re-renders `DEBOUNCE_MS` after the last change to `input` — also before the first page
  *   appears and after a failed build; the previous pages stay on screen (double-buffered) until
- *   the new ones are painted, so typing never flashes blank.
+ *   the new ones are painted, so typing never flashes blank. Typing that never pauses that long
+ *   still re-renders, `MAX_WAIT_MS` after the first change no build has taken up — one build at a
+ *   time: while one is on its way, the next waits for it or for a pause.
  * - A finished render is shown when it is newer than the pages on screen, even while a newer
  *   change is still waiting or building (steady typing would otherwise freeze the preview); only
  *   one older than the pages on screen is dropped.
@@ -20,6 +22,9 @@ import { previewBox } from '@/constants/pageSize';
 
 const GUTTER_PX = 48;    // breathing room either side of the page
 const DEBOUNCE_MS = 350;
+// Steady typing (a key every few hundred ms) never leaves a DEBOUNCE_MS pause: without a cap the
+// preview stayed frozen until typing stopped (R2-142).
+const MAX_WAIT_MS = 1200;
 
 /** Free a pdf.js document (PDFDocumentProxy has no destroy(); its loading task does). */
 const release = (pdf) => { pdf?.loadingTask?.destroy(); };
@@ -114,6 +119,8 @@ export function PdfPreview({ render, input, zoom = 1, textId, title = 'Résumé'
   const generation = useRef(0); // bumped by every change that asks for a build
   const shownGen = useRef(0);   // the generation of the pages on screen
   const built = useRef(null); // { input, render, retry } of the last build that started
+  const waiting = useRef(null); // when the first change no build has taken up yet arrived
+  const building = useRef(0);   // builds started and not finished
   const wasActive = useRef(active);
   const docRef = useRef(null);
   const mounted = useRef(true);
@@ -133,17 +140,25 @@ export function PdfPreview({ render, input, zoom = 1, textId, title = 'Résumé'
     const revealed = active && !wasActive.current;
     wasActive.current = active;
     const last = built.current;
-    if (last && last.input === input && last.render === render && last.retry === retry) return undefined;
-    if (!active) { setStatus('paused'); return undefined; }
+    if (last && last.input === input && last.render === render && last.retry === retry) { waiting.current = null; return undefined; }
+    if (!active) { waiting.current = null; setStatus('paused'); return undefined; }
     const gen = ++generation.current;
     setStatus('rendering');
     // Every change after the first build has STARTED waits for a pause in typing — not only once a
     // build has succeeded: a cold open (fonts and template still loading) or a failed build would
     // otherwise start one full build per keystroke (R2-017). At once: the first build, a Retry, and
     // a preview just shown (nobody is typing into it).
+    // Typing that goes on with no pause is built MAX_WAIT_MS after its first change — unless a build
+    // is still on its way: its pages go up first, and the change after it starts the next, so a
+    // build slower than MAX_WAIT_MS never piles up more of them on the main thread.
+    const now = Date.now();
+    if (waiting.current === null) waiting.current = now;
+    const due = building.current ? DEBOUNCE_MS : Math.max(0, waiting.current + MAX_WAIT_MS - now);
     const retried = last && last.retry !== retry;
-    const delay = last && !revealed && !retried ? DEBOUNCE_MS : 0;
+    const delay = last && !revealed && !retried ? Math.min(DEBOUNCE_MS, due) : 0;
     const timer = setTimeout(async () => {
+      waiting.current = null;
+      building.current += 1;
       built.current = { input, render, retry };
       let pdf = null;
       // Unmounted meanwhile (Cover Letter clicked mid-render), or overtaken by newer pages on screen.
@@ -176,6 +191,8 @@ export function PdfPreview({ render, input, zoom = 1, textId, title = 'Résumé'
         console.error('Preview render failed:', e);
         setError(e);
         setStatus('error');
+      } finally {
+        building.current -= 1;
       }
     }, delay);
     return () => clearTimeout(timer);
