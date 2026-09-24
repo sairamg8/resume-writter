@@ -3,29 +3,87 @@
   "branch": "claude/wf-boards",
   "base": "9c3589a",
   "rows": [
-    { "id": "R2-037", "outcome": "fixed", "commits": ["b181e7c"], "tests": ["tests/pdf/82-board-pages.test.mjs"],
+    {
+      "id": "R2-037",
+      "outcome": "fixed",
+      "commits": [
+        "b181e7c"
+      ],
+      "tests": [
+        "tests/pdf/82-board-pages.test.mjs"
+      ],
       "summary": "The board page now shows the same not-saved alert as the grid (role=alert, NOT_SAVED_MESSAGES.boards) and the RecoveryNotice for a saved list that could not be read in full, through one BoardStorageNotice both pages use.",
-      "remaining": "" },
-    { "id": "R2-041", "outcome": "fixed", "commits": ["b181e7c", "60b40ff"], "tests": ["tests/pdf/82-board-pages.test.mjs"],
+      "remaining": ""
+    },
+    {
+      "id": "R2-041",
+      "outcome": "fixed",
+      "commits": [
+        "b181e7c",
+        "60b40ff",
+        "097052a"
+      ],
+      "tests": [
+        "tests/pdf/82-board-pages.test.mjs"
+      ],
       "summary": "The normaliser part was already fixed (a9eacee; boardMigrate turns a v1 list with missing/null cards into an empty column). But at base both board pages still read v1 boards (b.lists, store.moveCard…) over the v2 store, so /boards and /boards/:id crashed for every saved board, the demo and the row's repro included. Both pages now read a v2 project through src/utils/boardView.js and call the v2 actions; the repro opens on both pages with an empty column.",
-      "remaining": "" },
-    { "id": "R2-098", "outcome": "already-fixed", "commits": ["f5b92ad"], "tests": ["tests/unit/board-drop.unit.mjs", "tests/unit/board-store.unit.mjs", "tests/unit/normalize-board.unit.mjs"],
+      "remaining": ""
+    },
+    {
+      "id": "R2-098",
+      "outcome": "already-fixed",
+      "commits": [
+        "f5b92ad"
+      ],
+      "tests": [
+        "tests/unit/board-drop.unit.mjs",
+        "tests/unit/board-store.unit.mjs",
+        "tests/unit/normalize-board.unit.mjs"
+      ],
       "summary": "Card ids are unique across the whole board since 08aaa66 (B-15), and v2 completeBoard keeps one `seen` set for every issue, column, label, sprint and checklist item; moveIssue takes the card out by index. A new drag test pins that dragging either of two cards saved with one id loses neither.",
-      "remaining": "" },
-    { "id": "R2-155", "outcome": "fixed", "commits": ["b181e7c", "f5b92ad", "60b40ff"], "tests": ["tests/unit/board-drop.unit.mjs", "tests/pdf/82-board-pages.test.mjs"],
+      "remaining": ""
+    },
+    {
+      "id": "R2-155",
+      "outcome": "fixed",
+      "commits": [
+        "b181e7c",
+        "f5b92ad",
+        "60b40ff",
+        "097052a"
+      ],
+      "tests": [
+        "tests/unit/board-drop.unit.mjs",
+        "tests/pdf/82-board-pages.test.mjs"
+      ],
       "summary": "Store, normaliser, ops, migration and transfer tests already existed (tests/unit/board-*.unit.mjs, normalize-board.unit.mjs). Now added: drag-and-drop (boardView.dropTarget over the real moveIssue/moveColumn, every index checked against arrayMove) and both pages (SSR markup, plus a fake-dom mount driving add card, labels, delete list and the card title).",
-      "remaining": "" },
-    { "id": "R2-159", "outcome": "partial", "commits": ["f5b92ad", "d164686"], "tests": ["tests/unit/board-drop.unit.mjs", "tests/pdf/82-board-pages.test.mjs", "tests/pdf/82-job-pipeline-tasks.test.mjs"],
+      "remaining": ""
+    },
+    {
+      "id": "R2-159",
+      "outcome": "partial",
+      "commits": [
+        "f5b92ad",
+        "d164686"
+      ],
+      "tests": [
+        "tests/unit/board-drop.unit.mjs",
+        "tests/pdf/82-board-pages.test.mjs",
+        "tests/pdf/82-job-pipeline-tasks.test.mjs"
+      ],
       "summary": "Boards now have tests (see R2-155), and the file normalizeBoard.js cites exists. The job side: Pipeline (every state), the Tasks tab (add, tick, rename, delete, newest completed first) and the kanban drop (another column changes the status; its own column or outside does nothing) are tested on the real components.",
-      "remaining": "NotesTab (RichTextEditor, contenteditable) is still untested." }
+      "remaining": "NotesTab (RichTextEditor, contenteditable) is still untested."
+    }
   ],
   "review": {
     "issues": [
       "Card sheet title: each keystroke went through updateIssue's cleanTitle and came back trimmed, so a space before the next word was removed and a cleared field refilled itself (a regression from the v2 wiring).",
       "A picked palette colour whose name matched a label of another colour got that label (addLabel returns the existing label with that name)."
     ],
-    "fixedByReviewer": ["60b40ff: the title field shows what was typed while it has focus; a new label takes the next free name ('Blue 2'); tests added for both, and for deleting the only list or an empty list"]
+    "fixedByReviewer": [
+      "60b40ff: the title field shows what was typed while it has focus; a new label takes the next free name ('Blue 2'); tests added for both, and for deleting the only list or an empty list"
+    ]
   },
   "baselineFailures": [],
-  "notes": "At base the Board pages (src/pages/Board.jsx, Boards.jsx) were never ported to board store v2 and crashed on every visit. This branch ports them minimally: they keep the v1 look (BoardColumn/BoardCard/CardDetailSheet), reading v2 through src/utils/boardView.js. BoardCard.jsx was not touched (R2-039 belongs to the jobs cluster). Known gaps until the planned v2 pages (BOARDS-UI-A/B) replace this one; these are not regressions, since v1 never had them: every issue shows whatever its sprint (a scrum backlog shows in the columns), hideDoneAfterDays and WIP limits are ignored, epics show as plain cards, and a new list is added before Done (the v2 addColumn rule). Deleting a list that has cards now moves them to the list beside it and does not delete them."
+  "notes": "At base the Board pages (src/pages/Board.jsx, Boards.jsx) were never ported to board store v2 and crashed on every visit. This branch ports them minimally: they keep the v1 look (BoardColumn/BoardCard/CardDetailSheet) and read v2 through src/utils/boardView.js. BoardCard.jsx was not touched (R2-039 belongs to the jobs cluster). 097052a (a follow-up asked for by the owner: functionality only, no a11y work) makes the board show what the v2 data says: a scrum project shows only its active sprint, and new cards join it; with no sprint started it shows every card and says so, since nothing in the app starts a sprint until the backlog page lands. Done cards resolved longer ago than hideDoneAfterDays are hidden, and the page says how many. A column with a WIP limit reads n/limit, red when over. Still open until the planned v2 pages (BOARDS-UI-A/B) replace this one: no UI sets a WIP limit, starts a sprint or changes hideDoneAfterDays; epics show as plain cards; a new list goes before Done (the v2 addColumn rule). Deleting a list that has cards now moves them to the list beside it and does not delete them."
 }
