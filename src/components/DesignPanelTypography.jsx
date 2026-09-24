@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { FONTS, loadPreviewFont, loadCustomFonts, saveCustomFont, removeCustomFont, checkFont } from '@/utils/fonts';
 import { Label, SizeRow, SegmentControl, DesignSection } from '@/components/DesignPanelShared';
 import { FONT_SIZE_BASE, ICON_SIZE, TYPE_SIZE_PT, deltaInRange } from '@/constants/designNumbers';
+import { headerTemplateId } from '@/constants/templates';
 
 // The quick size buttons set the base size (pt) the PDF is laid out with.
 const SIZE_PRESETS = { small: 10, normal: 11, large: 12 };
@@ -150,8 +151,9 @@ export function TypographySection({ settings, template, updateSetting, onReset }
             );
           })()}
         </div>
-        {/* Sidebar's side column prints its own small type, whatever these say (V2W2b-3). */}
-        {template === 'sidebar' && (
+        {/* Sidebar's side column prints its own small type, whatever these say (V2W2b-3). Its
+            Single · ATS-safe Layout prints no side column: Classic's page, every size from here (R2-082). */}
+        {headerTemplateId(template, settings) === 'sidebar' && (
           <p className="mt-2 text-[11px] text-gray-400 leading-relaxed">
             Base and Section Title size the main column; the side column&apos;s sections keep their own small type (8.5 pt headings, 9 pt text).
           </p>

@@ -1,6 +1,6 @@
 import { DesignSection } from '@/components/DesignPanelShared';
 import { SECTION_BORDER_PT } from '@/constants/designNumbers';
-import { headingBorderControls, headingBorderExtraPt, upperSectionTitles } from '@/constants/templates';
+import { headerTemplateId, headingBorderControls, headingBorderExtraPt, upperSectionTitles } from '@/constants/templates';
 import { DEFAULTS } from '@/templates/pdf/shared/templateSettings';
 import { sectionHeadingLook } from '@/templates/pdf/shared/sectionHeadingLook';
 
@@ -44,7 +44,8 @@ export function HeadingControls({ settings, template, updateSetting }) {
 
   return (
     <>
-      {template === 'sidebar' && (
+      {/* Only the two-column page has a side column: Single · ATS-safe prints Classic's (R2-082). */}
+      {headerTemplateId(template, settings) === 'sidebar' && (
         <p className="text-[11px] text-gray-400 leading-relaxed">
           These style the main column&apos;s headings. The side column keeps its own small headings and rule; only Title case applies there.
         </p>
