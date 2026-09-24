@@ -1,0 +1,101 @@
+# The heavy checks run here, not on the owner's laptop: the full node suite (sharded), the production
+# build and the Playwright browser suite. A local run of all three at once, beside several agents, ran the
+# laptop out of memory on 2026-09-24. Lanes push the exact commit they want gated to a scratch branch
+# ci/<lane>; the gate script waits for this run and reads its results. master is checked on every push too.
+name: ci
+
+on:
+  push:
+    branches: [master, 'ci/**', boards-jobs-ui]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  suite:
+    name: suite (${{ matrix.shard }}/4)
+    runs-on: ubuntu-latest
+    # The PDF tests read text through Poppler and MuPDF, and some measure what Poppler 26.01 does
+    # (pdftotext -raw word gaps): run them on the same Ubuntu release the project is developed on.
+    container: ubuntu:26.04
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: System packages
+        run: |
+          apt-get update -qq
+          DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends \
+            git ca-certificates curl xz-utils poppler-utils mupdf-tools > /dev/null
+          pdftotext -v 2>&1 | head -1; mutool -v 2>&1 | head -1
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install
+        run: corepack enable && yarn install --immutable
+      - name: node --test (shard ${{ matrix.shard }}/4)
+        run: |
+          set -o pipefail
+          node --test --test-shard=${{ matrix.shard }}/4 --test-concurrency=4 \
+            "tests/pdf/**/*.test.mjs" "tests/unit/*.unit.mjs" 2>&1 | tee suite.log
+          echo "suite exit $?"
+      - name: Summary
+        if: always()
+        run: |
+          grep -E '^# (tests|pass|fail|todo|skipped|cancelled)' suite.log || true
+          grep -E '^not ok' suite.log | head -40 || true
+
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install
+        run: corepack enable && yarn install --immutable
+      - name: Production build
+        run: ./node_modules/.bin/vite build --mode production --outDir dist --emptyOutDir
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist
+          retention-days: 3
+
+  playwright:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install
+        run: corepack enable && yarn install --immutable
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+      - name: Chromium
+        run: ./node_modules/.bin/playwright install --with-deps chromium
+      - name: Playwright
+        run: ./node_modules/.bin/playwright test
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: test-results
+          retention-days: 3
