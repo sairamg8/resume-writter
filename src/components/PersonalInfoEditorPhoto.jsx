@@ -108,7 +108,8 @@ export function PhotoSection({ personal, updatePersonal, toggleFieldVisibility, 
             <PhotoChips control="photoBorder" s={s} set={set} />
           </div>
 
-          {(s.photoShape || 'circle') !== 'circle' && (
+          {/* A circle takes no Height, and an imported shape the PDF does not draw ('oval') is one (R2-094). */}
+          {photoOption('photoShape', s.photoShape) !== 'circle' && (
             <div>
               <p className="text-xs font-semibold text-gray-700 mb-1.5">Height</p>
               <PhotoChips control="photoHeight" s={s} set={set} />
