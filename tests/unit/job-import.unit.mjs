@@ -97,3 +97,27 @@ test('J-04: importMessage — counts in a status message; nothing found is an er
   assert.deepEqual(importMessage({ added: 0, updated: 0, skipped: 0, lossy: false }),
     { kind: 'error', text: 'No job applications found in that file.' });
 });
+
+// ── A file without times: re-importing it never duplicates ───────────────────────────────────
+// A hand-made file, or one from another tool, has no createdAt / updatedAt. Each import stamped
+// its jobs with that import's time, so the copy already here never compared equal, and every
+// re-import added another copy of every job under a new id.
+
+test('a job with no times in the file is skipped, not copied, when the file is imported again', () => {
+  const file = [{ id: 'x1', company: 'Acme', role: 'Dev', status: 'applied', todos: [{ text: 'Call' }] }];
+  const first = mergeImport([], file, 1000);
+  assert.equal(first.added, 1);
+  const second = mergeImport(first.jobs, file, 2000);
+  const third = mergeImport(second.jobs, file, 3000);
+  assert.deepEqual([second.added, second.updated, second.skipped], [0, 0, 1]);
+  assert.deepEqual([third.added, third.updated, third.skipped], [0, 0, 1]);
+  assert.deepEqual(third.jobs.map((j) => j.id), ['x1']);
+  assert.equal(third.jobs[0].updatedAt, 1000, 'the job here is left as it was');
+});
+
+test('a changed job with no times in the file is still kept, as a copy: nothing is dropped', () => {
+  const first = mergeImport([], [{ id: 'x1', company: 'Acme', role: 'Dev', status: 'applied' }], 1000);
+  const changed = mergeImport(first.jobs, [{ id: 'x1', company: 'Acme', role: 'Lead', status: 'applied' }], 2000);
+  assert.equal(changed.added, 1);
+  assert.deepEqual(changed.jobs.map((j) => j.role), ['Dev', 'Lead']);
+});
