@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import { Mail, Phone, MapPin, Globe, Link2, Code, Eye, EyeOff, Camera, Palette, Sparkles } from 'lucide-react';
 import RichTextEditor from '@/components/RichTextEditor';
 import { Chip, Field, SectionBlock } from '@/components/CoverLetterPanelShared';
-import { letterContactFormat, letterFieldsPosition, letterHiddenFields, todayLetterDate } from '@/utils/coverLetter';
+import { letterContactFormat, letterFieldsPosition, letterHiddenFields, letterResumePhoto, todayLetterDate } from '@/utils/coverLetter';
 import { letterheadCentered, templateLabel } from '@/constants/templates';
 import { readImageFile } from '@/utils/imageUpload';
 import { CONTACT_FIELDS } from '@/utils/contacts';
@@ -51,6 +51,8 @@ export default function CoverLetterPanel({ resume, coverLetter, personal, settin
   // Whether the letter prints a photo, and the line saying which one, or why none (R7-7).
   const { hasPhoto, note: photoNote } = useLetterPhoto(cl, personal);
   const photoShown = cl.showPhoto !== false;
+  // The résumé photo the letter falls back on: none once hidden on the résumé (R2-092).
+  const resumePhoto = letterResumePhoto(personal);
 
   function handleApplyGenerated(gen) {
     if (!gen) return;
@@ -65,8 +67,11 @@ export default function CoverLetterPanel({ resume, coverLetter, personal, settin
     if (gen.subject) updateCoverLetter('subject', gen.subject);
     if (gen.body) updateCoverLetter('body', gen.body);
     if (gen.closing) updateCoverLetter('closing', gen.closing);
-    if (gen.signatureName) updateCoverLetter('signatureName', gen.signatureName);
-    if (gen.signatureDesignation) updateCoverLetter('signatureDesignation', gen.signatureDesignation);
+    // The generated letter signs with the résumé's name and title as they are when it prints, so
+    // Apply clears the letter's own: a name filled in later reaches the signature, and one an
+    // earlier Apply stored ('Candidate', a name since changed) no longer pins it (R2-043).
+    updateCoverLetter('signatureName', '');
+    updateCoverLetter('signatureDesignation', '');
   }
 
   const effectiveResume = resume || { personal, settings, template, coverLetter: cl };
@@ -96,8 +101,8 @@ export default function CoverLetterPanel({ resume, coverLetter, personal, settin
           >
             {cl.clPhoto ? (
               <img src={cl.clPhoto} alt="" className="w-full h-full object-cover" />
-            ) : personal?.photo ? (
-              <img src={personal.photo} alt="" className="w-full h-full object-cover opacity-50" />
+            ) : resumePhoto ? (
+              <img src={resumePhoto} alt="" className="w-full h-full object-cover opacity-50" />
             ) : (
               <div className="flex flex-col items-center gap-0.5 text-gray-400">
                 <Camera size={16} />

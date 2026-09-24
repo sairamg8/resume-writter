@@ -28,6 +28,9 @@ export const COVER_LETTER_ARCHETYPES = [
   },
 ];
 
+/** The editor's empty line (RichTextEditor), which the PDF and Word print as one blank line. */
+export const BLANK_LINE = '<p><br></p>';
+
 /** A section or entry: an object. A null (or other value) in a native .json or stored data is skipped. */
 const isEntry = (v) => Boolean(v) && typeof v === 'object' && !Array.isArray(v);
 
@@ -46,12 +49,14 @@ export function extractResumeHighlights(resume) {
 
   const topExperiences = [];
   if (expSec && Array.isArray(expSec.items)) {
-    for (const item of expSec.items.filter(i => isEntry(i) && i.visible !== false).slice(0, 2)) {
-      topExperiences.push({
-        role: storedText(item.role),
-        company: storedText(item.company),
-        description: storedText(item.description),
-      });
+    for (const item of expSec.items.filter(i => isEntry(i) && i.visible !== false)) {
+      const role = storedText(item.role).trim();
+      const company = storedText(item.company).trim();
+      // A new Experience section starts with one blank entry: an entry with neither a role nor a
+      // company has nothing to cite, so the letter cites the next one (R2-103).
+      if (!role && !company) continue;
+      topExperiences.push({ role, company, description: storedText(item.description) });
+      if (topExperiences.length === 2) break;
     }
   }
 
@@ -63,9 +68,11 @@ export function extractResumeHighlights(resume) {
     }
   }
 
+  // '' for a résumé with no name or title: the letter words around it, and its signature follows
+  // the résumé's (R2-043) rather than printing a placeholder.
   return {
-    candidateName: storedText(p.name) || 'Candidate',
-    candidateTitle: storedText(p.title) || 'Professional',
+    candidateName: storedText(p.name).trim(),
+    candidateTitle: storedText(p.title).trim(),
     summary: storedText(p.summary),
     topExperiences,
     topSkills: topSkills.slice(0, 8),
@@ -73,7 +80,26 @@ export function extractResumeHighlights(resume) {
 }
 
 /**
- * Generates structured cover letter content tailored to role, company and archetype.
+ * Where the most recent job was, as a clause: "as Lead at Acme", "as Lead", "at Acme", or '' — so
+ * a job with a blank role or company never prints "as  at Acme" or "at ," (R2-103).
+ */
+/**
+ * "a" or "an" for the word `next`, by its first sound: "an Engineer", "an IT Manager", but "a UX
+ * Designer", "a University Lecturer", "a European …" — a vowel letter read with a consonant sound.
+ */
+function article(next) {
+  if (/^U[A-Z]/.test(next) || /^(uni|use|usu|uti|eu|one\b|once)/i.test(next)) return 'a';
+  return /^[aeiou]/i.test(next) ? 'an' : 'a';
+}
+
+function roleClause({ role, company }) {
+  return [role && `as ${role}`, company && `at ${company}`].filter(Boolean).join(' ');
+}
+
+/**
+ * Generates structured cover letter content tailored to role, company and archetype. It writes no
+ * signature: the letter's own is the user's to type, and until then it signs with the résumé's
+ * name and title as they are when it prints (letterSignature, R2-043).
  */
 export function generateCoverLetter({
   resume,
@@ -84,32 +110,36 @@ export function generateCoverLetter({
 }) {
   const highlights = extractResumeHighlights(resume);
   const targetCompany = company.trim() || '[Company Name]';
-  const targetRole = role.trim() || highlights.candidateTitle || 'the position';
+  const title = highlights.candidateTitle;
+  const targetRole = role.trim() || title;
+  // "the Staff Engineer role", else "the open role" — never "the  role" or "the the position role".
+  const theRole = `the ${targetRole || 'open'}`;
   const typedRecipient = recipientName.trim();
   const recipient = typedRecipient || 'Hiring Team';
   const skillsStr = highlights.topSkills.length > 0 ? highlights.topSkills.slice(0, 4).join(', ') : 'modern best practices';
 
-  const mostRecent = highlights.topExperiences[0] || {
-    role: highlights.candidateTitle,
-    company: 'prior roles',
-  };
+  // The most recent job with something to cite; with none, the résumé's title ("as Staff Engineer"),
+  // else no clause at all — never the old "at prior roles" (R2-103).
+  const mostRecent = roleClause(highlights.topExperiences[0] || { role: title, company: '' });
+  // "as a Staff Engineer" in the opening, only when the résumé has a title.
+  const asTitle = title ? ` as ${article(title)} ${title}` : '';
 
-  let subject = `Application for ${targetRole} — ${highlights.candidateName}`;
+  const subject = [targetRole ? `Application for ${targetRole}` : 'Application', highlights.candidateName].filter(Boolean).join(' — ');
   let paragraphs = [];
 
   if (archetype === 'leadership') {
     paragraphs = [
       `Dear ${recipient},`,
-      `I am writing to express my enthusiastic interest in the ${targetRole} role at ${targetCompany}. With a proven background as a ${highlights.candidateTitle} specializing in driving scalable initiatives, aligning cross-functional teams, and delivering strategic value, I am confident in my ability to make an immediate, positive impact on your organization.`,
-      `Throughout my career, most notably as ${mostRecent.role} at ${mostRecent.company}, I have focused on empowering teams and bridging technical strategy with core business objectives. My approach centers on transparent communication, data-backed decision making, and establishing high standards for operational excellence across ${skillsStr}.`,
+      `I am writing to express my enthusiastic interest in ${theRole} role at ${targetCompany}. With a proven background${asTitle} specializing in driving scalable initiatives, aligning cross-functional teams, and delivering strategic value, I am confident in my ability to make an immediate, positive impact on your organization.`,
+      `Throughout my career${mostRecent ? `, most notably ${mostRecent},` : ','} I have focused on empowering teams and bridging technical strategy with core business objectives. My approach centers on transparent communication, data-backed decision making, and establishing high standards for operational excellence across ${skillsStr}.`,
       `What particularly excites me about ${targetCompany} is your commitment to industry innovation and culture of excellence. I welcome the opportunity to discuss how my leadership experience, strategic mindset, and background can help achieve your upcoming milestones.`,
       `Thank you for your time and consideration.`,
     ];
   } else if (archetype === 'growth') {
     paragraphs = [
       `Dear ${recipient},`,
-      `I am thrilled to submit my application for the ${targetRole} position at ${targetCompany}. Having built a strong foundation as a ${highlights.candidateTitle}, I pride myself on rapid problem-solving, intellectual curiosity, and delivering results in dynamic environments.`,
-      `In my experience at ${mostRecent.company}, I developed expertise in ${skillsStr}, consistently identifying bottlenecks and creating proactive solutions. I thrive when tackling novel challenges, mastering new technologies, and collaborating closely with talented peers to build high-quality work.`,
+      `I am thrilled to submit my application for ${theRole} position at ${targetCompany}. Having built a strong foundation${asTitle}, I pride myself on rapid problem-solving, intellectual curiosity, and delivering results in dynamic environments.`,
+      `In my experience${mostRecent ? ` ${mostRecent}` : ''}, I developed expertise in ${skillsStr}, consistently identifying bottlenecks and creating proactive solutions. I thrive when tackling novel challenges, mastering new technologies, and collaborating closely with talented peers to build high-quality work.`,
       `${targetCompany}'s forward-thinking approach strongly aligns with my own dedication to continuous learning and impact. I would love the chance to discuss how my adaptability, technical drive, and energy can add immediate value to your team.`,
       `Thank you for reviewing my application.`,
     ];
@@ -117,8 +147,8 @@ export function generateCoverLetter({
     // Default: 'impact'
     paragraphs = [
       `Dear ${recipient},`,
-      `I am writing to apply for the ${targetRole} opportunity at ${targetCompany}. With over several years of hands-on experience as a ${highlights.candidateTitle}, I have dedicated my career to designing high-performance solutions, optimizing workflows, and delivering measurable business outcomes.`,
-      `During my tenure as ${mostRecent.role} at ${mostRecent.company}, I led critical initiatives utilizing ${skillsStr}. By emphasizing architectural rigor and quantifiable metrics, my work directly enhanced system reliability, user satisfaction, and team delivery velocity.`,
+      `I am writing to apply for ${theRole} opportunity at ${targetCompany}. With over several years of hands-on experience${asTitle}, I have dedicated my career to designing high-performance solutions, optimizing workflows, and delivering measurable business outcomes.`,
+      `${mostRecent ? `During my tenure ${mostRecent}` : 'In my recent roles'}, I led critical initiatives utilizing ${skillsStr}. By emphasizing architectural rigor and quantifiable metrics, my work directly enhanced system reliability, user satisfaction, and team delivery velocity.`,
       `I have long admired ${targetCompany}'s achievements and innovative products. I am eager to bring my problem-solving mindset, engineering discipline, and passion for excellence to your team.`,
       `I look forward to discussing how my background and accomplishments align with the goals of ${targetCompany}. Thank you for your time and consideration.`,
     ];
@@ -127,7 +157,9 @@ export function generateCoverLetter({
   // Every value above is text — résumé fields can come from an imported file — so each paragraph
   // is escaped before it is wrapped: a name like `<img onerror=…>` prints as typed, never as markup.
   // A line break inside a field reads as a space, as it did in the unescaped HTML, not as a <br>.
-  const htmlBody = paragraphs.map(p => `<p>${plainTextToHtml(p.replace(/\s*[\r\n]+\s*/g, ' '))}</p>`).join('');
+  // An empty paragraph — the blank line Enter-Enter leaves in the editor — separates two, so the
+  // PDF and Word print them apart as the modal previews them, not 2 pt apart in one block (R2-130).
+  const htmlBody = paragraphs.map(p => `<p>${plainTextToHtml(p.replace(/\s*[\r\n]+\s*/g, ' '))}</p>`).join(BLANK_LINE);
 
   // The recipient block holds only what the user typed (AUD-31): the letter prints every filled
   // line, so a generic 'Hiring Manager' for a blank name sat above "Dear Hiring Team,", and the
@@ -139,7 +171,5 @@ export function generateCoverLetter({
     subject,
     body: htmlBody,
     closing: 'Sincerely,',
-    signatureName: highlights.candidateName,
-    signatureDesignation: highlights.candidateTitle,
   };
 }

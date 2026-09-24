@@ -140,8 +140,9 @@ export default function CoverLetterGeneratorModal({ isOpen, onClose, resume, onA
                 Subject: {generated.subject}
               </span>
             </div>
+            {/* Paragraphs set apart by the letter's own blank lines, as the PDF and Word print them (R2-130). */}
             <div
-              className="prose prose-sm max-w-none text-xs text-gray-700 leading-relaxed max-h-56 overflow-y-auto space-y-2 bg-white p-3.5 rounded-lg border border-gray-200"
+              className="prose prose-sm max-w-none text-xs text-gray-700 leading-relaxed max-h-56 overflow-y-auto bg-white p-3.5 rounded-lg border border-gray-200"
               dangerouslySetInnerHTML={{ __html: sanitizeRichText(generated.body) }}
             />
           </div>

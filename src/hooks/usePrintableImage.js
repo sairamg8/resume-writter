@@ -1,5 +1,6 @@
 import { useEffect, useSyncExternalStore } from 'react';
 import { onPrintableChange, printableImage, printableNow } from '@/utils/printableImage';
+import { letterResumePhoto } from '@/utils/coverLetter';
 
 /**
  * What the PDF prints for the saved image `src` (printableNow): the image, the copy made of a WebP
@@ -26,11 +27,12 @@ export const UNPRINTABLE_ICON = "This icon can't be printed; upload a PNG or JPE
  * The letter's photo as the Cover Letter panel describes it: `hasPhoto` when the letter prints one
  * (its own, else the résumé's — CoverLetterHeaderPDF), and `note`, the line saying which, or why it
  * prints none. An own photo that cannot be printed no longer hides a résumé photo that can (R7-7).
- * A photo whose copy is still being made counts as one that prints, so nothing flickers.
+ * A photo whose copy is still being made counts as one that prints, so nothing flickers. A résumé
+ * photo hidden under Personal Info → Photo is none: the letter does not print it (R2-092).
  */
 export function useLetterPhoto(cl, personal) {
   const own = cl?.clPhoto;
-  const resume = personal?.photo;
+  const resume = letterResumePhoto(personal);
   const ownPrints = usePrintableImage(own);
   const resumePrints = usePrintableImage(resume);
   const ownFails = Boolean(own) && ownPrints === null;
@@ -44,7 +46,7 @@ export function useLetterPhoto(cl, personal) {
   } else if (resumeFails) {
     note = { warn: true, text: "Your résumé photo's format can't be printed. Upload a photo here, or again under Personal Info." };
   } else {
-    note = { text: resume ? 'Using resume photo (faded = preview)' : 'No photo — upload or add to resume' };
+    note = { text: resume ? 'Using resume photo (faded = preview)' : personal?.photo ? 'Résumé photo hidden — upload one for the letter' : 'No photo — upload or add to resume' };
   }
   return { hasPhoto, note };
 }

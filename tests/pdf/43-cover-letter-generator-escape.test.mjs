@@ -43,14 +43,16 @@ async function applied(opts = {}) {
 }
 
 describe('the cover letter generator escapes what it writes (HTML injection)', () => {
-  it('the modal\'s live preview inserts no element from the résumé — only <p>, with the markup shown as text', async () => {
+  it('the modal\'s live preview inserts no element from the résumé — only <p> and its blank lines, with the markup shown as text', async () => {
     const { default: Modal } = await loadModule('/src/components/CoverLetterGeneratorModal.jsx');
     const html = renderToString(createElement(Modal, { isOpen: true, onClose: () => {}, onApply: () => {}, resume: hostile() }));
     const preview = /class="prose[^"]*"[^>]*>(.*?)<\/div>/s.exec(html);
     assert.ok(preview, 'the preview is rendered');
     const inner = preview[1];
     assert.ok(inner.length > 200, 'the preview holds the letter');
-    assert.deepEqual([...new Set(tags(inner))].sort(), ['</p>', '<p>'], inner);
+    // <br> only as the generator's blank line between two paragraphs (R2-130).
+    assert.deepEqual([...new Set(tags(inner))].sort(), ['</p>', '<br>', '<p>'], inner);
+    assert.equal(inner.split('<br>').length - 1, inner.split('<p><br></p>').length - 1, inner);
     for (const bad of ['<img', '<script', '<svg', '<iframe', '<b>']) assert.ok(!inner.toLowerCase().includes(bad), `no ${bad} in: ${inner}`);
     assert.ok(inner.includes('Engineer &lt;script&gt;alert(2)&lt;/script&gt;'), 'the title\'s markup is shown as text');
     assert.ok(inner.includes('&lt;svg onload=alert(3)&gt;Lead'), 'the role\'s markup is shown as text');
