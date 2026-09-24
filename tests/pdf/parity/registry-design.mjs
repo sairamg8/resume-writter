@@ -66,6 +66,9 @@ async function headerColour({ runs, before, variant }, key, needle) {
 
 const CONTACTS = [PERSONAL.email, PERSONAL.phone, PERSONAL.location, PERSONAL.website, PERSONAL.linkedin, PERSONAL.github];
 
+/** Each paper's page box, [width, height] in pt (react-pdf's A4 and LETTER), written out — not read from PAGE_SIZES. */
+const PAPER = { A4: [595.28, 841.89], LETTER: [612, 792] };
+
 const DATES = { asEntered: '01/2021', 'MMM YYYY': 'Jan 2021', 'MMMM YYYY': 'January 2021', 'MM/YYYY': '01/2021',
   'MM.YYYY': '01.2021', 'YYYY-MM': '2021-01', 'YYYY.MM': '2021.01', YYYY: '2021' };
 
@@ -83,8 +86,9 @@ export const DESIGN = {
       return out;
     },
   },
-  // Reset Design Settings keeps the Sidebar's Single · ATS-safe Layout: the ATS-safe page it promises (R2-089).
-  resetAll: { family: 'resets', keeps: ['setting.sidebarSingleColumn'] },
+  // Reset Design Settings keeps the Sidebar's Single · ATS-safe Layout: the ATS-safe page it promises (R2-089);
+  // and the paper, which no template has one of its own (R2-136).
+  resetAll: { family: 'resets', keeps: ['setting.sidebarSingleColumn', 'setting.pageSize'] },
   'setting.sidebarSingleColumn': {
     family: 'template',
     check: ({ runs }) => runs.flatMap((r) => {
@@ -188,6 +192,17 @@ export const DESIGN = {
       const ok = [0, 1].some((side) => sorted.every((r, i) => i === 0 || sideGaps(r.snap)[side] > sideGaps(sorted[i - 1].snap)[side] + 0.01));
       return ok ? [] : [`neither side's gap grows with the margin: ${sorted.map((r) => `${valueOf(r, 'setting.marginH')}→${sideGaps(r.snap).map((g) => g.toFixed(1)).join('/')}`).join(', ')}`];
     },
+  },
+  // Design → Spacing → Page size (R2-136): every page prints on the paper picked, to 0.01 pt.
+  'setting.pageSize': {
+    family: 'spacing',
+    check: ({ runs }) => runs.flatMap((r) => {
+      const v = valueOf(r, 'setting.pageSize');
+      const want = PAPER[v];
+      if (!want) return [`${v}: a page size this test does not know — add its box to PAPER`];
+      const boxes = r.snap.pages.map((p) => [p.W, p.H].map((n) => Math.round(n * 100) / 100));
+      return boxes.every(([w, h]) => w === want[0] && h === want[1]) ? [] : [`${v}: pages of ${boxes.map((b) => b.join(' × ')).join(', ')} pt, not ${want.join(' × ')}`];
+    }),
   },
   'setting.sectionGap': {
     family: 'spacing',

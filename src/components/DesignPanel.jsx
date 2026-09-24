@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { Sparkles } from 'lucide-react';
 import { ATS_DEFAULTS, sectionReset } from '@/utils/defaultData';
 import { atsRating, contactIconHint, drawsContactIcons, TEMPLATE_PICKER, templateId } from '@/constants/templates';
 import { MARGIN_MM } from '@/constants/pageMargins';
+import { PAGE_SIZES, PAGE_SIZE_IDS, pageSizeOf } from '@/constants/pageSize';
 import { ICON_SIZE } from '@/constants/designNumbers';
 import { ITEM_GAP_PX, LINE_HEIGHT, SECTION_GAP_PX } from '@/constants/spacingNumbers';
 import { DesignSection, NumberRow, Label, SegmentControl } from '@/components/DesignPanelShared';
@@ -24,6 +25,8 @@ const HEADING_KEYS    = ['headingStyle', 'sectionTitleCase', 'sectionBorderWidth
 // Not contactStyle: Header Customization's, and the ↺ here turned a Bar or Bullet header to Icon (R2-090).
 const ICON_KEYS       = ['iconSet', 'iconSize'];
 const DATE_KEYS       = ['dateFormat'];
+// The paper, by its name and size as the editor states them: "A4 · 210 × 297 mm".
+const PAGE_SIZE_OPTIONS = PAGE_SIZE_IDS.map(id => ({ label: `${PAGE_SIZES[id].label} · ${PAGE_SIZES[id].dims}`, value: id }));
 
 export default function DesignPanel({ resume, updateSetting, setTemplate, resetSettings }) {
   const settings = resume.settings || {};
@@ -31,6 +34,7 @@ export default function DesignPanel({ resume, updateSetting, setTemplate, resetS
   // Modern and Sidebar draw the pack whatever Contact style says, the others only with Icon.
   const drawsIcons = drawsContactIcons(current, settings);
   const [confirmReset, setConfirmReset] = useState(false);
+  const pageSizeLabelId = useId();
 
   /** A section's reset: its settings back to the template's defaults (Sidebar's plain headings, …). */
   function resetSection(keys) {
@@ -222,6 +226,13 @@ export default function DesignPanel({ resume, updateSetting, setTemplate, resetS
 
           <NumberRow label="Line Height" value={settings.lineHeightValue ?? 1.5} onChange={v => updateSetting('lineHeightValue', v)} min={LINE_HEIGHT.min} max={LINE_HEIGHT.max} step={0.1} />
           <div className="h-px bg-gray-100" />
+          {/* The paper the résumé and its cover letter print on (R2-136): the PDF, the preview and both
+              Word files read it (pageSizeOf). None stored reads as A4, the page every résumé printed on
+              before, so A4 shows selected for it. */}
+          <div role="group" aria-labelledby={pageSizeLabelId} className="space-y-1.5">
+            <p id={pageSizeLabelId} className="text-xs text-gray-600">Page size</p>
+            <SegmentControl options={PAGE_SIZE_OPTIONS} value={pageSizeOf(settings)} onChange={v => updateSetting('pageSize', v)} />
+          </div>
           <NumberRow label="Top / Bottom margin" value={settings.marginV ?? 14} onChange={v => updateSetting('marginV', v)} min={MARGIN_MM.min} max={MARGIN_MM.max} step={1} unit="mm" />
           <NumberRow label="Left / Right margin" value={settings.marginH ?? 18} onChange={v => updateSetting('marginH', v)} min={MARGIN_MM.min} max={MARGIN_MM.max} step={1} unit="mm" />
           <div className="h-px bg-gray-100" />
