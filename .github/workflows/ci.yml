@@ -4,15 +4,39 @@
 # owner, 2026-09-24: no other branches are pushed) — and a red run is fixed forward on master at once.
 # A working branch is gated by hand before it merges (Actions → ci → Run workflow, or workflow_dispatch
 # on that ref), so its full suite, build, Playwright, lint and Cypress run here and not on a 4-CPU box.
+#
+# The owner, 2026-09-24: tests run ONLY here — never on a laptop, a cloud session's machine or an agent's
+# worktree. A dispatch can therefore run just what a change needs (the inputs below): named node test
+# files on one machine, fail-first checks (each fix commit's src/ changes undone: its tests must fail,
+# then pass again with them), and named Playwright / Cypress specs. Left empty, it runs everything.
 name: ci
 
 on:
   push:
     branches: [master]
   workflow_dispatch:
+    inputs:
+      tests:
+        description: 'Node test files to run instead of the whole suite (space-separated paths or globs). Empty: the full suite.'
+        required: false
+        default: ''
+      failfirst:
+        description: 'Fail-first checks, space-separated "sha:test1,test2" — the commit''s src/ changes are undone and its tests must fail, then pass with them.'
+        required: false
+        default: ''
+      playwright:
+        description: 'Playwright: all, none, or spec files (space-separated). Empty: all, unless tests or failfirst is set.'
+        required: false
+        default: ''
+      cypress:
+        description: 'Cypress: all, none, or spec files (space-separated). Empty: all, unless tests or failfirst is set.'
+        required: false
+        default: ''
 
+# A push to master cancels the run it supersedes; each dispatch runs to the end, so checks started
+# side by side on one branch never cancel one another.
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ${{ github.event_name == 'push' && format('ci-{0}', github.ref) || format('ci-{0}', github.run_id) }}
   cancel-in-progress: true
 
 permissions:
@@ -21,6 +45,8 @@ permissions:
 jobs:
   suite:
     name: suite (${{ matrix.shard }}/6)
+    # The whole suite: on a push, or a dispatch that names neither test files nor fail-first checks.
+    if: github.event_name == 'push' || (inputs.tests == '' && inputs.failfirst == '')
     runs-on: ubuntu-latest
     # The PDF tests read text through Poppler and MuPDF, and some measure what Poppler 26.01 does
     # (pdftotext -raw word gaps): run them on the same Ubuntu release the project is developed on.
@@ -58,7 +84,93 @@ jobs:
           grep -E '^# (tests|pass|fail|todo|skipped|cancelled)' suite.log || true
           grep -E '^not ok' suite.log | head -40 || true
 
+  # Named test files on one machine (the tests input), in the suite's container.
+  tests:
+    if: github.event_name == 'workflow_dispatch' && inputs.tests != ''
+    runs-on: ubuntu-latest
+    container: ubuntu:26.04
+    timeout-minutes: 45
+    defaults:
+      run:
+        shell: bash
+    env:
+      TESTS: ${{ inputs.tests }}
+    steps:
+      - name: System packages
+        run: |
+          apt-get update -qq
+          DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends \
+            git ca-certificates curl xz-utils poppler-utils mupdf-tools > /dev/null
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install
+        run: corepack enable && yarn install --immutable
+      - name: node --test (named files)
+        run: |
+          set -o pipefail
+          node --test --test-concurrency=4 $TESTS 2>&1 | tee tests.log
+      - name: Summary
+        if: always()
+        run: |
+          grep -E '^# (tests|pass|fail|todo|skipped|cancelled)' tests.log || true
+          grep -E '^not ok' tests.log | head -40 || true
+
+  # Fail-first (the failfirst input): for each "sha:tests", undo that commit's src/ changes on this
+  # checkout — its diff reversed, or its parent's files where later work moved the lines — and its tests
+  # must fail; restored, they must pass. A test that passes without its fix proves nothing.
+  failfirst:
+    if: github.event_name == 'workflow_dispatch' && inputs.failfirst != ''
+    runs-on: ubuntu-latest
+    container: ubuntu:26.04
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: bash
+    env:
+      FAILFIRST: ${{ inputs.failfirst }}
+    steps:
+      - name: System packages
+        run: |
+          apt-get update -qq
+          DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends \
+            git ca-certificates curl xz-utils poppler-utils mupdf-tools > /dev/null
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install
+        run: corepack enable && yarn install --immutable
+      - name: Fail-first
+        run: |
+          git config --global --add safe.directory "$PWD"
+          status=0
+          for pair in $FAILFIRST; do
+            sha=${pair%%:*}; files=${pair#*:}; files=${files//,/ }
+            if ! git cat-file -e "$sha^{commit}" 2>/dev/null; then echo "::error::$sha is not in this checkout"; status=1; continue; fi
+            src=$(git diff --name-only "$sha^" "$sha" -- src/)
+            if [ -z "$src" ]; then echo "::error::$sha changes nothing under src/"; status=1; continue; fi
+            if git diff "$sha^" "$sha" -- src/ | git apply -R 2>/dev/null; then how='its diff reversed'
+            else git reset -q --hard HEAD; git checkout "$sha^" -- $src 2>/dev/null || git rm -q -- $src; how="its parent's files"; fi
+            if node --test --test-concurrency=4 $files > ff.log 2>&1; then
+              echo "::error::$sha — $files pass WITHOUT the fix ($how)"; status=1
+            else
+              echo "ok  $sha — $files fail without the fix ($how): $(grep -E '^# fail' ff.log)"
+            fi
+            git reset -q --hard HEAD; git clean -fdq -- src
+            if node --test --test-concurrency=4 $files > ff.log 2>&1; then
+              echo "ok  $sha — $files pass with it"
+            else
+              echo "::error::$sha — $files FAIL with the fix"; grep -E '^not ok' ff.log | head -20; status=1
+            fi
+          done
+          exit $status
+
   build:
+    if: github.event_name == 'push' || (inputs.playwright != 'none' && (inputs.playwright != '' || (inputs.tests == '' && inputs.failfirst == '')))
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -80,6 +192,7 @@ jobs:
   playwright:
     name: playwright (${{ matrix.shard }}/3)
     needs: build
+    if: github.event_name == 'push' || (inputs.playwright != 'none' && (inputs.playwright != '' || (inputs.tests == '' && inputs.failfirst == '')))
     runs-on: ubuntu-latest
     timeout-minutes: 40
     strategy:
@@ -100,7 +213,9 @@ jobs:
       - name: Chromium
         run: ./node_modules/.bin/playwright install --with-deps chromium
       - name: Playwright
-        run: ./node_modules/.bin/playwright test --shard=${{ matrix.shard }}/3
+        env:
+          SPECS: ${{ (inputs.playwright != 'all' && inputs.playwright != '') && inputs.playwright || '' }}
+        run: ./node_modules/.bin/playwright test $SPECS --shard=${{ matrix.shard }}/3 --pass-with-no-tests
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
@@ -126,6 +241,7 @@ jobs:
   # Cypress has no sharding of its own: each machine runs every 4th spec file, in name order.
   cypress:
     name: cypress (${{ matrix.shard }}/4)
+    if: github.event_name == 'push' || (inputs.cypress != 'none' && (inputs.cypress != '' || (inputs.tests == '' && inputs.failfirst == '')))
     runs-on: ubuntu-latest
     timeout-minutes: 45
     strategy:
@@ -142,8 +258,12 @@ jobs:
       - name: Cypress binary
         run: ./node_modules/.bin/cypress install && ./node_modules/.bin/cypress verify
       - name: Cypress (shard ${{ matrix.shard }}/4)
+        env:
+          PICK: ${{ (inputs.cypress != 'all' && inputs.cypress != '') && inputs.cypress || '' }}
         run: |
-          SPECS=$(find cypress/e2e -name '*.cy.js' | sort | awk -v n=4 -v k=${{ matrix.shard }} '(NR - 1) % n == k - 1' | paste -sd, -)
+          ALL=$( [ -n "$PICK" ] && printf '%s\n' $PICK || find cypress/e2e -name '*.cy.js' )
+          SPECS=$(printf '%s\n' $ALL | sort | awk -v n=4 -v k=${{ matrix.shard }} '(NR - 1) % n == k - 1' | paste -sd, -)
+          if [ -z "$SPECS" ]; then echo "no specs on this shard"; exit 0; fi
           echo "specs: $SPECS"
           ./node_modules/.bin/vite build --mode e2e
           ./node_modules/.bin/start-server-and-test "./node_modules/.bin/vite preview --host 127.0.0.1 --port 4173 --strictPort" \
