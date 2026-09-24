@@ -51,3 +51,45 @@ body {
 .rich-text-output li {
   margin-bottom: 0.125rem;
 }
+
+/* ── Workspace UI kit (src/components/ui, src/components/shell) ─────────────────────────────
+   Motion tokens for the kit: `animate-ui-*` utilities. 150 ms hover/press is Tailwind's own
+   `transition` default; dialogs fade and scale in over 180 ms, sheets and the navigation drawer
+   slide over 220 ms, menus and popovers pop in over 150 ms. Exits are shorter than entrances. */
+@theme {
+  --animate-ui-fade-in: ui-fade-in 180ms ease-out both;
+  --animate-ui-fade-out: ui-fade-out 150ms ease-in both;
+  --animate-ui-dialog-in: ui-dialog-in 180ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  --animate-ui-dialog-out: ui-dialog-out 140ms ease-in both;
+  --animate-ui-pop-in: ui-pop-in 150ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  --animate-ui-sheet-in: ui-sheet-in 220ms cubic-bezier(0.32, 0.72, 0, 1) both;
+  --animate-ui-sheet-out: ui-sheet-out 180ms ease-in both;
+  --animate-ui-drawer-in: ui-drawer-in 220ms cubic-bezier(0.32, 0.72, 0, 1) both;
+  --animate-ui-drawer-out: ui-drawer-out 180ms ease-in both;
+  --animate-ui-toast-in: ui-toast-in 220ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  --animate-ui-shimmer: ui-shimmer 1.4s ease-in-out infinite;
+
+  @keyframes ui-fade-in { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes ui-fade-out { from { opacity: 1; } to { opacity: 0; } }
+  @keyframes ui-dialog-in { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
+  @keyframes ui-dialog-out { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(0.98); } }
+  @keyframes ui-pop-in { from { opacity: 0; transform: translateY(-2px) scale(0.98); } to { opacity: 1; transform: none; } }
+  @keyframes ui-sheet-in { from { transform: translateY(100%); } to { transform: translateY(0); } }
+  @keyframes ui-sheet-out { from { transform: translateY(0); } to { transform: translateY(100%); } }
+  @keyframes ui-drawer-in { from { transform: translateX(-100%); } to { transform: translateX(0); } }
+  @keyframes ui-drawer-out { from { transform: translateX(0); } to { transform: translateX(-100%); } }
+  @keyframes ui-toast-in { from { opacity: 0; transform: translateY(8px) scale(0.98); } to { opacity: 1; transform: none; } }
+  @keyframes ui-shimmer { 0% { background-position: 100% 0; } 100% { background-position: -100% 0; } }
+}
+
+/* Reduced motion: the workspace shell and every kit layer (Portal) carry data-ui-motion; there,
+   animations and transitions finish at once (1 ms, so animationend and transitionend still fire).
+   Scoped so the résumé editor keeps its own behaviour. */
+@media (prefers-reduced-motion: reduce) {
+  [data-ui-motion], [data-ui-motion] *, [data-ui-motion] *::before, [data-ui-motion] *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
+  }
+}
