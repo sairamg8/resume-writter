@@ -78,7 +78,8 @@ describe('one date-range rule for every section, in the PDF and in Word', () => 
   it('Word prints the same ranges, numeric years included', async () => {
     const { r, expected } = dated('classic');
     const { texts } = await renderDocx(r);
-    const missing = expected.filter((want) => !texts.some((t) => t.endsWith(`\t${want}`)));
+    // At the end of an entry's title line: a Stacked entry's second field is on the line under it (R2-070).
+    const missing = expected.filter((want) => !texts.some((t) => t.split('\n').some((line) => line.endsWith(`\t${want}`))));
     assert.deepEqual(missing, [], texts.join(' | '));
   });
 });
