@@ -167,5 +167,30 @@
     ]
   },
   "baselineFailures": [],
-  "notes": "src/pages/Board.jsx and Boards.jsx cannot render at this base (v1 `board.lists` on a v2 store); claude/wf-boards fixes that (b181e7c). Hence the board-page instruction test checks Board.jsx's source. Checked: claude/wf-jobs and claude/wf-boards merge with no conflict, and 81-job-tracker-ui, 81-job-tracker-page's neighbours, 82-job-pipeline-tasks and 82-board-pages all pass (29/29) on the merge. Touched src/pages/Board.jsx (one DndContext prop) and src/components/board/BoardCard.jsx (onKeyDown) for R2-039 — small merge-conflict risk with the boards cluster. Beyond the rows: ListView's sort headers were not keyboard-operable (<th onClick>); fixed in b34b16b — each header is a button with aria-sort, tested in tests/pdf/81-job-tracker-ui.test.mjs. Commit trailers use this session's URL (session_01TxTRPE1CXJu54unwVCNutZ) rather than the one in the protocol."
+  "notes": "src/pages/Board.jsx and Boards.jsx cannot render at this base (v1 `board.lists` on a v2 store); claude/wf-boards fixes that (b181e7c). Hence the board-page instruction test checks Board.jsx's source. Checked: claude/wf-jobs and claude/wf-boards merge with no conflict, and 81-job-tracker-ui, 81-job-tracker-page's neighbours, 82-job-pipeline-tasks and 82-board-pages all pass (29/29) on the merge. Touched src/pages/Board.jsx (one DndContext prop) and src/components/board/BoardCard.jsx (onKeyDown) for R2-039 — small merge-conflict risk with the boards cluster. Beyond the rows: ListView's sort headers were not keyboard-operable (<th onClick>); fixed in b34b16b — each header is a button with aria-sort, tested in tests/pdf/81-job-tracker-ui.test.mjs. Commit trailers use this session's URL (session_01TxTRPE1CXJu54unwVCNutZ) rather than the one in the protocol. Beyond the rows, a functional audit of the job code found three bugs not in the trackers, fixed in extraFixes (each fail-first). On a merge with claude/wf-boards, 37/37 of both clusters' job and board page tests pass. Left alone (outside this cluster): src/utils/storageBackup.js, dates.js, AppRoutes.jsx are changed by other clusters. Not fixed, contrived: jobs or to-dos written without ids by another tab after this tab loaded get fresh random ids on each page change until the next write.",
+  "extraFixes": [
+    {
+      "commit": "1758214",
+      "tests": [
+        "tests/unit/job-import.unit.mjs"
+      ],
+      "summary": "Re-importing a file whose jobs carry no createdAt/updatedAt (hand-made, another tool) skips them: each import used to stamp them with its own time, so they never matched and every re-import added a copy of each job under a new id."
+    },
+    {
+      "commit": "7ec8a65",
+      "tests": [
+        "tests/unit/job-query.unit.mjs"
+      ],
+      "summary": "A salary range with its unit at the end ('$120-150k', '10-15 LPA', '£45–55k') is read in that unit, so it sorts by its real amount instead of as 120 / 10."
+    },
+    {
+      "commit": "a906eb2",
+      "tests": [
+        "tests/unit/job-edits.unit.mjs",
+        "tests/unit/job-store-edits.unit.mjs",
+        "tests/pdf/81-job-tracker-page.test.mjs"
+      ],
+      "summary": "An edit that changes nothing (current pipeline step clicked, form saved unchanged, a field's pencil opened and closed) writes nothing and keeps updatedAt, so the job no longer jumps to the top of the list's 'last updated' order."
+    }
+  ]
 }
