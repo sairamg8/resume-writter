@@ -1,9 +1,10 @@
 // Unit tests for the page size table and how a stored value is read (PAR-01): the PDF, the
 // preview and Word all read the size through pageSizeOf(), so a value it reads as A4 prints A4
-// everywhere.
+// everywhere. And the JSON Resume file keeps a US Letter paper (R2-136).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { PAGE_SIZES, PAGE_SIZE_IDS, DEFAULT_PAGE_SIZE, pageSizeOf, pageBoxPt, previewBox } from '../../src/constants/pageSize.js';
+import { jsonResumeToCpwtResume, cpwtResumeToJsonResume } from '../../src/utils/jsonResume.js';
 
 test('pageSizeOf: US Letter in any case; A4 for none, A4 and anything else (PAR-01)', () => {
   for (const pageSize of ['LETTER', 'letter', 'Letter']) assert.equal(pageSizeOf({ pageSize }), 'LETTER', pageSize);
@@ -47,4 +48,41 @@ test('previewBox: 100% width and placeholder ratio match page size (ONB-9-NB1)',
   const letterResumeBox = previewBox({ settings: { pageSize: 'letter' } });
   assert.equal(letterResumeBox.widthPx, 816);
   assert.equal(letterResumeBox.ratio, 792 / 612);
+});
+
+// Export → JSON Resume → import keeps the paper (R2-136): the file carried the template, the Date
+// format and the Sidebar's Layout in `meta`, not the page size, so a US Letter résumé came back on
+// A4 — every page break moved. `meta.pageSize` is written only for a paper other than A4, so an A4
+// résumé's file is what it always was, and a file with none (every other tool's) imports as A4.
+const cv = (settings) => ({
+  personal: { name: 'Pat Sample' }, template: 'classic', settings,
+  sections: [{ id: 's', type: 'experience', title: 'Work', items: [{ id: 'i', company: 'Acme', role: 'Dev', startDate: '2021-03' }] }],
+});
+const written = (settings) => JSON.parse(JSON.stringify(cpwtResumeToJsonResume(cv(settings))));
+
+test('JSON Resume: a US Letter résumé\'s file names its paper, and the import brings it back (R2-136)', () => {
+  for (const pageSize of ['LETTER', 'letter']) {
+    const file = written({ pageSize });
+    assert.equal(file.meta.pageSize, 'LETTER', `${pageSize}: the export`);
+    const back = jsonResumeToCpwtResume(file);
+    assert.equal(back.settings.pageSize, 'LETTER', `${pageSize}: the import`);
+    assert.equal(pageSizeOf(back.settings), 'LETTER');
+  }
+});
+
+test('JSON Resume: an A4 résumé\'s file is as before — no page size — and imports storing none (R2-136)', () => {
+  for (const settings of [{}, { pageSize: 'A4' }, { pageSize: 'Legal' }, { pageSize: 5 }]) {
+    const file = written(settings);
+    assert.equal('pageSize' in file.meta, false, JSON.stringify(settings));
+    assert.equal('pageSize' in jsonResumeToCpwtResume(file).settings, false, JSON.stringify(settings));
+  }
+});
+
+test('JSON Resume: a file with no page size, or one this build does not offer, imports as A4 (R2-136)', () => {
+  const importedWith = (meta) => jsonResumeToCpwtResume({ basics: { name: 'X' }, ...(meta ? { meta } : {}) }).settings;
+  for (const meta of [null, {}, { pageSize: 'A4' }, { pageSize: 'a4' }, { pageSize: 'Legal' }, { pageSize: 7 }, { pageSize: ['LETTER'] }]) {
+    assert.equal('pageSize' in importedWith(meta), false, JSON.stringify(meta));
+  }
+  // Cased as another tool wrote it: read as the PDF reads a stored one (pageSizeOf).
+  assert.equal(importedWith({ pageSize: 'Letter' }).pageSize, 'LETTER');
 });
