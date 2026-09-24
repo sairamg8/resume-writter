@@ -206,3 +206,72 @@ it('the board page\'s actions reach the v2 store: add a card, label it, delete a
     await page.view.unmount();
   }
 });
+
+it('the card sheet\'s title takes what is typed — a space between words, a field cleared to retype — and the store keeps a clean title', async () => {
+  open([saved([project()])]);
+  const page = await mountBoard('/boards/p1');
+  const dom = await import('./fake-dom.mjs');
+  try {
+    page.click(page.card('Paint the fence'));
+    const field = () => [...dom.elements(page.view.container)].find((el) => el.tagName === 'TEXTAREA' && el.getAttribute('aria-label') === 'Card title');
+    const shows = () => dom.reactProps(field()).value;
+    // The store cleans every title (updateIssue: trimmed, never blank); the field used to show
+    // the cleaned one back at each keystroke, so the space before a next word was taken away.
+    page.type(field(), 'Paint the fence ');
+    assert.equal(shows(), 'Paint the fence ');
+    page.type(field(), 'Paint the fence white');
+    assert.equal(shows(), 'Paint the fence white');
+    assert.equal(boardNow().issues.find((i) => i.id === 'i2').title, 'Paint the fence white');
+    page.type(field(), '');
+    assert.equal(shows(), '', 'a cleared field stays clear while it is being retyped');
+    assert.equal(boardNow().issues.find((i) => i.id === 'i2').title, 'Paint the fence white', 'a blank title is never saved');
+    page.view.act(() => dom.reactProps(field()).onBlur({}));
+    assert.equal(shows(), 'Paint the fence white', 'left blank, the field shows the saved title again');
+  } finally {
+    await page.view.unmount();
+  }
+});
+
+it('a label colour whose palette name another label of the board already has gets a label of its own', async () => {
+  // "Blue" is the palette's name for #3b82f6; this board already has a green label called "Blue".
+  // addLabel hands back the label that has the name, so the card used to get the green one, and
+  // the blue swatch never showed as picked.
+  open([saved([project({ labels: [{ id: 'l1', name: 'Urgent', color: '#ef4444' }, { id: 'lg', name: 'Blue', color: '#22c55e' }] })])]);
+  const page = await mountBoard('/boards/p1');
+  try {
+    page.click(page.card('Paint the fence'));
+    page.click(page.byLabel('Blue'));
+    const labels = boardNow().labels;
+    const ids = boardNow().issues.find((i) => i.id === 'i2').labelIds;
+    assert.equal(ids.length, 1);
+    const picked = labels.find((l) => l.id === ids[0]);
+    assert.equal(picked.color, '#3b82f6');
+    assert.notEqual(picked.id, 'lg');
+    assert.equal(labels.find((l) => l.id === 'lg').color, '#22c55e', 'the green label is left as it was');
+    assert.equal(page.byLabel('Blue').getAttribute('aria-pressed'), 'true');
+  } finally {
+    await page.view.unmount();
+  }
+});
+
+it('the only list is never deleted (the store would refuse): the page says why; an empty list goes without a question', async () => {
+  open([saved([project({ columns: [col('c1', 'To Do'), col('c2', 'Doing', 'inprogress')], issues: [issue('i1', 1, 'Fix the tap', 'c1')] })])]);
+  const page = await mountBoard('/boards/p1');
+  const asked = [];
+  globalThis.alert = (m) => asked.push(['alert', m]);
+  globalThis.confirm = (m) => { asked.push(['confirm', m]); return true; };
+  try {
+    page.click(page.byLabel('Delete list', page.column('Doing')));
+    assert.deepEqual(asked, [], 'an empty list: no question');
+    assert.deepEqual(boardNow().columns.map((c) => c.id), ['c1']);
+    page.click(page.byLabel('Delete list', page.column('To Do')));
+    assert.deepEqual(asked.map(([kind]) => kind), ['alert']);
+    assert.match(asked[0][1], /at least one list/);
+    assert.deepEqual(boardNow().columns.map((c) => c.id), ['c1']);
+    assert.deepEqual(boardNow().issues.map((i) => i.title), ['Fix the tap']);
+  } finally {
+    delete globalThis.alert;
+    delete globalThis.confirm;
+    await page.view.unmount();
+  }
+});

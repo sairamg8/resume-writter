@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { X, Trash2, Calendar } from 'lucide-react';
 import RichTextEditor from '@/components/RichTextEditor';
 import { TasksTab } from '@/components/job/TasksTab';
@@ -12,6 +13,10 @@ import { useIsMobile } from '@/hooks/useMediaQuery';
  */
 export function CardDetailSheet({ card, listTitle, onClose, onChange, onDelete }) {
   const mobile = useIsMobile();
+  // What is typed in the title while the field has focus: the store cleans a title (trimmed,
+  // never blank), so showing the saved one back at each keystroke took away the space before
+  // the next word, and a cleared field refilled itself.
+  const [titleDraft, setTitleDraft] = useState(null);
   if (!card) return null;
 
   const panel = mobile ? 'w-full rounded-t-2xl max-h-[92vh]' : 'w-full max-w-lg rounded-2xl max-h-[88vh] my-8';
@@ -22,8 +27,9 @@ export function CardDetailSheet({ card, listTitle, onClose, onChange, onDelete }
         <div className="sticky top-0 bg-white border-b border-gray-100 px-4 py-3 flex items-start gap-2 z-10">
           <div className="flex-1 min-w-0">
             <textarea
-              value={card.title}
-              onChange={(e) => onChange({ title: e.target.value })}
+              value={titleDraft ?? card.title}
+              onChange={(e) => { setTitleDraft(e.target.value); onChange({ title: e.target.value }); }}
+              onBlur={() => setTitleDraft(null)}
               rows={1}
               placeholder="Card title"
               aria-label="Card title"

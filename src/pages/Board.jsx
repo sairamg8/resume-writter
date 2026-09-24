@@ -134,6 +134,20 @@ export function Board() {
   }
 
   /**
+   * The board's label for a colour the sheet picked (`{ name, color }`, the palette's): the first
+   * one of that colour, else a new one. Its palette name may be another colour's label's already
+   * (addLabel would hand that one back), so the new one then takes the next free "Name 2", "Name 3"…
+   */
+  function labelFor({ name, color }) {
+    const found = board.labels.find((x) => x.color === color);
+    if (found) return found;
+    const taken = (n) => board.labels.some((x) => x.name.toLowerCase() === n.toLowerCase());
+    let free = name || color;
+    for (let n = 2; taken(free); n++) free = `${name || color} ${n}`;
+    return store.addLabel(board.id, { name: free, color });
+  }
+
+  /**
    * The card sheet's change as an issue patch: the sheet picks labels by colour ({ name, color }),
    * an issue holds the ids of the board's labels — a colour the board has no label for yet gets one.
    */
@@ -143,9 +157,7 @@ export function Board() {
       return;
     }
     const { labels, ...rest } = patch;
-    const labelIds = labels
-      .map((l) => (l.id ? l : board.labels.find((x) => x.color === l.color) ?? store.addLabel(board.id, l))?.id)
-      .filter(Boolean);
+    const labelIds = labels.map((l) => (l.id ? l : labelFor(l))?.id).filter(Boolean);
     store.updateIssue(board.id, cardId, { ...rest, labelIds });
   }
 
