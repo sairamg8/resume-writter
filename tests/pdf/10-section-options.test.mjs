@@ -111,8 +111,7 @@ describe('experience Order (FIDA-58 / FIDB-72)', () => {
       const line = await lineOf(template);
       assert.equal(line.indexOf('Staff Engineer') < line.indexOf('Acme Corp') ? 'role' : 'company', DEFAULT_ORDER[template], `${template}: ${line}`);
     }
-    // The Sidebar's cards are Stacked: the second field on the line under the first (R2-070).
-    assert.match(await lineOf('sidebar', { titleOrder: 'company' }), /^Acme Corp\t[^\n]*\nStaff Engineer/);
+    assert.match(await lineOf('sidebar', { titleOrder: 'company' }), /^Acme Corp — Staff Engineer/);
   });
 
   it('a stored null or empty Order (imported data) is no choice: the PDF, Word and the editor all take the template default (R6-5)', async () => {

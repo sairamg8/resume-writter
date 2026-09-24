@@ -5,7 +5,7 @@
 // the section stores.
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { setup, teardown, resume, section, render, renderDocx, read, itemsWith, loadModule, TEMPLATES } from './harness.mjs';
+import { setup, teardown, resume, section, render, renderDocx, read, itemsWith, TEMPLATES } from './harness.mjs';
 
 before(setup);
 after(teardown);
@@ -24,8 +24,6 @@ const TYPES = {
   interests: { word: 'IntOne', items: [{ interests: 'IntOne, IntTwo' }] },
   custom: { word: 'CustTitle', date: '2017', place: 'CustCity', items: [{ title: 'CustTitle', subtitle: 'CustSub', location: 'CustCity', date: '2017', description: '<p>CustText</p>' }] },
 };
-/** The two fields of each entry with a Title (Section Options → Title). */
-const TITLED = { experience: ['ExpCo', 'ExpRole'], education: ['EduUni', 'EduDeg'], volunteering: ['VolRole', 'VolOrg'], custom: ['CustTitle', 'CustSub'] };
 const heading = (type) => `HEAD${type.toUpperCase()}`;
 /** A résumé with a section of every type, each at `alignment`. */
 const everyType = (template, alignment) => resume({
@@ -65,9 +63,7 @@ describe('Word: Section Options → Alignment "Center" centres what the PDF cent
 
     it(`${template}: a centred entry prints its date centred on a line of its own below its title line, and its location under that`, async () => {
       const { SIDEBAR_COLUMN_TYPES } = await import('../../src/constants/templates.js');
-      const { resolveSection } = await loadModule('/src/templates/pdf/shared/templateSectionDefaults.js');
-      const r = everyType(template, 'center');
-      const doc = byType(await renderDocx(r));
+      const doc = byType(await renderDocx(everyType(template, 'center')));
       for (const [type, { word, date, place }] of Object.entries(TYPES)) {
         if (!date) continue;
         const text = doc[type].find((p) => p.text.includes(word)).text;
@@ -79,14 +75,9 @@ describe('Word: Section Options → Alignment "Center" centres what the PDF cent
           continue;
         }
         const lines = text.split('\n');
-        // Title "Stacked" (the default but Executive's and the Timeline's jobs) puts the entry's second
-        // field on a centred line of its own under the date, as the PDF's sub line (R2-070).
-        const fields = TITLED[type];
-        const stacked = fields && (resolveSection(r.sections.find((s) => s.type === type), template).settings.titleStyle || 'stacked') === 'stacked';
-        assert.equal(lines.length, 2 + (stacked ? 1 : 0) + (place ? 1 : 0), `${template} ${type}: ${JSON.stringify(text)}`);
-        const title = stacked ? [lines[0], lines[2]].sort().join() === [...fields].sort().join() : lines[0].includes(word);
-        assert.ok(title && lines[1].startsWith(date) && !text.includes('\t'), `${template} ${type}: no right-tab date: ${JSON.stringify(text)}`);
-        if (place) assert.equal(lines.at(-1), place, `${template} ${type}: the location on a line of its own (ATS-1)`);
+        assert.equal(lines.length, place ? 3 : 2, `${template} ${type}: ${JSON.stringify(text)}`);
+        assert.ok(lines[0].includes(word) && lines[1].startsWith(date) && !text.includes('\t'), `${template} ${type}: no right-tab date: ${JSON.stringify(text)}`);
+        if (place) assert.equal(lines[2], place, `${template} ${type}: the location on a line of its own (ATS-1)`);
       }
     });
   }

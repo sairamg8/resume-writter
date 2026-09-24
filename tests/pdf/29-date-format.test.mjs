@@ -115,8 +115,7 @@ describe('each Date format in Word', () => {
   for (const format of ['asEntered', ...FORMATS]) {
     it(`${format}: every dated paragraph ends with its date`, async () => {
       const { texts } = await renderDocx(dated('classic', format));
-      // Its title line does: a Stacked entry's second field is on the line under it (R2-070).
-      const missing = PRINTS[format].filter((want) => !texts.some((t) => t.split('\n')[0].endsWith(`\t${want}`)));
+      const missing = PRINTS[format].filter((want) => !texts.some((t) => t.endsWith(`\t${want}`)));
       assert.deepEqual(missing, [], texts.join(' | '));
     });
   }

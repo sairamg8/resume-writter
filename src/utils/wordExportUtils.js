@@ -204,25 +204,21 @@ export function descriptionToParagraphs(html, base = { size: 20, color: '374151'
  * at `tab` twips, the width between the page's margins (wordContentTwips) — or, `centered` (Section
  * Options → Alignment "Center"), the line centred and the date centred on a line of its own below it.
  * Empty parts (null, false, '') are left out, so a line with nothing but a date prints the date
- * alone. `under` (runs: Title "Stacked"'s second field, R2-070) starts the line under the title, as
- * the PDF's sub line does. `place` ({ text, color, size }: the entry's location) ends that line — at
- * the same right tab, or on a centred line of its own — or has a line of its own there, never in the
- * title's text, where a parser reads it as part of the job title or the company (ATS-1), as the PDF
- * keeps it a field of its own.
+ * alone. `place` ({ text, color, size }: the entry's location) prints on a line of its own under
+ * the date — at the same right tab, or centred — never in the title's text, where a parser reads
+ * it as part of the job title or the company (ATS-1), as the PDF keeps it a field of its own.
  */
-export function dateRightPara(leftChildren, rightText, { color: colorHex, centered = false, size = 20, place = null, tab, under = [] }) {
+export function dateRightPara(leftChildren, rightText, { color: colorHex, centered = false, size = 20, place = null, tab }) {
   const left = leftChildren.filter(Boolean);
-  const sub = under.filter(Boolean);
-  const date = rightText ? [new TextRun({ text: String(rightText), color: colorHex, size })] : [];
-  const where = place?.text ? [new TextRun({ text: String(place.text), color: place.color, size: place.size })] : [];
-  // The lines that print, one after another: a line with nothing on it takes no break.
-  const lines = (list) => list.filter((line) => line.length).flatMap((line, i) => (i ? [new TextRun({ break: 1 }), ...line] : line));
+  const date = (extra) => (rightText ? [new TextRun({ text: String(rightText), color: colorHex, size, ...extra })] : []);
+  const where = place?.text ? String(place.text) : '';
   if (centered) {
-    return new Paragraph({ children: lines([left, date, sub, where]), keepNext: true, ...centredIf(true) });
+    const under = where ? [new TextRun({ text: where, color: place.color, size: place.size, ...(left.length || rightText ? { break: 1 } : {}) })] : [];
+    return new Paragraph({ children: [...left, ...date(left.length ? { break: 1 } : {}), ...under], keepNext: true, ...centredIf(true) });
   }
-  const tabbed = (runs) => (runs.length ? [new TextRun({ text: '\t' }), ...runs] : []);
+  const under = where ? [new TextRun({ text: '\t', ...(left.length || rightText ? { break: 1 } : {}) }), new TextRun({ text: where, color: place.color, size: place.size })] : [];
   return new Paragraph({
-    children: lines([[...left, ...tabbed(date)], [...sub, ...tabbed(where)]]),
+    children: [...left, ...(rightText ? [new TextRun({ text: '\t' })] : []), ...date(), ...under],
     tabStops: [{ type: TabStopType.RIGHT, position: tab }],
     keepNext: true,
   });

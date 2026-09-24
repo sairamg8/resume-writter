@@ -65,9 +65,8 @@ describe('Word export', () => {
     const entry = [{ company: 'Acme', role: 'Lead', location: '' }];
     const exec = await renderDocx(resume({ template: 'executive', sections: [experience(entry)] }));
     assert.ok(exec.texts.some((t) => t.startsWith('Lead — Acme')), exec.texts.join(' | '));
-    // Classic's Title is Stacked: the role on the line under the company (R2-070).
     const classic = await renderDocx(resume({ sections: [experience(entry)] }));
-    assert.ok(classic.texts.some((t) => t.startsWith('Acme\t') && t.includes('\nLead')), classic.texts.join(' | '));
+    assert.ok(classic.texts.some((t) => t.startsWith('Acme — Lead')));
   });
 
   it('references print phone and relationship', async () => {
