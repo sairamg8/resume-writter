@@ -10,15 +10,20 @@ The cluster list and its state: [HANDOFF.md](HANDOFF.md).
 ## Set-up
 
 ```bash
-corepack enable && yarn install --immutable
-apt-get install -y poppler-utils mupdf-tools     # pdftotext / mutool: the PDF tests read PDFs with them
+corepack enable && yarn install --immutable     # for oxlint and reading node_modules — not for running tests
 ```
 
-- CI runs Poppler 26.01. A different local Poppler can make a few tests that measure pdftotext word gaps
-  fail at baseline. If an existing test fails, re-run it on the base code (`git stash -u; node --test
-  <file>; git stash pop`) before deciding you broke it.
-- Run **targeted** test files only: `node --test --test-concurrency=2 <files>`. The whole suite takes about
-  an hour on 4 CPUs; the coordinator runs it on GitHub after merging.
+- **Tests run only on the CI pipeline (the owner, 2026-09-24): never on your machine or in a subagent's
+  worktree.** Push your branch, then dispatch `ci.yml` on it with the GitHub MCP tool
+  `actions_run_trigger` (method `run_workflow`, workflow_id `ci.yml`, ref `claude/wf-<cluster>`) and read
+  the result with `actions_list` (`list_workflow_runs` / `list_workflow_jobs`) and `get_job_logs`:
+  - `inputs: { tests: "tests/pdf/xx-a.test.mjs tests/unit/b.unit.mjs" }` runs just those files on one
+    machine (Ubuntu 26.04, Poppler 26.01 — the versions the suite is measured on) in a few minutes;
+  - `inputs: { failfirst: "<sha>:tests/pdf/xx-a.test.mjs,tests/unit/b.unit.mjs <sha2>:…" }` proves each fix
+    commit's tests fail without its src/ changes and pass with them;
+  - `inputs: { playwright: "tests/playwright/x.spec.mjs", cypress: "cypress/e2e/y.cy.js" }` for browser
+    specs (`none` skips them; left empty with no tests/failfirst they all run, as does the whole suite).
+  Batch what you need into one dispatch where you can; runs on one branch no longer cancel one another.
 - Push after every commit: `git push -u origin claude/wf-<cluster>`, so nothing is lost if the container
   restarts. Push only to your own branch — never master, never another branch, never `--force`.
 
@@ -46,8 +51,10 @@ The rows live in `docs/tracking/bug-status-r2/01-high-medium.md` (High/Medium), 
    voice (comments say why, in plain words). Don't refactor beyond what the row needs; keep behaviour for
    everything the row doesn't cover. The preview is the PDF, so a change to what prints usually needs the
    PDF, Word, Markdown and ATS-text exporters to agree — check them.
-5. **Run** your new tests plus the existing test files that exercise the code you changed (`grep -rl` the
-   module name in `tests/`). Everything you touch must pass, except proven baseline failures.
+5. **Test on CI**: your new tests plus the existing test files that exercise the code you changed (`grep -rl`
+   the module name in `tests/`) go in one dispatch's `tests` input, and each fix commit with its tests in
+   `failfirst`. Everything you touch must pass, except proven baseline failures (a failure the same run
+   shows on the base commit too: dispatch on the base with the same `tests`).
 6. **Commit** one commit per row, or one per group of rows with a single root cause. Style (see `git log`):
    `fix(<area>): <what now happens, in plain words> (R2-0xx)`, or `test(<area>): …` / `feat(<area>): …`.
    End every message with these two trailer lines after a blank line:
@@ -79,10 +86,10 @@ branch, your base commit, your per-row report, and this brief:
 > Adversarially review this branch; assume each claim is wrong until you see it hold. For each fixed row:
 > read the row (grep its ID in docs/tracking/bug-status-r2/) and the diff (`git log -p <base>..HEAD`). Does
 > the change fix the defect at the root for every case the Repro names, without breaking other templates,
-> other exporters, other callers of a changed function, or older stored data? Fail-first: restore each fix
-> commit's src/ files to its parent (`git checkout <sha>^ -- <files>`), run the row's new tests and confirm
-> they FAIL, then restore (`git checkout HEAD -- <files>`); strengthen any test that passes without its fix.
-> Run every added or changed test file plus the existing tests of the changed modules. Check that each
+> other exporters, other callers of a changed function, or older stored data? Fail-first, on CI only (the
+> ci workflow's `failfirst` input, see Set-up): each fix commit's tests must fail without its src/ changes;
+> strengthen any test that passes without its fix. Run every added or changed test file plus the existing
+> tests of the changed modules on CI (the `tests` input) — never locally. Check that each
 > closed row's proof is true. Run oxlint on the changed files. Fix every real problem you find (commit with
 > the same style and trailers), and report the issues and any row whose outcome should change.
 
