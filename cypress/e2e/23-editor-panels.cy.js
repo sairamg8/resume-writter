@@ -9,14 +9,14 @@ const handle = () => cy.get('[title="Drag to resize panel"]');
 /** The editor panel: the handle's left neighbour. */
 const panel = () => handle().prev();
 
-/** Drag the handle by `dx` px: mousedown on it, move and release on the window. */
+/** Drag the handle by `dx` px with a mouse pointer: pointerdown on it, move and release on the window (R2-144). */
 function dragBy(dx) {
   handle().then(($h) => {
     const x = Math.round($h[0].getBoundingClientRect().left) + 2;
-    cy.wrap($h).trigger('mousedown', { clientX: x, button: 0 });
+    cy.wrap($h).trigger('pointerdown', { clientX: x, button: 0, pointerType: 'mouse', pointerId: 1 });
     cy.window().then((win) => {
-      win.dispatchEvent(new win.MouseEvent('mousemove', { clientX: x + dx, bubbles: true }));
-      win.dispatchEvent(new win.MouseEvent('mouseup', { clientX: x + dx, bubbles: true }));
+      win.dispatchEvent(new win.PointerEvent('pointermove', { clientX: x + dx, pointerId: 1, pointerType: 'mouse', bubbles: true }));
+      win.dispatchEvent(new win.PointerEvent('pointerup', { clientX: x + dx, pointerId: 1, pointerType: 'mouse', bubbles: true }));
     });
   });
 }

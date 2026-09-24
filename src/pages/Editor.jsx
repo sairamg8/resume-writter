@@ -38,7 +38,7 @@ export function Editor({ store, auth, sync }) {
   const exportMenu = useEditorExports({
     resume, activeTab, authUser: auth?.user, importResume: store.importResume, navigate,
   });
-  const { panelWidth, onDragHandleMouseDown } = usePanelResize();
+  const { panelWidth, separatorProps } = usePanelResize();
 
   function toggleAllSections() {
     const next = !allExpanded;
@@ -129,7 +129,13 @@ export function Editor({ store, auth, sync }) {
       </div>
 
       {!isMobile && layoutMode === 'split' && (
-        <div onMouseDown={onDragHandleMouseDown} title="Drag to resize panel" className="w-1 shrink-0 bg-gray-200 hover:bg-blue-400 active:bg-blue-500 cursor-col-resize transition-colors z-10" />
+        // touch-none: a finger drags the handle instead of panning the page. The ::before widens what
+        // a finger can hit, out over the preview only: the editor panel's scrollbar is on its left (R2-144).
+        <div
+          {...separatorProps}
+          title="Drag to resize panel"
+          className="relative w-1 shrink-0 bg-gray-200 hover:bg-blue-400 active:bg-blue-500 focus-visible:bg-blue-500 focus-visible:outline-none cursor-col-resize touch-none transition-colors z-10 before:absolute before:inset-y-0 before:left-0 before:-right-3 before:content-['']"
+        />
       )}
 
       <EditorPreviewPane
