@@ -6,6 +6,7 @@ import { contactHref } from '@/utils/contacts';
 import { formatDate } from '@/utils/dates';
 import { tint } from './pdfColors';
 import { ContactValue } from './PdfContact';
+import { lineBox } from './pdfMeasure';
 import {
   SPACER,
   SectionTitleOf,
@@ -25,11 +26,17 @@ export function ReferencesSection({ section, settings, marginBottom, spaceBefore
   const shade     = shadesOf(settings);
   const visibleItems = (section.items || []).filter(i => i.visible !== false);
   const alignStyle = centered ? { textAlign: 'center' } : {};
+  // A card is unbreakable: its title keeps the first row's tallest card with it — a line per field, one
+  // more for a field that wraps, its padding — or the title was left alone at a page's foot, its cards
+  // on the next page (T9: a long Compact résumé at Letter).
+  const line = lineBox({ fontFamily: settings?._pdfFontFamily, fontSize: baseSize }).height;
+  const fields = (item) => [item.name, item.jobTitle, item.company, item.relationship, item.email, item.phone].filter(Boolean).length;
+  const card = Math.ceil((Math.max(0, ...visibleItems.slice(0, cols).map(fields)) + 1) * line + 12);
 
   return (
     <View style={{ marginBottom, marginTop: spaceBefore }}>
       {SPACER}
-      <SectionTitleOf section={section} settings={settings} centered={centered} />
+      <SectionTitleOf section={section} settings={settings} centered={centered} presence={card} />
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: itemGap }}>
         {visibleItems.map((item, i) => (
           <View key={i} style={{ width: getColumnWidth(cols), padding: 5, borderWidth: 0.5, borderColor: '#e5e7eb', borderRadius: 3, alignItems: centered ? 'center' : 'flex-start' }} wrap={false}>

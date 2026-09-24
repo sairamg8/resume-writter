@@ -96,8 +96,9 @@ export function RenderColGrid({ items, cols, gap, renderItem }) {
 // section renderers and the Word export import them from here.
 export { ItemHeader, getDateColor } from './PdfItemHeader';
 
-// Builds PdfSectionTitle props from section + settings
-export function SectionTitleOf({ section, settings, centered }) {
+// Builds PdfSectionTitle props from section + settings; `presence`: pt of what follows the title must fit
+// under it on its page, where more than three lines (an unbreakable reference card, ReferencesSection).
+export function SectionTitleOf({ section, settings, centered, presence = 0 }) {
   return (
     <PdfSectionTitle
       title={section.title}
@@ -110,7 +111,7 @@ export function SectionTitleOf({ section, settings, centered }) {
       centered={centered}
       template={settings?._template}
       lineHeightValue={settings?.lineHeightValue ?? 1.5}
-      presence={Math.round((settings?.fontSizeBase || 11) * (settings?.lineHeightValue ?? 1.5) * 3)}
+      presence={Math.max(presence, Math.round((settings?.fontSizeBase || 11) * (settings?.lineHeightValue ?? 1.5) * 3))}
     />
   );
 }
