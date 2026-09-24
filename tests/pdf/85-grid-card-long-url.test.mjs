@@ -2,8 +2,8 @@
 // card beside it. The registered break callback (breakLongWords) marks only tokens past 48
 // characters, and a half-width card is narrower than a shorter URL. Now a grid card's link may break
 // after / . - _ @ … (at a break mark, so it reads as typed wherever it sits on one line, R4-10) when
-// it does not fit its line. The Sidebar's main-column card, and the other templates' Projects and
-// Certifications grids.
+// it does not fit its line. The Sidebar's main-column card, Timeline's project line, and the other
+// templates' Projects and Certifications grids.
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { setup, teardown, resume, section, render, read, allItems, overlaps } from './harness.mjs';
@@ -54,6 +54,10 @@ describe('a grid card\'s link breaks inside its card (R2-105)', () => {
       { name: 'Cloud', issuer: 'AWS', url: URL46, date: '02/2022' },
       { name: 'Kube', issuer: 'CNCF', date: '02/2022' },
     ], { columns: 2 })] }), 'Checkout', 'Queuebird', [URL43, URL46]);
+  });
+
+  it('Timeline, Projects in 2 columns (its own project line)', async () => {
+    await assertInCard(resume({ template: 'timeline', settings: { fontSizeBase: 13 }, sections: [projects()] }), 'Checkout', 'Queuebird', [URL43]);
   });
 
   it('a link that fits its card prints on one line, as typed (unchanged)', async () => {
