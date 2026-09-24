@@ -3,9 +3,10 @@
 // failure handling are passed in; no React and no Firebase, so the tests drive this very code
 // through the engine over a fake Firestore (tests/pdf/18-cloud-sync-*.test.mjs).
 //
-// A flush first reads the server's copies of the résumés it sends — never the deletion list
-// (R8-4) — and keeps another device's edit made since this page last saw the cloud
-// (cloudSyncLineage.js, R2-004): until then it wrote its whole copy over it. Flushes still reach
+// A flush first reads the server's copies of the résumés it sends — the deletion list only when
+// one the cloud had is gone, and nothing is written from what it read (R8-4, R2-029) — and keeps
+// another device's edit made since this page last saw the cloud (cloudSyncLineage.js, R2-004):
+// until then it wrote its whole copy over it. Flushes still reach
 // Firestore in the order they were made (R4-3): each one's batch is handed over after the one
 // before it, once that one's read is answered — never after its acknowledgement, which may not
 // come (VM4-3); a read with no answer within cloudTimeout fails the flush, and the next first sync
@@ -95,10 +96,19 @@ export function createQueue({ s, io, store, report, held, timers, flushDelay, cl
       if (!current()) return;
       const { writes, copies, deletes, back } = checkFlush({ writes: sendable, deletes: queuedDeletes, docs, lineage: s.lineage });
       s.lineage.synced(docs);
+      // A résumé the cloud had and has no longer may have been deleted on another device: this
+      // edit was made where that deletion was never seen, so it wins and comes off the deletion
+      // list (R2-029). Until then it was written under the listed id, and every device left it out.
+      const missing = writes.filter((r) => s.lineage.knows(r.id) && !docs.some((d) => d.id === r.id)).map((r) => r.id);
+      const listed = missing.length ? await withDeadline(io.readDeleted(user.uid)) : [];
+      if (!current()) return;
       // In a demo account a deleted original is flagged, not removed: its last copy stays in the
       // cloud so that restoring the originals on any device brings back the edited version.
       // Writing it again (a restore) replaces the whole document, flag included.
-      const flush = { uid: user.uid, writes: [...writes, ...copies], deletes, kept, marked, demoAccount: isDemo(user) };
+      const flush = {
+        uid: user.uid, writes: [...writes, ...copies], deletes, kept, marked, demoAccount: isDemo(user),
+        listRemove: missing.filter((id) => listed.includes(id)),
+      };
       const sending = flush.writes.length || deletes.length
         ? flushOnce(flush, { commit: (uid, plan) => held.commit(uid, plan, source, current) })
         : null;

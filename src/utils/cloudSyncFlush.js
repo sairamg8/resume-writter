@@ -13,13 +13,14 @@ import { planFlush } from '@/utils/cloudSyncPlan';
 /**
  * Send one flush of account `uid`'s queue — `writes` (résumés), `deletes` (ids), `kept` (the
  * deletes that were originals), `marked` (originals whose mark was not sent yet), `demoAccount`
- * (planFlush) — as ONE batch: io.commit(uid, plan). Nothing is read first: the batch adds to the
- * deletion list itself (R8-4), and io.commit is called before anything is awaited — flushes
- * started in order reach Firestore in order. Resolves once the server has it, to what got through:
- * io.commit's answer when it says (cloudSyncHeld.commitHolding: a résumé refused is held), else the plan.
+ * (planFlush), `listRemove` (listed ids written again, R2-029) — as ONE batch: io.commit(uid,
+ * plan). Nothing is read first: the batch adds to the deletion list itself (R8-4), and io.commit
+ * is called before anything is awaited — flushes started in order reach Firestore in order.
+ * Resolves once the server has it, to what got through: io.commit's answer when it says
+ * (cloudSyncHeld.commitHolding: a résumé refused is held), else the plan.
  */
-export async function flushOnce({ uid, writes, deletes, kept, marked, demoAccount = false }, io) {
-  const plan = planFlush(writes, deletes, { demoAccount, kept, marked });
+export async function flushOnce({ uid, writes, deletes, kept, marked, demoAccount = false, listRemove = [] }, io) {
+  const plan = planFlush(writes, deletes, { demoAccount, kept, marked, listRemove });
   const sent = await io.commit(uid, plan);
   return sent && Array.isArray(sent.sets) ? sent : plan;
 }

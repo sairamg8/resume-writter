@@ -31,6 +31,7 @@ const add = (map, id, version) => {
  *   synced(list)      these copies are the cloud's now — read by a first sync, or sent
  *   held(list)        these copies were in this page's store (its own edits, another tab's save)
  *   isSynced(id, v)   the cloud held, or was sent, version v of `id`
+ *   knows(id)         some version of `id` the cloud held, or was sent, is known here
  *   elsewhere(id, v)  version v of `id` was made on another device: a version the cloud held is
  *                     known here, and this one was never seen here
  */
@@ -46,6 +47,7 @@ export function createLineage() {
     synced(list) { list.forEach((r) => add(synced, r.id, r.updatedAt)); },
     held(list) { list.forEach((r) => add(held, r.id, r.updatedAt)); },
     isSynced: (id, v) => Boolean(synced.get(id)?.has(v)),
+    knows: (id) => synced.has(id),
     elsewhere: (id, v) => synced.has(id) && !synced.get(id).has(v) && !held.get(id)?.has(v),
   };
 }

@@ -59,6 +59,8 @@ const unflagged = ({ deleted: _deleted, ...r }) => r;
  *                a demo account also every flagged résumé (flagged before R4-11), in one every
  *                sample an older build flagged that nobody edited (below)
  *   listAdd      ids to add to the deletion list (the removals)
+ *   listRemove   listed ids edited where the deletion was never seen: loaded and written, and
+ *                taken off the list (R2-029, below)
  *   handled      the ids of the deletions dealt with — the store forgets this account's entries
  *                of them (afterSync); another account's are left out of the merge and kept
  * A deletion is sent only when the cloud's copy is not newer than the version deleted: one made
@@ -70,6 +72,13 @@ const unflagged = ({ deleted: _deleted, ...r }) => r;
  * edited offline) brings it back — written whole, flag and all — instead of being dropped.
  * Before 53d6a3b no deletion was sent at all: the cloud kept the résumés, the store forgot the
  * deletions, and the next sync brought them back (R4-1).
+ * A listed id is left out, as deleted for good — unless edited where the deletion was never seen
+ * (R2-029): a copy here changed since the cloud last had it (by `lineage`: with no version of it
+ * known, left out as before), or a copy the cloud holds again, written after the deletion removed
+ * it. Until then a page left open wrote its edit back under the listed id, and every device left
+ * it out from then on — that page too at its next reload — while its content stayed in Firestore.
+ * Now it is loaded and written, and comes off the list. A listed copy the cloud still holds that
+ * nothing brings back (a demo account's original) is removed.
  * A sample a demo account's older build flagged (not an original; oldSamples.js) was hidden for
  * good — nothing restores the samples now (V2OWNER-DATA-8). Not edited here since: one nobody
  * edited is removed and listed, as if deleted for good; an edited one is a résumé again — its flag
@@ -83,7 +92,18 @@ export function planInitialSync({ local = [], deletions = [], cloud = [], cloudD
   const revived = new Set(oldSamples.filter((r) => !isUntouchedSample(r)).map((r) => r.id));
   const docs = cloud.filter(hasId).map((r) => (revived.has(r.id) ? unflagged(r) : r));
   const byId = new Map(docs.map((r) => [r.id, r]));
-  const cloudDeletedSet = new Set([...cloudDeleted, ...purged]);
+  // Listed, and edited where the deletion was never seen (R2-029): a copy here this browser never
+  // had from the cloud nor sent it, or one the cloud holds again — the deletion removed it, so a
+  // later write put it back; not a demo account's original, which only a restore writes back
+  // (V2OWNER-DATA-0). That edit wins, as over a deletion made offline (R8-0).
+  const editedAfter = (id) => {
+    const doc = byId.get(id);
+    const mine = localById.get(id);
+    return (doc && !doc.deleted && !(demoAccount && isOriginal(doc)))
+      || Boolean(mine && lineage?.knows(id) && !lineage.isSynced(id, mine.updatedAt));
+  };
+  const listRemove = [...new Set(cloudDeleted)].filter((id) => !purged.includes(id) && editedAfter(id));
+  const cloudDeletedSet = new Set([...cloudDeleted, ...purged].filter((id) => !listRemove.includes(id)));
   const flagged = docs.filter((r) => r.deleted && !editedSince(r)).map((r) => r.id);
   const excluded = new Set([...cloudDeletedSet, ...flagged]);
 
@@ -106,17 +126,20 @@ export function planInitialSync({ local = [], deletions = [], cloud = [], cloudD
   }
   const flags = demoAccount ? unsent.filter((id) => kept.has(id)) : [];
   const marks = flags.filter((id) => !isOriginal(byId.get(id)));
-  const hardDeletes = [
+  // A listed id's copy the cloud still holds, and nothing brings back, is removed with it: until
+  // R2-029 it stayed in Firestore for good, where no device would show it again.
+  const hardDeletes = [...new Set([
     ...unsent.filter((id) => !flags.includes(id)),
     ...(demoAccount ? purged : flagged),
-  ];
+    ...[...cloudDeletedSet].filter((id) => byId.has(id)),
+  ])];
 
   const live = docs.filter((r) => !r.deleted && !excluded.has(r.id));
   const { pulled, forked, copies } = lineage ? sortOut(local.filter(hasId), live, lineage) : { pulled: new Set(), forked: new Set(), copies: [] };
   const merged = mergeResumeLists([...local.filter((r) => !pulled.has(r?.id)), ...copies], docs.filter((r) => !forked.has(r.id)), excluded);
   // `!(>=)`: a copy with no time of its own, on either side, is written.
   const sets = merged.filter((r) => { const c = byId.get(r.id); return !c || c.deleted || revived.has(r.id) || forked.has(r.id) || !(c.updatedAt >= r.updatedAt); });
-  return { merged, sets, flags, marks, hardDeletes, listAdd: hardDeletes, handled };
+  return { merged, sets, flags, marks, hardDeletes, listAdd: hardDeletes, listRemove: listRemove.filter((id) => merged.some((r) => r.id === id)), handled };
 }
 
 /**
@@ -211,10 +234,11 @@ export function queueChanges({ writes, deletes, kept = new Set(), marked = new S
  * cannot resurrect it — an original neither. A demo account never lists an original it deletes
  * (it flags it), so a listed one was deleted for good ("Stop keeping", then Delete), and the flush
  * that took a stale device's kept copy of it off the list brought it back on every device
- * (V2OWNER-DATA-0).
+ * (V2OWNER-DATA-0). `listRemove` the only exception: listed ids written in this flush that were
+ * edited where the deletion was never seen — the flush found no copy in the cloud (R2-029).
  */
-export function planFlush(writes, deletes, { demoAccount = false, kept = new Set(), marked = new Set() } = {}) {
+export function planFlush(writes, deletes, { demoAccount = false, kept = new Set(), marked = new Set(), listRemove = [] } = {}) {
   const flags = demoAccount ? deletes.filter((id) => kept.has(id)) : [];
   const hardDeletes = deletes.filter((id) => !flags.includes(id));
-  return { sets: writes, flags, marks: flags.filter((id) => marked.has(id)), hardDeletes, listAdd: hardDeletes };
+  return { sets: writes, flags, marks: flags.filter((id) => marked.has(id)), hardDeletes, listAdd: hardDeletes, listRemove };
 }
