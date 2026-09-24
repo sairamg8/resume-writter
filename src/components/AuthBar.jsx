@@ -10,7 +10,7 @@ function GoogleIcon() {
     </svg>
   );
 }
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 const clip = (name) => (name.length > 32 ? `${name.slice(0, 31)}…` : name);
 
@@ -25,8 +25,33 @@ function stoppedLabel(held = []) {
   return 'Sync stopped (a large photo?) — saved in this browser';
 }
 
+/** A focus this soon after a pointer press came from that press (a tap or a click), not a keyboard. */
+const PRESS_FOCUS_MS = 1000;
+
+/**
+ * The header's cloud icon — the only place that says what the sync is doing, and that a résumé is
+ * not reaching the cloud (R2-019). A button named by its status (screen readers read it; keyboards
+ * reach it). Its words open on mouse hover, on keyboard focus, and on a tap, Enter or Space; a
+ * second tap, Escape, leaving it, or a tap anywhere else closes them. A tap's emulated hover and
+ * focus are not counted, so one tap opens the words and the next closes them.
+ */
 function SyncDot({ syncStatus, lastSynced, isOnline, heldResumes }) {
-  const [tip, setTip] = useState(false);
+  const [hover, setHover] = useState(false);     // a mouse is over it
+  const [focused, setFocused] = useState(false); // keyboard focus
+  const [pinned, setPinned] = useState(false);   // opened by a tap, or Enter / Space
+  const pointer = useRef(null);                  // the pointer type last over or pressing it
+  const pressedAt = useRef(-Infinity);
+  const rootRef = useRef(null);
+  const open = hover || focused || pinned;
+
+  // A tap anywhere else closes words a tap opened (iOS Safari never focuses a tapped button, so
+  // no blur comes to close them).
+  useEffect(() => {
+    if (!pinned) return undefined;
+    const away = (e) => { if (!rootRef.current?.contains(e.target)) setPinned(false); };
+    document.addEventListener('pointerdown', away);
+    return () => document.removeEventListener('pointerdown', away);
+  }, [pinned]);
 
   let Icon, color, label;
   if (!isOnline) {
@@ -48,14 +73,35 @@ function SyncDot({ syncStatus, lastSynced, isOnline, heldResumes }) {
   }
 
   return (
-    <div className="relative" data-testid="sync-status" onMouseEnter={() => setTip(true)} onMouseLeave={() => setTip(false)}>
-      <Icon
-        size={15}
-        style={{ color }}
-        className={syncStatus === 'syncing' ? 'animate-spin' : ''}
-      />
-      {tip && (
-        <div className="absolute right-0 top-6 bg-gray-800 text-white text-[11px] rounded-lg px-2.5 py-1.5 whitespace-nowrap z-50 shadow-lg">
+    <div className="relative" ref={rootRef}>
+      <button
+        type="button"
+        data-testid="sync-status"
+        aria-label={label}
+        onPointerEnter={(e) => { pointer.current = e.pointerType; }}
+        onPointerDown={(e) => { pointer.current = e.pointerType; pressedAt.current = Date.now(); }}
+        // A touch fires an emulated mouseenter before its click: only a mouse hovers.
+        onMouseEnter={() => { if (pointer.current == null || pointer.current === 'mouse') setHover(true); }}
+        onMouseLeave={() => setHover(false)}
+        onFocus={() => { if (Date.now() - pressedAt.current > PRESS_FOCUS_MS) setFocused(true); }}
+        onBlur={() => { setFocused(false); setPinned(false); }}
+        // A mouse click keeps what its hover shows; a tap, Enter or Space (detail 0) toggles.
+        onClick={(e) => { if (!(e.detail > 0 && pointer.current === 'mouse')) setPinned((p) => !p); }}
+        onKeyDown={(e) => { if (e.key === 'Escape') { setHover(false); setFocused(false); setPinned(false); } }}
+        className="flex p-1 -m-1 rounded-md hover:bg-gray-100 transition-colors"
+      >
+        <Icon
+          size={15}
+          style={{ color }}
+          aria-hidden="true"
+          className={syncStatus === 'syncing' ? 'animate-spin' : ''}
+        />
+      </button>
+      {open && (
+        <div
+          role="tooltip"
+          className="absolute right-0 top-6 w-max max-w-[min(18rem,calc(100vw_-_6rem))] bg-gray-800 text-white text-[11px] leading-snug rounded-lg px-2.5 py-1.5 z-50 shadow-lg"
+        >
           {label}
         </div>
       )}
