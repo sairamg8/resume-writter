@@ -53,7 +53,8 @@ export function PhotoSection({ personal, updatePersonal, toggleFieldVisibility, 
             <button
               onClick={e => { e.stopPropagation(); toggleFieldVisibility('photo'); }}
               className={`p-1 rounded transition-colors ${hidden.has('photo') ? 'text-gray-300 hover:text-gray-400' : 'text-blue-500 hover:text-blue-600'}`}
-              title={hidden.has('photo') ? 'Show photo on resume' : 'Hide photo from resume'}
+              // Hidden, it leaves the cover letter too; a photo uploaded for the letter still prints (R2-092).
+              title={hidden.has('photo') ? 'Show photo on the résumé and cover letter' : 'Hide photo from the résumé and cover letter (a photo uploaded for the letter stays)'}
             >
               {hidden.has('photo') ? <EyeOff size={14} /> : <Eye size={14} />}
             </button>
