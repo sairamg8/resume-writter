@@ -43,8 +43,11 @@ export function NumberRow({ label, value, onChange, min = 1, max = 200, step = 1
   // A value that is not a number (text, true, {}) shows and steps as `min` instead of crashing the
   // editor on toFixed; normalizeResume drops one from saved data (VF2-3.2-NB1-NB1).
   const current = Number.isFinite(value) ? value : min;
+  // A fractional step shows the value to two decimals (at least one): a preset's or a template's
+  // 1.35 and 1.65 Line Height read 1.4 and 1.6 at one, over a page laid out at 1.35 / 1.65 (R2-083).
+  const fraction = current.toFixed(2).replace(/(\.\d)0$/, '$1');
   const typed = useTypedNumber({
-    shown: Number.isInteger(current / step) && step >= 1 ? current + unit : current.toFixed(step < 1 ? 1 : 0) + unit,
+    shown: Number.isInteger(current / step) && step >= 1 ? current + unit : (step < 1 ? fraction : current.toFixed(0)) + unit,
     editText: String(current),
     commit: (str) => {
       const n = parseFloat(str);
