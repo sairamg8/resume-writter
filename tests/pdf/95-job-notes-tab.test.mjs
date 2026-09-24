@@ -89,7 +89,7 @@ it('the stored notes show in the editor, sanitized; a job with none shows it emp
     assert.match(t.view.container.textContent, /^Notes/, 'under its heading');
     const box = t.box();
     assert.equal(box.getAttribute('aria-label'), 'Notes');
-    assert.equal(box.getAttribute('contenteditable'), 'true');
+    assert.equal(dom.reactProps(box).contentEditable, true, 'an editable box');
     assert.deepEqual(tagsIn(box), ['P', 'STRONG', 'UL', 'LI', 'LI']);
     assert.equal(box.textContent, 'Call Ana on MondayPanel of 3Salary: 80k & bonus');
     assert.equal(box.innerHTML, sanitizeRichText(notes));
