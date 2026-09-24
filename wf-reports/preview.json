@@ -1,0 +1,32 @@
+{
+  "cluster": "preview",
+  "branch": "claude/wf-preview",
+  "base": "9c3589a",
+  "rows": [
+    { "id": "R2-106", "outcome": "fixed", "commits": ["623d1cd"], "tests": ["tests/pdf/90-preview-pdf-documents.test.mjs"],
+      "summary": "A render that finishes after the preview unmounted (Cover Letter or Back to dashboard clicked mid-render) stops before opening its pdf.js document, or destroys it; a render that fails after opening its document destroys it; unmount destroys the document on screen.",
+      "remaining": "" },
+    { "id": "R2-107", "outcome": "fixed", "commits": ["69d1123"], "tests": ["tests/pdf/90-preview-newer-render.test.mjs"],
+      "summary": "A finished render is shown when it is newer than the pages on screen, even while a newer change is still waiting out its debounce or building; only a render older than the pages on screen is dropped. Steady typing with short pauses now updates the preview as renders finish.",
+      "remaining": "" },
+    { "id": "R2-170", "outcome": "fixed", "commits": ["b41d4ea", "dad94c7"], "tests": ["tests/pdf/90-preview-canvas-memory.test.mjs"],
+      "summary": "Every canvas that leaves the screen (a newer render, a zoom repaint, unmount) or never reaches it (a stale render, a failed paint, a cancelled or overtaken zoom repaint) is shrunk to 0×0 at once instead of waiting for the garbage collector. Not checked on an iPhone.",
+      "remaining": "" },
+    { "id": "R2-165", "outcome": "fixed", "commits": ["a9814a6", "a972ebd"], "tests": ["tests/pdf/90-preview-mechanics.test.mjs", "tests/pdf/preview-stub.mjs"],
+      "summary": "The preview's mechanics now have gate tests that run all the way to pages on screen, using a stand-in pdf.js (PdfPreview._setPdfjsForTest) and builds the test finishes itself. They cover the typing debounce with pages up, the stale-render drop, the zoom repaint (and none while hidden), the error alert with its message, Retry clearing it, and a failure superseded by a newer change.",
+      "remaining": "" },
+    { "id": "R3-005", "outcome": "fixed", "commits": ["8376bbe", "d6655a4", "80e481c"], "tests": ["tests/unit/ui-overlays.unit.mjs", "tests/unit/ui-dom-harness.mjs"],
+      "summary": "The file was killed because it ran out of memory. A test failed on a real bug: a closed Dialog did not give focus back to its opener (confirmed in Chromium, where focus ended on <body>). assert.equal's report on two fake-dom nodes then inspected the whole DOM and React's fibers until the heap ran out. useFocusTrap now hands focus back after the commit, and only when focus was left in a closing trap or nowhere; the tests compare nodes with assertSame; ConfirmProvider clears its hand-off timer on unmount. All three suites run again: 15 tests in about 4 s.",
+      "remaining": "" }
+  ],
+  "review": {
+    "issues": [
+      "The first focus-trap fix handed focus back even when the same commit had put it somewhere on purpose (an autoFocus field appearing as a dialog closed; nested dialogs closing together).",
+      "A zoom repaint that finished at the same moment as a newer render was never shown and never shrunk to 0×0.",
+      "Left as is, not a regression: while the preview is hidden with a change pending, a build already in flight still sets status 'ready' (from before this branch). A dev-only HMR edit of PdfPreview.jsx now blanks the preview until the next edit."
+    ],
+    "fixedByReviewer": ["80e481c", "dad94c7"]
+  },
+  "baselineFailures": [],
+  "notes": "A real a11y bug beyond the row was fixed under R3-005: at HEAD before this branch, every kit Dialog (and the phone's Sidebar drawer, which shares useFocusTrap) left focus on <body> when it closed. Three ui-overlays assertions were test bugs and were corrected: the scroll lock accepts fake-dom's undefined for an unset style, the toast replace check counts toasts, and node comparisons use assertSame. fake-dom.mjs gained replaceChildren. PdfPreview exports _setPdfjsForTest for tests. Commit a9814a6 carries the protocol file's Claude-Session trailer, not this session's (it could not be amended without a force-push)."
+}
