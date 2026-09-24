@@ -9,7 +9,7 @@ import { setup, teardown, loadModule, resume } from './harness.mjs';
 import { fakeWindow, mount, elements, reactProps } from './fake-dom.mjs';
 
 export const DEBOUNCE_MS = 350; // PdfPreview's
-export const COLUMN_PX = 1000;  // the scroll column's width: the page fits it at 816 px (Letter)
+export const COLUMN_PX = 1000;  // the scroll column's width: wide enough for a page at its own width
 export const wait = (ms) => new Promise((r) => { setTimeout(r, ms); });
 /** Let a finished build run through pdf.js, the paint and React's commit. */
 export const settle = () => wait(25);
