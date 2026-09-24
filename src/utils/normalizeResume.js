@@ -152,6 +152,29 @@ function withReadableHeaderColors(r, below) {
  */
 const withHeaderColorsSeen = (r) => withReadableHeaderColors(r, HEADER_SEEN);
 
+/**
+ * v12 (R2-043): before 0617247 the Smart Cover Letter Generator stored placeholders for a résumé with
+ * no name or title — 'Candidate' as the letter's own Signature Name, 'Professional' as its
+ * Designation, and "Application for … — Candidate" as its subject — and they kept printing after the
+ * user filled in their name. They are cleared: the signature then follows the résumé's name and title
+ * ('' is unset, letterSignature), and the subject drops the "— Candidate". 'Candidate' names no one;
+ * 'Professional' is cleared only where the generator wrote it — beside a 'Candidate', or over its body
+ * for a résumé with no title ("… as a Professional, …") — so a Designation the user typed stays.
+ */
+function withoutGeneratorPlaceholders(r) {
+  const cl = r.coverLetter;
+  if (!cl || typeof cl !== 'object') return r;
+  const next = { ...cl };
+  const generatedName = cl.signatureName === 'Candidate';
+  if (generatedName) next.signatureName = '';
+  if (cl.signatureDesignation === 'Professional' && (generatedName || (typeof cl.body === 'string' && cl.body.includes('as a Professional')))) {
+    next.signatureDesignation = '';
+  }
+  const subject = typeof cl.subject === 'string' && /^(Application for .+) — Candidate$/.exec(cl.subject);
+  if (subject) next.subject = subject[1];
+  return Object.keys(next).some((k) => next[k] !== cl[k]) ? { ...r, coverLetter: next } : r;
+}
+
 /** One-time migrations: [the version that introduced it, (résumé, its own version) → résumé]. */
 const MIGRATIONS = [
   [7, (r) => (r.coverLetter && !editedSince(r, SPACING_AND_RECIPIENT_LIVE) ? { ...r, coverLetter: withoutDefaultRecipientTitle(r.coverLetter) } : r)],
@@ -159,6 +182,7 @@ const MIGRATIONS = [
   [9, withModernTextAtTop],
   [10, withResumeHiddenOnLetter],
   [11, withHeaderColorsSeen],
+  [12, withoutGeneratorPlaceholders],
 ];
 
 /**
