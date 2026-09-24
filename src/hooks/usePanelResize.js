@@ -1,11 +1,23 @@
 import { useState, useRef } from 'react';
 
+const KEY = 'cpwtcv-panel-width';
+const DEFAULT_WIDTH = 360;
+const clamp = (w) => Math.min(640, Math.max(240, w));
+
+/**
+ * The width last remembered, clamped to 240–640; 360 when there is none, it is not a number, or the
+ * browser refuses storage (site data blocked throws SecurityError from getItem) — never a crash.
+ */
+function storedWidth() {
+  let stored = null;
+  try { stored = localStorage.getItem(KEY); } catch { /* storage blocked: the default */ }
+  const width = Number.parseInt(stored, 10);
+  return Number.isFinite(width) ? clamp(width) : DEFAULT_WIDTH;
+}
+
 /** The editor panel's width in split mode: dragged by its right edge, remembered in localStorage. */
 export function usePanelResize() {
-  const [panelWidth, setPanelWidth] = useState(() => {
-    const stored = localStorage.getItem('cpwtcv-panel-width');
-    return stored ? Math.min(640, Math.max(240, parseInt(stored, 10))) : 360;
-  });
+  const [panelWidth, setPanelWidth] = useState(storedWidth);
   const dragState = useRef(null);
 
   function onDragHandleMouseDown(e) {
@@ -17,21 +29,22 @@ export function usePanelResize() {
     function onMouseMove(e) {
       if (!dragState.current) return;
       const delta = e.clientX - dragState.current.startX;
-      const next = Math.min(640, Math.max(240, dragState.current.startW + delta));
-      setPanelWidth(next);
+      setPanelWidth(clamp(dragState.current.startW + delta));
     }
 
     function onMouseUp(e) {
-      if (dragState.current) {
-        const delta = e.clientX - dragState.current.startX;
-        const final = Math.min(640, Math.max(240, dragState.current.startW + delta));
-        localStorage.setItem('cpwtcv-panel-width', String(final));
-      }
+      const drag = dragState.current;
+      // Let go of the drag first: remembering the width is best-effort, and a full storage
+      // (QuotaExceededError) must not leave the panel following the mouse with text selection off.
       dragState.current = null;
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
       window.removeEventListener('mousemove', onMouseMove);
       window.removeEventListener('mouseup', onMouseUp);
+      if (!drag) return;
+      const final = clamp(drag.startW + (e.clientX - drag.startX));
+      setPanelWidth(final);
+      try { localStorage.setItem(KEY, String(final)); } catch { /* storage full or blocked: this visit only */ }
     }
 
     window.addEventListener('mousemove', onMouseMove);
