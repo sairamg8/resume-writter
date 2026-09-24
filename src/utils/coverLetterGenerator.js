@@ -83,6 +83,15 @@ export function extractResumeHighlights(resume) {
  * Where the most recent job was, as a clause: "as Lead at Acme", "as Lead", "at Acme", or '' — so
  * a job with a blank role or company never prints "as  at Acme" or "at ," (R2-103).
  */
+/**
+ * "a" or "an" for the word `next`, by its first sound: "an Engineer", "an IT Manager", but "a UX
+ * Designer", "a University Lecturer", "a European …" — a vowel letter read with a consonant sound.
+ */
+function article(next) {
+  if (/^U[A-Z]/.test(next) || /^(uni|use|usu|uti|eu|one\b|once)/i.test(next)) return 'a';
+  return /^[aeiou]/i.test(next) ? 'an' : 'a';
+}
+
 function roleClause({ role, company }) {
   return [role && `as ${role}`, company && `at ${company}`].filter(Boolean).join(' ');
 }
@@ -113,7 +122,7 @@ export function generateCoverLetter({
   // else no clause at all — never the old "at prior roles" (R2-103).
   const mostRecent = roleClause(highlights.topExperiences[0] || { role: title, company: '' });
   // "as a Staff Engineer" in the opening, only when the résumé has a title.
-  const asTitle = title ? ` as a ${title}` : '';
+  const asTitle = title ? ` as ${article(title)} ${title}` : '';
 
   const subject = [targetRole ? `Application for ${targetRole}` : 'Application', highlights.candidateName].filter(Boolean).join(' — ');
   let paragraphs = [];

@@ -63,3 +63,17 @@ test('generateCoverLetter: the paragraphs print apart — one blank line between
     assert.deepEqual(blank, [false, true, false, true, false, true, false, true, false], archetype);
   }
 });
+
+// "as a Engineer": the opening's article did not follow the title's first sound.
+test('generateCoverLetter: the opening says "an" before a title that starts with a vowel, "a" otherwise', () => {
+  for (const archetype of ARCHETYPES) {
+    const opening = (title) => plain(generateCoverLetter({ resume: resume({ name: 'Jane Doe', title }), archetype }));
+    for (const title of ['Engineer', 'Analyst', 'engineer', 'Operations Lead', 'Illustrator', 'IT Manager', 'Underwriter', 'Urban Planner']) {
+      assert.ok(opening(title).includes(`an ${title}`) && !opening(title).includes(`a ${title}`), `${archetype}: ${title}`);
+    }
+    // A vowel letter with a consonant sound takes "a": "a UX Designer", "a University Lecturer", "a European …".
+    for (const title of ['Designer', 'Staff Engineer', 'Product Manager', 'UX Designer', 'University Lecturer', 'User Researcher', 'European Sales Lead', 'One-Person Studio Owner', 'Unity Developer']) {
+      assert.ok(opening(title).includes(`as a ${title}`), `${archetype}: ${title}`);
+    }
+  }
+});
