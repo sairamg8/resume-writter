@@ -1,0 +1,43 @@
+{
+  "cluster": "jobs",
+  "branch": "claude/wf-jobs",
+  "base": "9c3589a",
+  "rows": [
+    { "id": "R2-035", "outcome": "already-fixed", "commits": ["671e064"], "tests": ["tests/unit/normalize-job.unit.mjs"],
+      "summary": "Fixed in Lane C (J-03): the job form's Notes use the same RichTextEditor as the Notes tab, and plain notes are converted once to editor HTML (notesToHtml / completeJob), so text is neither mangled nor shown as tags.", "remaining": "" },
+    { "id": "R2-036", "outcome": "already-fixed", "commits": ["7e49d33"], "tests": ["tests/unit/job-csv.unit.mjs"],
+      "summary": "Fixed in Lane C (J-08): the Notes column is richTextToPlain(notesToHtml(notes)): plain text with its line breaks, no tags or entities.", "remaining": "" },
+    { "id": "R2-038", "outcome": "fixed", "commits": ["addbb40", "79afdf1"], "tests": ["tests/pdf/81-job-tracker-ui.test.mjs"],
+      "summary": "The job kanban drags with MouseSensor (8px) plus TouchSensor (press-and-hold 200ms), as the boards do, so a finger drags a card to another column while a swipe still scrolls.", "remaining": "" },
+    { "id": "R2-039", "outcome": "fixed", "commits": ["addbb40", "79afdf1"], "tests": ["tests/pdf/81-job-tracker-ui.test.mjs"],
+      "summary": "Enter or Space on a focused kanban card or board card opens it (keys on a link or button inside are left to them); each list row's company is a button Tab reaches; both DndContexts announce their own instructions instead of dnd-kit's false space-bar/arrow-key drag; hover-only card controls show while focused.",
+      "remaining": "No keyboard way to move a board card or list (the list grip does nothing from the keyboard); job cards move via the job page's status." },
+    { "id": "R2-040", "outcome": "already-fixed", "commits": ["7f4a3f8"], "tests": ["tests/pdf/67-job-form-save.test.mjs", "tests/unit/job-edits.unit.mjs"],
+      "summary": "Fixed in Lane C (J-02, J-16): Save writes only the fields the form changed (formPatch), so another tab's to-dos, history and status stay; a job deleted meanwhile keeps the typed input and offers 'Save as a new job'.", "remaining": "" },
+    { "id": "R2-042", "outcome": "already-fixed", "commits": ["7e49d33"], "tests": ["tests/unit/job-csv.unit.mjs"],
+      "summary": "Fixed in Lane C (J-09): the CSV starts with a UTF-8 BOM, so Excel reads – · ₹ as written.", "remaining": "" },
+    { "id": "R2-075", "outcome": "already-fixed", "commits": ["7f4a3f8"], "tests": ["tests/pdf/67-job-form-save.test.mjs"],
+      "summary": "Fixed in Lane C (J-16): /jobs/:id/edit with an unknown id shows 'Job not found' instead of a form; a job deleted while its form is open keeps the input and offers to save it as new.", "remaining": "" },
+    { "id": "R2-099", "outcome": "fixed", "commits": ["addbb40", "79afdf1"], "tests": ["tests/pdf/81-job-tracker-ui.test.mjs"],
+      "summary": "The kanban card's 'Open job posting' icon stops its click from reaching the card, so it opens the posting only; it and the delete button start no drag.", "remaining": "" },
+    { "id": "R2-100", "outcome": "already-fixed", "commits": ["9e6102d"], "tests": ["tests/pdf/68-job-overview.test.mjs"],
+      "summary": "Fixed in Lane C (J-21): a job linked to a deleted résumé reads 'Résumé deleted' in Overview and the form, and the Open button shows only for a résumé that exists.", "remaining": "" },
+    { "id": "R2-101", "outcome": "already-fixed", "commits": ["9e6102d"], "tests": ["tests/unit/job-query.unit.mjs", "tests/pdf/81-job-tracker-ui.test.mjs"],
+      "summary": "Fixed in Lane C (J-20): historyLabels marks '→ reopened' only when a pipeline status follows a closed one; On Hold then Rejected is not reopened (now also pinned on the rendered StatusHistory).", "remaining": "" },
+    { "id": "R2-102", "outcome": "already-fixed", "commits": ["7e49d33"], "tests": ["tests/unit/job-csv.unit.mjs"],
+      "summary": "Fixed in Lane C (J-17): a cell starting with = + - @ tab or CR gets a leading apostrophe (FORMULA_START), so it opens as text.", "remaining": "" },
+    { "id": "R2-156", "outcome": "fixed", "commits": ["addbb40", "79afdf1"], "tests": ["tests/pdf/81-job-tracker-ui.test.mjs"],
+      "summary": "The kanban (columns, tasks, notes text, open, delete, keys, sensors), list (open button, sorting), status history, Tasks tab and the job page's tabs are tested on the real components over fake-dom.",
+      "remaining": "Pipeline, InterviewStageSelector, TodoItem and JobTracker's filters have no fake-dom test of their own yet (Pipeline and Field partly via 68-job-overview)." }
+  ],
+  "review": {
+    "issues": [
+      "Hover-only delete button / posting link on kanban cards and list rows were reached by Tab while invisible",
+      "Board instructions ('Press Enter to open a card') were also read on list drag handles, where Enter does nothing",
+      "R2-038 / R2-099 tests were weaker than they could be"
+    ],
+    "fixedByReviewer": ["79afdf1: focus-within / focus-visible shows the controls; board instructions reworded 'On a card, press Enter to open it'; tests strengthened (no PointerSensor, touch delay 200, delete starts no drag, focus and wording)"]
+  },
+  "baselineFailures": [],
+  "notes": "src/pages/Board.jsx and src/pages/Boards.jsx cannot render at this base: they read v1 `board.lists` / `list.cards` while useBoardStore now holds v2 boards (columns, issues) — for the boards cluster. Hence the board-page instruction test checks Board.jsx's source. Touched src/pages/Board.jsx (one DndContext prop) and src/components/board/BoardCard.jsx (onKeyDown) for R2-039 — small merge-conflict risk with the boards cluster. New minor finding: ListView's sort headers (<th onClick>) are not keyboard-operable. Commit trailers use this session's URL (session_01TxTRPE1CXJu54unwVCNutZ) rather than the one in the protocol."
+}
