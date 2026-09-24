@@ -108,6 +108,7 @@ export function PdfPreview({ render, input, zoom = 1, textId, title = 'Résumé'
   const built = useRef(null); // { input, render, retry } of the last build that started
   const wasActive = useRef(active);
   const docRef = useRef(null);
+  const mounted = useRef(true);
   const rootRef = useRef(null);
   const box = previewBox(input?.settings || input);
   const [available, setAvailable] = useState(() => box.widthPx + GUTTER_PX);
@@ -134,11 +135,14 @@ export function PdfPreview({ render, input, zoom = 1, textId, title = 'Résumé'
     const delay = last && !revealed && !retried ? DEBOUNCE_MS : 0;
     const timer = setTimeout(async () => {
       built.current = { input, render, retry };
+      let pdf = null;
+      // Unmounted meanwhile (Cover Letter clicked mid-render), or overtaken by newer pages on screen.
+      const unwanted = () => !mounted.current || gen < shownGen.current;
       try {
         const [blob, pdfjs] = await Promise.all([render(input), loadPdfjs()]);
-        if (gen < shownGen.current) return;
+        if (unwanted()) return;
         const data = new Uint8Array(await blob.arrayBuffer());
-        const pdf = await pdfjs.lib.getDocument({ data, worker: pdfjs.worker, isEvalSupported: false }).promise;
+        pdf = await pdfjs.lib.getDocument({ data, worker: pdfjs.worker, isEvalSupported: false }).promise;
         const pages = [];
         for (let i = 1; i <= pdf.numPages; i += 1) {
           const page = await pdf.getPage(i);
@@ -147,7 +151,7 @@ export function PdfPreview({ render, input, zoom = 1, textId, title = 'Résumé'
         }
         const width = widthRef.current;
         const painted = await paint(pages, width);
-        if (gen < shownGen.current) { release(pdf); return; }
+        if (unwanted()) { release(pdf); return; }
         release(docRef.current);
         docRef.current = pdf;
         shownGen.current = gen;
@@ -157,7 +161,8 @@ export function PdfPreview({ render, input, zoom = 1, textId, title = 'Résumé'
         setError(null);
         setStatus('ready');
       } catch (e) {
-        if (gen !== generation.current) return;
+        release(pdf); // opened, then a page or the paint failed: nothing else holds it
+        if (!mounted.current || gen !== generation.current) return;
         console.error('Preview render failed:', e);
         setError(e);
         setStatus('error');
@@ -177,7 +182,14 @@ export function PdfPreview({ render, input, zoom = 1, textId, title = 'Résumé'
     return () => { cancelled = true; };
   }, [active, cssWidth, view]);
 
-  useEffect(() => () => { release(docRef.current); }, []);
+  useEffect(() => {
+    mounted.current = true; // again after StrictMode's trial unmount
+    return () => {
+      mounted.current = false;
+      release(docRef.current);
+      docRef.current = null;
+    };
+  }, []);
 
   // Track the scroll column's width so the page always fits it at 100 %.
   useLayoutEffect(() => {
