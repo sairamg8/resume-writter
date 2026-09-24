@@ -2,7 +2,7 @@ import { View } from '@react-pdf/renderer';
 import { Text } from './PdfText';
 import { safeHref, hasRichText } from '@/utils/richText';
 import { contactHref } from '@/utils/contacts';
-import { dateRange } from '@/utils/dates';
+import { dateRange, endDateOf } from '@/utils/dates';
 import { SIDEBAR_COLUMN_TYPES, upperSectionTitles } from '@/constants/templates';
 import { CSS_PX_TO_PT, DEFAULT_ITEM_GAP_PX, MM_TO_PT, tracking } from './pdfUnits';
 import { breakToFit, fitsOnLine, textWidth } from './pdfMeasure';
@@ -137,8 +137,8 @@ export function SideEducation({ section, sectionGap, itemGap, shades = NAVY, tit
             {item.fieldOfStudy && <Text style={{ fontSize: 9, color: shades.label, lineHeight: 1.2 }} hyphenationCallback={textBreaks}>{item.fieldOfStudy}</Text>}
             {showLoc && item.location ? <Text style={{ fontSize: 9, color: shades.meta, lineHeight: 1.2 }} hyphenationCallback={textBreaks}>{item.location}</Text> : null}
             {item.gpa && <Text style={{ fontSize: 9, color: shades.meta, lineHeight: 1.2 }} hyphenationCallback={textBreaks}>GPA: {item.gpa}</Text>}
-            {showDates && dateRange(item.startDate, item.endDate, settings) ? (
-              <Text style={{ fontSize: 9, color: shades.meta, lineHeight: 1.2 }}>{dateRange(item.startDate, item.endDate, settings)}</Text>
+            {showDates && dateRange(item.startDate, endDateOf(item, settings), settings) ? (
+              <Text style={{ fontSize: 9, color: shades.meta, lineHeight: 1.2 }}>{dateRange(item.startDate, endDateOf(item, settings), settings)}</Text>
             ) : null}
             {/* Coursework, honours …: printed like the main column's, in the column's light text. */}
             {hasRichText(item.description) ? <PdfRichText html={item.description} style={{ fontSize: 9, color: shades.value, lineHeight: 1.3, marginTop: 2 }} breaks={listBreaks} /> : null}

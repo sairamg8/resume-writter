@@ -109,16 +109,17 @@ function link(url, label) {
  * its description (unless hidden) and legacy bullets.
  */
 function itemLines(type, item, f, body, settings) {
+  // "Present" for a current job, education, project or volunteering role (R2-150).
+  const end = (item.hiddenFields || []).includes('endDate') ? '' : (item.current ? presentLabel(settings) : f('endDate'));
   switch (type) {
     case 'experience':
     case 'volunteering': {
       const org = type === 'volunteering' ? (f('org') || f('organization')) : f('company');
-      const end = (item.hiddenFields || []).includes('endDate') ? '' : (item.current ? presentLabel(settings) : f('endDate'));
       return entryLines(heading(f('role'), org), [italic(joined([dateRange(f('startDate'), end, settings), f('location')], ' | '))], body());
     }
     case 'education': {
       const gpa = f('gpa') ? `GPA: ${f('gpa')}` : '';
-      const dates = dateRange(f('startDate'), f('endDate'), settings);
+      const dates = dateRange(f('startDate'), end, settings);
       return entryLines(heading(joined([f('degree'), f('fieldOfStudy')], ', '), f('institution')),
         [italic(joined([dates, f('location'), gpa], ' | '))], body());
     }
@@ -127,7 +128,7 @@ function itemLines(type, item, f, body, settings) {
       const href = safeHref(url);
       const name = f('name');
       const title = href ? `[${name || url}](${href})` : name;
-      const meta = [f('technologies') ? `Technologies: ${f('technologies')}` : '', dateRange(f('startDate'), f('endDate'), settings), href ? '' : url];
+      const meta = [f('technologies') ? `Technologies: ${f('technologies')}` : '', dateRange(f('startDate'), end, settings), href ? '' : url];
       return entryLines(title, [italic(joined(meta, ' | '))], body());
     }
     case 'certifications': {

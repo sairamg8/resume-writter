@@ -10,7 +10,7 @@ import { sectionHeadingLook } from '@/templates/pdf/shared/sectionHeadingLook';
 import { resolveTemplateSettings } from '@/templates/pdf/shared/templateSettings';
 import { getDateColor, getEffectiveSpacing } from '@/templates/pdf/shared/PdfSections';
 import { hasRichText } from '@/utils/richText';
-import { dateRange, formatDate, presentLabel } from '@/utils/dates';
+import { dateRange, endDateOf, formatDate, presentLabel } from '@/utils/dates';
 import { skillCategory, skillGroup, skillSeparator } from '@/utils/skills';
 
 /**
@@ -121,7 +121,7 @@ export function buildEducation(section, accentHex, settings, centered, dateHex, 
       first(item.institution || degree, look),
       ...(item.institution && degree ? [second(` — ${degree}`, look)] : []),
       ...(item.gpa ? [second(` · GPA: ${item.gpa}`, look)] : []),
-    ], s.showDates !== false ? dateRange(item.startDate, item.endDate, settings) : '', dateHex, centered, look, place(location, look)), ...body(item, centered, look)];
+    ], s.showDates !== false ? dateRange(item.startDate, endDateOf(item, settings), settings) : '', dateHex, centered, look, place(location, look)), ...body(item, centered, look)];
   })];
 }
 
@@ -159,7 +159,7 @@ export function buildProjects(section, accentHex, settings, centered, dateHex, l
       first(item.name, look),
       ...(item.technologies ? [second(` · ${item.technologies}`, look, look.ink.tech)] : []),
       ...(item.url ? [second(' · ', look, accentHex), linked(item.url, item.url, { size: look.entry, color: accentHex })] : []),
-    ], s.showDates !== false ? dateRange(item.startDate, item.endDate, settings) : '', dateHex, centered, look),
+    ], s.showDates !== false ? dateRange(item.startDate, endDateOf(item, settings), settings) : '', dateHex, centered, look),
     ...body(item, centered, look),
   ])];
 }
@@ -207,7 +207,7 @@ export function buildVolunteering(section, accentHex, settings, centered, dateHe
     return [titleLine([
       first(item.role || item.org, look),
       ...(item.role && item.org ? [second(` — ${item.org}`, look)] : []),
-    ], s.showDates !== false ? dateRange(item.startDate, item.endDate, settings) : '', dateHex, centered, look, place(location, look)), ...body(item, centered, look)];
+    ], s.showDates !== false ? dateRange(item.startDate, endDateOf(item, settings), settings) : '', dateHex, centered, look, place(location, look)), ...body(item, centered, look)];
   })];
 }
 

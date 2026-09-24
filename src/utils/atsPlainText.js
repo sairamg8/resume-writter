@@ -57,10 +57,11 @@ const joined = (parts, sep) => parts.filter(Boolean).join(sep);
  */
 function entryLines(type, item, f, hidden) {
   const body = () => bodyLines(item, hidden);
+  // "Present" for a current job, education, project or volunteering role (R2-150).
+  const end = hidden.has('endDate') ? '' : (item.current ? 'Present' : item.endDate);
   switch (type) {
     case 'experience':
     case 'volunteering': {
-      const end = hidden.has('endDate') ? '' : (item.current ? 'Present' : item.endDate);
       return [
         joined([f('role'), f('company') || f('org')], ' - '),
         joined([joined([f('startDate'), end], ' - '), f('location')], ' | '),
@@ -70,7 +71,7 @@ function entryLines(type, item, f, hidden) {
     case 'education':
       return [
         joined([f('degree'), f('fieldOfStudy') ? `in ${f('fieldOfStudy')}` : '', f('institution')], ' - '),
-        joined([joined([f('startDate'), f('endDate')], ' - '), f('location'), f('gpa') ? `GPA: ${f('gpa')}` : ''], ' | '),
+        joined([joined([f('startDate'), end], ' - '), f('location'), f('gpa') ? `GPA: ${f('gpa')}` : ''], ' | '),
         ...body(), '',
       ];
     case 'skills':
@@ -82,7 +83,7 @@ function entryLines(type, item, f, hidden) {
     case 'projects':
       return [
         joined([f('name'), f('technologies') ? `(${f('technologies')})` : ''], ' '),
-        joined([f('startDate'), f('endDate')], ' - '),
+        joined([f('startDate'), end], ' - '),
         f('url') ? `Link: ${f('url')}` : '',
         ...body(), '',
       ];
