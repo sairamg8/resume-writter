@@ -108,7 +108,12 @@ export const HEADER_CONTROLS = {
       const v = valueOf(r, 'setting.contactLayout');
       const lines = contactLines(r.snap, CONTACTS);
       const n = lines.flat().length;
-      const cols = new Set(lines.flat().map((t) => Math.round(t.x / 3))).size;
+      // A centred header centres each value in its cell (PdfContactRow): its columns are where the values'
+      // centres gather (Academic's own header is centred, T8); else where they start.
+      const xs = lines.flat().map((t) => t.x + t.w / 2).sort((a, b) => a - b);
+      const cols = r.state?.settings?.headerAlign === 'center'
+        ? (xs.length ? 1 + xs.slice(1).filter((x, i) => x - xs[i] > 3).length : 0)
+        : new Set(lines.flat().map((t) => Math.round(t.x / 3))).size;
       const shape = lines.map((l) => l.length).join('+');
       if (v === 'single') return lines.length === n ? [] : [`single: ${n} contacts on ${lines.length} lines (${shape})`];
       if (v === '2grid') return cols === 2 && lines.length >= 2 ? [] : [`2grid: ${cols} columns, lines ${shape}`];

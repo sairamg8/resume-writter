@@ -166,7 +166,8 @@ export function applyWrites(r, writes, sectionId = null) {
       for (const k of w.keys) delete settings[k];
       out = { ...out, settings };
     } else if (w.kind === 'template') {
-      out = { ...out, template: w.value, settings: colors.headerColorsOnSwitch({ ...out.settings, ...templates.templateStyleDefaults(w.value) }, out.template, w.value) };
+      // As useResumeStore.setTemplate: the style the template brings, and what the old one brought leaving with it (T8).
+      out = { ...out, template: w.value, settings: colors.headerColorsOnSwitch(data.styleOnSwitch(out.settings, out.template, w.value), out.template, w.value) };
     } else if (w.kind === 'resetAll') {
       out = { ...out, settings: data.settingsAfterReset(out) };
     } else if (w.kind === 'personal') {
