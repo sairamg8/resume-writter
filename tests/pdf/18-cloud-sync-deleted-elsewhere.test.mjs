@@ -98,6 +98,25 @@ describe('an edit the deleting device never saw is kept (R2-029)', () => {
     assert.deepEqual([cloudShape(cloud), listed(cloud)], [['resume_x | EDITED OFFLINE', 'resume_y | v1'], []]);
   });
 
+  it('an offline edit too large for a document is held: its id stays listed until the copy goes, and the account says so', async () => {
+    const net = { on: true };
+    const devices = await deletedOnPhone({ net });
+    const { cloud, laptop } = devices;
+    net.on = false;
+    laptop.sync.start(USER);
+    await edit(laptop, X, { summary: 'S'.repeat(1_100_000) }, 20, { flush: false });
+    await phoneDeletes(devices);
+    net.on = true;
+    const reloaded = page(cloud, stored(laptop));
+    await signIn(reloaded);
+    assert.deepEqual([Object.keys(cloud.resumes('u')), listed(cloud)], [[Y], [X]], 'taken off the list without its copy');
+    assert.deepEqual(reloaded.seen.account.cloudDeleted, [X], 'the account read as if the list no longer held it');
+    assert.equal(reloaded.seen.status, 'stopped');
+    // Made smaller: the edit goes, and comes off the list with it.
+    await edit(reloaded, X, { summary: 'EDITED OFFLINE' }, 21);
+    assert.deepEqual([cloudShape(cloud), listed(cloud)], [['resume_x | EDITED OFFLINE', 'resume_y | v1'], []]);
+  });
+
   it('a listed résumé an older build wrote back after the deletion is shown again, not kept out of sight in Firestore', async () => {
     // The state R2-029 left behind: the stale page's edit written under the listed id.
     const cloud = fakeFirestore({ [resumePath('u', X)]: cv(X, 20, { summary: 'LAPTOP EDIT' }), [resumePath('u', Y)]: cv(Y), [listPath('u')]: { ids: [X] } });

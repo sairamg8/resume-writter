@@ -251,8 +251,9 @@ export function createCloudSync({
       s.initialSyncDone = true;
       // A listed id was deleted for good, whatever copy of it a stale device wrote back since
       // (V2OWNER-DATA-0): it is none of the account's originals. One the plan took off the list,
-      // edited where the deletion was never seen, is no longer listed (R2-029).
-      const listed = new Set(cloud.deleted.filter((id) => !plan.listRemove.includes(id)));
+      // edited where the deletion was never seen, is no longer listed (R2-029) — unless its copy was
+      // held back: it stays listed until that copy goes.
+      const listed = new Set(cloud.deleted.filter((id) => !listRemove.includes(id) || held.has(id)));
       const cloudOriginals = cloud.docs.filter((r) => isOriginal(r) && !listed.has(r.id)).map(({ deleted: _deleted, ...r }) => r);
       setAccount({ uid: user.uid, cloud: true, cloudOriginals, cloudDeleted: [...listed] });
       s.attempts = 0;

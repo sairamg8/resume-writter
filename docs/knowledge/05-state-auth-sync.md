@@ -89,7 +89,7 @@ equality only, never by clock. The store keeps the cloud's versions it last knew
 | First sync: the copy here is one the cloud had, the cloud's is newer | the cloud's loads, whatever the clocks say |
 | First sync: changed on both sides (an offline edit, even across a reload) | both kept, as above |
 | The tab is shown again ≥ 10 s after the account was read | the account is read again, so the next edit starts from the other device's copy |
-| Deleted on another device, edited here where the deletion was never seen (a page left open, or offline; R2-029) | the edit wins: written under its id, taken off the deletion list, back on every device |
+| Deleted on another device, edited here where the deletion was never seen (a page left open, or offline; R2-029) | the edit wins: written under its id, taken off the deletion list, back on every device. A copy the cloud had, written again (a demo restore racing a deletion for good), is no edit: it stays listed (V2OWNER-DATA-0); one held back (too large) stays listed until it goes |
 | First sync: a listed id the cloud holds again (an older build wrote it back after the deletion) | loaded and taken off the list; a demo account's original there (a restore's copy) is removed from the cloud instead |
 | First sync: a listed id, the copy here unchanged since the cloud had it, or of no known version | left out, deleted, as before |
 

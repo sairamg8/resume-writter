@@ -96,10 +96,14 @@ export function createQueue({ s, io, store, report, held, timers, flushDelay, cl
       if (!current()) return;
       const { writes, copies, deletes, back } = checkFlush({ writes: sendable, deletes: queuedDeletes, docs, lineage: s.lineage });
       s.lineage.synced(docs);
-      // A résumé the cloud had and has no longer may have been deleted on another device: this
-      // edit was made where that deletion was never seen, so it wins and comes off the deletion
-      // list (R2-029). Until then it was written under the listed id, and every device left it out.
-      const missing = writes.filter((r) => s.lineage.knows(r.id) && !docs.some((d) => d.id === r.id)).map((r) => r.id);
+      // A résumé the cloud had and has no longer may have been deleted on another device: an edit
+      // of it made here — a version the cloud never had — was made where that deletion was never
+      // seen, so it wins and comes off the deletion list (R2-029). Until then it was written under
+      // the listed id, and every device left it out. A copy the cloud had, written again (a demo
+      // restore racing a deletion for good), is no edit: it stays listed (V2OWNER-DATA-0).
+      const missing = writes
+        .filter((r) => s.lineage.knows(r.id) && !s.lineage.isSynced(r.id, r.updatedAt) && !docs.some((d) => d.id === r.id))
+        .map((r) => r.id);
       const listed = missing.length ? await withDeadline(io.readDeleted(user.uid)) : [];
       if (!current()) return;
       // In a demo account a deleted original is flagged, not removed: its last copy stays in the
