@@ -47,7 +47,11 @@ async function openTab(state) {
   return {
     store: () => current,
     storage,
-    saved: () => JSON.parse(storage.getItem(KEY)),
+    /** What storage holds once this tab's held save is written (leaving the page writes it, R2-077). */
+    saved: () => {
+      view.act(() => { view.window.dispatchEvent({ type: 'pagehide' }); });
+      return JSON.parse(storage.getItem(KEY));
+    },
     act: async (fn) => { view.act(fn); await settle(); },
     /** Another tab saves `state`: storage holds it, and this tab is told, as a browser tells it. */
     async otherTabSaves(state) {
@@ -97,6 +101,20 @@ describe('two tabs of the app', () => {
       await tab.act(() => tab.store().updatePersonal('name', 'B edited'));
       assert.deepEqual(tab.saved().resumes.map((r) => r.id), ['resume_b']);
       assert.deepEqual(tab.saved().deletedIds, ['resume_a']);
+    } finally { await tab.close(); }
+  });
+
+  it('two saves of the other tab while this tab’s save is held: the second is taken, and this tab’s edit kept (R2-077)', async () => {
+    const tab = await openTab(storeOf([cv('resume_a'), cv('resume_b')]));
+    try {
+      // Right after the first save: this edit is held a moment (R2-077), storage has not seen it.
+      await tab.act(() => tab.store().updatePersonal('name', 'Edited in tab 1'));
+      await tab.otherTabSaves(storeOf([cv('resume_a'), cv('resume_b', 3, { name: 'B once' })]));
+      await tab.otherTabSaves(storeOf([cv('resume_a'), cv('resume_b', 4, { name: 'B twice' })]));
+      assert.equal(tab.store().appState.resumes[1].name, 'B twice', 'the other tab’s second save was undone by its first');
+      const saved = tab.saved();
+      assert.deepEqual(saved.resumes.map((r) => r.name), ['resume_a', 'B twice']);
+      assert.equal(saved.resumes[0].personal.name, 'Edited in tab 1');
     } finally { await tab.close(); }
   });
 

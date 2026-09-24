@@ -13,24 +13,23 @@ import { useEditorExports } from '@/hooks/useEditorExports';
 import { usePanelResize } from '@/hooks/usePanelResize';
 import { useIsMobile } from '@/hooks/useMediaQuery';
 import { useOpenResume } from '@/hooks/useOpenResume';
+import { useRename } from '@/hooks/useRename';
+import { useEditorTab } from '@/hooks/useEditorTab';
 
 export function Editor({ store, auth, sync }) {
   const { id } = useParams();
   const navigate = useNavigate();
-  const searchParams = new URLSearchParams(window.location.hash.split('?')[1] || '');
-  const initialTab = searchParams.get('tab') || 'resume';
 
   useOpenResume(store, id);
 
   const resume = store.activeResume;
   const isMobile = useIsMobile(768);
   const [mobileTab, setMobileTab] = useState('editor'); // 'editor' | 'preview'
-  const [activeTab, setActiveTab] = useState(initialTab);
+  const [activeTab, setActiveTab] = useEditorTab();
   // What is open on the Résumé tab lives here, so it survives a trip to Design or the letter.
   const [personalOpen, setPersonalOpen] = useState(true);
   const [addSectionOpen, setAddSectionOpen] = useState(false);
-  const [resumeName, setResumeName] = useState(resume?.name || '');
-  const [editingName, setEditingName] = useState(false);
+  const rename = useRename(resume, (name) => store.renameResume(resume.id, name));
   const [layoutMode, setLayoutMode] = useState('split');
   const [allExpanded, setAllExpanded] = useState(true);
   const [forceOpenKey, setForceOpenKey] = useState(0);
@@ -39,7 +38,7 @@ export function Editor({ store, auth, sync }) {
   const exportMenu = useEditorExports({
     resume, activeTab, authUser: auth?.user, importResume: store.importResume, navigate,
   });
-  const { panelWidth, onDragHandleMouseDown } = usePanelResize();
+  const { panelWidth, separatorProps } = usePanelResize();
 
   function toggleAllSections() {
     const next = !allExpanded;
@@ -68,14 +67,6 @@ export function Editor({ store, auth, sync }) {
     return () => { cancelled = true; };
   }, [resume?.template, resume?.settings?.font, resume?.settings?.customFont]);
 
-  useEffect(() => { setResumeName(resume?.name || ''); }, [resume?.id]);
-
-  function commitName() {
-    setEditingName(false);
-    if (resumeName.trim()) store.renameResume(resume.id, resumeName.trim());
-    else setResumeName(resume.name);
-  }
-
   if (!resume) return null;
 
   return (
@@ -91,7 +82,7 @@ export function Editor({ store, auth, sync }) {
       >
         <EditorHeader
           resume={resume}
-          rename={{ resumeName, setResumeName, editingName, setEditingName, commitName }}
+          rename={rename}
           layoutMode={layoutMode}
           setLayoutMode={setLayoutMode}
           exportMenu={exportMenu}
@@ -138,7 +129,13 @@ export function Editor({ store, auth, sync }) {
       </div>
 
       {!isMobile && layoutMode === 'split' && (
-        <div onMouseDown={onDragHandleMouseDown} title="Drag to resize panel" className="w-1 shrink-0 bg-gray-200 hover:bg-blue-400 active:bg-blue-500 cursor-col-resize transition-colors z-10" />
+        // touch-none: a finger drags the handle instead of panning the page. The ::before widens what
+        // a finger can hit, out over the preview only: the editor panel's scrollbar lies just left of it (R2-144).
+        <div
+          {...separatorProps}
+          title="Drag to resize panel"
+          className="relative w-1 shrink-0 bg-gray-200 hover:bg-blue-400 active:bg-blue-500 focus-visible:bg-blue-500 focus-visible:outline-none cursor-col-resize touch-none transition-colors z-10 before:absolute before:inset-y-0 before:left-0 before:-right-3 before:content-['']"
+        />
       )}
 
       <EditorPreviewPane

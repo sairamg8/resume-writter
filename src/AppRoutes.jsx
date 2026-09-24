@@ -1,5 +1,5 @@
-import { useMemo } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { useLayoutEffect, useMemo } from 'react';
+import { Routes, Route, Navigate, useLocation, useNavigationType } from 'react-router-dom';
 import { Dashboard } from '@/pages/Dashboard';
 import { Editor } from '@/pages/Editor';
 import { JobTracker } from '@/pages/JobTracker';
@@ -28,6 +28,25 @@ export function WorkspaceRoute() {
 }
 
 /**
+ * Around every page: a new path gets a fresh ErrorBoundary — one page's crash used to stay on
+ * screen through Back and every link until a reload (R2-072) — and opens at the top of the window,
+ * which HashRouter never resets: the Privacy Policy opened from the dashboard's footer showed its
+ * end (R2-073). Back and Forward leave the scroll to the browser, and a change of the search alone
+ * (the editor's ?tab=) is not a new page. The workspace pages scroll their own <main>
+ * (useScrollMemory).
+ */
+function RouteFrame({ children }) {
+  const { pathname } = useLocation();
+  const navigationType = useNavigationType();
+  useLayoutEffect(() => {
+    if (navigationType !== 'POP') window.scrollTo(0, 0);
+    // Only a new path moves the scroll; the way we came is read with it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
+  return <ErrorBoundary resetKey={pathname}>{children}</ErrorBoundary>;
+}
+
+/**
  * What each page gets from the app's state (App.jsx): the résumé store, the account, the cloud
  * sync and the demo restore (`seed`) — the dashboard says when the originals wait for the
  * account's cloud (seed.waiting). tests/pdf/18-cloud-sync-waiting-notice.test.mjs renders it.
@@ -38,7 +57,7 @@ export function WorkspaceRoute() {
  */
 export function AppRoutes({ store, auth, sync, seed }) {
   return (
-    <ErrorBoundary>
+    <RouteFrame>
       <Routes>
         <Route path="/"           element={<Dashboard store={store} auth={auth} sync={sync} originalsWaiting={seed.waiting} />} />
         <Route path="/resume/:id" element={<Editor    store={store} auth={auth} sync={sync} />} />
@@ -57,6 +76,6 @@ export function AppRoutes({ store, auth, sync, seed }) {
         <Route path="/privacy"    element={<PrivacyPage />} />
         <Route path="*"           element={<Navigate to="/" replace />} />
       </Routes>
-    </ErrorBoundary>
+    </RouteFrame>
   );
 }

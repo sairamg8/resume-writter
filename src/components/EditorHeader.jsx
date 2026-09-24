@@ -8,11 +8,10 @@ import { notSavedMessage } from '@/utils/storageBackup';
 /**
  * The editor panel's header: back to the dashboard, the résumé's name (click to rename), the
  * layout toggle in editor-only mode, the Export menu and the account.
- * The rename state is the Editor's (`rename`), as are the export handlers (`exportMenu`).
+ * The rename state is the Editor's (`rename`, useRename), as are the export handlers (`exportMenu`).
  */
 export function EditorHeader({ resume, rename, layoutMode, setLayoutMode, exportMenu, auth, sync, isMobile = false }) {
   const navigate = useNavigate();
-  const { resumeName, setResumeName, editingName, setEditingName, commitName } = rename;
 
   return (
     <div className="px-3 sm:px-4 py-2.5 sm:py-3 border-b border-gray-200 flex items-center gap-1.5 sm:gap-2 bg-white">
@@ -20,21 +19,21 @@ export function EditorHeader({ resume, rename, layoutMode, setLayoutMode, export
         <ArrowLeft size={15} />
       </button>
       <div className="flex-1 min-w-0 pr-1">
-        {editingName ? (
+        {rename.editing ? (
           <input
             autoFocus
             aria-label="Résumé name"
-            value={resumeName}
-            onChange={e => setResumeName(e.target.value)}
-            onBlur={commitName}
+            value={rename.draft}
+            onChange={e => rename.setDraft(e.target.value)}
+            onBlur={rename.commit}
             onKeyDown={e => {
-              if (e.key === 'Enter') commitName();
-              if (e.key === 'Escape') { setEditingName(false); setResumeName(resume.name); }
+              if (e.key === 'Enter') rename.commit();
+              if (e.key === 'Escape') rename.cancel();
             }}
             className="w-full text-xs sm:text-sm font-semibold border-b border-blue-400 outline-none bg-transparent text-gray-800"
           />
         ) : (
-          <button onClick={() => setEditingName(true)} title="Rename resume" className="text-xs sm:text-sm font-semibold text-gray-800 hover:text-gray-600 truncate block w-full text-left">
+          <button onClick={rename.start} title="Rename resume" className="text-xs sm:text-sm font-semibold text-gray-800 hover:text-gray-600 truncate block w-full text-left">
             {resume.name}
           </button>
         )}

@@ -1,13 +1,14 @@
 import { useNavigate } from 'react-router-dom';
+import { useBackOrHome } from '@/hooks/useBackOrHome';
 import { FileText, ArrowLeft } from 'lucide-react';
 
 export default function PrivacyPage() {
-  const navigate = useNavigate();
+  const goBack = useBackOrHome();
   return (
     <div className="min-h-screen bg-[#f5f3ef]">
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-3xl mx-auto px-6 py-4 flex items-center gap-3">
-          <button onClick={() => navigate(-1)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors">
+          <button onClick={goBack} aria-label="Back" title="Back" className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors">
             <ArrowLeft size={16} />
           </button>
           <div className="flex items-center gap-2">

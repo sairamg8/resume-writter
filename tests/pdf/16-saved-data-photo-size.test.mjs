@@ -150,6 +150,8 @@ async function openApp(resumes) {
 /** Let the copies be made and the store save them: until `done()`, or `turns` turns have gone. */
 async function until(done, turns = 400) {
   for (let i = 0; i < turns && !done(); i += 1) await new Promise((r) => { setImmediate(r); });
+  // The store writes a change that follows another within a moment a short while later (R2-077).
+  for (const deadline = Date.now() + 1500; !done() && Date.now() < deadline;) await new Promise((r) => { setTimeout(r, 10); });
   for (let i = 0; i < 20; i += 1) await new Promise((r) => { setImmediate(r); }); // and anything after it
 }
 

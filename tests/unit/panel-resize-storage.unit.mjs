@@ -6,7 +6,8 @@
 //      the drag, so after the mouse was released the panel kept following it and text selection
 //      stayed off page-wide until a reload;
 //  (c) a stored value that is not a number gave the panel a width of NaN.
-// Mounted with react-dom/client over tests/pdf/fake-dom.mjs, whose window keeps its listeners.
+// Mounted with react-dom/client over tests/pdf/fake-dom.mjs, whose window keeps its listeners. The
+// drag is made of pointer events since R2-144 (a finger drags the handle too).
 import { describe, it, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { Component, createElement } from 'react';
@@ -46,7 +47,7 @@ class Boundary extends Component {
   render() { return this.state.error ? createElement('p', null, `crashed: ${this.state.error.message}`) : this.props.children; }
 }
 
-/** The hook in a component, as the Editor uses it; `hook()` → its latest { panelWidth, onDragHandleMouseDown }. */
+/** The hook in a component, as the Editor uses it; `hook()` → its latest { panelWidth, separatorProps }. */
 function mountHook() {
   let latest = null;
   function Probe() {
@@ -61,7 +62,7 @@ function mountHook() {
   } finally { console.error = quiet; }
 }
 
-/** Fire a mouse event at the window as a browser does: a listener that throws is reported, not rethrown. */
+/** Fire a pointer event at the window as a browser does: a listener that throws is reported, not rethrown. */
 function fire(view, type, clientX) {
   view.act(() => {
     try { view.window.dispatchEvent({ type, clientX }); } catch { /* the browser logs it and moves on */ }
@@ -70,13 +71,13 @@ function fire(view, type, clientX) {
 
 /** Drag the handle from x=500 by `dx`, then release there; returns the page's state after release. */
 function drag(view, hook, dx) {
-  view.act(() => hook().onDragHandleMouseDown({ preventDefault() {}, clientX: 500 }));
-  fire(view, 'mousemove', 500 + dx);
-  fire(view, 'mouseup', 500 + dx);
+  view.act(() => hook().separatorProps.onPointerDown({ preventDefault() {}, clientX: 500, pointerType: 'mouse', button: 0 }));
+  fire(view, 'pointermove', 500 + dx);
+  fire(view, 'pointerup', 500 + dx);
   const { style } = view.document.body;
   return {
     width: hook().panelWidth,
-    listeners: `mousemove ${view.window.listeners('mousemove')} · mouseup ${view.window.listeners('mouseup')}`,
+    listeners: `pointermove ${view.window.listeners('pointermove')} · pointerup ${view.window.listeners('pointerup')}`,
     body: `cursor "${style.cursor}" · userSelect "${style.userSelect}"`,
   };
 }
@@ -98,9 +99,9 @@ describe('the editor panel width survives a browser that refuses storage (R2-015
     try {
       const after = drag(view, hook, -120);
       assert.equal(after.width, 240);
-      assert.equal(after.listeners, 'mousemove 0 · mouseup 0', 'the drag\'s listeners outlive the release');
+      assert.equal(after.listeners, 'pointermove 0 · pointerup 0', 'the drag\'s listeners outlive the release');
       assert.equal(after.body, 'cursor "" · userSelect ""', 'the page stays in drag mode (no text selection)');
-      fire(view, 'mousemove', 900);
+      fire(view, 'pointermove', 900);
       assert.equal(hook().panelWidth, 240, 'a plain mouse move after the drag still resizes the panel');
     } finally { await view.unmount(); }
   });

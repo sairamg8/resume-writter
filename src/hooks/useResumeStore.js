@@ -13,8 +13,14 @@ import { isOriginal, withKeep } from '@/utils/demoSeed';
 import { useSmallerPhotos } from '@/hooks/useSmallerPhotos';
 import { keepUnsaved } from '@/utils/unsavedJobs';
 import { templateId } from '@/constants/templates';
+import { coalescedWriter } from '@/utils/coalescedWrite';
 
 const STORAGE_KEY = 'cpwtcv_v1';
+// A save is the whole store — every résumé, photos as base64 — stringified and written on the main
+// thread. A change after a quiet spell is written at once; the keystrokes that follow are written
+// together, this long after the last (and at least every SAVE_MAX_WAIT_MS while typing goes on).
+const SAVE_WAIT_MS = 300;
+const SAVE_MAX_WAIT_MS = 2000;
 
 /** First run: no résumés. The dashboard shows its "Create your first resume" state. */
 function emptyStore() {
@@ -98,24 +104,49 @@ export function useAppStore() {
   const stored = useRef(loaded.state.resumes);
   const taken = useRef(null);
 
-  useEffect(() => {
-    const other = taken.current;
-    taken.current = null;
-    // Only another tab's save was taken: not written back, or two tabs would answer each other's
-    // saves for ever (each keeps its own open résumé, so their stores never read the same).
-    if (other && appState.resumes === other.resumes && appState.deletedIds === other.deletedIds) {
-      stored.current = appState.resumes;
-      return;
-    }
+  // Saves are coalesced (R2-077): every keystroke used to stringify and write the whole store.
+  // Until a held save is written, storage has not seen its changes, so another tab's save keeps
+  // them (stored stays the list last written).
+  const [saver] = useState(() => coalescedWriter((state) => {
     try {
       // When storage is full, old backups make room before the change is refused (R4-8).
-      setItemWithRoom(STORAGE_KEY, JSON.stringify({ ...appState, dataVersion: DATA_VERSION }));
-      stored.current = appState.resumes;
+      setItemWithRoom(STORAGE_KEY, JSON.stringify({ ...state, dataVersion: DATA_VERSION }));
+      stored.current = state.resumes;
       setPersistError(null);
     } catch (e) {
       setPersistError(e);
     }
-  }, [appState]);
+  }, { wait: SAVE_WAIT_MS, maxWait: SAVE_MAX_WAIT_MS }));
+
+  useEffect(() => {
+    const other = taken.current;
+    taken.current = null;
+    // Only another tab's save was taken: not written back, or two tabs would answer each other's
+    // saves for ever (each keeps its own open résumé, so their stores never read the same). A save
+    // of this tab's still held (the open résumé, say) is written as the state is now.
+    if (other && appState.resumes === other.resumes && appState.deletedIds === other.deletedIds) {
+      stored.current = appState.resumes;
+      if (saver.pending()) saver.schedule(appState);
+      return;
+    }
+    saver.schedule(appState);
+  }, [appState, saver]);
+
+  // Nothing typed is lost: leaving or hiding the page, or the store going away, writes what is
+  // held at once.
+  useEffect(() => {
+    const flush = () => saver.flush();
+    const onVisibility = () => { if (document.hidden || document.visibilityState === 'hidden') flush(); };
+    window.addEventListener('pagehide', flush);
+    window.addEventListener('beforeunload', flush);
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      window.removeEventListener('pagehide', flush);
+      window.removeEventListener('beforeunload', flush);
+      document.removeEventListener('visibilitychange', onVisibility);
+      flush();
+    };
+  }, [saver]);
 
   // Another tab saved the store: take its save (withOtherTabsSave). A value that cannot be read in
   // full is not taken over this tab's — its own load backs such a value up (readStore).
@@ -125,11 +156,19 @@ export function useAppStore() {
       const { state: incoming, unreadable } = readStore();
       if (unreadable !== null) return;
       taken.current = incoming;
-      setAppState((prev) => withOtherTabsSave(prev, incoming, stored.current));
+      // Storage holds the other tab's save from now on, whether or not a save of this tab's is held
+      // (R2-077): a second save of the other tab before that one is written is weighed against this
+      // one, not against this tab's last write — which counted every résumé taken from the first as
+      // changed here and undid the second. The held save is not written until the state it would
+      // write has taken this one in (the effect above schedules it again).
+      const knew = stored.current;
+      stored.current = incoming.resumes;
+      saver.hold();
+      setAppState((prev) => withOtherTabsSave(prev, incoming, knew));
     }
     window.addEventListener('storage', onStorage);
     return () => window.removeEventListener('storage', onStorage);
-  }, []);
+  }, [saver]);
 
   // A photo an older build stored at camera size is made what an upload of it is now, once (ONB-10).
   useSmallerPhotos(appState.resumes, setAppState);
@@ -193,11 +232,11 @@ export function useAppStore() {
     }));
   }
 
+  /** The same name is not an edit: no new updatedAt, no save, nothing to sync (R2-084). */
   function renameResume(id, name) {
-    setAppState(prev => ({
-      ...prev,
-      resumes: prev.resumes.map(r => r.id === id ? { ...r, name, updatedAt: Date.now() } : r),
-    }));
+    setAppState(prev => (prev.resumes.some(r => r.id === id && r.name !== name)
+      ? { ...prev, resumes: prev.resumes.map(r => r.id === id ? { ...r, name, updatedAt: Date.now() } : r) }
+      : prev));
   }
 
   // ── Personal Info & Settings ───────────────────────────────────────
