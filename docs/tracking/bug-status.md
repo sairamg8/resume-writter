@@ -146,7 +146,7 @@ existing test caught any of these; several unit tests asserted the same wrong da
 Found by Phase 1 of `templates-ui-plan.md` (a read-only UI audit, 4 agents + a live-app pass). The full
 write-up — these six plus four lower-value rows (pixel-identical dashboard cards, the .docx dropping
 Modern's and Sidebar's header band, the starter modal's untrue "ATS-optimized" claim, `ResumeCard`
-bypassing `templateLabel()`) — is in the `templates-ui-audit` worktree's `templates-ui-bugs.md`.
+bypassing `templateLabel()`) — is in [templates-ui-bugs.md](templates-ui-bugs.md) (merged from the `templates-ui-audit` worktree, 2026-09-24).
 
 | ID | Area | Severity | Status | Commit | Tests | Bug — where | Verified |
 |---|---|---|---|---|---|---|---|

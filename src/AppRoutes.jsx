@@ -31,7 +31,7 @@ export function WorkspaceRoute() {
  *
  * The Job Tracker and Boards pages sit inside the workspace shell (WorkspaceRoute); the résumé and
  * legal pages keep their own full-page layouts. /work and a project's backlog and settings show a
- * placeholder in the shell until their own pages replace them (boards-jobs-plan/01, Routes);
+ * placeholder in the shell until their own pages replace them (docs/tracking/boards-jobs-plan/01, Routes);
  * tests/unit/ui-shell.unit.mjs checks which paths are inside the shell.
  */
 export function AppRoutes({ store, auth, sync, seed }) {

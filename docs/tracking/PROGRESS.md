@@ -4,7 +4,7 @@
 **Phase:** React-PDF fidelity **merged** to `master` → next: visual QA + open-source packaging  
 **Overall maturity:** High for resume/cover letter/export; medium for open-source packaging  
 **Active checkout:** `/home/sairam/Documents/flowcv` · branch `master`  
-**Resume guide:** [HANDOFF.md](./HANDOFF.md)
+**Resume guide:** [HANDOFF.md](HANDOFF.md)
 
 ---
 
@@ -59,7 +59,7 @@
 
 ## Suggested next milestones (not started unless noted)
 
-See [10-open-source-goals.md](./10-open-source-goals.md). Priority order for sharing:
+See [10-open-source-goals.md](../knowledge/10-open-source-goals.md). Priority order for sharing:
 
 1. Initialize git + `.gitignore` + real `LICENSE`
 2. Fix README accuracy (structure, job routes, scripts, templates)

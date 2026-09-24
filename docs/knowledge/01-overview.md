@@ -24,7 +24,7 @@ Primary differentiators for developers/users:
 
 ## Tech stack summary
 
-See [AGENT_MEMORY.md](./AGENT_MEMORY.md) for the locked table. High level:
+See [AGENT_MEMORY.md](../tracking/AGENT_MEMORY.md) for the locked table. High level:
 
 - SPA with client-side hash routing (deployable on any static host)
 - No custom backend server — Firebase is optional BaaS

@@ -1,5 +1,5 @@
 // The workspace UI kit (Boards + Job Tracker) — import from '@/components/ui'. Each component's
-// contract is in the JSDoc above it; the design rules are boards-jobs-plan/01-design-and-kit.md.
+// contract is in the JSDoc above it; the design rules are docs/tracking/boards-jobs-plan/01-design-and-kit.md.
 export { Avatar } from './Avatar.jsx';
 export { Badge, TONE_CLASSES } from './Badge.jsx';
 export { Button, buttonClass, FOCUS_RING } from './Button.jsx';

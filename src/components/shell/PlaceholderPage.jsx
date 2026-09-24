@@ -7,7 +7,7 @@ import { useWorkspace } from './workspaceContext.js';
 /**
  * A workspace page that is not built yet: its header, and one calm note saying what will be here
  * and where to go meanwhile. The routes exist now so the sidebar and a project's tabs lead
- * somewhere real; BOARDS-UI-B replaces each with its page (boards-jobs-plan/01, Routes).
+ * somewhere real; BOARDS-UI-B replaces each with its page (docs/tracking/boards-jobs-plan/01, Routes).
  */
 export function PlaceholderPage({ title, icon, heading, description, breadcrumbs, tabs, action }) {
   return (

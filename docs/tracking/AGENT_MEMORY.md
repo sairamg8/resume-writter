@@ -2,7 +2,7 @@
 
 Short-form project memory for AI/human continuity. Details live in numbered docs.
 
-> **Session resume:** also read [`HANDOFF.md`](./HANDOFF.md) before coding.
+> **Session resume:** also read [`HANDOFF.md`](HANDOFF.md) before coding.
 
 ## Identity
 

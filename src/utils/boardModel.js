@@ -4,7 +4,7 @@
 // recurring issue repeats by. Pure: its imports have none of their own (ids.js, the constants),
 // so Node's test runner loads it as it is (tests/unit/board-model.unit.mjs).
 //
-// The shapes (data version 2) — see boards-jobs-plan/02-boards.md:
+// The shapes (data version 2) — see docs/tracking/boards-jobs-plan/02-boards.md:
 //   Board  { id, key, title, description, color, starred, mode: 'kanban'|'scrum', columns, labels,
 //            sprints, issues (ARRAY ORDER IS THE RANK), nextNumber, hideDoneAfterDays, createdAt,
 //            updatedAt, dataVersion: 2 }

@@ -62,6 +62,9 @@ flowcv/
 │       ├── resume.js
 │       ├── wordExport*.js
 │       └── brandIcons.jsx
+├── docs/
+│   ├── knowledge/           # how the app works (this folder)
+│   └── tracking/            # every tracker, plan, audit and session log — see its README
 ├── tests/                   # Playwright
 ├── firestore.rules
 ├── index.html
@@ -70,7 +73,6 @@ flowcv/
 ├── package-lock.json
 ├── playwright.config.js
 ├── README.md
-├── TODO_RESOLVE_CONFLICTS.md
 ├── vite-plugin-owner-resume.js  # the owner's private résumé on the dev server only
 └── vite.config.js
 ```
