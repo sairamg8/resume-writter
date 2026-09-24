@@ -1,7 +1,8 @@
-import { decodeEntities } from './richText.js';
+import { decodeEntities, hasRichText, parseRichText } from './richText.js';
 import { contactItems } from './contacts.js';
+import { skillGroup } from './skills.js';
 import { atsRating, hasHeaderControls, templateId, templateLabel, TEMPLATE_PICKER } from '../constants/templates.js';
-import { TEMPLATE_SECTION_DEFAULTS } from '../templates/pdf/shared/templateSectionDefaults.js';
+import { TEMPLATE_SECTION_DEFAULTS, resolveSection } from '../templates/pdf/shared/templateSectionDefaults.js';
 
 // The ATS plain-text export lives in its own module; the ATS tab and Export menu import it from here.
 export { generateAtsPlainText } from './atsPlainText.js';
@@ -221,13 +222,25 @@ const shownField = (p, key) => ((Array.isArray(p?.hiddenFields) && p.hiddenField
 const hiddenByUser = (p, key) => !shownField(p, key) && Boolean(String(p?.[key] || '').trim());
 
 /**
+ * Rich text (the summary, a description) as the words it prints: parseRichText, the parse the PDF
+ * and Word print from, so no tag, list marker or entity is read as a word, and a cleared editor
+ * ('<p><br></p>') reads as nothing (R2-020).
+ */
+const printedText = (html) => parseRichText(html).map((b) => b.runs.map((r) => r.text).join('')).join('\n');
+
+/** The fields Section Options → Show dates takes off an entry, and the types Show location applies to. */
+const DATE_FIELDS = ['startDate', 'endDate', 'date', 'expiry'];
+const LOCATION_TYPES = new Set(['experience', 'education', 'volunteering']);
+
+/**
  * An entry as it prints: each field hidden with the eye beside it (`item.hiddenFields`: Company, Job
  * Title, Location, dates, Description, a skill group's title or skills) blanked, and a hidden End
  * Date is no end — not "Present" — as the PDF and Word print it. The corpus and the score read
- * entries through this, as they read the personal fields through shownField (R2-033).
+ * entries through this, as they read the personal fields through shownField (R2-033). `off`: the
+ * fields its section's options take off every entry (sectionOff).
  */
-function printedItem(item) {
-  const hidden = Array.isArray(item?.hiddenFields) ? item.hiddenFields : [];
+function printedItem(item, off = []) {
+  const hidden = [...(Array.isArray(item?.hiddenFields) ? item.hiddenFields : []), ...off];
   if (!hidden.length) return item;
   const out = { ...item };
   for (const key of hidden) out[key] = '';
@@ -235,10 +248,29 @@ function printedItem(item) {
   return out;
 }
 
-/** A section's shown entries, as they print (printedItem). */
-const shownItems = (s) => (Array.isArray(s?.items) ? s.items : [])
-  .filter((item) => item && typeof item === 'object' && item.visible !== false)
-  .map(printedItem);
+/** Whether Section Options → Show dates is off on `s`, as the PDF and Word resolve it on `template`. */
+const datesOff = (s, template) => resolveSection(s, template).settings.showDates === false;
+
+/**
+ * The fields a section's options take off all its entries on `template`: Show dates off prints no
+ * dates, nor "Present", on any template, and Show location off no location on a job, a degree or a
+ * volunteer role — in the PDF and in Word (R2-020).
+ */
+function sectionOff(s, template) {
+  const { showLocation } = resolveSection(s, template).settings;
+  return [
+    ...(datesOff(s, template) ? DATE_FIELDS : []),
+    ...(showLocation === false && LOCATION_TYPES.has(s.type) ? ['location'] : []),
+  ];
+}
+
+/** A section's shown entries, as they print on `template` (printedItem, sectionOff). */
+function shownItems(s, template) {
+  const off = sectionOff(s, template);
+  return (Array.isArray(s?.items) ? s.items : [])
+    .filter((item) => item && typeof item === 'object' && item.visible !== false)
+    .map((item) => printedItem(item, off));
+}
 
 /**
  * Extracts searchable text corpus from an entire resume object — what it prints: no hidden entry,
@@ -253,10 +285,11 @@ export function extractResumeCorpus(resume) {
   if (shownField(p, 'summary')) parts.push(p.summary);
 
   const sections = Array.isArray(resume.sections) ? resume.sections : [];
+  const template = templateId(resume.template);
   for (const s of sections) {
     if (s.visible === false) continue;
     if (s.title) parts.push(s.title);
-    for (const item of shownItems(s)) {
+    for (const item of shownItems(s, template)) {
       if (!item || typeof item !== 'object') continue;
       // Experience / Volunteering
       if (item.company) parts.push(item.company);
@@ -588,8 +621,8 @@ export function analyzeAtsScore(resume, jobDescriptionText = '') {
     });
   }
 
-  // Summary / Objective check (3 pts)
-  const summaryWords = String(shown('summary') || '').trim().split(/\s+/).filter(Boolean);
+  // Summary / Objective check (3 pts) — its words as they print, not its markup (R2-020)
+  const summaryWords = printedText(shown('summary')).split(/\s+/).filter(Boolean);
   if (summaryWords.length >= 25 && summaryWords.length <= 150) {
     contactPts += 3;
     results.categories.contact.items.push({
@@ -608,7 +641,7 @@ export function analyzeAtsScore(resume, jobDescriptionText = '') {
       id: 'summary', status: 'warn', text: 'Brief summary',
       detail: 'Expand your summary to 2-3 impactful sentences highlighting your core value.',
     });
-  } else if (hiddenByUser(p, 'summary')) {
+  } else if (hiddenByUser(p, 'summary') && hasRichText(p.summary)) {
     results.categories.contact.items.push({
       id: 'summary', status: 'warn', text: 'Professional Summary is hidden on the résumé',
       detail: `A strong summary helps parsers index your seniority and primary domain immediately. ${HIDDEN_DETAIL}`,
@@ -694,7 +727,10 @@ export function analyzeAtsScore(resume, jobDescriptionText = '') {
   // ── 3. Work Experience & Action Verbs (25 pts) ─────────────────────
   let expPts = 0;
   const expSections = visibleSections.filter(s => s.type === 'experience');
-  const allExpItems = expSections.flatMap(shownItems);
+  const allExpItems = expSections.flatMap(s => shownItems(s, currentTemplate));
+  // "…" names of the sections whose Show dates is off: their entries print no dates (R2-020).
+  const datesOffTitles = (secs) => secs.filter(s => datesOff(s, currentTemplate))
+    .map(s => `"${String(s.title || '').trim() || ATS_STANDARD_SECTIONS[s.type]?.canonical}"`).join(', ');
 
   if (allExpItems.length === 0) {
     results.categories.experience.items.push({
@@ -728,9 +764,13 @@ export function analyzeAtsScore(resume, jobDescriptionText = '') {
       });
     } else {
       expPts += 2;
+      const off = datesOffTitles(expSections);
       results.categories.experience.items.push({
-        id: 'exp_dates', status: 'warn', text: 'Missing employment dates on some roles',
-        detail: 'Parsers use employment dates to calculate total years of experience.',
+        id: 'exp_dates', status: 'warn',
+        text: off ? 'Employment dates are not printed (Show dates is off)' : 'Missing employment dates on some roles',
+        detail: off
+          ? `Section Options → Show dates is off on ${off}, so the PDF and Word print no dates for those roles. Parsers use employment dates to calculate total years of experience: turn Show dates on.`
+          : 'Parsers use employment dates to calculate total years of experience.',
       });
     }
 
@@ -848,7 +888,7 @@ export function analyzeAtsScore(resume, jobDescriptionText = '') {
   // ── 4. Education & Credentials (15 pts) ───────────────────────────
   let eduPts = 0;
   const eduSections = visibleSections.filter(s => s.type === 'education');
-  const allEduItems = eduSections.flatMap(shownItems);
+  const allEduItems = eduSections.flatMap(s => shownItems(s, currentTemplate));
 
   if (allEduItems.length === 0) {
     results.categories.education.items.push({
@@ -898,9 +938,13 @@ export function analyzeAtsScore(resume, jobDescriptionText = '') {
       });
     } else {
       eduPts += 2;
+      const off = datesOffTitles(eduSections);
       results.categories.education.items.push({
-        id: 'edu_dates', status: 'warn', text: 'Missing graduation year',
-        detail: 'Specify the year of graduation or expected graduation.',
+        id: 'edu_dates', status: 'warn',
+        text: off ? 'Graduation year is not printed (Show dates is off)' : 'Missing graduation year',
+        detail: off
+          ? `Section Options → Show dates is off on ${off}, so the PDF and Word print no year for those degrees: turn Show dates on.`
+          : 'Specify the year of graduation or expected graduation.',
       });
     }
   }
@@ -910,14 +954,14 @@ export function analyzeAtsScore(resume, jobDescriptionText = '') {
   // ── 5. Skills & Keyword Density (10 pts) ──────────────────────────
   let skillsPts = 0;
   const skillSections = visibleSections.filter(s => s.type === 'skills');
-  const allSkillItems = skillSections.flatMap(shownItems);
+  // Each group as every export reads it (skillGroup): skills stored as a list (imported data) are
+  // its skills too — reading them as a string threw, and the ATS Check tab went down (R2-020).
+  const allSkillItems = skillSections.flatMap(s => shownItems(s, currentTemplate)).map(skillGroup);
 
   // Count individual skills
   const skillsSet = new Set();
   for (const item of allSkillItems) {
-    if (item.skills) {
-      item.skills.split(/[,;\n•|]+/).map(s => s.trim()).filter(Boolean).forEach(s => skillsSet.add(s.toLowerCase()));
-    }
+    item.skills.split(/[,;\n•|]+/).map(s => s.trim()).filter(Boolean).forEach(s => skillsSet.add(s.toLowerCase()));
   }
 
   if (skillsSet.size >= 8) {
@@ -940,7 +984,7 @@ export function analyzeAtsScore(resume, jobDescriptionText = '') {
   }
 
   // Skills categorized (3 pts)
-  const hasCategories = allSkillItems.some(i => i.category && i.category.trim());
+  const hasCategories = allSkillItems.some(i => i.category);
   if (hasCategories) {
     skillsPts += 3;
     results.categories.skills.items.push({

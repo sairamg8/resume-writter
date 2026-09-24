@@ -12,7 +12,7 @@
 //
 // Run on GitHub, never locally (the owner's rule): wip/ciprobe.sh <name> 'node --test tests/unit/ats-printed-score.unit.mjs'
 // Written fail-first by LANE-2 for R2-020 and committed with the failing cases marked todo (2026-09-24);
-// the fix removes each `todo`.
+// the fix (atsChecker's sectionOff, printedText and skillGroup reads) made them live.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { analyzeAtsScore } from '../../src/utils/atsChecker.js';
@@ -50,7 +50,7 @@ test('Show dates on: every role and degree has its dates (the guard)', () => {
   assert.equal(item(sample(), 'education', 'edu_dates').status, 'pass');
 });
 
-test('Experience with Show dates off prints no dates, so its roles score as undated — and the item says why', { todo: 'R2-020 is open — these fail until the ATS score reads what the PDF prints (CI run 35970356735: 5 fail, 2 pass)' }, () => {
+test('Experience with Show dates off prints no dates, so its roles score as undated — and the item says why', () => {
   for (const template of TEMPLATE_IDS) {
     const r = sample({ template, exp: { showDates: false } });
     const got = item(r, 'experience', 'exp_dates');
@@ -61,7 +61,7 @@ test('Experience with Show dates off prints no dates, so its roles score as unda
   }
 });
 
-test('Education with Show dates off prints no graduation year, so it scores as missing', { todo: 'R2-020 is open — these fail until the ATS score reads what the PDF prints (CI run 35970356735: 5 fail, 2 pass)' }, () => {
+test('Education with Show dates off prints no graduation year, so it scores as missing', () => {
   for (const template of TEMPLATE_IDS) {
     const got = item(sample({ template, edu: { showDates: false } }), 'education', 'edu_dates');
     assert.equal(got.status, 'warn', `${template}: ${got.text}`);
@@ -76,7 +76,7 @@ test('Show dates off on Education leaves Experience\'s dates alone, and the reve
 
 // ── 2. The summary as it prints ──────────────────────────────────────────────────────────────
 
-test('a cleared summary editor prints nothing and scores as no summary', { todo: 'R2-020 is open — these fail until the ATS score reads what the PDF prints (CI run 35970356735: 5 fail, 2 pass)' }, () => {
+test('a cleared summary editor prints nothing and scores as no summary', () => {
   for (const summary of ['<p><br></p>', '<p>&nbsp;</p>', '<p> </p><p><br></p>']) {
     const got = item(sample({ summary }), 'contact', 'summary');
     assert.equal(got.text, 'No Professional Summary', `${JSON.stringify(summary)}: ${got.text}`);
@@ -85,7 +85,7 @@ test('a cleared summary editor prints nothing and scores as no summary', { todo:
   assert.equal(analyzeAtsScore(sample({ summary: '<p><br></p>' })).categories.contact.score, full - 3, 'no points for it');
 });
 
-test('a summary\'s words are counted as they print, not with its markup', { todo: 'R2-020 is open — these fail until the ATS score reads what the PDF prints (CI run 35970356735: 5 fail, 2 pass)' }, () => {
+test('a summary\'s words are counted as they print, not with its markup', () => {
   // 26 words as 13 two-word list items: the raw HTML splits into 14 whitespace tokens.
   const words = `${SUMMARY} daily`.replace(/[.,]/g, '').split(/\s+/);
   assert.equal(words.length, 26);
@@ -102,7 +102,7 @@ test('a summary\'s words are counted as they print, not with its markup', { todo
 
 // ── 3. Skill groups read as every export reads them ──────────────────────────────────────────
 
-test('skills stored as a list are counted, and the report does not throw', { todo: 'R2-020 is open — these fail until the ATS score reads what the PDF prints (CI run 35970356735: 5 fail, 2 pass)' }, () => {
+test('skills stored as a list are counted, and the report does not throw', () => {
   const list = ['Go', 'Python', 'Rust', 'Java', 'SQL', 'Docker', 'Kafka', 'Redis'];
   let report;
   assert.doesNotThrow(() => { report = analyzeAtsScore(sample({ skills: list })); });
