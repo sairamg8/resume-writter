@@ -1,16 +1,19 @@
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Plus, Trash2, Columns2 } from 'lucide-react';
 import { useBoardStore } from '@/hooks/useBoardStore';
-import { RecoveryNotice } from '@/components/RecoveryNotice';
+import { BoardStorageNotice } from '@/components/board/BoardStorageNotice';
 
-/** The board grid — every board as a card, plus create and delete. Opens a board at /boards/:id. */
+/**
+ * The board grid — every board (a v2 project: columns and issues) as a card, plus create and
+ * delete. Opens a board at /boards/:id.
+ */
 export function Boards() {
   const navigate = useNavigate();
-  const { boards, persistError, persistReason, recovery, dismissRecovery, addBoard, deleteBoard } = useBoardStore();
+  const { boards, persistError, recovery, dismissRecovery, addBoard, deleteBoard } = useBoardStore();
 
   function create() {
-    const id = addBoard();
-    navigate(`/boards/${id}`);
+    const board = addBoard();
+    navigate(`/boards/${board.id}`);
   }
 
   function confirmDelete(e, b) {
@@ -37,18 +40,7 @@ export function Boards() {
         </div>
       </div>
 
-      {persistError && (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-3">
-          <p role="alert" className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-            Changes aren’t being saved: browser storage is {persistReason === 'full' ? 'full' : 'blocked'}. Your latest edits may be lost on reload.
-          </p>
-        </div>
-      )}
-      {recovery && (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-3">
-          <RecoveryNotice what="board list" recovery={recovery} onDismiss={dismissRecovery} />
-        </div>
-      )}
+      <BoardStorageNotice persistError={persistError} recovery={recovery} onDismissRecovery={dismissRecovery} className="max-w-7xl mx-auto px-4 sm:px-6 pt-3" />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
         {boards.length === 0 ? (
@@ -65,7 +57,7 @@ export function Boards() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {boards.map((b) => {
-              const cardCount = b.lists.reduce((n, l) => n + l.cards.length, 0);
+              const cardCount = b.issues.length;
               return (
                 <div
                   key={b.id}
@@ -85,7 +77,7 @@ export function Boards() {
                     </button>
                   </div>
                   <p className="text-[11px] text-gray-400">
-                    {b.lists.length} list{b.lists.length !== 1 ? 's' : ''} · {cardCount} card{cardCount !== 1 ? 's' : ''}
+                    {b.columns.length} list{b.columns.length !== 1 ? 's' : ''} · {cardCount} card{cardCount !== 1 ? 's' : ''}
                   </p>
                 </div>
               );
