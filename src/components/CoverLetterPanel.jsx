@@ -44,8 +44,9 @@ export default function CoverLetterPanel({ resume, coverLetter, personal, settin
     const file = e.target.files?.[0];
     e.target.value = '';
     if (!file) return;
-    const resume = { personal, settings, template, coverLetter: cl };
-    readImageFile(file, { kind: 'photo', resume, replacing: cl.clPhoto }).then(dataUrl => updateCoverLetter('clPhoto', dataUrl), err => alert(err.message));
+    // The whole résumé, sections and all: an upload may take only what its cloud document has left (R2-097).
+    const whole = { ...resume, personal, settings, template, coverLetter: cl };
+    readImageFile(file, { kind: 'photo', resume: whole, replacing: cl.clPhoto }).then(dataUrl => updateCoverLetter('clPhoto', dataUrl), err => alert(err.message));
   }
 
   // Whether the letter prints a photo, and the line saying which one, or why none (R7-7).

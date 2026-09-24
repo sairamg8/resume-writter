@@ -88,7 +88,7 @@ function CustomIconControl({ fieldKey, iconLabel, customIcon, s, onPickIconFile,
   );
 }
 
-export default function PersonalInfoEditor({ personal, updatePersonal, toggleFieldVisibility, settings, updateSetting, clearSettings, template, coverLetter }) {
+export default function PersonalInfoEditor({ resume: whole, personal, updatePersonal, toggleFieldVisibility, settings, updateSetting, clearSettings, template, coverLetter }) {
   const hidden = new Set(personal.hiddenFields || []);
   const s = settings || {};
   // Where a field's icon prints: the résumé, or only the cover letter, whose own Contact Style
@@ -119,7 +119,8 @@ export default function PersonalInfoEditor({ personal, updatePersonal, toggleFie
   function onPickIconFile(field, file) {
     if (!file || !file.type.startsWith('image/')) return;
     const prev = s.customContactIcons || {};
-    const resume = { personal, settings: s, template, coverLetter };
+    // The whole résumé, sections and all: an upload may take only what its cloud document has left (R2-097).
+    const resume = { ...whole, personal, settings: s, template, coverLetter };
     readImageFile(file, { kind: 'icon', resume, replacing: prev[field] }).then(dataUrl => setCustomIcon(field, dataUrl), err => alert(err.message));
   }
 
@@ -138,6 +139,7 @@ export default function PersonalInfoEditor({ personal, updatePersonal, toggleFie
       />
 
       <PhotoSection
+        resume={whole}
         personal={personal}
         updatePersonal={updatePersonal}
         toggleFieldVisibility={toggleFieldVisibility}

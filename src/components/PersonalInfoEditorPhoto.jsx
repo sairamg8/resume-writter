@@ -22,7 +22,7 @@ function PhotoChips({ control, s, set }) {
   );
 }
 
-export function PhotoSection({ personal, updatePersonal, toggleFieldVisibility, hidden, s, set, template, open, onToggle, coverLetter }) {
+export function PhotoSection({ resume: whole, personal, updatePersonal, toggleFieldVisibility, hidden, s, set, template, open, onToggle, coverLetter }) {
   const photoInputRef = useRef(null);
   // A photo saved as WebP or GIF, before uploads were converted, prints as a converted copy; one
   // this browser cannot read either prints nothing, and the panel says so instead of "Added" (R7-7).
@@ -33,7 +33,8 @@ export function PhotoSection({ personal, updatePersonal, toggleFieldVisibility, 
     const file = e.target.files?.[0];
     e.target.value = '';
     if (!file) return;
-    const resume = { personal, settings: s, template, coverLetter };
+    // The whole résumé, sections and all: an upload may take only what its cloud document has left (R2-097).
+    const resume = { ...whole, personal, settings: s, template, coverLetter };
     readImageFile(file, { kind: 'photo', resume, replacing: personal.photo }).then((dataUrl) => updatePersonal('photo', dataUrl), (err) => alert(err.message));
   }
 
