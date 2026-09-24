@@ -63,6 +63,7 @@ export function ConfirmProvider({ children }) {
   const latest = useRef(queue);
   useEffect(() => { latest.current = queue; });
   const seq = useRef(0);
+  const timers = useRef(new Set());
 
   const confirm = useCallback((options = {}) => new Promise((resolve) => {
     seq.current += 1;
@@ -76,10 +77,17 @@ export function ConfirmProvider({ children }) {
     current.resolve(value);
     setQueue((q) => (q[0] === current ? [{ ...current, closing: true }, ...q.slice(1)] : q));
     // Let it animate out (Dialog: 150 ms) before the next question, if any, takes its place.
-    setTimeout(() => setQueue((q) => q.filter((item) => item.id !== current.id)), 160);
+    const timer = setTimeout(() => {
+      timers.current.delete(timer);
+      setQueue((q) => q.filter((item) => item.id !== current.id));
+    }, 160);
+    timers.current.add(timer);
   };
 
-  useEffect(() => () => { for (const q of latest.current) q.resolve(false); }, []);
+  useEffect(() => () => {
+    for (const q of latest.current) q.resolve(false);
+    for (const timer of timers.current) clearTimeout(timer); // gone: nothing left to animate out
+  }, []);
 
   return (
     <ConfirmContext.Provider value={confirm}>

@@ -9,7 +9,9 @@ import { previewBox } from '@/constants/pageSize';
  * - Re-renders `DEBOUNCE_MS` after the last change to `input` — also before the first page
  *   appears and after a failed build; the previous pages stay on screen (double-buffered) until
  *   the new ones are painted, so typing never flashes blank.
- * - A stale render is dropped when a newer one has started.
+ * - A finished render is shown when it is newer than the pages on screen, even while a newer
+ *   change is still waiting or building (steady typing would otherwise freeze the preview); only
+ *   one older than the pages on screen is dropped.
  * - `active` false (the column is hidden: "Editor only", or a phone's Edit tab) builds and paints
  *   nothing: the preview only notes it is behind (status 'paused') and builds once, with the latest
  *   input, when it is shown again. Shown again with nothing changed, it keeps what it has.
@@ -21,6 +23,12 @@ const DEBOUNCE_MS = 350;
 
 /** Free a pdf.js document (PDFDocumentProxy has no destroy(); its loading task does). */
 const release = (pdf) => { pdf?.loadingTask?.destroy(); };
+
+/**
+ * Free canvases' pixels now rather than when the garbage collector gets to them: iOS Safari caps
+ * a page's total canvas memory and fails the next paint past it (R2-170).
+ */
+const discard = (canvases) => { for (const c of canvases) { c.width = 0; c.height = 0; } };
 
 let pdfjsPromise = null;
 function loadPdfjs() {
@@ -38,6 +46,11 @@ function loadPdfjs() {
     }).catch((e) => { pdfjsPromise = null; throw e; });
   }
   return pdfjsPromise;
+}
+
+/** For tests/pdf/90-preview-*: a stand-in `{ lib, worker }` for pdf.js, or null to load the real one again. */
+export function _setPdfjsForTest(pdfjs) {
+  pdfjsPromise = pdfjs ? Promise.resolve(pdfjs) : null;
 }
 
 /**
@@ -63,10 +76,12 @@ function pageText(content) {
 /** Paint every page into a fresh canvas at `cssWidth` (device-pixel sharp). */
 async function paint(pages, cssWidth) {
   const dpr = Math.min(window.devicePixelRatio || 1, 3);
+  const canvases = [];
   return Promise.all(pages.map(async ({ page, width, height }) => {
     const scale = (cssWidth * dpr) / width;
     const viewport = page.getViewport({ scale });
     const canvas = document.createElement('canvas');
+    canvases.push(canvas);
     canvas.width = Math.round(viewport.width);
     canvas.height = Math.round(viewport.height);
     canvas.style.width = '100%';
@@ -74,7 +89,7 @@ async function paint(pages, cssWidth) {
     canvas.style.display = 'block';
     await page.render({ canvasContext: canvas.getContext('2d'), viewport, canvas }).promise;
     return { canvas, cssHeight: (cssWidth * height) / width };
-  }));
+  })).catch((e) => { discard(canvases); throw e; });
 }
 
 function PageCanvas({ canvas, width, height, label }) {
@@ -96,11 +111,15 @@ export function PdfPreview({ render, input, zoom = 1, textId, title = 'Résumé'
   const [status, setStatus] = useState(active ? 'rendering' : 'paused');
   const [error, setError] = useState(null);
   const [retry, setRetry] = useState(0);
-  const generation = useRef(0);
+  const generation = useRef(0); // bumped by every change that asks for a build
+  const shownGen = useRef(0);   // the generation of the pages on screen
   const built = useRef(null); // { input, render, retry } of the last build that started
   const wasActive = useRef(active);
   const docRef = useRef(null);
+  const mounted = useRef(true);
   const rootRef = useRef(null);
+  const onScreen = useRef([]); // the canvases of the pages on screen
+  const handed = useRef(null);  // the last view given to setView: on screen, or about to be
   const box = previewBox(input?.settings || input);
   const [available, setAvailable] = useState(() => box.widthPx + GUTTER_PX);
   // 100 % = fit the column (never wider than true page size); the zoom buttons scale from there.
@@ -126,11 +145,14 @@ export function PdfPreview({ render, input, zoom = 1, textId, title = 'Résumé'
     const delay = last && !revealed && !retried ? DEBOUNCE_MS : 0;
     const timer = setTimeout(async () => {
       built.current = { input, render, retry };
+      let pdf = null;
+      // Unmounted meanwhile (Cover Letter clicked mid-render), or overtaken by newer pages on screen.
+      const unwanted = () => !mounted.current || gen < shownGen.current;
       try {
         const [blob, pdfjs] = await Promise.all([render(input), loadPdfjs()]);
-        if (gen !== generation.current) return;
+        if (unwanted()) return;
         const data = new Uint8Array(await blob.arrayBuffer());
-        const pdf = await pdfjs.lib.getDocument({ data, worker: pdfjs.worker, isEvalSupported: false }).promise;
+        pdf = await pdfjs.lib.getDocument({ data, worker: pdfjs.worker, isEvalSupported: false }).promise;
         const pages = [];
         for (let i = 1; i <= pdf.numPages; i += 1) {
           const page = await pdf.getPage(i);
@@ -139,14 +161,18 @@ export function PdfPreview({ render, input, zoom = 1, textId, title = 'Résumé'
         }
         const width = widthRef.current;
         const painted = await paint(pages, width);
-        if (gen !== generation.current) { release(pdf); return; }
+        if (unwanted()) { release(pdf); discard(painted.map((p) => p.canvas)); return; }
         release(docRef.current);
         docRef.current = pdf;
-        setView({ pages, painted, cssWidth: width });
+        shownGen.current = gen;
+        show({ pages, painted, cssWidth: width });
+        // Older than the latest change: its pages go up, but the latest build still owns the status.
+        if (gen !== generation.current) return;
         setError(null);
         setStatus('ready');
       } catch (e) {
-        if (gen !== generation.current) return;
+        release(pdf); // opened, then a page or the paint failed: nothing else holds it
+        if (!mounted.current || gen !== generation.current) return;
         console.error('Preview render failed:', e);
         setError(e);
         setStatus('error');
@@ -161,12 +187,40 @@ export function PdfPreview({ render, input, zoom = 1, textId, title = 'Résumé'
     if (!active || !view || view.cssWidth === cssWidth) return undefined;
     let cancelled = false;
     paint(view.pages, cssWidth).then((painted) => {
-      if (!cancelled) setView((v) => (v && v.pages === view.pages ? { ...v, painted, cssWidth } : v));
+      // Cancelled, or a newer render's pages were handed over while this painted: never shown.
+      if (cancelled || handed.current !== view) discard(painted.map((p) => p.canvas));
+      else show({ ...view, painted, cssWidth });
     }).catch(() => { /* the next render repaints */ });
     return () => { cancelled = true; };
   }, [active, cssWidth, view]);
 
-  useEffect(() => () => { release(docRef.current); }, []);
+  // Put `next` up. A view handed over before it but not on screen yet (a zoom repaint the same moment
+  // as a render) never will be: free its canvases.
+  function show(next) {
+    const unshown = handed.current && handed.current !== next ? handed.current.painted.map((p) => p.canvas) : [];
+    discard(unshown.filter((c) => !onScreen.current.includes(c)));
+    handed.current = next;
+    setView(next);
+  }
+
+  // Pages replaced (a newer render, a zoom repaint): free the canvases that left the screen. A
+  // layout effect, so it runs after PageCanvas has put the new ones up and before the browser paints.
+  useLayoutEffect(() => {
+    const next = view ? view.painted.map((p) => p.canvas) : [];
+    discard(onScreen.current.filter((c) => !next.includes(c)));
+    onScreen.current = next;
+  }, [view]);
+
+  useEffect(() => {
+    mounted.current = true; // again after StrictMode's trial unmount
+    return () => {
+      mounted.current = false;
+      release(docRef.current);
+      docRef.current = null;
+      discard(onScreen.current);
+      onScreen.current = [];
+    };
+  }, []);
 
   // Track the scroll column's width so the page always fits it at 100 %.
   useLayoutEffect(() => {

@@ -1,22 +1,25 @@
 # Session Handoff — Resume Here
 
-> **Updated 2026-09-24 (cloud session, branch `claude/beautiful-heisenberg-x3bsvo`).** This section is the
-> live resume cursor for the "fix every open row" session. It is rewritten and pushed after every merge,
-> so a cold start reads the state here and carries on. Older handoffs follow below.
+> **Updated 2026-09-24 (cloud session, branch `claude/confident-goldberg-2uig8b`).** This section is the
+> live resume cursor for the "fix every open row" session. After the owner's reboot a new coordinator
+> (session_01UaZc6yUjHdoanpnUfTnzFF) took over from session_01PdF933BaDvYDh7KFAJpkKi: its work branch
+> `claude/beautiful-heisenberg-x3bsvo` was fast-forwarded into `claude/confident-goldberg-2uig8b`, which is now
+> the work branch; the old one is frozen at `859c3c7`. Older handoffs follow below.
 
 ## 2026-09-24 — fix every open tracker row (in progress)
 
 **Goal (owner):** fix every open bug in `docs/tracking/` (149 open at `504b313`), then improve the app.
-**Base:** `504b313` (master, CI green). **Work branch:** `claude/beautiful-heisenberg-x3bsvo` (pushed; CI
-runs on master only, so nothing deploys from here).
+**Base:** `504b313` (master, CI green). **Work branch:** `claude/confident-goldberg-2uig8b` (was
+`claude/beautiful-heisenberg-x3bsvo` until `859c3c7`; pushed; CI runs on master only, so nothing deploys from here).
+**Owner, after the reboot:** merge every cloud agent's work into master.
 
 ### How the work is split
 
 Round 1 — defects, 14 clusters, each fixed by **its own cloud session** (its own machine) on branch
 `claude/wf-<cluster>`, following [CLUSTER-PROTOCOL.md](CLUSTER-PROTOCOL.md): fail-first test → fix → commit
 → push, an independent reviewer subagent, then `wf-reports/<cluster>.json` as the last push (its arrival
-means the cluster is done). Sessions do not edit `docs/tracking/`; the coordinator
-(session_01PdF933BaDvYDh7KFAJpkKi) merges each branch into the work branch, updates the tracker rows and
+means the cluster is done). Sessions do not edit `docs/tracking/`; the coordinator (now
+session_01UaZc6yUjHdoanpnUfTnzFF) merges each branch into the work branch, updates the tracker rows and
 totals, runs CI on GitHub (workflow_dispatch on the work branch), and deletes the `claude/wf-*` branch.
 The owner approved the temporary `claude/wf-*` branches on 2026-09-24 12:47.
 
@@ -30,7 +33,7 @@ The owner approved the temporary `claude/wf-*` branches on 2026-09-24 12:47.
 | jobs | R2-035 036 038 039 040 042 075 099 100 101 102 156 | session_01TxTRPE1CXJu54unwVCNutZ | **merged** (with follow-ups: page tests, salary sort, re-import) |
 | app-shell | R2-050 071 072 073 074 076 077 084 086 144 | session_01S681bgs4qE2ric3C7MivaC | **merged** (8c60c6c) |
 | boards | R2-037 041 098 155 159 | session_01AeqejztN2Vs4b4cpnBNrnU | **merged** (with follow-ups: Backlog, Settings, Your work pages, epics) |
-| preview | R2-106 107 170 165, R3-005 | session_01JqQBbPVCVC4WNbFTi77bQ2 | reported, **not merged** — merge claude/wf-preview |
+| preview | R2-106 107 170 165, R3-005 | session_01JqQBbPVCVC4WNbFTi77bQ2 | **merged** |
 | import-data | R2-031 055 056 110 085 091 117 093 094 095 097 | session_01174H7ZETLrGKWfVVXQdWmd | **merged** (e6ebbd4) |
 | sections | R2-057 069 127 108 112 113 115 116 150 151 | session_01WXhjKL5tbvAFuBeRpZ6c4d | reported, **not merged** — merge claude/wf-sections |
 | sync | R2-028 029 030 | session_01CkkXUYrb8NXsPv4VYVH4MX | **merged** |

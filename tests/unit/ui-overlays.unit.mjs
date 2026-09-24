@@ -5,13 +5,8 @@
 // Run: node --test tests/unit/ui-overlays.unit.mjs
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { createElement as h, useState } from 'react';
-import { kitLoader, patchFakeDom, mount, ev, reactProps, byAttr, byText, elements, wait } from './ui-dom-harness.mjs';
-
-// R3-005: on CI (run 35970636799) this file was SIGKILLed after 60 s — it hangs or runs away somewhere in
-// these three suites, merged from Lane C's work in progress on 2026-09-24. Skipped, not deleted, until the
-// lane finds why; the owner's rule forbids running it on the laptop, so the investigation runs on CI.
-const HANG = 'R3-005: killed after 60 s on CI (run 35970636799) — Lane C investigates';
+import { createElement as h } from 'react';
+import { kitLoader, patchFakeDom, mount, ev, reactProps, byAttr, byText, wait, assertSame } from './ui-dom-harness.mjs';
 
 let kit;
 let ui;
@@ -40,7 +35,7 @@ function dialogPage(extra = {}) {
   return { view, opener, panel, layer, closes };
 }
 
-describe('Dialog', { skip: HANG }, () => {
+describe('Dialog', () => {
   it('is a labelled, described modal in a portal', async () => {
     const { view, panel } = dialogPage();
     try {
@@ -60,8 +55,44 @@ describe('Dialog', { skip: HANG }, () => {
     try {
       assert.equal(view.document.activeElement.textContent, 'Inner');
       view.update({ open: false });
-      assert.equal(view.document.activeElement, opener);
+      assertSame(view.document.activeElement, opener, 'focus went back to the opener');
       assert.deepEqual(closes, []);
+    } finally { await view.unmount(); }
+  });
+
+  it('a field that takes focus as the dialog closes keeps it (not pulled back to the opener)', async () => {
+    function Page({ open, next }) {
+      return h('div', null,
+        h('button', { id: 'opener' }, 'Open'),
+        next && h('input', { id: 'next', autoFocus: true }),
+        h(ui.Dialog, { open, onClose: () => {}, title: 'Add' }, h('button', { 'data-autofocus': true }, 'Inner')));
+    }
+    const view = mount(Page, { open: false, next: false });
+    try {
+      byAttr(view.container, 'id', 'opener')[0].focus();
+      view.update({ open: true, next: false });
+      assert.equal(view.document.activeElement.textContent, 'Inner');
+      view.update({ open: false, next: true }); // closed, and the field it added appears with autoFocus
+      assertSame(view.document.activeElement, byAttr(view.container, 'id', 'next')[0], 'the new field keeps focus');
+    } finally { await view.unmount(); }
+  });
+
+  it('a dialog opened from another, both closing at once: focus goes to the first opener', async () => {
+    function Page({ outer, inner }) {
+      return h('div', null,
+        h('button', { id: 'opener' }, 'Open'),
+        h(ui.Dialog, { open: outer, onClose: () => {}, title: 'Outer' }, h('button', { 'data-autofocus': true }, 'Ask')),
+        h(ui.Dialog, { open: inner, onClose: () => {}, title: 'Inner' }, h('button', { 'data-autofocus': true }, 'Yes')));
+    }
+    const view = mount(Page, { outer: false, inner: false });
+    try {
+      const opener = byAttr(view.container, 'id', 'opener')[0];
+      opener.focus();
+      view.update({ outer: true, inner: false });
+      view.update({ outer: true, inner: true });
+      assert.equal(view.document.activeElement.textContent, 'Yes');
+      view.update({ outer: false, inner: false }); // "Yes" answered, and the outer dialog closes with it
+      assertSame(view.document.activeElement, opener, 'not the closing outer dialog\'s Ask button');
     } finally { await view.unmount(); }
   });
 
@@ -74,12 +105,12 @@ describe('Dialog', { skip: HANG }, () => {
       const tab = ev({ key: 'Tab', target: inner });
       view.act(() => reactProps(panel().parentNode.parentNode).onKeyDown(tab));
       assert.ok(tab.defaultPrevented);
-      assert.equal(view.document.activeElement, close, 'Tab from the last element goes to the first');
+      assertSame(view.document.activeElement, close, 'Tab from the last element goes to the first');
       const back = ev({ key: 'Tab', shiftKey: true, target: close });
       view.act(() => reactProps(panel().parentNode.parentNode).onKeyDown(back));
-      assert.equal(view.document.activeElement, inner, 'Shift+Tab from the first goes to the last');
+      assertSame(view.document.activeElement, inner, 'Shift+Tab from the first goes to the last');
       opener.focus();
-      assert.equal(view.document.activeElement, panel(), 'focus on the page behind came back to the dialog');
+      assertSame(view.document.activeElement, panel(), 'focus on the page behind came back to the dialog');
     } finally { await view.unmount(); }
   });
 
@@ -112,7 +143,8 @@ describe('Dialog', { skip: HANG }, () => {
       await wait(200);
       view.act(() => {});
       assert.equal(byAttr(view.document.body, 'aria-modal', 'true').length, 0, 'unmounted after its exit animation');
-      assert.equal(view.document.body.style.overflow, '');
+      // fake-dom reads an unset style as undefined where a browser reads '': either way, the body's own.
+      assert.equal(view.document.body.style.overflow ?? '', '');
     } finally { await view.unmount(); }
   });
 
@@ -130,7 +162,7 @@ describe('Dialog', { skip: HANG }, () => {
   });
 });
 
-describe('useConfirm', { skip: HANG }, () => {
+describe('useConfirm', () => {
   /** The confirm host with a page that keeps the confirm function. */
   function confirmPage() {
     let ask = null;
@@ -183,6 +215,15 @@ describe('useConfirm', { skip: HANG }, () => {
     } finally { await view.unmount(); }
   });
 
+  it('unmounted while an answered question animates out: nothing of it runs afterwards', async () => {
+    const { view, ask, dialog } = confirmPage();
+    const answered = ask({ title: 'Delete?' });
+    view.act(() => reactProps(byText(dialog(), 'Confirm')).onClick(ev()));
+    assert.equal(await answered, true);
+    await view.unmount(); // the page left (a route change) inside the 160 ms hand-off to the next question
+    await wait(200);      // a timer left behind would fire here, into a page that is gone, and fail this test
+  });
+
   it('throws without a ConfirmProvider rather than answering for the user', async () => {
     const errors = [];
     const original = console.error;
@@ -198,7 +239,7 @@ describe('useConfirm', { skip: HANG }, () => {
   });
 });
 
-describe('toasts', { skip: HANG }, () => {
+describe('toasts', () => {
   function toastPage() {
     let api = null;
     function Page() {
@@ -252,7 +293,7 @@ describe('toasts', { skip: HANG }, () => {
       assert.deepEqual(toasts().map((t) => t.textContent.replace('Dismiss notification', '')), ['T3', 'T4', 'T5', 'T6']);
       toast({ id: 'sync', title: 'Syncing…', duration: Infinity });
       toast({ id: 'sync', title: 'Synced', duration: Infinity });
-      assert.equal([...elements(region())].filter((el) => el.textContent === 'Synced').length, 1);
+      assert.equal(toasts().filter((t) => t.textContent === 'Synced').length, 1, 'one toast for the id, now saying Synced');
       assert.doesNotMatch(region().textContent, /Syncing/);
     } finally { await view.unmount(); }
     let api = null;

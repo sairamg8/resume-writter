@@ -38,6 +38,11 @@ class FakeNode {
     child.parentNode = null;
     return child;
   }
+  replaceChildren(...nodes) {
+    for (const c of this.childNodes) c.parentNode = null;
+    this.childNodes = [];
+    for (const n of nodes) this.appendChild(n);
+  }
   contains(node) {
     for (let n = node; n; n = n.parentNode) if (n === this) return true;
     return false;
