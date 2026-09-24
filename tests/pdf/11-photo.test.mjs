@@ -13,9 +13,11 @@ const SCALE = 4; // px per pt: the 1.125 pt ring is ~4.5 px wide
 const PHOTO_RGB = [22, 163, 74];
 const ACCENT = '#e11d48';
 
-/** pdf.js paints through @napi-rs/canvas in Node; without it these tests skip. */
-let canvasLib = null;
-try { canvasLib = await import('@napi-rs/canvas'); } catch { /* skipped below */ }
+/**
+ * pdf.js paints through @napi-rs/canvas in Node. It is a devDependency now (R2-169): these tests used to
+ * skip without it, so an install that lost pdf.js's optional copy passed them unrun; now it fails them.
+ */
+const canvasLib = await import('@napi-rs/canvas');
 
 /** A 64×64 photo of one flat colour, as the editor stores an upload (a data URL). */
 function photo() {
@@ -111,7 +113,7 @@ const CASES = [
   ['cover letter', { photoShape: 'rounded' }, ACCENT],
 ];
 
-describe('photo ring', { skip: canvasLib ? false : '@napi-rs/canvas is not installed' }, () => {
+describe('photo ring', () => {
   for (const [template, settings, expected] of CASES) {
     it(`${template} ${JSON.stringify(settings)}: the ring shows in ${expected} on every side (FIDA-43)`, async () => {
       const cover = template === 'cover letter';
@@ -134,7 +136,7 @@ describe('photo ring', { skip: canvasLib ? false : '@napi-rs/canvas is not insta
   });
 });
 
-describe('a see-through photo shows the ground it sits on (R7-6)', { skip: canvasLib ? false : '@napi-rs/canvas is not installed' }, () => {
+describe('a see-through photo shows the ground it sits on (R7-6)', () => {
   /** What page 1 paints beside the cut-out's disc (1.5 radii from its centre, inside the photo). */
   const besideDisc = async (template, src, cover = false) => {
     const r = resume({ template, personal: { photo: src }, settings: { accentColor: ACCENT, sidebarBg: '#1e293b' } });
