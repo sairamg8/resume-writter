@@ -129,8 +129,9 @@ jobs:
           grep -E '^not ok' tests.log | head -40 || true
 
   # Fail-first (the failfirst input): for each "sha:tests", on a machine of its own, undo that
-  # commit's src/ changes on this checkout — its diff reversed, or its parent's files where later work moved the lines — and its tests
-  # must fail; restored, they must pass. A test that passes without its fix proves nothing.
+  # commit's changes to src/ (and to a yarn patch and yarn.lock, then reinstall) on this checkout —
+  # its diff reversed, or its parent's files where later work moved the lines — and its tests must
+  # fail; restored, they must pass. A test that passes without its fix proves nothing.
   # One machine per check: the input's "sha:tests" pairs become a matrix.
   failfirst-plan:
     if: github.event_name == 'workflow_dispatch' && inputs.failfirst != ''
@@ -185,16 +186,20 @@ jobs:
           for pair in $FAILFIRST; do
             sha=${pair%%:*}; files=${pair#*:}; files=${files//,/ }
             if ! git cat-file -e "$sha^{commit}" 2>/dev/null; then echo "::error::$sha is not in this checkout"; status=1; continue; fi
-            src=$(git diff --name-only "$sha^" "$sha" -- src/)
+            src=$(git diff --name-only "$sha^" "$sha" -- src/ .yarn/patches/ yarn.lock)
             if [ -z "$src" ]; then echo "::error::$sha changes nothing under src/"; status=1; continue; fi
-            if git diff "$sha^" "$sha" -- src/ | git apply -R 2>/dev/null; then how='its diff reversed'
+            # A fix in a patched dependency only counts once node_modules is rebuilt from the reverted patch.
+            deps=$(printf '%s\n' $src | grep -E '^(\.yarn/patches/|yarn\.lock$)' || true)
+            if git diff "$sha^" "$sha" -- $src | git apply -R 2>/dev/null; then how='its diff reversed'
             else git reset -q --hard HEAD; git checkout "$sha^" -- $src 2>/dev/null || git rm -q -- $src; how="its parent's files"; fi
+            [ -n "$deps" ] && yarn install > /dev/null
             if node --test --test-concurrency=4 $files > ff.log 2>&1; then
               echo "::error::$sha — $files pass WITHOUT the fix ($how)"; status=1
             else
               echo "ok  $sha — $files fail without the fix ($how): $(grep -E '^# fail' ff.log)"
             fi
             git reset -q --hard HEAD; git clean -fdq -- src
+            [ -n "$deps" ] && yarn install --immutable > /dev/null
             if node --test --test-concurrency=4 $files > ff.log 2>&1; then
               echo "ok  $sha — $files pass with it"
             else
