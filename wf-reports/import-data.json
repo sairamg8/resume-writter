@@ -1,0 +1,39 @@
+{
+  "cluster": "import-data",
+  "branch": "claude/wf-import-data",
+  "base": "9c3589a",
+  "rows": [
+    { "id": "R2-031", "outcome": "fixed", "commits": ["73aa4f3", "e0970bc"], "tests": ["tests/pdf/80-import-section-shapes.test.mjs"],
+      "summary": "normalizeResume() now runs withSectionShapes() on every load, import, restore and cloud merge: a null or non-object section or entry is dropped, items that is not a list becomes one, sections that is not a list becomes []. The editor, PDF, Word, Markdown and JSON Resume export all work on such a file." },
+    { "id": "R2-055", "outcome": "fixed", "commits": ["73aa4f3"], "tests": ["tests/pdf/80-import-section-shapes.test.mjs"],
+      "summary": "A section or entry with no id, or an id another already holds, gets its own (deterministic: <type>_<n> / <sectionId>_item<n>, the same on every load); every valid id is kept, the first holder keeping a repeated one. Editing, renaming or deleting one no longer hits its siblings." },
+    { "id": "R2-056", "outcome": "fixed", "commits": ["73aa4f3"], "tests": ["tests/pdf/80-import-section-shapes.test.mjs"],
+      "summary": "A section with no title gets its type's title (custom's for an unknown type), and one with no items an empty list: the PDF and editor render it." },
+    { "id": "R2-110", "outcome": "fixed", "commits": ["73aa4f3", "e0970bc"], "tests": ["tests/pdf/80-import-section-shapes.test.mjs"],
+      "summary": "A section's Grids stored as text or out of range is stored as a whole number from 1 to 4 (\"2\" → 2, 7 → 4); 0 or no number is dropped so the template default prints, as it did. \"2\" on five entries prints two to a row." },
+    { "id": "R2-085", "outcome": "fixed", "commits": ["904bc99"], "tests": ["tests/pdf/80-dashboard-import-read-error.test.mjs"],
+      "summary": "Dashboard → Import sets reader.onerror/onabort: a file the browser cannot read shows the editor's AUD-23 message ('That file could not be read…'), cleared after 4 s, and imports nothing." },
+    { "id": "R2-091", "outcome": "duplicate", "commits": ["904bc99"], "tests": ["tests/pdf/80-dashboard-import-read-error.test.mjs"],
+      "summary": "Same defect as R2-085 (fixed there). Its Job Tracker half was already fixed by e9c48c3 (J-23: readImportFile sets onerror/onabort)." },
+    { "id": "R2-117", "outcome": "duplicate", "commits": ["904bc99"], "tests": ["tests/pdf/80-dashboard-import-read-error.test.mjs"],
+      "summary": "Same defect as R2-085 (Dashboard fixed there); the Job Tracker import already reported read errors since e9c48c3 (J-23)." },
+    { "id": "R2-093", "outcome": "fixed", "commits": ["09bc832", "4340601"], "tests": ["tests/pdf/80-photo-url.test.mjs", "tests/unit/image-upload.unit.mjs", "tests/pdf/16-saved-data-photos.test.mjs"],
+      "summary": "A photo stored as a URL or path is never handed to react-pdf: printableImage fetches it once a session and the PDF prints that copy, or no photo at all (no ring, no gap) when it cannot be fetched or is not an image; the Photo panel then says 'Not printed' and that the link could not be loaded. Header Customization's Photo ↔ Text row follows the photo as printed." },
+    { "id": "R2-094", "outcome": "fixed", "commits": ["b6d1ad2"], "tests": ["tests/pdf/80-panel-stored-values.test.mjs"],
+      "summary": "Photo → Height shows only when the shape the PDF draws (photoOption) is not a circle: an imported 'oval' shows Circle and no Height." },
+    { "id": "R2-095", "outcome": "fixed", "commits": ["14f3ccf"], "tests": ["tests/pdf/80-panel-stored-values.test.mjs"],
+      "summary": "Contact Details' Style and Layout chips read the value as the PDF and Word print it (contactStyleOf/contactLayoutOf): an unknown style shows Bar, an unknown layout Justify, a blank style Icon; the icon controls stay hidden where no icons print." },
+    { "id": "R2-097", "outcome": "fixed", "commits": ["b6a54e1"], "tests": ["tests/pdf/80-upload-budget-sections.test.mjs"],
+      "summary": "The photo, contact-icon and letter-photo uploads measure the whole résumé (sections included) against the cloud document's room: on a long résumé the upload is refused with RESUME_IMAGES_TOO_LARGE instead of breaking sync." }
+  ],
+  "review": {
+    "issues": [
+      "09bc832: the Photo panel's new link line called startsWith on a photo stored as a number/object (crash)",
+      "09bc832: headerGapRows read the raw photo, so Photo ↔ Text vanished for a URL photo whose fetched copy prints",
+      "73aa4f3: Grids 0 was stored as 1, changing Languages/References (default 2) from two to a row to one"
+    ],
+    "fixedByReviewer": ["4340601", "e0970bc"]
+  },
+  "baselineFailures": [],
+  "notes": "Changed existing assertions: tests/pdf/16-saved-data-text-fields.test.mjs fixture gave every section's second entry the id 'x_item1' (now unique, since loading de-duplicates ids, R2-055); tests/unit/image-upload.unit.mjs and tests/pdf/16-saved-data-photos.test.mjs pinned 'a plain URL is drawn as it is', the behaviour R2-093 names. Leftovers: tests/pdf/16-saved-data-photo-size.test.mjs:193 has a https://example.com photo the app now tries to fetch (passes; fetch times out at 15 s at most) — a stub fetch there would be cleaner. useLetterPhoto still says a URL photo's 'format can't be printed' on the Cover Letter panel (wording only). Non-skills sections keep Grids 3–4 after the clamp while their panel offers only 1–2 (PDF draws them; outside R2-110). Section shape normalization is always-run, not a DATA_VERSION migration."
+}
