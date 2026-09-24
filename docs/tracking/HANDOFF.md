@@ -12,30 +12,34 @@ runs on master only, so nothing deploys from here).
 
 ### How the work is split
 
-Round 1 — defects, 14 clusters. Each cluster is fixed on its own branch `wf/<cluster>` in a worktree
-(fail-first test → fix → commit), then an independent reviewer re-runs the fail-first checks. Agents do
-not edit `docs/tracking/`; the coordinator merges each branch into the work branch, updates the tracker
-rows and totals, and pushes.
+Round 1 — defects, 14 clusters, each fixed by **its own cloud session** (its own machine) on branch
+`claude/wf-<cluster>`, following [CLUSTER-PROTOCOL.md](CLUSTER-PROTOCOL.md): fail-first test → fix → commit
+→ push, an independent reviewer subagent, then `wf-reports/<cluster>.json` as the last push (its arrival
+means the cluster is done). Sessions do not edit `docs/tracking/`; the coordinator
+(session_01PdF933BaDvYDh7KFAJpkKi) merges each branch into the work branch, updates the tracker rows and
+totals, runs CI on GitHub (workflow_dispatch on the work branch), and deletes the `claude/wf-*` branch.
+The owner approved the temporary `claude/wf-*` branches on 2026-09-24 12:47.
 
-| Cluster | Rows | State |
-|---|---|---|
-| ats | R2-020 021 022 023 024 025 027 078 079 080 081 163 166 | running |
-| text-exports | R2-026 034 052 053 054 058 060 064 122 129 131 | queued |
-| sync | R2-028 029 030 | queued |
-| import-data | R2-031 055 056 110 085 091 117 093 094 095 097 | queued |
-| jobs | R2-035 036 038 039 040 042 075 099 100 101 102 156 | queued |
-| boards | R2-037 041 098 155 159 | queued |
-| letter | R2-043 044 092 103 130 134 068 133 | queued |
-| pdf-pagination | R2-046 047 048 049 104 109 111 | running |
-| pdf-text | R2-045 105, R3-002 003 004 | queued |
-| design-sidebar | R2-013 051 059 082 083 087 088 089 090 096 119 120 121 123 | running |
-| word | R2-061 065 066 070 114 118 124 125 126 128 132 | running |
-| sections | R2-057 069 127 108 112 113 115 116 150 151 | queued |
-| app-shell | R2-050 071 072 073 074 076 077 084 086 144 | queued |
-| preview | R2-106 107 170 165, R3-005 | queued |
-| cypress | R2-152 161 162 (Cypress suite green, 09-17…20 features end to end, mobile) | running |
+| Cluster | Rows | Session | State |
+|---|---|---|---|
+| ats | R2-020 021 022 023 024 025 027 078 079 080 081 163 166 | session_01GG1ULRf3BEFijyNRzXNJoT | running (5 fixes carried over) |
+| pdf-pagination | R2-046 047 048 049 104 109 111 | session_013Hg3VSwaVkaQmNCkotTNsb | running |
+| design-sidebar | R2-013 051 059 082 083 087 088 089 090 096 119 120 121 123 | session_014y3tSMD21g1ji9Ct73pZQh | running (4 fixes carried over) |
+| word | R2-061 065 066 070 114 118 124 125 126 128 132 | session_01Kms1vF1NWaaH7yWz6e2UWr | running (2 fixes carried over) |
+| text-exports | R2-026 034 052 053 054 058 060 064 122 129 131 | session_01YUpaiGLx34s4T8huDzmJNW | running |
+| jobs | R2-035 036 038 039 040 042 075 099 100 101 102 156 | session_01TxTRPE1CXJu54unwVCNutZ | running |
+| app-shell | R2-050 071 072 073 074 076 077 084 086 144 | session_01S681bgs4qE2ric3C7MivaC | running |
+| boards | R2-037 041 098 155 159 | session_01AeqejztN2Vs4b4cpnBNrnU | running |
+| preview | R2-106 107 170 165, R3-005 | session_01JqQBbPVCVC4WNbFTi77bQ2 | running |
+| import-data | R2-031 055 056 110 085 091 117 093 094 095 097 | session_01174H7ZETLrGKWfVVXQdWmd | running |
+| sections | R2-057 069 127 108 112 113 115 116 150 151 | session_01WXhjKL5tbvAFuBeRpZ6c4d | running |
+| sync | R2-028 029 030 | session_01CkkXUYrb8NXsPv4VYVH4MX | running |
+| letter | R2-043 044 092 103 130 134 068 133 | session_019D9Rn4N2nqJnTSeZgxodBg | running |
+| pdf-text | R2-045 105, R3-002 003 004 | session_01SUaj4fLPe8rVZ9g2kGSu6H | running |
+| cypress | R2-152 161 162 | coordinator's own machine (workflow wf_f5efdc0c-440, local branch `wf/cypress`) | running |
 
-Done outside the clusters: `12c2a71` — LICENSE, CONTRIBUTING, README, knowledge docs (R2-143, R2-169, partial).
+Done outside the clusters: `12c2a71` — LICENSE, CONTRIBUTING, README, knowledge docs (R2-143, R2-169, partial);
+`e6796ec` — CI gains lint and Cypress jobs, and a working branch is gated by workflow_dispatch (R2-152, R2-154).
 
 Round 2 — features and test gaps not in a cluster: R2-135 136 137 138 139 140 141 142 145 146 147 148
 149, R2-152 154 157 158 161 162 167 168 171; plus a lint step in CI and the 21 oxlint warnings.
@@ -46,8 +50,9 @@ session first. Round 2 begins only after that restart.
 ### If this session was cut off
 
 1. `git fetch origin claude/beautiful-heisenberg-x3bsvo && git checkout claude/beautiful-heisenberg-x3bsvo`.
-2. Read the table above: a cluster marked **merged** is on the branch and in the tracker. Any other
-   cluster's local `wf/*` branch is gone with the container: re-run that cluster from the branch head.
+2. Read the table above: a cluster marked **merged** is on the branch and in the tracker. The others are
+   on GitHub as `claude/wf-<cluster>`; their sessions run on their own machines and survive this one's
+   restart. A branch with `wf-reports/<cluster>.json` is finished and ready to merge.
 3. Local set-up: `corepack enable && yarn install --immutable`; `apt-get install poppler-utils mupdf-tools`.
    Local Poppler is 24.02 (CI: 26.01), so a few word-gap tests can differ locally; CI on master is the judge.
 
