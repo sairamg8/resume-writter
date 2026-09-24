@@ -3,7 +3,7 @@
 > Location: `/mnt/Storage/Projects/flowcv/docs/tracking/bug-status.md` (moved from the repo root 2026-09-24)
 > Updated: 2026-09-24 · every row **verified independently at `d495cb2`** (see Verification pass) ·
 > `origin/master` (deployed) = `443321a` · nothing on `master` waits for a gate
-> **Open: 139** (0 here + 139 in [bug-status-r2/](bug-status-r2/README.md)) | Fixed, not pushed: 4 | **Closed: 116** (111 fixed + 5 ✖ without a code fix)
+> **Open: 138** (0 here + 138 in [bug-status-r2/](bug-status-r2/README.md)) | Fixed, not pushed: 5 | **Closed: 116** (111 fixed + 5 ✖ without a code fix)
 
 ## Summary
 
@@ -15,8 +15,8 @@
 | Prompt tasks, 2026-09-14 → 09-21 | 33 | 33 | 0 | 0 | 0 |
 | Full audit, 2026-09-23 — defects (`R2-001`…`R2-134`, [bug-status-r2/](bug-status-r2/README.md)) | 134 | 28 | 3 | 3 | **100** |
 | Full audit, 2026-09-23 — features and test gaps (`R2-135`…`R2-171`) | 37 | 3 | 1 | 0 | **33** |
-| Found by the build lanes, 2026-09-24 (`R3-`, in [bug-status-r2/](bug-status-r2/README.md)) | 7 | 1 | 0 | 0 | **6** |
-| **Total** | **259** | **111** | **4** | **5** | **139** |
+| Found by the build lanes, 2026-09-24 (`R3-`, in [bug-status-r2/](bug-status-r2/README.md)) | 7 | 1 | 1 | 0 | **5** |
+| **Total** | **259** | **111** | **5** | **5** | **138** |
 
 - **Status:** ✅ fixed and pushed (on `origin/master`, so deployed) · ⏸ fixed and committed, not pushed · 🔴 open ·
   ✖ closed without a code fix (won't fix: a known limit; not a bug; a duplicate) — the proof is in the row, and it counts as closed.
