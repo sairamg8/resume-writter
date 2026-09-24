@@ -1,7 +1,8 @@
 // A canvas that leaves the screen (a newer render, a zoom repaint, unmount) or never reaches it (a
-// stale or failed render) is shrunk to 0×0 at once (R2-170), instead of holding its pixels until
-// the garbage collector runs: iOS Safari caps a page's total canvas memory and fails the next paint
-// past it ("Preview failed to render").
+// stale or failed render, a zoom repaint overtaken by another zoom or by a render) is shrunk to 0×0
+// at once (R2-170), instead of holding its pixels until the garbage collector runs: iOS Safari caps
+// a page's total canvas memory and fails the next paint past it
+// ("Preview failed to render").
 // PdfPreview over fake-dom with a stand-in pdf.js and builds the test finishes (preview-stub.mjs).
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
@@ -39,6 +40,50 @@ describe('canvases leaving the screen are shrunk to 0×0 (R2-170)', () => {
       assert.deepEqual(size(old), [0, 0]);
     } finally { await view.unmount(); }
   });
+
+  it('a zoom repaint overtaken by the next zoom: its canvases are 0×0', async () => {
+    const [v0] = versions(1);
+    const { view, set, build, pdf, onScreen } = await opened(v0);
+    try {
+      const go = pdf.holdPaint(name(v0));
+      set({ render: build, input: v0, zoom: 1.25 });
+      await settle();
+      set({ render: build, input: v0, zoom: 1.5 }); // the 1.25 repaint is still painting
+      await settle();
+      go();
+      await settle();
+      const live = new Set(onScreen());
+      assert.equal(live.size, 1);
+      const offScreen = pdf.canvases.filter((c) => !live.has(c));
+      assert.equal(offScreen.length, 2, 'the first paint and the 1.25 repaint');
+      assert.deepEqual(offScreen.map(size), [[0, 0], [0, 0]]);
+    } finally { await view.unmount(); }
+  });
+
+  for (const first of ['render', 'repaint']) {
+    it(`a zoom repaint that ends as a newer render goes up (the ${first}'s paint ends first): its canvases are 0×0`, async () => {
+      const [v0, v1] = versions(2);
+      const { view, set, calls, build, pdf, onScreen, shown } = await opened(v0);
+      try {
+        const zoomed = pdf.holdPaint(name(v0));
+        const rendered = pdf.holdPaint(name(v1));
+        set({ render: build, input: v0, zoom: 1.25 }); // the repaint of v0 waits
+        await settle();
+        set({ render: build, input: v1, zoom: 1.25 });
+        await pause();
+        calls[1].finish(); // v1 is painting too
+        await settle();
+        // Both paints end before React commits either result.
+        if (first === 'render') { rendered(); zoomed(); } else { zoomed(); rendered(); }
+        await settle();
+        assert.equal(shown(), name(v1));
+        const live = new Set(onScreen());
+        const offScreen = pdf.canvases.filter((c) => !live.has(c));
+        assert.equal(offScreen.length, 2, 'the first paint of v0 and its repaint');
+        assert.deepEqual(offScreen.map(size), [[0, 0], [0, 0]]);
+      } finally { await view.unmount(); }
+    });
+  }
 
   it('unmount: the canvases on screen are 0×0', async () => {
     const [v0] = versions(1);

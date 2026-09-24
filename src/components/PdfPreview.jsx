@@ -119,6 +119,7 @@ export function PdfPreview({ render, input, zoom = 1, textId, title = 'Résumé'
   const mounted = useRef(true);
   const rootRef = useRef(null);
   const onScreen = useRef([]); // the canvases of the pages on screen
+  const handed = useRef(null);  // the last view given to setView: on screen, or about to be
   const box = previewBox(input?.settings || input);
   const [available, setAvailable] = useState(() => box.widthPx + GUTTER_PX);
   // 100 % = fit the column (never wider than true page size); the zoom buttons scale from there.
@@ -164,7 +165,7 @@ export function PdfPreview({ render, input, zoom = 1, textId, title = 'Résumé'
         release(docRef.current);
         docRef.current = pdf;
         shownGen.current = gen;
-        setView({ pages, painted, cssWidth: width });
+        show({ pages, painted, cssWidth: width });
         // Older than the latest change: its pages go up, but the latest build still owns the status.
         if (gen !== generation.current) return;
         setError(null);
@@ -186,11 +187,21 @@ export function PdfPreview({ render, input, zoom = 1, textId, title = 'Résumé'
     if (!active || !view || view.cssWidth === cssWidth) return undefined;
     let cancelled = false;
     paint(view.pages, cssWidth).then((painted) => {
-      if (cancelled) discard(painted.map((p) => p.canvas));
-      else setView((v) => (v && v.pages === view.pages ? { ...v, painted, cssWidth } : v));
+      // Cancelled, or a newer render's pages were handed over while this painted: never shown.
+      if (cancelled || handed.current !== view) discard(painted.map((p) => p.canvas));
+      else show({ ...view, painted, cssWidth });
     }).catch(() => { /* the next render repaints */ });
     return () => { cancelled = true; };
   }, [active, cssWidth, view]);
+
+  // Put `next` up. A view handed over before it but not on screen yet (a zoom repaint the same moment
+  // as a render) never will be: free its canvases.
+  function show(next) {
+    const unshown = handed.current && handed.current !== next ? handed.current.painted.map((p) => p.canvas) : [];
+    discard(unshown.filter((c) => !onScreen.current.includes(c)));
+    handed.current = next;
+    setView(next);
+  }
 
   // Pages replaced (a newer render, a zoom repaint): free the canvases that left the screen. A
   // layout effect, so it runs after PageCanvas has put the new ones up and before the browser paints.
