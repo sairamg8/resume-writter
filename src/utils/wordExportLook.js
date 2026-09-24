@@ -73,13 +73,16 @@ function entrySizes(section, s, tid, side) {
  * Section Options → Grids as the PDF lays the section out on a text column `width` twips wide
  * (R2-070): `cols` entries to a row — the section's Grids; unset, Languages and References two, the
  * rest one — each `cell` twips wide (getColumnWidth's 48 %, 31 % or 23 %), the cells spread from edge
- * to edge (`starts`: where each begins). Null for one column; the Sidebar's side column is always one.
+ * to edge (`starts`: where each begins). Grids over 4 (stored data; the editor offers 1 to 4) get
+ * the whole column from getColumnWidth, and the PDF's row shrinks its cells alike: `cols` equal
+ * cells, no gap. Null for one column, or a Grids that is no whole number; the Sidebar's side
+ * column is always one.
  */
 function gridOf(section, width, side) {
   const cols = side ? 1 : Number(section.settings?.columns) || (['languages', 'references'].includes(section.type) ? 2 : 1);
+  if (!Number.isInteger(cols) || cols < 2) return null;
   const share = parseFloat(getColumnWidth(cols)) / 100;
-  if (cols < 2 || share >= 1) return null;
-  const cell = Math.round(width * share);
+  const cell = Math.round(width * (share < 1 ? share : 1 / cols));
   const gap = (width - cols * cell) / (cols - 1);
   return { cols, cell, width, starts: Array.from({ length: cols }, (_, i) => Math.round(i * (cell + gap))) };
 }

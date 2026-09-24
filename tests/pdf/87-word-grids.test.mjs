@@ -123,4 +123,25 @@ describe('Word: Section Options → Grids lays entries out side by side, as the 
     const right = rightMargin(table.rows[0][0]);
     assert.equal(tab, table.columns[0] - right);
   });
+
+  it('a stored Grids over 4 (the editor offers 1 to 4): equal cells edge to edge, where the PDF prints them', async () => {
+    const { PAGE_SIZES } = await loadModule('/src/constants/pageSize.js');
+    const margin = Math.round((18 * 1440) / 25.4);
+    const width = PAGE_SIZES.A4.twips.width - 2 * margin;
+    for (const columns of [5, 6]) {
+      const skills = ['Alpha', 'Bravo', 'Charlie'].map((category) => ({ category, skills: 'Go' }));
+      const r = resume({ sections: [section('skills', skills, { columns })] });
+      const items = allItems(await read(await render(r)));
+      const pdfX = skills.map(({ category }) => items.find((t) => t.str.startsWith(category)).x * 20 - margin);
+      const [table] = tables((await renderDocx(r)).xml);
+      assert.ok(table, `Grids ${columns}: a table`);
+      assert.deepEqual(table.rows.map((row) => row.map((c) => c.text)), [['Alpha: Go', 'Bravo: Go', 'Charlie: Go', ...Array(columns - 3).fill('')]]);
+      let x = 0;
+      table.columns.forEach((w, i) => {
+        assert.ok(Math.abs(w - rightMargin(table.rows[0][i]) - width / columns) <= columns, `Grids ${columns} cell ${i + 1}: ${w} wide`);
+        if (i < 3) assert.ok(Math.abs(x - pdfX[i]) <= 20, `Grids ${columns} cell ${i + 1} starts at ${x}, the PDF's at ${pdfX[i]}`);
+        x += w;
+      });
+    }
+  });
 });
