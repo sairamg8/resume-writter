@@ -1,7 +1,8 @@
-import { useId, useState } from 'react';
+import { useId } from 'react';
 import { Copy, Trash2, Edit2, Check, Pin } from 'lucide-react';
 import { timeAgo } from '@/utils/resume';
 import { isOriginal } from '@/utils/demoSeed';
+import { useRename } from '@/hooks/useRename';
 
 const KEEP_HINT = 'Your originals come back whenever none of them is left';
 const LAST_ORIGINAL_HINT = 'Your last original always comes back. To delete it, choose "Stop keeping" first.';
@@ -13,16 +14,9 @@ const LAST_ORIGINAL_HINT = 'Your last original always comes back. To delete it, 
  * disabled and the card says why (V2OWNER-DATA-4).
  */
 export function ResumeCard({ resume, onOpen, onDuplicate, onDelete, onRename, onKeep, lastOriginal = false }) {
-  const [editing, setEditing] = useState(false);
-  const [name, setName] = useState(resume.name);
+  const rename = useRename(resume, (name) => onRename(resume.id, name));
   const hintId = useId();
   const accent = resume.settings?.accentColor || '#2563eb';
-
-  function commitRename() {
-    setEditing(false);
-    if (name.trim()) onRename(resume.id, name.trim());
-    else setName(resume.name);
-  }
 
   return (
     <div className="group bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-all overflow-hidden flex flex-col">
@@ -58,27 +52,29 @@ export function ResumeCard({ resume, onOpen, onDuplicate, onDelete, onRename, on
 
       {/* Name — grows, so every card in a row has its buttons at the bottom (the last original's hint is longer) */}
       <div className="px-3 pt-3 pb-1 flex-1">
-        {editing ? (
+        {rename.editing ? (
           <div className="flex items-center gap-1">
             <input
               autoFocus
               aria-label="Résumé name"
-              value={name}
-              onChange={e => setName(e.target.value)}
-              onBlur={commitRename}
+              value={rename.draft}
+              onChange={e => rename.setDraft(e.target.value)}
+              onBlur={rename.commit}
               onKeyDown={e => {
-                if (e.key === 'Enter') commitRename();
-                if (e.key === 'Escape') { setEditing(false); setName(resume.name); }
+                if (e.key === 'Enter') rename.commit();
+                if (e.key === 'Escape') rename.cancel();
               }}
               className="flex-1 text-sm font-semibold border-b border-blue-400 outline-none bg-transparent"
             />
-            <button onClick={commitRename} className="p-0.5 text-blue-600"><Check size={13} /></button>
+            <button onClick={rename.commit} aria-label="Save name" className="p-0.5 text-blue-600"><Check size={13} /></button>
           </div>
         ) : (
           <div className="flex items-center gap-1 group/name">
             <p className="text-sm font-semibold text-gray-800 truncate flex-1">{resume.name}</p>
             <button
-              onClick={() => setEditing(true)}
+              onClick={rename.start}
+              title="Rename"
+              aria-label="Rename"
               className="opacity-0 group-hover/name:opacity-100 no-hover:opacity-100 p-0.5 text-gray-400 hover:text-gray-600 transition-opacity shrink-0"
             >
               <Edit2 size={11} />

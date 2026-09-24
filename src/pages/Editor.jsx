@@ -13,6 +13,7 @@ import { useEditorExports } from '@/hooks/useEditorExports';
 import { usePanelResize } from '@/hooks/usePanelResize';
 import { useIsMobile } from '@/hooks/useMediaQuery';
 import { useOpenResume } from '@/hooks/useOpenResume';
+import { useRename } from '@/hooks/useRename';
 
 export function Editor({ store, auth, sync }) {
   const { id } = useParams();
@@ -29,8 +30,7 @@ export function Editor({ store, auth, sync }) {
   // What is open on the Résumé tab lives here, so it survives a trip to Design or the letter.
   const [personalOpen, setPersonalOpen] = useState(true);
   const [addSectionOpen, setAddSectionOpen] = useState(false);
-  const [resumeName, setResumeName] = useState(resume?.name || '');
-  const [editingName, setEditingName] = useState(false);
+  const rename = useRename(resume, (name) => store.renameResume(resume.id, name));
   const [layoutMode, setLayoutMode] = useState('split');
   const [allExpanded, setAllExpanded] = useState(true);
   const [forceOpenKey, setForceOpenKey] = useState(0);
@@ -68,14 +68,6 @@ export function Editor({ store, auth, sync }) {
     return () => { cancelled = true; };
   }, [resume?.template, resume?.settings?.font, resume?.settings?.customFont]);
 
-  useEffect(() => { setResumeName(resume?.name || ''); }, [resume?.id]);
-
-  function commitName() {
-    setEditingName(false);
-    if (resumeName.trim()) store.renameResume(resume.id, resumeName.trim());
-    else setResumeName(resume.name);
-  }
-
   if (!resume) return null;
 
   return (
@@ -91,7 +83,7 @@ export function Editor({ store, auth, sync }) {
       >
         <EditorHeader
           resume={resume}
-          rename={{ resumeName, setResumeName, editingName, setEditingName, commitName }}
+          rename={rename}
           layoutMode={layoutMode}
           setLayoutMode={setLayoutMode}
           exportMenu={exportMenu}

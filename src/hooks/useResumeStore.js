@@ -189,11 +189,11 @@ export function useAppStore() {
     }));
   }
 
+  /** The same name is not an edit: no new updatedAt, no save, nothing to sync (R2-084). */
   function renameResume(id, name) {
-    setAppState(prev => ({
-      ...prev,
-      resumes: prev.resumes.map(r => r.id === id ? { ...r, name, updatedAt: Date.now() } : r),
-    }));
+    setAppState(prev => (prev.resumes.some(r => r.id === id && r.name !== name)
+      ? { ...prev, resumes: prev.resumes.map(r => r.id === id ? { ...r, name, updatedAt: Date.now() } : r) }
+      : prev));
   }
 
   // ── Personal Info & Settings ───────────────────────────────────────
