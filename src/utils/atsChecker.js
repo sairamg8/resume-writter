@@ -1,6 +1,7 @@
 import { decodeEntities, hasRichText, parseRichText } from './richText.js';
 import { contactItems } from './contacts.js';
 import { skillGroup } from './skills.js';
+import { ACTION_VERBS, hasMetric, leadsWithActionVerb } from './bulletOptimizer.js';
 import { atsRating, hasHeaderControls, templateId, templateLabel, TEMPLATE_PICKER } from '../constants/templates.js';
 import { TEMPLATE_SECTION_DEFAULTS, resolveSection } from '../templates/pdf/shared/templateSectionDefaults.js';
 
@@ -71,47 +72,8 @@ export function extractBulletsFromItem(item) {
   return bullets;
 }
 
-// ── 1. High-Impact Action Verbs Dictionary (150+ categorized power verbs) ──
-export const ACTION_VERBS = new Set([
-  // Leadership & Management
-  'accelerated', 'achieved', 'administered', 'advocated', 'aligned', 'allocated', 'appointed',
-  'approved', 'assigned', 'authorized', 'chaired', 'championed', 'coached', 'consolidated',
-  'contracted', 'coordinated', 'delegated', 'directed', 'empowered', 'enabled', 'enforced',
-  'ensured', 'established', 'executed', 'facilitated', 'fostered', 'founded', 'governed',
-  'guided', 'headed', 'hired', 'hosted', 'inspired', 'instituted', 'instructed', 'led',
-  'leveraged', 'managed', 'mentored', 'mobilized', 'motivated', 'navigated', 'orchestrated',
-  'organized', 'overhauled', 'oversaw', 'partnered', 'pioneered', 'planned', 'prioritized',
-  'produced', 'recruited', 'reorganized', 'restructured', 'revamped', 'spearheaded', 'steered',
-  'supervised', 'trained', 'transformed', 'unified',
-
-  // Technical, Development & Engineering
-  'architected', 'automated', 'built', 'coded', 'compiled', 'computed', 'configured',
-  'constructed', 'debugged', 'deployed', 'designed', 'developed', 'devised', 'discovered',
-  'engineered', 'enhanced', 'implemented', 'installed', 'integrated', 'invented', 'maintained',
-  'migrated', 'modeled', 'modernized', 'optimized', 'programmed', 'prototyped', 'refactored',
-  're-engineered', 'resolved', 'scaled', 'secured', 'simulated', 'standardized', 'streamlined',
-  'tested', 'troubleshot', 'upgraded', 'validated',
-
-  // Research, Analysis & Problem Solving
-  'analyzed', 'assessed', 'audited', 'benchmarked', 'calculated', 'clarified', 'collected',
-  'compared', 'conducted', 'critiqued', 'deduced', 'diagnosed', 'evaluated', 'examined',
-  'explored', 'forecasted', 'formulated', 'identified', 'inspected', 'interpreted', 'interviewed',
-  'investigated', 'measured', 'modeled', 'monitored', 'quantified', 'researched', 'reviewed',
-  'surveyed', 'synthesized', 'tracked',
-
-  // Execution, Growth & Financial Impact
-  'acquired', 'boosted', 'budgeted', 'captured', 'closed', 'curtailed', 'cut', 'decreased',
-  'delivered', 'doubled', 'earned', 'exceeded', 'expanded', 'expedited', 'generated', 'grew',
-  'halved', 'improved', 'increased', 'maximized', 'minimized', 'negotiated', 'outperformed',
-  'procured', 'profitably', 'raised', 'reduced', 'saved', 'slashed', 'surpassed', 'tripled',
-  'yielded',
-
-  // Communication, Creative & Writing
-  'addressed', 'authored', 'briefed', 'collaborated', 'composed', 'conveyed', 'corresponded',
-  'created', 'customized', 'documented', 'drafted', 'edited', 'illustrated', 'influenced',
-  'moderated', 'negotiated', 'persuaded', 'presented', 'promoted', 'publicized', 'published',
-  'represented', 'spoke', 'translated', 'wrote',
-]);
+// ── 1. High-Impact Action Verbs: the one list the score and the STAR Optimizer read (R2-025) ──
+export { ACTION_VERBS };
 
 // Weak or passive phrases that hurt ATS score and recruiter impression
 export const WEAK_PHRASES = [
@@ -836,9 +798,8 @@ export function analyzeAtsScore(resume, jobDescriptionText = '') {
 
       for (const bullet of allBullets) {
         const lower = bullet.toLowerCase();
-        // Check first word for action verb
-        const firstWord = lower.replace(/^[^\w]+/, '').split(/\s+/)[0];
-        if (ACTION_VERBS.has(firstWord)) {
+        // Check first word for action verb — the STAR Optimizer's own check (R2-025)
+        if (leadsWithActionVerb(bullet)) {
           actionVerbCount++;
         }
         // Check for weak phrases
@@ -848,8 +809,8 @@ export function analyzeAtsScore(resume, jobDescriptionText = '') {
             break;
           }
         }
-        // Check for numbers / quantifiable metrics
-        if (/(\d+[%$€£kmbx]?|\$[\d,]+|\b\d+\b)/i.test(bullet) && !/^\d{4}$/.test(bullet.trim())) {
+        // Check for numbers / quantifiable metrics — the optimizer's rule too (R2-025)
+        if (hasMetric(bullet)) {
           metricCount++;
         }
       }
