@@ -1,23 +1,25 @@
 import { useState, useId } from 'react';
 import { ChevronDown, RotateCcw } from 'lucide-react';
+import { useTypedNumber } from '@/hooks/useTypedNumber';
 
 export function Label({ children }) {
   return <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-2">{children}</p>;
 }
 
+// SizeRow and NumberRow write a typed value on Enter or on leaving the box, and only when it differs
+// from the one shown; Escape writes nothing (useTypedNumber, R2-032). Clicking in and out used to
+// store the shown value — Contact Icons with nothing stored became a stored 11, Line Height 1.15 a 1.1.
 export function SizeRow({ label, value, onChange, min = 6, max = 40 }) {
   const labelId = useId();
-  const [raw, setRaw] = useState('');
-  const [editing, setEditing] = useState(false);
-
-  function commit(str) {
-    const n = parseInt(str, 10);
-    if (!isNaN(n)) onChange(Math.min(max, Math.max(min, n)));
-    setEditing(false);
-  }
-
   const current = Number.isFinite(value) ? value : min;
-  const display = editing ? raw : current + 'pt';
+  const typed = useTypedNumber({
+    shown: current + 'pt',
+    editText: String(current),
+    commit: (str) => {
+      const n = parseInt(str, 10);
+      if (!isNaN(n)) onChange(Math.min(max, Math.max(min, n)));
+    },
+  });
 
   return (
     <div className="flex items-center justify-between">
@@ -27,14 +29,7 @@ export function SizeRow({ label, value, onChange, min = 6, max = 40 }) {
         <input
           type="text"
           aria-labelledby={labelId}
-          value={display}
-          onFocus={() => { setEditing(true); setRaw(String(current)); }}
-          onChange={e => setRaw(e.target.value)}
-          onBlur={e => commit(e.target.value)}
-          onKeyDown={e => {
-            if (e.key === 'Enter') { commit(raw); e.target.blur(); }
-            if (e.key === 'Escape') { setEditing(false); e.target.blur(); }
-          }}
+          {...typed.inputProps}
           className="w-14 text-center text-xs font-medium text-gray-700 border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-400 focus:border-blue-400 h-6 cursor-text"
         />
         <button onClick={() => onChange(Math.min(max, current + 1))} className="w-6 h-6 flex items-center justify-center border border-gray-200 rounded text-gray-600 hover:bg-gray-100 text-base leading-none">+</button>
@@ -45,19 +40,17 @@ export function SizeRow({ label, value, onChange, min = 6, max = 40 }) {
 
 export function NumberRow({ label, value, onChange, min = 1, max = 200, step = 1, unit = '' }) {
   const labelId = useId();
-  const [raw, setRaw] = useState('');
-  const [editing, setEditing] = useState(false);
-
-  function commit(str) {
-    const n = parseFloat(str);
-    if (!isNaN(n)) onChange(Math.min(max, Math.max(min, Math.round(n / step) * step)));
-    setEditing(false);
-  }
-
   // A value that is not a number (text, true, {}) shows and steps as `min` instead of crashing the
   // editor on toFixed; normalizeResume drops one from saved data (VF2-3.2-NB1-NB1).
   const current = Number.isFinite(value) ? value : min;
-  const display = editing ? raw : (Number.isInteger(current / step) && step >= 1 ? current + unit : current.toFixed(step < 1 ? 1 : 0) + unit);
+  const typed = useTypedNumber({
+    shown: Number.isInteger(current / step) && step >= 1 ? current + unit : current.toFixed(step < 1 ? 1 : 0) + unit,
+    editText: String(current),
+    commit: (str) => {
+      const n = parseFloat(str);
+      if (!isNaN(n)) onChange(Math.min(max, Math.max(min, Math.round(n / step) * step)));
+    },
+  });
 
   return (
     <div className="flex items-center justify-between">
@@ -67,14 +60,7 @@ export function NumberRow({ label, value, onChange, min = 1, max = 200, step = 1
         <input
           type="text"
           aria-labelledby={labelId}
-          value={display}
-          onFocus={() => { setEditing(true); setRaw(String(current)); }}
-          onChange={e => setRaw(e.target.value)}
-          onBlur={e => commit(e.target.value)}
-          onKeyDown={e => {
-            if (e.key === 'Enter') { commit(raw); e.target.blur(); }
-            if (e.key === 'Escape') { setEditing(false); e.target.blur(); }
-          }}
+          {...typed.inputProps}
           className="w-14 text-center text-xs font-medium text-gray-700 border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-400 focus:border-blue-400 h-6 cursor-text"
         />
         <button onClick={() => onChange(Math.min(max, Math.round((current + step) / step) * step))} className="w-6 h-6 flex items-center justify-center border border-gray-200 rounded text-gray-600 hover:bg-gray-100 text-base leading-none">+</button>

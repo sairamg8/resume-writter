@@ -1,30 +1,37 @@
 // Header spacing steppers (header_spacing_spec.md): one row per gap the header prints, in CSS px like
 // Between Sections. An unset gap shows the template's own value in grey; a set one shows a reset
 // arrow. The rows come from headerGapRows (src/utils/headerSpacingRows.js).
-import { useId, useState } from 'react';
+import { useId } from 'react';
 import { RotateCcw } from 'lucide-react';
 import { HEADER_GAP_KEYS } from '@/constants/headerSpacing';
+import { useTypedNumber } from '@/hooks/useTypedNumber';
 
 /** A px value as the stepper shows it: whole numbers plain, a template's 1.33 px as "1.3". */
 export const formatPx = (px) => String(Math.round(px * 10) / 10);
 
 const STEP_BTN = 'w-6 h-6 flex items-center justify-center border border-gray-200 rounded text-gray-600 hover:bg-gray-100 text-base leading-none disabled:opacity-40 disabled:hover:bg-transparent';
 
-/** One gap: label, −, the value (typed on Enter/blur), +, px — and ↺ once the user has set it. */
+/**
+ * One gap: label, −, the value, +, px — and ↺ once the user has set it. A typed value is written on
+ * Enter or on leaving the box, and only when it differs from the shown one; Escape writes nothing
+ * (useTypedNumber, R2-032) — clicking in and out no longer stores a template's 13.33 px as 13.
+ */
 export function GapStepper({ row, onChange, onReset }) {
   const labelId = useId();
-  const [draft, setDraft] = useState(null);
   const { min, max, valuePx, set, name } = row;
   // −/+ land on whole pixels: from a template's 1.33 px, + gives 2 and − gives 1.
   const down = Math.max(min, Math.ceil(valuePx - 1e-6) - 1);
   const up = Math.min(max, Math.floor(valuePx + 1e-6) + 1);
   const lower = name.charAt(0).toLowerCase() + name.slice(1);
 
-  function commit(str) {
-    const n = parseFloat(String(str).replace(',', '.'));
-    if (Number.isFinite(n)) onChange(Math.min(max, Math.max(min, Math.round(n))));
-    setDraft(null);
-  }
+  const typed = useTypedNumber({
+    shown: formatPx(valuePx),
+    select: true,
+    commit: (str) => {
+      const n = parseFloat(str.replace(',', '.'));
+      if (Number.isFinite(n)) onChange(Math.min(max, Math.max(min, Math.round(n))));
+    },
+  });
 
   return (
     <div className="flex items-center justify-between gap-2" data-gap={row.key}>
@@ -46,15 +53,11 @@ export function GapStepper({ row, onChange, onReset }) {
           aria-valuemin={min}
           aria-valuemax={max}
           aria-valuetext={`${formatPx(valuePx)} pixels${set ? '' : ", the template's spacing"}`}
-          value={draft ?? formatPx(valuePx)}
-          onFocus={(e) => { setDraft(formatPx(valuePx)); e.target.select(); }}
-          onChange={(e) => setDraft(e.target.value)}
-          onBlur={(e) => commit(e.target.value)}
+          {...typed.inputProps}
           onKeyDown={(e) => {
-            if (e.key === 'Enter') { commit(draft ?? ''); e.currentTarget.blur(); }
-            else if (e.key === 'Escape') { setDraft(null); e.currentTarget.blur(); }
-            else if (e.key === 'ArrowUp') { e.preventDefault(); setDraft(null); onChange(up); }
-            else if (e.key === 'ArrowDown') { e.preventDefault(); setDraft(null); onChange(down); }
+            if (e.key === 'ArrowUp') { e.preventDefault(); typed.drop(); onChange(up); }
+            else if (e.key === 'ArrowDown') { e.preventDefault(); typed.drop(); onChange(down); }
+            else typed.inputProps.onKeyDown(e);
           }}
           className={`w-12 text-center text-xs border border-gray-200 rounded h-6 focus:outline-none focus:ring-1 focus:ring-blue-400 ${set ? 'font-medium text-gray-700' : 'text-gray-400'}`}
         />
