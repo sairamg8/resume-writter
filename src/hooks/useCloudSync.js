@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import {
-  arrayUnion, collection, doc, getDocFromServer, getDocsFromServer, writeBatch,
+  arrayRemove, arrayUnion, collection, doc, getDocFromServer, getDocsFromServer, writeBatch,
 } from 'firebase/firestore';
 import { db } from '@/utils/firebase';
 import { isDemoAccount } from '@/utils/demoSeed';
@@ -11,7 +11,7 @@ import { liveStore } from '@/hooks/useResumeSyncActions';
 
 /** The real Firestore calls (cloudSyncIo); null in a build without a cloud. */
 const io = db
-  ? cloudIo({ collection, doc, getDocsFromServer, getDocFromServer, writeBatch, arrayUnion }, db)
+  ? cloudIo({ collection, doc, getDocsFromServer, getDocFromServer, writeBatch, arrayUnion, arrayRemove }, db)
   : null;
 
 /**

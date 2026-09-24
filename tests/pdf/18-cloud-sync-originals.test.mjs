@@ -76,6 +76,30 @@ describe('an original deleted for good stays deleted on every device (V2OWNER-DA
     assert.deepEqual(listed(cloud), ['orig_x']);
   });
 
+  it('an original a tab restored just before another device deleted it for good stays deleted: a restore is no edit (R2-029)', async () => {
+    const cloud = fakeFirestore({
+      [resumePath('u', 'orig_x')]: orig('orig_x', 5, { name: 'X', deleted: true }),
+      [resumePath('u', 'orig_y')]: orig('orig_y', 5, { name: 'Y' }), [resumePath('u', 'resume_b')]: cv('resume_b'),
+    });
+    const laptop = page(cloud, { resumes: [orig('orig_y', 5, { name: 'Y' }), cv('resume_b')] });
+    await signIn(laptop);
+    const phone = page(cloud, { resumes: [] });
+    await signIn(phone);
+    await phone.remove('orig_y');
+    await settle();
+    await phone.timers.fire();
+    // The laptop restores X and Y (the list does not hold X yet); its flush waits for the pause.
+    await laptop.remove('orig_y');
+    await settle();
+    assert.deepEqual(ids(laptop), ['orig_x', 'orig_y', 'resume_b']);
+    await deleteForGood(phone, 'orig_x', 10);
+    await laptop.timers.fire();
+    assert.deepEqual(listed(cloud), ['orig_x'], 'the restore\'s copy took X off the list: back on every device');
+    const fresh = page(cloud, { resumes: [] });
+    await signIn(fresh);
+    assert.ok(!ids(fresh).includes('orig_x'));
+  });
+
   it('a stale tab deleting an original another device stopped keeping does not mark it kept again (V2OWNER-DATA-2)', async () => {
     const cloud = fakeFirestore({ [resumePath('u', 'orig_x')]: orig('orig_x', 5, { name: 'X' }), [resumePath('u', 'orig_y')]: orig('orig_y', 5, { name: 'Y' }) });
     const laptop = page(cloud, { resumes: [orig('orig_x', 5, { name: 'X' }), orig('orig_y', 5, { name: 'Y' })] });

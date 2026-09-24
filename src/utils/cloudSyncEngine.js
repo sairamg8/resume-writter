@@ -231,7 +231,10 @@ export function createCloudSync({
       // Deletions this browser never sent reach the cloud in the same batch, before the store
       // forgets them (afterSync) — else the next sync restores them (R4-1). A résumé too large
       // for a document is never sent; one refused is held and the rest sent without it.
-      await held.commit(user.uid, { ...plan, sets: held.sendable(user.uid, plan.sets) }, own, () => gen === s.gen);
+      // A listed id comes off the list only with its copy: not while that copy is held back (R2-029).
+      const sets = held.sendable(user.uid, plan.sets);
+      const listRemove = plan.listRemove.filter((id) => sets.some((r) => r.id === id) || !plan.sets.some((r) => r.id === id));
+      await held.commit(user.uid, { ...plan, sets, listRemove }, own, () => gen === s.gen);
       if (gen !== s.gen) return;
       s.lineage.synced(cloud.docs);
       s.lineage.synced(plan.sets);
@@ -247,10 +250,12 @@ export function createCloudSync({
       s.prevResumes = plan.merged;
       s.initialSyncDone = true;
       // A listed id was deleted for good, whatever copy of it a stale device wrote back since
-      // (V2OWNER-DATA-0): it is none of the account's originals.
-      const listed = new Set(cloud.deleted);
+      // (V2OWNER-DATA-0): it is none of the account's originals. One the plan took off the list,
+      // edited where the deletion was never seen, is no longer listed (R2-029) — unless its copy was
+      // held back: it stays listed until that copy goes.
+      const listed = new Set(cloud.deleted.filter((id) => !listRemove.includes(id) || held.has(id)));
       const cloudOriginals = cloud.docs.filter((r) => isOriginal(r) && !listed.has(r.id)).map(({ deleted: _deleted, ...r }) => r);
-      setAccount({ uid: user.uid, cloud: true, cloudOriginals, cloudDeleted: [...cloud.deleted] });
+      setAccount({ uid: user.uid, cloud: true, cloudOriginals, cloudDeleted: [...listed] });
       s.attempts = 0;
       settled();
     } catch (e) {

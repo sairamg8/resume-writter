@@ -70,7 +70,8 @@ on hover); what a failure means: `src/utils/cloudSyncRetry.js`.
 - Diff previous vs current resumes by id / `updatedAt`
 - Queue writes and deletes
 - Debounce ~1.5s then flush
-- Each flush first reads the server's copies of the résumés it sends (never the deletion list, R8-4)
+- Each flush first reads the server's copies of the résumés it sends — the deletion list only when a
+  copy the cloud had is gone, and nothing is written from what it read (R8-4, R2-029)
 - Offline, or a flush that failed: the résumé store keeps the edits and deletions, and the next first
   sync sends them. Firestore's cache is in memory only (`memoryLocalCache`, R2-005): nothing reads it
   (every read asks the server), and a persistent one kept every account's résumés on disk after sign-out
@@ -88,6 +89,9 @@ equality only, never by clock. The store keeps the cloud's versions it last knew
 | First sync: the copy here is one the cloud had, the cloud's is newer | the cloud's loads, whatever the clocks say |
 | First sync: changed on both sides (an offline edit, even across a reload) | both kept, as above |
 | The tab is shown again ≥ 10 s after the account was read | the account is read again, so the next edit starts from the other device's copy |
+| Deleted on another device, edited here where the deletion was never seen (a page left open, or offline; R2-029) | the edit wins: written under its id, taken off the deletion list, back on every device. A copy the cloud had, written again (a demo restore racing a deletion for good), is no edit: it stays listed (V2OWNER-DATA-0); one held back (too large) stays listed until it goes |
+| First sync: a listed id the cloud holds again (an older build wrote it back after the deletion) | loaded and taken off the list; a demo account's original there (a restore's copy) is removed from the cloud instead |
+| First sync: a listed id, the copy here unchanged since the cloud had it, or of no known version | left out, deleted, as before |
 
 ### Signing out on a shared browser (R2-005)
 

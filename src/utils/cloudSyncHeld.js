@@ -131,7 +131,7 @@ export function createHeld({ io = null, report = {}, online = () => true, resume
   return api;
 }
 
-const NOTHING = { sets: [], flags: [], marks: [], hardDeletes: [], listAdd: [] };
+const NOTHING = { sets: [], flags: [], marks: [], hardDeletes: [], listAdd: [], listRemove: [] };
 
 /**
  * io.commit(uid, plan) — and when the server refuses the batch for good (failureKind 'stop') and
@@ -160,8 +160,10 @@ export async function commitHolding(io, uid, plan, { held, source, resumes, onli
   const keep = (ids = []) => ids.filter(unchanged);
   const rest = {
     ...NOTHING, flags: keep(plan.flags), marks: keep(plan.marks), hardDeletes: keep(plan.hardDeletes), listAdd: keep(plan.listAdd),
+    // A listed id whose copy the cloud holds already; one written here goes with its copy, below.
+    listRemove: (plan.listRemove || []).filter((id) => !plan.sets.some((r) => r.id === id)),
   };
-  if (rest.flags.length || rest.hardDeletes.length || rest.listAdd.length) await io.commit(uid, rest);
+  if (rest.flags.length || rest.hardDeletes.length || rest.listAdd.length || rest.listRemove.length) await io.commit(uid, rest);
   if (plan.sets.length === 1) {
     if (unchanged(plan.sets[0].id)) held.hold(plan.sets[0]);
     return rest;
@@ -171,7 +173,8 @@ export async function commitHolding(io, uid, plan, { held, source, resumes, onli
     if (!live()) break;
     if (!unchanged(r.id)) continue;
     try {
-      await io.commit(uid, { ...NOTHING, sets: [r] });
+      // Its id comes off the deletion list with it, and only with it (R2-029).
+      await io.commit(uid, { ...NOTHING, sets: [r], listRemove: (plan.listRemove || []).filter((id) => id === r.id) });
       sets.push(r);
     } catch (e) {
       if (failureKind(e, online()) !== 'stop') throw e;

@@ -1,5 +1,5 @@
 // The Firestore calls behind the cloud sync, with the SDK's functions passed in (`fs`: collection,
-// doc, getDocsFromServer, getDocFromServer, writeBatch, arrayUnion), so the tests run
+// doc, getDocsFromServer, getDocFromServer, writeBatch, arrayUnion, arrayRemove), so the tests run
 // this very code against a fake Firestore (tests/pdf/fake-firestore.mjs). useCloudSync passes the
 // real functions and `db`; nothing else in the sync touches Firebase.
 //
@@ -52,17 +52,30 @@ export function cloudIo(fs, db) {
     },
 
     /**
+     * The account's deletion list now: a flush that finds no copy of a résumé it writes asks
+     * whether it was deleted elsewhere (R2-029). Nothing is written from it: the list only ever
+     * changes by the ids a batch adds or removes itself.
+     */
+    async readDeleted(uid) {
+      const list = await fs.getDocFromServer(deletionsDoc(uid));
+      return list.exists() ? (list.data().ids || []) : [];
+    },
+
+    /**
      * One batch: whole résumés written (`sets`), originals flagged (the rest of the document
      * kept; `marks` marked an original too — one marked here and deleted before the mark was
-     * sent), the rest removed, and their ids added to the deletion list (`listAdd`). Nothing ever
-     * comes off the list: an id on it was deleted for good. Resolves when the server has it.
+     * sent), the rest removed, and their ids added to the deletion list (`listAdd`). An id on it
+     * was deleted for good; it comes off (`listRemove`) only with a copy written in the same batch
+     * that was edited where the deletion was never seen (cloudSyncPlan.js, R2-029). Resolves when
+     * the server has it.
      */
-    commit(uid, { sets, flags, marks = [], hardDeletes, listAdd = [] }) {
+    commit(uid, { sets, flags, marks = [], hardDeletes, listAdd = [], listRemove = [] }) {
       const batch = fs.writeBatch(db);
       sets.forEach((r) => batch.set(resumeDoc(uid, r.id), asStored(r)));
       flags.forEach((id) => batch.set(resumeDoc(uid, id), marks.includes(id) ? { deleted: true, keep: true } : { deleted: true }, { merge: true }));
       hardDeletes.forEach((id) => batch.delete(resumeDoc(uid, id)));
       if (listAdd.length) batch.set(deletionsDoc(uid), { ids: fs.arrayUnion(...listAdd) }, { merge: true });
+      if (listRemove.length) batch.set(deletionsDoc(uid), { ids: fs.arrayRemove(...listRemove) }, { merge: true });
       return batch.commit();
     },
   };
