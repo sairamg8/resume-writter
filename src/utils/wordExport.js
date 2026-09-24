@@ -1,6 +1,6 @@
-import { Document, Packer, convertInchesToTwip } from 'docx';
-import { accent2Hex, WORD_MARGIN_IN } from '@/utils/wordExportUtils';
-import { buildSection } from '@/utils/wordExportBuilders';
+import { Document, Packer } from 'docx';
+import { accent2Hex, wordMargins } from '@/utils/wordExportUtils';
+import { buildSection, sectionSpaceAfter } from '@/utils/wordExportBuilders';
 import { buildPersonalSection } from '@/utils/wordExportHeader';
 import { buildCoverLetter } from '@/utils/wordExportCoverLetter';
 import { resolveSection } from '@/templates/pdf/shared/templateSectionDefaults';
@@ -15,9 +15,13 @@ export function resolveWordFont(settings = {}) {
   return fontObj?.label || fontObj?.name || 'Noto Sans';
 }
 
-/** A one-section document on the résumé's paper (A4 or US Letter, PAR-01), WORD_MARGIN_IN margins on either. */
+/**
+ * A one-section document on the résumé's paper (A4 or US Letter, PAR-01), in Design → Spacing's page
+ * margins (wordMargins, R2-062) — the résumé's and its letter's, as their PDFs print them.
+ */
 function buildDocument(children, settings) {
   const font = resolveWordFont(settings);
+  const margin = wordMargins(settings);
   const baseSize = Math.round((settings?.fontSizeBase ?? 11) * 2);
   return new Document({
     styles: {
@@ -43,12 +47,7 @@ function buildDocument(children, settings) {
       properties: {
         page: {
           size: PAGE_SIZES[pageSizeOf(settings)].twips,
-          margin: {
-            top: convertInchesToTwip(WORD_MARGIN_IN),
-            right: convertInchesToTwip(WORD_MARGIN_IN),
-            bottom: convertInchesToTwip(WORD_MARGIN_IN),
-            left: convertInchesToTwip(WORD_MARGIN_IN),
-          },
+          margin: { top: margin.v, right: margin.h, bottom: margin.v, left: margin.h },
         },
       },
       children,
@@ -61,11 +60,19 @@ export async function renderResumeDocx(resume) {
   const { personal = {}, sections = [], settings = {}, template = 'classic' } = resume || {};
   const accentHex = accent2Hex(settings.accentColor);
   const effectiveTemplate = (templateId(template) === 'sidebar' && settings.sidebarSingleColumn) ? 'classic' : template;
+  // Template defaults (e.g. Executive and Sidebar lead with the role, …) apply as in the PDF, and
+  // so does Section Options → Alignment (never in the Sidebar's side column).
+  const printed = sections
+    .map((s) => resolveSection(s, effectiveTemplate))
+    .map((section) => ({ section, paras: buildSection(section, accentHex, settings, effectiveTemplate) }))
+    .filter(({ paras }) => paras.length);
   const children = [
     ...buildPersonalSection(personal, settings, effectiveTemplate),
-    // Template defaults (e.g. Executive and Sidebar lead with the role, …) apply as in the PDF, and
-    // so does Section Options → Alignment (never in the Sidebar's side column).
-    ...sections.flatMap((s) => buildSection(resolveSection(s, effectiveTemplate), accentHex, settings, effectiveTemplate)),
+    // Between Sections under every section but the last, as the PDF's: space under the last one
+    // could only push a blank page (R2-062).
+    ...printed.flatMap(({ section, paras }, i) => (i < printed.length - 1
+      ? [...paras, ...sectionSpaceAfter(section, settings, effectiveTemplate)]
+      : paras)),
   ];
   return Packer.toBlob(buildDocument(children, settings));
 }

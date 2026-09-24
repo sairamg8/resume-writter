@@ -221,10 +221,12 @@ describe('Word: the résumé and the letter .docx (PAR-01)', () => {
     const { renderCoverLetterDocx } = await loadModule('/src/utils/wordExport.js');
     return readDocx(new Uint8Array(await (await renderCoverLetterDocx(r)).arrayBuffer()));
   };
-  const MARGINS = [1080, 1080, 1080, 1080]; // 0.75 in, whatever the paper
+  // Design → Spacing's default margins, whatever the paper: 14 mm top and bottom, 18 mm left and
+  // right (R2-062; tests/pdf/69-word-spacing sets other ones).
+  const MARGINS = [794, 1020, 794, 1020];
 
   for (const [label, docx] of [['résumé', renderDocx], ['letter', letterDocx]]) {
-    it(`the ${label}: a US Letter page, 12240 × 15840 twips, with the same 0.75 in margins, under every template`, async () => {
+    it(`the ${label}: a US Letter page, 12240 × 15840 twips, with the same default margins, under every template`, async () => {
       for (const template of TEMPLATES) {
         const page = sectPr((await docx(resume({ template, settings: { pageSize: 'LETTER' }, sections: [experience([{}])] }))).xml);
         assert.deepEqual(page, { size: [12240, 15840], portrait: true, margins: MARGINS }, template);

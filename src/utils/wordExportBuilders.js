@@ -1,12 +1,13 @@
 import { BorderStyle, Paragraph, ShadingType } from 'docx';
 import {
-  accent2Hex, bold, normal, linked, sectionHeading, bulletPoint, descriptionToParagraphs, dateRightPara, centredIf, eighths, spacer,
+  accent2Hex, bold, normal, linked, sectionHeading, bulletPoint, descriptionToParagraphs, dateRightPara, centredIf, eighths,
+  gapPara, lineSpacing, twips, wordContentTwips,
 } from '@/utils/wordExportUtils';
 import { headingBorderExtraPt, inSidebarColumn, templateId, upperSectionTitles } from '@/constants/templates';
 import { solid } from '@/templates/pdf/shared/pdfColors';
 import { sectionHeadingLook } from '@/templates/pdf/shared/sectionHeadingLook';
 import { resolveTemplateSettings } from '@/templates/pdf/shared/templateSettings';
-import { getDateColor } from '@/templates/pdf/shared/PdfSections';
+import { getDateColor, getEffectiveSpacing } from '@/templates/pdf/shared/PdfSections';
 import { hasRichText } from '@/utils/richText';
 import { dateRange, formatDate, presentLabel } from '@/utils/dates';
 import { skillCategory, skillGroup, skillSeparator } from '@/utils/skills';
@@ -45,7 +46,8 @@ function headingOf(s, template) {
 export function buildSectionTitle(title, settings, template) {
   const s = resolveTemplateSettings(settings, templateId(template));
   const text = String(title || '');
-  return sectionHeading(upperSectionTitles(s.sectionTitleCase) ? text.toUpperCase() : text, accent2Hex(settings?.accentColor), false, headingOf(s, template));
+  const heading = { ...headingOf(s, template), lineHeight: s.lineHeightValue };
+  return sectionHeading(upperSectionTitles(s.sectionTitleCase) ? text.toUpperCase() : text, accent2Hex(settings?.accentColor), false, heading);
 }
 
 /** Items the user has not hidden (the eye toggle on an entry). */
@@ -54,189 +56,188 @@ const shown = (section) => (section.items || []).filter((item) => item && item.v
 const field = (item, key) => ((item.hiddenFields || []).includes(key) ? '' : (item[key] || ''));
 
 /**
+ * How buildSection's builders print a section (`look`): `base` and `entry` — the body's and the entry
+ * titles' sizes, half-points; `tab` — the dates' right tab, twips: the right margin (wordContentTwips);
+ * `line` — Design → Line Height; `gap` — the space between two entries, pt: Design → Between Items
+ * scaled by the section's Spacing preset, or its own Item gap (getEffectiveSpacing, R2-062); `side` —
+ * the section is in the Sidebar's side column.
+ */
+
+/**
+ * The entries of `section` the user has not hidden, each as `build` makes it (its paragraphs), with
+ * `look.gap` between two, as the PDF spaces them. An entry that prints nothing takes no gap.
+ */
+function entries(section, look, build) {
+  const out = [];
+  for (const item of shown(section)) {
+    const paras = build(item).filter(Boolean);
+    if (!paras.length) continue;
+    if (out.length) out.push(...gapPara(look.gap));
+    out.push(...paras);
+  }
+  return out;
+}
+
+/**
  * An entry's location for dateRightPara: a line of its own under the date, in the date's size and
  * grey — the PDF prints it with the date, never in the title's text (ATS-1).
  */
-const place = (text, sizes) => (text ? { text, color: GREY, size: sizes.base } : null);
+const place = (text, look) => (text ? { text, color: GREY, size: look.base } : null);
 
-/** Description + legacy bullets of an entry, centred in a centred section. */
-function body(item, centered, baseSize = 22) {
+/** An entry's title line (dateRightPara) with its `date` in `dateHex`, at the look's right tab. */
+const titleLine = (left, date, dateHex, centered, look, where = null) => dateRightPara(left, date, { color: dateHex, centered, size: look.base, place: where, tab: look.tab });
+
+/** Description + legacy bullets of an entry, centred in a centred section, at Design → Line Height. */
+function body(item, centered, look) {
   const paras = [];
   const description = field(item, 'description');
-  if (hasRichText(description)) paras.push(...descriptionToParagraphs(description, { size: baseSize, color: '374151' }, centered ? 'center' : null));
-  for (const b of item.bullets || []) if (b) paras.push(bulletPoint(b, centered));
+  if (hasRichText(description)) paras.push(...descriptionToParagraphs(description, { size: look.base, color: '374151', lineHeight: look.line }, centered ? 'center' : null));
+  for (const b of item.bullets || []) if (b) paras.push(bulletPoint(b, centered, { size: look.base }, look.line));
   return paras;
 }
 
-export function buildExperience(section, accentHex, settings, centered, dateHex = accentHex, sizes = { base: 22, entry: 20 }) {
+export function buildExperience(section, accentHex, settings, centered, dateHex, look) {
   const s = section.settings || {};
-  const paras = [sectionHeading(section.title, accentHex, centered, section.heading)];
-  for (const item of shown(section)) {
+  return [sectionHeading(section.title, accentHex, centered, section.heading), ...entries(section, look, (item) => {
     const company = field(item, 'company');
     const role = field(item, 'role');
     const [primary, secondary] = s.titleOrder === 'role' ? [role, company] : [company, role];
     const location = s.showLocation !== false ? field(item, 'location') : '';
     const end = field(item, 'endDate') && !item.current ? field(item, 'endDate') : '';
     const dates = dateRange(field(item, 'startDate'), item.current && !(item.hiddenFields || []).includes('endDate') ? presentLabel(settings) : end, settings);
-    paras.push(dateRightPara([
-      primary && bold(primary, { size: sizes.entry }),
-      ...(secondary ? [normal(`${primary ? ' — ' : ''}${secondary}`, { size: sizes.entry })] : []),
-    ], s.showDates !== false ? dates : '', dateHex, centered, sizes.base, place(location, sizes)));
-    paras.push(...body(item, centered, sizes.base), spacer());
-  }
-  return paras;
+    return [titleLine([
+      primary && bold(primary, { size: look.entry }),
+      ...(secondary ? [normal(`${primary ? ' — ' : ''}${secondary}`, { size: look.entry })] : []),
+    ], s.showDates !== false ? dates : '', dateHex, centered, look, place(location, look)), ...body(item, centered, look)];
+  })];
 }
 
-export function buildEducation(section, accentHex, settings, centered, dateHex = accentHex, sizes = { base: 22, entry: 20 }) {
+export function buildEducation(section, accentHex, settings, centered, dateHex, look) {
   const s = section.settings || {};
-  const paras = [sectionHeading(section.title, accentHex, centered, section.heading)];
-  for (const item of shown(section)) {
+  return [sectionHeading(section.title, accentHex, centered, section.heading), ...entries(section, look, (item) => {
     const degree = [item.degree, item.fieldOfStudy].filter(Boolean).join(', ');
     const location = s.showLocation !== false ? item.location : '';
-    paras.push(dateRightPara([
-      (item.institution || degree) && bold(item.institution || degree, { size: sizes.entry }),
-      ...(item.institution && degree ? [normal(` — ${degree}`, { size: sizes.entry })] : []),
-      ...(item.gpa ? [normal(` · GPA: ${item.gpa}`, { size: sizes.entry, color: GREY })] : []),
-    ], s.showDates !== false ? dateRange(item.startDate, item.endDate, settings) : '', dateHex, centered, sizes.base, place(location, sizes)));
-    paras.push(...body(item, centered, sizes.base), spacer());
-  }
-  return paras;
+    return [titleLine([
+      (item.institution || degree) && bold(item.institution || degree, { size: look.entry }),
+      ...(item.institution && degree ? [normal(` — ${degree}`, { size: look.entry })] : []),
+      ...(item.gpa ? [normal(` · GPA: ${item.gpa}`, { size: look.entry, color: GREY })] : []),
+    ], s.showDates !== false ? dateRange(item.startDate, item.endDate, settings) : '', dateHex, centered, look, place(location, look)), ...body(item, centered, look)];
+  })];
 }
 
-/** Skill groups, each category cased as the PDF prints it (skillCategory; `sideColumn`: the Sidebar's). */
-export function buildSkills(section, accentHex, settings, centered, sideColumn = false, dateHex = accentHex, sizes = { base: 22, entry: 20 }) {
+/** Skill groups, each category cased as the PDF prints it (skillCategory; `look.side`: the Sidebar's). */
+export function buildSkills(section, accentHex, settings, centered, dateHex, look) {
   const s = section.settings || {};
-  const paras = [sectionHeading(section.title, accentHex, centered, section.heading)];
   const sep = skillSeparator(s);
   const bulletStyle = s.skillsStyle === 'bullet';
-  for (const item of shown(section)) {
+  return [sectionHeading(section.title, accentHex, centered, section.heading), ...entries(section, look, (item) => {
     const { category: typed, skills } = skillGroup(item);
-    const category = skillCategory(typed, { style: s.skillsStyle, sideColumn });
+    const category = skillCategory(typed, { style: s.skillsStyle, sideColumn: look.side });
     const children = [];
-    if (category) children.push(bold(`${category}${skills ? sep : ''}`, { size: sizes.entry, color: accentHex }));
-    if (skills) children.push(normal(skills, { size: sizes.base }));
-    if (children.length) {
-      paras.push(new Paragraph({
-        children,
-        spacing: { after: 40 },
-        ...(bulletStyle ? { bullet: { level: 0 }, indent: { left: 360 } } : {}),
-        ...centredIf(centered),
-      }));
-    }
-  }
-  return paras;
-}
-
-export function buildProjects(section, accentHex, settings, centered, dateHex = accentHex, sizes = { base: 22, entry: 20 }) {
-  const s = section.settings || {};
-  const paras = [sectionHeading(section.title, accentHex, centered, section.heading)];
-  for (const item of shown(section)) {
-    paras.push(dateRightPara([
-      item.name && bold(item.name, { size: sizes.entry }),
-      ...(item.technologies ? [normal(` · ${item.technologies}`, { size: sizes.entry, color: GREY })] : []),
-      ...(item.url ? [normal(' · ', { size: sizes.entry, color: GREY }), linked(item.url, item.url, { size: sizes.entry, color: accentHex })] : []),
-    ], s.showDates !== false ? dateRange(item.startDate, item.endDate, settings) : '', dateHex, centered, sizes.base));
-    paras.push(...body(item, centered, sizes.base), spacer());
-  }
-  return paras;
-}
-
-export function buildLanguages(section, accentHex, settings, centered, dateHex = accentHex, sizes = { base: 22, entry: 20 }) {
-  const paras = [sectionHeading(section.title, accentHex, centered, section.heading)];
-  for (const item of shown(section)) {
-    if (!item.language && !item.proficiency) continue;
-    paras.push(new Paragraph({
-      children: [
-        bold(item.language, { size: sizes.entry }),
-        ...(item.proficiency ? [normal(`${item.language ? ' — ' : ''}${item.proficiency}`, { size: sizes.entry, color: GREY })] : []),
-      ],
-      spacing: { after: 40 },
+    if (category) children.push(bold(`${category}${skills ? sep : ''}`, { size: look.entry, color: accentHex }));
+    if (skills) children.push(normal(skills, { size: look.base }));
+    return children.length ? [new Paragraph({
+      children,
+      spacing: { after: 0, ...lineSpacing(look.line, look.base) },
+      ...(bulletStyle ? { bullet: { level: 0 }, indent: { left: 360 } } : {}),
       ...centredIf(centered),
-    }));
-  }
-  return paras;
+    })] : [];
+  })];
 }
 
-export function buildCertifications(section, accentHex, settings, centered, dateHex = accentHex, sizes = { base: 22, entry: 20 }) {
+export function buildProjects(section, accentHex, settings, centered, dateHex, look) {
   const s = section.settings || {};
-  const paras = [sectionHeading(section.title, accentHex, centered, section.heading)];
-  for (const item of shown(section)) {
-    paras.push(dateRightPara([
-      (item.name || item.title) && bold(item.name || item.title, { size: sizes.entry }),
-      ...(item.issuer ? [normal(` — ${item.issuer}`, { size: sizes.entry })] : []),
-      ...(item.credentialId ? [normal(` · ID: ${item.credentialId}`, { size: sizes.entry, color: GREY })] : []),
-      ...(item.url ? [normal(' · ', { size: sizes.entry, color: GREY }), linked(item.urlLabel || item.url, item.url, { size: sizes.entry, color: accentHex })] : []),
-    ], s.showDates !== false ? dateRange(item.date, item.expiry, settings) : '', dateHex, centered, sizes.base));
-    paras.push(spacer(40));
-  }
-  return paras;
+  return [sectionHeading(section.title, accentHex, centered, section.heading), ...entries(section, look, (item) => [
+    titleLine([
+      item.name && bold(item.name, { size: look.entry }),
+      ...(item.technologies ? [normal(` · ${item.technologies}`, { size: look.entry, color: GREY })] : []),
+      ...(item.url ? [normal(' · ', { size: look.entry, color: GREY }), linked(item.url, item.url, { size: look.entry, color: accentHex })] : []),
+    ], s.showDates !== false ? dateRange(item.startDate, item.endDate, settings) : '', dateHex, centered, look),
+    ...body(item, centered, look),
+  ])];
 }
 
-export function buildAwards(section, accentHex, settings, centered, dateHex = accentHex, sizes = { base: 22, entry: 20 }) {
-  const s = section.settings || {};
-  const paras = [sectionHeading(section.title, accentHex, centered, section.heading)];
-  for (const item of shown(section)) {
-    paras.push(dateRightPara([
-      item.title && bold(item.title, { size: sizes.entry }),
-      ...(item.issuer ? [normal(` — ${item.issuer}`, { size: sizes.entry })] : []),
-    ], s.showDates !== false ? formatDate(item.date || '', settings) : '', dateHex, centered, sizes.base));
-    paras.push(...body(item, centered, sizes.base), spacer(40));
-  }
-  return paras;
+export function buildLanguages(section, accentHex, settings, centered, dateHex, look) {
+  return [sectionHeading(section.title, accentHex, centered, section.heading), ...entries(section, look, (item) => (!item.language && !item.proficiency ? [] : [
+    new Paragraph({
+      children: [
+        bold(item.language, { size: look.entry }),
+        ...(item.proficiency ? [normal(`${item.language ? ' — ' : ''}${item.proficiency}`, { size: look.entry, color: GREY })] : []),
+      ],
+      spacing: { after: 0 },
+      ...centredIf(centered),
+    }),
+  ]))];
 }
 
-export function buildVolunteering(section, accentHex, settings, centered, dateHex = accentHex, sizes = { base: 22, entry: 20 }) {
+export function buildCertifications(section, accentHex, settings, centered, dateHex, look) {
   const s = section.settings || {};
-  const paras = [sectionHeading(section.title, accentHex, centered, section.heading)];
-  for (const item of shown(section)) {
+  return [sectionHeading(section.title, accentHex, centered, section.heading), ...entries(section, look, (item) => [
+    titleLine([
+      (item.name || item.title) && bold(item.name || item.title, { size: look.entry }),
+      ...(item.issuer ? [normal(` — ${item.issuer}`, { size: look.entry })] : []),
+      ...(item.credentialId ? [normal(` · ID: ${item.credentialId}`, { size: look.entry, color: GREY })] : []),
+      ...(item.url ? [normal(' · ', { size: look.entry, color: GREY }), linked(item.urlLabel || item.url, item.url, { size: look.entry, color: accentHex })] : []),
+    ], s.showDates !== false ? dateRange(item.date, item.expiry, settings) : '', dateHex, centered, look),
+  ])];
+}
+
+export function buildAwards(section, accentHex, settings, centered, dateHex, look) {
+  const s = section.settings || {};
+  return [sectionHeading(section.title, accentHex, centered, section.heading), ...entries(section, look, (item) => [
+    titleLine([
+      item.title && bold(item.title, { size: look.entry }),
+      ...(item.issuer ? [normal(` — ${item.issuer}`, { size: look.entry })] : []),
+    ], s.showDates !== false ? formatDate(item.date || '', settings) : '', dateHex, centered, look),
+    ...body(item, centered, look),
+  ])];
+}
+
+export function buildVolunteering(section, accentHex, settings, centered, dateHex, look) {
+  const s = section.settings || {};
+  return [sectionHeading(section.title, accentHex, centered, section.heading), ...entries(section, look, (item) => {
     const location = s.showLocation !== false ? item.location : '';
-    paras.push(dateRightPara([
-      (item.role || item.org) && bold(item.role || item.org, { size: sizes.entry }),
-      ...(item.role && item.org ? [normal(` — ${item.org}`, { size: sizes.entry })] : []),
-    ], s.showDates !== false ? dateRange(item.startDate, item.endDate, settings) : '', dateHex, centered, sizes.base, place(location, sizes)));
-    paras.push(...body(item, centered, sizes.base), spacer());
-  }
-  return paras;
+    return [titleLine([
+      (item.role || item.org) && bold(item.role || item.org, { size: look.entry }),
+      ...(item.role && item.org ? [normal(` — ${item.org}`, { size: look.entry })] : []),
+    ], s.showDates !== false ? dateRange(item.startDate, item.endDate, settings) : '', dateHex, centered, look, place(location, look)), ...body(item, centered, look)];
+  })];
 }
 
-export function buildReferences(section, accentHex, settings, centered, dateHex = accentHex, sizes = { base: 22, entry: 20 }) {
-  const paras = [sectionHeading(section.title, accentHex, centered, section.heading)];
+export function buildReferences(section, accentHex, settings, centered, dateHex, look) {
   const line = (children, after = 20) => new Paragraph({ children, spacing: { after }, ...centredIf(centered) });
-  for (const item of shown(section)) {
-    paras.push(line([bold(item.name, { size: sizes.entry })]));
+  return [sectionHeading(section.title, accentHex, centered, section.heading), ...entries(section, look, (item) => {
+    const paras = [line([bold(item.name, { size: look.entry })])];
     const role = [item.jobTitle, item.company].filter(Boolean).join(', ');
-    if (role) paras.push(line([normal(role, { size: sizes.base, color: GREY })]));
-    if (item.relationship) paras.push(line([normal(item.relationship, { size: sizes.base, color: GREY, italics: true })]));
+    if (role) paras.push(line([normal(role, { size: look.base, color: GREY })]));
+    if (item.relationship) paras.push(line([normal(item.relationship, { size: look.base, color: GREY, italics: true })]));
     const reach = [
-      item.email && linked(item.email, `mailto:${item.email}`, { size: sizes.base, color: accentHex }),
-      item.phone && linked(item.phone, `tel:${item.phone.replace(/[^\d+]/g, '')}`, { size: sizes.base, color: GREY }),
+      item.email && linked(item.email, `mailto:${item.email}`, { size: look.base, color: accentHex }),
+      item.phone && linked(item.phone, `tel:${item.phone.replace(/[^\d+]/g, '')}`, { size: look.base, color: GREY }),
     ].filter(Boolean);
-    if (reach.length) paras.push(line(reach.flatMap((r, i) => (i ? [normal('  |  ', { size: sizes.base, color: GREY }), r] : [r]))));
-    paras.push(spacer());
-  }
-  return paras;
+    if (reach.length) paras.push(line(reach.flatMap((r, i) => (i ? [normal('  |  ', { size: look.base, color: GREY }), r] : [r]))));
+    return paras;
+  })];
 }
 
-export function buildInterests(section, accentHex, settings, centered, dateHex = accentHex, sizes = { base: 22, entry: 20 }) {
+export function buildInterests(section, accentHex, settings, centered, dateHex, look) {
   const allInterests = shown(section).map((i) => i.interests).filter(Boolean).join(', ');
   if (!allInterests) return [];
   return [
     sectionHeading(section.title, accentHex, centered, section.heading),
-    new Paragraph({ children: [normal(allInterests, { size: sizes.base })], spacing: { after: 60 }, ...centredIf(centered) }),
+    new Paragraph({ children: [normal(allInterests, { size: look.base })], spacing: { after: 60 }, ...centredIf(centered) }),
   ];
 }
 
-export function buildCustom(section, accentHex, settings, centered, dateHex = accentHex, sizes = { base: 22, entry: 20 }) {
+export function buildCustom(section, accentHex, settings, centered, dateHex, look) {
   const s = section.settings || {};
-  const paras = [sectionHeading(section.title, accentHex, centered, section.heading)];
-  for (const item of shown(section)) {
-    paras.push(dateRightPara([
-      ...(item.title ? [bold(item.title, { size: sizes.entry })] : []),
-      ...(item.subtitle ? [normal(`${item.title ? ' — ' : ''}${item.subtitle}`, { size: sizes.entry })] : []),
-    ], s.showDates !== false ? formatDate(item.date || '', settings) : '', dateHex, centered, sizes.base, place(item.location, sizes)));
-    paras.push(...body(item, centered, sizes.base), spacer());
-  }
-  return paras;
+  return [sectionHeading(section.title, accentHex, centered, section.heading), ...entries(section, look, (item) => [
+    titleLine([
+      ...(item.title ? [bold(item.title, { size: look.entry })] : []),
+      ...(item.subtitle ? [normal(`${item.title ? ' — ' : ''}${item.subtitle}`, { size: look.entry })] : []),
+    ], s.showDates !== false ? formatDate(item.date || '', settings) : '', dateHex, centered, look, place(item.location, look)),
+    ...body(item, centered, look),
+  ])];
 }
 
 /**
@@ -245,26 +246,38 @@ export function buildCustom(section, accentHex, settings, centered, dateHex = ac
  * side column (`template`), which prints one left-aligned column whatever the section stores.
  * Its title prints in Design → Title case as the PDF prints it, in both of the Sidebar's columns:
  * in capitals for "ABC", as typed for "Abc" — the template's own when none is stored (Executive's
- * is "Abc").
+ * is "Abc"). Design → Spacing spaces it as the PDF does (R2-062): Line Height, Between Items, and
+ * the section's own Spacing Override Before above its title; the space under it is
+ * sectionSpaceAfter's.
  */
 export function buildSection(section, accentHex, settings, template) {
   if (section.visible === false || !shown(section).length) return [];
   const side = inSidebarColumn(template, section.type);
   const centered = section.settings?.alignment === 'center' && !side;
   const s = resolveTemplateSettings(settings, templateId(template));
+  const spacing = getEffectiveSpacing(section, s);
   const title = String(section.title || '');
   const sectionTitleSize = Math.round(((s.fontSizeBase ?? 11) + (s.fontSizeSectionDelta ?? 1)) * 2);
-  const heading = side ? { size: sectionTitleSize } : headingOf(s, template);
+  const heading = {
+    ...(side ? { size: sectionTitleSize } : headingOf(s, template)),
+    before: twips(spacing.spaceBefore ?? 0),
+    lineHeight: s.lineHeightValue,
+  };
   const dateColor = getDateColor({ ...settings, _template: templateId(template) });
   const dateHex = accent2Hex(solid(dateColor), '6b7280');
-  const baseSize = Math.round((s.fontSizeBase ?? 11) * 2);
-  const entrySize = Math.round(((s.fontSizeBase ?? 11) + (s.fontSizeEntryDelta ?? 0)) * 2);
-  const sizes = { base: baseSize, entry: entrySize };
-  const args = [{ ...section, title: upperSectionTitles(s.sectionTitleCase) ? title.toUpperCase() : title, heading }, accentHex, settings, centered, dateHex, sizes];
+  const look = {
+    base: Math.round((s.fontSizeBase ?? 11) * 2),
+    entry: Math.round(((s.fontSizeBase ?? 11) + (s.fontSizeEntryDelta ?? 0)) * 2),
+    tab: wordContentTwips(settings),
+    line: s.lineHeightValue,
+    gap: spacing.itemGap,
+    side,
+  };
+  const args = [{ ...section, title: upperSectionTitles(s.sectionTitleCase) ? title.toUpperCase() : title, heading }, accentHex, settings, centered, dateHex, look];
   switch (section.type) {
     case 'experience':     return buildExperience(...args);
     case 'education':      return buildEducation(...args);
-    case 'skills':         return buildSkills(args[0], args[1], args[2], args[3], side, dateHex, sizes);
+    case 'skills':         return buildSkills(...args);
     case 'projects':       return buildProjects(...args);
     case 'languages':      return buildLanguages(...args);
     case 'certifications': return buildCertifications(...args);
@@ -274,4 +287,13 @@ export function buildSection(section, accentHex, settings, template) {
     case 'interests':      return buildInterests(...args);
     default:               return buildCustom(...args);
   }
+}
+
+/**
+ * The space under a printed section, before the next one: Design → Between Sections, or the
+ * section's own Spacing Override After — the PDF's marginBottom (getEffectiveSpacing). The résumé
+ * puts it under every section but the last (renderResumeDocx, R2-062).
+ */
+export function sectionSpaceAfter(section, settings, template) {
+  return gapPara(getEffectiveSpacing(section, resolveTemplateSettings(settings, templateId(template))).marginBottom);
 }

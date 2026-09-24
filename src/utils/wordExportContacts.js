@@ -2,9 +2,8 @@
 // header (wordExportHeader.js) and the cover letter's letterhead (wordExportCoverLetter.js), laid out
 // as PdfContactRow lays them out in the PDF.
 import { TabStopType } from 'docx';
-import { accent2Hex, contactSeparator, linked, normal, WORD_MARGIN_IN } from '@/utils/wordExportUtils';
+import { accent2Hex, contactSeparator, linked, normal, wordContentTwips } from '@/utils/wordExportUtils';
 import { CONTACT_GRID } from '@/utils/contacts';
-import { PAGE_SIZES, pageSizeOf } from '@/constants/pageSize';
 import { PAGE_MARKS } from '@/templates/pdf/shared/pdfColors';
 import { pxToPt } from '@/templates/pdf/shared/pdfUnits';
 
@@ -16,7 +15,7 @@ const twips = (pt) => Math.round(pt * 20);
  * paragraph options it needs (tab stops). Justify (and a layout the app does not
  * offer): one row, the values joined by `contactStyle`'s marks (Icon prints bars). Single: a row a
  * value. 2 Grid: a row of two, the second at a tab stop where the PDF's second cell starts on Word's
- * page (`settings`' paper) — centred, centre tab stops at the two cells' centres, and an odd last
+ * page (`settings`' paper, between its margins) — centred, centre tab stops at the two cells' centres, and an odd last
  * value centred on the line as its lone cell is. Word has no cells: a value wider than its cell
  * pushes the next one along, where the PDF gives it a row of its own. Under Single and 2 Grid,
  * Bullet prints a bullet before each value, Icon and Bar nothing. `style` the values' run style,
@@ -29,7 +28,7 @@ export function contactRows(items, { contactStyle, layout, centered, settings, s
   const mark = contactStyle === 'bullet' ? [normal('• ', { ...style, color: markColor || accent2Hex(PAGE_MARKS.bullet) })] : [];
   const cell = (item) => [...mark, linked(item.value, item.href, style)];
   if (layout === 'single') return items.map((item) => ({ runs: cell(item), centred: centered, extra: {} }));
-  const width = PAGE_SIZES[pageSizeOf(settings)].twips.width / 20 - 144 * WORD_MARGIN_IN;
+  const width = wordContentTwips(settings) / 20;
   const cellPt = CONTACT_GRID.cell * width;
   const gap = pxToPt(CONTACT_GRID.gapPx);
   const left = (width - (2 * cellPt + gap)) / 2;

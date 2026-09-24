@@ -46,10 +46,13 @@ async function pdfRows(r) {
   return [...rows.entries()].sort((a, b) => b[0] - a[0])
     .map(([, items]) => items.sort((a, b) => a.x - b.x).map((i) => i.str.replace(/•/g, '').trim()).filter(Boolean));
 }
-/** Word's content width, pt: the paper less its 0.75 in margins (wordExport.js buildDocument). */
+/**
+ * Word's content width, pt: the paper less its left and right margins — Design → Spacing's, 18 mm
+ * unless `settings` set one (wordExport.js buildDocument, R2-062) — in the whole twips Word takes.
+ */
 async function contentPt(settings) {
   const { PAGE_SIZES, pageSizeOf } = await loadModule('/src/constants/pageSize.js');
-  return PAGE_SIZES[pageSizeOf(settings)].twips.width / 20 - 108;
+  return (PAGE_SIZES[pageSizeOf(settings)].twips.width - 2 * Math.round(((settings.marginH ?? 18) * 1440) / 25.4)) / 20;
 }
 const twips = (pt) => Math.round(pt * 20);
 /** 2 Grid's geometry, as the PDF lays it out: cells of 46 % of the row, 24 px (18 pt) between them. */

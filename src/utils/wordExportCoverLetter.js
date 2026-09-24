@@ -11,7 +11,7 @@
 // as the PDF does, and prints the name and title in Word's own weights (Minimal's light name and
 // an Inline title's medium are regular).
 import { Paragraph, BorderStyle, ShadingType, AlignmentType } from 'docx';
-import { accent2Hex, bold, normal, descriptionToParagraphs, eighths, inlineGap } from '@/utils/wordExportUtils';
+import { accent2Hex, bold, normal, descriptionToParagraphs, eighths, inlineGap, lineSpacing } from '@/utils/wordExportUtils';
 import { contactRows } from '@/utils/wordExportContacts';
 import { contactItems } from '@/utils/contacts';
 import { hasRichText } from '@/utils/richText';
@@ -157,13 +157,15 @@ export function buildCoverLetter(resume) {
   recipient.forEach((run, i) => paras.push(line([run], i === recipient.length - 1 ? gap : 0)));
   if (block.subject) paras.push(line([bold(block.subject, text)], gap));
 
+  // The body and the closing at Design → Line Height, as the letter's PDF prints them (R2-062).
   if (hasRichText(cl.body)) {
-    paras.push(...descriptionToParagraphs(cl.body, text));
+    paras.push(...descriptionToParagraphs(cl.body, { ...text, lineHeight: s.lineHeightValue }));
     paras.push(line([], pt(16)));
   }
 
   // Closing and signature stay together on one page.
-  paras.push(line([normal(sig.closing, text)], pt(sig.wide ? 24 : 8), { keepNext: true }));
+  const closingLine = { spacing: { after: pt(sig.wide ? 24 : 8), ...lineSpacing(s.lineHeightValue, text.size) } };
+  paras.push(new Paragraph({ children: [normal(sig.closing, text)], ...closingLine, keepNext: true }));
   if (sig.name) paras.push(line([bold(sig.name, text)], 0, { keepNext: !!sig.designation }));
   if (sig.designation) paras.push(line([normal(sig.designation, { ...text, color: colors.grey })]));
   return paras;
