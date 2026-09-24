@@ -89,15 +89,16 @@
     },
     {
       "id": "R2-133",
-      "outcome": "partial",
+      "outcome": "fixed",
       "commits": [
-        "b7a5e21"
+        "b7a5e21",
+        "ecd3df4"
       ],
       "tests": [
-        "tests/pdf/83-templates-ui-leftovers.test.mjs"
+        "tests/pdf/83-templates-ui-leftovers.test.mjs",
+        "tests/pdf/83-dashboard-thumbnails.test.mjs"
       ],
-      "summary": "Of the four audit leftovers (templates-ui-bugs.md, 'lower value'): the dashboard card now names its template with templateLabel(), so an unknown id reads 'Classic' as it opens; Export Word has a tooltip saying the .docx has no photo and the résumé prints without its banner or coloured column; and the starter modal's 'ATS-optimized' claim is obsolete, because Modern is now atsTier 'good' and atsRating('modern').safe is true.",
-      "remaining": "Dashboard thumbnails are still identical: the mock is drawn from the accent colour alone and every creation path writes #374151. Making the thumbnail follow the template is a design job."
+      "summary": "All four audit leftovers (templates-ui-bugs.md, 'lower value') are handled. Each dashboard card's thumbnail now draws its template's layout (ResumeThumbnail, ecd3df4): Modern's accent band, Banner's full-width band, the Sidebar column in its own colour, Timeline's line, Executive's double rule, Academic centred, Compact's grid, a centred header when set, and the photo unless it's hidden. Also: the dashboard card now names its template with templateLabel(), so an unknown id reads 'Classic' as it opens; Export Word has a tooltip saying the .docx has no photo and the résumé prints without its banner or coloured column; and the starter modal's 'ATS-optimized' claim is obsolete, because Modern is now atsTier 'good' and atsRating('modern').safe is true."
     }
   ],
   "review": {
@@ -105,5 +106,5 @@
     "fixedByReviewer": []
   },
   "baselineFailures": [],
-  "notes": "Assertions changed because the rows call the old behaviour a bug: cover-letter-generator.unit.mjs (the generator no longer returns signature fields; the body's tags now include <br>, but only as blank-line paragraphs; there are no 'Candidate' / 'Professional' placeholders) and 43-cover-letter-generator-escape (the preview's tag list includes <br>). tests/pdf/83-letter-signature-photo.test.mjs was committed with 0617247 but covers 90811f8, 8c8f99f and e0dfd2e too. Fixed at the owner's request, though no row filed it (ca99d05, test in tests/unit/letter-generator-sentences.unit.mjs): the generator wrote 'as a Engineer'. It now picks 'a' or 'an' by the title's first sound ('an Engineer', 'an IT Manager', 'a UX Designer', 'a University Lecturer'). Cosmetic: the Personal Info photo eye still says 'Hide photo from resume', although it now hides the photo from the letter too. 28b15c6 bumps DATA_VERSION 11 → 12 (src/utils/dataVersion.js and tests/helpers.js) for a one-time letter migration. When this was pushed no other claude/wf-* branch touched those files; if another cluster also adds a v12 migration, the merge must renumber one of them."
+  "notes": "Assertions changed because the rows call the old behaviour a bug: cover-letter-generator.unit.mjs (the generator no longer returns signature fields; the body's tags now include <br>, but only as blank-line paragraphs; there are no 'Candidate' / 'Professional' placeholders) and 43-cover-letter-generator-escape (the preview's tag list includes <br>). tests/pdf/83-letter-signature-photo.test.mjs was committed with 0617247 but covers 90811f8, 8c8f99f and e0dfd2e too. Fixed at the owner's request, though no row filed it (ca99d05, test in tests/unit/letter-generator-sentences.unit.mjs): the generator wrote 'as a Engineer'. It now picks 'a' or 'an' by the title's first sound ('an Engineer', 'an IT Manager', 'a UX Designer', 'a University Lecturer'). Cosmetic: the Personal Info photo eye still says 'Hide photo from resume', although it now hides the photo from the letter too. 28b15c6 bumps DATA_VERSION 11 → 12 (src/utils/dataVersion.js and tests/helpers.js) for a one-time letter migration. When this was pushed no other claude/wf-* branch touched those files; if another cluster also adds a v12 migration, the merge must renumber one of them. ecd3df4 adds src/components/ResumeThumbnail.jsx and changes only ResumeCard's thumbnail block and its imports. It was trial-merged with claude/wf-app-shell (which rewrites ResumeCard's rename code), wf-sections and wf-import-data: no conflicts."
 }
