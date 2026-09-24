@@ -78,7 +78,7 @@ describe('picking Academic brings its type, header and spacing, and never reorde
     const { templateStyleDefaults } = await loadModule('/src/constants/templates.js');
     const { headerColorsOnSwitch } = await loadModule('/src/templates/pdf/shared/headerColors.js');
     const { styleOnSwitch } = await loadModule('/src/utils/defaultData.js');
-    const r = resume({ template: 'classic', sections: [experience([{}]), { ...experience([{}]), id: 'edu', type: 'education', title: 'Education', items: [] }] });
+    const r = resume({ template: 'classic', sections: [experience([{}]), { ...experience([{}]), id: 'edu', type: 'education', title: 'Education', items: [{ id: 'edu_0', institution: 'Harbor College' }] }] });
     // useResumeStore.setTemplate: the template's style over the résumé's settings, then the header colours.
     const settings = headerColorsOnSwitch(styleOnSwitch(r.settings, 'classic', 'academic'), 'classic', 'academic');
     for (const [k, v] of Object.entries(templateStyleDefaults('academic'))) assert.equal(settings[k], v, k);
