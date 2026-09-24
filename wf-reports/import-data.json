@@ -42,12 +42,13 @@
       "outcome": "fixed",
       "commits": [
         "73aa4f3",
-        "e0970bc"
+        "e0970bc",
+        "9a79056"
       ],
       "tests": [
         "tests/pdf/80-import-section-shapes.test.mjs"
       ],
-      "summary": "A section's Grids stored as text or out of range is stored as a whole number from 1 to 4 (\"2\" → 2, 7 → 4); 0 or no number is dropped so the template default prints, as it did. \"2\" on five entries prints two to a row."
+      "summary": "A section's Grids stored as text or out of range is stored as a whole number within what Section Options offers it — 1–4 for Skills, 1–2 for every other section (\"2\" → 2, 7 → 4 on Skills, 3 → 2 on Experience); 0 or no number is dropped so the template default prints, as it did. The active chip is what prints, and \"2\" on five entries prints two to a row."
     },
     {
       "id": "R2-085",
@@ -144,5 +145,5 @@
     ]
   },
   "baselineFailures": [],
-  "notes": "Changed existing assertions: tests/pdf/16-saved-data-text-fields.test.mjs fixture gave every section's second entry the id 'x_item1' (now unique, since loading de-duplicates ids, R2-055); tests/unit/image-upload.unit.mjs and tests/pdf/16-saved-data-photos.test.mjs pinned 'a plain URL is drawn as it is', the behaviour R2-093 names. tests/pdf/16-saved-data-photo-size.test.mjs now stubs fetch, so its https://example.com photo never reaches the network. Leftovers: Non-skills sections keep Grids 3–4 after the clamp while their panel offers only 1–2 (PDF draws them; outside R2-110). Section shape normalization is always-run, not a DATA_VERSION migration."
+  "notes": "Changed existing assertions: tests/pdf/16-saved-data-text-fields.test.mjs fixture gave every section's second entry the id 'x_item1' (now unique, since loading de-duplicates ids, R2-055); tests/unit/image-upload.unit.mjs and tests/pdf/16-saved-data-photos.test.mjs pinned 'a plain URL is drawn as it is', the behaviour R2-093 names. tests/pdf/16-saved-data-photo-size.test.mjs now stubs fetch, so its https://example.com photo never reaches the network. Section shape normalization is always-run, not a DATA_VERSION migration."
 }
