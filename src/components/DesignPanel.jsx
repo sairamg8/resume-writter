@@ -44,7 +44,8 @@ export default function DesignPanel({ resume, updateSetting, setTemplate, resetS
           {TEMPLATE_PICKER.map(t => (
             <button
               key={t.id}
-              onClick={() => setTemplate(t.id)}
+              // The card already selected is no switch: it would reset the headings (R2-087).
+              onClick={() => { if (t.id !== current) setTemplate(t.id); }}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border text-left transition-all ${
                 current === t.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
               }`}
