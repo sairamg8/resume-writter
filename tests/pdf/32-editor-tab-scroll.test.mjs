@@ -101,7 +101,8 @@ describe('the Editor gives its scroll box the tab on screen', () => {
     }
     Object.assign(globalThis, { window: { location: { hash } }, localStorage: { getItem: () => null } });
     try {
-      renderToString(createElement(MemoryRouter, null, createElement(Capture)));
+      // The router's address, as HashRouter reads it from the hash (useEditorTab, R2-076).
+      renderToString(createElement(MemoryRouter, { initialEntries: [hash.slice(1)] }, createElement(Capture)));
     } finally {
       delete globalThis.window;
       delete globalThis.localStorage;

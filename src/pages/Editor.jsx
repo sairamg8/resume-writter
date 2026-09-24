@@ -14,19 +14,18 @@ import { usePanelResize } from '@/hooks/usePanelResize';
 import { useIsMobile } from '@/hooks/useMediaQuery';
 import { useOpenResume } from '@/hooks/useOpenResume';
 import { useRename } from '@/hooks/useRename';
+import { useEditorTab } from '@/hooks/useEditorTab';
 
 export function Editor({ store, auth, sync }) {
   const { id } = useParams();
   const navigate = useNavigate();
-  const searchParams = new URLSearchParams(window.location.hash.split('?')[1] || '');
-  const initialTab = searchParams.get('tab') || 'resume';
 
   useOpenResume(store, id);
 
   const resume = store.activeResume;
   const isMobile = useIsMobile(768);
   const [mobileTab, setMobileTab] = useState('editor'); // 'editor' | 'preview'
-  const [activeTab, setActiveTab] = useState(initialTab);
+  const [activeTab, setActiveTab] = useEditorTab();
   // What is open on the Résumé tab lives here, so it survives a trip to Design or the letter.
   const [personalOpen, setPersonalOpen] = useState(true);
   const [addSectionOpen, setAddSectionOpen] = useState(false);
