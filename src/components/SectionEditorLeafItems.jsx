@@ -3,7 +3,7 @@ import RichTextEditor from '@/components/RichTextEditor';
 import { newId } from '@/utils/ids';
 import { InputField, MonthPicker, FieldRow, ItemCard } from '@/components/SectionEditorShared';
 
-export function SkillItem({ item, onUpdate, onRemove }) {
+export function SkillItem({ item, onUpdate, onRemove, onDuplicate }) {
   const u = (k, v) => onUpdate({ ...item, [k]: v });
   const visible = item.visible !== false;
   const itemHidden = new Set(item.hiddenFields || []);
@@ -12,7 +12,7 @@ export function SkillItem({ item, onUpdate, onRemove }) {
     onUpdate({ ...item, hiddenFields: itemHidden.has(f) ? cur.filter(x => x !== f) : [...cur, f] });
   }
   return (
-    <ItemCard label={item.category || 'Skill Group'} onRemove={onRemove} visible={visible} onToggleVisibility={() => onUpdate({ ...item, visible: !visible })}>
+    <ItemCard label={item.category || 'Skill Group'} onRemove={onRemove} onDuplicate={onDuplicate} visible={visible} onToggleVisibility={() => onUpdate({ ...item, visible: !visible })}>
       <FieldRow label="Title / Category" field="category" hiddenSet={itemHidden} onToggle={toggleField}>
         <InputField value={item.category} onChange={v => u('category', v)} placeholder="e.g. Frontend Development" />
       </FieldRow>
@@ -61,11 +61,11 @@ export function LanguageItem({ item, onUpdate, onRemove }) {
   );
 }
 
-export function CertificationItem({ item, onUpdate, onRemove }) {
+export function CertificationItem({ item, onUpdate, onRemove, onDuplicate }) {
   const u = (k, v) => onUpdate({ ...item, [k]: v });
   const visible = item.visible !== false;
   return (
-    <ItemCard label={item.name} onRemove={onRemove} visible={visible} onToggleVisibility={() => onUpdate({ ...item, visible: !visible })}>
+    <ItemCard label={item.name} onRemove={onRemove} onDuplicate={onDuplicate} visible={visible} onToggleVisibility={() => onUpdate({ ...item, visible: !visible })}>
       <InputField label="Certification Name" value={item.name} onChange={v => u('name', v)} placeholder="AWS Certified Developer" />
       <InputField label="Issuing Organization" value={item.issuer} onChange={v => u('issuer', v)} placeholder="Amazon Web Services" />
       <div className="grid grid-cols-2 gap-2">
@@ -81,11 +81,11 @@ export function CertificationItem({ item, onUpdate, onRemove }) {
   );
 }
 
-export function AwardItem({ item, onUpdate, onRemove }) {
+export function AwardItem({ item, onUpdate, onRemove, onDuplicate }) {
   const u = (k, v) => onUpdate({ ...item, [k]: v });
   const visible = item.visible !== false;
   return (
-    <ItemCard label={item.title} onRemove={onRemove} visible={visible} onToggleVisibility={() => onUpdate({ ...item, visible: !visible })}>
+    <ItemCard label={item.title} onRemove={onRemove} onDuplicate={onDuplicate} visible={visible} onToggleVisibility={() => onUpdate({ ...item, visible: !visible })}>
       <InputField label="Award Title" value={item.title} onChange={v => u('title', v)} placeholder="Dean's List Award" />
       <InputField label="Issuing Organization" value={item.issuer} onChange={v => u('issuer', v)} placeholder="University of California" />
       <MonthPicker label="Date" value={item.date} onChange={v => u('date', v)} />
@@ -94,11 +94,11 @@ export function AwardItem({ item, onUpdate, onRemove }) {
   );
 }
 
-export function ReferenceItem({ item, onUpdate, onRemove }) {
+export function ReferenceItem({ item, onUpdate, onRemove, onDuplicate }) {
   const u = (k, v) => onUpdate({ ...item, [k]: v });
   const visible = item.visible !== false;
   return (
-    <ItemCard label={item.name} onRemove={onRemove} visible={visible} onToggleVisibility={() => onUpdate({ ...item, visible: !visible })}>
+    <ItemCard label={item.name} onRemove={onRemove} onDuplicate={onDuplicate} visible={visible} onToggleVisibility={() => onUpdate({ ...item, visible: !visible })}>
       <InputField label="Name" value={item.name} onChange={v => u('name', v)} placeholder="Jane Smith" />
       <InputField label="Job Title" value={item.jobTitle} onChange={v => u('jobTitle', v)} placeholder="Engineering Manager" />
       <InputField label="Company" value={item.company} onChange={v => u('company', v)} placeholder="Acme Corp" />

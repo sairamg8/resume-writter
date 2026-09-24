@@ -48,6 +48,12 @@ export function dateLabels(settings) {
 /** A current job's end — "Present" — in the résumé's words. */
 export const presentLabel = (settings) => dateLabels(settings).present;
 
+/**
+ * An entry's end as it prints: "Present" while it is current — a job, and since R2-150 an
+ * education, a project or a volunteering role, which have the same flag — else its End Date.
+ */
+export const endDateOf = (item, settings) => (item?.current ? presentLabel(settings) : item?.endDate);
+
 /** 'january', 'jan', 'sept' … → 1–12: the month words a stored date can hold (any case). */
 const MONTH_OF = new Map([
   ...MONTHS.flatMap((name, i) => [[name.toLowerCase(), i + 1], [name.slice(0, 3).toLowerCase(), i + 1]]),

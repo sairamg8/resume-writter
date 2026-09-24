@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import {
   Plus, User, ChevronDown, ChevronUp, ChevronsDownUp, ChevronsUpDown,
 } from 'lucide-react';
@@ -24,6 +25,13 @@ export function EditorResumeTab({
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
+
+  // Collapse/Expand All reaches the sections there when it was pressed (and every one when the tab
+  // mounts, so a trip to Design keeps them as they were, or another résumé opens in the Editor, which
+  // stays mounted from one to the next). One added since opens, as a new section does: it collapsed
+  // after Collapse All, hiding its entry and its Add button (R2-113).
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const forcedIds = useMemo(() => new Set(resume.sections.map(s => s.id)), [forceOpenKey, resume.id]);
 
   function handleSectionDragEnd(event) {
     const { active, over } = event;
@@ -85,8 +93,10 @@ export function EditorResumeTab({
               removeItem={store.removeItem}
               reorderItems={store.reorderItems}
               toggleSectionVisibility={store.toggleSectionVisibility}
+              duplicateSection={store.duplicateSection}
+              duplicateItem={store.duplicateItem}
               forceOpen={allExpanded}
-              forceOpenKey={forceOpenKey}
+              forceOpenKey={forcedIds.has(section.id) ? forceOpenKey : 0}
             />
           ))}
         </SortableContext>

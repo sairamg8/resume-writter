@@ -290,12 +290,41 @@ function withProjectUrls(r) {
   return changed ? { ...r, sections } : r;
 }
 
+const escapeHtml = (t) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+/**
+ * An entry's legacy `bullets[]` (an old save's, an imported file's) at the end of its description,
+ * as the list the PDF, Word and ATS text print after the description (RenderBullets), and `bullets`
+ * emptied. They printed, but no field in the editor held them and the Description eye did not hide
+ * them (R2-112); in the description they are seen, edited and hidden with it. Whatever its data
+ * version (a file can carry any); the same object when no entry has one to move.
+ */
+function withBulletsInDescription(r) {
+  if (!Array.isArray(r.sections)) return r;
+  const listed = (item) => (item && typeof item === 'object' && Array.isArray(item.bullets)
+    ? item.bullets.map((b) => (typeof b === 'string' || typeof b === 'number' ? String(b).trim() : '')).filter(Boolean)
+    : []);
+  let changed = false;
+  const sections = r.sections.map((s) => {
+    if (!s || !Array.isArray(s.items) || !s.items.some((item) => listed(item).length)) return s;
+    changed = true;
+    return { ...s, items: s.items.map((item) => {
+      const bullets = listed(item);
+      if (!bullets.length) return item;
+      const list = `<ul>${bullets.map((b) => `<li>${escapeHtml(b)}</li>`).join('')}</ul>`;
+      return { ...item, description: `${typeof item.description === 'string' ? item.description : ''}${list}`, bullets: [] };
+    }) };
+  });
+  return changed ? { ...r, sections } : r;
+}
+
 /**
  * `resume` made current: a template the app offers (withKnownTemplate), sections and entries that
  * are objects with unique ids, a title and Grids Section Options offers (withSectionShapes), the
  * Design panel's numbers stored as numbers in their controls' ranges (withDesignNumbers), valid colors
  * stored as '#rrggbb' (withNormalizedColors), text wherever it keeps text (withTextFields), a
- * project's link as its `url` (withProjectUrls) and its skill groups as skills (withSkillNames),
+ * project's link as its `url` (withProjectUrls), its skill groups as skills (withSkillNames) and an
+ * entry's legacy bullets in its description (withBulletsInDescription),
  * whatever its version; then each one-time migration newer than its own `dataVersion`, after
  * which it carries DATA_VERSION.
  * Never touches `updatedAt` — this is not an edit, so it neither wins a sync merge
@@ -315,7 +344,7 @@ function withProjectUrls(r) {
 export function normalizeResume(resume) {
   if (!resume || typeof resume !== 'object') return resume;
   const known = withSectionShapes(withKnownTemplate(resume));
-  const r = withSkillNames(withProjectUrls(withTextFields(withNormalizedColors(withDesignNumbers(offersTemplate(resume.template) ? known : withHeaderReadableOnClassic(known))))));
+  const r = withBulletsInDescription(withSkillNames(withProjectUrls(withTextFields(withNormalizedColors(withDesignNumbers(offersTemplate(resume.template) ? known : withHeaderReadableOnClassic(known)))))));
   const ahead = aheadOf(r);
   const from = versionOf(r);
   if (ahead != null) return r.dataVersion === DATA_VERSION && r.dataVersionAhead === ahead ? r : stamped(r, ahead);

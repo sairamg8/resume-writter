@@ -1,5 +1,5 @@
 import { useState, useId } from 'react';
-import { Eye, EyeOff, Trash2, ChevronDown, ChevronUp, X, GripVertical } from 'lucide-react';
+import { Eye, EyeOff, Trash2, ChevronDown, ChevronUp, X, GripVertical, Copy } from 'lucide-react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { FieldIdsContext, useFieldIds } from '@/hooks/useFieldIds';
@@ -25,14 +25,15 @@ export function InputField({ label, value, onChange, placeholder, type = 'text' 
 export const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
 /**
- * The year select's choices, newest first: five years ahead of `now` down to 49 back, plus
+ * The year select's choices, newest first: fifteen years ahead of `now` down to 49 back, plus
  * `stored` in its place when it is a 4-digit year outside them. The PDF prints any year
  * parseMonthYear reads (1000–9999), so a 1975 start or an expiry ten years out must be offered
  * too, or the select has no option for it and shows blank (AUD-28). `now` is read at each render,
- * not once when the module loads, so a tab left open over New Year moves on.
+ * not once when the module loads, so a tab left open over New Year moves on. Fifteen ahead, not
+ * five, so a certificate's expiry or an expected graduation can be picked (R2-116).
  */
 export function yearOptions(stored, now = new Date().getFullYear()) {
-  const years = Array.from({ length: 55 }, (_, i) => String(now + 5 - i));
+  const years = Array.from({ length: 65 }, (_, i) => String(now + 15 - i));
   if (!/^\d{4}$/.test(stored) || years.includes(stored)) return years;
   return [...years, stored].sort((a, b) => b - a);
 }
@@ -47,11 +48,10 @@ export function MonthPicker({ label, value, onChange, disabled }) {
   const monthStr = date ? (date.m ? MONTHS[date.m - 1] : '') : (MONTHS.includes(parts[0]) ? parts[0] : '');
   const yearStr = date ? String(date.y) : (parts[1] || '');
 
+  // Both halves as the selects now hold them: a blank 'Month' or 'Year' clears its half, so
+  // 'Jan 2024' can become '2024' (R2-108) — putting the stored half back undid the choice.
   function update(m, y) {
-    if (!m && !y) { onChange(''); return; }
-    if (m && y) { onChange(`${m} ${y}`); return; }
-    if (m) { onChange(yearStr ? `${m} ${yearStr}` : m); return; }
-    onChange(monthStr ? `${monthStr} ${y}` : y);
+    onChange([m, y].filter(Boolean).join(' '));
   }
 
   return (
@@ -108,7 +108,7 @@ export function FieldRow({ label, field, hiddenSet, onToggle, children }) {
   );
 }
 
-export function ItemCard({ label, onRemove, onToggleVisibility, visible = true, defaultOpen = false, children }) {
+export function ItemCard({ label, onRemove, onDuplicate, onToggleVisibility, visible = true, defaultOpen = false, children }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
     <div className={`border rounded-lg overflow-hidden ${visible ? 'border-gray-200' : 'border-gray-100 opacity-60'}`}>
@@ -125,6 +125,11 @@ export function ItemCard({ label, onRemove, onToggleVisibility, visible = true, 
               title={visible ? 'Hide entry' : 'Show entry'}
             >
               {visible ? <Eye size={12} /> : <EyeOff size={12} />}
+            </button>
+          )}
+          {onDuplicate && (
+            <button onClick={e => { e.stopPropagation(); onDuplicate(); }} title="Duplicate entry" aria-label="Duplicate entry" className="p-1 text-gray-400 hover:text-blue-600">
+              <Copy size={12} />
             </button>
           )}
           <button onClick={e => { e.stopPropagation(); onRemove(); }} title="Delete entry" aria-label="Delete entry" className="p-1 text-gray-400 hover:text-red-500">
@@ -146,11 +151,14 @@ export function SortableItemWrapper({ id, children }) {
       style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1 }}
       className="flex items-start gap-1 group/item"
     >
+      {/* In the tab order, so Space and the arrow keys move the entry (the section's KeyboardSensor);
+          shown while focused, as it is on hover (R2-115). */}
       <button
         {...attributes}
         {...listeners}
-        className="mt-2.5 cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-400 opacity-0 group-hover/item:opacity-100 no-hover:opacity-100 transition-opacity shrink-0 touch-none"
-        tabIndex={-1}
+        aria-label="Reorder entry"
+        title="Drag, or press Space then the arrow keys, to reorder"
+        className="mt-2.5 cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-400 opacity-0 group-hover/item:opacity-100 focus-visible:opacity-100 no-hover:opacity-100 transition-opacity shrink-0 touch-none"
       >
         <GripVertical size={13} />
       </button>

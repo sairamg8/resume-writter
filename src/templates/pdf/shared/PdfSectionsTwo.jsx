@@ -4,7 +4,7 @@ import { PdfRichText } from './PdfRichText';
 import { ContactValue } from './PdfContact';
 import { pxToPt } from './pdfUnits';
 import { hasRichText, safeHref } from '@/utils/richText';
-import { dateRange, formatDate } from '@/utils/dates';
+import { dateRange, endDateOf, formatDate } from '@/utils/dates';
 import {
   SPACER,
   SectionTitleOf,
@@ -94,7 +94,7 @@ export function ProjectsSection({ section, settings, marginBottom, spaceBefore, 
         cols={cols}
         gap={itemGap}
         renderItem={(item) => {
-          const dateStr = showDates ? dateRange(item.startDate, item.endDate, settings) : '';
+          const dateStr = showDates ? dateRange(item.startDate, endDateOf(item, settings), settings) : '';
           // The name alone on the first line with the date, as a job's header prints it: a parser reads
           // a project's header as its first line (ATS-2). Technologies and link on the line under it.
           // Unbreakable and kept with two lines of what follows, as ItemHeader keeps a job's header.
@@ -218,7 +218,7 @@ export function VolunteeringSection({ section, settings, marginBottom, spaceBefo
         cols={cols}
         gap={itemGap}
         renderItem={(item) => {
-          const dateStr = showDates ? dateRange(item.startDate, item.endDate, settings) : '';
+          const dateStr = showDates ? dateRange(item.startDate, endDateOf(item, settings), settings) : '';
           const loc = showLoc && item.location ? item.location : '';
           return (
             <View>

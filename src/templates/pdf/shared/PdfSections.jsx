@@ -172,8 +172,14 @@ export function getEffectiveSpacing(section, settings, { isLast = false } = {}) 
   };
 }
 
-/** Visible sections in order + last id (for isLast spacing). */
+/**
+ * Whether a section prints: it is shown and at least one of its entries is. One whose entries are
+ * all hidden or all deleted printed a bare heading, which Word, Markdown and ATS text leave out (R2-057).
+ */
+export const sectionPrints = (s) => s.visible !== false && (s.items || []).some(i => i && i.visible !== false);
+
+/** Printing sections in order + last id (for isLast spacing). */
 export function getVisibleSections(sections = []) {
-  const visible = sections.filter(s => s.visible !== false);
+  const visible = sections.filter(sectionPrints);
   return { visible, lastId: visible[visible.length - 1]?.id };
 }

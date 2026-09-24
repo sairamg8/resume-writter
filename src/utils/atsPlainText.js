@@ -66,23 +66,24 @@ const joined = (parts, sep) => parts.filter(Boolean).join(sep);
 function entryLines(type, item, f, hidden, settings, opts) {
   const body = () => bodyLines(item, hidden);
   const date = (key) => (opts.showDates !== false ? formatDate(f(key), settings) : '');
-  const range = (from, to) => joined([date(from), date(to)], ' - ');
   const place = () => (opts.showLocation !== false ? f('location') : '');
+  // "Present" for a current job, education, project or volunteering role (R2-150).
+  const end = hidden.has('endDate') || opts.showDates === false ? '' : (item.current ? presentLabel(settings) : date('endDate'));
+  const range = () => joined([date('startDate'), end], ' - ');
   switch (type) {
     case 'experience':
     case 'volunteering': {
-      const end = hidden.has('endDate') || opts.showDates === false ? '' : (item.current ? presentLabel(settings) : date('endDate'));
       const org = f('company') || f('org');
       return [
         type === 'experience' && opts.titleOrder !== 'role' ? joined([org, f('role')], ' - ') : joined([f('role'), org], ' - '),
-        joined([joined([date('startDate'), end], ' - '), place()], ' | '),
+        joined([range(), place()], ' | '),
         ...body(), '',
       ];
     }
     case 'education':
       return [
         joined([f('degree'), f('fieldOfStudy') ? `in ${f('fieldOfStudy')}` : '', f('institution')], ' - '),
-        joined([range('startDate', 'endDate'), place(), f('gpa') ? `GPA: ${f('gpa')}` : ''], ' | '),
+        joined([range(), place(), f('gpa') ? `GPA: ${f('gpa')}` : ''], ' | '),
         ...body(), '',
       ];
     case 'skills':
@@ -94,7 +95,7 @@ function entryLines(type, item, f, hidden, settings, opts) {
     case 'projects':
       return [
         joined([f('name'), f('technologies') ? `(${f('technologies')})` : ''], ' '),
-        range('startDate', 'endDate'),
+        range(),
         f('url') ? `Link: ${f('url')}` : '',
         ...body(), '',
       ];

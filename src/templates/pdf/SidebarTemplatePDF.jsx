@@ -1,7 +1,7 @@
 import { Document, Page, View, StyleSheet } from '@react-pdf/renderer';
 import { Text } from './shared/PdfText';
 import { PdfSectionTitle } from './shared/PdfSection';
-import { getEffectiveSpacing, SPACER } from './shared/PdfSections';
+import { getEffectiveSpacing, SPACER, sectionPrints } from './shared/PdfSections';
 import { PdfRichText } from './shared/PdfRichText';
 import { hasRichText } from '@/utils/richText';
 import { getDocumentProps, pageMargins } from './shared/PdfPage';
@@ -74,7 +74,7 @@ export function SidebarTemplatePDF({ data }) {
   const hidden     = personal?.hiddenFields || [];
   const g          = settings.headerGaps; // the header's spacing, pt (TEMPLATES' headerGaps)
 
-  const visibleSections = sections.filter(s => s.visible !== false);
+  const visibleSections = sections.filter(sectionPrints);
   const sidebarSections = visibleSections.filter(s => SIDEBAR_TYPES.has(s.type));
   const mainSections    = visibleSections.filter(s => !SIDEBAR_TYPES.has(s.type));
 

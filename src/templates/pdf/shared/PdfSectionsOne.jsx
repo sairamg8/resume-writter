@@ -3,7 +3,7 @@ import { Text } from './PdfText';
 import { PdfRichText } from './PdfRichText';
 import { hasRichText } from '@/utils/richText';
 import { skillCategory, skillGroup, skillSeparator } from '@/utils/skills';
-import { dateRange, presentLabel } from '@/utils/dates';
+import { dateRange, endDateOf, presentLabel } from '@/utils/dates';
 import { opacityFor, solid, tint } from './pdfColors';
 import { tracking } from './pdfUnits';
 import {
@@ -222,7 +222,7 @@ export function EducationSection({ section, settings, marginBottom, spaceBefore,
         cols={cols}
         gap={itemGap}
         renderItem={(item) => {
-          const dateStr = showDates ? dateRange(item.startDate, item.endDate, settings) : '';
+          const dateStr = showDates ? dateRange(item.startDate, endDateOf(item, settings), settings) : '';
           const degree  = [item.degree, item.fieldOfStudy ? item.fieldOfStudy : ''].filter(Boolean).join(', ');
           const gpaPart = item.gpa ? ` · GPA: ${item.gpa}` : '';
           const subLine = degree + gpaPart;

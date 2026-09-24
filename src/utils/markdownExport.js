@@ -117,17 +117,18 @@ function link(url, label) {
 function itemLines(type, item, f, body, settings, opts = {}) {
   const shown = (text) => (opts.showDates !== false ? text : '');
   const place = () => (opts.showLocation !== false ? f('location') : '');
+  // "Present" for a current job, education, project or volunteering role (R2-150).
+  const end = (item.hiddenFields || []).includes('endDate') ? '' : (item.current ? presentLabel(settings) : f('endDate'));
   switch (type) {
     case 'experience':
     case 'volunteering': {
       const org = type === 'volunteering' ? (f('org') || f('organization')) : f('company');
-      const end = (item.hiddenFields || []).includes('endDate') ? '' : (item.current ? presentLabel(settings) : f('endDate'));
       const title = type === 'experience' && opts.titleOrder !== 'role' ? heading(org, f('role')) : heading(f('role'), org);
       return entryLines(title, [italic(joined([shown(dateRange(f('startDate'), end, settings)), place()], ' | '))], body());
     }
     case 'education': {
       const gpa = f('gpa') ? `GPA: ${f('gpa')}` : '';
-      const dates = shown(dateRange(f('startDate'), f('endDate'), settings));
+      const dates = shown(dateRange(f('startDate'), end, settings));
       return entryLines(heading(joined([f('degree'), f('fieldOfStudy')], ', '), f('institution')),
         [italic(joined([dates, place(), gpa], ' | '))], body());
     }
@@ -136,7 +137,7 @@ function itemLines(type, item, f, body, settings, opts = {}) {
       const href = safeHref(url);
       const name = f('name');
       const title = href ? `[${name || url}](${href})` : name;
-      const meta = [f('technologies') ? `Technologies: ${f('technologies')}` : '', shown(dateRange(f('startDate'), f('endDate'), settings)), href ? '' : url];
+      const meta = [f('technologies') ? `Technologies: ${f('technologies')}` : '', shown(dateRange(f('startDate'), end, settings)), href ? '' : url];
       return entryLines(title, [italic(joined(meta, ' | '))], body());
     }
     case 'certifications': {
