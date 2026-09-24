@@ -1,4 +1,5 @@
-import { Cloud, CloudOff, Loader, CloudAlert, LogOut } from 'lucide-react';
+import { Cloud, CloudOff, Loader, CloudAlert, LogOut, X } from 'lucide-react';
+import { signInErrorMessage } from '@/utils/signInError';
 
 function GoogleIcon() {
   return (
@@ -115,10 +116,19 @@ export default function AuthBar({
 }) {
   const [signingIn, setSigningIn] = useState(false);
   const [menuOpen, setMenuOpen]   = useState(false);
+  // What the last sign-in failure was, in words (signInErrorMessage): it used to go to the
+  // console only, so a blocked popup or an unauthorized domain looked like nothing (R2-086).
+  const [signInError, setSignInError] = useState(null);
 
   async function handleSignIn() {
     setSigningIn(true);
-    try { await signInWithGoogle(); } catch (e) { console.error(e); }
+    setSignInError(null);
+    try {
+      await signInWithGoogle();
+    } catch (e) {
+      console.error(e);
+      setSignInError(signInErrorMessage(e));
+    }
     setSigningIn(false);
   }
 
@@ -131,16 +141,29 @@ export default function AuthBar({
 
   if (!user) {
     return (
-      <button
-        onClick={handleSignIn}
-        disabled={signingIn}
-        title={compact ? 'Sign in with Google' : undefined}
-        aria-label={compact ? 'Sign in with Google' : undefined}
-        className={`flex items-center gap-2 ${compact ? 'p-1.5' : 'px-3 py-1.5'} bg-white border border-gray-200 text-gray-700 rounded-lg text-xs font-semibold hover:bg-gray-50 transition-colors shadow-sm disabled:opacity-60 shrink-0`}
-      >
-        <GoogleIcon />
-        {!compact && (signingIn ? 'Signing in…' : 'Sign in with Google')}
-      </button>
+      <div className="relative shrink-0">
+        <button
+          onClick={handleSignIn}
+          disabled={signingIn}
+          title={compact ? 'Sign in with Google' : undefined}
+          aria-label={compact ? 'Sign in with Google' : undefined}
+          className={`flex items-center gap-2 ${compact ? 'p-1.5' : 'px-3 py-1.5'} bg-white border border-gray-200 text-gray-700 rounded-lg text-xs font-semibold hover:bg-gray-50 transition-colors shadow-sm disabled:opacity-60 shrink-0`}
+        >
+          <GoogleIcon />
+          {!compact && (signingIn ? 'Signing in…' : 'Sign in with Google')}
+        </button>
+        {signInError && (
+          <div
+            role="alert"
+            className="absolute right-0 top-full mt-2 z-50 w-72 max-w-[calc(100vw_-_2rem)] flex items-start gap-2 bg-white border border-red-200 text-red-700 text-xs leading-snug rounded-lg shadow-lg px-3 py-2"
+          >
+            <span className="flex-1">{signInError}</span>
+            <button type="button" onClick={() => setSignInError(null)} aria-label="Dismiss" className="p-0.5 -m-0.5 text-red-400 hover:text-red-700 shrink-0">
+              <X size={12} aria-hidden="true" />
+            </button>
+          </div>
+        )}
+      </div>
     );
   }
 
