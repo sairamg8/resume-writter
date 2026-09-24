@@ -9,7 +9,7 @@
 import { newId } from './ids.js';
 import { SECTION_TYPE_DEFAULTS } from './defaultDataSectionTypes.js';
 import { isText, storedText } from './storedText.js';
-import { describe, entries, isoDate, joined, listOf, listText, month, plain, richDescription, richText } from './jsonResumeText.js';
+import { describe, entries, flattened, isoDate, joined, listOf, listText, month, richDescription, richFrom } from './jsonResumeText.js';
 
 const text = (v) => storedText(v);
 const lines = (parts, sep) => parts.filter(Boolean).join(sep);
@@ -59,6 +59,7 @@ export const SECTION_KEYS = {
         location: item.location || '',
         startDate: isoDate(item.startDate),
         endDate: item.current ? '' : isoDate(item.endDate),
+        current: Boolean(item.current),
         summary,
         highlights,
       };
@@ -73,7 +74,10 @@ export const SECTION_KEYS = {
         location: text(w.location),
         startDate,
         endDate,
-        current: !endDate && Boolean(startDate),
+        // The export says whether the job is the current one (R2-006): a past job with no end date
+        // came back current and printed "Present". A file with no flag — another tool's — keeps the
+        // schema's convention: a job with a start and no end is the current one.
+        current: typeof w.current === 'boolean' ? w.current : !endDate && Boolean(startDate),
         description: richDescription(w.summary, w.highlights),
       };
     }),
@@ -106,13 +110,16 @@ export const SECTION_KEYS = {
   },
   skills: {
     key: 'skills',
+    // A group with no category goes out with no name, and comes back with none (R2-006): it went out
+    // as "Skills" and printed that label after the trip. A group of another tool's file with no
+    // name at all still gets one.
     out: (item) => ({
-      name: item.category || 'Skills',
+      name: text(item.category),
       keywords: text(item.skills || item.name).split(/[,•;]+/).map((k) => k.trim()).filter(Boolean),
     }),
     in: each((sk) => ({
       id: newId('sk'),
-      category: text(sk.name) || 'Technical Skills',
+      category: 'name' in sk ? text(sk.name) : 'Technical Skills',
       skills: listText(sk.keywords),
     })),
   },
@@ -167,14 +174,19 @@ export const SECTION_KEYS = {
   },
   awards: {
     key: 'awards',
-    // The schema's award has one summary text: every line of the description goes in it, so any tool prints them all.
-    out: (item) => ({ title: item.title || '', awarder: item.issuer || '', date: isoDate(item.date), summary: plain(item.description) }),
+    // The schema's award has one summary text: every line of the description goes in it, so any tool
+    // prints them all — and, when that text alone would print differently (a list, bold), the
+    // description itself beside it, which the import reads back (R2-006: a list came back as lines).
+    out: (item) => {
+      const { text: summary, html } = flattened(item.description);
+      return { title: item.title || '', awarder: item.issuer || '', date: isoDate(item.date), summary, ...(html ? { summaryHtml: html } : {}) };
+    },
     in: each((a) => ({
       id: newId('awd'),
       title: text(a.title),
       issuer: text(a.awarder),
       date: month(a.date),
-      description: richText(a.summary),
+      description: richFrom(a.summary, a.summaryHtml),
     })),
   },
   volunteering: {

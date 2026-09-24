@@ -3,7 +3,7 @@
 // (jsonResumeSections.js) share. Plain data: Node loads it as well as Vite.
 import { isText, storedText } from './storedText.js';
 import { parseMonthYear } from './dates.js';
-import { parseRichText, plainTextToHtml } from './richText.js';
+import { parseRichText, plainTextToHtml, sanitizeRichText } from './richText.js';
 
 /** A list's entries that are objects: a null (or other value) in one of the file's lists is skipped. */
 export const entries = (list) => (Array.isArray(list) ? list.filter((v) => Boolean(v) && typeof v === 'object' && !Array.isArray(v)) : []);
@@ -94,3 +94,30 @@ export function describe(html, bullets) {
 
 /** Rich text (the summary, an award's description) as plain text: one line per paragraph or list item. */
 export const plain = (html) => parseRichText(html).map(blockText).filter(Boolean).join('\n');
+
+/**
+ * Rich text (the summary, an award's description) for a field the schema holds as one plain text:
+ * `text`, one line per paragraph or list item, which every tool reads — and `html`, the rich text
+ * itself, sanitized, only when the text alone would print differently: a list, a second paragraph,
+ * bold. The import reads `html` back while the text is still the one written beside it (richFrom).
+ * Until R2-006 only the text went out, and a list in the summary came back as plain lines.
+ */
+export function flattened(html) {
+  const clean = sanitizeRichText(html);
+  const text = plain(clean);
+  return sanitizeRichText(richText(text)) === clean ? { text } : { text, html: clean };
+}
+
+/**
+ * A field's rich text from the file: `html`, the export's formatted copy (flattened), while `text`
+ * is still the plain text written beside it — sanitized, as the editor reads any HTML, so a file
+ * can bring in nothing the editor would not keep. Otherwise `text` (another tool's file, or one
+ * whose text was edited since the export), a line break per line.
+ */
+export function richFrom(text, html) {
+  if (typeof html === 'string' && html) {
+    const clean = sanitizeRichText(html);
+    if (plain(clean) === storedText(text)) return clean;
+  }
+  return richText(text);
+}

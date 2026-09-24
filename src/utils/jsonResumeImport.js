@@ -6,8 +6,9 @@ import { SECTION_TYPE_DEFAULTS } from './defaultDataSectionTypes.js';
 import { getStarterSettings } from './starterTemplates.js';
 import { DATA_VERSION } from './dataVersion.js';
 import { isText, storedText } from './storedText.js';
-import { entries, richText } from './jsonResumeText.js';
+import { entries, richFrom } from './jsonResumeText.js';
 import { customItem, fileEntries, PUBLICATIONS, SECTION_KEYS } from './jsonResumeSections.js';
+import { CONTACT_FIELDS } from './contacts.js';
 import { templateId } from '../constants/templates.js';
 
 const isRecord = (v) => Boolean(v) && typeof v === 'object' && !Array.isArray(v);
@@ -62,6 +63,22 @@ function sectionsOf(file) {
   return sections;
 }
 
+/**
+ * The display label and link URL of the website, LinkedIn and GitHub the export writes beside the
+ * schema's fields (R2-006); only the ones the file holds, so a header from another tool's file has
+ * none.
+ */
+function linkFields(b) {
+  const out = {};
+  for (const { key } of CONTACT_FIELDS.filter((f) => f.link)) {
+    for (const k of [`${key}Label`, `${key}Url`]) {
+      const v = storedText(b[k]);
+      if (v.trim()) out[k] = v;
+    }
+  }
+  return out;
+}
+
 /** Entries of `type` no section in `meta` claimed: into the last section of that type, or a new one. */
 function addRest(sections, type, items) {
   if (items.length === 0) return;
@@ -108,7 +125,8 @@ export function jsonResumeToCpwtResume(jsonResume, customId) {
     website: storedText(b.url),
     linkedin,
     github,
-    summary: richText(b.summary),
+    ...linkFields(b),
+    summary: richFrom(b.summary, b.summaryHtml),
     photo: typeof b.image === 'string' && b.image ? b.image : null,
     hiddenFields: [],
   };
