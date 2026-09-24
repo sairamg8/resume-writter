@@ -222,10 +222,11 @@ export function fakeStore(state, mods) {
  * and `state` in its store, wired as useCloudSync wires them (liveStore; `hidden` () → whether the
  * tab is hidden); with `demo`
  * ({ accounts, ownerResume?, now? }) also the demo restore, run after every change as
- * useDemoSeed runs it; with `ownTimers` the engine's default timers, as the app runs it. `page.sync.start(user)` signs in; `page.change(next)` changes the store as
+ * useDemoSeed runs it; with `ownTimers` the engine's default timers, as the app runs it; with `now`
+ * (() → ms) the engine's clock. `page.sync.start(user)` signs in; `page.change(next)` changes the store as
  * a click would, `page.remove(id)` deletes a résumé — the effects run after each, as React's would.
  */
-export function syncPage(mods, cloud, state, { isDemo = () => false, online = () => true, hidden = () => false, demo = null, ownTimers = false } = {}) {
+export function syncPage(mods, cloud, state, { isDemo = () => false, online = () => true, hidden = () => false, demo = null, ownTimers = false, now } = {}) {
   const store = fakeStore(state, mods);
   // ownTimers: none passed in, as useCloudSync passes none — the engine then uses its own default.
   const timers = ownTimers ? undefined : manualTimers();
@@ -244,7 +245,7 @@ export function syncPage(mods, cloud, state, { isDemo = () => false, online = ()
   report.account = (a) => { onAccount(a); queueMicrotask(render); };
   const sync = mods.engine.createCloudSync({
     io: cloud ? mods.io.cloudIo(cloud.fs, cloud.db) : null, store: mods.actions.liveStore(() => ({ appState: store.state, store })),
-    report, isDemo, online, hidden, timers,
+    report, isDemo, online, hidden, timers, now,
   });
   const start = sync.start;
   sync.start = (u) => { user = u || null; start(u); queueMicrotask(render); };

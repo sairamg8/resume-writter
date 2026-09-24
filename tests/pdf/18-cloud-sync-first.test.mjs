@@ -129,7 +129,8 @@ describe('a flush adds to the deletion list without reading it (R8-4)', () => {
     const readsBefore = cloud.reads.length;
     await laptop.remove('resume_a');
     await laptop.timers.fire();
-    assert.deepEqual(cloud.reads.slice(readsBefore), [], 'before: read, then set whole — whatever landed in between was lost');
+    // The flush reads the résumé it sends, to keep another device's edit (R2-004) — never the list.
+    assert.deepEqual(cloud.reads.slice(readsBefore), [resumePath('u', 'resume_a')], 'before: read, then set whole — whatever landed in between was lost');
     assert.deepEqual(cloud.doc(listPath('u')).ids, ['resume_x', 'resume_s', 'resume_a']);
   });
 });

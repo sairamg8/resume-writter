@@ -82,10 +82,14 @@ describe('an original deleted for good stays deleted on every device (V2OWNER-DA
     await signIn(laptop);
     // The phone: "Stop keeping" on X, and an edit.
     cloud.data.set(resumePath('u', 'orig_x'), cv('orig_x', 20, { name: 'X, edited, not kept' }));
-    await laptop.remove('orig_x'); // the laptop still shows it as an original: flagged
+    await laptop.remove('orig_x'); // the laptop still shows it as an original
     await laptop.timers.fire();
     const { name, keep, deleted } = cloud.resumes('u').orig_x;
-    assert.deepEqual([name, keep, deleted], ['X, edited, not kept', undefined, true], 'before: keep: true written over the phone\'s "Stop keeping"');
+    // Deleted from a copy older than the phone's edit, it is not sent at all (R2-004): the edit
+    // stays, as a deletion made offline already did at a first sync (R8-0), and comes back here.
+    assert.deepEqual([name, keep, deleted], ['X, edited, not kept', undefined, undefined], 'before: keep: true written over the phone\'s "Stop keeping"');
+    await settle();
+    assert.equal(laptop.store.state.resumes.find((r) => r.id === 'orig_x')?.name, 'X, edited, not kept');
     const fresh = page(cloud, { resumes: [] });
     await signIn(fresh);
     assert.deepEqual(fresh.seen.account.cloudOriginals.map((r) => r.id), ['orig_y'], 'before: X was an original again, for the next restore');

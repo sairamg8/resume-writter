@@ -27,6 +27,8 @@ const OWNER = { uid: 'u', email: 'owner@example.com' };
 const PHOTO = 'data:image/jpeg;base64,/9j/4AAQ';
 const tooLarge = () => Object.assign(new Error('Document cannot be written because its size (1,100,123 bytes) exceeds the maximum allowed size of 1,048,576 bytes.'), { code: 'invalid-argument' });
 const writes = (ops, id) => ops.some(([op, path]) => op === 'set' && path === resumePath('u', id));
+/** How many times the whole account was read — a first sync. A flush reads only the résumés it sends (R2-004). */
+const accountReads = (cloud) => cloud.reads.filter((path) => path === 'users/u/resumes').length;
 /** How many batches the server was sent that write résumé A, refused or not. */
 const triesOfA = (cloud) => [...cloud.commits, ...cloud.refused].filter((ops) => writes(ops, 'resume_a')).length;
 /** The server refuses any batch that writes résumé A with a photo, whatever the reason. */
@@ -49,10 +51,10 @@ describe('a résumé the server refuses holds back only itself (V2VF1S-0)', () =
     await settle();
     await edit(p, 'resume_a', { name: 'With a photo', photo: PHOTO }, 2);
     assert.deepEqual([p.seen.status, p.timers.count], ['stopped', 0]);
-    const [reads, tries] = [cloud.reads.length, triesOfA(cloud)];
+    const [reads, tries] = [accountReads(cloud), triesOfA(cloud)];
     for (let i = 0; i < 3; i += 1) await edit(p, 'resume_b', { name: `B edit ${i}` }, 3 + i);
     assert.equal(cloud.resumes('u').resume_b.name, 'B edit 2', 'before: B\'s edits never reached the cloud while A was refused');
-    assert.deepEqual([cloud.reads.length - reads, triesOfA(cloud) - tries], [0, 0], 'before: each pause read the whole account and sent A again');
+    assert.deepEqual([accountReads(cloud) - reads, triesOfA(cloud) - tries], [0, 0], 'before: each pause read the whole account and sent A again');
     assert.deepEqual([p.seen.status, p.seen.held.map((r) => r.name)], ['stopped', ['With a photo']], 'the icon still says A is not in the cloud, and which');
     p.sync.start(USER); // offline and online again: the first sync leaves A out too
     await settle();
@@ -74,9 +76,9 @@ describe('a résumé the server refuses holds back only itself (V2VF1S-0)', () =
     assert.deepEqual(Object.keys(cloud.resumes('u')), ['resume_b'], 'before: nothing got through — C kept, B not sent');
     assert.deepEqual([cloud.resumes('u').resume_b.name, cloud.doc(listPath('u')).ids, p.store.state.deletedIds], ['B, edited offline', ['resume_c'], []]);
     assert.deepEqual([p.seen.status, p.seen.held.map((r) => r.id), p.timers.count, p.seen.account?.cloud], ['stopped', ['resume_a'], 0, true]);
-    const reads = cloud.reads.length;
+    const reads = accountReads(cloud);
     await edit(p, 'resume_b', { name: 'B, edited again' }, 3);
-    assert.deepEqual([cloud.resumes('u').resume_b.name, cloud.reads.length - reads], ['B, edited again', 0], 'a flush, not another first sync');
+    assert.deepEqual([cloud.resumes('u').resume_b.name, accountReads(cloud) - reads], ['B, edited again', 0], 'a flush, not another first sync');
   });
 
   it('a demo account\'s originals come back meanwhile: its account can be reached', async () => {

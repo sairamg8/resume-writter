@@ -17,6 +17,7 @@ import { isOriginal } from '@/utils/demoSeed';
 import { isSampleId, isUntouchedSample } from '@/utils/oldSamples';
 import { mergeResumeLists } from '@/utils/syncMerge';
 import { withoutDeletions } from '@/utils/localDeletions';
+import { sortOut } from '@/utils/cloudSyncLineage';
 
 const hasId = (r) => r && typeof r.id === 'string' && r.id !== '';
 /** A deletion entry (localDeletions.js); a bare id is an older build's, with no version. */
@@ -37,8 +38,12 @@ const unflagged = ({ deleted: _deleted, ...r }) => r;
  *   cloud         the account's résumé documents, each with its document id
  *   cloudDeleted  the account's deletion list
  *   demoAccount   the account is a demo account (its deleted originals are flagged)
+ *   lineage       the copies this browser has seen (cloudSyncLineage.createLineage), or null
  * Returns
- *   merged       the list to load: newer copy wins, deletions left out
+ *   merged       the list to load: newer copy wins, deletions left out — but by `lineage` (R2-004):
+ *                a copy here that the cloud had takes the cloud's other one, and a résumé changed
+ *                on both sides keeps this copy and gets the cloud's as "<name> (conflict copy)" —
+ *                the newer copy used to win, and the other side's edit was gone everywhere
  *   sets         the merged résumés the account lacks or holds an older copy of → write them.
  *                Only those: writing back a copy just read put it over an edit another device
  *                made before the batch arrived (R8-4) — and an edited sample an older build
@@ -68,7 +73,7 @@ const unflagged = ({ deleted: _deleted, ...r }) => r;
  * edited is removed and listed, as if deleted for good; an edited one is a résumé again — its flag
  * dropped, it is merged and written back like any, and a deletion made here still applies to it.
  */
-export function planInitialSync({ local = [], deletions = [], cloud = [], cloudDeleted = [], demoAccount = false, uid = null }) {
+export function planInitialSync({ local = [], deletions = [], cloud = [], cloudDeleted = [], demoAccount = false, uid = null, lineage = null }) {
   const localById = new Map(local.filter(hasId).map((r) => [r.id, r]));
   const editedSince = (doc) => (localById.get(doc.id)?.updatedAt ?? 0) > (doc.updatedAt ?? 0);
   const oldSamples = demoAccount ? cloud.filter((r) => hasId(r) && r.deleted && isSampleId(r.id) && !isOriginal(r) && !editedSince(r)) : [];
@@ -104,9 +109,11 @@ export function planInitialSync({ local = [], deletions = [], cloud = [], cloudD
     ...(demoAccount ? purged : flagged),
   ];
 
-  const merged = mergeResumeLists(local, docs, excluded);
+  const live = docs.filter((r) => !r.deleted && !excluded.has(r.id));
+  const { pulled, forked, copies } = lineage ? sortOut(local.filter(hasId), live, lineage) : { pulled: new Set(), forked: new Set(), copies: [] };
+  const merged = mergeResumeLists([...local.filter((r) => !pulled.has(r?.id)), ...copies], docs.filter((r) => !forked.has(r.id)), excluded);
   // `!(>=)`: a copy with no time of its own, on either side, is written.
-  const sets = merged.filter((r) => { const c = byId.get(r.id); return !c || c.deleted || revived.has(r.id) || !(c.updatedAt >= r.updatedAt); });
+  const sets = merged.filter((r) => { const c = byId.get(r.id); return !c || c.deleted || revived.has(r.id) || forked.has(r.id) || !(c.updatedAt >= r.updatedAt); });
   return { merged, sets, flags, marks, hardDeletes, listAdd: hardDeletes, handled };
 }
 
@@ -115,7 +122,8 @@ export function planInitialSync({ local = [], deletions = [], cloud = [], cloudD
  * when the plan read it — the user may have typed, deleted or added a résumé while the sync read
  * the account and waited for its batch (R8-2). `snapshot` the résumés the plan was made from,
  * `merged` and `handled` from the plan, `before` when the plan read the store, `uid` the account
- * the list is now synced with (`syncedUid`: whose a later deletion is, R8-6).
+ * the list is now synced with (`syncedUid`: whose a later deletion is, R8-6), `versions` the
+ * copies its cloud holds now ({ id: updatedAt }: `cloudVersions`, the next visit's lineage base, R2-004).
  * A résumé unchanged since the snapshot takes its merged copy, or goes when the plan left it out;
  * one edited or added meanwhile stays as it is, and one deleted meanwhile stays deleted — the
  * watcher then sends those changes. Only the deletions the plan dealt with are forgotten — `uid`'s
@@ -124,7 +132,7 @@ export function planInitialSync({ local = [], deletions = [], cloud = [], cloudD
  * store and every deletion was forgotten: an edit typed during the sync was lost, and a résumé
  * deleted during it came back — the batch had just written it to the cloud again.
  */
-export function afterSync(state, { uid, snapshot, merged, handled, before }) {
+export function afterSync(state, { uid, snapshot, merged, handled, before, versions = {} }) {
   const seen = new Map(snapshot.map((r) => [r.id, r.updatedAt]));
   const current = new Map(state.resumes.map((r) => [r.id, r]));
   const touched = (r) => !seen.has(r.id) || seen.get(r.id) !== r.updatedAt;
@@ -142,6 +150,7 @@ export function afterSync(state, { uid, snapshot, merged, handled, before }) {
     activeId: resumes.some((r) => r.id === state.activeId) ? state.activeId : (resumes[0]?.id ?? state.activeId),
     ...withoutDeletions(state, handled, before, uid ?? undefined),
     syncedUid: uid ?? state.syncedUid ?? null,
+    cloudVersions: versions,
   };
 }
 

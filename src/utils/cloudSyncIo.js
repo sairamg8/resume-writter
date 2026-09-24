@@ -43,6 +43,15 @@ export function cloudIo(fs, db) {
     },
 
     /**
+     * The server's copies of these résumés now, those that exist: a flush checks what it sends
+     * against them (cloudSyncLineage.js, R2-004). The deletion list is not read (R8-4).
+     */
+    async readDocs(uid, ids) {
+      const snaps = await Promise.all(ids.map((id) => fs.getDocFromServer(resumeDoc(uid, id))));
+      return snaps.filter((d) => d.exists()).map(withId);
+    },
+
+    /**
      * One batch: whole résumés written (`sets`), originals flagged (the rest of the document
      * kept; `marks` marked an original too — one marked here and deleted before the mark was
      * sent), the rest removed, and their ids added to the deletion list (`listAdd`). Nothing ever

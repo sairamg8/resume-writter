@@ -63,7 +63,7 @@ export function remainingImageBudget(resume, replacing = null) {
  *   hold(r), release(list)       let go of those changed or gone in `list`: tried again
  *   replaced(uid, list)          the copies held that `list` holds replaced in place and that now fit
  *                                in a document: let go, and returned to be sent (below)
- *   size, clear()
+ *   size, has(id), clear()
  * Replaced in place: the same version (`updatedAt`) as another object — the store made its photo
  * smaller (smallerPhotos.js, ONB-10), which is no edit, so neither the queue nor release sees it.
  * Held until then, a résumé over 1 MiB for a photo an older build stored whole waited for its next
@@ -82,6 +82,7 @@ export function createHeld({ io = null, report = {}, online = () => true, resume
   const api = {
     hold,
     get size() { return held.size; },
+    has: (id) => held.has(id),
     commit: (uid, plan, source, live) => commitHolding(io, uid, plan, { held: api, source, resumes, online, live }),
     sendable(uid, list) {
       // The store's copy of the same version: one made smaller since the queue or the plan took it.

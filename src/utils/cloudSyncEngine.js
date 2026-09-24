@@ -2,25 +2,26 @@
 // read-back of a demo account's originals — as a plain object with everything outside passed
 // in: the Firestore calls (`io`, cloudSyncIo.js; null without a cloud), the résumé store, the
 // timers, the online flag. What a failure means and when it is tried again: cloudSyncRetry.js; a
-// résumé the cloud will not take, held back on its own: cloudSyncHeld.js.
+// résumé the cloud will not take, held back on its own: cloudSyncHeld.js; the write queue:
+// cloudSyncQueue.js; another device's edit told from this one's: cloudSyncLineage.js (R2-004).
 // No React and no Firebase, so the tests drive this very code (tests/pdf/18-cloud-sync-*.test.mjs);
 // cloudSyncBrowser.js wires it to the page (online flag, hidden tab), useCloudSync to React state.
 import { isOriginal } from '@/utils/demoSeed';
-import { planInitialSync, queueChanges } from '@/utils/cloudSyncPlan';
-import { flushOnce } from '@/utils/cloudSyncFlush';
+import { planInitialSync } from '@/utils/cloudSyncPlan';
 import { deletionEntries } from '@/utils/localDeletions';
 import { backoff, failureReport } from '@/utils/cloudSyncRetry';
 import { createHeld } from '@/utils/cloudSyncHeld';
-
-/** Nothing waiting to be sent: queueChanges adds to it, a flush takes it whole. */
-const emptyQueue = () => ({ writes: new Map(), deletes: new Set(), kept: new Set(), marked: new Set() });
+import { createQueue, emptyQueue } from '@/utils/cloudSyncQueue';
+import { createLineage } from '@/utils/cloudSyncLineage';
 
 /**
  * createCloudSync({ io, store, report, isDemo, ... }):
  *   io        cloudIo(...) — null when this build has no cloud
  *   store     { getState() → the résumé store's state now, applyCloudSync(result) — a first
  *             sync's result (cloudSyncPlan.afterSync), forgetDeletions(ids, before, uid) — that
- *             account's cloud has these deletions (localDeletions.js) }: useResumeSyncActions.liveStore
+ *             account's cloud has these deletions (localDeletions.js), restoreResumes(list),
+ *             noteCloudVersions(uid, { id: version | null }) — the copies the cloud holds now
+ *             (cloudSyncLineage.js) }: useResumeSyncActions.liveStore
  *   report    { status('idle'|'syncing'|'synced'|'offline'|'error'|'stopped'|'off'), synced(Date), account(a),
  *             held([{ id, name }]) } — held: the résumés the cloud will not take ('stopped' while any);
  *             account: { uid, cloud, cloudOriginals, cloudDeleted } once the account's list is
@@ -32,7 +33,8 @@ const emptyQueue = () => ({ writes: new Map(), deletes: new Set(), kept: new Set
  *   timers    { set(fn, ms) → id, clear(id) }; flushDelay (ms) before queued changes are sent;
  *             cloudTimeout (ms) readCloudCopies waits for an answer; retryDelay (ms) before a
  *             first sync that failed for a moment is tried again, doubled after each failure up
- *             to maxRetryDelay; now() → ms
+ *             to maxRetryDelay; refreshAfter (ms) since the account was last read before a tab
+ *             shown again reads it again (R2-004); now() → ms
  * Returns { start(user), cancel(), shown(), resumesChanged(resumes), readCloudCopies(ids) }.
  */
 export function createCloudSync({
@@ -40,7 +42,7 @@ export function createCloudSync({
   // The default timers call the globals, never as methods of `timers`: a browser's setTimeout and
   // clearTimeout throw "Illegal invocation" on any `this` but the window (the live site went blank).
   online = () => true, hidden = () => false, timers = { set: (fn, ms) => setTimeout(fn, ms), clear: (id) => clearTimeout(id) },
-  flushDelay = 1500, cloudTimeout = 5000, retryDelay = 30000, maxRetryDelay = 600000,
+  flushDelay = 1500, cloudTimeout = 5000, retryDelay = 30000, maxRetryDelay = 600000, refreshAfter = 10000,
   now = () => Date.now(), log = () => {},
 }) {
   const s = {
@@ -56,9 +58,15 @@ export function createCloudSync({
     retryOnShow: false, // a retry came due while the tab was hidden
     stopped: null, // the résumés when a batch no résumé can be held for was refused for good
     account: null,
+    lineage: createLineage(), // the account's copies this page has seen (R2-004)
+    turn: Promise.resolve(), // the last flush's batch handed to Firestore (cloudSyncQueue.js)
+    readAt: -Infinity, // when a first sync last read the account (now())
   };
   // The résumés the cloud will not take, left out of every batch until they change (V2VF1S-0).
   const held = createHeld({ io, report, online, resumes: () => store.getState().resumes });
+  // The write queue, sending the store's changes after a pause (hoisted: failed, settled, scheduleRetry).
+  const queue = createQueue({ s, io, store, report, held, timers, flushDelay, cloudTimeout, now, isDemo, failed, settled, scheduleRetry });
+  const { dropQueue } = queue;
 
   function setAccount(account) {
     s.account = account;
@@ -75,7 +83,7 @@ export function createCloudSync({
     // refused, and that refusal turned sync off for whoever signed in next (R8-5). Nothing is
     // lost: the store keeps the edits and deletions for that account's next first sync. Nor do its
     // failures put off the next account's retry: that one starts from retryDelay (V2VF1S-5).
-    if ((user?.uid ?? null) !== (s.user?.uid ?? null)) { dropQueue(); held.clear(); s.attempts = 0; }
+    if ((user?.uid ?? null) !== (s.user?.uid ?? null)) { dropQueue(); held.clear(); s.attempts = 0; s.lineage.reset(); }
     s.user = user || null;
 
     if (!user) {
@@ -104,12 +112,6 @@ export function createCloudSync({
     initialSync(user, s.gen);
   }
 
-  function dropQueue() {
-    timers.clear(s.timer);
-    s.timer = null;
-    s.queue = emptyQueue();
-  }
-
   /** The account when there is no cloud to read: this browser's résumés are the whole list. */
   const noCloud = (user) => ({ uid: user.uid, cloud: false, cloudOriginals: [], cloudDeleted: [] });
 
@@ -135,9 +137,16 @@ export function createCloudSync({
     }, wait);
   }
 
-  /** The tab is shown again: a retry that came due while it was hidden runs now. */
+  /**
+   * The tab is shown again: a retry that came due while it was hidden runs now — and, the account
+   * read longer than refreshAfter ago, it is read again: another device's edits made meanwhile are
+   * here before this page's next change (R2-004). A tab left open showed its stale copies until a
+   * reload.
+   */
   function shown() {
-    if (s.retryOnShow && s.user) start(s.user);
+    if (!s.user) return;
+    const stale = s.initialSyncDone && !s.stopped && io && !s.cloudDisabled && now() - s.readAt >= refreshAfter;
+    if (s.retryOnShow || stale) start(s.user);
   }
 
   /**
@@ -189,9 +198,10 @@ export function createCloudSync({
       // The store as it is once the account is known: what was done while it was read counts.
       const appState = store.getState();
       const planAt = now();
+      if (appState.syncedUid === user.uid) s.lineage.base(appState.cloudVersions);
       const plan = planInitialSync({
         local: appState.resumes, deletions: deletionEntries(appState), cloud: cloud.docs, cloudDeleted: cloud.deleted,
-        demoAccount: isDemo(user), uid: user.uid,
+        demoAccount: isDemo(user), uid: user.uid, lineage: s.lineage,
       });
 
       // Deletions this browser never sent reach the cloud in the same batch, before the store
@@ -199,10 +209,17 @@ export function createCloudSync({
       // for a document is never sent; one refused is held and the rest sent without it.
       await held.commit(user.uid, { ...plan, sets: held.sendable(user.uid, plan.sets) }, appState.resumes, () => gen === s.gen);
       if (gen !== s.gen) return;
+      s.lineage.synced(cloud.docs);
+      s.lineage.synced(plan.sets);
+      s.readAt = now();
 
       // Applied to the store as it is now (R8-2). The watcher then compares it with the merged list,
-      // so it sends what was edited, added or deleted while the batch was on its way.
-      store.applyCloudSync({ uid: user.uid, snapshot: appState.resumes, merged: plan.merged, handled: plan.handled, before: planAt });
+      // so it sends what was edited, added or deleted while the batch was on its way. `versions`:
+      // the copies the cloud holds now — a résumé held back keeps the cloud's own.
+      const cloudCopy = new Map(cloud.docs.map((r) => [r.id, r.updatedAt]));
+      const versions = Object.fromEntries(plan.merged.map((r) => [r.id, held.has(r.id) ? cloudCopy.get(r.id) : r.updatedAt])
+        .filter(([, v]) => Number.isFinite(v)));
+      store.applyCloudSync({ uid: user.uid, snapshot: appState.resumes, merged: plan.merged, handled: plan.handled, before: planAt, versions });
       s.prevResumes = plan.merged;
       s.initialSyncDone = true;
       // A listed id was deleted for good, whatever copy of it a stale device wrote back since
@@ -215,64 +232,6 @@ export function createCloudSync({
     } catch (e) {
       if (gen !== s.gen) return;
       failed(e, user, 'sync');
-    }
-  }
-
-  /** The store's résumés after every change: what changed is queued and sent after a pause. */
-  function resumesChanged(current) {
-    held.release(current); // changed or deleted: tried again
-    if (s.stopped && s.user && current !== s.stopped) {
-      // Refused for good with no résumé to hold: a change is tried once, after the pause.
-      s.stopped = current;
-      scheduleRetry(flushDelay);
-      return;
-    }
-    if (!s.user || !s.initialSyncDone || s.cloudDisabled || !io) return;
-    const queued = queueChanges(s.queue, s.prevResumes || [], current, held.replaced(s.user.uid, current));
-    if (!queued.dirty) return;
-    s.queue = queued;
-    s.prevResumes = current;
-
-    timers.clear(s.timer);
-    report.status('syncing');
-    const { user } = s;
-    s.timer = timers.set(() => sendPending(user), flushDelay);
-  }
-
-  /** Send the changes waiting: handed to Firestore at once, in order (cloudSyncFlush.js). */
-  async function sendPending(user) {
-    const current = () => s.user?.uid === user.uid;
-    const { kept, marked } = s.queue;
-    const queued = [...s.queue.writes.values()];
-    const deletes = [...s.queue.deletes];
-    const source = s.prevResumes || []; // the résumés the queue was made from (cloudSyncHeld.js)
-    s.queue = emptyQueue();
-    // Signed out or switched since (R8-5): the queue is not sent — and not left for the next
-    // account's flush either, should start() not have dropped it (V2W1a-2).
-    if (!current() || s.cloudDisabled || !io) return;
-    const writes = held.sendable(user.uid, queued);
-    if (!writes.length && !deletes.length) {
-      if (s.initialSyncDone) report.status(held.size ? 'stopped' : 'synced'); // all of it held back
-      return;
-    }
-
-    const sentAt = now();
-    try {
-      // In a demo account a deleted original is flagged, not removed: its last copy stays in the
-      // cloud so that restoring the originals on any device brings back the edited version.
-      // Writing it again (a restore) replaces the whole document, flag included.
-      const flush = { uid: user.uid, writes, deletes, kept, marked, demoAccount: isDemo(user) };
-      await flushOnce(flush, { commit: (uid, plan) => held.commit(uid, plan, source, current) });
-      // The cloud has them: the store stops keeping them for the next first sync, which would send
-      // them again — over a restore another device made since (R8-1).
-      if (deletes.length) store.forgetDeletions(deletes, sentAt, user.uid);
-      // Not "synced" while a first sync is still owed (offline, or the cloud stopped answering).
-      if (!current() || !s.initialSyncDone) return;
-      settled();
-    } catch (e) {
-      // An account signed out since: its refusal says nothing about the one signed in now (R8-5).
-      if (!current()) return;
-      failed(e, user, 'flush');
     }
   }
 
@@ -296,5 +255,5 @@ export function createCloudSync({
     });
   }
 
-  return { start, cancel, shown, resumesChanged, readCloudCopies };
+  return { start, cancel, shown, resumesChanged: queue.resumesChanged, readCloudCopies };
 }

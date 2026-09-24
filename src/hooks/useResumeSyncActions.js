@@ -52,7 +52,24 @@ export function createSyncActions(setAppState, now = () => Date.now()) {
     });
   }
 
-  return { forgetDeletions, applyCloudSync, restoreResumes, deleteResume };
+  /**
+   * Account `uid`'s cloud holds these copies now ({ id: updatedAt }, null: none), as a flush it got
+   * sent them: kept for the next visit's first sync, to tell another device's edit from this
+   * browser's (cloudSyncLineage.js, R2-004) — only while the list is that account's.
+   */
+  function noteCloudVersions(uid, versions) {
+    setAppState(prev => {
+      if (prev.syncedUid !== uid) return prev;
+      const next = { ...(prev.cloudVersions || {}) };
+      for (const [id, v] of Object.entries(versions)) {
+        if (Number.isFinite(v)) next[id] = v;
+        else delete next[id];
+      }
+      return { ...prev, cloudVersions: next };
+    });
+  }
+
+  return { forgetDeletions, applyCloudSync, restoreResumes, deleteResume, noteCloudVersions };
 }
 
 /**
@@ -65,5 +82,7 @@ export function liveStore(latest) {
     getState: () => latest().appState,
     applyCloudSync: (result) => latest().store.applyCloudSync(result),
     forgetDeletions: (ids, before, uid) => latest().store.forgetDeletions(ids, before, uid),
+    restoreResumes: (list) => latest().store.restoreResumes(list),
+    noteCloudVersions: (uid, versions) => latest().store.noteCloudVersions(uid, versions),
   };
 }

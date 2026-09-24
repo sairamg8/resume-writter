@@ -69,15 +69,19 @@ describe('a restore without the cloud\'s answer never overwrites the cloud (VM4-
     await settle();
     assert.deepEqual(names(laptop), [], 'before: the morning copies came back here — and an edit typed into one was written over the phone\'s at the retry');
     assert.equal(laptop.seen.waiting, true, 'the dashboard says they come back once the account answers');
-    await laptop.timers.fire(); // the pause (both flagged), and a retry that still cannot read
-    assert.deepEqual([cloud.resumes('u').orig_a.name, cloud.resumes('u').orig_a.deleted], ['Edited on the phone', true]);
+    await laptop.timers.fire(); // the pause, and a retry that still cannot read
+    // The flush reads the copies it deletes first (R2-004): it cannot, so nothing is sent — the
+    // phone's edit is not flagged either.
+    assert.deepEqual([cloud.resumes('u').orig_a.name, cloud.resumes('u').orig_a.deleted], ['Edited on the phone', undefined]);
     assert.equal(laptop.seen.status, 'error', 'says it will retry');
 
     cloud.fail.read = null;
-    await laptop.timers.fire(); // the retry gets through: the restore asks again
+    await laptop.timers.fire(); // the retry gets through
     await laptop.timers.fire();
-    assert.deepEqual(names(laptop).toSorted(), ['B', 'Edited on the phone'], 'before: only the edited morning copy was left');
-    assert.deepEqual([cloud.resumes('u').orig_a.name, cloud.resumes('u').orig_a.deleted, cloud.resumes('u').orig_b.deleted], ['Edited on the phone', undefined, undefined]);
+    // Its first sync brings the phone's copy of A: a deletion made from an older copy is not sent
+    // (R8-0, R2-004). An original is left, so none is restored: B stays deleted, as the user asked.
+    assert.deepEqual(names(laptop), ['Edited on the phone'], 'before: only the edited morning copy was left');
+    assert.deepEqual([cloud.resumes('u').orig_a.name, cloud.resumes('u').orig_a.deleted, cloud.resumes('u').orig_b.deleted], ['Edited on the phone', undefined, true]);
     assert.deepEqual([laptop.seen.status, laptop.seen.waiting], ['synced', false]);
   });
 
