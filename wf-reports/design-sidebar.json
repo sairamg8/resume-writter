@@ -1,0 +1,41 @@
+{
+  "cluster": "design-sidebar",
+  "branch": "claude/wf-design-sidebar",
+  "base": "504b313",
+  "rows": [
+    { "id": "R2-013", "outcome": "duplicate", "commits": [], "tests": ["tests/pdf/69-picker-ats-badge.test.mjs"],
+      "summary": "Duplicate of R2-011 (✅): each Template card's ATS badge is atsRating(t.id, settings).safe (src/components/DesignPanel.jsx), so in Sidebar → Single · ATS-safe the Sidebar card shows the badge the ATS Check's verdict gives; test 69 passes at HEAD.", "remaining": "" },
+    { "id": "R2-051", "outcome": "fixed", "commits": ["4d7c5fb", "49e4050"], "tests": ["tests/pdf/86-sidebar-single-entry-colours.test.mjs", "tests/pdf/72-sidebar-single-title-order.test.mjs"],
+      "summary": "In Sidebar → Single · ATS-safe, Word builds each section with the résumé's own template, as the PDF does: role first (R2-012, c06a9de), grey dates, the second field in the accent; Section Options' Order already resolved the same (c06a9de).", "remaining": "" },
+    { "id": "R2-059", "outcome": "duplicate", "commits": [], "tests": ["tests/pdf/72-sidebar-single-title-order.test.mjs"],
+      "summary": "Duplicate of R2-012 (✅ c06a9de): PDF, Word and Section Options → Order all resolve with templateId(template), and atsChecker reads TEMPLATE_SECTION_DEFAULTS[currentTemplate], so Single · ATS-safe leads a job with the role everywhere; test 72 passes at HEAD.", "remaining": "" },
+    { "id": "R2-082", "outcome": "fixed", "commits": ["0b5f6e2", "1075736"], "tests": ["tests/pdf/86-sidebar-single-design-notes.test.mjs", "tests/pdf/parity/01-offered.test.mjs"],
+      "summary": "The Typography and Section Headings notes about the side column read headerTemplateId, so Single · ATS-safe (which prints Classic's page) no longer shows them; the Colors half was fixed in 0b5f6e2.", "remaining": "" },
+    { "id": "R2-083", "outcome": "fixed", "commits": ["2c98125"], "tests": ["tests/pdf/86-line-height-shown.test.mjs"],
+      "summary": "Line Height (NumberRow with a fractional step) shows two decimals, one where the second is 0: after 1-Page Fit and Spacious it reads 1.35 / 1.65, the value the PDF is laid out with; Academic's 1.35 and a stored 1.15 too.", "remaining": "" },
+    { "id": "R2-087", "outcome": "fixed", "commits": ["d60bd16"], "tests": ["tests/pdf/86-template-reclick.test.mjs"],
+      "summary": "Clicking the Template card already selected calls nothing, and the store's setTemplate returns the résumé unchanged (no updatedAt stamp) for the template it is on, so the Section Headings style and Title case stay as set.", "remaining": "" },
+    { "id": "R2-088", "outcome": "fixed", "commits": ["7cb2d6e"], "tests": ["tests/pdf/86-heading-border-colour.test.mjs"],
+      "summary": "With no Border colour picked, the swatch shows headingBorderDefault's colour — what the heading prints (Classic Ruled: the grey rule) — and the label says 'accent' only where it is the accent, 'template' otherwise; ↺ names what it resets to.", "remaining": "" },
+    { "id": "R2-089", "outcome": "fixed", "commits": ["0d5867d", "ff5138d"], "tests": ["tests/pdf/86-reset-keeps-single.test.mjs", "tests/pdf/parity/15-template-resets.test.mjs"],
+      "summary": "Design → Reset keeps a stored sidebarSingleColumn (resetDesignSettings), so a Sidebar in Single · ATS-safe stays one column and the ATS Check passes; every other setting resets.", "remaining": "" },
+    { "id": "R2-090", "outcome": "fixed", "commits": ["595a3bd"], "tests": ["tests/pdf/86-icon-reset-keeps-contact-style.test.mjs"],
+      "summary": "Contact icons ↺ resets only iconSet and iconSize; Header Customization's Contact Style (Bar, Bullet) stays as set.", "remaining": "" },
+    { "id": "R2-096", "outcome": "fixed", "commits": ["1075736"], "tests": ["tests/pdf/86-sidebar-single-design-notes.test.mjs"],
+      "summary": "contactIconHint reads headerTemplateId: in Single · ATS-safe the hint says icons follow Contact style Icon (naming the two-column Sidebar as the one that always draws them).", "remaining": "" },
+    { "id": "R2-119", "outcome": "fixed", "commits": ["7cb2d6e"], "tests": ["tests/pdf/86-heading-border-colour.test.mjs"],
+      "summary": "Modern's Boxed tints the Border colour as every other template's box does (the accent's tint while none is picked, so unset résumés print as before), in the PDF and Word; the test checks Border colour is enabled exactly where a picked colour changes the PDF and Word, every template × style.", "remaining": "" },
+    { "id": "R2-120", "outcome": "fixed", "commits": ["0b5f6e2", "1075736"], "tests": ["tests/pdf/86-sidebar-single-design-notes.test.mjs", "tests/pdf/parity/01-offered.test.mjs"],
+      "summary": "In Single · ATS-safe, Colors (0b5f6e2), Typography, Section Headings and Contact icons (1075736) all read the page the résumé prints (headerTemplateId): no Sidebar Background, Header Text Color, side-column notes or 'always shows icons'.", "remaining": "" },
+    { "id": "R2-121", "outcome": "fixed", "commits": ["4d7c5fb", "49e4050"], "tests": ["tests/pdf/86-sidebar-single-entry-colours.test.mjs", "tests/pdf/38-word-fonts-and-sizes.test.mjs"],
+      "summary": "Sidebar Single · ATS-safe prints its dates grey and the second field in the accent in Word as in the PDF (4d7c5fb), and its header in the Sidebar's resolved Text colour (49e4050, reviewer), for an unset, default and custom Text colour.", "remaining": "" },
+    { "id": "R2-123", "outcome": "fixed", "commits": ["613d2fc"], "tests": ["tests/pdf/86-icon-size-steps.test.mjs", "tests/pdf/16-saved-data-typography.test.mjs"],
+      "summary": "Sidebar and Modern print the icon at its fractional pt (no rounding), and the steps start at 9 px (ICON_SIZE.min), so every step 9–20 px prints a larger icon on every template and the Sidebar's Single; Typography's Contact Icons reads px.", "remaining": "" }
+  ],
+  "review": {
+    "issues": ["R2-121: 4d7c5fb fixed the entries only — Word's header in Single · ATS-safe still resolved Classic's Text colour (name #1a1a1a vs the PDF's #1e2937 with none stored)."],
+    "fixedByReviewer": ["49e4050 fix(word): Sidebar Single · ATS-safe prints its header in the Sidebar's Text colour too (R2-121)"]
+  },
+  "baselineFailures": [],
+  "notes": "Changed assertions: tests/pdf/38-word-fonts-and-sizes (Single · ATS-safe dates read the PDF's grey, R2-121, by 4d7c5fb); tests/pdf/16-saved-data-typography (least icon size 8 → 9, R2-123); tests/pdf/parity/matrix.mjs + registry-design.mjs gain a reset spec `keeps` so Reset Design Settings may keep sidebarSingleColumn (R2-089). Deliberate print changes (R2-123): a stored iconSize 8 normalizes to 9 (same 7 pt on most templates; Modern 7 → 8.1 pt, two-column Sidebar 6 → 6.75 pt), and Modern/Sidebar icons lose their whole-point rounding (default 11 px: Modern 10 → 9.9 pt, Sidebar 8 → 8.25 pt). R2-090 side effect: picking an icon pack still switches Contact Style to Icon, and the icons ↺ no longer undoes that. Word ignores iconSize (word cluster's area). Not checked: the cover letter's Word export in Single · ATS-safe may have the same Classic-vs-Sidebar Text colour question. Poppler was not installable here; pdftotext-dependent tests were skipped locally (47 skips)."
+}
