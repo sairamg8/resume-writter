@@ -5,6 +5,7 @@
 // phone, and nothing wider than the screen. Widening the window past 768 px brings the split view
 // back without a reload. The hook itself is tested in tests/unit/media-query.unit.mjs.
 import { buildTestState } from '../../tests/helpers.js';
+import { CARD } from '../support/selectors.js';
 
 const PHONE = [375, 812];
 const NAME = 'input[placeholder="John Doe"]';
@@ -26,6 +27,20 @@ const fitsTheScreen = () =>
     expect(doc.documentElement.scrollWidth, 'page width').to.be.at.most(PHONE[0]);
   });
 
+/**
+ * The same in the editor, a fixed layer that never scrolls the page: its tab box hides what is wider
+ * (EditorTabContent, overflow-x-hidden), so that box is measured — content wider than it would be
+ * cut off at the right edge, not scrolled to.
+ */
+const editorFitsTheScreen = () => {
+  fitsTheScreen();
+  cy.get('.overflow-y-auto.overflow-x-hidden').should(($boxes) => {
+    $boxes.each((_, box) => {
+      expect(box.scrollWidth, 'the tab content, not cut off at the right').to.be.at.most(box.clientWidth);
+    });
+  });
+};
+
 describe('editor on a phone (375 × 812)', () => {
   beforeEach(visitOnPhone);
 
@@ -33,7 +48,9 @@ describe('editor on a phone (375 × 812)', () => {
     switchButton('Edit').should('be.visible').and('have.class', 'bg-blue-600');
     switchButton('Preview').should('be.visible').and('not.have.class', 'bg-blue-600');
 
-    cy.get('[data-preview-status]').should('have.attr', 'data-preview-status', 'paused').and('not.be.visible');
+    cy.get('[data-preview-status]').should('have.attr', 'data-preview-status', 'paused')
+      .and('have.attr', 'data-preview-pages', '0') // never built: 'paused' alone is also what a preview built once and then hidden says
+      .and('not.be.visible');
     cy.get('#resume-preview').should('not.be.visible');
 
     // The editor column (the header's parent) spans the screen; the desktop-only controls are not there.
@@ -42,7 +59,7 @@ describe('editor on a phone (375 × 812)', () => {
     cy.get('button[title="Split view"]').should('not.exist');
     cy.get('button[title="Editor only"]').should('not.exist');
     cy.contains('button', 'Export').should('be.visible');
-    fitsTheScreen();
+    editorFitsTheScreen();
   });
 
   it('Preview shows the PDF alone, with the edits made on Edit; Edit brings the form back', () => {
@@ -56,7 +73,7 @@ describe('editor on a phone (375 × 812)', () => {
     cy.get(NAME).should('not.be.visible');
     cy.contains('span', /^\s*Résumé · /).should('be.visible'); // the preview's own caption
     cy.get('button[title="Preview only"]').should('not.exist');
-    fitsTheScreen();
+    editorFitsTheScreen();
 
     switchButton('Edit').click();
     cy.get(NAME).should('be.visible').and('have.value', 'Robin Phone');
@@ -66,13 +83,14 @@ describe('editor on a phone (375 × 812)', () => {
   it('the Design and ATS Check tabs open on the phone, full width', () => {
     cy.get('button[title="Design & Customize"]').click();
     cy.contains('button', 'Template').should('be.visible');
-    fitsTheScreen();
+    editorFitsTheScreen();
     cy.contains('button', 'ATS Check').click();
     cy.contains('h2', 'ATS Score & Parser Checker').should('be.visible');
-    fitsTheScreen();
+    editorFitsTheScreen();
   });
 
   it('widening past 768 px brings back the split view without a reload, and narrowing hides it again', () => {
+    cy.window().then((win) => { win.phonePage = true; }); // gone if the page reloads
     cy.viewport(1024, 800);
     cy.get(handle).should('exist');
     cy.get('div.fixed.bottom-4').should('not.exist');
@@ -85,6 +103,7 @@ describe('editor on a phone (375 × 812)', () => {
     switchButton('Edit').should('be.visible');
     cy.get(NAME).should('be.visible');
     cy.get('#resume-preview').should('not.be.visible');
+    cy.window().its('phonePage').should('eq', true);
   });
 });
 
@@ -93,6 +112,8 @@ describe('dashboard on a phone (375 × 812)', () => {
     cy.viewport(...PHONE);
     cy.visitDashboard(buildTestState('classic'));
     cy.contains('Test Classic').should('be.visible');
+    // One column: the card spans the row (two to a row start at sm, 640 px).
+    cy.get(CARD).first().invoke('outerWidth').should('be.greaterThan', PHONE[0] * 0.8);
     ['Import', 'Job Tracker', 'Boards', 'New Cover', 'New Resume'].forEach((label) => {
       cy.contains('button', label).should('be.visible');
     });

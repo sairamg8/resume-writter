@@ -2,7 +2,8 @@
 // Page Fit spacing presets in Design → Spacing, and the header icon picker in Personal Info. Each
 // opens, is used once, and its result shows in the store, the controls and the printed PDF.
 // Smoke level: the starters' content is pinned in tests/unit/starter-templates.unit.mjs and
-// tests/pdf/16-saved-data-starter-skills.test.mjs, the icons in tests/unit/contact-icon-paths.unit.mjs.
+// tests/pdf/16-saved-data-starter-skills.test.mjs, the icons in tests/unit/contact-icon-paths.unit.mjs
+// and — the shape a picked icon prints as in the PDF — tests/pdf/09-contact-icons.test.mjs.
 // That 1-Page Fit never checks the page count it promises is R2-149, not asserted here.
 import { buildTestState } from '../../tests/helpers.js';
 
@@ -110,7 +111,8 @@ describe('Personal Info → header icon picker', () => {
     cy.store().should((s) => expect(active(s).settings.customContactIcons?.email).to.eq('icon:star'));
     cy.get('button[title="Remove custom icon"]').should('have.length', 1);
 
-    // The PDF prints the new icon (a vector, so no picture); the text beside it is unchanged.
+    // The PDF still exports with the address beside the icon, and draws no picture for it: the pick is
+    // a vector icon, not an image address. Which shape it prints is not checked here (09-contact-icons).
     cy.exportPdf().then((pdf) => {
       expect(pdf.runs.map((r) => r.str).join(' ')).to.contain('alex@example.com');
       expect(pdf.images).to.eq(0);
