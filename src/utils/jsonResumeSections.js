@@ -47,6 +47,13 @@ function interestName(e) {
  */
 const REFERENCE_FIELDS = Object.keys(SECTION_TYPE_DEFAULTS.references('ref').items[0]).filter((k) => k !== 'id' && k !== 'name');
 
+/**
+ * An education's, project's or volunteering role's current flag (R2-150), out to the file and back:
+ * without it a trip lost "Present" and the entry printed its start date alone. Only a flag the file
+ * sets — another tool's entry with no end date stays as it was read before (no flag).
+ */
+const ongoing = (item) => (item?.current ? { current: true } : {});
+
 /** The section types the schema has a key for, in the order an import with no `meta` lays them out. */
 export const SECTION_KEYS = {
   experience: {
@@ -91,7 +98,8 @@ export const SECTION_KEYS = {
       studyType: item.degree || '',
       location: item.location || '',
       startDate: isoDate(item.startDate),
-      endDate: isoDate(item.endDate),
+      endDate: item.current ? '' : isoDate(item.endDate),
+      ...ongoing(item),
       score: item.gpa || '',
       courses: [],
       ...describe(item.description, item.bullets),
@@ -104,6 +112,7 @@ export const SECTION_KEYS = {
       location: text(ed.location),
       startDate: month(ed.startDate),
       endDate: month(ed.endDate),
+      ...ongoing(ed),
       gpa: text(ed.score),
       description: richDescription(ed.summary, ed.highlights, Array.isArray(ed.courses) && ed.courses.length > 0 ? `Relevant courses: ${joined(ed.courses)}` : ''),
     })),
@@ -135,7 +144,8 @@ export const SECTION_KEYS = {
         url: item.url || item.link || '', // `link`: what earlier builds' import stored
         roles: item.role ? [item.role] : [],
         startDate: isoDate(item.startDate),
-        endDate: isoDate(item.endDate),
+        endDate: item.current ? '' : isoDate(item.endDate),
+        ...ongoing(item),
       };
     },
     in: each((p) => ({
@@ -146,6 +156,7 @@ export const SECTION_KEYS = {
       technologies: listText(p.keywords),
       startDate: month(p.startDate),
       endDate: month(p.endDate),
+      ...ongoing(p),
       description: richDescription(p.description, p.highlights),
     })),
   },
@@ -198,7 +209,8 @@ export const SECTION_KEYS = {
         position: item.role || '',
         location: item.location || '',
         startDate: isoDate(item.startDate),
-        endDate: isoDate(item.endDate),
+        endDate: item.current ? '' : isoDate(item.endDate),
+        ...ongoing(item),
         summary,
         highlights,
       };
@@ -210,6 +222,7 @@ export const SECTION_KEYS = {
       location: text(v.location),
       startDate: month(v.startDate),
       endDate: month(v.endDate),
+      ...ongoing(v),
       description: richDescription(v.summary, v.highlights),
     })),
   },
