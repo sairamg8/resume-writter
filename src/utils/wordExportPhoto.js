@@ -3,6 +3,7 @@
 import { ImageRun } from 'docx';
 import { getPdfPhotoStyle } from '@/templates/pdf/shared/pdfPhoto';
 import { drawableImage } from '@/utils/imageUpload';
+import { withPrintablePhotos } from '@/utils/printableImage';
 import { templateId } from '@/constants/templates';
 import { accent2Hex } from '@/utils/wordExportUtils';
 
@@ -87,7 +88,8 @@ class ShapedImageRun extends ImageRun {
  * Sidebar's scaled to its column; the picture cropped to fill it. A Circle prints as an ellipse, Rounded
  * and Square as a rectangle with the PDF's corners. Border Thin and Accent ring it in the colour they
  * take on the white page — Word draws no banner or panel for the white ring they take there.
- * An SVG photo prints none: Word needs a PNG copy of it that the export cannot draw.
+ * An SVG photo prints none: Word needs a PNG copy of it that the export cannot draw. A photo
+ * react-pdf reads from elsewhere reaches here as bytes (withWordPhoto).
  * Returns { run, width }: `width` the box's, pt.
  */
 export function wordPhoto(personal = {}, s = {}, template = 'classic') {
@@ -116,4 +118,44 @@ export function wordPhoto(personal = {}, s = {}, template = 'classic') {
     ...(box.borderWidth ? { outline: { type: 'solidFill', solidFillType: 'rgb', value: accent2Hex(ring.borderColor), width: Math.round(box.borderWidth * EMU_PER_PT) } } : {}),
   }, round, coverCrop(size, w, h));
   return { run, width: w };
+}
+
+/** `bytes` as a base64 string, a chunk at a time (a photo's bytes overflow one call's arguments). */
+function base64Of(bytes) {
+  let bin = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return btoa(bin);
+}
+
+/** The picture at `url` as a data URL labelled by its bytes (drawableImage), or null when it cannot be read. */
+async function fetchedImage(url) {
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout?.(15000) });
+    if (!res.ok) return null;
+    return drawableImage(`data:image/png;base64,${base64Of(new Uint8Array(await res.arrayBuffer()))}`);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * `resume` with its photo as the PDF export draws it, for wordPhoto to print (R2-126): the copy
+ * the PDF prints of a WebP or GIF saved before uploads were converted (withPrintablePhotos, as
+ * pdfExportReactPDF takes it), and the picture at a plain URL (a JSON Resume's `image`) fetched, as
+ * react-pdf fetches it. Word printed neither. A photo that cannot be read stays as it is, and prints
+ * none; a hidden one is not fetched. The résumé itself is never changed.
+ */
+export async function withWordPhoto(resume) {
+  const personal = resume?.personal;
+  if (!personal?.photo || (personal.hiddenFields || []).includes('photo')) return resume;
+  let out = resume;
+  try {
+    out = await withPrintablePhotos(resume);
+  } catch {
+    // no copy: the photo stays as saved
+  }
+  const photo = out.personal.photo;
+  if (typeof photo !== 'string' || !/^https?:\/\//i.test(photo)) return out;
+  const fetched = await fetchedImage(photo);
+  return fetched ? { ...out, personal: { ...out.personal, photo: fetched } } : out;
 }

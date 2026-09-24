@@ -3,6 +3,7 @@ import { accent2Hex, wordMargins } from '@/utils/wordExportUtils';
 import { buildSection, sectionSpaceAfter } from '@/utils/wordExportBuilders';
 import { buildPersonalSection } from '@/utils/wordExportHeader';
 import { buildCoverLetter } from '@/utils/wordExportCoverLetter';
+import { withWordPhoto } from '@/utils/wordExportPhoto';
 import { resolveSection } from '@/templates/pdf/shared/templateSectionDefaults';
 import { downloadBlob } from '@/utils/download';
 import { PAGE_SIZES, pageSizeOf } from '@/constants/pageSize';
@@ -57,7 +58,8 @@ function buildDocument(children, settings) {
 
 /** The résumé as a .docx Blob — same sections, entries and hidden fields as the PDF. */
 export async function renderResumeDocx(resume) {
-  const { personal = {}, sections = [], settings = {}, template = 'classic' } = resume || {};
+  // The photo as the PDF export draws it: a WebP's copy, a plain URL's picture (R2-126).
+  const { personal = {}, sections = [], settings = {}, template = 'classic' } = (await withWordPhoto(resume)) || {};
   const accentHex = accent2Hex(settings.accentColor);
   const effectiveTemplate = (templateId(template) === 'sidebar' && settings.sidebarSingleColumn) ? 'classic' : template;
   // Template defaults (e.g. Executive and Sidebar lead with the role, …) apply as in the PDF, and

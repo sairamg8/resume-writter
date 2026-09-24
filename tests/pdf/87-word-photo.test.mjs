@@ -8,6 +8,7 @@
 // row, the photo's cell as wide as it and the Photo ↔ Text gap, or above the name when centred.
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import { createServer } from 'node:http';
 import { setup, teardown, resume, renderDocx, loadModule, TEMPLATES } from './harness.mjs';
 
 before(setup);
@@ -108,5 +109,45 @@ describe('Word: the résumé prints the photo, as the PDF does (R2-126)', () => 
     const photoPara = xmlC.split('</w:p>').find((p) => p.includes('<w:drawing>'));
     assert.match(photoPara, /<w:jc w:val="center"\/>/);
     assert.ok(xmlC.indexOf('<w:drawing>') < xmlC.indexOf('Robin Sample'), 'the photo above the name');
+  });
+
+  it('a photo at a plain URL (a JSON Resume\'s image) prints, fetched as react-pdf fetches it; one that cannot be read prints none', async () => {
+    const jpeg = Buffer.from(JPEG_2X2.split(',')[1], 'base64');
+    const server = createServer((req, res) => {
+      if (req.url === '/me.jpg') res.writeHead(200, { 'content-type': 'image/jpeg' }).end(jpeg);
+      else if (req.url === '/me.svg') res.writeHead(200, { 'content-type': 'image/svg+xml' }).end('<svg xmlns="http://www.w3.org/2000/svg"/>');
+      else res.writeHead(404).end();
+    });
+    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const at = (path) => `http://127.0.0.1:${server.address().port}${path}`;
+    try {
+      const pics = pictures((await renderDocx(cv('classic', { photo: at('/me.jpg') }))).xml);
+      assert.equal(pics.length, 1, 'the fetched photo prints');
+      for (const path of ['/missing.jpg', '/me.svg']) assert.equal(pictures((await renderDocx(cv('classic', { photo: at(path) }))).xml).length, 0, path);
+      const hidden = cv('classic', { photo: at('/me.jpg'), hiddenFields: ['photo'] });
+      assert.equal(pictures((await renderDocx(hidden)).xml).length, 0, 'hidden');
+    } finally {
+      server.close();
+    }
+  });
+
+  it('a WebP or GIF saved before uploads were converted prints the copy its PDF prints (withPrintablePhotos)', async () => {
+    // The browser's decoder and canvas, as readImageFile uses them: the copy is a 4 × 2 PNG.
+    const saved = { createImageBitmap: globalThis.createImageBitmap, document: globalThis.document };
+    const ctx = { drawImage() {}, fillRect() {}, getImageData: () => ({ data: new Uint8ClampedArray([0, 0, 0, 255]) }) };
+    globalThis.createImageBitmap = async () => ({ width: 4, height: 2, close() {} });
+    globalThis.document = { createElement: () => ({ getContext: () => ctx, toDataURL: () => PNG_4X2 }) };
+    // A WebP of its own: the session keeps the copy made (or found impossible) of each photo, and
+    // the GIF above found none.
+    const WEBP = 'data:image/webp;base64,UklGRiQAAABXRUJQVlA4IBgAAAAwAQCdASoBAAEAAwA0JaQAA3AA/vuUAAA=';
+    try {
+      const [pic] = pictures((await renderDocx(cv('classic', { photo: WEBP }, { photoShape: 'square', photoHeight: 'match' }))).xml);
+      assert.ok(pic, 'the copy prints');
+      assert.deepEqual(pic.crop, { l: 25000, t: 0, r: 25000, b: 0 }, 'the 4 × 2 copy, cropped to its square box');
+    } finally {
+      Object.assign(globalThis, saved);
+      if (saved.document === undefined) delete globalThis.document;
+      if (saved.createImageBitmap === undefined) delete globalThis.createImageBitmap;
+    }
   });
 });
