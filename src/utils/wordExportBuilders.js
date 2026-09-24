@@ -72,9 +72,10 @@ function entries(section, look, build) {
 
 /**
  * An entry's location for dateRightPara: a line of its own under the date, in the date's size and
- * the Text colour's muted shade — the PDF prints it with the date, never in the title's text (ATS-1).
+ * the colour the PDF prints it in (`place`: the Text colour's muted shade, Compact's meta) — the PDF
+ * prints it with the date, never in the title's text (ATS-1).
  */
-const place = (text, look) => (text ? { text, color: look.ink.muted, size: look.base } : null);
+const place = (text, look) => (text ? { text, color: look.ink.place, size: look.base } : null);
 
 /** An entry's title line (dateRightPara) with its `date` in `dateHex`, at the look's right tab. */
 const titleLine = (left, date, dateHex, centered, look, where = null) => dateRightPara(left, date, { color: dateHex, centered, size: look.base, place: where, tab: look.tab });

@@ -14,6 +14,7 @@ import { getEffectiveSpacing } from '@/templates/pdf/shared/PdfSections';
  * - `sub`, `meta`, `muted`, `body` — the Text colour's shades (textShades): skills, issuers and a
  *   reference's role; a relationship and a project's technologies; a location and a credential ID;
  *   descriptions and legacy bullets;
+ * - `place` — an entry's location: `muted`, Compact's `meta`;
  * - `tech` — a project's technologies: the accent at 70 % in the Sidebar's main column, else `meta`;
  * - `bar` — a Bars skill: the Text colour at 80 %.
  * The Sidebar's side column prints light on its dark panel; Word has no panel, so it takes these too.
@@ -29,6 +30,8 @@ export function entryInk(s, tid) {
     sub: hex(shade.sub),
     meta: hex(shade.meta),
     muted: hex(shade.muted),
+    // An entry's location: `muted`, but Compact's 9 pt one `meta`, which reads 4.5:1 (ItemHeader, T9).
+    place: hex(tid === 'compact' ? shade.meta : shade.muted),
     body: hex(shade.body, '374151'),
     tech: tid === 'sidebar' ? accentAt(0.7) : hex(shade.meta),
     bar: hex(solid(s.textColor, 0.8)),

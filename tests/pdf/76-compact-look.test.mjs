@@ -173,6 +173,11 @@ describe('the short sections: a grid of whole items, two to a row (T9)', () => {
     assert.ok(Math.abs(date.y - role.y) < 1 && Math.abs(date.x + date.w - right) < 0.5, 'the dates flush right on the role\'s line');
     assert.ok(Math.abs(loc.y - company.y) < 1 && Math.abs(loc.x + loc.w - right) < 0.5, 'the location flush right on the company\'s line');
     assert.deepEqual([...new Set((await drawState(bytes, '04/2021')).map((h) => h.fill))], [textShades('#111111').sub], 'dates in the Text grey');
+    // Its 9 pt location reads 4.5:1 on white: the Text colour's meta grey, not the muted one the others print.
+    const [loc9] = await drawState(bytes, 'Chicago, IL');
+    assert.equal(loc9.fill, textShades('#111111').meta);
+    const { contrast } = await loadModule('/src/templates/pdf/shared/pdfColors.js');
+    assert.ok(contrast(loc9.fill, '#ffffff') >= 4.5, `the location at ${contrast(loc9.fill, '#ffffff').toFixed(2)}:1`);
   });
 });
 

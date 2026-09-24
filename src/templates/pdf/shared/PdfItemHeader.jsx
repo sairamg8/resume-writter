@@ -137,7 +137,9 @@ export function ItemHeader({ primary, sub, loc, dateStr, settings, titleStyle = 
   const onTitle    = onBaselineOf(oneLine ? [primaryBox, subBox] : primaryBox, fieldBox);
   const onSub      = onBaselineOf(subBox, fieldBox);
   const subStyle   = { fontSize: baseSize, color: subColor, fontStyle, textAlign };
-  const locStyle   = { fontSize: baseSize, color: shade.muted, fontStyle, textAlign };
+  // Compact's 9 pt location in the Text colour's `meta` grey, which reads 4.5:1 on white; the lighter
+  // `muted` the other templates print theirs in reads 2.6:1, too faint at that size (T9).
+  const locStyle   = { fontSize: baseSize, color: settings?._template === 'compact' ? shade.meta : shade.muted, fontStyle, textAlign };
   const dateStyle  = { fontSize: baseSize, color: getDateColor(settings), lineHeight: onTitle };
   const gap        = fieldGap(baseSize);
   // Keep the header with at least two lines of what follows it (react-pdf moves it otherwise).
