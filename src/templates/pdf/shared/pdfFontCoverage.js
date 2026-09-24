@@ -91,6 +91,38 @@ const inRanges = (cp, ranges) => ranges.some(([a, b]) => cp >= a && cp <= b);
 const LATIN_RANGES = parseRanges(LATIN);
 const SUBSET_RANGES = Object.entries(SUBSETS).map(([subset, r]) => [subset, parseRanges(r)]);
 const SYMBOL_RANGES = SYMBOL_FONTS.map((f) => [f, parseRanges(f.ranges)]);
+// The symbol fonts as pass-2 candidates, first: an arrow the range put in Latin (↑) still has
+// Noto Sans Math. `name` is the family pass 1 registers them under, so one file is one family.
+const SYMBOL_CANDIDATES = SYMBOL_RANGES.map(([f, ranges]) => ({ ...f, name: f.family, ranges, hint: null }));
+
+/**
+ * Characters the Latin subset's range claims (U+2000-206F) that a face may still not draw — Noto
+ * Sans's Latin file has no ‐ ‑ ‒ ― and none of the typographic spaces but U+2002 and U+2009 — and
+ * the character drawn in their place: a hyphen as '-', a dash as the nearest dash, a space as the
+ * space. prepareFonts gives a face these only where it lacks the character itself, so its .notdef
+ * glyph (nothing, or a '/' under pdf.js) never prints; the text layer then reads the stand-in (R2-045).
+ */
+export const STAND_INS = new Map([
+  [0x2010, 0x2d], [0x2011, 0x2d], [0x2012, 0x2013], [0x2015, 0x2014], [0x2212, 0x2d],
+  ...[0x2000, 0x2001, 0x2002, 0x2003, 0x2004, 0x2005, 0x2006, 0x2007, 0x2008, 0x2009, 0x200a, 0x202f, 0x205f].map((cp) => [cp, 0x20]),
+]);
+
+// Characters that draw nothing (joiners, direction marks, separators): never a reason to load a font.
+const INVISIBLE = /[\p{Cf}\p{Zl}\p{Zp}]/u;
+
+/**
+ * The distinct code points of `text` a loaded face must draw, for pass 2: every visible character
+ * past ASCII. The Latin range is not skipped — it is the Google subset's range, not what a file
+ * holds: Noto Sans's Latin file has no ↑ ↓ ∕, which the range claims (R2-045).
+ */
+export function glyphCodePoints(text) {
+  const out = [];
+  for (const ch of new Set(text)) {
+    const cp = ch.codePointAt(0);
+    if (cp >= 0x80 && !(inRanges(cp, LATIN_RANGES) && INVISIBLE.test(ch))) out.push(cp);
+  }
+  return out;
+}
 
 /** The distinct code points of `text` outside the Latin face: what fallbacks are for. */
 export function extraCodePoints(text) {
@@ -134,7 +166,7 @@ export function needsOf(text, primarySubsets = []) {
 export function scriptCandidates(missing, text) {
   const cps = extraCodePoints(text);
   const hinted = (s) => (s.hint && cps.some((cp) => inRanges(cp, s.hint)) ? 0 : 1);
-  return SCRIPT_FONTS
+  return [...SYMBOL_CANDIDATES, ...SCRIPT_FONTS]
     .filter((s) => missing.some((cp) => inRanges(cp, s.ranges)))
     .map((s, i) => [s, i])
     .sort(([a, i], [b, j]) => hinted(a) - hinted(b) || i - j)

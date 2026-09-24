@@ -1,7 +1,7 @@
 import { Font } from '@react-pdf/renderer';
 import { decodeEntities } from '@/utils/richText';
 import { FONTSOURCE_CDN as CDN, fetchMetadata, fontsourceId } from '@/utils/fontsource';
-import { extraCodePoints, isPresentationForm, needsOf, scriptCandidates, scriptClaims } from './pdfFontCoverage';
+import { glyphCodePoints, isPresentationForm, needsOf, scriptCandidates, scriptClaims, STAND_INS } from './pdfFontCoverage';
 
 /**
  * Fonts for the PDF (which is also the editor preview).
@@ -193,14 +193,17 @@ function undrawn(cps, families) {
  * so the two never register different files under one name.
  */
 async function scriptFallbacks(text, usable) {
-  let missing = undrawn(extraCodePoints(text), usable);
+  let missing = undrawn(glyphCodePoints(text), usable);
   const added = [];
   for (const font of missing.length ? scriptCandidates(missing, text) : []) {
     if (!missing.some((cp) => scriptClaims(font, cp))) continue;
     const meta = await fetchMetadata(font.pkg);
-    if (!meta?.subsets?.includes(font.subset)) continue;
-    const [family] = await prepareFonts([registerCdn(`${font.family} ${font.subset}`, font.pkg, meta, font.subset, { fallback: true })]);
+    // A symbol font is taken as pass 1 takes it: Noto Sans Math's metadata lists no 'math' subset,
+    // though its math files are there.
+    if (!meta || (!font.name && !meta.subsets?.includes(font.subset))) continue;
+    const [family] = await prepareFonts([registerCdn(font.name || `${font.family} ${font.subset}`, font.pkg, meta, font.subset, { fallback: true })]);
     if (!family) continue; // offline, or blocked: the characters stay undrawn, the PDF still renders
+    if (usable.includes(family) || added.includes(family)) continue;
     added.push(family);
     missing = undrawn(missing, [family]);
     if (!missing.length) break;
@@ -273,6 +276,23 @@ function widenNarrowSpace(font, layout) {
 }
 
 /**
+ * Draw a character the face lacks with its stand-in (STAND_INS: ‐ as '-', U+202F as ' '), when the
+ * face has that. It answers through the face's cmap, so textkit picks this face for the character,
+ * layout draws the stand-in's glyph, and that glyph — seeded from the cmap first — keeps the
+ * stand-in's text in the PDF's ToUnicode.
+ */
+function addStandIns(font) {
+  const cmap = font._cmapProcessor;
+  if (!cmap || typeof cmap.lookup !== 'function') return;
+  const lookup = cmap.lookup.bind(cmap);
+  cmap.lookup = (codePoint, variationSelector) => {
+    const glyph = lookup(codePoint, variationSelector);
+    if (glyph || variationSelector || !STAND_INS.has(codePoint)) return glyph;
+    return lookup(STAND_INS.get(codePoint));
+  };
+}
+
+/**
  * Load every registered face of `families` and get their fontkit fonts ready to render;
  * returns the families that can be used, in order. Call before every render.
  *
@@ -287,6 +307,7 @@ function widenNarrowSpace(font, layout) {
  * 3. Lay every face out with ligatures off (noLigatures), so no glyph stands for several letters.
  * 4. Widen a too-narrow space in the laid-out run (widenNarrowSpace), so `pdftotext -raw` reads the
  *    narrow-space fonts' words apart instead of glued.
+ * 5. Draw a dash or space the face lacks with its stand-in (addStandIns), after the seeding in 1.
  */
 export async function prepareFonts(families) {
   const store = Font.getRegisteredFonts();
@@ -309,6 +330,7 @@ export async function prepareFonts(families) {
     for (const { data: font } of sources) {
       if (!font || primedFonts.has(font) || typeof font.glyphForCodePoint !== 'function') continue;
       for (const codePoint of font.characterSet || []) if (!isPresentationForm(codePoint)) font.glyphForCodePoint(codePoint);
+      addStandIns(font);
       if (typeof font.layout === 'function') {
         const base = font.layout.bind(font);
         const noLig = (string, features, ...rest) => base(string, features ?? noLigatures(), ...rest);
