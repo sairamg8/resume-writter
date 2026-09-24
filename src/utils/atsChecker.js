@@ -208,6 +208,8 @@ const COMMON_STOP_WORDS = new Set([
   'qualifications', 'requirements', 'preferred', 'required', 'plus', 'opportunity', 'company', 'job',
   'position', 'join', 'looking', 'equal', 'employment', 'status', 'race', 'color', 'religion', 'seeking',
   'big', 'expertise', 'strong', 'solid', 'demonstrated', 'familiarity', 'proficient', 'knowledge',
+  // Abbreviations with one dot, which LETTER_ABBREVIATION does not catch (R2-023).
+  'etc', 'vs',
 ]);
 
 /**
@@ -338,13 +340,21 @@ function chooseBestCasing(newWord, oldWord) {
 }
 
 /**
- * Extracts keywords & tech terms from a job description
+ * An abbreviation of single letters and dots — "e.g", "i.e", "U.S", "a.m" once the trailing dot is
+ * trimmed — which is no keyword: it used to be listed as a missing one, and "+" wrote it into
+ * Skills (R2-023). "Ph.D", "Node.js" and "ASP.NET" have longer parts and stay.
+ */
+const LETTER_ABBREVIATION = /^(?:\p{L}\.)+\p{L}?$/u;
+
+/**
+ * Extracts keywords & tech terms from a job description. A word is Unicode letters and digits:
+ * `\w` is ASCII, and read with it "München" was the keyword "nchen" (R2-023).
  */
 export function extractJobKeywords(jobDescriptionText) {
   if (!jobDescriptionText || typeof jobDescriptionText !== 'string') return [];
   // Tokenize words, normalizing punctuation
   const clean = jobDescriptionText
-    .replace(/[^\w\s+#.-]/g, ' ')
+    .replace(/[^\p{L}\p{N}_\s+#.-]/gu, ' ')
     .replace(/\s+/g, ' ');
 
   const tokens = clean.split(' ');
@@ -354,8 +364,9 @@ export function extractJobKeywords(jobDescriptionText) {
   for (let raw of tokens) {
     let word = raw.trim();
     // Strip trailing periods/commas
-    word = word.replace(/^[^\w+#]+|[^\w+#]+$/g, '');
+    word = word.replace(/^[^\p{L}\p{N}_+#]+|[^\p{L}\p{N}_+#]+$/gu, '');
     if (word.length < 2 || word.length > 30) continue;
+    if (LETTER_ABBREVIATION.test(word)) continue;
     const lower = word.toLowerCase();
     if (COMMON_STOP_WORDS.has(lower)) continue;
     if (/^\d+\+?$/.test(lower)) continue; // skip pure numbers and numbers with + (e.g. 5+)
@@ -412,10 +423,12 @@ export function matchResumeWithJob(resume, jobDescriptionText) {
     if (lowerKw.includes(' ') || lowerKw.includes('/') || lowerKw.includes('.')) {
       isPresent = resumeCorpus.includes(lowerKw);
     } else {
+      // Boundaries of Unicode letters, as the keywords are read: with `\w` the keyword "rich" was
+      // found inside "Zürich" (R2-023).
       const esc = lowerKw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const lead = /^\w/.test(lowerKw) ? '(?<!\\w)' : '(?<!\\S)';
-      const trail = /\w$/.test(lowerKw) ? '(?!\\w)' : '(?![\\w+#])';
-      const regex = new RegExp(`${lead}${esc}${trail}`, 'i');
+      const lead = /^[\p{L}\p{N}_]/u.test(lowerKw) ? '(?<![\\p{L}\\p{N}_])' : '(?<!\\S)';
+      const trail = /[\p{L}\p{N}_]$/u.test(lowerKw) ? '(?![\\p{L}\\p{N}_])' : '(?![\\p{L}\\p{N}_+#])';
+      const regex = new RegExp(`${lead}${esc}${trail}`, 'iu');
       isPresent = regex.test(resumeCorpus);
     }
 
