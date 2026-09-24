@@ -88,6 +88,18 @@ describe('the window’s scroll on a route change (R2-073)', () => {
   });
 });
 
+describe('the window’s scroll on Back (R2-073)', () => {
+  it('Back and Forward leave the scroll to the browser', async () => {
+    const app = await openApp(['/terms', '/privacy']);
+    try {
+      app.scrolls.length = 0;
+      await app.go(-1);
+      assert.match(app.text(), /Terms and Conditions/);
+      assert.deepEqual(app.scrolls, [], 'Back scrolled the page it went back to to the top');
+    } finally { await app.close(); }
+  });
+});
+
 describe('the Terms and Privacy back arrow (R2-074)', () => {
   for (const [page, heading, other] of [['/terms', /Terms and Conditions/, '/privacy'], ['/privacy', /Privacy Policy/, '/terms']]) {
     it(`${page} visited directly: the arrow goes to the dashboard`, async () => {
