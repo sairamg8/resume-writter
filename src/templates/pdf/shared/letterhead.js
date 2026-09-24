@@ -8,6 +8,7 @@ import { contrast, sidebarShades, solid, textShades } from './pdfColors';
 import { CSS_PX_TO_PT, MODERN_HEADER_PAD_X_PT, MODERN_HEADER_PAD_Y_PT } from './pdfUnits';
 import { DEFAULTS } from './templateSettings';
 import { railColor, TIMELINE_RAIL } from './timelineRail';
+import { bannerPadY } from './bannerBand';
 
 /**
  * Space under the letterhead's text, above its rule (or the gap under the letterhead, with none),
@@ -116,6 +117,20 @@ export const LOOKS = {
     ...base,
     rules: rule || [{ width: TIMELINE_RAIL.width, color: railColor(accent) }],
   }),
+  // Banner's band: the accent from the paper's top and side edges, the text on the page margins, the
+  // band's padding under it, everything on it in the header text colour (BannerTemplatePDF.jsx) —
+  // the résumé header's rule too, drawn on the band under the text, at its Thickness.
+  banner: (base, { s, accent, rule }) => {
+    const headerText = s.headerTextColor || '#ffffff';
+    return {
+      ...base,
+      contacts: headerText,
+      marks: bandMarks(headerText, solid(accent)),
+      band: { color: accent, fallback: DEFAULTS.banner.accentColor, padX: 0, padY: bannerPadY(s), bleed: true },
+      rules: rule ? [{ width: rule[0].width, color: solid(headerText, 1, solid(accent)) }] : [],
+      photo: ['#ffffff', { onBanner: true }],
+    };
+  },
 };
 
 /**

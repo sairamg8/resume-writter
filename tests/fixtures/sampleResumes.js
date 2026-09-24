@@ -137,4 +137,6 @@ export const DEMO_RESUMES = [
   // last line of page 1 (ATS-7, 66-ats-page-top-heading) — a limit the field tests are not about.
   sample('demo_timeline', 'Sample · Timeline', 'timeline',
     { accentColor: '#0f766e', textColor: '#1a1a1a', headingStyle: 'plain', sectionTitleCase: 'upper', sectionGap: 16, itemGap: 8, lineHeightValue: 1.35 }),
+  sample('demo_banner', 'Sample · Banner', 'banner',
+    { accentColor: '#1e3a8a', textColor: '#1a1a1a', headingStyle: 'box', sectionTitleCase: 'upper', sectionGap: 16, itemGap: 8 }),
 ];

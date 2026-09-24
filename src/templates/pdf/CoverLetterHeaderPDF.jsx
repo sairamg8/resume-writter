@@ -29,14 +29,15 @@ function Frame({ look, settings, children }) {
   const { band, rules: [rule, second], ruleGap } = look;
   if (band?.bleed) {
     // The fill runs from the paper's top and side edges; the content keeps the page margins, so
-    // it sits where every other letterhead's does.
+    // it sits where every other letterhead's does. A rule (Banner's header rule) is drawn on the
+    // band, its Text ↔ Border gap under the text, as the résumé's band draws it.
     const { v, h } = pageMargins(settings);
     const top = v * MM_TO_PT;
     const side = h * MM_TO_PT;
     return (
       <View style={{ paddingBottom: band.padY, marginBottom: LETTERHEAD_GAP }}>
         <View style={{ position: 'absolute', top: -top, left: -side, right: -side, bottom: 0, backgroundColor: band.color }} />
-        {children}
+        {rule ? <View style={{ borderBottomWidth: rule.width, borderBottomColor: rule.color, paddingBottom: ruleGap }}>{children}</View> : children}
       </View>
     );
   }

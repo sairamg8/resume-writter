@@ -33,6 +33,8 @@ const EXPECTED = {
   },
   // Templates added since print Classic's stacked header, so they start from its gaps (T6 on).
   timeline: STACKED,
+  // Banner prints that header in a band: the band's padding under its text, and band ↔ summary (T7).
+  banner: { ...STACKED, summaryGap: 12, headerPadY: 20 },
 };
 
 test('each template\'s header gaps are the constants it printed before they became settings (header_spacing_spec.md)', () => {
@@ -44,8 +46,8 @@ test('each template\'s header gaps are the constants it printed before they beca
   }
 });
 
-test('header ↔ first section: Classic, Minimal, Executive and Timeline keep 15 pt (mb-5) until Between Sections is wider; Modern and Sidebar follow it', () => {
-  for (const t of ['classic', 'minimal', 'executive', 'timeline']) {
+test('header ↔ first section: Classic, Minimal, Executive, Timeline and Banner keep 15 pt (mb-5) until Between Sections is wider; Modern and Sidebar follow it', () => {
+  for (const t of ['classic', 'minimal', 'executive', 'timeline', 'banner']) {
     const below = templateHeaderGaps(t).headerGapBelow;
     for (const [sectionGapPt, want] of [[12, 15], [15, 15], [30, 30], [0, 15]]) assert.equal(below(sectionGapPt), want, `${t} at ${sectionGapPt} pt`);
     // Math.max(HEADER_MARGIN_BOTTOM_PT, sectionGap || 0), as it was: a sectionGap that is not a

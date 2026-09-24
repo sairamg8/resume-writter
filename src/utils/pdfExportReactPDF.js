@@ -15,6 +15,7 @@ export const LOADERS = {
   sidebar:   () => import('@/templates/pdf/SidebarTemplatePDF').then(m => m.SidebarTemplatePDF),
   executive: () => import('@/templates/pdf/ExecutiveTemplatePDF').then(m => m.ExecutiveTemplatePDF),
   timeline:  () => import('@/templates/pdf/TimelineTemplatePDF').then(m => m.TimelineTemplatePDF),
+  banner:    () => import('@/templates/pdf/BannerTemplatePDF').then(m => m.BannerTemplatePDF),
 };
 
 /** Cache loaded template components so repeat exports skip network/chunk parse. */

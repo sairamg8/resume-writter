@@ -31,7 +31,8 @@ const shadesOf = (settings) => textShades(settings?.textColor || '#1a1a1a');
 
 export function getDateColor(settings) {
   const template = settings?._template;
-  if (template === 'minimal' || template === 'executive') return shadesOf(settings).sub;
+  // Banner's colour is its band and heading chips; its entries' dates are the Text colour's grey.
+  if (template === 'minimal' || template === 'executive' || template === 'banner') return shadesOf(settings).sub;
   if (template === 'sidebar') return shadesOf(settings).muted;
   return settings?.accentColor || '#2563eb';
 }

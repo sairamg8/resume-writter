@@ -22,9 +22,11 @@ const letter = (template, { settings, personal, coverLetter } = {}) => resume({
   coverLetter: { ...BLOCK, ...coverLetter },
 });
 
-/** The band a banded look draws (Modern's accent, the Sidebar panel's navy), else null. */
+/** The looks whose letterhead is a band: Modern's accent, the Sidebar panel's navy, Banner's accent (T7). */
+const BANDED = ['modern', 'sidebar', 'banner'];
+/** The band a banded look draws, else null. */
 const bandOf = (template, paths) => {
-  const colour = { modern: ACCENT, sidebar: '#1e293b' }[template];
+  const colour = { modern: ACCENT, sidebar: '#1e293b', banner: ACCENT }[template];
   return colour ? paths.find((p) => p.paint === 'fill' && p.colour === colour && p.x1 - p.x0 > 100) : null;
 };
 
@@ -56,7 +58,7 @@ describe('the letter\'s options under every look (FIDB-51)', () => {
           const images = paths.filter((p) => p.paint === 'image');
           assert.equal(images.length, photo ? 1 : 0, `${at}: the photo`);
           const band = bandOf(template, paths);
-          assert.equal(!!band, template === 'modern' || template === 'sidebar', `${at}: a band exactly in the banded looks`);
+          assert.equal(!!band, BANDED.includes(template), `${at}: a band exactly in the banded looks`);
           if (band) {
             const head = allItems(pages).filter((t) => t.y > band.y0 - 1);
             assert.ok(head.length >= 5, `${at}: the letterhead is in the band`);
@@ -68,7 +70,7 @@ describe('the letter\'s options under every look (FIDB-51)', () => {
     });
   }
 
-  for (const template of ['modern', 'sidebar']) {
+  for (const template of BANDED) {
     it(`${template}: Text Position moves the name against the photo on the band, as on a white page`, async () => {
       const at = {};
       for (const photoTextAlign of ['top', 'center', 'bottom']) {
@@ -107,6 +109,7 @@ describe('the letter\'s options under every look (FIDB-51)', () => {
     })))).filter((p) => p.paint === 'stroke' && p.width === 1.5 && p.x1 - p.x0 < 60).map((p) => p.colour))];
     assert.deepEqual(await ring('modern', { photoBorder: 'accent' }), ['#ffffff'], 'Modern: Accent is white, as on the banner');
     assert.deepEqual(await ring('modern', { photoBorder: 'thin' }), [solid('rgba(255,255,255,0.5)', 1, ACCENT)], 'Modern: Thin');
+    assert.deepEqual(await ring('banner', { photoBorder: 'accent' }), ['#ffffff'], 'Banner: Accent is white, as on its band');
     assert.deepEqual(await ring('sidebar', { photoBorder: 'accent', accentColor: '#374151' }), [readableOn('#374151', '#1e293b', 3)], 'Sidebar: a dark accent lightened');
     assert.deepEqual(await ring('classic', { photoBorder: 'accent' }), [ACCENT], 'Classic: the accent');
   });
@@ -123,13 +126,15 @@ describe('the Bar and Bullet marks on a band take its colours (VFIDB-51-0)', () 
     ['modern', { accentColor: '#fde68a', headerTextColor: '#1e293b' }, '#fde68a'],
     ['modern', { accentColor: '#2563eb' }, '#2563eb'],
     ['modern', { accentColor: '#ea580c' }, '#ea580c'], // white values at 3.56:1
+    ['banner', {}, ACCENT],
+    ['banner', { accentColor: '#fde68a', headerTextColor: '#1e293b' }, '#fde68a'],
   ];
   /** The distinct colours of the runs Word prints `mark` in. */
   const wordMarks = (doc, mark) => [...new Set(doc.xml.split('</w:r>')
     .filter((run) => new RegExp(`>\\s*\\${mark}\\s*<`).test(run))
     .map((run) => run.match(/<w:color w:val="([0-9a-fA-F]{6})"/)?.[1]?.toLowerCase()))];
 
-  it('Modern and Sidebar: every mark reads on the band (3:1 or more), no stronger than the values, in the colour Word prints', async () => {
+  it('Modern, Sidebar and Banner: every mark reads on the band (3:1 or more), no stronger than the values, in the colour Word prints', async () => {
     const { contrast } = await loadModule('/src/templates/pdf/shared/pdfColors.js');
     const { renderCoverLetterDocx } = await loadModule('/src/utils/wordExport.js');
     for (const [template, settings, band] of BANDS) {
@@ -145,6 +150,10 @@ describe('the Bar and Bullet marks on a band take its colours (VFIDB-51-0)', () 
         assert.ok(k <= contrast(value.fill, band), `${at}: ${drawn[0]} no stronger than the values' ${value.fill}`);
         const doc = readDocx(new Uint8Array(await (await renderCoverLetterDocx(r)).arrayBuffer()));
         assert.deepEqual(wordMarks(doc, mark), [drawn[0].slice(1)], `${at}: Word's marks`);
+        if (template === 'banner') { // its résumé's band takes Contact Style too: the same marks
+          const cv = await render(resume({ template, settings: { accentColor: ACCENT, ...settings, contactStyle: headerStyle, contactLayout: headerLayout }, personal: { name: 'Pat Sample', ...CONTACTS } }));
+          assert.deepEqual([...new Set((await drawState(cv, mark)).map((h) => h.fill))], drawn, `${at}: the résumé's band`);
+        }
       }
     }
   });
@@ -155,7 +164,8 @@ describe('the Bar and Bullet marks on a band take its colours (VFIDB-51-0)', () 
     for (const template of TEMPLATES) {
       for (const [style, layout, mark, grey] of [['bar', 'justify', '|', '#cccccc'], ['bullet', 'justify', '•', '#bbbbbb'], ['bullet', '2grid', '•', '#bbbbbb']]) {
         const at = `${template}, ${style}/${layout}`;
-        if (!['modern', 'sidebar'].includes(template)) {
+        if (template === 'banner') continue; // its band's marks, on the letter and the résumé: above
+        if (!BANDED.includes(template)) {
           const bytes = await renderCover(letter(template, { coverLetter: { headerStyle: style, headerLayout: layout } }));
           assert.deepEqual([...new Set((await drawState(bytes, mark)).map((h) => h.fill))], [grey], `${at}: the letter`);
         }
@@ -203,7 +213,7 @@ describe('letters saved before the looks (FIDB-51)', () => {
       const r = normalizeResume(legacy(template));
       const bytes = await renderCover(r);
       assert.equal(allText(await read(bytes)), 'Pat Sample Staff Engineer pat@example.com +1 555 0100 Berlin, Germany pat.dev linkedin.com/in/pat Dear Sarah, Sincerely, Pat Sample Staff Engineer', template);
-      if (template === 'modern' || template === 'sidebar') assert.ok(bandOf(template, await painted(bytes)), `${template}: its band, from the defaults`);
+      if (BANDED.includes(template)) assert.ok(bandOf(template, await painted(bytes)), `${template}: its band, from the defaults`);
       const doc = readDocx(new Uint8Array(await (await renderCoverLetterDocx(r)).arrayBuffer()));
       assert.equal(doc.texts[0], 'Pat Sample', `${template}: Word`);
     }

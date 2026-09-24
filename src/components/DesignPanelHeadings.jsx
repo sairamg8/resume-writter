@@ -2,6 +2,7 @@ import { DesignSection } from '@/components/DesignPanelShared';
 import { SECTION_BORDER_PT } from '@/constants/designNumbers';
 import { headingBorderControls, headingBorderExtraPt, upperSectionTitles } from '@/constants/templates';
 import { DEFAULTS } from '@/templates/pdf/shared/templateSettings';
+import { sectionHeadingLook } from '@/templates/pdf/shared/sectionHeadingLook';
 
 /** The heading styles the panel offers, in the order it lays them out. */
 const HEADING_STYLES = [
@@ -34,6 +35,8 @@ export function HeadingControls({ settings, template, updateSetting }) {
   const extraPt = headingBorderExtraPt(headingStyle);
   const borderPt = Number(settings.sectionBorderWidth ?? 1) + extraPt;
   const setBorderPt = (pt) => updateSetting('sectionBorderWidth', Math.min(SECTION_BORDER_PT.max, Math.max(SECTION_BORDER_PT.min, pt - extraPt)));
+  // Boxed as the PDF prints it on this template: Banner's is a filled chip, the title reversed out of it.
+  const boxLook = sectionHeadingLook({ template, headingStyle: 'box', accent: settings.accentColor || '#2563eb', borderColor: settings.sectionBorderColor || '' });
 
   return (
     <>
@@ -92,7 +95,9 @@ export function HeadingControls({ settings, template, updateSetting }) {
         <p className="text-[11px] text-gray-400 leading-relaxed">A left bar is {extraPt} pt wider than a rule, so it starts at {1 + extraPt} pt.</p>
       )}
       {!borderControls.thickness && headingStyle === 'box' && (
-        <p className="text-[11px] text-gray-400 leading-relaxed">Boxed has no border line.</p>
+        <p className="text-[11px] text-gray-400 leading-relaxed">
+          {boxLook.chip ? 'Boxed has no border line: it prints a filled tag in the Border color.' : 'Boxed has no border line.'}
+        </p>
       )}
       {!borderControls.thickness && headingStyle === 'plain' && (
         <p className="text-[11px] text-gray-400 leading-relaxed">Plain has no border.</p>
@@ -134,7 +139,7 @@ export function HeadingControls({ settings, template, updateSetting }) {
                 {opt.value === 'leftbar'   && <div className="flex items-center gap-1"><div className="w-0.5 self-stretch rounded-full" style={{ backgroundColor: accent }} /><span className="text-[8px] font-bold uppercase tracking-wider" style={{ color: '#374151' }}>ABC</span></div>}
                 {opt.value === 'line'      && <div className="flex items-center gap-1"><span className="text-[8px] font-bold uppercase tracking-wider" style={{ color: accent }}>ABC</span><span className="flex-1 h-px" style={{ backgroundColor: accent + '60' }} /></div>}
                 {opt.value === 'underline' && <div className="pb-0.5 inline-block" style={{ borderBottom: `1.5px solid ${accent}` }}><span className="text-[8px] font-bold uppercase tracking-wider" style={{ color: accent }}>ABC</span></div>}
-                {opt.value === 'box'       && <span className="text-[8px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded" style={{ color: accent, backgroundColor: accent + '18' }}>ABC</span>}
+                {opt.value === 'box'       && <span className="text-[8px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded" style={boxLook.chip ? { color: boxLook.text, backgroundColor: boxLook.box } : { color: accent, backgroundColor: accent + '18' }}>ABC</span>}
                 {opt.value === 'plain'     && <span className="text-[8px] font-bold uppercase tracking-wider" style={{ color: accent }}>ABC</span>}
               </div>
               <span className={`text-[10px] ${active ? 'text-blue-700 font-medium' : 'text-gray-500'}`}>{opt.label}</span>

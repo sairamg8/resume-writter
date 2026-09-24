@@ -228,7 +228,7 @@ describe('the letter\'s greys read, and match the résumé\'s header (R9-13)', (
         const bytes = await renderCover(r);
         const { xml } = await coverDocx(r);
         const onPaper = [['designation', await fillOf(bytes, 'Staff Engineer'), `#${colourOf(xml, 'Staff Engineer')}`]];
-        if (!['modern', 'sidebar'].includes(template)) {
+        if (!['modern', 'sidebar', 'banner'].includes(template)) { // the bands (Banner's, T7) have their own colours
           const cv = await render(r);
           const email = await fillOf(bytes, 'pat@example.com');
           assert.equal(email, await fillOf(cv, 'pat@example.com'), `${at}: the contacts in the résumé header's colour`);

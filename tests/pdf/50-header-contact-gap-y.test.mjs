@@ -21,9 +21,9 @@ const PERSONAL = {
 const TWO = { name: 'Jordan Rivera', title: 'Staff Engineer', email: 'jordan@example.com', phone: '+1 555 0100' };
 const ONE = { ...TWO, phone: '' };
 /** The templates' own Between contact rows, pt, by Contact Layout (TEMPLATES' headerGaps.contactGapY). */
-const OWN = { classic: 1.5, minimal: 1.5, executive: 1.5, modern: 1.5, sidebar: 6, timeline: 1.5 };
+const OWN = { classic: 1.5, minimal: 1.5, executive: 1.5, modern: 1.5, sidebar: 6, timeline: 1.5, banner: 1.5 };
 const SINGLE_OWN = 2;
-const STACKED = ['classic', 'minimal', 'executive', 'timeline'];
+const STACKED = ['classic', 'minimal', 'executive', 'timeline', 'banner'];
 const near = (a, b, at) => assert.ok(Math.abs(a - b) < 0.01, `${at}: ${a} vs ${b}`);
 
 /** Page 1's baselines, y down from the top, pt, of `needles`. */

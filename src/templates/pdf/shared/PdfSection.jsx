@@ -53,6 +53,16 @@ export function PdfSectionTitle({
       </View>
     );
   }
+  if (headingStyle === 'box' && look.chip) {
+    // Banner: a chip as wide as the title, filled, the title reversed out of it (sectionHeadingLook).
+    return (
+      <View {...keepWithNext} style={{ flexDirection: 'row', justifyContent: centered ? 'center' : 'flex-start', marginBottom: 6 }}>
+        <View style={{ backgroundColor: look.box, paddingVertical: 1, paddingHorizontal: 7, borderRadius: 2, maxWidth: '100%' }}>
+          <Text style={titleText}>{label}</Text>
+        </View>
+      </View>
+    );
+  }
   if (headingStyle === 'box') {
     return (
       <View {...keepWithNext} style={{ backgroundColor: look.box, paddingVertical: 3, paddingHorizontal: 6, marginBottom: 6, borderRadius: 2 }}>

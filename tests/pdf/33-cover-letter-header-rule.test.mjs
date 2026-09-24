@@ -15,6 +15,9 @@ after(teardown);
 const ACCENT = '#e11d48';
 // The templates whose header takes Header Bottom Border (Timeline's is Classic's stacked header, T6).
 const RULE_LOOKS = ['classic', 'minimal', 'executive', 'timeline'];
+// Banner's band takes it too, drawn on the band in its text colour on the résumé and the letter alike
+// (T7): its own tests are 68-banner-letter.test.mjs.
+const BAND_RULE = ['banner'];
 
 /** A résumé on `template` with a letterhead's worth of header and a letter; no sections, so the header rule is its only wide stroke. */
 const make = (template, settings) => resume({
@@ -211,7 +214,7 @@ describe('the letterhead\'s rule sits the résumé header\'s Text ↔ Border gap
   // Sidebar panel — nor does the letter, which keeps its own 12 pt there.
   it('where the résumé prints no Text ↔ Border gap — border off, Modern, Sidebar — a set one changes neither the résumé nor the letter', async () => {
     for (const template of TEMPLATES) {
-      for (const settings of RULE_LOOKS.includes(template) ? [OFF(), OFF(6)] : [ON(6), OFF()]) {
+      for (const settings of [...RULE_LOOKS, ...BAND_RULE].includes(template) ? [OFF(), OFF(6)] : [ON(6), OFF()]) {
         const at = `${template} ${JSON.stringify(settings)}`;
         const set = make(template, { ...settings, headerRuleGap: 40 });
         assert.ok(await drawing(await render(set)) === await drawing(await render(make(template, settings))), `${at}: the résumé`);

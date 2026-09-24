@@ -34,6 +34,12 @@ export const TEMPLATE_SECTION_DEFAULTS = {
     experience:   { titleOrder: 'role', titleStyle: 'sidebyside' },
     volunteering: { titleStyle: 'sidebyside' },
   },
+
+  banner: {
+    // Unset, a job leads with the role, bold, its date at the right; the company and location on the
+    // line under it (Stacked): the job title is what an ATS indexes first (atsChecker's title order).
+    experience: { titleOrder: 'role' },
+  },
 };
 
 /**

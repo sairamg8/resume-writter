@@ -154,7 +154,8 @@ describe('Design → a template: Name & Title Colors picked for the old header (
     const { TEMPLATE_IDS } = await loadModule('/src/constants/templates.js');
     const { contrast } = await loadModule('/src/templates/pdf/shared/pdfColors.js');
     // Timeline (T6) prints its header on the white page, as Classic: headerGround reads no band there.
-    assert.deepEqual([...TEMPLATE_IDS].sort(), ['classic', 'executive', 'minimal', 'modern', 'sidebar', 'timeline'], 'a template added needs its ground');
+    // Banner (T7) prints it on its accent band, as Modern: headerGround reads the band's accent.
+    assert.deepEqual([...TEMPLATE_IDS].sort(), ['banner', 'classic', 'executive', 'minimal', 'modern', 'sidebar', 'timeline'], 'a template added needs its ground');
     // The default header, a dark banner/column, and a mid banner beside a light column.
     for (const settings of [{}, { accentColor: '#0f172a', sidebarBg: '#0f172a' }, { accentColor: '#374151', sidebarBg: '#f1f5f9' }]) {
       for (const template of TEMPLATE_IDS) {

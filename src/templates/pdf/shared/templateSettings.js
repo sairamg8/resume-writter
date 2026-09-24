@@ -100,6 +100,18 @@ export const DEFAULTS = {
     headingStyle: 'plain',
     sectionTitleCase: 'upper',
   },
+  // The band is the accent, and everything on it — name, title, contacts, icons, marks, the header
+  // rule — prints the header text colour as it reads there, as Modern's banner does (3:1, one
+  // colour for the band). The body is the white page in the Text colour; headings are filled chips.
+  banner: {
+    accentColor: '#2563eb',
+    textColor: '#1a1a1a',
+    headerTextColor: (s) => headerTextOn(s, s.accentColor, 3),
+    nameColor: (s) => s.nameColor || s.headerTextColor,
+    jobTitleColor: (s) => s.jobTitleColor || s.headerTextColor,
+    headingStyle: 'box',
+    sectionTitleCase: 'upper',
+  },
 };
 
 /** The photo controls resolveTemplateSettings clamps, from the one list the panel offers. */

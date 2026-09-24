@@ -31,6 +31,13 @@ const MODERN_HEADER_GAPS = {
   iconTextGap: 2, photoTextGap: 12, summaryGap: 8, headerGapBelow: (sectionGapPt) => sectionGapPt,
   headerRuleGap: null, headerPadY: 15, headerPadX: 18,
 };
+/**
+ * Banner's header is Classic's stacked one set in a full-bleed band (BannerTemplatePDF.jsx), so it has
+ * Classic's gaps, plus the band's own: `headerPadY` the band's padding under its text (its top is the
+ * page's top margin, as the cover letter's band keeps it); `summaryGap` the band's edge ↔ the summary,
+ * which prints under the band on the white page. The text keeps the page margins: no `headerPadX`.
+ */
+const BANNER_HEADER_GAPS = { ...STACKED_HEADER_GAPS, summaryGap: 12, headerPadY: 20 };
 const SIDEBAR_HEADER_GAPS = {
   nameTitleGap: 2, headerInlineGap: null, titleContactsGap: null, contactGapX: null, contactGapY: 6,
   iconTextGap: 3.5, photoTextGap: 10, summaryGap: null, headerGapBelow: (sectionGapPt) => sectionGapPt,
@@ -88,6 +95,14 @@ const TEMPLATES = {
     label: 'Timeline', desc: 'ATS-friendly · Dated entries on an accent line', atsTier: 'certified',
     style: { headingStyle: 'plain', sectionTitleCase: 'upper' }, headerControls: true, headerRule: false,
     headerGaps: STACKED_HEADER_GAPS,
+  },
+  // A full-bleed accent band holding the name, title and contacts in reversed colour, filled heading
+  // chips, one column (BannerTemplatePDF.jsx). Its band takes every header control; rated as Modern's
+  // banner is: the same clean text flow, under a coloured header ground.
+  banner: {
+    label: 'Banner', desc: 'Full-bleed colour band · Filled section tags', atsTier: 'good',
+    style: { headingStyle: 'box', sectionTitleCase: 'upper' }, headerControls: true, headerRule: false,
+    headerGaps: BANNER_HEADER_GAPS,
   },
 };
 
@@ -168,7 +183,7 @@ export const headerTemplateId = (template, settings) => {
  *
  * - `certified` (5 pts) — one linear column on the white page; every Poppler mode and pdf.js read it whole
  *   (`tests/pdf/40-ats-parse.test.mjs`, `42-ats-fields.test.mjs`).
- * - `good` (4 pts) — the same single-column body under a coloured banner (Modern). It parses clean in the
+ * - `good` (4 pts) — the same single-column body under a coloured banner (Modern, Banner). It parses clean in the
  *   same battery; the notch is its header ground, not its text flow.
  * - `risky` (2 pts) — two columns a portal may interleave (ATS-3). Only the Sidebar, and only in its
  *   two-column Layout.
@@ -208,7 +223,8 @@ export const inSidebarColumn = (template, type, settings) =>
 
 /**
  * Does the template's header take Header Customization's alignment, name/title layout, rule and
- * contact controls? Classic, Minimal, Executive and Timeline; Modern prints a fixed banner, Sidebar a side panel.
+ * contact controls? Classic, Minimal, Executive, Timeline and Banner (in its band); Modern prints a fixed
+ * banner, Sidebar a side panel.
  * Sidebar in Single · ATS-safe mode prints Classic's page and header.
  */
 export const hasHeaderControls = (template, settings) => {
