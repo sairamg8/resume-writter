@@ -22,21 +22,21 @@ The owner approved the temporary `claude/wf-*` branches on 2026-09-24 12:47.
 
 | Cluster | Rows | Session | State |
 |---|---|---|---|
-| ats | R2-020 021 022 023 024 025 027 078 079 080 081 163 166 | session_01GG1ULRf3BEFijyNRzXNJoT | **merged** 32beacf |
-| pdf-pagination | R2-046 047 048 049 104 109 111 | session_013Hg3VSwaVkaQmNCkotTNsb | running |
-| design-sidebar | R2-013 051 059 082 083 087 088 089 090 096 119 120 121 123 | session_014y3tSMD21g1ji9Ct73pZQh | running (4 fixes carried over) |
-| word | R2-061 065 066 070 114 118 124 125 126 128 132 | session_01Kms1vF1NWaaH7yWz6e2UWr | running (2 fixes carried over) |
+| ats | R2-020 021 022 023 024 025 027 078 079 080 081 163 166 | session_01GG1ULRf3BEFijyNRzXNJoT | **merged** |
+| pdf-pagination | R2-046 047 048 049 104 109 111 | session_013Hg3VSwaVkaQmNCkotTNsb | still running in its cloud session at the reboot |
+| design-sidebar | R2-013 051 059 082 083 087 088 089 090 096 119 120 121 123 | session_014y3tSMD21g1ji9Ct73pZQh | **merged** up to a78df27 — follow-up 45fd98c + 4daa9cb (JSON Resume / Backup keep Single) NOT merged: conflicts in jsonResumeExport.js / jsonResumeImport.js with text-exports' Date-format round trip (751b732); keep both |
+| word | R2-061 065 066 070 114 118 124 125 126 128 132 | session_01Kms1vF1NWaaH7yWz6e2UWr | still running in its cloud session at the reboot |
 | text-exports | R2-026 034 052 053 054 058 060 064 122 129 131 | session_01YUpaiGLx34s4T8huDzmJNW | **merged** (with follow-up: the letter's text export) |
 | jobs | R2-035 036 038 039 040 042 075 099 100 101 102 156 | session_01TxTRPE1CXJu54unwVCNutZ | **merged** (with follow-ups: page tests, salary sort, re-import) |
-| app-shell | R2-050 071 072 073 074 076 077 084 086 144 | session_01S681bgs4qE2ric3C7MivaC | running |
+| app-shell | R2-050 071 072 073 074 076 077 084 086 144 | session_01S681bgs4qE2ric3C7MivaC | **merged** (8c60c6c) |
 | boards | R2-037 041 098 155 159 | session_01AeqejztN2Vs4b4cpnBNrnU | **merged** (with follow-ups: Backlog, Settings, Your work pages, epics) |
-| preview | R2-106 107 170 165, R3-005 | session_01JqQBbPVCVC4WNbFTi77bQ2 | running |
-| import-data | R2-031 055 056 110 085 091 117 093 094 095 097 | session_01174H7ZETLrGKWfVVXQdWmd | running |
-| sections | R2-057 069 127 108 112 113 115 116 150 151 | session_01WXhjKL5tbvAFuBeRpZ6c4d | running |
-| sync | R2-028 029 030 | session_01CkkXUYrb8NXsPv4VYVH4MX | **merged** 0cd44d8 |
+| preview | R2-106 107 170 165, R3-005 | session_01JqQBbPVCVC4WNbFTi77bQ2 | reported, **not merged** — merge claude/wf-preview |
+| import-data | R2-031 055 056 110 085 091 117 093 094 095 097 | session_01174H7ZETLrGKWfVVXQdWmd | **merged** (e6ebbd4) |
+| sections | R2-057 069 127 108 112 113 115 116 150 151 | session_01WXhjKL5tbvAFuBeRpZ6c4d | reported, **not merged** — merge claude/wf-sections |
+| sync | R2-028 029 030 | session_01CkkXUYrb8NXsPv4VYVH4MX | **merged** |
 | letter | R2-043 044 092 103 130 134 068 133 | session_019D9Rn4N2nqJnTSeZgxodBg | **merged** (with follow-ups: v12 placeholder migration, dashboard thumbnails) |
-| pdf-text | R2-045 105, R3-002 003 004 | session_01SUaj4fLPe8rVZ9g2kGSu6H | running |
-| cypress | R2-152 161 162 | coordinator's own machine (workflow wf_f5efdc0c-440, local branch `wf/cypress`) | running |
+| pdf-text | R2-045 105, R3-002 003 004 | session_01SUaj4fLPe8rVZ9g2kGSu6H | reported, **not merged** — merge claude/wf-pdf-text |
+| cypress | R2-152 161 162 | coordinator's own machine (workflow wf_f5efdc0c-440, local branch `wf/cypress`) | local workflow stopped by the reboot; its spec fixes are on claude/wf-cypress (8dcfc0c, unreviewed) — review, finish, merge |
 
 The git proxy refuses branch deletion (HTTP 403), so merged `claude/wf-*` branches stay on GitHub until the
 owner deletes them there; each one's work is in the work branch once its row reads **merged**.
@@ -49,6 +49,17 @@ Round 2 — features and test gaps not in a cluster: R2-135 136 137 138 139 140 
 
 **Owner, 2026-09-24 12:35:** once the running clusters finish, start nothing new — the owner restarts the
 session first. Round 2 begins only after that restart.
+
+### State at the owner's reboot (2026-09-24 ~13:45 UTC)
+
+Work branch `claude/beautiful-heisenberg-x3bsvo` = `8c60c6c` on GitHub: 10 clusters merged, tracker at **63 open**
+(from 149). To finish, in this order: merge `claude/wf-preview`, `claude/wf-sections`, `claude/wf-pdf-text`; the
+design-sidebar follow-up (conflict noted in its row); `claude/wf-word` and `claude/wf-pdf-pagination` once their
+reports land (their sessions keep running on their own machines); then review and merge `claude/wf-cypress`.
+Each merge: drop `wf-reports/`, run the cluster's tests plus the suites of every file it touches, set its tracker
+rows from its report (✅ already-fixed · ⏸ fixed · ✖ duplicate / known limit · 🔴 partial with a note) and
+re-total `bug-status.md`, push, then run CI (Actions → ci → Run workflow on the work branch). Last CI run with
+all suites green but Cypress (stale specs, the cypress cluster's job): run 41 on 9238dac.
 
 ### If this session was cut off
 
