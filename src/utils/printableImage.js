@@ -1,6 +1,7 @@
 // A photo saved before uploads were converted (c7b1aa6) — a WebP, GIF or AVIF — shows in the
 // editor, where the browser decodes it, but react-pdf cannot draw it: the preview and the PDF
-// printed no photo, and nothing said why (R7-7). The PDF prints a copy of it instead, converted as
+// printed no photo, and nothing said why (R7-7). A photo stored as a URL or a path (an imported
+// JSON Resume's basics.image) is fetched for its copy the same way (R2-093). The PDF prints a copy of it instead, converted as
 // an upload of it is (readImageFile) and made once a session. The saved résumé keeps what it
 // holds, so old data loads unchanged — unless it is larger than any upload stores, when the store
 // keeps the same copy in its place (smallerPhotos.js). A photo this browser cannot decode either
@@ -37,9 +38,26 @@ function blobOf(src) {
   return blob.size ? blob : null;
 }
 
-/** A copy of data URL `src` the PDF can draw, made as an upload of it would be; null when there is none. */
+/** How long a photo stored as a URL may take to fetch before it prints as none. */
+const FETCH_MS = 15_000;
+
+/**
+ * The image at URL or path `src` (a JSON Resume file's basics.image), as a Blob; null when it cannot
+ * be fetched — a missing file, a server that allows no cross-site read, no network (R2-093).
+ */
+async function fetchedBlob(src) {
+  try {
+    const signal = typeof AbortSignal?.timeout === 'function' ? AbortSignal.timeout(FETCH_MS) : undefined;
+    const res = await fetch(src, { signal });
+    return res.ok ? await res.blob() : null;
+  } catch {
+    return null;
+  }
+}
+
+/** A copy of `src` (a data URL, or a URL fetched) the PDF can draw, made as an upload of it would be; null when there is none. */
 async function copyOf(src, { kind = 'photo' } = {}) {
-  const blob = blobOf(src);
+  const blob = src.startsWith('data:') ? blobOf(src) : await fetchedBlob(src);
   if (!blob) return null;
   try {
     return drawableImage(await readImageFile(blob, { kind }));
@@ -50,13 +68,14 @@ async function copyOf(src, { kind = 'photo' } = {}) {
 
 /**
  * What the PDF prints for the saved image `src`, when that is known now: `src` itself when react-pdf
- * draws it (a PNG, JPEG or SVG data URL, or a plain URL — see drawableImage), the copy made of it,
- * or null when it prints nothing (no image, or no copy could be made). Undefined while the copy of
- * a data URL react-pdf cannot draw has not been made yet (printableImage makes it).
+ * draws it (a PNG, JPEG or SVG data URL — see drawableImage), the copy made of it, or null when it
+ * prints nothing (no image, or no copy could be made). Undefined while the copy of a data URL
+ * react-pdf cannot draw, or of a plain URL or path (fetched), has not been made yet (printableImage
+ * makes it).
  */
 export function printableNow(src, { kind = 'photo' } = {}) {
   if (drawableImage(src)) return src;
-  if (typeof src !== 'string' || !src.startsWith('data:')) return null;
+  if (typeof src !== 'string' || !src) return null;
   const key = `${kind}:${src}`;
   return made.has(key) ? made.get(key) : undefined;
 }

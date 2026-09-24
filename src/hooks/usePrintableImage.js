@@ -51,3 +51,5 @@ export function useLetterPhoto(cl, personal) {
 
 /** The Photo panel's line for a résumé photo that cannot be printed. */
 export const UNPRINTABLE_PHOTO = `This photo's format can't be printed. ${REUPLOAD}`;
+/** Its line for a photo stored as a link (an imported JSON Resume's basics.image) that could not be loaded (R2-093). */
+export const UNLOADABLE_PHOTO = 'This photo is a link that could not be loaded, so it is not printed. Upload the image itself.';

@@ -2,7 +2,7 @@ import { useRef } from 'react';
 import { Camera, ChevronDown, ChevronRight, Eye, EyeOff } from 'lucide-react';
 import { Chip } from '@/components/PersonalInfoEditorHeader';
 import { readImageFile } from '@/utils/imageUpload';
-import { UNPRINTABLE_PHOTO, usePrintableImage } from '@/hooks/usePrintableImage';
+import { UNLOADABLE_PHOTO, UNPRINTABLE_PHOTO, usePrintableImage } from '@/hooks/usePrintableImage';
 import { photoTextPositionApplies, templateId } from '@/constants/templates';
 import { PHOTO_OPTIONS, photoOption } from '@/constants/photoOptions';
 
@@ -82,7 +82,11 @@ export function PhotoSection({ personal, updatePersonal, toggleFieldVisibility, 
             <div className="flex-1 min-w-0">
               <p className="text-xs font-medium text-gray-700">Profile Photo</p>
               <p className="text-[11px] text-gray-400 mt-0.5">Optional. Click to upload.</p>
-              {unprintable && <p className="text-[11px] text-amber-700 mt-1" data-testid="photo-unprintable">{UNPRINTABLE_PHOTO}</p>}
+              {unprintable && (
+                <p className="text-[11px] text-amber-700 mt-1" data-testid="photo-unprintable">
+                  {personal.photo.startsWith('data:') ? UNPRINTABLE_PHOTO : UNLOADABLE_PHOTO}
+                </p>
+              )}
               {personal.photo && (
                 <button onClick={() => updatePersonal('photo', null)} className="text-[11px] text-red-500 hover:text-red-600 mt-1">Remove photo</button>
               )}

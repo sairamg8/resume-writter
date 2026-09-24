@@ -55,12 +55,12 @@ describe('drawableImage: what the PDF draws from a saved image', () => {
     assert.equal(isDrawableImage(`data:image/svg+xml;base64,${b64('<!-- a -- b --><!----><svg/>')}`), true, 'a "--" inside a comment is fine');
   });
 
-  test('not an image: null; a plain URL: as it is (react-pdf fetches it and reads its bytes)', () => {
+  test('not an image, or a plain URL or path: null (the PDF prints a copy fetched of a URL, R2-093)', () => {
     for (const src of [undefined, null, '', 42, {}, 'data:image/png;base64,', 'data:image/png,iVBORw0KGgo',
       `data:text/plain;base64,${PNG_B64}`, `data:image/svg+xml;base64,${b64('<html><svg></svg></html>')}`, 'data:image/png;base64,!!!!']) {
       assert.equal(drawableImage(src), null, String(src));
     }
-    assert.equal(drawableImage('https://example.com/me.webp'), 'https://example.com/me.webp');
+    for (const src of ['https://example.com/me.webp', 'https://example.com/me.png', 'photo.jpg']) assert.equal(drawableImage(src), null, src);
   });
 });
 
