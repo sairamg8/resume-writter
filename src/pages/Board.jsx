@@ -210,7 +210,7 @@ export function Board() {
             <ListTodo size={14} /> Backlog
           </button>
           <button
-            onClick={() => { if (confirm(`Delete "${board.title || 'this board'}"?`)) { store.deleteBoard(board.id); navigate('/boards'); } }}
+            onClick={() => { if (confirm(`Delete "${board.title || 'this board'}"?`)) { navigate('/boards'); store.deleteBoard(board.id); } }}
             className="p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors shrink-0"
             title="Delete board"
             aria-label="Delete board"

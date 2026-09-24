@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Play, Plus, Trash2, CheckCircle2 } from 'lucide-react';
 import { useBoardStore } from '@/hooks/useBoardStore';
 import { PageHeader } from '@/components/shell/PageHeader';
-import { NavTabs } from '@/components/ui';
+import { ProjectTabs } from '@/components/board/ProjectTabs';
 import { BoardStorageNotice } from '@/components/board/BoardStorageNotice';
 import { backlogSections } from '@/utils/boardQuery';
 import { activeSprint, addDays, issueKey, statusColumn, todayISO } from '@/utils/boardModel';
@@ -176,16 +176,7 @@ export function Backlog() {
       <PageHeader
         title="Backlog"
         breadcrumbs={[{ label: 'Projects', to: '/boards' }, { label: board.title, to: base }, { label: 'Backlog' }]}
-        tabs={(
-          <NavTabs
-            aria-label="Project views"
-            items={[
-              { to: base, label: 'Board', end: true },
-              { to: `${base}/backlog`, label: 'Backlog' },
-              { to: `${base}/settings`, label: 'Settings' },
-            ]}
-          />
-        )}
+        tabs={<ProjectTabs boardId={board.id} />}
         actions={scrum && (
           <button onClick={() => store.addSprint(board.id)} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 shadow-sm">
             <Plus size={13} /> Create sprint
