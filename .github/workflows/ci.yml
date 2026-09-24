@@ -128,19 +128,36 @@ jobs:
           grep -E '^# (tests|pass|fail|todo|skipped|cancelled)' tests.log || true
           grep -E '^not ok' tests.log | head -40 || true
 
-  # Fail-first (the failfirst input): for each "sha:tests", undo that commit's src/ changes on this
-  # checkout — its diff reversed, or its parent's files where later work moved the lines — and its tests
+  # Fail-first (the failfirst input): for each "sha:tests", on a machine of its own, undo that
+  # commit's src/ changes on this checkout — its diff reversed, or its parent's files where later work moved the lines — and its tests
   # must fail; restored, they must pass. A test that passes without its fix proves nothing.
-  failfirst:
+  # One machine per check: the input's "sha:tests" pairs become a matrix.
+  failfirst-plan:
     if: github.event_name == 'workflow_dispatch' && inputs.failfirst != ''
+    runs-on: ubuntu-latest
+    outputs:
+      pairs: ${{ steps.plan.outputs.pairs }}
+    steps:
+      - id: plan
+        env:
+          FAILFIRST: ${{ inputs.failfirst }}
+        run: echo "pairs=$(printf '%s\n' $FAILFIRST | jq -R . | jq -cs .)" >> "$GITHUB_OUTPUT"
+
+  failfirst:
+    name: failfirst (${{ matrix.pair }})
+    needs: failfirst-plan
     runs-on: ubuntu-latest
     container: ubuntu:26.04
     timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        pair: ${{ fromJSON(needs.failfirst-plan.outputs.pairs) }}
     defaults:
       run:
         shell: bash
     env:
-      FAILFIRST: ${{ inputs.failfirst }}
+      FAILFIRST: ${{ matrix.pair }}
     steps:
       - name: System packages
         # The 26.04 mirrors are sometimes mid-sync (a listed package 404s: run 36015200631): try three times,
