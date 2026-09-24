@@ -10,7 +10,7 @@ import { pageBoxPt } from '@/constants/pageSize';
 import { pageMargins } from '@/constants/pageMargins';
 import { sidebarShades } from './pdfColors';
 import { PdfRichText } from './PdfRichText';
-import { RenderBullets } from './PdfSections';
+import { RenderBullets, SPACER } from './PdfSections';
 import { ContactValue } from './PdfContact';
 
 /**
@@ -101,19 +101,35 @@ export function EntryLink({ url, label, style, hyphenationCallback, settings }) 
  * A section title in the column: its own small letter-spaced heading and rule, whatever Design →
  * Section Headings sets for the main column — but in capitals only when Title case says so, by
  * the main column's rule (upperSectionTitles: "As typed" prints it as typed, R6-4, V2W2b-5).
+ *
+ * Never left alone at the foot of a page (R2-104): it moves unless `presence` pt of its section fit
+ * under it — the first entry's unbreakable head (entryPresence), else three of the column's lines.
+ * SPACER, printed before it, gives it the previous sibling minPresenceAhead needs.
  */
-export function SideSectionTitle({ title, shades = NAVY, titleCase = 'upper', settings }) {
+export function SideSectionTitle({ title, shades = NAVY, titleCase = 'upper', settings, presence = 3 * SIDE_LINE }) {
   const upper = upperSectionTitles(titleCase);
   const type = { fontSize: 8.5, fontWeight: 'bold', letterSpacing: tracking(8.5, 1.2) };
   return (
-    <View style={{ marginBottom: 6 }}>
-      <Text style={{ ...type, color: shades.label, textTransform: upper ? 'uppercase' : 'none', marginBottom: 2.5, lineHeight: 1.2 }} hyphenationCallback={sideBreaks(settings, type)}>
-        {upper ? title.toUpperCase() : title}
-      </Text>
-      <View style={{ height: 1, backgroundColor: shades.fill }} />
-    </View>
+    <>
+      {SPACER}
+      <View wrap={false} minPresenceAhead={Math.ceil(presence)} style={{ marginBottom: 6 }}>
+        <Text style={{ ...type, color: shades.label, textTransform: upper ? 'uppercase' : 'none', marginBottom: 2.5, lineHeight: 1.2 }} hyphenationCallback={sideBreaks(settings, type)}>
+          {upper ? title.toUpperCase() : title}
+        </Text>
+        <View style={{ height: 1, backgroundColor: shades.fill }} />
+      </View>
+    </>
   );
 }
+
+/** One line of the column's 9 pt text (lineHeight 1.2), pt. */
+const SIDE_LINE = 9 * 1.2;
+
+/**
+ * What a title keeps with it: its first entry's head, which prints unbreakable — `lines` of the
+ * column's text (one per field it prints; none, the default) and one more for a field that wraps.
+ */
+const entryPresence = (lines) => (lines ? (lines + 1) * SIDE_LINE : undefined);
 
 export function SideEducation({ section, sectionGap, itemGap, shades = NAVY, titleCase, settings }) {
   const s        = section.settings || {};
@@ -125,21 +141,27 @@ export function SideEducation({ section, sectionGap, itemGap, shades = NAVY, tit
   // Rich text past its list marker or indent. A break sees the word, not its run: measured as bold, so
   // a bold run breaks inside the column too (a mark in a word that fits is never taken).
   const listBreaks = (inset) => sideBreaks(settings, { fontSize: 9, fontWeight: 'bold' }, inset);
+  const dates = (item) => (showDates ? dateRange(item.startDate, item.endDate, settings) : '');
+  const first = visibleItems[0];
+  const headLines = first ? [first.degree, first.institution, first.fieldOfStudy, showLoc && first.location, first.gpa, dates(first)].filter(Boolean).length : 0;
 
   return (
     <View style={{ marginBottom: sectionGap }}>
-      <SideSectionTitle title={section.title} shades={shades} titleCase={titleCase} settings={settings} />
+      <SideSectionTitle title={section.title} shades={shades} titleCase={titleCase} settings={settings} presence={entryPresence(headLines)} />
       <View style={{ gap: itemGap }}>
         {visibleItems.map((item, i) => (
           <View key={i}>
-            <Text style={{ fontSize: 10, fontWeight: 'bold', color: shades.strong, lineHeight: 1.2 }} hyphenationCallback={degreeBreaks}>{item.degree}</Text>
-            {item.institution && <Text style={{ fontSize: 9, color: shades.label, lineHeight: 1.2 }} hyphenationCallback={textBreaks}>{item.institution}</Text>}
-            {item.fieldOfStudy && <Text style={{ fontSize: 9, color: shades.label, lineHeight: 1.2 }} hyphenationCallback={textBreaks}>{item.fieldOfStudy}</Text>}
-            {showLoc && item.location ? <Text style={{ fontSize: 9, color: shades.meta, lineHeight: 1.2 }} hyphenationCallback={textBreaks}>{item.location}</Text> : null}
-            {item.gpa && <Text style={{ fontSize: 9, color: shades.meta, lineHeight: 1.2 }} hyphenationCallback={textBreaks}>GPA: {item.gpa}</Text>}
-            {showDates && dateRange(item.startDate, item.endDate, settings) ? (
-              <Text style={{ fontSize: 9, color: shades.meta, lineHeight: 1.2 }}>{dateRange(item.startDate, item.endDate, settings)}</Text>
-            ) : null}
+            {/* Degree to dates unbreakable: an entry never splits across two pages (R2-104). */}
+            <View wrap={false}>
+              <Text style={{ fontSize: 10, fontWeight: 'bold', color: shades.strong, lineHeight: 1.2 }} hyphenationCallback={degreeBreaks}>{item.degree}</Text>
+              {item.institution && <Text style={{ fontSize: 9, color: shades.label, lineHeight: 1.2 }} hyphenationCallback={textBreaks}>{item.institution}</Text>}
+              {item.fieldOfStudy && <Text style={{ fontSize: 9, color: shades.label, lineHeight: 1.2 }} hyphenationCallback={textBreaks}>{item.fieldOfStudy}</Text>}
+              {showLoc && item.location ? <Text style={{ fontSize: 9, color: shades.meta, lineHeight: 1.2 }} hyphenationCallback={textBreaks}>{item.location}</Text> : null}
+              {item.gpa && <Text style={{ fontSize: 9, color: shades.meta, lineHeight: 1.2 }} hyphenationCallback={textBreaks}>GPA: {item.gpa}</Text>}
+              {dates(item) ? (
+                <Text style={{ fontSize: 9, color: shades.meta, lineHeight: 1.2 }}>{dates(item)}</Text>
+              ) : null}
+            </View>
             {/* Coursework, honours …: printed like the main column's, in the column's light text. */}
             {hasRichText(item.description) ? <PdfRichText html={item.description} style={{ fontSize: 9, color: shades.value, lineHeight: 1.3, marginTop: 2 }} breaks={listBreaks} /> : null}
             <RenderBullets bullets={item.bullets} style={{ fontSize: 9, color: shades.value, lineHeight: 1.3 }} breaks={listBreaks} />
@@ -181,16 +203,20 @@ export function SideCertifications({ section, sectionGap, itemGap, shades = NAVY
   const visibleItems = (section.items || []).filter(i => i.visible !== false);
   const nameBreaks = sideBreaks(settings, { fontSize: 9, fontWeight: 'bold' });
   const textBreaks = sideBreaks(settings, { fontSize: 9 });
+  // Issued – expires, as the main column prints it ("– 03/2027" without an issue date).
+  const dates = (item) => (showDates ? dateRange(item.date, item.expiry, settings) : '');
+  const first = visibleItems[0];
+  const lines = first ? [first.name, first.issuer, dates(first), first.credentialId, first.url].filter(Boolean).length : 0;
 
   return (
     <View style={{ marginBottom: sectionGap }}>
-      <SideSectionTitle title={section.title} shades={shades} titleCase={titleCase} settings={settings} />
+      <SideSectionTitle title={section.title} shades={shades} titleCase={titleCase} settings={settings} presence={entryPresence(lines)} />
       <View style={{ gap: itemGap }}>
         {visibleItems.map((item, i) => {
-          // Issued – expires, as the main column prints it ("– 03/2027" without an issue date).
-          const dateStr = showDates ? dateRange(item.date, item.expiry, settings) : '';
+          const dateStr = dates(item);
           return (
-            <View key={i}>
+            // Unbreakable: an entry never splits across two pages (R2-104).
+            <View key={i} wrap={false}>
               <Text style={{ fontSize: 9, fontWeight: 'bold', color: shades.strong, lineHeight: 1.2 }} hyphenationCallback={nameBreaks}>{item.name}</Text>
               {item.issuer && <Text style={{ fontSize: 9, color: shades.label, lineHeight: 1.2 }} hyphenationCallback={textBreaks}>{item.issuer}</Text>}
               {dateStr ? <Text style={{ fontSize: 9, color: shades.meta, lineHeight: 1.2 }}>{dateStr}</Text> : null}
@@ -237,12 +263,15 @@ export function SideReferences({ section, sectionGap, itemGap, shades = NAVY, ti
   const visibleItems = (section.items || []).filter(i => i.visible !== false);
   const nameBreaks = sideBreaks(settings, { fontSize: 9, fontWeight: 'bold' });
   const textBreaks = sideBreaks(settings, { fontSize: 9 });
+  const first = visibleItems[0];
+  const lines = first ? [first.name, first.jobTitle, first.company, first.relationship, first.email, first.phone].filter(Boolean).length : 0;
   return (
     <View style={{ marginBottom: sectionGap }}>
-      <SideSectionTitle title={section.title} shades={shades} titleCase={titleCase} settings={settings} />
+      <SideSectionTitle title={section.title} shades={shades} titleCase={titleCase} settings={settings} presence={entryPresence(lines)} />
       <View style={{ gap: itemGap }}>
         {visibleItems.map((item, i) => (
-          <View key={i}>
+          // Unbreakable: a reference never splits across two pages (R2-104).
+          <View key={i} wrap={false}>
             <Text style={{ fontSize: 9, fontWeight: 'bold', color: shades.strong, lineHeight: 1.2 }} hyphenationCallback={nameBreaks}>{item.name}</Text>
             {item.jobTitle && <Text style={{ fontSize: 9, color: shades.label, lineHeight: 1.2 }} hyphenationCallback={textBreaks}>{item.jobTitle}</Text>}
             {item.company && <Text style={{ fontSize: 9, color: shades.label, lineHeight: 1.2 }} hyphenationCallback={textBreaks}>{item.company}</Text>}
