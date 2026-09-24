@@ -28,10 +28,9 @@ async function assertApart(r, words, fields) {
   return pages;
 }
 
-const projects = (settings = {}) => section('projects', [
-  { name: 'Ledgerline', technologies: 'React', startDate: '02/2022', endDate: '08/2022' },
-  { name: 'Queuebird', technologies: 'Go', startDate: '02/2022', endDate: '08/2022' },
-], { columns: 2, ...settings });
+const projects = (settings = {}, names = ['Ledgerline', 'Queuebird']) => section('projects', names.map((name, i) => (
+  { name, technologies: i ? 'Go' : 'React', startDate: '02/2022', endDate: '08/2022' }
+)), { columns: 2, ...settings });
 
 describe('a title word wider than the room beside the date wraps the date under it (R3-002)', () => {
   it('Sidebar, Projects in 2 columns (the card header)', async () => {
@@ -73,11 +72,12 @@ describe('a title word wider than the room beside the date wraps the date under 
   it('Classic, Projects and Certifications in 2 columns (PdfSectionsTwo)', async () => {
     await assertApart(resume({
       settings: { fontSizeEntryDelta: 8 },
-      sections: [projects(), section('certifications', [
+      // A project name as long as a certification's word: Ledgerline fits beside its date here.
+      sections: [projects({}, ['Reliabilityarchitect', 'Queuebird']), section('certifications', [
         { name: 'CNCF Kubernetesadministrator', date: '02/2022', expiry: '08/2024' },
         { name: 'Cloudpractitioner', issuer: 'AWS', date: '02/2022', expiry: '08/2024' },
       ], { columns: 2 })],
-    }), ['Ledgerline', 'Kubernetesadministrator'], [/\d\d\/\d{4}/]);
+    }), ['Reliabilityarchitect', 'Kubernetesadministrator'], [/\d\d\/\d{4}/]);
   });
 
   it('Timeline, a one-word company beside a long location', async () => {
