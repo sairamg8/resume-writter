@@ -95,8 +95,12 @@ export function resolveSection(section, templateKey) {
   };
 }
 
-/** The Grids a new section of `type` stores (SECTION_TYPE_DEFAULTS), or undefined where it stores none. */
-const createdColumns = (type) => (SECTION_TYPE_DEFAULTS[type] || SECTION_TYPE_DEFAULTS.custom)('grid').settings.columns;
+/**
+ * The Grids a new section of `type` stores (SECTION_TYPE_DEFAULTS), or undefined where it stores none.
+ * Any other type prints as a custom section: an imported type named like an Object member
+ * ('constructor', 'toString') is one too, not a lookup of that member (resolveSection threw on it).
+ */
+const createdColumns = (type) => (Object.hasOwn(SECTION_TYPE_DEFAULTS, type) ? SECTION_TYPE_DEFAULTS[type] : SECTION_TYPE_DEFAULTS.custom)('grid').settings.columns;
 
 /**
  * A section's Grids for template `to`, coming from `from`: every section is created storing a Grids

@@ -3,7 +3,7 @@
 // shows (SectionEditorCustomizer: the resolved value, else 1) is what prints, whatever is stored.
 import { before, after, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { setup, teardown, resume, section, render, read, itemsWith, loadModule } from './harness.mjs';
+import { setup, teardown, resume, section, render, renderDocx, read, itemsWith, loadModule } from './harness.mjs';
 
 before(setup);
 after(teardown);
@@ -32,4 +32,19 @@ it('Languages and References with no stored Grids print in the columns the Grids
     }
   }
   assert.deepEqual(wrong, []);
+});
+
+// resolveSection reads the Grids a section's type is created with: an imported type named like an
+// Object member is a custom section's, not that member (it threw, and the PDF, Word and the section's
+// options with it).
+it('a section whose imported type is named like an Object member resolves, prints and exports as a custom one', async () => {
+  const { resolveSection } = await loadModule('/src/templates/pdf/shared/templateSectionDefaults.js');
+  for (const type of ['constructor', 'toString', 'hasOwnProperty', 'valueOf', '__proto__']) {
+    const s = { id: `odd_${type}`, type, title: `Odd ${type}`, visible: true, settings: {}, items: [{ id: 'i1', title: `Oddentry ${type}` }] };
+    assert.equal(resolveSection(s, 'classic').settings.columns, 1, type);
+    const pages = await read(await render(resume({ template: 'classic', sections: [s] })));
+    assert.ok(itemsWith(pages, `Oddentry ${type}`).length, `${type}: the PDF prints the entry`);
+    const doc = await renderDocx(resume({ template: 'classic', sections: [s] }));
+    assert.ok(doc.texts.some((t) => t.includes(`Oddentry ${type}`)), `${type}: Word prints the entry`);
+  }
 });
