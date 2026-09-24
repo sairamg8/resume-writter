@@ -1,6 +1,6 @@
 import { dateRange, formatDate, presentLabel } from './dates.js';
 import { parseRichText, safeHref } from './richText.js';
-import { contactHref } from './contacts.js';
+import { contactHref, contactItems } from './contacts.js';
 
 /**
  * Markdown Resume Exporter (Export → Markdown (.md)): the résumé as GitHub Flavored Markdown.
@@ -196,23 +196,10 @@ export function generateMarkdownResume(resume) {
   if (p.title) lines.push(`**${p.title}**`);
   lines.push('');
 
-  // Contact details
-  const contacts = [];
-  if (p.email && !hiddenFields.has('email')) contacts.push(`Email: [${p.email}](mailto:${p.email})`);
-  if (p.phone && !hiddenFields.has('phone')) contacts.push(`Phone: ${p.phone}`);
-  if (p.location && !hiddenFields.has('location')) contacts.push(`Location: ${p.location}`);
-  if (p.website && !hiddenFields.has('website')) {
-    const url = p.websiteUrl || (p.website.startsWith('http') ? p.website : `https://${p.website}`);
-    contacts.push(`[${p.websiteLabel || p.website}](${url})`);
-  }
-  if (p.linkedin && !hiddenFields.has('linkedin')) {
-    const url = p.linkedinUrl || (p.linkedin.startsWith('http') ? p.linkedin : `https://${p.linkedin}`);
-    contacts.push(`[LinkedIn](${url})`);
-  }
-  if (p.github && !hiddenFields.has('github')) {
-    const url = p.githubUrl || (p.github.startsWith('http') ? p.github : `https://${p.github}`);
-    contacts.push(`[GitHub](${url})`);
-  }
+  // Contact details: the PDF's contact lines — each field's Display label, else its address, linked
+  // where the PDF links it (a Link URL override through safeHref). R2-129: a label never printed,
+  // and an override went in as the link unchecked.
+  const contacts = contactItems(p).map(({ value, href }) => (href ? `[${value}](${href})` : value));
 
   if (contacts.length > 0) {
     lines.push(contacts.join(' • '));
