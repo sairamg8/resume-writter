@@ -9,15 +9,23 @@ A browser-based resume and cover letter builder. Create, design, and export prof
 
 ## Features
 
-- **5 resume templates** — Classic, Minimal, Sidebar, Modern, Dark
-- **Cover letter builder** — matches your resume's design settings
-- **PDF & Word export** — print-quality A4 PDF and `.docx` download
-- **JSON import / export** — backup and restore any resume
-- **Design system** — accent colour, fonts (14 built-in + custom Google Fonts), heading styles, margins, spacing, per-section overrides
-- **Drag-and-drop** — reorder sections and items
-- **Google Sign-In + cloud sync** — resumes sync across devices via Firebase Firestore, with full offline-first support
-- **URL routing** — each resume has its own URL; browser back/forward and refresh all work
-- **Terms & Privacy pages** — accessible at `/terms` and `/privacy`
+- **9 résumé templates** — Classic, Modern, Minimal, Executive, Sidebar (with a single-column
+  *ATS-safe* layout), Timeline, Banner, Academic and Compact — plus role-based starter résumés
+- **What you see is the PDF** — the preview is the exported A4 / US Letter PDF itself, rendered
+  with `@react-pdf/renderer`
+- **Exports** — PDF, Word (`.docx`), Markdown, ATS plain text, [JSON Resume](https://jsonresume.org),
+  and a full backup JSON; **imports** a backup or a JSON Resume file
+- **Design system** — accent and text colours, 14 built-in fonts plus any Google Font, heading
+  styles, header spacing, page margins, spacing presets, date formats, contact icons, photo shape
+  and size, and per-section options (columns, dates, locations, title order)
+- **Cover letters** — share the résumé's design; a generator drafts one from the résumé
+- **ATS checker** — a score for what the PDF prints, job-description keyword matching, and a
+  STAR bullet optimiser
+- **Job tracker** — list and kanban views, stages, tasks, notes, status history, CSV export
+- **Boards** — Jira-style boards for anything else you track
+- **Drag and drop** — reorder sections and entries
+- **Google Sign-In + cloud sync** — résumés sync across devices through Firebase Firestore;
+  everything works offline and without an account
 
 ---
 
@@ -27,12 +35,14 @@ A browser-based resume and cover letter builder. Create, design, and export prof
 |---|---|
 | UI framework | React 19 + Vite 8 |
 | Styling | Tailwind CSS v4 |
-| Routing | React Router v7 |
+| Routing | React Router v7 (`HashRouter`) |
+| PDF | `@react-pdf/renderer` (export and preview), `pdfjs-dist` (preview painting) |
+| Word export | `docx` |
 | Drag and drop | dnd-kit |
 | Auth + cloud | Firebase v12 (Auth + Firestore) |
-| Word export | docx + file-saver |
 | Icons | lucide-react |
 | Linting | oxlint |
+| Tests | `node:test` (PDF and unit suites), Playwright, Cypress |
 
 ---
 
@@ -40,11 +50,17 @@ A browser-based resume and cover letter builder. Create, design, and export prof
 
 ### 1. Clone and install
 
+The project uses Yarn 4 through Corepack (Node 22).
+
 ```bash
-git clone <your-repo-url>
-cd flowcv
-npm install
+git clone https://github.com/sairamg8/resume-writter.git
+cd resume-writter
+corepack enable
+yarn install
 ```
+
+Firebase is optional: without the keys below the app runs fully offline (localStorage only), and a
+production build hides Google Sign-In.
 
 ### 2. Firebase setup (required for Google Sign-In and cloud sync)
 
@@ -100,7 +116,7 @@ VITE_FIREBASE_APP_ID=1:123456789:web:abc...
 ### 3. Run the dev server
 
 ```bash
-npm run dev
+yarn dev
 ```
 
 Open [http://localhost:5173](http://localhost:5173).
@@ -108,8 +124,8 @@ Open [http://localhost:5173](http://localhost:5173).
 ### 4. Build for production
 
 ```bash
-npm run build       # outputs to /dist
-npm run preview     # serve the built output locally
+yarn build          # outputs to /dist
+yarn preview        # serve the built output locally
 ```
 
 ---
@@ -118,35 +134,24 @@ npm run preview     # serve the built output locally
 
 ```
 src/
-  App.jsx                  # Root router, dashboard, editor
-  main.jsx                 # React entry point + HashRouter
-  components/
-    AuthBar.jsx            # Google sign-in button, avatar, sync status
-    CoverLetterPanel.jsx   # Cover letter settings editor
-    DesignPanel.jsx        # Design / template settings
-    PersonalInfoEditor.jsx # Personal info form
-    RichTextEditor.jsx     # Rich text editor for descriptions
-    SectionEditor.jsx      # Section + item editors, drag-and-drop
-  hooks/
-    useAuth.js             # Firebase Auth state + Google sign-in
-    useCloudSync.js        # Firestore sync, offline detection, merge logic
-    useResumeStore.js      # All resume state, localStorage persistence
-  pages/
-    TermsPage.jsx          # Terms & Conditions
-    PrivacyPage.jsx        # Privacy Policy
-  templates/
-    ClassicTemplate.jsx
-    MinimalTemplate.jsx
-    SidebarTemplate.jsx
-    ModernTemplate.jsx
-    DarkTemplate.jsx
-    CoverLetterTemplate.jsx
-  utils/
-    defaultData.js         # ATS_DEFAULTS, default resume data, section factories
-    firebase.js            # Firebase app init (Auth + Firestore with offline cache)
-    fonts.js               # Built-in fonts + custom Google Font management
-    pdfExport.js           # Print-based A4 PDF export
-    wordExport.js          # .docx export via docx library
+  main.jsx, App.jsx, AppRoutes.jsx   # entry, stores, routes (HashRouter)
+  pages/          # Dashboard, Editor, JobTracker / JobForm / JobDetail, Boards / Board, Terms, Privacy
+  components/     # editor panels (design, sections, personal info, cover letter, ATS), preview
+    ui/           # the shared UI kit (dialogs, menus, toasts, fields…)
+    shell/        # the workspace shell around the Job Tracker and Boards
+    job/, board/  # Job Tracker and Boards components
+  hooks/          # stores (résumés, jobs, boards), auth, cloud sync, exports
+  templates/pdf/  # one react-pdf file per template, the cover letter, and shared/ building blocks
+  constants/      # template table, spacing, page sizes, photo options…
+  utils/          # data model and normaliser, exporters (Word, Markdown, ATS text, JSON Resume),
+                  # cloud-sync engine, ATS checker, cover-letter generator, job and board logic
+tests/
+  pdf/            # node:test suites that render real PDFs and read them back (Poppler, MuPDF, pdf.js)
+  unit/           # node:test unit suites
+  playwright/     # browser suites: the preview is the downloaded PDF, every control repaints it
+cypress/          # end-to-end specs
+docs/knowledge/   # architecture, data model, features, testing — start at INDEX.md
+docs/tracking/    # bug tracker, plans and session logs
 ```
 
 ---
@@ -189,7 +194,10 @@ Full policy: see [`/privacy`](#/privacy) in the running app or [`src/pages/Priva
 | Path | Description |
 |---|---|
 | `#/` | Dashboard — all resumes |
-| `#/resume/:id` | Resume editor |
+| `#/resume/:id` | Resume editor (`?tab=coverletter` opens the cover letter) |
+| `#/jobs` | Job tracker — list and kanban |
+| `#/jobs/new`, `#/jobs/:id`, `#/jobs/:id/edit` | Add, view and edit a job |
+| `#/boards`, `#/boards/:id` | Boards |
 | `#/terms` | Terms & Conditions |
 | `#/privacy` | Privacy Policy |
 
@@ -200,11 +208,25 @@ Uses `HashRouter` so all routes work after a page refresh without any server con
 ## Scripts
 
 ```bash
-npm run dev      # start dev server with HMR
-npm run build    # production build → /dist
-npm run preview  # preview production build locally
-npm run lint     # run oxlint
+yarn dev          # dev server with HMR
+yarn build        # production build → /dist
+yarn preview      # serve the production build locally
+yarn lint         # oxlint
+yarn test         # node:test — the PDF suites and the unit suites
+yarn test:unit    # unit suites only
+yarn test:pw      # production build + Playwright browser suites
+yarn test:e2e     # e2e build + Cypress
 ```
+
+The PDF suites read PDFs back with Poppler and MuPDF: install `poppler-utils` and `mupdf-tools`
+(Debian/Ubuntu) first. They are heavy — CI (`.github/workflows/ci.yml`) runs them in four shards.
+To run one file: `node --test tests/pdf/06-pagination.test.mjs`.
+
+---
+
+## Contributing
+
+Bug reports and pull requests are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ---
 

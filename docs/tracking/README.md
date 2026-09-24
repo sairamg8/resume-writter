@@ -23,7 +23,6 @@ happened.
 | [templates-ui-suggestions.md](templates-ui-suggestions.md) | Phase 1's result: suggestions for the template picker, waiting on the owner's picks. |
 | [boards-plan.md](boards-plan.md) | The original Boards plan (phases 1–4). |
 | [boards-jobs-plan/](boards-jobs-plan/README.md) | The Boards (Jira core) and Job Tracker redesign spec: design kit, boards, jobs. |
-| [TODO_RESOLVE_CONFLICTS.md](TODO_RESOLVE_CONFLICTS.md) | Historical notes from the react-pdf branch merge. PENDING-ALL marks it stale. |
 
 ## Audits and evidence
 

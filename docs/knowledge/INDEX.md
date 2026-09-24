@@ -32,7 +32,6 @@
 | Path | Role |
 |------|------|
 | [`README.md`](../../README.md) | User-facing setup + feature list |
-| [`TODO_RESOLVE_CONFLICTS.md`](../tracking/TODO_RESOLVE_CONFLICTS.md) | Historical merge/rebase notes (react-pdf branch) |
 | [`firestore.rules`](../../firestore.rules) | Production Firestore security rules |
 | [`graphify-out/GRAPH_REPORT.md`](../../graphify-out/GRAPH_REPORT.md) | Code knowledge graph (communities, god nodes) |
 | [`package.json`](../../package.json) | Scripts and dependencies |

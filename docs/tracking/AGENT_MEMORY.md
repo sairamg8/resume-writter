@@ -101,7 +101,6 @@ Bundle splits: `react-pdf`, `docx`, `firebase` (`vite.config.js` `manualChunks`)
 - No `.gitignore` / `LICENSE` observed at project root
 - `dist/` build artifacts present
 - `graphify-out/` exists (prior code graph)
-- `TODO_RESOLVE_CONFLICTS.md` is historical branch-merge context; many items may already be integrated
 
 ## Naming for contributors
 

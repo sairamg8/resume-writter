@@ -8,7 +8,10 @@
 ### Persistence
 
 - Every `appState` change writes full JSON to `localStorage` key `cpwtcv_v1`.
-- `DATA_VERSION = 6` — mismatch wipes to seed (no stepwise migration beyond version gate).
+- `DATA_VERSION` (`src/utils/dataVersion.js`, 11 at the time of writing) — each résumé records its own
+  `dataVersion`, and `normalizeResume()` runs the one-time migrations it has not had yet, so none runs
+  twice (not after a sync, an import, or a stale tab of an older build). A version above this build's
+  is stamped down to it and the claim kept in `dataVersionAhead` (AUD-26).
 
 ### Core API (conceptual)
 

@@ -6,7 +6,7 @@
 {
   "resumes": [ /* Resume */ ],
   "activeId": "resume_…",
-  "dataVersion": 6,
+  "dataVersion": 11,
   "deletedIds": ["resume_…"]
 }
 ```
