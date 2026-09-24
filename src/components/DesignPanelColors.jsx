@@ -1,6 +1,7 @@
 import { useId } from 'react';
 import { Label, DesignSection } from '@/components/DesignPanelShared';
-import { templateId } from '@/constants/templates';
+import { headerTemplateId, templateId } from '@/constants/templates';
+import { letterheadLook } from '@/templates/pdf/shared/letterhead';
 import { DEFAULTS } from '@/templates/pdf/shared/templateSettings';
 
 const ACCENT_PRESETS = [
@@ -37,6 +38,12 @@ export function ColorsSection({ resume, settings, updateSetting, onReset }) {
   // The Text colour the PDF prints: the stored one, else the template's own default (Modern's
   // slate, Minimal's #111111 …), not a panel-wide Near Black the PDF does not use (R9-7).
   const textColor = settings.textColor || DEFAULTS[templateId(resume.template)].textColor;
+  // The page the header prints on. Header Text Color colours a header printed on a band — Modern's
+  // banner, Banner's full-bleed band (R3-001), the two-column Sidebar's column: letterheadLook's band.
+  // The Sidebar's "Single · ATS-safe" prints Classic's white page, no column and no band, so there
+  // Header Text Color and Sidebar Background have nothing to colour (R2-082).
+  const header = headerTemplateId(resume.template, settings);
+  const onBand = Boolean(letterheadLook(resume.template, settings).band);
   return (
     <DesignSection title="Colors" onReset={onReset}>
       <div>
@@ -79,11 +86,11 @@ export function ColorsSection({ resume, settings, updateSetting, onReset }) {
         </div>
       </div>
 
-      {(resume.template === 'modern' || resume.template === 'sidebar') && (
+      {onBand && (
         <div className="pt-1 border-t border-gray-100">
           <Label>Header Text Color</Label>
           <p className="text-[10px] text-gray-400 mb-2">
-            {resume.template === 'sidebar' ? 'Color for name text in the sidebar header. One too faint on the Sidebar Background prints a readable tint of it.' : 'Color for name & text in the colored header banner. One too faint on the Accent Color prints a readable tint of it.'}
+            {header === 'sidebar' ? 'Color for name text in the sidebar header. One too faint on the Sidebar Background prints a readable tint of it.' : 'Color for name & text in the colored header banner. One too faint on the Accent Color prints a readable tint of it.'}
           </p>
           <div className="flex items-center gap-2">
             <label htmlFor={uid + 'headerTextColor'} className="text-xs text-gray-500">Color:</label>
@@ -115,7 +122,7 @@ export function ColorsSection({ resume, settings, updateSetting, onReset }) {
         ))}
       </div>
 
-      {resume.template === 'sidebar' && (
+      {header === 'sidebar' && (
         <div className="pt-1 border-t border-gray-100">
           <Label>Sidebar Background</Label>
           <div className="grid grid-cols-4 gap-2 mb-2">
