@@ -77,14 +77,27 @@ describe('picking Academic brings its type, header and spacing, and never reorde
   it('the store\'s switch sets the style; the sections stay in the résumé\'s order', async () => {
     const { templateStyleDefaults } = await loadModule('/src/constants/templates.js');
     const { headerColorsOnSwitch } = await loadModule('/src/templates/pdf/shared/headerColors.js');
+    const { styleOnSwitch } = await loadModule('/src/utils/defaultData.js');
     const r = resume({ template: 'classic', sections: [experience([{}]), { ...experience([{}]), id: 'edu', type: 'education', title: 'Education', items: [] }] });
     // useResumeStore.setTemplate: the template's style over the résumé's settings, then the header colours.
-    const settings = headerColorsOnSwitch({ ...r.settings, ...templateStyleDefaults('academic') }, 'classic', 'academic');
+    const settings = headerColorsOnSwitch(styleOnSwitch(r.settings, 'classic', 'academic'), 'classic', 'academic');
     for (const [k, v] of Object.entries(templateStyleDefaults('academic'))) assert.equal(settings[k], v, k);
     assert.deepEqual(r.sections.map((s) => s.type), ['experience', 'education'], 'the order is the résumé\'s');
     const pages = await read(await render({ ...r, template: 'academic', settings: { ...settings, font: 'notosans' } }));
     const text = allText(pages);
     assert.ok(text.indexOf('PROFESSIONAL EXPERIENCE') < text.indexOf('EDUCATION'), 'printed in that order');
+  });
+
+  it('switched away untouched, its type and spacing leave with it: every template then prints as one started on it; a font picked on Academic stays', async () => {
+    const { styleOnSwitch, defaultSettings } = await loadModule('/src/utils/defaultData.js');
+    const { TEMPLATE_IDS } = await loadModule('/src/constants/templates.js');
+    for (const to of TEMPLATE_IDS) {
+      assert.deepEqual(styleOnSwitch(defaultSettings('academic'), 'academic', to), defaultSettings(to), `academic → ${to}`);
+      assert.deepEqual(styleOnSwitch(defaultSettings(to), to, 'academic'), defaultSettings('academic'), `${to} → academic`);
+    }
+    const tuned = { ...defaultSettings('academic'), font: 'inter', sectionGap: 20 };
+    const classic = styleOnSwitch(tuned, 'academic', 'classic');
+    assert.deepEqual([classic.font, classic.sectionGap, classic.headerAlign, classic.lineHeightValue], ['inter', 20, 'left', 1.5], 'the user\'s picks stay; Academic\'s own leave');
   });
 
   it('the Design panel says what picking it brought, under the picker, only on Academic', async () => {

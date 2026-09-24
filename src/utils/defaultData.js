@@ -60,6 +60,25 @@ export function defaultSettings(template) {
 }
 
 /**
+ * The design settings of a résumé on template `from` when `to` is picked: `to`'s style over them
+ * (templateStyleDefaults) — and each setting `from` brought that `to` does not, where the résumé
+ * still holds `from`'s own value, back to the app's default. Academic brings its serif, centred
+ * header and dense Spacing (T8): switched to Classic untouched, a résumé prints what one started on
+ * Classic prints, while a font or a spacing the user picked on Academic stays theirs.
+ */
+export function styleOnSwitch(settings, from, to) {
+  const was = templateStyleDefaults(from);
+  const next = templateStyleDefaults(to);
+  const out = { ...settings };
+  for (const [key, value] of Object.entries(was)) {
+    if (key in next || out[key] !== value) continue;
+    if (key in ATS_DEFAULTS) out[key] = ATS_DEFAULTS[key];
+    else delete out[key];
+  }
+  return { ...out, ...next };
+}
+
+/**
  * Design → Reset: `settings` back to the template's defaults, keeping the contact icons uploaded
  * under Personal Info → Fields. They are stored with the design settings but are the user's own
  * images, and Reset deleted them with no undo (R5-6). A value that is not a map of them (none in

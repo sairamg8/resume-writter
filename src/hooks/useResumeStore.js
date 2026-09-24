@@ -1,10 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
-import { createBlankResume, settingsAfterReset } from '@/utils/defaultData';
+import { createBlankResume, settingsAfterReset, styleOnSwitch } from '@/utils/defaultData';
 import { buildResumeFromStarter } from '@/utils/starterTemplates';
 import { createSectionActions } from '@/hooks/useResumeSectionActions';
 import { createSyncActions } from '@/hooks/useResumeSyncActions';
 import { newId } from '@/utils/ids';
-import { templateStyleDefaults } from '@/constants/templates';
 import { HEADER_READS, headerColorsOnSwitch, withHeaderColorsBack } from '@/templates/pdf/shared/headerColors';
 import { DATA_VERSION, normalizeResume } from '@/utils/normalizeResume';
 import { backupRaw, notSavedReason, pendingRecovery, readSavedList, rememberRecovery, setItemWithRoom } from '@/utils/storageBackup';
@@ -245,14 +244,15 @@ export function useAppStore() {
   }
 
   /**
-   * Design → a template: the heading style and title case it brings, and a Name or Job title
-   * colour picked for the old header that does not read on the new one back to its own (NB-1).
+   * Design → a template: the style it brings (styleOnSwitch: its heading style and title case, and
+   * Academic's type and spacing — which leave with it where the user kept them), and a Name or Job
+   * title colour picked for the old header that does not read on the new one back to its own (NB-1).
    */
   function setTemplate(template) {
     patchActive(r => ({
       ...r,
       template,
-      settings: headerColorsOnSwitch({ ...r.settings, ...templateStyleDefaults(template) }, r.template, template),
+      settings: headerColorsOnSwitch(styleOnSwitch(r.settings, r.template, template), r.template, template),
     }));
   }
 
