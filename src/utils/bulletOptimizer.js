@@ -205,7 +205,10 @@ export function analyzeBullet(text = '') {
     suggestions.push('Add quantifiable metrics (e.g. %, $, time saved, team size, scale) to prove tangible business impact.');
   }
   if (detectedWeakPhrases.length > 0) {
-    suggestions.push(`Replace weak phrases like "${detectedWeakPhrases[0].alternatives[0]}" to demonstrate leadership.`);
+    // The words it found, and what they could be instead: it used to quote the first alternative as
+    // the weak phrase — "Resolved" on a statement that said "handled" (R2-078).
+    const { phrase, replacement, alternatives } = detectedWeakPhrases[0];
+    suggestions.push(`Replace the weak phrase "${phrase}" with a power verb such as "${replacement}" or "${alternatives[0]}" to demonstrate leadership.`);
   }
 
   return {
@@ -220,12 +223,26 @@ export function analyzeBullet(text = '') {
 }
 
 /**
- * Replaces weak phrases in text with their strongest alternatives.
+ * Whether the text before a phrase ends where a sentence starts: nothing, or a line break or a
+ * sentence's end (". ", "! ", "? "), then only spaces, bullet marks or opening quotes.
+ */
+const SENTENCE_START = /(?:^|[.!?]\s|\n)[\s•\-*–—◦▪▸‣⁃"'“‘(]*$/;
+
+/**
+ * Replaces weak phrases in text with their strongest alternatives — capitalised where a sentence
+ * starts, in lowercase inside one: "Engineered 4 APIs; handled QA" becomes "…; managed QA", not
+ * "…; Managed QA" (R2-078).
  */
 export function autoFixWeakPhrases(text = '') {
   let result = text;
   for (const wp of WEAK_PHRASE_REPLACEMENTS) {
-    result = result.replace(wp.match, wp.replacement);
+    // Each pattern has one group, so the offset and the whole text are the last two arguments.
+    result = result.replace(wp.match, (...args) => {
+      const [offset, whole] = args.slice(-2);
+      return SENTENCE_START.test(whole.slice(0, offset))
+        ? wp.replacement
+        : wp.replacement[0].toLowerCase() + wp.replacement.slice(1);
+    });
   }
   return result;
 }
