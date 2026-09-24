@@ -202,8 +202,14 @@ const FIELDS = {
   due: { read: (b, v) => (isLocalISO(v) ? v : '') },
   startDate: { read: (b, v) => (isLocalISO(v) ? v : '') },
   estimate: { read: (b, v) => estimateOf(v) },
-  epicId: { read: (b, v, i) => epicIdFor(b, i.type, v, i.id), show: epicName, field: 'epic' },
-  sprintId: { read: (b, v) => openSprintId(b, v), show: sprintName, field: 'sprint' },
+  // null (or '') takes the issue out; an epic or sprint it cannot join leaves the field as it was —
+  // a form sending a done issue's closed sprint back with an edit must not drop that record.
+  epicId: { read: (b, v, i) => (v == null || v === '' ? null : epicIdFor(b, i.type, v, i.id) ?? i.epicId), show: epicName, field: 'epic' },
+  sprintId: {
+    read: (b, v, i) => (v == null || v === '' ? null : v === i.sprintId ? v : openSprintId(b, v) ?? i.sprintId),
+    show: sprintName,
+    field: 'sprint',
+  },
   checklist: { read: (b, v) => checklistOf(v), show: (b, v) => checklistCount(v) },
   recurrence: { read: (b, v, i) => (RECURRENCE_IDS.includes(v) ? v : i.recurrence) },
 };

@@ -252,6 +252,24 @@ test('sprints: one active at a time; complete keeps done issues, sends open ones
   assert.equal(ops.updateSprint(b, 's2', { name: 'Renamed', endDate: 'soon' }).sprints[1].name, 'Renamed');
 });
 
+test('updateIssue: a sprint or epic that cannot be taken leaves the field as it was; null clears it', () => {
+  let b = boardWith(['A', 'B', 'E'], { mode: 'scrum' });
+  b = ops.updateIssue(b, 'E', { type: 'epic' }, ctx);
+  b = ops.addSprint(b, { id: 's1' });
+  b = ops.moveIssue(b, 'A', { sprintId: 's1', columnId: 'done' }, ctx);
+  b = ops.updateIssue(b, 'B', { epicId: 'E' }, ctx);
+  b = ops.completeSprint(ops.startSprint(b, 's1', {}, ctx), 's1', {}, ctx);
+  // The issue modal saves its form: a done issue's closed sprint comes back unchanged with the edit.
+  const edited = ops.updateIssue(b, 'A', { title: 'A2', sprintId: 's1' }, ctx);
+  assert.deepEqual([get(edited, 'A').title, get(edited, 'A').sprintId], ['A2', 's1'], 'the closed sprint is its record');
+  assert.equal(ops.updateIssue(b, 'B', { sprintId: 's1' }, ctx), b, 'a closed sprint is no target: nothing changes');
+  assert.equal(ops.updateIssue(b, 'B', { sprintId: 'gone' }, ctx), b);
+  assert.equal(ops.updateIssue(b, 'B', { epicId: 'A' }, ctx), b, 'A is not an epic: B stays in E');
+  assert.equal(ops.updateIssue(b, 'B', { epicId: 'gone' }, ctx), b);
+  assert.equal(get(ops.updateIssue(b, 'B', { epicId: null }, ctx), 'B').epicId, null, 'null takes it out');
+  assert.equal(get(ops.updateIssue(b, 'A', { sprintId: null }, ctx), 'A').sprintId, null, 'null: the backlog');
+});
+
 test('updateBoardFields: a key is validated and unique; the rest of the patch waits for a valid one', () => {
   const b = boardWith([]);
   const other = { id: 'x', key: 'WEB', title: 'Website' };
