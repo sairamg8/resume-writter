@@ -87,7 +87,8 @@
       "outcome": "fixed",
       "commits": [
         "09bc832",
-        "4340601"
+        "4340601",
+        "d014960"
       ],
       "tests": [
         "tests/pdf/80-photo-url.test.mjs",
@@ -95,7 +96,7 @@
         "tests/pdf/16-saved-data-photos.test.mjs",
         "tests/pdf/16-saved-data-photo-size.test.mjs"
       ],
-      "summary": "A photo stored as a URL or path is never handed to react-pdf: printableImage fetches it once a session and the PDF prints that copy, or no photo at all (no ring, no gap) when it cannot be fetched or is not an image; the Photo panel then says 'Not printed' and that the link could not be loaded. Header Customization's Photo ↔ Text row follows the photo as printed."
+      "summary": "A photo stored as a URL or path is never handed to react-pdf: printableImage fetches it once a session and the PDF prints that copy, or no photo at all (no ring, no gap) when it cannot be fetched or is not an image; the Photo panel then says 'Not printed' and that the link could not be loaded, and the Cover Letter panel says the same of a letter or résumé photo link. Header Customization's Photo ↔ Text row follows the photo as printed."
     },
     {
       "id": "R2-094",
@@ -143,5 +144,5 @@
     ]
   },
   "baselineFailures": [],
-  "notes": "Changed existing assertions: tests/pdf/16-saved-data-text-fields.test.mjs fixture gave every section's second entry the id 'x_item1' (now unique, since loading de-duplicates ids, R2-055); tests/unit/image-upload.unit.mjs and tests/pdf/16-saved-data-photos.test.mjs pinned 'a plain URL is drawn as it is', the behaviour R2-093 names. tests/pdf/16-saved-data-photo-size.test.mjs now stubs fetch, so its https://example.com photo never reaches the network. Leftovers: useLetterPhoto still says a URL photo's 'format can't be printed' on the Cover Letter panel (wording only). Non-skills sections keep Grids 3–4 after the clamp while their panel offers only 1–2 (PDF draws them; outside R2-110). Section shape normalization is always-run, not a DATA_VERSION migration."
+  "notes": "Changed existing assertions: tests/pdf/16-saved-data-text-fields.test.mjs fixture gave every section's second entry the id 'x_item1' (now unique, since loading de-duplicates ids, R2-055); tests/unit/image-upload.unit.mjs and tests/pdf/16-saved-data-photos.test.mjs pinned 'a plain URL is drawn as it is', the behaviour R2-093 names. tests/pdf/16-saved-data-photo-size.test.mjs now stubs fetch, so its https://example.com photo never reaches the network. Leftovers: Non-skills sections keep Grids 3–4 after the clamp while their panel offers only 1–2 (PDF draws them; outside R2-110). Section shape normalization is always-run, not a DATA_VERSION migration."
 }
