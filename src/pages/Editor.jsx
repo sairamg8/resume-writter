@@ -130,7 +130,7 @@ export function Editor({ store, auth, sync }) {
 
       {!isMobile && layoutMode === 'split' && (
         // touch-none: a finger drags the handle instead of panning the page. The ::before widens what
-        // a finger can hit, out over the preview only: the editor panel's scrollbar is on its left (R2-144).
+        // a finger can hit, out over the preview only: the editor panel's scrollbar lies just left of it (R2-144).
         <div
           {...separatorProps}
           title="Drag to resize panel"
