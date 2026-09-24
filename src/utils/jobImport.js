@@ -52,6 +52,21 @@ function stable(value) {
 }
 
 /**
+ * `theirs` (a file's job, read and completed) as it would be saved over `mine`: what the file left
+ * out and the import made up — the times (now) and a to-do's id — taken from `mine`, so the same
+ * job compares equal. Stamped anew, a file without times never matched the copy an earlier import
+ * saved, and every re-import added each job again.
+ */
+function asOver(theirs, kept, mine) {
+  const out = { ...theirs };
+  if (!isTime(kept.createdAt)) out.createdAt = mine.createdAt;
+  if (!isTime(kept.updatedAt)) out.updatedAt = mine.updatedAt;
+  const given = Array.isArray(kept.todos) ? kept.todos : [];
+  out.todos = (theirs.todos || []).map((t, n) => (given[n]?.id || !mine.todos?.[n] ? t : { ...t, id: mine.todos[n].id }));
+  return out;
+}
+
+/**
  * `current` with the jobs of an imported file merged in, as `{ jobs, added, updated, skipped, lossy }`
  * (J-04: importing the tracker's own backup added every job again, each with a new id). Each
  * entry is read like a saved job (readJob, completeJob), then:
@@ -82,7 +97,7 @@ export function mergeImport(current, incoming, now = Date.now()) {
     const i = at.get(kept.id);
     if (i !== undefined) {
       const mine = jobs[i];
-      if (stable(mine) === stable(theirs)) { skipped += 1; continue; }
+      if (stable(mine) === stable(asOver(theirs, kept, mine))) { skipped += 1; continue; }
       if (isTime(kept.updatedAt)) {
         if (!isTime(mine.updatedAt) || kept.updatedAt > mine.updatedAt) { jobs[i] = theirs; updated += 1; } else skipped += 1;
         continue;

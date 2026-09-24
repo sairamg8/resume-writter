@@ -214,3 +214,21 @@ test('J-27: visibleDone lists completed tasks newest first, so the one just tick
   assert.deepEqual(visibleDone(todos).map((t) => t.id), ['t7', 't8', 't1', 't2', 't3', 't4', 't5']);
   assert.deepEqual(visibleDone([]), []);
 });
+
+// ── A salary range with its unit after the second number ─────────────────────────────────────
+// '$120-150k' read as 120 and '10-15 LPA' as 10: the unit applied only right after the first number,
+// so a range written the usual way sorted as the lowest pay in the list.
+
+test('a range with the unit once, at its end, is read in that unit', () => {
+  assert.equal(salaryValue('$120-150k'), 120000);
+  assert.equal(salaryValue('10-15 LPA'), 1000000);
+  assert.equal(salaryValue('£45–55k'), 45000);
+  assert.equal(salaryValue('$120k to $150k'), 120000);
+  assert.equal(salaryValue('90 - 110K + bonus'), 90000);
+  // A unit after the first number wins; a plain number and no amount are as before.
+  assert.equal(salaryValue('1.5M-2M'), 1500000);
+  assert.equal(salaryValue('$120,000'), 120000);
+  assert.equal(salaryValue('Competitive'), null);
+  const jobs = ['10-15 LPA', '8 LPA', '$120-150k', '$95k'].map((salary, n) => ({ id: String(n), salary }));
+  assert.deepEqual(sortJobs(jobs, 'salary', 'desc').map((j) => j.salary), ['10-15 LPA', '8 LPA', '$120-150k', '$95k'], 'amounts, not currencies: 8 LPA is 800000');
+});

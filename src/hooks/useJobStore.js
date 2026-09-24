@@ -175,9 +175,11 @@ function addJob(data = {}) {
  */
 function updateJob(id, updates) {
   if (!initialized) init();
-  if (!snapshot().jobs.some(j => j.id === id)) return false;
+  const job = snapshot().jobs.find(j => j.id === id);
+  if (!job) return false;
   const now = Date.now();
-  setJobs(jobs => jobs.map(j => (j.id === id ? applyEdits(j, updates, now) : j)));
+  // An edit that changes nothing (applyEdits returns the job) writes nothing.
+  if (applyEdits(job, updates, now) !== job) setJobs(jobs => jobs.map(j => (j.id === id ? applyEdits(j, updates, now) : j)));
   return true;
 }
 

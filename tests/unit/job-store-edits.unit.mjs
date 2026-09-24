@@ -162,3 +162,16 @@ test('deleteJob returns the job and its place; restoreJob puts it back there (Un
   store.restoreJob(job('z', 'Z'), 99);
   assert.deepEqual(stored().map((j) => j.id), ['a', 'b', 'c', 'z'], 'an index past the end: last');
 });
+
+test('an edit that changes nothing writes nothing: the job keeps its updatedAt and its place in "last updated"', () => {
+  open([job('a', 'Acme'), job('b', 'Beta')]);
+  const before = localStorage.getItem(KEY);
+  let writes = 0;
+  const setItem = localStorage.setItem.bind(localStorage);
+  localStorage.setItem = (k, v) => { if (k === KEY) writes += 1; setItem(k, v); };
+  assert.equal(store.updateJob('a', { status: 'applied' }), true, 'the job is there');
+  assert.equal(store.updateJob('a', {}), true);
+  assert.equal(writes, 0);
+  assert.equal(localStorage.getItem(KEY), before);
+  assert.equal(byId('a').updatedAt, 1);
+});

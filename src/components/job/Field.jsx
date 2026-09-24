@@ -11,7 +11,8 @@ export function Field({ label, value, onChange, type = 'text', icon: Icon, place
 
   function commit() {
     setEditing(false);
-    if (draft !== value) onChange(draft);
+    // Shown as '' when the job has no value: closing it untouched wrote '' — an edit of nothing.
+    if (draft !== (value || '')) onChange(draft);
   }
 
   if (readOnly) {
