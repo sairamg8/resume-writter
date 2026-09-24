@@ -127,4 +127,29 @@ describe('a photo stored as a URL or a path', () => {
     assert.match(panel(prints), /Photo ↔ Text/, 'the PDF prints its copy, beside the text');
     assert.doesNotMatch(panel(fails), /Photo ↔ Text/, 'the PDF prints no photo');
   });
+
+  it('the Cover Letter panel says a link could not be loaded, not that its format cannot be printed', async () => {
+    const { printableImage } = await loadModule('/src/utils/printableImage.js');
+    const { useLetterPhoto } = await loadModule('/src/hooks/usePrintableImage.js');
+    let note;
+    const Probe = ({ cl, personal }) => { ({ note } = useLetterPhoto(cl, personal)); return null; };
+    const noteOf = (cl, personal) => { renderToString(createElement(Probe, { cl, personal })); return note; };
+    const fails = 'https://no-cors.example.com/letter.jpg';
+    const webp = `data:image/webp;base64,${Buffer.from('not an image').toString('base64')}`;
+    await printableImage(fails);
+    await printableImage(webp);
+
+    const own = noteOf({ clPhoto: fails }, { photo: JPEG_2X2 });
+    assert.equal(own.warn, true);
+    assert.match(own.text, /link that could not be loaded/i, 'its own photo');
+    assert.match(own.text, /uses your résumé photo/, 'and what prints instead');
+    assert.doesNotMatch(own.text, /format/);
+    const resume = noteOf({}, { photo: fails });
+    assert.equal(resume.warn, true);
+    assert.match(resume.text, /résumé photo is a link that could not be loaded/i, 'the résumé photo it would use');
+    assert.doesNotMatch(resume.text, /format/);
+    // A data URL no copy can be made of still names its format.
+    assert.match(noteOf({ clPhoto: webp }, {}).text, /format can't be printed/);
+    assert.match(noteOf({}, { photo: webp }).text, /format can't be printed/);
+  });
 });

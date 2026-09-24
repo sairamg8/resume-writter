@@ -20,6 +20,9 @@ export function usePrintableImage(src, { kind = 'photo' } = {}) {
 }
 
 const REUPLOAD = 'Upload it again as a PNG or JPEG.';
+const UPLOAD_ITSELF = 'Upload the image itself.';
+/** A photo stored as a URL or path (an imported JSON Resume's basics.image), not as an image's data (R2-093). */
+const isLink = (src) => typeof src === 'string' && !src.startsWith('data:');
 export const UNPRINTABLE_ICON = "This icon can't be printed; upload a PNG or JPEG";
 
 /**
@@ -38,11 +41,13 @@ export function useLetterPhoto(cl, personal) {
   const hasPhoto = Boolean(own && !ownFails) || Boolean(resume && !resumeFails);
   let note;
   if (ownFails) {
-    note = { warn: true, text: `This photo's format can't be printed${hasPhoto ? ', so the letter uses your résumé photo' : ''}. ${REUPLOAD}` };
+    const instead = hasPhoto ? ', so the letter uses your résumé photo' : '';
+    note = { warn: true, text: isLink(own) ? `This photo is a link that could not be loaded${instead}. ${UPLOAD_ITSELF}` : `This photo's format can't be printed${instead}. ${REUPLOAD}` };
   } else if (own) {
     note = { text: 'Using own photo' };
   } else if (resumeFails) {
-    note = { warn: true, text: "Your résumé photo's format can't be printed. Upload a photo here, or again under Personal Info." };
+    const why = isLink(resume) ? 'Your résumé photo is a link that could not be loaded.' : "Your résumé photo's format can't be printed.";
+    note = { warn: true, text: `${why} Upload a photo here, or again under Personal Info.` };
   } else {
     note = { text: resume ? 'Using resume photo (faded = preview)' : 'No photo — upload or add to resume' };
   }
@@ -52,4 +57,4 @@ export function useLetterPhoto(cl, personal) {
 /** The Photo panel's line for a résumé photo that cannot be printed. */
 export const UNPRINTABLE_PHOTO = `This photo's format can't be printed. ${REUPLOAD}`;
 /** Its line for a photo stored as a link (an imported JSON Resume's basics.image) that could not be loaded (R2-093). */
-export const UNLOADABLE_PHOTO = 'This photo is a link that could not be loaded, so it is not printed. Upload the image itself.';
+export const UNLOADABLE_PHOTO = `This photo is a link that could not be loaded, so it is not printed. ${UPLOAD_ITSELF}`;
