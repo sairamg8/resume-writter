@@ -1,0 +1,29 @@
+{
+  "cluster": "pdf-text",
+  "branch": "claude/wf-pdf-text",
+  "base": "9c3589a",
+  "rows": [
+    { "id": "R2-045", "outcome": "fixed", "commits": ["4dd38e9"], "tests": ["tests/pdf/85-font-glyph-coverage.test.mjs"],
+      "summary": "↑ ↓ ∕ print as arrows: the by-glyph pass now checks every visible character past ASCII against the loaded faces (the Latin subset's range claims U+2000-206F, ↑ ↓ ∕, but Noto Sans's Latin file lacks them), with Noto Sans Math and Symbols 2 as its first candidates. A dash or space a face lacks (‐ ‑ ‒ ― U+2212, U+2000-200A, U+202F, U+205F) is drawn with that face's own '-', '–', '—' or ' ', and pdf.js and every pdftotext mode read the stand-in ('e-mail', 'non-stop', '10 000') instead of nothing or '/'.",
+      "remaining": "Offline, ↑ ↓ still print .notdef, like every symbol-font character does offline (R2-010's documented behaviour)." },
+    { "id": "R3-002", "outcome": "fixed", "commits": ["35e8946", "e45781e"], "tests": ["tests/pdf/85-entry-header-long-word.test.mjs"],
+      "summary": "EndRow takes the left side's widest word (wordRoom → pdfMeasure widestWord). The left side keeps at least that width, and the date or location wraps onto its own line at the right end when both don't fit. Headers that fit print as before. This covers ItemHeader (Stacked, Inline, Side by side, the sub line's location), Projects, Certifications, the Sidebar's cards and Timeline's sub line. The parity matrix's two R3-002 KNOWN entries are deleted, and parity 30-sections and 11-type pass." },
+    { "id": "R2-105", "outcome": "fixed", "commits": ["9264900", "699a7ca"], "tests": ["tests/pdf/85-grid-card-long-url.test.mjs"],
+      "summary": "A line that holds a link breaks with breakLinks (breakLongWords at 16 characters) in the Sidebar main column's card, Projects and Certifications (PdfSectionsTwo) and Timeline's project line. textkit breaks at a mark only when a token is wider than its line, so a 43-character URL in a half-width card now breaks inside the card, and a URL that fits still prints whole, as typed." },
+    { "id": "R3-003", "outcome": "fixed", "commits": ["7c2dba5"], "tests": ["tests/pdf/85-contact-nbsp-gaps.test.mjs"],
+      "summary": "widenNarrowSpace also lifts the no-break space to 0.22 em. Lato's and Literata's U+00A0 printed at 0.193 and 0.200 em, under Poppler 26.01's ~0.201 em word break. The textkit patch's keepWordGaps now counts U+00A0 as a word gap, so a closed-up contact line floors it instead of taking from it as from a letter (it was 0.215 em). Bar and Bullet contact gaps measure ≥ 0.22 em in every template.",
+      "remaining": "Local Poppler is 24.02 and does not glue these words, so locally the proof is the measured gap (wordGaps now reads no-break-space gaps). The test's pdftotext -raw check can only catch gluing on CI's Poppler 26.01." },
+    { "id": "R3-004", "outcome": "known-limit", "commits": ["d5b27a9"], "tests": ["tests/pdf/85-ats-pdfminer-dates.test.mjs"],
+      "summary": "Reproduced with pdfminer.six 20251107: Classic's demo with one short bullet per job prints every date and location after Experience. pdfminer's group_textboxes first merges the pair of boxes whose rectangle wastes the least area with nothing inside it. Two entries' flush-right date boxes in an empty right strip are that pair, and they merge before either joins its entry. The only levers are a date within about two character widths of the title (no longer flush right), glyphs filling the gap (pdf.js, Poppler and OpenResume would then read title and date as one field), or text placed in the strip. All of these are layout decisions. A todo test reproduces it when PDFMINER_PYTHON points to a Python with pdfminer.six, and skips otherwise.",
+      "remaining": "Needs a layout decision on flush-right dates." }
+  ],
+  "review": {
+    "issues": [
+      "R2-105 missed Timeline's own project line (PdfTimelineSections.jsx): a 43-character URL ran over the next card at base size 13.",
+      "R3-002's PdfSectionsTwo case passed without the Projects part of the fix ('Ledgerline' fits at entry +8); only the certification exercised it."
+    ],
+    "fixedByReviewer": ["699a7ca fix(pdf/long-words): Timeline's 2-column Projects breaks a long link inside its card too (R2-105)", "e45781e test(pdf/entry header): a Classic project name that overlaps its date without the fix (R3-002)"]
+  },
+  "baselineFailures": [],
+  "notes": "The textkit yarn patch changed (isWordGap in keepWordGaps; hunk offsets shifted by 6), and yarn.lock's patch hash and checksum were updated with `yarn install`, so `yarn install --immutable` passes. tests/pdf/extractors.mjs wordGaps now also reads no-break-space gaps (with an `nbsp` flag), which 41-word-gaps picks up; it passes. widenNarrowSpace skips a glyph whose advance can't be read: IBM Plex Sans Arabic's subset maps U+00A0 to a glyph it doesn't hold, and reading it threw. EndRow's `leftMin` is opt-in, so other callers are unchanged. Academic still defaults to the Icon contact style because of R3-003; it could move to Bar once CI confirms -raw reads it apart."
+}
