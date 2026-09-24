@@ -1,7 +1,7 @@
 import { View } from '@react-pdf/renderer';
 import { Text } from './PdfText';
 import { tint, textShades } from './pdfColors';
-import { lineBox } from './pdfMeasure';
+import { lineBox, textWidth, widestWord } from './pdfMeasure';
 import { headerTemplateId } from '@/constants/templates';
 
 /**
@@ -68,15 +68,31 @@ export function onBaselineOf(big, small) {
   return (b.height - b.ascent + s.ascent - below) / small.fontSize;
 }
 
+/** Room left beside a measured word, pt: its kerning into the next space is not in widestWord. */
+const WORD_SLACK = 1;
+
+/**
+ * The width `left` must keep so no word of it runs out of its box, pt: the widest unbreakable piece
+ * of each [text, style] pair (widestWord), the style a pdfMeasure one ({ fontFamily, fontSize,
+ * fontWeight }). For EndRow's `leftMin`.
+ */
+export const wordRoom = (...parts) => Math.max(0, ...parts.map(([text, style, tail]) => (text ? widestWord(text, style, tail) : 0)));
+
 /**
  * A row whose `left` side fills the line: flex 1 (basis 0) keeps the fields on its right whole —
  * react-pdf 4 reads flexShrink 0 as 1 (VM3-9). Bottom-aligned: a field on the right sits on the
  * left side's last line, and a field taller than a one-line left side lowers it to its baseline.
+ *
+ * `leftMin` (wordRoom): the left side's widest word. textkit cannot break a word, so a left side
+ * narrower than it drew the word over the date beside it (R3-002: "Ledgerline" in a 2-column
+ * Sidebar card). The left side keeps that width, and the fields wrap onto a line of their own under
+ * it, at its right end, when both do not fit; when they do, the row prints as it always has.
  */
-export function EndRow({ left, children }) {
+export function EndRow({ left, leftMin = 0, children }) {
+  const wraps = leftMin > 0;
   return (
-    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-      <View style={{ flex: 1 }}>{left}</View>
+    <View style={{ flexDirection: 'row', justifyContent: wraps ? 'flex-end' : 'space-between', alignItems: 'flex-end', ...(wraps ? { flexWrap: 'wrap' } : {}) }}>
+      <View style={{ flex: 1, ...(wraps ? { minWidth: leftMin + WORD_SLACK } : {}) }}>{left}</View>
       {children}
     </View>
   );
@@ -153,6 +169,10 @@ export function ItemHeader({ primary, sub, loc, dateStr, settings, titleStyle = 
     </Text>
   ) : null;
   const dateField = endField(dateStr, dateStyle, gap);
+  // The widest word of the title and of the sub, which a field beside them must leave room for (EndRow).
+  const primaryMin = wordRoom([primary, primaryBox]);
+  const subMin     = wordRoom([sub, subBox]);
+  const lineMin    = Math.max(wordRoom([primary, primaryBox, sub && italicSub ? textWidth(',', subBox) : 0]), subMin);
   // A one-line title's location: right-aligned on a line of its own under the date.
   const locUnder  = loc ? <EndRow left={null}>{endField(loc, locStyle, gap)}</EndRow> : null;
 
@@ -172,13 +192,14 @@ export function ItemHeader({ primary, sub, loc, dateStr, settings, titleStyle = 
   if (titleStyle === 'sidebyside') {
     return (
       <View {...keep}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-          <View style={{ flex: 1, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'baseline', gap: 6 }}>
+        <EndRow leftMin={Math.max(primaryMin, subMin)} left={(
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'baseline', gap: 6 }}>
             <Text style={{ fontSize: entrySize, fontWeight: 'bold', color: textColor }}>{primary}</Text>
             {sub ? <Text style={subStyle}>{sub}</Text> : null}
           </View>
+        )}>
           {dateField}
-        </View>
+        </EndRow>
         {locUnder}
       </View>
     );
@@ -187,7 +208,7 @@ export function ItemHeader({ primary, sub, loc, dateStr, settings, titleStyle = 
   if (titleStyle === 'inline') {
     return (
       <View {...keep}>
-        <EndRow left={inlineText}>{dateField}</EndRow>
+        <EndRow left={inlineText} leftMin={lineMin}>{dateField}</EndRow>
         {locUnder}
       </View>
     );
@@ -195,9 +216,9 @@ export function ItemHeader({ primary, sub, loc, dateStr, settings, titleStyle = 
 
   return (
     <View {...keep}>
-      <EndRow left={primaryText}>{dateField}</EndRow>
+      <EndRow left={primaryText} leftMin={primaryMin}>{dateField}</EndRow>
       {sub || loc ? (
-        <EndRow left={sub ? <Text style={subStyle}>{sub}</Text> : null}>{endField(loc, { ...locStyle, lineHeight: onSub }, gap)}</EndRow>
+        <EndRow left={sub ? <Text style={subStyle}>{sub}</Text> : null} leftMin={subMin}>{endField(loc, { ...locStyle, lineHeight: onSub }, gap)}</EndRow>
       ) : null}
     </View>
   );

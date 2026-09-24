@@ -15,7 +15,7 @@ import {
   getDateColor,
   shadesOf,
 } from './PdfSections';
-import { CentredLine, EndRow, endField, fieldGap, onBaselineOf } from './PdfItemHeader';
+import { CentredLine, EndRow, endField, fieldGap, onBaselineOf, wordRoom } from './PdfItemHeader';
 
 export function CertificationsSection({ section, settings, marginBottom, spaceBefore, itemGap, italicSubs, centered }) {
   const s        = section.settings || {};
@@ -50,6 +50,10 @@ export function CertificationsSection({ section, settings, marginBottom, spaceBe
               {item.url ? <Text style={{ color: accent }}>{' · '}<ContactValue value={item.urlLabel || item.url} href={safeHref(item.url)} style={{ color: accent }} /></Text> : null}
             </Text>
           );
+          // The name line's widest word, which the date wraps under rather than prints over (R3-002).
+          const nameBox = { fontFamily: font, fontSize: entrySize };
+          const nameMin = wordRoom([item.name || item.title, { ...nameBox, fontWeight: 'bold' }], [item.issuer, nameBox],
+            [item.credentialId && `ID: ${item.credentialId}`, nameBox], [item.url && (item.urlLabel || item.url), nameBox]);
           if (centered) {
             return (
               <View style={{ alignItems: 'center' }}>
@@ -60,7 +64,7 @@ export function CertificationsSection({ section, settings, marginBottom, spaceBe
           }
           return (
             // The date on the name line's LAST line and its baseline, so a name that wraps reads whole (ATS-5).
-            <EndRow left={nameLine}>{endField(dateStr, { fontSize: baseSize, color: dateColor, textAlign, lineHeight: onName }, 8)}</EndRow>
+            <EndRow left={nameLine} leftMin={nameMin}>{endField(dateStr, { fontSize: baseSize, color: dateColor, textAlign, lineHeight: onName }, 8)}</EndRow>
           );
         }}
       />
@@ -106,7 +110,7 @@ export function ProjectsSection({ section, settings, marginBottom, spaceBefore, 
               <View wrap={false} minPresenceAhead={Math.round(baseSize * (settings?.lineHeightValue ?? 1.5) * 2)} style={{ alignItems: flexAlign, marginBottom: 2 }}>
                 {centered
                   ? <CentredLine first={item.name ? name : null} date={dateStr} dateStyle={dateStyle} sepColor={shade.muted} gap={fieldGap(baseSize)} />
-                  : <EndRow left={name}>{endField(dateStr, dateStyle, fieldGap(baseSize))}</EndRow>}
+                  : <EndRow left={name} leftMin={wordRoom([item.name, { fontFamily: font, fontSize: entrySize, fontWeight: 'bold' }])}>{endField(dateStr, dateStyle, fieldGap(baseSize))}</EndRow>}
                 {item.technologies || item.url ? (
                   <Text style={{ fontSize: baseSize, color: shade.meta, textAlign }}>
                     {item.technologies}

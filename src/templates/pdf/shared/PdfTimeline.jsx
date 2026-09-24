@@ -3,7 +3,7 @@ import { Text } from './PdfText';
 import { solid, textShades } from './pdfColors';
 import { railColor, TIMELINE_RAIL } from './timelineRail';
 import { lineBox } from './pdfMeasure';
-import { EndRow, endField, fieldGap, getDateColor, onBaselineOf } from './PdfItemHeader';
+import { EndRow, endField, fieldGap, getDateColor, onBaselineOf, wordRoom } from './PdfItemHeader';
 import { SPACER, getColumnWidth } from './PdfSections';
 
 /**
@@ -174,7 +174,7 @@ export function TimelineHead({ primary, sub, subLine, loc, dateStr, settings, ti
     title = (
       <>
         {primaryText}
-        {subText || loc ? <EndRow left={subText}>{endField(loc, { ...locStyle, lineHeight: onSub }, gap)}</EndRow> : null}
+        {subText || loc ? <EndRow left={subText} leftMin={subLine ? 0 : wordRoom([sub, { fontFamily: font, fontSize: baseSize }])}>{endField(loc, { ...locStyle, lineHeight: onSub }, gap)}</EndRow> : null}
       </>
     );
   }
