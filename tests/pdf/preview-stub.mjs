@@ -39,17 +39,27 @@ export async function teardownPreview() {
 
 /**
  * A stand-in for pdf.js. `docs`: every document opened ({ name, destroyed }); `canvases`: every
- * canvas a page was painted into; `failPaint`: set true and the next paints fail.
+ * canvas a page was painted into; `failPaint`: set true and the next paints fail; `holdPaint(name)`:
+ * the paints of that résumé wait until the function it returns is called.
  */
 export function fakePdfjs() {
-  const stub = { docs: [], canvases: [], failPaint: false };
+  const held = new Map();
+  const stub = {
+    docs: [], canvases: [], failPaint: false,
+    holdPaint: (name) => {
+      let go;
+      held.set(name, new Promise((r) => { go = r; }));
+      return () => { held.delete(name); go(); };
+    },
+  };
   const page = (name) => ({
     view: [0, 0, 612, 792],
     getViewport: ({ scale }) => ({ width: 612 * scale, height: 792 * scale }),
     getTextContent: async () => ({ items: [{ str: name, transform: [1, 0, 0, 1, 72, 700], width: 100 }] }),
     render: ({ canvas }) => {
       stub.canvases.push(canvas);
-      return { promise: stub.failPaint ? Promise.reject(new Error('paint failed')) : Promise.resolve() };
+      if (stub.failPaint) return { promise: Promise.reject(new Error('paint failed')) };
+      return { promise: held.get(name) ?? Promise.resolve() };
     },
   });
   const lib = {

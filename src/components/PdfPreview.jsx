@@ -24,6 +24,12 @@ const DEBOUNCE_MS = 350;
 /** Free a pdf.js document (PDFDocumentProxy has no destroy(); its loading task does). */
 const release = (pdf) => { pdf?.loadingTask?.destroy(); };
 
+/**
+ * Free canvases' pixels now rather than when the garbage collector gets to them: iOS Safari caps
+ * a page's total canvas memory and fails the next paint past it (R2-170).
+ */
+const discard = (canvases) => { for (const c of canvases) { c.width = 0; c.height = 0; } };
+
 let pdfjsPromise = null;
 function loadPdfjs() {
   if (!pdfjsPromise) {
@@ -70,10 +76,12 @@ function pageText(content) {
 /** Paint every page into a fresh canvas at `cssWidth` (device-pixel sharp). */
 async function paint(pages, cssWidth) {
   const dpr = Math.min(window.devicePixelRatio || 1, 3);
+  const canvases = [];
   return Promise.all(pages.map(async ({ page, width, height }) => {
     const scale = (cssWidth * dpr) / width;
     const viewport = page.getViewport({ scale });
     const canvas = document.createElement('canvas');
+    canvases.push(canvas);
     canvas.width = Math.round(viewport.width);
     canvas.height = Math.round(viewport.height);
     canvas.style.width = '100%';
@@ -81,7 +89,7 @@ async function paint(pages, cssWidth) {
     canvas.style.display = 'block';
     await page.render({ canvasContext: canvas.getContext('2d'), viewport, canvas }).promise;
     return { canvas, cssHeight: (cssWidth * height) / width };
-  }));
+  })).catch((e) => { discard(canvases); throw e; });
 }
 
 function PageCanvas({ canvas, width, height, label }) {
@@ -110,6 +118,7 @@ export function PdfPreview({ render, input, zoom = 1, textId, title = 'Résumé'
   const docRef = useRef(null);
   const mounted = useRef(true);
   const rootRef = useRef(null);
+  const onScreen = useRef([]); // the canvases of the pages on screen
   const box = previewBox(input?.settings || input);
   const [available, setAvailable] = useState(() => box.widthPx + GUTTER_PX);
   // 100 % = fit the column (never wider than true page size); the zoom buttons scale from there.
@@ -151,7 +160,7 @@ export function PdfPreview({ render, input, zoom = 1, textId, title = 'Résumé'
         }
         const width = widthRef.current;
         const painted = await paint(pages, width);
-        if (unwanted()) { release(pdf); return; }
+        if (unwanted()) { release(pdf); discard(painted.map((p) => p.canvas)); return; }
         release(docRef.current);
         docRef.current = pdf;
         shownGen.current = gen;
@@ -177,10 +186,19 @@ export function PdfPreview({ render, input, zoom = 1, textId, title = 'Résumé'
     if (!active || !view || view.cssWidth === cssWidth) return undefined;
     let cancelled = false;
     paint(view.pages, cssWidth).then((painted) => {
-      if (!cancelled) setView((v) => (v && v.pages === view.pages ? { ...v, painted, cssWidth } : v));
+      if (cancelled) discard(painted.map((p) => p.canvas));
+      else setView((v) => (v && v.pages === view.pages ? { ...v, painted, cssWidth } : v));
     }).catch(() => { /* the next render repaints */ });
     return () => { cancelled = true; };
   }, [active, cssWidth, view]);
+
+  // Pages replaced (a newer render, a zoom repaint): free the canvases that left the screen. A
+  // layout effect, so it runs after PageCanvas has put the new ones up and before the browser paints.
+  useLayoutEffect(() => {
+    const next = view ? view.painted.map((p) => p.canvas) : [];
+    discard(onScreen.current.filter((c) => !next.includes(c)));
+    onScreen.current = next;
+  }, [view]);
 
   useEffect(() => {
     mounted.current = true; // again after StrictMode's trial unmount
@@ -188,6 +206,8 @@ export function PdfPreview({ render, input, zoom = 1, textId, title = 'Résumé'
       mounted.current = false;
       release(docRef.current);
       docRef.current = null;
+      discard(onScreen.current);
+      onScreen.current = [];
     };
   }, []);
 
