@@ -3,7 +3,7 @@ import { contactItems } from './contacts.js';
 import { skillGroup } from './skills.js';
 import { ACTION_VERBS, hasMetric, leadsWithActionVerb } from './bulletOptimizer.js';
 import { ATS_TIER_POINTS, atsRating, hasHeaderControls, inSidebarColumn, templateId, templateLabel, TEMPLATE_PICKER } from '../constants/templates.js';
-import { TEMPLATE_SECTION_DEFAULTS, resolveSection } from '../templates/pdf/shared/templateSectionDefaults.js';
+import { resolveSection } from '../templates/pdf/shared/templateSectionDefaults.js';
 
 // The ATS plain-text export lives in its own module; the ATS tab and Export menu import it from here.
 export { generateAtsPlainText } from './atsPlainText.js';
@@ -436,6 +436,28 @@ export function standardizeSectionsForAts(sections) {
 }
 
 /**
+ * Whether `section` is one the report's exp_title_order item reads as leading with the company: a
+ * shown experience section whose title order, as the PDF resolves it on `template` (its own setting,
+ * else the template's — Executive, Sidebar and Timeline lead with the role), is not Role / Co. The
+ * one rule of the item and of its fix, jobTitleFirst, so the button cannot rewrite a section the
+ * report never read — a hidden one, before R2-079.
+ */
+function leadsWithCompany(section, template) {
+  return !!section && section.visible !== false && section.type === 'experience'
+    && resolveSection(section, template).settings.titleOrder !== 'role';
+}
+
+/**
+ * "Put Job Title First": Role / Co. on each section leadsWithCompany names, and nothing else. Every
+ * other section is returned as the same object.
+ */
+export function jobTitleFirst(sections, template) {
+  if (!Array.isArray(sections)) return sections;
+  const t = templateId(template);
+  return sections.map((s) => (leadsWithCompany(s, t) ? { ...s, settings: { ...s.settings, titleOrder: 'role' } } : s));
+}
+
+/**
  * The types whose entries run to several lines — a heading, dates, a description. Printed two or
  * more to a row (Section Options → Grids), their lines sit side by side, and a parser that reads a
  * page line by line interleaves them. A skill group, a language, a certificate, an award or a
@@ -802,12 +824,7 @@ export function analyzeAtsScore(resume, jobDescriptionText = '') {
     }
 
     // 3. Title Order check (Job Title leads Role / Co. for 100% ATS indexing) (3 pts)
-    const hasCompanyLeading = expSections.some(s => {
-      const explicit = s.settings?.titleOrder || s.titleOrder;
-      // Unset, the template's own order (Executive, Sidebar and Timeline lead with the role): the one table the PDF reads.
-      const effectiveOrder = explicit || TEMPLATE_SECTION_DEFAULTS[currentTemplate]?.experience?.titleOrder || 'company';
-      return effectiveOrder === 'company';
-    });
+    const hasCompanyLeading = expSections.some(s => leadsWithCompany(s, currentTemplate));
 
     if (!hasCompanyLeading) {
       expPts += 3;

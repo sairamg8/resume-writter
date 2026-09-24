@@ -6,6 +6,7 @@ import {
 import {
   analyzeAtsScore,
   entriesInOneColumn,
+  jobTitleFirst,
   keywordSkillTarget,
   standardizeSectionsForAts,
   generateAtsPlainText
@@ -86,17 +87,13 @@ export default function AtsCheckerPanel({ resume, store }) {
     store.updateSections(updated);
   }
 
+  /**
+   * "Put Job Title First": Role / Co. on the sections the exp_title_order warning read as leading with
+   * the company (jobTitleFirst) — not a hidden section, nor one that already leads with the role (R2-079).
+   */
   function handleOptimizeExperienceOrder() {
     if (!resume || !Array.isArray(resume.sections)) return;
-    const updated = resume.sections.map(s => {
-      if (s.type !== 'experience') return s;
-      return {
-        ...s,
-        titleOrder: 'role',
-        settings: { ...s.settings, titleOrder: 'role' },
-      };
-    });
-    store.updateSections(updated);
+    store.updateSections(jobTitleFirst(resume.sections, resume.template));
   }
 
   /**

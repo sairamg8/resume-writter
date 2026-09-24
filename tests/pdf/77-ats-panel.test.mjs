@@ -2,7 +2,8 @@
 // what the app saves. tests/pdf/56 and 58 cover the layout and heading fixes; this file covers the rest
 // of the tab, each against the row that found it broken:
 //   - "Print entries one under another (Grids 1)", the side-by-side warning's fix (R2-021);
-//   - the job-description scanner's "+", which wrote into a hidden skill group (R2-024, R2-081).
+//   - the job-description scanner's "+", which wrote into a hidden skill group (R2-024, R2-081);
+//   - "Put Job Title First", which rewrote hidden sections the report never inspected (R2-079).
 //
 // The panel is mounted as Editor.jsx mounts it — the real useAppStore as its `store`, the résumé that
 // store holds as its `resume` — through react-dom/client in tests/pdf/fake-dom.mjs, with an in-memory
@@ -184,6 +185,58 @@ describe('Target Job Description Scanner → "+": the keyword goes where the ré
     try {
       assert.equal(byId(tab.saved(), 'sk').items[0].skills, 'AWS, GCP, Kubernetes');
       assert.deepEqual(tab.chips('matched'), ['Kubernetes']);
+    } finally { await tab.unmount(); }
+  });
+});
+
+describe('"Put Job Title First": it leads with the role on the sections the report read, and no other (R2-079)', () => {
+  const TITLE_FIRST = 'Put Job Title First (Role / Co.)';
+  const jobs = [{ company: 'Acme', role: 'Engineer' }];
+  const exp = (id, settings = {}, extra = {}) => ({ ...section('experience', jobs, settings, extra), id });
+  const order = (r, id) => byId(r, id).settings.titleOrder;
+
+  it('a hidden experience section set to Co. / Role is left as it is', async () => {
+    const tab = await atsTab(resume({ template: 'classic', sections: [
+      exp('shown', { titleOrder: 'company' }),
+      exp('hidden', { titleOrder: 'company' }, { visible: false }),
+    ] }));
+    try {
+      const before = tab.saved();
+      tab.click(TITLE_FIRST);
+      const after = tab.saved();
+      assert.equal(order(after, 'shown'), 'role');
+      assert.deepEqual(byId(after, 'hidden'), byId(before, 'hidden'), 'the hidden section is not touched');
+      assert.ok(!tab.labels().includes(TITLE_FIRST), 'the warning and its fix are gone');
+    } finally { await tab.unmount(); }
+  });
+
+  it('a section that already leads with the role, by its own setting or its template\'s, is left as it is', async () => {
+    const tab = await atsTab(resume({ template: 'classic', sections: [
+      exp('co', { titleOrder: 'company' }),
+      exp('role', { titleOrder: 'role' }),
+      exp('unset', { titleOrder: undefined }),
+    ] }));
+    try {
+      const before = tab.saved();
+      tab.click(TITLE_FIRST);
+      const after = tab.saved();
+      assert.equal(order(after, 'co'), 'role');
+      assert.deepEqual(byId(after, 'role'), byId(before, 'role'));
+      assert.equal(order(after, 'unset'), 'role', 'unset on Classic prints the company first, so it is the report\'s too');
+    } finally { await tab.unmount(); }
+  });
+
+  it('on Executive, whose jobs lead with the role unless set otherwise, only the Co. / Role section changes', async () => {
+    const tab = await atsTab(resume({ template: 'executive', sections: [
+      exp('co', { titleOrder: 'company' }),
+      exp('unset', { titleOrder: undefined }),
+    ] }));
+    try {
+      const before = tab.saved();
+      tab.click(TITLE_FIRST);
+      const after = tab.saved();
+      assert.equal(order(after, 'co'), 'role');
+      assert.deepEqual(byId(after, 'unset'), byId(before, 'unset'), 'Executive already prints it role first');
     } finally { await tab.unmount(); }
   });
 });
