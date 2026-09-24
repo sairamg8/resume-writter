@@ -4,11 +4,15 @@
 // (or the same id twice) were edited, renamed and deleted together, as the store finds them by id
 // (R2-055). A section with no title crashed the PDF (title.toUpperCase()), one with no items the editor
 // (R2-056). Grids stored as text ("2") or out of range crammed a row, as the grid steps by `i += cols`
-// (R2-110). normalizeResume() now gives every résumé coming in (load, import, restore, cloud merge) a
-// list of section objects, each with a unique id, a title and a list of entry objects with unique ids,
-// and Grids of 1–4 — keeping every valid id as it was, since the cloud sync keys on them.
+// (R2-110); Grids of 3 or 4 on a section other than Skills, which Section Options offers only 1 and 2
+// for, showed no chip. normalizeResume() now gives every résumé coming in (load, import, restore,
+// cloud merge) a list of section objects, each with a unique id, a title and a list of entry objects
+// with unique ids, and Grids Section Options offers (1–4 for Skills, 1–2 for the rest) — keeping
+// every valid id as it was, since the cloud sync keys on them.
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import { createElement } from 'react';
+import { renderToString } from 'react-dom/server';
 import { setup, teardown, resume, section, experience, render, renderDocx, read, allText, loadModule } from './harness.mjs';
 
 before(setup);
@@ -128,6 +132,37 @@ describe('R2-110: Grids stored as text or out of range', () => {
       assert.equal(settings.columns, want, JSON.stringify(stored));
       if (want === undefined) assert.ok(!('columns' in settings), `${JSON.stringify(stored)}: dropped`);
     }
+  });
+
+  it('a section other than Skills keeps at most 2, the Grids Section Options offers it; Skills up to 4', async () => {
+    const { normalizeResume } = await normalizer();
+    for (const type of ['experience', 'education', 'projects', 'languages', 'certifications', 'awards', 'volunteering', 'references', 'custom']) {
+      for (const [stored, want] of [[3, 2], [4, 2], ['3', 2], [9, 2], [2, 2], [1, 1]]) {
+        const raw = asFile(resume({ sections: [section(type, [{}], { columns: stored })] }));
+        assert.equal(normalizeResume(raw).sections[0].settings.columns, want, `${type} ${JSON.stringify(stored)}`);
+      }
+    }
+    for (const [stored, want] of [[3, 3], [4, 4], [9, 4]]) {
+      assert.equal(normalizeResume(asFile(resume({ sections: [section('skills', [{}], { columns: stored })] }))).sections[0].settings.columns, want);
+    }
+  });
+
+  it('Section Options shows the Grids that prints: 2 active for an imported 3, and the PDF prints two to a row', async () => {
+    const { normalizeResume } = await normalizer();
+    const { SectionCustomizer } = await loadModule('/src/components/SectionEditorCustomizer.jsx');
+    const items = ['Alpha', 'Bravo', 'Charlie', 'Delta'].map((name) => ({ name, issuer: 'Board' }));
+    const raw = asFile(resume({ sections: [section('certifications', items, { columns: 3 })] }));
+    const r = normalizeResume(raw);
+    const html = renderToString(createElement(SectionCustomizer, { section: r.sections[0], template: r.template, updateSectionSettings: () => {}, settings: r.settings }));
+    const grids = html.slice(html.indexOf('>Grids<'));
+    const active = [...grids.slice(0, grids.indexOf('</div></div>') + 12).matchAll(/<button[^>]*class="([^"]*)"[^>]*>(\d)<\/button>/g)]
+      .filter(([, cls]) => cls.includes('bg-blue-600')).map(([, , n]) => n);
+    assert.deepEqual(active, ['2']);
+    const ys = async (x) => {
+      const pages = await read(await render(x));
+      return ['Alpha', 'Bravo', 'Charlie', 'Delta'].map((n) => Math.round(pages[0].items.find((t) => t.str.includes(n)).y));
+    };
+    assert.deepEqual(await ys(r), await ys(resume({ sections: [section('certifications', items, { columns: 2 })] })));
   });
 
   it('0, which every reader took as none, still prints the default: Languages two to a row', async () => {

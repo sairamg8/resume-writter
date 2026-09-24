@@ -268,8 +268,8 @@ function withProjectUrls(r) {
 
 /**
  * `resume` made current: a template the app offers (withKnownTemplate), sections and entries that
- * are objects with unique ids, a title and Grids of 1–4 (withSectionShapes), the Design panel's
- * numbers stored as numbers in their controls' ranges (withDesignNumbers), valid colors
+ * are objects with unique ids, a title and Grids Section Options offers (withSectionShapes), the
+ * Design panel's numbers stored as numbers in their controls' ranges (withDesignNumbers), valid colors
  * stored as '#rrggbb' (withNormalizedColors), text wherever it keeps text (withTextFields), a
  * project's link as its `url` (withProjectUrls) and its skill groups as skills (withSkillNames),
  * whatever its version; then each one-time migration newer than its own `dataVersion`, after
