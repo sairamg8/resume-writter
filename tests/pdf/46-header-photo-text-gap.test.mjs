@@ -96,11 +96,29 @@ describe('Photo ↔ Text in the cover letter', () => {
 });
 
 describe('Photo ↔ Text in Word', () => {
-  it('Word prints no photo, so the gap changes nothing', async () => {
+  // Word prints the photo now (R2-126): it no longer ignores the gap, it moves the text as the PDF does.
+  it('each value moves the text beside the photo (its cell) or under it (the space after it) by exactly its change, on the PDF\'s axis', async () => {
+    /** Where Word's text starts against the photo, pt: the photo cell's width, or the space under the photo. */
+    const offset = async (t, s) => {
+      const { xml } = await renderDocx(cv(t, s));
+      const cell = /<w:gridCol w:w="(\d+)"\/>/.exec(xml.split('Jordan Rivera')[0])?.[1];
+      const under = /w:after="(\d+)"/.exec(xml.split('</w:p>').find((p) => p.includes('<w:drawing>')))?.[1];
+      return cell ? { axis: 'x', pt: Number(cell) / 20 } : { axis: 'y', pt: Number(under) / 20 };
+    };
     for (const t of TEMPLATES) {
-      // A hyperlink's relationship id is random per export.
-      const xml = async (s) => (await renderDocx(cv(t, s))).xml.replace(/r:id="[^"]*"/g, '');
-      assert.equal(await xml({ photoTextGap: 40 }), await xml(), t);
+      const unset = await offset(t, {});
+      assert.equal(unset.axis, AXIS[t], `${t}: the photo ${AXIS[t] === 'x' ? 'beside' : 'above'} the text, as in the PDF`);
+      for (const px of [0, 12, 48]) near((await offset(t, { photoTextGap: px })).pt - unset.pt, px * 0.75 - OWN[t], `${t} ${px}px`);
+    }
+  });
+
+  it('with no photo, or the photo hidden, the gap changes nothing', async () => {
+    for (const t of TEMPLATES) {
+      for (const personal of [{ ...PERSONAL, photo: '' }, { ...PERSONAL, hiddenFields: ['photo'] }]) {
+        // A hyperlink's relationship id is random per export.
+        const xml = async (s) => (await renderDocx(cv(t, s, personal))).xml.replace(/r:id="[^"]*"/g, '');
+        assert.equal(await xml({ photoTextGap: 40 }), await xml(), t);
+      }
     }
   });
 });

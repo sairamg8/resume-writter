@@ -131,8 +131,11 @@ describe('Word: Line Height (R2-062)', () => {
         r.sections.push(section('skills', [{ category: 'Tools', skills: 'Go, Rust' }]));
         r.sections[0].items[0].bullets = ['A legacy bullet'];
         const ps = paras((await renderDocx(r)).xml);
-        const want = `atLeast:${Math.round(lineHeightValue * fontSizeBase * 20)}`;
         for (const text of ['Alpha work.', 'Summary line.', 'A legacy bullet', 'Tools']) {
+          // Each at its size: Base, but the Sidebar page prints a job's description and bullets half
+          // a point under Entry Header (R2-118).
+          const size = template === 'sidebar' && text !== 'Summary line.' && text !== 'Tools' ? fontSizeBase - 0.5 : fontSizeBase;
+          const want = `atLeast:${Math.round(lineHeightValue * size * 20)}`;
           const got = lineOf(ps, text);
           if (got !== want) wrong.push(`${template} ${lineHeightValue}×${fontSizeBase} pt "${text}": ${got} (want ${want})`);
         }

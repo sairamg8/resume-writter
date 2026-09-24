@@ -28,7 +28,7 @@ The owner approved the temporary `claude/wf-*` branches on 2026-09-24 12:47.
 | ats | R2-020 021 022 023 024 025 027 078 079 080 081 163 166 | session_01GG1ULRf3BEFijyNRzXNJoT | **merged** |
 | pdf-pagination | R2-046 047 048 049 104 109 111 | session_013Hg3VSwaVkaQmNCkotTNsb | still running in its cloud session at the reboot |
 | design-sidebar | R2-013 051 059 082 083 087 088 089 090 096 119 120 121 123 | session_014y3tSMD21g1ji9Ct73pZQh | **merged** up to a78df27 — follow-up 45fd98c + 4daa9cb (JSON Resume / Backup keep Single) NOT merged: conflicts in jsonResumeExport.js / jsonResumeImport.js with text-exports' Date-format round trip (751b732); keep both |
-| word | R2-061 065 066 070 114 118 124 125 126 128 132 | session_01Kms1vF1NWaaH7yWz6e2UWr | still running in its cloud session at the reboot |
+| word | R2-061 065 066 070 114 118 124 125 126 128 132 | session_01Kms1vF1NWaaH7yWz6e2UWr | **merged** |
 | text-exports | R2-026 034 052 053 054 058 060 064 122 129 131 | session_01YUpaiGLx34s4T8huDzmJNW | **merged** (with follow-up: the letter's text export) |
 | jobs | R2-035 036 038 039 040 042 075 099 100 101 102 156 | session_01TxTRPE1CXJu54unwVCNutZ | **merged** (with follow-ups: page tests, salary sort, re-import) |
 | app-shell | R2-050 071 072 073 074 076 077 084 086 144 | session_01S681bgs4qE2ric3C7MivaC | **merged** (8c60c6c) |

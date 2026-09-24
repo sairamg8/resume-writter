@@ -1,5 +1,6 @@
 import {
   Paragraph, TextRun, BorderStyle, TabStopType, ExternalHyperlink, AlignmentType, HeadingLevel, LineRuleType,
+  Table, TableBorders, TableCell, TableLayoutType, TableRow, WidthType,
 } from 'docx';
 import { parseRichText, safeHref } from '@/utils/richText';
 import { PAGE_MARKS } from '@/templates/pdf/shared/pdfColors';
@@ -44,6 +45,32 @@ export const lineSpacing = (lineHeight, size) => (lineHeight > 0 && size > 0
 export const gapPara = (pt) => (pt > 0
   ? [new Paragraph({ children: [], spacing: { before: 0, after: 0, line: Math.max(1, twips(pt)), lineRule: LineRuleType.EXACT } })]
   : []);
+
+/**
+ * A section's entries in Section Options → Grids (R2-070): a borderless table of `grid`'s columns
+ * (sectionLook's), `cells` (each an entry's paragraphs) in reading order, row by row, as the PDF's
+ * RenderColGrid lays them out. Each column starts where the PDF's cell does; its text is as wide as the
+ * PDF's cell, the gap to the next cell its right margin. Rows after the first stand `gapPt` below
+ * the one above (Between Items), and a short last row is filled with empty cells.
+ */
+export function gridTable(cells, { cols, cell, starts, width }, gapPt) {
+  const widths = starts.map((x, i) => (starts[i + 1] ?? width) - x);
+  const rows = [];
+  for (let i = 0; i < cells.length; i += cols) rows.push(cells.slice(i, i + cols));
+  return new Table({
+    width: { size: width, type: WidthType.DXA },
+    columnWidths: widths,
+    layout: TableLayoutType.FIXED,
+    borders: TableBorders.NONE,
+    rows: rows.map((row, r) => new TableRow({
+      children: widths.map((w, c) => new TableCell({
+        children: row[c] || [new Paragraph({ children: [] })],
+        width: { size: w, type: WidthType.DXA },
+        margins: { marginUnitType: WidthType.DXA, top: r ? twips(gapPt) : 0, bottom: 0, left: 0, right: w - cell },
+      })),
+    })),
+  });
+}
 
 /** A '#rrggbb' colour as Word's 'rrggbb'; anything else gives `fallback`. */
 export function accent2Hex(color, fallback = '2563eb') {
@@ -204,21 +231,25 @@ export function descriptionToParagraphs(html, base = { size: 20, color: '374151'
  * at `tab` twips, the width between the page's margins (wordContentTwips) — or, `centered` (Section
  * Options → Alignment "Center"), the line centred and the date centred on a line of its own below it.
  * Empty parts (null, false, '') are left out, so a line with nothing but a date prints the date
- * alone. `place` ({ text, color, size }: the entry's location) prints on a line of its own under
- * the date — at the same right tab, or centred — never in the title's text, where a parser reads
- * it as part of the job title or the company (ATS-1), as the PDF keeps it a field of its own.
+ * alone. `under` (runs: Title "Stacked"'s second field, R2-070) starts the line under the title, as
+ * the PDF's sub line does. `place` ({ text, color, size }: the entry's location) ends that line — at
+ * the same right tab, or on a centred line of its own — or has a line of its own there, never in the
+ * title's text, where a parser reads it as part of the job title or the company (ATS-1), as the PDF
+ * keeps it a field of its own.
  */
-export function dateRightPara(leftChildren, rightText, { color: colorHex, centered = false, size = 20, place = null, tab }) {
+export function dateRightPara(leftChildren, rightText, { color: colorHex, centered = false, size = 20, place = null, tab, under = [] }) {
   const left = leftChildren.filter(Boolean);
-  const date = (extra) => (rightText ? [new TextRun({ text: String(rightText), color: colorHex, size, ...extra })] : []);
-  const where = place?.text ? String(place.text) : '';
+  const sub = under.filter(Boolean);
+  const date = rightText ? [new TextRun({ text: String(rightText), color: colorHex, size })] : [];
+  const where = place?.text ? [new TextRun({ text: String(place.text), color: place.color, size: place.size })] : [];
+  // The lines that print, one after another: a line with nothing on it takes no break.
+  const lines = (list) => list.filter((line) => line.length).flatMap((line, i) => (i ? [new TextRun({ break: 1 }), ...line] : line));
   if (centered) {
-    const under = where ? [new TextRun({ text: where, color: place.color, size: place.size, ...(left.length || rightText ? { break: 1 } : {}) })] : [];
-    return new Paragraph({ children: [...left, ...date(left.length ? { break: 1 } : {}), ...under], keepNext: true, ...centredIf(true) });
+    return new Paragraph({ children: lines([left, date, sub, where]), keepNext: true, ...centredIf(true) });
   }
-  const under = where ? [new TextRun({ text: '\t', ...(left.length || rightText ? { break: 1 } : {}) }), new TextRun({ text: where, color: place.color, size: place.size })] : [];
+  const tabbed = (runs) => (runs.length ? [new TextRun({ text: '\t' }), ...runs] : []);
   return new Paragraph({
-    children: [...left, ...(rightText ? [new TextRun({ text: '\t' })] : []), ...date(), ...under],
+    children: lines([[...left, ...tabbed(date)], [...sub, ...tabbed(where)]]),
     tabStops: [{ type: TabStopType.RIGHT, position: tab }],
     keepNext: true,
   });

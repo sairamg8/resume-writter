@@ -63,7 +63,8 @@ describe('Word prints skill categories in the case the PDF prints them in (ONB-2
       for (const [skillsStyle, main] of Object.entries(upper)) {
         const expected = template === 'sidebar' || main ? 'FRONT-END TOOLS' : 'Front-end Tools';
         const texts = (await renderDocx(skillsResume(template, skillsStyle))).texts;
-        assert.ok(texts.includes(`${expected}: React, CSS`), `${template}, ${skillsStyle}: ${JSON.stringify(texts)}`);
+        // Stacked prints the category on a line of its own, as its PDF does (R2-070).
+        assert.ok(texts.includes(skillsStyle === 'stacked' ? expected : `${expected}: React, CSS`), `${template}, ${skillsStyle}: ${JSON.stringify(texts)}`);
       }
     }
   });
