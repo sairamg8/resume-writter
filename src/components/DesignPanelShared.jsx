@@ -1,5 +1,5 @@
-import { useState, useId } from 'react';
-import { ChevronDown, RotateCcw } from 'lucide-react';
+import { useState, useId, useRef } from 'react';
+import { Check, ChevronDown, RotateCcw } from 'lucide-react';
 import { useTypedNumber } from '@/hooks/useTypedNumber';
 
 export function Label({ children }) {
@@ -72,19 +72,50 @@ export function NumberRow({ label, value, onChange, min = 1, max = 200, step = 1
   );
 }
 
-export function SegmentControl({ options, value, onChange }) {
+/**
+ * A row of options, one chosen (Font Size, the Sidebar's Layout). A radio group, as the ui kit's
+ * SegmentedControl is: each option a radio with aria-checked, only the chosen one in the Tab order,
+ * ←/→ (and ↑/↓) move and choose, Home/End jump. The chosen one shows a check, not only its colour,
+ * and each option is 44 px tall, a finger's size (R2-139). `label` names the group.
+ */
+export function SegmentControl({ options, value, onChange, label }) {
+  const refs = useRef({});
+  const at = options.findIndex(opt => opt.value === value);
+  const tabStop = at >= 0 ? at : 0;
+
+  function onKeyDown(e) {
+    const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key];
+    let next = null;
+    if (step) {
+      // From none chosen, → takes the first and ← the last.
+      const from = at >= 0 ? at : step > 0 ? -1 : options.length;
+      next = options[(from + step + options.length) % options.length];
+    } else if (e.key === 'Home') next = options[0];
+    else if (e.key === 'End') next = options[options.length - 1];
+    if (!next) return;
+    e.preventDefault();
+    onChange(next.value);
+    refs.current[String(next.value)]?.focus();
+  }
+
   return (
-    <div className="flex gap-1">
-      {options.map(opt => (
+    <div role="radiogroup" aria-label={label} onKeyDown={onKeyDown} className="flex gap-1">
+      {options.map((opt, i) => (
         <button
           key={opt.value}
+          ref={el => { refs.current[String(opt.value)] = el; }}
+          type="button"
+          role="radio"
+          aria-checked={value === opt.value}
+          tabIndex={i === tabStop ? 0 : -1}
           onClick={() => onChange(opt.value)}
-          className={`flex-1 py-1.5 text-xs font-medium rounded border transition-all ${
+          className={`flex-1 min-h-11 inline-flex items-center justify-center gap-1 px-1.5 text-xs font-medium rounded border transition-all ${
             value === opt.value
               ? 'bg-blue-600 border-blue-600 text-white'
               : 'border-gray-200 text-gray-600 hover:border-blue-300 hover:text-blue-600'
           }`}
         >
+          {value === opt.value && <Check size={12} aria-hidden="true" className="shrink-0" />}
           {opt.label}
         </button>
       ))}
@@ -94,11 +125,15 @@ export function SegmentControl({ options, value, onChange }) {
 
 export function DesignSection({ title, defaultOpen = false, onReset, children }) {
   const [open, setOpen] = useState(defaultOpen);
+  // The header says whether the section is open and, while it is, which box it opened (R2-139).
+  const panelId = useId();
   return (
     <div className="border border-gray-200 rounded-xl overflow-hidden">
       <div className="flex items-center">
         <button
           onClick={() => setOpen(o => !o)}
+          aria-expanded={open}
+          aria-controls={open ? panelId : undefined}
           className="flex-1 flex items-center justify-between pl-4 pr-2 py-3 hover:bg-gray-50 transition-colors text-left"
         >
           <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">{title}</span>
@@ -114,7 +149,7 @@ export function DesignSection({ title, defaultOpen = false, onReset, children })
           </button>
         )}
       </div>
-      {open && <div className="px-4 pb-4 pt-2 border-t border-gray-100 space-y-4">{children}</div>}
+      {open && <div id={panelId} className="px-4 pb-4 pt-2 border-t border-gray-100 space-y-4">{children}</div>}
     </div>
   );
 }

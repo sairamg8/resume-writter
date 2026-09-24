@@ -1,3 +1,5 @@
+import { TEMPLATE_IDS } from '../../src/constants/templates.js';
+
 /** Resume the store marks active. */
 const active = (s) => s.resumes.find((r) => r.id === s.activeId);
 const settingsOf = (s) => active(s).settings;
@@ -50,6 +52,46 @@ describe('design — templates', () => {
     openDesign();
     cy.contains('button', 'Clean & whitespace-first').should('have.class', 'border-blue-500');
     cy.contains('button', 'Two-column header').should('not.have.class', 'border-blue-500');
+    // Not by colour alone: a radio group of cards, the one checked saying "Selected" (R2-139).
+    cy.get('[role="radiogroup"][aria-label="Template"] [role="radio"][data-testid="template-card"]').should('have.length', TEMPLATE_IDS.length);
+    cy.get('[data-testid="template-card"][aria-checked="true"]').should('have.length', 1)
+      .and('contain.text', 'Minimal').and('contain.text', 'Selected');
+    cy.get('[data-testid="template-card"][aria-checked="false"]').should('have.length', TEMPLATE_IDS.length - 1)
+      .each(($card) => expect($card.text()).not.to.contain('Selected'));
+    cy.contains('[data-testid="template-card"]', 'Classic').click();
+    cy.contains('[data-testid="template-card"]', 'Classic').should('have.attr', 'aria-checked', 'true').and('contain.text', 'Selected');
+    cy.contains('[data-testid="template-card"]', 'Minimal').should('have.attr', 'aria-checked', 'false').and('not.contain.text', 'Selected');
+  });
+
+  it('the Design button says "Design", is 44 px square at least, whole in its bar, and pressed while Design is open (R2-139)', () => {
+    cy.visitEditor('classic');
+    const button = () => cy.get('button[title="Design & Customize"]');
+    button().should('have.text', 'Design').and('have.attr', 'aria-pressed', 'false').then(([b]) => {
+      const box = b.getBoundingClientRect();
+      const bar = b.parentElement;
+      expect(box.width, 'width').to.be.at.least(44);
+      expect(box.height, 'height').to.be.at.least(44);
+      expect(box.right, 'its right edge inside the tab bar').to.be.at.most(bar.getBoundingClientRect().right + 0.5);
+      expect(bar.scrollWidth, 'the tab bar fits the panel').to.be.at.most(bar.clientWidth);
+    });
+    button().click();
+    button().should('have.attr', 'aria-pressed', 'true');
+    cy.contains('button', 'Template').should('have.attr', 'aria-expanded', 'true');
+    button().click();
+    button().should('have.attr', 'aria-pressed', 'false');
+  });
+
+  it('the Sidebar\'s Layout is a radio group: 44 px options, the chosen one checked and ticked (R2-139)', () => {
+    cy.visitEditor('sidebar');
+    openDesign();
+    const option = (label) => cy.contains('[role="radiogroup"][aria-label="Layout"] [role="radio"]', label);
+    option('Two columns').should('have.attr', 'aria-checked', 'true').find('svg').should('exist');
+    option('Single · ATS-safe').should('have.attr', 'aria-checked', 'false').find('svg').should('not.exist');
+    option('Single · ATS-safe').invoke('outerHeight').should('be.at.least', 44);
+    option('Single · ATS-safe').click();
+    cy.store().should((s) => expect(settingsOf(s).sidebarSingleColumn).to.eq(true));
+    option('Single · ATS-safe').should('have.attr', 'aria-checked', 'true').find('svg').should('exist');
+    option('Two columns').should('have.attr', 'aria-checked', 'false');
   });
 
   /** Set the colour input labelled `label` to `color`, as its picker does (React reads the input event). */

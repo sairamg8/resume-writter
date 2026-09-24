@@ -127,6 +127,7 @@ export function TypographySection({ settings, template, updateSetting, onReset }
       <div>
         <Label>Font Size</Label>
         <SegmentControl
+          label="Font Size"
           value={sizePreset}
           onChange={v => setBase(SIZE_PRESETS[v])}
           options={[{ label: 'Small', value: 'small' }, { label: 'Normal', value: 'normal' }, { label: 'Large', value: 'large' }]}

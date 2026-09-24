@@ -105,12 +105,17 @@ export function EditorModeBar({ activeTab, setActiveTab }) {
           <ShieldCheck size={13} className="shrink-0" /> ATS Check
         </button>
       </div>
+      {/* Named on screen at every width, not by its tooltip alone (a phone shows no tooltip), 44 px
+          square for a finger, and aria-pressed says whether Design is open (R2-139). Its label reads
+          at 4.5:1 or more: amber-700 on amber-50, gray-500 on white. The specs find it by its title. */}
       <button
         onClick={() => setActiveTab(prev => (prev === 'design' ? 'resume' : 'design'))}
         title="Design & Customize"
-        className={`p-2 sm:p-2.5 rounded-xl border transition-all shrink-0 ${activeTab === 'design' ? 'bg-amber-50 border-amber-300 text-amber-600 shadow-sm' : 'border-gray-200 bg-white text-gray-400 hover:text-gray-700 hover:border-gray-300 hover:bg-gray-50'}`}
+        aria-pressed={activeTab === 'design'}
+        className={`min-h-11 min-w-11 px-1.5 flex flex-col items-center justify-center gap-0.5 rounded-xl border transition-all shrink-0 ${activeTab === 'design' ? 'bg-amber-50 border-amber-300 text-amber-700 shadow-sm' : 'border-gray-200 bg-white text-gray-500 hover:text-gray-700 hover:border-gray-300 hover:bg-gray-50'}`}
       >
-        <Palette size={15} />
+        <Palette size={15} aria-hidden="true" />
+        <span className="text-[10px] font-semibold leading-none">Design</span>
       </button>
     </div>
   );

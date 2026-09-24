@@ -95,7 +95,18 @@ describe('editor on a phone (375 × 812)', () => {
 
   it('the Design and ATS Check tabs open on the phone, full width', () => {
     const fullWidth = () => cy.get(`${TAB_BOX}:visible`).should('have.length', 1).invoke('outerWidth').should('eq', PHONE[0]);
+    // The one door to Design: named on screen (a phone shows no tooltip), 44 px square at least, and
+    // whole on the screen, not cut off by the tab bar it sits in, which scrolls sideways (R2-139).
+    cy.get('button[title="Design & Customize"]').should('have.text', 'Design').then(([b]) => {
+      const box = b.getBoundingClientRect();
+      const bar = b.parentElement;
+      expect(box.width, 'width').to.be.at.least(44);
+      expect(box.height, 'height').to.be.at.least(44);
+      expect(box.right, 'its right edge on the screen').to.be.at.most(PHONE[0]);
+      expect(bar.scrollWidth, 'the tab bar fits the screen').to.be.at.most(bar.clientWidth);
+    });
     cy.get('button[title="Design & Customize"]').click();
+    cy.get('button[title="Design & Customize"]').should('have.attr', 'aria-pressed', 'true');
     cy.contains('button', 'Template').should('be.visible');
     fullWidth();
     editorFitsTheScreen();

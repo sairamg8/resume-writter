@@ -42,10 +42,18 @@ export default function DesignPanel({ resume, updateSetting, setTemplate, resetS
     <div className="space-y-3 py-2">
 
       <DesignSection title="Template" defaultOpen>
-        <div className="space-y-1.5">
+        {/* A radio group whose cards say which one is chosen by aria-checked and a "Selected" word,
+            not by colour alone (R2-139). Each card stays a Tab stop and picks on a click, Space or
+            Enter only, not on an arrow key as a radio group's would: a pick is a template switch,
+            which sets the template's headings, so every card an arrow passed would switch it. */}
+        <div role="radiogroup" aria-label="Template" className="space-y-1.5">
           {TEMPLATE_PICKER.map(t => (
             <button
               key={t.id}
+              type="button"
+              role="radio"
+              aria-checked={current === t.id}
+              data-testid="template-card"
               // The card already selected is no switch: it would reset the headings (R2-087).
               onClick={() => { if (t.id !== current) setTemplate(t.id); }}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border text-left transition-all ${
@@ -61,7 +69,7 @@ export default function DesignPanel({ resume, updateSetting, setTemplate, resetS
                 <div className="h-0.5 bg-white/30 rounded-sm w-full mt-0.5" />
                 <div className="h-0.5 bg-white/30 rounded-sm w-5/6" />
               </div>
-              <div>
+              <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5">
                   <p className={`text-sm font-medium ${current === t.id ? 'text-blue-700' : 'text-gray-700'}`}>{t.label}</p>
                   {/* The ATS Check's verdict on this template as the résumé would print it (R2-011): the
@@ -69,8 +77,11 @@ export default function DesignPanel({ resume, updateSetting, setTemplate, resetS
                       prints Classic's certified page. TEMPLATE_PICKER's own `ats` knows no settings. */}
                   {atsRating(t.id, settings).safe && <span className="text-[9px] font-bold px-1 py-0.5 rounded bg-emerald-100 text-emerald-700">ATS</span>}
                 </div>
-                <p className="text-[10px] text-gray-400">{t.desc}</p>
+                {/* gray-600 at 11 px reads at about 7:1, on white and on the chosen card's blue; gray-400 read 2.5:1, under WCAG's 4.5 (R2-139). */}
+                <p className="text-[11px] text-gray-600">{t.desc}</p>
               </div>
+              {/* aria-checked already says it to a screen reader. */}
+              {current === t.id && <span aria-hidden="true" className="shrink-0 text-[10px] font-semibold text-blue-600">Selected</span>}
             </button>
           ))}
         </div>
@@ -78,6 +89,7 @@ export default function DesignPanel({ resume, updateSetting, setTemplate, resetS
           <div className="mt-3 pt-3 border-t border-gray-100">
             <Label>Layout</Label>
             <SegmentControl
+              label="Layout"
               options={[
                 { label: 'Two columns', value: false },
                 { label: 'Single · ATS-safe', value: true },
@@ -85,22 +97,22 @@ export default function DesignPanel({ resume, updateSetting, setTemplate, resetS
               value={!!settings.sidebarSingleColumn}
               onChange={v => updateSetting('sidebarSingleColumn', v)}
             />
-            <p className="text-[10px] text-gray-400 mt-2">
+            <p className="text-[11px] text-gray-600 mt-2">
               Single column reads cleanly in every applicant-tracking system. The two-column look can interleave when a portal parses it.
             </p>
           </div>
         )}
         {current === 'academic' && (
-          <p className="text-[10px] text-gray-400 mt-2">
+          <p className="text-[11px] text-gray-600 mt-2">
             Academic brings its own type and spacing: a serif, a centred header, section titles at the body&apos;s size and tighter Spacing. Every one of them can be changed below.
           </p>
         )}
         {current === 'compact' && (
-          <p className="text-[10px] text-gray-400 mt-2">
+          <p className="text-[11px] text-gray-600 mt-2">
             Compact brings its own type and spacing: 9 pt text, narrow margins, the job title beside the name and tighter Spacing, and lays skills, certifications, awards, languages and references out two to a row (each section&apos;s Grids). Every one of them can be changed.
           </p>
         )}
-        <p className="text-[10px] text-gray-400 mt-2">The cover letter&apos;s header takes the template&apos;s look too.</p>
+        <p className="text-[11px] text-gray-600 mt-2">The cover letter&apos;s header takes the template&apos;s look too.</p>
       </DesignSection>
 
       <ColorsSection resume={resume} settings={settings} updateSetting={updateSetting} onReset={() => resetSection(COLOR_KEYS)} />
