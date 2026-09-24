@@ -103,3 +103,11 @@ export function letterSignature(cl = {}, personal = {}) {
     wide: cl.signatureSpace === 'wide',
   };
 }
+
+/**
+ * The résumé photo the letter may fall back on: none when the user hid it under Personal Info →
+ * Photo, so the letter never prints a photo the résumé leaves out (R2-092). The letter's own photo
+ * (clPhoto) is its own choice and prints either way.
+ */
+export const letterResumePhoto = (personal = {}) =>
+  (list(personal?.hiddenFields)?.includes('photo') ? null : personal?.photo || null);

@@ -14,7 +14,7 @@ import { DOUBLE_RULE_GAP, LETTERHEAD_GAP } from './shared/letterhead';
 import { photoTextAlignItems } from '@/constants/templates';
 import { setGapPt } from '@/constants/headerSpacing';
 import { contactItems } from '@/utils/contacts';
-import { letterFieldsPosition } from '@/utils/coverLetter';
+import { letterFieldsPosition, letterResumePhoto } from '@/utils/coverLetter';
 import { isDrawableImage } from '@/utils/imageUpload';
 import { MM_TO_PT } from './shared/pdfUnits';
 import { opacityFor } from './shared/pdfColors';
@@ -80,7 +80,8 @@ export function CoverLetterHeader({ look, personal, settings, cl, hidden, contac
   // The letter's own photo, else the résumé's — the first the PDF can draw. One it cannot draw
   // (PdfPhoto prints nothing for it) takes no room (VM3-7), and an own photo saved in a format no
   // copy could be made of (withPrintablePhotos) no longer hides a résumé photo that prints (R7-7).
-  const photoSrc = cl.showPhoto === false ? null : [cl.clPhoto, personal?.photo].find(isDrawableImage) ?? null;
+  // A résumé photo hidden under Personal Info → Photo is none (letterResumePhoto, R2-092).
+  const photoSrc = cl.showPhoto === false ? null : [cl.clPhoto, letterResumePhoto(personal)].find(isDrawableImage) ?? null;
   // The panel's "Text Position (relative to photo)": the name block's place beside the photo.
   const photoAlign = photoTextAlignItems(cl); // the letter's own Text Position
 
