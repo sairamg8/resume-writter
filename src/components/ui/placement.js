@@ -8,7 +8,9 @@ const OPPOSITE = { top: 'bottom', bottom: 'top', left: 'right', right: 'left' };
 
 /** 'bottom-start' → { side: 'bottom', align: 'start' }; align defaults to 'center'. */
 export function parsePlacement(placement = 'bottom-start') {
-  const [side = 'bottom', align = 'center'] = String(placement).split('-');
+  const parts = String(placement).split('-');
+  const side = parts[0] || 'bottom';
+  const align = parts[1] || 'center';
   return { side: OPPOSITE[side] ? side : 'bottom', align: ['start', 'end', 'center'].includes(align) ? align : 'center' };
 }
 
