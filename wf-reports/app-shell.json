@@ -140,7 +140,7 @@
       "R2-077 (Medium): at 27bc9d1, two saves from another tab while this tab held a save made the second one's edits undone and deletions come back (stored ref only advanced on this tab's writes)",
       "R2-084 (Low): box opened, then renamed in another tab, then left untouched still wrote the old name back",
       "R2-073: no test pinned that Back (POP) leaves the scroll alone",
-      "Fixed after review in d718ad6: a pagehide landing between another tab's storage event and the re-render wrote the stale held state. Not fixed, minor: the resize handle does not use pointer capture (as before)",
+      "Fixed after review in d718ad6: a pagehide landing between another tab's storage event and the re-render wrote the stale held state.",
       "Fixed after review in 13a0eb5: the editor's 'Saved' label could lead the actual write by up to ~2 s",
       "Added after review in 40a2df8: the resize handle captures the pointer while dragged"
     ],
