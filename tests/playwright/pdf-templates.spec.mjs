@@ -1,70 +1,14 @@
 import { test, expect } from '@playwright/test';
 import { visitEditor, exportPdf, findRun, openDesignPanel } from './pw-helpers.js';
+import { ALL_SECTION_TYPES } from '../helpers.js';
+import { railPixels, topRowAccent, hairlines, shortRules } from './preview-pixels.js';
 
-/**
- * The tallest column of the preview's first page painted in the Timeline rail's colour, px: the accent
- * #2563eb at 35 % on white (timelineRail.js), rgb(179, 200, 248). The rail is a vertical line, so one
- * column holds many such pixels; a heading rule or a tag in a similar tint is horizontal and holds few.
- * The preview is the PDF drawn by pdf.js onto a canvas, so the rail shows there exactly when the PDF draws it.
- */
-async function railPixels(page) {
-  const canvas = page.locator('[data-preview-status="ready"] canvas').first();
-  await expect(canvas).toBeVisible();
-  return canvas.evaluate((c) => {
-    const { data } = c.getContext('2d').getImageData(0, 0, c.width, c.height);
-    const columns = new Array(c.width).fill(0);
-    for (let i = 0; i < data.length; i += 4) {
-      if (Math.abs(data[i] - 179) <= 6 && Math.abs(data[i + 1] - 200) <= 6 && Math.abs(data[i + 2] - 248) <= 6) columns[(i / 4) % c.width] += 1;
-    }
-    return Math.max(...columns);
-  });
-}
-
-/**
- * The share of the preview's first page painted in the Banner band's colour along its top edge: the
- * accent #2563eb, rgb(37, 99, 235), on the canvas's third pixel row. The band runs from the paper's
- * edges, so nearly the whole row is the accent; on a white-page template it is white.
- */
-async function topRowAccent(page) {
-  const canvas = page.locator('[data-preview-status="ready"] canvas').first();
-  await expect(canvas).toBeVisible();
-  return canvas.evaluate((c) => {
-    const { data } = c.getContext('2d').getImageData(0, 2, c.width, 1);
-    let hits = 0;
-    for (let i = 0; i < data.length; i += 4) {
-      if (Math.abs(data[i] - 37) <= 8 && Math.abs(data[i + 1] - 99) <= 8 && Math.abs(data[i + 2] - 235) <= 8) hits += 1;
-    }
-    return hits / c.width;
-  });
-}
-
-/**
- * How many separate blue-tinted lines cross most of the preview's first page: Academic's hairline under
- * each section title — the accent #2563eb at 55 % on white, rgb(135, 169, 244) — drawn by pdf.js onto the
- * canvas. A pixel row counts when 60 % of it is bluer than it is red by 40 or more (a hairline 1.3 px
- * tall covers at least half of one row: still that blue); rows next to each other are one line. Classic's
- * grey #e5e7eb title rules count none; its accent header rule (drawn when unset) is one line.
- */
-async function hairlines(page) {
-  const canvas = page.locator('[data-preview-status="ready"] canvas').first();
-  await expect(canvas).toBeVisible();
-  return canvas.evaluate((c) => {
-    const { data } = c.getContext('2d').getImageData(0, 0, c.width, c.height);
-    let lines = 0;
-    let inLine = false;
-    for (let y = 0; y < c.height; y += 1) {
-      let blue = 0;
-      for (let x = 0; x < c.width; x += 1) {
-        const i = (y * c.width + x) * 4;
-        if (data[i + 2] - data[i] >= 40 && data[i] < 235) blue += 1;
-      }
-      const row = blue > c.width * 0.6;
-      if (row && !inLine) lines += 1;
-      inLine = row;
-    }
-    return lines;
-  });
-}
+/** The fixture's sections with two skill groups, so a grid has two cells to set side by side; `grid`: as picking Compact leaves them. */
+const withTwoSkillGroups = (grid) => ALL_SECTION_TYPES.map((s) => (s.type !== 'skills' ? s : {
+  ...s,
+  settings: grid ? { spacing: 'normal', skillsStyle: 'inline', separator: 'colon' } : s.settings,
+  items: [{ id: 'sk1', category: 'Frontend', skills: 'React, TypeScript, CSS' }, { id: 'sk2', category: 'Backend', skills: 'Node.js, PostgreSQL' }],
+}));
 
 /** The exported PDF's Experience entry: its date run ("01/2023 – ", the first) sits above its role (PDF y grows upward), both starting at one x. */
 function expectDateAboveTitle(runs) {
@@ -225,6 +169,37 @@ test.describe('Exported PDF — every template', () => {
 
     const { runs } = await exportPdf(page);
     expect(findRun(runs, 'Alex Johnson').x).toBeGreaterThan(150);
+  });
+
+  test('Compact template: the preview draws a short rule after each title; the export sets the title beside the name, 9 pt text, skills two to a row', async ({ page }) => {
+    await visitEditor(page, 'compact', { sections: withTwoSkillGroups(true) });
+    // Page 1 holds several section titles, each followed by its short rule.
+    expect(await shortRules(page)).toBeGreaterThan(2);
+
+    const { runs, text } = await exportPdf(page);
+    expect(text).toContain('Alex Johnson');
+    expect(text).toContain('Acme Corp');
+    const [name, title] = [findRun(runs, 'Alex Johnson'), findRun(runs, 'Full Stack Engineer')];
+    expect(Math.abs(name.y - title.y)).toBeLessThan(2);
+    expect(title.x).toBeGreaterThan(name.x);
+    expect(findRun(runs, 'Built amazing products').fontSize).toBeCloseTo(9, 1);
+    expect(Math.abs(findRun(runs, 'Frontend').y - findRun(runs, 'Backend').y)).toBeLessThan(1);
+    // Section titles in the accent; an entry's dates in the Text colour's grey (#111111 at 72 %).
+    expect(findRun(runs, 'PROFESSIONAL').colorHex).toBe('#2563eb');
+    expect(findRun(runs, '01/2023').colorHex).toBe('#545454');
+  });
+
+  test('Compact is offered in the Design panel; picking it redraws the preview with its short rules and lays the skills out two to a row', async ({ page }) => {
+    await visitEditor(page, 'classic', { sections: withTwoSkillGroups(false) });
+    expect(await shortRules(page)).toBeLessThan(2);
+
+    await openDesignPanel(page);
+    await page.locator('button:has-text("Compact")').first().click();
+    await expect.poll(() => shortRules(page), { timeout: 20_000 }).toBeGreaterThan(2);
+    await expect(page.locator('text=Compact brings its own type and spacing')).toBeVisible();
+
+    const { runs } = await exportPdf(page);
+    expect(Math.abs(findRun(runs, 'Frontend').y - findRun(runs, 'Backend').y)).toBeLessThan(1);
   });
 
 });
