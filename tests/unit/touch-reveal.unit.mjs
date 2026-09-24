@@ -104,6 +104,9 @@ function opacityOf(css, classes, { canHover, hovered }) {
       if (p === '@media (hover: hover)') return canHover;
       if (p === '@media (hover: none)') return !canHover;
       if (p.startsWith('@')) throw new Error(`no rule here for the at-rule "${p}" around ${classes.join(' ')}`);
+      // Nothing here has keyboard focus: a control that also shows while tabbed to
+      // (focus-visible: / focus-within:, R2-115) is still hidden until hovered.
+      if (/:focus(-visible|-within)?\b/.test(unescaped(p))) return false;
       return !/:hover\b/.test(unescaped(p)) || hovered;
     });
     if (applies) value = rule.value;
