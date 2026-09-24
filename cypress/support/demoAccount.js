@@ -8,8 +8,11 @@ import { dashboardState } from './state.js';
 export const OWNER = { uid: 'e2e-owner', email: 'sairamgudiputi8@gmail.com', displayName: 'Owner' };
 export const OTHER = { uid: 'e2e-other', email: 'someone@example.com', displayName: 'Someone' };
 
-/** The header's account button: it shows the signed-in user's first name, as after a Google sign-in. */
-const accountButton = (user) => cy.contains('button', user.displayName.split(' ')[0]);
+/**
+ * The header's account button: it shows the signed-in user's first name, as after a Google sign-in.
+ * The one on screen — the dashboard has a compact header for phones and a full one from md up.
+ */
+const accountButton = (user) => cy.contains('button:visible', user.displayName.split(' ')[0]);
 
 /**
  * Open the dashboard signed in as `user` (null = signed out) with `state` as the résumé store,
@@ -79,6 +82,7 @@ export const expectCards = (names) => cy.get(CARD).should(($cards) => {
  */
 export const newResumeAndBack = () => {
   cy.contains('button', 'New Resume').click();
+  cy.contains('button', 'Start from Scratch (Blank)').click(); // New Resume asks: blank or a role starter
   cy.contains('button', 'Export').should('be.visible');
   backToDashboard();
 };

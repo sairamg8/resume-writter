@@ -24,6 +24,8 @@ describe('regressions — resume store', () => {
     cy.store().its('deletedIds').should('have.length', 1);
 
     cy.contains('button', 'New Resume').click();
+    cy.contains('button', 'Start from Scratch (Blank)').click();
+    cy.store().its('resumes').should('have.length', 3);
     cy.store().its('deletedIds').should('have.length', 1);
 
     cy.get('button[title="Back to dashboard"]').click();

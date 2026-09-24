@@ -33,14 +33,14 @@ function readZipEntry(buffer, name) {
   return null;
 }
 
-/** Newest finished file in the downloads folder with the given extension, or null. */
-function newestDownload(ext) {
-  if (!fs.existsSync(DOWNLOADS)) return null;
-  const files = fs.readdirSync(DOWNLOADS)
+/** Newest finished file in the downloads folder `dir` with the given extension, or null. */
+function newestDownload(dir, ext) {
+  if (!fs.existsSync(dir)) return null;
+  const files = fs.readdirSync(dir)
     .filter((f) => f.endsWith(ext))
-    .map((f) => ({ f, t: fs.statSync(path.join(DOWNLOADS, f)).mtimeMs }))
+    .map((f) => ({ f, t: fs.statSync(path.join(dir, f)).mtimeMs }))
     .sort((a, b) => b.t - a.t);
-  return files[0] ? path.join(DOWNLOADS, files[0].f) : null;
+  return files[0] ? path.join(dir, files[0].f) : null;
 }
 
 export default defineConfig({
@@ -57,10 +57,13 @@ export default defineConfig({
     video: false,
     retries: { runMode: 1, openMode: 0 },
     setupNodeEvents(on, config) {
+      // The folder the browser saves into, as configured: two runs side by side can each be given
+      // their own (--config downloadsFolder=…) and never clear or read the other's files.
+      const downloads = config.downloadsFolder || DOWNLOADS;
       on('task', {
         clearDownloads() {
-          fs.rmSync(DOWNLOADS, { recursive: true, force: true });
-          fs.mkdirSync(DOWNLOADS, { recursive: true });
+          fs.rmSync(downloads, { recursive: true, force: true });
+          fs.mkdirSync(downloads, { recursive: true });
           return null;
         },
         /** Poll until a download with `ext` exists and its size is stable. */
@@ -68,7 +71,7 @@ export default defineConfig({
           const start = Date.now();
           let last = -1;
           while (Date.now() - start < timeoutMs) {
-            const file = newestDownload(ext);
+            const file = newestDownload(downloads, ext);
             if (file) {
               const size = fs.statSync(file).size;
               if (size > 0 && size === last) return file;
