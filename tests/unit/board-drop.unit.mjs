@@ -155,3 +155,15 @@ test('WIP: each list carries its limit and whether the cards it shows are under,
   assert.deepEqual([byId.todo.limit, byId.todo.wip], [1, 'at']);
   assert.deepEqual([byId.done.limit, byId.done.wip], [null, null]);
 });
+
+test('epics hold issues, they are not cards: off the columns, and each child card names its epic', () => {
+  let b = boardWith([['E', 'todo'], ['A', 'todo'], ['B', 'doing']]);
+  b = ops.updateIssue(b, 'E', { type: 'epic' }, ctx);
+  b = ops.updateIssue(b, 'A', { epicId: 'E' }, ctx);
+  assert.deepEqual(shown(b, ctx.now), { todo: ['A'], doing: ['B'], done: [] });
+  const [a] = boardLists(b, { now: ctx.now })[0].cards;
+  assert.deepEqual(a.epic, { id: 'E', title: 'E' });
+  assert.equal(boardLists(b, { now: ctx.now })[1].cards[0].epic, null);
+  // A drop still lands among the cards shown: before A, whatever the epic's place in the rank.
+  assert.deepEqual(shown(drop(b, card('B'), overCard(b, 'A')), ctx.now).todo, ['B', 'A']);
+});

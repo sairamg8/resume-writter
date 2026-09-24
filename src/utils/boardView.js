@@ -4,7 +4,8 @@
 // is the one place that reads a project as lists of cards, and dropTarget the one place that turns
 // a drop into the store's moveColumn / moveIssue — so the page keeps no index maths of its own.
 // Which issues the board shows is boardQuery's (the plan's board view): a scrum board its active
-// sprint's, a kanban board all but the done ones resolved longer ago than hideDoneAfterDays.
+// sprint's, a kanban board all but the done ones resolved longer ago than hideDoneAfterDays — and
+// never an epic: an epic holds issues (the backlog page lists epics), each card naming its own.
 // Pure (tests/unit/board-drop.unit.mjs).
 import { activeSprint } from './boardModel.js';
 import { columnCounts, groupIntoColumns, visibleOnBoard } from './boardQuery.js';
@@ -18,15 +19,15 @@ export function boardSprint(board) {
   return board.mode === 'scrum' ? activeSprint(board) ?? null : null;
 }
 
-/** The issues the board shows, in rank order (see boardSprint). */
+/** The issues the board shows, in rank order (see boardSprint): never an epic. */
 function shownIssues(board, now) {
-  return visibleOnBoard(boardSprint(board) ? board : { ...board, mode: 'kanban' }, { now });
+  return visibleOnBoard(boardSprint(board) ? board : { ...board, mode: 'kanban' }, { now }).filter((i) => i.type !== 'epic');
 }
 
 /** How many done issues are off the board for being resolved longer ago than hideDoneAfterDays. */
 export function hiddenDoneCount(board, { now = Date.now() } = {}) {
   if (boardSprint(board)) return 0;
-  return board.issues.length - shownIssues(board, now).length;
+  return board.issues.filter((i) => i.type !== 'epic').length - shownIssues(board, now).length;
 }
 
 /** A label as a card shows it — `{ id, name, color }` — for each of the issue's labels that exists. */
@@ -34,9 +35,16 @@ function labelsOf(board, issue) {
   return issue.labelIds.map((id) => board.labels.find((l) => l.id === id)).filter(Boolean);
 }
 
+/** The epic `issue` belongs to, as a card names it — `{ id, title }` — or null. */
+function epicOf(board, issue) {
+  const epic = issue.epicId ? board.issues.find((i) => i.id === issue.epicId && i.type === 'epic') : null;
+  return epic ? { id: epic.id, title: epic.title } : null;
+}
+
 /**
  * The project's columns in order, each as `{ id, title, limit, wip, cards }`: the issues the board
- * shows in that column in rank order, each as a card — the issue with `labels` for its labelIds —
+ * shows in that column in rank order, each as a card — the issue with `labels` for its labelIds
+ * and `epic` for its epicId —
  * and the column's WIP limit (null: none) with its state over those cards ('under' | 'at' |
  * 'over', null without a limit). `now` (ms) dates hideDoneAfterDays.
  */
@@ -48,7 +56,7 @@ export function boardLists(board, { now = Date.now() } = {}) {
     title: column.title,
     limit: counts[column.id].limit,
     wip: counts[column.id].state,
-    cards: list.map((i) => ({ ...i, labels: labelsOf(board, i) })),
+    cards: list.map((i) => ({ ...i, labels: labelsOf(board, i), epic: epicOf(board, i) })),
   }));
 }
 

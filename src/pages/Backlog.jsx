@@ -5,7 +5,7 @@ import { useBoardStore } from '@/hooks/useBoardStore';
 import { PageHeader } from '@/components/shell/PageHeader';
 import { ProjectTabs } from '@/components/board/ProjectTabs';
 import { BoardStorageNotice } from '@/components/board/BoardStorageNotice';
-import { backlogSections } from '@/utils/boardQuery';
+import { backlogSections, epicProgress, epicsOf } from '@/utils/boardQuery';
 import { activeSprint, addDays, issueKey, statusColumn, todayISO } from '@/utils/boardModel';
 import { DEFAULT_SPRINT_DAYS } from '@/constants/boards';
 
@@ -100,8 +100,8 @@ function SprintName({ sprint, onRename }) {
   );
 }
 
-/** "Add an issue" at the foot of a section: a title, then Enter. */
-function AddIssue({ onAdd }) {
+/** "Add an issue" at the foot of a section: a title, then Enter. `label` names the field. */
+function AddIssue({ onAdd, label = 'New issue' }) {
   const [title, setTitle] = useState('');
   const add = () => {
     if (!title.trim()) return;
@@ -111,15 +111,83 @@ function AddIssue({ onAdd }) {
   return (
     <div className="flex gap-2 px-3 py-2">
       <input
-        aria-label="New issue"
+        aria-label={label}
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         onKeyDown={(e) => { if (e.key === 'Enter') add(); }}
-        placeholder="Add an issue…"
+        placeholder={label === 'New issue' ? 'Add an issue…' : `${label}…`}
         className="flex-1 text-sm px-2 py-1.5 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-400"
       />
       <button onClick={add} disabled={!title.trim()} className="px-3 py-1.5 text-xs font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-40">Add</button>
     </div>
+  );
+}
+
+/** An epic's row: its key, its title (click to rename), its children's progress, delete. */
+function EpicRow({ board, epic, store }) {
+  const [draft, setDraft] = useState(null);
+  const { total, done } = epicProgress(board, epic.id);
+  const commit = () => {
+    if (draft !== null && draft.trim() && draft.trim() !== epic.title) store.updateIssue(board.id, epic.id, { title: draft.trim() });
+    setDraft(null);
+  };
+  return (
+    <li data-epic={epic.id} className="flex items-center gap-3 px-3 py-2">
+      <span className="text-[11px] font-mono text-gray-400 shrink-0">{issueKey(board, epic)}</span>
+      {draft === null ? (
+        <button onClick={() => setDraft(epic.title)} title="Rename epic" className="flex-1 min-w-0 text-left text-sm font-medium text-violet-800 truncate hover:bg-violet-50 rounded px-1">{epic.title}</button>
+      ) : (
+        <input
+          autoFocus
+          aria-label="Epic title"
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={commit}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') commit();
+            if (e.key === 'Escape') setDraft(null);
+          }}
+          className="flex-1 min-w-0 text-sm px-1.5 py-0.5 rounded border border-violet-300 focus:outline-none"
+        />
+      )}
+      <span className="text-[11px] text-gray-500 shrink-0">{done}/{total} done</span>
+      <span className="w-20 h-1.5 bg-gray-100 rounded-full overflow-hidden shrink-0">
+        <span className="block h-full bg-violet-500" style={{ width: `${total ? Math.round((done / total) * 100) : 0}%` }} />
+      </span>
+      <button
+        onClick={() => { if (total === 0 || confirm(`Delete the epic "${epic.title}"? Its ${total} issue${total === 1 ? '' : 's'} stay, in no epic.`)) store.deleteIssue(board.id, epic.id); }}
+        aria-label="Delete epic"
+        title="Delete epic"
+        className="p-1 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded shrink-0"
+      >
+        <Trash2 size={12} />
+      </button>
+    </li>
+  );
+}
+
+/**
+ * A project's epics: the issues that hold others (an epic is not a card on the board, nor planned
+ * into a sprint). Each with its children's progress; add, rename, delete (its issues stay, in no
+ * epic). A card joins an epic from its sheet on the board.
+ */
+function EpicsPanel({ board, store }) {
+  const epics = epicsOf(board);
+  return (
+    <section data-section="epics" className="bg-white border border-gray-200 rounded-2xl shadow-sm">
+      <div className="flex items-center gap-2 px-3 py-2.5 border-b border-gray-100">
+        <span className="text-sm font-semibold text-gray-900 px-1">Epics</span>
+        <span className="text-[11px] text-gray-400">{epics.length} epic{epics.length === 1 ? '' : 's'} · a card joins one from its sheet on the board</span>
+      </div>
+      {epics.length === 0 ? (
+        <p className="px-4 py-3 text-xs text-gray-400">No epics yet: an epic groups related issues, such as a project within the project.</p>
+      ) : (
+        <ul className="divide-y divide-gray-100">
+          {epics.map((e) => <EpicRow key={e.id} board={board} epic={e} store={store} />)}
+        </ul>
+      )}
+      <AddIssue label="New epic" onAdd={(title) => store.addIssue(board.id, { title, type: 'epic' })} />
+    </section>
   );
 }
 
@@ -130,7 +198,8 @@ function AddIssue({ onAdd }) {
  * two weeks on — and goal; one at a time), complete the active one (its open issues go to the
  * backlog or a future sprint), rename or delete a sprint (its issues go to the backlog). Sprints
  * are a Scrum project's: a Kanban project is offered the switch, and its board then shows the
- * active sprint (boardView.boardSprint).
+ * active sprint (boardView.boardSprint). Epics are listed on their own (EpicsPanel), never in a
+ * sprint or the backlog list.
  */
 export function Backlog() {
   const { id } = useParams();
@@ -150,7 +219,7 @@ export function Backlog() {
   }
 
   const base = `/boards/${encodeURIComponent(board.id)}`;
-  const sections = backlogSections(board);
+  const sections = backlogSections(board, board.issues.filter((i) => i.type !== 'epic'));
   const active = activeSprint(board);
   const futures = board.sprints.filter((s) => s.state === 'future');
   const scrum = board.mode === 'scrum';
@@ -274,6 +343,8 @@ export function Backlog() {
             </section>
           );
         })}
+
+        <EpicsPanel board={board} store={store} />
       </div>
     </div>
   );

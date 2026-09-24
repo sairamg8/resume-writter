@@ -11,6 +11,7 @@ import { CardView } from '@/components/board/BoardCard';
 import { CardDetailSheet } from '@/components/board/CardDetailSheet';
 import { BoardStorageNotice } from '@/components/board/BoardStorageNotice';
 import { boardLists, boardSprint, dropTarget, hiddenDoneCount } from '@/utils/boardView';
+import { epicsOf } from '@/utils/boardQuery';
 
 /** The "Add list" column at the right edge of the board (and its own scroll-snap target on mobile). */
 function AddListColumn({ onAdd }) {
@@ -263,7 +264,8 @@ export function Board() {
                 />
               ))}
             </SortableContext>
-            <AddListColumn onAdd={(title) => store.addColumn(board.id, { title })} />
+            {/* At the end, where the button is: the store's default puts a new column before Done. */}
+            <AddListColumn onAdd={(title) => store.addColumn(board.id, { title, index: board.columns.length })} />
           </div>
         </div>
 
@@ -282,6 +284,7 @@ export function Board() {
         <CardDetailSheet
           card={openCard}
           listTitle={openList?.title}
+          epics={epicsOf(board).map((e) => ({ id: e.id, title: e.title }))}
           onClose={() => setOpen(null)}
           onChange={(patch) => changeCard(openCard.id, patch)}
           onDelete={() => { store.deleteIssue(board.id, openCard.id); setOpen(null); }}

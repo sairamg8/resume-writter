@@ -4,14 +4,17 @@ import RichTextEditor from '@/components/RichTextEditor';
 import { TasksTab } from '@/components/job/TasksTab';
 import { LabelPicker } from '@/components/board/LabelPicker';
 import { useIsMobile } from '@/hooks/useMediaQuery';
+import { ISSUE_TYPES } from '@/constants/boards';
 
 /**
  * The card editor — a bottom sheet on a phone (slides up, tall), a centred modal from md up. Every
  * field writes straight through `onChange` to the store (no local draft, no Save button): the board
  * behind updates live and the change syncs. The checklist reuses the Job Tracker's TasksTab, since
- * a card's checklist and a job's to-dos are the same `{ id, text, done }` shape.
+ * a card's checklist and a job's to-dos are the same `{ id, text, done }` shape. With `epics` (the
+ * board's, `{ id, title }`) it also sets the card's type and the epic it belongs to; an epic is not
+ * a card, so it is made on the backlog page, not picked as a type here.
  */
-export function CardDetailSheet({ card, listTitle, onClose, onChange, onDelete }) {
+export function CardDetailSheet({ card, listTitle, epics, onClose, onChange, onDelete }) {
   const mobile = useIsMobile();
   // What is typed in the title while the field has focus: the store cleans a title (trimmed,
   // never blank), so showing the saved one back at each keystroke took away the space before
@@ -47,6 +50,32 @@ export function CardDetailSheet({ card, listTitle, onClose, onChange, onDelete }
             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Labels</p>
             <LabelPicker labels={card.labels} onChange={(labels) => onChange({ labels })} />
           </div>
+
+          {epics && (
+            <div className="grid grid-cols-2 gap-3">
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest space-y-2">Type
+                <select
+                  aria-label="Card type"
+                  value={card.type}
+                  onChange={(e) => onChange({ type: e.target.value })}
+                  className="block w-full text-sm font-normal normal-case tracking-normal text-gray-800 border border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                >
+                  {ISSUE_TYPES.filter((t) => t.id !== 'epic').map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                </select>
+              </label>
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest space-y-2">Epic
+                <select
+                  aria-label="Card epic"
+                  value={card.epicId || ''}
+                  onChange={(e) => onChange({ epicId: e.target.value || null })}
+                  className="block w-full text-sm font-normal normal-case tracking-normal text-gray-800 border border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                >
+                  <option value="">None</option>
+                  {epics.map((e) => <option key={e.id} value={e.id}>{e.title}</option>)}
+                </select>
+              </label>
+            </div>
+          )}
 
           <div>
             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Due date</p>

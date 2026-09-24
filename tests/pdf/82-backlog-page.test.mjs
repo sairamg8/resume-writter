@@ -191,3 +191,36 @@ it('the board links to its backlog, and a scrum board with no sprint says where 
   assert.match(t, /Backlog/);
   assert.match(t, /No sprint is active, so every card is shown. Start one from the backlog./);
 });
+
+it('epics: listed on their own with their progress, never in a sprint or the backlog; added, renamed, deleted (children stay)', async () => {
+  const issues = [
+    issue('e1', 1, 'Garden makeover', 'c1', { type: 'epic' }),
+    issue('i2', 2, 'Dig the beds', 'c3', { epicId: 'e1', resolvedAt: 1 }),
+    issue('i3', 3, 'Plant roses', 'c1', { epicId: 'e1' }),
+  ];
+  open([project({ mode: 'scrum', issues, nextNumber: 4 })]);
+  const page = await mountBacklog();
+  globalThis.confirm = () => true;
+  try {
+    const epics = () => page.section('epics');
+    assert.match(epics().textContent, /HOME-1Garden makeover1\/2 done/);
+    assert.doesNotMatch(page.section('backlog').textContent, /Garden makeover/);
+    assert.match(page.section('backlog').textContent, /Plant roses/);
+
+    page.change(page.byLabel('New epic', epics()), 'Kitchen refit');
+    page.click(page.button('Add', epics()));
+    assert.equal(boardNow().issues.find((i) => i.title === 'Kitchen refit')?.type, 'epic');
+    assert.doesNotMatch(page.section('backlog').textContent, /Kitchen refit/);
+
+    page.click(page.button('Garden makeover', epics()));
+    page.change(page.byLabel('Epic title', epics()), 'Garden redo');
+    page.key(page.byLabel('Epic title', epics()), 'Enter');
+    assert.equal(boardNow().issues.find((i) => i.id === 'e1').title, 'Garden redo');
+
+    page.click(page.byLabel('Delete epic', epics()));
+    assert.ok(!boardNow().issues.some((i) => i.id === 'e1'));
+    assert.deepEqual(boardNow().issues.filter((i) => ['i2', 'i3'].includes(i.id)).map((i) => i.epicId), [null, null], 'its issues stay, in no epic');
+  } finally {
+    await page.view.unmount();
+  }
+});

@@ -230,7 +230,7 @@ export function BoardSettings() {
           <ul className="divide-y divide-gray-100">
             {board.columns.map((c, n) => <ColumnRow key={c.id} board={board} column={c} index={n} store={store} />)}
           </ul>
-          <AddRow label="New column" onAdd={(title) => store.addColumn(board.id, { title })} />
+          <AddRow label="New column" onAdd={(title) => store.addColumn(board.id, { title, index: board.columns.length })} />
         </Card>
 
         <Card title="Labels">

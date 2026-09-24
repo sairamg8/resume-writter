@@ -115,7 +115,7 @@ it('columns: rename, category, WIP limit (blank: none), reorder, add, delete —
 
     page.change(page.byLabel('New column'), 'Review');
     page.click(page.button('Add', page.byLabel('New column').parentNode));
-    assert.ok(p1().columns.some((x) => x.title === 'Review'));
+    assert.equal(p1().columns.at(-1).title, 'Review', 'added at the end, as listed');
 
     // To Do holds "Fix the tap": deleting it asks where its issue goes.
     page.click(page.byLabel('Delete column', row('c1')));
