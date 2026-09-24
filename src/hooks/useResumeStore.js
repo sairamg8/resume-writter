@@ -160,9 +160,11 @@ export function useAppStore() {
       // one, not against this tab's last write — which counted every résumé taken from the first as
       // changed here and undid the second. The held save is not written until the state it would
       // write has taken this one in (the effect above schedules it again).
+      // Leaving the page before that render (pagehide) writes the held save with this one taken in
+      // too, not as it was: that would put back what the other tab just changed.
       const knew = stored.current;
       stored.current = incoming.resumes;
-      saver.hold();
+      saver.hold((held) => withOtherTabsSave(held, incoming, knew));
       setAppState((prev) => withOtherTabsSave(prev, incoming, knew));
     }
     window.addEventListener('storage', onStorage);

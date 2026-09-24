@@ -47,6 +47,7 @@ async function openTab(state) {
   return {
     store: () => current,
     storage,
+    window: view.window,
     /** What storage holds once this tab's held save is written (leaving the page writes it, R2-077). */
     saved: () => {
       view.act(() => { view.window.dispatchEvent({ type: 'pagehide' }); });
@@ -114,6 +115,23 @@ describe('two tabs of the app', () => {
       assert.equal(tab.store().appState.resumes[1].name, 'B twice', 'the other tab’s second save was undone by its first');
       const saved = tab.saved();
       assert.deepEqual(saved.resumes.map((r) => r.name), ['resume_a', 'B twice']);
+      assert.equal(saved.resumes[0].personal.name, 'Edited in tab 1');
+    } finally { await tab.close(); }
+  });
+
+  it('the page left right after the other tab’s save, before this tab re-renders: storage keeps both tabs’ changes (R2-077)', async () => {
+    const tab = await openTab(storeOf([cv('resume_a'), cv('resume_b')]));
+    try {
+      await tab.act(() => tab.store().updatePersonal('name', 'Edited in tab 1')); // held a moment
+      const theirs = JSON.stringify(storeOf([cv('resume_a'), cv('resume_b', 3, { name: 'B in tab 2' })]));
+      tab.storage.map.set(KEY, theirs);
+      // The storage event and pagehide in one task: React has not rendered the taken save yet.
+      await tab.act(() => {
+        tab.window.dispatchEvent({ type: 'storage', key: KEY, newValue: theirs });
+        tab.window.dispatchEvent({ type: 'pagehide' });
+      });
+      const saved = JSON.parse(tab.storage.getItem(KEY));
+      assert.equal(saved.resumes[1].name, 'B in tab 2', 'before: the held save, written as it was, undid the other tab’s');
       assert.equal(saved.resumes[0].personal.name, 'Edited in tab 1');
     } finally { await tab.close(); }
   });
