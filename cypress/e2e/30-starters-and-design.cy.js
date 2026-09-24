@@ -6,6 +6,8 @@
 // and — the shape a picked icon prints as in the PDF — tests/pdf/09-contact-icons.test.mjs.
 // That 1-Page Fit never checks the page count it promises is R2-149, not asserted here.
 import { buildTestState } from '../../tests/helpers.js';
+import { STARTER_TEMPLATES } from '../../src/utils/starterTemplates.js';
+import { CARD } from '../support/selectors.js';
 
 const active = (s) => s.resumes.find((r) => r.id === s.activeId);
 const MM = 72 / 25.4; // PDF points per millimetre
@@ -17,14 +19,19 @@ describe('New Resume → role starters', () => {
     cy.contains('h2', 'Choose a Resume Starter').should('be.visible');
   });
 
-  it('offers a blank résumé and three role starters; closing it creates nothing', () => {
+  it('offers a blank résumé and every role starter (STARTER_TEMPLATES); closing it creates nothing', () => {
+    const picker = () => cy.contains('h2', 'Choose a Resume Starter').parents('.rounded-2xl').first();
+    // One button per starter, and the blank one: a starter added to the list is offered too.
+    picker().find('button h3').should('have.length', STARTER_TEMPLATES.length + 1);
     cy.contains('button', 'Start from Scratch (Blank)').should('be.visible');
-    ['Software Engineer (Full Stack)', 'Product Manager', 'Data Scientist & AI Engineer'].forEach((name) => {
-      cy.contains('button h3', name).should('be.visible');
+    STARTER_TEMPLATES.forEach(({ name }) => {
+      cy.contains('button h3', name).scrollIntoView().should('be.visible');
     });
-    cy.contains('h2', 'Choose a Resume Starter').parents('.rounded-2xl').first().find('.border-b button').click();
+    picker().find('.border-b button').click();
     cy.contains('h2', 'Choose a Resume Starter').should('not.exist');
-    cy.location('hash').should('eq', '#/');
+    // Still the dashboard, with its one résumé: the page first, as a store read straight after the
+    // close can be one taken before a write lands.
+    cy.get(CARD).should('have.length', 1).and('contain.text', 'Test Classic');
     cy.store().its('resumes').should('have.length', 1);
   });
 

@@ -42,6 +42,8 @@ describe('ATS Check tab', () => {
       onScreen(cy.contains('button', label)).and('contain.text', 'pts');
     });
     // Contact is open at first and lists its checks; Education is closed and opens on a click.
+    cy.contains('button', 'Contact & Header Information').parent().find('.border-t').children()
+      .should('have.length.greaterThan', 0);
     cy.contains('button', 'Education & Credentials').parent().find('.border-t').should('not.exist');
     cy.contains('button', 'Education & Credentials').click();
     onScreen(cy.contains('button', 'Education & Credentials').parent().find('.border-t'));
@@ -63,30 +65,39 @@ describe('ATS Check tab', () => {
     cy.get('#resume-preview', { timeout: 30_000 }).should('contain.text', 'Kubernetes');
   });
 
-  it('Copy Text copies the plain-text résumé; the download button saves it as a .txt', () => {
+  it('Copy Text copies the plain-text résumé; the download button saves that same text as a .txt', () => {
     cy.window().then((win) => {
       cy.stub(win.navigator.clipboard, 'writeText').as('copy').resolves();
     });
     cy.contains('button', 'Copy Text').click();
     cy.contains('button', 'Copied!').should('be.visible');
-    cy.get('@copy').should('have.been.calledOnce').its('firstCall.args.0')
-      .should('contain', 'ALEX JOHNSON').and('contain', 'PROFESSIONAL SUMMARY');
-
-    cy.task('clearDownloads');
-    cy.get('button[title="Download .txt"]').click();
-    cy.task('waitForDownload', { ext: '.txt' }).then((file) => {
-      expect(basename(file)).to.eq('Alex_Johnson_ATS.txt');
-      cy.task('readTextFile', file).should('contain', 'ALEX JOHNSON').and('contain', 'alex@example.com').and('contain', 'Acme Corp');
+    cy.get('@copy').should('have.been.calledOnce').its('firstCall.args.0').then((copied) => {
+      expect(copied).to.contain('ALEX JOHNSON').and.contain('PROFESSIONAL SUMMARY');
+      cy.task('clearDownloads');
+      cy.get('button[title="Download .txt"]').click();
+      cy.task('waitForDownload', { ext: '.txt' }).then((file) => {
+        cy.task('readTextFile', file).should('eq', copied);
+      });
     });
   });
 
-  it('Export → Export ATS Text (.txt) downloads the same plain text', () => {
-    cy.exportFile('Export ATS Text (.txt)', '.txt').then((file) => {
-      expect(basename(file)).to.eq('Alex_Johnson_Full_Stack_Engineer_ATS.txt');
-      cy.task('readTextFile', file).then((text) => {
-        expect(text.split('\n')[0]).to.eq('ALEX JOHNSON');
-        expect(text).to.contain('PROFESSIONAL SUMMARY').and.contain('MIT');
-        expect(text).not.to.match(/<[a-z/][^>]*>/i); // no HTML left in it
+  // One text file, two ways to save it: the tab's own button and the Export menu. Both are named as
+  // the Export menu names every file (buildExportFilename: <Name>_<Title>), and hold the same text.
+  it('Export → Export ATS Text (.txt) saves what the tab\'s download saves, under the same name', () => {
+    const NAME = 'Alex_Johnson_Full_Stack_Engineer_ATS.txt';
+    cy.task('clearDownloads');
+    cy.get('button[title="Download .txt"]').click();
+    cy.task('waitForDownload', { ext: '.txt' }).then((tabFile) => {
+      expect(basename(tabFile), 'the tab\'s download').to.eq(NAME);
+      cy.task('readTextFile', tabFile).then((tabText) => {
+        expect(tabText.split('\n')[0]).to.eq('ALEX JOHNSON');
+        expect(tabText).to.contain('PROFESSIONAL SUMMARY').and.contain('alex@example.com').and.contain('Acme Corp').and.contain('MIT');
+        expect(tabText).not.to.match(/<[a-z/][^>]*>/i); // no HTML left in it
+
+        cy.exportFile('Export ATS Text (.txt)', '.txt').then((menuFile) => { // clears the tab's file first
+          expect(basename(menuFile), 'Export → ATS text').to.eq(NAME);
+          cy.task('readTextFile', menuFile).should('eq', tabText);
+        });
       });
     });
   });

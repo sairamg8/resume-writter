@@ -12,6 +12,11 @@ const SECTIONS = [{
 }];
 
 const active = (s) => s.resumes.find((r) => r.id === s.activeId);
+/**
+ * The bullets the editor shows, as texts: `.should(bullets(texts))`. Retried, and read from the
+ * page, not from storage, where a save can still be held (coalescedWrite, SAVE_WAIT_MS).
+ */
+const bullets = (texts) => ($li) => expect([...$li].map((li) => li.textContent)).to.deep.eq(texts);
 /** The PDF preview's text, waiting as long as a rebuild of it can take. */
 const previewText = (id = '#resume-preview') => cy.get(id, { timeout: 30_000 });
 
@@ -52,9 +57,7 @@ describe('STAR bullet optimiser', () => {
 
     cy.contains('button', 'Apply to Resume').click();
     cy.contains('h2', 'Bullet Optimizer & STAR Formula').should('not.exist');
-    cy.get('@editor').find('li').then(($li) => {
-      expect([...$li].map((li) => li.textContent)).to.deep.eq(['Spearheaded the payments team of 5 by 35%', 'Built the ledger service']);
-    });
+    cy.get('@editor').find('li').should(bullets(['Spearheaded the payments team of 5 by 35%', 'Built the ledger service']));
     cy.store().should((s) => expect(active(s).sections[0].items[0].description).to.contain('<li>Spearheaded the payments team of 5 by 35%</li>'));
     previewText().should('contain.text', 'Spearheaded the payments team of 5 by 35%').and('not.contain.text', 'Was responsible');
   });
@@ -64,6 +67,9 @@ describe('STAR bullet optimiser', () => {
     cy.get('textarea[placeholder^="e.g. Engineered distributed cache"]').type('Anything at all', { delay: 0 });
     cy.contains('button', /^Cancel$/).click();
     cy.contains('h2', 'Bullet Optimizer & STAR Formula').should('not.exist');
+    // The editor first: a store read straight after Cancel can be one taken before a write lands.
+    cy.get('@editor').find('li').should(bullets(['Was responsible for the payments team of 5', 'Built the ledger service']));
+    cy.get('@editor').should('not.contain.text', 'Anything at all');
     cy.store().should((s) => expect(active(s).sections[0].items[0].description).to.eq(BULLETS));
   });
 });
@@ -71,6 +77,8 @@ describe('STAR bullet optimiser', () => {
 describe('cover-letter generator', () => {
   /** The generator's dialog: its fields are looked up in it, not among the letter's own. */
   const dialog = () => cy.contains('h2', 'Smart Cover Letter Generator').parents('.rounded-2xl').first();
+  /** One of the letter's own fields on the Cover Letter tab, by its label. */
+  const letterField = (label) => cy.contains('label', new RegExp(`^${label}$`)).next('input');
 
   beforeEach(() => {
     cy.visitEditor('classic', { tab: 'coverletter' });
@@ -107,7 +115,16 @@ describe('cover-letter generator', () => {
       dialog().find('input[placeholder="e.g. Google, Stripe"]').type('Nobody Inc', { delay: 0 });
       cy.contains('button', /^Cancel$/).click();
       cy.contains('h2', 'Smart Cover Letter Generator').should('not.exist');
-      cy.store().should((s) => expect(active(s).coverLetter).to.deep.eq(active(before).coverLetter));
+      // The letter on the tab first: a store read straight after Cancel can be one taken before a
+      // write lands. Apply would fill these from the dialog.
+      const cl = active(before).coverLetter;
+      letterField('Company').should('have.value', cl.company);
+      letterField('Recipient Name').should('have.value', cl.recipientName);
+      letterField('Subject').should('have.value', cl.subject);
+      cy.get('[contenteditable="true"]').should('have.length', 1)
+        .and('contain.text', 'I am excited to apply for the Senior Engineer position at Globex Corp.')
+        .and('not.contain.text', 'Nobody Inc');
+      cy.store().should((s) => expect(active(s).coverLetter).to.deep.eq(cl));
     });
   });
 });

@@ -99,9 +99,11 @@ describe('job tracker', () => {
     stat('Total').should('have.text', '0');
   });
 
-  // Import merges (J-04): a job already in the tracker is skipped, never duplicated; one that is
-  // not is added.
-  it('Export JSON downloads the jobs as JSON; importing it back adds nothing, another job is added', () => {
+  // Import merges (J-04, src/utils/jobImport.js mergeImport): a job already in the tracker is
+  // skipped, never duplicated; one whose id is not here is added under that id; one with an id that
+  // is here, different, and no time to tell which is newer is added as a copy under a fresh id —
+  // nothing is dropped.
+  it('Export JSON downloads the jobs as JSON; importing it back adds nothing, other jobs are added', () => {
     cy.task('clearDownloads');
     cy.contains('button', /^\s*Export JSON\s*$/).click(); // beside Export CSV (29-exports-imports)
     cy.task('waitForDownload', { ext: '.json' }).then((file) => {
@@ -117,13 +119,21 @@ describe('job tracker', () => {
         cy.contains('Nothing new: the job application in that file is already in the tracker.').should('be.visible');
         cy.jobStore().its('jobs').should('have.length', 1);
 
-        importJobs([{ ...exported[0], id: 'job_from_elsewhere', company: 'Initech' }], 'other.json');
-        cy.contains('Imported 1 job application.').should('be.visible');
+        const [google] = exported;
+        importJobs([
+          { ...google, id: 'job_from_elsewhere', company: 'Initech' },
+          // The same id as the job here, and no createdAt / updatedAt (JSON leaves undefined out).
+          { ...google, company: 'Hooli', createdAt: undefined, updatedAt: undefined },
+        ], 'other.json');
+        cy.contains('Imported 2 job applications.').should('be.visible');
         cy.jobStore().should((s) => {
-          expect(s.jobs.map((j) => j.company)).to.deep.eq(['Google', 'Initech']);
-          expect(new Set(s.jobs.map((j) => j.id)).size).to.eq(2);
+          expect(s.jobs.map((j) => j.company)).to.deep.eq(['Google', 'Initech', 'Hooli']);
+          const [here, elsewhere, copy] = s.jobs.map((j) => j.id);
+          expect(here).to.eq(google.id);
+          expect(elsewhere, 'an id not here yet is kept').to.eq('job_from_elsewhere');
+          expect(copy, 'the copy has an id of its own').to.match(/^job_./).and.not.eq(google.id);
         });
-        stat('Total').should('have.text', '2');
+        stat('Total').should('have.text', '3');
       });
     });
   });
