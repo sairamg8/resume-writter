@@ -1,0 +1,25 @@
+{
+  "cluster": "sync",
+  "branch": "claude/wf-sync",
+  "base": "9c3589a",
+  "rows": [
+    { "id": "R2-028", "outcome": "already-fixed", "commits": [], "tests": ["tests/pdf/18-cloud-sync-stale-tab.test.mjs"],
+      "summary": "Fixed by R2-004 (ef067e9): a flush reads the server's copy of what it deletes, and a deletion made from a copy older than another device's edit is not sent — the newer copy comes back (cloudSyncLineage.checkFlush `back`). Pinned by the stale-tab test 'a deletion made from the stale copy is not sent'.",
+      "remaining": "" },
+    { "id": "R2-029", "outcome": "fixed", "commits": ["8986943", "c4c3c7a"], "tests": ["tests/pdf/18-cloud-sync-deleted-elsewhere.test.mjs", "tests/pdf/18-cloud-sync-originals.test.mjs"],
+      "summary": "An edit made where a deletion was never seen (a page left open, or offline across a reload) now wins: the résumé is written under its id and comes off the account's deletion list in the same batch (arrayRemove), so it is back on every device. A flush reads the list only when a copy the cloud had is gone and the version sent is one the cloud never had; a first sync does the same by cloudVersions, and takes back a listed copy the cloud holds again. A listed copy nothing brings back (a demo account's original) is removed from Firestore; an unedited copy still goes. Fail-first: 5 of 7 new tests failed at 9c3589a.",
+      "remaining": "" },
+    { "id": "R2-030", "outcome": "already-fixed", "commits": [], "tests": ["tests/pdf/18-cloud-sync-stale-tab.test.mjs"],
+      "summary": "Fixed by R2-004 (ef067e9): at the first sync back online, a résumé changed on both sides keeps this device's copy under its id and the other device's as '<name> (conflict copy)', in the same visit and after a reload (cloudSyncLineage.sortOut, cloudVersions). Pinned by the stale-tab tests 'an edit made offline…'.",
+      "remaining": "A store saved before R2-004 (no cloudVersions) still decides newer-wins at its first sync — known limit." }
+  ],
+  "review": {
+    "issues": [
+      "8986943's flush took any written résumé whose cloud copy was gone off the list, so a demo tab's restore racing a deletion for good brought the original back (V2OWNER-DATA-0)",
+      "account.cloudDeleted was built from the unfiltered listRemove, so a listed résumé held back as too large was reported as off the list"
+    ],
+    "fixedByReviewer": ["c4c3c7a: only a version the cloud never had comes off the list; the account's list keeps an id while its copy is held (tests added in both files)"]
+  },
+  "baselineFailures": [],
+  "notes": "The deletion list is no longer strictly add-only: an id comes off it (arrayRemove, same batch as its write) only for an edit made where the deletion was never seen. useCloudSync now passes arrayRemove to cloudIo. Residual narrow races (from review): a deletion landing between a flush's read and its batch leaves the edit under a listed id until the next first sync takes it back (for a demo original that first sync removes it instead); two stale devices both editing a deleted résumé — the later write wins with no conflict copy. docs/knowledge/05-state-auth-sync.md updated."
+}
