@@ -161,3 +161,22 @@ test('moveInList: before another job, or last; a status change adds one history 
   const reordered = moveInList(list, 'c', { status: 'applied', beforeId: 'a' }, T);
   assert.equal(reordered[0], list[2], 'the same status: the job itself, untouched — a reorder is not an edit');
 });
+
+// ── An edit that changes nothing is not an edit ──────────────────────────────────────────────
+// Clicking the job's current pipeline step, Save Changes with nothing changed, or a field's pencil
+// opened and closed stamped `updatedAt` now: the job jumped to the top of the list's default
+// "last updated" order, and a later backup import skipped it as older.
+
+test('applyEdits returns the job itself when no value changes — no new updatedAt', () => {
+  const job = { id: 'a', company: 'Acme', role: 'Dev', status: 'applied', todos: [{ id: 't', text: 'x', done: false }],
+    statusHistory: [{ status: 'applied', changedAt: 1 }], createdAt: 1, updatedAt: 1 };
+  assert.equal(edits.applyEdits(job, {}, 999), job);
+  assert.equal(edits.applyEdits(job, { status: 'applied' }, 999), job, 'the current status again');
+  assert.equal(edits.applyEdits(job, { role: 'Dev', company: 'Acme' }, 999), job);
+  assert.equal(edits.applyEdits(job, { id: 'other', updatedAt: 5 }, 999), job, 'keys an edit may not write change nothing');
+  assert.equal(edits.applyEdits(job, { todos: job.todos }, 999), job);
+  // A real change still counts, and stamps the time.
+  assert.equal(edits.applyEdits(job, { role: 'Lead' }, 999).updatedAt, 999);
+  assert.equal(edits.applyEdits(job, { todos: [...job.todos] }, 999).updatedAt, 999, 'a new to-do list is a write');
+  assert.equal(edits.applyEdits(job, { location: '' }, 999).updatedAt, 999, 'a field the job lacked, set');
+});

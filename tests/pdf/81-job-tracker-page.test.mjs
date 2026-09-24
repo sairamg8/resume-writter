@@ -221,3 +221,31 @@ it('R2-156: the stage picker selects a stage, deselects it, adds a custom one on
     await page.view.unmount();
   }
 });
+
+it('a job-page field opened and closed without typing writes nothing, even when the job never had it', async () => {
+  const { Field } = await loadModule('/src/components/job/Field.jsx');
+  const writes = [];
+  for (const value of [undefined, '', 'Berlin']) {
+    const page = await render(Field, { label: 'Location', value, onChange: (v) => writes.push(v) });
+    try {
+      page.fire(page.button('Edit'), 'onClick');
+      const input = page.all().find((el) => el.tagName === 'INPUT');
+      page.fire(input, 'onBlur');
+      page.fire(page.button('Edit'), 'onClick');
+      page.fire(page.all().find((el) => el.tagName === 'INPUT'), 'onKeyDown', ev({ key: 'Enter' }));
+    } finally {
+      await page.view.unmount();
+    }
+  }
+  assert.deepEqual(writes, [], `writes: ${JSON.stringify(writes)}`);
+  // A real edit is still written.
+  const page = await render(Field, { label: 'Location', value: undefined, onChange: (v) => writes.push(v) });
+  try {
+    page.fire(page.button('Edit'), 'onClick');
+    page.fire(page.all().find((el) => el.tagName === 'INPUT'), 'onChange', ev({ target: { value: 'Remote' } }));
+    page.fire(page.all().find((el) => el.tagName === 'INPUT'), 'onBlur');
+    assert.deepEqual(writes, ['Remote']);
+  } finally {
+    await page.view.unmount();
+  }
+});

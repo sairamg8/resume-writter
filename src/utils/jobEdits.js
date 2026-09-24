@@ -52,17 +52,24 @@ export function applyStatusChange(job, status, now = Date.now()) {
 const NOT_EDITABLE = new Set(['id', 'createdAt', 'updatedAt', 'statusHistory', 'status']);
 
 /**
- * `job` with `updates` merged in, `updatedAt` now. `id`, `createdAt` and `statusHistory` are never
+ * `job` with `updates` merged in, `updatedAt` now — or `job` itself when no value changes. `id`, `createdAt` and `statusHistory` are never
  * taken from an edit — a stale copy of the history wrote a false entry (J-02) — and a `status`
  * goes through applyStatusChange, so history and the applied date stay consistent.
  */
 export function applyEdits(job, updates, now = Date.now()) {
   const out = { ...job };
+  let changed = false;
   for (const [key, value] of Object.entries(updates || {})) {
-    if (!NOT_EDITABLE.has(key)) out[key] = value;
+    if (NOT_EDITABLE.has(key) || (key in job && Object.is(job[key], value))) continue;
+    out[key] = value;
+    changed = true;
   }
+  const status = updates && 'status' in updates ? statusId(updates.status) : null;
+  // Nothing new — the current pipeline step clicked, a form saved unchanged — is not an edit: a
+  // fresh updatedAt put the job first in "last updated" and made a backup of it look older.
+  if (!changed && (!status || status === job.status)) return job;
   out.updatedAt = now;
-  return updates && 'status' in updates ? applyStatusChange(out, updates.status, now) : out;
+  return status ? applyStatusChange(out, status, now) : out;
 }
 
 /**
