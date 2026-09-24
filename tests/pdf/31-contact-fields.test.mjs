@@ -97,9 +97,13 @@ describe('one contact-field table (R1-3, R9-6)', () => {
     // Elsewhere "LinkedIn" and "GitHub" name nothing but contact fields, so any second table spells them;
     // a list of the keys starts 'email', 'phone'.
     const copy = /(['"`])(?:LinkedIn|GitHub)\1|(['"])email\2\s*,\s*(['"])phone\3/;
+    // A reference entry has an email and a phone of its own, beside its job title and relationship: a
+    // list that also names 'relationship' (no contact field) lists an entry's fields, not the contacts'
+    // — the ATS job match's PRINTED_FIELDS (R2-022).
+    const entryFields = /(['"])relationship\1/;
     const offenders = files.flatMap((f) => fs.readFileSync(path.join(SRC, f), 'utf8').split('\n')
       .map((line, i) => ({ where: `src/${f}:${i + 1}`, line }))
-      .filter(({ line }) => copy.test(line)));
+      .filter(({ line }) => copy.test(line) && !entryFields.test(line)));
     assert.deepEqual(offenders.map((o) => o.where), [], offenders.map((o) => o.line.trim()).join('\n'));
   });
 });

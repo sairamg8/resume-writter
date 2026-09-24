@@ -208,11 +208,11 @@ index 0b8b6fa..b2dacca 100644
 +/** flowcv patch (ATS-4): at most this much (em) comes off any one letter to pay for a wider gap. */
 +const MAX_LETTER_TAKE_EM = 0.05;
 +/**
-+ * flowcv patch (R3-003): a word gap's glyph — a space, or a no-break space. A contact value's words
++ * flowcv patch (R3-003): a word gap's glyph — a space, a no-break or typographic space. A contact value's words
 + * are joined with U+00A0 so it never wraps; counted as a letter, a closed-up line took from it too
 + * (0.215 em in Lato), where it must stay as wide as a space for `pdftotext -raw`.
 + */
-+const isWordGap = (glyph) => (glyph?.codePoints || []).some((cp) => cp === SPACE_CODE || cp === 0xa0);
++const isWordGap = (glyph) => (glyph?.codePoints || []).some((cp) => cp === SPACE_CODE || cp === 0xa0 || (cp >= 0x2000 && cp <= 0x200a) || cp === 0x202f || cp === 0x205f);
 +/**
 + * flowcv patch (ATS-4): keep every word gap of a line at least KEEP_SPACE_EM wide.
 + *

@@ -265,20 +265,28 @@ const noLigatures = () => ({ liga: false, clig: false }); // a new object each c
 const MIN_SPACE_EM = 0.22;
 
 /**
+ * The space characters whose glyph is widened: U+0020, the no-break space and the typographic spaces
+ * (U+2000-200A, U+202F, U+205F). -raw breaks words on all of them alike, and text pasted from a word
+ * processor carries them: Noto Sans draws its own U+2009 at 0.166 em, so "jobs a day" read "jobsa day".
+ */
+const SPACES = [0x20, 0xa0, 0x2000, 0x2001, 0x2002, 0x2003, 0x2004, 0x2005, 0x2006, 0x2007, 0x2008, 0x2009, 0x200a, 0x202f, 0x205f];
+
+/**
  * Wrap font.layout so a run's space glyphs advance at least MIN_SPACE_EM, without touching any other
  * glyph. Returns the wrapper; when the font's spaces already clear the bar it returns `layout`
  * unchanged, so nothing is measured per run.
  *
- * The no-break space too: a contact value's words are joined with U+00A0 so it never wraps
- * (PdfContact.jsx keepTogether), and Lato's and Literata's own U+00A0 glyph is as narrow as their
- * space, so Contact style Bar or Bullet read "+15550142" and "Austin,TX" under `pdftotext -raw` (R3-003).
+ * The no-break and typographic spaces too (SPACES): a contact value's words are joined with U+00A0
+ * so it never wraps (PdfContact.jsx keepTogether), and Lato's and Literata's own U+00A0 glyph is as
+ * narrow as their space, so Contact style Bar or Bullet read "+15550142" and "Austin,TX" under
+ * `pdftotext -raw` (R3-003).
  */
 function widenNarrowSpace(font, layout) {
   const minAdvance = MIN_SPACE_EM * (font.unitsPerEm || 1000);
   // A subset file can map a code point to a glyph it does not hold (IBM Plex Sans Arabic's U+00A0):
   // reading its advance throws, and that face is not widened for it.
   const advance = (glyph) => { try { return glyph.advanceWidth; } catch { return Infinity; } };
-  const narrow = new Set(typeof font.glyphForCodePoint !== 'function' ? [] : [0x20, 0xa0]
+  const narrow = new Set(typeof font.glyphForCodePoint !== 'function' ? [] : SPACES
     .filter((cp) => font.hasGlyphForCodePoint?.(cp))
     .map((cp) => font.glyphForCodePoint(cp))
     .filter((glyph) => glyph && advance(glyph) < minAdvance)

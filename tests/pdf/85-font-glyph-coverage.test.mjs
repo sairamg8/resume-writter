@@ -6,7 +6,7 @@
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { setup, teardown, resume, experience, render, read, allText, allItems } from './harness.mjs';
-import { pdftotext } from './extractors.mjs';
+import { pdftotext, wordGaps } from './extractors.mjs';
 
 before(setup);
 after(teardown);
@@ -37,6 +37,10 @@ async function assertDashesAndSpaces(settings) {
     const plain = out.replace(/\s+/g, ' ');
     for (const word of READS) assert.ok(plain.includes(word), `${mode} reads "${word}" in: ${plain}`);
   }
+  // Poppler 26.01's -raw joins two words across a gap under ~0.201 em ("jobsa day" on CI, where the
+  // default face draws its own U+2009 at 0.2 em); Poppler 24.02 does not, so the gap itself is the proof.
+  const narrow = (await wordGaps(bytes)).filter((g) => g.em < 0.21).map((g) => `${g.em.toFixed(3)} em ${g.at}`);
+  assert.deepEqual(narrow, [], 'every word gap clears -raw\'s word break');
 }
 
 describe('dashes and spaces the Latin face lacks print as its own stand-ins (R2-045)', () => {
