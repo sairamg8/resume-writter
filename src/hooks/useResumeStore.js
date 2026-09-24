@@ -107,6 +107,8 @@ export function useAppStore() {
   // another tab's save just taken — storage holds it already.
   const stored = useRef(loaded.state.resumes);
   const taken = useRef(null);
+  // The account the list belongs to (syncedUid) as this tab last saved or took it.
+  const owner = useRef(loaded.state.syncedUid);
 
   // Saves are coalesced (R2-077): every keystroke used to stringify and write the whole store.
   // Until a held save is written, storage has not seen its changes, so another tab's save keeps
@@ -127,6 +129,12 @@ export function useAppStore() {
   useEffect(() => {
     const other = taken.current;
     taken.current = null;
+    // The list changing hands — above all its account signing out, which takes it off this browser
+    // (R2-005) — is written at once, not held with the typing just before it: until then storage
+    // still held that account's résumés, for a browser closed with no pagehide (killed, crashed) to
+    // show whoever opened it next (R2-142).
+    const handedOver = appState.syncedUid !== owner.current;
+    owner.current = appState.syncedUid;
     // Only another tab's save was taken: not written back, or two tabs would answer each other's
     // saves for ever (each keeps its own open résumé, so their stores never read the same). A save
     // of this tab's still held (the open résumé, say) is written as the state is now.
@@ -137,6 +145,7 @@ export function useAppStore() {
       return;
     }
     saver.schedule(appState);
+    if (handedOver) saver.flush();
     setSaving(saver.pending());
   }, [appState, saver]);
 
