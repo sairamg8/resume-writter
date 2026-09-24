@@ -81,12 +81,13 @@ export function ExecutiveTemplatePDF({ data }) {
   return (
     <Document {...getDocumentProps(personal)}>
       <Page size={pageSizeOf(settings)} style={pageStyle} wrap>
-        <View style={[{ marginBottom: headerMb }, headerBorderStyle]} wrap={false}>
+        {/* Breakable: a summary longer than a page continues on the next (R2-046); the name row never splits. */}
+        <View style={[{ marginBottom: headerMb }, headerBorderStyle]}>
           <View style={{
             flexDirection: centered ? 'column' : 'row',
             alignItems: centered ? 'center' : alignItemsVal,
             gap: g.photoTextGap,
-          }}>
+          }} wrap={false}>
             {personal?.photo && !hidden.includes('photo') && (
               <PdfPhoto src={personal.photo} style={photoStyle} />
             )}

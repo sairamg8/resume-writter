@@ -83,12 +83,13 @@ export function TimelineTemplatePDF({ data }) {
   return (
     <Document {...getDocumentProps(personal)}>
       <Page size={pageSizeOf(settings)} style={getPageStyle(settings)} wrap>
-        <View style={[{ marginBottom: g.headerGapBelow }, getHeaderBorderStyle(settings)]} wrap={false}>
+        {/* Breakable: a summary longer than a page continues on the next (R2-046); the name row never splits. */}
+        <View style={[{ marginBottom: g.headerGapBelow }, getHeaderBorderStyle(settings)]}>
           <View style={{
             flexDirection: centered ? 'column' : 'row',
             alignItems: centered ? 'center' : photoTextAlignItems(settings),
             gap: g.photoTextGap,
-          }}>
+          }} wrap={false}>
             {personal?.photo && !hidden.includes('photo') && <PdfPhoto src={personal.photo} style={photoStyle} />}
             <View style={centered ? { alignItems: 'center', alignSelf: 'stretch' } : { flex: 1 }}>
               {nameBlock}
