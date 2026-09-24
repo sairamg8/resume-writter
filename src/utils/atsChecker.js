@@ -273,8 +273,26 @@ function shownItems(s, template) {
 }
 
 /**
+ * The fields an entry prints as they are, whatever its type (the PDF's and Word's): a job's or
+ * volunteer role's company / org, role and location; a degree's institution, degree, field and GPA;
+ * a project's name and technologies; a certificate's name, issuer and ID; an award's or a custom
+ * entry's title and subtitle; a language and its proficiency; a reference's name, job title,
+ * company, relationship, email and phone; interests. A link, the description, bullets and a skill
+ * group are read apart; dates are left out, as the matcher reads no numbers.
+ */
+const PRINTED_FIELDS = [
+  'company', 'org', 'role', 'location', 'institution', 'degree', 'fieldOfStudy', 'gpa',
+  'name', 'technologies', 'issuer', 'credentialId', 'title', 'subtitle',
+  'language', 'proficiency', 'jobTitle', 'relationship', 'email', 'phone', 'interests',
+];
+
+/** A stored field as text: a number from imported data as written, anything else not text as ''. */
+const fieldText = (v) => (typeof v === 'string' || typeof v === 'number' ? String(v) : '');
+
+/**
  * Extracts searchable text corpus from an entire resume object — what it prints: no hidden entry,
- * section or summary (R2-033).
+ * section or field (R2-033), every field an export prints, the header's contact lines as it prints
+ * them, and rich text as its words, never its markup (R2-022).
  */
 export function extractResumeCorpus(resume) {
   if (!resume) return '';
@@ -282,7 +300,8 @@ export function extractResumeCorpus(resume) {
   const p = resume.personal || {};
   if (p.name) parts.push(p.name);
   if (p.title) parts.push(p.title);
-  if (shownField(p, 'summary')) parts.push(p.summary);
+  for (const { value } of contactItems(p)) parts.push(value);
+  parts.push(printedText(shownField(p, 'summary')));
 
   const sections = Array.isArray(resume.sections) ? resume.sections : [];
   const template = templateId(resume.template);
@@ -290,35 +309,19 @@ export function extractResumeCorpus(resume) {
     if (s.visible === false) continue;
     if (s.title) parts.push(s.title);
     for (const item of shownItems(s, template)) {
-      if (!item || typeof item !== 'object') continue;
-      // Experience / Volunteering
-      if (item.company) parts.push(item.company);
-      if (item.org) parts.push(item.org);
-      if (item.role) parts.push(item.role);
-      if (item.location) parts.push(item.location);
-      if (item.description) parts.push(item.description);
-      if (Array.isArray(item.bullets)) parts.push(...item.bullets);
-
-      // Education
-      if (item.institution) parts.push(item.institution);
-      if (item.degree) parts.push(item.degree);
-      if (item.fieldOfStudy) parts.push(item.fieldOfStudy);
-
-      // Skills / Interests
-      if (item.category) parts.push(item.category);
-      if (item.skills) parts.push(item.skills);
-      if (item.interests) parts.push(item.interests);
-
-      // Projects
-      if (item.name) parts.push(item.name);
-      if (item.technologies) parts.push(item.technologies);
-
-      // Certifications / Awards
-      if (item.issuer) parts.push(item.issuer);
-      if (item.title) parts.push(item.title);
+      if (s.type === 'skills') {
+        const { category, skills } = skillGroup(item);
+        parts.push(category, skills);
+        continue;
+      }
+      parts.push(...PRINTED_FIELDS.map((key) => fieldText(item[key])));
+      // A certificate prints its link's label where it has one, a project its link.
+      parts.push(fieldText(item.urlLabel) || fieldText(item.url));
+      parts.push(printedText(fieldText(item.description)));
+      if (Array.isArray(item.bullets)) parts.push(...item.bullets.map(fieldText));
     }
   }
-  return parts.join(' ');
+  return parts.filter(Boolean).join(' ');
 }
 
 function chooseBestCasing(newWord, oldWord) {
