@@ -47,7 +47,11 @@ async function openTab(state) {
   return {
     store: () => current,
     storage,
-    saved: () => JSON.parse(storage.getItem(KEY)),
+    /** What storage holds once this tab's held save is written (leaving the page writes it, R2-077). */
+    saved: () => {
+      view.act(() => { view.window.dispatchEvent({ type: 'pagehide' }); });
+      return JSON.parse(storage.getItem(KEY));
+    },
     act: async (fn) => { view.act(fn); await settle(); },
     /** Another tab saves `state`: storage holds it, and this tab is told, as a browser tells it. */
     async otherTabSaves(state) {

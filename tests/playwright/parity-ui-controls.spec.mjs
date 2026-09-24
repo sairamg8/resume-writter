@@ -19,6 +19,9 @@ const PNG_2X2 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91
  * customFont '' where there was none, and prints the same).
  */
 const saved = (page) => page.evaluate(() => {
+  // The store writes a change that follows another within a moment a short while later; leaving
+  // the page writes it at once (R2-077), so this reads what the app holds now.
+  window.dispatchEvent(new Event('pagehide'));
   const s = JSON.parse(localStorage.getItem('cpwtcv_v1') || '{}');
   const r = (s.resumes || []).find((x) => x.id === s.activeId) || {};
   return JSON.stringify([r.template, r.settings, r.personal, (r.sections || []).map((x) => [x.id, x.settings, x.visible])],
