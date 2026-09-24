@@ -20,7 +20,8 @@ const COLOR_KEYS      = ['accentColor', 'textColor', 'sidebarBg', 'headerTextCol
 const TYPOGRAPHY_KEYS = ['font', 'fontSize', 'fontSizeBase', 'fontSizeNameDelta', 'fontSizeSectionDelta', 'fontSizeEntryDelta', 'customFont', 'iconSize'];
 const SPACING_KEYS    = ['lineHeightValue', 'marginV', 'marginH', 'sectionGap', 'itemGap'];
 const HEADING_KEYS    = ['headingStyle', 'sectionTitleCase', 'sectionBorderWidth', 'sectionBorderColor'];
-const ICON_KEYS       = ['iconSet', 'iconSize', 'contactStyle'];
+// Not contactStyle: Header Customization's, and the ↺ here turned a Bar or Bullet header to Icon (R2-090).
+const ICON_KEYS       = ['iconSet', 'iconSize'];
 const DATE_KEYS       = ['dateFormat'];
 
 export default function DesignPanel({ resume, updateSetting, setTemplate, resetSettings }) {
