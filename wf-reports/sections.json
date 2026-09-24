@@ -1,0 +1,41 @@
+{
+  "cluster": "sections",
+  "branch": "claude/wf-sections",
+  "base": "9c3589a",
+  "rows": [
+    { "id": "R2-057", "outcome": "fixed", "commits": ["28af5f1", "d16f1d3"], "tests": ["tests/pdf/88-hidden-entries-section.test.mjs"],
+      "summary": "A section whose entries are all hidden or all deleted no longer prints a bare heading in the PDF or preview on any template (sectionPrints in PdfSections.jsx, used by getVisibleSections and the Sidebar's column split). Word, Markdown and ATS text already left such a section out.", "remaining": "" },
+    { "id": "R2-069", "outcome": "duplicate", "commits": ["28af5f1"], "tests": ["tests/pdf/88-hidden-entries-section.test.mjs"],
+      "summary": "Same defect as R2-057 and fixed by the same commit: a section with no visible entries prints no heading in the PDF, as in Word.", "remaining": "" },
+    { "id": "R2-127", "outcome": "duplicate", "commits": ["28af5f1"], "tests": ["tests/pdf/88-hidden-entries-section.test.mjs"],
+      "summary": "Same defect as R2-057 and fixed by the same commit: the PDF and preview leave out a section whose entries are all hidden, as Word, Markdown and ATS text do.", "remaining": "" },
+    { "id": "R2-108", "outcome": "fixed", "commits": ["e8be4e4"], "tests": ["tests/pdf/88-month-picker.test.mjs"],
+      "summary": "Choosing the month picker's blank 'Month' or 'Year' option now clears that half of the date, so 'Jan 2024' can become '2024' or 'Jan'.", "remaining": "" },
+    { "id": "R2-112", "outcome": "fixed", "commits": ["84f9f6b"], "tests": ["tests/pdf/88-legacy-bullets.test.mjs"],
+      "summary": "As a résumé loads (normalizeResume, whatever its data version, since an imported file can carry any), an entry's legacy bullets[] move once and losslessly to the end of its description as an escaped list, and bullets[] is emptied. The editor's Description shows and edits them, and the Description eye hides them. The PDF, Word and ATS text print the same words as before.", "remaining": "" },
+    { "id": "R2-113", "outcome": "fixed", "commits": ["f998d99", "dc66104"], "tests": ["tests/pdf/88-new-section-open.test.mjs"],
+      "summary": "Collapse All and Expand All reach only the sections that existed when the button was pressed (or when the tab or résumé opened), so a section added after Collapse All opens and shows its entry and Add button. Another résumé opened after Collapse All still opens collapsed.", "remaining": "" },
+    { "id": "R2-115", "outcome": "fixed", "commits": ["69736a1"], "tests": ["tests/pdf/88-entry-keyboard-reorder.test.mjs"],
+      "summary": "An entry's drag grip is now in the tab order, named 'Reorder entry', and visible while focused, so Space and the arrow keys (the section's KeyboardSensor) move the entry.", "remaining": "" },
+    { "id": "R2-116", "outcome": "fixed", "commits": ["e7d75e8"], "tests": ["tests/pdf/88-month-picker.test.mjs", "tests/pdf/30-date-editor.test.mjs"],
+      "summary": "The month picker's year list now reaches fifteen years past the current year (was five), so certificate expiries and expected graduations can be picked. A stored year outside the list is still added.", "remaining": "" },
+    { "id": "R2-150", "outcome": "fixed", "commits": ["232a601", "d1603f4"], "tests": ["tests/pdf/88-present-entries.test.mjs", "tests/unit/json-resume-present.unit.mjs"],
+      "summary": "Education, Projects and Volunteering have Experience's current flag ('Currently studying here', 'Ongoing project', 'Currently volunteering here'), which clears and disables End Date. A current entry prints '<start> – Present' in the PDF on every template, and in Word, Markdown and ATS text (endDateOf in dates.js). The flag survives a JSON Resume export and re-import.", "remaining": "" },
+    { "id": "R2-151", "outcome": "fixed", "commits": ["64f3fb8"], "tests": ["tests/pdf/88-duplicate.test.mjs"],
+      "summary": "Each card-style entry has a Duplicate button, and the section menu has 'Duplicate section'. The copy is a deep copy placed right after the original, with a fresh unique id for the section and for every entry.", "remaining": "Language and Interest rows (single-line entries without a card) have no duplicate button." }
+  ],
+  "review": {
+    "issues": [
+      "R2-150: the JSON Resume export and re-import dropped the new current flag on education, project and volunteer entries.",
+      "R2-113: forcedIds was memoised on forceOpenKey only, so another résumé opened in the same Editor after Collapse All showed its sections open.",
+      "R2-057: tests/pdf/74-academic-letter.test.mjs relied on an Education section with items: [] printing its heading."
+    ],
+    "fixedByReviewer": [
+      "d1603f4: the JSON Resume export and import keep current for education, projects and volunteering.",
+      "dc66104: the forcedIds memo also depends on resume.id.",
+      "d16f1d3: the Academic section-order test's Education fixture has one entry; its assertion is unchanged."
+    ]
+  },
+  "baselineFailures": [],
+  "notes": "Behaviour changes: (1) After the legacy-bullets move, a hidden Description also hides the bullets. Awards' legacy bullets now print in the PDF too, which never printed them before, so the PDF now agrees with Word and ATS text. (2) tests/pdf/30-date-editor.test.mjs assertions changed for the +15-year window, as R2-116 asks. Found in passing, not fixed: src/utils/atsChecker.js still counts a section whose entries are all hidden (its title enters the keyword corpus near line 257, its type counts as present near line 627, and its heading can be flagged near line 409), which is worth a separate row. The PDF and Word ignore hiddenFields 'endDate' for education, projects and volunteering, while Markdown and ATS text honour it; the editor has no eye for those fields, so only imported data can hit this."
+}
