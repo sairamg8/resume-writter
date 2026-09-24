@@ -1,5 +1,56 @@
 # Session Handoff — Resume Here
 
+> **Updated 2026-09-24 (cloud session, branch `claude/beautiful-heisenberg-x3bsvo`).** This section is the
+> live resume cursor for the "fix every open row" session. It is rewritten and pushed after every merge,
+> so a cold start reads the state here and carries on. Older handoffs follow below.
+
+## 2026-09-24 — fix every open tracker row (in progress)
+
+**Goal (owner):** fix every open bug in `docs/tracking/` (149 open at `504b313`), then improve the app.
+**Base:** `504b313` (master, CI green). **Work branch:** `claude/beautiful-heisenberg-x3bsvo` (pushed; CI
+runs on master only, so nothing deploys from here).
+
+### How the work is split
+
+Round 1 — defects, 14 clusters. Each cluster is fixed on its own branch `wf/<cluster>` in a worktree
+(fail-first test → fix → commit), then an independent reviewer re-runs the fail-first checks. Agents do
+not edit `docs/tracking/`; the coordinator merges each branch into the work branch, updates the tracker
+rows and totals, and pushes.
+
+| Cluster | Rows | State |
+|---|---|---|
+| ats | R2-020 021 022 023 024 025 027 078 079 080 081 163 166 | running |
+| text-exports | R2-026 034 052 053 054 058 060 064 122 129 131 | queued |
+| sync | R2-028 029 030 | queued |
+| import-data | R2-031 055 056 110 085 091 117 093 094 095 097 | queued |
+| jobs | R2-035 036 038 039 040 042 075 099 100 101 102 156 | queued |
+| boards | R2-037 041 098 155 159 | queued |
+| letter | R2-043 044 092 103 130 134 068 133 | queued |
+| pdf-pagination | R2-046 047 048 049 104 109 111 | running |
+| pdf-text | R2-045 105, R3-002 003 004 | queued |
+| design-sidebar | R2-013 051 059 082 083 087 088 089 090 096 119 120 121 123 | running |
+| word | R2-061 065 066 070 114 118 124 125 126 128 132 | running |
+| sections | R2-057 069 127 108 112 113 115 116 150 151 | queued |
+| app-shell | R2-050 071 072 073 074 076 077 084 086 144 | queued |
+| preview | R2-106 107 170 165, R3-005 | queued |
+
+Done outside the clusters: `12c2a71` — LICENSE, CONTRIBUTING, README, knowledge docs (R2-143, R2-169, partial).
+
+Round 2 — features and test gaps not in a cluster: R2-135 136 137 138 139 140 141 142 145 146 147 148
+149, R2-152 154 157 158 161 162 167 168 171; plus a lint step in CI and the 21 oxlint warnings.
+
+### If this session was cut off
+
+1. `git fetch origin claude/beautiful-heisenberg-x3bsvo && git checkout claude/beautiful-heisenberg-x3bsvo`.
+2. Read the table above: a cluster marked **merged** is on the branch and in the tracker. Any other
+   cluster's local `wf/*` branch is gone with the container: re-run that cluster from the branch head.
+3. Local set-up: `corepack enable && yarn install --immutable`; `apt-get install poppler-utils mupdf-tools`.
+   Local Poppler is 24.02 (CI: 26.01), so a few word-gap tests can differ locally; CI on master is the judge.
+
+---
+
+## Earlier handoffs
+
 > **Updated 2026-09-14.** Checkout moved to **`/mnt/Storage/Projects/flowcv`**, branch
 > **`audit/e2e-fidelity`**. The authoritative resume cursor lives outside the repo:
 > `/mnt/Storage/my-learning/claude/flowcv/START-HERE.md`.
