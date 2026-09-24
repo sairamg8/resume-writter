@@ -67,3 +67,19 @@ for (const [name, generate] of EXPORTS) {
     assert.ok(r2 >= 0 && r2 < c2, 'Role / Co.: role first');
   });
 }
+
+for (const [name, generate] of EXPORTS) {
+  test(`${name}: an unset Order follows the template's default, as the PDF and Word resolve it (resolveSection)`, () => {
+    const order = (template, sectionSettings) => {
+      const r = { ...resumeWith(sectionSettings), template };
+      const out = generate(r);
+      return out.indexOf('Rolex') < out.indexOf('Compy') ? 'role' : 'company';
+    };
+    for (const t of ['executive', 'sidebar', 'timeline', 'banner', 'academic', 'compact']) {
+      assert.equal(order(t, {}), 'role', `${t}: unset leads with the role`);
+      assert.equal(order(t, { titleOrder: '' }), 'role', `${t}: a stored '' is no choice`);
+      assert.equal(order(t, { titleOrder: 'company' }), 'company', `${t}: a chosen Co. / Role wins`);
+    }
+    for (const t of ['classic', 'modern', 'minimal', undefined]) assert.equal(order(t, {}), 'company', `${t}: company first`);
+  });
+}

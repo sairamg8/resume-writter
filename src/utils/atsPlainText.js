@@ -1,5 +1,7 @@
 import { parseRichText } from './richText.js';
 import { formatDate, presentLabel } from './dates.js';
+import { resolveSection } from '../templates/pdf/shared/templateSectionDefaults.js';
+import { templateId } from '../constants/templates.js';
 
 /**
  * The ATS plain-text export (Export → ATS Text, and the ATS tab's Copy / Download): the résumé as
@@ -9,8 +11,9 @@ import { formatDate, presentLabel } from './dates.js';
  * no dates — and a description holding a list printed the list alone, as a one-line description
  * next to legacy bullets was dropped for them. Hidden entries and every field hidden with its eye
  * stay out (AUD-10). Dates print in Design → Date format, and Section Options → Show dates / Show
- * location and an experience section's Order apply as in the PDF (R2-064): it printed every date as
- * stored and every date and location the options hid.
+ * location and an experience section's Order apply as in the PDF (R2-064), an unset one as the
+ * résumé's template prints it (resolveSection): it printed every date as stored and every date and
+ * location the options hid.
  */
 
 const RULE = '----------------------------------------';
@@ -125,12 +128,12 @@ function entryLines(type, item, f, hidden, settings, opts) {
  * A section's lines under its heading: each shown entry's, the empty ones left out. Interests print
  * as one list, as the PDF prints every entry's interests as one row of chips.
  */
-function sectionLines(section, items, settings) {
+function sectionLines(section, items, settings, template) {
   const lines = [];
   for (const item of items) {
     const hidden = new Set(item.hiddenFields || []);
     const f = (k) => (hidden.has(k) ? '' : (item[k] || ''));
-    const own = entryLines(section.type, item, f, hidden, settings, section.settings || {});
+    const own = entryLines(section.type, item, f, hidden, settings, resolveSection(section, templateId(template)).settings);
     lines.push(...own.filter((line, i) => line || (i === own.length - 1 && own.some(Boolean))));
   }
   if (section.type === 'interests') return [lines.filter(Boolean).join(', ')].filter(Boolean);
@@ -170,7 +173,7 @@ export function generateAtsPlainText(resume) {
   for (const s of sections) {
     if (!s || s.visible === false) continue;
     const items = (Array.isArray(s.items) ? s.items : []).filter((item) => item && item.visible !== false);
-    const body = sectionLines(s, items, resume.settings || {});
+    const body = sectionLines(s, items, resume.settings || {}, resume.template);
     if (!body.some(Boolean)) continue;
     lines.push(String(s.title || s.type).toUpperCase(), RULE, ...body, '');
   }

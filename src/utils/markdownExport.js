@@ -1,6 +1,8 @@
 import { dateRange, formatDate, presentLabel } from './dates.js';
 import { parseRichText, safeHref } from './richText.js';
 import { contactHref, contactItems } from './contacts.js';
+import { resolveSection } from '../templates/pdf/shared/templateSectionDefaults.js';
+import { templateId } from '../constants/templates.js';
 
 /**
  * Markdown Resume Exporter (Export → Markdown (.md)): the résumé as GitHub Flavored Markdown.
@@ -12,7 +14,8 @@ import { contactHref, contactItems } from './contacts.js';
  * through the PDF's safeHref, so a bare "github.com/me" links https:// and a javascript: or data:
  * address prints as text, never as a link. Hidden entries and every field hidden with its eye stay
  * out (AUD-13); dates print in the résumé's Date format, and Section Options → Show dates / Show
- * location and an experience section's Order apply as in the PDF (R2-064).
+ * location and an experience section's Order apply as in the PDF (R2-064), an unset one as the
+ * résumé's template prints it (resolveSection: Executive, Sidebar, Timeline… lead a job with the role).
  */
 
 /** Two trailing spaces: a Markdown hard line break, so a line the PDF breaks stays broken. */
@@ -222,7 +225,7 @@ export function generateMarkdownResume(resume) {
       ? listLines(s.type, items, fieldOf)
       : items.flatMap((item) => {
         const f = fieldOf(item);
-        return itemLines(s.type, item, f, () => markdownBody(f('description'), item.bullets), settings, s.settings || {});
+        return itemLines(s.type, item, f, () => markdownBody(f('description'), item.bullets), settings, resolveSection(s, templateId(resume.template)).settings);
       });
     if (!body.some((l) => l.trim())) continue;
     lines.push(`## ${s.title || s.type}`, ...body);
