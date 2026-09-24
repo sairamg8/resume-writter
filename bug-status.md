@@ -2,8 +2,8 @@
 
 > Location: `/mnt/Storage/Projects/flowcv/bug-status.md`
 > Updated: 2026-09-24 · every row **verified independently at `d495cb2`** (see Verification pass) ·
-> `origin/master` (deployed) = `9c4bdce` · 3 commit(s) on `master` wait for their gate
-> **Open: 163** (0 here + 163 from the full audit in [bug-status-r2/](bug-status-r2/README.md)) | Fixed, not pushed: 0 | **Closed: 91** (87 fixed + 4 ✖ without a code fix)
+> `origin/master` (deployed) = `d92c1ec` · 2 commit(s) on `master` wait for their gate
+> **Open: 160** (0 here + 160 from the full audit in [bug-status-r2/](bug-status-r2/README.md)) | Fixed, not pushed: 0 | **Closed: 94** (90 fixed + 4 ✖ without a code fix)
 
 ## Summary
 
@@ -13,10 +13,10 @@
 | ATS parsing defects (`ATS-`) | 7 (ATS-7 was TUI-6) | 5 | 0 | 2 | 0 |
 | Templates UI audit, 2026-09-23 (`TUI-`) | 6 (+ TUI-6, filed as ATS-7) | 6 | 0 | 0 | 0 |
 | Prompt tasks, 2026-09-14 → 09-21 | 33 | 33 | 0 | 0 | 0 |
-| Full audit, 2026-09-23 — defects (`R2-001`…`R2-134`, [bug-status-r2/](bug-status-r2/README.md)) | 134 | 8 | 0 | 2 | **124** |
+| Full audit, 2026-09-23 — defects (`R2-001`…`R2-134`, [bug-status-r2/](bug-status-r2/README.md)) | 134 | 11 | 0 | 2 | **121** |
 | Full audit, 2026-09-23 — features and test gaps (`R2-135`…`R2-171`) | 37 | 0 | 0 | 0 | **37** |
 | Found by the build lanes, 2026-09-24 (`R3-`, in [bug-status-r2/](bug-status-r2/README.md)) | 2 | 0 | 0 | 0 | **2** |
-| **Total** | **254** | **87** | **0** | **4** | **163** |
+| **Total** | **254** | **90** | **0** | **4** | **160** |
 
 - **Status:** ✅ fixed and pushed (on `origin/master`, so deployed) · ⏸ fixed and committed, not pushed · 🔴 open ·
   ✖ closed without a code fix (won't fix: a known limit; not a bug; a duplicate) — the proof is in the row, and it counts as closed.
@@ -33,8 +33,8 @@
 2. ATS-4 is ✅ (`58f4f96`), ATS-6 is ✅ (`32a5972`; PENDING-ALL D3 closed: Heading styles, look unchanged). ATS-1/2/5 are ✅ (`417db1e`, one entry-header layout). TUI-6 is filed as ATS-7; ATS-3 and ATS-7 are ✖ known limits (`c950ae7`, `a67caa3`). The ATS list is closed.
 3. The TUI list is closed (TUI-6 filed as ATS-7).
 
-✅ **Deployed:** `origin/master` = `9c4bdce` (R2-009: the Markdown export prints every field the PDF prints — Interests, a reference's details, a custom entry's subtitle and location, the field of study, legacy bullets — with nested lists nested and links absolute, `9c4bdce`; the tree also holds the other lane's R2-062 `21d64d1`, BUILD-T's Banner template `08227b8` and `1344fd0`, and the R3-001 filing `2d71604`). Gate on that exact tree, GitHub Actions run 35954796321, 2026-09-24 09:50:
-**2205 tests, 2200 pass, 0 fail, 4 todo** (the accepted limits' `todo`s; 1 skipped: the private-résumé scan, whose file
+✅ **Deployed:** `origin/master` = `d92c1ec` (R2-011: the template picker badges the Sidebar ATS in its Single · ATS-safe Layout, `41766b0`; R2-062: the Word résumé and letter follow Design → Spacing — margins, Line Height, Between Sections, Between Items and the Page Fit presets, `21d64d1`; R2-063: Word's section bodies print in Design → Text Color's shades and the accent, as the PDF does, `d92c1ec`; the tree also holds the other lane's R2-009 `9c4bdce`). Gate on that exact tree, GitHub Actions run 35955157448, 2026-09-24 09:53:
+**2214 tests, 2209 pass, 0 fail, 4 todo** (the accepted limits' `todo`s; 1 skipped: the private-résumé scan, whose file
 is not on CI), a green production build, Playwright green, and a private-data scan of all 76 bundle files with no hits.
 Per the owner (2026-09-23, *"keep pushing after each bug"*) every finished bug lands → gates → pushes, unasked.
 
