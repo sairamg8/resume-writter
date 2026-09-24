@@ -6,7 +6,7 @@
 //     first entry, whose unbreakable header and the two lines it keeps are taller than the title's
 //     own three-line keep;
 //   - a 2-column grid keeps its reading order: a row's left entry never prints after its right one
-//     (R2-048);
+//     (R2-048), the Timeline's too;
 //   - a certification's date prints on the page of its name, an award's title is never left alone at
 //     a page foot (R2-049) — nor, when the award is its section's first, the section's title.
 // Each sweep ends where its section's title (or `needle`) is first pushed to page 2 — templates fill a
@@ -141,6 +141,20 @@ const education1 = () => section('education', [
   { institution: 'Northfield University', degree: 'B.Sc.', fieldOfStudy: 'Computer Science', location: 'Pune', startDate: '2012', endDate: '2016', description: '<p>Thesis on distributed systems and more.</p><p>Second line.</p>' },
 ], {}, { title: 'Education' });
 
+// Two rows: the second, its left entry's header the taller, at the page foot.
+const experience4 = () => section('experience', [
+  { company: 'Firstco', role: 'Engineer', startDate: '2021', endDate: '2023', description: '<ul><li>One</li><li>Two</li><li>Three</li><li>Four</li></ul>' },
+  { company: 'Secondco', role: 'Engineer', startDate: '2020', endDate: '2021', description: '<ul><li>One</li><li>Two</li><li>Three</li><li>Four</li></ul>' },
+  { company: 'Leftco', role: 'Senior Staff Principal Engineer of Platform Infrastructure Services', location: 'Pune', startDate: '2019', endDate: '2021', description: '<ul><li>Did a thing</li><li>Did another</li></ul>' },
+  { company: 'Rightco', role: 'Dev', startDate: '2017', endDate: '2019', description: '<p>Short</p>' },
+], { columns: 2 }, { title: 'Target Zone' });
+
+// The Sidebar's main column prints Projects as cards, in a grid under Grids 2.
+const projects2 = () => section('projects', [
+  { name: 'Leftproj Platform', technologies: 'React, Node.js, PostgreSQL, Docker, Kubernetes, Terraform, AWS', url: 'https://example.com/left', startDate: '2020', description: '<ul><li>Built it</li><li>Ran it</li></ul>' },
+  { name: 'Rightproj', technologies: 'Go', startDate: '2021', description: '<p>Short</p>' },
+], { columns: 2 }, { title: 'Projects' });
+
 /** The award's title never the last line of a page. */
 function awardNotAlone(items, pageCount) {
   const title = items.find((i) => i.str.includes('Best Engineer Award'));
@@ -179,12 +193,26 @@ describe('a section title keeps the first line of its content (R2-047)', () => {
     assert.deepEqual(await sweep('classic', education1, titleNotAlone), []);
   });
 
+  it('a 2-column section with no entry to print still prints its title, as one column does', async () => {
+    const missing = [];
+    for (const template of ['classic', 'modern', 'compact', 'sidebar', 'timeline']) {
+      for (const type of ['experience', 'projects', 'awards', 'custom', 'skills']) {
+        const s = section(type, [], { columns: 2 }, { title: `Zz${type}` });
+        const pages = await read(await render(resume({ template, sections: [experience([{}]), s] })));
+        if (!allItems(pages).some((t) => t.str.toUpperCase().includes(`ZZ${type.toUpperCase()}`))) missing.push(`${template} ${type}`);
+      }
+    }
+    assert.deepEqual(missing, []);
+  });
 });
 
 describe('a 2-column grid keeps its reading order across a page break (R2-048)', () => {
-  for (const template of ['classic', 'sidebar']) {
+  for (const template of ['classic', 'sidebar', 'timeline']) {
     it(`${template}: Experience in two columns`, async () => {
       assert.deepEqual(await sweep(template, experience2, both(titleNotAlone, inOrder([['Leftco', 'Rightco']]))), []);
+    });
+    it(`${template}: Experience in two columns, its second row at the page foot`, async () => {
+      assert.deepEqual(await sweep(template, experience4, inOrder([['Leftco', 'Rightco']]), { needle: 'Leftco' }), []);
     });
   }
   it('classic: Education in two columns', async () => {
@@ -194,6 +222,9 @@ describe('a 2-column grid keeps its reading order across a page break (R2-048)',
   // Single · ATS-safe page prints it in a grid.
   it('sidebar: Education in two columns', async () => {
     assert.deepEqual(await sweep('sidebar', education2, inOrder([['Northfield', 'Southgate']]), { settings: { sidebarSingleColumn: true } }), []);
+  });
+  it('sidebar: Projects in two columns', async () => {
+    assert.deepEqual(await sweep('sidebar', projects2, both(titleNotAlone, inOrder([['Leftproj', 'Rightproj']]))), []);
   });
 });
 

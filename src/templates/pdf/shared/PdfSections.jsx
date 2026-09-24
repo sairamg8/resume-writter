@@ -81,8 +81,8 @@ const GRID_ROW_KEEP_LINES = 8;
 const GRID_TITLE_LINES = 2;
 
 /**
- * The section `title` and its entries, one per row or `cols` per row, as siblings (no wrapper View),
- * so every entry, and every row of a grid, can move or split on its own at a page break.
+ * A grid's rows, `cols` cells each (Section Options → Grids), the section `title` in the first;
+ * `cell(item, index, width, c)` prints a cell. RenderColGrid's and the Timeline's (TimelineEntries).
  *
  * A grid row splits cell by cell, and a cell whose header did not fit moved to the next page while
  * the cell beside it stayed: the right entry printed before the left one (R2-048), and a first row
@@ -91,26 +91,33 @@ const GRID_TITLE_LINES = 2;
  * that needs), in a View of its own, the first one's with the title: with less room left than that,
  * a row that does not fit moves to the next page whole, its title with it. A row taller than that
  * room splits where it starts, so a cell taller than a page continues on the next page instead of
- * being cut off.
+ * being cut off. With no entry to print, the title alone, as a single column prints it.
+ */
+export function gridRows({ items, cols, gap, title = null, settings, cell }) {
+  const rows = [];
+  for (let i = 0; i < items.length; i += cols) rows.push(items.slice(i, i + cols));
+  if (!rows.length) return title;
+  const width = getColumnWidth(cols);
+  const line = (settings?.fontSizeBase || 11) * (settings?.lineHeightValue ?? 1.5);
+  return rows.map((row, r) => (
+    <View key={r} style={{ marginTop: r ? gap : 0 }}>
+      {SPACER}
+      <View minPresenceAhead={Math.round(line * (GRID_ROW_KEEP_LINES + (r || !title ? 0 : GRID_TITLE_LINES)))} />
+      {r ? null : title}
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+        {row.map((item, c) => cell(item, r * cols + c, width, c))}
+        {Array.from({ length: cols - row.length }, (_, f) => <View key={`fill${f}`} style={{ width }} />)}
+      </View>
+    </View>
+  ));
+}
+
+/**
+ * The section `title` and its entries, one per row or `cols` per row (gridRows), as siblings (no
+ * wrapper View), so every entry, and every row of a grid, can move or split on its own at a page break.
  */
 export function RenderColGrid({ items, cols, gap, renderItem, title = null, settings }) {
-  if (cols > 1) {
-    const rows = [];
-    for (let i = 0; i < items.length; i += cols) rows.push(items.slice(i, i + cols));
-    const width = getColumnWidth(cols);
-    const line = (settings?.fontSizeBase || 11) * (settings?.lineHeightValue ?? 1.5);
-    return rows.map((row, r) => (
-      <View key={r} style={{ marginTop: r ? gap : 0 }}>
-        {SPACER}
-        <View minPresenceAhead={Math.round(line * (GRID_ROW_KEEP_LINES + (r || !title ? 0 : GRID_TITLE_LINES)))} />
-        {r ? null : title}
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-          {row.map((item, c) => entry(renderItem(item, r * cols + c), { width }, c))}
-          {Array.from({ length: cols - row.length }, (_, f) => <View key={`fill${f}`} style={{ width }} />)}
-        </View>
-      </View>
-    ));
-  }
+  if (cols > 1) return gridRows({ items, cols, gap, title, settings, cell: (item, i, width, c) => entry(renderItem(item, i), { width }, c) });
   return (
     <>
       {title}

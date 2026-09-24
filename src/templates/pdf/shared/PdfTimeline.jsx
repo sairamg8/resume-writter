@@ -4,7 +4,7 @@ import { solid, textShades } from './pdfColors';
 import { railColor, TIMELINE_RAIL } from './timelineRail';
 import { lineBox } from './pdfMeasure';
 import { EndRow, endField, fieldGap, getDateColor, onBaselineOf } from './PdfItemHeader';
-import { SPACER, getColumnWidth } from './PdfSections';
+import { SPACER, gridRows } from './PdfSections';
 
 /**
  * The Timeline template's rail (TimelineTemplatePDF.jsx): a vertical accent line down the left of a
@@ -88,23 +88,20 @@ function railEntry(el, { padTop = 0, width, settings, key }) {
 }
 
 /**
- * A section's entries on the rail — one per row, or `cols` per row (Section Options → Grids), each
- * cell on a rail of its own. Returned as siblings of the section title, as RenderColGrid's are, so
- * every entry and every row can move or split on its own at a page break.
+ * The section `title` and its entries on the rail — one per row, or `cols` per row (Section Options →
+ * Grids), each cell on a rail of its own — as siblings, as RenderColGrid's are, so every entry and every
+ * row can move or split on its own at a page break. A grid's rows are RenderColGrid's (gridRows): a row
+ * moves whole, with the title on the first, when its cells' headers do not fit — split cell by cell,
+ * the right entry printed before the left one (R2-048).
  */
-export function TimelineEntries({ items, cols = 1, gap, settings, renderItem }) {
-  if (cols > 1) {
-    const rows = [];
-    for (let i = 0; i < items.length; i += cols) rows.push(items.slice(i, i + cols));
-    const width = getColumnWidth(cols);
-    return rows.map((row, r) => (
-      <View key={r} style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: r ? gap : 0 }}>
-        {row.map((item, c) => railEntry(renderItem(item, r * cols + c), { width, settings, key: c }))}
-        {Array.from({ length: cols - row.length }, (_, f) => <View key={`fill${f}`} style={{ width }} />)}
-      </View>
-    ));
-  }
-  return items.map((item, i) => railEntry(renderItem(item, i), { padTop: i ? gap : 0, settings, key: i }));
+export function TimelineEntries({ items, cols = 1, gap, settings, renderItem, title = null }) {
+  if (cols > 1) return gridRows({ items, cols, gap, title, settings, cell: (item, i, width, c) => railEntry(renderItem(item, i), { width, settings, key: c }) });
+  return (
+    <>
+      {title}
+      {items.map((item, i) => railEntry(renderItem(item, i), { padTop: i ? gap : 0, settings, key: i }))}
+    </>
+  );
 }
 
 /**
