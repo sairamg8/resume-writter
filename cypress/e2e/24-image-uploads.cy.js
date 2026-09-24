@@ -78,7 +78,7 @@ describe('a photo saved as a WebP, before uploads were converted, still prints (
   it("the letter's own undecodable photo gives way to the résumé photo instead of hiding it", () => {
     cy.visitEditor('classic', { state: saved(`data:image/webp;base64,${WEBP}`, BROKEN), tab: 'coverletter' });
     cy.get('[data-testid=letter-photo-note]').should('contain', 'uses your résumé photo');
-    cy.exportPdf().then((pdf) => expect(pdf.images, 'the résumé photo is drawn').to.be.at.least(1));
+    cy.exportLetterPdf().then((pdf) => expect(pdf.images, 'the résumé photo is drawn').to.be.at.least(1));
   });
 });
 

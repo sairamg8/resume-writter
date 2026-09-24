@@ -30,8 +30,8 @@ describe('cover letter contacts follow the letter\'s own visibility (FIDB-44)', 
     cy.visitEditor('classic', { state: seeded(['phone'], { hiddenFields: [] }), tab: 'coverletter' });
     letter().invoke('text').should((t) => expect(squash(t)).to.contain(PHONE));
     cy.get('button[title="Hide Phone from the cover letter"]').should('exist');
-    cy.exportPdf().then((pdf) => expect(pdfText(pdf)).to.contain(PHONE));
-    cy.exportDocx().then((docx) => expect(squash(docx.paragraphs.join(' '))).to.contain(PHONE));
+    cy.exportLetterPdf().then((pdf) => expect(pdfText(pdf)).to.contain(PHONE));
+    cy.exportLetterDocx().then((docx) => expect(squash(docx.paragraphs.join(' '))).to.contain(PHONE));
   });
 
   // Guard / selector note: hiding on the letter already worked before e0e243c; this test fails
@@ -48,7 +48,7 @@ describe('cover letter contacts follow the letter\'s own visibility (FIDB-44)', 
       expect(active(s).coverLetter.hiddenFields).to.deep.eq(['phone']);
       expect(active(s).personal.hiddenFields).to.deep.eq([]);
     });
-    cy.exportPdf().then((pdf) => {
+    cy.exportLetterPdf().then((pdf) => {
       expect(pdfText(pdf)).not.to.contain(PHONE);
       expect(pdfText(pdf)).to.contain(EMAIL);
     });
@@ -168,7 +168,7 @@ describe('contact icon packs in the Design panel (FIDA-39, FIDB-07)', () => {
     cy.contains('button', 'Cover Letter').click();
     cy.previewReady();
     letter().invoke('text').should(contactsWith('•'));
-    cy.exportDocx().then((docx) => contactsWith('•')(docx.paragraphs.join(' ')));
+    cy.exportLetterDocx().then((docx) => contactsWith('•')(docx.paragraphs.join(' ')));
   });
 
   it('Classic draws the pack only with the Icon style: its hint says a pick switches Bar to Icon, and a pick does (R9-4)', () => {

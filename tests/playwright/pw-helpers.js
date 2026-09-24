@@ -24,18 +24,22 @@ export async function visitEditor(page, template = 'classic', opts = {}) {
   return state;
 }
 
+/** The Cover Letter tab's PDF item: there the Export menu says it exports the letter (R2-131). */
+export const LETTER_PDF = 'Export Cover Letter PDF';
+
 /**
- * Clicks Export -> Export PDF in the real browser, waits for the downloaded PDF file,
- * reads its buffer, and extracts all rendered text runs and properties.
+ * Clicks Export -> `label` (the résumé tab's "Export PDF", or LETTER_PDF on the Cover Letter tab) in
+ * the real browser, waits for the downloaded PDF file, reads its buffer, and extracts all rendered
+ * text runs and properties.
  */
-export async function exportPdf(page) {
+export async function exportPdf(page, label = 'Export PDF') {
   await page.waitForSelector('[data-preview-status="ready"]', { timeout: 30_000 });
 
   const exportBtn = page.locator('button:has-text("Export")').first();
   await exportBtn.click();
 
   const downloadPromise = page.waitForEvent('download', { timeout: 30_000 });
-  const exportPdfBtn = page.locator('button:has-text("Export PDF")');
+  const exportPdfBtn = page.getByRole('button', { name: label, exact: true });
   await exportPdfBtn.click();
 
   const download = await downloadPromise;

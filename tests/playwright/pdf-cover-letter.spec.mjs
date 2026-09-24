@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { visitEditor, exportPdf } from './pw-helpers.js';
+import { visitEditor, exportPdf, LETTER_PDF } from './pw-helpers.js';
 
 test.describe('Exported PDF — Cover Letter Customizations', () => {
 
@@ -19,7 +19,7 @@ test.describe('Exported PDF — Cover Letter Customizations', () => {
       },
     });
 
-    const { runs, text } = await exportPdf(page);
+    const { runs, text } = await exportPdf(page, LETTER_PDF);
     expect(runs.length).toBeGreaterThan(5);
 
     // Verify all customized fields in the exported PDF
@@ -49,8 +49,8 @@ test.describe('Exported PDF — Cover Letter Customizations', () => {
     await expect(applyBtn).toBeVisible();
     await applyBtn.click();
 
-    // Export PDF and verify the applied content reached the exported PDF
-    const { text } = await exportPdf(page);
+    // Export Cover Letter PDF and verify the applied content reached the exported PDF
+    const { text } = await exportPdf(page, LETTER_PDF);
     expect(text).toContain('Airbnb');
     expect(text).toContain('Alex Johnson');
   });

@@ -80,6 +80,14 @@ Cypress.Commands.add('exportPdf', (label = 'Export PDF') =>
     cy.task('readPdf', file, { timeout: 60_000 }).then((pdf) => ({ ...pdf, file }))));
 
 /** Export Word and resolve with { paragraphs, aligns, bytes, file } (aligns[i]: paragraph i's alignment or null). */
-Cypress.Commands.add('exportDocx', () =>
-  cy.exportFile('Export Word', '.docx').then((file) =>
+Cypress.Commands.add('exportDocx', (label = 'Export Word') =>
+  cy.exportFile(label, '.docx').then((file) =>
     cy.task('readDocx', file).then((docx) => ({ ...docx, file }))));
+
+/**
+ * The Cover Letter tab's PDF and Word exports, as exportPdf and exportDocx resolve them. On that tab
+ * the Export menu names the letter — "Export Cover Letter PDF" / "Export Cover Letter Word" — and the
+ * résumé tab's "Export PDF" / "Export Word" are not offered there (R2-131).
+ */
+Cypress.Commands.add('exportLetterPdf', () => cy.exportPdf('Export Cover Letter PDF'));
+Cypress.Commands.add('exportLetterDocx', () => cy.exportDocx('Export Cover Letter Word'));

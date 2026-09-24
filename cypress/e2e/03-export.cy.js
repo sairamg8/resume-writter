@@ -63,7 +63,7 @@ describe('export — PDF per template', () => {
 
   it('the cover letter exports its own PDF with the letter body and signature', () => {
     cy.visitEditor('classic', { tab: 'coverletter' });
-    cy.exportPdf().then((pdf) => {
+    cy.exportLetterPdf().then((pdf) => {
       expect(basename(pdf.file)).to.eq('Alex_Johnson_Full_Stack_Engineer_cover_letter.pdf');
       const text = pdfText(pdf);
       expect(text).to.contain(squash('I am excited to apply for the Senior Engineer position'));

@@ -65,7 +65,7 @@ describe('cover letter', () => {
     contactToggle('Email').click();
     letter().should('not.contain.text', 'alex@example.com');
     cy.store().should((s) => expect(active(s).coverLetter.hiddenFields).to.include('email'));
-    cy.exportPdf().then((pdf) => {
+    cy.exportLetterPdf().then((pdf) => {
       const text = squash(pdf.runs.map((r) => r.str).join(''));
       expect(text).not.to.contain('alex@example.com');
       expect(text).to.contain(squash('+1 555 0100'));
@@ -75,7 +75,7 @@ describe('cover letter', () => {
   it('the exported cover letter carries the edited closing and signature', () => {
     field('Closing Phrase').clear().type('Warm regards');
     field('Signature Name').clear().type('A. Johnson');
-    cy.exportPdf().then((pdf) => {
+    cy.exportLetterPdf().then((pdf) => {
       const text = squash(pdf.runs.map((r) => r.str).join(''));
       expect(text).to.contain('warmregards');
       expect(text).to.contain('a.johnson');
@@ -108,7 +108,7 @@ describe('cover letter', () => {
       expect(at, 'letter order').to.deep.eq([...at].sort((a, b) => a - b));
     };
     letter().should(($el) => inOrder(squash($el.text())));
-    cy.exportPdf().then((pdf) => inOrder(squash(pdf.runs.map((r) => r.str).join(''))));
+    cy.exportLetterPdf().then((pdf) => inOrder(squash(pdf.runs.map((r) => r.str).join(''))));
   });
 
   it('"Today" writes today\'s date out in full', () => {
@@ -120,7 +120,7 @@ describe('cover letter', () => {
   });
 
   it('Export Word on the Cover Letter tab downloads the letter, not the resume (FIDB-50)', () => {
-    cy.exportDocx().then((docx) => {
+    cy.exportLetterDocx().then((docx) => {
       expect(docx.file.split(/[\\/]/).pop()).to.eq('Alex_Johnson_Full_Stack_Engineer_cover_letter.docx');
       const text = squash(docx.paragraphs.join(' '));
       ['15 January 2026', 'Sarah Smith', 'Globex Corp', 'Application for Senior Engineer role',
