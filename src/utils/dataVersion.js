@@ -8,4 +8,4 @@
  * it has had, so none runs twice on the same data — not after a sync, an import of an exported
  * file, or a stale tab of an older build writing the store back with its older store version.
  */
-export const DATA_VERSION = 11;
+export const DATA_VERSION = 12;
