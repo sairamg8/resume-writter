@@ -142,6 +142,19 @@
         "tests/unit/json-resume-date-format.unit.mjs"
       ],
       "summary": "Found while fixing R2-064/R2-122: a JSON Resume round trip reset Design → Date format to the starter's (Classic's MMM YYYY), so a résumé printing its dates As entered or MM/YYYY came back printing 'Mar 2021'. The export now writes the effective format to meta.dateFormat and the import restores it when this build knows it. Fail-first: 2 of 3 tests failed before the fix."
+    },
+    {
+      "id": "R2-171",
+      "outcome": "partial",
+      "commits": [],
+      "tests": [
+        "tests/pdf/70-markdown-parity.test.mjs",
+        "tests/pdf/65-ats-text-parity.test.mjs",
+        "tests/unit/json-resume-sections.unit.mjs",
+        "tests/unit/json-resume-reprint.unit.mjs"
+      ],
+      "summary": "The export half is covered at HEAD: every one of the 11 section types (interests, references and custom included) is checked word for word against the PDF in Markdown (70-markdown-parity, R2-009) and the ATS text (65-ats-text-parity, R2-001), and goes both ways through JSON Resume, reprinting the same (json-resume-sections / json-resume-reprint, R2-002 / R2-006).",
+      "remaining": "The editor half — tests for section reorder, visibility, delete, MonthPicker writes and the Sidebar's single-column resolution. Not taken here: the sections cluster is changing EditorResumeTab, the section editors and useResumeSectionActions, and app-shell / design-sidebar useResumeStore, so it belongs after those merge."
     }
   ],
   "review": {
