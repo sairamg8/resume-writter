@@ -9,7 +9,9 @@ import { previewBox } from '@/constants/pageSize';
  * - Re-renders `DEBOUNCE_MS` after the last change to `input` — also before the first page
  *   appears and after a failed build; the previous pages stay on screen (double-buffered) until
  *   the new ones are painted, so typing never flashes blank.
- * - A stale render is dropped when a newer one has started.
+ * - A finished render is shown when it is newer than the pages on screen, even while a newer
+ *   change is still waiting or building (steady typing would otherwise freeze the preview); only
+ *   one older than the pages on screen is dropped.
  * - `active` false (the column is hidden: "Editor only", or a phone's Edit tab) builds and paints
  *   nothing: the preview only notes it is behind (status 'paused') and builds once, with the latest
  *   input, when it is shown again. Shown again with nothing changed, it keeps what it has.
@@ -101,7 +103,8 @@ export function PdfPreview({ render, input, zoom = 1, textId, title = 'Résumé'
   const [status, setStatus] = useState(active ? 'rendering' : 'paused');
   const [error, setError] = useState(null);
   const [retry, setRetry] = useState(0);
-  const generation = useRef(0);
+  const generation = useRef(0); // bumped by every change that asks for a build
+  const shownGen = useRef(0);   // the generation of the pages on screen
   const built = useRef(null); // { input, render, retry } of the last build that started
   const wasActive = useRef(active);
   const docRef = useRef(null);
@@ -133,7 +136,7 @@ export function PdfPreview({ render, input, zoom = 1, textId, title = 'Résumé'
       built.current = { input, render, retry };
       try {
         const [blob, pdfjs] = await Promise.all([render(input), loadPdfjs()]);
-        if (gen !== generation.current) return;
+        if (gen < shownGen.current) return;
         const data = new Uint8Array(await blob.arrayBuffer());
         const pdf = await pdfjs.lib.getDocument({ data, worker: pdfjs.worker, isEvalSupported: false }).promise;
         const pages = [];
@@ -144,10 +147,13 @@ export function PdfPreview({ render, input, zoom = 1, textId, title = 'Résumé'
         }
         const width = widthRef.current;
         const painted = await paint(pages, width);
-        if (gen !== generation.current) { release(pdf); return; }
+        if (gen < shownGen.current) { release(pdf); return; }
         release(docRef.current);
         docRef.current = pdf;
+        shownGen.current = gen;
         setView({ pages, painted, cssWidth: width });
+        // Older than the latest change: its pages go up, but the latest build still owns the status.
+        if (gen !== generation.current) return;
         setError(null);
         setStatus('ready');
       } catch (e) {
