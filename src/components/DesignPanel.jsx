@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Sparkles } from 'lucide-react';
 import { ATS_DEFAULTS, sectionReset } from '@/utils/defaultData';
-import { contactIconHint, drawsContactIcons, TEMPLATE_PICKER, templateId } from '@/constants/templates';
+import { atsRating, contactIconHint, drawsContactIcons, TEMPLATE_PICKER, templateId } from '@/constants/templates';
 import { MARGIN_MM } from '@/constants/pageMargins';
 import { ITEM_GAP_PX, LINE_HEIGHT, SECTION_GAP_PX } from '@/constants/spacingNumbers';
 import { DesignSection, NumberRow, Label, SegmentControl } from '@/components/DesignPanelShared';
@@ -61,7 +61,10 @@ export default function DesignPanel({ resume, updateSetting, setTemplate, resetS
               <div>
                 <div className="flex items-center gap-1.5">
                   <p className={`text-sm font-medium ${current === t.id ? 'text-blue-700' : 'text-gray-700'}`}>{t.label}</p>
-                  {t.ats && <span className="text-[9px] font-bold px-1 py-0.5 rounded bg-emerald-100 text-emerald-700">ATS</span>}
+                  {/* The ATS Check's verdict on this template as the résumé would print it (R2-011): the
+                      Sidebar's Layout, kept across a switch, decides its card — Single · ATS-safe
+                      prints Classic's certified page. TEMPLATE_PICKER's own `ats` knows no settings. */}
+                  {atsRating(t.id, settings).safe && <span className="text-[9px] font-bold px-1 py-0.5 rounded bg-emerald-100 text-emerald-700">ATS</span>}
                 </div>
                 <p className="text-[10px] text-gray-400">{t.desc}</p>
               </div>
