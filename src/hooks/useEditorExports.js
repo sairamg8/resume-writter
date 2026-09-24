@@ -22,7 +22,8 @@ function buildExportFilename(resume) {
 
 /**
  * The editor's Export menu: PDF and Word of the tab on screen (résumé or cover letter), the
- * résumé as JSON, and Import JSON — with the busy state and a visible error message. `keeps`: a
+ * résumé as Markdown, ATS text, JSON Resume and JSON whichever tab is open — `letterTab` tells the
+ * menu to say so on the letter's tab (R2-131) — and Import JSON — with the busy state and a visible error message. `keeps`: a
  * demo account, which can import a file as its original (useDemoSeed), as from the dashboard.
  */
 export function useEditorExports({ resume, activeTab, authUser, importResume, navigate }) {
@@ -113,7 +114,7 @@ export function useEditorExports({ resume, activeTab, authUser, importResume, na
   }
 
   return {
-    exporting, exportError, setExportError, keeps,
+    exporting, exportError, setExportError, keeps, letterTab: activeTab === 'coverletter',
     handleExportPDF, handleExportWord, handleExportJSON, handleExportMarkdown, handleExportAtsText, handleExportJsonResume, handleImportJSON,
   };
 }

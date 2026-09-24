@@ -1,4 +1,7 @@
 import { parseRichText } from './richText.js';
+import { formatDate, presentLabel } from './dates.js';
+import { resolveSection } from '../templates/pdf/shared/templateSectionDefaults.js';
+import { templateId } from '../constants/templates.js';
 
 /**
  * The ATS plain-text export (Export → ATS Text, and the ATS tab's Copy / Download): the résumé as
@@ -7,7 +10,10 @@ import { parseRichText } from './richText.js';
  * reference and a custom entry their title alone, a certificate no expiry, ID or link, a project
  * no dates — and a description holding a list printed the list alone, as a one-line description
  * next to legacy bullets was dropped for them. Hidden entries and every field hidden with its eye
- * stay out (AUD-10). Dates print as stored.
+ * stay out (AUD-10). Dates print in Design → Date format, and Section Options → Show dates / Show
+ * location and an experience section's Order apply as in the PDF (R2-064), an unset one as the
+ * résumé's template prints it (resolveSection): it printed every date as stored and every date and
+ * location the options hid.
  */
 
 const RULE = '----------------------------------------';
@@ -53,24 +59,30 @@ const joined = (parts, sep) => parts.filter(Boolean).join(sep);
 
 /**
  * One entry's lines, by section type; a multi-line entry ends with a blank line. `f(key)` is the
- * field, '' when its eye hides it.
+ * field, '' when its eye hides it. `settings` are the résumé's (its Date format); `opts` the
+ * section's options, read as the PDF and Word read them: Show dates off prints no date, Show
+ * location off no location where the section offers it, Order the company or the role first.
  */
-function entryLines(type, item, f, hidden) {
+function entryLines(type, item, f, hidden, settings, opts) {
   const body = () => bodyLines(item, hidden);
+  const date = (key) => (opts.showDates !== false ? formatDate(f(key), settings) : '');
+  const range = (from, to) => joined([date(from), date(to)], ' - ');
+  const place = () => (opts.showLocation !== false ? f('location') : '');
   switch (type) {
     case 'experience':
     case 'volunteering': {
-      const end = hidden.has('endDate') ? '' : (item.current ? 'Present' : item.endDate);
+      const end = hidden.has('endDate') || opts.showDates === false ? '' : (item.current ? presentLabel(settings) : date('endDate'));
+      const org = f('company') || f('org');
       return [
-        joined([f('role'), f('company') || f('org')], ' - '),
-        joined([joined([f('startDate'), end], ' - '), f('location')], ' | '),
+        type === 'experience' && opts.titleOrder !== 'role' ? joined([org, f('role')], ' - ') : joined([f('role'), org], ' - '),
+        joined([joined([date('startDate'), end], ' - '), place()], ' | '),
         ...body(), '',
       ];
     }
     case 'education':
       return [
         joined([f('degree'), f('fieldOfStudy') ? `in ${f('fieldOfStudy')}` : '', f('institution')], ' - '),
-        joined([joined([f('startDate'), f('endDate')], ' - '), f('location'), f('gpa') ? `GPA: ${f('gpa')}` : ''], ' | '),
+        joined([range('startDate', 'endDate'), place(), f('gpa') ? `GPA: ${f('gpa')}` : ''], ' | '),
         ...body(), '',
       ];
     case 'skills':
@@ -82,19 +94,19 @@ function entryLines(type, item, f, hidden) {
     case 'projects':
       return [
         joined([f('name'), f('technologies') ? `(${f('technologies')})` : ''], ' '),
-        joined([f('startDate'), f('endDate')], ' - '),
+        range('startDate', 'endDate'),
         f('url') ? `Link: ${f('url')}` : '',
         ...body(), '',
       ];
     case 'certifications':
       return [
-        joined([f('name') || f('title'), f('issuer'), f('date')], ' - '),
-        joined([f('expiry') ? `Expires: ${f('expiry')}` : '', f('credentialId') ? `ID: ${f('credentialId')}` : ''], ' | '),
+        joined([f('name') || f('title'), f('issuer'), date('date')], ' - '),
+        joined([date('expiry') ? `Expires: ${date('expiry')}` : '', f('credentialId') ? `ID: ${f('credentialId')}` : ''], ' | '),
         f('url') ? `Link: ${f('url')}` : '',
         '',
       ];
     case 'awards':
-      return [joined([f('title'), f('issuer')], ' - '), f('date'), ...body(), ''];
+      return [joined([f('title'), f('issuer')], ' - '), date('date'), ...body(), ''];
     case 'references':
       return [
         f('name'),
@@ -103,10 +115,10 @@ function entryLines(type, item, f, hidden) {
         joined([f('email'), f('phone')], ' | '),
         '',
       ];
-    default: // custom, and any type this build does not know
+    default: // custom, and any type this build does not know; the PDF prints its location whatever the options
       return [
         joined([f('title') || f('name'), f('subtitle')], ' - '),
-        joined([f('date'), f('location')], ' | '),
+        joined([date('date'), f('location')], ' | '),
         ...body(), '',
       ];
   }
@@ -116,12 +128,12 @@ function entryLines(type, item, f, hidden) {
  * A section's lines under its heading: each shown entry's, the empty ones left out. Interests print
  * as one list, as the PDF prints every entry's interests as one row of chips.
  */
-function sectionLines(section, items) {
+function sectionLines(section, items, settings, template) {
   const lines = [];
   for (const item of items) {
     const hidden = new Set(item.hiddenFields || []);
     const f = (k) => (hidden.has(k) ? '' : (item[k] || ''));
-    const own = entryLines(section.type, item, f, hidden);
+    const own = entryLines(section.type, item, f, hidden, settings, resolveSection(section, templateId(template)).settings);
     lines.push(...own.filter((line, i) => line || (i === own.length - 1 && own.some(Boolean))));
   }
   if (section.type === 'interests') return [lines.filter(Boolean).join(', ')].filter(Boolean);
@@ -161,7 +173,7 @@ export function generateAtsPlainText(resume) {
   for (const s of sections) {
     if (!s || s.visible === false) continue;
     const items = (Array.isArray(s.items) ? s.items : []).filter((item) => item && item.visible !== false);
-    const body = sectionLines(s, items);
+    const body = sectionLines(s, items, resume.settings || {}, resume.template);
     if (!body.some(Boolean)) continue;
     lines.push(String(s.title || s.type).toUpperCase(), RULE, ...body, '');
   }

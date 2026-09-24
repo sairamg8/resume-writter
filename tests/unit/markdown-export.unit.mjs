@@ -67,7 +67,7 @@ test('generateMarkdownResume: generates clean markdown with contact details, sec
   assert.ok(md.includes('## Professional Summary'));
   assert.ok(md.includes('Seasoned engineer with 10+ years scaling cloud platforms.'));
   assert.ok(md.includes('## Work Experience'));
-  assert.ok(md.includes('**Lead Architect** — *TechCorp*'));
+  assert.ok(md.includes('**TechCorp** — *Lead Architect*'));
   assert.ok(md.includes('- Engineered microservices cluster handling 100K RPS.'));
   assert.ok(md.includes('## Education'));
   assert.ok(md.includes('Stanford University'));

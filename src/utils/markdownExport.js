@@ -1,6 +1,8 @@
 import { dateRange, formatDate, presentLabel } from './dates.js';
 import { parseRichText, safeHref } from './richText.js';
-import { contactHref } from './contacts.js';
+import { contactHref, contactItems } from './contacts.js';
+import { resolveSection } from '../templates/pdf/shared/templateSectionDefaults.js';
+import { templateId } from '../constants/templates.js';
 
 /**
  * Markdown Resume Exporter (Export → Markdown (.md)): the résumé as GitHub Flavored Markdown.
@@ -11,7 +13,9 @@ import { contactHref } from './contacts.js';
  * became a relative link. Rich text goes through the parse the PDF and Word use; every link goes
  * through the PDF's safeHref, so a bare "github.com/me" links https:// and a javascript: or data:
  * address prints as text, never as a link. Hidden entries and every field hidden with its eye stay
- * out (AUD-13); dates print in the résumé's Date format.
+ * out (AUD-13); dates print in the résumé's Date format, and Section Options → Show dates / Show
+ * location and an experience section's Order apply as in the PDF (R2-064), an unset one as the
+ * résumé's template prints it (resolveSection: Executive, Sidebar, Timeline… lead a job with the role).
  */
 
 /** Two trailing spaces: a Markdown hard line break, so a line the PDF breaks stays broken. */
@@ -106,48 +110,53 @@ function link(url, label) {
 
 /**
  * One entry's lines, by section type. `f(key)` is the field, '' when its eye hides it; `body()` is
- * its description (unless hidden) and legacy bullets.
+ * its description (unless hidden) and legacy bullets. `opts` are the section's options, read as the
+ * PDF and Word read them (R2-064): Show dates off prints no date, Show location off no location on
+ * the sections that offer it, and an experience entry's Order puts the company or the role first.
  */
-function itemLines(type, item, f, body, settings) {
+function itemLines(type, item, f, body, settings, opts = {}) {
+  const shown = (text) => (opts.showDates !== false ? text : '');
+  const place = () => (opts.showLocation !== false ? f('location') : '');
   switch (type) {
     case 'experience':
     case 'volunteering': {
       const org = type === 'volunteering' ? (f('org') || f('organization')) : f('company');
       const end = (item.hiddenFields || []).includes('endDate') ? '' : (item.current ? presentLabel(settings) : f('endDate'));
-      return entryLines(heading(f('role'), org), [italic(joined([dateRange(f('startDate'), end, settings), f('location')], ' | '))], body());
+      const title = type === 'experience' && opts.titleOrder !== 'role' ? heading(org, f('role')) : heading(f('role'), org);
+      return entryLines(title, [italic(joined([shown(dateRange(f('startDate'), end, settings)), place()], ' | '))], body());
     }
     case 'education': {
       const gpa = f('gpa') ? `GPA: ${f('gpa')}` : '';
-      const dates = dateRange(f('startDate'), f('endDate'), settings);
+      const dates = shown(dateRange(f('startDate'), f('endDate'), settings));
       return entryLines(heading(joined([f('degree'), f('fieldOfStudy')], ', '), f('institution')),
-        [italic(joined([dates, f('location'), gpa], ' | '))], body());
+        [italic(joined([dates, place(), gpa], ' | '))], body());
     }
     case 'projects': {
       const url = f('url');
       const href = safeHref(url);
       const name = f('name');
       const title = href ? `[${name || url}](${href})` : name;
-      const meta = [f('technologies') ? `Technologies: ${f('technologies')}` : '', dateRange(f('startDate'), f('endDate'), settings), href ? '' : url];
+      const meta = [f('technologies') ? `Technologies: ${f('technologies')}` : '', shown(dateRange(f('startDate'), f('endDate'), settings)), href ? '' : url];
       return entryLines(title, [italic(joined(meta, ' | '))], body());
     }
     case 'certifications': {
       const id = f('credentialId') ? `ID: ${f('credentialId')}` : '';
       const url = f('url');
       return entryLines(heading(f('name') || f('title'), f('issuer')),
-        [italic(joined([dateRange(f('date'), f('expiry'), settings), id], ' | ')), url ? link(url, f('urlLabel')) : ''], body());
+        [italic(joined([shown(dateRange(f('date'), f('expiry'), settings)), id], ' | ')), url ? link(url, f('urlLabel')) : ''], body());
     }
     case 'awards':
-      return entryLines(heading(f('title') || f('name'), f('issuer')), [italic(formatDate(f('date'), settings))], body());
+      return entryLines(heading(f('title') || f('name'), f('issuer')), [italic(shown(formatDate(f('date'), settings)))], body());
     case 'references': {
       const mailto = f('email') ? contactHref('email', item) : null;
       const email = mailto ? `[${f('email')}](${mailto})` : f('email');
       return entryLines(heading(f('name'), joined([f('jobTitle'), f('company')], ', ')),
         [italic(f('relationship')), joined([email, f('phone')], ' | ')], []);
     }
-    default: { // custom, and any type this build does not know
+    default: { // custom, and any type this build does not know; the PDF prints its location whatever the options
       const dates = f('date') ? formatDate(f('date'), settings) : dateRange(f('startDate'), f('endDate'), settings);
       const sub = f('subtitle') || f('org') || f('organization') || f('company') || f('issuer');
-      return entryLines(heading(f('title') || f('name') || f('role'), sub), [italic(joined([dates, f('location')], ' | '))], body());
+      return entryLines(heading(f('title') || f('name') || f('role'), sub), [italic(joined([shown(dates), f('location')], ' | '))], body());
     }
   }
 }
@@ -190,23 +199,10 @@ export function generateMarkdownResume(resume) {
   if (p.title) lines.push(`**${p.title}**`);
   lines.push('');
 
-  // Contact details
-  const contacts = [];
-  if (p.email && !hiddenFields.has('email')) contacts.push(`Email: [${p.email}](mailto:${p.email})`);
-  if (p.phone && !hiddenFields.has('phone')) contacts.push(`Phone: ${p.phone}`);
-  if (p.location && !hiddenFields.has('location')) contacts.push(`Location: ${p.location}`);
-  if (p.website && !hiddenFields.has('website')) {
-    const url = p.websiteUrl || (p.website.startsWith('http') ? p.website : `https://${p.website}`);
-    contacts.push(`[${p.websiteLabel || p.website}](${url})`);
-  }
-  if (p.linkedin && !hiddenFields.has('linkedin')) {
-    const url = p.linkedinUrl || (p.linkedin.startsWith('http') ? p.linkedin : `https://${p.linkedin}`);
-    contacts.push(`[LinkedIn](${url})`);
-  }
-  if (p.github && !hiddenFields.has('github')) {
-    const url = p.githubUrl || (p.github.startsWith('http') ? p.github : `https://${p.github}`);
-    contacts.push(`[GitHub](${url})`);
-  }
+  // Contact details: the PDF's contact lines — each field's Display label, else its address, linked
+  // where the PDF links it (a Link URL override through safeHref). R2-129: a label never printed,
+  // and an override went in as the link unchecked.
+  const contacts = contactItems(p).map(({ value, href }) => (href ? `[${value}](${href})` : value));
 
   if (contacts.length > 0) {
     lines.push(contacts.join(' • '));
@@ -229,7 +225,7 @@ export function generateMarkdownResume(resume) {
       ? listLines(s.type, items, fieldOf)
       : items.flatMap((item) => {
         const f = fieldOf(item);
-        return itemLines(s.type, item, f, () => markdownBody(f('description'), item.bullets), settings);
+        return itemLines(s.type, item, f, () => markdownBody(f('description'), item.bullets), settings, resolveSection(s, templateId(resume.template)).settings);
       });
     if (!body.some((l) => l.trim())) continue;
     lines.push(`## ${s.title || s.type}`, ...body);

@@ -3,7 +3,7 @@
 > Location: `/mnt/Storage/Projects/flowcv/docs/tracking/bug-status.md` (moved from the repo root 2026-09-24)
 > Updated: 2026-09-24 · every row **verified independently at `d495cb2`** (see Verification pass) ·
 > `origin/master` (deployed) = `443321a` · nothing on `master` waits for a gate
-> **Open: 133** (0 here + 133 in [bug-status-r2/](bug-status-r2/README.md)) | Fixed, not pushed: 9 | **Closed: 117** (112 fixed + 5 ✖ without a code fix)
+> **Open: 122** (0 here + 122 in [bug-status-r2/](bug-status-r2/README.md)) | Fixed, not pushed: 12 | **Closed: 125** (116 fixed + 9 ✖ without a code fix)
 
 ## Summary
 
@@ -13,10 +13,10 @@
 | ATS parsing defects (`ATS-`) | 7 (ATS-7 was TUI-6) | 5 | 0 | 2 | 0 |
 | Templates UI audit, 2026-09-23 (`TUI-`) | 6 (+ TUI-6, filed as ATS-7) | 6 | 0 | 0 | 0 |
 | Prompt tasks, 2026-09-14 → 09-21 | 33 | 33 | 0 | 0 | 0 |
-| Full audit, 2026-09-23 — defects (`R2-001`…`R2-134`, [bug-status-r2/](bug-status-r2/README.md)) | 134 | 29 | 5 | 3 | **97** |
+| Full audit, 2026-09-23 — defects (`R2-001`…`R2-134`, [bug-status-r2/](bug-status-r2/README.md)) | 134 | 33 | 8 | 7 | **86** |
 | Full audit, 2026-09-23 — features and test gaps (`R2-135`…`R2-171`) | 37 | 3 | 2 | 0 | **32** |
 | Found by the build lanes, 2026-09-24 (`R3-`, in [bug-status-r2/](bug-status-r2/README.md)) | 7 | 1 | 2 | 0 | **4** |
-| **Total** | **259** | **112** | **9** | **5** | **133** |
+| **Total** | **259** | **116** | **12** | **9** | **122** |
 
 - **Status:** ✅ fixed and pushed (on `origin/master`, so deployed) · ⏸ fixed and committed, not pushed · 🔴 open ·
   ✖ closed without a code fix (won't fix: a known limit; not a bug; a duplicate) — the proof is in the row, and it counts as closed.
