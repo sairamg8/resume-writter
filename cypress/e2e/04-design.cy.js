@@ -98,7 +98,7 @@ describe('design — settings', () => {
     // Classic prints the job title in the accent colour (the preview is this same PDF).
     cy.exportPdf().then((pdf) => {
       const title = pdf.runs.find((r) => r.str.includes('Full Stack Engineer'));
-      expect(title, 'job title run').to.exist;
+      expect(title, 'job title run').to.be.an('object');
       expect(title.colorHex).to.eq('#e11d48');
     });
   });

@@ -55,7 +55,7 @@ describe('typography regressions', () => {
     cy.store().should((s) => expect(active(s).settings.fontSizeBase).to.eq(10));
     cy.exportPdf().then((pdf) => {
       const body = pdf.runs.find((r) => /Developed|Built|Led|Designed|experience/i.test(r.str) && r.fontSize < 12);
-      expect(body, 'a body text run').to.exist;
+      expect(body, 'a body text run').to.be.an('object');
       expect(body.fontSize).to.be.closeTo(10, 0.6);
     });
   });
