@@ -39,9 +39,41 @@ export function entryInk(s, tid) {
 }
 
 /**
+ * The sizes, half-points, `section`'s entries print at in the PDF, from the résumé's resolved
+ * settings `s` on template `tid` (R2-118):
+ * - `base` and `entry` — Base and Design → Entry Header, an entry's title's size;
+ * - `sub`, `place`, `date` and `link` — an entry's second field (ItemHeader's sub line), location,
+ *   dates and a project's link: Base, and on the Sidebar page's job and project cards 1, 1, 1.5 and
+ *   1.5 pt under Entry Header;
+ * - `body` — its description and legacy bullets: half a point under Entry Header, a job's at it (not
+ *   on the Sidebar page), an award's at Base.
+ * Word printed the second field at Entry Header and descriptions at Base: the other way round.
+ */
+function entrySizes(section, s, tid, side) {
+  const base = s.fontSizeBase ?? 11;
+  const entry = base + (s.fontSizeEntryDelta ?? 0);
+  const page = tid === 'sidebar' && !side;
+  // The Sidebar page's cards (SidebarMainExperience, SidebarMainProjects); a job's Title "Inline" and
+  // "Side by side" print as ItemHeader prints them.
+  const card = page && (section.type === 'projects' || (section.type === 'experience' && (section.settings?.titleStyle || 'stacked') === 'stacked'));
+  const step = section.type === 'experience' && !page ? 0 : 0.5;
+  const half = (pt) => Math.round(pt * 2);
+  return {
+    base: half(base),
+    entry: half(entry),
+    sub: half(card ? entry - 1 : base),
+    place: half(card ? entry - 1 : base),
+    date: half(card ? entry - 1.5 : base),
+    link: half(card ? entry - 1.5 : base),
+    body: half(section.type === 'awards' ? base : entry - step),
+  };
+}
+
+/**
  * The `look` buildSection's builders print `section` in, from the résumé's `settings` and their
  * resolved `s`:
- * - `base` and `entry` — the body's and the entry titles' sizes, half-points;
+ * - `base`, `entry`, `sub`, `place`, `date`, `link` and `body` — the sizes of its fields,
+ *   half-points (entrySizes);
  * - `tab` — the dates' right tab, twips: the right margin (wordContentTwips);
  * - `line` — Design → Line Height;
  * - `gap` — the space between two entries, pt: Design → Between Items scaled by the section's
@@ -52,8 +84,7 @@ export function entryInk(s, tid) {
 export function sectionLook(section, settings, s, template, side) {
   const tid = templateId(template);
   return {
-    base: Math.round((s.fontSizeBase ?? 11) * 2),
-    entry: Math.round(((s.fontSizeBase ?? 11) + (s.fontSizeEntryDelta ?? 0)) * 2),
+    ...entrySizes(section, s, tid, side),
     tab: wordContentTwips(settings),
     line: s.lineHeightValue,
     gap: getEffectiveSpacing(section, s).itemGap,

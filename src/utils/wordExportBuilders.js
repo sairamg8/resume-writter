@@ -71,28 +71,32 @@ function entries(section, look, build) {
 }
 
 /**
- * An entry's location for dateRightPara: a line of its own under the date, in the date's size and
- * the colour the PDF prints it in (`place`: the Text colour's muted shade, Compact's meta) — the PDF
+ * An entry's location for dateRightPara: a line of its own under the date, in the size and the
+ * colour the PDF prints it in (`place`: the Text colour's muted shade, Compact's meta) — the PDF
  * prints it with the date, never in the title's text (ATS-1).
  */
-const place = (text, look) => (text ? { text, color: look.ink.place, size: look.base } : null);
+const place = (text, look) => (text ? { text, color: look.ink.place, size: look.place } : null);
 
 /** An entry's title line (dateRightPara) with its `date` in `dateHex`, at the look's right tab. */
-const titleLine = (left, date, dateHex, centered, look, where = null) => dateRightPara(left, date, { color: dateHex, centered, size: look.base, place: where, tab: look.tab });
+const titleLine = (left, date, dateHex, centered, look, where = null) => dateRightPara(left, date, { color: dateHex, centered, size: look.date, place: where, tab: look.tab });
 
-/** An entry's first field, bold in the Text colour, and its second in the PDF's colour for it. */
+/**
+ * An entry's first field, bold in the Text colour at Entry Header, and its second in the PDF's
+ * colour and size for it (the sub line's, `look.sub`: Base, R2-118).
+ */
 const first = (text, look) => text && bold(text, { size: look.entry, color: look.ink.text });
-const second = (text, look, color = look.ink.second) => normal(text, { size: look.entry, color });
+const second = (text, look, color = look.ink.second, size = look.sub) => normal(text, { size, color });
 
 /**
  * Description + legacy bullets of an entry, centred in a centred section, at Design → Line Height,
- * in the Text colour's body shade (`color`: an award's, which the PDF prints in its sub shade).
+ * at the PDF's size for them (`look.body`, R2-118), in the Text colour's body shade (`color`: an
+ * award's, which the PDF prints in its sub shade).
  */
 function body(item, centered, look, color = look.ink.body) {
   const paras = [];
   const description = field(item, 'description');
-  if (hasRichText(description)) paras.push(...descriptionToParagraphs(description, { size: look.base, color, lineHeight: look.line }, centered ? 'center' : null));
-  for (const b of item.bullets || []) if (b) paras.push(bulletPoint(b, centered, { size: look.base, color }, look.line));
+  if (hasRichText(description)) paras.push(...descriptionToParagraphs(description, { size: look.body, color, lineHeight: look.line }, centered ? 'center' : null));
+  for (const b of item.bullets || []) if (b) paras.push(bulletPoint(b, centered, { size: look.body, color }, look.line));
   return paras;
 }
 
@@ -129,6 +133,7 @@ export function buildEducation(section, accentHex, settings, centered, dateHex, 
  * Skill groups, each category cased as the PDF prints it (skillCategory; `look.side`: the Sidebar's),
  * in its colours (R2-063): the category in the Text colour (the accent on Modern, and in Tags and
  * Bars), the skills in its sub shade — Tags in the accent (Minimal's in the sub shade), Bars at 80 %.
+ * Both at Entry Header, as the PDF prints them (R2-118): Tags half a point under it, Bars a point.
  */
 export function buildSkills(section, accentHex, settings, centered, dateHex, look) {
   const s = section.settings || {};
@@ -137,15 +142,16 @@ export function buildSkills(section, accentHex, settings, centered, dateHex, loo
   const chips = s.skillsStyle === 'tags' || s.skillsStyle === 'bars';
   const categoryInk = chips || look.template === 'modern' ? accentHex : look.ink.text;
   const skillsInk = { tags: look.template === 'minimal' ? look.ink.sub : accentHex, bars: look.ink.bar }[s.skillsStyle] || look.ink.sub;
+  const skillsSize = look.entry - ({ tags: 1, bars: 2 }[s.skillsStyle] || 0);
   return [sectionHeading(section.title, accentHex, centered, section.heading), ...entries(section, look, (item) => {
     const { category: typed, skills } = skillGroup(item);
     const category = skillCategory(typed, { style: s.skillsStyle, sideColumn: look.side });
     const children = [];
     if (category) children.push(bold(`${category}${skills ? sep : ''}`, { size: look.entry, color: categoryInk }));
-    if (skills) children.push(normal(skills, { size: look.base, color: skillsInk }));
+    if (skills) children.push(normal(skills, { size: skillsSize, color: skillsInk }));
     return children.length ? [new Paragraph({
       children,
-      spacing: { after: 0, ...lineSpacing(look.line, look.base) },
+      spacing: { after: 0, ...lineSpacing(look.line, look.entry) },
       ...(bulletStyle ? { bullet: { level: 0 }, indent: { left: 360 } } : {}),
       ...centredIf(centered),
     })] : [];
@@ -158,7 +164,7 @@ export function buildProjects(section, accentHex, settings, centered, dateHex, l
     titleLine([
       first(item.name, look),
       ...(item.technologies ? [second(` · ${item.technologies}`, look, look.ink.tech)] : []),
-      ...(item.url ? [second(' · ', look, accentHex), linked(item.url, item.url, { size: look.entry, color: accentHex })] : []),
+      ...(item.url ? [second(' · ', look, accentHex, look.link), linked(item.url, item.url, { size: look.link, color: accentHex })] : []),
     ], s.showDates !== false ? dateRange(item.startDate, item.endDate, settings) : '', dateHex, centered, look),
     ...body(item, centered, look),
   ])];
@@ -168,8 +174,9 @@ export function buildLanguages(section, accentHex, settings, centered, dateHex, 
   return [sectionHeading(section.title, accentHex, centered, section.heading), ...entries(section, look, (item) => (!item.language && !item.proficiency ? [] : [
     new Paragraph({
       children: [
-        ...(item.language ? [first(item.language, look)] : []),
-        ...(item.proficiency ? [second(`${item.language ? ' — ' : ''}${item.proficiency}`, look, look.ink.sub)] : []),
+        // Both at Base, as the PDF prints them (R2-118).
+        ...(item.language ? [bold(item.language, { size: look.base, color: look.ink.text })] : []),
+        ...(item.proficiency ? [second(`${item.language ? ' — ' : ''}${item.proficiency}`, look, look.ink.sub, look.base)] : []),
       ],
       spacing: { after: 0 },
       ...centredIf(centered),
@@ -182,9 +189,10 @@ export function buildCertifications(section, accentHex, settings, centered, date
   return [sectionHeading(section.title, accentHex, centered, section.heading), ...entries(section, look, (item) => [
     titleLine([
       first(item.name || item.title, look),
-      ...(item.issuer ? [second(` — ${item.issuer}`, look, look.ink.sub)] : []),
-      ...(item.credentialId ? [second(` · ID: ${item.credentialId}`, look, look.ink.muted)] : []),
-      ...(item.url ? [second(' · ', look, accentHex), linked(item.urlLabel || item.url, item.url, { size: look.entry, color: accentHex })] : []),
+      // The name's line at Entry Header, all of it, as the PDF prints it.
+      ...(item.issuer ? [second(` — ${item.issuer}`, look, look.ink.sub, look.entry)] : []),
+      ...(item.credentialId ? [second(` · ID: ${item.credentialId}`, look, look.ink.muted, look.entry)] : []),
+      ...(item.url ? [second(' · ', look, accentHex, look.entry), linked(item.urlLabel || item.url, item.url, { size: look.entry, color: accentHex })] : []),
     ], s.showDates !== false ? dateRange(item.date, item.expiry, settings) : '', dateHex, centered, look),
   ])];
 }
@@ -215,7 +223,8 @@ export function buildReferences(section, accentHex, settings, centered, dateHex,
   const line = (children, after = 20) => new Paragraph({ children, spacing: { after }, ...centredIf(centered) });
   const { ink } = look;
   return [sectionHeading(section.title, accentHex, centered, section.heading), ...entries(section, look, (item) => {
-    const paras = [line([bold(item.name, { size: look.entry, color: ink.text })])];
+    // A card of Base-size lines, the name's too, as the PDF prints it (R2-118).
+    const paras = [line([bold(item.name, { size: look.base, color: ink.text })])];
     const role = [item.jobTitle, item.company].filter(Boolean).join(', ');
     if (role) paras.push(line([normal(role, { size: look.base, color: ink.sub })]));
     if (item.relationship) paras.push(line([normal(item.relationship, { size: look.base, color: ink.meta, italics: true })]));
