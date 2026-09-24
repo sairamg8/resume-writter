@@ -113,7 +113,10 @@ export function TimelineEntries({ items, cols = 1, gap, settings, renderItem }) 
  * for `sub` (a project's technologies and link). Unbreakable and kept with two lines of what follows,
  * as ItemHeader is, so a date and title never sit alone at the foot of a page.
  */
-export function TimelineHead({ primary, sub, subLine, loc, dateStr, settings, titleStyle = 'stacked', italicSub = false, centered = false }) {
+export function TimelineHead({ primary: first, sub: second, subLine, loc, dateStr, settings, titleStyle = 'stacked', italicSub = false, centered = false }) {
+  // An empty leading field: the next one leads, bold, as ItemHeader prints it (R2-111).
+  const primary = first || second;
+  const sub = first ? second : undefined;
   const textColor = settings?.textColor || '#1a1a1a';
   const baseSize  = settings?.fontSizeBase || 11;
   const entrySize = baseSize + (settings?.fontSizeEntryDelta ?? 0);
