@@ -3,6 +3,8 @@ import { Component } from 'react';
 /**
  * Catches unhandled JavaScript errors anywhere in the child component tree,
  * logs the error, and renders a fallback recovery UI instead of crashing the whole page.
+ * A new `resetKey` (the route's path, AppRoutes) clears a caught error, so leaving the page that
+ * crashed shows the next one (R2-072).
  */
 export class ErrorBoundary extends Component {
   constructor(props) {
@@ -12,6 +14,12 @@ export class ErrorBoundary extends Component {
 
   static getDerivedStateFromError(error) {
     return { hasError: true, error };
+  }
+
+  componentDidUpdate(prevProps) {
+    if (this.state.hasError && prevProps.resetKey !== this.props.resetKey) {
+      this.setState({ hasError: false, error: null });
+    }
   }
 
   componentDidCatch(error, errorInfo) {
