@@ -154,8 +154,9 @@ export function buildSkills(section, accentHex, settings, centered, dateHex, loo
   const skillsInk = { tags: look.template === 'minimal' ? look.ink.sub : accentHex, bars: look.ink.bar }[s.skillsStyle] || look.ink.sub;
   const skillsSize = look.entry - ({ tags: 1, bars: 2 }[s.skillsStyle] || 0);
   return [sectionHeading(section.title, accentHex, centered, section.heading), ...entries(section, look, (item) => {
-    const { category: typed, skills } = skillGroup(item);
+    const { category: typed, skills, list } = skillGroup(item);
     const category = skillCategory(typed, { style: s.skillsStyle, sideColumn: look.side });
+    if (s.skillsStyle === 'stacked') return stackedSkills(category, skills, list, categoryInk, centered, look);
     const children = [];
     if (category) children.push(bold(`${category}${skills ? sep : ''}`, { size: look.entry, color: categoryInk }));
     if (skills) children.push(normal(skills, { size: skillsSize, color: skillsInk }));
@@ -166,6 +167,31 @@ export function buildSkills(section, accentHex, settings, centered, dateHex, loo
       ...centredIf(centered),
     })] : [];
   })];
+}
+
+/**
+ * A skill group in Skills style "Stacked" (R2-070), as the PDF prints it: the category on a line of
+ * its own over a thin rule, its skills in the paragraph under it — in the Sidebar's side column, which
+ * draws no rule, one skill to a paragraph behind a "• ". Word printed it as Inline.
+ */
+function stackedSkills(category, skills, list, categoryInk, centered, look) {
+  const paras = [];
+  if (category) {
+    paras.push(new Paragraph({
+      children: [bold(category, { size: look.entry, color: categoryInk })],
+      spacing: { after: 40 },
+      ...(look.side ? {} : { border: { bottom: { style: BorderStyle.SINGLE, size: eighths(0.5), color: 'e5e7eb', space: 1 } } }),
+      ...centredIf(centered),
+    }));
+  }
+  const line = (text) => new Paragraph({
+    children: [normal(text, { size: look.entry, color: look.ink.sub })],
+    spacing: { after: 0, ...lineSpacing(look.line, look.entry) },
+    ...centredIf(centered),
+  });
+  if (look.side) paras.push(...list.map((skill) => line(`• ${skill}`)));
+  else if (skills) paras.push(line(skills));
+  return paras;
 }
 
 export function buildProjects(section, accentHex, settings, centered, dateHex, look) {
