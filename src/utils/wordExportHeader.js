@@ -12,6 +12,7 @@ import { headerRule, headerTitleSize, inlineLayout } from '@/templates/pdf/share
 import { HEADER_BORDER_PAD_PT } from '@/templates/pdf/shared/pdfUnits';
 import { setGapPt } from '@/constants/headerSpacing';
 import { resolveTemplateSettings } from '@/templates/pdf/shared/templateSettings';
+import { headerContactPt } from '@/templates/pdf/shared/contactSize';
 import { hasRichText } from '@/utils/richText';
 
 /**
@@ -86,7 +87,9 @@ export function buildPersonalSection(personal = {}, settings = {}, template = 'c
   }
 
   if (contacts.length) {
-    const style = { size: 18, color: accent2Hex(textShades(s.textColor).sub, '64748b') };
+    // At the size the PDF prints them on this template (headerContactPt): it follows Design → Base.
+    // Word printed them at 9 pt at every Base (R2-067).
+    const style = { size: Math.round(headerContactPt(s, template) * 2), color: accent2Hex(textShades(s.textColor).sub, '64748b') };
     paragraphs.push(...contactParagraphs(contacts, s, hasHeaderControls(template, settings), style, centered));
   }
 

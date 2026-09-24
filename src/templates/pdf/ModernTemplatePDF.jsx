@@ -6,6 +6,7 @@ import { PdfRichText } from './shared/PdfRichText';
 import { hasRichText } from '@/utils/richText';
 import { PdfContactIcon } from './shared/PdfContactIcon';
 import { ContactValue, headerRowWidth } from './shared/PdfContact';
+import { bannerContactPt } from './shared/contactSize';
 import { fitFontSize } from './shared/pdfMeasure';
 import { contactItems } from '@/utils/contacts';
 import { getPdfPhotoStyle } from './shared/pdfPhoto';
@@ -22,9 +23,8 @@ const CSS_ICON_SCALE = 0.9;
  * uploaded for a field) as every other template. `gaps`: the header's spacing, pt (headerGaps).
  */
 function HeaderContact({ personal, settings, textColor, gaps }) {
-  const baseSize = settings?.fontSizeBase || 11;
   const iconPt   = Math.max(7, Math.round((settings?.iconSize ?? 9) * CSS_ICON_SCALE));
-  const textSize = baseSize - 1.5;
+  const textSize = bannerContactPt(settings); // the Word export's contact size on Modern too
   const items = contactItems(personal);
 
   if (!items.length) return null;

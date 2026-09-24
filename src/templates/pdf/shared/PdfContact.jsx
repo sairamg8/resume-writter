@@ -7,6 +7,7 @@ import { textWidth, widestWord } from './pdfMeasure';
 import { CONTACT_GRID, contactItems } from '@/utils/contacts';
 import { isDrawableImage } from '@/utils/imageUpload';
 import { PAGE_MARKS, textShades } from './pdfColors';
+import { rowContactPt } from './contactSize';
 
 const NBSP = '\u00a0';
 /** A contact value never breaks across lines ("+1 555 0100", "New York, NY"). */
@@ -20,10 +21,9 @@ const GRID_GAP = pxToPt(CONTACT_GRID.gapPx);
 /** The narrowest row two cells and the gap sit side by side in, pt (225 pt at 46 % and 18 pt). */
 const GRID_TWO_COLUMNS = GRID_GAP / (1 - 2 * GRID_CELL);
 
-/** The contacts' type: the values' size (half a point under the body's) and the icons'. */
+/** The contacts' type: the values' size (half a point under the body's, rowContactPt — the Word export's too) and the icons'. */
 function rowSizes(settings) {
-  const baseSize = settings?.fontSizeBase || 11;
-  return { textSize: Math.max(8, baseSize - 0.5), iconPt: Math.max(7, pxToPt(settings?.iconSize ?? 11)) };
+  return { textSize: rowContactPt(settings), iconPt: Math.max(7, pxToPt(settings?.iconSize ?? 11)) };
 }
 
 /**

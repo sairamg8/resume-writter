@@ -16,6 +16,7 @@ import { SIDE_COL, SIDE_PAD_RIGHT, SideValue, sideColumnRoom } from './shared/Pd
 import { sidebarShades } from './shared/pdfColors';
 import { pageSizeOf } from '@/constants/pageSize';
 import { ClassicTemplatePDF } from './ClassicTemplatePDF';
+import { SIDE_CONTACT_PT } from './shared/contactSize';
 
 /**
  * A contact in the dark column: icon and label in the column's label colour, not the accent. The
@@ -36,7 +37,7 @@ function SideContactRow({ field, label, value, href, iconPt, iconGap, below, set
         settings={settings}
         value={value}
         href={href}
-        style={{ fontSize: 9, color: shades.value, paddingLeft: iconPt + iconGap, lineHeight: 1.2 }}
+        style={{ fontSize: SIDE_CONTACT_PT, color: shades.value, paddingLeft: iconPt + iconGap, lineHeight: 1.2 }}
         inset={iconPt + iconGap}
       />
     </View>
