@@ -43,6 +43,8 @@ function runsOf(template) {
     modern: {},
     minimal: { VolOrg: '#555555', CustSub: '#555555', 'Spring 2024': '#4b5563', '06/2021': '#4b5563', ...HEADER, SummaryText: '#555555' },
     executive: { VolOrg: '#4b5563', CustSub: '#4b5563', 'Spring 2024': '#4b5563', '06/2021': '#4b5563', ...HEADER },
+    // Compact (T9) had no "before": its 9 pt locations print in the meta grey, which reads 4.5:1.
+    compact: { Cityville: '#6b7280', VolTown: '#6b7280' },
   }[template];
   return { ...RUNS, ...own };
 }
