@@ -6,21 +6,33 @@
 {
   "resumes": [ /* Resume */ ],
   "activeId": "resume_…",
-  "dataVersion": 11,
-  "deletedIds": ["resume_…"]
+  "dataVersion": 12,
+  "deletedIds": ["resume_…"],
+  "deletedInfo": { "resume_…": { /* version, time, account, keep */ } },
+  "syncedUid": "…",
+  "cloudVersions": { "resume_…": 1727000000000 },  // the updatedAt the cloud holds (R2-004)
+  "stashed": { "<uid>": { "resumes": [], "versions": {} } }  // kept aside at sign-out (R2-005)
 }
 ```
 
-On load: if missing/invalid version → seed one resume per template default factory list.
+First run: an empty store (no résumés; the dashboard shows "Create your first resume"). On load any
+store version is kept: each résumé is migrated from its **own** `dataVersion` by `normalizeResume()`
+(`src/utils/dataVersion.js` holds the current number; `src/utils/normalizeResume.js` the migrations).
+A store or résumé that cannot be read is copied to a backup key before the next save replaces it
+(`src/utils/storageBackup.js`).
 
 ### Resume object
 
 ```ts
 type Resume = {
-  id: string;                 // `resume_${timestamp}`
+  id: string;                 // `resume_<uuid>` (newId, src/utils/ids.js)
   name: string;
   updatedAt: number;          // ms epoch; conflict resolution key
-  template: 'classic' | 'modern' | 'minimal' | 'sidebar' | 'executive' | 'dark' /* orphaned */;
+  dataVersion: number;        // the one-time migrations it has had (DATA_VERSION when current)
+  dataVersionAhead?: number;  // a newer build's version, kept until this build catches up (AUD-26)
+  keep?: boolean;             // "Keep as my original" (demo accounts)
+  template: 'classic' | 'modern' | 'minimal' | 'executive' | 'sidebar'
+          | 'timeline' | 'banner' | 'academic' | 'compact'; // any other id prints as Classic
   settings: Settings;         // design system; starts from ATS_DEFAULTS
   personal: Personal;
   sections: Section[];
@@ -30,7 +42,7 @@ type Resume = {
 
 ### Personal (high level)
 
-Seeded from `SAIRAM_PERSONAL` in `defaultDataContent.js` (demo content for the author).  
+A new résumé starts from `BLANK_PERSONAL` in `defaultDataContent.js` (empty fields).  
 Includes name, title, contact fields, optional photo, `hiddenFields[]`.  
 A photo (and the letter's `clPhoto`) is a data URL: an upload is stored at most 1024 px and 300 KB
 (`readImageFile`); one an older build stored larger is replaced by that copy once the store has it,
@@ -67,7 +79,9 @@ Important keys (non-exhaustive):
   Executive print them); `headerPadY`/`headerPadX` and `contactsSideGap` are reserved. Keys, ranges
   and resolution: `src/constants/headerSpacing.js`; `headerInlineGap` stays the Inline layout's.
 
-Template switch merges `TEMPLATE_STYLE_DEFAULTS` for heading style + title case.
+Template switch applies the new template's `style` (`TEMPLATES[t].style`: heading style, title case;
+Academic and Compact bring more) through `styleOnSwitch` in `src/utils/defaultData.js`, keeping what
+the user picked themselves.
 
 ### Cover letter
 
@@ -87,7 +101,7 @@ Edited via `updateCoverLetter` / `CoverLetterPanel`.
 
 ```ts
 type Job = {
-  id: string;                 // `job_${timestamp}` or demo_*
+  id: string;                 // `job_<uuid>` (newId) or demo_*
   company: string;
   role: string;
   status: JobStatusId;
@@ -103,8 +117,13 @@ type Job = {
   statusHistory: { status: string; changedAt: number }[];
   createdAt: number;
   updatedAt: number;
+  // optional, read by src/utils/jobFields.js: stage, followUpDate, source, workMode,
+  // excitement (0–5), interviews[]
 };
 ```
+
+Every job, loaded or imported, goes through `readJob()` then `completeJob()`
+(`src/utils/normalizeJob.js`).
 
 Statuses: `saved | applied | phone_screen | interview | offer | on_hold | rejected | withdrawn`  
 (defined in `src/constants/jobs.js`).
@@ -122,5 +141,6 @@ No jobs collection.
 
 ## Import/export schemas
 
-- **Resume JSON:** must include `personal` and `sections` array (Dashboard import check).
+- **Resume JSON:** a CPWT-CV backup (`personal` and a `sections` array) or a JSON Resume file
+  (`isJsonResume`, converted by `jsonResumeToCpwtResume`) — the Dashboard's import check.
 - **Jobs JSON:** array or `{ jobs: [] }`.

@@ -7,11 +7,13 @@
 
 ### Persistence
 
-- Every `appState` change writes full JSON to `localStorage` key `cpwtcv_v1`.
-- `DATA_VERSION` (`src/utils/dataVersion.js`, 11 at the time of writing) — each résumé records its own
-  `dataVersion`, and `normalizeResume()` runs the one-time migrations it has not had yet, so none runs
-  twice (not after a sync, an import, or a stale tab of an older build). A version above this build's
-  is stamped down to it and the claim kept in `dataVersionAhead` (AUD-26).
+- Every `appState` change writes full JSON to `localStorage` key `cpwtcv_v1`: at once after a quiet
+  spell, then the keystrokes that follow together (`coalescedWriter`, `src/utils/coalescedWrite.js`).
+- `DATA_VERSION = 12` (`src/utils/dataVersion.js`) — each résumé records its own `dataVersion`, and
+  `normalizeResume()` runs the one-time migrations it has not had yet, so none runs twice (not after a
+  sync, an import, or a stale tab of an older build). A store of any version loads: nothing is wiped
+  to a seed. A version above this build's is stamped down to it and the claim kept in
+  `dataVersionAhead` (AUD-26). `tests/unit/knowledge-docs.unit.mjs` fails when this number drifts.
 
 ### Core API (conceptual)
 
@@ -39,7 +41,10 @@ account — one account's deletion of it never replaces, nor forgets, another's 
 - `signInWithPopup` + `GoogleAuthProvider`
 - `signOut`
 
-Requires valid `VITE_FIREBASE_*` env vars; without them Auth will error at runtime (tests ignore HTTPS / may still log Firebase noise).
+Firebase is optional: without the `VITE_FIREBASE_*` values `src/utils/firebase.js` exports `auth` and
+`db` as null (`firebaseEnabled`), and the app runs on localStorage alone. A build then shows no Sign In
+at all (`useAuth().cloudAvailable` false, so AuthBar renders nothing); on the dev server Sign In signs
+in a local stand-in user instead.
 
 ## Cloud sync (`useCloudSync`)
 
@@ -197,10 +202,11 @@ doc.
 **File:** `src/hooks/useJobStore.js`  
 Key: `cpwtcv_jobs_v1`, `JOB_VERSION = 2`.
 
-Independent React state; not wired into App-level auth/sync. Each job page instantiates the hook separately — still consistent via localStorage reads on mount (standard multi-hook localStorage pattern; simultaneous multi-tab may race).
+Not wired into App-level auth/sync. Every job page shares one list (`useSyncExternalStore`), read
+from localStorage when the first job page opens; another tab's save arrives through the `storage`
+event, and what storage refused here is kept and written again (`src/utils/unsavedJobs.js`).
 
 ## Implications for open-source forks
 
-- App is usable **without** Firebase if users never click Sign In (local mode).
-- Document clearly that empty Firebase config breaks only the auth path.
-- Consider a “cloud optional” guard that no-ops when env missing (improvement idea).
+- App is usable **without** Firebase: a clone with no `VITE_FIREBASE_*` values runs local-only
+  (`firebaseEnabled` false; no Sign In in a build).

@@ -18,8 +18,8 @@ Help users track applications alongside tailored resumes — a differentiator vs
 - **Kanban:** `components/job/KanbanView.jsx` columns by status  
 - **List:** `components/job/ListView.jsx`  
 - Search + status filter on tracker page  
-- Import/export jobs as JSON  
-- `clearDemoData` for removing seed demos  
+- Import/export jobs as JSON, export as CSV (`utils/jobCsv.js`)  
+- `clearDemoData` ("Clear all jobs and start fresh?") empties the list  
 
 ## Detail tabs / widgets
 
@@ -34,8 +34,7 @@ Under `src/components/job/`:
 | `StatusBadge` / `StatusHistory` | Status UI + audit trail |
 | `InterviewStageSelector` | Stage controls |
 | `Field` | Form field helper |
-
-Also: `JobModal.jsx` at components root for modal flows.
+| `ImportNotice` / `JobsNotSavedAlert` | What an import did; a list storage refused |
 
 ## Status model
 
@@ -50,8 +49,8 @@ Jobs may store `resumeId` pointing at a resume in `cpwtcv_v1`. Tracker can show 
 ## Persistence limits
 
 - No Firestore sync  
-- Demo Google job seeded for first-time UX  
-- Multi-tab: last write to localStorage wins  
+- Demo Google job seeded for first-time UX (`demoJobs`, `utils/jobEdits.js`)  
+- Multi-tab: another tab's save is taken in through the `storage` event, keeping what this tab has not saved (`utils/unsavedJobs.js`)  
 
 ## Future ideas (not implemented)
 

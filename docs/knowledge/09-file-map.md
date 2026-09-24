@@ -1,93 +1,89 @@
 # 09 — File Map (actual tree)
 
-README’s structure section is partial. This is the living map as of 2026-07-14.
+The living map as of 2026-09-24. `tests/unit/knowledge-docs.unit.mjs` checks that every `src/` and
+`tests/` path these docs name in backticks exists.
 
 ```
-flowcv/
-├── docs/knowledge/          # ← this knowledge base
-├── dist/                    # production build output
-├── graphify-out/            # code knowledge graph artifacts
-├── public/                  # favicon, fonts, icons
+resume-writter/
+├── .github/workflows/ci.yml   # the CI gate: node suite, build, Playwright, lint, Cypress, fail-first
+├── .yarn/patches/             # yarn patches (react-pdf's textkit)
+├── cypress/
+│   ├── e2e/                   # end-to-end specs (*.cy.js)
+│   └── support/               # commands, stored-state and demo-account steps, selectors
+├── docs/
+│   ├── knowledge/             # how the app works (this folder)
+│   └── tracking/              # every tracker, plan, audit and session log — see its README
+├── public/                    # favicon, icons
 ├── src/
-│   ├── main.jsx
-│   ├── App.jsx              # the app's state: store, account, sync, demo restore
-│   ├── AppRoutes.jsx        # what each page gets from it
-│   ├── App.css, index.css
+│   ├── main.jsx               # StrictMode + HashRouter
+│   ├── App.jsx                # the app's state: store, account, sync, demo restore
+│   ├── AppRoutes.jsx          # the routes, and what each page gets from App
+│   ├── index.css
 │   ├── assets/
 │   ├── components/
-│   │   ├── AuthBar.jsx
-│   │   ├── CareerHistoryPanel.jsx
-│   │   ├── CoverLetterPanel.jsx
-│   │   ├── DesignPanel*.jsx
-│   │   ├── EditorHeader|EditorResumeTab|EditorPreviewPane.jsx  # the Editor page's parts
-│   │   ├── ExportDropdown.jsx
-│   │   ├── LayoutToggle.jsx
-│   │   ├── PaginatedPreview.jsx
-│   │   ├── PersonalInfoEditor*.jsx
-│   │   ├── ResumeCard.jsx
-│   │   ├── RichTextEditor.jsx
-│   │   ├── SectionEditor*.jsx
-│   │   ├── JobModal.jsx
-│   │   └── job/             # tracker UI pieces
-│   ├── constants/
-│   │   ├── resume.js
-│   │   └── jobs.js
+│   │   ├── AtsCheckerPanel.jsx, AuthBar.jsx, CareerHistoryPanel.jsx
+│   │   ├── CoverLetterPanel*.jsx, CoverLetterGeneratorModal.jsx, BulletOptimizerModal.jsx
+│   │   ├── DesignPanel*.jsx, HeaderIconPickerModal.jsx, HeaderSpacingControls.jsx
+│   │   ├── EditorHeader|EditorResumeTab|EditorPreviewPane|EditorTabContent.jsx  # the Editor page's parts
+│   │   ├── ExportDropdown.jsx, ImportMenu.jsx, LayoutToggle.jsx
+│   │   ├── PdfPreview.jsx     # the preview: the exported PDF, painted by pdf.js
+│   │   ├── PersonalInfoEditor*.jsx, RichTextEditor.jsx, SectionEditor*.jsx
+│   │   ├── ResumeCard.jsx, ResumeThumbnail.jsx, StarterTemplateModal.jsx
+│   │   ├── ErrorBoundary.jsx, RecoveryNotice.jsx
+│   │   ├── job/               # Job Tracker pieces (kanban, list, detail tabs)
+│   │   ├── board/             # Boards pieces (cards, columns, labels)
+│   │   ├── shell/             # the workspace shell around the Job Tracker and Boards
+│   │   └── ui/                # the shared UI kit (dialogs, menus, toasts, fields…)
+│   ├── constants/             # templateTable.js + templates.js, resume.js (section groups), jobs.js,
+│   │                          # boards.js, pageSize.js, pageMargins.js, headerSpacing.js, photoOptions.js…
 │   ├── hooks/
-│   │   ├── useAuth.js
-│   │   ├── useCloudSync.js
-│   │   ├── useEditorExports.js, usePanelResize.js  # the Editor's export menu and panel drag
-│   │   ├── useResumeStore.js
-│   │   ├── useResumeSectionActions.js
-│   │   ├── useJobStore.js
-│   │   └── useJobStages.js
-│   ├── pages/
-│   │   ├── Dashboard.jsx
-│   │   ├── Editor.jsx
-│   │   ├── JobTracker.jsx
-│   │   ├── JobDetail.jsx
-│   │   ├── JobForm.jsx
-│   │   ├── PrivacyPage.jsx
-│   │   └── TermsPage.jsx
-│   ├── templates/
-│   │   ├── Classic|Modern|Minimal|Sidebar|Executive*.jsx
-│   │   ├── CoverLetterTemplate*.jsx
-│   │   ├── sectionCase.js, templateShared.jsx
-│   │   └── pdf/             # react-pdf templates + shared/
+│   │   ├── useResumeStore.js, useResumeSectionActions.js, useResumeSyncActions.js
+│   │   ├── useAuth.js, useCloudSync.js, useDemoSeed.js
+│   │   ├── useJobStore.js, useJobStages.js, useBoardStore.js
+│   │   ├── useEditorExports.js, useEditorTab.js, usePanelResize.js, useOpenResume.js
+│   │   └── useMediaQuery.js, useHotkeys.js, useSmallerPhotos.js, …
+│   ├── pages/                 # Dashboard, Editor, JobTracker, JobDetail, JobForm, Boards, Board,
+│   │                          # Backlog, BoardSettings, YourWork, PrivacyPage, TermsPage
+│   ├── templates/pdf/         # one react-pdf file per template, the cover letter, and shared/
 │   └── utils/
-│       ├── defaultData*.js
-│       ├── firebase.js
-│       ├── fonts.js
-│       ├── pdfExport.js
-│       ├── pdfExportReactPDF.js
-│       ├── resume.js
-│       ├── wordExport*.js
-│       └── brandIcons.jsx
-├── docs/
-│   ├── knowledge/           # how the app works (this folder)
-│   └── tracking/            # every tracker, plan, audit and session log — see its README
-├── tests/                   # Playwright
+│       ├── normalizeResume.js, dataVersion.js, defaultData*.js, starter*.js  # the data model
+│       ├── pdfExportReactPDF.js                                      # PDF render + download
+│       ├── wordExport*.js, markdownExport.js, atsPlainText.js, jsonResume*.js  # the other exporters
+│       ├── atsChecker.js, bulletOptimizer.js, coverLetterGenerator.js
+│       ├── cloudSync*.js, syncMerge.js, localDeletions.js, demo*.js, firebase.js
+│       ├── job*.js, normalizeJob.js, board*.js, normalizeBoard.js
+│       └── storageBackup.js, ids.js, richText.js, fonts.js, …
+├── tests/
+│   ├── pdf/                   # node:test suites that render real PDFs (harness.mjs); parity/
+│   ├── unit/                  # node:test unit suites
+│   ├── playwright/            # browser suites against a built ./dist
+│   ├── fixtures/              # fictional sample résumés
+│   └── helpers.js, pdf-utils.js  # stored-state builders and PDF text-run readers the browser suites share
+├── cypress.config.js
 ├── firestore.rules
 ├── index.html
 ├── jsconfig.json
-├── package.json
-├── package-lock.json
+├── package.json, yarn.lock, .yarnrc.yml  # Yarn 4, node-modules linker
 ├── playwright.config.js
-├── README.md
+├── README.md, CONTRIBUTING.md, LICENSE
 ├── vite-plugin-owner-resume.js  # the owner's private résumé on the dev server only
-└── vite.config.js
+├── vite.config.js
+└── wrangler.jsonc             # Cloudflare static-assets deploy of ./dist
 ```
 
 ## Rough size
 
-- ~100+ JS/JSX modules under `src/`
-- ~9.5k lines across src (approx; includes templates)
+- ~290 JS/JSX modules under `src/`
+- ~36k lines across `src/`
 
 ## Config files of note
 
 | File | Role |
 |------|------|
-| `vite.config.js` | React, Tailwind, `@` alias, manualChunks, owner-résumé plugin |
+| `vite.config.js` | React, Tailwind, `@` alias, named vendor chunks (`codeSplitting.groups`), owner-résumé plugin |
 | `vite-plugin-owner-resume.js` | `virtual:owner-resume`: `private/sairam-resume.json` on the dev server, `null` in every build |
 | `jsconfig.json` | editor path alias |
 | `firestore.rules` | owner-only user subtree |
-| `playwright.config.js` | E2E server + browser defaults |
+| `playwright.config.js` | serves a built `./dist` (`PW_DIST`) on port 4173 (`PW_PORT`) for `tests/playwright/` |
+| `cypress.config.js` | the e2e build on 4173; tasks that read downloaded PDFs and .docx files |
+| `.github/workflows/ci.yml` | the CI gate and its dispatch inputs (08-testing.md) |
