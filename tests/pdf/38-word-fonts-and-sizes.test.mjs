@@ -89,7 +89,9 @@ describe('Word export: entry date colours (AUD-22)', () => {
     assert.equal(await dateColor('sidebar', { accentColor: '#e11d48', textColor: '#111111' }), 'a0a0a0');
   });
 
-  it('Sidebar Single · ATS-safe mode prints entry dates in accent colour as Classic does', async () => {
-    assert.equal(await dateColor('sidebar', { accentColor: '#e11d48', sidebarSingleColumn: true }), 'e11d48');
+  // Its PDF prints Classic's page with the Sidebar's entries: grey dates, as in two columns. This
+  // pinned the accent Word printed, which R2-121 found the PDF never did (86-sidebar-single-entry-colours).
+  it('Sidebar Single · ATS-safe mode prints entry dates in the grey its PDF prints them in (R2-121)', async () => {
+    assert.equal(await dateColor('sidebar', { accentColor: '#e11d48', textColor: '#111111', sidebarSingleColumn: true }), 'a0a0a0');
   });
 });

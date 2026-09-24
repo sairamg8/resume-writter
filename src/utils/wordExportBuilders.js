@@ -250,9 +250,10 @@ export function buildCustom(section, accentHex, settings, centered, dateHex, loo
 }
 
 /**
- * A section's paragraphs; `settings` are the résumé's (its dates print in its Date format).
+ * A section's paragraphs; `settings` are the résumé's (its dates print in its Date format), and
+ * `template` the résumé's own, whose entry colours the PDF prints in every Layout (R2-121).
  * Section Options → Alignment "Center" centres it as the PDF does: everywhere but the Sidebar's
- * side column (`template`), which prints one left-aligned column whatever the section stores.
+ * side column (two columns only), which prints one left-aligned column whatever the section stores.
  * Its title prints in Design → Title case as the PDF prints it, in both of the Sidebar's columns:
  * in capitals for "ABC", as typed for "Abc" — the template's own when none is stored (Executive's
  * is "Abc"). Design → Spacing spaces it as the PDF does (R2-062): Line Height, Between Items, and
@@ -261,7 +262,7 @@ export function buildCustom(section, accentHex, settings, centered, dateHex, loo
  */
 export function buildSection(section, accentHex, settings, template) {
   if (section.visible === false || !shown(section).length) return [];
-  const side = inSidebarColumn(template, section.type);
+  const side = inSidebarColumn(template, section.type, settings);
   const centered = section.settings?.alignment === 'center' && !side;
   const s = resolveTemplateSettings(settings, templateId(template));
   const title = String(section.title || '');

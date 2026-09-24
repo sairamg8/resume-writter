@@ -1,7 +1,7 @@
 // How the Word résumé prints a section's entries (buildSection's `look`): the sizes, the spacing of
 // Design → Spacing (R2-062) and the colours (R2-063) its PDF prints the same section in.
 import { accent2Hex, wordContentTwips } from '@/utils/wordExportUtils';
-import { templateId } from '@/constants/templates';
+import { headerTemplateId, templateId } from '@/constants/templates';
 import { solid, textShades } from '@/templates/pdf/shared/pdfColors';
 import { getEffectiveSpacing } from '@/templates/pdf/shared/PdfSections';
 
@@ -15,7 +15,8 @@ import { getEffectiveSpacing } from '@/templates/pdf/shared/PdfSections';
  *   reference's role; a relationship and a project's technologies; a location and a credential ID;
  *   descriptions and legacy bullets;
  * - `place` — an entry's location: `muted`, Compact's `meta`;
- * - `tech` — a project's technologies: the accent at 70 % in the Sidebar's main column, else `meta`;
+ * - `tech` — a project's technologies: the accent at 70 % in the two-column Sidebar's main column,
+ *   else `meta` — its Single · ATS-safe prints Classic's projects (headerTemplateId);
  * - `bar` — a Bars skill: the Text colour at 80 %.
  * The Sidebar's side column prints light on its dark panel; Word has no panel, so it takes these too.
  */
@@ -33,7 +34,7 @@ export function entryInk(s, tid) {
     // An entry's location: `muted`, but Compact's 9 pt one `meta`, which reads 4.5:1 (ItemHeader, T9).
     place: hex(tid === 'compact' ? shade.meta : shade.muted),
     body: hex(shade.body, '374151'),
-    tech: tid === 'sidebar' ? accentAt(0.7) : hex(shade.meta),
+    tech: headerTemplateId(tid, s) === 'sidebar' ? accentAt(0.7) : hex(shade.meta),
     bar: hex(solid(s.textColor, 0.8)),
   };
 }
