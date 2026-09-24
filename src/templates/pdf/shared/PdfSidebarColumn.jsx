@@ -126,10 +126,41 @@ export function SideSectionTitle({ title, shades = NAVY, titleCase = 'upper', se
 const SIDE_LINE = 9 * 1.2;
 
 /**
- * What a title keeps with it: its first entry's head, which prints unbreakable — `lines` of the
- * column's text (one per field it prints; none, the default) and one more for a field that wraps.
+ * The lines `text` fills in the column in `style` ({ fontSize, fontWeight }): word by word, a word
+ * wider than the column broken inside it (sideBreaks); none for no text.
  */
-const entryPresence = (lines) => (lines ? (lines + 1) * SIDE_LINE : undefined);
+function sideLines(settings, text, style) {
+  const words = String(text ?? '').split(/\s+/).filter(Boolean);
+  if (!words.length) return 0;
+  const font = { fontFamily: settings?._pdfFontFamily, ...style };
+  const room = sideColumnRoom(settings);
+  const space = textWidth(' ', font);
+  let lines = 1;
+  let used = 0;
+  for (const word of words) {
+    const w = textWidth(word, font);
+    if (used && used + space + w <= room) { used += space + w; continue; }
+    const over = Math.max(0, Math.ceil(w / room) - 1);
+    lines += (used ? 1 : 0) + over;
+    used = w - over * room;
+  }
+  return lines;
+}
+
+/**
+ * What a title keeps with it: its first entry's head, which prints unbreakable — each of `fields`
+ * ([text, style], a style's lines 1.2 of its size) in the lines it fills in the column, a `whole` one
+ * (a contact value, set on one line) in one — and a line more, as textkit may fill a line less than
+ * sideLines does. A count of one line per field left the title alone at the foot of a page above a
+ * reference whose job title and company wrapped. None (the title's three lines) for no entry.
+ */
+function entryPresence(settings, fields) {
+  const pt = fields.reduce((sum, [text, style, whole]) => sum + (text ? (whole ? 1 : sideLines(settings, text, style)) * style.fontSize * 1.2 : 0), 0);
+  return pt ? pt + SIDE_LINE : undefined;
+}
+
+const SIDE_TEXT = { fontSize: 9 };
+const SIDE_NAME = { fontSize: 9, fontWeight: 'bold' };
 
 export function SideEducation({ section, sectionGap, itemGap, shades = NAVY, titleCase, settings }) {
   const s        = section.settings || {};
@@ -143,11 +174,14 @@ export function SideEducation({ section, sectionGap, itemGap, shades = NAVY, tit
   const listBreaks = (inset) => sideBreaks(settings, { fontSize: 9, fontWeight: 'bold' }, inset);
   const dates = (item) => (showDates ? dateRange(item.startDate, item.endDate, settings) : '');
   const first = visibleItems[0];
-  const headLines = first ? [first.degree, first.institution, first.fieldOfStudy, showLoc && first.location, first.gpa, dates(first)].filter(Boolean).length : 0;
+  const presence = first ? entryPresence(settings, [
+    [first.degree, { fontSize: 10, fontWeight: 'bold' }], [first.institution, SIDE_TEXT], [first.fieldOfStudy, SIDE_TEXT],
+    [showLoc && first.location, SIDE_TEXT], [first.gpa && `GPA: ${first.gpa}`, SIDE_TEXT], [dates(first), SIDE_TEXT, true],
+  ]) : undefined;
 
   return (
     <View style={{ marginBottom: sectionGap }}>
-      <SideSectionTitle title={section.title} shades={shades} titleCase={titleCase} settings={settings} presence={entryPresence(headLines)} />
+      <SideSectionTitle title={section.title} shades={shades} titleCase={titleCase} settings={settings} presence={presence} />
       <View style={{ gap: itemGap }}>
         {visibleItems.map((item, i) => (
           <View key={i}>
@@ -206,11 +240,14 @@ export function SideCertifications({ section, sectionGap, itemGap, shades = NAVY
   // Issued – expires, as the main column prints it ("– 03/2027" without an issue date).
   const dates = (item) => (showDates ? dateRange(item.date, item.expiry, settings) : '');
   const first = visibleItems[0];
-  const lines = first ? [first.name, first.issuer, dates(first), first.credentialId, first.url].filter(Boolean).length : 0;
+  const presence = first ? entryPresence(settings, [
+    [first.name, SIDE_NAME], [first.issuer, SIDE_TEXT], [dates(first), SIDE_TEXT, true],
+    [first.credentialId && `ID: ${first.credentialId}`, SIDE_TEXT], [first.url, SIDE_TEXT, true],
+  ]) : undefined;
 
   return (
     <View style={{ marginBottom: sectionGap }}>
-      <SideSectionTitle title={section.title} shades={shades} titleCase={titleCase} settings={settings} presence={entryPresence(lines)} />
+      <SideSectionTitle title={section.title} shades={shades} titleCase={titleCase} settings={settings} presence={presence} />
       <View style={{ gap: itemGap }}>
         {visibleItems.map((item, i) => {
           const dateStr = dates(item);
@@ -264,10 +301,13 @@ export function SideReferences({ section, sectionGap, itemGap, shades = NAVY, ti
   const nameBreaks = sideBreaks(settings, { fontSize: 9, fontWeight: 'bold' });
   const textBreaks = sideBreaks(settings, { fontSize: 9 });
   const first = visibleItems[0];
-  const lines = first ? [first.name, first.jobTitle, first.company, first.relationship, first.email, first.phone].filter(Boolean).length : 0;
+  const presence = first ? entryPresence(settings, [
+    [first.name, SIDE_NAME], [first.jobTitle, SIDE_TEXT], [first.company, SIDE_TEXT], [first.relationship, SIDE_TEXT],
+    [first.email, SIDE_TEXT, true], [first.phone, SIDE_TEXT, true],
+  ]) : undefined;
   return (
     <View style={{ marginBottom: sectionGap }}>
-      <SideSectionTitle title={section.title} shades={shades} titleCase={titleCase} settings={settings} presence={entryPresence(lines)} />
+      <SideSectionTitle title={section.title} shades={shades} titleCase={titleCase} settings={settings} presence={presence} />
       <View style={{ gap: itemGap }}>
         {visibleItems.map((item, i) => (
           // Unbreakable: a reference never splits across two pages (R2-104).
