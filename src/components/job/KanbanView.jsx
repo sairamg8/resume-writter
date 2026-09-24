@@ -1,12 +1,16 @@
 import { useState, useEffect, useRef } from 'react';
 import { ExternalLink, Trash2, CheckSquare } from 'lucide-react';
 import {
-  DndContext, DragOverlay, PointerSensor, useSensor, useSensors,
+  DndContext, DragOverlay, MouseSensor, TouchSensor, useSensor, useSensors,
   useDroppable, useDraggable,
 } from '@dnd-kit/core';
 import { JOB_STATUSES } from '@/constants/jobs';
 import { deadlineState } from '@/utils/dates';
 import { hasRichText, richTextToPlain, safeHref } from '@/utils/richText';
+import { JOB_DRAG_INSTRUCTIONS, openOnKey } from '@/utils/cardKeys';
+
+/** Keeps a press on a control inside a card from starting the card's drag (mouse or touch). */
+const stopDrag = { onMouseDown: e => e.stopPropagation(), onTouchStart: e => e.stopPropagation() };
 
 function KanbanCard({ job, onDelete, overlay = false }) {
   const deadline = deadlineState(job.deadline);
@@ -25,7 +29,9 @@ function KanbanCard({ job, onDelete, overlay = false }) {
             href={safeHref(job.url)}
             target="_blank"
             rel="noopener noreferrer"
-            onPointerDown={e => e.stopPropagation()}
+            {...stopDrag}
+            /* The card's click opens the job: the posting opened and the tracker left too (R2-099). */
+            onClick={e => e.stopPropagation()}
             title="Open job posting"
             aria-label={`Open the ${job.company || 'job'} posting`}
             className="p-0.5 text-gray-300 hover:text-blue-500 shrink-0 mt-0.5 transition-colors"
@@ -82,7 +88,7 @@ function KanbanCard({ job, onDelete, overlay = false }) {
       <div className="flex items-center justify-between mt-2 opacity-0 group-hover/card:opacity-100 no-hover:opacity-100 transition-opacity">
         <span className="text-[10px] text-indigo-400 font-medium">Open →</span>
         <button
-          onPointerDown={e => e.stopPropagation()}
+          {...stopDrag}
           onClick={e => { e.stopPropagation(); onDelete(job.id); }}
           title="Delete application"
           aria-label="Delete application"
@@ -103,6 +109,7 @@ function DraggableCard({ job, onNavigate, onDelete }) {
       {...attributes}
       {...listeners}
       onClick={() => !isDragging && onNavigate(job.id)}
+      onKeyDown={e => openOnKey(e, () => onNavigate(job.id))}
       className={`group/card cursor-pointer ${isDragging ? 'opacity-30 cursor-grabbing' : ''}`}
     >
       <KanbanCard job={job} onDelete={onDelete} />
@@ -139,7 +146,13 @@ function KanbanColumn({ status, jobs, onNavigate, onDelete }) {
 
 export function KanbanView({ jobs, updateJob, onNavigate, onDelete, scrollToStatus }) {
   const [activeId, setActiveId] = useState(null);
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
+  // A mouse drags on a small move, a finger on a press-and-hold, as on the boards: the pointer sensor
+  // on a card without touch-action: none lost every touch drag to the page's scroll (R2-038), and a
+  // swipe must still scroll the columns.
+  const sensors = useSensors(
+    useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } }),
+  );
   const activeJob = jobs.find(j => j.id === activeId);
   const containerRef = useRef(null);
 
@@ -152,6 +165,7 @@ export function KanbanView({ jobs, updateJob, onNavigate, onDelete, scrollToStat
   return (
     <DndContext
       sensors={sensors}
+      accessibility={{ screenReaderInstructions: JOB_DRAG_INSTRUCTIONS }}
       onDragStart={({ active }) => setActiveId(active.id)}
       onDragEnd={({ active, over }) => {
         setActiveId(null);

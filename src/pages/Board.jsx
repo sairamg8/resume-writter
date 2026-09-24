@@ -8,6 +8,7 @@ import { SortableContext, horizontalListSortingStrategy } from '@dnd-kit/sortabl
 import { useBoardStore } from '@/hooks/useBoardStore';
 import { BoardColumn } from '@/components/board/BoardColumn';
 import { CardView } from '@/components/board/BoardCard';
+import { BOARD_DRAG_INSTRUCTIONS } from '@/utils/cardKeys';
 import { CardDetailSheet } from '@/components/board/CardDetailSheet';
 
 /** The "Add list" column at the right edge of the board (and its own scroll-snap target on mobile). */
@@ -201,7 +202,7 @@ export function Board() {
       )}
 
       {/* Board */}
-      <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={onDragStart} onDragEnd={onDragEnd} onDragCancel={() => setActive(null)}>
+      <DndContext sensors={sensors} accessibility={{ screenReaderInstructions: BOARD_DRAG_INSTRUCTIONS }} collisionDetection={closestCorners} onDragStart={onDragStart} onDragEnd={onDragEnd} onDragCancel={() => setActive(null)}>
         <div className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden">
           <div className="flex gap-3 items-start px-3 sm:px-5 py-4 h-full snap-x snap-mandatory md:snap-none">
             <SortableContext items={board.lists.map((l) => l.id)} strategy={horizontalListSortingStrategy}>

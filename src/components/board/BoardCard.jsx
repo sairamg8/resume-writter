@@ -2,6 +2,7 @@ import { Calendar, CheckSquare } from 'lucide-react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { deadlineState } from '@/utils/dates';
+import { openOnKey } from '@/utils/cardKeys';
 
 /**
  * A card's face — labels, title, and a meta row (due date coloured by how close it is, checklist
@@ -62,6 +63,7 @@ export function SortableCard({ card, listId, onOpen }) {
       {...attributes}
       {...listeners}
       onClick={() => !isDragging && onOpen(card.id, listId)}
+      onKeyDown={(e) => openOnKey(e, () => onOpen(card.id, listId))}
       className={`cursor-pointer ${isDragging ? 'opacity-40' : ''}`}
     >
       <CardView card={card} />
