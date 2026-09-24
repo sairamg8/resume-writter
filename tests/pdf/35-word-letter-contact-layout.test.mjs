@@ -50,7 +50,8 @@ describe('the Word letter prints Cover Letter → Contact Layout (FIDB-51-VF1-NB
       for (const headerStyle of ['bullet', 'icon']) {
         for (const headerLayout of ['single', '2grid']) {
           const at = `${template} ${headerStyle} ${headerLayout}`;
-          const r = letter(template, { headerLayout, headerStyle });
+          // Left-aligned: every template's own letterhead but Academic's, which is centred (T8).
+          const r = letter(template, { headerLayout, headerStyle }, { headerAlign: 'left' });
           const rows = await wordRows(r);
           assert.deepEqual(rows.map((row) => row.cells), await pdfRows(r), `${at}: the PDF's rows`);
           assert.deepEqual(rows.map((row) => row.cells), headerLayout === 'single' ? VALUES.map((v) => [v]) : [VALUES.slice(0, 2), VALUES.slice(2)], at);

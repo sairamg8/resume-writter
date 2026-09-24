@@ -119,6 +119,7 @@ export function CoverLetterHeader({ look, personal, settings, cl, hidden, contac
     // Stacked: Personal Info → Header spacing → Name ↔ Title when the résumé sets it, else the letterhead's 1 pt.
     ...(look.inline ? { fontWeight: 500, lineHeight: 1.2 } : { marginTop: setGapPt(settings, 'nameTitleGap') ?? 1 }),
     ...(look.title.opacity ? { opacity: opacityFor(look.title.color, look.title.opacity) } : {}), ...align,
+    ...(look.title.italic ? { fontStyle: 'italic' } : {}), // Academic's position line
   };
 
   // Beside the contacts ('right', the default) the name side takes the room the contacts' widest

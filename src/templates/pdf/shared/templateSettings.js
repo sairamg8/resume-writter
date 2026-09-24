@@ -5,7 +5,7 @@ import { headerBorderOn, headerTemplateId } from '@/constants/templates';
 import { headerGapsPt } from '@/constants/headerSpacing';
 import { pageMargins } from '@/constants/pageMargins';
 import { PHOTO_OPTIONS, photoOption } from '@/constants/photoOptions';
-import { contrast, readableOn } from './pdfColors';
+import { contrast, readableOn, textShades } from './pdfColors';
 import { CSS_PX_TO_PT, DEFAULT_ITEM_GAP_PX, DEFAULT_SECTION_GAP_PX } from './pdfUnits';
 
 /**
@@ -110,6 +110,16 @@ export const DEFAULTS = {
     nameColor: (s) => s.nameColor || s.headerTextColor,
     jobTitleColor: (s) => s.jobTitleColor || s.headerTextColor,
     headingStyle: 'box',
+    sectionTitleCase: 'upper',
+  },
+  // A scholarly CV on the white page: the name in the Text colour, the position under it (italic) in
+  // the Text colour's grey — the accent is kept for the section titles and their hairlines.
+  academic: {
+    accentColor: '#1f2937',
+    textColor: '#111111',
+    nameColor: (s) => s.nameColor || s.textColor || '#111111',
+    jobTitleColor: (s) => s.jobTitleColor || textShades(s.textColor || '#111111').sub,
+    headingStyle: 'ruled',
     sectionTitleCase: 'upper',
   },
 };

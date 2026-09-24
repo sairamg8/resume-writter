@@ -7,7 +7,8 @@ import { readableOn, solid, tint } from './pdfColors';
  * The colours a section heading prints in, for `template` (an id), `headingStyle`, the résumé's
  * `accent` and Section Headings → Border colour `borderColor` ('' = the template's own):
  *   text       the title: the accent, or the neutral #374151 where the template's style prints it so
- *   ruled      Ruled's rule (a fill: translucent allowed)
+ *   ruled      Ruled's rule (a fill: translucent allowed) — Academic's, under a title in the accent, is
+ *              the accent at 55 % on white unless a Border colour is picked (AcademicTemplatePDF.jsx)
  *   line       Line's rules beside the title (a fill)
  *   underline  Underline's border (opaque)
  *   bar        Left bar's bar
@@ -27,6 +28,7 @@ export function sectionHeadingLook({ template, headingStyle, accent = '#2563eb',
     chip,
     text: chip && headingStyle === 'box' ? readableOn('#ffffff', solid(bc), 4.5) : neutral ? '#374151' : accent,
     ruled: template === 'modern' ? (borderColor || tint(accent, 0x30 / 255))
+      : template === 'academic' ? (borderColor || solid(accent, 0.55)) // the hairline under its titles
       : template === 'minimal' || template === 'executive' ? (borderColor || '#d1d5db')
       : (borderColor || '#e5e7eb'), // classic, sidebar
     line: template === 'modern' ? (borderColor || tint(accent, 0x30 / 255))

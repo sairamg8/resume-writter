@@ -1,54 +1,10 @@
 import { BASE_COVER_LETTER } from './defaultDataContent.js';
-import { templateStyleDefaults } from '../constants/templates.js';
 import { DATA_VERSION } from './dataVersion.js';
+import { getStarterSettings } from './starterSettings.js';
+import { ACADEMIC_STARTER } from './starterAcademic.js';
 
-
-export function getStarterSettings(template) {
-  return {
-    font: 'notosans',
-    fontSize: 'normal',
-    fontSizeBase: 11,
-    fontSizeNameDelta: 8,
-    fontSizeSectionDelta: 1,
-    fontSizeEntryDelta: 0,
-    lineHeight: 'normal',
-    margins: 'normal',
-    accentColor: '#374151',
-    textColor: '#111111',
-    headingStyle: 'ruled',
-    sectionTitleCase: 'upper',
-    dateFormat: 'MMM YYYY',
-    sectionBorderWidth: 1,
-    sectionBorderColor: '',
-    headerAlign: 'left',
-    headerLayout: 'stack',
-    headerInlineGap: 8,
-    contactStyle: 'icon',
-    iconSet: 'filled',
-    customContactIcons: {},
-    contactCols: 1,
-    contactLayout: 'justify',
-    photoShape: 'circle',
-    photoSize: 'md',
-    photoBorder: 'accent',
-    photoHeight: 'match',
-    photoTextAlign: 'center',
-    showHeaderBorder: false,
-    headerBorderWidth: 2,
-    customFont: '',
-    iconSize: 11,
-    lineHeightValue: 1.5,
-    sectionGap: 16,
-    itemGap: 8,
-    marginH: 18,
-    marginV: 14,
-    sidebarBg: '#1e293b',
-    headerTextColor: '#ffffff',
-    nameColor: '',
-    jobTitleColor: '',
-    ...templateStyleDefaults(template),
-  };
-}
+// The design settings a starter (or a JSON Resume import) starts with: ./starterSettings.js.
+export { getStarterSettings };
 
 export const STARTER_TEMPLATES = [
   {
@@ -295,7 +251,8 @@ export const STARTER_TEMPLATES = [
         ]
       }
     ]
-  }
+  },
+  ACADEMIC_STARTER,
 ];
 
 export function buildResumeFromStarter(starterId, newId) {

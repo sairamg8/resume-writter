@@ -1,4 +1,5 @@
 import { ATS_DEFAULTS } from '@/utils/defaultData';
+import { templateStyleDefaults } from '@/constants/templates';
 
 // The five fictional sample résumés the owner's login got back after deleting everything, until
 // 2026-09-15 — the owner asked for their own résumé instead (src/utils/demoSeed.js), and the app
@@ -120,6 +121,35 @@ function sample(id, name, template, settings) {
   };
 }
 
+/** A publication, as the Academic CV starter lists them: the paper, where it appeared, when, its link. */
+const PUBLICATIONS = {
+  id: 'publications', type: 'custom', title: 'Publications', visible: true,
+  settings: { spacing: 'normal', columns: 1, showDates: true, titleStyle: 'stacked' },
+  items: [
+    {
+      id: 'pub1', title: 'Measuring Interaction Latency in Single-Page Applications', subtitle: 'Proceedings of the Web Performance Workshop',
+      location: '', date: '06/2023', bullets: [],
+      description: '<p>J. Rivera and A. Chen. An open benchmark of input delay across 40 production React applications.</p>',
+    },
+    {
+      id: 'pub2', title: 'Accessible Forms at Scale', subtitle: 'Journal of Web Engineering Practice', location: '', date: '11/2021', bullets: [],
+      description: '<p>J. Rivera. What a WCAG 2.1 AA audit of 300 banking forms taught one frontend team.</p>',
+    },
+  ],
+};
+
+/**
+ * Academic's sample: the template's own type and spacing (TEMPLATES.academic.style) and the section
+ * order of its starter — education, then publications, then the rest (T8).
+ */
+function academic() {
+  const r = sample('demo_academic', 'Sample · Academic', 'academic',
+    { ...templateStyleDefaults('academic'), accentColor: '#7f1d1d', textColor: '#111111' });
+  const by = (type) => r.sections.find((x) => x.type === type);
+  r.sections = [by('education'), JSON.parse(JSON.stringify(PUBLICATIONS)), ...r.sections.filter((x) => x.type !== 'education')];
+  return r;
+}
+
 /** One sample résumé per template, with the ids and names the owner's account had (demo_…). */
 export const DEMO_RESUMES = [
   sample('demo_classic', 'Sample · Classic', 'classic',
@@ -139,4 +169,5 @@ export const DEMO_RESUMES = [
     { accentColor: '#0f766e', textColor: '#1a1a1a', headingStyle: 'plain', sectionTitleCase: 'upper', sectionGap: 16, itemGap: 8, lineHeightValue: 1.35 }),
   sample('demo_banner', 'Sample · Banner', 'banner',
     { accentColor: '#1e3a8a', textColor: '#1a1a1a', headingStyle: 'box', sectionTitleCase: 'upper', sectionGap: 16, itemGap: 8 }),
+  academic(),
 ];

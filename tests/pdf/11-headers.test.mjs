@@ -47,9 +47,11 @@ const ICON_CONTROLS = [
   ['Icon set: Classic', {}, { iconSet: 'lucide' }],
   ['Icon size', {}, { iconSize: 16 }],
 ];
+/** Each control is measured from a left-aligned header: every template's own, but Academic's, which is centred (T8). */
+const START = { headerAlign: 'left' };
 const changing = async (template, controls) => {
   const out = [];
-  for (const [label, from, to] of controls) if (await drawn(template, from) !== await drawn(template, to)) out.push(label);
+  for (const [label, from, to] of controls) if (await drawn(template, { ...START, ...from }) !== await drawn(template, { ...START, ...to })) out.push(label);
   return out;
 };
 

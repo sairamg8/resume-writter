@@ -58,7 +58,9 @@ export function buildPersonalSection(personal = {}, settings = {}, template = 'c
 
   const ink = headerInk(settings, template);
   const name = new TextRun({ text: personal.name || 'Your Name', bold: true, size: nameSize, color: ink.name });
-  const title = personal.title ? new TextRun({ text: personal.title, size: titleSize, color: ink.title }) : null;
+  // Academic prints the job title in italic, the position under the name (AcademicTemplatePDF.jsx).
+  const italics = templateId(template) === 'academic' ? { italics: true } : {};
+  const title = personal.title ? new TextRun({ text: personal.title, size: titleSize, color: ink.title, ...italics }) : null;
   // Name & Title Layout "Inline" (ONB-3-NB1): one line, as the PDF's nameBlock and the letter's letterhead print it.
   const inline = title && inlineLayout(templateId(template), s);
   const contacts = contactItems(personal);

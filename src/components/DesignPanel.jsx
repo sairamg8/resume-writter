@@ -87,6 +87,11 @@ export default function DesignPanel({ resume, updateSetting, setTemplate, resetS
             </p>
           </div>
         )}
+        {current === 'academic' && (
+          <p className="text-[10px] text-gray-400 mt-2">
+            Academic brings its own type and spacing: a serif, a centred header, section titles at the body&apos;s size and tighter Spacing. Every one of them can be changed below.
+          </p>
+        )}
         <p className="text-[10px] text-gray-400 mt-2">The cover letter&apos;s header takes the template&apos;s look too.</p>
       </DesignSection>
 

@@ -18,7 +18,7 @@ const PERSONAL = {
 };
 const NO_CONTACTS = { ...PERSONAL, email: '', phone: '' };
 /** The templates' own Title ↔ Contacts, pt (TEMPLATES' headerGaps.titleContactsGap); the Sidebar has none. */
-const OWN = { classic: 3, minimal: 3, executive: 3, modern: 4, sidebar: null, timeline: 3, banner: 3 };
+const OWN = { classic: 3, minimal: 3, executive: 3, modern: 4, sidebar: null, timeline: 3, banner: 3, academic: 3 };
 const WITH_GAP = TEMPLATES.filter((t) => OWN[t] != null);
 const near = (a, b, at) => assert.ok(Math.abs(a - b) < 0.01, `${at}: ${a} vs ${b}`);
 
@@ -75,7 +75,7 @@ describe('Title ↔ Contacts in the résumé PDF', () => {
     assert.deepEqual(await header(await render(cv('sidebar', { titleContactsGap: 40 }))), await header(await render(cv('sidebar'))));
   });
 
-  for (const template of ['classic', 'minimal', 'executive', 'timeline', 'banner']) {
+  for (const template of ['classic', 'minimal', 'executive', 'timeline', 'banner', 'academic']) {
     it(`${template}: Inline — the contacts under the name and title's line move by the change`, async () => {
       const unset = await header(await render(cv(template, { headerLayout: 'inline' })));
       const set = await header(await render(cv(template, { headerLayout: 'inline', titleContactsGap: 20 })));
@@ -91,8 +91,9 @@ describe('Title ↔ Contacts in the cover letter', () => {
   for (const template of TEMPLATES) {
     for (const fieldsPosition of ['below-name', 'below-all']) {
       it(`${template} ${fieldsPosition}: the contacts follow the résumé's set value, else the letterhead's own ${LETTER_OWN[fieldsPosition]} pt`, async () => {
-        const unset = await header(await renderCover(cv(template, {}, PERSONAL, { fieldsPosition })));
-        const set = await header(await renderCover(cv(template, { titleContactsGap: 20 }, PERSONAL, { fieldsPosition })));
+        // Left-aligned (Academic's own header is centred, T8; the centred letterhead is tested below).
+        const unset = await header(await renderCover(cv(template, { headerAlign: 'left' }, PERSONAL, { fieldsPosition })));
+        const set = await header(await renderCover(cv(template, { headerAlign: 'left', titleContactsGap: 20 }, PERSONAL, { fieldsPosition })));
         near(set.name, unset.name, `${template}: name`);
         near(set.title, unset.title, `${template}: title`);
         near(set.contact - unset.contact, 15 - LETTER_OWN[fieldsPosition], `${template}: first contact`);
@@ -141,7 +142,7 @@ describe('Title ↔ Contacts in Word', () => {
     assert.equal(spaceAfter(await renderDocx(cv('sidebar', { titleContactsGap: 20 })), 'Staff Engineer'), 60);
   });
 
-  for (const template of ['classic', 'minimal', 'executive', 'timeline', 'banner']) {
+  for (const template of ['classic', 'minimal', 'executive', 'timeline', 'banner', 'academic']) {
     it(`${template}: Inline — the name and title's paragraph takes it`, async () => {
       assert.equal(spaceAfter(await renderDocx(cv(template, { headerLayout: 'inline' })), 'Jordan Rivera'), 60);
       assert.equal(spaceAfter(await renderDocx(cv(template, { headerLayout: 'inline', titleContactsGap: 20 })), 'Jordan Rivera'), 300);

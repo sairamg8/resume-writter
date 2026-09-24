@@ -16,9 +16,9 @@ after(teardown);
 const PERSONAL = { name: 'Jordan Rivera', title: 'Staff Engineer', email: 'jordan@example.com', phone: '+1 555 0100', location: 'Austin, TX' };
 const ONE_CONTACT = { ...PERSONAL, phone: '', location: '' };
 /** The templates' own Between contacts, pt (TEMPLATES' headerGaps.contactGapX, Icon + Justify); the Sidebar has none. */
-const OWN = { classic: 12, minimal: 12, executive: 12, modern: 12, sidebar: null, timeline: 12, banner: 12 };
+const OWN = { classic: 12, minimal: 12, executive: 12, modern: 12, sidebar: null, timeline: 12, banner: 12, academic: 12 };
 const WITH_GAP = TEMPLATES.filter((t) => OWN[t] != null);
-const STACKED = ['classic', 'minimal', 'executive', 'timeline', 'banner'];
+const STACKED = ['classic', 'minimal', 'executive', 'timeline', 'banner', 'academic'];
 const near = (a, b, at) => assert.ok(Math.abs(a - b) < 0.01, `${at}: ${a} vs ${b}`);
 
 /** Page 1's name and the three contacts: x from the left, y down from the top, pt. */
@@ -27,7 +27,9 @@ async function header(bytes) {
   const at = (s) => { const t = page.items.find((i) => i.str.includes(s)); return t && { x: t.x, y: page.H - t.y }; };
   return { name: at('Jordan Rivera'), email: at('jordan@example.com'), phone: at('+1 555 0100'), location: at('Austin, TX') };
 }
-const cv = (template, settings = {}, personal = PERSONAL, coverLetter = {}) => resume({ template, settings, personal, coverLetter });
+/** These gaps are measured on a left-aligned header: every template's own, but Academic's, which is centred (T8). */
+const ICON_ROW = { academic: { headerAlign: 'left' } };
+const cv = (template, settings = {}, personal = PERSONAL, coverLetter = {}) => resume({ template, settings: { ...ICON_ROW[template], ...settings }, personal, coverLetter });
 
 describe('Between contacts in the résumé PDF', () => {
   it('pins the templates\' own gaps the row starts from', async () => {

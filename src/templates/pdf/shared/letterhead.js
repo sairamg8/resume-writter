@@ -131,7 +131,18 @@ export const LOOKS = {
       photo: ['#ffffff', { onBanner: true }],
     };
   },
+  // Academic's letterhead: its résumé's centred header — the position under the name in italic, as
+  // AcademicTemplatePDF prints it — over the hairline its section titles print on (sectionHeadingLook),
+  // 0.75 pt, where the résumé's header rule is off.
+  academic: (base, { s, accent, rule }) => ({
+    ...base,
+    title: { ...base.title, italic: true },
+    rules: rule || [{ width: ACADEMIC_HAIRLINE, color: solid(s.sectionBorderColor || accent, s.sectionBorderColor ? 1 : 0.55) }],
+  }),
 };
+
+/** The hairline under Academic's letterhead, pt: Minimal's. */
+export const ACADEMIC_HAIRLINE = 0.75;
 
 /**
  * The letterhead of a letter whose résumé prints with `template`, from the résumé's resolved
@@ -141,7 +152,7 @@ export const LOOKS = {
  *   centered  the résumé's header is centred (letterheadCentered): photo, name and contacts on the centre line
  *   inline    null, or { gap }: the résumé's header prints the title on the name's line (inlineLayout)
  *   name      { color, weight, letterSpacing? }: Design → Name color, else the template's own
- *   title     { color, opacity? }: Design → Job title color, else the template's own
+ *   title     { color, opacity?, italic? }: Design → Job title color, else the template's own (Academic's italic)
  *   contacts  the colour of the contact icons and values
  *   marks     the colour of the Bar and Bullet marks on a band (bandMarks), else null: the
  *             page's light greys, as the résumé's header prints them

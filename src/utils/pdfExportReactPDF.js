@@ -16,6 +16,7 @@ export const LOADERS = {
   executive: () => import('@/templates/pdf/ExecutiveTemplatePDF').then(m => m.ExecutiveTemplatePDF),
   timeline:  () => import('@/templates/pdf/TimelineTemplatePDF').then(m => m.TimelineTemplatePDF),
   banner:    () => import('@/templates/pdf/BannerTemplatePDF').then(m => m.BannerTemplatePDF),
+  academic:  () => import('@/templates/pdf/AcademicTemplatePDF').then(m => m.AcademicTemplatePDF),
 };
 
 /** Cache loaded template components so repeat exports skip network/chunk parse. */

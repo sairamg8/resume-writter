@@ -37,6 +37,8 @@ export function HeadingControls({ settings, template, updateSetting }) {
   const setBorderPt = (pt) => updateSetting('sectionBorderWidth', Math.min(SECTION_BORDER_PT.max, Math.max(SECTION_BORDER_PT.min, pt - extraPt)));
   // Boxed as the PDF prints it on this template: Banner's is a filled chip, the title reversed out of it.
   const boxLook = sectionHeadingLook({ template, headingStyle: 'box', accent: settings.accentColor || '#2563eb', borderColor: settings.sectionBorderColor || '' });
+  // Ruled as the PDF prints it on this template: Academic's title in the accent over its hairline (T8).
+  const ruledLook = sectionHeadingLook({ template, headingStyle: 'ruled', accent: settings.accentColor || '#2563eb', borderColor: settings.sectionBorderColor || '' });
 
   return (
     <>
@@ -135,7 +137,7 @@ export function HeadingControls({ settings, template, updateSetting }) {
           return (
             <button key={opt.value} onClick={() => updateSetting('headingStyle', opt.value)} className={`px-2 py-2 rounded-lg border text-left transition-all ${active ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}`}>
               <div className="mb-1">
-                {opt.value === 'ruled'     && <div><span className="text-[8px] font-bold uppercase tracking-wider" style={{ color: '#374151' }}>ABC</span><div className="h-px mt-0.5" style={{ backgroundColor: '#e5e7eb' }} /></div>}
+                {opt.value === 'ruled'     && <div><span className="text-[8px] font-bold uppercase tracking-wider" style={{ color: ruledLook.text }}>ABC</span><div className="h-px mt-0.5" style={{ backgroundColor: ruledLook.ruled }} /></div>}
                 {opt.value === 'leftbar'   && <div className="flex items-center gap-1"><div className="w-0.5 self-stretch rounded-full" style={{ backgroundColor: accent }} /><span className="text-[8px] font-bold uppercase tracking-wider" style={{ color: '#374151' }}>ABC</span></div>}
                 {opt.value === 'line'      && <div className="flex items-center gap-1"><span className="text-[8px] font-bold uppercase tracking-wider" style={{ color: accent }}>ABC</span><span className="flex-1 h-px" style={{ backgroundColor: accent + '60' }} /></div>}
                 {opt.value === 'underline' && <div className="pb-0.5 inline-block" style={{ borderBottom: `1.5px solid ${accent}` }}><span className="text-[8px] font-bold uppercase tracking-wider" style={{ color: accent }}>ABC</span></div>}

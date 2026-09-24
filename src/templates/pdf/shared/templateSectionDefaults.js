@@ -40,6 +40,13 @@ export const TEMPLATE_SECTION_DEFAULTS = {
     // line under it (Stacked): the job title is what an ATS indexes first (atsChecker's title order).
     experience: { titleOrder: 'role' },
   },
+
+  academic: {
+    // Unset, a post leads with the position, bold, its dates flush right on that line; the
+    // institution (italic) and its location on the line under it (Stacked), as a scholarly CV
+    // lists appointments — and the job title is what an ATS indexes first (atsChecker's title order).
+    experience: { titleOrder: 'role' },
+  },
 };
 
 /**

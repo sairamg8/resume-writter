@@ -2,47 +2,11 @@
 // editor UI, the store and the PDF code all read it, and it must not pull react-pdf into the
 // editor bundle.
 
-/**
- * The header's spacing where the résumé sets none (TEMPLATES' `headerGaps`; header_spacing_spec.md),
- * in pt — the PDF's own unit, so an unset gap prints exactly what the template always did: each
- * value is the constant it replaced. null: the template has no such gap, and a stored value is
- * ignored there. A map is by Contact Layout; a function takes Between Sections (pt). The settings
- * (CSS px), their ranges and how they resolve: src/constants/headerSpacing.js. Classic, Minimal and
- * Executive print these; Modern's banner and the Sidebar column still print the constants their
- * values here record, until their own batch wires them (no editor control may offer those before).
- */
-const STACKED_HEADER_GAPS = {
-  nameTitleGap: 1,                  // Stack layout: the title's marginTop
-  headerInlineGap: 6,               // Inline layout: the 8 px ATS_DEFAULTS stores, as resolveTemplateSettings reads it
-  titleContactsGap: 3,              // the contacts' marginTop (PdfContactRow): name ↔ contacts without a title
-  contactGapX: { justify: 12 },     // Icon + Justify, pxToPt(16); 2 Grid's 46 % cells and Bar/Bullet's one line have none
-  contactGapY: { single: 2, justify: 1.5, '2grid': 1.5 }, // between contact rows
-  iconTextGap: 2,                   // a contact's icon (or bullet) ↔ its value
-  photoTextGap: 10,                 // photo ↔ name block (a centred header stacks the photo above it)
-  summaryGap: 8,                    // contacts ↔ summary
-  headerGapBelow: (sectionGapPt) => Math.max(15, sectionGapPt || 0), // mb-5 (20 px), or Between Sections when wider
-  headerRuleGap: 12,                // text ↔ the header rule, when it is on: pb-4 (16 px)
-  headerPadY: null,                 // no banner
-  headerPadX: null,
-};
-/** Modern ignores Contact Layout, so its contact gaps are plain numbers (a map by layout would drop them). */
-const MODERN_HEADER_GAPS = {
-  nameTitleGap: 1, headerInlineGap: null, titleContactsGap: 4, contactGapX: 12, contactGapY: 1.5,
-  iconTextGap: 2, photoTextGap: 12, summaryGap: 8, headerGapBelow: (sectionGapPt) => sectionGapPt,
-  headerRuleGap: null, headerPadY: 15, headerPadX: 18,
-};
-/**
- * Banner's header is Classic's stacked one set in a full-bleed band (BannerTemplatePDF.jsx), so it has
- * Classic's gaps, plus the band's own: `headerPadY` the band's padding under its text (its top is the
- * page's top margin, as the cover letter's band keeps it); `summaryGap` the band's edge ↔ the summary,
- * which prints under the band on the white page. The text keeps the page margins: no `headerPadX`.
- */
-const BANNER_HEADER_GAPS = { ...STACKED_HEADER_GAPS, summaryGap: 12, headerPadY: 20 };
-const SIDEBAR_HEADER_GAPS = {
-  nameTitleGap: 2, headerInlineGap: null, titleContactsGap: null, contactGapX: null, contactGapY: 6,
-  iconTextGap: 3.5, photoTextGap: 10, summaryGap: null, headerGapBelow: (sectionGapPt) => sectionGapPt,
-  headerRuleGap: null, headerPadY: null, headerPadX: null,
-};
+import {
+  ACADEMIC_HEADER_GAPS, BANNER_HEADER_GAPS, MODERN_HEADER_GAPS, SIDEBAR_HEADER_GAPS, STACKED_HEADER_GAPS,
+} from './templateHeaderGaps.js';
+
+// The header's spacing where the résumé sets none, per template, in pt: ./templateHeaderGaps.js.
 
 /**
  * Every template the app offers, one entry each — so a template cannot be added without its
@@ -50,6 +14,7 @@ const SIDEBAR_HEADER_GAPS = {
  *   label           its name in the editor (the Cover Letter panel names the look its letter takes)
  *   desc, ats       the Design panel's one-line description, and its ATS-friendly badge
  *   style           the heading style and title case it brings: set when it is picked and on Reset
+ *                   (Academic brings its serif, centred header and dense Spacing as well)
  *   headerControls  Header Customization's alignment, name/title layout, rule and contact
  *                   controls apply (Modern prints a fixed banner, Sidebar a side panel)
  *   headerRule      it draws the header's bottom rule when a résumé has no `showHeaderBorder`
@@ -103,6 +68,20 @@ const TEMPLATES = {
     label: 'Banner', desc: 'Full-bleed colour band · Filled section tags', atsTier: 'good',
     style: { headingStyle: 'box', sectionTitleCase: 'upper' }, headerControls: true, headerRule: false,
     headerGaps: BANNER_HEADER_GAPS,
+  },
+  // A scholarly CV (AcademicTemplatePDF.jsx): serif, the name centred, section titles in small capitals
+  // (capitals at the body's size) over a hairline, italic institutions, dense. Picking it (and Reset)
+  // brings that type, header and spacing — they are settings, so every control still changes them; the
+  // Design panel says so under the picker. Its contacts keep Icon: Bar and Bullet glue a value's words
+  // under pdftotext -raw in the narrow-space fonts (R3-003), so they are no template's default.
+  academic: {
+    label: 'Academic', desc: 'ATS-friendly · Scholarly CV · Serif, centred', atsTier: 'certified',
+    style: {
+      headingStyle: 'ruled', sectionTitleCase: 'upper', font: 'sourceserif', headerAlign: 'center',
+      fontSizeSectionDelta: 0, lineHeightValue: 1.35, sectionGap: 12, itemGap: 6,
+    },
+    headerControls: true, headerRule: false,
+    headerGaps: ACADEMIC_HEADER_GAPS,
   },
 };
 
@@ -223,8 +202,8 @@ export const inSidebarColumn = (template, type, settings) =>
 
 /**
  * Does the template's header take Header Customization's alignment, name/title layout, rule and
- * contact controls? Classic, Minimal, Executive, Timeline and Banner (in its band); Modern prints a fixed
- * banner, Sidebar a side panel.
+ * contact controls? Classic, Minimal, Executive, Timeline, Banner (in its band) and Academic; Modern
+ * prints a fixed banner, Sidebar a side panel.
  * Sidebar in Single · ATS-safe mode prints Classic's page and header.
  */
 export const hasHeaderControls = (template, settings) => {

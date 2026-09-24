@@ -94,7 +94,8 @@ function letterhead(personal, s, cl, sizes, look) {
   const afterName = personal.title && !look.inline ? nameGap : toContacts;
   const rows = [{ runs: [nameRun(personal.name || 'Your Name', { size: sizes.name, color: ink(look.name.color) })], after: pt(afterName ?? (look.inline && personal.title ? 2 : 1)), kept: afterName != null }];
   // Modern's title prints at 90 % on its band (look.title.opacity, R5-9): the same blend here.
-  const title = personal.title ? normal(personal.title, { size: sizes.title, color: ink(look.title.color, look.title.opacity) }) : null;
+  // Academic's title is italic (look.title.italic), as its PDF letterhead prints it.
+  const title = personal.title ? normal(personal.title, { size: sizes.title, color: ink(look.title.color, look.title.opacity), ...(look.title.italic ? { italics: true } : {}) }) : null;
   if (title && look.inline) {
     // Name & Title Layout "Inline" (V2FIDB-51-3): the title on the name's line, after a real space
     // (the line reads and copies as words) widened to the PDF's gap — as the résumé's (inlineGap).

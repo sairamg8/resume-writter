@@ -15,9 +15,10 @@ after(teardown);
 const PHOTO = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
 const PERSONAL = { name: 'Jordan Rivera', title: 'Staff Engineer', email: 'jordan@example.com', phone: '+1 555 0100', photo: PHOTO };
 /** The templates' own Photo ↔ Text, pt (TEMPLATES' headerGaps.photoTextGap). */
-const OWN = { classic: 10, minimal: 10, executive: 10, modern: 12, sidebar: 10, timeline: 10, banner: 10 };
+const OWN = { classic: 10, minimal: 10, executive: 10, modern: 12, sidebar: 10, timeline: 10, banner: 10, academic: 10 };
 /** Where the text sits against the photo: beside it (x), or under it (y) — the Sidebar column's photo is above the name. */
-const AXIS = { classic: 'x', minimal: 'x', executive: 'x', modern: 'x', sidebar: 'y', timeline: 'x', banner: 'x' };
+// Academic's header is centred where it is picked (T8): its photo stands above the text.
+const AXIS = { classic: 'x', minimal: 'x', executive: 'x', modern: 'x', sidebar: 'y', timeline: 'x', banner: 'x', academic: 'y' };
 const near = (a, b, at) => assert.ok(Math.abs(a - b) < 0.01, `${at}: ${a} vs ${b}`);
 
 /** Page 1's name, title and first contact: x from the left, y down from the top, pt. */
@@ -61,7 +62,7 @@ describe('Photo ↔ Text in the résumé PDF', () => {
     });
   }
 
-  for (const template of ['classic', 'minimal', 'executive', 'timeline', 'banner']) {
+  for (const template of ['classic', 'minimal', 'executive', 'timeline', 'banner', 'academic']) {
     it(`${template}: a centred header stacks the photo above the text, and the gap moves the text down`, async () => {
       const unset = await header(await render(cv(template, { headerAlign: 'center' })));
       const set = await header(await render(cv(template, { headerAlign: 'center', photoTextGap: 40 })));
@@ -74,8 +75,9 @@ describe('Photo ↔ Text in the résumé PDF', () => {
 describe('Photo ↔ Text in the cover letter', () => {
   for (const template of TEMPLATES) {
     it(`${template}: the letterhead follows the résumé's set value, else its own 10 pt beside the name`, async () => {
-      const unset = await header(await renderCover(cv(template)));
-      const set = await header(await renderCover(cv(template, { photoTextGap: 20 })));
+      // Left-aligned (Academic's own header is centred, T8; the centred letterhead is tested below).
+      const unset = await header(await renderCover(cv(template, { headerAlign: 'left' })));
+      const set = await header(await renderCover(cv(template, { headerAlign: 'left', photoTextGap: 20 })));
       near(set.name.x - unset.name.x, 20 * 0.75 - 10, `${template}: name x`);
       near(set.name.y, unset.name.y, `${template}: name y`);
     });

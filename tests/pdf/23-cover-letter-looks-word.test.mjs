@@ -81,13 +81,14 @@ describe('the Word letter\'s letterhead takes the look too (FIDB-51)', () => {
   });
 
   // Classic's rule is the résumé header's: none on a new résumé, its border off (V2FIDB-51-2).
-  it('Classic draws the résumé\'s rule, none with the border off; Minimal has a 0.75 pt pale rule and a regular name; Executive a double rule; Timeline its 1.5 pt rail', async () => {
+  it('Classic draws the résumé\'s rule, none with the border off; Minimal has a 0.75 pt pale rule and a regular name; Executive a double rule; Timeline its 1.5 pt rail; Academic its hairline', async () => {
     const { solid } = await loadModule('/src/templates/pdf/shared/pdfColors.js');
     const expected = {
       classic: null,
       minimal: { val: 'single', sz: '6', color: solid(ACCENT, 0.4).slice(1), space: '12' },
       executive: { val: 'double', sz: '6', color: ACCENT.slice(1), space: '12' },
       timeline: { val: 'single', sz: '12', color: solid(ACCENT, 0.35).slice(1), space: '12' },
+      academic: { val: 'single', sz: '6', color: solid(ACCENT, 0.55).slice(1), space: '12' }, // its titles' hairline (T8)
     };
     for (const [template, rule] of Object.entries(expected)) {
       const { head } = parts(await coverDocx(template));

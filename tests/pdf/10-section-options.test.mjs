@@ -81,7 +81,7 @@ describe('custom section', () => {
 
 describe('experience Order (FIDA-58 / FIDB-72)', () => {
   // With no Order chosen a template prints its own default — the one the section editor shows.
-  const DEFAULT_ORDER = { classic: 'company', modern: 'company', minimal: 'company', executive: 'role', sidebar: 'role', timeline: 'role', banner: 'role' };
+  const DEFAULT_ORDER = { classic: 'company', modern: 'company', minimal: 'company', executive: 'role', sidebar: 'role', timeline: 'role', banner: 'role', academic: 'role' };
   const bold = (t) => /Bold/.test(t.font);
   /** Which field leads the entry: the bold primary, printed before the other one. */
   async function lead(template, titleOrder) {
@@ -219,12 +219,17 @@ describe('the default gap between items (R2-1)', () => {
   };
   const near = (actual, expected, what) => assert.ok(Math.abs(actual - expected) < 0.3, `${what}: ${actual.toFixed(2)} pt, expected ${expected.toFixed(2)}`);
 
+  // Academic brings a denser Between Items, 6 px (T8): its presets keep the same proportions.
+  const OWN_PT = { academic: 4.5 };
   for (const template of TEMPLATES) {
-    it(`${template}: a new résumé prints the old presets' gaps — Normal 6 pt, Tight 3 pt, Spacious 10.5 pt`, async () => {
+    const own = OWN_PT[template] ?? 6;
+    it(`${template}: a new résumé prints the old presets' gaps — Normal ${own} pt, Tight ${own / 2} pt, Spacious ${own * 1.75} pt`, async () => {
+      const { defaultSettings } = await loadModule('/src/utils/defaultData.js');
+      assert.equal(defaultSettings(template).itemGap * 0.75, own, `${template}: its own Between Items`);
       const none = await pitch(template, { itemGap: 0 });
-      near(await pitch(template) - none, 6, 'Normal');
-      near(await pitch(template, { spacing: 'compact' }) - none, 3, 'Tight');
-      near(await pitch(template, { spacing: 'relaxed' }) - none, 10.5, 'Spacious');
+      near(await pitch(template) - none, own, 'Normal');
+      near(await pitch(template, { spacing: 'compact' }) - none, own / 2, 'Tight');
+      near(await pitch(template, { spacing: 'relaxed' }) - none, own * 1.75, 'Spacious');
     });
   }
 

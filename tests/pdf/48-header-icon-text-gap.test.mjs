@@ -15,8 +15,8 @@ after(teardown);
 const PERSONAL = { name: 'Jordan Rivera', title: 'Staff Engineer', email: 'jordan@example.com', phone: '+1 555 0100' };
 const NO_CONTACTS = { ...PERSONAL, email: '', phone: '' };
 /** The templates' own Icon ↔ Text, pt (TEMPLATES' headerGaps.iconTextGap). */
-const OWN = { classic: 2, minimal: 2, executive: 2, modern: 2, sidebar: 3.5, timeline: 2, banner: 2 };
-const STACKED = ['classic', 'minimal', 'executive', 'timeline', 'banner'];
+const OWN = { classic: 2, minimal: 2, executive: 2, modern: 2, sidebar: 3.5, timeline: 2, banner: 2, academic: 2 };
+const STACKED = ['classic', 'minimal', 'executive', 'timeline', 'banner', 'academic'];
 const near = (a, b, at) => assert.ok(Math.abs(a - b) < 0.01, `${at}: ${a} vs ${b}`);
 
 /**
@@ -29,7 +29,9 @@ async function header(bytes) {
   const at = (s) => { const t = page.items.find((i) => i.str.includes(s)); return t && { x: t.x, end: t.x + t.w, y: page.H - t.y }; };
   return { name: at('Jordan Rivera'), title: at('Staff Engineer'), email: at('jordan@example.com'), phone: at('+1 555 0100') };
 }
-const cv = (template, settings = {}, personal = PERSONAL, coverLetter = {}) => resume({ template, settings, personal, coverLetter });
+/** These gaps are measured on a left-aligned header: every template's own, but Academic's, which is centred (T8). */
+const ICON_ROW = { academic: { headerAlign: 'left' } };
+const cv = (template, settings = {}, personal = PERSONAL, coverLetter = {}) => resume({ template, settings: { ...ICON_ROW[template], ...settings }, personal, coverLetter });
 
 describe('Icon ↔ Text in the résumé PDF', () => {
   it('pins the templates\' own gaps the row starts from', async () => {
