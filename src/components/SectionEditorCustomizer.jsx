@@ -44,8 +44,9 @@ export function SegmentRow({ label, options, value, onChange }) {
 export function SectionCustomizer({ section, template, updateSectionSettings, settings }) {
   // What the PDF prints with: the section's own settings over its template's defaults (Executive
   // and Sidebar lead with the role, …), so an unset control shows the template's choice (FIDA-58).
-  const effectiveTemplate = (templateId(template) === 'sidebar' && settings?.sidebarSingleColumn) ? 'classic' : templateId(template);
-  const s = resolveSection(section, effectiveTemplate).settings;
+  // The résumé's own template in every Layout, as the PDF and Word resolve it: the Sidebar's
+  // Single · ATS-safe prints Classic's page but keeps the Sidebar's section defaults (R2-012).
+  const s = resolveSection(section, templateId(template)).settings;
   const isSkills = section.type === 'skills';
   // Sidebar prints skills, education, … in its narrow side column: one left-aligned column, so
   // alignment, grids and title layouts cannot apply there and are not offered (FIDB-75).

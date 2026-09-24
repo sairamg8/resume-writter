@@ -61,9 +61,11 @@ export async function renderResumeDocx(resume) {
   const accentHex = accent2Hex(settings.accentColor);
   const effectiveTemplate = (templateId(template) === 'sidebar' && settings.sidebarSingleColumn) ? 'classic' : template;
   // Template defaults (e.g. Executive and Sidebar lead with the role, …) apply as in the PDF, and
-  // so does Section Options → Alignment (never in the Sidebar's side column).
+  // so does Section Options → Alignment (never in the Sidebar's side column). A section's defaults are
+  // the résumé's own template's in every Layout: the Sidebar's Single · ATS-safe prints Classic's page
+  // (effectiveTemplate) but still leads a job with the role, as its PDF does (R2-012).
   const printed = sections
-    .map((s) => resolveSection(s, effectiveTemplate))
+    .map((s) => resolveSection(s, templateId(template)))
     .map((section) => ({ section, paras: buildSection(section, accentHex, settings, effectiveTemplate) }))
     .filter(({ paras }) => paras.length);
   const children = [
