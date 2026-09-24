@@ -26,7 +26,7 @@ The owner approved the temporary `claude/wf-*` branches on 2026-09-24 12:47.
 | Cluster | Rows | Session | State |
 |---|---|---|---|
 | ats | R2-020 021 022 023 024 025 027 078 079 080 081 163 166 | session_01GG1ULRf3BEFijyNRzXNJoT | **merged** |
-| pdf-pagination | R2-046 047 048 049 104 109 111 | session_013Hg3VSwaVkaQmNCkotTNsb | still running in its cloud session at the reboot |
+| pdf-pagination | R2-046 047 048 049 104 109 111 | session_013Hg3VSwaVkaQmNCkotTNsb | **merged** (a933db1) from its pushed branch — its session ran out before its review; the coordinator runs that review (read-only reviewers + CI fail-first) before the rows are set |
 | design-sidebar | R2-013 051 059 082 083 087 088 089 090 096 119 120 121 123 | session_014y3tSMD21g1ji9Ct73pZQh | **merged** (with the JSON Resume / Backup follow-up) |
 | word | R2-061 065 066 070 114 118 124 125 126 128 132 | session_01Kms1vF1NWaaH7yWz6e2UWr | **merged** |
 | text-exports | R2-026 034 052 053 054 058 060 064 122 129 131 | session_01YUpaiGLx34s4T8huDzmJNW | **merged** (with follow-up: the letter's text export) |
@@ -39,7 +39,7 @@ The owner approved the temporary `claude/wf-*` branches on 2026-09-24 12:47.
 | sync | R2-028 029 030 | session_01CkkXUYrb8NXsPv4VYVH4MX | **merged** |
 | letter | R2-043 044 092 103 130 134 068 133 | session_019D9Rn4N2nqJnTSeZgxodBg | **merged** (with follow-ups: v12 placeholder migration, dashboard thumbnails) |
 | pdf-text | R2-045 105, R3-002 003 004 | session_01SUaj4fLPe8rVZ9g2kGSu6H | **merged** |
-| cypress | R2-152 161 162 | coordinator's own machine (workflow wf_f5efdc0c-440, local branch `wf/cypress`) | **merged** (its review: the CI Cypress job on the work branch + a spec review) |
+| cypress | R2-152 161 162 | coordinator's own machine (workflow wf_f5efdc0c-440, local branch `wf/cypress`) | **merged**, reviewed (02a6ab8: six findings fixed, Cypress 63/63) |
 
 The git proxy refuses branch deletion (HTTP 403), so merged `claude/wf-*` branches stay on GitHub until the
 owner deletes them there; each one's work is in the work branch once its row reads **merged**.
@@ -53,28 +53,38 @@ Round 2 — features and test gaps not in a cluster: R2-135 136 137 138 139 140 
 **Owner, 2026-09-24 12:35:** once the running clusters finish, start nothing new — the owner restarts the
 session first. Round 2 begins only after that restart.
 
-### State at the owner's reboot (2026-09-24 ~13:45 UTC)
+### State now (2026-09-24 ~14:50 UTC, coordinator session_01UaZc6yUjHdoanpnUfTnzFF)
 
-Work branch `claude/beautiful-heisenberg-x3bsvo` = `8c60c6c` on GitHub: 10 clusters merged, tracker at **63 open**
-(from 149). To finish, in this order: merge `claude/wf-preview`, `claude/wf-sections`, `claude/wf-pdf-text`; the
-design-sidebar follow-up (conflict noted in its row); `claude/wf-word` and `claude/wf-pdf-pagination` once their
-reports land (their sessions keep running on their own machines); then review and merge `claude/wf-cypress`.
-Each merge: drop `wf-reports/`, run the cluster's tests plus the suites of every file it touches, set its tracker
-rows from its report (✅ already-fixed · ⏸ fixed · ✖ duplicate / known limit · 🔴 partial with a note) and
-re-total `bug-status.md`, push, then run CI (Actions → ci → Run workflow on the work branch). Last CI run with
-all suites green but Cypress (stale specs, the cypress cluster's job): run 41 on 9238dac.
+Work branch `claude/confident-goldberg-2uig8b`: **all 15 Round 1 clusters are merged** (preview, sections,
+pdf-text, word, the design-sidebar follow-up, cypress and pdf-pagination by this coordinator; the rest before
+the reboot). Tracker: 29 open before pdf-pagination's 7 rows are set. Also on the branch since the takeover:
+- CI fixes found by the first gate (run 36009975344): R2-045's thin space (0eab18a), the contact-field guard
+  (0eab18a), the touch-reveal guard (2d61cbe); stale browser specs for R2-131 / R2-064 / R2-092 (62958f5,
+  3edbba1, 73725f7); the Cypress review's six findings + the ATS tab's file name (02a6ab8).
+- CI: the suite on 6 machines, Playwright on 3, Cypress on 4 (53cb635); dispatch inputs `tests`,
+  `failfirst`, `playwright`, `cypress` (ea9d31f); apt retried three times (1331c80).
+
+**The owner's rules since the reboot:** merge every cloud agent's work into master once CI is green; **tests
+run only on the CI pipeline** — never on this machine, a cloud session's or an agent's worktree (use the
+dispatch inputs; CLUSTER-PROTOCOL.md says how); go fast without dropping quality.
+
+Open before master moves: (1) pdf-pagination's review — read-only reviewers (workflow) + a CI fail-first
+dispatch of its 7 fix commits; then set its rows from the draft report in its handoff
+(`git show origin/claude/wf-pdf-pagination:HANDOFF-pdf-pagination.md`); (2) a full CI run green on the head;
+(3) then fast-forward master to the work branch, mark every ⏸ row ✅ and re-total. After that: Round 2 — the
+22 feature / test-gap rows, split into clusters by a scoping workflow, one cloud session each, all testing on
+CI.
 
 ### If this session was cut off
 
-1. `git fetch origin claude/beautiful-heisenberg-x3bsvo && git checkout claude/beautiful-heisenberg-x3bsvo`.
+1. `git fetch origin claude/confident-goldberg-2uig8b && git checkout claude/confident-goldberg-2uig8b`.
    The merge tools are in `docs/tracking/tools/`: `merge_cluster.sh <cluster>` (fetch, merge without committing,
    drop `wf-reports/`, print the report), `update_tracker.py <report.json>` (set the rows, re-total; `--recount`
    alone re-totals) and `handoff_state.py '<cluster>=<state>'` (this file's table).
 2. Read the table above: a cluster marked **merged** is on the branch and in the tracker. The others are
    on GitHub as `claude/wf-<cluster>`; their sessions run on their own machines and survive this one's
    restart. A branch with `wf-reports/<cluster>.json` is finished and ready to merge.
-3. Local set-up: `corepack enable && yarn install --immutable`; `apt-get install poppler-utils mupdf-tools`.
-   Local Poppler is 24.02 (CI: 26.01), so a few word-gap tests can differ locally; CI on master is the judge.
+3. Local set-up: `corepack enable && yarn install --immutable` (for lint and reading code). Tests: CI only.
 
 ---
 
