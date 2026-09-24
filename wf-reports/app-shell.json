@@ -82,14 +82,16 @@
       "commits": [
         "27bc9d1",
         "544decb",
-        "d718ad6"
+        "d718ad6",
+        "13a0eb5"
       ],
       "tests": [
         "tests/pdf/89-store-save-coalesced.test.mjs",
         "tests/pdf/16-saved-data-two-tabs.test.mjs",
-        "tests/pdf/16-saved-data-photo-size.test.mjs"
+        "tests/pdf/16-saved-data-photo-size.test.mjs",
+        "tests/pdf/89-save-status.test.mjs"
       ],
-      "summary": "Store saves are coalesced (coalescedWriter): a change after a quiet spell is written at once; later keystrokes are written together 300 ms after the last one, and at least every 2 s. pagehide, beforeunload, a hidden tab and unmount flush what is held. persistError reporting and recovery are unchanged. Other tabs' saves (even two in a row while a save is held, 544decb) are taken without undoing either tab's changes. 20 keystrokes now cost ≤2 whole-store writes instead of 20. Leaving the page between another tab's save and this tab's re-render writes the held save with that save taken in (d718ad6).",
+      "summary": "Store saves are coalesced (coalescedWriter): a change after a quiet spell is written at once; later keystrokes are written together 300 ms after the last one, and at least every 2 s. pagehide, beforeunload, a hidden tab and unmount flush what is held. persistError reporting and recovery are unchanged. Other tabs' saves (even two in a row while a save is held, 544decb) are taken without undoing either tab's changes. 20 keystrokes now cost ≤2 whole-store writes instead of 20. Leaving the page between another tab's save and this tab's re-render writes the held save with that save taken in (d718ad6). The editor's save status reads \"Saving…\" while a write waits and \"Saved …\" only once storage holds it (13a0eb5).",
       "remaining": ""
     },
     {
@@ -137,7 +139,8 @@
       "R2-077 (Medium): at 27bc9d1, two saves from another tab while this tab held a save made the second one's edits undone and deletions come back (stored ref only advanced on this tab's writes)",
       "R2-084 (Low): box opened, then renamed in another tab, then left untouched still wrote the old name back",
       "R2-073: no test pinned that Back (POP) leaves the scroll alone",
-      "Fixed after review in d718ad6: a pagehide landing between another tab's storage event and the re-render wrote the stale held state. Not fixed, minor: the editor's 'Saved' label can lead the actual write by up to ~2 s; the resize handle does not use pointer capture (as before)"
+      "Fixed after review in d718ad6: a pagehide landing between another tab's storage event and the re-render wrote the stale held state. Not fixed, minor: the resize handle does not use pointer capture (as before)",
+      "Fixed after review in 13a0eb5: the editor's 'Saved' label could lead the actual write by up to ~2 s"
     ],
     "fixedByReviewer": [
       "544decb (R2-077 two-tab second save)",
