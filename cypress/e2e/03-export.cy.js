@@ -85,8 +85,9 @@ describe('export — Word and JSON', () => {
     });
   });
 
-  it('Export JSON downloads exactly the resume in the store', () => {
-    cy.exportFile('Export JSON', '.json').then((file) => {
+  // The app's own backup format: "Export Backup JSON", beside the JSON Resume export (29-exports-imports).
+  it('Export Backup JSON downloads exactly the resume in the store', () => {
+    cy.exportFile('Export Backup JSON', '.json').then((file) => {
       expect(basename(file)).to.eq('Alex_Johnson_Full_Stack_Engineer.json');
       cy.task('readTextFile', file).then((raw) => {
         cy.store().then((s) => {

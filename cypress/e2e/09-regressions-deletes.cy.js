@@ -49,7 +49,7 @@ describe('regressions — deletes ask first', () => {
     cy.get('@confirm').should('have.been.calledWith', 'Delete Google?');
     cy.jobStore().its('jobs').should('have.length', 1);
 
-    cy.get('button[title="List view"]').click();
+    cy.get('button[title="List view"]:visible').click(); // one toggle for phones, one from md up
     cy.get('button[title="Delete application"]').first().click({ force: true });
     cy.jobStore().its('jobs').should('have.length', 1);
   });

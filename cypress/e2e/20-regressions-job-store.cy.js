@@ -176,7 +176,7 @@ describe('regressions — the Add Job form and its saved interview stages', () =
     formField('Company').type('Stripe');
     cy.get('input[placeholder^="e.g."]').type('Culture Round');
     cy.contains('button', /^\s*Add$/).click();
-    cy.contains('button', 'Culture Round').should('be.visible');
+    cy.contains('button', 'Culture Round').scrollIntoView().should('be.visible'); // below the fold of the form
     cy.contains('button', /^Add Job$/).click();
     cy.contains('h1', 'Stripe').should('be.visible');
     cy.jobStore().should((s) => expect(s.jobs.find((j) => j.company === 'Stripe').stage).to.eq('Culture Round'));

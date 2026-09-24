@@ -120,7 +120,8 @@ describe('demo account — nobody else gets anything back', () => {
   it('the sync icon says the sync is off on this page with no cloud — never "will retry" (V2VF1S-2)', () => {
     // As for an account whose Firestore rules refuse it (tests/pdf/18-cloud-sync-retry.test.mjs).
     visitAs(OTHER);
-    cy.get(SYNC_STATUS).trigger('mouseover');
+    // The one on screen: the dashboard has a compact header for phones and a full one from md up.
+    cy.get(`${SYNC_STATUS}:visible`).trigger('mouseover');
     cy.contains('Sync is off — changes are saved in this browser').should('be.visible');
     cy.contains('Sync error').should('not.exist');
   });

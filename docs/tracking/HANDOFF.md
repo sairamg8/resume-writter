@@ -39,7 +39,7 @@ The owner approved the temporary `claude/wf-*` branches on 2026-09-24 12:47.
 | sync | R2-028 029 030 | session_01CkkXUYrb8NXsPv4VYVH4MX | **merged** |
 | letter | R2-043 044 092 103 130 134 068 133 | session_019D9Rn4N2nqJnTSeZgxodBg | **merged** (with follow-ups: v12 placeholder migration, dashboard thumbnails) |
 | pdf-text | R2-045 105, R3-002 003 004 | session_01SUaj4fLPe8rVZ9g2kGSu6H | **merged** |
-| cypress | R2-152 161 162 | coordinator's own machine (workflow wf_f5efdc0c-440, local branch `wf/cypress`) | local workflow stopped by the reboot; its spec fixes are on claude/wf-cypress (8dcfc0c, unreviewed) — review, finish, merge |
+| cypress | R2-152 161 162 | coordinator's own machine (workflow wf_f5efdc0c-440, local branch `wf/cypress`) | **merged** (its review: the CI Cypress job on the work branch + a spec review) |
 
 The git proxy refuses branch deletion (HTTP 403), so merged `claude/wf-*` branches stay on GitHub until the
 owner deletes them there; each one's work is in the work branch once its row reads **merged**.

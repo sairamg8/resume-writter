@@ -55,7 +55,7 @@ describe('job tracker', () => {
   });
 
   it('list view shows the same applications', () => {
-    cy.get('button[title="List view"]').click();
+    cy.get('button[title="List view"]:visible').click(); // one toggle for phones, one from md up
     cy.get('table').should('contain.text', 'Google').and('contain.text', 'Senior Frontend Engineer');
   });
 
@@ -99,19 +99,28 @@ describe('job tracker', () => {
     stat('Total').should('have.text', '0');
   });
 
-  it('Export downloads the jobs as JSON; Import adds them back with fresh ids', () => {
+  // Import merges (J-04): a job already in the tracker is skipped, never duplicated; one that is
+  // not is added.
+  it('Export JSON downloads the jobs as JSON; importing it back adds nothing, another job is added', () => {
     cy.task('clearDownloads');
-    cy.contains('button', /^\s*Export\s*$/).click();
+    cy.contains('button', /^\s*Export JSON\s*$/).click(); // beside Export CSV (29-exports-imports)
     cy.task('waitForDownload', { ext: '.json' }).then((file) => {
       expect(file).to.match(/job_applications\.json$/);
       cy.task('readTextFile', file).then((raw) => {
         const exported = JSON.parse(raw);
         cy.jobStore().then((s) => expect(exported).to.deep.eq(s.jobs));
-        cy.get('input[type="file"][accept=".json"]').selectFile({
-          contents: Cypress.Buffer.from(raw), fileName: 'job_applications.json',
+        const importJobs = (jobs, fileName) => cy.get('input[type="file"][accept=".json"]').selectFile({
+          contents: Cypress.Buffer.from(JSON.stringify(jobs)), fileName,
         }, { force: true });
+
+        importJobs(exported, 'job_applications.json');
+        cy.contains('Nothing new: the job application in that file is already in the tracker.').should('be.visible');
+        cy.jobStore().its('jobs').should('have.length', 1);
+
+        importJobs([{ ...exported[0], id: 'job_from_elsewhere', company: 'Initech' }], 'other.json');
+        cy.contains('Imported 1 job application.').should('be.visible');
         cy.jobStore().should((s) => {
-          expect(s.jobs).to.have.length(2);
+          expect(s.jobs.map((j) => j.company)).to.deep.eq(['Google', 'Initech']);
           expect(new Set(s.jobs.map((j) => j.id)).size).to.eq(2);
         });
         stat('Total').should('have.text', '2');

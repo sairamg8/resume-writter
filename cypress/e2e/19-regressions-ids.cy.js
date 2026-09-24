@@ -43,9 +43,14 @@ describe('regressions — unique ids', () => {
   it('M17: two résumés created in the same millisecond stay two résumés', () => {
     cy.visitDashboard(null);
     stopTheClock();
-    cy.contains('button', 'New Resume').click();
+    // New Resume asks first: a blank résumé or a role starter.
+    const newBlankResume = () => {
+      cy.contains('button', 'New Resume').click();
+      cy.contains('button', 'Start from Scratch (Blank)').click();
+    };
+    newBlankResume();
     cy.get('button[title="Back to dashboard"]').click();
-    cy.contains('button', 'New Resume').click();
+    newBlankResume();
     cy.store().its('resumes').should((rs) => {
       expect(rs).to.have.length(2);
       unique(rs.map((r) => r.id));

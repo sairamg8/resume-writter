@@ -17,6 +17,9 @@ describe('regressions — a job storage refused, when another tab saves (R6-2)',
   it('R6-2: a list another tab saves keeps the job this tab could not save, which is saved once there is room', () => {
     cy.seedAndVisit('/#/jobs', null);
     stat('Total').should('have.text', '1');
+    // The demo job saved first: the board can show it before the store's first write, and storage
+    // made full before that write refuses it too — then there is no list for the other tab to read.
+    cy.jobStore().its('jobs').should('have.length', 1);
     const storage = { full: true };
     cy.window().then((win) => {
       const original = win.Storage.prototype.setItem;

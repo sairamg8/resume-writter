@@ -105,7 +105,7 @@ describe('regressions — a status the board has no column for (VM4-4)', () => {
     visitWithJobs([]);
     importFile([{ company: 'Hotel', status: 'OFFER' }, { company: 'India', status: 'On Hold' }]);
     stat('Total').should('have.text', '2');
-    cy.contains('#kanban-col-offer', 'Hotel').should('be.visible');
+    cy.contains('#kanban-col-offer', 'Hotel').scrollIntoView().should('be.visible'); // past the first columns
     cy.contains('#kanban-col-on_hold', 'India').scrollIntoView().should('be.visible'); // the board scrolls sideways
     cy.contains('[role="alert"]', 'left out').should('not.exist');
     importFile([{ company: 'Juliet', status: 'ghosted' }]);

@@ -95,7 +95,7 @@ const PAGES = {
   },
   'job tracker, list view'() {
     visitWith('/#/jobs', { state: buildTestState('classic'), jobs: [ACME] });
-    cy.get('button[title="List view"]').click();
+    cy.get('button[title="List view"]:visible').click(); // one toggle for phones, one from md up
     cy.get('table').should('contain.text', 'Acme');
   },
   'Add Job form with custom stages'() {
