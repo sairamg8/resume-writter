@@ -171,3 +171,143 @@ test('status: one in other case or spacing is the status it names, and not repor
   assert.equal(statusId(undefined), null);
   assert.equal(statusId('ghosted'), null);
 });
+
+// ── J-03: one notes format ───────────────────────────────────────────────────────────────────
+// The form saved notes as plain text, the Notes tab as rich-text HTML: a plain note's line breaks
+// and anything that looked like a tag ('<tbd>') were lost on the card and saved that way on the
+// first keystroke in the Notes tab. Notes are HTML everywhere now; plain ones are converted once.
+import * as normalize from '../../src/utils/normalizeJob.js';
+import { richTextToPlain, sanitizeRichText } from '../../src/utils/richText.js';
+
+test('J-03: notesToHtml turns plain notes into editor HTML that reads back as the same text', () => {
+  const { notesToHtml } = normalize;
+  assert.equal(typeof notesToHtml, 'function');
+  const plain = 'Round 1: recruiter call\nSalary <tbd> & equity';
+  const html = notesToHtml(plain);
+  assert.equal(html, 'Round 1: recruiter call<br>Salary &lt;tbd&gt; &amp; equity');
+  assert.equal(richTextToPlain(html), plain);
+  assert.equal(richTextToPlain(sanitizeRichText(html)), plain, 'what the Notes tab loads and saves keeps it too');
+  assert.equal(notesToHtml('a\r\nb'), 'a<br>b');
+});
+
+test('J-03: notes that are HTML already, or blank, are left as they are', () => {
+  const { notesToHtml } = normalize;
+  for (const html of ['<p>Hi</p>', '<p>a <strong>b</strong></p>', 'line<br>next', '<div>chrome line</div>', '<ul><li>x</li></ul>', 'Tom &amp; Jerry']) {
+    assert.equal(notesToHtml(html), html, html);
+  }
+  for (const v of ['', '   ', null, undefined]) assert.equal(notesToHtml(v), v ?? '', String(v));
+});
+
+test('J-03: a saved or imported job with plain notes gets them as HTML — once, losing nothing', () => {
+  const j = job({ notes: 'Referred by Ana\nL5 <level?>' });
+  const done = completeJob(j);
+  assert.equal(done.notes, 'Referred by Ana<br>L5 &lt;level?&gt;');
+  assert.equal(richTextToPlain(done.notes), 'Referred by Ana\nL5 <level?>');
+  assert.equal(completeJob(done), done, 'converted once: HTML is not converted again');
+  assert.equal(readJob(j).lost, false, 'not a loss');
+  const html = job();
+  assert.equal(completeJob(html), html, 'HTML notes: the same object');
+});
+
+// ── J-19: imported status history and to-dos are read like the job ───────────────────────────
+// A history entry 'Rejected' (a label) matched no status: no 'Rejected 1×', no 'Current'. An entry
+// 'ghosted' was kept, 'yesterday' printed 'Invalid Date', and done: 'false' counted as done.
+
+test('J-19: history statuses are the tracker\'s ids — a label in any case is mapped, not reported', () => {
+  const j = job({ status: 'Rejected', statusHistory: [{ status: 'Applied', changedAt: 1 }, { status: 'Rejected', changedAt: 2 }] });
+  assert.equal(readJob(j).lost, false);
+  const done = completeJob(readJob(j).kept);
+  assert.deepEqual(done.statusHistory, [{ status: 'applied', changedAt: 1 }, { status: 'rejected', changedAt: 2 }]);
+  assert.equal(done.status, 'rejected');
+  const clean = job();
+  assert.equal(completeJob(clean).statusHistory, clean.statusHistory, 'ids already: the same array');
+});
+
+test('J-19: a history entry naming no status is left out, and that is a loss', () => {
+  const { kept, lost } = readJob(job({ statusHistory: [{ status: 'applied', changedAt: 1 }, { status: 'ghosted', changedAt: 5 }] }));
+  assert.equal(lost, true);
+  assert.deepEqual(kept.statusHistory, [{ status: 'applied', changedAt: 1 }]);
+});
+
+test('J-19: changedAt is kept only as a time — a date text becomes its time, anything else is dropped (a loss)', () => {
+  const iso = '2025-06-09T10:00:00.000Z';
+  const read = readJob(job({ statusHistory: [{ status: 'saved', changedAt: iso }, { status: 'applied', changedAt: '1749514800000' }] }));
+  assert.equal(read.lost, false, 'a date or a number as text loses nothing');
+  assert.deepEqual(read.kept.statusHistory.map((h) => h.changedAt), [Date.parse(iso), 1749514800000]);
+  const bad = readJob(job({ statusHistory: [{ status: 'applied', changedAt: 'yesterday' }, { status: 'offer', changedAt: { t: 1 } }] }));
+  assert.equal(bad.lost, true);
+  assert.deepEqual(bad.kept.statusHistory, [{ status: 'applied' }, { status: 'offer' }]);
+  const noTime = job({ statusHistory: [{ status: 'applied' }] });
+  assert.equal(readJob(noTime).kept, noTime, 'no time at all: nothing to repair');
+});
+
+test('J-19: a to-do\'s done is a boolean — "false" is not done', () => {
+  const { kept, lost } = readJob(job({ todos: [{ id: 'a', text: 'x', done: 'false' }, { id: 'b', text: 'y', done: 'true' }, { id: 'c', text: 'z', done: 0 }, { id: 'd', text: 'w', done: 1 }] }));
+  assert.equal(lost, false);
+  assert.deepEqual(kept.todos.map((t) => t.done), [false, true, false, true]);
+  const fine = job({ todos: [{ id: 'a', text: 'x', done: false }, { id: 'b', text: 'y' }] });
+  assert.equal(readJob(fine).kept, fine, 'booleans, or no done at all: untouched');
+});
+
+// ── The optional fields: follow-up date, source, work mode, excitement, interviews ─────────────
+// Optional and absent on every job saved before them: missing stays missing (the pages read it as
+// empty). A value that names a choice in other words is that choice, and not a loss; one that names
+// none is repaired and reported, like any other field.
+
+test('optional fields: a job holding readable ones comes back as the same object', () => {
+  const j = job({
+    followUpDate: '2026-10-01', source: 'referral', workMode: 'hybrid', excitement: 4,
+    interviews: [{ id: 'iv1', date: '2026-10-02', time: '14:00', kind: 'HR Round', notes: 'Ask about team' }],
+  });
+  assert.equal(readJob(j).kept, j);
+  assert.equal(completeJob(j), j);
+  assert.equal(readJob(job({ source: '', workMode: '', excitement: 0, interviews: [] })).lost, false);
+});
+
+test('optional fields: source and work mode in other words are their choice — not a loss', () => {
+  const named = readJob(job({ source: 'LinkedIn', workMode: 'On-site' }));
+  assert.equal(named.lost, false);
+  const done = completeJob(named.kept);
+  assert.deepEqual([done.source, done.workMode], ['linkedin', 'onsite']);
+  const more = completeJob(readJob(job({ source: 'Job board', workMode: 'REMOTE' })).kept);
+  assert.deepEqual([more.source, more.workMode], ['board', 'remote']);
+});
+
+test('optional fields: a source or work mode naming no choice is repaired, and reported', () => {
+  const r = readJob(job({ source: 'Indeed', workMode: 'sometimes' }));
+  assert.equal(r.lost, true);
+  assert.deepEqual([r.kept.source, r.kept.workMode], ['other', '']);
+  const odd = readJob(job({ source: 3, workMode: { x: 1 } }));
+  assert.deepEqual([odd.kept.source, odd.kept.workMode, odd.lost], ['', '', true]);
+});
+
+test('optional fields: excitement is a whole number 0–5 — text digits are read, the rest repaired and reported', () => {
+  assert.deepEqual([readJob(job({ excitement: '4' })).kept.excitement, readJob(job({ excitement: '4' })).lost], [4, false]);
+  for (const [v, out] of [[7, 5], [-2, 0], [3.6, 4]]) {
+    const r = readJob(job({ excitement: v }));
+    assert.deepEqual([r.kept.excitement, r.lost], [out, true], String(v));
+  }
+  for (const v of ['very', true, { n: 1 }]) {
+    const r = readJob(job({ excitement: v }));
+    assert.deepEqual(['excitement' in r.kept, r.lost], [false, true], JSON.stringify(v));
+  }
+});
+
+test('optional fields: interviews — a list of objects; the rest is left out and reported; ids for each', () => {
+  const r = readJob(job({ interviews: [null, { date: '2026-10-02', kind: 'HR Round', time: 1400 }, 'x', { date: { d: 1 }, notes: 'n' }] }));
+  assert.equal(r.lost, true);
+  assert.deepEqual(r.kept.interviews, [{ date: '2026-10-02', kind: 'HR Round', time: '1400' }, { date: '', notes: 'n' }]);
+  const done = completeJob(r.kept);
+  const ids = done.interviews.map((i) => i.id);
+  assert.equal(new Set(ids).size, 2);
+  for (const id of ids) assert.match(id, /^iv_./);
+  assert.equal(readJob(job({ interviews: 'monday' })).lost, true);
+  assert.equal('interviews' in readJob(job({ interviews: 'monday' })).kept, false);
+  const numbersOnly = readJob(job({ interviews: [{ id: 'a', time: 930 }] }));
+  assert.equal(numbersOnly.lost, false, 'a number kept as its digits loses nothing');
+});
+
+test('optional fields: followUpDate is text like the other dates', () => {
+  assert.deepEqual([readJob(job({ followUpDate: 20261001 })).kept.followUpDate, readJob(job({ followUpDate: 20261001 })).lost], ['20261001', false]);
+  assert.deepEqual([readJob(job({ followUpDate: ['x'] })).kept.followUpDate, readJob(job({ followUpDate: ['x'] })).lost], ['', true]);
+});

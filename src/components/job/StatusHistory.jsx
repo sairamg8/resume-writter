@@ -1,6 +1,5 @@
 import { STATUS_MAP } from '@/constants/jobs';
-
-const TERMINAL = new Set(['rejected', 'withdrawn', 'on_hold']);
+import { historyLabels } from '@/utils/jobQuery';
 
 function fmt(ts) {
   return new Date(ts).toLocaleString('en-US', {
@@ -38,10 +37,11 @@ export function StatusHistory({ history }) {
         <div className="absolute left-[7px] top-2 bottom-2 w-px bg-gray-100" />
 
         <div className="space-y-4">
-          {history.map((entry, i) => {
+          {/* '→ reopened' only when a pipeline status follows a closed one (J-20). */}
+          {historyLabels(history).map((entry, i) => {
             const s = STATUS_MAP[entry.status];
-            const isTerminalEntry = TERMINAL.has(entry.status);
-            const isLast = i === history.length - 1;
+            const isTerminalEntry = entry.closed;
+            const isLast = entry.current;
 
             return (
               <div key={i} className="relative flex items-start gap-3">
@@ -60,7 +60,7 @@ export function StatusHistory({ history }) {
                       className="text-sm font-semibold"
                       style={{ color: isTerminalEntry ? s?.text : '#374151' }}
                     >
-                      {s?.label || entry.status}
+                      {entry.label}
                     </span>
                     {isTerminalEntry && isLast && (
                       <span
@@ -70,12 +70,12 @@ export function StatusHistory({ history }) {
                         Current
                       </span>
                     )}
-                    {isTerminalEntry && !isLast && (
+                    {entry.reopened && (
                       <span className="text-[10px] text-gray-400">→ reopened</span>
                     )}
                   </div>
-                  {entry.changedAt && (
-                    <p className="text-[10px] text-gray-400 mt-0.5">{fmt(entry.changedAt)}</p>
+                  {entry.at !== null && (
+                    <p className="text-[10px] text-gray-400 mt-0.5">{fmt(entry.at)}</p>
                   )}
                 </div>
               </div>

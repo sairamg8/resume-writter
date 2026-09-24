@@ -7,10 +7,10 @@ export function InterviewStageSelector({ stage, onStageChange, customStages, add
   const inputId = useId();
 
   function handleAddStage() {
-    const trimmed = newStageInput.trim();
-    if (!trimmed) return;
-    addCustomStage(trimmed);
-    onStageChange(trimmed);
+    // The stage as the lists hold it: 'hr round' is the existing 'HR Round', not a stray spelling (J-28).
+    const stage = addCustomStage(newStageInput);
+    if (!stage) return;
+    onStageChange(stage);
     setNewStageInput('');
   }
 

@@ -1,34 +1,14 @@
 import { useSyncExternalStore } from 'react';
 import { loadSavedList, notSavedReason, pendingRecovery, readSavedList, rememberRecovery, setItemWithRoom } from '../utils/storageBackup.js';
 import { newId } from '../utils/ids.js';
-import { addressableJobs, completeJob, readJob } from '../utils/normalizeJob.js';
+import { addressableJobs, completeJob, readJob, statusId } from '../utils/normalizeJob.js';
 import { keepUnsaved } from '../utils/unsavedJobs.js';
+import { applyEdits, demoJobs, moveInList, newJobDefaults } from '../utils/jobEdits.js';
+import { mergeImport } from '../utils/jobImport.js';
 
 const KEY = 'cpwtcv_jobs_v1';
 
-const DEMO_JOBS = [
-  {
-    id: 'demo_1', company: 'Google', role: 'Senior Frontend Engineer', status: 'interview',
-    url: '', location: 'Mountain View, CA', salary: '$180k – $250k',
-    appliedDate: '2026-06-10', deadline: '2026-06-30',
-    contact: 'Sarah Kim (Recruiter) · sarah@google.com',
-    notes: 'Referred by college contact. L5 level. Focus on systems design round.',
-    todos: [
-      { id: 't1', text: 'Research recent Google products & announcements', done: true },
-      { id: 't2', text: 'Prepare system design (YouTube, Google Drive)', done: true },
-      { id: 't3', text: 'Practice LeetCode hard — trees & graphs', done: false },
-      { id: 't4', text: 'Send thank you email after interview', done: false },
-    ],
-    statusHistory: [
-      { status: 'saved', changedAt: 1749500000000 },
-      { status: 'applied', changedAt: 1749514800000 },
-      { status: 'phone_screen', changedAt: 1749600000000 },
-      { status: 'interview', changedAt: 1749686400000 },
-    ],
-    createdAt: 1749500000000, updatedAt: 1749686400000,
-  },
-];
-
+// Not bumped for the new optional fields: a version change re-adds the demo job (load, peek).
 const JOB_VERSION = 2;
 
 /**
@@ -37,17 +17,17 @@ const JOB_VERSION = 2;
  * raw value is first copied to a backup key, because the next save replaces it (loadSavedList).
  * `recovery` is then `{ backupKey }` (null when not even the copy could be written). A repair
  * that loses nothing — a number turned into its digits — gets neither (VM4-5). Nothing saved
- * yet: the demo job.
+ * yet: the demo job, dated from today (demoJobs, J-29).
  */
 function load() {
   const { saved, list, recovery } = loadSavedList(KEY, 'jobs', readJob);
-  if (!list) return { jobs: DEMO_JOBS, recovery: null };
+  if (!list) return { jobs: demoJobs(), recovery: null };
   if (!saved) return { jobs: [], recovery };
   // A job, or a to-do, the pages cannot address (no id, or one another has) gets an id rather than
   // being dropped; nothing is lost, so it is not a repair to report (completeJob, addressableJobs).
   let jobs = list.map(completeJob);
   // Migrate: strip old demo_* jobs, keep user-created ones
-  if (saved.dataVersion !== JOB_VERSION) jobs = [...DEMO_JOBS, ...jobs.filter(j => !j.id.startsWith('demo_'))];
+  if (saved.dataVersion !== JOB_VERSION) jobs = [...demoJobs(), ...jobs.filter(j => !j.id.startsWith('demo_'))];
   return { jobs: addressableJobs(jobs), recovery };
 }
 
@@ -82,11 +62,11 @@ let initialized = false;
 function peek() {
   const { saved, list } = readSavedList(KEY, 'jobs', readJob);
   let jobs;
-  if (!list) jobs = DEMO_JOBS;
+  if (!list) jobs = demoJobs();
   else if (!saved) jobs = [];
   else {
     jobs = list.map(completeJob);
-    if (saved.dataVersion !== JOB_VERSION) jobs = [...DEMO_JOBS, ...jobs.filter(j => !j.id.startsWith('demo_'))];
+    if (saved.dataVersion !== JOB_VERSION) jobs = [...demoJobs(), ...jobs.filter(j => !j.id.startsWith('demo_'))];
     jobs = addressableJobs(jobs);
   }
   return { jobs, recovery: pendingRecovery(KEY), persistError: null };
@@ -138,6 +118,10 @@ function subscribe(listener) {
   if (!initialized) {
     init();
     listener();
+  } else if (wasEmpty) {
+    // Back on a job page after none was open: nothing listened to other tabs meanwhile, so read
+    // storage again — the list of the first visit, written back, erased their jobs (J-01).
+    takeOtherTabsList();
   }
 
   if (wasEmpty && typeof window !== 'undefined') {
@@ -165,63 +149,90 @@ function setJobs(change) {
   update({ jobs, persistError });
 }
 
+/**
+ * Add a job with `data` over a new job's defaults (newJobDefaults: an applied date only past Saved,
+ * J-10) and return its id. The id, the history (one entry, its status) and the times are always
+ * its own; notes in plain text become HTML (completeJob).
+ */
 function addJob(data = {}) {
   const now = Date.now();
-  const initialStatus = data.status || 'saved';
-  const job = {
-    id: newId('job'),
-    company: '', role: '', status: 'saved',
-    url: '', location: '', salary: '',
-    contact: '', resumeId: '', notes: '',
-    appliedDate: '', deadline: '',
-    todos: [],
-    statusHistory: [{ status: initialStatus, changedAt: now }],
-    createdAt: now, updatedAt: now,
+  const status = statusId(data.status) || 'saved';
+  const job = completeJob({
+    ...newJobDefaults(status, new Date(now)),
     ...data,
-    // ensure statusHistory always exists (imports may lack it)
-  };
-  if (!job.statusHistory) {
-    job.statusHistory = [{ status: job.status, changedAt: job.createdAt || now }];
-  }
+    id: newId('job'), status,
+    statusHistory: [{ status, changedAt: now }],
+    createdAt: now, updatedAt: now,
+  });
   setJobs(jobs => [...jobs, job]);
   return job.id;
 }
 
+/**
+ * Merge `updates` into job `id` (applyEdits: a status change adds one history entry and may fill
+ * the applied date; id and history are never overwritten). False — nothing written — when no job
+ * has that id any more: its edit form was open while another tab deleted it (J-16).
+ */
 function updateJob(id, updates) {
-  setJobs(jobs => jobs.map(j => {
-    if (j.id !== id) return j;
-    const updated = { ...j, ...updates, updatedAt: Date.now() };
-    if (updates.status && updates.status !== j.status) {
-      const prev = j.statusHistory || [{ status: j.status, changedAt: j.createdAt || Date.now() }];
-      updated.statusHistory = [...prev, { status: updates.status, changedAt: Date.now() }];
-    }
-    return updated;
-  }));
+  if (!initialized) init();
+  if (!snapshot().jobs.some(j => j.id === id)) return false;
+  const now = Date.now();
+  setJobs(jobs => jobs.map(j => (j.id === id ? applyEdits(j, updates, now) : j)));
+  return true;
 }
 
-function deleteJob(id) {
-  setJobs(jobs => jobs.filter(j => j.id !== id));
+/** Job `id` as it is and where, `{ job, index }` — what Undo needs — or null when there is none. */
+function placeOf(id) {
+  if (!initialized) init();
+  const index = snapshot().jobs.findIndex(j => j.id === id);
+  return index < 0 ? null : { job: snapshot().jobs[index], index };
 }
 
 /**
- * Add the jobs of an imported file, each with a new id, made readable the way a saved job is
- * (readJob). Returns `{ added, lossy }`: lossy when an entry, or a detail of one, could not
- * be read and was left out — not for a number kept as its digits (VM4-5).
+ * Move job `id` on the board: to `status` (a status change like any other — one history entry)
+ * and before job `beforeId`, or last (moveInList: the array order is the rank). Returns the job
+ * as it was and where, for restoreJob to undo it; null when no job has that id.
+ */
+function moveJob(id, { status, beforeId = null } = {}) {
+  const was = placeOf(id);
+  if (!was) return null;
+  const jobs = moveInList(snapshot().jobs, id, { status, beforeId }, Date.now());
+  if (jobs !== snapshot().jobs) setJobs(() => jobs);
+  return was;
+}
+
+/** Delete job `id`; returns it and its place, `{ job, index }`, for restoreJob (Undo) — null when there was none. */
+function deleteJob(id) {
+  const was = placeOf(id);
+  if (was) setJobs(jobs => jobs.filter(j => j.id !== id));
+  return was;
+}
+
+/**
+ * Put `job` back at `index` (past the end: last), replacing a job with its id — Undo for
+ * deleteJob and moveJob with what they returned. An undone move leaves no history entry: the job
+ * comes back exactly as it was.
+ */
+function restoreJob(job, index) {
+  if (!job?.id) return;
+  setJobs(jobs => {
+    const rest = jobs.filter(j => j.id !== job.id);
+    const at = Number.isInteger(index) ? Math.max(0, Math.min(index, rest.length)) : rest.length;
+    return [...rest.slice(0, at), job, ...rest.slice(at)];
+  });
+}
+
+/**
+ * Merge the jobs of an imported file (mergeImport: a job already here is skipped or, from a newer
+ * copy, replaced — never duplicated, J-04). Returns `{ added, updated, skipped, lossy }`: lossy
+ * when an entry, or a detail of one, could not be read and was left out (VM4-5); importMessage
+ * turns it into what the tracker says.
  */
 function importJobs(incoming) {
-  const read = incoming.map(readJob);
-  const stamped = read.map(r => r.kept).filter(Boolean).map(j => completeJob({
-    status: 'saved',
-    todos: [],
-    contact: '',
-    deadline: '',
-    ...j,
-    id: newId('job'),
-    createdAt: j.createdAt || Date.now(),
-    updatedAt: Date.now(),
-  }));
-  if (stamped.length) setJobs(jobs => [...jobs, ...stamped]);
-  return { added: stamped.length, lossy: read.some(r => r.lost) };
+  if (!initialized) init();
+  const { jobs, added, updated, skipped, lossy } = mergeImport(snapshot().jobs, incoming, Date.now());
+  if (added || updated) setJobs(() => addressableJobs(jobs));
+  return { added, updated, skipped, lossy };
 }
 
 function clearDemoData() {
@@ -242,11 +253,15 @@ export function _resetJobStoreForTest() {
   listeners.clear();
 }
 
-export { snapshot, subscribe };
+// The actions as plain functions too: node tests drive the store without React.
+export { snapshot, subscribe, addJob, updateJob, moveJob, deleteJob, restoreJob, importJobs, clearDemoData, dismissRecovery };
 
 export function useJobStore() {
   const { jobs, persistError, recovery } = useSyncExternalStore(subscribe, snapshot);
   const persistReason = notSavedReason(persistError);
-  return { jobs, persistError, persistReason, recovery, dismissRecovery, addJob, updateJob, deleteJob, importJobs, clearDemoData };
+  return {
+    jobs, persistError, persistReason, recovery, dismissRecovery,
+    addJob, updateJob, moveJob, deleteJob, restoreJob, importJobs, clearDemoData,
+  };
 }
 

@@ -1,212 +1,141 @@
-// A board from this browser's saved list or an imported .json, made safe for every board page —
-// the board grid, the board itself, the card detail sheet. Both ways a board comes in go through
-// readBoard() then completeBoard() (useBoardStore's load), so they cannot disagree on what a
-// board is, or on what a repair lost. Mirrors normalizeJob.js — the same never-destroy-what-
-// cannot-be-read contract, one level deeper (board → lists → cards → checklist). Its only import
-// is newId, so Node's test runner loads this file as it is (tests/unit/normalize-board.unit.mjs).
+// A v2 board from this browser's saved list or an imported .json, made safe for every board page
+// — the projects table, the board, the backlog, the issue modal. Both ways a board comes in go
+// through readBoard() then completeBoard() (boardStorage.js, boardTransfer.js), so they cannot
+// disagree on what a board is, or on what a repair lost. The same never-destroy-what-cannot-be-
+// read contract as normalizeJob.js: readBoard reports `lost` whenever it left something out or
+// replaced it, so the raw value is backed up before the next save (storageBackup.loadSavedList);
+// completeBoard only adds what the pages address things by, and loses nothing. A v1 board is
+// migrated first (boardMigrate.js). Pure (tests/unit/normalize-board.unit.mjs).
 import { newId } from './ids.js';
+import { deriveKey, isValidKey } from './boardModel.js';
+import { isEntry, readBoardFields } from './boardReaders.js';
 
-/** True when `v` can be an entry at all: an object that is not an array. */
-export function isBoardEntry(v) {
-  return Boolean(v && typeof v === 'object' && !Array.isArray(v));
-}
-
-/** Text the pages can print as it is: a string, or nothing (null / undefined). */
-const isText = (v) => typeof v === 'string' || v == null;
-
-/** A number that reads back as its digits, and loses nothing as them. */
-const isNumber = (v) => typeof v === 'number' && Number.isFinite(v);
-
-/** A value that is not text, as text: a number as its digits, anything else ''. */
-const asText = (v) => (isNumber(v) ? String(v) : '');
+/** True when `v` can be a board at all: an object that is not an array. */
+export const isBoardEntry = isEntry;
 
 /**
- * `entries` (objects), each with an id no earlier one in the same list has — a new `<prefix>_…`
- * where it has none or one already taken; the same array when they all do. Cards, lists and
- * checklist items are addressed and dragged by id, so two sharing one id (a hand-edited file, or
- * ids minted in the same millisecond by an old build) would move or delete together.
- */
-function withOwnIds(entries, prefix) {
-  const seen = new Set();
-  const out = entries.map((e) => {
-    const id = typeof e.id === 'string' && e.id && !seen.has(e.id) ? e.id : newId(prefix);
-    seen.add(id);
-    return id === e.id ? e : { ...e, id };
-  });
-  return out.every((e, i) => e === entries[i]) ? entries : out;
-}
-
-/** The labels a card can show; the same array when every one is readable (a string `color`). */
-function readLabels(labels) {
-  if (!Array.isArray(labels)) return { value: [], lost: labels != null };
-  const kept = labels
-    .filter((l) => isBoardEntry(l) && typeof l.color === 'string')
-    .map((l) => (isText(l.name) ? l : { ...l, name: asText(l.name) }));
-  const lost = kept.length !== labels.length;
-  const same = !lost && kept.every((l, i) => l === labels[i]);
-  return { value: same ? labels : kept, lost };
-}
-
-/** The checklist items a card can show; the same array when every one is readable. */
-function readChecklist(items) {
-  if (!Array.isArray(items)) return { value: [], lost: items != null };
-  const kept = items
-    .filter((t) => isBoardEntry(t) && (typeof t.text === 'string' || isNumber(t.text)))
-    .map((t) => {
-      const text = typeof t.text === 'string' ? t.text : String(t.text);
-      const done = Boolean(t.done);
-      return text === t.text && done === t.done ? t : { ...t, text, done };
-    });
-  const lost = kept.length !== items.length; // a number kept as its digits, or done coerced, is not a loss
-  const same = !lost && kept.every((t, i) => t === items[i]);
-  return { value: same ? items : kept, lost };
-}
-
-/** The fields a card prints as text. */
-const CARD_TEXT = ['title', 'description', 'due'];
-
-/**
- * `card` in a shape every board page can use, as `{ kept, lost }`: the same object when it is
- * readable already, else a repaired copy; kept null when it is not an object at all.
- *   a text field holding a number → its digits; anything else → ''
- *   labels / checklist not a list → []; entries that are not objects (or a label with no
- *                                   string color, or a checklist item with no text) are left out
- */
-function readCard(card) {
-  if (!isBoardEntry(card)) return { kept: null, lost: card != null };
-  let out = card;
-  let lost = false;
-  const set = (key, value, loses) => {
-    if (out === card) out = { ...card };
-    if (value === undefined) delete out[key]; else out[key] = value;
-    if (loses) lost = true;
-  };
-  for (const key of CARD_TEXT) {
-    if (!isText(card[key])) set(key, asText(card[key]), !isNumber(card[key]));
-  }
-  if (card.labels != null) {
-    const { value, lost: l } = readLabels(card.labels);
-    if (value !== card.labels) set('labels', value, l);
-  }
-  if (card.checklist != null) {
-    const { value, lost: l } = readChecklist(card.checklist);
-    if (value !== card.checklist) set('checklist', value, l);
-  }
-  return { kept: out, lost };
-}
-
-/** Read the entries of `arr` with `readEntry`, as `{ value, lost }`: the same array when unchanged. */
-function readEntries(arr, readEntry) {
-  const read = arr.map(readEntry);
-  const kept = read.map((r) => r.kept).filter(Boolean);
-  const same = kept.length === arr.length && kept.every((e, i) => e === arr[i]);
-  const lost = read.some((r) => r.lost) || kept.length !== arr.length;
-  return { value: same ? arr : kept, lost };
-}
-
-/** `list` in a shape every board page can use, as `{ kept, lost }`. */
-function readList(list) {
-  if (!isBoardEntry(list)) return { kept: null, lost: list != null };
-  let out = list;
-  let lost = false;
-  const set = (key, value, loses) => {
-    if (out === list) out = { ...list };
-    if (value === undefined) delete out[key]; else out[key] = value;
-    if (loses) lost = true;
-  };
-  if (!isText(list.title)) set('title', asText(list.title), !isNumber(list.title));
-  if (list.cards != null) {
-    if (!Array.isArray(list.cards)) set('cards', [], true);
-    else {
-      const { value, lost: l } = readEntries(list.cards, readCard);
-      if (value !== list.cards) set('cards', value, l);
-    }
-  }
-  return { kept: out, lost };
-}
-
-/**
- * normalizeBoard, and whether its repair lost anything, as `{ kept, lost }` — the entry reader
- * useBoardStore hands storageBackup.readSavedList. lost is false for a board that was readable, or
- * needed only repairs that keep what it held (a number in a text field as its digits); true when
- * anything was left out or replaced by ''.
+ * The board every page can use, and whether reading it lost anything, as `{ kept, lost }` —
+ * the entry reader boardStorage hands storageBackup.readSavedList. Unreadable issues, columns,
+ * labels, sprints, checklist items, comments and history entries are left out; bad values of
+ * the known fields become their defaults (lost when they held something). Unknown fields are
+ * kept. kept is null for a value that is not a board at all.
  */
 export function readBoard(board) {
-  if (!isBoardEntry(board)) return { kept: null, lost: board != null };
-  let out = board;
-  let lost = false;
-  const set = (key, value, loses) => {
-    if (out === board) out = { ...board };
-    if (value === undefined) delete out[key]; else out[key] = value;
-    if (loses) lost = true;
-  };
-  if (!isText(board.title)) set('title', asText(board.title), !isNumber(board.title));
-  if (!isText(board.color)) set('color', asText(board.color), !isNumber(board.color));
-  if (board.lists != null) {
-    if (!Array.isArray(board.lists)) set('lists', [], true);
-    else {
-      const { value, lost: l } = readEntries(board.lists, readList);
-      if (value !== board.lists) set('lists', value, l);
-    }
-  }
-  return { kept: out, lost };
+  return readBoardFields(board);
 }
 
-/**
- * `board` in a shape every board page can use — the same object when it already is, else a
- * repaired copy; null when it is not a board at all.
- */
+/** readBoard's board, or null. */
 export function normalizeBoard(board) {
   return readBoard(board).kept;
 }
 
-/** Cards (readable) each with an id, and each with a checklist whose items each have an id. */
-function completeCards(cards) {
-  const withIds = withOwnIds(cards, 'card');
-  const out = withIds.map((c) => {
-    if (!Array.isArray(c.checklist)) return c;
-    const checklist = withOwnIds(c.checklist, 'chk');
-    return checklist === c.checklist ? c : { ...c, checklist };
+/**
+ * `entries`, each with an id no earlier one has — a new `<prefix>_…` where it has none or one
+ * already taken. `seen` is one set for the whole board (B-15): issues are moved and opened by id,
+ * and two parts sharing one (a hand-edited or merged file) moved or deleted together.
+ */
+function withOwnIds(entries, prefix, seen) {
+  return entries.map((e) => {
+    const id = e.id && !seen.has(e.id) ? e.id : newId(prefix);
+    seen.add(id);
+    return id === e.id ? e : { ...e, id };
   });
-  return out.every((c, i) => c === withIds[i]) ? withIds : out;
-}
-
-/** Lists (readable) each with an id, and each with cards made addressable (completeCards). */
-function completeLists(lists) {
-  const withIds = withOwnIds(lists, 'list');
-  const out = withIds.map((l) => {
-    if (!Array.isArray(l.cards)) return l;
-    const cards = completeCards(l.cards);
-    return cards === l.cards ? l : { ...l, cards };
-  });
-  return out.every((l, i) => l === withIds[i]) ? withIds : out;
 }
 
 /**
- * `board` (readable: readBoard) with what the pages address it by, where it has none — the same
- * object when it has it all. Nothing is lost here, so it is not reported as a repair:
- *   no id, or not a string → a new one (the router opens a board by its id)
- *   no lists array         → []; lists / cards / checklist items with no id, or a shared one → new
+ * Issue numbers unique on the board: the first holder keeps its number, the rest get new ones —
+ * from `nextNumber` up, never below it: a number under it may have been a deleted issue's, and
+ * numbers are never given out twice (an old link to LIFE-7 must not open another issue).
+ */
+function withOwnNumbers(issues, nextNumber) {
+  const taken = new Set();
+  let next = issues.reduce((n, i) => Math.max(n, (i.number ?? 0) + 1), nextNumber);
+  return issues.map((i) => {
+    if (i.number && !taken.has(i.number)) {
+      taken.add(i.number);
+      return i;
+    }
+    taken.add(next);
+    next += 1;
+    return { ...i, number: next - 1 };
+  });
+}
+
+/**
+ * `board` (readBoard's) with what the pages address its parts by, nothing lost:
+ *   ids        the board's own; every issue, column, label, sprint, checklist item, comment and
+ *              history entry unique across the board, the first holder keeping its id (B-15)
+ *   key        a valid key (derived from the title when it is not one; unique: addressableBoards)
+ *   columns    at least one: a board with none gets To Do and Done
+ *   references an issue's column that is gone → the first column; labels, epic (an epic of this
+ *              board, never itself, never for an epic), sprint and next occurrence that are gone → none
+ *   sprints    one active at most: later ones become future
+ *   numbers    unique; nextNumber above every number, so none is reused
  */
 export function completeBoard(board) {
-  let out = board;
-  const set = (key, value) => {
-    if (out === board) out = { ...board };
-    out[key] = value;
-  };
-  if (typeof board.id !== 'string' || !board.id) set('id', newId('board'));
-  if (!Array.isArray(board.lists)) set('lists', []);
-  else {
-    const lists = completeLists(board.lists);
-    if (lists !== board.lists) set('lists', lists);
+  const seen = new Set();
+  let columns = withOwnIds(board.columns, 'col', seen);
+  if (!columns.length) {
+    columns = [['To Do', 'todo'], ['Done', 'done']].map(([title, category]) => ({ id: newId('col'), title, category, wipLimit: null }));
   }
-  return out;
+  const labels = withOwnIds(board.labels, 'label', seen);
+  let active = false;
+  const sprints = withOwnIds(board.sprints, 'sprint', seen).map((s) => {
+    if (s.state !== 'active') return s;
+    if (active) return { ...s, state: 'future' };
+    active = true;
+    return s;
+  });
+  const nextNumber = Number.isInteger(board.nextNumber) && board.nextNumber > 0 ? board.nextNumber : 1;
+  const issues = withOwnNumbers(withOwnIds(board.issues, 'issue', seen), nextNumber).map((i) => ({
+    ...i,
+    checklist: withOwnIds(i.checklist, 'chk', seen),
+    comments: withOwnIds(i.comments, 'cmt', seen),
+    activity: withOwnIds(i.activity, 'act', seen),
+  }));
+
+  const columnIds = new Set(columns.map((c) => c.id));
+  const labelIds = new Set(labels.map((l) => l.id));
+  const sprintIds = new Set(sprints.map((s) => s.id));
+  const epicIds = new Set(issues.filter((i) => i.type === 'epic').map((i) => i.id));
+  const issueIds = new Set(issues.map((i) => i.id));
+  const repaired = issues.map((i) => ({
+    ...i,
+    columnId: columnIds.has(i.columnId) ? i.columnId : columns[0].id,
+    labelIds: i.labelIds.filter((l) => labelIds.has(l)),
+    epicId: i.type !== 'epic' && i.epicId !== i.id && epicIds.has(i.epicId) ? i.epicId : null,
+    sprintId: sprintIds.has(i.sprintId) ? i.sprintId : null,
+    recurrenceNextId: issueIds.has(i.recurrenceNextId) ? i.recurrenceNextId : null,
+  }));
+
+  return {
+    ...board,
+    id: board.id || newId('board'),
+    key: isValidKey(board.key) ? board.key : deriveKey(board.title),
+    columns,
+    labels,
+    sprints,
+    issues: repaired,
+    nextNumber: repaired.reduce((n, i) => Math.max(n, i.number + 1), nextNumber),
+  };
 }
 
 /**
- * `boards` (each completeBoard's), each with an id no earlier board has — the first keeps it, the
- * one a link opens; the same array when they all do. Nothing is lost, so it is not a repair.
+ * `boards` (each completeBoard's) each with an id and a key no earlier board has — the first
+ * keeps them, the one a link opens; a later one gets a new id, or a key derived from its title
+ * (its issue keys change with it: `?issue=KEY-N` must name one issue). Nothing is lost.
  */
 export function addressableBoards(boards) {
-  return withOwnIds(boards, 'board');
+  const ids = new Set();
+  const keys = new Set();
+  const everyKey = boards.map((b) => b.key);
+  return boards.map((b) => {
+    let out = b;
+    if (ids.has(b.id)) out = { ...out, id: newId('board') };
+    ids.add(out.id);
+    if (keys.has(b.key)) out = { ...out, key: deriveKey(b.title, [...keys, ...everyKey]) };
+    keys.add(out.key);
+    return out;
+  });
 }
+
