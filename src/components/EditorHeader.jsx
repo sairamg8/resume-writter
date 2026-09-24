@@ -51,6 +51,7 @@ export function EditorHeader({ resume, rename, layoutMode, setLayoutMode, export
           onExportJSON={exportMenu.handleExportJSON}
           onExportMarkdown={exportMenu.handleExportMarkdown}
           onExportAtsText={exportMenu.handleExportAtsText}
+          onExportLetterText={exportMenu.handleExportLetterText}
           onExportJsonResume={exportMenu.handleExportJsonResume}
           onImportJSON={exportMenu.handleImportJSON}
           onImportError={exportMenu.setExportError}
