@@ -33,11 +33,15 @@ rows and totals, and pushes.
 | sections | R2-057 069 127 108 112 113 115 116 150 151 | queued |
 | app-shell | R2-050 071 072 073 074 076 077 084 086 144 | queued |
 | preview | R2-106 107 170 165, R3-005 | queued |
+| cypress | R2-152 161 162 (Cypress suite green, 09-17…20 features end to end, mobile) | running |
 
 Done outside the clusters: `12c2a71` — LICENSE, CONTRIBUTING, README, knowledge docs (R2-143, R2-169, partial).
 
 Round 2 — features and test gaps not in a cluster: R2-135 136 137 138 139 140 141 142 145 146 147 148
 149, R2-152 154 157 158 161 162 167 168 171; plus a lint step in CI and the 21 oxlint warnings.
+
+**Owner, 2026-09-24 12:35:** once the running clusters finish, start nothing new — the owner restarts the
+session first. Round 2 begins only after that restart.
 
 ### If this session was cut off
 
