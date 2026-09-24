@@ -115,8 +115,8 @@ function TimelineSection({ section, settings, marginBottom, spaceBefore, itemGap
   return (
     <View style={{ marginBottom, marginTop: spaceBefore }}>
       {SPACER}
-      {title}
       <TimelineEntries
+        title={title}
         items={items}
         cols={s.columns || 1}
         gap={itemGap}

@@ -2,7 +2,8 @@
 // left at the foot of a page with its entries on the next ("EDUCATION" ending page 1 under 18 skill
 // groups and Languages), and an education, certification or reference entry split across two pages.
 // The column is filled with skill groups and language rows, one more at a time, so each title and
-// entry crosses the page foot.
+// entry crosses the page foot. References come last there and never reach the foot: a second test
+// slides them alone across it, with a first reference whose fields wrap in the column too.
 import { before, after, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { setup, teardown, resume, section, experience, render, read, allItems } from './harness.mjs';
@@ -53,6 +54,50 @@ it('a dark-column title never ends a page, and an entry never splits across two'
         else if (a.page !== b.page) found.push(`${tag}: "${head}" on page ${a.page}, its "${tail}" on page ${b.page}`);
       }
     }
+  }
+  assert.deepEqual(found, []);
+});
+
+// A first reference whose name, job title and company wrap in the column.
+const longReferences = () => section('references', [
+  { name: 'Alexandra Catherine Doe-Montgomery', jobTitle: 'Senior Vice President of Engineering Operations', company: 'Acme International Holdings Group', relationship: 'Former manager for four years', email: 'alex@example.com', phone: '+1 555 0100' },
+  { name: 'Sam Roe', jobTitle: 'Director', company: 'Globex', email: 'sam@example.com', phone: '+1 555 0101' },
+], {}, { title: 'References' });
+
+/** References alone under `groups` skill groups and a gap of `px` after them. */
+async function referencesAfter(refs, groups, px) {
+  const s = skills(groups);
+  s.settings = { ...s.settings, spaceAfter: px };
+  const pages = await read(await render(resume({ template: 'sidebar', sections: [experience([{ description: '<p>Main column</p>' }]), s, refs()] })));
+  return { pages, side: allItems(pages).filter((t) => t.x < pages[0].W * 0.38) };
+}
+
+it('the References title keeps its first reference, however its fields wrap, and a reference never splits', async () => {
+  const found = [];
+  const cases = [[references, [['Alex Doe', '555 0100'], ['Sam Roe', '555 0101']]], [longReferences, [['Alexandra', '555 0100'], ['Sam Roe', '555 0101']]]];
+  for (const [refs, entries] of cases) {
+    // The fewest skill groups that push REFERENCES to page 2: the sweep ends there.
+    const page = async (g) => (await referencesAfter(refs, g, 0)).side.find((i) => i.str.trim() === 'REFERENCES')?.page;
+    let [lo, hi] = [1, 60];
+    while (hi - lo > 1) { const mid = (lo + hi) >> 1; if (await page(mid) > 1) hi = mid; else lo = mid; }
+    const seen = new Set();
+    for (let groups = hi - 6; groups <= hi; groups += 1) {
+      for (let px = 0; px <= 22; px += 2) {
+        const { pages, side } = await referencesAfter(refs, groups, px);
+        const tag = `${refs().items[0].name} groups=${groups} px=${px}`;
+        const t = side.find((i) => i.str.trim() === 'REFERENCES');
+        if (!t) { found.push(`${tag}: REFERENCES not printed`); continue; }
+        seen.add(t.page);
+        if (t.page < pages.length && !side.some((i) => i.page === t.page && i.y < t.y - 1)) found.push(`${tag}: REFERENCES ends page ${t.page}`);
+        for (const [head, tail] of entries) {
+          const a = side.find((i) => i.str.includes(head));
+          const b = side.find((i) => i.str.includes(tail) && (!a || i.page > a.page || i.y <= a.y));
+          if (!a || !b) found.push(`${tag}: "${head}" entry not printed`);
+          else if (a.page !== b.page) found.push(`${tag}: "${head}" on page ${a.page}, its "${tail}" on page ${b.page}`);
+        }
+      }
+    }
+    if (!seen.has(1) || !seen.has(2)) found.push(`${refs().items[0].name}: the sweep never crossed the page foot`);
   }
   assert.deepEqual(found, []);
 });

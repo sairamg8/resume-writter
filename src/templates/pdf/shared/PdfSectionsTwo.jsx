@@ -16,7 +16,7 @@ import {
   getDateColor,
   shadesOf,
 } from './PdfSections';
-import { CentredLine, EndRow, endField, fieldGap, onBaselineOf, wordRoom } from './PdfItemHeader';
+import { CentredLine, EndRow, endField, fieldGap, headPresence, headerKeep, itemHeadPresence, onBaselineOf, wordRoom } from './PdfItemHeader';
 
 export function CertificationsSection({ section, settings, marginBottom, spaceBefore, itemGap, italicSubs, centered }) {
   const s        = section.settings || {};
@@ -95,12 +95,22 @@ export function ProjectsSection({ section, settings, marginBottom, spaceBefore, 
   const isModern   = settings?._template === 'modern';
   const dateColor  = getDateColor(settings);
   const shade      = shadesOf(settings);
+  const font       = settings?._pdfFontFamily;
+  // The title keeps the first project's header — its name and date, its technologies and link — and the
+  // lines it keeps with it (R2-047).
+  const first      = visibleItems[0];
+  const presence   = first ? headPresence({
+    lines: 1 + (first.technologies || first.url ? 1 : 0),
+    styles: [{ fontFamily: font, fontSize: entrySize, fontWeight: 'bold' }, { fontFamily: font, fontSize: baseSize }],
+    keep: headerKeep(settings),
+    extra: 2,
+  }) : 0;
 
   return (
     <View style={{ marginBottom, marginTop: spaceBefore }}>
       {SPACER}
       <RenderColGrid
-        title={<SectionTitleOf section={section} settings={settings} centered={centered} />}
+        title={<SectionTitleOf section={section} settings={settings} centered={centered} presence={presence} />}
         settings={settings}
         items={visibleItems}
         cols={cols}
@@ -111,11 +121,10 @@ export function ProjectsSection({ section, settings, marginBottom, spaceBefore, 
           // a project's header as its first line (ATS-2). Technologies and link on the line under it.
           // Unbreakable and kept with two lines of what follows, as ItemHeader keeps a job's header.
           const name = <Text style={{ fontSize: entrySize, fontWeight: 'bold', color: textColor, textAlign }}>{item.name}</Text>;
-          const font = settings?._pdfFontFamily;
           const dateStyle = { fontSize: baseSize, color: dateColor, lineHeight: onBaselineOf({ fontFamily: font, fontSize: entrySize, fontWeight: 'bold' }, { fontFamily: font, fontSize: baseSize }) };
           return (
             <View>
-              <View wrap={false} minPresenceAhead={Math.round(baseSize * (settings?.lineHeightValue ?? 1.5) * 2)} style={{ alignItems: flexAlign, marginBottom: 2 }}>
+              <View wrap={false} minPresenceAhead={headerKeep(settings)} style={{ alignItems: flexAlign, marginBottom: 2 }}>
                 {centered
                   ? <CentredLine first={item.name ? name : null} date={dateStr} dateStyle={dateStyle} sepColor={shade.muted} gap={fieldGap(baseSize)} />
                   : <EndRow left={name} leftMin={wordRoom([item.name, { fontFamily: font, fontSize: entrySize, fontWeight: 'bold' }])}>{endField(dateStr, dateStyle, fieldGap(baseSize))}</EndRow>}
@@ -182,12 +191,26 @@ export function AwardsSection({ section, settings, marginBottom, spaceBefore, it
   const textAlign  = centered ? 'center' : 'left';
   const dateColor  = getDateColor(settings);
   const sub        = shadesOf(settings).sub;
+  const font       = settings?._pdfFontFamily;
+  const dateOf     = (item) => (showDates ? formatDate(item.date || '', settings) : '');
+  // An award's title, issuer and date keep two lines of its description with them; with none, no keep:
+  // react-pdf would move the block to make room for lines that never come.
+  const keepOf     = (item) => (hasRichText(item.description) ? headerKeep(settings) : 0);
+  // The section's title keeps the first award's block and what the block keeps with it: its own three
+  // lines were less, and it was left alone at the foot of a page while that block moved on (R2-047).
+  const first      = visibleItems[0];
+  const presence   = first ? headPresence({
+    lines: 1 + (first.issuer ? 1 : 0) + (dateOf(first) ? 1 : 0),
+    styles: [{ fontFamily: font, fontSize: entrySize, fontWeight: 'bold' }, { fontFamily: font, fontSize: baseSize }],
+    keep: keepOf(first),
+    extra: dateOf(first) ? 1 : 0,
+  }) : 0;
 
   return (
     <View style={{ marginBottom, marginTop: spaceBefore }}>
       {SPACER}
       <RenderColGrid
-        title={<SectionTitleOf section={section} settings={settings} centered={centered} />}
+        title={<SectionTitleOf section={section} settings={settings} centered={centered} presence={presence} />}
         settings={settings}
         items={visibleItems}
         cols={cols}
@@ -195,14 +218,13 @@ export function AwardsSection({ section, settings, marginBottom, spaceBefore, it
         renderItem={(item) => (
           <View style={{ alignItems: flexAlign }}>
             {/* Title, issuer and date unbreakable and kept with two lines of a description, as ItemHeader
-                keeps a job's header: an award's title is never left alone at a page foot (R2-049). With
-                none, no keep: react-pdf would move the block to make room for lines that never come. */}
-            <View wrap={false} minPresenceAhead={hasRichText(item.description) ? Math.round(baseSize * (settings?.lineHeightValue ?? 1.5) * 2) : 0} style={{ alignItems: flexAlign }}>
+                keeps a job's header: an award's title is never left alone at a page foot (R2-049). */}
+            <View wrap={false} minPresenceAhead={keepOf(item)} style={{ alignItems: flexAlign }}>
               <Text style={{ fontSize: entrySize, fontWeight: 'bold', color: textColor, textAlign }}>{item.title}</Text>
               {item.issuer && (
                 <Text style={{ fontSize: baseSize, color: sub, fontStyle: italicSubs ? 'italic' : 'normal', textAlign }}>{item.issuer}</Text>
               )}
-              {showDates && formatDate(item.date || '', settings) ? <Text style={{ fontSize: baseSize, color: dateColor, marginTop: 1, textAlign }}>{formatDate(item.date || '', settings)}</Text> : null}
+              {dateOf(item) ? <Text style={{ fontSize: baseSize, color: dateColor, marginTop: 1, textAlign }}>{dateOf(item)}</Text> : null}
             </View>
             {hasRichText(item.description) && (
               <PdfRichText html={item.description} style={{ fontSize: baseSize, color: sub, lineHeight: lineH, marginTop: 1, textAlign }} />
@@ -226,26 +248,30 @@ export function VolunteeringSection({ section, settings, marginBottom, spaceBefo
   const accent     = settings?.accentColor || '#2563eb';
   const isModern   = settings?._template === 'modern';
   const body       = shadesOf(settings).body;
+  // An entry's header fields, as ItemHeader prints them.
+  const head = (item) => ({
+    primary: item.role,
+    sub: item.org || undefined,
+    loc: (showLoc && item.location ? item.location : '') || undefined,
+    dateStr: showDates ? dateRange(item.startDate, endDateOf(item, settings), settings) : '',
+  });
+  // The title keeps the first entry's header and the lines it keeps with it (R2-047).
+  const presence = visibleItems.length ? itemHeadPresence({ ...head(visibleItems[0]), settings, titleStyle, centered }) : 0;
 
   return (
     <View style={{ marginBottom, marginTop: spaceBefore }}>
       {SPACER}
       <RenderColGrid
-        title={<SectionTitleOf section={section} settings={settings} centered={centered} />}
+        title={<SectionTitleOf section={section} settings={settings} centered={centered} presence={presence} />}
         settings={settings}
         items={visibleItems}
         cols={cols}
         gap={itemGap}
         renderItem={(item) => {
-          const dateStr = showDates ? dateRange(item.startDate, endDateOf(item, settings), settings) : '';
-          const loc = showLoc && item.location ? item.location : '';
           return (
             <View>
               <ItemHeader
-                primary={item.role}
-                sub={item.org || undefined}
-                loc={loc || undefined}
-                dateStr={dateStr}
+                {...head(item)}
                 settings={settings}
                 titleStyle={titleStyle}
                 italicSub={italicSubs}
