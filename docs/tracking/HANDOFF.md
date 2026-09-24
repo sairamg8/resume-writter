@@ -64,6 +64,9 @@ all suites green but Cypress (stale specs, the cypress cluster's job): run 41 on
 ### If this session was cut off
 
 1. `git fetch origin claude/beautiful-heisenberg-x3bsvo && git checkout claude/beautiful-heisenberg-x3bsvo`.
+   The merge tools are in `docs/tracking/tools/`: `merge_cluster.sh <cluster>` (fetch, merge without committing,
+   drop `wf-reports/`, print the report), `update_tracker.py <report.json>` (set the rows, re-total; `--recount`
+   alone re-totals) and `handoff_state.py '<cluster>=<state>'` (this file's table).
 2. Read the table above: a cluster marked **merged** is on the branch and in the tracker. The others are
    on GitHub as `claude/wf-<cluster>`; their sessions run on their own machines and survive this one's
    restart. A branch with `wf-reports/<cluster>.json` is finished and ready to merge.

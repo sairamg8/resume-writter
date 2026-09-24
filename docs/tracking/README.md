@@ -39,6 +39,11 @@ happened.
 | [AGENT_MEMORY.md](AGENT_MEMORY.md) | Short-form facts for an agent to load first. |
 | [SESSION_LOG.md](SESSION_LOG.md) | Append-only session log, newest first. |
 
+## Tools
+
+[`tools/`](tools/) — the scripts that merge a bug cluster's branch, set its tracker rows from its report and
+re-total the Summary, and update the handoff table ([CLUSTER-PROTOCOL.md](CLUSTER-PROTOCOL.md) says how clusters work).
+
 ## Rules for this folder
 
 - New trackers, plans and audit write-ups go here, never at the repo root.
