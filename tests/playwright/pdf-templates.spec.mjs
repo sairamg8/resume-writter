@@ -38,6 +38,30 @@ async function topRowAccent(page) {
   });
 }
 
+/**
+ * How many pixel rows of the preview's first page are mostly a blue-tinted line: Academic's hairlines under
+ * its section titles — the accent #2563eb at 55 % on white, rgb(135, 169, 244) — drawn by pdf.js onto the
+ * canvas. A row counts when 60 % of it is bluer than it is red by 40 or more (a hairline 1.3 px tall
+ * covers at least half of one row: still that blue); Classic's grey #e5e7eb rules and white rows do not.
+ */
+async function hairlineRows(page) {
+  const canvas = page.locator('[data-preview-status="ready"] canvas').first();
+  await expect(canvas).toBeVisible();
+  return canvas.evaluate((c) => {
+    const { data } = c.getContext('2d').getImageData(0, 0, c.width, c.height);
+    let rows = 0;
+    for (let y = 0; y < c.height; y += 1) {
+      let blue = 0;
+      for (let x = 0; x < c.width; x += 1) {
+        const i = (y * c.width + x) * 4;
+        if (data[i + 2] - data[i] >= 40 && data[i] < 235) blue += 1;
+      }
+      if (blue > c.width * 0.6) rows += 1;
+    }
+    return rows;
+  });
+}
+
 /** The exported PDF's Experience entry: its date run ("01/2023 – ", the first) sits above its role (PDF y grows upward), both starting at one x. */
 function expectDateAboveTitle(runs) {
   const date = findRun(runs, '01/2023');
@@ -168,6 +192,34 @@ test.describe('Exported PDF — every template', () => {
     const { runs } = await exportPdf(page);
     expect(findRun(runs, 'Alex Johnson').colorHex).toBe('#ffffff');
     expect(findRun(runs, 'PROFESSIONAL').colorHex).toBe('#ffffff');
+  });
+
+  test('Academic template: the preview draws a hairline under each section title; the export centres the name, dates in the Text grey', async ({ page }) => {
+    await visitEditor(page, 'academic');
+    expect(await hairlineRows(page)).toBeGreaterThan(2);
+
+    const { runs, text } = await exportPdf(page);
+    expect(text).toContain('Alex Johnson');
+    expect(text).toContain('Acme Corp');
+    expect(text).toContain('MIT');
+    // Centred where Classic's name sits on the 18 mm margin (51 pt).
+    expect(findRun(runs, 'Alex Johnson').x).toBeGreaterThan(150);
+    // Section titles in the accent; an entry's dates in the Text colour's grey (#111111 at 72 %).
+    expect(findRun(runs, 'PROFESSIONAL').colorHex).toBe('#2563eb');
+    expect(findRun(runs, '01/2023').colorHex).toBe('#545454');
+  });
+
+  test('Academic is offered in the Design panel; picking it redraws the preview and the export', async ({ page }) => {
+    await visitEditor(page, 'classic');
+    expect(await hairlineRows(page)).toBe(0);
+
+    await openDesignPanel(page);
+    await page.locator('button:has-text("Academic")').first().click();
+    await expect.poll(() => hairlineRows(page), { timeout: 20_000 }).toBeGreaterThan(2);
+    await expect(page.locator('text=Academic brings its own type and spacing')).toBeVisible();
+
+    const { runs } = await exportPdf(page);
+    expect(findRun(runs, 'Alex Johnson').x).toBeGreaterThan(150);
   });
 
 });
