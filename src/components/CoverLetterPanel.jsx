@@ -67,8 +67,11 @@ export default function CoverLetterPanel({ resume, coverLetter, personal, settin
     if (gen.subject) updateCoverLetter('subject', gen.subject);
     if (gen.body) updateCoverLetter('body', gen.body);
     if (gen.closing) updateCoverLetter('closing', gen.closing);
-    if (gen.signatureName) updateCoverLetter('signatureName', gen.signatureName);
-    if (gen.signatureDesignation) updateCoverLetter('signatureDesignation', gen.signatureDesignation);
+    // The generated letter signs with the résumé's name and title as they are when it prints, so
+    // Apply clears the letter's own: a name filled in later reaches the signature, and one an
+    // earlier Apply stored ('Candidate', a name since changed) no longer pins it (R2-043).
+    updateCoverLetter('signatureName', '');
+    updateCoverLetter('signatureDesignation', '');
   }
 
   const effectiveResume = resume || { personal, settings, template, coverLetter: cl };

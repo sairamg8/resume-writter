@@ -73,8 +73,8 @@ test('generateCoverLetter: creates tailored letter with recipient, subject, and 
   assert.ok(letter.subject.includes('VP of Distribution'));
   assert.ok(letter.body.includes('Dear Jo Bennett'));
   assert.ok(letter.body.includes('Sabre Corp'));
-  assert.equal(letter.signatureName, 'Michael Scott');
-  assert.equal(letter.signatureDesignation, 'Regional Manager');
+  // No signature of its own: the letter signs with the résumé's name and title as they print (R2-043).
+  assert.ok(!('signatureName' in letter) && !('signatureDesignation' in letter));
 });
 
 // HTML injection: every résumé field and typed value is text, never markup. The body a crafted
@@ -101,10 +101,12 @@ const hostileLetter = (archetype) => generateCoverLetter({
 });
 
 for (const archetype of ['impact', 'leadership', 'growth']) {
-  test(`generateCoverLetter (${archetype}): the body's only tags are its own <p>s — every value is escaped text`, () => {
+  test(`generateCoverLetter (${archetype}): the body's only tags are its own <p>s and blank lines — every value is escaped text`, () => {
     const { body } = hostileLetter(archetype);
     const tags = [...new Set((body.match(/<[^>]*>/g) || []).map((t) => t.toLowerCase()))].sort();
-    assert.deepEqual(tags, ['</p>', '<p>'], body);
+    // <br> only as the blank line between two paragraphs (R2-130).
+    assert.deepEqual(tags, ['</p>', '<br>', '<p>'], body);
+    assert.equal(body.split('<br>').length - 1, body.split('<p><br></p>').length - 1, body);
     const plain = richTextToPlain(body);
     for (const s of ['<style>*{display:none}</style>Jo', 'Acme"><img src=y onerror=alert(5)>', '<a href="javascript:alert(6)">Staff</a>']) {
       assert.ok(plain.includes(s), `"${s}" survives as text in: ${plain}`);
@@ -129,7 +131,8 @@ test('generateCoverLetter: a line break inside a field reads as a space, not a h
     resume: { personal: { title: 'Staff\r\nEngineer' }, sections: [{ type: 'experience', items: [{ role: 'Lead\nDev', company: 'Acme\n  Inc' }] }] },
     company: 'Globex\nCorp',
   });
-  assert.ok(!body.includes('<br>'), body);
+  // No <br> inside a paragraph: only the blank lines between paragraphs hold one (R2-130).
+  assert.ok(!body.replaceAll('<p><br></p>', '').includes('<br>'), body);
   const plain = richTextToPlain(body);
   for (const s of ['Staff Engineer', 'Lead Dev', 'Acme Inc', 'Globex Corp']) assert.ok(plain.includes(s), `"${s}" in: ${plain}`);
 });
@@ -187,9 +190,6 @@ test('generateCoverLetter: a name, title, role or company that is not text print
   let letter = generateCoverLetter({ resume: r({ name: ['Ada', 'Lovelace'], title: 7 }, { role: ['Lead', 'Dev'], company: 2024 }) });
   assert.equal(letter.subject, 'Application for 7 — Ada, Lovelace');
   assert.ok(richTextToPlain(letter.body).includes('During my tenure as Lead, Dev at 2024,'), letter.body);
-  // The signature is text too: the panel's Apply saves it into the letter's own fields.
-  assert.equal(letter.signatureName, 'Ada, Lovelace');
-  assert.equal(letter.signatureDesignation, '7');
   // An object, true or a list with no text is no value: the letter an empty field gives.
   const blank = (archetype) => generateCoverLetter({ resume: r({ name: '', title: '' }, { role: '', company: '' }), archetype, company: 'Globex' });
   for (const v of [{ a: 1 }, {}, true, SHADOW, [SHADOW], [{ a: 1 }]]) {
@@ -198,8 +198,9 @@ test('generateCoverLetter: a name, title, role or company that is not text print
       assert.deepEqual(letter, blank(archetype), `${JSON.stringify(v)}, ${archetype}`);
     }
   }
-  assert.equal(blank('impact').signatureName, 'Candidate');
-  assert.equal(blank('impact').signatureDesignation, 'Professional');
+  // An empty name and title are no placeholder 'Candidate' / 'Professional' (R2-043).
+  assert.equal(blank('impact').subject, 'Application');
+  assert.ok(!/Candidate|Professional/.test(blank('impact').body), blank('impact').body);
 });
 
 test('extractResumeHighlights: a section or an entry that is not an object (null in a native .json or stored data) is skipped', () => {
