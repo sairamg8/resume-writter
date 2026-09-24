@@ -3,14 +3,16 @@
 // applied here with the real boardOps.moveIssue / moveColumn, as the page does through the store.
 // A card lands where it was dropped: before the card under it, after it when it moves down its
 // own column (arrayMove's rule), at the bottom of a column's empty space (B-05); a drop on itself
-// or outside moves nothing; no move ever loses or duplicates a card — even one that was saved
+// or outside moves nothing; the board shows what the plan says it shows (a scrum board its active
+// sprint, a kanban board no done card older than hideDoneAfterDays) with each list's WIP state;
+// no move ever loses or duplicates a card — even one that was saved
 // sharing its id with a card in another list (R2-098, repaired by completeBoard). Run: yarn test:unit
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as ops from '../../src/utils/boardOps.js';
 import { createBoard } from '../../src/utils/boardModel.js';
 import { completeBoard, readBoard } from '../../src/utils/normalizeBoard.js';
-import { boardLists, dropTarget } from '../../src/utils/boardView.js';
+import { boardLists, boardSprint, dropTarget, hiddenDoneCount } from '../../src/utils/boardView.js';
 
 const ctx = { now: new Date(2026, 8, 24, 10, 0).getTime() };
 
@@ -27,7 +29,7 @@ function boardWith(cards) {
 }
 
 /** What the page shows: `{ columnId: [cardId…] }`, in column order. */
-const shown = (b) => Object.fromEntries(boardLists(b).map((l) => [l.id, l.cards.map((c) => c.id)]));
+const shown = (b, now) => Object.fromEntries(boardLists(b, { now }).map((l) => [l.id, l.cards.map((c) => c.id)]));
 
 const card = (id) => ({ id, type: 'card' });
 const overCard = (b, id) => ({ id, data: { type: 'card', listId: b.issues.find((i) => i.id === id).columnId } });
@@ -35,7 +37,7 @@ const overList = (id) => ({ id, data: { type: 'list' } });
 
 /** Drop `active` on `over` and apply the move, as Board.jsx's onDragEnd does. */
 function drop(b, active, over) {
-  const move = dropTarget(b, active, over);
+  const move = dropTarget(b, active, over, { now: ctx.now });
   if (!move) return b;
   if (move.kind === 'column') return ops.moveColumn(b, move.columnId, move.toIndex);
   return ops.moveIssue(b, move.issueId, move.target, ctx);
@@ -113,4 +115,43 @@ test('R2-098: two cards saved with one id in two lists — a drag of either lose
       assert.equal(new Set(after.issues.map((i) => i.id)).size, 3);
     }
   }
+});
+
+const DAY = 24 * 60 * 60 * 1000;
+
+test('kanban: a done card resolved longer ago than hideDoneAfterDays is off the board; open and recent ones stay', () => {
+  let b = boardWith([['old', 'todo'], ['recent', 'todo'], ['open', 'todo']]);
+  b = ops.moveIssue(b, 'old', { columnId: 'done' }, { now: ctx.now - 20 * DAY });
+  b = ops.moveIssue(b, 'recent', { columnId: 'done' }, { now: ctx.now - 2 * DAY });
+  assert.equal(b.hideDoneAfterDays, 14);
+  assert.deepEqual(shown(b, ctx.now), { todo: ['open'], doing: [], done: ['recent'] });
+  assert.deepEqual(boardLists({ ...b, hideDoneAfterDays: null }, { now: ctx.now }).find((l) => l.id === 'done').cards.map((c) => c.id), ['old', 'recent']);
+  assert.equal(hiddenDoneCount(b, { now: ctx.now }), 1);
+});
+
+test('scrum: the board shows the active sprint\'s cards only; with no active sprint, every card', () => {
+  let b = { ...boardWith([['in', 'todo'], ['out', 'todo'], ['doing', 'doing']]), mode: 'scrum' };
+  assert.equal(boardSprint(b), null);
+  assert.deepEqual(shown(b, ctx.now), { todo: ['in', 'out'], doing: ['doing'], done: [] }, 'no sprint started: nothing is hidden');
+  b = ops.addSprint(b, { id: 's1', name: 'Sprint 1' });
+  b = ops.updateIssue(b, 'in', { sprintId: 's1' }, ctx);
+  b = ops.updateIssue(b, 'doing', { sprintId: 's1' }, ctx);
+  b = ops.startSprint(b, 's1', {}, ctx);
+  assert.equal(boardSprint(b)?.id, 's1');
+  assert.deepEqual(shown(b, ctx.now), { todo: ['in'], doing: ['doing'], done: [] });
+  // A drop lands among the shown cards; the one off the board keeps its place and its sprint.
+  const after = drop(b, card('doing'), overCard(b, 'in'));
+  assert.deepEqual(shown(after, ctx.now).todo, ['doing', 'in']);
+  assert.equal(after.issues.find((i) => i.id === 'doing').sprintId, 's1');
+  assert.equal(after.issues.find((i) => i.id === 'out').sprintId, null);
+});
+
+test('WIP: each list carries its limit and whether the cards it shows are under, at or over it', () => {
+  let b = boardWith([['A', 'doing'], ['B', 'doing'], ['C', 'todo']]);
+  b = ops.updateColumn(b, 'doing', { wipLimit: 1 }, ctx);
+  b = ops.updateColumn(b, 'todo', { wipLimit: 1 }, ctx);
+  const byId = Object.fromEntries(boardLists(b, { now: ctx.now }).map((l) => [l.id, l]));
+  assert.deepEqual([byId.doing.limit, byId.doing.wip], [1, 'over']);
+  assert.deepEqual([byId.todo.limit, byId.todo.wip], [1, 'at']);
+  assert.deepEqual([byId.done.limit, byId.done.wip], [null, null]);
 });

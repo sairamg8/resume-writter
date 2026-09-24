@@ -10,7 +10,8 @@ import { AddCard } from '@/components/board/AddCard';
  * the same node, a droppable target — so a card dropped on the column's empty space lands here
  * (Board's onDragEnd appends it). Cards inside are their own vertical SortableContext. Width is
  * phone-first: ~85vw with scroll-snap so one column fills the screen and the next peeks, widening
- * to a fixed 18rem from md up.
+ * to a fixed 18rem from md up. The count reads `n/limit` for a column with a WIP limit (boardView),
+ * red when the column holds more than its limit.
  */
 export function BoardColumn({ list, onOpenCard, onAddCard, onRenameList, onDeleteList }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -69,7 +70,12 @@ export function BoardColumn({ list, onOpenCard, onAddCard, onRenameList, onDelet
             {list.title || 'Untitled'}
           </span>
         )}
-        <span className="text-[10px] font-medium text-gray-400 bg-gray-200/70 px-1.5 py-0.5 rounded-full shrink-0">{list.cards.length}</span>
+        <span
+          className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full shrink-0 ${list.wip === 'over' ? 'text-red-700 bg-red-100' : 'text-gray-400 bg-gray-200/70'}`}
+          title={list.limit != null ? `Work-in-progress limit: ${list.limit}` : undefined}
+        >
+          {list.limit != null ? `${list.cards.length}/${list.limit}` : list.cards.length}
+        </span>
         <button onClick={onDeleteList} className="p-1 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded shrink-0" title="Delete list" aria-label="Delete list">
           <Trash2 size={12} />
         </button>

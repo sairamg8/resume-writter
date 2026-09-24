@@ -275,3 +275,36 @@ it('the only list is never deleted (the store would refuse): the page says why; 
     await page.view.unmount();
   }
 });
+
+it('the board shows what it should: a WIP count, done cards past hideDoneAfterDays hidden and said so, a scrum board its active sprint', () => {
+  const day = 24 * 60 * 60 * 1000;
+  const done = (id, number, title, daysAgo) => issue(id, number, title, 'c3', { resolvedAt: Date.now() - daysAgo * day });
+  open([saved([project({
+    columns: [col('c1', 'To Do'), { ...col('c2', 'Doing', 'inprogress'), wipLimit: 1 }, col('c3', 'Done', 'done')],
+    issues: [...project().issues, issue('i6', 6, 'Stain the deck', 'c2'), done('i4', 4, 'Old chore', 30), done('i5', 5, 'Fresh chore', 1)],
+    hideDoneAfterDays: 14,
+  })])]);
+  let html = page('/boards/p1');
+  const columns = html.split('id="board-col-').slice(1).map((c) => text(`<${c}`));
+  assert.match(columns[1], /^ Doing 2\/1 /, 'the WIP count');
+  assert.match(html, /text-red-700 bg-red-100"[^>]*>2\/1/, 'over its limit: red');
+  assert.match(columns[2], /Fresh chore/);
+  assert.doesNotMatch(html, /Old chore/);
+  assert.match(text(html), /1 done card is hidden: resolved more than 14 days ago/);
+
+  store._resetBoardStoreForTest();
+  const sprints = [{ id: 's1', name: 'Sprint 1', goal: '', startDate: '2026-09-21', endDate: '2026-10-05', state: 'active' }];
+  open([saved([project({ mode: 'scrum', sprints, issues: project().issues.map((i) => (i.id === 'i2' ? { ...i, sprintId: 's1' } : i)) })])]);
+  html = text(page('/boards/p1'));
+  assert.match(html, /Sprint: Sprint 1 · ends 2026-10-05/);
+  assert.match(html, /Paint the fence/);
+  assert.doesNotMatch(html, /Fix the tap|Buy nails/, 'not in the sprint: off the board');
+  assert.ok(store.boardActions.addIssue('p1', { title: 'Sand the fence', columnId: 'c1', sprintId: 's1' }));
+  assert.match(text(page('/boards/p1')), /Sand the fence/);
+
+  store._resetBoardStoreForTest();
+  open([saved([project({ mode: 'scrum' })])]);
+  html = text(page('/boards/p1'));
+  assert.match(html, /No sprint is active, so every card is shown/);
+  assert.match(html, /Fix the tap.*Buy nails.*Paint the fence/);
+});

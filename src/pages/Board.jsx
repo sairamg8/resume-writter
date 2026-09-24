@@ -10,7 +10,7 @@ import { BoardColumn } from '@/components/board/BoardColumn';
 import { CardView } from '@/components/board/BoardCard';
 import { CardDetailSheet } from '@/components/board/CardDetailSheet';
 import { BoardStorageNotice } from '@/components/board/BoardStorageNotice';
-import { boardLists, dropTarget } from '@/utils/boardView';
+import { boardLists, boardSprint, dropTarget, hiddenDoneCount } from '@/utils/boardView';
 
 /** The "Add list" column at the right edge of the board (and its own scroll-snap target on mobile). */
 function AddListColumn({ onAdd }) {
@@ -98,7 +98,11 @@ export function Board() {
     );
   }
 
-  const lists = boardLists(board);
+  // One time for the render and its drops: which done cards hideDoneAfterDays keeps off the board.
+  const now = Date.now();
+  const lists = boardLists(board, { now });
+  const sprint = boardSprint(board);
+  const hiddenDone = hiddenDoneCount(board, { now });
   const activeCard = active?.type === 'card' ? lists.flatMap((l) => l.cards).find((c) => c.id === active.id) : null;
   const activeList = active?.type === 'list' ? lists.find((l) => l.id === active.id) : null;
   // Found by id alone: a move made elsewhere (another tab) may have changed its column meanwhile.
@@ -111,7 +115,7 @@ export function Board() {
 
   function onDragEnd({ active: a, over }) {
     setActive(null);
-    const move = dropTarget(board, { id: a.id, type: a.data.current?.type }, over && { id: over.id, data: over.data.current });
+    const move = dropTarget(board, { id: a.id, type: a.data.current?.type }, over && { id: over.id, data: over.data.current }, { now });
     if (move?.kind === 'column') store.moveColumn(board.id, move.columnId, move.toIndex);
     if (move?.kind === 'issue') store.moveIssue(board.id, move.issueId, move.target);
   }
@@ -211,6 +215,14 @@ export function Board() {
 
       <BoardStorageNotice persistError={store.persistError} recovery={store.recovery} onDismissRecovery={store.dismissRecovery} className="px-3 sm:px-5 pt-3 shrink-0" />
 
+      {(sprint || board.mode === 'scrum' || hiddenDone > 0) && (
+        <p className="px-3 sm:px-5 pt-2 text-xs text-gray-500 shrink-0">
+          {sprint && <>Sprint: <span className="font-semibold text-gray-700">{sprint.name}</span>{sprint.endDate && <> · ends {sprint.endDate}</>}. New cards join it.</>}
+          {!sprint && board.mode === 'scrum' && <>No sprint is active, so every card is shown.</>}
+          {hiddenDone > 0 && <> {hiddenDone} done card{hiddenDone === 1 ? ' is' : 's are'} hidden: resolved more than {board.hideDoneAfterDays} days ago.</>}
+        </p>
+      )}
+
       {/* Mobile list tabs — tap to scroll a column into view */}
       {lists.length > 0 && (
         <div className="md:hidden bg-white border-b border-gray-100 overflow-x-auto shrink-0">
@@ -238,7 +250,7 @@ export function Board() {
                   key={list.id}
                   list={list}
                   onOpenCard={(cardId, listId) => setOpen({ cardId, listId })}
-                  onAddCard={(listId, title) => store.addIssue(board.id, { title, columnId: listId })}
+                  onAddCard={(listId, title) => store.addIssue(board.id, { title, columnId: listId, sprintId: sprint?.id ?? null })}
                   onRenameList={(title) => store.updateColumn(board.id, list.id, { title })}
                   onDeleteList={() => deleteList(list)}
                 />
