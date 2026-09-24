@@ -210,7 +210,39 @@ const COMMON_STOP_WORDS = new Set([
 ]);
 
 /**
- * Extracts searchable text corpus from an entire resume object
+ * The résumé's own field `key` as every export prints it: '' when the user hid it on Personal Info
+ * (the eye beside Email, Phone, …, Summary; `hiddenFields`). The ATS score and the job match read
+ * the personal fields through this, so a hidden one counts as absent, as it is from the PDF, Word,
+ * Markdown and ATS text (R2-033; AUD-12 did the same for hidden entries and the photo).
+ */
+const shownField = (p, key) => ((Array.isArray(p?.hiddenFields) && p.hiddenFields.includes(key)) ? '' : p?.[key]);
+
+/** Whether the user filled `key` in and then hid it: its item then says so, not "missing". */
+const hiddenByUser = (p, key) => !shownField(p, key) && Boolean(String(p?.[key] || '').trim());
+
+/**
+ * An entry as it prints: each field hidden with the eye beside it (`item.hiddenFields`: Company, Job
+ * Title, Location, dates, Description, a skill group's title or skills) blanked, and a hidden End
+ * Date is no end — not "Present" — as the PDF and Word print it. The corpus and the score read
+ * entries through this, as they read the personal fields through shownField (R2-033).
+ */
+function printedItem(item) {
+  const hidden = Array.isArray(item?.hiddenFields) ? item.hiddenFields : [];
+  if (!hidden.length) return item;
+  const out = { ...item };
+  for (const key of hidden) out[key] = '';
+  if (hidden.includes('endDate')) out.current = false;
+  return out;
+}
+
+/** A section's shown entries, as they print (printedItem). */
+const shownItems = (s) => (Array.isArray(s?.items) ? s.items : [])
+  .filter((item) => item && typeof item === 'object' && item.visible !== false)
+  .map(printedItem);
+
+/**
+ * Extracts searchable text corpus from an entire resume object — what it prints: no hidden entry,
+ * section or summary (R2-033).
  */
 export function extractResumeCorpus(resume) {
   if (!resume) return '';
@@ -218,14 +250,13 @@ export function extractResumeCorpus(resume) {
   const p = resume.personal || {};
   if (p.name) parts.push(p.name);
   if (p.title) parts.push(p.title);
-  if (p.summary) parts.push(p.summary);
+  if (shownField(p, 'summary')) parts.push(p.summary);
 
   const sections = Array.isArray(resume.sections) ? resume.sections : [];
   for (const s of sections) {
     if (s.visible === false) continue;
     if (s.title) parts.push(s.title);
-    const items = (Array.isArray(s.items) ? s.items : []).filter(item => item && item.visible !== false);
-    for (const item of items) {
+    for (const item of shownItems(s)) {
       if (!item || typeof item !== 'object') continue;
       // Experience / Volunteering
       if (item.company) parts.push(item.company);
@@ -434,6 +465,9 @@ export function analyzeAtsScore(resume, jobDescriptionText = '') {
   const p = resume.personal || {};
   const sections = Array.isArray(resume.sections) ? resume.sections : [];
   const settings = resume.settings || {};
+  // A field the user hid prints nowhere, so it scores as absent — and its item says it is hidden (R2-033).
+  const shown = (key) => shownField(p, key);
+  const HIDDEN_DETAIL = 'You hid it on Personal Info, so no export prints it: show it again (the eye beside the field) for parsers to read it.';
   // templateId, not the raw field: an imported file carries "Modern" or " sidebar ", and an
   // un-normalised id used to fall through to the Sidebar branch and be scored as two columns.
   const currentTemplate = templateId(resume.template);
@@ -465,11 +499,16 @@ export function analyzeAtsScore(resume, jobDescriptionText = '') {
 
   // Email check (4 pts)
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (emailRegex.test(String(p.email || '').trim())) {
+  if (emailRegex.test(String(shown('email') || '').trim())) {
     contactPts += 4;
     results.categories.contact.items.push({
       id: 'email', status: 'pass', text: 'Valid professional email address',
       detail: `Email "${p.email}" will parse reliably across all job portals.`,
+    });
+  } else if (hiddenByUser(p, 'email')) {
+    results.categories.contact.items.push({
+      id: 'email', status: 'fail', text: 'Email address is hidden on the résumé',
+      detail: `Workday and Greenhouse require a valid email to link your application. ${HIDDEN_DETAIL}`,
     });
   } else {
     results.categories.contact.items.push({
@@ -479,7 +518,7 @@ export function analyzeAtsScore(resume, jobDescriptionText = '') {
   }
 
   // Phone check (4 pts)
-  const phoneDigits = String(p.phone || '').replace(/\D/g, '');
+  const phoneDigits = String(shown('phone') || '').replace(/\D/g, '');
   if (phoneDigits.length >= 10 && phoneDigits.length <= 15) {
     contactPts += 4;
     results.categories.contact.items.push({
@@ -492,6 +531,11 @@ export function analyzeAtsScore(resume, jobDescriptionText = '') {
       id: 'phone', status: 'warn', text: 'Short phone number format',
       detail: 'Include area code and country code for international compatibility.',
     });
+  } else if (hiddenByUser(p, 'phone')) {
+    results.categories.contact.items.push({
+      id: 'phone', status: 'fail', text: 'Phone number is hidden on the résumé',
+      detail: `Recruiters and automated scheduling systems need a reachable phone number. ${HIDDEN_DETAIL}`,
+    });
   } else {
     results.categories.contact.items.push({
       id: 'phone', status: 'fail', text: 'Missing or invalid phone number',
@@ -500,7 +544,7 @@ export function analyzeAtsScore(resume, jobDescriptionText = '') {
   }
 
   // Location check (3 pts)
-  const loc = String(p.location || '').trim();
+  const loc = String(shown('location') || '').trim();
   if (loc.includes(',') || loc.length >= 5) {
     contactPts += 3;
     results.categories.contact.items.push({
@@ -513,6 +557,11 @@ export function analyzeAtsScore(resume, jobDescriptionText = '') {
       id: 'location', status: 'warn', text: 'Vague location format',
       detail: 'Use "City, State" (e.g. "Austin, TX") or "City, Country" for 100% Workday parsing.',
     });
+  } else if (hiddenByUser(p, 'location')) {
+    results.categories.contact.items.push({
+      id: 'location', status: 'warn', text: 'Location is hidden on the résumé',
+      detail: `Many ATS filter candidates based on location/commute radius. ${HIDDEN_DETAIL}`,
+    });
   } else {
     results.categories.contact.items.push({
       id: 'location', status: 'warn', text: 'Missing location',
@@ -521,11 +570,16 @@ export function analyzeAtsScore(resume, jobDescriptionText = '') {
   }
 
   // LinkedIn / Online Profile check (2 pts)
-  if (p.linkedin && p.linkedin.trim()) {
+  if (String(shown('linkedin') || '').trim()) {
     contactPts += 2;
     results.categories.contact.items.push({
       id: 'linkedin', status: 'pass', text: 'LinkedIn profile link present',
       detail: 'Workday and Lever enrich candidate records automatically using LinkedIn URLs.',
+    });
+  } else if (hiddenByUser(p, 'linkedin')) {
+    results.categories.contact.items.push({
+      id: 'linkedin', status: 'warn', text: 'LinkedIn profile is hidden on the résumé',
+      detail: `Workday and Lever enrich candidate records automatically using LinkedIn URLs. ${HIDDEN_DETAIL}`,
     });
   } else {
     results.categories.contact.items.push({
@@ -535,7 +589,7 @@ export function analyzeAtsScore(resume, jobDescriptionText = '') {
   }
 
   // Summary / Objective check (3 pts)
-  const summaryWords = String(p.summary || '').trim().split(/\s+/).filter(Boolean);
+  const summaryWords = String(shown('summary') || '').trim().split(/\s+/).filter(Boolean);
   if (summaryWords.length >= 25 && summaryWords.length <= 150) {
     contactPts += 3;
     results.categories.contact.items.push({
@@ -553,6 +607,11 @@ export function analyzeAtsScore(resume, jobDescriptionText = '') {
     results.categories.contact.items.push({
       id: 'summary', status: 'warn', text: 'Brief summary',
       detail: 'Expand your summary to 2-3 impactful sentences highlighting your core value.',
+    });
+  } else if (hiddenByUser(p, 'summary')) {
+    results.categories.contact.items.push({
+      id: 'summary', status: 'warn', text: 'Professional Summary is hidden on the résumé',
+      detail: `A strong summary helps parsers index your seniority and primary domain immediately. ${HIDDEN_DETAIL}`,
     });
   } else {
     results.categories.contact.items.push({
@@ -635,7 +694,7 @@ export function analyzeAtsScore(resume, jobDescriptionText = '') {
   // ── 3. Work Experience & Action Verbs (25 pts) ─────────────────────
   let expPts = 0;
   const expSections = visibleSections.filter(s => s.type === 'experience');
-  const allExpItems = expSections.flatMap(s => (Array.isArray(s.items) ? s.items.filter(i => i && i.visible !== false) : []));
+  const allExpItems = expSections.flatMap(shownItems);
 
   if (allExpItems.length === 0) {
     results.categories.experience.items.push({
@@ -789,7 +848,7 @@ export function analyzeAtsScore(resume, jobDescriptionText = '') {
   // ── 4. Education & Credentials (15 pts) ───────────────────────────
   let eduPts = 0;
   const eduSections = visibleSections.filter(s => s.type === 'education');
-  const allEduItems = eduSections.flatMap(s => (Array.isArray(s.items) ? s.items.filter(i => i && i.visible !== false) : []));
+  const allEduItems = eduSections.flatMap(shownItems);
 
   if (allEduItems.length === 0) {
     results.categories.education.items.push({
@@ -851,7 +910,7 @@ export function analyzeAtsScore(resume, jobDescriptionText = '') {
   // ── 5. Skills & Keyword Density (10 pts) ──────────────────────────
   let skillsPts = 0;
   const skillSections = visibleSections.filter(s => s.type === 'skills');
-  const allSkillItems = skillSections.flatMap(s => (Array.isArray(s.items) ? s.items.filter(i => i && i.visible !== false) : []));
+  const allSkillItems = skillSections.flatMap(shownItems);
 
   // Count individual skills
   const skillsSet = new Set();
