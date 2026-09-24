@@ -75,7 +75,7 @@ test('The paragraph before (and after) a bullet list prints, in the order the PD
 
 test('A one-line description prints above the entry\'s legacy bullets, as in the PDF', () => {
   const out = text({ type: 'experience', title: 'Experience', items: [{ role: 'Dev', company: 'Beta', description: 'Led the core team.', bullets: ['Legacy one', ' ', 'Legacy two'] }] });
-  assert.deepEqual(under(out, 'EXPERIENCE'), ['Dev - Beta', 'Led the core team.', '* Legacy one', '* Legacy two']);
+  assert.deepEqual(under(out, 'EXPERIENCE'), ['Beta - Dev', 'Led the core team.', '* Legacy one', '* Legacy two']);
 });
 
 test('Numbered lists keep their numbers, typed bullets and nested items read as list items', () => {

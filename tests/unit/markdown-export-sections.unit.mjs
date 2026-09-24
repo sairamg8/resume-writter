@@ -62,18 +62,18 @@ test('Education prints the field of study after the degree, as the PDF prints "d
 
 test('A nested list item prints on its own line, indented under its parent', () => {
   const out = md({ type: 'experience', title: 'Work', items: [{ role: 'Dev', company: 'Acme', description: '<ul><li>Shipped v2<ul><li>nested child<ul><li>grandchild</li></ul></li></ul></li><li>Second</li></ul>' }] });
-  assert.deepEqual(under(out, 'Work'), ['### **Dev** — *Acme*', '- Shipped v2', '    - nested child', '        - grandchild', '- Second']);
+  assert.deepEqual(under(out, 'Work'), ['### **Acme** — *Dev*', '- Shipped v2', '    - nested child', '        - grandchild', '- Second']);
 });
 
 test('A numbered list keeps its numbers; a paragraph around a list stays a paragraph of its own', () => {
   const out = md({ type: 'experience', title: 'Work', items: [{ role: 'Dev', company: 'Acme', description: '<p>Lead line.</p><ol><li>One</li><li>Two</li></ol><p>Closing note.</p>' }] });
-  const body = out.slice(out.indexOf('### **Dev**'));
+  const body = out.slice(out.indexOf('### **Acme**'));
   assert.ok(body.includes('Lead line.\n\n1. One\n2. Two\n\nClosing note.'), body);
 });
 
 test('A line break inside a paragraph or a list item stays a line break (two trailing spaces)', () => {
   const out = md({ type: 'experience', title: 'Work', items: [{ role: 'Dev', company: 'Acme', description: '<p>First line<br>Second line</p><ul><li>Item top<br>item rest</li></ul>' }] });
-  const body = out.slice(out.indexOf('### **Dev**'));
+  const body = out.slice(out.indexOf('### **Acme**'));
   assert.ok(body.includes('First line  \nSecond line\n\n- Item top  \n  item rest'), body);
 });
 
@@ -83,7 +83,7 @@ test('Legacy bullets print after the description, as the PDF prints them', () =>
     { type: 'projects', title: 'Projects', items: [{ name: 'Flow', bullets: ['Project bullet'] }] },
     { type: 'custom', title: 'Talks', items: [{ title: 'Keynote', bullets: ['Custom bullet'] }] },
   );
-  assert.deepEqual(under(out, 'Work'), ['### **Dev** — *Acme*', 'Owned billing.', '- Legacy walrus bullet']);
+  assert.deepEqual(under(out, 'Work'), ['### **Acme** — *Dev*', 'Owned billing.', '- Legacy walrus bullet']);
   assert.ok(under(out, 'Projects').includes('- Project bullet'), out);
   assert.ok(under(out, 'Talks').includes('- Custom bullet'), out);
 });

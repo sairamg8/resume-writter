@@ -17,7 +17,8 @@ const roundTrip = (resume) => jsonResumeToCpwtResume(exportOf(resume));
 /** Each block of rich text as it prints: its list marker, its text, bold runs marked. */
 const printed = (html) => parseRichText(html).map((b) => `${b.marker ? `${b.marker} ` : ''}${b.runs.map((r) => (r.bold ? `**${r.text}**` : r.text)).join('')}`);
 const section = (type, title, items) => ({ id: `sec-${title}`, type, title, visible: true, items });
-const resumeWith = (sections, personal = {}) => ({ personal: { name: 'Ada Lovelace', ...personal }, template: 'classic', settings: {}, sections });
+// The Classic starter's Date format, the one the import gives a résumé (a JSON Resume file carries none).
+const resumeWith = (sections, personal = {}) => ({ personal: { name: 'Ada Lovelace', ...personal }, template: 'classic', settings: { dateFormat: 'MMM YYYY' }, sections });
 const jobs = (r) => r.sections.filter((s) => s.type === 'experience').flatMap((s) => s.items);
 
 const RICH = '<p>Ops <strong>lead</strong> for ten years</p><ul><li>Kubernetes</li><li>Terraform<ul><li>Modules</li></ul></li></ul><ol><li>First</li><li>Second</li></ol><p>Closing line</p>';
@@ -30,7 +31,7 @@ test('a past job with no end date comes back past, a current one current (R2-006
   ])]);
   const back = roundTrip(resume);
   assert.deepEqual(jobs(back).map((j) => [j.company, Boolean(j.current), j.endDate]), [['Now Co', true, ''], ['Past Co', false, ''], ['Old Co', false, '2017-01']]);
-  assert.equal(generateAtsPlainText(back), generateAtsPlainText(resume), '"Past Co" prints 2019-01, not 2019-01 - Present');
+  assert.equal(generateAtsPlainText(back), generateAtsPlainText(resume), '"Past Co" prints Jan 2019, not Jan 2019 - Present');
 });
 
 test('a file another builder wrote: a job with no end date is still the current one — JSON Resume\'s own convention', () => {

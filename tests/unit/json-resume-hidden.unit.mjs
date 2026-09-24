@@ -53,7 +53,8 @@ function resumeWithHidden() {
   return {
     personal: { name: 'Ada Lovelace', hiddenFields: [] },
     template: 'classic',
-    settings: {},
+    // The Classic starter's Date format, the one the import gives a résumé (a JSON Resume file carries none).
+    settings: { dateFormat: 'MMM YYYY' },
     sections: [
       section('experience', 'Work', [
         { id: 'e1', company: 'Acme', role: 'Lead', location: 'Secret Town', startDate: '2021-03', endDate: '2023-06', current: false,
@@ -91,10 +92,11 @@ test('sections: a hidden section, a hidden entry and an entry\'s hidden fields a
 test('a current job whose end date is hidden prints no end date, before the trip and after it (R2-007)', () => {
   const resume = {
     personal: { name: 'Ada' },
+    settings: { dateFormat: 'MMM YYYY' },
     sections: [section('experience', 'Work', [{ id: 'e1', company: 'Acme', role: 'Lead', startDate: '2020-01', endDate: '', current: true, description: '', hiddenFields: ['endDate'] }])],
   };
   const printed = generateAtsPlainText(resume);
-  assert.match(printed, /^2020-01$/m, 'the hidden end prints nothing, not "Present"');
+  assert.match(printed, /^Jan 2020$/m, 'the hidden end prints nothing, not "Present"');
   assert.equal(generateAtsPlainText(importOf(fileOf(resume))), printed);
 });
 
