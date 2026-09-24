@@ -5,7 +5,7 @@ import { isText, storedText } from './storedText.js';
 import { entries, flattened } from './jsonResumeText.js';
 import { customEntry, SECTION_KEYS } from './jsonResumeSections.js';
 import { CONTACT_FIELDS } from './contacts.js';
-import { templateId } from '../constants/templates.js';
+import { headerTemplateId, templateId } from '../constants/templates.js';
 
 const isRecord = (v) => Boolean(v) && typeof v === 'object' && !Array.isArray(v);
 
@@ -103,7 +103,13 @@ export function cpwtResumeToJsonResume(resume) {
     // reads it back (TUI-4): until it was written, an exported Modern, Sidebar, Executive or Minimal
     // résumé came back Classic. templateId: what the PDF actually drew, so a résumé holding an id the
     // app no longer offers exports as the Classic it was printing as, not as that dead id.
-    // The sections' layout rides beside it (above; read back by jsonResumeImport.js).
-    meta: { template: templateId(resume.template), sections: layout },
+    // The sections' layout rides beside it (above; read back by jsonResumeImport.js). So does the
+    // Sidebar's Layout "Single · ATS-safe", which decides the page itself: without it the import
+    // reopened the two columns a portal may interleave. Written only where it prints (headerTemplateId).
+    meta: {
+      template: templateId(resume.template),
+      ...(headerTemplateId(resume.template, resume.settings) !== templateId(resume.template) ? { layout: 'single' } : {}),
+      sections: layout,
+    },
   };
 }
