@@ -9,6 +9,7 @@ import {
   SIDEBAR_TYPES, SideSectionTitle, EntryLink, SideEducation, SideLanguages, SideCertifications, SideInterests, SideReferences,
 } from './PdfSidebarColumn';
 import { SideSkills } from './PdfSidebarSkills';
+import { breakLinks } from './pdfFontLoader';
 
 export { SIDEBAR_TYPES, SideSectionTitle };
 
@@ -180,7 +181,7 @@ export function SidebarMainProjects({ section, settings, marginBottom, spaceBefo
                 {...cardWordRooms(settings, entrySize, item.name, item.technologies)}
                 first={item.name ? <Text style={{ fontSize: entrySize, fontWeight: 'bold', color: textColor, lineHeight: 1.2, textAlign }}>{item.name}</Text> : null}
                 details={item.technologies ? <Text style={{ fontSize: entrySize - 1, color: hexAlpha(accent, 0.7), lineHeight: 1.2, textAlign }}>{item.technologies}</Text> : null}
-                extra={item.url ? <EntryLink url={item.url} style={{ fontSize: entrySize - 1.5, color: accent, textAlign }} /> : null}
+                extra={item.url ? <EntryLink url={item.url} style={{ fontSize: entrySize - 1.5, color: accent, textAlign }} hyphenationCallback={breakLinks} /> : null}
               />
               {hasRichText(item.description) ? (
                 <PdfRichText html={item.description} style={{ fontSize: entrySize - 0.5, color: shade.body, lineHeight: lineH, marginTop: 2, textAlign }} />

@@ -81,6 +81,16 @@ export function breakLongWords(max) {
   };
 }
 
+/**
+ * The break callback of a line that holds a link in a box narrower than a long URL — a Projects or
+ * Certifications card in a 2- to 4-column grid, the Sidebar's main-column card. The registered one
+ * marks only tokens past 48 characters, and a 43-character URL is wider than a half-width card: it
+ * ran over the card beside it (R2-105). This one marks every token past 16 characters, which any
+ * card holds; textkit breaks at a mark only a token wider than its line, so a URL that fits its line
+ * — or the next — prints whole, as typed.
+ */
+export const breakLinks = breakLongWords(16);
+
 let hyphenationSet = false;
 /** Words are never hyphenated — résumé text should read as typed. Very long tokens may break. */
 export function ensureNoHyphenation() {

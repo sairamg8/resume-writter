@@ -3,6 +3,7 @@ import { Text } from './PdfText';
 import { PdfRichText } from './PdfRichText';
 import { ContactValue } from './PdfContact';
 import { pxToPt } from './pdfUnits';
+import { breakLinks } from './pdfFontLoader';
 import { hasRichText, safeHref } from '@/utils/richText';
 import { dateRange, formatDate } from '@/utils/dates';
 import {
@@ -43,7 +44,8 @@ export function CertificationsSection({ section, settings, marginBottom, spaceBe
           const font = settings?._pdfFontFamily;
           const onName = onBaselineOf([{ fontFamily: font, fontSize: entrySize, fontWeight: 'bold' }, { fontFamily: font, fontSize: entrySize }], { fontFamily: font, fontSize: baseSize });
           const nameLine = (
-            <Text style={{ fontSize: entrySize, color: textColor, textAlign }}>
+            // A link that does not fit its line breaks inside it rather than run out (R2-105).
+            <Text style={{ fontSize: entrySize, color: textColor, textAlign }} hyphenationCallback={item.url ? breakLinks : undefined}>
               <Text style={{ fontWeight: 'bold' }}>{item.name || item.title}</Text>
               {item.issuer ? <Text style={{ color: shade.sub, fontStyle: italicSubs ? 'italic' : 'normal' }}>{' — '}{item.issuer}</Text> : null}
               {item.credentialId ? <Text style={{ color: shade.muted }}>{` · ID: ${item.credentialId}`}</Text> : null}
@@ -51,9 +53,10 @@ export function CertificationsSection({ section, settings, marginBottom, spaceBe
             </Text>
           );
           // The name line's widest word, which the date wraps under rather than prints over (R3-002).
+          // Not the link's: it breaks where it must (breakLinks).
           const nameBox = { fontFamily: font, fontSize: entrySize };
           const nameMin = wordRoom([item.name || item.title, { ...nameBox, fontWeight: 'bold' }], [item.issuer, nameBox],
-            [item.credentialId && `ID: ${item.credentialId}`, nameBox], [item.url && (item.urlLabel || item.url), nameBox]);
+            [item.credentialId && `ID: ${item.credentialId}`, nameBox]);
           if (centered) {
             return (
               <View style={{ alignItems: 'center' }}>
@@ -112,7 +115,7 @@ export function ProjectsSection({ section, settings, marginBottom, spaceBefore, 
                   ? <CentredLine first={item.name ? name : null} date={dateStr} dateStyle={dateStyle} sepColor={shade.muted} gap={fieldGap(baseSize)} />
                   : <EndRow left={name} leftMin={wordRoom([item.name, { fontFamily: font, fontSize: entrySize, fontWeight: 'bold' }])}>{endField(dateStr, dateStyle, fieldGap(baseSize))}</EndRow>}
                 {item.technologies || item.url ? (
-                  <Text style={{ fontSize: baseSize, color: shade.meta, textAlign }}>
+                  <Text style={{ fontSize: baseSize, color: shade.meta, textAlign }} hyphenationCallback={item.url ? breakLinks : undefined}>
                     {item.technologies}
                     {item.url ? <Text style={{ color: accent }}>{item.technologies ? ' · ' : ''}<ContactValue value={item.url} href={safeHref(item.url)} style={{ color: accent }} /></Text> : null}
                   </Text>
