@@ -1,6 +1,6 @@
 import { ChevronDown, ChevronRight, Eye, EyeOff } from 'lucide-react';
 import { HEADER_BORDER_PT } from '@/constants/designNumbers';
-import { drawsContactIcons, hasHeaderControls, headerBorderOn, headerControlTemplateLabels } from '@/constants/templates';
+import { contactLayoutOf, contactStyleOf, drawsContactIcons, hasHeaderControls, headerBorderOn, headerControlTemplateLabels } from '@/constants/templates';
 import { ICON_SET_OPTIONS, getIconSetId } from '@/utils/contactIcons';
 import { headerGapRows, headerGapKeysSet } from '@/utils/headerSpacingRows';
 import { HeaderSpacingGroup } from '@/components/HeaderSpacingControls';
@@ -127,13 +127,13 @@ export function HeaderCustomization({ s, set, clear, personal, template, templat
                 <p className="text-[11px] text-gray-400 mb-1.5">Layout</p>
                 <div className="flex gap-2 mb-3">
                   {[{ val: 'single', label: 'Single' }, { val: 'justify', label: 'Justify' }, { val: '2grid', label: '2 Grid' }].map(({ val, label }) => (
-                    <Chip key={val} active={(s.contactLayout || 'justify') === val} onClick={() => set('contactLayout', val)}>{label}</Chip>
+                    <Chip key={val} active={contactLayoutOf(s) === val} onClick={() => set('contactLayout', val)}>{label}</Chip>
                   ))}
                 </div>
                 <p className="text-[11px] text-gray-400 mb-1.5">Style</p>
                 <div className="flex gap-2 mb-2">
                   {[{ val: 'icon', label: '⊕ Icon' }, { val: 'bullet', label: '• Bullet' }, { val: 'bar', label: '| Bar' }].map(({ val, label }) => (
-                    <Chip key={val} active={(s.contactStyle || 'icon') === val} onClick={() => set('contactStyle', val)}>{label}</Chip>
+                    <Chip key={val} active={contactStyleOf(s) === val} onClick={() => set('contactStyle', val)}>{label}</Chip>
                   ))}
                 </div>
                 {/* The header draws the pack exactly as the Style chip above reads it: a blank
