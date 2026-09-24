@@ -13,6 +13,7 @@ import {
 } from '@/utils/atsChecker';
 import { templateLabel } from '@/constants/templates';
 import { skillGroup } from '@/utils/skills';
+import { copyText } from '@/utils/clipboard';
 import { downloadBlob } from '@/utils/download';
 import { newId } from '@/utils/ids';
 
@@ -57,7 +58,8 @@ const LAYOUT_FIXES = {
 
 export default function AtsCheckerPanel({ resume, store }) {
   const [jobDescription, setJobDescription] = useState('');
-  const [copiedText, setCopiedText] = useState(false);
+  // Copy Text's outcome, shown on the button for a moment: 'done', 'failed' or null.
+  const [copiedText, setCopiedText] = useState(null);
   const [copiedKeyword, setCopiedKeyword] = useState(null);
   const [expandedCats, setExpandedCats] = useState({
     contact: true,
@@ -152,11 +154,12 @@ export default function AtsCheckerPanel({ resume, store }) {
     );
   }
 
+  /** Copy Text: says Copied!, or Copy failed where the browser refuses the clipboard (R2-080). */
   function handleCopyPlainText() {
     const text = generateAtsPlainText(resume);
-    navigator.clipboard.writeText(text).then(() => {
-      setCopiedText(true);
-      setTimeout(() => setCopiedText(false), 2500);
+    copyText(text).then(() => 'done', () => 'failed').then((outcome) => {
+      setCopiedText(outcome);
+      setTimeout(() => setCopiedText(null), 2500);
     });
   }
 
@@ -289,10 +292,12 @@ export default function AtsCheckerPanel({ resume, store }) {
         <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
           <button
             onClick={handleCopyPlainText}
+            title={copiedText === 'failed' ? 'The browser did not allow copying to the clipboard. Download the .txt file instead.' : undefined}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-gray-700 bg-white hover:bg-gray-100 border border-gray-300 rounded-xl shadow-sm transition-all"
           >
-            {copiedText ? <Check size={13} className="text-emerald-600" /> : <Copy size={13} />}
-            {copiedText ? 'Copied!' : 'Copy Text'}
+            {copiedText === 'done' && <><Check size={13} className="text-emerald-600" /> Copied!</>}
+            {copiedText === 'failed' && <><XCircle size={13} className="text-red-600" /> Copy failed</>}
+            {!copiedText && <><Copy size={13} /> Copy Text</>}
           </button>
           <button
             onClick={handleDownloadPlainText}

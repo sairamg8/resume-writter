@@ -3,7 +3,9 @@
 // of the tab, each against the row that found it broken:
 //   - "Print entries one under another (Grids 1)", the side-by-side warning's fix (R2-021);
 //   - the job-description scanner's "+", which wrote into a hidden skill group (R2-024, R2-081);
-//   - "Put Job Title First", which rewrote hidden sections the report never inspected (R2-079).
+//   - "Put Job Title First", which rewrote hidden sections the report never inspected (R2-079);
+//   - Copy Text and the .txt download, and Copy failing silently where the clipboard is refused, here
+//     and in the STAR Optimizer (R2-080).
 //
 // The panel is mounted as Editor.jsx mounts it — the real useAppStore as its `store`, the résumé that
 // store holds as its `resume` — through react-dom/client in tests/pdf/fake-dom.mjs, with an in-memory
@@ -41,6 +43,7 @@ async function atsTab(r) {
   globalThis.localStorage = new MemoryStorage([[KEY, JSON.stringify({ resumes: [r], activeId: r.id })]]);
   // The panel's buttons flash "done" for two seconds (setTimeout): the clock is the test's, and runs
   // out before the tab unmounts, so no timer fires after it.
+  mock.timers.reset();
   mock.timers.enable({ apis: ['setTimeout'] });
   let store = null;
   function AtsTab() {
@@ -239,4 +242,132 @@ describe('"Put Job Title First": it leads with the role on the sections the repo
       assert.deepEqual(byId(after, 'unset'), byId(before, 'unset'), 'Executive already prints it role first');
     } finally { await tab.unmount(); }
   });
+});
+
+/**
+ * `navigator.clipboard` for the length of `fn`: `writeText` resolves and records what it was given,
+ * or rejects as a browser that denies clipboard-write does; `clipboard: null` is a page with no
+ * clipboard at all (an insecure origin).
+ */
+async function withClipboard(mode, fn) {
+  const saved = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
+  const written = [];
+  const clipboard = mode === 'none' ? undefined : {
+    writeText: (text) => (mode === 'deny'
+      ? Promise.reject(new Error('NotAllowedError: Write permission denied.'))
+      : Promise.resolve(written.push(text))),
+  };
+  Object.defineProperty(globalThis, 'navigator', { value: { clipboard }, configurable: true, writable: true });
+  try { await fn(written); } finally { Object.defineProperty(globalThis, 'navigator', saved); }
+}
+
+/** Lets the clipboard's promise settle, and React commit what it set. */
+const settle = async () => {
+  for (let i = 0; i < 5; i += 1) await new Promise((r) => { setImmediate(r); });
+};
+
+describe('ATS Plain Text: Copy Text and the .txt download (R2-080, R2-166)', () => {
+  const plain = () => resume({ template: 'classic', personal: { name: 'Jonas Weber', email: 'jonas@example.com' }, sections: [
+    section('experience', [{ company: 'Acme', role: 'Engineer', startDate: '2020-01', current: true }]),
+  ] });
+
+  it('Copy Text writes the ATS plain text, and says Copied!', async () => {
+    await withClipboard('allow', async (written) => {
+      const r = plain();
+      const tab = await atsTab(r);
+      try {
+        const { generateAtsPlainText } = await loadModule('/src/utils/atsChecker.js');
+        tab.click('Copy Text');
+        await settle();
+        assert.deepEqual(written, [generateAtsPlainText(tab.saved())]);
+        assert.match(written[0], /JONAS WEBER/);
+        assert.ok(tab.labels().includes('Copied!'));
+      } finally { await tab.unmount(); }
+    });
+  });
+
+  for (const [mode, why] of [['deny', 'the browser denies clipboard-write'], ['none', 'the page has no clipboard']]) {
+    it(`${why}: the button says the copy failed and points to the download`, async () => {
+      await withClipboard(mode, async () => {
+        const tab = await atsTab(plain());
+        try {
+          tab.click('Copy Text');
+          await settle();
+          assert.ok(tab.labels().includes('Copy failed'), `the panel offers: ${tab.labels().join(' | ')}`);
+          assert.match(tab.button('Copy failed').getAttribute('title'), /Download/);
+          assert.ok(!tab.labels().includes('Copied!'));
+        } finally { await tab.unmount(); }
+      });
+    });
+  }
+
+  it('Download saves the ATS plain text as <name>_ATS.txt', async () => {
+    const tab = await atsTab(plain());
+    const saved = { create: URL.createObjectURL, revoke: URL.revokeObjectURL };
+    const blobs = [];
+    const clicks = [];
+    URL.createObjectURL = (blob) => { blobs.push(blob); return 'blob:ats'; };
+    URL.revokeObjectURL = () => {};
+    const { document } = tab.view;
+    const createElement = document.createElement.bind(document);
+    document.createElement = (tag) => Object.assign(createElement(tag), tag === 'a' ? { click() { clicks.push({ href: this.href, download: this.download }); } } : {});
+    try {
+      const { generateAtsPlainText } = await loadModule('/src/utils/atsChecker.js');
+      const button = [...elements(tab.view.container)].find((el) => el.getAttribute?.('title') === 'Download .txt');
+      tab.view.act(() => reactProps(button).onClick());
+      assert.deepEqual(clicks, [{ href: 'blob:ats', download: 'Jonas_Weber_ATS.txt' }]);
+      assert.equal(blobs[0].type, 'text/plain;charset=utf-8');
+      assert.equal(await blobs[0].text(), generateAtsPlainText(tab.saved()));
+    } finally {
+      Object.assign(URL, { createObjectURL: saved.create, revokeObjectURL: saved.revoke });
+      await tab.unmount();
+    }
+  });
+});
+
+describe('STAR Optimizer → Copy: a refused clipboard is said, not silent (R2-080)', () => {
+  async function optimizer() {
+    const { default: BulletOptimizerModal } = await loadModule('/src/components/BulletOptimizerModal.jsx');
+    mock.timers.reset();
+  mock.timers.enable({ apis: ['setTimeout'] });
+    const view = mount(BulletOptimizerModal, { isOpen: true, onClose() {}, onApply() {}, initialText: 'Led 3 migrations' });
+    const text = (el) => el.textContent.replace(/\s+/g, ' ').trim();
+    const buttons = () => [...elements(view.container)].filter((el) => el.tagName === 'BUTTON');
+    return {
+      labels: () => buttons().map(text),
+      button: (label) => buttons().find((el) => text(el) === label),
+      click(label) { view.act(() => reactProps(buttons().find((el) => text(el) === label)).onClick()); },
+      async unmount() {
+        view.act(() => mock.timers.runAll());
+        mock.timers.reset();
+        await view.unmount();
+      },
+    };
+  }
+
+  it('allowed: it copies the statement and says Copied', async () => {
+    await withClipboard('allow', async (written) => {
+      const modal = await optimizer();
+      try {
+        modal.click('Copy');
+        await settle();
+        assert.deepEqual(written, ['Led 3 migrations']);
+        assert.ok(modal.labels().includes('Copied'));
+      } finally { await modal.unmount(); }
+    });
+  });
+
+  for (const mode of ['deny', 'none']) {
+    it(`${mode === 'deny' ? 'denied' : 'no clipboard'}: it says Copy failed`, async () => {
+      await withClipboard(mode, async () => {
+        const modal = await optimizer();
+        try {
+          modal.click('Copy');
+          await settle();
+          assert.ok(modal.labels().includes('Copy failed'), `the modal offers: ${modal.labels().join(' | ')}`);
+          assert.match(modal.button('Copy failed').getAttribute('title'), /select/i);
+        } finally { await modal.unmount(); }
+      });
+    });
+  }
 });

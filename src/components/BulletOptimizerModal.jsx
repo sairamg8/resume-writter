@@ -9,11 +9,13 @@ import {
   ACTION_VERBS_BY_CATEGORY,
   GOOGLE_XYZ_TEMPLATES
 } from '@/utils/bulletOptimizer';
+import { copyText } from '@/utils/clipboard';
 
 export default function BulletOptimizerModal({ isOpen, onClose, initialText = '', onApply }) {
   const [text, setText] = useState(initialText);
   const [activeCategory, setActiveCategory] = useState('Technical & Engineering');
-  const [copied, setCopied] = useState(false);
+  // Copy's outcome, shown on the button for a moment: 'done', 'failed' or null.
+  const [copied, setCopied] = useState(null);
 
   if (!isOpen) return null;
 
@@ -48,10 +50,11 @@ export default function BulletOptimizerModal({ isOpen, onClose, initialText = ''
     onClose();
   }
 
+  /** Copy: says Copied, or Copy failed where the browser refuses the clipboard (R2-080). */
   function handleCopy() {
-    navigator.clipboard.writeText(text).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+    copyText(text).then(() => 'done', () => 'failed').then((outcome) => {
+      setCopied(outcome);
+      setTimeout(() => setCopied(null), 2000);
     });
   }
 
@@ -224,10 +227,12 @@ export default function BulletOptimizerModal({ isOpen, onClose, initialText = ''
         <div className="px-5 py-3 border-t border-gray-100 bg-gray-50 flex items-center justify-between gap-3">
           <button
             onClick={handleCopy}
+            title={copied === 'failed' ? 'The browser did not allow copying to the clipboard. Select the text above and copy it with Ctrl+C (⌘C on a Mac).' : undefined}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-gray-600 hover:text-gray-800 bg-white border border-gray-200 rounded-xl hover:bg-gray-100 transition-colors"
           >
-            {copied ? <Check size={13} className="text-emerald-600" /> : <Copy size={13} />}
-            {copied ? 'Copied' : 'Copy'}
+            {copied === 'done' && <><Check size={13} className="text-emerald-600" /> Copied</>}
+            {copied === 'failed' && <><AlertTriangle size={13} className="text-red-600" /> Copy failed</>}
+            {!copied && <><Copy size={13} /> Copy</>}
           </button>
           <div className="flex items-center gap-2">
             <button
