@@ -57,5 +57,9 @@ export function withSkillNames(r) {
   return sections.some((s, i) => s !== r.sections[i]) ? { ...r, sections } : r;
 }
 
-/** The separator between a group's category and its skills (Inline and Bullet; Word). */
-export const skillSeparator = (settings = {}) => (settings.separator === 'dash' ? ' – ' : ': ');
+/**
+ * The separator between a group's category and its skills (Inline and Bullet; Word): Section Options →
+ * Separator's Colon (and a section storing none), Dash or Pipe (R2-147).
+ */
+const SEPARATORS = { colon: ': ', dash: ' – ', pipe: ' | ' };
+export const skillSeparator = (settings = {}) => SEPARATORS[settings.separator] || SEPARATORS.colon;

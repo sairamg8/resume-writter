@@ -167,7 +167,12 @@ export const SECTIONS = {
   },
   'section.separator': {
     family: 'sections',
-    check: each('section.separator', ({ v, m, snap }) => (prints(snap, `${m.label}:`) === (v === 'colon') ? [] : [`${v}: "${m.label}:" ${v === 'colon' ? 'does not print' : 'still prints'}`])),
+    check: each('section.separator', ({ v, m, snap }) => {
+      if (prints(snap, `${m.label}:`) !== (v === 'colon')) return [`${v}: "${m.label}:" ${v === 'colon' ? 'does not print' : 'still prints'}`];
+      // Dash's and Pipe's own mark after the category (skillSeparator, R2-147).
+      const own = { dash: `${m.label} –`, pipe: `${m.label} |` }[v];
+      return own && !prints(snap, own) ? [`${v}: "${own}" does not print`] : [];
+    }),
   },
   'section.showDates': { family: 'sections', check: each('section.showDates', ({ v, m, snap }) => (v === false && m.date && prints(snap, m.date) ? [`hidden dates still print (${m.date})`] : [])) },
   'section.showLocation': { family: 'sections', check: each('section.showLocation', ({ v, m, snap }) => (v === false && m.location && prints(snap, m.location) ? [`hidden location still prints (${m.location})`] : [])) },
