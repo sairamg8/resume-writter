@@ -42,7 +42,7 @@ describe('résumé exports: Markdown and JSON Resume', () => {
 
         // The same file, imported from the editor's Export menu.
         cy.openExportMenu();
-        cy.get('input[type="file"][accept=".json"]').selectFile({
+        cy.get('input[type="file"][accept^=".json"]').selectFile({
           contents: Cypress.Buffer.from(raw), fileName: 'alex_resume.json', mimeType: 'application/json',
         }, { force: true });
         cy.location('hash').should('match', /^#\/resume\/resume_[\w-]+$/);

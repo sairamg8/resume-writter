@@ -7,8 +7,8 @@ export const CARD = '.group.bg-white.rounded-2xl';
 /** The pencil button that appears on hover next to a card's resume name. */
 export const CARD_RENAME = '.group\\/name button';
 
-/** The dashboard's hidden JSON import input. */
-export const IMPORT_INPUT = 'input[type="file"][accept=".json"]';
+/** The hidden import input of the dashboard and the editor: .json first, then the documents (R2-148). */
+export const IMPORT_INPUT = 'input[type="file"][accept^=".json"]';
 
 /** The header's cloud-sync icon; hovering it shows what the sync is doing (AuthBar's SyncDot). */
 export const SYNC_STATUS = '[data-testid="sync-status"]';

@@ -10,6 +10,7 @@ import { DATA_VERSION, normalizeResume } from '@/utils/normalizeResume';
 import { backupRaw, notSavedReason, pendingRecovery, readSavedList, rememberRecovery, setItemWithRoom } from '@/utils/storageBackup';
 import { savedDeletions } from '@/utils/localDeletions';
 import { isOriginal, withKeep } from '@/utils/demoSeed';
+import { isLetter, letterFrom, LETTER_KIND, LETTER_NAME } from '@/utils/letters';
 import { useSmallerPhotos } from '@/hooks/useSmallerPhotos';
 import { keepUnsaved } from '@/utils/unsavedJobs';
 import { coalescedWriter } from '@/utils/coalescedWrite';
@@ -241,6 +242,23 @@ export function useAppStore() {
   }
 
   /**
+   * Dashboard → New Cover Letter: a letter of its own, which the dashboard lists with the letters
+   * (R2-135). From the résumé `fromId`: its name, job title, contacts, photo and look, with nothing
+   * yet said to the reader (letterFrom). With none — or one that is gone, or a letter — a blank
+   * letter, as New Cover Letter made before.
+   */
+  function createLetter(fromId = null) {
+    const id = newId('resume');
+    const now = Date.now();
+    setAppState(prev => {
+      const source = prev.resumes.find(r => r.id === fromId && !isLetter(r));
+      const letter = source ? letterFrom(source, { id, now }) : { ...createBlankResume({ id, name: LETTER_NAME }), kind: LETTER_KIND };
+      return { ...prev, resumes: [...prev.resumes, letter], activeId: id };
+    });
+    return id;
+  }
+
+  /**
    * A résumé from a file, as a new one. `keep`: marked as the account's original (useDemoSeed) —
    * never because the file says so. Made current against the file's own `updatedAt` — which build
    * last saved it (normalizeResume) — before it is stamped as new here.
@@ -362,6 +380,7 @@ export function useAppStore() {
     activeResume,
     setActiveId,
     createResume,
+    createLetter,
     duplicateResume,
     renameResume,
     keepResume,

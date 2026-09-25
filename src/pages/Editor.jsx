@@ -15,6 +15,7 @@ import { useIsMobile } from '@/hooks/useMediaQuery';
 import { useOpenResume } from '@/hooks/useOpenResume';
 import { useRename } from '@/hooks/useRename';
 import { useEditorTab } from '@/hooks/useEditorTab';
+import { useImportNotice } from '@/hooks/useImportNotice';
 
 export function Editor({ store, auth, sync }) {
   const { id } = useParams();
@@ -39,6 +40,7 @@ export function Editor({ store, auth, sync }) {
     resume, activeTab, authUser: auth?.user, importResume: store.importResume, navigate,
   });
   const { panelWidth, separatorProps } = usePanelResize();
+  const importNotice = useImportNotice();
 
   function toggleAllSections() {
     const next = !allExpanded;
@@ -90,7 +92,7 @@ export function Editor({ store, auth, sync }) {
           sync={sync}
           isMobile={isMobile}
         />
-        <EditorAlerts exportError={exportMenu.exportError} onDismiss={() => exportMenu.setExportError(null)} persistError={store.persistError} />
+        <EditorAlerts exportError={exportMenu.exportError} onDismiss={() => exportMenu.setExportError(null)} persistError={store.persistError} importNotice={importNotice.notice} onDismissImport={importNotice.dismiss} />
         <EditorModeBar activeTab={activeTab} setActiveTab={handleModeTabChange} />
 
         <EditorTabContent activeTab={activeTab}>

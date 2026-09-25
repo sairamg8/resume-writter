@@ -2,15 +2,17 @@ import { useRef, useState, useEffect } from 'react';
 import { Download, FileText, Upload, ChevronDown, Pin, FileCode, FileJson } from 'lucide-react';
 import { ORIGINALS_HINT } from '@/components/ImportMenu';
 import { isJsonResume, jsonResumeToCpwtResume } from '@/utils/jsonResume';
+import { DOCUMENT_HINT, IMPORT_ACCEPT, isDocumentFile } from '@/utils/importDocument';
 
 /**
- * The editor's Export menu, with Import JSON: `onImportJSON(data, asOriginal)`. `keeps` — a demo
+ * The editor's Export menu, with Import JSON: `onImportJSON(data, asOriginal)`, and a PDF, Word,
+ * Markdown or text résumé read best-effort: `onImportFile(file, asOriginal)` (R2-148). `keeps` — a demo
  * account, whose originals come back (useDemoSeed) — adds "Import as my original", as the
  * dashboard's Import menu has (V2OWNER-DATA-3). `letter`: the Cover Letter tab is open, where PDF
  * and Word export the letter, Cover Letter Text the letter as plain text (`onExportLetterText`), and
  * the other text exports still the résumé — each item says which (R2-131).
  */
-export function ExportDropdown({ exporting, keeps = false, letter = false, onExportPDF, onExportWord, onExportJSON, onExportMarkdown, onExportAtsText, onExportJsonResume, onExportLetterText, onImportJSON, onImportError }) {
+export function ExportDropdown({ exporting, keeps = false, letter = false, onExportPDF, onExportWord, onExportJSON, onExportMarkdown, onExportAtsText, onExportJsonResume, onExportLetterText, onImportJSON, onImportFile, onImportError }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   const importRef = useRef(null);
@@ -101,8 +103,9 @@ export function ExportDropdown({ exporting, keeps = false, letter = false, onExp
             onClick={() => pickImport(false)}
             className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-gray-50"
           >
-            <Upload size={12} className="text-gray-400" /> Import JSON
+            <Upload size={12} className="text-gray-400" /> Import JSON, PDF, Word or text
           </button>
+          <p className="px-3 pb-1 text-[11px] text-gray-500">{DOCUMENT_HINT}</p>
           {keeps && (
             <>
               <button onClick={() => pickImport(true)} className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-gray-50">
@@ -117,11 +120,16 @@ export function ExportDropdown({ exporting, keeps = false, letter = false, onExp
       <input
         ref={importRef}
         type="file"
-        accept=".json"
+        accept={IMPORT_ACCEPT}
         className="hidden"
         onChange={e => {
           const file = e.target.files?.[0];
           if (!file) return;
+          if (isDocumentFile(file) && onImportFile) {
+            e.target.value = '';
+            onImportFile(file, asOriginal.current);
+            return;
+          }
           const reader = new FileReader();
           reader.onload = ev => {
             let parsed;

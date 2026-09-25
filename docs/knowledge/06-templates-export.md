@@ -83,6 +83,21 @@ Not a pixel-perfect match to PDF; structural DOCX for ATS/HR systems.
 Full resume object (with a new id on import: `importResume`). Every import goes through
 `normalizeResume()`, so a file from an older build is migrated like stored data.
 
+## Import from a PDF, Word, Markdown or text (R2-148)
+
+The Dashboard's and the editor's Import accept `.json,.pdf,.docx,.txt,.md` (`IMPORT_ACCEPT`,
+`src/utils/importDocument.js`); a `.json` goes the JSON way above, the rest are read best-effort:
+
+- `importFile.js` gets the text out as lines: a PDF through pdf.js (lines by baseline, wide gaps as
+  tabs, wrapped lines joined), a `.docx` by unzipping `word/document.xml` with `DecompressionStream`
+  (Heading styles marked), Markdown through `markdownLines` (`#` name, `##` headings, `###` entries).
+- `importText.js` (pure) reads the lines: name, job title, contacts, summary; a section per known
+  heading (the app's titles and `ATS_STANDARD_SECTIONS` aliases), others custom; entries found by
+  their dates; every line it cannot place in a custom "Additional Information".
+- The editor then shows a dismissable notice (`useImportNotice`, route state `importNotice`).
+- Tests: `tests/unit/import-text.unit.mjs`, round trip of the four exports in
+  `tests/pdf/99-import-roundtrip.test.mjs`, the UI in `tests/pdf/99-import-ui.test.mjs`.
+
 ## Bundle impact
 
 `codeSplitting.groups` in `vite.config.js` keeps `@react-pdf/renderer` and `docx` out of the main app chunk so dashboard/job tracker load stays lighter (`tests/pdf/71-startup-chunks.test.mjs`).

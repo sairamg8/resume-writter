@@ -24,7 +24,7 @@ with one full CI run and fast-forwards `master` on green.
 | section-style | R2-147 | session_01NqoaVxqWn89c2oi9DMyehg | **stalled 03:03 → taken over by the coordinator** — merged as left (328b9fe); page-number fix f0f9784 (explicit height), Word footer on the title page; CI pending |
 | cloud-sync | R2-159 (done), 145, 140 | session_017BB79LpEbU9c3zT2CccWDV | **merged** — R2-159, 145, 140 fixed (jobs + boards sync on one shared engine; Privacy page true) |
 | structure-tests | R2-158, 167, 171 | session_015xkXZJXdNDrdPoNy6Nusob | **merged** — R2-158, 167, 171 fixed (c1f085d: a section dropped off the list no longer throws) |
-| letters-import | R2-135, 148 | session_01C9EUo2kre8QeqViw2sAKkx | running |
+| letters-import | R2-135, 148 | session_01C9EUo2kre8QeqViw2sAKkx | **merged** — R2-135 fixed (several letters per résumé), R2-148 partial (import PDF/Word/Markdown/text; language, RTL, public link left) |
 | release | R2-169 (done), 143, 154, 168 | session_012ktnCPxsipt5gQWuGvDdjh | **merged** — R2-169, 154, 168 fixed; R2-143 partial (owner: v0.1.0 tag, Terms/Privacy domain) |
 
 **Parked for the a11y pass at the end:** `claude/wf-templates` (`67c88c5`, R2-139's picker accessibility — its Cypress

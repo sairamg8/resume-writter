@@ -7,9 +7,11 @@ Maps user-facing features → primary code locations.
 | Feature | Code |
 |---------|------|
 | List resumes | `pages/Dashboard.jsx`, `components/ResumeCard.jsx` |
-| New resume / cover letter | `store.createResume`, navigate with optional `?tab=coverletter` |
+| New resume | `store.createResume` |
+| New cover letter (from a résumé, picker `NewLetterModal`) and the Cover Letters list | `store.createLetter`, `utils/letters.js`, navigate with `?tab=coverletter` |
 | Start from a role starter | `components/StarterTemplateModal.jsx`, `utils/starterTemplates.js` |
 | Import a backup JSON or a JSON Resume file | Dashboard `handleImport` (`components/ImportMenu.jsx` in a demo account) |
+| Import PDF / Word / Markdown / text (best-effort, R2-148) | `importDocument.js` → `importFile.js` (text out of the file) → `importText.js` (text → résumé) |
 | Job Tracker entry | navigate `/jobs` |
 | Career history panel | `components/CareerHistoryPanel.jsx` |
 | Auth + sync indicator | `components/AuthBar.jsx` |

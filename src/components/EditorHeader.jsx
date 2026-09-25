@@ -53,6 +53,7 @@ export function EditorHeader({ resume, rename, layoutMode, setLayoutMode, export
           onExportLetterText={exportMenu.handleExportLetterText}
           onExportJsonResume={exportMenu.handleExportJsonResume}
           onImportJSON={exportMenu.handleImportJSON}
+          onImportFile={exportMenu.handleImportFile}
           onImportError={exportMenu.setExportError}
         />
         <div className="w-px h-4 bg-gray-200 self-center hidden sm:block" />
@@ -62,10 +63,19 @@ export function EditorHeader({ resume, rename, layoutMode, setLayoutMode, export
   );
 }
 
-/** A failed export or import (dismissable), and browser storage that is full. */
-export function EditorAlerts({ exportError, onDismiss, persistError }) {
+/**
+ * A failed export or import (dismissable), browser storage that is full, and after a PDF, Word or
+ * text import the reminder that it was read best-effort (`importNotice`, dismissable, R2-148).
+ */
+export function EditorAlerts({ exportError, onDismiss, persistError, importNotice, onDismissImport }) {
   return (
     <>
+      {importNotice && (
+        <div role="status" className="px-4 py-2 text-xs text-amber-800 bg-amber-50 border-b border-amber-200 flex items-start gap-2">
+          <span className="flex-1">{importNotice}</span>
+          <button onClick={onDismissImport} className="font-semibold hover:text-amber-950 shrink-0">Dismiss</button>
+        </div>
+      )}
       {exportError && (
         <div role="alert" className="px-4 py-2 text-xs text-red-700 bg-red-50 border-b border-red-200 flex items-start gap-2">
           <span className="flex-1">{exportError}</span>

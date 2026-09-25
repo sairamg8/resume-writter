@@ -7,6 +7,9 @@ import { generateAtsPlainText } from '@/utils/atsChecker';
 import { generateMarkdownResume } from '@/utils/markdownExport';
 import { generateCoverLetterPlainText } from '@/utils/coverLetterText';
 import { isJsonResume, jsonResumeToCpwtResume, cpwtResumeToJsonResume } from '@/utils/jsonResume';
+import { importDocument } from '@/utils/importDocument';
+import { normalizeResume } from '@/utils/normalizeResume';
+import { editorPath } from '@/utils/letters';
 
 /**
  * The editor's Export menu: PDF and Word of the tab on screen (résumé or cover letter), the
@@ -104,15 +107,22 @@ export function useEditorExports({ resume, activeTab, authUser, importResume, na
     try {
       const resumeData = isJsonResume(data) ? jsonResumeToCpwtResume(data) : data;
       const newId = importResume(resumeData, { keep: keeps && asOriginal });
-      navigate(`/resume/${newId}`);
+      // A letter's file (an older build's 'Cover Letter' too, marked on import) opens on its letter.
+      navigate(editorPath(newId, normalizeResume(resumeData)));
     } catch (e) {
       console.error('Import failed:', e);
       setExportError(`Import failed${e?.message ? ` (${e.message})` : ''}. Check the file and try again.`);
     }
   }
 
+  /** A PDF, Word, Markdown or text résumé, read best-effort into a new one (R2-148). */
+  function handleImportFile(file, asOriginal = false) {
+    setExportError(null);
+    return importDocument(file, { importResume, navigate, onError: setExportError, keep: keeps && asOriginal });
+  }
+
   return {
     exporting, exportError, setExportError, keeps, letterTab: activeTab === 'coverletter',
-    handleExportPDF, handleExportWord, handleExportJSON, handleExportMarkdown, handleExportAtsText, handleExportJsonResume, handleExportLetterText, handleImportJSON,
+    handleExportPDF, handleExportWord, handleExportJSON, handleExportMarkdown, handleExportAtsText, handleExportJsonResume, handleExportLetterText, handleImportJSON, handleImportFile,
   };
 }

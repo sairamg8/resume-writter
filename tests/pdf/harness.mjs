@@ -65,6 +65,12 @@ export async function setup() {
     ]);
     const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
     ctx = { fonts, vite, pdf, data, types, pdfjs, load: (p) => vite.ssrLoadModule(p) };
+  } catch (e) {
+    // A module that does not load (a fail-first run takes a fix's files away) fails the file; left
+    // open, the Vite server and the font server kept the process alive and the run hung.
+    await vite.close();
+    fonts.close();
+    throw e;
   } finally {
     delete globalThis.window;
   }

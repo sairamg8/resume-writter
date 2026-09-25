@@ -7,10 +7,14 @@ import { CareerHistoryPanel } from '@/components/CareerHistoryPanel';
 import { RecoveryNotice } from '@/components/RecoveryNotice';
 import { ImportMenu } from '@/components/ImportMenu';
 import StarterTemplateModal from '@/components/StarterTemplateModal';
+import NewLetterModal from '@/components/NewLetterModal';
 import { notSavedMessage } from '@/utils/storageBackup';
 import { comesStraightBack, isDemoAccount, isOriginal } from '@/utils/demoSeed';
 import { DEMO_ACCOUNTS } from '@/utils/demoAccounts';
 import { isJsonResume, jsonResumeToCpwtResume } from '@/utils/jsonResume';
+import { editorPath, isLetter, letterSources } from '@/utils/letters';
+import { normalizeResume } from '@/utils/normalizeResume';
+import { DOCUMENT_HINT, IMPORT_ACCEPT, importDocument, isDocumentFile } from '@/utils/importDocument';
 
 const IMPORT_BUTTON = 'flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 bg-white border border-gray-200 text-gray-700 rounded-lg text-xs sm:text-sm font-semibold hover:bg-gray-50 transition-colors shadow-sm whitespace-nowrap';
 
@@ -31,6 +35,7 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false }) {
   const importRef = useRef(null);
   const [importError, setImportError] = useState(null);
   const [starterModalOpen, setStarterModalOpen] = useState(false);
+  const [letterModalOpen, setLetterModalOpen] = useState(false);
   // A demo account keeps originals: the cards and Import offer "Keep as my original".
   const keeps = isDemoAccount(auth.user, DEMO_ACCOUNTS);
   // Whether the file being picked is imported as an original (ImportMenu).
@@ -53,9 +58,52 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false }) {
     navigate(`/resume/${id}`);
   }
 
+  // Letters are listed apart from the résumés, and never counted as one (R2-135).
+  const resumes = store.appState.resumes.filter(r => !isLetter(r));
+  const letters = store.appState.resumes.filter(isLetter);
+  const letterSourceList = letterSources(store.appState.resumes);
+  const openLetter = id => navigate(`/resume/${id}?tab=coverletter`);
+
+  // New Cover Letter takes the name, job title, contacts and photo of a résumé: the only one there
+  // is, or the one picked when there are several; with none, a blank letter.
+  function startLetter() {
+    if (letterSourceList.length > 1) setLetterModalOpen(true);
+    else newLetter(letterSourceList[0]?.id ?? null);
+  }
+
+  function newLetter(fromId) {
+    setLetterModalOpen(false);
+    openLetter(store.createLetter(fromId));
+  }
+
+  /** A résumé's or a letter's card; `open` is where Edit and a new copy go. */
+  const card = (r, open) => (
+    <ResumeCard
+      key={r.id}
+      resume={r}
+      onOpen={open}
+      onDuplicate={id => { const newId = store.duplicateResume(id); if (newId) open(newId); }}
+      onDelete={id => {
+        if (confirm(deletePrompt(r, keeps))) store.deleteResume(id, auth.user?.uid);
+      }}
+      onRename={store.renameResume}
+      onKeep={keeps ? store.keepResume : undefined}
+      lastOriginal={keeps && comesStraightBack(r, store.appState.resumes)}
+    />
+  );
+
   function handleImport(e) {
     const file = e.target.files?.[0];
     if (!file) return;
+    // A PDF, Word, Markdown or text résumé: read best-effort into a new one (R2-148).
+    if (isDocumentFile(file)) {
+      e.target.value = '';
+      importDocument(file, {
+        importResume: store.importResume, navigate, keep: keeps && importAsOriginal.current,
+        onError: (message) => { setImportError(message); setTimeout(() => setImportError(null), 8000); },
+      });
+      return;
+    }
     const reader = new FileReader();
     reader.onload = ev => {
       try {
@@ -63,7 +111,8 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false }) {
         if (parsed?.personal && Array.isArray(parsed?.sections)) {
           const id = store.importResume(parsed, { keep: keeps && importAsOriginal.current });
           setImportError(null);
-          navigate(`/resume/${id}`);
+          // A letter's file (an older build's 'Cover Letter' too, marked on import) opens on its letter.
+          navigate(editorPath(id, normalizeResume(parsed)));
         } else if (isJsonResume(parsed)) {
           const converted = jsonResumeToCpwtResume(parsed);
           const id = store.importResume(converted, { keep: keeps && importAsOriginal.current });
@@ -105,9 +154,9 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false }) {
             </div>
           </div>
           <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-            <input ref={importRef} type="file" accept=".json" className="hidden" onChange={handleImport} />
+            <input ref={importRef} type="file" accept={IMPORT_ACCEPT} className="hidden" onChange={handleImport} />
             {keeps ? <ImportMenu onPick={pickImport} className={IMPORT_BUTTON} /> : (
-              <button onClick={() => pickImport(false)} className={IMPORT_BUTTON}>
+              <button onClick={() => pickImport(false)} className={IMPORT_BUTTON} title={`Import a résumé: a CPWT-CV or JSON Resume file (.json). ${DOCUMENT_HINT}`}>
                 <Upload size={14} /> Import
               </button>
             )}
@@ -124,7 +173,7 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false }) {
               <Columns2 size={14} /> Boards
             </button>
             <button
-              onClick={() => { const id = store.createResume('Cover Letter'); navigate(`/resume/${id}?tab=coverletter`); }}
+              onClick={startLetter}
               className="flex items-center gap-1.5 px-2.5 sm:px-4 py-1.5 sm:py-2 bg-white border border-gray-200 text-gray-700 rounded-lg text-xs sm:text-sm font-semibold hover:bg-gray-50 transition-colors shadow-sm whitespace-nowrap"
             >
               <MailIcon size={14} /> New Cover
@@ -176,11 +225,11 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false }) {
             <div className="flex items-center justify-between mb-4 sm:mb-6">
               <h1 className="text-xl sm:text-2xl font-bold text-gray-900">My Resumes</h1>
               <p className="text-xs sm:text-sm text-gray-400">
-                {store.appState.resumes.length} resume{store.appState.resumes.length !== 1 ? 's' : ''}
+                {resumes.length} resume{resumes.length !== 1 ? 's' : ''}
               </p>
             </div>
 
-            {store.appState.resumes.length === 0 ? (
+            {resumes.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-20 text-center bg-white rounded-2xl border border-gray-200 p-6">
                 <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mb-4">
                   <FileText size={28} className="text-gray-400" />
@@ -196,20 +245,7 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false }) {
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
-                {store.appState.resumes.map(r => (
-                  <ResumeCard
-                    key={r.id}
-                    resume={r}
-                    onOpen={id => navigate(`/resume/${id}`)}
-                    onDuplicate={id => { const newId = store.duplicateResume(id); if (newId) navigate(`/resume/${newId}`); }}
-                    onDelete={id => {
-                      if (confirm(deletePrompt(r, keeps))) store.deleteResume(id, auth.user?.uid);
-                    }}
-                    onRename={store.renameResume}
-                    onKeep={keeps ? store.keepResume : undefined}
-                    lastOriginal={keeps && comesStraightBack(r, store.appState.resumes)}
-                  />
-                ))}
+                {resumes.map(r => card(r, id => navigate(`/resume/${id}`)))}
                 <button
                   onClick={() => setStarterModalOpen(true)}
                   className="h-full min-h-[180px] sm:min-h-[220px] border-2 border-dashed border-gray-200 rounded-2xl flex flex-col items-center justify-center gap-3 text-gray-400 hover:text-blue-500 hover:border-blue-300 hover:bg-blue-50/50 transition-all cursor-pointer p-4"
@@ -219,16 +255,31 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false }) {
                   </div>
                   <span className="text-sm font-medium">New Resume</span>
                 </button>
-                <button
-                  onClick={() => { const id = store.createResume('Cover Letter'); navigate(`/resume/${id}?tab=coverletter`); }}
-                  className="h-full min-h-[180px] sm:min-h-[220px] border-2 border-dashed border-gray-200 rounded-2xl flex flex-col items-center justify-center gap-3 text-gray-400 hover:text-purple-500 hover:border-purple-300 hover:bg-purple-50/50 transition-all cursor-pointer p-4"
-                >
-                  <div className="w-12 h-12 rounded-xl border-2 border-current flex items-center justify-center">
-                    <MailIcon size={22} />
-                  </div>
-                  <span className="text-sm font-medium">New Cover Letter</span>
-                </button>
               </div>
+            )}
+
+            {/* Cover letters: a group of their own, each opening on its letter (R2-135) */}
+            {(resumes.length > 0 || letters.length > 0) && (
+              <section aria-labelledby="dashboard-letters" className="mt-8 sm:mt-10">
+                <div className="flex items-center justify-between mb-4 sm:mb-6">
+                  <h2 id="dashboard-letters" className="text-lg sm:text-xl font-bold text-gray-900">Cover Letters</h2>
+                  <p className="text-xs sm:text-sm text-gray-400">
+                    {letters.length} letter{letters.length !== 1 ? 's' : ''}
+                  </p>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+                  {letters.map(r => card(r, openLetter))}
+                  <button
+                    onClick={startLetter}
+                    className="h-full min-h-[180px] sm:min-h-[220px] border-2 border-dashed border-gray-200 rounded-2xl flex flex-col items-center justify-center gap-3 text-gray-400 hover:text-purple-500 hover:border-purple-300 hover:bg-purple-50/50 transition-all cursor-pointer p-4"
+                  >
+                    <div className="w-12 h-12 rounded-xl border-2 border-current flex items-center justify-center">
+                      <MailIcon size={22} />
+                    </div>
+                    <span className="text-sm font-medium">New Cover Letter</span>
+                  </button>
+                </div>
+              </section>
             )}
           </div>
 
@@ -244,7 +295,7 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false }) {
               </button>
             </div>
             <CareerHistoryPanel
-              resumes={store.appState.resumes}
+              resumes={resumes}
               activeId={store.appState.activeId}
               showJobTrackerLink={true}
             />
@@ -268,6 +319,12 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false }) {
         onClose={() => setStarterModalOpen(false)}
         onSelectStarter={handleSelectStarter}
         onSelectBlank={handleSelectBlank}
+      />
+      <NewLetterModal
+        isOpen={letterModalOpen}
+        sources={letterSourceList}
+        onPick={newLetter}
+        onClose={() => setLetterModalOpen(false)}
       />
     </div>
   );

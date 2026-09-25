@@ -34,6 +34,22 @@ describe('dashboard — first visit', () => {
       expect(r.sections.every((x) => x.items.length === 0)).to.eq(true);
     });
   });
+
+  // R2-135: with no résumé to take a name and contacts from, the letter starts blank — and is a letter.
+  it('New Cover with no résumé yet opens a blank letter, listed with the letters, not the résumés', () => {
+    cy.contains('button', 'New Cover').click();
+    cy.location('hash').should('match', /^#\/resume\/resume_[\w-]+\?tab=coverletter$/);
+    cy.store().should((s) => {
+      expect(s.resumes).to.have.length(1);
+      expect(active(s).kind).to.eq('letter');
+      expect(active(s).personal.name).to.eq('');
+    });
+    cy.go('back');
+    cy.contains('h1', 'My Resumes').next().should('have.text', '0 resumes');
+    cy.contains('No resumes yet').should('be.visible');
+    cy.contains('h2', 'Cover Letters').next().should('have.text', '1 letter');
+    cy.contains('section', 'Cover Letters').find(CARD).should('have.length', 1).and('contain.text', 'Cover Letter');
+  });
 });
 
 describe('dashboard — with résumés', () => {
@@ -57,10 +73,51 @@ describe('dashboard — with résumés', () => {
     });
   });
 
-  it('New Cover creates a résumé and opens its cover-letter tab', () => {
+  // R2-135: it made a blank résumé named 'Cover Letter' — no name, no contacts — listed as a résumé.
+  it('New Cover asks which résumé heads the letter, opens it on its tab, and lists it as a letter', () => {
     cy.contains('button', 'New Cover').click();
+    cy.get('[role="dialog"]').should('be.visible').within(() => {
+      cy.contains('h2', 'New Cover Letter').should('be.visible');
+      NAMES.forEach((name) => cy.contains('button', name).should('be.visible'));
+      cy.contains('button', 'Blank letter').should('be.visible');
+      cy.contains('button', 'Modern CV').click();
+    });
     cy.location('hash').should('match', /^#\/resume\/resume_[\w-]+\?tab=coverletter$/);
-    cy.store().should((s) => expect(active(s).name).to.eq('Cover Letter'));
+    cy.get('#cover-letter-preview').should('contain.text', 'Alex Johnson').and('contain.text', 'alex@example.com');
+    cy.store().should((s) => {
+      const letter = active(s);
+      const modern = s.resumes.find((r) => r.name === 'Modern CV');
+      expect(letter.kind).to.eq('letter');
+      expect(letter.name).to.eq('Cover Letter');
+      expect(letter.personal).to.deep.eq(modern.personal);
+      expect(letter.template).to.eq('modern');
+      expect(letter.coverLetter.body).to.eq('');
+      expect(modern.kind).to.eq(undefined);
+    });
+    cy.go('back');
+    cy.contains('h1', 'My Resumes').next().should('have.text', '3 resumes');
+    cy.contains('h2', 'Cover Letters').next().should('have.text', '1 letter');
+    cy.contains('section', 'Cover Letters').find(CARD).should('have.length', 1).and('contain.text', 'Cover Letter');
+    cy.get(CARD).should('have.length', NAMES.length + 1);
+  });
+
+  it('a letter card opens on its letter, and its Copy is a letter too', () => {
+    cy.contains('button', 'New Cover Letter').click();
+    cy.get('[role="dialog"]').contains('button', 'Classic CV').click();
+    cy.location('hash').should('match', /\?tab=coverletter$/);
+    cy.go('back');
+    cy.contains('section', 'Cover Letters').find(CARD).contains('button', 'Edit').click();
+    cy.location('hash').should('match', /^#\/resume\/resume_[\w-]+\?tab=coverletter$/);
+    cy.go('back');
+    cy.contains('section', 'Cover Letters').find(CARD).contains('button', 'Copy').click();
+    cy.location('hash').should('match', /\?tab=coverletter$/);
+    cy.store().should((s) => {
+      expect(active(s).name).to.eq('Cover Letter (Copy)');
+      expect(active(s).kind).to.eq('letter');
+    });
+    cy.go('back');
+    cy.contains('h2', 'Cover Letters').next().should('have.text', '2 letters');
+    cy.contains('h1', 'My Resumes').next().should('have.text', '3 resumes');
   });
 
   it('Copy duplicates a résumé as "<name> (Copy)" and opens the copy', () => {

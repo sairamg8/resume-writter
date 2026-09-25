@@ -13,7 +13,7 @@ describe('regressions — editor', () => {
     other.personal = { ...other.personal, summary: '<p>Imported summary text.</p>' };
     cy.openExportMenu();
     cy.contains('button', 'Import JSON').click(); // closes the menu, as for a real user
-    cy.get('input[type="file"][accept=".json"]').selectFile({
+    cy.get('input[type="file"][accept^=".json"]').selectFile({
       contents: Cypress.Buffer.from(JSON.stringify(other)), fileName: 'other.json',
     }, { force: true });
     cy.location('hash').should('match', /^#\/resume\/resume_[\w-]+$/);
@@ -71,7 +71,7 @@ describe('regressions — export failures', () => {
 
 describe('regressions — imports say why they failed', () => {
   const pick = (contents, fileName) =>
-    cy.get('input[type="file"][accept=".json"]').selectFile({ contents: Cypress.Buffer.from(contents), fileName }, { force: true });
+    cy.get('input[type="file"][accept^=".json"]').selectFile({ contents: Cypress.Buffer.from(contents), fileName }, { force: true });
 
   it('M11: the editor Import JSON reports unparseable and non-resume files', () => {
     cy.visitEditor('classic');
