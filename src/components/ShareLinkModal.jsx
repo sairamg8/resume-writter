@@ -110,7 +110,7 @@ export default function ShareLinkModal({ isOpen, resume, uid, io = firebasePubli
               <div>
                 <p className="font-semibold text-gray-800">{share ? 'What is public:' : 'What would be public:'}</p>
                 <ul className="list-disc pl-5 mt-1 space-y-0.5">
-                  {shown.map((line) => <li key={line}>{line}</li>)}
+                  {shown.map((line, i) => <li key={i}>{line}</li>)}
                 </ul>
                 <p className="mt-1 text-gray-500">Fields and sections you hid, the cover letter and this résumé's name in your list stay private.</p>
               </div>

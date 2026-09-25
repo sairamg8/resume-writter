@@ -72,8 +72,12 @@ export function publicUrl(shareId, origin = globalThis.location?.origin || '') {
   return `${origin}/#/r/${encodeURIComponent(shareId)}`;
 }
 
+/** `v` as JSON with every object's keys in order: the server hands a map back with its keys sorted. */
+const stable = (v) => JSON.stringify(v, (_, x) => (x && typeof x === 'object' && !Array.isArray(x)
+  ? Object.fromEntries(Object.keys(x).sort().map((k) => [k, x[k]])) : x));
+
 /** Does the published copy print what `resume` prints now? */
-export const publishedIsCurrent = (copy, resume) => JSON.stringify(copy) === JSON.stringify(publicSnapshot(resume));
+export const publishedIsCurrent = (copy, resume) => stable(copy) === stable(publicSnapshot(resume));
 
 const TOO_LARGE = 'This résumé is too large to publish (over 1 MB, usually its photo). Use a smaller photo and try again.';
 
