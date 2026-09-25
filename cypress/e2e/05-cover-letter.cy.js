@@ -29,7 +29,7 @@ function shareOf(canvas, mm, hex) {
 /** Pick a template in the Design tab (by its description), then go back to the Cover Letter tab. */
 function pickTemplate(template) {
   cy.get('button[title="Design & Customize"]').click();
-  cy.contains('p', "The cover letter's header takes the template's look too.").should('be.visible');
+  cy.contains('p', "The cover letter's header takes the template's look too.").scrollIntoView().should('be.visible');
   cy.get(`[data-testid="template-${template}"]`).click();
   cy.contains('button', 'Cover Letter').click();
 }

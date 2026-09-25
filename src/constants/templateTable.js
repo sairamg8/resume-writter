@@ -35,7 +35,7 @@ import {
  */
 export const TEMPLATES = {
   classic: {
-    label: 'Classic', desc: 'Name over a full-width rule · Ruled section titles', atsTier: 'certified',
+    label: 'Classic', desc: 'Name over a full-width rule · Section titles over a rule', atsTier: 'certified',
     style: { headingStyle: 'ruled', sectionTitleCase: 'upper' }, headerControls: true, headerRule: true,
     headerGaps: STACKED_HEADER_GAPS,
   },
@@ -45,7 +45,7 @@ export const TEMPLATES = {
     headerGaps: MODERN_HEADER_GAPS,
   },
   minimal: {
-    label: 'Minimal', desc: 'Open header with no rule · Underlined titles · Whitespace-first', atsTier: 'certified',
+    label: 'Minimal', desc: 'Open header, no rule · Titles underlined · Whitespace-first', atsTier: 'certified',
     style: { headingStyle: 'underline', sectionTitleCase: 'upper' }, headerControls: true, headerRule: false,
     headerGaps: { ...STACKED_HEADER_GAPS, summaryGap: 6 },
   },
