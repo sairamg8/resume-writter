@@ -2,7 +2,7 @@
 // Fit, the ATS tab's parser view and the editor's warm-up — ran react-pdf on the main thread, and the
 // editor stopped answering for as long as a long résumé took to lay out. Now pdfBuild.js hands each
 // build to a Web Worker (pdfWorker.js → pdfWorkerJobs.js) that runs the very same renderResumePdf and
-// renderCoverLetterPdf, so the file is the one the main thread would have written: here a stand-in
+// renderCoverLetterPdf, so the file draws exactly what the main thread's would have: here a stand-in
 // worker runs the real jobs in this process, through a structured clone as a real one would. The font
 // the worker could not load reaches the editor's fontFallback (latest build only); a build that fails
 // there fails here with its message; a worker that cannot start or dies hands its builds to the main
@@ -44,12 +44,11 @@ function scriptedWorker() {
 }
 
 /**
- * The PDF with what differs between any two builds taken out: its creation and modification dates and
- * the random six-letter tag of each embedded font subset ("KYQJWI+NotoSans-Bold").
+ * What the PDF draws, page by page: every text run (its text, place, size and font), link, stroke and
+ * fill (harness.read). Two builds of one résumé never match byte for byte, even on one thread: the
+ * dates, each font subset's random tag and the order react-pdf writes its objects in vary.
  */
-const undated = (bytes) => new TextDecoder('latin1').decode(bytes)
-  .replace(/\/(CreationDate|ModDate) \(D:[^)]*\)/g, '')
-  .replace(/\/([A-Z]{6})\+/g, '/TAG+');
+const drawing = async (bytes) => JSON.stringify(await read(bytes)).replace(/\b[A-Z]{6}\+/g, '');
 const bytesOf = async (blob) => new Uint8Array(await blob.arrayBuffer());
 
 const sample = () => resume({
@@ -59,15 +58,14 @@ const sample = () => resume({
 });
 
 describe('the PDF is built in a Web Worker (R2-142, PERF-6)', () => {
-  it('the résumé and the letter are built in the worker, and the file is the one the main thread writes', async () => {
+  it('the résumé and the letter are built in the worker, and the file draws what the main thread’s does', async () => {
     const w = inProcessWorker();
     build._setPdfWorkerForTest(() => w);
     const r = sample();
     const fromWorker = await bytesOf(await build.buildResumePdf(r));
     assert.deepEqual(w.sent.map((j) => j.kind), ['resume'], 'the build went to the worker');
     const here = await render(r);
-    assert.equal(undated(fromWorker), undated(here), 'byte for byte the main thread’s PDF, but for its dates and font subset tags');
-    assert.equal(allText(await read(fromWorker)), allText(await read(here)));
+    assert.equal(await drawing(fromWorker), await drawing(here), 'the worker’s PDF draws what the main thread’s does');
 
     const letter = await build.buildCoverLetterPdf({ ...r, coverLetter: { ...r.coverLetter, body: '' } }, { preview: true });
     assert.deepEqual(w.sent.map((j) => [j.kind, j.options]), [['resume', undefined], ['letter', { preview: true }]]);
@@ -152,6 +150,6 @@ describe('the PDF is built in a Web Worker (R2-142, PERF-6)', () => {
     assert.equal(typeof globalThis.Worker, 'undefined');
     const r = sample();
     const bytes = await bytesOf(await build.buildResumePdf(r));
-    assert.equal(undated(bytes), undated(await render(r)));
+    assert.equal(await drawing(bytes), await drawing(await render(r)));
   });
 });

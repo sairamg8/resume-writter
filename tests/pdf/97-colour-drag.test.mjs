@@ -34,7 +34,7 @@ async function panel(file, name, r) {
   const view = mount(Store, { initial: r });
   // The section opens closed: its title button opens it.
   view.act(() => reactProps([...elements(view.container)].find((el) => el.tagName === 'BUTTON')).onClick({}));
-  const input = (label) => [...elements(view.container)].find((el) => el.tagName === 'INPUT' && el.getAttribute('type') === 'color'
+  const input = (label) => [...elements(view.container)].find((el) => el.tagName === 'INPUT' && (el.type || el.getAttribute('type')) === 'color'
     && (el.getAttribute('aria-label') === label || el.getAttribute('title') === label));
   const fire = (label, value) => view.act(() => reactProps(input(label)).onChange(evt(value)));
   const shown = (label) => { const el = input(label); return el.value !== undefined ? el.value : el.getAttribute('value'); };
