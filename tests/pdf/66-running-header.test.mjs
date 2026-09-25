@@ -144,6 +144,16 @@ describe('Word prints the same running header', () => {
     assert.ok(Number(distance) > 0 && Number(distance) < Number(top), `the header (${distance}) prints inside the top margin (${top})`);
   });
 
+  it('with Design → Page numbers on, page 1 keeps its number: the title page takes the same footer', async () => {
+    const { renderResumeDocx } = await loadModule('/src/utils/wordExport.js');
+    const buffer = Buffer.from(await (await renderResumeDocx(build({ template: 'classic', settings: {} }, { settings: { pageNumbers: true } }))).arrayBuffer());
+    const xml = unzipEntry(buffer, 'word/document.xml');
+    const sectPr = xml.slice(xml.lastIndexOf('<w:sectPr'));
+    assert.match(sectPr, /<w:titlePg/, 'the running header makes page 1 a title page');
+    const footers = [...sectPr.matchAll(/<w:footerReference [^>]*w:type="(\w+)"/g)].map((m) => m[1]).sort();
+    assert.deepEqual(footers, ['default', 'first'], 'a footer for page 1 and for the pages after it');
+  });
+
   it('none where the margin has no room, and none on the cover letter', async () => {
     const tight = await docx(build({ template: 'classic', settings: {} }, { settings: { marginV: 3 } }));
     assert.deepEqual(Object.keys(tight.headers), []);

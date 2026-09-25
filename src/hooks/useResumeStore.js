@@ -3,9 +3,11 @@ import { createBlankResume, settingsAfterReset } from '@/utils/defaultData';
 import { buildResumeFromStarter } from '@/utils/starterTemplates';
 import { createSectionActions } from '@/hooks/useResumeSectionActions';
 import { createSyncActions } from '@/hooks/useResumeSyncActions';
+import { createDesignActions } from '@/hooks/useResumeDesignActions';
+import { keepPageImagesOf } from '@/utils/pageImageStore';
 import { newId } from '@/utils/ids';
 import { HEADER_READS, withHeaderColorsBack } from '@/templates/pdf/shared/headerColors';
-import { withTemplate } from '@/utils/templateSwitch';
+import { withLook, withTemplate } from '@/utils/templateSwitch';
 import { DATA_VERSION, normalizeResume } from '@/utils/normalizeResume';
 import { backupRaw, notSavedReason, pendingRecovery, readSavedList, rememberRecovery, setItemWithRoom } from '@/utils/storageBackup';
 import { savedDeletions } from '@/utils/localDeletions';
@@ -133,6 +135,8 @@ export function useAppStore() {
       // When storage is full, old backups make room before the change is refused (R4-8).
       setItemWithRoom(STORAGE_KEY, JSON.stringify({ ...state, dataVersion: DATA_VERSION }));
       stored.current = state.resumes;
+      // The dashboard's page pictures of résumés this browser no longer holds go with them (C1).
+      keepPageImagesOf(state.resumes);
       setPersistError(null);
       setSavedAt(Date.now());
     } catch (e) {
@@ -232,11 +236,17 @@ export function useAppStore() {
 
   // ── Resume management ──────────────────────────────────────────────
 
-  function createResume(name = 'Untitled Resume', starterId = null) {
+  /**
+   * A new résumé: blank, or from the role starter `starterId`. `look`: a card of the picker's
+   * (utils/templatePicker.js) picked beside the starters (D1) — the résumé starts on that template or
+   * design instead of the starter's own, as picking it in Design would put it there.
+   */
+  function createResume(name = 'Untitled Resume', starterId = null, look = null) {
     const id = newId('resume');
-    const newResume = starterId
+    const built = starterId
       ? buildResumeFromStarter(starterId, id)
       : createBlankResume({ id, name });
+    const newResume = look?.engine ? withLook(built, look) : built;
     setAppState(prev => ({ ...prev, resumes: [...prev.resumes, newResume], activeId: id }));
     return id;
   }
@@ -368,6 +378,7 @@ export function useAppStore() {
   const sectionActions = createSectionActions(patchActive);
   // Delete, restore, a first sync's result, sent deletions forgotten — the sync tests run these too.
   const syncActions = createSyncActions(setAppState);
+  const designActions = createDesignActions(patchActive, setAppState);
 
   return {
     appState,
@@ -394,5 +405,6 @@ export function useAppStore() {
     resetSettings,
     ...syncActions,
     ...sectionActions,
+    ...designActions,
   };
 }

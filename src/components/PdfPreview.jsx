@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { previewBox } from '@/constants/pageSize';
 import { fontFallback } from '@/utils/fontFallback';
+import { loadPdfjs, setPdfjsForTest } from '@/utils/pdfjsLoader';
 
 /**
  * The editor preview IS the exported PDF: `render(input)` builds the same react-pdf document
@@ -36,28 +37,8 @@ const release = (pdf) => { pdf?.loadingTask?.destroy(); };
  */
 const discard = (canvases) => { for (const c of canvases) { c.width = 0; c.height = 0; } };
 
-let pdfjsPromise = null;
-function loadPdfjs() {
-  if (!pdfjsPromise) {
-    // The legacy build: pdf.js 6's default build calls ES2025 APIs (Uint8Array#toHex) that
-    // browsers older than ~2025 lack, which would leave those users with no preview at all.
-    pdfjsPromise = Promise.all([
-      import('pdfjs-dist/legacy/build/pdf.mjs'),
-      import('pdfjs-dist/legacy/build/pdf.worker.min.mjs?url'),
-    ]).then(([lib, worker]) => {
-      lib.GlobalWorkerOptions.workerSrc = worker.default;
-      // One worker for every render: a document given a caller-owned worker leaves it running
-      // when its loading task is destroyed, so re-renders skip worker start-up.
-      return { lib, worker: new lib.PDFWorker() };
-    }).catch((e) => { pdfjsPromise = null; throw e; });
-  }
-  return pdfjsPromise;
-}
-
 /** For tests/pdf/90-preview-*: a stand-in `{ lib, worker }` for pdf.js, or null to load the real one again. */
-export function _setPdfjsForTest(pdfjs) {
-  pdfjsPromise = pdfjs ? Promise.resolve(pdfjs) : null;
-}
+export const _setPdfjsForTest = setPdfjsForTest;
 
 /**
  * Reading-order text of one page, for screen readers and tests: runs that sit apart get a

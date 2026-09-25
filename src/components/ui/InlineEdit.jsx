@@ -33,7 +33,7 @@ export function InlineEdit({
     if (editing) {
       const field = fieldRef.current;
       field?.focus({ preventScroll: true });
-      field?.select();
+      field?.select?.();
       fit(field);
     } else if (refocus.current) {
       refocus.current = false;
@@ -76,7 +76,7 @@ export function InlineEdit({
       'aria-label': label,
       onBlur: () => finish(true),
       onKeyDown,
-      className: cx(BOX, 'block border-indigo-500 bg-white text-slate-900 outline-none ring-2 ring-indigo-500/25', className, inputClassName),
+      className: cx(BOX, 'block border-brand bg-white text-slate-900 outline-none ring-2 ring-brand/25', className, inputClassName),
     };
     return multiline
       ? <textarea {...shared} rows={1} onChange={(e) => { setDraft(e.target.value); fit(e.target); }} className={cx(shared.className, 'resize-none overflow-hidden')} />
@@ -94,7 +94,7 @@ export function InlineEdit({
       onClick={start}
       className={cx(
         BOX, 'block cursor-text border-transparent text-left transition-colors duration-150',
-        'hover:bg-slate-100 focus-visible:border-indigo-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/25',
+        'hover:bg-slate-100 focus-visible:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/25',
         empty ? 'text-slate-400' : 'text-inherit', multiline && 'whitespace-pre-wrap', className,
       )}
     >

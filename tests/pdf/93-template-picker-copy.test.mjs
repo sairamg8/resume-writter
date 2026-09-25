@@ -52,11 +52,15 @@ describe('the template cards describe what each engine draws (A6)', () => {
     for (const id of inline) assert.match(d[id], /role-first/i, `${id}: "${d[id]}"`);
   });
 
-  it('the Sidebar card says which page its Layout prints: the side column, or Classic\'s single column', async () => {
-    assert.match((await descriptions('sidebar', { sidebarSingleColumn: false })).sidebar, /side column/);
-    const single = (await descriptions('sidebar', { sidebarSingleColumn: true })).sidebar;
-    assert.match(single, /Single · ATS-safe/);
-    assert.match(single, /one column/);
+  it('each Sidebar card says which page its Layout prints: the side column, or Classic\'s single column', async () => {
+    // Since R2-139 A9 each Layout is a card of its own (template-sidebar-single), whatever is stored.
+    for (const sidebarSingleColumn of [false, true]) {
+      const html = await panel('sidebar', { sidebarSingleColumn });
+      const desc = (id) => /<p class="text-\[10px\][^"]*">([^<]*)<\/p>/.exec(html.split(`data-testid="${id}"`)[1]?.split('</button>')[0] || '')?.[1];
+      assert.match(desc('template-sidebar'), /side column/);
+      assert.match(desc('template-sidebar-single'), /Single · ATS-safe/);
+      assert.match(desc('template-sidebar-single'), /one column/);
+    }
   });
 });
 

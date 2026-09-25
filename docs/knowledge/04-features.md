@@ -28,6 +28,7 @@ Maps user-facing features → primary code locations.
 | Layout modes (split/etc.) | `LayoutToggle.jsx` |
 | Resizable editor panel | localStorage `cpwtcv-panel-width` |
 | Export menu | `ExportDropdown.jsx` + `hooks/useEditorExports.js` |
+| Share a public link (signed in, Firebase only) | `ShareLinkModal.jsx`, `utils/publicLink.js`; the page `#/r/:shareId` is `pages/PublicResume.jsx` |
 | Design panel | `DesignPanel.jsx` + Colors/Typography/Headings/Dates/Shared |
 | ATS check | `AtsCheckerPanel.jsx`, `utils/atsChecker.js` |
 | Writing helpers | `BulletOptimizerModal.jsx` (`utils/bulletOptimizer.js`), `CoverLetterGeneratorModal.jsx` (`utils/coverLetterGenerator.js`) — rules, no AI service |

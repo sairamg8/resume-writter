@@ -55,6 +55,7 @@ export default function PrivacyPage() {
               <li><strong>Resume data</strong>: your résumés, synced to Firebase Firestore under your unique user ID.</li>
               <li><strong>Job Tracker data</strong>: your jobs — company, role, status, dates, notes, to-dos and the rest of each job — synced the same way.</li>
               <li><strong>Boards</strong>: your projects with their columns, labels, sprints and issues, synced the same way.</li>
+              <li><strong>Public links</strong>: only when you choose Share a public link on a résumé, a read-only copy of that résumé — what its PDF prints: the name, job title, contacts, photo, summary and sections you show — is stored in Firestore under a random link, and anyone with the link can read it. Fields and sections you hid, the cover letter and the résumé's name in your list are not in it. It stays public until you unpublish it.</li>
             </ul>
             <p className="mt-2">
               When you sign out, your résumés, jobs and boards are removed from this browser; they stay in your
@@ -111,7 +112,9 @@ export default function PrivacyPage() {
             <h2 className="text-lg font-semibold text-gray-900 mb-3">6. Security</h2>
             <p>
               Firestore security rules ensure that only you (authenticated by your Google account) can
-              read or write your résumés, jobs and boards. All data in transit is encrypted via HTTPS/TLS.
+              read or write your résumés, jobs and boards. The one exception is a résumé you publish with a
+              public link: anyone with that link can read its copy, and only you can change or unpublish it.
+              All data in transit is encrypted via HTTPS/TLS.
             </p>
           </section>
 

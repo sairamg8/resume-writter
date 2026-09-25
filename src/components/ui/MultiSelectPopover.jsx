@@ -94,7 +94,7 @@ function PickerBody({ options, value, onChange, onCreate, title, clearable, sear
         <div className="flex items-center justify-between gap-2 px-3 pt-2.5">
           {title && <span className="text-xs font-semibold text-slate-500">{title}</span>}
           {clearable && value.length > 0 && (
-            <button type="button" onClick={() => onChange?.([])} className="ml-auto rounded text-xs font-medium text-indigo-600 hover:text-indigo-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60">
+            <button type="button" onClick={() => onChange?.([])} className="ml-auto rounded text-xs font-medium text-brand hover:text-indigo-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60">
               Clear
             </button>
           )}
@@ -115,7 +115,7 @@ function PickerBody({ options, value, onChange, onCreate, title, clearable, sear
           value={query}
           onChange={(e) => { setQuery(e.target.value); setActive(0); }}
           onKeyDown={onKeyDown}
-          className="h-8 w-full rounded-md border border-slate-200 bg-slate-50 pr-2 pl-8 text-[13px] text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/25 pointer-coarse:h-10 pointer-coarse:text-base"
+          className="h-8 w-full rounded-md border border-slate-200 bg-slate-50 pr-2 pl-8 text-[13px] text-slate-900 placeholder:text-slate-400 focus:border-brand focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand/25 pointer-coarse:h-10 pointer-coarse:text-base"
         />
       </div>
       <ul ref={listRef} id={`${id}-list`} role="listbox" aria-multiselectable="true" aria-label={title ?? searchPlaceholder} className="max-h-64 overflow-y-auto p-1 pt-0">
@@ -139,7 +139,7 @@ function PickerBody({ options, value, onChange, onCreate, title, clearable, sear
             >
               {row.create ? (
                 <>
-                  <Plus size={14} aria-hidden="true" className="shrink-0 text-indigo-600" />
+                  <Plus size={14} aria-hidden="true" className="shrink-0 text-brand" />
                   <span className="min-w-0 truncate">Create <span className="font-semibold">“{row.label}”</span></span>
                 </>
               ) : (
@@ -148,7 +148,7 @@ function PickerBody({ options, value, onChange, onCreate, title, clearable, sear
                     aria-hidden="true"
                     className={cx(
                       'flex size-4 shrink-0 items-center justify-center rounded border transition-colors duration-100',
-                      selected ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-slate-300 bg-white',
+                      selected ? 'border-brand bg-brand text-white' : 'border-slate-300 bg-white',
                     )}
                   >
                     {selected && <Check size={11} strokeWidth={3} />}

@@ -10,7 +10,7 @@ import { entries, richFrom } from './jsonResumeText.js';
 import { customItem, fileEntries, PUBLICATIONS, SECTION_KEYS } from './jsonResumeSections.js';
 import { CONTACT_FIELDS } from './contacts.js';
 import { templateId } from '../constants/templates.js';
-import { presetOf, presetSettings } from '../constants/templatePresets.js';
+import { presetOf, presetSettings, withOwnDesign } from '../constants/templatePresets.js';
 import { DATE_FORMATS } from './dates.js';
 import { DEFAULT_PAGE_SIZE, pageSizeOf } from '../constants/pageSize.js';
 
@@ -154,7 +154,7 @@ export function jsonResumeToCpwtResume(jsonResume, customId) {
   const single = template === 'sidebar' && jsonResume?.meta?.layout === 'single';
   // The design the export names (R2-138), where it is one of this build's over that template: its look
   // over the starter's, as picking it sets it.
-  const design = presetOf({ templatePreset: jsonResume?.meta?.design }, template) ? presetSettings(jsonResume.meta.design) : {};
+  const design = presetOf({ templatePreset: jsonResume?.meta?.design }, template) ? presetSettings(jsonResume.meta.design) : ownDesignOf(jsonResume?.meta, template);
   // The paper the export wrote (R2-136), read as the PDF reads it: a size this build does not offer,
   // or none — every file another tool wrote — is the A4 a résumé with none prints on.
   const pageSize = pageSizeOf({ pageSize: jsonResume?.meta?.pageSize });
@@ -170,4 +170,18 @@ export function jsonResumeToCpwtResume(jsonResume, customId) {
     sections: sectionsOf(jsonResume),
     coverLetter: { ...BASE_COVER_LETTER },
   };
+}
+
+/**
+ * The design the user saved that an export names (B4, meta.design with its look in meta.designLook),
+ * over `template`: its look, its id, and the design itself kept with the résumé, as picking it sets
+ * them — else nothing. Only its plain values are read (designLook), whatever the file holds.
+ */
+function ownDesignOf(meta, template) {
+  const id = meta?.design;
+  const look = meta?.designLook;
+  if (typeof id !== 'string' || !look || typeof look !== 'object') return {};
+  const settings = withOwnDesign({}, id, { label: String(look.label ?? '').slice(0, 60), engine: look.engine, settings: look.settings });
+  const own = presetOf({ ...settings, templatePreset: id }, template);
+  return own ? { ...own.settings, ...settings, templatePreset: id } : {};
 }

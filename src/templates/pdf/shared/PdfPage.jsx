@@ -1,5 +1,6 @@
 import { StyleSheet } from '@react-pdf/renderer';
-import { solid } from './pdfColors';
+import { Text } from './PdfText';
+import { solid, textShades } from './pdfColors';
 import { HEADER_BORDER_PAD_PT, MM_TO_PT } from './pdfUnits';
 import { pageBoxPt } from '@/constants/pageSize';
 
@@ -32,7 +33,7 @@ export function getPageStyle(settings) {
   // last block sits near the edge (github.com/diegomura/react-pdf/issues/739).
   // Keep visual margins equal via a 0.5mm epsilon only on the bottom.
   const { v, h } = pageMargins(settings);
-  const bottom = Math.max(0, v - 0.5);
+  const bottom = Math.max(0, bottomMarginMm(settings) - 0.5);
 
   return StyleSheet.create({
     page: {
@@ -58,4 +59,51 @@ export function getDocumentProps(personal) {
     subject: 'Resume',
     keywords: 'resume, cv, CPWT-CV',
   };
+}
+
+/** Design → Page numbers' footer (settings.pageNumbers, R2-147): its type size, pt, and the least bottom margin that holds it, mm. */
+const PAGE_NUMBER_PT = 8;
+const PAGE_NUMBER_ROOM_MM = 10;
+
+/**
+ * The page's bottom margin in mm: Design → Spacing's, or with Page numbers on at least the room its
+ * footer prints in — a 0 mm margin would print it over the last line. Off (every résumé storing
+ * none), the margin as before.
+ */
+export const bottomMarginMm = (settings) => {
+  const { v } = pageMargins(settings);
+  return settings?.pageNumbers === true ? Math.max(v, PAGE_NUMBER_ROOM_MM) : v;
+};
+
+/**
+ * "Page 1 of 2" at the foot of every page when Design → Page numbers is on (R2-147): fixed, so
+ * react-pdf repeats it on each page, and absolute, inside the bottom margin (bottomMarginMm) at the
+ * right margin, so it takes no room from the content and moves no page break. Right-aligned, it
+ * stays off the Sidebar's dark column. A template puts it LAST among its page's children: it is then
+ * the page's last text drawn, so text readers (pdftotext -raw, an ATS) still read the name first on
+ * page 1 and the running header first on the pages after. (react-pdf leaves the fixed elements that
+ * follow a node that cannot break and is taller than a page off that node's page: a Banner header
+ * longer than a page, already cut off, would print no number on page 1.) Off: nothing.
+ */
+export function PdfPageNumbers({ settings }) {
+  if (settings?.pageNumbers !== true) return null;
+  const room = bottomMarginMm(settings) * MM_TO_PT;
+  const line = PAGE_NUMBER_PT * 1.2;
+  return (
+    <Text
+      fixed
+      style={{
+        // Placed from the top with no height, as the running header (ATS-7) is. Each time react-pdf lays
+        // a page out again it multiplies a render-prop Text's unitless lineHeight by its fontSize once
+        // more (8 pt × 1.2 = 9.6, then 76.8, 4915.2 … pt), so this line is far taller than its type. Given a
+        // height, textkit dropped the line (it keeps none taller than its box); placed from the bottom, the
+        // box grew up off the paper — no page printed a number (19ce8d1 … 9e4c0fa). From the top, it grows
+        // down past the paper's edge and the number prints at its top, where it is placed.
+        position: 'absolute', top: pageBoxPt(settings).height - room + Math.max(0, (room - line) / 2),
+        left: 0, right: `${pageMargins(settings).h}mm`,
+        fontSize: PAGE_NUMBER_PT, lineHeight: 1.2, textAlign: 'right', color: textShades(settings.textColor).meta,
+      }}
+      render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`}
+    />
+  );
 }

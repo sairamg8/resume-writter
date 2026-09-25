@@ -93,8 +93,16 @@ export function SegmentControl({ options, value, onChange }) {
   );
 }
 
-export function DesignSection({ title, defaultOpen = false, onReset, children }) {
-  const [open, setOpen] = useState(defaultOpen);
+/**
+ * A collapsible Design section. `open` and `onOpenChange` given, its parent keeps whether it is open —
+ * the editor does for Template, so a collapsed Template stays collapsed across tabs (A12); else it keeps
+ * its own, from `defaultOpen`.
+ */
+export function DesignSection({ title, defaultOpen = false, open: kept, onOpenChange, onReset, children }) {
+  const [own, setOwn] = useState(defaultOpen);
+  const controlled = typeof kept === 'boolean' && typeof onOpenChange === 'function';
+  const open = controlled ? kept : own;
+  const setOpen = (next) => (controlled ? onOpenChange(next(open)) : setOwn(next));
   return (
     <div className="border border-gray-200 rounded-xl overflow-hidden">
       <div className="flex items-center">

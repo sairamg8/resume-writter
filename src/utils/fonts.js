@@ -23,6 +23,13 @@ export const FONTS = [
   { id: 'literata',    label: 'Literata',       name: 'Literata',       pkg: 'literata',       category: 'serif' },
 ].map((f) => ({ ...f, family: `'${f.name}', ${f.category}` }));
 
+/**
+ * The font settings a Typography font choice stands for — Name Font and Heading Font store one value
+ * (R2-146): a picker id prints that font, anything else is a custom Google Font's name, as Font
+ * Family's customFont is. Read by the PDF (pdfFontLoader.js) and Word (wordExport.js) alike.
+ */
+export const fontChoice = (value) => (FONTS.some((f) => f.id === value) ? { font: value, customFont: '' } : { customFont: String(value || '') });
+
 const previewing = new Set();
 
 /** Show `name` in its own face in the app, loaded from the files the PDF uses (no Google Fonts CSS). */

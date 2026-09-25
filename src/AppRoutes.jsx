@@ -1,11 +1,15 @@
-import { Suspense, lazy, useLayoutEffect, useMemo } from 'react';
+import { Suspense, lazy, useCallback, useLayoutEffect, useMemo } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigationType } from 'react-router-dom';
 import { Dashboard } from '@/pages/Dashboard';
 import TermsPage from '@/pages/TermsPage';
 import PrivacyPage from '@/pages/PrivacyPage';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { WorkspaceLayout, sidebarProjects } from '@/components/shell';
+import { CreateIssueDialog } from '@/components/board/CreateIssueDialog';
 import { useBoardStore } from '@/hooks/useBoardStore';
+import { searchWorkspace } from '@/utils/workspaceSearch';
+
+const renderCreate = (props) => <CreateIssueDialog {...props} />;
 
 // The editor and the workspace pages are split from the start-up code (R2-142, PERF-5): the entry
 // held every page — the editor's panels, the ATS checker, the boards, drag and drop — so the
@@ -21,6 +25,12 @@ const Board         = page(() => import('@/pages/Board'), 'Board');
 const Backlog       = page(() => import('@/pages/Backlog'), 'Backlog');
 const BoardSettings = page(() => import('@/pages/BoardSettings'), 'BoardSettings');
 const YourWork      = page(() => import('@/pages/YourWork'), 'YourWork');
+const ProjectSummary  = page(() => import('@/pages/ProjectSummary'), 'ProjectSummary');
+const ProjectTimeline = page(() => import('@/pages/ProjectTimeline'), 'ProjectTimeline');
+const ProjectCalendar = page(() => import('@/pages/ProjectCalendar'), 'ProjectCalendar');
+const ProjectList     = page(() => import('@/pages/ProjectList'), 'ProjectList');
+// A published résumé (R2-148), opened from its link by anyone: its page, not the editor's code.
+const PublicResume    = page(() => import('@/pages/PublicResume'), 'PublicResume');
 
 /** What shows for the moment a page's code is on its way. */
 function PageLoading() {
@@ -28,14 +38,16 @@ function PageLoading() {
 }
 
 /**
- * The workspace shell (sidebar + scrolling main) as a layout route, its sidebar's projects read
- * from the board store. Only the workspace pages mount it, so the résumé dashboard and editor never
- * load the boards. The mapping reads v1 and v2 boards alike (shell/projects.js).
+ * The workspace shell (top bar, sidebar, scrolling main) as a layout route, its sidebar's projects,
+ * its quick search and its Create dialog reading the board store. Only the workspace pages mount
+ * it, so the résumé dashboard and editor never load the boards. The mapping reads v1 and v2 boards
+ * alike (shell/projects.js).
  */
 export function WorkspaceRoute() {
   const { boards } = useBoardStore();
   const projects = useMemo(() => sidebarProjects(boards), [boards]);
-  return <WorkspaceLayout projects={projects} />;
+  const search = useCallback((query) => searchWorkspace(boards, query), [boards]);
+  return <WorkspaceLayout projects={projects} search={search} renderCreate={renderCreate} />;
 }
 
 /**
@@ -81,10 +93,16 @@ export function AppRoutes({ store, auth, sync, seed }) {
           <Route path="/work"                element={<YourWork />} />
           <Route path="/boards/:id"          element={<Board />} />
           <Route path="/boards/:id/backlog"  element={<Backlog />} />
+          <Route path="/boards/:id/summary"  element={<ProjectSummary />} />
+          <Route path="/boards/:id/timeline" element={<ProjectTimeline />} />
+          <Route path="/boards/:id/calendar" element={<ProjectCalendar />} />
+          <Route path="/boards/:id/list"     element={<ProjectList />} />
           <Route path="/boards/:id/settings" element={<BoardSettings />} />
         </Route>
         <Route path="/terms"      element={<TermsPage />} />
         <Route path="/privacy"    element={<PrivacyPage />} />
+        {/* A published résumé, read-only, for anyone with its link (R2-148). */}
+        <Route path="/r/:shareId" element={<PublicResume />} />
         <Route path="*"           element={<Navigate to="/" replace />} />
       </Routes>
     </RouteFrame>

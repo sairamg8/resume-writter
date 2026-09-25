@@ -1,99 +1,133 @@
-import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Check } from 'lucide-react';
 import { useBoardStore } from '@/hooks/useBoardStore';
-import { PageHeader } from '@/components/shell/PageHeader';
+import { Button, DatePill, EmptyState, IconButton, TabPanel, Tabs } from '@/components/ui';
+import { PageHeader } from '@/components/shell';
 import { BoardStorageNotice } from '@/components/board/BoardStorageNotice';
-import { yourWork } from '@/utils/boardQuery';
+import { ProjectAvatar } from '@/components/board/ProjectTabs';
+import { IssueHost, useIssueRoute } from '@/components/board/useIssueActions';
+import { Lozenge } from '@/components/tracker/Lozenge';
+import { IssueTypeIcon, PriorityIcon } from '@/components/tracker/TrackerIcons';
+import { issueCounts, yourWork } from '@/utils/boardQuery';
 import { isIssueDone, statusColumn } from '@/utils/boardModel';
+import { relativeTime } from '@/utils/uiFormat';
 
-/** The sections, in order: boardQuery.yourWork's buckets, and what each is called here. */
+/** The sections of "To do", in order: boardQuery.yourWork's buckets, and what each is called here. */
 const SECTIONS = [
-  { id: 'overdue', title: 'Overdue', tone: 'text-red-700' },
-  { id: 'today', title: 'Due today', tone: 'text-amber-700' },
-  { id: 'week', title: 'Due this week', tone: 'text-gray-900' },
-  { id: 'inProgress', title: 'In progress', tone: 'text-gray-900' },
-  { id: 'recent', title: 'Recently updated', tone: 'text-gray-900' },
+  { id: 'overdue', title: 'Overdue' },
+  { id: 'today', title: 'Due today' },
+  { id: 'week', title: 'Due this week' },
+  { id: 'inProgress', title: 'In progress' },
 ];
 
-/** One issue: key, title, its project, status and due date; opens it on its board, or marks it done. */
-function WorkRow({ row, onOpen, onDone }) {
+/** One issue: type, key, summary, its project, status, due date — opens in place; ✓ marks it done. */
+function WorkRow({ row, onOpen, onDone, showUpdated }) {
   const { board, issue, key } = row;
+  const column = statusColumn(board, issue);
   const done = isIssueDone(board, issue);
   return (
-    <li data-issue={issue.id} className="flex items-center gap-3 px-3 py-2">
-      <button onClick={onOpen} className="flex-1 min-w-0 flex items-center gap-3 text-left hover:bg-gray-50 rounded-lg px-1 py-0.5" title={`Open ${key} on its board`}>
-        <span className="text-[11px] font-mono text-gray-400 shrink-0">{key}</span>
-        <span className={`flex-1 min-w-0 text-sm truncate ${done ? 'line-through text-gray-400' : 'text-gray-800'}`}>{issue.title}</span>
-        <span className="hidden sm:inline-flex items-center gap-1 text-[11px] text-gray-500 shrink-0 max-w-[9rem]">
-          <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: board.color }} />
-          <span className="truncate">{board.title}</span>
+    <li data-issue={issue.id} className="group flex items-center gap-3 border-b border-line-subtle px-2 py-1.5 last:border-b-0 hover:bg-hovered">
+      <button type="button" onClick={onOpen} className="flex min-w-0 flex-1 items-center gap-3 text-left" title={`Open ${key}`}>
+        <IssueTypeIcon type={issue.type} />
+        <span className="min-w-0 flex-1">
+          <span className={done ? 'block truncate text-sm text-ink-subtlest line-through' : 'block truncate text-sm text-ink'}>{issue.title}</span>
+          <span className="block truncate text-[12px] text-ink-subtlest">{key} · {board.title}</span>
         </span>
-        <span className="text-[11px] text-gray-500 bg-gray-100 rounded-full px-2 py-0.5 shrink-0">{statusColumn(board, issue)?.title}</span>
-        {issue.due && <span className="text-[11px] text-gray-400 shrink-0 w-20 text-right">{issue.due}</span>}
+        <PriorityIcon priority={issue.priority} />
+        {issue.due && <DatePill value={issue.due} done={done} size="sm" />}
+        <Lozenge tone={column?.category} className="hidden sm:inline-flex">{column?.title}</Lozenge>
+        {showUpdated && <span className="hidden w-20 shrink-0 text-right text-[12px] text-ink-subtlest md:block">{relativeTime(issue.updatedAt)}</span>}
       </button>
-      {!done && board.columns.some((c) => c.category === 'done') && (
-        <button onClick={onDone} aria-label={`Mark ${key} done`} title="Mark done" className="p-1 text-gray-300 hover:text-emerald-600 hover:bg-emerald-50 rounded shrink-0">
-          <Check size={14} />
-        </button>
+      {!done && onDone && board.columns.some((c) => c.category === 'done') && (
+        <IconButton icon={Check} size="sm" label={`Mark ${key} done`} onClick={onDone} className="hover:text-loz-done-ink" />
       )}
     </li>
   );
 }
 
 /**
- * "Your work" (/work): what needs doing across every project (boardQuery.yourWork) — overdue, due
- * today, due this week, in progress — and the issues updated last. An issue opens on its board
- * (`?issue=KEY-N` opens its card), or is marked done here (into its project's first done column).
- * Epics hold issues rather than being work themselves, so they are left out, as on the board.
+ * "Your work" (/work): your recent projects as cards, then To do — what needs doing across every
+ * project (overdue, due today, this week, in progress; boardQuery.yourWork) — and Worked on, the
+ * issues updated last. An issue opens here (`?issue=KEY-N`), or is marked done (into its
+ * project's first done column). Epics hold issues rather than being work, so they are left out.
  */
 export function YourWork() {
-  const navigate = useNavigate();
   const store = useBoardStore();
+  const route = useIssueRoute(store.boards);
+  const [tab, setTab] = useState('todo');
   const boards = store.boards.map((b) => ({ ...b, issues: b.issues.filter((i) => i.type !== 'epic') }));
   const work = yourWork(boards);
-  const open = SECTIONS.slice(0, 4).reduce((n, s) => n + work[s.id].length, 0);
-
+  const open = SECTIONS.reduce((n, s) => n + work[s.id].length, 0);
+  const recentProjects = [...store.boards].sort((a, b) => Number(b.starred) - Number(a.starred) || (b.updatedAt ?? 0) - (a.updatedAt ?? 0)).slice(0, 4);
   function markDone({ board, issue }) {
     const column = board.columns.find((c) => c.category === 'done');
     if (column) store.moveIssue(board.id, issue.id, { columnId: column.id });
   }
+  const row = (r, extra = {}) => <WorkRow key={`${r.board.id}-${r.issue.id}`} row={r} onOpen={() => route.open(r.key)} onDone={() => markDone(r)} {...extra} />;
 
   return (
-    <div className="flex flex-col min-h-full bg-[#f5f3ef]">
+    <div className="flex min-h-0 flex-1 flex-col">
       <PageHeader title="Your work" subtitle={open ? `${open} issue${open === 1 ? '' : 's'} need attention across ${store.boards.length} project${store.boards.length === 1 ? '' : 's'}` : undefined} />
-      <BoardStorageNotice persistError={store.persistError} recovery={store.recovery} onDismissRecovery={store.dismissRecovery} className="max-w-4xl w-full mx-auto px-4 sm:px-6 pt-3" />
-
-      <div className="max-w-4xl w-full mx-auto px-4 sm:px-6 py-5 space-y-4">
-        {work.recent.length === 0 ? (
-          <div className="text-center py-16">
-            <p className="text-sm font-medium text-gray-500 mb-1">Nothing here yet</p>
-            <p className="text-xs text-gray-400 mb-4">Issues due soon and in progress across your projects gather here.</p>
-            <button onClick={() => navigate('/boards')} className="px-4 py-2 text-sm font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700">Open projects</button>
-          </div>
+      <BoardStorageNotice persistError={store.persistError} recovery={store.recovery} onDismissRecovery={store.dismissRecovery} className="px-4 pt-3 md:px-8" />
+      <div className="flex flex-col gap-6 px-4 py-4 md:px-8">
+        {store.boards.length === 0 ? (
+          <EmptyState title="Nothing here yet" description="Issues due soon and in progress across your projects gather here." action={<Button variant="primary" to="/boards?create=1">Create a project</Button>} />
         ) : (
           <>
-            {open === 0 && <p className="text-sm text-gray-500">Nothing overdue, due this week or in progress. Well done.</p>}
-            {SECTIONS.filter((s) => work[s.id].length > 0).map((section) => (
-              <section key={section.id} data-section={section.id} className="bg-white border border-gray-200 rounded-2xl shadow-sm">
-                <div className="flex items-center gap-2 px-3 py-2.5 border-b border-gray-100">
-                  <h2 className={`text-sm font-semibold px-1 ${section.tone}`}>{section.title}</h2>
-                  <span className="text-[11px] text-gray-400">{work[section.id].length}</span>
-                </div>
-                <ul className="divide-y divide-gray-100">
-                  {work[section.id].map((row) => (
-                    <WorkRow
-                      key={`${row.board.id}-${row.issue.id}`}
-                      row={row}
-                      onOpen={() => navigate(`/boards/${encodeURIComponent(row.board.id)}?issue=${encodeURIComponent(row.key)}`)}
-                      onDone={() => markDone(row)}
-                    />
-                  ))}
-                </ul>
-              </section>
-            ))}
+            <section aria-labelledby="recent-projects">
+              <div className="mb-2 flex items-center justify-between">
+                <h2 id="recent-projects" className="text-sm font-semibold text-ink-subtle">Recent projects</h2>
+                <Link to="/boards" className="text-sm text-brand hover:underline">View all projects</Link>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                {recentProjects.map((b) => {
+                  const counts = issueCounts(b);
+                  const base = `/boards/${encodeURIComponent(b.id)}`;
+                  return (
+                    <div key={b.id} className="relative overflow-hidden rounded-md border border-line bg-white p-4 pl-6 shadow-[0_1px_1px_#091e4220]">
+                      <span aria-hidden="true" className="absolute inset-y-0 left-0 w-3" style={{ backgroundColor: b.color }} />
+                      <div className="flex items-center gap-2.5">
+                        <ProjectAvatar board={b} size={28} />
+                        <div className="min-w-0">
+                          <Link to={base} className="block truncate text-sm font-semibold text-ink hover:underline">{b.title}</Link>
+                          <p className="text-[12px] text-ink-subtlest">{b.mode === 'scrum' ? 'Scrum' : 'Kanban'} project</p>
+                        </div>
+                      </div>
+                      <p className="mt-3 text-[12px] font-semibold uppercase text-ink-subtle">Quick links</p>
+                      <div className="mt-1 flex flex-col gap-0.5 text-sm">
+                        <Link to={base} className="flex justify-between rounded px-1 py-0.5 text-ink hover:bg-hovered">Open issues <span className="rounded-full bg-neutral-fill-hover px-2 text-[12px]">{counts.open}</span></Link>
+                        <Link to={`${base}/backlog`} className="rounded px-1 py-0.5 text-ink hover:bg-hovered">Backlog</Link>
+                        <Link to={`${base}/summary`} className="rounded px-1 py-0.5 text-ink hover:bg-hovered">Summary</Link>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+            <section className="flex flex-col gap-3">
+              <Tabs id="your-work" aria-label="Your work" value={tab} onChange={setTab} items={[{ value: 'todo', label: 'To do', count: open || null }, { value: 'worked', label: 'Worked on' }]} />
+              <TabPanel tabsId="your-work" value="todo" current={tab} className="flex flex-col gap-4">
+                {open === 0 && <p className="text-sm text-ink-subtle">Nothing overdue, due this week or in progress. Well done.</p>}
+                {SECTIONS.filter((s) => work[s.id].length > 0).map((s) => (
+                  <section key={s.id} data-section={s.id}>
+                    <h3 className="mb-1 text-[12px] font-semibold uppercase tracking-wide text-ink-subtle">{s.title} <span className="font-normal text-ink-subtlest">{work[s.id].length}</span></h3>
+                    <ul className="rounded-md border border-line">{work[s.id].map((r) => row(r))}</ul>
+                  </section>
+                ))}
+              </TabPanel>
+              <TabPanel tabsId="your-work" value="worked" current={tab}>
+                <section data-section="recent">
+                  {work.recent.length === 0 ? <p className="text-sm text-ink-subtle">No issues yet.</p> : (
+                    <ul className="rounded-md border border-line">{work.recent.map((r) => row(r, { showUpdated: true }))}</ul>
+                  )}
+                </section>
+              </TabPanel>
+            </section>
           </>
         )}
       </div>
+      <IssueHost route={route} />
     </div>
   );
 }

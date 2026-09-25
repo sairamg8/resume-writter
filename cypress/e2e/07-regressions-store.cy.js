@@ -285,8 +285,9 @@ describe('regressions — job store', () => {
         return original.call(this, key, value);
       });
     });
-    cy.on('window:confirm', () => true);
-    cy.get('button[title="Clear all job data"]').click();
+    cy.get('button[aria-label="More job actions"]').click();
+    cy.contains('[role="menuitem"]', 'Clear all jobs').click();
+    cy.contains('[role="alertdialog"] button', 'Clear all jobs').click();
     cy.contains('span', /^Total$/).prev('span').should('have.text', '0');
     cy.contains('[role="alert"]', 'not being saved').should('be.visible');
   });

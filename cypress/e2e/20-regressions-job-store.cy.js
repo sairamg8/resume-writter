@@ -39,7 +39,7 @@ describe('regressions — one résumé store and one job store (M14)', () => {
     });
     stat('Total').should('have.text', '2');
 
-    cy.contains('button', 'Add Job').click();
+    cy.contains('button', /^Add job$/).click(); // the page header's (the top bar's reads "Add job" twice, for phones)
     formField('Company').type('Stripe');
     formField('Role / Position').type('Backend Engineer');
     formField('Resume Used').select(resumes.resumes[0].name);
@@ -74,7 +74,7 @@ describe('regressions — one résumé store and one job store (M14)', () => {
     stat('Total').should('have.text', '1');
     fillStorage();
 
-    cy.contains('button', 'Add Job').click();
+    cy.contains('button', /^Add job$/).click(); // the page header's (the top bar's reads "Add job" twice, for phones)
     formField('Company').type('Stripe');
     cy.contains('button', /^Add Job$/).click();
     cy.contains('h1', 'Stripe').should('be.visible');
@@ -105,8 +105,8 @@ describe('regressions — one résumé store and one job store (M14)', () => {
       win.dispatchEvent(new win.StorageEvent('storage', { key: JOBS_KEY, newValue: value }));
     }));
     stat('Total').should('have.text', '2');
-    cy.on('window:confirm', () => true);
-    cy.contains('p', /^Google$/).closest('.rounded-xl').find('button[title="Delete application"]').click({ force: true });
+    cy.contains('[aria-roledescription="draggable"]', 'Google').find('button[title="Delete application"]').click({ force: true });
+    cy.contains('[role="alertdialog"] button', /^Delete$/).click();
     stat('Total').should('have.text', '1');
     cy.jobStore().its('jobs').should((jobs) => expect(jobs.map((j) => j.company)).to.deep.eq(['Other Tab Inc']));
   });
@@ -153,8 +153,8 @@ describe('regressions — one résumé store and one job store (M14)', () => {
     formField('Resume Used').find('option').should(($o) => {
       expect([...$o].map((o) => o.textContent)).to.deep.eq(['— Not linked yet —', 'My CV']);
     });
-    goTo('#/jobs');
-    cy.contains('p', 'Career History').next().should('contain.text', 'Sam Owner');
+    goTo('#/jobs?view=summary');
+    cy.contains('h2', 'Career history').next().should('contain.text', 'Sam Owner');
   });
 });
 
@@ -172,7 +172,7 @@ describe('regressions — the Add Job form and its saved interview stages', () =
         };
       },
     });
-    cy.contains('button', 'Add Job').click();
+    cy.contains('button', /^Add job$/).click(); // the page header's (the top bar's reads "Add job" twice, for phones)
     cy.contains('h1', 'Add Job Application').should('be.visible');
     formField('Company').type('Stripe');
     cy.get('input[placeholder^="e.g."]').type('Culture Round');
