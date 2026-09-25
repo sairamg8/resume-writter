@@ -81,6 +81,14 @@ describe('Undo a template switch (A4)', () => {
     assert.equal(undone.sections.at(-1).settings.columns, 2, 'the new section\'s own Grid');
   });
 
+  it('Undo changes only the résumé it was taken of: one opened meanwhile (an import) is left as it is', async () => {
+    const { designSnapshot } = await loadModule('/src/utils/templateSwitch.js');
+    const before = cv();
+    const other = { ...cv(), id: 'resume_imported', template: 'modern', settings: { ...cv().settings, accentColor: '#0e7490' } };
+    const left = await inStore(other, (s) => s.restoreDesign(designSnapshot(before)));
+    assert.deepEqual(look(left), look(other));
+  });
+
   it('a section that had no settings of its own has none again — never an undefined Firestore refuses', async () => {
     const { designSnapshot, withDesignSnapshot } = await loadModule('/src/utils/templateSwitch.js');
     const bare = { ...cv(), sections: [{ id: 'sec_x', type: 'skills', title: 'Skills', items: [] }] };

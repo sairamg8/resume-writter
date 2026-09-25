@@ -47,6 +47,7 @@ export function withLook(r, { engine, preset = '', variant = null, design = null
  * section's own settings (a Grid the new template lays out) — kept so the switch can be undone (A4).
  */
 export const designSnapshot = (r) => ({
+  id: r.id,
   template: r.template,
   settings: r.settings,
   sections: (r.sections || []).map((s) => ({ id: s.id, has: Object.hasOwn(s, 'settings'), settings: s.settings })),
@@ -55,9 +56,11 @@ export const designSnapshot = (r) => ({
 /**
  * `r` as `snap` (designSnapshot) had it: the template, the settings and each section's settings — its
  * content as it is now, typed since or not, and the designs saved since kept (B4). A section added since
- * keeps its own; one deleted since stays deleted.
+ * keeps its own; one deleted since stays deleted. Another résumé than the one it was taken of: `r` itself.
  */
 export function withDesignSnapshot(r, snap) {
+  // Only the résumé it was taken of: the Undo of a switch outlives a résumé opened meanwhile (an import).
+  if (snap.id !== undefined && r.id !== snap.id) return r;
   const was = new Map(snap.sections.map((s) => [s.id, s]));
   const sections = (r.sections || []).map((s) => {
     const w = was.get(s.id);
