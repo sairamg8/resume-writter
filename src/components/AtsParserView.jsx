@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { ScanText, ChevronDown, Copy, Check, XCircle } from 'lucide-react';
+import { ScanText, ChevronDown, Copy, Check, XCircle, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { copyText } from '@/utils/clipboard';
-import { parserText, readPdfLines } from '@/utils/parserText';
+import { printedJobs } from '@/utils/atsChecker';
+import { jobFields, parserText, readPdfLines } from '@/utils/parserText';
 
 /**
  * "What a parser reads" (R2-141): the text of the résumé's own PDF, as pdf.js reads it — the text
@@ -37,6 +38,16 @@ export function _setPdfjsForTest(pdfjs) {
   pdfjsPromise = pdfjs ? Promise.resolve(pdfjs) : null;
 }
 
+/** The per-job check's fields, in the order a job's header gives them. */
+const JOB_FIELDS = [['title', 'Title'], ['company', 'Company'], ['dates', 'Dates'], ['location', 'Location']];
+
+/** How each outcome of jobFields shows: its mark, colour and what it means. */
+const FIELD_LOOK = {
+  own: { Icon: CheckCircle2, tone: 'text-emerald-700 bg-emerald-50 border-emerald-200', says: 'a field of its own: a parser files it' },
+  joined: { Icon: AlertTriangle, tone: 'text-amber-800 bg-amber-50 border-amber-200', says: 'on one run with other text: a parser has to split it out' },
+  missing: { Icon: XCircle, tone: 'text-red-700 bg-red-50 border-red-200', says: 'not found in the text as it is typed' },
+};
+
 /** A change waits this long for the typing to pause before the PDF is read again (PdfPreview's). */
 const WAIT_MS = 350;
 
@@ -47,14 +58,17 @@ const WAIT_MS = 350;
  */
 export function AtsParserView({ resume, columnsWarned = false }) {
   const [open, setOpen] = useState(false);
-  // What was read: `status` 'idle' | 'reading' | 'ready' | 'error'; the pages stay while a newer read runs.
-  const [read, setRead] = useState({ status: 'idle', pages: null, error: null });
+  // What was read: `status` 'idle' | 'reading' | 'ready' | 'error'; the pages, and the résumé they were
+  // read from (`of`), stay while a newer read runs.
+  const [read, setRead] = useState({ status: 'idle', pages: null, of: null, error: null });
   const [retry, setRetry] = useState(0);
   // Copy's outcome, shown on the button for a moment: 'done', 'failed' or null.
   const [copied, setCopied] = useState(null);
   const readFor = useRef(null); // { resume, retry } of the last read that started
   const wanted = useRef(0); // bumped by every change that asks for a read
   const shownGen = useRef(0); // the change whose read is on screen
+  const copyTimer = useRef(null); // clears Copy's outcome; cleared itself when the view goes
+  useEffect(() => () => clearTimeout(copyTimer.current), []);
 
   useEffect(() => {
     if (!open || !resume) return undefined;
@@ -73,7 +87,7 @@ export function AtsParserView({ resume, columnsWarned = false }) {
         // change still waits, so steady typing never freezes the text (as the preview, R2-017).
         if (gen < shownGen.current) return;
         shownGen.current = gen;
-        setRead({ status: gen === wanted.current ? 'ready' : 'reading', pages, error: null });
+        setRead({ status: gen === wanted.current ? 'ready' : 'reading', pages, of: resume, error: null });
       } catch (error) {
         if (gen === wanted.current) setRead((r) => ({ ...r, status: 'error', error }));
       }
@@ -82,11 +96,15 @@ export function AtsParserView({ resume, columnsWarned = false }) {
   }, [open, resume, retry]);
 
   const text = parserText(read.pages);
+  // The jobs of the résumé that was read, not of one typed since: the check is of that PDF's text.
+  const jobs = read.pages ? printedJobs(read.of) : [];
+  const checks = read.pages ? jobFields(read.pages, jobs) : [];
 
   function handleCopy() {
     copyText(text).then(() => 'done', () => 'failed').then((outcome) => {
       setCopied(outcome);
-      setTimeout(() => setCopied(null), 2500);
+      clearTimeout(copyTimer.current);
+      copyTimer.current = setTimeout(() => setCopied(null), 2500);
     });
   }
 
@@ -143,6 +161,25 @@ export function AtsParserView({ resume, columnsWarned = false }) {
                   {!copied && <><Copy size={13} /> Copy</>}
                 </button>
               </div>
+              {jobs.length > 0 && (
+                <div className="space-y-1.5" data-parser-jobs>
+                  <p className="text-[11px] font-semibold text-gray-700">Each job, as a parser files it</p>
+                  {jobs.map((job, i) => (
+                    <div key={job.id || i} className="flex flex-wrap items-center gap-1.5 text-[11px]">
+                      <span className="font-medium text-gray-800 mr-1">{[job.role, job.company].filter(Boolean).join(' · ') || `Job ${i + 1}`}</span>
+                      {JOB_FIELDS.filter(([key]) => checks[i]?.[key]).map(([key, label]) => {
+                        const { Icon, tone, says } = FIELD_LOOK[checks[i][key]];
+                        return (
+                          <span key={key} data-field={key} data-outcome={checks[i][key]} title={`${label}: ${says}`}
+                            className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md border ${tone}`}>
+                            <Icon size={11} /> {label}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  ))}
+                </div>
+              )}
               <pre
                 aria-label="The text a parser reads"
                 className="max-h-96 overflow-auto whitespace-pre-wrap break-words text-[11px] leading-relaxed font-mono text-gray-800 bg-gray-50 border border-gray-200 rounded-xl p-3"

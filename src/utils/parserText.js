@@ -92,3 +92,74 @@ export async function readPdfLines(data, { lib, worker } = {}) {
     Promise.resolve(task.destroy()).catch(() => {});
   }
 }
+
+/** Text as compared: lower case, one space between words. */
+const norm = (s) => String(s ?? '').replace(/\s+/g, ' ').trim().toLowerCase();
+/** A run's text less the separators a template sets around a field ("Austin, TX |", "· 2021"). */
+const bare = (s) => norm(s).replace(/^[\s|·•,:;–—-]+|[\s|·•,:;–—-]+$/g, '');
+/** A date's words and marks: what is left once they are gone is some other field's text. */
+const DATE_WORDS = /\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?|\b(?:present|current|now|today|to|since)\b|\d+|[\s/.,'–—-]+/gi;
+const YEAR = /\b(?:19|20)\d{2}\b/;
+
+/**
+ * How one value comes out of the lines: 'own' — a run of its own, which a parser files as a field;
+ * 'joined' — inside a run with other text, which a parser must split to file it; 'missing' — in no
+ * run (not printed, or broken across lines).
+ */
+function fieldIn(lines, value) {
+  const want = norm(value);
+  if (!want) return null;
+  let joined = false;
+  for (const runs of lines) {
+    for (const run of runs) {
+      if (bare(run) === want) return 'own';
+      if (norm(run).includes(want)) joined = true;
+    }
+  }
+  return joined ? 'joined' : 'missing';
+}
+
+/** How a job's dates come out: its start year's run holds nothing but dates ('own'), or other text too. */
+function datesIn(lines, years) {
+  if (!years.length) return null;
+  let joined = false;
+  for (const runs of lines) {
+    for (const run of runs) {
+      if (!years.some((y) => run.includes(y))) continue;
+      if (!run.replace(DATE_WORDS, '').trim()) return 'own';
+      joined = true;
+    }
+  }
+  return joined ? 'joined' : 'missing';
+}
+
+/**
+ * For each job (`jobs`: the entries as they print — atsChecker's printedJobs), whether its title,
+ * company, dates and location come out of `pages` (readPdfLines) as fields a parser can file: each
+ * 'own', 'joined' or 'missing' (fieldIn), or null where the job prints none. A job is looked for from
+ * where the one before it was found, over its header — the line with its title (or, failing that, its
+ * company), the line above and the three below — so two jobs at one company are each read at their
+ * own place.
+ */
+export function jobFields(pages, jobs) {
+  const all = (Array.isArray(pages) ? pages : []).flat();
+  let from = 0;
+  return (Array.isArray(jobs) ? jobs : []).map((job) => {
+    const title = norm(job?.role);
+    const company = norm(job?.company);
+    // Found by its title first: a company can head the job before it too.
+    const find = (want) => (want ? all.findIndex((runs, i) => i >= from && runs.some((r) => norm(r).includes(want))) : -1);
+    const byTitle = find(title);
+    const at = byTitle >= 0 ? byTitle : find(company);
+    const header = at >= 0 ? all.slice(Math.max(from, at - 1), at + 4) : all;
+    if (at >= 0) from = at + 1;
+    const years = [job?.startDate, job?.current ? '' : job?.endDate]
+      .map((d) => String(d ?? '').match(YEAR)?.[0]).filter(Boolean);
+    return {
+      title: fieldIn(header, job?.role),
+      company: fieldIn(header, job?.company),
+      dates: datesIn(header, years),
+      location: fieldIn(header, job?.location),
+    };
+  });
+}

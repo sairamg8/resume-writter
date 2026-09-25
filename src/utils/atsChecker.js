@@ -237,6 +237,17 @@ function shownItems(s, template) {
 }
 
 /**
+ * Every job the résumé prints — its shown Experience entries, each as it prints (shownItems) — for the
+ * ATS tab's per-job check of what a parser reads (parserText's jobFields, R2-141).
+ */
+export function printedJobs(resume) {
+  const template = templateId(resume?.template);
+  return (Array.isArray(resume?.sections) ? resume.sections : [])
+    .filter((s) => s?.type === 'experience' && s.visible !== false)
+    .flatMap((s) => shownItems(s, template));
+}
+
+/**
  * The fields an entry prints as they are, whatever its type (the PDF's and Word's): a job's or
  * volunteer role's company / org, role and location; a degree's institution, degree, field and GPA;
  * a project's name and technologies; a certificate's name, issuer and ID; an award's or a custom
