@@ -187,10 +187,17 @@ test.describe('every design control changes the preview, through the UI', () => 
 
   test('classic: Personal Info (Header Customization, Photo, the eyes) and Section Options', async ({ page }) => {
     await hookPreviewPdfs(page);
-    // Two jobs: the first section's Spacing and Grids have a gap between entries to change. Three
+    // Two jobs: the first section's Spacing and Grids have a gap between entries to change — and a second
+    // role at Acme Corp under its first, so Group roles by company has two roles to group. Three
     // languages, two rows of the grid, for Languages' Spacing; each proficiency one Level draws (R2-147).
     const sections = ALL_SECTION_TYPES.map((s) => (s.type === 'experience' ? {
-      ...s, items: [...s.items, { ...s.items[0], id: 'exp2', company: 'Globex', role: 'Engineer', location: 'Boston', startDate: '03/2019', endDate: '12/2022', current: false }],
+      ...s,
+      items: [
+        s.items[0],
+        { ...s.items[0], id: 'exp1b', role: 'Developer', startDate: '06/2020', endDate: '12/2022', current: false },
+        ...s.items.slice(1),
+        { ...s.items[0], id: 'exp2', company: 'Globex', role: 'Engineer', location: 'Boston', startDate: '03/2019', endDate: '12/2022', current: false },
+      ],
     } : s.type === 'languages' ? {
       ...s, items: [...s.items, { id: 'lang2', language: 'Spanish', proficiency: 'Fluent' }, { id: 'lang3', language: 'French', proficiency: 'Conversational' }],
     } : s));

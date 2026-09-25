@@ -14,7 +14,8 @@ import {
   RenderBullets,
   shadesOf,
 } from './PdfSections';
-import { itemHeadPresence } from './PdfItemHeader';
+import { EmployerHeader, itemHeadPresence } from './PdfItemHeader';
+import { employerOf, groupPlaces, groupsRoles, roleGroups } from '@/utils/roleGroups';
 
 export function ExperienceSection({ section, settings, marginBottom, spaceBefore, itemGap, italicSubs, centered }) {
   const s = section.settings || {};
@@ -30,10 +31,11 @@ export function ExperienceSection({ section, settings, marginBottom, spaceBefore
   const isModern   = settings?._template === 'modern';
   const body       = shadesOf(settings).body;
   // An entry's header fields, as ItemHeader prints them.
+  const roleOf = (item) => ((item.hiddenFields || []).includes('role') ? '' : (item.role || ''));
   const head = (item) => {
     const iH  = item.hiddenFields || [];
     const company = iH.includes('company') ? '' : (item.company || '');
-    const role    = iH.includes('role')    ? '' : (item.role    || '');
+    const role    = roleOf(item);
     const loc  = !iH.includes('location') && showLoc ? (item.location || '') : '';
     const sd   = iH.includes('startDate') ? '' : item.startDate;
     const ed   = iH.includes('endDate')   ? '' : (item.current ? presentLabel(settings) : item.endDate);
@@ -44,8 +46,66 @@ export function ExperienceSection({ section, settings, marginBottom, spaceBefore
       dateStr: showDates ? dateRange(sd, ed, settings) : '',
     };
   };
-  // The title keeps the first entry's header and the lines it keeps with it (R2-047).
-  const presence = visibleItems.length ? itemHeadPresence({ ...head(visibleItems[0]), settings, titleStyle, centered }) : 0;
+  // Section Options → "Group roles by company" (R2-147): consecutive roles at one employer print under
+  // one employer header (roleGroups); a group is one entry of the section, in Grids one cell. Off, or a
+  // job alone at its company, prints as it always has (`one`).
+  const grouped = groupsRoles(s);
+  const groups = grouped ? roleGroups(visibleItems) : null;
+  // The title keeps the first entry's header and the lines it keeps with it (R2-047): a group's employer
+  // line and its first role's, two lines as a Stacked header.
+  const presence = !visibleItems.length ? 0
+    : groups?.[0].length > 1 ? itemHeadPresence({ primary: employerOf(groups[0][0]), sub: roleOf(groups[0][0]) || undefined, settings, centered })
+    : itemHeadPresence({ ...head(visibleItems[0]), settings, titleStyle, centered });
+  const descOf = (item) => ((item.hiddenFields || []).includes('description') ? '' : item.description);
+  const one = (item) => {
+    const desc = descOf(item);
+    return (
+      <View>
+        <ItemHeader
+          {...head(item)}
+          settings={settings}
+          titleStyle={titleStyle}
+          italicSub={italicSubs}
+          centered={centered}
+        />
+        {hasRichText(desc) && (
+          <PdfRichText html={desc} style={{ fontSize: entrySize, color: body, lineHeight: lineH, marginTop: 2, textAlign: centered ? 'center' : 'left' }} />
+        )}
+        <RenderBullets bullets={item.bullets} style={{ fontSize: entrySize, color: body, lineHeight: lineH, textAlign: centered ? 'center' : 'left' }} accent={accent} isModern={isModern} template={settings?._template} />
+      </View>
+    );
+  };
+  // A group: the employer (and the first role's location) once, then each role — its title, whichever
+  // Order is chosen (the employer leads a group: that is what it groups by), with its own dates, a
+  // location only where it differs, and its description — half an item gap apart.
+  const group = (g) => {
+    const places = groupPlaces(g, (item) => head(item).loc);
+    return (
+      <View>
+        <EmployerHeader
+          company={employerOf(g[0])}
+          loc={places.header || undefined}
+          settings={settings}
+          italicSub={italicSubs}
+          centered={centered}
+          keep={itemHeadPresence({ primary: roleOf(g[0]), loc: places.roles[0] || undefined, settings, titleStyle, centered })}
+        />
+        {g.map((item, k) => {
+          const desc = descOf(item);
+          return (
+            <View key={k} style={k ? { marginTop: itemGap / 2 } : null}>
+              {SPACER}
+              <ItemHeader primary={roleOf(item)} loc={places.roles[k] || undefined} dateStr={head(item).dateStr} settings={settings} titleStyle={titleStyle} centered={centered} />
+              {hasRichText(desc) && (
+                <PdfRichText html={desc} style={{ fontSize: entrySize, color: body, lineHeight: lineH, marginTop: 2, textAlign: centered ? 'center' : 'left' }} />
+              )}
+              <RenderBullets bullets={item.bullets} style={{ fontSize: entrySize, color: body, lineHeight: lineH, textAlign: centered ? 'center' : 'left' }} accent={accent} isModern={isModern} template={settings?._template} />
+            </View>
+          );
+        })}
+      </View>
+    );
+  };
 
   return (
     <View style={{ marginBottom, marginTop: spaceBefore }}>
@@ -53,27 +113,10 @@ export function ExperienceSection({ section, settings, marginBottom, spaceBefore
       <RenderColGrid
         title={<SectionTitleOf section={section} settings={settings} centered={centered} presence={presence} />}
         settings={settings}
-        items={visibleItems}
+        items={groups || visibleItems}
         cols={cols}
         gap={itemGap}
-        renderItem={(item) => {
-          const desc = (item.hiddenFields || []).includes('description') ? '' : item.description;
-          return (
-            <View>
-              <ItemHeader
-                {...head(item)}
-                settings={settings}
-                titleStyle={titleStyle}
-                italicSub={italicSubs}
-                centered={centered}
-              />
-              {hasRichText(desc) && (
-                <PdfRichText html={desc} style={{ fontSize: entrySize, color: body, lineHeight: lineH, marginTop: 2, textAlign: centered ? 'center' : 'left' }} />
-              )}
-              <RenderBullets bullets={item.bullets} style={{ fontSize: entrySize, color: body, lineHeight: lineH, textAlign: centered ? 'center' : 'left' }} accent={accent} isModern={isModern} template={settings?._template} />
-            </View>
-          );
-        }}
+        renderItem={groups ? (g) => (g.length > 1 ? group(g) : one(g[0])) : one}
       />
     </View>
   );

@@ -13,6 +13,7 @@ import { fieldGap } from '@/templates/pdf/shared/PdfItemHeader';
 import { hasRichText } from '@/utils/richText';
 import { dateRange, endDateOf, formatDate, presentLabel, startDateOf } from '@/utils/dates';
 import { skillCategory, skillGroup, skillSeparator } from '@/utils/skills';
+import { employerOf, groupPlaces, groupsRoles, roleGroups } from '@/utils/roleGroups';
 
 /**
  * Design → Section Headings in Word, as PdfSectionTitle draws them (ONB-12-NB1), from the résumé's
@@ -70,8 +71,8 @@ const field = (item, key) => ((item.hiddenFields || []).includes(key) ? '' : (it
  * or more, a table of them (gridTable, R2-070). An entry that prints nothing takes no gap and no
  * cell. `look` is sectionLook's: sizes, spacing, grid and colours.
  */
-function entries(section, look, build) {
-  const cells = shown(section).map((item) => build(item).filter(Boolean)).filter((paras) => paras.length);
+function entries(section, look, build, items = shown(section)) {
+  const cells = items.map((item) => build(item).filter(Boolean)).filter((paras) => paras.length);
   if (look.grid && cells.length) return [gridTable(cells, look.grid, look.gap)];
   return cells.flatMap((paras, i) => (i ? [...gapPara(look.gap), ...paras] : paras));
 }
@@ -126,17 +127,37 @@ function body(item, centered, look, color = look.ink.body) {
 
 export function buildExperience(section, accentHex, settings, centered, dateHex, look) {
   const s = section.settings || {};
-  return [sectionHeading(section.title, accentHex, centered, section.heading), ...entries(section, look, (item) => {
+  const locationOf = (item) => (s.showLocation !== false ? field(item, 'location') : '');
+  const datesOf = (item) => {
+    const end = field(item, 'endDate') && !item.current ? field(item, 'endDate') : '';
+    const dates = dateRange(field(item, 'startDate'), item.current && !(item.hiddenFields || []).includes('endDate') ? presentLabel(settings) : end, settings);
+    return s.showDates !== false ? dates : '';
+  };
+  const job = (item) => {
     const company = field(item, 'company');
     const role = field(item, 'role');
     // An empty leading field: the next one leads, bold, as the PDF prints it (R2-111).
     const [lead, next] = s.titleOrder === 'role' ? [role, company] : [company, role];
     const [primary, secondary] = lead ? [lead, next] : [next, ''];
-    const location = s.showLocation !== false ? field(item, 'location') : '';
-    const end = field(item, 'endDate') && !item.current ? field(item, 'endDate') : '';
-    const dates = dateRange(field(item, 'startDate'), item.current && !(item.hiddenFields || []).includes('endDate') ? presentLabel(settings) : end, settings);
-    return [header(primary, secondary, s.showDates !== false ? dates : '', dateHex, centered, look, place(location, look)), ...body(item, centered, look)];
-  })];
+    return [header(primary, secondary, datesOf(item), dateHex, centered, look, place(locationOf(item), look)), ...body(item, centered, look)];
+  };
+  // Section Options → "Group roles by company" (R2-147), as the PDF groups them (roleGroups): the
+  // employer and the first role's location once, then each role bold with its dates, a location only
+  // where it differs and its description, half the item gap apart. A group is one entry (a grid's cell).
+  if (!groupsRoles(s)) return [sectionHeading(section.title, accentHex, centered, section.heading), ...entries(section, look, job)];
+  const group = (g) => {
+    if (g.length === 1) return job(g[0]);
+    const places = groupPlaces(g, locationOf);
+    return [
+      titleLine([first(employerOf(g[0]), look)], '', dateHex, centered, look, place(places.header, look)),
+      ...g.flatMap((item, k) => [
+        ...(k ? gapPara(look.gap / 2) : []),
+        header(field(item, 'role'), '', datesOf(item), dateHex, centered, look, place(places.roles[k], look)),
+        ...body(item, centered, look),
+      ]),
+    ];
+  };
+  return [sectionHeading(section.title, accentHex, centered, section.heading), ...entries(section, look, group, roleGroups(shown(section)))];
 }
 
 export function buildEducation(section, accentHex, settings, centered, dateHex, look) {

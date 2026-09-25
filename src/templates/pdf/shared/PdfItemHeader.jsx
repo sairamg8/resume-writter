@@ -258,3 +258,39 @@ export function ItemHeader({ primary: first, sub: second, loc, dateStr, settings
     </View>
   );
 }
+
+/**
+ * A group's employer line — Section Options → "Group roles by company" (R2-147, src/utils/roleGroups.js):
+ * the company once, bold as an entry's title, its location at the line's right end on its baseline, as
+ * ItemHeader sets a location (centred: on a line of its own under it). No date: each role under it
+ * prints its own. Unbreakable, and kept with `keep` pt of what follows (the first role's header and the
+ * lines it keeps), so an employer never sits alone at the foot of a page.
+ */
+export function EmployerHeader({ company, loc, settings, italicSub = false, centered = false, keep }) {
+  const textColor = settings?.textColor || '#1a1a1a';
+  const baseSize  = settings?.fontSizeBase || 11;
+  const entrySize = baseSize + (settings?.fontSizeEntryDelta ?? 0);
+  const shade     = shadesOf(settings);
+  const textAlign = centered ? 'center' : 'left';
+  const { primaryBox } = headerBoxes(settings);
+  const fieldBox  = { fontFamily: settings?._pdfFontFamily, fontSize: baseSize };
+  // ItemHeader's location look: Compact's in the `meta` grey (T9), the others' in `muted`.
+  const locStyle  = { fontSize: baseSize, color: settings?._template === 'compact' ? shade.meta : shade.muted, fontStyle: italicSub ? 'italic' : 'normal', textAlign };
+  const hold = { wrap: false, minPresenceAhead: keep ?? headerKeep(settings) };
+  const name = <Text style={{ fontSize: entrySize, fontWeight: 'bold', color: textColor, textAlign }}>{company}</Text>;
+  if (centered) {
+    return (
+      <View {...hold} style={{ alignItems: 'center', marginBottom: 2 }}>
+        {name}
+        {loc ? <Text style={{ ...locStyle, marginTop: 1 }}>{loc}</Text> : null}
+      </View>
+    );
+  }
+  return (
+    <View {...hold} style={{ marginBottom: 2 }}>
+      <EndRow left={name} leftMin={wordRoom([company, primaryBox])}>
+        {endField(loc, { ...locStyle, lineHeight: onBaselineOf(primaryBox, fieldBox) }, fieldGap(baseSize))}
+      </EndRow>
+    </View>
+  );
+}
