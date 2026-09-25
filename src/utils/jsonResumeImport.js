@@ -16,7 +16,7 @@ import { DATE_FORMATS } from './dates.js';
 const isRecord = (v) => Boolean(v) && typeof v === 'object' && !Array.isArray(v);
 
 /** The title a section of `type` gets when it is added in the editor. */
-const defaultTitle = (type) => (SECTION_TYPE_DEFAULTS[type] || SECTION_TYPE_DEFAULTS.custom)('sec').title;
+const defaultTitle = (type) => (Object.hasOwn(SECTION_TYPE_DEFAULTS, type) ? SECTION_TYPE_DEFAULTS[type] : SECTION_TYPE_DEFAULTS.custom)('sec').title;
 
 /** A section as the import builds one; `settings` only when the file carries the section's own. */
 function sectionOf(type, title, items, settings) {
@@ -41,7 +41,8 @@ function sectionsOf(file) {
   for (const m of layout) {
     const type = storedText(m.type);
     const title = isText(m.title) ? storedText(m.title) : defaultTitle(type);
-    const kind = SECTION_KEYS[type];
+    // By its own key only: a type named like an Object member ('constructor') is a custom section (R2-109).
+    const kind = Object.hasOwn(SECTION_KEYS, type) ? SECTION_KEYS[type] : undefined;
     if (!kind) {
       sections.push(sectionOf('custom', title, entries(m.items).map(customItem), m.settings));
       continue;

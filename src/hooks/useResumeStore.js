@@ -76,6 +76,21 @@ function withOtherTabsSave(prev, incoming, stored) {
   return { ...incoming, resumes, deletedIds, deletedInfo, activeId };
 }
 
+/**
+ * `incoming` (another tab's save, read from its JSON) with each résumé that reads the same as the
+ * one storage last held here (`known`) replaced by that very object (R2-142): every résumé came back
+ * a new copy, so the one open here — unchanged there — was built into a new preview, and the
+ * dashboard's thumbnails redrawn, at every save of the other tab. `known` is what this tab's
+ * unchanged résumés are (keepUnsaved), so they stay as they are; a changed one reads differently.
+ */
+function sameAsKnown(incoming, known) {
+  const byId = new Map(known.map((r) => [r.id, r]));
+  return incoming.map((r) => {
+    const k = byId.get(r.id);
+    return k && k.updatedAt === r.updatedAt && JSON.stringify(k) === JSON.stringify(r) ? k : r;
+  });
+}
+
 export function useAppStore() {
   const [loaded] = useState(readStore);
   const [appState, setAppState] = useState(loaded.state);
@@ -106,6 +121,8 @@ export function useAppStore() {
   // another tab's save just taken — storage holds it already.
   const stored = useRef(loaded.state.resumes);
   const taken = useRef(null);
+  // The account the list belongs to (syncedUid) as this tab last saved or took it.
+  const owner = useRef(loaded.state.syncedUid);
 
   // Saves are coalesced (R2-077): every keystroke used to stringify and write the whole store.
   // Until a held save is written, storage has not seen its changes, so another tab's save keeps
@@ -126,6 +143,12 @@ export function useAppStore() {
   useEffect(() => {
     const other = taken.current;
     taken.current = null;
+    // The list changing hands — above all its account signing out, which takes it off this browser
+    // (R2-005) — is written at once, not held with the typing just before it: until then storage
+    // still held that account's résumés, for a browser closed with no pagehide (killed, crashed) to
+    // show whoever opened it next (R2-142).
+    const handedOver = appState.syncedUid !== owner.current;
+    owner.current = appState.syncedUid;
     // Only another tab's save was taken: not written back, or two tabs would answer each other's
     // saves for ever (each keeps its own open résumé, so their stores never read the same). A save
     // of this tab's still held (the open résumé, say) is written as the state is now.
@@ -136,6 +159,7 @@ export function useAppStore() {
       return;
     }
     saver.schedule(appState);
+    if (handedOver) saver.flush();
     setSaving(saver.pending());
   }, [appState, saver]);
 
@@ -171,6 +195,7 @@ export function useAppStore() {
       // Leaving the page before that render (pagehide) writes the held save with this one taken in
       // too, not as it was: that would put back what the other tab just changed.
       const knew = stored.current;
+      incoming.resumes = sameAsKnown(incoming.resumes, knew);
       stored.current = incoming.resumes;
       saver.hold((held) => withOtherTabsSave(held, incoming, knew));
       setAppState((prev) => withOtherTabsSave(prev, incoming, knew));
@@ -185,19 +210,23 @@ export function useAppStore() {
   const activeResume = appState.resumes.find(r => r.id === appState.activeId) || appState.resumes[0];
 
   function setActiveId(id) {
-    setAppState(prev => ({ ...prev, activeId: id }));
+    setAppState(prev => (prev.activeId === id ? prev : { ...prev, activeId: id }));
   }
 
   /** The active résumé as `updater` returns it, stamped as an edit — unless it returns the same résumé: nothing changed. */
   function patchActive(updater) {
-    setAppState(prev => ({
-      ...prev,
-      resumes: prev.resumes.map(r => {
+    setAppState(prev => {
+      let changed = false;
+      const resumes = prev.resumes.map(r => {
         if (r.id !== prev.activeId) return r;
         const next = updater(r);
-        return next === r ? r : { ...next, updatedAt: Date.now() };
-      }),
-    }));
+        if (next === r) return r;
+        changed = true;
+        return { ...next, updatedAt: Date.now() };
+      });
+      // Nothing changed: the same store, so nothing is written, built or synced (R2-142).
+      return changed ? { ...prev, resumes } : prev;
+    });
   }
 
   // ── Resume management ──────────────────────────────────────────────
@@ -249,9 +278,12 @@ export function useAppStore() {
   }
 
   // ── Personal Info & Settings ───────────────────────────────────────
+  // A field or setting set to the value it holds already (an option clicked again, a colour picker
+  // or a number box handing back what it shows) is not an edit: no new updatedAt, no store write, no
+  // preview build, nothing to sync (R2-142) — as the same name is no rename (R2-084).
 
   function updatePersonal(field, value) {
-    patchActive(r => ({ ...r, personal: { ...r.personal, [field]: value } }));
+    patchActive(r => (r.personal?.[field] === value ? r : { ...r, personal: { ...r.personal, [field]: value } }));
   }
 
   function toggleFieldVisibility(field) {
@@ -269,6 +301,7 @@ export function useAppStore() {
    */
   function updateSetting(key, value) {
     patchActive(r => {
+      if (r.settings?.[key] === value) return r;
       const settings = { ...r.settings, [key]: value };
       return {
         ...r,
@@ -285,6 +318,7 @@ export function useAppStore() {
    */
   function clearSettings(keys) {
     patchActive(r => {
+      if (!keys.some(k => k in (r.settings || {}))) return r;
       const settings = { ...r.settings };
       for (const k of keys) delete settings[k];
       return { ...r, settings };
@@ -310,7 +344,7 @@ export function useAppStore() {
   }
 
   function updateCoverLetter(field, value) {
-    patchActive(r => ({ ...r, coverLetter: { ...r.coverLetter, [field]: value } }));
+    patchActive(r => (r.coverLetter?.[field] === value ? r : { ...r, coverLetter: { ...r.coverLetter, [field]: value } }));
   }
 
   const sectionActions = createSectionActions(patchActive);

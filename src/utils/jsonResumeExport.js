@@ -69,7 +69,8 @@ export function cpwtResumeToJsonResume(resume) {
   const layout = [];
   for (const s of entries(resume.sections).filter((section) => section.visible !== false)) {
     const items = shownItems(s.items);
-    const kind = SECTION_KEYS[s.type];
+    // By its own key only: a type named like an Object member ('constructor') is a custom section (R2-109).
+    const kind = Object.hasOwn(SECTION_KEYS, s.type) ? SECTION_KEYS[s.type] : undefined;
     const own = { type: kind ? s.type : 'custom', title: storedText(s.title), ...(isRecord(s.settings) ? { settings: s.settings } : {}) };
     if (kind) {
       const out = items.flatMap((item) => kind.out(item));

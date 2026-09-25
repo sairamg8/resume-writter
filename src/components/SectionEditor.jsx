@@ -53,7 +53,8 @@ export function SortableSection({
   }
 
   function handleAddItem() {
-    const factory = NEW_ITEM[section.type] || NEW_ITEM.custom;
+    // By its own key only: a type named like an Object member ('valueOf') is a custom section (R1-LEFT-c).
+    const factory = Object.hasOwn(NEW_ITEM, section.type) ? NEW_ITEM[section.type] : NEW_ITEM.custom;
     addItem(section.id, factory());
   }
 
@@ -124,7 +125,7 @@ export function SortableSection({
               </button>
               <button
                 onClick={() => {
-                  const factory = SECTION_TYPE_DEFAULTS[section.type] || SECTION_TYPE_DEFAULTS.custom;
+                  const factory = Object.hasOwn(SECTION_TYPE_DEFAULTS, section.type) ? SECTION_TYPE_DEFAULTS[section.type] : SECTION_TYPE_DEFAULTS.custom;
                   // In its template's own Grids where it has one (Compact's grid, T9), as a new section is.
                   const fresh = newSectionGrid(factory(section.id), templateId(template));
                   updateSection(section.id, s => ({ ...s, settings: { ...fresh.settings } }));
@@ -184,7 +185,7 @@ export function SortableSection({
             onClick={handleAddItem}
             className="flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-700 font-medium mt-1 px-1 py-1"
           >
-            <Plus size={13} /> {ADD_LABEL[section.type] || 'Add Entry'}
+            <Plus size={13} /> {(Object.hasOwn(ADD_LABEL, section.type) && ADD_LABEL[section.type]) || 'Add Entry'}
           </button>
         </div>
       )}

@@ -525,7 +525,8 @@ export function keywordSkillTarget(sections) {
  */
 export function isStandardAtsTitle(section) {
   if (!section || !section.type) return true;
-  const spec = ATS_STANDARD_SECTIONS[section.type];
+  // By its own key only: a type named like an Object member ('constructor') is a custom section (R2-109).
+  const spec = Object.hasOwn(ATS_STANDARD_SECTIONS, section.type) ? ATS_STANDARD_SECTIONS[section.type] : undefined;
   if (!spec) return true; // custom sections are exempt
   const current = String(section.title || '').trim().toLowerCase();
   return spec.aliases.includes(current);

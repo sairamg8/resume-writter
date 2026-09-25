@@ -63,9 +63,12 @@ export function withSectionShapes(r) {
   };
 
   const sections = kept.map((s, i) => {
-    const id = keptIds[i].section ? s.id : fresh(`${SECTION_TYPE_DEFAULTS[s.type] ? s.type : 'section'}_${i + 1}`);
+    // A type is its own only by its own key: one named like an Object member ('toString') is a custom
+    // section's, and takes a custom section's title (R2-109).
+    const known = Object.hasOwn(SECTION_TYPE_DEFAULTS, s.type);
+    const id = keptIds[i].section ? s.id : fresh(`${known ? s.type : 'section'}_${i + 1}`);
     const items = s.items.map((item, j) => (keptIds[i].items[j] ? item : { ...item, id: fresh(`${id}_item${j + 1}`) }));
-    const title = s.title == null ? (SECTION_TYPE_DEFAULTS[s.type] || SECTION_TYPE_DEFAULTS.custom)(id).title : s.title;
+    const title = s.title == null ? (known ? SECTION_TYPE_DEFAULTS[s.type] : SECTION_TYPE_DEFAULTS.custom)(id).title : s.title;
     const settings = withColumns(s.settings, s.type);
     const same = id === s.id && title === s.title && settings === s.settings && items.every((item, j) => item === s.items[j]);
     if (same) return s;

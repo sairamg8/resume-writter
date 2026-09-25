@@ -2,7 +2,7 @@ import { View } from '@react-pdf/renderer';
 import { Text } from './PdfText';
 import { safeHref, hasRichText } from '@/utils/richText';
 import { contactHref } from '@/utils/contacts';
-import { dateRange, endDateOf } from '@/utils/dates';
+import { dateRange, endDateOf, startDateOf } from '@/utils/dates';
 import { SIDEBAR_COLUMN_TYPES, upperSectionTitles } from '@/constants/templates';
 import { CSS_PX_TO_PT, DEFAULT_ITEM_GAP_PX, MM_TO_PT, tracking } from './pdfUnits';
 import { breakToFit, fitsOnLine, textWidth } from './pdfMeasure';
@@ -172,7 +172,7 @@ export function SideEducation({ section, sectionGap, itemGap, shades = NAVY, tit
   // Rich text past its list marker or indent. A break sees the word, not its run: measured as bold, so
   // a bold run breaks inside the column too (a mark in a word that fits is never taken).
   const listBreaks = (inset) => sideBreaks(settings, { fontSize: 9, fontWeight: 'bold' }, inset);
-  const dates = (item) => (showDates ? dateRange(item.startDate, endDateOf(item, settings), settings) : '');
+  const dates = (item) => (showDates ? dateRange(startDateOf(item), endDateOf(item, settings), settings) : '');
   const first = visibleItems[0];
   const presence = first ? entryPresence(settings, [
     [first.degree, { fontSize: 10, fontWeight: 'bold' }], [first.institution, SIDE_TEXT], [first.fieldOfStudy, SIDE_TEXT],
