@@ -79,7 +79,9 @@ export const bottomMarginMm = (settings) => {
  * "Page 1 of 2" at the foot of every page when Design → Page numbers is on (R2-147): fixed, so
  * react-pdf repeats it on each page, and absolute, inside the bottom margin (bottomMarginMm) at the
  * right margin, so it takes no room from the content and moves no page break. Right-aligned, it
- * stays off the Sidebar's dark column. Off: nothing.
+ * stays off the Sidebar's dark column. A template puts it LAST among its page's children: it is then
+ * the page's last text drawn, so text readers (pdftotext -raw, an ATS) still read the name first on
+ * page 1 and the running header first on the pages after. Off: nothing.
  */
 export function PdfPageNumbers({ settings }) {
   if (settings?.pageNumbers !== true) return null;
@@ -89,10 +91,10 @@ export function PdfPageNumbers({ settings }) {
     <Text
       fixed
       style={{
-        // Placed from the top, as the running header (ATS-7) is, with both sides and its height set:
-        // react-pdf lays a render-prop text out before it has its words, and one placed from the bottom
-        // or the right alone printed nothing.
-        position: 'absolute', top: pageBoxPt(settings).height - room + Math.max(0, (room - line) / 2), height: line,
+        // Placed from the top, as the running header (ATS-7) is, with both sides set (anchored on the
+        // right alone it got no width). No height: textkit drops a line taller than its box, and a box of
+        // exactly 8 pt × 1.2 was a hair short of Noto Sans' line, so every page printed nothing.
+        position: 'absolute', top: pageBoxPt(settings).height - room + Math.max(0, (room - line) / 2),
         left: 0, right: `${pageMargins(settings).h}mm`,
         fontSize: PAGE_NUMBER_PT, lineHeight: 1.2, textAlign: 'right', color: textShades(settings.textColor).meta,
       }}

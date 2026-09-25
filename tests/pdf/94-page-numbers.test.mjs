@@ -5,6 +5,7 @@
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { setup, teardown, resume, experience, render, renderCover, read, loadModule, unzipEntry, MM, TEMPLATES } from './harness.mjs';
+import { hasPdftotext, pdftotext } from './extractors.mjs';
 
 before(setup);
 after(teardown);
@@ -68,5 +69,26 @@ describe('Design → Page numbers prints "Page n of N" on every page (R2-147)', 
     assert.match(on.footer, />Page </);
     const off = await parts({});
     assert.doesNotMatch(off.xml, /<w:footerReference /);
+  });
+
+  // Text readers take a page's words in drawing order: the number, drawn last, must not come before the
+  // name on page 1 (a first-line parser would take "Page 1 of 3" for it) nor before the running header
+  // (ATS-7) that opens the pages after.
+  it('every template: the page number is the page\'s last text drawn; readers still open page 1 with the name', async (t) => {
+    const wrong = [];
+    for (const template of TEMPLATES) {
+      const bytes = await render(cv(template, { pageNumbers: true }));
+      (await read(bytes)).forEach((p, i) => {
+        const last = p.items[p.items.length - 1];
+        if (!last || !FOOTER.test(last.str.trim())) wrong.push(`${template} page ${i + 1}: last drawn "${last?.str}"`);
+      });
+      if (!hasPdftotext) continue;
+      const [, raw] = pdftotext(bytes).find(([name]) => name.includes('-raw'));
+      const pages = raw.split('\f');
+      if (!pages[0].trimStart().startsWith('Test Person')) wrong.push(`${template}: -raw page 1 opens "${pages[0].trimStart().slice(0, 40)}"`);
+      if (!pages[1].trimStart().startsWith('Test Person · Page 2')) wrong.push(`${template}: -raw page 2 opens "${pages[1].trimStart().slice(0, 40)}"`);
+    }
+    if (!hasPdftotext) t.diagnostic('pdftotext not installed: the drawing order was checked with pdf.js only');
+    assert.deepEqual(wrong, []);
   });
 });
