@@ -60,8 +60,9 @@ describe('the fit ladder (pageFit.js)', () => {
     const ladder = fitLadder(r.settings);
     for (const n of [0, 1, 2, ladder.length - 1]) {
       const seen = [];
-      // Fits once the settings are step n's (and more pages at any looser one).
-      const countPages = async (x) => { seen.push(x.settings); return ladder.findIndex((s) => Object.entries(s).every(([k, v]) => x.settings[k] === v)) >= n ? 1 : 3; };
+      // Fits once the settings are step n's (and more pages at any looser one). The last match: the
+      // font steps carry the tightest spacing step's values too.
+      const countPages = async (x) => { seen.push(x.settings); return ladder.findLastIndex((s) => Object.entries(s).every(([k, v]) => x.settings[k] === v)) >= n ? 1 : 3; };
       const fit = await fitOnePage(r, { countPages });
       assert.equal(fit.step, n, `fits at step ${n}`);
       assert.deepEqual(fit.settings, ladder[n]);
@@ -146,10 +147,13 @@ describe('the 1-Page Fit button', () => {
     view.act(() => reactProps(spacing).onClick());
     const button = () => all().find((el) => el.tagName === 'BUTTON' && el.getAttribute('title')?.startsWith('Fit more onto 1 page'));
     const settled = async () => {
+      // The click's state commits on a later tick: first "Fitting…" shows, then it goes.
+      for (let i = 0; i < 100 && !button().textContent.includes('Fitting'); i += 1) await new Promise((res) => { setTimeout(res, 0); });
+      assert.match(button().textContent, /Fitting/, 'busy while it measures');
       for (let i = 0; i < 600 && button().textContent.includes('Fitting'); i += 1) await new Promise((res) => { setTimeout(res, 100); });
       await new Promise((res) => { setTimeout(res, 0); });
     };
-    const notice = () => all().find((el) => el.tagName === 'P' && /pages at the tightest spacing/.test(el.textContent))?.textContent.trim();
+    const notice = () => all().find((el) => el.tagName === 'P' && /pages at the tightest spacing|Could not measure/.test(el.textContent))?.textContent.trim();
     return { writes, button, settled, notice, settings: () => current.settings, unmount: () => view.unmount() };
   }
 
