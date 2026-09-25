@@ -45,6 +45,8 @@ function samples() {
  * - `all(within)`, `button(label, within)` (by its text, title or aria-label), `buttonWith(words)`,
  *   `click(el)`;
  * - `cards()`, `card(name)`, `names()` (each card's name, in order), `count()` (the "N resumes" line);
+ * - `lists()` (each card's name where it is listed: `resumes`, or `letters`, the Cover Letters group
+ *   of R2-135), `letterCount()` (that group's "N letters" line), `dialog()` (New Cover's picker);
  * - `fileInput()`, `pick(file)` (a file chosen in it; `file.text` its contents);
  * - `close()`, then `saved()`: the store as written to storage.
  */
@@ -103,6 +105,16 @@ async function dashboard(resumes = [], { user = null } = {}) {
       const line = all().find((el) => el.tagName === 'P' && /^\d+ resumes?$/.test(text(el)));
       return line && text(line);
     },
+    lists() {
+      const group = all().find((el) => el.tagName === 'SECTION' && text(el).startsWith('Cover Letters'));
+      const named = (inGroup) => page.cards().filter((c) => Boolean(group?.contains(c)) === inGroup).map((c) => nameOf(c)?.textContent ?? null);
+      return { resumes: named(false), letters: named(true) };
+    },
+    letterCount() {
+      const line = all().find((el) => el.tagName === 'P' && /^\d+ letters?$/.test(text(el)));
+      return line && text(line);
+    },
+    dialog: () => all().find((el) => el.getAttribute('role') === 'dialog'),
     fileInput() {
       const input = all().find((el) => el.tagName === 'INPUT' && (el.type === 'file' || el.getAttribute('type') === 'file'));
       assert.ok(input, 'the Import file input');
@@ -224,16 +236,97 @@ describe('the dashboard: new résumés (R2-167)', () => {
     } finally { await page.close(); }
   });
 
-  it('New Cover: a résumé named "Cover Letter", opened on its cover-letter tab', async () => {
-    const page = await dashboard(samples());
+  // New Cover made a résumé named "Cover Letter". Since R2-135 it makes a letter (kind 'letter'),
+  // listed in a Cover Letters group of its own and never counted as a résumé, whose sender is the
+  // only résumé there is, the one picked when there are several, or nobody yet when there is none.
+  it('New Cover with no résumé: a blank letter, listed with the letters, not as a résumé; current, opened on its letter tab, and saved as a letter', async () => {
+    const page = await dashboard();
+    let made;
     try {
       page.click(page.button('New Cover'));
       await settle();
-      const made = page.resumes()[3];
+      assert.equal(page.dialog(), undefined, 'no résumé to pick from: no picker');
+      assert.equal(page.resumes().length, 1);
+      made = page.resumes()[0];
+      assert.match(made.id, /^resume_[\w-]+$/);
+      assert.equal(made.kind, 'letter');
       assert.equal(made.name, 'Cover Letter');
+      assert.equal(made.personal.name, '', 'blank');
       assert.equal(page.store().appState.activeId, made.id);
       assert.equal(page.where(), `/resume/${made.id}?tab=coverletter`);
+      assert.deepEqual(page.lists(), { resumes: [], letters: ['Cover Letter'] });
+      assert.ok(page.has('H2', 'No resumes yet'), 'a letter is not a résumé');
+      assert.equal(page.count(), '0 resumes');
+      assert.equal(page.letterCount(), '1 letter');
     } finally { await page.close(); }
+    assert.deepEqual(page.saved().resumes.map((r) => [r.id, r.kind]), [[made.id, 'letter']]);
+  });
+
+  it('New Cover with one résumé: a letter from it (its name, job title and contacts), listed with the letters, current, opened on its letter tab', async () => {
+    const [pilot] = samples();
+    pilot.personal.email = 'wren@example.com';
+    const page = await dashboard([pilot]);
+    try {
+      const before = plain(page.resumes()[0]);
+      page.click(page.button('New Cover'));
+      await settle();
+      assert.equal(page.dialog(), undefined, 'one résumé: no picker');
+      assert.equal(page.resumes().length, 2);
+      const [source, made] = page.resumes();
+      assert.equal(made.kind, 'letter');
+      assert.equal(made.name, 'Cover Letter');
+      assert.deepEqual([made.personal.name, made.personal.title, made.personal.email], ['Wren Calloway', 'Harbor Pilot', 'wren@example.com']);
+      assert.deepEqual(plain(made.personal), before.personal);
+      assert.deepEqual(plain(source), before, 'the résumé untouched');
+      assert.equal(page.store().appState.activeId, made.id);
+      assert.equal(page.where(), `/resume/${made.id}?tab=coverletter`);
+      assert.deepEqual(page.lists(), { resumes: ['Harbor Pilot CV'], letters: ['Cover Letter'] });
+      assert.equal(page.count(), '1 resume', 'the letter is not counted as one');
+      assert.equal(page.letterCount(), '1 letter');
+    } finally { await page.close(); }
+  });
+
+  it('New Cover with several résumés: a picker, most recently edited first, makes nothing until one is picked; the one picked heads the letter, opened on its letter tab', async () => {
+    const list = samples();
+    const page = await dashboard(list);
+    let made;
+    try {
+      const lighthouse = plain(page.resumes()[1]);
+      page.click(page.button('New Cover'));
+      await settle();
+      const dialog = page.dialog();
+      assert.ok(dialog, 'which résumé heads the letter');
+      assert.ok(page.has('H2', 'New Cover Letter'));
+      const choices = page.all(dialog).filter((el) => el.tagName === 'BUTTON' && el.getAttribute('aria-label') !== 'Close');
+      assert.equal(choices.length, 4, choices.map(text).join(' | '));
+      ['Chart Maker CV', 'Lighthouse CV', 'Harbor Pilot CV', 'Blank letter']
+        .forEach((name, i) => assert.ok(text(choices[i]).startsWith(name), `${i + 1}: ${text(choices[i])}`));
+      assert.equal(page.resumes().length, 3, 'nothing made until one is picked');
+      assert.equal(page.where(), '/');
+
+      page.click(choices.find((el) => text(el).startsWith('Lighthouse CV')));
+      await settle();
+      assert.equal(page.dialog(), undefined, 'the picker closed');
+      const resumes = page.resumes();
+      assert.deepEqual(resumes.slice(0, 3).map((r) => r.id), list.map((r) => r.id), 'the others stay, in order');
+      made = resumes[3];
+      assert.ok(made && !list.some((r) => r.id === made.id), 'a new id');
+      assert.equal(made.kind, 'letter');
+      assert.equal(made.name, 'Cover Letter');
+      assert.equal(made.personal.name, 'Idris Vane', 'the one picked heads it');
+      assert.deepEqual(plain(made.personal), lighthouse.personal);
+      assert.equal(made.template, 'modern', 'in its look');
+      assert.deepEqual(plain(resumes[1]), lighthouse, 'the résumé untouched');
+      assert.equal(page.store().appState.activeId, made.id);
+      assert.equal(page.where(), `/resume/${made.id}?tab=coverletter`);
+      assert.deepEqual(page.lists(), { resumes: ['Harbor Pilot CV', 'Lighthouse CV', 'Chart Maker CV'], letters: ['Cover Letter'] });
+      assert.equal(page.count(), '3 resumes', 'the letter is not counted as one');
+      assert.equal(page.letterCount(), '1 letter');
+    } finally { await page.close(); }
+    const saved = page.saved();
+    assert.deepEqual(saved.resumes.map((r) => r.id), [...list.map((r) => r.id), made.id]);
+    assert.equal(saved.resumes[3].kind, 'letter', 'saved as a letter');
+    assert.equal(saved.activeId, made.id);
   });
 });
 
@@ -508,7 +601,7 @@ describe("the dashboard: a demo account's originals (R2-167)", () => {
     } finally { confirm.restore(); await page.close(); }
   });
 
-  it('Import → Import as my original keeps the imported résumé as an original; Import JSON does not', async () => {
+  it('Import → Import as my original keeps the imported résumé as an original; Import JSON, PDF, Word or text does not', async () => {
     const [, , chart] = samples();
     const file = { name: 'chart-maker.json', text: JSON.stringify({ ...chart, keep: true }) };
     const page = await dashboard(samples().slice(0, 2), { user: DEMO });
@@ -522,8 +615,9 @@ describe("the dashboard: a demo account's originals (R2-167)", () => {
       await page.pick(file);
       assert.equal(page.resumes()[2].keep, true);
 
+      // The plain import: it reads a PDF, Word or text file as well as JSON since R2-148, and says so.
       page.click(page.button('Import'));
-      page.click(page.button('Import JSON'));
+      page.click(page.button('Import JSON, PDF, Word or text'));
       assert.equal(opened, 2);
       await page.pick(file);
       assert.equal(page.resumes().length, 4);
