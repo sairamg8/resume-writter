@@ -1,0 +1,39 @@
+{
+  "cluster": "structure-tests",
+  "branch": "claude/wf-structure-tests",
+  "base": "334b454",
+  "rows": [
+    {
+      "id": "R2-158",
+      "outcome": "fixed",
+      "commits": ["ee4d19f", "c1f085d"],
+      "tests": ["tests/pdf/96-section-structure.test.mjs", "tests/pdf/96-structure-keyboard.test.mjs", "tests/pdf/resume-tab.mjs"],
+      "summary": "The Résumé tab's structure actions run on the real components and store in the gate: Add Section (a new section goes last, open, with its first entry; the picker closes), renaming in the title box, the eye (hide, then show), ⋯ → Delete section (the confirm names the section and counts its entries; Cancel keeps it), an entry's Add and Delete (an untouched entry goes without asking), and reordering sections and entries by a drop (through the tab's and the section's own onDragEnd) and by the keyboard (dnd-kit's own KeyboardSensor: Space, the arrow keys, Space or Escape). Each result is checked in the store, on the tab and in the printed PDF. The tests found a real bug: a section let go over nothing threw on over.id and the tab went down. **Now:** it stays where it was (c1f085d, proven fail-first on CI).",
+      "remaining": ""
+    },
+    {
+      "id": "R2-167",
+      "outcome": "fixed",
+      "commits": ["8e26d02", "f61af54"],
+      "tests": ["tests/pdf/96-dashboard.test.mjs"],
+      "summary": "The node gate now tests the real Dashboard and ResumeCards over the real store and router. New Résumé covers Start from Scratch, a role starter and New Cover; each opens the right route. Copy gives '<name> (Copy)' as a deep copy with a new id, without `keep`. Inline rename: Enter, Escape, a blank name, the same name, Save name and blur. Delete: the exact confirm, Cancel keeps the résumé, OK removes it and records deletedIds/deletedInfo for the sync; deleting every résumé leaves the empty dashboard. Import: a CPWT-CV backup (fresh id, file's keep ignored), a JSON Resume file (converted) and invalid files (the error shown, nothing imported). A demo account's Keep / Stop keeping / last-original Delete lock and ImportMenu are covered too. Each test would catch a regression in placement, ids, deep copy, the saved state, the confirm wording or the deletion record.",
+      "remaining": ""
+    },
+    {
+      "id": "R2-171",
+      "outcome": "fixed",
+      "commits": ["7dbc10e"],
+      "tests": ["tests/pdf/96-visibility-exports.test.mjs", "tests/pdf/96-month-picker.test.mjs", "tests/pdf/96-sidebar-single-column.test.mjs"],
+      "summary": "The editor half is covered. For each of the 11 section types, on Classic and on the Sidebar's two columns: hidden, it drops out of the PDF, Word, Markdown, ATS text and JSON Resume, heading included; a hidden section prints exactly what a deleted one prints; with every entry hidden no heading prints; shown again, every export matches the original. MonthPicker writes 'Apr', then 'Apr 2019' (either order); a stored '05/2023' with a new year picked becomes 'May 2024'; × clears the date. Picked dates print in every export and date format. 'Currently working here' writes endDate '' and every export prints Present, even when an imported entry has a leftover end date. The Sidebar's Single · ATS-safe layout prints every section in one column in stored order in the PDF and Word, while two columns split the six side types (SIDEBAR_COLUMN_TYPES / inSidebarColumn pinned). The Word export centres sections as Alignment says in Single, and only the main-column sections in two columns.",
+      "remaining": "96-sidebar-single-column checks Section Options → Alignment in Single mode only in Word, not in the PDF (the reviewer's note)."
+    }
+  ],
+  "review": {
+    "issues": [
+      "No defects found. Minor: 96-sidebar-single-column's header comment mentions alignment in Single mode, but only Word asserts it (no PDF alignment assertion); 96-structure-keyboard's layOut leaves fake-window props set (a fresh window per mount, so nothing leaks)."
+    ],
+    "fixedByReviewer": []
+  },
+  "baselineFailures": [],
+  "notes": "Final head f61af54: CI run 36088757851 is green (258 tests across the six 96-* files plus 40-structure, 88-new-section-open, 30-date-editor and 10-section-options; failfirst c1f085d passed; lint passed). Earlier green runs: 36088006903 (R2-158 + failfirst) and 36088467397 (R2-171). The only src/ change is src/components/EditorResumeTab.jsx handleSectionDragEnd (an early return when over is null or is the section itself, as SectionEditor.handleItemDragEnd already does). Observed, not changed: duplicateResume gives the copy a new résumé id but keeps its section and entry ids (Cypress expects the sections to deep-equal the source's), and it reads appState from the render closure rather than from prev, so two duplicates in one tick would both start from the older list. Deferred a11y: a current entry's End Date picker is disabled only by CSS (pointer-events-none, SectionEditorShared.jsx:62), so its selects can still be changed from the keyboard and leave a stale endDate under current:true (the exports ignore it and print Present). New shared test helper: tests/pdf/resume-tab.mjs (the Résumé tab over the real store, with a drop that ends in the DndContext's own onDragEnd)."
+}
