@@ -32,8 +32,8 @@ afterEach(() => {
   delete globalThis.localStorage;
 });
 
-/** Visible text of `markup`, tags gone and spaces collapsed. */
-const text = (markup) => markup.replace(/<[^>]+>/g, ' ').replace(/&#x27;|&#39;/g, "'").replace(/&amp;/g, '&').replace(/\s+/g, ' ');
+/** Visible text of `markup`: inline tags dropped, the rest a space, spaces collapsed. */
+const text = (markup) => markup.replace(/<\/?(strong|em|a|span)\b[^>]*>/g, '').replace(/<[^>]+>/g, ' ').replace(/&#x27;|&#39;/g, "'").replace(/&amp;/g, '&').replace(/\s+/g, ' ');
 
 const at = (path, element) => renderToStaticMarkup(createElement(MemoryRouter, { initialEntries: [path] },
   createElement(Routes, null, createElement(Route, { path, element }))));
