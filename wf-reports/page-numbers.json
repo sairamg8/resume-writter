@@ -1,0 +1,37 @@
+{
+  "cluster": "page-numbers",
+  "branch": "claude/wf-page-numbers",
+  "base": "c5acb93",
+  "rows": [
+    {
+      "id": "R2-147",
+      "outcome": "partial",
+      "commits": ["b181c8b", "8e84cac", "a2d6d61", "203d9a7", "bf2f61d", "f5dfa39", "b2510e3"],
+      "tests": [
+        "tests/pdf/94-page-numbers.test.mjs",
+        "tests/pdf/94-page-numbers-import.test.mjs",
+        "tests/pdf/parity/18-page-numbers.test.mjs",
+        "tests/pdf/parity/registry-design.mjs",
+        "tests/pdf/66-running-header.test.mjs",
+        "tests/pdf/91-design-resets.test.mjs"
+      ],
+      "summary": "The page-number part is fixed. **Now:** Design → Page numbers (off by default) prints 'Page n of N' at the bottom right of every page, page 1 included, on all nine templates (preview = PDF), inside a bottom margin that grows to 10 mm if smaller, with nothing else moved. It is each page's last text drawn, so pdftotext -raw and an ATS still read the name first on page 1 and the running header 'Name · Page N' first on later pages. Word prints it as a footer with PAGE/NUMPAGES fields (page 1 included next to the running header). The cover letter, Markdown and ATS text print none. Importing the app's own PDF drops the page numbers and running headers instead of reading them into job descriptions. Off, or a résumé stored without the key, prints exactly as before. CI: runs 36105757941, 36105880413, 36108376825 all green; fail-first ok for 8e84cac (13 fail without the fix) and 203d9a7 (3 fail without).",
+      "remaining": "Only the page-number task was in this cluster's scope. The rest of R2-147 is still open: section icons, link styling, level visuals, grouped roles, column layout, photo greyscale/position. Known limit: a node that cannot break and is taller than a page (only a Banner header longer than a page, which is already cut off) keeps react-pdf from printing the fixed elements after it on that page, so page 1 would carry no number."
+    }
+  ],
+  "review": {
+    "issues": [
+      "8e84cac's stated root cause was wrong (not 'a hair over 9.6 pt'). react-pdf resolves a render-prop Text's unitless lineHeight again at every relayout and multiplies it by fontSize each time (checked in @react-pdf/stylesheet transformLineHeight), so the line grows 9.6 → 76.8 → 4915.2 pt… With a set height, textkit kept no line. Anchored at the bottom, the box grew up off the paper. From the top with no height, the number prints where it is placed. The fix itself was right. A probe of 29, 51 and 186 pages prints every number and running header.",
+      "Known limit (documented in PdfPage.jsx, not fixed): react-pdf drops the fixed elements that follow an unbreakable node taller than a page from that page. Putting the footer first would fix that, but would put 'Page 1 of N' ahead of the name for every text reader.",
+      "Coverage gaps: no test rendered a résumé stored with no pageNumbers key, or checked the letter's .docx for a footer.",
+      "Tests not run before: parity/15-template-resets, the DesignPanel-mounting tests, import-file-errors, dead-code, and Cypress 04-design and 21-a11y. The reviewer ran all of them in run 36108376825, all green.",
+      "Accessibility, deferred by the owner (noted, not fixed): the Off / 'Page 1 of 2' buttons show the selected one by colour only (no aria-pressed). The control's note is 11 px text-gray-400. The 8 pt footer is 60% of the text colour, so it is faint when the text colour is light."
+    ],
+    "fixedByReviewer": [
+      "f5dfa39: the footer's comment now gives the real cause (compounding lineHeight) and notes the unbreakable-node limit. Comment only.",
+      "b2510e3: 94-page-numbers also pins that a résumé stored with no pageNumbers key prints the same PDF with no number and a .docx with no footer, and that the letter's .docx has no footer."
+    ]
+  },
+  "baselineFailures": [],
+  "notes": "b181c8b restores 6c11484's removal exactly and is red on purpose, as the fail-first baseline; 8e84cac is the fix. The importer change (203d9a7) also stops ATS-7's running header from leaking into imported résumés, a pre-existing R2-148 × ATS-7 bug. The running header uses the same compounding unitless lineHeight and works for the same reason (top anchor, no height); leave it as it is. 8e84cac's commit message gives the wrong cause (see review.issues[0]); the code comment is corrected. Tracker: R2-147's 'Withdrawn 2026-09-25' note can become fixed for the page-number part, citing runs 36105757941, 36105880413 and 36108376825. The full 13-machine gate has not been run on this branch: with page numbers off every page draws exactly as at the base (checked operator by operator on all 9 templates, the letter and Word), so the coordinator's batch gate covers it."
+}
