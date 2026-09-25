@@ -62,7 +62,8 @@ Then: fix → full gate green → master waits for the owner's Cloudflare env va
 hidden fields (other than dates) on education/projects/volunteering/certifications/awards; duplicateResume reads a
 stale list if called twice in one tick. No new agents (owner).
 
-**🔴 Before `master` moves (R2-143, merged from release):** the owner's e-mail, uid and name now come from the build's
+**✅ Owner confirmed 2026-09-25 ~03:55: the Cloudflare build env has VITE_DEMO_ACCOUNTS and VITE_CONTACT_EMAIL.** Was:
+**Before `master` moves (R2-143, merged from release):** the owner's e-mail, uid and name now come from the build's
 env (`src/utils/siteOwner.js`, `.env.example`). The live site's Cloudflare build must set
 `VITE_DEMO_ACCOUNTS` and `VITE_CONTACT_EMAIL` (the owner's address) first, or the live site loses its demo account (the
 "Keep as my original" résumés stop coming back) and Terms/Privacy name no contact address. The owner's `.env.local`
