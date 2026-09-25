@@ -50,17 +50,19 @@ on any template), with nothing to wake it. No new agents (owner), so the coordin
 too), fixed the footer (`f0f9784`: its box had no height), added a Word test (`87cd9d3`). CI run with fail-first
 dispatched ~03:28. Then: the report rows for R2-147 by hand (update_tracker from a hand-written report).
 
-**State at 03:48 UTC — all 10 clusters merged into the work branch, all 10 sessions archived (owner's request):**
-`4e1aeff` holds everything. The full CI gate on it was dispatched at 03:48 — read it first. Known open items it may show:
-1. **Page numbers (R2-147):** "Page n of N" printed on no template (f0f9784 height fix failed; 1923da1 places it from the
-   top as the running header is — result pending in run dispatched 03:45). If it still fails, debug
-   `PdfPageNumbers` in `src/templates/pdf/shared/PdfPage.jsx` against `PdfRunningHeader` (which prints).
-2. **ATS-7 parity (31-section-overrides, Timeline/Academic):** d183193 makes the section measures skip the running header.
-3. **header-type:** its own final CI never ran (session limit) — the gate is its first full check.
-Then: fix → full gate green → master waits for the owner's Cloudflare env vars (below). Tracker: 215 fixed ·
-15 ⏸ fixed on the work branch · 7 open features (partials) · 22 ✖. Found and not filed yet: the PDF and Word ignore
-hidden fields (other than dates) on education/projects/volunteering/certifications/awards; duplicateResume reads a
-stale list if called twice in one tick. No new agents (owner).
+**State at 04:05 UTC — deploy in progress (owner: "fix what you wish, deploy everything, then delete every other branch"):**
+- Work branch head `6c11484`. The page-number footer (R2-147 part) is **withdrawn** — four fixes failed; removed with its
+  tests; R2-147's page-number task is open again.
+- Full gate on `6c11484` dispatched ~04:05. The previous gate (run 36092025661, on 63d1b42) also failed: Cypress
+  `23-editor-panels.cy.js` (1 of 90 in shard 2), Cypress shard 4 and Playwright shard 3 (specs not read yet), plus the
+  page-number tests now removed. Read the new gate; fix what is real (a test updated only to intended behaviour).
+- On green: update_tracker ⏸ → ✅ for rows whose commits are on the head, record the run, `git push origin <sha>:master`.
+- **Branch deletion is blocked for Claude** (auto-mode classifier: "Git Destructive"). The owner deletes them on GitHub,
+  or allows `git push origin --delete` in settings. Safe to delete once master = the work branch: every `claude/wf-*`
+  branch merged into master or the work branch, `claude/beautiful-heisenberg-x3bsvo`, `claude/confident-goldberg-2uig8b`,
+  `claude/wf-round2-resume` (its patches are applied). **Keep / ask first:** `claude/jira-revamp` (another live session's
+  unmerged work), `claude/wf-templates` (the parked a11y work, 67c88c5), `claude/wf-pdf-pagination` (a handoff note only;
+  its code is on master).
 
 **✅ Owner confirmed 2026-09-25 ~03:55: the Cloudflare build env has VITE_DEMO_ACCOUNTS and VITE_CONTACT_EMAIL.** Was:
 **Before `master` moves (R2-143, merged from release):** the owner's e-mail, uid and name now come from the build's
