@@ -47,12 +47,31 @@ async function fieldReaders(bytes) {
   return [['pdf.js lines', pdfjsLineText(await read(bytes))], ...pdftotext(bytes)];
 }
 
+/**
+ * Every field reader's problems, less ATS-7 — a known limit (accepted 2026-09-24): under `pdftotext -raw`
+ * a heading that opens a page joins the last line of the page before, so a line-only parser loses it.
+ * As 42-ats-fields does, a header loss is set aside only when reading the form feed as a line break
+ * recovers every header; it is reported, and any other loss still fails.
+ */
+async function fieldProblemsOf(bytes, truth, t) {
+  const found = [];
+  for (const [n, text] of await fieldReaders(bytes)) {
+    const pageTop = String(text).includes('\f')
+      && !fieldProblems(n, scoreFields(truth, String(text).replace(/\f/g, '\n'))).some((p) => /section header/.test(p));
+    for (const p of fieldProblems(n, scoreFields(truth, text))) {
+      if (pageTop && p.endsWith('section header(s) undetected')) t.diagnostic(`ATS-7 (known limit): ${p} — a heading opens a page`);
+      else found.push(p);
+    }
+  }
+  return found;
+}
+
 const STATES = [...TEMPLATES.map((t) => [t, {}]), ['sidebar', { sidebarSingleColumn: true }]];
 const label = (t, s) => `${t}${s.sidebarSingleColumn ? ' (Single · ATS-safe)' : ''}`;
 
 describe('the template verdict says what pdf.js and Poppler read (R2-141)', () => {
   for (const [template, settings] of STATES.filter(([t, s]) => t !== 'sidebar' || s.sidebarSingleColumn)) {
-    it(`${label(template, settings)}: it passes, and every reader recovers every field`, { skip: NO_POPPLER }, async () => {
+    it(`${label(template, settings)}: it passes, and every reader recovers every field`, { skip: NO_POPPLER }, async (t) => {
       const r = await demo(template, settings);
       const verdict = await item(r, 'layout', 'template');
       assert.equal(verdict.status, 'pass');
@@ -63,8 +82,7 @@ describe('the template verdict says what pdf.js and Poppler read (R2-141)', () =
         assert.doesNotMatch(verdict.detail, /Workday|Taleo|Greenhouse|100%/, 'no parser the battery does not run');
       }
       const truth = truthFields(r);
-      const found = (await fieldReaders(await render(r))).flatMap(([n, text]) => fieldProblems(n, scoreFields(truth, text)));
-      assert.deepEqual(found, []);
+      assert.deepEqual(await fieldProblemsOf(await render(r), truth, t), []);
     });
   }
 
