@@ -4,7 +4,7 @@
 // Smoke level: the starters' content is pinned in tests/unit/starter-templates.unit.mjs and
 // tests/pdf/16-saved-data-starter-skills.test.mjs, the icons in tests/unit/contact-icon-paths.unit.mjs
 // and — the shape a picked icon prints as in the PDF — tests/pdf/09-contact-icons.test.mjs.
-// That 1-Page Fit never checks the page count it promises is R2-149, not asserted here.
+// That 1-Page Fit then measures the page count and tightens further is R2-149's, tests/pdf/91-page-fit.test.mjs.
 import { buildTestState } from '../../tests/helpers.js';
 import { STARTER_TEMPLATES } from '../../src/utils/starterTemplates.js';
 import { CARD } from '../support/selectors.js';

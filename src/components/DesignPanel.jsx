@@ -1,4 +1,4 @@
-import { useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { Sparkles } from 'lucide-react';
 import { ATS_DEFAULTS, sectionReset } from '@/utils/defaultData';
 import { atsRating, contactIconHint, drawsContactIcons, TEMPLATE_PICKER, templateId } from '@/constants/templates';
@@ -17,6 +17,7 @@ import {
   getIconSetId,
 } from '@/utils/contactIcons';
 import { CONTACT_FIELDS } from '@/utils/contacts';
+import { ONE_PAGE_FIT, fitOnePage } from '@/utils/pageFit';
 
 const COLOR_KEYS      = ['accentColor', 'textColor', 'sidebarBg', 'headerTextColor', 'nameColor', 'jobTitleColor'];
 const TYPOGRAPHY_KEYS = ['font', 'fontSize', 'fontSizeBase', 'fontSizeNameDelta', 'fontSizeSectionDelta', 'fontSizeEntryDelta', 'customFont', 'iconSize'];
@@ -35,6 +36,40 @@ export default function DesignPanel({ resume, updateSetting, setTemplate, resetS
   const drawsIcons = drawsContactIcons(current, settings);
   const [confirmReset, setConfirmReset] = useState(false);
   const pageSizeLabelId = useId();
+  const [fitting, setFitting] = useState(false);
+  const [fitNotice, setFitNotice] = useState('');
+  const fitRun = useRef(false); // a fit is measuring: a second click waits for it, not starts another
+  const latest = useRef(resume);
+  latest.current = resume;
+  const mounted = useRef(true);
+  useEffect(() => () => { mounted.current = false; }, []);
+
+  /**
+   * 1-Page Fit (R2-149): the preset at once, then the résumé is printed at it and, while it runs past
+   * one page, at each tighter step (pageFit.js) — the first that fits is written. Left mid-measure
+   * (another résumé, the editor closed), nothing more is written: updateSetting writes to whichever
+   * résumé is open.
+   */
+  async function fitToOnePage() {
+    if (fitRun.current) return;
+    fitRun.current = true;
+    setFitting(true);
+    setFitNotice('');
+    Object.entries(ONE_PAGE_FIT).forEach(([k, v]) => updateSetting(k, v));
+    const id = resume.id;
+    let notice = '';
+    try {
+      const fit = await fitOnePage({ ...resume, settings: { ...settings, ...ONE_PAGE_FIT } });
+      if (!mounted.current || latest.current?.id !== id) return;
+      Object.entries(fit.settings).forEach(([k, v]) => { if (ONE_PAGE_FIT[k] !== v) updateSetting(k, v); });
+      if (fit.pages > 1) notice = `Still ${fit.pages} pages at the tightest spacing — shorten the content to fit one page.`;
+    } catch {
+      notice = 'Could not measure the pages: the tight spacing is applied, check the preview.';
+    } finally {
+      fitRun.current = false;
+      if (mounted.current) { setFitting(false); setFitNotice(notice); }
+    }
+  }
 
   /** A section's reset: its settings back to the template's defaults (Sidebar's plain headings, …). */
   function resetSection(keys) {
@@ -181,17 +216,12 @@ export default function DesignPanel({ resume, updateSetting, setTemplate, resetS
             <div className="grid grid-cols-3 gap-1.5">
               <button
                 type="button"
-                onClick={() => {
-                  updateSetting('marginV', 10);
-                  updateSetting('marginH', 14);
-                  updateSetting('sectionGap', 10);
-                  updateSetting('itemGap', 5);
-                  updateSetting('lineHeightValue', 1.35);
-                }}
+                onClick={fitToOnePage}
+                disabled={fitting}
                 title="Fit more onto 1 page by safely tightening margins and line heights"
-                className="px-2 py-1.5 text-[11px] font-medium rounded-lg bg-white border border-blue-200 text-blue-700 hover:bg-blue-100/70 shadow-2xs transition-all text-center cursor-pointer"
+                className="px-2 py-1.5 text-[11px] font-medium rounded-lg bg-white border border-blue-200 text-blue-700 hover:bg-blue-100/70 shadow-2xs transition-all text-center cursor-pointer disabled:opacity-60 disabled:cursor-wait"
               >
-                📄 1-Page Fit
+                {fitting ? 'Fitting…' : '📄 1-Page Fit'}
               </button>
               <button
                 type="button"
@@ -222,6 +252,7 @@ export default function DesignPanel({ resume, updateSetting, setTemplate, resetS
                 📑 Spacious
               </button>
             </div>
+            {fitNotice && <p className="text-[11px] text-amber-800">{fitNotice}</p>}
           </div>
 
           <NumberRow label="Line Height" value={settings.lineHeightValue ?? 1.5} onChange={v => updateSetting('lineHeightValue', v)} min={LINE_HEIGHT.min} max={LINE_HEIGHT.max} step={0.1} />
