@@ -36,7 +36,7 @@ session per cluster, each from `c5acb93` on `claude/wf-<cluster>`, per CLUSTER-P
 | locale | R2-148: résumé language for dates, RTL | session_01DjbrY7hHtJmKD6GJcXHFx7 |
 | perf2 | R2-142: PERF-1, 4, 5, 6 | session_017oTZg6ZNCXoJwpKhSURxST |
 | section-look | R2-147 rest: section icons, links, levels, grouped roles, columns, photo | session_01A8Pc1gVNQNk225roXUbEns |
-| public-link | R2-148: public web link; two-column / scanned PDF import | session_01H7o4mAMVufFnaL8mMiYhCJ |
+| public-link | R2-148: public web link; two-column / scanned PDF import | session_01H7o4mAMVufFnaL8mMiYhCJ — **merged** (`091f00c`; R2-148 stays 🔴 until locale lands). **Owner:** publish the new `firestore.rules` to the Firebase project, or Share a public link fails permission-denied |
 | layouts | R2-138 B2: the designed layouts as new engines | session_018uk2NM3EkjexkRoDkRHEEz |
 | picker | R2-139 non-a11y (A1–A4, A9, A12, B3, C1, D1, E1, F1), R2-138 B4 | session_01MkCArZxvT5mbX1ELBQKrAu |
 
