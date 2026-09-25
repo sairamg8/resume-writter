@@ -77,6 +77,21 @@ function withOtherTabsSave(prev, incoming, stored) {
   return { ...incoming, resumes, deletedIds, deletedInfo, activeId };
 }
 
+/**
+ * `incoming` (another tab's save, read from its JSON) with each résumé that reads the same as the
+ * one storage last held here (`known`) replaced by that very object (R2-142): every résumé came back
+ * a new copy, so the one open here — unchanged there — was built into a new preview, and the
+ * dashboard's thumbnails redrawn, at every save of the other tab. `known` is what this tab's
+ * unchanged résumés are (keepUnsaved), so they stay as they are; a changed one reads differently.
+ */
+function sameAsKnown(incoming, known) {
+  const byId = new Map(known.map((r) => [r.id, r]));
+  return incoming.map((r) => {
+    const k = byId.get(r.id);
+    return k && k.updatedAt === r.updatedAt && JSON.stringify(k) === JSON.stringify(r) ? k : r;
+  });
+}
+
 export function useAppStore() {
   const [loaded] = useState(readStore);
   const [appState, setAppState] = useState(loaded.state);
@@ -181,6 +196,7 @@ export function useAppStore() {
       // Leaving the page before that render (pagehide) writes the held save with this one taken in
       // too, not as it was: that would put back what the other tab just changed.
       const knew = stored.current;
+      incoming.resumes = sameAsKnown(incoming.resumes, knew);
       stored.current = incoming.resumes;
       saver.hold((held) => withOtherTabsSave(held, incoming, knew));
       setAppState((prev) => withOtherTabsSave(prev, incoming, knew));
