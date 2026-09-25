@@ -34,7 +34,7 @@ describe('regressions — a job storage refused, when another tab saves (R6-2)',
         win.dispatchEvent(new win.StorageEvent('storage', { key: JOBS_KEY, newValue: value }));
       };
     });
-    cy.contains('button', 'Add Job').click();
+    cy.contains('button', /^Add job$/).click(); // the page header's (the top bar's reads "Add job" twice, for phones)
     formField('Company').type('Stripe');
     cy.contains('button', /^Add Job$/).click();
     cy.contains('h1', 'Stripe').should('be.visible');

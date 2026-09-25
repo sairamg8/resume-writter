@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { CheckSquare, Copy, Link2, ListPlus, MoreHorizontal, Trash2, X } from 'lucide-react';
 import { useBoardStore } from '@/hooks/useBoardStore';
-import { Button, Dialog, IconButton, InlineEdit, Menu, useConfirm, useToast } from '@/components/ui';
+import { Button, Dialog, IconButton, InlineEdit, Menu, useConfirmOptional, useToast } from '@/components/ui';
 import { useWorkspace } from '@/components/shell';
 import RichTextEditor from '@/components/RichTextEditor';
 import { IssueTypeIcon, PriorityIcon } from '@/components/tracker/TrackerIcons';
@@ -87,7 +87,7 @@ function ChildIssues({ board, epic, onOpen, onAdd }) {
 export function IssueDialog({ board, issueId, onClose, onOpenIssue }) {
   const store = useBoardStore();
   const workspace = useWorkspace();
-  const confirm = useConfirm();
+  const confirm = useConfirmOptional();
   const { toast } = useToast();
   const [checklistOpen, setChecklistOpen] = useState(false);
   const issue = board ? issueById(board, issueId) : null;

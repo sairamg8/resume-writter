@@ -148,6 +148,7 @@ it('labels: add, rename (a taken name refused), recolour, delete off every issue
     assert.deepEqual(p1().labels.find((l) => l.id === 'l2'), { id: 'l2', name: 'House', color: '#a855f7' });
 
     page.click(page.byLabel('Delete label', row('l1')));
+    for (let n = 0; n < 5; n += 1) await new Promise((r) => { setImmediate(r); }); // the question is the kit's (here, the browser's) and answers later
     assert.ok(!p1().labels.some((l) => l.id === 'l1'));
     assert.deepEqual(p1().issues.find((i) => i.id === 'i1').labelIds, []);
   } finally {
@@ -169,8 +170,9 @@ it('done issues: the days are set, hiding is turned off (null) and on again; the
     assert.equal(p1().hideDoneAfterDays, 14);
 
     page.click(page.button('Delete project'));
+    // The question answers later, and the router's navigation is a transition.
+    for (let n = 0; n < 5; n += 1) await new Promise((r) => { setImmediate(r); });
     assert.equal(p1(), undefined);
-    for (let n = 0; n < 5; n += 1) await new Promise((r) => { setImmediate(r); }); // the router's navigation is a transition
     assert.match(page.text(), /Projects list/);
     assert.ok(store.snapshot().boards.some((b) => b.id === 'p2'), 'the other project stays');
   } finally {

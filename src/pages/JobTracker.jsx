@@ -14,7 +14,7 @@ import { JobsNotSavedAlert } from '@/components/job/JobsNotSavedAlert';
 import { ImportNotice } from '@/components/job/ImportNotice';
 import { downloadBlob } from '@/utils/download';
 import { jobsToCsv } from '@/utils/jobCsv';
-import { filterJobs } from '@/utils/jobQuery';
+import { filterJobs, jobStats } from '@/utils/jobQuery';
 import { importMessage, jobsFromText, readImportFile } from '@/utils/jobImport';
 
 const VIEWS = [
@@ -99,6 +99,13 @@ export function JobTracker({ store }) {
   }
 
   const filteredJobs = filterJobs(jobs, { q: search, statuses: filterStatus ? [filterStatus] : [] });
+  const counts = jobStats(jobs); // the definitions, tested: src/utils/jobQuery.js
+  const stats = [
+    { label: 'Total', value: counts.total },
+    { label: 'Active', value: counts.active },
+    { label: 'Interviews', value: counts.interviewing },
+    { label: 'Offers', value: counts.offers },
+  ];
   const filtering = Boolean(search.trim() || filterStatus);
   const open = id => navigate(`/jobs/${id}`);
 
@@ -174,7 +181,17 @@ export function JobTracker({ store }) {
             {filterStatus && (
               <button type="button" onClick={() => setFilterStatus('')} className="h-8 rounded px-2.5 text-sm font-medium text-ink-subtle hover:text-ink hover:underline">Clear</button>
             )}
-            {filtering && <span className="ml-auto text-[13px] text-ink-subtlest">{filteredJobs.length} result{filteredJobs.length !== 1 ? 's' : ''}</span>}
+            <span className="ml-auto flex items-center gap-4">
+              {filtering && <span className="text-[13px] text-ink-subtlest">{filteredJobs.length} result{filteredJobs.length !== 1 ? 's' : ''}</span>}
+              <span className="hidden items-center gap-3 md:flex" aria-label="Totals">
+                {stats.map((st) => (
+                  <span key={st.label} className="flex items-baseline gap-1 text-[13px]">
+                    <span className="font-semibold text-ink">{st.value}</span>
+                    <span className="text-ink-subtlest">{st.label}</span>
+                  </span>
+                ))}
+              </span>
+            </span>
           </div>
           <div className="min-h-0 flex-1 px-4 pb-6 md:px-8">
             {view === 'list' ? (

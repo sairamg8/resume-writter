@@ -1,5 +1,26 @@
 # Session Handoff — Resume Here
 
+> **2026-09-25 — parallel lane: Jira-style revamp of Boards and the Job Tracker** (session
+> session_01ASmJ6BQpqJE5fifosw4z8y, branch **`claude/jira-revamp`**, off `master` `334b454`). The owner asked for
+> a complete revamp of both UIs "like Jira", on a branch of its own so it collides with no other session, and — to
+> protect usage — **no agents or workflows: one session works it by hand**. Nothing here is merged or deployed.
+>
+> - Done (pushed): a tracker look (index.css colour tokens; the kit's buttons, fields, dialogs); the shell's TopBar
+>   (Your work, Projects menu, Job Tracker, Résumés, Create — `c` — quick search `/`, shortcuts `?`) and a sidebar that
+>   opens the current project as a tree of views; Board (status columns, rich cards, filters, swimlanes, card menu),
+>   the issue view at `?issue=KEY` (IssueDialog: description, checklist, child issues, comments + history, status
+>   button, Details), Create issue / Create project dialogs, Backlog (sprint containers, Epic panel, start/complete
+>   dialogs), new views Summary / Timeline / Calendar / List (routes `/boards/:id/{summary,timeline,calendar,list}`),
+>   Projects table, Your work, Settings; Job Tracker Summary · Board · List (`?view=`), job page as an issue.
+> - Data and stores are untouched (UI only), so the Round 2 cloud-sync work (R2-140, R2-145) does not collide. When
+>   `claude/wf-cloud-sync` merges, its `tests/pdf/95-job-notes-tab.test.mjs` still finds the Notes tab by its text.
+> - Tests: rewritten for the new UI — 82-board-pages, 82-backlog-page, 82-your-work-page, 82-settings-page (async
+>   confirm), 81-job-tracker-page, ui-kit (sidebar); new tests/unit/tracker-views.unit.mjs; Cypress 06/07/20-* specs
+>   for the job page's menus and dialogs. CI only: run 36090063593 (node suite at 1fb2c64) showed the stale tests;
+>   the full gate on the branch head is the next step, then fix what it finds.
+> - Next: green full gate on the branch → the owner decides when to merge into `master` (deploys).
+
+
 > **Updated 2026-09-24 (cloud session, branch `claude/confident-goldberg-2uig8b`).** This section is the
 > live resume cursor for the "fix every open row" session. After the owner's reboot a new coordinator
 > (session_01UaZc6yUjHdoanpnUfTnzFF) took over from session_01PdF933BaDvYDh7KFAJpkKi: its work branch

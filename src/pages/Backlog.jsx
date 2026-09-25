@@ -4,7 +4,7 @@ import { ChevronDown, Layers, MoreHorizontal } from 'lucide-react';
 import { DndContext, MouseSensor, TouchSensor, closestCenter, useDroppable, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { useBoardStore } from '@/hooks/useBoardStore';
-import { Button, EmptyState, IconButton, InlineEdit, Menu, cx, useConfirm, useToast } from '@/components/ui';
+import { Button, EmptyState, IconButton, InlineEdit, Menu, cx, useConfirmOptional, useToast } from '@/components/ui';
 import { BoardStorageNotice } from '@/components/board/BoardStorageNotice';
 import { BoardToolbar, EMPTY_FILTERS } from '@/components/board/BoardToolbar';
 import { ProjectHeader } from '@/components/board/ProjectTabs';
@@ -30,7 +30,7 @@ function SectionBody({ id, sprintId, children }) {
 export function Backlog() {
   const { id } = useParams();
   const store = useBoardStore();
-  const confirm = useConfirm();
+  const confirm = useConfirmOptional();
   const { toast } = useToast();
   const board = store.boards.find((b) => b.id === id);
   const route = useIssueRoute(store.boards, board);

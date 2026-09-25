@@ -74,7 +74,7 @@ function QuickSearch({ search }) {
         role="combobox"
         aria-label="Search issues and projects"
         aria-expanded={results.length > 0}
-        aria-controls={listId}
+        aria-controls={results.length ? listId : undefined}
         aria-activedescendant={results.length ? `${listId}-${active}` : undefined}
         placeholder="Search"
         value={query}

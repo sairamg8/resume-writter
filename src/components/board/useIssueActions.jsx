@@ -1,5 +1,5 @@
 import { useBoardStore } from '@/hooks/useBoardStore';
-import { useConfirm, useToast, useUrlState } from '@/components/ui';
+import { useConfirmOptional, useToast, useUrlState } from '@/components/ui';
 import { copyText } from '@/utils/clipboard';
 import { findIssueByKey, issueKey } from '@/utils/boardModel';
 import { IssueDialog } from './IssueDialog';
@@ -31,7 +31,7 @@ export function IssueHost({ route }) {
  */
 export function useIssueActions(board) {
   const store = useBoardStore();
-  const confirm = useConfirm();
+  const confirm = useConfirmOptional();
   const { toast } = useToast();
   return {
     async remove(issue) {

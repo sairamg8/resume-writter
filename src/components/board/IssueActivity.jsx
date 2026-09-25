@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ArrowRight } from 'lucide-react';
-import { Avatar, Button, TabPanel, Tabs, cx, useConfirm, useHotkeys } from '@/components/ui';
+import { Avatar, Button, TabPanel, Tabs, cx, useConfirmOptional, useHotkeys } from '@/components/ui';
 import { describeActivity } from '@/utils/issueHistory';
 import { formatDateTime, relativeTime } from '@/utils/uiFormat';
 
@@ -59,7 +59,7 @@ function Composer({ initial = '', onSave, onCancel, autoFocus = false, saveLabel
 
 function Comment({ comment, onUpdate, onDelete }) {
   const [editing, setEditing] = useState(false);
-  const confirm = useConfirm();
+  const confirm = useConfirmOptional();
   return (
     <li className="flex gap-3">
       <Avatar name={WHO} size="md" decorative />

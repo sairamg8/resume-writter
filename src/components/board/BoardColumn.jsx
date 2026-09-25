@@ -20,6 +20,7 @@ export function BoardColumn({
   const ids = cards.map((c) => c.id);
   return (
     <section
+      data-column={list.id}
       aria-label={showHeader ? `${list.title || 'Untitled'} column` : undefined}
       className={cx('flex w-[272px] shrink-0 snap-center flex-col rounded-md bg-sunken', className)}
     >

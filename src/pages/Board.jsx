@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ChevronDown, Info, MoreHorizontal, Plus } from 'lucide-react';
 import { DndContext, DragOverlay, MouseSensor, TouchSensor, closestCorners, useSensor, useSensors } from '@dnd-kit/core';
 import { useBoardStore } from '@/hooks/useBoardStore';
-import { Button, EmptyState, IconButton, Menu, cx, useConfirm, useToast } from '@/components/ui';
+import { Button, EmptyState, IconButton, Menu, cx, useConfirmOptional, useToast } from '@/components/ui';
 import { useWorkspace } from '@/components/shell';
 import { BoardStorageNotice } from '@/components/board/BoardStorageNotice';
 import { BoardColumn, ColumnDialog, ColumnMenu } from '@/components/board/BoardColumn';
@@ -63,7 +63,7 @@ export function Board() {
   const navigate = useNavigate();
   const store = useBoardStore();
   const workspace = useWorkspace();
-  const confirm = useConfirm();
+  const confirm = useConfirmOptional();
   const { toast } = useToast();
   const board = store.boards.find((b) => b.id === id);
   const route = useIssueRoute(store.boards, board);

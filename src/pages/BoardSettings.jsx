@@ -4,7 +4,7 @@ import { ArrowDown, ArrowUp, Plus, Trash2 } from 'lucide-react';
 import { useBoardStore } from '@/hooks/useBoardStore';
 import { ProjectHeader } from '@/components/board/ProjectTabs';
 import { BoardStorageNotice } from '@/components/board/BoardStorageNotice';
-import { Button, EmptyState, useConfirm, useToast } from '@/components/ui';
+import { Button, EmptyState, useConfirmOptional, useToast } from '@/components/ui';
 import { BOARD_COLORS, BOARD_MODES, COLUMN_CATEGORIES, DEFAULT_HIDE_DONE_DAYS, LABEL_COLORS } from '@/constants/boards';
 
 const FIELD = 'text-sm px-2 py-1.5 rounded-lg border border-line focus:outline-none focus:ring-2 focus:ring-brand';
@@ -77,7 +77,7 @@ function ColumnRow({ board, column, index, store }) {
   const [target, setTarget] = useState(others[0]?.id ?? '');
   const count = board.issues.filter((i) => i.columnId === column.id).length;
   const last = board.columns.length === 1;
-  const confirm = useConfirm();
+  const confirm = useConfirmOptional();
 
   async function remove() {
     if (count === 0) {
@@ -156,7 +156,7 @@ export function BoardSettings() {
   const store = useBoardStore();
   const board = store.boards.find((b) => b.id === id);
   const [labelRefused, setLabelRefused] = useState(null);
-  const confirm = useConfirm();
+  const confirm = useConfirmOptional();
   const { toast } = useToast();
 
   if (!board) {

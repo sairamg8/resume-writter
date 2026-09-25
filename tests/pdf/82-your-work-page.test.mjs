@@ -2,7 +2,7 @@
 // across the projects. Here the real page, the real board page and the real board store are mounted
 // with react-dom/client (tests/pdf/fake-dom.mjs, through Vite's loader): the sections hold the right
 // issues from every project (epics left out, as on the board), a row marks its issue done, and a row
-// opens its issue on its board — `?issue=KEY-N` opens the card, and closing it drops the parameter.
+// opens its issue in place — `?issue=KEY-N` opens the issue view, and closing it drops the parameter.
 import { before, after, beforeEach, afterEach, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { createElement } from 'react';
@@ -59,10 +59,13 @@ async function mountAt(path, boards) {
       createElement(Route, { path: '/work', element: createElement(YourWork) }),
       createElement(Route, { path: '/boards/:id', element: createElement(Board) }))), {});
   const ev = { stopPropagation() {}, preventDefault() {}, key: '' };
-  const all = (node = view.container) => [...dom.elements(node)];
+  // The whole document: the issue view opens in a portal at the end of <body>.
+  const all = (node = view.document.body) => [...dom.elements(node)];
   return {
     view,
-    text: () => view.container.textContent,
+    text: () => view.document.body.textContent,
+    dialog: (label) => all().find((el) => el.getAttribute('role') === 'dialog' && (!label || el.getAttribute('aria-label') === label)),
+    button: (text) => all().find((el) => el.tagName === 'BUTTON' && el.textContent.trim() === text),
     section: (id) => all().find((el) => el.getAttribute('data-section') === id),
     rows: (id) => all(all().find((el) => el.getAttribute('data-section') === id)).filter((el) => el.tagName === 'LI').map((el) => el.getAttribute('data-issue')),
     byLabel: (label, node) => all(node).find((el) => el.getAttribute('aria-label') === label),
@@ -101,10 +104,12 @@ it('overdue, due today, this week and in progress, across every project — epic
     assert.deepEqual(page.rows('today'), ['now']);
     assert.deepEqual(page.rows('week'), ['soon']);
     assert.deepEqual(page.rows('inProgress'), ['wip']);
-    assert.ok(!page.rows('recent').includes('epic'), 'an epic is not work of its own');
-    assert.match(page.section('overdue').textContent, /HOME-1Pay the gas billHome jobs/);
-    assert.match(page.section('inProgress').textContent, /WORK-1Draft the proposalSide work/);
+    assert.match(page.section('overdue').textContent, /Pay the gas billHOME-1 · Home jobs/);
+    assert.match(page.section('inProgress').textContent, /Draft the proposalWORK-1 · Side work/);
     assert.match(page.text(), /4 issues need attention across 2 projects/);
+    page.click(page.button('Worked on'));
+    assert.ok(page.rows('recent').length > 0);
+    assert.ok(!page.rows('recent').includes('epic'), 'an epic is not work of its own');
   } finally {
     await page.view.unmount();
   }
@@ -124,17 +129,18 @@ it('a row marks its issue done: into its project\'s done column, off the section
   }
 });
 
-it('a row opens its issue on its board, the card open; closing the card drops ?issue=', async () => {
+it('a row opens its issue in place, over Your work; closing it drops ?issue=', async () => {
   const page = await mountAt('/work', sample());
   try {
     page.click(page.row('soon').childNodes[0]);
-    await settle(() => page.byLabel('Card title'));
-    assert.equal(where, '/boards/p1?issue=HOME-3');
-    assert.equal(page.props(page.byLabel('Card title')).value, 'Book the MOT');
-    page.click(page.byLabel('Close'));
-    await settle(() => where === '/boards/p1');
-    assert.equal(where, '/boards/p1');
-    assert.equal(page.byLabel('Card title'), undefined);
+    await settle(() => page.dialog());
+    assert.equal(where, '/work?issue=HOME-3');
+    assert.ok(page.dialog('HOME-3 Book the MOT'), 'the issue view, named by key and summary');
+    assert.match(page.dialog().textContent, /Book the MOT/);
+    page.click(page.byLabel('Close', page.dialog()));
+    await settle(() => where === '/work');
+    assert.equal(where, '/work');
+    assert.equal(page.dialog(), undefined);
   } finally {
     await page.view.unmount();
   }
@@ -143,15 +149,15 @@ it('a row opens its issue on its board, the card open; closing the card drops ?i
 it('?issue= opens a card that is off the board too (a done one past hideDoneAfterDays); a key of another project opens nothing', async () => {
   let page = await mountAt('/boards/p1?issue=HOME-5', sample());
   try {
-    assert.equal(page.props(page.byLabel('Card title')).value, 'Fix the tap', 'the old done card opens');
-    assert.match(page.text(), /in Done/);
+    assert.ok(page.dialog('HOME-5 Fix the tap'), 'the old done issue opens');
+    assert.ok(page.byLabel('Status: Done', page.dialog()), 'in Done');
   } finally {
     await page.view.unmount();
   }
   store._resetBoardStoreForTest();
   page = await mountAt('/boards/p1?issue=WORK-1', sample());
   try {
-    assert.equal(page.byLabel('Card title'), undefined);
+    assert.equal(page.dialog(), undefined);
   } finally {
     await page.view.unmount();
   }
@@ -160,7 +166,8 @@ it('?issue= opens a card that is off the board too (a done one past hideDoneAfte
 it('with no issues anywhere: a note and the way to the projects', async () => {
   const page = await mountAt('/work', [project('p1', 'HOME', 'Home jobs', [])]);
   try {
-    assert.match(page.text(), /Nothing here yet/);
+    assert.match(page.text(), /Nothing overdue, due this week or in progress/);
+    assert.match(page.text(), /View all projects/);
   } finally {
     await page.view.unmount();
   }

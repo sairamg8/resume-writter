@@ -120,8 +120,11 @@ export function useConfirm() {
   return confirm;
 }
 
-/** Without a provider: the browser's own question, with the title as its text. */
-const nativeConfirm = async ({ title }) => (typeof window !== 'undefined' && typeof window.confirm === 'function' ? window.confirm(title) : false);
+/** Without a provider: the browser's own question, with the title as its text (false where there is none). */
+async function nativeConfirm({ title }) {
+  const ask = typeof window !== 'undefined' && typeof window.confirm === 'function' ? window.confirm : globalThis.confirm;
+  return typeof ask === 'function' ? Boolean(ask(title)) : false;
+}
 
 /**
  * useConfirm() for a page that also renders outside the workspace shell (a page test, an embed):

@@ -1,4 +1,5 @@
-// The two board pages over the board store v2 (R2-037, R2-041, R2-155). The store and its
+// The two board pages over the board store v2 (R2-037, R2-041, R2-155) — in the tracker look since
+// the revamp: status columns of cards, a card menu, the issue view at ?issue=KEY. The store and its
 // normaliser were rewritten for v2 projects (columns and issues) while /boards and /boards/:id
 // still read v1 boards (lists of cards): `b.lists.reduce` threw on every saved board, so the
 // ErrorBoundary replaced both pages on every visit — the v1 list with no cards of R2-041
@@ -80,41 +81,42 @@ const project = (extra = {}) => ({
 });
 const saved = (boards) => [KEY, JSON.stringify({ boards, dataVersion: 2 })];
 
-it('/boards lists every project with its column and card counts (the first-run demo included)', () => {
+it('/boards lists every project with its key, type and issue counts (the first-run demo included)', () => {
   open([]);
   const demo = store.snapshot().boards;
   assert.ok(demo.length > 0);
   const html = text(page('/boards'));
   for (const b of demo) {
     assert.match(html, new RegExp(b.title));
-    const cards = b.issues.length;
-    assert.match(html, new RegExp(`${b.columns.length} lists? · ${cards} cards?`));
+    assert.match(html, new RegExp(`${b.key} (Kanban|Scrum)`));
+    assert.match(html, new RegExp(`\\d+ open · ${b.issues.length} total`));
   }
 });
 
-it('/boards/:id shows each column with its cards in rank order, their labels, due dates and checklists', () => {
+it('/boards/:id shows each status column with its issues in rank order: keys, labels, due dates and checklists', () => {
   open([saved([project()])]);
   const html = page('/boards/p1');
   assert.match(text(html), /Home jobs/);
-  // Each column (id="board-col-…"), in order, with its own cards in rank order and their count.
-  const columns = html.split('id="board-col-').slice(1).map((c) => text(`<${c}`));
+  // Each column (data-column="…"), in order, with its own cards in rank order and their count.
+  const columns = html.split('data-column="').slice(1).map((c) => text(`<${c}`));
   assert.equal(columns.length, 3);
-  assert.match(columns[0], /^ To Do 2 .*Fix the tap .*Buy nails/);
-  assert.match(columns[1], /^ Doing 1 .*Paint the fence/);
+  assert.match(columns[0], /^ To Do 2 .*Fix the tap .*HOME-1 .*Buy nails .*HOME-3/);
+  assert.match(columns[1], /^ Doing 1 .*Paint the fence .*HOME-2/);
   assert.match(columns[2], /^ Done 0 /);
   assert.doesNotMatch(columns[2], /Fix the tap|Buy nails|Paint the fence/);
   const t = text(html);
-  assert.match(t, /2030-01-02/);
-  assert.match(t, /1\/2/); // the checklist's progress
-  assert.match(html, /title="Urgent"/); // the label, by the board's own label
+  assert.match(t, /Jan 2, 2030/, 'the due date');
+  assert.match(t, /1\/2/, 'the checklist\'s progress');
+  assert.match(html, /title="Urgent"/, 'the label, by the board\'s own label');
+  assert.match(html, /aria-label="Medium priority"/, 'each card names its priority');
 });
 
 it('R2-041: a v1 list with no cards array opens on both pages, as an empty column', () => {
   open([[V1_KEY, JSON.stringify({ boards: [{ id: 'b', title: 'B', lists: [{ id: 'l', title: 'x' }] }], dataVersion: 1 })]]);
-  assert.match(text(page('/boards')), /B .*1 list · 0 cards/);
-  const t = text(page('/boards/b'));
-  assert.match(t, /\bx 0\b/);
-  assert.match(t, /Add list/);
+  assert.match(text(page('/boards')), /B .*0 open · 0 total/);
+  const html = page('/boards/b');
+  assert.match(text(html), /\bx 0\b/);
+  assert.match(html, /aria-label="Add column"/);
 });
 
 it('R2-037: the board page says when changes are not being saved, as the grid does', () => {
@@ -139,140 +141,122 @@ it('R2-037: the board page shows the recovery notice for a saved list that could
 
 it('a project that does not exist says so, with the way back', () => {
   open([saved([project()])]);
-  assert.match(text(page('/boards/nope')), /This board doesn.t exist/);
+  const html = page('/boards/nope');
+  assert.match(text(html), /This project doesn.t exist/);
+  assert.match(html, /href="\/boards"/);
 });
 
 /** The board page mounted with react-dom/client (tests/pdf/fake-dom.mjs), its handlers called as clicks. */
 async function mountBoard(path) {
   const dom = await import('./fake-dom.mjs');
+  const { patchFakeDom } = await import('../unit/ui-dom-harness.mjs');
+  patchFakeDom();
   const Page = () => createElement(MemoryRouter, { initialEntries: [path] },
     createElement(Routes, null, createElement(Route, { path: '/boards/:id', element: createElement(Board) })));
   const view = dom.mount(Page, {});
-  const ev = { stopPropagation() {}, preventDefault() {}, key: '' };
-  const under = (node) => [...dom.elements(node)];
+  const ev = (extra = {}) => ({ stopPropagation() {}, preventDefault() {}, key: '', nativeEvent: {}, ...extra });
+  // The whole document: menus and the issue view open in portals at the end of <body>.
+  const all = () => [...dom.elements(view.document.body)];
   const labelled = (label) => (el) => el.getAttribute('aria-label') === label || el.getAttribute('title') === label;
-  /** The column titled `title` (its element, id="board-col-…"). */
-  const column = (title) => under(view.container).find((el) => el.getAttribute('id')?.startsWith('board-col-') && el.textContent.startsWith(title));
   return {
     view,
-    text: () => view.container.textContent,
-    column,
-    /** The first element under `node` (default: the page) labelled `label` (aria-label or title). */
-    byLabel: (label, node = view.container) => under(node).find(labelled(label)),
-    /** The first button under `node` whose text is `text`. */
-    button: (text, node = view.container) => under(node).find((el) => el.tagName === 'BUTTON' && el.textContent.trim() === text),
-    /** The card showing `title`: its clickable wrapper. */
-    card: (title) => under(view.container).find((el) => el.tagName === 'DIV' && String(el.getAttribute('class')).includes('cursor-pointer') && el.textContent === title),
-    click: (el) => view.act(() => dom.reactProps(el).onClick(ev)),
-    type: (el, value) => view.act(() => dom.reactProps(el).onChange({ ...ev, target: { value } })),
-    change: (el, value) => view.act(() => dom.reactProps(el).onChange({ ...ev, target: { value } })),
+    text: () => view.document.body.textContent,
+    /** The column `id` (its section, data-column="…"). */
+    column: (id) => all().find((el) => el.getAttribute('data-column') === id),
+    byLabel: (label, node) => (node ? [...dom.elements(node)] : all()).find(labelled(label)),
+    button: (label, node) => (node ? [...dom.elements(node)] : all()).find((el) => el.tagName === 'BUTTON' && el.textContent.trim() === label),
+    item: (label) => all().find((el) => String(el.getAttribute('role')).startsWith('menuitem') && el.textContent.trim() === label),
+    click: (el) => view.act(() => dom.reactProps(el).onClick(ev())),
+    type: (el, value) => view.act(() => dom.reactProps(el).onChange(ev({ target: { value } }))),
+    key: (el, key) => view.act(() => dom.reactProps(el).onKeyDown(ev({ key }))),
   };
 }
 
 const boardNow = () => store.snapshot().boards.find((b) => b.id === 'p1');
+const tick = async () => { for (let n = 0; n < 5; n += 1) await new Promise((r) => { setImmediate(r); }); await new Promise((r) => { setTimeout(r, 0); }); };
 
-it('the board page\'s actions reach the v2 store: add a card, label it, delete a list without losing its cards', async () => {
+it('a column creates an issue in place: Enter adds it to that column and keeps the composer open for the next', async () => {
   open([saved([project()])]);
   const page = await mountBoard('/boards/p1');
-  const confirms = [];
-  globalThis.confirm = (q) => { confirms.push(q); return true; };
   try {
-    // Add a card to Doing.
-    page.click(page.button('Add a card', page.column('Doing')));
-    page.type(page.byLabel('Card title'), 'Oil the gate');
-    page.click(page.button('Add card'));
+    page.click(page.button('Create issue', page.column('c2')));
+    const field = () => page.byLabel('Summary of the new issue', page.column('c2'));
+    page.type(field(), 'Oil the gate');
+    page.key(field(), 'Enter');
     const added = boardNow().issues.find((i) => i.title === 'Oil the gate');
     assert.equal(added?.columnId, 'c2');
-    assert.match(page.text(), /Oil the gate/);
-
-    // Open "Paint the fence" and pick two label colours: the board's own red label, and a new blue one.
-    page.click(page.card('Paint the fence'));
-    page.click(page.byLabel('Red'));
-    page.click(page.byLabel('Blue'));
-    const blue = boardNow().labels.find((l) => l.color === '#3b82f6');
-    assert.ok(blue, 'a label for the new colour');
-    assert.deepEqual(boardNow().issues.find((i) => i.id === 'i2').labelIds, ['l1', blue.id]);
-    page.click(page.byLabel('Red'));
-    assert.deepEqual(boardNow().issues.find((i) => i.id === 'i2').labelIds, [blue.id]);
-
-    // Delete To Do: its two cards move to the list beside it, none lost.
-    page.click(page.byLabel('Delete list', page.column('To Do')));
-    assert.equal(confirms.length, 1);
-    assert.match(confirms[0], /Its 2 cards will move to "Doing"/);
-    const after = boardNow();
-    assert.deepEqual(after.columns.map((c) => c.title), ['Doing', 'Done']);
-    assert.deepEqual(after.issues.filter((i) => i.columnId === 'c2').map((i) => i.title).sort(), ['Buy nails', 'Fix the tap', 'Oil the gate', 'Paint the fence']);
+    assert.equal(added.type, 'task');
+    assert.match(page.column('c2').textContent, /Oil the gate/);
+    assert.ok(field(), 'the composer stays open');
   } finally {
-    delete globalThis.confirm;
     await page.view.unmount();
   }
 });
 
-it('the card sheet\'s title takes what is typed — a space between words, a field cleared to retype — and the store keeps a clean title', async () => {
+it('deleting a column asks first and moves its issues to the column beside it — none lost; an empty one goes without a question', async () => {
   open([saved([project()])]);
   const page = await mountBoard('/boards/p1');
-  const dom = await import('./fake-dom.mjs');
-  try {
-    page.click(page.card('Paint the fence'));
-    const field = () => [...dom.elements(page.view.container)].find((el) => el.tagName === 'TEXTAREA' && el.getAttribute('aria-label') === 'Card title');
-    const shows = () => dom.reactProps(field()).value;
-    // The store cleans every title (updateIssue: trimmed, never blank); the field used to show
-    // the cleaned one back at each keystroke, so the space before a next word was taken away.
-    page.type(field(), 'Paint the fence ');
-    assert.equal(shows(), 'Paint the fence ');
-    page.type(field(), 'Paint the fence white');
-    assert.equal(shows(), 'Paint the fence white');
-    assert.equal(boardNow().issues.find((i) => i.id === 'i2').title, 'Paint the fence white');
-    page.type(field(), '');
-    assert.equal(shows(), '', 'a cleared field stays clear while it is being retyped');
-    assert.equal(boardNow().issues.find((i) => i.id === 'i2').title, 'Paint the fence white', 'a blank title is never saved');
-    page.view.act(() => dom.reactProps(field()).onBlur({}));
-    assert.equal(shows(), 'Paint the fence white', 'left blank, the field shows the saved title again');
-  } finally {
-    await page.view.unmount();
-  }
-});
-
-it('a label colour whose palette name another label of the board already has gets a label of its own', async () => {
-  // "Blue" is the palette's name for #3b82f6; this board already has a green label called "Blue".
-  // addLabel hands back the label that has the name, so the card used to get the green one, and
-  // the blue swatch never showed as picked.
-  open([saved([project({ labels: [{ id: 'l1', name: 'Urgent', color: '#ef4444' }, { id: 'lg', name: 'Blue', color: '#22c55e' }] })])]);
-  const page = await mountBoard('/boards/p1');
-  try {
-    page.click(page.card('Paint the fence'));
-    page.click(page.byLabel('Blue'));
-    const labels = boardNow().labels;
-    const ids = boardNow().issues.find((i) => i.id === 'i2').labelIds;
-    assert.equal(ids.length, 1);
-    const picked = labels.find((l) => l.id === ids[0]);
-    assert.equal(picked.color, '#3b82f6');
-    assert.notEqual(picked.id, 'lg');
-    assert.equal(labels.find((l) => l.id === 'lg').color, '#22c55e', 'the green label is left as it was');
-    assert.equal(page.byLabel('Blue').getAttribute('aria-pressed'), 'true');
-  } finally {
-    await page.view.unmount();
-  }
-});
-
-it('the only list is never deleted (the store would refuse): the page says why; an empty list goes without a question', async () => {
-  open([saved([project({ columns: [col('c1', 'To Do'), col('c2', 'Doing', 'inprogress')], issues: [issue('i1', 1, 'Fix the tap', 'c1')] })])]);
-  const page = await mountBoard('/boards/p1');
   const asked = [];
-  globalThis.alert = (m) => asked.push(['alert', m]);
-  globalThis.confirm = (m) => { asked.push(['confirm', m]); return true; };
+  page.view.window.confirm = (q) => { asked.push(q); return true; };
   try {
-    page.click(page.byLabel('Delete list', page.column('Doing')));
-    assert.deepEqual(asked, [], 'an empty list: no question');
-    assert.deepEqual(boardNow().columns.map((c) => c.id), ['c1']);
-    page.click(page.byLabel('Delete list', page.column('To Do')));
-    assert.deepEqual(asked.map(([kind]) => kind), ['alert']);
-    assert.match(asked[0][1], /at least one list/);
-    assert.deepEqual(boardNow().columns.map((c) => c.id), ['c1']);
-    assert.deepEqual(boardNow().issues.map((i) => i.title), ['Fix the tap']);
+    page.click(page.byLabel('Done column actions'));
+    page.click(page.item('Delete column'));
+    await tick();
+    assert.deepEqual(asked, [], 'an empty column: no question');
+    assert.deepEqual(boardNow().columns.map((c) => c.id), ['c1', 'c2']);
+
+    page.click(page.byLabel('To Do column actions'));
+    page.click(page.item('Delete column'));
+    await tick();
+    assert.deepEqual(asked, ['Delete the To Do column?']);
+    const after = boardNow();
+    assert.deepEqual(after.columns.map((c) => c.title), ['Doing']);
+    assert.deepEqual(after.issues.filter((i) => i.columnId === 'c2').map((i) => i.title).sort(), ['Buy nails', 'Fix the tap', 'Paint the fence']);
   } finally {
-    delete globalThis.alert;
-    delete globalThis.confirm;
+    await page.view.unmount();
+  }
+});
+
+it('a card\'s menu moves it to another status and changes its priority, without a drag', async () => {
+  open([saved([project()])]);
+  const page = await mountBoard('/boards/p1');
+  try {
+    const card = () => page.byLabel('HOME-1 Fix the tap');
+    page.click(page.byLabel('Card actions', card()));
+    page.click(page.item('Move to'));
+    page.click(page.item('Done'));
+    const moved = boardNow().issues.find((i) => i.id === 'i1');
+    assert.equal(moved.columnId, 'c3');
+    assert.ok(moved.resolvedAt, 'moved to a done column: resolved');
+    page.click(page.byLabel('Card actions', card()));
+    page.click(page.item('Priority'));
+    page.click(page.item('Highest'));
+    assert.equal(boardNow().issues.find((i) => i.id === 'i1').priority, 'highest');
+  } finally {
+    await page.view.unmount();
+  }
+});
+
+it('?issue=KEY opens the issue view: its summary is renamed in place (trimmed, never blank), its status set from the status button', async () => {
+  open([saved([project()])]);
+  const page = await mountBoard('/boards/p1?issue=HOME-2');
+  try {
+    assert.ok(page.byLabel('HOME-2 Paint the fence'), 'the dialog, named by key and summary');
+    assert.match(page.text(), /Details/);
+    page.click(page.button('Paint the fence, edit Summary'));
+    const field = () => page.byLabel('Summary');
+    page.type(field(), '  Paint the fence white ');
+    page.key(field(), 'Enter');
+    assert.equal(boardNow().issues.find((i) => i.id === 'i2').title, 'Paint the fence white');
+    page.click(page.button('Paint the fence white, edit Summary'));
+    page.type(field(), '   ');
+    page.key(field(), 'Enter');
+    assert.equal(boardNow().issues.find((i) => i.id === 'i2').title, 'Paint the fence white', 'a blank summary is never saved');
+
+    page.click(page.byLabel('Status: Doing'));
+    page.click(page.item('Done'));
+    assert.equal(boardNow().issues.find((i) => i.id === 'i2').columnId, 'c3');
+  } finally {
     await page.view.unmount();
   }
 });
@@ -286,18 +270,18 @@ it('the board shows what it should: a WIP count, done cards past hideDoneAfterDa
     hideDoneAfterDays: 14,
   })])]);
   let html = page('/boards/p1');
-  const columns = html.split('id="board-col-').slice(1).map((c) => text(`<${c}`));
+  const columns = html.split('data-column="').slice(1).map((c) => text(`<${c}`));
   assert.match(columns[1], /^ Doing 2\/1 /, 'the WIP count');
-  assert.match(html, /text-red-700 bg-red-100"[^>]*>2\/1/, 'over its limit: red');
+  assert.match(html, /bg-\[#ffd5d2\][^"]*"[^>]*>2\/1/, 'over its limit: red');
   assert.match(columns[2], /Fresh chore/);
   assert.doesNotMatch(html, /Old chore/);
-  assert.match(text(html), /1 done card is hidden: resolved more than 14 days ago/);
+  assert.match(text(html), /1 done issue is hidden: resolved more than 14 days ago/);
 
   store._resetBoardStoreForTest();
   const sprints = [{ id: 's1', name: 'Sprint 1', goal: '', startDate: '2026-09-21', endDate: '2026-10-05', state: 'active' }];
   open([saved([project({ mode: 'scrum', sprints, issues: project().issues.map((i) => (i.id === 'i2' ? { ...i, sprintId: 's1' } : i)) })])]);
   html = text(page('/boards/p1'));
-  assert.match(html, /Sprint: Sprint 1 · ends 2026-10-05/);
+  assert.match(html, /Sprint 1 · ends 2026-10-05/);
   assert.match(html, /Paint the fence/);
   assert.doesNotMatch(html, /Fix the tap|Buy nails/, 'not in the sprint: off the board');
   assert.ok(store.boardActions.addIssue('p1', { title: 'Sand the fence', columnId: 'c1', sprintId: 's1' }));
@@ -306,11 +290,11 @@ it('the board shows what it should: a WIP count, done cards past hideDoneAfterDa
   store._resetBoardStoreForTest();
   open([saved([project({ mode: 'scrum' })])]);
   html = text(page('/boards/p1'));
-  assert.match(html, /No sprint is active, so every card is shown/);
+  assert.match(html, /No sprint is active, so every issue is shown/);
   assert.match(html, /Fix the tap.*Buy nails.*Paint the fence/);
 });
 
-it('epics: not cards on the board; a child card names its epic; the sheet sets a card\'s type and epic; a new list goes at the end', async () => {
+it('epics: not cards on the board; a child card names its epic in its lozenge', () => {
   open([saved([project({
     issues: [
       issue('e1', 9, 'Garden makeover', 'c1', { type: 'epic' }),
@@ -319,27 +303,7 @@ it('epics: not cards on the board; a child card names its epic; the sheet sets a
     nextNumber: 10,
   })])]);
   const html = page('/boards/p1');
-  const columns = html.split('id="board-col-').slice(1).map((c) => text(`<${c}`));
-  assert.match(columns[0], /^ To Do 2 Garden makeover Fix the tap .*Buy nails/, 'the epic is a chip on its child, not a card');
+  const columns = html.split('data-column="').slice(1).map((c) => text(`<${c}`));
+  assert.match(columns[0], /^ To Do 2 Fix the tap Garden makeover Urgent HOME-1/, 'the epic is a lozenge on its child, not a card');
   assert.match(html, /title="Epic: Garden makeover"/);
-
-  const view = await mountBoard('/boards/p1');
-  try {
-    view.click(view.card('Paint the fence'));
-    view.change(view.byLabel('Card epic'), 'e1');
-    view.change(view.byLabel('Card type'), 'bug');
-    const painted = boardNow().issues.find((i) => i.id === 'i2');
-    assert.deepEqual([painted.epicId, painted.type], ['e1', 'bug']);
-    assert.ok(![...view.byLabel('Card type').childNodes].some((o) => o.getAttribute('value') === 'epic'), 'an epic is made on the backlog page');
-    view.change(view.byLabel('Card epic'), '');
-    assert.equal(boardNow().issues.find((i) => i.id === 'i2').epicId, null);
-    view.click(view.byLabel('Close'));
-
-    view.click(view.button('Add list'));
-    view.change(view.byLabel('List title'), 'Waiting');
-    view.click(view.button('Add list'));
-    assert.deepEqual(boardNow().columns.map((c) => c.title), ['To Do', 'Doing', 'Done', 'Waiting'], 'where the button is: at the end');
-  } finally {
-    await view.view.unmount();
-  }
 });

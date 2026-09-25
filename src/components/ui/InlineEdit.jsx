@@ -33,7 +33,7 @@ export function InlineEdit({
     if (editing) {
       const field = fieldRef.current;
       field?.focus({ preventScroll: true });
-      field?.select();
+      field?.select?.();
       fit(field);
     } else if (refocus.current) {
       refocus.current = false;

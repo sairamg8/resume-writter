@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FolderKanban, MoreHorizontal, Plus, Star } from 'lucide-react';
 import { useBoardStore } from '@/hooks/useBoardStore';
-import { Avatar, Button, EmptyState, IconButton, Menu, SearchInput, useConfirm, useToast, useUrlState } from '@/components/ui';
+import { Avatar, Button, EmptyState, IconButton, Menu, SearchInput, useConfirmOptional, useToast, useUrlState } from '@/components/ui';
 import { PageHeader } from '@/components/shell';
 import { BoardStorageNotice } from '@/components/board/BoardStorageNotice';
 import { CreateProjectDialog } from '@/components/board/CreateProjectDialog';
@@ -18,7 +18,7 @@ import { relativeTime } from '@/utils/uiFormat';
 export function Boards() {
   const navigate = useNavigate();
   const store = useBoardStore();
-  const confirm = useConfirm();
+  const confirm = useConfirmOptional();
   const { toast } = useToast();
   const [creating, setCreating] = useUrlState('create', null);
   const [query, setQuery] = useState('');

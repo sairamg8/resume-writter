@@ -38,7 +38,7 @@ describe('regressions — one résumé store and one job store (M14)', () => {
     });
     stat('Total').should('have.text', '2');
 
-    cy.contains('button', 'Add Job').click();
+    cy.contains('button', /^Add job$/).click(); // the page header's (the top bar's reads "Add job" twice, for phones)
     formField('Company').type('Stripe');
     formField('Role / Position').type('Backend Engineer');
     formField('Resume Used').select(resumes.resumes[0].name);
@@ -73,7 +73,7 @@ describe('regressions — one résumé store and one job store (M14)', () => {
     stat('Total').should('have.text', '1');
     fillStorage();
 
-    cy.contains('button', 'Add Job').click();
+    cy.contains('button', /^Add job$/).click(); // the page header's (the top bar's reads "Add job" twice, for phones)
     formField('Company').type('Stripe');
     cy.contains('button', /^Add Job$/).click();
     cy.contains('h1', 'Stripe').should('be.visible');
@@ -171,7 +171,7 @@ describe('regressions — the Add Job form and its saved interview stages', () =
         };
       },
     });
-    cy.contains('button', 'Add Job').click();
+    cy.contains('button', /^Add job$/).click(); // the page header's (the top bar's reads "Add job" twice, for phones)
     cy.contains('h1', 'Add Job Application').should('be.visible');
     formField('Company').type('Stripe');
     cy.get('input[placeholder^="e.g."]').type('Culture Round');
