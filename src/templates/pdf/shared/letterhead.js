@@ -172,7 +172,8 @@ export const LOOKS = {
     return {
       ...base,
       marks: bandMarks(base.contacts, ground),
-      band: { color: ground, fallback: bandedGround(DEFAULTS.banded.accentColor), padX: 0, padY: BANDED_PAD, bleed: true },
+      // pageInks: its text keeps the page's own colours, not Header Text Color (DesignPanelColors offers none).
+      band: { color: ground, fallback: bandedGround(DEFAULTS.banded.accentColor), padX: 0, padY: BANDED_PAD, bleed: true, pageInks: true },
       rules: rule || [],
     };
   },

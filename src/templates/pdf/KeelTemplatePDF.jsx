@@ -8,10 +8,12 @@ import { KEEL_BAR, KEEL_PAD } from './shared/designedMarks';
  */
 export function KeelTemplatePDF({ data }) {
   const s = data.settings || {};
+  // Centred, the text keeps the page's centre line: the bar's width and space mirrored on the right.
+  const centered = (s.headerAlign || 'left') === 'center';
   return (
     <PdfDesignedDocument
       data={data}
-      header={<PdfDesignedHeader personal={data.personal} settings={s} frame={{ borderLeftWidth: KEEL_BAR, borderLeftColor: s.accentColor, paddingLeft: KEEL_PAD }} />}
+      header={<PdfDesignedHeader personal={data.personal} settings={s} frame={{ borderLeftWidth: KEEL_BAR, borderLeftColor: s.accentColor, paddingLeft: KEEL_PAD, ...(centered ? { paddingRight: KEEL_BAR + KEEL_PAD } : {}) }} />}
     />
   );
 }

@@ -20,7 +20,7 @@ const evt = (value = '') => {
   return { target, currentTarget: target, key: '', stopPropagation() {}, preventDefault() {} };
 };
 const PROBE_COLOR = '#1a7f5a';
-const GRID_SAMPLE = 16;
+const GRID_SAMPLE = 32;
 
 /** An input's type: React sets it as a property, not an attribute. */
 const typeOf = (el) => el.type || el.getAttribute('type') || '';
@@ -120,7 +120,8 @@ function walkOnce(render, { openers: given = null, onlyNew = null } = {}) {
     writes = [];
   };
   // A grid of like choices (the icon picker's hundreds of icons) is sampled: the first GRID_SAMPLE
-  // buttons of one parent. Every design grid (8 accents, 13 fonts, 6 heading styles) is under it.
+  // buttons of one parent. Every design grid (8 accents, 13 fonts, 6 heading styles, the picker's 19 templates and
+  // 8 designs) is under it.
   const perParent = new Map();
   for (const { sig, el, props: p } of all) {
     if (onlyNew && onlyNew.has(sig)) continue;

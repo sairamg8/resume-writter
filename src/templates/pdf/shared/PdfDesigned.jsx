@@ -21,8 +21,9 @@ import { pageSizeOf } from '@/constants/pageSize';
  * control, and slots where each layout draws its own marks. The marks are fills, never text, so every
  * reader extracts the header as Classic's: name → title → contacts → summary (ATS-1, ATS-2).
  *   top       drawn above the name's row (a bar, a hairline, a rule)
- *   beside    { node, width }: drawn left of the name's block, on its row, `width` pt wide (Keystone's wedge)
- *   underName drawn between the name's block and the contacts (Broadsheet's heavy rule)
+ *   beside    { node, width, gap }: drawn left of the name's block, on its row, `width` pt wide and `gap` pt
+ *             from it (Keystone's wedge); in a centred header it stands centred over the name instead
+ *   underName drawn under the name: between it and the job title (Stack), under the two (Inline) (Broadsheet's heavy rule)
  *   bottom    drawn under the summary, inside the header (a closing hairline or double rule)
  *   frame     the header's own box style: a ground, padding, a border at its side
  *   bleed     { top, side } in pt: the frame's ground runs that far past the page margins, to the paper's
@@ -42,7 +43,7 @@ export function PdfDesignedHeader({ personal, settings, top = null, beside = nul
   const photoStyle   = getPdfPhotoStyle(settings, accent, 'classic');
   // What the frame's padding and the mark beside the name take from the row, so the contacts and the name fit.
   const inset = (frame.paddingLeft ?? frame.paddingHorizontal ?? 0) + (frame.paddingRight ?? frame.paddingHorizontal ?? 0)
-    + (frame.borderLeftWidth ?? 0) + (beside ? beside.width + g.photoTextGap : 0);
+    + (frame.borderLeftWidth ?? 0) + (beside && !centered ? beside.width + beside.gap : 0);
   const contactWidth = headerRowWidth(settings, personal, { photoWidth: photoStyle.width, gap: g.photoTextGap, centered }) - inset;
   // A word of the name wider than the row prints at the largest size that holds it, as Classic's does.
   const name    = personal?.name || 'Your Name';
@@ -65,6 +66,7 @@ export function PdfDesignedHeader({ personal, settings, top = null, beside = nul
   ) : (
     <View style={centered ? { alignSelf: 'stretch' } : undefined}>
       {nameText}
+      {underName}
       {personal?.title && <Text style={{ ...title, marginTop: g.nameTitleGap, textAlign: align }}>{personal.title}</Text>}
     </View>
   );
@@ -75,8 +77,9 @@ export function PdfDesignedHeader({ personal, settings, top = null, beside = nul
     <View style={[{ marginBottom: g.headerGapBelow }, bleed ? { ...frame, backgroundColor: undefined } : frame, headerBorderStyle]}>
       {bleed && <View style={{ position: 'absolute', top: -bleed.top, left: -bleed.side, right: -bleed.side, bottom: 0, backgroundColor: frame.backgroundColor }} />}
       {top}
-      <View style={{ flexDirection: 'row', alignItems: 'stretch', gap: g.photoTextGap }} wrap={false}>
-        {beside?.node}
+      {beside && centered && <View style={{ alignSelf: 'center', marginBottom: beside.gap }}>{beside.node}</View>}
+      <View style={{ flexDirection: 'row', alignItems: 'stretch', gap: beside?.gap ?? 0 }} wrap={false}>
+        {!centered && beside?.node}
         <View style={{
           flex: 1,
           flexDirection: centered ? 'column' : 'row',
@@ -86,7 +89,7 @@ export function PdfDesignedHeader({ personal, settings, top = null, beside = nul
           {personal?.photo && !hidden.includes('photo') && <PdfPhoto src={personal.photo} style={photoStyle} />}
           <View style={centered ? { alignItems: 'center', alignSelf: 'stretch' } : { flex: 1 }}>
             {nameBlock}
-            {underName}
+            {headerLayout === 'inline' && underName}
             <PdfContactRow personal={personal} settings={settings} gaps={g} width={contactWidth} />
           </View>
         </View>

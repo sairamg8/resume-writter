@@ -28,7 +28,7 @@ async function header(bytes) {
   return { name: at('Jordan Rivera'), email: at('jordan@example.com'), phone: at('+1 555 0100'), location: at('Austin, TX') };
 }
 /** These gaps are measured on a left-aligned header: every template's own, but Academic's, which is centred (T8). */
-const ICON_ROW = { academic: { headerAlign: 'left' } };
+const ICON_ROW = { academic: { headerAlign: 'left' }, lectern: { headerAlign: 'left' } };
 const cv = (template, settings = {}, personal = PERSONAL, coverLetter = {}) => resume({ template, settings: { ...ICON_ROW[template], ...settings }, personal, coverLetter });
 
 describe('Between contacts in the résumé PDF', () => {

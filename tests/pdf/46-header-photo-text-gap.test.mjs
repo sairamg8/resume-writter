@@ -17,8 +17,11 @@ const PERSONAL = { name: 'Jordan Rivera', title: 'Staff Engineer', email: 'jorda
 /** The templates' own Photo ↔ Text, pt (TEMPLATES' headerGaps.photoTextGap). */
 const OWN = { classic: 10, minimal: 10, executive: 10, modern: 12, sidebar: 10, timeline: 10, banner: 10, academic: 10, compact: 10, gridline: 10, registry: 10, bookend: 10, lectern: 10, chronicle: 10, keystone: 10, banded: 10, keel: 10, linen: 10, broadsheet: 10 };
 /** Where the text sits against the photo: beside it (x), or under it (y) — the Sidebar column's photo is above the name. */
-// Academic's header is centred where it is picked (T8): its photo stands above the text.
-const AXIS = { classic: 'x', minimal: 'x', executive: 'x', modern: 'x', sidebar: 'y', timeline: 'x', banner: 'x', academic: 'y', compact: 'x' };
+// Academic's header is centred where it is picked (T8), as Lectern's (R2-138 B2): its photo stands above the text.
+const AXIS = {
+  classic: 'x', minimal: 'x', executive: 'x', modern: 'x', sidebar: 'y', timeline: 'x', banner: 'x', academic: 'y', compact: 'x',
+  gridline: 'x', registry: 'x', bookend: 'x', lectern: 'y', chronicle: 'x', keystone: 'x', banded: 'x', keel: 'x', linen: 'x', broadsheet: 'x',
+};
 const near = (a, b, at) => assert.ok(Math.abs(a - b) < 0.01, `${at}: ${a} vs ${b}`);
 
 /** Page 1's name, title and first contact: x from the left, y down from the top, pt. */

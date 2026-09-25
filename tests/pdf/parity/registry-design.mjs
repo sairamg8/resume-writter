@@ -5,7 +5,7 @@ import { loadModule } from '../harness.mjs';
 import { item, flow, fillsOf, prints } from './measure.mjs';
 import { PERSONAL, baseResume } from './store.mjs';
 import { shot } from './matrix.mjs';
-import { headingMarks, iconBefore, STYLE_MARK } from './marks.mjs';
+import { headingMarks, iconBefore, styleMark } from './marks.mjs';
 import { bulletAt } from '../../../src/utils/richText.js';
 
 export const valueOf = (run, key) => run.writes.find((w) => `${w.kind}.${w.key}` === key || w.kind === key)?.value;
@@ -249,13 +249,13 @@ export const DESIGN = {
   // Each style's own mark around the Experience title (marks.mjs), and Plain none of them.
   'setting.headingStyle': {
     family: 'headings',
-    check: ({ runs }) => runs.flatMap((r) => {
+    check: ({ runs, variant }) => runs.flatMap((r) => {
       const v = valueOf(r, 'setting.headingStyle');
       const t = heading(r.snap, EXPERIENCE);
       if (!t) return [`${v}: the Experience title does not print`];
       const m = headingMarks(r.snap, t);
       const found = Object.entries(m).filter(([, x]) => x != null).map(([k]) => k);
-      const want = STYLE_MARK[v];
+      const want = styleMark(r.state?.template ?? variant.template, v);
       if (want === undefined) return [`${v}: a heading style this test does not know — add its mark to marks.mjs`];
       return (want ? m[want] != null : !found.length) ? [] : [`${v}: prints ${found.join(', ') || 'no mark'} around the title, not ${want || 'none'}`];
     }),
@@ -266,7 +266,7 @@ export const DESIGN = {
     check: ({ runs }) => grows(runs, 'setting.sectionBorderWidth', (r) => {
       const t = heading(r.snap, EXPERIENCE);
       const m = t && headingMarks(r.snap, t);
-      return m ? m.below ?? m.beside ?? m.bar : null;
+      return m ? m.below ?? m.beside ?? m.bar ?? m.above : null;
     }, 'the heading mark\'s thickness'),
   },
   'setting.sectionTitleCase': {

@@ -151,7 +151,7 @@ describe('Title ↔ Contacts in Word', () => {
   }
 
   for (const template of TEMPLATES) {
-    const band = ['modern', 'sidebar', 'banner'].includes(template); // the letters whose letterhead is a band
+    const band = ['modern', 'sidebar', 'banner', 'banded'].includes(template); // the letters whose letterhead is a band (Banded's, R2-138 B2)
     it(`${template}: the letter's title (or name) row keeps Word's own spacing unset${band ? ' (none on the band)' : ''}, and takes the set value`, async () => {
       assert.equal(spaceAfter(await letterDocx(cv(template)), 'Staff Engineer'), band ? 0 : 40);
       assert.equal(spaceAfter(await letterDocx(cv(template, { titleContactsGap: 20 })), 'Staff Engineer'), 300);

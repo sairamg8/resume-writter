@@ -2,7 +2,7 @@
 // with their boxes, pt, y up): the marks a Section Headings style draws around its title, the header's
 // rule, the icon before a contact and the ring around the photo. Each is found by where it sits against
 // the text it belongs to, the same way on every template — probed on all of them (B1, 2026-09-24):
-//   Ruled      a fill under the title, as wide as the column, its height the thickness
+//   Ruled      a fill under the title, as wide as the column, its height the thickness (Broadsheet's: over it)
 //   Underline  a stroke under the title, its width the thickness
 //   Line       a fill on the title's line, after it
 //   Left bar   a fill left of the title, as tall as its line, its width the thickness + 2 pt
@@ -28,7 +28,7 @@ export const headingRun = (snap, re) => snap.pages.flatMap((p) => p.items).find(
 
 /**
  * The marks a heading style draws around title run `t`, each its thickness (Boxed: its height) or null:
- * { below, beside, bar, box }.
+ * { below, beside, bar, box, above }.
  */
 export function headingMarks(snap, t) {
   const ps = drawn(snap, t.page);
@@ -38,11 +38,16 @@ export function headingMarks(snap, t) {
   const beside = ps.filter((p) => p.paint === 'fill' && flat(p) && p.x0 >= t.x + t.w - 1 && (p.y0 + p.y1) / 2 >= t.y - 2 && (p.y0 + p.y1) / 2 <= t.y + t.h);
   const bar = ps.filter((p) => p.paint === 'fill' && p.x1 - p.x0 <= 15 && p.y1 - p.y0 >= t.h * 0.8 && p.x1 <= t.x + 1 && p.x0 >= t.x - 20 && p.y0 <= mid && p.y1 >= mid);
   const box = ps.filter((p) => p.paint === 'fill' && p.x0 <= t.x && p.x1 >= t.x + t.w && p.y0 <= t.y && p.y1 >= t.y + t.h * 0.7 && p.y1 - p.y0 <= t.h * 3);
-  return { below: most(below, thick), beside: most(beside, thick), bar: most(bar, (p) => p.x1 - p.x0), box: most(box, (p) => p.y1 - p.y0) };
+  // A rule just over the title's line (Broadsheet's Ruled, Gridline's upper hairline), as wide as the title or more.
+  const above = ps.filter((p) => p.paint === 'fill' && flat(p) && p.x1 - p.x0 >= t.w * 0.4 && p.x0 <= t.x + 2 && p.y0 >= t.y + t.h * 0.7 && p.y0 <= t.y + t.h * 2);
+  return { below: most(below, thick), beside: most(beside, thick), bar: most(bar, (p) => p.x1 - p.x0), box: most(box, (p) => p.y1 - p.y0), above: most(above, thick) };
 }
 
 /** The mark each heading style prints (Plain: none). */
 export const STYLE_MARK = { ruled: 'below', underline: 'below', line: 'beside', leftbar: 'bar', box: 'box', plain: null };
+
+/** The mark `style` prints on `template`: Broadsheet's Ruled is a rule over the title (sectionHeadingLook's `overline`, R2-138 B2). */
+export const styleMark = (template, style) => (template === 'broadsheet' && style === 'ruled' ? 'above' : STYLE_MARK[style]);
 
 /** The section titles `state` prints, as runs on page 1, top first. */
 export function titleRuns(snap, state) {
@@ -51,15 +56,16 @@ export function titleRuns(snap, state) {
 }
 
 /**
- * The header's rule: a horizontal mark across half the page or more, below the name and above the first
- * section's title — its thickness, or null when none prints.
+ * The header's rule: a horizontal stroke (the header's bottom border) across half the page or more, below the
+ * name and above the first section's title — its thickness, or null when none prints. A fill there is a
+ * layout's own mark (Gridline's hairline, Bookend's and Chronicle's rules, R2-138 B2), not the rule.
  */
 export function headerRule(snap, state, name) {
   const n = item(snap, name);
   const [first] = titleRuns(snap, state);
   if (!n || !first) return undefined;
   const W = snap.pages[0].W;
-  const ps = drawn(snap, 1).filter((p) => flat(p, 14) && p.x1 - p.x0 >= W * 0.5 && p.y1 < n.y && p.y0 > first.y + first.h * 0.7);
+  const ps = drawn(snap, 1).filter((p) => p.paint === 'stroke' && flat(p, 14) && p.x1 - p.x0 >= W * 0.5 && p.y1 < n.y && p.y0 > first.y + first.h * 0.7);
   return most(ps, thick);
 }
 

@@ -20,8 +20,8 @@ export const LECTERN_RULE = { width: 48, height: 2 };
 /** Chronicle's thick-and-thin masthead rule: the thick one's and the thin one's width, and the space between, pt. */
 export const CHRONICLE_RULES = { thick: 2.5, thin: 0.75, gap: 1.5 };
 
-/** Keystone's wedge beside the name: pt wide and tall. */
-export const KEYSTONE_WEDGE = { width: 18, height: 26 };
+/** Keystone's wedge beside the name: pt wide and tall, and its own space from the name (not Photo ↔ Text's). */
+export const KEYSTONE_WEDGE = { width: 18, height: 26, gap: 10 };
 
 /** Banded's band: the tint of the accent it fills with, and its padding under the text, pt. */
 export const BANDED_TINT = 0x1c / 255;

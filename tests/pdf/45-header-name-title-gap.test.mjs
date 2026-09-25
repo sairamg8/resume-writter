@@ -94,7 +94,7 @@ describe('Name ↔ Title in Word', () => {
     });
 
     it(`${template}: the letter's name keeps Word's own spacing unset (none on Modern's, Sidebar's and Banner's band), and takes the set value`, async () => {
-      assert.equal(nameAfter(await letterDocx(cv(template))), ['modern', 'sidebar', 'banner'].includes(template) ? 0 : 20);
+      assert.equal(nameAfter(await letterDocx(cv(template))), ['modern', 'sidebar', 'banner', 'banded'].includes(template) ? 0 : 20);
       assert.equal(nameAfter(await letterDocx(cv(template, { nameTitleGap: 20 }))), 300);
     });
   }

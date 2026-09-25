@@ -43,7 +43,9 @@ export function ColorsSection({ resume, settings, updateSetting, onReset }) {
   // The Sidebar's "Single · ATS-safe" prints Classic's white page, no column and no band, so there
   // Header Text Color and Sidebar Background have nothing to colour (R2-082).
   const header = headerTemplateId(resume.template, settings);
-  const onBand = Boolean(letterheadLook(resume.template, settings).band);
+  // A band whose text takes Header Text Color: Modern's, the Sidebar's, Banner's — not Banded's pale one, in the page's inks.
+  const band = letterheadLook(resume.template, settings).band;
+  const onBand = Boolean(band) && !band.pageInks;
   return (
     <DesignSection title="Colors" onReset={onReset}>
       <div>

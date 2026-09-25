@@ -30,7 +30,7 @@ async function page1(r) {
   const [p] = await read(bytes);
   const marks = (await painted(bytes)).filter((m) => m.paint === 'fill' || m.paint === 'stroke');
   const left = (r.settings.marginH ?? 18) * MM;
-  return { bytes, marks, items: p.items, name: p.items.find((i) => i.str === r.personal.name), left, right: p.width - left, width: p.width, height: p.height };
+  return { bytes, marks, items: p.items, name: p.items.find((i) => i.str === r.personal.name), left, right: p.W - left, width: p.W, height: p.H };
 }
 
 /** The marks in colour `c` (case-insensitive). */
@@ -233,7 +233,7 @@ describe('each designed layout\'s cover letter closes its letterhead on its rés
       if (id === 'banded') {
         assert.deepEqual(look.rules, []);
         const [p] = await read(await renderCover(r));
-        assert.ok(inColour(marks, look.band.color).some((m) => near(m.x0, 0) && near(m.x1, p.width)), 'the band, to the paper\'s edges');
+        assert.ok(inColour(marks, look.band.color).some((m) => near(m.x0, 0) && near(m.x1, p.W)), 'the band, to the paper\'s edges');
         return;
       }
       assert.ok(look.rules.length >= 1, 'its mark as a rule');

@@ -14,8 +14,8 @@ const {
 
 test('templateId: every template stays, however an imported file cases or spaces them; any other id reads as Classic (M15, R5-5)', () => {
   for (const id of TEMPLATE_IDS) assert.equal(templateId(id), id);
-  assert.deepEqual(TEMPLATE_IDS.toSorted(), ['academic', 'banner', 'classic', 'compact', 'executive', 'minimal', 'modern', 'sidebar', 'timeline']);
-  for (const [written, id] of [['Modern', 'modern'], [' sidebar ', 'sidebar'], ['EXECUTIVE', 'executive'], ['Minimal\n', 'minimal'], ['Classic', 'classic'], [' Timeline', 'timeline'], ['BANNER ', 'banner'], ['Academic', 'academic'], [' COMPACT', 'compact']]) {
+  assert.deepEqual(TEMPLATE_IDS.toSorted(), ['academic', 'banded', 'banner', 'bookend', 'broadsheet', 'chronicle', 'classic', 'compact', 'executive', 'gridline', 'keel', 'keystone', 'lectern', 'linen', 'minimal', 'modern', 'registry', 'sidebar', 'timeline']);
+  for (const [written, id] of [['Modern', 'modern'], [' sidebar ', 'sidebar'], ['EXECUTIVE', 'executive'], ['Minimal\n', 'minimal'], ['Classic', 'classic'], [' Timeline', 'timeline'], ['BANNER ', 'banner'], ['Academic', 'academic'], [' COMPACT', 'compact'], ['Gridline ', 'gridline'], [' BROADSHEET', 'broadsheet']]) {
     assert.equal(templateId(written), id, JSON.stringify(written));
   }
   for (const id of ['dark', 'Dark', 'aurora', '', '  ', null, undefined, 42, {}, ['modern']]) assert.equal(templateId(id), 'classic', String(id));
