@@ -26,6 +26,8 @@ const TEXT = 'Robin Vale\nProduct Designer\nrobin@example.org\n\nEXPERIENCE\nFab
 /** A picked file: a name and its bytes, as a File gives them. */
 const fileOf = (name, text) => ({ name, arrayBuffer: async () => new TextEncoder().encode(text).buffer });
 const flush = async () => { for (let i = 0; i < 20; i += 1) await new Promise((r) => { setImmediate(r); }); };
+/** Waits, up to 20 s, for `done()`: the first import loads the reader through Vite's loader. */
+const until = async (done) => { for (const end = Date.now() + 20_000; !done() && Date.now() < end;) await new Promise((r) => { setImmediate(r); }); };
 
 function DashboardPage({ store }) {
   const auth = { user: null, authLoading: false, cloudAvailable: false, signInWithGoogle: () => {}, signOut: () => {} };
@@ -57,7 +59,7 @@ describe('Dashboard → Import of a document', () => {
     try {
       const input = [...elements(view.container)].find((el) => el.tagName === 'INPUT' && el.type === 'file');
       view.act(() => reactProps(input).onChange({ target: { files: [fileOf('robin.txt', TEXT)], value: '' } }));
-      await flush();
+      await until(() => imported.length);
       assert.equal(imported.length, 1, view.container.textContent);
       const [r] = imported;
       assert.equal(r.personal.name, 'Robin Vale');
@@ -79,7 +81,7 @@ describe('Dashboard → Import of a document', () => {
     try {
       const input = [...elements(view.container)].find((el) => el.tagName === 'INPUT' && el.type === 'file');
       view.act(() => reactProps(input).onChange({ target: { files: [fileOf('empty.md', '  \n ')], value: '' } }));
-      await flush();
+      await until(() => /No text could be read/.test(view.container.textContent));
       assert.match(view.container.textContent, /No text could be read from that file/);
       assert.deepEqual(imported, []);
     } finally {
