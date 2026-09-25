@@ -139,8 +139,9 @@ test('Markdown and ATS text of a résumé storing no language are what English p
 
 test('JSON Resume: the language comes back from the file; English, or none, writes nothing', () => {
   const trip = (r) => jsonResumeToCpwtResume(JSON.parse(JSON.stringify(cpwtResumeToJsonResume(r))));
+  // In a Date format: JSON Resume stores dates as ISO months, which As entered prints as stored.
   for (const id of ['fr', 'ar']) {
-    const r = sample(lang(id));
+    const r = sample(lang(id, 'MMMM YYYY'));
     assert.equal(cpwtResumeToJsonResume(r).meta.language, id);
     const back = trip(r);
     assert.equal(back.settings.language, id);

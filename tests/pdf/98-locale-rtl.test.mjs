@@ -35,11 +35,13 @@ describe('the PDF of a right-to-left résumé is its left-to-right page mirrored
       const W = rtl[0].W;
       assert.ok(near(W - (b.x + b.w), a.x), `the name's right edge is ${(W - (b.x + b.w)).toFixed(1)} pt from the right, as it was ${a.x.toFixed(1)} pt from the left`);
 
-      const item = (pages) => [first(pages, '•'), allItems(pages).find((t) => t.str.includes('Built the billing'))];
+      // pdf.js reads a left-to-right bullet and its text as one run ("• Built…"), a right-to-left one as two.
+      const item = (pages) => [allItems(pages).find((t) => t.str.trim().startsWith('•')), allItems(pages).find((t) => t.str.includes('Built the billing'))];
       const [lb, lt] = item(ltr);
       const [rb, rt] = item(rtl);
       assert.ok(lb && lt && rb && rt, 'the bullet and its item print');
-      assert.ok(lb.x < lt.x, 'left to right: the bullet leads on the left');
+      assert.ok(lb.x <= lt.x, 'left to right: the bullet leads on the left');
+      assert.equal(rb.str.trim(), '•', 'right to left: the bullet is a run of its own');
       assert.ok(rb.x > rt.x + rt.w - 0.5, `right to left: the bullet (${rb.x.toFixed(1)}) is right of its item (ends ${(rt.x + rt.w).toFixed(1)})`);
 
       const word = (pages) => [allItems(pages).find((t) => t.str.includes('Senior')), allItems(pages).find((t) => t.str.includes('مهندس'))];

@@ -202,6 +202,8 @@ jobs:
             if [ -z "$src" ]; then echo "::error::$sha changes nothing under src/"; status=1; continue; fi
             # A fix in a patched dependency only counts once node_modules is rebuilt from the reverted patch.
             deps=$(printf '%s\n' $src | grep -E '^(\.yarn/patches/|yarn\.lock$)' || true)
+            # A new yarn patch is named in package.json's resolutions: that line goes with it, or yarn cannot install.
+            if [ -n "$deps" ]; then src="$src $(git diff --name-only "$sha^" "$sha" -- package.json)"; fi
             if git diff "$sha^" "$sha" -- $src | git apply -R 2>/dev/null; then how='its diff reversed'
             else git reset -q --hard HEAD; git checkout "$sha^" -- $src 2>/dev/null || git rm -q -- $src; how="its parent's files"; fi
             [ -n "$deps" ] && yarn install > /dev/null
