@@ -146,7 +146,9 @@ function photoRow(photo, gap, text, s) {
   });
   const right = photoRowDirection(s) === 'row-reverse';
   const pic = [new Paragraph({ children: [photo.run], spacing: { after: 0 }, ...(right ? { alignment: AlignmentType.RIGHT } : {}) })];
-  const photoCell = cell(pic, first, { [right ? 'left' : 'right']: first - twips(photo.width) });
+  // The gap between the photo and the text is padding on the photo cell's side facing the text.
+  const gapSide = right ? 'left' : 'right';
+  const photoCell = cell(pic, first, { [gapSide]: first - twips(photo.width) });
   const textCell = cell(text, width - first);
   return new Table({
     width: { size: width, type: WidthType.DXA },
