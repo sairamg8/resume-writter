@@ -5,6 +5,10 @@
 // held-back notice (items the cloud will not take) lives here too, as a tiny store the board and
 // job pages read.
 
+/** Where each list's record lives. */
+export const JOBS_SYNC_KEY = 'cpwtcv_jobs_sync_v1';
+export const BOARDS_SYNC_KEY = 'cpwtcv_boards_sync_v1';
+
 const empty = () => ({ uid: null, versions: {}, stashed: {} });
 const isMap = (v) => Boolean(v && typeof v === 'object' && !Array.isArray(v));
 
@@ -36,6 +40,18 @@ export function localMeta(key, storage = () => globalThis.localStorage) {
       }
     },
   };
+}
+
+/**
+ * The list under `key`'s sync record forgets which items the cloud holds, keeping the account and
+ * what was kept aside: called when the saved list could not be read in full. Without it, every
+ * item left out looked deleted here, and the next first sync deleted it from the account — and so
+ * from every other device. Forgotten, the first sync merges instead: the cloud's copies come back.
+ */
+export function forgetSynced(key, storage) {
+  const record = localMeta(key, storage);
+  const m = record.read();
+  if (Object.keys(m.versions).length) record.write({ ...m, versions: {} });
 }
 
 /** A record in memory, for a test or a page with no storage. */

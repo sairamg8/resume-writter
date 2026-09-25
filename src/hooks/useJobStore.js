@@ -5,6 +5,7 @@ import { addressableJobs, completeJob, readJob, statusId } from '../utils/normal
 import { keepUnsaved } from '../utils/unsavedJobs.js';
 import { applyEdits, demoJobs, moveInList, newJobDefaults } from '../utils/jobEdits.js';
 import { mergeImport } from '../utils/jobImport.js';
+import { forgetSynced, JOBS_SYNC_KEY } from '../utils/collectionSyncMeta.js';
 
 const KEY = 'cpwtcv_jobs_v1';
 
@@ -81,6 +82,8 @@ function init() {
   if (initialized) return;
   initialized = true;
   const { jobs, recovery: found } = load();
+  // Jobs left out here are not deleted ones: the cloud sync must not delete them from the account.
+  if (found) forgetSynced(JOBS_SYNC_KEY);
   const recovery = found ? rememberRecovery(KEY, found) : pendingRecovery(KEY);
   stored = jobs;
   const persistError = persist(jobs);

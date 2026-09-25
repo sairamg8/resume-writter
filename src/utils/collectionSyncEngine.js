@@ -23,7 +23,8 @@ import { itemPath } from './collectionSyncIo.js';
  *   name      the list's collection: 'jobs' or 'boards'
  *   io        collectionIo(...) — null when this build has no cloud
  *   store     { items() → the list now, replace(list), subscribe(fn) → unsubscribe, fromCloud(doc)
- *             → the item as the store holds one (null: not one), label(item) → its name }
+ *             → the item as the store holds one (null: not one), label(item) → its name, seed(item)
+ *             → whether it is the first visit's demo, untouched (optional) }
  *   meta      { read(), write(m) } — collectionSyncMeta.js
  *   report    { status('idle'|'syncing'|'synced'|'offline'|'error'|'stopped'|'off'), held([{ id, name }]) }
  *   online, hidden, timers, flushDelay, retryDelay, maxRetryDelay, refreshAfter, now, log — as
@@ -96,7 +97,10 @@ export function createCollectionSync({
 
   /** Account `uid`'s list leaves this browser (collectionSyncPlan.leaveList); nothing when it is not that account's. */
   function leave(uid) {
-    const left = leaveList(meta.read(), store.items(), uid);
+    // The list first: loading it may find it damaged and make the record forget what the cloud
+    // holds (forgetSynced), which must come before the record is read.
+    const list = store.items();
+    const left = leaveList(meta.read(), list, uid);
     if (!left) return;
     meta.write(left.meta);
     store.replace(left.list);
@@ -201,7 +205,7 @@ export function createCollectionSync({
       const ownIds = new Set(own.map((x) => x.id));
       const localDeletes = [...stash.deletes, ...(mine ? Object.keys(record.versions).filter((id) => !ownIds.has(id)) : [])]
         .filter((id) => !local.some((x) => x.id === id));
-      const plan = planFirstSync({ local, versions, localDeletes, docs, deleted: cloud.deleted, order: cloud.order });
+      const plan = planFirstSync({ local, versions, localDeletes, docs, deleted: cloud.deleted, order: cloud.order, seed: store.seed });
 
       sets = sendable(uid, plan.sets);
       const sameOrder = plan.order.length === cloud.order.length && plan.order.every((id, i) => cloud.order[i] === id);

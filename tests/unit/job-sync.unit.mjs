@@ -16,6 +16,7 @@ import { localMeta, memoryMeta } from '../../src/utils/collectionSyncMeta.js';
 import { completeJob, readJob } from '../../src/utils/normalizeJob.js';
 import { fakeFirestore, manualTimers, recorder, settle } from '../pdf/fake-firestore.mjs';
 import * as jobStore from '../../src/hooks/useJobStore.js';
+import { demoJobs, isUntouchedDemoJob } from '../../src/utils/jobEdits.js';
 
 const A = { uid: 'A', email: 'a@example.com' };
 const B = { uid: 'B', email: 'b@example.com' };
@@ -51,7 +52,7 @@ function device(cloud, jobs = [], { online = () => true, meta = memoryMeta() } =
     items: () => list,
     replace: set,
     subscribe: (fn) => { listeners.add(fn); return () => listeners.delete(fn); },
-    fromCloud, label,
+    fromCloud, label, seed: isUntouchedDemoJob,
   };
   const timers = manualTimers();
   const { seen, report } = recorder();
@@ -356,4 +357,45 @@ test('R2-145: a flush keeps a newer copy another device sent meanwhile, and take
   assert.equal(d1.seen.status, 'synced');
   await d1.timers.fire();
   assert.deepEqual(writtenSince(cloud, from), ['j2'], 'the copy taken is not sent back');
+});
+
+test('R2-145: a fresh demo job (site data cleared) never goes over the demo job the account filled in', async () => {
+  // The account's demo job, filled in long ago; the fresh one is dated from today, so it is newer.
+  const filled = { ...demoJobs(new Date(2026, 0, 20))[0], notes: '<p>Asked for L6. Call Sarah Friday.</p>', updatedAt: new Date(2026, 0, 25).getTime() };
+  const cloud = fakeFirestore({ [jobPath('A', 'demo_1')]: filled });
+  const fresh = demoJobs();
+  assert.ok(isUntouchedDemoJob(fresh[0]) && fresh[0].updatedAt > filled.updatedAt);
+  const d = device(cloud, fresh);
+  await d.start(A);
+
+  assert.equal(cloud.doc(jobPath('A', 'demo_1')).notes, filled.notes, 'the account keeps what was typed in it');
+  assert.equal(d.job('demo_1').notes, filled.notes, 'this browser takes it');
+  assert.equal(d.seen.status, 'synced');
+
+  // Once edited here, the demo is a job like any other: the newer edit wins.
+  d.edit('demo_1', { notes: '<p>Offer!</p>' }, Date.now());
+  await d.timers.fire();
+  assert.equal(cloud.doc(jobPath('A', 'demo_1')).notes, '<p>Offer!</p>');
+  assert.equal(isUntouchedDemoJob(d.job('demo_1')), false);
+});
+
+test('R2-145: a saved job list that cannot be read deletes nothing from the account; its jobs come back', async (t) => {
+  globalThis.localStorage = new MemoryStorage();
+  jobStore._resetJobStoreForTest();
+  t.after(() => { jobStore._resetJobStoreForTest(); delete globalThis.localStorage; });
+  // Synced with A before; since then the saved list was damaged (one job unreadable, then all).
+  localStorage.setItem('cpwtcv_jobs_sync_v1', JSON.stringify({ uid: 'A', versions: { j1: 2, j2: 4 }, stashed: {} }));
+  localStorage.setItem('cpwtcv_jobs_v1', '{"jobs": [not json');
+  const cloud = fakeFirestore({ [jobPath('A', 'j1')]: job('j1', 'Acme', 2), [jobPath('A', 'j2')]: job('j2', 'Globex', 4) });
+  const sync = createCollectionSync({
+    name: 'jobs', io: collectionIo(cloud.fs, cloud.db, 'jobs'),
+    store: { items: jobStore.jobsNow, replace: jobStore.replaceJobs, subscribe: jobStore.subscribe, fromCloud, label },
+    meta: localMeta('cpwtcv_jobs_sync_v1'), report: recorder().report, timers: manualTimers(),
+  });
+
+  sync.start(A);
+  await settle();
+  assert.deepEqual(Object.keys(cloudJobs(cloud, 'A')).toSorted(), ['j1', 'j2'], 'the account keeps its jobs');
+  assert.deepEqual(cloud.doc(metaPath('A'))?.deleted ?? [], [], 'none is listed as deleted');
+  assert.deepEqual(jobStore.jobsNow().map((j) => j.id).toSorted(), ['j1', 'j2'], 'and they come back here');
 });

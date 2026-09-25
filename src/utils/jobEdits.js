@@ -188,3 +188,16 @@ export function demoJobs(now = new Date()) {
     createdAt: history[0].changedAt, updatedAt: history.at(-1).changedAt,
   }];
 }
+
+/**
+ * Whether `job` is the demo job as demoJobs made it, never edited: every edit stamps updatedAt
+ * with the time of the edit, and a status change adds a history entry, so the demo keeps its own
+ * four entries and an updatedAt equal to the last one's only while nobody touched it. The cloud
+ * sync lets the account's copy of the demo win over such a job (collectionSyncPlan.planFirstSync):
+ * it is dated from the day it was shown, so it looked newer than the demo the user filled in.
+ */
+export function isUntouchedDemoJob(job) {
+  const history = job?.statusHistory;
+  return job?.id === 'demo_1' && Array.isArray(history) && history.length === 4
+    && job.updatedAt === history[3]?.changedAt && job.createdAt === history[0]?.changedAt;
+}

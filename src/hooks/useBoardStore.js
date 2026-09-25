@@ -13,6 +13,7 @@ import { BOARDS_KEY } from '../constants/boards.js';
 import { addressableBoards } from '../utils/normalizeBoard.js';
 import { createBoardActions } from '../utils/boardActions.js';
 import { readRaw, readStoredBoards, writeBoards } from '../utils/boardStorage.js';
+import { BOARDS_SYNC_KEY, forgetSynced } from '../utils/collectionSyncMeta.js';
 
 let current = null;
 const listeners = new Set();
@@ -39,6 +40,8 @@ function init() {
   if (initialized) return;
   initialized = true;
   const { boards, recovery: found } = readStoredBoards({ backup: true });
+  // Boards left out here are not deleted ones: the cloud sync must not delete them from the account.
+  if (found) forgetSynced(BOARDS_SYNC_KEY);
   const recovery = found ? rememberRecovery(BOARDS_KEY, found) : pendingRecovery(BOARDS_KEY);
   stored = boards;
   const persistError = persist(boards);

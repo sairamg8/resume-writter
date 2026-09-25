@@ -5,10 +5,12 @@ import {
 import { db } from '@/utils/firebase';
 import { collectionIo } from '@/utils/collectionSyncIo';
 import { createCollectionSync } from '@/utils/collectionSyncEngine';
-import { localMeta, syncHeld } from '@/utils/collectionSyncMeta';
+import { BOARDS_SYNC_KEY, JOBS_SYNC_KEY, localMeta, syncHeld } from '@/utils/collectionSyncMeta';
 import { browserCloudSync } from '@/utils/cloudSyncBrowser';
 import { completeJob, readJob } from '@/utils/normalizeJob';
 import { completeBoard, readBoard } from '@/utils/normalizeBoard';
+import { isUntouchedDemoJob } from '@/utils/jobEdits';
+import { isUntouchedDemoBoard } from '@/utils/boardDemo';
 import { jobsNow, replaceJobs, subscribe as subscribeJobs } from '@/hooks/useJobStore';
 import { boardsNow, replaceBoards, subscribe as subscribeBoards } from '@/hooks/useBoardStore';
 
@@ -31,8 +33,9 @@ export const jobSync = {
     items: jobsNow, replace: replaceJobs, subscribe: subscribeJobs,
     fromCloud: fromCloud(readJob, completeJob),
     label: (j) => [j.company, j.role].filter(Boolean).join(' — ') || 'Untitled job',
+    seed: isUntouchedDemoJob,
   },
-  meta: () => localMeta('cpwtcv_jobs_sync_v1'),
+  meta: () => localMeta(JOBS_SYNC_KEY),
 };
 
 export const boardSync = {
@@ -41,8 +44,9 @@ export const boardSync = {
     items: boardsNow, replace: replaceBoards, subscribe: subscribeBoards,
     fromCloud: fromCloud(readBoard, completeBoard),
     label: (b) => b.title || 'Untitled project',
+    seed: isUntouchedDemoBoard,
   },
-  meta: () => localMeta('cpwtcv_boards_sync_v1'),
+  meta: () => localMeta(BOARDS_SYNC_KEY),
 };
 
 /**

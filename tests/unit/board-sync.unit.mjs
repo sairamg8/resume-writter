@@ -15,6 +15,9 @@ import { collectionIo } from '../../src/utils/collectionSyncIo.js';
 import { localMeta, memoryMeta } from '../../src/utils/collectionSyncMeta.js';
 import { completeBoard, readBoard } from '../../src/utils/normalizeBoard.js';
 import { createBoard } from '../../src/utils/boardModel.js';
+import { isUntouchedDemoBoard, makeDemoBoards } from '../../src/utils/boardDemo.js';
+
+const DAY = 24 * 60 * 60 * 1000;
 
 const A = { uid: 'A', email: 'ada@example.test' };
 const B = { uid: 'B', email: 'bo@example.test' };
@@ -306,4 +309,41 @@ test('the boards\' order is written to the account and another device takes it',
   await settle();
   assert.deepEqual(d1.store.items().map((b) => b.id), reversed);
   assert.deepEqual(savedBoards(d1.storage).map((b) => b.id), reversed);
+});
+
+test('a fresh demo project (site data cleared) never goes over the demo project the account filled in', async () => {
+  // The account adopted the demo project days ago and added an issue; the fresh one is dated an hour ago.
+  const adopted = makeDemoBoards(Date.now() - 10 * DAY);
+  adopted[0] = { ...adopted[0], issues: [...adopted[0].issues, { ...adopted[0].issues[0], id: 'iss_mine', number: 11, title: 'Paint the hallway' }], updatedAt: Date.now() - 5 * DAY };
+  cloud.data.set(boardPath('A', 'demo_board_life'), JSON.parse(JSON.stringify(adopted[0])));
+  const storage = freshStorage(); // nothing saved: the store shows the demo project
+  const tab = await openTab(storage);
+  const mod = tab.run((m) => m);
+  assert.ok(isUntouchedDemoBoard(mod.boardsNow()[0]) && mod.boardsNow()[0].updatedAt > adopted[0].updatedAt);
+  const store = { items: mod.boardsNow, replace: mod.replaceBoards, subscribe: mod.subscribe, fromCloud, label, seed: isUntouchedDemoBoard };
+  const d = engineFor(cloud, store, localMeta('cpwtcv_boards_sync_v1', () => storage));
+
+  d.sync.start(A);
+  await settle();
+  assert.ok(cloud.doc(boardPath('A', 'demo_board_life')).issues.some((i) => i.title === 'Paint the hallway'), 'the account keeps what was added');
+  assert.ok(mod.boardsNow()[0].issues.some((i) => i.title === 'Paint the hallway'), 'this browser takes it');
+  assert.equal(d.seen.status, 'synced');
+});
+
+test('a saved board list that cannot be read deletes nothing from the account; its boards come back', async () => {
+  const garden = createBoard({ title: 'Garden' }, { now: 1000 });
+  cloud.data.set(boardPath('A', garden.id), JSON.parse(JSON.stringify(garden)));
+  const storage = freshStorage();
+  storage.setItem('cpwtcv_boards_sync_v1', JSON.stringify({ uid: 'A', versions: { [garden.id]: garden.updatedAt }, stashed: {} }));
+  storage.setItem('cpwtcv_boards_v2', '{"boards": [not json');
+  const tab = await openTab(storage);
+  const mod = tab.run((m) => m);
+  const store = { items: mod.boardsNow, replace: mod.replaceBoards, subscribe: mod.subscribe, fromCloud, label };
+  const d = engineFor(cloud, store, localMeta('cpwtcv_boards_sync_v1', () => storage));
+
+  d.sync.start(A);
+  await settle();
+  assert.ok(cloud.doc(boardPath('A', garden.id)), 'the account keeps the board');
+  assert.deepEqual(cloud.doc(metaPath('A'))?.deleted ?? [], [], 'it is not listed as deleted');
+  assert.deepEqual(mod.boardsNow().map((b) => b.title), ['Garden'], 'and it comes back here');
 });

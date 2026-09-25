@@ -24,12 +24,13 @@ const time = (x) => (Number.isFinite(x?.updatedAt) ? x.updatedAt : 0);
  * the cloud's) }. Nothing typed is lost:
  *   - an item on one side only is new there and joins the list — unless the account deleted it
  *     for good, or it is one this browser knew and deleted since;
- *   - on both sides, the newer `updatedAt` wins (this browser's on a tie);
+ *   - on both sides, the newer `updatedAt` wins (this browser's on a tie) — but for this
+ *     browser's untouched demo (`seed(item)`), never synced here: the account's copy wins;
  *   - a deleted id stays deleted, but for a copy changed where the deletion was never seen (its
  *     version newer than the one this browser last saw): that edit wins, as a résumé's does (R2-029);
  *   - one deleted here that another device changed since this browser last saw it comes back.
  */
-export function planFirstSync({ local, versions = {}, localDeletes = [], docs, deleted = [], order = [] }) {
+export function planFirstSync({ local, versions = {}, localDeletes = [], docs, deleted = [], order = [], seed = () => false }) {
   const gone = new Set(deleted);
   const dropped = new Set(localDeletes);
   const cloudById = new Map(docs.map((d) => [d.id, d]));
@@ -53,7 +54,10 @@ export function planFirstSync({ local, versions = {}, localDeletes = [], docs, d
       continue;
     }
     if (mine && theirs) {
-      if (time(theirs) > time(mine)) keep.set(id, theirs);
+      // A first visit's demo (the store's `seed`), never synced here and never edited, carries
+      // nothing typed: the account's copy wins, however old — the demo is dated from the day it
+      // was shown, so clearing site data used to send a fresh demo over the one the user filled in.
+      if (time(theirs) > time(mine) || (!known(id) && seed(mine))) keep.set(id, theirs);
       else { keep.set(id, mine); if (time(mine) > time(theirs)) sets.push(mine); }
     } else if (mine) {
       // Known here and gone from the cloud with no deletion listed (removed by hand): gone, unless
