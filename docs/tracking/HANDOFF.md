@@ -1,13 +1,16 @@
 # Session Handoff — Resume Here
 
-## ⏩ COLD START HERE — 2026-09-25 16:20 UTC (laptop session, owner's execution brief of 21:45 IST)
+## ⏩ COLD START HERE — 2026-09-25 16:50 UTC (laptop session, owner's execution brief of 21:45 IST)
 
-**Deployed:** `master` = `e006835` (Round 3 batch 1: typography, public link; gate run 36109292470). The owner confirmed
-the new `firestore.rules` is published (16:15 UTC). R2-146 ✅. The laptop checkout works on this branch.
-**Work branch:** `claude/busy-darwin-yjb13t`; batch 2 = page-numbers (`3a70d91`) + picker (`6e19667`, conflict in
-`src/pages/Editor.jsx` only: both sides kept). Full gate **run 36158213786 on `6e19667`** — on green:
-`git push origin 6e19667:refs/heads/master`, `python3 docs/tracking/tools/deploy_rows.py 6e19667`,
-`update_tracker.py --recount`, the tracker's "Updated" line, this file.
+**Deployed:** `master` = `6e19667` = Round 3 batches 1–2: typography, public link (`e006835`, gate 36109292470; the owner
+published the new `firestore.rules`), page numbers and the picker (gate 36158213786 green on `6e19667`). R2-146 ✅;
+R2-138, R2-139, R2-147, R2-148 stay open for their remaining parts. The laptop checkout works on the `claude/*` branches.
+**Work branch:** `claude/busy-darwin-yjb13t` = master + docs.
+
+**In progress:** perf2 (`7a768b4`, gate green) — an independent review is running before its report and merge.
+section-look: the work branch is merged into `claude/wf-section-look` (`9fe4865`, pushed); its fix
+for the parity `linkStyle` failure (an underlined link prints react-pdf's default blue: the Link run needs the
+text's colour) comes next, then its gate.
 
 **Picker's product calls** (owner left them to Claude): (1) leaving a saved design resets what still holds its values —
 kept, Undo covers it; (2) deleting a saved design must hold on every device — **R3-008**; (3) a design saved from an
