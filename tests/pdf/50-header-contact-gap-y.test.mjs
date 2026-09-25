@@ -21,9 +21,9 @@ const PERSONAL = {
 const TWO = { name: 'Jordan Rivera', title: 'Staff Engineer', email: 'jordan@example.com', phone: '+1 555 0100' };
 const ONE = { ...TWO, phone: '' };
 /** The templates' own Between contact rows, pt, by Contact Layout (TEMPLATES' headerGaps.contactGapY). */
-const OWN = { classic: 1.5, minimal: 1.5, executive: 1.5, modern: 1.5, sidebar: 6, timeline: 1.5, banner: 1.5, academic: 1.5, compact: 1.5 };
+const OWN = { classic: 1.5, minimal: 1.5, executive: 1.5, modern: 1.5, sidebar: 6, timeline: 1.5, banner: 1.5, academic: 1.5, compact: 1.5, gridline: 1.5, registry: 1.5, bookend: 1.5, lectern: 1.5, chronicle: 1.5, keystone: 1.5, banded: 1.5, keel: 1.5, linen: 1.5, broadsheet: 1.5 };
 const SINGLE_OWN = 2;
-const STACKED = ['classic', 'minimal', 'executive', 'timeline', 'banner', 'academic', 'compact'];
+const STACKED = ['classic', 'minimal', 'executive', 'timeline', 'banner', 'academic', 'compact', 'gridline', 'registry', 'bookend', 'lectern', 'chronicle', 'keystone', 'banded', 'keel', 'linen', 'broadsheet'];
 const near = (a, b, at) => assert.ok(Math.abs(a - b) < 0.01, `${at}: ${a} vs ${b}`);
 
 /** Page 1's baselines, y down from the top, pt, of `needles`. */

@@ -75,11 +75,11 @@ for (const [name, generate] of EXPORTS) {
       const out = generate(r);
       return out.indexOf('Rolex') < out.indexOf('Compy') ? 'role' : 'company';
     };
-    for (const t of ['executive', 'sidebar', 'timeline', 'banner', 'academic', 'compact']) {
+    for (const t of ['executive', 'sidebar', 'timeline', 'banner', 'academic', 'compact', 'registry', 'broadsheet']) {
       assert.equal(order(t, {}), 'role', `${t}: unset leads with the role`);
       assert.equal(order(t, { titleOrder: '' }), 'role', `${t}: a stored '' is no choice`);
       assert.equal(order(t, { titleOrder: 'company' }), 'company', `${t}: a chosen Co. / Role wins`);
     }
-    for (const t of ['classic', 'modern', 'minimal', undefined]) assert.equal(order(t, {}), 'company', `${t}: company first`);
+    for (const t of ['classic', 'modern', 'minimal', 'gridline', 'linen', undefined]) assert.equal(order(t, {}), 'company', `${t}: company first`);
   });
 }

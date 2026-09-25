@@ -16,9 +16,9 @@ after(teardown);
 const PERSONAL = { name: 'Jordan Rivera', title: 'Staff Engineer', email: 'jordan@example.com', phone: '+1 555 0100', location: 'Austin, TX' };
 const ONE_CONTACT = { ...PERSONAL, phone: '', location: '' };
 /** The templates' own Between contacts, pt (TEMPLATES' headerGaps.contactGapX, Icon + Justify); the Sidebar has none. */
-const OWN = { classic: 12, minimal: 12, executive: 12, modern: 12, sidebar: null, timeline: 12, banner: 12, academic: 12, compact: 12 };
+const OWN = { classic: 12, minimal: 12, executive: 12, modern: 12, sidebar: null, timeline: 12, banner: 12, academic: 12, compact: 12, gridline: 12, registry: 12, bookend: 12, lectern: 12, chronicle: 12, keystone: 12, banded: 12, keel: 12, linen: 12, broadsheet: 12 };
 const WITH_GAP = TEMPLATES.filter((t) => OWN[t] != null);
-const STACKED = ['classic', 'minimal', 'executive', 'timeline', 'banner', 'academic', 'compact'];
+const STACKED = ['classic', 'minimal', 'executive', 'timeline', 'banner', 'academic', 'compact', 'gridline', 'registry', 'bookend', 'lectern', 'chronicle', 'keystone', 'banded', 'keel', 'linen', 'broadsheet'];
 const near = (a, b, at) => assert.ok(Math.abs(a - b) < 0.01, `${at}: ${a} vs ${b}`);
 
 /** Page 1's name and the three contacts: x from the left, y down from the top, pt. */

@@ -15,8 +15,8 @@ after(teardown);
 const PERSONAL = { name: 'Jordan Rivera', title: 'Staff Engineer', email: 'jordan@example.com', phone: '+1 555 0100' };
 const NO_CONTACTS = { ...PERSONAL, email: '', phone: '' };
 /** The templates' own Icon ↔ Text, pt (TEMPLATES' headerGaps.iconTextGap). */
-const OWN = { classic: 2, minimal: 2, executive: 2, modern: 2, sidebar: 3.5, timeline: 2, banner: 2, academic: 2, compact: 2 };
-const STACKED = ['classic', 'minimal', 'executive', 'timeline', 'banner', 'academic', 'compact'];
+const OWN = { classic: 2, minimal: 2, executive: 2, modern: 2, sidebar: 3.5, timeline: 2, banner: 2, academic: 2, compact: 2, gridline: 2, registry: 2, bookend: 2, lectern: 2, chronicle: 2, keystone: 2, banded: 2, keel: 2, linen: 2, broadsheet: 2 };
+const STACKED = ['classic', 'minimal', 'executive', 'timeline', 'banner', 'academic', 'compact', 'gridline', 'registry', 'bookend', 'lectern', 'chronicle', 'keystone', 'banded', 'keel', 'linen', 'broadsheet'];
 const near = (a, b, at) => assert.ok(Math.abs(a - b) < 0.01, `${at}: ${a} vs ${b}`);
 
 /**

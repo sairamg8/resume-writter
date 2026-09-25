@@ -100,3 +100,22 @@ export async function shortRules(page) {
     return rules;
   });
 }
+
+/**
+ * A fingerprint of the preview's first page: the ink of each of 64 bands of pixel rows, as a string. Two
+ * templates that draw different marks, or set the page differently, give different fingerprints; the
+ * same page painted again gives the same one.
+ */
+export async function previewFingerprint(page) {
+  const canvas = page.locator('[data-preview-status="ready"] canvas').first();
+  await expect(canvas).toBeVisible();
+  return canvas.evaluate((c) => {
+    const { data } = c.getContext('2d').getImageData(0, 0, c.width, c.height);
+    const bands = Array.from({ length: 64 }, () => 0);
+    for (let i = 0; i < data.length; i += 4) {
+      const row = Math.floor(i / 4 / c.width);
+      bands[Math.min(63, Math.floor((row * 64) / c.height))] += 765 - data[i] - data[i + 1] - data[i + 2];
+    }
+    return bands.map((b) => Math.round(b / 1000)).join(',');
+  });
+}

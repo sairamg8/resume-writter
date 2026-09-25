@@ -29,7 +29,7 @@ const cv = (template, settings = {}, personal = {}, coverLetter = {}) =>
 const near = (a, b, at) => assert.ok(Math.abs(a - b) < 0.02, `${at}: ${a} vs ${b}`);
 const drawn = async (...args) => drawing(await render(cv(...args)));
 /** Stacked headers: every template but Modern's banner and the Sidebar column. */
-const STACKED = ['classic', 'minimal', 'executive', 'timeline', 'banner', 'academic', 'compact'];
+const STACKED = ['classic', 'minimal', 'executive', 'timeline', 'banner', 'academic', 'compact', 'gridline', 'registry', 'bookend', 'lectern', 'chronicle', 'keystone', 'banded', 'keel', 'linen', 'broadsheet'];
 
 /** Where each anchor prints on page 1: its x, and its baseline's depth from the page top, pt. */
 async function anchors(bytes) {
@@ -83,7 +83,7 @@ describe('the gaps under the header move the résumé PDF by exactly their chang
     const none = { summaryGap: 40, headerRuleGap: 40, headerPadY: 40, headerPadX: 40, showHeaderBorder: true };
     assert.equal(await drawn('sidebar', none), await drawn('sidebar', { showHeaderBorder: true }), 'the Sidebar column: no summary gap, rule or banner');
     assert.equal(await drawn('modern', { headerRuleGap: 40, showHeaderBorder: true }), await drawn('modern', { showHeaderBorder: true }), 'Modern: no rule');
-    for (const t of ['classic', 'minimal', 'executive', 'timeline', 'academic', 'compact']) {
+    for (const t of ['classic', 'minimal', 'executive', 'timeline', 'academic', 'compact', 'gridline', 'registry', 'bookend', 'lectern', 'chronicle', 'keystone', 'banded', 'keel', 'linen', 'broadsheet']) {
       assert.equal(await drawn(t, { headerPadY: 40, headerPadX: 40 }), await drawn(t), `${t}: no banner`);
     }
     assert.equal(await drawn('banner', { headerPadX: 40 }), await drawn('banner'), 'Banner: its text keeps the page margins');
@@ -105,7 +105,7 @@ describe('unset, every template prints the header it always printed', () => {
 
   it('Banner, Timeline, Academic and Compact: each gap set to the template\'s own prints the unset page', async () => {
     const { templateGapPt } = await loadModule('/src/constants/headerSpacing.js');
-    for (const t of ['timeline', 'banner', 'academic', 'compact']) {
+    for (const t of ['timeline', 'banner', 'academic', 'compact', 'gridline', 'registry', 'bookend', 'lectern', 'chronicle', 'keystone', 'banded', 'keel', 'linen', 'broadsheet']) {
       const base = cv(t, { showHeaderBorder: true });
       const sectionGapPt = base.settings.sectionGap * 0.75;
       const own = Object.fromEntries(['summaryGap', 'headerGapBelow', 'headerRuleGap', 'headerPadY']
@@ -124,7 +124,7 @@ describe('the rows (Personal Info → Header Customization → Header spacing)',
     const keys = (t, s = {}, p = P) => headerGapRows(t, s, p).map((r) => r.key).filter((k) => NEW.includes(k));
     // Classic's own border is on where the résumé stores none; a new résumé stores it off.
     assert.deepEqual(keys('classic'), ['summaryGap', 'headerRuleGap', 'headerGapBelow'], 'classic, its border unset');
-    for (const t of ['classic', 'minimal', 'executive', 'timeline', 'academic', 'compact']) {
+    for (const t of ['classic', 'minimal', 'executive', 'timeline', 'academic', 'compact', 'gridline', 'registry', 'bookend', 'lectern', 'chronicle', 'keystone', 'banded', 'keel', 'linen', 'broadsheet']) {
       assert.deepEqual(keys(t, { showHeaderBorder: false }), ['summaryGap', 'headerGapBelow'], t);
       assert.deepEqual(keys(t, { showHeaderBorder: true }), ['summaryGap', 'headerRuleGap', 'headerGapBelow'], `${t}: border on`);
     }

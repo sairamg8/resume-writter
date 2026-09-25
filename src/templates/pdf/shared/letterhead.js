@@ -9,6 +9,10 @@ import { CSS_PX_TO_PT, MODERN_HEADER_PAD_X_PT, MODERN_HEADER_PAD_Y_PT } from './
 import { DEFAULTS } from './templateSettings';
 import { railColor, TIMELINE_RAIL } from './timelineRail';
 import { bannerPadY } from './bannerBand';
+import {
+  BANDED_PAD, bandedGround, BOOKEND_RULE, BROADSHEET_RULE, CHRONICLE_RULES, GRID_HAIRLINE, gridHairlineColor, KEEL_BAR,
+  LECTERN_RULE, LINEN_STITCH, REGISTRY_BAR,
+} from './designedMarks';
 
 /**
  * Space under the letterhead's text, above its rule (or the gap under the letterhead, with none),
@@ -152,6 +156,29 @@ export const LOOKS = {
     ...base,
     rules: rule || [{ width: COMPACT_RULE, color: solid(s.sectionBorderColor || accent) }],
   }),
+  // The designed layouts (R2-138 B2): the letter closes its letterhead on the mark the résumé's header
+  // draws (designedMarks.js), where the résumé's header rule is off — Banded's sits on its pale band.
+  gridline: (base, { accent, rule }) => ({ ...base, rules: rule || [{ width: GRID_HAIRLINE, color: gridHairlineColor(accent) }] }),
+  registry: (base, { accent, rule }) => ({ ...base, rules: rule || [{ width: REGISTRY_BAR, color: solid(accent) }] }),
+  bookend: (base, { accent, rule }) => ({ ...base, rules: rule || [{ width: BOOKEND_RULE, color: solid(accent) }] }),
+  lectern: (base, { accent, rule }) => ({ ...base, rules: rule || [{ width: LECTERN_RULE.height, color: solid(accent) }] }),
+  chronicle: (base, { accent, rule }) => ({
+    ...base,
+    rules: rule || [{ width: CHRONICLE_RULES.thick, color: solid(accent) }, { width: CHRONICLE_RULES.thin, color: solid(accent) }],
+  }),
+  keystone: (base, { accent, rule }) => ({ ...base, rules: rule || [{ width: 2, color: solid(accent) }] }),
+  banded: (base, { accent, rule }) => {
+    const ground = bandedGround(accent);
+    return {
+      ...base,
+      marks: bandMarks(base.contacts, ground),
+      band: { color: ground, fallback: bandedGround(DEFAULTS.banded.accentColor), padX: 0, padY: BANDED_PAD, bleed: true },
+      rules: rule || [],
+    };
+  },
+  keel: (base, { accent, rule }) => ({ ...base, rules: rule || [{ width: KEEL_BAR, color: solid(accent) }] }),
+  linen: (base, { accent, rule }) => ({ ...base, rules: rule || [{ width: LINEN_STITCH.height, color: solid(accent) }] }),
+  broadsheet: (base, { s, rule }) => ({ ...base, rules: rule || [{ width: BROADSHEET_RULE, color: solid(s.nameColor || s.textColor || '#111111') }] }),
 };
 
 /** The hairline under Academic's letterhead, pt: Minimal's. */

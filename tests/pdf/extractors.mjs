@@ -130,16 +130,17 @@ export const PNG_2X2 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCA
  * order: { paint: 'fill' | 'stroke' | 'image' | 'clip', colour, width, x0, y0, x1, y1 }.
  * react-pdf strokes a border at twice its width, clipped to the box, so a stroke's `width` is
  * half its line width: the rule's thickness as printed. A clip also has `start`, the x where its
- * path starts: a rounded box's corner radius is start - x0.
+ * path starts: a rounded box's corner radius is start - x0. A dashed or dotted stroke also has `dash`, its dash array
+ * (a solid one has none). `pageNo`: another page than the first.
  */
-export async function painted(bytes) {
+export async function painted(bytes, pageNo = 1) {
   const doc = await pdfjs.getDocument({ data: bytes.slice(), isEvalSupported: false, verbosity: 0 }).promise;
-  const { fnArray, argsArray } = await (await doc.getPage(1)).getOperatorList();
+  const { fnArray, argsArray } = await (await doc.getPage(pageNo)).getOperatorList();
   await doc.loadingTask.destroy();
   const O = pdfjs.OPS;
   const out = [];
   const stack = [];
-  let g = { m: [1, 0, 0, 1, 0, 0], fill: '#000000', stroke: '#000000', lw: 1 };
+  let g = { m: [1, 0, 0, 1, 0, 0], fill: '#000000', stroke: '#000000', lw: 1, dash: [] };
   let clipping = false;
   const box = ([x0, y0, x1, y1], m) => {
     const xs = [x0 * m[0] + y0 * m[2] + m[4], x1 * m[0] + y1 * m[2] + m[4]];
@@ -154,6 +155,7 @@ export async function painted(bytes) {
     else if (fn === O.setFillRGBColor) g = { ...g, fill: a[0] };
     else if (fn === O.setStrokeRGBColor) g = { ...g, stroke: a[0] };
     else if (fn === O.setLineWidth) g = { ...g, lw: a[0] };
+    else if (fn === O.setDash) g = { ...g, dash: a[0] };
     else if (fn === O.clip || fn === O.eoClip) clipping = true;
     else if (fn === O.constructPath) {
       if (clipping) {
@@ -163,7 +165,7 @@ export async function painted(bytes) {
         return;
       }
       const stroke = a[0] === O.stroke;
-      out.push({ paint: stroke ? 'stroke' : 'fill', colour: stroke ? g.stroke : g.fill, width: stroke ? g.lw / 2 : 0, ...box(a[2], g.m) });
+      out.push({ paint: stroke ? 'stroke' : 'fill', colour: stroke ? g.stroke : g.fill, width: stroke ? g.lw / 2 : 0, ...box(a[2], g.m), ...(stroke && g.dash?.length ? { dash: g.dash } : {}) });
     } else if (fn === O.paintImageXObject || fn === O.paintInlineImageXObject) out.push({ paint: 'image', ...box([0, 0, 1, 1], g.m) });
   });
   return out;

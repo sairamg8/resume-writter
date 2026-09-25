@@ -20,6 +20,17 @@ export const LOADERS = {
   banner:    () => import('@/templates/pdf/BannerTemplatePDF').then(m => m.BannerTemplatePDF),
   academic:  () => import('@/templates/pdf/AcademicTemplatePDF').then(m => m.AcademicTemplatePDF),
   compact:   () => import('@/templates/pdf/CompactTemplatePDF').then(m => m.CompactTemplatePDF),
+  // The designed layouts (R2-138 B2), each Classic's header and single column with marks of its own.
+  gridline:  () => import('@/templates/pdf/GridlineTemplatePDF').then(m => m.GridlineTemplatePDF),
+  registry:  () => import('@/templates/pdf/RegistryTemplatePDF').then(m => m.RegistryTemplatePDF),
+  bookend:   () => import('@/templates/pdf/BookendTemplatePDF').then(m => m.BookendTemplatePDF),
+  lectern:   () => import('@/templates/pdf/LecternTemplatePDF').then(m => m.LecternTemplatePDF),
+  chronicle: () => import('@/templates/pdf/ChronicleTemplatePDF').then(m => m.ChronicleTemplatePDF),
+  keystone:  () => import('@/templates/pdf/KeystoneTemplatePDF').then(m => m.KeystoneTemplatePDF),
+  banded:    () => import('@/templates/pdf/BandedTemplatePDF').then(m => m.BandedTemplatePDF),
+  keel:      () => import('@/templates/pdf/KeelTemplatePDF').then(m => m.KeelTemplatePDF),
+  linen:     () => import('@/templates/pdf/LinenTemplatePDF').then(m => m.LinenTemplatePDF),
+  broadsheet:() => import('@/templates/pdf/BroadsheetTemplatePDF').then(m => m.BroadsheetTemplatePDF),
 };
 
 /** Cache loaded template components so repeat exports skip network/chunk parse. */
