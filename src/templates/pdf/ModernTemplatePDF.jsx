@@ -1,6 +1,7 @@
 import { Document, Page, View } from '@react-pdf/renderer';
 import { Text } from './shared/PdfText';
 import { getPageStyle, getDocumentProps } from './shared/PdfPage';
+import { PdfRunningHeader } from './shared/PdfRunningHeader';
 import { SectionRouter, getEffectiveSpacing, getVisibleSections } from './shared/PdfSections';
 import { PdfRichText } from './shared/PdfRichText';
 import { hasRichText } from '@/utils/richText';
@@ -74,6 +75,8 @@ export function ModernTemplatePDF({ data }) {
   return (
     <Document {...getDocumentProps(personal)}>
       <Page size={pageSizeOf(settings)} style={pageStyle} wrap>
+        {/* First on every page: after page 1 it prints "Name · Page 2" (ATS-7). */}
+        <PdfRunningHeader personal={personal} settings={settings} />
         <View style={{
           backgroundColor: accent,
           borderRadius: 2,

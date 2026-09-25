@@ -1,6 +1,7 @@
 import { Document, Page, View } from '@react-pdf/renderer';
 import { Text } from './shared/PdfText';
 import { getPageStyle, getDocumentProps, pageMargins } from './shared/PdfPage';
+import { PdfRunningHeader } from './shared/PdfRunningHeader';
 import { headerRowWidth, PdfContactRow } from './shared/PdfContact';
 import { fitFontSize } from './shared/pdfMeasure';
 import { SectionRouter, getEffectiveSpacing, getVisibleSections } from './shared/PdfSections';
@@ -108,6 +109,8 @@ export function BannerTemplatePDF({ data }) {
       <Page size={pageSizeOf(settings)} style={getPageStyle(settings)} wrap>
         {/* Pages 2+: the band carried on as a strip along the paper's top edge (under the band on page 1). */}
         {strip > 0 && <View fixed style={{ position: 'absolute', top: 0, left: 0, right: 0, height: strip, backgroundColor: accent }} />}
+        {/* First text on every page: after page 1 it prints "Name · Page 2" (ATS-7), below the strip. */}
+        <PdfRunningHeader personal={personal} settings={settings} insetPt={strip} />
 
         <View style={{ paddingBottom: bannerPadY(settings), marginBottom: summary ? g.summaryGap : g.headerGapBelow }} wrap={false}>
           <View style={{ position: 'absolute', top: -bleedTop, left: -bleedSide, right: -bleedSide, bottom: 0, backgroundColor: accent }} />

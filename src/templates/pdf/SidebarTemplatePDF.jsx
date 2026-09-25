@@ -5,6 +5,7 @@ import { getEffectiveSpacing, SPACER, sectionPrints } from './shared/PdfSections
 import { PdfRichText } from './shared/PdfRichText';
 import { hasRichText } from '@/utils/richText';
 import { getDocumentProps, pageMargins } from './shared/PdfPage';
+import { PdfRunningHeader } from './shared/PdfRunningHeader';
 import { getPdfPhotoStyle } from './shared/pdfPhoto';
 import { PdfPhoto } from './shared/PdfPhoto';
 import { CSS_PX_TO_PT, tracking } from './shared/pdfUnits';
@@ -130,6 +131,8 @@ export function SidebarTemplatePDF({ data }) {
     <Document {...getDocumentProps(personal)}>
       <Page size={pageSizeOf(settings)} style={pageStyle} wrap>
         <View style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${SIDE_COL * 100}%`, backgroundColor: sidebarBg }} fixed />
+        {/* First text on every page: after page 1 it prints "Name · Page 2" (ATS-7), over the main column. */}
+        <PdfRunningHeader personal={personal} settings={settings} left={`${SIDE_COL * 100}%`} />
 
         <View style={{
           width: `${SIDE_COL * 100}%`,

@@ -1,6 +1,7 @@
 import { Document, Page, View } from '@react-pdf/renderer';
 import { Text } from './shared/PdfText';
 import { getPageStyle, getDocumentProps, getHeaderBorderStyle } from './shared/PdfPage';
+import { PdfRunningHeader } from './shared/PdfRunningHeader';
 import { headerRowWidth, PdfContactRow } from './shared/PdfContact';
 import { fitFontSize } from './shared/pdfMeasure';
 import { SectionRouter, getEffectiveSpacing, getVisibleSections } from './shared/PdfSections';
@@ -94,6 +95,8 @@ export function AcademicTemplatePDF({ data }) {
   return (
     <Document {...getDocumentProps(personal)}>
       <Page size={pageSizeOf(settings)} style={getPageStyle(settings)} wrap>
+        {/* First on every page: after page 1 it prints "Name · Page 2" (ATS-7). */}
+        <PdfRunningHeader personal={personal} settings={settings} />
         {/* Breakable: a summary longer than a page continues on the next (R2-046); the name row never splits. */}
         <View style={[{ marginBottom: g.headerGapBelow }, headerBorderStyle]}>
           <View style={{

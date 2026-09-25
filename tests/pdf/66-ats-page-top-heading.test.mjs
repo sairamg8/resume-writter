@@ -1,20 +1,17 @@
-// A section heading that opens a page (TUI-6, filed as ATS-7 — a known limit of Poppler's -raw mode,
-// accepted, not fixed). Headings keep with their first entry, so on some résumé lengths one moves to the
-// top of page 2. pdf.js, Poppler's reading order and -layout read it as a line of its own; `pdftotext -raw`
-// writes words in drawing order with a newline only BETWEEN two words, and after a page's last word it
-// writes the form feed straight away, so the next page's first word joins the last line: "…checkout
-// service.\fSKILLS". A parser that splits lines only on '\n' (ats-fields.mjs does, as do JS regexes with
-// ^…$/m) then reads the heading as body text; one that treats \f as a break (Python splitlines) does not.
+// A section heading that opens a page (TUI-6, filed as ATS-7). Headings keep with their first entry, so on
+// some résumé lengths one moves to the top of page 2. pdf.js, Poppler's reading order and -layout read it as
+// a line of its own; `pdftotext -raw` writes words in drawing order with a newline only BETWEEN two words, and
+// after a page's last word it writes the form feed straight away, so the next page's first word joins the
+// last line: "…checkout service.\fSKILLS". A parser that splits lines only on '\n' (ats-fields.mjs does, as
+// do JS regexes with ^…$/m) then read the heading as body text.
 //
 // It is Poppler's, not react-pdf's: a two-page PDF written by hand (Helvetica, no react-pdf) and one made
-// by `mutool create` read "Figma\fPROJECTS" under -raw too (diagnosis 2026-09-23). What would change it is
-// a word drawn above the heading on page 2, and every such word is read as text: a running header ("Name ·
-// Page 2") changes the page; the same header drawn invisibly is hidden text, the thing screeners flag as
-// keyword stuffing; a zero-width mark cannot be written — react-pdf draws U+200B and U+FEFF as the space
-// glyph, which Poppler drops, as it drops every whitespace and control character tried, and it exposes no
-// marked content (ActualText). So the limit is asserted here, not hidden: the readers that do read it
-// whole are held to it, -raw is a `todo` that prints in every run, and the scorer is left splitting on
-// '\n' only, so it keeps counting what a line-only parser loses (the ATS fuzz's -raw numbers include it).
+// by `mutool create` read "Figma\fPROJECTS" under -raw too (diagnosis 2026-09-23). No invisible mark can
+// take the join (react-pdf draws U+200B and U+FEFF as the space glyph, which Poppler drops, as it drops
+// every whitespace and control character tried, and it exposes no marked content), and hidden text is what
+// screeners flag as keyword stuffing. So every page after the first carries a visible running header,
+// "Name · Page 2", drawn before anything else on the page (the owner's option A, 2026-09-25;
+// 66-running-header pins it): the form feed joins it, and the heading keeps its own line under every reader.
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { setup, teardown, resume, section, experience, render, read, TEMPLATES } from './harness.mjs';
@@ -47,9 +44,13 @@ function build(c, n) {
   });
 }
 
+/** The running header's runs on page 2 ("Pat Lee · Page 2", split or whole). */
+const RUNNING = /^(Pat Lee)?\s*·?\s*(Page\s*)?2?$/;
+
 /**
- * The first bullet count whose page 2 opens with the Skills heading (pdf.js's first item there, which
- * is the first thing drawn), with its PDF — or null. Two pages only: past that the sweep has overshot.
+ * The first bullet count whose page 2 opens with the Skills heading (pdf.js's first item there after the
+ * running header, which is the first thing drawn), with its PDF — or null. Two pages only: past that the
+ * sweep has overshot.
  */
 async function pageTopHeading(c) {
   const from = c.from ?? 28;
@@ -58,7 +59,8 @@ async function pageTopHeading(c) {
     const bytes = await render(r);
     const pages = await read(bytes);
     if (pages.length > 2) break;
-    const first = pages[1]?.items[0]?.str.trim().toLowerCase();
+    // The page's own first text: after the running header, which is drawn first on every page but the first.
+    const first = pages[1]?.items.find((t) => !RUNNING.test(t.str.trim()))?.str.trim().toLowerCase();
     if (first === r.sections[1].title.toLowerCase()) return { r, bytes, pages, n };
   }
   return null;
@@ -95,8 +97,8 @@ describe('a section heading that opens page 2 reads as a heading (ATS-7)', () =>
   }
 });
 
-describe('known limit (todo: reported until Poppler changes)', () => {
-  it('Poppler -raw reads a heading that opens page 2 as a heading', { todo: 'ATS-7, accepted: pdftotext -raw writes no newline before the form feed, so the heading joins the last line of page 1 ("…service.\\fSKILLS") for any PDF, hand-made ones too. No mark that fixes it is invisible and not read as text; see the header of this file' }, async (t) => {
+describe('Poppler -raw: the running header takes the form feed (ATS-7)', () => {
+  it('Poppler -raw reads a heading that opens page 2 as a heading', async (t) => {
     if (!hasPdftotext) { t.skip('pdftotext not installed'); return; }
     const found = [];
     for (const c of CASES) found.push(...await headingsLostAt(c, (name) => name.includes('-raw')));

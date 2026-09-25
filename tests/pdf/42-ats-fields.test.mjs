@@ -27,25 +27,12 @@ async function readersForFields(bytes) {
 }
 
 /**
- * Every reader's field problems, less one kind: ATS-7, a known limit (accepted): under `pdftotext -raw` a
- * heading that opens a page joins the last line of the page before ("…service.\fSKILLS"), so a line-only
- * parser loses it — 66-ats-page-top-heading holds that as a `todo`. Where a heading keeps with its first
- * entry, which heading opens a page depends on the résumé's length. A header loss is set aside only when
- * reading the form feed as a line break recovers every header; it is reported (t.diagnostic), not hidden,
- * and any other loss still fails.
+ * Every reader's field problems, none set aside. A heading that opens a page keeps its own line under
+ * `pdftotext -raw` too: the running header drawn first on every page after the first takes the form feed
+ * that joined it to the page before (ATS-7, 66-ats-page-top-heading), so a header loss here is a defect.
  */
-async function problemsOf(bytes, truth, t) {
-  const found = [];
-  for (const [n, text] of await readersForFields(bytes)) {
-    const problems = fieldProblems(n, scoreFields(truth, text));
-    const pageTop = String(text).includes('\f')
-      && !fieldProblems(n, scoreFields(truth, String(text).replace(/\f/g, '\n'))).some((p) => /section header/.test(p));
-    for (const p of problems) {
-      if (pageTop && p.endsWith('section header(s) undetected')) t.diagnostic(`ATS-7 (known limit): ${p} — a heading opens a page`);
-      else found.push(p);
-    }
-  }
-  return found;
+async function problemsOf(bytes, truth) {
+  return (await readersForFields(bytes)).flatMap(([n, text]) => fieldProblems(n, scoreFields(truth, text)));
 }
 
 describe('every single-column template imports as clean fields', () => {
@@ -55,7 +42,7 @@ describe('every single-column template imports as clean fields', () => {
       const { DEMO_RESUMES } = await loadModule('/tests/fixtures/sampleResumes.js');
       const r = DEMO_RESUMES.find((x) => x.template === template);
       const truth = truthFields(r);
-      assert.deepEqual(await problemsOf(await render(r), truth, t), []);
+      assert.deepEqual(await problemsOf(await render(r), truth), []);
     });
   }
 });
@@ -67,7 +54,7 @@ describe('the Sidebar ATS-safe single column imports as clean fields', () => {
     const base = DEMO_RESUMES.find((x) => x.template === 'sidebar');
     const r = { ...base, settings: { ...base.settings, sidebarSingleColumn: true } };
     const truth = truthFields(r);
-    assert.deepEqual(await problemsOf(await render(r), truth, t), []);
+    assert.deepEqual(await problemsOf(await render(r), truth), []);
   });
 });
 

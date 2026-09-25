@@ -1,4 +1,4 @@
-import { Document, Packer } from 'docx';
+import { AlignmentType, Document, Header, Packer, PageNumber, Paragraph, TextRun } from 'docx';
 import { accent2Hex, wordMargins } from '@/utils/wordExportUtils';
 import { buildSection, sectionSpaceAfter } from '@/utils/wordExportBuilders';
 import { buildPersonalSection } from '@/utils/wordExportHeader';
@@ -10,6 +10,8 @@ import { PAGE_SIZES, pageSizeOf } from '@/constants/pageSize';
 import { templateId } from '@/constants/templates';
 import { resolveTemplateSettings } from '@/templates/pdf/shared/templateSettings';
 import { FONTS } from '@/utils/fonts';
+import { RUNNING_HEADER_PT, runningHeaderLead, runningHeaderTop } from '@/constants/runningHeader';
+import { textShades } from '@/templates/pdf/shared/pdfColors';
 
 export function resolveWordFont(settings = {}) {
   if (settings?.customFont?.trim()) return settings.customFont.trim();
@@ -18,12 +20,35 @@ export function resolveWordFont(settings = {}) {
 }
 
 /**
- * A one-section document on the résumé's paper (A4 or US Letter, PAR-01), in Design → Spacing's page
- * margins (wordMargins, R2-062) — the résumé's and its letter's, as their PDFs print them.
+ * The résumé's running header, as its PDF prints it (ATS-7, constants/runningHeader.js): "Name · Page N"
+ * flush right in the top margin of every page after the first — the section's default header, with none
+ * on its first page (titlePage). Null where the margin has no room for it, as in the PDF.
  */
-function buildDocument(children, settings) {
+function runningHeader(name, color, margin) {
+  const top = runningHeaderTop((margin.v * 25.4) / 1440);
+  if (top == null) return null;
+  const run = { size: RUNNING_HEADER_PT * 2, color: textShades(color || '#111111').meta.replace('#', '') };
+  return {
+    distance: Math.round(top * 20),
+    header: new Header({
+      children: [new Paragraph({
+        alignment: AlignmentType.RIGHT,
+        spacing: { before: 0, after: 0 },
+        children: [new TextRun({ ...run, text: runningHeaderLead(name) }), new TextRun({ ...run, children: [PageNumber.CURRENT] })],
+      })],
+    }),
+  };
+}
+
+/**
+ * A one-section document on the résumé's paper (A4 or US Letter, PAR-01), in Design → Spacing's page
+ * margins (wordMargins, R2-062) — the résumé's and its letter's, as their PDFs print them. `running`:
+ * the résumé's name and Text colour, for its running header (the letter has none).
+ */
+function buildDocument(children, settings, running = null) {
   const font = resolveWordFont(settings);
   const margin = wordMargins(settings);
+  const rh = running && runningHeader(running.name, running.color, margin);
   const baseSize = Math.round((settings?.fontSizeBase ?? 11) * 2);
   return new Document({
     styles: {
@@ -47,11 +72,13 @@ function buildDocument(children, settings) {
     },
     sections: [{
       properties: {
+        ...(rh ? { titlePage: true } : {}),
         page: {
           size: PAGE_SIZES[pageSizeOf(settings)].twips,
-          margin: { top: margin.v, right: margin.h, bottom: margin.v, left: margin.h },
+          margin: { top: margin.v, right: margin.h, bottom: margin.v, left: margin.h, ...(rh ? { header: rh.distance } : {}) },
         },
       },
+      ...(rh ? { headers: { default: rh.header } } : {}),
       children,
     }],
   });
@@ -86,7 +113,8 @@ export async function renderResumeDocx(resume) {
       ? [...paras, ...sectionSpaceAfter(section, settings, own)]
       : paras)),
   ];
-  return Packer.toBlob(buildDocument(children, settings));
+  const running = { name: personal?.name, color: resolveTemplateSettings(settings, own).textColor };
+  return Packer.toBlob(buildDocument(children, settings, running));
 }
 
 export async function exportToWord(resume, filename = 'resume.docx') {
