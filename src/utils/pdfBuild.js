@@ -24,6 +24,7 @@ let broken = false;       // the worker failed to start or died: every build run
 const pending = new Map(); // id → { job, resolve, reject }
 let nextId = 0;
 let lastBuild = 0;         // the id of the latest build asked for: only it sets the font fallback
+let proven = false;        // a build came back from the worker: from then on its errors are the résumé's
 
 const mainThread = () => import('@/utils/pdfExportReactPDF');
 
@@ -44,12 +45,20 @@ function giveUp(worker) {
   for (const { job, resolve, reject } of held) runHere(job).then(resolve, reject);
 }
 
-function onReply({ data }) {
+function onReply({ data }, w) {
   const entry = pending.get(data?.id);
   if (!entry) return;
   pending.delete(data.id);
-  if (data.error !== undefined) { entry.reject(new Error(data.error)); return; }
+  if (data.error !== undefined) {
+    // Before the worker has built anything, its error may be its own — a browser whose workers lack
+    // something react-pdf needs — not the résumé's: the build runs here, and if it works here, every
+    // build does from now (the worker path is proven on Chromium only). A warm-up is best effort.
+    if (proven || entry.job.kind === 'warm') { entry.reject(new Error(data.error)); return; }
+    runHere(entry.job).then((out) => { giveUp(w); entry.resolve(out); }, entry.reject);
+    return;
+  }
   if (entry.job.kind === 'warm') { entry.resolve(); return; }
+  proven = true;
   // As resolvePdfFonts does on the main thread: a slow build for a font since changed must not name it.
   if (data.id === lastBuild) setFontFallback(data.fallback);
   entry.resolve(new Blob([data.bytes], { type: 'application/pdf' }));
@@ -59,7 +68,7 @@ function worker() {
   if (broken || (typeof Worker === 'undefined' && !createWorker.forTest)) return null;
   if (!workerPromise) {
     workerPromise = createWorker().then((w) => {
-      w.onmessage = onReply;
+      w.onmessage = (e) => onReply(e, w);
       w.onerror = (e) => { e?.preventDefault?.(); giveUp(w); };
       w.onmessageerror = () => giveUp(w);
       return w;
@@ -124,6 +133,7 @@ export function _setPdfWorkerForTest(create) {
   pending.clear();
   workerPromise = null;
   broken = false;
+  proven = false;
   createWorker = create
     ? Object.assign(async () => create(), { forTest: true })
     : () => import('./pdfWorker.js?worker').then(({ default: PdfWorker }) => new PdfWorker());

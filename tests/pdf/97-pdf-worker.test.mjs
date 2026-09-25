@@ -85,6 +85,14 @@ describe('the PDF is built in a Web Worker (R2-142, PERF-6)', () => {
       return null;
     }
     const view = mount(Harness, { tab: 'resume' });
+    // The fake page's links cannot click: count the downloads instead, so an export that throws fails here.
+    const downloads = [];
+    const make = view.document.createElement.bind(view.document);
+    view.document.createElement = (tag, ...rest) => {
+      const el = make(tag, ...rest);
+      if (String(tag).toLowerCase() === 'a') el.click = () => downloads.push(el.download);
+      return el;
+    };
     try {
       await hook.handleExportPDF();
       for (let i = 0; i < 5; i += 1) await tick();
@@ -92,6 +100,8 @@ describe('the PDF is built in a Web Worker (R2-142, PERF-6)', () => {
       view.update({ tab: 'coverletter' });
       await hook.handleExportPDF();
       assert.deepEqual(w.sent.map((j) => j.kind), ['resume', 'letter'], 'Export Cover Letter PDF built in the worker');
+      assert.equal(hook.exportError, null, 'both exports finished');
+      assert.equal(downloads.length, 2, 'and each downloaded its file');
     } finally {
       await view.unmount();
     }
@@ -124,13 +134,35 @@ describe('the PDF is built in a Web Worker (R2-142, PERF-6)', () => {
     fonts.setFontFallback(null);
   });
 
-  it('a build that fails in the worker fails with its message', async () => {
+  it('a build that fails in a worker that has built before fails with its message', async () => {
     const w = scriptedWorker();
     build._setPdfWorkerForTest(() => w);
-    const failing = build.buildResumePdf(sample());
+    const pdf = await render(sample());
+    const first = build.buildResumePdf(sample());
     while (!w.sent.length) await tick();
-    w.answer({ id: w.sent[0].id, error: 'Font family not registered: Nope' });
+    w.answer({ id: w.sent[0].id, bytes: pdf, fallback: null });
+    await first;
+    const failing = build.buildResumePdf(sample());
+    while (w.sent.length < 2) await tick();
+    w.answer({ id: w.sent[1].id, error: 'Font family not registered: Nope' });
     await assert.rejects(failing, /Font family not registered: Nope/);
+    assert.equal(w.terminated, false, 'the worker keeps building');
+  });
+
+  // The review of perf2: a browser whose workers start but cannot build (something react-pdf needs
+  // missing there) failed every preview and export for good — only a worker that failed to start or
+  // died fell back. Now an error before the worker has built anything is tried on the main thread.
+  it('the worker’s first build fails, the main thread’s works: that build comes from here, and so does every build after', async () => {
+    const w = scriptedWorker();
+    build._setPdfWorkerForTest(() => w);
+    const held = build.buildResumePdf(sample());
+    while (!w.sent.length) await tick();
+    w.answer({ id: w.sent[0].id, error: 'ReferenceError: OffscreenCanvas is not defined' });
+    const bytes = await bytesOf(await held);
+    assert.equal(allText(await read(bytes)), allText(await read(await render(sample()))), 'built on the main thread instead');
+    assert.ok(w.terminated, 'the worker that cannot build is let go');
+    await build.buildResumePdf(sample());
+    assert.equal(w.sent.length, 1, 'no build is sent to it again');
   });
 
   it('a reply the worker cannot send fails that build with its message, and the next job still runs', async () => {
