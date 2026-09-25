@@ -12,12 +12,9 @@ import { sidebarShades } from './pdfColors';
 import { PdfRichText } from './PdfRichText';
 import { RenderBullets, SPACER } from './PdfSections';
 import { ContactValue } from './PdfContact';
-<<<<<<< HEAD
 import { PdfLevel } from './PdfLevel';
 import { languageLevel, languageLevelStyle } from '@/utils/languageLevel';
-=======
 import { sectionIconMark } from './PdfIcons';
->>>>>>> worktree-agent-acfc3fa9dc9997ae6
 
 /**
  * The Sidebar template's dark column: its section title and the renderers of the sections that
