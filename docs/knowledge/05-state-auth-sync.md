@@ -186,9 +186,26 @@ The debounced watcher also drops an id from the pending deletes when the same id
 again before the flush — otherwise one batch would set and then delete (or flag) the restored
 doc.
 
+### Jobs and boards (R2-145, R2-140)
+
+The Job Tracker's jobs and the boards sync with the signed-in account too, through one shared
+engine for plain lists (`src/utils/collectionSyncEngine.js`, wired per list in
+`src/hooks/useCollectionSync.js`, mounted twice in `App.jsx`). Each job or board is one document,
+`users/{uid}/jobs/{id}` / `users/{uid}/boards/{id}`; `users/{uid}/meta/jobs` and `meta/boards` hold
+the ids deleted for good (`deleted`) and the list's order (`order`). The existing
+`users/{uid}/{document=**}` rule covers them (no rules change). The first sync merges item by item
+(`collectionSyncPlan.planFirstSync`: newer `updatedAt` wins, nothing typed is lost, a deleted id
+stays deleted unless edited where the deletion was never seen); then changes are sent in one batch
+after a 1.5 s pause. Failures, retries and 'off' reuse `cloudSyncRetry.js`; an item over Firestore's
+1 MiB is held back on its own and named on the page (`SyncHeldNotice`). This browser's record of a
+list — the account it last synced with, the versions its cloud holds, what was kept aside — is
+`cpwtcv_jobs_sync_v1` / `cpwtcv_boards_sync_v1` (`collectionSyncMeta.js`). Signing out (or another
+account signing in) takes the list off the browser as the résumés' is (`leaveList`: unsent
+changes kept aside for that account's next sign-in); signed out, nothing runs and the list is
+this browser's, as before.
+
 ### What is NOT synced
 
-- Job applications
 - UI prefs like panel width
 - Auth profile itself (handled by Firebase Auth)
 
@@ -197,7 +214,7 @@ doc.
 **File:** `src/hooks/useJobStore.js`  
 Key: `cpwtcv_jobs_v1`, `JOB_VERSION = 2`.
 
-Independent React state; not wired into App-level auth/sync. Each job page instantiates the hook separately — still consistent via localStorage reads on mount (standard multi-hook localStorage pattern; simultaneous multi-tab may race).
+A module store shared by every job page (useSyncExternalStore), synced with the signed-in account by `useCollectionSync` (above); `jobsNow` / `replaceJobs` are what the sync reads and replaces.
 
 ## Implications for open-source forks
 

@@ -35,6 +35,7 @@ flowcv/
 │   ├── hooks/
 │   │   ├── useAuth.js
 │   │   ├── useCloudSync.js
+│   │   ├── useCollectionSync.js  # jobs + boards cloud sync (collectionSync*.js in utils/)
 │   │   ├── useEditorExports.js, usePanelResize.js  # the Editor's export menu and panel drag
 │   │   ├── useResumeStore.js
 │   │   ├── useResumeSectionActions.js

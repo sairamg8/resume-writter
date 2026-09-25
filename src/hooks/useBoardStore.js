@@ -129,7 +129,12 @@ export function _resetBoardStoreForTest() {
 /** Every action, for code outside React; useBoardStore() hands out the same functions. */
 export const boardActions = { ...createBoardActions({ boardsNow, setBoards }), dismissRecovery };
 
-export { snapshot, subscribe };
+/** Replace the list with the cloud sync's result (or [] as the account's list leaves); keys kept apart (addressableBoards). */
+function replaceBoards(list) {
+  setBoards((boards) => (list === boards ? boards : addressableBoards(list)));
+}
+
+export { snapshot, subscribe, boardsNow, replaceBoards };
 
 /**
  * The boards and their actions: `{ boards, persistError, persistReason ('full' | 'blocked' |

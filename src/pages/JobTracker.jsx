@@ -11,6 +11,7 @@ import { ListView } from '@/components/job/ListView';
 import { CareerHistoryPanel } from '@/components/CareerHistoryPanel';
 import { RecoveryNotice } from '@/components/RecoveryNotice';
 import { JobsNotSavedAlert } from '@/components/job/JobsNotSavedAlert';
+import { SyncHeldNotice } from '@/components/SyncHeldNotice';
 import { ImportNotice } from '@/components/job/ImportNotice';
 import { downloadBlob } from '@/utils/download';
 import { jobsToCsv } from '@/utils/jobCsv';
@@ -166,6 +167,7 @@ export function JobTracker({ store }) {
       </div>
 
       <JobsNotSavedAlert error={persistError} className="max-w-7xl mx-auto px-4 sm:px-6 pt-3" />
+      <SyncHeldNotice name="jobs" className="max-w-7xl mx-auto px-4 sm:px-6 pt-3" />
       {recovery && (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-3">
           <RecoveryNotice what="job list" recovery={recovery} onDismiss={dismissRecovery} />

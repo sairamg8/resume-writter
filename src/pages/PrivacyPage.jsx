@@ -39,17 +39,24 @@ export default function PrivacyPage() {
 
             <h3 className="font-semibold text-gray-800 mt-4 mb-2">2a. Without an account (local-only mode)</h3>
             <p>
-              All resume data — including your name, contact details, work history, and any uploaded photo
-              — is stored exclusively in your browser's <strong>localStorage</strong>. It never leaves
-              your device and we cannot access it.
+              Everything you enter — your résumés (including your name, contact details, work history, and
+              any uploaded photo), the Job Tracker's jobs, and your boards — is stored exclusively in your
+              browser's <strong>localStorage</strong>. It never leaves your device and we cannot access it.
             </p>
 
             <h3 className="font-semibold text-gray-800 mt-4 mb-2">2b. With a Google account (cloud sync)</h3>
             <p>When you sign in with Google, we collect and store the following:</p>
             <ul className="list-disc pl-5 mt-2 space-y-1">
               <li><strong>Google profile data</strong>: your name, email address, and profile photo URL, provided by Google OAuth.</li>
-              <li><strong>Resume data</strong>: all content you enter into CPWT-CV, synced to Firebase Firestore under your unique user ID.</li>
+              <li><strong>Resume data</strong>: your résumés, synced to Firebase Firestore under your unique user ID.</li>
+              <li><strong>Job Tracker data</strong>: your jobs — company, role, status, dates, notes, to-dos and the rest of each job — synced the same way.</li>
+              <li><strong>Boards</strong>: your projects with their columns, labels, sprints and issues, synced the same way.</li>
             </ul>
+            <p className="mt-2">
+              When you sign out, your résumés, jobs and boards are removed from this browser; they stay in your
+              account and come back when you sign in again. Anything you add while signed out stays in this
+              browser only, and joins your account the next time you sign in.
+            </p>
             <p className="mt-2">
               We do <strong>not</strong> collect payment information, browsing history, or device identifiers.
             </p>
@@ -58,7 +65,7 @@ export default function PrivacyPage() {
           <section>
             <h2 className="text-lg font-semibold text-gray-900 mb-3">3. How We Use Your Data</h2>
             <ul className="list-disc pl-5 space-y-1">
-              <li>To sync your resumes across devices when you are signed in.</li>
+              <li>To sync your résumés, jobs and boards across devices when you are signed in.</li>
               <li>To restore your data if you clear your browser's local storage.</li>
               <li>We do <strong>not</strong> sell, rent, or share your personal data with third parties for marketing purposes.</li>
             </ul>
@@ -91,7 +98,7 @@ export default function PrivacyPage() {
             <h2 className="text-lg font-semibold text-gray-900 mb-3">5. Data Retention</h2>
             <p>
               Your cloud data is retained for as long as your account exists. You may delete your data
-              at any time by signing in and deleting all your resumes, or by contacting us to request
+              at any time by signing in and deleting all your résumés, jobs and boards, or by contacting us to request
               full account deletion.
             </p>
           </section>
@@ -100,7 +107,7 @@ export default function PrivacyPage() {
             <h2 className="text-lg font-semibold text-gray-900 mb-3">6. Security</h2>
             <p>
               Firestore security rules ensure that only you (authenticated by your Google account) can
-              read or write your resume data. All data in transit is encrypted via HTTPS/TLS.
+              read or write your résumés, jobs and boards. All data in transit is encrypted via HTTPS/TLS.
             </p>
           </section>
 
