@@ -4,7 +4,7 @@ import { PdfSectionTitle } from './shared/PdfSection';
 import { getEffectiveSpacing, SPACER, sectionPrints } from './shared/PdfSections';
 import { PdfRichText } from './shared/PdfRichText';
 import { hasRichText } from '@/utils/richText';
-import { getDocumentProps, pageMargins } from './shared/PdfPage';
+import { PdfPageNumbers, bottomMarginMm, getDocumentProps, pageMargins } from './shared/PdfPage';
 import { PdfRunningHeader } from './shared/PdfRunningHeader';
 import { getPdfPhotoStyle } from './shared/pdfPhoto';
 import { PdfPhoto } from './shared/PdfPhoto';
@@ -117,7 +117,7 @@ export function SidebarTemplatePDF({ data }) {
     page: {
       fontFamily: settings._pdfFontFamily || 'NotoSans',
       paddingTop: `${vMm}mm`,
-      paddingBottom: `${Math.max(0, vMm - 0.5)}mm`,
+      paddingBottom: `${Math.max(0, bottomMarginMm(settings) - 0.5)}mm`,
       paddingLeft: 0,
       paddingRight: 0,
       flexDirection: 'row',
@@ -244,6 +244,7 @@ export function SidebarTemplatePDF({ data }) {
             );
           })}
         </View>
+        <PdfPageNumbers settings={settings} />
       </Page>
     </Document>
   );

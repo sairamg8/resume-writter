@@ -158,9 +158,10 @@ export function buildCoverLetter(resume) {
   recipient.forEach((run, i) => paras.push(line([run], i === recipient.length - 1 ? gap : 0)));
   if (block.subject) paras.push(line([bold(block.subject, text)], gap));
 
-  // The body and the closing at Design → Line Height, as the letter's PDF prints them (R2-062).
+  // The body and the closing at Design → Line Height, as the letter's PDF prints them (R2-062), the
+  // body's lists behind Design → Lists' glyph (R2-147).
   if (hasRichText(cl.body)) {
-    paras.push(...descriptionToParagraphs(cl.body, { ...text, lineHeight: s.lineHeightValue }));
+    paras.push(...descriptionToParagraphs(cl.body, { ...text, lineHeight: s.lineHeightValue, bullet: s.bulletStyle }));
     paras.push(line([], pt(16)));
   }
 

@@ -113,8 +113,8 @@ export function buildPersonalSection(personal = {}, settings = {}, template = 'c
     // The Sidebar prints its summary under an "About Me" section title at the top of its main column (FIDB-51-VF3-NB2-NB1-NB1).
     if (templateId(template) === 'sidebar') paragraphs.push(buildSectionTitle('About Me', settings, template));
     const { run, frame } = summaryLook(s, template);
-    // At Design → Line Height, as the PDF's summary (R2-062).
-    paragraphs.push(...descriptionToParagraphs(personal.summary, { size: Math.round(baseSize * 2), lineHeight: s.lineHeightValue, ...run }, centered ? 'center' : null, frame));
+    // At Design → Line Height, as the PDF's summary (R2-062), its lists behind Design → Lists' glyph (R2-147).
+    paragraphs.push(...descriptionToParagraphs(personal.summary, { size: Math.round(baseSize * 2), lineHeight: s.lineHeightValue, bullet: s.bulletStyle, ...run }, centered ? 'center' : null, frame));
   }
 
   paragraphs.push(headerEnd(s, template));

@@ -112,7 +112,7 @@ export function SectionCustomizer({ section, template, updateSectionSettings, se
               label="Separator"
               value={s.separator || 'colon'}
               onChange={v => set('separator', v)}
-              options={[{ label: 'Colon  :', value: 'colon' }, { label: 'Dash  –', value: 'dash' }]}
+              options={[{ label: 'Colon  :', value: 'colon' }, { label: 'Dash  –', value: 'dash' }, { label: 'Pipe  |', value: 'pipe' }]}
             />
           )}
         </>

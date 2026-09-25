@@ -3,6 +3,7 @@ import { designStyle, presetOf } from '@/constants/templatePresets';
 import { sectionsOnSwitch } from '@/templates/pdf/shared/templateSectionDefaults';
 import { DATA_VERSION } from '@/utils/normalizeResume';
 import { DEFAULT_DATE_FORMAT } from '@/utils/dates';
+import { DEFAULT_BULLET_STYLE } from '@/utils/richText';
 
 // ATS-safe defaults — proper dimensions, neutral colors, standard font
 export const ATS_DEFAULTS = {
@@ -20,6 +21,10 @@ export const ATS_DEFAULTS = {
   sectionTitleCase: 'upper',
   /** Design → Date format (src/utils/dates.js): As entered prints every date as stored, as before PAR-06. */
   dateFormat: DEFAULT_DATE_FORMAT,
+  /** Design → Lists (src/utils/richText.js): Bullet prints '•', '–', '·' by depth, as every résumé storing no style (R2-147). */
+  bulletStyle: DEFAULT_BULLET_STYLE,
+  /** Design → Page numbers (PdfPageNumbers): off, the page as every résumé storing none prints it (R2-147). */
+  pageNumbers: false,
   sectionBorderWidth: 1,
   sectionBorderColor: '',
   headerAlign: 'left',

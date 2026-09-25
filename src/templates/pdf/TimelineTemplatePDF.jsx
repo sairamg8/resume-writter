@@ -1,6 +1,6 @@
 import { Document, Page, View } from '@react-pdf/renderer';
 import { Text } from './shared/PdfText';
-import { getPageStyle, getDocumentProps, getHeaderBorderStyle } from './shared/PdfPage';
+import { PdfPageNumbers, getPageStyle, getDocumentProps, getHeaderBorderStyle } from './shared/PdfPage';
 import { PdfRunningHeader } from './shared/PdfRunningHeader';
 import { headerRowWidth, PdfContactRow } from './shared/PdfContact';
 import { fitFontSize } from './shared/pdfMeasure';
@@ -125,6 +125,7 @@ export function TimelineTemplatePDF({ data }) {
             />
           );
         })}
+        <PdfPageNumbers settings={settings} />
       </Page>
     </Document>
   );

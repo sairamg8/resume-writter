@@ -1,11 +1,13 @@
 import React from 'react';
 import { pdf } from '@react-pdf/renderer';
 import { resolvePdfFonts, collectText } from '@/templates/pdf/shared/pdfFontLoader';
+import { BulletStyle } from '@/templates/pdf/shared/PdfRichText';
 import { resolveTemplateSettings } from '@/templates/pdf/shared/templateSettings';
 import { resolveSection } from '@/templates/pdf/shared/templateSectionDefaults';
 import { downloadBlob } from '@/utils/download';
 import { withPrintablePhotos } from '@/utils/printableImage';
 import { templateId } from '@/constants/templates';
+import { BULLET_STYLES, DEFAULT_BULLET_STYLE, bulletStyleOf } from '@/utils/richText';
 
 /** Each template's PDF component, code-split. Pinned to TEMPLATE_IDS (15-design-defaults, VM3-5). */
 export const LOADERS = {
@@ -44,13 +46,27 @@ function prepareResumeData(resume, fontFamily, templateKey) {
 }
 
 /**
+ * The text the fonts are chosen for: `value`'s (collectText), and the glyph Design → Lists draws in
+ * front of its list items (R2-147), which is no text of the résumé's — Circle's ◦ is in no Latin
+ * face, so it brings the symbol font that draws it, as a ◦ typed into a description does. Bullet,
+ * the default, adds nothing: a résumé printing its lists as before asks for the fonts it did.
+ */
+function printedText(value, settings) {
+  const style = bulletStyleOf(settings?.bulletStyle);
+  return collectText(value) + (style === DEFAULT_BULLET_STYLE ? '' : BULLET_STYLES[style].join(''));
+}
+
+/** `element` drawn with the résumé's Design → Lists style (PdfRichText's BulletStyle, R2-147). */
+const withBulletStyle = (element, settings) => React.createElement(BulletStyle.Provider, { value: settings?.bulletStyle }, element);
+
+/**
  * Warm caches used by Export PDF: fonts and the template chunk.
  * Call from the editor on mount / when template or font changes.
  */
 export async function warmPdfExport(resume) {
   const key = templateId(resume?.template);
   await Promise.all([
-    resolvePdfFonts(resume?.settings, collectText(resume)).catch(() => null),
+    resolvePdfFonts(resume?.settings, printedText(resume, resume?.settings)).catch(() => null),
     loadTemplate(key).catch(() => null),
     // Cover letter is small; warm in background when user may need it
     import('@/templates/pdf/CoverLetterTemplatePDF').catch(() => null),
@@ -66,12 +82,12 @@ export async function warmPdfExport(resume) {
 export async function renderResumePdf(resume) {
   const key = templateId(resume?.template);
   const [{ fontFamily }, TemplatePDF, printable] = await Promise.all([
-    resolvePdfFonts(resume?.settings, collectText(resume)),
+    resolvePdfFonts(resume?.settings, printedText(resume, resume?.settings)),
     loadTemplate(key),
     withPrintablePhotos(resume),
   ]);
   const data = prepareResumeData(printable, fontFamily, key);
-  const instance = pdf(React.createElement(TemplatePDF, { data }));
+  const instance = pdf(withBulletStyle(React.createElement(TemplatePDF, { data }), data.settings));
   const blob = await instance.toBlob();
   // Free internal resources when the API supports it
   try { instance.reset?.(); } catch { /* no-op */ }
@@ -86,7 +102,7 @@ export async function renderResumePdf(resume) {
 export async function renderCoverLetterPdf(resume, { preview = false } = {}) {
   const templateKey = templateId(resume?.template);
   const [{ fontFamily }, mod, printable] = await Promise.all([
-    resolvePdfFonts(resume?.settings, collectText({ personal: resume?.personal, coverLetter: resume?.coverLetter })),
+    resolvePdfFonts(resume?.settings, printedText({ personal: resume?.personal, coverLetter: resume?.coverLetter }, resume?.settings)),
     import('@/templates/pdf/CoverLetterTemplatePDF'),
     withPrintablePhotos(resume),
   ]);
@@ -97,7 +113,7 @@ export async function renderCoverLetterPdf(resume, { preview = false } = {}) {
   }, templateKey);
 
   const data = { ...printable, settings: resolvedSettings, _preview: preview };
-  const instance = pdf(React.createElement(mod.CoverLetterTemplatePDF, { data }));
+  const instance = pdf(withBulletStyle(React.createElement(mod.CoverLetterTemplatePDF, { data }), resolvedSettings));
   const blob = await instance.toBlob();
   try { instance.reset?.(); } catch { /* no-op */ }
   return blob;

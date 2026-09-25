@@ -107,7 +107,7 @@ export function SideSkills({ section, sectionGap, itemGap, accent, shades = side
   }
 
   // Inline: "CATEGORY: skills" per group; Bullet: the same line behind a marker, wrapped lines
-  // hanging clear of it (FIDB-75). The separator (colon or dash) comes only with skills.
+  // hanging clear of it (FIDB-75). The separator (colon, dash or pipe) comes only with skills.
   const bullet = style === 'bullet';
   return (
     <View style={{ marginBottom: sectionGap }}>

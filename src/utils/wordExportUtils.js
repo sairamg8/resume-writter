@@ -1,8 +1,8 @@
 import {
   Paragraph, TextRun, BorderStyle, TabStopType, ExternalHyperlink, AlignmentType, HeadingLevel, LineRuleType,
-  Table, TableBorders, TableCell, TableLayoutType, TableRow, WidthType,
+  LevelFormat, Table, TableBorders, TableCell, TableLayoutType, TableRow, WidthType,
 } from 'docx';
-import { parseRichText, safeHref } from '@/utils/richText';
+import { DEFAULT_BULLET_STYLE, bulletAt, bulletStyleOf, parseRichText, safeHref } from '@/utils/richText';
 import { PAGE_MARKS } from '@/templates/pdf/shared/pdfColors';
 import { MARGIN_MM, pageMargins } from '@/constants/pageMargins';
 import { PAGE_SIZES, pageSizeOf } from '@/constants/pageSize';
@@ -153,11 +153,44 @@ export function sectionHeading(title, accentHex, centered = false, heading = nul
   });
 }
 
-/** A legacy bullet (an entry's `bullets[]`) in `run`'s size and colour, at Design → Line Height `lineHeight`. */
-export function bulletPoint(text, centered = false, run = { size: 20 }, lineHeight = 0) {
+const BULLET_REFERENCE = 'bullet-style';
+
+/**
+ * Design → Lists → Bullet in the .docx (settings.bulletStyle, R2-147): for a style other than Bullet,
+ * a bullet numbering of its own (the document's `numbering.config`, buildDocument's) that draws the
+ * style's glyph at every level (bulletAt, the PDF's), indented as docx's default bullets are — 720
+ * twips a level, the glyph hanging 360 in front — so only the glyph changes; None's levels draw no
+ * glyph, and the tab after it still takes the text to its place. Bullet, and a résumé storing no
+ * style, keep docx's default bullets (● ○ ■): no numbering is added, the file is as before.
+ */
+export function bulletNumbering(style) {
+  if (bulletStyleOf(style) === DEFAULT_BULLET_STYLE) return [];
+  const levels = Array.from({ length: 9 }, (_, level) => {
+    const glyph = bulletAt(level + 1, style);
+    return {
+      level,
+      format: glyph ? LevelFormat.BULLET : LevelFormat.NONE,
+      text: glyph,
+      alignment: AlignmentType.LEFT,
+      style: { paragraph: { indent: { left: 720 * (level + 1), hanging: 360 } } },
+    };
+  });
+  return [{ reference: BULLET_REFERENCE, levels }];
+}
+
+/** A bulleted list item's numbering at `level` (0: the top) under Design → Lists `style`: docx's default bullets, or bulletNumbering's. */
+const listItem = (level, style) => (bulletStyleOf(style) === DEFAULT_BULLET_STYLE
+  ? { bullet: { level } }
+  : { numbering: { reference: BULLET_REFERENCE, level } });
+
+/**
+ * A legacy bullet (an entry's `bullets[]`) in `run`'s size and colour, at Design → Line Height
+ * `lineHeight`, behind Design → Lists `style`'s glyph.
+ */
+export function bulletPoint(text, centered = false, run = { size: 20 }, lineHeight = 0, style = undefined) {
   return new Paragraph({
     children: [new TextRun({ text: String(text || ''), ...run })],
-    bullet: { level: 0 },
+    ...listItem(0, style),
     spacing: { before: 20, after: 20, ...lineSpacing(lineHeight, run.size) },
     indent: { left: 360 },
     ...centredIf(centered),
@@ -195,9 +228,10 @@ function runsToDocx(runs, base) {
 /**
  * The editor's HTML as Word paragraphs — the same parse the PDF uses, so line breaks, blank
  * lines, nested and numbered lists, marks, alignment and links match the PDF.
- * `base` sets size (half-points), colour, whole-block bold/italics and `lineHeight` (Design → Line
- * Height, R2-062); `align` is the alignment of a block the editor did not align (a centred
- * section's: 'center'), as in the PDF.
+ * `base` sets size (half-points), colour, whole-block bold/italics, `lineHeight` (Design → Line
+ * Height, R2-062) and `bullet`, the glyph a bulleted item prints behind (Design → Lists, R2-147);
+ * `align` is the alignment of a block the editor did not align (a centred section's: 'center'), as
+ * in the PDF.
  */
 export function descriptionToParagraphs(html, base = { size: 20, color: '374151' }, align = null, frame = {}) {
   return parseRichText(html).map((block) => {
@@ -207,7 +241,7 @@ export function descriptionToParagraphs(html, base = { size: 20, color: '374151'
     if (block.marker) {
       const level = Math.max(0, block.indent - 1);
       if (block.marker.length === 1) {
-        return new Paragraph({ ...options, children, bullet: { level: Math.min(level, 8) } });
+        return new Paragraph({ ...options, children, ...listItem(Math.min(level, 8), base.bullet) });
       }
       // Numbers are written out, so start="3", value and a/i numbering print exactly as in the PDF.
       const left = LEVEL_TWIPS * (level + 1);

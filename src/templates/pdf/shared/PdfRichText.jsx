@@ -1,6 +1,15 @@
+import { createContext, useContext } from 'react';
 import { View, Link } from '@react-pdf/renderer';
 import { Text } from './PdfText';
-import { parseRichText, safeHref } from '@/utils/richText';
+import { listMarker, parseRichText, safeHref } from '@/utils/richText';
+
+/**
+ * Design → Lists → Bullet (settings.bulletStyle, R2-147) of the document being drawn. renderResumePdf
+ * and renderCoverLetterPdf provide it around the template, so every list — the summary's, an entry's
+ * description, its legacy bullets[], the letter's body, in either Sidebar column — prints the chosen
+ * glyph without each section passing it down. Nothing provided: the parse's own markers, as before.
+ */
+export const BulletStyle = createContext(undefined);
 
 const INDENT = 10;        // pt of text indent per list level
 const MARKER_GAP = 3;     // pt between a list marker and its text
@@ -52,6 +61,7 @@ function markerWidth(chars, fontSize) {
  * of a block whose text starts `inset` pt in may break (sideBreaks in the Sidebar's dark column).
  */
 export function PdfRichText({ html, style = {}, breaks }) {
+  const bulletStyle = useContext(BulletStyle);
   const blocks = parseRichText(html);
   if (!blocks.length) return null;
   const { marginTop, marginBottom, ...textStyle } = style;
@@ -91,14 +101,17 @@ export function PdfRichText({ html, style = {}, breaks }) {
     textStart[block.indent] = left + width;
     textStart.length = block.indent + 1;
     const length = block.runs.reduce((n, r) => n + r.text.length, 0);
+    // The glyph Design → Lists picked; the column is as wide whatever it draws, so a style never
+    // moves the text. None draws nothing there: the text keeps its place by its own margin.
+    const glyph = listMarker(block.marker, bulletStyle);
     return (
       <View
         key={i}
         wrap={length > KEEP_TOGETHER_CHARS}
         style={{ ...edges, flexDirection: 'row', marginLeft: left || undefined }}
       >
-        <Text style={{ ...textStyle, textAlign: 'left', width }}>{block.marker}</Text>
-        <Text style={{ ...textStyle, textAlign: align, flex: 1 }} hyphenationCallback={breaks?.(left + width)}>
+        {glyph ? <Text style={{ ...textStyle, textAlign: 'left', width }}>{glyph}</Text> : null}
+        <Text style={{ ...textStyle, textAlign: align, flex: 1, marginLeft: glyph ? undefined : width }} hyphenationCallback={breaks?.(left + width)}>
           <Runs runs={block.runs} color={color} />
         </Text>
       </View>

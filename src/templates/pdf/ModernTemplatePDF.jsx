@@ -1,6 +1,6 @@
 import { Document, Page, View } from '@react-pdf/renderer';
 import { Text } from './shared/PdfText';
-import { getPageStyle, getDocumentProps } from './shared/PdfPage';
+import { PdfPageNumbers, getPageStyle, getDocumentProps } from './shared/PdfPage';
 import { PdfRunningHeader } from './shared/PdfRunningHeader';
 import { SectionRouter, getEffectiveSpacing, getVisibleSections } from './shared/PdfSections';
 import { PdfRichText } from './shared/PdfRichText';
@@ -129,6 +129,7 @@ export function ModernTemplatePDF({ data }) {
             />
           );
         })}
+        <PdfPageNumbers settings={settings} />
       </Page>
     </Document>
   );
