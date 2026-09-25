@@ -30,8 +30,12 @@ with one full CI run and fast-forwards `master` on green.
 **Parked for the a11y pass at the end:** `claude/wf-templates` (`67c88c5`, R2-139's picker accessibility — its Cypress
 shards 3 and 4 were red); R2-139's A7, A8, A11, A13, A14; A11Y-1…6.
 
-**Needs the owner:** ATS-7 option A (a running "Name · Page 2" header); deleting the merged `claude/wf-*` branches on
-GitHub (the git proxy refuses branch deletion).
+**Owner, 2026-09-25, later:** (3) ATS-7 option A approved: a running "Name · Page 2" header on pages 2+ — built by
+the coordinator itself on the work branch; (4) **no new agents, sessions or workflows** once these 10 are running (to
+protect usage): they finish, and the coordinator does everything else itself; a failed session is reported to the
+owner, not restarted.
+
+**Needs the owner:** deleting the merged `claude/wf-*` branches on GitHub (the git proxy refuses branch deletion).
 
 > **Updated 2026-09-24 (cloud session, branch `claude/confident-goldberg-2uig8b`).** This section is the
 > live resume cursor for the "fix every open row" session. After the owner's reboot a new coordinator
