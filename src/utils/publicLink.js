@@ -7,7 +7,7 @@
 // The Firestore calls take the SDK's functions (`fs`: doc, getDocFromServer, writeBatch), so the
 // tests run this very code against tests/pdf/fake-firestore.mjs.
 import { newId } from '@/utils/ids';
-import { CONTACT_KEYS } from '@/utils/contacts';
+import { CONTACT_FIELDS, CONTACT_KEYS } from '@/utils/contacts';
 
 /** The largest copy the cloud takes (Firestore's 1 MiB a document), less room for the rest. */
 export const MAX_PUBLIC_BYTES = 1_000_000;
@@ -75,7 +75,6 @@ export function publicSnapshot(resume) {
   return JSON.parse(JSON.stringify(copy));
 }
 
-const CONTACTS = [['email', 'Email'], ['phone', 'Phone'], ['location', 'Location'], ['website', 'Website'], ['linkedin', 'LinkedIn'], ['github', 'GitHub']];
 const plain = (html) => String(html || '').replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
 
 /**
@@ -88,7 +87,8 @@ export function publicSummary(copy) {
   const lines = [];
   if (p.name) lines.push(`Name: ${p.name}`);
   if (p.title) lines.push(`Job title: ${p.title}`);
-  for (const [key, label] of CONTACTS) if (p[key]) lines.push(`${label}: ${p[key]}`);
+  // The contact table's own names, in its order (src/utils/contacts.js: one table, R1-3 / R9-6).
+  for (const { key, label } of CONTACT_FIELDS) if (p[key]) lines.push(`${label}: ${p[key]}`);
   if (p.photo) lines.push('Your photo');
   if (plain(p.summary)) lines.push('Your summary');
   for (const s of copy?.sections || []) {
