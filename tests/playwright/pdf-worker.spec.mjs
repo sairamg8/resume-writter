@@ -15,6 +15,6 @@ test('the preview and Export PDF are built in the PDF worker, not on the page', 
   const { text } = await exportPdf(page);
   expect(text.toLowerCase()).toContain('experience');
   const scripts = await pageScripts(page);
-  expect(scripts.some((n) => /^pdfWorker-/.test(n)), `the PDF worker was started (${scripts.join(', ')})`).toBe(true);
+  expect(scripts.some((n) => n.startsWith('pdfWorker-')), `the PDF worker was started (${scripts.join(', ')})`).toBe(true);
   expect(scripts.filter((n) => /^(react-pdf|pdfExportReactPDF|ModernTemplatePDF)-/.test(n)), 'the page loaded no PDF engine').toEqual([]);
 });
