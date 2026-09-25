@@ -4,6 +4,7 @@ import { getPageStyle, getDocumentProps, getHeaderBorderStyle } from './shared/P
 import { PdfRunningHeader } from './shared/PdfRunningHeader';
 import { headerRowWidth, PdfContactRow } from './shared/PdfContact';
 import { fitFontSize } from './shared/pdfMeasure';
+import { nameFace, nameFamily } from './shared/pdfFaces';
 import { SectionRouter, getEffectiveSpacing, getVisibleSections } from './shared/PdfSections';
 import { PdfRichText } from './shared/PdfRichText';
 import { hasRichText } from '@/utils/richText';
@@ -37,7 +38,7 @@ export function ExecutiveTemplatePDF({ data }) {
   // The name has the same row. A word of it wider than the row has nowhere to break, and
   // react-pdf drew it past the margin, off the paper: it prints at the largest size that holds it.
   const name = personal?.name || 'Your Name';
-  const nameFit = fitFontSize(name, { fontFamily: settings._pdfFontFamily, fontSize: nameSize, fontWeight: 'bold' }, contactWidth);
+  const nameFit = fitFontSize(name, { fontFamily: nameFamily(settings), fontSize: nameSize, fontWeight: 'bold' }, contactWidth);
   const headerMb     = g.headerGapBelow;
   // Off unless the user turns it on (the Executive design has no header rule).
   const headerBorderStyle = getHeaderBorderStyle(settings);
@@ -50,7 +51,7 @@ export function ExecutiveTemplatePDF({ data }) {
       gap: settings.headerInlineGap ?? 6,
       justifyContent: centered ? 'center' : 'flex-start',
     }}>
-      <Text style={{ fontSize: nameFit, fontWeight: 'bold', color: nameColor, lineHeight: 1.2 }}>
+      <Text style={{ ...nameFace(settings), fontSize: nameFit, fontWeight: 'bold', color: nameColor, lineHeight: 1.2 }}>
         {name}
       </Text>
       {personal?.title && (
@@ -62,7 +63,7 @@ export function ExecutiveTemplatePDF({ data }) {
   ) : (
     <View style={centered ? { alignSelf: 'stretch' } : undefined}>
       <Text style={{
-        fontSize: nameFit, fontWeight: 'bold', color: nameColor,
+        ...nameFace(settings), fontSize: nameFit, fontWeight: 'bold', color: nameColor,
         textAlign: centered ? 'center' : 'left', lineHeight: 1.2,
       }}>
         {name}

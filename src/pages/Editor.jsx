@@ -67,7 +67,7 @@ export function Editor({ store, auth, sync }) {
       } catch { /* warm is best-effort */ }
     })();
     return () => { cancelled = true; };
-  }, [resume?.template, resume?.settings?.font, resume?.settings?.customFont]);
+  }, [resume?.template, resume?.settings?.font, resume?.settings?.customFont, resume?.settings?.nameFont, resume?.settings?.headingFont]);
 
   if (!resume) return null;
 

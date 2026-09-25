@@ -65,6 +65,21 @@ async function headerColour({ runs, before, variant }, key, needle) {
   return out;
 }
 
+/** Lines for runs whose `find(snap)` text does not print in the face of the picker font `key` wrote. */
+async function printsIn(runs, key, find, what) {
+  const { FONTS } = await loadModule('/src/utils/fonts.js');
+  const norm = (x) => String(x).replace(/[^a-z0-9]/gi, '').toLowerCase();
+  const out = [];
+  for (const r of runs) {
+    const f = FONTS.find((x) => x.id === valueOf(r, key));
+    if (!f) continue;
+    const t = find(r.snap);
+    if (!t) out.push(`${f.id}: ${what} not found`);
+    else if (!norm(t.font).startsWith(norm(f.name))) out.push(`${f.id}: ${what} prints in ${t.font}, not ${f.name}`);
+  }
+  return out;
+}
+
 const CONTACTS = [PERSONAL.email, PERSONAL.phone, PERSONAL.location, PERSONAL.website, PERSONAL.linkedin, PERSONAL.github];
 
 /** What prints in front of `text` on its line, within a list marker's reach: '' for nothing, null when `text` does not print. */
@@ -178,6 +193,10 @@ export const DESIGN = {
       return out;
     },
   },
+  // Name Font and Heading Font (R2-146): the name, and the Experience title, print in the face picked
+  // (its first word: a large name wraps). "Same as text" ('') is the reset back to Font Family's.
+  'setting.nameFont': { family: 'fonts', check: ({ runs }) => printsIn(runs, 'setting.nameFont', (snap) => item(snap, 'Jordan'), 'the name') },
+  'setting.headingFont': { family: 'fonts', check: ({ runs }) => printsIn(runs, 'setting.headingFont', (snap) => heading(snap, /^professional( experience)?$/i), 'the Experience title') },
   // Picking a face writes it with Font Family (customFont ''), whose check covers both; a Google font
   // typed into Custom font is fetched from the network when applied — not a probe the walker can type.
   'setting.customFont': { family: 'fonts', with: 'setting.font' },

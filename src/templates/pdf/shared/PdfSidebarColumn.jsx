@@ -9,6 +9,8 @@ import { breakToFit, fitsOnLine, textWidth } from './pdfMeasure';
 import { pageBoxPt } from '@/constants/pageSize';
 import { pageMargins } from '@/constants/pageMargins';
 import { sidebarShades } from './pdfColors';
+import { titleTracking } from './sectionHeadingLook';
+import { headingFace } from './pdfFaces';
 import { PdfRichText } from './PdfRichText';
 import { RenderBullets, SPACER } from './PdfSections';
 import { ContactValue } from './PdfContact';
@@ -108,7 +110,10 @@ export function EntryLink({ url, label, style, hyphenationCallback, settings }) 
  */
 export function SideSectionTitle({ title, shades = NAVY, titleCase = 'upper', settings, presence = 3 * SIDE_LINE }) {
   const upper = upperSectionTitles(titleCase);
-  const type = { fontSize: 8.5, fontWeight: 'bold', letterSpacing: tracking(8.5, 1.2) };
+  // Design → Title Spacing, % of the title's size, as the main column's titles take it; unset, the
+  // column's own 1.2 pt, capped. Heading Font's family when one is set (R2-146).
+  const pct = settings?.sectionLetterSpacing;
+  const type = { ...headingFace(settings), fontSize: 8.5, fontWeight: 'bold', letterSpacing: typeof pct === 'number' ? titleTracking(8.5, pct) : tracking(8.5, 1.2) };
   return (
     <>
       {SPACER}

@@ -46,6 +46,9 @@ export const ATS_DEFAULTS = {
   showHeaderBorder: false,
   headerBorderWidth: 2,
   customFont: '',
+  /** Typography → Name Font and Heading Font: a picker id or a custom font's name; '' prints Font Family's (R2-146). */
+  nameFont: '',
+  headingFont: '',
   iconSize: 11,
   /** Design → Title Spacing, % of the title's size; null prints the titles' own 0.7 pt (R2-146). */
   sectionLetterSpacing: null,

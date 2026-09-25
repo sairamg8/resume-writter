@@ -10,6 +10,7 @@ import { PdfPhoto } from './shared/PdfPhoto';
 import { contentWidthPt, pageMargins } from './shared/PdfPage';
 import { getPdfPhotoStyle } from './shared/pdfPhoto';
 import { fitFontSize, textWidth, widestWord } from './shared/pdfMeasure';
+import { nameFace } from './shared/pdfFaces';
 import { DOUBLE_RULE_GAP, LETTER_CONTACTS_GAP } from './shared/letterhead';
 import { photoTextAlignItems } from '@/constants/templates';
 import { setGapPt } from '@/constants/headerSpacing';
@@ -110,6 +111,7 @@ export function CoverLetterHeader({ look, personal, settings, cl, hidden, contac
   const align = centered ? { textAlign: 'center' } : {};
   const name = personal?.name || 'Your Name';
   const nameStyle = {
+    ...nameFace(settings), // Typography → Name Font (R2-146); measured in it below, over `font`
     fontSize: nameSize, fontWeight: look.name.weight, color: look.name.color, lineHeight: 1.2,
     ...(look.name.letterSpacing ? { letterSpacing: look.name.letterSpacing } : {}), ...align,
   };

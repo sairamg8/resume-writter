@@ -40,7 +40,9 @@ describe('typography regressions', () => {
     openTypography();
     cy.get('#custom-font-input').type('bebas neue{enter}');
     cy.store().its('resumes.0.settings.customFont').should('eq', 'Bebas Neue');
-    cy.contains('button', 'Bebas Neue').should('be.visible');
+    // Typography runs longer below the input now (Name Font, Heading Font, the Word note): typing
+    // scrolled the chips above it under the editor's tabs, so bring the chip into view first.
+    cy.contains('button', 'Bebas Neue').scrollIntoView().should('be.visible');
     cy.get('[data-preview-status="ready"]', { timeout: 30_000 });
     cy.contains('Preview failed').should('not.exist');
   });

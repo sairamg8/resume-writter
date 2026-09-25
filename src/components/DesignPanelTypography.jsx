@@ -1,12 +1,38 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useId } from 'react';
 import { FONTS, loadPreviewFont, loadCustomFonts, saveCustomFont, removeCustomFont, checkFont } from '@/utils/fonts';
 import { Label, SizeRow, SegmentControl, DesignSection } from '@/components/DesignPanelShared';
 import { FONT_SIZE_BASE, ICON_SIZE, SECTION_LETTER_SPACING, TYPE_SIZE_PT, deltaInRange } from '@/constants/designNumbers';
 import { titleTrackingPct } from '@/templates/pdf/shared/sectionHeadingLook';
 import { headerTemplateId } from '@/constants/templates';
+import { wordFontStandIns } from '@/utils/wordFonts';
 
 // The quick size buttons set the base size (pt) the PDF is laid out with.
 const SIZE_PRESETS = { small: 10, normal: 11, large: 12 };
+
+/**
+ * Name Font or Heading Font (R2-146): the name, or every section title, in a font of its own —
+ * a picker font or one of the custom fonts added here. "Same as text" ('') prints it in Font
+ * Family's, as before.
+ */
+function OwnFontRow({ label, value, customFonts, onChange }) {
+  const id = useId();
+  const custom = [...new Set([...customFonts, ...(value && !FONTS.some((f) => f.id === value) ? [value] : [])])];
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <label htmlFor={id} className="text-xs text-gray-600">{label}</label>
+      <select
+        id={id}
+        value={value || ''}
+        onChange={e => onChange(e.target.value)}
+        className="min-w-0 max-w-[60%] px-2 py-1.5 text-xs border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+      >
+        <option value="">Same as text</option>
+        {FONTS.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
+        {custom.map(name => <option key={name} value={name}>{name}</option>)}
+      </select>
+    </div>
+  );
+}
 
 /** Design → Typography. `template`: the one the PDF prints (Sidebar's side column keeps its own sizes). */
 export function TypographySection({ settings, template, updateSetting, onReset }) {
@@ -42,6 +68,16 @@ export function TypographySection({ settings, template, updateSetting, onReset }
     setSavedCustomFonts(loadCustomFonts());
     setCustomFontInput('');
   }
+
+  // Word does not embed fonts: each one it may not find, and the installed font it shows instead —
+  // the stand-ins the Word export's font table names (wordFonts.js, R2-146).
+  const [standIns, setStandIns] = useState([]);
+  useEffect(() => {
+    let live = true;
+    wordFontStandIns(settings).then((list) => { if (live) setStandIns(list.filter((f) => f.standIn)); }, () => {});
+    return () => { live = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settings.font, settings.customFont, settings.nameFont, settings.headingFont]);
 
   const base = settings.fontSizeBase ?? 11;
   // No font set (older or imported résumés) prints in Noto Sans, so that is what is selected.
@@ -90,7 +126,12 @@ export function TypographySection({ settings, template, updateSetting, onReset }
                   <div key={name} className={`flex items-center gap-1 px-2 py-1 rounded-full border text-xs transition-all ${active ? 'border-blue-400 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}>
                     <button style={{ fontFamily: `'${name}', sans-serif` }} onClick={() => chooseCustomFont(name)} className="leading-none">{name}</button>
                     <button
-                      onClick={() => { removeCustomFont(name); setSavedCustomFonts(loadCustomFonts()); if (settings.customFont === name) updateSetting('customFont', ''); }}
+                      onClick={() => {
+                        removeCustomFont(name);
+                        setSavedCustomFonts(loadCustomFonts());
+                        // A removed font leaves every place it was chosen: Font Family, Name Font, Heading Font.
+                        for (const key of ['customFont', 'nameFont', 'headingFont']) if (settings[key] === name) updateSetting(key, '');
+                      }}
                       className="text-gray-300 hover:text-red-400 leading-none ml-0.5"
                       title="Remove font"
                       aria-label={`Remove ${name}`}
@@ -123,6 +164,16 @@ export function TypographySection({ settings, template, updateSetting, onReset }
           </button>
         </div>
         {fontError && <p id="custom-font-error" role="alert" className="mt-1 text-[11px] text-red-600">{fontError}</p>}
+        {standIns.length > 0 && (
+          <p data-word-fonts className="mt-2 text-[11px] text-gray-400 leading-relaxed">
+            Word does not embed fonts: where they are not installed, {standIns.map((f) => `${f.font} shows as ${f.standIn.name}`).join(', ')}. The PDF prints them as chosen.
+          </p>
+        )}
+      </div>
+
+      <div className="space-y-2">
+        <OwnFontRow label="Name Font" value={settings.nameFont} customFonts={savedCustomFonts} onChange={v => updateSetting('nameFont', v)} />
+        <OwnFontRow label="Heading Font" value={settings.headingFont} customFonts={savedCustomFonts} onChange={v => updateSetting('headingFont', v)} />
       </div>
 
       <div>
@@ -161,7 +212,7 @@ export function TypographySection({ settings, template, updateSetting, onReset }
             Single · ATS-safe Layout prints no side column: Classic's page, every size from here (R2-082). */}
         {headerTemplateId(template, settings) === 'sidebar' && (
           <p className="mt-2 text-[11px] text-gray-400 leading-relaxed">
-            Base and Section Title size the main column; the side column&apos;s sections keep their own small type (8.5 pt headings, 9 pt text).
+            Base and Section Title size the main column; the side column&apos;s sections keep their own small type (8.5 pt headings, 9 pt text), spaced by Title Spacing.
           </p>
         )}
       </div>
