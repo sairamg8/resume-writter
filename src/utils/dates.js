@@ -51,8 +51,15 @@ export const presentLabel = (settings) => dateLabels(settings).present;
 /**
  * An entry's end as it prints: "Present" while it is current — a job, and since R2-150 an
  * education, a project or a volunteering role, which have the same flag — else its End Date.
+ * Nothing when the entry's `hiddenFields` hides it (R1-LEFT-b): an education, project or
+ * volunteering entry imported with a hidden end printed it in the PDF and Word, as Markdown and
+ * ATS text did not.
  */
-export const endDateOf = (item, settings) => (item?.current ? presentLabel(settings) : item?.endDate);
+const hides = (item, key) => Array.isArray(item?.hiddenFields) && item.hiddenFields.includes(key);
+export const endDateOf = (item, settings) => (hides(item, 'endDate') ? '' : item?.current ? presentLabel(settings) : item?.endDate);
+
+/** An entry's start as it prints: its Start Date, or nothing when its `hiddenFields` hides it. */
+export const startDateOf = (item) => (hides(item, 'startDate') ? '' : item?.startDate);
 
 /** 'january', 'jan', 'sept' … → 1–12: the month words a stored date can hold (any case). */
 const MONTH_OF = new Map([

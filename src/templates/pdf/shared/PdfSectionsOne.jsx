@@ -3,7 +3,7 @@ import { Text } from './PdfText';
 import { PdfRichText } from './PdfRichText';
 import { hasRichText } from '@/utils/richText';
 import { skillCategory, skillGroup, skillSeparator } from '@/utils/skills';
-import { dateRange, endDateOf, presentLabel } from '@/utils/dates';
+import { dateRange, endDateOf, presentLabel, startDateOf } from '@/utils/dates';
 import { opacityFor, solid, tint } from './pdfColors';
 import { tracking } from './pdfUnits';
 import {
@@ -236,7 +236,7 @@ export function EducationSection({ section, settings, marginBottom, spaceBefore,
       primary: item.institution,
       sub: (degree + gpaPart) || undefined,
       loc: (showLoc && item.location ? item.location : '') || undefined,
-      dateStr: showDates ? dateRange(item.startDate, endDateOf(item, settings), settings) : '',
+      dateStr: showDates ? dateRange(startDateOf(item), endDateOf(item, settings), settings) : '',
     };
   };
   // The title keeps the first entry's header and the lines it keeps with it (R2-047).
