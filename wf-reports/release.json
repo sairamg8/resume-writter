@@ -1,0 +1,75 @@
+{
+  "cluster": "release",
+  "branch": "claude/wf-release",
+  "base": "334b454",
+  "rows": [
+    {
+      "id": "R2-169",
+      "outcome": "fixed",
+      "commits": [
+        "7741845",
+        "1f6a4cb",
+        "731ae2c"
+      ],
+      "tests": [
+        "tests/unit/knowledge-docs.unit.mjs",
+        "tests/pdf/11-photo*.test.mjs"
+      ],
+      "summary": "TODO_RESOLVE_CONFLICTS.md was already gone. graphify-out/ is no longer tracked (it is in .gitignore, and nothing read it). @napi-rs/canvas is a declared devDependency, so the photo paint tests always run and fail rather than skip if it is missing; file-saver, imported by nothing, is gone. docs/knowledge was checked claim by claim against src/, and tests/unit/knowledge-docs.unit.mjs fails when the stated DATA_VERSION, a named path or a relative link drifts. CI 36021843381 passed; confirmed by the reviewer.",
+      "remaining": ""
+    },
+    {
+      "id": "R2-143",
+      "outcome": "partial",
+      "commits": [
+        "52e864f",
+        "d7a98d9",
+        "40cf922"
+      ],
+      "tests": [
+        "tests/unit/site-owner.unit.mjs",
+        "tests/pdf/79-site-owner.test.mjs",
+        "tests/pdf/38-owner-resume-not-embedded.test.mjs",
+        "tests/pdf/18-cloud-sync-waiting-notice.test.mjs",
+        "cypress/e2e/11-demo-account.cy.js",
+        "cypress/e2e/11-demo-account-keep.cy.js",
+        "cypress/e2e/20-regressions-job-store.cy.js"
+      ],
+      "summary": "The owner's e-mail, uid and name come from VITE_* env (src/utils/siteOwner.js, documented in .env.example): VITE_DEMO_ACCOUNTS, VITE_CONTACT_EMAIL, VITE_DEV_USER_UID/EMAIL/NAME. A fork that sets none gets no demo account, Terms and Privacy pages that say 'Contact the people who run this site.', and a made-up dev sign-in (dev@example.com). No src file holds a personal mailbox address. The e2e build's demo account is the made-up one in the tracked .env.e2e. The owner's résumé file was already dev-only and in no bundle (vite-plugin-owner-resume.js, tests 24/38), and the app already ran fully without Firebase (firebase.js firebaseEnabled; useAuth cloudAvailable). The README now matches src/: file map, templates, routes (boards, backlog, settings, Your work), scripts, the CI gate and its inputs, and the env vars.",
+      "remaining": "Owner only: tag v0.1.0; confirm the Terms and Privacy pages match the hosting domain; set the env vars listed in notes on the live site's build BEFORE this reaches master. Also cosmetic: the git-ignored private file is still named private/sairam-resume.json (vite-plugin-owner-resume.js default; it is not in any bundle)."
+    },
+    {
+      "id": "R2-154",
+      "outcome": "fixed",
+      "commits": [
+        "f5d5d69"
+      ],
+      "tests": [
+        ".github/workflows/ci.yml (dispatches 36088228020, 36088456748)"
+      ],
+      "summary": "The pushgate.sh the row cites is replaced by .github/workflows/ci.yml, and its claims no longer hold. A failing node test fails its job: steps run under bash -e -o pipefail (defaults.run.shell: bash, ci.yml:59-61) with set -o pipefail and tee (ci.yml:80-84, 127-129). A failed build fails its job (vite build, build job). Browser suites and lint run on every master push and on a full dispatch (the suite/build/playwright/cypress if: conditions start with github.event_name == 'push'; lint has none). The one real gap, skipped tests being hidden, is fixed: the Summary steps of the suite and tests jobs now emit a ::warning:: naming each skipped test. It is additive and non-fatal, and the dispatch inputs are unchanged. Run 36088228020's log shows '##[warning]1 skipped: … # SKIP private/sairam-resume.json is not on this machine'.",
+      "remaining": ""
+    },
+    {
+      "id": "R2-168",
+      "outcome": "partial",
+      "commits": [],
+      "tests": [],
+      "summary": "Push-gate half: superseded by CI (R2-154); the memory-store pushgate.sh hardening is moot, because the gate is .github/workflows/ci.yml and CLAUDE.md makes CI the only place tests run. Branch templates-ui-audit does not exist on origin (git ls-remote), but its commit 45f4acc ('Phase 1 audit complete') is an ancestor of origin/master, so its content is on the work branch. The stale tracking lines are handed to the coordinator in notes.",
+      "remaining": "Coordinator: apply the docs/tracking edits listed in notes."
+    }
+  ],
+  "review": {
+    "issues": [
+      "Deploy risk (R2-143): the live site is built from master (Cloudflare, wrangler.jsonc). Without VITE_DEMO_ACCOUNTS and VITE_CONTACT_EMAIL in that build's env, the owner's originals stop coming back and Terms/Privacy lose the contact address.",
+      "The owner's dev server: the dev uid changes from dev_sairam to dev_user unless VITE_DEV_USER_UID=dev_sairam is set, and the dev sign-in is no demo account unless VITE_DEV_USER_EMAIL and VITE_DEMO_ACCOUNTS are set in .env.local.",
+      "tests/pdf/24-private-data.test.mjs:121-123's comment said the owner's e-mail is in src/; stale after R2-143.",
+      "The v0.1.0 tag named in R2-143 is not on the branch (owner step)."
+    ],
+    "fixedByReviewer": [
+      "40cf922: 24-private-data's comment now says the e-mail comes from the build's env (comment only; CI 36088456748 green)"
+    ]
+  },
+  "baselineFailures": [],
+  "notes": "Final head 40cf922: CI 36088668966 green (tests: site-owner, 79-site-owner, 38, 24, 18-cloud-sync-waiting-notice, demo-seed, knowledge-docs, 11-photo*; lint). Earlier 36088228020 on f5d5d69: failfirst 52e864f ok (fails without, passes with), Cypress 11-demo-account, 11-demo-account-keep, 20-regressions-job-store green. SET BEFORE MERGING TO MASTER (the owner's Cloudflare build env, next to VITE_FIREBASE_*): VITE_DEMO_ACCOUNTS=sairamgudiputi8@gmail.com and VITE_CONTACT_EMAIL=sairamgudiputi8@gmail.com. Without them the live site has no demo account (the owner's 'Keep as my original' résumés stop coming back) and Terms/Privacy name no contact address. For the owner's local .env.local (dev server only): VITE_DEV_USER_UID=dev_sairam, VITE_DEV_USER_EMAIL=sairamgudiputi8@gmail.com, VITE_DEV_USER_NAME=Sairam, plus the same VITE_DEMO_ACCOUNTS. A new tracked file, .env.e2e (Vite mode e2e), holds the e2e build's made-up demo account (owner@example.com); .gitignore now has a !.env.e2e exception. R2-168 tracker edits (docs/tracking/, coordinator only): (1) PENDING-ALL.md:17-23, section 0 decisions. D1 'Push policy … 19 unpushed commits' is stale: now CLAUDE.md 'Deploying' says a push to master deploys, and master is fast-forwarded only when the full CI gate on that commit is green; mark it closed. D2 Templates UI: the audit was done (45f4acc, on master), and presets/picker are R2-138/R2-139 in the templates cluster; @napi-rs/canvas is declared (1f6a4cb); mark it superseded by those rows. D4 Accessibility: the owner's order of 2026-09-25 defers a11y until no other bug or feature is left; say so. D5 Housekeeping: done in 1f6a4cb (canvas declared, file-saver removed); mark ✅. (2) PENDING-ALL.md:31-37, section 1 'Open bugs — 18': every AUD-23…AUD-34 is ✅ Fixed in bug-status.md; ATS-1,2,4,5,6 are ✅ Fixed and ATS-3 is ✖ Won't fix (known limit). '12 fixed but unpushed' is stale (all on master and deployed). It should say: 0 open in bug-status.md; open work lives in bug-status-r2/. (3) templates-ui-plan.md:188-194. §8 'master only … Push only on the owner's word. The push gate runs every test, a production build and the private-data scan' should say: work on claude/wf-* branches merged by the coordinator; the gate is .github/workflows/ci.yml; master is fast-forwarded when the full gate is green. §9 'P1 audit ☐ waits for §7' should be ✅ (45f4acc, 2026-09-23, templates-ui-suggestions.md / templates-ui-bugs.md); P2/P3 continue as R2-138/R2-139. Also: the stop hook .claude/hooks/handoff-fresh.sh keeps asking cluster sessions to update docs/tracking/HANDOFF.md, which the protocol forbids them; I left it to the coordinator. A11y: none noted."
+}
