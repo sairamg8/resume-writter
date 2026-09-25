@@ -63,10 +63,10 @@ async function steppers() {
 }
 
 describe('a stepper box writes only what the user typed (R2-032)', () => {
-  it('Classic\'s six Header spacing rows are all offered (with a photo, a title and contacts)', async () => {
+  it('Classic\'s Header spacing rows are all offered (with a photo, a title, contacts and its own border, no summary)', async () => {
     const { headerGapRows } = await loadModule('/src/utils/headerSpacingRows.js');
     assert.deepEqual(headerGapRows('classic', {}, P).map((r) => r.key),
-      ['photoTextGap', 'nameTitleGap', 'titleContactsGap', 'iconTextGap', 'contactGapX', 'contactGapY']);
+      ['photoTextGap', 'nameTitleGap', 'titleContactsGap', 'iconTextGap', 'contactGapX', 'contactGapY', 'headerRuleGap', 'headerGapBelow']);
   });
 
   it('clicking into a box and leaving it writes nothing', async () => {

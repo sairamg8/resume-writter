@@ -10,7 +10,7 @@ import { PdfPhoto } from './shared/PdfPhoto';
 import { contentWidthPt, pageMargins } from './shared/PdfPage';
 import { getPdfPhotoStyle } from './shared/pdfPhoto';
 import { fitFontSize, textWidth, widestWord } from './shared/pdfMeasure';
-import { DOUBLE_RULE_GAP, LETTERHEAD_GAP } from './shared/letterhead';
+import { DOUBLE_RULE_GAP } from './shared/letterhead';
 import { photoTextAlignItems } from '@/constants/templates';
 import { setGapPt } from '@/constants/headerSpacing';
 import { contactItems } from '@/utils/contacts';
@@ -24,9 +24,9 @@ const CONTACTS_GAP = 12;
 /** Room added to each measured width, pt: a word's kerning into the next space is not in it. */
 const SLACK = 1;
 
-/** The band, the rule or rules, around the letterhead's content. */
+/** The band, the rule or rules, around the letterhead's content; `gapBelow` under them (letterheadLook). */
 function Frame({ look, settings, children }) {
-  const { band, rules: [rule, second], ruleGap } = look;
+  const { band, rules: [rule, second], ruleGap, gapBelow } = look;
   if (band?.bleed) {
     // The fill runs from the paper's top and side edges; the content keeps the page margins, so
     // it sits where every other letterhead's does. A rule (Banner's header rule) is drawn on the
@@ -35,7 +35,7 @@ function Frame({ look, settings, children }) {
     const top = v * MM_TO_PT;
     const side = h * MM_TO_PT;
     return (
-      <View style={{ paddingBottom: band.padY, marginBottom: LETTERHEAD_GAP }}>
+      <View style={{ paddingBottom: band.padY, marginBottom: gapBelow }}>
         <View style={{ position: 'absolute', top: -top, left: -side, right: -side, bottom: 0, backgroundColor: band.color }} />
         {rule ? <View style={{ borderBottomWidth: rule.width, borderBottomColor: rule.color, paddingBottom: ruleGap }}>{children}</View> : children}
       </View>
@@ -45,7 +45,7 @@ function Frame({ look, settings, children }) {
     return (
       <View style={{
         backgroundColor: band.color, borderRadius: band.radius,
-        paddingVertical: band.padY, paddingHorizontal: band.padX, marginBottom: LETTERHEAD_GAP,
+        paddingVertical: band.padY, paddingHorizontal: band.padX, marginBottom: gapBelow,
       }}>
         {children}
       </View>
@@ -55,9 +55,9 @@ function Frame({ look, settings, children }) {
   const ruled = rule
     ? { borderBottomWidth: rule.width, borderBottomColor: rule.color, paddingBottom: ruleGap }
     : { paddingBottom: ruleGap };
-  if (!second) return <View style={{ ...ruled, marginBottom: LETTERHEAD_GAP }}>{children}</View>;
+  if (!second) return <View style={{ ...ruled, marginBottom: gapBelow }}>{children}</View>;
   return (
-    <View style={{ marginBottom: LETTERHEAD_GAP }}>
+    <View style={{ marginBottom: gapBelow }}>
       <View style={ruled}>{children}</View>
       <View style={{ marginTop: DOUBLE_RULE_GAP, borderTopWidth: second.width, borderTopColor: second.color }} />
     </View>

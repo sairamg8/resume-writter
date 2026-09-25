@@ -138,7 +138,9 @@ export function SidebarTemplatePDF({ data }) {
           paddingRight: SIDE_PAD_RIGHT,
           color: side.strong,
         }}>
-          <View style={{ marginBottom: sideSectionGap, alignItems: 'center' }} wrap={false}>
+          {/* Personal Info → Header spacing → Header ↔ First section: the name block ↔ the column's first
+              section, its Contact where it has one (unset, Between Sections). */}
+          <View style={{ marginBottom: g.headerGapBelow, alignItems: 'center' }} wrap={false}>
             {personal?.photo && !hidden.includes('photo') && (
               <PdfPhoto src={personal.photo} style={sidePhoto} />
             )}

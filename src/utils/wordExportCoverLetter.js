@@ -17,7 +17,7 @@ import { contactItems } from '@/utils/contacts';
 import { hasRichText } from '@/utils/richText';
 import { letterBlock, letterContactFormat, letterHiddenFields, letterSignature } from '@/utils/coverLetter';
 import { solid } from '@/templates/pdf/shared/pdfColors';
-import { letterGrey, letterheadLook, LETTERHEAD_GAP } from '@/templates/pdf/shared/letterhead';
+import { letterGrey, letterheadLook } from '@/templates/pdf/shared/letterhead';
 import { resolveTemplateSettings } from '@/templates/pdf/shared/templateSettings';
 import { templateId } from '@/constants/templates';
 import { setGapPt } from '@/constants/headerSpacing';
@@ -115,9 +115,10 @@ function letterhead(personal, s, cl, sizes, look) {
     }
   }
   // A band's rows touch (no white gap inside it). Word puts a bottom border's space between the
-  // text and the border, so the gap under the letterhead is the PDF's: 16 pt below the rule or band
-  // — and, with neither (a Classic résumé's border off, V2FIDB-51-2), the PDF's pad above it too.
-  const below = LETTERHEAD_GAP + (look.band || look.rules.length ? 0 : look.ruleGap);
+  // text and the border, so the gap under the letterhead is the PDF's: its gapBelow (16 pt, or the
+  // résumé's Header ↔ First section) below the rule or band — and, with neither (a Classic résumé's
+  // border off, V2FIDB-51-2), the PDF's pad above it too.
+  const below = look.gapBelow + (look.band || look.rules.length ? 0 : look.ruleGap);
   return rows.map((r, i) => {
     const last = i === rows.length - 1;
     return line(r.runs, last ? pt(below) : look.band && !r.kept ? 0 : r.after, { ...frame(look, last), ...r.extra });

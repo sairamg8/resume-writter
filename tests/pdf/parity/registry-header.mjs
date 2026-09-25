@@ -9,15 +9,19 @@ const images = (snap) => snap.paint.filter((p) => p.paint === 'image' && p.page 
 /** The header's own text: the name, the title and each contact value. */
 const HEADER = [PERSONAL.name, PERSONAL.title, PERSONAL.email, PERSONAL.phone, PERSONAL.location, PERSONAL.website, PERSONAL.linkedin, PERSONAL.github];
 const headerRuns = (snap) => HEADER.map((s) => item(snap, s)).filter(Boolean);
+/** What prints under the header's lines: the summary and the first entry, which the gaps below the contacts move (R2-137). */
+const BELOW = ['Platform engineer who ships', 'Northwind Labs'];
 
 /**
  * A header gap: from its smallest to its largest value, the distance between two things the header
  * prints — the photo, the name, the title, a contact — changes by exactly the change (px → pt): the gap
  * prints what the stepper says. Distances, not positions: a header centred on its photo moves every
- * line by half of it. How each gap moves each line is 45…50-header-*.test.mjs's; this proves the
- * control reaches the PDF on every template that offers it.
+ * line by half of it. `below`: the summary and the first entry count too — Contacts ↔ Summary, Text ↔
+ * Border and Header ↔ First section move only what follows the header's lines. How each gap moves each
+ * line is 45…50-header-*.test.mjs's and 92-header-spacing-rows'; this proves the control reaches the
+ * PDF on every template that offers it.
  */
-function gapMoves(key) {
+function gapMoves(key, { below = false } = {}) {
   return ({ runs }) => {
     const sorted = [...runs].filter((r) => typeof valueOf(r, key) === 'number').sort((a, b) => valueOf(a, key) - valueOf(b, key));
     if (sorted.length < 2) return [];
@@ -25,7 +29,8 @@ function gapMoves(key) {
     const want = (valueOf(hi, key) - valueOf(lo, key)) * 0.75;
     const marks = (snap) => {
       const photo = images(snap)[0];
-      return [...headerRuns(snap).map((r) => [r.str, r.x, r.y]), ...(photo ? [['<photo>', photo.x1, photo.y1]] : [])];
+      const under = below ? BELOW.map((m) => [m, item(snap, m)]).filter(([, r]) => r).map(([m, r]) => [m, r.x, r.y]) : [];
+      return [...headerRuns(snap).map((r) => [r.str, r.x, r.y]), ...under, ...(photo ? [['<photo>', photo.x1, photo.y1]] : [])];
     };
     const [a, b] = [new Map(marks(lo.snap).map(([k, ...xy]) => [k, xy])), new Map(marks(hi.snap).map(([k, ...xy]) => [k, xy]))];
     const keys = [...a.keys()].filter((k) => b.has(k));
@@ -144,6 +149,12 @@ export const HEADER_CONTROLS = {
   'setting.iconTextGap': { family: 'gaps', check: gapMoves('setting.iconTextGap') },
   'setting.contactGapX': { family: 'gaps', check: gapMoves('setting.contactGapX') },
   'setting.contactGapY': { family: 'gaps', check: gapMoves('setting.contactGapY') },
+  // The gaps below the contacts (R2-137): the summary, the header's rule, the banner's padding, the first section.
+  'setting.summaryGap': { family: 'gaps', check: gapMoves('setting.summaryGap', { below: true }) },
+  'setting.headerRuleGap': { family: 'gaps', check: gapMoves('setting.headerRuleGap', { below: true }) },
+  'setting.headerPadY': { family: 'gaps', check: gapMoves('setting.headerPadY', { below: true }) },
+  'setting.headerPadX': { family: 'gaps', check: gapMoves('setting.headerPadX') },
+  'setting.headerGapBelow': { family: 'gaps', check: gapMoves('setting.headerGapBelow', { below: true }) },
   clear: { family: 'resets' },
   'setting.photoShape': { family: 'photo', check: ({ runs }) => runs.filter((r) => images(r.snap).length !== 1).map((r) => `${valueOf(r, 'setting.photoShape')}: ${images(r.snap).length} photos`) },
   'setting.photoSize': { family: 'photo', check: ordered('setting.photoSize', ['sm', 'md', 'lg'], (r) => images(r.snap)[0] && images(r.snap)[0].x1 - images(r.snap)[0].x0, 'the photo\'s width') },
