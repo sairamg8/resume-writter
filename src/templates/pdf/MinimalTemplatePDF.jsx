@@ -1,6 +1,6 @@
 import { Document, Page, View } from '@react-pdf/renderer';
 import { Text } from './shared/PdfText';
-import { PdfPageNumbers, getPageStyle, getDocumentProps, getHeaderBorderStyle } from './shared/PdfPage';
+import { getPageStyle, getDocumentProps, getHeaderBorderStyle } from './shared/PdfPage';
 import { PdfRunningHeader } from './shared/PdfRunningHeader';
 import { headerRowWidth, PdfContactRow } from './shared/PdfContact';
 import { fitFontSize } from './shared/pdfMeasure';
@@ -87,8 +87,6 @@ export function MinimalTemplatePDF({ data }) {
       <Page size={pageSizeOf(settings)} style={pageStyle} wrap>
         {/* First on every page: after page 1 it prints "Name · Page 2" (ATS-7). */}
         <PdfRunningHeader personal={personal} settings={settings} />
-        {/* Before the page's content: react-pdf repeats a fixed element only from where it stands on. */}
-        <PdfPageNumbers settings={settings} />
         {/* Breakable: a summary longer than a page continues on the next (R2-046); the name row never splits. */}
         <View style={[{ marginBottom: headerMb }, headerBorderStyle]}>
           <View style={{
