@@ -9,7 +9,7 @@
 
 - Every `appState` change writes full JSON to `localStorage` key `cpwtcv_v1`: at once after a quiet
   spell, then the keystrokes that follow together (`coalescedWriter`, `src/utils/coalescedWrite.js`).
-- `DATA_VERSION = 12` (`src/utils/dataVersion.js`) — each résumé records its own `dataVersion`, and
+- `DATA_VERSION = 13` (`src/utils/dataVersion.js`) — each résumé records its own `dataVersion`, and
   `normalizeResume()` runs the one-time migrations it has not had yet, so none runs twice (not after a
   sync, an import, or a stale tab of an older build). A store of any version loads: nothing is wiped
   to a seed. A version above this build's is stamped down to it and the claim kept in

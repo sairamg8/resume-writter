@@ -6,7 +6,7 @@
 {
   "resumes": [ /* Resume */ ],
   "activeId": "resume_…",
-  "dataVersion": 12,
+  "dataVersion": 13,
   "deletedIds": ["resume_…"],
   "deletedInfo": { "resume_…": { /* version, time, account, keep */ } },
   "syncedUid": "…",
