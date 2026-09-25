@@ -150,12 +150,13 @@ export function sectionHeading(title, accentHex, centered = false, heading = nul
   const base = heading?.color
     ? heading
     : { color: accentHex, border: { bottom: { style: BorderStyle.SINGLE, size: 4, color: accentHex, space: 4 } }, ...heading };
-  const { color, size, before = 180, lineHeight, tracking, ...frame } = base;
+  const { color, size, before = 180, lineHeight, tracking, font, ...frame } = base;
   const titleSize = size ?? 24;
   return new Paragraph({
     heading: HeadingLevel.HEADING_1,
     // `tracking`: Design → Title Spacing, twips (wordExportBuilders.js trackingOf, R2-146).
-    children: [new TextRun({ text: String(title || ''), bold: true, size: titleSize, color, ...(tracking ? { characterSpacing: tracking } : {}) })],
+    // `font`: Typography → Heading Font (wordFonts.js wordHeadingFont, R2-146).
+    children: [new TextRun({ text: String(title || ''), bold: true, size: titleSize, color, ...(font ? { font } : {}), ...(tracking ? { characterSpacing: tracking } : {}) })],
     ...frame,
     spacing: { before, after: 60, ...lineSpacing(lineHeight, titleSize) },
     keepNext: true,

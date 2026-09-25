@@ -14,23 +14,25 @@ export const HIT_AREA = {
   md: "relative pointer-coarse:after:absolute pointer-coarse:after:content-[''] pointer-coarse:after:-inset-1",
 };
 
+// The tracker look (index.css's workspace colours): a brand-blue primary, a neutral-filled
+// default, a transparent subtle one — flat, 4 px corners, 32 px tall at md.
 const VARIANTS = {
-  primary: 'bg-indigo-600 text-white shadow-sm hover:bg-indigo-700 active:bg-indigo-800',
-  secondary: 'bg-white text-slate-700 border border-slate-200 shadow-sm hover:bg-slate-50 hover:border-slate-300 hover:text-slate-900 active:bg-slate-100',
-  ghost: 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 active:bg-slate-200/70',
-  subtle: 'bg-slate-100 text-slate-700 hover:bg-slate-200/80 hover:text-slate-900 active:bg-slate-200',
-  danger: 'bg-red-600 text-white shadow-sm hover:bg-red-700 active:bg-red-800',
+  primary: 'bg-brand text-white hover:bg-brand-hover active:bg-brand-pressed',
+  secondary: 'bg-neutral-fill text-ink-subtle hover:bg-neutral-fill-hover hover:text-ink active:bg-brand-subtle active:text-brand',
+  ghost: 'text-ink-subtle hover:bg-neutral-fill hover:text-ink active:bg-neutral-fill-hover',
+  subtle: 'bg-neutral-fill text-ink-subtle hover:bg-neutral-fill-hover hover:text-ink active:bg-neutral-fill-hover',
+  danger: 'bg-[#c9372c] text-white hover:bg-[#ae2e24] active:bg-[#5d1f1a]',
 };
 
 const SIZES = {
-  sm: 'h-8 gap-1.5 px-2.5 text-[13px]',
-  md: 'h-9 gap-2 px-3.5 text-sm',
+  sm: 'h-7 gap-1.5 px-2 text-[13px]',
+  md: 'h-8 gap-2 px-3 text-sm',
 };
 
 /** The classes of a kit button, for an element that must look like one (a label, a link). */
 export function buttonClass({ variant = 'secondary', size = 'md', fullWidth = false, className } = {}) {
   return cx(
-    'inline-flex shrink-0 select-none items-center justify-center whitespace-nowrap rounded-lg font-medium',
+    'inline-flex shrink-0 select-none items-center justify-center whitespace-nowrap rounded font-medium',
     'transition-colors duration-150 ease-out disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50',
     FOCUS_RING, HIT_AREA[size], VARIANTS[variant] ?? VARIANTS.secondary, SIZES[size] ?? SIZES.md,
     fullWidth && 'w-full', className,

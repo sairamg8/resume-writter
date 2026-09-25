@@ -1,9 +1,10 @@
 import { Document, Page, View } from '@react-pdf/renderer';
 import { Text } from './shared/PdfText';
-import { getPageStyle, getDocumentProps, getHeaderBorderStyle } from './shared/PdfPage';
+import { PdfPageNumbers, getPageStyle, getDocumentProps, getHeaderBorderStyle } from './shared/PdfPage';
 import { PdfRunningHeader } from './shared/PdfRunningHeader';
 import { headerRowWidth, PdfContactRow } from './shared/PdfContact';
 import { fitFontSize } from './shared/pdfMeasure';
+import { nameFace, nameFamily } from './shared/pdfFaces';
 import { SectionRouter, getEffectiveSpacing, getVisibleSections } from './shared/PdfSections';
 import { PdfRichText } from './shared/PdfRichText';
 import { hasRichText } from '@/utils/richText';
@@ -39,7 +40,7 @@ export function MinimalTemplatePDF({ data }) {
   // The name has the same row. A word of it wider than the row has nowhere to break, and
   // react-pdf drew it past the margin, off the paper: it prints at the largest size that holds it.
   const name = personal?.name || 'Your Name';
-  const nameFit = fitFontSize(name, { fontFamily: settings._pdfFontFamily, fontSize: nameSize, fontWeight: 300, letterSpacing: -0.3 }, contactWidth);
+  const nameFit = fitFontSize(name, { fontFamily: nameFamily(settings), fontSize: nameSize, fontWeight: 300, letterSpacing: -0.3 }, contactWidth);
   const headerMb     = g.headerGapBelow;
   // Off unless the user turns it on (the Minimal design has no header rule).
   const headerBorderStyle = getHeaderBorderStyle(settings);
@@ -52,7 +53,7 @@ export function MinimalTemplatePDF({ data }) {
       gap: settings.headerInlineGap ?? 6,
       justifyContent: centered ? 'center' : 'flex-start',
     }}>
-      <Text style={{ fontSize: nameFit, fontWeight: 300, color: nameColor, letterSpacing: -0.3, lineHeight: 1.2 }}>
+      <Text style={{ ...nameFace(settings), fontSize: nameFit, fontWeight: 300, color: nameColor, letterSpacing: -0.3, lineHeight: 1.2 }}>
         {name}
       </Text>
       {personal?.title && (
@@ -64,7 +65,7 @@ export function MinimalTemplatePDF({ data }) {
   ) : (
     <View style={centered ? { alignSelf: 'stretch' } : undefined}>
       <Text style={{
-        fontSize: nameFit, fontWeight: 300, color: nameColor, letterSpacing: -0.3,
+        ...nameFace(settings), fontSize: nameFit, fontWeight: 300, color: nameColor, letterSpacing: -0.3,
         textAlign: centered ? 'center' : 'left', lineHeight: 1.2,
       }}>
         {name}
@@ -140,6 +141,8 @@ export function MinimalTemplatePDF({ data }) {
             />
           );
         })}
+        {/* Last on every page: its footer is the page's last line drawn, after the résumé's own text (R2-147). */}
+        <PdfPageNumbers settings={settings} />
       </Page>
     </Document>
   );

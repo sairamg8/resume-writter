@@ -35,10 +35,17 @@ async function loadTemplate(key) {
   return Comp;
 }
 
-function prepareResumeData(resume, fontFamily, templateKey) {
+/** The resolved fonts as the templates read them: the body's, the name's and the headings' (R2-146). */
+const fontSettings = ({ fontFamily, nameFontFamily, headingFontFamily }) => ({
+  _pdfFontFamily: fontFamily,
+  _pdfNameFontFamily: nameFontFamily,
+  _pdfHeadingFontFamily: headingFontFamily,
+});
+
+function prepareResumeData(resume, fonts, templateKey) {
   const resolvedSettings = resolveTemplateSettings({
     ...resume?.settings,
-    _pdfFontFamily: fontFamily,
+    ...fontSettings(fonts),
     _template: templateKey,
   }, templateKey);
 
@@ -87,12 +94,12 @@ export async function warmPdfExport(resume) {
  */
 export async function renderResumePdf(resume) {
   const key = templateId(resume?.template);
-  const [{ fontFamily }, TemplatePDF, printable] = await Promise.all([
+  const [fonts, TemplatePDF, printable] = await Promise.all([
     resolvePdfFonts(resume?.settings, printedText(resume, resume?.settings)),
     loadTemplate(key),
     withPrintablePhotos(resume),
   ]);
-  const data = prepareResumeData(printable, fontFamily, key);
+  const data = prepareResumeData(printable, fonts, key);
   const instance = pdf(withListsAndLinks(React.createElement(TemplatePDF, { data }), data.settings));
   const blob = await instance.toBlob();
   // Free internal resources when the API supports it
@@ -107,14 +114,14 @@ export async function renderResumePdf(resume) {
  */
 export async function renderCoverLetterPdf(resume, { preview = false } = {}) {
   const templateKey = templateId(resume?.template);
-  const [{ fontFamily }, mod, printable] = await Promise.all([
+  const [fonts, mod, printable] = await Promise.all([
     resolvePdfFonts(resume?.settings, printedText({ personal: resume?.personal, coverLetter: resume?.coverLetter }, resume?.settings)),
     import('@/templates/pdf/CoverLetterTemplatePDF'),
     withPrintablePhotos(resume),
   ]);
   const resolvedSettings = resolveTemplateSettings({
     ...printable?.settings,
-    _pdfFontFamily: fontFamily,
+    ...fontSettings(fonts),
     _template: templateKey,
   }, templateKey);
 

@@ -1,4 +1,4 @@
-import { useId } from 'react';
+import { useId, useMemo } from 'react';
 import { Copy, Trash2, Edit2, Check, Pin } from 'lucide-react';
 import { timeAgo } from '@/utils/resume';
 import { isOriginal } from '@/utils/demoSeed';
@@ -6,6 +6,9 @@ import { useRename } from '@/hooks/useRename';
 
 import { templateLabel } from '@/constants/templates';
 import ResumeThumbnail from '@/components/ResumeThumbnail';
+import { usePicture } from '@/hooks/usePicture';
+import { isLetter } from '@/utils/letters';
+import { printHash, savedPicture, savePicture } from '@/utils/pageImageStore';
 
 const KEEP_HINT = 'Your originals come back whenever none of them is left';
 const LAST_ORIGINAL_HINT = 'Your last original always comes back. To delete it, choose "Stop keeping" first.';
@@ -20,6 +23,15 @@ export function ResumeCard({ resume, onOpen, onDuplicate, onDelete, onRename, on
   const rename = useRename(resume, (name) => onRename(resume.id, name));
   const hintId = useId();
   const accent = resume.settings?.accentColor || '#2563eb';
+  // Its real page 1 (C1) — a letter's, for a letter — painted once the card is on screen and kept
+  // until the résumé prints differently (printHash): the drawn page shows until then.
+  const hash = useMemo(() => printHash(resume), [resume]);
+  const letter = isLetter(resume);
+  const [pictureRef, picture] = usePicture(
+    `resume:${resume.id}:${hash}`,
+    () => import('@/utils/pageImage').then((m) => m.pageImage(resume, { width: 160, letter })),
+    { saved: () => savedPicture(resume.id, hash), onPainted: (url) => savePicture(resume.id, hash, url) },
+  );
 
   return (
     <div className="group bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-all overflow-hidden flex flex-col">
@@ -29,7 +41,11 @@ export function ResumeCard({ resume, onOpen, onDuplicate, onDelete, onRename, on
         style={{ background: `linear-gradient(135deg, ${accent}18 0%, ${accent}08 100%)` }}
         onClick={() => onOpen(resume.id)}
       >
-        <ResumeThumbnail resume={resume} accent={accent} />
+        <div ref={pictureRef}>
+          {picture ? (
+            <img data-page-image="" src={picture} alt="" className="w-20 rounded shadow-md bg-white" style={{ border: `2px solid ${accent}30` }} />
+          ) : <ResumeThumbnail resume={resume} accent={accent} />}
+        </div>
 
         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
           <span className="px-4 py-2 bg-white rounded-lg shadow-md text-sm font-semibold text-gray-700">

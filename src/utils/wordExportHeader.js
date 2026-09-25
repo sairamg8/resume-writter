@@ -1,6 +1,7 @@
 // The Word résumé's header: name, job title, contact line and summary (buildPersonalSection), in the
 // colours, alignment and layout the PDF's header prints them in.
 import { AlignmentType, BorderStyle, LineRuleType, Paragraph, Table, TableBorders, TableCell, TableLayoutType, TableRow, TextRun, VerticalAlign, WidthType } from 'docx';
+import { wordNameFont } from '@/utils/wordFonts';
 import { accent2Hex, bold, descriptionToParagraphs, centredIf, eighths, inlineGap, normal, spacer, wordContentTwips } from '@/utils/wordExportUtils';
 import { wordPhoto } from '@/utils/wordExportPhoto';
 import { contactRows } from '@/utils/wordExportContacts';
@@ -68,7 +69,7 @@ export function buildPersonalSection(personal = {}, settings = {}, template = 'c
   // In the weight the PDF prints it, as the letter's letterhead takes it (letterheadLook): Minimal's
   // light name regular — Word has no light weight to give it — every other template's bold (R2-128).
   const nameRun = letterheadLook(template, s).name.weight === 'bold' ? bold : normal;
-  const name = nameRun(personal.name || 'Your Name', { size: nameSize, color: ink.name });
+  const name = nameRun(personal.name || 'Your Name', { size: nameSize, color: ink.name, ...wordNameFont(s) }); // Name Font (R2-146)
   // Academic prints the job title in italic, the position under the name (AcademicTemplatePDF.jsx).
   const italics = templateId(template) === 'academic' ? { italics: true } : {};
   const title = personal.title ? new TextRun({ text: personal.title, size: titleSize, color: ink.title, ...italics }) : null;

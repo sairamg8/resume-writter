@@ -18,6 +18,7 @@ export function PdfSectionTitle({
   presence = 50,
   letterSpacingPct = null,
   icon = null,
+  face = {},
 }) {
   const label = upperSectionTitles(sectionTitleCase) ? title.toUpperCase() : title;
   const look = sectionHeadingLook({ template, headingStyle, accent, borderColor });
@@ -25,7 +26,8 @@ export function PdfSectionTitle({
   // Design → Title Spacing, or 0.7 pt unset — narrower below 11.7 pt so small titles still extract as words.
   const letterSpacing = titleTracking(sectionSize, letterSpacingPct);
   // The title in the accent, or neutral dark grey where the template's style prints it so (sectionHeadingLook).
-  const titleText = { fontSize: sectionSize, fontWeight: 'bold', color: look.text, letterSpacing, lineHeight: lineHeightValue, ...textAlignment };
+  // `face`: Typography → Heading Font's family, {} while unset (pdfFaces.js headingFace, R2-146).
+  const titleText = { ...face, fontSize: sectionSize, fontWeight: 'bold', color: look.text, letterSpacing, lineHeight: lineHeightValue, ...textAlignment };
 
   // Never leave a heading alone at the bottom of a page: it moves unless `presence` points of
   // the section fit below it. (Works because SPACER gives the title a previous sibling.)

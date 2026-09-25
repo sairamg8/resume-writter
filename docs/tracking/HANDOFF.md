@@ -1,6 +1,73 @@
 # Session Handoff — Resume Here
 
+## ⏩ COLD START HERE — 2026-09-25 16:20 UTC (laptop session, owner's execution brief of 21:45 IST)
+
+**Deployed:** `master` = `e006835` (Round 3 batch 1: typography, public link; gate run 36109292470). The owner confirmed
+the new `firestore.rules` is published (16:15 UTC). R2-146 ✅. The laptop checkout works on this branch.
+**Work branch:** `claude/busy-darwin-yjb13t`; batch 2 = page-numbers (`3a70d91`) + picker (`6e19667`, conflict in
+`src/pages/Editor.jsx` only: both sides kept). Full gate **run 36158213786 on `6e19667`** — on green:
+`git push origin 6e19667:refs/heads/master`, `python3 docs/tracking/tools/deploy_rows.py 6e19667`,
+`update_tracker.py --recount`, the tracker's "Updated" line, this file.
+
+**Picker's product calls** (owner left them to Claude): (1) leaving a saved design resets what still holds its values —
+kept, Undo covers it; (2) deleting a saved design must hold on every device — **R3-008**; (3) a design saved from an
+older résumé keeps only the keys it had — kept.
+**New rows R3-009…012 = the owner's four asks of 09-24:** hand cursor, modals close on an outside click, a new résumé
+from the account's own data, a `/new` page of template pictures.
+
+**Next, in order:** perf2 (`7a768b4`, gate green, no report; conflicts in `src/AppRoutes.jsx`) → section-look
+(`f0fe67f`, red) → layouts (`3e2ed65`, red) → locale (`2f5d9d0`, red) — one at a time, each on its own branch to a
+green gate and a `wf-reports/<cluster>.json`, then merged here. Then R3-008…012, the rest of the checklist,
+accessibility last.
+
+## ⏩ COLD START HERE — 2026-09-25 07:47 UTC (coordinator session_01XeVJDQKh78wxFo4dTK6ZpW, about to run out)
+
+**Deployed:** `master` = `0a79974` = Round 2 (ten clusters, ATS-7) + the Jira-style revamp of Boards and the Job Tracker.
+**Work branch:** `claude/busy-darwin-yjb13t` (head = this commit). Owner's orders: finish the project, fast, agents allowed;
+tests only on CI; `master` moves only on a green full gate on that exact commit; accessibility last.
+
+**Do next, in order:**
+1. **Gate run 36109292470 on `e006835`** (batch 1: typography + public-link merged, the revamp-merge gaps `a09f005`,
+   `3d50022`, and `e006835` — publicLink.js used its own copy of the contact table; the previous gate on `3d50022`, run
+   36108339083, failed only `31-contact-fields` for that; its fail-first run 36108340868 is green). Read it with
+   `actions_get get_workflow_run 36109292470`; failures with `get_job_logs run_id=… failed_only=true`. On green:
+   `git push origin e006835:refs/heads/master`, then `python3 docs/tracking/tools/deploy_rows.py e006835 &&
+   python3 docs/tracking/tools/update_tracker.py --recount` (R2-146 ⏸ → ✅), update bug-status.md's "Updated" line,
+   commit, push.
+2. **Round 3 cluster sessions** (each from `c5acb93`, branch `claude/wf-<cluster>`, done when
+   `wf-reports/<cluster>.json` is on its branch). Check: `for c in page-numbers locale perf2 section-look layouts picker;
+   do git fetch -q origin claude/wf-$c && git cat-file -e FETCH_HEAD:wf-reports/$c.json && echo "$c REPORTED"; done`.
+   Merge each: `REPORTS=/tmp/wf-reports bash docs/tracking/tools/merge_cluster.sh <c>` → resolve → `python3
+   docs/tracking/tools/update_tracker.py /tmp/wf-reports/<c>.json` → commit (only the merge + tracker files) → push →
+   batch → one full gate (`actions_run_trigger run_workflow ci.yml ref=claude/busy-darwin-yjb13t inputs={}`) → deploy
+   as in 1. At 07:45: typography ✅ reported+merged (`323991e`), public-link ✅ reported+merged (`091f00c`);
+   **07:55: page-numbers ✅ reported+merged (`3a70d91`**, R2-147 part; conflicts in importFile.js — page furniture is
+   now dropped from a page's items before its column split — and wordExport.js — font table + footer, both kept;
+   rerere recorded). Not yet gated: batch 2 = `3a70d91` + the next merges. Still working: locale, perf2,
+   section-look, layouts, picker.
+   Sessions: page-numbers session_01PL4e5MkwcqPVF1pzRc4tAg · typography session_01VrpBFXbHBAp8Aow3YbjvwA ·
+   locale session_01DjbrY7hHtJmKD6GJcXHFx7 · perf2 session_017oTZg6ZNCXoJwpKhSURxST · section-look
+   session_01A8Pc1gVNQNk225roXUbEns · public-link session_01H7o4mAMVufFnaL8mMiYhCJ · layouts
+   session_018uk2NM3EkjexkRoDkRHEEz · picker session_01MkCArZxvT5mbX1ELBQKrAu.
+   Watch in merges: the guard `tests/pdf/31-contact-fields` (no second contact table: use `CONTACT_FIELDS`), the
+   Design ↺ test `91-design-resets` (new Design keys belong in a section's ↺ list), `tests/unit/knowledge-docs`
+   (docs must state the current `DATA_VERSION`), the Playwright parity walk (every new control must repaint).
+   **R2-148** is split: public-link did the link and import (partial); set the row fixed when locale's report lands.
+3. **After all eight:** the a11y pass (R2-139's A7, A8, A11, A13, A14; A11Y-1…6; parked branch `claude/wf-templates`,
+   `67c88c5`) — last, by the owner's rule.
+
+**Owner actions:** publish the new `firestore.rules` to the Firebase project (Share a public link fails permission-denied
+until then); tag v0.1.0 when ready; delete merged branches on GitHub (the git proxy refuses deletes): every
+`claude/wf-*` of Rounds 1–2, `claude/beautiful-heisenberg-x3bsvo`, `claude/confident-goldberg-2uig8b`,
+`claude/sweet-feynman-ro5q2g`, `claude/wf-round2-resume`, `claude/jira-revamp` (all merged); keep `claude/wf-templates`.
+
 ## 2026-09-25 ~06:40 — Round 2's gate fixed and deployed (in progress)
+
+**Round 3 batch 1 at 07:35 UTC:** typography (`323991e`) and public-link (`091f00c`) merged, plus the merge gaps (`a09f005` BoardStorageNotice on Summary/Timeline/Calendar, `3d50022` the Job Tracker page's SyncHeldNotice test). **Full gate run 36108339083 and fail-first run 36108340868 on `3d50022`** — on green: `git push origin 3d50022:master`, then R2-146 ⏸ → ✅.
+
+**State at 07:22 UTC: `master` = `0a79974` — Round 2 and the Jira revamp are both deployed** (combined gate run 36106125348 green on that exact commit). Follow-ups with an agent: a Job Tracker page test for its SyncHeldNotice (the merge's one hand resolution) and BoardStorageNotice on the revamp's Summary/Timeline/Calendar views. Round 3's eight sessions are running; a monitor watches their branches for `wf-reports/<cluster>.json`. Each report: `REPORTS=<dir> bash docs/tracking/tools/merge_cluster.sh <cluster>` → `update_tracker.py <dir>/<cluster>.json` → commit, push; a batch of merges → one full gate → `git push origin <sha>:master` → ⏸ rows ✅ (scratchpad `deploy_rows.py <sha>` logic: every ⏸ row whose commits are ancestors of master).
+
+**Earlier, 07:09:** Round 2 is **deployed** — `master` = `c5acb93`, its full gate run 36104952093 green; the tracker set (`5c3d907`: 15 ⏸ → ✅, ATS-7 ✅; 231 fixed, 21 ✖, 7 open). The Jira revamp is merged into the work branch (`75236a2`, its fixes `0a79974`: R6-2's spec `40800ce`, Your work's test `c2e82cb`, the backlog's `e358cf8`); **its full gate: run 36106125348 on `0a79974`** — on green, `git push origin 0a79974:master`, then this file. An agent pre-checks Round 2's tests against the revamp's pages (95-job-notes-tab, 95-sync-privacy-notices, Cypress 07/20-regressions, 01-dashboard) in a scratch worktree.
 
 **Coordinator:** session_01XeVJDQKh78wxFo4dTK6ZpW. **Work branch: `claude/busy-darwin-yjb13t`**, fast-forwarded from
 `claude/sweet-feynman-ro5q2g` (`5086b0a`, frozen). The previous coordinator (session_01YBTHhwV9xeHy7YGaebJnhY) and the
@@ -21,6 +88,25 @@ The full gate on `6c11484` (run 36092446651) had 7 failures, all where Round 2 c
 
 Next: **one** full gate on the head (all seven fixed; the Jira lane's two failures are being fixed in the worktree `/home/user/jira-revamp`, pushed to `claude/jira-revamp`, gated separately) → on green, `git push origin <sha>:master`,
 then the tracker (every ⏸ row whose commits are on master → ✅; ATS-7 ✖ → ✅, `38f35b5`) and this file, docs only.
+**Owner, ~07:00: "finish this project"; merge the Jira revamp too once green.** Round 3 — the 7 open rows, one cloud
+session per cluster, each from `c5acb93` on `claude/wf-<cluster>`, per CLUSTER-PROTOCOL.md (its report
+`wf-reports/<cluster>.json` last); the coordinator merges each into the work branch, gates, deploys. Accessibility last.
+
+| Cluster | Rows | Session |
+|---|---|---|
+| page-numbers | R2-147 page numbers | session_01PL4e5MkwcqPVF1pzRc4tAg |
+| typography | R2-146 rest: name font, per-section font, Sidebar title spacing, Word font fallback | session_01VrpBFXbHBAp8Aow3YbjvwA — **merged** (`323991e`, R2-146 ⏸; its CI green on 32074e8); not yet gated on the work branch |
+| locale | R2-148: résumé language for dates, RTL | session_01DjbrY7hHtJmKD6GJcXHFx7 |
+| perf2 | R2-142: PERF-1, 4, 5, 6 | session_017oTZg6ZNCXoJwpKhSURxST |
+| section-look | R2-147 rest: section icons, links, levels, grouped roles, columns, photo | session_01A8Pc1gVNQNk225roXUbEns |
+| public-link | R2-148: public web link; two-column / scanned PDF import | session_01H7o4mAMVufFnaL8mMiYhCJ — **merged** (`091f00c`; R2-148 stays 🔴 until locale lands). **Owner:** publish the new `firestore.rules` to the Firebase project, or Share a public link fails permission-denied |
+| layouts | R2-138 B2: the designed layouts as new engines | session_018uk2NM3EkjexkRoDkRHEEz |
+| picker | R2-139 non-a11y (A1–A4, A9, A12, B3, C1, D1, E1, F1), R2-138 B4 | session_01MkCArZxvT5mbX1ELBQKrAu |
+
+Jira revamp (lane of session_01ASmJ6BQpqJE5fifosw4z8y, `claude/jira-revamp`: Boards and the Job Tracker in a tracker look — top bar, project tree, Board/IssueCard, issue view, Backlog, Summary/Timeline/Calendar/List, Your work; UI only) is **merged into the work branch**; its two failures are with agents in `/home/user/jira-revamp` (R6-2's spec: `40800ce`); a trial merge onto `c5acb93` conflicts only
+in `src/pages/JobTracker.jsx` (resolved: the revamp's page plus Round 2's SyncHeldNotice; rerere recorded) and this file.
+Order: Round 2 green → `master` = `c5acb93`; then the revamp merged into the work branch, one gate, `master` again.
+
 Still open after the deploy: 7 rows (R2-138, 139, 142, 143, 146, 147, 148 — each partly done); `claude/jira-revamp`
 (its gate run 36092746492: `82-your-work-page` and Cypress `20-regressions-job-unsaved` left; the owner decides when it
 merges); `claude/wf-templates` parked for the a11y pass.

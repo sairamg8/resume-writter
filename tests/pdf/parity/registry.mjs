@@ -21,6 +21,7 @@ export const FAMILY_FILES = {
   dates: '14-headings-dates.test.mjs',
   lists: '17-lists.test.mjs',
   links: '19-links.test.mjs',
+  footer: '18-page-numbers.test.mjs',
   template: '15-template-resets.test.mjs',
   resets: '15-template-resets.test.mjs',
   icons: '16-icons.test.mjs',

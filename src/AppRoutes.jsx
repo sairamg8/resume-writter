@@ -1,4 +1,4 @@
-import { useLayoutEffect, useMemo } from 'react';
+import { useCallback, useLayoutEffect, useMemo } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigationType } from 'react-router-dom';
 import { Dashboard } from '@/pages/Dashboard';
 import { Editor } from '@/pages/Editor';
@@ -10,21 +10,32 @@ import { Board } from '@/pages/Board';
 import { Backlog } from '@/pages/Backlog';
 import { BoardSettings } from '@/pages/BoardSettings';
 import { YourWork } from '@/pages/YourWork';
+import { ProjectSummary } from '@/pages/ProjectSummary';
+import { ProjectList } from '@/pages/ProjectList';
+import { ProjectCalendar } from '@/pages/ProjectCalendar';
+import { ProjectTimeline } from '@/pages/ProjectTimeline';
 import TermsPage from '@/pages/TermsPage';
 import PrivacyPage from '@/pages/PrivacyPage';
+import { PublicResume } from '@/pages/PublicResume';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { WorkspaceLayout, sidebarProjects } from '@/components/shell';
+import { CreateIssueDialog } from '@/components/board/CreateIssueDialog';
 import { useBoardStore } from '@/hooks/useBoardStore';
+import { searchWorkspace } from '@/utils/workspaceSearch';
+
+const renderCreate = (props) => <CreateIssueDialog {...props} />;
 
 /**
- * The workspace shell (sidebar + scrolling main) as a layout route, its sidebar's projects read
- * from the board store. Only the workspace pages mount it, so the résumé dashboard and editor never
- * load the boards. The mapping reads v1 and v2 boards alike (shell/projects.js).
+ * The workspace shell (top bar, sidebar, scrolling main) as a layout route, its sidebar's projects,
+ * its quick search and its Create dialog reading the board store. Only the workspace pages mount
+ * it, so the résumé dashboard and editor never load the boards. The mapping reads v1 and v2 boards
+ * alike (shell/projects.js).
  */
 export function WorkspaceRoute() {
   const { boards } = useBoardStore();
   const projects = useMemo(() => sidebarProjects(boards), [boards]);
-  return <WorkspaceLayout projects={projects} />;
+  const search = useCallback((query) => searchWorkspace(boards, query), [boards]);
+  return <WorkspaceLayout projects={projects} search={search} renderCreate={renderCreate} />;
 }
 
 /**
@@ -70,10 +81,16 @@ export function AppRoutes({ store, auth, sync, seed }) {
           <Route path="/work"                element={<YourWork />} />
           <Route path="/boards/:id"          element={<Board />} />
           <Route path="/boards/:id/backlog"  element={<Backlog />} />
+          <Route path="/boards/:id/summary"  element={<ProjectSummary />} />
+          <Route path="/boards/:id/timeline" element={<ProjectTimeline />} />
+          <Route path="/boards/:id/calendar" element={<ProjectCalendar />} />
+          <Route path="/boards/:id/list"     element={<ProjectList />} />
           <Route path="/boards/:id/settings" element={<BoardSettings />} />
         </Route>
         <Route path="/terms"      element={<TermsPage />} />
         <Route path="/privacy"    element={<PrivacyPage />} />
+        {/* A published résumé, read-only, for anyone with its link (R2-148). */}
+        <Route path="/r/:shareId" element={<PublicResume />} />
         <Route path="*"           element={<Navigate to="/" replace />} />
       </Routes>
     </RouteFrame>

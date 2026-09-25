@@ -1,6 +1,6 @@
 import { Document, Page, View } from '@react-pdf/renderer';
 import { Text } from './shared/PdfText';
-import { getPageStyle, getDocumentProps } from './shared/PdfPage';
+import { PdfPageNumbers, getPageStyle, getDocumentProps } from './shared/PdfPage';
 import { PdfRunningHeader } from './shared/PdfRunningHeader';
 import { SectionRouter, getEffectiveSpacing, getVisibleSections } from './shared/PdfSections';
 import { PdfRichText } from './shared/PdfRichText';
@@ -10,6 +10,7 @@ import { ContactValue, headerRowWidth } from './shared/PdfContact';
 import { LinkGround } from './shared/PdfLinkStyle';
 import { bannerContactPt } from './shared/contactSize';
 import { fitFontSize } from './shared/pdfMeasure';
+import { nameFace, nameFamily } from './shared/pdfFaces';
 import { contactItems } from '@/utils/contacts';
 import { getPdfPhotoStyle } from './shared/pdfPhoto';
 import { PdfPhoto } from './shared/PdfPhoto';
@@ -68,7 +69,7 @@ export function ModernTemplatePDF({ data }) {
   // paper: it prints at the largest size that holds it.
   const name = personal?.name || 'Your Name';
   const nameRow = headerRowWidth(settings, personal, { photoWidth: photoStyle.width, gap: g.photoTextGap }) - 2 * g.headerPadX;
-  const nameFit = fitFontSize(name, { fontFamily: settings._pdfFontFamily, fontSize: nameSize, fontWeight: 'bold' }, nameRow);
+  const nameFit = fitFontSize(name, { fontFamily: nameFamily(settings), fontSize: nameSize, fontWeight: 'bold' }, nameRow);
 
   const pageStyle = getPageStyle(settings);
 
@@ -97,7 +98,7 @@ export function ModernTemplatePDF({ data }) {
               <PdfPhoto src={personal.photo} style={photoStyle} />
             )}
             <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: nameFit, fontWeight: 'bold', color: nameColor, marginBottom: personal?.title ? g.nameTitleGap : 1, lineHeight: 1.2 }}>
+              <Text style={{ ...nameFace(settings), fontSize: nameFit, fontWeight: 'bold', color: nameColor, marginBottom: personal?.title ? g.nameTitleGap : 1, lineHeight: 1.2 }}>
                 {name}
               </Text>
               {personal?.title && (
@@ -135,6 +136,8 @@ export function ModernTemplatePDF({ data }) {
             />
           );
         })}
+        {/* Last on every page: its footer is the page's last line drawn, after the résumé's own text (R2-147). */}
+        <PdfPageNumbers settings={settings} />
       </Page>
     </Document>
   );

@@ -3,6 +3,9 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { PenLine, Eye } from 'lucide-react';
 
 import DesignPanel from '@/components/DesignPanel';
+import { TemplateGallery } from '@/components/TemplateGallery';
+import { ToastProvider } from '@/components/ui/Toast';
+import { savedDesigns } from '@/constants/templatePresets';
 import CoverLetterPanel from '@/components/CoverLetterPanel';
 import AtsCheckerPanel from '@/components/AtsCheckerPanel';
 import { EditorHeader, EditorAlerts, EditorModeBar } from '@/components/EditorHeader';
@@ -16,6 +19,7 @@ import { useOpenResume } from '@/hooks/useOpenResume';
 import { useRename } from '@/hooks/useRename';
 import { useEditorTab } from '@/hooks/useEditorTab';
 import { useImportNotice } from '@/hooks/useImportNotice';
+import ShareLinkModal, { firebasePublicIo } from '@/components/ShareLinkModal';
 
 export function Editor({ store, auth, sync }) {
   const { id } = useParams();
@@ -35,6 +39,16 @@ export function Editor({ store, auth, sync }) {
   const [allExpanded, setAllExpanded] = useState(true);
   const [forceOpenKey, setForceOpenKey] = useState(0);
   const [previewZoom, setPreviewZoom] = useState(1);
+  const [shareOpen, setShareOpen] = useState(false);
+  // Design → Template open or collapsed, kept here so a trip to another tab keeps it (A12), and the
+  // template gallery (A2).
+  const [templateOpen, setTemplateOpen] = useState(true);
+  const [galleryOpen, setGalleryOpen] = useState(false);
+  // The designs the user saved, from every résumé that holds one (B4), and the store's look actions.
+  const designs = savedDesigns(store.appState.resumes);
+  const lookActions = {
+    setTemplate: store.setTemplate, updateSetting: store.updateSetting, applyDesign: store.applyDesign, restoreDesign: store.restoreDesign,
+  };
 
   const exportMenu = useEditorExports({
     resume, activeTab, authUser: auth?.user, importResume: store.importResume, navigate,
@@ -67,12 +81,16 @@ export function Editor({ store, auth, sync }) {
       } catch { /* warm is best-effort */ }
     })();
     return () => { cancelled = true; };
-  }, [resume?.template, resume?.settings?.font, resume?.settings?.customFont]);
+  }, [resume?.template, resume?.settings?.font, resume?.settings?.customFont, resume?.settings?.nameFont, resume?.settings?.headingFont]);
 
   if (!resume) return null;
+  // Share a public link (R2-148): a résumé, not a letter, of a signed-in account, on a site with a cloud.
+  const canShare = Boolean(firebasePublicIo && auth?.user?.uid && resume.kind !== 'letter');
 
   return (
     /* fixed inset-0: never let document/body scroll (up or down) and tear the split layout */
+    // The notices of the editor (a template switch's Undo, A4).
+    <ToastProvider>
     <div className="fixed inset-0 z-20 flex overflow-hidden bg-[#f5f3ef]">
       <div
         className={`${
@@ -91,6 +109,7 @@ export function Editor({ store, auth, sync }) {
           auth={auth}
           sync={sync}
           isMobile={isMobile}
+          onShare={canShare ? () => setShareOpen(true) : undefined}
         />
         <EditorAlerts exportError={exportMenu.exportError} onDismiss={() => exportMenu.setExportError(null)} persistError={store.persistError} importNotice={importNotice.notice} onDismissImport={importNotice.dismiss} />
         <EditorModeBar activeTab={activeTab} setActiveTab={handleModeTabChange} />
@@ -112,7 +131,17 @@ export function Editor({ store, auth, sync }) {
 
           {activeTab === 'design' && (
             <div className="px-4 py-4">
-              <DesignPanel resume={resume} updateSetting={store.updateSetting} setTemplate={store.setTemplate} resetSettings={store.resetSettings} />
+              <DesignPanel
+                resume={resume}
+                {...lookActions}
+                resetSettings={store.resetSettings}
+                designs={designs}
+                saveDesign={store.saveDesign}
+                deleteDesign={store.deleteDesign}
+                onBrowseTemplates={() => setGalleryOpen(true)}
+                templateOpen={templateOpen}
+                onTemplateOpenChange={setTemplateOpen}
+              />
             </div>
           )}
 
@@ -153,6 +182,8 @@ export function Editor({ store, auth, sync }) {
         isMobile={isMobile}
       />
 
+      {canShare && <ShareLinkModal isOpen={shareOpen} resume={resume} uid={auth.user.uid} onClose={() => setShareOpen(false)} />}
+
       {/* Floating Mobile Toggle Switch */}
       {isMobile && (
         <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 flex items-center bg-gray-900/90 backdrop-blur-md text-white p-1 rounded-full shadow-2xl border border-white/10 text-xs font-semibold">
@@ -180,6 +211,8 @@ export function Editor({ store, auth, sync }) {
           </button>
         </div>
       )}
+      <TemplateGallery open={galleryOpen} onClose={() => setGalleryOpen(false)} resume={resume} designs={designs} {...lookActions} />
     </div>
+    </ToastProvider>
   );
 }

@@ -2,12 +2,12 @@ import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowDown, ArrowUp, Plus, Trash2 } from 'lucide-react';
 import { useBoardStore } from '@/hooks/useBoardStore';
-import { PageHeader } from '@/components/shell/PageHeader';
-import { ProjectTabs } from '@/components/board/ProjectTabs';
+import { ProjectHeader } from '@/components/board/ProjectTabs';
 import { BoardStorageNotice } from '@/components/board/BoardStorageNotice';
+import { Button, EmptyState, useConfirmOptional, useToast } from '@/components/ui';
 import { BOARD_COLORS, BOARD_MODES, COLUMN_CATEGORIES, DEFAULT_HIDE_DONE_DAYS, LABEL_COLORS } from '@/constants/boards';
 
-const FIELD = 'text-sm px-2 py-1.5 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-400';
+const FIELD = 'text-sm px-2 py-1.5 rounded-lg border border-line focus:outline-none focus:ring-2 focus:ring-brand';
 
 /**
  * A text field that saves when it is left or Enter is pressed (Escape puts the saved value back),
@@ -37,10 +37,10 @@ function CommitField({ value, onCommit, multiline = false, ...props }) {
 /** One settings card: a heading, an optional line under it, and its controls. */
 function Card({ title, note, children, tone = 'default' }) {
   return (
-    <section className={`bg-white border rounded-2xl shadow-sm p-4 space-y-3 ${tone === 'danger' ? 'border-red-200' : 'border-gray-200'}`}>
+    <section className={`bg-white border rounded-md  p-4 space-y-3 ${tone === 'danger' ? 'border-red-200' : 'border-line'}`}>
       <div>
-        <h2 className={`text-sm font-semibold ${tone === 'danger' ? 'text-red-700' : 'text-gray-900'}`}>{title}</h2>
-        {note && <p className="text-xs text-gray-500 mt-0.5">{note}</p>}
+        <h2 className={`text-sm font-semibold ${tone === 'danger' ? 'text-red-700' : 'text-ink'}`}>{title}</h2>
+        {note && <p className="text-xs text-ink-subtlest mt-0.5">{note}</p>}
       </div>
       {children}
     </section>
@@ -62,10 +62,10 @@ function KeyField({ board, keyError, onSave }) {
     <div className="space-y-1">
       <div className="flex gap-2">
         <input aria-label="Project key" value={draft} onChange={(e) => { setDraft(e.target.value); setRefused(null); }} className={`${FIELD} w-32 font-mono uppercase`} />
-        <button onClick={save} disabled={next === board.key || Boolean(problem)} className="px-3 py-1.5 text-xs font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-40">Save key</button>
+        <button onClick={save} disabled={next === board.key || Boolean(problem)} className="px-3 py-1.5 text-xs font-semibold text-white bg-brand rounded-lg hover:bg-brand-hover disabled:opacity-40">Save key</button>
       </div>
       {(problem || refused) && <p role="alert" className="text-xs text-red-600">{refused || problem}</p>}
-      <p className="text-xs text-gray-400">Issue keys use it: {board.key}-1 becomes {next || board.key}-1.</p>
+      <p className="text-xs text-ink-subtlest">Issue keys use it: {board.key}-1 becomes {next || board.key}-1.</p>
     </div>
   );
 }
@@ -77,10 +77,11 @@ function ColumnRow({ board, column, index, store }) {
   const [target, setTarget] = useState(others[0]?.id ?? '');
   const count = board.issues.filter((i) => i.columnId === column.id).length;
   const last = board.columns.length === 1;
+  const confirm = useConfirmOptional();
 
-  function remove() {
+  async function remove() {
     if (count === 0) {
-      if (confirm(`Delete the column "${column.title}"?`)) store.deleteColumn(board.id, column.id);
+      if (await confirm({ title: `Delete the ${column.title} column?`, body: 'It holds no issues.', confirmLabel: 'Delete column', tone: 'danger' })) store.deleteColumn(board.id, column.id);
       return;
     }
     setDeleting(true);
@@ -93,24 +94,24 @@ function ColumnRow({ board, column, index, store }) {
         <select aria-label="Column category" value={column.category} onChange={(e) => store.updateColumn(board.id, column.id, { category: e.target.value })} className={FIELD}>
           {COLUMN_CATEGORIES.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
-        <label className="flex items-center gap-1 text-xs text-gray-500">WIP
+        <label className="flex items-center gap-1 text-xs text-ink-subtlest">WIP
           <CommitField aria-label="WIP limit" type="number" min="1" placeholder="none" value={column.wipLimit ?? ''} onCommit={(v) => store.updateColumn(board.id, column.id, { wipLimit: v })} className={`${FIELD} w-20`} />
         </label>
-        <span className="text-xs text-gray-400 w-16">{count} issue{count === 1 ? '' : 's'}</span>
-        <button aria-label="Move column up" title="Move up" disabled={index === 0} onClick={() => store.moveColumn(board.id, column.id, index - 1)} className="p-1 text-gray-400 hover:text-gray-700 disabled:opacity-30"><ArrowUp size={14} /></button>
-        <button aria-label="Move column down" title="Move down" disabled={index === board.columns.length - 1} onClick={() => store.moveColumn(board.id, column.id, index + 1)} className="p-1 text-gray-400 hover:text-gray-700 disabled:opacity-30"><ArrowDown size={14} /></button>
+        <span className="text-xs text-ink-subtlest w-16">{count} issue{count === 1 ? '' : 's'}</span>
+        <button aria-label="Move column up" title="Move up" disabled={index === 0} onClick={() => store.moveColumn(board.id, column.id, index - 1)} className="p-1 text-ink-subtlest hover:text-ink-subtle disabled:opacity-30"><ArrowUp size={14} /></button>
+        <button aria-label="Move column down" title="Move down" disabled={index === board.columns.length - 1} onClick={() => store.moveColumn(board.id, column.id, index + 1)} className="p-1 text-ink-subtlest hover:text-ink-subtle disabled:opacity-30"><ArrowDown size={14} /></button>
         <button aria-label="Delete column" title={last ? 'A project keeps at least one column' : 'Delete column'} disabled={last} onClick={remove} className="p-1 text-gray-300 hover:text-red-500 disabled:opacity-30"><Trash2 size={14} /></button>
       </div>
       {deleting && (
-        <div className="flex flex-wrap items-center gap-2 bg-red-50 border border-red-100 rounded-xl p-2 text-xs text-gray-700">
+        <div className="flex flex-wrap items-center gap-2 bg-red-50 border border-red-100 rounded-md p-2 text-xs text-ink-subtle">
           <label className="flex items-center gap-2">
             Its {count} issue{count === 1 ? '' : 's'} move to
-            <select aria-label="Move its issues to" value={target} onChange={(e) => setTarget(e.target.value)} className="text-xs px-2 py-1 rounded-lg border border-gray-200">
+            <select aria-label="Move its issues to" value={target} onChange={(e) => setTarget(e.target.value)} className="text-xs px-2 py-1 rounded-lg border border-line">
               {others.map((c) => <option key={c.id} value={c.id}>{c.title}</option>)}
             </select>
           </label>
           <button onClick={() => { store.deleteColumn(board.id, column.id, target); setDeleting(false); }} className="px-3 py-1 font-semibold text-white bg-red-600 rounded-lg hover:bg-red-700">Delete column</button>
-          <button onClick={() => setDeleting(false)} className="px-3 py-1 font-semibold text-gray-600">Cancel</button>
+          <button onClick={() => setDeleting(false)} className="px-3 py-1 font-semibold text-ink-subtle">Cancel</button>
         </div>
       )}
     </li>
@@ -134,7 +135,7 @@ function AddRow({ label, onAdd, colors }) {
           {colors.map((c) => <option key={c.color} value={c.color}>{c.name}</option>)}
         </select>
       )}
-      <button onClick={add} disabled={!name.trim()} className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-40"><Plus size={12} /> Add</button>
+      <button onClick={add} disabled={!name.trim()} className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-white bg-brand rounded-lg hover:bg-brand-hover disabled:opacity-40"><Plus size={12} /> Add</button>
     </div>
   );
 }
@@ -155,17 +156,13 @@ export function BoardSettings() {
   const store = useBoardStore();
   const board = store.boards.find((b) => b.id === id);
   const [labelRefused, setLabelRefused] = useState(null);
+  const confirm = useConfirmOptional();
+  const { toast } = useToast();
 
   if (!board) {
-    return (
-      <div className="min-h-screen bg-[#f5f3ef] flex flex-col items-center justify-center gap-3">
-        <p className="text-sm text-gray-500">This board doesn’t exist.</p>
-        <button onClick={() => navigate('/boards')} className="text-sm font-semibold text-indigo-600 hover:text-indigo-700">Back to boards</button>
-      </div>
-    );
+    return <EmptyState className="m-auto" title="This project doesn’t exist" description="It may have been deleted, or the link is wrong." action={<Button variant="primary" to="/boards">View all projects</Button>} />;
   }
 
-  const base = `/boards/${encodeURIComponent(board.id)}`;
   const hides = board.hideDoneAfterDays !== null;
 
   function renameLabel(label, name) {
@@ -180,32 +177,37 @@ export function BoardSettings() {
     if (!taken) store.addLabel(board.id, { name, color });
   }
 
-  function deleteLabel(label) {
+  async function deleteLabel(label) {
     const used = board.issues.filter((i) => i.labelIds.includes(label.id)).length;
-    if (used === 0 || confirm(`Delete the label "${label.name}"? It comes off ${used} issue${used === 1 ? '' : 's'}.`)) store.deleteLabel(board.id, label.id);
+    if (used === 0 || await confirm({ title: `Delete the label “${label.name}”?`, body: `It comes off ${used} issue${used === 1 ? '' : 's'}.`, confirmLabel: 'Delete label', tone: 'danger' })) store.deleteLabel(board.id, label.id);
+  }
+
+  async function deleteProject() {
+    const ok = await confirm({ title: `Delete ${board.title}?`, body: `The project and its ${board.issues.length} issue${board.issues.length === 1 ? '' : 's'} will be deleted. You can undo this for a few seconds.`, confirmLabel: 'Delete project', tone: 'danger' });
+    if (!ok) return;
+    navigate('/boards');
+    const removed = store.deleteBoard(board.id);
+    if (removed) toast({ title: `${board.title} deleted`, action: { label: 'Undo', onClick: () => store.restoreBoard(removed) } });
   }
 
   return (
-    <div className="flex flex-col min-h-full bg-[#f5f3ef]">
-      <PageHeader
-        title="Settings"
-        breadcrumbs={[{ label: 'Projects', to: '/boards' }, { label: board.title, to: base }, { label: 'Settings' }]}
-        tabs={<ProjectTabs boardId={board.id} />}
-      />
+    <div className="flex min-h-0 flex-1 flex-col">
+      <ProjectHeader board={board} />
+      <h2 className="mx-auto w-full max-w-3xl px-4 pt-5 text-xl font-semibold text-ink sm:px-6">Project settings</h2>
       <BoardStorageNotice persistError={store.persistError} recovery={store.recovery} onDismissRecovery={store.dismissRecovery} className="max-w-3xl w-full mx-auto px-4 sm:px-6 pt-3" />
 
       <div className="max-w-3xl w-full mx-auto px-4 sm:px-6 py-5 space-y-4">
         <Card title="Details">
-          <label className="block text-xs text-gray-600 space-y-1">Name
+          <label className="block text-xs text-ink-subtle space-y-1">Name
             <CommitField aria-label="Project name" value={board.title} onCommit={(title) => store.updateBoard(board.id, { title })} className={`${FIELD} w-full`} />
           </label>
-          <div className="text-xs text-gray-600 space-y-1">Key
+          <div className="text-xs text-ink-subtle space-y-1">Key
             <KeyField key={board.key} board={board} keyError={store.keyError} onSave={(key) => store.updateBoard(board.id, { key })} />
           </div>
-          <label className="block text-xs text-gray-600 space-y-1">Description
+          <label className="block text-xs text-ink-subtle space-y-1">Description
             <CommitField multiline rows={3} aria-label="Project description" value={board.description} onCommit={(description) => store.updateBoard(board.id, { description })} className={`${FIELD} w-full`} />
           </label>
-          <div className="text-xs text-gray-600 space-y-1">Colour
+          <div className="text-xs text-ink-subtle space-y-1">Colour
             <div className="flex flex-wrap gap-1.5">
               {BOARD_COLORS.map((c) => (
                 <button
@@ -219,7 +221,7 @@ export function BoardSettings() {
               ))}
             </div>
           </div>
-          <label className="block text-xs text-gray-600 space-y-1">Way of working
+          <label className="block text-xs text-ink-subtle space-y-1">Way of working
             <select aria-label="Project mode" value={board.mode} onChange={(e) => store.updateBoard(board.id, { mode: e.target.value })} className={`${FIELD} w-full`}>
               {BOARD_MODES.map((m) => <option key={m.id} value={m.id}>{m.name} — {m.description}</option>)}
             </select>
@@ -227,15 +229,15 @@ export function BoardSettings() {
         </Card>
 
         <Card title="Columns" note="Issues in a Done column count as resolved. A WIP limit turns a column's count red when it holds more.">
-          <ul className="divide-y divide-gray-100">
+          <ul className="divide-y divide-line-subtle">
             {board.columns.map((c, n) => <ColumnRow key={c.id} board={board} column={c} index={n} store={store} />)}
           </ul>
           <AddRow label="New column" onAdd={(title) => store.addColumn(board.id, { title, index: board.columns.length })} />
         </Card>
 
         <Card title="Labels">
-          {board.labels.length === 0 && <p className="text-xs text-gray-400">No labels yet.</p>}
-          <ul className="divide-y divide-gray-100">
+          {board.labels.length === 0 && <p className="text-xs text-ink-subtlest">No labels yet.</p>}
+          <ul className="divide-y divide-line-subtle">
             {board.labels.map((l) => (
               <li key={l.id} data-label={l.id} className="flex flex-wrap items-center gap-2 py-2">
                 <span className="h-3 w-3 rounded-full shrink-0" style={{ backgroundColor: l.color }} />
@@ -252,7 +254,7 @@ export function BoardSettings() {
         </Card>
 
         <Card title="Done issues on the board" note="Done issues resolved longer ago than this leave the board; they stay in the project.">
-          <div className="flex flex-wrap items-center gap-3 text-sm text-gray-700">
+          <div className="flex flex-wrap items-center gap-3 text-sm text-ink-subtle">
             <label className="flex items-center gap-2">
               <input
                 type="checkbox"
@@ -276,12 +278,7 @@ export function BoardSettings() {
         </Card>
 
         <Card title="Delete project" tone="danger" note="Deletes the project with every issue, sprint and label in it.">
-          <button
-            onClick={() => { if (confirm(`Delete "${board.title}" and its ${board.issues.length} issue${board.issues.length === 1 ? '' : 's'}?`)) { navigate('/boards'); store.deleteBoard(board.id); } }}
-            className="px-3 py-1.5 text-xs font-semibold text-white bg-red-600 rounded-lg hover:bg-red-700"
-          >
-            Delete project
-          </button>
+          <Button variant="danger" onClick={deleteProject}>Delete project</Button>
         </Card>
       </div>
     </div>
