@@ -68,13 +68,35 @@ describe('Photo → Position (R2-147)', () => {
   });
 
   it('Word: the header row puts the photo on the same side of the name', async () => {
-    for (const photoPosition of ['left', 'right']) {
-      const { xml } = await renderDocx(cv('classic', { photoPosition }));
-      const photoAt = xml.indexOf('<w:drawing');
-      const nameAt = xml.indexOf(`>${NAME}<`); // the name's text, not the picture's alt text
-      assert.ok(photoAt >= 0 && nameAt >= 0, 'the photo and the name print');
-      assert.equal(photoAt < nameAt ? 'left' : 'right', photoPosition);
+    // The Sidebar's Single · ATS-safe Layout prints Classic's header: beside the name in Word too, as in
+    // its PDF — Word stacked it above the name, the Sidebar column's way (the review of R2-147).
+    for (const [template, extra] of [['classic', {}], ['sidebar', { sidebarSingleColumn: true, headerAlign: 'left' }]]) {
+      for (const photoPosition of ['left', 'right']) {
+        const { xml } = await renderDocx(cv(template, { ...extra, photoPosition }));
+        const photoAt = xml.indexOf('<w:drawing');
+        const nameAt = xml.indexOf(`>${NAME}<`); // the name's text, not the picture's alt text
+        assert.ok(photoAt >= 0 && nameAt >= 0, `${template}: the photo and the name print`);
+        assert.equal(photoAt < nameAt ? 'left' : 'right', photoPosition, `${template} ${photoPosition}`);
+      }
     }
+  });
+
+  // The review of R2-147: the letter took the résumé's photo Shape, Size, Border and Tone, but not its
+  // Position — every letterhead printed the photo left of the name.
+  it('the cover letter puts the photo on the résumé\'s side of the name', async () => {
+    const wrong = [];
+    let beside = 0;
+    for (const template of BESIDE) {
+      const settings = { headerAlign: 'left' };
+      // Only a letterhead that sets the photo beside the name has a side to put it on (a centred one stacks it).
+      const left = side(await snapshot(await renderCover(cv(template, settings))));
+      if (left !== 'left') continue;
+      beside += 1;
+      const right = side(await snapshot(await renderCover(cv(template, { ...settings, photoPosition: 'right' }))));
+      if (right !== 'right') wrong.push(`${template} Right: ${right}`);
+    }
+    assert.ok(beside >= 3, `letterheads with the photo beside the name: ${beside}`);
+    assert.deepEqual(wrong, []);
   });
 
   it('the text exports print the same words whatever the side or tone', async () => {
