@@ -152,8 +152,10 @@ describe('the 1-Page Fit button', () => {
   /** The Design panel with Spacing open over a store stand-in that re-renders with each write. */
   async function panel(r, { strict = false } = {}) {
     const { default: DesignPanel } = await loadModule('/src/components/DesignPanel.jsx');
-    // As main.jsx mounts the app: StrictMode, whose trial unmount runs each effect's cleanup once.
-    const Panel = strict ? (p) => createElement(StrictMode, null, createElement(DesignPanel, p)) : DesignPanel;
+    // As main.jsx mounts the app: StrictMode, whose trial unmount runs each effect's cleanup once. The
+    // panel is mounted into a StrictMode already there, as the Design tab opens in the app: React
+    // replays the effects only of what mounts inside one, not of the root's own first child.
+    const Panel = strict ? ({ hidden, ...p }) => createElement(StrictMode, null, hidden ? null : createElement(DesignPanel, p)) : DesignPanel;
     const writes = [];
     let current = r;
     let view = null;
@@ -163,7 +165,8 @@ describe('the 1-Page Fit button', () => {
       current = { ...current, settings: { ...current.settings, [key]: value } };
       queueMicrotask(() => view.update(props()));
     }
-    view = mount(Panel, props());
+    view = mount(Panel, strict ? { hidden: true } : props());
+    if (strict) view.update(props());
     const all = () => [...elements(view.container)];
     const spacing = all().find((el) => el.tagName === 'BUTTON' && el.textContent.trim() === 'Spacing');
     view.act(() => reactProps(spacing).onClick());
