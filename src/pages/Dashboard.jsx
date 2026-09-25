@@ -8,6 +8,7 @@ import { RecoveryNotice } from '@/components/RecoveryNotice';
 import { ImportMenu } from '@/components/ImportMenu';
 import StarterTemplateModal from '@/components/StarterTemplateModal';
 import NewLetterModal from '@/components/NewLetterModal';
+import { firebasePublicIo } from '@/components/ShareLinkModal';
 import { notSavedMessage } from '@/utils/storageBackup';
 import { comesStraightBack, isDemoAccount, isOriginal } from '@/utils/demoSeed';
 import { DEMO_ACCOUNTS } from '@/utils/demoAccounts';
@@ -30,7 +31,7 @@ function deletePrompt(resume, keeps) {
 }
 
 /** `originalsWaiting`: a demo account's originals are due back once its cloud answers (useDemoSeed). */
-export function Dashboard({ store, auth, sync, originalsWaiting = false }) {
+export function Dashboard({ store, auth, sync, originalsWaiting = false, publicLinks = firebasePublicIo }) {
   const navigate = useNavigate();
   const importRef = useRef(null);
   const [importError, setImportError] = useState(null);
@@ -84,7 +85,13 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false }) {
       onOpen={open}
       onDuplicate={id => { const newId = store.duplicateResume(id); if (newId) open(newId); }}
       onDelete={id => {
-        if (confirm(deletePrompt(r, keeps))) store.deleteResume(id, auth.user?.uid);
+        if (!confirm(deletePrompt(r, keeps))) return;
+        store.deleteResume(id, auth.user?.uid);
+        // Its public copy (R2-148) goes with it: once the résumé is gone its share panel is too,
+        // and the copy would stay public with no way left to unpublish it.
+        if (publicLinks && auth.user?.uid && !isLetter(r)) {
+          publicLinks.unpublishResume(auth.user.uid, id).catch((e) => console.error('Taking down the public link failed:', e));
+        }
       }}
       onRename={store.renameResume}
       onKeep={keeps ? store.keepResume : undefined}

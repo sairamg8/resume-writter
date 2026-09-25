@@ -165,6 +165,9 @@ const PLACE = /^(?:[\p{L}][\p{L}.'’\- ]{0,40},\s*[\p{L}][\p{L}.'’\- ]{0,40}(
 /** A contact's name before it: "Email: …", "LinkedIn - …". */
 const LABEL = /^(?:e-?mail|mail|phone|tel|telephone|mobile|cell|linkedin|github|website|web|site|portfolio|url|location|address|based in)\s*[:\-–]\s*/i;
 
+/** A contact's name on a line of its own, over its value: the Sidebar template's "EMAIL", "PHONE". */
+const BARE_LABEL = /^(?:e-?mail|mail|phone|tel|telephone|mobile|cell|linkedin|github|website|web|site|portfolio|url|location|address)$/i;
+
 const digits = (s) => s.replace(/\D/g, '').length;
 
 /** What a piece of header text is: { key, value } for a contact, else null. */
@@ -339,12 +342,18 @@ function entryOf(type, header, body) {
         else if (!fields.degree && DEGREE.test(part)) fields.degree = part;
         else left.push(part);
       }
+      // A place on a line of its own (a side column's stacked fields): the location.
+      let location = h.location || h.meta.location || '';
+      const placeAt = location ? -1 : left.findIndex((p) => PLACE.test(p) && !DEGREE.test(p));
+      if (placeAt >= 0) location = left.splice(placeAt, 1)[0];
       if (!fields.degree && left.length) fields.degree = left.shift();
       if (!fields.institution && left.length) fields.institution = left.shift();
       // "B.S., Computer Science": the degree and its field, as the exports print them.
       const comma = /^([^,]+),\s*(.+)$/.exec(fields.degree);
       if (comma && !fields.fieldOfStudy && DEGREE.test(comma[1])) { fields.degree = comma[1].trim(); fields.fieldOfStudy = comma[2].trim(); }
-      return itemOf(type, { ...fields, location: h.location || h.meta.location || '', ...dates, description: description(left) });
+      // The degree and the school found, one field over, on a line of its own: the field of study.
+      if (placeAt >= 0 && !fields.fieldOfStudy && left.length === 1) fields.fieldOfStudy = left.shift();
+      return itemOf(type, { ...fields, location, ...dates, description: description(left) });
     }
     case 'projects': {
       const named = /^(.*?)\s*\(([^()]+)\)$/.exec(p0);
@@ -417,9 +426,11 @@ function entriesOf(type, lines) {
       i += 1;
       if (L.date.first) {
         // Its title line(s): the text lines right before it, not the previous entry's list.
+        // A school in a side column stacks each field on a line of its own over its dates (Sidebar's
+        // degree, school, field and place): up to four lines.
         const body = pool();
         let next = L;
-        while (header.length < 3 && body.length) {
+        while (header.length < (type === 'education' ? 5 : 3) && body.length) {
           const prev = body[body.length - 1];
           if (prev.bullet || prev.index !== next.index - 1 || next.gap || prev.date) break;
           header.unshift(body.pop());
@@ -481,12 +492,17 @@ const LEVEL = /\b(native|bilingual|fluent|proficient|professional|full professio
 function languagesOf(lines) {
   const items = [];
   for (const line of lines) {
+    let bare = null; // the language before on this line, with no level yet
     for (const cell of line.text.replace(BULLET, '').split(/\t|\s+[|•·]\s+/).map((s) => s.trim()).filter(Boolean)) {
       const m = /^(.+?)\s*(?::|\s[—–-]\s|\()\s*(.+?)\)?$/.exec(cell);
-      if (m) { items.push(itemOf('languages', { language: m[1], proficiency: m[2] })); continue; }
+      if (m) { items.push(itemOf('languages', { language: m[1], proficiency: m[2] })); bare = null; continue; }
       const level = LEVEL.exec(cell);
-      if (level && level.index > 0) items.push(itemOf('languages', { language: cell.slice(0, level.index).trim(), proficiency: level[0].trim() }));
-      else items.push(itemOf('languages', { language: cell, proficiency: '' }));
+      // A level alone, set apart from its language ("English ⇥ Native", a PDF's grid cells two to a
+      // row): the level of the language before it.
+      if (level && level.index === 0 && bare) { bare.proficiency = cell; bare = null; continue; }
+      if (level && level.index > 0) { items.push(itemOf('languages', { language: cell.slice(0, level.index).trim(), proficiency: level[0].trim() })); bare = null; continue; }
+      bare = itemOf('languages', { language: cell, proficiency: '' });
+      items.push(bare);
     }
   }
   return items;
@@ -533,7 +549,7 @@ export function resumeFromText(input) {
       const known = headingType(text);
       if (known && (l.ruled || isCaps(text) || l.gap || l.text.endsWith(':') || i === nameAt + 1 || headingAt.size === 0)) type = known;
       else if (l.ruled && !/\d/.test(text)) type = 'custom';
-      else if (seen && isCaps(text) && !/\d/.test(text) && text.replace(/[^\p{L}]/gu, '').length >= 4 && text.split(/\s+/).length <= 5) type = 'custom';
+      else if (seen && isCaps(text) && !/\d/.test(text) && text.replace(/[^\p{L}]/gu, '').length >= 4 && text.split(/\s+/).length <= 5 && !BARE_LABEL.test(text)) type = 'custom';
     }
     if (type) { headingAt.set(i, { type, title: text }); seen = true; }
   });
@@ -548,6 +564,7 @@ export function resumeFromText(input) {
     for (const l of ls) {
       const leftover = [];
       for (const piece of headerPieces(l.text)) {
+        if (BARE_LABEL.test(piece)) continue; // the name over a contact: its value says what it is
         const c = contactOf(piece);
         if (c && !personal[c.key]) personal[c.key] = c.value;
         else leftover.push(piece); // not a contact, or a second one of a kind
@@ -563,7 +580,9 @@ export function resumeFromText(input) {
     const [name, ...more] = headerPieces(nameLine.text);
     personal.name = tamed(name || '');
     const rest = [...head.slice(0, nameAt), ...(more.length ? [{ text: more.join('\t') }] : []), ...head.slice(nameAt + 1)];
-    const t = rest[0] && !more.length ? rest[0] : null;
+    // The job title is the next line, or the one field set beside the name on its line (Compact's
+    // Inline layout, "Name ⇥ Job Title"); a name line with more fields than that is a contact line.
+    const t = rest[0] && more.length <= 1 ? rest[0] : null;
     if (t && headerPieces(t.text).length === 1 && !contactOf(t.text) && t.text.length <= 80 && !/[.!?]$/.test(t.text)) {
       personal.title = t.text;
       rest.shift();
