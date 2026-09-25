@@ -8,28 +8,28 @@
 > (`MISSED-2026-09-22`, `CHECKLIST-2026-09-22`, `PENDING-2026-09-16`, `START-HERE`, `TRACKER`) ·
 > repo `templates-ui-plan.md`, `boards-plan.md`, `docs/knowledge/10-open-source-goals.md`.
 > ✅ = verified against the code at `60c6954` on 2026-09-23 · ❓ = from a doc, not re-checked.
+> **2026-09-25:** sections 0 and 1 are brought up to date; the rest is the 2026-09-23 list — its open items are
+> tracked as rows of [bug-status-r2/03-features-and-test-gaps.md](bug-status-r2/03-features-and-test-gaps.md).
 
 ---
 
-## 0 · 🔴 Decisions waiting on the owner — these block work
+## 0 · Decisions waiting on the owner — all answered (updated 2026-09-25)
 
-| # | Decision | Asked | Blocks |
-|---|---|---|---|
-| D1 | **Push policy.** Keep pushing after each finished bug (each push deploys the site), or push only on your word? The gate = all node tests + production build + private-data scan, then `git push` of exactly that commit. | Owed since 2026-09-22 22:20, when you stopped a push: *"Kill existing agenet i am not in hurry to gate ( i am not sure what it is ) and for push"* | **19 unpushed commits, 12 bug fixes, none deployed** |
-| D2 | **Templates UI — 5 decisions** (`templates-ui-plan.md` §7): audit scope · presets-first vs the 10 new layouts · preview-then-Apply vs apply+Undo · thumbnails as built images + declare `@napi-rs/canvas` · start now or after the bugs | 2026-09-22 ~21:50 | All 16 templates-UI suggestions (A1–F1) |
-| D3 | ✅ **Closed 2026-09-23** — ~~**ATS-6** — should Word section headings become real Word Heading styles? Microsoft advises it; not proven to matter to any ATS.~~ Yes, Heading styles, look unchanged (owner away, ordered the recommended action): built only because the .docx is measured identical — see ATS-6 in `bug-status.md`. | 2026-09-22 | — |
-| D4 | **Accessibility** — excluded by you on 2026-09-16 (A11Y-1…6). Still excluded? | 2026-09-16 | 6 tasks + every `a11y:` finding |
-| D5 | **Housekeeping calls** — declare `@napi-rs/canvas` (used by 11-photo tests, undeclared); drop unused `file-saver`. | 2026-09-21 | Trivial, but yours |
+| # | Decision | State |
+|---|---|---|
+| D1 | Push policy | ✅ **Closed.** CLAUDE.md "Deploying": a push to `master` deploys, and `master` is fast-forwarded only when the full CI gate (`.github/workflows/ci.yml`) on that exact commit is green. |
+| D2 | Templates UI — 5 decisions | ✅ **Superseded.** The audit is done (`45f4acc`, templates-ui-suggestions.md / templates-ui-bugs.md); presets and the picker are rows R2-138 and R2-139 in bug-status-r2; `@napi-rs/canvas` is declared (`1f6a4cb`). |
+| D3 | ATS-6 — Word Heading styles | ✅ Closed 2026-09-23: Heading styles, look unchanged (ATS-6 in bug-status.md). |
+| D4 | Accessibility | ✅ **Answered 2026-09-25:** deferred until no other bug or feature is left (CLAUDE.md). A11Y-1…6 and every `a11y:` finding wait. |
+| D5 | Housekeeping (`@napi-rs/canvas`, `file-saver`) | ✅ Done in `1f6a4cb`: canvas declared, file-saver removed (R2-169). |
 
 ---
 
-## 1 · Open bugs — 18
+## 1 · Open bugs
 
-See **[bug-status.md](bug-status.md)**. Summary only:
-
-- **12 AUD** — AUD-23, AUD-24 (Medium) then AUD-25…AUD-34 (Low). Next in queue: **AUD-23**.
-- **6 ATS** — ATS-1…ATS-6, no order set. ATS-3 has no fix in react-pdf v4; ATS-6 is fixed (D3 closed).
-- **12 fixed but unpushed** (AUD-09…AUD-22) — waits on **D1**.
+**0 open in [bug-status.md](bug-status.md):** AUD-09…AUD-34 are ✅ Fixed and on `master`; ATS-1, 2, 4, 5, 6 are ✅ Fixed, ATS-3
+is ✖ a known limit, and ATS-7 is fixed by the running header (2026-09-25). Open work lives in
+[bug-status-r2/](bug-status-r2/README.md) — the features and test gaps of Round 2 (see HANDOFF.md).
 
 ---
 

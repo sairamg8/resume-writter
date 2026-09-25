@@ -34,14 +34,15 @@ PDF path uses `resolveTemplateSettings` + `resolveSection` for template-specific
 Design-panel spacing is CSS px and converts to points once (`pdfUnits.js`); font sizes are
 already points.
 
-## PDF export (primary)
+## PDF export (the only PDF path — the preview renders the same PDF)
 
-**Entry:** `src/utils/pdfExportReactPDF.js`
+**Entry:** `src/utils/pdfExportReactPDF.js` — `renderResumePdf` / `renderCoverLetterPdf` (preview and
+export), `exportToPDFReact` / `exportCoverLetterPDFReact` (download), `warmPdfExport` (caches)
 
-1. `registerPdfFont(settings)` — react-pdf font registration  
-2. Dynamic import template PDF component  
-3. Resolve settings/sections  
-4. `pdf(<Template />).toBlob()` → download  
+1. `resolvePdfFonts(settings, text)` — registers the fonts the text needs (`pdfFontLoader.js`)  
+2. Dynamic import of the template's PDF component (`LOADERS`; an unknown id loads Classic)  
+3. Resolve settings/sections (`resolveTemplateSettings`, `resolveSection`)  
+4. `pdf(<Template />).toBlob()` → the preview paints it, or `downloadBlob` saves it  
 
 Shared building blocks live in `src/templates/pdf/shared/` (`PdfPage.jsx`, `PdfSections*.jsx`,
 `PdfItemHeader.jsx`, `PdfContact.jsx`, `PdfRichText.jsx`, `pdfFontLoader.js`, …). The Playwright
@@ -55,6 +56,7 @@ control repaints it.
 - `wordExportHeader.js`, `wordExportContacts.js` — the header and contact line  
 - `wordExportCoverLetter.js` — the letter  
 - `wordExportUtils.js`, `wordExportLook.js` — text/html helpers, headings, bullets, colours  
+- `wordExportPhoto.js` — the photo, as the PDF prints it  
 
 Not a pixel-perfect match to PDF; structural DOCX for ATS/HR systems.
 
@@ -66,8 +68,9 @@ Not a pixel-perfect match to PDF; structural DOCX for ATS/HR systems.
 
 ## JSON backup export/import
 
-Full resume object (with new id on import). Every import goes through `normalizeResume()`.
+Full resume object (with a new id on import: `importResume`). Every import goes through
+`normalizeResume()`, so a file from an older build is migrated like stored data.
 
 ## Bundle impact
 
-`manualChunks` in Vite keeps `@react-pdf/renderer` and `docx` out of the main app chunk so dashboard/job tracker load stays lighter.
+`codeSplitting.groups` in `vite.config.js` keeps `@react-pdf/renderer` and `docx` out of the main app chunk so dashboard/job tracker load stays lighter (`tests/pdf/71-startup-chunks.test.mjs`).

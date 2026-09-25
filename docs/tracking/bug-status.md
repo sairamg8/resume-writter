@@ -3,7 +3,7 @@
 > Location: `/mnt/Storage/Projects/flowcv/docs/tracking/bug-status.md` (moved from the repo root 2026-09-24)
 > Updated: 2026-09-24 · every row **verified independently at `d495cb2`** (see Verification pass) ·
 > `origin/master` (deployed) = `9a49f83` · nothing on `master` waits for a gate
-> **Open: 22** (0 here + 22 in [bug-status-r2/](bug-status-r2/README.md)) | Fixed, not pushed: 0 | **Closed: 237** (215 fixed + 22 ✖ without a code fix)
+> **Open: 19** (0 here + 19 in [bug-status-r2/](bug-status-r2/README.md)) | Fixed, not pushed: 3 | **Closed: 237** (215 fixed + 22 ✖ without a code fix)
 
 ## Summary
 
@@ -14,9 +14,9 @@
 | Templates UI audit, 2026-09-23 (`TUI-`) | 6 (+ TUI-6, filed as ATS-7) | 6 | 0 | 0 | 0 |
 | Prompt tasks, 2026-09-14 → 09-21 | 33 | 33 | 0 | 0 | 0 |
 | Full audit, 2026-09-23 — defects (`R2-001`…`R2-134`, [bug-status-r2/](bug-status-r2/README.md)) | 134 | 115 | 0 | 19 | **0** |
-| Full audit, 2026-09-23 — features and test gaps (`R2-135`…`R2-171`) | 37 | 15 | 0 | 0 | **22** |
+| Full audit, 2026-09-23 — features and test gaps (`R2-135`…`R2-171`) | 37 | 15 | 3 | 0 | **19** |
 | Found by the build lanes, 2026-09-24 (`R3-`, in [bug-status-r2/](bug-status-r2/README.md)) | 7 | 6 | 0 | 1 | **0** |
-| **Total** | **259** | **215** | **0** | **22** | **22** |
+| **Total** | **259** | **215** | **3** | **22** | **19** |
 
 - **Status:** ✅ fixed and pushed (on `origin/master`, so deployed) · ⏸ fixed and committed, not pushed · 🔴 open ·
   ✖ closed without a code fix (won't fix: a known limit; not a bug; a duplicate) — the proof is in the row, and it counts as closed.

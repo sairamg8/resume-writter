@@ -1,51 +1,61 @@
 # 08 — Testing
 
-## Framework
+## Suites
 
-- **Playwright** (`playwright.config.js`)
-- `testDir: ./tests`
-- Auto-starts `npm run dev` at `http://localhost:5173`
-- `workers: 1`, `retries: 1`, timeout 45s
-- HTML report → `playwright-report/`
+| Suite | Where | Runner | What it checks |
+|-------|-------|--------|----------------|
+| PDF | `tests/pdf/**/*.test.mjs` | `node --test` | renders résumés with the app's own react-pdf code and reads the PDFs back (pdf.js, Poppler's `pdftotext`, MuPDF's `mutool`) — layout, text, every template, the exporters, and components over a fake DOM |
+| Unit | `tests/unit/*.unit.mjs` | `node --test` | modules Node imports as they are (no `@/` aliases, no JSX) |
+| Playwright | `tests/playwright/*.spec.mjs` | Playwright, against a built `./dist` | the preview is the downloaded PDF, and every design control repaints it |
+| Cypress | `cypress/e2e/*.cy.js` | Cypress, against the e2e build | end to end: dashboard, editor, exports, job tracker, demo accounts |
+
+Helpers the PDF and unit suites share:
+
+- `tests/pdf/harness.mjs` — Vite's SSR loader in middleware mode (so `@/` imports and JSX load
+  unchanged), `resume()` / `section()` builders, `render()` / `renderCover()` / `renderDocx()`,
+  `read()` / `readDocx()`, `loadModule()`, and `TEMPLATES` (every template the app offers)
+- `tests/pdf/extractors.mjs` — text as pdf.js and `pdftotext` read it; what page 1 paints besides text
+- `tests/pdf/fake-dom.mjs`, `tests/unit/ui-dom-harness.mjs` — just enough DOM for react-dom to mount
+  a component in Node
+- `tests/pdf/fake-firestore.mjs` — an in-memory Firestore for the cloud-sync tests
+- `tests/pdf/preview-stub.mjs` — a stand-in pdf.js for `PdfPreview`'s mechanics
+- `tests/pdf/parity/` — the registry of every control the editor's panels write (`registry*.mjs`)
+  and the matrix that checks each one in the PDF and Word; `00-registry` fails for a control with none
+- `tests/fixtures/` — fictional sample résumés
+
+`tests/pdf/11-photo.test.mjs` paints pages through `@napi-rs/canvas` (a devDependency).
 
 ## Scripts
 
 ```bash
-npm test          # npx playwright test
-npm run test:ui   # interactive UI mode
+yarn test         # node --test: the PDF suites and the unit suites
+yarn test:pdf     # the PDF suites only
+yarn test:unit    # the unit suites only
+yarn test:pw      # production build, then Playwright
+yarn test:e2e     # e2e build, then Cypress
+yarn lint         # oxlint
 ```
 
-## Spec inventory
+The PDF suites need Poppler and MuPDF (`poppler-utils`, `mupdf-tools` on Debian/Ubuntu); some
+measure what Poppler 26.01 does, so CI runs them on Ubuntu 26.04.
 
-| File | Focus |
-|------|-------|
-| `01-app.spec.js` | App shell / smoke |
-| `02-templates.spec.js` | Template switching |
-| `03-sections.spec.js` | Section CRUD |
-| `04-sidebar.spec.js` | Sidebar template |
-| `05-design.spec.js` | Design panel |
-| `06-cover-letter.spec.js` | Cover letter |
-| `07-export.spec.js` | Export flows |
-| `08-pdf-design-fidelity.spec.js` | PDF vs design checks |
+## CI
 
-Helpers:
+`.github/workflows/ci.yml` runs on every push to master and on a manual dispatch: the node suite
+(sharded), the production build, Playwright, oxlint on `src tests cypress`, and Cypress. A dispatch
+can name what to run instead — `tests` (node test files), `failfirst` (`sha:test,…` pairs: the
+commit's `src/` changes, yarn patch and yarn.lock are undone and its tests must fail, then pass with
+them), `playwright` and `cypress` (spec files, or `none`). Sessions and agents run tests only there,
+never on their own machine (the owner, 2026-09-24; `docs/tracking/CLUSTER-PROTOCOL.md`).
 
-- `helpers.js` — `gotoDashboard`, `gotoEditor`, `injectTestState`, `buildTestState`, …
-- `pdf-utils.js` — PDF parsing helpers (`pdfjs-dist` in devDependencies)
-
-## Unit tests (`node:test`, no extra dependency)
-
-```bash
-yarn test:unit    # node --test tests/unit/*.unit.mjs
-```
+## Demo accounts and the owner's private résumé
 
 `tests/unit/demo-seed.unit.mjs` covers the demo-account rules in `src/utils/demoSeed.js` (which
 originals come back, and the dev-only import of the owner's private résumé).
 `tests/pdf/24-private-data.test.mjs` builds production and e2e and checks that no text of the
 git-ignored `private/sairam-resume.json` is in either bundle (skipped, with a message, where the
 file is absent); it also runs `vite-plugin-owner-resume.js` on a dev server and in a build.
-Files are `*.unit.mjs` so Playwright's default `*.test.*` / `*.spec.*` match in `tests/`
-never picks them up, and the module under test has no imports so Node loads it as it is.
+A `*.unit.mjs` file's module under test has no `@/` imports, so Node loads it as it is.
 
 ## Cypress: e2e builds and the fake sign-in
 
@@ -65,12 +75,9 @@ Run by hand: `npx vite build --mode e2e --outDir <scratch>/dist-e2e` →
 
 ## Testing notes
 
-- Firebase env may be missing in CI/local; config comments say to tolerate related noise.
+- No Firebase values are needed: a build without them runs local-only, and the e2e build's fake
+  sign-in above stands in for Google.
 - Prefer injecting localStorage state over going through Google OAuth in E2E.
-- Fidelity tests are sensitive to font/layout changes — run after template/PDF edits.
-
-## Gaps
-
-- No unit test runner (Vitest/Jest) configured
-- Job tracker has limited/no dedicated Playwright coverage in the numbered specs list (verify before claiming coverage)
-- Lint: `npm run lint` (oxlint) — not a substitute for E2E
+- Fidelity tests are sensitive to font/layout changes — run them after template/PDF edits.
+- `tests/unit/knowledge-docs.unit.mjs` fails when these docs name a `src/` or `tests/` path that is
+  gone, or state a `DATA_VERSION` the code no longer has.

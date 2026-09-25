@@ -2657,13 +2657,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"file-saver@npm:^2.0.5":
-  version: 2.0.5
-  resolution: "file-saver@npm:2.0.5"
-  checksum: 10c0/0a361f683786c34b2574aea53744cb70d0a6feb0fa5e3af00f2fcb6c9d40d3049cc1470e38c6c75df24219f247f6fb3076f86943958f580e62ee2ffe897af8b1
-  languageName: node
-  linkType: hard
-
 "firebase@npm:^12.15.0":
   version: 12.17.0
   resolution: "firebase@npm:12.17.0"
@@ -2708,6 +2701,7 @@ __metadata:
     "@dnd-kit/sortable": "npm:^10.0.0"
     "@dnd-kit/utilities": "npm:^3.2.2"
     "@fontsource/noto-sans": "npm:^5.2.10"
+    "@napi-rs/canvas": "npm:^1.0.0"
     "@playwright/test": "npm:^1.63.0"
     "@react-pdf/renderer": "npm:^4.5.1"
     "@tailwindcss/vite": "npm:^4.3.1"
@@ -2716,7 +2710,6 @@ __metadata:
     "@vitejs/plugin-react": "npm:^6.0.2"
     cypress: "npm:14.5.4"
     docx: "npm:^9.7.1"
-    file-saver: "npm:^2.0.5"
     firebase: "npm:^12.15.0"
     lucide-react: "npm:^1.21.0"
     oxlint: "npm:^1.69.0"

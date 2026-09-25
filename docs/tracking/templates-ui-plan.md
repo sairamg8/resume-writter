@@ -174,8 +174,9 @@ a phone screenshot. Progress is ticked in §9.
 
 ## 8 · Rules for this work
 
-- `master` only, one item per commit, explicit `git add` paths.
-- Push only on the owner's word. The push gate runs every test, a production build and the private-data scan.
+- Work lands on `claude/wf-*` branches, one item per commit, explicit `git add` paths; the coordinator merges them.
+- The gate is `.github/workflows/ci.yml` (CLAUDE.md): `master` is fast-forwarded only when the full gate on that
+  commit is green, and a push to `master` deploys.
 - Screens, thumbnails and samples use fictional résumés only (`tests/fixtures/sampleResumes.js`):
   - never `private/`;
   - never `qa-visual-compare/seed-*`, which is the owner's real résumé;
@@ -189,6 +190,6 @@ a phone screenshot. Progress is ticked in §9.
 | Phase | State |
 |---|---|
 | Plan | ✅ this file, 2026-09-22 |
-| P1 audit | ☐ waits for §7 |
-| P2 wireframes | ☐ |
-| P3a–P3e build | ☐ |
+| P1 audit | ✅ `45f4acc`, 2026-09-23 — templates-ui-suggestions.md, templates-ui-bugs.md |
+| P2 wireframes | ☐ — continues as R2-138 / R2-139 (bug-status-r2) |
+| P3a–P3e build | ☐ — continues as R2-138 (presets) and R2-139 (picker; its a11y part deferred, owner 2026-09-25) |

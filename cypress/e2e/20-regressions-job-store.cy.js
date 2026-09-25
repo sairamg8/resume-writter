@@ -5,7 +5,8 @@ import { buildTestState, STORAGE_KEY } from '../../tests/helpers.js';
 import { CARD } from '../support/selectors.js';
 
 const JOBS_KEY = 'cpwtcv_jobs_v1';
-const OWNER = { uid: 'e2e-owner', email: 'sairamgudiputi8@gmail.com', displayName: 'Owner' };
+// The e2e build's demo account (VITE_DEMO_ACCOUNTS in .env.e2e).
+const OWNER = { uid: 'e2e-owner', email: 'owner@example.com', displayName: 'Owner' };
 
 const job = (id, company, role, status = 'applied') => ({
   id, company, role, status, url: '', location: '', salary: '', contact: '', resumeId: '', notes: '',

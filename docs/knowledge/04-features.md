@@ -8,7 +8,8 @@ Maps user-facing features → primary code locations.
 |---------|------|
 | List resumes | `pages/Dashboard.jsx`, `components/ResumeCard.jsx` |
 | New resume / cover letter | `store.createResume`, navigate with optional `?tab=coverletter` |
-| Import JSON | Dashboard `handleImport` |
+| Start from a role starter | `components/StarterTemplateModal.jsx`, `utils/starterTemplates.js` |
+| Import a backup JSON or a JSON Resume file | Dashboard `handleImport` (`components/ImportMenu.jsx` in a demo account) |
 | Job Tracker entry | navigate `/jobs` |
 | Career history panel | `components/CareerHistoryPanel.jsx` |
 | Auth + sync indicator | `components/AuthBar.jsx` |
@@ -17,21 +18,23 @@ Maps user-facing features → primary code locations.
 
 | Feature | Code |
 |---------|------|
-| Tab: resume / design / cover letter | `pages/Editor.jsx` `activeTab` |
+| Tab: resume / design / cover letter / ATS check | `pages/Editor.jsx` `activeTab`, `hooks/useEditorTab.js` |
 | Personal info | `PersonalInfoEditor*.jsx` |
 | Sections + DnD | `SectionEditor*.jsx`, dnd-kit |
 | Add section types | `SECTION_GROUPS` + `addSection` |
-| Live A4 preview | `PaginatedPreview.jsx` + `TEMPLATE_MAP` |
+| Live preview (the exported PDF) | `PdfPreview.jsx` + `renderResumePdf` (`utils/pdfExportReactPDF.js`) |
 | Layout modes (split/etc.) | `LayoutToggle.jsx` |
 | Resizable editor panel | localStorage `cpwtcv-panel-width` |
-| Export menu | `ExportDropdown.jsx` + handlers in Editor |
-| Design panel | `DesignPanel.jsx` + Colors/Typography/Shared |
+| Export menu | `ExportDropdown.jsx` + `hooks/useEditorExports.js` |
+| Design panel | `DesignPanel.jsx` + Colors/Typography/Headings/Dates/Shared |
+| ATS check | `AtsCheckerPanel.jsx`, `utils/atsChecker.js` |
+| Writing helpers | `BulletOptimizerModal.jsx` (`utils/bulletOptimizer.js`), `CoverLetterGeneratorModal.jsx` (`utils/coverLetterGenerator.js`) — rules, no AI service |
 
 ## Design system
 
 | Feature | Code |
 |---------|------|
-| Template picker | Design panel + `setTemplate` |
+| Template picker | Design panel + `setTemplate`; the list is `constants/templateTable.js` |
 | Accent / text / sidebar colors | `DesignPanelColors.jsx` |
 | Fonts + Google fonts | `utils/fonts.js` |
 | Spacing / margins | Design panel keys → `settings` |
@@ -42,8 +45,7 @@ Maps user-facing features → primary code locations.
 | Feature | Code |
 |---------|------|
 | Editor panel | `CoverLetterPanel.jsx` |
-| Preview | `CoverLetterTemplate.jsx` |
-| PDF | `CoverLetterTemplatePDF.jsx` via `exportCoverLetterPDFReact` |
+| Preview and PDF | `CoverLetterTemplatePDF.jsx` via `renderCoverLetterPdf` / `exportCoverLetterPDFReact` |
 
 ## Job tracker
 
@@ -53,7 +55,15 @@ Maps user-facing features → primary code locations.
 | Detail | `JobDetail.jsx` + job/* tabs |
 | Create/edit form | `JobForm.jsx` |
 | Status pipeline | `constants/jobs.js`, Pipeline, StatusHistory |
-| Link resume | `resumeId` field + resumes from `useAppStore` |
+| Link resume | `resumeId` field + résumés from the `store` prop |
+
+## Boards
+
+| Feature | Code |
+|---------|------|
+| Boards list, a board, its backlog and settings, "Your work" | `pages/Boards.jsx`, `Board.jsx`, `Backlog.jsx`, `BoardSettings.jsx`, `YourWork.jsx` |
+| Store (localStorage `cpwtcv_boards_v2`) | `hooks/useBoardStore.js`, `utils/board*.js` |
+| Cards, columns, labels | `components/board/*` |
 
 ## Legal
 
@@ -65,7 +75,6 @@ Maps user-facing features → primary code locations.
 ## Non-features (common expectations not implemented)
 
 - Collaborative multi-user editing
-- AI rewrite / tailoring (no LLM SDK in package.json)
-- Job cloud sync
-- Template “Dark” as a real registered template
+- AI rewrite / tailoring (no LLM SDK in package.json; the writing helpers are rules)
+- Job and board cloud sync
 - Server-side PDF rendering

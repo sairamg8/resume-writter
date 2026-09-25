@@ -82,10 +82,10 @@ describe('cover letter photo on the shared table (R3-5)', () => {
 });
 
 describe('the ring shows around the picture, read without a canvas (FIDA-43, R3-9)', () => {
-  // 11-photo paints the page to see the ring, so it skips where @napi-rs/canvas (pdf.js's
-  // optional dependency) is missing. This reads the same fact from the operator list: the
-  // picture is clipped inside the ring's strokes. Before FIDA-43 the ring was the Image's own
-  // border, and the picture, clipped to the whole box, painted over it.
+  // 11-photo paints the page to see the ring, through @napi-rs/canvas. This reads the same fact
+  // from the operator list, with no canvas: the picture is clipped inside the ring's strokes.
+  // Before FIDA-43 the ring was the Image's own border, and the picture, clipped to the whole
+  // box, painted over it.
   for (const [template, ring] of [['classic', 1.125], ['minimal', 1.125], ['executive', 1.125], ['modern', 1.5], ['sidebar', 1.125], ['cover letter', 1.5]]) {
     it(`${template}: the picture sits inside a ${ring} pt ring, whatever the shape`, async () => {
       const cover = template === 'cover letter';

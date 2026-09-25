@@ -33,11 +33,16 @@ playwright-report/
 test-results/
 qa-visual-compare/
 
+# graphify's code-graph output: generated on a machine, stale as soon as src/ moves, and read by nothing
+graphify-out/
+
 
 # Local env (real Firebase keys) — copy .env.example instead
 .env
 .env.*
 !.env.example
+# The e2e build's made-up demo account, which the Cypress specs sign in as
+!.env.e2e
 
 # Yarn 4 (node-modules linker) local state
 .yarn/*

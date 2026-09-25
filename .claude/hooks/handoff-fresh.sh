@@ -7,6 +7,8 @@ input=$(cat)
 [ "$(printf '%s' "$input" | jq -r '.stop_hook_active // false' 2>/dev/null)" = "true" ] && exit 0
 cd "${CLAUDE_PROJECT_DIR:-.}" 2>/dev/null || exit 0
 git rev-parse --git-dir > /dev/null 2>&1 || exit 0
+# A cluster session (branch claude/wf-*) never edits docs/tracking/ (CLUSTER-PROTOCOL.md): the coordinator does.
+case "$(git branch --show-current 2>/dev/null)" in claude/wf-*) exit 0 ;; esac
 last=$(git log -1 --format=%H -- docs/tracking/HANDOFF.md)
 [ -z "$last" ] && exit 0
 behind=$(git rev-list --count "$last..HEAD" -- src tests cypress .github .yarn package.json yarn.lock vite.config.js playwright.config.js cypress.config.js)

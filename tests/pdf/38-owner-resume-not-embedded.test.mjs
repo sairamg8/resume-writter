@@ -18,7 +18,7 @@ import { setup, teardown, loadModule } from './harness.mjs';
 
 const ROOT = path.resolve(fileURLToPath(new URL('../..', import.meta.url)));
 const SRC = path.join(ROOT, 'src');
-const OWNER_EMAIL = 'sairamgudiputi8@gmail.com';
+const OWNER_EMAIL = 'owner@example.com';
 // A base64-like run this long is data, not code. The payload of a data: URI (a small asset Vite inlines) is fine.
 const BLOB = /(?<!base64,)[A-Za-z0-9+/]{1500,}={0,2}/g;
 

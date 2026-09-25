@@ -2,9 +2,9 @@
 
 > **Purpose:** Persistent project memory for humans and AI agents.  
 > **Product goal:** Free, open resume + cover letter + job tracker for fellow developers.  
-> **Last full audit:** 2026-07-14  
+> **Last full audit:** 2026-09-24 (each claim checked against `src/`)  
 > **Canonical product name in UI/README:** **CPWT-CV** (repo folder: `flowcv`)  
-> **Active branch:** `master` (React-PDF fidelity merged) — see [HANDOFF.md](../tracking/HANDOFF.md)
+> **Branches and work in flight:** [HANDOFF.md](../tracking/HANDOFF.md)
 
 ---
 
@@ -21,10 +21,10 @@
 | [03-data-model.md](03-data-model.md) | Resume JSON shape, storage keys, versions |
 | [04-features.md](04-features.md) | Feature inventory mapped to code |
 | [05-state-auth-sync.md](05-state-auth-sync.md) | localStorage, Firebase Auth, Firestore sync |
-| [06-templates-export.md](06-templates-export.md) | Templates, design system, PDF/Word/JSON |
+| [06-templates-export.md](06-templates-export.md) | Templates, design system, PDF / Word / Markdown / ATS text / JSON |
 | [07-job-tracker.md](07-job-tracker.md) | Job pipeline, statuses, local store |
-| [08-testing.md](08-testing.md) | Playwright suite layout and how to run |
-| [09-file-map.md](09-file-map.md) | Directory map (actual tree vs outdated README) |
+| [08-testing.md](08-testing.md) | The node:test PDF and unit suites, Playwright, Cypress, CI |
+| [09-file-map.md](09-file-map.md) | Directory map |
 | [10-open-source-goals.md](10-open-source-goals.md) | Sharing plan, repo hygiene, community checklist |
 
 ## Related project files (outside this folder)
@@ -33,7 +33,6 @@
 |------|------|
 | [`README.md`](../../README.md) | User-facing setup + feature list |
 | [`firestore.rules`](../../firestore.rules) | Production Firestore security rules |
-| [`graphify-out/GRAPH_REPORT.md`](../../graphify-out/GRAPH_REPORT.md) | Code knowledge graph (communities, god nodes) |
 | [`package.json`](../../package.json) | Scripts and dependencies |
 
 ## How to maintain this knowledge base
@@ -47,12 +46,15 @@
 
 ```
 Browser (HashRouter)
-  ├── Dashboard          → list resumes, import JSON, enter job tracker
-  ├── Editor             → resume / cover letter / design / export
+  ├── Dashboard          → list resumes, import a backup or JSON Resume file, enter job tracker
+  ├── Editor             → resume / design / cover letter / ATS check tabs, export menu;
+  │                        the preview is the exported PDF, painted by pdf.js
   ├── Job Tracker        → kanban/list + detail/form
+  ├── Boards             → boards, backlog, board settings, "Your work"
   └── Terms / Privacy
 
 State:
   Resumes → localStorage `cpwtcv_v1`  (+ optional Firestore users/{uid}/resumes)
   Jobs    → localStorage `cpwtcv_jobs_v1`  (no cloud sync yet)
+  Boards  → localStorage `cpwtcv_boards_v2`  (no cloud sync yet)
 ```

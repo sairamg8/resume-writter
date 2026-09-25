@@ -25,7 +25,7 @@ with one full CI run and fast-forwards `master` on green.
 | cloud-sync | R2-159 (done), 145, 140 | session_017BB79LpEbU9c3zT2CccWDV | running |
 | structure-tests | R2-158, 167, 171 | session_015xkXZJXdNDrdPoNy6Nusob | running |
 | letters-import | R2-135, 148 | session_01C9EUo2kre8QeqViw2sAKkx | running |
-| release | R2-169 (done), 143, 154, 168 | session_012ktnCPxsipt5gQWuGvDdjh | running |
+| release | R2-169 (done), 143, 154, 168 | session_012ktnCPxsipt5gQWuGvDdjh | **merged** — R2-169, 154, 168 fixed; R2-143 partial (owner: v0.1.0 tag, Terms/Privacy domain) |
 
 **Parked for the a11y pass at the end:** `claude/wf-templates` (`67c88c5`, R2-139's picker accessibility — its Cypress
 shards 3 and 4 were red); R2-139's A7, A8, A11, A13, A14; A11Y-1…6.
@@ -42,7 +42,15 @@ titlePage); no Design control (always on, left out where the margin has no room)
 removed. CI on the work branch: a targeted run with fail-first (run 36088672238), and the full suite (run 36088673756) (to find other tests that read
 the top of page 2). When green: ATS-7's row in `bug-status.md` goes ✖ → ✅.
 
-**Needs the owner:** deleting the merged `claude/wf-*` branches on GitHub (the git proxy refuses branch deletion).
+**🔴 Before `master` moves (R2-143, merged from release):** the owner's e-mail, uid and name now come from the build's
+env (`src/utils/siteOwner.js`, `.env.example`). The live site's Cloudflare build must set
+`VITE_DEMO_ACCOUNTS` and `VITE_CONTACT_EMAIL` (the owner's address) first, or the live site loses its demo account (the
+"Keep as my original" résumés stop coming back) and Terms/Privacy name no contact address. The owner's `.env.local`
+(dev server only): `VITE_DEV_USER_UID=dev_sairam`, `VITE_DEV_USER_EMAIL`, `VITE_DEV_USER_NAME=Sairam`, and the same
+`VITE_DEMO_ACCOUNTS`. Hold `master` until the owner confirms.
+
+**Needs the owner:** the Cloudflare env vars above; deleting the merged `claude/wf-*` branches on GitHub (the git proxy
+refuses branch deletion); tag v0.1.0 when ready.
 
 > **Updated 2026-09-24 (cloud session, branch `claude/confident-goldberg-2uig8b`).** This section is the
 > live resume cursor for the "fix every open row" session. After the owner's reboot a new coordinator
