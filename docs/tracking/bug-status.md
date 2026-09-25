@@ -2,8 +2,8 @@
 
 > Location: `/mnt/Storage/Projects/flowcv/docs/tracking/bug-status.md` (moved from the repo root 2026-09-24)
 > Updated: 2026-09-24 · every row **verified independently at `d495cb2`** (see Verification pass) ·
-> `origin/master` (deployed) = `443321a` · nothing on `master` waits for a gate
-> **Open: 29** (0 here + 29 in [bug-status-r2/](bug-status-r2/README.md)) | Fixed, not pushed: 87 | **Closed: 143** (121 fixed + 22 ✖ without a code fix)
+> `origin/master` (deployed) = `9a49f83` · nothing on `master` waits for a gate
+> **Open: 22** (0 here + 22 in [bug-status-r2/](bug-status-r2/README.md)) | Fixed, not pushed: 0 | **Closed: 237** (215 fixed + 22 ✖ without a code fix)
 
 ## Summary
 
@@ -13,10 +13,10 @@
 | ATS parsing defects (`ATS-`) | 7 (ATS-7 was TUI-6) | 5 | 0 | 2 | 0 |
 | Templates UI audit, 2026-09-23 (`TUI-`) | 6 (+ TUI-6, filed as ATS-7) | 6 | 0 | 0 | 0 |
 | Prompt tasks, 2026-09-14 → 09-21 | 33 | 33 | 0 | 0 | 0 |
-| Full audit, 2026-09-23 — defects (`R2-001`…`R2-134`, [bug-status-r2/](bug-status-r2/README.md)) | 134 | 38 | 70 | 19 | **7** |
-| Full audit, 2026-09-23 — features and test gaps (`R2-135`…`R2-171`) | 37 | 3 | 12 | 0 | **22** |
-| Found by the build lanes, 2026-09-24 (`R3-`, in [bug-status-r2/](bug-status-r2/README.md)) | 7 | 1 | 5 | 1 | **0** |
-| **Total** | **259** | **121** | **87** | **22** | **29** |
+| Full audit, 2026-09-23 — defects (`R2-001`…`R2-134`, [bug-status-r2/](bug-status-r2/README.md)) | 134 | 115 | 0 | 19 | **0** |
+| Full audit, 2026-09-23 — features and test gaps (`R2-135`…`R2-171`) | 37 | 15 | 0 | 0 | **22** |
+| Found by the build lanes, 2026-09-24 (`R3-`, in [bug-status-r2/](bug-status-r2/README.md)) | 7 | 6 | 0 | 1 | **0** |
+| **Total** | **259** | **215** | **0** | **22** | **22** |
 
 - **Status:** ✅ fixed and pushed (on `origin/master`, so deployed) · ⏸ fixed and committed, not pushed · 🔴 open ·
   ✖ closed without a code fix (won't fix: a known limit; not a bug; a duplicate) — the proof is in the row, and it counts as closed.
@@ -33,13 +33,13 @@
 2. ATS-4 is ✅ (`58f4f96`), ATS-6 is ✅ (`32a5972`; PENDING-ALL D3 closed: Heading styles, look unchanged). ATS-1/2/5 are ✅ (`417db1e`, one entry-header layout). TUI-6 is filed as ATS-7; ATS-3 and ATS-7 are ✖ known limits (`c950ae7`, `a67caa3`). The ATS list is closed.
 3. The TUI list is closed (TUI-6 filed as ATS-7).
 
-✅ **Deployed:** `origin/master` = `443321a` (R2-067: the Word résumé's contact line follows Design → Base, `4203257`; T8: the Academic
-template, `a4b08c2` `a1099e2` `2964a58` (R3-003 filed, `c6eb4b5`); B1: the parity matrix — every control the editor offers, on every
-template, measured in the PDF — and the Playwright preview-equals-download check, `6ae3d50` `a9262ff` `443321a` (R2-153, R2-160, R2-164
-✅; R3-001 ✅ and R2-082's Colors half in `0b5f6e2`); the tracker commit `5035868`). Gate on that exact tree, GitHub Actions run
-35958668018, 2026-09-24 10:46: **3756 tests, 3749 pass, 0 fail, 6 todo** (the accepted limits' `todo`s; 1 skipped: the private-résumé
-scan, whose file is not on CI), a green production build, Playwright green, and a private-data scan of all 78 bundle files with no hits.
-Per the owner (2026-09-23, *"keep pushing after each bug"*) every finished bug lands → gates → pushes, unasked.
+✅ **Deployed:** `origin/master` = `9a49f83` (2026-09-24 ~15:30 UTC), fast-forwarded from `504b313`: 250 commits — all 15 Round 1
+clusters (ats, pdf-pagination, design-sidebar, word, text-exports, jobs, app-shell, boards, preview, import-data, sections, sync,
+letter, pdf-text, cypress), the coordinator's merge and CI fixes, and the open-source docs. Gate on that exact commit: GitHub Actions
+run 36018983145 — the node suite on 6 machines, Playwright on 3, Cypress on 4, build and lint, **every job green**. Every ⏸ row's
+commits were checked to be ancestors of `9a49f83` before it was set ✅ (94 rows). The private-résumé scan the laptop gate ran is not
+part of CI: the file it looks for is not in the repository, so a CI or hosting build cannot carry it. Per the owner (2026-09-24):
+tests run only on CI; master moves only on a green gate.
 
 🔴 **Read a gate's output, do not skim it.** Earlier the same day it printed `private scan: 0 files,
 hits=none` and nothing else — no suite line, no build line — because `flock` could not take

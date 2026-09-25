@@ -193,16 +193,21 @@ describe('a section title keeps the first line of its content (R2-047)', () => {
     assert.deepEqual(await sweep('classic', education1, titleNotAlone), []);
   });
 
-  it('a 2-column section with no entry to print still prints its title, as one column does', async () => {
-    const missing = [];
+  // A section with nothing to print prints no title at all, in one column or a grid, as Word, Markdown
+  // and ATS text leave it out (R2-057, merged after this test was first written against a base where a
+  // single column still printed a bare title).
+  it('a 2-column section with no entry to print prints no title, as one column does (R2-057)', async () => {
+    const printed = [];
     for (const template of ['classic', 'modern', 'compact', 'sidebar', 'timeline']) {
       for (const type of ['experience', 'projects', 'awards', 'custom', 'skills']) {
-        const s = section(type, [], { columns: 2 }, { title: `Zz${type}` });
-        const pages = await read(await render(resume({ template, sections: [experience([{}]), s] })));
-        if (!allItems(pages).some((t) => t.str.toUpperCase().includes(`ZZ${type.toUpperCase()}`))) missing.push(`${template} ${type}`);
+        for (const columns of [1, 2]) {
+          const s = section(type, [], { columns }, { title: `Zz${type}` });
+          const pages = await read(await render(resume({ template, sections: [experience([{}]), s] })));
+          if (allItems(pages).some((t) => t.str.toUpperCase().includes(`ZZ${type.toUpperCase()}`))) printed.push(`${template} ${type} ${columns} col`);
+        }
       }
     }
-    assert.deepEqual(missing, []);
+    assert.deepEqual(printed, []);
   });
 });
 
