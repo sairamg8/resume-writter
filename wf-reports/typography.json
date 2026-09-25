@@ -1,0 +1,34 @@
+{
+  "cluster": "typography",
+  "branch": "claude/wf-typography",
+  "base": "c5acb93",
+  "rows": [
+    {
+      "id": "R2-146",
+      "outcome": "fixed",
+      "commits": ["d141c53", "ba90225", "f1208ca", "ae78679", "32074e8"],
+      "tests": [
+        "tests/pdf/93-side-title-spacing.test.mjs",
+        "tests/pdf/93-name-heading-font.test.mjs",
+        "tests/pdf/93-word-font-fallback.test.mjs",
+        "tests/pdf/91-design-resets.test.mjs",
+        "tests/pdf/parity/registry-design.mjs",
+        "cypress/e2e/13-regressions-fonts.cy.js"
+      ],
+      "summary": "Typography → Name Font and Heading Font (settings.nameFont / headingFont: a picker font or a saved custom font; 'Same as text' = unset) print the name (every template, the cover letter's letterhead) and the section titles (main column, the Sidebar's About Me and side-column titles) in fonts of their own, in the PDF and in Word; one that cannot load prints in Noto Sans and is named in the font-fallback notice ('Lato and Inter could not be loaded …'); the Typography ↺ resets both. Title Spacing now reaches the Sidebar's side-column titles (PDF and Word). The Word file's font table names an installed stand-in for every font it uses — Arial for a sans, Georgia for a serif (w:altName + PANOSE + family), none for Georgia — and Typography says so ('Word does not embed fonts: where they are not installed, Inter shows as Arial …'). Unset, the PDF prints as before.",
+      "remaining": ""
+    }
+  ],
+  "review": {
+    "issues": [
+      "The 93 panel tests left view.unmount() unawaited, so CI failed 93-word-font-fallback with 'window is not defined' after the test ended (and its failfirst 'with the fix' step).",
+      "Cypress 13-regressions-fonts: Typography is longer now, and after type() the Bebas Neue chip sat under the editor tabs; it failed be.visible.",
+      "The name is now measured in its own font (fitFontSize via nameFamily), but no test covers that: Liberation Sans and Noto Sans bold are too close in width to tell apart reliably."
+    ],
+    "fixedByReviewer": [
+      "32074e8: both panel tests await unmount; the Cypress spec scrolls the chip into view before checking it is visible (the check itself is unchanged)."
+    ]
+  },
+  "baselineFailures": [],
+  "notes": "CI: all green on 32074e8 — run 36106737510 (93 tests, failfirst f1208ca, Cypress 13), 36106287888 (parity 00/01/11/12/14/15/20 incl. the new nameFont/headingFont registry entries), 36106276470 (failfirst ba90225, Playwright parity-ui-controls ×3, Cypress 04-design; its other failures fixed by 32074e8), 36105602884 (failfirst d141c53). No full gate run yet. Unset path in Word is not byte-identical: every .docx now carries a font table (the default names Noto Sans → Arial), and Typography always shows the Word note, even for the default Noto Sans. With a custom font set, Word export and the note fetch Fontsource metadata for the font's category (cached; an offline fetch fails at once, but a hung network waits up to the 8 s timeout). Name/Heading Font list picker fonts plus this browser's saved custom fonts. LibreOffice could not open files in the session sandbox, so how Word/LibreOffice substitute fonts was not checked by eye; the font-table XML is pinned by the test. New shared files: src/utils/wordFonts.js (resolveWordFont moved here, still re-exported from wordExport.js), src/templates/pdf/shared/pdfFaces.js. Deferred a11y noted: the new selects' focus ring and small text."
+}
