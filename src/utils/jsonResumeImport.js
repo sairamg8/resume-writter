@@ -10,6 +10,7 @@ import { entries, richFrom } from './jsonResumeText.js';
 import { customItem, fileEntries, PUBLICATIONS, SECTION_KEYS } from './jsonResumeSections.js';
 import { CONTACT_FIELDS } from './contacts.js';
 import { templateId } from '../constants/templates.js';
+import { presetOf, presetSettings } from '../constants/templatePresets.js';
 import { DATE_FORMATS } from './dates.js';
 
 const isRecord = (v) => Boolean(v) && typeof v === 'object' && !Array.isArray(v);
@@ -149,6 +150,9 @@ export function jsonResumeToCpwtResume(jsonResume, customId) {
   // The Date format the export wrote (one this build knows), over the starter's.
   const dateFormat = jsonResume?.meta?.dateFormat;
   const single = template === 'sidebar' && jsonResume?.meta?.layout === 'single';
+  // The design the export names (R2-138), where it is one of this build's over that template: its look
+  // over the starter's, as picking it sets it.
+  const design = presetOf({ templatePreset: jsonResume?.meta?.design }, template) ? presetSettings(jsonResume.meta.design) : {};
 
   return {
     id,
@@ -156,7 +160,7 @@ export function jsonResumeToCpwtResume(jsonResume, customId) {
     updatedAt: Date.now(),
     dataVersion: DATA_VERSION, // built now, from a file with no app history: no migration applies
     template,
-    settings: { ...getStarterSettings(template), ...(DATE_FORMATS.includes(dateFormat) ? { dateFormat } : {}), ...(single ? { sidebarSingleColumn: true } : {}) },
+    settings: { ...getStarterSettings(template), ...design, ...(DATE_FORMATS.includes(dateFormat) ? { dateFormat } : {}), ...(single ? { sidebarSingleColumn: true } : {}) },
     personal,
     sections: sectionsOf(jsonResume),
     coverLetter: { ...BASE_COVER_LETTER },

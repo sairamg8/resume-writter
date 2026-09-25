@@ -1,18 +1,17 @@
 import { useState, useEffect, useRef } from 'react';
-import { createBlankResume, settingsAfterReset, styleOnSwitch } from '@/utils/defaultData';
+import { createBlankResume, settingsAfterReset } from '@/utils/defaultData';
 import { buildResumeFromStarter } from '@/utils/starterTemplates';
 import { createSectionActions } from '@/hooks/useResumeSectionActions';
 import { createSyncActions } from '@/hooks/useResumeSyncActions';
 import { newId } from '@/utils/ids';
-import { HEADER_READS, headerColorsOnSwitch, withHeaderColorsBack } from '@/templates/pdf/shared/headerColors';
-import { sectionsOnSwitch } from '@/templates/pdf/shared/templateSectionDefaults';
+import { HEADER_READS, withHeaderColorsBack } from '@/templates/pdf/shared/headerColors';
+import { withTemplate } from '@/utils/templateSwitch';
 import { DATA_VERSION, normalizeResume } from '@/utils/normalizeResume';
 import { backupRaw, notSavedReason, pendingRecovery, readSavedList, rememberRecovery, setItemWithRoom } from '@/utils/storageBackup';
 import { savedDeletions } from '@/utils/localDeletions';
 import { isOriginal, withKeep } from '@/utils/demoSeed';
 import { useSmallerPhotos } from '@/hooks/useSmallerPhotos';
 import { keepUnsaved } from '@/utils/unsavedJobs';
-import { templateId } from '@/constants/templates';
 import { coalescedWriter } from '@/utils/coalescedWrite';
 
 const STORAGE_KEY = 'cpwtcv_v1';
@@ -303,15 +302,11 @@ export function useAppStore() {
    * title colour picked for the old header that does not read on the new one back to its own (NB-1);
    * a section's Grids its template's own where the section kept the one it was created with (Compact's
    * grid, T9 — sectionsOnSwitch). The template it is on already is no switch: picking it again
-   * would put back the heading style and title case the user changed since (R2-087).
+   * would put back the heading style and title case the user changed since (R2-087). `preset`: a
+   * design over `template` (R2-138, templatePresets.js), which brings its whole look (withTemplate).
    */
-  function setTemplate(template) {
-    patchActive(r => (templateId(r.template) === templateId(template) ? r : {
-      ...r,
-      template,
-      settings: headerColorsOnSwitch(styleOnSwitch(r.settings, r.template, template), r.template, template),
-      sections: sectionsOnSwitch(r.sections, r.template, template),
-    }));
+  function setTemplate(template, preset = '') {
+    patchActive(r => withTemplate(r, template, preset));
   }
 
   function updateCoverLetter(field, value) {

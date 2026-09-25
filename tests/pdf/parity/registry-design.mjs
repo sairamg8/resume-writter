@@ -83,6 +83,25 @@ export const DESIGN = {
       return out;
     },
   },
+  // A design picked (R2-138) prints what a résumé started on its engine with its settings prints, not
+  // what its engine prints plainly, and its accent prints.
+  preset: {
+    family: 'template',
+    check: async ({ runs, variant }) => {
+      const { TEMPLATE_PRESETS, presetSettings } = await loadModule('/src/constants/templatePresets.js');
+      const out = [];
+      for (const r of runs) {
+        const id = valueOf(r, 'preset');
+        const p = TEMPLATE_PRESETS[id];
+        const fresh = await shot(baseResume(p.engine, { ...variant.settings, ...presetSettings(id) }, { compact: true }));
+        const plain = await shot(baseResume(p.engine, variant.settings, { compact: true }));
+        if (r.snap.drawing !== fresh.drawing) out.push(`${id}: picked, it does not print what a résumé started on it prints`);
+        if (r.snap.drawing === plain.drawing) out.push(`${id}: prints what ${p.engine} prints plainly`);
+        if (!hasColour(r.snap, p.settings.accentColor)) out.push(`${id}: its accent ${p.settings.accentColor} prints nowhere`);
+      }
+      return out;
+    },
+  },
   // Reset Design Settings keeps the Sidebar's Single · ATS-safe Layout: the ATS-safe page it promises (R2-089).
   resetAll: { family: 'resets', keeps: ['setting.sidebarSingleColumn'] },
   'setting.sidebarSingleColumn': {

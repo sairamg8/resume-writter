@@ -140,14 +140,16 @@ export function aroundTypes(template, settings, type) {
 let helpers = null;
 export async function loadStore() {
   if (helpers) return helpers;
-  const [colors, templates, data, sectionActions, sectionDefaults] = await Promise.all([
+  const [colors, templates, data, sectionActions, sectionDefaults, templateSwitch, presets] = await Promise.all([
     loadModule('/src/templates/pdf/shared/headerColors.js'),
     loadModule('/src/constants/templates.js'),
     loadModule('/src/utils/defaultData.js'),
     loadModule('/src/hooks/useResumeSectionActions.js'),
     loadModule('/src/templates/pdf/shared/templateSectionDefaults.js'),
+    loadModule('/src/utils/templateSwitch.js'),
+    loadModule('/src/constants/templatePresets.js'),
   ]);
-  helpers = { colors, templates, data, sectionActions, sectionDefaults };
+  helpers = { colors, templates, data, sectionActions, sectionDefaults, templateSwitch, presets };
   return helpers;
 }
 
@@ -180,6 +182,9 @@ export function applyWrites(r, writes, sectionId = null) {
         ...out, template: w.value, settings: colors.headerColorsOnSwitch(data.styleOnSwitch(out.settings, out.template, w.value), out.template, w.value),
         sections: sectionDefaults.sectionsOnSwitch(out.sections, out.template, w.value),
       };
+    } else if (w.kind === 'preset') {
+      // As useResumeStore.setTemplate(engine, preset): the design's engine and its whole look (withTemplate).
+      out = helpers.templateSwitch.withTemplate(out, helpers.presets.TEMPLATE_PRESETS[w.value].engine, w.value);
     } else if (w.kind === 'resetAll') {
       out = { ...out, settings: data.settingsAfterReset(out) };
     } else if (w.kind === 'personal') {

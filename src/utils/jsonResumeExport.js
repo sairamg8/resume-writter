@@ -6,6 +6,7 @@ import { entries, flattened } from './jsonResumeText.js';
 import { customEntry, SECTION_KEYS } from './jsonResumeSections.js';
 import { CONTACT_FIELDS } from './contacts.js';
 import { headerTemplateId, templateId } from '../constants/templates.js';
+import { presetOf } from '../constants/templatePresets.js';
 import { dateFormatOf } from './dates.js';
 
 const isRecord = (v) => Boolean(v) && typeof v === 'object' && !Array.isArray(v);
@@ -113,6 +114,8 @@ export function cpwtResumeToJsonResume(resume) {
       template: templateId(resume.template),
       dateFormat: dateFormatOf(resume.settings),
       ...(headerTemplateId(resume.template, resume.settings) !== templateId(resume.template) ? { layout: 'single' } : {}),
+      // The design the résumé is on (R2-138): the import brings its look back, as picking it would.
+      ...(presetOf(resume.settings, resume.template) ? { design: resume.settings.templatePreset } : {}),
       sections: layout,
     },
   };

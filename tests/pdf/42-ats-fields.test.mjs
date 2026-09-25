@@ -15,6 +15,7 @@ import assert from 'node:assert/strict';
 import { setup, teardown, read, render, loadModule, TEMPLATES } from './harness.mjs';
 import { hasPdftotext, pdftotext } from './extractors.mjs';
 import { truthFields, scoreFields, fieldProblems, extractName, pdfjsLineText } from './ats-fields.mjs';
+import { PRESET_IDS, TEMPLATE_PRESETS } from '../../src/constants/templatePresets.js';
 
 before(setup);
 after(teardown);
@@ -56,6 +57,22 @@ describe('every single-column template imports as clean fields', () => {
       const r = DEMO_RESUMES.find((x) => x.template === template);
       const truth = truthFields(r);
       assert.deepEqual(await problemsOf(await render(r), truth, t), []);
+    });
+  }
+});
+
+// Every design (R2-138) is its engine's sample résumé with the design picked, as the store picks it: a
+// font, a colour or a heading style must not cost a parser a field, on any reader.
+describe('every design imports as clean fields', () => {
+  for (const id of PRESET_IDS) {
+    const { engine } = TEMPLATE_PRESETS[id];
+    it(`${id} (over ${engine}): name, contacts, links, sections, every job (title+company+date) and skills`, async (t) => {
+      if (!hasPdftotext) { t.skip('pdftotext not installed'); return; }
+      const { DEMO_RESUMES } = await loadModule('/tests/fixtures/sampleResumes.js');
+      const { withTemplate } = await loadModule('/src/utils/templateSwitch.js');
+      const r = withTemplate(DEMO_RESUMES.find((x) => x.template === engine), engine, id);
+      assert.equal(r.settings.templatePreset, id);
+      assert.deepEqual(await problemsOf(await render(r), truthFields(r), t), []);
     });
   }
 });

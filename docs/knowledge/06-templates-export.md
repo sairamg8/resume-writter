@@ -23,6 +23,18 @@ react-pdf component plus a row in the template table.
 | `academic` | `AcademicTemplatePDF.jsx` | certified |
 | `compact` | `CompactTemplatePDF.jsx` | good |
 
+### Designs (presets)
+
+Design → Template also lists **designs** (`src/constants/templatePresets.js` → `TEMPLATE_PRESETS`): a
+named look — Harbor, Ledger, Nordic, Crimson, Midnight, Sunrise, Grove, Inkwell — over a template above
+(its `engine`) with a bundle of design settings (font, colours, heading style, header, spacing). No
+layout code of their own. Picking one is `setTemplate(engine, presetId)` (`src/utils/templateSwitch.js`
+→ `withTemplate`): the engine, the design's settings, and `settings.templatePreset` so the picker marks
+its card; a plain template clears it and its look leaves where the user kept it (`styleOnSwitch`); Reset
+returns to the design (`defaultSettings(template, settings)`). JSON Resume writes it as `meta.design`,
+Backup keeps it with the settings. Section settings are never touched. Every design runs the ATS field
+battery (`tests/pdf/42-ats-fields.test.mjs`); its badge is `atsRating(engine, settings)`.
+
 ### Cover letter
 
 `CoverLetterTemplatePDF.jsx` (+ `CoverLetterHeaderPDF.jsx`) — uses the résumé's design settings

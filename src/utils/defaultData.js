@@ -1,5 +1,5 @@
 import { BLANK_PERSONAL, blankSections, BASE_COVER_LETTER } from '@/utils/defaultDataContent';
-import { templateStyleDefaults } from '@/constants/templates';
+import { designStyle, presetOf } from '@/constants/templatePresets';
 import { sectionsOnSwitch } from '@/templates/pdf/shared/templateSectionDefaults';
 import { DATA_VERSION } from '@/utils/normalizeResume';
 import { DEFAULT_DATE_FORMAT } from '@/utils/dates';
@@ -54,10 +54,11 @@ export const ATS_DEFAULTS = {
 
 /**
  * The design settings Reset returns a résumé to: the ATS-safe defaults with the heading style
- * and title case its template brings (the same ones picking the template sets).
+ * and title case its template brings (the same ones picking the template sets) — and, on a design
+ * (`settings.templatePreset`, R2-138), the design's own look, as picking it set them.
  */
-export function defaultSettings(template) {
-  return { ...ATS_DEFAULTS, ...templateStyleDefaults(template) };
+export function defaultSettings(template, settings) {
+  return { ...ATS_DEFAULTS, ...designStyle(template, settings) };
 }
 
 /**
@@ -67,16 +68,19 @@ export function defaultSettings(template) {
  * header and dense Spacing (T8): switched to Classic untouched, a résumé prints what one started on
  * Classic prints, while a font or a spacing the user picked on Academic stays theirs.
  */
-export function styleOnSwitch(settings, from, to) {
-  const was = templateStyleDefaults(from);
-  const next = templateStyleDefaults(to);
+export function styleOnSwitch(settings, from, to, preset = '') {
+  // A design (R2-138) is a template's style and more: what it set leaves with it where the résumé
+  // still holds it, as a template's own does, and the design picked brings its whole look.
+  const was = designStyle(from, settings);
+  const next = designStyle(to, { templatePreset: preset });
   const out = { ...settings };
+  delete out.templatePreset;
   for (const [key, value] of Object.entries(was)) {
     if (key in next || out[key] !== value) continue;
     if (key in ATS_DEFAULTS) out[key] = ATS_DEFAULTS[key];
     else delete out[key];
   }
-  return { ...out, ...next };
+  return { ...out, ...next, ...(presetOf({ templatePreset: preset }, to) ? { templatePreset: preset } : {}) };
 }
 
 /**
@@ -91,7 +95,8 @@ export function resetDesignSettings(settings, template) {
   const icons = settings?.customContactIcons;
   const uploads = icons && typeof icons === 'object' && !Array.isArray(icons) ? { ...icons } : {};
   const layout = settings?.sidebarSingleColumn === true ? { sidebarSingleColumn: true } : {};
-  return { ...defaultSettings(template), ...layout, customContactIcons: uploads };
+  const design = presetOf(settings, template) ? { templatePreset: settings.templatePreset } : {};
+  return { ...defaultSettings(template, settings), ...layout, ...design, customContactIcons: uploads };
 }
 
 /**
@@ -106,7 +111,7 @@ export function settingsAfterReset(resume) {
  * A section's reset: its settings keys back to the template's defaults (W1b-6.2).
  */
 export function sectionReset(template, keys, settings = {}) {
-  const defaults = defaultSettings(template);
+  const defaults = defaultSettings(template, settings);
   const next = { ...settings };
   for (const k of keys) {
     if (k in defaults) next[k] = defaults[k];
