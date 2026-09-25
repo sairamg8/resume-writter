@@ -10,6 +10,10 @@ import { Board } from '@/pages/Board';
 import { Backlog } from '@/pages/Backlog';
 import { BoardSettings } from '@/pages/BoardSettings';
 import { YourWork } from '@/pages/YourWork';
+import { ProjectSummary } from '@/pages/ProjectSummary';
+import { ProjectList } from '@/pages/ProjectList';
+import { ProjectCalendar } from '@/pages/ProjectCalendar';
+import { ProjectTimeline } from '@/pages/ProjectTimeline';
 import TermsPage from '@/pages/TermsPage';
 import PrivacyPage from '@/pages/PrivacyPage';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
@@ -76,6 +80,10 @@ export function AppRoutes({ store, auth, sync, seed }) {
           <Route path="/work"                element={<YourWork />} />
           <Route path="/boards/:id"          element={<Board />} />
           <Route path="/boards/:id/backlog"  element={<Backlog />} />
+          <Route path="/boards/:id/summary"  element={<ProjectSummary />} />
+          <Route path="/boards/:id/timeline" element={<ProjectTimeline />} />
+          <Route path="/boards/:id/calendar" element={<ProjectCalendar />} />
+          <Route path="/boards/:id/list"     element={<ProjectList />} />
           <Route path="/boards/:id/settings" element={<BoardSettings />} />
         </Route>
         <Route path="/terms"      element={<TermsPage />} />

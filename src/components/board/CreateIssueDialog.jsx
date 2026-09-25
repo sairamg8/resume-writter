@@ -17,7 +17,7 @@ function initialDraft(board, defaults = {}) {
     columnId: defaults.columnId && board?.columns.some((c) => c.id === defaults.columnId) ? defaults.columnId : defaultColumnId(board ?? { columns: [] }),
     priority: 'medium',
     labelIds: [],
-    due: '',
+    due: defaults.due ?? '',
     startDate: '',
     estimate: null,
     epicId: defaults.epicId ?? null,
