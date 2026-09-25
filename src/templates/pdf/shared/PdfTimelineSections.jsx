@@ -5,7 +5,7 @@ import { PdfRichText } from './PdfRichText';
 import { ContactValue } from './PdfContact';
 import { breakLinks } from './pdfFontLoader';
 import { hasRichText, safeHref } from '@/utils/richText';
-import { dateRange, endDateOf, formatDate, presentLabel } from '@/utils/dates';
+import { dateRange, endDateOf, formatDate, presentLabel, startDateOf } from '@/utils/dates';
 import { SPACER, SectionTitleOf, SectionRouter, RenderBullets, shadesOf } from './PdfSections';
 import { TimelineEntries, TimelineHead } from './PdfTimeline';
 
@@ -45,7 +45,7 @@ const FIELDS = {
       primary: item.institution,
       sub: degree + (item.gpa ? ` · GPA: ${item.gpa}` : ''),
       loc: s.showLocation !== false ? (item.location || '') : '',
-      dateStr: s.showDates !== false ? dateRange(item.startDate, endDateOf(item, settings), settings) : '',
+      dateStr: s.showDates !== false ? dateRange(startDateOf(item), endDateOf(item, settings), settings) : '',
       desc: item.description,
       step: 0.5,
     };
@@ -54,7 +54,7 @@ const FIELDS = {
     primary: item.role,
     sub: item.org || '',
     loc: s.showLocation !== false ? (item.location || '') : '',
-    dateStr: s.showDates !== false ? dateRange(item.startDate, endDateOf(item, settings), settings) : '',
+    dateStr: s.showDates !== false ? dateRange(startDateOf(item), endDateOf(item, settings), settings) : '',
     desc: item.description,
     step: 0.5,
   }),
@@ -71,7 +71,7 @@ const FIELDS = {
     primary: item.name,
     subLine: projectLine(item, settings),
     loc: '',
-    dateStr: s.showDates !== false ? dateRange(item.startDate, endDateOf(item, settings), settings) : '',
+    dateStr: s.showDates !== false ? dateRange(startDateOf(item), endDateOf(item, settings), settings) : '',
     desc: item.description,
     step: 0.5,
     stacked: true,

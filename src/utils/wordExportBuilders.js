@@ -11,7 +11,7 @@ import { resolveTemplateSettings } from '@/templates/pdf/shared/templateSettings
 import { getDateColor, getEffectiveSpacing } from '@/templates/pdf/shared/PdfSections';
 import { fieldGap } from '@/templates/pdf/shared/PdfItemHeader';
 import { hasRichText } from '@/utils/richText';
-import { dateRange, endDateOf, formatDate, presentLabel } from '@/utils/dates';
+import { dateRange, endDateOf, formatDate, presentLabel, startDateOf } from '@/utils/dates';
 import { skillCategory, skillGroup, skillSeparator } from '@/utils/skills';
 
 /**
@@ -137,7 +137,7 @@ export function buildEducation(section, accentHex, settings, centered, dateHex, 
     const location = s.showLocation !== false ? item.location : '';
     // The degree and GPA are the second field, the PDF's sub line; without a school the degree leads.
     const sub = [item.institution ? degree : '', item.gpa ? `GPA: ${item.gpa}` : ''].filter(Boolean).join(' · ');
-    return [header(item.institution || degree, sub, s.showDates !== false ? dateRange(item.startDate, endDateOf(item, settings), settings) : '', dateHex, centered, look, place(location, look)), ...body(item, centered, look)];
+    return [header(item.institution || degree, sub, s.showDates !== false ? dateRange(startDateOf(item), endDateOf(item, settings), settings) : '', dateHex, centered, look, place(location, look)), ...body(item, centered, look)];
   })];
 }
 
@@ -203,7 +203,7 @@ export function buildProjects(section, accentHex, settings, centered, dateHex, l
       first(item.name, look),
       ...(item.technologies ? [second(` · ${item.technologies}`, look, look.ink.tech)] : []),
       ...(item.url ? [second(' · ', look, accentHex, look.link), linked(item.url, item.url, { size: look.link, color: accentHex })] : []),
-    ], s.showDates !== false ? dateRange(item.startDate, endDateOf(item, settings), settings) : '', dateHex, centered, look),
+    ], s.showDates !== false ? dateRange(startDateOf(item), endDateOf(item, settings), settings) : '', dateHex, centered, look),
     ...body(item, centered, look),
   ])];
 }
@@ -250,7 +250,7 @@ export function buildVolunteering(section, accentHex, settings, centered, dateHe
   const s = section.settings || {};
   return [sectionHeading(section.title, accentHex, centered, section.heading), ...entries(section, look, (item) => {
     const location = s.showLocation !== false ? item.location : '';
-    return [header(item.role || item.org, item.role ? item.org : '', s.showDates !== false ? dateRange(item.startDate, endDateOf(item, settings), settings) : '', dateHex, centered, look, place(location, look)), ...body(item, centered, look)];
+    return [header(item.role || item.org, item.role ? item.org : '', s.showDates !== false ? dateRange(startDateOf(item), endDateOf(item, settings), settings) : '', dateHex, centered, look, place(location, look)), ...body(item, centered, look)];
   })];
 }
 
