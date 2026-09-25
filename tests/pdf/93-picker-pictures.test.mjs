@@ -79,6 +79,24 @@ describe('a résumé\'s dashboard picture (C1)', () => {
     assert.equal(storage.getItem('cpwtcv_v1').length, 2000, 'the résumés are written');
     assert.equal(storage.getItem(KEY), null, 'the pictures made room');
     assert.ok(storage.getItem('cpwtcv_v1_backup_1'), 'the backup is kept');
+    // The next picture painted is saved alone: the ones dropped are not written back with it.
+    savePicture('r2', 'h', 'data:r2');
+    assert.deepEqual(Object.keys(JSON.parse(storage.getItem(KEY))), ['r2']);
+  });
+
+  it('a picture saved, or a prune, after another tab pruned the pictures never writes back the ones it pruned', async () => {
+    const storage = new MemoryStorage();
+    const { savePicture, keepPageImagesOf } = await pictures(storage);
+    savePicture('resume_a', 'h', 'data:a');
+    savePicture('resume_gone', 'h', 'data:gone');
+    // Another tab's store write: its account signed out, and only resume_a's picture is left.
+    storage.setItem(KEY, JSON.stringify({ resume_a: JSON.parse(storage.getItem(KEY)).resume_a }));
+    savePicture('resume_b', 'h', 'data:b');
+    assert.equal(JSON.parse(storage.getItem(KEY)).resume_gone, undefined, 'saving a picture');
+    // A full storage dropped every picture since; this tab's own prune must not write them back.
+    storage.removeItem(KEY);
+    keepPageImagesOf([{ id: 'resume_a' }]);
+    assert.equal(storage.getItem(KEY), null, 'pruning');
   });
 
   it('the store\'s writes keep only the pictures of the résumés it holds', async () => {

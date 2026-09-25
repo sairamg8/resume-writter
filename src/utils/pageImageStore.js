@@ -86,7 +86,9 @@ export function requestPicture(key, make, done) {
 // ── A résumé's dashboard picture, kept across visits (C1) ────────────────
 
 // What is saved, read from storage once and then kept here: the dashboard asks on every render, and
-// the store's every write (keepPageImagesOf).
+// the store's every write (keepPageImagesOf). A write reads storage again first: it may have changed
+// under this copy — a full storage dropped the pictures (setItemWithRoom), another tab pruned them (its
+// account signed out) — and writing the copy back would bring back what was dropped.
 let saved = null;
 
 function readSaved() {
@@ -114,6 +116,7 @@ export function savedPicture(id, hash) {
 
 /** Keep `url` as résumé `id`'s picture at `hash`; the least recently painted go past SAVED_KEPT. */
 export function savePicture(id, hash, url) {
+  saved = null;
   const next = { ...readSaved(), [id]: { h: hash, url, t: Date.now() } };
   // The one just painted first: several painted in one millisecond tie on `t`.
   const ids = [id, ...Object.keys(next).filter((k) => k !== id).sort((a, b) => (next[b].t || 0) - (next[a].t || 0))];
@@ -128,5 +131,6 @@ export function keepPageImagesOf(resumes) {
   const ids = new Set((resumes || []).map((r) => r?.id));
   const all = readSaved();
   if (Object.keys(all).every((id) => ids.has(id))) return;
-  writeSaved(Object.fromEntries(Object.entries(all).filter(([id]) => ids.has(id))));
+  saved = null;
+  writeSaved(Object.fromEntries(Object.entries(readSaved()).filter(([id]) => ids.has(id))));
 }
