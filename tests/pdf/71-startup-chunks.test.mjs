@@ -90,3 +90,27 @@ describe('the start-up path loads no PDF or Word library (R2-014)', () => {
     assert.ok(out.startup.has(withReact[0]), `${withReact[0]} is on the start-up path`);
   });
 });
+
+// The dashboard loads light (R2-142, PERF-5): every page was in the entry chunk — the editor with its
+// panels, the ATS checker, the job tracker and the boards, drag and drop — 704 kB the dashboard
+// downloaded and parsed before its first paint, and Firebase came as one 532 kB chunk. Each page but
+// the dashboard and the legal pages now loads when its route opens, and no start-up chunk is over the
+// build's 500 kB warning.
+const PAGES = /[\\/]src[\\/]pages[\\/](Editor|JobTracker|JobDetail|JobForm|Boards|Board|Backlog|BoardSettings|YourWork)\.jsx$/;
+const KB = 1024;
+
+describe('the dashboard loads light: the other pages are split from the start-up path (R2-142, PERF-5)', () => {
+  it('no editor or workspace page is on the start-up path — each is in the build, loaded with its route', () => {
+    const on = [...out.startup].flatMap((name) => out.chunks.get(name).moduleIds.filter((id) => PAGES.test(id)).map(short));
+    assert.deepEqual(on.map((id) => id.replace(/.*src\//, 'src/')), [], 'pages downloaded before the dashboard paints');
+    const split = [...out.chunks.values()].filter((c) => !out.startup.has(c.fileName) && c.moduleIds.some((id) => PAGES.test(id)));
+    assert.ok(split.length >= 5, `the pages are lazy chunks of the build (${split.length})`);
+  });
+
+  it('no start-up chunk is over 500 kB, and all of them are under 1.1 MB together', () => {
+    const sizes = [...out.startup].map((name) => [name, out.chunks.get(name).code.length]);
+    assert.deepEqual(sizes.filter(([, n]) => n > 500 * KB).map(([name, n]) => `${name} ${Math.round(n / KB)} kB`), []);
+    const total = sizes.reduce((sum, [, n]) => sum + n, 0);
+    assert.ok(total < 1100 * KB, `the start-up path is ${Math.round(total / KB)} kB (was 1,443 kB)`);
+  });
+});

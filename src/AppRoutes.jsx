@@ -1,20 +1,31 @@
-import { useLayoutEffect, useMemo } from 'react';
+import { Suspense, lazy, useLayoutEffect, useMemo } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigationType } from 'react-router-dom';
 import { Dashboard } from '@/pages/Dashboard';
-import { Editor } from '@/pages/Editor';
-import { JobTracker } from '@/pages/JobTracker';
-import { JobDetail } from '@/pages/JobDetail';
-import { JobForm } from '@/pages/JobForm';
-import { Boards } from '@/pages/Boards';
-import { Board } from '@/pages/Board';
-import { Backlog } from '@/pages/Backlog';
-import { BoardSettings } from '@/pages/BoardSettings';
-import { YourWork } from '@/pages/YourWork';
 import TermsPage from '@/pages/TermsPage';
 import PrivacyPage from '@/pages/PrivacyPage';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { WorkspaceLayout, sidebarProjects } from '@/components/shell';
 import { useBoardStore } from '@/hooks/useBoardStore';
+
+// The editor and the workspace pages are split from the start-up code (R2-142, PERF-5): the entry
+// held every page — the editor's panels, the ATS checker, the boards, drag and drop — so the
+// dashboard downloaded and parsed ~700 kB before its first paint. Each now loads when its route is
+// first opened; the dashboard and the legal pages, small and reached first, stay in the entry.
+const page = (load, name) => lazy(() => load().then((m) => ({ default: m[name] })));
+const Editor        = page(() => import('@/pages/Editor'), 'Editor');
+const JobTracker    = page(() => import('@/pages/JobTracker'), 'JobTracker');
+const JobDetail     = page(() => import('@/pages/JobDetail'), 'JobDetail');
+const JobForm       = page(() => import('@/pages/JobForm'), 'JobForm');
+const Boards        = page(() => import('@/pages/Boards'), 'Boards');
+const Board         = page(() => import('@/pages/Board'), 'Board');
+const Backlog       = page(() => import('@/pages/Backlog'), 'Backlog');
+const BoardSettings = page(() => import('@/pages/BoardSettings'), 'BoardSettings');
+const YourWork      = page(() => import('@/pages/YourWork'), 'YourWork');
+
+/** What shows for the moment a page's code is on its way. */
+function PageLoading() {
+  return <div className="min-h-screen flex items-center justify-center text-sm text-gray-400">Loading…</div>;
+}
 
 /**
  * The workspace shell (sidebar + scrolling main) as a layout route, its sidebar's projects read
@@ -43,7 +54,7 @@ function RouteFrame({ children }) {
     // Only a new path moves the scroll; the way we came is read with it.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
-  return <ErrorBoundary resetKey={pathname}>{children}</ErrorBoundary>;
+  return <ErrorBoundary resetKey={pathname}><Suspense fallback={<PageLoading />}>{children}</Suspense></ErrorBoundary>;
 }
 
 /**
