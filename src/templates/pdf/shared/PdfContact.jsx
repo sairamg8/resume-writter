@@ -102,6 +102,11 @@ export function ContactValue({ value, href, style, hyphenationCallback }) {
   if (!href) return <Text style={style} hyphenationCallback={hyphenationCallback}>{value}</Text>;
   // Plain adds nothing: the link prints exactly as it always has.
   const own = Object.keys(look).length ? look : undefined;
+  // react-pdf draws no underline for a Text inside a Link laid out as a box, only for a Link that is a
+  // run of a Text: Underline prints the value as that run, in a Text of the same style.
+  if (look.textDecoration) {
+    return <Text style={style} hyphenationCallback={hyphenationCallback}><Link src={href} style={{ textDecoration: 'none', ...own }}>{value}</Link></Text>;
+  }
   return <Link src={href} style={{ ...style, textDecoration: 'none', ...own }}><Text style={own} hyphenationCallback={hyphenationCallback}>{value}</Text></Link>;
 }
 
