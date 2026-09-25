@@ -80,6 +80,24 @@ describe('the fit ladder (pageFit.js)', () => {
     assert.equal(fit.pages, 2);
   });
 
+  it('stops, printing nothing more, once `stopped()` says the résumé it measures is gone', async () => {
+    const { fitOnePage } = await loadModule('/src/utils/pageFit.js');
+    let printed = 0;
+    const fit = await fitOnePage(long(1), { countPages: async () => { printed += 1; return 3; }, stopped: () => printed >= 2 });
+    assert.equal(fit, null, 'no step to write');
+    assert.equal(printed, 2, 'no step printed after it stopped');
+  });
+
+  it('keys a résumé by what prints: a copy with its keys in another order matches, an edit does not', async () => {
+    const { printedKey } = await loadModule('/src/utils/pageFit.js');
+    const r = long(2, { marginV: 12, font: 'Inter' });
+    const copy = JSON.parse(JSON.stringify({ updatedAt: 1, settings: { font: 'Inter', marginV: 12 }, personal: r.personal, sections: r.sections, template: r.template }));
+    assert.equal(printedKey(copy), printedKey(r), 'another tab\'s save of the same résumé');
+    assert.notEqual(printedKey({ ...r, template: r.template === 'modern' ? 'classic' : 'modern' }), printedKey(r), 'another template');
+    assert.notEqual(printedKey({ ...r, settings: { ...r.settings, marginV: 13 } }), printedKey(r), 'a setting');
+    assert.notEqual(printedKey({ ...r, personal: { ...r.personal, name: 'Robin V.' } }), printedKey(r), 'the content');
+  });
+
   it('a smaller base keeps each size delta printing in its row\'s range, as the Base control does', async () => {
     const { fitLadder } = await loadModule('/src/utils/pageFit.js');
     // Full Name prints base + delta and may not print smaller than the base: delta −1 on 11 pt is out of range at any base.
@@ -154,7 +172,7 @@ describe('the 1-Page Fit button', () => {
       await new Promise((res) => { setTimeout(res, 0); });
     };
     const notice = () => all().find((el) => el.tagName === 'P' && /pages at the tightest spacing|Could not measure/.test(el.textContent))?.textContent.trim();
-    return { writes, button, settled, notice, settings: () => current.settings, unmount: () => view.unmount() };
+    return { writes, button, settled, notice, updateSetting, settings: () => current.settings, unmount: () => view.unmount() };
   }
 
   it('writes the preset at once, shows it is busy, ignores a second click and writes nothing more for a résumé that fits', async () => {
@@ -184,6 +202,19 @@ describe('the 1-Page Fit button', () => {
       const tightest = fitLadder(r.settings).at(-1);
       assert.deepEqual(Object.fromEntries(Object.keys(tightest).map((k) => [k, p.settings()[k]])), tightest, 'the tightest step is stored');
       assert.match(p.notice() || '', /^Still \d+ pages at the tightest spacing — shorten the content to fit one page\.$/);
+    } finally { await p.unmount(); }
+  });
+
+  it('a résumé changed while it measures keeps the change: the steps measured before it are not written', async () => {
+    const p = await panel(long(60));
+    try {
+      reactProps(p.button()).onClick();
+      p.updateSetting('marginV', 20); // typed into Top / Bottom margin while the first step prints
+      const count = p.writes.length;
+      await p.settled();
+      assert.deepEqual(p.writes.slice(count), [], 'nothing written after the edit');
+      assert.equal(p.settings().marginV, 20, 'the margin typed stays');
+      assert.equal(p.notice(), undefined, 'no page count for a résumé it did not finish measuring');
     } finally { await p.unmount(); }
   });
 });

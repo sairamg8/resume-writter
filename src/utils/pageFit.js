@@ -57,15 +57,28 @@ async function printedPages(resume) {
 }
 
 /**
+ * What of `resume` prints — its template, content and settings — as one string whose object keys are
+ * sorted: the same for a copy of it (another tab's save, a sync) and different after any edit.
+ */
+export function printedKey(resume) {
+  const sorted = (v) => (Array.isArray(v) ? v.map(sorted)
+    : v && typeof v === 'object' ? Object.fromEntries(Object.keys(v).sort().map((k) => [k, sorted(v[k])])) : v);
+  const { template, sections, personal, settings } = resume || {};
+  return JSON.stringify(sorted({ template, sections, personal, settings }));
+}
+
+/**
  * Find the loosest step of fitLadder that prints `resume` on one page. `countPages(resume)` is the
  * page counter (the app's own render by default). Resolves to `{ settings, pages, step }`: the
  * settings to write (a step's values), the page count at them, and the step's index — the last
- * step, with its page count still over one, when none fits.
+ * step, with its page count still over one, when none fits. `stopped()` is asked before each step:
+ * true (the panel closed, the résumé changed) resolves to null, with nothing more printed.
  */
-export async function fitOnePage(resume, { countPages = printedPages } = {}) {
+export async function fitOnePage(resume, { countPages = printedPages, stopped = () => false } = {}) {
   const ladder = fitLadder(resume.settings || {});
   let pages = 0;
   for (let step = 0; step < ladder.length; step += 1) {
+    if (stopped()) return null;
     pages = await countPages({ ...resume, settings: { ...resume.settings, ...ladder[step] } });
     if (pages <= 1) return { settings: ladder[step], pages, step };
   }

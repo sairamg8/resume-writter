@@ -17,7 +17,7 @@ import {
   getIconSetId,
 } from '@/utils/contactIcons';
 import { CONTACT_FIELDS } from '@/utils/contacts';
-import { ONE_PAGE_FIT, fitOnePage } from '@/utils/pageFit';
+import { ONE_PAGE_FIT, fitOnePage, printedKey } from '@/utils/pageFit';
 
 const COLOR_KEYS      = ['accentColor', 'textColor', 'sidebarBg', 'headerTextColor', 'nameColor', 'jobTitleColor'];
 const TYPOGRAPHY_KEYS = ['font', 'fontSize', 'fontSizeBase', 'fontSizeNameDelta', 'fontSizeSectionDelta', 'fontSizeEntryDelta', 'customFont', 'iconSize'];
@@ -47,8 +47,9 @@ export default function DesignPanel({ resume, updateSetting, setTemplate, resetS
   /**
    * 1-Page Fit (R2-149): the preset at once, then the résumé is printed at it and, while it runs past
    * one page, at each tighter step (pageFit.js) — the first that fits is written. Left mid-measure
-   * (another résumé, the editor closed), nothing more is written: updateSetting writes to whichever
-   * résumé is open.
+   * (another résumé, the editor closed) or changed while it measures (another template, a margin
+   * typed, Reset), it stops and writes nothing more: the steps were measured on a résumé no longer
+   * there, and updateSetting writes to whichever résumé is open.
    */
   async function fitToOnePage() {
     if (fitRun.current) return;
@@ -57,10 +58,14 @@ export default function DesignPanel({ resume, updateSetting, setTemplate, resetS
     setFitNotice('');
     Object.entries(ONE_PAGE_FIT).forEach(([k, v]) => updateSetting(k, v));
     const id = resume.id;
+    const measured = { ...resume, settings: { ...settings, ...ONE_PAGE_FIT } };
+    // As clicked (the preset's writes not rendered yet) or with the preset: anything else is an edit.
+    const keys = new Set([printedKey(resume), printedKey(measured)]);
+    const stopped = () => !mounted.current || latest.current?.id !== id || !keys.has(printedKey(latest.current));
     let notice = '';
     try {
-      const fit = await fitOnePage({ ...resume, settings: { ...settings, ...ONE_PAGE_FIT } });
-      if (!mounted.current || latest.current?.id !== id) return;
+      const fit = await fitOnePage(measured, { stopped });
+      if (!fit || stopped()) return;
       Object.entries(fit.settings).forEach(([k, v]) => { if (ONE_PAGE_FIT[k] !== v) updateSetting(k, v); });
       if (fit.pages > 1) notice = `Still ${fit.pages} pages at the tightest spacing — shorten the content to fit one page.`;
     } catch {
