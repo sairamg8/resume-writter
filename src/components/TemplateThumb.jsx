@@ -52,7 +52,7 @@ export function TemplateThumb({ card, size = 'sm', picture = false, letter = fal
   const accent = resume.settings.accentColor || '#2563eb';
   const box = size === 'lg' ? 'w-full aspect-[210/297]' : 'w-10 h-14';
   return (
-    <div ref={ref} data-look-thumb={letter ? 'letter' : 'page'} className={`${box} relative shrink-0 overflow-hidden rounded bg-white`}>
+    <div ref={ref} data-look-thumb={letter ? 'letter' : 'page'} data-look-of={own ? source.id : undefined} className={`${box} relative shrink-0 overflow-hidden rounded bg-white`}>
       {url ? (
         <img data-page-image="" src={url} alt="" className="absolute inset-0 w-full h-full object-cover object-top" />
       ) : (

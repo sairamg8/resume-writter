@@ -43,13 +43,16 @@ resume-writter/
 │   │   ├── useAuth.js, useCloudSync.js, useCollectionSync.js (jobs + boards sync), useDemoSeed.js
 │   │   ├── useJobStore.js, useJobStages.js, useBoardStore.js
 │   │   ├── useEditorExports.js, useEditorTab.js, usePanelResize.js, useOpenResume.js
+│   │   ├── useOverlayClose.js  # a modal's backdrop: a click beside the box closes it
 │   │   └── useMediaQuery.js, useHotkeys.js, useSmallerPhotos.js, …
 │   ├── pages/                 # Dashboard, Editor, JobTracker, JobDetail, JobForm, Boards, Board,
 │   │                          # Backlog, BoardSettings, YourWork, PrivacyPage, TermsPage,
-│   │                          # PublicResume (#/r/:shareId)
+│   │                          # PublicResume (#/r/:shareId), NewResume (#/new: every look drawn
+│   │                          # with the user's own résumé; a click starts a copy of it on that look)
 │   ├── templates/pdf/         # one react-pdf file per template, the cover letter, and shared/
 │   └── utils/
 │       ├── normalizeResume.js, dataVersion.js, defaultData*.js, starter*.js  # the data model
+│       ├── letters.js, newResume.js  # a new letter / a new résumé from one of the user's résumés
 │       ├── pdfExportReactPDF.js                                      # PDF render + download
 │       ├── templatePicker.js   # Design → Template's cards, built from the table, designs and saved designs
 │       ├── pageImage.js, pageImageStore.js, pdfjsLoader.js  # page-1 pictures: painted, queued, kept
