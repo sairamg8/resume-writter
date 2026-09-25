@@ -89,8 +89,9 @@ const MARKER = /^(?:[•◦▪▸‣⁃●○■–-]|\d{1,2}[.)]|[a-z][.)]|[ivx
 
 /**
  * One page's text items `{ str, x, y, w, h }` (y the baseline from the page's foot, pt) as lines, top
- * to bottom: items on one baseline are one line, in x order — a word gap a space, a wide gap (a date
- * at the right margin, the gap between two contacts, two grid cells) a tab. A list item's marker
+ * to bottom: items on one baseline are one line, in x order — a word gap a space, a wider gap (a date
+ * at the right margin, two contacts, two grid cells; the app sets two fields on a line at least 0.7 em
+ * apart, PdfItemHeader's fieldGap) a tab. A list item's marker
  * joins its text with a space. Each line keeps where it starts and ends, and its text height.
  */
 export function pdfPageLines(items) {
@@ -115,7 +116,7 @@ export function pdfPageLines(items) {
         const gap = it.x - (prev.x + prev.w);
         const marker = i === 1 && MARKER.test(prev.str.trim());
         if (marker) { text = `${text.trim()} `; textX = it.x; }
-        else if (gap > Math.max(7, row.h * 0.9)) text = `${text.trimEnd()}\t`;
+        else if (gap > Math.max(5, row.h * 0.55)) text = `${text.trimEnd()}\t`;
         else if (gap > row.h * 0.12 && !/\s$/.test(text) && !/^\s/.test(it.str)) text += ' ';
       }
       text += it.str;

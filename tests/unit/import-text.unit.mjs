@@ -208,4 +208,10 @@ describe('the pieces', () => {
     assert.deepEqual(pdfPageLines(page).map((l) => l.text), ['Northwind Analytics\tMar 2021 – Present', '• Built the pipeline that feeds every dashboard in the company and', 'more', '• Cut costs.']);
     assert.deepEqual(pdfLinesOfPages([page]).map((l) => l.text), ['Northwind Analytics\tMar 2021 – Present', '• Built the pipeline that feeds every dashboard in the company and more', '• Cut costs.', '']);
   });
+
+  test('PDF: two fields the app sets 8 pt apart on one line (PdfItemHeader\'s fieldGap) are two fields, not one', () => {
+    const item = (str, x, w) => ({ str, x, y: 700, w, h: 12 });
+    assert.deepEqual(pdfPageLines([item('Senior Data Engineer', 40, 120), item('Northwind Analytics', 168, 110)]).map((l) => l.text), ['Senior Data Engineer\tNorthwind Analytics']);
+    assert.deepEqual(pdfPageLines([item('Senior', 40, 38), item('Data', 81, 26)]).map((l) => l.text), ['Senior Data'], 'a word gap stays a space');
+  });
 });
