@@ -7,7 +7,7 @@ import { wordPhoto } from '@/utils/wordExportPhoto';
 import { contactRows } from '@/utils/wordExportContacts';
 import { buildSectionTitle } from '@/utils/wordExportBuilders';
 import { contactItems } from '@/utils/contacts';
-import { hasHeaderControls, headerBorderOn, headerTemplateId, photoRowDirection, templateId } from '@/constants/templates';
+import { hasHeaderControls, headerBorderOn, photoRowDirection, templateId } from '@/constants/templates';
 import { solid, textShades } from '@/templates/pdf/shared/pdfColors';
 import { headerColorsOnPage } from '@/templates/pdf/shared/headerColors';
 import { headerRule, headerTitleSize, inlineLayout, letterheadLook } from '@/templates/pdf/shared/letterhead';
@@ -88,11 +88,10 @@ export function buildPersonalSection(personal = {}, settings = {}, template = 'c
   const stacked = title && !inline;
   // The photo beside the name, as the PDF's header row: its cell the photo's width and the Photo ↔
   // Text gap, the contacts laid out in what is left. Above the name in a centred header and on the
-  // Sidebar, whose column stacks them (R2-126) — not its Single · ATS-safe Layout, which prints
-  // Classic's header, the photo beside the name as in its PDF.
+  // Sidebar, whose column stacks them (R2-126).
   const photo = wordPhoto(personal, s, template);
   const gap = s.headerGaps?.photoTextGap ?? 12;
-  const beside = photo && !centered && headerTemplateId(template, s) !== 'sidebar';
+  const beside = photo && !centered && templateId(template) !== 'sidebar';
   if (photo && !beside) paragraphs.push(new Paragraph({ children: [photo.run], spacing: { after: twips(gap) }, ...centredIf(centered) }));
   paragraphs.push(new Paragraph({
     children: inline ? [name, inlineGap(inline.gap, titleSize), title] : [name],
