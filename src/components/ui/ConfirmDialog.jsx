@@ -119,3 +119,14 @@ export function useConfirm() {
   if (!confirm) throw new Error('useConfirm() needs a <ConfirmProvider> above it (WorkspaceLayout mounts one).');
   return confirm;
 }
+
+/** Without a provider: the browser's own question, with the title as its text. */
+const nativeConfirm = async ({ title }) => (typeof window !== 'undefined' && typeof window.confirm === 'function' ? window.confirm(title) : false);
+
+/**
+ * useConfirm() for a page that also renders outside the workspace shell (a page test, an embed):
+ * the kit's dialog under a ConfirmProvider, else the browser's confirm() asking the title.
+ */
+export function useConfirmOptional() {
+  return useContext(ConfirmContext) ?? nativeConfirm;
+}

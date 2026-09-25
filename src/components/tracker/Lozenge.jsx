@@ -18,6 +18,8 @@ const BUTTON_TONES = {
   todo: 'bg-loz-todo text-loz-todo-ink hover:bg-[#c7ccd4]',
   inprogress: 'bg-brand text-white hover:bg-brand-hover',
   done: 'bg-[#1f845a] text-white hover:bg-[#216e4e]',
+  warning: 'bg-[#f8e6a0] text-[#7f5f01] hover:bg-[#f5cd47]',
+  danger: 'bg-[#ffd5d2] text-[#ae2e24] hover:bg-[#fd9891]',
 };
 
 /** A status in the tracker's compact caps: `tone` a category id or a LOZENGE_TONES key. */
@@ -39,7 +41,8 @@ export function Lozenge({ tone = 'todo', children, className, title }) {
  * The status picker of an issue or a job: a button in its category's colour naming the status
  * ("In Progress ▾"), opening a menu of every status as a lozenge.
  *
- * - `value`: the chosen status id; `options`: `[{ id, name, category }]`; `onChange(id)`.
+ * - `value`: the chosen status id; `options`: `[{ id, name, category }]` (category 'todo' |
+ *   'inprogress' | 'done', or a job's 'warning' | 'danger'); `onChange(id)`.
  * - `label`: the menu's accessible name ('Status'); `size`: 'sm' | 'md'.
  */
 export function StatusMenu({ value, options, onChange, label = 'Status', size = 'md', className }) {
