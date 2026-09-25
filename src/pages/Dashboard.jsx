@@ -12,7 +12,8 @@ import { notSavedMessage } from '@/utils/storageBackup';
 import { comesStraightBack, isDemoAccount, isOriginal } from '@/utils/demoSeed';
 import { DEMO_ACCOUNTS } from '@/utils/demoAccounts';
 import { isJsonResume, jsonResumeToCpwtResume } from '@/utils/jsonResume';
-import { isLetter, letterSources } from '@/utils/letters';
+import { editorPath, isLetter, letterSources } from '@/utils/letters';
+import { normalizeResume } from '@/utils/normalizeResume';
 import { DOCUMENT_HINT, IMPORT_ACCEPT, importDocument, isDocumentFile } from '@/utils/importDocument';
 
 const IMPORT_BUTTON = 'flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 bg-white border border-gray-200 text-gray-700 rounded-lg text-xs sm:text-sm font-semibold hover:bg-gray-50 transition-colors shadow-sm whitespace-nowrap';
@@ -110,7 +111,8 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false }) {
         if (parsed?.personal && Array.isArray(parsed?.sections)) {
           const id = store.importResume(parsed, { keep: keeps && importAsOriginal.current });
           setImportError(null);
-          navigate(`/resume/${id}`);
+          // A letter's file (an older build's 'Cover Letter' too, marked on import) opens on its letter.
+          navigate(editorPath(id, normalizeResume(parsed)));
         } else if (isJsonResume(parsed)) {
           const converted = jsonResumeToCpwtResume(parsed);
           const id = store.importResume(converted, { keep: keeps && importAsOriginal.current });

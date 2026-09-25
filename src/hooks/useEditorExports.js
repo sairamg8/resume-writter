@@ -8,6 +8,8 @@ import { generateMarkdownResume } from '@/utils/markdownExport';
 import { generateCoverLetterPlainText } from '@/utils/coverLetterText';
 import { isJsonResume, jsonResumeToCpwtResume, cpwtResumeToJsonResume } from '@/utils/jsonResume';
 import { importDocument } from '@/utils/importDocument';
+import { normalizeResume } from '@/utils/normalizeResume';
+import { editorPath } from '@/utils/letters';
 
 /**
  * The editor's Export menu: PDF and Word of the tab on screen (résumé or cover letter), the
@@ -105,7 +107,8 @@ export function useEditorExports({ resume, activeTab, authUser, importResume, na
     try {
       const resumeData = isJsonResume(data) ? jsonResumeToCpwtResume(data) : data;
       const newId = importResume(resumeData, { keep: keeps && asOriginal });
-      navigate(`/resume/${newId}`);
+      // A letter's file (an older build's 'Cover Letter' too, marked on import) opens on its letter.
+      navigate(editorPath(newId, normalizeResume(resumeData)));
     } catch (e) {
       console.error('Import failed:', e);
       setExportError(`Import failed${e?.message ? ` (${e.message})` : ''}. Check the file and try again.`);

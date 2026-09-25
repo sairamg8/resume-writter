@@ -14,6 +14,9 @@ export const LETTER_NAME = 'Cover Letter';
 
 export const isLetter = (r) => r?.kind === LETTER_KIND;
 
+/** Where the editor opens the record `id`: a letter on its letter's tab, as its card's Edit does. */
+export const editorPath = (id, record) => (isLetter(record) ? `/resume/${id}?tab=coverletter` : `/resume/${id}`);
+
 /**
  * The résumés a new letter can take its sender from — every record that is not a letter — the most
  * recently edited first (a record with no time last, in list order).

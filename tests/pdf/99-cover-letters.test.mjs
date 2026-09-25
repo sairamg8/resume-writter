@@ -389,3 +389,69 @@ describe('a \'Cover Letter\' résumé an older build saved (R2-135, data version
     } finally { await app.close(); }
   });
 });
+
+describe('a letter\'s JSON file, imported, opens on its letter (R2-135 review)', () => {
+  /** A FileReader stand-in that reads `contents`. */
+  const readerOf = (contents) => class {
+    readAsText() { setTimeout(() => this.onload?.({ target: { result: contents } }), 0); }
+  };
+
+  /** Dashboard → Import of `record` as a .json file: where the page goes, and the store after. */
+  async function importOnDashboard(record) {
+    const app = await openApp([cv('resume_a', 'Design CV', JORDAN, 1000)]);
+    const saved = globalThis.FileReader;
+    globalThis.FileReader = readerOf(JSON.stringify(record));
+    try {
+      const input = [...elements(app.view.container)].find((el) => el.tagName === 'INPUT' && el.type === 'file');
+      await app.fire(input, 'onChange', { target: { files: [{ name: 'backup.json' }], value: '' } });
+      // The reader's onload, then the navigation it starts and the store's save.
+      await new Promise((r) => { setTimeout(r, 20); });
+      for (let i = 0; i < 10; i += 1) { await new Promise((r) => { setImmediate(r); }); app.view.act(() => {}); }
+      return { where: app.where(), active: app.active(), counts: (await app.press('Back to dashboard'), app.counts()) };
+    } finally {
+      globalThis.FileReader = saved;
+      await app.close();
+    }
+  }
+
+  const oldLetterFile = async () => {
+    const { createBlankResume } = await loadModule('/src/utils/defaultData.js');
+    const r = createBlankResume({ id: 'resume_file', name: 'Cover Letter' });
+    return { ...r, dataVersion: 12, personal: { ...r.personal, name: 'Jordan Avery' }, coverLetter: { ...r.coverLetter, body: '<p>Dear Morgan.</p>' } };
+  };
+
+  it('Dashboard: a letter\'s file, and an older build\'s \'Cover Letter\' file, open on the letter tab; a résumé\'s on the résumé', async () => {
+    const letter = await importOnDashboard({ ...cv('resume_file', 'Contoso letter', JORDAN, 1000), kind: 'letter' });
+    assert.equal(letter.active.kind, 'letter');
+    assert.equal(letter.where, `/resume/${letter.active.id}?tab=coverletter`, 'before: the résumé tab of a letter');
+    assert.deepEqual(letter.counts, ['1 resume', '1 letter']);
+
+    const old = await importOnDashboard(await oldLetterFile());
+    assert.equal(old.active.kind, 'letter', 'marked a letter on import (data version 13)');
+    assert.equal(old.where, `/resume/${old.active.id}?tab=coverletter`);
+
+    const resume = await importOnDashboard(cv('resume_file', 'Data CV', SAM, 1000));
+    assert.equal(resume.active.kind, undefined);
+    assert.equal(resume.where, `/resume/${resume.active.id}`);
+  });
+
+  it('the editor\'s Import JSON: a letter\'s file opens on the letter tab; a résumé\'s on the résumé', async () => {
+    const { useEditorExports } = await loadModule('/src/hooks/useEditorExports.js');
+    const went = [];
+    let hook;
+    function Harness() {
+      hook = useEditorExports({ resume: cv('resume_a', 'Design CV', JORDAN, 1000), activeTab: 'resume', authUser: null, importResume: () => 'resume_new', navigate: (to) => went.push(to) });
+      return null;
+    }
+    const view = mount(Harness, {});
+    try {
+      view.act(() => hook.handleImportJSON({ ...cv('resume_x', 'Contoso letter', JORDAN, 1000), kind: 'letter' }));
+      view.act(() => hook.handleImportJSON(JSON.parse(JSON.stringify(cv('resume_x', 'Data CV', SAM, 1000)))));
+      assert.deepEqual(went, ['/resume/resume_new?tab=coverletter', '/resume/resume_new']);
+      assert.equal(hook.exportError, null);
+      const old = await oldLetterFile();
+      view.act(() => hook.handleImportJSON(old));
+      assert.equal(went[2], '/resume/resume_new?tab=coverletter', 'an older build\'s \'Cover Letter\' file');
+    } finally { await view.unmount(); }
+  });
+});
