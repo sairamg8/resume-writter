@@ -80,7 +80,9 @@ export function styleOnSwitch(settings, from, to, preset = '') {
   // A design (R2-138) is a template's style and more: what it set leaves with it where the résumé
   // still holds it, as a template's own does, and the design picked brings its whole look.
   const was = designStyle(from, settings);
-  const next = designStyle(to, { templatePreset: preset });
+  // A design the user saved is looked up in the résumé's own (ownDesign, B4).
+  const picked = { templatePreset: preset, myDesigns: settings?.myDesigns };
+  const next = designStyle(to, picked);
   const out = { ...settings };
   delete out.templatePreset;
   for (const [key, value] of Object.entries(was)) {
@@ -88,7 +90,7 @@ export function styleOnSwitch(settings, from, to, preset = '') {
     if (key in ATS_DEFAULTS) out[key] = ATS_DEFAULTS[key];
     else delete out[key];
   }
-  return { ...out, ...next, ...(presetOf({ templatePreset: preset }, to) ? { templatePreset: preset } : {}) };
+  return { ...out, ...next, ...(presetOf(picked, to) ? { templatePreset: preset } : {}) };
 }
 
 /**
@@ -99,7 +101,8 @@ export function styleOnSwitch(settings, from, to, preset = '') {
  * ATS-safe page Reset promises, and dropping it printed the two columns a portal may interleave
  * (R2-089). Kept on every template, as a template switch keeps it. So is the paper (Design →
  * Spacing → Page size, R2-136): it is where the résumé is sent, not a look of the template's, and
- * no template has one of its own — a US Letter résumé stays on Letter. A4 is stored as none.
+ * no template has one of its own — a US Letter résumé stays on Letter. A4 is stored as none. And the
+ * designs the user saved (`myDesigns`, B4): they are theirs to delete, not a look Reset undoes.
  */
 export function resetDesignSettings(settings, template) {
   const icons = settings?.customContactIcons;
@@ -107,7 +110,8 @@ export function resetDesignSettings(settings, template) {
   const layout = settings?.sidebarSingleColumn === true ? { sidebarSingleColumn: true } : {};
   const design = presetOf(settings, template) ? { templatePreset: settings.templatePreset } : {};
   const paper = pageSizeOf(settings) !== DEFAULT_PAGE_SIZE ? { pageSize: pageSizeOf(settings) } : {};
-  return { ...defaultSettings(template, settings), ...layout, ...design, ...paper, customContactIcons: uploads };
+  const mine = settings?.myDesigns && typeof settings.myDesigns === 'object' ? { myDesigns: settings.myDesigns } : {};
+  return { ...defaultSettings(template, settings), ...layout, ...design, ...paper, ...mine, customContactIcons: uploads };
 }
 
 /**

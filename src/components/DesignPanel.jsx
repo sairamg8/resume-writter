@@ -1,8 +1,10 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { Sparkles } from 'lucide-react';
 import { ATS_DEFAULTS, sectionReset } from '@/utils/defaultData';
-import { atsRating, contactIconHint, drawsContactIcons, TEMPLATE_PICKER, templateDesc, templateId, templateSwitchNote } from '@/constants/templates';
-import { presetOf, PRESET_IDS, TEMPLATE_PRESETS } from '@/constants/templatePresets';
+import { contactIconHint, drawsContactIcons, templateId, templateSwitchNote } from '@/constants/templates';
+import { pickerCards } from '@/utils/templatePicker';
+import { usePickCard } from '@/hooks/usePickCard';
+import { LetterheadNote, SavedDesigns, templateCard } from '@/components/DesignPanelTemplate';
 import { MARGIN_MM } from '@/constants/pageMargins';
 import { PAGE_SIZES, PAGE_SIZE_IDS, pageSizeOf } from '@/constants/pageSize';
 import { ICON_SIZE } from '@/constants/designNumbers';
@@ -32,7 +34,17 @@ const LIST_KEYS       = ['bulletStyle'];
 // The paper, by its name and size as the editor states them: "A4 · 210 × 297 mm".
 const PAGE_SIZE_OPTIONS = PAGE_SIZE_IDS.map(id => ({ label: `${PAGE_SIZES[id].label} · ${PAGE_SIZES[id].dims}`, value: id }));
 
-export default function DesignPanel({ resume, updateSetting, setTemplate, resetSettings }) {
+/**
+ * Design → the résumé's look. Beyond the store's setting actions: `designs` (the ones the user saved,
+ * savedDesigns) with `applyDesign`, `saveDesign` and `deleteDesign` (B4); `restoreDesign`, Undo after a
+ * switch (A4); `onBrowseTemplates`, the gallery (A2); `templateOpen` / `onTemplateOpenChange`, whether
+ * Template is open, kept by the editor across tabs (A12). Each is optional: without it, its control is not
+ * offered.
+ */
+export default function DesignPanel({
+  resume, updateSetting, setTemplate, resetSettings, designs = [], applyDesign, saveDesign, deleteDesign, restoreDesign,
+  onBrowseTemplates, templateOpen, onTemplateOpenChange,
+}) {
   const settings = resume.settings || {};
   const current = templateId(resume.template); // the template the PDF prints
   // Modern and Sidebar draw the pack whatever Contact style says, the others only with Icon.
@@ -86,67 +98,38 @@ export default function DesignPanel({ resume, updateSetting, setTemplate, resetS
     keys.forEach(k => { if (k in updated) updateSetting(k, updated[k]); });
   }
 
-  // The design the résumé is on (R2-138): its card is the one selected, not its engine's.
-  const activePreset = presetOf(settings, current)?.id || '';
-  const templateCards = TEMPLATE_PICKER.map(t => ({
-    testid: `template-${t.id}`, label: t.label, desc: templateDesc(t.id, settings), engine: t.id, preset: '',
-    // The ATS Check's verdict on this template as the résumé would print it (R2-011): the Sidebar's
-    // Layout, kept across a switch, decides its card — Single · ATS-safe prints Classic's certified
-    // page. TEMPLATE_PICKER's own `ats` knows no settings.
-    ats: atsRating(t.id, settings).safe, accent: settings.accentColor,
-  }));
-  // A design's badge rates its engine with the settings it brings over the résumé's own.
-  const presetCards = PRESET_IDS.map(id => {
-    const p = TEMPLATE_PRESETS[id];
-    return {
-      testid: `preset-${id}`, label: p.label, desc: p.desc, engine: p.engine, preset: id,
-      ats: atsRating(p.engine, { ...settings, ...p.settings }).safe, accent: p.settings.accentColor,
-    };
-  });
-
-  const card = (c) => {
-    const on = current === c.engine && activePreset === c.preset;
-    return (
-      <button
-        key={c.testid}
-        data-testid={c.testid}
-        // The card already selected is no switch: it would reset the headings (R2-087).
-        onClick={() => { if (on) return; if (c.preset) setTemplate(c.engine, c.preset); else setTemplate(c.engine); }}
-        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border text-left transition-all ${
-          on ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-        }`}
-      >
-        <div
-          className={`w-8 h-10 rounded shrink-0 flex flex-col gap-0.5 p-1 ${on ? 'opacity-100' : 'opacity-40'}`}
-          style={{ backgroundColor: on ? c.accent || '#2563eb' : c.preset ? c.accent : '#94a3b8' }}
-        >
-          <div className="h-1 bg-white/60 rounded-sm w-full" />
-          <div className="h-0.5 bg-white/40 rounded-sm w-3/4" />
-          <div className="h-0.5 bg-white/30 rounded-sm w-full mt-0.5" />
-          <div className="h-0.5 bg-white/30 rounded-sm w-5/6" />
-        </div>
-        <div>
-          <div className="flex items-center gap-1.5">
-            <p className={`text-sm font-medium ${on ? 'text-blue-700' : 'text-gray-700'}`}>{c.label}</p>
-            {c.ats && <span className="text-[9px] font-bold px-1 py-0.5 rounded bg-emerald-100 text-emerald-700">ATS</span>}
-          </div>
-          <p className="text-[10px] text-gray-400">{c.desc}</p>
-        </div>
-      </button>
-    );
-  };
+  // Every card, from the data (utils/templatePicker.js): the templates — the Sidebar's single column a
+  // card of its own (A9) — the app's designs (R2-138) and the user's (B4). The one the résumé is on is
+  // marked, a design's and not its engine's; picking one goes through the store (usePickCard).
+  const cards = pickerCards(settings, designs);
+  const { pick, selected } = usePickCard(resume, { setTemplate, updateSetting, applyDesign, restoreDesign });
+  const card = (c) => templateCard(c, { on: selected(c), onPick: pick });
+  const onCard = cards.find(selected) || cards.find((c) => c.engine === current && !c.preset);
 
   return (
     <div className="space-y-3 py-2">
 
-      <DesignSection title="Template" defaultOpen>
+      <DesignSection title="Template" defaultOpen open={templateOpen} onOpenChange={onTemplateOpenChange}>
+        {onBrowseTemplates && (
+          <button
+            type="button"
+            data-testid="browse-templates"
+            onClick={onBrowseTemplates}
+            className="w-full mb-2 px-3 py-2 text-xs font-semibold rounded-lg border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100"
+          >
+            Browse templates ({cards.filter((c) => !c.own).length}) · pictures and filters
+          </button>
+        )}
         <div className="space-y-1.5">
-          {templateCards.map(card)}
+          {cards.filter((c) => !c.preset).map(card)}
           {/* The designs (R2-138): a named look over a template the app draws — its engine and a bundle
               of design settings. Picked, it goes through the store as a template switch does. */}
           <p className="pt-2 text-[11px] font-semibold text-gray-500">Designs · a named look over a template</p>
-          {presetCards.map(card)}
+          {cards.filter((c) => c.preset && !c.own).map(card)}
           <p className="text-[10px] text-gray-400">A design brings its font, colours and heading style too; picking its template plainly takes back what you kept of them, and Reset returns to the design.</p>
+          {(saveDesign || designs.length > 0) && (
+            <SavedDesigns cards={cards.filter((c) => c.own)} isOn={selected} onPick={pick} saveDesign={saveDesign} deleteDesign={deleteDesign} />
+          )}
         </div>
         {current === 'sidebar' && (
           <div className="mt-3 pt-3 border-t border-gray-100">
@@ -175,7 +158,7 @@ export default function DesignPanel({ resume, updateSetting, setTemplate, resetS
           </p>
         )}
         <p className="text-[10px] text-gray-400 mt-2">{templateSwitchNote()}</p>
-        <p className="text-[10px] text-gray-400 mt-2">The cover letter&apos;s header takes the template&apos;s look too.</p>
+        <LetterheadNote card={onCard} />
       </DesignSection>
 
       <ColorsSection resume={resume} settings={settings} updateSetting={updateSetting} onReset={() => resetSection(COLOR_KEYS)} />

@@ -6,7 +6,7 @@ import { entries, flattened } from './jsonResumeText.js';
 import { customEntry, SECTION_KEYS } from './jsonResumeSections.js';
 import { CONTACT_FIELDS } from './contacts.js';
 import { headerTemplateId, templateId } from '../constants/templates.js';
-import { presetOf } from '../constants/templatePresets.js';
+import { ownDesign, presetOf } from '../constants/templatePresets.js';
 import { dateFormatOf } from './dates.js';
 import { DEFAULT_PAGE_SIZE, pageSizeOf } from '../constants/pageSize.js';
 
@@ -120,6 +120,9 @@ export function cpwtResumeToJsonResume(resume) {
       ...(headerTemplateId(resume.template, resume.settings) !== templateId(resume.template) ? { layout: 'single' } : {}),
       // The design the résumé is on (R2-138): the import brings its look back, as picking it would.
       ...(presetOf(resume.settings, resume.template) ? { design: resume.settings.templatePreset } : {}),
+      // A design the user saved (B4) is theirs, not this build's: its look rides with its id.
+      ...(presetOf(resume.settings, resume.template) && ownDesign(resume.settings, resume.settings.templatePreset)
+        ? { designLook: ownDesign(resume.settings, resume.settings.templatePreset) } : {}),
       ...(pageSizeOf(resume.settings) !== DEFAULT_PAGE_SIZE ? { pageSize: pageSizeOf(resume.settings) } : {}),
       sections: layout,
     },

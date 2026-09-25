@@ -84,14 +84,16 @@ const DATES = { asEntered: '01/2021', 'MMM YYYY': 'Jan 2021', 'MMMM YYYY': 'Janu
   'MM.YYYY': '01.2021', 'YYYY-MM': '2021-01', 'YYYY.MM': '2021.01', YYYY: '2021' };
 
 export const DESIGN = {
-  // A template picked from its defaults prints exactly what a résumé started on it prints.
+  // A template picked from its defaults prints exactly what a résumé started on it prints — with the
+  // Layout its card sets, for a Layout's own card (the Sidebar's single column, R2-139 A9).
   template: {
     family: 'template',
     check: async ({ runs, variant }) => {
       const out = [];
       for (const r of runs) {
         const v = valueOf(r, 'template');
-        const fresh = await shot(baseResume(v, variant.settings, { compact: true }));
+        const layout = Object.fromEntries(r.writes.filter((w) => w.kind === 'setting').map((w) => [w.key, w.value]));
+        const fresh = await shot(baseResume(v, { ...variant.settings, ...layout }, { compact: true }));
         if (r.snap.drawing !== fresh.drawing) out.push(`${v}: switched to, it does not print what a résumé started on ${v} prints`);
       }
       return out;
