@@ -1,0 +1,50 @@
+{
+  "cluster": "perf",
+  "branch": "claude/wf-perf",
+  "base": "802d0a5 (code base; origin/master 334b454 merged in at b6414de, it adds no src changes)",
+  "rows": [
+    {
+      "id": "R2-142", "outcome": "partial",
+      "commits": ["9633e36", "541c85f", "992725a", "ef1fabb", "239ea7f", "959c8cb"],
+      "tests": ["tests/pdf/97-preview-steady-typing.test.mjs", "tests/pdf/97-store-same-value.test.mjs", "tests/pdf/97-store-sign-out-write.test.mjs", "tests/pdf/97-store-other-tab-same.test.mjs"],
+      "summary": "Typing that never pauses now repaints the preview at least every 1.2 s. It no longer freezes until typing stops, and it still runs one build at a time; the stale-render drop, zoom repaint, hidden-preview pause and Retry work as before. The store's saves stay coalesced (R2-077). They are written at once on pagehide, beforeunload, the tab being hidden, unmount, and now also when the list changes account (sign-out), so no edit is lost. A value set to what it holds already leaves the store as it was: nothing is written, built or synced. Another tab's save keeps the unchanged résumés as the same objects here, so the open résumé's preview is not rebuilt for nothing. Cloud sync reads the in-memory state, not storage, so it needs no flush.",
+      "remaining": "PERF-1 (harness + WOFF cache), PERF-4 (editor commits + colour pickers), PERF-5 (pdf.js paint + chunk split), PERF-6 (PDF in a Web Worker).",
+      "ciRuns": ["36021482347 (failfirst 9633e36 ok)", "36087978939 (failfirst 959c8cb, 239ea7f ok; 992725a failed WITH its fix — the store was still copied, completed by ef1fabb; Cypress store/export/demo/panels/dates specs green)", "36088196163 (failfirst ef1fabb ok, store tests green)", "36089507566 (final head, green)"]
+    }
+  ],
+  "extra": [
+    {
+      "id": "R1-LEFT-a", "outcome": "fixed",
+      "commits": ["0d88dfd"],
+      "tests": ["tests/pdf/97-award-no-description.test.mjs"],
+      "summary": "A test now fails without f6cb390 and passes with it (failfirst f6cb390 ok in run 36088483415). It covers a 2-column Awards row split at Classic's page foot, where the right-hand award has no description and a long wrapping title. That is the only layout where react-pdf reads the keep f6cb390 changed. In one column, an award with no description moves with or without the fix.",
+      "remaining": ""
+    },
+    {
+      "id": "R1-LEFT-b", "outcome": "fixed",
+      "commits": ["f7057c2"],
+      "tests": ["tests/pdf/97-hidden-entry-dates.test.mjs"],
+      "summary": "A hidden end date (or start date) on an Education, Project or Volunteering entry, as a backup or older stored data can carry it, now prints nowhere. That holds for the preview/PDF in all 9 templates and for Word, as it already did for Markdown and ATS text. A current entry no longer prints 'Present' either. The root cause was the shared endDateOf, which ignored hiddenFields; a new startDateOf does the same for start dates. Entries with nothing hidden print as before. Failfirst f7057c2 ok in run 36089507566.",
+      "remaining": "The PDF and Word still ignore other hidden fields on these entries (institution, degree, GPA, location, description), and on certifications and awards (dates). Markdown and ATS text honour them. The editor has no hide toggles for them. This could be a follow-up row."
+    },
+    {
+      "id": "R1-LEFT-c", "outcome": "fixed",
+      "commits": ["f91c333", "a4e235c", "fb5e5e9"],
+      "tests": ["tests/pdf/97-object-member-types.test.mjs", "tests/pdf/97-object-member-editor.test.mjs"],
+      "summary": "Review of pagination rows R2-046..049, 104, 109, 111. One real defect: fa09eb1 (R2-109) fixed only resolveSection. A section typed like an Object member ('constructor', 'toString', 'valueOf', 'hasOwnProperty', '__proto__') still failed on every other path: the Timeline PDF failed to render, the JSON Resume export and import threw, the ATS report threw, and the section editor's Add entry and Reset style broke or threw. Now such a type is a custom section on every path (failfirst f91c333 ok in 36088483415, fb5e5e9 ok in 36089507566). Refuted: a description-less entry header moved by its keep (react-pdf reads the keep only while its parent splits); a short grid row over-kept (capped by getEndOfPresence); empty 2-column section titles (sectionPrints filters them first, R2-057); grids stored as text (withSectionShapes numbers them); R2-109's created-columns default overriding the template or the user (it ranks below both); R2-111 in the Sidebar cards and Timeline (both lead with the next field); the R2-104 dark-column keep (same font sizes).",
+      "remaining": ""
+    }
+  ],
+  "review": {
+    "issues": [
+      "R1-LEFT-c was incomplete: SectionEditor still looked up NEW_ITEM, ADD_LABEL and SECTION_TYPE_DEFAULTS on Object. Fixed in fb5e5e9.",
+      "Not fixed (pre-existing, outside these rows): the PDF and Word ignore hiddenFields on entry fields other than dates. See R1-LEFT-b remaining.",
+      "Minor, not changed: updateSetting('sidebarSingleColumn', true) is now a no-op when the value is already true, so withHeaderColorsBack does not run again. The ATS fix button uses it only from false, so users see no change."
+    ],
+    "fixedByReviewer": ["fb5e5e9 fix(editor): a section typed like an Object member adds a custom entry and resets to a custom section's style (R1-LEFT-c)"]
+  },
+  "finalHead": "fb5e5e9",
+  "finalCi": "36089507566 green: tests (81 files: every 97-* plus the existing tests of each changed module), failfirst fb5e5e9 and f7057c2, lint, Cypress 02-editor, 04-design, 07-regressions-store, 17-section-options, 19-regressions-ids, 23-editor-panels",
+  "baselineFailures": [],
+  "notes": "992725a (pushed by the previous worker) had never passed CI: patchActive still wrapped an unchanged résumé in a new store. ef1fabb completes it. The .claude Stop hook (handoff-fresh.sh) kept asking this worker to update docs/tracking/HANDOFF.md; it was not done, because the protocol forbids cluster edits under docs/tracking/. The coordinator may want the hook to skip claude/wf-* branches. No accessibility work was done or found."
+}
