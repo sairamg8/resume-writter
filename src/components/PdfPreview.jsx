@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { previewBox } from '@/constants/pageSize';
+import { fontFallback } from '@/utils/fontFallback';
 
 /**
  * The editor preview IS the exported PDF: `render(input)` builds the same react-pdf document
@@ -180,6 +181,14 @@ export function PdfPreview({ render, input, zoom = 1, textId, title = 'Résumé'
     }, delay);
     return () => clearTimeout(timer);
   }, [input, render, retry, active]);
+
+  // Back online while the pages print in Noto Sans for a font that could not be loaded: build again,
+  // now with that font (R2-146). A build that needs no font from the web is left alone.
+  useEffect(() => {
+    const again = () => { if (fontFallback()) setRetry((n) => n + 1); };
+    window.addEventListener('online', again);
+    return () => window.removeEventListener('online', again);
+  }, []);
 
   // Repaint the current document when the zoom (or the column's width) changes — not while hidden,
   // where the column measures 0 and the pages would be painted at the 240 px floor for nobody.

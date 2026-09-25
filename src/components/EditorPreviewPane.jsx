@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { timeAgo } from '@/utils/resume';
 import { LayoutToggle } from '@/components/LayoutToggle';
 import { PdfPreview } from '@/components/PdfPreview';
+import { FontFallbackNotice } from '@/components/FontFallbackNotice';
 import { PAGE_SIZES, pageSizeOf } from '@/constants/pageSize';
 
 // Module-level so their identity is stable: PdfPreview re-renders when `render` changes.
@@ -60,6 +61,8 @@ export function EditorPreviewPane({ resume, activeTab, layoutMode, setLayoutMode
           <button onClick={() => setPreviewZoom(z => Math.min(1.5, Math.round((z + 0.25) * 100) / 100))} disabled={previewZoom >= 1.5} className="px-2 py-1 text-xs text-gray-500 hover:text-gray-800 disabled:opacity-30 rounded-md font-bold leading-none">+</button>
         </div>
       </div>
+
+      <FontFallbackNotice />
 
       {activeTab === 'coverletter' ? (
         <PdfPreview key="coverletter" title="Cover letter" textId="cover-letter-preview" input={resume} render={renderCoverLetterPreview} zoom={previewZoom} active={shown} />
