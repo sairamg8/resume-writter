@@ -167,11 +167,11 @@ export const LOOKS = {
     rules: rule || [{ width: CHRONICLE_RULES.thick, color: solid(accent) }, { width: CHRONICLE_RULES.thin, color: solid(accent) }],
   }),
   keystone: (base, { accent, rule }) => ({ ...base, rules: rule || [{ width: 2, color: solid(accent) }] }),
+  // Its contacts and their marks keep the page's inks and greys, as its résumé's header prints them on the band.
   banded: (base, { accent, rule }) => {
     const ground = bandedGround(accent);
     return {
       ...base,
-      marks: bandMarks(base.contacts, ground),
       // pageInks: its text keeps the page's own colours, not Header Text Color (DesignPanelColors offers none).
       band: { color: ground, fallback: bandedGround(DEFAULTS.banded.accentColor), padX: 0, padY: BANDED_PAD, bleed: true, pageInks: true },
       rules: rule || [],

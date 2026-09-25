@@ -156,7 +156,11 @@ describe('Design → a template: Name & Title Colors picked for the old header (
     // Timeline (T6) prints its header on the white page, as Classic: headerGround reads no band there.
     // Banner (T7) prints it on its accent band, as Modern: headerGround reads the band's accent.
     // Academic (T8) and Compact (T9) print it on the white page, as Classic.
-    assert.deepEqual([...TEMPLATE_IDS].sort(), ['academic', 'banner', 'classic', 'compact', 'executive', 'minimal', 'modern', 'sidebar', 'timeline'], 'a template added needs its ground');
+    // The designed layouts (R2-138 B2) print it on the white page too; Banded on its pale band, which headerGround reads.
+    assert.deepEqual([...TEMPLATE_IDS].sort(), [
+      'academic', 'banded', 'banner', 'bookend', 'broadsheet', 'chronicle', 'classic', 'compact', 'executive', 'gridline', 'keel', 'keystone',
+      'lectern', 'linen', 'minimal', 'modern', 'registry', 'sidebar', 'timeline',
+    ], 'a template added needs its ground');
     // The default header, a dark banner/column, and a mid banner beside a light column.
     for (const settings of [{}, { accentColor: '#0f172a', sidebarBg: '#0f172a' }, { accentColor: '#374151', sidebarBg: '#f1f5f9' }]) {
       for (const template of TEMPLATE_IDS) {

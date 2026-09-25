@@ -22,11 +22,13 @@ const letter = (template, { settings, personal, coverLetter } = {}) => resume({
   coverLetter: { ...BLOCK, ...coverLetter },
 });
 
-/** The looks whose letterhead is a band: Modern's accent, the Sidebar panel's navy, Banner's accent (T7). */
-const BANDED = ['modern', 'sidebar', 'banner'];
+/** The looks whose letterhead is a band: Modern's accent, the Sidebar panel's navy, Banner's accent (T7), Banded's pale accent (R2-138 B2). */
+const BANDED = ['modern', 'sidebar', 'banner', 'banded'];
+let PALE = null; // Banded's band colour at ACCENT (designedMarks.js), read once the harness is up
+before(async () => { PALE = (await loadModule('/src/templates/pdf/shared/designedMarks.js')).bandedGround(ACCENT); });
 /** The band a banded look draws, else null. */
 const bandOf = (template, paths) => {
-  const colour = { modern: ACCENT, sidebar: '#1e293b', banner: ACCENT }[template];
+  const colour = { modern: ACCENT, sidebar: '#1e293b', banner: ACCENT, banded: PALE }[template];
   return colour ? paths.find((p) => p.paint === 'fill' && p.colour === colour && p.x1 - p.x0 > 100) : null;
 };
 
