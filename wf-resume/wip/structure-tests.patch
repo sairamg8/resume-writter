@@ -1,0 +1,505 @@
+diff --git a/tests/pdf/96-section-structure.test.mjs b/tests/pdf/96-section-structure.test.mjs
+new file mode 100644
+index 0000000..71bdfcd
+--- /dev/null
++++ b/tests/pdf/96-section-structure.test.mjs
+@@ -0,0 +1,213 @@
++// The Résumé tab's structure actions had no gate test on the real components (R2-158): Add Section,
++// a section's title box, its eye, its ⋯ → Delete section (with its confirm), an entry's Add and
++// Delete (with its confirm), and a section or an entry dropped on another, which ends in the tab's
++// and the section's own onDragEnd (handleSectionDragEnd → updateSections(arrayMove), handleItemDragEnd
++// → reorderItems). Each runs on the Résumé tab over the real store (resume-tab.mjs) and is checked in
++// what the store then holds, what the tab shows, and what the PDF (= the preview) prints.
++// parity/40-structure already pins the store's reorder and hide on every template; the keyboard's
++// way through dnd-kit's own sensor is 96-structure-keyboard.
++import { before, after, describe, it } from 'node:test';
++import assert from 'node:assert/strict';
++import { setup, teardown, resume, section, loadModule, render, read, allText } from './harness.mjs';
++import { reactProps } from './fake-dom.mjs';
++import { resumeTab } from './resume-tab.mjs';
++
++before(setup);
++after(teardown);
++
++/** A fictional pilot's résumé: two jobs, a project, a skill group — in that order. */
++const sample = () => resume({
++  personal: { name: 'Wren Calloway', title: 'Harbor Pilot' },
++  sections: [
++    section('experience', [
++      { role: 'Lamplighter', company: 'Brightwater Light' },
++      { role: 'Ferry Pilot', company: 'Saltmarsh Line' },
++    ]),
++    section('projects', [{ name: 'Tidewatch' }]),
++    section('skills', [{ category: 'Seamanship', skills: 'Knots, Charts' }]),
++  ],
++});
++
++/** The PDF's text, runs joined, in reading order. */
++const printed = async (r) => allText(await read(await render(r)));
++
++/** `words` each print, in this order. */
++function printsInOrder(text, words) {
++  const at = words.map((w) => text.indexOf(w));
++  assert.ok(at.every((i) => i >= 0), `each of ${words.join(', ')} prints: ${text}`);
++  assert.deepEqual([...at].sort((a, b) => a - b), at, `${words.join(' → ')} in this order: ${text}`);
++}
++
++/** `confirm` answering `answer()`, each question kept in `asked`; restored by the returned function. */
++function confirming(answer) {
++  const asked = [];
++  const saved = globalThis.confirm;
++  globalThis.confirm = (question) => { asked.push(question); return answer(); };
++  return { asked, restore: () => { if (saved === undefined) delete globalThis.confirm; else globalThis.confirm = saved; } };
++}
++
++describe('the Résumé tab: sections (R2-158)', () => {
++  it('Add Section → a type: that section at the end, open with its first entry; the picker closes; the PDF prints its title', async () => {
++    const tab = await resumeTab(sample());
++    let added;
++    try {
++      tab.click(tab.button('Add Section'));
++      tab.click(tab.button('Awards & Honors'));
++      added = tab.saved();
++      assert.deepEqual(added.sections.map((s) => s.type), ['experience', 'projects', 'skills', 'awards']);
++      assert.equal(added.sections[3].title, 'Awards & Honors');
++      assert.equal(added.sections[3].items.length, 1, 'with its first, blank entry');
++      assert.deepEqual(tab.titles(), ['Professional Experience', 'Projects', 'Skills', 'Awards & Honors']);
++      assert.ok(tab.button('Add Award', tab.card('Awards & Honors')), 'open, with its Add button');
++      assert.ok(!tab.all().some((el) => el.tagName === 'BUTTON' && el.textContent.trim() === 'Awards & Honors'), 'the picker closed');
++    } finally { await tab.close(); }
++    assert.match(await printed(added), /awards & honors/i);
++  });
++
++  it("a section's title box renames it: the store keeps the new title, the PDF prints it", async () => {
++    const tab = await resumeTab(sample());
++    let renamed;
++    try {
++      const box = tab.all().find((el) => el.getAttribute('aria-label') === 'Section title' && el.value === 'Projects');
++      tab.view.act(() => reactProps(box).onChange({ target: { value: 'Side Voyages' } }));
++      renamed = tab.saved();
++      assert.deepEqual(renamed.sections.map((s) => s.title), ['Professional Experience', 'Side Voyages', 'Skills']);
++      assert.deepEqual(tab.titles(), ['Professional Experience', 'Side Voyages', 'Skills']);
++    } finally { await tab.close(); }
++    const text = await printed(renamed);
++    assert.match(text, /side voyages/i);
++    assert.doesNotMatch(text, /projects/i);
++  });
++
++  it("a section's eye hides it and shows it again: the card says Hidden, the PDF leaves it out, then prints as before", async () => {
++    const tab = await resumeTab(sample());
++    let original;
++    let hidden;
++    let shown;
++    try {
++      original = tab.saved();
++      tab.click(tab.button('Hide section from resume', tab.card('Projects')));
++      hidden = tab.saved();
++      assert.equal(hidden.sections[1].visible, false);
++      assert.deepEqual(hidden.sections.map((s) => s.visible), [true, false, true], 'only that section');
++      assert.match(tab.card('Projects').textContent, /Hidden/);
++      tab.click(tab.button('Show section on resume', tab.card('Projects')));
++      shown = tab.saved();
++      assert.equal(shown.sections[1].visible, true);
++      assert.doesNotMatch(tab.card('Projects').textContent, /Hidden/);
++    } finally { await tab.close(); }
++    const text = await printed(hidden);
++    assert.ok(!text.includes('Tidewatch'), 'the hidden section prints nothing of itself');
++    assert.doesNotMatch(text, /projects/i);
++    printsInOrder(text, ['Lamplighter', 'Seamanship']);
++    assert.equal(await printed(shown), await printed(original), 'shown again, it prints as before');
++  });
++
++  it('Delete section asks first, naming the section and its entries: Cancel keeps it, OK deletes it; the PDF drops it', async () => {
++    const tab = await resumeTab(sample());
++    let answer = false;
++    const confirm = confirming(() => answer);
++    let deleted;
++    try {
++      const before = tab.saved();
++      const deleteFrom = (title) => {
++        tab.click(tab.button('Section options', tab.card(title)));
++        tab.click(tab.button('Delete section', tab.card(title)));
++      };
++      deleteFrom('Professional Experience');
++      assert.deepEqual(confirm.asked, ['Delete the "Professional Experience" section and its 2 entries?']);
++      assert.equal(tab.saved(), before, 'Cancel: nothing changes');
++      assert.ok(!tab.all().some((el) => el.tagName === 'BUTTON' && el.textContent.trim() === 'Delete section'), 'the menu closed');
++      answer = true;
++      deleteFrom('Projects');
++      assert.equal(confirm.asked[1], 'Delete the "Projects" section and its 1 entry?');
++      deleted = tab.saved();
++      assert.deepEqual(deleted.sections.map((s) => s.type), ['experience', 'skills']);
++      assert.deepEqual(tab.titles(), ['Professional Experience', 'Skills']);
++    } finally { confirm.restore(); await tab.close(); }
++    const text = await printed(deleted);
++    assert.ok(!text.includes('Tidewatch'));
++    printsInOrder(text, ['Lamplighter', 'Ferry Pilot', 'Seamanship']);
++  });
++});
++
++describe('the Résumé tab: entries (R2-158)', () => {
++  it("Add adds a blank entry of the section's type at its end; Delete takes an untouched one at once, and asks first for one with content", async () => {
++    const { NEW_ITEM } = await loadModule('/src/components/SectionEditorLeafItems.jsx');
++    const tab = await resumeTab(sample());
++    let answer = false;
++    const confirm = confirming(() => answer);
++    let left;
++    try {
++      const exp = tab.card('Professional Experience');
++      tab.click(tab.button('Add Experience', exp));
++      const items = tab.saved().sections[0].items;
++      assert.equal(items.length, 3);
++      const { id, ...fields } = items[2];
++      const { id: _blankId, ...blank } = NEW_ITEM.experience();
++      assert.match(id, /^exp_/);
++      assert.ok(!items.slice(0, 2).some((i) => i.id === id), 'an id of its own');
++      assert.deepEqual(fields, blank, 'blank, as Add Experience makes it');
++      assert.deepEqual(tab.entries(exp), ['Lamplighter', 'Ferry Pilot', 'New Entry']);
++
++      const deletes = () => tab.all(exp).filter((el) => el.getAttribute('aria-label') === 'Delete entry');
++      tab.click(deletes()[2]);
++      assert.deepEqual(confirm.asked, [], 'an untouched new entry goes without asking');
++      assert.deepEqual(tab.entries(exp), ['Lamplighter', 'Ferry Pilot']);
++
++      const before = tab.saved();
++      tab.click(deletes()[1]);
++      assert.deepEqual(confirm.asked, ['Delete this entry?']);
++      assert.equal(tab.saved(), before, 'Cancel: nothing changes');
++      answer = true;
++      tab.click(deletes()[1]);
++      left = tab.saved();
++      assert.deepEqual(left.sections[0].items.map((i) => i.role), ['Lamplighter']);
++      assert.deepEqual(tab.entries(exp), ['Lamplighter']);
++      assert.deepEqual(left.sections.slice(1), before.sections.slice(1), 'the other sections keep theirs');
++    } finally { confirm.restore(); await tab.close(); }
++    const text = await printed(left);
++    assert.ok(!text.includes('Ferry Pilot'), 'the deleted entry no longer prints');
++    printsInOrder(text, ['Lamplighter', 'Tidewatch']);
++  });
++});
++
++describe('the Résumé tab: a drop ends in its own handlers (R2-158)', () => {
++  /** The section's own grip: the first sortable handle in its card (its entries' come after). */
++  const sectionGrip = (tab, title) => tab.all(tab.card(title)).find((el) => el.getAttribute('aria-roledescription') === 'sortable');
++
++  it('a section dropped on another takes its place; dropped on itself nothing changes; the PDF prints the new order', async () => {
++    const tab = await resumeTab(sample());
++    let moved;
++    try {
++      const [exp, , skills] = tab.saved().sections.map((s) => s.id);
++      tab.drop(sectionGrip(tab, 'Skills'), skills, exp);
++      moved = tab.saved();
++      assert.deepEqual(moved.sections.map((s) => s.type), ['skills', 'experience', 'projects']);
++      assert.deepEqual(tab.titles(), ['Skills', 'Professional Experience', 'Projects']);
++      tab.drop(sectionGrip(tab, 'Skills'), skills, skills);
++      assert.equal(tab.saved(), moved, 'on itself: no change, no edit');
++    } finally { await tab.close(); }
++    printsInOrder(await printed(moved), ['Seamanship', 'Lamplighter', 'Tidewatch']);
++  });
++
++  it("an entry dropped on another takes its place in its section; on itself or on nothing, nothing changes; the PDF prints the new order", async () => {
++    const tab = await resumeTab(sample());
++    let moved;
++    try {
++      const exp = tab.card('Professional Experience');
++      const [first, second] = tab.saved().sections[0].items.map((i) => i.id);
++      const grip = () => tab.all(exp).filter((el) => el.getAttribute('aria-label') === 'Reorder entry')[1];
++      const before = tab.saved();
++      tab.drop(grip(), second, first);
++      moved = tab.saved();
++      assert.deepEqual(moved.sections[0].items.map((i) => i.role), ['Ferry Pilot', 'Lamplighter']);
++      assert.deepEqual(tab.entries(exp), ['Ferry Pilot', 'Lamplighter']);
++      assert.deepEqual(moved.sections.slice(1), before.sections.slice(1), 'the other sections keep their order');
++      tab.drop(grip(), first, first);
++      tab.drop(grip(), first, null);
++      assert.equal(tab.saved(), moved, 'on itself or on nothing: no change, no edit');
++    } finally { await tab.close(); }
++    printsInOrder(await printed(moved), ['Ferry Pilot', 'Lamplighter', 'Tidewatch']);
++  });
++});
+diff --git a/tests/pdf/96-structure-keyboard.test.mjs b/tests/pdf/96-structure-keyboard.test.mjs
+new file mode 100644
+index 0000000..2aa8e6a
+--- /dev/null
++++ b/tests/pdf/96-structure-keyboard.test.mjs
+@@ -0,0 +1,162 @@
++// Sections and entries reorder from the keyboard, and nothing tested it (R2-158; an entry's grip
++// reaches the tab order since R2-115): with a grip focused, Space lifts the card, the arrow keys
++// move it past its neighbours, Space drops it there and Escape puts it back. Driven through
++// dnd-kit's own KeyboardSensor and sortableKeyboardCoordinates on the real Résumé tab and store
++// (resume-tab.mjs): the grip's onKeyDown as React set it, then keys on the document, where the
++// sensor listens. fake-dom has no layout, so each element is given a box one row below its previous
++// sibling — a list, which is all the sensor measures. What the drop leaves is what the store keeps
++// and the PDF prints.
++import { before, after, describe, it } from 'node:test';
++import assert from 'node:assert/strict';
++import { setup, teardown, resume, section, render, read, allText } from './harness.mjs';
++import { reactProps } from './fake-dom.mjs';
++import { resumeTab, settle } from './resume-tab.mjs';
++
++before(setup);
++after(teardown);
++
++const sample = () => resume({
++  personal: { name: 'Wren Calloway', title: 'Harbor Pilot' },
++  sections: [
++    section('experience', [
++      { role: 'Lamplighter', company: 'Brightwater Light' },
++      { role: 'Ferry Pilot', company: 'Saltmarsh Line' },
++    ]),
++    section('projects', [{ name: 'Tidewatch' }]),
++    section('skills', [{ category: 'Seamanship', skills: 'Knots, Charts' }]),
++  ],
++});
++
++const printed = async (r) => allText(await read(await render(r)));
++
++function printsInOrder(text, words) {
++  const at = words.map((w) => text.indexOf(w));
++  assert.ok(at.every((i) => i >= 0), `each of ${words.join(', ')} prints: ${text}`);
++  assert.deepEqual([...at].sort((a, b) => a - b), at, `${words.join(' → ')} in this order: ${text}`);
++}
++
++/** A key press as dnd-kit reads it: its `code`, the element it is aimed at, preventDefault. */
++class KeyboardEvent {
++  constructor(type, { code, target }) {
++    Object.assign(this, { type, code, key: code === 'Space' ? ' ' : code, target, defaultPrevented: false });
++  }
++  preventDefault() { this.defaultPrevented = true; }
++  stopPropagation() {}
++}
++
++/**
++ * What dnd-kit asks of the page: every element a box 80 tall, 100 below its previous sibling (the
++ * cards of one list stack), no scrolling, and the window's classes it checks nodes and events
++ * against. Returns the undo.
++ */
++function layOut(view) {
++  const proto = Object.getPrototypeOf(view.container);
++  proto.getBoundingClientRect = function box() {
++    const top = (this.parentNode ? this.parentNode.childNodes.indexOf(this) : 0) * 100;
++    return { top, left: 0, width: 400, height: 80, bottom: top + 80, right: 400, x: 0, y: top };
++  };
++  Object.assign(view.window, {
++    Document: Object.getPrototypeOf(view.document).constructor,
++    HTMLElement: proto.constructor,
++    SVGElement: class SVGElement {},
++    KeyboardEvent,
++    innerWidth: 1280,
++    innerHeight: 100000,
++    getComputedStyle: () => ({ position: 'static', overflow: 'visible', overflowX: 'visible', overflowY: 'visible', transform: '', transformOrigin: '' }),
++  });
++  return () => { delete proto.getBoundingClientRect; };
++}
++
++/** Tab to `grip` and press Space on it: its own onKeyDown lifts the card. */
++async function lift(tab, grip) {
++  tab.view.document.activeElement = grip;
++  const nativeEvent = new KeyboardEvent('keydown', { code: 'Space', target: grip });
++  tab.view.act(() => reactProps(grip).onKeyDown({
++    nativeEvent, target: grip, currentTarget: grip, code: 'Space', key: ' ',
++    preventDefault: () => nativeEvent.preventDefault(), stopPropagation() {},
++  }));
++  await settle();
++}
++
++/** Press `codes` in turn while a card is lifted: the sensor listens on the document. */
++async function press(tab, grip, ...codes) {
++  for (const code of codes) {
++    tab.view.act(() => tab.view.document.dispatchEvent(new KeyboardEvent('keydown', { code, target: grip })));
++    await settle();
++  }
++}
++
++/** The Résumé tab over `sample()`, laid out; `close()` undoes both. */
++async function openTab() {
++  const tab = await resumeTab(sample());
++  const undo = layOut(tab.view);
++  const close = tab.close;
++  return Object.assign(tab, { async close() { undo(); await close(); } });
++}
++
++const entryGrips = (tab, card) => tab.all(card).filter((el) => el.getAttribute('aria-label') === 'Reorder entry');
++const sectionGrip = (tab, title) => tab.all(tab.card(title)).find((el) => el.getAttribute('aria-roledescription') === 'sortable');
++
++describe('entries reorder from the keyboard (R2-158)', () => {
++  it('Space lifts an entry, ArrowDown moves it below the next, Space drops it there; the PDF prints it there', async () => {
++    const tab = await openTab();
++    let moved;
++    try {
++      const exp = tab.card('Professional Experience');
++      const grip = entryGrips(tab, exp)[0];
++      await lift(tab, grip);
++      await press(tab, grip, 'ArrowDown', 'Space');
++      moved = tab.saved();
++      assert.deepEqual(moved.sections[0].items.map((i) => i.role), ['Ferry Pilot', 'Lamplighter']);
++      assert.deepEqual(tab.entries(exp), ['Ferry Pilot', 'Lamplighter']);
++      assert.deepEqual(moved.sections.map((s) => s.type), ['experience', 'projects', 'skills'], 'the sections stay');
++    } finally { await tab.close(); }
++    printsInOrder(await printed(moved), ['Ferry Pilot', 'Lamplighter', 'Tidewatch']);
++  });
++
++  it('Escape puts a lifted entry back, and one at the top pressed up stays: nothing changes; the next Space, ArrowDown, Space still moves it', async () => {
++    const tab = await openTab();
++    try {
++      const exp = tab.card('Professional Experience');
++      const before = tab.saved();
++      const grip = entryGrips(tab, exp)[0];
++      await lift(tab, grip);
++      await press(tab, grip, 'ArrowDown', 'Escape');
++      assert.equal(tab.saved(), before, 'Escape: no change, no edit');
++      await lift(tab, grip);
++      await press(tab, grip, 'ArrowUp', 'Space');
++      assert.equal(tab.saved(), before, 'nothing above the first entry: it stays');
++      await lift(tab, grip);
++      await press(tab, grip, 'ArrowDown', 'Space');
++      assert.deepEqual(tab.saved().sections[0].items.map((i) => i.role), ['Ferry Pilot', 'Lamplighter']);
++    } finally { await tab.close(); }
++  });
++});
++
++describe('sections reorder from the keyboard (R2-158)', () => {
++  it("Space lifts a section by its grip, ArrowDown moves it below the next, Space drops it there; the PDF prints it there", async () => {
++    const tab = await openTab();
++    let moved;
++    try {
++      const grip = sectionGrip(tab, 'Professional Experience');
++      await lift(tab, grip);
++      await press(tab, grip, 'ArrowDown', 'Space');
++      moved = tab.saved();
++      assert.deepEqual(moved.sections.map((s) => s.type), ['projects', 'experience', 'skills']);
++      assert.deepEqual(tab.titles(), ['Projects', 'Professional Experience', 'Skills']);
++      assert.deepEqual(moved.sections[1].items.map((i) => i.role), ['Lamplighter', 'Ferry Pilot'], 'its entries go with it, in order');
++    } finally { await tab.close(); }
++    printsInOrder(await printed(moved), ['Tidewatch', 'Lamplighter', 'Ferry Pilot', 'Seamanship']);
++  });
++
++  it('ArrowUp twice takes the last section to the top', async () => {
++    const tab = await openTab();
++    try {
++      const grip = sectionGrip(tab, 'Skills');
++      await lift(tab, grip);
++      await press(tab, grip, 'ArrowUp', 'ArrowUp', 'Space');
++      assert.deepEqual(tab.saved().sections.map((s) => s.type), ['skills', 'experience', 'projects']);
++      assert.deepEqual(tab.titles(), ['Skills', 'Professional Experience', 'Projects']);
++    } finally { await tab.close(); }
++  });
++});
+diff --git a/tests/pdf/resume-tab.mjs b/tests/pdf/resume-tab.mjs
+new file mode 100644
+index 0000000..189cf6a
+--- /dev/null
++++ b/tests/pdf/resume-tab.mjs
+@@ -0,0 +1,112 @@
++// The Résumé tab (EditorResumeTab) over the real store (useAppStore on an in-memory localStorage),
++// wired as the Editor wires it, for tests that use its controls and read what the store then holds
++// (R2-158). Mounted with react-dom/client over fake-dom.mjs: a control's handler is called as React
++// set it, and a drop ends in the DndContext's own onDragEnd, found in the tree React has on screen.
++import assert from 'node:assert/strict';
++import { createElement, useState } from 'react';
++import { loadModule } from './harness.mjs';
++import { mount, elements, reactProps } from './fake-dom.mjs';
++
++const KEY = 'cpwtcv_v1';
++
++/** A localStorage stand-in. */
++export class MemoryStorage {
++  constructor(entries) { this.map = new Map(entries); }
++  get length() { return this.map.size; }
++  key(i) { return [...this.map.keys()][i] ?? null; }
++  getItem(k) { return this.map.has(k) ? this.map.get(k) : null; }
++  setItem(k, v) { this.map.set(k, String(v)); }
++  removeItem(k) { this.map.delete(k); }
++}
++
++/**
++ * Let React run what a change set off — effects, and the renders their updates ask for (dnd-kit
++ * measures and picks what is under a drag from those) — and dnd-kit's own timers.
++ */
++export const settle = async () => {
++  for (let i = 0; i < 20; i += 1) await new Promise((r) => { setTimeout(r, 0); });
++};
++
++const text = (el) => el.textContent.replace(/\s+/g, ' ').trim();
++
++/**
++ * The onDragEnd of the innermost DndContext on screen that holds `el`: what dnd-kit calls when a
++ * drag there ends. Found from the root down, in the tree React has on screen: a node keeps the
++ * fiber it was created with, whose props (and return path) are an older render's every other update.
++ */
++function dragEndOf(view, el) {
++  const rootKey = Object.keys(view.container).find((k) => k.startsWith('__reactContainer$'));
++  let found = null;
++  (function walk(fiber, onDragEnd) {
++    for (let f = fiber; f && !found; f = f.sibling) {
++      const own = typeof f.memoizedProps?.onDragEnd === 'function' ? f.memoizedProps.onDragEnd : onDragEnd;
++      if (f.stateNode === el) { found = own; return; }
++      walk(f.child, own);
++    }
++  })(view.container[rootKey].stateNode.current, null);
++  assert.ok(found, 'no DndContext holds it');
++  return found;
++}
++
++/**
++ * The Résumé tab over a saved résumé `r`, as the Editor mounts it (Personal Info closed, sections
++ * expanded, the Add Section picker's open state its own). Returns:
++ * - `view`, `store()` (the store now), `saved()` (the résumé it holds now), `storage`;
++ * - `all(within)`, `button(label, within)` (a button by its text, title or aria-label), `click(el)`;
++ * - `card(title)` (a section's card, found by its title box), `titles()` (the section titles, top to
++ *   bottom), `entries(card)` (its entries' names, as their cards show them);
++ * - `drop(el, active, over)`: the drag that holds `el` ends with `active` over `over` (ids, or null);
++ * - `close()`.
++ */
++export async function resumeTab(r) {
++  const { useAppStore } = await loadModule('/src/hooks/useResumeStore.js');
++  const { EditorResumeTab } = await loadModule('/src/components/EditorResumeTab.jsx');
++  const storage = new MemoryStorage([[KEY, JSON.stringify({ resumes: [r], activeId: r.id })]]);
++  globalThis.localStorage = storage;
++  let store = null;
++  function Tab() {
++    store = useAppStore();
++    const [addSectionOpen, setAddSectionOpen] = useState(false);
++    return createElement(EditorResumeTab, {
++      resume: store.activeResume, store,
++      personalOpen: false, setPersonalOpen() {}, allExpanded: true, forceOpenKey: 0, toggleAllSections() {},
++      addSectionOpen, setAddSectionOpen,
++    });
++  }
++  const view = mount(Tab, {});
++  await settle();
++  const all = (within = view.container) => [...elements(within)];
++  const titleBoxes = () => all().filter((el) => el.tagName === 'INPUT' && el.getAttribute('aria-label') === 'Section title');
++  const tab = {
++    view,
++    storage,
++    store: () => store,
++    saved: () => store.activeResume,
++    all,
++    button(label, within) {
++      const found = all(within).find((el) => el.tagName === 'BUTTON'
++        && [text(el), el.getAttribute('title'), el.getAttribute('aria-label')].includes(label));
++      assert.ok(found, `no button "${label}"`);
++      return found;
++    },
++    click(el) {
++      view.act(() => reactProps(el).onClick({ preventDefault() {}, stopPropagation() {}, target: el, currentTarget: el }));
++    },
++    card(title) {
++      const box = titleBoxes().find((el) => el.value === title);
++      assert.ok(box, `no section titled "${title}": the tab shows ${tab.titles().join(' | ')}`);
++      return box.parentNode.parentNode; // title box → header row → the section's card
++    },
++    titles: () => titleBoxes().map((el) => el.value),
++    entries: (card) => all(card).filter((el) => el.tagName === 'SPAN' && /\btruncate\b/.test(el.className)).map(text),
++    drop(el, active, over) {
++      const onDragEnd = dragEndOf(view, el);
++      view.act(() => onDragEnd({ active: { id: active }, over: over == null ? null : { id: over } }));
++    },
++    async close() {
++      await view.unmount();
++      delete globalThis.localStorage;
++    },
++  };
++  return tab;
++}

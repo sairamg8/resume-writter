@@ -1,0 +1,836 @@
+diff --git a/src/constants/templateHeaderGaps.js b/src/constants/templateHeaderGaps.js
+index 00a5ee7..e980951 100644
+--- a/src/constants/templateHeaderGaps.js
++++ b/src/constants/templateHeaderGaps.js
+@@ -6,9 +6,9 @@
+  * in pt — the PDF's own unit, so an unset gap prints exactly what the template always did: each
+  * value is the constant it replaced. null: the template has no such gap, and a stored value is
+  * ignored there. A map is by Contact Layout; a function takes Between Sections (pt). The settings
+- * (CSS px), their ranges and how they resolve: src/constants/headerSpacing.js. Classic, Minimal and
+- * Executive print these; Modern's banner and the Sidebar column still print the constants their
+- * values here record, until their own batch wires them (no editor control may offer those before).
++ * (CSS px), their ranges and how they resolve: src/constants/headerSpacing.js. Every template prints
++ * these, and Personal Info → Header spacing offers each where it moves something
++ * (src/utils/headerSpacingRows.js). contactsSideGap is in none: it is the cover letter's own.
+  */
+ export const STACKED_HEADER_GAPS = {
+   nameTitleGap: 1,                  // Stack layout: the title's marginTop
+diff --git a/src/templates/pdf/CoverLetterHeaderPDF.jsx b/src/templates/pdf/CoverLetterHeaderPDF.jsx
+index 2cfa23d..4fa2dfe 100644
+--- a/src/templates/pdf/CoverLetterHeaderPDF.jsx
++++ b/src/templates/pdf/CoverLetterHeaderPDF.jsx
+@@ -10,7 +10,7 @@ import { PdfPhoto } from './shared/PdfPhoto';
+ import { contentWidthPt, pageMargins } from './shared/PdfPage';
+ import { getPdfPhotoStyle } from './shared/pdfPhoto';
+ import { fitFontSize, textWidth, widestWord } from './shared/pdfMeasure';
+-import { DOUBLE_RULE_GAP, LETTERHEAD_GAP } from './shared/letterhead';
++import { DOUBLE_RULE_GAP } from './shared/letterhead';
+ import { photoTextAlignItems } from '@/constants/templates';
+ import { setGapPt } from '@/constants/headerSpacing';
+ import { contactItems } from '@/utils/contacts';
+@@ -24,9 +24,9 @@ const CONTACTS_GAP = 12;
+ /** Room added to each measured width, pt: a word's kerning into the next space is not in it. */
+ const SLACK = 1;
+ 
+-/** The band, the rule or rules, around the letterhead's content. */
++/** The band, the rule or rules, around the letterhead's content; `gapBelow` under them (letterheadLook). */
+ function Frame({ look, settings, children }) {
+-  const { band, rules: [rule, second], ruleGap } = look;
++  const { band, rules: [rule, second], ruleGap, gapBelow } = look;
+   if (band?.bleed) {
+     // The fill runs from the paper's top and side edges; the content keeps the page margins, so
+     // it sits where every other letterhead's does. A rule (Banner's header rule) is drawn on the
+@@ -35,7 +35,7 @@ function Frame({ look, settings, children }) {
+     const top = v * MM_TO_PT;
+     const side = h * MM_TO_PT;
+     return (
+-      <View style={{ paddingBottom: band.padY, marginBottom: LETTERHEAD_GAP }}>
++      <View style={{ paddingBottom: band.padY, marginBottom: gapBelow }}>
+         <View style={{ position: 'absolute', top: -top, left: -side, right: -side, bottom: 0, backgroundColor: band.color }} />
+         {rule ? <View style={{ borderBottomWidth: rule.width, borderBottomColor: rule.color, paddingBottom: ruleGap }}>{children}</View> : children}
+       </View>
+@@ -45,7 +45,7 @@ function Frame({ look, settings, children }) {
+     return (
+       <View style={{
+         backgroundColor: band.color, borderRadius: band.radius,
+-        paddingVertical: band.padY, paddingHorizontal: band.padX, marginBottom: LETTERHEAD_GAP,
++        paddingVertical: band.padY, paddingHorizontal: band.padX, marginBottom: gapBelow,
+       }}>
+         {children}
+       </View>
+@@ -55,9 +55,9 @@ function Frame({ look, settings, children }) {
+   const ruled = rule
+     ? { borderBottomWidth: rule.width, borderBottomColor: rule.color, paddingBottom: ruleGap }
+     : { paddingBottom: ruleGap };
+-  if (!second) return <View style={{ ...ruled, marginBottom: LETTERHEAD_GAP }}>{children}</View>;
++  if (!second) return <View style={{ ...ruled, marginBottom: gapBelow }}>{children}</View>;
+   return (
+-    <View style={{ marginBottom: LETTERHEAD_GAP }}>
++    <View style={{ marginBottom: gapBelow }}>
+       <View style={ruled}>{children}</View>
+       <View style={{ marginTop: DOUBLE_RULE_GAP, borderTopWidth: second.width, borderTopColor: second.color }} />
+     </View>
+diff --git a/src/templates/pdf/ModernTemplatePDF.jsx b/src/templates/pdf/ModernTemplatePDF.jsx
+index 1142599..0e49431 100644
+--- a/src/templates/pdf/ModernTemplatePDF.jsx
++++ b/src/templates/pdf/ModernTemplatePDF.jsx
+@@ -12,7 +12,6 @@ import { contactItems } from '@/utils/contacts';
+ import { getPdfPhotoStyle } from './shared/pdfPhoto';
+ import { PdfPhoto } from './shared/PdfPhoto';
+ import { opacityFor } from './shared/pdfColors';
+-import { MODERN_HEADER_PAD_X_PT, MODERN_HEADER_PAD_Y_PT } from './shared/pdfUnits';
+ import { photoTextAlignItems } from '@/constants/templates';
+ import { pageSizeOf } from '@/constants/pageSize';
+ 
+@@ -50,7 +49,6 @@ export function ModernTemplatePDF({ data }) {
+     nameColor,
+     jobTitleColor,
+     lineHeightValue: lineH,
+-    sectionGap,
+   } = settings;
+   const nameSize  = baseSize + (settings.fontSizeNameDelta  ?? 8);
+   const entrySize = baseSize + (settings.fontSizeEntryDelta ?? 0);
+@@ -66,7 +64,7 @@ export function ModernTemplatePDF({ data }) {
+   // of it wider than that has nowhere to break, and react-pdf drew it off the banner and the
+   // paper: it prints at the largest size that holds it.
+   const name = personal?.name || 'Your Name';
+-  const nameRow = headerRowWidth(settings, personal, { photoWidth: photoStyle.width, gap: g.photoTextGap }) - 2 * MODERN_HEADER_PAD_X_PT;
++  const nameRow = headerRowWidth(settings, personal, { photoWidth: photoStyle.width, gap: g.photoTextGap }) - 2 * g.headerPadX;
+   const nameFit = fitFontSize(name, { fontFamily: settings._pdfFontFamily, fontSize: nameSize, fontWeight: 'bold' }, nameRow);
+ 
+   const pageStyle = getPageStyle(settings);
+@@ -74,13 +72,15 @@ export function ModernTemplatePDF({ data }) {
+   return (
+     <Document {...getDocumentProps(personal)}>
+       <Page size={pageSizeOf(settings)} style={pageStyle} wrap>
++        {/* Personal Info → Header spacing: Banner top & bottom and Banner sides pad it (unset, px-6 py-5:
++            15 / 18 pt), Header ↔ First section spaces what follows (unset, Between Sections). */}
+         <View style={{
+           backgroundColor: accent,
+           borderRadius: 2,
+-          paddingTop: MODERN_HEADER_PAD_Y_PT,
+-          paddingBottom: MODERN_HEADER_PAD_Y_PT,
+-          paddingHorizontal: MODERN_HEADER_PAD_X_PT,
+-          marginBottom: sectionGap,
++          paddingTop: g.headerPadY,
++          paddingBottom: g.headerPadY,
++          paddingHorizontal: g.headerPadX,
++          marginBottom: g.headerGapBelow,
+         }}>
+           {/* Breakable: a summary longer than a page continues on the next, on the banner's colour (R2-046);
+               the name row never splits. Photo → Text Position, as Classic, Minimal and Executive take it (R3-0). */}
+@@ -102,7 +102,7 @@ export function ModernTemplatePDF({ data }) {
+           </View>
+           {!hidden.includes('summary') && personal?.summary &&
+            hasRichText(personal.summary) && (
+-            <View style={{ marginTop: 8 }}>
++            <View style={{ marginTop: g.summaryGap }}>
+               <PdfRichText
+                 html={personal.summary}
+                 style={{ fontSize: baseSize, color: headerText, opacity: summaryOpacity, lineHeight: lineH }}
+diff --git a/src/templates/pdf/SidebarTemplatePDF.jsx b/src/templates/pdf/SidebarTemplatePDF.jsx
+index 462b5ca..defe006 100644
+--- a/src/templates/pdf/SidebarTemplatePDF.jsx
++++ b/src/templates/pdf/SidebarTemplatePDF.jsx
+@@ -138,7 +138,9 @@ export function SidebarTemplatePDF({ data }) {
+           paddingRight: SIDE_PAD_RIGHT,
+           color: side.strong,
+         }}>
+-          <View style={{ marginBottom: sideSectionGap, alignItems: 'center' }} wrap={false}>
++          {/* Personal Info → Header spacing → Header ↔ First section: the name block ↔ the column's first
++              section, its Contact where it has one (unset, Between Sections). */}
++          <View style={{ marginBottom: g.headerGapBelow, alignItems: 'center' }} wrap={false}>
+             {personal?.photo && !hidden.includes('photo') && (
+               <PdfPhoto src={personal.photo} style={sidePhoto} />
+             )}
+diff --git a/src/templates/pdf/shared/letterhead.js b/src/templates/pdf/shared/letterhead.js
+index c8dff10..e56222f 100644
+--- a/src/templates/pdf/shared/letterhead.js
++++ b/src/templates/pdf/shared/letterhead.js
+@@ -3,7 +3,7 @@
+ // to print Classic's letterhead under every template, so a Modern or Sidebar résumé and its
+ // letter never read as a set. Plain data (no react-pdf).
+ import { hasHeaderControls, headerBorderOn, headerTemplateId, letterheadCentered, templateId } from '@/constants/templates';
+-import { HEADER_GAPS, templateGapPt } from '@/constants/headerSpacing';
++import { HEADER_GAPS, setGapPt, templateGapPt } from '@/constants/headerSpacing';
+ import { contrast, sidebarShades, solid, textShades } from './pdfColors';
+ import { CSS_PX_TO_PT, MODERN_HEADER_PAD_X_PT, MODERN_HEADER_PAD_Y_PT } from './pdfUnits';
+ import { DEFAULTS } from './templateSettings';
+@@ -13,7 +13,7 @@ import { bannerPadY } from './bannerBand';
+ /**
+  * Space under the letterhead's text, above its rule (or the gap under the letterhead, with none),
+  * where the résumé's header prints no Text ↔ Border gap of its own (letterheadLook's ruleGap) —
+- * and the gap under the letterhead.
++ * and the gap under the letterhead where the résumé sets no Header ↔ First section (gapBelow).
+  */
+ const LETTERHEAD_PAD = 12;
+ export const LETTERHEAD_GAP = 16;
+@@ -80,13 +80,17 @@ export const LOOKS = {
+   classic: (base, { rule }) => ({ ...base, rules: rule || [] }),
+   modern: (base, { s, accent }) => {
+     // Modern's banner: the accent, its padding and corners; everything on it in the header text colour.
++    // Its padding is the résumé banner's: Header spacing's Banner top & bottom and sides, else 15 / 18 pt.
+     const headerText = s.headerTextColor || '#ffffff';
+     return {
+       ...base,
+       title: { ...base.title, opacity: 0.9 },
+       contacts: headerText,
+       marks: bandMarks(headerText, solid(accent)),
+-      band: { color: accent, fallback: DEFAULTS.modern.accentColor, padX: MODERN_HEADER_PAD_X_PT, padY: MODERN_HEADER_PAD_Y_PT, radius: 2 },
++      band: {
++        color: accent, fallback: DEFAULTS.modern.accentColor, radius: 2,
++        padX: s.headerGaps?.headerPadX ?? MODERN_HEADER_PAD_X_PT, padY: s.headerGaps?.headerPadY ?? MODERN_HEADER_PAD_Y_PT,
++      },
+       photo: ['#ffffff', { onBanner: true }],
+     };
+   },
+@@ -177,6 +181,8 @@ export const COMPACT_RULE = 1;
+  *   ruleGap   the space under the text, above the rules — with none, added to the gap under the
+  *             letterhead — in pt: the résumé header's Text ↔ Border gap wherever its header prints
+  *             one (Header Bottom Border on: headerGaps.headerRuleGap, FIDB-51-VF3-NB3), else 12
++ *   gapBelow  the gap under the letterhead (its band, rule or ruleGap), pt: the résumé's Header ↔
++ *             First section where it sets one (Personal Info → Header spacing), else 16
+  *   photo     [the ring colour of Photo → Border "Accent", getPdfPhotoStyle options]: a ring that
+  *             shows on the band, as on the résumé's (white on Modern's accent, a readable accent
+  *             on the Sidebar panel)
+@@ -216,6 +222,8 @@ export function letterheadLook(template, s = {}) {
+     // draws no rule at included (getHeaderBorderStyle); the letter's rule sat 12 pt under its text
+     // whatever that gap. Modern's banner and the Sidebar panel have none (null): 12, unused there.
+     ruleGap: headerBorderOn(s, look) ? s.headerGaps?.headerRuleGap ?? LETTERHEAD_PAD : LETTERHEAD_PAD,
++    // The letter's own 16 pt under its letterhead, unless the résumé set the gap under its header (spec D5).
++    gapBelow: setGapPt(s, 'headerGapBelow') ?? LETTERHEAD_GAP,
+     photo: [accent, {}],
+   };
+   // The résumé header's rule (headerRule) replaces Minimal's hairline and Executive's double rule —
+diff --git a/src/templates/pdf/shared/pdfUnits.js b/src/templates/pdf/shared/pdfUnits.js
+index 35b7bf2..d8c4c76 100644
+--- a/src/templates/pdf/shared/pdfUnits.js
++++ b/src/templates/pdf/shared/pdfUnits.js
+@@ -31,7 +31,10 @@ export const MM_TO_PT = 72 / 25.4;
+  */
+ export const HEADER_BORDER_PAD_PT = pxToPt(16); // 12
+ 
+-/** Modern accent band: px-6 py-5 → 24px / 20px */
++/**
++ * Modern accent band: px-6 py-5 → 24px / 20px — MODERN_HEADER_GAPS' headerPadX / headerPadY, and the
++ * cover letter's Modern band where the settings carry no header gaps.
++ */
+ export const MODERN_HEADER_PAD_X_PT = pxToPt(24); // 18
+ export const MODERN_HEADER_PAD_Y_PT = pxToPt(20); // 15
+ 
+diff --git a/src/utils/headerSpacingRows.js b/src/utils/headerSpacingRows.js
+index b07ba50..2140107 100644
+--- a/src/utils/headerSpacingRows.js
++++ b/src/utils/headerSpacingRows.js
+@@ -2,10 +2,11 @@
+ // offers, top to bottom as the header prints them, each only where it prints. Plain data (no React):
+ // the panel and tests read it.
+ import { HEADER_GAPS, HEADER_GAP_KEYS, storedGapPx, templateGapPt } from '@/constants/headerSpacing';
+-import { hasHeaderControls, headerTemplateId } from '@/constants/templates';
++import { hasHeaderControls, headerBorderOn, headerTemplateId } from '@/constants/templates';
+ import { contactItems } from '@/utils/contacts';
+ import { isDrawableImage } from '@/utils/imageUpload';
+-import { CSS_PX_TO_PT } from '@/templates/pdf/shared/pdfUnits';
++import { hasRichText } from '@/utils/richText';
++import { CSS_PX_TO_PT, DEFAULT_SECTION_GAP_PX } from '@/templates/pdf/shared/pdfUnits';
+ 
+ /** Each row's visible label and its accessible name ("↔" reads badly aloud). */
+ const TEXT = {
+@@ -16,11 +17,31 @@ const TEXT = {
+   iconTextGap: ['Icon ↔ Text', 'Icon to text spacing'],
+   contactGapX: ['Between contacts', 'Space between contacts'],
+   contactGapY: ['Between contact rows', 'Space between contact rows'],
++  summaryGap: ['Contacts ↔ Summary', 'Contacts to summary spacing'],
++  headerRuleGap: ['Text ↔ Border', 'Text to border spacing'],
++  headerPadY: ['Banner top & bottom', 'Banner top and bottom padding'],
++  headerPadX: ['Banner sides', 'Banner side padding'],
++  headerGapBelow: ['Header ↔ First section', 'Header to first section spacing'],
+ };
+ /** Without a title the contacts follow the name, and Title ↔ Contacts is the name's gap. */
+ const NAME_CONTACTS = ['Name ↔ Contacts', 'Name to contacts spacing'];
+ /** Contact Style "Bullet" prints a bullet where "Icon" prints an icon. */
+ const BULLET_TEXT = ['Bullet ↔ Text', 'Bullet to text spacing'];
++/** Without contacts the summary follows the title, or the name. */
++const TITLE_SUMMARY = ['Title ↔ Summary', 'Title to summary spacing'];
++const NAME_SUMMARY = ['Name ↔ Summary', 'Name to summary spacing'];
++/** Banner's band: its padding is under its text only (the top is the page's margin), and the summary prints under it. */
++const BAND_PAD = ['Banner padding', 'Banner padding under the text'];
++const BAND_SUMMARY = ['Banner ↔ Summary', 'Banner to summary spacing'];
++
++/**
++ * What a template's own gap depends on, as resolveTemplateSettings reads it: Contact Layout, and
++ * Between Sections in pt — the gap under the header follows it where it is wider (templateHeaderGaps).
++ */
++const gapContext = (settings) => ({
++  contactLayout: settings?.contactLayout,
++  sectionGapPt: (settings?.sectionGap ?? DEFAULT_SECTION_GAP_PX) * CSS_PX_TO_PT,
++});
+ 
+ /**
+  * One stepper row, in CSS px like Between Sections: `valuePx` is what prints — the résumé's value
+@@ -29,7 +50,7 @@ const BULLET_TEXT = ['Bullet ↔ Text', 'Bullet to text spacing'];
+  */
+ function gapRow(key, template, settings, [label, name] = TEXT[key]) {
+   const { min, max } = HEADER_GAPS[key];
+-  const defaultPx = templateGapPt(template, key, { contactLayout: settings?.contactLayout }) / CSS_PX_TO_PT;
++  const defaultPx = templateGapPt(template, key, gapContext(settings)) / CSS_PX_TO_PT;
+   const stored = storedGapPx(settings, key);
+   return { key, label, name, valuePx: stored ?? defaultPx, defaultPx, set: gapIsSet(key, template, settings), min, max };
+ }
+@@ -46,7 +67,7 @@ function gapRow(key, template, settings, [label, name] = TEXT[key]) {
+ export function gapIsSet(key, template, settings) {
+   const stored = storedGapPx(settings, key);
+   if (stored == null) return false;
+-  const ownPt = templateGapPt(headerTemplateId(template, settings), key, { contactLayout: settings?.contactLayout });
++  const ownPt = templateGapPt(headerTemplateId(template, settings), key, gapContext(settings));
+   if (ownPt == null) return true;
+   // Compared as the stepper shows them (formatPx, one decimal): 1 pt is 1.33 px, never whole.
+   return Math.round(stored * 10) !== Math.round((ownPt / CSS_PX_TO_PT) * 10);
+@@ -76,6 +97,14 @@ export const headerGapKeysSet = (template, settings = {}) =>
+  *                     columns are its own — spec D7)
+  *   Between contact    two contacts or more on rows of their own: Modern's and Icon + Justify's once
+  *   rows               they wrap, the Sidebar column's, Single's; a 2 Grid's from the third
++ *   Contacts ↔ Summary the summary prints, in a header that has the gap (not the Sidebar column's
++ *                     page, whose summary is its main column's About Me): "Title ↔ Summary" or
++ *                     "Name ↔ Summary" without contacts, "Banner ↔ Summary" under Banner's band
++ *   Text ↔ Border     Header Bottom Border is on, in a header that takes it (the rule's padding)
++ *   Banner top &       Modern's banner padding, and Banner's band's under its text ("Banner padding");
++ *   bottom, sides      the side padding is Modern's only (Banner's text keeps the page margins)
++ *   Header ↔ First     every header: the space between it (the summary where it follows the header)
++ *   section            and what follows — the Sidebar column's under its name
+  */
+ export function headerGapRows(template, settings = {}, personal = {}) {
+   const t = headerTemplateId(template, settings); // the Sidebar's single column prints Classic's header
+@@ -98,5 +127,15 @@ export function headerGapRows(template, settings = {}, personal = {}) {
+   if (contacts > 1 && flowing) rows.push(gapRow('contactGapX', t, settings));
+   const layout = hc ? settings?.contactLayout : null;
+   if ((contacts > 1 && (flowing || t === 'sidebar' || layout === 'single')) || (contacts > 2 && layout === '2grid')) rows.push(gapRow('contactGapY', t, settings));
++  // Banner prints its summary under the band, so it follows the band's rows; every other header ends in it.
++  const summary = !hidden.includes('summary') && hasRichText(personal?.summary) && has('summaryGap');
++  const band = t === 'banner';
++  const summaryRow = () => gapRow('summaryGap', t, settings, band ? BAND_SUMMARY : contacts ? undefined : personal?.title ? TITLE_SUMMARY : NAME_SUMMARY);
++  if (summary && !band) rows.push(summaryRow());
++  if (hc && headerBorderOn(settings, t) && has('headerRuleGap')) rows.push(gapRow('headerRuleGap', t, settings));
++  if (has('headerPadY')) rows.push(gapRow('headerPadY', t, settings, band ? BAND_PAD : undefined));
++  if (has('headerPadX')) rows.push(gapRow('headerPadX', t, settings));
++  if (summary && band) rows.push(summaryRow());
++  if (has('headerGapBelow')) rows.push(gapRow('headerGapBelow', t, settings));
+   return rows;
+ }
+diff --git a/src/utils/wordExportCoverLetter.js b/src/utils/wordExportCoverLetter.js
+index 1d3e578..3bb35b4 100644
+--- a/src/utils/wordExportCoverLetter.js
++++ b/src/utils/wordExportCoverLetter.js
+@@ -17,7 +17,7 @@ import { contactItems } from '@/utils/contacts';
+ import { hasRichText } from '@/utils/richText';
+ import { letterBlock, letterContactFormat, letterHiddenFields, letterSignature } from '@/utils/coverLetter';
+ import { solid } from '@/templates/pdf/shared/pdfColors';
+-import { letterGrey, letterheadLook, LETTERHEAD_GAP } from '@/templates/pdf/shared/letterhead';
++import { letterGrey, letterheadLook } from '@/templates/pdf/shared/letterhead';
+ import { resolveTemplateSettings } from '@/templates/pdf/shared/templateSettings';
+ import { templateId } from '@/constants/templates';
+ import { setGapPt } from '@/constants/headerSpacing';
+@@ -115,9 +115,10 @@ function letterhead(personal, s, cl, sizes, look) {
+     }
+   }
+   // A band's rows touch (no white gap inside it). Word puts a bottom border's space between the
+-  // text and the border, so the gap under the letterhead is the PDF's: 16 pt below the rule or band
+-  // — and, with neither (a Classic résumé's border off, V2FIDB-51-2), the PDF's pad above it too.
+-  const below = LETTERHEAD_GAP + (look.band || look.rules.length ? 0 : look.ruleGap);
++  // text and the border, so the gap under the letterhead is the PDF's: its gapBelow (16 pt, or the
++  // résumé's Header ↔ First section) below the rule or band — and, with neither (a Classic résumé's
++  // border off, V2FIDB-51-2), the PDF's pad above it too.
++  const below = look.gapBelow + (look.band || look.rules.length ? 0 : look.ruleGap);
+   return rows.map((r, i) => {
+     const last = i === rows.length - 1;
+     return line(r.runs, last ? pt(below) : look.band && !r.kept ? 0 : r.after, { ...frame(look, last), ...r.extra });
+diff --git a/src/utils/wordExportHeader.js b/src/utils/wordExportHeader.js
+index 5cb28ad..ca9f311 100644
+--- a/src/utils/wordExportHeader.js
++++ b/src/utils/wordExportHeader.js
+@@ -32,14 +32,15 @@ const twips = (pt) => Math.round(pt * 20);
+ 
+ /**
+  * The résumé's contacts in Design → Contact Layout, as paragraphs (contactRows; FIDB-51-VF1-NB1-NB2),
+- * laid out `width` pt wide: what the photo beside them leaves, as the PDF's (headerRowWidth).
++ * laid out `width` pt wide: what the photo beside them leaves, as the PDF's (headerRowWidth). `last`:
++ * the space after the last row, twips — Word's own 4 pt, or Contacts ↔ Summary where it is set.
+  */
+-function contactParagraphs(items, s, styled, style, centered, width) {
++function contactParagraphs(items, s, styled, style, centered, width, last = 80) {
+   const rows = contactRows(items, {
+     contactStyle: styled ? s.contactStyle : 'icon', layout: styled ? s.contactLayout : 'justify', centered, settings: s, style, width,
+   });
+   return rows.map((row, i) => new Paragraph({
+-    children: row.runs, spacing: { after: i === rows.length - 1 ? 80 : 20 }, ...centredIf(row.centred), ...row.extra,
++    children: row.runs, spacing: { after: i === rows.length - 1 ? last : 20 }, ...centredIf(row.centred), ...row.extra,
+   }));
+ }
+ 
+@@ -76,6 +77,11 @@ export function buildPersonalSection(personal = {}, settings = {}, template = 'c
+   // space after is the gap to what follows it); unset, Word keeps its own spacing (spec D6).
+   const setTwips = (key) => (s.headerGaps?.[key] != null && setGapPt(settings, key) != null ? twips(setGapPt(settings, key)) : null);
+   const toContacts = contacts.length ? setTwips('titleContactsGap') : null; // Title (or Name) ↔ Contacts
++  const summary = !hidden.has('summary') && hasRichText(personal.summary);
++  // Contacts ↔ Summary: the space after what prints last above the summary — the contacts, else the
++  // title or the name (in the photo's row, its text column).
++  const toSummary = summary ? setTwips('summaryGap') : null;
++  const next = contacts.length ? toContacts : toSummary; // after the name and title: the contacts, else the summary
+   const stacked = title && !inline;
+   // The photo beside the name, as the PDF's header row: its cell the photo's width and the Photo ↔
+   // Text gap, the contacts laid out in what is left. Above the name in a centred header and on the
+@@ -87,15 +93,15 @@ export function buildPersonalSection(personal = {}, settings = {}, template = 'c
+   paragraphs.push(new Paragraph({
+     children: inline ? [name, inlineGap(inline.gap, titleSize), title] : [name],
+     // A stacked title follows Name ↔ Title when set, else Word's own 2 pt; the contacts after the name
+-    // (no title, or Inline) Title ↔ Contacts.
+-    spacing: { after: stacked ? setTwips('nameTitleGap') ?? 40 : toContacts ?? (inline ? 60 : 40) },
++    // (no title, or Inline) Title ↔ Contacts, a summary with no contacts Contacts ↔ Summary.
++    spacing: { after: stacked ? setTwips('nameTitleGap') ?? 40 : next ?? (inline ? 60 : 40) },
+     ...centredIf(centered),
+   }));
+ 
+   if (stacked) {
+     paragraphs.push(new Paragraph({
+       children: [title],
+-      spacing: { after: toContacts ?? 60 },
++      spacing: { after: next ?? 60 },
+       ...centredIf(centered),
+     }));
+   }
+@@ -105,11 +111,11 @@ export function buildPersonalSection(personal = {}, settings = {}, template = 'c
+     // Word printed them at 9 pt at every Base (R2-067).
+     const style = { size: Math.round(headerContactPt(s, template) * 2), color: accent2Hex(textShades(s.textColor).sub, '64748b') };
+     const width = beside ? wordContentTwips(s) / 20 - photo.width - gap : undefined;
+-    paragraphs.push(...contactParagraphs(contacts, s, hasHeaderControls(template, settings), style, centered, width));
++    paragraphs.push(...contactParagraphs(contacts, s, hasHeaderControls(template, settings), style, centered, width, toSummary ?? 80));
+   }
+   if (beside) paragraphs.splice(0, paragraphs.length, photoRow(photo, gap, paragraphs, s));
+ 
+-  if (!hidden.has('summary') && hasRichText(personal.summary)) {
++  if (summary) {
+     // The Sidebar prints its summary under an "About Me" section title at the top of its main column (FIDB-51-VF3-NB2-NB1-NB1).
+     if (templateId(template) === 'sidebar') paragraphs.push(buildSectionTitle('About Me', settings, template));
+     const { run, frame } = summaryLook(s, template);
+@@ -117,7 +123,8 @@ export function buildPersonalSection(personal = {}, settings = {}, template = 'c
+     paragraphs.push(...descriptionToParagraphs(personal.summary, { size: Math.round(baseSize * 2), lineHeight: s.lineHeightValue, ...run }, centered ? 'center' : null, frame));
+   }
+ 
+-  paragraphs.push(headerEnd(s, template));
++  // Header ↔ First section, where set: the space after the header's end, as Word's own 4 pt is.
++  paragraphs.push(headerEnd(s, template, setTwips('headerGapBelow') ?? 80));
+   return paragraphs;
+ }
+ 
+@@ -167,18 +174,19 @@ function summaryLook(s, template) {
+  * (FIDB-51-VF3-NB2): a rule in the accent at its Thickness, the header's Text ↔ Border gap under
+  * the text (headerRule; a Thickness no rule is drawn at keeps the gap). Else — the border off,
+  * Modern's banner, the Sidebar's column — a little space, and no line: no PDF draws one there.
++ * `below`: the space after it, twips (Word's own 4 pt, or Header ↔ First section).
+  */
+-function headerEnd(s, template) {
++function headerEnd(s, template, below) {
+   const on = hasHeaderControls(template, s) && headerBorderOn(s, template);
+-  if (!on) return spacer(80);
++  if (!on) return spacer(below);
+   const gap = twips(s.headerGaps?.headerRuleGap ?? HEADER_BORDER_PAD_PT);
+   const rule = headerRule(s, template);
+-  if (!rule) return spacer(gap + 80);
++  if (!rule) return spacer(gap + below);
+   return new Paragraph({
+     children: [],
+     border: { bottom: { style: BorderStyle.SINGLE, size: eighths(rule.width), color: accent2Hex(rule.color), space: 0 } },
+     // A 1 pt line: the rule sits the gap under the text above it, not a whole empty line under it.
+-    spacing: { before: gap, after: 80, line: 20, lineRule: LineRuleType.EXACT },
++    spacing: { before: gap, after: below, line: 20, lineRule: LineRuleType.EXACT },
+   });
+ }
+ 
+diff --git a/tests/pdf/27-header-spacing.test.mjs b/tests/pdf/27-header-spacing.test.mjs
+index c75b572..d228cad 100644
+--- a/tests/pdf/27-header-spacing.test.mjs
++++ b/tests/pdf/27-header-spacing.test.mjs
+@@ -192,16 +192,17 @@ describe('Classic, Minimal and Executive print the header gaps (header_spacing_s
+     }
+   });
+ 
+-  // Guard, until the letterhead takes the résumé's gaps in its own batch (header_spacing_spec.md
+-  // D5 — this test then becomes its "follows the résumé" test): the letterhead keeps its own
+-  // spacing. PdfContactRow takes gaps only from its `gaps` prop, never from the résumé's resolved
+-  // settings the letter passes it — they carry the résumé's Contact Layout, not the letter's.
+-  // Name ↔ Title, Photo ↔ Text, Title ↔ Contacts, Icon ↔ Text and Between contacts (and rows)
+-  // follow the résumé (D5; 45- to 50-header-*); the rest keep the letterhead's spacing until their
+-  // rows land.
+-  it('the cover letter keeps its letterhead\'s spacing whatever other header gaps the résumé sets', async () => {
+-    const SET = { headerGapBelow: 60, headerRuleGap: 30 };
++  // Guard: the letterhead follows the résumé's gaps it prints (header_spacing_spec.md D5): Name ↔
++  // Title, Photo ↔ Text, Title ↔ Contacts, Icon ↔ Text and Between contacts (and rows) — 45- to
++  // 50-header-* — Text ↔ Border where the border is on (33-cover-letter-header-rule), and Modern's
++  // banner padding and Header ↔ First section (92-header-spacing-rows, R2-137). The rest change
++  // nothing: a letter has no summary, the border is off, a template without a banner has no banner
++  // padding, and the space beside the contacts is the letter's own. PdfContactRow takes gaps only
++  // from its `gaps` prop, never from the résumé's resolved settings the letter passes it — they
++  // carry the résumé's Contact Layout, not the letter's.
++  it('the cover letter keeps its letterhead\'s spacing whatever header gaps the résumé sets that it does not print', async () => {
+     for (const template of [...STACKED, 'modern', 'sidebar']) {
++      const SET = { summaryGap: 40, headerRuleGap: 30, contactsSideGap: 40, ...(template === 'modern' ? {} : { headerPadY: 30, headerPadX: 30 }) };
+       for (const coverLetter of [{ fieldsPosition: 'below-name', headerLayout: 'single' }, { fieldsPosition: 'right' }]) {
+         const letter = async (settings) => drawing(await renderCover(make(template, settings, { photo: PNG_2X2 }, coverLetter)));
+         assert.equal(await letter(SET), await letter({}), `${template} ${JSON.stringify(coverLetter)}`);
+diff --git a/tests/pdf/73-typed-number-fields.test.mjs b/tests/pdf/73-typed-number-fields.test.mjs
+index a9154f9..8957f63 100644
+--- a/tests/pdf/73-typed-number-fields.test.mjs
++++ b/tests/pdf/73-typed-number-fields.test.mjs
+@@ -63,10 +63,10 @@ async function steppers() {
+ }
+ 
+ describe('a stepper box writes only what the user typed (R2-032)', () => {
+-  it('Classic\'s six Header spacing rows are all offered (with a photo, a title and contacts)', async () => {
++  it('Classic\'s Header spacing rows are all offered (with a photo, a title, contacts and its own border, no summary)', async () => {
+     const { headerGapRows } = await loadModule('/src/utils/headerSpacingRows.js');
+     assert.deepEqual(headerGapRows('classic', {}, P).map((r) => r.key),
+-      ['photoTextGap', 'nameTitleGap', 'titleContactsGap', 'iconTextGap', 'contactGapX', 'contactGapY']);
++      ['photoTextGap', 'nameTitleGap', 'titleContactsGap', 'iconTextGap', 'contactGapX', 'contactGapY', 'headerRuleGap', 'headerGapBelow']);
+   });
+ 
+   it('clicking into a box and leaving it writes nothing', async () => {
+diff --git a/tests/pdf/92-header-spacing-rows.test.mjs b/tests/pdf/92-header-spacing-rows.test.mjs
+new file mode 100644
+index 0000000..a2d0b34
+--- /dev/null
++++ b/tests/pdf/92-header-spacing-rows.test.mjs
+@@ -0,0 +1,248 @@
++// R2-137: Personal Info → Header Customization → Header spacing offers the header gaps that had no
++// control — Contacts ↔ Summary (summaryGap), Text ↔ Border (headerRuleGap), the banner's padding
++// (headerPadY, headerPadX) and Header ↔ First section (headerGapBelow) — each only where it moves
++// something. Modern printed its banner's 15 / 18 pt padding, the 8 pt above its summary and Between
++// Sections under the banner as constants, and the Sidebar column Between Sections under its name, so a
++// stored value changed nothing there; the letter's Modern band and the gap under every letterhead, and
++// Word's space above the summary and under the header, kept their own. Now each value moves what
++// follows its gap by exactly its change, and unset every template prints what it always printed.
++// contactsSideGap has no row: no résumé header prints it (it is the letter's space beside its contacts).
++import { before, after, describe, it } from 'node:test';
++import assert from 'node:assert/strict';
++import { createElement } from 'react';
++import { renderToString } from 'react-dom/server';
++import { setup, teardown, resume, experience, render, renderCover, renderDocx, read, readDocx, loadModule, TEMPLATES } from './harness.mjs';
++import { drawing } from './extractors.mjs';
++
++before(setup);
++after(teardown);
++
++const P = {
++  name: 'Alex Johnson', title: 'Senior Engineer', email: 'alex@example.com', phone: '+1 555 0100',
++  summary: '<p>Summary line of an experienced engineer.</p>',
++};
++const LETTER = { date: '2026-01-15', recipientName: 'Jane Smith', body: '<p>Body line.</p>' };
++const cv = (template, settings = {}, personal = {}, coverLetter = {}) =>
++  resume({ template, settings, personal: { ...P, ...personal }, coverLetter: { ...LETTER, ...coverLetter }, sections: [experience([{}])] });
++const near = (a, b, at) => assert.ok(Math.abs(a - b) < 0.02, `${at}: ${a} vs ${b}`);
++const drawn = async (...args) => drawing(await render(cv(...args)));
++/** Stacked headers: every template but Modern's banner and the Sidebar column. */
++const STACKED = ['classic', 'minimal', 'executive', 'timeline', 'banner', 'academic', 'compact'];
++
++/** Where each anchor prints on page 1: its x, and its baseline's depth from the page top, pt. */
++async function anchors(bytes) {
++  const [page] = await read(bytes);
++  const out = {};
++  for (const [k, s] of Object.entries({ name: P.name, title: P.title, email: P.email, summary: 'Summary line', section: 'Company 1', recipient: 'Jane Smith' })) {
++    const t = page.items.find((i) => i.str.includes(s));
++    if (t) { out[k] = page.H - t.y; out[`${k}X`] = t.x; }
++  }
++  return out;
++}
++
++/**
++ * [template, key, other settings, what moves — anchor: how many times the gap it moves by — and what
++ * stays]. The gap is set to 4 and 36 px: what follows it moves 24 pt per time, what precedes it not at all.
++ */
++const MOVES = [
++  ['modern', 'summaryGap', {}, { summary: 1, section: 1 }, ['name', 'title', 'email']],
++  ['modern', 'headerGapBelow', {}, { section: 1 }, ['name', 'email', 'summary']],
++  ['modern', 'headerPadY', {}, { name: 1, email: 1, summary: 1, section: 2 }, []],
++  ['modern', 'headerPadX', {}, { nameX: 1, emailX: 1, summaryX: 1 }, ['name', 'sectionX']],
++  // The column's name block ↔ its Contact; the main column (the summary's About Me, the sections) stays.
++  ['sidebar', 'headerGapBelow', {}, { email: 1 }, ['name', 'title', 'summary', 'section']],
++  ...STACKED.flatMap((t) => [
++    [t, 'summaryGap', {}, { summary: 1, section: 1 }, ['name', 'email']],
++    [t, 'headerGapBelow', {}, { section: 1 }, ['name', 'email', 'summary']],
++    // Banner draws its rule on the band, over the summary under it; the others under the summary.
++    [t, 'headerRuleGap', { showHeaderBorder: true }, t === 'banner' ? { summary: 1, section: 1 } : { section: 1 }, t === 'banner' ? ['name', 'email'] : ['name', 'email', 'summary']],
++  ]),
++  ['banner', 'headerPadY', {}, { summary: 1, section: 1 }, ['name', 'email']],
++];
++
++describe('the gaps under the header move the résumé PDF by exactly their change', () => {
++  for (const [template, key, settings, moves, stays] of MOVES) {
++    it(`${template}: ${key}${Object.keys(settings).length ? ` ${JSON.stringify(settings)}` : ''} moves ${Object.keys(moves).join(', ')}; not ${stays.join(', ') || 'what precedes it'}`, async () => {
++      const [lo, hi] = await Promise.all([4, 36].map(async (px) => anchors(await render(cv(template, { ...settings, [key]: px })))));
++      for (const [a, times] of Object.entries(moves)) near(hi[a] - lo[a], 24 * times, `${template} ${key}: ${a}`);
++      for (const a of stays) near(hi[a], lo[a], `${template} ${key}: ${a} stays`);
++    });
++  }
++
++  it('a stored value out of range prints at its end; one that is not a number prints as unset', async () => {
++    for (const [template, key, max] of [['modern', 'headerPadY', 40], ['modern', 'headerPadX', 40], ['modern', 'summaryGap', 48], ['modern', 'headerGapBelow', 80], ['sidebar', 'headerGapBelow', 80]]) {
++      assert.equal(await drawn(template, { [key]: 1000 }), await drawn(template, { [key]: max }), `${template} ${key}: 1000 → ${max}`);
++      assert.equal(await drawn(template, { [key]: -5 }), await drawn(template, { [key]: 0 }), `${template} ${key}: -5 → 0`);
++      assert.equal(await drawn(template, { [key]: 'abc' }), await drawn(template), `${template} ${key}: 'abc' → unset`);
++    }
++  });
++
++  it('a stored gap a template does not print changes nothing there', async () => {
++    const none = { summaryGap: 40, headerRuleGap: 40, headerPadY: 40, headerPadX: 40, showHeaderBorder: true };
++    assert.equal(await drawn('sidebar', none), await drawn('sidebar', { showHeaderBorder: true }), 'the Sidebar column: no summary gap, rule or banner');
++    assert.equal(await drawn('modern', { headerRuleGap: 40, showHeaderBorder: true }), await drawn('modern', { showHeaderBorder: true }), 'Modern: no rule');
++    for (const t of ['classic', 'minimal', 'executive', 'timeline', 'academic', 'compact']) {
++      assert.equal(await drawn(t, { headerPadY: 40, headerPadX: 40 }), await drawn(t), `${t}: no banner`);
++    }
++    assert.equal(await drawn('banner', { headerPadX: 40 }), await drawn('banner'), 'Banner: its text keeps the page margins');
++    assert.equal(await drawn('classic', { headerRuleGap: 40 }), await drawn('classic'), 'Classic with its border off: no rule to pad');
++  });
++});
++
++// Guard: unset, Modern and the Sidebar print the constants they printed before the keys reached them
++// (px-6 py-5 → 18 / 15 pt, the summary's 8 pt, Between Sections) — the drawing of those values set
++// is the unset drawing, at the default and at other Between Sections.
++describe('unset, every template prints the header it always printed', () => {
++  for (const settings of [{}, { sectionGap: 40 }, { sectionGap: 0 }]) {
++    it(`Modern and the Sidebar, Between Sections ${settings.sectionGap ?? 16} px`, async () => {
++      const between = settings.sectionGap ?? 16;
++      assert.equal(await drawn('modern', { ...settings, headerPadY: 20, headerPadX: 24, summaryGap: 32 / 3, headerGapBelow: between }), await drawn('modern', settings), 'modern');
++      assert.equal(await drawn('sidebar', { ...settings, headerGapBelow: between }), await drawn('sidebar', settings), 'sidebar');
++    });
++  }
++
++  it('Banner, Timeline, Academic and Compact: each gap set to the template\'s own prints the unset page', async () => {
++    const { templateGapPt } = await loadModule('/src/constants/headerSpacing.js');
++    for (const t of ['timeline', 'banner', 'academic', 'compact']) {
++      const base = cv(t, { showHeaderBorder: true });
++      const sectionGapPt = base.settings.sectionGap * 0.75;
++      const own = Object.fromEntries(['summaryGap', 'headerGapBelow', 'headerRuleGap', 'headerPadY']
++        .map((k) => [k, templateGapPt(t, k, { sectionGapPt })]).filter(([, pt]) => pt != null).map(([k, pt]) => [k, pt / 0.75]));
++      assert.equal(await drawing(await render(cv(t, { showHeaderBorder: true, ...own }))), await drawing(await render(base)), t);
++    }
++  });
++});
++
++describe('the rows (Personal Info → Header Customization → Header spacing)', () => {
++  const rowsOf = async () => (await loadModule('/src/utils/headerSpacingRows.js')).headerGapRows;
++  const NEW = ['summaryGap', 'headerRuleGap', 'headerPadY', 'headerPadX', 'headerGapBelow'];
++
++  it('each new row is offered where its gap prints, after the contacts, top to bottom as the header prints them', async () => {
++    const headerGapRows = await rowsOf();
++    const keys = (t, s = {}, p = P) => headerGapRows(t, s, p).map((r) => r.key).filter((k) => NEW.includes(k));
++    // Classic's own border is on where the résumé stores none; a new résumé stores it off.
++    assert.deepEqual(keys('classic'), ['summaryGap', 'headerRuleGap', 'headerGapBelow'], 'classic, its border unset');
++    for (const t of ['classic', 'minimal', 'executive', 'timeline', 'academic', 'compact']) {
++      assert.deepEqual(keys(t, { showHeaderBorder: false }), ['summaryGap', 'headerGapBelow'], t);
++      assert.deepEqual(keys(t, { showHeaderBorder: true }), ['summaryGap', 'headerRuleGap', 'headerGapBelow'], `${t}: border on`);
++    }
++    assert.deepEqual(keys('banner', { showHeaderBorder: true }), ['headerRuleGap', 'headerPadY', 'summaryGap', 'headerGapBelow'], 'banner: the summary prints under the band');
++    assert.deepEqual(keys('modern', { showHeaderBorder: true }), ['summaryGap', 'headerPadY', 'headerPadX', 'headerGapBelow'], 'modern: no rule');
++    assert.deepEqual(keys('sidebar', { showHeaderBorder: true }), ['headerGapBelow'], 'the Sidebar column');
++    assert.deepEqual(keys('sidebar', { sidebarSingleColumn: true, showHeaderBorder: true }), keys('classic', { showHeaderBorder: true }), 'its single column prints Classic\'s header');
++    for (const t of TEMPLATES) {
++      assert.ok(!keys(t, {}, { ...P, summary: '' }).includes('summaryGap'), `${t}: no summary`);
++      assert.ok(!keys(t, {}, { ...P, summary: '<p></p>' }).includes('summaryGap'), `${t}: an empty summary prints nothing`);
++      assert.ok(!keys(t, {}, { ...P, hiddenFields: ['summary'] }).includes('summaryGap'), `${t}: summary hidden`);
++      assert.ok(!headerGapRows(t, { showHeaderBorder: true }, P).some((r) => r.key === 'contactsSideGap'), `${t}: the letter's own gap`);
++    }
++    const all = headerGapRows('classic', { showHeaderBorder: true }, P).map((r) => r.key);
++    assert.deepEqual(all.slice(-3), ['summaryGap', 'headerRuleGap', 'headerGapBelow'], 'after the contact rows');
++  });
++
++  it('each is named for what it spaces, starts from the template\'s own and takes the range the engine clamps to', async () => {
++    const headerGapRows = await rowsOf();
++    const row = (t, key, s = {}, p = P) => headerGapRows(t, { showHeaderBorder: true, ...s }, p).find((r) => r.key === key);
++    const shape = (r) => [r.label, r.name, r.set, r.min, r.max, Math.round(r.valuePx * 100) / 100];
++    assert.deepEqual(shape(row('classic', 'summaryGap')), ['Contacts ↔ Summary', 'Contacts to summary spacing', false, 0, 48, 10.67]);
++    assert.deepEqual(shape(row('minimal', 'summaryGap')), ['Contacts ↔ Summary', 'Contacts to summary spacing', false, 0, 48, 8]);
++    assert.deepEqual(shape(row('modern', 'summaryGap')), ['Contacts ↔ Summary', 'Contacts to summary spacing', false, 0, 48, 10.67]);
++    assert.deepEqual(shape(row('banner', 'summaryGap')), ['Banner ↔ Summary', 'Banner to summary spacing', false, 0, 48, 16]);
++    assert.deepEqual(row('classic', 'summaryGap', {}, { ...P, email: '', phone: '' }).label, 'Title ↔ Summary', 'no contacts');
++    assert.deepEqual(row('classic', 'summaryGap', {}, { ...P, email: '', phone: '', title: '' }).label, 'Name ↔ Summary', 'no contacts, no title');
++    assert.deepEqual(shape(row('classic', 'headerRuleGap')), ['Text ↔ Border', 'Text to border spacing', false, 0, 40, 16]);
++    assert.deepEqual(shape(row('modern', 'headerPadY')), ['Banner top & bottom', 'Banner top and bottom padding', false, 0, 40, 20]);
++    assert.deepEqual(shape(row('modern', 'headerPadX')), ['Banner sides', 'Banner side padding', false, 0, 40, 24]);
++    assert.deepEqual(shape(row('banner', 'headerPadY')), ['Banner padding', 'Banner padding under the text', false, 0, 40, 26.67]);
++    assert.deepEqual(shape(row('classic', 'headerGapBelow')), ['Header ↔ First section', 'Header to first section spacing', false, 0, 80, 20]);
++    assert.deepEqual(shape(row('modern', 'headerGapBelow')).slice(-1), [16], 'Modern: Between Sections');
++    assert.deepEqual(shape(row('sidebar', 'headerGapBelow')).slice(-1), [16], 'the Sidebar column: Between Sections');
++    assert.deepEqual(shape(row('academic', 'headerGapBelow')).slice(-1), [16], 'Academic: its 12 pt');
++    // The gap under the header follows Between Sections where it is wider, as the PDF resolves it.
++    assert.equal(row('classic', 'headerGapBelow', { sectionGap: 40 }).valuePx, 40);
++    assert.equal(row('modern', 'headerGapBelow', { sectionGap: 8 }).valuePx, 8);
++    assert.equal(row('classic', 'headerGapBelow', { sectionGap: 8 }).valuePx, 20, 'Classic keeps 15 pt under a narrower one');
++    // Set, clamped; a stored value that is what the template prints anyway is not a choice (AUD-34).
++    assert.deepEqual([row('classic', 'headerGapBelow', { headerGapBelow: 100 }).valuePx, row('classic', 'headerGapBelow', { headerGapBelow: 100 }).set], [80, true]);
++    assert.equal(row('classic', 'headerGapBelow', { headerGapBelow: 20 }).set, false, 'Classic\'s own 15 pt');
++    assert.equal(row('classic', 'headerGapBelow', { headerGapBelow: 40, sectionGap: 40 }).set, false, 'Between Sections\' own 30 pt');
++    assert.equal(row('classic', 'headerGapBelow', { headerGapBelow: 20, sectionGap: 40 }).set, true, 'narrower than Between Sections');
++    assert.equal(row('modern', 'headerPadX', { headerPadX: 30 }).set, true);
++  });
++
++  it('the panel shows them, and Reset still clears every gap', async () => {
++    const { HeaderCustomization } = await loadModule('/src/components/PersonalInfoEditorHeader.jsx');
++    const { headerGapKeysSet } = await loadModule('/src/utils/headerSpacingRows.js');
++    const html = (template, s = {}) => renderToString(createElement(HeaderCustomization, {
++      s, set() {}, clear() {}, personal: P, template, templateLabel: template, open: true, onToggle() {},
++    }));
++    assert.match(html('classic', { showHeaderBorder: true }), /data-gap="summaryGap"[\s\S]*?aria-label="Contacts to summary spacing \(px\)"[\s\S]*data-gap="headerRuleGap"[\s\S]*?aria-label="Text to border spacing \(px\)"[\s\S]*data-gap="headerGapBelow"[\s\S]*?aria-label="Header to first section spacing \(px\)"/);
++    assert.match(html('modern'), /data-gap="headerPadY"[\s\S]*?aria-label="Banner top and bottom padding \(px\)"[\s\S]*?value="20"[\s\S]*data-gap="headerPadX"[\s\S]*?aria-label="Banner side padding \(px\)"[\s\S]*?value="24"/);
++    assert.match(html('sidebar'), /data-gap="headerGapBelow"/);
++    assert.doesNotMatch(html('sidebar'), /data-gap="summaryGap"/);
++    assert.deepEqual(headerGapKeysSet('modern', { headerPadY: 30, headerGapBelow: 40, summaryGap: 2 }).toSorted(), ['headerGapBelow', 'headerPadY', 'summaryGap']);
++  });
++});
++
++describe('the cover letter follows them where its letterhead prints the same gap', () => {
++  it('every letter: the space under its letterhead is the résumé\'s Header ↔ First section, else its own 16 pt', async () => {
++    for (const template of TEMPLATES) {
++      const at = async (settings) => (await anchors(await renderCover(cv(template, settings)))).recipient;
++      const unset = await at({});
++      near(await at({ headerGapBelow: 40 }) - unset, 30 - 16, `${template}: 40 px`);
++      near(await at({ headerGapBelow: 0 }) - unset, -16, `${template}: 0 px`);
++      assert.equal(await drawing(await renderCover(cv(template, { headerGapBelow: 64 / 3 }))), await drawing(await renderCover(cv(template))), `${template}: its own 16 pt, set, prints the unset letter`);
++    }
++  });
++
++  it('Modern\'s band is padded as the résumé\'s banner: Banner top & bottom and Banner sides, else 15 / 18 pt', async () => {
++    const at = async (settings) => anchors(await renderCover(cv('modern', settings)));
++    const unset = await at({});
++    const set = await at({ headerPadY: 40, headerPadX: 40 });
++    near(set.name - unset.name, 30 - 15, 'the name under the band\'s top');
++    near(set.nameX - unset.nameX, 30 - 18, 'the name inside the band\'s side');
++    near(set.recipient - unset.recipient, 2 * (30 - 15), 'the letter under the band');
++    assert.equal(await drawing(await renderCover(cv('modern', { headerPadY: 20, headerPadX: 24 }))), await drawing(await renderCover(cv('modern'))), 'set to its own, the unset letter');
++  });
++
++  it('in Word: the letterhead\'s last row keeps the gap under it, and Modern\'s band its padding', async () => {
++    const { renderCoverLetterDocx } = await loadModule('/src/utils/wordExport.js');
++    const docx = async (template, settings) => readDocx(new Uint8Array(await (await renderCoverLetterDocx(cv(template, settings, { email: '', phone: '' }))).arrayBuffer()));
++    const titleRow = (doc) => doc.paragraphs.find((p) => p.text.includes(P.title)).xml;
++    const after = (doc) => Number(/<w:spacing [^>]*w:after="(\d+)"/.exec(titleRow(doc))[1]);
++    // Classic with its border off adds its 12 pt pad; a band adds none (the letter's PDF).
++    assert.equal(after(await docx('classic', {})), 560, '16 + 12 pt');
++    assert.equal(after(await docx('classic', { headerGapBelow: 40 })), 840, '30 + 12 pt');
++    assert.equal(after(await docx('modern', {})), 320, '16 pt under the band');
++    assert.equal(after(await docx('modern', { headerGapBelow: 40 })), 600, '30 pt under the band');
++    const band = (doc) => [/<w:top [^>]*w:space="(\d+)"/.exec(titleRow(doc))?.[1], /<w:ind [^>]*w:left="(\d+)"/.exec(titleRow(doc))?.[1]].map(Number);
++    assert.deepEqual(band(await docx('modern', {})), [15, 360], 'its own 15 pt band, 18 pt in');
++    assert.deepEqual(band(await docx('modern', { headerPadY: 40, headerPadX: 40 })), [30, 600], 'the résumé banner\'s 30 / 30 pt');
++  });
++});
++
++describe('Word follows a set gap above the summary and under the header, and keeps its own otherwise', () => {
++  const xmlParas = (doc) => doc.xml.split('</w:p>');
++  const afterOf = (xml) => Number(/<w:spacing [^>]*w:after="(\d+)"/.exec(xml)?.[1]);
++  const afterText = (doc, needle) => afterOf(doc.paragraphs.find((p) => p.text.includes(needle)).xml);
++  /** The paragraph closing the header: the first after the summary. */
++  const headerEnd = (doc) => { const all = xmlParas(doc); return all[all.findIndex((p) => p.includes('Summary line')) + 1]; };
++
++  for (const template of TEMPLATES) {
++    const has = template !== 'sidebar'; // the Sidebar prints its summary as the main column's About Me
++    it(`${template}: Contacts ↔ Summary${has ? '' : ' (none: a stored one changes nothing)'} and Header ↔ First section`, async () => {
++      assert.equal(afterText(await renderDocx(cv(template)), P.phone), 80, 'the contacts: Word\'s own 4 pt');
++      assert.equal(afterText(await renderDocx(cv(template, { summaryGap: 20 })), P.phone), has ? 300 : 80, '20 px = 15 pt');
++      assert.equal(afterText(await renderDocx(cv(template, { summaryGap: 20 }, { summary: '' })), P.phone), 80, 'no summary: nothing to space');
++      assert.equal(afterText(await renderDocx(cv(template, { summaryGap: 20 }, { email: '', phone: '' })), P.title), has ? 300 : 60, 'no contacts: the title');
++      assert.equal(afterOf(headerEnd(await renderDocx(cv(template)))), 80, 'the header\'s end: Word\'s own 4 pt');
++      assert.equal(afterOf(headerEnd(await renderDocx(cv(template, { headerGapBelow: 40 })))), 600, '40 px = 30 pt');
++    });
++  }
++
++  it('Classic with its rule: the rule\'s paragraph keeps the gap under it', async () => {
++    const doc = await renderDocx(cv('classic', { showHeaderBorder: true, headerGapBelow: 40 }));
++    assert.match(headerEnd(doc), /<w:bottom [^>]*w:val="single"/);
++    assert.equal(afterOf(headerEnd(doc)), 600);
++  });
++});
+diff --git a/tests/pdf/parity/01-offered.test.mjs b/tests/pdf/parity/01-offered.test.mjs
+index bb161b8..a25151e 100644
+--- a/tests/pdf/parity/01-offered.test.mjs
++++ b/tests/pdf/parity/01-offered.test.mjs
+@@ -12,11 +12,17 @@ const W = await walks();
+ let look = null;
+ before(async () => {
+   await setup();
+-  const [letterhead, templates] = await Promise.all([
++  const [letterhead, templates, spacing] = await Promise.all([
+     loadModule('/src/templates/pdf/shared/letterhead.js'),
+     loadModule('/src/constants/templates.js'),
++    loadModule('/src/constants/headerSpacing.js'),
+   ]);
+-  look = { band: (v) => Boolean(letterhead.letterheadLook(v.template, v.settings).band), ...templates };
++  look = {
++    band: (v) => Boolean(letterhead.letterheadLook(v.template, v.settings).band),
++    // The page prints header gap `key`: its header's template has one (the walk's résumé has a summary).
++    gap: (v, key) => spacing.templateGapPt(templates.headerTemplateId(v.template, v.settings), key) != null,
++    ...templates,
++  };
+ });
+ after(teardown);
+ 
+@@ -33,6 +39,11 @@ const WHERE = [
+   ['sidebarBg', (v) => look.headerTemplateId(v.template, v.settings) === 'sidebar', 'the page prints the Sidebar column'],
+   ['headerAlign', (v) => look.hasHeaderControls(v.template, v.settings), 'the header takes Header Customization'],
+   ['showHeaderBorder', (v) => look.hasHeaderControls(v.template, v.settings), 'the header takes Header Customization'],
++  // Header spacing's rows under the contacts (R2-137); Text ↔ Border shows once the border is on, one step deep.
++  ['summaryGap', (v) => look.gap(v, 'summaryGap'), 'the header prints a gap above its summary'],
++  ['headerPadY', (v) => look.gap(v, 'headerPadY'), 'the header is a padded banner (Modern, Banner)'],
++  ['headerPadX', (v) => look.gap(v, 'headerPadX'), 'the banner is padded at its sides (Modern)'],
++  ['headerGapBelow', (v) => look.gap(v, 'headerGapBelow'), 'the header has a gap under it (every one)'],
+ ];
+ 
+ describe('each control is offered where the PDF prints what it styles, and only there', () => {
+diff --git a/tests/pdf/parity/registry-header.mjs b/tests/pdf/parity/registry-header.mjs
+index 6d9761c..09fbd51 100644
+--- a/tests/pdf/parity/registry-header.mjs
++++ b/tests/pdf/parity/registry-header.mjs
+@@ -9,15 +9,19 @@ const images = (snap) => snap.paint.filter((p) => p.paint === 'image' && p.page
+ /** The header's own text: the name, the title and each contact value. */
+ const HEADER = [PERSONAL.name, PERSONAL.title, PERSONAL.email, PERSONAL.phone, PERSONAL.location, PERSONAL.website, PERSONAL.linkedin, PERSONAL.github];
+ const headerRuns = (snap) => HEADER.map((s) => item(snap, s)).filter(Boolean);
++/** What prints under the header's lines: the summary and the first entry, which the gaps below the contacts move (R2-137). */
++const BELOW = ['Platform engineer who ships', 'Northwind Labs'];
+ 
+ /**
+  * A header gap: from its smallest to its largest value, the distance between two things the header
+  * prints — the photo, the name, the title, a contact — changes by exactly the change (px → pt): the gap
+  * prints what the stepper says. Distances, not positions: a header centred on its photo moves every
+- * line by half of it. How each gap moves each line is 45…50-header-*.test.mjs's; this proves the
+- * control reaches the PDF on every template that offers it.
++ * line by half of it. `below`: the summary and the first entry count too — Contacts ↔ Summary, Text ↔
++ * Border and Header ↔ First section move only what follows the header's lines. How each gap moves each
++ * line is 45…50-header-*.test.mjs's and 92-header-spacing-rows'; this proves the control reaches the
++ * PDF on every template that offers it.
+  */
+-function gapMoves(key) {
++function gapMoves(key, { below = false } = {}) {
+   return ({ runs }) => {
+     const sorted = [...runs].filter((r) => typeof valueOf(r, key) === 'number').sort((a, b) => valueOf(a, key) - valueOf(b, key));
+     if (sorted.length < 2) return [];
+@@ -25,7 +29,8 @@ function gapMoves(key) {
+     const want = (valueOf(hi, key) - valueOf(lo, key)) * 0.75;
+     const marks = (snap) => {
+       const photo = images(snap)[0];
+-      return [...headerRuns(snap).map((r) => [r.str, r.x, r.y]), ...(photo ? [['<photo>', photo.x1, photo.y1]] : [])];
++      const under = below ? BELOW.map((m) => [m, item(snap, m)]).filter(([, r]) => r).map(([m, r]) => [m, r.x, r.y]) : [];
++      return [...headerRuns(snap).map((r) => [r.str, r.x, r.y]), ...under, ...(photo ? [['<photo>', photo.x1, photo.y1]] : [])];
+     };
+     const [a, b] = [new Map(marks(lo.snap).map(([k, ...xy]) => [k, xy])), new Map(marks(hi.snap).map(([k, ...xy]) => [k, xy]))];
+     const keys = [...a.keys()].filter((k) => b.has(k));
+@@ -144,6 +149,12 @@ export const HEADER_CONTROLS = {
+   'setting.iconTextGap': { family: 'gaps', check: gapMoves('setting.iconTextGap') },
+   'setting.contactGapX': { family: 'gaps', check: gapMoves('setting.contactGapX') },
+   'setting.contactGapY': { family: 'gaps', check: gapMoves('setting.contactGapY') },
++  // The gaps below the contacts (R2-137): the summary, the header's rule, the banner's padding, the first section.
++  'setting.summaryGap': { family: 'gaps', check: gapMoves('setting.summaryGap', { below: true }) },
++  'setting.headerRuleGap': { family: 'gaps', check: gapMoves('setting.headerRuleGap', { below: true }) },
++  'setting.headerPadY': { family: 'gaps', check: gapMoves('setting.headerPadY', { below: true }) },
++  'setting.headerPadX': { family: 'gaps', check: gapMoves('setting.headerPadX') },
++  'setting.headerGapBelow': { family: 'gaps', check: gapMoves('setting.headerGapBelow', { below: true }) },
+   clear: { family: 'resets' },
+   'setting.photoShape': { family: 'photo', check: ({ runs }) => runs.filter((r) => images(r.snap).length !== 1).map((r) => `${valueOf(r, 'setting.photoShape')}: ${images(r.snap).length} photos`) },
+   'setting.photoSize': { family: 'photo', check: ordered('setting.photoSize', ['sm', 'md', 'lg'], (r) => images(r.snap)[0] && images(r.snap)[0].x1 - images(r.snap)[0].x0, 'the photo\'s width') },

@@ -1,0 +1,535 @@
+diff --git a/src/components/DesignPanel.jsx b/src/components/DesignPanel.jsx
+index 59e190b..f8901fd 100644
+--- a/src/components/DesignPanel.jsx
++++ b/src/components/DesignPanel.jsx
+@@ -10,6 +10,7 @@ import { HeadingsSection } from '@/components/DesignPanelHeadings';
+ import { ColorsSection } from '@/components/DesignPanelColors';
+ import { TypographySection } from '@/components/DesignPanelTypography';
+ import { DatesSection } from '@/components/DesignPanelDates';
++import { ListsSection } from '@/components/DesignPanelLists';
+ import {
+   ICON_SET_OPTIONS,
+   ContactIcon,
+@@ -24,6 +25,7 @@ const HEADING_KEYS    = ['headingStyle', 'sectionTitleCase', 'sectionBorderWidth
+ // Not contactStyle: Header Customization's, and the ↺ here turned a Bar or Bullet header to Icon (R2-090).
+ const ICON_KEYS       = ['iconSet', 'iconSize'];
+ const DATE_KEYS       = ['dateFormat'];
++const LIST_KEYS       = ['bulletStyle'];
+ 
+ export default function DesignPanel({ resume, updateSetting, setTemplate, resetSettings }) {
+   const settings = resume.settings || {};
+@@ -234,6 +236,8 @@ export default function DesignPanel({ resume, updateSetting, setTemplate, resetS
+ 
+       <DatesSection settings={settings} updateSetting={updateSetting} onReset={() => resetSection(DATE_KEYS)} />
+ 
++      <ListsSection settings={settings} updateSetting={updateSetting} onReset={() => resetSection(LIST_KEYS)} />
++
+       <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl">
+         <div className="flex items-start justify-between gap-3">
+           <div>
+diff --git a/src/components/DesignPanelLists.jsx b/src/components/DesignPanelLists.jsx
+new file mode 100644
+index 0000000..1a905fb
+--- /dev/null
++++ b/src/components/DesignPanelLists.jsx
+@@ -0,0 +1,29 @@
++import { DesignSection, Label, SegmentControl } from '@/components/DesignPanelShared';
++import { bulletStyleOf } from '@/utils/richText';
++
++/** The bullet styles the panel offers (BULLET_STYLES, src/utils/richText.js), each shown with its glyph. */
++const BULLET_OPTIONS = [
++  { value: 'bullet', label: '• Bullet' },
++  { value: 'dash',   label: '– Dash' },
++  { value: 'circle', label: '◦ Circle' },
++  { value: 'none',   label: 'None' },
++];
++
++/**
++ * Design → Lists: the glyph in front of every bulleted list item the résumé prints (settings.bulletStyle,
++ * R2-147) — the summary's, each entry's description's, and the cover letter's — in the PDF (= the
++ * preview) and the Word export. Bullet, which every résumé storing no style prints, is marked for one.
++ */
++export function ListsSection({ settings, updateSetting, onReset }) {
++  return (
++    <DesignSection title="Lists" onReset={onReset}>
++      <div>
++        <Label>Bullet</Label>
++        <SegmentControl options={BULLET_OPTIONS} value={bulletStyleOf(settings.bulletStyle)} onChange={v => updateSetting('bulletStyle', v)} />
++      </div>
++      <p className="text-[11px] text-gray-400 leading-relaxed">
++        Every bulleted list on the résumé and the cover letter. Numbered lists keep their numbers, and the text stays where it is. The Markdown and ATS text exports keep their plain &ldquo;-&rdquo; and &ldquo;*&rdquo;.
++      </p>
++    </DesignSection>
++  );
++}
+diff --git a/src/templates/pdf/shared/PdfRichText.jsx b/src/templates/pdf/shared/PdfRichText.jsx
+index 2abfbc4..523000d 100644
+--- a/src/templates/pdf/shared/PdfRichText.jsx
++++ b/src/templates/pdf/shared/PdfRichText.jsx
+@@ -1,6 +1,15 @@
++import { createContext, useContext } from 'react';
+ import { View, Link } from '@react-pdf/renderer';
+ import { Text } from './PdfText';
+-import { parseRichText, safeHref } from '@/utils/richText';
++import { listMarker, parseRichText, safeHref } from '@/utils/richText';
++
++/**
++ * Design → Lists → Bullet (settings.bulletStyle, R2-147) of the document being drawn. renderResumePdf
++ * and renderCoverLetterPdf provide it around the template, so every list — the summary's, an entry's
++ * description, its legacy bullets[], the letter's body, in either Sidebar column — prints the chosen
++ * glyph without each section passing it down. Nothing provided: the parse's own markers, as before.
++ */
++export const BulletStyle = createContext(undefined);
+ 
+ const INDENT = 10;        // pt of text indent per list level
+ const MARKER_GAP = 3;     // pt between a list marker and its text
+@@ -52,6 +61,7 @@ function markerWidth(chars, fontSize) {
+  * of a block whose text starts `inset` pt in may break (sideBreaks in the Sidebar's dark column).
+  */
+ export function PdfRichText({ html, style = {}, breaks }) {
++  const bulletStyle = useContext(BulletStyle);
+   const blocks = parseRichText(html);
+   if (!blocks.length) return null;
+   const { marginTop, marginBottom, ...textStyle } = style;
+@@ -91,14 +101,17 @@ export function PdfRichText({ html, style = {}, breaks }) {
+     textStart[block.indent] = left + width;
+     textStart.length = block.indent + 1;
+     const length = block.runs.reduce((n, r) => n + r.text.length, 0);
++    // The glyph Design → Lists picked; the column is as wide whatever it draws, so a style never
++    // moves the text. None draws nothing there: the text keeps its place by its own margin.
++    const glyph = listMarker(block.marker, bulletStyle);
+     return (
+       <View
+         key={i}
+         wrap={length > KEEP_TOGETHER_CHARS}
+         style={{ ...edges, flexDirection: 'row', marginLeft: left || undefined }}
+       >
+-        <Text style={{ ...textStyle, textAlign: 'left', width }}>{block.marker}</Text>
+-        <Text style={{ ...textStyle, textAlign: align, flex: 1 }} hyphenationCallback={breaks?.(left + width)}>
++        {glyph ? <Text style={{ ...textStyle, textAlign: 'left', width }}>{glyph}</Text> : null}
++        <Text style={{ ...textStyle, textAlign: align, flex: 1, marginLeft: glyph ? undefined : width }} hyphenationCallback={breaks?.(left + width)}>
+           <Runs runs={block.runs} color={color} />
+         </Text>
+       </View>
+diff --git a/src/utils/defaultData.js b/src/utils/defaultData.js
+index eed14fb..3e87ac5 100644
+--- a/src/utils/defaultData.js
++++ b/src/utils/defaultData.js
+@@ -3,6 +3,7 @@ import { templateStyleDefaults } from '@/constants/templates';
+ import { sectionsOnSwitch } from '@/templates/pdf/shared/templateSectionDefaults';
+ import { DATA_VERSION } from '@/utils/normalizeResume';
+ import { DEFAULT_DATE_FORMAT } from '@/utils/dates';
++import { DEFAULT_BULLET_STYLE } from '@/utils/richText';
+ 
+ // ATS-safe defaults — proper dimensions, neutral colors, standard font
+ export const ATS_DEFAULTS = {
+@@ -20,6 +21,8 @@ export const ATS_DEFAULTS = {
+   sectionTitleCase: 'upper',
+   /** Design → Date format (src/utils/dates.js): As entered prints every date as stored, as before PAR-06. */
+   dateFormat: DEFAULT_DATE_FORMAT,
++  /** Design → Lists (src/utils/richText.js): Bullet prints '•', '–', '·' by depth, as every résumé storing no style (R2-147). */
++  bulletStyle: DEFAULT_BULLET_STYLE,
+   sectionBorderWidth: 1,
+   sectionBorderColor: '',
+   headerAlign: 'left',
+diff --git a/src/utils/pdfExportReactPDF.js b/src/utils/pdfExportReactPDF.js
+index 3814b83..98cb205 100644
+--- a/src/utils/pdfExportReactPDF.js
++++ b/src/utils/pdfExportReactPDF.js
+@@ -1,11 +1,13 @@
+ import React from 'react';
+ import { pdf } from '@react-pdf/renderer';
+ import { resolvePdfFonts, collectText } from '@/templates/pdf/shared/pdfFontLoader';
++import { BulletStyle } from '@/templates/pdf/shared/PdfRichText';
+ import { resolveTemplateSettings } from '@/templates/pdf/shared/templateSettings';
+ import { resolveSection } from '@/templates/pdf/shared/templateSectionDefaults';
+ import { downloadBlob } from '@/utils/download';
+ import { withPrintablePhotos } from '@/utils/printableImage';
+ import { templateId } from '@/constants/templates';
++import { BULLET_STYLES, DEFAULT_BULLET_STYLE, bulletStyleOf } from '@/utils/richText';
+ 
+ /** Each template's PDF component, code-split. Pinned to TEMPLATE_IDS (15-design-defaults, VM3-5). */
+ export const LOADERS = {
+@@ -43,6 +45,20 @@ function prepareResumeData(resume, fontFamily, templateKey) {
+   return { ...resume, sections: resolvedSections, settings: resolvedSettings };
+ }
+ 
++/**
++ * The text the fonts are chosen for: `value`'s (collectText), and the glyph Design → Lists draws in
++ * front of its list items (R2-147), which is no text of the résumé's — Circle's ◦ is in no Latin
++ * face, so it brings the symbol font that draws it, as a ◦ typed into a description does. Bullet,
++ * the default, adds nothing: a résumé printing its lists as before asks for the fonts it did.
++ */
++function printedText(value, settings) {
++  const style = bulletStyleOf(settings?.bulletStyle);
++  return collectText(value) + (style === DEFAULT_BULLET_STYLE ? '' : BULLET_STYLES[style].join(''));
++}
++
++/** `element` drawn with the résumé's Design → Lists style (PdfRichText's BulletStyle, R2-147). */
++const withBulletStyle = (element, settings) => React.createElement(BulletStyle.Provider, { value: settings?.bulletStyle }, element);
++
+ /**
+  * Warm caches used by Export PDF: fonts and the template chunk.
+  * Call from the editor on mount / when template or font changes.
+@@ -50,7 +66,7 @@ function prepareResumeData(resume, fontFamily, templateKey) {
+ export async function warmPdfExport(resume) {
+   const key = templateId(resume?.template);
+   await Promise.all([
+-    resolvePdfFonts(resume?.settings, collectText(resume)).catch(() => null),
++    resolvePdfFonts(resume?.settings, printedText(resume, resume?.settings)).catch(() => null),
+     loadTemplate(key).catch(() => null),
+     // Cover letter is small; warm in background when user may need it
+     import('@/templates/pdf/CoverLetterTemplatePDF').catch(() => null),
+@@ -66,12 +82,12 @@ export async function warmPdfExport(resume) {
+ export async function renderResumePdf(resume) {
+   const key = templateId(resume?.template);
+   const [{ fontFamily }, TemplatePDF, printable] = await Promise.all([
+-    resolvePdfFonts(resume?.settings, collectText(resume)),
++    resolvePdfFonts(resume?.settings, printedText(resume, resume?.settings)),
+     loadTemplate(key),
+     withPrintablePhotos(resume),
+   ]);
+   const data = prepareResumeData(printable, fontFamily, key);
+-  const instance = pdf(React.createElement(TemplatePDF, { data }));
++  const instance = pdf(withBulletStyle(React.createElement(TemplatePDF, { data }), data.settings));
+   const blob = await instance.toBlob();
+   // Free internal resources when the API supports it
+   try { instance.reset?.(); } catch { /* no-op */ }
+@@ -86,7 +102,7 @@ export async function renderResumePdf(resume) {
+ export async function renderCoverLetterPdf(resume, { preview = false } = {}) {
+   const templateKey = templateId(resume?.template);
+   const [{ fontFamily }, mod, printable] = await Promise.all([
+-    resolvePdfFonts(resume?.settings, collectText({ personal: resume?.personal, coverLetter: resume?.coverLetter })),
++    resolvePdfFonts(resume?.settings, printedText({ personal: resume?.personal, coverLetter: resume?.coverLetter }, resume?.settings)),
+     import('@/templates/pdf/CoverLetterTemplatePDF'),
+     withPrintablePhotos(resume),
+   ]);
+@@ -97,7 +113,7 @@ export async function renderCoverLetterPdf(resume, { preview = false } = {}) {
+   }, templateKey);
+ 
+   const data = { ...printable, settings: resolvedSettings, _preview: preview };
+-  const instance = pdf(React.createElement(mod.CoverLetterTemplatePDF, { data }));
++  const instance = pdf(withBulletStyle(React.createElement(mod.CoverLetterTemplatePDF, { data }), resolvedSettings));
+   const blob = await instance.toBlob();
+   try { instance.reset?.(); } catch { /* no-op */ }
+   return blob;
+diff --git a/src/utils/richText.js b/src/utils/richText.js
+index 4b9dd87..8067cf2 100644
+--- a/src/utils/richText.js
++++ b/src/utils/richText.js
+@@ -17,7 +17,8 @@
+  *   align  'left' | 'center' | 'right' | 'justify' | null (null: the caller's alignment)
+  *   indent list depth: 0 for body text; list items at depth n and their continuation
+  *          paragraphs share indent n + 1 for the text, the marker hangs in the gutter
+- *   marker '•' / '–' / '·' (by depth) or '1.' / 'a.' / 'i.' for list items, else null
++ *   marker '•' / '–' / '·' (by depth) or '1.' / 'a.' / 'i.' for list items, else null; the glyph a
++ *          bullet prints with is listMarker's (Design → Lists)
+  */
+ 
+ const BLOCK_TAGS = new Set([
+@@ -185,6 +186,31 @@ function formatOf(tag, attrs, fmt) {
+ 
+ const BULLETS = ['•', '–', '·'];
+ 
++/**
++ * Design → Lists → Bullet (settings.bulletStyle, R2-147): the glyph each depth of a bulleted list
++ * prints with, the top level first. Bullet — the default, and what a résumé storing no style prints —
++ * is the parse's own '•', '–', '·'; the others print one glyph at every depth (the indent shows the
++ * nesting), None no glyph at all. Only the glyph changes: the item's text keeps its place. Numbered
++ * lists keep their numbers under every style. The parse itself never changes: the text exports and
++ * the ATS checker read its markers, whatever the style.
++ */
++export const BULLET_STYLES = { bullet: BULLETS, dash: ['–'], circle: ['◦'], none: [''] };
++export const DEFAULT_BULLET_STYLE = 'bullet';
++
++/** `style` if it is one of BULLET_STYLES, else the default (a résumé storing none, an imported file's unknown one). */
++export const bulletStyleOf = (style) => (Object.hasOwn(BULLET_STYLES, style) ? style : DEFAULT_BULLET_STYLE);
++
++/** The glyph list item `marker` (parseRichText's) prints with under `style`: a bullet's for its depth, a number as it is. */
++export function listMarker(marker, style) {
++  const depth = BULLETS.indexOf(marker);
++  if (depth < 0) return marker;
++  const glyphs = BULLET_STYLES[bulletStyleOf(style)];
++  return glyphs[depth % glyphs.length];
++}
++
++/** The glyph a bulleted list item `depth` deep (1: the top level) prints with under `style`. */
++export const bulletAt = (depth, style) => listMarker(BULLETS[(depth - 1) % BULLETS.length], style);
++
+ function toRoman(n) {
+   const table = [[1000, 'm'], [900, 'cm'], [500, 'd'], [400, 'cd'], [100, 'c'], [90, 'xc'], [50, 'l'], [40, 'xl'], [10, 'x'], [9, 'ix'], [5, 'v'], [4, 'iv'], [1, 'i']];
+   let out = '';
+diff --git a/src/utils/wordExport.js b/src/utils/wordExport.js
+index e427a6b..540a1d6 100644
+--- a/src/utils/wordExport.js
++++ b/src/utils/wordExport.js
+@@ -1,5 +1,5 @@
+ import { Document, Packer } from 'docx';
+-import { accent2Hex, wordMargins } from '@/utils/wordExportUtils';
++import { accent2Hex, bulletNumbering, wordMargins } from '@/utils/wordExportUtils';
+ import { buildSection, sectionSpaceAfter } from '@/utils/wordExportBuilders';
+ import { buildPersonalSection } from '@/utils/wordExportHeader';
+ import { buildCoverLetter } from '@/utils/wordExportCoverLetter';
+@@ -19,7 +19,8 @@ export function resolveWordFont(settings = {}) {
+ 
+ /**
+  * A one-section document on the résumé's paper (A4 or US Letter, PAR-01), in Design → Spacing's page
+- * margins (wordMargins, R2-062) — the résumé's and its letter's, as their PDFs print them.
++ * margins (wordMargins, R2-062) — the résumé's and its letter's, as their PDFs print them — with the
++ * bullets of Design → Lists (bulletNumbering, R2-147).
+  */
+ function buildDocument(children, settings) {
+   const font = resolveWordFont(settings);
+@@ -45,6 +46,7 @@ function buildDocument(children, settings) {
+         heading1: { basedOn: undefined, run: { font }, paragraph: { outlineLevel: 0 } },
+       },
+     },
++    numbering: { config: bulletNumbering(settings?.bulletStyle) },
+     sections: [{
+       properties: {
+         page: {
+diff --git a/src/utils/wordExportBuilders.js b/src/utils/wordExportBuilders.js
+index 8b78991..e955a62 100644
+--- a/src/utils/wordExportBuilders.js
++++ b/src/utils/wordExportBuilders.js
+@@ -105,13 +105,13 @@ function header(primary, secondary, date, dateHex, centered, look, where) {
+ /**
+  * Description + legacy bullets of an entry, centred in a centred section, at Design → Line Height,
+  * at the PDF's size for them (`look.body`, R2-118), in the Text colour's body shade (`color`: an
+- * award's, which the PDF prints in its sub shade).
++ * award's, which the PDF prints in its sub shade), behind Design → Lists' glyph (`look.bullet`, R2-147).
+  */
+ function body(item, centered, look, color = look.ink.body) {
+   const paras = [];
+   const description = field(item, 'description');
+-  if (hasRichText(description)) paras.push(...descriptionToParagraphs(description, { size: look.body, color, lineHeight: look.line }, centered ? 'center' : null));
+-  for (const b of item.bullets || []) if (b) paras.push(bulletPoint(b, centered, { size: look.body, color }, look.line));
++  if (hasRichText(description)) paras.push(...descriptionToParagraphs(description, { size: look.body, color, lineHeight: look.line, bullet: look.bullet }, centered ? 'center' : null));
++  for (const b of item.bullets || []) if (b) paras.push(bulletPoint(b, centered, { size: look.body, color }, look.line, look.bullet));
+   return paras;
+ }
+ 
+diff --git a/src/utils/wordExportCoverLetter.js b/src/utils/wordExportCoverLetter.js
+index 1d3e578..4d5970a 100644
+--- a/src/utils/wordExportCoverLetter.js
++++ b/src/utils/wordExportCoverLetter.js
+@@ -158,9 +158,10 @@ export function buildCoverLetter(resume) {
+   recipient.forEach((run, i) => paras.push(line([run], i === recipient.length - 1 ? gap : 0)));
+   if (block.subject) paras.push(line([bold(block.subject, text)], gap));
+ 
+-  // The body and the closing at Design → Line Height, as the letter's PDF prints them (R2-062).
++  // The body and the closing at Design → Line Height, as the letter's PDF prints them (R2-062), the
++  // body's lists behind Design → Lists' glyph (R2-147).
+   if (hasRichText(cl.body)) {
+-    paras.push(...descriptionToParagraphs(cl.body, { ...text, lineHeight: s.lineHeightValue }));
++    paras.push(...descriptionToParagraphs(cl.body, { ...text, lineHeight: s.lineHeightValue, bullet: s.bulletStyle }));
+     paras.push(line([], pt(16)));
+   }
+ 
+diff --git a/src/utils/wordExportHeader.js b/src/utils/wordExportHeader.js
+index 5cb28ad..06cd6e8 100644
+--- a/src/utils/wordExportHeader.js
++++ b/src/utils/wordExportHeader.js
+@@ -113,8 +113,8 @@ export function buildPersonalSection(personal = {}, settings = {}, template = 'c
+     // The Sidebar prints its summary under an "About Me" section title at the top of its main column (FIDB-51-VF3-NB2-NB1-NB1).
+     if (templateId(template) === 'sidebar') paragraphs.push(buildSectionTitle('About Me', settings, template));
+     const { run, frame } = summaryLook(s, template);
+-    // At Design → Line Height, as the PDF's summary (R2-062).
+-    paragraphs.push(...descriptionToParagraphs(personal.summary, { size: Math.round(baseSize * 2), lineHeight: s.lineHeightValue, ...run }, centered ? 'center' : null, frame));
++    // At Design → Line Height, as the PDF's summary (R2-062), its lists behind Design → Lists' glyph (R2-147).
++    paragraphs.push(...descriptionToParagraphs(personal.summary, { size: Math.round(baseSize * 2), lineHeight: s.lineHeightValue, bullet: s.bulletStyle, ...run }, centered ? 'center' : null, frame));
+   }
+ 
+   paragraphs.push(headerEnd(s, template));
+diff --git a/src/utils/wordExportLook.js b/src/utils/wordExportLook.js
+index 83cc279..9dd9a94 100644
+--- a/src/utils/wordExportLook.js
++++ b/src/utils/wordExportLook.js
+@@ -95,7 +95,7 @@ function gridOf(section, width, side) {
+  *   half-points (entrySizes);
+  * - `grid` — Section Options → Grids (gridOf), or null for one entry to a row;
+  * - `tab` — the dates' right tab, twips: the right margin (wordContentTwips), or in a grid its cell's;
+- * - `line` — Design → Line Height;
++ * - `line` — Design → Line Height; `bullet` — Design → Lists, the glyph of its bulleted items (R2-147);
+  * - `gap` — the space between two entries, pt: Design → Between Items scaled by the section's
+  *   Spacing preset, or its own Item gap (getEffectiveSpacing, R2-062);
+  * - `title` — Section Options → Title: 'stacked' (unset), 'inline' or 'sidebyside'; the Sidebar's
+@@ -111,6 +111,7 @@ export function sectionLook(section, settings, s, template, side) {
+     grid,
+     tab: grid ? grid.cell : wordContentTwips(settings),
+     line: s.lineHeightValue,
++    bullet: s.bulletStyle,
+     gap: getEffectiveSpacing(section, s).itemGap,
+     title: (!side && section.settings?.titleStyle) || 'stacked',
+     side,
+diff --git a/src/utils/wordExportUtils.js b/src/utils/wordExportUtils.js
+index 70ff611..7c9603a 100644
+--- a/src/utils/wordExportUtils.js
++++ b/src/utils/wordExportUtils.js
+@@ -1,8 +1,8 @@
+ import {
+   Paragraph, TextRun, BorderStyle, TabStopType, ExternalHyperlink, AlignmentType, HeadingLevel, LineRuleType,
+-  Table, TableBorders, TableCell, TableLayoutType, TableRow, WidthType,
++  LevelFormat, Table, TableBorders, TableCell, TableLayoutType, TableRow, WidthType,
+ } from 'docx';
+-import { parseRichText, safeHref } from '@/utils/richText';
++import { DEFAULT_BULLET_STYLE, bulletAt, bulletStyleOf, parseRichText, safeHref } from '@/utils/richText';
+ import { PAGE_MARKS } from '@/templates/pdf/shared/pdfColors';
+ import { MARGIN_MM, pageMargins } from '@/constants/pageMargins';
+ import { PAGE_SIZES, pageSizeOf } from '@/constants/pageSize';
+@@ -153,11 +153,44 @@ export function sectionHeading(title, accentHex, centered = false, heading = nul
+   });
+ }
+ 
+-/** A legacy bullet (an entry's `bullets[]`) in `run`'s size and colour, at Design → Line Height `lineHeight`. */
+-export function bulletPoint(text, centered = false, run = { size: 20 }, lineHeight = 0) {
++const BULLET_REFERENCE = 'bullet-style';
++
++/**
++ * Design → Lists → Bullet in the .docx (settings.bulletStyle, R2-147): for a style other than Bullet,
++ * a bullet numbering of its own (the document's `numbering.config`, buildDocument's) that draws the
++ * style's glyph at every level (bulletAt, the PDF's), indented as docx's default bullets are — 720
++ * twips a level, the glyph hanging 360 in front — so only the glyph changes; None's levels draw no
++ * glyph, and the tab after it still takes the text to its place. Bullet, and a résumé storing no
++ * style, keep docx's default bullets (● ○ ■): no numbering is added, the file is as before.
++ */
++export function bulletNumbering(style) {
++  if (bulletStyleOf(style) === DEFAULT_BULLET_STYLE) return [];
++  const levels = Array.from({ length: 9 }, (_, level) => {
++    const glyph = bulletAt(level + 1, style);
++    return {
++      level,
++      format: glyph ? LevelFormat.BULLET : LevelFormat.NONE,
++      text: glyph,
++      alignment: AlignmentType.LEFT,
++      style: { paragraph: { indent: { left: 720 * (level + 1), hanging: 360 } } },
++    };
++  });
++  return [{ reference: BULLET_REFERENCE, levels }];
++}
++
++/** A bulleted list item's numbering at `level` (0: the top) under Design → Lists `style`: docx's default bullets, or bulletNumbering's. */
++const listItem = (level, style) => (bulletStyleOf(style) === DEFAULT_BULLET_STYLE
++  ? { bullet: { level } }
++  : { numbering: { reference: BULLET_REFERENCE, level } });
++
++/**
++ * A legacy bullet (an entry's `bullets[]`) in `run`'s size and colour, at Design → Line Height
++ * `lineHeight`, behind Design → Lists `style`'s glyph.
++ */
++export function bulletPoint(text, centered = false, run = { size: 20 }, lineHeight = 0, style = undefined) {
+   return new Paragraph({
+     children: [new TextRun({ text: String(text || ''), ...run })],
+-    bullet: { level: 0 },
++    ...listItem(0, style),
+     spacing: { before: 20, after: 20, ...lineSpacing(lineHeight, run.size) },
+     indent: { left: 360 },
+     ...centredIf(centered),
+@@ -195,9 +228,10 @@ function runsToDocx(runs, base) {
+ /**
+  * The editor's HTML as Word paragraphs — the same parse the PDF uses, so line breaks, blank
+  * lines, nested and numbered lists, marks, alignment and links match the PDF.
+- * `base` sets size (half-points), colour, whole-block bold/italics and `lineHeight` (Design → Line
+- * Height, R2-062); `align` is the alignment of a block the editor did not align (a centred
+- * section's: 'center'), as in the PDF.
++ * `base` sets size (half-points), colour, whole-block bold/italics, `lineHeight` (Design → Line
++ * Height, R2-062) and `bullet`, the glyph a bulleted item prints behind (Design → Lists, R2-147);
++ * `align` is the alignment of a block the editor did not align (a centred section's: 'center'), as
++ * in the PDF.
+  */
+ export function descriptionToParagraphs(html, base = { size: 20, color: '374151' }, align = null, frame = {}) {
+   return parseRichText(html).map((block) => {
+@@ -207,7 +241,7 @@ export function descriptionToParagraphs(html, base = { size: 20, color: '374151'
+     if (block.marker) {
+       const level = Math.max(0, block.indent - 1);
+       if (block.marker.length === 1) {
+-        return new Paragraph({ ...options, children, bullet: { level: Math.min(level, 8) } });
++        return new Paragraph({ ...options, children, ...listItem(Math.min(level, 8), base.bullet) });
+       }
+       // Numbers are written out, so start="3", value and a/i numbering print exactly as in the PDF.
+       const left = LEVEL_TWIPS * (level + 1);
+diff --git a/tests/pdf/parity/17-lists.test.mjs b/tests/pdf/parity/17-lists.test.mjs
+new file mode 100644
+index 0000000..7bcabbd
+--- /dev/null
++++ b/tests/pdf/parity/17-lists.test.mjs
+@@ -0,0 +1,14 @@
++// Parity matrix (how it works: matrix.mjs): every template × every control of the 'lists' family the
++// editor offers on it — Design → Lists' Bullet style (R2-147) at every value it offers, and its ↺ —
++// each changes the PDF (= the preview) as registry-design.mjs says, loses no text and overlaps
++// nothing. Circle's ◦ is in no Latin face: its symbol font comes from jsDelivr, as in the app, so
++// offline these skip.
++import { parityFamily } from './run.mjs';
++
++let online = null;
++const isOnline = async () => {
++  if (online === null) online = await fetch('https://cdn.jsdelivr.net/npm/@fontsource/noto-sans-symbols-2@5/metadata.json', { signal: AbortSignal.timeout(5000) }).then((r) => r.ok, () => false);
++  return online;
++};
++
++await parityFamily(['lists'], { skip: async () => (await isOnline() ? null : 'offline: Circle\'s glyph comes from jsDelivr') });
+diff --git a/tests/pdf/parity/registry-design.mjs b/tests/pdf/parity/registry-design.mjs
+index 82b3b67..ca21a7b 100644
+--- a/tests/pdf/parity/registry-design.mjs
++++ b/tests/pdf/parity/registry-design.mjs
+@@ -6,6 +6,7 @@ import { item, flow, fillsOf, prints } from './measure.mjs';
+ import { PERSONAL, baseResume } from './store.mjs';
+ import { shot } from './matrix.mjs';
+ import { headingMarks, iconBefore, STYLE_MARK } from './marks.mjs';
++import { bulletAt } from '../../../src/utils/richText.js';
+ 
+ export const valueOf = (run, key) => run.writes.find((w) => `${w.kind}.${w.key}` === key || w.kind === key)?.value;
+ const byValue = (runs, key) => [...runs].filter((r) => typeof valueOf(r, key) === 'number').sort((a, b) => valueOf(a, key) - valueOf(b, key));
+@@ -66,6 +67,17 @@ async function headerColour({ runs, before, variant }, key, needle) {
+ 
+ const CONTACTS = [PERSONAL.email, PERSONAL.phone, PERSONAL.location, PERSONAL.website, PERSONAL.linkedin, PERSONAL.github];
+ 
++/** What prints in front of `text` on its line, within a list marker's reach: '' for nothing, null when `text` does not print. */
++function leadOf(snap, text) {
++  const at = item(snap, text);
++  if (!at) return null;
++  const own = at.str.slice(0, at.str.indexOf(text)).trim();
++  if (own) return own; // pdf.js merged the marker into the text's run
++  return snap.pages[at.page - 1].items.filter((t) => t !== at && Math.abs(t.y - at.y) < 1 && t.x < at.x && t.x > at.x - 20)
++    .map((t) => t.str.trim()).join('');
++}
++const LIST_ITEMS = ['Designed the event ledger', 'Mentored six engineers'];
++
+ const DATES = { asEntered: '01/2021', 'MMM YYYY': 'Jan 2021', 'MMMM YYYY': 'January 2021', 'MM/YYYY': '01/2021',
+   'MM.YYYY': '01.2021', 'YYYY-MM': '2021-01', 'YYYY.MM': '2021.01', YYYY: '2021' };
+ 
+@@ -228,6 +240,22 @@ export const DESIGN = {
+       return r.snap.text.includes(want) ? [] : [`${v}: "${want}" does not print`];
+     }),
+   },
++  // Each Bullet style's glyph (bulletAt, the PDF's own) in front of the job's list items, None none, and
++  // every item's text where it was: the marker's column keeps its width whatever it draws (R2-147).
++  'setting.bulletStyle': {
++    family: 'lists',
++    check: ({ runs, before }) => runs.flatMap((r) => {
++      const v = valueOf(r, 'setting.bulletStyle');
++      return LIST_ITEMS.flatMap((li) => {
++        const [t, was] = [item(r.snap, li), item(before.snap, li)];
++        if (!t || !was) return [`${v}: "${li}" does not print`];
++        const [got, want] = [leadOf(r.snap, li), bulletAt(1, v)];
++        const out = got === want ? [] : [`${v}: "${got}" prints in front of "${li}", not "${want}"`];
++        if (Math.abs(t.x + t.w - (was.x + was.w)) > 0.5 || Math.abs(t.y - was.y) > 0.5) out.push(`${v}: "${li}" moved`);
++        return out;
++      });
++    }),
++  },
+   'setting.dateFormat': {
+     family: 'dates',
+     check: ({ runs }) => runs.flatMap((r) => {
+diff --git a/tests/pdf/parity/registry.mjs b/tests/pdf/parity/registry.mjs
+index 961ded5..787e7b5 100644
+--- a/tests/pdf/parity/registry.mjs
++++ b/tests/pdf/parity/registry.mjs
+@@ -19,6 +19,7 @@ export const FAMILY_FILES = {
+   spacing: '13-spacing.test.mjs',
+   headings: '14-headings-dates.test.mjs',
+   dates: '14-headings-dates.test.mjs',
++  lists: '17-lists.test.mjs',
+   template: '15-template-resets.test.mjs',
+   resets: '15-template-resets.test.mjs',
+   icons: '16-icons.test.mjs',

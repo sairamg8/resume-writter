@@ -1,0 +1,993 @@
+diff --git a/cypress/e2e/01-dashboard.cy.js b/cypress/e2e/01-dashboard.cy.js
+index bfca16b..1e3b886 100644
+--- a/cypress/e2e/01-dashboard.cy.js
++++ b/cypress/e2e/01-dashboard.cy.js
+@@ -34,6 +34,22 @@ describe('dashboard — first visit', () => {
+       expect(r.sections.every((x) => x.items.length === 0)).to.eq(true);
+     });
+   });
++
++  // R2-135: with no résumé to take a name and contacts from, the letter starts blank — and is a letter.
++  it('New Cover with no résumé yet opens a blank letter, listed with the letters, not the résumés', () => {
++    cy.contains('button', 'New Cover').click();
++    cy.location('hash').should('match', /^#\/resume\/resume_[\w-]+\?tab=coverletter$/);
++    cy.store().should((s) => {
++      expect(s.resumes).to.have.length(1);
++      expect(active(s).kind).to.eq('letter');
++      expect(active(s).personal.name).to.eq('');
++    });
++    cy.go('back');
++    cy.contains('h1', 'My Resumes').next().should('have.text', '0 resumes');
++    cy.contains('No resumes yet').should('be.visible');
++    cy.contains('h2', 'Cover Letters').next().should('have.text', '1 letter');
++    cy.contains('section', 'Cover Letters').find(CARD).should('have.length', 1).and('contain.text', 'Cover Letter');
++  });
+ });
+ 
+ describe('dashboard — with résumés', () => {
+@@ -57,10 +73,51 @@ describe('dashboard — with résumés', () => {
+     });
+   });
+ 
+-  it('New Cover creates a résumé and opens its cover-letter tab', () => {
++  // R2-135: it made a blank résumé named 'Cover Letter' — no name, no contacts — listed as a résumé.
++  it('New Cover asks which résumé heads the letter, opens it on its tab, and lists it as a letter', () => {
+     cy.contains('button', 'New Cover').click();
++    cy.get('[role="dialog"]').should('be.visible').within(() => {
++      cy.contains('h2', 'New Cover Letter').should('be.visible');
++      NAMES.forEach((name) => cy.contains('button', name).should('be.visible'));
++      cy.contains('button', 'Blank letter').should('be.visible');
++      cy.contains('button', 'Modern CV').click();
++    });
++    cy.location('hash').should('match', /^#\/resume\/resume_[\w-]+\?tab=coverletter$/);
++    cy.get('#cover-letter-preview').should('contain.text', 'Alex Johnson').and('contain.text', 'alex@example.com');
++    cy.store().should((s) => {
++      const letter = active(s);
++      const modern = s.resumes.find((r) => r.name === 'Modern CV');
++      expect(letter.kind).to.eq('letter');
++      expect(letter.name).to.eq('Cover Letter');
++      expect(letter.personal).to.deep.eq(modern.personal);
++      expect(letter.template).to.eq('modern');
++      expect(letter.coverLetter.body).to.eq('');
++      expect(modern.kind).to.eq(undefined);
++    });
++    cy.go('back');
++    cy.contains('h1', 'My Resumes').next().should('have.text', '3 resumes');
++    cy.contains('h2', 'Cover Letters').next().should('have.text', '1 letter');
++    cy.contains('section', 'Cover Letters').find(CARD).should('have.length', 1).and('contain.text', 'Cover Letter');
++    cy.get(CARD).should('have.length', NAMES.length + 1);
++  });
++
++  it('a letter card opens on its letter, and its Copy is a letter too', () => {
++    cy.contains('button', 'New Cover Letter').click();
++    cy.get('[role="dialog"]').contains('button', 'Classic CV').click();
++    cy.location('hash').should('match', /\?tab=coverletter$/);
++    cy.go('back');
++    cy.contains('section', 'Cover Letters').find(CARD).contains('button', 'Edit').click();
+     cy.location('hash').should('match', /^#\/resume\/resume_[\w-]+\?tab=coverletter$/);
+-    cy.store().should((s) => expect(active(s).name).to.eq('Cover Letter'));
++    cy.go('back');
++    cy.contains('section', 'Cover Letters').find(CARD).contains('button', 'Copy').click();
++    cy.location('hash').should('match', /\?tab=coverletter$/);
++    cy.store().should((s) => {
++      expect(active(s).name).to.eq('Cover Letter (Copy)');
++      expect(active(s).kind).to.eq('letter');
++    });
++    cy.go('back');
++    cy.contains('h2', 'Cover Letters').next().should('have.text', '2 letters');
++    cy.contains('h1', 'My Resumes').next().should('have.text', '3 resumes');
+   });
+ 
+   it('Copy duplicates a résumé as "<name> (Copy)" and opens the copy', () => {
+diff --git a/docs/knowledge/03-data-model.md b/docs/knowledge/03-data-model.md
+index 1e17591..2b2a9f1 100644
+--- a/docs/knowledge/03-data-model.md
++++ b/docs/knowledge/03-data-model.md
+@@ -25,6 +25,7 @@ type Resume = {
+   personal: Personal;
+   sections: Section[];
+   coverLetter: CoverLetter;
++  kind?: 'letter';            // a cover letter of its own, listed apart on the dashboard (R2-135)
+ };
+ ```
+ 
+@@ -72,7 +73,11 @@ Template switch merges `TEMPLATE_STYLE_DEFAULTS` for heading style + title case.
+ ### Cover letter
+ 
+ `BASE_COVER_LETTER` shape: recipient, body, etc. (see `defaultDataContent.js`).  
+-Edited via `updateCoverLetter` / `CoverLetterPanel`.
++Edited via `updateCoverLetter` / `CoverLetterPanel`.  
++A record with `kind: 'letter'` is a letter of its own (`src/utils/letters.js`): Dashboard → New Cover
++Letter makes one from a résumé (`store.createLetter`: its Personal Info, template, Design and sections
++copied, the letter's recipient block and body empty), and the dashboard lists it under Cover Letters.
++v13 marks an older build's 'Cover Letter' résumé with no entries as one.
+ 
+ ## Job store document (`cpwtcv_jobs_v1`)
+ 
+diff --git a/docs/knowledge/04-features.md b/docs/knowledge/04-features.md
+index ec8b05f..a91b093 100644
+--- a/docs/knowledge/04-features.md
++++ b/docs/knowledge/04-features.md
+@@ -7,7 +7,8 @@ Maps user-facing features → primary code locations.
+ | Feature | Code |
+ |---------|------|
+ | List resumes | `pages/Dashboard.jsx`, `components/ResumeCard.jsx` |
+-| New resume / cover letter | `store.createResume`, navigate with optional `?tab=coverletter` |
++| New resume | `store.createResume` |
++| New cover letter (from a résumé, picker `NewLetterModal`) and the Cover Letters list | `store.createLetter`, `utils/letters.js`, navigate with `?tab=coverletter` |
+ | Import JSON | Dashboard `handleImport` |
+ | Job Tracker entry | navigate `/jobs` |
+ | Career history panel | `components/CareerHistoryPanel.jsx` |
+diff --git a/src/components/NewLetterModal.jsx b/src/components/NewLetterModal.jsx
+new file mode 100644
+index 0000000..9377471
+--- /dev/null
++++ b/src/components/NewLetterModal.jsx
+@@ -0,0 +1,83 @@
++import { useId } from 'react';
++import { ArrowRight, FileText, Mail, X } from 'lucide-react';
++import { timeAgo } from '@/utils/resume';
++
++/**
++ * Dashboard → New Cover Letter when there are several résumés (R2-135): which résumé's name, job
++ * title, contacts and photo the new letter takes — `sources`, the most recently edited first (that
++ * one has the focus) — or a blank letter. `onPick(id)`, `onPick(null)` for the blank one; Escape, the
++ * close button or a click beside the box is `onClose()`, and makes nothing.
++ */
++export default function NewLetterModal({ isOpen, sources, onPick, onClose }) {
++  const titleId = useId();
++  const descriptionId = useId();
++  if (!isOpen) return null;
++
++  return (
++    <div
++      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm"
++      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
++      onKeyDown={e => { if (e.key === 'Escape') onClose(); }}
++    >
++      <div
++        role="dialog"
++        aria-modal="true"
++        aria-labelledby={titleId}
++        aria-describedby={descriptionId}
++        className="bg-white rounded-2xl shadow-2xl border border-gray-200 max-w-md w-full flex flex-col overflow-hidden"
++      >
++        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between gap-3 bg-gray-50/70">
++          <div className="flex items-center gap-2.5 min-w-0">
++            <div className="w-8 h-8 rounded-xl bg-purple-600 text-white flex items-center justify-center shadow-sm shrink-0">
++              <Mail size={16} aria-hidden="true" />
++            </div>
++            <div className="min-w-0">
++              <h2 id={titleId} className="text-sm sm:text-base font-bold text-gray-900">New Cover Letter</h2>
++              <p id={descriptionId} className="text-[11px] text-gray-500">Start from a résumé: its name, job title, contacts and photo head the letter.</p>
++            </div>
++          </div>
++          <button
++            onClick={onClose}
++            aria-label="Close"
++            className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors shrink-0"
++          >
++            <X size={16} />
++          </button>
++        </div>
++
++        <div className="p-5 space-y-2 max-h-[70vh] overflow-y-auto">
++          {sources.map((r, i) => {
++            const who = [r.personal?.name, r.personal?.title].filter(Boolean).join(' · ');
++            const when = Number.isFinite(r.updatedAt) ? timeAgo(r.updatedAt).toLowerCase() : '';
++            return (
++              <button
++                key={r.id}
++                autoFocus={i === 0}
++                onClick={() => onPick(r.id)}
++                className="w-full text-left p-3 rounded-xl border border-gray-200 hover:border-purple-400 hover:bg-purple-50/40 focus-visible:border-purple-500 transition-all flex items-center justify-between gap-3 group"
++              >
++                <div className="min-w-0">
++                  <p className="text-sm font-bold text-gray-900 truncate">{r.name}</p>
++                  <p className="text-xs text-gray-500 truncate">{who || 'No name yet'}</p>
++                  {when && <p className="text-[11px] text-gray-400">{i === 0 ? 'Last edited' : 'Edited'} {when}</p>}
++                </div>
++                <ArrowRight size={15} className="text-gray-300 group-hover:text-purple-600 shrink-0 transition-colors" aria-hidden="true" />
++              </button>
++            );
++          })}
++
++          <button
++            onClick={() => onPick(null)}
++            className="w-full text-left p-3 rounded-xl border-2 border-dashed border-gray-200 hover:border-purple-400 hover:bg-purple-50/40 transition-all flex items-center gap-3"
++          >
++            <FileText size={16} className="text-gray-400 shrink-0" aria-hidden="true" />
++            <div>
++              <p className="text-sm font-bold text-gray-800">Blank letter</p>
++              <p className="text-xs text-gray-400">No name or contacts yet: fill them in under Personal Info.</p>
++            </div>
++          </button>
++        </div>
++      </div>
++    </div>
++  );
++}
+diff --git a/src/components/ResumeThumbnail.jsx b/src/components/ResumeThumbnail.jsx
+index 1e38bef..d7d25d1 100644
+--- a/src/components/ResumeThumbnail.jsx
++++ b/src/components/ResumeThumbnail.jsx
+@@ -1,4 +1,6 @@
+ import { letterheadCentered, templateId } from '@/constants/templates';
++import { isLetter } from '@/utils/letters';
++import { letterResumePhoto } from '@/utils/coverLetter';
+ 
+ // A dashboard card's mock page: the résumé's template drawn in bars, so two résumés on different
+ // templates look different at a glance (R2-133). Every way of making a résumé stores the same accent,
+@@ -60,7 +62,25 @@ export default function ResumeThumbnail({ resume, accent }) {
+   ));
+ 
+   let page;
+-  if (t === 'sidebar') {
++  if (isLetter(resume)) {
++    // A letter's card draws a letter (R2-135): its letterhead in the template's look, the recipient
++    // lines, three paragraphs and the signature — not a résumé's sections.
++    const cl = resume.coverLetter || {};
++    const letterPhoto = cl.showPhoto !== false && Boolean(cl.clPhoto || letterResumePhoto(personal));
++    page = (
++      <div className="p-1.5 space-y-1.5">
++        <Header ink={ink} sub={grey} center={center} photo={letterPhoto} photoRing={accent} />
++        <Bar w={1} h={0.75} color={accent} />
++        <div className="space-y-0.5"><Bar w={0.3} h={1} color={grey} /><Bar w={0.45} h={1} color={grey} /></div>
++        {[3, 3, 2].map((lines, i) => (
++          <div key={i} className="space-y-0.5">
++            {Array.from({ length: lines }, (_, j) => <Bar key={j} w={j === lines - 1 ? 0.6 : 0.95} h={1} color={soft} />)}
++          </div>
++        ))}
++        <Bar w={0.35} h={1.5} color={ink} />
++      </div>
++    );
++  } else if (t === 'sidebar') {
+     const bg = s.sidebarBg || '#1e293b';
+     page = (
+       <div className="flex h-full">
+@@ -102,7 +122,7 @@ export default function ResumeThumbnail({ resume, accent }) {
+   }
+ 
+   return (
+-    <div data-thumb={t} className="w-20 h-28 rounded shadow-md flex flex-col overflow-hidden bg-white" style={{ border: `2px solid ${accent}30` }}>
++    <div data-thumb={isLetter(resume) ? 'letter' : t} className="w-20 h-28 rounded shadow-md flex flex-col overflow-hidden bg-white" style={{ border: `2px solid ${accent}30` }}>
+       {page}
+     </div>
+   );
+diff --git a/src/hooks/useResumeStore.js b/src/hooks/useResumeStore.js
+index f5258af..71a48cb 100644
+--- a/src/hooks/useResumeStore.js
++++ b/src/hooks/useResumeStore.js
+@@ -10,6 +10,7 @@ import { DATA_VERSION, normalizeResume } from '@/utils/normalizeResume';
+ import { backupRaw, notSavedReason, pendingRecovery, readSavedList, rememberRecovery, setItemWithRoom } from '@/utils/storageBackup';
+ import { savedDeletions } from '@/utils/localDeletions';
+ import { isOriginal, withKeep } from '@/utils/demoSeed';
++import { isLetter, letterFrom, LETTER_KIND, LETTER_NAME } from '@/utils/letters';
+ import { useSmallerPhotos } from '@/hooks/useSmallerPhotos';
+ import { keepUnsaved } from '@/utils/unsavedJobs';
+ import { templateId } from '@/constants/templates';
+@@ -212,6 +213,23 @@ export function useAppStore() {
+     return id;
+   }
+ 
++  /**
++   * Dashboard → New Cover Letter: a letter of its own, which the dashboard lists with the letters
++   * (R2-135). From the résumé `fromId`: its name, job title, contacts, photo and look, with nothing
++   * yet said to the reader (letterFrom). With none — or one that is gone, or a letter — a blank
++   * letter, as New Cover Letter made before.
++   */
++  function createLetter(fromId = null) {
++    const id = newId('resume');
++    const now = Date.now();
++    setAppState(prev => {
++      const source = prev.resumes.find(r => r.id === fromId && !isLetter(r));
++      const letter = source ? letterFrom(source, { id, now }) : { ...createBlankResume({ id, name: LETTER_NAME }), kind: LETTER_KIND };
++      return { ...prev, resumes: [...prev.resumes, letter], activeId: id };
++    });
++    return id;
++  }
++
+   /**
+    * A résumé from a file, as a new one. `keep`: marked as the account's original (useDemoSeed) —
+    * never because the file says so. Made current against the file's own `updatedAt` — which build
+@@ -333,6 +351,7 @@ export function useAppStore() {
+     activeResume,
+     setActiveId,
+     createResume,
++    createLetter,
+     duplicateResume,
+     renameResume,
+     keepResume,
+diff --git a/src/pages/Dashboard.jsx b/src/pages/Dashboard.jsx
+index cd6ec67..0e18f63 100644
+--- a/src/pages/Dashboard.jsx
++++ b/src/pages/Dashboard.jsx
+@@ -7,10 +7,12 @@ import { CareerHistoryPanel } from '@/components/CareerHistoryPanel';
+ import { RecoveryNotice } from '@/components/RecoveryNotice';
+ import { ImportMenu } from '@/components/ImportMenu';
+ import StarterTemplateModal from '@/components/StarterTemplateModal';
++import NewLetterModal from '@/components/NewLetterModal';
+ import { notSavedMessage } from '@/utils/storageBackup';
+ import { comesStraightBack, isDemoAccount, isOriginal } from '@/utils/demoSeed';
+ import { DEMO_ACCOUNTS } from '@/utils/demoAccounts';
+ import { isJsonResume, jsonResumeToCpwtResume } from '@/utils/jsonResume';
++import { isLetter, letterSources } from '@/utils/letters';
+ 
+ const IMPORT_BUTTON = 'flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 bg-white border border-gray-200 text-gray-700 rounded-lg text-xs sm:text-sm font-semibold hover:bg-gray-50 transition-colors shadow-sm whitespace-nowrap';
+ 
+@@ -31,6 +33,7 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false }) {
+   const importRef = useRef(null);
+   const [importError, setImportError] = useState(null);
+   const [starterModalOpen, setStarterModalOpen] = useState(false);
++  const [letterModalOpen, setLetterModalOpen] = useState(false);
+   // A demo account keeps originals: the cards and Import offer "Keep as my original".
+   const keeps = isDemoAccount(auth.user, DEMO_ACCOUNTS);
+   // Whether the file being picked is imported as an original (ImportMenu).
+@@ -53,6 +56,40 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false }) {
+     navigate(`/resume/${id}`);
+   }
+ 
++  // Letters are listed apart from the résumés, and never counted as one (R2-135).
++  const resumes = store.appState.resumes.filter(r => !isLetter(r));
++  const letters = store.appState.resumes.filter(isLetter);
++  const letterSourceList = letterSources(store.appState.resumes);
++  const openLetter = id => navigate(`/resume/${id}?tab=coverletter`);
++
++  // New Cover Letter takes the name, job title, contacts and photo of a résumé: the only one there
++  // is, or the one picked when there are several; with none, a blank letter.
++  function startLetter() {
++    if (letterSourceList.length > 1) setLetterModalOpen(true);
++    else newLetter(letterSourceList[0]?.id ?? null);
++  }
++
++  function newLetter(fromId) {
++    setLetterModalOpen(false);
++    openLetter(store.createLetter(fromId));
++  }
++
++  /** A résumé's or a letter's card; `open` is where Edit and a new copy go. */
++  const card = (r, open) => (
++    <ResumeCard
++      key={r.id}
++      resume={r}
++      onOpen={open}
++      onDuplicate={id => { const newId = store.duplicateResume(id); if (newId) open(newId); }}
++      onDelete={id => {
++        if (confirm(deletePrompt(r, keeps))) store.deleteResume(id, auth.user?.uid);
++      }}
++      onRename={store.renameResume}
++      onKeep={keeps ? store.keepResume : undefined}
++      lastOriginal={keeps && comesStraightBack(r, store.appState.resumes)}
++    />
++  );
++
+   function handleImport(e) {
+     const file = e.target.files?.[0];
+     if (!file) return;
+@@ -124,7 +161,7 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false }) {
+               <Columns2 size={14} /> Boards
+             </button>
+             <button
+-              onClick={() => { const id = store.createResume('Cover Letter'); navigate(`/resume/${id}?tab=coverletter`); }}
++              onClick={startLetter}
+               className="flex items-center gap-1.5 px-2.5 sm:px-4 py-1.5 sm:py-2 bg-white border border-gray-200 text-gray-700 rounded-lg text-xs sm:text-sm font-semibold hover:bg-gray-50 transition-colors shadow-sm whitespace-nowrap"
+             >
+               <MailIcon size={14} /> New Cover
+@@ -176,11 +213,11 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false }) {
+             <div className="flex items-center justify-between mb-4 sm:mb-6">
+               <h1 className="text-xl sm:text-2xl font-bold text-gray-900">My Resumes</h1>
+               <p className="text-xs sm:text-sm text-gray-400">
+-                {store.appState.resumes.length} resume{store.appState.resumes.length !== 1 ? 's' : ''}
++                {resumes.length} resume{resumes.length !== 1 ? 's' : ''}
+               </p>
+             </div>
+ 
+-            {store.appState.resumes.length === 0 ? (
++            {resumes.length === 0 ? (
+               <div className="flex flex-col items-center justify-center py-20 text-center bg-white rounded-2xl border border-gray-200 p-6">
+                 <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mb-4">
+                   <FileText size={28} className="text-gray-400" />
+@@ -196,20 +233,7 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false }) {
+               </div>
+             ) : (
+               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+-                {store.appState.resumes.map(r => (
+-                  <ResumeCard
+-                    key={r.id}
+-                    resume={r}
+-                    onOpen={id => navigate(`/resume/${id}`)}
+-                    onDuplicate={id => { const newId = store.duplicateResume(id); if (newId) navigate(`/resume/${newId}`); }}
+-                    onDelete={id => {
+-                      if (confirm(deletePrompt(r, keeps))) store.deleteResume(id, auth.user?.uid);
+-                    }}
+-                    onRename={store.renameResume}
+-                    onKeep={keeps ? store.keepResume : undefined}
+-                    lastOriginal={keeps && comesStraightBack(r, store.appState.resumes)}
+-                  />
+-                ))}
++                {resumes.map(r => card(r, id => navigate(`/resume/${id}`)))}
+                 <button
+                   onClick={() => setStarterModalOpen(true)}
+                   className="h-full min-h-[180px] sm:min-h-[220px] border-2 border-dashed border-gray-200 rounded-2xl flex flex-col items-center justify-center gap-3 text-gray-400 hover:text-blue-500 hover:border-blue-300 hover:bg-blue-50/50 transition-all cursor-pointer p-4"
+@@ -219,17 +243,32 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false }) {
+                   </div>
+                   <span className="text-sm font-medium">New Resume</span>
+                 </button>
+-                <button
+-                  onClick={() => { const id = store.createResume('Cover Letter'); navigate(`/resume/${id}?tab=coverletter`); }}
+-                  className="h-full min-h-[180px] sm:min-h-[220px] border-2 border-dashed border-gray-200 rounded-2xl flex flex-col items-center justify-center gap-3 text-gray-400 hover:text-purple-500 hover:border-purple-300 hover:bg-purple-50/50 transition-all cursor-pointer p-4"
+-                >
+-                  <div className="w-12 h-12 rounded-xl border-2 border-current flex items-center justify-center">
+-                    <MailIcon size={22} />
+-                  </div>
+-                  <span className="text-sm font-medium">New Cover Letter</span>
+-                </button>
+               </div>
+             )}
++
++            {/* Cover letters: a group of their own, each opening on its letter (R2-135) */}
++            {(resumes.length > 0 || letters.length > 0) && (
++              <section aria-labelledby="dashboard-letters" className="mt-8 sm:mt-10">
++                <div className="flex items-center justify-between mb-4 sm:mb-6">
++                  <h2 id="dashboard-letters" className="text-lg sm:text-xl font-bold text-gray-900">Cover Letters</h2>
++                  <p className="text-xs sm:text-sm text-gray-400">
++                    {letters.length} letter{letters.length !== 1 ? 's' : ''}
++                  </p>
++                </div>
++                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
++                  {letters.map(r => card(r, openLetter))}
++                  <button
++                    onClick={startLetter}
++                    className="h-full min-h-[180px] sm:min-h-[220px] border-2 border-dashed border-gray-200 rounded-2xl flex flex-col items-center justify-center gap-3 text-gray-400 hover:text-purple-500 hover:border-purple-300 hover:bg-purple-50/50 transition-all cursor-pointer p-4"
++                  >
++                    <div className="w-12 h-12 rounded-xl border-2 border-current flex items-center justify-center">
++                      <MailIcon size={22} />
++                    </div>
++                    <span className="text-sm font-medium">New Cover Letter</span>
++                  </button>
++                </div>
++              </section>
++            )}
+           </div>
+ 
+           {/* Sidebar — career history */}
+@@ -244,7 +283,7 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false }) {
+               </button>
+             </div>
+             <CareerHistoryPanel
+-              resumes={store.appState.resumes}
++              resumes={resumes}
+               activeId={store.appState.activeId}
+               showJobTrackerLink={true}
+             />
+@@ -269,6 +308,12 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false }) {
+         onSelectStarter={handleSelectStarter}
+         onSelectBlank={handleSelectBlank}
+       />
++      <NewLetterModal
++        isOpen={letterModalOpen}
++        sources={letterSourceList}
++        onPick={newLetter}
++        onClose={() => setLetterModalOpen(false)}
++      />
+     </div>
+   );
+ }
+diff --git a/src/utils/dataVersion.js b/src/utils/dataVersion.js
+index 2f3aa96..c851859 100644
+--- a/src/utils/dataVersion.js
++++ b/src/utils/dataVersion.js
+@@ -8,4 +8,4 @@
+  * it has had, so none runs twice on the same data — not after a sync, an import of an exported
+  * file, or a stale tab of an older build writing the store back with its older store version.
+  */
+-export const DATA_VERSION = 12;
++export const DATA_VERSION = 13;
+diff --git a/src/utils/letters.js b/src/utils/letters.js
+new file mode 100644
+index 0000000..8ed1a5f
+--- /dev/null
++++ b/src/utils/letters.js
+@@ -0,0 +1,43 @@
++// A cover letter of its own (R2-135). It is a résumé record marked `kind: 'letter'` and listed with
++// the letters on the dashboard, not with the résumés. It keeps a résumé's shape on purpose: the
++// letterhead prints the record's own name, job title, contacts and photo in its template's look, and
++// the generator writes from its sections, so the editor, the PDF, Word and text exports and the cloud
++// sync take a letter as they always took one. Relative imports only, none of them back to the
++// normaliser, so Node's test runner loads this file as it is.
++import { BASE_COVER_LETTER } from './defaultDataContent.js';
++import { withKeep } from './demoSeed.js';
++
++export const LETTER_KIND = 'letter';
++
++/** The name a new letter gets, as Dashboard → New Cover Letter always named it. */
++export const LETTER_NAME = 'Cover Letter';
++
++export const isLetter = (r) => r?.kind === LETTER_KIND;
++
++/**
++ * The résumés a new letter can take its sender from — every record that is not a letter — the most
++ * recently edited first (a record with no time last, in list order).
++ */
++export function letterSources(resumes) {
++  const at = (r) => (Number.isFinite(r.updatedAt) ? r.updatedAt : -Infinity);
++  return (Array.isArray(resumes) ? resumes : []).filter((r) => r && !isLetter(r)).sort((a, b) => at(b) - at(a));
++}
++
++/** What a letter says to its reader. A new one starts with these empty. */
++const LETTER_CONTENT = ['date', 'recipientName', 'recipientTitle', 'company', 'subject', 'body'];
++
++/**
++ * A new letter `id`, made at `now`, from the résumé `source`: a copy of it — its Personal Info (the
++ * name, job title and contacts the letterhead prints, the photo and what it hides), its template and
++ * Design (the letterhead's look), its sections (what Auto-Generate writes from) and its own letter's
++ * letterhead and sign-off choices (the letter's photo and Show photo, contact style, layout and
++ * fields, closing, signature) — with what the letter says to its reader (LETTER_CONTENT) empty. A
++ * copy is not the account's original, whatever the source is (as duplicateResume's copy).
++ */
++export function letterFrom(source, { id, now }) {
++  const copy = JSON.parse(JSON.stringify(source));
++  const own = copy.coverLetter && typeof copy.coverLetter === 'object' && !Array.isArray(copy.coverLetter) ? copy.coverLetter : {};
++  const coverLetter = { ...BASE_COVER_LETTER, ...own };
++  for (const key of LETTER_CONTENT) coverLetter[key] = BASE_COVER_LETTER[key];
++  return withKeep({ ...copy, id, name: LETTER_NAME, kind: LETTER_KIND, coverLetter }, false, now);
++}
+diff --git a/src/utils/normalizeResume.js b/src/utils/normalizeResume.js
+index fb1dd89..878eb70 100644
+--- a/src/utils/normalizeResume.js
++++ b/src/utils/normalizeResume.js
+@@ -11,6 +11,7 @@ import { DEFAULT_ITEM_GAP_PX, SECTION_SPACING_PX } from '@/templates/pdf/shared/
+ import { withTextFields } from '@/utils/textFields';
+ import { withSkillNames } from '@/utils/skills';
+ import { withSectionShapes } from '@/utils/sectionShapes';
++import { LETTER_KIND, LETTER_NAME } from '@/utils/letters';
+ 
+ import { DATA_VERSION } from '@/utils/dataVersion';
+ 
+@@ -176,6 +177,20 @@ function withoutGeneratorPlaceholders(r) {
+   return Object.keys(next).some((k) => next[k] !== cl[k]) ? { ...r, coverLetter: next } : r;
+ }
+ 
++/**
++ * v13 (R2-135): until this build, Dashboard → New Cover Letter made an ordinary résumé named 'Cover
++ * Letter', blank, its sections empty, and the dashboard listed it with the résumés. A letter is now
++ * marked (`kind: 'letter'`, letters.js) and listed with the letters. A résumé saved before that still
++ * has that name and no entry in any section is such a letter, and is marked one. Nothing else about it
++ * changes, so its letter and its résumé print as they did. One the user renamed, or gave entries,
++ * stays a résumé.
++ */
++function withOldLetterMarked(r) {
++  if (r.kind != null || r.name !== LETTER_NAME) return r;
++  const entries = Array.isArray(r.sections) && r.sections.some((s) => Array.isArray(s?.items) && s.items.length > 0);
++  return entries ? r : { ...r, kind: LETTER_KIND };
++}
++
+ /** One-time migrations: [the version that introduced it, (résumé, its own version) → résumé]. */
+ const MIGRATIONS = [
+   [7, (r) => (r.coverLetter && !editedSince(r, SPACING_AND_RECIPIENT_LIVE) ? { ...r, coverLetter: withoutDefaultRecipientTitle(r.coverLetter) } : r)],
+@@ -184,6 +199,7 @@ const MIGRATIONS = [
+   [10, withResumeHiddenOnLetter],
+   [11, withHeaderColorsSeen],
+   [12, withoutGeneratorPlaceholders],
++  [13, withOldLetterMarked],
+ ];
+ 
+ /**
+diff --git a/tests/helpers.js b/tests/helpers.js
+index 13557dc..076afd2 100644
+--- a/tests/helpers.js
++++ b/tests/helpers.js
+@@ -4,14 +4,14 @@
+  * Key concepts:
+  * - The app uses HashRouter, so all routes are /#/path
+  * - Resume data lives in localStorage key `cpwtcv_v1`
+- * - DATA_VERSION = 12 — the store's data version (src/utils/normalizeResume.js); any version loads
++ * - DATA_VERSION = 13 — the store's data version (src/utils/normalizeResume.js); any version loads
+  * - Default seed produces 6 resumes: Classic, Executive, Modern, Minimal, Dark, Sidebar
+  * - Test resumes are injected via addInitScript before page.goto()
+  */
+ 
+ import { templateStyleDefaults } from '../src/constants/templates.js';
+ 
+-export const DATA_VERSION = 12;
++export const DATA_VERSION = 13;
+ export const STORAGE_KEY = 'cpwtcv_v1';
+ 
+ /** Minimal ATS_DEFAULTS that matches the live app */
+diff --git a/tests/pdf/99-cover-letters.test.mjs b/tests/pdf/99-cover-letters.test.mjs
+new file mode 100644
+index 0000000..ae8caa1
+--- /dev/null
++++ b/tests/pdf/99-cover-letters.test.mjs
+@@ -0,0 +1,391 @@
++// R2-135: Dashboard → New Cover Letter made a blank résumé named 'Cover Letter' — no name, no
++// contacts, the letterhead said 'Your Name' — and the dashboard listed it with the résumés and
++// counted it as one. Now a new letter takes the name, job title, contacts and photo (and the look) of
++// a résumé: the only one there is, or the one picked when there are several (the most recently edited
++// first); with none it is blank. Letters are listed in a group of their own, never counted as a
++// résumé, and each opens on its letter, copies, renames and deletes like a résumé. A 'Cover Letter'
++// résumé an older build saved (the old button's) is marked a letter on load (data version 13) and
++// prints exactly as it did. The real store (useAppStore) and the real Dashboard, mounted with
++// react-dom/client over tests/pdf/fake-dom.mjs; handlers are called as React set them.
++import { before, after, describe, it } from 'node:test';
++import assert from 'node:assert/strict';
++import { createElement } from 'react';
++import { renderToString } from 'react-dom/server';
++import { MemoryRouter, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
++import { setup, teardown, loadModule, renderCover, render, read, readDocx, allText } from './harness.mjs';
++import { mount, elements, reactProps } from './fake-dom.mjs';
++import { PNG_2X2 as PNG } from './extractors.mjs';
++
++before(setup);
++after(teardown);
++
++const KEY = 'cpwtcv_v1';
++
++/** A localStorage stand-in. */
++class MemoryStorage {
++  constructor(entries = []) { this.map = new Map(entries); }
++  get length() { return this.map.size; }
++  key(i) { return [...this.map.keys()][i] ?? null; }
++  getItem(k) { return this.map.has(k) ? this.map.get(k) : null; }
++  setItem(k, v) { this.map.set(k, String(v)); }
++  removeItem(k) { this.map.delete(k); }
++}
++
++// Fictional people.
++const JORDAN = {
++  name: 'Jordan Avery', title: 'Product Designer', email: 'jordan.avery@example.com', phone: '+1 555 0142',
++  location: 'Portland, OR', website: 'jordanavery.example', linkedin: 'linkedin.com/in/jordan-avery-example',
++  github: '', summary: '<p>Designer of calm, useful software.</p>', photo: PNG, hiddenFields: ['phone'],
++};
++const SAM = { ...JORDAN, name: 'Sam Rivera', title: 'Data Engineer', email: 'sam.rivera@example.com', photo: null, hiddenFields: [] };
++
++/** A résumé as this build saves it, with one experience entry (the letter generator writes from it). */
++function cv(id, name, personal, updatedAt, extra = {}) {
++  return {
++    id, name, updatedAt, dataVersion: 13, template: 'modern',
++    settings: { accentColor: '#0f766e', font: 'notosans', fontSizeBase: 11 },
++    personal,
++    sections: [{
++      id: 'experience', type: 'experience', title: 'Experience', visible: true, settings: {},
++      items: [{ id: 'e1', company: 'Northwind Studio', role: 'Designer', startDate: '01/2020', endDate: '', current: true, description: '<p>Led the design system.</p>' }],
++    }],
++    coverLetter: {
++      // What this résumé's own letter says to its reader …
++      recipientName: 'Morgan Lee', recipientTitle: 'Head of Design', company: 'Contoso', date: '2026-03-01',
++      subject: 'Application for Lead Designer', body: '<p>Dear Morgan, I would love to join Contoso.</p>',
++      // … and how it is headed and signed.
++      closing: 'Best regards', signatureName: 'J. Avery', signatureDesignation: '', signatureSpace: 'wide',
++      headerStyle: 'bar', headerLayout: 'single', fieldsPosition: 'below-name', showPhoto: true, hiddenFields: ['location'],
++    },
++    ...extra,
++  };
++}
++
++const text = (el) => el.textContent.replace(/\s+/g, ' ').trim();
++const inside = (el, tag) => { for (let n = el; n; n = n.parentNode) if (n.tagName === tag) return true; return false; };
++
++/** Where the page is: the path and query on the editor's route, or the dashboard. */
++function Editor() {
++  const location = useLocation();
++  const navigate = useNavigate();
++  return createElement('div', null,
++    createElement('p', { 'data-where': '' }, location.pathname + location.search),
++    createElement('button', { onClick: () => navigate('/') }, 'Back to dashboard'));
++}
++
++const auth = { user: null, authLoading: false, cloudAvailable: false, signInWithGoogle() {}, signOut() {} };
++const sync = { syncStatus: 'idle', lastSynced: null, isOnline: true, heldResumes: [] };
++
++/** The app's store and Dashboard over a saved store holding `resumes` (as a build at `dataVersion` saved it). */
++async function openApp(resumes, dataVersion = 13) {
++  const { useAppStore } = await loadModule('/src/hooks/useResumeStore.js');
++  const { Dashboard } = await loadModule('/src/pages/Dashboard.jsx');
++  globalThis.localStorage = new MemoryStorage([[KEY, JSON.stringify({ resumes, activeId: resumes[0]?.id ?? null, dataVersion, deletedIds: [] })]]);
++  const saved = globalThis.confirm;
++  globalThis.confirm = () => true;
++  let store = null;
++  function App() {
++    store = useAppStore();
++    return createElement(MemoryRouter, { initialEntries: ['/'] },
++      createElement(Routes, null,
++        createElement(Route, { path: '/', element: createElement(Dashboard, { store, auth, sync }) }),
++        createElement(Route, { path: '/resume/:id', element: createElement(Editor) })));
++  }
++  const view = mount(App, {});
++  // The router commits a navigation from an effect, and the store saves from one: let them run.
++  const settle = async () => { for (let i = 0; i < 10; i += 1) { await new Promise((r) => { setImmediate(r); }); view.act(() => {}); } };
++  await settle();
++  const all = () => [...elements(view.container)];
++  /** The button whose text is `label` — or starts with it, `starts` true — under `root`. */
++  const button = (label, root = view.container, starts = false) => {
++    const found = [...elements(root)].find((el) => el.tagName === 'BUTTON' && (starts ? text(el).startsWith(label) : text(el) === label));
++    assert.ok(found, `a button reads "${label}"; the page: ${text(view.container)}`);
++    return found;
++  };
++  /** Calls `el`'s handler `name` as React set it, then lets what it started settle. */
++  const fire = async (el, name, event = {}) => {
++    const handler = reactProps(el)?.[name];
++    assert.ok(handler, `no ${name} handler on <${el?.tagName}>`);
++    view.act(() => handler({ target: el, currentTarget: el, preventDefault() {}, stopPropagation() {}, ...event }));
++    await settle();
++  };
++  const click = (el) => fire(el, 'onClick');
++  return {
++    view,
++    store: () => store,
++    active: () => store.appState.resumes.find((r) => r.id === store.appState.activeId),
++    where: () => all().find((el) => el.hasAttribute('data-where'))?.textContent ?? null,
++    button,
++    click,
++    fire,
++    press: (label) => click(button(label)),
++    dialog: () => all().find((el) => el.getAttribute('role') === 'dialog') ?? null,
++    /** Every card on the dashboard: its text, and whether it is in the Cover Letters group. */
++    cards: () => all().filter((el) => el.tagName === 'DIV' && /\bgroup bg-white rounded-2xl\b/.test(el.className))
++      .map((el) => ({ el, text: text(el), letter: inside(el, 'SECTION') })),
++    card: (name) => {
++      const found = all().filter((el) => el.tagName === 'DIV' && /\bgroup bg-white rounded-2xl\b/.test(el.className)).filter((el) => text(el).includes(name));
++      assert.equal(found.length, 1, `one card shows "${name}"`);
++      return found[0];
++    },
++    heading: (level) => all().filter((el) => el.tagName === level).map(text),
++    counts: () => all().filter((el) => el.tagName === 'P' && /^\d+ (resume|letter)s?$/.test(text(el))).map(text),
++    async close() {
++      await view.unmount();
++      delete globalThis.localStorage;
++      globalThis.confirm = saved;
++    },
++  };
++}
++
++/** The letter's PDF, Word and plain text, as its tab exports them. */
++async function exportsOf(letter) {
++  const { renderCoverLetterDocx } = await loadModule('/src/utils/wordExport.js');
++  const { generateCoverLetterPlainText } = await loadModule('/src/utils/coverLetterText.js');
++  const docx = readDocx(new Uint8Array(await (await renderCoverLetterDocx(letter)).arrayBuffer()));
++  return { pdf: allText(await read(await renderCover(letter))), docx: docx.texts.join(' | '), txt: generateCoverLetterPlainText(letter) };
++}
++
++describe('New Cover Letter takes a résumé\'s name, job title, contacts and photo (R2-135)', () => {
++  it('one résumé: the letter is made from it and opens on its letter tab; its PDF, Word and text print the sender', async () => {
++    const app = await openApp([cv('resume_j', 'Design CV', JORDAN, 1000)]);
++    try {
++      const before = JSON.parse(JSON.stringify(app.store().appState.resumes[0]));
++      await app.press('New Cover');
++      const letter = app.active();
++      assert.match(app.where() ?? '', new RegExp(`^/resume/${letter.id}\\?tab=coverletter$`));
++      assert.equal(letter.kind, 'letter', 'marked a letter');
++      assert.notEqual(letter.id, 'resume_j');
++      assert.equal(letter.name, 'Cover Letter');
++      for (const key of ['name', 'title', 'email', 'phone', 'website', 'linkedin', 'photo']) {
++        assert.equal(letter.personal[key], JORDAN[key], `${key} — before: a blank résumé, no name, no contacts`);
++      }
++      assert.deepEqual(letter.personal.hiddenFields, ['phone'], 'what the résumé hides, its photo setting among them');
++      assert.deepEqual(letter.personal, before.personal);
++      assert.equal(letter.template, 'modern');
++      assert.deepEqual(letter.settings, before.settings, 'its look: the letterhead follows the résumé\'s template and Design');
++      assert.deepEqual(letter.sections, before.sections, 'Auto-Generate writes from its entries');
++      const { coverLetter: cl } = letter;
++      for (const key of ['recipientName', 'recipientTitle', 'company', 'date', 'subject', 'body']) {
++        assert.equal(cl[key], '', `${key}: a new letter says nothing yet to its reader`);
++      }
++      assert.deepEqual(
++        [cl.closing, cl.signatureName, cl.signatureSpace, cl.headerStyle, cl.headerLayout, cl.fieldsPosition, cl.showPhoto, cl.hiddenFields],
++        ['Best regards', 'J. Avery', 'wide', 'bar', 'single', 'below-name', true, ['location']],
++        'the letterhead and sign-off chosen on the résumé\'s letter',
++      );
++      const source = app.store().appState.resumes.find((r) => r.id === 'resume_j');
++      assert.deepEqual(source, before, 'the résumé itself is untouched');
++
++      const out = await exportsOf(letter);
++      for (const [what, printed] of Object.entries(out)) {
++        for (const shown of ['Jordan Avery', 'Product Designer', 'jordan.avery@example.com', 'jordanavery.example']) {
++          assert.ok(printed.includes(shown), `${what} prints "${shown}": ${printed}`);
++        }
++        // The letter's own Visible Contact Fields, copied with it, hide the location.
++        assert.ok(!printed.includes('Portland'), `${what} hides the location as the letter chose`);
++        assert.ok(!printed.includes('Contoso') && !printed.includes('Morgan'), `${what}: none of the résumé letter's words to its reader`);
++      }
++    } finally { await app.close(); }
++  });
++
++  it('several résumés: a picker lists them, the most recently edited first; the one picked heads the letter', async () => {
++    const app = await openApp([
++      cv('resume_a', 'Older CV', JORDAN, 1000),
++      cv('resume_b', 'Newest CV', SAM, 3000),
++      cv('resume_c', 'Middle CV', { ...JORDAN, name: 'Casey Morgan' }, 2000),
++    ]);
++    try {
++      await app.press('New Cover');
++      const dialog = app.dialog();
++      assert.ok(dialog, 'before: a blank résumé was made at once');
++      assert.equal(dialog.getAttribute('aria-modal'), 'true');
++      assert.ok(text(dialog).includes('New Cover Letter'));
++      const listed = [...elements(dialog)].filter((el) => el.tagName === 'BUTTON' && el.getAttribute('aria-label') !== 'Close').map(text);
++      assert.equal(listed.length, 4, listed.join(' / '));
++      ['Newest CV', 'Middle CV', 'Older CV', 'Blank letter'].forEach((name, i) => assert.ok(listed[i].startsWith(name), `${i + 1}: ${listed[i]}`));
++      assert.match(listed[0], /Sam Rivera · Data Engineer/);
++      assert.match(listed[0], /Last edited/);
++      assert.equal(app.store().appState.resumes.length, 3, 'nothing is made until one is picked');
++
++      await app.click(app.button('Middle CV', dialog, true));
++      assert.equal(app.dialog(), null);
++      const letter = app.active();
++      assert.equal(letter.kind, 'letter');
++      assert.equal(letter.personal.name, 'Casey Morgan');
++      assert.match(app.where() ?? '', /\?tab=coverletter$/);
++    } finally { await app.close(); }
++  });
++
++  it('the picker\'s Blank letter makes a blank one; Escape and Close make nothing', async () => {
++    const app = await openApp([cv('resume_a', 'A CV', JORDAN, 1000), cv('resume_b', 'B CV', SAM, 2000)]);
++    try {
++      await app.press('New Cover Letter');
++      await app.fire(app.dialog().parentNode, 'onKeyDown', { key: 'Escape' });
++      assert.equal(app.dialog(), null, 'Escape closes it');
++      await app.press('New Cover');
++      await app.click([...elements(app.dialog())].find((el) => el.getAttribute('aria-label') === 'Close'));
++      assert.equal(app.dialog(), null, 'Close closes it');
++      assert.equal(app.store().appState.resumes.length, 2, 'and neither made a letter');
++
++      await app.press('New Cover');
++      await app.click(app.button('Blank letter', app.dialog(), true));
++      const letter = app.active();
++      assert.equal(letter.kind, 'letter');
++      assert.equal(letter.name, 'Cover Letter');
++      assert.equal(letter.personal.name, '');
++      assert.equal(letter.personal.email, '');
++    } finally { await app.close(); }
++  });
++
++  it('no résumé at all: New Cover makes a blank letter, listed as a letter', async () => {
++    const app = await openApp([]);
++    try {
++      await app.press('New Cover');
++      const letter = app.active();
++      assert.equal(letter.kind, 'letter');
++      assert.equal(letter.personal.name, '');
++      assert.match(app.where() ?? '', /\?tab=coverletter$/);
++      await app.press('Back to dashboard');
++      assert.deepEqual(app.counts(), ['0 resumes', '1 letter']);
++      assert.ok(app.heading('H2').includes('No resumes yet'), 'no résumé yet: the letter is not one');
++      assert.ok(app.cards().every((c) => c.letter), 'its card is in the Cover Letters group');
++    } finally { await app.close(); }
++  });
++});
++
++describe('the dashboard lists letters as letters (R2-135)', () => {
++  const letter = (id, name, updatedAt) => ({ ...cv(id, name, JORDAN, updatedAt), kind: 'letter' });
++
++  it('letters are a group of their own, never counted or shown as a résumé', async () => {
++    const app = await openApp([cv('resume_a', 'Design CV', JORDAN, 1000), letter('resume_l1', 'Contoso letter', 2000), cv('resume_b', 'Data CV', SAM, 3000), letter('resume_l2', 'Fabrikam letter', 4000)]);
++    try {
++      assert.deepEqual(app.counts(), ['2 resumes', '2 letters'], 'before: "4 resumes"');
++      assert.ok(app.heading('H2').includes('Cover Letters'));
++      const cards = app.cards();
++      assert.deepEqual(cards.filter((c) => !c.letter).map((c) => c.text.includes('CV')), [true, true], 'the résumés\' grid holds the two résumés');
++      assert.deepEqual(cards.filter((c) => c.letter).map((c) => /letter/.test(c.text)), [true, true], 'the letters\' group holds the two letters');
++      // Each letter's card draws a letter, not the résumé layout of its template.
++      assert.equal(cards.filter((c) => c.letter).map((c) => [...elements(c.el)].find((el) => el.hasAttribute('data-thumb'))?.getAttribute('data-thumb')).join(), 'letter,letter');
++      assert.equal(cards.filter((c) => !c.letter).map((c) => [...elements(c.el)].find((el) => el.hasAttribute('data-thumb'))?.getAttribute('data-thumb')).join(), 'modern,modern');
++    } finally { await app.close(); }
++  });
++
++  it('each letter opens on its letter, copies as a letter, renames and deletes like a résumé', async () => {
++    const app = await openApp([cv('resume_a', 'Design CV', JORDAN, 1000), letter('resume_l1', 'Contoso letter', 2000)]);
++    try {
++      await app.click(app.button('Edit', app.card('Contoso letter')));
++      assert.equal(app.where(), '/resume/resume_l1?tab=coverletter', 'Edit opens the letter on its tab');
++      await app.press('Back to dashboard');
++
++      await app.click(app.button('Copy', app.card('Contoso letter')));
++      const copy = app.active();
++      assert.equal(copy.name, 'Contoso letter (Copy)');
++      assert.equal(copy.kind, 'letter', 'a copy of a letter is a letter');
++      assert.equal(app.where(), `/resume/${copy.id}?tab=coverletter`);
++      await app.press('Back to dashboard');
++      assert.deepEqual(app.counts(), ['1 resume', '2 letters']);
++
++      const card = app.card('Contoso letter (Copy)');
++      await app.click([...elements(card)].find((el) => el.getAttribute('title') === 'Rename'));
++      const input = [...elements(card)].find((el) => el.tagName === 'INPUT');
++      await app.fire(input, 'onChange', { target: { value: 'Fabrikam letter' } });
++      await app.fire(input, 'onKeyDown', { key: 'Enter' });
++      assert.equal(app.store().appState.resumes.find((r) => r.id === copy.id).name, 'Fabrikam letter');
++
++      await app.click(app.button('Delete', app.card('Fabrikam letter')));
++      assert.deepEqual(app.store().appState.resumes.map((r) => r.id), ['resume_a', 'resume_l1']);
++      assert.deepEqual(app.counts(), ['1 resume', '1 letter']);
++    } finally { await app.close(); }
++  });
++
++  it('New Cover Letter twice: two letters, each its own', async () => {
++    const app = await openApp([cv('resume_a', 'Design CV', JORDAN, 1000)]);
++    try {
++      await app.press('New Cover Letter');
++      const first = app.active().id;
++      await app.press('Back to dashboard');
++      await app.press('New Cover Letter');
++      const second = app.active().id;
++      await app.press('Back to dashboard');
++      assert.notEqual(first, second);
++      assert.deepEqual(app.counts(), ['1 resume', '2 letters']);
++      assert.ok(app.store().appState.resumes.filter((r) => r.kind === 'letter').every((r) => r.personal.name === 'Jordan Avery'));
++    } finally { await app.close(); }
++  });
++
++  it('a letter is not the account\'s original, whatever its résumé is', async () => {
++    const { letterFrom } = await loadModule('/src/utils/letters.js');
++    const made = letterFrom(cv('resume_k', 'Kept CV', JORDAN, 1000, { keep: true }), { id: 'resume_n', now: 5000 });
++    assert.equal('keep' in made, false);
++    assert.equal(made.updatedAt, 5000);
++    assert.equal(made.kind, 'letter');
++  });
++
++  it('the career panel beside the lists reads a résumé, not a letter', async () => {
++    const app = await openApp([letter('resume_l1', 'Contoso letter', 2000), cv('resume_b', 'Data CV', SAM, 3000)]);
++    try {
++      // The store opens the first record, the letter; the panel shows the résumé's person.
++      assert.ok(text(app.view.container).includes('Sam Rivera'), 'before: the letter\'s sender, as if a résumé');
++      assert.ok(!text(app.view.container).includes('Jordan Avery'));
++    } finally { await app.close(); }
++  });
++
++  it('a letter card\'s thumbnail draws a letter, with its photo as the letter prints it', async () => {
++    const { ResumeCard } = await loadModule('/src/components/ResumeCard.jsx');
++    const html = (r) => renderToString(createElement(ResumeCard, { resume: r, onOpen() {}, onDuplicate() {}, onDelete() {}, onRename() {} }));
++    const shown = html(letter('resume_l1', 'Mine', 0));
++    assert.match(shown, /data-thumb="letter"/);
++    assert.match(shown, /data-thumb-photo/, 'the résumé photo the letter prints');
++    const off = letter('resume_l1', 'Mine', 0);
++    off.coverLetter = { ...off.coverLetter, showPhoto: false };
++    assert.doesNotMatch(html(off), /data-thumb-photo/, 'Show photo off on the letter');
++    assert.notEqual(html(letter('resume_l1', 'Mine', 0)), html(cv('resume_l1', 'Mine', JORDAN, 0)));
++  });
++});
++
++describe('a \'Cover Letter\' résumé an older build saved (R2-135, data version 13)', () => {
++  // What the old New Cover Letter made: a blank Classic résumé named 'Cover Letter', whose Personal
++  // Info and letter the user then filled in. Saved by a version-12 build.
++  async function oldLetter(extra = {}) {
++    const { createBlankResume } = await loadModule('/src/utils/defaultData.js');
++    const r = createBlankResume({ id: 'resume_old', name: 'Cover Letter' });
++    return {
++      ...r, dataVersion: 12, updatedAt: Date.UTC(2026, 8, 20),
++      personal: { ...r.personal, name: 'Jordan Avery', title: 'Product Designer', email: 'jordan.avery@example.com', phone: '+1 555 0142' },
++      coverLetter: { ...r.coverLetter, company: 'Contoso', recipientName: 'Morgan Lee', body: '<p>Dear Morgan, I would love to join Contoso.</p>' },
++      ...extra,
++    };
++  }
++
++  it('is marked a letter, and nothing else about it changes: its letter and its résumé print as they did', async () => {
++    const { normalizeResume, DATA_VERSION } = await loadModule('/src/utils/normalizeResume.js');
++    const old = await oldLetter();
++    const now = normalizeResume(old);
++    assert.equal(now.kind, 'letter', 'before: listed and counted as a résumé');
++    assert.equal(now.dataVersion, DATA_VERSION);
++    const { kind: _k, dataVersion: _v, ...rest } = now;
++    const { dataVersion: _o, ...was } = old;
++    assert.deepEqual(rest, was, 'no other field changes; updatedAt neither (not an edit)');
++    assert.deepEqual(await exportsOf(now), await exportsOf(old), 'the letter prints the same, in the PDF, Word and text');
++    assert.equal(allText(await read(await render(now))), allText(await read(await render(old))), 'and so does its résumé');
++  });
++
++  it('one the user renamed, or gave entries, stays a résumé; so does one a build that knows letters saved', async () => {
++    const { normalizeResume } = await loadModule('/src/utils/normalizeResume.js');
++    assert.equal(normalizeResume(await oldLetter({ name: 'Contoso letter' })).kind, undefined, 'renamed');
++    const withEntries = await oldLetter();
++    withEntries.sections = withEntries.sections.map((s) => (s.type === 'skills' ? { ...s, items: [{ id: 's1', name: 'Figma' }] } : s));
++    assert.equal(normalizeResume(withEntries).kind, undefined, 'it has an entry: a résumé in use');
++    assert.equal(normalizeResume(await oldLetter({ dataVersion: 13 })).kind, undefined, 'saved by this build as a résumé the user named so');
++  });
++
++  it('loaded from storage, the dashboard lists it with the letters and opens it on its letter', async () => {
++    const app = await openApp([cv('resume_a', 'Design CV', JORDAN, 1000), await oldLetter()], 12);
++    try {
++      assert.deepEqual(app.counts(), ['1 resume', '1 letter'], 'before: "2 resumes"');
++      await app.click(app.button('Edit', app.card('Cover Letter')));
++      assert.equal(app.where(), '/resume/resume_old?tab=coverletter');
++    } finally { await app.close(); }
++  });
++});
