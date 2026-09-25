@@ -23,7 +23,7 @@ with one full CI run and fast-forwards `master` on green.
 | templates-core | R2-139 (non-a11y part), 138 — branch `claude/wf-templates-core` | session_01RJGwPXpTmeycSSs3P4AScW | running |
 | section-style | R2-147 | session_01NqoaVxqWn89c2oi9DMyehg | running |
 | cloud-sync | R2-159 (done), 145, 140 | session_017BB79LpEbU9c3zT2CccWDV | running |
-| structure-tests | R2-158, 167, 171 | session_015xkXZJXdNDrdPoNy6Nusob | running |
+| structure-tests | R2-158, 167, 171 | session_015xkXZJXdNDrdPoNy6Nusob | **merged** — R2-158, 167, 171 fixed (c1f085d: a section dropped off the list no longer throws) |
 | letters-import | R2-135, 148 | session_01C9EUo2kre8QeqViw2sAKkx | running |
 | release | R2-169 (done), 143, 154, 168 | session_012ktnCPxsipt5gQWuGvDdjh | **merged** — R2-169, 154, 168 fixed; R2-143 partial (owner: v0.1.0 tag, Terms/Privacy domain) |
 
