@@ -92,6 +92,17 @@ describe('Save my design (B4)', () => {
     assert.match(card, /border-blue-500/, 'and its card is the one selected');
   });
 
+  it('a Job Title size or Title Spacing left unset is part of the look: picked where they are set, it unsets them', async () => {
+    const { savedDesigns } = await loadModule('/src/constants/templatePresets.js');
+    const { a } = await saved();
+    assert.equal(a.settings.fontSizeTitleDelta, null, 'the saved résumé leaves them unset');
+    assert.equal(a.settings.sectionLetterSpacing, null);
+    const set = cv('resume_b', 'minimal', { fontSizeTitleDelta: 4, sectionLetterSpacing: 12 });
+    const { resumes: [, picked] } = await inStore([a, set], 'resume_b', (s) => s.applyDesign(savedDesigns([a])[0]));
+    assert.equal(picked.settings.fontSizeTitleDelta, null);
+    assert.equal(picked.settings.sectionLetterSpacing, null);
+  });
+
   it('Reset returns to it; a plain template takes its look away; the design stays saved', async () => {
     const { id, a } = await saved();
     const { resumes: [reset] } = await inStore([{ ...a, settings: { ...a.settings, accentColor: '#000000', font: 'roboto' } }], 'resume_a', (s) => s.resetSettings());
