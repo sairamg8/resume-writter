@@ -84,6 +84,14 @@ describe('the published copy holds what the PDF prints, and nothing else', () =>
     ]);
   });
 
+  it('a copy the server hands back with its keys in another order is still current; an edit is not', () => {
+    const r = sample();
+    const reorder = (v) => (Array.isArray(v) ? v.map(reorder) : v && typeof v === 'object'
+      ? Object.fromEntries(Object.keys(v).reverse().map((k) => [k, reorder(v[k])])) : v);
+    assert.equal(link.publishedIsCurrent(reorder(link.publicSnapshot(r)), r), true);
+    assert.equal(link.publishedIsCurrent(link.publicSnapshot(r), { ...r, personal: { ...r.personal, title: 'Art Director' } }), false);
+  });
+
   it('the copy prints as the résumé does, without what was hidden', async () => {
     const r = sample();
     const { normalizeResume } = await loadModule('/src/utils/normalizeResume.js');
