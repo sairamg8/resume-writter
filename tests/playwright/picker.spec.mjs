@@ -63,12 +63,15 @@ test.describe('the template gallery', () => {
     const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible();
     await expect.poll(async () => (await dialog.boundingBox())?.width).toBe(375);
-    const a = await page.getByTestId('gallery-template-executive').boundingBox();
-    const b = await page.getByTestId('gallery-template-classic').boundingBox();
-    const c = await page.getByTestId('gallery-template-modern').boundingBox();
+    // The sheet slides up (animate-ui-sheet-in): the boxes are read once it has come to rest, in one frame.
+    const box = await page.evaluate(async () => {
+      await Promise.all(document.getAnimations().map((x) => x.finished.catch(() => {})));
+      const of = (id) => { const r = document.querySelector(`[data-testid="${id}"]`).getBoundingClientRect(); return { y: r.y, height: r.height }; };
+      return { a: of('gallery-template-executive'), b: of('gallery-template-classic'), c: of('gallery-template-modern'), done: of('gallery-done') };
+    });
+    const { a, b, c, done } = box;
     expect(Math.abs(a.y - b.y)).toBeLessThan(2); // side by side
     expect(c.y).toBeGreaterThan(a.y + a.height - 1); // the third on the next row
-    const done = await page.getByTestId('gallery-done').boundingBox();
     expect(done.y + done.height).toBeLessThanOrEqual(812);
     expect(done.height).toBeGreaterThanOrEqual(44);
   });
