@@ -718,7 +718,9 @@ export function analyzeAtsScore(resume, jobDescriptionText = '') {
 
   // ── 2. Section Headings & ATS Taxonomy (20 pts) ───────────────────
   let headingsPts = 0;
-  const visibleSections = sections.filter(s => s.visible !== false);
+  // The sections that print: one whose entries are all hidden, or that has none, prints no heading
+  // anywhere (sectionPrints in PdfSections.jsx, R2-057), so a parser finds no such section (R1-LEFT-d).
+  const visibleSections = sections.filter(s => s.visible !== false && shownItems(s, currentTemplate).length > 0);
   const typesPresent = new Set(visibleSections.map(s => s.type));
 
   // Experience section present (6 pts)
