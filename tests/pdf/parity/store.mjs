@@ -69,6 +69,9 @@ export const SECTION_ITEMS = {
     { title: 'Meetup Host', subtitle: 'Lisbon Go', location: 'Sintra', date: '03/2019', description: '' },
   ],
 };
+/** The role Group roles by company prints under its employer (the second entry at Northwind Labs). */
+const GROUPED_ROLE = 'Lead Engineer';
+
 /** Text every render must still print, whatever a control does (dates and locations are a control's to hide), by where it prints. */
 const MARKS_BY = {
   header: ['Jordan Rivera', 'Principal Platform Engineer', 'jordan@example.com', 'Platform engineer who ships'],
@@ -85,7 +88,9 @@ const MARKS_BY = {
   custom: ['Open Source Talk', 'Meetup Host'],
 };
 /** The marks `r` must print: the header's and each of its sections'. */
-export const marksOf = (r) => [...MARKS_BY.header, ...r.sections.flatMap((sec) => MARKS_BY[sec.type] || [])];
+export const marksOf = (r) => [...MARKS_BY.header, ...r.sections.flatMap((sec) => (MARKS_BY[sec.type] || [])
+  // The second role at Northwind (GROUPED_ROLE) prints only where the page has it.
+  .filter((m) => m !== GROUPED_ROLE || sec.items.some((it) => it.role === GROUPED_ROLE)))];
 export const SECTION_TYPES = Object.keys(SECTION_ITEMS);
 
 /**
@@ -118,12 +123,18 @@ export const COMPACT_TYPES = ['experience', 'education', 'skills', 'languages'];
  * The résumé every control is tried on: `template`, `settings` over its defaults, and every section
  * type — or, `compact`, COMPACT_TYPES (one page: half the render time, for controls that style the whole page).
  */
-export function baseResume(template, settings = {}, { compact = false, types: only = null } = {}) {
+export function baseResume(template, settings = {}, { compact = false, types: only = null, focus = null } = {}) {
   const types = only || (compact ? COMPACT_TYPES : SECTION_TYPES);
+  // On another section's page (`focus`: the type whose Section Options are tried) Experience is a
+  // neighbour and prints its two jobs, as before Group roles by company (R2-147): its second role at
+  // Northwind made those pages longer, and the next heading broke onto a page of its own, where Space
+  // after cannot move it.
+  const itemsOf = (type) => (type === 'experience' && focus && focus !== 'experience'
+    ? SECTION_ITEMS.experience.filter((it) => it.role !== GROUPED_ROLE) : SECTION_ITEMS[type]);
   const r = resume({
     template,
     personal: PERSONAL,
-    sections: types.map((type) => section(type, SECTION_ITEMS[type])),
+    sections: types.map((type) => section(type, itemsOf(type))),
   });
   // Stable ids: an action's section write names its section by type. Each section as the app creates it
   // on `template` — in its own Grids where it has one (Compact's grid, T9: newSectionGrid), as a résumé

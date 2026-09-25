@@ -77,7 +77,7 @@ export async function checkControl(variant, control, { spec, customise }) {
   const fail = [];
   // A section's options are tried on its own page of three (aroundTypes); the rest on the compact page.
   const types = control.sectionId ? aroundTypes(variant.template, variant.settings, control.sectionId.replace(/^sec_/, '')) : null;
-  const base = baseResume(variant.template, variant.settings, { compact: !types, types });
+  const base = baseResume(variant.template, variant.settings, { compact: !types, types, focus: control.sectionId?.replace(/^sec_/, '') ?? null });
   const before = applyWrites(base, control.context, control.sectionId);
   const b = await shot(before);
   if (control.reset) return checkReset(variant, control, { base, before, b, customise, fail, spec });
