@@ -88,6 +88,12 @@ jobs:
         run: |
           grep -E '^# (tests|pass|fail|todo|skipped|cancelled)' suite.log || true
           grep -E '^not ok' suite.log | head -40 || true
+          # A skipped test is not a failure (some skip on purpose, e.g. 24-private-data without the
+          # owner's private file) but it proves nothing: name each one, so a skip nobody meant shows (R2-154).
+          skipped=$(grep -E '^ *ok [0-9]+ - .* # SKIP' suite.log | sed -E 's/^ *ok [0-9]+ - //' || true)
+          if [ -n "$skipped" ]; then
+            echo "::warning title=Skipped tests (shard ${{ matrix.shard }}/6)::$(printf '%s\n' "$skipped" | wc -l) skipped:%0A$(printf '%s\n' "$skipped" | sed 's/%/%25/g' | awk -v ORS='%0A' 1)"
+          fi
 
   # Named test files on one machine (the tests input), in the suite's container.
   tests:
@@ -127,6 +133,12 @@ jobs:
         run: |
           grep -E '^# (tests|pass|fail|todo|skipped|cancelled)' tests.log || true
           grep -E '^not ok' tests.log | head -40 || true
+          # A skipped test is not a failure (some skip on purpose, e.g. 24-private-data without the
+          # owner's private file) but it proves nothing: name each one, so a skip nobody meant shows (R2-154).
+          skipped=$(grep -E '^ *ok [0-9]+ - .* # SKIP' tests.log | sed -E 's/^ *ok [0-9]+ - //' || true)
+          if [ -n "$skipped" ]; then
+            echo "::warning title=Skipped tests::$(printf '%s\n' "$skipped" | wc -l) skipped:%0A$(printf '%s\n' "$skipped" | sed 's/%/%25/g' | awk -v ORS='%0A' 1)"
+          fi
 
   # Fail-first (the failfirst input): for each "sha:tests", on a machine of its own, undo that
   # commit's changes to src/ (and to a yarn patch and yarn.lock, then reinstall) on this checkout —
