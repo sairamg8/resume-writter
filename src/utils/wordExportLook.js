@@ -95,7 +95,7 @@ function gridOf(section, width, side) {
  *   half-points (entrySizes);
  * - `grid` — Section Options → Grids (gridOf), or null for one entry to a row;
  * - `tab` — the dates' right tab, twips: the right margin (wordContentTwips), or in a grid its cell's;
- * - `line` — Design → Line Height;
+ * - `line` — Design → Line Height; `bullet` — Design → Lists, the glyph of its bulleted items (R2-147);
  * - `gap` — the space between two entries, pt: Design → Between Items scaled by the section's
  *   Spacing preset, or its own Item gap (getEffectiveSpacing, R2-062);
  * - `title` — Section Options → Title: 'stacked' (unset), 'inline' or 'sidebyside'; the Sidebar's
@@ -111,6 +111,7 @@ export function sectionLook(section, settings, s, template, side) {
     grid,
     tab: grid ? grid.cell : wordContentTwips(settings),
     line: s.lineHeightValue,
+    bullet: s.bulletStyle,
     gap: getEffectiveSpacing(section, s).itemGap,
     title: (!side && section.settings?.titleStyle) || 'stacked',
     side,

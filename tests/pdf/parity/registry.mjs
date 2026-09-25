@@ -19,6 +19,7 @@ export const FAMILY_FILES = {
   spacing: '13-spacing.test.mjs',
   headings: '14-headings-dates.test.mjs',
   dates: '14-headings-dates.test.mjs',
+  lists: '17-lists.test.mjs',
   template: '15-template-resets.test.mjs',
   resets: '15-template-resets.test.mjs',
   icons: '16-icons.test.mjs',

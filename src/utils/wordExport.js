@@ -1,5 +1,5 @@
 import { Document, Packer } from 'docx';
-import { accent2Hex, wordMargins } from '@/utils/wordExportUtils';
+import { accent2Hex, bulletNumbering, wordMargins } from '@/utils/wordExportUtils';
 import { buildSection, sectionSpaceAfter } from '@/utils/wordExportBuilders';
 import { buildPersonalSection } from '@/utils/wordExportHeader';
 import { buildCoverLetter } from '@/utils/wordExportCoverLetter';
@@ -19,7 +19,8 @@ export function resolveWordFont(settings = {}) {
 
 /**
  * A one-section document on the résumé's paper (A4 or US Letter, PAR-01), in Design → Spacing's page
- * margins (wordMargins, R2-062) — the résumé's and its letter's, as their PDFs print them.
+ * margins (wordMargins, R2-062) — the résumé's and its letter's, as their PDFs print them — with the
+ * bullets of Design → Lists (bulletNumbering, R2-147).
  */
 function buildDocument(children, settings) {
   const font = resolveWordFont(settings);
@@ -45,6 +46,7 @@ function buildDocument(children, settings) {
         heading1: { basedOn: undefined, run: { font }, paragraph: { outlineLevel: 0 } },
       },
     },
+    numbering: { config: bulletNumbering(settings?.bulletStyle) },
     sections: [{
       properties: {
         page: {

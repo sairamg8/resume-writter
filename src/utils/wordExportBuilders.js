@@ -105,13 +105,13 @@ function header(primary, secondary, date, dateHex, centered, look, where) {
 /**
  * Description + legacy bullets of an entry, centred in a centred section, at Design → Line Height,
  * at the PDF's size for them (`look.body`, R2-118), in the Text colour's body shade (`color`: an
- * award's, which the PDF prints in its sub shade).
+ * award's, which the PDF prints in its sub shade), behind Design → Lists' glyph (`look.bullet`, R2-147).
  */
 function body(item, centered, look, color = look.ink.body) {
   const paras = [];
   const description = field(item, 'description');
-  if (hasRichText(description)) paras.push(...descriptionToParagraphs(description, { size: look.body, color, lineHeight: look.line }, centered ? 'center' : null));
-  for (const b of item.bullets || []) if (b) paras.push(bulletPoint(b, centered, { size: look.body, color }, look.line));
+  if (hasRichText(description)) paras.push(...descriptionToParagraphs(description, { size: look.body, color, lineHeight: look.line, bullet: look.bullet }, centered ? 'center' : null));
+  for (const b of item.bullets || []) if (b) paras.push(bulletPoint(b, centered, { size: look.body, color }, look.line, look.bullet));
   return paras;
 }
 

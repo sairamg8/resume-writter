@@ -17,7 +17,8 @@
  *   align  'left' | 'center' | 'right' | 'justify' | null (null: the caller's alignment)
  *   indent list depth: 0 for body text; list items at depth n and their continuation
  *          paragraphs share indent n + 1 for the text, the marker hangs in the gutter
- *   marker '•' / '–' / '·' (by depth) or '1.' / 'a.' / 'i.' for list items, else null
+ *   marker '•' / '–' / '·' (by depth) or '1.' / 'a.' / 'i.' for list items, else null; the glyph a
+ *          bullet prints with is listMarker's (Design → Lists)
  */
 
 const BLOCK_TAGS = new Set([
@@ -184,6 +185,31 @@ function formatOf(tag, attrs, fmt) {
 }
 
 const BULLETS = ['•', '–', '·'];
+
+/**
+ * Design → Lists → Bullet (settings.bulletStyle, R2-147): the glyph each depth of a bulleted list
+ * prints with, the top level first. Bullet — the default, and what a résumé storing no style prints —
+ * is the parse's own '•', '–', '·'; the others print one glyph at every depth (the indent shows the
+ * nesting), None no glyph at all. Only the glyph changes: the item's text keeps its place. Numbered
+ * lists keep their numbers under every style. The parse itself never changes: the text exports and
+ * the ATS checker read its markers, whatever the style.
+ */
+export const BULLET_STYLES = { bullet: BULLETS, dash: ['–'], circle: ['◦'], none: [''] };
+export const DEFAULT_BULLET_STYLE = 'bullet';
+
+/** `style` if it is one of BULLET_STYLES, else the default (a résumé storing none, an imported file's unknown one). */
+export const bulletStyleOf = (style) => (Object.hasOwn(BULLET_STYLES, style) ? style : DEFAULT_BULLET_STYLE);
+
+/** The glyph list item `marker` (parseRichText's) prints with under `style`: a bullet's for its depth, a number as it is. */
+export function listMarker(marker, style) {
+  const depth = BULLETS.indexOf(marker);
+  if (depth < 0) return marker;
+  const glyphs = BULLET_STYLES[bulletStyleOf(style)];
+  return glyphs[depth % glyphs.length];
+}
+
+/** The glyph a bulleted list item `depth` deep (1: the top level) prints with under `style`. */
+export const bulletAt = (depth, style) => listMarker(BULLETS[(depth - 1) % BULLETS.length], style);
 
 function toRoman(n) {
   const table = [[1000, 'm'], [900, 'cm'], [500, 'd'], [400, 'cd'], [100, 'c'], [90, 'xc'], [50, 'l'], [40, 'xl'], [10, 'x'], [9, 'ix'], [5, 'v'], [4, 'iv'], [1, 'i']];

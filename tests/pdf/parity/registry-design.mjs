@@ -6,6 +6,7 @@ import { item, flow, fillsOf, prints } from './measure.mjs';
 import { PERSONAL, baseResume } from './store.mjs';
 import { shot } from './matrix.mjs';
 import { headingMarks, iconBefore, STYLE_MARK } from './marks.mjs';
+import { bulletAt } from '../../../src/utils/richText.js';
 
 export const valueOf = (run, key) => run.writes.find((w) => `${w.kind}.${w.key}` === key || w.kind === key)?.value;
 const byValue = (runs, key) => [...runs].filter((r) => typeof valueOf(r, key) === 'number').sort((a, b) => valueOf(a, key) - valueOf(b, key));
@@ -65,6 +66,17 @@ async function headerColour({ runs, before, variant }, key, needle) {
 }
 
 const CONTACTS = [PERSONAL.email, PERSONAL.phone, PERSONAL.location, PERSONAL.website, PERSONAL.linkedin, PERSONAL.github];
+
+/** What prints in front of `text` on its line, within a list marker's reach: '' for nothing, null when `text` does not print. */
+function leadOf(snap, text) {
+  const at = item(snap, text);
+  if (!at) return null;
+  const own = at.str.slice(0, at.str.indexOf(text)).trim();
+  if (own) return own; // pdf.js merged the marker into the text's run
+  return snap.pages[at.page - 1].items.filter((t) => t !== at && Math.abs(t.y - at.y) < 1 && t.x < at.x && t.x > at.x - 20)
+    .map((t) => t.str.trim()).join('');
+}
+const LIST_ITEMS = ['Designed the event ledger', 'Mentored six engineers'];
 
 const DATES = { asEntered: '01/2021', 'MMM YYYY': 'Jan 2021', 'MMMM YYYY': 'January 2021', 'MM/YYYY': '01/2021',
   'MM.YYYY': '01.2021', 'YYYY-MM': '2021-01', 'YYYY.MM': '2021.01', YYYY: '2021' };
@@ -226,6 +238,22 @@ export const DESIGN = {
       const v = valueOf(r, 'setting.sectionTitleCase');
       const want = v === 'upper' ? 'PROFESSIONAL EXPERIENCE' : 'Professional Experience';
       return r.snap.text.includes(want) ? [] : [`${v}: "${want}" does not print`];
+    }),
+  },
+  // Each Bullet style's glyph (bulletAt, the PDF's own) in front of the job's list items, None none, and
+  // every item's text where it was: the marker's column keeps its width whatever it draws (R2-147).
+  'setting.bulletStyle': {
+    family: 'lists',
+    check: ({ runs, before }) => runs.flatMap((r) => {
+      const v = valueOf(r, 'setting.bulletStyle');
+      return LIST_ITEMS.flatMap((li) => {
+        const [t, was] = [item(r.snap, li), item(before.snap, li)];
+        if (!t || !was) return [`${v}: "${li}" does not print`];
+        const [got, want] = [leadOf(r.snap, li), bulletAt(1, v)];
+        const out = got === want ? [] : [`${v}: "${got}" prints in front of "${li}", not "${want}"`];
+        if (Math.abs(t.x + t.w - (was.x + was.w)) > 0.5 || Math.abs(t.y - was.y) > 0.5) out.push(`${v}: "${li}" moved`);
+        return out;
+      });
     }),
   },
   'setting.dateFormat': {

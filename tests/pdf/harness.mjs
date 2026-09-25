@@ -239,7 +239,7 @@ export function overlaps(page) {
 // ── Word ─────────────────────────────────────────────────────────────────────
 
 /** One entry of a zip archive (a .docx is one), found through the central directory. */
-function unzipEntry(buffer, name) {
+export function unzipEntry(buffer, name) {
   const eocd = buffer.lastIndexOf(Buffer.from([0x50, 0x4b, 0x05, 0x06]));
   if (eocd < 0) throw new Error('not a zip archive');
   const count = buffer.readUInt16LE(eocd + 10);
