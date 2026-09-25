@@ -12,7 +12,9 @@ import {
  * Every template the app offers, one entry each — so a template cannot be added without its
  * header decisions or its place in the picker (they were four more tables — R3-6, VM3-5):
  *   label           its name in the editor (the Cover Letter panel names the look its letter takes)
- *   desc, ats       the Design panel's one-line description, and its ATS-friendly badge
+ *   desc            the Design panel's one-line description: what the engine draws, never an ATS claim —
+ *                   the card's ATS badge is derived from atsRating, so the words cannot contradict it (A6)
+ *   descSingle      the Sidebar's description in its Layout "Single · ATS-safe", which prints Classic's page
  *   atsTier, atsNote how well it parses (atsRating) and, below certified, the ATS Check's reason where it
  *                   is not the coloured header ground's (Compact's grid)
  *   style           the heading style and title case it brings: set when it is picked and on Reset
@@ -33,34 +35,35 @@ import {
  */
 export const TEMPLATES = {
   classic: {
-    label: 'Classic', desc: 'ATS-friendly · Two-column header', atsTier: 'certified',
+    label: 'Classic', desc: 'Name over a full-width rule · Ruled section titles', atsTier: 'certified',
     style: { headingStyle: 'ruled', sectionTitleCase: 'upper' }, headerControls: true, headerRule: true,
     headerGaps: STACKED_HEADER_GAPS,
   },
   modern: {
-    label: 'Modern', desc: 'Bold accent header · Full-width layout', atsTier: 'good',
+    label: 'Modern', desc: 'Name and contacts in an accent banner · One full-width column', atsTier: 'good',
     style: { headingStyle: 'line', sectionTitleCase: 'upper' }, headerControls: false, headerRule: false,
     headerGaps: MODERN_HEADER_GAPS,
   },
   minimal: {
-    label: 'Minimal', desc: 'ATS-friendly · Clean & whitespace-first', atsTier: 'certified',
+    label: 'Minimal', desc: 'Open header with no rule · Underlined titles · Whitespace-first', atsTier: 'certified',
     style: { headingStyle: 'underline', sectionTitleCase: 'upper' }, headerControls: true, headerRule: false,
     headerGaps: { ...STACKED_HEADER_GAPS, summaryGap: 6 },
   },
   executive: {
-    label: 'Executive', desc: 'ATS-friendly · Clean accent headings · Vibrant', atsTier: 'certified',
+    label: 'Executive', desc: 'Role-first entries on one line · Title-case accent headings', atsTier: 'certified',
     style: { headingStyle: 'underline', sectionTitleCase: 'normal' }, headerControls: true, headerRule: false,
     headerGaps: { ...STACKED_HEADER_GAPS, summaryGap: 6 },
   },
   sidebar: {
-    label: 'Sidebar', desc: 'Colored left sidebar layout', atsTier: 'risky',
+    label: 'Sidebar', desc: 'Skills, education and contacts in a coloured side column',
+    descSingle: "Single · ATS-safe: one column, printed as Classic's page", atsTier: 'risky',
     style: { headingStyle: 'plain', sectionTitleCase: 'upper' }, headerControls: false, headerRule: false,
     headerGaps: SIDEBAR_HEADER_GAPS,
   },
   // History on an accent line, a dot per entry, dates above titles (TimelineTemplatePDF.jsx). Its header
   // is Classic's stacked one, so it takes every header control and Classic's spacing.
   timeline: {
-    label: 'Timeline', desc: 'ATS-friendly · Dated entries on an accent line', atsTier: 'certified',
+    label: 'Timeline', desc: 'Dated entries on an accent line', atsTier: 'certified',
     style: { headingStyle: 'plain', sectionTitleCase: 'upper' }, headerControls: true, headerRule: false,
     headerGaps: STACKED_HEADER_GAPS,
   },
@@ -78,7 +81,7 @@ export const TEMPLATES = {
   // Design panel says so under the picker. Its contacts keep Icon: Bar and Bullet glue a value's words
   // under pdftotext -raw in the narrow-space fonts (R3-003), so they are no template's default.
   academic: {
-    label: 'Academic', desc: 'ATS-friendly · Scholarly CV · Serif, centred', atsTier: 'certified',
+    label: 'Academic', desc: 'Scholarly CV · Serif, centred, small-capital titles', atsTier: 'certified',
     style: {
       headingStyle: 'ruled', sectionTitleCase: 'upper', font: 'sourceserif', headerAlign: 'center',
       fontSizeSectionDelta: 0, lineHeightValue: 1.35, sectionGap: 12, itemGap: 6,
@@ -94,7 +97,7 @@ export const TEMPLATES = {
   // Rated good, not certified: the experience flows in one column, but a grid's cells share lines,
   // which a line-reading parser takes as one line of two items.
   compact: {
-    label: 'Compact', desc: 'ATS-friendly · Dense one-pager · Grid for short sections', atsTier: 'good',
+    label: 'Compact', desc: 'Dense one-pager · Short sections two to a row', atsTier: 'good',
     atsNote: 'Single-column experience parses reliably. Skills, certifications and other short sections print two to a line, which some older parsers read as one line.',
     style: {
       headingStyle: 'line', sectionTitleCase: 'upper', headerLayout: 'inline',

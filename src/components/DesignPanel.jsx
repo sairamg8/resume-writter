@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Sparkles } from 'lucide-react';
 import { ATS_DEFAULTS, sectionReset } from '@/utils/defaultData';
-import { atsRating, contactIconHint, drawsContactIcons, TEMPLATE_PICKER, templateId } from '@/constants/templates';
+import { atsRating, contactIconHint, drawsContactIcons, TEMPLATE_PICKER, templateDesc, templateId, templateSwitchNote } from '@/constants/templates';
 import { MARGIN_MM } from '@/constants/pageMargins';
 import { ICON_SIZE } from '@/constants/designNumbers';
 import { ITEM_GAP_PX, LINE_HEIGHT, SECTION_GAP_PX } from '@/constants/spacingNumbers';
@@ -46,6 +46,7 @@ export default function DesignPanel({ resume, updateSetting, setTemplate, resetS
           {TEMPLATE_PICKER.map(t => (
             <button
               key={t.id}
+              data-testid={`template-${t.id}`}
               // The card already selected is no switch: it would reset the headings (R2-087).
               onClick={() => { if (t.id !== current) setTemplate(t.id); }}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border text-left transition-all ${
@@ -69,7 +70,7 @@ export default function DesignPanel({ resume, updateSetting, setTemplate, resetS
                       prints Classic's certified page. TEMPLATE_PICKER's own `ats` knows no settings. */}
                   {atsRating(t.id, settings).safe && <span className="text-[9px] font-bold px-1 py-0.5 rounded bg-emerald-100 text-emerald-700">ATS</span>}
                 </div>
-                <p className="text-[10px] text-gray-400">{t.desc}</p>
+                <p className="text-[10px] text-gray-400">{templateDesc(t.id, settings)}</p>
               </div>
             </button>
           ))}
@@ -100,6 +101,7 @@ export default function DesignPanel({ resume, updateSetting, setTemplate, resetS
             Compact brings its own type and spacing: 9 pt text, narrow margins, the job title beside the name and tighter Spacing, and lays skills, certifications, awards, languages and references out two to a row (each section&apos;s Grids). Every one of them can be changed.
           </p>
         )}
+        <p className="text-[10px] text-gray-400 mt-2">{templateSwitchNote()}</p>
         <p className="text-[10px] text-gray-400 mt-2">The cover letter&apos;s header takes the template&apos;s look too.</p>
       </DesignSection>
 

@@ -153,7 +153,7 @@ describe('contact icon packs in the Design panel (FIDA-39, FIDB-07)', () => {
     cy.previewReady();
     letter().invoke('text').should(contactsWith('|'));
     cy.get('button[title="Design & Customize"]').click();
-    cy.contains('button', 'Two-column header').click();
+    cy.get('[data-testid="template-classic"]').click();
     cy.store().should((s) => {
       expect(active(s).template).to.eq('classic');
       expect(active(s).settings.contactStyle).to.eq('bar');

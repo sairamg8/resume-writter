@@ -27,10 +27,10 @@ function shareOf(canvas, mm, hex) {
 }
 
 /** Pick a template in the Design tab (by its description), then go back to the Cover Letter tab. */
-function pickTemplate(description) {
+function pickTemplate(template) {
   cy.get('button[title="Design & Customize"]').click();
   cy.contains('p', "The cover letter's header takes the template's look too.").should('be.visible');
-  cy.contains('button', description).click();
+  cy.get(`[data-testid="template-${template}"]`).click();
   cy.contains('button', 'Cover Letter').click();
 }
 
@@ -146,13 +146,13 @@ describe('cover letter', () => {
       expect(shareOf($c[0], 7, '#1e293b'), 'Classic: no dark band').to.be.below(0.05);
     });
 
-    pickTemplate('Bold accent header');
+    pickTemplate('modern');
     note().should('contain.text', 'Modern');
     cy.previewReady();
     letterPage().should(($c) => expect(shareOf($c[0], 16, '#2563eb'), 'Modern: the accent band').to.be.above(0.6));
     cy.store().should((s) => expect(active(s).template).to.eq('modern'));
 
-    pickTemplate('Colored left sidebar layout');
+    pickTemplate('sidebar');
     note().should('contain.text', 'Sidebar');
     cy.previewReady();
     letterPage().should(($c) => {

@@ -17,7 +17,7 @@ describe('design — templates', () => {
   it('switching to Sidebar applies its heading defaults and reaches the PDF', () => {
     cy.visitEditor('classic');
     openDesign();
-    cy.contains('button', 'Colored left sidebar layout').click();
+    cy.get('[data-testid="template-sidebar"]').click();
     cy.store().should((s) => {
       expect(active(s).template).to.eq('sidebar');
       expect(settingsOf(s).headingStyle).to.eq('plain');
@@ -33,7 +33,7 @@ describe('design — templates', () => {
     cy.visitEditor('classic');
     renderedText().should('contain', 'PROFESSIONAL EXPERIENCE');
     openDesign();
-    cy.contains('button', 'Clean accent headings').click();
+    cy.get('[data-testid="template-executive"]').click();
     cy.store().should((s) => {
       expect(active(s).template).to.eq('executive');
       expect(settingsOf(s).sectionTitleCase).to.eq('normal');
@@ -48,8 +48,8 @@ describe('design — templates', () => {
   it('the selected template is marked in the template list', () => {
     cy.visitEditor('minimal');
     openDesign();
-    cy.contains('button', 'Clean & whitespace-first').should('have.class', 'border-blue-500');
-    cy.contains('button', 'Two-column header').should('not.have.class', 'border-blue-500');
+    cy.get('[data-testid="template-minimal"]').should('have.class', 'border-blue-500');
+    cy.get('[data-testid="template-classic"]').should('not.have.class', 'border-blue-500');
   });
 
   /** Set the colour input labelled `label` to `color`, as its picker does (React reads the input event). */
@@ -65,7 +65,7 @@ describe('design — templates', () => {
     openDesign('Colors');
     pickColor('Name color', '#ffffff');
     cy.store().should((s) => expect(settingsOf(s).nameColor).to.eq('#ffffff'));
-    cy.contains('button', 'Two-column header').click();
+    cy.get('[data-testid="template-classic"]').click();
     cy.store().should((s) => expect([active(s).template, settingsOf(s).nameColor]).to.deep.eq(['classic', '']));
     cy.get('input[aria-label="Name color"]').parent().should('contain.text', 'Template default');
     cy.previewReady();
@@ -78,7 +78,7 @@ describe('design — templates', () => {
   it('NB-1: an ink Name color picked on Classic goes back to the Sidebar\'s own on its dark column', () => {
     cy.visitEditor('classic', { settings: { nameColor: '#1a1a1a' } });
     openDesign();
-    cy.contains('button', 'Colored left sidebar layout').click();
+    cy.get('[data-testid="template-sidebar"]').click();
     cy.store().should((s) => expect([active(s).template, settingsOf(s).nameColor]).to.deep.eq(['sidebar', '']));
     cy.exportPdf().then((pdf) => {
       // The header text colour on the navy column; #1a1a1a vanished there (1.2:1).
