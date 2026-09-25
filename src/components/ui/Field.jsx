@@ -16,12 +16,12 @@ export function useFieldIds(id, { hint, error } = {}) {
 /** The border and ring of every text-like control, red when `invalid`. */
 export function controlClass({ invalid = false, size = 'md' } = {}) {
   return cx(
-    'w-full rounded-lg border bg-white text-slate-900 shadow-sm transition-[border-color,box-shadow] duration-150',
-    'placeholder:text-slate-400 hover:border-slate-300 focus:outline-none focus-visible:outline-none',
+    'w-full rounded border bg-white text-ink transition-[border-color,box-shadow,background-color] duration-150',
+    'placeholder:text-ink-subtlest hover:bg-hovered focus:bg-white focus:outline-none focus-visible:outline-none',
     'disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500',
     invalid
       ? 'border-red-400 focus:border-red-500 focus:ring-2 focus:ring-red-500/30'
-      : 'border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30',
+      : 'border-[#8590a2]/70 focus:border-brand focus:ring-1 focus:ring-brand',
     // 16 px on touch screens: iOS zooms the page into any smaller field it focuses.
     size === 'sm' ? 'text-[13px] pointer-coarse:text-base' : 'text-sm pointer-coarse:text-base',
   );
@@ -37,7 +37,7 @@ export function Field({ ids, label, hint, error, required = false, className, la
   return (
     <div className={cx('flex min-w-0 flex-col gap-1.5', className)}>
       {label && (
-        <label htmlFor={ids.controlId} className={cx('text-[13px] font-medium leading-5 text-slate-700', labelClassName)}>
+        <label htmlFor={ids.controlId} className={cx('text-[12px] font-semibold leading-5 text-ink-subtle', labelClassName)}>
           {label}
           {required && <span className="ml-0.5 text-red-600" aria-hidden="true">*</span>}
         </label>

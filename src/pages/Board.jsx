@@ -1,313 +1,267 @@
-import { useState, useRef, useEffect } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, ListTodo, Plus, Trash2, X } from 'lucide-react';
-import {
-  DndContext, DragOverlay, MouseSensor, TouchSensor, useSensor, useSensors, closestCorners,
-} from '@dnd-kit/core';
-import { SortableContext, horizontalListSortingStrategy } from '@dnd-kit/sortable';
+import { useState } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { ChevronDown, Info, MoreHorizontal, Plus } from 'lucide-react';
+import { DndContext, DragOverlay, MouseSensor, TouchSensor, closestCorners, useSensor, useSensors } from '@dnd-kit/core';
 import { useBoardStore } from '@/hooks/useBoardStore';
-import { BoardColumn } from '@/components/board/BoardColumn';
-import { CardView } from '@/components/board/BoardCard';
-import { BOARD_DRAG_INSTRUCTIONS } from '@/utils/cardKeys';
-import { CardDetailSheet } from '@/components/board/CardDetailSheet';
+import { Button, EmptyState, IconButton, Menu, cx, useConfirm, useToast } from '@/components/ui';
+import { useWorkspace } from '@/components/shell';
 import { BoardStorageNotice } from '@/components/board/BoardStorageNotice';
-import { boardCard, boardLists, boardSprint, dropTarget, hiddenDoneCount } from '@/utils/boardView';
-import { epicsOf } from '@/utils/boardQuery';
-import { findIssueByKey, statusColumn } from '@/utils/boardModel';
-import { withSearchParam } from '@/hooks/useUrlState';
+import { BoardColumn, ColumnDialog, ColumnMenu } from '@/components/board/BoardColumn';
+import { BoardToolbar, EMPTY_FILTERS } from '@/components/board/BoardToolbar';
+import { IssueCardMenu, IssueCardView, SortableIssueCard } from '@/components/board/IssueCard';
+import { ProjectHeader } from '@/components/board/ProjectTabs';
+import { IssueHost, useIssueActions, useIssueRoute } from '@/components/board/useIssueActions';
+import { IssueTypeIcon, PriorityIcon } from '@/components/tracker/TrackerIcons';
+import { BOARD_DRAG_INSTRUCTIONS } from '@/utils/cardKeys';
+import { boardLists, boardSprint, dropTarget, hiddenDoneCount } from '@/utils/boardView';
+import { filterIssues, swimlanes } from '@/utils/boardQuery';
+import { issueKey } from '@/utils/boardModel';
 
-/** The "Add list" column at the right edge of the board (and its own scroll-snap target on mobile). */
-function AddListColumn({ onAdd }) {
-  const [open, setOpen] = useState(false);
-  const [text, setText] = useState('');
-  const ref = useRef(null);
-
-  useEffect(() => { if (open) ref.current?.focus(); }, [open]);
-
-  function add() {
-    const t = text.trim();
-    if (!t) return;
-    onAdd(t);
-    setText('');
-    ref.current?.focus();
+/** "+" at the end of the columns: a new column, named at once. */
+function AddColumn({ onAdd }) {
+  const [text, setText] = useState(null);
+  if (text === null) {
+    return <IconButton icon={Plus} label="Add column" variant="subtle" onClick={() => setText('')} className="mt-1 shrink-0" />;
   }
-
-  if (!open) {
-    return (
-      <button
-        onClick={() => setOpen(true)}
-        className="snap-center shrink-0 w-[70vw] max-w-[16rem] md:w-64 flex items-center gap-1.5 self-start px-3 py-2 text-sm font-medium text-gray-500 bg-white/70 hover:bg-white border border-dashed border-gray-300 rounded-2xl transition-colors"
-      >
-        <Plus size={15} /> Add list
-      </button>
-    );
-  }
-
+  const add = () => { if (text.trim()) onAdd(text.trim()); setText(null); };
   return (
-    <div className="snap-center shrink-0 w-[70vw] max-w-[16rem] md:w-64 self-start bg-gray-100/70 rounded-2xl p-2">
-      <input
-        ref={ref}
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') add();
-          if (e.key === 'Escape') { setOpen(false); setText(''); }
-        }}
-        placeholder="List title…"
-        aria-label="List title"
-        className="w-full text-sm p-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-      />
-      <div className="flex items-center gap-2 mt-1">
-        <button onClick={add} className="px-3 py-1 text-xs font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700">Add list</button>
-        <button onClick={() => { setOpen(false); setText(''); }} className="p-1 text-gray-400 hover:text-gray-600" aria-label="Cancel">
-          <X size={14} />
-        </button>
-      </div>
-    </div>
+    <input
+      autoFocus
+      value={text}
+      onChange={(e) => setText(e.target.value)}
+      onBlur={add}
+      onKeyDown={(e) => { if (e.key === 'Enter') add(); if (e.key === 'Escape') setText(null); }}
+      placeholder="Column name"
+      aria-label="Column name"
+      className="h-9 w-[272px] shrink-0 rounded border-2 border-brand bg-white px-2 text-sm text-ink focus:outline-none"
+    />
+  );
+}
+
+/** A swimlane's heading: fold it, its name (an epic's, a priority's, a type's), how many issues. */
+function LaneHeader({ lane, open, onToggle }) {
+  return (
+    <button type="button" aria-expanded={open} onClick={onToggle} className="sticky left-0 flex items-center gap-2 rounded px-1 py-2 text-sm font-semibold text-ink hover:bg-neutral-fill focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60">
+      <ChevronDown size={16} aria-hidden="true" className={cx('transition-transform', !open && '-rotate-90')} />
+      {lane.kind === 'type' && <IssueTypeIcon type={lane.id} decorative />}
+      {lane.kind === 'priority' && <PriorityIcon priority={lane.id} decorative />}
+      {lane.kind === 'epic' && lane.id !== 'none' && <IssueTypeIcon type="epic" decorative />}
+      {lane.title}
+      <span className="font-normal text-ink-subtlest">({lane.issues.length} {lane.issues.length === 1 ? 'issue' : 'issues'})</span>
+    </button>
   );
 }
 
 /**
- * One board (a v2 project) — its columns as lists and its issues as cards, with drag to reorder
- * cards (within and across lists) and to reorder lists. A single DndContext handles both: a
- * draggable carries `data.type` ('card' or 'list'). Moves are computed end-only (no live
- * onDragOver), which keeps the store's per-board updates cheap; where a drop lands is
- * boardView.dropTarget's, which the store's moveColumn / moveIssue then make.
+ * A project's board: its columns (statuses) side by side, the issues as cards in rank order —
+ * a scrum project's active sprint, a kanban project's all but long-done ones — filtered by the
+ * toolbar and, with "Group by", in swimlanes. Drag a card to another place or column; its ⋯ menu
+ * moves it too. `?issue=KEY` opens the issue view over the board.
  */
 export function Board() {
   const { id } = useParams();
   const navigate = useNavigate();
   const store = useBoardStore();
+  const workspace = useWorkspace();
+  const confirm = useConfirm();
+  const { toast } = useToast();
   const board = store.boards.find((b) => b.id === id);
-
-  const [active, setActive] = useState(null); // { type, id } of the dragged item
-  const location = useLocation();
-  // { cardId } of the card whose sheet is open — at first the one `?issue=KEY-N` names (a link from
-  // Your work, or a shared one), when it is on this board.
-  const [open, setOpen] = useState(() => {
-    const found = findIssueByKey(store.boards, new URLSearchParams(location.search).get('issue'));
-    return found && found.board.id === id ? { cardId: found.issue.id } : null;
-  });
-  const [titleEditing, setTitleEditing] = useState(false);
-  const [titleDraft, setTitleDraft] = useState('');
-
-  // Mouse drags on a small move (snappy on desktop; a plain click stays under 8px and opens the
-  // card). Touch drags only on a press-and-hold, so a normal swipe still scrolls the columns and a
-  // list still scrolls its cards, and a tap opens the card — the plan's mobile fix.
+  const route = useIssueRoute(store.boards, board);
+  const actions = useIssueActions(board ?? { id, key: '', columns: [], issues: [] });
+  const [filters, setFilters] = useState(EMPTY_FILTERS);
+  const [groupBy, setGroupBy] = useState('none');
+  const [folded, setFolded] = useState(() => new Set());
+  const [active, setActive] = useState(null);
+  const [columnEdit, setColumnEdit] = useState(null);
   const sensors = useSensors(
-    useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } }),
   );
 
   if (!board) {
     return (
-      <div className="min-h-screen bg-[#f5f3ef] flex flex-col items-center justify-center gap-3">
-        <p className="text-sm text-gray-500">This board doesn’t exist.</p>
-        <button onClick={() => navigate('/boards')} className="text-sm font-semibold text-indigo-600 hover:text-indigo-700">Back to boards</button>
-      </div>
+      <EmptyState
+        className="m-auto"
+        title="This project doesn’t exist"
+        description="It may have been deleted, or the link is wrong."
+        action={<Button variant="primary" to="/boards">View all projects</Button>}
+      />
     );
   }
 
-  // One time for the render and its drops: which done cards hideDoneAfterDays keeps off the board.
   const now = Date.now();
   const lists = boardLists(board, { now });
   const sprint = boardSprint(board);
   const hiddenDone = hiddenDoneCount(board, { now });
-  const activeCard = active?.type === 'card' ? lists.flatMap((l) => l.cards).find((c) => c.id === active.id) : null;
-  const activeList = active?.type === 'list' ? lists.find((l) => l.id === active.id) : null;
-  // Found by id on the whole board, so a card off it (an old done one, one in another sprint) opens
-  // too; and after a move made elsewhere (another tab) it shows its column now.
-  const openIssue = open ? board.issues.find((i) => i.id === open.cardId && i.type !== 'epic') : null;
-  const openCard = openIssue ? boardCard(board, openIssue) : null;
-  const openList = openIssue ? statusColumn(board, openIssue) : null;
-
-  /** Close the sheet; the `?issue=` that opened it goes too, so a reload does not open it again. */
-  function closeCard() {
-    setOpen(null);
-    const search = withSearchParam(location.search, 'issue', null);
-    if (search !== location.search) navigate({ pathname: location.pathname, search }, { replace: true });
-  }
-
-  function onDragStart({ active: a }) {
-    setActive({ type: a.data.current?.type, id: a.id });
-  }
+  const shown = new Set(filterIssues(board, filters, { now, issues: lists.flatMap((l) => l.cards) }).map((i) => i.id));
+  const allCards = lists.flatMap((l) => l.cards);
+  const lanes = swimlanes(board, allCards.filter((c) => shown.has(c.id)), groupBy);
+  const doneIds = new Set(board.columns.filter((c) => c.category === 'done').map((c) => c.id));
+  const activeCard = active ? allCards.find((c) => c.id === active) : null;
 
   function onDragEnd({ active: a, over }) {
     setActive(null);
-    const move = dropTarget(board, { id: a.id, type: a.data.current?.type }, over && { id: over.id, data: over.data.current }, { now });
-    if (move?.kind === 'column') store.moveColumn(board.id, move.columnId, move.toIndex);
+    if (!over) return;
+    const target = over.data.current?.type === 'list' ? { id: over.data.current.listId, data: { type: 'list' } } : { id: over.id, data: over.data.current };
+    const move = dropTarget(board, { id: a.id, type: 'card' }, target, { now });
     if (move?.kind === 'issue') store.moveIssue(board.id, move.issueId, move.target);
   }
 
-  /**
-   * Delete a list. Its cards are never lost: they move to the list beside it (the store refuses
-   * to delete a list that holds cards without a target, and never deletes the last one).
-   */
-  function deleteList(list) {
-    const index = lists.indexOf(list);
+  async function deleteColumn(list, index) {
     const target = lists[index + 1] ?? lists[index - 1];
-    if (!target) {
-      alert('A board needs at least one list.');
-      return;
-    }
+    if (!target) return;
     const n = list.cards.length;
-    if (n === 0 || confirm(`Delete "${list.title || 'this list'}"? Its ${n} card${n === 1 ? '' : 's'} will move to "${target.title || 'Untitled'}".`)) {
-      store.deleteColumn(board.id, list.id, target.id);
+    if (n > 0) {
+      const ok = await confirm({
+        title: `Delete the ${list.title || 'Untitled'} column?`,
+        body: `Its ${n} issue${n === 1 ? '' : 's'} will move to “${target.title || 'Untitled'}”.`,
+        confirmLabel: 'Delete column',
+        tone: 'danger',
+      });
+      if (!ok) return;
     }
+    store.deleteColumn(board.id, list.id, target.id);
+    toast({ title: `Column “${list.title || 'Untitled'}” deleted` });
   }
 
-  /**
-   * The board's label for a colour the sheet picked (`{ name, color }`, the palette's): the first
-   * one of that colour, else a new one. Its palette name may be another colour's label's already
-   * (addLabel would hand that one back), so the new one then takes the next free "Name 2", "Name 3"…
-   */
-  function labelFor({ name, color }) {
-    const found = board.labels.find((x) => x.color === color);
-    if (found) return found;
-    const taken = (n) => board.labels.some((x) => x.name.toLowerCase() === n.toLowerCase());
-    let free = name || color;
-    for (let n = 2; taken(free); n++) free = `${name || color} ${n}`;
-    return store.addLabel(board.id, { name: free, color });
-  }
+  const columnMenu = (list, index) => {
+    const column = board.columns.find((c) => c.id === list.id);
+    return (
+      <ColumnMenu
+        column={column}
+        index={index}
+        count={lists.length}
+        onRename={() => setColumnEdit({ id: list.id, mode: 'rename' })}
+        onLimit={() => setColumnEdit({ id: list.id, mode: 'limit' })}
+        onCategory={(category) => store.updateColumn(board.id, list.id, { category })}
+        onMove={(to) => store.moveColumn(board.id, list.id, to)}
+        onDelete={() => deleteColumn(list, index)}
+      />
+    );
+  };
 
-  /**
-   * The card sheet's change as an issue patch: the sheet picks labels by colour ({ name, color }),
-   * an issue holds the ids of the board's labels — a colour the board has no label for yet gets one.
-   */
-  function changeCard(cardId, patch) {
-    if (!('labels' in patch)) {
-      store.updateIssue(board.id, cardId, patch);
-      return;
-    }
-    const { labels, ...rest } = patch;
-    const labelIds = labels.map((l) => (l.id ? l : labelFor(l))?.id).filter(Boolean);
-    store.updateIssue(board.id, cardId, { ...rest, labelIds });
-  }
+  const renderCard = (listId) => (card) => {
+    const key = issueKey(board, card);
+    return (
+      <SortableIssueCard
+        card={card}
+        listId={listId}
+        issueKey={key}
+        done={doneIds.has(card.columnId)}
+        onOpen={() => route.open(key)}
+        menu={(
+          <IssueCardMenu
+            columns={board.columns}
+            columnId={card.columnId}
+            priority={card.priority}
+            onOpen={() => route.open(key)}
+            onMove={(columnId) => store.moveIssue(board.id, card.id, { columnId, sprintId: card.sprintId, beforeId: null })}
+            onPriority={(priority) => store.updateIssue(board.id, card.id, { priority })}
+            onCopyLink={() => actions.copyLink(card)}
+            onDuplicate={() => actions.duplicate(card)}
+            onDelete={() => actions.remove(card)}
+          />
+        )}
+      />
+    );
+  };
 
-  function commitTitle() {
-    setTitleEditing(false);
-    const t = titleDraft.trim();
-    if (t && t !== board.title) store.updateBoard(board.id, { title: t });
-  }
+  const create = (listId) => ({ title, type }) => store.addIssue(board.id, { title, type, columnId: listId, sprintId: sprint?.id ?? null });
 
   return (
-    <div className="min-h-screen h-screen bg-[#f5f3ef] flex flex-col">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 shrink-0">
-        <div className="px-3 sm:px-5 py-3 flex items-center gap-2.5">
-          <button onClick={() => navigate('/boards')} className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors shrink-0" title="Back to boards">
-            <ArrowLeft size={16} />
-          </button>
-          <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: board.color }} />
-          {titleEditing ? (
-            <input
-              autoFocus
-              value={titleDraft}
-              onChange={(e) => setTitleDraft(e.target.value)}
-              onBlur={commitTitle}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') e.currentTarget.blur();
-                if (e.key === 'Escape') setTitleEditing(false);
-              }}
-              aria-label="Board title"
-              className="min-w-0 text-lg font-bold text-gray-900 bg-white border border-indigo-300 rounded px-2 py-0.5 focus:outline-none"
+    <div className="flex min-h-0 flex-1 flex-col">
+      <ProjectHeader
+        board={board}
+        actions={(
+          <>
+            {sprint && <Button to={`/boards/${encodeURIComponent(board.id)}/backlog`} size="md">Complete sprint</Button>}
+            <Menu
+              label="Board actions"
+              items={[
+                { id: 'create', label: 'Create issue', onSelect: () => workspace?.openCreate({ boardId: board.id }) },
+                { id: 'settings', label: 'Project settings', onSelect: () => navigate(`/boards/${encodeURIComponent(board.id)}/settings`) },
+              ]}
+              trigger={<IconButton icon={MoreHorizontal} label="Board actions" />}
             />
-          ) : (
-            <button
-              onClick={() => { setTitleDraft(board.title); setTitleEditing(true); }}
-              className="min-w-0 text-lg font-bold text-gray-900 truncate hover:bg-gray-100 rounded px-1"
-              title="Rename board"
-            >
-              {board.title || 'Untitled board'}
-            </button>
-          )}
-          <button
-            onClick={() => navigate(`/boards/${encodeURIComponent(board.id)}/backlog`)}
-            className="ml-auto flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors shrink-0"
-            title="Plan sprints in the backlog"
-          >
-            <ListTodo size={14} /> Backlog
-          </button>
-          <button
-            onClick={() => { if (confirm(`Delete "${board.title || 'this board'}"?`)) { navigate('/boards'); store.deleteBoard(board.id); } }}
-            className="p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors shrink-0"
-            title="Delete board"
-            aria-label="Delete board"
-          >
-            <Trash2 size={14} />
-          </button>
-        </div>
-      </div>
-
-      <BoardStorageNotice persistError={store.persistError} recovery={store.recovery} onDismissRecovery={store.dismissRecovery} className="px-3 sm:px-5 pt-3 shrink-0" />
-
+          </>
+        )}
+      />
+      <BoardStorageNotice persistError={store.persistError} recovery={store.recovery} onDismissRecovery={store.dismissRecovery} className="px-4 pt-3 md:px-8" />
+      <BoardToolbar board={board} filters={filters} onChange={setFilters} groupBy={groupBy} onGroupBy={setGroupBy} />
       {(sprint || board.mode === 'scrum' || hiddenDone > 0) && (
-        <p className="px-3 sm:px-5 pt-2 text-xs text-gray-500 shrink-0">
-          {sprint && <>Sprint: <span className="font-semibold text-gray-700">{sprint.name}</span>{sprint.endDate && <> · ends {sprint.endDate}</>}. New cards join it.</>}
-          {!sprint && board.mode === 'scrum' && <>No sprint is active, so every card is shown. Start one from the backlog.</>}
-          {hiddenDone > 0 && <> {hiddenDone} done card{hiddenDone === 1 ? ' is' : 's are'} hidden: resolved more than {board.hideDoneAfterDays} days ago.</>}
+        <p className="flex items-center gap-1.5 px-4 pb-2 text-[13px] text-ink-subtle md:px-8">
+          <Info size={14} aria-hidden="true" className="shrink-0 text-ink-subtlest" />
+          <span>
+            {sprint && <><span className="font-semibold text-ink">{sprint.name}</span>{sprint.endDate && <> · ends {sprint.endDate}</>}{sprint.goal && <> · {sprint.goal}</>}. </>}
+            {!sprint && board.mode === 'scrum' && <>No sprint is active, so every issue is shown. <Link className="font-medium text-brand hover:underline" to={`/boards/${encodeURIComponent(board.id)}/backlog`}>Plan one in the backlog</Link>. </>}
+            {hiddenDone > 0 && <>{hiddenDone} done issue{hiddenDone === 1 ? ' is' : 's are'} hidden: resolved more than {board.hideDoneAfterDays} days ago.</>}
+          </span>
         </p>
       )}
 
-      {/* Mobile list tabs — tap to scroll a column into view */}
-      {lists.length > 0 && (
-        <div className="md:hidden bg-white border-b border-gray-100 overflow-x-auto shrink-0">
-          <div className="flex gap-1.5 px-3 py-2">
-            {lists.map((l) => (
-              <button
-                key={l.id}
-                onClick={() => document.getElementById(`board-col-${l.id}`)?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' })}
-                className="shrink-0 text-[11px] font-medium text-gray-500 bg-gray-100 hover:bg-gray-200 rounded-full px-3 py-1 transition-colors"
-              >
-                {l.title || 'Untitled'} <span className="text-gray-400">{l.cards.length}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Board */}
-      <DndContext sensors={sensors} accessibility={{ screenReaderInstructions: BOARD_DRAG_INSTRUCTIONS }} collisionDetection={closestCorners} onDragStart={onDragStart} onDragEnd={onDragEnd} onDragCancel={() => setActive(null)}>
-        <div className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden">
-          <div className="flex gap-3 items-start px-3 sm:px-5 py-4 h-full snap-x snap-mandatory md:snap-none">
-            <SortableContext items={lists.map((l) => l.id)} strategy={horizontalListSortingStrategy}>
-              {lists.map((list) => (
+      <DndContext
+        sensors={sensors}
+        accessibility={{ screenReaderInstructions: BOARD_DRAG_INSTRUCTIONS }}
+        collisionDetection={closestCorners}
+        onDragStart={({ active: a }) => setActive(a.id)}
+        onDragEnd={onDragEnd}
+        onDragCancel={() => setActive(null)}
+      >
+        <div className="min-h-0 flex-1 overflow-auto px-4 pb-6 md:px-8">
+          {groupBy === 'none' ? (
+            <div className="flex min-h-full snap-x snap-mandatory items-start gap-2 md:snap-none">
+              {lists.map((list, index) => (
                 <BoardColumn
                   key={list.id}
                   list={list}
-                  onOpenCard={(cardId, listId) => setOpen({ cardId, listId })}
-                  onAddCard={(listId, title) => store.addIssue(board.id, { title, columnId: listId, sprintId: sprint?.id ?? null })}
-                  onRenameList={(title) => store.updateColumn(board.id, list.id, { title })}
-                  onDeleteList={() => deleteList(list)}
+                  cards={list.cards.filter((c) => shown.has(c.id))}
+                  renderCard={renderCard(list.id)}
+                  onCreate={create(list.id)}
+                  menu={columnMenu(list, index)}
                 />
               ))}
-            </SortableContext>
-            {/* At the end, where the button is: the store's default puts a new column before Done. */}
-            <AddListColumn onAdd={(title) => store.addColumn(board.id, { title, index: board.columns.length })} />
-          </div>
-        </div>
-
-        <DragOverlay dropAnimation={null}>
-          {activeCard ? (
-            <div className="w-[85vw] max-w-xs md:w-72"><CardView card={activeCard} overlay /></div>
-          ) : activeList ? (
-            <div className="w-72 bg-gray-100/90 rounded-2xl p-2 shadow-2xl">
-              <div className="text-sm font-semibold text-gray-700 px-2 py-1">{activeList.title || 'Untitled'}</div>
+              <AddColumn onAdd={(title) => store.addColumn(board.id, { title, index: board.columns.length })} />
             </div>
-          ) : null}
+          ) : (
+            <div className="flex w-max min-w-full flex-col gap-1">
+              <div className="sticky top-0 z-10 flex gap-2 bg-white pb-1">
+                {lists.map((list) => (
+                  <div key={list.id} className="flex h-10 w-[272px] shrink-0 items-center gap-2 rounded-md bg-sunken px-3 text-[12px] font-semibold uppercase tracking-[0.03em] text-ink-subtle">
+                    {list.title || 'Untitled'} <span className="text-ink-subtlest">{list.cards.filter((c) => shown.has(c.id)).length}</span>
+                  </div>
+                ))}
+              </div>
+              {lanes.length === 0 && <p className="py-8 text-center text-sm text-ink-subtlest">No issues match these filters.</p>}
+              {lanes.map((lane) => {
+                const open = !folded.has(lane.id);
+                const inLane = new Set(lane.issues.map((i) => i.id));
+                return (
+                  <div key={lane.id} className="flex flex-col">
+                    <LaneHeader lane={lane} open={open} onToggle={() => setFolded((f) => { const n = new Set(f); if (n.has(lane.id)) n.delete(lane.id); else n.add(lane.id); return n; })} />
+                    {open && (
+                      <div className="flex items-stretch gap-2">
+                        {lists.map((list) => (
+                          <BoardColumn key={list.id} list={list} droppableId={`${lane.id}:${list.id}`} showHeader={false} cards={list.cards.filter((c) => inLane.has(c.id))} renderCard={renderCard(list.id)} />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+        <DragOverlay dropAnimation={null}>
+          {activeCard ? <div className="w-[264px]"><IssueCardView card={activeCard} issueKey={issueKey(board, activeCard)} overlay /></div> : null}
         </DragOverlay>
       </DndContext>
-
-      {openCard && (
-        <CardDetailSheet
-          card={openCard}
-          listTitle={openList?.title}
-          epics={epicsOf(board).map((e) => ({ id: e.id, title: e.title }))}
-          onClose={closeCard}
-          onChange={(patch) => changeCard(openCard.id, patch)}
-          onDelete={() => { store.deleteIssue(board.id, openCard.id); closeCard(); }}
-        />
-      )}
+      <IssueHost route={route} />
+      <ColumnDialog
+        column={columnEdit && board.columns.find((c) => c.id === columnEdit.id)}
+        mode={columnEdit?.mode}
+        onClose={() => setColumnEdit(null)}
+        onSave={(patch) => { store.updateColumn(board.id, columnEdit.id, patch); setColumnEdit(null); }}
+      />
     </div>
   );
 }
