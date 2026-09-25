@@ -10,6 +10,10 @@ import { setup, teardown, resume, experience, render, renderCover, read, allItem
 before(setup);
 after(teardown);
 
+// Circle's ◦ is in no Latin face: its symbol font comes from jsDelivr, as in the app, so offline Circle is not checked.
+const online = await fetch('https://cdn.jsdelivr.net/npm/@fontsource/noto-sans-symbols-2@5/metadata.json', { signal: AbortSignal.timeout(5000) }).then((r) => r.ok, () => false);
+const STYLES = online ? ['dash', 'circle', 'none', 'bullet'] : ['dash', 'none', 'bullet'];
+
 const ITEMS = ['Designed the event ledger', 'Mentored six engineers'];
 const LIST = `<ul>${ITEMS.map((t) => `<li>${t}</li>`).join('')}</ul>`;
 const GLYPH = { bullet: '•', dash: '–', circle: '◦', none: '' };
@@ -43,7 +47,7 @@ describe('Design → Lists → Bullet prints the chosen glyph in front of every 
     for (const template of TEMPLATES) {
       const base = await read(await render(cv(template, undefined)));
       for (const text of ITEMS) if (lead(base, text).glyph !== '•') wrong.push(`${template} unset: "${lead(base, text).glyph}" before "${text}"`);
-      for (const style of ['dash', 'circle', 'none', 'bullet']) {
+      for (const style of STYLES) {
         const pages = await read(await render(cv(template, style)));
         for (const text of ITEMS) {
           const [got, was] = [lead(pages, text), lead(base, text)];
@@ -79,7 +83,7 @@ describe('Design → Lists → Bullet prints the chosen glyph in front of every 
   it('Word: Dash, Circle and None number the items with their own glyph (none for None); unset keeps Word\'s own bullets', async () => {
     const plain = await docxParts(cv('classic', undefined));
     assert.doesNotMatch(plain.numbering, /w:lvlText w:val="[–◦]"/, 'unset: no Design → Lists numbering');
-    for (const style of ['dash', 'circle']) {
+    for (const style of STYLES.filter((s) => s === 'dash' || s === 'circle')) {
       const { xml, numbering } = await docxParts(cv('classic', style));
       assert.match(numbering, new RegExp(`w:lvlText w:val="${GLYPH[style]}"`), style);
       const para = xml.split('</w:p>').find((p) => p.includes(ITEMS[0]));

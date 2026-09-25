@@ -34,8 +34,8 @@ describe('Skills: Separator → Pipe prints "Category | skills" (R2-147)', () =>
     }
   });
 
-  it('Colon, a section storing none, and Dash print as before', async () => {
-    for (const [separator, re] of [[undefined, PRINTS.colon], ['colon', PRINTS.colon], ['dash', PRINTS.dash]]) {
+  it('Colon, a section storing none or one this build does not know (an import\'s "constructor"), and Dash print as before', async () => {
+    for (const [separator, re] of [[undefined, PRINTS.colon], ['colon', PRINTS.colon], ['constructor', PRINTS.colon], ['toString', PRINTS.colon], ['dash', PRINTS.dash]]) {
       assert.match(allText(await read(await render(cv('classic', separator)))).replace(/\s+/g, ' '), re, String(separator));
     }
   });

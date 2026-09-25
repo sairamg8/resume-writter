@@ -11,7 +11,7 @@ export function PageNumbersSection({ settings, updateSetting, onReset }) {
     <DesignSection title="Page numbers" onReset={onReset}>
       <SegmentControl
         options={[{ label: 'Off', value: false }, { label: 'Page 1 of 2', value: true }]}
-        value={!!settings.pageNumbers}
+        value={settings.pageNumbers === true}
         onChange={v => updateSetting('pageNumbers', v)}
       />
       <p className="text-[11px] text-gray-400 leading-relaxed">

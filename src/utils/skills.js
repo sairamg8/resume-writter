@@ -62,4 +62,4 @@ export function withSkillNames(r) {
  * Separator's Colon (and a section storing none), Dash or Pipe (R2-147).
  */
 const SEPARATORS = { colon: ': ', dash: ' – ', pipe: ' | ' };
-export const skillSeparator = (settings = {}) => SEPARATORS[settings.separator] || SEPARATORS.colon;
+export const skillSeparator = (settings = {}) => (Object.hasOwn(SEPARATORS, settings.separator) ? SEPARATORS[settings.separator] : SEPARATORS.colon);
