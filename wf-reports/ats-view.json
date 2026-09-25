@@ -1,0 +1,37 @@
+{
+  "cluster": "ats-view",
+  "branch": "claude/wf-ats-view",
+  "base": "334b454",
+  "rows": [
+    {
+      "id": "R2-141",
+      "outcome": "fixed",
+      "commits": ["39c7925", "83a2414", "db48a15", "1229e78", "9f705bd", "c11e001", "7cc6ec7", "9221b0a", "2b23b72"],
+      "tests": ["tests/pdf/98-ats-claims.test.mjs", "tests/pdf/98-ats-parser-view.test.mjs", "tests/pdf/98-ats-job-fields.test.mjs"],
+      "summary": "The ATS Check says only what the ATS battery reads from the app's own PDF: the template verdicts, the Sidebar and side-by-side (Grids 2) warnings name pdf.js and Poppler instead of the untested \"100% sequential parsing on Workday, Taleo, and Greenhouse\" / \"modern AI parsers handle sidebars\", a LinkedIn printed under a Display label warns (no reader finds it), and the tab header no longer says \"Tested for Workday, Taleo, Greenhouse, Lever & iCIMS\" — tests/pdf/98-ats-claims sets each claim beside pdf.js and pdftotext. A new collapsible \"What a parser reads\" in the ATS tab shows the text of the résumé's own PDF as pdf.js reads it (lines of runs by the battery's item-parser rules), with Copy, re-read after a pause in typing, Retry on error and a side-by-side caveat; under it each job's title, company, dates and location is marked as a field of its own, sharing a run with other text, or not found.",
+      "remaining": "",
+      "ciRuns": ["36087864329", "36088154483", "36088460995", "36088678538", "36089472277"]
+    }
+  ],
+  "extra": [
+    {
+      "id": "R1-LEFT-d",
+      "outcome": "fixed",
+      "commits": ["7580def"],
+      "tests": ["tests/unit/ats-hidden-entries-sections.unit.mjs"],
+      "summary": "A section whose entries are all hidden, or that has none, prints no heading anywhere since R2-057, and the ATS Check now scores it as missing too: \"Work Experience / Education / Skills section present\" read only the sections that print (visible with a shown entry, as sectionPrints does), where they used to pass on it for 16 of the 20 heading points.",
+      "remaining": "The std_headings item still lists a non-printing section's non-standard title (at most 4 points); left as is because its rule (needsAtsTitle) is shared with the Standardize Headings fix.",
+      "ciRuns": ["36088154483", "36089472277"]
+    }
+  ],
+  "review": {
+    "issues": [
+      "AtsParserView could stay on \"Updating…\" for ever when a change was undone before its read began (Undo within the 350 ms pause, or closing and reopening with a change pending) — real, fixed.",
+      "jobFields' date words matched any word beginning like a month (\"Decatur\", \"Marketing\") and missed seasons (\"Summer 2020\") — real, fixed to whole month/season words as the battery's ats-entry-header does.",
+      "Known heuristic limits kept: without bullets the per-job window (line above to three below) can reach the next job's lines; a current job with no start date gets no dates mark."
+    ],
+    "fixedByReviewer": ["7cc6ec7", "9221b0a", "2b23b72"]
+  },
+  "baselineFailures": [],
+  "notes": "The CI failure of 36021730919 (39c7925) was ATS-7 (a heading that opens page 2 under pdftotext -raw, since R2-047) — 42-ats-fields was fixed on master by 9a49f83, which the branch lacked; 83a2414 gives 98-ats-claims the same set-aside. Final CI 36089472277 on 2b23b72: 98-ats-claims, 42-ats-fields, 98-ats-parser-view, 98-ats-job-fields, 77-ats-panel, 77-ats-score-printed, 77-ats-section-grids, 56-ats-layout-fix-buttons, 58-ats-standardize-headings and every tests/unit/ats-*.unit.mjs green, fail-first ok for every fix commit across the runs listed; cypress 27-ats-checker passed on db48a15 (36088072087). The parser view starts its own pdf.js worker (the preview's loader is local to PdfPreview.jsx; not shared to keep hunks out of the preview cluster's file). docs/knowledge does not describe the ATS tab; nothing added there. The Stop hook asks every session to update docs/tracking/HANDOFF.md; not done, per the no-docs/tracking rule. a11y: not reviewed (deferred)."
+}
