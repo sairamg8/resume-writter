@@ -137,9 +137,9 @@ function datesIn(lines, years) {
  * For each job (`jobs`: the entries as they print — atsChecker's printedJobs), whether its title,
  * company, dates and location come out of `pages` (readPdfLines) as fields a parser can file: each
  * 'own', 'joined' or 'missing' (fieldIn), or null where the job prints none. A job is looked for from
- * where the one before it was found, over its header — the line with its title (or, failing that, its
- * company), the line above and the three below — so two jobs at one company are each read at their
- * own place.
+ * where the one before it was found, over its header — the line with its title (with its company
+ * near it, where it can), the line above and the three below — so two jobs at one company are each
+ * read at their own place.
  */
 export function jobFields(pages, jobs) {
   const all = (Array.isArray(pages) ? pages : []).flat();
@@ -147,11 +147,13 @@ export function jobFields(pages, jobs) {
   return (Array.isArray(jobs) ? jobs : []).map((job) => {
     const title = norm(job?.role);
     const company = norm(job?.company);
-    // Found by its title first: a company can head the job before it too.
-    const find = (want) => (want ? all.findIndex((runs, i) => i >= from && runs.some((r) => norm(r).includes(want))) : -1);
-    const byTitle = find(title);
-    const at = byTitle >= 0 ? byTitle : find(company);
-    const header = at >= 0 ? all.slice(Math.max(from, at - 1), at + 4) : all;
+    const around = (i) => all.slice(Math.max(from, i - 1), i + 4);
+    const holds = (lines, want) => lines.some((runs) => runs.some((r) => norm(r).includes(want)));
+    const find = (want, near) => (want ? all.findIndex((runs, i) => i >= from && holds([runs], want) && (!near || holds(around(i), near))) : -1);
+    // Its title with its company beside it — the headline under the name can repeat a job's title, and
+    // a company can head the job before it too — then either one alone.
+    const at = [find(title, company), find(company, title), find(title), find(company)].find((i) => i >= 0) ?? -1;
+    const header = at >= 0 ? around(at) : all;
     if (at >= 0) from = at + 1;
     const years = [job?.startDate, job?.current ? '' : job?.endDate]
       .map((d) => String(d ?? '').match(YEAR)?.[0]).filter(Boolean);
