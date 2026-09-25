@@ -95,7 +95,8 @@ export const SECTION_ICON_GAP_EM = 0.45;
  * whatever it is called) gets Custom's.
  */
 export function sectionIconShapes(type, color = 'currentColor') {
-  const shapes = ICONS[type] || ICONS.custom;
+  // Own keys only: a section typed 'constructor' or 'toString' (R2-109 keeps such types) is no icon.
+  const shapes = Object.hasOwn(ICONS, type) ? ICONS[type] : ICONS.custom;
   return shapes.map(([tag, attrs]) => ({
     tag,
     props: { fill: 'none', stroke: color, strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round', ...attrs },

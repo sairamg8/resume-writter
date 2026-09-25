@@ -8,7 +8,7 @@ import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { createElement } from 'react';
 import { renderToString } from 'react-dom/server';
-import { setup, teardown, resume, section, render, renderDocx, loadModule, TEMPLATES } from './harness.mjs';
+import { setup, teardown, resume, section, render, renderDocx, loadModule, read, itemsWith, TEMPLATES } from './harness.mjs';
 import { snapshot } from './parity/measure.mjs';
 import { headingIcon } from './parity/marks.mjs';
 
@@ -171,5 +171,31 @@ describe('Design → Section Headings → Icons prints an icon before every sect
       assert.equal(defaultSettings(template).sectionIcons, false, template);
       assert.equal(sectionReset(template, ['sectionIcons'], { sectionIcons: true }).sectionIcons, false, template);
     }
+  });
+});
+
+// The review of R2-147: a section typed like an Object member (R2-109 keeps them) looked its icon up
+// through the prototype — ICONS['constructor'] is a function — and Icons On threw, so neither the
+// preview nor Export PDF printed. It gets Custom's icon, and every entry prints.
+describe('Icons On with a section typed like an Object member', () => {
+  const TYPES = ['constructor', 'toString', 'hasOwnProperty', 'valueOf', '__proto__'];
+  const odd = (type) => ({ id: `odd_${type}`, type, title: `Odd ${type}`, visible: true, settings: {}, items: [{ id: 'i1', title: `Oddentry ${type}`, subtitle: 'Oddsub' }] });
+
+  it('its icon is Custom\'s', async () => {
+    const { sectionIconShapes } = await loadModule('/src/utils/sectionIconPaths.js');
+    const custom = JSON.stringify(sectionIconShapes('custom', '#123456'));
+    for (const type of TYPES) assert.equal(JSON.stringify(sectionIconShapes(type, '#123456')), custom, type);
+  });
+
+  it('every template prints its entries', async () => {
+    const missing = [];
+    for (const template of TEMPLATES) {
+      for (const type of TYPES) {
+        const r = resume({ template, settings: { sectionIcons: true }, sections: [odd(type)] });
+        const pages = await read(await render(r));
+        if (!itemsWith(pages, `Oddentry ${type}`).length) missing.push(`${template} ${type}`);
+      }
+    }
+    assert.deepEqual(missing, []);
   });
 });
