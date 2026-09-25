@@ -11,6 +11,7 @@ import { DEFAULT_ITEM_GAP_PX, SECTION_SPACING_PX } from '@/templates/pdf/shared/
 import { withTextFields } from '@/utils/textFields';
 import { withSkillNames } from '@/utils/skills';
 import { withSectionShapes } from '@/utils/sectionShapes';
+import { LETTER_KIND, LETTER_NAME } from '@/utils/letters';
 
 import { DATA_VERSION } from '@/utils/dataVersion';
 
@@ -176,6 +177,20 @@ function withoutGeneratorPlaceholders(r) {
   return Object.keys(next).some((k) => next[k] !== cl[k]) ? { ...r, coverLetter: next } : r;
 }
 
+/**
+ * v13 (R2-135): until this build, Dashboard → New Cover Letter made an ordinary résumé named 'Cover
+ * Letter', blank, its sections empty, and the dashboard listed it with the résumés. A letter is now
+ * marked (`kind: 'letter'`, letters.js) and listed with the letters. A résumé saved before that still
+ * has that name and no entry in any section is such a letter, and is marked one. Nothing else about it
+ * changes, so its letter and its résumé print as they did. One the user renamed, or gave entries,
+ * stays a résumé.
+ */
+function withOldLetterMarked(r) {
+  if (r.kind != null || r.name !== LETTER_NAME) return r;
+  const entries = Array.isArray(r.sections) && r.sections.some((s) => Array.isArray(s?.items) && s.items.length > 0);
+  return entries ? r : { ...r, kind: LETTER_KIND };
+}
+
 /** One-time migrations: [the version that introduced it, (résumé, its own version) → résumé]. */
 const MIGRATIONS = [
   [7, (r) => (r.coverLetter && !editedSince(r, SPACING_AND_RECIPIENT_LIVE) ? { ...r, coverLetter: withoutDefaultRecipientTitle(r.coverLetter) } : r)],
@@ -184,6 +199,7 @@ const MIGRATIONS = [
   [10, withResumeHiddenOnLetter],
   [11, withHeaderColorsSeen],
   [12, withoutGeneratorPlaceholders],
+  [13, withOldLetterMarked],
 ];
 
 /**

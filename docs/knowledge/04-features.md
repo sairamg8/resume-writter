@@ -7,7 +7,8 @@ Maps user-facing features → primary code locations.
 | Feature | Code |
 |---------|------|
 | List resumes | `pages/Dashboard.jsx`, `components/ResumeCard.jsx` |
-| New resume / cover letter | `store.createResume`, navigate with optional `?tab=coverletter` |
+| New resume | `store.createResume` |
+| New cover letter (from a résumé, picker `NewLetterModal`) and the Cover Letters list | `store.createLetter`, `utils/letters.js`, navigate with `?tab=coverletter` |
 | Import JSON | Dashboard `handleImport` |
 | Job Tracker entry | navigate `/jobs` |
 | Career history panel | `components/CareerHistoryPanel.jsx` |
