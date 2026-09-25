@@ -4,6 +4,7 @@ import { STARTER_TEMPLATES } from '@/utils/starterTemplates';
 import { templateLabel } from '@/constants/templates';
 import { pickerCards } from '@/utils/templatePicker';
 import { TemplateThumb } from '@/components/TemplateThumb';
+import { useOverlayClose } from '@/hooks/useOverlayClose';
 
 /**
  * Dashboard → New Resume: the content (blank, or a role starter) and the look in one step (D1). Each
@@ -13,13 +14,14 @@ import { TemplateThumb } from '@/components/TemplateThumb';
  */
 export default function StarterTemplateModal({ isOpen, onClose, onSelectStarter, onSelectBlank }) {
   const [look, setLook] = useState(null); // a card of pickerCards, or null: each starter's own
+  const overlay = useOverlayClose(onClose);
   if (!isOpen) return null;
   const looks = pickerCards({});
   const lookOf = (c) => (c ? { engine: c.engine, preset: c.preset, variant: c.variant } : null);
   const templateOf = (starter) => (look ? look.label : templateLabel(starter.template));
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm" {...overlay}>
       <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 max-w-xl w-full flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
         
         {/* Header */}
