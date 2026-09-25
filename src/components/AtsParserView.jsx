@@ -67,19 +67,32 @@ export function AtsParserView({ resume, columnsWarned = false }) {
   const readFor = useRef(null); // { resume, retry } of the last read that started
   const wanted = useRef(0); // bumped by every change that asks for a read
   const shownGen = useRef(0); // the change whose read is on screen
+  const started = useRef(0); // the change whose read began last
+  const settled = useRef({ gen: 0, status: 'idle', error: null }); // the last read that ended, and how
   const copyTimer = useRef(null); // clears Copy's outcome; cleared itself when the view goes
   useEffect(() => () => clearTimeout(copyTimer.current), []);
 
   useEffect(() => {
     if (!open || !resume) return undefined;
     const last = readFor.current;
-    if (last && last.resume === resume && last.retry === retry) return undefined;
+    if (last && last.resume === resume && last.retry === retry) {
+      // Back to the résumé whose read began last before a later change's read did (an Undo within the
+      // pause, or the view shut and opened again): that change is dropped, and this read stands — its
+      // outcome shows, not "Updating…" for a read that never comes.
+      if (wanted.current !== started.current) {
+        wanted.current = started.current;
+        const { gen, status, error } = settled.current;
+        if (gen === started.current) setRead((r) => ({ ...r, status, ...(status === 'error' ? { error } : {}) }));
+      }
+      return undefined;
+    }
     const gen = ++wanted.current;
     setRead((r) => ({ ...r, status: 'reading' }));
     // The first read at once, and a Retry; a change once the typing pauses.
     const delay = last && last.retry === retry ? WAIT_MS : 0;
     const timer = setTimeout(async () => {
       readFor.current = { resume, retry };
+      started.current = gen;
       try {
         const [blob, pdfjs] = await Promise.all([renderResume(resume), loadPdfjs()]);
         const pages = await readPdfLines(new Uint8Array(await blob.arrayBuffer()), pdfjs);
@@ -87,8 +100,10 @@ export function AtsParserView({ resume, columnsWarned = false }) {
         // change still waits, so steady typing never freezes the text (as the preview, R2-017).
         if (gen < shownGen.current) return;
         shownGen.current = gen;
+        settled.current = { gen, status: 'ready', error: null };
         setRead({ status: gen === wanted.current ? 'ready' : 'reading', pages, of: resume, error: null });
       } catch (error) {
+        settled.current = { gen, status: 'error', error };
         if (gen === wanted.current) setRead((r) => ({ ...r, status: 'error', error }));
       }
     }, delay);

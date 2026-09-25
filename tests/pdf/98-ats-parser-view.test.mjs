@@ -181,6 +181,21 @@ describe('the ATS tab: What a parser reads (R2-141)', () => {
     } finally { await tab.unmount(); }
   });
 
+  it('a change undone before its read begins (Undo within the pause): the read on screen stands, not "Updating…" for ever', async () => {
+    const r = await demo('classic');
+    const tab = await atsTab(r);
+    try {
+      tab.click('What a parser reads');
+      await until(() => tab.status() === 'ready', 'the first read');
+      const shown = tab.pre().textContent;
+      tab.view.update({ resume: { ...r, personal: { ...r.personal, name: 'Morgan Example' } }, store: tab.store });
+      assert.equal(tab.status(), 'reading', 'the change waits for the typing to pause');
+      tab.view.update({ resume: r, store: tab.store });
+      await until(() => tab.status() === 'ready', 'the undone change to settle');
+      assert.equal(tab.pre().textContent, shown, 'the text of the résumé as it is again');
+    } finally { await tab.unmount(); }
+  });
+
   it('beside the two-column Sidebar, it says a parser that reads by position mixes the columns\' lines', async () => {
     const tab = await atsTab(await demo('sidebar'));
     try {
