@@ -134,14 +134,28 @@ export function pdfPageLines(items) {
 }
 
 /**
+ * Page `index`'s furniture, not the résumé's text: the running header the app prints atop every page
+ * after the first ("Pat Lee · Page 2", ATS-7) and Design → Page numbers' footer ("Page 1 of 3",
+ * R2-147) — the page's first or last line, and only with that page's own number.
+ */
+function isPageFurniture(line, index, first) {
+  const n = index + 1;
+  if (first && index > 0 && new RegExp(`^(?:.+ · )?Page ${n}$`).test(line.text)) return true;
+  return !first && new RegExp(`^Page ${n} of \\d+$`).test(line.text);
+}
+
+/**
  * The lines of every page as the parser takes them: a line the PDF wrapped joined back to the one
  * it continues (a list item's next line starts under its text; a paragraph's line before it ran to
- * the right margin), a larger gap than a line's as a blank line, a page break as one too.
+ * the right margin), a larger gap than a line's as a blank line, a page break as one too. A page's
+ * running header and page number (isPageFurniture) are left out.
  */
 export function pdfLinesOfPages(pages) {
   const out = [];
-  for (const page of pages) {
+  for (const [index, page] of pages.entries()) {
     const lines = pdfPageLines(page);
+    if (lines.length && isPageFurniture(lines[lines.length - 1], index, false)) lines.pop();
+    if (lines.length && isPageFurniture(lines[0], index, true)) lines.shift();
     const right = Math.max(0, ...lines.map((l) => l.right));
     let prev = null;
     for (const line of lines) {
