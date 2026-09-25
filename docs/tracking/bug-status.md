@@ -1,8 +1,8 @@
 # FlowCV Bug Tracker & Status Index
 
 > Location: `/mnt/Storage/Projects/flowcv/docs/tracking/bug-status.md` (moved from the repo root 2026-09-24)
-> Updated: 2026-09-25 · `origin/master` (deployed) = `c5acb93`, full gate CI run 36104952093 green (Round 2: ten clusters, ATS-7) ·
-> the work branch `claude/busy-darwin-yjb13t` holds the Jira revamp's merge (`75236a2`), waiting for its gate
+> Updated: 2026-09-25 · `origin/master` (deployed) = `0a79974` — Round 2 (`c5acb93`, gate run 36104952093) and the Jira-style
+> revamp of Boards and the Job Tracker (merged `75236a2`, gate run 36106125348 green on `0a79974`) · Round 3 in progress
 > **Open: 7** (0 here + 7 in [bug-status-r2/](bug-status-r2/README.md)) | Fixed, not pushed: 0 | **Closed: 252** (231 fixed + 21 ✖ without a code fix)
 
 ## Summary
