@@ -11,11 +11,11 @@ import { before, after, afterEach, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { setup, teardown, loadModule, resume, experience, render, read, allText } from './harness.mjs';
 
-before(setup);
 after(teardown);
 
 let build, jobs, fonts;
 before(async () => {
+  await setup();
   [build, jobs, fonts] = await Promise.all([
     loadModule('/src/utils/pdfBuild.js'),
     loadModule('/src/utils/pdfWorkerJobs.js'),
