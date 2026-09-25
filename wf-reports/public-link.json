@@ -1,0 +1,38 @@
+{
+  "cluster": "public-link",
+  "branch": "claude/wf-public-link",
+  "base": "c5acb93",
+  "rows": [
+    {
+      "id": "R2-148",
+      "outcome": "partial",
+      "commits": ["c9fbe96", "dd867fc", "4331297", "96726aa", "083b7d5", "07d8051", "a33931f", "4284972", "a23ecb7", "1582dc0", "b572d25", "8d856ff"],
+      "tests": [
+        "tests/pdf/99-public-link.test.mjs",
+        "tests/unit/firestore-rules.unit.mjs",
+        "tests/pdf/99-import-roundtrip-columns.test.mjs",
+        "tests/pdf/99-import-roundtrip-one-column.test.mjs",
+        "tests/unit/import-pdf-columns.unit.mjs",
+        "tests/unit/import-file-errors.unit.mjs"
+      ],
+      "summary": "**Now:** A signed-in account on a site with Firebase gets Export → Share a public link: it lists exactly what anyone with the link sees, publishes a read-only copy (only what the PDF prints: no hidden field, link, section, entry, date or location, no cover letter, dashboard name or id) at #/r/<random id>, says when the résumé changed since and updates it, and unpublishes it; deleting the résumé on the Dashboard takes the copy down. The link's page prints the copy with the editor's PDF preview and a Download PDF button. firestore.rules lets anyone get a public/{shareId} copy by id (never list), and only its owner write it; without Firebase nothing offers it, and the Privacy page, README and docs say so. PDF import reads the Sidebar's two columns in order (side column, then main) and Compact's inline name/title and grid; a PDF with no text layer says it looks like a scanned image and to export as text, save as Word or run OCR.",
+      "remaining": "Not built: résumé language for dates (month names, 'Present') and RTL. A résumé deleted on another device keeps its public copy until unpublished (the copy's panel is gone; would need the sync to unpublish). PDF import: only two columns, left first (a right-hand sidebar reads after the main column); on Executive and Timeline PDFs the parser's company/role guess is off (company read as the location / empty) — likely pre-existing, not proven on base."
+    }
+  ],
+  "review": {
+    "issues": [
+      "The published copy kept a hidden LinkedIn/website/GitHub's Url and Label, unprinted personal keys, dates of sections with Show dates off, locations with Show location off, and current:true for a hidden end date.",
+      "Deleting a published résumé left its copy public with no way to unpublish it.",
+      "(earlier, found by the author) The panel compared the stored copy by JSON text, and Firestore returns map keys sorted, so every published résumé read as changed since."
+    ],
+    "fixedByReviewer": ["4284972 (copy holds only printed data; Dashboard Delete unpublishes)", "a33931f tests", "a23ecb7/1582dc0/b572d25 single-column import guard test", "8d856ff docs"]
+  },
+  "ci": {
+    "36105942009": "tests (35 files, 242 pass) + failfirst dd867fc green",
+    "36106641345": "tests (9 files, 85 pass) + failfirst 96726aa and 07d8051 green",
+    "36107060633": "failfirst 4284972 green; 58 files, 830 pass (a one-column test setup bug fixed in 1582dc0)",
+    "36107928787": "b572d25: import, public-link, dashboard tests green"
+  },
+  "baselineFailures": [],
+  "notes": "firestore.rules changed: the deployed project must publish the new rules (README shows them) or publishing fails permission-denied. tests/unit/firestore-rules.unit.mjs was updated to pin two rules (the owner-only rule is unchanged). tests/pdf/fake-firestore.mjs now applies the public/{id} rule. Optional hardening not done: the rules don't restrict which fields a writer puts in public/{id}; settings.customContactIcons is copied as is. Accessibility of the share dialog not reviewed (deferred). No Playwright/Cypress spec for the flow; no full gate run on this branch."
+}
