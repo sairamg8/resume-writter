@@ -1,5 +1,44 @@
 # Session Handoff — Resume Here
 
+## ⏩ LIVE STATE — 2026-09-25 15:10 UTC (a read-only check by session_01JiiD3rdJJ6DiPifwzEF2Gd; nothing is running)
+
+**This branch, `claude/sweet-turing-y2x9s4`, is `master` plus this note — no code of its own.** The work continues on
+**`claude/busy-darwin-yjb13t`** (head `818b83a`, 07:53 UTC): its copy of this file ("COLD START HERE — 07:47 UTC") has
+the full procedure, and its `bug-status.md` is the current tracker.
+
+- **Deployed:** `master` = `0a79974` — Round 2 (ten clusters, ATS-7) and the Jira-style revamp of Boards and the Job
+  Tracker (full gate run 36106125348, green on that commit).
+- **Green, not deployed:** `e006835` — Round 3 batch 1: typography (`323991e`), public-link (`091f00c`), the revamp-merge
+  gaps (`a09f005`, `3d50022`) and the one-contact-table fix (`e006835`). Full gate run 36109292470 on that exact commit:
+  every job green (lint, build, suite 6/6, Playwright 3/3, Cypress 4/4). `0a79974` → `e006835` is a fast-forward.
+- **Merged, not gated:** page-numbers (`3a70d91`, R2-147 part) — batch 2 on the work branch.
+- **Reported, not merged:** picker (`claude/wf-picker` = `c64b3d2`, 07:55 UTC; R2-139 partial).
+- **Stopped without a report:** locale (`2f5d9d0`; its last two CI runs red), perf2 (`7a768b4`; green), section-look
+  (`f0fe67f`; green), layouts (`3e2ed65`; one of its last three runs green, two red). All four sessions hit the
+  five-hour usage limit around 08:00 UTC and are archived (status: failed); each branch holds its work so far.
+- **The coordinator** (session_01XeVJDQKh78wxFo4dTK6ZpW) hit the same limit at ~08:20 UTC and is archived. The last push
+  and CI run were at ~07:56–08:07 UTC.
+
+**Next, in order, on `claude/busy-darwin-yjb13t`:**
+1. Deploy `e006835`: `git push origin e006835:refs/heads/master`, then `python3 docs/tracking/tools/deploy_rows.py
+   e006835 && python3 docs/tracking/tools/update_tracker.py --recount` (R2-146 ⏸ → ✅), the tracker's "Updated" line,
+   commit, push.
+2. Merge picker: `REPORTS=/tmp/wf-reports bash docs/tracking/tools/merge_cluster.sh picker` → `python3
+   docs/tracking/tools/update_tracker.py /tmp/wf-reports/picker.json` → commit, push; then one full gate on batch 2
+   (page-numbers + picker) → deploy as in 1.
+3. The four clusters without a report: resume each from its branch (unarchive its session and message it, or a new
+   session per CLUSTER-PROTOCOL.md); merge each when its `wf-reports/<cluster>.json` lands. R2-148 is set fixed only
+   once locale lands.
+4. Accessibility last: R2-139's A7, A8, A11, A13, A14; A11Y-1…6; the parked `claude/wf-templates` (`67c88c5`).
+
+**Owner:** publish the new `firestore.rules` to the Firebase project (until then, Share a public link fails with
+permission-denied); tag v0.1.0 when ready; delete the merged branches on GitHub (the git proxy refuses deletes).
+
+**Rules (CLAUDE.md):** tests run only on CI (`ci.yml`: no inputs = the full gate; `tests`, `failfirst`, `playwright`,
+`cypress` for targeted runs); `master` moves only on a green full gate on that exact commit, the tracker rows ✅ in the
+same step; every fix gets a fail-first test; cluster sessions never edit `docs/tracking/`; accessibility waits until
+last; this file stays current (a Stop hook refuses to end a turn while it is behind the code).
+
 ## 2026-09-25 ~06:40 — Round 2's gate fixed and deployed (in progress)
 
 **Coordinator:** session_01XeVJDQKh78wxFo4dTK6ZpW. **Work branch: `claude/busy-darwin-yjb13t`**, fast-forwarded from
