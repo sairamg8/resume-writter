@@ -21,6 +21,25 @@ The full gate on `6c11484` (run 36092446651) had 7 failures, all where Round 2 c
 
 Next: **one** full gate on the head (all seven fixed; the Jira lane's two failures are being fixed in the worktree `/home/user/jira-revamp`, pushed to `claude/jira-revamp`, gated separately) → on green, `git push origin <sha>:master`,
 then the tracker (every ⏸ row whose commits are on master → ✅; ATS-7 ✖ → ✅, `38f35b5`) and this file, docs only.
+**Owner, ~07:00: "finish this project"; merge the Jira revamp too once green.** Round 3 — the 7 open rows, one cloud
+session per cluster, each from `c5acb93` on `claude/wf-<cluster>`, per CLUSTER-PROTOCOL.md (its report
+`wf-reports/<cluster>.json` last); the coordinator merges each into the work branch, gates, deploys. Accessibility last.
+
+| Cluster | Rows | Session |
+|---|---|---|
+| page-numbers | R2-147 page numbers | session_01PL4e5MkwcqPVF1pzRc4tAg |
+| typography | R2-146 rest: name font, per-section font, Sidebar title spacing, Word font fallback | session_01VrpBFXbHBAp8Aow3YbjvwA |
+| locale | R2-148: résumé language for dates, RTL | session_01DjbrY7hHtJmKD6GJcXHFx7 |
+| perf2 | R2-142: PERF-1, 4, 5, 6 | session_017oTZg6ZNCXoJwpKhSURxST |
+| section-look | R2-147 rest: section icons, links, levels, grouped roles, columns, photo | session_01A8Pc1gVNQNk225roXUbEns |
+| public-link | R2-148: public web link; two-column / scanned PDF import | session_01H7o4mAMVufFnaL8mMiYhCJ |
+| layouts | R2-138 B2: the designed layouts as new engines | session_018uk2NM3EkjexkRoDkRHEEz |
+| picker | R2-139 non-a11y (A1–A4, A9, A12, B3, C1, D1, E1, F1), R2-138 B4 | session_01MkCArZxvT5mbX1ELBQKrAu |
+
+Jira revamp: its two failures are with agents in `/home/user/jira-revamp`; a trial merge onto `c5acb93` conflicts only
+in `src/pages/JobTracker.jsx` (resolved: the revamp's page plus Round 2's SyncHeldNotice; rerere recorded) and this file.
+Order: Round 2 green → `master` = `c5acb93`; then the revamp merged into the work branch, one gate, `master` again.
+
 Still open after the deploy: 7 rows (R2-138, 139, 142, 143, 146, 147, 148 — each partly done); `claude/jira-revamp`
 (its gate run 36092746492: `82-your-work-page` and Cypress `20-regressions-job-unsaved` left; the owner decides when it
 merges); `claude/wf-templates` parked for the a11y pass.
