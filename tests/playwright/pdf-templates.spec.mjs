@@ -107,7 +107,7 @@ test.describe('Exported PDF — every template', () => {
     expect(await railPixels(page)).toBeLessThan(40);
 
     await openDesignPanel(page);
-    await page.locator('button:has-text("Timeline")').first().click();
+    await page.getByTestId('template-timeline').click();
     await expect.poll(() => railPixels(page), { timeout: 20_000 }).toBeGreaterThan(120);
 
     const { runs } = await exportPdf(page);
@@ -134,7 +134,9 @@ test.describe('Exported PDF — every template', () => {
     expect(await topRowAccent(page)).toBeLessThan(0.05);
 
     await openDesignPanel(page);
-    await page.locator('button:has-text("Banner")').first().click();
+    // Each template card by its test id: `:has-text` matches case-insensitively, and Modern's card, listed
+    // before Banner's, reads "Name and contacts in an accent banner" (R2-139); design cards name templates too.
+    await page.getByTestId('template-banner').click();
     await expect.poll(() => topRowAccent(page), { timeout: 20_000 }).toBeGreaterThan(0.95);
 
     const { runs } = await exportPdf(page);
@@ -163,7 +165,7 @@ test.describe('Exported PDF — every template', () => {
     expect(await hairlines(page)).toBeLessThan(2); // at most Classic's header rule
 
     await openDesignPanel(page);
-    await page.locator('button:has-text("Academic")').first().click();
+    await page.getByTestId('template-academic').click();
     await expect.poll(() => hairlines(page), { timeout: 20_000 }).toBeGreaterThan(2);
     await expect(page.locator('text=Academic brings its own type and spacing')).toBeVisible();
 
@@ -194,7 +196,7 @@ test.describe('Exported PDF — every template', () => {
     expect(await shortRules(page)).toBeLessThan(2);
 
     await openDesignPanel(page);
-    await page.locator('button:has-text("Compact")').first().click();
+    await page.getByTestId('template-compact').click();
     await expect.poll(() => shortRules(page), { timeout: 20_000 }).toBeGreaterThan(2);
     await expect(page.locator('text=Compact brings its own type and spacing')).toBeVisible();
 
