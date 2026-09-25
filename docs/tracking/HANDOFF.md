@@ -37,10 +37,13 @@ owner, not restarted.
 
 **ATS-7 (coordinator, on the work branch):** `38f35b5` — "Name · Page N" on every résumé page after the first, drawn
 first in the top margin (`constants/runningHeader.js`, `PdfRunningHeader`, all nine templates, Word's header with
-titlePage); no Design control (always on, left out where the margin has no room). Tests: `tests/unit/running-header`,
-`tests/pdf/66-running-header`, 66-ats-page-top-heading's -raw check un-todo'd, 42-ats-fields' ATS-7 set-aside
-removed. CI on the work branch: a targeted run with fail-first (run 36088672238), and the full suite (run 36088673756) (to find other tests that read
-the top of page 2). When green: ATS-7's row in `bug-status.md` goes ✖ → ✅.
+titlePage); no Design control (always on, left out where the margin has no room). Its own tests pass with fail-first
+(run 36088672238: 60/60, failfirst ok). The full suite (run 36088673756) then failed only where older tests read the
+page's own text: `24bf996` gives the harness `runningHeaderItems` / `bodyItems` / `withoutRunningHeaders` and points
+06-pagination, 29-page-size, 68-banner-look, 65-ats-text-parity and 70-markdown-parity at the page's own text. Still
+to check (run 36089666144): shard 1's "timeline" and "academic" failures — parity 15-template-resets or
+31-section-overrides; likely 31's Space before measuring from the header when a heading opens page 2
+(registry-sections.mjs `all`/`gapAbove`). When green: ATS-7's row in `bug-status.md` goes ✖ → ✅.
 
 **🔴 Before `master` moves (R2-143, merged from release):** the owner's e-mail, uid and name now come from the build's
 env (`src/utils/siteOwner.js`, `.env.example`). The live site's Cloudflare build must set
