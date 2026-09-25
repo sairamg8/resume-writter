@@ -71,6 +71,28 @@ describe('Design → Links prints every link Plain, Underlined or in the accent 
     assert.deepEqual(wrong, []);
   });
 
+  it('every template and the letter: Underline and Accent print every word where Plain does — only the look changes', async () => {
+    // Underline prints a contact as a run of a Text, not a Text in a Link box (ContactValue): the words
+    // must stay where they were, on the page and in the Sidebar's column, whose values fit a line.
+    const places = (snap) => snap.pages.flatMap((p, i) => p.items.map((t) => `${i} ${t.x.toFixed(1)},${t.y.toFixed(1)} ${t.str}`)).sort();
+    const wrong = [];
+    const long = { personal: { linkedin: 'linkedin.com/in/avery-stone-ledger-engineering', github: 'github.com/avery-stone' } };
+    for (const template of TEMPLATES) {
+      for (const cover of [false, true]) {
+        if (cover && template !== 'classic' && template !== 'sidebar') continue;
+        const plain = places(await shot(cv(template, 'plain', long), cover));
+        for (const v of ['underline', 'accent']) {
+          const got = places(await shot(cv(template, v, long), cover));
+          if (JSON.stringify(got) !== JSON.stringify(plain)) {
+            const moved = got.filter((x) => !plain.includes(x)).slice(0, 3);
+            wrong.push(`${template}${cover ? ' letter' : ''} ${v}: ${moved.join(' | ')}`);
+          }
+        }
+      }
+    }
+    assert.deepEqual(wrong, []);
+  });
+
   it('every template: Accent paints the e-mail in the accent — on a banner, band or the Sidebar\'s column the tint of it that reads there', async () => {
     const wrong = [];
     for (const template of TEMPLATES) {
