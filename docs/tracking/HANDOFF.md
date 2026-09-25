@@ -2,6 +2,8 @@
 
 ## 2026-09-25 ~06:40 — Round 2's gate fixed and deployed (in progress)
 
+**State at 07:09 UTC:** Round 2 is **deployed** — `master` = `c5acb93`, its full gate run 36104952093 green; the tracker set (`5c3d907`: 15 ⏸ → ✅, ATS-7 ✅; 231 fixed, 21 ✖, 7 open). The Jira revamp is merged into the work branch (`75236a2`, its fixes `0a79974`: R6-2's spec `40800ce`, Your work's test `c2e82cb`, the backlog's `e358cf8`); **its full gate: run 36106125348 on `0a79974`** — on green, `git push origin 0a79974:master`, then this file. An agent pre-checks Round 2's tests against the revamp's pages (95-job-notes-tab, 95-sync-privacy-notices, Cypress 07/20-regressions, 01-dashboard) in a scratch worktree.
+
 **Coordinator:** session_01XeVJDQKh78wxFo4dTK6ZpW. **Work branch: `claude/busy-darwin-yjb13t`**, fast-forwarded from
 `claude/sweet-feynman-ro5q2g` (`5086b0a`, frozen). The previous coordinator (session_01YBTHhwV9xeHy7YGaebJnhY) and the
 Jira-revamp lane (session_01ASmJ6BQpqJE5fifosw4z8y) both stopped at 04:18–04:22 UTC on the usage limit. **Owner,
