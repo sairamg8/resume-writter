@@ -10,7 +10,8 @@
 // `cloud.goOffline()` makes getDocs/getDoc answer from a stale cache, as the SDK does when it
 // cannot reach the server, while getDocsFromServer/getDocFromServer fail. Set `cloud.auth` to the
 // signed-in uid (null: nobody) and the security rules apply: another account's documents are
-// permission-denied, as firestore.rules has it. `cloud.refuse` refuses chosen batches, as the
+// permission-denied, as firestore.rules has it, and a published résumé (`public/{id}`) is read by
+// anyone but written only by its owner. `cloud.refuse` refuses chosen batches, as the
 // server refuses one writing a document over 1 MiB. As the SDK, set() throws on a value holding
 // `undefined` (invalid-argument).
 
@@ -64,7 +65,18 @@ export function fakeFirestore(docs = {}) {
   };
   const unavailable = () => Object.assign(new Error('Failed to get documents from server. (However, these documents may exist in the local cache.)'), { code: 'unavailable' });
   const denied = () => Object.assign(new Error('Missing or insufficient permissions.'), { code: 'permission-denied' });
-  const allowed = (path) => api.auth === undefined || (api.auth !== null && path.startsWith(`users/${api.auth}/`));
+  const own = (path) => api.auth !== null && path.startsWith(`users/${api.auth}/`);
+  // A published résumé (`public/{id}`, firestore.rules): anyone gets one by its id, nobody lists
+  // them, and only the account named its `owner` writes one — the owner it has, and it keeps.
+  const isPublic = (path) => /^public\/[^/]+$/.test(path);
+  const allowed = (path) => api.auth === undefined || own(path) || isPublic(path);
+  const writable = ([op, path, value]) => {
+    if (api.auth === undefined) return true;
+    if (!isPublic(path)) return own(path);
+    const current = data.get(path);
+    if (!api.auth || (current && current.owner !== api.auth)) return false;
+    return op === 'delete' ? Boolean(current) : value?.owner === api.auth;
+  };
   async function read(path, get, { server = false } = {}) {
     reads.push(path);
     if (!allowed(path)) throw denied();
@@ -112,7 +124,7 @@ export function fakeFirestore(docs = {}) {
         },
         delete(ref) { ops.push(['delete', ref.path]); },
         commit() {
-          if (ops.some(([, path]) => !allowed(path))) return Promise.reject(denied());
+          if (!ops.every(writable)) return Promise.reject(denied());
           if (fail.commit) return Promise.reject(fail.commit);
           const ack = hold.commit;
           const refusal = api.refuse?.(ops);
