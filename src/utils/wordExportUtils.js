@@ -53,13 +53,15 @@ export const gapPara = (pt) => (pt > 0
  * PDF's cell, the gap to the next cell its right margin. Rows after the first stand `gapPt` below
  * the one above (Between Items), and a short last row is filled with empty cells.
  */
-export function gridTable(cells, { cols, cell, starts, width }, gapPt) {
+export function gridTable(cells, { cols, cell, starts, width, rtl = false }, gapPt) {
   const widths = starts.map((x, i) => (starts[i + 1] ?? width) - x);
   const rows = [];
   for (let i = 0; i < cells.length; i += cols) rows.push(cells.slice(i, i + cols));
   return new Table({
     width: { size: width, type: WidthType.DXA },
     columnWidths: widths,
+    // A right-to-left résumé's (R2-148): the first cell on the right, as its PDF lays the grid out.
+    ...(rtl ? { visuallyRightToLeft: true } : {}),
     layout: TableLayoutType.FIXED,
     borders: TableBorders.NONE,
     rows: rows.map((row, r) => new TableRow({

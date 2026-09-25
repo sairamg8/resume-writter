@@ -12,7 +12,7 @@ import { resolveTemplateSettings } from '@/templates/pdf/shared/templateSettings
 import { FONTS } from '@/utils/fonts';
 import { RUNNING_HEADER_PT, runningHeaderLead, runningHeaderTop } from '@/constants/runningHeader';
 import { textShades } from '@/templates/pdf/shared/pdfColors';
-import { withPrintedTitles } from '@/utils/resumeLanguage';
+import { isRtl, withPrintedTitles } from '@/utils/resumeLanguage';
 
 export function resolveWordFont(settings = {}) {
   if (settings?.customFont?.trim()) return settings.customFont.trim();
@@ -57,7 +57,9 @@ function buildDocument(children, settings, { running = null } = {}) {
       default: {
         document: {
           run: { font, size: baseSize },
-          paragraph: { spacing: { after: 40 } },
+          // A right-to-left résumé (Design → Language, R2-148): every paragraph reads right to left,
+          // which in Word also puts its start — alignment, indents, tab stops — on the right.
+          paragraph: { spacing: { after: 40 }, ...(isRtl(settings) ? { bidirectional: true } : {}) },
         },
         // Section titles are Heading 1 (sectionHeading, ATS-6); this replaces docx's own Heading 1
         // (2E74B5, 16 pt). It sets only outline level 1 and the document font: every visible

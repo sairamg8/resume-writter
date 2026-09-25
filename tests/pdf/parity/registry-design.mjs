@@ -83,6 +83,7 @@ const PAPER = { A4: [595.28, 841.89], LETTER: [612, 792] };
 /** A current job's "Present" in each Design → Language (R2-148), written out, not read from the code. */
 const PRESENT = { en: 'Present', es: 'Actualidad', fr: 'Aujourd’hui', de: 'heute', pt: 'Atual', it: 'In corso', nl: 'heden',
   ar: 'حتى الآن', he: 'היום', fa: 'اکنون', ur: 'تاحال' };
+const RTL = new Set(['ar', 'he', 'fa', 'ur']);
 const DATES = { asEntered: '01/2021', 'MMM YYYY': 'Jan 2021', 'MMMM YYYY': 'January 2021', 'MM/YYYY': '01/2021',
   'MM.YYYY': '01.2021', 'YYYY-MM': '2021-01', 'YYYY.MM': '2021.01', YYYY: '2021' };
 
@@ -298,13 +299,19 @@ export const DESIGN = {
     }),
   },
   // Design → Language (R2-148): the current job ends in the language's "Present" — each of its words, as
-  // pdf.js reads a right-to-left line word by word.
+  // pdf.js reads a right-to-left line word by word — and a right-to-left language mirrors the page: the
+  // name's right edge as far from the paper's right as it stood from its left; a left-to-right one keeps it.
   'setting.language': {
     family: 'dates',
-    check: ({ runs }) => runs.flatMap((r) => {
+    check: ({ runs, before }) => runs.flatMap((r) => {
       const v = valueOf(r, 'setting.language');
       if (!(v in PRESENT)) return [`${v}: a language this test does not know — add its "Present" to PRESENT`];
-      return PRESENT[v].split(' ').every((w) => prints(r.snap, w)) ? [] : [`${v}: "${PRESENT[v]}" does not print`];
+      const out = PRESENT[v].split(' ').every((w) => prints(r.snap, w)) ? [] : [`${v}: "${PRESENT[v]}" does not print`];
+      const [was, now] = [item(before.snap, PERSONAL.name), item(r.snap, PERSONAL.name)];
+      if (!was || !now) return [...out, `${v}: the name does not print`];
+      const x = RTL.has(v) ? r.snap.pages[now.page - 1].W - (now.x + now.w) : now.x;
+      if (!near(x, was.x, 1)) out.push(`${v}: the name stands ${x.toFixed(1)} pt from the ${RTL.has(v) ? 'right' : 'left'}, not ${was.x.toFixed(1)}`);
+      return out;
     }),
   },
   'setting.dateFormat': {

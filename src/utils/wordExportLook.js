@@ -2,6 +2,7 @@
 // Design → Spacing (R2-062) and the colours (R2-063) its PDF prints the same section in.
 import { accent2Hex, wordContentTwips } from '@/utils/wordExportUtils';
 import { headerTemplateId, templateId } from '@/constants/templates';
+import { isRtl } from '@/utils/resumeLanguage';
 import { solid, textShades } from '@/templates/pdf/shared/pdfColors';
 import { getColumnWidth, getEffectiveSpacing } from '@/templates/pdf/shared/PdfSections';
 
@@ -105,7 +106,9 @@ function gridOf(section, width, side) {
  */
 export function sectionLook(section, settings, s, template, side) {
   const tid = templateId(template);
-  const grid = gridOf(section, wordContentTwips(settings), side);
+  const cells = gridOf(section, wordContentTwips(settings), side);
+  // A right-to-left résumé's grid runs from the right (gridTable, R2-148).
+  const grid = cells && isRtl(settings) ? { ...cells, rtl: true } : cells;
   return {
     ...entrySizes(section, s, tid, side),
     grid,

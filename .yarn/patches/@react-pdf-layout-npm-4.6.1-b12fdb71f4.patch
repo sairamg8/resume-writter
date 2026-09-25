@@ -1,0 +1,81 @@
+diff --git a/lib/index.js b/lib/index.js
+index b7ea5e30fddb9bdef0034c00f28bbd4f0dee584a..6567eb976ae9d1a82ec367cf86a316a6eac1a5fb 100644
+--- a/lib/index.js
++++ b/lib/index.js
+@@ -1867,6 +1867,8 @@ const BASE_INHERITABLE_PROPERTIES = [
+     'textAlign',
+     'visibility',
+     'wordSpacing',
++    // flowcv patch (R2-148): a right-to-left page's direction reaches every node under it
++    'direction',
+ ];
+ const TEXT_INHERITABLE_PROPERTIES = [
+     ...BASE_INHERITABLE_PROPERTIES,
+@@ -1900,9 +1902,44 @@ const merge = (inheritedStyles, style) => {
+  * @param inheritedStyles - Style object
+  * @returns Merge styles function
+  */
++/**
++ * flowcv patch (R2-148): a right-to-left node's own physical sides swapped — margins, paddings,
++ * borders, corner radii, the left/right insets and a left/right text alignment — so a page styled
++ * `direction: 'rtl'` prints as the mirror image of its left-to-right page. Yoga lays the page out
++ * right to left (calculateLayout), which turns every row and each column's cross axis, but keeps
++ * physical sides physical. Only the node's own style is swapped, before it merges what it
++ * inherits, and only once: a relayout (pagination) resolves the already-swapped style again.
++ */
++const MIRRORED_SIDES = [
++    ['marginLeft', 'marginRight'],
++    ['paddingLeft', 'paddingRight'],
++    ['borderLeftWidth', 'borderRightWidth'],
++    ['borderLeftColor', 'borderRightColor'],
++    ['borderLeftStyle', 'borderRightStyle'],
++    ['borderTopLeftRadius', 'borderTopRightRadius'],
++    ['borderBottomLeftRadius', 'borderBottomRightRadius'],
++    ['left', 'right'],
++];
++const MIRRORED_ALIGN = { left: 'right', right: 'left' };
++const mirrorStyle = (style) => {
++    const out = Object.assign({}, style);
++    for (const [a, b] of MIRRORED_SIDES) {
++        delete out[a];
++        delete out[b];
++        if (a in style)
++            out[b] = style[a];
++        if (b in style)
++            out[a] = style[b];
++    }
++    if (style.textAlign in MIRRORED_ALIGN)
++        out.textAlign = MIRRORED_ALIGN[style.textAlign];
++    return out;
++};
+ const mergeStyles = (inheritedStyles) => (node) => {
+-    const style = merge(inheritedStyles, node.style || {});
+-    return Object.assign({}, node, { style });
++    const own = node.style || {};
++    const rtl = (own.direction || inheritedStyles.direction) === 'rtl' && !node.rtlMirrored;
++    const style = merge(inheritedStyles, rtl ? mirrorStyle(own) : own);
++    return Object.assign({}, node, { style }, rtl ? { rtlMirrored: true } : {});
+ };
+ /**
+  * Inherit style values from the root to the leafs
+@@ -2526,7 +2563,9 @@ const measureText = (page, node, fontStore) => (width, widthMode, height) => {
+         return { height: linesHeight(node), width };
+     }
+     if (widthMode === Yoga.MeasureMode.AtMost) {
+-        const alignFactor = ALIGNMENT_FACTORS[node.style?.textAlign] || 0;
++        // flowcv patch (R2-148): a right-to-left text with no textAlign is aligned right (textkit's
++        // default), and needs the same compensation as one aligned right
++        const alignFactor = ALIGNMENT_FACTORS[node.style?.textAlign || (node.style?.direction === 'rtl' ? 'right' : 'left')] || 0;
+         if (!node.lines) {
+             node.lines = layoutText(node, width, height, fontStore);
+             node.alignOffset = (width - linesWidth(node)) * alignFactor; // Compensate align in variable width containers
+@@ -2792,7 +2831,8 @@ const createYogaNodes = (page, fontStore, yoga) => (node) => {
+  * @returns Page node
+  */
+ const calculateLayout = (page) => {
+-    page.yogaNode.calculateLayout();
++    // flowcv patch (R2-148): a page styled `direction: 'rtl'` flows right to left (mergeStyles)
++    page.yogaNode.calculateLayout(undefined, undefined, page.style?.direction === 'rtl' ? Yoga.Direction.RTL : Yoga.Direction.LTR);
+     return page;
+ };
+ /**

@@ -4,7 +4,7 @@ import { PdfSectionTitle } from './shared/PdfSection';
 import { getEffectiveSpacing, SPACER, sectionPrints } from './shared/PdfSections';
 import { PdfRichText } from './shared/PdfRichText';
 import { hasRichText } from '@/utils/richText';
-import { getDocumentProps, pageMargins } from './shared/PdfPage';
+import { getDocumentProps, pageMargins, rtlPage } from './shared/PdfPage';
 import { languageWords } from '@/utils/resumeLanguage';
 import { PdfRunningHeader } from './shared/PdfRunningHeader';
 import { getPdfPhotoStyle } from './shared/pdfPhoto';
@@ -126,6 +126,7 @@ export function SidebarTemplatePDF({ data }) {
       fontSize: baseSize,
       lineHeight: lineH,
       backgroundColor: 'white',
+      ...rtlPage(settings),
     },
   }).page;
 

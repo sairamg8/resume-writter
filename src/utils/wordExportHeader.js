@@ -15,7 +15,7 @@ import { setGapPt } from '@/constants/headerSpacing';
 import { resolveTemplateSettings } from '@/templates/pdf/shared/templateSettings';
 import { headerContactPt } from '@/templates/pdf/shared/contactSize';
 import { hasRichText } from '@/utils/richText';
-import { languageWords } from '@/utils/resumeLanguage';
+import { isRtl, languageWords } from '@/utils/resumeLanguage';
 
 /**
  * The name's and the job title's Word colours, 'rrggbb' opaque on the white page: the colours the
@@ -145,6 +145,8 @@ function photoRow(photo, gap, text, s) {
   return new Table({
     width: { size: width, type: WidthType.DXA },
     columnWidths: [first, width - first],
+    // A right-to-left résumé's photo on the right, as its PDF prints it (R2-148).
+    ...(isRtl(s) ? { visuallyRightToLeft: true } : {}),
     layout: TableLayoutType.FIXED,
     borders: TableBorders.NONE,
     rows: [new TableRow({ children: [cell([new Paragraph({ children: [photo.run], spacing: { after: 0 } })], first, first - twips(photo.width)), cell(text, width - first, 0)] })],

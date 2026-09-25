@@ -2,6 +2,7 @@ import { StyleSheet } from '@react-pdf/renderer';
 import { solid } from './pdfColors';
 import { HEADER_BORDER_PAD_PT, MM_TO_PT } from './pdfUnits';
 import { pageBoxPt } from '@/constants/pageSize';
+import { isRtl } from '@/utils/resumeLanguage';
 
 
 /**
@@ -44,9 +45,17 @@ export function getPageStyle(settings) {
       fontSize: settings.fontSizeBase,
       color: settings.textColor,
       backgroundColor: 'white',
+      ...rtlPage(settings),
     },
   }).page;
 }
+
+/**
+ * A right-to-left résumé's page (Design → Language, R2-148): react-pdf's layout, as patched
+ * (.yarn/patches/@react-pdf-layout-*), flows it right to left and mirrors every side, and each line
+ * of text reads right to left. Nothing for a left-to-right résumé, whose page is as it always was.
+ */
+export const rtlPage = (settings) => (isRtl(settings) ? { direction: 'rtl' } : {});
 
 /** Document metadata — product branding (not FlowCV). */
 export function getDocumentProps(personal) {

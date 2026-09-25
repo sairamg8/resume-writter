@@ -50,6 +50,7 @@
   },
   "packageManager": "yarn@4.18.0",
   "resolutions": {
-    "@react-pdf/textkit@npm:^6.3.0": "patch:@react-pdf/textkit@npm%3A6.3.0#~/.yarn/patches/@react-pdf-textkit-npm-6.3.0-1e829976be.patch"
+    "@react-pdf/textkit@npm:^6.3.0": "patch:@react-pdf/textkit@npm%3A6.3.0#~/.yarn/patches/@react-pdf-textkit-npm-6.3.0-1e829976be.patch",
+    "@react-pdf/layout@npm:^4.6.1": "patch:@react-pdf/layout@npm%3A4.6.1#~/.yarn/patches/@react-pdf-layout-npm-4.6.1-b12fdb71f4.patch"
   }
 }
