@@ -1,5 +1,43 @@
 # Session Handoff — Resume Here
 
+## ⏩ COLD START HERE — 2026-09-25 07:47 UTC (coordinator session_01XeVJDQKh78wxFo4dTK6ZpW, about to run out)
+
+**Deployed:** `master` = `0a79974` = Round 2 (ten clusters, ATS-7) + the Jira-style revamp of Boards and the Job Tracker.
+**Work branch:** `claude/busy-darwin-yjb13t` (head = this commit). Owner's orders: finish the project, fast, agents allowed;
+tests only on CI; `master` moves only on a green full gate on that exact commit; accessibility last.
+
+**Do next, in order:**
+1. **Gate run 36109292470 on `e006835`** (batch 1: typography + public-link merged, the revamp-merge gaps `a09f005`,
+   `3d50022`, and `e006835` — publicLink.js used its own copy of the contact table; the previous gate on `3d50022`, run
+   36108339083, failed only `31-contact-fields` for that; its fail-first run 36108340868 is green). Read it with
+   `actions_get get_workflow_run 36109292470`; failures with `get_job_logs run_id=… failed_only=true`. On green:
+   `git push origin e006835:refs/heads/master`, then `python3 docs/tracking/tools/deploy_rows.py e006835 &&
+   python3 docs/tracking/tools/update_tracker.py --recount` (R2-146 ⏸ → ✅), update bug-status.md's "Updated" line,
+   commit, push.
+2. **Round 3 cluster sessions** (each from `c5acb93`, branch `claude/wf-<cluster>`, done when
+   `wf-reports/<cluster>.json` is on its branch). Check: `for c in page-numbers locale perf2 section-look layouts picker;
+   do git fetch -q origin claude/wf-$c && git cat-file -e FETCH_HEAD:wf-reports/$c.json && echo "$c REPORTED"; done`.
+   Merge each: `REPORTS=/tmp/wf-reports bash docs/tracking/tools/merge_cluster.sh <c>` → resolve → `python3
+   docs/tracking/tools/update_tracker.py /tmp/wf-reports/<c>.json` → commit (only the merge + tracker files) → push →
+   batch → one full gate (`actions_run_trigger run_workflow ci.yml ref=claude/busy-darwin-yjb13t inputs={}`) → deploy
+   as in 1. At 07:45: typography ✅ reported+merged (`323991e`), public-link ✅ reported+merged (`091f00c`);
+   page-numbers 7 commits, locale 3, perf2 9, section-look 14, layouts 4, picker 7 — still working.
+   Sessions: page-numbers session_01PL4e5MkwcqPVF1pzRc4tAg · typography session_01VrpBFXbHBAp8Aow3YbjvwA ·
+   locale session_01DjbrY7hHtJmKD6GJcXHFx7 · perf2 session_017oTZg6ZNCXoJwpKhSURxST · section-look
+   session_01A8Pc1gVNQNk225roXUbEns · public-link session_01H7o4mAMVufFnaL8mMiYhCJ · layouts
+   session_018uk2NM3EkjexkRoDkRHEEz · picker session_01MkCArZxvT5mbX1ELBQKrAu.
+   Watch in merges: the guard `tests/pdf/31-contact-fields` (no second contact table: use `CONTACT_FIELDS`), the
+   Design ↺ test `91-design-resets` (new Design keys belong in a section's ↺ list), `tests/unit/knowledge-docs`
+   (docs must state the current `DATA_VERSION`), the Playwright parity walk (every new control must repaint).
+   **R2-148** is split: public-link did the link and import (partial); set the row fixed when locale's report lands.
+3. **After all eight:** the a11y pass (R2-139's A7, A8, A11, A13, A14; A11Y-1…6; parked branch `claude/wf-templates`,
+   `67c88c5`) — last, by the owner's rule.
+
+**Owner actions:** publish the new `firestore.rules` to the Firebase project (Share a public link fails permission-denied
+until then); tag v0.1.0 when ready; delete merged branches on GitHub (the git proxy refuses deletes): every
+`claude/wf-*` of Rounds 1–2, `claude/beautiful-heisenberg-x3bsvo`, `claude/confident-goldberg-2uig8b`,
+`claude/sweet-feynman-ro5q2g`, `claude/wf-round2-resume`, `claude/jira-revamp` (all merged); keep `claude/wf-templates`.
+
 ## 2026-09-25 ~06:40 — Round 2's gate fixed and deployed (in progress)
 
 **Round 3 batch 1 at 07:35 UTC:** typography (`323991e`) and public-link (`091f00c`) merged, plus the merge gaps (`a09f005` BoardStorageNotice on Summary/Timeline/Calendar, `3d50022` the Job Tracker page's SyncHeldNotice test). **Full gate run 36108339083 and fail-first run 36108340868 on `3d50022`** — on green: `git push origin 3d50022:master`, then R2-146 ⏸ → ✅.
