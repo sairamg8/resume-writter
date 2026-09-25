@@ -5,8 +5,11 @@
 /** What the Import file pickers offer: the backup and JSON Resume files, and the documents. */
 export const IMPORT_ACCEPT = '.json,.pdf,.docx,.txt,.md';
 
-/** A file read as a document, by its name: a PDF, a .docx, Markdown or text. Any other goes the JSON way. */
-export const isDocumentFile = (file) => /\.(pdf|docx|txt|text|md|markdown)$/i.test(String(file?.name || ''));
+/**
+ * A file read as a document, by its name: a PDF, a Word file, Markdown or text. Any other goes the
+ * JSON way. An older .doc comes this way too, to be told to save it as .docx, not that it is bad JSON.
+ */
+export const isDocumentFile = (file) => /\.(pdf|docx?|txt|text|md|markdown)$/i.test(String(file?.name || ''));
 
 /** Under the Import menu items: what a document import is. */
 export const DOCUMENT_HINT = 'PDF, Word (.docx), Markdown and text files are read best-effort: review the result.';

@@ -5,6 +5,11 @@ import { markdownLines, resumeFromText } from './importText.js';
 
 const NO_TEXT = 'No text could be read from that file. A scanned PDF holds pictures of its pages, not text: export it again as text, or import a Word, text or JSON file.';
 
+/** The largest file the import reads: a résumé is well under it; one over it would stall the page. */
+export const MAX_IMPORT_BYTES = 20 * 1024 * 1024;
+const TOO_BIG = 'That file is too large to be a résumé (over 20 MB). Import the résumé itself as a PDF, Word, text or JSON file.';
+const DAMAGED = 'That Word file is damaged and cannot be read. Save it again as .docx (or PDF) and import that.';
+
 // ── Word (.docx) ─────────────────────────────────────────────────────────────
 
 const decode = (bytes) => new TextDecoder().decode(bytes);
@@ -34,10 +39,12 @@ export async function unzipEntry(bytes, name) {
     const skip = nameLen + view.getUint16(p + 30, true) + view.getUint16(p + 32, true);
     const local = view.getUint32(p + 42, true);
     if (decode(bytes.subarray(p + 46, p + 46 + nameLen)) === name) {
+      if (local + 30 > bytes.length) throw new Error(DAMAGED);
       const start = local + 30 + view.getUint16(local + 26, true) + view.getUint16(local + 28, true);
+      if (start + size > bytes.length) throw new Error(DAMAGED);
       const data = bytes.subarray(start, start + size);
       if (method === 0) return data;
-      if (method === 8) return inflateRaw(data);
+      if (method === 8) return inflateRaw(data).catch(() => { throw new Error(DAMAGED); });
       throw new Error('That Word file is compressed in a way this import cannot read.');
     }
     p += 46 + skip;
@@ -198,7 +205,8 @@ export async function pdfLines(bytes, lib) {
 /** A file's text as the parser's lines, by its kind. `bytes` its contents. */
 export async function documentLines(name, bytes, { pdfjs } = {}) {
   if (/\.pdf$/i.test(name)) return pdfLines(bytes, pdfjs);
-  if (/\.docx$/i.test(name)) return docxLines(bytes);
+  // An older .doc is not a zip: docxLines says to save it as .docx (a .docx named .doc reads as one).
+  if (/\.docx?$/i.test(name)) return docxLines(bytes);
   const text = decode(bytes).replace(/^﻿/, '');
   return /\.(md|markdown)$/i.test(name) ? markdownLines(text) : text;
 }
@@ -208,6 +216,7 @@ export async function documentLines(name, bytes, { pdfjs } = {}) {
  * arrayBuffer()). Throws, with a message to show, when the file holds no text to read.
  */
 export async function resumeFromFile(file, options) {
+  if (Number(file?.size) > MAX_IMPORT_BYTES) throw new Error(TOO_BIG);
   const bytes = new Uint8Array(await file.arrayBuffer());
   const lines = await documentLines(file.name, bytes, options);
   const count = (Array.isArray(lines) ? lines.map((l) => l.text ?? l).join('') : lines).replace(/\s/g, '').length;
