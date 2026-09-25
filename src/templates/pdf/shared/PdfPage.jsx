@@ -89,10 +89,11 @@ export function PdfPageNumbers({ settings }) {
     <Text
       fixed
       style={{
-        // Both sides and the height set: react-pdf lays a render-prop text out before it has its words,
-        // so one anchored on the right alone got no width, and one anchored on the bottom alone no height
-        // — a box of nothing, and nothing printed.
-        position: 'absolute', bottom: Math.max(0, (room - line) / 2), height: line, left: 0, right: `${pageMargins(settings).h}mm`,
+        // Placed from the top, as the running header (ATS-7) is, with both sides and its height set:
+        // react-pdf lays a render-prop text out before it has its words, and one placed from the bottom
+        // or the right alone printed nothing.
+        position: 'absolute', top: pageBoxPt(settings).height - room + Math.max(0, (room - line) / 2), height: line,
+        left: 0, right: `${pageMargins(settings).h}mm`,
         fontSize: PAGE_NUMBER_PT, lineHeight: 1.2, textAlign: 'right', color: textShades(settings.textColor).meta,
       }}
       render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`}
