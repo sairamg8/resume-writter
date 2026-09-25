@@ -1,0 +1,36 @@
+{
+  "cluster": "templates-core",
+  "branch": "claude/wf-templates-core",
+  "base": "334b454",
+  "rows": [
+    {
+      "id": "R2-139",
+      "outcome": "partial",
+      "commits": ["4a67f20", "8142dae"],
+      "tests": ["tests/pdf/93-template-picker-copy.test.mjs", "tests/pdf/69-picker-ats-badge.test.mjs", "cypress/e2e/04-design.cy.js", "cypress/e2e/05-cover-letter.cy.js", "cypress/e2e/07-regressions-store.cy.js", "cypress/e2e/14-contacts.cy.js"],
+      "summary": "Task 'one atsRating, honest badges, switch copy, name on card'. A10 and C2 were already done on master: one atsRating(template, settings) feeds the picker badge and the ATS Check (TUI-5 / R2-011, pinned by 69-picker-ats-badge), and each dashboard card names its template (b7a5e21, R2-133). Now (A6): each template card says what its engine draws and makes no ATS claim in words. The badge makes that claim, from atsRating. Classic no longer claims a 'Two-column header'. Executive names its role-first entries on one line. The Sidebar card names the page its Layout prints. (A5): one line under the picker says what a switch keeps and what it changes. A test runs every pair of templates and checks that a switch changes only the settings that line names. The cards carry data-testid=\"template-<id>\", and the Cypress specs pick templates by it rather than by the old descriptions.",
+      "remaining": "Deferred by the owner (accessibility): A7 Design button label/size/aria-pressed, A8 radiogroup/aria-checked + visible Selected marker, A11 44 px SegmentControl targets, A13 description contrast, A14 aria-expanded on DesignSection (parked a11y commit 67c88c5 on claude/wf-templates). Not built: A1 thumbnails, A2 gallery dialog, A3 filter chips, A4 undo a switch, A9 two Sidebar picker entries, A12 keep a collapsed Template open state, B3 categories, C1 page-1 card image, D1, E1 phone sheet, F1 letterhead thumbnail."
+    },
+    {
+      "id": "R2-138",
+      "outcome": "partial",
+      "commits": ["c75f02d", "c2eff4d"],
+      "tests": ["tests/pdf/93-template-presets.test.mjs", "tests/pdf/42-ats-fields.test.mjs", "tests/pdf/parity/00-registry.test.mjs", "tests/pdf/parity/15-template-resets.test.mjs"],
+      "summary": "B1 shipped. Design → Template now offers 17 choices: the 9 templates plus 8 designs. The designs are Harbor, Ledger, Nordic, Crimson, Midnight, Sunrise, Grove and Inkwell. Each one is a named look over an existing engine: its own font and accent, plus a heading style, header and spacing (src/constants/templatePresets.js). A design is picked through the store's setTemplate(engine, preset), using the same switch the parity walker uses (withTemplate). It is stored as settings.templatePreset, and the picker marks its card. Picking a plain template takes the design's look away wherever the user kept it. Reset returns to the design. JSON Resume writes it as meta.design and imports it back; Backup keeps it. It never writes a section's own settings. Every design passes the ATS field battery on pdf.js and every Poppler mode (42-ats-fields). Its badge is atsRating over its engine and settings. Its name and job title read on its header. Its values stay inside the panel's ranges. The parity registry measures the new control: a design picked prints what a résumé started on it prints, unlike its engine, and its accent prints. Word prints the designs' fonts and accents. With no design set, everything prints as before.",
+      "remaining": "B2: new layout code (the ten designed layouts). B4: save my own design. A preset-keyed entry layout (resolveSection) was not built, because designs deliberately leave section settings alone. The dashboard card and the cover-letter panel name the design's template, not the design."
+    }
+  ],
+  "extra": [],
+  "review": {
+    "issues": [
+      "Stale comment in templatePresets.js named test files that do not exist. Real; fixed in c2eff4d.",
+      "Crimson's description says 'Gelasio serif' (the font that prints) while the Typography menu shows 'Georgia'. Wording only; left as it is.",
+      "A résumé on a design shows its template's name on the dashboard, as the editor does. Not a bug; listed as remaining.",
+      "A font or colour the user set that happens to equal a design's value leaves with the design, the same rule a template's own style follows. By design, and the panel's note says so.",
+      "The reviewer checked old data, stale or unknown templatePreset ids, other callers of the changed functions, the exporters, the cover letter, switch_to_classic, contrast and ranges, and found no problem."
+    ],
+    "fixedByReviewer": []
+  },
+  "baselineFailures": [],
+  "notes": "CI: run 36088526386 on c75f02d was green: 25 named node files, 434 pass / 0 skip, including all 8 designs × every reader in 42-ats-fields and the parity 00-registry/01-offered/15-template-resets; fail-first ok for 4a67f20 (93-template-picker-copy) and c75f02d (93-template-presets, 11 fail without it); Cypress 04-design, 04-design-left-bar, 05-cover-letter, 07-regressions-store and 14-contacts all pass. The final head c2eff4d (a comment-only change) re-ran the two 93-* files green: run 36089461902. Shared files touched, with local hunks only: src/utils/defaultData.js (styleOnSwitch gains a preset argument; defaultSettings, resetDesignSettings and sectionReset know about designs), src/hooks/useResumeStore.js (setTemplate now calls withTemplate), src/components/DesignPanel.jsx (the Template section only), jsonResumeExport/Import (meta.design), tests/pdf/parity/panels.mjs, store.mjs and registry-design.mjs (a new 'preset' write kind), and docs/knowledge/06-templates-export.md. The a11y items noted only: the new Designs heading and note use the same low-contrast grey text as the existing cards. The Stop hook asked for docs/tracking/HANDOFF.md to be updated; this session did not touch it, because the cluster rules forbid it."
+}
