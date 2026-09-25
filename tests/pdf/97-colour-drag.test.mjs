@@ -77,10 +77,12 @@ describe('dragging a Design colour writes it coalesced, not at every step (R2-14
     const p = await panel('/src/components/DesignPanelColors.jsx', 'ColorsSection', resume({ template: 'sidebar' }));
     const steps = drag(5, 40);
     for (const v of steps) p.fire('Custom sidebar background', v);
+    assert.deepEqual(p.writes, [['sidebarBg', steps[0]]], 'the drag’s later steps are held until it pauses');
     p.view.act(() => reactProps(p.input('Custom sidebar background')).onBlur?.(evt(steps.at(-1))));
     assert.deepEqual(p.writes.at(-1), ['sidebarBg', steps.at(-1)], 'blur writes it');
     const more = drag(3, 60);
     for (const v of more) p.fire('Name color', v);
+    assert.notDeepEqual(p.writes.at(-1), ['nameColor', more.at(-1)], 'the last step is held while the drag goes on');
     await p.view.unmount();
     assert.deepEqual(p.writes.at(-1), ['nameColor', more.at(-1)], 'unmount writes it');
   });
