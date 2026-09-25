@@ -11,7 +11,7 @@ import { hasRichText } from '@/utils/richText';
 import { getPdfPhotoStyle } from './shared/pdfPhoto';
 import { PdfPhoto } from './shared/PdfPhoto';
 import { textShades } from './shared/pdfColors';
-import { photoTextAlignItems } from '@/constants/templates';
+import { photoRowDirection, photoTextAlignItems } from '@/constants/templates';
 import { pageSizeOf } from '@/constants/pageSize';
 import { headerTitleSize } from './shared/letterhead';
 
@@ -90,7 +90,7 @@ export function TimelineTemplatePDF({ data }) {
         {/* Breakable: a summary longer than a page continues on the next (R2-046); the name row never splits. */}
         <View style={[{ marginBottom: g.headerGapBelow }, getHeaderBorderStyle(settings)]}>
           <View style={{
-            flexDirection: centered ? 'column' : 'row',
+            flexDirection: centered ? 'column' : photoRowDirection(settings), // Photo → Position (R2-147)
             alignItems: centered ? 'center' : photoTextAlignItems(settings),
             gap: g.photoTextGap,
           }} wrap={false}>

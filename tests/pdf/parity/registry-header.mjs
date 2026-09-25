@@ -181,6 +181,29 @@ export const HEADER_CONTROLS = {
       return d.every((x) => x > 0.01) || d.every((x) => x < -0.01) ? [] : [`the name does not move along the photo: ${pts.map(([v, m]) => `${v}→${m.toFixed(2)}`).join(', ')}`];
     },
   },
+  // Right prints the photo right of the name, Left (the default) left of it, where the panel offers
+  // Position: the photo beside the name (R2-147).
+  'setting.photoPosition': {
+    family: 'photo',
+    check: ({ runs }) => runs.flatMap((r) => {
+      const v = valueOf(r, 'setting.photoPosition');
+      const [photo] = images(r.snap);
+      const name = item(r.snap, PERSONAL.name);
+      if (!photo || !name) return [`${v}: the photo or the name does not print`];
+      const ok = v === 'right' ? photo.x0 >= name.x + name.w - 0.5 : photo.x1 <= name.x + 0.5;
+      return ok ? [] : [`${v}: the photo (x ${photo.x0.toFixed(1)}–${photo.x1.toFixed(1)}) is not ${v} of the name (x ${name.x.toFixed(1)}–${(name.x + name.w).toFixed(1)})`];
+    }),
+  },
+  // Grayscale prints the photo's pixels grey (R = G = B); Color as uploaded — the fixture's photo is red (R2-147).
+  'setting.photoTone': {
+    family: 'photo',
+    check: ({ runs }) => runs.flatMap((r) => {
+      const v = valueOf(r, 'setting.photoTone');
+      const [photo] = images(r.snap);
+      if (!photo || photo.grey === undefined) return [`${v}: the photo's pixels cannot be read`];
+      return photo.grey === (v === 'grayscale') ? [] : [`${v}: the photo prints ${photo.grey ? 'grey' : 'in colour'}`];
+    }),
+  },
   'hide.photo': { family: 'visibility', check: ({ runs, before }) => (images(before.snap).length !== 1 ? ['the photo does not print before it is hidden'] : runs.filter((r) => images(r.snap).length).map(() => 'the hidden photo still prints')) },
   personal: { family: 'visibility', check: ({ runs }) => runs.filter((r) => r.writes.some((w) => w.key === 'photo') && images(r.snap).length).map(() => 'the removed photo still prints') },
   'hide.email': hidesField('email'),

@@ -48,6 +48,9 @@ export const ATS_DEFAULTS = {
   photoBorder: 'accent',
   photoHeight: 'match',
   photoTextAlign: 'center',
+  /** Personal Info → Photo → Position and Tone (R2-147): left of the name, in colour, as every résumé storing none. */
+  photoPosition: 'left',
+  photoTone: 'color',
   showHeaderBorder: false,
   headerBorderWidth: 2,
   customFont: '',

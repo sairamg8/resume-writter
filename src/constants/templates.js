@@ -3,6 +3,7 @@
 // editor bundle.
 
 import { TEMPLATES } from './templateTable.js';
+import { photoOption } from './photoOptions.js';
 
 // Every template's decisions — label, ATS tier, the style it brings, its header — are one table:
 // TEMPLATES in ./templateTable.js. Everything below reads it.
@@ -257,6 +258,14 @@ export function contactIconHint(template, settings, cl) {
 /** Text Position as a flex alignment for the photo's row (Center when unset). */
 export const photoTextAlignItems = (settings) =>
   ({ top: 'flex-start', bottom: 'flex-end' })[settings?.photoTextAlign] || 'center';
+
+/**
+ * Photo → Position as the flex direction of the header's photo row (R2-147): Right lays the row out
+ * from the right, so the photo prints right of the name and contacts; Left, unset or anything else
+ * is the row every header drew before. Only where the photo sits beside the name
+ * (photoTextPositionApplies): a centred header stacks it above and ignores it.
+ */
+export const photoRowDirection = (settings) => (photoOption('photoPosition', settings?.photoPosition) === 'right' ? 'row-reverse' : 'row');
 
 /**
  * Is the header rule on? The PDF and the Header Customization toggle both ask this: the stored
