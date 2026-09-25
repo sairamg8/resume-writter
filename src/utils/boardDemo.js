@@ -115,3 +115,14 @@ export function makeDemoBoards(now = Date.now()) {
     dataVersion: BOARD_DATA_VERSION,
   }];
 }
+
+/**
+ * Whether `board` is the demo project as makeDemoBoards made it, never edited: every action that
+ * changes a board stamps its updatedAt with the time of the change (boardActions.js), always later
+ * than the demo's own, which sits a fixed time after its createdAt. The cloud sync lets the
+ * account's copy of the demo win over such a board (collectionSyncPlan.planFirstSync): dated from
+ * the day it was shown, it looked newer than the demo project the user adopted and filled in.
+ */
+export function isUntouchedDemoBoard(board) {
+  return board?.id === 'demo_board_life' && board.updatedAt === board.createdAt + 21 * DAY - HOUR;
+}

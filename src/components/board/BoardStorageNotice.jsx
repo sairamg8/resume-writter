@@ -1,11 +1,13 @@
 import { notSavedMessage } from '@/utils/storageBackup';
 import { RecoveryNotice } from '@/components/RecoveryNotice';
+import { SyncHeldNotice } from '@/components/SyncHeldNotice';
 
 /**
  * Said on both board pages (useBoardStore's persistError and recovery): that changes are not
  * being saved, and that the saved list could not be read in full. Only the grid used to say
  * either, so edits made on a board while storage was full looked saved until the reload lost
- * them (R2-037). `className` places each notice in the page's own column.
+ * them (R2-037) — and which projects the cloud sync holds back (SyncHeldNotice, R2-140).
+ * `className` places each notice in the page's own column.
  */
 export function BoardStorageNotice({ persistError, recovery, onDismissRecovery, className }) {
   return (
@@ -22,6 +24,7 @@ export function BoardStorageNotice({ persistError, recovery, onDismissRecovery, 
           <RecoveryNotice what="board list" recovery={recovery} onDismiss={onDismissRecovery} />
         </div>
       )}
+      <SyncHeldNotice name="boards" className={className} />
     </>
   );
 }

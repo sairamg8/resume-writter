@@ -13,6 +13,7 @@ import { BOARDS_KEY } from '../constants/boards.js';
 import { addressableBoards } from '../utils/normalizeBoard.js';
 import { createBoardActions } from '../utils/boardActions.js';
 import { readRaw, readStoredBoards, writeBoards } from '../utils/boardStorage.js';
+import { BOARDS_SYNC_KEY, forgetSynced } from '../utils/collectionSyncMeta.js';
 
 let current = null;
 const listeners = new Set();
@@ -39,6 +40,8 @@ function init() {
   if (initialized) return;
   initialized = true;
   const { boards, recovery: found } = readStoredBoards({ backup: true });
+  // Boards left out here are not deleted ones: the cloud sync must not delete them from the account.
+  if (found) forgetSynced(BOARDS_SYNC_KEY);
   const recovery = found ? rememberRecovery(BOARDS_KEY, found) : pendingRecovery(BOARDS_KEY);
   stored = boards;
   const persistError = persist(boards);
@@ -129,7 +132,12 @@ export function _resetBoardStoreForTest() {
 /** Every action, for code outside React; useBoardStore() hands out the same functions. */
 export const boardActions = { ...createBoardActions({ boardsNow, setBoards }), dismissRecovery };
 
-export { snapshot, subscribe };
+/** Replace the list with the cloud sync's result (or [] as the account's list leaves); keys kept apart (addressableBoards). */
+function replaceBoards(list) {
+  setBoards((boards) => (list === boards ? boards : addressableBoards(list)));
+}
+
+export { snapshot, subscribe, boardsNow, replaceBoards };
 
 /**
  * The boards and their actions: `{ boards, persistError, persistReason ('full' | 'blocked' |

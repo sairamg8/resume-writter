@@ -10,14 +10,16 @@ import { createCloudSync } from '@/utils/cloudSyncEngine';
  *   win       the page — `window`: its navigator.onLine is the sync's `online`, its
  *             document.hidden the sync's `hidden`
  *   options   the rest of createCloudSync's: io, store, report, isDemo, log (timers …)
+ *   create    the sync to make: createCloudSync (the résumés), or createCollectionSync (the jobs
+ *             and the boards, collectionSyncEngine.js) — the same start/cancel/shown
  * Returns { sync, online(), watch(setOnline) → unwatch }: `watch` passes the page going online or
  * offline to setOnline (useCloudSync restarts the sync on it) and runs a retry that came due while
  * the tab was hidden as soon as the tab is shown (V2W1a-1) — without it that retry waited for an
  * online/offline change or a reload, under "Sync error — will retry".
  */
-export function browserCloudSync(win, options) {
+export function browserCloudSync(win, options, create = createCloudSync) {
   const online = () => win.navigator.onLine;
-  const sync = createCloudSync({ ...options, online, hidden: () => win.document.hidden });
+  const sync = create({ ...options, online, hidden: () => win.document.hidden });
 
   function watch(setOnline) {
     const on = () => setOnline(true);

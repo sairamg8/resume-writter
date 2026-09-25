@@ -38,7 +38,7 @@ resume-writter/
 │   │                          # boards.js, pageSize.js, pageMargins.js, headerSpacing.js, photoOptions.js…
 │   ├── hooks/
 │   │   ├── useResumeStore.js, useResumeSectionActions.js, useResumeSyncActions.js
-│   │   ├── useAuth.js, useCloudSync.js, useDemoSeed.js
+│   │   ├── useAuth.js, useCloudSync.js, useCollectionSync.js (jobs + boards sync), useDemoSeed.js
 │   │   ├── useJobStore.js, useJobStages.js, useBoardStore.js
 │   │   ├── useEditorExports.js, useEditorTab.js, usePanelResize.js, useOpenResume.js
 │   │   └── useMediaQuery.js, useHotkeys.js, useSmallerPhotos.js, …

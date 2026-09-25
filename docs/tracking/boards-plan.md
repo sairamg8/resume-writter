@@ -58,15 +58,16 @@ Every board-changing mutation stamps `board.updatedAt` (sync LWW keys on it).
   (Automated pointer can't trigger dnd card taps — same limitation hits the existing Job kanban —
   so the card-tap-to-open sheet was confirmed via a real DOM click; it's the app's proven pattern.)
 
-### Phase 3 — Google sync
-- [ ] `src/utils/boardSyncIo.js` — `users/{uid}/boards`, `meta/boardDeletions`
-- [ ] `src/utils/boardSyncMerge.js` — per-board LWW, honors deletion list
-- [ ] `src/utils/boardSyncEngine.js` — first sync + debounced queue + offline/retry + size guard
-- [ ] `src/hooks/useBoardSync.js`; wire into `src/App.jsx`
+### Phase 3 — Google sync — ✅ done (R2-140, cloud-sync cluster, e96514b / 8cd4901)
+Built as one engine shared with the Job Tracker's sync (R2-145) instead of a board-only copy:
+- [x] `src/utils/collectionSyncIo.js` — `users/{uid}/boards` (one document per board), `meta/boards` (deletions, order)
+- [x] `src/utils/collectionSyncPlan.js` — per-board last-writer-wins, honours the deletion list
+- [x] `src/utils/collectionSyncEngine.js` — first sync + debounced queue + offline/retry + size guard
+- [x] `src/hooks/useCollectionSync.js` (`boardSync`), wired into `src/App.jsx`
 
-### Phase 4 — tests
-- [ ] mirror `tests/pdf/18-cloud-sync-*` for board sync against `fake-firestore.mjs`
-- [ ] unit tests for store + merge
+### Phase 4 — tests — ✅ done
+- [x] `tests/unit/board-sync.unit.mjs` (and `job-sync.unit.mjs`) against `fake-firestore.mjs`
+- [x] `tests/unit/firestore-rules.unit.mjs`: `users/{uid}/{document=**}` stays owner-only
 
 ### Order
 1 → 2 (ship-able local app) → 3 (add sync) → 4 (tests with 1 and 3) → polish (sync-status in AuthBar).

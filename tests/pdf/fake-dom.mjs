@@ -265,6 +265,59 @@ export function reactProps(el) {
   return key ? el[key] : undefined;
 }
 
+const VOID_TAGS = new Set(['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'source', 'track', 'wbr']);
+const NAMED_REFS = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' };
+const decodeRefs = (s) => s.replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (ref, name) => {
+  if (name[0] !== '#') return NAMED_REFS[name] ?? ref;
+  return String.fromCodePoint(/x/i.test(name[1]) ? Number.parseInt(name.slice(2), 16) : Number.parseInt(name.slice(1), 10));
+});
+const escapeText = (s) => s.replace(/&/g, '&amp;').replace(/ /g, '&nbsp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+const escapeAttr = (s) => s.replace(/&/g, '&amp;').replace(/ /g, '&nbsp;').replace(/"/g, '&quot;');
+/** `node`'s children as HTML, escaped the way a browser's innerHTML escapes them. */
+const htmlOf = (node) => node.childNodes.map((child) => {
+  if (child.nodeType === 3) return escapeText(child.nodeValue);
+  const tag = child.namespaceURI === HTML_NS ? child.nodeName.toLowerCase() : child.nodeName;
+  const attrs = [...child.attributes].map(([name, value]) => ` ${name}="${escapeAttr(value)}"`).join('');
+  return VOID_TAGS.has(tag) ? `<${tag}${attrs}>` : `<${tag}${attrs}>${htmlOf(child)}</${tag}>`;
+}).join('');
+const HTML_TOKENS = /<\/([a-z][^\s/>]*)\s*>|<([a-z][^\s/>]*)((?:\s+[^\s/>=]+(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+))?)*)\s*\/?>|<!--[\s\S]*?-->|[^<]+|</gi;
+const HTML_ATTRS = /([^\s/>=]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+)))?/g;
+
+/**
+ * innerHTML as a browser has it, for a test that edits a rich-text editor's content (NotesTab,
+ * R2-159): reading it writes the element's nodes out as HTML, setting it parses HTML into nodes —
+ * tags, quoted attributes, void tags such as <br>, character references. Enough for the HTML
+ * sanitizeRichText writes and a test types; not a browser's parser (no implied end tags). Opt-in,
+ * for the calling test process: without it, innerHTML stays the plain property it always was.
+ */
+export function withInnerHtml() {
+  Object.defineProperty(FakeElement.prototype, 'innerHTML', {
+    configurable: true,
+    get() { return htmlOf(this); },
+    set(html) {
+      this.replaceChildren();
+      const open = [this];
+      for (const [token, end, start, attrs] of String(html ?? '').matchAll(HTML_TOKENS)) {
+        const top = open.at(-1);
+        if (end) {
+          const at = open.findLastIndex((el, i) => i > 0 && el.nodeName === end.toUpperCase());
+          if (at > 0) open.length = at;
+        } else if (start) {
+          const el = top.appendChild(this.ownerDocument.createElement(start));
+          for (const [, name, ...values] of attrs.matchAll(HTML_ATTRS)) {
+            el.setAttribute(name.toLowerCase(), decodeRefs(values.find((v) => v !== undefined) ?? ''));
+          }
+          if (!VOID_TAGS.has(start.toLowerCase())) open.push(el);
+        } else if (!token.startsWith('<!--')) {
+          const text = decodeRefs(token);
+          if (top.lastChild?.nodeType === 3) top.lastChild.nodeValue += text;
+          else top.appendChild(this.ownerDocument.createTextNode(text));
+        }
+      }
+    },
+  });
+}
+
 /**
  * Mount `component` with `props` into a fresh fake page (fakeWindow); `window` and `document`
  * exist for as long as the mount does. Returns the container, the `window` and `document`,

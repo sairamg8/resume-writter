@@ -5,6 +5,7 @@ import { addressableJobs, completeJob, readJob, statusId } from '../utils/normal
 import { keepUnsaved } from '../utils/unsavedJobs.js';
 import { applyEdits, demoJobs, moveInList, newJobDefaults } from '../utils/jobEdits.js';
 import { mergeImport } from '../utils/jobImport.js';
+import { forgetSynced, JOBS_SYNC_KEY } from '../utils/collectionSyncMeta.js';
 
 const KEY = 'cpwtcv_jobs_v1';
 
@@ -81,6 +82,8 @@ function init() {
   if (initialized) return;
   initialized = true;
   const { jobs, recovery: found } = load();
+  // Jobs left out here are not deleted ones: the cloud sync must not delete them from the account.
+  if (found) forgetSynced(JOBS_SYNC_KEY);
   const recovery = found ? rememberRecovery(KEY, found) : pendingRecovery(KEY);
   stored = jobs;
   const persistError = persist(jobs);
@@ -251,6 +254,17 @@ function importJobs(incoming) {
   return { added, updated, skipped, lossy };
 }
 
+/** The list now, loaded first: what the cloud sync reads (jobSync in useCollectionSync.js). */
+function jobsNow() {
+  if (!initialized) init();
+  return snapshot().jobs;
+}
+
+/** Replace the list with the cloud sync's result (or [] as the account's list leaves); the same list writes nothing. */
+function replaceJobs(jobs) {
+  if (jobs !== jobsNow()) setJobs(() => jobs);
+}
+
 function clearDemoData() {
   setJobs(() => []);
 }
@@ -270,7 +284,7 @@ export function _resetJobStoreForTest() {
 }
 
 // The actions as plain functions too: node tests drive the store without React.
-export { snapshot, subscribe, addJob, updateJob, moveJob, deleteJob, restoreJob, importJobs, clearDemoData, dismissRecovery };
+export { snapshot, subscribe, addJob, updateJob, moveJob, deleteJob, restoreJob, importJobs, clearDemoData, dismissRecovery, jobsNow, replaceJobs };
 
 export function useJobStore() {
   const { jobs, persistError, recovery } = useSyncExternalStore(subscribe, snapshot);
