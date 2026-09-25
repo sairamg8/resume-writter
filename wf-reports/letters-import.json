@@ -3,23 +3,48 @@
   "branch": "claude/wf-letters-import",
   "base": "334b454",
   "rows": [
-    { "id": "R2-135", "outcome": "fixed",
-      "commits": ["00f65d6", "152fee2"],
-      "tests": ["tests/pdf/99-cover-letters.test.mjs", "cypress/e2e/01-dashboard.cy.js"],
+    {
+      "id": "R2-135",
+      "outcome": "fixed",
+      "commits": [
+        "00f65d6",
+        "152fee2"
+      ],
+      "tests": [
+        "tests/pdf/99-cover-letters.test.mjs",
+        "cypress/e2e/01-dashboard.cy.js"
+      ],
       "summary": "**Now:** New Cover Letter makes a letter (kind: 'letter', src/utils/letters.js) from a résumé: its name, job title, contacts, photo and look. With one résumé it uses that one; with several a picker lists them most recently edited first, plus Blank letter; with none the letter is blank. The dashboard lists letters in a Cover Letters group of their own, never counted as résumés, with letter thumbnails. Each letter opens on its letter tab and is copied, renamed and deleted like a résumé. Data version 13 marks an older build's 'Cover Letter' résumé (that name, no entries) as a letter and changes nothing else, so it prints as before. Sync and the JSON backup carry the whole record, and an imported letter file opens on its letter tab.",
-      "remaining": "No live link from a letter to its résumé: later edits to the résumé's contacts do not reach letters already made. Job Tracker résumé pickers (JobForm, OverviewTab) still list letters alongside résumés, as they listed the old 'Cover Letter' résumés." },
-    { "id": "R2-148", "outcome": "partial",
-      "commits": ["7a66961", "5bb2eb0", "9c62ebb", "c8fc0fc", "1b580ef"],
-      "tests": ["tests/unit/import-text.unit.mjs", "tests/pdf/99-import-roundtrip.test.mjs", "tests/pdf/99-import-ui.test.mjs"],
+      "remaining": "No live link from a letter to its résumé: later edits to the résumé's contacts do not reach letters already made. Job Tracker résumé pickers (JobForm, OverviewTab) still list letters alongside résumés, as they listed the old 'Cover Letter' résumés."
+    },
+    {
+      "id": "R2-148",
+      "outcome": "partial",
+      "commits": [
+        "7a66961",
+        "5bb2eb0",
+        "9c62ebb",
+        "c8fc0fc",
+        "1b580ef"
+      ],
+      "tests": [
+        "tests/unit/import-text.unit.mjs",
+        "tests/pdf/99-import-roundtrip.test.mjs",
+        "tests/pdf/99-import-ui.test.mjs"
+      ],
       "summary": "**Now:** Import on the Dashboard and in the editor's Export menu takes .json, .pdf, .docx, .txt and .md. A PDF, Word, Markdown or text résumé becomes a new résumé: name, job title, contacts and summary go in the header, each known heading gets a section with its entries found by their dates, and every line it cannot place is kept in a custom section. The editor then shows a best-effort notice until it is dismissed. JSON imports as before. An old .doc is asked to be saved as .docx, a damaged Word file says so, and a file over 20 MB is refused unread. The app's own PDF, Word, Markdown and ATS-text exports round-trip back through it. No new dependency: .docx is unzipped with DecompressionStream.",
-      "remaining": "Not built: résumé language for dates (month names, 'Present'), RTL, and the public web link. Several cover letters is done by R2-135. Only the Classic single-column PDF is round-trip tested: two-column PDFs (Sidebar, Compact grid) interleave their columns, and scanned PDFs get a 'no text' error." }
+      "remaining": "Not built: résumé language for dates (month names, 'Present'), RTL, and the public web link. Several cover letters is done by R2-135. Only the Classic single-column PDF is round-trip tested: two-column PDFs (Sidebar, Compact grid) interleave their columns, and scanned PDFs get a 'no text' error."
+    }
   ],
   "review": {
     "issues": [
       "A letter JSON imported on the Dashboard or in the editor opened on the résumé tab, not the letter tab (fixed in 152fee2).",
       "Import error paths: an old .doc and a damaged .docx gave generic errors, and a huge file was read into memory unchecked (fixed in 1b580ef)."
     ],
-    "fixedByReviewer": ["152fee2", "1b580ef"]
+    "fixedByReviewer": [
+      "152fee2",
+      "1b580ef"
+    ]
   },
   "ci": {
     "fullGateOnFinalHead": "36090190769 on 152fee2: build, lint, suite 6/6, Playwright 3/3 and Cypress 4/4 all green",
@@ -30,5 +55,14 @@
     ]
   },
   "baselineFailures": [],
-  "notes": "DATA_VERSION is now 13 (tests/helpers.js too); only this cluster bumped it this round. The migration keys only on name === 'Cover Letter', no kind, and no section entries. The reviewer subagent's own final hand-back had not arrived when the session neared its limit; its two fix commits and the green full gate on 152fee2 are the record. Cypress IMPORT_INPUT selectors are now [accept^=\".json\"]. .docx import needs DecompressionStream (Chrome 103+, Firefox 113+, Safari 16.4+). a11y (deferred): the new import notice does not move focus, and the NewLetterModal has no focus trap."
+  "notes": "DATA_VERSION is now 13 (tests/helpers.js too); only this cluster bumped it this round. The migration keys only on name === 'Cover Letter', no kind, and no section entries. The reviewer subagent's own final hand-back had not arrived when the session neared its limit; its two fix commits and the green full gate on 152fee2 are the record. Cypress IMPORT_INPUT selectors are now [accept^=\".json\"]. .docx import needs DecompressionStream (Chrome 103+, Firefox 113+, Safari 16.4+). a11y (deferred): the new import notice does not move focus, and the NewLetterModal has no focus trap.",
+  "status": {
+    "sessionLimit": "This session (session_01C9EUo2kre8QeqViw2sAKkx) is near its session limit. The report was written before the independent reviewer's final hand-back arrived.",
+    "failures": [
+      "CI run 36089207... (36089208905, head 92ae90e) was red: 2 tests in 99-import-ui did not wait for the async import. Fixed in 5bb2eb0; later runs are green.",
+      "The reviewer's hand-back never arrived. Its fix commits 1b580ef and 152fee2 are pushed, and the full gate on 152fee2 (run 36090190769) is green, but its fail-first proof for those two commits was not read back from the logs (run 36090185517 is green; contents unchecked).",
+      "The reviewer subagent may still be running and could push more commits after this report. If the branch head is past this report's commit, re-run the gate before merging."
+    ],
+    "coordinatorAction": "Before merging: check that run 36090185517's failfirst lines show 'fail without the fix' for 1b580ef and 152fee2, or dispatch failfirst for them; then run the full gate on the merged head."
+  }
 }
