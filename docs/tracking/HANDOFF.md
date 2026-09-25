@@ -2,7 +2,7 @@
 
 ## 2026-09-25 ~06:40 — Round 2's gate fixed and deployed (in progress)
 
-**State at 07:22 UTC: `master` = `0a79974` — Round 2 and the Jira revamp are both deployed** (combined gate run 36106125348 green on that exact commit). Follow-ups with an agent: a Job Tracker page test for its SyncHeldNotice (the merge's one hand resolution) and BoardStorageNotice on the revamp's Summary/Timeline/Calendar views. Round 3's eight sessions are running; a monitor watches their branches for `wf-reports/<cluster>.json`.
+**State at 07:22 UTC: `master` = `0a79974` — Round 2 and the Jira revamp are both deployed** (combined gate run 36106125348 green on that exact commit). Follow-ups with an agent: a Job Tracker page test for its SyncHeldNotice (the merge's one hand resolution) and BoardStorageNotice on the revamp's Summary/Timeline/Calendar views. Round 3's eight sessions are running; a monitor watches their branches for `wf-reports/<cluster>.json`. Each report: `REPORTS=<dir> bash docs/tracking/tools/merge_cluster.sh <cluster>` → `update_tracker.py <dir>/<cluster>.json` → commit, push; a batch of merges → one full gate → `git push origin <sha>:master` → ⏸ rows ✅ (scratchpad `deploy_rows.py <sha>` logic: every ⏸ row whose commits are ancestors of master).
 
 **Earlier, 07:09:** Round 2 is **deployed** — `master` = `c5acb93`, its full gate run 36104952093 green; the tracker set (`5c3d907`: 15 ⏸ → ✅, ATS-7 ✅; 231 fixed, 21 ✖, 7 open). The Jira revamp is merged into the work branch (`75236a2`, its fixes `0a79974`: R6-2's spec `40800ce`, Your work's test `c2e82cb`, the backlog's `e358cf8`); **its full gate: run 36106125348 on `0a79974`** — on green, `git push origin 0a79974:master`, then this file. An agent pre-checks Round 2's tests against the revamp's pages (95-job-notes-tab, 95-sync-privacy-notices, Cypress 07/20-regressions, 01-dashboard) in a scratch worktree.
 
@@ -32,7 +32,7 @@ session per cluster, each from `c5acb93` on `claude/wf-<cluster>`, per CLUSTER-P
 | Cluster | Rows | Session |
 |---|---|---|
 | page-numbers | R2-147 page numbers | session_01PL4e5MkwcqPVF1pzRc4tAg |
-| typography | R2-146 rest: name font, per-section font, Sidebar title spacing, Word font fallback | session_01VrpBFXbHBAp8Aow3YbjvwA |
+| typography | R2-146 rest: name font, per-section font, Sidebar title spacing, Word font fallback | session_01VrpBFXbHBAp8Aow3YbjvwA — **merged** (`323991e`, R2-146 ⏸; its CI green on 32074e8); not yet gated on the work branch |
 | locale | R2-148: résumé language for dates, RTL | session_01DjbrY7hHtJmKD6GJcXHFx7 |
 | perf2 | R2-142: PERF-1, 4, 5, 6 | session_017oTZg6ZNCXoJwpKhSURxST |
 | section-look | R2-147 rest: section icons, links, levels, grouped roles, columns, photo | session_01A8Pc1gVNQNk225roXUbEns |
