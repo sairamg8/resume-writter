@@ -75,11 +75,17 @@ export function gapIsSet(key, template, settings) {
 }
 
 /**
+ * The résumé header's gaps, which Personal Info's Reset clears: every key but contactsSideGap, the
+ * cover letter's own, which Cover Letter → Header Layout sets and resets (letterSideGapRow).
+ */
+export const RESUME_GAP_KEYS = HEADER_GAP_KEYS.filter((key) => key !== 'contactsSideGap');
+
+/**
  * Every header gap this résumé has set — including ones whose row the header does not show now
  * (a photo since removed, Stack ↔ Inline), which is what Reset exists to clear (AUD-19).
  */
 export const headerGapKeysSet = (template, settings = {}) =>
-  HEADER_GAP_KEYS.filter((key) => gapIsSet(key, template, settings));
+  RESUME_GAP_KEYS.filter((key) => gapIsSet(key, template, settings));
 
 /**
  * The header's spacing rows for `template` with `settings` and `personal`:

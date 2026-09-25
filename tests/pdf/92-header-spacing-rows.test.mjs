@@ -8,7 +8,7 @@
 // follows its gap by exactly its change, and unset every template prints what it always printed.
 // contactsSideGap has no row there: no résumé header prints it. It is the letter's space between the name
 // and the contacts on its right, a constant 12 pt: Cover Letter → Header Layout offers it under Right of
-// Name, and the letterhead prints it.
+// Name, and the letterhead prints it; Personal Info's Reset leaves it to the letter's own ↺.
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { createElement } from 'react';
@@ -277,6 +277,29 @@ describe('the letter\'s Name ↔ Contacts (contactsSideGap): Cover Letter → He
       assert.equal(await at({ contactsSideGap: 48 }), await at({}), fieldsPosition);
     }
     for (const t of TEMPLATES) assert.equal(await drawn(t, { contactsSideGap: 48 }), await drawn(t), `${t}: the résumé`);
+  });
+
+  it('Personal Info\'s Reset neither turns on for it nor clears it: it is the letter\'s, reset in the letter\'s panel', async () => {
+    const { HeaderCustomization } = await loadModule('/src/components/PersonalInfoEditorHeader.jsx');
+    const { headerGapKeysSet } = await loadModule('/src/utils/headerSpacingRows.js');
+    const { mount, elements, reactProps } = await import('./fake-dom.mjs');
+    assert.deepEqual(headerGapKeysSet('classic', { contactsSideGap: 30 }), [], 'nothing of the résumé\'s header is set');
+    const reset = async (s) => {
+      let cleared = null;
+      const view = mount(HeaderCustomization, {
+        s, set() {}, clear(keys) { cleared = keys; }, personal: P, template: 'classic', templateLabel: 'Classic', open: true, onToggle() {},
+      });
+      try {
+        const btn = [...elements(view.container)].find((el) => el.tagName === 'BUTTON' && el.textContent.includes('Reset') && el.getAttribute('aria-label') === 'Reset header spacing to the template\'s');
+        if (reactProps(btn).disabled) return 'disabled';
+        view.act(() => reactProps(btn).onClick());
+        return cleared;
+      } finally { await view.unmount(); }
+    };
+    assert.equal(await reset({ contactsSideGap: 30 }), 'disabled', 'only the letter\'s gap set: nothing to reset here');
+    const cleared = await reset({ contactsSideGap: 30, headerGapBelow: 40 });
+    assert.ok(cleared.includes('headerGapBelow') && cleared.includes('photoTextGap'), 'the résumé\'s gaps, shown or not');
+    assert.ok(!cleared.includes('contactsSideGap'), 'the letter keeps its Name ↔ Contacts');
   });
 
   it('the panel offers it under Right of Name only, from the letter\'s own 16 px', async () => {
