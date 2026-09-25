@@ -6,7 +6,9 @@
 // stored value changed nothing there; the letter's Modern band and the gap under every letterhead, and
 // Word's space above the summary and under the header, kept their own. Now each value moves what
 // follows its gap by exactly its change, and unset every template prints what it always printed.
-// contactsSideGap has no row: no résumé header prints it (it is the letter's space beside its contacts).
+// contactsSideGap has no row there: no résumé header prints it. It is the letter's space between the name
+// and the contacts on its right, a constant 12 pt: Cover Letter → Header Layout offers it under Right of
+// Name, and the letterhead prints it.
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { createElement } from 'react';
@@ -244,5 +246,48 @@ describe('Word follows a set gap above the summary and under the header, and kee
     const doc = await renderDocx(cv('classic', { showHeaderBorder: true, headerGapBelow: 40 }));
     assert.match(headerEnd(doc), /<w:bottom [^>]*w:val="single"/);
     assert.equal(afterOf(headerEnd(doc)), 600);
+  });
+});
+
+describe('the letter\'s Name ↔ Contacts (contactsSideGap): Cover Letter → Header Layout, Right of Name', () => {
+  /** Whether the letter prints its contacts beside the name (else they fell under it for want of room). */
+  const beside = async (name, settings) => {
+    const [page] = await read(await renderCover(cv('classic', settings, { name, photo: '' })));
+    const depth = (s) => page.H - page.items.find((i) => i.str.includes(s)).y;
+    return depth(P.email) < depth(name) + 4;
+  };
+
+  it('the gap is the least room between the name and the contacts: wider, a name that fitted beside them puts them under it', async () => {
+    // A one-word name grown until the contacts no longer fit beside it at the widest gap.
+    let found = null;
+    for (let n = 8; n <= 60 && !found; n += 2) {
+      const name = 'M'.repeat(n);
+      if (!(await beside(name, { contactsSideGap: 48 })) && await beside(name, { contactsSideGap: 0 })) found = name;
+    }
+    assert.ok(found, 'some name fits beside the contacts at 0 px and not at 48 px');
+    const at = async (settings) => drawing(await renderCover(cv('classic', settings, { name: found, photo: '' })));
+    assert.equal(await at({ contactsSideGap: 16 }), await at({}), 'unset: the letter\'s own 12 pt (16 px)');
+    assert.equal(await at({ contactsSideGap: 1000 }), await at({ contactsSideGap: 48 }), 'clamped to 48 px');
+    assert.equal(await at({ contactsSideGap: 'abc' }), await at({}), 'not a number: unset');
+  });
+
+  it('under Below Name or Below Everything, and on the résumé, it changes nothing', async () => {
+    for (const fieldsPosition of ['below-name', 'below-all']) {
+      const at = async (settings) => drawing(await renderCover(cv('classic', settings, {}, { fieldsPosition })));
+      assert.equal(await at({ contactsSideGap: 48 }), await at({}), fieldsPosition);
+    }
+    for (const t of TEMPLATES) assert.equal(await drawn(t, { contactsSideGap: 48 }), await drawn(t), `${t}: the résumé`);
+  });
+
+  it('the panel offers it under Right of Name only, from the letter\'s own 16 px', async () => {
+    const { default: CoverLetterPanel } = await loadModule('/src/components/CoverLetterPanel.jsx');
+    const html = (coverLetter, settings = {}) => renderToString(createElement(CoverLetterPanel, {
+      resume: cv('classic', settings), coverLetter: { ...LETTER, ...coverLetter }, personal: P, settings, template: 'classic',
+      updateCoverLetter() {}, updateSetting() {}, clearSettings() {},
+    }));
+    assert.match(html({ fieldsPosition: 'right' }), /data-gap="contactsSideGap"[\s\S]*?aria-label="Name to contacts spacing \(px\)"[\s\S]*?value="16"/);
+    assert.match(html({ fieldsPosition: 'right' }, { contactsSideGap: 30 }), /data-gap="contactsSideGap"[\s\S]*?value="30"/);
+    assert.doesNotMatch(html({ fieldsPosition: 'below-name' }), /data-gap="contactsSideGap"/);
+    assert.doesNotMatch(html({ fieldsPosition: 'below-all' }), /data-gap="contactsSideGap"/);
   });
 });

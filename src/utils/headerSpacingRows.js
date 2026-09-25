@@ -7,6 +7,7 @@ import { contactItems } from '@/utils/contacts';
 import { isDrawableImage } from '@/utils/imageUpload';
 import { hasRichText } from '@/utils/richText';
 import { CSS_PX_TO_PT, DEFAULT_SECTION_GAP_PX } from '@/templates/pdf/shared/pdfUnits';
+import { LETTER_CONTACTS_GAP } from '@/templates/pdf/shared/letterhead';
 
 /** Each row's visible label and its accessible name ("↔" reads badly aloud). */
 const TEXT = {
@@ -138,4 +139,19 @@ export function headerGapRows(template, settings = {}, personal = {}) {
   if (summary && band) rows.push(summaryRow());
   if (has('headerGapBelow')) rows.push(gapRow('headerGapBelow', t, settings));
   return rows;
+}
+
+/**
+ * The cover letter's one gap of its own (Cover Letter → Header Layout, under Right of Name): the space
+ * between the name side and the contacts on its right — contactsSideGap, else the letterhead's 12 pt.
+ * No résumé header prints it, so Personal Info offers no row for it (R2-137).
+ */
+export function letterSideGapRow(settings = {}) {
+  const { min, max } = HEADER_GAPS.contactsSideGap;
+  const defaultPx = LETTER_CONTACTS_GAP / CSS_PX_TO_PT;
+  const stored = storedGapPx(settings, 'contactsSideGap');
+  return {
+    key: 'contactsSideGap', label: 'Name ↔ Contacts', name: 'Name to contacts spacing', valuePx: stored ?? defaultPx, defaultPx,
+    set: stored != null && Math.round(stored * 10) !== Math.round(defaultPx * 10), min, max,
+  };
 }

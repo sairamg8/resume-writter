@@ -63,8 +63,10 @@ Important keys (non-exhaustive):
 - Photo: `photoShape`, `photoSize`, `photoBorder`, …
 - Header spacing, CSS px, **not** in `ATS_DEFAULTS` — unset, each prints its template's own
   (`TEMPLATES[t].headerGaps`, pt): `nameTitleGap`, `titleContactsGap`, `contactGapX`, `contactGapY`,
-  `iconTextGap`, `photoTextGap`, `summaryGap`, `headerRuleGap`, `headerGapBelow` (Classic, Minimal,
-  Executive print them); `headerPadY`/`headerPadX` and `contactsSideGap` are reserved. Keys, ranges
+  `iconTextGap`, `photoTextGap`, `summaryGap`, `headerRuleGap`, `headerGapBelow`, `headerPadY`/`headerPadX`
+  (Modern's banner; Banner's band under its text) — every template prints those it has, Personal Info →
+  Header spacing offers each where it moves something; `contactsSideGap` is the cover letter's own (Right of
+  Name: name side ↔ contacts, else 12 pt), offered in Cover Letter → Header Layout. Keys, ranges
   and resolution: `src/constants/headerSpacing.js`; `headerInlineGap` stays the Inline layout's.
 
 Template switch merges `TEMPLATE_STYLE_DEFAULTS` for heading style + title case.
