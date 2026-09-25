@@ -1,0 +1,40 @@
+{
+  "cluster": "design-page",
+  "branch": "claude/wf-design-page",
+  "base": "334b454",
+  "rows": [
+    { "id": "R2-136", "outcome": "fixed",
+      "commits": ["ccc9c21", "302335d"],
+      "tests": ["tests/pdf/91-page-size-control.test.mjs", "tests/pdf/91-page-size-round-trip.test.mjs", "tests/unit/page-size.unit.mjs", "tests/pdf/parity/registry-design.mjs"],
+      "summary": "Design → Spacing offers Page size, A4 · 210 × 297 mm or US Letter · 8.5 × 11 in; the résumé PDF (= the preview), its cover letter and both Word files print on the paper picked, and Backup JSON and JSON Resume keep it through export → import. A résumé that stores none prints on A4 as before.",
+      "remaining": "" },
+    { "id": "R2-149", "outcome": "fixed",
+      "commits": ["c3ce291", "2449fba", "6f30051", "314052d", "fe9709e", "396af0e"],
+      "tests": ["tests/pdf/91-page-fit.test.mjs"],
+      "summary": "1-Page Fit writes its preset at once, then prints the résumé with the app's own renderer and, while it runs past one page, steps down a ladder (margins, section/entry gaps, line height, then the base font size a point at a time to 9 pt, all inside the panel's ranges), keeping the first step that fits. When even the tightest is over a page it keeps the tightest and says 'Still N pages at the tightest spacing — shorten the content to fit one page.' Content is never touched; the button reads 'Fitting…' and ignores clicks while it measures, and stops without writing if the résumé is edited, switched or closed meanwhile. Balanced and Spacious are unchanged.",
+      "remaining": "" },
+    { "id": "R2-157", "outcome": "fixed",
+      "commits": ["dac527f", "f16a4dc"],
+      "tests": ["tests/pdf/91-design-resets.test.mjs", "tests/pdf/91-design-presets.test.mjs", "tests/pdf/91-design-typography.test.mjs", "tests/pdf/91-icon-picker-modal.test.mjs", "tests/pdf/91-starter-modal.test.mjs"],
+      "summary": "The gate now drives the real components over the fake DOM: every Design section's ↺ (exact writes, template defaults for Academic/Compact/Sidebar/Executive, and keys no ↺ may touch), Balanced and Spacious, the icon size stepper and its limits, Small/Normal/Large and Base with delta keeping, custom font add/remove/unknown, the header icon picker (open, pick, packs, search, close/×/backdrop write nothing, reset) and the starter picker (each starter, blank, ×, the store's createResume). A bug the tests found is fixed: the header icon picker kept the last field's search and tab when opened for another field; it now opens fresh (f16a4dc, fail-first ok). Already covered before: 86-icon-reset-keeps-contact-style, 15-design-defaults, 86-line-height-shown, 69-word-spacing, 86-icon-size-steps, 16-saved-data-typography, 09-contact-icons, starter-templates.unit, 16-saved-data-starter-skills; Cypress 30/13/04 smoke.",
+      "remaining": "" }
+  ],
+  "review": {
+    "issues": [
+      "R2-149: the fit only checked the résumé id, so a template switch, a typed margin or Reset while it measured was overwritten by a step measured on the old résumé, and a closed panel kept rendering the whole ladder.",
+      "R2-149: under StrictMode (main.jsx, dev build) the mounted flag stayed false after the trial unmount, so the button stuck on 'Fitting…' and nothing was written."
+    ],
+    "fixedByReviewer": [
+      "6f30051 fix(design): 1-Page Fit stops when the résumé changes while it measures (printedKey + fitOnePage's stopped()), with a mid-fit edit test",
+      "314052d fix(design): 1-Page Fit measures and writes under StrictMode too; 396af0e makes its test mount inside an existing StrictMode so it fails without the fix",
+      "fe9709e test fix to the printedKey test"
+    ]
+  },
+  "ciRuns": [
+    "36088033734 (c3ce291): cypress 30-starters-and-design and playwright pdf-typography-spacing passed; two test-code bugs in 91-page-fit fixed in 2449fba",
+    "36088542302 (dac527f): 13 test files pass, failfirst c3ce291 ok, lint ok",
+    "36090137569 (396af0e, final head): tests 197/197, failfirst c3ce291 / f16a4dc / 6f30051 / 314052d all ok, lint ok, cypress 30-starters-and-design passed"
+  ],
+  "baselineFailures": [],
+  "notes": "Tests that mount createElement(StrictMode, …) as the root's first child never have their effects replayed by React 19, so they don't really exercise StrictMode: 89-rename-fresh-name, 89-save-status, 16-saved-data-two-tabs, 16-saved-data-photo-size (the reviewer found this; not fixed, out of scope). Minor, not fixed: the icon size −/+ at its limits and each section ↺ write values even when unchanged (harmless no-op edits). The fit's notice is plain text (a11y deferred). Other clusters may touch src/components/DesignPanel.jsx (Spacing section) and PersonalInfoEditor.jsx (one-line key on HeaderIconPickerModal)."
+}
