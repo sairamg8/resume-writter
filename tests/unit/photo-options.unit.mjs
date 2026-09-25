@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { PHOTO_OPTIONS, PHOTO_DEFAULTS, photoOption } from '../../src/constants/photoOptions.js';
 
-const KEYS = ['photoShape', 'photoSize', 'photoBorder', 'photoHeight', 'photoTextAlign'];
+const KEYS = ['photoShape', 'photoSize', 'photoBorder', 'photoHeight', 'photoTextAlign', 'photoPosition', 'photoTone'];
 const read = (p) => fs.readFileSync(new URL(`../../${p}`, import.meta.url), 'utf8');
 
 test('photoOption: a value the panel offers is kept, anything else is the control default', () => {

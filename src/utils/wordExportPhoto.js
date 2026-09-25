@@ -5,6 +5,7 @@ import { getPdfPhotoStyle } from '@/templates/pdf/shared/pdfPhoto';
 import { drawableImage } from '@/utils/imageUpload';
 import { withPrintablePhotos } from '@/utils/printableImage';
 import { templateId } from '@/constants/templates';
+import { photoOption } from '@/constants/photoOptions';
 import { accent2Hex } from '@/utils/wordExportUtils';
 
 const EMU_PER_PT = 12700;
@@ -57,13 +58,15 @@ function coverCrop(size, w, h) {
 /**
  * An ImageRun in a shape Word's API does not offer: docx always writes a rectangle, uncropped. The
  * drawing it builds gets `geometry` ({ prst, adj }: an ellipse, or a rounded rectangle and its
- * corner) and `crop` (srcRect) set in place.
+ * corner) and `crop` (srcRect) set in place — and, `grey`, DrawingML's greyscale effect on its
+ * picture (<a:grayscl/>), so Word shows Photo → Tone Grayscale whatever bytes it holds (R2-147).
  */
 class ShapedImageRun extends ImageRun {
-  constructor(options, geometry, crop) {
+  constructor(options, geometry, crop, grey = false) {
     super(options);
     this.geometry = geometry;
     this.crop = crop;
+    this.grey = grey;
   }
 
   prepForXml(context) {
@@ -74,6 +77,10 @@ class ShapedImageRun extends ImageRun {
       if (!node || typeof node !== 'object') return undefined;
       if (node['a:prstGeom']) node['a:prstGeom'] = [{ _attr: { prst } }, { 'a:avLst': adj == null ? {} : [{ 'a:gd': { _attr: { name: 'adj', fmla: `val ${adj}` } } }] }];
       if ('a:srcRect' in node) node['a:srcRect'] = { _attr: this.crop };
+      if (this.grey && node['a:blip'] && !JSON.stringify(node['a:blip']).includes('a:grayscl')) {
+        const blip = node['a:blip'];
+        node['a:blip'] = [...(Array.isArray(blip) ? blip : [blip]), { 'a:grayscl': {} }];
+      }
       return Object.values(node).forEach(walk);
     };
     walk(xml);
@@ -89,7 +96,8 @@ class ShapedImageRun extends ImageRun {
  * and Square as a rectangle with the PDF's corners. Border Thin and Accent ring it in the colour they
  * take on the white page — Word draws no banner or panel for the white ring they take there.
  * An SVG photo prints none: Word needs a PNG copy of it that the export cannot draw. A photo
- * react-pdf reads from elsewhere reaches here as bytes (withWordPhoto).
+ * react-pdf reads from elsewhere reaches here as bytes (withWordPhoto). Photo → Tone Grayscale
+ * prints it grey (ShapedImageRun's <a:grayscl/>; R2-147).
  * Returns { run, width }: `width` the box's, pt.
  */
 export function wordPhoto(personal = {}, s = {}, template = 'classic') {
@@ -116,7 +124,7 @@ export function wordPhoto(personal = {}, s = {}, template = 'classic') {
     transformation: { width: w * PX_PER_PT, height: h * PX_PER_PT },
     altText: { name: 'Photo', description: personal.name || 'Photo', title: 'Photo' },
     ...(box.borderWidth ? { outline: { type: 'solidFill', solidFillType: 'rgb', value: accent2Hex(ring.borderColor), width: Math.round(box.borderWidth * EMU_PER_PT) } } : {}),
-  }, round, coverCrop(size, w, h));
+  }, round, coverCrop(size, w, h), photoOption('photoTone', s.photoTone) === 'grayscale');
   return { run, width: w };
 }
 

@@ -13,7 +13,7 @@ import { contactItems } from '@/utils/contacts';
 import { getPdfPhotoStyle } from './shared/pdfPhoto';
 import { PdfPhoto } from './shared/PdfPhoto';
 import { opacityFor } from './shared/pdfColors';
-import { photoTextAlignItems } from '@/constants/templates';
+import { photoRowDirection, photoTextAlignItems } from '@/constants/templates';
 import { pageSizeOf } from '@/constants/pageSize';
 import { headerTitleSize } from './shared/letterhead';
 
@@ -87,8 +87,9 @@ export function ModernTemplatePDF({ data }) {
           marginBottom: g.headerGapBelow,
         }}>
           {/* Breakable: a summary longer than a page continues on the next, on the banner's colour (R2-046);
-              the name row never splits. Photo → Text Position, as Classic, Minimal and Executive take it (R3-0). */}
-          <View style={{ flexDirection: 'row', alignItems: photoTextAlignItems(settings), gap: g.photoTextGap }} wrap={false}>
+              the name row never splits. Photo → Text Position, as Classic, Minimal and Executive take it (R3-0),
+              and Photo → Position: Right prints the photo right of the name (R2-147). */}
+          <View style={{ flexDirection: photoRowDirection(settings), alignItems: photoTextAlignItems(settings), gap: g.photoTextGap }} wrap={false}>
             {personal?.photo && !hidden.includes('photo') && (
               <PdfPhoto src={personal.photo} style={photoStyle} />
             )}

@@ -15,6 +15,10 @@ export const PHOTO_OPTIONS = {
   photoBorder: [{ val: 'none', label: 'None' }, { val: 'thin', label: 'Thin' }, { val: 'accent', label: 'Accent' }],
   photoHeight: [{ val: 'match', label: 'Square' }, { val: 'tall', label: 'Tall' }, { val: 'taller', label: 'Portrait' }],
   photoTextAlign: [{ val: 'top', label: '↑ Top' }, { val: 'center', label: '↕ Center' }, { val: 'bottom', label: '↓ Bottom' }],
+  // Which side of the name the photo prints on, where it sits beside it (photoTextPositionApplies, R2-147).
+  photoPosition: [{ val: 'left', label: 'Left' }, { val: 'right', label: 'Right' }],
+  // The photo as uploaded, or a greyscale copy of it (printableImage.js makes it, R2-147).
+  photoTone: [{ val: 'color', label: 'Color' }, { val: 'grayscale', label: 'Grayscale' }],
 };
 
 /** What each control prints when the résumé stores nothing for it — always one of its options. */
@@ -24,6 +28,8 @@ export const PHOTO_DEFAULTS = {
   photoBorder: 'accent',
   photoHeight: 'match',
   photoTextAlign: 'center',
+  photoPosition: 'left',
+  photoTone: 'color',
 };
 
 /** A stored photo choice as the panel would show it: `value` when the control offers it, else its default. */

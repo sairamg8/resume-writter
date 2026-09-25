@@ -1,12 +1,12 @@
 // The Word résumé's header: name, job title, contact line and summary (buildPersonalSection), in the
 // colours, alignment and layout the PDF's header prints them in.
-import { BorderStyle, LineRuleType, Paragraph, Table, TableBorders, TableCell, TableLayoutType, TableRow, TextRun, VerticalAlign, WidthType } from 'docx';
+import { AlignmentType, BorderStyle, LineRuleType, Paragraph, Table, TableBorders, TableCell, TableLayoutType, TableRow, TextRun, VerticalAlign, WidthType } from 'docx';
 import { accent2Hex, bold, descriptionToParagraphs, centredIf, eighths, inlineGap, normal, spacer, wordContentTwips } from '@/utils/wordExportUtils';
 import { wordPhoto } from '@/utils/wordExportPhoto';
 import { contactRows } from '@/utils/wordExportContacts';
 import { buildSectionTitle } from '@/utils/wordExportBuilders';
 import { contactItems } from '@/utils/contacts';
-import { hasHeaderControls, headerBorderOn, templateId } from '@/constants/templates';
+import { hasHeaderControls, headerBorderOn, photoRowDirection, templateId } from '@/constants/templates';
 import { solid, textShades } from '@/templates/pdf/shared/pdfColors';
 import { headerColorsOnPage } from '@/templates/pdf/shared/headerColors';
 import { headerRule, headerTitleSize, inlineLayout, letterheadLook } from '@/templates/pdf/shared/letterhead';
@@ -131,22 +131,27 @@ export function buildPersonalSection(personal = {}, settings = {}, template = 'c
 /**
  * The header's row of the photo and, beside it, the name, title and contacts `text` (paragraphs): a
  * borderless table as wide as the page's text, the photo's cell its width and `gap` (pt, Photo ↔
- * Text), the text aligned to the photo as Photo → Text Position sets (top, centre or bottom).
+ * Text), the text aligned to the photo as Photo → Text Position sets (top, centre or bottom). Photo →
+ * Position Right puts the photo's cell last, the gap on its left, as the PDF's row-reverse (R2-147).
  */
 function photoRow(photo, gap, text, s) {
   const width = wordContentTwips(s);
   const first = Math.min(width, twips(photo.width + gap));
   const valign = { top: VerticalAlign.TOP, bottom: VerticalAlign.BOTTOM }[s.photoTextAlign] || VerticalAlign.CENTER;
-  const cell = (children, w, right) => new TableCell({
+  const cell = (children, w, pad = {}) => new TableCell({
     children, width: { size: w, type: WidthType.DXA }, verticalAlign: valign,
-    margins: { marginUnitType: WidthType.DXA, top: 0, bottom: 0, left: 0, right },
+    margins: { marginUnitType: WidthType.DXA, top: 0, bottom: 0, left: 0, right: 0, ...pad },
   });
+  const right = photoRowDirection(s) === 'row-reverse';
+  const pic = [new Paragraph({ children: [photo.run], spacing: { after: 0 }, ...(right ? { alignment: AlignmentType.RIGHT } : {}) })];
+  const photoCell = cell(pic, first, { [right ? 'left' : 'right']: first - twips(photo.width) });
+  const textCell = cell(text, width - first);
   return new Table({
     width: { size: width, type: WidthType.DXA },
-    columnWidths: [first, width - first],
+    columnWidths: right ? [width - first, first] : [first, width - first],
     layout: TableLayoutType.FIXED,
     borders: TableBorders.NONE,
-    rows: [new TableRow({ children: [cell([new Paragraph({ children: [photo.run], spacing: { after: 0 } })], first, first - twips(photo.width)), cell(text, width - first, 0)] })],
+    rows: [new TableRow({ children: right ? [textCell, photoCell] : [photoCell, textCell] })],
   });
 }
 

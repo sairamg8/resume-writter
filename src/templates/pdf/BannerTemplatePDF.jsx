@@ -13,7 +13,7 @@ import { textShades } from './shared/pdfColors';
 import { MM_TO_PT } from './shared/pdfUnits';
 import { letterheadLook, headerTitleSize } from './shared/letterhead';
 import { bannerPadY, bannerStripPt } from './shared/bannerBand';
-import { photoTextAlignItems } from '@/constants/templates';
+import { photoRowDirection, photoTextAlignItems } from '@/constants/templates';
 import { pageSizeOf } from '@/constants/pageSize';
 
 /**
@@ -116,7 +116,7 @@ export function BannerTemplatePDF({ data }) {
           <View style={{ position: 'absolute', top: -bleedTop, left: -bleedSide, right: -bleedSide, bottom: 0, backgroundColor: accent }} />
           <View style={rule}>
             <View style={{
-              flexDirection: centered ? 'column' : 'row',
+              flexDirection: centered ? 'column' : photoRowDirection(settings), // Photo → Position (R2-147)
               alignItems: centered ? 'center' : photoTextAlignItems(settings),
               gap: g.photoTextGap,
             }}>
