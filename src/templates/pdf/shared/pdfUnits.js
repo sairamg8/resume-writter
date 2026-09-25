@@ -31,7 +31,10 @@ export const MM_TO_PT = 72 / 25.4;
  */
 export const HEADER_BORDER_PAD_PT = pxToPt(16); // 12
 
-/** Modern accent band: px-6 py-5 → 24px / 20px */
+/**
+ * Modern accent band: px-6 py-5 → 24px / 20px — MODERN_HEADER_GAPS' headerPadX / headerPadY, and the
+ * cover letter's Modern band where the settings carry no header gaps.
+ */
 export const MODERN_HEADER_PAD_X_PT = pxToPt(24); // 18
 export const MODERN_HEADER_PAD_Y_PT = pxToPt(20); // 15
 

@@ -32,14 +32,15 @@ const twips = (pt) => Math.round(pt * 20);
 
 /**
  * The résumé's contacts in Design → Contact Layout, as paragraphs (contactRows; FIDB-51-VF1-NB1-NB2),
- * laid out `width` pt wide: what the photo beside them leaves, as the PDF's (headerRowWidth).
+ * laid out `width` pt wide: what the photo beside them leaves, as the PDF's (headerRowWidth). `last`:
+ * the space after the last row, twips — Word's own 4 pt, or Contacts ↔ Summary where it is set.
  */
-function contactParagraphs(items, s, styled, style, centered, width) {
+function contactParagraphs(items, s, styled, style, centered, width, last = 80) {
   const rows = contactRows(items, {
     contactStyle: styled ? s.contactStyle : 'icon', layout: styled ? s.contactLayout : 'justify', centered, settings: s, style, width,
   });
   return rows.map((row, i) => new Paragraph({
-    children: row.runs, spacing: { after: i === rows.length - 1 ? 80 : 20 }, ...centredIf(row.centred), ...row.extra,
+    children: row.runs, spacing: { after: i === rows.length - 1 ? last : 20 }, ...centredIf(row.centred), ...row.extra,
   }));
 }
 
@@ -76,6 +77,11 @@ export function buildPersonalSection(personal = {}, settings = {}, template = 'c
   // space after is the gap to what follows it); unset, Word keeps its own spacing (spec D6).
   const setTwips = (key) => (s.headerGaps?.[key] != null && setGapPt(settings, key) != null ? twips(setGapPt(settings, key)) : null);
   const toContacts = contacts.length ? setTwips('titleContactsGap') : null; // Title (or Name) ↔ Contacts
+  const summary = !hidden.has('summary') && hasRichText(personal.summary);
+  // Contacts ↔ Summary: the space after what prints last above the summary — the contacts, else the
+  // title or the name (in the photo's row, its text column).
+  const toSummary = summary ? setTwips('summaryGap') : null;
+  const next = contacts.length ? toContacts : toSummary; // after the name and title: the contacts, else the summary
   const stacked = title && !inline;
   // The photo beside the name, as the PDF's header row: its cell the photo's width and the Photo ↔
   // Text gap, the contacts laid out in what is left. Above the name in a centred header and on the
@@ -87,15 +93,15 @@ export function buildPersonalSection(personal = {}, settings = {}, template = 'c
   paragraphs.push(new Paragraph({
     children: inline ? [name, inlineGap(inline.gap, titleSize), title] : [name],
     // A stacked title follows Name ↔ Title when set, else Word's own 2 pt; the contacts after the name
-    // (no title, or Inline) Title ↔ Contacts.
-    spacing: { after: stacked ? setTwips('nameTitleGap') ?? 40 : toContacts ?? (inline ? 60 : 40) },
+    // (no title, or Inline) Title ↔ Contacts, a summary with no contacts Contacts ↔ Summary.
+    spacing: { after: stacked ? setTwips('nameTitleGap') ?? 40 : next ?? (inline ? 60 : 40) },
     ...centredIf(centered),
   }));
 
   if (stacked) {
     paragraphs.push(new Paragraph({
       children: [title],
-      spacing: { after: toContacts ?? 60 },
+      spacing: { after: next ?? 60 },
       ...centredIf(centered),
     }));
   }
@@ -105,11 +111,11 @@ export function buildPersonalSection(personal = {}, settings = {}, template = 'c
     // Word printed them at 9 pt at every Base (R2-067).
     const style = { size: Math.round(headerContactPt(s, template) * 2), color: accent2Hex(textShades(s.textColor).sub, '64748b') };
     const width = beside ? wordContentTwips(s) / 20 - photo.width - gap : undefined;
-    paragraphs.push(...contactParagraphs(contacts, s, hasHeaderControls(template, settings), style, centered, width));
+    paragraphs.push(...contactParagraphs(contacts, s, hasHeaderControls(template, settings), style, centered, width, toSummary ?? 80));
   }
   if (beside) paragraphs.splice(0, paragraphs.length, photoRow(photo, gap, paragraphs, s));
 
-  if (!hidden.has('summary') && hasRichText(personal.summary)) {
+  if (summary) {
     // The Sidebar prints its summary under an "About Me" section title at the top of its main column (FIDB-51-VF3-NB2-NB1-NB1).
     if (templateId(template) === 'sidebar') paragraphs.push(buildSectionTitle('About Me', settings, template));
     const { run, frame } = summaryLook(s, template);
@@ -117,7 +123,8 @@ export function buildPersonalSection(personal = {}, settings = {}, template = 'c
     paragraphs.push(...descriptionToParagraphs(personal.summary, { size: Math.round(baseSize * 2), lineHeight: s.lineHeightValue, ...run }, centered ? 'center' : null, frame));
   }
 
-  paragraphs.push(headerEnd(s, template));
+  // Header ↔ First section, where set: the space after the header's end, as Word's own 4 pt is.
+  paragraphs.push(headerEnd(s, template, setTwips('headerGapBelow') ?? 80));
   return paragraphs;
 }
 
@@ -167,18 +174,19 @@ function summaryLook(s, template) {
  * (FIDB-51-VF3-NB2): a rule in the accent at its Thickness, the header's Text ↔ Border gap under
  * the text (headerRule; a Thickness no rule is drawn at keeps the gap). Else — the border off,
  * Modern's banner, the Sidebar's column — a little space, and no line: no PDF draws one there.
+ * `below`: the space after it, twips (Word's own 4 pt, or Header ↔ First section).
  */
-function headerEnd(s, template) {
+function headerEnd(s, template, below) {
   const on = hasHeaderControls(template, s) && headerBorderOn(s, template);
-  if (!on) return spacer(80);
+  if (!on) return spacer(below);
   const gap = twips(s.headerGaps?.headerRuleGap ?? HEADER_BORDER_PAD_PT);
   const rule = headerRule(s, template);
-  if (!rule) return spacer(gap + 80);
+  if (!rule) return spacer(gap + below);
   return new Paragraph({
     children: [],
     border: { bottom: { style: BorderStyle.SINGLE, size: eighths(rule.width), color: accent2Hex(rule.color), space: 0 } },
     // A 1 pt line: the rule sits the gap under the text above it, not a whole empty line under it.
-    spacing: { before: gap, after: 80, line: 20, lineRule: LineRuleType.EXACT },
+    spacing: { before: gap, after: below, line: 20, lineRule: LineRuleType.EXACT },
   });
 }
 
