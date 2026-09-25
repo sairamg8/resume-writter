@@ -18,10 +18,14 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 const NOTO = readFileSync(path.join(ROOT, 'node_modules/@fontsource/noto-sans/files/noto-sans-latin-400-normal.woff'));
 const realFetch = globalThis.fetch;
 
-/** fetch as the network answers it: `meta` / `faces` false throw as offline does. */
+/**
+ * The CDN as the network answers it: `meta` / `faces` false throw as offline does; any other font on
+ * it is offline. The harness's own server (the bundled Noto Sans) answers as ever.
+ */
 function network({ meta = true, faces = true } = {}) {
-  globalThis.fetch = async (url) => {
+  globalThis.fetch = async (url, opts) => {
     const u = String(url);
+    if (!u.includes('cdn.jsdelivr.net')) return realFetch(url, opts);
     const offline = () => { throw new TypeError('fetch failed'); };
     const pkg = u.match(/@fontsource\/([^@/]+)@/)?.[1];
     if (u.endsWith('/metadata.json')) {
