@@ -14,6 +14,22 @@ import { hookPreviewPdfs, settledPreview, previewPdf, downloadedPdf, drawingDiff
 const PNG_2X2 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAEElEQVR4nGP4z8AARAwQCgAf7gP9i18U1AAAAABJRU5ErkJggg==';
 
 /**
+ * The résumé the Design panel is walked on: the fixture's, with a photo, and its job's description a
+ * paragraph and a bulleted list, as the node matrix's is (tests/pdf/parity/store.mjs). Design → Lists
+ * restyles a bulleted list's glyphs (R2-147) and every other text of the fixture is a paragraph: with no
+ * list, Bullet, Dash, Circle and None change the résumé and rightly print the same.
+ */
+const DESIGN_WALK = {
+  personal: { photo: PNG_2X2 },
+  sections: ALL_SECTION_TYPES.map((s) => (s.type !== 'experience' ? s : {
+    ...s,
+    items: s.items.map((item, i) => (i ? item : {
+      ...item, description: `<p>${item.description}</p><ul><li>Designed the event ledger</li><li>Mentored six engineers</li></ul>`,
+    })),
+  })),
+};
+
+/**
  * What the preview prints from: the open résumé's template, settings, personal info and sections — an
  * unset value and an empty one alike ('' / null / absent: picking the font already in use stores
  * customFont '' where there was none, and prints the same).
@@ -152,7 +168,7 @@ test.describe('every design control changes the preview, through the UI', () => 
   for (const template of TEMPLATE_IDS) {
     test(`${template}: Design panel`, async ({ page }) => {
       await hookPreviewPdfs(page);
-      await visitEditor(page, template, { personal: { photo: PNG_2X2 } });
+      await visitEditor(page, template, DESIGN_WALK);
       await settledPreview(page);
       await openDesignPanel(page);
       await openSections(page);
