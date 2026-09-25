@@ -75,7 +75,7 @@ export function BacklogRow({ board, issue, sprintId, targets, onOpen, onStatus, 
             { type: 'separator' },
             { id: 'del', label: 'Delete', danger: true, onSelect: onDelete },
           ]}
-          trigger={<IconButton icon={MoreHorizontal} label={`${key} actions`} size="sm" tooltip={false} className="opacity-0 group-hover/row:opacity-100 no-hover:opacity-100 focus-visible:opacity-100 aria-expanded:opacity-100" />}
+          trigger={<IconButton icon={MoreHorizontal} label={`${key} actions`} size="sm" tooltip={false} className="opacity-0 group-hover/row:opacity-100 no-hover:opacity-100 focus-visible:opacity-100" />}
         />
       </span>
     </li>

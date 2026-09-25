@@ -91,7 +91,7 @@ export function IssueCardMenu({ columns, columnId, priority, onMove, onPriority,
           size="sm"
           variant="subtle"
           tooltip={false}
-          className="opacity-0 group-hover/card:opacity-100 no-hover:opacity-100 focus-visible:opacity-100 aria-expanded:opacity-100"
+          className="opacity-0 group-hover/card:opacity-100 no-hover:opacity-100 focus-visible:opacity-100"
         />
       )}
     />

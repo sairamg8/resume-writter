@@ -40,7 +40,7 @@ describe('regressions — a job storage refused, when another tab saves (R6-2)',
     cy.contains('h1', 'Stripe').should('be.visible');
 
     cy.then(() => storage.otherTab((jobs) => [...jobs, job('job_other', 'Other Tab Inc', 'Engineer')]));
-    cy.contains('span', /^Apps$/).prev('span').should('have.text', '3'); // before: 2, the list taken as it was
+    cy.jobStore().its('jobs').should('have.length', 3); // before: 2, the list taken as it was
     cy.contains('h1', 'Stripe').should('be.visible'); // before: "Job not found."
     cy.contains('[role="alert"]', 'not being saved').should('be.visible');
     goTo('#/jobs');

@@ -70,7 +70,7 @@ export function ColumnMenu({ column, index, count, onRename, onLimit, onCategory
         { type: 'separator' },
         { id: 'delete', label: 'Delete column', danger: true, disabled: count <= 1, onSelect: onDelete },
       ]}
-      trigger={<IconButton icon={MoreHorizontal} label={`${column.title || 'Untitled'} column actions`} size="sm" tooltip={false} className="opacity-0 group-hover/col:opacity-100 no-hover:opacity-100 focus-visible:opacity-100 aria-expanded:opacity-100" />}
+      trigger={<IconButton icon={MoreHorizontal} label={`${column.title || 'Untitled'} column actions`} size="sm" tooltip={false} className="opacity-0 group-hover/col:opacity-100 no-hover:opacity-100 focus-visible:opacity-100" />}
     />
   );
 }

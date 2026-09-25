@@ -222,8 +222,8 @@ it('epics: in the Epic panel with their progress, never in the backlog list; a c
   open([project({ mode: 'scrum', issues, nextNumber: 5 })]);
   const page = await mountBacklog();
   try {
-    assert.doesNotMatch(page.section('backlog').textContent, /Garden makeover/);
-    assert.match(page.section('backlog').textContent, /Plant roses.*Fix the tap/);
+    assert.equal(page.byLabel('HOME-1 Garden makeover', page.section('backlog')), undefined, 'the epic has no row of its own');
+    assert.match(page.section('backlog').textContent, /Plant roses.*Garden makeover.*Fix the tap/, 'its child names it in a lozenge');
     page.click(page.button('Epic panel'));
     const panel = () => page.byLabel('Epics');
     assert.match(panel().textContent, /Garden makeover.*HOME-1.*1 of 2 issues done/);
@@ -239,7 +239,7 @@ it('epics: in the Epic panel with their progress, never in the backlog list; a c
     page.change(box, 'Kitchen refit');
     page.key(box, 'Enter');
     assert.equal(boardNow().issues.find((i) => i.title === 'Kitchen refit')?.type, 'epic');
-    assert.doesNotMatch(page.section('backlog').textContent, /Kitchen refit/);
+    assert.equal(page.byLabel('HOME-5 Kitchen refit', page.section('backlog')), undefined);
   } finally {
     await page.view.unmount();
   }

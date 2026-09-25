@@ -104,8 +104,8 @@ describe('regressions — one résumé store and one job store (M14)', () => {
       win.dispatchEvent(new win.StorageEvent('storage', { key: JOBS_KEY, newValue: value }));
     }));
     stat('Total').should('have.text', '2');
-    cy.on('window:confirm', () => true);
-    cy.contains('p', /^Google$/).closest('.rounded-xl').find('button[title="Delete application"]').click({ force: true });
+    cy.contains('[aria-roledescription="draggable"]', 'Google').find('button[title="Delete application"]').click({ force: true });
+    cy.contains('[role="alertdialog"] button', /^Delete$/).click();
     stat('Total').should('have.text', '1');
     cy.jobStore().its('jobs').should((jobs) => expect(jobs.map((j) => j.company)).to.deep.eq(['Other Tab Inc']));
   });
@@ -152,8 +152,8 @@ describe('regressions — one résumé store and one job store (M14)', () => {
     formField('Resume Used').find('option').should(($o) => {
       expect([...$o].map((o) => o.textContent)).to.deep.eq(['— Not linked yet —', 'My CV']);
     });
-    goTo('#/jobs');
-    cy.contains('p', 'Career History').next().should('contain.text', 'Sam Owner');
+    goTo('#/jobs?view=summary');
+    cy.contains('h2', 'Career history').next().should('contain.text', 'Sam Owner');
   });
 });
 

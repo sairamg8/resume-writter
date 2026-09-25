@@ -30,7 +30,7 @@ describe('regressions — local dates in the job tracker', () => {
         win.localStorage.setItem('cpwtcv_jobs_v1', JSON.stringify({ jobs: [job], dataVersion: 2 }));
       },
     });
-    cy.contains('Due soon').should('be.visible');
-    cy.contains('Deadline passed').should('not.exist');
+    // The card's deadline pill: due today, not overdue at 8 pm.
+    cy.contains('[aria-roledescription="draggable"]', 'Acme').should('contain.text', 'Today').and('not.contain.text', 'overdue');
   });
 });

@@ -53,6 +53,8 @@ async function mountAt(path, boards) {
   globalThis.localStorage = new Storage([[KEY, JSON.stringify({ boards, dataVersion: 2 })]]);
   store.subscribe(() => {});
   const dom = await import('./fake-dom.mjs');
+  const { patchFakeDom } = await import('../unit/ui-dom-harness.mjs');
+  patchFakeDom(); // the issue view's focus trap and menus query the document
   const view = dom.mount(() => createElement(MemoryRouter, { initialEntries: [path] },
     createElement(Where),
     createElement(Routes, null,
