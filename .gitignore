@@ -22,7 +22,10 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-.claude
+# Local Claude state (worktrees, caches) stays out; the project hooks and settings are shared.
+.claude/*
+!.claude/settings.json
+!.claude/hooks/
 .grok
 
 # Test / playwright artifacts
