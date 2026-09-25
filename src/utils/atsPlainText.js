@@ -2,6 +2,7 @@ import { parseRichText } from './richText.js';
 import { formatDate, presentLabel } from './dates.js';
 import { resolveSection } from '../templates/pdf/shared/templateSectionDefaults.js';
 import { templateId } from '../constants/templates.js';
+import { languageWords, sectionTitle } from './resumeLanguage.js';
 
 /**
  * The ATS plain-text export (Export → ATS Text, and the ATS tab's Copy / Download): the résumé as
@@ -167,7 +168,7 @@ export function generateAtsPlainText(resume) {
 
   // Summary
   const summary = hiddenPersonal.has('summary') ? [] : richTextLines(p.summary);
-  if (summary.length) lines.push('PROFESSIONAL SUMMARY', RULE, ...summary, '');
+  if (summary.length) lines.push(languageWords(resume.settings).summary.toUpperCase(), RULE, ...summary, '');
 
   // Sections: a heading only over something printed under it.
   const sections = Array.isArray(resume.sections) ? resume.sections : [];
@@ -176,7 +177,7 @@ export function generateAtsPlainText(resume) {
     const items = (Array.isArray(s.items) ? s.items : []).filter((item) => item && item.visible !== false);
     const body = sectionLines(s, items, resume.settings || {}, resume.template);
     if (!body.some(Boolean)) continue;
-    lines.push(String(s.title || s.type).toUpperCase(), RULE, ...body, '');
+    lines.push(String(sectionTitle(s, resume.settings) || s.type).toUpperCase(), RULE, ...body, '');
   }
 
   return lines.join('\n').replace(/\n{3,}/g, '\n\n').trim();

@@ -1,3 +1,5 @@
+import { DEFAULT_LANGUAGE, languageOf, languageWords } from './resumeLanguage.js';
+
 // Job-tracker dates are stored as local calendar days ('YYYY-MM-DD'). `new Date('YYYY-MM-DD')`
 // parses that as UTC midnight, which is the previous evening west of Greenwich and 05:30 in
 // India, so these helpers keep every comparison in the user's own day.
@@ -30,19 +32,16 @@ export function deadlineState(iso, now = new Date()) {
 // the editor print every one of them through here, in the résumé's `settings.dateFormat`. A value
 // that is not a month and year prints exactly as stored, so nothing is lost or garbled.
 
-const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-
-/** The words a date prints with: month names, the picker's three-letter ones, a current job's end. */
-const ENGLISH = Object.freeze({ months: MONTHS, monthsShort: MONTHS.map((m) => m.slice(0, 3)), present: 'Present' });
+const MONTHS = languageWords().months;
 
 /**
- * The words the dates of the résumé with `settings` print with. English: the résumé language
- * (PAR-03) returns its own here, and every date of the PDF, Word and the editor follows it with
- * no caller changed — each passes the résumé's settings already.
+ * The words the dates of the résumé with `settings` print with: its Design → Language's month
+ * names and "Present" (src/utils/resumeLanguage.js, R2-148) — English for a résumé storing none.
+ * Every date of the PDF, Word, Markdown, ATS text and the editor follows it: each passes the
+ * résumé's settings.
  */
-// eslint-disable-next-line no-unused-vars -- the résumé language reads it
 export function dateLabels(settings) {
-  return ENGLISH;
+  return languageWords(settings);
 }
 
 /** A current job's end — "Present" — in the résumé's words. */
@@ -125,6 +124,21 @@ export function dateFormatOf(settings) {
 const dateText = (v) => (typeof v === 'string' ? v.trim() : (Number.isFinite(v) ? String(v) : ''));
 
 /**
+ * A date As entered in the résumé's language (R2-148): a month written in English words — "Jan 2024",
+ * as the month picker stores every date, or "January 2024" — with its month in the language's words,
+ * short for short, long for long; every other date, and every date in English, exactly as stored.
+ */
+function translatedAsEntered(text, settings) {
+  if (languageOf(settings) === DEFAULT_LANGUAGE) return text;
+  const words = /^([a-z]+)\.?,?\s+(\d{4})$/i.exec(text);
+  const m = words && MONTH_OF.get(words[1].toLowerCase());
+  if (!m) return text;
+  const w = dateLabels(settings);
+  const long = words[1].length > 3 && words[1].toLowerCase() === MONTHS[m - 1].toLowerCase();
+  return `${(long ? w.months : w.monthsShort)[m - 1]} ${words[2]}`;
+}
+
+/**
  * One stored date as the résumé with `settings` prints it: a month and year in its Date format (a
  * year alone as the year, in every format); anything else, and every date As entered, as stored —
  * trimmed, a year imported as a number as written (R9-1), '' for what is neither text nor number.
@@ -132,7 +146,8 @@ const dateText = (v) => (typeof v === 'string' ? v.trim() : (Number.isFinite(v) 
 export function formatDate(value, settings) {
   const text = dateText(value);
   const format = FORMATS[dateFormatOf(settings)];
-  const date = format && text ? parseMonthYear(value) : null;
+  if (!format) return translatedAsEntered(text, settings);
+  const date = text ? parseMonthYear(value) : null;
   if (!date) return text;
   return date.m ? format.my(date.y, date.m, dateLabels(settings)) : String(date.y);
 }
@@ -179,5 +194,9 @@ export function formatDayDate(value, settings) {
   const words = dateLabels(settings);
   const format = FORMATS[dateFormatOf(settings)]?.dmy;
   if (format) return format(day.y, day.m, day.d, words);
-  return /^\d{4}-/.test(text) ? `${day.d} ${words.months[day.m - 1]} ${day.y}` : text;
+  if (/^\d{4}-/.test(text)) return `${day.d} ${words.months[day.m - 1]} ${day.y}`;
+  // "15 January 2026" as the Today button writes it: its month in the résumé's language (R2-148).
+  const [, dd, month] = /^(\d{1,2})\s+(.+)$/.exec(text);
+  const typed = translatedAsEntered(month, settings);
+  return typed === month ? text : `${dd} ${typed}`;
 }

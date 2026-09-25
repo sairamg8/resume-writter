@@ -3,6 +3,7 @@ import { parseRichText, safeHref } from './richText.js';
 import { contactHref, contactItems } from './contacts.js';
 import { resolveSection } from '../templates/pdf/shared/templateSectionDefaults.js';
 import { templateId } from '../constants/templates.js';
+import { languageWords, sectionTitle } from './resumeLanguage.js';
 
 /**
  * Markdown Resume Exporter (Export → Markdown (.md)): the résumé as GitHub Flavored Markdown.
@@ -212,7 +213,7 @@ export function generateMarkdownResume(resume) {
 
   // Summary
   const summary = hiddenFields.has('summary') ? [] : markdownBody(p.summary);
-  if (summary.length) lines.push('## Professional Summary', ...summary, '');
+  if (summary.length) lines.push(`## ${languageWords(settings).summary}`, ...summary, '');
 
   // Sections: a heading only over something printed under it.
   const fieldOf = (item) => {
@@ -229,7 +230,7 @@ export function generateMarkdownResume(resume) {
         return itemLines(s.type, item, f, () => markdownBody(f('description'), item.bullets), settings, resolveSection(s, templateId(resume.template)).settings);
       });
     if (!body.some((l) => l.trim())) continue;
-    lines.push(`## ${s.title || s.type}`, ...body);
+    lines.push(`## ${sectionTitle(s, settings) || s.type}`, ...body);
   }
 
   return lines.join('\n');

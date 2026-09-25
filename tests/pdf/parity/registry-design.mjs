@@ -80,6 +80,9 @@ const LIST_ITEMS = ['Designed the event ledger', 'Mentored six engineers'];
 /** Each paper's page box, [width, height] in pt (react-pdf's A4 and LETTER), written out — not read from PAGE_SIZES. */
 const PAPER = { A4: [595.28, 841.89], LETTER: [612, 792] };
 
+/** A current job's "Present" in each Design → Language (R2-148), written out, not read from the code. */
+const PRESENT = { en: 'Present', es: 'Actualidad', fr: 'Aujourd’hui', de: 'heute', pt: 'Atual', it: 'In corso', nl: 'heden',
+  ar: 'حتى الآن', he: 'היום', fa: 'اکنون', ur: 'تاحال' };
 const DATES = { asEntered: '01/2021', 'MMM YYYY': 'Jan 2021', 'MMMM YYYY': 'January 2021', 'MM/YYYY': '01/2021',
   'MM.YYYY': '01.2021', 'YYYY-MM': '2021-01', 'YYYY.MM': '2021.01', YYYY: '2021' };
 
@@ -118,7 +121,8 @@ export const DESIGN = {
   },
   // Reset Design Settings keeps the Sidebar's Single · ATS-safe Layout: the ATS-safe page it promises (R2-089);
   // and the paper, which no template has one of its own (R2-136).
-  resetAll: { family: 'resets', keeps: ['setting.sidebarSingleColumn', 'setting.pageSize'] },
+  // So is the language (R2-148): it is what the résumé is written in.
+  resetAll: { family: 'resets', keeps: ['setting.sidebarSingleColumn', 'setting.pageSize', 'setting.language'] },
   'setting.sidebarSingleColumn': {
     family: 'template',
     check: ({ runs }) => runs.flatMap((r) => {
@@ -291,6 +295,16 @@ export const DESIGN = {
         if (Math.abs(t.x + t.w - (was.x + was.w)) > 0.5 || Math.abs(t.y - was.y) > 0.5) out.push(`${v}: "${li}" moved`);
         return out;
       });
+    }),
+  },
+  // Design → Language (R2-148): the current job ends in the language's "Present" — each of its words, as
+  // pdf.js reads a right-to-left line word by word.
+  'setting.language': {
+    family: 'dates',
+    check: ({ runs }) => runs.flatMap((r) => {
+      const v = valueOf(r, 'setting.language');
+      if (!(v in PRESENT)) return [`${v}: a language this test does not know — add its "Present" to PRESENT`];
+      return PRESENT[v].split(' ').every((w) => prints(r.snap, w)) ? [] : [`${v}: "${PRESENT[v]}" does not print`];
     }),
   },
   'setting.dateFormat': {

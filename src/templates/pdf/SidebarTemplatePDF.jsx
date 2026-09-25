@@ -5,6 +5,7 @@ import { getEffectiveSpacing, SPACER, sectionPrints } from './shared/PdfSections
 import { PdfRichText } from './shared/PdfRichText';
 import { hasRichText } from '@/utils/richText';
 import { getDocumentProps, pageMargins } from './shared/PdfPage';
+import { languageWords } from '@/utils/resumeLanguage';
 import { PdfRunningHeader } from './shared/PdfRunningHeader';
 import { getPdfPhotoStyle } from './shared/pdfPhoto';
 import { PdfPhoto } from './shared/PdfPhoto';
@@ -166,13 +167,13 @@ export function SidebarTemplatePDF({ data }) {
 
           {contacts.length > 0 && (
             <View style={{ marginBottom: sideSectionGap }}>
-              <SideSectionTitle title="Contact" shades={side} titleCase={settings.sectionTitleCase} settings={settings} />
+              <SideSectionTitle title={languageWords(settings).contact} shades={side} titleCase={settings.sectionTitleCase} settings={settings} />
               <View style={{ marginTop: 2 }}>
                 {contacts.map((item, i) => (
                   <SideContactRow
                     key={item.key}
                     field={item.key}
-                    label={CONTACT_LABELS[item.key]}
+                    label={languageWords(settings).fields?.[item.key] ?? CONTACT_LABELS[item.key]}
                     value={item.value}
                     href={item.href}
                     iconPt={sideIconPt}
@@ -213,7 +214,7 @@ export function SidebarTemplatePDF({ data }) {
             <View style={{ marginBottom: sectionGap }}>
               {SPACER}
               <PdfSectionTitle
-                title="About Me"
+                title={languageWords(settings).aboutMe}
                 headingStyle={settings.headingStyle}
                 accent={accent}
                 sectionTitleCase={settings.sectionTitleCase || 'upper'}

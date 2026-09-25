@@ -5,6 +5,7 @@ import { DATA_VERSION } from '@/utils/normalizeResume';
 import { DEFAULT_DATE_FORMAT } from '@/utils/dates';
 import { DEFAULT_BULLET_STYLE } from '@/utils/richText';
 import { DEFAULT_PAGE_SIZE, pageSizeOf } from '@/constants/pageSize';
+import { DEFAULT_LANGUAGE, languageOf } from '@/utils/resumeLanguage';
 
 // ATS-safe defaults — proper dimensions, neutral colors, standard font
 export const ATS_DEFAULTS = {
@@ -99,7 +100,9 @@ export function styleOnSwitch(settings, from, to, preset = '') {
  * ATS-safe page Reset promises, and dropping it printed the two columns a portal may interleave
  * (R2-089). Kept on every template, as a template switch keeps it. So is the paper (Design →
  * Spacing → Page size, R2-136): it is where the résumé is sent, not a look of the template's, and
- * no template has one of its own — a US Letter résumé stays on Letter. A4 is stored as none.
+ * no template has one of its own — a US Letter résumé stays on Letter. A4 is stored as none. So is
+ * the language (Design → Language, R2-148): it is what the résumé is written in, and Reset turned an
+ * Arabic résumé's page left to right. English is stored as none.
  */
 export function resetDesignSettings(settings, template) {
   const icons = settings?.customContactIcons;
@@ -107,7 +110,8 @@ export function resetDesignSettings(settings, template) {
   const layout = settings?.sidebarSingleColumn === true ? { sidebarSingleColumn: true } : {};
   const design = presetOf(settings, template) ? { templatePreset: settings.templatePreset } : {};
   const paper = pageSizeOf(settings) !== DEFAULT_PAGE_SIZE ? { pageSize: pageSizeOf(settings) } : {};
-  return { ...defaultSettings(template, settings), ...layout, ...design, ...paper, customContactIcons: uploads };
+  const language = languageOf(settings) !== DEFAULT_LANGUAGE ? { language: languageOf(settings) } : {};
+  return { ...defaultSettings(template, settings), ...layout, ...design, ...paper, ...language, customContactIcons: uploads };
 }
 
 /**

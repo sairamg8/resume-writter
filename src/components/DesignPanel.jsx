@@ -12,6 +12,7 @@ import { HeadingsSection } from '@/components/DesignPanelHeadings';
 import { ColorsSection } from '@/components/DesignPanelColors';
 import { TypographySection } from '@/components/DesignPanelTypography';
 import { DatesSection } from '@/components/DesignPanelDates';
+import { LanguageSection } from '@/components/DesignPanelLanguage';
 import { ListsSection } from '@/components/DesignPanelLists';
 import {
   ICON_SET_OPTIONS,
@@ -309,6 +310,8 @@ export default function DesignPanel({ resume, updateSetting, setTemplate, resetS
       </DesignSection>
 
       <HeadingsSection settings={settings} template={current} updateSetting={updateSetting} onReset={() => resetSection(HEADING_KEYS)} />
+
+      <LanguageSection settings={settings} updateSetting={updateSetting} />
 
       <DatesSection settings={settings} updateSetting={updateSetting} onReset={() => resetSection(DATE_KEYS)} />
 

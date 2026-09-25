@@ -8,6 +8,7 @@ import { CONTACT_FIELDS } from './contacts.js';
 import { headerTemplateId, templateId } from '../constants/templates.js';
 import { presetOf } from '../constants/templatePresets.js';
 import { dateFormatOf } from './dates.js';
+import { DEFAULT_LANGUAGE, languageOf } from './resumeLanguage.js';
 import { DEFAULT_PAGE_SIZE, pageSizeOf } from '../constants/pageSize.js';
 
 const isRecord = (v) => Boolean(v) && typeof v === 'object' && !Array.isArray(v);
@@ -113,7 +114,9 @@ export function cpwtResumeToJsonResume(resume) {
     // decides the page itself: without it the import reopened the two columns a portal may
     // interleave. Written only where it prints (headerTemplateId). And the paper (Design → Spacing →
     // Page size), which decides every page break: without it a US Letter résumé came back on A4
-    // (R2-136) — written only when it is not the A4 a résumé with none prints on.
+    // (R2-136) — written only when it is not the A4 a résumé with none prints on. And the language
+    // (Design → Language, R2-148), which decides the month names, the titles and the page's direction
+    // — written only when it is not the English a résumé with none prints in.
     meta: {
       template: templateId(resume.template),
       dateFormat: dateFormatOf(resume.settings),
@@ -121,6 +124,7 @@ export function cpwtResumeToJsonResume(resume) {
       // The design the résumé is on (R2-138): the import brings its look back, as picking it would.
       ...(presetOf(resume.settings, resume.template) ? { design: resume.settings.templatePreset } : {}),
       ...(pageSizeOf(resume.settings) !== DEFAULT_PAGE_SIZE ? { pageSize: pageSizeOf(resume.settings) } : {}),
+      ...(languageOf(resume.settings) !== DEFAULT_LANGUAGE ? { language: languageOf(resume.settings) } : {}),
       sections: layout,
     },
   };

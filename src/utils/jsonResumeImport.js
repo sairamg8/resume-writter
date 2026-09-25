@@ -13,6 +13,7 @@ import { templateId } from '../constants/templates.js';
 import { presetOf, presetSettings } from '../constants/templatePresets.js';
 import { DATE_FORMATS } from './dates.js';
 import { DEFAULT_PAGE_SIZE, pageSizeOf } from '../constants/pageSize.js';
+import { DEFAULT_LANGUAGE, languageOf } from './resumeLanguage.js';
 
 const isRecord = (v) => Boolean(v) && typeof v === 'object' && !Array.isArray(v);
 
@@ -158,6 +159,8 @@ export function jsonResumeToCpwtResume(jsonResume, customId) {
   // The paper the export wrote (R2-136), read as the PDF reads it: a size this build does not offer,
   // or none — every file another tool wrote — is the A4 a résumé with none prints on.
   const pageSize = pageSizeOf({ pageSize: jsonResume?.meta?.pageSize });
+  // The language the export wrote (R2-148), one this build knows; none — any other tool's file — is English.
+  const language = languageOf({ language: jsonResume?.meta?.language });
 
   return {
     id,
@@ -165,7 +168,7 @@ export function jsonResumeToCpwtResume(jsonResume, customId) {
     updatedAt: Date.now(),
     dataVersion: DATA_VERSION, // built now, from a file with no app history: no migration applies
     template,
-    settings: { ...getStarterSettings(template), ...design, ...(DATE_FORMATS.includes(dateFormat) ? { dateFormat } : {}), ...(single ? { sidebarSingleColumn: true } : {}), ...(pageSize !== DEFAULT_PAGE_SIZE ? { pageSize } : {}) },
+    settings: { ...getStarterSettings(template), ...design, ...(DATE_FORMATS.includes(dateFormat) ? { dateFormat } : {}), ...(single ? { sidebarSingleColumn: true } : {}), ...(pageSize !== DEFAULT_PAGE_SIZE ? { pageSize } : {}), ...(language !== DEFAULT_LANGUAGE ? { language } : {}) },
     personal,
     sections: sectionsOf(jsonResume),
     coverLetter: { ...BASE_COVER_LETTER },

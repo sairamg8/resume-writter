@@ -12,6 +12,7 @@ import { resolveTemplateSettings } from '@/templates/pdf/shared/templateSettings
 import { FONTS } from '@/utils/fonts';
 import { RUNNING_HEADER_PT, runningHeaderLead, runningHeaderTop } from '@/constants/runningHeader';
 import { textShades } from '@/templates/pdf/shared/pdfColors';
+import { withPrintedTitles } from '@/utils/resumeLanguage';
 
 export function resolveWordFont(settings = {}) {
   if (settings?.customFont?.trim()) return settings.customFont.trim();
@@ -99,7 +100,8 @@ export async function renderResumeDocx(resume) {
   // Layout), but still leads a job with the role (R2-012) and prints its dates in grey and its second
   // field in the accent, as its PDF does (R2-121).
   const own = templateId(template);
-  const printed = sections
+  // Each title the app gave a section in the résumé's Design → Language (R2-148), as the PDF prints it.
+  const printed = withPrintedTitles(sections, settings)
     .map((s) => resolveSection(s, own))
     .map((section) => ({ section, paras: buildSection(section, accentHex, settings, own) }))
     .filter(({ paras }) => paras.length);

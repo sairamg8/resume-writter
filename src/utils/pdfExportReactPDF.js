@@ -8,6 +8,7 @@ import { downloadBlob } from '@/utils/download';
 import { withPrintablePhotos } from '@/utils/printableImage';
 import { templateId } from '@/constants/templates';
 import { BULLET_STYLES, DEFAULT_BULLET_STYLE, bulletStyleOf } from '@/utils/richText';
+import { languageText, withPrintedTitles } from '@/utils/resumeLanguage';
 
 /** Each template's PDF component, code-split. Pinned to TEMPLATE_IDS (15-design-defaults, VM3-5). */
 export const LOADERS = {
@@ -41,7 +42,8 @@ function prepareResumeData(resume, fontFamily, templateKey) {
     _template: templateKey,
   }, templateKey);
 
-  const resolvedSections = (resume?.sections || []).map(s => resolveSection(s, templateKey));
+  // Each title the app gave a section in the résumé's Design → Language (R2-148).
+  const resolvedSections = withPrintedTitles((resume?.sections || []).map(s => resolveSection(s, templateKey)), resume?.settings);
   return { ...resume, sections: resolvedSections, settings: resolvedSettings };
 }
 
@@ -49,11 +51,13 @@ function prepareResumeData(resume, fontFamily, templateKey) {
  * The text the fonts are chosen for: `value`'s (collectText), and the glyph Design → Lists draws in
  * front of its list items (R2-147), which is no text of the résumé's — Circle's ◦ is in no Latin
  * face, so it brings the symbol font that draws it, as a ◦ typed into a description does. Bullet,
- * the default, adds nothing: a résumé printing its lists as before asks for the fonts it did.
+ * the default, adds nothing: a résumé printing its lists as before asks for the fonts it did. So
+ * do the words of its Design → Language (R2-148) — none for English.
  */
 function printedText(value, settings) {
   const style = bulletStyleOf(settings?.bulletStyle);
-  return collectText(value) + (style === DEFAULT_BULLET_STYLE ? '' : BULLET_STYLES[style].join(''));
+  const words = languageText(settings);
+  return collectText(value) + (style === DEFAULT_BULLET_STYLE ? '' : BULLET_STYLES[style].join('')) + (words ? ` ${words}` : '');
 }
 
 /** `element` drawn with the résumé's Design → Lists style (PdfRichText's BulletStyle, R2-147). */
