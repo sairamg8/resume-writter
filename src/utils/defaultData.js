@@ -4,6 +4,7 @@ import { sectionsOnSwitch } from '@/templates/pdf/shared/templateSectionDefaults
 import { DATA_VERSION } from '@/utils/normalizeResume';
 import { DEFAULT_DATE_FORMAT } from '@/utils/dates';
 import { DEFAULT_BULLET_STYLE } from '@/utils/richText';
+import { DEFAULT_PAGE_SIZE, pageSizeOf } from '@/constants/pageSize';
 
 // ATS-safe defaults — proper dimensions, neutral colors, standard font
 export const ATS_DEFAULTS = {
@@ -94,14 +95,17 @@ export function styleOnSwitch(settings, from, to, preset = '') {
  * images, and Reset deleted them with no undo (R5-6). A value that is not a map of them (none in
  * older data) resets to none. The Sidebar's Layout "Single · ATS-safe" is kept too: it is the
  * ATS-safe page Reset promises, and dropping it printed the two columns a portal may interleave
- * (R2-089). Kept on every template, as a template switch keeps it.
+ * (R2-089). Kept on every template, as a template switch keeps it. So is the paper (Design →
+ * Spacing → Page size, R2-136): it is where the résumé is sent, not a look of the template's, and
+ * no template has one of its own — a US Letter résumé stays on Letter. A4 is stored as none.
  */
 export function resetDesignSettings(settings, template) {
   const icons = settings?.customContactIcons;
   const uploads = icons && typeof icons === 'object' && !Array.isArray(icons) ? { ...icons } : {};
   const layout = settings?.sidebarSingleColumn === true ? { sidebarSingleColumn: true } : {};
   const design = presetOf(settings, template) ? { templatePreset: settings.templatePreset } : {};
-  return { ...defaultSettings(template, settings), ...layout, ...design, customContactIcons: uploads };
+  const paper = pageSizeOf(settings) !== DEFAULT_PAGE_SIZE ? { pageSize: pageSizeOf(settings) } : {};
+  return { ...defaultSettings(template, settings), ...layout, ...design, ...paper, customContactIcons: uploads };
 }
 
 /**

@@ -1,6 +1,7 @@
 import { letterheadCentered, templateId } from '@/constants/templates';
 import { isLetter } from '@/utils/letters';
 import { letterResumePhoto } from '@/utils/coverLetter';
+import { pageSizeOf } from '@/constants/pageSize';
 
 // A dashboard card's mock page: the résumé's template drawn in bars, so two résumés on different
 // templates look different at a glance (R2-133). Every way of making a résumé stores the same accent,
@@ -121,8 +122,10 @@ export default function ResumeThumbnail({ resume, accent }) {
     );
   }
 
+  // The page in the paper's shape (R2-136): A4's 80 × 112 px, US Letter's shorter 80 × 104 (11 / 8.5).
+  const paper = pageSizeOf(s) === 'LETTER' ? 'h-[104px]' : 'h-28';
   return (
-    <div data-thumb={isLetter(resume) ? 'letter' : t} className="w-20 h-28 rounded shadow-md flex flex-col overflow-hidden bg-white" style={{ border: `2px solid ${accent}30` }}>
+    <div data-thumb={isLetter(resume) ? 'letter' : t} className={`w-20 ${paper} rounded shadow-md flex flex-col overflow-hidden bg-white`} style={{ border: `2px solid ${accent}30` }}>
       {page}
     </div>
   );

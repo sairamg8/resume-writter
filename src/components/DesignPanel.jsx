@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { Sparkles } from 'lucide-react';
 import { ATS_DEFAULTS, sectionReset } from '@/utils/defaultData';
 import { atsRating, contactIconHint, drawsContactIcons, TEMPLATE_PICKER, templateDesc, templateId, templateSwitchNote } from '@/constants/templates';
 import { presetOf, PRESET_IDS, TEMPLATE_PRESETS } from '@/constants/templatePresets';
 import { MARGIN_MM } from '@/constants/pageMargins';
+import { PAGE_SIZES, PAGE_SIZE_IDS, pageSizeOf } from '@/constants/pageSize';
 import { ICON_SIZE } from '@/constants/designNumbers';
 import { ITEM_GAP_PX, LINE_HEIGHT, SECTION_GAP_PX } from '@/constants/spacingNumbers';
 import { DesignSection, NumberRow, Label, SegmentControl } from '@/components/DesignPanelShared';
@@ -19,6 +20,7 @@ import {
   getIconSetId,
 } from '@/utils/contactIcons';
 import { CONTACT_FIELDS } from '@/utils/contacts';
+import { ONE_PAGE_FIT, fitOnePage, printedKey } from '@/utils/pageFit';
 
 const COLOR_KEYS      = ['accentColor', 'textColor', 'sidebarBg', 'headerTextColor', 'nameColor', 'jobTitleColor'];
 const TYPOGRAPHY_KEYS = ['font', 'fontSize', 'fontSizeBase', 'fontSizeNameDelta', 'fontSizeSectionDelta', 'fontSizeEntryDelta', 'customFont', 'iconSize'];
@@ -29,6 +31,8 @@ const ICON_KEYS       = ['iconSet', 'iconSize'];
 const DATE_KEYS       = ['dateFormat'];
 const LIST_KEYS       = ['bulletStyle'];
 const PAGE_NUMBER_KEYS = ['pageNumbers'];
+// The paper, by its name and size as the editor states them: "A4 · 210 × 297 mm".
+const PAGE_SIZE_OPTIONS = PAGE_SIZE_IDS.map(id => ({ label: `${PAGE_SIZES[id].label} · ${PAGE_SIZES[id].dims}`, value: id }));
 
 export default function DesignPanel({ resume, updateSetting, setTemplate, resetSettings }) {
   const settings = resume.settings || {};
@@ -36,6 +40,47 @@ export default function DesignPanel({ resume, updateSetting, setTemplate, resetS
   // Modern and Sidebar draw the pack whatever Contact style says, the others only with Icon.
   const drawsIcons = drawsContactIcons(current, settings);
   const [confirmReset, setConfirmReset] = useState(false);
+  const pageSizeLabelId = useId();
+  const [fitting, setFitting] = useState(false);
+  const [fitNotice, setFitNotice] = useState('');
+  const fitRun = useRef(false); // a fit is measuring: a second click waits for it, not starts another
+  const latest = useRef(resume);
+  latest.current = resume;
+  const mounted = useRef(true);
+  // Set again on mount: StrictMode's trial unmount (main.jsx) left it false, and every fit was dropped.
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
+
+  /**
+   * 1-Page Fit (R2-149): the preset at once, then the résumé is printed at it and, while it runs past
+   * one page, at each tighter step (pageFit.js) — the first that fits is written. Left mid-measure
+   * (another résumé, the editor closed) or changed while it measures (another template, a margin
+   * typed, Reset), it stops and writes nothing more: the steps were measured on a résumé no longer
+   * there, and updateSetting writes to whichever résumé is open.
+   */
+  async function fitToOnePage() {
+    if (fitRun.current) return;
+    fitRun.current = true;
+    setFitting(true);
+    setFitNotice('');
+    Object.entries(ONE_PAGE_FIT).forEach(([k, v]) => updateSetting(k, v));
+    const id = resume.id;
+    const measured = { ...resume, settings: { ...settings, ...ONE_PAGE_FIT } };
+    // As clicked (the preset's writes not rendered yet) or with the preset: anything else is an edit.
+    const keys = new Set([printedKey(resume), printedKey(measured)]);
+    const stopped = () => !mounted.current || latest.current?.id !== id || !keys.has(printedKey(latest.current));
+    let notice = '';
+    try {
+      const fit = await fitOnePage(measured, { stopped });
+      if (!fit || stopped()) return;
+      Object.entries(fit.settings).forEach(([k, v]) => { if (ONE_PAGE_FIT[k] !== v) updateSetting(k, v); });
+      if (fit.pages > 1) notice = `Still ${fit.pages} pages at the tightest spacing — shorten the content to fit one page.`;
+    } catch {
+      notice = 'Could not measure the pages: the tight spacing is applied, check the preview.';
+    } finally {
+      fitRun.current = false;
+      if (mounted.current) { setFitting(false); setFitNotice(notice); }
+    }
+  }
 
   /** A section's reset: its settings back to the template's defaults (Sidebar's plain headings, …). */
   function resetSection(keys) {
@@ -209,17 +254,12 @@ export default function DesignPanel({ resume, updateSetting, setTemplate, resetS
             <div className="grid grid-cols-3 gap-1.5">
               <button
                 type="button"
-                onClick={() => {
-                  updateSetting('marginV', 10);
-                  updateSetting('marginH', 14);
-                  updateSetting('sectionGap', 10);
-                  updateSetting('itemGap', 5);
-                  updateSetting('lineHeightValue', 1.35);
-                }}
+                onClick={fitToOnePage}
+                disabled={fitting}
                 title="Fit more onto 1 page by safely tightening margins and line heights"
-                className="px-2 py-1.5 text-[11px] font-medium rounded-lg bg-white border border-blue-200 text-blue-700 hover:bg-blue-100/70 shadow-2xs transition-all text-center cursor-pointer"
+                className="px-2 py-1.5 text-[11px] font-medium rounded-lg bg-white border border-blue-200 text-blue-700 hover:bg-blue-100/70 shadow-2xs transition-all text-center cursor-pointer disabled:opacity-60 disabled:cursor-wait"
               >
-                📄 1-Page Fit
+                {fitting ? 'Fitting…' : '📄 1-Page Fit'}
               </button>
               <button
                 type="button"
@@ -250,10 +290,18 @@ export default function DesignPanel({ resume, updateSetting, setTemplate, resetS
                 📑 Spacious
               </button>
             </div>
+            {fitNotice && <p className="text-[11px] text-amber-800">{fitNotice}</p>}
           </div>
 
           <NumberRow label="Line Height" value={settings.lineHeightValue ?? 1.5} onChange={v => updateSetting('lineHeightValue', v)} min={LINE_HEIGHT.min} max={LINE_HEIGHT.max} step={0.1} />
           <div className="h-px bg-gray-100" />
+          {/* The paper the résumé and its cover letter print on (R2-136): the PDF, the preview and both
+              Word files read it (pageSizeOf). None stored reads as A4, the page every résumé printed on
+              before, so A4 shows selected for it. */}
+          <div role="group" aria-labelledby={pageSizeLabelId} className="space-y-1.5">
+            <p id={pageSizeLabelId} className="text-xs text-gray-600">Page size</p>
+            <SegmentControl options={PAGE_SIZE_OPTIONS} value={pageSizeOf(settings)} onChange={v => updateSetting('pageSize', v)} />
+          </div>
           <NumberRow label="Top / Bottom margin" value={settings.marginV ?? 14} onChange={v => updateSetting('marginV', v)} min={MARGIN_MM.min} max={MARGIN_MM.max} step={1} unit="mm" />
           <NumberRow label="Left / Right margin" value={settings.marginH ?? 18} onChange={v => updateSetting('marginH', v)} min={MARGIN_MM.min} max={MARGIN_MM.max} step={1} unit="mm" />
           <div className="h-px bg-gray-100" />
