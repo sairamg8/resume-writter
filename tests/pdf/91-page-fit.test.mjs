@@ -92,7 +92,8 @@ describe('the fit ladder (pageFit.js)', () => {
   it('keys a résumé by what prints: a copy with its keys in another order matches, an edit does not', async () => {
     const { printedKey } = await loadModule('/src/utils/pageFit.js');
     const r = long(2, { marginV: 12, font: 'Inter' });
-    const copy = JSON.parse(JSON.stringify({ updatedAt: 1, settings: { font: 'Inter', marginV: 12 }, personal: r.personal, sections: r.sections, template: r.template }));
+    const reversed = (o) => Object.fromEntries(Object.entries(o).reverse());
+    const copy = JSON.parse(JSON.stringify({ updatedAt: 1, settings: reversed(r.settings), personal: reversed(r.personal), sections: r.sections, template: r.template }));
     assert.equal(printedKey(copy), printedKey(r), 'another tab\'s save of the same résumé');
     assert.notEqual(printedKey({ ...r, template: r.template === 'modern' ? 'classic' : 'modern' }), printedKey(r), 'another template');
     assert.notEqual(printedKey({ ...r, settings: { ...r.settings, marginV: 13 } }), printedKey(r), 'a setting');
