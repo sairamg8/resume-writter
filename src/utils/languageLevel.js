@@ -18,7 +18,8 @@
  * "Pre-intermediate" are not read as 3.
  */
 const LEVELS = [
-  [/\b(native|bilingual|mother[- ]tongue|c2)\b/, 5],
+  // Not "Non-native": a speaker saying they are not one, whatever else the words say.
+  [/(?<!non[- ]?)\b(native|bilingual|mother[- ]tongue|c2)\b/, 5],
   [/\b(fluent|full[- ]professional|advanced|proficient|upper[- ]?intermediate|c1|b2)\b/, 4],
   [/\b(elementary|limited|pre[- ]?intermediate|a2)\b/, 2],
   [/\b(basic|beginner|novice|a1)\b/, 1],

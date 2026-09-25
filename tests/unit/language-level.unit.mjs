@@ -35,3 +35,12 @@ test('Level: Dots and Bar draw; Text, unset and unknown values draw nothing', ()
   for (const s of [{ levelStyle: 'text' }, {}, undefined, null, { levelStyle: 'constructor' }, { levelStyle: 'stars' }]) assert.equal(languageLevelStyle(s), null, JSON.stringify(s));
   assert.equal(mod.LEVEL_STEPS, 5);
 });
+
+// The review of R2-147: "Non-native" drew five dots, the Native step's, since `\bnative\b` matches after
+// the hyphen. A speaker saying they are not native names no level by that word.
+test('"Non-native" is not Native: no level unless its other words name one', () => {
+  for (const text of ['Non-native', 'non native speaker', 'Non-Native']) assert.equal(languageLevel(text), null, text);
+  assert.equal(languageLevel('Non-native, fluent'), 4);
+  assert.equal(languageLevel('Native'), 5);
+  assert.equal(languageLevel('Bilingual (native)'), 5);
+});
