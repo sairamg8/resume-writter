@@ -47,7 +47,8 @@ describe('Photo → Position (R2-147)', () => {
   it('Right prints the photo right of the name, Left left of it, where the photo sits beside the name', async () => {
     const wrong = [];
     for (const template of [...BESIDE, 'sidebar']) {
-      const settings = template === 'sidebar' ? { sidebarSingleColumn: true } : {};
+      // A header aligned left, where the photo sits beside the name: Academic's own style centres it.
+      const settings = template === 'sidebar' ? { sidebarSingleColumn: true, headerAlign: 'left' } : { headerAlign: 'left' };
       const left = side(await shot(cv(template, settings)));
       const right = side(await shot(cv(template, { ...settings, photoPosition: 'right' })));
       if (left !== 'left') wrong.push(`${template} Left: ${left}`);
