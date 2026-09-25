@@ -53,7 +53,7 @@ describe('the Word résumé prints Design → Section Headings as the PDF does (
         for (const border of BORDERS) {
           const at = `${template} ${headingStyle} ${JSON.stringify(border)}`;
           const r = cv(template, { headingStyle, ...border });
-          const width = border.sectionBorderWidth ?? 1;
+          const width = border.sectionBorderWidth ?? r.settings.sectionBorderWidth ?? 1; // Broadsheet brings 2 pt (R2-138 B2)
           const look = sectionHeadingLook({ template, headingStyle, accent: ACCENT, borderColor: border.sectionBorderColor || '' });
           const opaque = (c) => solid(c).toLowerCase();
           const [word, pdf] = [await wordHeading(r), await pdfHeading(r)];

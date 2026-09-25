@@ -41,7 +41,7 @@ export function PdfSectionTitle({
     // Gridline: the title between two hairlines. Broadsheet: a rule over the title, as a newspaper heads a column.
     return (
       <View {...keepWithNext} style={{ marginBottom: 6 }}>
-        {rule({ marginBottom: 3 })}
+        {rule({ marginBottom: 1 })}
         <Text style={titleText}>{label}</Text>
         {look.variant === 'framed' && rule({ marginTop: 2 })}
       </View>

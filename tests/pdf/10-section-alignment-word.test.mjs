@@ -53,9 +53,11 @@ describe('Word: Section Options → Alignment "Center" centres what the PDF cent
       const [left, centre] = await Promise.all(['left', 'center'].map(async (a) => read(await render(everyType(template, a)))));
       const doc = byType(await renderDocx(everyType(template, 'center')));
       for (const type of Object.keys(TYPES)) {
-        // The PDF centres a section when its title moves to the middle of the column.
-        const x = (pages) => itemsWith(pages, heading(type))[0].x;
-        const pdfCentred = x(centre) - x(left) > 20;
+        // The PDF centres a section when its title moves to the middle of the column — or, where the template
+        // centres every title (Lectern, R2-138 B2), when its first entry does.
+        const x = (pages, s) => itemsWith(pages, s)[0].x;
+        const moved = (s) => x(centre, s) - x(left, s) > 20;
+        const pdfCentred = moved(heading(type)) || moved(TYPES[type].word);
         const side = template === 'sidebar' && SIDEBAR_COLUMN_TYPES.includes(type);
         assert.equal(pdfCentred, !side, `${template} ${type}: the PDF ${side ? 'keeps the side column left' : 'centres it'}`);
         assert.ok(doc[type]?.length > 1, `${template} ${type}: printed in Word`);

@@ -20,9 +20,15 @@ import { skillCategory, skillGroup, skillSeparator } from '@/utils/skills';
  * Ruled, Underline and Line as a bottom border, Left bar as a left border, Boxed as the paragraph's
  * shading — at the stored Thickness (Left bar's the wider bar the PDF prints) and Border colour.
  * Word has no rule beside a title: Line's rules print under it. Plain, and a style the app does not
- * offer (the PDF's plain), print the title alone; so does a Thickness no rule is drawn at.
+ * offer (the PDF's plain), print the title alone; so does a Thickness no rule is drawn at. Lectern's titles
+ * are centred whatever the section's Alignment, as its PDF centres them (sectionHeadingLook's `center`, R2-138 B2).
  */
 function headingOf(s, template) {
+  const own = headingFrame(s, template);
+  return sectionHeadingLook({ template: templateId(template), headingStyle: s.headingStyle }).center ? { ...own, ...centredIf(true) } : own;
+}
+
+function headingFrame(s, template) {
   const look = sectionHeadingLook({ template: templateId(template), headingStyle: s.headingStyle, accent: s.accentColor || '#2563eb', borderColor: s.sectionBorderColor || '' });
   const hex = (c) => accent2Hex(solid(c), accent2Hex(solid(s.accentColor), '2563eb'));
   const width = Number(s.sectionBorderWidth);

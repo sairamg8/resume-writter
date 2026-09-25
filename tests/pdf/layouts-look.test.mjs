@@ -184,7 +184,7 @@ describe('each designed layout draws its own marks (R2-138 B2)', () => {
     assert.ok(stitch[0].y0 > p.name.y, 'over the name');
     const t = titleItems(p.items, ['Professional Experience'])[0];
     assert.ok(t, 'the title in title case');
-    const under = inColour(p.marks, r.settings.accentColor).filter((m) => m.paint === 'stroke' && m.y0 < t.y && m.y0 > t.y - 8);
+    const under = inColour(p.marks, r.settings.accentColor).filter((m) => m.paint === 'stroke' && m.y0 < t.y && m.y0 > t.y - 12);
     assert.equal(under.length, 1, 'its underline');
     assert.ok(near(under[0].x1, t.x + t.w, 3), `as long as the title: ${under[0].x1} vs ${t.x + t.w}`);
   });

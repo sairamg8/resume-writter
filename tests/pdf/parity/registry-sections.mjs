@@ -22,13 +22,17 @@ const headings = (snap, state) => state.sections.filter((s) => s.visible !== fal
  * The runs of section `type`: below its heading and above the next heading of its column. The column is
  * read off `layout` (the page before the click: a centred heading still sits in its column); its left
  * edge is up to HEADING_INDENT left of the heading (Banner's headings sit 7 pt in from their entries).
+ * A heading on the page's centre line (Lectern centres every title, R2-138 B2) is the page's one column:
+ * it marks no column's edge.
  */
 function region(snap, state, type, layout) {
   const own = headings(snap, state).find((h) => h.type === type)?.run;
   const was = headings(layout, state).find((h) => h.type === type)?.run || own;
   if (!own) return { head: null, runs: [] };
-  const xs = headings(layout, state).map((h) => h.run.x);
-  const left = was.x - HEADING_INDENT;
+  const W = layout.pages[0].W;
+  const onCentre = (t) => Math.abs(t.x + t.w / 2 - W / 2) < 2;
+  const xs = headings(layout, state).map((h) => h.run).filter((t) => !onCentre(t)).map((t) => t.x);
+  const left = onCentre(was) ? 0 : was.x - HEADING_INDENT;
   const right = Math.min(Infinity, ...xs.filter((x) => x > was.x + 20)) - 5;
   const inCol = (t) => t.x >= left && t.x < right;
   const top = flow(snap, own);
