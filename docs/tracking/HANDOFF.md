@@ -15,11 +15,11 @@ The full gate on `6c11484` (run 36092446651) had 7 failures, all where Round 2 c
 | suite 2: `91-design-resets` (R2-157) | header-type added `sectionLetterSpacing` and `fontSizeTitleDelta` to the Typography ↺; section-style added the Lists ↺ | `34afa71`: the test moves them off default and expects them back (seven ↺s) |
 | suite 5: `knowledge-docs` (R2-169) | letters-import moved `DATA_VERSION` to 13 | `556d0fc`: docs 03 and 05 say 13 |
 | Playwright 3: `pdf-templates` Banner | templates-core's Modern card reads "…in an accent banner"; `:has-text("Banner")` clicked it | `1760224`: cards by `data-testid` (`template-<id>`) |
-| suite 1: `96-dashboard` (R2-167) ×2 | letters-import: New Cover Letter makes a letter; Import JSON renamed | agent, in progress |
-| Playwright 2: `parity-ui-controls` classic Design panel | Lists' bullet buttons change the résumé but not Classic's preview | agent, in progress |
+| suite 1: `96-dashboard` (R2-167) ×2 | letters-import: New Cover Letter makes a letter; Import JSON renamed | test updated to the letter flow (no / one / several résumés) and the new label |
+| Playwright 2: `parity-ui-controls` classic Design panel | the walk's résumé had no bulleted list (only Classic walks Design → Lists); the app is right | `85d9994`: the first job gets a two-item list |
 | Cypress 2: `23-editor-panels` zoom across the letter | header-type's Name ↔ Contacts stepper puts a "+" in the letter panel before the zoom's | `34416d2`: the zoom's "+" is read in the preview column |
 
-Next: the three agents' fixes committed → push → **one** full gate on the head → on green, `git push origin <sha>:master`,
+Next: **one** full gate on the head (all seven fixed; the Jira lane's two failures are being fixed in the worktree `/home/user/jira-revamp`, pushed to `claude/jira-revamp`, gated separately) → on green, `git push origin <sha>:master`,
 then the tracker (every ⏸ row whose commits are on master → ✅; ATS-7 ✖ → ✅, `38f35b5`) and this file, docs only.
 Still open after the deploy: 7 rows (R2-138, 139, 142, 143, 146, 147, 148 — each partly done); `claude/jira-revamp`
 (its gate run 36092746492: `82-your-work-page` and Cypress `20-regressions-job-unsaved` left; the owner decides when it
