@@ -38,7 +38,8 @@ before(async () => {
   for (const template of ONE_COLUMN) {
     const { personal, sections } = content();
     const pdf = await render(resume({ template, personal, sections }));
-    const doc = await ctx.pdfjs.getDocument({ data: pdf.slice(), isEvalSupported: false, verbosity: 0 }).promise;
+    const task = ctx.pdfjs.getDocument({ data: pdf.slice(), isEvalSupported: false, verbosity: 0 });
+    const doc = await task.promise;
     const pages = [];
     for (let i = 1; i <= doc.numPages; i += 1) {
       const text = await (await doc.getPage(i)).getTextContent();
@@ -46,7 +47,7 @@ before(async () => {
         str: it.str, x: it.transform[4], y: it.transform[5], w: it.width, h: it.height || Math.abs(it.transform[3]),
       })));
     }
-    await doc.destroy();
+    await task.destroy();
     const lines = await pdfLines(pdf, ctx.pdfjs);
     got[template] = { pages, resume: resumeFromText(lines), seen: lines.map((x) => x.text).join('\n') };
   }
