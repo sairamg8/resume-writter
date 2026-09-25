@@ -1,0 +1,34 @@
+{
+  "cluster": "header-type",
+  "branch": "claude/wf-header-type",
+  "base": "334b454",
+  "status": "INCOMPLETE: the session limit was reached before the independent review and its final CI run finished. Do not merge as done until the final CI run on the branch head is confirmed green (see notes).",
+  "rows": [
+    { "id": "R2-137", "outcome": "fixed",
+      "commits": ["7d175c3", "7aa467a", "f35e664"],
+      "tests": ["tests/pdf/92-header-spacing-rows.test.mjs", "tests/pdf/27-header-spacing.test.mjs", "tests/pdf/73-typed-number-fields.test.mjs", "tests/pdf/parity/registry-header.mjs", "tests/pdf/parity/01-offered.test.mjs"],
+      "summary": "**Now:** Personal Info → Header spacing offers Contacts ↔ Summary, Text ↔ Border, Banner padding (top & bottom, sides) and Header ↔ First section, each only where it moves something. Modern and the Sidebar print them instead of fixed gaps and are unchanged when unset. The cover letter follows Header ↔ First section and Modern's band padding. Word follows a set Contacts ↔ Summary and Header ↔ First section. The letter's own Name ↔ Contacts gap (contactsSideGap) is a stepper under Cover Letter → Header Layout → Right of Name.",
+      "remaining": "Word draws no Modern banner and no side-by-side letter contacts, so headerPadX/Y and contactsSideGap have no Word counterpart. contactsSideGap has no parity-registry entry because the parity walker does not walk the Cover Letter panel; tests/pdf/92-header-spacing-rows covers it instead." },
+    { "id": "R2-146", "outcome": "partial",
+      "commits": ["6f04c7d", "2fda3bc", "b5b0b2f", "f3b31ef", "17e2c70", "4f3f386"],
+      "tests": ["tests/pdf/92-font-fallback-notice.test.mjs", "tests/pdf/92-title-spacing.test.mjs", "tests/pdf/92-job-title-size.test.mjs", "tests/pdf/parity/registry-design.mjs"],
+      "summary": "**Now:** A chosen web font that can't load is named in a notice above the preview (\"Lora could not be loaded — the PDF uses Noto Sans until you are back online\"). The notice clears once the font loads, and the preview retries when the browser comes back online. Preview and export use the same fallback. Typography → Title Spacing (sectionLetterSpacing, % of title size) prints in the PDF section titles and in Word. Typography → Job Title (fontSizeTitleDelta) sizes the job title on every template, the letterhead and Word. Unset, both print as before.",
+      "remaining": "Separate name font and per-section font were not started. Title Spacing does not reach the Sidebar's side-column titles. Word's font fallback is unchanged (Word does not embed fonts)." }
+  ],
+  "review": {
+    "issues": [
+      "Reviewer found that stale preview builds could set the font-fallback notice, and a font coming back online did not reload its subsets: fixed in 17e2c70.",
+      "Reviewer found that Personal Info's Header spacing Reset counted and cleared the cover letter's contactsSideGap: fixed in f35e664 (RESUME_GAP_KEYS).",
+      "Reviewer found that the font-fallback test hung, instead of failing, when its modules were missing under fail-first: fixed in 4f3f386.",
+      "The reviewer's full report never reached this session before the session limit; it may have found other issues."
+    ],
+    "fixedByReviewer": ["17e2c70", "f35e664", "4f3f386"]
+  },
+  "baselineFailures": [],
+  "ci": {
+    "green": ["36087994740 (7d175c3, failfirst ok)", "36088109698 (7aa467a, failfirst ok, pdf-cover-letter Playwright + 05-cover-letter Cypress)", "36088466885 and 36088621258 (R2-146 up to f3b31ef, failfirst ok)"],
+    "cancelled": ["36089440001 (f35e664)", "36090448431 (4f3f386)"],
+    "unconfirmed": "36091056045 on head b6c103b, in progress when the session limit was reached: the reviewer's final run. Its result, and fail-first for 17e2c70 / f35e664, are NOT confirmed."
+  },
+  "notes": "SESSION LIMIT REACHED: this report was written before the cluster finished. Before merging, the coordinator (or a cold start) must check run 36091056045. If it is not green, or does not cover the reviewer's fix commits, dispatch it again as described in wf-resume/header-type.md (on this branch, which also lists the exact test inputs). Delete wf-resume/header-type.md when merging. docs/tracking/HANDOFF.md was not touched (cluster sessions don't edit docs/tracking/). A11y (deferred): the font-fallback notice is a plain <p> with no live region. letterhead.js's unused `templateId` import is already on master."
+}
