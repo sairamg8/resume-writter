@@ -6,6 +6,7 @@ import { flow, ownRuns, prints } from './measure.mjs';
 import { TYPE_MARKS } from './store.mjs';
 import { valueOf } from './registry-design.mjs';
 import { inSidebarColumn } from '../../../src/constants/templates.js';
+import { languageLevel } from '../../../src/utils/languageLevel.js';
 
 const typeOf = (control) => control.sectionId.replace(/^sec_/, '');
 const norm = (s) => s.trim().toLowerCase();
@@ -114,6 +115,65 @@ const gapBelow = (reg, snap) => (reg.runs.length && Number.isFinite(reg.end) ? r
  */
 const chipScale = (variant, type) => (type === 'interests' && inSidebarColumn(variant.template, type, variant.settings) ? 2.5 / 6 : 1);
 
+/**
+ * Per language entry (`entries`: its run, in the section's order), the shapes painted for it: each small
+ * fill goes to the entry it hangs from — on its page, from the entry's left edge to the next entry on its
+ * line, the nearest whose top is above the shape's centre (its own line in the main column, the line
+ * under it in the Sidebar's side column). `dot`: small round fills; `bar`: flat ones (a track and its fill).
+ */
+function levelShapes(snap, entries) {
+  const [w, h] = [(p) => p.x1 - p.x0, (p) => p.y1 - p.y0];
+  const counts = entries.map(() => ({ dot: 0, bar: 0 }));
+  const top = (L, cy) => L.y + L.h - cy;
+  for (const p of snap.paint) {
+    if (p.paint !== 'fill') continue;
+    const kind = w(p) >= 2 && w(p) <= 8 && Math.abs(w(p) - h(p)) < 0.6 ? 'dot'
+      : h(p) >= 1.5 && h(p) <= 6 && w(p) >= 2 * h(p) && w(p) <= 60 ? 'bar' : null;
+    if (!kind) continue;
+    const cy = (p.y0 + p.y1) / 2;
+    let owner = -1;
+    entries.forEach((L, i) => {
+      if (!L || L.page !== p.page || p.x0 < L.x - 1) return;
+      const next = Math.min(Infinity, ...entries.filter((o) => o && o !== L && sameLine(o, L) && o.x > L.x).map((o) => o.x));
+      if (p.x0 >= next || top(L, cy) < 0 || top(L, cy) > 20) return;
+      if (owner < 0 || top(L, cy) < top(entries[owner], cy)) owner = i;
+    });
+    if (owner >= 0) counts[owner][kind] += 1;
+  }
+  return counts;
+}
+/**
+ * Languages' Level (languageLevel.js, R2-147): Dots paints five small circles for each language that
+ * names a known proficiency, Bar a track and its fill; Text paints neither. Every language and every
+ * proficiency's word still prints under all three. Counted against Text's page (or the page before the
+ * click), so what a template paints there of its own is not counted.
+ */
+function levelCheck({ runs, control, before }) {
+  const text = runs.find((r) => valueOf(r, 'section.levelStyle') === 'text') || before;
+  const items = (state) => state.sections.find((s) => s.id === control.sectionId)?.items || [];
+  const regText = region(text.snap, text.state, 'languages', before.snap);
+  const was = levelShapes(text.snap, items(text.state).map((it) => find(regText, it.language)));
+  return runs.flatMap((r) => {
+    const v = valueOf(r, 'section.levelStyle');
+    const want = { text: { dot: 0, bar: 0 }, dots: { dot: 5, bar: 0 }, bar: { dot: 0, bar: 2 } }[v];
+    const reg = region(r.snap, r.state, 'languages', before.snap);
+    const list = items(r.state);
+    const out = [];
+    for (const it of list) {
+      if (!find(reg, it.language)) out.push(`${v}: "${it.language}" does not print`);
+      if (it.proficiency && !find(reg, it.proficiency)) out.push(`${v}: "${it.proficiency}" does not print`);
+    }
+    if (!want) return out;
+    const got = levelShapes(r.snap, list.map((it) => find(reg, it.language)));
+    list.forEach((it, i) => {
+      const w = languageLevel(it.proficiency) ? want : { dot: 0, bar: 0 };
+      const d = { dot: got[i].dot - (was[i]?.dot || 0), bar: got[i].bar - (was[i]?.bar || 0) };
+      if (d.dot !== w.dot || d.bar !== w.bar) out.push(`${v}: "${it.language}" (${it.proficiency}) paints ${d.dot} dot(s) and ${d.bar} bar shape(s), not ${w.dot} and ${w.bar}`);
+    });
+    return out;
+  });
+}
+
 export const SECTIONS = {
   'section.alignment': {
     family: 'sections',
@@ -175,6 +235,7 @@ export const SECTIONS = {
       return own && !prints(snap, own) ? [`${v}: "${own}" does not print`] : [];
     }),
   },
+  'section.levelStyle': { family: 'sections', check: levelCheck },
   'section.showDates': { family: 'sections', check: each('section.showDates', ({ v, m, snap }) => (v === false && m.date && prints(snap, m.date) ? [`hidden dates still print (${m.date})`] : [])) },
   'section.showLocation': { family: 'sections', check: each('section.showLocation', ({ v, m, snap }) => (v === false && m.location && prints(snap, m.location) ? [`hidden location still prints (${m.location})`] : [])) },
   'section.spaceBefore': { family: 'overrides', check: override('section.spaceBefore', gapAbove) },

@@ -4,6 +4,9 @@ import { PdfRichText } from './PdfRichText';
 import { ContactValue } from './PdfContact';
 import { pxToPt } from './pdfUnits';
 import { breakLinks } from './pdfFontLoader';
+import { tint } from './pdfColors';
+import { PdfLevel } from './PdfLevel';
+import { languageLevel, languageLevelStyle } from '@/utils/languageLevel';
 import { hasRichText, safeHref } from '@/utils/richText';
 import { dateRange, endDateOf, formatDate, startDateOf } from '@/utils/dates';
 import {
@@ -154,6 +157,10 @@ export function LanguagesSection({ section, settings, marginBottom, spaceBefore,
   const textColor = settings?.textColor   || '#1a1a1a';
   const sub       = shadesOf(settings).sub;
   const visibleItems = (section.items || []).filter(i => i.visible !== false);
+  // Section Options → Level (R2-147): Dots or Bar drawn in front of a known proficiency's word, in the
+  // accent on a faint track of it (the skill bars' pair); Text (unset) prints the word alone, as before.
+  const levelStyle = languageLevelStyle(s);
+  const accent    = settings?.accentColor || '#2563eb';
   // Centred: each "English  Native" pair is centred in its column. Left: the language at the
   // left edge, the proficiency at the right — on Compact beside it, a grid cell of one item with its
   // label (T9), two runs a field's gap apart. Rows are spaced by the item gap alone.
@@ -170,7 +177,12 @@ export function LanguagesSection({ section, settings, marginBottom, spaceBefore,
         {visibleItems.map((item, i) => (
           <View key={i} style={{ width: getColumnWidth(cols), flexDirection: 'row', ...pair }}>
             <Text style={{ fontSize: baseSize, fontWeight: 'bold', color: textColor }}>{item.language}</Text>
-            {item.proficiency && <Text style={{ fontSize: baseSize, color: sub }}>{item.proficiency}</Text>}
+            {levelStyle && languageLevel(item.proficiency) ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: pxToPt(6) }}>
+                <PdfLevel level={languageLevel(item.proficiency)} style={levelStyle} size={baseSize * 0.5} fill={accent} track={tint(accent, 0x20 / 255)} />
+                <Text style={{ fontSize: baseSize, color: sub }}>{item.proficiency}</Text>
+              </View>
+            ) : item.proficiency && <Text style={{ fontSize: baseSize, color: sub }}>{item.proficiency}</Text>}
           </View>
         ))}
       </View>

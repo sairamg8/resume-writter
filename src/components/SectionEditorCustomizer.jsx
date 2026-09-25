@@ -118,6 +118,17 @@ export function SectionCustomizer({ section, template, updateSectionSettings, se
         </>
       )}
 
+      {/* A language's proficiency drawn beside its word, in the main column and the Sidebar's side
+          column alike; the word always prints (R2-147). */}
+      {section.type === 'languages' && (
+        <SegmentRow
+          label="Level"
+          value={s.levelStyle || 'text'}
+          onChange={v => set('levelStyle', v)}
+          options={[{ label: 'Text', value: 'text' }, { label: 'Dots', value: 'dots' }, { label: 'Bar', value: 'bar' }]}
+        />
+      )}
+
       {section.type === 'experience' && (
         <SegmentRow
           label="Order"

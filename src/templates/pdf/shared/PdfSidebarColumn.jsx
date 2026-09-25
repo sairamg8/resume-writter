@@ -12,6 +12,8 @@ import { sidebarShades } from './pdfColors';
 import { PdfRichText } from './PdfRichText';
 import { RenderBullets, SPACER } from './PdfSections';
 import { ContactValue } from './PdfContact';
+import { PdfLevel } from './PdfLevel';
+import { languageLevel, languageLevelStyle } from '@/utils/languageLevel';
 
 /**
  * The Sidebar template's dark column: its section title and the renderers of the sections that
@@ -206,10 +208,14 @@ export function SideEducation({ section, sectionGap, itemGap, shades = NAVY, tit
   );
 }
 
-export function SideLanguages({ section, sectionGap, itemGap, shades = NAVY, titleCase, settings }) {
+export function SideLanguages({ section, sectionGap, itemGap, accent = '#2563eb', shades = NAVY, titleCase, settings }) {
   const visibleItems = (section.items || []).filter(i => i.visible !== false);
   const room = sideColumnRoom(settings);
   const textBreaks = sideBreaks(settings, { fontSize: 9 });
+  // Section Options → Level (R2-147): Dots or Bar on a line of its own under a known proficiency's
+  // language and word — the narrow column has no room beside them — in the accent on the column's fill
+  // (its skill bars' track). Text (unset) prints the words alone, as before.
+  const levelStyle = languageLevelStyle(section.settings);
   return (
     <View style={{ marginBottom: sectionGap }}>
       <SideSectionTitle title={section.title} shades={shades} titleCase={titleCase} settings={settings} />
@@ -217,12 +223,22 @@ export function SideLanguages({ section, sectionGap, itemGap, shades = NAVY, tit
         {visibleItems.map((item, i) => {
           const font = { fontFamily: settings?._pdfFontFamily, fontSize: 9 };
           const fitsTogether = !item.proficiency || (textWidth(item.language, font) + textWidth(item.proficiency, font) + 8 <= room);
-          return (
+          const words = (
             <View key={i} style={fitsTogether ? { flexDirection: 'row', justifyContent: 'space-between' } : undefined}>
               <Text style={{ fontSize: 9, color: shades.strong, lineHeight: 1.2 }} hyphenationCallback={textBreaks}>{item.language}</Text>
               {item.proficiency ? (
                 <Text style={{ fontSize: 9, color: shades.meta, lineHeight: 1.2 }} hyphenationCallback={textBreaks}>{item.proficiency}</Text>
               ) : null}
+            </View>
+          );
+          const level = levelStyle && languageLevel(item.proficiency);
+          if (!level) return words;
+          return (
+            <View key={i} wrap={false}>
+              {words}
+              <View style={{ marginTop: 2 }}>
+                <PdfLevel level={level} style={levelStyle} size={4.5} fill={accent} track={shades.fill} />
+              </View>
             </View>
           );
         })}
