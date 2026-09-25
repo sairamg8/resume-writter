@@ -322,7 +322,7 @@ export function buildSection(section, accentHex, settings, template) {
     ...(side ? { size: sectionTitleSize } : headingOf(s, template)),
     before: twips(getEffectiveSpacing(section, s).spaceBefore ?? 0),
     lineHeight: s.lineHeightValue,
-    ...(side ? {} : trackingOf(s)), // the Sidebar's column titles keep their own, as in the PDF
+    ...trackingOf(s), // the Sidebar's column titles too, as in the PDF (R2-146)
   };
   // The date in the PDF's colour for the template, from the Text colour it prints (its own when none is stored).
   const dateHex = accent2Hex(solid(getDateColor({ ...s, _template: templateId(template) })), '6b7280');

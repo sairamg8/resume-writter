@@ -161,7 +161,7 @@ export function TypographySection({ settings, template, updateSetting, onReset }
             Single · ATS-safe Layout prints no side column: Classic's page, every size from here (R2-082). */}
         {headerTemplateId(template, settings) === 'sidebar' && (
           <p className="mt-2 text-[11px] text-gray-400 leading-relaxed">
-            Base and Section Title size the main column; the side column&apos;s sections keep their own small type (8.5 pt headings, 9 pt text).
+            Base and Section Title size the main column; the side column&apos;s sections keep their own small type (8.5 pt headings, 9 pt text), spaced by Title Spacing.
           </p>
         )}
       </div>
