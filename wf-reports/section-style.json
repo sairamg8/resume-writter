@@ -1,0 +1,19 @@
+{
+  "cluster": "section-style",
+  "branch": "claude/wf-section-style",
+  "base": "334b454",
+  "status": "STOPPED AT SESSION LIMIT — incomplete: the page-number footer fails on CI; resume from wf-resume/section-style.md",
+  "rows": [
+    { "id": "R2-147", "outcome": "partial",
+      "commits": ["c017a8b", "14e212c", "19ce8d1", "39f4a60", "893aa53"],
+      "tests": ["tests/pdf/94-bullet-style.test.mjs", "tests/pdf/94-skills-pipe.test.mjs", "tests/pdf/94-page-numbers.test.mjs", "tests/pdf/parity/17-lists.test.mjs", "tests/pdf/parity/18-page-numbers.test.mjs"],
+      "summary": "Design → Lists offers Bullet •, Dash –, Circle ◦ or None for every rich-text bulleted list (summary, descriptions, legacy bullets[], cover letter) in the PDF and Word, the text where it was; unset prints as before. Skills' Separator offers Pipe ('Languages | JavaScript') in the PDF main and side columns and Word. Both pass on CI (runs 36088243126, 36088741695; pipe fail-first ok).",
+      "remaining": "FAILING: the page-number footer (19ce8d1, 893aa53) — CI finds no 'Page n of N' in the PDF on any template and the Sidebar's content moves (94-page-numbers tests 1–2, parity/18-page-numbers on all 10 variants); the Word footer and the cover-letter check pass. Do not merge 19ce8d1/893aa53 as-is (or merge with page numbers left off by default — off prints as before, but its tests are red). Next steps in wf-resume/section-style.md. Fail-first results for c017a8b (run 36088243126) and 39f4a60 (run 36088741695) not read yet. Rest of the row: section icons, link styling, level visuals, grouped roles, column layout, photo greyscale/position." }
+  ],
+  "review": {
+    "issues": ["skillSeparator read prototype keys ('constructor' printed a function source)", "panel showed pageNumbers on for truthy non-true values", "bullet test needed an offline skip for Circle", "Design → Lists does not reach Skills' own bullets (Skills style Bullet, Sidebar stacked skills, Word buildSkills)", "'Page n of N' is English only and is PDF text an ATS may read", "10 mm minimum margin puts the number ~3 mm from the edge", "JSON Resume does not carry bulletStyle/pageNumbers"],
+    "fixedByReviewer": ["39f4a60: Object.hasOwn in skillSeparator, panel reads === true, offline Circle skip (applied by the cluster session from the reviewer's findings)"]
+  },
+  "baselineFailures": [],
+  "notes": "Session limit reached before the footer was fixed. Final full CI on the final head was NOT run. a11y (deferred, note only): SegmentControl buttons lack aria-pressed/type=button. HANDOFF.md not edited (cluster rule)."
+}
