@@ -6,7 +6,7 @@
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  setup, teardown, resume, section, experience, render, renderCover, renderDocx, read, readDocx, overlaps, allItems, loadModule, MM, TEMPLATES,
+  setup, teardown, resume, section, experience, render, renderCover, renderDocx, read, readDocx, overlaps, allItems, bodyItems, loadModule, MM, TEMPLATES,
 } from './harness.mjs';
 import { drawing, painted, PNG_2X2 as PNG } from './extractors.mjs';
 
@@ -51,10 +51,11 @@ function misplaced(pages, { marginH = 18, marginV = 14 } = {}) {
   const h = marginH * MM;
   const v = marginV * MM;
   const out = [];
-  if (pages.length > 1 && pages[pages.length - 1].items.length === 0) out.push('blank trailing page');
+  if (pages.length > 1 && bodyItems(pages[pages.length - 1], pages.length - 1).length === 0) out.push('blank trailing page');
   pages.forEach((p, i) => {
     const tag = `p${i + 1}/${pages.length}`;
-    for (const t of p.items) {
+    // The page's own text: the running header ("Name · Page 2", ATS-7) prints in the top margin on purpose.
+    for (const t of bodyItems(p, i)) {
       if (t.x < h - 1 || t.x + t.w > p.W - h + 1) out.push(`${tag}: "${t.str.slice(0, 24)}" x ${t.x.toFixed(1)}–${(t.x + t.w).toFixed(1)}, margins at ${h.toFixed(1)} and ${(p.W - h).toFixed(1)}`);
       if (t.y < v - 3 || t.y + t.h * 0.8 > p.H - v + 3) out.push(`${tag}: "${t.str.slice(0, 24)}" at y ${t.y.toFixed(1)}, outside the top and bottom margins`);
     }

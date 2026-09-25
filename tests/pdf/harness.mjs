@@ -197,6 +197,31 @@ export const allText = (pages) => pages.map((p) => p.text).join(' ');
 /** Items whose text contains `needle`. */
 export const itemsWith = (pages, needle) => allItems(pages).filter((t) => t.str.includes(needle));
 
+/**
+ * A page's running header: "Name · Page N", which every résumé page after the first prints first, in its
+ * top margin (ATS-7, PdfRunningHeader) — the page's first line drawn, when it ends "Page N". Page furniture,
+ * not the résumé's text: the checks of a page's own text (its margins, its words against the exports) read
+ * it without, 66-running-header pins it.
+ */
+export function runningHeaderItems(page, index) {
+  if (!index || !page.items.length) return [];
+  const [first] = page.items;
+  const line = page.items.filter((t) => Math.abs(t.y - first.y) < 0.5);
+  return new RegExp(`(^|\\s)Page ${index + 1}$`).test(line.map((t) => t.str).join(' ').replace(/\s+/g, ' ').trim()) ? line : [];
+}
+
+/** Page `index`'s own items, without its running header. */
+export function bodyItems(page, index) {
+  const header = new Set(runningHeaderItems(page, index));
+  return page.items.filter((t) => !header.has(t));
+}
+
+/** The pages as the résumé's own text prints them: each without its running header. */
+export const withoutRunningHeaders = (pages) => pages.map((p, i) => {
+  const items = bodyItems(p, i);
+  return items.length === p.items.length ? p : { ...p, items, text: joinItems(items) };
+});
+
 /** For each drawn string containing `needle`: the fill colour and fill alpha in effect. */
 export async function drawState(bytes, needle) {
   const doc = await open(bytes);

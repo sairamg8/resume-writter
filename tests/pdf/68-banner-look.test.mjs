@@ -6,7 +6,7 @@
 // band and chips answer to. The header's own controls: 68-banner-header. How it parses: 68-banner-ats.
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { setup, teardown, resume, section, experience, render, read, allText, overlaps, drawState, loadModule, MM } from './harness.mjs';
+import { setup, teardown, resume, section, experience, render, read, allText, overlaps, drawState, loadModule, bodyItems, runningHeaderItems, MM } from './harness.mjs';
 import { paintedPages, topBands, fillsBehind } from './banner-paint.mjs';
 
 before(setup);
@@ -121,8 +121,12 @@ describe('every page after the first carries the band on as a strip (T7)', () =>
     const [strip] = topBands((await paintedPages(bytes))[1], ACCENT, pages[1].W, pages[1].H);
     assert.ok(strip, 'a full-width accent fill from page 2\'s top edge');
     assert.ok(Math.abs(strip.y1 - strip.y0 - 6) < 0.05, `6 pt tall (${(strip.y1 - strip.y0).toFixed(2)})`);
-    const top = Math.max(...pages[1].items.map((i) => i.y + i.h));
+    const top = Math.max(...bodyItems(pages[1], 1).map((i) => i.y + i.h));
     assert.ok(top < strip.y0 - 20, `page 2's text (top ${top.toFixed(1)}) starts on the margin, under the strip (${strip.y0.toFixed(1)})`);
+    // The running header ("Name · Page 2", ATS-7) prints in the margin between the strip and the text.
+    const header = runningHeaderItems(pages[1], 1);
+    assert.ok(header.length, 'page 2 carries its running header');
+    for (const h of header) assert.ok(h.y + h.h < strip.y0 && h.y > top, `the header (${h.y.toFixed(1)}–${(h.y + h.h).toFixed(1)}) is between the text (${top.toFixed(1)}) and the strip (${strip.y0.toFixed(1)})`);
     const flush = await render(make(0));
     const flushPages = await read(flush);
     assert.ok(flushPages.length >= 2);

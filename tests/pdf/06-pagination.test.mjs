@@ -3,7 +3,7 @@
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  setup, teardown, resume, section, experience, render, read, overlaps, allItems, MM, TEMPLATES,
+  setup, teardown, resume, section, experience, render, read, overlaps, allItems, bodyItems, MM, TEMPLATES,
 } from './harness.mjs';
 
 before(setup);
@@ -28,23 +28,28 @@ function longResume(template, k) {
   });
 }
 
-/** Everything wrong with one rendered document, as readable strings. */
+/**
+ * Everything wrong with one rendered document, as readable strings. The margins and the orphans are the
+ * page's own text's: the running header ("Name · Page 2", ATS-7) prints in the top margin on purpose — it
+ * still may not overprint anything.
+ */
 function problems(pages, { marginV = 14 } = {}) {
   const out = [];
   const m = marginV * MM;
-  if (pages.length > 1 && pages[pages.length - 1].items.length === 0) out.push('blank trailing page');
+  if (pages.length > 1 && bodyItems(pages[pages.length - 1], pages.length - 1).length === 0) out.push('blank trailing page');
   pages.forEach((p, i) => {
     const tag = `p${i + 1}/${pages.length}`;
     for (const [a, b] of overlaps(p)) out.push(`${tag}: "${a.slice(0, 20)}" overprints "${b.slice(0, 20)}"`);
-    const low = p.items.find((t) => t.y < m - 3);
+    const own = bodyItems(p, i);
+    const low = own.find((t) => t.y < m - 3);
     if (low) out.push(`${tag}: "${low.str.slice(0, 24)}" below the bottom margin (y=${low.y.toFixed(1)})`);
-    const high = p.items.find((t) => t.y + t.h * 0.8 > p.H - m + 3);
+    const high = own.find((t) => t.y + t.h * 0.8 > p.H - m + 3);
     if (high) out.push(`${tag}: "${high.str.slice(0, 24)}" above the top margin`);
-    const wide = p.items.find((t) => t.x + t.w > p.W - 3);
+    const wide = own.find((t) => t.x + t.w > p.W - 3);
     if (wide) out.push(`${tag}: "${wide.str.slice(0, 24)}" runs off the page`);
-    if (i < pages.length - 1 && p.items.length) {
-      const lowest = Math.min(...p.items.map((t) => t.y));
-      const lastLine = p.items.filter((t) => Math.abs(t.y - lowest) < 1);
+    if (i < pages.length - 1 && own.length) {
+      const lowest = Math.min(...own.map((t) => t.y));
+      const lastLine = own.filter((t) => Math.abs(t.y - lowest) < 1);
       if (lastLine.every((t) => /^\s*[•–·]\s*$/.test(t.str))) out.push(`${tag}: ends with a lone bullet`);
       if (lastLine.some((t) => TITLES.includes(t.str.trim().toUpperCase()))) out.push(`${tag}: ends with the heading "${lastLine[0].str}"`);
     }

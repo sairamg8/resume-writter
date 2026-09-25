@@ -7,7 +7,7 @@
 // single column. The same settings reach both, so the dates are formatted alike.
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { setup, teardown, read, render, renderDocx, loadModule, resume, section, allText, TEMPLATES } from './harness.mjs';
+import { setup, teardown, read, render, renderDocx, loadModule, resume, section, allText, TEMPLATES, withoutRunningHeaders } from './harness.mjs';
 
 before(setup);
 after(teardown);
@@ -57,7 +57,8 @@ describe('the Markdown prints every word the PDF prints (R2-009)', () => {
       const r = fullResume(template, settings);
       const { generateMarkdownResume } = await loadModule('/src/utils/markdownExport.js');
       const md = generateMarkdownResume(r);
-      const pdf = allText(await read(await render(r)));
+      // The résumé's own words: the exports have no pages, so no running header ("Name · Page 2", ATS-7).
+      const pdf = allText(withoutRunningHeaders(await read(await render(r))));
       assert.deepEqual(missing(pdf, md), [], `Markdown:\n${md}`);
     });
   }

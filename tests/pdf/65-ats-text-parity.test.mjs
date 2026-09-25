@@ -8,7 +8,7 @@
 // a certificate's link has no label, as the text prints the address a label would hide.
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { setup, teardown, read, render, renderDocx, loadModule, resume, section, allText, TEMPLATES } from './harness.mjs';
+import { setup, teardown, read, render, renderDocx, loadModule, resume, section, allText, TEMPLATES, withoutRunningHeaders } from './harness.mjs';
 
 before(setup);
 after(teardown);
@@ -58,7 +58,8 @@ describe('the ATS text prints every word the PDF prints (R2-001)', () => {
       const r = fullResume(template, settings);
       const { generateAtsPlainText } = await loadModule('/src/utils/atsChecker.js');
       const ats = generateAtsPlainText(r);
-      const pdf = allText(await read(await render(r)));
+      // The résumé's own words: the exports have no pages, so no running header ("Name · Page 2", ATS-7).
+      const pdf = allText(withoutRunningHeaders(await read(await render(r))));
       assert.deepEqual(missing(pdf, ats), [], `ATS text:\n${ats}`);
     });
   }
