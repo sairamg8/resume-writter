@@ -1,5 +1,30 @@
 # Session Handoff — Resume Here
 
+## 2026-09-25 ~06:40 — Round 2's gate fixed and deployed (in progress)
+
+**Coordinator:** session_01XeVJDQKh78wxFo4dTK6ZpW. **Work branch: `claude/busy-darwin-yjb13t`**, fast-forwarded from
+`claude/sweet-feynman-ro5q2g` (`5086b0a`, frozen). The previous coordinator (session_01YBTHhwV9xeHy7YGaebJnhY) and the
+Jira-revamp lane (session_01ASmJ6BQpqJE5fifosw4z8y) both stopped at 04:18–04:22 UTC on the usage limit. **Owner,
+06:40:** fix the gate and deploy; agents allowed (fast and efficient); fix everything as one batch, gated by one CI run.
+
+The full gate on `6c11484` (run 36092446651) had 7 failures, all where Round 2 clusters' changes meet:
+
+| Failure | Cause | Fix |
+|---|---|---|
+| suite 2: `31-contact-fields` one contact table | ats-view's comment at `src/utils/atsChecker.js:670` spelled `"LinkedIn"` in quotes | `4444898` rewords the comment; the guard is unchanged |
+| suite 2: `91-design-resets` (R2-157) | header-type added `sectionLetterSpacing` and `fontSizeTitleDelta` to the Typography ↺; section-style added the Lists ↺ | `34afa71`: the test moves them off default and expects them back (seven ↺s) |
+| suite 5: `knowledge-docs` (R2-169) | letters-import moved `DATA_VERSION` to 13 | `556d0fc`: docs 03 and 05 say 13 |
+| Playwright 3: `pdf-templates` Banner | templates-core's Modern card reads "…in an accent banner"; `:has-text("Banner")` clicked it | `1760224`: cards by `data-testid` (`template-<id>`) |
+| suite 1: `96-dashboard` (R2-167) ×2 | letters-import: New Cover Letter makes a letter; Import JSON renamed | agent, in progress |
+| Playwright 2: `parity-ui-controls` classic Design panel | Lists' bullet buttons change the résumé but not Classic's preview | agent, in progress |
+| Cypress 2: `23-editor-panels` zoom across the letter | header-type's Name ↔ Contacts stepper puts a "+" in the letter panel before the zoom's | `34416d2`: the zoom's "+" is read in the preview column |
+
+Next: the three agents' fixes committed → push → **one** full gate on the head → on green, `git push origin <sha>:master`,
+then the tracker (every ⏸ row whose commits are on master → ✅; ATS-7 ✖ → ✅, `38f35b5`) and this file, docs only.
+Still open after the deploy: 7 rows (R2-138, 139, 142, 143, 146, 147, 148 — each partly done); `claude/jira-revamp`
+(its gate run 36092746492: `82-your-work-page` and Cypress `20-regressions-job-unsaved` left; the owner decides when it
+merges); `claude/wf-templates` parked for the a11y pass.
+
 ## 2026-09-25 — Round 2 relaunched: 10 cloud sessions (in progress)
 
 **Coordinator:** session_01YBTHhwV9xeHy7YGaebJnhY. **Work branch:** `claude/sweet-feynman-ro5q2g` (= master `334b454`
