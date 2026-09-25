@@ -474,14 +474,16 @@ describe("the dashboard: a demo account's originals (R2-167)", () => {
       const deleteOf = (name) => page.button('Delete', page.card(name));
       const pilot = () => page.resumes().find((r) => r.id === list[0].id);
       assert.ok(page.button('Keep as my original', page.card('Harbor Pilot CV')));
-      assert.doesNotMatch(page.card('Harbor Pilot CV').textContent, /\bOriginal\b/);
+      // The badge is its own element: the fake DOM runs a card's texts together ("OriginalStop keeping").
+      const badged = (name) => [...elements(page.card(name))].some((el) => el.tagName === 'SPAN' && el.textContent.trim() === 'Original');
+      assert.equal(badged('Harbor Pilot CV'), false);
 
       const t0 = Date.now();
       page.click(page.button('Keep as my original', page.card('Harbor Pilot CV')));
       assert.equal(pilot().keep, true);
       assert.ok(pilot().updatedAt >= t0, 'an edit: the sync sends it');
       assert.equal(page.resumes()[1].keep, undefined, 'only that one');
-      assert.match(page.card('Harbor Pilot CV').textContent, /\bOriginal\b/);
+      assert.equal(badged('Harbor Pilot CV'), true, 'the Original badge');
       assert.ok(page.button('Stop keeping', page.card('Harbor Pilot CV')));
       assert.equal(reactProps(deleteOf('Harbor Pilot CV')).disabled, true, 'the last original: deleted, it would come straight back');
       assert.match(page.card('Harbor Pilot CV').textContent, /Your last original always comes back/);
