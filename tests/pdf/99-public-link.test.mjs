@@ -12,6 +12,7 @@ import assert from 'node:assert/strict';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
+import { MemoryStorage, settle } from './resume-tab.mjs';
 import { setupPreview, teardownPreview } from './preview-stub.mjs';
 import { resume, section, experience, render, read, allText, loadModule } from './harness.mjs';
 import { elements, mount, reactProps } from './fake-dom.mjs';
@@ -99,6 +100,114 @@ describe('the published copy holds what the PDF prints, and nothing else', () =>
     const published = allText(await read(await render(normalizeResume({ ...link.publicSnapshot(r), id: 'public_x', name: 'x' }))));
     assert.equal(published, printed);
     assert.doesNotMatch(published, /555 0199|Secret Town|Hidden Employer|Invisible College/);
+  });
+});
+
+// Review of R2-148: what the PDF leaves out is not only what an eye hides. A hidden LinkedIn's
+// "Link URL" and "Display label", a key of `personal` no template reads, a section's dates with its
+// Show dates off, its locations with Show location off, and whether a job whose end date is hidden
+// is current — none prints, so none may be in the copy.
+describe('the copy leaves out what the PDF does not print beyond the eyes', () => {
+  function more() {
+    const r = resume({
+      personal: {
+        name: 'Jordan Ellery', title: 'Product Designer', email: 'jordan.ellery@example.org',
+        linkedin: 'linkedin.com/in/jordan-hidden', linkedinUrl: 'https://www.linkedin.com/in/jordan-hidden-url/',
+        linkedinLabel: 'Jordan on LinkedIn (hidden)', website: 'jordan.example.org', websiteLabel: 'Portfolio',
+        websiteUrl: 'https://jordan.example.org/work', hiddenFields: ['linkedin'],
+        birthday: '1990-02-14', homeAddress: '12 Private Lane',
+      },
+      sections: [
+        experience([
+          { company: 'Fabrikam Studio', role: 'Lead Designer', location: 'Quietville', startDate: 'Jan 2020', endDate: 'Mar 2024' },
+        ], { showLocation: false }),
+        experience([
+          { company: 'Northwind', role: 'Designer', location: 'Shown City', startDate: 'Undisclosed 2012', endDate: 'Undisclosed 2015' },
+        ], { showDates: false }),
+        section('certifications', [{ name: 'Figma Pro', issuer: 'Figma', date: 'Secret May 2019', expiry: 'Secret May 2029' }], { showDates: false }),
+        experience([{ company: 'Contoso', role: 'Intern', startDate: 'Jun 2010', endDate: '', current: true, hiddenFields: ['endDate'] }]),
+        section('custom', [{ title: 'Talk', location: 'Custom Place', date: 'Oct 2021' }], { showLocation: false }),
+      ],
+    });
+    return r;
+  }
+
+  it('no hidden link or label, unprinted personal key, date or location a section hides, or current flag behind a hidden end date', () => {
+    const copy = link.publicSnapshot(more());
+    const json = JSON.stringify(copy);
+    for (const secret of ['jordan-hidden', 'Jordan on LinkedIn', '1990-02-14', '12 Private Lane', 'birthday', 'homeAddress',
+      'Quietville', 'Undisclosed', 'Secret May']) {
+      assert.ok(!json.includes(secret), `${secret} is not in the copy`);
+    }
+    assert.equal(copy.personal.websiteLabel, 'Portfolio', 'a shown link keeps its label');
+    assert.equal(copy.personal.websiteUrl, 'https://jordan.example.org/work', 'and its link');
+    assert.equal(copy.sections[1].items[0].location, 'Shown City', 'Show dates off hides only the dates');
+    assert.equal(copy.sections[3].items[0].current, false, 'a hidden end date hides that the job is current');
+    assert.equal(copy.sections[4].items[0].location, 'Custom Place', 'a custom section prints its location always');
+  });
+
+  it('and it still prints exactly as the résumé does', async () => {
+    const r = more();
+    const { normalizeResume } = await loadModule('/src/utils/normalizeResume.js');
+    const printed = allText(await read(await render(r)));
+    const published = allText(await read(await render(normalizeResume({ ...link.publicSnapshot(r), id: 'public_x', name: 'x' }))));
+    assert.equal(published, printed);
+    assert.match(published, /Portfolio/);
+    assert.match(published, /Custom Place/);
+  });
+});
+
+describe('deleting a résumé takes its public copy down', () => {
+  it('publicIo.unpublishResume removes the copy and the record; with none it does nothing', async () => {
+    const cloud = fakeFirestore();
+    cloud.auth = 'uid_owner';
+    const io = link.publicIo(cloud.fs, cloud.db);
+    const r = sample();
+    const { shareId } = await io.publish('uid_owner', r);
+    assert.equal(await io.unpublishResume('uid_owner', r.id), true);
+    assert.equal(cloud.doc(`public/${shareId}`), undefined);
+    assert.equal(cloud.doc(`users/uid_owner/shares/${r.id}`), undefined);
+    assert.equal(await io.unpublishResume('uid_owner', r.id), false, 'nothing published: nothing to do');
+  });
+
+  it("the Dashboard's Delete, signed in, unpublishes it: the link no longer opens", async () => {
+    const cloud = fakeFirestore();
+    cloud.auth = 'uid_owner';
+    const io = link.publicIo(cloud.fs, cloud.db);
+    const r = Object.assign(sample(), { name: 'Shared CV' });
+    const other = Object.assign(resume({ personal: { name: 'Riley Other' } }), { name: 'Other CV' });
+    const { shareId } = await io.publish('uid_owner', r);
+
+    const { useAppStore } = await loadModule('/src/hooks/useResumeStore.js');
+    const { Dashboard } = await loadModule('/src/pages/Dashboard.jsx');
+    globalThis.localStorage = new MemoryStorage([['cpwtcv_v1', JSON.stringify({ resumes: [r, other], activeId: r.id })]]);
+    const savedConfirm = globalThis.confirm;
+    globalThis.confirm = () => true;
+    const auth = { user: { uid: 'uid_owner', email: 'owner@example.com' }, authLoading: false, cloudAvailable: true, signInWithGoogle: () => {}, signOut: () => {} };
+    const sync = { syncStatus: 'idle', lastSynced: null, isOnline: true, heldResumes: [] };
+    function Page() {
+      const store = useAppStore();
+      return createElement(MemoryRouter, { initialEntries: ['/'] }, createElement(Dashboard, { store, auth, sync, publicLinks: io }));
+    }
+    const view = mount(Page, {});
+    try {
+      await settle();
+      const card = [...elements(view.container)].find((el) => el.tagName === 'DIV' && el.className.startsWith('group bg-white rounded-2xl')
+        && el.textContent.includes('Shared CV'));
+      assert.ok(card, 'the card of the shared résumé');
+      const del = [...elements(card)].find((el) => el.tagName === 'BUTTON'
+        && [el.textContent.trim(), el.getAttribute('title'), el.getAttribute('aria-label')].includes('Delete'));
+      click(view, del);
+      await until(() => cloud.doc(`public/${shareId}`) === undefined);
+      assert.equal(cloud.doc(`public/${shareId}`), undefined, 'the copy is gone');
+      assert.equal(cloud.doc(`users/uid_owner/shares/${r.id}`), undefined);
+      cloud.auth = null;
+      assert.equal(await io.readPublic(shareId), null, 'the link finds nothing');
+    } finally {
+      await view.unmount();
+      delete globalThis.localStorage;
+      if (savedConfirm === undefined) delete globalThis.confirm; else globalThis.confirm = savedConfirm;
+    }
   });
 });
 
