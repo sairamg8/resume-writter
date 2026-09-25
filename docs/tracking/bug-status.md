@@ -1,9 +1,9 @@
 # FlowCV Bug Tracker & Status Index
 
 > Location: `/mnt/Storage/Projects/flowcv/docs/tracking/bug-status.md` (moved from the repo root 2026-09-24)
-> Updated: 2026-09-25 · `origin/master` (deployed) = `0a79974` — Round 2 (`c5acb93`, gate run 36104952093) and the Jira-style
-> revamp of Boards and the Job Tracker (merged `75236a2`, gate run 36106125348 green on `0a79974`) · Round 3 in progress
-> **Open: 6** (0 here + 6 in [bug-status-r2/](bug-status-r2/README.md)) | Fixed, not pushed: 1 | **Closed: 252** (231 fixed + 21 ✖ without a code fix)
+> Updated: 2026-09-25 · `origin/master` (deployed) = `e006835` — Round 3 batch 1 (typography, public link; gate run 36109292470 green
+> on `e006835`) on top of Round 2 and the Jira-style revamp (`0a79974`) · batch 2 (page-numbers, picker) gating on the work branch
+> **Open: 11** (0 here + 11 in [bug-status-r2/](bug-status-r2/README.md)) | Fixed, not pushed: 0 | **Closed: 253** (232 fixed + 21 ✖ without a code fix)
 
 ## Summary
 
@@ -14,9 +14,9 @@
 | Templates UI audit, 2026-09-23 (`TUI-`) | 6 (+ TUI-6, filed as ATS-7) | 6 | 0 | 0 | 0 |
 | Prompt tasks, 2026-09-14 → 09-21 | 33 | 33 | 0 | 0 | 0 |
 | Full audit, 2026-09-23 — defects (`R2-001`…`R2-134`, [bug-status-r2/](bug-status-r2/README.md)) | 134 | 115 | 0 | 19 | **0** |
-| Full audit, 2026-09-23 — features and test gaps (`R2-135`…`R2-171`) | 37 | 30 | 1 | 0 | **6** |
-| Found by the build lanes, 2026-09-24 (`R3-`, in [bug-status-r2/](bug-status-r2/README.md)) | 7 | 6 | 0 | 1 | **0** |
-| **Total** | **259** | **231** | **1** | **21** | **6** |
+| Full audit, 2026-09-23 — features and test gaps (`R2-135`…`R2-171`) | 37 | 31 | 0 | 0 | **6** |
+| Found by the build lanes, 2026-09-24 (`R3-`, in [bug-status-r2/](bug-status-r2/README.md)) | 12 | 6 | 0 | 1 | **5** |
+| **Total** | **264** | **232** | **0** | **21** | **11** |
 
 - **Status:** ✅ fixed and pushed (on `origin/master`, so deployed) · ⏸ fixed and committed, not pushed · 🔴 open ·
   ✖ closed without a code fix (won't fix: a known limit; not a bug; a duplicate) — the proof is in the row, and it counts as closed.
