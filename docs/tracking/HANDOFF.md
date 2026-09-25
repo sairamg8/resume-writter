@@ -1,5 +1,22 @@
 # Session Handoff — Resume Here
 
+## ⏩ COLD START HERE — 2026-09-25 16:05 UTC (laptop session, owner's execution brief of 21:45 IST)
+
+**Deployed:** `master` = `0a79974` (unchanged). The laptop checkout is fast-forwarded to it and now works on this branch.
+**Work branch:** `claude/busy-darwin-yjb13t`; head = the picker merge `6e19667` (+ this docs commit).
+
+**Batch 2 = page-numbers (`3a70d91`) + picker (`6e19667`, conflict in `src/pages/Editor.jsx` only: both sides kept).**
+Full gate **run 36158213786 on `6e19667`**. `e006835` (batch 1) is green (run 36109292470) but not deployed: it waits
+on the owner publishing the new `firestore.rules`. On green of 36158213786 and the owner's yes on the rules:
+`git push origin 6e19667:refs/heads/master`, `python3 docs/tracking/tools/deploy_rows.py 6e19667`,
+`update_tracker.py --recount`, the tracker's "Updated" line, this file.
+
+**Next, in order:** perf2 (`7a768b4`, gate green, no report; conflicts in `src/AppRoutes.jsx`) → section-look
+(`f0fe67f`, red) → layouts (`3e2ed65`, red) → locale (`2f5d9d0`, red) — one at a time, each on its own branch to a
+green gate and a `wf-reports/<cluster>.json`, then merged here. Then the owner's four asks of 09-24 (hand cursor,
+modals close on an outside click, a new résumé from the account's own data, a `/new` page of template pictures),
+the rest of the checklist, accessibility last. Picker's three product calls are with the owner (its report's notes).
+
 ## ⏩ COLD START HERE — 2026-09-25 07:47 UTC (coordinator session_01XeVJDQKh78wxFo4dTK6ZpW, about to run out)
 
 **Deployed:** `master` = `0a79974` = Round 2 (ten clusters, ATS-7) + the Jira-style revamp of Boards and the Job Tracker.
