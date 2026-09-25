@@ -8,6 +8,8 @@ import { hasRichText, safeHref } from '@/utils/richText';
 import { dateRange, endDateOf, formatDate, presentLabel, startDateOf } from '@/utils/dates';
 import { SPACER, SectionTitleOf, SectionRouter, RenderBullets, shadesOf } from './PdfSections';
 import { TimelineEntries, TimelineHead } from './PdfTimeline';
+import { EmployerHeader } from './PdfItemHeader';
+import { employerOf, groupPlaces, groupsRoles, roleGroups } from '@/utils/roleGroups';
 
 /**
  * The Timeline template's sections. Every section whose entries have a header — Experience, Education,
@@ -113,36 +115,74 @@ function TimelineSection({ section, settings, marginBottom, spaceBefore, itemGap
   // one line taller than on the other templates, moved to the next.
   const title = cloneElement(SectionTitleOf({ section, settings, centered }), { presence: Math.round((settings?.fontSizeBase || 11) * lineH * 5) });
 
-  return (
-    <View style={{ marginBottom, marginTop: spaceBefore }}>
-      {SPACER}
-      <TimelineEntries
-        title={title}
-        items={items}
-        cols={s.columns || 1}
-        gap={itemGap}
-        settings={settings}
-        renderItem={(item) => {
+  const one = (item) => {
+    const f = fields(item, s, settings);
+    const text = { fontSize: entrySize - f.step, color: body, lineHeight: lineH, textAlign };
+    return (
+      <View>
+        <TimelineHead
+          primary={f.primary}
+          sub={f.sub || undefined}
+          subLine={f.subLine}
+          loc={f.loc || undefined}
+          dateStr={f.dateStr}
+          settings={settings}
+          titleStyle={f.stacked ? 'stacked' : (s.titleStyle || 'stacked')}
+          italicSub={italicSubs}
+          centered={centered}
+        />
+        {hasRichText(f.desc) && <PdfRichText html={f.desc} style={{ ...text, marginTop: 2 }} />}
+        <RenderBullets bullets={item.bullets} style={text} />
+      </View>
+    );
+  };
+
+  // Experience's "Group roles by company" (R2-147, roleGroups): a group is one entry on the rail — the
+  // employer (and the first role's location) once, then each role with its dot, its date above it, a
+  // location only where it differs and its description. The employer leads whatever Order says: that
+  // is what it groups by. A job alone at its company prints as it always has.
+  const groups = section.type === 'experience' && groupsRoles(s) ? roleGroups(items) : null;
+  const group = (g) => {
+    const places = groupPlaces(g, (item) => fields(item, s, settings).loc);
+    return (
+      <View>
+        <EmployerHeader
+          company={employerOf(g[0])} loc={places.header || undefined} settings={settings} italicSub={italicSubs} centered={centered}
+          keep={Math.round((settings?.fontSizeBase || 11) * lineH * 4)}
+        />
+        {g.map((item, k) => {
           const f = fields(item, s, settings);
           const text = { fontSize: entrySize - f.step, color: body, lineHeight: lineH, textAlign };
           return (
-            <View>
+            <View key={k} style={k ? { marginTop: itemGap / 2 } : null}>
+              {SPACER}
               <TimelineHead
-                primary={f.primary}
-                sub={f.sub || undefined}
-                subLine={f.subLine}
-                loc={f.loc || undefined}
+                primary={hid(item, 'role') ? '' : (item.role || '')}
+                loc={places.roles[k] || undefined}
                 dateStr={f.dateStr}
                 settings={settings}
-                titleStyle={f.stacked ? 'stacked' : (s.titleStyle || 'stacked')}
-                italicSub={italicSubs}
+                titleStyle={s.titleStyle || 'stacked'}
                 centered={centered}
               />
               {hasRichText(f.desc) && <PdfRichText html={f.desc} style={{ ...text, marginTop: 2 }} />}
               <RenderBullets bullets={item.bullets} style={text} />
             </View>
           );
-        }}
+        })}
+      </View>
+    );
+  };
+
+  return (
+    <View style={{ marginBottom, marginTop: spaceBefore }}>
+      {SPACER}
+      <TimelineEntries
+        title={title}
+        items={groups || items}
+        cols={s.columns || 1}
+        gap={itemGap}
+        settings={settings}
+        renderItem={groups ? (g) => (g.length > 1 ? group(g) : one(g[0])) : one}
       />
     </View>
   );

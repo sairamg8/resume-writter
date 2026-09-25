@@ -45,7 +45,8 @@ for (const variant of W.variants) {
     });
 
     it('an entry dragged above another prints above it', async () => {
-      const moved = await withActions(base(), (a) => a.reorderItems('sec_experience', 1, 0));
+      // The third job is the first at another company (the second is a role at the first's, R2-147).
+      const moved = await withActions(base(), (a) => a.reorderItems('sec_experience', 2, 0));
       assert.ok(before_(await shot(moved), 'Contoso Retail', 'Northwind Labs'));
     });
 

@@ -4,7 +4,8 @@ import { PdfRichText } from './PdfRichText';
 import { hasRichText } from '@/utils/richText';
 import { dateRange, endDateOf, presentLabel, startDateOf } from '@/utils/dates';
 import { SectionTitleOf, RenderBullets, RenderColGrid, hexAlpha, SectionRouter, SPACER, ItemHeader, shadesOf } from './PdfSections';
-import { CentredLine, EndRow, endField, fieldGap, headPresence, itemHeadPresence, onBaselineOf, wordRoom } from './PdfItemHeader';
+import { CentredLine, EmployerHeader, EndRow, endField, fieldGap, headPresence, itemHeadPresence, onBaselineOf, wordRoom } from './PdfItemHeader';
+import { employerOf, groupPlaces, groupsRoles, roleGroups } from '@/utils/roleGroups';
 import {
   SIDEBAR_TYPES, SideSectionTitle, EntryLink, SideEducation, SideLanguages, SideCertifications, SideInterests, SideReferences,
 } from './PdfSidebarColumn';
@@ -144,39 +145,72 @@ export function SidebarMainExperience({ section, settings, marginBottom, spaceBe
     : titleStyle === 'stacked' ? cardPresence(settings, entrySize, lineH, cardLines(firstHead))
     : itemHeadPresence({ primary: firstHead.primary, sub: firstHead.secondary || undefined, loc: firstHead.loc || undefined, settings, titleStyle, centered });
 
+  // A card's header: CardHeader Stacked, the shared one-line header in Title "Inline" / "Side by side",
+  // as the other templates print it.
+  const cardHead = ({ primary, secondary, loc, dateStr }) => (titleStyle === 'stacked' ? (
+    <CardHeader
+      centered={centered} entrySize={entrySize} lineH={lineH} dateStr={dateStr} dateStyle={dateStyle} sepColor={shade.muted}
+      {...cardWordRooms(settings, entrySize, primary, secondary)}
+      first={primary ? <Text style={{ fontSize: entrySize, fontWeight: 'bold', color: textColor, lineHeight: 1.2, textAlign }}>{primary}</Text> : null}
+      details={secondary ? <Text style={{ fontSize: entrySize - 1, color: hexAlpha(accent, 0.8), lineHeight: 1.2, textAlign }}>{secondary}</Text> : null}
+      loc={loc} locStyle={{ fontSize: entrySize - 1, color: shade.muted, lineHeight: 1.2 }}
+    />
+  ) : (
+    <ItemHeader primary={primary} sub={secondary || undefined} loc={loc || undefined} dateStr={dateStr} settings={settings} titleStyle={titleStyle} centered={centered} />
+  ));
+  const descOf = (item) => ((item.hiddenFields || []).includes('description') ? '' : item.description);
+  const details = (item) => {
+    const desc = descOf(item);
+    return (
+      <>
+        {hasRichText(desc) ? (
+          <PdfRichText html={desc} style={{ fontSize: entrySize - 0.5, color: shade.body, lineHeight: lineH, marginTop: 2, textAlign }} />
+        ) : null}
+        <RenderBullets bullets={item.bullets} style={{ fontSize: entrySize - 0.5, color: shade.body, lineHeight: lineH, textAlign }} accent={accent} isModern={false} template="sidebar" />
+      </>
+    );
+  };
+  const card = (item, idx) => (
+    <CardItem key={idx}>
+      {cardHead(head(item))}
+      {details(item)}
+    </CardItem>
+  );
+  // Section Options → "Group roles by company" (R2-147, roleGroups): one card per employer — its name
+  // and the first role's location once, then each role (the role leads whatever Order says: the card
+  // is the employer's), its dates, a location only where it differs, its description. A job alone at
+  // its company is the card it always was.
+  const groups = groupsRoles(s) ? roleGroups(visibleItems) : null;
+  const roleOf = (item) => ((item.hiddenFields || []).includes('role') ? '' : (item.role || ''));
+  const groupCard = (g, idx) => {
+    const places = groupPlaces(g, (item) => head(item).loc);
+    return (
+      <CardItem key={idx}>
+        <EmployerHeader
+          company={employerOf(g[0])} loc={places.header || undefined} settings={settings} centered={centered}
+          keep={cardPresence(settings, entrySize, lineH, places.roles[0] ? 2 : 1)}
+        />
+        {g.map((item, k) => (
+          <View key={k} style={k ? { marginTop: itemGap / 2 } : null}>
+            {SPACER}
+            {cardHead({ primary: roleOf(item), secondary: '', loc: places.roles[k], dateStr: head(item).dateStr })}
+            {details(item)}
+          </View>
+        ))}
+      </CardItem>
+    );
+  };
+
   return (
     <View style={{ marginBottom, marginTop: spaceBefore }}>
       {SPACER}
       <RenderColGrid
         title={<SectionTitleOf section={section} settings={settings} centered={centered} presence={presence} />}
         settings={settings}
-        items={visibleItems}
+        items={groups || visibleItems}
         cols={s.columns || 1}
         gap={itemGap}
-        renderItem={(item, idx) => {
-          const { primary, secondary, loc, dateStr } = head(item);
-          const desc = (item.hiddenFields || []).includes('description') ? '' : item.description;
-          return (
-            <CardItem key={idx}>
-              {titleStyle === 'stacked' ? (
-                <CardHeader
-                  centered={centered} entrySize={entrySize} lineH={lineH} dateStr={dateStr} dateStyle={dateStyle} sepColor={shade.muted}
-                  {...cardWordRooms(settings, entrySize, primary, secondary)}
-                  first={primary ? <Text style={{ fontSize: entrySize, fontWeight: 'bold', color: textColor, lineHeight: 1.2, textAlign }}>{primary}</Text> : null}
-                  details={secondary ? <Text style={{ fontSize: entrySize - 1, color: hexAlpha(accent, 0.8), lineHeight: 1.2, textAlign }}>{secondary}</Text> : null}
-                  loc={loc} locStyle={{ fontSize: entrySize - 1, color: shade.muted, lineHeight: 1.2 }}
-                />
-              ) : (
-                // Title "Inline" / "Side by side": the shared one-line header, as the other templates print it.
-                <ItemHeader primary={primary} sub={secondary || undefined} loc={loc || undefined} dateStr={dateStr} settings={settings} titleStyle={titleStyle} centered={centered} />
-              )}
-              {hasRichText(desc) ? (
-                <PdfRichText html={desc} style={{ fontSize: entrySize - 0.5, color: shade.body, lineHeight: lineH, marginTop: 2, textAlign }} />
-              ) : null}
-              <RenderBullets bullets={item.bullets} style={{ fontSize: entrySize - 0.5, color: shade.body, lineHeight: lineH, textAlign }} accent={accent} isModern={false} template="sidebar" />
-            </CardItem>
-          );
-        }}
+        renderItem={groups ? (g, idx) => (g.length > 1 ? groupCard(g, idx) : card(g[0], idx)) : card}
       />
     </View>
   );

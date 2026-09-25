@@ -175,6 +175,24 @@ export const SECTIONS = {
       return own && !prints(snap, own) ? [`${v}: "${own}" does not print`] : [];
     }),
   },
+  // Group roles by company (R2-147): on, the fixture's two roles at Northwind Labs print under its name
+  // printed once, both roles still printing; off, the name prints with each of them.
+  'section.groupRoles': {
+    family: 'sections',
+    check: ({ runs, control, before }) => {
+      const type = typeOf(control);
+      const m = TYPE_MARKS[type];
+      const times = (reg) => reg.runs.filter((t) => norm(t.str).includes(norm(first(m.first)))).length;
+      return runs.flatMap((r) => {
+        const v = valueOf(r, 'section.groupRoles');
+        const reg = region(r.snap, r.state, type, before.snap);
+        const n = times(reg);
+        if (![m.title, m.grouped].every((s) => find(reg, first(s)))) return [`${v}: "${m.title}" or "${m.grouped}" does not print`];
+        if (v === true && n !== 1) return [`on: "${m.first}" prints ${n} times in the section, not once`];
+        return v !== true && n < 2 ? [`off: "${m.first}" prints ${n} time(s), not with each role`] : [];
+      });
+    },
+  },
   'section.showDates': { family: 'sections', check: each('section.showDates', ({ v, m, snap }) => (v === false && m.date && prints(snap, m.date) ? [`hidden dates still print (${m.date})`] : [])) },
   'section.showLocation': { family: 'sections', check: each('section.showLocation', ({ v, m, snap }) => (v === false && m.location && prints(snap, m.location) ? [`hidden location still prints (${m.location})`] : [])) },
   'section.spaceBefore': { family: 'overrides', check: override('section.spaceBefore', gapAbove) },

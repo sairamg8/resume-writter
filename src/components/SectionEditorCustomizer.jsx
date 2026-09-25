@@ -144,6 +144,12 @@ export function SectionCustomizer({ section, template, updateSectionSettings, se
         <ToggleRow label="Show location" value={s.showLocation !== false} onChange={v => set('showLocation', v)} />
       )}
 
+      {/* Consecutive roles at one company under one employer header, in the PDF, Word and Markdown;
+          the ATS text keeps every role with its company (src/utils/roleGroups.js, R2-147). */}
+      {section.type === 'experience' && (
+        <ToggleRow label="Group roles by company" value={s.groupRoles === true} onChange={v => set('groupRoles', v)} />
+      )}
+
       <div className="pt-1 border-t border-slate-200 space-y-2">
         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Spacing Override</p>
         <div className="grid grid-cols-3 gap-2">
