@@ -10,7 +10,9 @@ import { CARD } from '../support/selectors.js';
 const PHONE = [375, 812];
 const NAME = 'input[placeholder="John Doe"]';
 /** The Edit | Preview switch: the fixed bar at the foot of the screen. */
-const switchButton = (label) => cy.contains('div.fixed.bottom-4 button', new RegExp(`^\\s*${label}\\s*$`));
+// The Edit / Preview pill (z-40): the editor's notice stack is fixed at the bottom too (R2-139 A4).
+const PILL = 'div.fixed.bottom-4.z-40';
+const switchButton = (label) => cy.contains(`${PILL} button`, new RegExp(`^\\s*${label}\\s*$`));
 const handle = '[title="Drag to resize panel"]';
 
 /** Open the seeded Classic résumé in the editor at a phone's size. */
@@ -109,7 +111,7 @@ describe('editor on a phone (375 × 812)', () => {
     cy.window().then((win) => { win.phonePage = true; }); // gone if the page reloads
     cy.viewport(1024, 800);
     cy.get(handle).should('exist');
-    cy.get('div.fixed.bottom-4').should('not.exist');
+    cy.get(PILL).should('not.exist');
     cy.previewReady();
     cy.previewPages().should('be.visible');
     cy.get(NAME).should('be.visible');

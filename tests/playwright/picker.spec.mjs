@@ -46,16 +46,18 @@ test.describe('the template gallery', () => {
     // A9 + A4: the single column picked, then undone.
     await page.getByTestId('gallery-template-sidebar-single').click();
     await expect.poll(async () => { const r = active(await store(page)); return `${r.template}/${r.settings.sidebarSingleColumn}`; }).toBe('sidebar/true');
+    // The notice sits over the gallery: Undo while it is up.
+    await page.getByRole('status').getByRole('button', { name: 'Undo' }).click();
     await page.getByTestId('gallery-done').click();
     await expect(gallery).toHaveCount(0);
-    await page.getByRole('status').getByRole('button', { name: 'Undo' }).click();
     await expect.poll(async () => active(await store(page)).template).toBe('classic');
     expect(active(await store(page)).settings.sidebarSingleColumn).toBeFalsy();
   });
 
   test('on a phone it fills the screen, two cards to a row, with Done in view', async ({ page }) => {
-    await page.setViewportSize({ width: 375, height: 812 });
+    // Seeded at desktop width, where the preview builds (a phone's Edit tab pauses it), then a phone.
     await visitEditor(page, 'classic');
+    await page.setViewportSize({ width: 375, height: 812 });
     await openDesignPanel(page);
     await page.getByTestId('browse-templates').click();
     const dialog = page.getByRole('dialog');
@@ -111,8 +113,8 @@ test('a design saved on one résumé is picked on another and deleted (B4)', asy
   await page.getByRole('button', { name: 'Delete design Violet' }).click();
   await page.getByRole('button', { name: 'Delete', exact: true }).click();
   await expect(page.getByTestId(`design-${id}`)).toHaveCount(0);
+  await expect.poll(async () => (await store(page)).resumes.filter((r) => r.settings.myDesigns?.[id]).length).toBe(0);
   const s = await store(page);
-  for (const r of s.resumes) expect(r.settings.myDesigns?.[id]).toBeUndefined();
   expect(s.resumes.find((x) => x.id === 'test_other').settings.font).toBe('literata');
 });
 
@@ -129,7 +131,7 @@ test('the dashboard shows each résumé\'s real page 1, kept across visits (C1)'
 
 test('New Resume: a look picked beside the starters makes the résumé on it (D1)', async ({ page }) => {
   await visit(page, buildTestState('classic'));
-  await page.getByRole('button', { name: 'New Resume' }).click();
+  await page.getByRole('button', { name: 'New Resume' }).first().click();
   await expect(page.getByText('Template: Modern')).toBeVisible(); // the Product Manager starter names its own
   await page.getByTestId('look-preset-harbor').click();
   await page.getByRole('button', { name: /Product Manager/ }).click();

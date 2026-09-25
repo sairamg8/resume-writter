@@ -115,7 +115,8 @@ export function savedPicture(id, hash) {
 /** Keep `url` as résumé `id`'s picture at `hash`; the least recently painted go past SAVED_KEPT. */
 export function savePicture(id, hash, url) {
   const next = { ...readSaved(), [id]: { h: hash, url, t: Date.now() } };
-  const ids = Object.keys(next).sort((a, b) => (next[b].t || 0) - (next[a].t || 0));
+  // The one just painted first: several painted in one millisecond tie on `t`.
+  const ids = [id, ...Object.keys(next).filter((k) => k !== id).sort((a, b) => (next[b].t || 0) - (next[a].t || 0))];
   writeSaved(Object.fromEntries(ids.slice(0, SAVED_KEPT).map((k) => [k, next[k]])));
 }
 

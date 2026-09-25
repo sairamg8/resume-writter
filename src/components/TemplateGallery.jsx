@@ -31,13 +31,13 @@ export function TemplateGallery({ open, onClose, resume, designs = [], setTempla
       footer={<Button variant="primary" onClick={onClose} className="min-h-11 min-w-24" data-testid="gallery-done">Done</Button>}
     >
       <div data-testid="template-gallery" className="space-y-3">
-        <div className="flex flex-wrap gap-1.5" data-testid="gallery-categories">
+        <div className="flex flex-wrap gap-1.5" data-testid="template-gallery-categories">
           <Chip size="sm" onClick={() => setCategory('')} pressed={category === ''}>All</Chip>
           {categoriesOf(cards).map((c) => (
             <Chip key={c.id} size="sm" onClick={() => setCategory(category === c.id ? '' : c.id)} pressed={category === c.id} data-category={c.id}>{c.label}</Chip>
           ))}
         </div>
-        <div className="flex flex-wrap gap-1.5" data-testid="gallery-filters">
+        <div className="flex flex-wrap gap-1.5" data-testid="template-gallery-filters">
           {PICKER_FILTERS.map((f) => (
             <Chip key={f.id} size="sm" tone="info" onClick={() => toggle(f.id)} pressed={filters.includes(f.id)} data-filter={f.id}>{f.label}</Chip>
           ))}

@@ -47,7 +47,10 @@ describe('the cards come from the data (R2-139)', () => {
     for (const id of TEMPLATE_IDS) assert.match(html, new RegExp(`data-testid="template-${id}"`), id);
     for (const id of PRESET_IDS) assert.match(html, new RegExp(`data-testid="preset-${id}"`), id);
     // Listed by hand, a template added to the table would be missing from the picker.
-    const source = fs.readFileSync(new URL('../../src/utils/templatePicker.js', import.meta.url), 'utf8');
+    // (The category chips' own ids — 'modern', 'compact' — are categories, not templates: left out.)
+    const file = fs.readFileSync(new URL('../../src/utils/templatePicker.js', import.meta.url), 'utf8');
+    const source = file.replace(/export const PICKER_CATEGORIES = \[[\s\S]*?\];/, '');
+    assert.notEqual(source, file, 'the categories were found and left out');
     for (const id of [...TEMPLATE_IDS, ...PRESET_IDS]) assert.doesNotMatch(source, new RegExp(`['"\`]${id}['"\`]`), `templatePicker.js names ${id}`);
   });
 

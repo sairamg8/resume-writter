@@ -88,7 +88,7 @@ describe('Save my design (B4)', () => {
     for (const [k, v] of Object.entries(MINE)) assert.equal(picked.settings[k], v, k);
     const html2 = renderToString(createElement((await loadModule('/src/components/DesignPanel.jsx')).default,
       { resume: picked, designs, updateSetting: noop, setTemplate: noop, resetSettings: noop, saveDesign: noop }));
-    const card = html2.split(`data-testid="design-${id}"`)[0].split('<button').at(-1);
+    const card = html2.split(`data-testid="design-${id}"`)[0].split('<button').at(-1) + html2.split(`data-testid="design-${id}"`)[1].split('>')[0];
     assert.match(card, /border-blue-500/, 'and its card is the one selected');
   });
 

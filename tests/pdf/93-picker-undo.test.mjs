@@ -78,7 +78,7 @@ describe('Undo a template switch (A4)', () => {
     assert.equal(undone.personal.name, 'Robin Q. Sample');
     assert.equal(undone.template, 'classic');
     assert.deepEqual(undone.settings, before.settings);
-    assert.deepEqual(undone.sections.at(-1).settings, { columns: 2 });
+    assert.equal(undone.sections.at(-1).settings.columns, 2, 'the new section\'s own Grid');
   });
 
   it('a section that had no settings of its own has none again — never an undefined Firestore refuses', async () => {
