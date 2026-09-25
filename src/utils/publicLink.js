@@ -7,17 +7,47 @@
 // The Firestore calls take the SDK's functions (`fs`: doc, getDocFromServer, writeBatch), so the
 // tests run this very code against tests/pdf/fake-firestore.mjs.
 import { newId } from '@/utils/ids';
+import { CONTACT_KEYS } from '@/utils/contacts';
 
 /** The largest copy the cloud takes (Firestore's 1 MiB a document), less room for the rest. */
 export const MAX_PUBLIC_BYTES = 1_000_000;
 
-/** An item or `personal` with the values of its hidden fields gone; the list stays, so it prints as before. */
+/**
+ * An item or `personal` with the values of its hidden fields gone; the list stays, so it prints as
+ * before. A hidden contact takes its "Display label" and "Link URL" with it: the PDF prints neither
+ * once the field is hidden, and a hidden LinkedIn's link is as private as the field.
+ */
 function withoutHidden(fields) {
   const hidden = Array.isArray(fields?.hiddenFields) ? fields.hiddenFields : [];
   const out = { ...fields };
   for (const key of hidden) {
     if (key in out) out[key] = key === 'photo' ? null : '';
+    // A hidden end date hides "Present" too (endDateOf): whether the job is current is not printed.
+    if (key === 'endDate' && 'current' in out) out.current = false;
+    for (const extra of [`${key}Label`, `${key}Url`]) if (extra in out) out[extra] = '';
   }
+  return out;
+}
+
+/** What the PDF reads of `personal` (contacts.js, the templates' headers): nothing else is copied. */
+const PERSONAL_KEYS = ['name', 'title', 'summary', 'photo', 'hiddenFields', ...CONTACT_KEYS.flatMap((k) => [k, `${k}Label`, `${k}Url`])];
+const printedPersonal = (personal) => Object.fromEntries(PERSONAL_KEYS.filter((k) => k in personal).map((k) => [k, personal[k]]));
+
+/** The section types whose Location a section's "Show location" hides (a custom section prints it always). */
+const LOCATION_SWITCH = new Set(['experience', 'education', 'volunteering']);
+
+/**
+ * An entry as its section prints it: with the section's Show dates off no date prints, and with Show
+ * location off (where it applies) no location, so neither is copied.
+ */
+function asSectionPrints(item, section) {
+  const s = section.settings || {};
+  const out = { ...item };
+  if (s.showDates === false) {
+    for (const key of ['startDate', 'endDate', 'date', 'expiry']) if (key in out) out[key] = '';
+    if ('current' in out) out.current = false;
+  }
+  if (s.showLocation === false && LOCATION_SWITCH.has(section.type) && 'location' in out) out.location = '';
   return out;
 }
 
@@ -31,12 +61,13 @@ export function publicSnapshot(resume) {
     .filter((s) => s && s.visible !== false)
     .map((s) => ({
       ...s,
-      items: (Array.isArray(s.items) ? s.items : []).filter((item) => item && item.visible !== false).map(withoutHidden),
+      items: (Array.isArray(s.items) ? s.items : []).filter((item) => item && item.visible !== false)
+        .map((item) => asSectionPrints(withoutHidden(item), s)),
     }));
   const copy = {
     template: resume?.template || 'classic',
     settings: resume?.settings || {},
-    personal: withoutHidden(resume?.personal || {}),
+    personal: printedPersonal(withoutHidden(resume?.personal || {})),
     sections,
   };
   if (resume?.dataVersion != null) copy.dataVersion = resume.dataVersion;
@@ -117,6 +148,24 @@ export function publicIo(fs, db) {
       batch.delete(publicDoc(shareId));
       batch.delete(shareDoc(uid, resumeId));
       await batch.commit();
+    },
+
+    /**
+     * Takes down whatever copy the résumé has, when it has one: a résumé deleted from the dashboard
+     * leaves no copy behind that its owner could no longer reach to unpublish. Resolves to whether
+     * there was one.
+     */
+    async unpublishResume(uid, resumeId) {
+      const share = await fs.getDocFromServer(shareDoc(uid, resumeId));
+      if (!share.exists()) return false;
+      const { shareId } = share.data();
+      const pub = await fs.getDocFromServer(publicDoc(shareId));
+      const batch = fs.writeBatch(db);
+      // The rules refuse deleting a copy that is not there (no owner to check), so only one that is.
+      if (pub.exists()) batch.delete(publicDoc(shareId));
+      batch.delete(shareDoc(uid, resumeId));
+      await batch.commit();
+      return true;
     },
 
     /** A published copy by its id, for anyone: the résumé to print, or null when there is none. */
