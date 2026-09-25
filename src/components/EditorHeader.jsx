@@ -8,9 +8,10 @@ import { notSavedMessage } from '@/utils/storageBackup';
 /**
  * The editor panel's header: back to the dashboard, the résumé's name (click to rename), the
  * layout toggle in editor-only mode, the Export menu and the account.
- * The rename state is the Editor's (`rename`, useRename), as are the export handlers (`exportMenu`).
+ * The rename state is the Editor's (`rename`, useRename), as are the export handlers (`exportMenu`)
+ * and Share a public link (`onShare`, absent where it is not offered).
  */
-export function EditorHeader({ resume, rename, layoutMode, setLayoutMode, exportMenu, auth, sync, isMobile = false }) {
+export function EditorHeader({ resume, rename, layoutMode, setLayoutMode, exportMenu, auth, sync, isMobile = false, onShare }) {
   const navigate = useNavigate();
 
   return (
@@ -55,6 +56,7 @@ export function EditorHeader({ resume, rename, layoutMode, setLayoutMode, export
           onImportJSON={exportMenu.handleImportJSON}
           onImportFile={exportMenu.handleImportFile}
           onImportError={exportMenu.setExportError}
+          onShare={onShare}
         />
         <div className="w-px h-4 bg-gray-200 self-center hidden sm:block" />
         <AuthBar {...auth} {...sync} compact />

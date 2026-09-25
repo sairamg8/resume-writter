@@ -16,6 +16,7 @@ import { useOpenResume } from '@/hooks/useOpenResume';
 import { useRename } from '@/hooks/useRename';
 import { useEditorTab } from '@/hooks/useEditorTab';
 import { useImportNotice } from '@/hooks/useImportNotice';
+import ShareLinkModal, { firebasePublicIo } from '@/components/ShareLinkModal';
 
 export function Editor({ store, auth, sync }) {
   const { id } = useParams();
@@ -35,6 +36,7 @@ export function Editor({ store, auth, sync }) {
   const [allExpanded, setAllExpanded] = useState(true);
   const [forceOpenKey, setForceOpenKey] = useState(0);
   const [previewZoom, setPreviewZoom] = useState(1);
+  const [shareOpen, setShareOpen] = useState(false);
 
   const exportMenu = useEditorExports({
     resume, activeTab, authUser: auth?.user, importResume: store.importResume, navigate,
@@ -70,6 +72,8 @@ export function Editor({ store, auth, sync }) {
   }, [resume?.template, resume?.settings?.font, resume?.settings?.customFont]);
 
   if (!resume) return null;
+  // Share a public link (R2-148): a résumé, not a letter, of a signed-in account, on a site with a cloud.
+  const canShare = Boolean(firebasePublicIo && auth?.user?.uid && resume.kind !== 'letter');
 
   return (
     /* fixed inset-0: never let document/body scroll (up or down) and tear the split layout */
@@ -91,6 +95,7 @@ export function Editor({ store, auth, sync }) {
           auth={auth}
           sync={sync}
           isMobile={isMobile}
+          onShare={canShare ? () => setShareOpen(true) : undefined}
         />
         <EditorAlerts exportError={exportMenu.exportError} onDismiss={() => exportMenu.setExportError(null)} persistError={store.persistError} importNotice={importNotice.notice} onDismissImport={importNotice.dismiss} />
         <EditorModeBar activeTab={activeTab} setActiveTab={handleModeTabChange} />
@@ -152,6 +157,8 @@ export function Editor({ store, auth, sync }) {
         savedAt={store.savedAt}
         isMobile={isMobile}
       />
+
+      {canShare && <ShareLinkModal isOpen={shareOpen} resume={resume} uid={auth.user.uid} onClose={() => setShareOpen(false)} />}
 
       {/* Floating Mobile Toggle Switch */}
       {isMobile && (

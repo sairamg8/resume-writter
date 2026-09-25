@@ -88,12 +88,25 @@ values below. Every variable the app reads is listed in [`.env.example`](.env.ex
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Everything an account syncs: its own, and no one else's.
     match /users/{uid}/{document=**} {
       allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+    // A résumé its owner published (Share a public link, src/utils/publicLink.js): anyone with the
+    // link reads it — one by its id, never the list — and only the account that owns it writes it.
+    match /public/{shareId} {
+      allow get: if true;
+      allow create: if request.auth != null && request.resource.data.owner == request.auth.uid;
+      allow update: if request.auth != null && resource.data.owner == request.auth.uid && request.resource.data.owner == request.auth.uid;
+      allow delete: if request.auth != null && resource.data.owner == request.auth.uid;
     }
   }
 }
 ```
+
+The second rule is what makes **Share a public link** work: a signed-in user can publish a read-only
+copy of one résumé at `https://<your site>/#/r/<id>`. Only published copies are readable by anyone;
+everything else stays owner-only. Without Firebase configured the feature is hidden.
 
 4. Click **Publish**
 

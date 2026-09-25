@@ -12,6 +12,7 @@ import { BoardSettings } from '@/pages/BoardSettings';
 import { YourWork } from '@/pages/YourWork';
 import TermsPage from '@/pages/TermsPage';
 import PrivacyPage from '@/pages/PrivacyPage';
+import { PublicResume } from '@/pages/PublicResume';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { WorkspaceLayout, sidebarProjects } from '@/components/shell';
 import { useBoardStore } from '@/hooks/useBoardStore';
@@ -74,6 +75,8 @@ export function AppRoutes({ store, auth, sync, seed }) {
         </Route>
         <Route path="/terms"      element={<TermsPage />} />
         <Route path="/privacy"    element={<PrivacyPage />} />
+        {/* A published résumé, read-only, for anyone with its link (R2-148). */}
+        <Route path="/r/:shareId" element={<PublicResume />} />
         <Route path="*"           element={<Navigate to="/" replace />} />
       </Routes>
     </RouteFrame>

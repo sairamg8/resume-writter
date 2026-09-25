@@ -215,6 +215,22 @@ never wins over the account's copy of it, though dated newer; and a saved list t
 read in full makes the record forget the versions (`forgetSynced`), so the items left out are
 merged back from the cloud instead of being deleted from it.
 
+### Public links (R2-148)
+
+Export → **Share a public link** (only for a signed-in account on a site with Firebase configured;
+hidden otherwise) publishes a read-only copy of one résumé (`src/utils/publicLink.js`,
+`src/components/ShareLinkModal.jsx`). The copy is `publicSnapshot(resume)`: template, design, and
+what the PDF prints — hidden fields' values blanked, hidden sections and entries dropped, no cover
+letter, no dashboard name, no id. It is written to `public/{shareId}` (`{ owner, resume, publishedAt }`,
+`shareId` a random uuid) together with `users/{uid}/shares/{resumeId}` (`{ shareId, publishedAt }`) in
+one batch; Unpublish deletes both. `firestore.rules` lets **anyone get** a `public/{shareId}` document
+(never list the collection) and only the account named its `owner` create, update or delete it —
+the only world-readable documents. The copy is not live: the panel says when the résumé changed since
+and offers "Update the public copy". The link `#/r/<shareId>` is served by this same app
+(`src/pages/PublicResume.jsx`): the editor's PDF preview of the copy and a Download PDF button; a
+missing copy says it is not published. Tests: `tests/pdf/99-public-link.test.mjs` (over
+`tests/pdf/fake-firestore.mjs`, which applies the same rule), `tests/unit/firestore-rules.unit.mjs`.
+
 ### What is NOT synced
 
 - UI prefs like panel width
