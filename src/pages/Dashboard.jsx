@@ -6,7 +6,6 @@ import { ResumeCard } from '@/components/ResumeCard';
 import { CareerHistoryPanel } from '@/components/CareerHistoryPanel';
 import { RecoveryNotice } from '@/components/RecoveryNotice';
 import { ImportMenu } from '@/components/ImportMenu';
-import StarterTemplateModal from '@/components/StarterTemplateModal';
 import NewLetterModal from '@/components/NewLetterModal';
 import { firebasePublicIo } from '@/components/ShareLinkModal';
 import { notSavedMessage } from '@/utils/storageBackup';
@@ -35,7 +34,6 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false, publicL
   const navigate = useNavigate();
   const importRef = useRef(null);
   const [importError, setImportError] = useState(null);
-  const [starterModalOpen, setStarterModalOpen] = useState(false);
   const [letterModalOpen, setLetterModalOpen] = useState(false);
   // A demo account keeps originals: the cards and Import offer "Keep as my original".
   const keeps = isDemoAccount(auth.user, DEMO_ACCOUNTS);
@@ -47,18 +45,9 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false, publicL
     importRef.current?.click();
   }
 
-  // `look`: a template or design picked beside the starters (D1), else each starter's own.
-  function handleSelectStarter(starterId, look = null) {
-    setStarterModalOpen(false);
-    const id = look ? store.createResume('Untitled Resume', starterId, look) : store.createResume('Untitled Resume', starterId);
-    navigate(`/resume/${id}`);
-  }
-
-  function handleSelectBlank(look = null) {
-    setStarterModalOpen(false);
-    const id = look ? store.createResume('Untitled Resume', null, look) : store.createResume();
-    navigate(`/resume/${id}`);
-  }
+  // New Resume opens /new (R3-012): every look drawn with the user's own résumé, then blank or a role
+  // starter below them (NewResume.jsx).
+  const newResume = () => navigate('/new');
 
   // Letters are listed apart from the résumés, and never counted as one (R2-135).
   const resumes = store.appState.resumes.filter(r => !isLetter(r));
@@ -187,7 +176,7 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false, publicL
               <MailIcon size={14} /> New Cover
             </button>
             <button
-              onClick={() => setStarterModalOpen(true)}
+              onClick={newResume}
               className="flex items-center gap-1.5 px-2.5 sm:px-4 py-1.5 sm:py-2 bg-blue-600 text-white rounded-lg text-xs sm:text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm whitespace-nowrap"
             >
               <Plus size={14} /> New Resume
@@ -245,7 +234,7 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false, publicL
                 <h2 className="text-lg font-semibold text-gray-700 mb-2">No resumes yet</h2>
                 <p className="text-gray-400 text-sm mb-6">Create your first resume to get started</p>
                 <button
-                  onClick={() => setStarterModalOpen(true)}
+                  onClick={newResume}
                   className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700"
                 >
                   <Plus size={15} /> Create Resume
@@ -255,7 +244,7 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false, publicL
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
                 {resumes.map(r => card(r, id => navigate(`/resume/${id}`)))}
                 <button
-                  onClick={() => setStarterModalOpen(true)}
+                  onClick={newResume}
                   className="h-full min-h-[180px] sm:min-h-[220px] border-2 border-dashed border-gray-200 rounded-2xl flex flex-col items-center justify-center gap-3 text-gray-400 hover:text-blue-500 hover:border-blue-300 hover:bg-blue-50/50 transition-all cursor-pointer p-4"
                 >
                   <div className="w-12 h-12 rounded-xl border-2 border-current flex items-center justify-center">
@@ -322,12 +311,6 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false, publicL
         </div>
       </div>
 
-      <StarterTemplateModal
-        isOpen={starterModalOpen}
-        onClose={() => setStarterModalOpen(false)}
-        onSelectStarter={handleSelectStarter}
-        onSelectBlank={handleSelectBlank}
-      />
       <NewLetterModal
         isOpen={letterModalOpen}
         sources={letterSourceList}

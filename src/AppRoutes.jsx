@@ -2,6 +2,7 @@ import { useCallback, useLayoutEffect, useMemo } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigationType } from 'react-router-dom';
 import { Dashboard } from '@/pages/Dashboard';
 import { Editor } from '@/pages/Editor';
+import { NewResume } from '@/pages/NewResume';
 import { JobTracker } from '@/pages/JobTracker';
 import { JobDetail } from '@/pages/JobDetail';
 import { JobForm } from '@/pages/JobForm';
@@ -72,6 +73,8 @@ export function AppRoutes({ store, auth, sync, seed }) {
       <Routes>
         <Route path="/"           element={<Dashboard store={store} auth={auth} sync={sync} originalsWaiting={seed.waiting} />} />
         <Route path="/resume/:id" element={<Editor    store={store} auth={auth} sync={sync} />} />
+        {/* New Resume: every look drawn with the user's own résumé (R3-012). */}
+        <Route path="/new"        element={<NewResume store={store} />} />
         <Route element={<WorkspaceRoute />}>
           <Route path="/jobs"                element={<JobTracker store={store} />} />
           <Route path="/jobs/new"            element={<JobForm    store={store} />} />
