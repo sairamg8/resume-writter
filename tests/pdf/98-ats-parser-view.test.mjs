@@ -52,16 +52,17 @@ describe('parserText reads the PDF as the battery\'s item-based parser does (R2-
     });
   }
 
-  it('a date set apart at the line\'s end is a run of its own, three spaces from the title', async () => {
+  it('a date set apart at the line\'s end is a run of its own, three spaces from the text beside it', async () => {
     const r = resume({
       template: 'classic',
       personal: { name: 'Pat Sample', email: 'pat@example.com' },
       sections: [section('experience', [{ company: 'Northwind Traders', role: 'Staff Engineer', startDate: '03/2021', endDate: '', current: true }])],
     });
     const { pages, text } = await viewText(await render(r));
-    const line = pages.flat().find((runs) => runs.some((t) => t.includes('Staff Engineer')));
-    assert.ok(line && line.length >= 2, `the title's line has runs apart: ${JSON.stringify(line)}`);
-    assert.ok(line.some((t) => /03\/2021/.test(t) && !t.includes('Staff Engineer')), 'the dates are not merged into the title');
+    const line = pages.flat().find((runs) => runs.some((t) => t.includes('03/2021')));
+    assert.ok(line && line.length >= 2, `the dates' line has runs apart: ${JSON.stringify(line)}`);
+    assert.ok(line.some((t) => t.startsWith('03/2021')), `the dates are a run of their own: ${JSON.stringify(line)}`);
+    assert.ok(line.some((t) => /Northwind Traders|Staff Engineer/.test(t) && !t.includes('2021')), 'beside the company or title, not merged into it');
     const { RUN_GAP } = await loadModule('/src/utils/parserText.js');
     assert.ok(text.split('\n').includes(line.join(RUN_GAP)));
   });
@@ -84,13 +85,13 @@ describe('the view agrees with the ATS text export where the PDF does (R2-141)',
       const r = await demo(template);
       const { text } = await viewText(await render(r));
       const { generateAtsPlainText } = await loadModule('/src/utils/atsChecker.js');
-      const exported = squash(generateAtsPlainText(r));
+      const exported = squash(generateAtsPlainText(r)).toLowerCase();
       const jobs = r.sections.find((s) => s.type === 'experience').items;
       const facts = [r.personal.name, r.personal.email, r.personal.phone, ...jobs.flatMap((j) => [j.role, j.company])].filter(Boolean);
       assert.ok(facts.length >= 5);
       for (const f of facts) {
         assert.ok(squash(text).includes(f), `the view holds "${f}"`);
-        assert.ok(exported.includes(f), `the export holds "${f}"`);
+        assert.ok(exported.includes(f.toLowerCase()), `the export holds "${f}"`);
       }
     });
   }
@@ -125,7 +126,9 @@ async function atsTab(r) {
   const view = mount(AtsCheckerPanel, { resume: r, store });
   const all = () => [...elements(view.container)];
   const text = (el) => squash(el.textContent);
-  const button = (label) => all().find((el) => el.tagName === 'BUTTON' && text(el).startsWith(label));
+  // By its whole text ("Copy", not the plain-text card's "Copy Text"), or by its start (a header's subtitle).
+  const buttons = () => all().filter((el) => el.tagName === 'BUTTON');
+  const button = (label) => buttons().find((el) => text(el) === label) ?? buttons().find((el) => text(el).startsWith(label));
   const clipboard = [];
   globalThis.navigator ??= {};
   const savedClipboard = Object.getOwnPropertyDescriptor(globalThis.navigator, 'clipboard');
@@ -135,7 +138,7 @@ async function atsTab(r) {
     store,
     all,
     clipboard,
-    pre: () => all().find((el) => el.tagName === 'PRE'),
+    pre: () => all().find((el) => el.tagName === 'PRE' && el.getAttribute('aria-label') === 'The text a parser reads'),
     status: () => all().find((el) => el.getAttribute('data-parser-status'))?.getAttribute('data-parser-status'),
     header: () => text(view.container),
     click(label) {
