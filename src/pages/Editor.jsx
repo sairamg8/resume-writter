@@ -56,14 +56,15 @@ export function Editor({ store, auth, sync }) {
     }
   }
 
-  // Warm react-pdf fonts + template chunk so Export PDF feels instant
+  // Warm react-pdf fonts + template chunk so Export PDF feels instant — where PDFs are built, the
+  // PDF worker (pdfBuild.js), which leaves the main thread without the PDF engine.
   useEffect(() => {
     if (!resume) return;
     let cancelled = false;
     (async () => {
       try {
-        const { warmPdfExport } = await import('@/utils/pdfExportReactPDF');
-        if (!cancelled) await warmPdfExport(resume);
+        const { warmPdfBuild } = await import('@/utils/pdfBuild');
+        if (!cancelled) await warmPdfBuild(resume);
       } catch { /* warm is best-effort */ }
     })();
     return () => { cancelled = true; };

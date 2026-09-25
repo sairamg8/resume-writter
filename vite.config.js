@@ -17,6 +17,12 @@ export default defineConfig({
     // system's inotify watches (ENOSPC) and crashed `yarn dev`.
     watch: { ignored: ['**/qa-visual-compare/**', '**/.claude/**', '**/graphify-out/**', '**/dist/**'] },
   },
+  // The PDF worker (src/utils/pdfWorker.js, R2-142): an ES module worker, so the templates it builds
+  // with stay code-split as they are on the main thread, and JSX compiled as the app's is.
+  worker: {
+    format: 'es',
+    plugins: () => [react()],
+  },
   build: {
     rolldownOptions: {
       output: {
