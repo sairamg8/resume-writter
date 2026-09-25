@@ -8,14 +8,16 @@ import { WorkspaceLayout, sidebarProjects } from '@/components/shell';
 import { CreateIssueDialog } from '@/components/board/CreateIssueDialog';
 import { useBoardStore } from '@/hooks/useBoardStore';
 import { searchWorkspace } from '@/utils/workspaceSearch';
+import { loadPage } from '@/utils/lazyPage';
 
 const renderCreate = (props) => <CreateIssueDialog {...props} />;
 
 // The editor and the workspace pages are split from the start-up code (R2-142, PERF-5): the entry
 // held every page — the editor's panels, the ATS checker, the boards, drag and drop — so the
 // dashboard downloaded and parsed ~700 kB before its first paint. Each now loads when its route is
-// first opened; the dashboard and the legal pages, small and reached first, stay in the entry.
-const page = (load, name) => lazy(() => load().then((m) => ({ default: m[name] })));
+// first opened; the dashboard and the legal pages, small and reached first, stay in the entry. A
+// page's file gone after a deploy reloads the tab once (lazyPage.js).
+const page = (load, name) => lazy(() => loadPage(load, name));
 const Editor        = page(() => import('@/pages/Editor'), 'Editor');
 const JobTracker    = page(() => import('@/pages/JobTracker'), 'JobTracker');
 const JobDetail     = page(() => import('@/pages/JobDetail'), 'JobDetail');
