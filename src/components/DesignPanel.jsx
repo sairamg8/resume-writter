@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Sparkles } from 'lucide-react';
 import { ATS_DEFAULTS, sectionReset } from '@/utils/defaultData';
-import { atsRating, contactIconHint, drawsContactIcons, TEMPLATE_PICKER, templateId } from '@/constants/templates';
+import { atsRating, contactIconHint, drawsContactIcons, TEMPLATE_PICKER, templateDesc, templateId, templateSwitchNote } from '@/constants/templates';
+import { presetOf, PRESET_IDS, TEMPLATE_PRESETS } from '@/constants/templatePresets';
 import { MARGIN_MM } from '@/constants/pageMargins';
 import { ICON_SIZE } from '@/constants/designNumbers';
 import { ITEM_GAP_PX, LINE_HEIGHT, SECTION_GAP_PX } from '@/constants/spacingNumbers';
@@ -38,41 +39,67 @@ export default function DesignPanel({ resume, updateSetting, setTemplate, resetS
     keys.forEach(k => { if (k in updated) updateSetting(k, updated[k]); });
   }
 
+  // The design the résumé is on (R2-138): its card is the one selected, not its engine's.
+  const activePreset = presetOf(settings, current)?.id || '';
+  const templateCards = TEMPLATE_PICKER.map(t => ({
+    testid: `template-${t.id}`, label: t.label, desc: templateDesc(t.id, settings), engine: t.id, preset: '',
+    // The ATS Check's verdict on this template as the résumé would print it (R2-011): the Sidebar's
+    // Layout, kept across a switch, decides its card — Single · ATS-safe prints Classic's certified
+    // page. TEMPLATE_PICKER's own `ats` knows no settings.
+    ats: atsRating(t.id, settings).safe, accent: settings.accentColor,
+  }));
+  // A design's badge rates its engine with the settings it brings over the résumé's own.
+  const presetCards = PRESET_IDS.map(id => {
+    const p = TEMPLATE_PRESETS[id];
+    return {
+      testid: `preset-${id}`, label: p.label, desc: p.desc, engine: p.engine, preset: id,
+      ats: atsRating(p.engine, { ...settings, ...p.settings }).safe, accent: p.settings.accentColor,
+    };
+  });
+
+  const card = (c) => {
+    const on = current === c.engine && activePreset === c.preset;
+    return (
+      <button
+        key={c.testid}
+        data-testid={c.testid}
+        // The card already selected is no switch: it would reset the headings (R2-087).
+        onClick={() => { if (on) return; if (c.preset) setTemplate(c.engine, c.preset); else setTemplate(c.engine); }}
+        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border text-left transition-all ${
+          on ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+        }`}
+      >
+        <div
+          className={`w-8 h-10 rounded shrink-0 flex flex-col gap-0.5 p-1 ${on ? 'opacity-100' : 'opacity-40'}`}
+          style={{ backgroundColor: on ? c.accent || '#2563eb' : c.preset ? c.accent : '#94a3b8' }}
+        >
+          <div className="h-1 bg-white/60 rounded-sm w-full" />
+          <div className="h-0.5 bg-white/40 rounded-sm w-3/4" />
+          <div className="h-0.5 bg-white/30 rounded-sm w-full mt-0.5" />
+          <div className="h-0.5 bg-white/30 rounded-sm w-5/6" />
+        </div>
+        <div>
+          <div className="flex items-center gap-1.5">
+            <p className={`text-sm font-medium ${on ? 'text-blue-700' : 'text-gray-700'}`}>{c.label}</p>
+            {c.ats && <span className="text-[9px] font-bold px-1 py-0.5 rounded bg-emerald-100 text-emerald-700">ATS</span>}
+          </div>
+          <p className="text-[10px] text-gray-400">{c.desc}</p>
+        </div>
+      </button>
+    );
+  };
+
   return (
     <div className="space-y-3 py-2">
 
       <DesignSection title="Template" defaultOpen>
         <div className="space-y-1.5">
-          {TEMPLATE_PICKER.map(t => (
-            <button
-              key={t.id}
-              // The card already selected is no switch: it would reset the headings (R2-087).
-              onClick={() => { if (t.id !== current) setTemplate(t.id); }}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border text-left transition-all ${
-                current === t.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-              }`}
-            >
-              <div
-                className={`w-8 h-10 rounded shrink-0 flex flex-col gap-0.5 p-1 ${current === t.id ? 'opacity-100' : 'opacity-40'}`}
-                style={{ backgroundColor: current === t.id ? settings.accentColor || '#2563eb' : '#94a3b8' }}
-              >
-                <div className="h-1 bg-white/60 rounded-sm w-full" />
-                <div className="h-0.5 bg-white/40 rounded-sm w-3/4" />
-                <div className="h-0.5 bg-white/30 rounded-sm w-full mt-0.5" />
-                <div className="h-0.5 bg-white/30 rounded-sm w-5/6" />
-              </div>
-              <div>
-                <div className="flex items-center gap-1.5">
-                  <p className={`text-sm font-medium ${current === t.id ? 'text-blue-700' : 'text-gray-700'}`}>{t.label}</p>
-                  {/* The ATS Check's verdict on this template as the résumé would print it (R2-011): the
-                      Sidebar's Layout, kept across a switch, decides its card — Single · ATS-safe
-                      prints Classic's certified page. TEMPLATE_PICKER's own `ats` knows no settings. */}
-                  {atsRating(t.id, settings).safe && <span className="text-[9px] font-bold px-1 py-0.5 rounded bg-emerald-100 text-emerald-700">ATS</span>}
-                </div>
-                <p className="text-[10px] text-gray-400">{t.desc}</p>
-              </div>
-            </button>
-          ))}
+          {templateCards.map(card)}
+          {/* The designs (R2-138): a named look over a template the app draws — its engine and a bundle
+              of design settings. Picked, it goes through the store as a template switch does. */}
+          <p className="pt-2 text-[11px] font-semibold text-gray-500">Designs · a named look over a template</p>
+          {presetCards.map(card)}
+          <p className="text-[10px] text-gray-400">A design brings its font, colours and heading style too; picking its template plainly takes back what you kept of them, and Reset returns to the design.</p>
         </div>
         {current === 'sidebar' && (
           <div className="mt-3 pt-3 border-t border-gray-100">
@@ -100,6 +127,7 @@ export default function DesignPanel({ resume, updateSetting, setTemplate, resetS
             Compact brings its own type and spacing: 9 pt text, narrow margins, the job title beside the name and tighter Spacing, and lays skills, certifications, awards, languages and references out two to a row (each section&apos;s Grids). Every one of them can be changed.
           </p>
         )}
+        <p className="text-[10px] text-gray-400 mt-2">{templateSwitchNote()}</p>
         <p className="text-[10px] text-gray-400 mt-2">The cover letter&apos;s header takes the template&apos;s look too.</p>
       </DesignSection>
 

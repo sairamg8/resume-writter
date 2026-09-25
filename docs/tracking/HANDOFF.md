@@ -20,7 +20,7 @@ with one full CI run and fast-forwards `master` on green.
 | ats-view | R2-141 (its 39c7925 was red on CI) + the ATS checker counting an all-hidden section | session_01LEdydPcqD7vQvaL88189M2 | **merged** — R2-141 fixed (parser view, per-job fields, honest claims); R1-LEFT-d fixed (7580def) |
 | design-page | R2-136 (done), 149, 157 | session_01PeCTicKUMnAJYJhVSLsUfV | running |
 | header-type | R2-137, 146 | session_01SfVdGGL7YohgirYbPRni3X | running |
-| templates-core | R2-139 (non-a11y part), 138 — branch `claude/wf-templates-core` | session_01RJGwPXpTmeycSSs3P4AScW | running |
+| templates-core | R2-139 (non-a11y part), 138 — branch `claude/wf-templates-core` | session_01RJGwPXpTmeycSSs3P4AScW | **merged** — R2-138 partial (8 designs: 17 choices; B2, B4 left), R2-139 partial (a11y part deferred) |
 | section-style | R2-147 | session_01NqoaVxqWn89c2oi9DMyehg | running |
 | cloud-sync | R2-159 (done), 145, 140 | session_017BB79LpEbU9c3zT2CccWDV | running |
 | structure-tests | R2-158, 167, 171 | session_015xkXZJXdNDrdPoNy6Nusob | **merged** — R2-158, 167, 171 fixed (c1f085d: a section dropped off the list no longer throws) |

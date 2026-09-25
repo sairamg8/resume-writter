@@ -102,6 +102,39 @@ export function atsRating(template, settings) {
   return { tier, points: ATS_TIER_POINTS[tier], safe: tier !== 'risky', ...(TEMPLATES[t].atsNote ? { note: TEMPLATES[t].atsNote } : {}) };
 }
 
+/**
+ * The picker card's one line on `template`: what its engine draws, as the résumé would print it — the
+ * Sidebar in its Layout "Single · ATS-safe" prints Classic's page, and says so (A6). Never an ATS
+ * claim: the card's badge says that, from atsRating.
+ */
+export function templateDesc(template, settings) {
+  const t = templateId(template);
+  return (headerTemplateId(t, settings) !== t && TEMPLATES[t].descSingle) || TEMPLATES[t].desc;
+}
+
+/** The labels of the templates that bring more than a heading style and title case (Academic's type, Compact's spacing). */
+export const templatesBringingType = (table = TEMPLATES) => Object.keys(table)
+  .filter((id) => Object.keys(table[id].style).some((k) => k !== 'headingStyle' && k !== 'sectionTitleCase'))
+  .map((id) => table[id].label);
+
+/**
+ * The line under the picker saying what a switch keeps and what it changes (A5), as setTemplate does it
+ * (useResumeStore): styleOnSwitch sets the new template's heading style and title case (and the type and
+ * spacing of those that bring them, templatesBringingType), a section's entry layout and Grids follow the
+ * template where the section holds no choice of its own (resolveSection, sectionsOnSwitch), and a Name or
+ * Job title colour that would not read on the new header goes back to the template's own
+ * (headerColorsOnSwitch). Everything else — the content, and the colours, font and spacing set — stays.
+ */
+export function templateSwitchNote(table = TEMPLATES) {
+  const bring = templatesBringingType(table);
+  const also = bring.length
+    ? ` ${bring.length > 1 ? `${bring.slice(0, -1).join(', ')} and ${bring.at(-1)}` : bring[0]} also bring${bring.length > 1 ? '' : 's'} ${bring.length > 1 ? 'their' : 'its'} own type and spacing.`
+    : '';
+  return 'Switching template keeps your content and the colours, font and spacing you set; it changes the heading style '
+    + `and title case to the new template's.${also} Entry layouts you have not set follow the new template, and a Name or `
+    + 'Job title colour that would not read on its header goes back to the template\'s own.';
+}
+
 /** The Design panel's template picker: { id, label, desc, ats } for every template, in its order. */
 export const TEMPLATE_PICKER = [...PICKER_FIRST, ...TEMPLATE_IDS.filter((id) => !PICKER_FIRST.includes(id))]
   .map((id) => ({ id, label: TEMPLATES[id].label, desc: TEMPLATES[id].desc, ats: atsRating(id).safe }));

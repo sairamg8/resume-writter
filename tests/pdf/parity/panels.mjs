@@ -35,7 +35,8 @@ export async function walkVariant(variant) {
     const r = at(ctx);
     return [guarded(P.DesignPanel), {
       resume: r, updateSetting: setting(spy),
-      setTemplate: (value) => spy({ kind: 'template', value }),
+      // A design (R2-138) is picked as its engine and its id: a write of its own.
+      setTemplate: (value, preset) => spy(preset ? { kind: 'preset', value: preset } : { kind: 'template', value }),
       resetSettings: () => spy({ kind: 'resetAll' }),
     }];
   }));

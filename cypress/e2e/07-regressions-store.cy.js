@@ -173,11 +173,11 @@ describe('regressions — resume store', () => {
     cy.contains('[role="alert"]', 'Not saved').should('be.visible');
   });
 
-  /** The Design panel's template list shows the one described `picked` ("Two-column header": Classic), and only it, selected. */
-  const selected = (picked = 'Two-column header') => {
+  /** The Design panel's template list shows the template `picked`, and only it, selected. */
+  const selected = (picked = 'classic') => {
     cy.get('button[title="Design & Customize"]').click();
-    ['Clean accent headings', 'Two-column header', 'Full-width layout', 'whitespace-first', 'Colored left sidebar']
-      .forEach((desc) => cy.contains('button', desc).should(desc === picked ? 'have.class' : 'not.have.class', 'border-blue-500'));
+    ['executive', 'classic', 'modern', 'minimal', 'sidebar']
+      .forEach((id) => cy.get(`[data-testid="template-${id}"]`).should(id === picked ? 'have.class' : 'not.have.class', 'border-blue-500'));
   };
   const importAs = (template, name) => {
     cy.visitDashboard(dashboardState());
@@ -207,7 +207,7 @@ describe('regressions — resume store', () => {
   it('R5-5: importing a résumé whose template is written "Modern " opens it as Modern, selected', () => {
     importAs('Modern ', 'Imported Modern');
     cy.store().should((s) => expect(s.resumes.find((r) => r.name === 'Imported Modern').template).to.eq('modern'));
-    selected('Full-width layout');
+    selected('modern');
   });
 });
 
