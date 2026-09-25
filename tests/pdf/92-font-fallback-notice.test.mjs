@@ -2,7 +2,8 @@
 // its metadata unreachable, or none of its faces — prints in Noto Sans, and resolvePdfFonts (the
 // preview's and Export PDF's one font step) says so: `fallback` names the font and fontFallback.js
 // holds it for the editor. The next build that loads the font clears it, even after react-pdf kept a
-// failed face load. The preview pane shows the notice naming the font ("… until you are back online"
+// failed face load — and its own subsets load again with it; only the latest build sets it, so a slow
+// build for a font since changed cannot name it. The preview pane shows the notice naming the font ("… until you are back online"
 // while offline) and drops it when it clears; the preview builds again when the browser is back online.
 // Fonts come from a stand-in fetch (a fictional "Testface" family, drawn with the bundled Noto Sans).
 import { before, after, afterEach, describe, it } from 'node:test';
@@ -22,16 +23,18 @@ const realFetch = globalThis.fetch;
  * The CDN as the network answers it: `meta` / `faces` false throw as offline does; any other font on
  * it is offline. The harness's own server (the bundled Noto Sans) answers as ever.
  */
-function network({ meta = true, faces = true } = {}) {
+function network({ meta = true, faces = true, subsets = ['latin'], gate = null } = {}) {
   globalThis.fetch = async (url, opts) => {
     const u = String(url);
     if (!u.includes('cdn.jsdelivr.net')) return realFetch(url, opts);
     const offline = () => { throw new TypeError('fetch failed'); };
     const pkg = u.match(/@fontsource\/([^@/]+)@/)?.[1];
     if (u.endsWith('/metadata.json')) {
+      // `gate`: a slow CDN — this package's metadata answers (offline) only once the gate opens.
+      if (gate && pkg === gate.pkg) { await gate.open; return offline(); }
       if (!meta || !pkg?.startsWith('testface')) return offline();
       const family = pkg.split('-').map((w) => w[0].toUpperCase() + w.slice(1)).join(' ');
-      return new Response(JSON.stringify({ family, weights: [400], styles: ['normal'], subsets: ['latin'] }), { status: 200 });
+      return new Response(JSON.stringify({ family, weights: [400], styles: ['normal'], subsets }), { status: 200 });
     }
     if (u.endsWith('.woff') && pkg?.startsWith('testface')) {
       if (!faces) return offline();
@@ -80,6 +83,30 @@ describe('resolvePdfFonts names a font it could not load, and clears it once loa
     const on = await loader.resolvePdfFonts(settings, 'Pat Example');
     assert.equal(primaryOf(on.fontFamily), 'Testface Sans', 'the faces are fetched again');
     assert.equal(store.fontFallback(), null);
+  });
+
+  it('back online, the font\'s own subsets load again too: a name\'s "ł" prints in its latin-ext, not Noto Sans\'s', async () => {
+    network({ faces: false, subsets: ['latin', 'latin-ext'] });
+    const settings = { customFont: 'Testface Mono' };
+    const off = await loader.resolvePdfFonts(settings, 'Paweł Example');
+    assert.equal(primaryOf(off.fontFamily), 'NotoSans');
+
+    network({ subsets: ['latin', 'latin-ext'] });
+    const on = await loader.resolvePdfFonts(settings, 'Paweł Example');
+    assert.equal(primaryOf(on.fontFamily), 'Testface Mono');
+    assert.ok([on.fontFamily].flat().includes('Testface Mono latin-ext'), `its latin-ext is fetched again: ${JSON.stringify(on.fontFamily)}`);
+  });
+
+  it('a slow build for a font since changed does not name it after a later build printed the new one', async () => {
+    let open;
+    const gate = { pkg: 'testface-slow', open: new Promise((resolve) => { open = resolve; }) };
+    network({ gate });
+    const slow = loader.resolvePdfFonts({ customFont: 'Testface Slow' }, 'Pat Example');
+    const now = await loader.resolvePdfFonts({ font: 'notosans' }, 'Pat Example');
+    assert.equal(now.fallback, null);
+    open();
+    assert.equal((await slow).fallback, 'Testface Slow', 'that build itself printed in Noto Sans');
+    assert.equal(store.fontFallback(), null, 'the editor shows what the latest build printed');
   });
 
   it('a picker font is named by its label; Noto Sans, bundled, is never a fallback', async () => {
