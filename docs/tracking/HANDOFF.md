@@ -50,6 +50,19 @@ on any template), with nothing to wake it. No new agents (owner), so the coordin
 too), fixed the footer (`f0f9784`: its box had no height), added a Word test (`87cd9d3`). CI run with fail-first
 dispatched ~03:28. Then: the report rows for R2-147 by hand (update_tracker from a hand-written report).
 
+**If this session is cut off (the 5-hour usage limit resets 05:20 UTC, 2026-09-25) — the next session does, in order:**
+1. `git fetch origin && git checkout claude/sweet-feynman-ro5q2g` (the work branch; everything merged so far is on it).
+2. Read CI runs 36090280535 (section-style's page numbers + failfirst f0f9784), 36090314334 (parity
+   31-section-overrides alone) and 36090315894 (parity 15-template-resets alone); fix what they show. The last two hold
+   ATS-7's only open failures ("timeline", "academic") — likely a measure reading the running header as page 2's text:
+   point it at the page's own text (`bodyItems` in harness.mjs; parity measures read `snap.pages[].items`).
+3. Merge claude/wf-design-page, wf-header-type and wf-letters-import when each has `wf-reports/<cluster>.json`
+   (`docs/tracking/tools/merge_cluster.sh <cluster>`, then `update_tracker.py`, `handoff_state.py`). A branch with no
+   report and an idle session: take it over as section-style was. Write R2-147's rows (section-style) by hand.
+4. Full gate on the work branch (dispatch ci.yml, no inputs). master: only on green AND after the owner confirms the
+   Cloudflare env vars below. Archived sessions (merged): release, structure-tests, ats-view, templates-core, cloud-sync,
+   perf. No new agents (owner).
+
 **🔴 Before `master` moves (R2-143, merged from release):** the owner's e-mail, uid and name now come from the build's
 env (`src/utils/siteOwner.js`, `.env.example`). The live site's Cloudflare build must set
 `VITE_DEMO_ACCOUNTS` and `VITE_CONTACT_EMAIL` (the owner's address) first, or the live site loses its demo account (the
