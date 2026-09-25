@@ -1,5 +1,38 @@
 # Session Handoff — Resume Here
 
+## 2026-09-25 — Round 2 relaunched: 10 cloud sessions (in progress)
+
+**Coordinator:** session_01YBTHhwV9xeHy7YGaebJnhY. **Work branch:** `claude/sweet-feynman-ro5q2g` (= master `334b454`
+at the start). The Round 2 worker of 2026-09-24 (session_01KDXZzZfUEUyKqzYyULQbRi) was stopped by the session limit;
+its resume kit is on `claude/wf-round2-resume` (`wf-resume/`: `args.json` briefs, `state.md`, `wip/*.patch`).
+
+**Owner, 2026-09-25:** (1) accessibility is deferred — no a11y bug or feature until no other bug or feature is left;
+(2) up to 10 fast, top-level agents; finish the pending rows.
+
+Each cluster runs in its own cloud session on its own branch, per [CLUSTER-PROTOCOL.md](CLUSTER-PROTOCOL.md), based
+on `origin/master`; its `wf-reports/<cluster>.json`, pushed last, means it is done. The coordinator merges each
+report with `tools/merge_cluster.sh` into the work branch, sets the rows (`tools/update_tracker.py`), gates the batch
+with one full CI run and fast-forwards `master` on green.
+
+| Cluster | Rows | Session | State |
+|---|---|---|---|
+| perf | R2-142 + Round 1 leftovers: f6cb390's missing fail-first test, hidden end date ignored by PDF/Word on imported education/projects/volunteering, a review of pdf-pagination's merged work | session_017EuPN3kida3Yn1AMTDH8qQ | running |
+| ats-view | R2-141 (its 39c7925 was red on CI) + the ATS checker counting an all-hidden section | session_01LEdydPcqD7vQvaL88189M2 | running |
+| design-page | R2-136 (done), 149, 157 | session_01PeCTicKUMnAJYJhVSLsUfV | running |
+| header-type | R2-137, 146 | session_01SfVdGGL7YohgirYbPRni3X | running |
+| templates-core | R2-139 (non-a11y part), 138 — branch `claude/wf-templates-core` | session_01RJGwPXpTmeycSSs3P4AScW | running |
+| section-style | R2-147 | session_01NqoaVxqWn89c2oi9DMyehg | running |
+| cloud-sync | R2-159 (done), 145, 140 | session_017BB79LpEbU9c3zT2CccWDV | running |
+| structure-tests | R2-158, 167, 171 | session_015xkXZJXdNDrdPoNy6Nusob | running |
+| letters-import | R2-135, 148 | session_01C9EUo2kre8QeqViw2sAKkx | running |
+| release | R2-169 (done), 143, 154, 168 | session_012ktnCPxsipt5gQWuGvDdjh | running |
+
+**Parked for the a11y pass at the end:** `claude/wf-templates` (`67c88c5`, R2-139's picker accessibility — its Cypress
+shards 3 and 4 were red); R2-139's A7, A8, A11, A13, A14; A11Y-1…6.
+
+**Needs the owner:** ATS-7 option A (a running "Name · Page 2" header); deleting the merged `claude/wf-*` branches on
+GitHub (the git proxy refuses branch deletion).
+
 > **Updated 2026-09-24 (cloud session, branch `claude/confident-goldberg-2uig8b`).** This section is the
 > live resume cursor for the "fix every open row" session. After the owner's reboot a new coordinator
 > (session_01UaZc6yUjHdoanpnUfTnzFF) took over from session_01PdF933BaDvYDh7KFAJpkKi: its work branch

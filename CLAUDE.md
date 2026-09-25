@@ -15,6 +15,11 @@ Contributor rules: `CONTRIBUTING.md`. How a bug cluster is fixed: `docs/tracking
 - Commit and push everything as you go, and keep `docs/tracking/HANDOFF.md` current, so a cold start
   can carry on.
 
+## Accessibility waits until last
+
+- Accessibility is deferred (owner, 2026-09-25): no a11y bug or feature (aria/roles, contrast, focus, target sizes,
+  screen readers) is worked until no other bug or feature is left. Note one you see; don't fix it.
+
 ## Tests run only on CI
 
 - Never run tests on this machine, a cloud session's or an agent's worktree. Push, then dispatch
