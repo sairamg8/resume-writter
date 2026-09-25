@@ -17,7 +17,7 @@ with one full CI run and fast-forwards `master` on green.
 | Cluster | Rows | Session | State |
 |---|---|---|---|
 | perf | R2-142 + Round 1 leftovers: f6cb390's missing fail-first test, hidden end date ignored by PDF/Word on imported education/projects/volunteering, a review of pdf-pagination's merged work | session_017EuPN3kida3Yn1AMTDH8qQ | running |
-| ats-view | R2-141 (its 39c7925 was red on CI) + the ATS checker counting an all-hidden section | session_01LEdydPcqD7vQvaL88189M2 | running |
+| ats-view | R2-141 (its 39c7925 was red on CI) + the ATS checker counting an all-hidden section | session_01LEdydPcqD7vQvaL88189M2 | **merged** — R2-141 fixed (parser view, per-job fields, honest claims); R1-LEFT-d fixed (7580def) |
 | design-page | R2-136 (done), 149, 157 | session_01PeCTicKUMnAJYJhVSLsUfV | running |
 | header-type | R2-137, 146 | session_01SfVdGGL7YohgirYbPRni3X | running |
 | templates-core | R2-139 (non-a11y part), 138 — branch `claude/wf-templates-core` | session_01RJGwPXpTmeycSSs3P4AScW | running |

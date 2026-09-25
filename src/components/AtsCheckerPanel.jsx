@@ -17,6 +17,7 @@ import { copyText } from '@/utils/clipboard';
 import { downloadBlob } from '@/utils/download';
 import { buildExportFilename } from '@/utils/exportFilename';
 import { newId } from '@/utils/ids';
+import { AtsParserView } from '@/components/AtsParserView';
 
 /**
  * The template the panel's costly layout fix moves a risky résumé to. One id, read both by the
@@ -212,6 +213,9 @@ export default function AtsCheckerPanel({ resume, store }) {
   const layoutFixes = ['template', 'section_grids']
     .flatMap(id => itemFixes(categories.layout.items.find(i => i.id === id && i.status === 'warn')));
   const hasCompanyTitleOrder = categories.experience.items.some(i => i.id === 'exp_title_order' && i.status === 'warn');
+  // Text set side by side (the two-column Sidebar, Grids 2): pdf.js reads it in drawing order, where a
+  // parser that reads by position does not — the parser view says so beside its text (R2-141).
+  const columnsWarned = categories.layout.items.some(i => (i.id === 'template' || i.id === 'section_grids') && i.status === 'warn');
 
   return (
     <div className="space-y-5 text-gray-800 pb-12">
@@ -225,7 +229,8 @@ export default function AtsCheckerPanel({ resume, store }) {
               </span>
               <div>
                 <h2 className="text-sm sm:text-base font-bold text-gray-900 leading-tight">ATS Score & Parser Checker</h2>
-                <p className="text-[11px] sm:text-xs text-gray-500 mt-0.5">Tested for Workday, Taleo, Greenhouse, Lever & iCIMS</p>
+                {/* No vendor's parser is tested, so none is named; the battery's readers are (R2-141). */}
+                <p className="text-[11px] sm:text-xs text-gray-500 mt-0.5">Scored on what a résumé parser needs to find — see below what it reads from your PDF</p>
               </div>
             </div>
           </div>
@@ -309,6 +314,9 @@ export default function AtsCheckerPanel({ resume, store }) {
           </button>
         </div>
       </div>
+
+      {/* ── What a parser reads: the PDF's own text (R2-141) ─────── */}
+      <AtsParserView resume={resume} columnsWarned={columnsWarned} />
 
       {/* ── Target Job Description Matcher ─────────────────────── */}
       <div className="p-4 sm:p-5 bg-white border border-gray-200 rounded-2xl shadow-sm space-y-3">

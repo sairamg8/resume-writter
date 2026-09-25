@@ -237,6 +237,17 @@ function shownItems(s, template) {
 }
 
 /**
+ * Every job the résumé prints — its shown Experience entries, each as it prints (shownItems) — for the
+ * ATS tab's per-job check of what a parser reads (parserText's jobFields, R2-141).
+ */
+export function printedJobs(resume) {
+  const template = templateId(resume?.template);
+  return (Array.isArray(resume?.sections) ? resume.sections : [])
+    .filter((s) => s?.type === 'experience' && s.visible !== false)
+    .flatMap((s) => shownItems(s, template));
+}
+
+/**
  * The fields an entry prints as they are, whatever its type (the PDF's and Word's): a job's or
  * volunteer role's company / org, role and location; a degree's institution, degree, field and GPA;
  * a project's name and technologies; a certificate's name, issuer and ID; an award's or a custom
@@ -654,12 +665,21 @@ export function analyzeAtsScore(resume, jobDescriptionText = '') {
     });
   }
 
-  // LinkedIn / Online Profile check (2 pts)
-  if (String(shown('linkedin') || '').trim()) {
+  // LinkedIn / Online Profile check (2 pts). A parser reads the text the PDF prints, not the link
+  // behind it: a Display label ("LinkedIn", "My profile") prints instead of the address, and no
+  // reader — pdf.js, Poppler — then finds a profile, where the check used to pass it (R2-141).
+  const linkedinPrinted = contactItems(p).find((c) => c.key === 'linkedin')?.value || '';
+  if (/linkedin\.com\/./i.test(linkedinPrinted)) {
     contactPts += 2;
     results.categories.contact.items.push({
       id: 'linkedin', status: 'pass', text: 'LinkedIn profile link present',
       detail: 'Workday and Lever enrich candidate records automatically using LinkedIn URLs.',
+    });
+  } else if (linkedinPrinted) {
+    contactPts += 1;
+    results.categories.contact.items.push({
+      id: 'linkedin', status: 'warn', text: `LinkedIn prints as "${linkedinPrinted}", not its address`,
+      detail: 'A parser reads the text the PDF prints, not the link behind it, so it finds no profile here. Clear the Display label on Personal Info, or type the address (linkedin.com/in/…), so the address prints.',
     });
   } else if (hiddenByUser(p, 'linkedin')) {
     results.categories.contact.items.push({
@@ -709,7 +729,9 @@ export function analyzeAtsScore(resume, jobDescriptionText = '') {
 
   // ── 2. Section Headings & ATS Taxonomy (20 pts) ───────────────────
   let headingsPts = 0;
-  const visibleSections = sections.filter(s => s.visible !== false);
+  // The sections that print: one whose entries are all hidden, or that has none, prints no heading
+  // anywhere (sectionPrints in PdfSections.jsx, R2-057), so a parser finds no such section (R1-LEFT-d).
+  const visibleSections = sections.filter(s => s.visible !== false && shownItems(s, currentTemplate).length > 0);
   const typesPresent = new Set(visibleSections.map(s => s.type));
 
   // Experience section present (6 pts)
@@ -1064,14 +1086,16 @@ export function analyzeAtsScore(resume, jobDescriptionText = '') {
     const label = isSidebarSingle ? 'SIDEBAR (SINGLE · ATS-SAFE)' : templateLabel(currentTemplate).toUpperCase();
     results.categories.layout.items.push({
       id: 'template', status: 'pass', text: `ATS-Certified Template: "${label}"`,
+      // What the ATS battery reads from this template's PDF (tests/pdf/42-ats-fields, 98-ats-claims):
+      // no vendor's parser is tested, so none is named (R2-141).
       detail: sideBySide.length
-        ? 'The template prints one column of text, which Workday, Taleo, and Greenhouse parse in order — but not the entries printed side by side below.'
-        : 'Single-column text flow ensures 100% sequential parsing on Workday, Taleo, and Greenhouse.',
+        ? 'The template prints one column of text, which pdf.js and Poppler\'s pdftotext read top to bottom — but not the entries printed side by side below.'
+        : 'One column of text: pdf.js and Poppler\'s pdftotext read it top to bottom, each job with its title, company and dates.',
     });
   } else if (rating.tier === 'good') {
     results.categories.layout.items.push({
       id: 'template', status: 'pass', text: `${templateLabel(currentTemplate)} Single-Column Layout`,
-      detail: rating.note || 'Single-column body parses reliably. Ensure header contrast remains legible.',
+      detail: rating.note || 'One column of text under a coloured header: pdf.js and Poppler\'s pdftotext read it as text, top to bottom. Keep the header contrast legible for the people who read it.',
     });
   } else {
     // Which fixes the ATS Check tab can offer, cheapest first — the checker names them by id, the
@@ -1085,7 +1109,8 @@ export function analyzeAtsScore(resume, jobDescriptionText = '') {
     results.categories.layout.items.push({
       id: 'template', status: 'warn', text: 'Multi-column / Sidebar layout detected',
       detail: [
-        'While modern AI parsers handle sidebars, older Workday/Taleo systems may interleave columns.',
+        // What the battery reads from the two columns (tests/pdf/40-ats-parse, 42-ats-fields, 98-ats-claims).
+        'Two columns side by side: a parser that reads the page by position, as Poppler\'s pdftotext does, can mix the two columns\' lines and part a job from its dates; pdf.js reads each column whole, in the order it is drawn.',
         // The advice is the buttons' order: the toggle keeps the résumé's design, the switch does not.
         singleColumnFixesIt && `${templateLabel(currentTemplate)}'s single-column Layout parses like the certified templates and keeps the template, its heading style and its title case.`,
         `Switching template — ${safeLabels.join(', ')} — replaces all three.`,
@@ -1102,7 +1127,7 @@ export function analyzeAtsScore(resume, jobDescriptionText = '') {
     const names = sideBySide.map(s => `"${String(s.title || '').trim() || ATS_STANDARD_SECTIONS[s.type]?.canonical || s.type}"`).join(', ');
     results.categories.layout.items.push({
       id: 'section_grids', status: 'warn', text: `Entries printed side by side: ${names}`,
-      detail: 'Section Options → Grids prints these entries two or more to a row. Poppler and older Workday/Taleo parsers read a page line by line, across the row, so the entries\' lines interleave. Grids 1 prints them one under another.',
+      detail: 'Section Options → Grids prints these entries two or more to a row. Poppler\'s pdftotext, in its layout mode, reads the page line by line, across the row, so the entries\' lines interleave. Grids 1 prints them one under another.',
       fixable: true,
       actions: ['grids_one_column'],
     });
