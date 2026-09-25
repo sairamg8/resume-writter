@@ -5,7 +5,7 @@ import { loadModule } from '../harness.mjs';
 import { item, flow, fillsOf, prints } from './measure.mjs';
 import { PERSONAL, baseResume } from './store.mjs';
 import { shot } from './matrix.mjs';
-import { headingMarks, iconBefore, STYLE_MARK } from './marks.mjs';
+import { headingMarks, headingIcon, iconBefore, titleRuns, STYLE_MARK } from './marks.mjs';
 import { bulletAt } from '../../../src/utils/richText.js';
 
 export const valueOf = (run, key) => run.writes.find((w) => `${w.kind}.${w.key}` === key || w.kind === key)?.value;
@@ -268,6 +268,32 @@ export const DESIGN = {
       const m = t && headingMarks(r.snap, t);
       return m ? m.below ?? m.beside ?? m.bar : null;
     }, 'the heading mark\'s thickness'),
+  },
+  // On: an icon about the title's size just left of every section title page 1 prints, in both of the
+  // Sidebar's columns, and every title still prints; Off: none, where there was none (R2-147).
+  'setting.sectionIcons': {
+    family: 'headings',
+    check: ({ runs, before }) => runs.flatMap((r) => {
+      const v = valueOf(r, 'setting.sectionIcons');
+      const titles = titleRuns(r.snap, r.state);
+      const out = titleRuns(before.snap, before.state).filter((b) => !titles.some((t) => t.str.trim() === b.str.trim()))
+        .map((b) => `${v}: the title "${b.str.trim()}" no longer prints`);
+      if (!titles.length) out.push(`${v}: no section title prints on page 1`);
+      for (const t of titles) {
+        const icon = headingIcon(r.snap, t);
+        const name = t.str.trim();
+        if (!v) {
+          const was = titleRuns(before.snap, before.state).find((b) => b.str.trim() === name);
+          if (icon && icon.sig !== (was && headingIcon(before.snap, was))?.sig) out.push(`${v}: an icon prints before "${name}"`);
+        } else if (!icon) out.push(`${v}: no icon before "${name}"`);
+        else {
+          if (icon.size < t.h * 0.5 || icon.size > t.h * 1.3) out.push(`${v}: the icon before "${name}" is ${icon.size.toFixed(1)} pt, the title ${t.h.toFixed(1)} pt`);
+          if (icon.gap > t.h) out.push(`${v}: the icon before "${name}" is ${icon.gap.toFixed(1)} pt from it`);
+          if (icon.mid < -t.h * 0.2 || icon.mid > t.h * 0.9) out.push(`${v}: the icon before "${name}" is off its line (${icon.mid.toFixed(1)} pt from the baseline)`);
+        }
+      }
+      return out;
+    }),
   },
   'setting.sectionTitleCase': {
     family: 'headings',

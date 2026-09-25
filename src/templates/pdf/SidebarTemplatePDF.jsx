@@ -169,7 +169,7 @@ export function SidebarTemplatePDF({ data }) {
 
           {contacts.length > 0 && (
             <View style={{ marginBottom: sideSectionGap }}>
-              <SideSectionTitle title="Contact" shades={side} titleCase={settings.sectionTitleCase} settings={settings} />
+              <SideSectionTitle title="Contact" type="contact" shades={side} titleCase={settings.sectionTitleCase} settings={settings} />
               <View style={{ marginTop: 2 }}>
                 {contacts.map((item, i) => (
                   <SideContactRow
@@ -227,6 +227,7 @@ export function SidebarTemplatePDF({ data }) {
                 template="sidebar"
                 lineHeightValue={settings.lineHeightValue ?? 1.5}
                 letterSpacingPct={settings.sectionLetterSpacing}
+                icon={settings.sectionIcons ? 'summary' : null}
                 presence={Math.round(baseSize * lineH * 3)}
               />
               <PdfRichText

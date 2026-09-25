@@ -12,8 +12,12 @@ import { sidebarShades } from './pdfColors';
 import { PdfRichText } from './PdfRichText';
 import { RenderBullets, SPACER } from './PdfSections';
 import { ContactValue } from './PdfContact';
+<<<<<<< HEAD
 import { PdfLevel } from './PdfLevel';
 import { languageLevel, languageLevelStyle } from '@/utils/languageLevel';
+=======
+import { sectionIconMark } from './PdfIcons';
+>>>>>>> worktree-agent-acfc3fa9dc9997ae6
 
 /**
  * The Sidebar template's dark column: its section title and the renderers of the sections that
@@ -107,17 +111,28 @@ export function EntryLink({ url, label, style, hyphenationCallback, settings }) 
  * Never left alone at the foot of a page (R2-104): it moves unless `presence` pt of its section fit
  * under it — the first entry's unbreakable head (entryPresence), else three of the column's lines.
  * SPACER, printed before it, gives it the previous sibling minPresenceAhead needs.
+ *
+ * With Design → Section Headings → Icons on (R2-147), `type`'s icon (a section type, or 'contact')
+ * prints before the words in the label colour, at the title's size, centred on its first line.
  */
-export function SideSectionTitle({ title, shades = NAVY, titleCase = 'upper', settings, presence = 3 * SIDE_LINE }) {
+export function SideSectionTitle({ title, type = null, shades = NAVY, titleCase = 'upper', settings, presence = 3 * SIDE_LINE }) {
   const upper = upperSectionTitles(titleCase);
-  const type = { fontSize: 8.5, fontWeight: 'bold', letterSpacing: tracking(8.5, 1.2) };
+  const font = { fontSize: 8.5, fontWeight: 'bold', letterSpacing: tracking(8.5, 1.2) };
+  const words = (extra) => (
+    <Text style={{ ...font, color: shades.label, textTransform: upper ? 'uppercase' : 'none', marginBottom: 2.5, lineHeight: 1.2, ...extra }} hyphenationCallback={sideBreaks(settings, font)}>
+      {upper ? title.toUpperCase() : title}
+    </Text>
+  );
   return (
     <>
       {SPACER}
       <View wrap={false} minPresenceAhead={Math.ceil(presence)} style={{ marginBottom: 6 }}>
-        <Text style={{ ...type, color: shades.label, textTransform: upper ? 'uppercase' : 'none', marginBottom: 2.5, lineHeight: 1.2 }} hyphenationCallback={sideBreaks(settings, type)}>
-          {upper ? title.toUpperCase() : title}
-        </Text>
+        {settings?.sectionIcons ? (
+          <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+            {sectionIconMark({ type: type || 'custom', size: font.fontSize, color: shades.label, lineHeight: 1.2 })}
+            {words({ flexShrink: 1 })}
+          </View>
+        ) : words()}
         <View style={{ height: 1, backgroundColor: shades.fill }} />
       </View>
     </>
@@ -183,7 +198,7 @@ export function SideEducation({ section, sectionGap, itemGap, shades = NAVY, tit
 
   return (
     <View style={{ marginBottom: sectionGap }}>
-      <SideSectionTitle title={section.title} shades={shades} titleCase={titleCase} settings={settings} presence={presence} />
+      <SideSectionTitle title={section.title} type={section.type} shades={shades} titleCase={titleCase} settings={settings} presence={presence} />
       <View style={{ gap: itemGap }}>
         {visibleItems.map((item, i) => (
           <View key={i}>
@@ -218,7 +233,7 @@ export function SideLanguages({ section, sectionGap, itemGap, accent = '#2563eb'
   const levelStyle = languageLevelStyle(section.settings);
   return (
     <View style={{ marginBottom: sectionGap }}>
-      <SideSectionTitle title={section.title} shades={shades} titleCase={titleCase} settings={settings} />
+      <SideSectionTitle title={section.title} type={section.type} shades={shades} titleCase={titleCase} settings={settings} />
       <View style={{ gap: itemGap }}>
         {visibleItems.map((item, i) => {
           const font = { fontFamily: settings?._pdfFontFamily, fontSize: 9 };
@@ -263,7 +278,7 @@ export function SideCertifications({ section, sectionGap, itemGap, shades = NAVY
 
   return (
     <View style={{ marginBottom: sectionGap }}>
-      <SideSectionTitle title={section.title} shades={shades} titleCase={titleCase} settings={settings} presence={presence} />
+      <SideSectionTitle title={section.title} type={section.type} shades={shades} titleCase={titleCase} settings={settings} presence={presence} />
       <View style={{ gap: itemGap }}>
         {visibleItems.map((item, i) => {
           const dateStr = dates(item);
@@ -300,7 +315,7 @@ export function SideInterests({ section, sectionGap, itemGap = DEFAULT_ITEM_GAP_
 
   return (
     <View style={{ marginBottom: sectionGap }}>
-      <SideSectionTitle title={section.title} shades={shades} titleCase={titleCase} settings={settings} />
+      <SideSectionTitle title={section.title} type={section.type} shades={shades} titleCase={titleCase} settings={settings} />
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: (CHIP_GAP_PT * itemGap) / DEFAULT_ITEM_GAP_PT }}>
         {allInterests.map((interest, i) => (
           <View key={i} style={{ backgroundColor: shades.fill, borderRadius: 2, paddingHorizontal: 5, paddingVertical: 1.5 }}>
@@ -323,7 +338,7 @@ export function SideReferences({ section, sectionGap, itemGap, shades = NAVY, ti
   ]) : undefined;
   return (
     <View style={{ marginBottom: sectionGap }}>
-      <SideSectionTitle title={section.title} shades={shades} titleCase={titleCase} settings={settings} presence={presence} />
+      <SideSectionTitle title={section.title} type={section.type} shades={shades} titleCase={titleCase} settings={settings} presence={presence} />
       <View style={{ gap: itemGap }}>
         {visibleItems.map((item, i) => (
           // Unbreakable: a reference never splits across two pages (R2-104).

@@ -29,6 +29,8 @@ export const ATS_DEFAULTS = {
   bulletStyle: DEFAULT_BULLET_STYLE,
   /** Design → Links (src/utils/linkStyle.js): Plain prints a link as the text around it, as every résumé storing no style (R2-147). */
   linkStyle: DEFAULT_LINK_STYLE,
+  /** Design → Section Headings → Icons: off, every title its words alone, as before R2-147. */
+  sectionIcons: false,
   sectionBorderWidth: 1,
   sectionBorderColor: '',
   headerAlign: 'left',
