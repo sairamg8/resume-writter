@@ -118,12 +118,19 @@ export function JobTracker({ store }) {
         actions={(
           <>
             <input ref={importRef} type="file" accept=".json" className="hidden" onChange={handleImport} />
-            <Button leftIcon={Upload} onClick={() => importRef.current?.click()}>Import</Button>
-            <Button leftIcon={Download} onClick={handleExport} title="Export as JSON backup">Export JSON</Button>
-            <Button leftIcon={FileSpreadsheet} onClick={handleExportCsv} title="Export as spreadsheet CSV for Excel or Google Sheets">Export CSV</Button>
+            {/* On a phone the three sit in the ⋯ menu instead: the header has room for two buttons. */}
+            <Button leftIcon={Upload} onClick={() => importRef.current?.click()} className="max-md:hidden">Import</Button>
+            <Button leftIcon={Download} onClick={handleExport} title="Export as JSON backup" className="max-md:hidden">Export JSON</Button>
+            <Button leftIcon={FileSpreadsheet} onClick={handleExportCsv} title="Export as spreadsheet CSV for Excel or Google Sheets" className="max-md:hidden">Export CSV</Button>
             <Menu
               label="More job actions"
-              items={[{ id: 'clear', label: 'Clear all jobs', danger: true, onSelect: clearAll }]}
+              items={[
+                { id: 'import', label: 'Import JSON', icon: Upload, onSelect: () => importRef.current?.click() },
+                { id: 'json', label: 'Export JSON', icon: Download, onSelect: handleExport },
+                { id: 'csv', label: 'Export CSV', icon: FileSpreadsheet, onSelect: handleExportCsv },
+                { type: 'separator' },
+                { id: 'clear', label: 'Clear all jobs', danger: true, onSelect: clearAll },
+              ]}
               trigger={<IconButton icon={MoreHorizontal} label="More job actions" />}
             />
             <Button variant="primary" leftIcon={Plus} onClick={() => navigate('/jobs/new')}>Add job</Button>
@@ -140,7 +147,7 @@ export function JobTracker({ store }) {
       <ImportNotice notice={importNotice} onDismiss={() => setImportNotice(null)} className="px-4 pt-3 md:px-8" />
 
       {view === 'summary' ? (
-        <div className="grid gap-4 bg-sunken px-4 py-6 md:px-8 xl:grid-cols-[1fr_18rem]">
+        <div className="grid flex-1 content-start gap-4 bg-sunken px-4 py-6 md:px-8 xl:grid-cols-[1fr_18rem]">
           <JobSummary jobs={jobs} onOpen={open} />
           <aside aria-label="Career history" className="flex flex-col gap-2">
             <h2 className="text-[12px] font-semibold uppercase tracking-wide text-ink-subtle">Career history</h2>

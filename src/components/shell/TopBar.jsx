@@ -70,7 +70,7 @@ function QuickSearch({ search }) {
       <Search size={16} aria-hidden="true" className="pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-ink-subtlest" />
       <input
         ref={inputRef}
-        type="search"
+        type="text"
         role="combobox"
         aria-label="Search issues and projects"
         aria-expanded={results.length > 0}

@@ -76,9 +76,11 @@ export function JobSummary({ jobs, onOpen }) {
               <li key={step.id} className="grid grid-cols-[7.5rem_1fr_5.5rem] items-center gap-3 text-sm" title={`${step.label}: ${step.count}`}>
                 <span className="text-ink">{step.label}</span>
                 <span className="h-6 rounded bg-hovered">
-                  <span className="flex h-6 items-center justify-end rounded bg-brand px-2 text-[12px] font-semibold text-white" style={{ width: `${Math.max((step.count / top) * 100, step.count ? 8 : 0)}%` }}>
-                    {step.count > 0 && step.count}
-                  </span>
+                  {step.count > 0 && (
+                    <span className="flex h-6 items-center justify-end rounded bg-brand px-2 text-[12px] font-semibold text-white" style={{ width: `${Math.max((step.count / top) * 100, 8)}%` }}>
+                      {step.count}
+                    </span>
+                  )}
                 </span>
                 <span className="text-right text-[12px] text-ink-subtle">{step.rate === null ? (step.count === 0 ? '0' : '') : `${step.rate}% of prev.`}</span>
               </li>

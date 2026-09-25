@@ -16,8 +16,9 @@
 >   `claude/wf-cloud-sync` merges, its `tests/pdf/95-job-notes-tab.test.mjs` still finds the Notes tab by its text.
 > - Tests: rewritten for the new UI — 82-board-pages, 82-backlog-page, 82-your-work-page, 82-settings-page (async
 >   confirm), 81-job-tracker-page, ui-kit (sidebar); new tests/unit/tracker-views.unit.mjs; Cypress 06/07/20-* specs
->   for the job page's menus and dialogs. CI only: run 36090063593 (node suite at 1fb2c64) showed the stale tests;
->   the full gate on the branch head is the next step, then fix what it finds.
+>   for the job page's menus and dialogs. CI only: run 36090063593 (node suite at 1fb2c64) showed the stale tests,
+>   now rewritten; the full gate (no inputs) is dispatched on the branch head — read it, fix what it finds, repeat.
+> - Phones: the Job Tracker's Import / Export sit in its ⋯ menu below md; the issue view is full-screen there.
 > - Next: green full gate on the branch → the owner decides when to merge into `master` (deploys).
 
 

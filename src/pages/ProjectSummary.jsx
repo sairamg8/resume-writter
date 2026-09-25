@@ -55,7 +55,7 @@ export function ProjectSummary() {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <ProjectHeader board={board} />
-      <div className="flex flex-col gap-4 bg-sunken px-4 py-6 md:px-8">
+      <div className="flex flex-1 flex-col gap-4 bg-sunken px-4 py-6 md:px-8">
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <Stat icon={CheckCircle2} tone="bg-loz-done text-loz-done-ink" value={s.completed} label="completed" hint="in the last 7 days" />
           <Stat icon={PencilLine} tone="bg-loz-progress text-loz-progress-ink" value={s.updated} label="updated" hint="in the last 7 days" />
