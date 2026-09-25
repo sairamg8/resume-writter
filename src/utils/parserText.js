@@ -97,8 +97,13 @@ export async function readPdfLines(data, { lib, worker } = {}) {
 const norm = (s) => String(s ?? '').replace(/\s+/g, ' ').trim().toLowerCase();
 /** A run's text less the separators a template sets around a field ("Austin, TX |", "· 2021"). */
 const bare = (s) => norm(s).replace(/^[\s|·•,:;–—-]+|[\s|·•,:;–—-]+$/g, '');
-/** A date's words and marks: what is left once they are gone is some other field's text. */
-const DATE_WORDS = /\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?|\b(?:present|current|now|today|to|since)\b|\d+|[\s/.,'–—-]+/gi;
+/**
+ * A date's words and marks — a month's name, short or whole, a season ("Summer 2020" prints as it is
+ * stored, as the battery's DATE_WORDS reads it), "Present" — each a whole word, so a word that only
+ * starts like a month ("Marketing", "Decatur") stays: what is left once they are gone is some other
+ * field's text.
+ */
+const DATE_WORDS = /\b(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sept?(?:ember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?|spring|summer|fall|autumn|winter|present|current|now|today|to|since)\b\.?|\d+|[\s/.,'–—-]+/gi;
 const YEAR = /\b(?:19|20)\d{2}\b/;
 
 /**

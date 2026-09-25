@@ -50,6 +50,18 @@ describe('jobFields: each field own, joined or missing (R2-141)', () => {
     assert.deepEqual(jobFields(undefined, undefined), []);
   });
 
+  it('dates: a season as stored is a date; a word that only starts like a month is not', async () => {
+    const { jobFields } = await loadModule('/src/utils/parserText.js');
+    const job = { role: 'Research Intern', company: 'Contoso Labs', startDate: 'Summer 2020', endDate: 'Fall 2020' };
+    const [season] = jobFields([[['Research Intern', 'Summer 2020 – Fall 2020'], ['Contoso Labs']]], [job]);
+    assert.equal(season.dates, 'own', '"Summer 2020 – Fall 2020" is nothing but dates');
+    const [shared] = jobFields([[['Research Intern'], ['Contoso Labs', 'Decatur 2019 – 2021']]],
+      [{ ...job, location: 'Atlanta, GA', startDate: '2019', endDate: '2021' }]);
+    assert.equal(shared.dates, 'joined', '"Decatur 2019 – 2021": a place shares the dates\' run');
+    const [march] = jobFields([[['Research Intern'], ['Contoso Labs', 'Marketing, 2019 – 2021']]], [{ ...job, startDate: '2019', endDate: '2021' }]);
+    assert.equal(march.dates, 'joined', '"Marketing" is not "March"');
+  });
+
   it('two jobs at one company: each is read at its own place', async () => {
     const { jobFields } = await loadModule('/src/utils/parserText.js');
     const pages = [[
