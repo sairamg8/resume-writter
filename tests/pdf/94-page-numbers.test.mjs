@@ -49,11 +49,28 @@ describe('Design → Page numbers prints "Page n of N" on every page (R2-147)', 
     }
   });
 
-  it('the cover letter prints no page number, and its page is as before', async () => {
+  it('the cover letter prints no page number, and its page is as before — nor does its Word file', async () => {
     const letter = { body: '<p>Dear team, I would like to join.</p>' };
     const [off, on] = [await read(await renderCover(resume({ coverLetter: letter }))), await read(await renderCover(resume({ coverLetter: letter, settings: { pageNumbers: true } })))];
     assert.equal(on.flatMap(footers).length, 0);
     assert.deepEqual(content(on), content(off));
+    const { renderCoverLetterDocx } = await loadModule('/src/utils/wordExport.js');
+    const docx = Buffer.from(await (await renderCoverLetterDocx(resume({ coverLetter: letter, settings: { pageNumbers: true } }))).arrayBuffer());
+    assert.doesNotMatch(unzipEntry(docx, 'word/document.xml') || '', /<w:footerReference /, 'the letter\'s .docx has no footer');
+  });
+
+  // A résumé saved before Page numbers existed stores no pageNumbers key, and loading it adds none
+  // (normalizeResume): it prints as it did, with no number on any page, and its .docx has no footer.
+  it('a résumé stored with no pageNumbers key prints as before, in the PDF and in Word', async () => {
+    const stored = cv('classic');
+    delete stored.settings.pageNumbers;
+    const [was, off] = [await read(await render(stored)), await read(await render(cv('classic', { pageNumbers: false })))];
+    assert.equal(was.flatMap(footers).length, 0, 'no page number');
+    assert.equal(was.length, off.length);
+    assert.deepEqual(content(was), content(off));
+    const { renderResumeDocx } = await loadModule('/src/utils/wordExport.js');
+    const docx = Buffer.from(await (await renderResumeDocx(stored)).arrayBuffer());
+    assert.doesNotMatch(unzipEntry(docx, 'word/document.xml') || '', /<w:footerReference /, 'no footer in Word');
   });
 
   it('Word: a footer with the PAGE and NUMPAGES fields when on, none when off', async () => {
