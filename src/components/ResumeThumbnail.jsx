@@ -57,6 +57,17 @@ export default function ResumeThumbnail({ resume, accent }) {
     academic: <Bar w={0.35} h={1.5} color={ink} center />,
     compact: <Bar w={0.3} h={1} color={accent} />,
     modern: <Bar w={0.35} h={1.5} color={accent} />,
+    // The designed layouts' heading marks (R2-138 B2; sectionHeadingLook's `variant`).
+    gridline: <div className="space-y-px"><Bar w={1} h={0.5} color={soft} /><Bar w={0.35} h={1.5} color={accent} /><Bar w={1} h={0.5} color={soft} /></div>,
+    registry: <div className="space-y-px"><Bar w={0.35} h={1.5} color={accent} /><div style={{ borderBottom: `1px dotted ${accent}` }} /></div>,
+    bookend: <div className="flex items-center gap-0.5"><Bar w={0.3} h={1.5} color={accent} /><div className="flex-1" style={{ height: 0.75, backgroundColor: accent }} /></div>,
+    lectern: <div className="flex items-center gap-0.5"><div className="flex-1" style={{ height: 0.75, backgroundColor: accent }} /><Bar w={0.3} h={1.5} color={accent} /><div className="flex-1" style={{ height: 0.75, backgroundColor: accent }} /></div>,
+    chronicle: <div className="space-y-px"><Bar w={0.35} h={1.5} color={accent} /><Bar w={1} h={0.5} color={accent} /><Bar w={1} h={0.5} color={accent} /></div>,
+    keystone: <div className="px-0.5 py-px" style={{ backgroundColor: soft, borderLeft: `2px solid ${accent}` }}><Bar w={0.4} h={1} color={accent} /></div>,
+    banded: <div className="-mx-1.5 px-1.5 py-px" style={{ backgroundColor: soft }}><Bar w={0.35} h={1} color={accent} /></div>,
+    keel: <div className="flex items-center gap-0.5"><Bar w={0.03} h={3} color={accent} /><Bar w={0.35} h={1.5} color={accent} /></div>,
+    linen: <div className="w-1/3 pb-px" style={{ borderBottom: `1px solid ${accent}` }}><Bar w={1} h={1.5} color={accent} /></div>,
+    broadsheet: <div className="space-y-px"><Bar w={1} h={1} color={accent} /><Bar w={0.35} h={1.5} color={accent} /></div>,
   }[t] || <Bar w={0.35} h={1.5} color={accent} />;
   const body = (sections, lines) => Array.from({ length: sections }, (_, i) => (
     <Section key={i} heading={heading} line={t === 'minimal' ? '#e5e7eb' : soft} lines={lines} center={t === 'academic'} />
@@ -102,11 +113,23 @@ export default function ResumeThumbnail({ resume, accent }) {
     );
     page = <>{band}<div className="p-1.5 space-y-1">{body(3, 2)}</div></>;
   } else {
-    const rule = { classic: null, executive: [accent, accent], academic: [ink], minimal: [grey] }[t];
+    const rule = { classic: null, executive: [accent, accent], academic: [ink], minimal: [grey], gridline: [soft], chronicle: [accent, accent], broadsheet: [ink] }[t];
+    // The designed layouts' header marks (R2-138 B2): a mark over the name, beside it or around the header.
+    const over = { gridline: <Bar w={1} h={0.5} color={soft} />, registry: <Bar w={1} h={2} color={accent} />, bookend: <Bar w={1} h={1.5} color={accent} />, linen: <Bar w={0.2} h={1} color={accent} center={center} /> }[t];
+    const under = { bookend: <Bar w={1} h={1.5} color={accent} />, lectern: <Bar w={0.25} h={1} color={accent} center={center} /> }[t];
+    const header = <Header ink={t === 'linen' ? accent : ink} sub={grey} center={center} photo={photo} photoRing={accent} />;
     page = (
       <div className={`p-1.5 ${t === 'minimal' ? 'space-y-1.5' : t === 'compact' ? 'space-y-0.5' : 'space-y-1'}`}>
-        <Header ink={ink} sub={grey} center={center} photo={photo} photoRing={accent} />
-        {rule && <div className="space-y-px">{rule.map((c, i) => <Bar key={i} w={1} h={0.75} color={c} />)}</div>}
+        {over}
+        {t === 'keystone' ? (
+          <div className="flex gap-1"><div className="w-1.5 h-3 shrink-0" style={{ backgroundColor: accent, clipPath: 'polygon(0 0, 100% 0, 78% 100%, 22% 100%)' }} />{header}</div>
+        ) : t === 'keel' ? (
+          <div className="pl-1" style={{ borderLeft: `2px solid ${accent}` }}>{header}</div>
+        ) : t === 'banded' ? (
+          <div className="-mx-1.5 -mt-1.5 px-1.5 pt-1.5 pb-1" style={{ backgroundColor: soft }}>{header}</div>
+        ) : header}
+        {under}
+        {rule && <div className="space-y-px">{rule.map((c, i) => <Bar key={i} w={1} h={t === 'broadsheet' || (t === 'chronicle' && i === 0) ? 1.5 : 0.75} color={c} />)}</div>}
         {t === 'timeline' ? (
           <div className="flex gap-1">
             <div className="w-px self-stretch" style={{ backgroundColor: accent }} />
