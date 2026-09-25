@@ -216,14 +216,18 @@ export function useAppStore() {
 
   /** The active résumé as `updater` returns it, stamped as an edit — unless it returns the same résumé: nothing changed. */
   function patchActive(updater) {
-    setAppState(prev => ({
-      ...prev,
-      resumes: prev.resumes.map(r => {
+    setAppState(prev => {
+      let changed = false;
+      const resumes = prev.resumes.map(r => {
         if (r.id !== prev.activeId) return r;
         const next = updater(r);
-        return next === r ? r : { ...next, updatedAt: Date.now() };
-      }),
-    }));
+        if (next === r) return r;
+        changed = true;
+        return { ...next, updatedAt: Date.now() };
+      });
+      // Nothing changed: the same store, so nothing is written, built or synced (R2-142).
+      return changed ? { ...prev, resumes } : prev;
+    });
   }
 
   // ── Resume management ──────────────────────────────────────────────
