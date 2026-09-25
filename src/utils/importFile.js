@@ -240,16 +240,44 @@ function fitsAfter(prev, line, right) {
 const LABELLED = /^\p{Lu}[^:.!?]{0,30}:\s/u;
 
 /**
+ * Page `index`'s furniture, not the résumé's text: the running header the app prints atop every page
+ * after the first ("Pat Lee · Page 2", ATS-7) and Design → Page numbers' footer ("Page 1 of 3",
+ * R2-147) — the page's first or last line, and only with that page's own number.
+ */
+function isPageFurniture(line, index, first) {
+  const n = index + 1;
+  if (first && index > 0 && new RegExp(`^(?:.+ · )?Page ${n}$`).test(line.text)) return true;
+  return !first && new RegExp(`^Page ${n} of \\d+$`).test(line.text);
+}
+
+/**
+ * Page `index`'s items without its furniture (isPageFurniture): its last row when that is the page
+ * number, then its first when that is the running header. Taken off the items, before the page is
+ * split into columns (pdfPageBlocks), so neither is read into a column's text.
+ */
+function withoutPageFurniture(items, index) {
+  let rows = rowsOf(items);
+  const drop = new Set();
+  const lineOf = (row) => pdfPageLines(row.items)[0];
+  if (rows.length && isPageFurniture(lineOf(rows[rows.length - 1]), index, false)) {
+    rows[rows.length - 1].items.forEach((it) => drop.add(it));
+    rows = rows.slice(0, -1);
+  }
+  if (rows.length && isPageFurniture(lineOf(rows[0]), index, true)) rows[0].items.forEach((it) => drop.add(it));
+  return drop.size ? items.filter((it) => !drop.has(it)) : items;
+}
+
+/**
  * The lines of every page as the parser takes them: a line the PDF wrapped joined back to the one
  * it continues (a list item's next line starts under its text; a paragraph's line before it ran to
  * the right margin), a larger gap than a line's as a blank line, a page break as one too. A page in
  * two columns is read a column at a time (pdfPageBlocks), each to its own right margin, with a blank
- * line after each.
+ * line after each. A page's running header and page number (isPageFurniture) are left out.
  */
 export function pdfLinesOfPages(pages) {
   const out = [];
-  for (const page of pages) {
-    for (const { items, column } of pdfPageBlocks(page)) {
+  for (const [index, page] of pages.entries()) {
+    for (const { items, column } of pdfPageBlocks(withoutPageFurniture(page, index))) {
       const lines = pdfPageLines(items);
       const right = Math.max(0, ...lines.map((l) => l.right));
       let prev = null;

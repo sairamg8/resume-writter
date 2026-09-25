@@ -1,6 +1,6 @@
 import { Document, Page, View } from '@react-pdf/renderer';
 import { Text } from './shared/PdfText';
-import { getPageStyle, getDocumentProps } from './shared/PdfPage';
+import { PdfPageNumbers, getPageStyle, getDocumentProps } from './shared/PdfPage';
 import { PdfRunningHeader } from './shared/PdfRunningHeader';
 import { SectionRouter, getEffectiveSpacing, getVisibleSections } from './shared/PdfSections';
 import { PdfRichText } from './shared/PdfRichText';
@@ -131,6 +131,8 @@ export function ModernTemplatePDF({ data }) {
             />
           );
         })}
+        {/* Last on every page: its footer is the page's last line drawn, after the résumé's own text (R2-147). */}
+        <PdfPageNumbers settings={settings} />
       </Page>
     </Document>
   );
