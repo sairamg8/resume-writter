@@ -4,7 +4,7 @@ import { PdfSectionTitle } from './shared/PdfSection';
 import { getEffectiveSpacing, SPACER, sectionPrints } from './shared/PdfSections';
 import { PdfRichText } from './shared/PdfRichText';
 import { hasRichText } from '@/utils/richText';
-import { getDocumentProps, pageMargins } from './shared/PdfPage';
+import { PdfPageNumbers, bottomMarginMm, getDocumentProps, pageMargins } from './shared/PdfPage';
 import { PdfRunningHeader } from './shared/PdfRunningHeader';
 import { getPdfPhotoStyle } from './shared/pdfPhoto';
 import { PdfPhoto } from './shared/PdfPhoto';
@@ -118,7 +118,7 @@ export function SidebarTemplatePDF({ data }) {
     page: {
       fontFamily: settings._pdfFontFamily || 'NotoSans',
       paddingTop: `${vMm}mm`,
-      paddingBottom: `${Math.max(0, vMm - 0.5)}mm`,
+      paddingBottom: `${Math.max(0, bottomMarginMm(settings) - 0.5)}mm`,
       paddingLeft: 0,
       paddingRight: 0,
       flexDirection: 'row',
@@ -134,6 +134,8 @@ export function SidebarTemplatePDF({ data }) {
         <View style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${SIDE_COL * 100}%`, backgroundColor: sidebarBg }} fixed />
         {/* First text on every page: after page 1 it prints "Name · Page 2" (ATS-7), over the main column. */}
         <PdfRunningHeader personal={personal} settings={settings} left={`${SIDE_COL * 100}%`} />
+        {/* Before the page's content: react-pdf repeats a fixed element only from where it stands on. */}
+        <PdfPageNumbers settings={settings} />
 
         <View style={{
           width: `${SIDE_COL * 100}%`,
