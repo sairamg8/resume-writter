@@ -19,7 +19,7 @@ with one full CI run and fast-forwards `master` on green.
 | perf | R2-142 + Round 1 leftovers: f6cb390's missing fail-first test, hidden end date ignored by PDF/Word on imported education/projects/volunteering, a review of pdf-pagination's merged work | session_017EuPN3kida3Yn1AMTDH8qQ | **merged** — R2-142 partial (max-wait preview, no-op edits, sign-out write, other-tab saves; PERF-1/4/5/6 left); R1-LEFT-a, b, c fixed |
 | ats-view | R2-141 (its 39c7925 was red on CI) + the ATS checker counting an all-hidden section | session_01LEdydPcqD7vQvaL88189M2 | **merged** — R2-141 fixed (parser view, per-job fields, honest claims); R1-LEFT-d fixed (7580def) |
 | design-page | R2-136 (done), 149, 157 | session_01PeCTicKUMnAJYJhVSLsUfV | **merged** — R2-136, 149, 157 fixed (page size, 1-Page Fit that measures, Design panel tests); session archived |
-| header-type | R2-137, 146 | session_01SfVdGGL7YohgirYbPRni3X | running |
+| header-type | R2-137, 146 | session_01SfVdGGL7YohgirYbPRni3X | **merged** (session limit hit before its final CI; the full gate checks it) — R2-137 fixed, R2-146 partial |
 | templates-core | R2-139 (non-a11y part), 138 — branch `claude/wf-templates-core` | session_01RJGwPXpTmeycSSs3P4AScW | **merged** — R2-138 partial (8 designs: 17 choices; B2, B4 left), R2-139 partial (a11y part deferred) |
 | section-style | R2-147 | session_01NqoaVxqWn89c2oi9DMyehg | **stalled 03:03 → taken over by the coordinator** — merged as left (328b9fe); page-number fix f0f9784 (explicit height), Word footer on the title page; CI pending |
 | cloud-sync | R2-159 (done), 145, 140 | session_017BB79LpEbU9c3zT2CccWDV | **merged** — R2-159, 145, 140 fixed (jobs + boards sync on one shared engine; Privacy page true) |

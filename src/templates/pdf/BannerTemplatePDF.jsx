@@ -11,7 +11,7 @@ import { getPdfPhotoStyle } from './shared/pdfPhoto';
 import { PdfPhoto } from './shared/PdfPhoto';
 import { textShades } from './shared/pdfColors';
 import { MM_TO_PT } from './shared/pdfUnits';
-import { letterheadLook } from './shared/letterhead';
+import { letterheadLook, headerTitleSize } from './shared/letterhead';
 import { bannerPadY, bannerStripPt } from './shared/bannerBand';
 import { photoTextAlignItems } from '@/constants/templates';
 import { pageSizeOf } from '@/constants/pageSize';
@@ -46,7 +46,7 @@ export function BannerTemplatePDF({ data }) {
     lineHeightValue: lineH,
   } = settings;
   const nameSize  = baseSize + (settings.fontSizeNameDelta  ?? 8);
-  const entrySize = baseSize + (settings.fontSizeEntryDelta ?? 0);
+  const entrySize = headerTitleSize(settings); // the job title's (R2-146)
   const hidden    = personal?.hiddenFields || [];
 
   const centered     = (settings.headerAlign || 'left') === 'center';

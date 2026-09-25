@@ -12,11 +12,17 @@ const W = await walks();
 let look = null;
 before(async () => {
   await setup();
-  const [letterhead, templates] = await Promise.all([
+  const [letterhead, templates, spacing] = await Promise.all([
     loadModule('/src/templates/pdf/shared/letterhead.js'),
     loadModule('/src/constants/templates.js'),
+    loadModule('/src/constants/headerSpacing.js'),
   ]);
-  look = { band: (v) => Boolean(letterhead.letterheadLook(v.template, v.settings).band), ...templates };
+  look = {
+    band: (v) => Boolean(letterhead.letterheadLook(v.template, v.settings).band),
+    // The page prints header gap `key`: its header's template has one (the walk's résumé has a summary).
+    gap: (v, key) => spacing.templateGapPt(templates.headerTemplateId(v.template, v.settings), key) != null,
+    ...templates,
+  };
 });
 after(teardown);
 
@@ -33,6 +39,11 @@ const WHERE = [
   ['sidebarBg', (v) => look.headerTemplateId(v.template, v.settings) === 'sidebar', 'the page prints the Sidebar column'],
   ['headerAlign', (v) => look.hasHeaderControls(v.template, v.settings), 'the header takes Header Customization'],
   ['showHeaderBorder', (v) => look.hasHeaderControls(v.template, v.settings), 'the header takes Header Customization'],
+  // Header spacing's rows under the contacts (R2-137); Text ↔ Border shows once the border is on, one step deep.
+  ['summaryGap', (v) => look.gap(v, 'summaryGap'), 'the header prints a gap above its summary'],
+  ['headerPadY', (v) => look.gap(v, 'headerPadY'), 'the header is a padded banner (Modern, Banner)'],
+  ['headerPadX', (v) => look.gap(v, 'headerPadX'), 'the banner is padded at its sides (Modern)'],
+  ['headerGapBelow', (v) => look.gap(v, 'headerGapBelow'), 'the header has a gap under it (every one)'],
 ];
 
 describe('each control is offered where the PDF prints what it styles, and only there', () => {

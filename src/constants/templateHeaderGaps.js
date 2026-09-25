@@ -6,9 +6,9 @@
  * in pt — the PDF's own unit, so an unset gap prints exactly what the template always did: each
  * value is the constant it replaced. null: the template has no such gap, and a stored value is
  * ignored there. A map is by Contact Layout; a function takes Between Sections (pt). The settings
- * (CSS px), their ranges and how they resolve: src/constants/headerSpacing.js. Classic, Minimal and
- * Executive print these; Modern's banner and the Sidebar column still print the constants their
- * values here record, until their own batch wires them (no editor control may offer those before).
+ * (CSS px), their ranges and how they resolve: src/constants/headerSpacing.js. Every template prints
+ * these, and Personal Info → Header spacing offers each where it moves something
+ * (src/utils/headerSpacingRows.js). contactsSideGap is in none: it is the cover letter's own.
  */
 export const STACKED_HEADER_GAPS = {
   nameTitleGap: 1,                  // Stack layout: the title's marginTop

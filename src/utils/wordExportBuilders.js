@@ -6,7 +6,7 @@ import {
 import { sectionLook } from '@/utils/wordExportLook';
 import { headingBorderExtraPt, inSidebarColumn, templateId, upperSectionTitles } from '@/constants/templates';
 import { solid } from '@/templates/pdf/shared/pdfColors';
-import { sectionHeadingLook } from '@/templates/pdf/shared/sectionHeadingLook';
+import { sectionHeadingLook, titleTracking } from '@/templates/pdf/shared/sectionHeadingLook';
 import { resolveTemplateSettings } from '@/templates/pdf/shared/templateSettings';
 import { getDateColor, getEffectiveSpacing } from '@/templates/pdf/shared/PdfSections';
 import { fieldGap } from '@/templates/pdf/shared/PdfItemHeader';
@@ -40,13 +40,22 @@ function headingOf(s, template) {
 }
 
 /**
+ * Design → Title Spacing on a title's run, twips, when one is set: what the PDF prints (titleTracking).
+ * Unset, Word's titles keep no letter-spacing, as they always had (R2-146).
+ */
+function trackingOf(s) {
+  if (typeof s.sectionLetterSpacing !== 'number') return {};
+  return { tracking: Math.round(titleTracking((s.fontSizeBase ?? 11) + (s.fontSizeSectionDelta ?? 1), s.sectionLetterSpacing) * 20) };
+}
+
+/**
  * A section title as the PDF prints it in the main column: Design → Title case and Section Headings
  * (headingOf). The Sidebar's "About Me" over its summary reads it too (FIDB-51-VF3-NB2-NB1-NB1).
  */
 export function buildSectionTitle(title, settings, template) {
   const s = resolveTemplateSettings(settings, templateId(template));
   const text = String(title || '');
-  const heading = { ...headingOf(s, template), lineHeight: s.lineHeightValue };
+  const heading = { ...headingOf(s, template), lineHeight: s.lineHeightValue, ...trackingOf(s) };
   return sectionHeading(upperSectionTitles(s.sectionTitleCase) ? text.toUpperCase() : text, accent2Hex(settings?.accentColor), false, heading);
 }
 
@@ -313,6 +322,7 @@ export function buildSection(section, accentHex, settings, template) {
     ...(side ? { size: sectionTitleSize } : headingOf(s, template)),
     before: twips(getEffectiveSpacing(section, s).spaceBefore ?? 0),
     lineHeight: s.lineHeightValue,
+    ...(side ? {} : trackingOf(s)), // the Sidebar's column titles keep their own, as in the PDF
   };
   // The date in the PDF's colour for the template, from the Text colour it prints (its own when none is stored).
   const dateHex = accent2Hex(solid(getDateColor({ ...s, _template: templateId(template) })), '6b7280');

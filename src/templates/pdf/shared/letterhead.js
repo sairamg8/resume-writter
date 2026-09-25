@@ -3,7 +3,7 @@
 // to print Classic's letterhead under every template, so a Modern or Sidebar résumé and its
 // letter never read as a set. Plain data (no react-pdf).
 import { hasHeaderControls, headerBorderOn, headerTemplateId, letterheadCentered, templateId } from '@/constants/templates';
-import { HEADER_GAPS, templateGapPt } from '@/constants/headerSpacing';
+import { HEADER_GAPS, setGapPt, templateGapPt } from '@/constants/headerSpacing';
 import { contrast, sidebarShades, solid, textShades } from './pdfColors';
 import { CSS_PX_TO_PT, MODERN_HEADER_PAD_X_PT, MODERN_HEADER_PAD_Y_PT } from './pdfUnits';
 import { DEFAULTS } from './templateSettings';
@@ -13,10 +13,12 @@ import { bannerPadY } from './bannerBand';
 /**
  * Space under the letterhead's text, above its rule (or the gap under the letterhead, with none),
  * where the résumé's header prints no Text ↔ Border gap of its own (letterheadLook's ruleGap) —
- * and the gap under the letterhead.
+ * and the gap under the letterhead where the résumé sets no Header ↔ First section (gapBelow).
  */
 const LETTERHEAD_PAD = 12;
 export const LETTERHEAD_GAP = 16;
+/** Right of Name: the space between the name side and the contacts on its right, pt (contactsSideGap unset). */
+export const LETTER_CONTACTS_GAP = 12;
 
 /** Space between the two lines of Executive's double rule, pt. */
 export const DOUBLE_RULE_GAP = 1.5;
@@ -80,13 +82,17 @@ export const LOOKS = {
   classic: (base, { rule }) => ({ ...base, rules: rule || [] }),
   modern: (base, { s, accent }) => {
     // Modern's banner: the accent, its padding and corners; everything on it in the header text colour.
+    // Its padding is the résumé banner's: Header spacing's Banner top & bottom and sides, else 15 / 18 pt.
     const headerText = s.headerTextColor || '#ffffff';
     return {
       ...base,
       title: { ...base.title, opacity: 0.9 },
       contacts: headerText,
       marks: bandMarks(headerText, solid(accent)),
-      band: { color: accent, fallback: DEFAULTS.modern.accentColor, padX: MODERN_HEADER_PAD_X_PT, padY: MODERN_HEADER_PAD_Y_PT, radius: 2 },
+      band: {
+        color: accent, fallback: DEFAULTS.modern.accentColor, radius: 2,
+        padX: s.headerGaps?.headerPadX ?? MODERN_HEADER_PAD_X_PT, padY: s.headerGaps?.headerPadY ?? MODERN_HEADER_PAD_Y_PT,
+      },
       photo: ['#ffffff', { onBanner: true }],
     };
   },
@@ -177,6 +183,8 @@ export const COMPACT_RULE = 1;
  *   ruleGap   the space under the text, above the rules — with none, added to the gap under the
  *             letterhead — in pt: the résumé header's Text ↔ Border gap wherever its header prints
  *             one (Header Bottom Border on: headerGaps.headerRuleGap, FIDB-51-VF3-NB3), else 12
+ *   gapBelow  the gap under the letterhead (its band, rule or ruleGap), pt: the résumé's Header ↔
+ *             First section where it sets one (Personal Info → Header spacing), else 16
  *   photo     [the ring colour of Photo → Border "Accent", getPdfPhotoStyle options]: a ring that
  *             shows on the band, as on the résumé's (white on Modern's accent, a readable accent
  *             on the Sidebar panel)
@@ -185,12 +193,12 @@ export const COMPACT_RULE = 1;
  * without one, and a Thickness reaches both.
  */
 /**
- * The job title's font size, pt: Design → Font sizes → Entry Header (fontSizeEntryDelta) over
- * the base font size. The résumé header and the cover letter's letterhead print the title at this
- * size (FIDB-51-VF4-NB2).
+ * The job title's font size, pt: Design → Typography → Job Title (fontSizeTitleDelta, R2-146), else
+ * Entry Header (fontSizeEntryDelta), over the base font size. Every résumé header, the cover letter's
+ * letterhead and Word's print the title at this size (FIDB-51-VF4-NB2).
  */
 export function headerTitleSize(settings = {}) {
-  return (settings?.fontSizeBase || 11) + (settings?.fontSizeEntryDelta ?? 0);
+  return (settings?.fontSizeBase || 11) + (settings?.fontSizeTitleDelta ?? settings?.fontSizeEntryDelta ?? 0);
 }
 
 export function letterheadLook(template, s = {}) {
@@ -216,6 +224,8 @@ export function letterheadLook(template, s = {}) {
     // draws no rule at included (getHeaderBorderStyle); the letter's rule sat 12 pt under its text
     // whatever that gap. Modern's banner and the Sidebar panel have none (null): 12, unused there.
     ruleGap: headerBorderOn(s, look) ? s.headerGaps?.headerRuleGap ?? LETTERHEAD_PAD : LETTERHEAD_PAD,
+    // The letter's own 16 pt under its letterhead, unless the résumé set the gap under its header (spec D5).
+    gapBelow: setGapPt(s, 'headerGapBelow') ?? LETTERHEAD_GAP,
     photo: [accent, {}],
   };
   // The résumé header's rule (headerRule) replaces Minimal's hairline and Executive's double rule —

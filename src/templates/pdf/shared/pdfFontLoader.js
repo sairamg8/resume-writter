@@ -1,6 +1,7 @@
 import { Font } from '@react-pdf/renderer';
 import { decodeEntities } from '@/utils/richText';
 import { FONTSOURCE_CDN as CDN, fetchMetadata, fontsourceId } from '@/utils/fontsource';
+import { chosenWebFont, setFontFallback } from '@/utils/fontFallback';
 import { glyphCodePoints, isPresentationForm, needsOf, scriptCandidates, scriptClaims, STAND_INS } from './pdfFontCoverage';
 
 /**
@@ -221,20 +222,39 @@ async function scriptFallbacks(text, usable) {
   return added;
 }
 
+/** resolvePdfFonts calls started, so that only the latest sets the editor's font fallback. */
+let resolveCount = 0;
+
 /**
  * The fontFamily for a PDF of `text` in the chosen font: the family name, or a fallback list
  * [chosen, …fallbacks]. Fonts are loaded and primed before it returns. A font that cannot be
- * loaded (offline, or not a Fontsource font) is replaced by Noto Sans rather than failing.
+ * loaded (offline, or not a Fontsource font) is replaced by Noto Sans rather than failing — and no
+ * longer silently: `fallback` names it, and so does fontFallback.js, which the editor shows (R2-146).
  */
 export async function resolvePdfFonts(settings, text = '') {
+  const build = ++resolveCount;
   ensureNoHyphenation();
   const primary = await chosenFont(settings);
   const families = [primary ? primary.family : 'NotoSans', ...(await fallbacksFor(text, primary))];
   let usable = await prepareFonts(families);
+  const missed = primary && usable[0] !== primary.family;
   // The chosen font could not be loaded at all (offline, blocked): Noto Sans takes its place.
-  if (primary && usable[0] !== primary.family) usable = await prepareFonts(['NotoSans', ...usable]);
+  if (missed) {
+    const store = Font.getRegisteredFonts();
+    // react-pdf keeps a failed load for good; forget it — the font's and its own subsets' (its
+    // latin-ext …) — so the next build tries them again.
+    for (const family of families.filter((f) => !usable.includes(f))) {
+      for (const source of store[family]?.sources || []) if (!source.data) source.loadResultPromise = null;
+    }
+    usable = await prepareFonts(['NotoSans', ...usable]);
+  }
   usable = [...usable, ...(await scriptFallbacks(text, usable))];
-  return { fontFamily: usable.length > 1 ? usable : usable[0] };
+  // Its metadata could not be fetched (chosenFont null), or none of its faces loaded.
+  const fallback = (!primary || missed) ? chosenWebFont(settings) : null;
+  // Only the latest build says what the editor shows: a slow one for a font since changed (a fetch
+  // that times out) must not name it after a later build printed the new font.
+  if (build === resolveCount) setFontFallback(fallback);
+  return { fontFamily: usable.length > 1 ? usable : usable[0], fallback };
 }
 
 const primedFonts = new WeakSet();

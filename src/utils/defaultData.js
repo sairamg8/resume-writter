@@ -14,6 +14,8 @@ export const ATS_DEFAULTS = {
   fontSizeNameDelta: 8,
   fontSizeSectionDelta: 1,
   fontSizeEntryDelta: 0,
+  /** Design → Job Title's size over the base; null prints it at Entry Header's size (R2-146). */
+  fontSizeTitleDelta: null,
   lineHeight: 'normal',
   margins: 'normal',
   accentColor: '#374151',
@@ -47,6 +49,8 @@ export const ATS_DEFAULTS = {
   headerBorderWidth: 2,
   customFont: '',
   iconSize: 11,
+  /** Design → Title Spacing, % of the title's size; null prints the titles' own 0.7 pt (R2-146). */
+  sectionLetterSpacing: null,
   lineHeightValue: 1.5,
   sectionGap: 16,
   itemGap: 8, // px: the Normal preset's gap (R2-1)

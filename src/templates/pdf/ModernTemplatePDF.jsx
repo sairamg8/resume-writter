@@ -13,9 +13,9 @@ import { contactItems } from '@/utils/contacts';
 import { getPdfPhotoStyle } from './shared/pdfPhoto';
 import { PdfPhoto } from './shared/PdfPhoto';
 import { opacityFor } from './shared/pdfColors';
-import { MODERN_HEADER_PAD_X_PT, MODERN_HEADER_PAD_Y_PT } from './shared/pdfUnits';
 import { photoTextAlignItems } from '@/constants/templates';
 import { pageSizeOf } from '@/constants/pageSize';
+import { headerTitleSize } from './shared/letterhead';
 
 const CSS_ICON_SCALE = 0.9;
 
@@ -51,10 +51,9 @@ export function ModernTemplatePDF({ data }) {
     nameColor,
     jobTitleColor,
     lineHeightValue: lineH,
-    sectionGap,
   } = settings;
   const nameSize  = baseSize + (settings.fontSizeNameDelta  ?? 8);
-  const entrySize = baseSize + (settings.fontSizeEntryDelta ?? 0);
+  const entrySize = headerTitleSize(settings); // the job title's (R2-146)
   const hidden    = personal?.hiddenFields || [];
   const g         = settings.headerGaps; // the header's spacing, pt (TEMPLATES' headerGaps)
   const headerText = settings.headerTextColor || '#ffffff';
@@ -67,7 +66,7 @@ export function ModernTemplatePDF({ data }) {
   // of it wider than that has nowhere to break, and react-pdf drew it off the banner and the
   // paper: it prints at the largest size that holds it.
   const name = personal?.name || 'Your Name';
-  const nameRow = headerRowWidth(settings, personal, { photoWidth: photoStyle.width, gap: g.photoTextGap }) - 2 * MODERN_HEADER_PAD_X_PT;
+  const nameRow = headerRowWidth(settings, personal, { photoWidth: photoStyle.width, gap: g.photoTextGap }) - 2 * g.headerPadX;
   const nameFit = fitFontSize(name, { fontFamily: settings._pdfFontFamily, fontSize: nameSize, fontWeight: 'bold' }, nameRow);
 
   const pageStyle = getPageStyle(settings);
@@ -77,13 +76,15 @@ export function ModernTemplatePDF({ data }) {
       <Page size={pageSizeOf(settings)} style={pageStyle} wrap>
         {/* First on every page: after page 1 it prints "Name · Page 2" (ATS-7). */}
         <PdfRunningHeader personal={personal} settings={settings} />
+        {/* Personal Info → Header spacing: Banner top & bottom and Banner sides pad it (unset, px-6 py-5:
+            15 / 18 pt), Header ↔ First section spaces what follows (unset, Between Sections). */}
         <View style={{
           backgroundColor: accent,
           borderRadius: 2,
-          paddingTop: MODERN_HEADER_PAD_Y_PT,
-          paddingBottom: MODERN_HEADER_PAD_Y_PT,
-          paddingHorizontal: MODERN_HEADER_PAD_X_PT,
-          marginBottom: sectionGap,
+          paddingTop: g.headerPadY,
+          paddingBottom: g.headerPadY,
+          paddingHorizontal: g.headerPadX,
+          marginBottom: g.headerGapBelow,
         }}>
           {/* Breakable: a summary longer than a page continues on the next, on the banner's colour (R2-046);
               the name row never splits. Photo → Text Position, as Classic, Minimal and Executive take it (R3-0). */}
@@ -105,7 +106,7 @@ export function ModernTemplatePDF({ data }) {
           </View>
           {!hidden.includes('summary') && personal?.summary &&
            hasRichText(personal.summary) && (
-            <View style={{ marginTop: 8 }}>
+            <View style={{ marginTop: g.summaryGap }}>
               <PdfRichText
                 html={personal.summary}
                 style={{ fontSize: baseSize, color: headerText, opacity: summaryOpacity, lineHeight: lineH }}

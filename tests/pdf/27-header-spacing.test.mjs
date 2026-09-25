@@ -192,16 +192,17 @@ describe('Classic, Minimal and Executive print the header gaps (header_spacing_s
     }
   });
 
-  // Guard, until the letterhead takes the résumé's gaps in its own batch (header_spacing_spec.md
-  // D5 — this test then becomes its "follows the résumé" test): the letterhead keeps its own
-  // spacing. PdfContactRow takes gaps only from its `gaps` prop, never from the résumé's resolved
-  // settings the letter passes it — they carry the résumé's Contact Layout, not the letter's.
-  // Name ↔ Title, Photo ↔ Text, Title ↔ Contacts, Icon ↔ Text and Between contacts (and rows)
-  // follow the résumé (D5; 45- to 50-header-*); the rest keep the letterhead's spacing until their
-  // rows land.
-  it('the cover letter keeps its letterhead\'s spacing whatever other header gaps the résumé sets', async () => {
-    const SET = { headerGapBelow: 60, headerRuleGap: 30 };
+  // Guard: the letterhead follows the résumé's gaps it prints (header_spacing_spec.md D5): Name ↔
+  // Title, Photo ↔ Text, Title ↔ Contacts, Icon ↔ Text and Between contacts (and rows) — 45- to
+  // 50-header-* — Text ↔ Border where the border is on (33-cover-letter-header-rule), and Modern's
+  // banner padding and Header ↔ First section (92-header-spacing-rows, R2-137). The rest change
+  // nothing: a letter has no summary, the border is off, a template without a banner has no banner
+  // padding, and the space beside the contacts is the letter's own (92-header-spacing-rows). PdfContactRow takes gaps only
+  // from its `gaps` prop, never from the résumé's resolved settings the letter passes it — they
+  // carry the résumé's Contact Layout, not the letter's.
+  it('the cover letter keeps its letterhead\'s spacing whatever header gaps the résumé sets that it does not print', async () => {
     for (const template of [...STACKED, 'modern', 'sidebar']) {
+      const SET = { summaryGap: 40, headerRuleGap: 30, ...(template === 'modern' ? {} : { headerPadY: 30, headerPadX: 30 }) };
       for (const coverLetter of [{ fieldsPosition: 'below-name', headerLayout: 'single' }, { fieldsPosition: 'right' }]) {
         const letter = async (settings) => drawing(await renderCover(make(template, settings, { photo: PNG_2X2 }, coverLetter)));
         assert.equal(await letter(SET), await letter({}), `${template} ${JSON.stringify(coverLetter)}`);

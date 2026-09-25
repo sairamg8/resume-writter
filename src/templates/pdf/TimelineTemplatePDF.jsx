@@ -13,6 +13,7 @@ import { PdfPhoto } from './shared/PdfPhoto';
 import { textShades } from './shared/pdfColors';
 import { photoTextAlignItems } from '@/constants/templates';
 import { pageSizeOf } from '@/constants/pageSize';
+import { headerTitleSize } from './shared/letterhead';
 
 /**
  * Timeline — one column of sans text in which a résumé's history reads as a timeline. A thin accent
@@ -41,7 +42,7 @@ export function TimelineTemplatePDF({ data }) {
     lineHeightValue: lineH,
   } = settings;
   const nameSize  = baseSize + (settings.fontSizeNameDelta  ?? 8);
-  const entrySize = baseSize + (settings.fontSizeEntryDelta ?? 0);
+  const entrySize = headerTitleSize(settings); // the job title's (R2-146)
   const hidden    = personal?.hiddenFields || [];
 
   const centered     = (settings.headerAlign || 'left') === 'center';

@@ -118,7 +118,7 @@ export function Editor({ store, auth, sync }) {
 
           {activeTab === 'coverletter' && (
             <div className="px-4 py-4">
-              <CoverLetterPanel resume={resume} coverLetter={resume.coverLetter} personal={resume.personal} settings={resume.settings} template={resume.template} updateCoverLetter={store.updateCoverLetter} />
+              <CoverLetterPanel resume={resume} coverLetter={resume.coverLetter} personal={resume.personal} settings={resume.settings} template={resume.template} updateCoverLetter={store.updateCoverLetter} updateSetting={store.updateSetting} clearSettings={store.clearSettings} />
             </div>
           )}
 

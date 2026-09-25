@@ -10,7 +10,7 @@ import { PdfPhoto } from './shared/PdfPhoto';
 import { contentWidthPt, pageMargins } from './shared/PdfPage';
 import { getPdfPhotoStyle } from './shared/pdfPhoto';
 import { fitFontSize, textWidth, widestWord } from './shared/pdfMeasure';
-import { DOUBLE_RULE_GAP, LETTERHEAD_GAP } from './shared/letterhead';
+import { DOUBLE_RULE_GAP, LETTER_CONTACTS_GAP } from './shared/letterhead';
 import { photoTextAlignItems } from '@/constants/templates';
 import { setGapPt } from '@/constants/headerSpacing';
 import { contactItems } from '@/utils/contacts';
@@ -19,14 +19,12 @@ import { isDrawableImage } from '@/utils/imageUpload';
 import { MM_TO_PT } from './shared/pdfUnits';
 import { opacityFor } from './shared/pdfColors';
 
-/** Space between the name side and the contacts on its right, pt. */
-const CONTACTS_GAP = 12;
 /** Room added to each measured width, pt: a word's kerning into the next space is not in it. */
 const SLACK = 1;
 
-/** The band, the rule or rules, around the letterhead's content. */
+/** The band, the rule or rules, around the letterhead's content; `gapBelow` under them (letterheadLook). */
 function Frame({ look, settings, children }) {
-  const { band, rules: [rule, second], ruleGap } = look;
+  const { band, rules: [rule, second], ruleGap, gapBelow } = look;
   if (band?.bleed) {
     // The fill runs from the paper's top and side edges; the content keeps the page margins, so
     // it sits where every other letterhead's does. A rule (Banner's header rule) is drawn on the
@@ -35,7 +33,7 @@ function Frame({ look, settings, children }) {
     const top = v * MM_TO_PT;
     const side = h * MM_TO_PT;
     return (
-      <View style={{ paddingBottom: band.padY, marginBottom: LETTERHEAD_GAP }}>
+      <View style={{ paddingBottom: band.padY, marginBottom: gapBelow }}>
         <View style={{ position: 'absolute', top: -top, left: -side, right: -side, bottom: 0, backgroundColor: band.color }} />
         {rule ? <View style={{ borderBottomWidth: rule.width, borderBottomColor: rule.color, paddingBottom: ruleGap }}>{children}</View> : children}
       </View>
@@ -45,7 +43,7 @@ function Frame({ look, settings, children }) {
     return (
       <View style={{
         backgroundColor: band.color, borderRadius: band.radius,
-        paddingVertical: band.padY, paddingHorizontal: band.padX, marginBottom: LETTERHEAD_GAP,
+        paddingVertical: band.padY, paddingHorizontal: band.padX, marginBottom: gapBelow,
       }}>
         {children}
       </View>
@@ -55,9 +53,9 @@ function Frame({ look, settings, children }) {
   const ruled = rule
     ? { borderBottomWidth: rule.width, borderBottomColor: rule.color, paddingBottom: ruleGap }
     : { paddingBottom: ruleGap };
-  if (!second) return <View style={{ ...ruled, marginBottom: LETTERHEAD_GAP }}>{children}</View>;
+  if (!second) return <View style={{ ...ruled, marginBottom: gapBelow }}>{children}</View>;
   return (
-    <View style={{ marginBottom: LETTERHEAD_GAP }}>
+    <View style={{ marginBottom: gapBelow }}>
       <View style={ruled}>{children}</View>
       <View style={{ marginTop: DOUBLE_RULE_GAP, borderTopWidth: second.width, borderTopColor: second.color }} />
     </View>
@@ -105,6 +103,9 @@ export function CoverLetterHeader({ look, personal, settings, cl, hidden, contac
     ...(centered ? { marginBottom: photoGap ?? 6 } : { marginRight: photoGap ?? 10 }),
   };
   const photoEl = photoSrc ? <PdfPhoto src={photoSrc} style={photoStyle} /> : null;
+  // Right of Name: the space between the name side and the contacts — the letter's Name ↔ Contacts
+  // (Cover Letter → Header Layout, contactsSideGap), else its own 12 pt (R2-137).
+  const sideGap = setGapPt(settings, 'contactsSideGap') ?? LETTER_CONTACTS_GAP;
 
   const align = centered ? { textAlign: 'center' } : {};
   const name = personal?.name || 'Your Name';
@@ -151,7 +152,7 @@ export function CoverLetterHeader({ look, personal, settings, cl, hidden, contac
     if (!hasContacts) {
       nameCap = beside;
     } else {
-      const room = beside - CONTACTS_GAP;
+      const room = beside - sideGap;
       const contactsNeed = contactRowMinWidth(personal, contactSettings, hidden, rowGaps) + SLACK;
       const nameNeed = Math.max(widestWord(name, { ...font, ...nameStyle }), widestWord(personal?.title, { ...font, ...titleStyle })) + SLACK;
       // Beside the name the contacts get at least what their widest item needs; under it, the row.
@@ -230,7 +231,7 @@ export function CoverLetterHeader({ look, personal, settings, cl, hidden, contac
           {photoEl}
           {nameBlock}
         </View>
-        {hasContacts ? <View style={{ flex: 1, alignItems: 'flex-end', marginLeft: CONTACTS_GAP }}>{contactEl}</View> : null}
+        {hasContacts ? <View style={{ flex: 1, alignItems: 'flex-end', marginLeft: sideGap }}>{contactEl}</View> : null}
       </View>
     );
   }

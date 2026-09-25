@@ -2,6 +2,17 @@
 // the Word résumé's headings take (wordExportUtils.js sectionHeading, ONB-12-NB1). Plain data and
 // functions (no react-pdf), so both read the one table.
 import { readableOn, solid, tint } from './pdfColors';
+import { tracking } from './pdfUnits';
+
+/**
+ * A section title's letter-spacing, pt, at `size` pt: Design → Title Spacing `pct` (% of the size,
+ * SECTION_LETTER_SPACING), or — unset — the 0.7 pt titles always had, narrower below 11.7 pt so
+ * small titles still extract as words (tracking()). PdfSectionTitle and the Word headings (R2-146).
+ */
+export const titleTracking = (size, pct) => (typeof pct === 'number' ? tracking(size, (size * pct) / 100) : tracking(size, 0.7));
+
+/** titleTracking in whole % of `size`: what Title Spacing shows. */
+export const titleTrackingPct = (size, pct) => (typeof pct === 'number' ? pct : Math.round((titleTracking(size) / size) * 100));
 
 /**
  * The colours a section heading prints in, for `template` (an id), `headingStyle`, the résumé's

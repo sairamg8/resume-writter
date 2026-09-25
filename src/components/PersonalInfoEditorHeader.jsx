@@ -2,7 +2,7 @@ import { ChevronDown, ChevronRight, Eye, EyeOff } from 'lucide-react';
 import { HEADER_BORDER_PT, ICON_SIZE } from '@/constants/designNumbers';
 import { contactLayoutOf, contactStyleOf, drawsContactIcons, hasHeaderControls, headerBorderOn, headerControlTemplateLabels } from '@/constants/templates';
 import { ICON_SET_OPTIONS, getIconSetId } from '@/utils/contactIcons';
-import { headerGapRows, headerGapKeysSet } from '@/utils/headerSpacingRows';
+import { headerGapRows, headerGapKeysSet, RESUME_GAP_KEYS } from '@/utils/headerSpacingRows';
 import { HeaderSpacingGroup } from '@/components/HeaderSpacingControls';
 import { usePrintableImage } from '@/hooks/usePrintableImage';
 
@@ -195,6 +195,7 @@ export function HeaderCustomization({ s, set, clear, personal, template, templat
             <HeaderSpacingGroup
               rows={headerGapRows(template, s, printed)}
               setKeys={headerGapKeysSet(template, s)}
+              allKeys={RESUME_GAP_KEYS}
               onChange={set}
               onClear={(keys) => clear?.(keys)}
               note={personal?.title ? null : 'Add a job title to set the space between your name and title.'}
