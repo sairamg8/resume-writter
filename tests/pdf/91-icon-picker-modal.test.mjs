@@ -170,6 +170,25 @@ describe('the header icon picker (R2-157)', () => {
     } finally { await view.unmount(); }
   });
 
+  it('opens fresh each time: no search or tab left over from the last field', async () => {
+    // It stayed mounted while closed, so a search for the e-mail icon still filtered the phone's
+    // picker, and All Icons stayed picked over the phone's recommended ones.
+    const { getSelectableIcons } = await loadModule('/src/utils/contactIconPaths.js');
+    const view = await editor(cv());
+    try {
+      view.choose('email');
+      view.type(view.search(), 'octocat');
+      view.click(view.inPicker('Close'));
+      view.choose('phone');
+      assert.equal(String(reactProps(view.search()).value), '', 'the search box is empty');
+      assert.deepEqual(view.icons(), getSelectableIcons('phone').recommended.map((i) => i.label), 'the phone\'s recommended icons');
+      view.click(view.inPicker(`All Icons (${getSelectableIcons('phone').all.length})`));
+      view.click(view.inPicker('Close'));
+      view.choose('location');
+      assert.deepEqual(view.icons(), getSelectableIcons('location').recommended.map((i) => i.label), 'back on Recommended');
+    } finally { await view.unmount(); }
+  });
+
   it('Reset to Default takes the field\'s icon off, and only that one', async () => {
     const view = await editor(cv({ email: 'icon:send', phone: 'pack:bold' }));
     try {

@@ -225,7 +225,10 @@ export default function PersonalInfoEditor({ resume: whole, personal, updatePers
         <RichTextEditor ariaLabel="Professional summary" value={personal.summary || ''} onChange={v => updatePersonal('summary', v)} placeholder="Brief professional summary highlighting your experience, skills, and goals..." rows={4} />
       </div>
 
+      {/* Keyed by the field: each open starts on Recommended with an empty search, not on the last
+          field's (it stays mounted while closed). */}
       <HeaderIconPickerModal
+        key={pickerField || ''}
         isOpen={Boolean(pickerField)}
         onClose={() => setPickerField(null)}
         fieldKey={pickerField}
