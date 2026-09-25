@@ -42,8 +42,10 @@ after(async () => { globalThis.fetch = realFetch; await teardown(); });
 
 const OWN = 'Testface Grotesk';
 const NAME = 'Robin Quill';
-const isOwn = (t) => /LiberationSans/i.test(t?.font || '');
-const isNoto = (t) => (t?.font || '').startsWith('NotoSans');
+// The embedded font's PostScript name, past its subset tag ("OFKXGM+NotoSans-Bold").
+const face = (t) => (t?.font || '').replace(/^[A-Z]{6}\+/, '');
+const isOwn = (t) => face(t).startsWith('LiberationSans');
+const isNoto = (t) => face(t).startsWith('NotoSans');
 const find = (items, re) => items.find((t) => re.test(t.str.trim()));
 const withSections = (template, settings, extra = {}) => resume({
   template,
@@ -152,6 +154,8 @@ describe('the panel offers both (R2-146)', () => {
       const settings = { nameFont: OWN, headingFont: '' };
       const view = mount(TypographySection, { settings, template: 'classic', updateSetting: (k, v) => writes.push([k, v]), onReset: () => {} });
       try {
+        const open = [...elements(view.container)].find((el) => el.tagName === 'BUTTON' && el.textContent.trim() === 'Typography');
+        view.act(() => reactProps(open).onClick());
         const selects = [...elements(view.container)].filter((el) => el.tagName === 'SELECT');
         const byLabel = (label) => {
           const l = [...elements(view.container)].find((el) => el.tagName === 'LABEL' && el.textContent.trim() === label);

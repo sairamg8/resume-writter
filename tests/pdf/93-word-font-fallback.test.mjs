@@ -8,7 +8,7 @@
 import { before, after, afterEach, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { setup, teardown, loadModule, resume, unzipEntry } from './harness.mjs';
-import { mount, elements } from './fake-dom.mjs';
+import { mount, elements, reactProps } from './fake-dom.mjs';
 
 const realFetch = globalThis.fetch;
 /** The CDN: "Testface Serif" is a serif; every other font is offline. */
@@ -76,6 +76,8 @@ describe('Typography says what Word shows (R2-146)', () => {
     const { TypographySection } = await loadModule('/src/components/DesignPanelTypography.jsx');
     const view = mount(TypographySection, { settings, template: 'classic', updateSetting: () => {}, onReset: () => {} });
     try {
+      const open = [...elements(view.container)].find((el) => el.tagName === 'BUTTON' && el.textContent.trim() === 'Typography');
+      view.act(() => reactProps(open).onClick());
       for (let i = 0; i < 40; i += 1) {
         const p = [...elements(view.container)].find((el) => el.hasAttribute('data-word-fonts'));
         if (p) return p.textContent;
