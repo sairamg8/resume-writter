@@ -2,7 +2,7 @@
 // only in its own region of the page (below its heading, above the next heading in its column): the
 // fixture's "Northwind Labs" is also an award's issuer and a reference's company. matrix.mjs adds the
 // checks every control gets.
-import { flow, prints } from './measure.mjs';
+import { flow, ownRuns, prints } from './measure.mjs';
 import { TYPE_MARKS } from './store.mjs';
 import { valueOf } from './registry-design.mjs';
 import { inSidebarColumn } from '../../../src/constants/templates.js';
@@ -11,7 +11,8 @@ const typeOf = (control) => control.sectionId.replace(/^sec_/, '');
 const norm = (s) => s.trim().toLowerCase();
 const first = (s) => s.split(' ')[0];
 const sameLine = (a, b) => a && b && a.page === b.page && Math.abs(a.y - b.y) < 3;
-const all = (snap) => snap.pages.flatMap((p) => p.items);
+// The résumé's own text: a page's running header (ATS-7) is no section's.
+const all = (snap) => ownRuns(snap);
 
 /** Each visible section's heading run in `snap`, by type. */
 const headings = (snap, state) => state.sections.filter((s) => s.visible !== false)

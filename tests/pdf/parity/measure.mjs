@@ -73,6 +73,18 @@ export async function snapshot(bytes) {
   return { pages, drawing: drawing.join('\n'), paint, colours, text };
 }
 
+/**
+ * The runs of the résumé's own text: each page after the first without its running header ("Name · Page 2",
+ * ATS-7) — the page's first line drawn, when it ends "Page N". Page furniture in the top margin, not a
+ * section's text: the section measures read around it.
+ */
+export const ownRuns = (snap) => snap.pages.flatMap((p, i) => {
+  if (!i || !p.items.length) return p.items;
+  const line = p.items.filter((t) => Math.abs(t.y - p.items[0].y) < 0.5);
+  const header = new RegExp(`(^|\\s)Page ${i + 1}$`).test(line.map((t) => t.str).join(' ').replace(/\s+/g, ' ').trim());
+  return header ? p.items.filter((t) => !line.includes(t)) : p.items;
+});
+
 /** The first run containing `mark` (null when none prints). */
 export const item = (snap, mark) => snap.pages.flatMap((p) => p.items).find((t) => t.str.includes(mark)) || null;
 
