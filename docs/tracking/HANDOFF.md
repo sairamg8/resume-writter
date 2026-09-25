@@ -21,7 +21,7 @@ with one full CI run and fast-forwards `master` on green.
 | design-page | R2-136 (done), 149, 157 | session_01PeCTicKUMnAJYJhVSLsUfV | running |
 | header-type | R2-137, 146 | session_01SfVdGGL7YohgirYbPRni3X | running |
 | templates-core | R2-139 (non-a11y part), 138 — branch `claude/wf-templates-core` | session_01RJGwPXpTmeycSSs3P4AScW | **merged** — R2-138 partial (8 designs: 17 choices; B2, B4 left), R2-139 partial (a11y part deferred) |
-| section-style | R2-147 | session_01NqoaVxqWn89c2oi9DMyehg | running |
+| section-style | R2-147 | session_01NqoaVxqWn89c2oi9DMyehg | **stalled 03:03 → taken over by the coordinator** — merged as left (328b9fe); page-number fix f0f9784 (explicit height), Word footer on the title page; CI pending |
 | cloud-sync | R2-159 (done), 145, 140 | session_017BB79LpEbU9c3zT2CccWDV | **merged** — R2-159, 145, 140 fixed (jobs + boards sync on one shared engine; Privacy page true) |
 | structure-tests | R2-158, 167, 171 | session_015xkXZJXdNDrdPoNy6Nusob | **merged** — R2-158, 167, 171 fixed (c1f085d: a section dropped off the list no longer throws) |
 | letters-import | R2-135, 148 | session_01C9EUo2kre8QeqViw2sAKkx | running |
@@ -38,12 +38,17 @@ owner, not restarted.
 **ATS-7 (coordinator, on the work branch):** `38f35b5` — "Name · Page N" on every résumé page after the first, drawn
 first in the top margin (`constants/runningHeader.js`, `PdfRunningHeader`, all nine templates, Word's header with
 titlePage); no Design control (always on, left out where the margin has no room). Its own tests pass with fail-first
-(run 36088672238: 60/60, failfirst ok). The full suite (run 36088673756) then failed only where older tests read the
-page's own text: `24bf996` gives the harness `runningHeaderItems` / `bodyItems` / `withoutRunningHeaders` and points
-06-pagination, 29-page-size, 68-banner-look, 65-ats-text-parity and 70-markdown-parity at the page's own text. Still
-to check (run 36089666144): shard 1's "timeline" and "academic" failures — parity 15-template-resets or
-31-section-overrides; likely 31's Space before measuring from the header when a heading opens page 2
-(registry-sections.mjs `all`/`gapAbove`). When green: ATS-7's row in `bug-status.md` goes ✖ → ✅.
+(run 36088672238: 60/60). `24bf996`: the harness's `runningHeaderItems` / `bodyItems` / `withoutRunningHeaders`, and
+06-pagination, 29-page-size, 68-banner-look, 65-ats-text-parity, 70-markdown-parity read the page's own text — green
+in run 36089666144. Left: the "timeline" and "academic" suites of parity 15-template-resets or 31-section-overrides
+(runs dispatched one file each, 03:30). `3b63310`: 98-ats-claims (from ats-view) no longer sets ATS-7 aside. When
+green: ATS-7's row in `bug-status.md` goes ✖ → ✅.
+
+**section-style (taken over):** its session went idle at 03:03 waiting on CI run 36088741695 (failed: no page number
+on any template), with nothing to wake it. No new agents (owner), so the coordinator merged its branch as left
+(`328b9fe`: imports beside PdfRunningHeader; Word keeps the header and the footer, the footer given for the title page
+too), fixed the footer (`f0f9784`: its box had no height), added a Word test (`87cd9d3`). CI run with fail-first
+dispatched ~03:28. Then: the report rows for R2-147 by hand (update_tracker from a hand-written report).
 
 **🔴 Before `master` moves (R2-143, merged from release):** the owner's e-mail, uid and name now come from the build's
 env (`src/utils/siteOwner.js`, `.env.example`). The live site's Cloudflare build must set
