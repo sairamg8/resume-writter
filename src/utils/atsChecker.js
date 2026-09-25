@@ -667,7 +667,7 @@ export function analyzeAtsScore(resume, jobDescriptionText = '') {
   }
 
   // LinkedIn / Online Profile check (2 pts). A parser reads the text the PDF prints, not the link
-  // behind it: a Display label ("LinkedIn", "My profile") prints instead of the address, and no
+  // behind it: a Display label (such as LinkedIn or My profile) prints instead of the address, and no
   // reader — pdf.js, Poppler — then finds a profile, where the check used to pass it (R2-141).
   const linkedinPrinted = contactItems(p).find((c) => c.key === 'linkedin')?.value || '';
   if (/linkedin\.com\/./i.test(linkedinPrinted)) {
