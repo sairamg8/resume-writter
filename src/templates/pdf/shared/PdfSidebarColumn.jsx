@@ -15,6 +15,7 @@ import { ContactValue } from './PdfContact';
 import { PdfLevel } from './PdfLevel';
 import { languageLevel, languageLevelStyle } from '@/utils/languageLevel';
 import { sectionIconMark } from './PdfIcons';
+import { SECTION_ICON_GAP_EM } from '@/utils/sectionIconPaths';
 
 /**
  * The Sidebar template's dark column: its section title and the renderers of the sections that
@@ -115,8 +116,10 @@ export function EntryLink({ url, label, style, hyphenationCallback, settings }) 
 export function SideSectionTitle({ title, type = null, shades = NAVY, titleCase = 'upper', settings, presence = 3 * SIDE_LINE }) {
   const upper = upperSectionTitles(titleCase);
   const font = { fontSize: 8.5, fontWeight: 'bold', letterSpacing: tracking(8.5, 1.2) };
+  // With an icon the words start its width and gap in, so a long word breaks to the room left beside it.
+  const inset = settings?.sectionIcons ? font.fontSize * (1 + SECTION_ICON_GAP_EM) : 0;
   const words = (extra) => (
-    <Text style={{ ...font, color: shades.label, textTransform: upper ? 'uppercase' : 'none', marginBottom: 2.5, lineHeight: 1.2, ...extra }} hyphenationCallback={sideBreaks(settings, font)}>
+    <Text style={{ ...font, color: shades.label, textTransform: upper ? 'uppercase' : 'none', marginBottom: 2.5, lineHeight: 1.2, ...extra }} hyphenationCallback={sideBreaks(settings, font, inset)}>
       {upper ? title.toUpperCase() : title}
     </Text>
   );

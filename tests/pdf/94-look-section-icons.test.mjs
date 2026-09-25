@@ -39,6 +39,8 @@ function cv(template, icons, settings = {}, sectionSettings = {}) {
 }
 
 const shot = async (r) => snapshot(await render(r));
+/** The Sidebar's dark column's right edge on the first page (38 % of the paper). */
+const p0 = (snap) => snap.pages[0].W * 0.38;
 
 /** Every section title `r` prints, as runs (any page), in the order of its sections. */
 function titles(snap, r) {
@@ -129,6 +131,34 @@ describe('Design → Section Headings → Icons prints an icon before every sect
       assert.equal(generateAtsPlainText(on), generateAtsPlainText(off), `${template}: ATS text`);
       assert.match(generateAtsPlainText(on), /EXPERIENCE/i, `${template}: the ATS text keeps its headings`);
     }
+  });
+
+  it('Sidebar: a long word in a side-column title breaks to the room left beside its icon, inside the column', async () => {
+    // breakToFit cut the word to the column's whole width, so its first piece, pushed in by the icon,
+    // ran past the column's edge over the main column (the review of R2-147).
+    const W = 'Donaudampfschifffahrtsgesellschaft';
+    const wrong = [];
+    for (const marginH of [18, 40]) {
+      const r = resume({
+        template: 'sidebar',
+        settings: { marginH, sectionIcons: true },
+        personal: { name: 'Wren Calloway', email: 'wren@example.com' },
+        sections: [
+          { ...section('languages', [{ language: 'Occitan', proficiency: 'Native' }]), title: `${W}L` },
+          { ...section('skills', [{ category: 'Tools', skills: 'Git' }]), title: `${W}S` },
+        ],
+      });
+      const snap = await shot(r);
+      for (const page of snap.pages) {
+        const right = page.W * 0.38 - 10;
+        for (const t of page.items.filter((it) => it.x < page.W * 0.38)) {
+          if (t.x + t.w > right + 0.5) wrong.push(`${marginH} mm: "${t.str}" ends at x ${(t.x + t.w).toFixed(1)}, the column at ${right.toFixed(1)}`);
+        }
+      }
+      const printed = snap.pages.flatMap((p) => p.items).filter((t) => t.x < p0(snap)).map((t) => t.str).join('').replace(/\s/g, '').toLowerCase();
+      for (const word of [`${W}L`, `${W}S`]) if (!printed.includes(word.toLowerCase())) wrong.push(`${marginH} mm: "${word}" does not print whole`);
+    }
+    assert.deepEqual(wrong, []);
   });
 
   it('Design → Section Headings offers Off and On, and its ↺ and Reset Design Settings put Off back', async () => {
