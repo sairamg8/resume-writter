@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import { useBoardStore } from '@/hooks/useBoardStore';
 import { Button, EmptyState, IconButton, cx } from '@/components/ui';
 import { useWorkspace } from '@/components/shell';
+import { BoardStorageNotice } from '@/components/board/BoardStorageNotice';
 import { BoardToolbar, EMPTY_FILTERS } from '@/components/board/BoardToolbar';
 import { ProjectHeader } from '@/components/board/ProjectTabs';
 import { IssueHost, useIssueRoute } from '@/components/board/useIssueActions';
@@ -42,6 +43,7 @@ export function ProjectCalendar() {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <ProjectHeader board={board} />
+      <BoardStorageNotice persistError={store.persistError} recovery={store.recovery} onDismissRecovery={store.dismissRecovery} className="px-4 pt-3 md:px-8" />
       <BoardToolbar board={board} filters={filters} onChange={setFilters} />
       <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-auto px-4 pb-8 md:px-8">
         <div className="flex items-center gap-2">

@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useBoardStore } from '@/hooks/useBoardStore';
 import { Button, EmptyState, IconButton, cx } from '@/components/ui';
+import { BoardStorageNotice } from '@/components/board/BoardStorageNotice';
 import { ProjectHeader } from '@/components/board/ProjectTabs';
 import { IssueHost, useIssueRoute } from '@/components/board/useIssueActions';
 import { IssueTypeIcon } from '@/components/tracker/TrackerIcons';
@@ -97,6 +98,7 @@ export function ProjectTimeline() {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <ProjectHeader board={board} />
+      <BoardStorageNotice persistError={store.persistError} recovery={store.recovery} onDismissRecovery={store.dismissRecovery} className="px-4 pt-3 md:px-8" />
       <div className="flex items-center gap-2 px-4 py-3 md:px-8">
         <Button onClick={() => setFrom(addDays(weekStart(today), -7))}>Today</Button>
         <IconButton icon={ChevronLeft} label="Earlier" onClick={() => setFrom((f) => addDays(f, -7))} />

@@ -4,9 +4,11 @@
 // still read v1 boards (lists of cards): `b.lists.reduce` threw on every saved board, so the
 // ErrorBoundary replaced both pages on every visit — the v1 list with no cards of R2-041
 // included. And the board page never said when a change could not be saved (R2-037): the grid
-// did, the page where edits are made did not. Here the real pages and the real store are
-// rendered through Vite's loader (tests/pdf/harness.mjs) with react-dom/server, over a
-// localStorage stand-in that can be made full.
+// did, the page where edits are made did not — nor, after the revamp, did a project's Summary,
+// Timeline and Calendar, where the issue view opens too; they carry the board's notice now
+// (BoardStorageNotice), as the List did. Here the real pages and the real store are rendered
+// through Vite's loader (tests/pdf/harness.mjs) with react-dom/server, over a localStorage
+// stand-in that can be made full.
 import { before, after, beforeEach, afterEach, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { createElement } from 'react';
@@ -19,11 +21,19 @@ const V1_KEY = 'cpwtcv_boards_v1';
 
 let Boards;
 let Board;
+/** A project's other views that edit or open its issues, by their path under /boards/:id. */
+let views;
 let store;
 before(async () => {
   await setup();
   ({ Boards } = await loadModule('/src/pages/Boards.jsx'));
   ({ Board } = await loadModule('/src/pages/Board.jsx'));
+  views = {
+    summary: (await loadModule('/src/pages/ProjectSummary.jsx')).ProjectSummary,
+    timeline: (await loadModule('/src/pages/ProjectTimeline.jsx')).ProjectTimeline,
+    calendar: (await loadModule('/src/pages/ProjectCalendar.jsx')).ProjectCalendar,
+    list: (await loadModule('/src/pages/ProjectList.jsx')).ProjectList,
+  };
   store = await loadModule('/src/hooks/useBoardStore.js');
   const { BOARDS_KEY } = await loadModule('/src/constants/boards.js');
   assert.equal(BOARDS_KEY, KEY);
@@ -58,7 +68,8 @@ function page(path) {
   return renderToStaticMarkup(createElement(MemoryRouter, { initialEntries: [path] },
     createElement(Routes, null,
       createElement(Route, { path: '/boards', element: createElement(Boards) }),
-      createElement(Route, { path: '/boards/:id', element: createElement(Board) }))));
+      createElement(Route, { path: '/boards/:id', element: createElement(Board) }),
+      ...Object.entries(views).map(([view, View]) => createElement(Route, { key: view, path: `/boards/:id/${view}`, element: createElement(View) })))));
 }
 
 /** The visible text of `html`, tags dropped and entities decoded. */
@@ -137,6 +148,24 @@ it('R2-037: the board page shows the recovery notice for a saved list that could
   const t = text(page('/boards/p1'));
   assert.match(t, /Kept/);
   assert.match(t, /Your saved board list could not be read in full/);
+});
+
+it('R2-037: the Summary, Timeline, Calendar and List say when changes are not being saved, as the board does', () => {
+  const storage = open([saved([project()])]);
+  for (const view of Object.keys(views)) assert.doesNotMatch(text(page(`/boards/p1/${view}`)), /not being saved/, view);
+  storage.full = true;
+  assert.ok(store.boardActions.addIssue('p1', { title: 'Lost on reload', columnId: 'c1' }));
+  for (const view of Object.keys(views)) {
+    const html = page(`/boards/p1/${view}`);
+    assert.match(text(html), /Changes are not being saved: browser storage is full/, view);
+    assert.match(html, /role="alert"/, view);
+  }
+});
+
+it('R2-037: the Summary, Timeline, Calendar and List show the recovery notice, as the board does', () => {
+  open([saved([project({ issues: [issue('i1', 1, 'Kept', 'c1'), 42] })])]);
+  assert.ok(store.snapshot().recovery);
+  for (const view of Object.keys(views)) assert.match(text(page(`/boards/p1/${view}`)), /Your saved board list could not be read in full/, view);
 });
 
 it('a project that does not exist says so, with the way back', () => {

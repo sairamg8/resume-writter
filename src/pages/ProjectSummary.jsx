@@ -2,6 +2,7 @@ import { Link, useParams } from 'react-router-dom';
 import { CalendarClock, CheckCircle2, PencilLine, PlusCircle } from 'lucide-react';
 import { useBoardStore } from '@/hooks/useBoardStore';
 import { Avatar, Button, EmptyState, ProgressBar } from '@/components/ui';
+import { BoardStorageNotice } from '@/components/board/BoardStorageNotice';
 import { ProjectHeader } from '@/components/board/ProjectTabs';
 import { IssueHost, useIssueRoute } from '@/components/board/useIssueActions';
 import { ColumnBars, Donut, ShareBars } from '@/components/tracker/Charts';
@@ -55,6 +56,7 @@ export function ProjectSummary() {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <ProjectHeader board={board} />
+      <BoardStorageNotice persistError={store.persistError} recovery={store.recovery} onDismissRecovery={store.dismissRecovery} className="px-4 pt-3 md:px-8" />
       <div className="flex flex-1 flex-col gap-4 bg-sunken px-4 py-6 md:px-8">
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <Stat icon={CheckCircle2} tone="bg-loz-done text-loz-done-ink" value={s.completed} label="completed" hint="in the last 7 days" />
