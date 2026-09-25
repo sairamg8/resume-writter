@@ -11,6 +11,10 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { setup, teardown, loadModule } from './harness.mjs';
 
+/** ui-dom-harness's assertSame, loaded with the fake DOM: assert.equal's report on a node inspects the whole DOM
+ * and React's fibers until the process runs out of memory (R3-005; 82-your-work-page, CI run 36092746492). */
+let assertSame;
+
 const KEY = 'cpwtcv_boards_v2';
 
 let Backlog;
@@ -64,8 +68,9 @@ const boardText = () => renderToStaticMarkup(routes('/boards/p1')).replace(/<[^>
 
 async function mountBacklog() {
   const dom = await import('./fake-dom.mjs');
-  const { patchFakeDom } = await import('../unit/ui-dom-harness.mjs');
-  patchFakeDom();
+  const harness = await import('../unit/ui-dom-harness.mjs');
+  harness.patchFakeDom();
+  ({ assertSame } = harness);
   const view = dom.mount(() => routes('/boards/p1/backlog'), {});
   const ev = (extra = {}) => ({ stopPropagation() {}, preventDefault() {}, key: '', nativeEvent: {}, ...extra });
   // The whole document: menus and dialogs open in portals at the end of <body>.
@@ -99,7 +104,7 @@ it('a Kanban project switches to sprints; a sprint is created, filled from row m
   const page = await mountBacklog();
   try {
     assert.match(page.text(), /This project runs as Kanban/);
-    assert.equal(page.button('Create sprint'), undefined, 'no sprints on a Kanban project');
+    assertSame(page.button('Create sprint'), undefined, 'no sprints on a Kanban project');
     page.click(page.button('Use sprints'));
     assert.equal(boardNow().mode, 'scrum');
 
@@ -164,7 +169,7 @@ it('one sprint at a time; completing it sends its open issues to the backlog or 
     assert.equal(b.sprints.find((s) => s.id === 's1').state, 'closed');
     assert.equal(sprintOf('i1'), 's2', 'open: on to the next sprint');
     assert.equal(sprintOf('i2'), 's1', 'done: keeps the closed sprint as its record');
-    assert.equal(page.section('s1'), undefined, 'a closed sprint leaves the backlog page');
+    assertSame(page.section('s1'), undefined, 'a closed sprint leaves the backlog page');
     // Now the next one can start.
     assert.equal(page.button('Start sprint', page.section('s2')).getAttribute('disabled'), null);
   } finally {
@@ -222,7 +227,7 @@ it('epics: in the Epic panel with their progress, never in the backlog list; a c
   open([project({ mode: 'scrum', issues, nextNumber: 5 })]);
   const page = await mountBacklog();
   try {
-    assert.equal(page.byLabel('HOME-1 Garden makeover', page.section('backlog')), undefined, 'the epic has no row of its own');
+    assertSame(page.byLabel('HOME-1 Garden makeover', page.section('backlog')), undefined, 'the epic has no row of its own');
     assert.match(page.section('backlog').textContent, /Plant roses.*Garden makeover.*Fix the tap/, 'its child names it in a lozenge');
     page.click(page.button('Epic panel'));
     const panel = () => page.byLabel('Epics');
@@ -239,7 +244,7 @@ it('epics: in the Epic panel with their progress, never in the backlog list; a c
     page.change(box, 'Kitchen refit');
     page.key(box, 'Enter');
     assert.equal(boardNow().issues.find((i) => i.title === 'Kitchen refit')?.type, 'epic');
-    assert.equal(page.byLabel('HOME-5 Kitchen refit', page.section('backlog')), undefined);
+    assertSame(page.byLabel('HOME-5 Kitchen refit', page.section('backlog')), undefined, 'HOME-5 has no row in the backlog');
   } finally {
     await page.view.unmount();
   }
