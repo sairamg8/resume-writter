@@ -81,7 +81,9 @@ export const bottomMarginMm = (settings) => {
  * right margin, so it takes no room from the content and moves no page break. Right-aligned, it
  * stays off the Sidebar's dark column. A template puts it LAST among its page's children: it is then
  * the page's last text drawn, so text readers (pdftotext -raw, an ATS) still read the name first on
- * page 1 and the running header first on the pages after. Off: nothing.
+ * page 1 and the running header first on the pages after. (react-pdf leaves the fixed elements that
+ * follow a node that cannot break and is taller than a page off that node's page: a Banner header
+ * longer than a page, already cut off, would print no number on page 1.) Off: nothing.
  */
 export function PdfPageNumbers({ settings }) {
   if (settings?.pageNumbers !== true) return null;
@@ -91,9 +93,12 @@ export function PdfPageNumbers({ settings }) {
     <Text
       fixed
       style={{
-        // Placed from the top, as the running header (ATS-7) is, with both sides set (anchored on the
-        // right alone it got no width). No height: textkit drops a line taller than its box, and a box of
-        // exactly 8 pt × 1.2 was a hair short of Noto Sans' line, so every page printed nothing.
+        // Placed from the top with no height, as the running header (ATS-7) is. Each time react-pdf lays
+        // a page out again it multiplies a render-prop Text's unitless lineHeight by its fontSize once
+        // more (8 pt × 1.2 = 9.6, then 76.8, 4915.2 … pt), so this line is far taller than its type. Given a
+        // height, textkit dropped the line (it keeps none taller than its box); placed from the bottom, the
+        // box grew up off the paper — no page printed a number (19ce8d1 … 9e4c0fa). From the top, it grows
+        // down past the paper's edge and the number prints at its top, where it is placed.
         position: 'absolute', top: pageBoxPt(settings).height - room + Math.max(0, (room - line) / 2),
         left: 0, right: `${pageMargins(settings).h}mm`,
         fontSize: PAGE_NUMBER_PT, lineHeight: 1.2, textAlign: 'right', color: textShades(settings.textColor).meta,
