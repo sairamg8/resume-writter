@@ -59,7 +59,7 @@
   "status": {
     "sessionLimit": "This session (session_01C9EUo2kre8QeqViw2sAKkx) is near its session limit. The report was written before the independent reviewer's final hand-back arrived.",
     "failures": [
-      "CI run 36089207... (36089208905, head 92ae90e) was red: 2 tests in 99-import-ui did not wait for the async import. Fixed in 5bb2eb0; later runs are green.",
+      "CI run 36089208905 (head 92ae90e) was red: 2 tests in 99-import-ui did not wait for the async import. Fixed in 5bb2eb0; later runs are green.",
       "The reviewer's hand-back never arrived. Its fix commits 1b580ef and 152fee2 are pushed, and the full gate on 152fee2 (run 36090190769) is green, but its fail-first proof for those two commits was not read back from the logs (run 36090185517 is green; contents unchecked).",
       "The reviewer subagent may still be running and could push more commits after this report. If the branch head is past this report's commit, re-run the gate before merging."
     ],
