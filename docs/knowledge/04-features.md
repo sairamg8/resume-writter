@@ -10,6 +10,7 @@ Maps user-facing features → primary code locations.
 | New resume | `store.createResume` |
 | New cover letter (from a résumé, picker `NewLetterModal`) and the Cover Letters list | `store.createLetter`, `utils/letters.js`, navigate with `?tab=coverletter` |
 | Import JSON | Dashboard `handleImport` |
+| Import PDF / Word / Markdown / text (best-effort, R2-148) | `importDocument.js` → `importFile.js` (text out of the file) → `importText.js` (text → résumé) |
 | Job Tracker entry | navigate `/jobs` |
 | Career history panel | `components/CareerHistoryPanel.jsx` |
 | Auth + sync indicator | `components/AuthBar.jsx` |
