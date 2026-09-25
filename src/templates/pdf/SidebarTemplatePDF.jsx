@@ -10,6 +10,7 @@ import { getPdfPhotoStyle } from './shared/pdfPhoto';
 import { PdfPhoto } from './shared/PdfPhoto';
 import { CSS_PX_TO_PT, tracking } from './shared/pdfUnits';
 import { fitFontSize } from './shared/pdfMeasure';
+import { headingFace, nameFace, nameFamily } from './shared/pdfFaces';
 import { PdfContactIcon } from './shared/PdfContactIcon';
 import { CONTACT_LABELS, contactItems } from '@/utils/contacts';
 import { SIDEBAR_TYPES, SideSectionTitle, renderSideSection, SidebarMainSectionRouter } from './shared/PdfSidebarSections';
@@ -108,7 +109,7 @@ export function SidebarTemplatePDF({ data }) {
   // 35-letter surname even at the default 19 pt, "Softwareentwicklungsingenieurin" at 11 pt): each
   // prints at the largest size that holds it.
   const room = sideColumnRoom(settings);
-  const nameFit = fitFontSize(personal?.name, { fontFamily: settings._pdfFontFamily, fontSize: nameSize, fontWeight: 'bold' }, room);
+  const nameFit = fitFontSize(personal?.name, { fontFamily: nameFamily(settings), fontSize: nameSize, fontWeight: 'bold' }, room);
   const titleFit = fitFontSize(personal?.title, { fontFamily: settings._pdfFontFamily, fontSize: entrySize }, room);
 
   // Top and bottom margins belong to the page, so react-pdf repeats them on every page; a
@@ -149,7 +150,7 @@ export function SidebarTemplatePDF({ data }) {
               <PdfPhoto src={personal.photo} style={sidePhoto} />
             )}
             <Text style={{
-              fontSize: nameFit, fontWeight: 'bold', color: nameColor,
+              ...nameFace(settings), fontSize: nameFit, fontWeight: 'bold', color: nameColor,
               textAlign: 'center', marginBottom: personal?.title ? g.nameTitleGap : 2, lineHeight: 1.2,
             }}>
               {personal?.name}
@@ -223,6 +224,7 @@ export function SidebarTemplatePDF({ data }) {
                 template="sidebar"
                 lineHeightValue={settings.lineHeightValue ?? 1.5}
                 letterSpacingPct={settings.sectionLetterSpacing}
+                face={headingFace(settings)}
                 presence={Math.round(baseSize * lineH * 3)}
               />
               <PdfRichText

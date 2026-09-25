@@ -9,15 +9,11 @@ import { downloadBlob } from '@/utils/download';
 import { PAGE_SIZES, pageSizeOf } from '@/constants/pageSize';
 import { templateId } from '@/constants/templates';
 import { resolveTemplateSettings } from '@/templates/pdf/shared/templateSettings';
-import { FONTS } from '@/utils/fonts';
+import { resolveWordFont } from '@/utils/wordFonts';
 import { RUNNING_HEADER_PT, runningHeaderLead, runningHeaderTop } from '@/constants/runningHeader';
 import { textShades } from '@/templates/pdf/shared/pdfColors';
 
-export function resolveWordFont(settings = {}) {
-  if (settings?.customFont?.trim()) return settings.customFont.trim();
-  const fontObj = FONTS.find((f) => f.id === settings?.font);
-  return fontObj?.label || fontObj?.name || 'Noto Sans';
-}
+export { resolveWordFont };
 
 /**
  * The résumé's running header, as its PDF prints it (ATS-7, constants/runningHeader.js): "Name · Page N"

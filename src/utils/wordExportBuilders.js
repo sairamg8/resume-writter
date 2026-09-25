@@ -4,6 +4,7 @@ import {
   gapPara, gridTable, inlineGap, lineSpacing, twips,
 } from '@/utils/wordExportUtils';
 import { sectionLook } from '@/utils/wordExportLook';
+import { wordHeadingFont } from '@/utils/wordFonts';
 import { headingBorderExtraPt, inSidebarColumn, templateId, upperSectionTitles } from '@/constants/templates';
 import { solid } from '@/templates/pdf/shared/pdfColors';
 import { sectionHeadingLook, titleTracking } from '@/templates/pdf/shared/sectionHeadingLook';
@@ -55,7 +56,7 @@ function trackingOf(s) {
 export function buildSectionTitle(title, settings, template) {
   const s = resolveTemplateSettings(settings, templateId(template));
   const text = String(title || '');
-  const heading = { ...headingOf(s, template), lineHeight: s.lineHeightValue, ...trackingOf(s) };
+  const heading = { ...headingOf(s, template), lineHeight: s.lineHeightValue, ...trackingOf(s), ...wordHeadingFont(s) };
   return sectionHeading(upperSectionTitles(s.sectionTitleCase) ? text.toUpperCase() : text, accent2Hex(settings?.accentColor), false, heading);
 }
 
@@ -323,6 +324,7 @@ export function buildSection(section, accentHex, settings, template) {
     before: twips(getEffectiveSpacing(section, s).spaceBefore ?? 0),
     lineHeight: s.lineHeightValue,
     ...trackingOf(s), // the Sidebar's column titles too, as in the PDF (R2-146)
+    ...wordHeadingFont(s), // Heading Font, as the PDF's titles (R2-146)
   };
   // The date in the PDF's colour for the template, from the Text colour it prints (its own when none is stored).
   const dateHex = accent2Hex(solid(getDateColor({ ...s, _template: templateId(template) })), '6b7280');

@@ -4,6 +4,7 @@ import { getPageStyle, getDocumentProps, getHeaderBorderStyle } from './shared/P
 import { PdfRunningHeader } from './shared/PdfRunningHeader';
 import { headerRowWidth, PdfContactRow } from './shared/PdfContact';
 import { fitFontSize } from './shared/pdfMeasure';
+import { nameFace, nameFamily } from './shared/pdfFaces';
 import { getEffectiveSpacing, getVisibleSections } from './shared/PdfSections';
 import { TimelineSectionRouter } from './shared/PdfTimelineSections';
 import { PdfRichText } from './shared/PdfRichText';
@@ -53,11 +54,11 @@ export function TimelineTemplatePDF({ data }) {
   const contactWidth = headerRowWidth(settings, personal, { photoWidth: photoStyle.width, gap: g.photoTextGap, centered });
   // A word of the name wider than the row prints at the largest size that holds it, as Classic's does.
   const name    = personal?.name || 'Your Name';
-  const nameFit = fitFontSize(name, { fontFamily: settings._pdfFontFamily, fontSize: nameSize, fontWeight: 'bold' }, contactWidth);
+  const nameFit = fitFontSize(name, { fontFamily: nameFamily(settings), fontSize: nameSize, fontWeight: 'bold' }, contactWidth);
   const align   = centered ? 'center' : 'left';
 
   const nameText = (
-    <Text style={{ fontSize: nameFit, fontWeight: 'bold', color: nameColor, lineHeight: 1.2, ...(headerLayout === 'inline' ? {} : { textAlign: align }) }}>
+    <Text style={{ ...nameFace(settings), fontSize: nameFit, fontWeight: 'bold', color: nameColor, lineHeight: 1.2, ...(headerLayout === 'inline' ? {} : { textAlign: align }) }}>
       {name}
     </Text>
   );
