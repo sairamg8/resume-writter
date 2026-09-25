@@ -8,6 +8,7 @@
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { setup, teardown, resume, experience, render, read, loadModule } from './harness.mjs';
+import { createElement, StrictMode } from 'react';
 import { mount, elements, reactProps } from './fake-dom.mjs';
 
 before(setup);
@@ -148,8 +149,10 @@ describe('fitted with the app\'s own renderer', () => {
 
 describe('the 1-Page Fit button', () => {
   /** The Design panel with Spacing open over a store stand-in that re-renders with each write. */
-  async function panel(r) {
+  async function panel(r, { strict = false } = {}) {
     const { default: DesignPanel } = await loadModule('/src/components/DesignPanel.jsx');
+    // As main.jsx mounts the app: StrictMode, whose trial unmount runs each effect's cleanup once.
+    const Panel = strict ? (p) => createElement(StrictMode, null, createElement(DesignPanel, p)) : DesignPanel;
     const writes = [];
     let current = r;
     let view = null;
@@ -159,7 +162,7 @@ describe('the 1-Page Fit button', () => {
       current = { ...current, settings: { ...current.settings, [key]: value } };
       queueMicrotask(() => view.update(props()));
     }
-    view = mount(DesignPanel, props());
+    view = mount(Panel, props());
     const all = () => [...elements(view.container)];
     const spacing = all().find((el) => el.tagName === 'BUTTON' && el.textContent.trim() === 'Spacing');
     view.act(() => reactProps(spacing).onClick());
@@ -202,6 +205,20 @@ describe('the 1-Page Fit button', () => {
       const tightest = fitLadder(r.settings).at(-1);
       assert.deepEqual(Object.fromEntries(Object.keys(tightest).map((k) => [k, p.settings()[k]])), tightest, 'the tightest step is stored');
       assert.match(p.notice() || '', /^Still \d+ pages at the tightest spacing — shorten the content to fit one page\.$/);
+    } finally { await p.unmount(); }
+  });
+
+  it('under StrictMode, as the app runs in development, it still measures, writes and comes back', async () => {
+    const { fitLadder } = await loadModule('/src/utils/pageFit.js');
+    const r = long(60);
+    const p = await panel(r, { strict: true });
+    try {
+      reactProps(p.button()).onClick();
+      await p.settled();
+      assert.match(p.button().textContent, /1-Page Fit/, 'not stuck on Fitting…');
+      const tightest = fitLadder(r.settings).at(-1);
+      assert.deepEqual(Object.fromEntries(Object.keys(tightest).map((k) => [k, p.settings()[k]])), tightest, 'the tightest step is stored');
+      assert.match(p.notice() || '', /^Still \d+ pages at the tightest spacing/);
     } finally { await p.unmount(); }
   });
 

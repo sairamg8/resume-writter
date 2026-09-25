@@ -42,7 +42,8 @@ export default function DesignPanel({ resume, updateSetting, setTemplate, resetS
   const latest = useRef(resume);
   latest.current = resume;
   const mounted = useRef(true);
-  useEffect(() => () => { mounted.current = false; }, []);
+  // Set again on mount: StrictMode's trial unmount (main.jsx) left it false, and every fit was dropped.
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
 
   /**
    * 1-Page Fit (R2-149): the preset at once, then the résumé is printed at it and, while it runs past
