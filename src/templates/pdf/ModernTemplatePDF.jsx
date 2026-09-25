@@ -7,6 +7,7 @@ import { PdfRichText } from './shared/PdfRichText';
 import { hasRichText } from '@/utils/richText';
 import { PdfContactIcon } from './shared/PdfContactIcon';
 import { ContactValue, headerRowWidth } from './shared/PdfContact';
+import { LinkGround } from './shared/PdfLinkStyle';
 import { bannerContactPt } from './shared/contactSize';
 import { fitFontSize } from './shared/pdfMeasure';
 import { contactItems } from '@/utils/contacts';
@@ -78,6 +79,8 @@ export function ModernTemplatePDF({ data }) {
         <PdfRunningHeader personal={personal} settings={settings} />
         {/* Personal Info → Header spacing: Banner top & bottom and Banner sides pad it (unset, px-6 py-5:
             15 / 18 pt), Header ↔ First section spaces what follows (unset, Between Sections). */}
+        {/* On the banner a link's Accent is the tint of it that reads there (Design → Links, R2-147). */}
+        <LinkGround.Provider value={accent}>
         <View style={{
           backgroundColor: accent,
           borderRadius: 2,
@@ -114,6 +117,7 @@ export function ModernTemplatePDF({ data }) {
             </View>
           )}
         </View>
+        </LinkGround.Provider>
 
         {getVisibleSections(sections).visible.map((section, index, list) => {
           const { marginBottom, spaceBefore, itemGap } = getEffectiveSpacing(section, settings, {

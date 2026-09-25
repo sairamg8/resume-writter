@@ -18,6 +18,7 @@ import { letterFieldsPosition, letterResumePhoto } from '@/utils/coverLetter';
 import { isDrawableImage } from '@/utils/imageUpload';
 import { MM_TO_PT } from './shared/pdfUnits';
 import { opacityFor } from './shared/pdfColors';
+import { LinkGround } from './shared/PdfLinkStyle';
 
 /** Room added to each measured width, pt: a word's kerning into the next space is not in it. */
 const SLACK = 1;
@@ -236,5 +237,6 @@ export function CoverLetterHeader({ look, personal, settings, cl, hidden, contac
     );
   }
 
-  return <Frame look={look} settings={settings}>{content()}</Frame>;
+  // On a band a link's Accent is the tint of it that reads there (Design → Links, R2-147).
+  return <Frame look={look} settings={settings}><LinkGround.Provider value={look.band?.color || null}>{content()}</LinkGround.Provider></Frame>;
 }

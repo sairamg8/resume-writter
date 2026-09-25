@@ -15,6 +15,7 @@ import { setGapPt } from '@/constants/headerSpacing';
 import { resolveTemplateSettings } from '@/templates/pdf/shared/templateSettings';
 import { headerContactPt } from '@/templates/pdf/shared/contactSize';
 import { hasRichText } from '@/utils/richText';
+import { linkLook } from '@/utils/linkStyle';
 
 /**
  * The name's and the job title's Word colours, 'rrggbb' opaque on the white page: the colours the
@@ -38,6 +39,7 @@ const twips = (pt) => Math.round(pt * 20);
 function contactParagraphs(items, s, styled, style, centered, width, last = 80) {
   const rows = contactRows(items, {
     contactStyle: styled ? s.contactStyle : 'icon', layout: styled ? s.contactLayout : 'justify', centered, settings: s, style, width,
+    links: linkLook(s.linkStyle, s.accentColor),
   });
   return rows.map((row, i) => new Paragraph({
     children: row.runs, spacing: { after: i === rows.length - 1 ? last : 20 }, ...centredIf(row.centred), ...row.extra,
@@ -120,7 +122,7 @@ export function buildPersonalSection(personal = {}, settings = {}, template = 'c
     if (templateId(template) === 'sidebar') paragraphs.push(buildSectionTitle('About Me', settings, template));
     const { run, frame } = summaryLook(s, template);
     // At Design → Line Height, as the PDF's summary (R2-062), its lists behind Design → Lists' glyph (R2-147).
-    paragraphs.push(...descriptionToParagraphs(personal.summary, { size: Math.round(baseSize * 2), lineHeight: s.lineHeightValue, bullet: s.bulletStyle, ...run }, centered ? 'center' : null, frame));
+    paragraphs.push(...descriptionToParagraphs(personal.summary, { size: Math.round(baseSize * 2), lineHeight: s.lineHeightValue, bullet: s.bulletStyle, links: linkLook(s.linkStyle, s.accentColor), ...run }, centered ? 'center' : null, frame));
   }
 
   // Header ↔ First section, where set: the space after the header's end, as Word's own 4 pt is.

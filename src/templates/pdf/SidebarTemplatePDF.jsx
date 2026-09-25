@@ -11,6 +11,7 @@ import { PdfPhoto } from './shared/PdfPhoto';
 import { CSS_PX_TO_PT, tracking } from './shared/pdfUnits';
 import { fitFontSize } from './shared/pdfMeasure';
 import { PdfContactIcon } from './shared/PdfContactIcon';
+import { LinkGround } from './shared/PdfLinkStyle';
 import { CONTACT_LABELS, contactItems } from '@/utils/contacts';
 import { SIDEBAR_TYPES, SideSectionTitle, renderSideSection, SidebarMainSectionRouter } from './shared/PdfSidebarSections';
 import { SIDE_COL, SIDE_PAD_RIGHT, SideValue, sideColumnRoom } from './shared/PdfSidebarColumn';
@@ -135,6 +136,8 @@ export function SidebarTemplatePDF({ data }) {
         {/* First text on every page: after page 1 it prints "Name · Page 2" (ATS-7), over the main column. */}
         <PdfRunningHeader personal={personal} settings={settings} left={`${SIDE_COL * 100}%`} />
 
+        {/* On the column a link's Accent is the tint of it that reads there (Design → Links, R2-147). */}
+        <LinkGround.Provider value={sidebarBg}>
         <View style={{
           width: `${SIDE_COL * 100}%`,
           backgroundColor: 'transparent',
@@ -201,6 +204,7 @@ export function SidebarTemplatePDF({ data }) {
             );
           })}
         </View>
+        </LinkGround.Provider>
 
         <View style={{
           flex: 1,

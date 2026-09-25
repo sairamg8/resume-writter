@@ -119,7 +119,7 @@ function header(primary, secondary, date, dateHex, centered, look, where) {
 function body(item, centered, look, color = look.ink.body) {
   const paras = [];
   const description = field(item, 'description');
-  if (hasRichText(description)) paras.push(...descriptionToParagraphs(description, { size: look.body, color, lineHeight: look.line, bullet: look.bullet }, centered ? 'center' : null));
+  if (hasRichText(description)) paras.push(...descriptionToParagraphs(description, { size: look.body, color, lineHeight: look.line, bullet: look.bullet, links: look.links }, centered ? 'center' : null));
   for (const b of item.bullets || []) if (b) paras.push(bulletPoint(b, centered, { size: look.body, color }, look.line, look.bullet));
   return paras;
 }
@@ -211,7 +211,7 @@ export function buildProjects(section, accentHex, settings, centered, dateHex, l
     titleLine([
       first(item.name, look),
       ...(item.technologies ? [second(` · ${item.technologies}`, look, look.ink.tech)] : []),
-      ...(item.url ? [second(' · ', look, accentHex, look.link), linked(item.url, item.url, { size: look.link, color: accentHex })] : []),
+      ...(item.url ? [second(' · ', look, accentHex, look.link), linked(item.url, item.url, { size: look.link, color: accentHex }, look.links)] : []),
     ], s.showDates !== false ? dateRange(startDateOf(item), endDateOf(item, settings), settings) : '', dateHex, centered, look),
     ...body(item, centered, look),
   ])];
@@ -239,7 +239,7 @@ export function buildCertifications(section, accentHex, settings, centered, date
       // The name's line at Entry Header, all of it, as the PDF prints it.
       ...(item.issuer ? [second(` — ${item.issuer}`, look, look.ink.sub, look.entry)] : []),
       ...(item.credentialId ? [second(` · ID: ${item.credentialId}`, look, look.ink.muted, look.entry)] : []),
-      ...(item.url ? [second(' · ', look, accentHex, look.entry), linked(item.urlLabel || item.url, item.url, { size: look.entry, color: accentHex })] : []),
+      ...(item.url ? [second(' · ', look, accentHex, look.entry), linked(item.urlLabel || item.url, item.url, { size: look.entry, color: accentHex }, look.links)] : []),
     ], s.showDates !== false ? dateRange(item.date, item.expiry, settings) : '', dateHex, centered, look),
   ])];
 }
@@ -273,8 +273,8 @@ export function buildReferences(section, accentHex, settings, centered, dateHex,
     if (role) paras.push(line([normal(role, { size: look.base, color: ink.sub })]));
     if (item.relationship) paras.push(line([normal(item.relationship, { size: look.base, color: ink.meta, italics: true })]));
     const reach = [
-      item.email && linked(item.email, `mailto:${item.email}`, { size: look.base, color: accentHex }),
-      item.phone && linked(item.phone, `tel:${item.phone.replace(/[^\d+]/g, '')}`, { size: look.base, color: ink.meta }),
+      item.email && linked(item.email, `mailto:${item.email}`, { size: look.base, color: accentHex }, look.links),
+      item.phone && linked(item.phone, `tel:${item.phone.replace(/[^\d+]/g, '')}`, { size: look.base, color: ink.meta }, look.links),
     ].filter(Boolean);
     if (reach.length) paras.push(line(reach.flatMap((r, i) => (i ? [normal('  |  ', { size: look.base, color: ink.muted }), r] : [r]))));
     return paras;

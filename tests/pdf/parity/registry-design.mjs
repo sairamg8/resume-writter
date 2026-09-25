@@ -293,6 +293,29 @@ export const DESIGN = {
       });
     }),
   },
+  // Underline strokes a line under the e-mail (a contact every template links); Accent paints it in
+  // another colour than Plain does — the accent, or on a banner or the Sidebar's column the tint of it
+  // that reads there — with no line under it (R2-147).
+  'setting.linkStyle': {
+    family: 'links',
+    check: async ({ runs, before }) => {
+      const plain = await fillsOf(before.snap.bytes, PERSONAL.email);
+      if (!plain.length) return [`"${PERSONAL.email}" does not print before the click`];
+      const out = [];
+      for (const r of runs) {
+        const v = valueOf(r, 'setting.linkStyle');
+        const at = item(r.snap, PERSONAL.email);
+        if (!at) { out.push(`${v}: "${PERSONAL.email}" does not print`); continue; }
+        const under = r.snap.paint.some((p) => p.paint === 'stroke' && p.page === at.page && p.y1 - p.y0 < 1.5
+          && p.y1 <= at.y + 0.5 && p.y0 >= at.y - 4 && p.x0 >= at.x - 1 && p.x1 <= at.x + at.w + 1 && p.x1 - p.x0 > 10);
+        if (under !== (v === 'underline')) out.push(`${v}: ${under ? 'a line prints' : 'no line prints'} under "${PERSONAL.email}"`);
+        const fill = await fillsOf(r.snap.bytes, PERSONAL.email);
+        const recoloured = JSON.stringify(fill) !== JSON.stringify(plain);
+        if (recoloured !== (v === 'accent')) out.push(`${v}: "${PERSONAL.email}" prints in ${fill.join(', ')}, Plain in ${plain.join(', ')}`);
+      }
+      return out;
+    },
+  },
   'setting.dateFormat': {
     family: 'dates',
     check: ({ runs }) => runs.flatMap((r) => {

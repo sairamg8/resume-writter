@@ -4,6 +4,7 @@ import { accent2Hex, wordContentTwips } from '@/utils/wordExportUtils';
 import { headerTemplateId, templateId } from '@/constants/templates';
 import { solid, textShades } from '@/templates/pdf/shared/pdfColors';
 import { getColumnWidth, getEffectiveSpacing } from '@/templates/pdf/shared/PdfSections';
+import { linkLook } from '@/utils/linkStyle';
 
 /**
  * The colours of a section's entries, 'rrggbb', as the PDF prints them on the white page, from the
@@ -96,6 +97,7 @@ function gridOf(section, width, side) {
  * - `grid` — Section Options → Grids (gridOf), or null for one entry to a row;
  * - `tab` — the dates' right tab, twips: the right margin (wordContentTwips), or in a grid its cell's;
  * - `line` — Design → Line Height; `bullet` — Design → Lists, the glyph of its bulleted items (R2-147);
+ * - `links` — Design → Links' look on its links, on the white page (linkLook, R2-147);
  * - `gap` — the space between two entries, pt: Design → Between Items scaled by the section's
  *   Spacing preset, or its own Item gap (getEffectiveSpacing, R2-062);
  * - `title` — Section Options → Title: 'stacked' (unset), 'inline' or 'sidebyside'; the Sidebar's
@@ -112,6 +114,7 @@ export function sectionLook(section, settings, s, template, side) {
     tab: grid ? grid.cell : wordContentTwips(settings),
     line: s.lineHeightValue,
     bullet: s.bulletStyle,
+    links: linkLook(s.linkStyle, s.accentColor),
     gap: getEffectiveSpacing(section, s).itemGap,
     title: (!side && section.settings?.titleStyle) || 'stacked',
     side,
