@@ -1,0 +1,37 @@
+{
+  "cluster": "cloud-sync",
+  "branch": "claude/wf-cloud-sync",
+  "base": "334b454",
+  "rows": [
+    {
+      "id": "R2-159", "outcome": "fixed", "commits": ["b2a73c6", "ae65084"],
+      "tests": ["tests/pdf/95-job-notes-tab.test.mjs"],
+      "summary": "**Now:** a job's Notes tab has a test on the real component: stored notes show sanitized, and typing, each toolbar command, a link, a paste and clearing write the notes through the job store (CI 36021742269, green again in 36089463049). Test-only: no bug found.",
+      "remaining": ""
+    },
+    {
+      "id": "R2-145", "outcome": "fixed", "commits": ["e96514b", "7f0d3b8", "8cd4901"],
+      "tests": ["tests/unit/job-sync.unit.mjs", "tests/unit/firestore-rules.unit.mjs", "tests/pdf/95-sync-privacy-notices.test.mjs"],
+      "summary": "**Now:** signed in, the Job Tracker's jobs sync with the account: one document per job under users/{uid}/jobs, and users/{uid}/meta/jobs lists deleted ids and the order. The first sync merges job by job (newer updatedAt wins, nothing lost, a deleted job stays deleted, a fresh demo never overwrites the account's copy). Later changes are sent after a pause and checked against the cloud's copy; offline and failed sends retry. Sign-out takes the jobs off the browser, keeping unsent changes aside for that account. The Privacy page says exactly what syncs: résumés, jobs and boards.",
+      "remaining": ""
+    },
+    {
+      "id": "R2-140", "outcome": "fixed", "commits": ["e96514b", "8cd4901"],
+      "tests": ["tests/unit/board-sync.unit.mjs", "tests/pdf/95-sync-privacy-notices.test.mjs"],
+      "summary": "**Now:** boards-plan Phase 3 and 4 are done on the same shared engine as the jobs (collectionSyncEngine/Plan/Io/Meta + useCollectionSync, wired in App.jsx) rather than a third copy of the sync code. One document per board, per-board last-writer-wins, first sync, debounced queue, offline/retry, and sign-out that takes the boards off the browser. A board over Firestore's 1 MiB is held back and named on every board page while the rest keep syncing. Tests use the real board store over fake-firestore.",
+      "remaining": "Order is last-writer-wins at first sync: a reorder made offline gives way to the cloud's order (content is never lost). A delete sent after the first sync does not check for a later edit elsewhere. No sync-status icon for jobs or boards in the AuthBar (plan's 'polish')."
+    }
+  ],
+  "review": {
+    "issues": [
+      "A fresh first-visit demo (demo_1, demo_board_life), dated from today, overwrote the account's adopted and filled-in demo on the Repro's own path (clear site data, sign in again)",
+      "A saved list that could not be read in full made the first sync delete the unreadable items from the account and tombstone them for every device",
+      "leave() read the sync record before loading the list, so the same damaged-list case could stash deletions",
+      "Found while writing tests and fixed before the review: a flush wrote without reading, so an older queued edit could land over a newer one from another device (it now reads first and keeps the newer copy)"
+    ],
+    "fixedByReviewer": ["8cd4901: untouched demo loses to the account's copy (store.seed); damaged load forgets synced versions (forgetSynced); leave reads the list first — 4 tests, fail-first proven"]
+  },
+  "baselineFailures": [],
+  "extra": [],
+  "notes": "Final CI 36089463049 on 8cd4901: named tests, lint, Cypress 06-job-tracker, 20-regressions-job-store and 01-dashboard, and fail-first for e96514b and 8cd4901 all green. firestore.rules is unchanged: users/{uid}/{document=**} is already owner-only and covers jobs, boards and meta/{jobs,boards} (pinned by tests/unit/firestore-rules.unit.mjs), so there is nothing new for the owner to deploy. New localStorage keys: cpwtcv_jobs_sync_v1 and cpwtcv_boards_sync_v1. Existing signed-in users' local jobs and boards join their account at the first sync after deploy. cloudSyncBrowser takes an optional third `create` argument (backward compatible). docs/tracking/boards-plan.md Phase 3/4 can be ticked. Shared files touched: useJobStore.js, useBoardStore.js, App.jsx, JobTracker.jsx, BoardStorageNotice.jsx, PrivacyPage.jsx, jobEdits.js, boardDemo.js. A11y: the held notice uses role=status; not otherwise reviewed."
+}
