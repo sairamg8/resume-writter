@@ -220,10 +220,13 @@ merged back from the cloud instead of being deleted from it.
 Export → **Share a public link** (only for a signed-in account on a site with Firebase configured;
 hidden otherwise) publishes a read-only copy of one résumé (`src/utils/publicLink.js`,
 `src/components/ShareLinkModal.jsx`). The copy is `publicSnapshot(resume)`: template, design, and
-what the PDF prints — hidden fields' values blanked, hidden sections and entries dropped, no cover
-letter, no dashboard name, no id. It is written to `public/{shareId}` (`{ owner, resume, publishedAt }`,
+what the PDF prints — hidden fields' values blanked (a hidden contact's Display label and Link URL
+with it), only the `personal` keys the PDF reads, a section's dates with Show dates off and its
+locations with Show location off blanked, hidden sections and entries dropped, no cover letter, no
+dashboard name, no id. It is written to `public/{shareId}` (`{ owner, resume, publishedAt }`,
 `shareId` a random uuid) together with `users/{uid}/shares/{resumeId}` (`{ shareId, publishedAt }`) in
-one batch; Unpublish deletes both. `firestore.rules` lets **anyone get** a `public/{shareId}` document
+one batch; Unpublish deletes both, and so does deleting the résumé from the Dashboard while signed
+in (`unpublishResume`), which would otherwise leave a copy with no panel left to take it down. `firestore.rules` lets **anyone get** a `public/{shareId}` document
 (never list the collection) and only the account named its `owner` create, update or delete it —
 the only world-readable documents. The copy is not live: the panel says when the résumé changed since
 and offers "Update the public copy". The link `#/r/<shareId>` is served by this same app
