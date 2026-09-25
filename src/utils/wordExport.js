@@ -1,4 +1,4 @@
-import { Document, Packer } from 'docx';
+import { AlignmentType, Document, Footer, Packer, PageNumber, Paragraph, TextRun } from 'docx';
 import { accent2Hex, bulletNumbering, wordMargins } from '@/utils/wordExportUtils';
 import { buildSection, sectionSpaceAfter } from '@/utils/wordExportBuilders';
 import { buildPersonalSection } from '@/utils/wordExportHeader';
@@ -9,6 +9,7 @@ import { downloadBlob } from '@/utils/download';
 import { PAGE_SIZES, pageSizeOf } from '@/constants/pageSize';
 import { templateId } from '@/constants/templates';
 import { resolveTemplateSettings } from '@/templates/pdf/shared/templateSettings';
+import { entryInk } from '@/utils/wordExportLook';
 import { FONTS } from '@/utils/fonts';
 
 export function resolveWordFont(settings = {}) {
@@ -17,14 +18,39 @@ export function resolveWordFont(settings = {}) {
   return fontObj?.label || fontObj?.name || 'Noto Sans';
 }
 
+/** The least bottom margin, twips, that holds the page-number footer: the PDF's 10 mm (bottomMarginMm). */
+const PAGE_NUMBER_ROOM = Math.round((10 * 1440) / 25.4);
+const PAGE_NUMBER_SIZE = 16; // half-points: the PDF's 8 pt
+
+/**
+ * Design → Page numbers in Word (R2-147): "Page 1 of 2" in the page's footer at the right margin,
+ * Word's own page and page-count fields, in the Text colour's meta grey as the PDF prints it.
+ */
+function pageNumberFooter(settings, template) {
+  const color = entryInk(resolveTemplateSettings(settings, templateId(template)), templateId(template)).meta;
+  const run = { size: PAGE_NUMBER_SIZE, color };
+  return new Footer({
+    children: [new Paragraph({
+      alignment: AlignmentType.RIGHT,
+      spacing: { before: 0, after: 0 },
+      children: [new TextRun({ ...run, children: ['Page ', PageNumber.CURRENT, ' of ', PageNumber.TOTAL_PAGES] })],
+    })],
+  });
+}
+
 /**
  * A one-section document on the résumé's paper (A4 or US Letter, PAR-01), in Design → Spacing's page
  * margins (wordMargins, R2-062) — the résumé's and its letter's, as their PDFs print them — with the
- * bullets of Design → Lists (bulletNumbering, R2-147).
+ * bullets of Design → Lists (bulletNumbering, R2-147). `pageNumbers` (the résumé's Design → Page
+ * numbers, R2-147; never the letter's): a footer with them, set in the middle of a bottom margin of at
+ * least the PDF's room for it, as the PDF prints it.
  */
-function buildDocument(children, settings) {
+function buildDocument(children, settings, { pageNumbers = false, template } = {}) {
   const font = resolveWordFont(settings);
   const margin = wordMargins(settings);
+  const bottom = pageNumbers ? Math.max(margin.v, PAGE_NUMBER_ROOM) : margin.v;
+  // The footer's distance from the paper's edge: its line centred in the bottom margin.
+  const footerAt = Math.max(0, Math.round((bottom - PAGE_NUMBER_SIZE * 10 * 1.2) / 2));
   const baseSize = Math.round((settings?.fontSizeBase ?? 11) * 2);
   return new Document({
     styles: {
@@ -51,9 +77,10 @@ function buildDocument(children, settings) {
       properties: {
         page: {
           size: PAGE_SIZES[pageSizeOf(settings)].twips,
-          margin: { top: margin.v, right: margin.h, bottom: margin.v, left: margin.h },
+          margin: { top: margin.v, right: margin.h, bottom, left: margin.h, ...(pageNumbers ? { footer: footerAt } : {}) },
         },
       },
+      ...(pageNumbers ? { footers: { default: pageNumberFooter(settings, template) } } : {}),
       children,
     }],
   });
@@ -88,7 +115,7 @@ export async function renderResumeDocx(resume) {
       ? [...paras, ...sectionSpaceAfter(section, settings, own)]
       : paras)),
   ];
-  return Packer.toBlob(buildDocument(children, settings));
+  return Packer.toBlob(buildDocument(children, settings, { pageNumbers: settings.pageNumbers === true, template: own }));
 }
 
 export async function exportToWord(resume, filename = 'resume.docx') {

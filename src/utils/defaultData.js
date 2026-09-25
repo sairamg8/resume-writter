@@ -23,6 +23,8 @@ export const ATS_DEFAULTS = {
   dateFormat: DEFAULT_DATE_FORMAT,
   /** Design → Lists (src/utils/richText.js): Bullet prints '•', '–', '·' by depth, as every résumé storing no style (R2-147). */
   bulletStyle: DEFAULT_BULLET_STYLE,
+  /** Design → Page numbers (PdfPageNumbers): off, the page as every résumé storing none prints it (R2-147). */
+  pageNumbers: false,
   sectionBorderWidth: 1,
   sectionBorderColor: '',
   headerAlign: 'left',

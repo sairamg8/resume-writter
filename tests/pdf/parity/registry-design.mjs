@@ -256,6 +256,30 @@ export const DESIGN = {
       });
     }),
   },
+  // Page numbers on: "Page n of N" on every page, below everything else in the bottom margin, at the
+  // right margin, and nothing else moves; off: none, and the page as before (R2-147).
+  'setting.pageNumbers': {
+    family: 'footer',
+    check: ({ runs, before }) => runs.flatMap((r) => {
+      const on = valueOf(r, 'setting.pageNumbers') === true;
+      const footers = r.snap.pages.map((p) => p.items.filter((t) => /^Page \d+ of \d+$/.test(t.str.trim())));
+      if (!on) return footers.some((f) => f.length) ? ['off: a page number prints'] : [];
+      const out = [];
+      const pages = r.snap.pages.length;
+      r.snap.pages.forEach((p, i) => {
+        const [f, ...more] = footers[i];
+        if (!f || more.length) return out.push(`page ${i + 1}: ${f ? 'two page numbers' : 'no page number'}`);
+        if (f.str.trim() !== `Page ${i + 1} of ${pages}`) out.push(`page ${i + 1}: "${f.str.trim()}"`);
+        const rest = p.items.filter((t) => t !== f);
+        if (rest.some((t) => t.y - 1 <= f.y + f.h)) out.push(`page ${i + 1}: the page number is not below the content`);
+        if (f.x + f.w > p.W - 5 || f.y < 2) out.push(`page ${i + 1}: the page number is off the paper's margin`);
+      });
+      if (pages !== before.snap.pages.length) out.push(`${before.snap.pages.length} page(s) became ${pages}`);
+      const where = (s) => s.pages.flatMap((p, i) => p.items.filter((t) => !/^Page \d+ of \d+$/.test(t.str.trim())).map((t) => `${i}:${t.str}@${t.x.toFixed(1)},${t.y.toFixed(1)}`));
+      if (pages === before.snap.pages.length && where(r.snap).join('|') !== where(before.snap).join('|')) out.push('the content moved');
+      return out;
+    }),
+  },
   'setting.dateFormat': {
     family: 'dates',
     check: ({ runs }) => runs.flatMap((r) => {

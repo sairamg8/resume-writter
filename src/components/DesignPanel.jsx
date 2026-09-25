@@ -11,6 +11,7 @@ import { ColorsSection } from '@/components/DesignPanelColors';
 import { TypographySection } from '@/components/DesignPanelTypography';
 import { DatesSection } from '@/components/DesignPanelDates';
 import { ListsSection } from '@/components/DesignPanelLists';
+import { PageNumbersSection } from '@/components/DesignPanelPageNumbers';
 import {
   ICON_SET_OPTIONS,
   ContactIcon,
@@ -26,6 +27,7 @@ const HEADING_KEYS    = ['headingStyle', 'sectionTitleCase', 'sectionBorderWidth
 const ICON_KEYS       = ['iconSet', 'iconSize'];
 const DATE_KEYS       = ['dateFormat'];
 const LIST_KEYS       = ['bulletStyle'];
+const PAGE_NUMBER_KEYS = ['pageNumbers'];
 
 export default function DesignPanel({ resume, updateSetting, setTemplate, resetSettings }) {
   const settings = resume.settings || {};
@@ -237,6 +239,8 @@ export default function DesignPanel({ resume, updateSetting, setTemplate, resetS
       <DatesSection settings={settings} updateSetting={updateSetting} onReset={() => resetSection(DATE_KEYS)} />
 
       <ListsSection settings={settings} updateSetting={updateSetting} onReset={() => resetSection(LIST_KEYS)} />
+
+      <PageNumbersSection settings={settings} updateSetting={updateSetting} onReset={() => resetSection(PAGE_NUMBER_KEYS)} />
 
       <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl">
         <div className="flex items-start justify-between gap-3">
