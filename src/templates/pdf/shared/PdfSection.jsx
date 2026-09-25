@@ -1,6 +1,7 @@
 import { View } from '@react-pdf/renderer';
 import { Text } from './PdfText';
 import { sectionHeadingLook, SHORT_RULE_EM, titleTracking } from './sectionHeadingLook';
+import { sectionIconMark } from './PdfIcons';
 import { headingBorderExtraPt, upperSectionTitles } from '@/constants/templates';
 
 export function PdfSectionTitle({
@@ -16,6 +17,7 @@ export function PdfSectionTitle({
   lineHeightValue = 1.5,
   presence = 50,
   letterSpacingPct = null,
+  icon = null,
 }) {
   const label = upperSectionTitles(sectionTitleCase) ? title.toUpperCase() : title;
   const look = sectionHeadingLook({ template, headingStyle, accent, borderColor });
@@ -29,10 +31,23 @@ export function PdfSectionTitle({
   // the section fit below it. (Works because SPACER gives the title a previous sibling.)
   const keepWithNext = { wrap: false, minPresenceAhead: presence };
 
+  // Design → Section Headings → Icons (R2-147): `icon`, a section type, prints its icon before the
+  // words in the title's colour and size — null prints the title exactly as before. In a row that
+  // centres its children (Left bar, Line after) the icon is one more child; where the title stands
+  // alone (Ruled, Underline, Boxed, Plain) it and the icon share a row, the icon at the middle of
+  // the first line, and the words wrap beside it.
+  const inRow = sectionIconMark({ type: icon, size: sectionSize, color: look.text });
+  const titled = (style) => (icon ? (
+    <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: centered ? 'center' : 'flex-start' }}>
+      {sectionIconMark({ type: icon, size: sectionSize, color: look.text, lineHeight: lineHeightValue })}
+      <Text style={{ ...style, flexShrink: 1 }}>{label}</Text>
+    </View>
+  ) : <Text style={style}>{label}</Text>);
+
   if (headingStyle === 'ruled') {
     return (
       <View {...keepWithNext} style={{ marginBottom: 6 }}>
-        <Text style={titleText}>{label}</Text>
+        {titled(titleText)}
         <View style={{ height: sectionBorderWidth, backgroundColor: look.ruled, marginTop: 2 }} />
       </View>
     );
@@ -40,7 +55,7 @@ export function PdfSectionTitle({
   if (headingStyle === 'underline') {
     return (
       <View {...keepWithNext} style={{ marginBottom: 6, borderBottomWidth: sectionBorderWidth, borderBottomColor: look.underline, paddingBottom: 2 }}>
-        <Text style={titleText}>{label}</Text>
+        {titled(titleText)}
       </View>
     );
   }
@@ -49,6 +64,7 @@ export function PdfSectionTitle({
       <View {...keepWithNext} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: centered ? 'center' : 'flex-start', marginBottom: 6 }}>
         {/* The bar prints wider than the stored thickness; the panel shows that width (headingBorderExtraPt) */}
         <View style={{ width: sectionBorderWidth + headingBorderExtraPt(headingStyle), backgroundColor: look.bar, alignSelf: 'stretch', marginRight: 6 }} />
+        {inRow}
         <Text style={titleText}>{label}</Text>
       </View>
     );
@@ -58,7 +74,7 @@ export function PdfSectionTitle({
     return (
       <View {...keepWithNext} style={{ flexDirection: 'row', justifyContent: centered ? 'center' : 'flex-start', marginBottom: 6 }}>
         <View style={{ backgroundColor: look.box, paddingVertical: 1, paddingHorizontal: 7, borderRadius: 2, maxWidth: '100%' }}>
-          <Text style={titleText}>{label}</Text>
+          {titled(titleText)}
         </View>
       </View>
     );
@@ -66,7 +82,7 @@ export function PdfSectionTitle({
   if (headingStyle === 'box') {
     return (
       <View {...keepWithNext} style={{ backgroundColor: look.box, paddingVertical: 3, paddingHorizontal: 6, marginBottom: 6, borderRadius: 2 }}>
-        <Text style={titleText}>{label}</Text>
+        {titled(titleText)}
       </View>
     );
   }
@@ -76,6 +92,7 @@ export function PdfSectionTitle({
     return (
       <View {...keepWithNext} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: centered ? 'center' : 'flex-start', gap: 6, marginBottom: 6 }}>
         {centered && rule}
+        {sectionIconMark({ type: icon, size: sectionSize, color: look.text, gap: false })}
         <Text style={{ ...titleText, flexShrink: 1 }}>{label}</Text>
         {rule}
       </View>
@@ -85,6 +102,7 @@ export function PdfSectionTitle({
     return (
       <View {...keepWithNext} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
         {centered && <View style={{ flex: 1, height: sectionBorderWidth, backgroundColor: look.line, marginRight: 8 }} />}
+        {inRow}
         <Text style={{ ...titleText, marginRight: centered ? 0 : 8 }}>{label}</Text>
         <View style={{ flex: 1, height: sectionBorderWidth, backgroundColor: look.line, marginLeft: centered ? 8 : 0 }} />
       </View>
@@ -93,7 +111,7 @@ export function PdfSectionTitle({
   // plain
   return (
     <View {...keepWithNext}>
-      <Text style={{ ...titleText, marginBottom: 6 }}>{label}</Text>
+      {titled({ ...titleText, marginBottom: 6 })}
     </View>
   );
 }

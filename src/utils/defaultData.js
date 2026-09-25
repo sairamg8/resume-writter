@@ -26,6 +26,8 @@ export const ATS_DEFAULTS = {
   dateFormat: DEFAULT_DATE_FORMAT,
   /** Design → Lists (src/utils/richText.js): Bullet prints '•', '–', '·' by depth, as every résumé storing no style (R2-147). */
   bulletStyle: DEFAULT_BULLET_STYLE,
+  /** Design → Section Headings → Icons: off, every title its words alone, as before R2-147. */
+  sectionIcons: false,
   sectionBorderWidth: 1,
   sectionBorderColor: '',
   headerAlign: 'left',

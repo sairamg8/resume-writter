@@ -208,7 +208,7 @@ describe('design — reset returns to the template\'s defaults (M16)', () => {
     cy.visitEditor('sidebar');
     renderedText().should('contain', 'CONTACT');
     openDesign('Section Headings');
-    cy.contains('The side column keeps its own small headings and rule; only Title case applies there.').should('be.visible');
+    cy.contains('The side column keeps its own small headings and rule; only Title case and Icons apply there.').should('be.visible');
     cy.contains('button', /^Abc$/).click();
     cy.store().should((s) => expect(settingsOf(s).sectionTitleCase).to.eq('normal'));
     renderedText().should('contain', 'Contact').and('not.contain', 'CONTACT');

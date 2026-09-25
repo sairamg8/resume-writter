@@ -22,7 +22,7 @@ const customised = (template) => resume({
     font: 'lato', fontSize: 'large', fontSizeBase: 13, fontSizeNameDelta: 12, fontSizeSectionDelta: 3, fontSizeEntryDelta: 2, customFont: 'Fictional Grotesk',
     sectionLetterSpacing: 12, fontSizeTitleDelta: 5,
     lineHeightValue: 1.8, marginV: 25, marginH: 30, sectionGap: 28, itemGap: 15,
-    headingStyle: 'box', sectionTitleCase: 'normal', sectionBorderWidth: 4, sectionBorderColor: '#ea580c',
+    headingStyle: 'box', sectionTitleCase: 'normal', sectionBorderWidth: 4, sectionBorderColor: '#ea580c', sectionIcons: true,
     dateFormat: 'YYYY-MM',
     bulletStyle: 'dash',
     // None of these is any ↺'s: Header Customization's style, the paper, the uploads.
@@ -61,7 +61,8 @@ const CLASSIC = {
     // Title Spacing and Job Title (R2-146): unset, each follows its template's own look.
     ['sectionLetterSpacing', null], ['fontSizeTitleDelta', null]],
   Spacing: [['lineHeightValue', 1.5], ['marginV', 14], ['marginH', 18], ['sectionGap', 16], ['itemGap', 8]],
-  'Section Headings': [['headingStyle', 'ruled'], ['sectionTitleCase', 'upper'], ['sectionBorderWidth', 1], ['sectionBorderColor', '']],
+  // Icons (R2-147): off, as every résumé printed before it.
+  'Section Headings': [['headingStyle', 'ruled'], ['sectionTitleCase', 'upper'], ['sectionBorderWidth', 1], ['sectionBorderColor', ''], ['sectionIcons', false]],
   Dates: [['dateFormat', 'asEntered']],
   Lists: [['bulletStyle', 'bullet']],
 };
