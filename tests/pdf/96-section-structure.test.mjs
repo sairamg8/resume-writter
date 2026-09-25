@@ -176,7 +176,7 @@ describe('the Résumé tab: a drop ends in its own handlers (R2-158)', () => {
   /** The section's own grip: the first sortable handle in its card (its entries' come after). */
   const sectionGrip = (tab, title) => tab.all(tab.card(title)).find((el) => el.getAttribute('aria-roledescription') === 'sortable');
 
-  it('a section dropped on another takes its place; dropped on itself nothing changes; the PDF prints the new order', async () => {
+  it('a section dropped on another takes its place; dropped on itself or on nothing, nothing changes; the PDF prints the new order', async () => {
     const tab = await resumeTab(sample());
     let moved;
     try {
@@ -187,6 +187,10 @@ describe('the Résumé tab: a drop ends in its own handlers (R2-158)', () => {
       assert.deepEqual(tab.titles(), ['Skills', 'Professional Experience', 'Projects']);
       tab.drop(sectionGrip(tab, 'Skills'), skills, skills);
       assert.equal(tab.saved(), moved, 'on itself: no change, no edit');
+      // Let go off the list, a drag ends over nothing: it threw on over.id and the tab went down.
+      tab.drop(sectionGrip(tab, 'Skills'), skills, null);
+      assert.equal(tab.saved(), moved, 'on nothing: no change, no edit');
+      assert.deepEqual(tab.titles(), ['Skills', 'Professional Experience', 'Projects']);
     } finally { await tab.close(); }
     printsInOrder(await printed(moved), ['Seamanship', 'Lamplighter', 'Tidewatch']);
   });

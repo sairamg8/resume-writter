@@ -35,12 +35,12 @@ export function EditorResumeTab({
 
   function handleSectionDragEnd(event) {
     const { active, over } = event;
-    if (active.id !== over?.id) {
-      const sections = resume.sections;
-      const oldIndex = sections.findIndex(s => s.id === active.id);
-      const newIndex = sections.findIndex(s => s.id === over.id);
-      store.updateSections(arrayMove(sections, oldIndex, newIndex));
-    }
+    // A section let go over no other one (off the list) stays where it was.
+    if (!over || active.id === over.id) return;
+    const sections = resume.sections;
+    const oldIndex = sections.findIndex(s => s.id === active.id);
+    const newIndex = sections.findIndex(s => s.id === over.id);
+    if (oldIndex !== -1 && newIndex !== -1) store.updateSections(arrayMove(sections, oldIndex, newIndex));
   }
 
   return (
