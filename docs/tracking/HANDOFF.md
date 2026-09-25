@@ -35,6 +35,13 @@ the coordinator itself on the work branch; (4) **no new agents, sessions or work
 protect usage): they finish, and the coordinator does everything else itself; a failed session is reported to the
 owner, not restarted.
 
+**ATS-7 (coordinator, on the work branch):** `38f35b5` — "Name · Page N" on every résumé page after the first, drawn
+first in the top margin (`constants/runningHeader.js`, `PdfRunningHeader`, all nine templates, Word's header with
+titlePage); no Design control (always on, left out where the margin has no room). Tests: `tests/unit/running-header`,
+`tests/pdf/66-running-header`, 66-ats-page-top-heading's -raw check un-todo'd, 42-ats-fields' ATS-7 set-aside
+removed. CI on the work branch: a targeted run with fail-first (run 36088672238), and the full suite (run 36088673756) (to find other tests that read
+the top of page 2). When green: ATS-7's row in `bug-status.md` goes ✖ → ✅.
+
 **Needs the owner:** deleting the merged `claude/wf-*` branches on GitHub (the git proxy refuses branch deletion).
 
 > **Updated 2026-09-24 (cloud session, branch `claude/confident-goldberg-2uig8b`).** This section is the
