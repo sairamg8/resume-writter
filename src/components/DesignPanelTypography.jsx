@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { FONTS, loadPreviewFont, loadCustomFonts, saveCustomFont, removeCustomFont, checkFont } from '@/utils/fonts';
 import { Label, SizeRow, SegmentControl, DesignSection } from '@/components/DesignPanelShared';
-import { FONT_SIZE_BASE, ICON_SIZE, TYPE_SIZE_PT, deltaInRange } from '@/constants/designNumbers';
+import { FONT_SIZE_BASE, ICON_SIZE, SECTION_LETTER_SPACING, TYPE_SIZE_PT, deltaInRange } from '@/constants/designNumbers';
+import { titleTrackingPct } from '@/templates/pdf/shared/sectionHeadingLook';
 import { headerTemplateId } from '@/constants/templates';
 
 // The quick size buttons set the base size (pt) the PDF is laid out with.
@@ -145,6 +146,8 @@ export function TypographySection({ settings, template, updateSetting, onReset }
                 <SizeRow label="Base" value={base} onChange={setBase} min={FONT_SIZE_BASE.min} max={FONT_SIZE_BASE.max} />
                 <SizeRow label="Full Name" value={base + nameDelta} onChange={v => updateSetting('fontSizeNameDelta', v - base)} {...TYPE_SIZE_PT.fontSizeNameDelta(base)} />
                 <SizeRow label="Section Title" value={base + sectionDelta} onChange={v => updateSetting('fontSizeSectionDelta', v - base)} {...TYPE_SIZE_PT.fontSizeSectionDelta(base)} />
+                {/* The titles' letter-spacing, % of their size; unset shows what the PDF prints (R2-146). */}
+                <SizeRow label="Title Spacing" value={titleTrackingPct(base + sectionDelta, settings.sectionLetterSpacing)} onChange={v => updateSetting('sectionLetterSpacing', v)} {...SECTION_LETTER_SPACING} unit="%" />
                 <SizeRow label="Entry Header" value={base + entryDelta} onChange={v => updateSetting('fontSizeEntryDelta', v - base)} {...TYPE_SIZE_PT.fontSizeEntryDelta(base)} />
                 {/* Stored in px, as Contact icons and Header Customization show it — not pt (R2-123). */}
                 <SizeRow label="Contact Icons" value={settings.iconSize ?? 11} onChange={v => updateSetting('iconSize', v)} min={ICON_SIZE.min} max={ICON_SIZE.max} unit="px" />

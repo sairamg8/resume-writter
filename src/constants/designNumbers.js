@@ -32,6 +32,14 @@ export const HEADER_BORDER_PT = { min: 1, max: 12, zeroIsUnset: true };
 export const FONT_SIZE_BASE = { min: 8, max: 16 };
 export const ICON_SIZE = { min: 9, max: 20 };
 
+/**
+ * Design → Typography → Title Spacing: the section titles' letter-spacing, in % of the title's size
+ * (R2-146). Up to 6 %: wider, ATS parsers read the letters apart (pdfUnits.js MAX_TRACKING_EM), so
+ * every value offered prints differently. Unset prints the 0.7 pt every title always had
+ * (sectionHeadingLook.js titleTracking); Word prints what the PDF does.
+ */
+export const SECTION_LETTER_SPACING = { min: -4, max: 6 };
+
 /** The base a résumé that stores none prints at (defaultData.js, every PDF's `?? 11`). */
 const DEFAULT_FONT_SIZE_BASE = 11;
 
@@ -76,6 +84,7 @@ const DESIGN_NUMBERS = {
   fontSizeSectionDelta: null,
   fontSizeEntryDelta: null,
   iconSize: ICON_SIZE,
+  sectionLetterSpacing: SECTION_LETTER_SPACING,
   sectionBorderWidth: SECTION_BORDER_PT,
   headerBorderWidth: HEADER_BORDER_PT,
   // Header Customization → Name & Title Spacing, px (HEADER_GAPS: 2–48). The résumé's PDF reads it

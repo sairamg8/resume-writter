@@ -145,6 +145,7 @@ export function SectionTitleOf({ section, settings, centered, presence = 0 }) {
       centered={centered}
       template={settings?._template}
       lineHeightValue={settings?.lineHeightValue ?? 1.5}
+      letterSpacingPct={settings?.sectionLetterSpacing}
       presence={Math.max(presence, Math.round((settings?.fontSizeBase || 11) * (settings?.lineHeightValue ?? 1.5) * 3))}
     />
   );

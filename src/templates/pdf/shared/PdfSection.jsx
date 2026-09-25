@@ -1,7 +1,6 @@
 import { View } from '@react-pdf/renderer';
 import { Text } from './PdfText';
-import { sectionHeadingLook, SHORT_RULE_EM } from './sectionHeadingLook';
-import { tracking } from './pdfUnits';
+import { sectionHeadingLook, SHORT_RULE_EM, titleTracking } from './sectionHeadingLook';
 import { headingBorderExtraPt, upperSectionTitles } from '@/constants/templates';
 
 export function PdfSectionTitle({
@@ -16,12 +15,13 @@ export function PdfSectionTitle({
   template = '',
   lineHeightValue = 1.5,
   presence = 50,
+  letterSpacingPct = null,
 }) {
   const label = upperSectionTitles(sectionTitleCase) ? title.toUpperCase() : title;
   const look = sectionHeadingLook({ template, headingStyle, accent, borderColor });
   const textAlignment = centered ? { textAlign: 'center' } : {};
-  // 0.7 pt tracking, narrower below 11.7 pt so small titles still extract as words (tracking()).
-  const letterSpacing = tracking(sectionSize, 0.7);
+  // Design → Title Spacing, or 0.7 pt unset — narrower below 11.7 pt so small titles still extract as words.
+  const letterSpacing = titleTracking(sectionSize, letterSpacingPct);
   // The title in the accent, or neutral dark grey where the template's style prints it so (sectionHeadingLook).
   const titleText = { fontSize: sectionSize, fontWeight: 'bold', color: look.text, letterSpacing, lineHeight: lineHeightValue, ...textAlignment };
 

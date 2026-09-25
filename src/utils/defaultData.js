@@ -41,6 +41,8 @@ export const ATS_DEFAULTS = {
   headerBorderWidth: 2,
   customFont: '',
   iconSize: 11,
+  /** Design → Title Spacing, % of the title's size; null prints the titles' own 0.7 pt (R2-146). */
+  sectionLetterSpacing: null,
   lineHeightValue: 1.5,
   sectionGap: 16,
   itemGap: 8, // px: the Normal preset's gap (R2-1)

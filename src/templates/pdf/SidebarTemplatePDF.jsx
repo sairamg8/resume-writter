@@ -218,6 +218,7 @@ export function SidebarTemplatePDF({ data }) {
                 sectionBorderWidth={settings.sectionBorderWidth ?? 1}
                 template="sidebar"
                 lineHeightValue={settings.lineHeightValue ?? 1.5}
+                letterSpacingPct={settings.sectionLetterSpacing}
                 presence={Math.round(baseSize * lineH * 3)}
               />
               <PdfRichText

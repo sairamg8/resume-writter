@@ -153,6 +153,8 @@ export const DESIGN = {
   // A large name or title wraps in a narrow column: its first word is measured.
   'setting.fontSizeNameDelta': { family: 'type', check: ({ runs }) => tracks(runs, 'setting.fontSizeNameDelta', (r) => item(r.snap, 'Jordan')?.h, 'name size') },
   'setting.fontSizeSectionDelta': { family: 'type', check: ({ runs }) => tracks(runs, 'setting.fontSizeSectionDelta', (r) => heading(r.snap, /^professional( experience)?$/i)?.h, 'section title size') },
+  // Title Spacing (R2-146): the Experience title widens with its letter-spacing, at every value offered.
+  'setting.sectionLetterSpacing': { family: 'type', check: ({ runs }) => grows(runs, 'setting.sectionLetterSpacing', (r) => heading(r.snap, EXPERIENCE)?.w, 'the section title\'s width') },
   'setting.fontSizeEntryDelta': {
     family: 'type',
     check: ({ runs, before }) => {
