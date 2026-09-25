@@ -119,8 +119,9 @@ describe('the owner\'s private résumé is in no bundle the app builds', () => {
   it('neither the production build nor the e2e build holds its name, phone, e-mail or any other text of it', { skip }, async () => {
     const data = JSON.parse(fs.readFileSync(PRIVATE, 'utf8'));
     // The file's contact details and every phrase of it — rich text split at its tags; single
-    // words like "Performance" are in any bundle — that the app's own source does not hold (the
-    // e-mail is the site's public contact address: Terms, Privacy, DEMO_ACCOUNTS).
+    // words like "Performance" are in any bundle — that the app's own source does not hold. Not the
+    // e-mail: the owner's build takes it from VITE_CONTACT_EMAIL and VITE_DEMO_ACCOUNTS (siteOwner.js),
+    // so it is meant to be in that bundle, as the site's public contact address (R2-143).
     const { name, phone, email } = data.personal;
     const texts = new Set(['name', 'phone', 'linkedin', 'github', 'website'].map((k) => data.personal[k]?.trim()).filter((t) => t?.length >= 6));
     const walk = (v) => {
