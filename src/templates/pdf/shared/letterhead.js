@@ -17,6 +17,8 @@ import { bannerPadY } from './bannerBand';
  */
 const LETTERHEAD_PAD = 12;
 export const LETTERHEAD_GAP = 16;
+/** Right of Name: the space between the name side and the contacts on its right, pt (contactsSideGap unset). */
+export const LETTER_CONTACTS_GAP = 12;
 
 /** Space between the two lines of Executive's double rule, pt. */
 export const DOUBLE_RULE_GAP = 1.5;

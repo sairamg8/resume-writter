@@ -9,11 +9,13 @@ import { CONTACT_FIELDS } from '@/utils/contacts';
 import { useLetterPhoto } from '@/hooks/usePrintableImage';
 import CoverLetterGeneratorModal from '@/components/CoverLetterGeneratorModal';
 import { PHOTO_OPTIONS, photoOption } from '@/constants/photoOptions';
+import { GapStepper } from '@/components/HeaderSpacingControls';
+import { letterSideGapRow } from '@/utils/headerSpacingRows';
 
 /** This panel's lucide icon per field — the names and their order come from CONTACT_FIELDS. */
 const ICONS = { email: Mail, phone: Phone, location: MapPin, website: Globe, linkedin: Link2, github: Code };
 
-export default function CoverLetterPanel({ resume, coverLetter, personal, settings, template, updateCoverLetter }) {
+export default function CoverLetterPanel({ resume, coverLetter, personal, settings, template, updateCoverLetter, updateSetting, clearSettings }) {
   const [generatorOpen, setGeneratorOpen] = useState(false);
   const cl = coverLetter || {};
   const contacts = letterContactFormat(cl, settings); // what the letter prints until a chip sets its own
@@ -192,6 +194,13 @@ export default function CoverLetterPanel({ resume, coverLetter, personal, settin
                 </button>
               ))}
             </div>
+            {/* Right of Name: the space between the name side and the contacts (R2-137), a résumé
+                header-spacing key no résumé header prints. */}
+            {fieldsPosition === 'right' && (
+              <div className="mt-2">
+                <GapStepper row={letterSideGapRow(settings)} onChange={(v) => updateSetting?.('contactsSideGap', v)} onReset={() => clearSettings?.(['contactsSideGap'])} />
+              </div>
+            )}
           </div>
         )}
 
