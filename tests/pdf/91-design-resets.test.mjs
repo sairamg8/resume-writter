@@ -25,6 +25,7 @@ const customised = (template) => resume({
     headingStyle: 'box', sectionTitleCase: 'normal', sectionBorderWidth: 4, sectionBorderColor: '#ea580c',
     dateFormat: 'YYYY-MM',
     bulletStyle: 'dash',
+    pageNumbers: true,
     // None of these is any ↺'s: Header Customization's style, the paper, the uploads.
     contactStyle: 'bar', pageSize: 'LETTER', customContactIcons: { email: 'icon:send' },
   },
@@ -64,6 +65,8 @@ const CLASSIC = {
   'Section Headings': [['headingStyle', 'ruled'], ['sectionTitleCase', 'upper'], ['sectionBorderWidth', 1], ['sectionBorderColor', '']],
   Dates: [['dateFormat', 'asEntered']],
   Lists: [['bulletStyle', 'bullet']],
+  // Page numbers (R2-147): off, as every résumé storing none prints.
+  'Page numbers': [['pageNumbers', false]],
 };
 
 /** `CLASSIC` with a template's own values over it: [section, key, value] each. */
@@ -74,7 +77,7 @@ const over = (changes) => {
 };
 
 describe('Design → a section\'s ↺ writes its own keys back to the template\'s values, and nothing else (R2-157)', () => {
-  it('Classic: each of the seven ↺s writes exactly its section\'s keys, at Classic\'s values', async () => {
+  it('Classic: each of the eight ↺s writes exactly its section\'s keys, at Classic\'s values', async () => {
     const view = await panel(customised('classic'));
     try {
       for (const [title, expected] of Object.entries(CLASSIC)) {
