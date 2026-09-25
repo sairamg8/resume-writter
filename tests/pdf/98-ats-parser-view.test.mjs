@@ -189,7 +189,8 @@ describe('the ATS tab: What a parser reads (R2-141)', () => {
       await until(() => tab.status() === 'ready', 'the first read');
       const shown = tab.pre().textContent;
       tab.view.update({ resume: { ...r, personal: { ...r.personal, name: 'Morgan Example' } }, store: tab.store });
-      assert.equal(tab.status(), 'reading', 'the change waits for the typing to pause');
+      // Its effect runs from React's next task: it asks for a read and waits for the typing to pause.
+      await until(() => tab.status() === 'reading', 'the change to ask for a read');
       tab.view.update({ resume: r, store: tab.store });
       await until(() => tab.status() === 'ready', 'the undone change to settle');
       assert.equal(tab.pre().textContent, shown, 'the text of the résumé as it is again');
