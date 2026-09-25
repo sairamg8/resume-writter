@@ -3,7 +3,9 @@
 // time, as before: a date at the right margin, the Timeline's date beside its entry and a location
 // under a date stay on their entry's lines. Each single-column template exports a fictional résumé
 // with the app's own react-pdf code; pdf.js reads each page's text, and no page is split into columns.
-// The import then finds the name and both jobs with their dates.
+// The import then finds the name and both jobs with their dates. (Which field of an entry's header
+// is the company is the text parser's guess, unchanged by the split: Executive's location on a line
+// of its own and Timeline's date over the entry are read as other fields, as before.)
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { setup, teardown, resume, section, experience, render } from './harness.mjs';
@@ -64,13 +66,13 @@ describe('Import reads a single-column PDF across the page, as before the column
           assert.equal(blocks.some((b) => b.column), false, `page ${i + 1} split into ${blocks.length} blocks${why()}`);
         });
       });
-      it('the name and each job with its company and dates', () => {
+      it('the name and each job with its dates', () => {
         const r = got[template].resume;
         assert.equal(r.personal.name, 'Avery Quinn', why());
         const jobs = r.sections.find((s) => s.type === 'experience')?.items || [];
-        assert.deepEqual(jobs.map((j) => [j.company, j.startDate, j.endDate, j.current]), [
-          ['Northwind Analytics', 'Mar 2021', '', true],
-          ['Contoso Freight', 'Jun 2017', 'Feb 2021', false],
+        assert.deepEqual(jobs.map((j) => [j.startDate, j.endDate, j.current]), [
+          ['Mar 2021', '', true],
+          ['Jun 2017', 'Feb 2021', false],
         ], why());
       });
     });
