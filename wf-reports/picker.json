@@ -1,0 +1,39 @@
+{
+  "cluster": "picker",
+  "branch": "claude/wf-picker",
+  "base": "c5acb93",
+  "rows": [
+    {
+      "id": "R2-139",
+      "outcome": "partial",
+      "commits": ["c2a2105", "761a67b", "11b2e5c", "729b24c", "0cabe5d", "e088a94"],
+      "tests": [
+        "tests/pdf/93-picker-cards.test.mjs", "tests/pdf/93-picker-undo.test.mjs", "tests/pdf/93-picker-pictures.test.mjs",
+        "tests/pdf/93-picker-new-resume.test.mjs", "tests/unit/picker-ui.unit.mjs", "tests/playwright/picker.spec.mjs",
+        "tests/pdf/69-picker-ats-badge.test.mjs", "tests/pdf/93-template-picker-copy.test.mjs", "tests/pdf/parity/registry-design.mjs",
+        "cypress/e2e/26-mobile-layout.cy.js"
+      ],
+      "summary": "Every non-accessibility item is built. The cards come from the data (utils/templatePicker.js over TEMPLATE_PICKER and the table's new category, columns, colourHeader and variant fields), so a template the table gains is a card in its category with no picker change. A1: each card draws its look's page, and the gallery paints the real page 1 once a card is on screen. F1: the letterhead shows beside the cover-letter line and on every gallery card. A2/A3/B3/E1: Browse templates opens a gallery with category chips (Simple, Professional, Modern, Creative, Compact, My designs) and filters (ATS-safe, One column, Two columns, Colour header, Serif); on a phone it fills the screen, two cards to a row, with Done in the footer. A4: a pick raises a notice whose Undo restores that résumé's template, settings and section settings together. A9: the Sidebar's single column is its own card, template-sidebar-single. A12: the editor keeps Template's open state across tabs. C1: each dashboard card shows the résumé's own page 1, kept in cpwtcv_page_images (never synced, dropped first when storage is full, pruned to the résumés the store holds on every write). D1: New Resume offers every card as the look beside the starters, and each starter names its template.",
+      "remaining": "Accessibility items, deferred by the owner: A7, A8, A11, A13, A14 (parked on origin/claude/wf-templates)."
+    },
+    {
+      "id": "R2-138",
+      "outcome": "partial",
+      "commits": ["c2a2105", "13e82d4"],
+      "tests": ["tests/pdf/93-picker-my-designs.test.mjs", "tests/unit/picker-ui.unit.mjs", "tests/playwright/picker.spec.mjs"],
+      "summary": "B4 is built. Design → Template → Save my design keeps the résumé's look (every plain setting, except uploaded icons and the paper) under a name in settings.myDesigns, with templatePreset naming it. It is listed under Your designs, and in the gallery's My designs chip, on every résumé. Picked, it brings its whole look and travels with that résumé. Reset returns to it, a plain template takes it away, and Delete removes it from every résumé in this browser. It syncs and backs up inside the résumé's settings; a JSON Resume export writes meta.designLook and the import brings the design back.",
+      "remaining": "B2 (new layout code) is the wf-layouts cluster's."
+    }
+  ],
+  "review": {
+    "issues": [
+      "Undo after a switch patched whichever résumé was open when it was clicked (a JSON import could open another within the notice's 8 s).",
+      "designLook dropped null, so a saved design did not bring unset Job Title size or Title Spacing.",
+      "savePicture and keepPageImagesOf wrote the in-memory picture copy back after a full storage dropped it or another tab pruned a signed-out account's pictures.",
+      "The phone gallery spec measured card positions while the sheet was still sliding in."
+    ],
+    "fixedByReviewer": ["11b2e5c", "13e82d4", "729b24c", "0cabe5d"]
+  },
+  "baselineFailures": [],
+  "notes": "Full gate green on 0cabe5d (run 36108971369: lint, build, suite 6/6, Playwright 3/3, Cypress 4/4). Fail-first proven on CI for c2a2105 (run 36107093770, 33 fail without the change), 761a67b (36108423065), and 11b2e5c, 13e82d4 and 729b24c (36108875140). Existing tests changed to the new intended behaviour: 69-picker-ats-badge and 93-template-picker-copy (the Sidebar's two layouts are two cards, and each card's badge and description are those of the page it prints, whatever layout is stored); parity registry-design's template check prints a fresh résumé with the layout its card sets; 26-mobile-layout selects the Edit / Preview pill by its z-40 (the editor's notice area is also fixed at the bottom-4). The picker needs nothing from wf-layouts: a new engine gets a card (category Simple unless it names one, and an unknown category gets its own chip) and a real page picture in the gallery; ResumeThumbnail's drawn mock falls back to a generic page for an engine it doesn't know. Product calls for the owner: (1) leaving a saved design by picking a plain template resets every setting still at the design's value (date format, bullets, contact style, layout …), which is wider than the switch note's wording, though Undo covers it; (2) deleting a saved design is local, and a résumé on another device that still holds it syncs it back; (3) a design saved from an older résumé holds only the keys it had. New files: src/utils/templatePicker.js, pageImage.js, pageImageStore.js, pdfjsLoader.js; src/components/TemplateGallery.jsx, TemplateThumb.jsx, DesignPanelTemplate.jsx; src/hooks/usePickCard.js, usePicture.js, useResumeDesignActions.js. templateTable.js gained per-template fields (category, columns, colourHeader, variant); expect merge touch points with wf-layouts there."
+}
