@@ -51,8 +51,10 @@ describe('resolvePdfFonts names a font it could not load, and clears it once loa
   let store;
   before(async () => {
     await setup();
-    loader = await loadModule('/src/templates/pdf/shared/pdfFontLoader.js');
-    store = await loadModule('/src/utils/fontFallback.js');
+    // A module that does not load (fail-first, without the fix) fails the tests rather than this hook:
+    // a failed hook skipped `after`, left the harness's servers up, and the run hung instead of failing.
+    loader = await loadModule('/src/templates/pdf/shared/pdfFontLoader.js').catch(() => null);
+    store = await loadModule('/src/utils/fontFallback.js').catch(() => null);
   });
   afterEach(() => { globalThis.fetch = realFetch; });
   after(teardown);
@@ -102,9 +104,10 @@ describe('resolvePdfFonts names a font it could not load, and clears it once loa
     const gate = { pkg: 'testface-slow', open: new Promise((resolve) => { open = resolve; }) };
     network({ gate });
     const slow = loader.resolvePdfFonts({ customFont: 'Testface Slow' }, 'Pat Example');
-    const now = await loader.resolvePdfFonts({ font: 'notosans' }, 'Pat Example');
-    assert.equal(now.fallback, null);
-    open();
+    try {
+      const now = await loader.resolvePdfFonts({ font: 'notosans' }, 'Pat Example');
+      assert.equal(now.fallback, null);
+    } finally { open(); }
     assert.equal((await slow).fallback, 'Testface Slow', 'that build itself printed in Noto Sans');
     assert.equal(store.fontFallback(), null, 'the editor shows what the latest build printed');
   });
@@ -148,7 +151,8 @@ describe('the preview pane shows the notice while the fallback holds (R2-146)', 
 
 describe('the preview builds again when the browser is back online (R2-146)', () => {
   before(setupPreview);
-  after(teardownPreview);
+  // PdfPreview.jsx not loading (fail-first) must not leave the harness's servers up: that hung the run.
+  after(() => teardownPreview().catch(() => teardown()));
 
   it('back online with a font fallback: one new build at once; with none: no build', async () => {
     const store = await loadModule('/src/utils/fontFallback.js');
