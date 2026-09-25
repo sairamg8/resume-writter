@@ -1,4 +1,4 @@
-import { DesignSection } from '@/components/DesignPanelShared';
+import { ColorInput, DesignSection } from '@/components/DesignPanelShared';
 import { SECTION_BORDER_PT } from '@/constants/designNumbers';
 import { headerTemplateId, headingBorderControls, headingBorderExtraPt, upperSectionTitles } from '@/constants/templates';
 import { DEFAULTS } from '@/templates/pdf/shared/templateSettings';
@@ -114,11 +114,10 @@ export function HeadingControls({ settings, template, updateSetting }) {
       <div className={`flex items-center justify-between ${!borderControls.color ? 'opacity-40' : ''}`}>
         <span className="text-xs text-gray-500">Border color</span>
         <div className="flex items-center gap-2">
-          <input
-            type="color"
+          <ColorInput
             disabled={!borderControls.color}
             value={settings.sectionBorderColor || borderDefault?.color || settings.accentColor || '#374151'}
-            onChange={e => updateSetting('sectionBorderColor', e.target.value)}
+            onCommit={v => updateSetting('sectionBorderColor', v)}
             className="h-6 w-10 rounded border border-gray-200 cursor-pointer disabled:cursor-not-allowed p-0.5"
             title="Pick border color"
             aria-label="Section border color"
