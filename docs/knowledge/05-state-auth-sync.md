@@ -44,7 +44,8 @@ account — one account's deletion of it never replaces, nor forgets, another's 
 Firebase is optional: without the `VITE_FIREBASE_*` values `src/utils/firebase.js` exports `auth` and
 `db` as null (`firebaseEnabled`), and the app runs on localStorage alone. A build then shows no Sign In
 at all (`useAuth().cloudAvailable` false, so AuthBar renders nothing); on the dev server Sign In signs
-in a local stand-in user instead.
+in a local stand-in user instead (`SITE_OWNER.devUser` from `src/utils/siteOwner.js`: `VITE_DEV_USER_*`,
+made-up `dev@example.com` by default).
 
 ## Cloud sync (`useCloudSync`)
 
@@ -114,8 +115,9 @@ out) still joins whoever signs in; a build with no cloud keeps its list (its onl
 `src/utils/demoAccounts.js` (`DEMO_ACCOUNTS`), `vite-plugin-owner-resume.js` (the private file on
 the dev server), `src/components/ImportMenu.jsx` + `ResumeCard.jsx` (the controls).
 
-The owner's login (`DEMO_ACCOUNTS`, default `sairamgudiputi8@gmail.com`; a build can override it
-with `VITE_DEMO_ACCOUNTS`, comma-separated, set-but-empty = nobody) always has its **originals**:
+The owner's login (`DEMO_ACCOUNTS`: the build's `VITE_DEMO_ACCOUNTS`, comma-separated, read by
+`src/utils/siteOwner.js`; unset or empty = nobody, so a fork has no demo account — the e2e build's
+is the made-up one in `.env.e2e`) always has its **originals**:
 the résumés marked **"Keep as my original"** (`keep: true` on the résumé). Everyone else, and every
 signed-out visitor, deletes like anywhere and keeps the blank first run.
 

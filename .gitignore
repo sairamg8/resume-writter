@@ -41,6 +41,8 @@ graphify-out/
 .env
 .env.*
 !.env.example
+# The e2e build's made-up demo account, which the Cypress specs sign in as
+!.env.e2e
 
 # Yarn 4 (node-modules linker) local state
 .yarn/*

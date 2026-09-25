@@ -1,6 +1,10 @@
 import { useNavigate } from 'react-router-dom';
 import { useBackOrHome } from '@/hooks/useBackOrHome';
+import { SITE_OWNER } from '@/utils/siteOwner';
 import { FileText, ArrowLeft } from 'lucide-react';
+
+// The deployment's contact address (VITE_CONTACT_EMAIL); a fork without it names nobody's.
+const { contactEmail } = SITE_OWNER;
 
 export default function PrivacyPage() {
   const goBack = useBackOrHome();
@@ -135,10 +139,12 @@ export default function PrivacyPage() {
           <section>
             <h2 className="text-lg font-semibold text-gray-900 mb-3">10. Contact</h2>
             <p>
-              For privacy-related requests or questions, email us at{' '}
-              <a href="mailto:sairamgudiputi8@gmail.com" className="text-blue-600 hover:underline">
-                sairamgudiputi8@gmail.com
-              </a>.
+              {contactEmail ? (<>
+                For privacy-related requests or questions, email us at{' '}
+                <a href={`mailto:${contactEmail}`} className="text-blue-600 hover:underline">
+                  {contactEmail}
+                </a>.
+              </>) : 'Contact the people who run this site.'}
             </p>
           </section>
         </div>

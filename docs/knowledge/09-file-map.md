@@ -50,7 +50,7 @@ resume-writter/
 │       ├── pdfExportReactPDF.js                                      # PDF render + download
 │       ├── wordExport*.js, markdownExport.js, atsPlainText.js, jsonResume*.js  # the other exporters
 │       ├── atsChecker.js, bulletOptimizer.js, coverLetterGenerator.js
-│       ├── cloudSync*.js, syncMerge.js, localDeletions.js, demo*.js, firebase.js
+│       ├── cloudSync*.js, syncMerge.js, localDeletions.js, demo*.js, siteOwner.js, firebase.js
 │       ├── job*.js, normalizeJob.js, board*.js, normalizeBoard.js
 │       └── storageBackup.js, ids.js, richText.js, fonts.js, …
 ├── tests/

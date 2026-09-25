@@ -5,7 +5,8 @@ import { STORAGE_KEY } from '../../tests/helpers.js';
 import { CARD, IMPORT_INPUT } from './selectors.js';
 import { dashboardState } from './state.js';
 
-export const OWNER = { uid: 'e2e-owner', email: 'sairamgudiputi8@gmail.com', displayName: 'Owner' };
+// Its e-mail is the e2e build's demo account (VITE_DEMO_ACCOUNTS in .env.e2e).
+export const OWNER = { uid: 'e2e-owner', email: 'owner@example.com', displayName: 'Owner' };
 export const OTHER = { uid: 'e2e-other', email: 'someone@example.com', displayName: 'Someone' };
 
 /**

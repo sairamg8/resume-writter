@@ -19,7 +19,7 @@ Primary differentiators for developers/users:
 | UI brand string | CPWT-CV |
 | npm `package.json` name | `flowcv` |
 | localStorage prefix | `cpwtcv_*` |
-| Email contact (privacy/terms) | sairamgudiputi8@gmail.com |
+| Email contact (privacy/terms) | the build's `VITE_CONTACT_EMAIL` (`src/utils/siteOwner.js`); unset, the pages name none |
 | Inspiration | FlowCV (flowcv.com) |
 
 ## Tech stack summary

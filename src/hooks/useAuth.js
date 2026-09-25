@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { GoogleAuthProvider, signInWithPopup, signOut as fbSignOut, onAuthStateChanged } from 'firebase/auth';
 import { auth, e2eUser } from '@/utils/firebase';
+import { SITE_OWNER } from '@/utils/siteOwner';
 
 export function useAuth() {
   // e2eUser: Cypress's fake account in e2e builds (see firebase.js); null everywhere else.
@@ -20,7 +21,7 @@ export function useAuth() {
   async function signInWithGoogle() {
     if (!auth) {
       if (import.meta.env.DEV) {
-        setUser({ uid: 'dev_sairam', email: 'sairamgudiputi8@gmail.com', displayName: 'Sairam' });
+        setUser(SITE_OWNER.devUser);
         return;
       }
       throw new Error('Cloud sync is not configured for this build.');
@@ -30,8 +31,8 @@ export function useAuth() {
       await signInWithPopup(auth, provider);
     } catch (e) {
       if (import.meta.env.DEV) {
-        console.warn('Google popup sign-in failed in dev; signing in as dev sairam:', e);
-        setUser({ uid: 'dev_sairam', email: 'sairamgudiputi8@gmail.com', displayName: 'Sairam' });
+        console.warn('Google popup sign-in failed in dev; signing in as the dev user:', e);
+        setUser(SITE_OWNER.devUser);
         return;
       }
       throw e;

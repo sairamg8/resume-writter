@@ -32,7 +32,7 @@ Inspiration: FlowCV’s free positioning, without claiming FlowCV affiliation.
 - [x] Resolve Dark template inconsistency (an unknown template id, the old seed's `dark` too, prints as Classic)
 - [x] Ensure app works fully offline without Firebase env (`firebaseEnabled`: no Sign In, local only)
 - [x] Replace the personal demo résumé seed: the first run is an empty dashboard
-- [ ] Remove the remaining owner-specific defaults (`src/utils/demoAccounts.js`, the dev sign-in in `src/hooks/useAuth.js`)
+- [x] Owner-specific defaults (demo accounts, the Terms/Privacy contact, the dev sign-in) come from `VITE_*` env (`src/utils/siteOwner.js`, `.env.example`); unset, nobody's
 - [ ] Confirm Terms/Privacy match intended hosting domain
 
 ### 4. Distribution
