@@ -53,6 +53,8 @@ export const TYPE_SIZE_PT = {
   fontSizeNameDelta: (base) => ({ min: base, max: 36 }),
   fontSizeSectionDelta: () => ({ min: 6, max: 24 }),
   fontSizeEntryDelta: () => ({ min: 6, max: 24 }),
+  // Job Title (R2-146): unset (null), the title prints at Entry Header's size, as it always had.
+  fontSizeTitleDelta: () => ({ min: 6, max: 24 }),
 };
 
 /** `delta` (a number) for `key` moved so that `base` + it prints within that row's range. */
@@ -83,6 +85,7 @@ const DESIGN_NUMBERS = {
   fontSizeNameDelta: null,
   fontSizeSectionDelta: null,
   fontSizeEntryDelta: null,
+  fontSizeTitleDelta: null,
   iconSize: ICON_SIZE,
   sectionLetterSpacing: SECTION_LETTER_SPACING,
   sectionBorderWidth: SECTION_BORDER_PT,

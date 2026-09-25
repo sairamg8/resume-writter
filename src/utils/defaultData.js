@@ -12,6 +12,8 @@ export const ATS_DEFAULTS = {
   fontSizeNameDelta: 8,
   fontSizeSectionDelta: 1,
   fontSizeEntryDelta: 0,
+  /** Design → Job Title's size over the base; null prints it at Entry Header's size (R2-146). */
+  fontSizeTitleDelta: null,
   lineHeight: 'normal',
   margins: 'normal',
   accentColor: '#374151',

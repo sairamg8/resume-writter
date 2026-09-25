@@ -11,6 +11,7 @@ import { PdfPhoto } from './shared/PdfPhoto';
 import { solid, textShades } from './shared/pdfColors';
 import { photoTextAlignItems } from '@/constants/templates';
 import { pageSizeOf } from '@/constants/pageSize';
+import { headerTitleSize } from './shared/letterhead';
 
 
 export function MinimalTemplatePDF({ data }) {
@@ -24,7 +25,7 @@ export function MinimalTemplatePDF({ data }) {
     lineHeightValue: lineH,
   } = settings;
   const nameSize  = baseSize + (settings.fontSizeNameDelta  ?? 8);
-  const entrySize = baseSize + (settings.fontSizeEntryDelta ?? 0);
+  const entrySize = headerTitleSize(settings); // the job title's (R2-146)
   const hidden    = personal?.hiddenFields || [];
 
   const headerAlign  = settings.headerAlign || 'left';

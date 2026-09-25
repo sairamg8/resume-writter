@@ -193,12 +193,12 @@ export const COMPACT_RULE = 1;
  * without one, and a Thickness reaches both.
  */
 /**
- * The job title's font size, pt: Design → Font sizes → Entry Header (fontSizeEntryDelta) over
- * the base font size. The résumé header and the cover letter's letterhead print the title at this
- * size (FIDB-51-VF4-NB2).
+ * The job title's font size, pt: Design → Typography → Job Title (fontSizeTitleDelta, R2-146), else
+ * Entry Header (fontSizeEntryDelta), over the base font size. Every résumé header, the cover letter's
+ * letterhead and Word's print the title at this size (FIDB-51-VF4-NB2).
  */
 export function headerTitleSize(settings = {}) {
-  return (settings?.fontSizeBase || 11) + (settings?.fontSizeEntryDelta ?? 0);
+  return (settings?.fontSizeBase || 11) + (settings?.fontSizeTitleDelta ?? settings?.fontSizeEntryDelta ?? 0);
 }
 
 export function letterheadLook(template, s = {}) {

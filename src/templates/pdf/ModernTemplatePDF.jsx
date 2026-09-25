@@ -14,6 +14,7 @@ import { PdfPhoto } from './shared/PdfPhoto';
 import { opacityFor } from './shared/pdfColors';
 import { photoTextAlignItems } from '@/constants/templates';
 import { pageSizeOf } from '@/constants/pageSize';
+import { headerTitleSize } from './shared/letterhead';
 
 const CSS_ICON_SCALE = 0.9;
 
@@ -51,7 +52,7 @@ export function ModernTemplatePDF({ data }) {
     lineHeightValue: lineH,
   } = settings;
   const nameSize  = baseSize + (settings.fontSizeNameDelta  ?? 8);
-  const entrySize = baseSize + (settings.fontSizeEntryDelta ?? 0);
+  const entrySize = headerTitleSize(settings); // the job title's (R2-146)
   const hidden    = personal?.hiddenFields || [];
   const g         = settings.headerGaps; // the header's spacing, pt (TEMPLATES' headerGaps)
   const headerText = settings.headerTextColor || '#ffffff';

@@ -17,6 +17,7 @@ import { sidebarShades } from './shared/pdfColors';
 import { pageSizeOf } from '@/constants/pageSize';
 import { ClassicTemplatePDF } from './ClassicTemplatePDF';
 import { SIDE_CONTACT_PT } from './shared/contactSize';
+import { headerTitleSize } from './shared/letterhead';
 
 /**
  * A contact in the dark column: icon and label in the column's label colour, not the accent. The
@@ -69,7 +70,7 @@ export function SidebarTemplatePDF({ data }) {
   const sidebarBg  = settings.sidebarBg || '#1e293b';
   const side       = sidebarShades(sidebarBg); // the column's colours on its background (R2-2)
   const nameSize   = baseSize + (settings.fontSizeNameDelta ?? 8);
-  const entrySize  = baseSize + (settings.fontSizeEntryDelta ?? 0);
+  const entrySize  = headerTitleSize(settings); // the job title's (R2-146)
   const sectionGap = settings.sectionGap ?? 12;
   const hidden     = personal?.hiddenFields || [];
   const g          = settings.headerGaps; // the header's spacing, pt (TEMPLATES' headerGaps)

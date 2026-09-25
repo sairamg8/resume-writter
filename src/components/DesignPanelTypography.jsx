@@ -149,6 +149,8 @@ export function TypographySection({ settings, template, updateSetting, onReset }
                 {/* The titles' letter-spacing, % of their size; unset shows what the PDF prints (R2-146). */}
                 <SizeRow label="Title Spacing" value={titleTrackingPct(base + sectionDelta, settings.sectionLetterSpacing)} onChange={v => updateSetting('sectionLetterSpacing', v)} {...SECTION_LETTER_SPACING} unit="%" />
                 <SizeRow label="Entry Header" value={base + entryDelta} onChange={v => updateSetting('fontSizeEntryDelta', v - base)} {...TYPE_SIZE_PT.fontSizeEntryDelta(base)} />
+                {/* The header's job title under the name; unset, it follows Entry Header (R2-146). */}
+                <SizeRow label="Job Title" value={base + (settings.fontSizeTitleDelta ?? entryDelta)} onChange={v => updateSetting('fontSizeTitleDelta', v - base)} {...TYPE_SIZE_PT.fontSizeTitleDelta(base)} />
                 {/* Stored in px, as Contact icons and Header Customization show it — not pt (R2-123). */}
                 <SizeRow label="Contact Icons" value={settings.iconSize ?? 11} onChange={v => updateSetting('iconSize', v)} min={ICON_SIZE.min} max={ICON_SIZE.max} unit="px" />
               </>
