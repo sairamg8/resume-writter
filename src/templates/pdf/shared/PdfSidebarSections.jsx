@@ -2,7 +2,7 @@ import { View } from '@react-pdf/renderer';
 import { Text } from './PdfText';
 import { PdfRichText } from './PdfRichText';
 import { hasRichText } from '@/utils/richText';
-import { dateRange, endDateOf, presentLabel } from '@/utils/dates';
+import { dateRange, endDateOf, presentLabel, startDateOf } from '@/utils/dates';
 import { SectionTitleOf, RenderBullets, RenderColGrid, hexAlpha, SectionRouter, SPACER, ItemHeader, shadesOf } from './PdfSections';
 import { CentredLine, EndRow, endField, fieldGap, headPresence, itemHeadPresence, onBaselineOf, wordRoom } from './PdfItemHeader';
 import {
@@ -209,7 +209,7 @@ export function SidebarMainProjects({ section, settings, marginBottom, spaceBefo
         cols={s.columns || 1}
         gap={itemGap}
         renderItem={(item, idx) => {
-          const dateStr = showDates ? dateRange(item.startDate, endDateOf(item, settings), settings) : '';
+          const dateStr = showDates ? dateRange(startDateOf(item), endDateOf(item, settings), settings) : '';
           return (
             <CardItem key={idx}>
               <CardHeader
