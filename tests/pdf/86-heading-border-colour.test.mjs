@@ -38,10 +38,12 @@ function textOf(node) {
 /** Section Headings' Border colour row for `settings` on `template`: its swatch, its label, enabled. */
 async function borderRow(template, settings) {
   const { HeadingControls } = await loadModule('/src/components/DesignPanelHeadings.jsx');
+  const { ColorInput } = await loadModule('/src/components/DesignPanelShared.jsx');
   const nodes = [...walk(HeadingControls({ settings, template, updateSetting: () => {} }))];
   const row = nodes.find((n) => n.type === 'div' && textOf(n).startsWith('Border color'));
   assert.ok(row, 'the Border color row');
-  const input = [...walk(row)].find((n) => n.type === 'input');
+  // The swatch: its <input type="color">, or the ColorInput that draws it (coalesced, R2-142).
+  const input = [...walk(row)].find((n) => n.type === 'input' || n.type === ColorInput);
   const label = [...walk(row)].filter((n) => n.type === 'span').map(textOf)[1];
   return { swatch: input.props.value.toLowerCase(), label, enabled: !input.props.disabled };
 }

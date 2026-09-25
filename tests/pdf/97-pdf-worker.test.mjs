@@ -43,8 +43,13 @@ function scriptedWorker() {
   return w;
 }
 
-/** The PDF with its creation and modification dates taken out: the one thing two builds differ in. */
-const undated = (bytes) => new TextDecoder('latin1').decode(bytes).replace(/\/(CreationDate|ModDate) \(D:[^)]*\)/g, '');
+/**
+ * The PDF with what differs between any two builds taken out: its creation and modification dates and
+ * the random six-letter tag of each embedded font subset ("KYQJWI+NotoSans-Bold").
+ */
+const undated = (bytes) => new TextDecoder('latin1').decode(bytes)
+  .replace(/\/(CreationDate|ModDate) \(D:[^)]*\)/g, '')
+  .replace(/\/([A-Z]{6})\+/g, '/TAG+');
 const bytesOf = async (blob) => new Uint8Array(await blob.arrayBuffer());
 
 const sample = () => resume({
@@ -61,7 +66,7 @@ describe('the PDF is built in a Web Worker (R2-142, PERF-6)', () => {
     const fromWorker = await bytesOf(await build.buildResumePdf(r));
     assert.deepEqual(w.sent.map((j) => j.kind), ['resume'], 'the build went to the worker');
     const here = await render(r);
-    assert.equal(undated(fromWorker), undated(here), 'byte for byte the main thread’s PDF, but for its dates');
+    assert.equal(undated(fromWorker), undated(here), 'byte for byte the main thread’s PDF, but for its dates and font subset tags');
     assert.equal(allText(await read(fromWorker)), allText(await read(here)));
 
     const letter = await build.buildCoverLetterPdf({ ...r, coverLetter: { ...r.coverLetter, body: '' } }, { preview: true });
