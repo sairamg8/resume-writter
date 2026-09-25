@@ -7,6 +7,7 @@ import { generateAtsPlainText } from '@/utils/atsChecker';
 import { generateMarkdownResume } from '@/utils/markdownExport';
 import { generateCoverLetterPlainText } from '@/utils/coverLetterText';
 import { isJsonResume, jsonResumeToCpwtResume, cpwtResumeToJsonResume } from '@/utils/jsonResume';
+import { importDocument } from '@/utils/importDocument';
 
 /**
  * The editor's Export menu: PDF and Word of the tab on screen (résumé or cover letter), the
@@ -111,8 +112,14 @@ export function useEditorExports({ resume, activeTab, authUser, importResume, na
     }
   }
 
+  /** A PDF, Word, Markdown or text résumé, read best-effort into a new one (R2-148). */
+  function handleImportFile(file, asOriginal = false) {
+    setExportError(null);
+    return importDocument(file, { importResume, navigate, onError: setExportError, keep: keeps && asOriginal });
+  }
+
   return {
     exporting, exportError, setExportError, keeps, letterTab: activeTab === 'coverletter',
-    handleExportPDF, handleExportWord, handleExportJSON, handleExportMarkdown, handleExportAtsText, handleExportJsonResume, handleExportLetterText, handleImportJSON,
+    handleExportPDF, handleExportWord, handleExportJSON, handleExportMarkdown, handleExportAtsText, handleExportJsonResume, handleExportLetterText, handleImportJSON, handleImportFile,
   };
 }

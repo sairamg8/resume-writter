@@ -100,7 +100,7 @@ describe('export — Word and JSON', () => {
   it('Import JSON from the editor opens the imported resume', () => {
     const resume = buildTestState('executive').resumes[0];
     cy.openExportMenu();
-    cy.get('input[type="file"][accept=".json"]').selectFile({
+    cy.get('input[type="file"][accept^=".json"]').selectFile({
       contents: Cypress.Buffer.from(JSON.stringify({ ...resume, name: 'From the editor' })),
       fileName: 'from-editor.json',
     }, { force: true });

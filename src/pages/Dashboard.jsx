@@ -11,6 +11,7 @@ import { notSavedMessage } from '@/utils/storageBackup';
 import { comesStraightBack, isDemoAccount, isOriginal } from '@/utils/demoSeed';
 import { DEMO_ACCOUNTS } from '@/utils/demoAccounts';
 import { isJsonResume, jsonResumeToCpwtResume } from '@/utils/jsonResume';
+import { DOCUMENT_HINT, IMPORT_ACCEPT, importDocument, isDocumentFile } from '@/utils/importDocument';
 
 const IMPORT_BUTTON = 'flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 bg-white border border-gray-200 text-gray-700 rounded-lg text-xs sm:text-sm font-semibold hover:bg-gray-50 transition-colors shadow-sm whitespace-nowrap';
 
@@ -56,6 +57,15 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false }) {
   function handleImport(e) {
     const file = e.target.files?.[0];
     if (!file) return;
+    // A PDF, Word, Markdown or text résumé: read best-effort into a new one (R2-148).
+    if (isDocumentFile(file)) {
+      e.target.value = '';
+      importDocument(file, {
+        importResume: store.importResume, navigate, keep: keeps && importAsOriginal.current,
+        onError: (message) => { setImportError(message); setTimeout(() => setImportError(null), 8000); },
+      });
+      return;
+    }
     const reader = new FileReader();
     reader.onload = ev => {
       try {
@@ -105,9 +115,9 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false }) {
             </div>
           </div>
           <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-            <input ref={importRef} type="file" accept=".json" className="hidden" onChange={handleImport} />
+            <input ref={importRef} type="file" accept={IMPORT_ACCEPT} className="hidden" onChange={handleImport} />
             {keeps ? <ImportMenu onPick={pickImport} className={IMPORT_BUTTON} /> : (
-              <button onClick={() => pickImport(false)} className={IMPORT_BUTTON}>
+              <button onClick={() => pickImport(false)} className={IMPORT_BUTTON} title={`Import a résumé: a CPWT-CV or JSON Resume file (.json). ${DOCUMENT_HINT}`}>
                 <Upload size={14} /> Import
               </button>
             )}

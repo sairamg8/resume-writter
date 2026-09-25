@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { ChevronDown, Pin, Upload } from 'lucide-react';
+import { DOCUMENT_HINT } from '@/utils/importDocument';
 
 /** What "Import as my original" means — under it here and in the editor's Export menu. */
 export const ORIGINALS_HINT = 'Your originals come back whenever none of them is left.';
@@ -36,12 +37,13 @@ export function ImportMenu({ onPick, className }) {
       {open && (
         <div className="absolute right-0 top-full mt-1 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-20 py-1">
           <button onClick={() => pick(false)} className={item}>
-            <Upload size={14} className="text-gray-400" aria-hidden="true" /> Import JSON
+            <Upload size={14} className="text-gray-400" aria-hidden="true" /> Import JSON, PDF, Word or text
           </button>
           <button onClick={() => pick(true)} className={item}>
             <Pin size={14} className="text-amber-700" aria-hidden="true" /> Import as my original
           </button>
           <p className="px-3 pt-1 pb-2 text-[11px] text-gray-500">{ORIGINALS_HINT}</p>
+          <p className="px-3 pb-2 text-[11px] text-gray-500">{DOCUMENT_HINT}</p>
         </div>
       )}
     </div>

@@ -33,7 +33,7 @@ describe('regressions — resume store', () => {
     cy.store().its('deletedIds').should('have.length', 1);
 
     cy.get('button[title="Back to dashboard"]').click();
-    cy.get('input[type="file"][accept=".json"]').selectFile({
+    cy.get('input[type="file"][accept^=".json"]').selectFile({
       contents: Cypress.Buffer.from(JSON.stringify(buildTestState('classic').resumes[0])),
       fileName: 'r.json',
     }, { force: true });
