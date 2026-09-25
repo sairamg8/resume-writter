@@ -173,7 +173,7 @@ describe('the panel offers both (R2-146)', () => {
         view.act(() => reactProps(remove).onClick());
         assert.ok(writes.some(([k, v]) => k === 'nameFont' && v === ''), JSON.stringify(writes));
       } finally {
-        view.unmount();
+        await view.unmount();
       }
     } finally {
       if (saved) Object.defineProperty(globalThis, 'localStorage', saved);

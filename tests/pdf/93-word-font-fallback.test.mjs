@@ -86,7 +86,7 @@ describe('Typography says what Word shows (R2-146)', () => {
       }
       return null;
     } finally {
-      view.unmount();
+      await view.unmount();
     }
   };
 
