@@ -1,4 +1,6 @@
 import { letterheadCentered, templateId } from '@/constants/templates';
+import { isLetter } from '@/utils/letters';
+import { letterResumePhoto } from '@/utils/coverLetter';
 
 // A dashboard card's mock page: the résumé's template drawn in bars, so two résumés on different
 // templates look different at a glance (R2-133). Every way of making a résumé stores the same accent,
@@ -60,7 +62,25 @@ export default function ResumeThumbnail({ resume, accent }) {
   ));
 
   let page;
-  if (t === 'sidebar') {
+  if (isLetter(resume)) {
+    // A letter's card draws a letter (R2-135): its letterhead in the template's look, the recipient
+    // lines, three paragraphs and the signature — not a résumé's sections.
+    const cl = resume.coverLetter || {};
+    const letterPhoto = cl.showPhoto !== false && Boolean(cl.clPhoto || letterResumePhoto(personal));
+    page = (
+      <div className="p-1.5 space-y-1.5">
+        <Header ink={ink} sub={grey} center={center} photo={letterPhoto} photoRing={accent} />
+        <Bar w={1} h={0.75} color={accent} />
+        <div className="space-y-0.5"><Bar w={0.3} h={1} color={grey} /><Bar w={0.45} h={1} color={grey} /></div>
+        {[3, 3, 2].map((lines, i) => (
+          <div key={i} className="space-y-0.5">
+            {Array.from({ length: lines }, (_, j) => <Bar key={j} w={j === lines - 1 ? 0.6 : 0.95} h={1} color={soft} />)}
+          </div>
+        ))}
+        <Bar w={0.35} h={1.5} color={ink} />
+      </div>
+    );
+  } else if (t === 'sidebar') {
     const bg = s.sidebarBg || '#1e293b';
     page = (
       <div className="flex h-full">
@@ -102,7 +122,7 @@ export default function ResumeThumbnail({ resume, accent }) {
   }
 
   return (
-    <div data-thumb={t} className="w-20 h-28 rounded shadow-md flex flex-col overflow-hidden bg-white" style={{ border: `2px solid ${accent}30` }}>
+    <div data-thumb={isLetter(resume) ? 'letter' : t} className="w-20 h-28 rounded shadow-md flex flex-col overflow-hidden bg-white" style={{ border: `2px solid ${accent}30` }}>
       {page}
     </div>
   );

@@ -25,6 +25,7 @@ type Resume = {
   personal: Personal;
   sections: Section[];
   coverLetter: CoverLetter;
+  kind?: 'letter';            // a cover letter of its own, listed apart on the dashboard (R2-135)
 };
 ```
 
@@ -72,7 +73,11 @@ Template switch merges `TEMPLATE_STYLE_DEFAULTS` for heading style + title case.
 ### Cover letter
 
 `BASE_COVER_LETTER` shape: recipient, body, etc. (see `defaultDataContent.js`).  
-Edited via `updateCoverLetter` / `CoverLetterPanel`.
+Edited via `updateCoverLetter` / `CoverLetterPanel`.  
+A record with `kind: 'letter'` is a letter of its own (`src/utils/letters.js`): Dashboard → New Cover
+Letter makes one from a résumé (`store.createLetter`: its Personal Info, template, Design and sections
+copied, the letter's recipient block and body empty), and the dashboard lists it under Cover Letters.
+v13 marks an older build's 'Cover Letter' résumé with no entries as one.
 
 ## Job store document (`cpwtcv_jobs_v1`)
 
