@@ -21,7 +21,13 @@ function dragBy(dx) {
   });
 }
 
-const zoomIn = () => cy.contains('button', /^\+$/);
+/** The preview column: the handle's right neighbour. */
+const preview = () => handle().next();
+/**
+ * The preview's zoom-in "+", looked for in the preview column: the letter's Header Layout shows a
+ * "+" of its own earlier on the page, Name ↔ Contacts' stepper under Right of Name (R2-137).
+ */
+const zoomIn = () => preview().contains('button', /^\+$/);
 const zoomLabel = () => zoomIn().prev('span');
 const resumeTab = () => cy.contains('button', /^\s*Resume\s*$/);
 /** The editor panel's scroll box, which every tab shows in. */
