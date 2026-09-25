@@ -4,6 +4,7 @@ import { Label, SizeRow, SegmentControl, DesignSection } from '@/components/Desi
 import { FONT_SIZE_BASE, ICON_SIZE, SECTION_LETTER_SPACING, TYPE_SIZE_PT, deltaInRange } from '@/constants/designNumbers';
 import { titleTrackingPct } from '@/templates/pdf/shared/sectionHeadingLook';
 import { headerTemplateId } from '@/constants/templates';
+import { wordFontStandIns } from '@/utils/wordFonts';
 
 // The quick size buttons set the base size (pt) the PDF is laid out with.
 const SIZE_PRESETS = { small: 10, normal: 11, large: 12 };
@@ -67,6 +68,16 @@ export function TypographySection({ settings, template, updateSetting, onReset }
     setSavedCustomFonts(loadCustomFonts());
     setCustomFontInput('');
   }
+
+  // Word does not embed fonts: each one it may not find, and the installed font it shows instead —
+  // the stand-ins the Word export's font table names (wordFonts.js, R2-146).
+  const [standIns, setStandIns] = useState([]);
+  useEffect(() => {
+    let live = true;
+    wordFontStandIns(settings).then((list) => { if (live) setStandIns(list.filter((f) => f.standIn)); }, () => {});
+    return () => { live = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settings.font, settings.customFont, settings.nameFont, settings.headingFont]);
 
   const base = settings.fontSizeBase ?? 11;
   // No font set (older or imported résumés) prints in Noto Sans, so that is what is selected.
@@ -153,6 +164,11 @@ export function TypographySection({ settings, template, updateSetting, onReset }
           </button>
         </div>
         {fontError && <p id="custom-font-error" role="alert" className="mt-1 text-[11px] text-red-600">{fontError}</p>}
+        {standIns.length > 0 && (
+          <p data-word-fonts className="mt-2 text-[11px] text-gray-400 leading-relaxed">
+            Word does not embed fonts: where they are not installed, {standIns.map((f) => `${f.font} shows as ${f.standIn.name}`).join(', ')}. The PDF prints them as chosen.
+          </p>
+        )}
       </div>
 
       <div className="space-y-2">

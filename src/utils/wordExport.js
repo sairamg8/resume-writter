@@ -9,7 +9,7 @@ import { downloadBlob } from '@/utils/download';
 import { PAGE_SIZES, pageSizeOf } from '@/constants/pageSize';
 import { templateId } from '@/constants/templates';
 import { resolveTemplateSettings } from '@/templates/pdf/shared/templateSettings';
-import { resolveWordFont } from '@/utils/wordFonts';
+import { resolveWordFont, wordFontTable } from '@/utils/wordFonts';
 import { RUNNING_HEADER_PT, runningHeaderLead, runningHeaderTop } from '@/constants/runningHeader';
 import { textShades } from '@/templates/pdf/shared/pdfColors';
 
@@ -112,7 +112,7 @@ export async function renderResumeDocx(resume) {
       : paras)),
   ];
   const running = { name: personal?.name, color: resolveTemplateSettings(settings, own).textColor };
-  return Packer.toBlob(buildDocument(children, settings, { running }));
+  return Packer.toBlob(buildDocument(children, settings, { running }), false, [await wordFontTable(settings)]);
 }
 
 export async function exportToWord(resume, filename = 'resume.docx') {
@@ -121,7 +121,7 @@ export async function exportToWord(resume, filename = 'resume.docx') {
 
 /** The cover letter as a .docx Blob — the same content as the cover-letter PDF. */
 export async function renderCoverLetterDocx(resume) {
-  return Packer.toBlob(buildDocument(buildCoverLetter(resume), resume?.settings));
+  return Packer.toBlob(buildDocument(buildCoverLetter(resume), resume?.settings), false, [await wordFontTable(resume?.settings)]);
 }
 
 export async function exportCoverLetterToWord(resume, filename = 'cover-letter.docx') {
