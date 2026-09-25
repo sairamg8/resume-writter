@@ -20,9 +20,11 @@ const customised = (template) => resume({
     accentColor: '#e11d48', textColor: '#0f172a', sidebarBg: '#14532d', headerTextColor: '#fef3c7', nameColor: '#7c3aed', jobTitleColor: '#0d9488',
     iconSet: 'bold', iconSize: 17,
     font: 'lato', fontSize: 'large', fontSizeBase: 13, fontSizeNameDelta: 12, fontSizeSectionDelta: 3, fontSizeEntryDelta: 2, customFont: 'Fictional Grotesk',
+    sectionLetterSpacing: 12, fontSizeTitleDelta: 5,
     lineHeightValue: 1.8, marginV: 25, marginH: 30, sectionGap: 28, itemGap: 15,
     headingStyle: 'box', sectionTitleCase: 'normal', sectionBorderWidth: 4, sectionBorderColor: '#ea580c',
     dateFormat: 'YYYY-MM',
+    bulletStyle: 'dash',
     // None of these is any ↺'s: Header Customization's style, the paper, the uploads.
     contactStyle: 'bar', pageSize: 'LETTER', customContactIcons: { email: 'icon:send' },
   },
@@ -55,10 +57,13 @@ async function panel(r) {
 const CLASSIC = {
   Colors: [['accentColor', '#374151'], ['textColor', '#111111'], ['sidebarBg', '#1e293b'], ['headerTextColor', '#ffffff'], ['nameColor', ''], ['jobTitleColor', '']],
   'Contact icons': [['iconSet', 'filled'], ['iconSize', 11]],
-  Typography: [['font', 'notosans'], ['fontSize', 'normal'], ['fontSizeBase', 11], ['fontSizeNameDelta', 8], ['fontSizeSectionDelta', 1], ['fontSizeEntryDelta', 0], ['customFont', ''], ['iconSize', 11]],
+  Typography: [['font', 'notosans'], ['fontSize', 'normal'], ['fontSizeBase', 11], ['fontSizeNameDelta', 8], ['fontSizeSectionDelta', 1], ['fontSizeEntryDelta', 0], ['customFont', ''], ['iconSize', 11],
+    // Title Spacing and Job Title (R2-146): unset, each follows its template's own look.
+    ['sectionLetterSpacing', null], ['fontSizeTitleDelta', null]],
   Spacing: [['lineHeightValue', 1.5], ['marginV', 14], ['marginH', 18], ['sectionGap', 16], ['itemGap', 8]],
   'Section Headings': [['headingStyle', 'ruled'], ['sectionTitleCase', 'upper'], ['sectionBorderWidth', 1], ['sectionBorderColor', '']],
   Dates: [['dateFormat', 'asEntered']],
+  Lists: [['bulletStyle', 'bullet']],
 };
 
 /** `CLASSIC` with a template's own values over it: [section, key, value] each. */
@@ -69,7 +74,7 @@ const over = (changes) => {
 };
 
 describe('Design → a section\'s ↺ writes its own keys back to the template\'s values, and nothing else (R2-157)', () => {
-  it('Classic: each of the six ↺s writes exactly its section\'s keys, at Classic\'s values', async () => {
+  it('Classic: each of the seven ↺s writes exactly its section\'s keys, at Classic\'s values', async () => {
     const view = await panel(customised('classic'));
     try {
       for (const [title, expected] of Object.entries(CLASSIC)) {
