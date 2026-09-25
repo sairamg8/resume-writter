@@ -4,8 +4,8 @@
 //
 // A design writes only résumé settings, never a section's own (an entry layout the user chose stays
 // theirs), and records its id in `settings.templatePreset` so the picker marks it; picking a plain template
-// clears it. Every design goes through the ATS battery on every reader (tests/pdf/93-preset-ats.test.mjs),
-// its name and job title must read on its header (tests/unit/template-presets.unit.mjs), and its badge is
+// clears it. Every design goes through the ATS battery on every reader (tests/pdf/42-ats-fields.test.mjs),
+// its name and job title must read on its header (tests/pdf/93-template-presets.test.mjs), and its badge is
 // atsRating over its engine and settings — so a design cannot claim what its page does not print.
 
 import { templateId, templateStyleDefaults } from './templates.js';
