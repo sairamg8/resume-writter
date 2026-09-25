@@ -42,18 +42,24 @@ test('the panel and the PDF read the options from here', () => {
 });
 
 test('no file restates a photo option list — that is what let the clamp drift (AUD-25)', () => {
-  // A restated list is two of a control's values inside one bracketed literal, as the three copies
-  // this replaced were: `new Set(['circle', 'rounded', 'square'])`. Using a value on its own —
-  // `sh === 'rounded' ? …`, the geometry each option draws — is not a list and stays allowed.
+  // A restated list is two of a control's values as the items of one array of strings, as the three
+  // copies this replaced were — `new Set(['circle', 'rounded', 'square'])` — or as two `val:`s in one
+  // bracket, the shape of PHOTO_OPTIONS itself. Using a value on its own — `sh === 'rounded' ? …`, the
+  // geometry each option draws — is not a list and stays allowed; nor is a word a two-value control
+  // shares with the rest of the app in another list's objects (a board column's menu, `{ id: 'left',
+  // label: 'Move left' }`, beside Photo → Position's Left and Right).
   const files = fs.globSync('src/**/*.{js,jsx}', { cwd: new URL('../..', import.meta.url) })
     .filter((f) => !f.endsWith('constants/photoOptions.js'));
   assert.ok(files.length > 50, 'the scan found the source tree');
   for (const file of files) {
     const text = read(file);
     for (const [key, options] of Object.entries(PHOTO_OPTIONS)) {
-      const vals = options.map((o) => o.val).join('|');
-      const restated = new RegExp(`\\[[^\\]]*'(?:${vals})'[^\\]]*'(?:${vals})'[^\\]]*\\]`);
-      assert.doesNotMatch(text, restated, `${file} restates ${key} instead of importing it`);
+      const val = `'(?:${options.map((o) => o.val).join('|')})'`;
+      const str = `'[^'\\n]*'`;
+      const strings = new RegExp(`\\[\\s*(?:${str}\\s*,\\s*)*${val}\\s*,\\s*(?:${str}\\s*,\\s*)*${val}(?:\\s*,\\s*${str})*\\s*,?\\s*\\]`);
+      const vals = new RegExp(`\\[[^\\]]*\\bval:\\s*${val}[^\\]]*\\bval:\\s*${val}[^\\]]*\\]`);
+      assert.doesNotMatch(text, strings, `${file} restates ${key} instead of importing it`);
+      assert.doesNotMatch(text, vals, `${file} restates ${key}'s options instead of importing them`);
     }
   }
 });
