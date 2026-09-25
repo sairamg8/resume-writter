@@ -111,6 +111,8 @@ export function BannerTemplatePDF({ data }) {
         {strip > 0 && <View fixed style={{ position: 'absolute', top: 0, left: 0, right: 0, height: strip, backgroundColor: accent }} />}
         {/* First text on every page: after page 1 it prints "Name · Page 2" (ATS-7), below the strip. */}
         <PdfRunningHeader personal={personal} settings={settings} insetPt={strip} />
+        {/* Before the page's content: react-pdf repeats a fixed element only from where it stands on. */}
+        <PdfPageNumbers settings={settings} />
 
         <View style={{ paddingBottom: bannerPadY(settings), marginBottom: summary ? g.summaryGap : g.headerGapBelow }} wrap={false}>
           <View style={{ position: 'absolute', top: -bleedTop, left: -bleedSide, right: -bleedSide, bottom: 0, backgroundColor: accent }} />
@@ -153,7 +155,6 @@ export function BannerTemplatePDF({ data }) {
             />
           );
         })}
-        <PdfPageNumbers settings={settings} />
       </Page>
     </Document>
   );

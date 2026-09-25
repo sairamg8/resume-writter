@@ -134,6 +134,8 @@ export function SidebarTemplatePDF({ data }) {
         <View style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${SIDE_COL * 100}%`, backgroundColor: sidebarBg }} fixed />
         {/* First text on every page: after page 1 it prints "Name · Page 2" (ATS-7), over the main column. */}
         <PdfRunningHeader personal={personal} settings={settings} left={`${SIDE_COL * 100}%`} />
+        {/* Before the page's content: react-pdf repeats a fixed element only from where it stands on. */}
+        <PdfPageNumbers settings={settings} />
 
         <View style={{
           width: `${SIDE_COL * 100}%`,
@@ -248,7 +250,6 @@ export function SidebarTemplatePDF({ data }) {
             );
           })}
         </View>
-        <PdfPageNumbers settings={settings} />
       </Page>
     </Document>
   );

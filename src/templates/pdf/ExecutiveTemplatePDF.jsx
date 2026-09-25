@@ -85,6 +85,8 @@ export function ExecutiveTemplatePDF({ data }) {
       <Page size={pageSizeOf(settings)} style={pageStyle} wrap>
         {/* First on every page: after page 1 it prints "Name · Page 2" (ATS-7). */}
         <PdfRunningHeader personal={personal} settings={settings} />
+        {/* Before the page's content: react-pdf repeats a fixed element only from where it stands on. */}
+        <PdfPageNumbers settings={settings} />
         {/* Breakable: a summary longer than a page continues on the next (R2-046); the name row never splits. */}
         <View style={[{ marginBottom: headerMb }, headerBorderStyle]}>
           <View style={{
@@ -133,7 +135,6 @@ export function ExecutiveTemplatePDF({ data }) {
             />
           );
         })}
-        <PdfPageNumbers settings={settings} />
       </Page>
     </Document>
   );

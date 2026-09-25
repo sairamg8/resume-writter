@@ -76,6 +76,8 @@ export function ModernTemplatePDF({ data }) {
       <Page size={pageSizeOf(settings)} style={pageStyle} wrap>
         {/* First on every page: after page 1 it prints "Name · Page 2" (ATS-7). */}
         <PdfRunningHeader personal={personal} settings={settings} />
+        {/* Before the page's content: react-pdf repeats a fixed element only from where it stands on. */}
+        <PdfPageNumbers settings={settings} />
         {/* Personal Info → Header spacing: Banner top & bottom and Banner sides pad it (unset, px-6 py-5:
             15 / 18 pt), Header ↔ First section spaces what follows (unset, Between Sections). */}
         <View style={{
@@ -130,7 +132,6 @@ export function ModernTemplatePDF({ data }) {
             />
           );
         })}
-        <PdfPageNumbers settings={settings} />
       </Page>
     </Document>
   );
