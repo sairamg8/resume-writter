@@ -47,15 +47,16 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false, publicL
     importRef.current?.click();
   }
 
-  function handleSelectStarter(starterId) {
+  // `look`: a template or design picked beside the starters (D1), else each starter's own.
+  function handleSelectStarter(starterId, look = null) {
     setStarterModalOpen(false);
-    const id = store.createResume('Untitled Resume', starterId);
+    const id = look ? store.createResume('Untitled Resume', starterId, look) : store.createResume('Untitled Resume', starterId);
     navigate(`/resume/${id}`);
   }
 
-  function handleSelectBlank() {
+  function handleSelectBlank(look = null) {
     setStarterModalOpen(false);
-    const id = store.createResume();
+    const id = look ? store.createResume('Untitled Resume', null, look) : store.createResume();
     navigate(`/resume/${id}`);
   }
 

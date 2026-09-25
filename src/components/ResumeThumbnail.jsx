@@ -1,4 +1,4 @@
-import { letterheadCentered, templateId } from '@/constants/templates';
+import { headerTemplateId, letterheadCentered } from '@/constants/templates';
 import { isLetter } from '@/utils/letters';
 import { letterResumePhoto } from '@/utils/coverLetter';
 import { pageSizeOf } from '@/constants/pageSize';
@@ -37,8 +37,9 @@ function Section({ heading, line, lines = 2, center = false }) {
 }
 
 export default function ResumeThumbnail({ resume, accent }) {
-  const t = templateId(resume.template);
   const s = resume.settings || {};
+  // The page it prints: the Sidebar's Single · ATS-safe Layout prints Classic's (R2-139 A9's card).
+  const t = headerTemplateId(resume.template, s);
   const personal = resume.personal || {};
   const hidden = Array.isArray(personal.hiddenFields) ? personal.hiddenFields : [];
   const photo = Boolean(personal.photo) && !hidden.includes('photo');

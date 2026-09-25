@@ -3,6 +3,9 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { PenLine, Eye } from 'lucide-react';
 
 import DesignPanel from '@/components/DesignPanel';
+import { TemplateGallery } from '@/components/TemplateGallery';
+import { ToastProvider } from '@/components/ui/Toast';
+import { savedDesigns } from '@/constants/templatePresets';
 import CoverLetterPanel from '@/components/CoverLetterPanel';
 import AtsCheckerPanel from '@/components/AtsCheckerPanel';
 import { EditorHeader, EditorAlerts, EditorModeBar } from '@/components/EditorHeader';
@@ -37,6 +40,15 @@ export function Editor({ store, auth, sync }) {
   const [forceOpenKey, setForceOpenKey] = useState(0);
   const [previewZoom, setPreviewZoom] = useState(1);
   const [shareOpen, setShareOpen] = useState(false);
+  // Design → Template open or collapsed, kept here so a trip to another tab keeps it (A12), and the
+  // template gallery (A2).
+  const [templateOpen, setTemplateOpen] = useState(true);
+  const [galleryOpen, setGalleryOpen] = useState(false);
+  // The designs the user saved, from every résumé that holds one (B4), and the store's look actions.
+  const designs = savedDesigns(store.appState.resumes);
+  const lookActions = {
+    setTemplate: store.setTemplate, updateSetting: store.updateSetting, applyDesign: store.applyDesign, restoreDesign: store.restoreDesign,
+  };
 
   const exportMenu = useEditorExports({
     resume, activeTab, authUser: auth?.user, importResume: store.importResume, navigate,
@@ -77,6 +89,8 @@ export function Editor({ store, auth, sync }) {
 
   return (
     /* fixed inset-0: never let document/body scroll (up or down) and tear the split layout */
+    // The notices of the editor (a template switch's Undo, A4).
+    <ToastProvider>
     <div className="fixed inset-0 z-20 flex overflow-hidden bg-[#f5f3ef]">
       <div
         className={`${
@@ -117,7 +131,17 @@ export function Editor({ store, auth, sync }) {
 
           {activeTab === 'design' && (
             <div className="px-4 py-4">
-              <DesignPanel resume={resume} updateSetting={store.updateSetting} setTemplate={store.setTemplate} resetSettings={store.resetSettings} />
+              <DesignPanel
+                resume={resume}
+                {...lookActions}
+                resetSettings={store.resetSettings}
+                designs={designs}
+                saveDesign={store.saveDesign}
+                deleteDesign={store.deleteDesign}
+                onBrowseTemplates={() => setGalleryOpen(true)}
+                templateOpen={templateOpen}
+                onTemplateOpenChange={setTemplateOpen}
+              />
             </div>
           )}
 
@@ -187,6 +211,8 @@ export function Editor({ store, auth, sync }) {
           </button>
         </div>
       )}
+      <TemplateGallery open={galleryOpen} onClose={() => setGalleryOpen(false)} resume={resume} designs={designs} {...lookActions} />
     </div>
+    </ToastProvider>
   );
 }

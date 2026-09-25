@@ -29,6 +29,7 @@ resume-writter/
 │   │   ├── PdfPreview.jsx     # the preview: the exported PDF, painted by pdf.js
 │   │   ├── PersonalInfoEditor*.jsx, RichTextEditor.jsx, SectionEditor*.jsx
 │   │   ├── ResumeCard.jsx, ResumeThumbnail.jsx, StarterTemplateModal.jsx
+│   │   ├── TemplateGallery.jsx, TemplateThumb.jsx  # Browse templates, and each card's page picture
 │   │   ├── ErrorBoundary.jsx, RecoveryNotice.jsx
 │   │   ├── job/               # Job Tracker pieces (kanban, list, detail tabs)
 │   │   ├── board/             # Boards pieces (cards, columns, labels)
@@ -37,7 +38,8 @@ resume-writter/
 │   ├── constants/             # templateTable.js + templates.js, resume.js (section groups), jobs.js,
 │   │                          # boards.js, pageSize.js, pageMargins.js, headerSpacing.js, photoOptions.js…
 │   ├── hooks/
-│   │   ├── useResumeStore.js, useResumeSectionActions.js, useResumeSyncActions.js
+│   │   ├── useResumeStore.js, useResumeSectionActions.js, useResumeSyncActions.js, useResumeDesignActions.js
+│   │   ├── usePickCard.js, usePicture.js  # a picker card picked (with Undo); a page picture once on screen
 │   │   ├── useAuth.js, useCloudSync.js, useCollectionSync.js (jobs + boards sync), useDemoSeed.js
 │   │   ├── useJobStore.js, useJobStages.js, useBoardStore.js
 │   │   ├── useEditorExports.js, useEditorTab.js, usePanelResize.js, useOpenResume.js
@@ -49,6 +51,8 @@ resume-writter/
 │   └── utils/
 │       ├── normalizeResume.js, dataVersion.js, defaultData*.js, starter*.js  # the data model
 │       ├── pdfExportReactPDF.js                                      # PDF render + download
+│       ├── templatePicker.js   # Design → Template's cards, built from the table, designs and saved designs
+│       ├── pageImage.js, pageImageStore.js, pdfjsLoader.js  # page-1 pictures: painted, queued, kept
 │       ├── wordExport*.js, markdownExport.js, atsPlainText.js, jsonResume*.js  # the other exporters
 │       ├── atsChecker.js, bulletOptimizer.js, coverLetterGenerator.js
 │       ├── cloudSync*.js, syncMerge.js, localDeletions.js, demo*.js, siteOwner.js, firebase.js

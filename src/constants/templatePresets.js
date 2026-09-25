@@ -8,7 +8,7 @@
 // its name and job title must read on its header (tests/pdf/93-template-presets.test.mjs), and its badge is
 // atsRating over its engine and settings — so a design cannot claim what its page does not print.
 
-import { templateId, templateStyleDefaults } from './templates.js';
+import { offersTemplate, templateId, templateStyleDefaults } from './templates.js';
 
 /**
  * Every design, in the order the picker lists them:
@@ -76,15 +76,29 @@ export const TEMPLATE_PRESETS = {
 export const PRESET_IDS = Object.keys(TEMPLATE_PRESETS);
 
 /**
+ * A design the user saved (B4): `settings.myDesigns[id]`, a { label, engine, settings } of their own look,
+ * where it is one — a name, a template the app offers and a map of settings. The résumé carries the
+ * designs it was saved on or picked from, so the design it is on syncs, backs up and exports with it.
+ */
+export function ownDesign(settings, id) {
+  const d = settings?.myDesigns;
+  const own = d && typeof d === 'object' && typeof id === 'string' && Object.hasOwn(d, id) ? d[id] : null;
+  const valid = own && typeof own === 'object' && typeof own.label === 'string' && offersTemplate(own.engine)
+    && own.settings && typeof own.settings === 'object' && !Array.isArray(own.settings);
+  return valid ? own : null;
+}
+
+/**
  * The design a résumé on `template` with `settings` is on: `settings.templatePreset` where it names a
- * design whose engine is the template the résumé prints — { id, ...preset } — else null. A design left
- * on another template (an imported file, an older build) is none.
+ * design — one of the app's, else one the user saved (ownDesign) — whose engine is the template the
+ * résumé prints — { id, ...preset } — else null. A design left on another template (an imported file,
+ * an older build) is none.
  */
 export function presetOf(settings, template) {
   const id = settings?.templatePreset;
-  if (typeof id !== 'string' || !Object.hasOwn(TEMPLATE_PRESETS, id)) return null;
-  const p = TEMPLATE_PRESETS[id];
-  return p.engine === templateId(template) ? { id, ...p } : null;
+  if (typeof id !== 'string') return null;
+  const p = Object.hasOwn(TEMPLATE_PRESETS, id) ? TEMPLATE_PRESETS[id] : ownDesign(settings, id);
+  return p && templateId(p.engine) === templateId(template) ? { id, ...p } : null;
 }
 
 /**
@@ -96,3 +110,52 @@ export const designStyle = (template, settings) => ({ ...templateStyleDefaults(t
 
 /** A design's settings as the résumé stores them once it is picked: its own, and its id. */
 export const presetSettings = (id) => (Object.hasOwn(TEMPLATE_PRESETS, id) ? { ...TEMPLATE_PRESETS[id].settings, templatePreset: id } : {});
+
+// What of a résumé's settings is its look, for a design the user saves (B4): everything but the contact
+// icons they uploaded (their own images), the paper (where the résumé is sent, kept by Reset too), and
+// the design bookkeeping itself. Only plain values: a look is font, colour, size and layout choices —
+// and null, which is one: Job Title's size and Title Spacing unset print their own (R2-146), so a
+// design saved with them unset brings them unset.
+const NOT_A_LOOK = ['customContactIcons', 'pageSize', 'templatePreset', 'myDesigns'];
+
+/** The look `settings` print: what a design saved from them brings (ownDesign). */
+export function designLook(settings) {
+  return Object.fromEntries(Object.entries(settings || {}).filter(([k, v]) => !NOT_A_LOOK.includes(k)
+    && (v === null || typeof v === 'string' || typeof v === 'boolean' || (typeof v === 'number' && Number.isFinite(v)))));
+}
+
+/** `settings` holding the design `id` the user saved (`design`: { label, engine, settings }). */
+export const withOwnDesign = (settings, id, design) => ({
+  ...settings,
+  myDesigns: { ...(ownDesignsOf(settings)), [id]: { label: design.label, engine: templateId(design.engine), settings: designLook(design.settings) } },
+});
+
+/** The designs `settings` hold, as stored — a map by id (none: {}). */
+function ownDesignsOf(settings) {
+  const d = settings?.myDesigns;
+  return d && typeof d === 'object' && !Array.isArray(d) ? d : {};
+}
+
+/**
+ * Every design the user saved, across `resumes` (each carries the ones it was saved on or picked from):
+ * [{ id, label, engine, settings }], one per id, by name. The picker lists them with the app's designs.
+ */
+export function savedDesigns(resumes) {
+  const byId = new Map();
+  for (const r of resumes || []) {
+    for (const id of Object.keys(ownDesignsOf(r?.settings))) {
+      const d = ownDesign(r.settings, id);
+      if (d && !byId.has(id) && !Object.hasOwn(TEMPLATE_PRESETS, id)) byId.set(id, { id, ...d });
+    }
+  }
+  return [...byId.values()].sort((a, b) => a.label.localeCompare(b.label));
+}
+
+/** `settings` without the saved design `id`: gone from its designs, and no longer the one it is on (its look stays). */
+export function withoutOwnDesign(settings, id) {
+  const mine = ownDesignsOf(settings);
+  if (!Object.hasOwn(mine, id) && settings?.templatePreset !== id) return settings;
+  const out = { ...settings, myDesigns: Object.fromEntries(Object.entries(mine).filter(([k]) => k !== id)) };
+  if (out.templatePreset === id) delete out.templatePreset;
+  return out;
+}
