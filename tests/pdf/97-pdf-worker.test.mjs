@@ -133,6 +133,19 @@ describe('the PDF is built in a Web Worker (R2-142, PERF-6)', () => {
     await assert.rejects(failing, /Font family not registered: Nope/);
   });
 
+  it('a reply the worker cannot send fails that build with its message, and the next job still runs', async () => {
+    const replies = [];
+    let first = true;
+    const queue = jobs.runJobs((reply) => {
+      if (first) { first = false; throw new Error('DataCloneError: the reply could not be cloned'); }
+      replies.push(reply);
+    });
+    queue({ id: 1, kind: 'warm', resume: sample() });
+    await queue({ id: 2, kind: 'warm', resume: sample() });
+    assert.deepEqual(replies.map((r) => [r.id, r.error]), [[1, 'DataCloneError: the reply could not be cloned'], [2, undefined]],
+      'before: the queue stopped at the throw, and no later job was answered');
+  });
+
   it('a worker that fails to start hands its builds to the main thread, and so does every build after', async () => {
     const w = scriptedWorker();
     build._setPdfWorkerForTest(() => w);

@@ -22,11 +22,18 @@ export async function runJob({ id, kind, resume, options }) {
   }
 }
 
-/** A queue that runs each job after the one before it and hands its reply to `reply`. */
+/**
+ * A queue that runs each job after the one before it and hands its reply to `reply`. A reply that
+ * cannot be sent (postMessage throws) is answered with its error instead, so that build fails with
+ * a message rather than waiting for good — and the queue goes on: one throw left `last` rejected,
+ * and every later job was skipped with no reply, the preview and Export PDF waiting forever.
+ */
 export function runJobs(reply) {
   let last = Promise.resolve();
   return (job) => {
-    last = last.then(() => runJob(job)).then(reply);
+    last = last.then(() => runJob(job)).then(reply)
+      .catch((e) => reply({ id: job?.id, error: e?.message || String(e) }))
+      .catch(() => { /* not even the error could be sent: the next job still runs */ });
     return last;
   };
 }
