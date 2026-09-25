@@ -43,7 +43,11 @@ function Runs({ runs, color }) {
   return runs.map((run, i) => {
     const style = runStyle(run, color);
     const href = run.href && safeHref(run.href);
-    if (href) return <Link key={i} src={href} style={{ ...style, ...look }}>{run.text}</Link>;
+    if (href) {
+      // Underline adds its line to a struck-through link's, as Word keeps both.
+      const deco = look.textDecoration && run.strike ? { textDecoration: 'underline line-through' } : {};
+      return <Link key={i} src={href} style={{ ...style, ...look, ...deco }}>{run.text}</Link>;
+    }
     return Object.keys(style).length ? <Text key={i} style={style}>{run.text}</Text> : run.text;
   });
 }

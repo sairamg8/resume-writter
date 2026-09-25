@@ -144,3 +144,25 @@ describe('Design → Links prints every link Plain, Underlined or in the accent 
     }
   });
 });
+
+// The review of R2-147: Underline replaced a struck-through link's line-through with its underline in
+// the PDF, while Word kept the strike and added the underline. Now both lines print.
+describe('Underline over a struck-through link', () => {
+  const STRUCK = 'the old ledger';
+  /** The heights (rounded) of the flat lines stroked across the run holding `text`: an underline, a strike. */
+  function linesAcross(snap, text) {
+    const at = item(snap, text);
+    assert.ok(at, `"${text}" prints`);
+    return [...new Set(snap.paint.filter((p) => p.paint === 'stroke' && p.page === at.page && p.y1 - p.y0 < 1.5
+      && Math.abs(p.y0 - at.y) < 12 && p.x0 >= at.x - 1 && p.x1 <= at.x + at.w + 1 && p.x1 - p.x0 > 10).map((p) => Math.round(p.y0)))];
+  }
+  const struckCv = (linkStyle) => cv('classic', linkStyle, { personal: { summary: `<p>See <a href="https://avery.dev/old"><s>${STRUCK}</s></a> first.</p>` } });
+
+  it('keeps the strike and adds the underline', async () => {
+    const plain = linesAcross(await shot(struckCv('plain')), STRUCK);
+    const under = linesAcross(await shot(struckCv('underline')), STRUCK);
+    assert.equal(plain.length, 1, `Plain: the strike alone (${plain})`);
+    assert.equal(under.length, 2, `Underline: the strike and the underline (${under})`);
+    assert.ok(under.includes(plain[0]), 'the strike where Plain draws it');
+  });
+});
