@@ -3,6 +3,11 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { fileURLToPath, URL } from 'node:url'
 import { ownerResume } from './vite-plugin-owner-resume.js'
+import { refusedBuild } from './vite-deploy-guard.js'
+
+// A branch's build on Cloudflare deploys the live site: only master's may (vite-deploy-guard.js).
+const refused = refusedBuild()
+if (refused) throw new Error(refused)
 
 export default defineConfig({
   // ownerResume: the owner's git-ignored résumé on the dev server only; null in every build.
