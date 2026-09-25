@@ -15,7 +15,8 @@ export function PageNumbersSection({ settings, updateSetting, onReset }) {
         onChange={v => updateSetting('pageNumbers', v)}
       />
       <p className="text-[11px] text-gray-400 leading-relaxed">
-        At the bottom right of every page, inside the bottom margin, which grows to 10 mm if it is smaller.
+        At the bottom right of every page of the résumé, inside the bottom margin, which grows to 10 mm if it
+        is smaller. The cover letter prints none.
       </p>
     </DesignSection>
   );
