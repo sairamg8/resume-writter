@@ -99,7 +99,8 @@ export const onTimelineRail = (type) => Object.hasOwn(FIELDS, type) || !KNOWN.in
 /** A section whose entries print on the rail. */
 function TimelineSection({ section, settings, marginBottom, spaceBefore, itemGap, italicSubs, centered }) {
   const s = section.settings || {};
-  const fields = FIELDS[section.type] || FIELDS.custom;
+  // By its own key only: a type named like an Object member ('constructor') is a custom section's (R2-109).
+  const fields = Object.hasOwn(FIELDS, section.type) ? FIELDS[section.type] : FIELDS.custom;
   const items = (section.items || []).filter((i) => i.visible !== false);
   const entrySize = (settings?.fontSizeBase || 11) + (settings?.fontSizeEntryDelta ?? 0);
   const lineH = settings?.lineHeightValue || 1.5;
