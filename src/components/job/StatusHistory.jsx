@@ -15,9 +15,9 @@ export function StatusHistory({ history }) {
   const withdrawals = history.filter(h => h.status === 'withdrawn').length;
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+    <div className="bg-white rounded-md border border-line p-5 shadow-sm">
       <div className="flex items-center justify-between mb-4">
-        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Application History</p>
+        <p className="text-[10px] font-bold text-ink-subtlest uppercase tracking-widest">Application History</p>
         <div className="flex gap-2">
           {rejections > 0 && (
             <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-red-50 text-red-600 border border-red-100">
@@ -25,7 +25,7 @@ export function StatusHistory({ history }) {
             </span>
           )}
           {withdrawals > 0 && (
-            <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-gray-100 text-gray-500 border border-gray-200">
+            <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-neutral-fill text-ink-subtle border border-line">
               Withdrawn {withdrawals}×
             </span>
           )}
@@ -34,7 +34,7 @@ export function StatusHistory({ history }) {
 
       <div className="relative pl-5">
         {/* Vertical rail */}
-        <div className="absolute left-[7px] top-2 bottom-2 w-px bg-gray-100" />
+        <div className="absolute left-[7px] top-2 bottom-2 w-px bg-neutral-fill" />
 
         <div className="space-y-4">
           {/* '→ reopened' only when a pipeline status follows a closed one (J-20). */}
@@ -71,11 +71,11 @@ export function StatusHistory({ history }) {
                       </span>
                     )}
                     {entry.reopened && (
-                      <span className="text-[10px] text-gray-400">→ reopened</span>
+                      <span className="text-[10px] text-ink-subtlest">→ reopened</span>
                     )}
                   </div>
                   {entry.at !== null && (
-                    <p className="text-[10px] text-gray-400 mt-0.5">{fmt(entry.at)}</p>
+                    <p className="text-[10px] text-ink-subtlest mt-0.5">{fmt(entry.at)}</p>
                   )}
                 </div>
               </div>

@@ -24,21 +24,21 @@ export function OverviewTab({ job, set, resumes, navigate }) {
     <div className="grid grid-cols-2 gap-5">
 
       {/* Pipeline — always interactive so user can reopen */}
-      <div className="col-span-2 bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
-        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-5">Application Stage</p>
+      <div className="col-span-2 bg-white rounded-md border border-line p-5 shadow-sm">
+        <p className="text-[10px] font-bold text-ink-subtlest uppercase tracking-widest mb-5">Application Stage</p>
         <Pipeline status={job.status} onChange={val => set('status', val)} />
       </div>
 
       {isTerminal && (
-        <div className="col-span-2 flex items-center gap-3 px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl">
-          <Info size={14} className="text-gray-400 shrink-0" />
-          <p className="text-sm text-gray-500">
-            This application is <span className="font-semibold text-gray-700">{job.status === 'rejected' ? 'Rejected' : 'Withdrawn'}</span>. Restart it from the pipeline above if it reopens.
+        <div className="col-span-2 flex items-center gap-3 px-4 py-3 bg-sunken border border-line rounded-md">
+          <Info size={14} className="text-ink-subtlest shrink-0" />
+          <p className="text-sm text-ink-subtle">
+            This application is <span className="font-semibold text-ink">{job.status === 'rejected' ? 'Rejected' : 'Withdrawn'}</span>. Restart it from the pipeline above if it reopens.
           </p>
         </div>
       )}
       {isOnHold && (
-        <div className="col-span-2 flex items-center gap-3 px-4 py-3 bg-amber-50 border border-amber-200 rounded-2xl">
+        <div className="col-span-2 flex items-center gap-3 px-4 py-3 bg-amber-50 border border-amber-200 rounded-md">
           <Info size={14} className="text-amber-500 shrink-0" />
           <p className="text-sm text-amber-700">Application is <span className="font-semibold">On Hold</span> — resume or close it from the pipeline above.</p>
         </div>
@@ -46,15 +46,15 @@ export function OverviewTab({ job, set, resumes, navigate }) {
 
       {/* Left col — Role Info */}
       <div className="space-y-4">
-        <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm space-y-4">
-          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Role Info</p>
+        <div className="bg-white rounded-md border border-line p-5 shadow-sm space-y-4">
+          <p className="text-[10px] font-bold text-ink-subtlest uppercase tracking-widest">Role Info</p>
           <Field label="Company"          value={job.company}   onChange={v => set('company', v)}  icon={Briefcase} placeholder="Company name" />
           <Field label="Role / Position"  value={job.role}      onChange={v => set('role', v)}     icon={FileText}  placeholder="Job title" />
           {job.stage && (
             <div className="flex items-center gap-2 px-3 py-2">
-              <Briefcase size={13} className="text-gray-300 shrink-0" />
-              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mr-2">Stage</span>
-              <span className="text-xs font-semibold text-indigo-700 bg-indigo-50 px-2.5 py-0.5 rounded-full border border-indigo-200">{job.stage}</span>
+              <Briefcase size={13} className="text-ink-subtlest shrink-0" />
+              <span className="text-[10px] font-bold text-ink-subtlest uppercase tracking-widest mr-2">Stage</span>
+              <span className="text-xs font-semibold text-brand bg-brand-subtle px-2.5 py-0.5 rounded-full border border-brand-subtle-hover">{job.stage}</span>
             </div>
           )}
           <Field label="Location"         value={job.location}  onChange={v => set('location', v)} icon={MapPin}    placeholder="City / Remote" />
@@ -65,25 +65,25 @@ export function OverviewTab({ job, set, resumes, navigate }) {
 
       {/* Right col — Timeline & Contact */}
       <div className="space-y-4">
-        <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm space-y-4">
-          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Timeline & Contact</p>
+        <div className="bg-white rounded-md border border-line p-5 shadow-sm space-y-4">
+          <p className="text-[10px] font-bold text-ink-subtlest uppercase tracking-widest">Timeline & Contact</p>
 
           <Field label="Applied Date"   value={job.appliedDate} onChange={v => set('appliedDate', v)} type="date" icon={Calendar} />
 
           {/* Deadline */}
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-widest mb-1 text-gray-400">
+            <p className="text-[10px] font-bold uppercase tracking-widest mb-1 text-ink-subtlest">
               Deadline / Follow-up
             </p>
-            <div className="flex items-center gap-2 px-3 py-2 rounded-xl border border-transparent hover:border-gray-200 hover:bg-gray-50 transition-all">
-              <Calendar size={13} className={`shrink-0 ${isDeadlinePast ? 'text-red-400' : isDeadlineSoon ? 'text-amber-400' : 'text-gray-400'}`} />
+            <div className="flex items-center gap-2 px-3 py-2 rounded-md border border-transparent hover:border-line hover:bg-sunken transition-all">
+              <Calendar size={13} className={`shrink-0 ${isDeadlinePast ? 'text-red-400' : isDeadlineSoon ? 'text-amber-400' : 'text-ink-subtlest'}`} />
               <input
                 type="date"
                 aria-label="Deadline / Follow-up"
                 value={job.deadline || ''}
                 onChange={e => set('deadline', e.target.value)}
                 className={`flex-1 text-sm bg-transparent focus:outline-none ${
-                  isDeadlinePast ? 'text-red-600 font-medium' : isDeadlineSoon ? 'text-amber-600 font-medium' : 'text-gray-800'
+                  isDeadlinePast ? 'text-red-600 font-medium' : isDeadlineSoon ? 'text-amber-600 font-medium' : 'text-ink'
                 }`}
               />
             </div>
@@ -98,16 +98,16 @@ export function OverviewTab({ job, set, resumes, navigate }) {
 
           {/* Resume */}
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-widest mb-1 text-gray-400">
+            <p className="text-[10px] font-bold uppercase tracking-widest mb-1 text-ink-subtlest">
               Resume Used
             </p>
-            <div className="flex items-center gap-2 px-3 py-2 rounded-xl border border-transparent hover:border-gray-200 hover:bg-gray-50 transition-all">
-              <FileText size={13} className="text-gray-400 shrink-0" />
+            <div className="flex items-center gap-2 px-3 py-2 rounded-md border border-transparent hover:border-line hover:bg-sunken transition-all">
+              <FileText size={13} className="text-ink-subtlest shrink-0" />
               <select
                 aria-label="Resume used"
                 value={job.resumeId || ''}
                 onChange={e => set('resumeId', e.target.value)}
-                className="flex-1 text-sm bg-transparent focus:outline-none cursor-pointer text-gray-700"
+                className="flex-1 text-sm bg-transparent focus:outline-none cursor-pointer text-ink"
               >
                 <option value="">— Not linked yet —</option>
                 {/* A linked résumé deleted since: said so, not 'Not linked yet' (J-21). */}
@@ -117,7 +117,7 @@ export function OverviewTab({ job, set, resumes, navigate }) {
               {resumeLink.state === 'linked' && (
                 <button
                   onClick={() => navigate(`/resume/${job.resumeId}`)}
-                  className="text-indigo-500 hover:text-indigo-700 shrink-0"
+                  className="text-brand hover:text-brand shrink-0"
                   title="Open resume"
                 >
                   <ExternalLink size={11} />

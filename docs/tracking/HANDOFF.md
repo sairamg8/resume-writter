@@ -36,7 +36,7 @@ session per cluster, each from `c5acb93` on `claude/wf-<cluster>`, per CLUSTER-P
 | layouts | R2-138 B2: the designed layouts as new engines | session_018uk2NM3EkjexkRoDkRHEEz |
 | picker | R2-139 non-a11y (A1–A4, A9, A12, B3, C1, D1, E1, F1), R2-138 B4 | session_01MkCArZxvT5mbX1ELBQKrAu |
 
-Jira revamp: its two failures are with agents in `/home/user/jira-revamp`; a trial merge onto `c5acb93` conflicts only
+Jira revamp (lane of session_01ASmJ6BQpqJE5fifosw4z8y, `claude/jira-revamp`: Boards and the Job Tracker in a tracker look — top bar, project tree, Board/IssueCard, issue view, Backlog, Summary/Timeline/Calendar/List, Your work; UI only) is **merged into the work branch**; its two failures are with agents in `/home/user/jira-revamp` (R6-2's spec: `40800ce`); a trial merge onto `c5acb93` conflicts only
 in `src/pages/JobTracker.jsx` (resolved: the revamp's page plus Round 2's SyncHeldNotice; rerere recorded) and this file.
 Order: Round 2 green → `master` = `c5acb93`; then the revamp merged into the work branch, one gate, `master` again.
 

@@ -44,13 +44,14 @@ describe('regressions — deletes ask first', () => {
 
   it('job tracker: kanban and list deletes ask first', () => {
     cy.seedAndVisit('/#/jobs', null);
-    answerConfirm(false);
+    // The question is the workspace's own dialog, not the browser's.
     cy.get('button[title="Delete application"]').first().click({ force: true });
-    cy.get('@confirm').should('have.been.calledWith', 'Delete Google?');
+    cy.contains('[role="alertdialog"]', 'Delete Google?').contains('button', 'Cancel').click();
     cy.jobStore().its('jobs').should('have.length', 1);
 
     cy.get('button[title="List view"]:visible').click(); // one toggle for phones, one from md up
     cy.get('button[title="Delete application"]').first().click({ force: true });
+    cy.contains('[role="alertdialog"]', 'Delete Google?').contains('button', 'Cancel').click();
     cy.jobStore().its('jobs').should('have.length', 1);
   });
 });

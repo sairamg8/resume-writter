@@ -168,7 +168,7 @@ export function MenuList({
             >
               {hasChecks && (
                 <span className="flex w-4 shrink-0 justify-center" aria-hidden="true">
-                  {item.checked && <Check size={14} className="text-indigo-600" />}
+                  {item.checked && <Check size={14} className="text-brand" />}
                 </span>
               )}
               {Icon && <Icon size={15} aria-hidden="true" className={cx('shrink-0', item.danger ? 'text-red-500' : 'text-slate-400')} />}

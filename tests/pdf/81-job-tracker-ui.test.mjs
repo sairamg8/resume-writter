@@ -241,15 +241,15 @@ it('the list\'s sort headers are buttons Tab reaches, and each header says how i
 // ── Board cards ──────────────────────────────────────────────────────────────────────────────
 
 it('R2-039: a focused board card opens on Enter and on Space; keys from inside it are left alone', async () => {
-  const { SortableCard } = await loadModule('/src/components/board/BoardCard.jsx');
+  const { SortableIssueCard } = await loadModule('/src/components/board/IssueCard.jsx');
   const { DndContext } = await import('@dnd-kit/core');
   const { SortableContext } = await import('@dnd-kit/sortable');
   const { createElement: h } = await import('react');
   const opened = [];
-  const card = { id: 'c1', title: 'Write the brief', labels: [], checklist: [] };
+  const card = { id: 'c1', type: 'task', priority: 'medium', title: 'Write the brief', labels: [], checklist: [], comments: [] };
   function Harness() {
     return h(DndContext, { onDragEnd() {}, sensors: [] }, h(SortableContext, { items: ['c1'] },
-      h(SortableCard, { card, listId: 'l1', onOpen: (...a) => opened.push(a) })));
+      h(SortableIssueCard, { card, listId: 'l1', issueKey: 'LIFE-1', onOpen: () => opened.push('c1') })));
   }
   const page = await render(Harness, {});
   try {
@@ -259,7 +259,7 @@ it('R2-039: a focused board card opens on Enter and on Space; keys from inside i
     const space = page.fire(c, 'onKeyDown', ev({ key: ' ', target: c, currentTarget: c }));
     assert.ok(space.defaultPrevented);
     page.fire(c, 'onKeyDown', ev({ key: 'Enter', target: {}, currentTarget: c }));
-    assert.deepEqual(opened, [['c1', 'l1'], ['c1', 'l1']]);
+    assert.deepEqual(opened, ['c1', 'c1']);
   } finally {
     await page.view.unmount();
   }

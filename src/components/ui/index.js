@@ -4,7 +4,7 @@ export { Avatar } from './Avatar.jsx';
 export { Badge, TONE_CLASSES } from './Badge.jsx';
 export { Button, buttonClass, FOCUS_RING } from './Button.jsx';
 export { Chip } from './Chip.jsx';
-export { ConfirmDialog, ConfirmProvider, useConfirm } from './ConfirmDialog.jsx';
+export { ConfirmDialog, ConfirmProvider, useConfirm, useConfirmOptional } from './ConfirmDialog.jsx';
 export { DatePill } from './DatePill.jsx';
 export { Dialog } from './Dialog.jsx';
 export { EmptyState } from './EmptyState.jsx';

@@ -28,7 +28,7 @@ export function Chip({
   const on = pressed === true;
   const look = cx(
     'inline-flex max-w-full items-center gap-1.5 whitespace-nowrap rounded-full font-medium ring-1 ring-inset',
-    height, on ? 'bg-indigo-50 text-indigo-700 ring-indigo-300' : TONE_CLASSES[tone] ?? TONE_CLASSES.neutral,
+    height, on ? 'bg-brand-subtle text-brand ring-brand-subtle-hover' : TONE_CLASSES[tone] ?? TONE_CLASSES.neutral,
   );
 
   if (onClick) {
@@ -41,7 +41,7 @@ export function Chip({
         className={cx(
           look, 'px-2.5 transition-colors duration-150', FOCUS_RING,
           "relative after:absolute after:content-[''] after:-inset-1 pointer-coarse:after:-inset-2",
-          on ? 'hover:bg-indigo-100' : 'hover:brightness-[0.97]', className,
+          on ? 'hover:bg-brand-subtle-hover' : 'hover:brightness-[0.97]', className,
         )}
         {...rest}
       >

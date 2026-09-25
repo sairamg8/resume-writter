@@ -6,7 +6,7 @@ const formField = (label) => cy.contains('label', label).parent().find('input, s
 describe('job tracker', () => {
   beforeEach(() => {
     cy.seedAndVisit('/#/jobs', null);
-    cy.contains('span', 'Job Tracker').should('be.visible');
+    cy.contains('h1', 'Job Tracker').should('be.visible');
   });
 
   it('seeds one demo application with matching stats', () => {
@@ -18,7 +18,7 @@ describe('job tracker', () => {
   });
 
   it('adds a job through the form; Add Job needs a company or a role', () => {
-    cy.contains('button', 'Add Job').click();
+    cy.contains('button', /^Add job$/).click(); // the page header's (the top bar's reads "Add job" twice, for phones)
     cy.location('hash').should('eq', '#/jobs/new');
     cy.contains('button', /^Add Job$/).should('be.disabled');
     formField('Company').type('Stripe');
@@ -75,27 +75,35 @@ describe('job tracker', () => {
     });
   });
 
-  it('deleting from the detail page asks first, then removes the job', () => {
-    let answer = false; // Cypress keeps every window:confirm listener, so flip one answer instead
-    cy.on('window:confirm', () => answer);
+  it('deleting from the detail page asks first, then removes the job — and Undo brings it back', () => {
+    const del = () => {
+      cy.get('button[aria-label="Job actions"]').click();
+      cy.contains('[role="menuitem"]', 'Delete').click();
+    };
     cy.visit('/#/jobs/demo_1');
-    cy.get('button[title="Delete"]').click();
+    del();
+    cy.contains('[role="alertdialog"] button', 'Cancel').click();
     cy.location('hash').should('eq', '#/jobs/demo_1');
     cy.jobStore().its('jobs').should('have.length', 1);
 
-    cy.then(() => { answer = true; });
-    cy.get('button[title="Delete"]').click();
+    del();
+    cy.contains('[role="alertdialog"] button', /^Delete$/).click();
     cy.location('hash').should('eq', '#/jobs');
     cy.jobStore().its('jobs').should('have.length', 0);
+    cy.contains('button', 'Undo').click();
+    cy.jobStore().its('jobs').should('have.length', 1);
   });
 
-  it('Clear empties the tracker only after confirmation', () => {
-    let answer = false;
-    cy.on('window:confirm', () => answer);
-    cy.get('button[title="Clear all job data"]').click();
+  it('Clear all jobs empties the tracker only after confirmation', () => {
+    const clear = () => {
+      cy.get('button[aria-label="More job actions"]').click();
+      cy.contains('[role="menuitem"]', 'Clear all jobs').click();
+    };
+    clear();
+    cy.contains('[role="alertdialog"] button', 'Cancel').click();
     stat('Total').should('have.text', '1');
-    cy.then(() => { answer = true; });
-    cy.get('button[title="Clear all job data"]').click();
+    clear();
+    cy.contains('[role="alertdialog"] button', 'Clear all jobs').click();
     stat('Total').should('have.text', '0');
   });
 
@@ -138,8 +146,8 @@ describe('job tracker', () => {
     });
   });
 
-  it('the back arrow returns to the dashboard', () => {
-    cy.get('button[title="Back to dashboard"]').click();
+  it('the brand returns to the résumés dashboard', () => {
+    cy.get('a[aria-label="CPWT-CV — résumés"]').first().click(); // the brand, at the top left of the workspace
     cy.location('hash').should('eq', '#/');
   });
 });
