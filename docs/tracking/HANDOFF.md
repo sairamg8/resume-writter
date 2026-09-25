@@ -1,16 +1,27 @@
 # Session Handoff — Resume Here
 
-## ⏩ COLD START HERE — 2026-09-25 16:50 UTC (laptop session, owner's execution brief of 21:45 IST)
+## ⏩ COLD START HERE — 2026-09-25 17:00 UTC (laptop session, owner's execution brief of 21:45 IST)
+
+🔴 **A push to ANY branch deploys the live site** (found 16:40 UTC by the revision session, confirmed here): Cloudflare
+Workers Builds builds and deploys every branch, not only master — the live bundle carried claude/wf-owner-ui's /new
+page. Until the owner turns off non-production deploys in the Cloudflare dashboard (Settings → Builds), **every branch
+must carry `4e68e6a`** (`claude/deploy-guard`: vite.config.js refuses a Workers build of any branch but master,
+vite-deploy-guard.js) **before it is pushed**. This docs push to the work branch (code = master `6e19667`) is what
+puts master's code back on the live site. The owner was asked to roll back to version 7d1efb15 (6e19667's build).
 
 **Deployed:** `master` = `6e19667` = Round 3 batches 1–2: typography, public link (`e006835`, gate 36109292470; the owner
-published the new `firestore.rules`), page numbers and the picker (gate 36158213786 green on `6e19667`). R2-146 ✅;
-R2-138, R2-139, R2-147, R2-148 stay open for their remaining parts. The laptop checkout works on the `claude/*` branches.
+published the new `firestore.rules`), page numbers and the picker (gate 36158213786 green on `6e19667`). R2-146 ✅.
 **Work branch:** `claude/busy-darwin-yjb13t` = master + docs.
 
-**In progress:** perf2 (`7a768b4`, gate green) — an independent review is running before its report and merge.
-section-look: the work branch is merged into `claude/wf-section-look` (`9fe4865`, pushed); its fix
-for the parity `linkStyle` failure (an underlined link prints react-pdf's default blue: the Link run needs the
-text's colour) comes next, then its gate.
+**In progress (each on its own branch, the work branch merged into it, reviewed by an agent, fixes committed):**
+- perf2 `claude/wf-perf2`: merge `8dbf7f7`, reload-once on a stale page file `580923e`, worker first-build fallback
+  `bd3ff9a` (fail-first 36161417165 ✅), lazy workspace shell `cf3ad0e` (start-up path was 1,133 kB > 1.1 MB).
+- section-look `claude/wf-section-look`: merge `9fe4865`, Underline colour `1d1b95a`, guard narrowed `e3ff5bc`,
+  review fixes `e87aa95` `761696d` `0c0ef29` `a11e174`, `e62647b` reverted (Word already right).
+- owner-ui `claude/wf-owner-ui` (R3-009 cursor, R3-010 modals, R3-011/012 the /new page): fail-firsts ✅; its gate
+  36161763933 failed only 91-starter-modal (fixed `bf62e48`).
+Next per branch: guard merged in → push → full gate → `wf-reports/<cluster>.json` → merge here → gate → deploy.
+Then layouts (an agent is diagnosing its failures) → locale (its RTL test fails with its own fix) → R3-008.
 
 **Picker's product calls** (owner left them to Claude): (1) leaving a saved design resets what still holds its values —
 kept, Undo covers it; (2) deleting a saved design must hold on every device — **R3-008**; (3) a design saved from an
