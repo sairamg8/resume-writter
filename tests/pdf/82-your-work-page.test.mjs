@@ -5,7 +5,7 @@
 // opens its issue in place — `?issue=KEY-N` opens the issue view, and closing it drops the parameter.
 import { before, after, beforeEach, afterEach, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { createElement } from 'react';
+import { createElement, useLayoutEffect } from 'react';
 import { MemoryRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { setup, teardown, loadModule } from './harness.mjs';
 
@@ -41,20 +41,33 @@ const issue = (id, number, title, columnId, extra = {}) => ({ id, number, type: 
 const columns = [col('c1', 'To Do'), col('c2', 'Doing', 'inprogress'), col('c3', 'Done', 'done')];
 const project = (id, key, title, issues) => ({ id, key, title, color: '#6366f1', mode: 'kanban', columns, labels: [], sprints: [], issues, nextNumber: issues.length + 1 });
 
-/** The address the router is at, for the test to read. */
+/**
+ * The address the router is at, for the test to read — taken as the navigation commits (a layout
+ * effect), with the DOM it rendered. Not during the render: a navigation is a transition, which
+ * React renders in 5 ms slices, and this component renders first — a wait on `where` returned
+ * between slices, while the issue view was still in the DOM (CI run 36092746492).
+ */
 let where = '';
 function Where() {
   const l = useLocation();
-  where = `${l.pathname}${l.search}`;
+  useLayoutEffect(() => { where = `${l.pathname}${l.search}`; });
   return null;
 }
+
+/**
+ * A node is compared with ui-dom-harness's assertSame, loaded with the fake DOM (mountAt) — never
+ * assert.equal: its report on a failure inspects the node, and through it the whole DOM and React's
+ * fibers, until the process runs out of memory and is killed (R3-005, and CI run 36092746492).
+ */
+let assertSame;
 
 async function mountAt(path, boards) {
   globalThis.localStorage = new Storage([[KEY, JSON.stringify({ boards, dataVersion: 2 })]]);
   store.subscribe(() => {});
   const dom = await import('./fake-dom.mjs');
-  const { patchFakeDom } = await import('../unit/ui-dom-harness.mjs');
-  patchFakeDom(); // the issue view's focus trap and menus query the document
+  const harness = await import('../unit/ui-dom-harness.mjs');
+  harness.patchFakeDom(); // the issue view's focus trap and menus query the document
+  ({ assertSame } = harness);
   const view = dom.mount(() => createElement(MemoryRouter, { initialEntries: [path] },
     createElement(Where),
     createElement(Routes, null,
@@ -124,8 +137,8 @@ it('a row marks its issue done: into its project\'s done column, off the section
     const late = store.snapshot().boards[0].issues.find((i) => i.id === 'late');
     assert.equal(late.columnId, 'c3');
     assert.ok(late.resolvedAt);
-    assert.equal(page.section('overdue'), undefined);
-    assert.equal(page.byLabel('Mark HOME-1 done'), undefined, 'done: nothing to mark');
+    assertSame(page.section('overdue'), undefined, 'no Overdue section left');
+    assertSame(page.byLabel('Mark HOME-1 done'), undefined, 'done: nothing to mark');
   } finally {
     await page.view.unmount();
   }
@@ -142,7 +155,7 @@ it('a row opens its issue in place, over Your work; closing it drops ?issue=', a
     page.click(page.byLabel('Close', page.dialog()));
     await settle(() => where === '/work');
     assert.equal(where, '/work');
-    assert.equal(page.dialog(), undefined);
+    assertSame(page.dialog(), undefined, 'the issue view is closed');
   } finally {
     await page.view.unmount();
   }
@@ -159,7 +172,7 @@ it('?issue= opens a card that is off the board too (a done one past hideDoneAfte
   store._resetBoardStoreForTest();
   page = await mountAt('/boards/p1?issue=WORK-1', sample());
   try {
-    assert.equal(page.dialog(), undefined);
+    assertSame(page.dialog(), undefined, 'a key of another project opens nothing');
   } finally {
     await page.view.unmount();
   }
