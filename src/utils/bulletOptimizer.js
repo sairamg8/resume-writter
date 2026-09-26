@@ -115,11 +115,15 @@ export function leadsWithActionVerb(text) {
 /**
  * Whether plain `text` quantifies its result — the one metric rule of the optimizer and the ATS
  * score (R2-025): a number that stands as one ("12", "45%", "$1.2M", "10k", "3x", "200ms"), not the
- * digit in a name such as "S3", "EC2" or "Web3", and not a statement that is only a year.
+ * digit in a name such as "S3", "EC2" or "Web3", and not a year.
  */
 export function hasMetric(text) {
   const clean = String(text || '').trim();
-  return /(?<!\p{L})\d/u.test(clean) && !/^\d{4}$/.test(clean);
+  // A calendar year ("in 2021", "2019–2022", "the 2020s") measures nothing: it is read as no number
+  // at all, or "Joined Acme in 2021" scored as a quantified result (R4-CL-09). "$2019", "2019%",
+  // "2000+" and "2010k" stay numbers.
+  const noYears = clean.replace(/(?<![\p{L}\d$]|\d[.,])(?:19|20)\d{2}(?![\d%+kKmMbBxX$]|[.,]\d)/gu, '');
+  return /(?<!\p{L})\d/u.test(noYears) && !/^\d{4}$/.test(clean);
 }
 
 export const GOOGLE_XYZ_TEMPLATES = [
