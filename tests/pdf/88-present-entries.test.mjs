@@ -1,7 +1,8 @@
 // Education, Volunteering and Projects had no 'Present' option: an ongoing one printed its start
 // date alone (R2-150). Each now has Experience's current flag ("Currently studying here", …): the
-// End Date is cleared and disabled, and the entry prints '<start> – Present' in the PDF (every
-// template), Word, Markdown and ATS text alike, as a current job does (presentLabel).
+// End Date is blanked and disabled — its value kept for when it is unticked (R4-DUX-26) — and the
+// entry prints '<start> – Present' in the PDF (every template), Word, Markdown and ATS text alike,
+// as a current job does (presentLabel).
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { createElement } from 'react';
@@ -41,7 +42,7 @@ describe('a current Education, Project or Volunteering entry prints "Present" (R
     assert.match(generateAtsPlainText(r), /Sep 2022 - Present/);
   });
 
-  it('the editor offers the flag, and checking it clears the End Date', async () => {
+  it('the editor offers the flag; checking it keeps the End Date, unchecking brings it back (R4-DUX-26)', async () => {
     const items = await loadModule('/src/components/SectionEditorEntryItems.jsx');
     const r = ongoing('classic', false);
     for (const [Item, i] of [[items.EducationItem, 0], [items.ProjectItem, 1], [items.VolunteeringItem, 2]]) {
@@ -54,7 +55,11 @@ describe('a current Education, Project or Volunteering entry prints "Present" (R
         const box = all().find((el) => el.tagName === 'INPUT' && el.type === 'checkbox');
         assert.ok(box, `${Item.name}: a current checkbox`);
         view.act(() => reactProps(box).onChange({ target: { checked: true } }));
-        assert.deepEqual([updates[0].current, updates[0].endDate], [true, ''], Item.name);
+        // The date entered is kept, not erased: nothing prints it while the entry is current.
+        assert.deepEqual([updates[0].current, updates[0].endDate], [true, 'Jun 2024'], Item.name);
+        view.update({ item: updates[0], onUpdate: (u) => updates.push(u), onRemove() {} });
+        view.act(() => reactProps(all().find((el) => el.tagName === 'INPUT' && el.type === 'checkbox')).onChange({ target: { checked: false } }));
+        assert.deepEqual([updates[1].current, updates[1].endDate], [false, 'Jun 2024'], `${Item.name}: unticked, the End Date is back`);
       } finally { await view.unmount(); }
       assert.match(renderToString(createElement(Item, { item: updates[0], onUpdate() {}, onRemove() {} })), /Harbor|Tidewatch|Warden/);
     }
