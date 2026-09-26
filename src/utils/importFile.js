@@ -64,23 +64,34 @@ const xmlText = (s) => s
  * word/document.xml as lines: a paragraph a line (its breaks as more lines, its tabs as tabs), a
  * list paragraph behind a "• ", an empty one as a blank line. A Heading style marks a heading, the
  * Title style the name — the app's Word export writes its section titles as Heading 1.
+ *
+ * A text box's paragraphs sit inside the paragraph that anchors it: each is a line of its own, before
+ * the anchoring paragraph's own text (what comes before and after the box). Word saves every text box
+ * twice, the drawing in <mc:Choice> and a VML copy in <mc:Fallback>: the copy is not read, or each
+ * line of a designed résumé's header or side column came out twice (R4-IMP-04).
  */
 export function docxXmlLines(xml) {
-  const body = String(xml).split(/<w:body\b[^>]*>/)[1] ?? String(xml);
+  const body = (String(xml).split(/<w:body\b[^>]*>/)[1] ?? String(xml))
+    .replace(/<mc:Fallback\b[^>]*>[\s\S]*?<\/mc:Fallback>/g, '');
   const lines = [];
-  for (const para of body.split(/<\/w:p>/)) {
-    // The paragraph's own start (not a <w:pPr> or <w:pStyle> inside it, nor a table's markup before it).
-    const starts = [...para.matchAll(/<w:p[\s>]/g)];
-    if (!starts.length) continue;
-    const p = para.slice(starts[starts.length - 1].index);
-    const props = /<w:pPr>([\s\S]*?)<\/w:pPr>/.exec(p)?.[1] ?? '';
-    const style = /<w:pStyle w:val="([^"]*)"/.exec(props)?.[1] ?? '';
-    const list = /<w:numPr>/.test(props);
-    const runs = p.replace(/<w:pPr>[\s\S]*?<\/w:pPr>/, '');
-    const text = [...runs.matchAll(/<w:t(?:\s[^>]*)?>([^<]*)<\/w:t>|<w:(tab|br|cr)(?:\s[^>]*)?\/>/g)]
-      .map((m) => (m[1] !== undefined ? xmlText(m[1]) : (m[2] === 'tab' ? '\t' : '\n'))).join('');
-    const hint = /^(heading|berschrift|titre)/i.test(style) ? 'heading' : (/^title$/i.test(style) ? 'name' : undefined);
-    lines.push({ text: list && text.trim() ? `• ${text}` : text, hint });
+  const open = []; // the paragraphs being read, the innermost last
+  const TOKEN = /<w:p(?=[\s>])[^>]*>|<\/w:p>|<w:pPr>([\s\S]*?)<\/w:pPr>|<w:t(?:\s[^>]*)?>([^<]*)<\/w:t>|<w:(tab|br|cr)(?:\s[^>]*)?\/>/g;
+  for (const m of body.matchAll(TOKEN)) {
+    const para = open[open.length - 1];
+    if (m[0] === '</w:p>') {
+      if (!para) continue;
+      open.pop();
+      const style = /<w:pStyle w:val="([^"]*)"/.exec(para.props)?.[1] ?? '';
+      const list = /<w:numPr>/.test(para.props);
+      const hint = /^(heading|berschrift|titre)/i.test(style) ? 'heading' : (/^title$/i.test(style) ? 'name' : undefined);
+      lines.push({ text: list && para.text.trim() ? `• ${para.text}` : para.text, hint });
+    } else if (m[0].startsWith('<w:p') && !m[0].startsWith('<w:pPr')) {
+      if (!m[0].endsWith('/>')) open.push({ text: '', props: '' }); // <w:p/>: an empty one, no line (as before)
+    }
+    else if (!para) continue;
+    else if (m[1] !== undefined) para.props = m[1];
+    else if (m[2] !== undefined) para.text += xmlText(m[2]);
+    else para.text += m[3] === 'tab' ? '\t' : '\n';
   }
   return lines;
 }
