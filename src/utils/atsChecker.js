@@ -89,6 +89,9 @@ export const WEAK_PHRASES = [
   'assisted in', 'tasked with', 'handled', 'was involved in', 'participated in',
   'tried to', 'attempted to',
 ];
+// Each phrase as whole words: a substring match read "Networked with" as "worked with" and
+// "unhandled" as "handled" (R4-LO-11).
+const WEAK_PHRASE_WORDS = WEAK_PHRASES.map((wp) => new RegExp(`(?<![\\p{L}\\d])${wp}(?![\\p{L}\\d])`, 'u'));
 
 // Standard ATS Section Categories & Workday Canonical Headings
 export const ATS_STANDARD_SECTIONS = {
@@ -929,8 +932,8 @@ export function analyzeAtsScore(resume, jobDescriptionText = '') {
           actionVerbCount++;
         }
         // Check for weak phrases
-        for (const wp of WEAK_PHRASES) {
-          if (lower.includes(wp)) {
+        for (const wp of WEAK_PHRASE_WORDS) {
+          if (wp.test(lower)) {
             weakPhraseCount++;
             break;
           }
