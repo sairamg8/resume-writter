@@ -4,9 +4,9 @@
 // owner write; `users/{uid}/shares/{resumeId}` remembers which id a résumé has, under the account's
 // own rule. The copy holds what the résumé's PDF prints and nothing else: a hidden field's value, a
 // hidden section or entry, the cover letter and the résumé's name in the dashboard stay private.
-// The Firestore calls take the SDK's functions (`fs`: doc, getDocFromServer, writeBatch — and
-// collection, getDocsFromServer for unpublishDeleted), so the tests run this very code against
-// tests/pdf/fake-firestore.mjs.
+// The Firestore calls take the SDK's functions (`fs`: doc, getDocFromServer, writeBatch,
+// runTransaction for publish — and collection, getDocsFromServer for unpublishDeleted), so the
+// tests run this very code against tests/pdf/fake-firestore.mjs.
 import { newId } from '@/utils/ids';
 import { CONTACT_FIELDS, CONTACT_KEYS } from '@/utils/contacts';
 
@@ -184,19 +184,26 @@ export function publicIo(fs, db) {
      * current state there. Resolves when the server has it. The record is read first: a panel
      * opened in another tab or on another device before this one published saw no link, and its
      * Publish made a second copy the record no longer named, public for good. A copy at the panel's
-     * own `shareId`, when the record names another, is taken down in the same batch: a résumé has
-     * one public copy at most.
+     * own `shareId`, when the record names another, is taken down in the same write: a résumé has
+     * one public copy at most. It is one transaction (R4-LO-22): two Publishes a moment apart both
+     * read "no record", and as a read then a batch each made its own copy, the first left with no
+     * record naming it; now the server refuses the second's write, as the record changed since it
+     * was read, and the SDK runs it again, when it reads the first one's link and reuses it.
      */
     async publish(uid, resume, { shareId: shown, now = Date.now() } = {}) {
       const copy = publicSnapshot(resume);
       if (new Blob([JSON.stringify(copy)]).size > MAX_PUBLIC_BYTES) throw Object.assign(new Error(TOO_LARGE), { code: TOO_LARGE_CODE });
-      const recorded = await recordedId(uid, resume.id);
-      const shareId = recorded || shown || newId();
-      const batch = fs.writeBatch(db);
-      if (shown && shown !== shareId) await deleteCopies(batch, [shown]);
-      batch.set(publicDoc(shareId), { owner: uid, resume: copy, publishedAt: now });
-      batch.set(shareDoc(uid, resume.id), { shareId, publishedAt: now });
-      await batch.commit();
+      // A transaction reads from the server, all its reads before its writes.
+      const shareId = await fs.runTransaction(db, async (tx) => {
+        const share = await tx.get(shareDoc(uid, resume.id));
+        const shareId = (share.exists() && share.data().shareId) || shown || newId();
+        // The rules refuse deleting a copy that is not there (no owner to check), so only one that is.
+        const stray = shown && shown !== shareId && (await tx.get(publicDoc(shown))).exists();
+        if (stray) tx.delete(publicDoc(shown));
+        tx.set(publicDoc(shareId), { owner: uid, resume: copy, publishedAt: now });
+        tx.set(shareDoc(uid, resume.id), { shareId, publishedAt: now });
+        return shareId;
+      });
       return { shareId, publishedAt: now, copy };
     },
 

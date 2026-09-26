@@ -233,8 +233,9 @@ locations with Show location off blanked, hidden sections and entries and sectio
 entry dropped, the design's saved designs, last-applied look name and hidden contacts' icons left
 out, no cover letter, no dashboard name, no id. It is written to `public/{shareId}` (`{ owner, resume,
 publishedAt }`, `shareId` a random uuid) together with `users/{uid}/shares/{resumeId}` (`{ shareId,
-publishedAt }`) in one batch; Publish first reads that record and reuses the link it names, so two tabs
-or devices never make two copies, and Unpublish deletes the copy the panel shows and the one the record
+publishedAt }`) in one transaction; Publish first reads that record and reuses the link it names, so two tabs
+or devices never make two copies — two Publishes at the same moment included: the second's write is
+refused as the record changed since its read, and it runs again on the first one's link (R4-LO-22) — and Unpublish deletes the copy the panel shows and the one the record
 names (each only if it is still there) and the record, and so does deleting the résumé from the Dashboard while signed
 in (`unpublishResume`), which would otherwise leave a copy with no panel left to take it down. A
 résumé deleted on another device, offline, signed out or on an older build loses its copy at the next

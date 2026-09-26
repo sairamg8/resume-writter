@@ -1,13 +1,13 @@
 import { useEffect, useId, useState } from 'react';
 import { Globe, X, Copy, ExternalLink } from 'lucide-react';
-import { doc, getDocFromServer, writeBatch } from 'firebase/firestore';
+import { doc, getDocFromServer, runTransaction, writeBatch } from 'firebase/firestore';
 import { db } from '@/utils/firebase';
 import { publicIo, publicSummary, publicUrl, publishedIsCurrent, publicSnapshot, TOO_LARGE_CODE } from '@/utils/publicLink';
 import { timeAgo } from '@/utils/resume';
 import { copyText } from '@/utils/clipboard';
 
 /** The real Firestore calls (publicLink.js); null in a build without a cloud, where sharing is not offered. */
-export const firebasePublicIo = db ? publicIo({ doc, getDocFromServer, writeBatch }, db) : null;
+export const firebasePublicIo = db ? publicIo({ doc, getDocFromServer, runTransaction, writeBatch }, db) : null;
 
 /**
  * Export → Share a public link (R2-148): publish a read-only copy of `resume` at a web address, put
