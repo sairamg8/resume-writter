@@ -1,0 +1,50 @@
+{
+  "cluster": "perf2",
+  "branch": "claude/wf-perf2",
+  "base": "c5acb9389c5ef4ed9bfb7c0783a52f53be0ffb42",
+  "rows": [
+    {
+      "id": "R2-142",
+      "outcome": "partial",
+      "commits": [
+        "24b8724",
+        "3fca30b",
+        "7e04f04",
+        "d7fd476",
+        "580923e",
+        "bd3ff9a",
+        "cf3ad0e"
+      ],
+      "tests": [
+        "tests/pdf/97-pdf-worker.test.mjs",
+        "tests/pdf/97-colour-drag.test.mjs",
+        "tests/pdf/97-font-cache.test.mjs",
+        "tests/pdf/71-startup-chunks.test.mjs",
+        "tests/pdf/86-heading-border-colour.test.mjs",
+        "tests/unit/lazy-page.unit.mjs",
+        "tests/playwright/pdf-worker.spec.mjs"
+      ],
+      "summary": "**Now:** The preview, Export PDF, 1-Page Fit, the ATS parser view, the editor's warm-up, the template gallery's page pictures and the public link's page build the PDF in a Web Worker, so the editor keeps answering while a page is laid out; where no module worker starts, it dies, or its first build fails, builds run on the main thread as before. Dragging a Design colour writes its first step at once, then at most every half second and on blur or close. The editor, workspace, project and public pages load with their routes and Firestore is its own chunk (the dashboard starts with under 1.1 MB of script, was 1,443 kB); the workspace shell — sidebar, top bar, quick search and the Create dialog — loads with the first Job Tracker or Boards page; a page's file gone after a deploy reloads the tab once.",
+      "remaining": "PERF-1: the perf harness (N1/N2 budgets, Gate A/B browser spec) and a WOFF table cache — fontkit still re-inflates a WOFF font's glyf table per glyph laid out (fontkit's WOFFFont._getTableStream); 97-font-cache only pins that font files are fetched once a session. PERF-4: one React commit per keystroke, sections not re-rendered (plan item 7). PERF-5: pdf.js paints before getTextContent and reuses canvases (item 9). PERF-6: Gate B unmeasured; the worker path is tested on Chromium only; no watchdog for a worker job that never replies."
+    }
+  ],
+  "review": {
+    "issues": [
+      "Lazy routes had no chunk-load recovery: after a deploy a tab opened before it could not open the editor, and React.lazy kept the failure (Try Again and Back failed too)",
+      "The work branch's pageImage.js and PublicResume.jsx built PDFs on the main thread",
+      "A worker that starts but cannot build never fell back to the main thread (only one that failed to start or died did)",
+      "97-font-cache's comment called PERF-1 a refetch; PERF-1 is fontkit's per-glyph WOFF inflate",
+      "97-pdf-worker's Export PDF check passed while the export threw (the fake page's link has no click)",
+      "Nits left: hex labels lag the swatch up to 500 ms during a drag; a colour held under 200 ms is lost if the tab closes; chunkSizeWarningLimit 1600 is global; docs/knowledge 02/04/06/09 do not name pdfBuild or the worker"
+    ],
+    "fixedByReviewer": [
+      "580923e",
+      "8dbf7f7",
+      "bd3ff9a",
+      "9254143",
+      "cf3ad0e"
+    ]
+  },
+  "baselineFailures": [],
+  "notes": "Reviewed by an independent agent (read-only) on 2026-09-25; the coordinator applied the fixes. 8dbf7f7 merges the work branch into perf2 (conflict src/AppRoutes.jsx only: the four project pages and PublicResume made lazy, 71-startup-chunks lists them; pageImage.js and PublicResume.jsx build through pdfBuild). Fail-first on CI: 24b8724, 3fca30b, 7e04f04, d7fd476 (36109203084, 36109676345); 580923e and bd3ff9a (36161417165). Full gate 36161413551 on 9254143 failed only 71-startup-chunks (start-up 1,133 kB > 1.1 MB); cf3ad0e makes the workspace shell lazy for it, gated with the batch on the work branch. 4e68e6a (the deploy guard) is merged in."
+}
