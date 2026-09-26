@@ -53,6 +53,13 @@ describe('Word: a centred entry prints "Title · date" on one line, as the PDF d
     assert.equal(paraWith(doc, 'Tideline').text, 'Tideline · 2021 – 2022');
   });
 
+  it('the Timeline keeps the date on a line of its own, as its rail prints it on its own line above the title', async () => {
+    const doc = await renderDocx(resume({ template: 'timeline', sections: [section('experience', [JOB], { alignment: 'center', titleStyle: 'stacked', titleOrder: 'company' })] }));
+    const lines = paraWith(doc, 'Acmeworks').text.split('\n');
+    assert.equal(lines[0], 'Acmeworks', JSON.stringify(lines));
+    assert.ok(lines[1]?.includes('2020') && !lines.some((l) => l.includes('·')), JSON.stringify(lines));
+  });
+
   it('a centred certification keeps its date on a line of its own, as its PDF does (guard)', async () => {
     const doc = await renderDocx(centred([section('certifications', [{ name: 'Keystone Cert', issuer: 'Lumen Board', date: '2020' }], { alignment: 'center' })]));
     const lines = paraWith(doc, 'Keystone Cert').text.split('\n');

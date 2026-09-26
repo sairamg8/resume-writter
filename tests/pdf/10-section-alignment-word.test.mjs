@@ -100,6 +100,16 @@ describe('Word: Section Options → Alignment "Center" centres what the PDF cent
         // entry's second field on a centred line of its own under it, as the PDF's sub line (R2-070).
         const fields = TITLED[type];
         const stacked = fields && (resolveSection(r.sections.find((s) => s.type === type), template).settings.titleStyle || 'stacked') === 'stacked';
+        if (template === 'timeline') {
+          // The Timeline's rail prints the date on a line of its own (above the title), never
+          // "Title · date": Word keeps it on a centred line of its own, under the title (R4-DOUT-03).
+          assert.equal(lines.length, 2 + (stacked ? 1 : 0) + (under ? 1 : 0) + (place ? 1 : 0), `${template} ${type}: ${JSON.stringify(text)}`);
+          if (under) assert.equal(lines[2], under, `${template} ${type}: ${JSON.stringify(text)}`);
+          const title = stacked ? [lines[0], lines[2]].sort().join() === [...fields].sort().join() : lines[0].includes(word);
+          assert.ok(title && lines[1].startsWith(date) && !lines[0].includes('·') && !text.includes('\t'), `${template} ${type}: ${JSON.stringify(text)}`);
+          if (place) assert.equal(lines.at(-1), place, `${template} ${type}: the location on a line of its own (ATS-1)`);
+          continue;
+        }
         const [head, tail] = lines[0].split(` · ${date}`);
         assert.ok(tail !== undefined && !text.includes('\t'), `${template} ${type}: "Title · date", no right-tab date: ${JSON.stringify(text)}`);
         assert.ok(!lines.slice(1).some((l) => l.includes(date)), `${template} ${type}: no date line of its own: ${JSON.stringify(text)}`);

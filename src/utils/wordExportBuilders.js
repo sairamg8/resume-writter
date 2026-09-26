@@ -114,9 +114,10 @@ const titleLine = (left, date, dateHex, centered, look, where = null, under = []
 /**
  * titleLine as the PDF's ItemHeader and Projects print it: centred, the date on the title's line
  * after a "·" in the Text colour's muted shade (CentredLine, R4-DOUT-03), not on a line of its own
- * as a centred certification's.
+ * as a centred certification's. Not on the Timeline: its rail (TimelineHead) prints the date on a
+ * line of its own, above the title, never joined to it, so the date keeps its own line there.
  */
-const headLine = (left, date, dateHex, centered, look, where = null, under = []) => dateRightPara(left, date, { color: dateHex, centered, size: look.date, place: where, tab: look.tab, under, sep: look.ink.muted });
+const headLine = (left, date, dateHex, centered, look, where = null, under = []) => dateRightPara(left, date, { color: dateHex, centered, size: look.date, place: where, tab: look.tab, under, sep: look.template === 'timeline' ? null : look.ink.muted });
 
 /**
  * An entry's first field, bold in the Text colour at Entry Header, and its second in the PDF's
