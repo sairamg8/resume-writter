@@ -272,8 +272,7 @@ function withoutPageFurniture(items, index) {
  * it continues (a list item's next line starts under its text; a paragraph's line before it ran to
  * the right margin), a larger gap than a line's as a blank line, a page break as one too. A page in
  * two columns is read a column at a time (pdfPageBlocks), each to its own right margin, with a blank
- * line after each. A page's running header and page number (isPageFurniture) are left out. A line
- * that is one field alone at a block's right margin carries hint 'end' (a location under a date).
+ * line after each. A page's running header and page number (isPageFurniture) are left out.
  */
 export function pdfLinesOfPages(pages) {
   const out = [];
@@ -281,7 +280,6 @@ export function pdfLinesOfPages(pages) {
     for (const { items, column } of pdfPageBlocks(withoutPageFurniture(page, index))) {
       const lines = pdfPageLines(items);
       const right = Math.max(0, ...lines.map((l) => l.right));
-      const left = Math.min(...lines.map((l) => l.x));
       let prev = null;
       for (const line of lines) {
         if (prev) {
@@ -303,11 +301,7 @@ export function pdfLinesOfPages(pages) {
           }
           if (!near) out.push({ text: '' });
         }
-        // One field alone at the right margin, well right of the left edge: set at the end of its line
-        // on purpose, as a location right-aligned under a date is (Title "Inline" and "Side by side",
-        // Executive's jobs). Hinted, so the parser reads it as the entry's location (importText.js).
-        const atEnd = !line.text.includes('\t') && Math.abs(line.right - right) <= 2 && line.x - left > (right - left) / 2;
-        out.push(atEnd ? { text: line.text, hint: 'end' } : { text: line.text });
+        out.push({ text: line.text });
         prev = { ...line, listed: false };
       }
       out.push({ text: '' });
