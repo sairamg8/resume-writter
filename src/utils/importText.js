@@ -77,7 +77,13 @@ function toLines(input) {
   const raw = Array.isArray(input) ? input : String(input ?? '').split(/\r\n|\r|\n/);
   return raw.flatMap((l) => {
     // Its links (a Markdown, Word or PDF line's, R4-LO-05) go with each of its lines: richText finds each by its text.
-    if (l && typeof l === 'object') return String(l.text ?? '').split('\n').map((text, i) => ({ text: clean(text), hint: i ? undefined : l.hint, depth: i ? 0 : (l.depth || 0), ...(l.links?.length ? { links: l.links } : {}) }));
+    // A line after a break that starts at a tab with nothing before it is set at the right tab stop, as
+    // Word's entry header sets a location under its date ("⇥ Porto"): at the line's end, hint 'end'.
+    if (l && typeof l === 'object') {
+      return String(l.text ?? '').split('\n').map((text, i) => ({
+        text: clean(text), hint: i ? (/^\t[^\t]*\S[^\t]*$/.test(text) ? 'end' : undefined) : l.hint, depth: i ? 0 : (l.depth || 0), ...(l.links?.length ? { links: l.links } : {}),
+      }));
+    }
     return [{ text: clean(l), depth: indentOf(l) }];
   });
 }
@@ -328,7 +334,10 @@ function linkedHtml(text, links = []) {
     const withUrl = `${shown} (${escapeHtml(url)})`;
     let at = html.indexOf(withUrl, from);
     let length = withUrl.length;
-    if (at < 0) { at = html.indexOf(shown, from); length = shown.length; }
+    // The label alone (a link whose label is its address): a whole word of the text, not part of one ("Go" in "Google").
+    for (let k = at < 0 ? html.indexOf(shown, from) : -1; k >= 0 && at < 0; k = html.indexOf(shown, k + 1)) {
+      if (!/\w/.test(html[k - 1] || '') && !/\w/.test(html[k + shown.length] || '')) { at = k; length = shown.length; }
+    }
     if (!shown || at < 0) continue;
     const a = anchor(url, shown);
     html = html.slice(0, at) + a + html.slice(at + length);
@@ -646,12 +655,14 @@ function entriesOf(type, lines, aside) {
     let found = null;
     // Word's: the employer, and its place on the line under it.
     if (one(a) && one(b) && over(a, b) && starts(a)) found = { n: 2, company: a.text, place: b.text };
-    else if (starts(b) && pieces(b.text).length <= 2) {
+    // Right after a list, only a line that is plainly an employer and its place: not a sentence ending the job above.
+    else if ((b.gap || !info[b.index - 1] || pieces(b.text).length === 2) && starts(b) && pieces(b.text).length <= 2) {
       // The PDF's: the employer, its place at the line's right end.
       const [company, place = ''] = pieces(b.text);
       found = { n: 1, company, place };
     }
-    if (!found) return null;
+    // One field: "Acme - Engineer" (the ATS text's job) is a job's title, not an employer over roles.
+    if (!found || fieldsOf(found.company).length !== 1) return null;
     body.splice(body.length - found.n);
     return { company: found.company, place: found.place, lead: [] };
   };
@@ -659,8 +670,7 @@ function entriesOf(type, lines, aside) {
   const roleOfGroup = (header, active) => {
     const h = readHeader('experience', header);
     // A role's own place on the line under it, where it differs from the employer's (Word's).
-    const placed = h.parts.length === 2 && header.length === 2 && pieces(header[1].text).length === 1 && !ROLE.test(h.parts[1])
-      && (PLACE.test(h.parts[1]) || /^\p{Lu}[\p{L}.'’-]*(?:\s+\p{Lu}[\p{L}.'’-]*){0,3}$/u.test(h.parts[1]));
+    const placed = h.parts.length === 2 && header.length === 2 && pieces(header[1].text).length === 1 && PLACE.test(h.parts[1]);
     if (h.parts.length !== 1 && !placed) return null;
     const next = employerOver(header[0]) || (active && cur?.header[0]?.group?.company === active.company ? active : null);
     if (!next) return null;
@@ -684,7 +694,22 @@ function entriesOf(type, lines, aside) {
     if (L.date && !L.bullet) {
       const header = [L];
       i += 1;
+      // The Timeline's grouped roles: the employer, then each role's date alone over the role (R4-LO-01).
+      const n = info[i];
+      if (type === 'experience' && L.date.first && pieces(L.text).length === 1 && n && !n.bullet && !n.gap && !n.date && n.hint !== 'entry'
+        && pieces(n.text).length === 1 && fieldsOf(n.text).length === 1 && n.text.length <= 60 && !/[.!?]$/.test(n.text)) {
+        const g = employerOver(L) || (group && cur?.header[0]?.group?.company === group.company ? group : null);
+        if (g) {
+          group = g;
+          header[0] = { ...L, group: g };
+          header.push(info[i++]);
+          if (info[i] && info[i].hint === 'end' && !info[i].gap) header.push(info[i++]);
+          start(header);
+          continue;
+        }
+      }
       if (L.date.first) {
+        if (type === 'experience') group = null; // not a role of the group above
         // Its title line(s): the text lines right before it, not the previous entry's list.
         // A school in a side column stacks each field on a line of its own over its dates (Sidebar's
         // degree, school, field and place): up to four lines.
@@ -863,11 +888,17 @@ export function resumeFromText(input) {
   const headingAt = new Map();
   let seen = false;
   // In a file that marks its headings, an unmarked one in capitals must be of a type the file does not
-  // mark itself; and inside an entry the file marks, not a title an entry uses for a part of its own (a
-  // job's "KEY ACHIEVEMENTS", "PROJECTS", "SKILLS"). Any other title there ("AWARDS", "EDUCATION" after
-  // the last job) starts its section: it stayed inside the last job (R4-LO-04).
+  // mark itself; and inside an entry the file marks, not a part of that entry: a title with another entry
+  // after it before the next heading is the entry's own ("KEY ACHIEVEMENTS", "SKILLS" in a job), and in
+  // the last entry, so is a title an entry uses for a part of it ("KEY ACHIEVEMENTS", "OVERVIEW"). Any
+  // other title after the last entry ("SKILLS", "AWARDS", "EDUCATION") starts its section: it stayed
+  // inside the last job (R4-LO-04).
   const marked = new Set(lines.filter((l, i) => i > nameAt && l.hint === 'heading').map((l) => headingType(l.text.replace(/\s*:$/, '').trim())));
-  const ownPart = (text) => ['skills', 'projects'].includes(headingType(text)) || /^(?:key)?achievements$/.test(headingKey(text));
+  const entryAfter = (i) => {
+    for (let j = i + 1; j < lines.length && lines[j].hint !== 'heading'; j += 1) if (lines[j].hint === 'entry' || lines[j].hint === 'role') return true;
+    return false;
+  };
+  const ownPart = (text, i) => entryAfter(i) || headingType(text) === 'summary' || /^(?:key)?achievements$|^recognitions$/.test(headingKey(text));
   let inEntry = false;
   lines.forEach((l, i) => {
     if (i <= nameAt) return;
@@ -878,7 +909,7 @@ export function resumeFromText(input) {
     let type = null;
     if (hinted) {
       if (l.hint === 'heading') type = headingType(text) || 'custom';
-      else if (!l.hint && plain && !(inEntry && ownPart(text)) && (isCaps(text) || l.ruled) && !marked.has(headingType(text))) type = headingType(text);
+      else if (!l.hint && plain && !(inEntry && ownPart(text, i)) && (isCaps(text) || l.ruled) && !marked.has(headingType(text))) type = headingType(text);
     } else if (plain) {
       const known = headingType(text);
       if (known && (l.ruled || isCaps(text) || l.gap || l.text.endsWith(':') || i === nameAt + 1 || headingAt.size === 0)) type = known;

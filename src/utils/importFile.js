@@ -106,7 +106,8 @@ export function docxXmlLines(xml, links = {}) {
   const link = (para, at, to) => {
     const label = para.text.slice(at);
     para.text = para.text.slice(0, at) + linkText(label, to);
-    if (label.trim()) (para.links || (para.links = [])).push({ label: label.trim(), url: to });
+    // Only an address the rich text may link (as the Markdown's and the PDF's): not javascript:, file: or a relative one.
+    if (label.trim() && /^(?:https?:|mailto:|tel:)/i.test(to)) (para.links || (para.links = [])).push({ label: label.trim(), url: to });
   };
   const linkField = (para, field) => {
     const to = field && field.at >= 0 && hyperlinkTarget(field.instr);

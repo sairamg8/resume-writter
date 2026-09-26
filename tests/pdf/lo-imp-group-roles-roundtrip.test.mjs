@@ -19,11 +19,14 @@ const JOBS = [
 
 before(async () => {
   ctx = await setup();
-  const fixture = resume({ personal: { name: 'Jordan Ellery', title: 'Engineering Manager', email: 'jordan.ellery@example.com' },
+  const cv = (template) => resume({ template, personal: { name: 'Jordan Ellery', title: 'Engineering Manager', email: 'jordan.ellery@example.com' },
     sections: [experience(JOBS, { groupRoles: true })] });
+  const fixture = cv('classic');
   const { renderResumeDocx } = await loadModule('/src/utils/wordExport.js');
   const lines = {
     PDF: await pdfLines(await render(fixture), ctx.pdfjs),
+    // The review of R4-LO-01: the Timeline prints each role's date over it.
+    'PDF, Timeline': await pdfLines(await render(cv('timeline')), ctx.pdfjs),
     Word: await docxLines(new Uint8Array(await (await renderResumeDocx(fixture)).arrayBuffer())),
   };
   for (const [kind, l] of Object.entries(lines)) read[kind] = { resume: resumeFromText(l), seen: l.map((x) => x.text).join('\n') };
@@ -31,7 +34,7 @@ before(async () => {
 after(teardown);
 
 describe('grouped roles come back as jobs at their employer', () => {
-  for (const kind of ['PDF', 'Word']) {
+  for (const kind of ['PDF', 'PDF, Timeline', 'Word']) {
     it(kind, () => {
       const { resume: r, seen } = read[kind];
       const jobs = r.sections.find((s) => s.type === 'experience')?.items || [];
