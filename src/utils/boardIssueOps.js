@@ -158,6 +158,24 @@ export function setStatus(board, ids, columnId, ctx = {}) {
 }
 
 /**
+ * The issues of column `columnId` once its category changed so that it is done (`done` true) or no
+ * longer done, `from` and `to` naming the categories as the history shows them. Resolved, each one's
+ * next occurrence is made, as a move into a done column makes it; reopened, resolvedAt clears. A
+ * status entry goes in each one's history either way (R4-BRD-09: the resolution was written straight
+ * onto the issues, so a repeating one never came back and the history said nothing).
+ */
+export function recategorized(board, columnId, done, { from, to }, ctx = {}) {
+  const now = nowOf(ctx);
+  const resolved = [];
+  const issues = board.issues.map((i) => {
+    if (i.columnId !== columnId) return i;
+    if (done && !i.resolvedAt) resolved.push(i.id);
+    return logged({ ...i, resolvedAt: done ? i.resolvedAt ?? now : null, updatedAt: now }, fieldEntry('status', from, to), now);
+  });
+  return resolved.reduce((b, id) => spawnNext(b, id, ctx), { ...board, issues });
+}
+
+/**
  * Move an issue: into `columnId` (a status change) and/or `sprintId` (null: the backlog), and
  * to a place in the rank — before `beforeId`, or after the last issue of the target group (the
  * issues in that column and/or sprint) when beforeId is null; into an empty group it keeps its

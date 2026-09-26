@@ -194,6 +194,27 @@ test('columns: add before Done, rename, WIP, category resolves or reopens, move'
   assert.equal(ops.moveColumn(b, 'todo', 0), b);
 });
 
+test('a column that becomes done resolves its issues as a move to Done does: what repeats comes back, the history says so (R4-BRD-09)', () => {
+  let b = ops.addColumn(boardWith(['A']), { id: 'rev', title: 'Review' });
+  b = ops.addIssue(b, { id: 'R', title: 'Water the plants', columnId: 'rev', due: '2026-09-23', recurrence: 'weekly' }, ctx);
+  b = ops.updateColumn(b, 'rev', { category: 'done' }, { now: NOW + MIN });
+  const r = get(b, 'R');
+  assert.equal(r.resolvedAt, NOW + MIN);
+  assert.deepEqual(r.activity.at(-1), { ...r.activity.at(-1), kind: 'field', field: 'status', from: 'In progress', to: 'Done' });
+  const next = b.issues.find((i) => i.id === r.recurrenceNextId);
+  assert.ok(next, 'the next occurrence was made');
+  assert.deepEqual([next.title, next.columnId, next.due, next.resolvedAt], ['Water the plants', 'todo', '2026-09-30', null]);
+  assert.equal(b.issues.filter((i) => i.title === 'Water the plants').length, 2, 'once');
+  assert.equal(get(b, 'A').activity.length, 1, 'an issue of another column is untouched');
+
+  const reopened = ops.updateColumn(b, 'rev', { category: 'inprogress' }, { now: NOW + 2 * MIN });
+  assert.equal(get(reopened, 'R').resolvedAt, null);
+  assert.deepEqual([get(reopened, 'R').activity.at(-1).from, get(reopened, 'R').activity.at(-1).to], ['Done', 'In progress']);
+  const again = ops.updateColumn(reopened, 'rev', { category: 'done' }, { now: NOW + 3 * MIN });
+  assert.equal(again.issues.filter((i) => i.title === 'Water the plants').length, 2, 'its next occurrence still exists: no second one');
+  assert.equal(ops.updateColumn(b, 'rev', { category: 'done' }, ctx), b, 'no change, nothing saved');
+});
+
 test('deleteColumn: its issues move to the target (never lost); no target, no delete; never the last column', () => {
   const b = boardWith(['A', 'B']);
   assert.equal(ops.deleteColumn(b, 'todo'), b, 'holds issues, no target');
