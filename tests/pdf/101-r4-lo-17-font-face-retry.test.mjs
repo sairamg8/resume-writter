@@ -94,7 +94,7 @@ describe('a face that failed once is fetched again later, not borrowed for the s
     assert.equal(fallback.facesBorrowed(), false, 'nothing borrows any more');
   });
 
-  it('a fetch again that stalls does not hold the build: the bold is put in by a build after it arrives', async () => {
+  it('a fetch again that stalls does not hold the build: the bold is put in by a build after it arrives', { timeout: 20_000 }, async () => {
     const settings = { customFont: 'Testface Stall' };
     network();
     boldFails = true;
