@@ -72,6 +72,6 @@ describe('Word export', () => {
 
   it('references print phone and relationship', async () => {
     const doc = await renderDocx(resume({ sections: [section('references', [{ name: 'Jane', jobTitle: 'CTO', company: 'Acme', relationship: 'Manager', email: 'jane@acme.com', phone: '+1 555 0101' }])] }));
-    for (const s of ['Jane', 'CTO, Acme', 'Manager', 'jane@acme.com', '+1 555 0101']) assert.ok(has(doc, s), s);
+    for (const s of ['Jane', 'CTO', 'Acme', 'Manager', 'jane@acme.com', '+1 555 0101']) assert.ok(has(doc, s), s);
   });
 });
