@@ -3,7 +3,7 @@
 // start-up — so the reading (importFile.js, and pdf.js for a PDF) is loaded only when a file comes.
 
 /** What the Import file pickers offer: the backup and JSON Resume files, and the documents. */
-export const IMPORT_ACCEPT = '.json,.pdf,.docx,.txt,.md';
+export const IMPORT_ACCEPT = '.json,.pdf,.docx,.txt,.text,.md,.markdown';
 
 /**
  * A file read as a document, by its name: a PDF, a Word file, Markdown or text. Any other goes the
