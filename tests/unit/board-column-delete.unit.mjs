@@ -45,7 +45,8 @@ test('the target: the nearest column of the same category, else the one beside i
   assert.equal(columnDeletion(b, 'todo').target.id, 'later', 'another to-do column, though not beside it');
   assert.equal(columnDeletion(b, 'doing').target.id, 'done', 'no other in-progress column: the one after');
   assert.equal(columnDeletion(b, 'doing').change, 'resolve');
-  assert.equal(columnDeletion(board([...COLUMNS, col('review', 'Review', 'inprogress')], []), 'review').target.id, 'done', 'the last column: the one before');
+  assert.equal(columnDeletion(board(COLUMNS.slice(0, 2), []), 'doing').target.id, 'todo', 'the last column: the one before');
+  assert.equal(columnDeletion(board([...COLUMNS, col('review', 'Review', 'inprogress')], []), 'review').target.id, 'doing', 'the other in-progress column, though not beside it');
   const two = [col('a', 'A', 'todo'), col('b', 'B', 'todo'), col('c', 'C', 'todo')];
   assert.equal(columnDeletion(board(two, []), 'b').target.id, 'c', 'a tie goes to the one after');
 });

@@ -128,7 +128,7 @@ test('updateIssue: each changed field is recorded; bursts on one field are one e
   const fields = get(b, 'A').activity.slice(1).map((e) => [e.field, e.from, e.to]);
   assert.deepEqual(fields, [['title', 'A', 'A2'], ['priority', 'medium', 'high'], ['labels', '', 'Home, Work'], ['due', '', '2026-10-01']]);
   b = ops.updateIssue(b, 'A', { description: '<p>one</p>' }, { now: NOW + MIN });
-  b = ops.updateIssue(b, 'A', { description: '<p>one two</p>' }, { now: NOW + 2 * MIN });
+  b = ops.updateIssue(b, 'A', { description: '<p>one two</p>' }, { now: NOW + 10 * MIN });
   assert.equal(get(b, 'A').activity.filter((e) => e.field === 'description').length, 1);
   assert.equal(ops.updateIssue(b, 'A', { title: 'A2', priority: 'high' }, ctx), b);
   assert.equal(get(ops.updateIssue(b, 'A', { title: '  ' }, ctx), 'A').title, 'A2', 'a blank title keeps the old one');
@@ -207,10 +207,11 @@ test('a column that becomes done resolves its issues as a move to Done does: wha
   assert.equal(b.issues.filter((i) => i.title === 'Water the plants').length, 2, 'once');
   assert.equal(get(b, 'A').activity.length, 1, 'an issue of another column is untouched');
 
-  const reopened = ops.updateColumn(b, 'rev', { category: 'inprogress' }, { now: NOW + 2 * MIN });
+  // Past MERGE_MS: a change back within it merges into the entry before (and the pair cancels out).
+  const reopened = ops.updateColumn(b, 'rev', { category: 'inprogress' }, { now: NOW + 10 * MIN });
   assert.equal(get(reopened, 'R').resolvedAt, null);
   assert.deepEqual([get(reopened, 'R').activity.at(-1).from, get(reopened, 'R').activity.at(-1).to], ['Done', 'In progress']);
-  const again = ops.updateColumn(reopened, 'rev', { category: 'done' }, { now: NOW + 3 * MIN });
+  const again = ops.updateColumn(reopened, 'rev', { category: 'done' }, { now: NOW + 20 * MIN });
   assert.equal(again.issues.filter((i) => i.title === 'Water the plants').length, 2, 'its next occurrence still exists: no second one');
   assert.equal(ops.updateColumn(b, 'rev', { category: 'done' }, ctx), b, 'no change, nothing saved');
 });
