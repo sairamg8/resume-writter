@@ -15,7 +15,7 @@ export function SortableSection({
   section, template, updateSection, updateSectionSettings,
   removeSection, addItem, updateItem, removeItem, reorderItems,
   toggleSectionVisibility, duplicateSection, duplicateItem,
-  forceOpen, forceOpenKey,
+  forceOpen, forceOpenKey, justAdded,
   settings,
 }) {
   const [customizerOpen, setCustomizerOpen] = useState(false);
@@ -55,26 +55,35 @@ export function SortableSection({
   // By its own key only: a type named like an Object member ('valueOf') is a custom section (R1-LEFT-c).
   const factory = Object.hasOwn(NEW_ITEM, section.type) ? NEW_ITEM[section.type] : NEW_ITEM.custom;
 
+  // The entry the user just added — with Add, or as the first entry of the section they just added
+  // (justAdded) — opens once, so its fields show at once instead of a collapsed 'New Entry' to find
+  // and click (R4-ED-07). Only that one: a blank entry left from an earlier visit opened on load and
+  // on every re-expand of its section (R4-LO-20). Forgotten once its card is on screen.
+  const openOnMount = useRef(justAdded ? section.items[0]?.id : null);
+  useEffect(() => {
+    if (openOnMount.current && section.items.some(i => i.id === openOnMount.current)) openOnMount.current = null;
+  });
+
   function handleAddItem() {
-    addItem(section.id, factory());
+    const item = factory();
+    openOnMount.current = item.id;
+    addItem(section.id, item);
   }
 
-  // An entry nobody has filled in yet: every text field empty, or still the value a new entry starts
-  // with (a new language's 'Professional'). Deleting one does not ask (R4-ED-06), and its card opens,
-  // so the entry Add just made, or a new section's first one, shows its fields at once instead of a
-  // collapsed 'New Entry' to find and click (R4-ED-07). Bullets (older data's list, which prints)
-  // are content too.
+  // An entry nobody has filled in yet: no field holds anything but what a new entry starts with (a
+  // new language's 'Professional', a job's current: false). Deleting one does not ask (R4-ED-06).
+  // Every field counts, not only text ones: a job marked current (which prints 'Present') or older
+  // data's bullets list was deleted without asking (R4-LO-20). The id, the entry's hidden switch and
+  // its hidden fields are how it shows, not what it holds.
   const fresh = useMemo(() => factory(), [factory]);
   function untouched(item) {
-    return !Object.entries(item).some(([k, v]) => k !== 'id' && (typeof v === 'string'
-      ? v.trim() && v !== fresh[k]
-      : k === 'bullets' && Array.isArray(v) && v.some(b => String(b ?? '').trim())));
+    return !Object.entries(item).some(([k, v]) => !NOT_CONTENT.has(k) && isContent(v, fresh[k]));
   }
 
   function renderItem(item) {
     const props = {
       item,
-      defaultOpen: untouched(item),
+      defaultOpen: item.id === openOnMount.current,
       onUpdate: u => updateItem(section.id, item.id, () => u),
       onRemove: () => {
         // An untouched new entry goes without asking; anything with content asks first.
@@ -204,4 +213,20 @@ export function SortableSection({
       )}
     </div>
   );
+}
+
+/** Keys of an entry that hold no content of their own: its id, and how it shows (R4-LO-20). */
+const NOT_CONTENT = new Set(['id', 'visible', 'hiddenFields']);
+
+/**
+ * Whether a stored value is something the user put there: text other than blanks, a number, true,
+ * or a list or object holding any — unless it is `start`, the value a new entry starts with.
+ */
+function isContent(v, start) {
+  if (typeof v === 'string') return v.trim() !== '' && v !== start;
+  if (typeof v === 'number') return Number.isFinite(v) && v !== start;
+  if (typeof v === 'boolean') return v && v !== start;
+  if (Array.isArray(v)) return v.some(x => isContent(x));
+  if (v && typeof v === 'object') return Object.values(v).some(x => isContent(x));
+  return false;
 }

@@ -17,10 +17,10 @@ const cards = (view) => [...elements(view.container)]
   .filter((e) => e.tagName === 'DIV' && /\bborder rounded-lg overflow-hidden\b/.test(e.getAttribute('class') || ''))
   .map((card) => ({ title: card.childNodes[0].textContent, fields: inputs(card).length }));
 
-async function editor(sec, addItem = noop) {
+async function editor(sec, addItem = noop, justAdded = false) {
   const { SortableSection } = await loadModule('/src/components/SectionEditor.jsx');
   const props = (s) => ({
-    section: s, template: 'classic', settings: {}, updateSectionSettings: noop, updateSection: noop,
+    section: s, template: 'classic', settings: {}, updateSectionSettings: noop, updateSection: noop, justAdded,
     removeSection: noop, addItem, updateItem: noop, removeItem: noop, reorderItems: noop,
   });
   const view = mount(SortableSection, props(sec));
@@ -50,7 +50,8 @@ describe('a new entry opens with its fields showing (R4-ED-07)', () => {
   it('a newly added section\'s first entry is open, for every card-based type', async () => {
     const { SECTION_TYPE_DEFAULTS } = await loadModule('/src/utils/defaultData.js');
     for (const type of ['experience', 'education', 'skills', 'projects', 'certifications', 'awards', 'volunteering', 'references', 'custom']) {
-      const { view } = await editor(SECTION_TYPE_DEFAULTS[type](`sec_${type}`));
+      // Add Section marks the section it made as just added (R4-LO-20: a blank one saved earlier stays shut).
+      const { view } = await editor(SECTION_TYPE_DEFAULTS[type](`sec_${type}`), noop, true);
       try {
         const [card] = cards(view);
         assert.ok(card && card.fields > 0, `${type}: the first entry shows its fields`);

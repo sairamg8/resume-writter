@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Plus, User, ChevronDown, ChevronUp, ChevronsDownUp, ChevronsUpDown,
 } from 'lucide-react';
@@ -32,6 +32,8 @@ export function EditorResumeTab({
   // after Collapse All, hiding its entry and its Add button (R2-113).
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const forcedIds = useMemo(() => new Set(resume.sections.map(s => s.id)), [forceOpenKey, resume.id]);
+  // The section just added from Add Section: its first entry opens, as an entry Add makes does (R4-LO-20).
+  const [addedSectionId, setAddedSectionId] = useState(null);
 
   function handleSectionDragEnd(event) {
     const { active, over } = event;
@@ -97,6 +99,7 @@ export function EditorResumeTab({
               duplicateItem={store.duplicateItem}
               forceOpen={allExpanded}
               forceOpenKey={forcedIds.has(section.id) ? forceOpenKey : 0}
+              justAdded={section.id === addedSectionId}
             />
           ))}
         </SortableContext>
@@ -117,7 +120,7 @@ export function EditorResumeTab({
                 <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 px-1">{group.label}</p>
                 <div className="grid grid-cols-2 gap-1.5">
                   {group.types.map(({ type, label }) => (
-                    <button key={type} onClick={() => { store.addSection(type); setAddSectionOpen(false); }} className="px-3 py-2 text-xs text-gray-700 bg-white border border-gray-200 rounded-lg hover:border-blue-300 hover:text-blue-700 hover:bg-blue-50 text-left transition-colors">
+                    <button key={type} onClick={() => { setAddedSectionId(store.addSection(type)); setAddSectionOpen(false); }} className="px-3 py-2 text-xs text-gray-700 bg-white border border-gray-200 rounded-lg hover:border-blue-300 hover:text-blue-700 hover:bg-blue-50 text-left transition-colors">
                       {label}
                     </button>
                   ))}
