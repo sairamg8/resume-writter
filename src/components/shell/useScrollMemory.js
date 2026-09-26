@@ -2,9 +2,11 @@ import { useLayoutEffect, useRef } from 'react';
 import { useLocation, useNavigationType } from 'react-router-dom';
 
 // Kept for the tab's life, not the shell's: the shell unmounts on a page outside it (the résumés,
-// the editor), and Back from there into the Job Tracker opened it at the top (R4-APP-07).
-// Keys are unique to their history entries, so pages never share one.
+// the editor), and Back from there into the Job Tracker opened it at the top (R4-APP-07). Each is
+// filed under its key and its path: HashRouter gives the key 'default' to the first entry and to
+// every address typed into the bar, so a key alone could hand one page another's offset.
 const offsets = new Map();
+const entryOf = (key, pathname) => `${key} ${pathname}`;
 
 /**
  * The scroll position of the workspace's <main> per page visit (J-40 / R2-073): a new page opens at
@@ -20,21 +22,25 @@ export function useScrollMemory(mainRef) {
   const navigationType = useNavigationType();
   const lastOffset = useRef(0);
   const shownKey = useRef(location.key);
+  const shownPath = useRef(location.pathname);
 
   // Leaving an entry — to another page or to the same page with another search — files its offset.
   // (Not on mount: the entry is only arriving, and its filed offset is what Back restores.)
   useLayoutEffect(() => {
-    if (shownKey.current === location.key) return;
-    offsets.set(shownKey.current, lastOffset.current);
+    if (shownKey.current === location.key && shownPath.current === location.pathname) return;
+    offsets.set(entryOf(shownKey.current, shownPath.current), lastOffset.current);
     shownKey.current = location.key;
-  }, [location.key]);
+    shownPath.current = location.pathname;
+  }, [location.key, location.pathname]);
   // Leaving the shell altogether files the last entry's offset too.
-  useLayoutEffect(() => () => { offsets.set(shownKey.current, lastOffset.current); }, []);
+  useLayoutEffect(() => () => {
+    offsets.set(entryOf(shownKey.current, shownPath.current), lastOffset.current);
+  }, []);
 
   useLayoutEffect(() => {
     const main = mainRef.current;
     if (!main) return;
-    const saved = navigationType === 'POP' ? offsets.get(location.key) : undefined;
+    const saved = navigationType === 'POP' ? offsets.get(entryOf(location.key, location.pathname)) : undefined;
     const top = saved ?? 0;
     main.scrollTop = top;
     lastOffset.current = top;

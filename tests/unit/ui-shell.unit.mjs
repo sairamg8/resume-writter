@@ -39,7 +39,7 @@ const loadModule = (id) => vite.ssrLoadModule(id);
  * mount, its <main>, `scroll(y)` (a user scroll), `go(to)` (router navigation, -1 is Back) and
  * the text the page shows.
  */
-async function shellAt(path) {
+async function shellAt(path, entries = [path]) {
   const { WorkspaceLayout } = await loadModule('/src/components/shell/WorkspaceLayout.jsx');
   let navigate = null;
   function Page({ name }) {
@@ -47,7 +47,7 @@ async function shellAt(path) {
     return createElement('p', null, name);
   }
   function App() {
-    return createElement(MemoryRouter, { initialEntries: [path] },
+    return createElement(MemoryRouter, { initialEntries: entries, initialIndex: 0 },
       createElement(Routes, null,
         createElement(Route, { element: createElement(WorkspaceLayout, { projects: [] }) },
           createElement(Route, { path: '/jobs', element: createElement(Page, { name: 'LIST' }) }),
@@ -142,6 +142,25 @@ describe('J-40: a route change inside the workspace opens the new page at its to
       await go(1);
       await go('/jobs/job_9'); // a new page after all that still opens at the top
       assert.equal(main().scrollTop, 0);
+    } finally { await view.unmount(); }
+  });
+
+  // The review of R4-APP-07: HashRouter gives the key 'default' to the first entry and to every
+  // address typed into the bar, and the offsets now outlive the shell: filed by key alone, a page
+  // opened by typing its address took the first page's offset.
+  it('an entry that shares another page’s key (HashRouter’s "default") opens at its own top', async () => {
+    const entries = [{ pathname: '/jobs', key: 'default' }, '/', { pathname: '/jobs/job_5', key: 'default' }];
+    const { view, main, scroll, go, shown } = await shellAt('/jobs', entries);
+    try {
+      scroll(900);
+      await go(1); // the résumés: the shell files /jobs at 900 under 'default'
+      assert.match(shown(), /HOME/);
+      await go(1); // a typed address, key 'default' again
+      assert.match(shown(), /JOB/);
+      assert.equal(main().scrollTop, 0, 'the job page took the list’s offset');
+      await go(-2);
+      assert.match(shown(), /LIST/);
+      assert.equal(main().scrollTop, 900);
     } finally { await view.unmount(); }
   });
 
