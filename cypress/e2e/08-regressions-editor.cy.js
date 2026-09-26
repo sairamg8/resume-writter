@@ -12,7 +12,7 @@ describe('regressions — editor', () => {
     const other = buildTestState('modern').resumes[0];
     other.personal = { ...other.personal, summary: '<p>Imported summary text.</p>' };
     cy.openExportMenu();
-    cy.contains('button', 'Import JSON').click(); // closes the menu, as for a real user
+    cy.contains('button', 'Import as a new résumé').click(); // closes the menu, as for a real user
     cy.get('input[type="file"][accept^=".json"]').selectFile({
       contents: Cypress.Buffer.from(JSON.stringify(other)), fileName: 'other.json',
     }, { force: true });
@@ -76,7 +76,7 @@ describe('regressions — imports say why they failed', () => {
   it('M11: the editor Import JSON reports unparseable and non-resume files', () => {
     cy.visitEditor('classic');
     cy.openExportMenu();
-    cy.contains('button', 'Import JSON').click();
+    cy.contains('button', 'Import as a new résumé').click();
     pick('{ nope', 'broken.json');
     cy.contains('[role="alert"]', 'Could not parse file').should('be.visible');
     pick(JSON.stringify({ hello: 'world' }), 'other.json');

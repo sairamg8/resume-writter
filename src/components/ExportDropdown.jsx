@@ -5,7 +5,7 @@ import { isJsonResume, jsonResumeToCpwtResume } from '@/utils/jsonResume';
 import { DOCUMENT_HINT, IMPORT_ACCEPT, isDocumentFile } from '@/utils/importDocument';
 
 /**
- * The editor's Export menu, with Import JSON: `onImportJSON(data, asOriginal)`, and a PDF, Word,
+ * The editor's Export menu, with "Import as a new résumé" (R4-DUX-17) of JSON: `onImportJSON(data, asOriginal)`, and a PDF, Word,
  * Markdown or text résumé read best-effort: `onImportFile(file, asOriginal)` (R2-148). `keeps` — a demo
  * account, whose originals come back (useDemoSeed) — adds "Import as my original", as the
  * dashboard's Import menu has (V2OWNER-DATA-3). `letter`: the Cover Letter tab is open, where PDF
@@ -117,7 +117,7 @@ export function ExportDropdown({ exporting, importing = false, keeps = false, le
             onClick={() => pickImport(false)}
             className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-gray-50"
           >
-            <Upload size={12} className="text-gray-400" /> Import JSON, PDF, Word or text
+            <Upload size={12} className="text-gray-400" /> Import as a new résumé (JSON, PDF, Word or text)
           </button>
           <p className="px-3 pb-1 text-[11px] text-gray-500">{DOCUMENT_HINT}</p>
           {keeps && (

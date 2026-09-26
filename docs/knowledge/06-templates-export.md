@@ -105,7 +105,10 @@ The Dashboard's and the editor's Import accept `.json,.pdf,.docx,.txt,.text,.md,
   heading (the app's titles and `ATS_STANDARD_SECTIONS` aliases), others custom; entries found by
   their dates (the PDF's and Word's "Group roles by company": the undated employer line over dated
   roles, R4-LO-01); every line it cannot place in a custom "Additional Information".
-- The editor then shows a dismissable notice (`useImportNotice`, route state `importNotice`).
+- The editor then shows a dismissable notice (`useImportNotice`, route state `importNotice`). An
+  import from the editor's own Export menu ("Import as a new résumé", JSON or document) also says it
+  is a new résumé (a letter's JSON: a new cover letter) and the open one is unchanged
+  (`NEW_RESUME_NOTICE` / `NEW_LETTER_NOTICE`, R4-DUX-17); names are not de-duplicated.
 - Tests: `tests/unit/import-text.unit.mjs`, round trip of the four exports in
   `tests/pdf/99-import-roundtrip.test.mjs`, the UI in `tests/pdf/99-import-ui.test.mjs`.
 
