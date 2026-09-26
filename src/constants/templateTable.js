@@ -113,4 +113,58 @@ export const TEMPLATES = {
     headerControls: true, headerRule: false,
     headerGaps: COMPACT_HEADER_GAPS, category: 'compact',
   },
+  // The designed layouts (R2-138 B2): each Classic's stacked header — every Header Customization control —
+  // and the shared single column, with marks of its own that are fills, never text (PdfDesigned.jsx,
+  // designedMarks.js), and its own heading mark under the heading style it brings (sectionHeadingLook).
+  gridline: {
+    label: 'Gridline', desc: 'Hairlines over and under the header · Titles between two hairlines', atsTier: 'certified',
+    style: { headingStyle: 'ruled', sectionTitleCase: 'upper' }, headerControls: true, headerRule: false,
+    headerGaps: STACKED_HEADER_GAPS,
+  },
+  registry: {
+    label: 'Registry', desc: 'An accent bar over the name · Titles on a dotted rule · Role-first jobs', atsTier: 'certified',
+    style: { headingStyle: 'underline', sectionTitleCase: 'upper' }, headerControls: true, headerRule: false,
+    headerGaps: STACKED_HEADER_GAPS,
+  },
+  bookend: {
+    label: 'Bookend', desc: 'The header between two heavy rules · A rule along every page\'s foot', atsTier: 'certified',
+    style: { headingStyle: 'line', sectionTitleCase: 'upper' }, headerControls: true, headerRule: false,
+    headerGaps: STACKED_HEADER_GAPS,
+  },
+  lectern: {
+    label: 'Lectern', desc: 'Centred header over a short rule · Centred section titles', atsTier: 'certified',
+    style: { headingStyle: 'line', sectionTitleCase: 'upper', headerAlign: 'center' }, headerControls: true, headerRule: false,
+    headerGaps: STACKED_HEADER_GAPS,
+  },
+  chronicle: {
+    label: 'Chronicle', desc: 'A serif masthead over a thick-and-thin rule · Double-ruled titles', atsTier: 'certified',
+    style: { headingStyle: 'underline', sectionTitleCase: 'upper', font: 'ptserif' }, headerControls: true, headerRule: false,
+    headerGaps: STACKED_HEADER_GAPS,
+  },
+  keystone: {
+    label: 'Keystone', desc: 'An accent keystone beside the name · Boxed titles with an accent edge', atsTier: 'certified',
+    style: { headingStyle: 'box', sectionTitleCase: 'upper' }, headerControls: true, headerRule: false,
+    headerGaps: STACKED_HEADER_GAPS,
+  },
+  // Rated as Banner is: the same clean text flow, under a tinted header ground.
+  banded: {
+    label: 'Banded', desc: 'The header on a pale band across the page · Titles on bands to the edges', atsTier: 'good',
+    style: { headingStyle: 'box', sectionTitleCase: 'upper' }, headerControls: true, headerRule: false,
+    headerGaps: STACKED_HEADER_GAPS,
+  },
+  keel: {
+    label: 'Keel', desc: 'An accent bar down the header\'s side · Left-bar titles', atsTier: 'certified',
+    style: { headingStyle: 'leftbar', sectionTitleCase: 'upper' }, headerControls: true, headerRule: false,
+    headerGaps: STACKED_HEADER_GAPS,
+  },
+  linen: {
+    label: 'Linen', desc: 'Lato, soft and open · Title-case titles underlined to their length', atsTier: 'certified',
+    style: { headingStyle: 'underline', sectionTitleCase: 'normal', font: 'lato' }, headerControls: true, headerRule: false,
+    headerGaps: STACKED_HEADER_GAPS,
+  },
+  broadsheet: {
+    label: 'Broadsheet', desc: 'A headline name over a heavy rule · A rule over every title', atsTier: 'certified',
+    style: { headingStyle: 'ruled', sectionTitleCase: 'upper', fontSizeNameDelta: 14, sectionBorderWidth: 2 }, headerControls: true, headerRule: false,
+    headerGaps: STACKED_HEADER_GAPS,
+  },
 };

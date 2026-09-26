@@ -69,7 +69,7 @@ describe('what a template switch keeps and changes (A5)', () => {
     const html = (await panel('classic')).replace(/&#x27;/g, "'");
     assert.match(html, /Switching template keeps your content and the colours, font and spacing you set/);
     assert.match(html, /changes the heading style and title case/);
-    assert.match(html, /Academic and Compact also bring their own type and spacing/);
+    assert.match(html, /Academic, Compact, Lectern, Chronicle, Linen and Broadsheet also bring their own type and spacing/);
     assert.match(html, /Name or Job title colour that would not read on its header goes back/);
   });
 

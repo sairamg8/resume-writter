@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { visitEditor, exportPdf, findRun, openDesignPanel } from './pw-helpers.js';
 import { ALL_SECTION_TYPES } from '../helpers.js';
-import { railPixels, topRowAccent, hairlines, shortRules } from './preview-pixels.js';
+import { railPixels, topRowAccent, hairlines, shortRules, previewFingerprint } from './preview-pixels.js';
 
 /** The fixture's sections with two skill groups, so a grid has two cells to set side by side; `grid`: as picking Compact leaves them. */
 const withTwoSkillGroups = (grid) => ALL_SECTION_TYPES.map((s) => (s.type !== 'skills' ? s : {
@@ -204,4 +204,38 @@ test.describe('Exported PDF — every template', () => {
     expect(Math.abs(findRun(runs, 'Frontend').y - findRun(runs, 'Backend').y)).toBeLessThan(1);
   });
 
+});
+
+// R2-138 B2: the ten designed layouts. Each is a card in Design → Template; picking it from Classic redraws the
+// preview (its marks and its type change the page), and the export prints the résumé's text with its own header:
+// the marks are drawn, never text (tests/pdf/layouts-look.test.mjs measures each one).
+const DESIGNED = {
+  gridline: {}, registry: {}, bookend: {}, chronicle: {}, banded: {},
+  lectern: { nameX: (x) => expect(x).toBeGreaterThan(150) }, // its header centred
+  keystone: { nameX: (x) => expect(x).toBeGreaterThan(51 + 18) }, // set off its wedge
+  keel: { nameX: (x) => expect(x).toBeGreaterThan(51 + 4) }, // set off its bar
+  linen: { title: 'Professional Experience' }, // title-case titles
+  broadsheet: { nameSize: 24 }, // a headline name
+};
+
+test.describe('Exported PDF — the designed layouts (R2-138 B2)', () => {
+  for (const [id, want] of Object.entries(DESIGNED)) {
+    const label = `${id[0].toUpperCase()}${id.slice(1)}`;
+    test(`${label} is offered in the Design panel; picking it redraws the preview and the export`, async ({ page }) => {
+      await visitEditor(page, 'classic');
+      const classic = await previewFingerprint(page);
+
+      await openDesignPanel(page);
+      await expect(page.getByTestId(`template-${id}`)).toContainText(label);
+      await page.getByTestId(`template-${id}`).click();
+      await expect.poll(() => previewFingerprint(page), { timeout: 20_000 }).not.toBe(classic);
+
+      const { runs, text } = await exportPdf(page);
+      for (const s of ['Alex Johnson', 'Full Stack Engineer', 'alex@example.com', 'Acme Corp', 'Senior Dev', 'MIT']) expect(text).toContain(s);
+      expect(text).toContain(want.title ?? 'PROFESSIONAL EXPERIENCE');
+      const name = findRun(runs, 'Alex Johnson');
+      expect(name.fontSize).toBeGreaterThan(want.nameSize ?? 16);
+      if (want.nameX) want.nameX(name.x);
+    });
+  }
 });

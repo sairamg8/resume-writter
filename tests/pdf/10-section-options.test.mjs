@@ -81,7 +81,9 @@ describe('custom section', () => {
 
 describe('experience Order (FIDA-58 / FIDB-72)', () => {
   // With no Order chosen a template prints its own default — the one the section editor shows.
-  const DEFAULT_ORDER = { classic: 'company', modern: 'company', minimal: 'company', executive: 'role', sidebar: 'role', timeline: 'role', banner: 'role', academic: 'role', compact: 'role' };
+  const DEFAULT_ORDER = { classic: 'company', modern: 'company', minimal: 'company', executive: 'role', sidebar: 'role', timeline: 'role', banner: 'role', academic: 'role', compact: 'role',
+    // The designed layouts (R2-138 B2): Classic's entries, but Registry's and Broadsheet's jobs lead with the role.
+    gridline: 'company', registry: 'role', bookend: 'company', lectern: 'company', chronicle: 'company', keystone: 'company', banded: 'company', keel: 'company', linen: 'company', broadsheet: 'role' };
   const bold = (t) => /Bold/.test(t.font);
   /** Which field leads the entry: the bold primary, printed before the other one. */
   async function lead(template, titleOrder) {

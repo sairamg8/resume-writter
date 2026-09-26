@@ -28,7 +28,8 @@ describe('dashboard thumbnails (R2-133)', () => {
   it('each template draws its own thumbnail, with the same accent', async () => {
     const seen = new Map();
     for (const template of TEMPLATES) {
-      const t = await thumbnail(template);
+      // Its drawing, not its name: the card names its template in data-thumb, which no one sees (R2-138 B2's ten drew Classic's page).
+      const t = (await thumbnail(template)).replace(/ data-thumb="[^"]*"/, '');
       assert.ok(!seen.has(t), `${template} draws the same thumbnail as ${seen.get(t)}`);
       seen.set(t, template);
     }

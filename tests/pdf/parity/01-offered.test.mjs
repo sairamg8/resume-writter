@@ -18,7 +18,8 @@ before(async () => {
     loadModule('/src/constants/headerSpacing.js'),
   ]);
   look = {
-    band: (v) => Boolean(letterhead.letterheadLook(v.template, v.settings).band),
+    // A band that prints in the page's own inks (Banded's pale ground, letterhead.js `pageInks`) takes no Header Text Color.
+    band: (v) => { const b = letterhead.letterheadLook(v.template, v.settings).band; return Boolean(b) && !b.pageInks; },
     // The page prints header gap `key`: its header's template has one (the walk's résumé has a summary).
     gap: (v, key) => spacing.templateGapPt(templates.headerTemplateId(v.template, v.settings), key) != null,
     ...templates,
@@ -35,7 +36,7 @@ const offers = (variant, key) => {
 
 /** [key, what the page must print for it to be offered, in words]. */
 const WHERE = [
-  ['headerTextColor', (v) => look.band(v), 'the header prints on a band or a column (letterheadLook band)'],
+  ['headerTextColor', (v) => look.band(v), 'the header prints on a band or a column in its own inks (letterheadLook band)'],
   ['sidebarBg', (v) => look.headerTemplateId(v.template, v.settings) === 'sidebar', 'the page prints the Sidebar column'],
   ['headerAlign', (v) => look.hasHeaderControls(v.template, v.settings), 'the header takes Header Customization'],
   ['showHeaderBorder', (v) => look.hasHeaderControls(v.template, v.settings), 'the header takes Header Customization'],

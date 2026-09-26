@@ -41,12 +41,13 @@ describe('design — Left bar\'s Border thickness is the width the bar prints (O
     cy.get('@thickness').find('input[aria-label="Section border thickness (pt)"]').should('be.disabled');
     cy.get('@thickness').contains('button', '−').should('be.disabled');
     cy.get('@thickness').contains('button', '+').should('be.disabled');
-    cy.contains('p', 'Boxed has no border line.').should('be.visible');
+    // Scrolled to: under a long template list the note can sit behind the floating Edit/Preview pill.
+    cy.contains('p', 'Boxed has no border line.').scrollIntoView().should('be.visible');
     cy.get('input[aria-label="Section border color"]').should('not.be.disabled');
 
     cy.contains('button', 'Plain').click();
     cy.get('@thickness').find('input[aria-label="Section border thickness (pt)"]').should('be.disabled');
-    cy.contains('p', 'Plain has no border.').should('be.visible');
+    cy.contains('p', 'Plain has no border.').scrollIntoView().should('be.visible');
     cy.get('input[aria-label="Section border color"]').should('be.disabled');
 
     cy.contains('button', 'Ruled').click();

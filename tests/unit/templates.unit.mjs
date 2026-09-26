@@ -14,8 +14,8 @@ const {
 
 test('templateId: every template stays, however an imported file cases or spaces them; any other id reads as Classic (M15, R5-5)', () => {
   for (const id of TEMPLATE_IDS) assert.equal(templateId(id), id);
-  assert.deepEqual(TEMPLATE_IDS.toSorted(), ['academic', 'banner', 'classic', 'compact', 'executive', 'minimal', 'modern', 'sidebar', 'timeline']);
-  for (const [written, id] of [['Modern', 'modern'], [' sidebar ', 'sidebar'], ['EXECUTIVE', 'executive'], ['Minimal\n', 'minimal'], ['Classic', 'classic'], [' Timeline', 'timeline'], ['BANNER ', 'banner'], ['Academic', 'academic'], [' COMPACT', 'compact']]) {
+  assert.deepEqual(TEMPLATE_IDS.toSorted(), ['academic', 'banded', 'banner', 'bookend', 'broadsheet', 'chronicle', 'classic', 'compact', 'executive', 'gridline', 'keel', 'keystone', 'lectern', 'linen', 'minimal', 'modern', 'registry', 'sidebar', 'timeline']);
+  for (const [written, id] of [['Modern', 'modern'], [' sidebar ', 'sidebar'], ['EXECUTIVE', 'executive'], ['Minimal\n', 'minimal'], ['Classic', 'classic'], [' Timeline', 'timeline'], ['BANNER ', 'banner'], ['Academic', 'academic'], [' COMPACT', 'compact'], ['Gridline ', 'gridline'], [' BROADSHEET', 'broadsheet']]) {
     assert.equal(templateId(written), id, JSON.stringify(written));
   }
   for (const id of ['dark', 'Dark', 'aurora', '', '  ', null, undefined, 42, {}, ['modern']]) assert.equal(templateId(id), 'classic', String(id));
@@ -48,10 +48,12 @@ test('the header helpers give each template the answers of the separate tables t
   // that folding them into TEMPLATES changed no answer.
   // Templates added since (T6 on) state their own answers: Timeline's header is Classic's stacked one, no rule;
   // Banner's is that header in its band (T7), no rule; Academic's is Classic's, centred where it is picked (T8), no rule;
-  // Compact's is Classic's, the title on the name's line where it is picked (T9), no rule.
-  const CONTROLS = { classic: true, modern: false, minimal: true, executive: true, sidebar: false, timeline: true, banner: true, academic: true, compact: true };
-  const RULE_WHEN_UNSET = { classic: true, modern: false, minimal: false, executive: false, sidebar: false, timeline: false, banner: false, academic: false, compact: false };
-  assert.deepEqual(TEMPLATE_IDS, ['classic', 'modern', 'minimal', 'executive', 'sidebar', 'timeline', 'banner', 'academic', 'compact']);
+  // Compact's is Classic's, the title on the name's line where it is picked (T9), no rule. The designed
+  // layouts' (R2-138 B2) are Classic's with marks of their own, no rule.
+  const DESIGNED = ['gridline', 'registry', 'bookend', 'lectern', 'chronicle', 'keystone', 'banded', 'keel', 'linen', 'broadsheet'];
+  const CONTROLS = { classic: true, modern: false, minimal: true, executive: true, sidebar: false, timeline: true, banner: true, academic: true, compact: true, ...Object.fromEntries(DESIGNED.map((t) => [t, true])) };
+  const RULE_WHEN_UNSET = { classic: true, modern: false, minimal: false, executive: false, sidebar: false, timeline: false, banner: false, academic: false, compact: false, ...Object.fromEntries(DESIGNED.map((t) => [t, false])) };
+  assert.deepEqual(TEMPLATE_IDS, ['classic', 'modern', 'minimal', 'executive', 'sidebar', 'timeline', 'banner', 'academic', 'compact', ...DESIGNED]);
   for (const template of [...TEMPLATE_IDS, 'dark', '', undefined]) {
     const t = templateId(template);
     assert.equal(hasHeaderControls(template), CONTROLS[t], `${template}: controls`);
@@ -85,6 +87,18 @@ test('templateStyleDefaults: each template\'s heading style and title case; an u
         headingStyle: 'line', sectionTitleCase: 'upper', headerLayout: 'inline',
         fontSizeBase: 9, lineHeightValue: 1.3, sectionGap: 10, itemGap: 5, marginH: 12, marginV: 10,
       },
+      // The designed layouts (R2-138 B2): each its heading style; Lectern its centred header, Chronicle PT Serif,
+      // Linen Lato and title-case titles, Broadsheet its headline name and 2 pt title rules.
+      gridline: { headingStyle: 'ruled', sectionTitleCase: 'upper' },
+      registry: { headingStyle: 'underline', sectionTitleCase: 'upper' },
+      bookend: { headingStyle: 'line', sectionTitleCase: 'upper' },
+      lectern: { headingStyle: 'line', sectionTitleCase: 'upper', headerAlign: 'center' },
+      chronicle: { headingStyle: 'underline', sectionTitleCase: 'upper', font: 'ptserif' },
+      keystone: { headingStyle: 'box', sectionTitleCase: 'upper' },
+      banded: { headingStyle: 'box', sectionTitleCase: 'upper' },
+      keel: { headingStyle: 'leftbar', sectionTitleCase: 'upper' },
+      linen: { headingStyle: 'underline', sectionTitleCase: 'normal', font: 'lato' },
+      broadsheet: { headingStyle: 'ruled', sectionTitleCase: 'upper', fontSizeNameDelta: 14, sectionBorderWidth: 2 },
     },
   );
   assert.deepEqual(templateStyleDefaults('dark'), templateStyleDefaults('classic'));
@@ -128,7 +142,10 @@ test('buildTestState: headingStyle and sectionTitleCase match templateStyleDefau
 });
 
 test('headerControlTemplateLabels: returns templates with headerControls in order (FIDB-51-VF7-NB1)', () => {
-  assert.deepEqual(headerControlTemplateLabels(), ['Classic', 'Minimal', 'Executive', 'Timeline', 'Banner', 'Academic', 'Compact']);
+  assert.deepEqual(headerControlTemplateLabels(), [
+    'Classic', 'Minimal', 'Executive', 'Timeline', 'Banner', 'Academic', 'Compact',
+    'Gridline', 'Registry', 'Bookend', 'Lectern', 'Chronicle', 'Keystone', 'Banded', 'Keel', 'Linen', 'Broadsheet',
+  ]);
 
   // Custom table with extra template prevents drift when new templates are added
   const customTable = {

@@ -2,7 +2,8 @@ import { View } from '@react-pdf/renderer';
 import { PdfSectionTitle } from './PdfSection';
 import { headingFace } from './pdfFaces';
 import { PdfRichText } from './PdfRichText';
-import { CSS_PX_TO_PT, DEFAULT_ITEM_GAP_PX, SECTION_SPACING_PX } from './pdfUnits';
+import { CSS_PX_TO_PT, DEFAULT_ITEM_GAP_PX, MM_TO_PT, SECTION_SPACING_PX } from './pdfUnits';
+import { pageMargins } from '@/constants/pageMargins';
 import { sectionOverridePx } from '@/constants/spacingNumbers';
 import { tint, textShades } from './pdfColors';
 
@@ -147,6 +148,7 @@ export function SectionTitleOf({ section, settings, centered, presence = 0 }) {
       template={settings?._template}
       lineHeightValue={settings?.lineHeightValue ?? 1.5}
       letterSpacingPct={settings?.sectionLetterSpacing}
+      pageSidePt={pageMargins(settings || {}).h * MM_TO_PT}
       // Design → Section Headings → Icons: the section's icon before its title (R2-147).
       icon={settings?.sectionIcons ? section.type : null}
       face={headingFace(settings)}

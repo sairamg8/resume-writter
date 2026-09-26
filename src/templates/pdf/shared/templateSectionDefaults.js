@@ -63,6 +63,19 @@ export const TEMPLATE_SECTION_DEFAULTS = {
     languages:      { columns: 2 },
     references:     { columns: 2 },
   },
+
+  // The designed layouts (R2-138 B2) print the shared entries as Classic does, but Registry's and Broadsheet's
+  // jobs lead with the role, bold, the company and location under it (Stacked) — a ledger's line, a headline.
+  gridline: {},
+  registry:   { experience: { titleOrder: 'role' } },
+  bookend: {},
+  lectern: {},
+  chronicle: {},
+  keystone: {},
+  banded: {},
+  keel: {},
+  linen: {},
+  broadsheet: { experience: { titleOrder: 'role' } },
 };
 
 /**

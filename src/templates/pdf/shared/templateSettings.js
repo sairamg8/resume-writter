@@ -132,7 +132,37 @@ export const DEFAULTS = {
     headingStyle: 'line',
     sectionTitleCase: 'upper',
   },
+  // The designed layouts (R2-138 B2) print on the white page, as Classic: the name in the Text colour (in
+  // the accent on Linen, a soft brown), the title in the accent, and their marks in the accent.
+  gridline: page('#1e40af', 'ruled'),
+  registry: page('#0f766e', 'underline'),
+  bookend: page('#9f1239', 'line'),
+  lectern: page('#4338ca', 'line'),
+  chronicle: page('#1f2937', 'underline'),
+  keystone: page('#b45309', 'box'),
+  banded: page('#0e7490', 'box'),
+  keel: page('#be123c', 'leftbar'),
+  linen: {
+    ...page('#8a5a44', 'underline'),
+    nameColor: (s) => s.nameColor || s.accentColor || '#8a5a44',
+    jobTitleColor: (s) => s.jobTitleColor || textShades(s.textColor || '#292524').sub,
+    textColor: '#292524',
+    sectionTitleCase: 'normal',
+  },
+  broadsheet: page('#b91c1c', 'ruled', '#111111'),
 };
+
+/** A designed layout's fallbacks on the white page: Classic's, in its own accent and heading style. */
+function page(accentColor, headingStyle, textColor = '#1a1a1a') {
+  return {
+    accentColor,
+    textColor,
+    nameColor: (s) => s.nameColor || s.textColor || textColor,
+    jobTitleColor: (s) => s.jobTitleColor || s.accentColor || accentColor,
+    headingStyle,
+    sectionTitleCase: 'upper',
+  };
+}
 
 /** The photo controls resolveTemplateSettings clamps, from the one list the panel offers. */
 const PHOTO_KEYS = Object.keys(PHOTO_OPTIONS);

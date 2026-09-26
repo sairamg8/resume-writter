@@ -184,4 +184,10 @@ export const DEMO_RESUMES = [
     { accentColor: '#1e3a8a', textColor: '#1a1a1a', headingStyle: 'box', sectionTitleCase: 'upper', sectionGap: 16, itemGap: 8 }),
   academic(),
   compact(),
+  // The designed layouts (R2-138 B2): each takes its template's own style, in its own accent.
+  ...[
+    ['gridline', '#1e40af'], ['registry', '#0f766e'], ['bookend', '#9f1239'], ['lectern', '#4338ca'], ['chronicle', '#1f2937'],
+    ['keystone', '#b45309'], ['banded', '#0e7490'], ['keel', '#be123c'], ['linen', '#8a5a44'], ['broadsheet', '#b91c1c'],
+  ].map(([id, accentColor]) => sample(`demo_${id}`, `Sample · ${id[0].toUpperCase()}${id.slice(1)}`, id,
+    { ...templateStyleDefaults(id), accentColor, textColor: '#1a1a1a', sectionGap: 16, itemGap: 8 })),
 ];

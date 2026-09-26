@@ -32,6 +32,16 @@ export const titleTrackingPct = (size, pct) => (typeof pct === 'number' ? pct : 
  *              inline headings (CompactTemplatePDF.jsx) — the rule SHORT_RULE_EM × the title's size
  *              long, in Border colour, else the accent at full strength. Word prints Line after as a
  *              bottom border on every template: a paragraph's border cannot stop short.
+ *   variant    the designed layouts' own mark under their own heading style (R2-138 B2), else null —
+ *              drawn by PdfSectionTitle; Word prints the style's plain form, as it does Compact's:
+ *                framed    Ruled with a rule above the title as well (Gridline)
+ *                overline  Ruled with the rule above the title, none under it (Broadsheet)
+ *                dotted    Underline dotted (Registry)
+ *                double    Underline doubled (Chronicle)
+ *                soft      Underline only as wide as the title (Linen)
+ *                edge      Boxed with a bar of Border colour at its left edge (Keystone)
+ *                bleed     Boxed as a band to the paper's edges, the title on the margin (Banded)
+ *   center     every section title centred, whatever the section's Alignment (Lectern)
  */
 export function sectionHeadingLook({ template, headingStyle, accent = '#2563eb', borderColor = '' }) {
   const bc = borderColor || accent;
@@ -43,9 +53,13 @@ export function sectionHeadingLook({ template, headingStyle, accent = '#2563eb',
   return {
     chip,
     short,
+    variant: VARIANTS[template]?.[headingStyle] || null,
+    center: template === 'lectern',
     text: chip && headingStyle === 'box' ? readableOn('#ffffff', solid(bc), 4.5) : neutral ? '#374151' : accent,
     ruled: template === 'modern' ? (borderColor || tint(accent, 0x30 / 255))
       : template === 'academic' ? (borderColor || solid(accent, 0.55)) // the hairline under its titles
+      : template === 'gridline' ? (borderColor || solid(accent, 0.5)) // the hairlines above and under its titles
+      : template === 'broadsheet' ? solid(bc) // the rule over its titles, as heavy as the ink
       : template === 'minimal' || template === 'executive' ? (borderColor || '#d1d5db')
       : (borderColor || '#e5e7eb'), // classic, sidebar
     line: short ? solid(bc)
@@ -62,6 +76,17 @@ export function sectionHeadingLook({ template, headingStyle, accent = '#2563eb',
       : tint(bc, 0x14 / 255), // executive, classic, sidebar, modern
   };
 }
+
+/** Each designed layout's own heading mark, under the heading style it brings (sectionHeadingLook's `variant`). */
+const VARIANTS = {
+  gridline: { ruled: 'framed' },
+  broadsheet: { ruled: 'overline' },
+  registry: { underline: 'dotted' },
+  chronicle: { underline: 'double' },
+  linen: { underline: 'soft' },
+  keystone: { box: 'edge' },
+  banded: { box: 'bleed' },
+};
 
 /** The part of the look Border colour sets under each style; Plain has none. */
 const BORDER_PART = { ruled: 'ruled', line: 'line', underline: 'underline', leftbar: 'bar', box: 'box' };

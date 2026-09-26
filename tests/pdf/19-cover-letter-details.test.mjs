@@ -179,6 +179,8 @@ describe('the Text colour reaches every line of the letter (R1-13)', () => {
   // PDF run is compared as it shows on the white page.
   it('a résumé that stores no Text colour, or a short or translucent one: Word prints the PDF\'s colours, in every template', async () => {
     const runs = ['Pat Sample', 'pat@example.com', 'Sarah Smith', 'Hello', 'Pat Signer', 'Staff Engineer'];
+    const { letterheadLook } = await loadModule('/src/templates/pdf/shared/letterhead.js');
+    const { resolveTemplateSettings } = await loadModule('/src/templates/pdf/shared/templateSettings.js');
     for (const template of TEMPLATES) {
       for (const textColor of [undefined, '#abc', '#11111180']) {
         const r = resume({
@@ -190,9 +192,13 @@ describe('the Text colour reaches every line of the letter (R1-13)', () => {
         else delete r.settings.textColor;
         const bytes = await renderCover(r);
         const { xml } = await coverDocx(r);
+        // A translucent run shows over what it is printed on: the letterhead's band where it has one (Banded's pale
+        // band takes the page's inks, R2-138 B2), else the white page.
+        const band = letterheadLook(template, resolveTemplateSettings(r.settings, template)).band?.color;
         for (const text of runs) {
           const { fill, alpha } = (await drawState(bytes, text))[0];
-          assert.equal(`#${colourOf(xml, text)}`, solid(fill, alpha), `${template}, Text colour ${textColor}: "${text}"`);
+          const ground = band && ['Pat Sample', 'pat@example.com'].includes(text) ? band : '#ffffff';
+          assert.equal(`#${colourOf(xml, text)}`, solid(fill, alpha, ground), `${template}, Text colour ${textColor}: "${text}"`);
         }
       }
     }

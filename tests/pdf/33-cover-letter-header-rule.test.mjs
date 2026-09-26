@@ -14,11 +14,13 @@ after(teardown);
 
 const ACCENT = '#e11d48';
 // The templates whose header takes Header Bottom Border (Timeline's is Classic's stacked header, T6;
-// Academic's is Classic's too, centred, T8; Compact's is Classic's with the title on the name's line, T9).
-const RULE_LOOKS = ['classic', 'minimal', 'executive', 'timeline', 'academic', 'compact'];
+// Academic's is Classic's too, centred, T8; Compact's is Classic's with the title on the name's line, T9;
+// the designed layouts' on the white page are Classic's with marks of their own, R2-138 B2).
+const DESIGNED_ON_PAGE = ['gridline', 'registry', 'bookend', 'lectern', 'chronicle', 'keystone', 'keel', 'linen', 'broadsheet'];
+const RULE_LOOKS = ['classic', 'minimal', 'executive', 'timeline', 'academic', 'compact', ...DESIGNED_ON_PAGE];
 // Banner's band takes it too, drawn on the band in its text colour on the résumé and the letter alike
-// (T7): its own tests are 68-banner-letter.test.mjs.
-const BAND_RULE = ['banner'];
+// (T7): its own tests are 68-banner-letter.test.mjs. Banded's pale band takes it in the accent (R2-138 B2).
+const BAND_RULE = ['banner', 'banded'];
 
 /** A résumé on `template` with a letterhead's worth of header and a letter; no sections, so the header rule is its only wide stroke. */
 const make = (template, settings) => resume({
@@ -76,6 +78,10 @@ describe('the letterhead\'s rule follows Header Bottom Border and its Thickness 
       classic: [], minimal: [`${solid(ACCENT, 0.4)}/0.75`], executive: [`${ACCENT}/0.75`, `${ACCENT}/0.75`], timeline: [`${solid(ACCENT, 0.35)}/1.5`],
       academic: [`${solid(ACCENT, 0.55)}/0.75`], // the hairline its section titles print on
       compact: [`${ACCENT}/1`], // its section titles' short rule, across the letterhead (T9)
+      // The designed layouts' own marks, as their letters draw them (designedMarks.js, R2-138 B2).
+      gridline: [`${solid(ACCENT, 0.5)}/0.75`], registry: [`${ACCENT}/4`], bookend: [`${ACCENT}/3`], lectern: [`${ACCENT}/2`],
+      chronicle: [`${ACCENT}/2.5`, `${ACCENT}/0.75`], keystone: [`${ACCENT}/2`], keel: [`${ACCENT}/4`], linen: [`${ACCENT}/1.5`],
+      broadsheet: ['#111111/3'], // in the Text colour its résumé's name prints in
     };
     for (const template of RULE_LOOKS) {
       for (const width of [undefined, 6]) {
@@ -123,7 +129,11 @@ describe('the letterhead\'s rule follows Header Bottom Border and its Thickness 
         const contact = allItems(pages).find((t) => t.str.includes('pat@example.com'));
         const [rule] = (await painted(bytes)).filter((p) => p.paint === 'stroke' && p.x1 - p.x0 > 400);
         assert.ok(rule.y1 < contact.y && rule.y0 > dateY(pages), `${template} ${width}: the rule (y ${rule.y0.toFixed(1)}) under the contacts (${contact.y.toFixed(1)}), above the date (${dateY(pages).toFixed(1)})`);
-        const shift = { classic: width, minimal: width - 0.75, executive: width - (0.75 + 1.5 + 0.75), timeline: width - 1.5, academic: width - 0.75, compact: width - 1 }[template];
+        const shift = {
+          classic: width, minimal: width - 0.75, executive: width - (0.75 + 1.5 + 0.75), timeline: width - 1.5, academic: width - 0.75, compact: width - 1,
+          gridline: width - 0.75, registry: width - 4, bookend: width - 3, lectern: width - 2, chronicle: width - (2.5 + 1.5 + 0.75),
+          keystone: width - 2, keel: width - 4, linen: width - 1.5, broadsheet: width - 3,
+        }[template];
         assert.ok(Math.abs(dateY(off) - dateY(pages) - shift) < 0.05, `${template} ${width}: the date moves ${(dateY(off) - dateY(pages)).toFixed(2)} pt, expected ${shift}`);
       }
     }

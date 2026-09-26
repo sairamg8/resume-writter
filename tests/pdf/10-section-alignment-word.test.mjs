@@ -52,10 +52,15 @@ describe('Word: Section Options → Alignment "Center" centres what the PDF cent
       const { SIDEBAR_COLUMN_TYPES } = await import('../../src/constants/templates.js');
       const [left, centre] = await Promise.all(['left', 'center'].map(async (a) => read(await render(everyType(template, a)))));
       const doc = byType(await renderDocx(everyType(template, 'center')));
+      const { sectionHeadingLook } = await loadModule('/src/templates/pdf/shared/sectionHeadingLook.js');
+      // The PDF centres a section when its title moves to the middle of the column — or, where the template
+      // centres every title whatever the Alignment (Lectern, R2-138 B2), when its first entry does.
+      const titlesCentred = Boolean(sectionHeadingLook({ template }).center);
       for (const type of Object.keys(TYPES)) {
-        // The PDF centres a section when its title moves to the middle of the column.
-        const x = (pages) => itemsWith(pages, heading(type))[0].x;
-        const pdfCentred = x(centre) - x(left) > 20;
+        const probe = titlesCentred ? TYPES[type].word : heading(type);
+        const [l, c] = [itemsWith(left, probe)[0], itemsWith(centre, probe)[0]];
+        assert.ok(l && c, `${template} ${type}: "${probe}" prints`);
+        const pdfCentred = c.x - l.x > 20;
         const side = template === 'sidebar' && SIDEBAR_COLUMN_TYPES.includes(type);
         assert.equal(pdfCentred, !side, `${template} ${type}: the PDF ${side ? 'keeps the side column left' : 'centres it'}`);
         assert.ok(doc[type]?.length > 1, `${template} ${type}: printed in Word`);

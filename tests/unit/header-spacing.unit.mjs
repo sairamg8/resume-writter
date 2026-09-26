@@ -40,6 +40,8 @@ const EXPECTED = {
   academic: { ...STACKED, nameTitleGap: 2, summaryGap: 6 },
   // Compact sets it tight for one page: the summary 5 pt under the contacts (T9); its gap under the header is below.
   compact: { ...STACKED, summaryGap: 5 },
+  // The designed layouts (R2-138 B2) print Classic's stacked header, with marks of their own.
+  ...Object.fromEntries(['gridline', 'registry', 'bookend', 'lectern', 'chronicle', 'keystone', 'banded', 'keel', 'linen', 'broadsheet'].map((t) => [t, STACKED])),
 };
 
 test('each template\'s header gaps are the constants it printed before they became settings (header_spacing_spec.md)', () => {

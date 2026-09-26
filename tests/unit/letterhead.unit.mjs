@@ -10,7 +10,10 @@ import assert from 'node:assert/strict';
 import { TEMPLATE_IDS, templateLabel, letterheadCentered } from '../../src/constants/templates.js';
 
 test('templateLabel: each template\'s name as the editor shows it; an unknown id is Classic (FIDB-51)', () => {
-  assert.deepEqual(TEMPLATE_IDS.map(templateLabel), ['Classic', 'Modern', 'Minimal', 'Executive', 'Sidebar', 'Timeline', 'Banner', 'Academic', 'Compact']);
+  assert.deepEqual(TEMPLATE_IDS.map(templateLabel), [
+    'Classic', 'Modern', 'Minimal', 'Executive', 'Sidebar', 'Timeline', 'Banner', 'Academic', 'Compact',
+    'Gridline', 'Registry', 'Bookend', 'Lectern', 'Chronicle', 'Keystone', 'Banded', 'Keel', 'Linen', 'Broadsheet',
+  ]);
   for (const id of ['dark', '', undefined]) assert.equal(templateLabel(id), 'Classic', String(id));
 });
 
