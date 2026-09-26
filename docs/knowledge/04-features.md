@@ -22,6 +22,7 @@ Maps user-facing features → primary code locations.
 |---------|------|
 | Tab: resume / design / cover letter / ATS check | `pages/Editor.jsx` `activeTab`, `hooks/useEditorTab.js` |
 | Personal info | `PersonalInfoEditor*.jsx` |
+| Header spacing (Personal Info → Header Customization: one stepper per gap the header prints, and Reset; the letter's own Name ↔ Contacts under Cover Letter → Header Layout) | `components/HeaderSpacingControls.jsx` (`HeaderSpacingGroup`, `GapStepper`), `utils/headerSpacingRows.js` (`headerGapRows` — which rows show for the template and header; `gapIsSet`; `headerGapKeysSet` for Reset; `letterSideGapRow`), `constants/headerSpacing.js` (the keys, their ranges, `storedGapPx`), `constants/templateHeaderGaps.js` (each template's own gaps) |
 | Sections + DnD | `SectionEditor*.jsx`, dnd-kit |
 | Add section types | `SECTION_GROUPS` + `addSection` |
 | Live preview (the exported PDF) | `PdfPreview.jsx` + `renderResumePdf` (`utils/pdfExportReactPDF.js`) |
