@@ -280,6 +280,7 @@ describe('Share a public link', () => {
       assert.equal(cloud.doc(`public/${shareId}`).resume.personal.title, 'Principal Designer', 'the same link, the new copy');
 
       click(view, buttonNamed(view, 'Unpublish'));
+      click(view, buttonNamed(view, 'Yes, unpublish')); // it asks first (R4-DUX-10)
       await until(() => buttonNamed(view, 'Publish'));
       assert.equal(cloud.doc(`public/${shareId}`), undefined);
       assert.equal(cloud.doc(`users/uid_owner/shares/${r.id}`), undefined);
