@@ -11,6 +11,7 @@ import {
 } from './PdfSidebarColumn';
 import { SideSkills } from './PdfSidebarSkills';
 import { breakLinks } from './pdfFontLoader';
+import { capMiddle } from './pdfMeasure';
 
 export { SIDEBAR_TYPES, SideSectionTitle };
 
@@ -32,10 +33,19 @@ export function renderSideSection(section, sectionGap, itemGap, accent, shades, 
 // ──────────────── Sidebar main-column card renderers ────────────────
 // Experience + Projects get the left-border card + dot marker to match HTML.
 
-function CardItem({ children }) {
+/** The card's dot, pt: its diameter. */
+const CARD_DOT = 6;
+
+/**
+ * A card: its left border, and the dot on it level with the middle of the header's first line
+ * (`firstLine`, a lineBox style or several: the title's, and the sub's where it shares the line), as
+ * the Timeline's dot sits (capMiddle). A fixed top put it 3 pt above a 14 pt title's middle.
+ */
+function CardItem({ firstLine, children }) {
+  const top = Math.max(0, capMiddle(firstLine) - CARD_DOT / 2);
   return (
     <View style={{ position: 'relative', borderLeftWidth: 2, borderLeftColor: '#e5e7eb', paddingLeft: 9 }}>
-      <View style={{ position: 'absolute', left: -4, top: 4, width: 6, height: 6, borderRadius: 3, backgroundColor: '#9ca3af' }} />
+      <View style={{ position: 'absolute', left: -4, top, width: CARD_DOT, height: CARD_DOT, borderRadius: CARD_DOT / 2, backgroundColor: '#9ca3af' }} />
       {children}
     </View>
   );
@@ -121,6 +131,10 @@ export function SidebarMainExperience({ section, settings, marginBottom, spaceBe
   const centered   = s.alignment === 'center';
   const textAlign  = centered ? 'center' : 'left';
   const dateStyle  = cardDateStyle(settings, entrySize, shade.muted);
+  // A card's first line, which its dot centres on: the bold title, and in Title "Inline" / "Side by
+  // side" the sub on the same line (ItemHeader's).
+  const titleBox   = { fontFamily: settings?._pdfFontFamily, fontSize: entrySize, fontWeight: 'bold' };
+  const firstLine  = titleStyle === 'stacked' ? titleBox : [titleBox, { fontFamily: settings?._pdfFontFamily, fontSize: settings?.fontSizeBase || 11 }];
   // A card's header fields.
   const head = (item) => {
     const iH = item.hiddenFields || [];
@@ -171,7 +185,7 @@ export function SidebarMainExperience({ section, settings, marginBottom, spaceBe
     );
   };
   const card = (item, idx) => (
-    <CardItem key={idx}>
+    <CardItem key={idx} firstLine={firstLine}>
       {cardHead(head(item))}
       {details(item)}
     </CardItem>
@@ -185,7 +199,7 @@ export function SidebarMainExperience({ section, settings, marginBottom, spaceBe
   const groupCard = (g, idx) => {
     const places = groupPlaces(g, (item) => head(item).loc);
     return (
-      <CardItem key={idx}>
+      <CardItem key={idx} firstLine={titleBox}>
         <EmployerHeader
           company={employerOf(g[0])} loc={places.header || undefined} settings={settings} centered={centered}
           keep={cardPresence(settings, entrySize, lineH, places.roles[0] ? 2 : 1)}
@@ -245,7 +259,7 @@ export function SidebarMainProjects({ section, settings, marginBottom, spaceBefo
         renderItem={(item, idx) => {
           const dateStr = showDates ? dateRange(startDateOf(item), endDateOf(item, settings), settings) : '';
           return (
-            <CardItem key={idx}>
+            <CardItem key={idx} firstLine={{ fontFamily: settings?._pdfFontFamily, fontSize: entrySize, fontWeight: 'bold' }}>
               <CardHeader
                 centered={centered} entrySize={entrySize} lineH={lineH} dateStr={dateStr} dateStyle={dateStyle} sepColor={shade.muted}
                 {...cardWordRooms(settings, entrySize, item.name, item.technologies)}
