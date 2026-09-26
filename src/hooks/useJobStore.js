@@ -265,8 +265,23 @@ function replaceJobs(jobs) {
   if (jobs !== jobsNow()) setJobs(() => jobs);
 }
 
+/** Remove every job ("Clear all jobs"); returns the list as it was, for restoreJobs (Undo). */
 function clearDemoData() {
-  setJobs(() => []);
+  if (!initialized) init();
+  const was = snapshot().jobs;
+  if (was.length) setJobs(() => []);
+  return was;
+}
+
+/**
+ * Put back `list` — what clearDemoData removed — in its order, ahead of any job added since (kept;
+ * one with the same id is replaced by its copy from `list`). The cloud sync sees them as added and
+ * sends them again, which also takes them off the account's deleted list (collectionSyncIo.commit).
+ */
+function restoreJobs(list) {
+  if (!Array.isArray(list) || !list.length) return;
+  const back = new Set(list.map(j => j.id));
+  setJobs(jobs => [...list, ...jobs.filter(j => !back.has(j.id))]);
 }
 
 // Set when the saved list could not be read in full; the tracker shows it until dismissed.
@@ -284,14 +299,14 @@ export function _resetJobStoreForTest() {
 }
 
 // The actions as plain functions too: node tests drive the store without React.
-export { snapshot, subscribe, addJob, updateJob, moveJob, deleteJob, restoreJob, importJobs, clearDemoData, dismissRecovery, jobsNow, replaceJobs };
+export { snapshot, subscribe, addJob, updateJob, moveJob, deleteJob, restoreJob, importJobs, clearDemoData, restoreJobs, dismissRecovery, jobsNow, replaceJobs };
 
 export function useJobStore() {
   const { jobs, persistError, recovery } = useSyncExternalStore(subscribe, snapshot);
   const persistReason = notSavedReason(persistError);
   return {
     jobs, persistError, persistReason, recovery, dismissRecovery,
-    addJob, updateJob, moveJob, deleteJob, restoreJob, importJobs, clearDemoData,
+    addJob, updateJob, moveJob, deleteJob, restoreJob, importJobs, clearDemoData, restoreJobs,
   };
 }
 

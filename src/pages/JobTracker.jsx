@@ -53,11 +53,11 @@ function ViewTabs({ view, onChange }) {
  * deadlines, follow-ups, career history), the Board (a column per status, drag or "Move to"),
  * and the List (a sortable table) — `?view=summary|kanban|list`. The search and the status quick
  * filters narrow the board and the list; Import, Export JSON / CSV and "Clear all jobs" sit in the
- * header. Deleting a job asks first, then offers Undo.
+ * header. Deleting a job, or all of them, asks first, then offers Undo.
  */
 export function JobTracker({ store }) {
   const navigate = useNavigate();
-  const { jobs, persistError, recovery, dismissRecovery, updateJob, deleteJob, restoreJob, importJobs, clearDemoData } = useJobStore();
+  const { jobs, persistError, recovery, dismissRecovery, updateJob, deleteJob, restoreJob, importJobs, clearDemoData, restoreJobs } = useJobStore();
   const confirm = useConfirmOptional();
   const { toast } = useToast();
   const { appState } = store;
@@ -97,8 +97,14 @@ export function JobTracker({ store }) {
     const removed = deleteJob(id);
     toast({ title: `${name} deleted`, action: removed ? { label: 'Undo', onClick: () => restoreJob(removed.job, removed.index) } : undefined });
   }
+  // Says how many go, and offers Undo, as deleting one job does: a slip used to lose the whole list (R4-DUX-02).
   async function clearAll() {
-    if (await confirm({ title: 'Clear all jobs?', body: 'Every tracked job is removed so you can start fresh.', confirmLabel: 'Clear all jobs', tone: 'danger' })) clearDemoData();
+    const n = jobs.length;
+    if (!n) return;
+    const count = `${n} job${n === 1 ? '' : 's'}`;
+    if (!await confirm({ title: 'Clear all jobs?', body: `${count}, with their tasks and notes, will be deleted. You can undo this for a few seconds.`, confirmLabel: 'Clear all jobs', tone: 'danger' })) return;
+    const removed = clearDemoData();
+    if (removed.length) toast({ title: `${removed.length} job${removed.length === 1 ? '' : 's'} cleared`, action: { label: 'Undo', onClick: () => restoreJobs(removed) } });
   }
 
   const filteredJobs = filterJobs(jobs, { q: search, statuses: filterStatus ? [filterStatus] : [] });
@@ -132,7 +138,7 @@ export function JobTracker({ store }) {
                 { id: 'json', label: 'Export JSON', icon: Download, onSelect: handleExport },
                 { id: 'csv', label: 'Export CSV', icon: FileSpreadsheet, onSelect: handleExportCsv },
                 { type: 'separator' },
-                { id: 'clear', label: 'Clear all jobs', danger: true, onSelect: clearAll },
+                { id: 'clear', label: 'Clear all jobs', danger: true, disabled: jobs.length === 0, onSelect: clearAll },
               ]}
               trigger={<IconButton icon={MoreHorizontal} label="More job actions" />}
             />
