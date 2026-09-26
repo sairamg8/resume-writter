@@ -74,3 +74,11 @@ test('an empty <w:p/> still gives no line, and a table\'s cells a line each, as 
   const xml = `<w:body><w:p/>${para('A')}<w:tbl><w:tr><w:tc>${para('B')}</w:tc><w:tc>${para('C')}</w:tc></w:tr></w:tbl></w:body>`;
   assert.deepEqual(docxXmlLines(xml).map((l) => l.text), ['A', 'B', 'C']);
 });
+
+// The review of R4-IMP-04: a box of the name and contacts anchored to the first section's title.
+test('a box anchored to a heading: the box first, then the heading', () => {
+  const xml = '<w:body>'
+    + anchored([para('Robin Vale', 'Title'), para('robin.vale@example.com')], '').replace('<w:p><w:r>', '<w:p><w:pPr><w:pStyle w:val="Heading1"/></w:pPr><w:r><w:t>PROFILE</w:t>')
+    + para('Designer who ships.') + '</w:body>';
+  assert.deepEqual(docxXmlLines(xml).map((l) => l.text), ['Robin Vale', 'robin.vale@example.com', 'PROFILE', 'Designer who ships.']);
+});

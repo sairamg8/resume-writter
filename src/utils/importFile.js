@@ -112,12 +112,14 @@ export function docxXmlLines(xml, links = {}) {
     } else if (m[0] === '</w:p>') {
       if (!para) continue;
       open.pop();
-      // Its own line before its text boxes' lines, read while it was open: a side column's box is
-      // anchored to the first paragraph, often the name, and the name comes first.
-      const at = para.start;
       const style = /<w:pStyle w:val="([^"]*)"/.exec(para.props)?.[1] ?? '';
       const list = /<w:numPr>/.test(para.props);
       const heading = /^(?:heading|berschrift|titre)\s*(\d)?/i.exec(style);
+      // Its own line before its text boxes' lines, read while it was open: a side column's box is
+      // anchored to the first paragraph, often the name, and the name comes first. A heading's after
+      // them: a box of the name and contacts anchored to the first section's title ("PROFILE") is the
+      // page's header, over that title.
+      const at = heading ? lines.length : para.start;
       levels.splice(at, 0, heading ? Number(heading[1] || 1) : 0);
       lines.splice(at, 0, { text: list && para.text.trim() ? `• ${para.text}` : para.text, hint: heading ? 'heading' : (/^title$/i.test(style) ? 'name' : undefined) });
     } else if (m[0].startsWith('<w:p') && !m[0].startsWith('<w:pPr')) {
