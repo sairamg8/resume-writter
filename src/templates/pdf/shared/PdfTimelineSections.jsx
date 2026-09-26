@@ -7,8 +7,8 @@ import { breakLinks } from './pdfFontLoader';
 import { hasRichText, safeHref } from '@/utils/richText';
 import { dateRange, endDateOf, formatDate, presentLabel, startDateOf } from '@/utils/dates';
 import { SPACER, SectionTitleOf, SectionRouter, RenderBullets, shadesOf } from './PdfSections';
-import { TimelineEntries, TimelineHead } from './PdfTimeline';
-import { EmployerHeader } from './PdfItemHeader';
+import { TimelineEntries, TimelineHead, timelineHeadPresence } from './PdfTimeline';
+import { EmployerHeader, headPresence } from './PdfItemHeader';
 import { employerOf, groupPlaces, groupsRoles, roleGroups } from '@/utils/roleGroups';
 
 /**
@@ -109,11 +109,29 @@ function TimelineSection({ section, settings, marginBottom, spaceBefore, itemGap
   const body = shadesOf(settings).body;
   const textAlign = centered ? 'center' : 'left';
 
-  // The heading keeps with as much as the first entry's unbreakable header and the two lines kept with
-  // it take — the date, the title, the sub or location line and two more, 5 lines — not the 3 lines
-  // SectionTitleOf keeps: with 3, a heading could stay at the foot of a page while its first entry,
-  // one line taller than on the other templates, moved to the next.
-  const title = cloneElement(SectionTitleOf({ section, settings, centered }), { presence: Math.round((settings?.fontSizeBase || 11) * lineH * 5) });
+  const head = (item) => {
+    const f = fields(item, s, settings);
+    return { primary: f.primary, sub: f.sub || undefined, subLine: f.subLine, loc: f.loc || undefined, dateStr: f.dateStr, titleStyle: f.stacked ? 'stacked' : (s.titleStyle || 'stacked') };
+  };
+
+  // Experience's "Group roles by company" (R2-147, roleGroups): a group is one entry on the rail — the
+  // employer (and the first role's location) once, then each role with its dot, its date above it, a
+  // location only where it differs and its description. The employer leads whatever Order says: that
+  // is what it groups by. A job alone at its company prints as it always has.
+  const groups = section.type === 'experience' && groupsRoles(s) ? roleGroups(items) : null;
+  const groupKeep = Math.round((settings?.fontSizeBase || 11) * lineH * 4);
+
+  // The heading keeps with as much as its first entry's unbreakable header and what that keeps take,
+  // measured from the header's own layout (timelineHeadPresence), as every other template measures
+  // its first ItemHeader (R2-047): a fixed 5 lines fell short of a centred Stacked head with a sub and
+  // a location, or a title that wraps, and left the heading alone at a page foot (R4-DOUT-07). A group
+  // leads with its employer line (and, centred, its location under it) and the lines it keeps.
+  const firstGroup = groups?.[0]?.length > 1 ? groups[0] : null;
+  const groupLoc = firstGroup && centered ? groupPlaces(firstGroup, (item) => fields(item, s, settings).loc).header : '';
+  const presence = !items.length ? 0
+    : firstGroup ? headPresence({ lines: groupLoc ? 2 : 1, styles: [{ fontFamily: settings?._pdfFontFamily, fontSize: entrySize, fontWeight: 'bold' }], keep: groupKeep, extra: 2 + (groupLoc ? 1 : 0) })
+    : timelineHeadPresence({ ...head(items[0]), settings, centered });
+  const title = cloneElement(SectionTitleOf({ section, settings, centered }), { presence });
 
   const one = (item) => {
     const f = fields(item, s, settings);
@@ -137,18 +155,13 @@ function TimelineSection({ section, settings, marginBottom, spaceBefore, itemGap
     );
   };
 
-  // Experience's "Group roles by company" (R2-147, roleGroups): a group is one entry on the rail — the
-  // employer (and the first role's location) once, then each role with its dot, its date above it, a
-  // location only where it differs and its description. The employer leads whatever Order says: that
-  // is what it groups by. A job alone at its company prints as it always has.
-  const groups = section.type === 'experience' && groupsRoles(s) ? roleGroups(items) : null;
   const group = (g) => {
     const places = groupPlaces(g, (item) => fields(item, s, settings).loc);
     return (
       <View>
         <EmployerHeader
           company={employerOf(g[0])} loc={places.header || undefined} settings={settings} italicSub={italicSubs} centered={centered}
-          keep={Math.round((settings?.fontSizeBase || 11) * lineH * 4)}
+          keep={groupKeep}
         />
         {g.map((item, k) => {
           const f = fields(item, s, settings);

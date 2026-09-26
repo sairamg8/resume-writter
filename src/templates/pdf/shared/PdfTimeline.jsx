@@ -3,7 +3,7 @@ import { Text } from './PdfText';
 import { solid, textShades } from './pdfColors';
 import { railColor, TIMELINE_RAIL } from './timelineRail';
 import { lineBox } from './pdfMeasure';
-import { EndRow, endField, fieldGap, getDateColor, onBaselineOf, wordRoom } from './PdfItemHeader';
+import { EndRow, endField, fieldGap, getDateColor, headPresence, headerKeep, onBaselineOf, wordRoom } from './PdfItemHeader';
 import { SPACER, gridRows } from './PdfSections';
 
 /**
@@ -186,6 +186,33 @@ export function TimelineHead({ primary: first, sub: second, subLine, loc, dateSt
       {title}
     </View>
   );
+}
+
+/**
+ * How much a section title keeps under it so its first entry's TimelineHead (these props) prints on the
+ * title's page (SectionTitleOf's `presence`, pt): the date line, the title lines as TimelineHead lays
+ * them out (one more for a field that wraps, headPresence), its margins and the two lines it keeps. A
+ * fixed five lines fell short of a centred Stacked head with a sub and a location, or of a title that
+ * wraps: the section title stayed alone at the foot of a page while the head moved on (R4-DOUT-07).
+ */
+export function timelineHeadPresence({ primary: first, sub: second, subLine, loc, dateStr, settings, titleStyle = 'stacked', centered = false }) {
+  const primary = first || second;
+  const subText = subLine || (first ? second : undefined);
+  const style = subLine ? 'stacked' : titleStyle;
+  const oneLine = style === 'inline' || style === 'sidebyside';
+  const baseSize = settings?.fontSizeBase || 11;
+  const font = settings?._pdfFontFamily;
+  const primaryBox = { fontFamily: font, fontSize: baseSize + (settings?.fontSizeEntryDelta ?? 0), fontWeight: 'bold' };
+  const subBox = { fontFamily: font, fontSize: baseSize };
+  // One-line styles: both fields on one line; centred Stacked: each field on its own; Stacked: the
+  // primary, then one row of the sub and the location. A location under a one-line or centred title
+  // is a line of its own, 1 pt below it.
+  const ownLoc = Boolean(loc) && (centered || oneLine);
+  const lines = oneLine ? (primary || subText ? 1 : 0) + (loc ? 1 : 0)
+    : centered ? [primary, subText, loc].filter(Boolean).length
+    : (primary ? 1 : 0) + (subText || loc ? 1 : 0);
+  const dateH = dateStr ? lineBox({ fontFamily: font, fontSize: timelineDateSize(settings), fontWeight: 'bold' }).height + 1 : 0;
+  return headPresence({ lines, styles: [primaryBox, subBox], keep: headerKeep(settings), extra: dateH + 2 + (ownLoc ? 1 : 0) });
 }
 
 /** Title "Inline": the primary, then the sub after " — " (", " for an italic sub), in one text of two runs. */
