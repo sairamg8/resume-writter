@@ -742,14 +742,21 @@ export function resumeFromText(input) {
   // Word résumé with some sections styled as headings and the others typed in bold capitals).
   const headingAt = new Map();
   let seen = false;
+  // In a file that marks its headings, an unmarked one in capitals must stand apart (after a gap or
+  // over a rule), not inside an entry (a job's "KEY ACHIEVEMENTS" is its own), and be of a type the
+  // file does not mark itself.
+  const marked = new Set(lines.filter((l, i) => i > nameAt && l.hint === 'heading').map((l) => headingType(l.text.replace(/\s*:$/, '').trim())));
+  let inEntry = false;
   lines.forEach((l, i) => {
     if (i <= nameAt) return;
+    if (l.hint === 'heading') inEntry = false;
+    else if (l.hint === 'entry' || l.hint === 'role') inEntry = true;
     const text = l.text.replace(/\s*:$/, '').trim();
     const plain = !BULLET.test(l.text) && !/\t|\s\|\s|@/.test(text) && text.length <= 48 && !/[.!?,;]$/.test(text);
     let type = null;
     if (hinted) {
       if (l.hint === 'heading') type = headingType(text) || 'custom';
-      else if (!l.hint && plain && (isCaps(text) || l.ruled)) type = headingType(text);
+      else if (!l.hint && plain && !inEntry && (isCaps(text) || l.ruled) && (l.gap || l.ruled) && !marked.has(headingType(text))) type = headingType(text);
     } else if (plain) {
       const known = headingType(text);
       if (known && (l.ruled || isCaps(text) || l.gap || l.text.endsWith(':') || i === nameAt + 1 || headingAt.size === 0)) type = known;

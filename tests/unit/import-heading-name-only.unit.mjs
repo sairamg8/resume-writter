@@ -38,8 +38,21 @@ test('some sections styled Heading 1, another typed in capitals: each is a secti
     { text: 'Robin Vale', hint: 'name' },
     { text: 'Experience', hint: 'heading' },
     { text: 'Juniper Labs — Senior Product Designer\tJan 2020 – Present' },
+    { text: '' },
     { text: 'SKILLS' },
     { text: 'Design: Figma, prototyping' },
   ];
   assert.deepEqual(resumeFromText(mixed).sections.map((s) => s.type), ['experience', 'skills']);
+});
+
+// The review of R4-IMP-08: a line in capitals inside an entry, or of a type the file marks itself, is
+// not a section of its own in a file that marks its headings.
+test('Markdown: a job\'s **KEY ACHIEVEMENTS** stays in the job; a marked file\'s own types are its word', async () => {
+  const { markdownLines } = await import('../../src/utils/importText.js');
+  const md = '# Robin Vale\n\n## Experience\n### Juniper Labs — Senior Product Designer\n*Jan 2020 – Present*\n\n**KEY ACHIEVEMENTS**\n- Shipped the design system.\n\n### Acme — Designer\n*2017 – 2019*\n\n## Skills\nFigma\n';
+  const r = resumeFromText(markdownLines(md));
+  assert.deepEqual(r.sections.map((s) => s.type), ['experience', 'skills']);
+  const jobs = r.sections[0].items;
+  assert.equal(jobs.length, 2);
+  assert.match(jobs[0].description, /KEY ACHIEVEMENTS/);
 });
