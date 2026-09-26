@@ -128,7 +128,7 @@ test('updateIssue: each changed field is recorded; bursts on one field are one e
   const fields = get(b, 'A').activity.slice(1).map((e) => [e.field, e.from, e.to]);
   assert.deepEqual(fields, [['title', 'A', 'A2'], ['priority', 'medium', 'high'], ['labels', '', 'Home, Work'], ['due', '', '2026-10-01']]);
   b = ops.updateIssue(b, 'A', { description: '<p>one</p>' }, { now: NOW + MIN });
-  b = ops.updateIssue(b, 'A', { description: '<p>one two</p>' }, { now: NOW + 10 * MIN });
+  b = ops.updateIssue(b, 'A', { description: '<p>one two</p>' }, { now: NOW + 2 * MIN });
   assert.equal(get(b, 'A').activity.filter((e) => e.field === 'description').length, 1);
   assert.equal(ops.updateIssue(b, 'A', { title: 'A2', priority: 'high' }, ctx), b);
   assert.equal(get(ops.updateIssue(b, 'A', { title: '  ' }, ctx), 'A').title, 'A2', 'a blank title keeps the old one');
