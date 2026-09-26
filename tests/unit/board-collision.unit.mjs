@@ -62,3 +62,41 @@ test('a drag with no pointer (a keyboard\'s) keeps closestCorners', () => {
   assert.deepEqual(boardCollision(noPointer), closestCorners(noPointer));
   assert.ok(boardCollision(noPointer).length > 0);
 });
+
+// The backlog (R4-BRD-07) used closestCenter, so a row released over the toolbar, the Epic panel,
+// a sprint's header or far below the last section still moved to the nearest one. It now uses
+// boardCollision too; its droppables are section bodies (type 'section') holding rows (type
+// 'row'). At 1280px with the Epic panel open: the toolbar down to y 120, the panel at x 32–312,
+// the active sprint's body (x 328–1248, y 160–260) with two rows under its header, and the
+// backlog's body (y 320–380) with one row. The page itself is checked in
+// tests/pdf/82-backlog-r4.test.mjs.
+const BACKLOG = [
+  ['section:s1', 'section', box(328, 160, 920, 100)],
+  ['i1', 'row', box(328, 160, 920, 40)],
+  ['i2', 'row', box(328, 202, 920, 40)],
+  ['section:backlog', 'section', box(328, 320, 920, 60)],
+  ['i3', 'row', box(328, 320, 920, 40)],
+];
+function backlogArgs(x, y) {
+  return {
+    active: { id: 'i3' },
+    collisionRect: box(x - 460, y - 20, 920, 40),
+    droppableContainers: BACKLOG.map(([id, type]) => ({ id, data: { current: { type } } })),
+    droppableRects: new Map(BACKLOG.map(([id, , rect]) => [id, rect])),
+    pointerCoordinates: { x, y },
+  };
+}
+
+test('R4-BRD-07: a backlog row released outside every section (toolbar, Epic panel, a sprint\'s header, below the last) is over nothing', () => {
+  for (const [where, x, y] of [['toolbar', 600, 90], ['Epic panel', 150, 300], ['sprint header', 600, 140], ['between the sections', 600, 290], ['below the last section', 600, 700]]) {
+    assert.deepEqual(boardCollision(backlogArgs(x, y)), [], where);
+    assert.ok(closestCorners(backlogArgs(x, y)).length > 0, `closestCorners over the ${where}`);
+  }
+});
+
+test('R4-BRD-07: over a backlog row, that row first, then its section; over a section\'s empty foot, the section', () => {
+  assert.deepEqual(ids(boardCollision(backlogArgs(700, 215))), ['i2', 'section:s1']);
+  assert.deepEqual(ids(boardCollision(backlogArgs(340, 170))), ['i1', 'section:s1'], 'at the row\'s very corner');
+  assert.deepEqual(ids(boardCollision(backlogArgs(700, 252))), ['section:s1'], 'below its last row');
+  assert.deepEqual(ids(boardCollision(backlogArgs(700, 372))), ['section:backlog'], 'the backlog below its row');
+});

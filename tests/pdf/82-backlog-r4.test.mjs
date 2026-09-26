@@ -4,16 +4,19 @@
 //   R4-BRD-04  typing a year into an issue's Due date / Start date (Chrome reports '0002-09-26'
 //              after the first digit) no longer wipes the field, nor clears a day already set; the
 //              day lands once its year is whole.
+//   R4-BRD-07  a backlog row released where no section is (the toolbar, far below) is over nothing,
+//              so the drop moves nothing: the page asks boardCollision, not closestCenter.
 // Run: node --test tests/pdf/82-backlog-r4.test.mjs
 import { before, after, beforeEach, afterEach, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { createElement as h } from 'react';
-import { MemoryRouter } from 'react-router-dom';
+import { createElement as h, Fragment } from 'react';
+import { MemoryRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { setup, teardown, loadModule } from './harness.mjs';
 
 let dom;
 let harness;
 let store;
+let Backlog;
 let IssueDetails;
 let CreateIssueDialog;
 before(async () => {
@@ -22,6 +25,7 @@ before(async () => {
   harness = await import('../unit/ui-dom-harness.mjs');
   harness.patchFakeDom();
   store = await loadModule('/src/hooks/useBoardStore.js');
+  ({ Backlog } = await loadModule('/src/pages/Backlog.jsx'));
   ({ IssueDetails } = await loadModule('/src/components/board/IssueDetails.jsx'));
   ({ CreateIssueDialog } = await loadModule('/src/components/board/CreateIssueDialog.jsx'));
 });
@@ -64,6 +68,31 @@ const issueNow = (id) => boardNow().issues.find((i) => i.id === id);
 /** The elements of the whole page (dialogs and menus open in portals at the end of <body>). */
 const all = (view) => [...dom.elements(view.document.body)];
 const input = (view, label) => all(view).find((el) => el.tagName === 'INPUT' && el.getAttribute('aria-label') === label);
+
+/** The address the page last rendered with (its ?search), as the probe beside it saw it. */
+let address = '';
+function Probe() {
+  address = useLocation().search;
+  return null;
+}
+
+/** The real Backlog page at `path`, with the few finders and clicks the tests need. */
+function mountBacklog(path = '/boards/p1/backlog') {
+  const Page = () => h(MemoryRouter, { initialEntries: [path] },
+    h(Routes, null, h(Route, { path: '/boards/:id/backlog', element: h(Fragment, null, h(Backlog), h(Probe)) })));
+  const view = dom.mount(Page, {});
+  return {
+    view,
+    section: (id) => all(view).find((el) => el.getAttribute('data-section') === id),
+    dialog: () => all(view).find((el) => el.getAttribute('role') === 'dialog'),
+    button: (text, node = view.document.body) => [...dom.elements(node)].find((el) => el.tagName === 'BUTTON' && el.textContent.trim() === text),
+    byLabel: (label, node = view.document.body) => [...dom.elements(node)].find((el) => el.getAttribute('aria-label') === label),
+    click: (el) => view.act(() => dom.reactProps(el).onClick(harness.ev())),
+  };
+}
+
+/** Lets the router's navigations (committed in a transition) and passive effects run. */
+const tick = async () => { for (let n = 0; n < 5; n += 1) await new Promise((r) => { setImmediate(r); }); await new Promise((r) => { setTimeout(r, 0); }); };
 
 describe('R4-BRD-04: typing a year into a date field', () => {
   /** The issue view's Details box for `issueId`, every change sent to the store as IssueDialog does. */
@@ -157,5 +186,39 @@ describe('R4-BRD-04: typing a year into a date field', () => {
       type('2026-09-26');
       assert.equal(dom.reactProps(input(view, 'Due date')).value, '2026-09-26');
     } finally { await view.unmount(); }
+  });
+});
+
+describe('R4-BRD-07: a backlog drag can be called off', () => {
+  /** The collision detection the page hands its DndContext, read off the rendered tree. */
+  function collisionOf(page) {
+    const el = page.section('backlog');
+    const key = Object.keys(el).find((k) => k.startsWith('__reactFiber$'));
+    let fiber = el[key];
+    while (fiber && typeof fiber.memoizedProps?.collisionDetection !== 'function') fiber = fiber.return;
+    assert.ok(fiber, 'the backlog is inside a DndContext');
+    return fiber.memoizedProps.collisionDetection;
+  }
+  const box = (left, top, width, height) => ({ left, top, width, height, right: left + width, bottom: top + height });
+  // The backlog's body (y 320–380) holding one row; the toolbar is above it, at y 90.
+  const LAYOUT = [['section:backlog', 'section', box(328, 320, 920, 60)], ['i1', 'row', box(328, 320, 920, 40)], ['i3', 'row', box(328, 400, 920, 40)]];
+  const args = (x, y) => ({
+    active: { id: 'i3' },
+    collisionRect: box(x - 460, y - 20, 920, 40),
+    droppableContainers: LAYOUT.map(([id, type]) => ({ id, data: { current: { type } } })),
+    droppableRects: new Map(LAYOUT.map(([id, , rect]) => [id, rect])),
+    pointerCoordinates: { x, y },
+  });
+
+  it('released over the toolbar (no section under the pointer) the row is over nothing, so onDragEnd moves nothing', async () => {
+    open([project()]);
+    const page = mountBacklog();
+    try {
+      const detect = collisionOf(page);
+      assert.deepEqual(detect(args(600, 90)), [], 'the toolbar');
+      assert.deepEqual(detect(args(600, 900)), [], 'far below the last section');
+      // Over a row: that row first (a drop there takes its place), then its section.
+      assert.deepEqual(detect(args(700, 340)).map((c) => c.id), ['i1', 'section:backlog']);
+    } finally { await page.view.unmount(); }
   });
 });

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { ChevronDown, Layers, MoreHorizontal } from 'lucide-react';
-import { DndContext, MouseSensor, TouchSensor, closestCenter, useDroppable, useSensor, useSensors } from '@dnd-kit/core';
+import { DndContext, MouseSensor, TouchSensor, useDroppable, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { useBoardStore } from '@/hooks/useBoardStore';
 import { Button, EmptyState, IconButton, InlineEdit, Menu, cx, useConfirmOptional, useToast } from '@/components/ui';
@@ -13,6 +13,7 @@ import { IssueHost, useIssueActions, useIssueRoute } from '@/components/board/us
 import { BacklogRow, CompleteSprintDialog, EpicPanel, PointBubbles, StartSprintDialog, sprintDates } from '@/components/board/BacklogParts';
 import { backlogSections, filterIssues } from '@/utils/boardQuery';
 import { activeSprint, issueKey } from '@/utils/boardModel';
+import { boardCollision } from '@/utils/boardDnd';
 
 /** A section's droppable body: rows dropped on its empty space land at its foot. */
 function SectionBody({ id, sprintId, children }) {
@@ -110,7 +111,8 @@ export function Backlog() {
             onClose={() => setEpicsOpen(false)}
           />
         )}
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+        {/* What is under the pointer, not the nearest section: a row released outside every section stays put (R4-BRD-07). */}
+        <DndContext sensors={sensors} collisionDetection={boardCollision} onDragEnd={onDragEnd}>
           <div className="flex min-w-0 flex-1 flex-col gap-3">
             {sections.map((section) => {
               const { sprint } = section;
