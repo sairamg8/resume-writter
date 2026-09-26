@@ -125,10 +125,14 @@ export function hasMetric(text) {
     // A year range or a month and year ("2019–22", "2019/20", "05/2021") is dates too, all of it.
     .replace(/(?<![\p{L}\d$])(?:19|20)\d{2}\s*[–—/-]\s*\d{2}(?![\d%+kKmMbBxX$])/gu, '')
     .replace(/(?<![\p{L}\d$])\d{1,2}\/(?:19|20)\d{2}(?![\d%+kKmMbBxX$])/gu, '')
-    .replace(/(?<![\p{L}\d$]|\d[.,])(?:19|20)\d{2}(?![\d%+kKmMbBxX$]|[.,]\d)/gu, '');
-  // A number starts where no letter or digit comes before it: the "021" of "FY2021" or the "0" of
-  // "v2.0" is inside a name, not a number of its own (R4-LO-15).
-  return /(?<![\p{L}\d]|[\p{L}\d][.,])\d/u.test(noYears) && !/^\d{4}$/.test(clean);
+    .replace(/(?<![\p{L}\d$]|\d[.,])(?:19|20)\d{2}(?![\d%+kKmMbBxX$]|[.,]\d)/gu, '')
+    // A fiscal year ("FY2021", "FY21-22", "FY '21") is a date too (R4-LO-15).
+    .replace(/(?<!\p{L})FY\s*['’-]?\s*\d{2}(?:\d{2})?(?:\s*[–—/-]\s*\d{2,4})?(?![\d%+kKmMbBxX$])/giu, '')
+    // A multiplier or currency written before its number ("x10", "Rs.500", "EUR500k") leaves the number whole.
+    .replace(/(?<!\p{L})(?:x|rs\.?|inr|usd|eur|gbp|aud|cad|chf|jpy|cny|sgd)(?=\s?\d)/giu, ' ');
+  // Digits glued to letters are part of a name, all of them: the "021" of "FY2021" and the "0" of
+  // "v2.0" counted as a number of their own, only the first digit was checked (R4-LO-15).
+  return /(?<!\p{L}[\d.,]*)\d/u.test(noYears) && !/^\d{4}$/.test(clean);
 }
 
 export const GOOGLE_XYZ_TEMPLATES = [
