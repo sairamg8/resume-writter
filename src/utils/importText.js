@@ -628,6 +628,47 @@ function entriesOf(type, lines, aside) {
   const pool = () => (cur ? cur.body : preamble);
   const start = (header) => { cur = { header, body: [] }; entries.push(cur); };
 
+  // Experience's "Group roles by company" in the PDF and Word (R4-LO-01; Markdown's: roleEntries): the
+  // employer on a line of its own with no date — its place at its right ("Acme ⇥ Portland, OR") or on
+  // the line under it (Word's) — then each role with its dates and one field, the role. Before, the
+  // employer line went into the job above as text, and each role had no company.
+  let group = null;
+  /** The employer lines right over a dated line, taken out of the text above: { company, place }, or null. */
+  const employerOver = (L) => {
+    const body = pool();
+    const titleish = (n) => n && !n.bullet && !n.date && n.hint !== 'entry' && n.text.length <= 80 && !/[.!?:;,]$/.test(n.text) && !isMetaLine(n.text);
+    const over = (n, m) => n.index === m.index - 1 && !m.gap; // n on the line right over m
+    // It starts a block: after a gap, first in the section, or right after a list (the job above's).
+    const starts = (n) => n.gap || !info[n.index - 1] || info[n.index - 1].bullet;
+    const one = (n) => titleish(n) && pieces(n.text).length === 1;
+    const [a, b] = body.slice(-2).length === 2 ? body.slice(-2) : [null, body[body.length - 1]];
+    if (!titleish(b) || !over(b, L)) return null;
+    let found = null;
+    // Word's: the employer, and its place on the line under it.
+    if (one(a) && one(b) && over(a, b) && starts(a)) found = { n: 2, company: a.text, place: b.text };
+    else if (starts(b) && pieces(b.text).length <= 2) {
+      // The PDF's: the employer, its place at the line's right end.
+      const [company, place = ''] = pieces(b.text);
+      found = { n: 1, company, place };
+    }
+    if (!found) return null;
+    body.splice(body.length - found.n);
+    return { company: found.company, place: found.place, lead: [] };
+  };
+  /** A dated `header` read as a role of `group` — or of a group whose employer is right over it — else no group. */
+  const roleOfGroup = (header, active) => {
+    const h = readHeader('experience', header);
+    // A role's own place on the line under it, where it differs from the employer's (Word's).
+    const placed = h.parts.length === 2 && header.length === 2 && pieces(header[1].text).length === 1 && !ROLE.test(h.parts[1])
+      && (PLACE.test(h.parts[1]) || /^\p{Lu}[\p{L}.'’-]*(?:\s+\p{Lu}[\p{L}.'’-]*){0,3}$/u.test(h.parts[1]));
+    if (h.parts.length !== 1 && !placed) return null;
+    const next = employerOver(header[0]) || (active && cur?.header[0]?.group?.company === active.company ? active : null);
+    if (!next) return null;
+    if (placed) header[header.length - 1] = { ...header[header.length - 1], hint: 'end' };
+    header[0] = { ...header[0], group: next };
+    return next;
+  };
+
   for (let i = 0; i < info.length;) {
     const L = info[i];
     if (L.hint === 'entry') {
@@ -671,6 +712,7 @@ function entriesOf(type, lines, aside) {
         if (!n.bullet && !n.gap && !n.date && n.hint !== 'entry' && n.text.length <= 100 && !/[.!?]$/.test(n.text)) { header.push(n); i += 1; }
       }
       while (i < info.length && !info[i].bullet && !info[i].gap && isMetaLine(info[i].text)) header.push(info[i++]);
+      if (type === 'experience' && !L.date.first) group = roleOfGroup(header, group);
       start(header);
       continue;
     }
