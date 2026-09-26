@@ -11,9 +11,10 @@ import { DOCUMENT_HINT, IMPORT_ACCEPT, isDocumentFile } from '@/utils/importDocu
  * dashboard's Import menu has (V2OWNER-DATA-3). `letter`: the Cover Letter tab is open, where PDF
  * and Word export the letter, Cover Letter Text the letter as plain text (`onExportLetterText`), and
  * the other text exports still the résumé — each item says which (R2-131). `onShare`: Share a public
- * link (R2-148), given only to a signed-in account on a site with a cloud.
+ * link (R2-148), given only to a signed-in account on a site with a cloud. `importing`: a document is
+ * being read, so the menu says "Reading…" and stays shut until it is done (R4-IMP-12).
  */
-export function ExportDropdown({ exporting, keeps = false, letter = false, onExportPDF, onExportWord, onExportJSON, onExportMarkdown, onExportAtsText, onExportJsonResume, onExportLetterText, onImportJSON, onImportFile, onImportError, onShare }) {
+export function ExportDropdown({ exporting, importing = false, keeps = false, letter = false, onExportPDF, onExportWord, onExportJSON, onExportMarkdown, onExportAtsText, onExportJsonResume, onExportLetterText, onImportJSON, onImportFile, onImportError, onShare }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   const importRef = useRef(null);
@@ -34,13 +35,13 @@ export function ExportDropdown({ exporting, keeps = false, letter = false, onExp
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen(o => !o)}
-        disabled={!!exporting}
+        disabled={!!exporting || importing}
         className={`flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg border transition-colors disabled:opacity-60 ${
           open ? 'bg-gray-100 border-gray-300 text-gray-700' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
         }`}
       >
         <Download size={12} />
-        {exporting ? '...' : 'Export'}
+        {exporting ? '...' : importing ? 'Reading…' : 'Export'}
         <ChevronDown size={11} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
 
