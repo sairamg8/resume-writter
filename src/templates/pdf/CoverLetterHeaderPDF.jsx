@@ -120,13 +120,14 @@ export function CoverLetterHeader({ look, personal, settings, cl, hidden, contac
     fontSize: nameSize, fontWeight: look.name.weight, color: look.name.color, lineHeight: 1.2,
     ...(look.name.letterSpacing ? { letterSpacing: look.name.letterSpacing } : {}), ...align,
   };
-  // Name & Title Layout "Inline" (look.inline, V2FIDB-51-3): the title on the name's line in the
-  // medium weight the résumé's Inline header prints it in, baselines aligned; else under the name.
+  // Name & Title Layout "Inline" (look.inline, V2FIDB-51-3): the title on the name's line, baselines
+  // aligned; else under the name. In the weight the résumé's header prints it in, stacked or Inline
+  // (look.title.weight): Banner's medium title printed regular on its letter (R4-DOUT-09).
   const titleSize = look.title?.size || (baseSize + (settings.fontSizeEntryDelta ?? 0));
   const titleStyle = {
-    fontSize: titleSize, color: look.title.color,
+    fontSize: titleSize, color: look.title.color, fontWeight: look.title.weight ?? 400,
     // Stacked: Personal Info → Header spacing → Name ↔ Title when the résumé sets it, else the letterhead's 1 pt.
-    ...(look.inline ? { fontWeight: 500, lineHeight: 1.2 } : { marginTop: setGapPt(settings, 'nameTitleGap') ?? 1 }),
+    ...(look.inline ? { lineHeight: 1.2 } : { marginTop: setGapPt(settings, 'nameTitleGap') ?? 1 }),
     ...(look.title.opacity ? { opacity: opacityFor(look.title.color, look.title.opacity) } : {}), ...align,
     ...(look.title.italic ? { fontStyle: 'italic' } : {}), // Academic's position line
   };
