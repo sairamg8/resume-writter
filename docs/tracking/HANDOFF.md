@@ -12,16 +12,11 @@ and fixes `cd0fbc9` `3da8a07` `a33e548` `ac50cf4`, never gated; its runs were ca
 **Deployed: `master` = `f20a62d`** = batch 4 (owner-ui, R3-009…012 ✅; gate 36217649197 15/15) on batch 3 (`91c91c9`): perf2 (`dcc0392`, report `1aa18ee`, R2-142 partial) + section-look (`91c91c9`,
 report `444cf33`, R2-147 partial); full gate 36216686987 15/15 green, fail-first 36216688486 (cf3ad0e) green.
 
-**Batch 4, in flight:**
-- ✅ DEPLOYED — owner-ui merged (`f20a62d`, report `9ee79bc`, R3-009…012 ✅): review fixes `d861584` (a second click on /new made a
-  second résumé) and `c9f400b` (a drag from the backdrop into a modal closed it; kit Dialog too) — fail-first 36217583015
-  ✅. AppRoutes conflict: NewResume is a lazy page. Full gate 36217649197 on `f20a62d` green.
-- R3-008 `c6eb880` on the work branch (saved-design deletion syncs as `{ deleted: true }`; buryDeletedDesigns on first
-  sync / put-back) — fail-first 36218191333.
-- layouts `claude/wf-layouts` `fa0e777`: work branch merged in (`af95b6b`; PdfDesigned gets Name font, Photo position,
-  page numbers; heading variants print icons), `db33587` test hook + probe, `aa66386` Keel rule, `a0aaa1f` Bookend foot
-  rule vs page numbers, `fa0e777` parity/31 page-break measure. Fail-first 36217882171 ✅ (aa66386, a0aaa1f). **Full
-  gate 36217880697.** Green → report `wf-reports/layouts.json` → merge → one gate → deploy.
+**Batch 4 deployed** (`f20a62d`: owner-ui, review fixes `d861584` `c9f400b`). **Batch 5, gating:** full gate **36218934694**
+on `e6b1a4a` = R3-008 `c6eb880` (fail-first 36218191333 ✅; known limit in its row) + layouts merged (`e6b1a4a`, report
+`05381c4`, R2-138 ⏸): its gate 36217880697 on fa0e777 failed only two test-side checks, fixed in `abed7ce`; parity/31
+page-break measure `fa0e777` + `f0575a3`. Green → `git push origin e6b1a4a:refs/heads/master`, deploy_rows, recount.
+Then: the rest of the checklist (English only), accessibility last.
 Scout notes (diagnoses, R3-008 design, pending bugs): store `flowcv/wip/execution-2026-09-26/`.
 
 ## ⏩ COLD START HERE — 2026-09-25 17:00 UTC (laptop session, owner's execution brief of 21:45 IST)
