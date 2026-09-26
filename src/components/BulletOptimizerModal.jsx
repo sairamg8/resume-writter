@@ -19,7 +19,9 @@ export default function BulletOptimizerModal({ isOpen, onClose, initialText = ''
   const [activeCategory, setActiveCategory] = useState('Technical & Engineering');
   // Copy's outcome, shown on the button for a moment: 'done', 'failed' or null.
   const [copied, setCopied] = useState(null);
-  const overlay = useOverlayClose(onClose);
+  // A click beside the box closes it only while the statement is still the one it opened with: once
+  // it is rewritten, a stray click must not throw the rewrite away — Cancel and × still close it (R4-DUX-09).
+  const overlay = useOverlayClose(() => { if (text === initialText) onClose(); });
 
   if (!isOpen) return null;
 
