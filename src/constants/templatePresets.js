@@ -117,7 +117,7 @@ export const designStyle = (template, settings) => ({ ...templateStyleDefaults(t
  * clears it (R4-DSN-02) — the PDF prefers `customFont` over `font`. A saved design brings its own.
  */
 export const withStyle = (settings, style) => ({
-  ...settings, ...('font' in style && !('customFont' in style) ? { customFont: '' } : {}), ...style,
+  ...settings, ...('font' in style && !('customFont' in style) && settings?.customFont ? { customFont: '' } : {}), ...style,
 });
 
 /** A design's settings as the résumé stores them once it is picked: its own, and its id. */
