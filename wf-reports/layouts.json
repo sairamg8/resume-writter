@@ -1,0 +1,56 @@
+{
+  "cluster": "layouts",
+  "branch": "claude/wf-layouts",
+  "base": "c5acb93",
+  "rows": [
+    {
+      "id": "R2-138",
+      "outcome": "fixed",
+      "commits": [
+        "56a4d4d",
+        "b51a896",
+        "3972161",
+        "67a901c",
+        "3e2ed65",
+        "aa66386",
+        "a0aaa1f"
+      ],
+      "tests": [
+        "tests/pdf/layouts-look.test.mjs",
+        "tests/pdf/22-cover-letter-looks-options.test.mjs",
+        "tests/pdf/10-section-alignment-word.test.mjs",
+        "tests/pdf/33-cover-letter-header-rule.test.mjs",
+        "tests/pdf/94-page-numbers.test.mjs",
+        "tests/pdf/94-look-section-icons.test.mjs",
+        "tests/pdf/parity/01-offered.test.mjs",
+        "tests/pdf/parity/31-section-overrides.test.mjs",
+        "tests/pdf/parity/registry-sections.mjs",
+        "tests/pdf/parity/marks.mjs"
+      ],
+      "summary": "**Now:** B2 is built — ten designed layouts are engines of their own: Gridline, Registry, Bookend, Lectern, Chronicle, Keystone, Banded, Keel, Linen and Broadsheet, each with its own marks (hairlines, ledger rules, bookend rules, centred titles, mastheads, wedge and edged boxes, bands to the paper's edge, a bar, stitched and short underlines, a headline rule), on one shared header and single column (PdfDesigned) that takes every Header Customization, Name Font, Photo Position, Section Headings → Icons, Links, and Page numbers; their letters, dashboard cards and Word files follow. With B1 (8 designs) and B4 (Save my design) live, the app has 19 templates.",
+      "remaining": "Owner's calls, not defects: the ten sit in the picker's Simple category (no category of their own), and Banded is not flagged colourHeader; Keel's letterhead draws a horizontal accent rule where its résumé draws a vertical bar (pinned by its test)."
+    }
+  ],
+  "review": {
+    "issues": [
+      "22-cover-letter-looks-options: a second root-level before() ran before setup() and failed every suite (db33587)",
+      "10-section-alignment-word: the Lectern-only entry probe fell through on the Sidebar's side column (db33587)",
+      "Keel's header rule was stroked 4 pt thick, sharing a box with the bar (aa66386)",
+      "Bookend's foot rule ran through the page number (a0aaa1f)",
+      "parity/31: Lectern's Space after measured two page-2 tops as 0 pt — a page break measured as a break (fa0e777), and a pull back onto the section's page still fails (f0575a3)",
+      "Merging the work branch: the designed heading variants print icons; PdfDesigned takes Name Font, Photo Position, Page numbers (af95b6b)",
+      "Gate 36217880697: Keystone's 3 pt edge read as an icon; Header Text Color expected on Banded's page-ink band (abed7ce)"
+    ],
+    "fixedByReviewer": [
+      "af95b6b",
+      "db33587",
+      "aa66386",
+      "a0aaa1f",
+      "fa0e777",
+      "f0575a3",
+      "abed7ce"
+    ]
+  },
+  "baselineFailures": [],
+  "notes": "Stopped cloud session's work, finished by the laptop coordinator 2026-09-26 from a read-only scout's diagnosis, reviewed read-only. Fail-first 36217882171: aa66386 (33-cover-letter-header-rule), a0aaa1f (94-page-numbers) green. Full gate 36217880697 on fa0e777 failed only 94-look-section-icons (keystone) and parity/01-offered (banded), both test-side, fixed in abed7ce; the final full gate runs on the work branch after the merge."
+}
