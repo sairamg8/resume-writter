@@ -228,7 +228,7 @@ export default function DesignPanel({
         </div>
       </DesignSection>
 
-      <TypographySection settings={settings} template={current} updateSetting={updateSetting} onReset={() => resetSection(TYPOGRAPHY_KEYS)} />
+      <TypographySection settings={settings} template={current} resumeId={resume.id} updateSetting={updateSetting} onReset={() => resetSection(TYPOGRAPHY_KEYS)} />
 
       <DesignSection title="Spacing" onReset={() => resetSection(SPACING_KEYS)}>
         <div className="space-y-3">

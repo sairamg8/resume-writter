@@ -1,4 +1,4 @@
-import { useState, useEffect, useId } from 'react';
+import { useState, useEffect, useId, useRef } from 'react';
 import { FONTS, loadPreviewFont, loadCustomFonts, saveCustomFont, removeCustomFont, checkFont } from '@/utils/fonts';
 import { Label, SizeRow, SegmentControl, DesignSection } from '@/components/DesignPanelShared';
 import { FONT_SIZE_BASE, ICON_SIZE, SECTION_LETTER_SPACING, TYPE_SIZE_PT, deltaInRange } from '@/constants/designNumbers';
@@ -35,12 +35,21 @@ function OwnFontRow({ label, value, customFonts, onChange }) {
   );
 }
 
-/** Design → Typography. `template`: the one the PDF prints (Sidebar's side column keeps its own sizes). */
-export function TypographySection({ settings, template, updateSetting, onReset }) {
+/**
+ * Design → Typography. `template`: the one the PDF prints (Sidebar's side column keeps its own sizes);
+ * `resumeId`: the résumé these settings are, so a slow font check does not land on another one.
+ */
+export function TypographySection({ settings, template, resumeId, updateSetting, onReset }) {
   const [customFontInput, setCustomFontInput] = useState('');
   const [savedCustomFonts, setSavedCustomFonts] = useState(() => loadCustomFonts());
   const [checking, setChecking] = useState(false);
   const [fontError, setFontError] = useState(null);
+  // The résumé and font as of this render, read after a font check's wait.
+  const latest = useRef(null);
+  latest.current = { resumeId, font: settings.font, customFont: settings.customFont };
+  const mounted = useRef(true);
+  // Set again on mount: StrictMode's trial unmount (main.jsx) left it false.
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
 
   // Show every choice in its own face — from the same files the PDF embeds.
   useEffect(() => {
@@ -54,17 +63,28 @@ export function TypographySection({ settings, template, updateSetting, onReset }
   }
 
   // A custom font is kept only if the PDF can load it; the name is stored as Google spells it.
+  // The check can take seconds: if meanwhile another font was picked or another résumé opened,
+  // that choice stands — updateSetting writes to whichever résumé is open now. The font is still
+  // remembered as a chip, just not selected.
   async function applyCustomFont(input) {
+    const asked = latest.current;
     setChecking(true);
     setFontError(null);
     const result = await checkFont(input);
+    if (!mounted.current) return;
     setChecking(false);
+    const now = latest.current;
+    const moved = now.resumeId !== asked.resumeId || now.font !== asked.font || now.customFont !== asked.customFont;
     if (!result.ok) {
-      setFontError(`“${input}” was not found on Google Fonts. Check the spelling (e.g. “Playfair Display”).`);
+      if (moved) return;
+      // Offline, or the font CDN not answering, says nothing about the name: keep it to try again.
+      setFontError(result.offline
+        ? `Could not check “${input}”: you seem to be offline, or Google Fonts is not answering. Check your connection and try again.`
+        : `“${input}” was not found on Google Fonts. Check the spelling (e.g. “Playfair Display”).`);
       return;
     }
     loadPreviewFont(result.family, result.pkg);
-    chooseCustomFont(result.family);
+    if (!moved) chooseCustomFont(result.family);
     saveCustomFont(result.family);
     setSavedCustomFonts(loadCustomFonts());
     setCustomFontInput('');
