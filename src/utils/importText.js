@@ -281,7 +281,7 @@ const isMetaLine = (text) => { const p = pieces(text); return p.length > 0 && p.
 const ROLE = /\b(engineer|developer|programmer|manager|director|lead|head|intern|analyst|designer|consultant|specialist|scientist|officer|assistant|associate|coordinator|architect|administrator|admin|president|vp|founder|co-founder|owner|teacher|professor|lecturer|researcher|nurse|technician|accountant|writer|editor|producer|representative|supervisor|executive|advisor|adviser|strategist|principal|chief|cto|ceo|cfo|coo|partner|fellow|trainee|apprentice|volunteer|tutor|mentor|chair|secretary|treasurer|clerk|agent|operator|instructor|coach|counselor|therapist|physician|attorney|paralegal|sales|marketer|recruiter|contractor|freelancer|freelance)s?\b/i;
 const DEGREE = /\b(b\.?\s?[ase]\.?|b\.?sc|bsc|b\.?tech|b\.?eng|beng|bba|bfa|bcom|m\.?\s?[ase]\.?|m\.?sc|msc|m\.?tech|m\.?eng|meng|mba|mfa|ph\.?\s?d|phd|doctor(?:ate)?|bachelor'?s?|master'?s?|associate'?s?|diploma|certificate|high school|a-?levels?|gcse|degree|hnd|llb|llm|md|jd)\b/i;
 /** A subject a degree is in, as a field of study names one: "Computer Science", "Business Administration". */
-const SUBJECT = /\b(science|sciences|engineering|studies|mathematics|maths?|statistics|economics|business|administration|finance|accounting|marketing|management|psychology|biology|chemistry|physics|history|literature|english|philosophy|law|medicine|nursing|architecture|arts?|music|informatics|communications?|journalism|politics|political|sociology|linguistics|humanities|design|geography|anthropology)\b/i;
+const SUBJECT = /\b(science|sciences|engineering|studies|mathematics|maths?|statistics|economics|business|administration|finance|accounting|marketing|management|psychology|biology|chemistry|physics|history|literature|english|philosophy|law|medicine|nursing|architecture|arts?|music|informatics|communications?|journalism|politics|political|sociology|linguistics|humanities|design|geography|anthropology|development|software|web|data|computing|technology|programming|stack)\b/i;
 const SCHOOL = /\b(university|universit[äéà]t?|college|institute|institut|school|academy|polytechnic|conservatory|seminary|lyc[ée]e|gymnasium)\b/i;
 const WEB = /^(?:https?:\/\/)?(?:www\.)?[a-z0-9][a-z0-9-]*(?:\.[a-z0-9-]+)*\.[a-z]{2,}(?:[/?#]\S*)?$/i;
 
@@ -463,7 +463,8 @@ function entryOf(type, header, body, aside = () => {}) {
       }
       // A place on a line of its own (a side column's stacked fields): the location.
       let location = h.location || take('location');
-      const placeAt = location ? -1 : left.findIndex((p) => PLACE.test(p) && !DEGREE.test(p));
+      // Not "Bootcamp, Full Stack" nor "B.F.A., Graphic Design": a subject after the comma is a field.
+      const placeAt = location ? -1 : left.findIndex((p) => PLACE.test(p) && !DEGREE.test(p) && !SUBJECT.test(p.split(',').slice(1).join(',')));
       if (placeAt >= 0) location = left.splice(placeAt, 1)[0];
       // No degree named: a subject alone is the field of study — the exports print "Computer Science -
       // MIT" for an entry with no degree — and the one field left beside it the school (R4-LO-06). Not
