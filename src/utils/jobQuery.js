@@ -6,6 +6,7 @@ import {
   JOB_STATUSES, STATUS_MAP, PIPELINE_STATUSES, CLOSED_STATUSES, ACTIVE_STATUSES, INTERVIEWING_STATUSES,
 } from '../constants/jobs.js';
 import { todayLocalISO } from './dates.js';
+import { isLetter } from './letters.js';
 
 const ISO_DAY = /^(\d{4})-(\d{2})-(\d{2})$/;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -230,6 +231,18 @@ export function linkedResume(job, resumes = []) {
   if (!id) return { state: 'none', resume: null };
   const resume = (resumes || []).find((r) => r.id === id);
   return resume ? { state: 'linked', resume } : { state: 'deleted', resume: null };
+}
+
+/**
+ * What a job's Resume Used picker lists: the résumés, never a letter. A cover letter is a résumé
+ * record marked `kind: 'letter'` (R2-135), so the pickers listed every letter among the résumés, as
+ * they listed an older build's 'Cover Letter' résumés. The one letter the job is already linked to
+ * stays listed, so the picker still shows that link (not a blank, nor 'Résumé deleted') until the
+ * user picks a résumé. In the list's own order.
+ */
+export function resumeChoices(job, resumes = []) {
+  const id = job?.resumeId;
+  return (Array.isArray(resumes) ? resumes : []).filter((r) => r && (!isLetter(r) || (Boolean(id) && r.id === id)));
 }
 
 /**

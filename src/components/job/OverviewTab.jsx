@@ -3,7 +3,8 @@ import { Field } from '@/components/job/Field';
 import { Pipeline } from '@/components/job/Pipeline';
 import { StatusHistory } from '@/components/job/StatusHistory';
 import { deadlineState } from '@/utils/dates';
-import { linkedResume } from '@/utils/jobQuery';
+import { linkedResume, resumeChoices } from '@/utils/jobQuery';
+import { editorPath } from '@/utils/letters';
 
 /**
  * A closed (rejected / withdrawn) job stays editable here: its "read-only" lock was bypassed by the
@@ -113,11 +114,13 @@ export function OverviewTab({ job, set, resumes, navigate }) {
                 <option value="">— Not linked yet —</option>
                 {/* A linked résumé deleted since: said so, not 'Not linked yet' (J-21). */}
                 {resumeLink.state === 'deleted' && <option value={job.resumeId}>Résumé deleted</option>}
-                {resumes.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+                {/* Résumés only: a cover letter is no résumé to have applied with (R2-135). */}
+                {resumeChoices(job, resumes).map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
               </select>
+              {/* A job still linked to a letter opens it on its letter's tab, as the letter's own card does. */}
               {resumeLink.state === 'linked' && (
                 <button
-                  onClick={() => navigate(`/resume/${job.resumeId}`)}
+                  onClick={() => navigate(editorPath(job.resumeId, resumeLink.resume))}
                   className="text-brand hover:text-brand shrink-0"
                   title="Open resume"
                 >
