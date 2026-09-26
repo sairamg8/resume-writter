@@ -86,7 +86,9 @@ export function ownDesign(settings, id) {
   const own = d && typeof d === 'object' && typeof id === 'string' && Object.hasOwn(d, id) ? d[id] : null;
   const valid = own && typeof own === 'object' && typeof own.label === 'string' && offersTemplate(own.engine)
     && own.settings && typeof own.settings === 'object' && !Array.isArray(own.settings);
-  return valid ? own : null;
+  // The engine as the app writes it: a file may store "Modern" or " sidebar " (offersTemplate accepts
+  // any case, R5-5), and the picker looks its card up by the written id.
+  return valid ? { ...own, engine: templateId(own.engine) } : null;
 }
 
 /**
