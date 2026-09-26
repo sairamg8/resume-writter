@@ -37,10 +37,18 @@ export function extractBulletsFromItem(item) {
     // no bullet, as before.
     if (/<li[\s>]/i.test(desc)) {
       const items = [];
+      // The item open at each depth: text after a nested list, inside the same outer item, prints at
+      // the outer item's depth and continues it, not the nested bullet above it (R4-LO-16).
+      const openAt = [];
       for (const block of parseRichText(desc)) {
         const text = block.runs.map((r) => r.text).join('').replace(/\s+/g, ' ').trim();
-        if (block.marker) items.push(text);
-        else if (block.indent >= 1 && items.length) items[items.length - 1] = `${items[items.length - 1]} ${text}`.trim();
+        if (block.marker) {
+          openAt.length = block.indent;
+          openAt[block.indent] = items.push(text) - 1;
+        } else if (block.indent >= 1) {
+          const at = openAt.slice(0, block.indent + 1).findLast((i) => i !== undefined);
+          if (at !== undefined) items[at] = `${items[at]} ${text}`.trim();
+        }
       }
       for (const clean of items) {
         if (clean && !bullets.includes(clean)) bullets.push(clean);
