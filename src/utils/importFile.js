@@ -10,6 +10,7 @@ const SCANNED = 'That PDF looks like a scanned image: its pages have no text lay
 export const MAX_IMPORT_BYTES = 20 * 1024 * 1024;
 const TOO_BIG = 'That file is too large to be a résumé (over 20 MB). Import the résumé itself as a PDF, Word, text or JSON file.';
 const DAMAGED = 'That Word file is damaged and cannot be read. Save it again as .docx (or PDF) and import that.';
+const LOCKED = 'That PDF is password-protected. Save a copy without a password (or as a Word file) and import that.';
 
 // ── Word (.docx) ─────────────────────────────────────────────────────────────
 
@@ -336,7 +337,8 @@ export async function pdfLines(bytes, lib) {
   const pdfjs = lib || await loadPdfjs();
   const task = pdfjs.getDocument({ data: bytes.slice(), isEvalSupported: false, verbosity: 0 });
   try {
-    const doc = await task.promise;
+    // A PDF that needs a password to open: pdf.js's own words are "No password given".
+    const doc = await task.promise.catch((e) => { throw e?.name === 'PasswordException' ? new Error(LOCKED) : e; });
     const pages = [];
     for (let i = 1; i <= doc.numPages; i += 1) {
       const content = await (await doc.getPage(i)).getTextContent();
