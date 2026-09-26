@@ -18,6 +18,7 @@ import { createServer } from 'vite';
 import { fileURLToPath } from 'node:url';
 import { mount, elements, reactProps } from '../pdf/fake-dom.mjs';
 import { sidebarProjects, orderProjects } from '../../src/components/shell/projects.js';
+import { patchFakeDom } from './ui-dom-harness.mjs';
 
 // JSX and the `@/` alias through Vite's SSR loader, as tests/pdf/harness.mjs does — without the
 // PDF modules and font server that harness also starts.
@@ -214,6 +215,7 @@ describe('the sidebar’s projects', () => {
  * drawer) and `click(a)` (a plain left click on it, as a browser sends it to the router's Link).
  */
 async function drawerShell(path, { width } = {}) {
+  patchFakeDom(); // the drawer's focus trap queries and moves focus
   const { WorkspaceLayout } = await loadModule('/src/components/shell/WorkspaceLayout.jsx');
   const { useWorkspace } = await loadModule('/src/components/shell/workspaceContext.js');
   let navigate = null;
