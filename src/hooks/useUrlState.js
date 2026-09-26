@@ -1,8 +1,9 @@
 import { useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
-// One piece of page state kept in the address — the job tracker's ?view=, the board's ?issue= —
-// so Back, refresh and a shared link all show the same page. (The tracker's search box is not
+// One piece of page state kept in the address — the job tracker's ?view=, the Projects page's
+// ?create= — so Back, refresh and a shared link all show the same page. (A board's ?issue= is
+// pushed and undone on close: useIssueRoute keeps it.) (The tracker's search box is not
 // here: the router commits a navigation in a transition, and a text box whose value follows one
 // drops keystrokes; it, the status filter and the list sort are in useSessionState.) Writes REPLACE the
 // history entry (typing a search must not leave one entry per letter), keep every other param
@@ -27,18 +28,16 @@ export function withSearchParam(search, name, value) {
 let pending = null;
 
 /**
- * `const [value, setValue] = useUrlState(name, fallback, { parse, serialize, push })`
+ * `const [value, setValue] = useUrlState(name, fallback, { parse, serialize })`
  *
  * - `value`: the param `name` read through `parse` (default: the string itself); `fallback` when
  *   the param is absent (or `parse` returns undefined).
  * - `setValue(next)` (or `setValue(prev => next)`): writes `serialize(next)` (default String);
  *   writing `fallback`, null or '' removes the param, so a default view keeps a clean address.
- * - `push: true` pushes a history entry instead of replacing — for state Back should undo, like
- *   opening an issue (?issue=KEY-12), so Back closes it.
  *
  * Arrays: pass `parse: (s) => s.split(',')` and `serialize: (a) => a.join(',')` (?status=a,b).
  */
-export function useUrlState(name, fallback = null, { parse, serialize, push = false } = {}) {
+export function useUrlState(name, fallback = null, { parse, serialize } = {}) {
   const location = useLocation();
   const navigate = useNavigate();
   // The router has rendered another entry: what was pending is written (or left behind by Back).
@@ -59,8 +58,8 @@ export function useUrlState(name, fallback = null, { parse, serialize, push = fa
     const search = withSearchParam(base, name, text);
     if (search === base) return;
     pending = { key: location.key, to: search };
-    navigate({ pathname: location.pathname, search, hash: location.hash }, { replace: !push, state: location.state });
-  }, [location, navigate, name, fallback, parse, serialize, push]);
+    navigate({ pathname: location.pathname, search, hash: location.hash }, { replace: true, state: location.state });
+  }, [location, navigate, name, fallback, parse, serialize]);
 
   return [value, setValue];
 }

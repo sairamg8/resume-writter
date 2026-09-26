@@ -191,7 +191,7 @@ describe('regressions — the Add Job form and its saved interview stages', () =
       },
     });
     cy.contains('h1', 'Add Job Application').should('be.visible');
-    cy.contains('No custom stages yet').should('be.visible');
+    cy.contains('No custom stages yet').scrollIntoView().should('be.visible'); // below the fold of the form
   });
 
   it('R6-3: a partly unreadable stage list is not written over on opening, and is copied before a change replaces it', () => {
@@ -205,7 +205,7 @@ describe('regressions — the Add Job form and its saved interview stages', () =
         win.localStorage.setItem(STAGES_KEY, raw);
       },
     });
-    cy.contains('button', 'Culture Round').should('be.visible');
+    cy.contains('button', 'Culture Round').scrollIntoView().should('be.visible');
     cy.window().then((win) => {
       expect(win.localStorage.getItem(STAGES_KEY), 'opening the form writes nothing').to.eq(raw);
       expect(backupsOf(win)).to.deep.eq([]);
@@ -229,14 +229,14 @@ describe('regressions — the Add Job form and its saved interview stages', () =
         win.localStorage.setItem(STAGES_KEY, JSON.stringify(['Culture Round']));
       },
     });
-    cy.contains('button', 'Culture Round').should('be.visible');
+    cy.contains('button', 'Culture Round').scrollIntoView().should('be.visible');
     // The other tab adds a stage: its write lands in storage and fires a storage event here.
     cy.window().then((win) => {
       const value = JSON.stringify(['Culture Round', 'Onsite']);
       win.localStorage.setItem(STAGES_KEY, value);
       win.dispatchEvent(new win.StorageEvent('storage', { key: STAGES_KEY, newValue: value }));
     });
-    cy.contains('button', 'Onsite').should('be.visible');
+    cy.contains('button', 'Onsite').scrollIntoView().should('be.visible');
 
     cy.get('input[placeholder^="e.g."]').type('Panel');
     cy.contains('button', /^\s*Add$/).click();

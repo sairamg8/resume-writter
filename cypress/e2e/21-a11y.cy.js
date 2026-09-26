@@ -65,7 +65,8 @@ const PAGES = {
     cy.contains('p', 'Section Options').should('exist');
     // Opened: entry fields, month pickers, rich text, header steppers, the options' own fields.
     ['Institution', 'Start Date', 'Description', 'Before', 'Company'].forEach((l) => cy.contains('label', l).should('exist'));
-    cy.get('input[type="number"]').should('have.length.at.least', 4);
+    // The steppers' boxes: Header Bottom Border's Thickness is a text box that takes digits since R4-ED-05.
+    cy.get('input[type="number"], input[inputmode="numeric"]').should('have.length.at.least', 4);
   },
   'editor header: Export menu, then renaming'() {
     cy.visitEditor('classic');
@@ -100,7 +101,7 @@ const PAGES = {
   },
   'Add Job form with custom stages'() {
     visitWith('/#/jobs/new', { state: buildTestState('classic'), stages: ['Culture Round'] });
-    cy.contains('button', 'Culture Round').should('be.visible');
+    cy.contains('button', 'Culture Round').scrollIntoView().should('be.visible'); // below the fold of the form
   },
   'job detail: tasks, overview with a field being edited, notes'() {
     visitWith('/#/jobs/job_acme', { state: buildTestState('classic'), jobs: [ACME] });

@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { ChevronDown, Layers, MoreHorizontal } from 'lucide-react';
-import { DndContext, MouseSensor, TouchSensor, closestCenter, useDroppable, useSensor, useSensors } from '@dnd-kit/core';
+import { DndContext, MouseSensor, TouchSensor, useDroppable, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { useBoardStore } from '@/hooks/useBoardStore';
-import { Button, EmptyState, IconButton, InlineEdit, Menu, cx, useConfirmOptional, useToast } from '@/components/ui';
+import { Button, EmptyState, IconButton, InlineEdit, Menu, cx, useConfirmOptional, useToast, useUrlState } from '@/components/ui';
 import { BoardStorageNotice } from '@/components/board/BoardStorageNotice';
 import { BoardToolbar, EMPTY_FILTERS } from '@/components/board/BoardToolbar';
 import { ProjectHeader } from '@/components/board/ProjectTabs';
@@ -13,11 +13,17 @@ import { IssueHost, useIssueActions, useIssueRoute } from '@/components/board/us
 import { BacklogRow, CompleteSprintDialog, EpicPanel, PointBubbles, StartSprintDialog, sprintDates } from '@/components/board/BacklogParts';
 import { backlogSections, filterIssues } from '@/utils/boardQuery';
 import { activeSprint, issueKey } from '@/utils/boardModel';
+import { boardCollision } from '@/utils/boardDnd';
 
-/** A section's droppable body: rows dropped on its empty space land at its foot. */
-function SectionBody({ id, sprintId, children }) {
+/**
+ * A sprint's (or the backlog's) section, droppable as a whole: a row dropped anywhere in it — its
+ * header, its empty space, its "Create issue" row, or the header of a folded section — lands at its
+ * foot. The whole section, not its body alone: the backlog asks what is under the pointer
+ * (R4-BRD-07), and a body alone refused drops on the header and the create row that used to land.
+ */
+function DroppableSection({ id, sprintId, children, ...props }) {
   const { setNodeRef, isOver } = useDroppable({ id: `section:${id}`, data: { type: 'section', sprintId } });
-  return <div ref={setNodeRef} className={cx('min-h-10 rounded-sm transition-colors', isOver && 'bg-brand-subtle')}>{children}</div>;
+  return <section ref={setNodeRef} {...props} className={cx('rounded-md p-2 transition-colors', isOver ? 'bg-brand-subtle' : 'bg-sunken')}>{children}</section>;
 }
 
 /**
@@ -40,6 +46,14 @@ export function Backlog() {
   const [folded, setFolded] = useState(() => new Set());
   const [starting, setStarting] = useState(null);
   const [completing, setCompleting] = useState(false);
+  // The board's "Complete sprint" links here with ?complete=1, which opens the dialog for the
+  // active sprint (R4-BRD-13). With no sprint to complete, the page drops it from the address.
+  const [completeParam, setCompleteParam] = useUrlState('complete');
+  const canComplete = Boolean(board && board.mode === 'scrum' && activeSprint(board));
+  useEffect(() => {
+    if (completeParam && board && !canComplete) setCompleteParam(null);
+  }, [completeParam, board, canComplete, setCompleteParam]);
+  const stopCompleting = () => { setCompleting(false); setCompleteParam(null); };
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } }),
@@ -52,8 +66,10 @@ export function Backlog() {
   const scrum = board.mode === 'scrum';
   const active = activeSprint(board);
   const futures = board.sprints.filter((s) => s.state === 'future');
-  const all = backlogSections(board, board.issues.filter((i) => i.type !== 'epic'));
-  const sections = all.filter((s) => scrum || s.kind === 'backlog').map((s) => ({ ...s, shown: filterIssues(board, filters, { issues: s.issues }) }));
+  // A Kanban project plans in one backlog, with no sprint sections: every open issue belongs in
+  // it, including one still in a sprint from when the project used sprints (R4-BRD-08).
+  const all = backlogSections(scrum ? board : { ...board, sprints: [] }, board.issues.filter((i) => i.type !== 'epic'));
+  const sections = all.map((s) => ({ ...s, shown: filterIssues(board, filters, { issues: s.issues }) }));
   const targets = [...(active ? [active] : []), ...futures].map((s) => ({ id: s.id, name: s.name })).concat({ id: null, name: 'Backlog' });
   const toggleFold = (sid) => setFolded((f) => { const n = new Set(f); if (n.has(sid)) n.delete(sid); else n.add(sid); return n; });
 
@@ -61,7 +77,11 @@ export function Backlog() {
     if (!over || over.id === a.id) return;
     const from = sections.find((s) => s.shown.some((i) => i.id === a.id));
     const data = over.data.current ?? {};
-    const sprintId = data.sprintId ?? null;
+    // A Kanban project's one backlog holds issues of every sprint (R4-BRD-08): a row still in one
+    // leaves it (null); one in none keeps none, and its place is read off the whole backlog
+    // (undefined), not off the issues in no sprint alone — or a drop among the others was a no-op.
+    const dragged = board.issues.find((i) => i.id === a.id);
+    const sprintId = scrum ? data.sprintId ?? null : (dragged?.sprintId ? null : undefined);
     let beforeId = null;
     if (data.type === 'row') {
       beforeId = over.id;
@@ -79,7 +99,7 @@ export function Backlog() {
     if (ok) { store.deleteSprint(board.id, sprint.id); toast({ title: `${sprint.name} deleted` }); }
   }
 
-  const completingSection = completing && active ? all.find((s) => s.id === active.id) : null;
+  const completingSection = (completing || completeParam) && active ? all.find((s) => s.id === active.id) : null;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -110,14 +130,15 @@ export function Backlog() {
             onClose={() => setEpicsOpen(false)}
           />
         )}
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+        {/* What is under the pointer, not the nearest section: a row released outside every section stays put (R4-BRD-07). */}
+        <DndContext sensors={sensors} collisionDetection={boardCollision} onDragEnd={onDragEnd}>
           <div className="flex min-w-0 flex-1 flex-col gap-3">
             {sections.map((section) => {
               const { sprint } = section;
               const open = !folded.has(section.id);
               const sprintId = sprint?.id ?? null;
               return (
-                <section key={section.id} data-section={section.id} aria-label={sprint ? sprint.name : 'Backlog'} className="rounded-md bg-sunken p-2">
+                <DroppableSection key={section.id} id={section.id} sprintId={sprintId} data-section={section.id} aria-label={sprint ? sprint.name : 'Backlog'}>
                   <header className="flex flex-wrap items-center gap-2 px-1 py-1">
                     <button type="button" aria-expanded={open} aria-label={`${open ? 'Fold' : 'Unfold'} ${sprint ? sprint.name : 'the backlog'}`} onClick={() => toggleFold(section.id)} className="rounded p-1 text-ink-subtle hover:bg-neutral-fill">
                       <ChevronDown size={16} aria-hidden="true" className={cx('transition-transform', !open && '-rotate-90')} />
@@ -149,7 +170,7 @@ export function Backlog() {
                   </header>
                   {open && (
                     <div className="mt-1 flex flex-col gap-1">
-                      <SectionBody id={section.id} sprintId={sprintId}>
+                      <div className="min-h-10 rounded-sm">
                         {section.shown.length === 0 ? (
                           <p className="rounded border-2 border-dashed border-line px-4 py-3 text-center text-[13px] text-ink-subtlest">
                             {section.issues.length ? 'No issues here match the filters.' : sprint ? 'Plan this sprint: drag issues here from the backlog, or create one.' : 'Your backlog is empty.'}
@@ -173,11 +194,11 @@ export function Backlog() {
                             </ul>
                           </SortableContext>
                         )}
-                      </SectionBody>
+                      </div>
                       <InlineCreate variant="row" onCreate={({ title, type }) => store.addIssue(board.id, { title, type, sprintId })} />
                     </div>
                   )}
-                </section>
+                </DroppableSection>
               );
             })}
           </div>
@@ -189,8 +210,8 @@ export function Backlog() {
         sprint={completingSection?.sprint}
         stats={completingSection?.stats}
         futures={futures}
-        onClose={() => setCompleting(false)}
-        onComplete={(moveOpenTo) => { store.completeSprint(board.id, active.id, { moveOpenTo }); setCompleting(false); toast({ tone: 'success', title: `${active.name} completed` }); }}
+        onClose={stopCompleting}
+        onComplete={(moveOpenTo) => { store.completeSprint(board.id, active.id, { moveOpenTo }); stopCompleting(); toast({ tone: 'success', title: `${active.name} completed` }); }}
       />
       <IssueHost route={route} />
     </div>

@@ -1,0 +1,184 @@
+{
+  "cluster": "r4-brd",
+  "branch": "claude/wf-r4-brd",
+  "base": "fd1f439",
+  "rows": [
+    {
+      "id": "R4-BRD-01",
+      "outcome": "fixed",
+      "commits": [
+        "45bcdcb"
+      ],
+      "tests": [
+        "tests/unit/board-column-delete.unit.mjs",
+        "tests/pdf/82-board-columns-r4.test.mjs"
+      ],
+      "summary": "Deleting a column counts every issue it holds — done ones hidden by hideDoneAfterDays, other sprints' issues, epics — so a column that only looks empty asks first. Its issues go to the nearest column of the same category (else the neighbour, as before), so the delete neither reopens nor resolves them; when it must, the question says so ('and be reopened' / 'and be marked done'). One helper, columnDeletion (boardView.js), serves the board and Settings.",
+      "remaining": "The delete toast still has no Undo (the finding's actual mentions it; its expected does not ask for it)."
+    },
+    {
+      "id": "R4-BRD-02",
+      "outcome": "fixed",
+      "commits": [
+        "20bb9eb"
+      ],
+      "tests": [
+        "tests/pdf/82-issue-view-r4-02.test.mjs"
+      ],
+      "summary": "The issue view's content is keyed by the issue (the Dialog shell stays mounted): opening a child from its epic, or the epic from the trail, starts from that issue's own description, comment box, checklist row and Activity tab; a draft never carries over into another issue."
+    },
+    {
+      "id": "R4-BRD-03",
+      "outcome": "fixed",
+      "commits": [
+        "9abcb22"
+      ],
+      "tests": [
+        "tests/pdf/82-issue-view-r4-03.test.mjs"
+      ],
+      "summary": "Product call: autosave. A description left open is saved into the issue it was typed in when the view closes (X, Escape, overlay, Back) or another issue opens; Cancel still discards it, and an editor opened and left untouched saves nothing."
+    },
+    {
+      "id": "R4-BRD-04",
+      "outcome": "fixed",
+      "commits": [
+        "7cf98d4"
+      ],
+      "tests": [
+        "tests/pdf/82-backlog-r4.test.mjs"
+      ],
+      "summary": "DateInput keeps what is typed in a draft and saves only a whole day (isLocalISO, year ≥ 1000) or a cleared field: typing a year digit by digit no longer wipes the field or clears a saved date; leaving with half a year typed puts the saved day back. The Create issue dialog uses the same DateInput."
+    },
+    {
+      "id": "R4-BRD-05",
+      "outcome": "fixed",
+      "commits": [
+        "69daddc",
+        "29085ec",
+        "6ad9ff5",
+        "b2edc1a",
+        "f8fa73d",
+        "8a942a1",
+        "0da56a4"
+      ],
+      "tests": [
+        "tests/pdf/82-issue-view-r4-05.test.mjs"
+      ],
+      "summary": "Closing the issue view undoes opening it: each open pushes an entry and counts it (issueDepth), close steps back over them, so Back after a close leaves the board; a shared-link issue closes in place. Review follow-ups: open/close read the live address (a toast's Open after the view closed), a double close or held Escape closes once, the guard expires so a close whose step back never lands can be retried, a double click before the address lands pushes once (also under HashRouter's transitions), Ctrl/⌘/Shift/middle clicks on the trail's project link are left to the browser. useUrlState loses its unused push option.",
+      "remaining": "A second close in the gap between a pending open's commit and its step back keeps its guard by code (0da56a4) but has no test: the fake router commits at once."
+    },
+    {
+      "id": "R4-BRD-06",
+      "outcome": "fixed",
+      "commits": [
+        "99394ed",
+        "ec5659d",
+        "2e8b524",
+        "4ae1c54",
+        "f942297"
+      ],
+      "tests": [
+        "tests/pdf/82-issue-view-r4-06.test.mjs"
+      ],
+      "summary": "M opens the comment box in the issue view (allowInDialog), and is still a letter in a field. It acts only while the view is the top dialog and not from a popover over it (Labels picker); it goes back to a comment being typed instead of wiping it; on the History tab it switches to Comments. The comment box stays mounted (hidden) on History, so a draft survives a look at History and an old M never reopens it."
+    },
+    {
+      "id": "R4-BRD-07",
+      "outcome": "fixed",
+      "commits": [
+        "f6daac9",
+        "0a06140"
+      ],
+      "tests": [
+        "tests/pdf/82-backlog-r4.test.mjs",
+        "tests/unit/board-collision.unit.mjs"
+      ],
+      "summary": "The backlog uses boardCollision (what is under the pointer; rows before their section): a row released outside every section — toolbar, Epic panel, between sections, far below — moves nothing. The whole section is the drop target, so a drop on its header, its 'Create issue' row or a folded section still lands at its foot."
+    },
+    {
+      "id": "R4-BRD-08",
+      "outcome": "fixed",
+      "commits": [
+        "612072e",
+        "61a6ad4"
+      ],
+      "tests": [
+        "tests/pdf/82-backlog-r4.test.mjs"
+      ],
+      "summary": "A Kanban project's backlog lists every open non-epic issue, including ones left in a sprint; a row dragged there leaves its sprint, and a row in no sprint is ranked against the whole backlog (a drop among rows still in a sprint used to be a no-op).",
+      "remaining": "A row still in a sprint dropped on the list's foot lands after the last row in no sprint, which may not be the list's end; the row menu's Move to still lists sprints in Kanban."
+    },
+    {
+      "id": "R4-BRD-09",
+      "outcome": "fixed",
+      "commits": [
+        "9548d72",
+        "cdbdb58"
+      ],
+      "tests": [
+        "tests/unit/board-ops.unit.mjs"
+      ],
+      "summary": "A column changed to (or from) Done resolves (or reopens) its issues as a move does: a status entry from the old category to the new one in each history, and a repeating issue's next occurrence made once. The next occurrence goes to the first to-do column, else the first open one — never a done column, where it would be born resolved (the board's only to-do column turned Done)."
+    },
+    {
+      "id": "R4-BRD-10",
+      "outcome": "fixed",
+      "commits": [
+        "faebc09"
+      ],
+      "tests": [
+        "tests/pdf/82-backlog-r4.test.mjs"
+      ],
+      "summary": "InlineCreate takes showType (default true); the Epic panel's 'Create epic' composer shows no Task/Story/Bug picker.",
+      "remaining": "Its placeholder still reads 'What needs to be done?' (cosmetic)."
+    },
+    {
+      "id": "R4-BRD-11",
+      "outcome": "fixed",
+      "commits": [
+        "501f00a",
+        "cdbdb58"
+      ],
+      "tests": [
+        "tests/unit/board-ops.unit.mjs"
+      ],
+      "summary": "An unnamed sprint is '<KEY> Sprint n', n one past the sprint count and past the highest n a sprint's name has (case aside): after a delete the next sprint never repeats an existing name."
+    },
+    {
+      "id": "R4-BRD-12",
+      "outcome": "fixed",
+      "commits": [
+        "8d3db9e"
+      ],
+      "tests": [
+        "tests/pdf/82-board-columns-r4.test.mjs"
+      ],
+      "summary": "Settings' 'move to' target is the pick while that column exists, else the column the board would pick (columnDeletion — so it now opens on a same-category column); Delete column moves the issues to the column the select shows, and a refusal keeps the panel open with a message."
+    },
+    {
+      "id": "R4-BRD-13",
+      "outcome": "fixed",
+      "commits": [
+        "3938990"
+      ],
+      "tests": [
+        "tests/pdf/82-backlog-r4.test.mjs"
+      ],
+      "summary": "The board's 'Complete sprint' links to the backlog with ?complete=1, which opens the Complete-sprint dialog for the active sprint; closing or completing it drops the param (replace), and a backlog with no sprint to complete (none active, or Kanban) just drops it."
+    }
+  ],
+  "review": {
+    "issues": [
+      "R4-BRD-09: the only to-do column turned Done made the next occurrence in that same done column, born resolved (fixed, cdbdb58).",
+      "R4-BRD-07: a section-body-only droppable refused drops on a sprint's header and 'Create issue' row that used to land (fixed, 0a06140).",
+      "R4-BRD-08: a Kanban reorder of a row in no sprint among rows left in a sprint was a no-op (fixed, 61a6ad4).",
+      "R4-BRD-05: a toast's stale Open over-counted depth; double close stepped off the board; modifier clicks on the project link were swallowed; the double-close guard never expired; a double open before commit pushed twice, also via HashRouter transitions (fixed, 29085ec 6ad9ff5 b2edc1a 8a942a1 0da56a4).",
+      "R4-BRD-06: M fired under stacked dialogs and popovers, wiped a typed comment, did nothing on History, and reopened the box after a History visit (fixed, ec5659d 2e8b524 4ae1c54 f942297).",
+      "Test mistakes of mine caught by CI and corrected: two wrong expectations (585a815), an unrelated test's time changed by a bulk replace (9ddee4e, put back), a class selector the fake DOM does not match (17fae60).",
+      "A History-tab test assertion used closest('.hidden'), which fake-dom does not match (fixed, 17fae60)."
+    ],
+    "fixedByReviewer": []
+  },
+  "baselineFailures": [],
+  "notes": "Fixes were written by this session and two sub-agents; each commit was reviewed by a separate agent (four review rounds) and every finding fixed. The issue-view tests are one file per row (tests/pdf/82-issue-view-r4-0{2,3,5,6}.test.mjs, helper tests/pdf/issue-view-page.mjs, not a *.test.mjs) so failfirst isolates rows. tests/pdf/82-issue-view-r4-06's History-tab test was updated to the box being hidden rather than removed (f942297's intended change). Product calls: autosave the description (03); a Kanban ?complete=1 opens nothing (13); a backlog drop outside every section moves nothing (07); column deletes prefer a same-category target (01, 12). Deferred (accessibility, noted not fixed): focus drops to <body> when the issue view re-keys to another issue (Escape then needs a click back in); the M hotkey has no announcement; the hidden comment box sits inside the History tab panel. CI: consolidated run 36232724310 at the merged head dd284de (every touched test file plus failfirst on all 25 fix commits) is green; merged claude/awesome-cerf-t3sh88 a8b3d6d."
+}

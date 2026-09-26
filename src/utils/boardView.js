@@ -10,7 +10,7 @@
 // sprint's, a kanban board all but the done ones resolved longer ago than hideDoneAfterDays — and
 // never an epic: an epic holds issues (the backlog page lists epics), each card naming its own.
 // Pure (tests/unit/board-drop.unit.mjs).
-import { activeSprint } from './boardModel.js';
+import { activeSprint, isDoneColumn } from './boardModel.js';
 import { columnCounts, groupIntoColumns, visibleOnBoard } from './boardQuery.js';
 
 /**
@@ -31,6 +31,28 @@ function shownIssues(board, now) {
 export function hiddenDoneCount(board, { now = Date.now() } = {}) {
   if (boardSprint(board)) return 0;
   return board.issues.filter((i) => i.type !== 'epic').length - shownIssues(board, now).length;
+}
+
+/**
+ * What deleting column `columnId` does: `count`, every issue it holds — the ones the board does not
+ * show too (done long ago, in another sprint, epics), or a column that looks empty would go without
+ * a question and take them along — and `target`, the column they move to: the nearest other column
+ * of the same category, so the delete neither resolves nor reopens them, else the one beside it
+ * (after, else before); null for the only column. `change` is what the move does to them: 'reopen'
+ * (out of a done column), 'resolve' (into one) or null.
+ */
+export function columnDeletion(board, columnId) {
+  const at = board.columns.findIndex((c) => c.id === columnId);
+  const column = board.columns[at];
+  if (!column) return { count: 0, target: null, change: null };
+  const count = board.issues.filter((i) => i.columnId === columnId).length;
+  const distance = (c) => Math.abs(board.columns.indexOf(c) - at) * 2 - (board.columns.indexOf(c) > at ? 1 : 0);
+  const same = board.columns.filter((c) => c !== column && c.category === column.category).sort((a, b) => distance(a) - distance(b));
+  const target = same[0] ?? board.columns[at + 1] ?? board.columns[at - 1] ?? null;
+  let change = null;
+  if (target && isDoneColumn(column) && !isDoneColumn(target)) change = 'reopen';
+  if (target && !isDoneColumn(column) && isDoneColumn(target)) change = 'resolve';
+  return { count, target, change };
 }
 
 /** A label as a card shows it — `{ id, name, color }` — for each of the issue's labels that exists. */
