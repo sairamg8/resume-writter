@@ -2,15 +2,18 @@ import { useState } from 'react';
 import { CheckSquare, Trash2 } from 'lucide-react';
 import { IconButton, InlineEdit, ProgressBar, isImeKey } from '@/components/ui';
 import { newId } from '@/utils/ids';
+import { useRemoveWithUndo } from '@/hooks/useRemoveWithUndo';
 
 /**
  * An issue's checklist, as the issue view shows it: a progress bar ("2 of 5 done"), each item
- * with its tick, its text (click to rename) and a delete; a field to add the next one (Enter adds
+ * with its tick, its text (click to rename) and a delete (with Undo); a field to add the next one (Enter adds
  * and stays, Escape leaves). `items` in, `onChange(items)` out — the store records the change.
  */
 export function IssueChecklist({ items = [], onChange, autoFocus = false }) {
   const [text, setText] = useState('');
   const done = items.filter((c) => c.done).length;
+  // A delete is one click, so it offers Undo, as an issue's own delete does (R4-DUX-20).
+  const remove = useRemoveWithUndo(items, onChange);
   const set = (id, patch) => onChange(items.map((c) => (c.id === id ? { ...c, ...patch } : c)));
 
   function add() {
@@ -56,7 +59,7 @@ export function IssueChecklist({ items = [], onChange, autoFocus = false }) {
                 label={`Delete “${c.text}”`}
                 size="sm"
                 variant="danger"
-                onClick={() => onChange(items.filter((x) => x.id !== c.id))}
+                onClick={() => remove(c.id, 'Checklist item deleted')}
                 className="opacity-0 group-hover:opacity-100 no-hover:opacity-100 focus-visible:opacity-100"
               />
             </li>
