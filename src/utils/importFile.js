@@ -106,22 +106,60 @@ export function docxXmlLines(xml, links = {}) {
   return lines;
 }
 
-/** A part's relationships file (word/_rels/<part>.rels) as its hyperlinks' targets, by id. */
-export function docxLinks(rels) {
-  const out = {};
-  for (const [, attrs] of String(rels ?? '').matchAll(/<Relationship\b([^>]*)>/g)) {
-    const attr = (name) => new RegExp(`\\b${name}="([^"]*)"`).exec(attrs)?.[1];
-    if ((attr('Type') || '').endsWith('/hyperlink') && attr('Target')) out[attr('Id')] = xmlText(attr('Target'));
-  }
-  return out;
+/** A part's relationships file (word/_rels/<part>.rels) as its relationships: { id, type, target }. */
+function docxRels(rels) {
+  return [...String(rels ?? '').matchAll(/<Relationship\b([^>]*)>/g)].map(([, attrs]) => {
+    const attr = (name) => xmlText(new RegExp(`\\b${name}="([^"]*)"`).exec(attrs)?.[1] ?? '');
+    return { id: attr('Id'), type: attr('Type'), target: attr('Target') };
+  });
 }
 
-/** A .docx file's text as lines (docxXmlLines), its hyperlinks' targets read from its relationships. */
+/** A part's relationships file as its hyperlinks' targets, by id. */
+export function docxLinks(rels) {
+  return Object.fromEntries(docxRels(rels).filter((r) => r.type.endsWith('/hyperlink') && r.target).map((r) => [r.id, r.target]));
+}
+
+/** One part of a .docx (word/document.xml, word/header1.xml) as lines, with its own hyperlinks' targets. */
+async function docxPartLines(bytes, part) {
+  const xml = await unzipEntry(bytes, `word/${part}`);
+  if (!xml) return null;
+  const rels = await unzipEntry(bytes, `word/_rels/${part}.rels`);
+  return docxXmlLines(decode(xml), docxLinks(rels && decode(rels)));
+}
+
+/**
+ * The page header the first page shows, as lines, else []: many résumés set the name and the contact
+ * line in Word's page header (Insert → Header), which is not in word/document.xml — they were lost,
+ * and the first body line ("Summary") became the name (R4-IMP-05). The first section's "first page"
+ * header when it has a different first page (<w:titlePg/>), else its default one. The app's own export
+ * has a different first page with no header on it, its running header ("Name · Page 2") on the others:
+ * none of that is read.
+ */
+async function docxHeaderLines(bytes, xml) {
+  const sect = /<w:sectPr\b[\s\S]*?<\/w:sectPr>/.exec(xml)?.[0] ?? '';
+  const titlePage = /<w:titlePg(?:\s+w:val="(?:1|true|on)")?\s*\/>/.test(sect);
+  const ref = [...sect.matchAll(/<w:headerReference\b[^>]*>/g)].map(([tag]) => tag)
+    .find((tag) => new RegExp(`w:type="${titlePage ? 'first' : 'default'}"`).test(tag));
+  const id = ref && /\br:id="([^"]*)"/.exec(ref)?.[1];
+  if (!id) return [];
+  const rels = await unzipEntry(bytes, 'word/_rels/document.xml.rels');
+  const target = docxRels(rels && decode(rels)).find((r) => r.id === id)?.target.replace(/^\/?word\//, '');
+  return (target && await docxPartLines(bytes, target)) || [];
+}
+
+/**
+ * A .docx file's text as lines (docxXmlLines), its hyperlinks' targets read from its relationships:
+ * the first page's header first (docxHeaderLines), less any line the body starts with too, then the body.
+ */
 export async function docxLines(bytes) {
   const xml = await unzipEntry(bytes, 'word/document.xml');
   if (!xml) throw new Error('That Word file has no document in it.');
+  const text = decode(xml);
   const rels = await unzipEntry(bytes, 'word/_rels/document.xml.rels');
-  return docxXmlLines(decode(xml), docxLinks(rels && decode(rels)));
+  const body = docxXmlLines(text, docxLinks(rels && decode(rels)));
+  const opening = new Set(body.map((l) => l.text.trim()).filter(Boolean).slice(0, 12));
+  const header = (await docxHeaderLines(bytes, text)).filter((l) => !l.text.trim() || !opening.has(l.text.trim()));
+  return header.some((l) => l.text.trim()) ? [...header, { text: '', hint: undefined }, ...body] : body;
 }
 
 // ── PDF ──────────────────────────────────────────────────────────────────────
