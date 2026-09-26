@@ -28,6 +28,20 @@ export function subscribeFontFallback(fn) {
   return () => listeners.delete(fn);
 }
 
+let borrowing = false;
+
+/**
+ * Whether a face of a loaded font failed and prints with another face's data for now (a bold that
+ * failed prints as the regular; pdfFontLoader.js prepareFonts fetches it again): the preview builds
+ * again when the browser is back online (R4-LO-17). Nothing is shown for it.
+ */
+export const facesBorrowed = () => borrowing;
+
+/** Record whether the last fonts prepared left a face borrowing another's data. */
+export function setFacesBorrowed(value) {
+  borrowing = Boolean(value);
+}
+
 /**
  * The name the editor shows for the font `settings` choose from the web: the custom font as typed,
  * or the picker's label ("Georgia", printed in Gelasio). Null for Noto Sans, or an id the picker

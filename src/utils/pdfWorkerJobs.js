@@ -1,12 +1,13 @@
 import { renderCoverLetterPdf, renderResumePdf, warmPdfExport } from '@/utils/pdfExportReactPDF';
-import { fontFallback } from '@/utils/fontFallback';
+import { facesBorrowed, fontFallback } from '@/utils/fontFallback';
 
 /**
  * What the PDF worker (pdfWorker.js) does with one message from pdfBuild.js: build the résumé's or
  * the letter's PDF with the very functions the main thread uses (renderResumePdf,
- * renderCoverLetterPdf), or warm their fonts and template. Its reply carries the PDF's bytes and the
- * font the build could not load (fontFallback.js lives on the main thread, where the editor reads
- * it); a build that fails replies with its error's message, as the main thread would have thrown it.
+ * renderCoverLetterPdf), or warm their fonts and template. Its reply carries the PDF's bytes, the
+ * font the build could not load and whether a face borrows another's data (fontFallback.js lives on
+ * the main thread, where the editor and the preview read them); a build that fails replies with its
+ * error's message, as the main thread would have thrown it.
  * Jobs run one at a time (runJobs), so the fallback read after a build is that build's.
  */
 export async function runJob({ id, kind, resume, options }) {
@@ -16,7 +17,7 @@ export async function runJob({ id, kind, resume, options }) {
       return { id };
     }
     const blob = kind === 'letter' ? await renderCoverLetterPdf(resume, options) : await renderResumePdf(resume, options);
-    return { id, bytes: new Uint8Array(await blob.arrayBuffer()), fallback: fontFallback() };
+    return { id, bytes: new Uint8Array(await blob.arrayBuffer()), fallback: fontFallback(), borrowed: facesBorrowed() };
   } catch (e) {
     return { id, error: e?.message || String(e) };
   }
