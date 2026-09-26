@@ -22,13 +22,17 @@ const SHARE = `users/uid_owner/shares/${RID}`;
 const copies = (c) => [...c.data.keys()].filter((p) => p.startsWith('public/'));
 const cv = () => Object.assign(resume({ personal: { name: 'Jordan Ellery', title: 'Designer' } }), { id: RID });
 
-/** Another device's Publish, landed on the server just after this one read the record. */
+/**
+ * Another device's Publish, landed on the server just after this one read the record: at the link
+ * the record names, as Publish reuses it, else at a new one.
+ */
 function publishElsewhereAfterRecordRead(c) {
   c.afterRead = (path) => {
     if (path !== SHARE) return;
     c.afterRead = null;
-    c.data.set('public/phone_link', { owner: 'uid_owner', resume: link.publicSnapshot(cv()), publishedAt: 2 });
-    c.data.set(SHARE, { shareId: 'phone_link', publishedAt: 2 });
+    const shareId = c.data.get(SHARE)?.shareId || 'phone_link';
+    c.data.set(`public/${shareId}`, { owner: 'uid_owner', resume: link.publicSnapshot(cv()), publishedAt: 2 });
+    c.data.set(SHARE, { shareId, publishedAt: 2 });
   };
 }
 
