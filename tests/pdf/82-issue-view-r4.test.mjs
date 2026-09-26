@@ -10,6 +10,9 @@
 //    now undoes the opening (an epic and the child opened from it, too), and Back after it leaves
 //    the board for the page before; an issue named by a shared link closes in place. Deleting the
 //    issue from its view and the trail's project link (on the board) close the same way.
+//  - R4-BRD-06: "Pro tip: press M to comment" never worked: the Activity's `m` slept, as a page's
+//    shortcuts do under a modal dialog, and the issue view is one. It opens the comment box now,
+//    and is still only a letter while typing in a field.
 // The real board page and the real board store are mounted with react-dom/client over fake-dom
 // (tests/pdf/fake-dom.mjs, the kit's harness), as tests/pdf/82-board-summary-labels.test.mjs does.
 // Run: node --test tests/pdf/82-issue-view-r4.test.mjs
@@ -356,6 +359,41 @@ it('R4-BRD-05: on the board, the trail\'s project link closes the view the same 
     page.back();
     await page.settle();
     assert.equal(page.path(), '/elsewhere', 'Back after the project link opened the issue again');
+  } finally {
+    await page.view.unmount();
+  }
+});
+
+/** A key pressed at `target`, as the window's keydown listeners (useHotkeys) get it. */
+function press(view, key, target) {
+  const event = {
+    type: 'keydown', key, target, repeat: false, isComposing: false,
+    shiftKey: false, metaKey: false, ctrlKey: false, altKey: false,
+    defaultPrevented: false,
+    preventDefault() { this.defaultPrevented = true; },
+  };
+  view.act(() => { view.window.dispatchEvent(event); });
+  return event;
+}
+
+it('R4-BRD-06: M in the issue view opens the comment box; typed in a field it is only a letter', async () => {
+  const page = mountBoard('/boards/p1?issue=HOME-2');
+  try {
+    await page.settle(); // the shortcut's listener is added in an effect
+    // The path the shortcut used to stop on: the issue view is a modal dialog.
+    assert.ok(page.view.document.querySelector('[aria-modal="true"]'), 'the issue view is modal');
+    assert.equal(page.byLabel('Comment'), undefined, 'the comment box starts closed');
+    assert.ok(page.button('Add a comment…'));
+
+    const field = page.view.document.createElement('input');
+    const typed = press(page.view, 'm', field);
+    assert.equal(typed.defaultPrevented, false, 'an m typed in a field is the letter');
+    assert.equal(page.byLabel('Comment'), undefined, 'an m typed in a field opened the comment box');
+
+    const pressed = press(page.view, 'm', page.view.document.body);
+    assert.ok(page.byLabel('Comment'), 'M did not open the comment box');
+    assert.equal(page.byLabel('Comment').tagName, 'TEXTAREA');
+    assert.equal(pressed.defaultPrevented, true, 'the m is the shortcut\'s, not typed into the box it opens');
   } finally {
     await page.view.unmount();
   }

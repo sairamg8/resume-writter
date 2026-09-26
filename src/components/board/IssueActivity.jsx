@@ -121,7 +121,8 @@ function HistoryEntry({ entry }) {
 export function IssueActivity({ issue, onAddComment, onUpdateComment, onDeleteComment }) {
   const [tab, setTab] = useState('comments');
   const [composeKey, setComposeKey] = useState(0);
-  useHotkeys({ m: () => setComposeKey((k) => k + 1) });
+  // The issue view is a modal dialog, where the page's shortcuts sleep: `m` is the view's own.
+  useHotkeys({ m: () => setComposeKey((k) => k + 1) }, { allowInDialog: true });
   const comments = [...(issue.comments ?? [])].reverse();
   const history = [...(issue.activity ?? [])].filter((a) => a.kind !== 'comment').reverse();
   const rows = tab === 'history' ? history.map((h) => ({ kind: 'history', at: h.at, h }))
