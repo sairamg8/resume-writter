@@ -65,6 +65,10 @@ export function IssueChecklist({ items = [], onChange, autoFocus = false }) {
         autoFocus={autoFocus}
         onChange={(e) => setText(e.target.value)}
         onKeyDown={(e) => {
+          // While an input method (Chinese, Japanese, Korean) is composing, Enter picks the word
+          // and Escape drops it: the keystroke is the IME's, not an add. Safari says so only with
+          // keyCode 229 (isComposing is already false there), so both are checked.
+          if (e.nativeEvent?.isComposing || e.keyCode === 229) return;
           if (e.key === 'Enter') { e.preventDefault(); add(); }
           if (e.key === 'Escape' && text) { e.stopPropagation(); setText(''); }
         }}

@@ -49,6 +49,10 @@ export function InlineCreate({ onCreate, label = 'Create issue', className, vari
         value={text}
         onChange={(e) => setText(e.target.value)}
         onKeyDown={(e) => {
+          // While an input method (Chinese, Japanese, Korean) is composing, Enter picks the word
+          // and Escape drops it: the keystroke is the IME's, not a create. Safari says so only with
+          // keyCode 229 (isComposing is already false there), so both are checked.
+          if (e.nativeEvent?.isComposing || e.keyCode === 229) return;
           if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); create(); }
           if (e.key === 'Escape') { e.stopPropagation(); setText(''); setOpen(false); }
         }}
