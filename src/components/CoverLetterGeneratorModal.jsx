@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { Sparkles, X, Check, ArrowRight, Building, User, Briefcase } from 'lucide-react';
-import { COVER_LETTER_ARCHETYPES, generateCoverLetter } from '@/utils/coverLetterGenerator';
+import { COVER_LETTER_ARCHETYPES, generateCoverLetter, extractResumeHighlights } from '@/utils/coverLetterGenerator';
 import { sanitizeRichText } from '@/utils/richText';
 import { useOverlayClose } from '@/hooks/useOverlayClose';
 
@@ -37,6 +37,15 @@ export default function CoverLetterGeneratorModal({ isOpen, onClose, resume, cov
       recipientName: recipient,
     });
   }, [isOpen, resume, archetype, company, role, recipient]);
+
+  // A letter with no experience, skills or title behind it (a Blank letter, or a résumé not filled
+  // in yet) has nothing to be written from: the preview is generic filler ("utilizing modern best
+  // practices"), so the modal says why rather than presenting it as tailored (R4-DUX-13).
+  const nothingToDrawOn = useMemo(() => {
+    if (!isOpen) return false;
+    const h = extractResumeHighlights(resume);
+    return h.topExperiences.length === 0 && h.topSkills.length === 0 && !h.candidateTitle;
+  }, [isOpen, resume]);
 
   if (!isOpen) return null;
 
@@ -145,6 +154,12 @@ export default function CoverLetterGeneratorModal({ isOpen, onClose, resume, cov
               })}
             </div>
           </div>
+
+          {nothingToDrawOn && (
+            <p data-testid="generator-no-details" className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+              This letter has no résumé details to draw on: add experience and skills on the Resume tab, or start the letter from a résumé.
+            </p>
+          )}
 
           {/* Generated Preview */}
           <div className="border border-gray-200 rounded-xl p-4 bg-gray-50/50">
