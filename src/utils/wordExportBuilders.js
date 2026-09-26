@@ -87,36 +87,41 @@ function entries(section, look, build, items = shown(section)) {
 
 /**
  * An entry's location for dateRightPara: a line of its own under the date, in the size and the
- * colour the PDF prints it in (`place`: the Text colour's muted shade, Compact's meta) — the PDF
+ * colour the PDF prints it in (`place`: the Text colour's muted shade, Compact's meta), italic on
+ * Executive and Academic (`look.italicSub`, R4-DOUT-02) — the PDF
  * prints it with the date, never in the title's text (ATS-1).
  */
-const place = (text, look) => (text ? { text, color: look.ink.place, size: look.place } : null);
+const place = (text, look, italics = look.italicSub) => (text ? { text, color: look.ink.place, size: look.place, italics } : null);
 
 /** An entry's title line (dateRightPara) with its `date` in `dateHex`, at the look's right tab; `under` the line under it. */
 const titleLine = (left, date, dateHex, centered, look, where = null, under = []) => dateRightPara(left, date, { color: dateHex, centered, size: look.date, place: where, tab: look.tab, under });
 
 /**
  * An entry's first field, bold in the Text colour at Entry Header, and its second in the PDF's
- * colour and size for it (the sub line's, `look.sub`: Base, R2-118).
+ * colour and size for it (the sub line's, `look.sub`: Base, R2-118). `slant`: italic where the PDF
+ * prints it so — an entry's second field and an issuer on Executive and Academic (R4-DOUT-02).
  */
 const first = (text, look) => text && bold(text, { size: look.entry, color: look.ink.text });
-const second = (text, look, color = look.ink.second, size = look.sub) => normal(text, { size, color });
+const second = (text, look, color = look.ink.second, size = look.sub, slant = false) => normal(text, { size, color, ...(slant && look.italicSub ? { italics: true } : {}) });
 
 /**
  * The header of an entry with a Title (Section Options → Title, `look.title`; R2-070) — a job, a
  * school, a volunteer role, a custom entry — laid out as the PDF's ItemHeader lays it out: "Stacked"
  * the first field with the date and the second on the line under it, with the location; "Inline"
  * "first — second" with the date; "Side by side" both with the date, a field's gap apart (centred,
- * joined as Inline, as the PDF centres them). Under a one-line title the location has a line of its
+ * joined as Inline, as the PDF centres them) — ", " on Executive and Academic, whose second field
+ * prints italic (R4-DOUT-02). Under a one-line title the location has a line of its
  * own (ATS-1). Word printed every entry Inline.
  */
 function header(primary, secondary, date, dateHex, centered, look, where) {
   const lead = [first(primary, look)];
-  if (secondary && look.title === 'stacked') return titleLine(lead, date, dateHex, centered, look, where, [second(secondary, look)]);
+  if (secondary && look.title === 'stacked') return titleLine(lead, date, dateHex, centered, look, where, [second(secondary, look, look.ink.second, look.sub, true)]);
   // Side by side: ItemHeader's 6 pt between the two, the Timeline's field gap.
   const apart = primary && look.title === 'sidebyside' && !centered;
   const gap = apart ? [inlineGap(look.template === 'timeline' ? fieldGap(look.base / 2) : 6, look.sub)] : [];
-  const rest = secondary ? [...gap, second(`${primary && !apart ? ' — ' : ''}${secondary}`, look)] : [];
+  // Joined as ItemHeader joins them: ", " before an italic second field (Executive, Academic), else " — ".
+  const joiner = look.italicSub ? ', ' : ' — ';
+  const rest = secondary ? [...gap, second(`${primary && !apart ? joiner : ''}${secondary}`, look, look.ink.second, look.sub, true)] : [];
   return titleLine([...lead, ...rest], date, dateHex, centered, look, where);
 }
 
@@ -160,7 +165,8 @@ export function buildExperience(section, accentHex, settings, centered, dateHex,
       titleLine([first(employerOf(g[0]), look)], '', dateHex, centered, look, place(places.header, look)),
       ...g.flatMap((item, k) => [
         ...(k ? gapPara(look.gap / 2) : []),
-        header(field(item, 'role'), '', datesOf(item), dateHex, centered, look, place(places.roles[k], look)),
+        // A grouped role's own location upright, as the PDF's role header prints it (no italicSub).
+        header(field(item, 'role'), '', datesOf(item), dateHex, centered, look, place(places.roles[k], look, false)),
         ...body(item, centered, look),
       ]),
     ];
@@ -266,7 +272,7 @@ export function buildCertifications(section, accentHex, settings, centered, date
     titleLine([
       first(item.name || item.title, look),
       // The name's line at Entry Header, all of it, as the PDF prints it.
-      ...(item.issuer ? [second(` — ${item.issuer}`, look, look.ink.sub, look.entry)] : []),
+      ...(item.issuer ? [second(` — ${item.issuer}`, look, look.ink.sub, look.entry, true)] : []),
       ...(item.credentialId ? [second(` · ID: ${item.credentialId}`, look, look.ink.muted, look.entry)] : []),
       ...(item.url ? [second(' · ', look, accentHex, look.entry), linked(item.urlLabel || item.url, item.url, { size: look.entry, color: accentHex }, look.links)] : []),
     ], s.showDates !== false ? dateRange(item.date, item.expiry, settings) : '', dateHex, centered, look),
@@ -278,7 +284,7 @@ export function buildAwards(section, accentHex, settings, centered, dateHex, loo
   return [sectionHeading(section.title, accentHex, centered, section.heading), ...entries(section, look, (item) => [
     titleLine([
       first(item.title, look),
-      ...(item.issuer ? [second(` — ${item.issuer}`, look, look.ink.sub)] : []),
+      ...(item.issuer ? [second(` — ${item.issuer}`, look, look.ink.sub, look.sub, true)] : []),
     ], s.showDates !== false ? formatDate(item.date || '', settings) : '', dateHex, centered, look),
     ...body(item, centered, look, look.ink.sub),
   ])];
