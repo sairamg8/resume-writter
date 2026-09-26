@@ -30,7 +30,8 @@ export function InterviewStageSelector({ stage, onStageChange, customStages, add
         )}
       </div>
 
-      <div className="grid grid-cols-2 gap-6">
+      {/* The predefined and the custom stages: one column on a phone, side by side from sm up (J-12). */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
         <div>
           <p className="text-[10px] font-bold text-ink-subtlest uppercase tracking-widest mb-2.5">Predefined</p>
           <div className="space-y-0.5">

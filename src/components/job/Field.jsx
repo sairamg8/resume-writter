@@ -52,7 +52,8 @@ export function Field({ label, value, onChange, type = 'text', icon: Icon, place
       ) : (
         <div className="flex items-center gap-2 px-3 py-2 rounded-md group/field">
           {Icon && <Icon size={13} className="text-ink-subtlest shrink-0" />}
-          <span className={`flex-1 text-sm ${value ? 'text-ink' : 'text-ink-subtlest italic'}`}>
+          {/* min-w-0 and break-words: a long value (a posting's URL) wraps in its row on a phone (J-12). */}
+          <span className={`min-w-0 flex-1 break-words text-sm ${value ? 'text-ink' : 'text-ink-subtlest italic'}`}>
             {value || placeholder || 'Not set'}
           </span>
           <button

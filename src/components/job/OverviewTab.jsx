@@ -22,16 +22,18 @@ export function OverviewTab({ job, set, resumes, navigate }) {
   const isDeadlineSoon = deadline === 'soon';
 
   return (
-    <div className="grid grid-cols-2 gap-5">
+    // One column on a phone, two from sm up: two fixed columns squeezed every card to half a phone's
+    // width (J-12). The cards that span the row span it only where there are two columns.
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
 
       {/* Pipeline — always interactive so user can reopen */}
-      <div className="col-span-2 bg-white rounded-md border border-line p-5 shadow-sm">
+      <div className="sm:col-span-2 bg-white rounded-md border border-line p-5 shadow-sm">
         <p className="text-[10px] font-bold text-ink-subtlest uppercase tracking-widest mb-5">Application Stage</p>
         <Pipeline status={job.status} onChange={val => set('status', val)} />
       </div>
 
       {isTerminal && (
-        <div className="col-span-2 flex items-center gap-3 px-4 py-3 bg-sunken border border-line rounded-md">
+        <div className="sm:col-span-2 flex items-center gap-3 px-4 py-3 bg-sunken border border-line rounded-md">
           <Info size={14} className="text-ink-subtlest shrink-0" />
           <p className="text-sm text-ink-subtle">
             This application is <span className="font-semibold text-ink">{job.status === 'rejected' ? 'Rejected' : 'Withdrawn'}</span>. Restart it from the pipeline above if it reopens.
@@ -39,7 +41,7 @@ export function OverviewTab({ job, set, resumes, navigate }) {
         </div>
       )}
       {isOnHold && (
-        <div className="col-span-2 flex items-center gap-3 px-4 py-3 bg-amber-50 border border-amber-200 rounded-md">
+        <div className="sm:col-span-2 flex items-center gap-3 px-4 py-3 bg-amber-50 border border-amber-200 rounded-md">
           <Info size={14} className="text-amber-500 shrink-0" />
           <p className="text-sm text-amber-700">Application is <span className="font-semibold">On Hold</span> — resume or close it from the pipeline above.</p>
         </div>
@@ -134,7 +136,7 @@ export function OverviewTab({ job, set, resumes, navigate }) {
 
       {/* Status history — full width, shown when there's meaningful history */}
       {job.statusHistory?.length > 0 && (
-        <div className="col-span-2">
+        <div className="sm:col-span-2">
           <StatusHistory history={job.statusHistory || []} />
         </div>
       )}
