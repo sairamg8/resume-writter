@@ -1,6 +1,7 @@
 // Section Options → Alignment "Center" in the Word résumé: it centres what the PDF centres — the
-// section title, every entry with its date on a line of its own below the title line and its
-// location on the line under that (ATS-1), the entry's text and bullets — in every template, and
+// section title, every entry with its date on the title line after a "·" ("Title · date", the
+// PDF's CentredLine, R4-DOUT-03) and its location on a line of its own (ATS-1), the entry's text
+// and bullets — in every template, and
 // nothing of the Sidebar's side column, which the PDF prints as one left-aligned column whatever
 // the section stores.
 import { before, after, describe, it } from 'node:test';
@@ -68,7 +69,7 @@ describe('Word: Section Options → Alignment "Center" centres what the PDF cent
       }
     });
 
-    it(`${template}: a centred entry prints its date centred on a line of its own below its title line, and its location under that`, async () => {
+    it(`${template}: a centred entry prints "Title · date" on its first line, as the PDF's CentredLine, and its location on a line of its own`, async () => {
       const { SIDEBAR_COLUMN_TYPES } = await import('../../src/constants/templates.js');
       const { resolveSection } = await loadModule('/src/templates/pdf/shared/templateSectionDefaults.js');
       const r = everyType(template, 'center');
@@ -84,13 +85,21 @@ describe('Word: Section Options → Alignment "Center" centres what the PDF cent
           continue;
         }
         const lines = text.split('\n');
-        // Title "Stacked" (the default but Executive's and the Timeline's jobs) puts the entry's second
-        // field on a centred line of its own under the date, as the PDF's sub line (R2-070).
+        // A certification's and an award's PDF print their date under the name: Word keeps it there.
+        if (!TITLED[type] && type !== 'projects') {
+          assert.ok(lines[0].includes(word) && lines[1]?.startsWith(date) && !text.includes('\t'), `${template} ${type}: ${JSON.stringify(text)}`);
+          continue;
+        }
+        // The PDF's CentredLine: the title line ends " · date" (R4-DOUT-03; it had the date on a line of
+        // its own). Title "Stacked" (the default but Executive's and the Timeline's jobs) puts the
+        // entry's second field on a centred line of its own under it, as the PDF's sub line (R2-070).
         const fields = TITLED[type];
         const stacked = fields && (resolveSection(r.sections.find((s) => s.type === type), template).settings.titleStyle || 'stacked') === 'stacked';
-        assert.equal(lines.length, 2 + (stacked ? 1 : 0) + (place ? 1 : 0), `${template} ${type}: ${JSON.stringify(text)}`);
-        const title = stacked ? [lines[0], lines[2]].sort().join() === [...fields].sort().join() : lines[0].includes(word);
-        assert.ok(title && lines[1].startsWith(date) && !text.includes('\t'), `${template} ${type}: no right-tab date: ${JSON.stringify(text)}`);
+        const [head, tail] = lines[0].split(` · ${date}`);
+        assert.ok(tail !== undefined && !text.includes('\t'), `${template} ${type}: "Title · date", no right-tab date: ${JSON.stringify(text)}`);
+        assert.ok(!lines.slice(1).some((l) => l.includes(date)), `${template} ${type}: no date line of its own: ${JSON.stringify(text)}`);
+        const title = stacked ? [head, lines[1]].sort().join() === [...fields].sort().join() : head.includes(word);
+        assert.ok(title, `${template} ${type}: ${JSON.stringify(text)}`);
         if (place) assert.equal(lines.at(-1), place, `${template} ${type}: the location on a line of its own (ATS-1)`);
       }
     });
