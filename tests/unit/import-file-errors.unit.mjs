@@ -7,7 +7,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { Document, Packer, Paragraph } from 'docx';
-import { resumeFromFile, unzipEntry, MAX_IMPORT_BYTES } from '../../src/utils/importFile.js';
+import { resumeFromFile, unzipEntry, pdfLines, MAX_IMPORT_BYTES } from '../../src/utils/importFile.js';
 import { importDocument, isDocumentFile } from '../../src/utils/importDocument.js';
 
 const DAMAGED = /That Word file is damaged/;
@@ -116,5 +116,35 @@ describe('a file far larger than a résumé is refused before it is read', () =>
     const text = new TextEncoder().encode('Robin Vale\nProduct Designer\n');
     const r = await resumeFromFile({ name: 'robin.txt', size: MAX_IMPORT_BYTES, arrayBuffer: async () => text.slice().buffer });
     assert.equal(r.personal.name, 'Robin Vale');
+  });
+});
+
+// R2-148: a scanned PDF — pages that are pictures, with no text layer — is told so, and what to do.
+describe('a PDF with pages but no text says it looks like a scan', () => {
+  /** A stand-in for pdf.js: a document of `pages`, each its text items as getTextContent gives them. */
+  const fakePdfjs = (pages) => ({
+    getDocument: () => ({
+      promise: Promise.resolve({ numPages: pages.length, getPage: async (n) => ({ getTextContent: async () => ({ items: pages[n - 1] }) }) }),
+      destroy: async () => {},
+    }),
+  });
+  const text = (str, y) => ({ str, transform: [12, 0, 0, 12, 40, y], width: str.length * 6, height: 12 });
+  const pdf = new Uint8Array([0x25, 0x50, 0x44, 0x46]); // "%PDF": the stand-in reads no bytes
+  const SCANNED = /scanned image.*no text layer.*text PDF.*Word.*OCR/s;
+
+  test('no text items on any page: the scan message, from the reader and from the import', async () => {
+    const scan = fakePdfjs([[], []]);
+    await assert.rejects(pdfLines(pdf, scan), SCANNED, 'before: two blank lines, read as an empty résumé');
+    await assert.rejects(resumeFromFile(fileOf('scan.pdf', pdf), { pdfjs: scan }), SCANNED, 'before: the generic "No text could be read from that file"');
+  });
+
+  test('only blank text items (a scanner\'s empty runs): the scan message too', async () => {
+    const scan = fakePdfjs([[text(' ', 700), text('', 680)]]);
+    await assert.rejects(resumeFromFile(fileOf('scan.pdf', pdf), { pdfjs: scan }), SCANNED);
+  });
+
+  test('a PDF with text still reads', async () => {
+    const r = await resumeFromFile(fileOf('robin.pdf', pdf), { pdfjs: fakePdfjs([[text('Robin Vale', 760), text('Product Designer', 720)]]) });
+    assert.deepEqual([r.personal.name, r.personal.title], ['Robin Vale', 'Product Designer']);
   });
 });

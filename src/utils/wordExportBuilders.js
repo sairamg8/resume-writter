@@ -4,6 +4,7 @@ import {
   gapPara, gridTable, inlineGap, lineSpacing, twips,
 } from '@/utils/wordExportUtils';
 import { sectionLook } from '@/utils/wordExportLook';
+import { wordHeadingFont } from '@/utils/wordFonts';
 import { headingBorderExtraPt, inSidebarColumn, templateId, upperSectionTitles } from '@/constants/templates';
 import { solid } from '@/templates/pdf/shared/pdfColors';
 import { sectionHeadingLook, titleTracking } from '@/templates/pdf/shared/sectionHeadingLook';
@@ -13,6 +14,7 @@ import { fieldGap } from '@/templates/pdf/shared/PdfItemHeader';
 import { hasRichText } from '@/utils/richText';
 import { dateRange, endDateOf, formatDate, presentLabel, startDateOf } from '@/utils/dates';
 import { skillCategory, skillGroup, skillSeparator } from '@/utils/skills';
+import { employerOf, groupPlaces, groupsRoles, roleGroups } from '@/utils/roleGroups';
 
 /**
  * Design → Section Headings in Word, as PdfSectionTitle draws them (ONB-12-NB1), from the résumé's
@@ -61,7 +63,7 @@ function trackingOf(s) {
 export function buildSectionTitle(title, settings, template) {
   const s = resolveTemplateSettings(settings, templateId(template));
   const text = String(title || '');
-  const heading = { ...headingOf(s, template), lineHeight: s.lineHeightValue, ...trackingOf(s) };
+  const heading = { ...headingOf(s, template), lineHeight: s.lineHeightValue, ...trackingOf(s), ...wordHeadingFont(s) };
   return sectionHeading(upperSectionTitles(s.sectionTitleCase) ? text.toUpperCase() : text, accent2Hex(settings?.accentColor), false, heading);
 }
 
@@ -76,8 +78,8 @@ const field = (item, key) => ((item.hiddenFields || []).includes(key) ? '' : (it
  * or more, a table of them (gridTable, R2-070). An entry that prints nothing takes no gap and no
  * cell. `look` is sectionLook's: sizes, spacing, grid and colours.
  */
-function entries(section, look, build) {
-  const cells = shown(section).map((item) => build(item).filter(Boolean)).filter((paras) => paras.length);
+function entries(section, look, build, items = shown(section)) {
+  const cells = items.map((item) => build(item).filter(Boolean)).filter((paras) => paras.length);
   if (look.grid && cells.length) return [gridTable(cells, look.grid, look.gap)];
   return cells.flatMap((paras, i) => (i ? [...gapPara(look.gap), ...paras] : paras));
 }
@@ -125,24 +127,44 @@ function header(primary, secondary, date, dateHex, centered, look, where) {
 function body(item, centered, look, color = look.ink.body) {
   const paras = [];
   const description = field(item, 'description');
-  if (hasRichText(description)) paras.push(...descriptionToParagraphs(description, { size: look.body, color, lineHeight: look.line, bullet: look.bullet }, centered ? 'center' : null));
+  if (hasRichText(description)) paras.push(...descriptionToParagraphs(description, { size: look.body, color, lineHeight: look.line, bullet: look.bullet, links: look.links }, centered ? 'center' : null));
   for (const b of item.bullets || []) if (b) paras.push(bulletPoint(b, centered, { size: look.body, color }, look.line, look.bullet));
   return paras;
 }
 
 export function buildExperience(section, accentHex, settings, centered, dateHex, look) {
   const s = section.settings || {};
-  return [sectionHeading(section.title, accentHex, centered, section.heading), ...entries(section, look, (item) => {
+  const locationOf = (item) => (s.showLocation !== false ? field(item, 'location') : '');
+  const datesOf = (item) => {
+    const end = field(item, 'endDate') && !item.current ? field(item, 'endDate') : '';
+    const dates = dateRange(field(item, 'startDate'), item.current && !(item.hiddenFields || []).includes('endDate') ? presentLabel(settings) : end, settings);
+    return s.showDates !== false ? dates : '';
+  };
+  const job = (item) => {
     const company = field(item, 'company');
     const role = field(item, 'role');
     // An empty leading field: the next one leads, bold, as the PDF prints it (R2-111).
     const [lead, next] = s.titleOrder === 'role' ? [role, company] : [company, role];
     const [primary, secondary] = lead ? [lead, next] : [next, ''];
-    const location = s.showLocation !== false ? field(item, 'location') : '';
-    const end = field(item, 'endDate') && !item.current ? field(item, 'endDate') : '';
-    const dates = dateRange(field(item, 'startDate'), item.current && !(item.hiddenFields || []).includes('endDate') ? presentLabel(settings) : end, settings);
-    return [header(primary, secondary, s.showDates !== false ? dates : '', dateHex, centered, look, place(location, look)), ...body(item, centered, look)];
-  })];
+    return [header(primary, secondary, datesOf(item), dateHex, centered, look, place(locationOf(item), look)), ...body(item, centered, look)];
+  };
+  // Section Options → "Group roles by company" (R2-147), as the PDF groups them (roleGroups): the
+  // employer and the first role's location once, then each role bold with its dates, a location only
+  // where it differs and its description, half the item gap apart. A group is one entry (a grid's cell).
+  if (!groupsRoles(s)) return [sectionHeading(section.title, accentHex, centered, section.heading), ...entries(section, look, job)];
+  const group = (g) => {
+    if (g.length === 1) return job(g[0]);
+    const places = groupPlaces(g, locationOf);
+    return [
+      titleLine([first(employerOf(g[0]), look)], '', dateHex, centered, look, place(places.header, look)),
+      ...g.flatMap((item, k) => [
+        ...(k ? gapPara(look.gap / 2) : []),
+        header(field(item, 'role'), '', datesOf(item), dateHex, centered, look, place(places.roles[k], look)),
+        ...body(item, centered, look),
+      ]),
+    ];
+  };
+  return [sectionHeading(section.title, accentHex, centered, section.heading), ...entries(section, look, group, roleGroups(shown(section)))];
 }
 
 export function buildEducation(section, accentHex, settings, centered, dateHex, look) {
@@ -217,7 +239,7 @@ export function buildProjects(section, accentHex, settings, centered, dateHex, l
     titleLine([
       first(item.name, look),
       ...(item.technologies ? [second(` · ${item.technologies}`, look, look.ink.tech)] : []),
-      ...(item.url ? [second(' · ', look, accentHex, look.link), linked(item.url, item.url, { size: look.link, color: accentHex })] : []),
+      ...(item.url ? [second(' · ', look, accentHex, look.link), linked(item.url, item.url, { size: look.link, color: accentHex }, look.links)] : []),
     ], s.showDates !== false ? dateRange(startDateOf(item), endDateOf(item, settings), settings) : '', dateHex, centered, look),
     ...body(item, centered, look),
   ])];
@@ -245,7 +267,7 @@ export function buildCertifications(section, accentHex, settings, centered, date
       // The name's line at Entry Header, all of it, as the PDF prints it.
       ...(item.issuer ? [second(` — ${item.issuer}`, look, look.ink.sub, look.entry)] : []),
       ...(item.credentialId ? [second(` · ID: ${item.credentialId}`, look, look.ink.muted, look.entry)] : []),
-      ...(item.url ? [second(' · ', look, accentHex, look.entry), linked(item.urlLabel || item.url, item.url, { size: look.entry, color: accentHex })] : []),
+      ...(item.url ? [second(' · ', look, accentHex, look.entry), linked(item.urlLabel || item.url, item.url, { size: look.entry, color: accentHex }, look.links)] : []),
     ], s.showDates !== false ? dateRange(item.date, item.expiry, settings) : '', dateHex, centered, look),
   ])];
 }
@@ -279,8 +301,8 @@ export function buildReferences(section, accentHex, settings, centered, dateHex,
     if (role) paras.push(line([normal(role, { size: look.base, color: ink.sub })]));
     if (item.relationship) paras.push(line([normal(item.relationship, { size: look.base, color: ink.meta, italics: true })]));
     const reach = [
-      item.email && linked(item.email, `mailto:${item.email}`, { size: look.base, color: accentHex }),
-      item.phone && linked(item.phone, `tel:${item.phone.replace(/[^\d+]/g, '')}`, { size: look.base, color: ink.meta }),
+      item.email && linked(item.email, `mailto:${item.email}`, { size: look.base, color: accentHex }, look.links),
+      item.phone && linked(item.phone, `tel:${item.phone.replace(/[^\d+]/g, '')}`, { size: look.base, color: ink.meta }, look.links),
     ].filter(Boolean);
     if (reach.length) paras.push(line(reach.flatMap((r, i) => (i ? [normal('  |  ', { size: look.base, color: ink.muted }), r] : [r]))));
     return paras;
@@ -328,7 +350,8 @@ export function buildSection(section, accentHex, settings, template) {
     ...(side ? { size: sectionTitleSize } : headingOf(s, template)),
     before: twips(getEffectiveSpacing(section, s).spaceBefore ?? 0),
     lineHeight: s.lineHeightValue,
-    ...(side ? {} : trackingOf(s)), // the Sidebar's column titles keep their own, as in the PDF
+    ...trackingOf(s), // the Sidebar's column titles too, as in the PDF (R2-146)
+    ...wordHeadingFont(s), // Heading Font, as the PDF's titles (R2-146)
   };
   // The date in the PDF's colour for the template, from the Text colour it prints (its own when none is stored).
   const dateHex = accent2Hex(solid(getDateColor({ ...s, _template: templateId(template) })), '6b7280');

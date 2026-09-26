@@ -10,14 +10,16 @@ import { PdfPhoto } from './shared/PdfPhoto';
 import { contentWidthPt, pageMargins } from './shared/PdfPage';
 import { getPdfPhotoStyle } from './shared/pdfPhoto';
 import { fitFontSize, textWidth, widestWord } from './shared/pdfMeasure';
+import { nameFace } from './shared/pdfFaces';
 import { DOUBLE_RULE_GAP, LETTER_CONTACTS_GAP } from './shared/letterhead';
-import { photoTextAlignItems } from '@/constants/templates';
+import { photoRowDirection, photoTextAlignItems } from '@/constants/templates';
 import { setGapPt } from '@/constants/headerSpacing';
 import { contactItems } from '@/utils/contacts';
 import { letterFieldsPosition, letterResumePhoto } from '@/utils/coverLetter';
 import { isDrawableImage } from '@/utils/imageUpload';
 import { MM_TO_PT } from './shared/pdfUnits';
 import { opacityFor } from './shared/pdfColors';
+import { LinkGround } from './shared/PdfLinkStyle';
 
 /** Room added to each measured width, pt: a word's kerning into the next space is not in it. */
 const SLACK = 1;
@@ -98,9 +100,13 @@ export function CoverLetterHeader({ look, personal, settings, cl, hidden, contac
   // Photo ↔ Text: the résumé's set value (Personal Info → Header spacing), else the letterhead's
   // own — 6 pt above a centred name, 10 pt beside one (spec D5).
   const photoGap = setGapPt(settings, 'photoTextGap');
+  // Photo → Position (R2-147), the résumé's as its Shape, Size, Border and Tone are: Right puts the photo
+  // right of the name, its gap on its left.
+  const photoDir = centered ? 'row' : photoRowDirection(settings);
+  const photoSideGap = photoGap ?? 10;
   const photoStyle = {
     ...getPdfPhotoStyle(settings, ring, 'cover', ringOpts),
-    ...(centered ? { marginBottom: photoGap ?? 6 } : { marginRight: photoGap ?? 10 }),
+    ...(centered ? { marginBottom: photoGap ?? 6 } : photoDir === 'row-reverse' ? { marginLeft: photoSideGap } : { marginRight: photoSideGap }),
   };
   const photoEl = photoSrc ? <PdfPhoto src={photoSrc} style={photoStyle} /> : null;
   // Right of Name: the space between the name side and the contacts — the letter's Name ↔ Contacts
@@ -110,6 +116,7 @@ export function CoverLetterHeader({ look, personal, settings, cl, hidden, contac
   const align = centered ? { textAlign: 'center' } : {};
   const name = personal?.name || 'Your Name';
   const nameStyle = {
+    ...nameFace(settings), // Typography → Name Font (R2-146); measured in it below, over `font`
     fontSize: nameSize, fontWeight: look.name.weight, color: look.name.color, lineHeight: 1.2,
     ...(look.name.letterSpacing ? { letterSpacing: look.name.letterSpacing } : {}), ...align,
   };
@@ -141,7 +148,7 @@ export function CoverLetterHeader({ look, personal, settings, cl, hidden, contac
   const bandPad = look.band && !look.band.bleed ? look.band.padX : 0;
   const headerWidth = contentWidthPt(settings) - 2 * bandPad;
   // The row beside the photo — where one sits and the letterhead is not centred (then it is above).
-  const beside = headerWidth - (photoEl && !centered ? photoStyle.width + photoStyle.marginRight : 0);
+  const beside = headerWidth - (photoEl && !centered ? photoStyle.width + photoSideGap : 0);
   const font = { fontFamily: settings._pdfFontFamily };
   let nameCap;
   // The width the contacts are laid out in (2 Grid sizes its cells with it): the whole header
@@ -202,7 +209,7 @@ export function CoverLetterHeader({ look, personal, settings, cl, hidden, contac
     }
     if (layout === 'below-name') {
       return (
-        <View style={{ flexDirection: 'row', alignItems: photoAlign }}>
+        <View style={{ flexDirection: photoDir, alignItems: photoAlign }}>
           {photoEl}
           <View style={{ flex: 1, minWidth: 0 }}>
             {nameBlock}
@@ -216,7 +223,7 @@ export function CoverLetterHeader({ look, personal, settings, cl, hidden, contac
       // instead of running past the margin (it kept its one-line width).
       return (
         <View>
-          <View style={{ flexDirection: 'row', alignItems: photoAlign }}>
+          <View style={{ flexDirection: photoDir, alignItems: photoAlign }}>
             {photoEl}
             <View style={{ flex: 1, minWidth: 0 }}>{nameBlock}</View>
           </View>
@@ -227,7 +234,7 @@ export function CoverLetterHeader({ look, personal, settings, cl, hidden, contac
     // 'right' — default: name+photo on left (at most nameCap), contact on right
     return (
       <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-        <View style={{ flexDirection: 'row', alignItems: photoAlign }}>
+        <View style={{ flexDirection: photoDir, alignItems: photoAlign }}>
           {photoEl}
           {nameBlock}
         </View>
@@ -236,5 +243,6 @@ export function CoverLetterHeader({ look, personal, settings, cl, hidden, contac
     );
   }
 
-  return <Frame look={look} settings={settings}>{content()}</Frame>;
+  // On a band a link's Accent is the tint of it that reads there (Design → Links, R2-147).
+  return <Frame look={look} settings={settings}><LinkGround.Provider value={look.band?.color || null}>{content()}</LinkGround.Provider></Frame>;
 }

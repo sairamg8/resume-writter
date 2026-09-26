@@ -9,9 +9,15 @@ import { breakToFit, fitsOnLine, textWidth } from './pdfMeasure';
 import { pageBoxPt } from '@/constants/pageSize';
 import { pageMargins } from '@/constants/pageMargins';
 import { sidebarShades } from './pdfColors';
+import { titleTracking } from './sectionHeadingLook';
+import { headingFace } from './pdfFaces';
 import { PdfRichText } from './PdfRichText';
 import { RenderBullets, SPACER } from './PdfSections';
 import { ContactValue } from './PdfContact';
+import { PdfLevel } from './PdfLevel';
+import { languageLevel, languageLevelStyle } from '@/utils/languageLevel';
+import { sectionIconMark } from './PdfIcons';
+import { SECTION_ICON_GAP_EM } from '@/utils/sectionIconPaths';
 
 /**
  * The Sidebar template's dark column: its section title and the renderers of the sections that
@@ -105,17 +111,33 @@ export function EntryLink({ url, label, style, hyphenationCallback, settings }) 
  * Never left alone at the foot of a page (R2-104): it moves unless `presence` pt of its section fit
  * under it — the first entry's unbreakable head (entryPresence), else three of the column's lines.
  * SPACER, printed before it, gives it the previous sibling minPresenceAhead needs.
+ *
+ * With Design → Section Headings → Icons on (R2-147), `type`'s icon (a section type, or 'contact')
+ * prints before the words in the label colour, at the title's size, centred on its first line.
  */
-export function SideSectionTitle({ title, shades = NAVY, titleCase = 'upper', settings, presence = 3 * SIDE_LINE }) {
+export function SideSectionTitle({ title, type = null, shades = NAVY, titleCase = 'upper', settings, presence = 3 * SIDE_LINE }) {
   const upper = upperSectionTitles(titleCase);
-  const type = { fontSize: 8.5, fontWeight: 'bold', letterSpacing: tracking(8.5, 1.2) };
+  // Design → Title Spacing, % of the title's size, as the main column's titles take it; unset, the
+  // column's own 1.2 pt, capped. Heading Font's family when one is set (R2-146).
+  const pct = settings?.sectionLetterSpacing;
+  const font = { ...headingFace(settings), fontSize: 8.5, fontWeight: 'bold', letterSpacing: typeof pct === 'number' ? titleTracking(8.5, pct) : tracking(8.5, 1.2) };
+  // With an icon the words start its width and gap in, so a long word breaks to the room left beside it.
+  const inset = settings?.sectionIcons ? font.fontSize * (1 + SECTION_ICON_GAP_EM) : 0;
+  const words = (extra) => (
+    <Text style={{ ...font, color: shades.label, textTransform: upper ? 'uppercase' : 'none', marginBottom: 2.5, lineHeight: 1.2, ...extra }} hyphenationCallback={sideBreaks(settings, font, inset)}>
+      {upper ? title.toUpperCase() : title}
+    </Text>
+  );
   return (
     <>
       {SPACER}
       <View wrap={false} minPresenceAhead={Math.ceil(presence)} style={{ marginBottom: 6 }}>
-        <Text style={{ ...type, color: shades.label, textTransform: upper ? 'uppercase' : 'none', marginBottom: 2.5, lineHeight: 1.2 }} hyphenationCallback={sideBreaks(settings, type)}>
-          {upper ? title.toUpperCase() : title}
-        </Text>
+        {settings?.sectionIcons ? (
+          <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+            {sectionIconMark({ type: type || 'custom', size: font.fontSize, color: shades.label, lineHeight: 1.2 })}
+            {words({ flexShrink: 1 })}
+          </View>
+        ) : words()}
         <View style={{ height: 1, backgroundColor: shades.fill }} />
       </View>
     </>
@@ -181,7 +203,7 @@ export function SideEducation({ section, sectionGap, itemGap, shades = NAVY, tit
 
   return (
     <View style={{ marginBottom: sectionGap }}>
-      <SideSectionTitle title={section.title} shades={shades} titleCase={titleCase} settings={settings} presence={presence} />
+      <SideSectionTitle title={section.title} type={section.type} shades={shades} titleCase={titleCase} settings={settings} presence={presence} />
       <View style={{ gap: itemGap }}>
         {visibleItems.map((item, i) => (
           <View key={i}>
@@ -206,23 +228,37 @@ export function SideEducation({ section, sectionGap, itemGap, shades = NAVY, tit
   );
 }
 
-export function SideLanguages({ section, sectionGap, itemGap, shades = NAVY, titleCase, settings }) {
+export function SideLanguages({ section, sectionGap, itemGap, accent = '#2563eb', shades = NAVY, titleCase, settings }) {
   const visibleItems = (section.items || []).filter(i => i.visible !== false);
   const room = sideColumnRoom(settings);
   const textBreaks = sideBreaks(settings, { fontSize: 9 });
+  // Section Options → Level (R2-147): Dots or Bar on a line of its own under a known proficiency's
+  // language and word — the narrow column has no room beside them — in the accent on the column's fill
+  // (its skill bars' track). Text (unset) prints the words alone, as before.
+  const levelStyle = languageLevelStyle(section.settings);
   return (
     <View style={{ marginBottom: sectionGap }}>
-      <SideSectionTitle title={section.title} shades={shades} titleCase={titleCase} settings={settings} />
+      <SideSectionTitle title={section.title} type={section.type} shades={shades} titleCase={titleCase} settings={settings} />
       <View style={{ gap: itemGap }}>
         {visibleItems.map((item, i) => {
           const font = { fontFamily: settings?._pdfFontFamily, fontSize: 9 };
           const fitsTogether = !item.proficiency || (textWidth(item.language, font) + textWidth(item.proficiency, font) + 8 <= room);
-          return (
+          const words = (
             <View key={i} style={fitsTogether ? { flexDirection: 'row', justifyContent: 'space-between' } : undefined}>
               <Text style={{ fontSize: 9, color: shades.strong, lineHeight: 1.2 }} hyphenationCallback={textBreaks}>{item.language}</Text>
               {item.proficiency ? (
                 <Text style={{ fontSize: 9, color: shades.meta, lineHeight: 1.2 }} hyphenationCallback={textBreaks}>{item.proficiency}</Text>
               ) : null}
+            </View>
+          );
+          const level = levelStyle && languageLevel(item.proficiency);
+          if (!level) return words;
+          return (
+            <View key={i} wrap={false}>
+              {words}
+              <View style={{ marginTop: 2 }}>
+                <PdfLevel level={level} style={levelStyle} size={4.5} fill={accent} track={shades.fill} />
+              </View>
             </View>
           );
         })}
@@ -247,7 +283,7 @@ export function SideCertifications({ section, sectionGap, itemGap, shades = NAVY
 
   return (
     <View style={{ marginBottom: sectionGap }}>
-      <SideSectionTitle title={section.title} shades={shades} titleCase={titleCase} settings={settings} presence={presence} />
+      <SideSectionTitle title={section.title} type={section.type} shades={shades} titleCase={titleCase} settings={settings} presence={presence} />
       <View style={{ gap: itemGap }}>
         {visibleItems.map((item, i) => {
           const dateStr = dates(item);
@@ -284,7 +320,7 @@ export function SideInterests({ section, sectionGap, itemGap = DEFAULT_ITEM_GAP_
 
   return (
     <View style={{ marginBottom: sectionGap }}>
-      <SideSectionTitle title={section.title} shades={shades} titleCase={titleCase} settings={settings} />
+      <SideSectionTitle title={section.title} type={section.type} shades={shades} titleCase={titleCase} settings={settings} />
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: (CHIP_GAP_PT * itemGap) / DEFAULT_ITEM_GAP_PT }}>
         {allInterests.map((interest, i) => (
           <View key={i} style={{ backgroundColor: shades.fill, borderRadius: 2, paddingHorizontal: 5, paddingVertical: 1.5 }}>
@@ -307,7 +343,7 @@ export function SideReferences({ section, sectionGap, itemGap, shades = NAVY, ti
   ]) : undefined;
   return (
     <View style={{ marginBottom: sectionGap }}>
-      <SideSectionTitle title={section.title} shades={shades} titleCase={titleCase} settings={settings} presence={presence} />
+      <SideSectionTitle title={section.title} type={section.type} shades={shades} titleCase={titleCase} settings={settings} presence={presence} />
       <View style={{ gap: itemGap }}>
         {visibleItems.map((item, i) => (
           // Unbreakable: a reference never splits across two pages (R2-104).

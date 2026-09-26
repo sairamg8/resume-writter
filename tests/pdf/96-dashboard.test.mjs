@@ -53,6 +53,7 @@ function samples() {
 async function dashboard(resumes = [], { user = null } = {}) {
   const { useAppStore } = await loadModule('/src/hooks/useResumeStore.js');
   const { Dashboard } = await loadModule('/src/pages/Dashboard.jsx');
+  const { NewResume } = await loadModule('/src/pages/NewResume.jsx');
   const storage = new MemoryStorage(resumes.length ? [[KEY, JSON.stringify({ resumes, activeId: resumes[0].id })]] : []);
   globalThis.localStorage = storage;
   const auth = { user, authLoading: false, cloudAvailable: false, signInWithGoogle: () => {}, signOut: () => {} };
@@ -63,11 +64,15 @@ async function dashboard(resumes = [], { user = null } = {}) {
     box.where = at.pathname + at.search;
     return null;
   }
+  // New Resume's page (R3-012) while the address is /new, over the same store.
+  function NewPage({ store }) {
+    return useLocation().pathname === '/new' ? createElement(NewResume, { store }) : null;
+  }
   // The Dashboard stays on screen when it navigates: `where` says where it went.
   function Page() {
     box.store = useAppStore();
     return createElement(MemoryRouter, { initialEntries: ['/'], useTransitions: false },
-      createElement(Where), createElement(Dashboard, { store: box.store, auth, sync }));
+      createElement(Where), createElement(Dashboard, { store: box.store, auth, sync }), createElement(NewPage, { store: box.store }));
   }
   const view = mount(Page, {});
   await settle();
@@ -169,7 +174,9 @@ describe('the dashboard: new résumés (R2-167)', () => {
       assert.ok(page.has('H2', 'No resumes yet'));
       assert.deepEqual(page.cards(), []);
       page.click(page.button('Create Resume'));
-      assert.ok(page.has('H2', 'Choose a Resume Starter'), 'the starter picker opens first');
+      assert.equal(page.where(), '/new', 'New Resume\'s page opens first (R3-012)');
+      assert.ok(page.has('H1', 'Pick a look to start'));
+      assert.ok(page.has('H2', 'Or start blank, or from a role example'), 'blank and the starters below the looks');
       assert.deepEqual(page.resumes(), [], 'nothing made yet');
       page.click(page.buttonWith('Start from Scratch (Blank)'));
       await settle();
@@ -182,7 +189,7 @@ describe('the dashboard: new résumés (R2-167)', () => {
       assert.ok(made.sections.every((s) => s.items.length === 0), 'blank');
       assert.equal(page.store().appState.activeId, made.id);
       assert.equal(page.where(), `/resume/${made.id}`);
-      assert.ok(!page.has('H2', 'Choose a Resume Starter'), 'the picker closed');
+      assert.ok(!page.has('H1', 'Pick a look to start'), 'the page is left for the editor');
       assert.ok(!page.has('H2', 'No resumes yet'));
       assert.deepEqual(page.names(), ['Untitled Resume']);
       assert.equal(page.count(), '1 resume');
@@ -232,8 +239,111 @@ describe('the dashboard: new résumés (R2-167)', () => {
       assert.notEqual(made.sections, starter.sections, 'a copy: editing it never changes the starter');
       assert.equal(page.store().appState.activeId, made.id);
       assert.equal(page.where(), `/resume/${made.id}`);
-      assert.ok(!page.has('H2', 'Choose a Resume Starter'));
+      assert.ok(!page.has('H1', 'Pick a look to start'));
     } finally { await page.close(); }
+  });
+
+  // The owner's asks of 2026-09-24 (R3-011, R3-012): New Resume shows every look as a picture of the
+  // user's own résumé, and a click starts a résumé with their details on that look — not a sample person,
+  // not a list of choices first. It started blank (or from a role starter's made-up person) before.
+  it("New Resume → a look: a copy of the most recently edited résumé, on that look, opened (R3-011, R3-012)", async () => {
+    const list = samples();
+    const page = await dashboard(list);
+    try {
+      page.click(page.button('New Resume'));
+      assert.equal(page.where(), '/new');
+      const from = page.all().find((el) => el.getAttribute('data-testid') === 'new-resume-from');
+      assert.match(text(from), /"Chart Maker CV"/, 'the most recently edited résumé');
+      const cards = page.all().filter((el) => /^new-(template|preset|design)-/.test(el.getAttribute('data-testid') || ''));
+      assert.ok(cards.length >= 10, `every look: ${cards.length}`);
+      for (const c of cards) {
+        const thumb = page.all(c).find((el) => el.getAttribute('data-look-thumb') === 'page');
+        assert.equal(thumb?.getAttribute('data-look-of'), list[2].id, `${c.getAttribute('data-testid')}: drawn with the user's résumé`);
+      }
+      page.click(cards.find((c) => c.getAttribute('data-testid') === 'new-template-modern'));
+      await settle();
+      const resumes = page.resumes();
+      assert.equal(resumes.length, 4);
+      const made = resumes[3];
+      assert.ok(!list.some((r) => r.id === made.id), 'a new id');
+      assert.equal(made.name, 'Untitled Resume');
+      assert.equal(made.template, 'modern', 'on the look picked');
+      assert.deepEqual(plain(made.personal), plain(list[2].personal), 'with their details');
+      assert.deepEqual(made.sections.map((x) => [x.type, x.items.map((i) => [i.role, i.company])]),
+        list[2].sections.map((x) => [x.type, x.items.map((i) => [i.role, i.company])]), 'and their sections');
+      assert.equal(made.keep, undefined, 'a copy is not an original');
+      assert.equal(page.store().appState.activeId, made.id);
+      assert.equal(page.where(), `/resume/${made.id}`);
+      assert.equal(resumes[2].template, 'sidebar', 'the résumé it came from is unchanged');
+      assert.equal(resumes[2].name, 'Chart Maker CV');
+    } finally { await page.close(); }
+  });
+
+  // The editor opens as a transition (its code loads with its route), so the page stays clickable meanwhile:
+  // a second click on a look, or on Blank, made a second résumé.
+  it('New Resume → a look clicked twice, or Blank clicked twice, before the editor opens: one résumé', async () => {
+    const list = samples();
+    const page = await dashboard(list);
+    const twice = (el) => page.view.act(() => {
+      const e = { preventDefault() {}, stopPropagation() {}, target: el, currentTarget: el };
+      reactProps(el).onClick(e);
+      reactProps(el).onClick(e);
+    });
+    try {
+      page.click(page.button('New Resume'));
+      twice(page.all().find((el) => el.getAttribute('data-testid') === 'new-template-modern'));
+      await settle();
+      assert.equal(page.resumes().length, 4, 'one copy, not two');
+    } finally { await page.close(); }
+    const empty = await dashboard();
+    try {
+      empty.click(empty.button('Create Resume'));
+      twice(empty.buttonWith('Start from Scratch (Blank)'));
+      await settle();
+      assert.equal(empty.resumes().length, 1, 'one blank résumé, not two');
+    } finally { await empty.close(); }
+  });
+
+  it('New Resume → "Your details from" another résumé → a design: that résumé\'s details on the design', async () => {
+    const list = samples();
+    const page = await dashboard(list);
+    try {
+      page.click(page.button('New Resume'));
+      const select = page.all().find((el) => el.getAttribute('data-testid') === 'new-resume-source');
+      assert.ok(select, 'several résumés: a choice of whose details');
+      page.view.act(() => reactProps(select).onChange({ target: { value: list[0].id } }));
+      const card = page.all().find((el) => el.getAttribute('data-testid') === 'new-preset-harbor');
+      assert.equal(page.all(card).find((el) => el.getAttribute('data-look-thumb') === 'page')?.getAttribute('data-look-of'), list[0].id);
+      page.click(card);
+      await settle();
+      const made = page.resumes()[3];
+      assert.deepEqual(plain(made.personal), plain(list[0].personal));
+      assert.equal(made.template, 'classic');
+      assert.equal(made.settings.templatePreset, 'harbor', 'on the design');
+    } finally { await page.close(); }
+  });
+
+  it('New Resume never starts from a letter, and with no résumé a look starts a blank one on it', async () => {
+    const list = samples();
+    const letter = Object.assign(resume({ personal: { name: 'Letter Only' } }), { name: 'Cover Letter', kind: 'letter', updatedAt: 9000 });
+    const page = await dashboard([...list, letter]);
+    try {
+      page.click(page.button('New Resume'));
+      const from = page.all().find((el) => el.getAttribute('data-testid') === 'new-resume-from');
+      assert.match(text(from), /"Chart Maker CV"/, 'the newest résumé, not the newer letter');
+    } finally { await page.close(); }
+    const empty = await dashboard();
+    try {
+      empty.click(empty.button('Create Resume'));
+      const card = empty.all().find((el) => el.getAttribute('data-testid') === 'new-template-timeline');
+      assert.equal(empty.all(card).find((el) => el.getAttribute('data-look-thumb') === 'page')?.getAttribute('data-look-of'), null, 'the sample is drawn');
+      empty.click(card);
+      await settle();
+      const [made] = empty.resumes();
+      assert.equal(made.template, 'timeline');
+      assert.equal(made.personal.name, '', 'blank');
+      assert.ok(made.sections.every((x) => x.items.length === 0));
+    } finally { await empty.close(); }
   });
 
   // New Cover made a résumé named "Cover Letter". Since R2-135 it makes a letter (kind 'letter'),

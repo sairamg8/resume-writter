@@ -1,95 +1,120 @@
 import { useState } from 'react';
-import { GripVertical, Trash2 } from 'lucide-react';
-import { useSortable, SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
-import { SortableCard } from '@/components/board/BoardCard';
-import { AddCard } from '@/components/board/AddCard';
+import { useDroppable } from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { MoreHorizontal } from 'lucide-react';
+import { Button, Dialog, IconButton, Menu, TextField, cx } from '@/components/ui';
+import { COLUMN_CATEGORIES } from '@/constants/boards';
+import { InlineCreate } from './InlineCreate';
 
 /**
- * A list column. The column itself is sortable (drag it by the grip to reorder columns) and, via
- * the same node, a droppable target — so a card dropped on the column's empty space lands here
- * (Board's onDragEnd appends it). Cards inside are their own vertical SortableContext. Width is
- * phone-first: ~85vw with scroll-snap so one column fills the screen and the next peeks, widening
- * to a fixed 18rem from md up. The count reads `n/limit` for a column with a WIP limit (boardView),
- * red when the column holds more than its limit.
+ * A board column (a status): its name in caps, how many issues it holds (and its WIP limit —
+ * red once over), a ⋯ menu for the column, the cards in rank order, and "+ Create issue" at the
+ * foot. The column's body is a droppable (`data.type` 'list'), so a card dropped on its empty
+ * space lands at its foot. With swimlanes the page renders one per lane (`droppableId` differs,
+ * `showHeader` only in the header row).
  */
-export function BoardColumn({ list, onOpenCard, onAddCard, onRenameList, onDeleteList }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: list.id,
-    data: { type: 'list' },
-  });
-  const style = { transform: CSS.Transform.toString(transform), transition };
-
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(list.title);
-  const cardIds = list.cards.map((c) => c.id);
-
-  function commit() {
-    setEditing(false);
-    const t = draft.trim();
-    if (t && t !== list.title) onRenameList(t);
-    else setDraft(list.title);
-  }
-
+export function BoardColumn({
+  list, droppableId = list.id, cards, renderCard, showHeader = true, onCreate, menu, className,
+}) {
+  const { setNodeRef, isOver } = useDroppable({ id: droppableId, data: { type: 'list', listId: list.id } });
+  const ids = cards.map((c) => c.id);
   return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      id={`board-col-${list.id}`}
-      className={`snap-center shrink-0 w-[85vw] max-w-xs md:w-72 flex flex-col max-h-full bg-gray-100/70 rounded-2xl p-2 ${isDragging ? 'opacity-50' : ''}`}
+    <section
+      data-column={list.id}
+      aria-label={showHeader ? `${list.title || 'Untitled'} column` : undefined}
+      className={cx('flex w-[272px] shrink-0 snap-center flex-col rounded-md bg-sunken', className)}
     >
-      <div className="flex items-center gap-1.5 px-1 py-1 mb-1">
-        <button
-          {...attributes}
-          {...listeners}
-          className="cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-500 touch-none shrink-0"
-          title="Drag to reorder list"
-          aria-label="Drag to reorder list"
-        >
-          <GripVertical size={14} />
-        </button>
-        {editing ? (
-          <input
-            autoFocus
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onBlur={commit}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') commit();
-              if (e.key === 'Escape') { setDraft(list.title); setEditing(false); }
-            }}
-            aria-label="List title"
-            className="flex-1 min-w-0 text-sm font-semibold bg-white rounded px-1.5 py-0.5 border border-indigo-300 focus:outline-none"
-          />
-        ) : (
+      {showHeader && (
+        <header className="group/col flex h-11 items-center gap-2 px-3">
+          <h2 className="min-w-0 truncate text-[12px] font-semibold uppercase tracking-[0.03em] text-ink-subtle">{list.title || 'Untitled'}</h2>
           <span
-            onDoubleClick={() => { setDraft(list.title); setEditing(true); }}
-            className="flex-1 min-w-0 text-sm font-semibold text-gray-700 truncate cursor-text"
-            title="Double-click to rename"
+            className={cx('shrink-0 text-[12px] font-semibold', list.wip === 'over' ? 'rounded-[3px] bg-[#ffd5d2] px-1 text-[#ae2e24]' : 'text-ink-subtlest')}
+            title={list.limit ? `${list.cards.length} issues, limit ${list.limit}` : `${list.cards.length} issues`}
           >
-            {list.title || 'Untitled'}
+            {list.limit ? `${list.cards.length}/${list.limit}` : list.cards.length}
           </span>
-        )}
-        <span
-          className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full shrink-0 ${list.wip === 'over' ? 'text-red-700 bg-red-100' : 'text-gray-400 bg-gray-200/70'}`}
-          title={list.limit != null ? `Work-in-progress limit: ${list.limit}` : undefined}
-        >
-          {list.limit != null ? `${list.cards.length}/${list.limit}` : list.cards.length}
-        </span>
-        <button onClick={onDeleteList} className="p-1 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded shrink-0" title="Delete list" aria-label="Delete list">
-          <Trash2 size={12} />
-        </button>
-      </div>
-
-      <div className="flex flex-col gap-2 flex-1 min-h-[2rem] overflow-y-auto px-0.5 pb-0.5">
-        <SortableContext items={cardIds} strategy={verticalListSortingStrategy}>
-          {list.cards.map((card) => (
-            <SortableCard key={card.id} card={card} listId={list.id} onOpen={onOpenCard} />
-          ))}
+          {list.limit && list.wip !== 'over' && <span className="shrink-0 text-[11px] font-semibold uppercase text-ink-subtlest">Max {list.limit}</span>}
+          <span className="ml-auto">{menu}</span>
+        </header>
+      )}
+      <div
+        ref={setNodeRef}
+        className={cx('flex min-h-24 flex-1 flex-col gap-1 px-1 pb-1 transition-colors', isOver && 'rounded-b-md bg-brand-subtle/60', !showHeader && 'pt-1')}
+      >
+        <SortableContext items={ids} strategy={verticalListSortingStrategy}>
+          <ul className="flex flex-col gap-1">
+            {cards.map((card) => <li key={card.id}>{renderCard(card)}</li>)}
+          </ul>
         </SortableContext>
+        {onCreate && <InlineCreate onCreate={onCreate} className="mt-0.5" />}
       </div>
+    </section>
+  );
+}
 
-      <AddCard onAdd={(title) => onAddCard(list.id, title)} />
-    </div>
+/** A column's ⋯ menu: rename, WIP limit, category (what it means), move left / right, delete. */
+export function ColumnMenu({ column, index, count, onRename, onLimit, onCategory, onMove, onDelete }) {
+  return (
+    <Menu
+      label={`${column.title || 'Untitled'} column actions`}
+      items={[
+        { id: 'rename', label: 'Rename', onSelect: onRename },
+        { id: 'limit', label: column.wipLimit ? `Change limit (${column.wipLimit})` : 'Set column limit', onSelect: onLimit },
+        {
+          id: 'category', label: 'Status category',
+          items: COLUMN_CATEGORIES.map((c) => ({ id: c.id, label: c.name, checked: c.id === column.category, radio: true, onSelect: () => c.id !== column.category && onCategory(c.id) })),
+        },
+        { type: 'separator' },
+        { id: 'left', label: 'Move left', disabled: index === 0, onSelect: () => onMove(index - 1) },
+        { id: 'right', label: 'Move right', disabled: index === count - 1, onSelect: () => onMove(index + 1) },
+        { type: 'separator' },
+        { id: 'delete', label: 'Delete column', danger: true, disabled: count <= 1, onSelect: onDelete },
+      ]}
+      trigger={<IconButton icon={MoreHorizontal} label={`${column.title || 'Untitled'} column actions`} size="sm" tooltip={false} className="opacity-0 group-hover/col:opacity-100 no-hover:opacity-100 focus-visible:opacity-100" />}
+    />
+  );
+}
+
+/** The fields ColumnDialog edits, kept as typed until saved. */
+function ColumnForm({ column, mode, onSave, onClose }) {
+  const [value, setValue] = useState(mode === 'rename' ? column.title : column.wipLimit ?? '');
+  const save = (e) => {
+    e.preventDefault();
+    if (mode === 'rename') {
+      if (value.trim()) onSave({ title: value.trim() });
+      return;
+    }
+    const n = Number(value);
+    onSave({ wipLimit: String(value).trim() === '' || n <= 0 ? null : Math.floor(n) });
+  };
+  return (
+    <form onSubmit={save} className="flex flex-col gap-4">
+      {mode === 'rename' ? (
+        <TextField label="Column name" data-autofocus value={value} onChange={(e) => setValue(e.target.value)} maxLength={60} required />
+      ) : (
+        <TextField
+          label="Maximum issues"
+          hint="The column's count turns red once it holds more. Leave it blank for no limit."
+          type="number"
+          min="1"
+          data-autofocus
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+        />
+      )}
+      <div className="flex justify-end gap-2">
+        <Button variant="ghost" onClick={onClose}>Cancel</Button>
+        <Button variant="primary" type="submit">Save</Button>
+      </div>
+    </form>
+  );
+}
+
+/** Rename a column, or set its WIP limit (`mode` 'rename' | 'limit'); nothing while `column` is null. */
+export function ColumnDialog({ column, mode, onSave, onClose }) {
+  return (
+    <Dialog open={!!column} onClose={onClose} title={mode === 'limit' ? 'Set column limit' : 'Rename column'} size="sm">
+      {column && <ColumnForm key={`${column.id}-${mode}`} column={column} mode={mode} onSave={onSave} onClose={onClose} />}
+    </Dialog>
   );
 }

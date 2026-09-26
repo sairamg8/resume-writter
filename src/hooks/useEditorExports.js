@@ -40,11 +40,12 @@ export function useEditorExports({ resume, activeTab, authUser, importResume, na
   function handleExportPDF() {
     const filename = buildExportFilename(resume);
     return runExport('pdf', 'PDF export', async () => {
-      const { exportToPDFReact, exportCoverLetterPDFReact } = await import('@/utils/pdfExportReactPDF');
+      // Built where the preview is built (pdfBuild.js): the same file, off the main thread.
+      const { exportResumePdf, exportCoverLetterPdf } = await import('@/utils/pdfBuild');
       if (activeTab === 'coverletter') {
-        await exportCoverLetterPDFReact(resume, `${filename}_cover_letter.pdf`);
+        await exportCoverLetterPdf(resume, `${filename}_cover_letter.pdf`);
       } else {
-        await exportToPDFReact(resume, `${filename}.pdf`);
+        await exportResumePdf(resume, `${filename}.pdf`);
       }
     });
   }

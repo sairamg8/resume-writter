@@ -1,16 +1,17 @@
 import { Document, Page, View } from '@react-pdf/renderer';
 import { Text } from './PdfText';
-import { getDocumentProps, getHeaderBorderStyle, getPageStyle } from './PdfPage';
+import { PdfPageNumbers, getDocumentProps, getHeaderBorderStyle, getPageStyle } from './PdfPage';
 import { PdfRunningHeader } from './PdfRunningHeader';
 import { SectionRouter, getEffectiveSpacing, getVisibleSections } from './PdfSections';
 import { headerRowWidth, PdfContactRow } from './PdfContact';
 import { fitFontSize } from './pdfMeasure';
+import { nameFace, nameFamily } from './pdfFaces';
 import { PdfRichText } from './PdfRichText';
 import { hasRichText } from '@/utils/richText';
 import { getPdfPhotoStyle } from './pdfPhoto';
 import { PdfPhoto } from './PdfPhoto';
 import { textShades } from './pdfColors';
-import { photoTextAlignItems } from '@/constants/templates';
+import { photoRowDirection, photoTextAlignItems } from '@/constants/templates';
 import { headerTitleSize } from './letterhead';
 import { pageSizeOf } from '@/constants/pageSize';
 
@@ -47,10 +48,10 @@ export function PdfDesignedHeader({ personal, settings, top = null, beside = nul
   const contactWidth = headerRowWidth(settings, personal, { photoWidth: photoStyle.width, gap: g.photoTextGap, centered }) - inset;
   // A word of the name wider than the row prints at the largest size that holds it, as Classic's does.
   const name    = personal?.name || 'Your Name';
-  const nameFit = fitFontSize(name, { fontFamily: settings._pdfFontFamily, fontSize: nameSize, fontWeight: 'bold' }, contactWidth);
+  const nameFit = fitFontSize(name, { fontFamily: nameFamily(settings), fontSize: nameSize, fontWeight: 'bold' }, contactWidth);
 
   const nameText = (
-    <Text style={{ fontSize: nameFit, fontWeight: 'bold', color: nameColor, lineHeight: 1.2, ...(headerLayout === 'inline' ? {} : { textAlign: align }) }}>
+    <Text style={{ ...nameFace(settings), fontSize: nameFit, fontWeight: 'bold', color: nameColor, lineHeight: 1.2, ...(headerLayout === 'inline' ? {} : { textAlign: align }) }}>
       {name}
     </Text>
   );
@@ -82,7 +83,7 @@ export function PdfDesignedHeader({ personal, settings, top = null, beside = nul
         {!centered && beside?.node}
         <View style={{
           flex: 1,
-          flexDirection: centered ? 'column' : 'row',
+          flexDirection: centered ? 'column' : photoRowDirection(settings), // Photo → Position (R2-147)
           alignItems: centered ? 'center' : photoTextAlignItems(settings),
           gap: g.photoTextGap,
         }}>
@@ -133,6 +134,7 @@ export function PdfDesignedDocument({ data, header, marks = null, italicSubs = f
             />
           );
         })}
+        <PdfPageNumbers settings={settings} />
       </Page>
     </Document>
   );

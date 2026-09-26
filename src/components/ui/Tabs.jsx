@@ -8,7 +8,7 @@ export function tabClass(selected) {
     'relative inline-flex h-10 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-t-md px-1 text-[13px] font-medium transition-colors duration-150',
     'after:absolute after:inset-x-0 after:-bottom-px after:h-0.5 after:rounded-full after:transition-colors after:duration-150',
     'pointer-coarse:h-11',
-    selected ? 'text-indigo-700 after:bg-indigo-600' : 'text-slate-500 hover:text-slate-900 after:bg-transparent hover:after:bg-slate-300',
+    selected ? 'text-brand after:bg-brand' : 'text-slate-500 hover:text-slate-900 after:bg-transparent hover:after:bg-slate-300',
     FOCUS_RING, 'focus-visible:ring-offset-0',
   );
 }

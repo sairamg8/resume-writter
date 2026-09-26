@@ -1,5 +1,5 @@
 import { useId } from 'react';
-import { Label, DesignSection } from '@/components/DesignPanelShared';
+import { ColorInput, Label, DesignSection } from '@/components/DesignPanelShared';
 import { headerTemplateId, templateId } from '@/constants/templates';
 import { letterheadLook } from '@/templates/pdf/shared/letterhead';
 import { DEFAULTS } from '@/templates/pdf/shared/templateSettings';
@@ -63,7 +63,7 @@ export function ColorsSection({ resume, settings, updateSetting, onReset }) {
         </div>
         <div className="flex items-center gap-2">
           <label htmlFor={uid + 'accentColor'} className="text-xs text-gray-500">Custom:</label>
-          <input id={uid + 'accentColor'} type="color" aria-label="Custom accent color" value={settings.accentColor || '#2563eb'} onChange={e => updateSetting('accentColor', e.target.value)} className="h-7 w-16 rounded border border-gray-200 cursor-pointer p-0.5" />
+          <ColorInput id={uid + 'accentColor'} aria-label="Custom accent color" value={settings.accentColor || '#2563eb'} onCommit={v => updateSetting('accentColor', v)} className="h-7 w-16 rounded border border-gray-200 cursor-pointer p-0.5" />
           <span className="text-xs text-gray-400 font-mono">{settings.accentColor || '#2563eb'}</span>
         </div>
       </div>
@@ -83,7 +83,7 @@ export function ColorsSection({ resume, settings, updateSetting, onReset }) {
         </div>
         <div className="flex items-center gap-2">
           <label htmlFor={uid + 'textColor'} className="text-xs text-gray-500">Custom:</label>
-          <input id={uid + 'textColor'} type="color" aria-label="Custom text color" value={textColor} onChange={e => updateSetting('textColor', e.target.value)} className="h-7 w-16 rounded border border-gray-200 cursor-pointer p-0.5" />
+          <ColorInput id={uid + 'textColor'} aria-label="Custom text color" value={textColor} onCommit={v => updateSetting('textColor', v)} className="h-7 w-16 rounded border border-gray-200 cursor-pointer p-0.5" />
           <span className="text-xs text-gray-400 font-mono">{textColor}</span>
         </div>
       </div>
@@ -96,7 +96,7 @@ export function ColorsSection({ resume, settings, updateSetting, onReset }) {
           </p>
           <div className="flex items-center gap-2">
             <label htmlFor={uid + 'headerTextColor'} className="text-xs text-gray-500">Color:</label>
-            <input id={uid + 'headerTextColor'} type="color" aria-label="Header text color" value={settings.headerTextColor || '#ffffff'} onChange={e => updateSetting('headerTextColor', e.target.value)} className="h-7 w-16 rounded border border-gray-200 cursor-pointer p-0.5" />
+            <ColorInput id={uid + 'headerTextColor'} aria-label="Header text color" value={settings.headerTextColor || '#ffffff'} onCommit={v => updateSetting('headerTextColor', v)} className="h-7 w-16 rounded border border-gray-200 cursor-pointer p-0.5" />
             <span className="text-xs text-gray-400 font-mono">{settings.headerTextColor || '#ffffff'}</span>
             {settings.headerTextColor && settings.headerTextColor !== '#ffffff' && (
               <button onClick={() => updateSetting('headerTextColor', '#ffffff')} className="text-[11px] text-gray-400 hover:text-gray-600" title="Reset to white">↺</button>
@@ -114,7 +114,7 @@ export function ColorsSection({ resume, settings, updateSetting, onReset }) {
           <div key={key} className="flex items-center justify-between">
             <span className="text-xs text-gray-600">{label}</span>
             <div className="flex items-center gap-2">
-              <input type="color" value={settings[key] || '#000000'} onChange={e => updateSetting(key, e.target.value)} className="h-6 w-10 rounded border border-gray-200 cursor-pointer p-0.5" title={label} aria-label={label} />
+              <ColorInput value={settings[key] || '#000000'} onCommit={v => updateSetting(key, v)} className="h-6 w-10 rounded border border-gray-200 cursor-pointer p-0.5" title={label} aria-label={label} />
               <span className="text-[11px] text-gray-400 font-mono w-16 truncate">{settings[key] || placeholder}</span>
               {settings[key] && (
                 <button onClick={() => updateSetting(key, '')} className="text-[11px] text-gray-400 hover:text-gray-600" title="Reset to template default">↺</button>
@@ -140,7 +140,7 @@ export function ColorsSection({ resume, settings, updateSetting, onReset }) {
           </div>
           <div className="flex items-center gap-2">
             <label htmlFor={uid + 'sidebarBg'} className="text-xs text-gray-500">Custom:</label>
-            <input id={uid + 'sidebarBg'} type="color" aria-label="Custom sidebar background" value={settings.sidebarBg || '#1e293b'} onChange={e => updateSetting('sidebarBg', e.target.value)} className="h-7 w-16 rounded border border-gray-200 cursor-pointer p-0.5" />
+            <ColorInput id={uid + 'sidebarBg'} aria-label="Custom sidebar background" value={settings.sidebarBg || '#1e293b'} onCommit={v => updateSetting('sidebarBg', v)} className="h-7 w-16 rounded border border-gray-200 cursor-pointer p-0.5" />
             <span className="text-xs text-gray-400 font-mono">{settings.sidebarBg || '#1e293b'}</span>
             {settings.sidebarBg && settings.sidebarBg !== '#1e293b' && (
               <button onClick={() => updateSetting('sidebarBg', '#1e293b')} className="text-[11px] text-gray-400 hover:text-gray-600">↺</button>

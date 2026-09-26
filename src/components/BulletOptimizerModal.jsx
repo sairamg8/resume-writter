@@ -10,12 +10,14 @@ import {
   GOOGLE_XYZ_TEMPLATES
 } from '@/utils/bulletOptimizer';
 import { copyText } from '@/utils/clipboard';
+import { useOverlayClose } from '@/hooks/useOverlayClose';
 
 export default function BulletOptimizerModal({ isOpen, onClose, initialText = '', onApply }) {
   const [text, setText] = useState(initialText);
   const [activeCategory, setActiveCategory] = useState('Technical & Engineering');
   // Copy's outcome, shown on the button for a moment: 'done', 'failed' or null.
   const [copied, setCopied] = useState(null);
+  const overlay = useOverlayClose(onClose);
 
   if (!isOpen) return null;
 
@@ -65,7 +67,7 @@ export default function BulletOptimizerModal({ isOpen, onClose, initialText = ''
     : 'text-amber-600 bg-amber-50 border-amber-300';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm" {...overlay}>
       <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
         
         {/* Header */}

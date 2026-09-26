@@ -14,7 +14,7 @@ import RichTextEditor from '@/components/RichTextEditor';
 function Field({ id, label, required, children }) {
   return (
     <div>
-      <label htmlFor={id} className="block text-xs font-semibold text-gray-500 mb-1.5">
+      <label htmlFor={id} className="block text-xs font-semibold text-ink-subtle mb-1.5">
         {label}{required && <span className="text-red-400 ml-0.5">*</span>}
       </label>
       {children}
@@ -22,7 +22,7 @@ function Field({ id, label, required, children }) {
   );
 }
 
-const INPUT = 'w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors';
+const INPUT = 'w-full px-3 py-2.5 text-sm border border-line rounded-md focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent transition-colors';
 
 export function JobForm({ store }) {
   const navigate = useNavigate();
@@ -62,10 +62,10 @@ export function JobForm({ store }) {
   // An unknown id is not a blank form whose Save throws the input away (J-16).
   if (isEdit && !opened) {
     return (
-      <div className="min-h-screen bg-[#f5f3ef] flex items-center justify-center">
+      <div className="flex flex-1 items-center justify-center bg-white">
         <div className="text-center">
-          <p className="text-gray-500 mb-3">Job not found.</p>
-          <button onClick={() => navigate('/jobs')} className="text-indigo-600 text-sm font-medium hover:underline">
+          <p className="text-ink-subtle mb-3">Job not found.</p>
+          <button onClick={() => navigate('/jobs')} className="text-brand text-sm font-medium hover:underline">
             ← Back to Job Tracker
           </button>
         </div>
@@ -74,16 +74,16 @@ export function JobForm({ store }) {
   }
 
   return (
-    <div className="min-h-screen bg-[#f5f3ef]">
-      <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
+    <div className="flex-1 bg-white">
+      <div className="bg-white border-b border-line sticky top-0 z-10">
         <div className="max-w-3xl mx-auto px-6 py-4 flex items-center gap-3">
-          <button onClick={() => navigate(backPath)} className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors shrink-0">
+          <button onClick={() => navigate(backPath)} className="p-1.5 text-ink-subtlest hover:text-ink hover:bg-neutral-fill rounded-lg transition-colors shrink-0">
             <ArrowLeft size={16} />
           </button>
-          <h1 className="text-base font-bold text-gray-900">{isEdit ? 'Edit Job Application' : 'Add Job Application'}</h1>
+          <h1 className="text-base font-bold text-ink">{isEdit ? 'Edit Job Application' : 'Add Job Application'}</h1>
           <div className="ml-auto flex gap-2">
-            <button onClick={() => navigate(backPath)} className="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">Cancel</button>
-            <button onClick={handleSave} disabled={!canSave || gone} className="px-5 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed shadow-sm">
+            <button onClick={() => navigate(backPath)} className="px-4 py-2 text-sm font-medium text-ink-subtle hover:bg-neutral-fill rounded-lg transition-colors">Cancel</button>
+            <button onClick={handleSave} disabled={!canSave || gone} className="px-5 py-2 text-sm font-semibold text-white bg-brand hover:bg-brand-hover rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed shadow-sm">
               {isEdit ? 'Save Changes' : 'Add Job'}
             </button>
           </div>
@@ -102,8 +102,8 @@ export function JobForm({ store }) {
 
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-5">
 
-        <section className="bg-white rounded-2xl border border-gray-100 p-4 sm:p-6 space-y-4">
-          <h2 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Basic Info</h2>
+        <section className="bg-white rounded-md border border-line p-4 sm:p-6 space-y-4">
+          <h2 className="text-[11px] font-bold text-ink-subtlest uppercase tracking-widest">Basic Info</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field id={uid + 'company'} label="Company" required>
               <input id={uid + 'company'} autoFocus value={form.company} onChange={e => set('company', e.target.value)} placeholder="Google, Stripe, Notion…" className={INPUT} />
@@ -125,8 +125,8 @@ export function JobForm({ store }) {
           </div>
         </section>
 
-        <section className="bg-white rounded-2xl border border-gray-100 p-4 sm:p-6 space-y-4">
-          <h2 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Status & Dates</h2>
+        <section className="bg-white rounded-md border border-line p-4 sm:p-6 space-y-4">
+          <h2 className="text-[11px] font-bold text-ink-subtlest uppercase tracking-widest">Status & Dates</h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <Field id={uid + 'status'} label="Application Status">
               <select id={uid + 'status'} value={form.status} onChange={e => setStatus(e.target.value)} className={INPUT + ' bg-white cursor-pointer'}>
@@ -152,8 +152,8 @@ export function JobForm({ store }) {
           removeCustomStage={removeCustomStage}
         />
 
-        <section className="bg-white rounded-2xl border border-gray-100 p-4 sm:p-6 space-y-4">
-          <h2 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Contact & Resume</h2>
+        <section className="bg-white rounded-md border border-line p-4 sm:p-6 space-y-4">
+          <h2 className="text-[11px] font-bold text-ink-subtlest uppercase tracking-widest">Contact & Resume</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field id={uid + 'contact'} label="Contact Person">
               <input id={uid + 'contact'} value={form.contact} onChange={e => set('contact', e.target.value)} placeholder="Recruiter name, email…" className={INPUT} />
@@ -168,15 +168,15 @@ export function JobForm({ store }) {
           </div>
         </section>
 
-        <section className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
-          <h2 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Notes</h2>
+        <section className="bg-white rounded-md border border-line p-6 space-y-4">
+          <h2 className="text-[11px] font-bold text-ink-subtlest uppercase tracking-widest">Notes</h2>
           {/* The Notes tab's editor and format: plain text here was stripped there (J-03). */}
           <RichTextEditor ariaLabel="Notes" value={form.notes} onChange={html => set('notes', html)} rows={4} placeholder="Key contacts, interview format, compensation details, next steps…" />
         </section>
 
         <div className="flex justify-end gap-3 pb-8">
-          <button onClick={() => navigate(backPath)} className="px-5 py-2.5 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors">Cancel</button>
-          <button onClick={handleSave} disabled={!canSave || gone} className="px-6 py-2.5 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition-colors disabled:opacity-40 disabled:cursor-not-allowed shadow-sm">
+          <button onClick={() => navigate(backPath)} className="px-5 py-2.5 text-sm font-medium text-ink-subtle bg-white border border-line rounded-md hover:bg-sunken transition-colors">Cancel</button>
+          <button onClick={handleSave} disabled={!canSave || gone} className="px-6 py-2.5 text-sm font-semibold text-white bg-brand hover:bg-brand-hover rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed shadow-sm">
             {isEdit ? 'Save Changes' : 'Add Job'}
           </button>
         </div>

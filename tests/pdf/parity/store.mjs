@@ -25,6 +25,10 @@ export const SECTION_ITEMS = {
   experience: [
     { company: 'Northwind Labs', role: 'Staff Engineer', location: 'Lisbon', startDate: '01/2021', endDate: '', current: true,
       description: '<p>Led the <strong>billing platform</strong> rewrite across four teams and <em>cut</em> incidents by <u>half</u>.</p><ul><li>Designed the event ledger</li><li>Mentored six engineers</li></ul>' },
+    // A second role at the first job's company, right under it: Group roles by company (R2-147) has two
+    // roles to print under one employer.
+    { company: 'Northwind Labs', role: 'Lead Engineer', location: 'Lisbon', startDate: '06/2019', endDate: '12/2020',
+      description: '<p>Moved the payment jobs onto one shared scheduler.</p>' },
     { company: 'Contoso Retail', role: 'Senior Engineer', location: 'Braga', startDate: '03/2017', endDate: '12/2020',
       description: '<p>Built the checkout service that handled every order for three years, moved it from a nightly batch to streaming events, wrote the runbooks the on-call rota still uses, and trained the support team to read its dashboards without an engineer on the line.</p>' },
   ],
@@ -65,10 +69,13 @@ export const SECTION_ITEMS = {
     { title: 'Meetup Host', subtitle: 'Lisbon Go', location: 'Sintra', date: '03/2019', description: '' },
   ],
 };
+/** The role Group roles by company prints under its employer (the second entry at Northwind Labs). */
+const GROUPED_ROLE = 'Lead Engineer';
+
 /** Text every render must still print, whatever a control does (dates and locations are a control's to hide), by where it prints. */
 const MARKS_BY = {
   header: ['Jordan Rivera', 'Principal Platform Engineer', 'jordan@example.com', 'Platform engineer who ships'],
-  experience: ['Northwind Labs', 'Staff Engineer', 'billing platform', 'Designed the event ledger', 'Mentored six engineers', 'Contoso Retail', 'without an engineer on the line'],
+  experience: ['Northwind Labs', 'Staff Engineer', 'Lead Engineer', 'billing platform', 'Designed the event ledger', 'Mentored six engineers', 'Contoso Retail', 'without an engineer on the line'],
   education: ['University of Coimbra', 'Porto Polytechnic'],
   skills: ['TypeScript', 'Kubernetes'],
   projects: ['Ledgerline', 'Queuebird'],
@@ -81,7 +88,9 @@ const MARKS_BY = {
   custom: ['Open Source Talk', 'Meetup Host'],
 };
 /** The marks `r` must print: the header's and each of its sections'. */
-export const marksOf = (r) => [...MARKS_BY.header, ...r.sections.flatMap((sec) => MARKS_BY[sec.type] || [])];
+export const marksOf = (r) => [...MARKS_BY.header, ...r.sections.flatMap((sec) => (MARKS_BY[sec.type] || [])
+  // The second role at Northwind (GROUPED_ROLE) prints only where the page has it.
+  .filter((m) => m !== GROUPED_ROLE || sec.items.some((it) => it.role === GROUPED_ROLE)))];
 export const SECTION_TYPES = Object.keys(SECTION_ITEMS);
 
 /**
@@ -89,9 +98,12 @@ export const SECTION_TYPES = Object.keys(SECTION_ITEMS);
  * no other entry prints); `cells`: the marks that open each entry's cell in a grid (a skill wraps under
  * its category in a narrow one); `seq`: every entry's mark in order, where two share a row (a grid of
  * two by default — Languages and References, and Awards on Compact, T9) or a line (Interests' chips).
+ * Experience: `second` is its first job at another company (the entry after the next); its first two
+ * entries, a grid's first row, are two roles at one company, told apart by their roles (`cells`), whose
+ * second is `grouped` (Group roles by company, R2-147).
  */
 export const TYPE_MARKS = {
-  experience: { first: 'Northwind Labs', second: 'Contoso Retail', date: '01/2021', location: 'Braga', title: 'Staff Engineer' },
+  experience: { first: 'Northwind Labs', second: 'Contoso Retail', date: '01/2021', location: 'Braga', title: 'Staff Engineer', cells: ['Staff', 'Lead'], grouped: 'Lead Engineer' },
   education: { first: 'University of Coimbra', second: 'Porto Polytechnic', date: 'Sep 2013', location: 'Faro', title: 'MSc Computer Science' },
   skills: { first: 'TypeScript', second: 'Kubernetes', label: 'Coding', cells: ['Coding', 'Platforms'], seq: ['Coding', 'Platforms', 'Tooling'] },
   projects: { first: 'Ledgerline', second: 'Queuebird', date: '02/2022' },
@@ -111,12 +123,18 @@ export const COMPACT_TYPES = ['experience', 'education', 'skills', 'languages'];
  * The résumé every control is tried on: `template`, `settings` over its defaults, and every section
  * type — or, `compact`, COMPACT_TYPES (one page: half the render time, for controls that style the whole page).
  */
-export function baseResume(template, settings = {}, { compact = false, types: only = null } = {}) {
+export function baseResume(template, settings = {}, { compact = false, types: only = null, focus = null } = {}) {
   const types = only || (compact ? COMPACT_TYPES : SECTION_TYPES);
+  // On another section's page (`focus`: the type whose Section Options are tried) Experience is a
+  // neighbour and prints its two jobs, as before Group roles by company (R2-147): its second role at
+  // Northwind made those pages longer, and the next heading broke onto a page of its own, where Space
+  // after cannot move it.
+  const itemsOf = (type) => (type === 'experience' && focus && focus !== 'experience'
+    ? SECTION_ITEMS.experience.filter((it) => it.role !== GROUPED_ROLE) : SECTION_ITEMS[type]);
   const r = resume({
     template,
     personal: PERSONAL,
-    sections: types.map((type) => section(type, SECTION_ITEMS[type])),
+    sections: types.map((type) => section(type, itemsOf(type))),
   });
   // Stable ids: an action's section write names its section by type. Each section as the app creates it
   // on `template` — in its own Grids where it has one (Compact's grid, T9: newSectionGrid), as a résumé

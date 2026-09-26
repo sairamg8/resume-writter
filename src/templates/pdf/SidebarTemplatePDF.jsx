@@ -4,13 +4,15 @@ import { PdfSectionTitle } from './shared/PdfSection';
 import { getEffectiveSpacing, SPACER, sectionPrints } from './shared/PdfSections';
 import { PdfRichText } from './shared/PdfRichText';
 import { hasRichText } from '@/utils/richText';
-import { getDocumentProps, pageMargins } from './shared/PdfPage';
+import { PdfPageNumbers, bottomMarginMm, getDocumentProps, pageMargins } from './shared/PdfPage';
 import { PdfRunningHeader } from './shared/PdfRunningHeader';
 import { getPdfPhotoStyle } from './shared/pdfPhoto';
 import { PdfPhoto } from './shared/PdfPhoto';
 import { CSS_PX_TO_PT, tracking } from './shared/pdfUnits';
 import { fitFontSize } from './shared/pdfMeasure';
+import { headingFace, nameFace, nameFamily } from './shared/pdfFaces';
 import { PdfContactIcon } from './shared/PdfContactIcon';
+import { LinkGround } from './shared/PdfLinkStyle';
 import { CONTACT_LABELS, contactItems } from '@/utils/contacts';
 import { SIDEBAR_TYPES, SideSectionTitle, renderSideSection, SidebarMainSectionRouter } from './shared/PdfSidebarSections';
 import { SIDE_COL, SIDE_PAD_RIGHT, SideValue, sideColumnRoom } from './shared/PdfSidebarColumn';
@@ -108,7 +110,7 @@ export function SidebarTemplatePDF({ data }) {
   // 35-letter surname even at the default 19 pt, "Softwareentwicklungsingenieurin" at 11 pt): each
   // prints at the largest size that holds it.
   const room = sideColumnRoom(settings);
-  const nameFit = fitFontSize(personal?.name, { fontFamily: settings._pdfFontFamily, fontSize: nameSize, fontWeight: 'bold' }, room);
+  const nameFit = fitFontSize(personal?.name, { fontFamily: nameFamily(settings), fontSize: nameSize, fontWeight: 'bold' }, room);
   const titleFit = fitFontSize(personal?.title, { fontFamily: settings._pdfFontFamily, fontSize: entrySize }, room);
 
   // Top and bottom margins belong to the page, so react-pdf repeats them on every page; a
@@ -118,7 +120,7 @@ export function SidebarTemplatePDF({ data }) {
     page: {
       fontFamily: settings._pdfFontFamily || 'NotoSans',
       paddingTop: `${vMm}mm`,
-      paddingBottom: `${Math.max(0, vMm - 0.5)}mm`,
+      paddingBottom: `${Math.max(0, bottomMarginMm(settings) - 0.5)}mm`,
       paddingLeft: 0,
       paddingRight: 0,
       flexDirection: 'row',
@@ -135,6 +137,8 @@ export function SidebarTemplatePDF({ data }) {
         {/* First text on every page: after page 1 it prints "Name · Page 2" (ATS-7), over the main column. */}
         <PdfRunningHeader personal={personal} settings={settings} left={`${SIDE_COL * 100}%`} />
 
+        {/* On the column a link's Accent is the tint of it that reads there (Design → Links, R2-147). */}
+        <LinkGround.Provider value={sidebarBg}>
         <View style={{
           width: `${SIDE_COL * 100}%`,
           backgroundColor: 'transparent',
@@ -149,7 +153,7 @@ export function SidebarTemplatePDF({ data }) {
               <PdfPhoto src={personal.photo} style={sidePhoto} />
             )}
             <Text style={{
-              fontSize: nameFit, fontWeight: 'bold', color: nameColor,
+              ...nameFace(settings), fontSize: nameFit, fontWeight: 'bold', color: nameColor,
               textAlign: 'center', marginBottom: personal?.title ? g.nameTitleGap : 2, lineHeight: 1.2,
             }}>
               {personal?.name}
@@ -166,7 +170,7 @@ export function SidebarTemplatePDF({ data }) {
 
           {contacts.length > 0 && (
             <View style={{ marginBottom: sideSectionGap }}>
-              <SideSectionTitle title="Contact" shades={side} titleCase={settings.sectionTitleCase} settings={settings} />
+              <SideSectionTitle title="Contact" type="contact" shades={side} titleCase={settings.sectionTitleCase} settings={settings} />
               <View style={{ marginTop: 2 }}>
                 {contacts.map((item, i) => (
                   <SideContactRow
@@ -201,6 +205,7 @@ export function SidebarTemplatePDF({ data }) {
             );
           })}
         </View>
+        </LinkGround.Provider>
 
         <View style={{
           flex: 1,
@@ -223,6 +228,8 @@ export function SidebarTemplatePDF({ data }) {
                 template="sidebar"
                 lineHeightValue={settings.lineHeightValue ?? 1.5}
                 letterSpacingPct={settings.sectionLetterSpacing}
+                icon={settings.sectionIcons ? 'summary' : null}
+                face={headingFace(settings)}
                 presence={Math.round(baseSize * lineH * 3)}
               />
               <PdfRichText
@@ -248,6 +255,8 @@ export function SidebarTemplatePDF({ data }) {
             );
           })}
         </View>
+        {/* Last on every page: its footer is the page's last line drawn, after the résumé's own text (R2-147). */}
+        <PdfPageNumbers settings={settings} />
       </Page>
     </Document>
   );

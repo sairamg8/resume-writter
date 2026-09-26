@@ -1,9 +1,11 @@
 import { Document, Page, View } from '@react-pdf/renderer';
 import { Text } from './shared/PdfText';
-import { getPageStyle, getDocumentProps, pageMargins } from './shared/PdfPage';
+import { PdfPageNumbers, getPageStyle, getDocumentProps, pageMargins } from './shared/PdfPage';
 import { PdfRunningHeader } from './shared/PdfRunningHeader';
 import { headerRowWidth, PdfContactRow } from './shared/PdfContact';
+import { LinkGround } from './shared/PdfLinkStyle';
 import { fitFontSize } from './shared/pdfMeasure';
+import { nameFace, nameFamily } from './shared/pdfFaces';
 import { SectionRouter, getEffectiveSpacing, getVisibleSections } from './shared/PdfSections';
 import { PdfRichText } from './shared/PdfRichText';
 import { hasRichText } from '@/utils/richText';
@@ -13,7 +15,7 @@ import { textShades } from './shared/pdfColors';
 import { MM_TO_PT } from './shared/pdfUnits';
 import { letterheadLook, headerTitleSize } from './shared/letterhead';
 import { bannerPadY, bannerStripPt } from './shared/bannerBand';
-import { photoTextAlignItems } from '@/constants/templates';
+import { photoRowDirection, photoTextAlignItems } from '@/constants/templates';
 import { pageSizeOf } from '@/constants/pageSize';
 
 /**
@@ -60,7 +62,7 @@ export function BannerTemplatePDF({ data }) {
   const contactWidth = headerRowWidth(settings, personal, { photoWidth: photoStyle.width, gap: g.photoTextGap, centered });
   // A word of the name wider than the row prints at the largest size that holds it, as Classic's does.
   const name    = personal?.name || 'Your Name';
-  const nameFit = fitFontSize(name, { fontFamily: settings._pdfFontFamily, fontSize: nameSize, fontWeight: 'bold' }, contactWidth);
+  const nameFit = fitFontSize(name, { fontFamily: nameFamily(settings), fontSize: nameSize, fontWeight: 'bold' }, contactWidth);
   const align   = centered ? 'center' : 'left';
 
   // The fill runs from the paper's top and side edges; the text keeps the page margins (as the letter's band).
@@ -79,7 +81,7 @@ export function BannerTemplatePDF({ data }) {
   const summary = !hidden.includes('summary') && personal?.summary && hasRichText(personal.summary);
 
   const nameText = (
-    <Text style={{ fontSize: nameFit, fontWeight: 'bold', color: nameColor, lineHeight: 1.2, ...(headerLayout === 'inline' ? {} : { textAlign: align }) }}>
+    <Text style={{ ...nameFace(settings), fontSize: nameFit, fontWeight: 'bold', color: nameColor, lineHeight: 1.2, ...(headerLayout === 'inline' ? {} : { textAlign: align }) }}>
       {name}
     </Text>
   );
@@ -112,11 +114,13 @@ export function BannerTemplatePDF({ data }) {
         {/* First text on every page: after page 1 it prints "Name · Page 2" (ATS-7), below the strip. */}
         <PdfRunningHeader personal={personal} settings={settings} insetPt={strip} />
 
+        {/* On the band a link's Accent is the tint of it that reads there (Design → Links, R2-147). */}
+        <LinkGround.Provider value={accent}>
         <View style={{ paddingBottom: bannerPadY(settings), marginBottom: summary ? g.summaryGap : g.headerGapBelow }} wrap={false}>
           <View style={{ position: 'absolute', top: -bleedTop, left: -bleedSide, right: -bleedSide, bottom: 0, backgroundColor: accent }} />
           <View style={rule}>
             <View style={{
-              flexDirection: centered ? 'column' : 'row',
+              flexDirection: centered ? 'column' : photoRowDirection(settings), // Photo → Position (R2-147)
               alignItems: centered ? 'center' : photoTextAlignItems(settings),
               gap: g.photoTextGap,
             }}>
@@ -128,6 +132,7 @@ export function BannerTemplatePDF({ data }) {
             </View>
           </View>
         </View>
+        </LinkGround.Provider>
 
         {summary && (
           <View style={{ marginBottom: g.headerGapBelow }}>
@@ -153,6 +158,8 @@ export function BannerTemplatePDF({ data }) {
             />
           );
         })}
+        {/* Last on every page: its footer is the page's last line drawn, after the résumé's own text (R2-147). */}
+        <PdfPageNumbers settings={settings} />
       </Page>
     </Document>
   );

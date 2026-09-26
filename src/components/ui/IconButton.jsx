@@ -3,14 +3,14 @@ import { FOCUS_RING } from './Button.jsx';
 import { cx } from './compose.js';
 
 const VARIANTS = {
-  ghost: 'text-slate-500 hover:bg-slate-100 hover:text-slate-900 active:bg-slate-200/70',
-  subtle: 'bg-slate-100 text-slate-600 hover:bg-slate-200/80 hover:text-slate-900',
-  secondary: 'border border-slate-200 bg-white text-slate-600 shadow-sm hover:bg-slate-50 hover:text-slate-900',
-  danger: 'text-slate-500 hover:bg-red-50 hover:text-red-600 active:bg-red-100',
-  primary: 'bg-indigo-600 text-white shadow-sm hover:bg-indigo-700',
+  ghost: 'text-ink-subtle hover:bg-neutral-fill hover:text-ink active:bg-neutral-fill-hover',
+  subtle: 'bg-neutral-fill text-ink-subtle hover:bg-neutral-fill-hover hover:text-ink',
+  secondary: 'bg-neutral-fill text-ink-subtle hover:bg-neutral-fill-hover hover:text-ink',
+  danger: 'text-ink-subtle hover:bg-red-50 hover:text-red-700 active:bg-red-100',
+  primary: 'bg-brand text-white hover:bg-brand-hover',
 };
 
-const SIZES = { sm: 'size-7 rounded-md', md: 'size-8 rounded-lg', lg: 'size-9 rounded-lg' };
+const SIZES = { sm: 'size-7 rounded', md: 'size-8 rounded', lg: 'size-9 rounded' };
 /** An invisible ::after that makes each size's hit target 36 px, and 44 px on a touch screen. */
 const HIT = {
   sm: "relative after:absolute after:content-[''] after:-inset-1 pointer-coarse:after:-inset-2",
@@ -45,7 +45,7 @@ export function IconButton({
         'inline-flex shrink-0 items-center justify-center transition-colors duration-150 ease-out',
         'disabled:pointer-events-none disabled:opacity-40',
         FOCUS_RING, SIZES[size] ?? SIZES.md, HIT[size] ?? HIT.md,
-        pressed ? 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100' : VARIANTS[variant] ?? VARIANTS.ghost,
+        pressed ? 'bg-brand-subtle text-brand hover:bg-brand-subtle-hover' : VARIANTS[variant] ?? VARIANTS.ghost,
         className,
       )}
       {...rest}

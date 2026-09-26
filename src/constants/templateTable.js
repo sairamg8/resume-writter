@@ -25,6 +25,12 @@ import {
  *   headerRule      it draws the header's bottom rule when a résumé has no `showHeaderBorder`
  *                   (older or imported data; new résumés store `false`): the Classic design
  *   headerGaps      the header's spacing where the résumé sets none (below)
+ *   category        the gallery's category chip it is listed under (PICKER_CATEGORIES in
+ *                   utils/templatePicker.js); none is Simple
+ *   columns         2 where the body prints in two columns; none is one
+ *   colourHeader    its header (or side column) prints on a coloured ground
+ *   variant         a Layout setting the picker offers as a card of its own (A9): the Sidebar's
+ *                   single column — `key` is the boolean setting, `label` the second card's name
  * Four per-template tables stay with the code that reads them, each pinned to TEMPLATE_IDS by
  * tests/pdf/15-design-defaults: DEFAULTS in templateSettings.js — the PDF's fallbacks for unset
  * colours, computed from other settings, and Classic's unset heading is 'line', not the 'ruled'
@@ -37,35 +43,36 @@ export const TEMPLATES = {
   classic: {
     label: 'Classic', desc: 'Name over a full-width rule · Section titles over a rule', atsTier: 'certified',
     style: { headingStyle: 'ruled', sectionTitleCase: 'upper' }, headerControls: true, headerRule: true,
-    headerGaps: STACKED_HEADER_GAPS,
+    headerGaps: STACKED_HEADER_GAPS, category: 'simple',
   },
   modern: {
     label: 'Modern', desc: 'Name and contacts in an accent banner · One full-width column', atsTier: 'good',
     style: { headingStyle: 'line', sectionTitleCase: 'upper' }, headerControls: false, headerRule: false,
-    headerGaps: MODERN_HEADER_GAPS,
+    headerGaps: MODERN_HEADER_GAPS, category: 'modern', colourHeader: true,
   },
   minimal: {
     label: 'Minimal', desc: 'Open header, no rule · Titles underlined · Whitespace-first', atsTier: 'certified',
     style: { headingStyle: 'underline', sectionTitleCase: 'upper' }, headerControls: true, headerRule: false,
-    headerGaps: { ...STACKED_HEADER_GAPS, summaryGap: 6 },
+    headerGaps: { ...STACKED_HEADER_GAPS, summaryGap: 6 }, category: 'simple',
   },
   executive: {
     label: 'Executive', desc: 'Role-first entries on one line · Title-case accent headings', atsTier: 'certified',
     style: { headingStyle: 'underline', sectionTitleCase: 'normal' }, headerControls: true, headerRule: false,
-    headerGaps: { ...STACKED_HEADER_GAPS, summaryGap: 6 },
+    headerGaps: { ...STACKED_HEADER_GAPS, summaryGap: 6 }, category: 'professional',
   },
   sidebar: {
     label: 'Sidebar', desc: 'Skills, education and contacts in a coloured side column',
     descSingle: "Single · ATS-safe: one column, printed as Classic's page", atsTier: 'risky',
     style: { headingStyle: 'plain', sectionTitleCase: 'upper' }, headerControls: false, headerRule: false,
-    headerGaps: SIDEBAR_HEADER_GAPS,
+    headerGaps: SIDEBAR_HEADER_GAPS, category: 'modern', columns: 2, colourHeader: true,
+    variant: { key: 'sidebarSingleColumn', label: 'Sidebar · Single column' },
   },
   // History on an accent line, a dot per entry, dates above titles (TimelineTemplatePDF.jsx). Its header
   // is Classic's stacked one, so it takes every header control and Classic's spacing.
   timeline: {
     label: 'Timeline', desc: 'Dated entries on an accent line', atsTier: 'certified',
     style: { headingStyle: 'plain', sectionTitleCase: 'upper' }, headerControls: true, headerRule: false,
-    headerGaps: STACKED_HEADER_GAPS,
+    headerGaps: STACKED_HEADER_GAPS, category: 'creative',
   },
   // A full-bleed accent band holding the name, title and contacts in reversed colour, filled heading
   // chips, one column (BannerTemplatePDF.jsx). Its band takes every header control; rated as Modern's
@@ -73,7 +80,7 @@ export const TEMPLATES = {
   banner: {
     label: 'Banner', desc: 'Full-bleed colour band · Filled section tags', atsTier: 'good',
     style: { headingStyle: 'box', sectionTitleCase: 'upper' }, headerControls: true, headerRule: false,
-    headerGaps: BANNER_HEADER_GAPS,
+    headerGaps: BANNER_HEADER_GAPS, category: 'creative', colourHeader: true,
   },
   // A scholarly CV (AcademicTemplatePDF.jsx): serif, the name centred, section titles in small capitals
   // (capitals at the body's size) over a hairline, italic institutions, dense. Picking it (and Reset)
@@ -87,7 +94,7 @@ export const TEMPLATES = {
       fontSizeSectionDelta: 0, lineHeightValue: 1.35, sectionGap: 12, itemGap: 6,
     },
     headerControls: true, headerRule: false,
-    headerGaps: ACADEMIC_HEADER_GAPS,
+    headerGaps: ACADEMIC_HEADER_GAPS, category: 'professional',
   },
   // A dense one-page résumé for a long career (CompactTemplatePDF.jsx): 9 pt type, narrow margins, the
   // title on the name's line, each section title followed by a short accent rule on its own line
@@ -104,7 +111,7 @@ export const TEMPLATES = {
       fontSizeBase: 9, lineHeightValue: 1.3, sectionGap: 10, itemGap: 5, marginH: 12, marginV: 10,
     },
     headerControls: true, headerRule: false,
-    headerGaps: COMPACT_HEADER_GAPS,
+    headerGaps: COMPACT_HEADER_GAPS, category: 'compact',
   },
   // The designed layouts (R2-138 B2): each Classic's stacked header — every Header Customization control —
   // and the shared single column, with marks of its own that are fills, never text (PdfDesigned.jsx,

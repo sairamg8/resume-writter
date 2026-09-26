@@ -13,9 +13,11 @@ const SIZES = {
   lg: 'md:max-w-2xl',
   xl: 'md:max-w-4xl',
   full: 'md:max-w-none h-[calc(100dvh-2rem)] md:h-[calc(100dvh-3rem)]',
+  // An issue's view: as wide as a laptop allows, as tall as the window.
+  wide: 'md:max-w-[1160px] h-[calc(100dvh-2rem)] md:h-[calc(100dvh-4rem)]',
 };
 /** Sizes too big for a phone: below sm they take the whole screen, sliding up as a sheet. */
-const LARGE = new Set(['lg', 'xl', 'full']);
+const LARGE = new Set(['lg', 'xl', 'full', 'wide']);
 
 /** The panel's enter / exit animation for its layout (Tailwind needs every class written out). */
 function panelMotion({ sheet, large, closing }) {
@@ -41,16 +43,18 @@ function panelMotion({ sheet, large, closing }) {
  *   the panel, and returns to whatever opened the dialog when it closes.
  * - Escape and a click on the overlay close it unless `closeOnEscape` / `closeOnOverlay` are false.
  *   A menu or popover open inside handles its own Escape first.
- * - `role`: 'dialog' (default) or 'alertdialog' (ConfirmDialog).
+ * - `role`: 'dialog' (default) or 'alertdialog' (ConfirmDialog). `flush`: the body has no padding
+ *   (a view that draws its own header and panes, like an issue's).
  */
 export function Dialog({
   open, onClose, title, description, size = 'md', sheet = false, footer, headerActions, hideClose = false,
-  closeOnEscape = true, closeOnOverlay = true, initialFocusRef, role = 'dialog', className, bodyClassName,
+  closeOnEscape = true, closeOnOverlay = true, initialFocusRef, role = 'dialog', className, bodyClassName, flush = false,
   children, 'aria-label': ariaLabel,
 }) {
   const { mounted, state } = usePresence(open, 150);
   const panelRef = useRef(null);
   const pressStartedOnOverlay = useRef(false);
+  const releasedInside = useRef(false);
   const titleId = useId();
   const descriptionId = useId();
   const onTrapKeyDown = useFocusTrap(panelRef, open && mounted, { initialFocusRef });
@@ -67,11 +71,17 @@ export function Dialog({
     }
   };
   // Closes only when the press both starts and ends on the overlay: selecting text inside and
-  // releasing outside must not throw the dialog away.
-  const onOverlayPointerDown = (event) => { pressStartedOnOverlay.current = event.target === event.currentTarget; };
+  // releasing outside must not throw the dialog away, nor a drag begun outside and released inside
+  // (the browser sends its click to the overlay, the two ends' common ancestor).
+  const onOverlayPointerDown = (event) => {
+    pressStartedOnOverlay.current = event.target === event.currentTarget;
+    releasedInside.current = false;
+  };
+  const onOverlayPointerUp = (event) => { releasedInside.current = event.target !== event.currentTarget; };
   const onOverlayClick = (event) => {
-    if (closeOnOverlay && pressStartedOnOverlay.current && event.target === event.currentTarget) close('overlay');
+    if (closeOnOverlay && pressStartedOnOverlay.current && !releasedInside.current && event.target === event.currentTarget) close('overlay');
     pressStartedOnOverlay.current = false;
+    releasedInside.current = false;
   };
 
   const closing = state === 'closed';
@@ -81,7 +91,7 @@ export function Dialog({
       <div className="fixed inset-0 z-50" onKeyDown={onKeyDown}>
         <div
           aria-hidden="true"
-          className={cx('absolute inset-0 bg-slate-900/40', closing ? 'animate-ui-fade-out' : 'animate-ui-fade-in')}
+          className={cx('absolute inset-0 bg-[#091e427a]', closing ? 'animate-ui-fade-out' : 'animate-ui-fade-in')}
         />
         <div
           className={cx(
@@ -90,6 +100,7 @@ export function Dialog({
             large && 'max-sm:p-0',
           )}
           onPointerDown={onOverlayPointerDown}
+          onPointerUp={onOverlayPointerUp}
           onClick={onOverlayClick}
         >
           <div
@@ -102,7 +113,7 @@ export function Dialog({
             tabIndex={-1}
             data-state={state}
             className={cx(
-              'relative flex w-full flex-col overflow-hidden rounded-2xl bg-white shadow-xl ring-1 ring-slate-900/5 outline-none',
+              'relative flex w-full flex-col overflow-hidden rounded-lg bg-white shadow-2xl ring-1 ring-slate-900/5 outline-none',
               'max-h-[calc(100dvh-2rem)] md:max-h-[calc(100dvh-3rem)]',
               SIZES[size] ?? SIZES.md,
               large && 'max-sm:h-dvh max-sm:max-h-dvh max-sm:rounded-none max-sm:ring-0',
@@ -118,7 +129,7 @@ export function Dialog({
             {(title || !hideClose || headerActions) && (
               <div className="flex shrink-0 items-start gap-3 px-5 pt-4 pb-3">
                 <div className="min-w-0 flex-1">
-                  {title && <h2 id={titleId} className="text-[15px] font-semibold leading-6 text-slate-900">{title}</h2>}
+                  {title && <h2 id={titleId} className="text-xl font-medium leading-7 text-ink">{title}</h2>}
                   {description && <p id={descriptionId} className="mt-0.5 text-[13px] leading-5 text-slate-500">{description}</p>}
                 </div>
                 {headerActions && <div className="flex shrink-0 items-center gap-1">{headerActions}</div>}
@@ -127,7 +138,7 @@ export function Dialog({
                 )}
               </div>
             )}
-            <div className={cx('min-h-0 flex-1 overflow-y-auto px-5 pb-5', !title && hideClose && 'pt-5', bodyClassName)}>
+            <div className={cx('min-h-0 flex-1 overflow-y-auto', !flush && 'px-5 pb-5', !flush && !title && hideClose && 'pt-5', bodyClassName)}>
               {children}
             </div>
             {footer && (

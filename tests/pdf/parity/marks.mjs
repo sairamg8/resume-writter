@@ -87,6 +87,27 @@ export function iconBefore(snap, needle) {
   return { box, size: Math.max(box.x1 - box.x0, box.y1 - box.y0), sig };
 }
 
+/**
+ * The icon Design → Section Headings → Icons prints before section title run `t` (R2-147): the strokes
+ * (Lucide outlines; no heading style strokes anything left of its title — a Left bar's bar and a
+ * centred Line's rule are fills) within twice the title's height left of it, on its line: { box, size
+ * (its larger side), gap (from its right edge to the title), mid (its middle's height above the
+ * baseline), colours (its strokes'), sig }, or null.
+ */
+export function headingIcon(snap, t) {
+  const reach = t.h * 2;
+  const ps = drawn(snap, t.page).filter((p) => p.paint === 'stroke' && p.x1 <= t.x + 0.5 && p.x0 >= t.x - reach
+    && p.x1 - p.x0 <= reach && p.y1 - p.y0 <= reach && p.y1 >= t.y - t.h * 0.6 && p.y0 <= t.y + t.h * 1.4);
+  if (!ps.length) return null;
+  const box = union(ps);
+  const r = (v) => Math.round((v - box.x0) * 10) / 10;
+  return {
+    box, size: Math.max(box.x1 - box.x0, box.y1 - box.y0), gap: t.x - box.x1, mid: (box.y0 + box.y1) / 2 - t.y,
+    colours: [...new Set(ps.map((p) => String(p.colour).toLowerCase()))],
+    sig: ps.map((p) => `${r(p.x0)},${r(p.x1)},${Math.round((p.y1 - p.y0) * 10) / 10}`).join(' '),
+  };
+}
+
 /** The contact runs `needles` print, grouped by baseline: [[run…]…], top line first. */
 export function contactLines(snap, needles) {
   const runs = needles.map((s) => item(snap, s)).filter(Boolean);

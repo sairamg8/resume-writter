@@ -1,16 +1,17 @@
 import { Document, Page, View } from '@react-pdf/renderer';
 import { Text } from './shared/PdfText';
-import { getPageStyle, getDocumentProps, getHeaderBorderStyle } from './shared/PdfPage';
+import { PdfPageNumbers, getPageStyle, getDocumentProps, getHeaderBorderStyle } from './shared/PdfPage';
 import { PdfRunningHeader } from './shared/PdfRunningHeader';
 import { headerRowWidth, PdfContactRow } from './shared/PdfContact';
 import { fitFontSize } from './shared/pdfMeasure';
+import { nameFace, nameFamily } from './shared/pdfFaces';
 import { SectionRouter, getEffectiveSpacing, getVisibleSections } from './shared/PdfSections';
 import { PdfRichText } from './shared/PdfRichText';
 import { hasRichText } from '@/utils/richText';
 import { getPdfPhotoStyle } from './shared/pdfPhoto';
 import { PdfPhoto } from './shared/PdfPhoto';
 import { textShades } from './shared/pdfColors';
-import { photoTextAlignItems } from '@/constants/templates';
+import { photoRowDirection, photoTextAlignItems } from '@/constants/templates';
 import { pageSizeOf } from '@/constants/pageSize';
 import { headerTitleSize } from './shared/letterhead';
 
@@ -37,7 +38,7 @@ export function ExecutiveTemplatePDF({ data }) {
   // The name has the same row. A word of it wider than the row has nowhere to break, and
   // react-pdf drew it past the margin, off the paper: it prints at the largest size that holds it.
   const name = personal?.name || 'Your Name';
-  const nameFit = fitFontSize(name, { fontFamily: settings._pdfFontFamily, fontSize: nameSize, fontWeight: 'bold' }, contactWidth);
+  const nameFit = fitFontSize(name, { fontFamily: nameFamily(settings), fontSize: nameSize, fontWeight: 'bold' }, contactWidth);
   const headerMb     = g.headerGapBelow;
   // Off unless the user turns it on (the Executive design has no header rule).
   const headerBorderStyle = getHeaderBorderStyle(settings);
@@ -50,7 +51,7 @@ export function ExecutiveTemplatePDF({ data }) {
       gap: settings.headerInlineGap ?? 6,
       justifyContent: centered ? 'center' : 'flex-start',
     }}>
-      <Text style={{ fontSize: nameFit, fontWeight: 'bold', color: nameColor, lineHeight: 1.2 }}>
+      <Text style={{ ...nameFace(settings), fontSize: nameFit, fontWeight: 'bold', color: nameColor, lineHeight: 1.2 }}>
         {name}
       </Text>
       {personal?.title && (
@@ -62,7 +63,7 @@ export function ExecutiveTemplatePDF({ data }) {
   ) : (
     <View style={centered ? { alignSelf: 'stretch' } : undefined}>
       <Text style={{
-        fontSize: nameFit, fontWeight: 'bold', color: nameColor,
+        ...nameFace(settings), fontSize: nameFit, fontWeight: 'bold', color: nameColor,
         textAlign: centered ? 'center' : 'left', lineHeight: 1.2,
       }}>
         {name}
@@ -88,7 +89,7 @@ export function ExecutiveTemplatePDF({ data }) {
         {/* Breakable: a summary longer than a page continues on the next (R2-046); the name row never splits. */}
         <View style={[{ marginBottom: headerMb }, headerBorderStyle]}>
           <View style={{
-            flexDirection: centered ? 'column' : 'row',
+            flexDirection: centered ? 'column' : photoRowDirection(settings), // Photo → Position (R2-147)
             alignItems: centered ? 'center' : alignItemsVal,
             gap: g.photoTextGap,
           }} wrap={false}>
@@ -133,6 +134,8 @@ export function ExecutiveTemplatePDF({ data }) {
             />
           );
         })}
+        {/* Last on every page: its footer is the page's last line drawn, after the résumé's own text (R2-147). */}
+        <PdfPageNumbers settings={settings} />
       </Page>
     </Document>
   );

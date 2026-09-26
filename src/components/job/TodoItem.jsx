@@ -16,12 +16,12 @@ export function TodoItem({ todo, onToggle, onDelete, onRename }) {
   }
 
   return (
-    <div className={`flex items-start gap-3 group px-4 py-3 rounded-2xl border transition-all ${
-      todo.done ? 'bg-gray-50/60 border-gray-100' : 'bg-white border-gray-100 hover:border-indigo-100 hover:shadow-sm'
+    <div className={`flex items-start gap-3 group px-4 py-3 rounded-md border transition-all ${
+      todo.done ? 'bg-sunken/60 border-line' : 'bg-white border-line hover:border-indigo-100 hover:shadow-sm'
     }`}>
       <button
         onClick={onToggle}
-        className={`mt-0.5 shrink-0 transition-colors ${todo.done ? 'text-indigo-500' : 'text-gray-300 hover:text-indigo-400'}`}
+        className={`mt-0.5 shrink-0 transition-colors ${todo.done ? 'text-brand' : 'text-ink-subtlest hover:text-indigo-400'}`}
       >
         {todo.done ? <CheckSquare size={18} /> : <Square size={18} />}
       </button>
@@ -42,7 +42,7 @@ export function TodoItem({ todo, onToggle, onDelete, onRename }) {
       ) : (
         <span
           onDoubleClick={() => { setDraft(todo.text); setEditing(true); }}
-          className={`flex-1 text-sm leading-relaxed cursor-default ${todo.done ? 'line-through text-gray-400' : 'text-gray-700'}`}
+          className={`flex-1 text-sm leading-relaxed cursor-default ${todo.done ? 'line-through text-ink-subtlest' : 'text-ink'}`}
         >
           {todo.text}
         </span>
