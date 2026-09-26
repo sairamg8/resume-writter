@@ -66,6 +66,21 @@ describe('the editor\'s Import says it makes a new résumé (R4-DUX-17)', () => 
     }
   });
 
+  it('a cover letter\'s JSON opens on its tab with the notice that it is a new cover letter', async () => {
+    const went = [];
+    const { view, hook } = editor(went);
+    try {
+      view.act(() => hook().handleImportJSON({ name: 'Contoso letter', kind: 'letter', personal: { name: 'Robin Vale' }, sections: [] }));
+      assert.equal(hook().exportError, null);
+      assert.equal(went[0]?.[0], '/resume/resume_new?tab=coverletter');
+      const notice = went[0]?.[1]?.state?.importNotice || '';
+      assert.match(notice, /Imported as a new cover letter: the one you had open is unchanged/);
+      assert.doesNotMatch(notice, /résumé/);
+    } finally {
+      await view.unmount();
+    }
+  });
+
   it('a document opens with the same notice, and still the best-effort one', async () => {
     const went = [];
     const { view, hook } = editor(went);

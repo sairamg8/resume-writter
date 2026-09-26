@@ -22,6 +22,8 @@ export const IMPORT_NOTICE = 'Imported from your file as best we could read it. 
  * opens it, so without this a user restoring a backup would think they had overwritten the open one.
  */
 export const NEW_RESUME_NOTICE = 'Imported as a new résumé: the one you had open is unchanged, on the dashboard.';
+/** The same, for a cover letter's file (the JSON way: a document is always read as a résumé). */
+export const NEW_LETTER_NOTICE = 'Imported as a new cover letter: the one you had open is unchanged, on the dashboard.';
 
 /**
  * Reads `file` into a new résumé, as the JSON import does: `importResume(resume, { keep })`, then
