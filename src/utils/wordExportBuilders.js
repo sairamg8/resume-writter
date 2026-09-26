@@ -309,9 +309,14 @@ export function buildReferences(section, accentHex, settings, centered, dateHex,
   })];
 }
 
-/** The interests on one line, in the accent the PDF prints its interest chips in. */
+/**
+ * The interests on one line, in the accent the PDF prints its interest chips in: each entry split at
+ * its commas and trimmed, blank parts left out, as the PDF's chips, the ATS text and the Markdown read
+ * them ("Chess,Hiking," → "Chess, Hiking").
+ */
 export function buildInterests(section, accentHex, settings, centered, dateHex, look) {
-  const allInterests = shown(section).map((i) => i.interests).filter(Boolean).join(', ');
+  const allInterests = shown(section)
+    .flatMap((i) => String(i.interests || '').split(',').map((s) => s.trim()).filter(Boolean)).join(', ');
   if (!allInterests) return [];
   return [
     sectionHeading(section.title, accentHex, centered, section.heading),
