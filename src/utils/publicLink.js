@@ -34,6 +34,22 @@ function withoutHidden(fields) {
 const PERSONAL_KEYS = ['name', 'title', 'summary', 'photo', 'hiddenFields', ...CONTACT_KEYS.flatMap((k) => [k, `${k}Label`, `${k}Url`])];
 const printedPersonal = (personal) => Object.fromEntries(PERSONAL_KEYS.filter((k) => k in personal).map((k) => [k, personal[k]]));
 
+/**
+ * The design as the PDF reads it: the saved designs and the name of the look last applied
+ * (useResumeDesignActions) print nothing, and an uploaded icon for a contact hidden with its eye
+ * prints no more than the contact does, so none of them is copied — nor, saved or deleted, makes
+ * the copy look out of date.
+ */
+function printedSettings(settings, hiddenFields) {
+  const { myDesigns: _designs, templatePreset: _preset, ...out } = settings;
+  const hidden = new Set(Array.isArray(hiddenFields) ? hiddenFields : []);
+  const icons = settings.customContactIcons;
+  if (icons && typeof icons === 'object' && hidden.size) {
+    out.customContactIcons = Object.fromEntries(Object.entries(icons).filter(([key]) => !hidden.has(key)));
+  }
+  return out;
+}
+
 /** The section types whose Location a section's "Show location" hides (a custom section prints it always). */
 const LOCATION_SWITCH = new Set(['experience', 'education', 'volunteering']);
 
@@ -67,7 +83,7 @@ export function publicSnapshot(resume) {
     }));
   const copy = {
     template: resume?.template || 'classic',
-    settings: resume?.settings || {},
+    settings: printedSettings(resume?.settings || {}, resume?.personal?.hiddenFields),
     personal: printedPersonal(withoutHidden(resume?.personal || {})),
     sections,
   };
@@ -108,8 +124,11 @@ export function publicUrl(shareId, origin = globalThis.location?.origin || '') {
 const stable = (v) => JSON.stringify(v, (_, x) => (x && typeof x === 'object' && !Array.isArray(x)
   ? Object.fromEntries(Object.keys(x).sort().map((k) => [k, x[k]])) : x));
 
+/** A copy without its data version: an app update that migrates the résumé changes nothing it prints. */
+const printed = ({ dataVersion: _version, ...copy } = {}) => copy;
+
 /** Does the published copy print what `resume` prints now? */
-export const publishedIsCurrent = (copy, resume) => stable(copy) === stable(publicSnapshot(resume));
+export const publishedIsCurrent = (copy, resume) => stable(printed(copy)) === stable(printed(publicSnapshot(resume)));
 
 const TOO_LARGE = 'This résumé is too large to publish (over 1 MB, usually its photo). Use a smaller photo and try again.';
 /** The error publish throws for a copy over MAX_PUBLIC_BYTES: its message is the whole story (no connection to check). */
