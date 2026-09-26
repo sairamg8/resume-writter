@@ -229,6 +229,34 @@ export function analyzeBullet(text = '') {
 }
 
 /**
+ * The statement with power verb `verb` clicked in (R4-CL-07): it replaces a leading action verb, or a
+ * leading weak phrase ("Responsible for" → "Spearheaded"), and otherwise goes before the first word,
+ * which is lowercased when it is an ordinary capitalised word ("In 2023, built" → "Spearheaded in
+ * 2023, built"; "AWS" stays). It always replaced the first word, whatever it was ("Spearheaded for
+ * migrating…"), and joined the lines of the statement into one. Every other character is kept.
+ */
+export function insertActionVerb(text, verb) {
+  const s = String(text ?? '');
+  if (!s.trim()) return `${verb} `;
+  if (leadsWithActionVerb(s)) return s.replace(/^(\s*[^\p{L}\s]*)\p{L}[\p{L}'’-]*/u, (_, lead) => lead + verb);
+  for (const wp of WEAK_PHRASE_REPLACEMENTS) {
+    const weak = new RegExp(`^(\\s*[^\\p{L}\\s]*)${wp.match.source}`, 'iu');
+    if (weak.test(s)) return s.replace(weak, (_, lead) => lead + verb);
+  }
+  return s.replace(/^(\s*)(\S*)/u, (_, space, word) => `${space}${verb} ${/^\p{Lu}\p{Ll}+(?!\p{L})/u.test(word) ? word[0].toLowerCase() + word.slice(1) : word}`);
+}
+
+/**
+ * The statement with a metric phrase ("by 35%") added at its end, before its closing punctuation:
+ * "Reduced latency for checkout." becomes "Reduced latency for checkout by 35%.", not "… checkout. by
+ * 35%", and an empty statement is the phrase alone (R4-CL-08).
+ */
+export function insertMetric(text, metric) {
+  const [, body, stop] = String(text ?? '').trim().match(/^([\s\S]*?)([.!?;:]*)$/);
+  return body.trim() ? `${body.trimEnd()} ${metric}${stop}` : metric;
+}
+
+/**
  * Whether the text before a phrase ends where a sentence starts: nothing, or a line break or a
  * sentence's end (". ", "! ", "? "), then only spaces, bullet marks or opening quotes.
  */
