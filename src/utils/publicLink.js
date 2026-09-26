@@ -152,10 +152,11 @@ export function publicIo(fs, db) {
    * nothing naming it. Now the record read is checked at the commit, and a changed one runs it again.
    */
   async function takeDown(uid, resumeId, shareIds) {
+    // Every link an attempt found recorded stays on the list when the transaction runs again.
+    const ids = new Set(shareIds.filter(Boolean));
     return fs.runTransaction(db, async (tx) => {
       const share = await tx.get(shareDoc(uid, resumeId));
-      const recorded = share.exists() ? share.data().shareId || null : null;
-      const ids = [...new Set([...shareIds, recorded].filter(Boolean))];
+      if (share.exists() && share.data().shareId) ids.add(share.data().shareId);
       // The rules refuse deleting a copy that is not there (no owner to check), so only one that is.
       const there = [];
       for (const id of ids) if ((await tx.get(publicDoc(id))).exists()) there.push(id);
@@ -238,7 +239,7 @@ export function publicIo(fs, db) {
       if (!gone.size) return [];
       const shares = await fs.getDocsFromServer(fs.collection(db, 'users', uid, 'shares'));
       const stale = shares.docs.filter((d) => gone.has(d.id));
-      for (const d of stale) await takeDown(uid, d.id, []);
+      for (const d of stale) await takeDown(uid, d.id, [d.data().shareId]);
       return stale.map((d) => d.id);
     },
 
