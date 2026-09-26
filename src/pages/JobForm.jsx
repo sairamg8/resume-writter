@@ -5,7 +5,7 @@ import { useJobStore } from '@/hooks/useJobStore';
 import { useJobStages } from '@/hooks/useJobStages';
 import { formPatch, jobFormValues, withFormStatus } from '@/utils/jobEdits';
 import { linkedResume, resumeChoices } from '@/utils/jobQuery';
-import { JOB_STATUSES } from '@/constants/jobs';
+import { JOB_SOURCES, JOB_STATUSES, WORK_MODES } from '@/constants/jobs';
 import { InterviewStageSelector } from '@/components/job/InterviewStageSelector';
 import { JobsNotSavedAlert } from '@/components/job/JobsNotSavedAlert';
 import RichTextEditor from '@/components/RichTextEditor';
@@ -134,6 +134,19 @@ export function JobForm({ store }) {
               <Field id={uid + 'salary'} label="Salary / Comp">
                 <input id={uid + 'salary'} value={form.salary} onChange={e => set('salary', e.target.value)} placeholder="$150k – $200k" className={INPUT} />
               </Field>
+              {/* The page's Details box shows both: nothing could set them but an imported file (R4-JOB-02). */}
+              <Field id={uid + 'workMode'} label="Work Mode">
+                <select id={uid + 'workMode'} value={form.workMode} onChange={e => set('workMode', e.target.value)} className={INPUT + ' bg-white cursor-pointer'}>
+                  <option value="">— Not set —</option>
+                  {WORK_MODES.map(m => <option key={m.id} value={m.id}>{m.label}</option>)}
+                </select>
+              </Field>
+              <Field id={uid + 'source'} label="Source">
+                <select id={uid + 'source'} value={form.source} onChange={e => set('source', e.target.value)} className={INPUT + ' bg-white cursor-pointer'}>
+                  <option value="">— Not set —</option>
+                  {JOB_SOURCES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
+                </select>
+              </Field>
               <div className="col-span-1 sm:col-span-2">
                 <Field id={uid + 'url'} label="Job Posting URL">
                   <input id={uid + 'url'} value={form.url} onChange={e => set('url', e.target.value)} placeholder="https://jobs.company.com/…" className={INPUT} />
@@ -144,7 +157,7 @@ export function JobForm({ store }) {
 
           <section className="bg-white rounded-md border border-line p-4 sm:p-6 space-y-4">
             <h2 className="text-[11px] font-bold text-ink-subtlest uppercase tracking-widest">Status & Dates</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Field id={uid + 'status'} label="Application Status">
                 <select id={uid + 'status'} value={form.status} onChange={e => setStatus(e.target.value)} className={INPUT + ' bg-white cursor-pointer'}>
                   {JOB_STATUSES.map((s, i) => (
@@ -155,8 +168,13 @@ export function JobForm({ store }) {
               <Field id={uid + 'appliedDate'} label="Applied Date">
                 <input id={uid + 'appliedDate'} type="date" value={form.appliedDate} onChange={e => set('appliedDate', e.target.value)} className={INPUT} />
               </Field>
-              <Field id={uid + 'deadline'} label="Deadline / Follow-up">
+              <Field id={uid + 'deadline'} label="Deadline">
                 <input id={uid + 'deadline'} type="date" value={form.deadline} onChange={e => set('deadline', e.target.value)} className={INPUT} />
+              </Field>
+              {/* Its own day: the one date labelled 'Deadline / Follow-up' wrote the deadline, so a
+                  follow-up set there never reached 'Follow-ups due' (R4-JOB-02). */}
+              <Field id={uid + 'followUpDate'} label="Follow-up Date">
+                <input id={uid + 'followUpDate'} type="date" value={form.followUpDate} onChange={e => set('followUpDate', e.target.value)} className={INPUT} />
               </Field>
             </div>
           </section>
