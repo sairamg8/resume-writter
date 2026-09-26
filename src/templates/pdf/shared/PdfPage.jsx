@@ -90,8 +90,9 @@ export const abovePageNumbersPt = (settings) => (settings?.pageNumbers === true
  * stays off the Sidebar's dark column. A template puts it LAST among its page's children: it is then
  * the page's last text drawn, so text readers (pdftotext -raw, an ATS) still read the name first on
  * page 1 and the running header first on the pages after. (react-pdf leaves the fixed elements that
- * follow a node that cannot break and is taller than a page off that node's page: a Banner header
- * longer than a page, already cut off, would print no number on page 1.) Off: nothing.
+ * follow a page's own child that cannot break and is taller than a page off that child's page, so no
+ * résumé template puts an unbreakable node straight on the page: the header row that never splits sits
+ * in a breakable View, whose split keeps the number on the page — R2-147-pn.) Off: nothing.
  */
 export function PdfPageNumbers({ settings }) {
   if (settings?.pageNumbers !== true) return null;

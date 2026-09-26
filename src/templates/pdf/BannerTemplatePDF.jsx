@@ -116,6 +116,10 @@ export function BannerTemplatePDF({ data }) {
 
         {/* On the band a link's Accent is the tint of it that reads there (Design → Links, R2-147). */}
         <LinkGround.Provider value={accent}>
+        {/* The band never splits, but it sits in a plain breakable View, as every other template's header does:
+            react-pdf leaves the fixed elements after a page's own child that cannot break and is taller than a
+            page off that page, so a band longer than a page printed no page number on page 1 (R2-147-pn). */}
+        <View>
         <View style={{ paddingBottom: bannerPadY(settings), marginBottom: summary ? g.summaryGap : g.headerGapBelow }} wrap={false}>
           <View style={{ position: 'absolute', top: -bleedTop, left: -bleedSide, right: -bleedSide, bottom: 0, backgroundColor: accent }} />
           <View style={rule}>
@@ -131,6 +135,7 @@ export function BannerTemplatePDF({ data }) {
               </View>
             </View>
           </View>
+        </View>
         </View>
         </LinkGround.Provider>
 

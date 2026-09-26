@@ -62,6 +62,24 @@ describe('Design → Page numbers prints "Page n of N" on every page (R2-147)', 
     assert.deepEqual(wrong, []);
   });
 
+  // react-pdf leaves the fixed elements after a page's own child that cannot break and is taller than a
+  // page off that page. The Banner's band never splits and stood straight on the page: a band longer than a
+  // page (here a job title of many lines) printed no number on page 1 (R2-147-pn).
+  it('Banner: a band longer than a page still prints page 1\'s number, last', async () => {
+    const title = Array.from({ length: 250 }, () => 'Principal platform engineer and team lead').join(' ');
+    const r = cv('banner', { pageNumbers: true });
+    r.personal = { ...r.personal, title };
+    const pages = await read(await render(r));
+    assert.ok(pages.length >= 2, 'the fixture runs past page 1');
+    pages.forEach((p, i) => {
+      const [f, ...more] = footers(p);
+      assert.ok(f, `page ${i + 1}: its number prints`);
+      assert.equal(more.length, 0, `page ${i + 1}: one number`);
+      assert.equal(f.str.trim(), `Page ${i + 1} of ${pages.length}`);
+      assert.equal(p.items[p.items.length - 1], f, `page ${i + 1}: the number is the last text drawn`);
+    });
+  });
+
   it('a bottom margin under 10 mm grows to hold the number: it never prints over the last line', async () => {
     const pages = await read(await render(cv('classic', { pageNumbers: true, marginV: 0 })));
     for (const p of pages) {
