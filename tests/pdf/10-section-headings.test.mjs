@@ -160,8 +160,9 @@ describe('Left bar: Border thickness says the width the bar prints (ONB-12)', ()
   it('a Left bar width typed or stepped prints at that width: it stores 2 pt less, within 1–8', async () => {
     const at = async (sectionBorderWidth) => headingControls({ headingStyle: 'leftbar', sectionBorderWidth });
     for (const [typed, stores] of [['6', 4], ['3', 1], ['10', 8], ['2', 1], ['1', 1], ['99', 8]]) {
-      const c = await at(4);
-      // Typed, then written on leaving the box (R4-LO-19: not on every keystroke).
+      // From a stored 5 (the box says 7 pt), so every value typed differs from what it shows:
+      // typed, then written on leaving the box (R4-LO-19: not on every keystroke).
+      const c = await at(5);
       c.input.props.onBlur({ target: { value: typed } });
       assert.deepEqual(c.stored, [stores], `typed ${typed}`);
       const [printed] = await fillWidths(await ruled('classic', 'leftbar', stores));

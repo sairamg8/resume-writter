@@ -39,6 +39,15 @@ function topBar(hits) {
       view.act(() => reactProps(box()).onChange({ target: { value } }));
     },
     key: (key) => view.act(() => reactProps(box()).onKeyDown(ev({ key }))),
+    // The router moves in a React transition, rendered over several tasks (tests/unit/ui-shell.unit.mjs):
+    // Enter, then let it finish before reading where it went.
+    enter: async () => {
+      view.act(() => reactProps(box()).onKeyDown(ev({ key: 'Enter' })));
+      for (let i = 0; i < 40; i += 1) {
+        await new Promise((resolve) => { setTimeout(resolve, 0); });
+        view.act(() => {});
+      }
+    },
     highlighted: () => box().getAttribute('aria-activedescendant'),
   };
 }
@@ -53,7 +62,7 @@ describe('the quick search opens the highlighted row of the list as it is now (R
       assert.match(t.highlighted(), /-2$/, 'the third row is highlighted');
       t.results([hit('a')]);
       assert.match(t.highlighted(), /-0$/, 'the only row left is highlighted');
-      t.key('Enter');
+      await t.enter();
       assert.equal(t.where(), '/boards/a', 'Enter opened the row');
     } finally { await t.view.unmount(); }
   });
@@ -64,7 +73,7 @@ describe('the quick search opens the highlighted row of the list as it is now (R
       t.type('proj');
       t.key('ArrowDown');
       t.results([hit('a'), hit('b')]);
-      t.key('Enter');
+      await t.enter();
       assert.equal(t.where(), '/boards/a');
     } finally { await t.view.unmount(); }
   });
@@ -77,7 +86,7 @@ describe('the quick search opens the highlighted row of the list as it is now (R
       t.key('ArrowDown');
       t.results([hit('a'), hit('b')]);
       t.key('ArrowUp');
-      t.key('Enter');
+      await t.enter();
       assert.equal(t.where(), '/boards/a');
     } finally { await t.view.unmount(); }
   });
