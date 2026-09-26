@@ -117,7 +117,7 @@ title: Job Tracker — verified bugs, High and Medium (J-01…J-15)
 - **Now:** `newJobDefaults(status)` gives an applied date only past Saved (the store's `addJob` uses it; a date the caller clears stays clear). `applyStatusChange` fills a blank applied date with that day when a job moves past Saved. On a new job's form the untouched date follows the status picked (`withFormStatus`: blank for Saved). Fail-first: the J-10 store tests failed at HEAD (added-as-Applied had no date; saved→applied left it blank), and the pure ones could not load; all pass now.
 - **Owner:** JOBS-FIX · **Fix commit:** `7f4a3f8` (`fix(jobs): the job form saves only what it edited, keeps input for a deleted job, and dates follow the status (J-02, J-10, J-16)`) · **Test:** tests/unit/job-edits.unit.mjs, tests/unit/job-store-edits.unit.mjs · **On master:** Lane C's merge `de0911f` (an ancestor of master `e6b1a4a`, deployed)
 
-### J-11 · Medium · mobile · 🔴 Open
+### J-11 · Medium · mobile · ✅ Fixed by the revamp
 **On phones the list view is clipped: columns after about Status, including Delete, cannot be reached**
 - **Where:** `src/components/job/ListView.jsx` : 37-38 (with src/pages/JobTracker.jsx:295)
 - **Repro:** 1. Open /#/jobs at 375px width. 2. Tap the List view toggle. 3. Try to see Deadline, Contact, Tasks or Resume, or tap Delete: they are cut off, and swiping sideways does nothing.
@@ -125,9 +125,10 @@ title: Job Tracker — verified bugs, High and Medium (J-01…J-15)
 - **Fix hint:** Below md, render a card list instead of the table. At md and up, wrap the table in overflow-x-auto with a sticky Company column. Remove overflow-hidden from JobTracker.jsx:295.
 - **Verified (WF-1):** Read the code. The table wrapper is 'overflow-hidden' (ListView.jsx:37), and its parent is 'flex-1 min-w-0 w-full overflow-hidden' (JobTracker.jsx:295). The table has 11 columns with px-4 cells, which is 352px of padding alone, plus whitespace-nowrap headers. That exceeds the 343px content width at 375px, and no ancestor scrolls horizontally.
 - **Fail-first test:** Cypress at viewport 375x812: switch to List and assert the first row's Delete button is visible and can be clicked. This fails today.
-- **Owner:** JOBS-UI · **Fix commit:** — · **Test:** —
+- **Now (checked at `45b6b60`):** The list's table sits in its own `overflow-x-auto` box with a minimum width (src/components/job/ListView.jsx:44-45), inside the shell's `<main>` (min-w-0), so on a phone the table scrolls sideways and every column, Delete included, can be reached.
+- **Owner:** JOBS-UI · **Fix commit:** the Lane C redesign and the Jira-style revamp (merges `de0911f`, `75236a2`; on master `e6b1a4a`, deployed) · **Test:** —
 
-### J-12 · Medium · mobile · 🔴 Open
+### J-12 · Medium · mobile · 🔴 Open (partly fixed by the revamp)
 **Job detail and form layouts do not collapse on phones: fixed 2-column grids, a 'Mark as' row that does not wrap, and long values overflow**
 - **Where:** `src/components/job/OverviewTab.jsx` : 17 (and src/components/job/Pipeline.jsx:169, src/components/job/InterviewStageSelector.jsx:32, 88-104, src/components/job/Field.jsx:52, src/pages/JobDetail.jsx:182-185)
 - **Repro:** 1. Open /#/jobs/demo_1 at 375px width and go to the Overview tab. 2. The Pipeline's 'Mark as:' chips run past the card edge, and the page scrolls sideways. 3. Role Info and Timeline are squeezed into two columns about 113px wide. 4. On Add Job, the Interview Stage 'Add Custom Stage' input and button do not fit. 5. On desktop, set a 120-character posting URL: it spills out of its card.
@@ -135,6 +136,7 @@ title: Job Tracker — verified bugs, High and Medium (J-01…J-15)
 - **Fix hint:** Use grid-cols-1 md:grid-cols-2 (with md:col-span-2) in OverviewTab, and grid-cols-1 sm:grid-cols-2 in InterviewStageSelector. Add flex-wrap to Pipeline.jsx:169. Give Field's value span min-w-0 break-all, or truncate with a title. Use px-4 sm:px-6 in JobDetail.
 - **Verified (WF-1):** Read the code and did the width arithmetic. At 375px the JobDetail content is 327px (px-6). OverviewTab's 'grid grid-cols-2 gap-5' has no breakpoint, which leaves about 113px inside the p-5 cards. Pipeline.jsx:169 is a flex row that does not wrap: the label plus three chips need about 360px inside a 287px card. index.css sets no overflow-x clip on body or #root, so the page scrolls sideways.
 - **Fail-first test:** Cypress at 375px on /#/jobs/demo_1, Overview tab: assert document.documentElement.scrollWidth <= 375.
+- **Now:** **Partly fixed by the revamp, still open (checked at `45b6b60`):** the pipeline's chips wrap (src/components/job/Pipeline.jsx:31, 64, 152) and the job page is one column below lg (src/pages/JobDetail.jsx:126). Still as filed: OverviewTab's `grid grid-cols-2` (src/components/job/OverviewTab.jsx:25) and InterviewStageSelector's (src/components/job/InterviewStageSelector.jsx:32) have no breakpoint, so Role Info and Timeline sit in two narrow columns on a phone, and Field's value (src/components/job/Field.jsx:54) has no min-w-0 or break-words for a long URL.
 - **Owner:** JOBS-UI · **Fix commit:** — · **Test:** —
 
 ### J-13 · Medium · a11y · 🔴 Open

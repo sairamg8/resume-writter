@@ -106,7 +106,7 @@ title: Job Tracker — verified bugs, Low (J-16…J-41)
 - **Now:** One rule: closed jobs stay editable. Overview no longer makes Rejected/Withdrawn fields read-only or says so (an info line points to the pipeline to restart), and the pipeline's restart calls `onChange` directly — no `window.confirm`, as the Edit form and a board drag never asked; every status change is recorded in the history (JOBS-UI adds the Undo toast). Fail-first: both J-24 tests in tests/pdf/68-job-overview.test.mjs failed at HEAD ('read-only' text; restart threw calling window.confirm); pass now.
 - **Owner:** JOBS-FIX · **Fix commit:** `9e6102d` (`fix(jobs): the job page's history, résumé link, closed-job rule, tasks and demo job tell the truth (J-20, J-21, J-24, J-26, J-27, J-29)`) · **Test:** tests/pdf/68-job-overview.test.mjs · **On master:** Lane C's merge `de0911f` (an ancestor of master `e6b1a4a`, deployed)
 
-### J-25 · Low · ux-defect · 🔴 Open
+### J-25 · Low · ux-defect · ✅ Fixed by the revamp
 **The list says 'No jobs tracked yet' when a search or filter matches nothing, and the kanban has no empty state**
 - **Where:** `src/components/job/ListView.jsx` : 143-150 (and src/components/job/KanbanView.jsx:166-176, src/pages/JobTracker.jsx:231-233)
 - **Repro:** 1. With several jobs, switch to List view. 2. Search 'zzz': the table says 'No jobs tracked yet / Click "+ Add Job"'. 3. In Kanban, the same search shows eight empty columns and no message. 4. Filter by a status, then drag its last card elsewhere: that status chip disappears while its filter stays on, and the board is blank.
@@ -114,7 +114,8 @@ title: Job Tracker — verified bugs, Low (J-16…J-41)
 - **Fix hint:** Pass the total job count and the active filters into both views and render a shared EmptyState of kind 'no-matches' or 'no-jobs'. Keep the active status chip visible while its filter is on.
 - **Verified (WF-1):** Read the code. ListView receives filteredJobs (JobTracker.jsx:305-306) and shows 'No jobs tracked yet' whenever sorted.length is 0 (143-150). KanbanView has no empty state. JobTracker.jsx:233 returns null for a chip whose count is 0, even when it is the active filter.
 - **Fail-first test:** Cypress: in List view, search 'zzz' and expect 'No applications match'.
-- **Owner:** JOBS-UI · **Fix commit:** — · **Test:** —
+- **Now (checked at `45b6b60`):** The list's empty row reads 'No jobs here — Add one with “Add job” at the top, or clear the filters.' (src/components/job/ListView.jsx:165-171), no longer 'No jobs tracked yet'; the filter bar shows the result count and a Clear button while a status filter is on (src/pages/JobTracker.jsx:192-196), so a filter whose chip has gone (its last job dragged away, :172-174) can still be cleared. Left: the kanban has no board-wide 'no matches' message (each empty column says 'Drop a job here', src/components/job/KanbanView.jsx:142).
+- **Owner:** JOBS-UI · **Fix commit:** the Lane C redesign and the Jira-style revamp (merges `de0911f`, `75236a2`; on master `e6b1a4a`, deployed) · **Test:** —
 
 ### J-26 · Low · ux-defect · ✅ Fixed
 **Adding a task whose text matches any existing task, even a completed one, does nothing and says nothing**
@@ -160,7 +161,7 @@ title: Job Tracker — verified bugs, Low (J-16…J-41)
 - **Now:** The demo job is built by `demoJobs(now)` (src/utils/jobEdits.js): applied ten days ago, its history on that day and the days after (never after now), the deadline five days ahead, notes as editor HTML; id still 'demo_1'. `JOB_VERSION` is unchanged, so no user's list gets the demo back. Fail-first: the J-29 test could not load at HEAD (fixed 2025/2026 constants in the store); passes now.
 - **Owner:** JOBS-FIX · **Fix commit:** `9e6102d` (`fix(jobs): the job page's history, résumé link, closed-job rule, tasks and demo job tell the truth (J-20, J-21, J-24, J-26, J-27, J-29)`) · **Test:** tests/unit/job-edits.unit.mjs · **On master:** Lane C's merge `de0911f` (an ancestor of master `e6b1a4a`, deployed)
 
-### J-30 · Low · ux-defect · 🔴 Open
+### J-30 · Low · ux-defect · ⏸ Fixed (not deployed)
 **The tracker's view, sort, search and filter reset every time the user opens a job and comes back**
 - **Where:** `src/pages/JobTracker.jsx` : 23-25 (and src/components/job/ListView.jsx:13, src/pages/JobDetail.jsx:62)
 - **Repro:** 1. On /jobs, switch to List view, sort by Deadline and search 'eng'. 2. Click a row, then the back arrow. 3. The Kanban view is back, unsorted, with the search cleared.
@@ -168,7 +169,8 @@ title: Job Tracker — verified bugs, Low (J-16…J-41)
 - **Fix hint:** Use useSearchParams for view, status, q and sort, and navigate(-1) from the detail page when there is history. Optionally remember the preferred view in localStorage.
 - **Verified (WF-1):** Read the code. view, search and filterStatus are component useState (JobTracker.jsx:23-25), and sort is useState in ListView (13). JobDetail's back arrow calls navigate('/jobs') (62), so the tracker remounts with its defaults.
 - **Fail-first test:** Cypress: pick List, open a job, click back, and expect List view still selected. This fails today.
-- **Owner:** JOBS-UI · **Fix commit:** — · **Test:** —
+- **Now:** The tracker's search, status filter and the List's sort are kept for the browser tab's session (src/hooks/useSessionState.js, sessionStorage), and the view was already in the address (?view=), so opening a job and going Back returns to the same view, filter, search and sort. Not in the address on purpose: React Router 7 commits a navigation in a transition, and a text box whose value follows one drops keystrokes. A saved value the page no longer knows is ignored.
+- **Owner:** JOBS-UI · **Fix commit:** `5f86d40` (work branch, not deployed) · **Test:** tests/pdf/81-job-tracker-session.test.mjs
 
 ### J-31 · Low · a11y · 🔴 Open
 **A task can be renamed only by double-clicking a span that is not focusable: impossible by keyboard and hard to discover on touch**
@@ -220,7 +222,7 @@ title: Job Tracker — verified bugs, Low (J-16…J-41)
 - **Fail-first test:** Cypress: /jobs has exactly one h1 and a main element, and on /jobs/demo_1 document.title contains 'Google'.
 - **Owner:** JOBS-UI · **Fix commit:** — · **Test:** —
 
-### J-36 · Low · ux-defect · 🔴 Open
+### J-36 · Low · ux-defect · ⏸ Fixed (not deployed)
 **On the Add/Edit job form, Enter does not submit, and both Company and Role are marked required although one is enough**
 - **Where:** `src/pages/JobForm.jsx` : 52, 55-59, 85-90
 - **Repro:** 1. Click Add Job, type 'Acme' in Company and press Enter: nothing happens. 2. Role shows a red asterisk, yet saving without it works. 3. With both fields empty, Save is greyed out and no reason is given.
@@ -228,7 +230,8 @@ title: Job Tracker — verified bugs, Low (J-16…J-41)
 - **Fix hint:** Wrap the page in <form onSubmit={handleSave}> with type=submit buttons. Replace the two asterisks with the helper text, announced through aria-live when a save is attempted.
 - **Verified (WF-1):** Read the code. There is no <form> element. Both Fields pass required, which only draws the asterisk (85-90). canSave needs only one of the two (52).
 - **Fail-first test:** Cypress: on /jobs/new, type Company and press Enter: the URL becomes /jobs/<new id>.
-- **Owner:** JOBS-UI · **Fix commit:** — · **Test:** —
+- **Now:** The Add / Edit job fields are a `<form>` whose submit runs the save (src/pages/JobForm.jsx), so Enter in a field saves; both Save buttons are its submit buttons, every other button is type="button", and a save while the job is gone is refused in the handler too. Company and Role no longer both wear a red star; Basic Info says 'A company or a role is enough to save the job.'
+- **Owner:** JOBS-UI · **Fix commit:** `62f024a` (work branch, not deployed) · **Test:** tests/pdf/67-job-form-save.test.mjs
 
 ### J-37 · Low · mobile · 🔴 Open
 **Touch targets on the tracker are about 15-21px: status chips, the card's posting link and delete, task delete, search clear**
@@ -240,7 +243,7 @@ title: Job Tracker — verified bugs, Low (J-16…J-41)
 - **Fail-first test:** Cypress at 375px: every button's getBoundingClientRect() is at least 24x24.
 - **Owner:** JOBS-UI · **Fix commit:** — · **Test:** —
 
-### J-38 · Low · mobile · 🔴 Open
+### J-38 · Low · mobile · ⏸ Fixed (not deployed)
 **iOS Safari zooms the page when any tracker input is focused, because the inputs use 12-14px text**
 - **Where:** `src/pages/JobTracker.jsx` : 267 (and src/pages/JobForm.jsx:23, src/components/job/TasksTab.jsx:44, src/components/job/Field.jsx:46, src/components/job/InterviewStageSelector.jsx:94)
 - **Repro:** 1. On an iPhone, open /jobs and tap Search: the page zooms in and stays zoomed. 2. Open Add Job and tap Company: the page zooms again.
@@ -248,9 +251,10 @@ title: Job Tracker — verified bugs, Low (J-16…J-41)
 - **Fix hint:** Use text-base sm:text-sm (16px on mobile) for every text input, select and textarea.
 - **Verified (WF-1):** Read the code. The index.html:6 viewport meta has no maximum-scale. The search input is text-xs (JobTracker.jsx:267). The form INPUT (JobForm.jsx:23), the task input, the inline Field input and the custom-stage input are text-sm. iOS Safari zooms on focus when an input's font size is below 16px.
 - **Fail-first test:** Cypress at 375px: the computed font-size of every input, select and textarea is at least 16px.
-- **Owner:** JOBS-UI · **Fix commit:** — · **Test:** —
+- **Now:** The job form, the job page's pencil fields, its deadline and résumé pickers, the custom-stage box and the tasks' boxes add `pointer-coarse:text-base`, the kit's own rule (controlClass in src/components/ui/Field.jsx): 16 px on a touch screen, 14 px with a mouse. The tracker's search is the kit's SearchInput and was already 16 px on touch; the test covers it too. The Notes editor followed in `2ece50b` (J-38b). A change to the date pill's hidden picker box (`be5dffa`) was reverted (`d4db465`): no test could show it matters.
+- **Owner:** JOBS-UI · **Fix commit:** `ca13cdb` (its test read a hidden file input as a text field until `a59d492`) (work branch, not deployed) · **Test:** tests/pdf/81-job-inputs-touch-text.test.mjs
 
-### J-39 · Low · mobile · 🔴 Open
+### J-39 · Low · mobile · ⏸ Fixed (not deployed)
 **On phones, the recovery notice's buttons, which do not wrap, squeeze the explanation into a sliver and overflow**
 - **Where:** `src/components/RecoveryNotice.jsx` : 43-57
 - **Repro:** 1. At 375px width, load /jobs with an unreadable cpwtcv_jobs_v1 so the recovery notice appears. 2. The red alert puts 'Download the copy' and Dismiss (and 'Download the earlier copy' if there is one) beside a message column only a few words wide, and the row overflows.
@@ -258,7 +262,8 @@ title: Job Tracker — verified bugs, Low (J-16…J-41)
 - **Fix hint:** Use flex-col sm:flex-row, and put the buttons in a flex-wrap gap-2 row.
 - **Verified (WF-1):** Read the code. The notice is a flex row: a flex-1 span next to whitespace-nowrap buttons (43-57). The message contains the unbroken key “cpwtcv_jobs_v1_backup_<ms>” (storageBackup.js:124), about 38 characters. That key's min-content width plus the buttons exceeds the roughly 317px available at 375px.
 - **Fail-first test:** Cypress at 375px with a corrupt job list: the alert's scrollWidth <= clientWidth.
-- **Owner:** JOBS-UI · **Fix commit:** — · **Test:** —
+- **Now:** RecoveryNotice (src/components/RecoveryNotice.jsx; the Job Tracker, the dashboard and the boards) stacks below sm: the message on top, its buttons in a wrapping row below it; from sm up they sit beside the message in at most half the row. The message may break its one long word, the backup key.
+- **Owner:** JOBS-UI · **Fix commit:** `d524d97` (work branch, not deployed) · **Test:** tests/pdf/34-recovery-notice-phone.test.mjs
 
 ### J-40 · Low · bug · ✅ Fixed · links **R2-073**
 **The scroll position is not reset on route change: a job page opens at the scroll offset of the list the user came from**

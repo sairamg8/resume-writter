@@ -31,14 +31,26 @@ Status legend: 🔴 open · ⏸ fixed on the work branch, not yet on master (not
 
 | Area | ✅ on master | ⏸ not deployed | 🔴 open |
 |---|---|---|---|
-| Boards (31) | 7 | 0 | 24 |
-| Jobs (41) | 25 | 0 | 16 |
-| **Total (72)** | **32** | **0** | **40** |
+| Boards (31) | 16 | 5 | 10 |
+| Jobs (41) | 27 | 4 | 10 |
+| **Total (72)** | **43** | **9** | **20** |
+
+**✅ (43):**
 
 - 22 are Lane C's own fixes, each row naming its commit: B-01, B-02, B-15, J-01 … J-04, J-08 … J-10, J-16 … J-21,
   J-23, J-24, J-26 … J-29.
 - 10 were fixed under their Round 2 twins (the table below): B-03 (R2-037), B-04 (R2-140), B-06 and B-07 (R2-039),
   J-05 (R2-039), J-06 (R2-038), J-07 (R2-145), J-22 (R2-099), J-40 (R2-073), J-41 (R2-156).
+- 11 were fixed by the Lane C redesign and the Jira-style revamp (merges `de0911f`, `75236a2`), each checked at
+  `45b6b60` with file:line in its row: B-14, B-16, B-18, B-19, B-21, B-22, B-23, B-30, B-31, J-11, J-25.
+
+**⏸ (9), fixed on the work branch by wave 1 of the 2026-09-26 bug-fix stream, not yet on master:** B-05 (`ff7e89a`,
+`9e20f77`), B-13 (`702fb61`), B-17 (`f568ac3`), B-20 (`617f24f`), B-29 (`4345a13`), J-30 (`5f86d40`), J-36 (`62f024a`),
+J-38 (`ca13cdb`), J-39 (`d524d97`).
+
+**🔴 (20):** all accessibility, deferred by the owner until nothing else is left — B-08 … B-12, B-24 … B-28, J-13 … J-15,
+J-31 … J-35, and J-37 (touch-target sizes, which the owner counts as accessibility) — except **J-12** (the job
+page's two-column grids on a phone), which the revamp fixed only in part.
 
 **Left open inside ✅ rows (accessibility, deferred by the owner 2026-09-25):** B-07 — a card or column cannot be
 dragged from the keyboard (no KeyboardSensor); J-05 — cards and rows are not links, and there is no keyboard drag.

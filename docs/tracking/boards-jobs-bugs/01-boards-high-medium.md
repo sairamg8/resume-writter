@@ -51,7 +51,7 @@ title: Boards — verified bugs, High and Medium (B-01…B-13)
 - **Now:** Fixed under its twin **R2-140**: signed in, the boards sync with the account (one document per board, per-board last-writer-wins, on the same engine as the jobs), so clearing site data or another device brings them back; the Privacy page names résumés, jobs and boards as what syncs (src/pages/PrivacyPage.jsx:47-61). R2-140's own 'Left for later' (an offline reorder yields to the cloud's order; no sync icon for boards) stays with that row.
 - **Owner:** BOARDS-MODEL (export/import fns) + BOARDS-UI-B (UI + PrivacyPage.jsx) · **Fix commit:** under **R2-140** — `e96514b`, `8cd4901` (on master `e6b1a4a`, deployed) · **Test:** tests/unit/board-sync.unit.mjs, tests/pdf/95-sync-privacy-notices.test.mjs
 
-### B-05 · Medium · bug · 🔴 Open · model half ✅
+### B-05 · Medium · bug · ⏸ Fixed (drop side not deployed; model half ✅)
 **A card dragged to another list can never land at the bottom of a list with 2 or more cards: it is inserted above the last card, and no placeholder shows during the drag**
 - **Where:** `src/pages/Board.jsx` : 122-135, 204
 - **Repro:** On the demo 'Product launch' board: 1) Drag 'Build pricing page' out of 'In progress'. 2) Release it just below 'Pick hero image', the last card of 'To do' (over its 'Add a card' button), or anywhere lower. 3) It lands between 'Draft landing copy' and 'Pick hero image'. No gap opened in 'To do' during the drag.
@@ -60,7 +60,8 @@ title: Boards — verified bugs, High and Medium (B-01…B-13)
 - **Verified (WF-1):** Ran verify-boards/v5-dnd.mjs, which runs dnd-kit 6.3.1's own closestCorners on a layout taken from the Board, BoardColumn and BoardCard classes. With the overlay 8, 30, 60 and 200px below 'Pick hero image', every drop gave over=hero, i.e. 'insert at index 1 of todo (above hero)' (hero:59.6 vs todo:100.19 at +8px). A 4-card list gave 'insert at index 3 of todo (above c4)'. Analytically, the column rect wins only when its top is within about 42px of the last card's top, which means 0 or 1 cards. No preview: sortable.esm.js:310-314 gives activeIndex -1 and overIndex ≠ -1 in the target list, so disableTransforms is true, and there is no onDragOver. Same-list moves are correct, because strip-then-insert matches arrayMove.
 - **Fail-first test:** Extract onDragEnd's target maths into a pure resolveCardDrop(board, activeId, over, activeRect, overRect) in src/utils/boardDnd.js. tests/unit/board-dnd.unit.mjs feeds it closestCorners output on the v5 geometry and asserts that a drop below the last card of a 2-card list gives toIndex 2 (append). Fails today (gives 1).
 - **Now:** Model half (BOARDS-MODEL): `moveIssue(board, issueId, { columnId, sprintId, beforeId })` splices the issue into the global rank — before `beforeId`, or after the last issue of the target column/sprint when it is null — and `beforeIdAt(visibleIds, index, activeId)` turns a drop index (dnd-kit's arrayMove index, or the hovered index in another column) into that beforeId, null at or past the end. Tests drop a card at every index of a 2-card column, the bottom included, and reorder within a column to the bottom. The drop side (collision detection, the onDragOver gap, calling moveIssue with beforeIdAt) is BOARDS-UI-A's; the row stays 🔴 until it lands. Fail-first: at HEAD neither function existed (both test files failed to import). Honest note: the v1 store's `moveCard(toIndex null)` did append; the defect is the drop handler's target index.
-- **Owner:** BOARDS-MODEL (moveIssue maths) + BOARDS-UI-A (drop handling) · **Fix commit:** model half: `4734406` (`feat(boards): the v2 model, its mutations and its queries, pure and tested`, on master through `de0911f`); drop side: — (BOARDS-UI-A) · **Test:** tests/unit/board-ops.unit.mjs, tests/unit/board-query.unit.mjs (model half)
+- **Now (drop side):** Board.jsx keeps a preview of the move in state from onDragOver (`dragPreview` / `previewLists`, src/utils/boardView.js), so the target column opens a gap where the card will land, and the drop reads off that gap: a drop below the last card of a 2-card column lands at its bottom. The columns are measured continuously only while a card is dragged (`9e20f77`: measured always, every render read each column's box, and the board pages threw over the fake DOM).
+- **Owner:** BOARDS-MODEL (moveIssue maths) + BOARDS-UI-A (drop handling) · **Fix commit:** model half: `4734406` (`feat(boards): the v2 model, its mutations and its queries, pure and tested`, on master through `de0911f`); drop side: `ff7e89a`, `9e20f77` (work branch, not deployed) · **Test:** tests/unit/board-drop-preview.unit.mjs; tests/unit/board-ops.unit.mjs, tests/unit/board-query.unit.mjs (model half)
 
 ### B-06 · Medium · a11y · ✅ Fixed · links **R2-039**
 **Keyboard users cannot open a board card: the focusable role=button card ignores Enter and Space (the 'open' part of R2-039)**
@@ -134,7 +135,7 @@ title: Boards — verified bugs, High and Medium (B-01…B-13)
 - **Fail-first test:** Playwright: open a card, Tab to 'Bullet list', press Enter, and expect a <ul> in the description. Fails today.
 - **Owner:** BOARDS-UI-A · **Fix commit:** — · **Test:** —
 
-### B-13 · Medium · mobile · 🔴 Open
+### B-13 · Medium · mobile · ⏸ Fixed (not deployed)
 **Column scroll-snap never works on phones: snap-x snap-mandatory is on the inner flex row, not on the overflow-x-auto scroller**
 - **Where:** `src/pages/Board.jsx` : 205-206
 - **Repro:** 1) Open a board at 375px width (a phone, or DevTools device mode). 2) Swipe horizontally and let go between two columns. 3) The board stops wherever the fling ends, showing half of each of two columns.
@@ -142,5 +143,6 @@ title: Boards — verified bugs, High and Medium (B-01…B-13)
 - **Fix hint:** Move `snap-x snap-mandatory md:snap-none` onto the overflow-x-auto div (L205) and add scroll-px-3 so the padding is respected.
 - **Verified (WF-1):** Code read: L205 is the scroll container (overflow-x-auto). L206 carries snap-x snap-mandatory but has no overflow of its own, so it is not a scroll container and scroll-snap-type has no effect there. The columns' snap-center (BoardColumn.jsx:38; Board.jsx:33, 41) snaps against the nearest scroll container, L205, whose scroll-snap-type is none.
 - **Fail-first test:** Static unit test in the style of tests/unit/touch-reveal.unit.mjs: find the className in Board.jsx that contains overflow-x-auto and assert it also contains snap-x and snap-mandatory. Fails today.
-- **Owner:** BOARDS-UI-A · **Fix commit:** — · **Test:** —
+- **Now:** `snap-x snap-mandatory md:snap-none` moved from the inner flex row onto the board's overflow-x-auto scroller (src/pages/Board.jsx), so on a phone each swipe settles on one column with the next one peeking; it is off while a card is dragged (auto-scroll is not pulled back) and with swimlanes. The test requires every class string in src/ that turns on snapping to sit on an element that scrolls.
+- **Owner:** BOARDS-UI-A · **Fix commit:** `702fb61` (work branch, not deployed) · **Test:** tests/unit/board-scroll-snap.unit.mjs
 
