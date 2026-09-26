@@ -5,7 +5,7 @@
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { setup, teardown, resume, experience, render, renderCover, read, loadModule, unzipEntry, MM, TEMPLATES } from './harness.mjs';
-import { hasPdftotext, pdftotext } from './extractors.mjs';
+import { hasPdftotext, painted, pdftotext } from './extractors.mjs';
 
 before(setup);
 after(teardown);
@@ -36,6 +36,28 @@ describe('Design → Page numbers prints "Page n of N" on every page (R2-147)', 
         if (f.y > 14 * MM) wrong.push(`${template} page ${i + 1}: above the bottom margin (${f.y.toFixed(1)} pt)`);
       });
       if (content(on).join('|') !== content(off).join('|')) wrong.push(`${template}: the content moved`);
+    }
+    assert.deepEqual(wrong, []);
+  });
+
+  // Bookend draws a thin accent rule along every page's foot, centred in the bottom margin — where the
+  // number prints too: the rule ran through "Page 1 of 2".
+  it('every template: no rule or fill it draws crosses the number', async () => {
+    const wrong = [];
+    for (const template of TEMPLATES) {
+      const bytes = await render(cv(template, { pageNumbers: true }));
+      const [page] = await read(bytes);
+      const [f] = footers(page);
+      if (!f) { wrong.push(`${template}: no page number`); continue; }
+      const box = { x0: f.x, x1: f.x + f.w, y0: f.y - 1, y1: f.y + f.h };
+      for (const p of await painted(bytes)) {
+        if (p.paint !== 'fill' && p.paint !== 'stroke') continue;
+        if (p.x1 - p.x0 > page.W * 0.9 && p.y1 - p.y0 > page.H * 0.5) continue; // the page's own ground
+        const w = p.width || 0;
+        if (p.x0 - w < box.x1 && p.x1 + w > box.x0 && p.y0 - w < box.y1 && p.y1 + w > box.y0) {
+          wrong.push(`${template}: a ${p.paint} ${p.colour} at y ${p.y0.toFixed(1)}–${p.y1.toFixed(1)} crosses "${f.str.trim()}" (y ${box.y0.toFixed(1)}–${box.y1.toFixed(1)})`);
+        }
+      }
     }
     assert.deepEqual(wrong, []);
   });

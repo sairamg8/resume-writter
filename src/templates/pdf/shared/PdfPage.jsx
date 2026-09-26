@@ -76,6 +76,14 @@ export const bottomMarginMm = (settings) => {
 };
 
 /**
+ * How far above the paper's bottom edge a mark drawn in the bottom margin must sit to clear the page
+ * number's line, pt (the line is centred in bottomMarginMm) — null with Page numbers off.
+ */
+export const abovePageNumbersPt = (settings) => (settings?.pageNumbers === true
+  ? (bottomMarginMm(settings) * MM_TO_PT + PAGE_NUMBER_PT * 1.2) / 2 + 2
+  : null);
+
+/**
  * "Page 1 of 2" at the foot of every page when Design → Page numbers is on (R2-147): fixed, so
  * react-pdf repeats it on each page, and absolute, inside the bottom margin (bottomMarginMm) at the
  * right margin, so it takes no room from the content and moves no page break. Right-aligned, it
