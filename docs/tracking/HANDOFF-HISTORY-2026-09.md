@@ -207,8 +207,9 @@ Still open from Round 1, none blocking:
 
 Round 2 (the 22 open rows) is handed to a separate session by the owner (the prompt the owner was given names this
 branch, the CI-only rule, `claude/wf-<cluster>` branches and `wf-reports/<cluster>.json`). This coordinator merges
-each reported branch, sets the rows, gates on CI and fast-forwards `master`. A scoping workflow's cluster plan goes to
-`docs/tracking/ROUND2-PLAN.md` when it lands.
+each reported branch, sets the rows, gates on CI and fast-forwards `master`. A scoping workflow's cluster plan was to
+go to `docs/tracking/ROUND2-PLAN.md`; that file was never written (2026-09-26: no commit ever added it). Round 2's
+clusters are the table under "2026-09-25 — Round 2 relaunched: 10 cloud sessions" above.
 
 ### If this session was cut off
 
