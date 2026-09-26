@@ -6,9 +6,10 @@ import { TypePicker } from './IssueFields';
 /**
  * "+ Create issue" at the foot of a column or a backlog section: a button that opens a small
  * composer — the type and "What needs to be done?"; Enter creates and keeps it open for the next
- * one, Escape (or leaving it empty) closes it. `onCreate({ title, type })`.
+ * one, Escape (or leaving it empty) closes it. `onCreate({ title, type })`. `showType={false}`
+ * hides the type picker where the type is fixed (the Epic panel makes only epics).
  */
-export function InlineCreate({ onCreate, label = 'Create issue', className, variant = 'column' }) {
+export function InlineCreate({ onCreate, label = 'Create issue', className, variant = 'column', showType = true }) {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState('');
   const [type, setType] = useState('task');
@@ -60,7 +61,7 @@ export function InlineCreate({ onCreate, label = 'Create issue', className, vari
         className="min-w-0 flex-1 resize-none bg-transparent text-sm text-ink placeholder:text-ink-subtlest focus:outline-none"
       />
       <div className="flex items-center gap-2">
-        <div className="w-32"><TypePicker value={type} onChange={setType} allowEpic={false} /></div>
+        {showType && <div className="w-32"><TypePicker value={type} onChange={setType} allowEpic={false} /></div>}
         <button type="button" onClick={create} disabled={!text.trim()} className="ml-auto h-7 rounded bg-brand px-2.5 text-[13px] font-medium text-white transition-colors hover:bg-brand-hover disabled:opacity-50">
           Create
         </button>

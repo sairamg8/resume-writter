@@ -6,11 +6,11 @@
 // boardIssueOps.js and are re-exported, so this is the one import. `ctx.now` is the time in ms.
 // Pure: no React, no '@/' aliases (tests/unit/board-ops.unit.mjs imports it directly).
 import { newId } from './ids.js';
-import { ACTIVITY_CAP, CATEGORY_IDS, DEFAULT_SPRINT_DAYS, MODE_IDS } from '../constants/boards.js';
+import { ACTIVITY_CAP, CATEGORY_IDS, COLUMN_CATEGORIES, DEFAULT_SPRINT_DAYS, MODE_IDS } from '../constants/boards.js';
 import {
   addDays, cleanTitle, columnById, isDoneColumn, isLocalISO, issueById, keyError, sprintById, todayISO,
 } from './boardModel.js';
-import { setStatus } from './boardIssueOps.js';
+import { recategorized, setStatus } from './boardIssueOps.js';
 
 export {
   addIssue, deleteIssue, duplicateIssue, makeIssue, moveIssue, removedIssue, restoreIssue, setStatus, updateIssue,
@@ -19,6 +19,7 @@ export {
 const nowOf = (ctx) => ctx?.now ?? Date.now();
 const mapById = (list, id, fn) => list.map((x) => (x.id === id ? fn(x) : x));
 const text = (v, fallback = '') => (typeof v === 'string' ? v : fallback);
+const categoryName = (id) => COLUMN_CATEGORIES.find((c) => c.id === id)?.name ?? id;
 
 /** A WIP limit: a whole number ≥ 1 (digits typed in a field too), else none (null). */
 function wipOf(v) {
@@ -69,7 +70,8 @@ export function addColumn(board, { id = newId('col'), title, category, wipLimit 
 
 /**
  * Rename a column, set its WIP limit (null: none) or its category. A column that becomes done
- * resolves its issues (resolvedAt now); one that stops being done reopens them.
+ * resolves its issues (resolvedAt now, what repeats made again, as a move to Done); one that stops
+ * being done reopens them — a status change in each one's history either way (recategorized).
  */
 export function updateColumn(board, columnId, patch = {}, ctx = {}) {
   const column = columnById(board, columnId);
@@ -79,13 +81,10 @@ export function updateColumn(board, columnId, patch = {}, ctx = {}) {
   if ('wipLimit' in patch) next.wipLimit = wipOf(patch.wipLimit);
   if ('category' in patch && CATEGORY_IDS.includes(patch.category)) next.category = patch.category;
   if (Object.keys(next).every((k) => next[k] === column[k])) return board;
-  const now = nowOf(ctx);
-  const becameDone = isDoneColumn(next) && !isDoneColumn(column);
-  const reopened = !isDoneColumn(next) && isDoneColumn(column);
-  const issues = becameDone || reopened
-    ? board.issues.map((i) => (i.columnId === columnId ? { ...i, resolvedAt: becameDone ? now : null, updatedAt: now } : i))
-    : board.issues;
-  return { ...board, columns: mapById(board.columns, columnId, () => next), issues };
+  const updated = { ...board, columns: mapById(board.columns, columnId, () => next) };
+  if (isDoneColumn(next) === isDoneColumn(column)) return updated;
+  const names = { from: categoryName(column.category), to: categoryName(next.category) };
+  return recategorized(updated, columnId, isDoneColumn(next), names, ctx);
 }
 
 /**
@@ -185,11 +184,23 @@ export function deleteComment(board, issueId, commentId, ctx = {}) {
 
 const dateOr = (v, fallback) => (isLocalISO(v) ? v : fallback);
 
-/** Add a future sprint; unnamed, it is "<KEY> Sprint <n>". */
+/**
+ * The name of the next unnamed sprint: "<KEY> Sprint <n>", n one past the sprint count and past the
+ * highest n a sprint's name already has (R4-BRD-11: from the count alone, a sprint deleted made the
+ * next one repeat the last one's name).
+ */
+function nextSprintName(board) {
+  const key = String(board.key ?? '');
+  const pattern = new RegExp(`^${key.replace(/[^A-Za-z0-9]/g, '\\$&')} Sprint (\\d+)$`, 'i');
+  const numbers = board.sprints.map((s) => Number(pattern.exec(s.name)?.[1] ?? 0));
+  return `${key} Sprint ${Math.max(board.sprints.length, ...numbers) + 1}`;
+}
+
+/** Add a future sprint; unnamed, it is "<KEY> Sprint <n>" (nextSprintName). */
 export function addSprint(board, { id = newId('sprint'), name, goal, startDate, endDate } = {}) {
   const sprint = {
     id,
-    name: cleanTitle(name) || `${board.key} Sprint ${board.sprints.length + 1}`,
+    name: cleanTitle(name) || nextSprintName(board),
     goal: text(goal),
     startDate: dateOr(startDate, ''),
     endDate: dateOr(endDate, ''),

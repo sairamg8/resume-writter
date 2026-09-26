@@ -7,6 +7,7 @@ import { BoardStorageNotice } from '@/components/board/BoardStorageNotice';
 import { Button, EmptyState, isImeKey, useConfirmOptional, useToast } from '@/components/ui';
 import { BOARD_COLORS, BOARD_MODES, COLUMN_CATEGORIES, DEFAULT_HIDE_DONE_DAYS, LABEL_COLORS } from '@/constants/boards';
 import { cleanTitle } from '@/utils/boardModel';
+import { columnDeletion } from '@/utils/boardView';
 
 const FIELD = 'text-sm px-2 py-1.5 rounded-lg border border-line focus:outline-none focus:ring-2 focus:ring-brand';
 
@@ -76,8 +77,13 @@ function KeyField({ board, keyError, onSave }) {
 function ColumnRow({ board, column, index, store }) {
   const [deleting, setDeleting] = useState(false);
   const others = board.columns.filter((c) => c.id !== column.id);
-  const [target, setTarget] = useState(others[0]?.id ?? '');
-  const count = board.issues.filter((i) => i.columnId === column.id).length;
+  const { count, target: nearest } = columnDeletion(board, column.id);
+  const [picked, setPicked] = useState(null);
+  const [refused, setRefused] = useState(false);
+  // The column picked, while it still exists; else the one the board would pick (R4-BRD-01). Kept
+  // as a pick alone, a column deleted meanwhile stayed the target the select no longer showed,
+  // and "Delete column" did nothing (R4-BRD-12).
+  const target = others.some((c) => c.id === picked) ? picked : nearest?.id ?? '';
   const last = board.columns.length === 1;
   const confirm = useConfirmOptional();
 
@@ -108,12 +114,13 @@ function ColumnRow({ board, column, index, store }) {
         <div className="flex flex-wrap items-center gap-2 bg-red-50 border border-red-100 rounded-md p-2 text-xs text-ink-subtle">
           <label className="flex items-center gap-2">
             Its {count} issue{count === 1 ? '' : 's'} move to
-            <select aria-label="Move its issues to" value={target} onChange={(e) => setTarget(e.target.value)} className="text-xs px-2 py-1 rounded-lg border border-line">
+            <select aria-label="Move its issues to" value={target} onChange={(e) => { setPicked(e.target.value); setRefused(false); }} className="text-xs px-2 py-1 rounded-lg border border-line">
               {others.map((c) => <option key={c.id} value={c.id}>{c.title}</option>)}
             </select>
           </label>
-          <button onClick={() => { store.deleteColumn(board.id, column.id, target); setDeleting(false); }} className="px-3 py-1 font-semibold text-white bg-red-600 rounded-lg hover:bg-red-700">Delete column</button>
-          <button onClick={() => setDeleting(false)} className="px-3 py-1 font-semibold text-ink-subtle">Cancel</button>
+          <button onClick={() => { const done = store.deleteColumn(board.id, column.id, target); setRefused(!done); if (done) setDeleting(false); }} className="px-3 py-1 font-semibold text-white bg-red-600 rounded-lg hover:bg-red-700">Delete column</button>
+          <button onClick={() => { setDeleting(false); setRefused(false); }} className="px-3 py-1 font-semibold text-ink-subtle">Cancel</button>
+          {refused && <p role="alert" className="w-full text-red-600">The column could not be deleted. Pick where its issues go and try again.</p>}
         </div>
       )}
     </li>

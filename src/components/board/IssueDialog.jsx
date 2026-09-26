@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { CheckSquare, Copy, Link2, ListPlus, MoreHorizontal, Trash2, X } from 'lucide-react';
 import { useBoardStore } from '@/hooks/useBoardStore';
 import { Button, Dialog, IconButton, InlineEdit, Menu, useConfirmOptional, useToast } from '@/components/ui';
@@ -16,9 +16,23 @@ import { IssueActivity } from './IssueActivity';
 import { IssueDetails } from './IssueDetails';
 import { AddButton } from './IssueFields';
 
-/** The description: its rich text, click to edit — an editor with Save / Cancel. */
+/**
+ * The description: its rich text, click to edit — an editor with Save / Cancel. A draft left open
+ * is saved when the view goes (the dialog closes, another issue opens): every other field of the
+ * view saves as you go, and closing used to throw the typed text away without a word.
+ */
 function Description({ value, onSave }) {
   const [draft, setDraft] = useState(null);
+  // The draft and this issue's value and save, as last rendered, for the unmount below: it runs
+  // after the view has moved on, and must save into the issue the draft was typed in.
+  const latest = useRef({ draft, value, onSave });
+  useLayoutEffect(() => {
+    latest.current = { draft, value, onSave };
+  });
+  useEffect(() => () => {
+    const { draft: left, value: saved, onSave: save } = latest.current;
+    if (left !== null && left !== (saved || '')) save(left);
+  }, []);
   if (draft !== null) {
     return (
       <div className="flex flex-col gap-2">
@@ -78,20 +92,15 @@ function ChildIssues({ board, epic, onOpen, onAdd }) {
   );
 }
 
-/**
- * One issue, as the tracker opens it over the board: the project › epic › key trail, the summary
- * (click to rename), the description, the checklist, an epic's child issues and the Activity
- * (comments, history) on the left; the status, the Details box and the dates on the right.
- * Every change goes straight to the store. `onOpenIssue(key)` opens another (a child, the epic).
- */
-export function IssueDialog({ board, issueId, onClose, onOpenIssue }) {
+/** What the issue view shows of one issue (IssueDialog): its header and its two panes. */
+function IssueView({ board, issue, onClose, onOpenIssue }) {
   const store = useBoardStore();
   const workspace = useWorkspace();
   const confirm = useConfirmOptional();
   const { toast } = useToast();
   const [checklistOpen, setChecklistOpen] = useState(false);
-  const issue = board ? issueById(board, issueId) : null;
-  if (!board || !issue) return null;
+  const boardPath = `/boards/${encodeURIComponent(board.id)}`;
+  const onBoardPage = useLocation().pathname === boardPath;
 
   const key = issueKey(board, issue);
   const epic = issue.epicId ? issueById(board, issue.epicId) : null;
@@ -123,10 +132,22 @@ export function IssueDialog({ board, issueId, onClose, onOpenIssue }) {
   const statuses = board.columns.map((c) => ({ id: c.id, name: c.title || 'Untitled', category: c.category }));
 
   return (
-    <Dialog open onClose={onClose} aria-label={`${key} ${issue.title}`} size="wide" hideClose flush>
+    <>
       <div className="sticky top-0 z-10 flex items-center gap-2 border-b border-line bg-white px-4 py-2.5 sm:px-6">
         <nav aria-label="Issue" className="flex min-w-0 flex-1 items-center gap-1.5 text-sm text-ink-subtle">
-          <Link to={`/boards/${encodeURIComponent(board.id)}`} onClick={onClose} className="flex min-w-0 items-center gap-1.5 rounded px-1 hover:underline">
+          {/* On the board itself the project link only closes the view: closing steps back over
+              the entries opening pushed, and following the link as well would push the board on
+              top of the issue, which Back then opened again. From another page the link goes to
+              the board, and the view goes with the page it was open on. Only a plain left click:
+              a middle, Ctrl, ⌘ or Shift click still opens the board in a new tab or window. */}
+          <Link
+            to={boardPath}
+            onClick={(e) => {
+              if (!onBoardPage || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+              e.preventDefault();
+              onClose();
+            }}
+            className="flex min-w-0 items-center gap-1.5 rounded px-1 hover:underline">
             <span aria-hidden="true" className="size-4 shrink-0 rounded-[3px]" style={{ backgroundColor: board.color }} />
             <span className="truncate">{board.title}</span>
           </Link>
@@ -197,6 +218,26 @@ export function IssueDialog({ board, issueId, onClose, onOpenIssue }) {
           <IssueDetails board={board} issue={issue} onChange={update} onCreateLabel={(l) => store.addLabel(board.id, l)} />
         </aside>
       </div>
+    </>
+  );
+}
+
+/**
+ * One issue, as the tracker opens it over the board: the project › epic › key trail, the summary
+ * (click to rename), the description, the checklist, an epic's child issues and the Activity
+ * (comments, history) on the left; the status, the Details box and the dates on the right.
+ * Every change goes straight to the store. `onOpenIssue(key)` opens another (a child, the epic).
+ */
+export function IssueDialog({ board, issueId, onClose, onOpenIssue }) {
+  const issue = board ? issueById(board, issueId) : null;
+  if (!board || !issue) return null;
+  return (
+    <Dialog open onClose={onClose} aria-label={`${issueKey(board, issue)} ${issue.title}`} size="wide" hideClose flush>
+      {/* Keyed by the issue: opening another (a child, the epic) starts from that issue's own view.
+          Unkeyed, a half-typed description, an open comment box, the checklist's new row and the
+          Activity tab stayed on screen for the next issue, and Save wrote the draft into it. The
+          dialog itself stays, so it does not animate out and in again. */}
+      <IssueView key={issue.id} board={board} issue={issue} onClose={onClose} onOpenIssue={onOpenIssue} />
     </Dialog>
   );
 }
