@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Check } from 'lucide-react';
-import { useBoardStore } from '@/hooks/useBoardStore';
+import { boardsNow, useBoardStore } from '@/hooks/useBoardStore';
 import { Button, DatePill, EmptyState, IconButton, TabPanel, Tabs, useToast } from '@/components/ui';
 import { PageHeader } from '@/components/shell';
 import { BoardStorageNotice } from '@/components/board/BoardStorageNotice';
@@ -64,17 +64,23 @@ export function YourWork() {
   const recentProjects = [...store.boards].sort((a, b) => Number(b.starred) - Number(a.starred) || (b.updatedAt ?? 0) - (a.updatedAt ?? 0)).slice(0, 4);
   // The row drops out of the list at once, so the toast is the only word of where it went — and
   // its Undo puts the issue back in the column it came from, at its old place in the rank (before
-  // the issue that followed it). The move keeps the sprint, so there is none to restore.
+  // the issue that followed it). The move keeps the sprint, so there is none to restore. A repeating
+  // issue's next occurrence, made as it was resolved, goes too while nobody has touched it — else
+  // Undo would leave two; with it gone, marking the issue done again makes the next one afresh.
   function markDone({ board, issue, key }) {
     const column = board.columns.find((c) => c.category === 'done');
     if (!column) return;
     const { issues } = store.boards.find((b) => b.id === board.id) ?? board; // with its epics: the whole rank
     const beforeId = issues[issues.findIndex((i) => i.id === issue.id) + 1]?.id ?? null;
     store.moveIssue(board.id, issue.id, { columnId: column.id });
-    toast({
-      title: `${key} marked done`,
-      action: { label: 'Undo', onClick: () => store.moveIssue(board.id, issue.id, { columnId: issue.columnId, beforeId }) },
-    });
+    const moved = boardsNow().find((b) => b.id === board.id)?.issues.find((i) => i.id === issue.id);
+    const spawnedId = moved?.recurrenceNextId && moved.recurrenceNextId !== issue.recurrenceNextId ? moved.recurrenceNextId : null;
+    function undo() {
+      store.moveIssue(board.id, issue.id, { columnId: issue.columnId, beforeId });
+      const spawned = spawnedId && boardsNow().find((b) => b.id === board.id)?.issues.find((i) => i.id === spawnedId);
+      if (spawned && spawned.updatedAt === spawned.createdAt) store.deleteIssue(board.id, spawnedId);
+    }
+    toast({ title: `${key} marked done`, action: { label: 'Undo', onClick: undo } });
   }
   const row = (r, extra = {}) => <WorkRow key={`${r.board.id}-${r.issue.id}`} row={r} onOpen={() => route.open(r.key)} onDone={() => markDone(r)} {...extra} />;
 
