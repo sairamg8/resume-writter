@@ -38,8 +38,9 @@ function region(snap, state, type, layout) {
   const inCol = (t) => t.x >= left && t.x < right;
   const top = flow(snap, own);
   const below = headings(snap, state).map((h) => h.run).filter((r) => r !== own && inCol(r) && flow(snap, r) > top);
-  const end = below.length ? Math.min(...below.map((r) => flow(snap, r))) : Infinity;
-  return { head: own, end, inCol, runs: all(snap).filter((t) => inCol(t) && flow(snap, t) > top && flow(snap, t) < end) };
+  const next = below.reduce((a, r) => (!a || flow(snap, r) < flow(snap, a) ? r : a), null);
+  const end = next ? flow(snap, next) : Infinity;
+  return { head: own, end, next, inCol, runs: all(snap).filter((t) => inCol(t) && flow(snap, t) > top && flow(snap, t) < end) };
 }
 const HEADING_INDENT = 12;
 const find = (reg, s) => reg.runs.find((t) => norm(t.str).includes(norm(s))) || null;
@@ -71,7 +72,9 @@ function along(key, order, measure, what) {
 /**
  * An override in px moves what it spaces by at least the change in pt (a page break only adds). A
  * measure may say which way it measured ({ axis, d }): two values measured along different axes are an
- * entry the larger gap pushed onto a line of its own — moved, so not compared.
+ * entry the larger gap pushed onto a line of its own — moved, so not compared. { axis: 'page', d } is a
+ * space the page's foot took (the next title starts page d): two of those are compared by page only — a
+ * larger value never moves the next title back a page.
  */
 function override(key, measure, scale = () => 1) {
   return ({ runs, control, before, variant }) => {
@@ -85,7 +88,9 @@ function override(key, measure, scale = () => 1) {
       const want = (pts[i][0] - pts[i - 1][0]) * 0.75 * k;
       if (pts[i][1] == null || pts[i - 1][1] == null) out.push('not found');
       else if (pts[i][2] !== pts[i - 1][2]) continue;
-      else if (pts[i][1] - pts[i - 1][1] < want - 0.5) out.push(`${pts[i - 1][0]} → ${pts[i][0]} px moves it ${(pts[i][1] - pts[i - 1][1]).toFixed(2)} pt, not ${want.toFixed(2)}`);
+      else if (pts[i][2] === 'page') {
+        if (pts[i][1] < pts[i - 1][1]) out.push(`${pts[i - 1][0]} → ${pts[i][0]} px moves the next title back from page ${pts[i - 1][1]} to page ${pts[i][1]}`);
+      } else if (pts[i][1] - pts[i - 1][1] < want - 0.5) out.push(`${pts[i - 1][0]} → ${pts[i][0]} px moves it ${(pts[i][1] - pts[i - 1][1]).toFixed(2)} pt, not ${want.toFixed(2)}`);
     }
     return out;
   };
@@ -109,8 +114,17 @@ const gapAbove = (reg, snap) => {
   const above = all(snap).filter((t) => reg.inCol(t) && flow(snap, t) < top - 0.5 && t.page === reg.head.page);
   return above.length ? top - Math.max(...above.map((t) => flow(snap, t))) : null;
 };
-/** Space after: from the section's last line to the next heading of its column. */
-const gapBelow = (reg, snap) => (reg.runs.length && Number.isFinite(reg.end) ? reg.end - Math.max(...reg.runs.map((t) => flow(snap, t))) : null);
+/**
+ * Space after: from the section's last line to the next heading of its column — or, when that heading
+ * starts a later page than the section's last line, { axis: 'page', d: its page }: the page's foot took the
+ * space (a margin ends at a page break, in react-pdf and in Word), so there is no gap on the paper to measure.
+ */
+const gapBelow = (reg, snap) => {
+  if (!reg.runs.length || !Number.isFinite(reg.end)) return null;
+  const last = reg.runs.reduce((a, t) => (flow(snap, t) > flow(snap, a) ? t : a));
+  if (reg.next && reg.next.page > last.page) return { axis: 'page', d: reg.next.page };
+  return reg.end - flow(snap, last);
+};
 
 /**
  * The Sidebar column's interest chips sit 2.5 pt apart at the default 6 pt item gap and follow a changed
