@@ -7,7 +7,7 @@
 // crash does (a reload loop helps nobody, and offline a reload loses the page). Relative imports
 // only, so Node's test runner loads this file as it is.
 
-/** The session key that marks "reloaded once for a page's code". */
+/** The session key that marks "reloaded once for a page's code": its value names the page. */
 export const RELOADED_KEY = 'cpwtcv_chunk_reload';
 
 const browser = () => ({
@@ -24,13 +24,19 @@ const browser = () => ({
  */
 export function loadPage(load, name, env = browser()) {
   return load().then((m) => {
-    try { env.storage?.removeItem(RELOADED_KEY); } catch { /* no storage: nothing to clear */ }
+    // Only the page that reloaded clears its mark ('1': the mark of a build before names were kept).
+    // A workspace page loads after its shell (WorkspaceRoute, a lazy layout route): cleared by the
+    // shell, a page whose file failed on every load reloaded the tab for good (R4-APP-05).
+    try {
+      const mark = env.storage?.getItem(RELOADED_KEY);
+      if (mark === name || mark === '1') env.storage.removeItem(RELOADED_KEY);
+    } catch { /* no storage: nothing to clear */ }
     return { default: m[name] };
   }, (error) => {
     let first = false;
     try {
       first = !env.storage.getItem(RELOADED_KEY);
-      if (first) env.storage.setItem(RELOADED_KEY, '1');
+      if (first) env.storage.setItem(RELOADED_KEY, name);
     } catch {
       first = false; // no storage: a reload could not tell it had happened, and might loop
     }
