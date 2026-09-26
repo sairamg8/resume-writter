@@ -31,12 +31,17 @@ Status legend: 🔴 open · ⏸ fixed on the work branch, not yet on master (not
 
 | Area | ✅ on master | ⏸ not deployed | 🔴 open |
 |---|---|---|---|
-| Boards (31) | 3 | 0 | 28 |
-| Jobs (41) | 19 | 0 | 22 |
-| **Total (72)** | **22** | **0** | **50** |
+| Boards (31) | 7 | 0 | 24 |
+| Jobs (41) | 25 | 0 | 16 |
+| **Total (72)** | **32** | **0** | **40** |
 
-The 22 ✅ are Lane C's own fixes, each row naming its commit: B-01, B-02, B-15, J-01 … J-04, J-08 … J-10, J-16 … J-21,
-J-23, J-24, J-26 … J-29.
+- 22 are Lane C's own fixes, each row naming its commit: B-01, B-02, B-15, J-01 … J-04, J-08 … J-10, J-16 … J-21,
+  J-23, J-24, J-26 … J-29.
+- 10 were fixed under their Round 2 twins (the table below): B-03 (R2-037), B-04 (R2-140), B-06 and B-07 (R2-039),
+  J-05 (R2-039), J-06 (R2-038), J-07 (R2-145), J-22 (R2-099), J-40 (R2-073), J-41 (R2-156).
+
+**Left open inside ✅ rows (accessibility, deferred by the owner 2026-09-25):** B-07 — a card or column cannot be
+dragged from the keyboard (no KeyboardSensor); J-05 — cards and rows are not links, and there is no keyboard drag.
 
 ## Links to the master tracker (`bug-status-r2/`)
 

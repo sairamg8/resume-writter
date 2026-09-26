@@ -29,7 +29,7 @@ title: Boards — verified bugs, High and Medium (B-01…B-13)
 - **Now:** readList repairs a missing, null or non-list `cards` to `[]` (a loss only when it held something that is not a list), and completeLists defaults it for any other caller. The v2 reader keeps this for v1 data (the migration reads v1 lists through it). Fail-first: the row's own assertion was `false` at HEAD (`# fail 1`), passes now.
 - **Owner:** BOARDS-MODEL · **Fix commit:** `a9eacee` (`fix(boards): a list with no cards reads as an empty list (B-02)`) · **Test:** tests/unit/normalize-board.unit.mjs · **On master:** Lane C's merge `de0911f` (an ancestor of master `e6b1a4a`, deployed)
 
-### B-03 · Medium · data-loss · 🔴 Open · links **R2-037**
+### B-03 · Medium · data-loss · ✅ Fixed · links **R2-037**
 **The board page never shows the storage-full alert or the recovery notice, so edits made there are lost on reload without warning**
 - **Where:** `src/pages/Board.jsx` : 74 (store read; compare src/pages/Boards.jsx:40-51)
 - **Repro:** 1) Fill localStorage close to its quota (for example with a large résumé photo). 2) Open /#/boards/demo_board_1 and add several cards. No alert appears. 3) Reload: the cards are gone. 4) Go to /#/boards: the 'Changes aren't being saved' alert appears only there.
@@ -37,9 +37,10 @@ title: Boards — verified bugs, High and Medium (B-01…B-13)
 - **Fix hint:** Move the alert and RecoveryNotice block (Boards.jsx:40-51) into a shared BoardStorageBanner and render it under the Board header too. Add NOT_SAVED_MESSAGES.boards in storageBackup.js.
 - **Verified (WF-1):** Code read: Board.jsx uses only store.boards and the store actions. grep for persistError\|persistReason\|recovery in Board.jsx and src/components/board/* finds nothing. Only Boards.jsx:40-51 renders them. setBoards (useBoardStore.js:127-133) keeps the edit in memory and records persistError when setItemWithRoom throws, so the page looks saved.
 - **Fail-first test:** SSR test through tests/pdf/harness.mjs loadModule plus react-dom/server: use a fake localStorage whose setItem throws a QuotaExceededError, render Board under MemoryRouter at /boards/demo_board_1, and assert the markup contains role="alert" and 'being saved'. Fails today.
-- **Owner:** BOARDS-UI-A · **Fix commit:** — · **Test:** —
+- **Now:** Fixed under its twin **R2-037**: both board pages show the same not-saved alert (role=alert, `NOT_SAVED_MESSAGES.boards`) and the RecoveryNotice through one `BoardStorageNotice` (src/components/board/BoardStorageNotice.jsx), so an edit that storage refuses on the board page says so there.
+- **Owner:** BOARDS-UI-A · **Fix commit:** under **R2-037** — `b181e7c` (on master `e6b1a4a`, deployed) · **Test:** tests/pdf/82-board-pages.test.mjs
 
-### B-04 · Medium · data-loss · 🔴 Open · links **R2-140**
+### B-04 · Medium · data-loss · ✅ Fixed · links **R2-140**
 **Boards exist only in this browser's localStorage (no sync, no export), but the Privacy page says all content syncs and is restored after clearing storage**
 - **Where:** `src/hooks/useBoardStore.js` : 16, 39-46 (src/pages/PrivacyPage.jsx:50, 61)
 - **Repro:** 1) Sign in with Google. 2) Create a board with cards. 3) Clear site data (or open the app on another device) and sign in again. 4) The résumés come back and the board does not.
@@ -47,7 +48,8 @@ title: Boards — verified bugs, High and Medium (B-01…B-13)
 - **Fix hint:** Until Phase 3 (per-board last-write-wins sync) ships, correct PrivacyPage.jsx:50/61 and add 'Export boards (JSON)' and 'Import' on /boards, routing imports through readBoard/completeBoard/addressableBoards.
 - **Verified (WF-1):** Code read: persist writes only cpwtcv_boards_v1 (L16, L39-46). No sync module imports the board store (grep: only Boards.jsx and Board.jsx do). Boards.jsx has no export or import control. PrivacyPage.jsx:50 says 'all content you enter into CPWT-CV, synced to Firebase Firestore', and :61 says 'To restore your data if you clear your browser's local storage.' (the finder cited :60; it is :61). Not run, because it needs a Google sign-in. R2-145 is the Low duplicate for jobs and boards together.
 - **Fail-first test:** tests/unit/board-transfer.unit.mjs for a new exportBoards/importBoards pair: export → JSON → import round-trips every board, list, card and checklist item with lost=false. Also an SSR render of Boards asserting an 'Export boards' control. Fails today (the functions do not exist).
-- **Owner:** BOARDS-MODEL (export/import fns) + BOARDS-UI-B (UI + PrivacyPage.jsx) · **Fix commit:** — · **Test:** —
+- **Now:** Fixed under its twin **R2-140**: signed in, the boards sync with the account (one document per board, per-board last-writer-wins, on the same engine as the jobs), so clearing site data or another device brings them back; the Privacy page names résumés, jobs and boards as what syncs (src/pages/PrivacyPage.jsx:47-61). R2-140's own 'Left for later' (an offline reorder yields to the cloud's order; no sync icon for boards) stays with that row.
+- **Owner:** BOARDS-MODEL (export/import fns) + BOARDS-UI-B (UI + PrivacyPage.jsx) · **Fix commit:** under **R2-140** — `e96514b`, `8cd4901` (on master `e6b1a4a`, deployed) · **Test:** tests/unit/board-sync.unit.mjs, tests/pdf/95-sync-privacy-notices.test.mjs
 
 ### B-05 · Medium · bug · 🔴 Open · model half ✅
 **A card dragged to another list can never land at the bottom of a list with 2 or more cards: it is inserted above the last card, and no placeholder shows during the drag**
@@ -60,7 +62,7 @@ title: Boards — verified bugs, High and Medium (B-01…B-13)
 - **Now:** Model half (BOARDS-MODEL): `moveIssue(board, issueId, { columnId, sprintId, beforeId })` splices the issue into the global rank — before `beforeId`, or after the last issue of the target column/sprint when it is null — and `beforeIdAt(visibleIds, index, activeId)` turns a drop index (dnd-kit's arrayMove index, or the hovered index in another column) into that beforeId, null at or past the end. Tests drop a card at every index of a 2-card column, the bottom included, and reorder within a column to the bottom. The drop side (collision detection, the onDragOver gap, calling moveIssue with beforeIdAt) is BOARDS-UI-A's; the row stays 🔴 until it lands. Fail-first: at HEAD neither function existed (both test files failed to import). Honest note: the v1 store's `moveCard(toIndex null)` did append; the defect is the drop handler's target index.
 - **Owner:** BOARDS-MODEL (moveIssue maths) + BOARDS-UI-A (drop handling) · **Fix commit:** model half: `4734406` (`feat(boards): the v2 model, its mutations and its queries, pure and tested`, on master through `de0911f`); drop side: — (BOARDS-UI-A) · **Test:** tests/unit/board-ops.unit.mjs, tests/unit/board-query.unit.mjs (model half)
 
-### B-06 · Medium · a11y · 🔴 Open · links **R2-039**
+### B-06 · Medium · a11y · ✅ Fixed · links **R2-039**
 **Keyboard users cannot open a board card: the focusable role=button card ignores Enter and Space (the 'open' part of R2-039)**
 - **Where:** `src/components/board/BoardCard.jsx` : 59-66 (src/pages/Board.jsx:85-88)
 - **Repro:** 1) Open /#/boards/demo_board_1. 2) Press Tab until the 'Draft landing copy' card is focused. 3) Press Enter, then Space. Nothing opens.
@@ -68,9 +70,10 @@ title: Boards — verified bugs, High and Medium (B-01…B-13)
 - **Fix hint:** Add onKeyDown to SortableCard so Enter opens the sheet (and Space too, if no KeyboardSensor is added), or render the title as a real <button> inside the card.
 - **Verified (WF-1):** Code read: BoardCard.jsx:62-63 spreads dnd-kit attributes. core.esm.js:3406-3439 gives role 'button', tabIndex 0, aria-roledescription 'draggable' and aria-describedby, which points at the default 'To pick up a draggable item, press the space bar…' text (core.esm.js:41). The listeners come only from MouseSensor and TouchSensor (Board.jsx:85-88). The only open path is onClick on a <div> (L64), which Enter and Space do not fire.
 - **Fail-first test:** Playwright spec tests/playwright/boards-keyboard.spec.mjs: goto /#/boards/demo_board_1, focus the 'Draft landing copy' card, press Enter, and expect the card sheet (a dialog titled with the card) to be visible. Fails today.
-- **Owner:** BOARDS-UI-A · **Fix commit:** — · **Test:** —
+- **Now:** Fixed under its twin **R2-039**: Enter or Space on a focused board card opens it (src/components/board/IssueCard.jsx:120, `openOnKey`; keys on a link or button inside are left to them), and the board's DndContext announces its own instructions instead of dnd-kit's false space-bar ones (src/pages/Board.jsx:222).
+- **Owner:** BOARDS-UI-A · **Fix commit:** under **R2-039** — `addbb40`, `79afdf1` (on master `e6b1a4a`, deployed) · **Test:** tests/pdf/81-job-tracker-ui.test.mjs
 
-### B-07 · Medium · a11y · 🔴 Open · links **R2-039**
+### B-07 · Medium · a11y · ✅ Fixed (keyboard drag left open: accessibility, deferred) · links **R2-039**
 **Cards and lists can be moved only by a pointer drag: there is no KeyboardSensor and no Move/Status control, and the announced space-bar instructions do nothing (the 'move' part of R2-039)**
 - **Where:** `src/pages/Board.jsx` : 85-88, 204 (src/components/board/BoardColumn.jsx:41-49; src/components/board/CardDetailSheet.jsx:32)
 - **Repro:** 1) Using only the keyboard, open the demo board. 2) Focus 'Draft landing copy' and press Space, then the arrow keys: nothing moves. 3) Open the card with the mouse: the sheet says 'in To do' as plain text and offers no way to change it. 4) Tab to a list's 'Drag to reorder list' grip and press Space, then the arrows: nothing happens.
@@ -78,7 +81,8 @@ title: Boards — verified bugs, High and Medium (B-01…B-13)
 - **Fix hint:** Add useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }) and DndContext accessibility.announcements that use card and list titles. Add a Status select in CardDetailSheet that calls store.moveCard(board.id, {cardId, toListId, toIndex: null}), and a column menu with Move left and Move right.
 - **Verified (WF-1):** Code read: useSensors (Board.jsx:85-88) registers only MouseSensor and TouchSensor. The grip <button> (BoardColumn.jsx:41-49) gets attributes and listeners but no onClick or onKeyDown. CardDetailSheet.jsx:32 prints 'in {listTitle}' as text. grep shows no caller of store.moveCard or store.moveList other than onDragEnd. dnd-kit's default screen-reader text (core.esm.js:41) promises space-bar pickup.
 - **Fail-first test:** Playwright: focus 'Draft landing copy', press Space, ArrowRight, Space, and expect the card under 'In progress'. Also open the sheet, pick 'In progress' in the Status select, and expect the card to move. Fails today.
-- **Owner:** BOARDS-UI-A · **Fix commit:** — · **Test:** —
+- **Now:** Fixed under its twin **R2-039**, apart from keyboard dragging: the announced instructions are the board's own and no longer promise a space-bar pickup (src/pages/Board.jsx:222); an issue's status (its column) is changed from the issue view's status menu (src/components/board/IssueDialog.jsx:191, `StatusMenu`); and a column moves with its ⋯ menu's Move left / Move right (src/components/board/BoardColumn.jsx:70-71) or Project settings' Move up / down (src/pages/BoardSettings.jsx:101-102). **Left open (accessibility, deferred by the owner 2026-09-25):** no KeyboardSensor — a card or column cannot be dragged from the keyboard (R2-039's own 'Left for later').
+- **Owner:** BOARDS-UI-A · **Fix commit:** under **R2-039** — `addbb40`, `79afdf1` (on master `e6b1a4a`, deployed) · **Test:** tests/pdf/81-job-tracker-ui.test.mjs
 
 ### B-08 · Medium · a11y · 🔴 Open
 **Board tiles on /boards are click-only divs, so no keyboard user can open a board, and tiles are not links (no middle-click or open in new tab)**

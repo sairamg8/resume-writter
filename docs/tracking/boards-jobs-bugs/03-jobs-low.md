@@ -73,7 +73,7 @@ title: Job Tracker — verified bugs, Low (J-16…J-41)
 - **Now:** `linkedResume(job, resumes)` tells 'linked', 'none' and 'deleted' apart. Overview and the job form show a 'Résumé deleted' option for a dangling id (the form's patch save no longer writes the id back unless it is changed), and the Open-résumé button appears only for a résumé that exists. Fail-first: the J-21 component test (tests/pdf/68-job-overview.test.mjs) found no 'Résumé deleted' option at HEAD; it and the pure test pass now.
 - **Owner:** JOBS-FIX · **Fix commit:** `9e6102d` (`fix(jobs): the job page's history, résumé link, closed-job rule, tasks and demo job tell the truth (J-20, J-21, J-24, J-26, J-27, J-29)`) · **Test:** tests/pdf/68-job-overview.test.mjs, tests/unit/job-query.unit.mjs · **On master:** Lane C's merge `de0911f` (an ancestor of master `e6b1a4a`, deployed)
 
-### J-22 · Low · bug · 🔴 Open · links **R2-099**
+### J-22 · Low · bug · ✅ Fixed · links **R2-099**
 **Clicking a kanban card's 'Open job posting' icon also navigates the tracker to the job page**
 - **Where:** `src/components/job/KanbanView.jsx` : 23-35, 105
 - **Repro:** 1. On the /jobs kanban, hover a card that has a URL. 2. Click the small external-link icon: the posting opens in a new tab, and the current tab also jumps to /jobs/:id.
@@ -81,7 +81,8 @@ title: Job Tracker — verified bugs, Low (J-16…J-41)
 - **Fix hint:** Add onClick={e => e.stopPropagation()} to the anchor, as ListView.jsx:73 already does, or fix it structurally as in J-05.
 - **Verified (WF-1):** Read the code. The anchor stops only onPointerDown (28). Its click bubbles to DraggableCard's onClick={() => !isDragging && onNavigate(job.id)} (105), and isDragging is false for a plain click.
 - **Fail-first test:** Cypress: remove the anchor's target attribute, click the kanban posting icon, and assert the hash stays '#/jobs'.
-- **Owner:** JOBS-UI · **Fix commit:** — · **Test:** —
+- **Now:** Fixed under its twin **R2-099**: the kanban card's 'Open job posting' icon stops its click from reaching the card (src/components/job/KanbanView.jsx:45), so it opens the posting only, and it starts no drag.
+- **Owner:** JOBS-UI · **Fix commit:** under **R2-099** — `addbb40`, `79afdf1` (on master `e6b1a4a`, deployed) · **Test:** tests/pdf/81-job-tracker-ui.test.mjs
 
 ### J-23 · Low · bug · ✅ Fixed · links **R2-117**
 **Job Tracker import shows no message when the browser cannot read the file**
@@ -259,7 +260,7 @@ title: Job Tracker — verified bugs, Low (J-16…J-41)
 - **Fail-first test:** Cypress at 375px with a corrupt job list: the alert's scrollWidth <= clientWidth.
 - **Owner:** JOBS-UI · **Fix commit:** — · **Test:** —
 
-### J-40 · Low · bug · 🔴 Open · links **R2-073**
+### J-40 · Low · bug · ✅ Fixed · links **R2-073**
 **The scroll position is not reset on route change: a job page opens at the scroll offset of the list the user came from**
 - **Where:** `src/main.jsx` : 9
 - **Repro:** 1. With about 30 jobs, switch to List view and scroll to the bottom. 2. Click a row: the job page opens scrolled down, with the content partly off-screen.
@@ -267,9 +268,10 @@ title: Job Tracker — verified bugs, Low (J-16…J-41)
 - **Fix hint:** Add a ScrollToTop effect on location.pathname in the app routes, or move to a data router with <ScrollRestoration/>.
 - **Verified (WF-1):** Read the code. HashRouter at main.jsx:9, and a grep for ScrollRestoration or scrollTo( in src finds nothing.
 - **Fail-first test:** Cypress: scroll /jobs to the bottom, click a row, and assert window.scrollY === 0.
-- **Owner:** KIT (scroll reset in WorkspaceLayout) · **Fix commit:** — · **Test:** —
+- **Now:** Fixed under its twin **R2-073**: a new path opens at the top of the window (`RouteFrame`, src/AppRoutes.jsx:48-57), and the job and board pages, which scroll the workspace shell's `<main>`, open each new page at its top while Back and Forward return to where that visit was (`useScrollMemory`, src/components/shell/useScrollMemory.js, from the Lane C shell).
+- **Owner:** KIT (scroll reset in WorkspaceLayout) · **Fix commit:** under **R2-073** — `ab44531`, `b8c4a38` (on master `e6b1a4a`, deployed) · **Test:** tests/pdf/89-app-routes.test.mjs, tests/unit/ui-shell.unit.mjs
 
-### J-41 · Low · bug · 🔴 Open · links **R2-156**
+### J-41 · Low · bug · ✅ Fixed · links **R2-156**
 **The job tracker's Cypress specs are stale, two tests fail against the current markup, and the tracker UI has no component tests**
 - **Where:** `cypress/e2e/06-job-tracker.cy.js` : 58, 104 (and cypress/e2e/21-a11y.cy.js:98; src/pages/JobTracker.jsx:105-139, 146)
 - **Repro:** Run npx cypress run --spec cypress/e2e/06-job-tracker.cy.js: 'list view shows the same applications' fails because .click() matches 2 elements, and 'Export downloads the jobs as JSON' fails because there is no button labelled exactly 'Export'.
@@ -277,4 +279,5 @@ title: Job Tracker — verified bugs, Low (J-16…J-41)
 - **Fix hint:** Render a single view toggle, repositioned with responsive classes instead of duplicated, and update the Export selector to 'Export JSON'. Add tests for Pipeline transitions, TasksTab add/toggle/rename and ListView sorting.
 - **Verified (WF-1):** Read the code. JobTracker.jsx renders two buttons with title="List view" (113-118, 132-137), so cy.get('button[title="List view"]').click() at 06-job-tracker.cy.js:58 and 21-a11y.cy.js:98 gets two elements, and Cypress throws without {multiple:true}. 06-job-tracker.cy.js:104 looks for /^\s*Export\s*$/, but the button reads 'Export JSON' (JobTracker.jsx:146). Not run, because this is a read-only phase with no servers.
 - **Fail-first test:** Fix the selectors and run 06-job-tracker.cy.js in the gate. Add node tests for the extracted helpers from J-18, J-20 and J-27.
-- **Owner:** JOBS-UI · **Fix commit:** — · **Test:** —
+- **Now:** Fixed under its twin **R2-156**: the kanban, the list (open button, sorting), the status history, the Tasks tab and the job page's tabs are tested on the real components over fake-dom. The two stale Cypress selectors match the page now: the view toggle is clicked as `button[title="List view"]:visible` (cypress/e2e/06-job-tracker.cy.js:58, cypress/e2e/21-a11y.cy.js:98) and Export as 'Export JSON' (06-job-tracker.cy.js:116). R2-156's 'Left for later' (Pipeline, InterviewStageSelector, TodoItem and the tracker's filters have no fake-dom test of their own) stays with that row.
+- **Owner:** JOBS-UI · **Fix commit:** under **R2-156** — `addbb40`, `79afdf1` (on master `e6b1a4a`, deployed) · **Test:** tests/pdf/81-job-tracker-ui.test.mjs

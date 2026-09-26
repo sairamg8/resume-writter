@@ -51,7 +51,7 @@ title: Job Tracker — verified bugs, High and Medium (J-01…J-15)
 - **Now:** `importJobs` merges through `mergeImport` (src/utils/jobImport.js): an incoming id that is free is kept; the same job already here is skipped; a newer copy (`updatedAt`) replaces it in place; an older copy is skipped (a backup never overwrites a later edit); a different job with no time to compare is added as a copy with a new id (nothing dropped). It returns `{ added, updated, skipped, lossy }` and the tracker shows `importMessage` — e.g. 'Nothing new: the 3 job applications in that file are already in the tracker.' — in a role=status notice (errors stay role=alert). Fail-first: the two J-04 store tests failed at HEAD (the list doubled), the pure ones could not load; all pass now.
 - **Owner:** JOBS-FIX · **Fix commit:** `e9c48c3` (`fix(jobs): re-importing a backup never duplicates jobs, an import reports its counts, a read error says so (J-04, J-23)`) · **Test:** tests/unit/job-store-edits.unit.mjs, tests/unit/job-import.unit.mjs · **On master:** Lane C's merge `de0911f` (an ancestor of master `e6b1a4a`, deployed)
 
-### J-05 · Medium · a11y · 🔴 Open · links **R2-039**
+### J-05 · Medium · a11y · ✅ Fixed · links **R2-039**
 **The tracker is mouse-only: focusable role=button cards ignore Enter and Space, and list rows and sort headers cannot be reached by keyboard**
 - **Where:** `src/components/job/KanbanView.jsx` : 98-111, 142 (and src/components/job/ListView.jsx:42-49, 60-64)
 - **Repro:** 1. On /jobs press Tab until a kanban card is focused. The screen reader announces 'draggable' and the press-space-to-pick-up instructions. 2. Press Enter, then Space: nothing happens. 3. Switch to List view and press Tab: the rows and sort headers are skipped, so there is no way to open a job or sort from the keyboard. 4. Middle-click or Ctrl-click a card or row: no new tab opens, because neither is a link.
@@ -59,9 +59,10 @@ title: Job Tracker — verified bugs, High and Medium (J-01…J-15)
 - **Fix hint:** Render the company/role as <Link to=/jobs/:id> with a stretched ::after, and move the drag listeners to a separate handle button. Add KeyboardSensor with announcements that use job.company and column labels. In ListView, make the company cell a Link and wrap each header label in a <button> inside <th aria-sort>.
 - **Verified (WF-1):** Read the code. useDraggable's attributes set role=button, tabIndex=0 and aria-roledescription 'draggable' (node_modules/@dnd-kit/core/dist/core.esm.js:3406-3437). The listeners contain only PointerSensor's onPointerDown, because it is the only sensor registered (142). A div's onClick (105) does not fire on Enter or Space. ListView uses <tr onClick> with no tabIndex or link (60-64) and <th onClick> with no button or aria-sort (42-49). dnd-kit's default announcement is 'Picked up draggable item ' + active.id.
 - **Fail-first test:** Cypress: on /jobs, Tab to the first card and press Enter: the URL becomes #/jobs/demo_1. In List view, Tab reaches a row link and a sort button whose <th> has aria-sort.
-- **Owner:** JOBS-UI · **Fix commit:** — · **Test:** —
+- **Now:** Fixed under its twin **R2-039**: Enter or Space on a focused kanban card opens the job (src/components/job/KanbanView.jsx:117), each list row's company is a button Tab reaches, the list's sort headers carry aria-sort (src/components/job/ListView.jsx:51), and the kanban's DndContext announces its own instructions (KanbanView.jsx:175). Not done (accessibility, deferred): cards and rows are not links (no middle-click to a new tab), and there is no keyboard drag — a job's status changes on its own page.
+- **Owner:** JOBS-UI · **Fix commit:** under **R2-039** — `addbb40`, `79afdf1` (on master `e6b1a4a`, deployed) · **Test:** tests/pdf/81-job-tracker-ui.test.mjs
 
-### J-06 · Medium · mobile · 🔴 Open · links **R2-038**
+### J-06 · Medium · mobile · ✅ Fixed · links **R2-038**
 **Job kanban drag-and-drop does not work on touch screens, and the board offers no other way to change status**
 - **Where:** `src/components/job/KanbanView.jsx` : 101-107, 142, 166
 - **Repro:** 1. On a phone, open /#/jobs (Kanban). 2. Press a card and drag it to the next column: the board scrolls sideways or nothing happens, and the status does not change.
@@ -69,9 +70,10 @@ title: Job Tracker — verified bugs, High and Medium (J-01…J-15)
 - **Fix hint:** Add TouchSensor (delay 200, tolerance 5-6) alongside MouseSensor, or put touch-none on a dedicated drag handle so the card body still scrolls. Add a per-card 'Move to…' menu.
 - **Verified (WF-1):** Read the code. PointerSensor is the only sensor (142). The draggable div (101-107) has no touch-none class, and index.css has no touch-action rule (grep). The card sits in an overflow-x-auto container (166). dnd-kit's PointerSensor does not block touchmove, so with touch-action:auto the browser takes the gesture as a pan and sends pointercancel before the 8px activation distance.
 - **Fail-first test:** Cypress or component test: the drag handle's computed touch-action is 'none', and the sensors include TouchSensor. Confirm manually on a phone.
-- **Owner:** JOBS-UI · **Fix commit:** — · **Test:** —
+- **Now:** Fixed under its twin **R2-038**: the job kanban drags with MouseSensor plus TouchSensor (press and hold 200 ms, src/components/job/KanbanView.jsx:160), as the boards do, so a finger moves a card to another column while a swipe still scrolls.
+- **Owner:** JOBS-UI · **Fix commit:** under **R2-038** — `addbb40`, `79afdf1` (on master `e6b1a4a`, deployed) · **Test:** tests/pdf/81-job-tracker-ui.test.mjs
 
-### J-07 · Medium · data-loss · 🔴 Open · links **R2-145**
+### J-07 · Medium · data-loss · ✅ Fixed · links **R2-145**
 **Jobs never leave localStorage, but the Privacy page says all content syncs and is restored after local storage is cleared**
 - **Where:** `src/hooks/useJobStore.js` : 7, 58-65 (vs src/pages/PrivacyPage.jsx:50, 60)
 - **Repro:** 1. Sign in with Google and add some jobs. 2. Clear site data, or open another device, and sign in again. 3. The résumés come back, but the jobs do not.
@@ -79,7 +81,8 @@ title: Job Tracker — verified bugs, High and Medium (J-01…J-15)
 - **Fix hint:** Add Firestore sync for jobs (and boards), or correct the Privacy copy and show a 'Stored only in this browser' note with an Export shortcut on /jobs. R2-140 is the same issue.
 - **Verified (WF-1):** Read the code. persist() writes only the localStorage key cpwtcv_jobs_v1 (58-65). A grep for 'job' in src/utils/cloudSync*.js and src/hooks/useCloudSync.js finds nothing. PrivacyPage.jsx:50 says 'all content you enter into CPWT-CV, synced to Firebase Firestore', and :60 says 'To restore your data if you clear your browser's local storage.'
 - **Fail-first test:** If jobs stay local-only: a Cypress assertion that /jobs shows the 'stored only in this browser' note. If they sync: a node test on the cloud sync plan that includes the job list.
-- **Owner:** BOARDS-UI-B (PrivacyPage.jsx wording, both features) · **Fix commit:** — · **Test:** —
+- **Now:** Fixed under its twin **R2-145**: signed in, the Job Tracker's jobs sync with the account (one document per job under users/{uid}/jobs; a first sync merges job by job, a deleted job stays deleted), and the Privacy page says exactly what syncs — résumés, jobs and boards (src/pages/PrivacyPage.jsx:47-61).
+- **Owner:** BOARDS-UI-B (PrivacyPage.jsx wording, both features) · **Fix commit:** under **R2-145** — `e96514b`, `7f0d3b8`, `8cd4901` (on master `e6b1a4a`, deployed) · **Test:** tests/unit/job-sync.unit.mjs, tests/unit/firestore-rules.unit.mjs, tests/pdf/95-sync-privacy-notices.test.mjs
 
 ### J-08 · Medium · bug · ✅ Fixed · links **R2-036**
 **CSV export writes the Notes column as raw HTML with entities**
