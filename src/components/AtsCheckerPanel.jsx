@@ -19,6 +19,7 @@ import { buildExportFilename } from '@/utils/exportFilename';
 import { newId } from '@/utils/ids';
 import { AtsParserView } from '@/components/AtsParserView';
 import { useSessionState } from '@/hooks/useSessionState';
+import { useToast } from '@/components/ui/Toast';
 
 /**
  * The template the panel's costly layout fix moves a risky résumé to. One id, read both by the
@@ -70,7 +71,22 @@ export default function AtsCheckerPanel(props) {
 /** A string, the only thing the scanner's box saves. */
 const isText = (v) => typeof v === 'string';
 
+/** "1 section heading", "3 section headings". */
+const count = (n, noun) => `${n} ${noun}${n === 1 ? '' : 's'}`;
+
+/** A section's heading as the notice quotes it. */
+const headingOf = (s) => `"${s?.title || s?.type || 'Untitled'}"`;
+
+/** An Undo's restore for one of a section's settings: the value it had, or no key where it had none. */
+const restoreSetting = (key) => (s, prev) => {
+  const settings = { ...s.settings };
+  if (prev.settings && Object.hasOwn(prev.settings, key)) settings[key] = prev.settings[key];
+  else delete settings[key];
+  return { ...s, settings };
+};
+
 function AtsCheck({ resume, store }) {
+  const { toast } = useToast();
   // The pasted posting is kept for the tab's session under the résumé's id: the Editor mounts this
   // panel only while ATS Check is open, so a trip to the Résumé tab to add a missing keyword emptied
   // the box and its results, which is the loop the scanner is for (R4-CL-03).
@@ -102,8 +118,38 @@ function AtsCheck({ resume, store }) {
    */
   function handleStandardizeHeadings() {
     if (!resume || !Array.isArray(resume.sections)) return;
-    const updated = standardizeSectionsForAts(resume.sections, resume.template);
+    applySectionFix('ats-fix-headings', standardizeSectionsForAts(resume.sections, resume.template), {
+      title: (n) => `Renamed ${count(n, 'section heading')}`,
+      description: (pairs) => pairs.map(([was, now]) => `${headingOf(was)} → ${headingOf(now)}`).join(', '),
+      restore: (s, prev) => ({ ...s, title: prev.title }),
+    });
+  }
+
+  /**
+   * One of the section fixes below (R4-DUX-12): writes `updated`, then a notice naming what it
+   * changed, with an Undo. They used to write at once and say nothing — the button just went, and a
+   * custom heading, a Co. / Role order or a Grids setting was gone for good. The Undo puts back, on
+   * just the sections the fix changed, the one field it wrote (`restore(section, before)`), so an edit
+   * made while the notice is up is kept. Each fix has its own notice (`id`), so running a second
+   * one does not take the first one's Undo away. Nothing changed: nothing written, no notice.
+   */
+  function applySectionFix(id, updated, { title, description, restore }) {
+    const before = resume.sections;
+    const pairs = updated.flatMap((s, i) => (s !== before[i] ? [[before[i], s]] : []));
+    if (!pairs.length) return;
     store.updateSections(updated);
+    toast({
+      id,
+      title: title(pairs.length),
+      description: description(pairs),
+      duration: 8000,
+      ...(store.updateSection ? {
+        action: {
+          label: 'Undo',
+          onClick: () => pairs.forEach(([prev]) => store.updateSection(prev.id, (s) => restore(s, prev))),
+        },
+      } : {}),
+    });
   }
 
   /**
@@ -112,7 +158,11 @@ function AtsCheck({ resume, store }) {
    */
   function handleOptimizeExperienceOrder() {
     if (!resume || !Array.isArray(resume.sections)) return;
-    store.updateSections(jobTitleFirst(resume.sections, resume.template));
+    applySectionFix('ats-fix-title-order', jobTitleFirst(resume.sections, resume.template), {
+      title: (n) => `Job title first (Role / Co.) in ${count(n, 'experience section')}`,
+      description: (pairs) => pairs.map(([was]) => headingOf(was)).join(', '),
+      restore: restoreSetting('titleOrder'),
+    });
   }
 
   /**
@@ -145,7 +195,11 @@ function AtsCheck({ resume, store }) {
    */
   function handleGridsOneColumn() {
     if (!resume || !Array.isArray(resume.sections)) return;
-    store.updateSections(entriesInOneColumn(resume.sections, resume.template, resume.settings));
+    applySectionFix('ats-fix-grids', entriesInOneColumn(resume.sections, resume.template, resume.settings), {
+      title: (n) => `Grids 1 in ${count(n, 'section')}: entries print one under another`,
+      description: (pairs) => pairs.map(([was]) => headingOf(was)).join(', '),
+      restore: restoreSetting('columns'),
+    });
   }
 
   /** Each layout fix's handler, by the id the checker names it with. */
