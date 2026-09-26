@@ -217,6 +217,8 @@ const WEB = /^(?:https?:\/\/)?(?:www\.)?[a-z0-9][a-z0-9-]*(?:\.[a-z0-9-]+)*\.[a-
 const SECOND_LINE = new Set(['experience', 'education', 'volunteering', 'custom']);
 /** Types whose entries carry a location. */
 const PLACED = new Set(['experience', 'education', 'volunteering', 'custom']);
+/** Types whose header names a role and an organisation: a job, a volunteering post. */
+const JOB = new Set(['experience', 'volunteering']);
 
 const escapeHtml = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
@@ -268,7 +270,10 @@ function sectionOf(type, title, items) {
  * An entry's header lines read as its fields: `parts` its text fields in order, `date`, `location`
  * and the fields it names (`meta`). On a line with the date, what follows the date is the location
  * ("Mar 2021 – Present | Portland, OR"); on the line under the title, what sits at the right tab is
- * ("Senior Engineer ⇥ Portland, OR", the PDF's and Word's layout).
+ * ("Senior Engineer ⇥ Portland, OR", the PDF's and Word's layout). A place alone on a line of its own
+ * under the title is too: at the right margin (hint 'end', Executive's "Inline" jobs), or, for a job,
+ * right under a line that held both the role and the company (the Timeline's jobs: "Role ⇥ Company",
+ * "Role — Company", "Role, Company", R2-148).
  */
 function readHeader(type, header) {
   const out = { parts: [], date: null, location: '', meta: {} };
@@ -282,8 +287,13 @@ function readHeader(type, header) {
     out.location = p;
     return true;
   };
+  // The text fields the line above gave: two when it held the role and the company ("Role ⇥ Company",
+  // "Role — Company", a job's "Role, Company"); one a line when they are stacked (the Sidebar's school).
+  let above = 0;
   header.forEach((line, k) => {
     const ps = pieces(line.text);
+    // The text fields found on the lines above this one: a title line came before it when there are any.
+    const titled = out.parts.length;
     let at = -1;
     if (!out.date) {
       at = ps.findIndex((p) => readDateRange(p) || trailingDate(p));
@@ -296,13 +306,37 @@ function readHeader(type, header) {
     }
     ps.forEach((p, j) => {
       if (!p || field(p)) return;
-      // After the date on its line; or at the right tab of the line under the title.
+      // After the date on its line; or at the right tab of the line under the title. Under a date
+      // alone ("Mar 2021 – Present" over "Role ⇥ Company", the Timeline's) that tab parts two fields.
       if (at >= 0 && j > at && place(p)) return;
-      if (at < 0 && k > 0 && j > 0 && j === ps.length - 1 && line.text.includes('\t') && place(p)) return;
+      if (at < 0 && k > 0 && j > 0 && j === ps.length - 1 && line.text.includes('\t') && titled && place(p)) return;
+      // A place alone on its line: at the right margin, or a job's, right under the line that held its
+      // role and company. Not any place under two fields: the Sidebar's school stacks its degree, school,
+      // field of study and place a line each, and that place is read by the education's own rule (entryOf).
+      if (at < 0 && k > 0 && ps.length === 1 && (line.hint === 'end' || (JOB.has(type) && above >= 2 && PLACE.test(p) && !ROLE.test(p))) && place(p)) return;
       out.parts.push(...fieldsOf(p));
     });
+    const gave = out.parts.slice(titled);
+    above = (JOB.has(type) ? inlinePair(gave) : gave).length;
   });
   return out;
+}
+
+/**
+ * `parts` with a lone "Role, Company" split in two: Title "Inline" with an italic sub prints the role
+ * and the company as one run joined by a comma (Executive's jobs: "Senior Data Engineer, Northwind
+ * Analytics"). Split at the first comma with a job title's word on one side alone, so a company's own
+ * comma ("Acme, Inc.") and a place ("Portland, OR") stay whole. Other parts as they are.
+ */
+function inlinePair(parts) {
+  if (parts.length !== 1) return parts;
+  const [text] = parts;
+  for (const m of text.matchAll(/,\s+/g)) {
+    const a = text.slice(0, m.index).trim();
+    const b = text.slice(m.index + m[0].length).trim();
+    if (a && b && ROLE.test(a) !== ROLE.test(b)) return [a, b];
+  }
+  return parts;
 }
 
 /** Two fields in the order the file printed them, `lead` the one that names the role when either does. */
@@ -316,7 +350,7 @@ function roleFirst(a, b, roleLeads) {
 /** One entry of `type` from its header and body lines. */
 function entryOf(type, header, body) {
   const h = readHeader(type, header);
-  const [p0 = '', p1 = '', ...rest] = h.parts;
+  const [p0 = '', p1 = '', ...rest] = JOB.has(type) ? inlinePair(h.parts) : h.parts;
   const d = h.date || { start: '', end: '', current: false, text: '' };
   const lead = rest.length ? [rest.join(' — ')] : [];
   const description = (extra = []) => richText([...extra.map((x) => x), ...body.map((l) => l.text)]);
@@ -387,9 +421,10 @@ function entryOf(type, header, body) {
  * A section's lines as entries of `type`. An entry is found by its date: a line with text and a
  * date is its title line ("Company ⇥ Mar 2021 – Present", the PDF's and Word's), with the role or
  * degree on the line under it; a line that starts with the date is its meta line ("Mar 2021 –
- * Present | Portland, OR", the ATS text's and Markdown's), under the title line(s) before it. A
- * Markdown "### " line starts an entry too. What follows up to the next entry is its body. With no
- * dates at all, a line after a gap or a list starts the next one.
+ * Present | Portland, OR", the ATS text's and Markdown's), under the title line(s) before it — or,
+ * a date alone with none before it, over them (the Timeline's). A Markdown "### " line starts an
+ * entry too. What follows up to the next entry is its body. With no dates at all, a line after a gap
+ * or a list starts the next one.
  */
 function entriesOf(type, lines) {
   const info = lines.map((l, index) => {
@@ -435,6 +470,17 @@ function entriesOf(type, lines) {
           if (prev.bullet || prev.index !== next.index - 1 || next.gap || prev.date) break;
           header.unshift(body.pop());
           next = prev;
+        }
+        // None over it, and the date alone on its line: the date prints above its entry's title (the
+        // Timeline's rail: "Mar 2021 – Present", then "Role ⇥ Company", then the location). Its title is
+        // the line under it, and for a type with a second line (a role, a degree) the one under that
+        // when it holds two fields or a place. Before, such an entry had no title, and its title and
+        // company went into its description (R2-148).
+        const titleLike = (n) => n && !n.bullet && !n.gap && !n.date && n.hint !== 'entry' && n.text.length <= 100 && !/[.!?]$/.test(n.text) && !isMetaLine(n.text);
+        if (header.length === 1 && pieces(L.text).length === 1 && titleLike(info[i])) {
+          header.push(info[i++]);
+          const n = info[i];
+          if (SECOND_LINE.has(type) && titleLike(n) && (pieces(n.text).length > 1 || PLACE.test(n.text))) header.push(info[i++]);
         }
       } else if (SECOND_LINE.has(type) && i < info.length) {
         const n = info[i];
