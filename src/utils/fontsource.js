@@ -16,7 +16,13 @@ const metadata = new Map(); // pkg → Promise<metadata | null>
 export function fetchMetadata(pkg) {
   if (!metadata.has(pkg)) {
     metadata.set(pkg, fetch(`${FONTSOURCE_CDN}/${pkg}@5/metadata.json`, { credentials: 'omit', signal: AbortSignal.timeout(8000) })
-      .then((r) => (r.ok ? r.json() : null))
+      .then((r) => {
+        if (r.ok) return r.json();
+        // Only a 404 means there is no such package. A 429 or 5xx is the CDN having a bad moment:
+        // forget it, so the next build asks again instead of printing the fallback all session.
+        if (r.status !== 404) metadata.delete(pkg);
+        return null;
+      })
       .then((m) => (m && Array.isArray(m.weights) && Array.isArray(m.styles) ? m : null))
       .catch(() => {
         metadata.delete(pkg); // offline: ask again next time
