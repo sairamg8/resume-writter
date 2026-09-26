@@ -119,12 +119,24 @@ export function publicIo(fs, db) {
   const publicDoc = (shareId) => fs.doc(db, 'public', shareId);
   const shareDoc = (uid, resumeId) => fs.doc(db, 'users', uid, 'shares', resumeId);
 
-  /** Deletes résumé `resumeId`'s copy at `shareId`, if it is there, and its record of the link. */
-  async function takeDown(uid, resumeId, shareId) {
-    const pub = await fs.getDocFromServer(publicDoc(shareId));
+  /** The link the account has recorded for résumé `resumeId`, or null: read from the server, never a stale cache. */
+  async function recordedId(uid, resumeId) {
+    const share = await fs.getDocFromServer(shareDoc(uid, resumeId));
+    return share.exists() ? share.data().shareId || null : null;
+  }
+
+  /** Adds to `batch` the deletion of each of these copies that is there (each id once). */
+  async function deleteCopies(batch, shareIds) {
+    for (const shareId of new Set(shareIds.filter(Boolean))) {
+      // The rules refuse deleting a copy that is not there (no owner to check), so only one that is.
+      if ((await fs.getDocFromServer(publicDoc(shareId))).exists()) batch.delete(publicDoc(shareId));
+    }
+  }
+
+  /** Deletes résumé `resumeId`'s copies at `shareIds`, those that are there, and its record of the link. */
+  async function takeDown(uid, resumeId, shareIds) {
     const batch = fs.writeBatch(db);
-    // The rules refuse deleting a copy that is not there (no owner to check), so only one that is.
-    if (pub.exists()) batch.delete(publicDoc(shareId));
+    await deleteCopies(batch, shareIds);
     batch.delete(shareDoc(uid, resumeId));
     await batch.commit();
   }
@@ -142,25 +154,34 @@ export function publicIo(fs, db) {
     },
 
     /**
-     * Publishes `resume` (publicSnapshot) at its link — the one it has, else a new one that cannot
-     * be guessed — or puts its current state there. Resolves when the server has it.
+     * Publishes `resume` (publicSnapshot) at its link — the one the account has recorded, else
+     * `shareId` (the link the panel shows), else a new one that cannot be guessed — or puts its
+     * current state there. Resolves when the server has it. The record is read first: a panel
+     * opened in another tab or on another device before this one published saw no link, and its
+     * Publish made a second copy the record no longer named, public for good. A copy at the panel's
+     * own `shareId`, when the record names another, is taken down in the same batch: a résumé has
+     * one public copy at most.
      */
-    async publish(uid, resume, { shareId = newId(), now = Date.now() } = {}) {
+    async publish(uid, resume, { shareId, now = Date.now() } = {}) {
       const copy = publicSnapshot(resume);
       if (new Blob([JSON.stringify(copy)]).size > MAX_PUBLIC_BYTES) throw Object.assign(new Error(TOO_LARGE), { code: TOO_LARGE_CODE });
+      const recorded = await recordedId(uid, resume.id);
+      const id = recorded || shareId || newId();
       const batch = fs.writeBatch(db);
-      batch.set(publicDoc(shareId), { owner: uid, resume: copy, publishedAt: now });
-      batch.set(shareDoc(uid, resume.id), { shareId, publishedAt: now });
+      if (shareId && shareId !== id) await deleteCopies(batch, [shareId]);
+      batch.set(publicDoc(id), { owner: uid, resume: copy, publishedAt: now });
+      batch.set(shareDoc(uid, resume.id), { shareId: id, publishedAt: now });
       await batch.commit();
-      return { shareId, publishedAt: now, copy };
+      return { shareId: id, publishedAt: now, copy };
     },
 
-    /** Takes the résumé's copy down: its link then finds nothing. */
+    /**
+     * Takes the résumé's copy down: its link then finds nothing. The copy at `shareId` (the link
+     * the panel shows) and the one the account has recorded, when another tab moved it, both go;
+     * one already gone (unpublished elsewhere) is skipped, as the rules refuse deleting it.
+     */
     async unpublish(uid, resumeId, shareId) {
-      const batch = fs.writeBatch(db);
-      batch.delete(publicDoc(shareId));
-      batch.delete(shareDoc(uid, resumeId));
-      await batch.commit();
+      await takeDown(uid, resumeId, [shareId, await recordedId(uid, resumeId)]);
     },
 
     /**
@@ -171,7 +192,7 @@ export function publicIo(fs, db) {
     async unpublishResume(uid, resumeId) {
       const share = await fs.getDocFromServer(shareDoc(uid, resumeId));
       if (!share.exists()) return false;
-      await takeDown(uid, resumeId, share.data().shareId);
+      await takeDown(uid, resumeId, [share.data().shareId]);
       return true;
     },
 
@@ -188,7 +209,7 @@ export function publicIo(fs, db) {
       if (!gone.size) return [];
       const shares = await fs.getDocsFromServer(fs.collection(db, 'users', uid, 'shares'));
       const stale = shares.docs.filter((d) => gone.has(d.id));
-      for (const d of stale) await takeDown(uid, d.id, d.data().shareId);
+      for (const d of stale) await takeDown(uid, d.id, [d.data().shareId]);
       return stale.map((d) => d.id);
     },
 
