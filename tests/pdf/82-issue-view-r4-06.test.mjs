@@ -55,6 +55,23 @@ it('R4-BRD-06: M with a comment half typed (the focus on a button) goes back to 
   }
 });
 
+it('R4-BRD-06: M on the History tab goes to Comments and opens the comment box', async () => {
+  const page = mountBoard('/boards/p1?issue=HOME-2');
+  try {
+    await page.settle();
+    page.click(page.tab('History'));
+    assert.equal(page.tab('History').getAttribute('aria-selected'), 'true');
+    assert.equal(page.button('Add a comment…'), undefined, 'the History tab has no comment box');
+    press(page.view, 'm', page.view.document.body);
+    await page.settle();
+    assert.equal(page.tab('Comments').getAttribute('aria-selected'), 'true', 'M left the History tab showing, and nothing happened');
+    assert.ok(page.byLabel('Comment'), 'M did not open the comment box');
+    assert.ok(page.view.document.activeElement === page.byLabel('Comment'), 'the focus is not in the box');
+  } finally {
+    await page.view.unmount();
+  }
+});
+
 it('R4-BRD-06: under a dialog stacked on the issue view (Delete\'s question), M leaves the comment box shut', async () => {
   const page = mountBoard('/boards/p1?issue=HOME-2', { confirms: true });
   try {

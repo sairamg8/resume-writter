@@ -19,7 +19,8 @@ function Composer({ initial = '', onSave, onCancel, autoFocus = false, saveLabel
   const [text, setText] = useState(initial);
   const [open, setOpen] = useState(autoFocus || !!initial);
   const fieldRef = useRef(null);
-  const [summoned, setSummoned] = useState(summon);
+  // From 0: a box that mounts already summoned (M on the History tab brings it in) opens.
+  const [summoned, setSummoned] = useState(0);
   if (summon !== summoned) {
     setSummoned(summon);
     setOpen(true);
@@ -143,6 +144,8 @@ export function IssueActivity({ issue, onAddComment, onUpdateComment, onDeleteCo
     m: () => {
       const modals = document.querySelectorAll('[aria-modal="true"]');
       if (!modals[modals.length - 1]?.contains(sectionRef.current)) return;
+      // The History tab has no comment box: M goes to Comments, where it is.
+      setTab((t) => (t === 'history' ? 'comments' : t));
       setComposeKey((k) => k + 1);
     },
   }, { allowInDialog: true });
