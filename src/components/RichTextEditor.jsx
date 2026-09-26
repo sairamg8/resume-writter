@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useId } from 'react';
 import {
   Bold, Italic, Underline, List, ListOrdered,
   AlignLeft, AlignCenter, AlignRight, AlignJustify, Link, Sparkles,
@@ -20,10 +20,10 @@ export default function RichTextEditor({ label, ariaLabel, value, onChange, plac
   // the selection, else the bullet or line the caret is in; null to add the result as a new bullet.
   const [optimizerText, setOptimizerText] = useState('');
   const optimizerTarget = useRef(null);
-  // A drag that starts in this editor is a move, and the browser does it (onDrop): the text leaves
-  // where it was, and the input events that follow store the result. Inserting it at the drop point
-  // ourselves cancelled the move, so the text ended up in both places (R4-ED-04).
-  const dragFromHere = useRef(false);
+  // A drag that starts in this editor: the text it drags (a Range), and the mark it puts on the drag
+  // so its own drop knows it (onDrop). A drag from anywhere else carries no such mark.
+  const dragSource = useRef(null);
+  const moveMark = useId();
 
   // Adopt `value` whenever it changes from outside (another resume opened, an import, a cloud
   // pull), but never while this editor has focus: there the DOM is the source of truth and
@@ -117,16 +117,35 @@ export default function RichTextEditor({ label, ariaLabel, value, onChange, plac
     insertClean(e.clipboardData);
   }
 
+  function onDragStart(e) {
+    const sel = window.getSelection();
+    dragSource.current = sel?.rangeCount ? sel.getRangeAt(0).cloneRange() : null;
+    e.dataTransfer?.setData(MOVE_TYPE, moveMark);
+  }
+
+  // A drag that started in this editor is a move: the text leaves where it was and goes in at the
+  // drop point. Inserting it there and nothing else — the browser's move cancelled — left it in both
+  // places (R4-ED-04). The editor moves it itself, rather than leaving the drop to the browser, so
+  // the moved text is sanitized like any drop (a browser's own move wraps it in styled spans). The
+  // drag's mark, not a flag, says where it came from: a flag cleared on dragend stayed set when the
+  // dragged node was gone before dragend fired, and every later drop went in unsanitized.
   function onDrop(e) {
-    if (dragFromHere.current) return;
     e.preventDefault();
     const data = e.dataTransfer;
+    const source = dragSource.current;
+    dragSource.current = null;
     if (!data?.getData('text/html') && !data?.getData('text/plain')) return;
-    const range = dropRange(e.clientX, e.clientY);
-    if (range) {
-      const sel = window.getSelection();
+    const at = dropRange(e.clientX, e.clientY);
+    const sel = window.getSelection();
+    if (source && data.getData(MOVE_TYPE) === moveMark && ref.current?.contains(source.commonAncestorContainer)) {
+      if (!at || source.isPointInRange?.(at.startContainer, at.startOffset)) return; // dropped on itself
       sel.removeAllRanges();
-      sel.addRange(range);
+      sel.addRange(source);
+      document.execCommand('delete'); // `at` is a live Range: it keeps its place as the text goes
+    }
+    if (at) {
+      sel.removeAllRanges();
+      sel.addRange(at);
     } else {
       ref.current?.focus();
     }
@@ -202,8 +221,8 @@ export default function RichTextEditor({ label, ariaLabel, value, onChange, plac
           onInput={onInput}
           onPaste={onPaste}
           onDrop={onDrop}
-          onDragStart={() => { dragFromHere.current = true; }}
-          onDragEnd={() => { dragFromHere.current = false; }}
+          onDragStart={onDragStart}
+          onDragEnd={() => { dragSource.current = null; }}
           onCompositionStart={() => { isComposing.current = true; }}
           onCompositionEnd={() => { isComposing.current = false; onInput(); }}
           className="px-3 py-2 text-sm pointer-coarse:text-base focus:outline-none empty-placeholder rich-text-output"
@@ -267,6 +286,8 @@ export function statementRange(el) {
 const MEDIA = new Set(['IMG', 'PICTURE', 'VIDEO', 'AUDIO', 'SVG', 'CANVAS', 'IFRAME', 'OBJECT', 'EMBED']);
 /** A data: URL's base64 payload, as a browser's own paste of a picture stores it. */
 const DATA_URL = /\bdata:[^\s"'>,;]*;base64,/i;
+/** The type a drag from an editor carries, with that editor's own id, so its drop knows it as a move. */
+const MOVE_TYPE = 'application/x-resume-rich-text-move';
 
 /** Remove every picture and other media element under `node`, in place (R4-ED-02). */
 function dropMedia(node) {
