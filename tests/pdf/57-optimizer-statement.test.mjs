@@ -294,6 +294,40 @@ describe('STAR Optimizer · a line break inside bold or a link, and a nested lis
     }
   });
 
+  it('a caret at an element boundary finds the line on either side of a wrapper or a nested list', () => {
+    const view = dom.mount(RichTextEditor, { label: 'Description', value: '', onChange: () => {} });
+    try {
+      const el = box(view);
+      const d = globalThis.document;
+      /** A <p> of `parts` (strings are text, arrays are a <b> of them, '|' a <br>); returns the <p>. */
+      const para = (parts) => {
+        const fill = (host, list) => list.forEach((x) => {
+          if (Array.isArray(x)) fill(host.appendChild(d.createElement('b')), x);
+          else host.appendChild(x === '|' ? d.createElement('br') : d.createTextNode(x));
+        });
+        const p = el.appendChild(d.createElement('p'));
+        fill(p, parts);
+        return p;
+      };
+      const p1 = para([['Handled QA', '|'], 'Cut costs']);
+      d.getSelection().collapse(p1.firstChild, 2);
+      assert.equal(statementRange(el).toString(), 'Cut costs', 'after the bold run\'s closing <br>');
+      const p2 = para(['Handled QA', ['|', 'Cut costs']]);
+      d.getSelection().collapse(p2.childNodes[1], 0);
+      assert.equal(statementRange(el).toString(), 'Handled QA', 'just before a <br> that opens a bold run');
+      const p3 = para(['Handled QA', ['|'], 'Cut costs']);
+      d.getSelection().collapse(p3, 1);
+      assert.equal(statementRange(el).toString(), 'Handled QA', 'just before a bold run holding only a <br>');
+      const li = el.appendChild(d.createElement('ul')).appendChild(d.createElement('li'));
+      li.appendChild(d.createTextNode('Led the migration'));
+      li.appendChild(d.createElement('ul')).appendChild(d.createElement('li')).appendChild(d.createTextNode('Cut costs by 30%'));
+      d.getSelection().collapse(li, 1);
+      assert.equal(statementRange(el).toString(), 'Led the migration', 'just before the nested list');
+    } finally {
+      view.unmount();
+    }
+  });
+
   it('a list item with a nested list opens on its own line, not its sub-items', () => {
     const view = dom.mount(RichTextEditor, { label: 'Description', value: '', onChange: () => {} });
     try {

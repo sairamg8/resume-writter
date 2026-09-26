@@ -252,8 +252,6 @@ export default function RichTextEditor({ label, ariaLabel, value, onChange, plac
 /** The elements a statement can be: a list item or a paragraph (Chrome writes a new line as a div). */
 const STATEMENTS = new Set(['LI', 'P', 'DIV', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'BLOCKQUOTE']);
 const BLOCKS = new Set([...STATEMENTS, 'UL', 'OL']);
-/** A node that sits inside a line of text: text, or an inline element other than <br>. */
-const inLine = (n) => n.nodeType === 3 || (n.nodeType === 1 && !BLOCKS.has(n.nodeName) && n.nodeName !== 'BR');
 
 /**
  * The statement being edited in `el`, as a Range: the selection when it is inside `el` and not
@@ -286,12 +284,13 @@ export function statementRange(el) {
   }
   let node = at.startContainer;
   if (node.nodeType === 1 && !leaves.includes(node)) {
-    // A caret between two children: the one after it, but just before a <br> it is at the end of the
-    // line that break closes.
-    const [before, after] = [node.childNodes[at.startOffset - 1], node.childNodes[at.startOffset]];
-    node = after && (after.nodeName !== 'BR' || !before || !inLine(before))
-      ? edgeLeaf(after, 'first')
-      : edgeLeaf(before || node.lastChild, 'last');
+    // A caret between two nodes, at any depth: the leaf after it, but just before a line break it is
+    // at the end of the line that break closes.
+    const child = node.childNodes[at.startOffset];
+    const pos = child ? leaves.indexOf(edgeLeaf(child, 'first')) : leaves.indexOf(edgeLeaf(node.lastChild, 'last')) + 1;
+    if (pos < 0 || (!child && !node.lastChild)) return null;
+    const [before, after] = [leaves[pos - 1], leaves[pos]];
+    node = after && (!isBreak(after) || !before || isBreak(before)) ? after : before;
   }
   let i = leaves.indexOf(node);
   // A caret inside a nested block's own text is outside this host's lines.
