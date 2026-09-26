@@ -153,6 +153,33 @@ describe('Photo → Tone (R2-147)', () => {
     }
   });
 
+  // RES-R2-126b: an SVG photo's grey copy was drawn at the SVG's own size — this 4 × 2 SVG became a 4 × 2
+  // raster — so Grayscale printed it soft in the PDF and in Word, where in colour it prints sharp (as
+  // vectors in the PDF, as svgPhotoCopy's PNG in Word, its longer side 1024 px). The grey copy is drawn
+  // at that PNG copy's size now, for both.
+  it('Grayscale draws an SVG photo\'s grey copy at its PNG copy\'s size, not the SVG\'s own, for the PDF and Word (RES-R2-126b)', async () => {
+    await installPhotoCanvas();
+    const canvas = await import('@napi-rs/canvas');
+    const { withPrintablePhotos } = await loadModule('/src/utils/printableImage.js');
+    const { withWordPhoto } = await loadModule('/src/utils/wordExportPhoto.js');
+    const SVG_4X2 = `data:image/svg+xml;base64,${Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="4" height="2" viewBox="0 0 4 2"><rect width="4" height="2" fill="#ff0000"/></svg>').toString('base64')}`;
+    const r = cv('classic', { photoTone: 'grayscale' });
+    r.personal.photo = SVG_4X2;
+    const wrong = [];
+    for (const [what, out] of [['PDF', await withPrintablePhotos(r)], ['Word', await withWordPhoto(r)]]) {
+      const photo = out.personal.photo;
+      if (!/^data:image\/(png|jpeg);base64,/.test(photo)) { wrong.push(`${what}: no grey copy (${String(photo).slice(0, 30)})`); continue; }
+      const img = await canvas.loadImage(Buffer.from(photo.slice(photo.indexOf(',') + 1), 'base64'));
+      if (img.width !== 1024 || img.height !== 512) wrong.push(`${what}: ${img.width} × ${img.height}, not 1024 × 512`);
+      // Still the SVG's picture, grey: red's luminance (0.299 × 255 = 76) in every channel.
+      const g = canvas.createCanvas(img.width, img.height).getContext('2d');
+      g.drawImage(img, 0, 0);
+      const [R, G, B] = g.getImageData(Math.floor(img.width / 2), Math.floor(img.height / 2), 1, 1).data;
+      if (Math.max(R, G, B) - Math.min(R, G, B) > 3 || Math.abs(G - 76) > 6) wrong.push(`${what}: the middle is ${R},${G},${B}, not grey 76`);
+    }
+    assert.deepEqual(wrong, []);
+  });
+
   it('Word: Grayscale\'s picture carries <a:grayscl/> in its blip; unset and Color do not', async () => {
     const blip = (xml) => (xml.match(/<a:blip\s[\s\S]*?(?:\/>|<\/a:blip>)/) || [''])[0];
     for (const [settings, grey] of [[{}, false], [{ photoTone: 'color' }, false], [{ photoTone: 'grayscale' }, true]]) {

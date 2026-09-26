@@ -147,15 +147,18 @@ const greyMade = new Map();
 /**
  * A greyscale copy of the data URL `src`: each pixel's luminance (0.299 R + 0.587 G + 0.114 B) in all
  * three channels, its alpha kept — a PNG when the photo is see-through anywhere, else a JPEG as an
- * upload stores one. Null when there is no canvas, or it cannot read `src`.
+ * upload stores one. An SVG is drawn at the size of its PNG copy (svgCopySize), not at its own: a
+ * 100 × 100 SVG made a 100 × 100 raster, which printed soft in the PDF and in Word where the SVG in
+ * colour prints sharp (RES-R2-126b). Null when there is no canvas, or it cannot read `src`.
  */
 async function greyCopyOf(src) {
   const canvas = photoCanvas || browserCanvas();
   if (!canvas) return null;
   try {
-    const img = await canvas.loadImage(src);
-    const w = img.naturalWidth || img.width;
-    const h = img.naturalHeight || img.height;
+    const svg = svgOf(src);
+    const img = await canvas.loadImage(svg || src);
+    const size = svg ? svgCopySize(img, svg) : { w: img.naturalWidth || img.width, h: img.naturalHeight || img.height };
+    const { w, h } = size || {};
     if (!w || !h) return null;
     const c = canvas.createCanvas(w, h);
     const ctx = c.getContext('2d');
@@ -222,25 +225,44 @@ function svgAspect(src) {
   return w > 0 && h > 0 ? w / h : null;
 }
 
+/** What react-pdf draws of `src`: an SVG's bytes under whatever label they were saved with, labelled as an SVG; null when `src` holds no SVG. */
+function svgOf(src) {
+  const svg = drawableImage(src);
+  return svg && /^data:image\/svg(?:\+xml)?;/i.test(svg) ? svg : null;
+}
+
+/**
+ * The size, { w, h } px, a raster copy of the SVG `svg` is drawn at — loaded by the canvas as `img`:
+ * its longer side SVG_COPY_SIDE and its shape the SVG's (its natural size, else its viewBox). Null when
+ * neither tells its shape. The PNG copy Word prints (svgPhotoCopy) and the greyscale copy of Photo →
+ * Tone Grayscale (greyCopyOf) are both drawn at it, so neither prints softer than the SVG in colour.
+ */
+function svgCopySize(img, svg) {
+  const nw = img.naturalWidth || img.width;
+  const nh = img.naturalHeight || img.height;
+  const aspect = nw > 0 && nh > 0 ? nw / nh : svgAspect(svg);
+  if (!aspect) return null;
+  return {
+    w: Math.max(1, Math.round(aspect >= 1 ? SVG_COPY_SIDE : SVG_COPY_SIDE * aspect)),
+    h: Math.max(1, Math.round(aspect >= 1 ? SVG_COPY_SIDE / aspect : SVG_COPY_SIDE)),
+  };
+}
+
 /**
  * A PNG copy of the SVG photo `src` (a base64 data URL), its longer side SVG_COPY_SIDE px and its shape
  * the SVG's, for the Word export (wordExportPhoto.js); a PNG keeps what the SVG leaves see-through.
  * Null when `src` is no SVG, there is no canvas, or the canvas cannot draw it.
  */
 export async function svgPhotoCopy(src) {
-  // What react-pdf draws: an SVG's bytes under whatever label they were saved with, labelled as an SVG.
-  const svg = drawableImage(src);
-  if (!svg || !/^data:image\/svg(?:\+xml)?;/i.test(svg)) return null;
+  const svg = svgOf(src);
+  if (!svg) return null;
   const canvas = photoCanvas || browserCanvas();
   if (!canvas) return null;
   try {
     const img = await canvas.loadImage(svg);
-    const nw = img.naturalWidth || img.width;
-    const nh = img.naturalHeight || img.height;
-    const aspect = nw > 0 && nh > 0 ? nw / nh : svgAspect(svg);
-    if (!aspect) return null;
-    const w = Math.max(1, Math.round(aspect >= 1 ? SVG_COPY_SIDE : SVG_COPY_SIDE * aspect));
-    const h = Math.max(1, Math.round(aspect >= 1 ? SVG_COPY_SIDE / aspect : SVG_COPY_SIDE));
+    const size = svgCopySize(img, svg);
+    if (!size) return null;
+    const { w, h } = size;
     const c = canvas.createCanvas(w, h);
     c.getContext('2d').drawImage(img, 0, 0, w, h);
     const out = c.toDataURL('image/png');
