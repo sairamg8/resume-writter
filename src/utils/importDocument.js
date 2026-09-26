@@ -18,15 +18,22 @@ export const DOCUMENT_HINT = 'PDF, Word (.docx), Markdown and text files are rea
 export const IMPORT_NOTICE = 'Imported from your file as best we could read it. Check the name, the contacts, every section and its dates, and move what landed in the wrong place.';
 
 /**
- * Reads `file` into a new résumé, as the JSON import does: `importResume(resume, { keep })`, then
- * the editor at it, which shows IMPORT_NOTICE. `onError(message)` when it cannot be read.
+ * What the editor says after its own Import, from any file (R4-DUX-17): it keeps the file's name and
+ * opens it, so without this a user restoring a backup would think they had overwritten the open one.
  */
-export async function importDocument(file, { importResume, navigate, onError, keep = false }) {
+export const NEW_RESUME_NOTICE = 'Imported as a new résumé: the one you had open is unchanged, on the dashboard.';
+
+/**
+ * Reads `file` into a new résumé, as the JSON import does: `importResume(resume, { keep })`, then
+ * the editor at it, which shows `notice` (IMPORT_NOTICE unless given). `onError(message)` when it
+ * cannot be read.
+ */
+export async function importDocument(file, { importResume, navigate, onError, keep = false, notice = IMPORT_NOTICE }) {
   try {
     const { resumeFromFile } = await import('./importFile.js');
     const resume = await resumeFromFile(file);
     const id = importResume(resume, { keep });
-    navigate(`/resume/${id}`, { state: { importNotice: IMPORT_NOTICE } });
+    navigate(`/resume/${id}`, { state: { importNotice: notice } });
     return id;
   } catch (e) {
     console.error('Import failed:', e);

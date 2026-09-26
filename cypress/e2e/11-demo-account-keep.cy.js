@@ -131,7 +131,7 @@ describe('demo account — the editor\'s Export → Import', () => {
   it('its Import JSON stays a plain import, even from a file that says it is an original', () => {
     visitAs(OWNER, stateWith(['Classic CV']));
     openExport();
-    cy.contains('button', 'Import JSON').click();
+    cy.contains('button', 'Import as a new résumé').click();
     chooseFile(file('Plain', { keep: true }));
     editorShows('Plain');
     cy.store().should((s) => expect(s.resumes.find((r) => r.name === 'Plain')).not.to.have.property('keep'));
@@ -140,7 +140,7 @@ describe('demo account — the editor\'s Export → Import', () => {
   it('another account gets Import JSON alone (a guard)', () => {
     visitAs(OTHER, stateWith(['Classic CV']));
     openExport();
-    cy.contains('button', 'Import JSON').should('be.visible');
+    cy.contains('button', 'Import as a new résumé').should('be.visible');
     cy.contains('button', 'Import as my original').should('not.exist');
     cy.contains('Your originals come back').should('not.exist');
   });

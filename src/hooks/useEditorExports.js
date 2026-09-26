@@ -7,7 +7,7 @@ import { generateAtsPlainText } from '@/utils/atsChecker';
 import { generateMarkdownResume } from '@/utils/markdownExport';
 import { generateCoverLetterPlainText } from '@/utils/coverLetterText';
 import { isJsonResume, jsonResumeToCpwtResume, cpwtResumeToJsonResume } from '@/utils/jsonResume';
-import { importDocument } from '@/utils/importDocument';
+import { importDocument, IMPORT_NOTICE, NEW_RESUME_NOTICE } from '@/utils/importDocument';
 import { normalizeResume } from '@/utils/normalizeResume';
 import { editorPath } from '@/utils/letters';
 
@@ -117,8 +117,9 @@ export function useEditorExports({ resume, activeTab, authUser, importResume, na
     try {
       const resumeData = isJsonResume(data) ? jsonResumeToCpwtResume(data) : data;
       const newId = importResume(resumeData, { keep: keeps && asOriginal });
-      // A letter's file (an older build's 'Cover Letter' too, marked on import) opens on its letter.
-      navigate(editorPath(newId, normalizeResume(resumeData)));
+      // A letter's file (an older build's 'Cover Letter' too, marked on import) opens on its letter,
+      // saying it is a new one: it keeps the file's name, so it looks like the one that was open.
+      navigate(editorPath(newId, normalizeResume(resumeData)), { state: { importNotice: NEW_RESUME_NOTICE } });
     } catch (e) {
       console.error('Import failed:', e);
       setExportError(`Import failed${e?.message ? ` (${e.message})` : ''}. Check the file and try again.`);
@@ -134,7 +135,7 @@ export function useEditorExports({ resume, activeTab, authUser, importResume, na
     const from = resume?.id;
     try {
       return await importDocument(file, {
-        importResume, onError: setExportError, keep: keeps && asOriginal,
+        importResume, onError: setExportError, keep: keeps && asOriginal, notice: `${NEW_RESUME_NOTICE} ${IMPORT_NOTICE}`,
         navigate: (...args) => { if (mounted.current && shownId.current === from) navigate(...args); },
       });
     } finally {
