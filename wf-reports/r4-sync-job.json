@@ -1,0 +1,58 @@
+{
+  "cluster": "r4-sync-job",
+  "branch": "claude/wf-r4-sync-job",
+  "base": "fd1f439",
+  "rows": [
+    { "id": "R4-SYNC-01", "outcome": "fixed", "commits": ["8832c68", "1cedd04"],
+      "tests": ["tests/pdf/100-r4-sync-01-one-public-copy.test.mjs"],
+      "summary": "Publish now reads the account's share record first and reuses the link it names, so two tabs or devices that both saw 'not published' make one copy. If the panel's own stale link differs from the recorded one, that copy is taken down in the same batch. Unpublish takes down the panel's copy and the recorded one, each only if it still exists, so an Unpublish from a stale panel no longer fails for good on firestore.rules. No rules change.",
+      "remaining": "A narrow race is still open: two Publishes within one round trip can both read 'no record' and leave one orphan copy. Closing it fully needs runTransaction (see notes)." },
+    { "id": "R4-SYNC-02", "outcome": "fixed", "commits": ["d2edebe"],
+      "tests": ["tests/pdf/100-r4-sync-02-sync-dot-unreachable.test.mjs"],
+      "summary": "When the browser is online but Firestore reports 'client is offline' (sync status 'offline'), the header icon now stays. It shows CloudOff and 'Cannot reach your account — changes saved locally, will retry'; before, the icon vanished. When the browser itself is offline, it still reads 'Offline — changes saved locally'." },
+    { "id": "R4-SYNC-03", "outcome": "fixed", "commits": ["0ab75b3", "1cedd04"],
+      "tests": ["tests/pdf/100-r4-sync-03-copy-print-settings.test.mjs"],
+      "summary": "publicSnapshot now copies only the settings that print. It leaves out myDesigns and templatePreset, and drops customContactIcons entries for contacts hidden with their eye. publishedIsCurrent runs both sides through publicSnapshot and ignores dataVersion. So saving or deleting a design, a data migration, or a copy published before this fix no longer reads as 'changed since'. The copy still prints identically." },
+    { "id": "R4-SYNC-04", "outcome": "fixed", "commits": ["44decc3"],
+      "tests": ["tests/pdf/100-r4-sync-04-too-large-message.test.mjs"],
+      "summary": "The too-large error carries code 'too-large', and the share panel shows its message on its own. Network failures still get 'Publishing failed (…). Check your connection and try again.'" },
+    { "id": "R4-SYNC-05", "outcome": "fixed", "commits": ["e0179e4"],
+      "tests": ["tests/pdf/100-r4-sync-05-copied-label.test.mjs"],
+      "summary": "The Copy button goes back from 'Copied' to 'Copy' whenever the panel opens, on Unpublish, and when a publish gives a new link. It keeps 'Copied' when 'Update the public copy' leaves the link the same, since that link was copied. No timer was added." },
+    { "id": "R4-SYNC-06", "outcome": "fixed", "commits": ["9a429a6"],
+      "tests": ["tests/pdf/100-r4-sync-06-empty-sections.test.mjs"],
+      "summary": "The public copy, and so 'What is public', now drops any section without a shown entry, matching the PDF's sectionPrints. The copy still prints the same as the résumé." },
+    { "id": "R4-JOB-01", "outcome": "fixed", "commits": ["08d0332"],
+      "tests": ["tests/pdf/100-r4-job-01-details-resume.test.mjs"],
+      "summary": "The Details box's Résumé row now shows the linked résumé's name, or 'Résumé deleted' when that résumé is gone (J-21). It shows 'None' only when nothing is linked." },
+    { "id": "R4-JOB-02", "outcome": "fixed", "commits": ["a0f0f19"],
+      "tests": ["tests/pdf/100-r4-job-02-follow-up-fields.test.mjs"],
+      "summary": "Product call: add editors rather than remove the displays. The job form and the Overview now edit Follow-up Date, Work Mode and Source ('— Not set —' = ''). The date formerly labelled 'Deadline / Follow-up' is now 'Deadline'. A follow-up date set in the form puts the job under the Summary's 'Follow-ups due' once that day comes.",
+      "remaining": "Excitement is still not editable; nothing in the app displays it, so it was left alone." },
+    { "id": "R4-JOB-03", "outcome": "fixed", "commits": ["6bb0ad5"],
+      "tests": ["tests/pdf/100-r4-job-03-closed-not-overdue.test.mjs"],
+      "summary": "An on-hold, rejected or withdrawn job (!isOpen) no longer shows a passed deadline as late. This covers the board card's pill, the Details box's deadline and follow-up pills, the list row's red date (a variant the finding missed) and the Overview's 'Deadline has passed' warning. Open jobs are unchanged." },
+    { "id": "R4-JOB-04", "outcome": "fixed", "commits": ["63f18a1"],
+      "tests": ["tests/pdf/100-r4-job-04-name-kept.test.mjs"],
+      "summary": "The Overview applies the form's canSave rule. Blanking Company or Role (whitespace counts as blank) while the other is blank keeps the old value. Field now reopens on the current value rather than a refused draft. Either one can still be blanked while the other is set." }
+  ],
+  "review": {
+    "issues": [
+      "The existing firestore-rules unit test reads `batch.set(publicDoc(shareId), …)`, but publish had renamed the variable to `id`.",
+      "Existing tests/pdf/81-job-resume-pickers counted every <option> in the Overview and the form, so the new Work Mode and Source selects broke it.",
+      "The R4-JOB-03 open-job assertion expected '1d overdue', but one day late reads 'Yesterday'.",
+      "Copies published before R4-SYNC-03 would have read as 'changed since' once after the deploy.",
+      "A narrow publish race remains (read, then batch): see R4-SYNC-01 remaining.",
+      "For the same 'offline' status, the workspace top bar (CollectionSyncDot) still says 'Offline'.",
+      "ShareLinkModal's publish and unpublish have no guard against a stale result landing after the panel reopens (pre-existing, minor)."
+    ],
+    "fixedByReviewer": [
+      "publish's variable is named shareId again (1cedd04).",
+      "The picker test now reads only the Resume Used select, found by aria-label or id (662cd72, a01db6f). The stale test was updated, not weakened.",
+      "The JOB-03 test uses a deadline three days back (662cd72).",
+      "publishedIsCurrent passes the stored copy through publicSnapshot too, with a test for an old-format copy (1cedd04)."
+    ]
+  },
+  "baselineFailures": [],
+  "notes": "No firestore.rules change was needed, so there is nothing to publish in the Firebase console. The fake Firestore, which applies the rules, accepts every new write pattern. Open items: (1) the R4-SYNC-01 residual race, fixable with runTransaction in publicIo.publish; (2) the workspace top bar's CollectionSyncDot maps 'offline' to isOnline=false. The collection engine reports 'offline' only when the browser is offline, but failureReport can also give 'offline' there; aligning the two means updating tests/unit/collection-sync-status.unit.mjs:141. Accessibility, deferred: the new Work Mode and Source selects on the Overview use aria-label with no visible <label>, like the existing Resume Used select. Knowledge docs 05-state-auth-sync.md (public links) and 07-job-tracker.md (OverviewTab) are updated. New tests use the prefix tests/pdf/100-r4-*, with shared helpers in tests/pdf/100-r4-job-helpers.mjs."
+}
