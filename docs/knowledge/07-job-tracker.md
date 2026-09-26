@@ -27,7 +27,7 @@ Under `src/components/job/`:
 
 | Component | Role |
 |-----------|------|
-| `OverviewTab` | Core fields summary |
+| `OverviewTab` | Core fields, edited in place: company and role (not both blank), deadline, follow-up date, work mode, source, résumé |
 | `NotesTab` | Freeform notes |
 | `TasksTab` / `TodoItem` | Checklist todos |
 | `Pipeline` | Visual pipeline |

@@ -11,9 +11,10 @@ import { DOCUMENT_HINT, IMPORT_ACCEPT, isDocumentFile } from '@/utils/importDocu
  * dashboard's Import menu has (V2OWNER-DATA-3). `letter`: the Cover Letter tab is open, where PDF
  * and Word export the letter, Cover Letter Text the letter as plain text (`onExportLetterText`), and
  * the other text exports still the résumé — each item says which (R2-131). `onShare`: Share a public
- * link (R2-148), given only to a signed-in account on a site with a cloud.
+ * link (R2-148), given only to a signed-in account on a site with a cloud. `importing`: a document is
+ * being read, so the menu says "Reading…" and stays shut until it is done (R4-IMP-12).
  */
-export function ExportDropdown({ exporting, keeps = false, letter = false, onExportPDF, onExportWord, onExportJSON, onExportMarkdown, onExportAtsText, onExportJsonResume, onExportLetterText, onImportJSON, onImportFile, onImportError, onShare }) {
+export function ExportDropdown({ exporting, importing = false, keeps = false, letter = false, onExportPDF, onExportWord, onExportJSON, onExportMarkdown, onExportAtsText, onExportJsonResume, onExportLetterText, onImportJSON, onImportFile, onImportError, onShare }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   const importRef = useRef(null);
@@ -34,13 +35,13 @@ export function ExportDropdown({ exporting, keeps = false, letter = false, onExp
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen(o => !o)}
-        disabled={!!exporting}
+        disabled={!!exporting || importing}
         className={`flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg border transition-colors disabled:opacity-60 ${
           open ? 'bg-gray-100 border-gray-300 text-gray-700' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
         }`}
       >
         <Download size={12} />
-        {exporting ? '...' : 'Export'}
+        {exporting ? '...' : importing ? 'Reading…' : 'Export'}
         <ChevronDown size={11} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
 
@@ -56,8 +57,12 @@ export function ExportDropdown({ exporting, keeps = false, letter = false, onExp
           <button
             onClick={() => { onExportWord(); setOpen(false); }}
             disabled={!!exporting}
-            // The .docx is text, for ATS: say what the PDF has that it leaves out — the letter keeps its band (R2-133).
-            title="A text document for ATS: no photo, and the résumé prints without its banner or coloured column"
+            // Say what the .docx leaves out that the PDF has (R2-133). The résumé prints its photo (R2-126) and
+            // Modern's and the Sidebar's header on their band (R2-137); the designed layouts' own marks (Registry's
+            // bar, Timeline's rail, the rules of Bookend, Chronicle, Keel…) are not drawn; the letter prints no photo.
+            title={letter
+              ? 'An editable document: the letter prints without its photo'
+              : "An editable document: Banner's and Banded's headers and the Sidebar's side column print on the white page, and the designed layouts' rules and bars are left out"}
             className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 disabled:opacity-50"
           >
             <FileText size={12} className="text-emerald-500" /> {letter ? 'Export Cover Letter Word' : 'Export Word'}

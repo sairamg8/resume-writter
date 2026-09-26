@@ -12,6 +12,7 @@ import { resolveTemplateSettings } from '@/templates/pdf/shared/templateSettings
 import { getDateColor, getEffectiveSpacing } from '@/templates/pdf/shared/PdfSections';
 import { fieldGap } from '@/templates/pdf/shared/PdfItemHeader';
 import { hasRichText } from '@/utils/richText';
+import { contactHref } from '@/utils/contacts';
 import { dateRange, endDateOf, formatDate, presentLabel, startDateOf } from '@/utils/dates';
 import { skillCategory, skillGroup, skillSeparator } from '@/utils/skills';
 import { employerOf, groupPlaces, groupsRoles, roleGroups } from '@/utils/roleGroups';
@@ -300,18 +301,25 @@ export function buildReferences(section, accentHex, settings, centered, dateHex,
     const role = [item.jobTitle, item.company].filter(Boolean).join(', ');
     if (role) paras.push(line([normal(role, { size: look.base, color: ink.sub })]));
     if (item.relationship) paras.push(line([normal(item.relationship, { size: look.base, color: ink.meta, italics: true })]));
+    // Linked through contactHref, as the PDF links them: a phone with under three digits ("On request")
+    // prints as text, not as an empty tel: link.
     const reach = [
-      item.email && linked(item.email, `mailto:${item.email}`, { size: look.base, color: accentHex }, look.links),
-      item.phone && linked(item.phone, `tel:${item.phone.replace(/[^\d+]/g, '')}`, { size: look.base, color: ink.meta }, look.links),
+      item.email && linked(item.email, contactHref('email', item), { size: look.base, color: accentHex }, look.links),
+      item.phone && linked(item.phone, contactHref('phone', item), { size: look.base, color: ink.meta }, look.links),
     ].filter(Boolean);
     if (reach.length) paras.push(line(reach.flatMap((r, i) => (i ? [normal('  |  ', { size: look.base, color: ink.muted }), r] : [r]))));
     return paras;
   })];
 }
 
-/** The interests on one line, in the accent the PDF prints its interest chips in. */
+/**
+ * The interests on one line, in the accent the PDF prints its interest chips in: each entry split at
+ * its commas and trimmed, blank parts left out, as the PDF's chips, the ATS text and the Markdown read
+ * them ("Chess,Hiking," → "Chess, Hiking").
+ */
 export function buildInterests(section, accentHex, settings, centered, dateHex, look) {
-  const allInterests = shown(section).map((i) => i.interests).filter(Boolean).join(', ');
+  const allInterests = shown(section)
+    .flatMap((i) => String(i.interests || '').split(',').map((s) => s.trim()).filter(Boolean)).join(', ');
   if (!allInterests) return [];
   return [
     sectionHeading(section.title, accentHex, centered, section.heading),

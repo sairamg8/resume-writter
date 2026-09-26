@@ -31,8 +31,8 @@ describe('regressions — unique ids', () => {
 
     // Editing the second new entry leaves the first one alone.
     sectionCard('Professional Experience').within(() => {
-      cy.contains('span', 'New Entry').click();
-      cy.get('input[placeholder="Company Name"]').last().type('Globex');
+      // Both new entries open with their fields (R4-ED-07); Acme's card stays collapsed.
+      cy.get('input[placeholder="Company Name"]').should('have.length', 2).first().type('Globex');
     });
     cy.store().should((s) => {
       const exp = active(s).sections.find((x) => x.type === 'experience');

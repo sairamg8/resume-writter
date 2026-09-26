@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useId } from 'react';
 import {
   Bold, Italic, Underline, List, ListOrdered,
   AlignLeft, AlignCenter, AlignRight, AlignJustify, Link, Sparkles,
@@ -20,6 +20,10 @@ export default function RichTextEditor({ label, ariaLabel, value, onChange, plac
   // the selection, else the bullet or line the caret is in; null to add the result as a new bullet.
   const [optimizerText, setOptimizerText] = useState('');
   const optimizerTarget = useRef(null);
+  // A drag that starts in this editor: the text it drags (a Range), and the mark it puts on the drag
+  // so its own drop knows it (onDrop). A drag from anywhere else carries no such mark.
+  const dragSource = useRef(null);
+  const moveMark = useId();
 
   // Adopt `value` whenever it changes from outside (another resume opened, an import, a cloud
   // pull), but never while this editor has focus: there the DOM is the source of truth and
@@ -30,10 +34,20 @@ export default function RichTextEditor({ label, ariaLabel, value, onChange, plac
     if (!el || document.activeElement === el) return;
     const clean = sanitizeRichText(value || '');
     if (el.innerHTML !== clean) el.innerHTML = clean;
+    // A value stored with a picture's data in it (before R4-ED-02, a pasted screenshot's megabytes
+    // of base64) is stored again without it, so it stops filling the browser's storage and the cloud
+    // copy. Only then: showing a value otherwise writes nothing. The data: URL is looked for inside a
+    // tag, where a picture keeps it; the same words typed as text stay in the clean value, and matching
+    // them wrote the field again every time it was shown.
+    if (DATA_URL.test(value || '')) onChange(clean);
   }, [value]);
 
+  // What the editor holds, with any picture dropped first (dropMedia): the stored value never keeps
+  // an <img> or a data: URL, whichever way the browser put one in.
   function emit() {
-    onChange(ref.current?.innerHTML || '');
+    const el = ref.current;
+    if (el) dropMedia(el);
+    onChange(el?.innerHTML || '');
   }
 
   function exec(cmd, val = null) {
@@ -95,20 +109,48 @@ export default function RichTextEditor({ label, ariaLabel, value, onChange, plac
   }
 
   // Pasted and dropped content is reduced to what the editor itself can produce — no colours,
-  // fonts or backgrounds from Google Docs or web pages, and nothing executable.
+  // fonts or backgrounds from Google Docs or web pages, and nothing executable. The browser never
+  // inserts its own: a clipboard or a drop with no text (a copied screenshot, an image file) put an
+  // <img src="data:…"> of 1–5 MB in the field, which never prints and filled the browser's storage
+  // and the cloud copy's 1 MB (R4-ED-02). The editor has no pictures, so that inserts nothing.
   function onPaste(e) {
-    if (insertClean(e.clipboardData)) e.preventDefault();
+    if (!e.clipboardData) return; // a browser with no clipboard data to read pastes as it always did
+    e.preventDefault();
+    insertClean(e.clipboardData);
   }
 
+  function onDragStart(e) {
+    // Only a selection is moved. A drag with none (a link dragged by itself) has a collapsed range,
+    // and deleting that deleted the character before the caret.
+    const sel = window.getSelection();
+    const range = sel?.rangeCount ? sel.getRangeAt(0) : null;
+    dragSource.current = range && !range.collapsed ? range.cloneRange() : null;
+    if (dragSource.current) e.dataTransfer?.setData(MOVE_TYPE, moveMark);
+  }
+
+  // A drag that started in this editor is a move: the text leaves where it was and goes in at the
+  // drop point. Inserting it there and nothing else — the browser's move cancelled — left it in both
+  // places (R4-ED-04). The editor moves it itself, rather than leaving the drop to the browser, so
+  // the moved text is sanitized like any drop (a browser's own move wraps it in styled spans). The
+  // drag's mark, not a flag, says where it came from: a flag cleared on dragend stayed set when the
+  // dragged node was gone before dragend fired, and every later drop went in unsanitized.
   function onDrop(e) {
-    const data = e.dataTransfer;
-    if (!data?.getData('text/html') && !data?.getData('text/plain')) return;
     e.preventDefault();
-    const range = document.caretRangeFromPoint?.(e.clientX, e.clientY);
-    if (range) {
-      const sel = window.getSelection();
+    const data = e.dataTransfer;
+    const source = dragSource.current;
+    dragSource.current = null;
+    if (!data?.getData('text/html') && !data?.getData('text/plain')) return;
+    const at = dropRange(e.clientX, e.clientY);
+    const sel = window.getSelection();
+    if (source && data.getData(MOVE_TYPE) === moveMark && ref.current?.contains(source.commonAncestorContainer)) {
+      if (!at || source.isPointInRange?.(at.startContainer, at.startOffset)) return; // dropped on itself
       sel.removeAllRanges();
-      sel.addRange(range);
+      sel.addRange(source);
+      document.execCommand('delete'); // `at` is a live Range: it keeps its place as the text goes
+    }
+    if (at) {
+      sel.removeAllRanges();
+      sel.addRange(at);
     } else {
       ref.current?.focus();
     }
@@ -184,6 +226,8 @@ export default function RichTextEditor({ label, ariaLabel, value, onChange, plac
           onInput={onInput}
           onPaste={onPaste}
           onDrop={onDrop}
+          onDragStart={onDragStart}
+          onDragEnd={() => { dragSource.current = null; }}
           onCompositionStart={() => { isComposing.current = true; }}
           onCompositionEnd={() => { isComposing.current = false; onInput(); }}
           className="px-3 py-2 text-sm pointer-coarse:text-base focus:outline-none empty-placeholder rich-text-output"
@@ -225,14 +269,26 @@ export function statementRange(el) {
   const at = sel.getRangeAt(0);
   if (!at.collapsed && at.toString().trim()) return at.cloneRange();
   const range = document.createRange();
+  // The paragraph or item the caret is in, else the editor itself. A paragraph whose lines are split
+  // by <br> (Shift+Enter, a pasted or imported description) is read line by line, as bare text is:
+  // read whole, its two lines opened glued into one ("Handled QACut costs") and Apply replaced both
+  // (R4-CL-04).
+  let host = el;
   for (let n = at.startContainer; n && n !== el; n = n.parentNode) {
-    if (n.nodeType === 1 && STATEMENTS.has(n.nodeName)) {
-      range.selectNodeContents(n);
-      return range.toString().trim() ? range : null;
-    }
+    if (n.nodeType === 1 && STATEMENTS.has(n.nodeName)) { host = n; break; }
   }
-  let node = at.startContainer === el ? el.childNodes[at.startOffset] || el.lastChild : at.startContainer;
-  while (node && node.parentNode !== el) node = node.parentNode;
+  if (host !== el && ![...host.childNodes].some((c) => c.nodeName === 'BR')) {
+    range.selectNodeContents(host);
+    return range.toString().trim() ? range : null;
+  }
+  let node = at.startContainer;
+  if (node === host) {
+    // A caret between two children: the one after it, but just before a <br> it is at the end of the
+    // line that break closes.
+    const [before, after] = [host.childNodes[at.startOffset - 1], host.childNodes[at.startOffset]];
+    node = after && (after.nodeName !== 'BR' || !before || !inLine(before)) ? after : before || host.lastChild;
+  }
+  while (node && node.parentNode !== host) node = node.parentNode;
   if (!node || !inLine(node)) return null;
   let first = node;
   let last = node;
@@ -241,6 +297,38 @@ export function statementRange(el) {
   range.setStartBefore(first);
   range.setEndAfter(last);
   return range.toString().trim() ? range : null;
+}
+
+/** Elements a browser can paste or drop into a contentEditable that the editor cannot print. */
+const MEDIA = new Set(['IMG', 'PICTURE', 'VIDEO', 'AUDIO', 'SVG', 'CANVAS', 'IFRAME', 'OBJECT', 'EMBED']);
+/** A data: URL's base64 payload inside a tag, as a browser's own paste of a picture stores it. */
+const DATA_URL = /<[^>]*\bdata:[^\s"'>,;]*;base64,/i;
+/** The type a drag from an editor carries, with that editor's own id, so its drop knows it as a move. */
+const MOVE_TYPE = 'application/x-resume-rich-text-move';
+
+/** Remove every picture and other media element under `node`, in place (R4-ED-02). */
+function dropMedia(node) {
+  for (const child of Array.from(node.childNodes)) { // a copy: removing a child changes the live list
+    if (child.nodeType !== 1) continue;
+    if (MEDIA.has(child.nodeName.toUpperCase())) node.removeChild(child);
+    else dropMedia(child);
+  }
+}
+
+/**
+ * The caret position under a drop point, as a Range: caretRangeFromPoint (Chromium, Safari), else
+ * caretPositionFromPoint (Firefox, which has no caretRangeFromPoint — the drop point was ignored
+ * there and the text went over the selection instead, R4-ED-04). null when neither finds one.
+ */
+function dropRange(x, y) {
+  const range = document.caretRangeFromPoint?.(x, y);
+  if (range) return range;
+  const pos = document.caretPositionFromPoint?.(x, y);
+  if (!pos?.offsetNode) return null;
+  const at = document.createRange();
+  at.setStart(pos.offsetNode, pos.offset);
+  at.setEnd(pos.offsetNode, pos.offset);
+  return at;
 }
 
 function Btn({ title, onExec, children }) {

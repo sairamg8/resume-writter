@@ -1,8 +1,9 @@
 // Two Templates-UI audit leftovers filed together as R2-133. The dashboard card printed the stored
 // template id under CSS `capitalize` ("Foo" for an id the app does not offer, which opens and prints
-// as Classic) instead of the name the editor shows (templateLabel). And Export Word gave no hint that
-// the .docx is the résumé's text — no photo, no banner or coloured column — so a Modern résumé with a
-// photo came out plain with no word why.
+// as Classic) instead of the name the editor shows (templateLabel). And Export Word gave no hint of
+// what the .docx leaves out. It now prints the photo (R2-126) and Modern's and the Sidebar's header on
+// their band (R2-137): the hint names what is left — Banner's and Banded's headers and the Sidebar's
+// side column print on the white page, and the letter prints no photo.
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { createElement } from 'react';
@@ -29,19 +30,26 @@ describe('Templates UI leftovers (R2-133)', () => {
     assert.ok(!/fancy/i.test(unknown), unknown);
   });
 
-  it('Export Word says what the .docx leaves out', async () => {
+  it('Export Word says what the .docx leaves out — and no longer that the résumé loses its photo or every band', async () => {
     const { ExportDropdown } = await loadModule('/src/components/ExportDropdown.jsx');
     const noop = () => {};
-    const view = mount(ExportDropdown, { exporting: false, onExportPDF: noop, onExportWord: noop, onExportJSON: noop, onImportJSON: noop });
-    try {
-      const button = (label) => [...elements(view.container)].find((el) => el.tagName === 'BUTTON' && text(el) === label);
-      view.act(() => reactProps(button('Export')).onClick());
-      const word = button('Export Word');
-      assert.ok(word, 'the menu is open');
-      assert.match(word.getAttribute('title') || '', /photo/i);
-      assert.match(word.getAttribute('title') || '', /banner/i);
-    } finally {
-      await view.unmount();
-    }
+    const hint = async (letter, label) => {
+      const view = mount(ExportDropdown, { exporting: false, letter, onExportPDF: noop, onExportWord: noop, onExportJSON: noop, onImportJSON: noop });
+      try {
+        const button = (name) => [...elements(view.container)].find((el) => el.tagName === 'BUTTON' && text(el) === name);
+        view.act(() => reactProps(button('Export')).onClick());
+        const word = button(label);
+        assert.ok(word, 'the menu is open');
+        return word.getAttribute('title') || '';
+      } finally {
+        await view.unmount();
+      }
+    };
+    const resumeHint = await hint(false, 'Export Word');
+    assert.match(resumeHint, /Banner's and Banded's headers/);
+    assert.match(resumeHint, /designed layouts' rules and bars are left out/);
+    assert.match(resumeHint, /Sidebar's side column/);
+    assert.doesNotMatch(resumeHint, /photo|coloured column|without its banner/i);
+    assert.match(await hint(true, 'Export Cover Letter Word'), /without its photo/);
   });
 });

@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FileText, Plus, Upload, Mail as MailIcon, Briefcase, Columns2 } from 'lucide-react';
 import AuthBar from '@/components/AuthBar';
@@ -34,11 +34,27 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false, publicL
   const navigate = useNavigate();
   const importRef = useRef(null);
   const [importError, setImportError] = useState(null);
+  // One timer for whichever import error shows: an earlier error's timer cleared a newer one early
+  // (a failed PDF's 8 s, then a bad .json 6 s later, gone after 2 s — R4-APP-09).
+  const importErrorTimer = useRef(0);
+  const showImportError = (message, ms = 4000) => {
+    clearTimeout(importErrorTimer.current);
+    setImportError(message);
+    importErrorTimer.current = setTimeout(() => setImportError(null), ms);
+  };
+  useEffect(() => () => clearTimeout(importErrorTimer.current), []);
   const [letterModalOpen, setLetterModalOpen] = useState(false);
   // A demo account keeps originals: the cards and Import offer "Keep as my original".
   const keeps = isDemoAccount(auth.user, DEMO_ACCOUNTS);
   // Whether the file being picked is imported as an original (ImportMenu).
   const importAsOriginal = useRef(false);
+  // A document being read (R4-IMP-12): pdf.js can take seconds to arrive, so Import says "Reading…"
+  // and is disabled, and a second pick meanwhile is ignored — the ref catches two in the same tick.
+  const [importing, setImporting] = useState(false);
+  const importBusy = useRef(false);
+  // A read that ends after the Dashboard is gone still imports, but no longer drags the user back.
+  const mounted = useRef(true);
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
 
   function pickImport(keep) {
     importAsOriginal.current = keep;
@@ -92,12 +108,19 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false, publicL
   function handleImport(e) {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (importBusy.current) { e.target.value = ''; return; }
     // A PDF, Word, Markdown or text résumé: read best-effort into a new one (R2-148).
     if (isDocumentFile(file)) {
       e.target.value = '';
+      importBusy.current = true;
+      setImporting(true);
       importDocument(file, {
-        importResume: store.importResume, navigate, keep: keeps && importAsOriginal.current,
-        onError: (message) => { setImportError(message); setTimeout(() => setImportError(null), 8000); },
+        importResume: store.importResume, keep: keeps && importAsOriginal.current,
+        navigate: (...args) => { if (mounted.current) navigate(...args); },
+        onError: (message) => showImportError(message, 8000),
+      }).finally(() => {
+        importBusy.current = false;
+        if (mounted.current) setImporting(false);
       });
       return;
     }
@@ -116,19 +139,16 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false, publicL
           setImportError(null);
           navigate(`/resume/${id}`);
         } else {
-          setImportError('Invalid resume file — must be a CPWT-CV backup or standard JSON Resume (.json).');
-          setTimeout(() => setImportError(null), 4000);
+          showImportError('Invalid resume file — must be a CPWT-CV backup or standard JSON Resume (.json).');
         }
       } catch {
-        setImportError('Could not parse file. Make sure it\'s a valid CPWT-CV or standard JSON Resume (.json).');
-        setTimeout(() => setImportError(null), 4000);
+        showImportError('Could not parse file. Make sure it\'s a valid CPWT-CV or standard JSON Resume (.json).');
       }
     };
     // A file the browser will not hand over — a permission error, a removed drive, a folder — never
     // reaches onload, and without this the import said nothing (R2-085; the editor's: AUD-23).
     reader.onerror = reader.onabort = () => {
-      setImportError('That file could not be read. Check it is still there and try again.');
-      setTimeout(() => setImportError(null), 4000);
+      showImportError('That file could not be read. Check it is still there and try again.');
     };
     reader.readAsText(file);
     e.target.value = '';
@@ -152,9 +172,9 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false, publicL
           </div>
           <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
             <input ref={importRef} type="file" accept={IMPORT_ACCEPT} className="hidden" onChange={handleImport} />
-            {keeps ? <ImportMenu onPick={pickImport} className={IMPORT_BUTTON} /> : (
-              <button onClick={() => pickImport(false)} className={IMPORT_BUTTON} title={`Import a résumé: a CPWT-CV or JSON Resume file (.json). ${DOCUMENT_HINT}`}>
-                <Upload size={14} /> Import
+            {keeps ? <ImportMenu onPick={pickImport} busy={importing} className={IMPORT_BUTTON} /> : (
+              <button onClick={() => pickImport(false)} disabled={importing} className={`${IMPORT_BUTTON} disabled:opacity-60`} title={`Import a résumé: a CPWT-CV or JSON Resume file (.json). ${DOCUMENT_HINT}`}>
+                <Upload size={14} /> {importing ? 'Reading…' : 'Import'}
               </button>
             )}
             <button

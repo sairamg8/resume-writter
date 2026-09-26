@@ -23,7 +23,7 @@ let createWorker = () => import('./pdfWorker.js?worker').then(({ default: PdfWor
 let broken = false;       // the worker failed to start or died: every build runs on the main thread
 const pending = new Map(); // id → { job, resolve, reject }
 let nextId = 0;
-let lastBuild = 0;         // the id of the latest build asked for: only it sets the font fallback
+let lastBuild = 0;         // the id of the latest build asked for that reports its font: only it sets the font fallback
 let proven = false;        // a build came back from the worker: from then on its errors are the résumé's
 
 const mainThread = () => import('@/utils/pdfExportReactPDF');
@@ -32,7 +32,7 @@ const mainThread = () => import('@/utils/pdfExportReactPDF');
 async function runHere({ kind, resume, options }) {
   const m = await mainThread();
   if (kind === 'warm') return m.warmPdfExport(resume);
-  return kind === 'letter' ? m.renderCoverLetterPdf(resume, options) : m.renderResumePdf(resume);
+  return kind === 'letter' ? m.renderCoverLetterPdf(resume, options) : m.renderResumePdf(resume, options);
 }
 
 /** The worker stopped (failed to load, or died): run what it held here, and every build from now. */
@@ -59,8 +59,9 @@ function onReply({ data }, w) {
   }
   if (entry.job.kind === 'warm') { entry.resolve(); return; }
   proven = true;
-  // As resolvePdfFonts does on the main thread: a slow build for a font since changed must not name it.
-  if (data.id === lastBuild) setFontFallback(data.fallback);
+  // As resolvePdfFonts does on the main thread: a slow build for a font since changed must not name it,
+  // and a page picture (reportFont: false) never speaks for the open résumé.
+  if (entry.job.options?.reportFont !== false && data.id === lastBuild) setFontFallback(data.fallback);
   entry.resolve(new Blob([data.bytes], { type: 'application/pdf' }));
 }
 
@@ -94,15 +95,20 @@ async function run(job) {
 
 async function build(kind, resume, options) {
   const id = ++nextId;
-  lastBuild = id;
+  // A page picture (pageImage: the gallery, dashboard cards, /new) is not the latest build of the
+  // open résumé: the preview's reply queued behind it must still set the notice (R4-PDF-01).
+  if (options?.reportFont !== false) lastBuild = id;
   const printable = await withPrintablePhotos(resume);
   return run({ id, kind, resume: printable, options });
 }
 
-/** The résumé's PDF, as Export PDF downloads it and the preview paints it (renderResumePdf). */
-export const buildResumePdf = (resume) => build('resume', resume);
+/**
+ * The résumé's PDF, as Export PDF downloads it and the preview paints it (renderResumePdf).
+ * `{ reportFont: false }` for a page picture: the editor's font notice is left as it was.
+ */
+export const buildResumePdf = (resume, options) => build('resume', resume, options);
 
-/** The cover letter's PDF (renderCoverLetterPdf); `{ preview: true }` adds the empty letter's hint. */
+/** The cover letter's PDF (renderCoverLetterPdf); `{ preview: true }` adds the empty letter's hint, `reportFont` as above. */
 export const buildCoverLetterPdf = (resume, options = {}) => build('letter', resume, options);
 
 /** Load the fonts and template `resume` prints with, where its PDFs are built (warmPdfExport). */

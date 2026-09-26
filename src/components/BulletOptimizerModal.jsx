@@ -6,6 +6,8 @@ import {
 import {
   analyzeBullet,
   autoFixWeakPhrases,
+  insertActionVerb,
+  insertMetric,
   ACTION_VERBS_BY_CATEGORY,
   GOOGLE_XYZ_TEMPLATES
 } from '@/utils/bulletOptimizer';
@@ -28,19 +30,14 @@ export default function BulletOptimizerModal({ isOpen, onClose, initialText = ''
     setText(autoFixWeakPhrases(text));
   }
 
+  // The verb in place of a leading verb or weak phrase, else before the first word; the metric before
+  // the closing full stop (R4-CL-07, R4-CL-08).
   function handleInsertVerb(verb) {
-    if (!text.trim()) {
-      setText(verb + ' ');
-      return;
-    }
-    // If text already starts with a word, replace or prepend
-    const words = text.trim().split(/\s+/);
-    words[0] = verb;
-    setText(words.join(' '));
+    setText(prev => insertActionVerb(prev, verb));
   }
 
   function handleInsertMetric(metricStr) {
-    setText(prev => prev.trim() + ' ' + metricStr);
+    setText(prev => insertMetric(prev, metricStr));
   }
 
   function handleInsertTemplate(tmpl) {

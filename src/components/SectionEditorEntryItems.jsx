@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import RichTextEditor from '@/components/RichTextEditor';
-import { InputField, MonthPicker, FieldRow, ItemCard } from '@/components/SectionEditorShared';
+import { InputField, MonthPicker, FieldRow, ItemCard, MONTHS } from '@/components/SectionEditorShared';
+import { parseMonthYear } from '@/utils/dates';
 
 /**
  * The current flag: the entry ends "Present" and its End Date is cleared. A job's, and an
@@ -28,7 +30,7 @@ function CurrentDates({ item, onUpdate, label }) {
   );
 }
 
-export function ExperienceItem({ item, onUpdate, onRemove, onDuplicate }) {
+export function ExperienceItem({ item, onUpdate, onRemove, onDuplicate, defaultOpen }) {
   const u = (k, v) => onUpdate({ ...item, [k]: v });
   const visible = item.visible !== false;
   const itemHidden = new Set(item.hiddenFields || []);
@@ -37,7 +39,7 @@ export function ExperienceItem({ item, onUpdate, onRemove, onDuplicate }) {
     onUpdate({ ...item, hiddenFields: itemHidden.has(f) ? cur.filter(x => x !== f) : [...cur, f] });
   }
   return (
-    <ItemCard label={item.role || item.company} onRemove={onRemove} onDuplicate={onDuplicate} visible={visible} onToggleVisibility={() => onUpdate({ ...item, visible: !visible })}>
+    <ItemCard label={item.role || item.company} onRemove={onRemove} onDuplicate={onDuplicate} visible={visible} defaultOpen={defaultOpen} onToggleVisibility={() => onUpdate({ ...item, visible: !visible })}>
       <FieldRow label="Company" field="company" hiddenSet={itemHidden} onToggle={toggleField}>
         <InputField value={item.company} onChange={v => u('company', v)} placeholder="Company Name" />
       </FieldRow>
@@ -63,11 +65,11 @@ export function ExperienceItem({ item, onUpdate, onRemove, onDuplicate }) {
   );
 }
 
-export function EducationItem({ item, onUpdate, onRemove, onDuplicate }) {
+export function EducationItem({ item, onUpdate, onRemove, onDuplicate, defaultOpen }) {
   const u = (k, v) => onUpdate({ ...item, [k]: v });
   const visible = item.visible !== false;
   return (
-    <ItemCard label={item.institution || item.degree} onRemove={onRemove} onDuplicate={onDuplicate} visible={visible} onToggleVisibility={() => onUpdate({ ...item, visible: !visible })}>
+    <ItemCard label={item.institution || item.degree} onRemove={onRemove} onDuplicate={onDuplicate} visible={visible} defaultOpen={defaultOpen} onToggleVisibility={() => onUpdate({ ...item, visible: !visible })}>
       <InputField label="Institution" value={item.institution} onChange={v => u('institution', v)} placeholder="University Name" />
       <InputField label="Degree" value={item.degree} onChange={v => u('degree', v)} placeholder="B.S. Computer Science" />
       <InputField label="Field of Study" value={item.fieldOfStudy} onChange={v => u('fieldOfStudy', v)} placeholder="Computer Science" />
@@ -79,11 +81,11 @@ export function EducationItem({ item, onUpdate, onRemove, onDuplicate }) {
   );
 }
 
-export function ProjectItem({ item, onUpdate, onRemove, onDuplicate }) {
+export function ProjectItem({ item, onUpdate, onRemove, onDuplicate, defaultOpen }) {
   const u = (k, v) => onUpdate({ ...item, [k]: v });
   const visible = item.visible !== false;
   return (
-    <ItemCard label={item.name} onRemove={onRemove} onDuplicate={onDuplicate} visible={visible} onToggleVisibility={() => onUpdate({ ...item, visible: !visible })}>
+    <ItemCard label={item.name} onRemove={onRemove} onDuplicate={onDuplicate} visible={visible} defaultOpen={defaultOpen} onToggleVisibility={() => onUpdate({ ...item, visible: !visible })}>
       <InputField label="Project Name" value={item.name} onChange={v => u('name', v)} placeholder="My Awesome Project" />
       <InputField label="URL (optional)" value={item.url} onChange={v => u('url', v)} placeholder="github.com/you/project" />
       <InputField label="Technologies" value={item.technologies} onChange={v => u('technologies', v)} placeholder="React, Node.js, PostgreSQL" />
@@ -93,11 +95,11 @@ export function ProjectItem({ item, onUpdate, onRemove, onDuplicate }) {
   );
 }
 
-export function VolunteeringItem({ item, onUpdate, onRemove, onDuplicate }) {
+export function VolunteeringItem({ item, onUpdate, onRemove, onDuplicate, defaultOpen }) {
   const u = (k, v) => onUpdate({ ...item, [k]: v });
   const visible = item.visible !== false;
   return (
-    <ItemCard label={item.role || item.org} onRemove={onRemove} onDuplicate={onDuplicate} visible={visible} onToggleVisibility={() => onUpdate({ ...item, visible: !visible })}>
+    <ItemCard label={item.role || item.org} onRemove={onRemove} onDuplicate={onDuplicate} visible={visible} defaultOpen={defaultOpen} onToggleVisibility={() => onUpdate({ ...item, visible: !visible })}>
       <InputField label="Organization" value={item.org} onChange={v => u('org', v)} placeholder="Non-profit Organization" />
       <InputField label="Role" value={item.role} onChange={v => u('role', v)} placeholder="Volunteer Coordinator" />
       <InputField label="Location" value={item.location} onChange={v => u('location', v)} placeholder="City, State" />
@@ -107,18 +109,33 @@ export function VolunteeringItem({ item, onUpdate, onRemove, onDuplicate }) {
   );
 }
 
-export function CustomItem({ item, onUpdate, onRemove, onDuplicate }) {
+export function CustomItem({ item, onUpdate, onRemove, onDuplicate, defaultOpen }) {
   const u = (k, v) => onUpdate({ ...item, [k]: v });
   const visible = item.visible !== false;
+  // A stored date the month picker cannot hold — an imported period ('Jan 2020 – Mar 2021',
+  // '2019 – 2021'), a season — is edited as text: the picker showed its first month and year, or
+  // blanks, and any pick wrote 'Jan 2021' over the whole period (R4-ED-03). The PDF prints the date
+  // as stored. Once a text box, it stays one while the entry is on screen, so it does not turn into
+  // the picker mid-typing (a period retyped passes through '2019', which the picker reads).
+  const [periodText, setPeriodText] = useState(false);
+  if (!periodText && isPeriodText(item.date)) setPeriodText(true);
   return (
-    <ItemCard label={item.title} onRemove={onRemove} onDuplicate={onDuplicate} visible={visible} onToggleVisibility={() => onUpdate({ ...item, visible: !visible })}>
+    <ItemCard label={item.title} onRemove={onRemove} onDuplicate={onDuplicate} visible={visible} defaultOpen={defaultOpen} onToggleVisibility={() => onUpdate({ ...item, visible: !visible })}>
       <InputField label="Title" value={item.title} onChange={v => u('title', v)} placeholder="Entry Title" />
       <InputField label="Subtitle" value={item.subtitle} onChange={v => u('subtitle', v)} placeholder="Organization or Context" />
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-        <MonthPicker label="Date / Period" value={item.date} onChange={v => u('date', v)} />
+        {periodText
+          ? <InputField label="Date / Period" value={item.date} onChange={v => u('date', v)} placeholder="Jan 2020 – Mar 2021" />
+          : <MonthPicker label="Date / Period" value={item.date} onChange={v => u('date', v)} />}
         <InputField label="Location" value={item.location} onChange={v => u('location', v)} placeholder="City, State" />
       </div>
       <RichTextEditor key={item.id + '_desc'} label="Description" value={item.description} onChange={v => u('description', v)} placeholder="Free-form description..." rows={3} />
     </ItemCard>
   );
+}
+
+/** A date the month picker cannot show and write back whole: text that is no month and year, nor a bare month. */
+function isPeriodText(value) {
+  if (typeof value !== 'string' || !value.trim()) return false;
+  return !parseMonthYear(value) && !MONTHS.includes(value.trim());
 }

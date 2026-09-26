@@ -1,7 +1,14 @@
 import { useLayoutEffect, useState } from 'react';
 import { computePlacement } from './placement.js';
 
-const HIDDEN = { position: 'fixed', top: 0, left: 0, visibility: 'hidden' };
+// Until it is measured the panel is transparent and lets the pointer through — not
+// visibility: hidden, which browsers refuse to focus: Popover and MenuList move focus into the panel
+// in the same commit, before its position renders, so a picker's search box and a menu's items
+// never had it (typing went nowhere, Escape reached the dialog around it — R4-APP-01). Its entry
+// animation waits too: running, it would override the opacity and show a panel never measured (an
+// anchor ref that reaches no element) at the corner; paused, it holds its first frame and plays once
+// placed.
+const HIDDEN = { position: 'fixed', top: 0, left: 0, opacity: 0, pointerEvents: 'none', animationPlayState: 'paused' };
 
 /**
  * Positions `floatingRef` (a fixed panel in a Portal) next to `anchorRef` while `open`, through

@@ -150,16 +150,30 @@ describe('Title ↔ Contacts in Word', () => {
     });
   }
 
+  // Below Name: the contacts under the title (or name), which the gap spaces, as the letter's PDF.
+  const below = { fieldsPosition: 'below-name' };
   for (const template of TEMPLATES) {
     const band = ['modern', 'sidebar', 'banner', 'banded'].includes(template); // the letters whose letterhead is a band (Banded's, R2-138 B2)
     it(`${template}: the letter's title (or name) row keeps Word's own spacing unset${band ? ' (none on the band)' : ''}, and takes the set value`, async () => {
-      assert.equal(spaceAfter(await letterDocx(cv(template)), 'Staff Engineer'), band ? 0 : 40);
-      assert.equal(spaceAfter(await letterDocx(cv(template, { titleContactsGap: 20 })), 'Staff Engineer'), 300);
+      assert.equal(spaceAfter(await letterDocx(cv(template, {}, PERSONAL, below)), 'Staff Engineer'), band ? 0 : 40);
+      assert.equal(spaceAfter(await letterDocx(cv(template, { titleContactsGap: 20 }, PERSONAL, below)), 'Staff Engineer'), 300);
       const noTitle = { ...PERSONAL, title: '' };
-      assert.equal(spaceAfter(await letterDocx(cv(template, {}, noTitle)), 'Jordan Rivera'), band ? 0 : 20);
-      assert.equal(spaceAfter(await letterDocx(cv(template, { titleContactsGap: 20 }, noTitle)), 'Jordan Rivera'), 300);
+      assert.equal(spaceAfter(await letterDocx(cv(template, {}, noTitle, below)), 'Jordan Rivera'), band ? 0 : 20);
+      assert.equal(spaceAfter(await letterDocx(cv(template, { titleContactsGap: 20 }, noTitle, below)), 'Jordan Rivera'), 300);
     });
   }
+
+  // Right of Name, the default: the contacts sit beside the name (R2-137), and the letter's PDF prints
+  // no Title ↔ Contacts there (above): the title (or name) ends its cell, with no space after it.
+  it('Right of Name: the title (or name) ends its cell; a stored Title ↔ Contacts changes nothing', async () => {
+    const noTitle = { ...PERSONAL, title: '' };
+    for (const template of ['classic', 'modern']) {
+      for (const settings of [{}, { titleContactsGap: 20 }]) {
+        assert.equal(spaceAfter(await letterDocx(cv(template, settings)), 'Staff Engineer'), 0, `${template} ${JSON.stringify(settings)}`);
+        assert.equal(spaceAfter(await letterDocx(cv(template, settings, noTitle)), 'Jordan Rivera'), 0, `${template} ${JSON.stringify(settings)}: no title`);
+      }
+    }
+  });
 });
 
 describe('the Title ↔ Contacts row (Personal Info → Header Customization → Header spacing)', () => {

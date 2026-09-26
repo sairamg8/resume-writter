@@ -43,6 +43,12 @@ const letterDocx = async (r) => {
   const { renderCoverLetterDocx } = await loadModule('/src/utils/wordExport.js');
   return readDocx(new Uint8Array(await (await renderCoverLetterDocx(r)).arrayBuffer()));
 };
+/** A letter on `template`'s band with `settings`, its contacts one line of Icon (printed as bars). */
+const bandLetter = (template, settings) => {
+  const r = cv(template, settings);
+  r.coverLetter = { ...r.coverLetter, headerStyle: 'icon', headerLayout: 'justify' };
+  return r;
+};
 /** The PDF's fill for `needle`'s runs, each once, without '#'. */
 const fills = async (bytes, needle) => [...new Set((await drawState(bytes, needle)).map((h) => h.fill.slice(1)))];
 
@@ -66,7 +72,7 @@ describe('the résumé\'s Word header prints the PDF\'s contact marks and colour
     }
   });
 
-  it('Modern and Sidebar: bars whatever Contact Style is stored (the PDF draws icons), the values in the Text colour\'s grey on the page', async () => {
+  it('Modern and Sidebar: bars whatever Contact Style is stored (the PDF draws icons), on the band in its colours', async () => {
     for (const template of BANDED) {
       for (const contactStyle of STYLES) {
         for (const textColor of ['#1e3a8a', '#374151']) {
@@ -74,12 +80,13 @@ describe('the résumé\'s Word header prints the PDF\'s contact marks and colour
           const r = cv(template, { contactStyle, textColor });
           const pdf = await render(r);
           assert.deepEqual([await fills(pdf, '|'), await fills(pdf, '•')], [[], []], `${at}: the PDF draws no marks`);
-          // Word prints no band: the values print on the white page, in the grey Classic's header
-          // prints them in at that Text colour.
-          const [grey] = await fills(await render(cv('classic', { textColor })), EMAIL);
+          // Word draws the band (R2-137): the values and bars in the band's colours, as the letter's
+          // letterhead prints them on the same band with Icon (below: the Bar letter's PDF bars).
           const { values, marks } = contactLine(await renderDocx(r));
-          assert.deepEqual([...new Set(values.map(([, c]) => c))], [grey], `${at}: the values`);
-          assert.deepEqual(distinct(marks), [`| ${BAR_GREY}`], `${at}: the marks`);
+          const letter = contactLine(await letterDocx(bandLetter(template, { contactStyle, textColor })));
+          assert.deepEqual([...new Set(values.map(([, c]) => c))], [...new Set(letter.values.map(([, c]) => c))], `${at}: the values`);
+          assert.equal(marks.length, 2, `${at}: a bar between each two values`);
+          assert.deepEqual(distinct(marks), distinct(letter.marks), `${at}: the marks`);
         }
       }
     }
@@ -95,10 +102,17 @@ describe('the résumé\'s Word header prints the PDF\'s contact marks and colour
         if (stored === undefined) delete r.settings.contactStyle;
         else r.settings.contactStyle = stored;
         const at = `${template}, contactStyle ${JSON.stringify(stored)}`;
+        const { values, marks } = contactLine(await renderDocx(r));
+        if (BANDED.includes(template)) {
+          // On the band (R2-137): the band's colours, as the Icon letter prints them there.
+          const letter = contactLine(await letterDocx(bandLetter(template, r.settings)));
+          assert.deepEqual([...new Set(values.map(([, c]) => c))], [...new Set(letter.values.map(([, c]) => c))], `${at}: the values`);
+          assert.deepEqual(distinct(marks), distinct(letter.marks), `${at}: the marks`);
+          continue;
+        }
         const grey = STYLED.includes(template)
           ? (await fills(await render(r), EMAIL))[0]
           : letterGrey(resolveTemplateSettings(r.settings, template).textColor).slice(1);
-        const { values, marks } = contactLine(await renderDocx(r));
         assert.deepEqual([...new Set(values.map(([, c]) => c))], [grey], `${at}: the values`);
         assert.deepEqual(distinct(marks), [`| ${BAR_GREY}`], `${at}: the marks`);
       }

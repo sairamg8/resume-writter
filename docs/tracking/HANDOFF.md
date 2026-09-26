@@ -14,6 +14,12 @@ tracker rows; wave 2 (design: dsg-layout, dsg-flow) from the merged branch.
 Sessions (08:34 UTC): imp session_016ehqgYvX9wwgL1x6gEQyZz · brd session_019hpMafzJsJDtWkUkC8kn1A · cl
 session_01LpUCmQtmevxSyTxCJCWFzT · exp session_01T22uErGMhDgQM2AoHvteUv · ed session_01RmULbsAQNiRSHXyGfvj1ut · dsn-pdf
 session_015jr7EiFHdBDX2DFKBB3yU7 · sync-job session_018ykA8zSVUR3WwqSd69zRP6 · app session_014snET2MtPBA5AvN32tmnF7.
+**09:20 UTC:** seven clusters reported and merged into the work branch (`bb200f4`; Dashboard.jsx conflict kept both
+R4-IMP-12 and R4-APP-09); full gate dispatched on `bb200f4`; brd still working (nudged by trigger at 09:24). Reports kept
+in `fixes3/reports/`, tracker `fixes3/R4-TRACKER.md` (`python3 docs/tracking/tools/r4_tracker.py [--deployed <sha>]`).
+Wave 1b leftovers (R4-LO-01…25, clusters lo-imp, lo-cl, lo-misc) in R4-CLUSTERS.md.
+Wave 1b sessions (09:20 UTC, from `e6edfc4`): lo-imp session_01SgWdHjxzSS97CRbYHJW6Wj · lo-cl session_01CefnMCJBUjNUyADrJ4H76X ·
+lo-misc session_01VnvtdsZ8V9QekYoa8wYrEF. Wave 2 (design) starts once wave 1 + 1b are merged and gated.
 Check: `for c in imp brd cl exp ed dsn-pdf sync-job app; do git fetch -q origin claude/wf-r4-$c && git cat-file -e
 FETCH_HEAD:wf-reports/r4-$c.json && echo "$c REPORTED"; done`.
 

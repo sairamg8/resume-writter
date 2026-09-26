@@ -4,6 +4,7 @@ import { skillGroup } from './skills.js';
 import { ACTION_VERBS, hasMetric, leadsWithActionVerb } from './bulletOptimizer.js';
 import { ATS_TIER_POINTS, atsRating, hasHeaderControls, inSidebarColumn, templateId, templateLabel, TEMPLATE_PICKER } from '../constants/templates.js';
 import { resolveSection } from '../templates/pdf/shared/templateSectionDefaults.js';
+import { groupsRoles, roleGroups } from './roleGroups.js';
 
 // The ATS plain-text export lives in its own module; the ATS tab and Export menu import it from here.
 export { generateAtsPlainText } from './atsPlainText.js';
@@ -29,14 +30,20 @@ export function extractBulletsFromItem(item) {
   if (item.description && typeof item.description === 'string') {
     const desc = item.description;
 
-    // Check for <li> tags
-    const liMatches = [...desc.matchAll(/<li[^>]*>([\s\S]*?)<\/li>/gi)];
-    if (liMatches.length > 0) {
-      for (const m of liMatches) {
-        const clean = decodeEntities(m[1].replace(/<[^>]+>/g, '')).trim();
-        if (clean && !bullets.includes(clean)) {
-          bullets.push(clean);
-        }
+    // A list: each item is a bullet, nested or not, read as the PDF prints it (parseRichText). A
+    // pattern from <li> to the next </li> ran from an outer item to its nested one's end, so
+    // "Led migration" and its sub-item "Cut costs by 30%" were one bullet, "Led migrationCut costs by
+    // 30%" (R4-CL-10). An item's continuation paragraph belongs to it; body text outside the list is
+    // no bullet, as before.
+    if (/<li[\s>]/i.test(desc)) {
+      const items = [];
+      for (const block of parseRichText(desc)) {
+        const text = block.runs.map((r) => r.text).join('').replace(/\s+/g, ' ').trim();
+        if (block.marker) items.push(text);
+        else if (block.indent >= 1 && items.length) items[items.length - 1] = `${items[items.length - 1]} ${text}`.trim();
+      }
+      for (const clean of items) {
+        if (clean && !bullets.includes(clean)) bullets.push(clean);
       }
     } else {
       // Look for bullet characters or line breaks (<br>, </p>, </div>, \n)
@@ -242,9 +249,19 @@ function shownItems(s, template) {
  */
 export function printedJobs(resume) {
   const template = templateId(resume?.template);
-  return (Array.isArray(resume?.sections) ? resume.sections : [])
-    .filter((s) => s?.type === 'experience' && s.visible !== false)
-    .flatMap((s) => shownItems(s, template));
+  const jobs = [];
+  for (const s of Array.isArray(resume?.sections) ? resume.sections : []) {
+    if (s?.type !== 'experience' || s.visible === false) continue;
+    // Section Options → "Group roles by company" prints a group's company, and a location its roles
+    // share, once, on the employer header above its first role (R2-147): each later role carries
+    // `groupLead`, the index of that first role here, so jobFields reads those fields where they
+    // print (R4-CL-06).
+    for (const group of roleGroups(shownItems(s, template), groupsRoles(s.settings))) {
+      const lead = jobs.length;
+      group.forEach((job, i) => jobs.push(i ? { ...job, groupLead: lead } : job));
+    }
+  }
+  return jobs;
 }
 
 /**
@@ -319,6 +336,11 @@ function chooseBestCasing(newWord, oldWord) {
  */
 const LETTER_ABBREVIATION = /^(?:\p{L}\.)+\p{L}?$/u;
 
+/** The apostrophes a pasted posting spells a contraction with: curly, modifier letter, prime. */
+const APOSTROPHES = /[\u2018\u2019\u02BC\u2032\uFF07]/g;
+/** A contraction's tail: "we'll", "they're", "I've", "she'd", "I'm", "isn't" (R4-CL-02). */
+const CONTRACTION = /^\p{L}+'(?:ll|re|ve|d|m)$|n't$/iu;
+
 /**
  * Extracts keywords & tech terms from a job description. A word is Unicode letters, their marks and
  * digits: `\w` is ASCII, and read with it "München" was the keyword "nchen" (R2-023). The text is
@@ -327,9 +349,12 @@ const LETTER_ABBREVIATION = /^(?:\p{L}\.)+\p{L}?$/u;
  */
 export function extractJobKeywords(jobDescriptionText) {
   if (!jobDescriptionText || typeof jobDescriptionText !== 'string') return [];
-  // Tokenize words, normalizing punctuation
+  // Tokenize words, normalizing punctuation. An apostrophe stays inside its word, typed straight or
+  // curly: read as a space, "You'll" and "we're" were the keywords "ll" and "re", which the stop
+  // list's "you'll" and "we're" could never catch, and "+" wrote them into Skills (R4-CL-02).
   const clean = jobDescriptionText.normalize('NFC')
-    .replace(/[^\p{L}\p{M}\p{N}_\s+#.-]/gu, ' ')
+    .replace(APOSTROPHES, "'")
+    .replace(/[^\p{L}\p{M}\p{N}_\s+#.'-]/gu, ' ')
     .replace(/\s+/g, ' ');
 
   const tokens = clean.split(' ');
@@ -342,6 +367,12 @@ export function extractJobKeywords(jobDescriptionText) {
     word = word.replace(/^[^\p{L}\p{M}\p{N}_+#]+|[^\p{L}\p{M}\p{N}_+#]+$/gu, '');
     if (word.length < 2 || word.length > 30) continue;
     if (LETTER_ABBREVIATION.test(word)) continue;
+    if (COMMON_STOP_WORDS.has(word.toLowerCase())) continue;
+    // "Stripe's" is the keyword "Stripe"; any other contraction ("it'll", "ain't") is no keyword.
+    // A name with an apostrophe ("O'Reilly") stays as it is.
+    word = word.replace(/'s$/i, '');
+    if (CONTRACTION.test(word)) continue;
+    if (word.length < 2) continue;
     const lower = word.toLowerCase();
     if (COMMON_STOP_WORDS.has(lower)) continue;
     if (/^\d+\+?$/.test(lower)) continue; // skip pure numbers and numbers with + (e.g. 5+)
@@ -387,7 +418,7 @@ export function matchResumeWithJob(resume, jobDescriptionText) {
   if (!jdKeywords.length) return null;
 
   // Composed, as the keywords are read (extractJobKeywords).
-  const resumeCorpus = extractResumeCorpus(resume).normalize('NFC').toLowerCase();
+  const resumeCorpus = extractResumeCorpus(resume).normalize('NFC').replace(APOSTROPHES, "'").toLowerCase();
   const matched = [];
   const missing = [];
 
@@ -425,26 +456,28 @@ export function matchResumeWithJob(resume, jobDescriptionText) {
 }
 
 /**
- * Whether the ATS report flags this section's heading: the section is shown and its title is not on
+ * Whether the ATS report flags this section's heading: the section prints (it is shown and so is one
+ * of its entries on `template` — an empty one prints no heading, R4-CL-11) and its title is not on
  * its type's alias list. The one rule for both the report's std_headings item (analyzeAtsScore) and
  * the fix it offers (standardizeSectionsForAts), so the button cannot change a heading the report
  * passed — it did, and hidden sections too, before TUI-7.
  */
-function needsAtsTitle(section) {
-  return !!section && section.visible !== false && !isStandardAtsTitle(section);
+function needsAtsTitle(section, template) {
+  return !!section && section.visible !== false && shownItems(section, template).length > 0 && !isStandardAtsTitle(section);
 }
 
 /**
  * Renames the headings the ATS report flags to their canonical Workday / Taleo title, and nothing
- * else. A hidden section, a title already on its type's alias list ("Work Experience", "Technical
+ * else. A hidden or empty section, a title already on its type's alias list ("Work Experience", "Technical
  * Skills") and a custom section are returned as the same object. It writes no title order: leading
  * experience entries with the job title is the report's separate "Put Job Title First" fix, and this
  * one used to set it on every experience section behind a label that only names headings (TUI-7).
  */
-export function standardizeSectionsForAts(sections) {
+export function standardizeSectionsForAts(sections, template) {
   if (!Array.isArray(sections)) return sections;
+  const id = templateId(template);
   return sections.map((s) => {
-    const spec = needsAtsTitle(s) && ATS_STANDARD_SECTIONS[s.type];
+    const spec = needsAtsTitle(s, id) && ATS_STANDARD_SECTIONS[s.type];
     return spec ? { ...s, title: spec.canonical } : s;
   });
 }
@@ -778,7 +811,7 @@ export function analyzeAtsScore(resume, jobDescriptionText = '') {
   }
 
   // Heading naming standardization check (4 pts) — needsAtsTitle, the rule its fix also uses
-  const nonStandard = sections.filter(needsAtsTitle)
+  const nonStandard = sections.filter((s) => needsAtsTitle(s, currentTemplate))
     .map(s => ({ title: s.title, type: s.type, canonical: ATS_STANDARD_SECTIONS[s.type]?.canonical }));
 
   if (nonStandard.length === 0) {

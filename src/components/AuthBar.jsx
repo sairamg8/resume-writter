@@ -61,6 +61,10 @@ export function SyncDot({ syncStatus, lastSynced, isOnline, heldResumes, heldLab
   let Icon, color, label;
   if (!isOnline) {
     Icon = CloudOff; color = '#9ca3af'; label = 'Offline — changes saved locally';
+  } else if (syncStatus === 'offline') {
+    // The browser says online, but Firestore cannot reach its server (a captive portal, a blocked
+    // host): the sync keeps trying (cloudSyncEngine), and the icon must not vanish meanwhile.
+    Icon = CloudOff; color = '#9ca3af'; label = 'Cannot reach your account — changes saved locally, will retry';
   } else if (syncStatus === 'syncing') {
     Icon = Loader;    color = '#f59e0b'; label = 'Syncing…';
   } else if (syncStatus === 'synced') {

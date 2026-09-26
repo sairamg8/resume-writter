@@ -22,6 +22,7 @@ const SERVED = {
   'https://img.example.com/me.webp': () => new Response(Buffer.from(WEBP_BYTES, 'base64'), { headers: { 'content-type': 'image/webp' } }),
   'https://img.example.com/page': () => new Response('<html></html>', { headers: { 'content-type': 'text/html' } }),
   'https://img.example.com/gone.jpg': () => new Response('Not found', { status: 404, headers: { 'content-type': 'image/jpeg' } }),
+  'https://img.example.com/gone-too.jpg': () => new Response('Not found', { status: 404, headers: { 'content-type': 'image/jpeg' } }),
 };
 const fetched = [];
 
@@ -90,13 +91,18 @@ describe('a photo stored as a URL or a path', () => {
     });
   }
 
-  it('is fetched once a session, and the Photo panel says "Not printed" for one that cannot be', async () => {
+  // A fetch that rejects (no network, or no cross-site read: fetch cannot tell them apart) is tried
+  // again on the next build (R4-PDF-03, pinned in r4pdf-photo-retry); a 404 is final for the session.
+  it('is fetched once a session when the server says it is not there, and the Photo panel says "Not printed" for one that cannot be', async () => {
     const { printableImage, printableNow } = await loadModule('/src/utils/printableImage.js');
+    const gone = 'https://img.example.com/gone-too.jpg';
+    assert.equal(printableNow(gone), undefined, 'not known before it is asked for');
+    assert.equal(await printableImage(gone), null);
+    assert.equal(await printableImage(gone), null);
+    assert.equal(fetched.filter((u) => u === gone).length, 1);
     const url = 'https://no-cors.example.com/panel.jpg';
-    assert.equal(printableNow(url), undefined, 'not known before it is asked for');
     assert.equal(await printableImage(url), null);
-    assert.equal(await printableImage(url), null);
-    assert.equal(fetched.filter((u) => u === url).length, 1);
+    assert.equal(printableNow(url), null, 'known not to print, for now');
     assert.equal(await printableImage('https://img.example.com/me.webp'), JPEG_2X2);
 
     const { PhotoSection } = await loadModule('/src/components/PersonalInfoEditorPhoto.jsx');

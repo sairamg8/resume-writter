@@ -2,7 +2,7 @@ import { useEffect, useId, useState } from 'react';
 import { Globe, X, Copy, ExternalLink } from 'lucide-react';
 import { doc, getDocFromServer, writeBatch } from 'firebase/firestore';
 import { db } from '@/utils/firebase';
-import { publicIo, publicSummary, publicUrl, publishedIsCurrent, publicSnapshot } from '@/utils/publicLink';
+import { publicIo, publicSummary, publicUrl, publishedIsCurrent, publicSnapshot, TOO_LARGE_CODE } from '@/utils/publicLink';
 import { timeAgo } from '@/utils/resume';
 import { copyText } from '@/utils/clipboard';
 
@@ -29,6 +29,7 @@ export default function ShareLinkModal({ isOpen, resume, uid, io = firebasePubli
     let live = true;
     setView({ state: 'loading', share: null });
     setError(null);
+    setCopied(null);
     io.readShare(uid, resumeId)
       .then((share) => { if (live) setView({ state: 'ready', share }); })
       .catch((e) => {
@@ -48,17 +49,22 @@ export default function ShareLinkModal({ isOpen, resume, uid, io = firebasePubli
       await fn();
     } catch (e) {
       console.error(`${label} failed:`, e);
-      setError(`${label} failed${e?.message ? ` (${e.message})` : ''}. Check your connection and try again.`);
+      // A copy too large to publish says so and only so: the connection has nothing to do with it.
+      setError(e?.code === TOO_LARGE_CODE ? e.message
+        : `${label} failed${e?.message ? ` (${e.message})` : ''}. Check your connection and try again.`);
     } finally {
       setBusy(false);
     }
   };
   const publish = () => run(async () => {
     const next = await io.publish(uid, resume, share ? { shareId: share.shareId } : undefined);
+    // 'Copied' was about the link as it was: a new one has not been copied.
+    if (next.shareId !== share?.shareId) setCopied(null);
     setView({ state: 'ready', share: next });
   }, 'Publishing');
   const unpublish = () => run(async () => {
     await io.unpublish(uid, resumeId, share.shareId);
+    setCopied(null);
     setView({ state: 'ready', share: null });
   }, 'Unpublishing');
   const url = share ? publicUrl(share.shareId) : '';

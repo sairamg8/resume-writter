@@ -2,7 +2,8 @@ import { useId } from 'react';
 import { ColorInput, Label, DesignSection } from '@/components/DesignPanelShared';
 import { headerTemplateId, templateId } from '@/constants/templates';
 import { letterheadLook } from '@/templates/pdf/shared/letterhead';
-import { DEFAULTS } from '@/templates/pdf/shared/templateSettings';
+import { DEFAULTS, resolveTemplateSettings } from '@/templates/pdf/shared/templateSettings';
+import { solid } from '@/templates/pdf/shared/pdfColors';
 
 const ACCENT_PRESETS = [
   { label: 'Blue',    color: '#2563eb' },
@@ -33,8 +34,22 @@ const SIDEBAR_BG_PRESETS = [
   { label: 'Crimson',  color: '#450a0a' },
 ];
 
+/**
+ * `color` as a colour input holds it (#rrggbb): one it cannot hold ('#abc', a colour name) as the PDF
+ * prints it, and one nobody can read as black, what the input shows for it anyway.
+ */
+function swatch(color) {
+  const hex = solid(color);
+  return /^#[0-9a-f]{6}$/i.test(hex || '') ? hex.toLowerCase() : '#000000';
+}
+
 export function ColorsSection({ resume, settings, updateSetting, onReset }) {
   const uid = useId();
+  // The colours the PDF prints where none is picked: the template's own accent (Gridline's navy, not
+  // a panel-wide blue), and the Name and Job title colours its header resolves (white on Modern's
+  // banner). Each swatch holds the printed colour, so it says what the page shows — and a colour that
+  // is not already the swatch's, black included, fires a change when picked (R4-DSN-05).
+  const printed = resolveTemplateSettings(settings, templateId(resume.template));
   // The Text colour the PDF prints: the stored one, else the template's own default (Modern's
   // slate, Minimal's #111111 …), not a panel-wide Near Black the PDF does not use (R9-7).
   const textColor = settings.textColor || DEFAULTS[templateId(resume.template)].textColor;
@@ -63,8 +78,8 @@ export function ColorsSection({ resume, settings, updateSetting, onReset }) {
         </div>
         <div className="flex items-center gap-2">
           <label htmlFor={uid + 'accentColor'} className="text-xs text-gray-500">Custom:</label>
-          <ColorInput id={uid + 'accentColor'} aria-label="Custom accent color" value={settings.accentColor || '#2563eb'} onCommit={v => updateSetting('accentColor', v)} className="h-7 w-16 rounded border border-gray-200 cursor-pointer p-0.5" />
-          <span className="text-xs text-gray-400 font-mono">{settings.accentColor || '#2563eb'}</span>
+          <ColorInput id={uid + 'accentColor'} aria-label="Custom accent color" value={swatch(printed.accentColor)} onCommit={v => updateSetting('accentColor', v)} className="h-7 w-16 rounded border border-gray-200 cursor-pointer p-0.5" />
+          <span className="text-xs text-gray-400 font-mono">{printed.accentColor}</span>
         </div>
       </div>
 
@@ -114,7 +129,7 @@ export function ColorsSection({ resume, settings, updateSetting, onReset }) {
           <div key={key} className="flex items-center justify-between">
             <span className="text-xs text-gray-600">{label}</span>
             <div className="flex items-center gap-2">
-              <ColorInput value={settings[key] || '#000000'} onCommit={v => updateSetting(key, v)} className="h-6 w-10 rounded border border-gray-200 cursor-pointer p-0.5" title={label} aria-label={label} />
+              <ColorInput value={swatch(printed[key])} onCommit={v => updateSetting(key, v)} className="h-6 w-10 rounded border border-gray-200 cursor-pointer p-0.5" title={label} aria-label={label} />
               <span className="text-[11px] text-gray-400 font-mono w-16 truncate">{settings[key] || placeholder}</span>
               {settings[key] && (
                 <button onClick={() => updateSetting(key, '')} className="text-[11px] text-gray-400 hover:text-gray-600" title="Reset to template default">↺</button>

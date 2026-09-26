@@ -102,11 +102,12 @@ export async function warmPdfExport(resume) {
 /**
  * Render the résumé exactly as it is exported. Used by the live preview and by Export PDF. A photo
  * saved as WebP or GIF, before uploads were converted, prints as a converted copy (R7-7).
+ * `reportFont: false` for a page picture: the editor's font notice is left alone (resolvePdfFonts).
  */
-export async function renderResumePdf(resume) {
+export async function renderResumePdf(resume, { reportFont = true } = {}) {
   const key = templateId(resume?.template);
   const [fonts, TemplatePDF, printable] = await Promise.all([
-    resolvePdfFonts(resume?.settings, printedText(resume, resume?.settings)),
+    resolvePdfFonts(resume?.settings, printedText(resume, resume?.settings), { reportFont }),
     loadTemplate(key),
     withPrintablePhotos(resume),
   ]);
@@ -121,12 +122,12 @@ export async function renderResumePdf(resume) {
 /**
  * Render the cover letter exactly as it is exported. `preview: true` adds the grey writing
  * hint an empty letter shows in the editor; exports never carry it. Its photos print as the
- * résumé's do (renderResumePdf).
+ * résumé's do, and `reportFont` is renderResumePdf's.
  */
-export async function renderCoverLetterPdf(resume, { preview = false } = {}) {
+export async function renderCoverLetterPdf(resume, { preview = false, reportFont = true } = {}) {
   const templateKey = templateId(resume?.template);
   const [fonts, mod, printable] = await Promise.all([
-    resolvePdfFonts(resume?.settings, printedText({ personal: resume?.personal, coverLetter: resume?.coverLetter }, resume?.settings)),
+    resolvePdfFonts(resume?.settings, printedText({ personal: resume?.personal, coverLetter: resume?.coverLetter }, resume?.settings), { reportFont }),
     import('@/templates/pdf/CoverLetterTemplatePDF'),
     withPrintablePhotos(resume),
   ]);

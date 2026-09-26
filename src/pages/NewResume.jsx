@@ -8,6 +8,7 @@ import { useBackOrHome } from '@/hooks/useBackOrHome';
 import { savedDesigns } from '@/constants/templatePresets';
 import { categoriesOf, filterCards, pickerCards } from '@/utils/templatePicker';
 import { NEW_RESUME_NAME, resumeSources } from '@/utils/newResume';
+import { defaultSettings } from '@/utils/defaultData';
 
 /**
  * Dashboard → New Resume (the owner's asks of 2026-09-24, R3-011 and R3-012): a page of the picker's looks
@@ -25,7 +26,9 @@ export function NewResume({ store }) {
   const [category, setCategory] = useState('');
   const sources = resumeSources(store.appState.resumes);
   const source = sources.find((r) => r.id === fromId) ?? sources[0] ?? null;
-  const cards = pickerCards(source?.settings || {}, savedDesigns(store.appState.resumes));
+  // With none, the looks are drawn over the settings a blank résumé starts with (its accent and text
+  // colour), so a card shows the page a click makes (R4-DSN-03), not each template's own default blue.
+  const cards = pickerCards(source?.settings || defaultSettings('classic'), savedDesigns(store.appState.resumes));
   const shown = filterCards(cards, { category });
 
   // The new résumé replaces /new in the history: Back from the editor goes to the dashboard.

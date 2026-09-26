@@ -113,11 +113,19 @@ export function leadsWithActionVerb(text) {
 /**
  * Whether plain `text` quantifies its result — the one metric rule of the optimizer and the ATS
  * score (R2-025): a number that stands as one ("12", "45%", "$1.2M", "10k", "3x", "200ms"), not the
- * digit in a name such as "S3", "EC2" or "Web3", and not a statement that is only a year.
+ * digit in a name such as "S3", "EC2" or "Web3", and not a year.
  */
 export function hasMetric(text) {
   const clean = String(text || '').trim();
-  return /(?<!\p{L})\d/u.test(clean) && !/^\d{4}$/.test(clean);
+  // A calendar year ("in 2021", "2019–2022", "the 2020s") measures nothing: it is read as no number
+  // at all, or "Joined Acme in 2021" scored as a quantified result (R4-CL-09). "$2019", "2019%",
+  // "2000+" and "2010k" stay numbers.
+  const noYears = clean
+    // A year range or a month and year ("2019–22", "2019/20", "05/2021") is dates too, all of it.
+    .replace(/(?<![\p{L}\d$])(?:19|20)\d{2}\s*[–—/-]\s*\d{2}(?![\d%+kKmMbBxX$])/gu, '')
+    .replace(/(?<![\p{L}\d$])\d{1,2}\/(?:19|20)\d{2}(?![\d%+kKmMbBxX$])/gu, '')
+    .replace(/(?<![\p{L}\d$]|\d[.,])(?:19|20)\d{2}(?![\d%+kKmMbBxX$]|[.,]\d)/gu, '');
+  return /(?<!\p{L})\d/u.test(noYears) && !/^\d{4}$/.test(clean);
 }
 
 export const GOOGLE_XYZ_TEMPLATES = [
@@ -220,6 +228,49 @@ export function analyzeBullet(text = '') {
     score: Math.min(100, Math.max(0, score)),
     suggestions
   };
+}
+
+/**
+ * The statement with power verb `verb` clicked in (R4-CL-07): it replaces a leading action verb, or a
+ * leading weak phrase ("Responsible for" → "Spearheaded"), and otherwise goes before the first word,
+ * which is lowercased when it is an ordinary capitalised word ("In 2023, built" → "Spearheaded in
+ * 2023, built"; "AWS" stays). It always replaced the first word, whatever it was ("Spearheaded for
+ * migrating…"), and joined the lines of the statement into one. Every other character is kept.
+ */
+export function insertActionVerb(text, verb) {
+  const s = String(text ?? '');
+  if (!s.trim()) return `${verb} `;
+  // Bullet marks, quotes and spaces before the first word stay where they are ("- Led …").
+  const lead = s.match(/^[\s•\-*–—◦▪▸‣⁃"'“‘(]*/u)[0];
+  const rest = s.slice(lead.length);
+  // A verb phrase Auto-Fix or the tips write ("Contributed to", "Collaborated on") goes whole, or the
+  // chip left "Spearheaded to the hackathon".
+  const phrase = rest.match(LEADING_VERB_PHRASE);
+  if (phrase) return lead + verb + rest.slice(phrase[0].length);
+  if (leadsWithActionVerb(rest)) return lead + rest.replace(/^\p{L}[\p{L}'’-]*/u, verb);
+  for (const wp of WEAK_PHRASE_REPLACEMENTS) {
+    const weak = new RegExp(`^${wp.match.source}`, 'iu');
+    if (weak.test(rest)) return lead + rest.replace(weak, verb);
+  }
+  const [word] = rest.match(/^\S*/u);
+  return `${lead}${verb} ${/^\p{Lu}\p{Ll}+(?!\p{L})/u.test(word) ? word[0].toLowerCase() + rest.slice(1) : rest}`;
+}
+
+/** The verb phrases of more than one word among Auto-Fix's replacements and their alternatives. */
+const LEADING_VERB_PHRASE = new RegExp(`^(?:${WEAK_PHRASE_REPLACEMENTS
+  .flatMap(({ replacement, alternatives }) => [replacement, ...alternatives])
+  .filter((p) => p.includes(' '))
+  .map((p) => p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+  .join('|')})\\b`, 'iu');
+
+/**
+ * The statement with a metric phrase ("by 35%") added at its end, before its closing punctuation:
+ * "Reduced latency for checkout." becomes "Reduced latency for checkout by 35%.", not "… checkout. by
+ * 35%", and an empty statement is the phrase alone (R4-CL-08).
+ */
+export function insertMetric(text, metric) {
+  const [, body, stop] = String(text ?? '').trim().match(/^([\s\S]*?)([.!?;:]*)$/);
+  return body.trim() ? `${body.trimEnd()} ${metric}${stop}` : metric;
 }
 
 /**

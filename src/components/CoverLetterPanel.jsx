@@ -66,7 +66,9 @@ export default function CoverLetterPanel({ resume, coverLetter, personal, settin
     const samePerson = name !== '' && name === String(cl.recipientName ?? '').trim();
     updateCoverLetter('recipientName', name);
     if (gen.recipientTitle || !samePerson) updateCoverLetter('recipientTitle', gen.recipientTitle ?? '');
-    if (gen.company) updateCoverLetter('company', gen.company);
+    // The company too: a blank generator Company clears the last one, so the block and the body
+    // (which then says "[Company Name]") agree (R4-CL-01).
+    updateCoverLetter('company', gen.company ?? '');
     if (gen.subject) updateCoverLetter('subject', gen.subject);
     if (gen.body) updateCoverLetter('body', gen.body);
     if (gen.closing) updateCoverLetter('closing', gen.closing);
@@ -86,6 +88,7 @@ export default function CoverLetterPanel({ resume, coverLetter, personal, settin
         isOpen={generatorOpen}
         onClose={() => setGeneratorOpen(false)}
         resume={effectiveResume}
+        coverLetter={cl}
         onApply={handleApplyGenerated}
       />
 

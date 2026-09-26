@@ -1,0 +1,197 @@
+{
+  "cluster": "r4-imp",
+  "branch": "claude/wf-r4-imp",
+  "base": "fd1f439",
+  "rows": [
+    {
+      "id": "R4-IMP-01",
+      "outcome": "fixed",
+      "commits": [
+        "57be086",
+        "fbbad00"
+      ],
+      "tests": [
+        "tests/unit/import-cert-award-lists.unit.mjs"
+      ],
+      "summary": "A Certifications or Awards section that opens with a list item is a list of them: one entry per bullet, its trailing date read (\"• AWS Certified Solutions Architect – 2022\"), a date or named-field line under an item joining it. A certificate's text with no field for it goes to \"Additional Information\" as an item titled with the certificate's name, never to a `description` the editor, PDF and Word never show."
+    },
+    {
+      "id": "R4-IMP-02",
+      "outcome": "fixed",
+      "commits": [
+        "a926344",
+        "1a63dc3",
+        "fbbad00"
+      ],
+      "tests": [
+        "tests/unit/import-markdown-links.unit.mjs",
+        "tests/unit/import-text.unit.mjs"
+      ],
+      "summary": "A Markdown link keeps its address: a labelled contact (\"[LinkedIn](https://…)\") fills its field with the address and keeps the label as its Display label (`linkedinLabel`…); a link in body text reads \"label (address)\"; a `###` title's link address becomes a field at the line's end (a project's URL; another type keeps it in its description); a certificate's labelled link line fills url and urlLabel. Product call: the label is restored as the Display label, so the app's own export round-trips exactly. One stale expectation in import-text.unit.mjs (the link text in a list item) now includes the address, as the finding asks."
+    },
+    {
+      "id": "R4-IMP-03",
+      "outcome": "fixed",
+      "commits": [
+        "63b087d"
+      ],
+      "tests": [
+        "tests/unit/import-docx-heading-levels.unit.mjs"
+      ],
+      "summary": "The Word reader keeps each Heading's level: the top level used starts sections, deeper levels are entries (as Markdown's ###), and a lone top-level first heading over deeper ones is the name. An entry-marked date line under an entry joins its header, and a custom heading with nothing under it keeps its words in \"Additional Information\"."
+    },
+    {
+      "id": "R4-IMP-04",
+      "outcome": "fixed",
+      "commits": [
+        "13214b8",
+        "44c8921",
+        "d28212b"
+      ],
+      "tests": [
+        "tests/unit/import-docx-textbox.unit.mjs"
+      ],
+      "summary": "docxXmlLines is a paragraph-stack reader: every <mc:Fallback> copy is skipped (nested or self-closing), so a text box is read once; the anchoring paragraph's own text (before and after the box) is kept, read before its boxes, or after them when it is a heading."
+    },
+    {
+      "id": "R4-IMP-05",
+      "outcome": "fixed",
+      "commits": [
+        "4902804",
+        "bed19a3",
+        "fbbad00"
+      ],
+      "tests": [
+        "tests/unit/import-docx-header.unit.mjs"
+      ],
+      "summary": "The header the first page shows (the first section's 'first' header with <w:titlePg/>, else its default one) is read before the body, with its own hyperlinks; lines the body opens with too are dropped, as is header furniture (Curriculum Vitae, Résumé, Confidential, Page N, a lone number, a '– Resume' or tab 'Page 1' tail). The app's own running header (default header, titlePg, none on page 1) adds nothing."
+    },
+    {
+      "id": "R4-IMP-06",
+      "outcome": "fixed",
+      "commits": [
+        "c5fa613",
+        "979b6b8",
+        "af27a4d"
+      ],
+      "tests": [
+        "tests/unit/import-text-encoding.unit.mjs"
+      ],
+      "summary": "Text and Markdown files are decoded by BOM (UTF-16 LE/BE), else strict UTF-8, else Windows-1252 — unless the bytes hold real UTF-8 letters around one stray bad byte, which stay UTF-8 (a single \"�\")."
+    },
+    {
+      "id": "R4-IMP-07",
+      "outcome": "fixed",
+      "commits": [
+        "3e00b2b"
+      ],
+      "tests": [
+        "tests/unit/import-unused-fields.unit.mjs"
+      ],
+      "summary": "A named field on an entry's header lines (\"Technologies:\", \"Link:\", \"ID:\", \"GPA:\", \"Expires:\", \"Location:\") that the entry type has no slot for leads its description as written; a certificate's goes to its \"Additional Information\" item."
+    },
+    {
+      "id": "R4-IMP-08",
+      "outcome": "fixed",
+      "commits": [
+        "a7cd2e4",
+        "568b4fe",
+        "fbbad00"
+      ],
+      "tests": [
+        "tests/unit/import-heading-name-only.unit.mjs"
+      ],
+      "summary": "Only a heading hint after the name makes a file 'hinted', so a Word file with only its name in Heading 1 finds its capitals sections. In a hinted file, an unmarked known title in capitals is a section too when it is not inside a marked entry and names a type the file does not mark itself (a job's **KEY ACHIEVEMENTS** stays in the job)."
+    },
+    {
+      "id": "R4-IMP-09",
+      "outcome": "fixed",
+      "commits": [
+        "ea0e470",
+        "764f35c",
+        "fbbad00"
+      ],
+      "tests": [
+        "tests/unit/import-markdown-role-groups.unit.mjs"
+      ],
+      "summary": "markdownLines marks a heading deeper than the entry above it a 'role'; an undated one-field employer over role headings (the app's \"Group roles by company\" export) gives each role its own job with the employer as company and the group's place as default location. A title holding role and company, or a dated entry, is never an employer."
+    },
+    {
+      "id": "R4-IMP-10",
+      "outcome": "fixed",
+      "commits": [
+        "489c32c",
+        "2138f79",
+        "fbbad00"
+      ],
+      "tests": [
+        "tests/unit/import-links-docx-pdf.unit.mjs",
+        "tests/pdf/imp-import-links.test.mjs"
+      ],
+      "summary": "The PDF reader reads each page's Link annotations and the Word reader each hyperlink's target (document and header .rels): a label that is not the address reads \"label (address)\" and fills the contact with its Display label. A contact line pdf.js reads as one item (Contact style Bar/Bullet) gives each link only its own label's letters, never past the separator. Round trip through the app's own PDF (Icon and Bar styles) and Word with Display labels."
+    },
+    {
+      "id": "R4-IMP-11",
+      "outcome": "fixed",
+      "commits": [
+        "0f1bcd6",
+        "764f35c",
+        "fbbad00"
+      ],
+      "tests": [
+        "tests/unit/import-languages-commas.unit.mjs"
+      ],
+      "summary": "Languages split at commas and semicolons outside brackets: \"English, Spanish, French\" is three, \"English (Native), Spanish (Fluent)\" two with their levels. A level cell after a level, or a lower-case last cell, joins that level (\"Full professional, C2\", \"Working knowledge, written\")."
+    },
+    {
+      "id": "R4-IMP-12",
+      "outcome": "fixed",
+      "commits": [
+        "bdd07fa"
+      ],
+      "tests": [
+        "tests/pdf/imp-import-busy.test.mjs"
+      ],
+      "summary": "While a document is read the Dashboard's Import (and the demo account's Import menu) and the editor's Export menu say \"Reading…\" and are disabled; a second pick meanwhile is ignored (a ref catches two in one tick). A finished import still imports but navigates only if the page that started it is still mounted (and, in the editor, still on the same résumé)."
+    },
+    {
+      "id": "R4-IMP-13",
+      "outcome": "fixed",
+      "commits": [
+        "a6c502c"
+      ],
+      "tests": [
+        "tests/unit/import-pdf-password.unit.mjs"
+      ],
+      "summary": "pdfLines turns pdf.js's PasswordException into \"That PDF is password-protected. Save a copy without a password (or as a Word file) and import that.\"; the loading task is still destroyed; other errors keep their message."
+    },
+    {
+      "id": "R4-IMP-14",
+      "outcome": "fixed",
+      "commits": [
+        "8f66889"
+      ],
+      "tests": [
+        "tests/unit/import-accept.unit.mjs",
+        "tests/pdf/99-import-ui.test.mjs"
+      ],
+      "summary": "IMPORT_ACCEPT is '.json,.pdf,.docx,.txt,.text,.md,.markdown' (not .doc: that is only told to save as .docx). The 99-import-ui expectation and docs/knowledge/06-templates-export.md were updated to it."
+    }
+  ],
+  "review": {
+    "issues": [
+      "Batch reviews (4 adversarial subagents) plus an end-of-cluster review; every issue they raised was fixed in the follow-up commits named per row:",
+      "IMP-04: nested/self-closing mc:Fallback; anchoring paragraph order (44c8921, d28212b)",
+      "IMP-06: one stray bad byte made a UTF-8 file all mojibake; NUL assertion could never fail (af27a4d)",
+      "IMP-02: '(Next.js)' read as a project URL; a linked company put the URL in the role; 'Node.js' under a certificate read as its URL; scheme-less typed links (1a63dc3, fbbad00)",
+      "IMP-10: a contact line read as one PDF item (Bar/Bullet) labelled wrong; wide link box put the address past the separator (2138f79, fbbad00)",
+      "IMP-05: header furniture (Curriculum Vitae, Page N, a number) became the name (bed19a3, fbbad00)",
+      "IMP-08: capitals sub-labels in marked files became sections (568b4fe); then too strict a gap rule, test input restored (fbbad00)",
+      "IMP-09/11: undated role+company entry misread as employer; employer named with a title word; level rest / lower-case language (764f35c, fbbad00)",
+      "IMP-12: the editor's import navigated after switching résumé (fixed in bdd07fa before landing)"
+    ],
+    "fixedByReviewer": []
+  },
+  "baselineFailures": [],
+  "notes": "Product calls: a labelled link's label is kept as the contact's Display label (R4-IMP-02/10); certificate leftovers go to 'Additional Information' items titled with the certificate name (R4-IMP-01); a document read blocks every Import pick, JSON too, until done (R4-IMP-12). New bugs seen, not fixed (no R4 row): (1) PDF and Word 'Group roles by company' print the employer line with no date over dated roles, and the import still drops that line into the previous job and gives the roles no company — only Markdown was covered by R4-IMP-09; (2) the Markdown export prints a certificate's description (markdownExport.js certifications body()), the only place one shows; (3) a bulleted certificate/award with indented sub-bullets becomes one entry per sub-bullet (list depth is lost by markdownLines/clean); (4) Word hyperlinks written as HYPERLINK field codes (instrText) are not read; (5) a Word file with Heading-2 job entries and a later section typed in bold capitals keeps that section inside the last job (known limit of R4-IMP-08's guard); (6) a link inside body text reads 'text (url)' as plain text rather than an <a> in the rich text. Accessibility seen, not fixed: 'Reading…' is not announced (no aria-busy/live region); ImportMenu keeps aria-expanded while disabled."
+}

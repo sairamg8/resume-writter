@@ -18,6 +18,7 @@ import { downloadBlob } from '@/utils/download';
 import { buildExportFilename } from '@/utils/exportFilename';
 import { newId } from '@/utils/ids';
 import { AtsParserView } from '@/components/AtsParserView';
+import { useSessionState } from '@/hooks/useSessionState';
 
 /**
  * The template the panel's costly layout fix moves a risky résumé to. One id, read both by the
@@ -58,8 +59,22 @@ const LAYOUT_FIXES = {
   },
 };
 
-export default function AtsCheckerPanel({ resume, store }) {
-  const [jobDescription, setJobDescription] = useState('');
+/**
+ * The ATS Check tab. Its panel is one per résumé (keyed by its id), so the job description kept for
+ * one is never shown, or saved, under another.
+ */
+export default function AtsCheckerPanel(props) {
+  return <AtsCheck key={props.resume?.id ?? ''} {...props} />;
+}
+
+/** A string, the only thing the scanner's box saves. */
+const isText = (v) => typeof v === 'string';
+
+function AtsCheck({ resume, store }) {
+  // The pasted posting is kept for the tab's session under the résumé's id: the Editor mounts this
+  // panel only while ATS Check is open, so a trip to the Résumé tab to add a missing keyword emptied
+  // the box and its results, which is the loop the scanner is for (R4-CL-03).
+  const [jobDescription, setJobDescription] = useSessionState(`cpwtcv_ats_jd:${resume?.id ?? ''}`, '', isText);
   // Copy Text's outcome, shown on the button for a moment: 'done', 'failed' or null.
   const [copiedText, setCopiedText] = useState(null);
   const [copiedKeyword, setCopiedKeyword] = useState(null);
@@ -82,12 +97,12 @@ export default function AtsCheckerPanel({ resume, store }) {
 
   /**
    * Both "Standardize" buttons: renames the headings the std_headings warning lists, and nothing
-   * else — not the titles it passed, not hidden sections, not the experience title order, which is
+   * else — not the titles it passed, not hidden or empty sections, not the experience title order, which is
    * "Put Job Title First" below (TUI-7).
    */
   function handleStandardizeHeadings() {
     if (!resume || !Array.isArray(resume.sections)) return;
-    const updated = standardizeSectionsForAts(resume.sections);
+    const updated = standardizeSectionsForAts(resume.sections, resume.template);
     store.updateSections(updated);
   }
 

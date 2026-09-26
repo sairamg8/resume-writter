@@ -1,0 +1,117 @@
+{
+  "cluster": "r4-exp",
+  "branch": "claude/wf-r4-exp",
+  "base": "fd1f439",
+  "rows": [
+    {
+      "id": "RES-R2-137",
+      "outcome": "fixed",
+      "commits": [
+        "39b3bf7",
+        "a96cebb"
+      ],
+      "tests": [
+        "tests/pdf/92-word-header-band.test.mjs",
+        "tests/pdf/35-word-name-title-colors.test.mjs",
+        "tests/pdf/35-word-summary-look.test.mjs",
+        "tests/pdf/33-word-contact-marks.test.mjs",
+        "tests/pdf/47-header-title-contacts-gap.test.mjs",
+        "tests/pdf/83-templates-ui-leftovers.test.mjs"
+      ],
+      "summary": "The Word résumé now prints Modern's and the two-column Sidebar's header on their band, in the colours the PDF prints there. In the Word letter at Right of Name, the contacts sit beside the name. A 2 Grid there is as wide as its two cells, against the right margin. When it would wrap a name and title that fit on their lines, it goes under the name, as in the PDF. The Word tooltip names what the .docx still leaves out: Banner's and Banded's headers and the Sidebar's side column print on the white page, and the designed layouts' rules and bars are left out. The letter prints no photo. Fail-first: CI 36230222904 (39b3bf7) and 36230632974 (a96cebb).",
+      "remaining": "Known differences from the PDF, kept as the patch's product calls: the Sidebar's Word band is full-width with the contacts on one line (the PDF uses a 38 % column with labelled contacts). Word does not draw Banner's rule on the letter's band. Word estimates widths, so a very wide Name Font can still wrap in the name cell."
+    },
+    {
+      "id": "R4-EXP-01",
+      "outcome": "fixed",
+      "commits": [
+        "415d45f",
+        "4819a0f"
+      ],
+      "tests": [
+        "tests/unit/r4-exp-markdown-escape.unit.mjs"
+      ],
+      "summary": "The Markdown export now backslash-escapes \\ ` * _ [ ] < > ~ in every user-text field: rich text, headings, meta lines, links, references, lists, the name, title, contacts and section titles. A line that starts with #, -, +, = or '3.' keeps it as text. Each field is trimmed before ** or * go around it, so '<DataGrid>', '__init__' and 'Acme Corp ' print as typed. The Markdown import takes the new \\< \\~ \\= escapes back off. Fail-first: CI 36230489859 and 36230774136."
+    },
+    {
+      "id": "R4-EXP-02",
+      "outcome": "fixed",
+      "commits": [
+        "46eceb6",
+        "4819a0f"
+      ],
+      "tests": [
+        "tests/pdf/98-exp-letter-text-contacts.test.mjs"
+      ],
+      "summary": "The Cover Letter Text now prints a labelled website, LinkedIn or GitHub as 'LinkedIn (linkedin.com/in/jdoe)', using the Link URL override's address when one is set. A Link URL the PDF would not follow prints as the label alone. Fail-first: CI 36230489859 and 36230774136."
+    },
+    {
+      "id": "R4-EXP-03",
+      "outcome": "fixed",
+      "commits": [
+        "6f0a799",
+        "e08e7f4"
+      ],
+      "tests": [
+        "tests/unit/r4-exp-ats-education.unit.mjs"
+      ],
+      "summary": "The ATS text's education line now reads 'BSc, Computer Science - MIT', the PDF's and the Markdown's form, and 'Computer Science - MIT' with no degree. Product call: the comma form rather than 'BSc in Computer Science', because the text import reads the comma form back and 'X in Y' would have broken 99-import-roundtrip. Fail-first: CI 36230489859."
+    },
+    {
+      "id": "R4-EXP-04",
+      "outcome": "fixed",
+      "commits": [
+        "844ffe6"
+      ],
+      "tests": [
+        "tests/pdf/98-exp-word-interests.test.mjs"
+      ],
+      "summary": "Word now splits each Interests entry at its commas, trims the parts and leaves blanks out, as the PDF's chips, the ATS text and the Markdown do: 'Chess,Hiking,' and 'Chess ,  Go' print 'Chess, Hiking, Chess, Go'. Fail-first: CI 36230489859."
+    },
+    {
+      "id": "R4-EXP-05",
+      "outcome": "already-fixed",
+      "commits": [
+        "39b3bf7"
+      ],
+      "tests": [
+        "tests/pdf/83-templates-ui-leftovers.test.mjs"
+      ],
+      "summary": "RES-R2-137's tooltip rewrite (39b3bf7) fixed this: the résumé's Export Word hint no longer mentions a photo, and 83 asserts doesNotMatch(/photo/). That assertion fails on the base's 'no photo' title (failfirst CI 36230222904). The letter's hint 'without its photo' is true."
+    },
+    {
+      "id": "R4-EXP-06",
+      "outcome": "fixed",
+      "commits": [
+        "94e179e"
+      ],
+      "tests": [
+        "tests/pdf/98-exp-word-reference-links.test.mjs"
+      ],
+      "summary": "Word now takes a reference's mailto: and tel: links from contactHref, the PDF's check. 'Available on request' prints as plain text, where Word used to link it to an empty 'tel:'. A dialable phone and an e-mail address are still linked. Fail-first: CI 36230489859."
+    },
+    {
+      "id": "R4-EXP-07",
+      "outcome": "fixed",
+      "commits": [
+        "869845f",
+        "4819a0f"
+      ],
+      "tests": [
+        "tests/unit/r4-exp-export-filename.unit.mjs"
+      ],
+      "summary": "Every exported file name (the Export menu, the ATS tab and the public link's PDF) now turns / \\ : * ? \" < > | and control characters into '-'. A run of - and _ collapses to one, leading and trailing dots and separators are removed, and each part is capped at 60 characters, never splitting an emoji. 'UI/UX Designer' saves as Jane_Doe_UI-UX_Designer everywhere. Fail-first: CI 36230489859 and 36230774136."
+    }
+  ],
+  "review": {
+    "issues": [
+      "RES-R2-137 review: at Right of Name, a 2 Grid spread across the row, because the name column was sized to the name and the grid's tab stop to the rest; the 2 Grid also had no PDF fallback when the name and title would wrap. Fixed in a96cebb.",
+      "RES-R2-137 review: the résumé's Word tooltip did not say that the designed layouts' rules and bars are left out. Fixed in a96cebb. The Sidebar band's contact colour is now checked against the PDF.",
+      "R4-EXP review: the Markdown import did not unescape \\< \\~ \\=, and a non-string name or title threw in the Markdown export. Also: a file name cut in UTF-16 units, and the letter .txt printing an unfollowable Link URL. All fixed in 4819a0f.",
+      "End-of-cluster review: no blocking issue. R4-EXP-03's comment overclaimed the import round trip; reworded in e08e7f4."
+    ],
+    "fixedByReviewer": []
+  },
+  "baselineFailures": [],
+  "notes": "Product calls: R4-EXP-03 uses the comma form. R4-EXP-07 caps each name part at 60 characters and does not handle Windows device names (CON, NUL). In a96cebb only the 2 Grid gets an exact column; Single and Justify keep their sizing, so a value never wraps inside itself on a short width estimate. Left for other clusters (not changed here): the text import reads 'Computer Science - MIT' (no degree) or an unknown degree like 'Bootcamp, Full Stack - GA' with the field as the degree, which affects the PDF, Markdown and ATS forms alike (imp cluster, importText.js). markdownLines' heading regex drops a trailing '#' ('## C#' → 'C'), and a link label holding [ ] does not round-trip; both predate this branch. The Markdown export still leaves & and | unescaped (rare). Word's Sidebar band can grow if Contacts ↔ Summary exceeds the band padding (cosmetic). src/utils/importText.js got a one-character-class change in 4819a0f (the unescape set), so the imp cluster may see a trivial merge. docs/knowledge/06-templates-export.md was updated by the RES-R2-137 patch. The tracker rows R2-137 and R2-133 need the coordinator's update. No full gate was run; the targeted CI runs 36230222904, 36230489859, 36230632974 and 36230774136 are all green (fail-first plus the tests of every changed module). e08e7f4 changes a comment only."
+}

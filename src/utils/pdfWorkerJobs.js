@@ -15,7 +15,7 @@ export async function runJob({ id, kind, resume, options }) {
       await warmPdfExport(resume);
       return { id };
     }
-    const blob = kind === 'letter' ? await renderCoverLetterPdf(resume, options) : await renderResumePdf(resume);
+    const blob = kind === 'letter' ? await renderCoverLetterPdf(resume, options) : await renderResumePdf(resume, options);
     return { id, bytes: new Uint8Array(await blob.arrayBuffer()), fallback: fontFallback() };
   } catch (e) {
     return { id, error: e?.message || String(e) };

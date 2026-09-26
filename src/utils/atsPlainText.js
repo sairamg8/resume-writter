@@ -85,7 +85,9 @@ function entryLines(type, item, f, hidden, settings, opts) {
     }
     case 'education':
       return [
-        joined([f('degree'), f('fieldOfStudy') ? `in ${f('fieldOfStudy')}` : '', f('institution')], ' - '),
+        // "BSc, Computer Science - MIT", the PDF's and the Markdown's form; with no degree, "Computer
+        // Science - MIT". It printed "BSc - in Computer Science - MIT".
+        joined([joined([f('degree'), f('fieldOfStudy')], ', '), f('institution')], ' - '),
         joined([range(), place(), f('gpa') ? `GPA: ${f('gpa')}` : ''], ' | '),
         ...body(), '',
       ];

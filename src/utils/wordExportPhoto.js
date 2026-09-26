@@ -94,14 +94,15 @@ class ShapedImageRun extends ImageRun {
  * Its box is the PDF's (getPdfPhotoStyle): Modern's and the Banner's photo sized for their banner, the
  * Sidebar's scaled to its column; the picture cropped to fill it. A Circle prints as an ellipse, Rounded
  * and Square as a rectangle with the PDF's corners. Border Thin and Accent ring it in the colour they
- * take on the white page — Word draws no banner or panel for the white ring they take there.
+ * take on the white page, or `onBand` — Modern's banner and the Sidebar's panel, which Word draws as
+ * the header's band (R2-137) — in the ring that reads there, as the PDF's.
  * An SVG photo reaches here as the PNG copy withWordPhoto makes of it (RES-R2-126); one no copy could
  * be made of prints none, as Word takes no SVG without a PNG beside it. A photo react-pdf reads from
  * elsewhere reaches here as bytes (withWordPhoto). Photo → Tone Grayscale
  * prints it grey (ShapedImageRun's <a:grayscl/>; R2-147).
  * Returns { run, width }: `width` the box's, pt.
  */
-export function wordPhoto(personal = {}, s = {}, template = 'classic') {
+export function wordPhoto(personal = {}, s = {}, template = 'classic', { onBand = false } = {}) {
   if ((personal.hiddenFields || []).includes('photo')) return null;
   const src = drawableImage(personal.photo);
   const match = /^data:image\/(png|jpeg|jpg);base64,(.*)$/is.exec(src || '');
@@ -118,7 +119,11 @@ export function wordPhoto(personal = {}, s = {}, template = 'classic') {
   const h = box.height * scale;
   const radius = Math.min(box.borderRadius, w / 2);
   const round = s.photoShape === 'circle' || radius >= Math.min(w, h) / 2 ? { prst: 'ellipse' } : { prst: 'roundRect', adj: Math.round((radius / Math.min(w, h)) * 100000) };
-  const ring = getPdfPhotoStyle(s, accent, 'classic');
+  // On the band, the ring the PDF draws there: white on Modern's banner (ModernTemplatePDF), the
+  // accent that reads on the Sidebar's panel (SidebarTemplatePDF's lightBorder).
+  const ring = !onBand ? getPdfPhotoStyle(s, accent, 'classic')
+    : tid === 'sidebar' ? getPdfPhotoStyle(s, accent, 'classic', { lightBorder: true })
+      : getPdfPhotoStyle(s, '#ffffff', 'modern');
   const run = new ShapedImageRun({
     type: match[1].toLowerCase() === 'png' ? 'png' : 'jpg',
     data: bytes,

@@ -114,6 +114,7 @@ export default function DesignPanel({
     <div className="space-y-3 py-2">
 
       <DesignSection title="Template" defaultOpen open={templateOpen} onOpenChange={onTemplateOpenChange}>
+        {/* The gallery's count: every card it lists, the designs the user saved too (R4-DSN-07). */}
         {onBrowseTemplates && (
           <button
             type="button"
@@ -121,7 +122,7 @@ export default function DesignPanel({
             onClick={onBrowseTemplates}
             className="w-full mb-2 px-3 py-2 text-xs font-semibold rounded-lg border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100"
           >
-            Browse templates ({cards.filter((c) => !c.own).length}) · pictures and filters
+            Browse templates ({cards.length}) · pictures and filters
           </button>
         )}
         <div className="space-y-1.5">
@@ -227,7 +228,7 @@ export default function DesignPanel({
         </div>
       </DesignSection>
 
-      <TypographySection settings={settings} template={current} updateSetting={updateSetting} onReset={() => resetSection(TYPOGRAPHY_KEYS)} />
+      <TypographySection settings={settings} template={current} resumeId={resume.id} updateSetting={updateSetting} onReset={() => resetSection(TYPOGRAPHY_KEYS)} />
 
       <DesignSection title="Spacing" onReset={() => resetSection(SPACING_KEYS)}>
         <div className="space-y-3">

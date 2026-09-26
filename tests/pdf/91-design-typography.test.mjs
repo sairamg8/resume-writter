@@ -184,7 +184,7 @@ describe('Design → Typography → custom fonts (R2-157)', () => {
       if (String(url).includes('/fictional-grotesk@5/metadata.json')) {
         return { ok: true, json: async () => ({ family: 'Fictional Grotesk', weights: [400, 700], styles: ['normal'] }) };
       }
-      return { ok: false, json: async () => null };
+      return { ok: false, status: 404, json: async () => null }; // jsDelivr's answer for no such package
     };
   });
   after(() => {

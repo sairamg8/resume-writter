@@ -1,6 +1,9 @@
 // The Word letter's letterhead takes the résumé template's look too (FIDB-51): its colours and
 // alignment, Modern's and the Sidebar's band as paragraph shading, Classic's, Minimal's and
-// Executive's rules as the last line's bottom border.
+// Executive's rules as the last line's bottom border. These read the letterhead of one column — the
+// contacts under the name, Fields Position Below Name. At Right of Name, the default, the name and the
+// contacts are the two cells of a table the band shades and the rule underlines (R2-137): its tests
+// are 92-word-header-band. Its runs are the same, so the colour tests hold for both.
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { setup, teardown, resume, loadModule, readDocx, renderCover, read, itemsWith, drawState, MM, TEMPLATES } from './harness.mjs';
@@ -19,9 +22,11 @@ const letter = (template, { settings } = {}) => resume({
 });
 
 describe('the Word letter\'s letterhead takes the look too (FIDB-51)', () => {
-  const coverDocx = async (template, settings) => {
+  const coverDocx = async (template, settings, fieldsPosition = 'below-name') => {
     const { renderCoverLetterDocx } = await loadModule('/src/utils/wordExport.js');
-    return readDocx(new Uint8Array(await (await renderCoverLetterDocx(letter(template, { settings }))).arrayBuffer()));
+    const r = letter(template, { settings });
+    r.coverLetter = { ...r.coverLetter, fieldsPosition };
+    return readDocx(new Uint8Array(await (await renderCoverLetterDocx(r)).arrayBuffer()));
   };
   /**
    * The letterhead's paragraphs (name, title, contacts — the name and title one line where the résumé prints

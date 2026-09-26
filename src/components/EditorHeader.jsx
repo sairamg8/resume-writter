@@ -45,6 +45,7 @@ export function EditorHeader({ resume, rename, layoutMode, setLayoutMode, export
       <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
         <ExportDropdown
           exporting={exportMenu.exporting}
+          importing={exportMenu.importing}
           keeps={exportMenu.keeps}
           letter={exportMenu.letterTab}
           onExportPDF={exportMenu.handleExportPDF}

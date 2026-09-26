@@ -1,0 +1,113 @@
+{
+  "cluster": "r4-ed",
+  "branch": "claude/wf-r4-ed",
+  "base": "fd1f439",
+  "rows": [
+    {
+      "id": "R4-ED-01",
+      "outcome": "fixed",
+      "commits": [
+        "d84cd90"
+      ],
+      "tests": [
+        "tests/pdf/99-language-proficiency-select.test.mjs"
+      ],
+      "summary": "A language's Proficiency select shows the stored level: a 'Not set' option holds '', and a level the five do not name ('Conversational', 'C1') is listed as its own option and selected, so the editor shows what the résumé prints and every level can be picked in one step. New languages still start at Professional. The supplied patch was reviewed by a second agent (held) and landed as is."
+    },
+    {
+      "id": "R4-ED-02",
+      "outcome": "fixed",
+      "commits": [
+        "300b136",
+        "997281a",
+        "d537224"
+      ],
+      "tests": [
+        "tests/pdf/99-rich-text-no-images.test.mjs"
+      ],
+      "summary": "A paste or a drop into a rich-text field is always cancelled and only its text inserted (sanitized), so a copied screenshot or an image file inserts nothing; emit() removes any img/picture/media element before storing; and a field already stored with a base64 data: URL inside a tag is stored again without it when shown (a value without one writes nothing). A paste event with no clipboardData is left to the browser."
+    },
+    {
+      "id": "R4-ED-03",
+      "outcome": "fixed",
+      "commits": [
+        "e068660"
+      ],
+      "tests": [
+        "tests/pdf/99-custom-date-period.test.mjs"
+      ],
+      "summary": "Product call: a Custom entry's Date / Period that the month picker cannot hold (an imported 'Jan 2020 – Mar 2021', '2019 – 2021', 'Summer 2020') is a text box showing it as it prints, and stays one while the entry is on screen; picker-shaped and empty dates keep the picker. MonthPicker itself is unchanged.",
+      "remaining": "Other month pickers (Experience/Education Start/End, Award and Certificate dates) still cut free text they cannot read; importers store single dates there, so low risk."
+    },
+    {
+      "id": "R4-ED-04",
+      "outcome": "fixed",
+      "commits": [
+        "ca5db38",
+        "ccc5de8",
+        "d537224"
+      ],
+      "tests": [
+        "tests/pdf/99-rich-text-drag-move.test.mjs"
+      ],
+      "summary": "A drag of selected text inside a rich-text field is moved by the editor: dragstart records the selection and marks the drag with the editor's own id; the drop deletes the source (execCommand 'delete', undoable) and inserts the text sanitized at the drop point. A drop with no mark only inserts, even if an earlier drag lost its dragend; a drag with no selection is not a move. Firefox finds the drop point with caretPositionFromPoint. A drag from one field to another still copies."
+    },
+    {
+      "id": "R4-ED-05",
+      "outcome": "fixed",
+      "commits": [
+        "e1ede9d",
+        "6d1f0d7"
+      ],
+      "tests": [
+        "tests/pdf/99-header-border-width-box.test.mjs"
+      ],
+      "summary": "Header Bottom Border's Thickness box is typed with useTypedNumber like the other stepper boxes: it can be emptied, holds what is typed, and writes once on Enter or leaving, clamped to 1–12 pt; Escape and click-in-and-out write nothing."
+    },
+    {
+      "id": "R4-ED-06",
+      "outcome": "fixed",
+      "commits": [
+        "5116abc",
+        "a43fabe"
+      ],
+      "tests": [
+        "tests/pdf/99-remove-untouched-entry.test.mjs"
+      ],
+      "summary": "An entry is untouched when every text field is empty or still its new-entry (NEW_ITEM) value and it has no non-empty bullets; such an entry, a fresh Language row at 'Professional' included, is deleted without 'Delete this entry?'."
+    },
+    {
+      "id": "R4-ED-07",
+      "outcome": "fixed",
+      "commits": [
+        "8c009c7",
+        "a43fabe",
+        "56c69e3"
+      ],
+      "tests": [
+        "tests/pdf/99-new-entry-open.test.mjs",
+        "cypress/e2e/02-editor.cy.js",
+        "cypress/e2e/19-regressions-ids.cy.js"
+      ],
+      "summary": "Product call: a card whose entry is untouched (the R4-ED-06 rule) opens when it mounts, so the entry Add makes and a new section's first entry show their fields at once; entries with content stay collapsed. Two Cypress specs that clicked 'New Entry' open were updated to the new behaviour."
+    }
+  ],
+  "review": {
+    "issues": [
+      "ED-01 patch review: holds; no changes.",
+      "ED-02 review: already-stored base64 blobs were never cleaned (fixed 997281a); a paste with null clipboardData was cancelled with nothing inserted (fixed 997281a); cleanup regex matched typed text reading like a data: URL and rewrote the field on every show (fixed d537224 by the end reviewer).",
+      "ED-04 review: leaving in-editor drops to the browser used a flag cleared only on dragend, which could stick and let later drops in unsanitized, and the browser's own move stored styled spans (reworked ccc5de8); a drag with a collapsed selection deleted the character before the caret (fixed d537224 by the end reviewer).",
+      "ED-05 review: the typing-and-leaving test case passed without the fix (strengthened 6d1f0d7). Same bug found in Design → Section Headings' 'Section border thickness' box (DesignPanelHeadings.jsx:101-110): not fixed here (see notes).",
+      "ED-06/07 review: bullets-only entries counted as untouched (fixed a43fabe); factory() ran per entry per render (memoised a43fabe); cypress 02-editor and 19-regressions-ids clicked the now-open card shut (fixed 56c69e3)."
+    ],
+    "fixedByReviewer": [
+      "d537224: a drag with no selection deletes nothing; the stored-blob cleanup only matches a data: URL inside a tag (R4-ED-04, R4-ED-02)"
+    ]
+  },
+  "ci": {
+    "failfirst": "runs 36230517540 (all seven fix commits), 36230805948 (997281a, ccc5de8, a43fabe), 36230960039 (d537224): each failed without its src change and passed with it",
+    "tests": "runs 36230524422, 36230805948 (42 files: new tests + existing tests of every changed module, cypress 02-editor and 19-regressions-ids, playwright bullet-optimizer), 36230819308 (cypress 09, 12, 16, 23), 36230961503 — all green; lint green"
+  },
+  "baselineFailures": [],
+  "notes": "New bug for the design cluster (dsn-pdf): Design → Section Headings' 'Section border thickness (pt)' box (src/components/DesignPanelHeadings.jsx:101-110) is a controlled number input that ignores NaN, so it cannot be emptied and typing 5 after 2 stores the maximum — the R4-ED-05 bug; left alone because it is design-panel scope and tests/pdf/10-section-headings pins its write-on-change behaviour (it would need updating along with cypress/e2e/04-design-left-bar's min/max asserts). ED-07 opens any untouched entry, not only the one just added: a blank entry left from an earlier visit opens on load and on each section re-expand. Minor: untouched() ignores non-string fields (an entry holding only current:true is deleted without asking). Accessibility noted, not fixed: BorderWidthBox's −/+ buttons and LanguageItem/InterestItem delete buttons have no aria-label. Process note: one early amend of my own just-pushed commit (8c009c7, a lint-only change) was pushed with --force-with-lease a minute after the first push; no one else had the commit."
+}
