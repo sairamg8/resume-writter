@@ -60,9 +60,9 @@ function markdownBody(html, bullets = []) {
   const item = (lines, depth, marker) => {
     if (!inList && out.length) out.push('');
     const pad = NEST.repeat(depth - 1);
-    const lead = /^\d+\.$/.test(marker) ? `${marker} ` : (marker.length === 1 ? '- ' : `- ${marker} `);
-    const col = pad.length + (/^\d+\.$/.test(marker) ? lead.length : 2);
-    push(lines, pad + lead, ' '.repeat(col));
+    const prefix = /^\d+\.$/.test(marker) ? `${marker} ` : (marker.length === 1 ? '- ' : `- ${marker} `);
+    const col = pad.length + (/^\d+\.$/.test(marker) ? prefix.length : 2);
+    push(lines, pad + prefix, ' '.repeat(col));
     cols.length = depth;
     cols[depth] = col;
     inList = true;
@@ -151,7 +151,7 @@ function itemLines(type, item, f, body, settings, opts = {}) {
       const url = f('url');
       const href = safeHref(url);
       const name = f('name');
-      const title = href ? `[${esc(name || url)}](${href})` : esc(name);
+      const title = href ? `[${esc(String(name || url).trim())}](${href})` : esc(name);
       const meta = [f('technologies') ? `Technologies: ${f('technologies')}` : '', shown(dateRange(f('startDate'), end, settings)), href ? '' : url];
       return entryLines(title, [italic(joined(meta, ' | '))], body());
     }
@@ -232,8 +232,8 @@ export function generateMarkdownResume(resume) {
   const lines = [];
 
   // Header
-  if (String(p.name || '').trim()) lines.push(`# ${esc(p.name.trim())}`);
-  if (String(p.title || '').trim()) lines.push(`**${esc(p.title.trim())}**`);
+  if (String(p.name || '').trim()) lines.push(`# ${esc(String(p.name).trim())}`);
+  if (String(p.title || '').trim()) lines.push(`**${esc(String(p.title).trim())}**`);
   lines.push('');
 
   // Contact details: the PDF's contact lines — each field's Display label, else its address, linked

@@ -7,6 +7,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { generateMarkdownResume } from '../../src/utils/markdownExport.js';
+import { markdownLines } from '../../src/utils/importText.js';
 
 const md = (personal, sections = []) => generateMarkdownResume({
   personal: { name: 'Robin Sample', ...personal },
@@ -46,4 +47,20 @@ test('the name, contacts, section title and list sections are escaped too', () =
   assert.ok(out.includes('## Skills\\_\\*'), out);
   assert.ok(out.includes('- **Lang:** C#, \\*nix'), out);
   assert.ok(out.includes('\\<b\\>Chess\\</b\\>, \\_\\_Go\\_\\_'), out);
+});
+
+// Review of R4-EXP-01: the Markdown import reads the escapes back off, and a name or title that is not
+// text (older stored data) still exports.
+
+test('the .md reads back through the Markdown import with its characters, not its escapes', () => {
+  const out = md({}, [{ type: 'experience', title: 'Experience', items: [{ id: 'e', company: 'Acme', role: 'Dev',
+    description: '<p>Built the &lt;DataGrid&gt; with ~~y~~ and __init__</p><p>= equals</p>' }] }]);
+  const texts = markdownLines(out).map((l) => l.text);
+  assert.ok(texts.includes('Built the <DataGrid> with ~~y~~ and __init__'), texts.join(' | '));
+  assert.ok(texts.includes('= equals'), texts.join(' | '));
+});
+
+test('a name or title that is a number exports as its text', () => {
+  const out = generateMarkdownResume({ personal: { name: 42, title: 7 }, sections: [] });
+  assert.ok(out.startsWith('# 42\n**7**'), out);
 });

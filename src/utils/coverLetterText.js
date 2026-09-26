@@ -2,7 +2,7 @@
 // PDF and Word print, in their order — name, title, the contacts the letter shows, date, recipient
 // block, subject, body, closing and signature — for pasting into an application form's letter box.
 // Until it existed the letter's tab offered only the résumé's text exports.
-import { contactItems, displayUrl } from '@/utils/contacts';
+import { contactHref, contactItems, displayUrl } from '@/utils/contacts';
 import { letterBlock, letterHiddenFields, letterSignature } from '@/utils/coverLetter';
 import { hasRichText, parseRichText } from '@/utils/richText';
 
@@ -39,7 +39,8 @@ function bodyLines(html) {
  */
 function contactText(personal, { key, value }) {
   const label = String(personal[`${key}Label`] || '').trim();
-  if (!label || !['website', 'linkedin', 'github'].includes(key)) return value;
+  // A Link URL the PDF would not follow (a javascript: address) is not printed either.
+  if (!label || !['website', 'linkedin', 'github'].includes(key) || !contactHref(key, personal)) return value;
   const address = displayUrl(String(personal[`${key}Url`] || '').trim() || personal[key]);
   return address && address !== label ? `${label} (${address})` : label;
 }

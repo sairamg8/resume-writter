@@ -21,6 +21,10 @@ test('no leading dot, no trailing separator, and a bounded length', () => {
   assert.equal(name({ name: '???', title: '' }), 'resume');
   const long = name({ name: 'N'.repeat(300), title: 'T'.repeat(300) });
   assert.ok(long.length <= 121, String(long.length));
+  // An emoji across the 60th character is kept whole or left out, never half a surrogate pair.
+  const cut = name({ name: `${'a'.repeat(59)}😀b` });
+  assert.equal(cut, `${'a'.repeat(59)}😀`);
+  assert.ok(!/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/.test(name({ name: `${'a'.repeat(59)}😀` })));
 });
 
 test('ordinary names are unchanged', () => {

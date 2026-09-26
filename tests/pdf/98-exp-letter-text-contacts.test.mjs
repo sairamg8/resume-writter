@@ -37,4 +37,9 @@ describe('the letter text keeps a labelled link\'s address (R4-EXP-02)', () => {
     const line = await contactLine({ website: 'https://jdoe.dev', phone: '+1 555 0100' });
     assert.equal(line, 'jo@example.com | +1 555 0100 | jdoe.dev');
   });
+
+  it('prints a label alone when its Link URL is one the PDF would not follow', async () => {
+    const line = await contactLine({ website: 'site', websiteLabel: 'Portfolio', websiteUrl: 'javascript:alert(1)' });
+    assert.equal(line, 'jo@example.com | Portfolio');
+  });
 });

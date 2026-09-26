@@ -1,3 +1,6 @@
+/** The characters Windows, macOS or Linux refuse in a file name. */
+const RESERVED = new Set('\\/:*?"<>|');
+
 /**
  * `value` as part of a file name, '' for anything not text: trimmed, inner runs of whitespace as one
  * `_`, and every character a file system reserves (/ \ : * ? " < > | and control characters) as `-`,
@@ -5,12 +8,14 @@
  * own. A run of `-` and `_` becomes one (a `-` if it holds one); leading and trailing dots, dashes and
  * underscores go (a name starting with a dot is hidden); at most 60 characters a part.
  */
-const RESERVED = new Set('\\/:*?"<>|');
-const filePart = (value) => (typeof value === 'string'
-  ? [...value.trim().replace(/\s+/g, '_')].map((c) => (c < ' ' || c === '\x7f' || RESERVED.has(c) ? '-' : c)).join('')
-    .replace(/[-_]{2,}/g, (m) => (m.includes('-') ? '-' : '_'))
-    .slice(0, 60).replace(/^[-_.]+|[-_.]+$/g, '')
-  : '');
+function filePart(value) {
+  if (typeof value !== 'string') return '';
+  const safe = [...value.trim().replace(/\s+/g, '_')]
+    .map((c) => (c < ' ' || c === '\x7f' || RESERVED.has(c) ? '-' : c)).join('')
+    .replace(/[-_]{2,}/g, (m) => (m.includes('-') ? '-' : '_'));
+  // 60 characters, not UTF-16 units: an emoji at the cut is kept whole or left out.
+  return [...safe].slice(0, 60).join('').replace(/^[-_.]+|[-_.]+$/g, '');
+}
 
 /**
  * An exported file's name, without its suffix: the résumé's name and title, as `Name_Title`. It
