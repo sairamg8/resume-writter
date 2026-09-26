@@ -1,0 +1,1244 @@
+diff --git a/docs/knowledge/06-templates-export.md b/docs/knowledge/06-templates-export.md
+index 1e0c55f..958aa47 100644
+--- a/docs/knowledge/06-templates-export.md
++++ b/docs/knowledge/06-templates-export.md
+@@ -70,7 +70,11 @@ control repaints it.
+ - `wordExportUtils.js`, `wordExportLook.js` — text/html helpers, headings, bullets, colours  
+ - `wordExportPhoto.js` — the photo, as the PDF prints it  
+ 
+-Not a pixel-perfect match to PDF; structural DOCX for ATS/HR systems.
++Not a pixel-perfect match to PDF; structural DOCX for ATS/HR systems. Modern's banner and the
++two-column Sidebar's header print on their band, a shaded table (`frameTable` in `wordExportLook.js`);
++Banner's and Banded's headers print on the white page. The letter's letterhead takes the same band or
++rule, and at Right of Name (its default Fields Position) its contacts sit beside the name in a two-cell
++table, under it where a name or title word would not fit beside them (R2-137).
+ 
+ ## Text exports
+ 
+diff --git a/src/components/ExportDropdown.jsx b/src/components/ExportDropdown.jsx
+index 5f295be..f73796e 100644
+--- a/src/components/ExportDropdown.jsx
++++ b/src/components/ExportDropdown.jsx
+@@ -56,8 +56,11 @@ export function ExportDropdown({ exporting, keeps = false, letter = false, onExp
+           <button
+             onClick={() => { onExportWord(); setOpen(false); }}
+             disabled={!!exporting}
+-            // The .docx is text, for ATS: say what the PDF has that it leaves out — the letter keeps its band (R2-133).
+-            title="A text document for ATS: no photo, and the résumé prints without its banner or coloured column"
++            // Say what the .docx leaves out that the PDF has (R2-133). The résumé prints its photo (R2-126) and
++            // Modern's and the Sidebar's header on their band (R2-137); the letter prints no photo.
++            title={letter
++              ? 'An editable document: the letter prints without its photo'
++              : "An editable document: Banner's and Banded's headers and the Sidebar's side column print on the white page"}
+             className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 disabled:opacity-50"
+           >
+             <FileText size={12} className="text-emerald-500" /> {letter ? 'Export Cover Letter Word' : 'Export Word'}
+diff --git a/src/utils/wordExportCoverLetter.js b/src/utils/wordExportCoverLetter.js
+index 5956186..c86ab16 100644
+--- a/src/utils/wordExportCoverLetter.js
++++ b/src/utils/wordExportCoverLetter.js
+@@ -1,25 +1,27 @@
+ // The cover letter as Word paragraphs: the same text, order, colours and hidden contacts as the
+ // cover-letter PDF — letterhead (name, title, contacts in the résumé template's look), date,
+ // recipient block, subject, body, closing and signature. Sizes follow the letter's base font
+-// size. It is a text document: no photo, and the contacts are one line whatever the PDF's
+-// layout (R1-10), Icon printing as Bar.
++// size. It is a text document: no photo; its contacts sit beside the name at Right of Name, the
++// default Fields Position (R2-137), else under it, in Cover Letter → Contact Style and Layout, Icon
++// printing as Bar.
+ //
+ // The letterhead takes the look the PDF's does (letterheadLook, FIDB-51): its colours, alignment
+ // and Name & Title layout, Modern's accent band and the Sidebar panel's colour as a shaded band,
+-// the résumé header's rule (else Minimal's hairline, Executive's double rule) as the last line's
+-// bottom border. Word runs the Sidebar band 15 pt into the page margins, not to the paper's edges
+-// as the PDF does, and prints the name and title in Word's own weights (Minimal's light name and
+-// an Inline title's medium are regular).
++// the résumé header's rule (else Minimal's hairline, Executive's double rule) under it. Word runs
++// the Sidebar band 15 pt into the page margins, not to the paper's edges as the PDF does, and
++// prints the name and title in Word's own weights (Minimal's light name and an Inline title's
++// medium are regular).
+ import { Paragraph, BorderStyle, ShadingType, AlignmentType } from 'docx';
+ import { wordNameFont } from '@/utils/wordFonts';
+-import { accent2Hex, bold, normal, descriptionToParagraphs, eighths, inlineGap, lineSpacing } from '@/utils/wordExportUtils';
++import { bold, normal, descriptionToParagraphs, eighths, gapPara, inlineGap, lineSpacing, twips } from '@/utils/wordExportUtils';
++import { bandFill, frameInner, frameTable, hexOn } from '@/utils/wordExportLook';
+ import { contactRows } from '@/utils/wordExportContacts';
+-import { contactItems } from '@/utils/contacts';
++import { CONTACT_GRID, contactItems } from '@/utils/contacts';
+ import { hasRichText } from '@/utils/richText';
+ import { linkLook } from '@/utils/linkStyle';
+-import { letterBlock, letterContactFormat, letterHiddenFields, letterSignature } from '@/utils/coverLetter';
+-import { solid } from '@/templates/pdf/shared/pdfColors';
+-import { letterGrey, letterheadLook } from '@/templates/pdf/shared/letterhead';
++import { letterBlock, letterContactFormat, letterFieldsPosition, letterHiddenFields, letterSignature } from '@/utils/coverLetter';
++import { LETTER_CONTACTS_GAP, letterGrey, letterheadLook } from '@/templates/pdf/shared/letterhead';
++import { pxToPt } from '@/templates/pdf/shared/pdfUnits';
+ import { resolveTemplateSettings } from '@/templates/pdf/shared/templateSettings';
+ import { templateId } from '@/constants/templates';
+ import { setGapPt } from '@/constants/headerSpacing';
+@@ -28,23 +30,9 @@ const pt = (n) => Math.round(n * 20); // points → twips (paragraph spacing, in
+ const line = (children, after = 0, extra = {}) => new Paragraph({ children, spacing: { after }, ...extra });
+ 
+ /**
+- * A colour as Word's 'rrggbb', opaque over `on` (the band a run sits on, else the white page), at
+- * `alpha` times its own: what the PDF draws with that opacity (Word has none).
+- */
+-const hexOn = (color, on = '#ffffff', fallback, alpha = 1) => accent2Hex(solid(color, alpha, on), fallback);
+-
+-/**
+- * The fill Word shades the letterhead's band in: the colour the PDF paints (a translucent one as it
+- * shows over the white page), else — a colour Word cannot take — the look's own band colour
+- * (letterheadLook's band.fallback), so a template's band brings its fallback with it: Word chose it
+- * by the look's name, the Sidebar's slate or else Modern's blue (FIDB-51-VF7-NB2).
+- */
+-const bandFill = (band) => hexOn(band.color, '#ffffff', hexOn(band.fallback));
+-
+-/**
+- * The paragraph formatting that frames the letterhead's rows: a band — each row shaded, with
+- * borders of the band's own colour as its padding, so Word joins the rows into one block — or
+- * the rule(s) under the last row.
++ * The paragraph formatting that frames the letterhead's rows, when they are one column (the contacts
++ * under the name): a band — each row shaded (bandFill), with borders of the band's own colour as its
++ * padding, so Word joins the rows into one block — or the rule(s) under the last row.
+  */
+ function frame(look, last) {
+   const align = look.centered ? { alignment: AlignmentType.CENTER } : {};
+@@ -78,6 +66,47 @@ function frame(look, last) {
+   };
+ }
+ 
++/**
++ * Word cannot measure text: a sans's average advance, em a character — generous, so a layout that
++ * sets two blocks side by side errs on the side of room — and a bold name's, wider.
++ */
++const EM = 0.6;
++const BOLD_EM = 0.65;
++/** Room added to each estimated width, pt. */
++const SLACK = 4;
++/** The width of `text` on one line at `size` half-points, pt, estimated at `em` a character. */
++const across = (text, size, em = EM) => [...String(text ?? '')].length * (size / 2) * em;
++/** Its widest word's: what cannot wrap. */
++const widestWord = (text, size, em = EM) => Math.max(0, ...String(text ?? '').split(/\s+/).map((word) => across(word, size, em)));
++
++/**
++ * Right of Name, the default Fields Position (R2-137), as the letter's PDF lays it out
++ * (CoverLetterHeaderPDF): the contacts beside the name, the letter's Name ↔ Contacts between them
++ * (contactsSideGap, else its 12 pt). The contacts get what their widest item needs (a 2 Grid two
++ * such cells), the name side what its lines need up to the rest; `{ name, contacts }` the two
++ * columns' widths, twips, the gap the contacts' left margin, and `width` the contacts' own, pt.
++ * Null where the PDF prints them under the name: another Fields Position, a centred letterhead
++ * (its centre line), no contacts, or a name or title word that does not fit beside them — the PDF's
++ * fit fallback. Word cannot measure text: the widths are estimates (across).
++ */
++function rightOfName(personal, cl, s, look, sizes, contacts, { contactStyle, layout }) {
++  if (look.centered || letterFieldsPosition(cl) !== 'right' || !contacts.length) return null;
++  const inner = frameInner(s, look.band);
++  const gap = setGapPt(s, 'contactsSideGap') ?? LETTER_CONTACTS_GAP;
++  const room = inner / 20 - gap;
++  // Justify keeps the mark after each value on its line; Single and 2 Grid put Bullet's before it.
++  const mark = layout === 'justify' ? across('  |  ', sizes.contact) : contactStyle === 'bullet' ? across('• ', sizes.contact) : 0;
++  const widest = Math.max(...contacts.map((c) => across(c.value, sizes.contact))) + mark;
++  const need = (layout === '2grid' && contacts.length > 1 ? 2 * widest + pxToPt(CONTACT_GRID.gapPx) : widest) + SLACK;
++  const nameEm = look.name.weight === 'bold' ? BOLD_EM : EM;
++  const name = personal.name || 'Your Name';
++  if (Math.max(widestWord(name, sizes.name, nameEm), widestWord(personal.title, sizes.title)) + SLACK + need > room) return null;
++  const title = personal.title ? across(personal.title, sizes.title) : 0;
++  const nameLine = look.inline && personal.title ? across(name, sizes.name, nameEm) + look.inline.gap + title : Math.max(across(name, sizes.name, nameEm), title);
++  const side = twips(Math.min(nameLine + SLACK, room - need));
++  return { name: side, contacts: inner - side, gap: twips(gap), width: (inner - side) / 20 - gap };
++}
++
+ /** Name, title and contact line in the résumé template's look (letterheadLook). */
+ function letterhead(personal, s, cl, sizes, look) {
+   // Runs on a band blend onto the fill Word shades (bandFill), as the PDF's onto the band it paints —
+@@ -105,17 +134,21 @@ function letterhead(personal, s, cl, sizes, look) {
+   } else if (title) {
+     rows.push({ runs: [title], after: pt(toContacts ?? 2), kept: toContacts != null });
+   }
++  // Cover Letter → Contact Style and Layout (letterContactFormat) as the letter's PDF lays them out
++  // (FIDB-51-VF1-NB1-NB2-NB1), in the band's marks where there is one, else the page's greys
++  // (FIDB-51-VF1-NB1). A centred 2 Grid row is centred by its tab stops, not as a whole.
++  const format = letterContactFormat(cl, s);
++  const beside = rightOfName(personal, cl, s, look, sizes, contacts, format);
++  const contactLines = [];
+   if (contacts.length) {
+     const style = { size: sizes.contact, color: ink(look.contacts) };
+-    // Cover Letter → Contact Style and Layout (letterContactFormat) as the letter's PDF lays them out
+-    // (FIDB-51-VF1-NB1-NB2-NB1), in the band's marks where there is one, else the page's greys
+-    // (FIDB-51-VF1-NB1). A centred 2 Grid row is centred by its tab stops, not as a whole.
+-    const { style: contactStyle, layout } = letterContactFormat(cl, s);
+     const marks = look.marks && ink(look.marks);
+     // Design → Links (R2-147): on a band, the Accent tint that reads on the fill Word shades.
+     const links = linkLook(s.linkStyle, s.accentColor, look.band ? on : null);
+-    for (const row of contactRows(contacts, { contactStyle, layout, centered: look.centered, settings: s, style, markColor: marks, links })) {
+-      rows.push({ runs: row.runs, extra: look.centered && !row.centred ? { ...row.extra, alignment: undefined } : row.extra });
++    // Beside the name a 2 Grid's second cell starts where it does in the contacts' own width.
++    const width = beside ? { width: beside.width } : {};
++    for (const row of contactRows(contacts, { contactStyle: format.style, layout: format.layout, centered: look.centered, settings: s, style, markColor: marks, links, ...width })) {
++      contactLines.push({ runs: row.runs, extra: look.centered && !row.centred ? { ...row.extra, alignment: undefined } : row.extra });
+     }
+   }
+   // A band's rows touch (no white gap inside it). Word puts a bottom border's space between the
+@@ -123,6 +156,22 @@ function letterhead(personal, s, cl, sizes, look) {
+   // résumé's Header ↔ First section) below the rule or band — and, with neither (a Classic résumé's
+   // border off, V2FIDB-51-2), the PDF's pad above it too.
+   const below = look.gapBelow + (look.band || look.rules.length ? 0 : look.ruleGap);
++  if (beside) {
++    // Right of Name (R2-137): a two-cell borderless table — the name and title | the contacts, the
++    // gap the contacts' left margin — framed as the letterhead is (frameTable): the band shading both
++    // cells, or the rule(s) under both. Set against the right margin as the PDF's; a 2 Grid's rows
++    // keep their tab stops. The gap under it is a paragraph of its own: a table has no space after.
++    const name = rows.map((r, i) => line(r.runs, i === rows.length - 1 ? 0 : look.band && !r.kept ? 0 : r.after));
++    const right = format.layout === '2grid' ? {} : { alignment: AlignmentType.RIGHT };
++    const side = contactLines.map((r) => line(r.runs, 0, { ...r.extra, ...right }));
++    return [
++      frameTable([[{ children: name }, { children: side, margins: { left: beside.gap } }]], [beside.name, beside.contacts], {
++        settings: s, band: look.band, rules: look.rules, ruleGap: look.ruleGap,
++      }),
++      ...gapPara(below),
++    ];
++  }
++  rows.push(...contactLines);
+   return rows.map((r, i) => {
+     const last = i === rows.length - 1;
+     return line(r.runs, last ? pt(below) : look.band && !r.kept ? 0 : r.after, { ...frame(look, last), ...r.extra });
+diff --git a/src/utils/wordExportHeader.js b/src/utils/wordExportHeader.js
+index 7388b43..dff3152 100644
+--- a/src/utils/wordExportHeader.js
++++ b/src/utils/wordExportHeader.js
+@@ -1,11 +1,13 @@
+ // The Word résumé's header: name, job title, contact line and summary (buildPersonalSection), in the
+-// colours, alignment and layout the PDF's header prints them in.
+-import { AlignmentType, BorderStyle, LineRuleType, Paragraph, Table, TableBorders, TableCell, TableLayoutType, TableRow, TextRun, VerticalAlign, WidthType } from 'docx';
++// colours, alignment and layout the PDF's header prints them in — on Modern's banner and the Sidebar
++// column's colour, the band Word draws for them (R2-137).
++import { AlignmentType, BorderStyle, LineRuleType, Paragraph, TextRun, VerticalAlign } from 'docx';
+ import { wordNameFont } from '@/utils/wordFonts';
+ import { accent2Hex, bold, descriptionToParagraphs, centredIf, eighths, inlineGap, normal, spacer, wordContentTwips } from '@/utils/wordExportUtils';
+ import { wordPhoto } from '@/utils/wordExportPhoto';
+ import { contactRows } from '@/utils/wordExportContacts';
+ import { buildSectionTitle } from '@/utils/wordExportBuilders';
++import { bandFill, frameInner, frameTable, hexOn } from '@/utils/wordExportLook';
+ import { contactItems } from '@/utils/contacts';
+ import { hasHeaderControls, headerBorderOn, photoRowDirection, templateId } from '@/constants/templates';
+ import { solid, textShades } from '@/templates/pdf/shared/pdfColors';
+@@ -32,15 +34,36 @@ function headerInk(settings, template) {
+ 
+ const twips = (pt) => Math.round(pt * 20);
+ 
++/**
++ * The templates whose header Word draws on its band (R2-137): Modern's accent banner and the two-column
++ * Sidebar's panel colour, as the letter's letterhead already drew them (letterheadLook's band). Banner's
++ * and Banded's headers take Header Customization's alignment, rule and contact styles on theirs, and
++ * print on the page, as the Export menu says.
++ */
++const BANDED = new Set(['modern', 'sidebar']);
++
++/**
++ * The name's and the job title's Word colours on the band, 'rrggbb': the colours the PDF prints there
++ * (letterheadLook — Design → Name and Job title colours, else the template's own; Modern's title at
++ * 90 %, its own alpha multiplied in), opaque on the fill Word shades (`on`), as the letter's are. A
++ * colour Word cannot take prints as the template's own there.
++ */
++function bandInk(settings, template, look, on) {
++  const own = letterheadLook(template, resolveTemplateSettings({ ...settings, nameColor: '', jobTitleColor: '' }, templateId(template)));
++  const hex = (key, alpha = 1) => hexOn(look[key].color, on, hexOn(own[key].color, on, 'ffffff', alpha), alpha);
++  return { name: hex('name'), title: hex('title', look.title.opacity ?? 1) };
++}
++
+ /**
+  * The résumé's contacts in Design → Contact Layout, as paragraphs (contactRows; FIDB-51-VF1-NB1-NB2),
+  * laid out `width` pt wide: what the photo beside them leaves, as the PDF's (headerRowWidth). `last`:
+  * the space after the last row, twips — Word's own 4 pt, or Contacts ↔ Summary where it is set.
++ * `on`: the band they print on, whose marks and link tint they take (R2-137).
+  */
+-function contactParagraphs(items, s, styled, style, centered, width, last = 80) {
++function contactParagraphs(items, s, styled, style, centered, width, last = 80, on = {}) {
+   const rows = contactRows(items, {
+     contactStyle: styled ? s.contactStyle : 'icon', layout: styled ? s.contactLayout : 'justify', centered, settings: s, style, width,
+-    links: linkLook(s.linkStyle, s.accentColor),
++    markColor: on.marks, links: on.links ?? linkLook(s.linkStyle, s.accentColor),
+   });
+   return rows.map((row, i) => new Paragraph({
+     children: row.runs, spacing: { after: i === rows.length - 1 ? last : 20 }, ...centredIf(row.centred), ...row.extra,
+@@ -51,7 +74,9 @@ function contactParagraphs(items, s, styled, style, centered, width, last = 80)
+  * Name, title, contacts and summary, closed by the header's rule (headerEnd). The contacts are the PDF's (PdfContactRow): its values
+  * in the Text colour's grey — the template's own Text colour when none is stored — and the marks
+  * of Design → Contact Style where the header takes it (`template`: Classic, Minimal, Executive).
+- * Modern's banner and the Sidebar column draw icons, and Word prints icons as bars.
++ * Modern's banner and the Sidebar column draw icons, and Word prints icons as bars. Their header
++ * prints on their band (R2-137): a shaded table (headerBand) holding the photo, name, title
++ * and contacts in the band's colours — and Modern's summary, which its PDF prints on the banner.
+  * Header alignment "Center" centres all four where the PDF does — in those same three templates;
+  * a summary block aligned in the editor keeps its own alignment, as in the PDF (ONB-3). Name &
+  * Title Layout "Inline" prints the title on the name's line, at the PDF's gap, in those three too.
+@@ -65,10 +90,15 @@ export function buildPersonalSection(personal = {}, settings = {}, template = 'c
+   const titleSize = Math.round(headerTitleSize(s) * 2);
+   const paragraphs = [];
+ 
+-  const ink = headerInk(settings, template);
++  // Modern's banner and the Sidebar's column: the band the PDF prints the header on (R2-137), the
++  // letter's letterhead's (letterheadLook); else the white page.
++  const look = letterheadLook(template, s);
++  const band = BANDED.has(look.look) ? look.band : null;
++  const on = band ? `#${bandFill(band)}` : null;
++  const ink = band ? bandInk(settings, template, look, on) : headerInk(settings, template);
+   // In the weight the PDF prints it, as the letter's letterhead takes it (letterheadLook): Minimal's
+   // light name regular — Word has no light weight to give it — every other template's bold (R2-128).
+-  const nameRun = letterheadLook(template, s).name.weight === 'bold' ? bold : normal;
++  const nameRun = look.name.weight === 'bold' ? bold : normal;
+   const name = nameRun(personal.name || 'Your Name', { size: nameSize, color: ink.name, ...wordNameFont(s) }); // Name Font (R2-146)
+   // Academic prints the job title in italic, the position under the name (AcademicTemplatePDF.jsx).
+   const italics = templateId(template) === 'academic' ? { italics: true } : {};
+@@ -89,41 +119,59 @@ export function buildPersonalSection(personal = {}, settings = {}, template = 'c
+   // The photo beside the name, as the PDF's header row: its cell the photo's width and the Photo ↔
+   // Text gap, the contacts laid out in what is left. Above the name in a centred header and on the
+   // Sidebar, whose column stacks them (R2-126).
+-  const photo = wordPhoto(personal, s, template);
++  const photo = wordPhoto(personal, s, template, { onBand: !!band });
+   const gap = s.headerGaps?.photoTextGap ?? 12;
+   const beside = photo && !centered && templateId(template) !== 'sidebar';
+   if (photo && !beside) paragraphs.push(new Paragraph({ children: [photo.run], spacing: { after: twips(gap) }, ...centredIf(centered) }));
++  // The space after the text's last line, twips: on a band it comes off the band's padding under it.
++  let textAfter = stacked ? setTwips('nameTitleGap') ?? 40 : next ?? (inline ? 60 : 40);
+   paragraphs.push(new Paragraph({
+     children: inline ? [name, inlineGap(inline.gap, titleSize), title] : [name],
+     // A stacked title follows Name ↔ Title when set, else Word's own 2 pt; the contacts after the name
+     // (no title, or Inline) Title ↔ Contacts, a summary with no contacts Contacts ↔ Summary.
+-    spacing: { after: stacked ? setTwips('nameTitleGap') ?? 40 : next ?? (inline ? 60 : 40) },
++    spacing: { after: textAfter },
+     ...centredIf(centered),
+   }));
+ 
+   if (stacked) {
++    textAfter = next ?? 60;
+     paragraphs.push(new Paragraph({
+       children: [title],
+-      spacing: { after: next ?? 60 },
++      spacing: { after: textAfter },
+       ...centredIf(centered),
+     }));
+   }
+ 
+   if (contacts.length) {
+     // At the size the PDF prints them on this template (headerContactPt): it follows Design → Base.
+-    // Word printed them at 9 pt at every Base (R2-067).
+-    const style = { size: Math.round(headerContactPt(s, template) * 2), color: accent2Hex(textShades(s.textColor).sub, '64748b') };
+-    const width = beside ? wordContentTwips(s) / 20 - photo.width - gap : undefined;
+-    paragraphs.push(...contactParagraphs(contacts, s, hasHeaderControls(template, settings), style, centered, width, toSummary ?? 80));
++    // Word printed them at 9 pt at every Base (R2-067). On a band, in its colours (letterheadLook).
++    const color = band ? hexOn(look.contacts, on, 'ffffff') : accent2Hex(textShades(s.textColor).sub, '64748b');
++    const style = { size: Math.round(headerContactPt(s, template) * 2), color };
++    const room = band ? frameInner(s, band) / 20 : wordContentTwips(s) / 20;
++    const width = beside ? room - photo.width - gap : band ? room : undefined;
++    // On a band, its marks and the Accent link tint that reads on the fill Word shades (Design → Links, R2-147).
++    const onBand = band ? { marks: look.marks ? hexOn(look.marks, on) : undefined, links: linkLook(s.linkStyle, s.accentColor, on) } : {};
++    textAfter = toSummary ?? 80;
++    paragraphs.push(...contactParagraphs(contacts, s, hasHeaderControls(template, settings), style, centered, width, textAfter, onBand));
++  }
++  // Modern prints its summary on the banner; the Sidebar under "About Me" on the page.
++  const summaryOnBand = summary && band && templateId(template) === 'modern';
++  const summaryParas = () => {
++    const { run, frame } = summaryLook(s, template, summaryOnBand ? on : null);
++    const links = linkLook(s.linkStyle, s.accentColor, summaryOnBand ? on : null);
++    // At Design → Line Height, as the PDF's summary (R2-062), its lists behind Design → Lists' glyph (R2-147).
++    return descriptionToParagraphs(personal.summary, { size: Math.round(baseSize * 2), lineHeight: s.lineHeightValue, bullet: s.bulletStyle, links, ...run }, centered ? 'center' : null, frame);
++  };
++  if (band) {
++    paragraphs.splice(0, paragraphs.length, headerBand(band, s, { photo: beside ? photo : null, gap, text: paragraphs, textAfter, summary: summaryOnBand ? summaryParas() : null }));
++  } else if (beside) {
++    paragraphs.splice(0, paragraphs.length, photoRow(photo, gap, paragraphs, s));
+   }
+-  if (beside) paragraphs.splice(0, paragraphs.length, photoRow(photo, gap, paragraphs, s));
+ 
+-  if (summary) {
++  if (summary && !summaryOnBand) {
+     // The Sidebar prints its summary under an "About Me" section title at the top of its main column (FIDB-51-VF3-NB2-NB1-NB1).
+     if (templateId(template) === 'sidebar') paragraphs.push(buildSectionTitle('About Me', settings, template));
+-    const { run, frame } = summaryLook(s, template);
+-    // At Design → Line Height, as the PDF's summary (R2-062), its lists behind Design → Lists' glyph (R2-147).
+-    paragraphs.push(...descriptionToParagraphs(personal.summary, { size: Math.round(baseSize * 2), lineHeight: s.lineHeightValue, bullet: s.bulletStyle, links: linkLook(s.linkStyle, s.accentColor), ...run }, centered ? 'center' : null, frame));
++    paragraphs.push(...summaryParas());
+   }
+ 
+   // Header ↔ First section, where set: the space after the header's end, as Word's own 4 pt is.
+@@ -133,42 +181,56 @@ export function buildPersonalSection(personal = {}, settings = {}, template = 'c
+ 
+ /**
+  * The header's row of the photo and, beside it, the name, title and contacts `text` (paragraphs): a
+- * borderless table as wide as the page's text, the photo's cell its width and `gap` (pt, Photo ↔
+- * Text), the text aligned to the photo as Photo → Text Position sets (top, centre or bottom). Photo →
+- * Position Right puts the photo's cell last, the gap on its left, as the PDF's row-reverse (R2-147).
++ * borderless table as wide as the page's text (frameTable), the photo's cell its width and `gap` (pt,
++ * Photo ↔ Text), the text aligned to the photo as Photo → Text Position sets (top, centre or bottom).
++ * Photo → Position Right puts the photo's cell last, the gap on its left, as the PDF's row-reverse
++ * (R2-147). `band`: the row is on the band (headerBand) — as wide as its text, its cells shaded, the
++ * text cell's own margins `textMargins` — and `rows` the band's rows under it.
+  */
+-function photoRow(photo, gap, text, s) {
+-  const width = wordContentTwips(s);
++function photoRow(photo, gap, text, s, { band = null, textMargins, rows = [] } = {}) {
++  const width = frameInner(s, band);
+   const first = Math.min(width, twips(photo.width + gap));
+   const valign = { top: VerticalAlign.TOP, bottom: VerticalAlign.BOTTOM }[s.photoTextAlign] || VerticalAlign.CENTER;
+-  const cell = (children, w, pad = {}) => new TableCell({
+-    children, width: { size: w, type: WidthType.DXA }, verticalAlign: valign,
+-    margins: { marginUnitType: WidthType.DXA, top: 0, bottom: 0, left: 0, right: 0, ...pad },
+-  });
+   const right = photoRowDirection(s) === 'row-reverse';
+   const pic = [new Paragraph({ children: [photo.run], spacing: { after: 0 }, ...(right ? { alignment: AlignmentType.RIGHT } : {}) })];
+   // The gap between the photo and the text is padding on the photo cell's side facing the text.
+   const gapSide = right ? 'left' : 'right';
+-  const photoCell = cell(pic, first, { [gapSide]: first - twips(photo.width) });
+-  const textCell = cell(text, width - first);
+-  return new Table({
+-    width: { size: width, type: WidthType.DXA },
+-    columnWidths: right ? [width - first, first] : [first, width - first],
+-    layout: TableLayoutType.FIXED,
+-    borders: TableBorders.NONE,
+-    rows: [new TableRow({ children: right ? [textCell, photoCell] : [photoCell, textCell] })],
+-  });
++  const photoCell = { children: pic, valign, margins: { [gapSide]: first - twips(photo.width) } };
++  const textCell = { children: text, valign, margins: textMargins };
++  return frameTable(
++    [right ? [textCell, photoCell] : [photoCell, textCell], ...rows],
++    right ? [width - first, first] : [first, width - first],
++    { settings: s, band },
++  );
++}
++
++/**
++ * The header on its band in Word (R2-137): Modern's banner, the Sidebar column's colour. A table as
++ * the letter's band and the PDF's banner: shaded in the band's fill (frameTable), its padding the
++ * band's — Banner top & bottom and sides on Modern (headerPadY / headerPadX), the Sidebar's running
++ * into the margins — holding the name, title and contacts `text` (paragraphs), the `photo` beside
++ * them where the PDF sets it there (photoRow), and Modern's `summary` (paragraphs) under them across
++ * the band. `textAfter`: the space after the text's last line, twips, which the band's padding under
++ * it takes in, so the band ends its padding under the text as the PDF's does.
++ */
++function headerBand(band, s, { photo, gap, text, textAfter, summary }) {
++  // The summary's paragraphs keep 1 pt after them (descriptionToParagraphs): the padding takes it in too.
++  const rows = summary ? [[{ children: summary, span: 2, margins: { bottom: -20 } }]] : [];
++  const textMargins = { bottom: -textAfter };
++  if (photo) return photoRow(photo, gap, text, s, { band, textMargins, rows });
++  return frameTable([[{ children: text, margins: textMargins }], ...rows], [frameInner(s, band)], { settings: s, band });
+ }
+ 
+ /**
+  * The summary as the PDF prints it on the page (FIDB-51-VF3-NB2-NB1): Classic and Executive upright
+  * in the Text colour's body shade; Minimal italic in its sub shade, beside a 2 pt bar of the accent
+  * at 40 % (a left border, which Word joins down the paragraphs); the Sidebar's main column upright in
+- * the Text colour itself. Modern prints it on its banner in the header text colour; Word draws no
+- * banner, so it prints as Classic's on the page, as Modern's name and title do (headerColorsOnPage).
++ * the Text colour itself. Modern prints it on its banner (`on`, the fill Word shades it, R2-137) in
++ * the header text colour at 85 %, its own alpha multiplied in, as its PDF does.
+  */
+-function summaryLook(s, template) {
++function summaryLook(s, template, on = null) {
+   const t = templateId(template);
++  if (on) return { run: { color: hexOn(s.headerTextColor || '#ffffff', on, 'ffffff', 0.85) }, frame: {} };
+   const ink = (c) => accent2Hex(c, '374151');
+   if (t === 'minimal') {
+     const bar = { style: BorderStyle.SINGLE, size: eighths(2), color: accent2Hex(solid(s.accentColor || '#2563eb', 0.4), '2563eb'), space: 8 };
+diff --git a/src/utils/wordExportLook.js b/src/utils/wordExportLook.js
+index 24d8381..3215257 100644
+--- a/src/utils/wordExportLook.js
++++ b/src/utils/wordExportLook.js
+@@ -1,6 +1,8 @@
+ // How the Word résumé prints a section's entries (buildSection's `look`): the sizes, the spacing of
+-// Design → Spacing (R2-062) and the colours (R2-063) its PDF prints the same section in.
+-import { accent2Hex, wordContentTwips } from '@/utils/wordExportUtils';
++// Design → Spacing (R2-062) and the colours (R2-063) its PDF prints the same section in — and the
++// header's frame, the band or rule the résumé's header and the letter's letterhead sit in (R2-137).
++import { BorderStyle, ShadingType, Table, TableBorders, TableCell, TableLayoutType, TableRow, VerticalAlign, WidthType } from 'docx';
++import { accent2Hex, eighths, twips, wordContentTwips, wordMargins } from '@/utils/wordExportUtils';
+ import { headerTemplateId, templateId } from '@/constants/templates';
+ import { solid, textShades } from '@/templates/pdf/shared/pdfColors';
+ import { getColumnWidth, getEffectiveSpacing } from '@/templates/pdf/shared/PdfSections';
+@@ -122,3 +124,93 @@ export function sectionLook(section, settings, s, template, side) {
+     ink: entryInk(s, tid),
+   };
+ }
++
++/**
++ * A colour as Word's 'rrggbb', opaque over `on` (the band a run sits on, else the white page), at
++ * `alpha` times its own: what the PDF draws with that opacity (Word has none).
++ */
++export const hexOn = (color, on = '#ffffff', fallback, alpha = 1) => accent2Hex(solid(color, alpha, on), fallback);
++
++/**
++ * The fill Word shades a header band in (letterheadLook's `band`): the colour the PDF paints (a
++ * translucent one as it shows over the white page), else — a colour Word cannot take — the look's
++ * own band colour (band.fallback), so a template's band brings its fallback with it: Word chose it
++ * by the look's name, the Sidebar's slate or else Modern's blue (FIDB-51-VF7-NB2).
++ */
++export const bandFill = (band) => hexOn(band.color, '#ffffff', hexOn(band.fallback));
++
++/**
++ * How far a band's fill runs past its text on each side, twips: Modern's band sits inside the page
++ * margins, its text its Banner sides (padX) in; a band that bleeds (the Sidebar's, whose padX is 0)
++ * keeps its text on the margins and runs its fill padY into them — never past the paper's edge.
++ * The PDF runs that fill to the paper's edges; a Word table cannot reach above the top margin.
++ */
++function bandSide(band, settings) {
++  if (!band) return 0;
++  return band.bleed ? Math.min(twips(band.padY), wordMargins(settings).h) : twips(band.padX);
++}
++
++/**
++ * The width a header frame (frameTable) leaves its text, twips: the page's text less a band's
++ * padding on each side where the band sits inside the margins (Modern's).
++ */
++export const frameInner = (settings, band = null) => wordContentTwips(settings) - (band && !band.bleed ? 2 * bandSide(band, settings) : 0);
++
++/**
++ * The header's frame in Word (R2-137): a borderless table whose columns are `widths` (twips, summing
++ * to frameInner), `rows` its rows of cells `{ children, span?, valign?, margins? }` — `margins` twips
++ * added to the frame's own on that side of the cell (less where negative, never under 0). With
++ * `band` (letterheadLook's): every cell shaded in its fill (bandFill), the band's padding as the
++ * outer cells' margins, so the band is one block however its cells' heights differ — Modern's inside
++ * the margins, a band that bleeds (bandSide) running into them, its text on them. With `rules` (the
++ * letterhead's rules, top down; two are a double rule) and no band: the table's bottom border, `ruleGap`
++ * pt under the text. The photo row of a header on the white page is this frame with neither.
++ */
++export function frameTable(rows, widths, { settings, band = null, rules = [], ruleGap = 0 } = {}) {
++  const side = bandSide(band, settings);
++  const padY = band ? twips(band.padY) : 0;
++  const [rule, second] = band ? [] : rules;
++  const fill = band ? bandFill(band) : null;
++  const cols = widths.length;
++  const colWidths = widths.map((w, i) => w + (i === 0 ? side : 0) + (i === cols - 1 ? side : 0));
++  const total = colWidths.reduce((a, b) => a + b, 0);
++  const under = padY + (rule ? twips(ruleGap) : 0);
++  const at = (own, extra = 0) => Math.max(0, own + extra);
++  return new Table({
++    width: { size: total, type: WidthType.DXA },
++    columnWidths: colWidths,
++    layout: TableLayoutType.FIXED,
++    // A band that bleeds starts its fill `side` left of the margin: in the compatibility mode docx writes
++    // (Word 2013's), a table's indent is where its edge starts, not its text.
++    ...(band?.bleed && side ? { indent: { size: -side, type: WidthType.DXA } } : {}),
++    borders: rule
++      ? { ...TableBorders.NONE, bottom: { style: second ? BorderStyle.DOUBLE : BorderStyle.SINGLE, size: eighths(rule.width), color: hexOn(rule.color) } }
++      : TableBorders.NONE,
++    rows: rows.map((row, r) => {
++      let col = 0;
++      return new TableRow({
++        children: row.map((cell) => {
++          const span = Math.min(cell.span || 1, cols - col);
++          const [first, last] = [col === 0, col + span === cols];
++          const width = colWidths.slice(col, col + span).reduce((a, b) => a + b, 0);
++          col += span;
++          const m = cell.margins || {};
++          return new TableCell({
++            children: cell.children,
++            width: { size: width, type: WidthType.DXA },
++            ...(span > 1 ? { columnSpan: span } : {}),
++            verticalAlign: cell.valign || VerticalAlign.TOP,
++            ...(fill ? { shading: { type: ShadingType.CLEAR, color: 'auto', fill } } : {}),
++            margins: {
++              marginUnitType: WidthType.DXA,
++              top: at(r === 0 ? padY : 0, m.top),
++              bottom: at(r === rows.length - 1 ? under : 0, m.bottom),
++              left: at(first ? side : 0, m.left),
++              right: at(last ? side : 0, m.right),
++            },
++          });
++        }),
++      });
++    }),
++  });
++}
+diff --git a/src/utils/wordExportPhoto.js b/src/utils/wordExportPhoto.js
+index 08e6660..38d13ee 100644
+--- a/src/utils/wordExportPhoto.js
++++ b/src/utils/wordExportPhoto.js
+@@ -94,14 +94,15 @@ class ShapedImageRun extends ImageRun {
+  * Its box is the PDF's (getPdfPhotoStyle): Modern's and the Banner's photo sized for their banner, the
+  * Sidebar's scaled to its column; the picture cropped to fill it. A Circle prints as an ellipse, Rounded
+  * and Square as a rectangle with the PDF's corners. Border Thin and Accent ring it in the colour they
+- * take on the white page — Word draws no banner or panel for the white ring they take there.
++ * take on the white page, or `onBand` — Modern's banner and the Sidebar's panel, which Word draws as
++ * the header's band (R2-137) — in the ring that reads there, as the PDF's.
+  * An SVG photo reaches here as the PNG copy withWordPhoto makes of it (RES-R2-126); one no copy could
+  * be made of prints none, as Word takes no SVG without a PNG beside it. A photo react-pdf reads from
+  * elsewhere reaches here as bytes (withWordPhoto). Photo → Tone Grayscale
+  * prints it grey (ShapedImageRun's <a:grayscl/>; R2-147).
+  * Returns { run, width }: `width` the box's, pt.
+  */
+-export function wordPhoto(personal = {}, s = {}, template = 'classic') {
++export function wordPhoto(personal = {}, s = {}, template = 'classic', { onBand = false } = {}) {
+   if ((personal.hiddenFields || []).includes('photo')) return null;
+   const src = drawableImage(personal.photo);
+   const match = /^data:image\/(png|jpeg|jpg);base64,(.*)$/is.exec(src || '');
+@@ -118,7 +119,11 @@ export function wordPhoto(personal = {}, s = {}, template = 'classic') {
+   const h = box.height * scale;
+   const radius = Math.min(box.borderRadius, w / 2);
+   const round = s.photoShape === 'circle' || radius >= Math.min(w, h) / 2 ? { prst: 'ellipse' } : { prst: 'roundRect', adj: Math.round((radius / Math.min(w, h)) * 100000) };
+-  const ring = getPdfPhotoStyle(s, accent, 'classic');
++  // On the band, the ring the PDF draws there: white on Modern's banner (ModernTemplatePDF), the
++  // accent that reads on the Sidebar's panel (SidebarTemplatePDF's lightBorder).
++  const ring = !onBand ? getPdfPhotoStyle(s, accent, 'classic')
++    : tid === 'sidebar' ? getPdfPhotoStyle(s, accent, 'classic', { lightBorder: true })
++      : getPdfPhotoStyle(s, '#ffffff', 'modern');
+   const run = new ShapedImageRun({
+     type: match[1].toLowerCase() === 'png' ? 'png' : 'jpg',
+     data: bytes,
+diff --git a/tests/pdf/23-cover-letter-looks-word.test.mjs b/tests/pdf/23-cover-letter-looks-word.test.mjs
+index 03dac6d..84b2d2e 100644
+--- a/tests/pdf/23-cover-letter-looks-word.test.mjs
++++ b/tests/pdf/23-cover-letter-looks-word.test.mjs
+@@ -1,6 +1,9 @@
+ // The Word letter's letterhead takes the résumé template's look too (FIDB-51): its colours and
+ // alignment, Modern's and the Sidebar's band as paragraph shading, Classic's, Minimal's and
+-// Executive's rules as the last line's bottom border.
++// Executive's rules as the last line's bottom border. These read the letterhead of one column — the
++// contacts under the name, Fields Position Below Name. At Right of Name, the default, the name and the
++// contacts are the two cells of a table the band shades and the rule underlines (R2-137): its tests
++// are 92-word-header-band. Its runs are the same, so the colour tests hold for both.
+ import { before, after, describe, it } from 'node:test';
+ import assert from 'node:assert/strict';
+ import { setup, teardown, resume, loadModule, readDocx, renderCover, read, itemsWith, drawState, MM, TEMPLATES } from './harness.mjs';
+@@ -19,9 +22,11 @@ const letter = (template, { settings } = {}) => resume({
+ });
+ 
+ describe('the Word letter\'s letterhead takes the look too (FIDB-51)', () => {
+-  const coverDocx = async (template, settings) => {
++  const coverDocx = async (template, settings, fieldsPosition = 'below-name') => {
+     const { renderCoverLetterDocx } = await loadModule('/src/utils/wordExport.js');
+-    return readDocx(new Uint8Array(await (await renderCoverLetterDocx(letter(template, { settings }))).arrayBuffer()));
++    const r = letter(template, { settings });
++    r.coverLetter = { ...r.coverLetter, fieldsPosition };
++    return readDocx(new Uint8Array(await (await renderCoverLetterDocx(r)).arrayBuffer()));
+   };
+   /**
+    * The letterhead's paragraphs (name, title, contacts — the name and title one line where the résumé prints
+diff --git a/tests/pdf/33-cover-letter-header-rule.test.mjs b/tests/pdf/33-cover-letter-header-rule.test.mjs
+index ea0fb29..460b87d 100644
+--- a/tests/pdf/33-cover-letter-header-rule.test.mjs
++++ b/tests/pdf/33-cover-letter-header-rule.test.mjs
+@@ -46,10 +46,16 @@ async function both(template, settings) {
+ const ON = (headerBorderWidth) => ({ showHeaderBorder: true, headerBorderWidth });
+ const OFF = (headerBorderWidth) => ({ showHeaderBorder: false, headerBorderWidth });
+ 
+-/** The Word letter of `template` with `settings`. */
++/**
++ * The Word letter of `template` with `settings`, its contacts under the name (Below Name): one column,
++ * the rule its last line's bottom border. At Right of Name, the default, the rule is the bottom border
++ * of the name's and the contacts' table (R2-137, 92-word-header-band); the PDF draws the same rule.
++ */
+ async function docx(template, settings) {
+   const { renderCoverLetterDocx } = await loadModule('/src/utils/wordExport.js');
+-  return readDocx(new Uint8Array(await (await renderCoverLetterDocx(make(template, settings))).arrayBuffer()));
++  const r = make(template, settings);
++  r.coverLetter = { ...r.coverLetter, fieldsPosition: 'below-name' };
++  return readDocx(new Uint8Array(await (await renderCoverLetterDocx(r)).arrayBuffer()));
+ }
+ 
+ /** Word's last letterhead line (the contacts): its bottom border's attributes, or null, and its spacing after, pt. */
+diff --git a/tests/pdf/33-cover-letter-inline-title.test.mjs b/tests/pdf/33-cover-letter-inline-title.test.mjs
+index 49a2eaf..67419f6 100644
+--- a/tests/pdf/33-cover-letter-inline-title.test.mjs
++++ b/tests/pdf/33-cover-letter-inline-title.test.mjs
+@@ -138,7 +138,9 @@ describe('Word\'s letterhead follows Name & Title Layout "Inline" too (V2FIDB-51
+       for (const headerAlign of ['left', 'center']) {
+         const at = `${template}, ${headerAlign}`;
+         // Header Bottom Border on: Classic's letter draws the résumé header's rule, and only then.
+-        const doc = await coverDocx(make(template, { settings: inline({ headerAlign, nameColor: '#7c3aed', jobTitleColor: '#0d9488', showHeaderBorder: true }) }));
++        // Below Name: the one-column letterhead, its rule the contacts' bottom border (at Right of Name,
++        // the default, the rule underlines the name's and the contacts' table: 92-word-header-band).
++        const doc = await coverDocx(make(template, { settings: inline({ headerAlign, nameColor: '#7c3aed', jobTitleColor: '#0d9488', showHeaderBorder: true }), coverLetter: { fieldsPosition: 'below-name' } }));
+         assert.deepEqual(doc.texts.slice(0, 3), ['Pat Sample Staff Engineer', 'pat@example.com  |  +1 555 0100  |  Berlin, Germany', '15 January 2026'], at);
+         const [head, contacts] = doc.paragraphs.map((p) => p.xml);
+         assert.deepEqual([colourOf(head, 'Pat Sample'), colourOf(head, 'Staff Engineer')], ['7c3aed', '0d9488'], `${at}: colours`);
+diff --git a/tests/pdf/33-word-contact-marks.test.mjs b/tests/pdf/33-word-contact-marks.test.mjs
+index 11cf731..523cd74 100644
+--- a/tests/pdf/33-word-contact-marks.test.mjs
++++ b/tests/pdf/33-word-contact-marks.test.mjs
+@@ -43,6 +43,12 @@ const letterDocx = async (r) => {
+   const { renderCoverLetterDocx } = await loadModule('/src/utils/wordExport.js');
+   return readDocx(new Uint8Array(await (await renderCoverLetterDocx(r)).arrayBuffer()));
+ };
++/** A letter on `template`'s band with `settings`, its contacts one line of Icon (printed as bars). */
++const bandLetter = (template, settings) => {
++  const r = cv(template, settings);
++  r.coverLetter = { ...r.coverLetter, headerStyle: 'icon', headerLayout: 'justify' };
++  return r;
++};
+ /** The PDF's fill for `needle`'s runs, each once, without '#'. */
+ const fills = async (bytes, needle) => [...new Set((await drawState(bytes, needle)).map((h) => h.fill.slice(1)))];
+ 
+@@ -66,7 +72,7 @@ describe('the résumé\'s Word header prints the PDF\'s contact marks and colour
+     }
+   });
+ 
+-  it('Modern and Sidebar: bars whatever Contact Style is stored (the PDF draws icons), the values in the Text colour\'s grey on the page', async () => {
++  it('Modern and Sidebar: bars whatever Contact Style is stored (the PDF draws icons), on the band in its colours', async () => {
+     for (const template of BANDED) {
+       for (const contactStyle of STYLES) {
+         for (const textColor of ['#1e3a8a', '#374151']) {
+@@ -74,12 +80,13 @@ describe('the résumé\'s Word header prints the PDF\'s contact marks and colour
+           const r = cv(template, { contactStyle, textColor });
+           const pdf = await render(r);
+           assert.deepEqual([await fills(pdf, '|'), await fills(pdf, '•')], [[], []], `${at}: the PDF draws no marks`);
+-          // Word prints no band: the values print on the white page, in the grey Classic's header
+-          // prints them in at that Text colour.
+-          const [grey] = await fills(await render(cv('classic', { textColor })), EMAIL);
++          // Word draws the band (R2-137): the values and bars in the band's colours, as the letter's
++          // letterhead prints them on the same band with Icon (below: the Bar letter's PDF bars).
+           const { values, marks } = contactLine(await renderDocx(r));
+-          assert.deepEqual([...new Set(values.map(([, c]) => c))], [grey], `${at}: the values`);
+-          assert.deepEqual(distinct(marks), [`| ${BAR_GREY}`], `${at}: the marks`);
++          const letter = contactLine(await letterDocx(bandLetter(template, { contactStyle, textColor })));
++          assert.deepEqual([...new Set(values.map(([, c]) => c))], [...new Set(letter.values.map(([, c]) => c))], `${at}: the values`);
++          assert.equal(marks.length, 2, `${at}: a bar between each two values`);
++          assert.deepEqual(distinct(marks), distinct(letter.marks), `${at}: the marks`);
+         }
+       }
+     }
+@@ -95,10 +102,17 @@ describe('the résumé\'s Word header prints the PDF\'s contact marks and colour
+         if (stored === undefined) delete r.settings.contactStyle;
+         else r.settings.contactStyle = stored;
+         const at = `${template}, contactStyle ${JSON.stringify(stored)}`;
++        const { values, marks } = contactLine(await renderDocx(r));
++        if (BANDED.includes(template)) {
++          // On the band (R2-137): the band's colours, as the Icon letter prints them there.
++          const letter = contactLine(await letterDocx(bandLetter(template, r.settings)));
++          assert.deepEqual([...new Set(values.map(([, c]) => c))], [...new Set(letter.values.map(([, c]) => c))], `${at}: the values`);
++          assert.deepEqual(distinct(marks), distinct(letter.marks), `${at}: the marks`);
++          continue;
++        }
+         const grey = STYLED.includes(template)
+           ? (await fills(await render(r), EMAIL))[0]
+           : letterGrey(resolveTemplateSettings(r.settings, template).textColor).slice(1);
+-        const { values, marks } = contactLine(await renderDocx(r));
+         assert.deepEqual([...new Set(values.map(([, c]) => c))], [grey], `${at}: the values`);
+         assert.deepEqual(distinct(marks), [`| ${BAR_GREY}`], `${at}: the marks`);
+       }
+diff --git a/tests/pdf/35-word-name-title-colors.test.mjs b/tests/pdf/35-word-name-title-colors.test.mjs
+index 9b958b9..6ab859e 100644
+--- a/tests/pdf/35-word-name-title-colors.test.mjs
++++ b/tests/pdf/35-word-name-title-colors.test.mjs
+@@ -4,10 +4,11 @@
+ // Text colour for the name, the accent for the title — Minimal's #555555. The letter's Word file
+ // already took both (23-cover-letter-looks-word).
+ //
+-// Word draws no band: Modern's banner and the Sidebar's column print their header on the white
+-// page, as their contact line already does (33-word-contact-marks). There a colour picked for the
+-// band that vanishes on the page, or the band's own (the Header Text Color, the Sidebar's readable
+-// accent), prints as a switch to Classic prints it (headerColorsOnSwitch, 31-template-switch-colors).
++// Modern's banner and the Sidebar's column: Word draws their band since R2-137 (92-word-header-band),
++// and prints the name and title on it in the colours the PDF draws there — the picked ones, else the
++// band's own (the Header Text Color, the Sidebar's readable accent), Modern's title at 90 % — as the
++// letter's letterhead does. Before, Word drew no band and printed them as a switch to Classic prints
++// them (headerColorsOnSwitch).
+ import { before, after, describe, it } from 'node:test';
+ import assert from 'node:assert/strict';
+ import { setup, teardown, resume, render, renderDocx, drawState, loadModule } from './harness.mjs';
+@@ -17,7 +18,7 @@ after(teardown);
+ 
+ /** Templates whose header is the white page, in the PDF as in Word. */
+ const PAGE = ['classic', 'minimal', 'executive'];
+-/** Templates whose PDF prints the header on a band Word does not draw. */
++/** Templates whose PDF prints the header on a band, as Word now does (R2-137). */
+ const BANDED = ['modern', 'sidebar'];
+ const NAME = 'Pat Sample';
+ const TITLE = 'Staff Engineer';
+@@ -53,6 +54,25 @@ async function pdfInk(r) {
+   }));
+ }
+ 
++/**
++ * The colours the PDF draws the name and the title in on the band, opaque: 'rrggbb'. Modern's title
++ * prints at 90 %, which the PDF stores in 255ths — Word's blend of it can differ by one per channel.
++ */
++async function pdfInkOnBand(r) {
++  const { solid } = await loadModule('/src/templates/pdf/shared/pdfColors.js');
++  const { letterheadLook } = await loadModule('/src/templates/pdf/shared/letterhead.js');
++  const { resolveTemplateSettings } = await loadModule('/src/templates/pdf/shared/templateSettings.js');
++  const ground = letterheadLook(r.template, resolveTemplateSettings(r.settings, r.template)).band.color;
++  const bytes = await render(r);
++  return Promise.all(['Pat', 'Staff'].map(async (word) => {
++    const drawn = [...new Set((await drawState(bytes, word)).map((h) => solid(h.fill, h.alpha, ground).slice(1)))];
++    assert.equal(drawn.length, 1, `"${word}" drawn in one colour: ${drawn}`);
++    return drawn[0];
++  }));
++}
++/** Two lists of 'rrggbb' within 2 per channel of each other. */
++const close = (a, b) => a.length === b.length && a.every((x, i) => x && b[i] && [0, 2, 4].every((k) => Math.abs(parseInt(x.slice(k, k + 2), 16) - parseInt(b[i].slice(k, k + 2), 16)) <= 2));
++
+ describe('the Word résumé prints Design → Name and Job title colours (FIDB-51-VF1-NB1-NB1)', () => {
+   it('Classic, Minimal and Executive: the name and title in the colours the PDF draws — picked, else the template\'s own', async () => {
+     const cases = [
+@@ -77,69 +97,66 @@ describe('the Word résumé prints Design → Name and Job title colours (FIDB-5
+     assert.deepEqual(await wordInk(cv('minimal')), [INK, '555555'], 'Minimal: its own grey title');
+   });
+ 
+-  it('Modern and Sidebar: a picked colour that reads on the page prints as picked, as the same colours print on Classic', async () => {
++  it('Modern and Sidebar: on the band, in the colours the PDF draws there — picked, else the band\'s own', async () => {
+     for (const template of BANDED) {
+       for (const settings of [
++        {},
+         { nameColor: '#7c3aed', jobTitleColor: '#0d9488' },
+-        { nameColor: '#70e', jobTitleColor: '#1e3a8a', textColor: '#7c2d12' },
++        { textColor: '#1e3a8a', accentColor: '#e11d48' },
++        // The old Sidebar seed's white name and pale blue title, a light yellow picked for a dark band.
++        { nameColor: '#ffffff', jobTitleColor: '#bfdbfe' },
++        { nameColor: '#ffffff', jobTitleColor: '#fde68a', accentColor: '#1e3a8a' },
++        // Header Text Color is the band's.
++        { headerTextColor: '#fde68a' },
++        { headerTextColor: '#1e293b', accentColor: '#0d9488', sidebarBg: '#f1f5f9' },
++        { accentColor: '#fde68a', headerTextColor: '#1e293b', jobTitleColor: '#f97316' },
+       ]) {
+-        const at = `${template} ${JSON.stringify(settings)}`;
+-        const word = await wordInk(cv(template, settings));
+-        assert.deepEqual(word, await pdfInk(cv('classic', settings)), at);
++        const r = cv(template, settings);
++        const [word, pdf] = [await wordInk(r), await pdfInkOnBand(r)];
++        assert.ok(close(word, pdf), `${template} ${JSON.stringify(settings)}: Word ${word}, the PDF ${pdf}`);
+       }
+     }
+-    // Faint on the page but fainter still on Modern's light banner: kept, as a switch keeps it.
+-    assert.deepEqual(await wordInk(cv('modern', { accentColor: '#fde68a', headerTextColor: '#1e293b', jobTitleColor: '#f97316' })), [INK, 'f97316']);
++    // A new résumé's Modern: white on its #374151 banner, the title at 90 % of it.
++    const { solid } = await loadModule('/src/templates/pdf/shared/pdfColors.js');
++    assert.deepEqual(await wordInk(cv('modern')), ['ffffff', solid('#ffffff', 0.9, '#374151').slice(1)]);
+   });
+ 
+-  it('Modern and Sidebar: the band\'s colours, picked or its own, never print on the page — the Text colour and the accent do', async () => {
+-    const cases = [
+-      [{}, [INK, SLATE]],
+-      [{ textColor: '#1e3a8a', accentColor: '#e11d48' }, ['1e3a8a', 'e11d48']],
+-      // The old Sidebar seed's white name and pale blue title, a light yellow picked for a dark band.
+-      [{ nameColor: '#ffffff', jobTitleColor: '#bfdbfe' }, [INK, SLATE]],
+-      [{ nameColor: '#ffffff', jobTitleColor: '#fde68a', accentColor: '#1e3a8a' }, [INK, '1e3a8a']],
+-      // Header Text Color is the band's.
+-      [{ headerTextColor: '#fde68a' }, [INK, SLATE]],
+-      [{ headerTextColor: '#1e293b', accentColor: '#0d9488', sidebarBg: '#f1f5f9' }, [INK, '0d9488']],
+-    ];
+-    for (const template of BANDED) {
+-      for (const [settings, expected] of cases) {
+-        const r = cv(template, settings);
+-        const at = `${template} ${JSON.stringify(settings)}`;
+-        assert.deepEqual(await wordInk(r), expected, at);
+-        // As Classic prints the same Text colour and accent with no picks.
+-        assert.deepEqual(expected, await pdfInk(cv('classic', { ...settings, nameColor: '', jobTitleColor: '' })), `${at}: Classic's`);
++  it('a colour Word cannot take prints as the template\'s own — on the page, or on the band (guard)', async () => {
++    for (const [template, own] of [['classic', [INK, SLATE]], ['minimal', [INK, '555555']], ['executive', [INK, SLATE]]]) {
++      for (const bad of ['notacolor', 'rgb(nope)', '#12']) {
++        assert.deepEqual(await wordInk(cv(template, { nameColor: bad, jobTitleColor: bad })), own, `${template} ${bad}`);
+       }
+     }
+-  });
+-
+-  it('a colour Word cannot take prints as the template\'s own on the page (guard)', async () => {
+-    for (const [template, own] of [['classic', [INK, SLATE]], ['minimal', [INK, '555555']], ['executive', [INK, SLATE]], ['modern', [INK, SLATE]], ['sidebar', [INK, SLATE]]]) {
++    for (const template of BANDED) {
++      const own = await wordInk(cv(template));
+       for (const bad of ['notacolor', 'rgb(nope)', '#12']) {
+         assert.deepEqual(await wordInk(cv(template, { nameColor: bad, jobTitleColor: bad })), own, `${template} ${bad}`);
+       }
+     }
+   });
+ 
+-  it('saved data from older builds (no dataVersion, no Name, Title or Text colour) exports the colours its PDF prints on the page', async () => {
++  it('saved data from older builds (no dataVersion, no Name, Title or Text colour) exports the colours its PDF prints', async () => {
+     const { normalizeResume } = await loadModule('/src/utils/normalizeResume.js');
+-    const own = { classic: ['1a1a1a', '2563eb'], minimal: [INK, '555555'], executive: [INK, '2563eb'], modern: ['1f2937', '2563eb'], sidebar: ['1e2937', '2563eb'] };
++    const own = { classic: ['1a1a1a', '2563eb'], minimal: [INK, '555555'], executive: [INK, '2563eb'] };
+     for (const template of [...PAGE, ...BANDED]) {
+       const old = { ...cv(template, { nameColor: '#7c3aed', jobTitleColor: '#0d9488' }), updatedAt: 5 };
+       delete old.dataVersion;
+       const picked = normalizeResume(old);
+-      // As its PDF prints them on the page — for a band, as Classic prints the migrated settings: v11
+-      // (NB-1) sets back a pick its band cannot show (this purple on Modern's slate banner, 1.8:1).
+-      const onPage = PAGE.includes(template) ? picked : cv('classic', picked.settings);
+-      assert.deepEqual(await wordInk(picked), await pdfInk(onPage), `${template}: picked`);
++      // As its PDF prints them — on the page, or on the band (v11, NB-1, sets back a pick its band
++      // cannot show: this purple on Modern's slate banner, 1.8:1).
++      const pdf = PAGE.includes(template) ? await pdfInk(picked) : await pdfInkOnBand(picked);
++      assert.ok(close(await wordInk(picked), pdf), `${template}: picked`);
+       if (template !== 'modern') assert.deepEqual(await wordInk(picked), ['7c3aed', '0d9488'], `${template}: picked, as stored`);
+       const bare = { ...cv(template), updatedAt: 5 };
+       delete bare.dataVersion;
+       for (const key of ['nameColor', 'jobTitleColor', 'textColor', 'accentColor']) delete bare.settings[key];
+       const r = normalizeResume(bare);
+-      assert.deepEqual(await wordInk(r), own[template], `${template}: the template's own`);
+-      if (PAGE.includes(template)) assert.deepEqual(own[template], await pdfInk(r), `${template}: its PDF`);
++      if (PAGE.includes(template)) {
++        assert.deepEqual(await wordInk(r), own[template], `${template}: the template's own`);
++        assert.deepEqual(own[template], await pdfInk(r), `${template}: its PDF`);
++      } else {
++        assert.ok(close(await wordInk(r), await pdfInkOnBand(r)), `${template}: the template's own, on its band`);
++      }
+     }
+   });
+ });
+diff --git a/tests/pdf/35-word-summary-look.test.mjs b/tests/pdf/35-word-summary-look.test.mjs
+index 52506b2..bc36e97 100644
+--- a/tests/pdf/35-word-summary-look.test.mjs
++++ b/tests/pdf/35-word-summary-look.test.mjs
+@@ -1,7 +1,8 @@
+ // The summary's look in the Word résumé (FIDB-51-VF3-NB2-NB1). The .docx printed every summary
+ // italic in a fixed #374151. The PDF (= the preview) prints Classic's and Executive's upright in the
+ // Text colour's body shade, Minimal's italic in its sub shade beside a 2 pt accent bar at 40 %, the
+-// Sidebar's upright in the Text colour, Modern's on its banner (Word has none: as Classic's).
++// Sidebar's upright in the Text colour, Modern's on its banner — which Word draws since R2-137, the
++// summary on it in the header text colour at 85 %, as the PDF prints it.
+ import { before, after, describe, it } from 'node:test';
+ import assert from 'node:assert/strict';
+ import { setup, teardown, resume, render, renderDocx, read, allItems, drawState, loadModule, TEMPLATES } from './harness.mjs';
+@@ -53,11 +54,17 @@ describe('the Word résumé prints the summary as the PDF does (FIDB-51-VF3-NB2-
+     }
+   });
+ 
+-  it('Modern: no banner in Word — the summary prints upright as Classic\'s does, in the same Text colour', async () => {
+-    for (const textColor of ['#1f2937', '#7c2d12']) {
+-      const word = await wordSummary(cv('modern', { textColor }));
+-      const classic = await pdfSummary(cv('classic', { textColor }));
+-      assert.deepEqual([word.colour, word.italic], [classic.colour, false], textColor);
++  it('Modern: on its banner, upright, in the colour the PDF draws there — the header text colour at 85 % on the accent', async () => {
++    const { solid } = await loadModule('/src/templates/pdf/shared/pdfColors.js');
++    for (const settings of [{}, { headerTextColor: '#fef3c7' }, { accentColor: '#1e3a8a', textColor: '#7c2d12' }]) {
++      const r = cv('modern', settings);
++      const word = await wordSummary(r);
++      const [ink] = await drawState(await render(r), WORD);
++      // The PDF stores the 85 % in 255ths: Word's blend of it can differ by one per channel.
++      const pdf = solid(ink.fill, ink.alpha, r.settings.accentColor).toLowerCase();
++      const channels = (c) => [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16));
++      assert.ok(channels(word.colour).every((v, i) => Math.abs(v - channels(pdf)[i]) <= 2), `${JSON.stringify(settings)}: Word ${word.colour}, the PDF ${pdf}`);
++      assert.equal(word.italic, false);
+     }
+   });
+ });
+diff --git a/tests/pdf/46-header-photo-text-gap.test.mjs b/tests/pdf/46-header-photo-text-gap.test.mjs
+index 00dd155..4ffe94f 100644
+--- a/tests/pdf/46-header-photo-text-gap.test.mjs
++++ b/tests/pdf/46-header-photo-text-gap.test.mjs
+@@ -101,10 +101,17 @@ describe('Photo ↔ Text in the cover letter', () => {
+ describe('Photo ↔ Text in Word', () => {
+   // Word prints the photo now (R2-126): it no longer ignores the gap, it moves the text as the PDF does.
+   it('each value moves the text beside the photo (its cell) or under it (the space after it) by exactly its change, on the PDF\'s axis', async () => {
+-    /** Where Word's text starts against the photo, pt: the photo cell's width, or the space under the photo. */
++    /**
++     * Where Word's text starts against the photo, pt: the photo cell's width — the first column of the
++     * table the name is in, where it has two: Modern's and the Sidebar's band is a table too (R2-137),
++     * the Sidebar's of one column, its photo above the name — or the space under the photo.
++     */
+     const offset = async (t, s) => {
+       const { xml } = await renderDocx(cv(t, s));
+-      const cell = /<w:gridCol w:w="(\d+)"\/>/.exec(xml.split('Jordan Rivera')[0])?.[1];
++      const head = xml.split('Jordan Rivera')[0];
++      const table = head.includes('<w:tbl>') ? head.slice(head.lastIndexOf('<w:tbl>')) : '';
++      const columns = [...table.matchAll(/<w:gridCol w:w="(\d+)"\/>/g)].map((m) => m[1]);
++      const cell = columns.length > 1 ? columns[0] : undefined;
+       const under = /w:after="(\d+)"/.exec(xml.split('</w:p>').find((p) => p.includes('<w:drawing>')))?.[1];
+       return cell ? { axis: 'x', pt: Number(cell) / 20 } : { axis: 'y', pt: Number(under) / 20 };
+     };
+diff --git a/tests/pdf/47-header-title-contacts-gap.test.mjs b/tests/pdf/47-header-title-contacts-gap.test.mjs
+index 420b328..5b853f8 100644
+--- a/tests/pdf/47-header-title-contacts-gap.test.mjs
++++ b/tests/pdf/47-header-title-contacts-gap.test.mjs
+@@ -150,16 +150,30 @@ describe('Title ↔ Contacts in Word', () => {
+     });
+   }
+ 
++  // Below Name: the contacts under the title (or name), which the gap spaces, as the letter's PDF.
++  const below = { fieldsPosition: 'below-name' };
+   for (const template of TEMPLATES) {
+     const band = ['modern', 'sidebar', 'banner', 'banded'].includes(template); // the letters whose letterhead is a band (Banded's, R2-138 B2)
+     it(`${template}: the letter's title (or name) row keeps Word's own spacing unset${band ? ' (none on the band)' : ''}, and takes the set value`, async () => {
+-      assert.equal(spaceAfter(await letterDocx(cv(template)), 'Staff Engineer'), band ? 0 : 40);
+-      assert.equal(spaceAfter(await letterDocx(cv(template, { titleContactsGap: 20 })), 'Staff Engineer'), 300);
++      assert.equal(spaceAfter(await letterDocx(cv(template, {}, PERSONAL, below)), 'Staff Engineer'), band ? 0 : 40);
++      assert.equal(spaceAfter(await letterDocx(cv(template, { titleContactsGap: 20 }, PERSONAL, below)), 'Staff Engineer'), 300);
+       const noTitle = { ...PERSONAL, title: '' };
+-      assert.equal(spaceAfter(await letterDocx(cv(template, {}, noTitle)), 'Jordan Rivera'), band ? 0 : 20);
+-      assert.equal(spaceAfter(await letterDocx(cv(template, { titleContactsGap: 20 }, noTitle)), 'Jordan Rivera'), 300);
++      assert.equal(spaceAfter(await letterDocx(cv(template, {}, noTitle, below)), 'Jordan Rivera'), band ? 0 : 20);
++      assert.equal(spaceAfter(await letterDocx(cv(template, { titleContactsGap: 20 }, noTitle, below)), 'Jordan Rivera'), 300);
+     });
+   }
++
++  // Right of Name, the default: the contacts sit beside the name (R2-137), and the letter's PDF prints
++  // no Title ↔ Contacts there (above): the title (or name) ends its cell, with no space after it.
++  it('Right of Name: the title (or name) ends its cell; a stored Title ↔ Contacts changes nothing', async () => {
++    const noTitle = { ...PERSONAL, title: '' };
++    for (const template of ['classic', 'modern']) {
++      for (const settings of [{}, { titleContactsGap: 20 }]) {
++        assert.equal(spaceAfter(await letterDocx(cv(template, settings)), 'Staff Engineer'), 0, `${template} ${JSON.stringify(settings)}`);
++        assert.equal(spaceAfter(await letterDocx(cv(template, settings, noTitle)), 'Jordan Rivera'), 0, `${template} ${JSON.stringify(settings)}: no title`);
++      }
++    }
++  });
+ });
+ 
+ describe('the Title ↔ Contacts row (Personal Info → Header Customization → Header spacing)', () => {
+diff --git a/tests/pdf/83-templates-ui-leftovers.test.mjs b/tests/pdf/83-templates-ui-leftovers.test.mjs
+index 2402118..cec955b 100644
+--- a/tests/pdf/83-templates-ui-leftovers.test.mjs
++++ b/tests/pdf/83-templates-ui-leftovers.test.mjs
+@@ -1,8 +1,9 @@
+ // Two Templates-UI audit leftovers filed together as R2-133. The dashboard card printed the stored
+ // template id under CSS `capitalize` ("Foo" for an id the app does not offer, which opens and prints
+-// as Classic) instead of the name the editor shows (templateLabel). And Export Word gave no hint that
+-// the .docx is the résumé's text — no photo, no banner or coloured column — so a Modern résumé with a
+-// photo came out plain with no word why.
++// as Classic) instead of the name the editor shows (templateLabel). And Export Word gave no hint of
++// what the .docx leaves out. It now prints the photo (R2-126) and Modern's and the Sidebar's header on
++// their band (R2-137): the hint names what is left — Banner's and Banded's headers and the Sidebar's
++// side column print on the white page, and the letter prints no photo.
+ import { before, after, describe, it } from 'node:test';
+ import assert from 'node:assert/strict';
+ import { createElement } from 'react';
+@@ -29,19 +30,25 @@ describe('Templates UI leftovers (R2-133)', () => {
+     assert.ok(!/fancy/i.test(unknown), unknown);
+   });
+ 
+-  it('Export Word says what the .docx leaves out', async () => {
++  it('Export Word says what the .docx leaves out — and no longer that the résumé loses its photo or every band', async () => {
+     const { ExportDropdown } = await loadModule('/src/components/ExportDropdown.jsx');
+     const noop = () => {};
+-    const view = mount(ExportDropdown, { exporting: false, onExportPDF: noop, onExportWord: noop, onExportJSON: noop, onImportJSON: noop });
+-    try {
+-      const button = (label) => [...elements(view.container)].find((el) => el.tagName === 'BUTTON' && text(el) === label);
+-      view.act(() => reactProps(button('Export')).onClick());
+-      const word = button('Export Word');
+-      assert.ok(word, 'the menu is open');
+-      assert.match(word.getAttribute('title') || '', /photo/i);
+-      assert.match(word.getAttribute('title') || '', /banner/i);
+-    } finally {
+-      await view.unmount();
+-    }
++    const hint = async (letter, label) => {
++      const view = mount(ExportDropdown, { exporting: false, letter, onExportPDF: noop, onExportWord: noop, onExportJSON: noop, onImportJSON: noop });
++      try {
++        const button = (name) => [...elements(view.container)].find((el) => el.tagName === 'BUTTON' && text(el) === name);
++        view.act(() => reactProps(button('Export')).onClick());
++        const word = button(label);
++        assert.ok(word, 'the menu is open');
++        return word.getAttribute('title') || '';
++      } finally {
++        await view.unmount();
++      }
++    };
++    const resumeHint = await hint(false, 'Export Word');
++    assert.match(resumeHint, /Banner's and Banded's headers/);
++    assert.match(resumeHint, /Sidebar's side column/);
++    assert.doesNotMatch(resumeHint, /photo|coloured column|without its banner/i);
++    assert.match(await hint(true, 'Export Cover Letter Word'), /without its photo/);
+   });
+ });
+diff --git a/tests/pdf/92-word-header-band.test.mjs b/tests/pdf/92-word-header-band.test.mjs
+new file mode 100644
+index 0000000..ca9506d
+--- /dev/null
++++ b/tests/pdf/92-word-header-band.test.mjs
+@@ -0,0 +1,207 @@
++// R2-137 — the header's band in Word. The PDF (= the preview) prints Modern's header on its accent
++// banner and the two-column Sidebar's on its panel colour; the Word résumé printed both on the white
++// page, in the page's colours, and the Export menu said so. Now Word draws the band as the letter's
++// letterhead already did: a table shaded in the band's fill — Modern's inside the margins, padded by
++// Banner top & bottom and Banner sides; the Sidebar's running 15 pt into the margins — holding the
++// photo, name, title and contacts (and Modern's summary) in the colours the PDF prints there.
++// The letter's contacts sat under the name at Right of Name, its default Fields Position, where the
++// PDF sets them beside it: now a two-cell table, the letter's Name ↔ Contacts (contactsSideGap)
++// between them, framed by the band or the rule; under the name where a name word would not fit.
++import { before, after, describe, it } from 'node:test';
++import assert from 'node:assert/strict';
++import { setup, teardown, resume, experience, render, drawState, readDocx, loadModule } from './harness.mjs';
++
++before(setup);
++after(teardown);
++
++const ACCENT = '#e11d48';
++const NAME = 'Pat Sample';
++const TITLE = 'Staff Engineer';
++const EMAIL = 'pat@example.com';
++const SUMMARY = 'Summarising';
++/** A 2 × 2 JPEG, as the editor stores an upload. */
++const JPEG = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgMCAgMDAwMEAwMEBQgFBQQEBQoHBwYIDAoMDAsKCwsNDhIQDQ4RDgsLEBYQERMUFRUVDA8XGBYUGBIUFRT/wAALCAACAAIBAREA/8QAFAABAAAAAAAAAAAAAAAAAAAAB//EABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEAAD8AGn//2Q==';
++
++const cv = (template, settings = {}, personal = {}, coverLetter = {}) => resume({
++  template,
++  settings: { accentColor: ACCENT, ...settings },
++  personal: { name: NAME, title: TITLE, email: EMAIL, phone: '+1 555 0100', summary: `<p>${SUMMARY} ten years</p>`, hiddenFields: [], ...personal },
++  coverLetter: { body: '<p>Dear Sarah,</p>', date: '2026-01-15', ...coverLetter },
++  sections: [experience([{}])],
++});
++
++async function docx(r, letter = false) {
++  const { renderResumeDocx, renderCoverLetterDocx } = await loadModule('/src/utils/wordExport.js');
++  return readDocx(new Uint8Array(await (await (letter ? renderCoverLetterDocx : renderResumeDocx)(r)).arrayBuffer()));
++}
++
++/** The .docx's tables, in order: their properties, column widths and cells (xml, text, fill, margins). */
++function tables(xml) {
++  return [...xml.matchAll(/<w:tbl>(.*?)<\/w:tbl>/gs)].map(([, tbl]) => ({
++    xml: tbl,
++    start: xml.indexOf(tbl),
++    tblPr: /<w:tblPr>(.*?)<\/w:tblPr>/s.exec(tbl)?.[1] || '',
++    columns: [...tbl.matchAll(/<w:gridCol w:w="(\d+)"\/>/g)].map((m) => Number(m[1])),
++    rows: [...tbl.matchAll(/<w:tr>(.*?)<\/w:tr>/gs)].map(([, tr]) => [...tr.matchAll(/<w:tc>(.*?)<\/w:tc>/gs)].map(([, tc]) => {
++      const tcPr = /<w:tcPr>(.*?)<\/w:tcPr>/s.exec(tc)?.[1] || '';
++      const mar = /<w:tcMar>(.*?)<\/w:tcMar>/s.exec(tcPr)?.[1] || '';
++      const side = (k) => Number(new RegExp(`<w:${k} w:type="dxa" w:w="(-?\\d+)"\\/>`).exec(mar)?.[1] ?? NaN);
++      return {
++        xml: tc,
++        text: [...tc.matchAll(/<w:t(?:\s[^>]*)?>([^<]*)<\/w:t>/g)].map((m) => m[1]).join(''),
++        fill: /<w:shd [^>]*w:fill="([0-9a-fA-F]{6})"/.exec(tcPr)?.[1]?.toLowerCase() ?? null,
++        margins: { top: side('top'), left: side('left'), bottom: side('bottom'), right: side('right') },
++      };
++    })),
++  }));
++}
++/** The table that holds `text`, or undefined. */
++const tableWith = (xml, text) => tables(xml).find((t) => t.xml.includes(`>${text}`));
++/** The colour of the run that prints `text`, 'rrggbb'. */
++const colourOf = (xml, text) => (xml.split('</w:r>').find((run) => run.includes(`>${text}`)) || '').match(/<w:color w:val="([0-9a-fA-F]{6})"/)?.[1]?.toLowerCase();
++/** Within 2 per channel: the PDF stores an opacity in 255ths. */
++const near = (a, b) => a && b && [0, 2, 4].every((i) => Math.abs(parseInt(a.slice(i, i + 2), 16) - parseInt(b.slice(i, i + 2), 16)) <= 2);
++
++/** The colour the PDF draws `word` in, opaque on `ground` (its band). */
++async function pdfOn(bytes, word, ground) {
++  const { solid } = await loadModule('/src/templates/pdf/shared/pdfColors.js');
++  const [hit] = await drawState(bytes, word);
++  assert.ok(hit, `"${word}" in the PDF`);
++  return solid(hit.fill, hit.alpha, ground).slice(1).toLowerCase();
++}
++
++describe('the Word résumé draws Modern\'s and the Sidebar\'s header on its band (R2-137)', () => {
++  it('Modern: one shaded table in the accent, padded 15 / 18 pt, holding the name, title, contacts and summary', async () => {
++    const { wordContentTwips } = await loadModule('/src/utils/wordExportUtils.js');
++    const r = cv('modern');
++    const { xml } = await docx(r);
++    const band = tableWith(xml, NAME);
++    assert.ok(band, 'the header is in a table');
++    const cells = band.rows.flat();
++    assert.deepEqual(cells.map((c) => c.fill), cells.map(() => ACCENT.slice(1)), 'every cell shaded in the accent');
++    for (const text of [NAME, TITLE, EMAIL, SUMMARY]) assert.ok(cells.some((c) => c.text.includes(text)), `${text} on the band`);
++    assert.equal(band.columns.reduce((a, b) => a + b, 0), wordContentTwips(r.settings), 'as wide as the page\'s text');
++    assert.doesNotMatch(band.tblPr, /<w:tblInd /, 'inside the margins');
++    const [text] = band.rows[0];
++    const [summary] = band.rows.at(-1);
++    assert.deepEqual([text.margins.top, text.margins.left, text.margins.right], [300, 360, 360], 'Banner top 15 pt, sides 18 pt');
++    assert.equal(summary.margins.bottom, 300 - 20, 'its padding under the summary, less the summary\'s own 1 pt');
++    assert.ok(!xml.slice(band.start + band.xml.length).split('PROFESSIONAL')[0].includes(SUMMARY), 'the summary is not printed again under it');
++  });
++
++  it('Modern: Banner top & bottom and Banner sides pad the band', async () => {
++    const band = tableWith((await docx(cv('modern', { headerPadY: 40, headerPadX: 40 }, { summary: '' }))).xml, NAME);
++    const [text] = band.rows[0];
++    // 30 pt; under the contacts, less their own 4 pt after them.
++    assert.deepEqual(text.margins, { top: 600, left: 600, bottom: 600 - 80, right: 600 });
++  });
++
++  it('Modern: the name, title, contacts and summary in the colours the PDF prints on the banner', async () => {
++    for (const settings of [{}, { nameColor: '#fde68a', jobTitleColor: '#bfdbfe' }, { headerTextColor: '#fef3c7' }]) {
++      const r = cv('modern', settings);
++      const { xml } = await docx(r);
++      const bytes = await render(r);
++      for (const [text, word] of [[NAME, 'Pat'], [TITLE, 'Staff'], [EMAIL, EMAIL], [SUMMARY, SUMMARY]]) {
++        const [pdf, got] = [await pdfOn(bytes, word, ACCENT), colourOf(xml, text)];
++        assert.ok(near(got, pdf), `${JSON.stringify(settings)} ${text}: Word ${got}, the PDF ${pdf}`);
++      }
++    }
++  });
++
++  it('Modern: a photo beside the name sits on the band, ringed white as on the banner; the summary spans the band under both', async () => {
++    const { xml } = await docx(cv('modern', { photoBorder: 'accent' }, { photo: JPEG }));
++    const band = tableWith(xml, NAME);
++    const [photo, text] = band.rows[0];
++    assert.match(photo.xml, /<w:drawing>/);
++    assert.ok(text.text.includes(NAME));
++    assert.deepEqual([photo.fill, text.fill], [ACCENT.slice(1), ACCENT.slice(1)]);
++    assert.equal(photo.margins.left, 360, 'Banner sides left of the photo');
++    const [summary] = band.rows[1];
++    assert.match(summary.xml, /<w:gridSpan w:val="2"\/>/);
++    assert.ok(summary.text.includes(SUMMARY));
++    const ring = /<a:ln w="\d+"[^>]*>.*?<a:srgbClr val="(\w+)"/s.exec(photo.xml)?.[1]?.toLowerCase();
++    assert.equal(ring, 'ffffff', 'the accent ring reads on the accent banner');
++  });
++
++  it('Sidebar: shaded in the panel colour, running 15 pt into the margins; About Me and the summary on the page under it', async () => {
++    const { wordContentTwips } = await loadModule('/src/utils/wordExportUtils.js');
++    const r = cv('sidebar');
++    const { xml } = await docx(r);
++    const band = tableWith(xml, NAME);
++    assert.ok(band, 'the header is in a table');
++    const [cell] = band.rows[0];
++    assert.equal(cell.fill, '1e293b');
++    assert.match(band.tblPr, /<w:tblInd w:type="dxa" w:w="-300"\/>/);
++    assert.equal(band.columns[0], wordContentTwips(r.settings) + 600);
++    assert.deepEqual([cell.margins.left, cell.margins.right, cell.margins.top], [300, 300, 300], 'its text on the margins');
++    assert.ok(cell.text.includes(EMAIL) && !cell.text.includes(SUMMARY), 'the contacts on the band, the summary not');
++    const bytes = await render(r);
++    for (const [text, word] of [[NAME, 'Pat'], [TITLE, 'Staff']]) {
++      const [pdf, got] = [await pdfOn(bytes, word, '#1e293b'), colourOf(xml, text)];
++      assert.ok(near(got, pdf), `${text}: Word ${got}, the PDF ${pdf}`);
++    }
++    const after = xml.slice(band.start + band.xml.length);
++    assert.ok(after.indexOf('ABOUT ME') >= 0 && after.indexOf('ABOUT ME') < after.indexOf(SUMMARY), 'About Me over the summary, after the band');
++  });
++
++  it('guard: Classic, Banner and the Sidebar\'s Single · ATS-safe print their header on the page, as before', async () => {
++    for (const [template, settings] of [['classic', {}], ['banner', {}], ['sidebar', { sidebarSingleColumn: true }]]) {
++      const { xml } = await docx(cv(template, settings));
++      assert.equal(tableWith(xml, NAME), undefined, `${template} ${JSON.stringify(settings)}: no band`);
++    }
++  });
++});
++
++describe('the Word letter sets its contacts beside the name at Right of Name (R2-137)', () => {
++  it('Right of Name (the default): a two-cell table — the name and title, then the contacts right-aligned, 12 pt apart', async () => {
++    const { xml, texts } = await docx(cv('classic'), true);
++    const head = tableWith(xml, NAME);
++    assert.ok(head, 'a table');
++    const [left, right] = head.rows[0];
++    assert.equal(left.text, `${NAME}${TITLE}`);
++    assert.ok(right.text.includes(EMAIL));
++    assert.equal(right.margins.left, 240, 'the letter\'s own 12 pt');
++    assert.match(right.xml, /<w:jc w:val="right"\/>/);
++    assert.equal(left.fill, null, 'no band on Classic');
++    assert.deepEqual(texts.slice(0, 3).map((t) => t.split(' ')[0]), ['Pat', 'Staff', 'pat@example.com'], 'it reads name, title, contacts');
++    // Cover Letter → Header Layout → Name ↔ Contacts.
++    const [, set] = tableWith((await docx(cv('classic', { contactsSideGap: 32 }), true)).xml, NAME).rows[0];
++    assert.equal(set.margins.left, 480, '32 px = 24 pt');
++  });
++
++  it('Below Name, a centred letterhead, or a name word that does not fit beside the contacts: under the name, no table', async () => {
++    for (const [settings, personal, coverLetter] of [
++      [{}, {}, { fieldsPosition: 'below-name' }],
++      [{ headerAlign: 'center' }, {}, {}],
++      [{}, { name: 'M'.repeat(40) }, {}],
++    ]) {
++      const { xml } = await docx(cv('classic', settings, personal, coverLetter), true);
++      assert.equal(tables(xml).length, 0, JSON.stringify([settings, personal, coverLetter]));
++    }
++  });
++
++  it('Modern: both cells shaded in the accent, the band\'s padding the cells\' outer margins', async () => {
++    const [left, right] = tableWith((await docx(cv('modern'), true)).xml, NAME).rows[0];
++    assert.deepEqual([left.fill, right.fill], [ACCENT.slice(1), ACCENT.slice(1)]);
++    assert.deepEqual([left.margins.top, left.margins.left, left.margins.bottom], [300, 360, 300]);
++    assert.deepEqual([right.margins.right, right.margins.left], [360, 240]);
++  });
++
++  it('Sidebar: its band runs 15 pt into the margins', async () => {
++    const head = tableWith((await docx(cv('sidebar'), true)).xml, NAME);
++    assert.match(head.tblPr, /<w:tblInd w:type="dxa" w:w="-300"\/>/);
++    assert.deepEqual(head.rows[0].map((c) => c.fill), ['1e293b', '1e293b']);
++  });
++
++  it('a rule: the table\'s bottom border, the Text ↔ Border gap under the text, the letter\'s 16 pt under it', async () => {
++    const { xml } = await docx(cv('executive'), true);
++    const head = tableWith(xml, NAME);
++    const bottom = /<w:tblBorders>.*?<w:bottom ([^>]*)\/>/s.exec(head.tblPr)?.[1] || '';
++    assert.match(bottom, /w:val="double"/);
++    assert.match(bottom, new RegExp(`w:color="${ACCENT.slice(1)}"`, 'i'));
++    assert.match(bottom, /w:sz="6"/);
++    assert.deepEqual(head.rows[0].map((c) => c.margins.bottom), [240, 240], '12 pt over the rule');
++    const gap = xml.slice(head.start + head.xml.length).split('</w:p>')[0];
++    assert.match(gap, /w:line="320"/, 'a 16 pt gap under it');
++  });
++});

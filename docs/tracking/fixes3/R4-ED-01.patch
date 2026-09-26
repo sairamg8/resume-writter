@@ -1,0 +1,136 @@
+diff --git a/src/components/SectionEditorLeafItems.jsx b/src/components/SectionEditorLeafItems.jsx
+index 1d65b36..298ba3c 100644
+--- a/src/components/SectionEditorLeafItems.jsx
++++ b/src/components/SectionEditorLeafItems.jsx
+@@ -36,8 +36,16 @@ function RowDuplicate({ onDuplicate }) {
+   );
+ }
+ 
++const PROFICIENCIES = ['Native', 'Fluent', 'Professional', 'Intermediate', 'Basic'];
++
+ export function LanguageItem({ item, onUpdate, onRemove, onDuplicate }) {
+   const visible = item.visible !== false;
++  // The select shows exactly what the résumé prints. A starter, an import or a hand-written file can
++  // store a level the list does not name ('Conversational', 'C1') or none at all (''); with no option
++  // of that value the browser showed the first one instead, and picking the level already on screen
++  // fired no change, so it could not be chosen. An unset level is its own option, and an unusual one
++  // is added to the list, as the date pickers do for an unusual year.
++  const proficiency = item.proficiency == null ? '' : String(item.proficiency);
+   return (
+     <div className={`flex gap-2 items-center ${visible ? '' : 'opacity-50'}`}>
+       <div className="flex-1 grid grid-cols-[2fr_3fr] gap-2">
+@@ -51,13 +59,17 @@ export function LanguageItem({ item, onUpdate, onRemove, onDuplicate }) {
+         />
+         <select
+           aria-label="Proficiency"
+-          value={item.proficiency || 'Professional'}
++          value={proficiency}
+           onChange={e => onUpdate({ ...item, proficiency: e.target.value })}
+           className="px-2.5 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+         >
+-          {['Native', 'Fluent', 'Professional', 'Intermediate', 'Basic'].map(p => (
++          <option value="">Not set</option>
++          {PROFICIENCIES.map(p => (
+             <option key={p} value={p}>{p}</option>
+           ))}
++          {proficiency && !PROFICIENCIES.includes(proficiency) && (
++            <option value={proficiency}>{proficiency}</option>
++          )}
+         </select>
+       </div>
+       <button
+diff --git a/tests/pdf/99-language-proficiency-select.test.mjs b/tests/pdf/99-language-proficiency-select.test.mjs
+new file mode 100644
+index 0000000..d0e1eb8
+--- /dev/null
++++ b/tests/pdf/99-language-proficiency-select.test.mjs
+@@ -0,0 +1,89 @@
++// R4-ED-01: a language's Proficiency select shows exactly what the résumé prints. The Compact starter
++// stores 'Conversational', and an import keeps the file's words ('C1', 'Advanced') or none (''). The
++// select had five options and `value={item.proficiency || 'Professional'}`: with no option of the
++// stored value the browser showed the first ('Native') while the PDF and every export printed
++// 'Conversational', and an unset level showed 'Professional' while nothing printed. Picking the option
++// already on screen fires no change, so that level could not be chosen. Now an unset level is its own
++// option ('Not set'), an unusual one is added to the list, and the stored value is the one selected.
++import { before, after, describe, it } from 'node:test';
++import assert from 'node:assert/strict';
++import { createElement } from 'react';
++import { renderToStaticMarkup } from 'react-dom/server';
++import { setup, teardown, loadModule } from './harness.mjs';
++
++before(setup);
++after(teardown);
++
++const FIVE = ['Native', 'Fluent', 'Professional', 'Intermediate', 'Basic'];
++const leaf = () => loadModule('/src/components/SectionEditorLeafItems.jsx');
++const item = (proficiency) => ({ id: 'lang_1', language: 'Spanish', proficiency });
++
++/** The Proficiency select's options as rendered: [{ value, label, selected }]. */
++async function options(proficiency) {
++  const { LanguageItem } = await leaf();
++  const html = renderToStaticMarkup(createElement(LanguageItem, { item: item(proficiency), onUpdate() {}, onRemove() {} }));
++  const select = /<select[^>]*aria-label="Proficiency"[^>]*>([\s\S]*?)<\/select>/.exec(html);
++  assert.ok(select, 'the Proficiency select is on the page');
++  return [...select[1].matchAll(/<option([^>]*)>([^<]*)<\/option>/g)].map(([, attrs, label]) => ({
++    value: /value="([^"]*)"/.exec(attrs)?.[1],
++    label,
++    selected: /\sselected(=|\s|$)/.test(attrs),
++  }));
++}
++
++const selectedValues = (opts) => opts.filter((o) => o.selected).map((o) => o.value);
++
++/** The <select> element LanguageItem returns (a plain function of its props: no hooks). */
++function findSelect(node) {
++  if (!node || typeof node !== 'object') return null;
++  if (Array.isArray(node)) {
++    for (const n of node) { const found = findSelect(n); if (found) return found; }
++    return null;
++  }
++  if (node.type === 'select') return node;
++  return findSelect(node.props?.children);
++}
++
++describe('the Proficiency select shows the stored level, and every listed level can be picked', () => {
++  it('a level the list does not name (the Compact starter\'s \'Conversational\', an import\'s \'C1\') is selected as its own option', async () => {
++    for (const stored of ['Conversational', 'C1', 'Advanced']) {
++      const opts = await options(stored);
++      assert.deepEqual(selectedValues(opts), [stored], stored);
++      assert.equal(opts.filter((o) => o.value === stored).length, 1, `${stored} is listed once`);
++      assert.equal(opts.find((o) => o.value === stored).label, stored);
++      for (const p of FIVE) assert.ok(opts.some((o) => o.value === p), `${p} is still offered`);
++    }
++  });
++
++  it('an unset level (\'\', or none stored) shows as not set, not as a level nothing prints', async () => {
++    for (const stored of ['', undefined, null]) {
++      const opts = await options(stored);
++      assert.deepEqual(selectedValues(opts), [''], String(stored));
++      assert.equal(opts[0].value, '');
++      assert.equal(opts[0].label, 'Not set');
++      assert.equal(opts.filter((o) => !FIVE.includes(o.value)).length, 1, 'no extra option for an unset level');
++    }
++  });
++
++  it('one of the five is selected as itself, with no extra option', async () => {
++    for (const stored of FIVE) {
++      const opts = await options(stored);
++      assert.deepEqual(selectedValues(opts), [stored], stored);
++      assert.deepEqual(opts.map((o) => o.value), ['', ...FIVE]);
++    }
++  });
++
++  it('picking Native over \'Conversational\', or Professional over an unset level, is a change that saves', async () => {
++    const { LanguageItem } = await leaf();
++    for (const [stored, pick] of [['Conversational', 'Native'], ['', 'Professional']]) {
++      // The level picked is not the one on screen, so the browser fires a change for it.
++      assert.equal(selectedValues(await options(stored)).includes(pick), false, `${pick} is not already shown for '${stored}'`);
++      const updates = [];
++      const select = findSelect(LanguageItem({ item: item(stored), onUpdate: (u) => updates.push(u), onRemove() {} }));
++      assert.ok(select, 'the select is rendered');
++      assert.equal(select.props.value, stored);
++      select.props.onChange({ target: { value: pick } });
++      assert.deepEqual(updates, [{ ...item(stored), proficiency: pick }]);
++    }
++  });
++});

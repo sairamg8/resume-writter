@@ -1,5 +1,19 @@
 # Session Handoff — Resume Here
 
+## ⏩ COLD START HERE — 2026-09-26 ~14:10 IST (cloud session; only `master` exists)
+
+**Live: `master` = this commit** = wave 3 (B-20c, J-12; full gate 36223045204 ✅ on `1daf0f0`) + docs. Every other branch was
+deleted on the owner's order; the unmerged ones are kept as tags `archive/<branch>` (wf-locale = English-only parked,
+wf-templates = a11y parked, sweet-turing, wf-pdf-pagination, wf-round2-resume).
+**Owner's order:** every bug first, then design bugs; zero pending (Claude makes the product calls); every fix reviewed by a
+second agent; no accessibility; English only; tests only on CI; master only on a green full gate.
+**Next, in order:** (1) land the six reviewed fixes in `docs/tracking/fixes3/` (`bash docs/tracking/fixes3/land.sh <ID>`):
+R2-148-c, R2-148-b, RES-R2-140-a, RES-R2-140-c, R2-147-pn, PERF-1-woff → fail-first on CI (each manifest's `failfirst_tests`)
+→ (2) review, then land RES-R2-137 and R4-ED-01 (`.fix.json` only, unreviewed) → (3) fix the 73 findings in
+`fixes3/findings-R4.json` (9 areas; each: fix + node test + independent review) → (4) sweep the areas never run: APP
+(dashboard, routing, shell, kit) and design (phone layout, visual consistency, UX flows, printed output) → one full gate →
+master → tracker rows. The workflow that made them: `fixes3/workflow.js`.
+
 ## ⏩ COLD START HERE — 2026-09-26 ~13:00 IST (session 26b8b31a ended; owner starts a new session)
 
 **▶ FIRST, a new session does exactly this:** read CI run **36223045204** (full gate on `1daf0f0` = wave 3):

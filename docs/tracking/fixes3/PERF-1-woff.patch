@@ -1,0 +1,160 @@
+diff --git a/src/templates/pdf/shared/pdfFontLoader.js b/src/templates/pdf/shared/pdfFontLoader.js
+index c34edc8..9dc5612 100644
+--- a/src/templates/pdf/shared/pdfFontLoader.js
++++ b/src/templates/pdf/shared/pdfFontLoader.js
+@@ -380,6 +380,29 @@ function addStandIns(font, standIns = STAND_INS) {
+   };
+ }
+ 
++/**
++ * Inflate a WOFF face's glyf table once, not once per glyph (PERF-1). Every font the PDF uses is a
++ * .woff (the bundled Noto Sans and every Fontsource face), and fontkit's WOFFFont answers each
++ * _getTableStream('glyf') by inflating the whole compressed table again (Noto Sans Latin's is 11 kB,
++ * 17.7 kB inflated). It asks per glyph: twice for every glyph a PDF embeds (TTFSubset._addGlyph reads
++ * the glyph's bytes, and glyph._decode its header) and once more for a glyph's bounding box. Every
++ * preview is a new PDF with new subsets, so every keystroke's build inflated each face's glyf table
++ * again for each of its glyphs. The inflated bytes now stay with the face, which react-pdf keeps for
++ * the session; every call gets a fresh stream over them at 0, as fontkit's own is, so no two readers
++ * share a position. Other tables are decoded once by fontkit itself (TTFFont._getTable caches them).
++ */
++function inflateGlyfOnce(font) {
++  const glyf = font.directory?.tables?.glyf;
++  if (font.type !== 'WOFF' || !glyf || glyf.compLength >= glyf.length || typeof font._getTableStream !== 'function') return;
++  const tableStream = font._getTableStream.bind(font);
++  let inflated = null;
++  font._getTableStream = (tag) => {
++    if (tag !== 'glyf') return tableStream(tag);
++    inflated ??= tableStream(tag);
++    return inflated && new inflated.constructor(inflated.buffer);
++  };
++}
++
+ /**
+  * Load every registered face of `families` and get their fontkit fonts ready to render;
+  * returns the families that can be used, in order. Call before every render.
+@@ -398,6 +421,8 @@ function addStandIns(font, standIns = STAND_INS) {
+  * 5. Draw a dash or space the face lacks with its stand-in (addStandIns), after the seeding in 1.
+  *    The offline arrows' face (ARROWS) takes its arrows first and seeds them before its cmap, so
+  *    each arrowhead glyph carries its arrow's text (RES-R2-045).
++ * 6. Keep a WOFF face's inflated glyf table (inflateGlyfOnce), so a build does not inflate it again
++ *    for every glyph it lays out and embeds (PERF-1).
+  */
+ export async function prepareFonts(families) {
+   const store = Font.getRegisteredFonts();
+@@ -425,6 +450,7 @@ export async function prepareFonts(families) {
+       }
+       for (const codePoint of font.characterSet || []) if (!isPresentationForm(codePoint)) font.glyphForCodePoint(codePoint);
+       if (family !== ARROWS) addStandIns(font);
++      inflateGlyfOnce(font);
+       if (typeof font.layout === 'function') {
+         const base = font.layout.bind(font);
+         const noLig = (string, features, ...rest) => base(string, features ?? noLigatures(), ...rest);
+diff --git a/tests/fixtures/reactPdfFont.js b/tests/fixtures/reactPdfFont.js
+new file mode 100644
+index 0000000..1ad95b2
+--- /dev/null
++++ b/tests/fixtures/reactPdfFont.js
+@@ -0,0 +1,4 @@
++// react-pdf's font store, for a test that looks at the faces the app registered and loaded
++// (tests/pdf/97-woff-glyf-once). Loaded through the harness's Vite instance, as the app's modules are,
++// so it is the same store pdfFontLoader.js registers in.
++export { Font } from '@react-pdf/renderer';
+diff --git a/tests/pdf/97-font-cache.test.mjs b/tests/pdf/97-font-cache.test.mjs
+index e685ee2..6edc70d 100644
+--- a/tests/pdf/97-font-cache.test.mjs
++++ b/tests/pdf/97-font-cache.test.mjs
+@@ -1,8 +1,8 @@
+ // Fonts are fetched and parsed once a session, not once a build (R2-142, part of PERF-1). Every
+ // keystroke's preview is a new PDF build; react-pdf keeps each registered face's load (its fetch and
+-// its fontkit font) for good, and pdfFontLoader registers a family once. This is a guard, not PERF-1's
+-// fix: PERF-1's cost is fontkit re-inflating a WOFF font's glyf table once per glyph laid out
+-// (fontkit's WOFFFont._getTableStream), which no cache here touches — that part is still open. It pins, for the
++// its fontkit font) for good, and pdfFontLoader registers a family once. This is a guard; PERF-1's other
++// cost, fontkit re-inflating a WOFF font's glyf table once per glyph laid out (fontkit's
++// WOFFFont._getTableStream), is fixed and pinned in 97-woff-glyf-once. It pins, for the
+ // bundled Noto Sans and for a subset only some text needs (latin-ext), over builds of different
+ // résumés and of the letter: the builds after the first fetch no font file — and react-pdf parses a
+ // face only as its fetch arrives, so none is parsed again either. It also reports what a cold and a warm build cost here,
+diff --git a/tests/pdf/97-woff-glyf-once.test.mjs b/tests/pdf/97-woff-glyf-once.test.mjs
+new file mode 100644
+index 0000000..8876f5c
+--- /dev/null
++++ b/tests/pdf/97-woff-glyf-once.test.mjs
+@@ -0,0 +1,77 @@
++// A WOFF face's glyf table is inflated once a session, not once per glyph of every build (R2-142, PERF-1).
++// Every font the PDF prints is a .woff, and fontkit's WOFFFont inflated the whole compressed glyf table
++// again each time it was asked for it: twice for every glyph a PDF embeds and once for a glyph's
++// bounding box, so each keystroke's preview re-inflated each face's table once per glyph it printed.
++// prepareFonts keeps the inflated bytes with the face (pdfFontLoader.js, inflateGlyfOnce). This loads
++// the bundled Noto Sans before any build, counts every inflation of each face's glyf table over three
++// builds (two résumés and a letter), and checks the PDFs still read as typed.
++import { before, after, describe, it } from 'node:test';
++import assert from 'node:assert/strict';
++import { setup, teardown, resume, experience, render, renderCover, read, allText, loadModule } from './harness.mjs';
++
++before(setup);
++after(teardown);
++
++const long = (n, summary) => resume({
++  template: 'classic',
++  personal: { summary: `<p>${summary} <em>across three markets</em>.</p>` },
++  sections: [experience(Array.from({ length: n }, (_, i) => ({
++    role: `Engineer ${i + 1}`,
++    description: `<ul>${'<li>Cut the checkout page load by forty percent for two platforms</li>'.repeat(4)}</ul>`,
++  })))],
++});
++
++describe('a WOFF face inflates its glyf table once, not per glyph (R2-142, PERF-1)', () => {
++  it('three builds inflate each Noto Sans face at most once, and the PDFs read as typed', async (t) => {
++    const { prepareFonts } = await loadModule('/src/templates/pdf/shared/pdfFontLoader.js');
++    // react-pdf's own font store, the one the app registers its faces in (the fixture re-exports it).
++    const { Font } = await loadModule('/tests/fixtures/reactPdfFont.js');
++    assert.deepEqual(await prepareFonts(['NotoSans']), ['NotoSans'], 'the bundled Noto Sans loads');
++    const faces = [...new Set(Font.getRegisteredFonts().NotoSans.sources.map((s) => s.data).filter(Boolean))];
++    assert.equal(faces.length, 6, 'Noto Sans has its six faces: 400, 500 and 700, upright and italic');
++
++    const counts = faces.map((face) => {
++      const glyf = face.directory.tables.glyf;
++      assert.equal(face.type, 'WOFF');
++      assert.ok(glyf.compLength < glyf.length, 'the face stores its glyf table compressed, so reading it inflates');
++      const count = { asked: 0, inflated: 0 };
++      // WOFFFont._getTableStream inflates by reading the table's compressed bytes from the file's stream.
++      const readBuffer = face.stream.readBuffer.bind(face.stream);
++      face.stream.readBuffer = (length) => {
++        if (length === glyf.compLength - 2 && face.stream.pos === glyf.offset + 2) count.inflated += 1;
++        return readBuffer(length);
++      };
++      const tableStream = face._getTableStream.bind(face);
++      face._getTableStream = (tag) => {
++        if (tag === 'glyf') count.asked += 1;
++        return tableStream(tag);
++      };
++      return count;
++    });
++
++    const pdfs = [
++      await render(long(6, 'Ships reliable services')),
++      await render(long(3, 'Leads a small platform team')),
++      await renderCover(long(1, 'Writes to hiring managers')),
++    ];
++
++    const [regular, , bold] = counts;
++    assert.ok(regular.asked > 50 && bold.asked > 10,
++      `the builds read the regular and bold faces' glyphs (glyf asked for ${counts.map((c) => c.asked).join(', ')} times)`);
++    counts.forEach((c, i) => assert.ok(c.inflated <= 1,
++      `face ${i} inflated its glyf table ${c.inflated} times for ${c.asked} reads over three builds`));
++    t.diagnostic(`glyf reads per face: ${counts.map((c) => c.asked).join(', ')}; inflations: ${counts.map((c) => c.inflated).join(', ')}`);
++
++    // The kept bytes are the table fontkit inflates itself.
++    for (const face of faces) {
++      const own = Object.getPrototypeOf(face)._getTableStream.call(face, 'glyf');
++      assert.deepEqual(face._getTableStream('glyf').buffer, own.buffer, 'the kept glyf table is the inflated one');
++    }
++
++    const [first, second] = await Promise.all(pdfs.slice(0, 2).map(read));
++    assert.match(allText(first), /Ships reliable services across three markets/);
++    assert.match(allText(first), /Cut the checkout page load by forty percent for two platforms/);
++    assert.match(allText(second), /Leads a small platform team across three markets/);
++    assert.match(allText(second), /Engineer 3/);
++  });
++});

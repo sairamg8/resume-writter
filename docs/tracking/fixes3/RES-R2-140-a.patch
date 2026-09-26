@@ -1,0 +1,509 @@
+diff --git a/docs/knowledge/05-state-auth-sync.md b/docs/knowledge/05-state-auth-sync.md
+index a63a7ef..7117fcf 100644
+--- a/docs/knowledge/05-state-auth-sync.md
++++ b/docs/knowledge/05-state-auth-sync.md
+@@ -205,11 +205,14 @@ the ids deleted for good (`deleted`) and the list's order (`order`). The existin
+ stays deleted unless edited where the deletion was never seen); then changes are sent in one batch
+ after a 1.5 s pause. Failures, retries and 'off' reuse `cloudSyncRetry.js`; an item over Firestore's
+ 1 MiB is held back on its own and named on the page (`SyncHeldNotice`). This browser's record of a
+-list — the account it last synced with, the versions its cloud holds, what was kept aside — is
+-`cpwtcv_jobs_sync_v1` / `cpwtcv_boards_sync_v1` (`collectionSyncMeta.js`). Signing out (or another
+-account signing in) takes the list off the browser as the résumés' is (`leaveList`: unsent
+-changes kept aside for that account's next sign-in); signed out, nothing runs and the list is
+-this browser's, as before. Two guards against losing the account's items: a first visit's demo
++list — the account it last synced with, the versions and the order its cloud holds, what was kept
++aside — is `cpwtcv_jobs_sync_v1` / `cpwtcv_boards_sync_v1` (`collectionSyncMeta.js`; a record saved
++before the order was kept reads with none). The order merges on that base: a move made before a
++first sync (offline, signed out, a failed sync) leads when the cloud's order is still the base's,
++and the cloud's order leads otherwise (R2-140). Signing out (or another account signing in) takes
++the list off the browser as the résumés' is (`leaveList`: unsent changes, a move among them, kept
++aside for that account's next sign-in); signed out, nothing runs and the list is this browser's, as
++before. Two guards against losing the account's items: a first visit's demo
+ job or project, untouched (`isUntouchedDemoJob` / `isUntouchedDemoBoard`, the store's `seed`),
+ never wins over the account's copy of it, though dated newer; and a saved list the store could not
+ read in full makes the record forget the versions (`forgetSynced`), so the items left out are
+diff --git a/src/utils/collectionSyncEngine.js b/src/utils/collectionSyncEngine.js
+index edbed6b..5ed996a 100644
+--- a/src/utils/collectionSyncEngine.js
++++ b/src/utils/collectionSyncEngine.js
+@@ -81,12 +81,13 @@ export function createCollectionSync({
+     if (changed) heldChanged();
+   }
+ 
+-  const noteVersions = (uid, sets, deletes) => {
++  /** What a flush got into account `uid`'s cloud: the versions of `sets`, `deletes` gone, and the `order` it sent (null: none). */
++  const noteVersions = (uid, sets, deletes, order) => {
+     const m = meta.read();
+     if (m.uid !== uid) return;
+     const versions = { ...m.versions, ...versionsOf(sets) };
+     deletes.forEach((id) => { delete versions[id]; });
+-    meta.write({ ...m, versions });
++    meta.write({ ...m, versions, ...(order ? { order } : {}) });
+   };
+ 
+   function dropQueue() {
+@@ -205,7 +206,11 @@ export function createCollectionSync({
+       const ownIds = new Set(own.map((x) => x.id));
+       const localDeletes = [...stash.deletes, ...(mine ? Object.keys(record.versions).filter((id) => !ownIds.has(id)) : [])]
+         .filter((id) => !local.some((x) => x.id === id));
+-      const plan = planFirstSync({ local, versions, localDeletes, docs, deleted: cloud.deleted, order: cloud.order, seed: store.seed });
++      // The order the cloud held when this browser last synced, so a move made here since (offline,
++      // signed out, a failed sync) is told from one made on another device: this account's own
++      // record, or the move kept aside when the list left (leaveList).
++      const moved = mine ? { baseOrder: record.order } : { baseOrder: stash.base, localOrder: stash.order ?? [] };
++      const plan = planFirstSync({ local, versions, localDeletes, docs, deleted: cloud.deleted, order: cloud.order, ...moved, seed: store.seed });
+ 
+       sets = sendable(uid, plan.sets);
+       const sameOrder = plan.order.length === cloud.order.length && plan.order.every((id, i) => cloud.order[i] === id);
+@@ -226,7 +231,7 @@ export function createCollectionSync({
+ 
+       const cloudVersions = { ...versionsOf(docs.filter((d) => !plan.deletes.includes(d.id))), ...versionsOf(sets) };
+       const { [uid]: _gone, ...stashed } = record.stashed;
+-      meta.write({ uid, versions: cloudVersions, stashed });
++      meta.write({ uid, versions: cloudVersions, order: plan.order, stashed });
+       s.prev = plan.merged;
+       s.ready = true;
+       s.readAt = now();
+@@ -341,7 +346,7 @@ export function createCollectionSync({
+       }
+       await sending;
+       if (!current()) return;
+-      noteVersions(user.uid, [...sets, ...newer, ...edited], deletes);
++      noteVersions(user.uid, [...sets, ...newer, ...edited], deletes, order);
+       if (!s.timer) settled();
+     } catch (e) {
+       if (s.user?.uid !== user.uid) return;
+diff --git a/src/utils/collectionSyncMeta.js b/src/utils/collectionSyncMeta.js
+index 34f3564..8fedf72 100644
+--- a/src/utils/collectionSyncMeta.js
++++ b/src/utils/collectionSyncMeta.js
+@@ -1,6 +1,6 @@
+ // What this browser keeps about a synced list (collectionSyncPlan.js) — the account it last synced
+-// with, the versions that account's cloud holds as last seen here, and what was kept aside for an
+-// account whose list left — under its own key, next to the list: `cpwtcv_jobs_sync_v1`,
++// with, the versions and the order that account's cloud holds as last seen here, and what was kept
++// aside for an account whose list left — under its own key, next to the list: `cpwtcv_jobs_sync_v1`,
+ // `cpwtcv_boards_sync_v1`. A browser that never synced has none, and its list is its own. The
+ // held-back notice (items the cloud will not take) lives here too, as a tiny store the board and
+ // job pages read.
+@@ -9,13 +9,15 @@
+ export const JOBS_SYNC_KEY = 'cpwtcv_jobs_sync_v1';
+ export const BOARDS_SYNC_KEY = 'cpwtcv_boards_sync_v1';
+ 
+-const empty = () => ({ uid: null, versions: {}, stashed: {} });
++const empty = () => ({ uid: null, versions: {}, order: null, stashed: {} });
+ const isMap = (v) => Boolean(v && typeof v === 'object' && !Array.isArray(v));
+ 
+ /**
+- * The record under `key` as { read() → { uid, versions, stashed }, write(meta) }: what cannot be
+- * read is an empty record (the list then joins the next account's, and nothing is lost); a write
+- * storage refuses is dropped — the next sync finds more to send, never less.
++ * The record under `key` as { read() → { uid, versions, order, stashed }, write(meta) }: what
++ * cannot be read is an empty record (the list then joins the next account's, and nothing is lost);
++ * a write storage refuses is dropped — the next sync finds more to send, never less. A record
++ * saved before the order was kept has none (`order` null): its first sync lets the cloud's order
++ * lead, as it always did.
+  */
+ export function localMeta(key, storage = () => globalThis.localStorage) {
+   return {
+@@ -26,6 +28,7 @@ export function localMeta(key, storage = () => globalThis.localStorage) {
+         return {
+           uid: typeof saved.uid === 'string' && saved.uid ? saved.uid : null,
+           versions: isMap(saved.versions) ? saved.versions : {},
++          order: Array.isArray(saved.order) ? saved.order.filter((id) => typeof id === 'string') : null,
+           stashed: isMap(saved.stashed) ? saved.stashed : {},
+         };
+       } catch {
+@@ -47,11 +50,12 @@ export function localMeta(key, storage = () => globalThis.localStorage) {
+  * what was kept aside: called when the saved list could not be read in full. Without it, every
+  * item left out looked deleted here, and the next first sync deleted it from the account — and so
+  * from every other device. Forgotten, the first sync merges instead: the cloud's copies come back.
++ * The order goes too: what is left of the list is no move, and the cloud's order leads.
+  */
+ export function forgetSynced(key, storage) {
+   const record = localMeta(key, storage);
+   const m = record.read();
+-  if (Object.keys(m.versions).length) record.write({ ...m, versions: {} });
++  if (Object.keys(m.versions).length || m.order) record.write({ ...m, versions: {}, order: null });
+ }
+ 
+ /** A record in memory, for a test or a page with no storage. */
+diff --git a/src/utils/collectionSyncPlan.js b/src/utils/collectionSyncPlan.js
+index c0550ec..e13255a 100644
+--- a/src/utils/collectionSyncPlan.js
++++ b/src/utils/collectionSyncPlan.js
+@@ -9,19 +9,47 @@
+ // boards' grid). This browser keeps, per list, the account it last synced with and the
+ // `updatedAt` of every item that account's cloud holds as this browser last saw it (`versions`,
+ // collectionSyncMeta.js): an item with no version there is new here, one whose version differs
+-// was changed here, and a known id no longer in the list was deleted here.
++// was changed here, and a known id no longer in the list was deleted here. It keeps the order that
++// account's cloud holds as last seen here too (`order`): the base a first sync compares both
++// orders with. An order carries no `updatedAt`, so without it a move made before the first sync
++// (offline, signed out, a failed sync) always lost to the cloud's order (R2-140).
+ 
+ /** `{ id: updatedAt }` of `list`. */
+ export const versionsOf = (list) => Object.fromEntries(list.filter((x) => Number.isFinite(x.updatedAt)).map((x) => [x.id, x.updatedAt]));
+ 
+ const time = (x) => (Number.isFinite(x?.updatedAt) ? x.updatedAt : 0);
+ 
++/** Whether the ids `a` and `b` have in common come in the same order in both (an id on one side only does not count). */
++export function sameOrder(a, b) {
++  const inA = new Set(a);
++  const inB = new Set(b);
++  const x = a.filter((id) => inB.has(id));
++  const y = b.filter((id) => inA.has(id));
++  return x.length === y.length && x.every((id, i) => y[i] === id);
++}
++
++/** `lead` with the ids only `other` has, each put right after the id before it in `other` (first when there is none). */
++function weave(lead, other) {
++  const out = [...lead];
++  const has = new Set(out);
++  let after = -1;
++  for (const id of other) {
++    if (has.has(id)) { after = out.indexOf(id); continue; }
++    out.splice(after + 1, 0, id);
++    has.add(id);
++    after += 1;
++  }
++  return out;
++}
++
+ /**
+  * The first sync of an account's list: this browser's `local` list with what it knew of the
+  * cloud (`versions`), the ids it deleted since (`localDeletes`), and the cloud's `docs`,
+- * `deleted` and `order`. Returns { merged (the list, in order), sets (items to write), deletes
+- * (ids to remove and list as deleted), order (the ids in order: written when it differs from
+- * the cloud's) }. Nothing typed is lost:
++ * `deleted` and `order`; `baseOrder` is the cloud's order as this browser last saw it (null:
++ * unknown, as in a record written before it was kept) and `localOrder` a move kept aside when the
++ * list left this browser (leaveList), which leads `local`'s own order. Returns { merged (the list,
++ * in order), sets (items to write), deletes (ids to remove and list as deleted), order (the ids in
++ * order: written when it differs from the cloud's) }. Nothing typed is lost:
+  *   - an item on one side only is new there and joins the list — unless the account deleted it
+  *     for good, or it is one this browser knew and deleted since;
+  *   - on both sides, the newer `updatedAt` wins (this browser's on a tie) — but for this
+@@ -29,8 +57,13 @@ const time = (x) => (Number.isFinite(x?.updatedAt) ? x.updatedAt : 0);
+  *   - a deleted id stays deleted, but for a copy changed where the deletion was never seen (its
+  *     version newer than the one this browser last saw): that edit wins, as a résumé's does (R2-029);
+  *   - one deleted here that another device changed since this browser last saw it comes back.
++ * The order merges on its base as the items do on their versions: moved here while the cloud's
++ * order is still the base's, this browser's order leads, and what only the cloud has goes where
++ * the cloud has it; otherwise (not moved here, moved elsewhere, or no base) the cloud's order
++ * leads, and what only this browser has follows as this browser had it. Moved on both sides, the
++ * cloud's wins: the device that sent first.
+  */
+-export function planFirstSync({ local, versions = {}, localDeletes = [], docs, deleted = [], order = [], seed = () => false }) {
++export function planFirstSync({ local, versions = {}, localDeletes = [], docs, deleted = [], order = [], baseOrder = null, localOrder = [], seed = () => false }) {
+   const gone = new Set(deleted);
+   const dropped = new Set(localDeletes);
+   const cloudById = new Map(docs.map((d) => [d.id, d]));
+@@ -68,8 +101,11 @@ export function planFirstSync({ local, versions = {}, localDeletes = [], docs, d
+     } else keep.set(id, theirs);
+   }
+ 
+-  // The cloud's order first, then what only this browser had, as it had it, then the rest.
+-  const ids = [...order, ...local.map((x) => x.id), ...docs.map((d) => d.id)];
++  const here = [...new Set([...localOrder, ...local.map((x) => x.id)])];
++  const movedHere = Array.isArray(baseOrder) && sameOrder(order, baseOrder) && !sameOrder(here, baseOrder);
++  // Moved here only: this browser's order, with what only the cloud has where the cloud has it.
++  // Otherwise the cloud's order first, then what only this browser had, as it had it. Then the rest.
++  const ids = [...(movedHere ? weave(here, order) : [...order, ...here]), ...docs.map((d) => d.id)];
+   const merged = [...new Set(ids)].filter((id) => keep.has(id)).map((id) => keep.get(id));
+   return { merged, sets, deletes, order: merged.map((x) => x.id) };
+ }
+@@ -93,13 +129,16 @@ export function diffLists(prev, next) {
+ }
+ 
+ const isMap = (v) => Boolean(v && typeof v === 'object' && !Array.isArray(v));
++/** A list of ids as saved (null: none saved, or not a list). */
++const idsOf = (v) => (Array.isArray(v) ? v.filter((id) => typeof id === 'string') : null);
+ 
+ /**
+  * The list's sync record (collectionSyncMeta.js) and the list once account `uid`'s list leaves
+  * this browser — it signed out, or another account signs in: `{ meta, list }`. As with the résumés
+  * (cloudSyncLeave.js, R2-005) the list goes; what its cloud does not have yet — changed or added
+- * here, or deleted here and not yet sent — is kept aside for that account (`stashed[uid]`) and its
+- * next first sync sends it. null when the list is not that account's.
++ * here, or deleted here and not yet sent, or a move not yet sent (the list's order with the base
++ * it was made on) — is kept aside for that account (`stashed[uid]`) and its next first sync sends
++ * it. null when the list is not that account's.
+  */
+ export function leaveList(meta, list, uid) {
+   if (!uid || meta.uid !== uid) return null;
+@@ -107,25 +146,35 @@ export function leaveList(meta, list, uid) {
+   const unsent = list.filter((x) => versions[x.id] !== x.updatedAt);
+   const ids = new Set(list.map((x) => x.id));
+   const deletes = Object.keys(versions).filter((id) => !ids.has(id));
++  const base = idsOf(meta.order);
++  const moved = base && !sameOrder(list.map((x) => x.id), base);
+   const stashed = { ...(isMap(meta.stashed) ? meta.stashed : {}) };
+-  if (unsent.length || deletes.length) {
++  if (unsent.length || deletes.length || moved) {
+     const was = stashOf(meta, uid);
+     const mine = new Set(unsent.map((x) => x.id));
+     stashed[uid] = {
+       items: [...was.items.filter((x) => !mine.has(x.id)), ...unsent],
+       versions: { ...was.versions, ...Object.fromEntries(unsent.filter((x) => Number.isFinite(versions[x.id])).map((x) => [x.id, versions[x.id]])) },
+       deletes: [...new Set([...was.deletes.filter((id) => !mine.has(id)), ...deletes])],
++      ...(moved ? { order: list.map((x) => x.id), base } : was.base ? { order: was.order, base: was.base } : {}),
+     };
+   }
+-  return { meta: { uid: null, versions: {}, stashed }, list: [] };
++  return { meta: { uid: null, versions: {}, order: null, stashed }, list: [] };
+ }
+ 
+-/** Account `uid`'s items kept aside when its list left: { items, versions, deletes } (empty when none). */
++/**
++ * Account `uid`'s items kept aside when its list left: { items, versions, deletes, order, base }
++ * (empty when none; `order` and `base` null when no move was kept).
++ */
+ export function stashOf(meta, uid) {
+   const entry = isMap(meta?.stashed) && isMap(meta.stashed[uid]) ? meta.stashed[uid] : {};
++  const base = idsOf(entry.base);
++  const order = idsOf(entry.order);
+   return {
+     items: Array.isArray(entry.items) ? entry.items.filter((x) => x && typeof x.id === 'string' && x.id) : [],
+     versions: isMap(entry.versions) ? entry.versions : {},
+     deletes: Array.isArray(entry.deletes) ? entry.deletes.filter((id) => typeof id === 'string') : [],
++    order: base && order ? order : null,
++    base: base && order ? base : null,
+   };
+ }
+diff --git a/tests/unit/collection-sync-order.unit.mjs b/tests/unit/collection-sync-order.unit.mjs
+new file mode 100644
+index 0000000..7d37b70
+--- /dev/null
++++ b/tests/unit/collection-sync-order.unit.mjs
+@@ -0,0 +1,230 @@
++// The order of a synced list — the job board's ranks, the boards' grid (R2-140) — merged on the
++// order this browser last saw in the cloud. The order carries no updatedAt, so a first sync used to
++// put the cloud's order first, always: a move made before it (offline, on a page loaded signed out,
++// before a failed sync was tried again, or kept aside at sign-out) was lost to the cloud's order.
++// Now the sync record keeps the order the cloud held as last seen here (`order`); a first sync lets
++// this browser's order lead when the cloud's is still that one, and the cloud's lead otherwise.
++// The engine (collectionSyncEngine.js) runs over a fake Firestore that several devices share, as
++// in job-sync.unit.mjs and board-sync.unit.mjs. Run: yarn test:unit
++import { test } from 'node:test';
++import assert from 'node:assert/strict';
++import { createCollectionSync } from '../../src/utils/collectionSyncEngine.js';
++import { collectionIo } from '../../src/utils/collectionSyncIo.js';
++import { forgetSynced, localMeta, memoryMeta } from '../../src/utils/collectionSyncMeta.js';
++import { planFirstSync } from '../../src/utils/collectionSyncPlan.js';
++import { completeJob, readJob } from '../../src/utils/normalizeJob.js';
++import { completeBoard, readBoard } from '../../src/utils/normalizeBoard.js';
++import { createBoard } from '../../src/utils/boardModel.js';
++import { fakeFirestore, manualTimers, recorder, settle } from '../pdf/fake-firestore.mjs';
++
++const A = { uid: 'A', email: 'a@example.com' };
++const JOBS_KEY = 'cpwtcv_jobs_sync_v1';
++
++const job = (id, company, updatedAt = 1) => ({
++  id, company, role: 'Engineer', status: 'applied', todos: [],
++  statusHistory: [{ status: 'applied', changedAt: 1 }], createdAt: 1, updatedAt,
++});
++const jobPath = (uid, id) => `users/${uid}/jobs/${id}`;
++const metaPath = (uid, name = 'jobs') => `users/${uid}/meta/${name}`;
++const jobFromCloud = (d) => { const { kept } = readJob(d); return kept ? completeJob(kept) : null; };
++const boardFromCloud = (d) => { const { kept } = readBoard(d); return kept ? completeBoard(kept) : null; };
++const unavailable = () => Object.assign(new Error('The service is currently unavailable.'), { code: 'unavailable' });
++
++class MemoryStorage {
++  constructor() { this.map = new Map(); }
++  get length() { return this.map.size; }
++  key(i) { return [...this.map.keys()][i] ?? null; }
++  getItem(k) { return this.map.has(k) ? this.map.get(k) : null; }
++  setItem(k, v) { this.map.set(k, String(v)); }
++  removeItem(k) { this.map.delete(k); }
++}
++
++/**
++ * A device: its own list in memory, sync record, timers and online flag (`net.online`), with the
++ * engine over `cloud`. `reorder` moves the list as a drag does (the same objects, a new order).
++ */
++function device(cloud, items = [], { name = 'jobs', meta = memoryMeta() } = {}) {
++  let list = items;
++  const listeners = new Set();
++  const set = (next) => { list = next; listeners.forEach((l) => l()); };
++  const store = {
++    items: () => list,
++    replace: set,
++    subscribe: (fn) => { listeners.add(fn); return () => listeners.delete(fn); },
++    fromCloud: name === 'jobs' ? jobFromCloud : boardFromCloud,
++    label: (x) => x.company || x.title || 'Untitled',
++  };
++  const timers = manualTimers();
++  const { seen, report } = recorder();
++  const net = { online: true };
++  const sync = createCollectionSync({
++    name, io: collectionIo(cloud.fs, cloud.db, name), store, meta, report, timers, online: () => net.online,
++  });
++  return {
++    sync, timers, seen, meta, net,
++    items: () => list,
++    ids: () => list.map((x) => x.id),
++    start: async (user) => { sync.start(user); await settle(); },
++    add: (x) => set([...list, x]),
++    reorder: (ids) => set(ids.map((id) => list.find((x) => x.id === id))),
++  };
++}
++
++test('R2-140: jobs moved offline keep their places once the browser is online again', async () => {
++  const cloud = fakeFirestore();
++  const d = device(cloud, [job('j1', 'Acme'), job('j2', 'Beta'), job('j3', 'Cyan')]);
++  await d.start(A);
++  assert.deepEqual(d.meta.read().order, ['j1', 'j2', 'j3'], 'the record keeps the order the cloud holds');
++
++  d.net.online = false;
++  await d.start(A);
++  assert.equal(d.seen.status, 'offline');
++  d.reorder(['j3', 'j1', 'j2']);
++  assert.equal(d.timers.count, 0, 'nothing waits to be sent while offline');
++
++  d.net.online = true;
++  await d.start(A);
++  assert.equal(d.seen.status, 'synced');
++  assert.deepEqual(d.ids(), ['j3', 'j1', 'j2'], 'the move made offline is kept here');
++  assert.deepEqual(cloud.doc(metaPath('A')).order, ['j3', 'j1', 'j2'], 'and sent');
++  assert.deepEqual(d.meta.read().order, ['j3', 'j1', 'j2']);
++  const other = device(cloud, []);
++  await other.start(A);
++  assert.deepEqual(other.ids(), ['j3', 'j1', 'j2'], 'another device shows it');
++});
++
++test('R2-140: a move made on a page loaded signed out is sent at the next sign-in', async () => {
++  const cloud = fakeFirestore();
++  const storage = new MemoryStorage();
++  const saved = localMeta(JOBS_KEY, () => storage);
++  const first = device(cloud, [job('j1', 'Acme'), job('j2', 'Beta'), job('j3', 'Cyan')], { meta: saved });
++  await first.start(A);
++  assert.deepEqual(JSON.parse(storage.getItem(JOBS_KEY)).order, ['j1', 'j2', 'j3'], 'saved with the record');
++
++  // The page again, with the saved list and record, and no one signed in yet.
++  const page = device(cloud, first.items(), { meta: localMeta(JOBS_KEY, () => storage) });
++  await page.start(null);
++  assert.equal(page.seen.status, 'idle');
++  page.reorder(['j2', 'j3', 'j1']);
++  await page.start(A);
++  assert.deepEqual(page.ids(), ['j2', 'j3', 'j1']);
++  assert.deepEqual(cloud.doc(metaPath('A')).order, ['j2', 'j3', 'j1']);
++});
++
++test('R2-140: a move not yet sent when the account signs out is kept aside and sent at its next sign-in', async () => {
++  const cloud = fakeFirestore();
++  const d = device(cloud, [job('j1', 'Acme'), job('j2', 'Beta'), job('j3', 'Cyan')]);
++  await d.start(A);
++  d.reorder(['j2', 'j3', 'j1']); // within the pause: not sent yet
++
++  await d.start(null);
++  assert.deepEqual(d.items(), [], 'the list leaves with the account');
++  const { stashed, order } = d.meta.read();
++  assert.equal(order, null, 'the record no longer holds the account\'s order');
++  assert.deepEqual([stashed.A.order, stashed.A.base], [['j2', 'j3', 'j1'], ['j1', 'j2', 'j3']]);
++  await d.timers.fire();
++  assert.deepEqual(cloud.doc(metaPath('A')).order, ['j1', 'j2', 'j3'], 'not sent signed out');
++
++  await d.start(A);
++  assert.deepEqual(d.ids(), ['j2', 'j3', 'j1'], 'the move comes back');
++  assert.deepEqual(cloud.doc(metaPath('A')).order, ['j2', 'j3', 'j1'], 'and is sent');
++  assert.equal(d.meta.read().stashed.A, undefined);
++});
++
++test('R2-140: a move made here keeps a job another device added where that device put it; moved on both sides, the cloud\'s order wins', async () => {
++  const cloud = fakeFirestore();
++  const d1 = device(cloud, [job('j1', 'Acme'), job('j2', 'Beta'), job('j3', 'Cyan')]);
++  await d1.start(A);
++  const d2 = device(cloud, []);
++  await d2.start(A);
++
++  d1.net.online = false;
++  await d1.start(A);
++  d1.reorder(['j3', 'j2', 'j1']);
++  // Device 2 adds a job at the top: the cloud's order changes, but not for the jobs device 1 knew.
++  d2.add(job('j4', 'Delta', 5));
++  d2.reorder(['j4', 'j1', 'j2', 'j3']);
++  await d2.timers.fire();
++  assert.deepEqual(cloud.doc(metaPath('A')).order, ['j4', 'j1', 'j2', 'j3']);
++
++  d1.net.online = true;
++  await d1.start(A);
++  assert.deepEqual(d1.ids(), ['j4', 'j3', 'j2', 'j1'], 'device 1\'s move, with device 2\'s job where device 2 put it');
++  assert.deepEqual(cloud.doc(metaPath('A')).order, ['j4', 'j3', 'j2', 'j1']);
++  await d2.start(A);
++  assert.deepEqual(d2.ids(), ['j4', 'j3', 'j2', 'j1'], 'device 2 takes it: it did not move anything since');
++
++  // Both move: device 2 sends first, and its order is the account's.
++  d1.net.online = false;
++  await d1.start(A);
++  d1.reorder(['j1', 'j2', 'j3', 'j4']);
++  d2.reorder(['j2', 'j1', 'j4', 'j3']);
++  await d2.timers.fire();
++  d1.net.online = true;
++  await d1.start(A);
++  assert.deepEqual(d1.ids(), ['j2', 'j1', 'j4', 'j3']);
++  assert.deepEqual(cloud.doc(metaPath('A')).order, ['j2', 'j1', 'j4', 'j3']);
++});
++
++test('R2-140: boards moved while the cloud refused them for now keep their places once it takes them', async () => {
++  const cloud = fakeFirestore();
++  const boards = ['Alpha', 'Bravo', 'Charlie'].map((title, i) => createBoard({ title }, { now: 1000 + i }));
++  const ids = boards.map((b) => b.id);
++  const d = device(cloud, boards, { name: 'boards' });
++  await d.start(A);
++  assert.deepEqual(cloud.doc(metaPath('A', 'boards')).order, ids);
++
++  cloud.fail.commit = unavailable();
++  const moved = [ids[2], ids[0], ids[1]];
++  d.reorder(moved);
++  await d.timers.fire();
++  assert.equal(d.seen.status, 'error');
++  assert.deepEqual(cloud.doc(metaPath('A', 'boards')).order, ids, 'not sent yet');
++  assert.deepEqual(d.meta.read().order, ids, 'the record keeps the order the cloud still holds');
++
++  cloud.fail.commit = null;
++  await d.timers.fire(); // the retry: a first sync
++  assert.equal(d.seen.status, 'synced');
++  assert.deepEqual(d.ids(), moved, 'the move is kept');
++  assert.deepEqual(cloud.doc(metaPath('A', 'boards')).order, moved, 'and sent');
++});
++
++test('R2-140: a record saved before the order was kept still reads, and the cloud\'s order leads its first sync', async () => {
++  const storage = new MemoryStorage();
++  storage.setItem(JOBS_KEY, JSON.stringify({ uid: 'A', versions: { j1: 1, j2: 1 }, stashed: {} }));
++  const meta = localMeta(JOBS_KEY, () => storage);
++  assert.equal(meta.read().order, null);
++  storage.setItem(JOBS_KEY, JSON.stringify({ uid: 'A', versions: { j1: 1, j2: 1 }, order: 'j1', stashed: {} }));
++  assert.equal(meta.read().order, null, 'an order that is not a list reads as none');
++  storage.setItem(JOBS_KEY, JSON.stringify({ uid: 'A', versions: { j1: 1, j2: 1 }, stashed: {} }));
++
++  const cloud = fakeFirestore({ [jobPath('A', 'j1')]: job('j1', 'Acme'), [jobPath('A', 'j2')]: job('j2', 'Beta') });
++  cloud.data.set(metaPath('A'), { order: ['j1', 'j2'], deleted: [] });
++  const d = device(cloud, [job('j2', 'Beta'), job('j1', 'Acme')], { meta });
++  await d.start(A);
++  assert.deepEqual(d.ids(), ['j1', 'j2'], 'no base to tell a move here from one made elsewhere: the cloud\'s order, as before');
++  assert.deepEqual(meta.read().order, ['j1', 'j2'], 'the order is kept from now on');
++});
++
++test('R2-140: a saved list that could not be read in full forgets the order too', () => {
++  const storage = new MemoryStorage();
++  storage.setItem(JOBS_KEY, JSON.stringify({ uid: 'A', versions: {}, order: ['j1', 'j2'], stashed: {} }));
++  forgetSynced(JOBS_KEY, () => storage);
++  assert.deepEqual(localMeta(JOBS_KEY, () => storage).read(), { uid: 'A', versions: {}, order: null, stashed: {} });
++});
++
++test('R2-140: planFirstSync merges the order on its base', () => {
++  const docs = ['a', 'b', 'c'].map((id) => ({ id, updatedAt: 1 }));
++  const versions = { a: 1, b: 1, c: 1 };
++  const local = ['c', 'a', 'b'].map((id) => ({ id, updatedAt: 1 }));
++  const plan = (order, baseOrder, extra = {}) => planFirstSync({ local, versions, docs, order, baseOrder, ...extra }).order;
++  assert.deepEqual(plan(['a', 'b', 'c'], ['a', 'b', 'c']), ['c', 'a', 'b'], 'moved here only: this browser\'s order');
++  assert.deepEqual(plan(['b', 'a', 'c'], ['a', 'b', 'c']), ['b', 'a', 'c'], 'moved elsewhere too: the cloud\'s');
++  assert.deepEqual(plan(['a', 'b', 'c'], null), ['a', 'b', 'c'], 'no base: the cloud\'s');
++  assert.deepEqual(plan(['c', 'a', 'b'], ['c', 'a', 'b'], { local: ['a', 'b', 'c'].map((id) => ({ id, updatedAt: 1 })) }), ['a', 'b', 'c'],
++    'moved here from the base, not elsewhere');
++  assert.deepEqual(plan(['a', 'b', 'c'], ['a', 'b', 'c'], { local: ['a', 'b', 'c'].map((id) => ({ id, updatedAt: 1 })) }), ['a', 'b', 'c'],
++    'moved nowhere: unchanged');
++  // Kept aside at sign-out: the move leads what the browser holds now.
++  assert.deepEqual(plan(['a', 'b', 'c'], ['a', 'b', 'c'], { local: [], localOrder: ['b', 'c', 'a'] }), ['b', 'c', 'a']);
++});

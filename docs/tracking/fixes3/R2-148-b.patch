@@ -1,0 +1,83 @@
+diff --git a/src/utils/importFile.js b/src/utils/importFile.js
+index 29dfe62..a03bc83 100644
+--- a/src/utils/importFile.js
++++ b/src/utils/importFile.js
+@@ -149,7 +149,9 @@ function isTwoColumns(rows, at) {
+  * width interleaves the columns line by line. So: find a gutter, an x band at least GUTTER wide that
+  * no item crosses (a line that does, such as a full-width header or footer, is read across the page
+  * as before); each run of rows between such lines that really is two columns (isTwoColumns) is read
+- * column by column, the left one first, as a page is read. A page with no gutter is one block.
++ * column by column, the left one first, as a page is read. Each side is split the same way in turn,
++ * so a page in three or more columns is read a column at a time, left to right (R2-148-b); every
++ * block inside a side is a column's. A page with no gutter is one block.
+  */
+ export function pdfPageBlocks(items) {
+   const one = [{ items, column: false }];
+@@ -178,7 +180,10 @@ export function pdfPageBlocks(items) {
+       if (whole.length) blocks.push({ items: whole, column: false });
+       whole = [];
+       const its = run.flatMap((r) => r.items);
+-      blocks.push({ items: its.filter((it) => it.x < at), column: true }, { items: its.filter((it) => it.x >= at), column: true });
++      // Either side may be columns of its own (a third column beside the second): split it again.
++      // Each call has fewer items than the last, both sides holding lines, so this ends.
++      const side = (part) => pdfPageBlocks(part).map((b) => ({ items: b.items, column: true }));
++      blocks.push(...side(its.filter((it) => it.x < at)), ...side(its.filter((it) => it.x >= at)));
+     } else whole.push(...run.flatMap((r) => r.items));
+     run = [];
+   };
+@@ -271,8 +276,8 @@ function withoutPageFurniture(items, index) {
+  * The lines of every page as the parser takes them: a line the PDF wrapped joined back to the one
+  * it continues (a list item's next line starts under its text; a paragraph's line before it ran to
+  * the right margin), a larger gap than a line's as a blank line, a page break as one too. A page in
+- * two columns is read a column at a time (pdfPageBlocks), each to its own right margin, with a blank
+- * line after each. A page's running header and page number (isPageFurniture) are left out. A line
++ * two or more columns is read a column at a time (pdfPageBlocks), each to its own right margin, with a
++ * blank line after each. A page's running header and page number (isPageFurniture) are left out. A line
+  * that is one field alone at a block's right margin carries hint 'end' (a location under a date).
+  */
+ export function pdfLinesOfPages(pages) {
+diff --git a/tests/unit/import-pdf-columns.unit.mjs b/tests/unit/import-pdf-columns.unit.mjs
+index d16ba12..2e548e9 100644
+--- a/tests/unit/import-pdf-columns.unit.mjs
++++ b/tests/unit/import-pdf-columns.unit.mjs
+@@ -114,3 +114,40 @@ test('the name and the job title on one line in two sizes (Compact\'s Inline lay
+   // A word gap in one size stays a space.
+   assert.deepEqual(pdfPageLines([item('Senior', 40, 700, 38), item('Data', 81, 700, 26)]).map((l) => l.text), ['Senior Data']);
+ });
++
++// R2-148-b: a page in three columns. Only one gutter was split, so two of the three columns came back
++// as one block, interleaved line by line. Now each side is split again: left to right, one at a time.
++// Three columns at x 40, 220 and 400; no baseline of one is on a baseline of another.
++const COL_A = [
++  item('Robin Vale', 40, 800, 110, 18), item('Product Designer', 40, 780, 90),
++  item('CONTACT', 40, 750, 45), item('robin@example.org', 40, 735, 95), item('+1 555 0100', 40, 720, 60),
++];
++const COL_B = [
++  item('SKILLS', 220, 795, 35), item('Figma', 220, 775, 30), item('Sketch', 220, 760, 35), item('Prototyping, Motion', 220, 745, 90),
++];
++const COL_C = [
++  item('LANGUAGES', 400, 790, 55), item('English: Native', 400, 770, 80), item('Spanish: Fluent', 400, 755, 75), item('German: Basic', 400, 740, 70),
++];
++const THREE = [
++  'Robin Vale', 'Product Designer', 'CONTACT', 'robin@example.org', '+1 555 0100',
++  'SKILLS', 'Figma', 'Sketch', 'Prototyping, Motion',
++  'LANGUAGES', 'English: Native', 'Spanish: Fluent', 'German: Basic',
++];
++
++describe('a three-column PDF page reads a column at a time, left to right', () => {
++  test('the first gutter found between the left columns: the right two are split again', () => {
++    assert.deepEqual(texts([[...COL_A, ...COL_B, ...COL_C]]), THREE,
++      'before: the left column, then "SKILLS", "LANGUAGES", "Figma", "English: Native", … the other two interleaved');
++  });
++
++  test('the first gutter found between the right columns: the left two are split again', () => {
++    assert.deepEqual(texts([[...COL_C, ...COL_B, ...COL_A]]), THREE,
++      'before: "Robin Vale", "SKILLS", "Product Designer", "Figma", … the left two interleaved, then the right column');
++  });
++
++  test('read into a résumé: the contacts, then the skills and the languages as sections of their own', () => {
++    const r = resumeFromText(pdfLinesOfPages([[...COL_A, ...COL_B, ...COL_C]]));
++    assert.deepEqual([r.personal.name, r.personal.title, r.personal.email, r.personal.phone], ['Robin Vale', 'Product Designer', 'robin@example.org', '+1 555 0100']);
++    assert.deepEqual(r.sections.map((s) => s.type), ['skills', 'languages']);
++  });
++});

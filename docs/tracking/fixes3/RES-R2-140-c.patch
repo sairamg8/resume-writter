@@ -1,0 +1,389 @@
+diff --git a/docs/knowledge/05-state-auth-sync.md b/docs/knowledge/05-state-auth-sync.md
+index a5e8ee3..8b99d86 100644
+--- a/docs/knowledge/05-state-auth-sync.md
++++ b/docs/knowledge/05-state-auth-sync.md
+@@ -204,7 +204,11 @@ the ids deleted for good (`deleted`) and the list's order (`order`). The existin
+ (`collectionSyncPlan.planFirstSync`: newer `updatedAt` wins, nothing typed is lost, a deleted id
+ stays deleted unless edited where the deletion was never seen); then changes are sent in one batch
+ after a 1.5 s pause. Failures, retries and 'off' reuse `cloudSyncRetry.js`; an item over Firestore's
+-1 MiB is held back on its own and named on the page (`SyncHeldNotice`). This browser's record of a
++1 MiB is held back on its own and named on the page (`SyncHeldNotice`). What each list's sync is
++doing goes to `collectionSyncStatus` (`collectionSyncMeta.js`) and shows in the workspace's top bar
++as the résumés' cloud icon, with its words (`shell/CollectionSyncDot.jsx`, R2-140-c): the jobs and
++the projects on the Job Tracker's pages, the projects elsewhere, the worst status winning
++(`worstSyncStatus`: error, stopped, off, offline, syncing, synced); none while signed out. This browser's record of a
+ list — the account it last synced with, the versions and the order its cloud holds, what was kept
+ aside — is `cpwtcv_jobs_sync_v1` / `cpwtcv_boards_sync_v1` (`collectionSyncMeta.js`; a record saved
+ before the order was kept reads with none). The order merges on that base: a move made before a
+diff --git a/src/components/AuthBar.jsx b/src/components/AuthBar.jsx
+index 3ad0ac5..99f7e26 100644
+--- a/src/components/AuthBar.jsx
++++ b/src/components/AuthBar.jsx
+@@ -35,8 +35,12 @@ const PRESS_FOCUS_MS = 1000;
+  * reach it). Its words open on mouse hover, on keyboard focus, and on a tap, Enter or Space; a
+  * second tap, Escape, leaving it, or a tap anywhere else closes them. A tap's emulated hover and
+  * focus are not counted, so one tap opens the words and the next closes them.
++ *
++ * The workspace's top bar shows the same icon for the jobs and the boards (shell/CollectionSyncDot,
++ * R2-140-c): `heldLabel(held)` gives the 'stopped' words for what it holds back (the résumés'
++ * by default).
+  */
+-function SyncDot({ syncStatus, lastSynced, isOnline, heldResumes }) {
++export function SyncDot({ syncStatus, lastSynced, isOnline, heldResumes, heldLabel = stoppedLabel }) {
+   const [hover, setHover] = useState(false);     // a mouse is over it
+   const [focused, setFocused] = useState(false); // keyboard focus
+   const [pinned, setPinned] = useState(false);   // opened by a tap, or Enter / Space
+@@ -65,7 +69,7 @@ function SyncDot({ syncStatus, lastSynced, isOnline, heldResumes }) {
+   } else if (syncStatus === 'error') {
+     Icon = CloudAlert; color = '#ef4444'; label = 'Sync error — will retry';
+   } else if (syncStatus === 'stopped') {
+-    Icon = CloudAlert; color = '#ef4444'; label = stoppedLabel(heldResumes);
++    Icon = CloudAlert; color = '#ef4444'; label = heldLabel(heldResumes);
+   } else if (syncStatus === 'off') {
+     // No access to the cloud (its rules, or no database): nothing is retried until a reload.
+     Icon = CloudOff; color = '#9ca3af'; label = 'Sync is off — changes are saved in this browser';
+diff --git a/src/components/shell/CollectionSyncDot.jsx b/src/components/shell/CollectionSyncDot.jsx
+new file mode 100644
+index 0000000..fb89b5e
+--- /dev/null
++++ b/src/components/shell/CollectionSyncDot.jsx
+@@ -0,0 +1,43 @@
++import { useSyncExternalStore } from 'react';
++import { useLocation } from 'react-router-dom';
++import { SyncDot } from '../AuthBar.jsx';
++import { collectionSyncStatus, syncHeld, worstSyncStatus } from '../../utils/collectionSyncMeta.js';
++
++const clip = (name) => (name.length > 32 ? `${name.slice(0, 31)}…` : name);
++
++/**
++ * The lists a workspace page shows: the Job Tracker's pages show the jobs, and every page shows the
++ * projects (the sidebar lists them, the top bar searches them).
++ */
++export const listsShown = (pathname) => (pathname === '/jobs' || pathname.startsWith('/jobs/') ? ['jobs', 'boards'] : ['boards']);
++
++/** The 'stopped' words: what the cloud will not take is named, as the résumés' icon names a résumé. */
++function heldLabel(held = []) {
++  if (held.length === 1) return `“${clip(held[0].name || 'Untitled')}” not synced (too large?) — saved in this browser`;
++  if (held.length > 1) {
++    const what = held.every((x) => x.list === 'jobs') ? 'jobs' : held.every((x) => x.list === 'boards') ? 'projects' : 'items';
++    return `${held.length} ${what} not synced (too large?) — saved in this browser`;
++  }
++  return 'Sync stopped — saved in this browser';
++}
++
++/**
++ * The jobs' and the boards' cloud icon in the workspace's top bar: the résumés' own icon (SyncDot,
++ * its look and its words) over the lists the page shows, the worst of their statuses winning
++ * (worstSyncStatus). Until R2-140-c these pages said nothing of their sync: an error, or a sync
++ * the account's rules refuse, went to the console only. Nothing while signed out (idle).
++ */
++export function CollectionSyncDot() {
++  const { pathname } = useLocation();
++  const statuses = useSyncExternalStore(collectionSyncStatus.subscribe, collectionSyncStatus.get, collectionSyncStatus.get);
++  const held = useSyncExternalStore(syncHeld.subscribe, syncHeld.get, syncHeld.get);
++  const names = listsShown(pathname);
++  const { status, at } = worstSyncStatus(statuses, names);
++  if (status === 'idle') return null;
++  const heldShown = names.flatMap((n) => (held[n] ?? []).map((x) => ({ ...x, list: n })));
++  return (
++    <div className="flex shrink-0 px-1.5">
++      <SyncDot syncStatus={status} lastSynced={at} isOnline={status !== 'offline'} heldResumes={heldShown} heldLabel={heldLabel} />
++    </div>
++  );
++}
+diff --git a/src/components/shell/TopBar.jsx b/src/components/shell/TopBar.jsx
+index 848bed5..22a0755 100644
+--- a/src/components/shell/TopBar.jsx
++++ b/src/components/shell/TopBar.jsx
+@@ -5,6 +5,7 @@ import { Button, IconButton, Menu, ShortcutsDialog, cx, isImeKey, useHotkeys } f
+ import { IssueTypeIcon } from '../tracker/TrackerIcons.jsx';
+ import { useWorkspace } from './workspaceContext.js';
+ import { orderProjects } from './projects.js';
++import { CollectionSyncDot } from './CollectionSyncDot.jsx';
+ import { projectPath } from './projectViews.js';
+ 
+ const FOCUS = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60';
+@@ -121,8 +122,8 @@ function QuickSearch({ search }) {
+ /**
+  * The workspace's top bar, across the whole window over the sidebar and the page: the menu
+  * button (phones), the brand, Your work · Projects ▾ · Job Tracker · Résumés, the Create button
+- * (a new issue — on the Job Tracker's pages, a new job), the quick search (`/`) and the
+- * keyboard-shortcuts help (`?`).
++ * (a new issue — on the Job Tracker's pages, a new job), the quick search (`/`), the jobs' and
++ * boards' cloud icon (CollectionSyncDot, signed in only) and the keyboard-shortcuts help (`?`).
+  *
+  * - `onCreate()`: open the create-issue dialog; `search(query)` → results (utils/workspaceSearch).
+  */
+@@ -179,6 +180,7 @@ export function TopBar({ projects = [], onCreate, search }) {
+       </Button>
+       <div className="ml-auto flex min-w-0 flex-1 items-center justify-end gap-1">
+         <QuickSearch search={search} />
++        <CollectionSyncDot />
+         <IconButton icon={CircleHelp} label="Keyboard shortcuts" shortcut="?" onClick={() => setHelpOpen(true)} />
+       </div>
+       <ShortcutsDialog open={helpOpen} onClose={() => setHelpOpen(false)} groups={SHORTCUTS} />
+diff --git a/src/hooks/useCollectionSync.js b/src/hooks/useCollectionSync.js
+index 9469dba..9c18c81 100644
+--- a/src/hooks/useCollectionSync.js
++++ b/src/hooks/useCollectionSync.js
+@@ -5,7 +5,7 @@ import {
+ import { db } from '@/utils/firebase';
+ import { collectionIo } from '@/utils/collectionSyncIo';
+ import { createCollectionSync } from '@/utils/collectionSyncEngine';
+-import { BOARDS_SYNC_KEY, JOBS_SYNC_KEY, localMeta, syncHeld } from '@/utils/collectionSyncMeta';
++import { BOARDS_SYNC_KEY, JOBS_SYNC_KEY, collectionReport, localMeta } from '@/utils/collectionSyncMeta';
+ import { browserCloudSync } from '@/utils/cloudSyncBrowser';
+ import { completeJob, readJob } from '@/utils/normalizeJob';
+ import { completeBoard, readBoard } from '@/utils/normalizeBoard';
+@@ -52,13 +52,15 @@ export const boardSync = {
+ /**
+  * One list's cloud sync wired to the page (cloudSyncBrowser.js): the signed-in user and the
+  * browser's online flag go in; the items the cloud will not take go to syncHeld, which the job and
+- * board pages show (SyncHeldNotice). Signed out, it does nothing: the list stays this browser's.
++ * board pages show (SyncHeldNotice), and what the sync is doing to collectionSyncStatus, which the
++ * workspace's top bar shows as the résumés' cloud icon (CollectionSyncDot). Signed out, it does
++ * nothing: the list stays this browser's.
+  */
+ export function useCollectionSync(user, { name, store, meta }) {
+   const [page] = useState(() => browserCloudSync(window, {
+     name, store, meta: meta(),
+     io: db ? collectionIo(fs, db, name) : null,
+-    report: { held: (list) => syncHeld.set(name, list) },
++    report: collectionReport(name),
+     log: (...args) => console.info(...args),
+   }, createCollectionSync));
+   const [isOnline, setIsOnline] = useState(() => page.online());
+diff --git a/src/utils/collectionSyncMeta.js b/src/utils/collectionSyncMeta.js
+index 8fedf72..db2da02 100644
+--- a/src/utils/collectionSyncMeta.js
++++ b/src/utils/collectionSyncMeta.js
+@@ -2,8 +2,8 @@
+ // with, the versions and the order that account's cloud holds as last seen here, and what was kept
+ // aside for an account whose list left — under its own key, next to the list: `cpwtcv_jobs_sync_v1`,
+ // `cpwtcv_boards_sync_v1`. A browser that never synced has none, and its list is its own. The
+-// held-back notice (items the cloud will not take) lives here too, as a tiny store the board and
+-// job pages read.
++// held-back notice (items the cloud will not take) and each list's sync status live here too, as
++// tiny stores the board and job pages read (SyncHeldNotice, the workspace's sync icon).
+ 
+ /** Where each list's record lives. */
+ export const JOBS_SYNC_KEY = 'cpwtcv_jobs_sync_v1';
+@@ -82,3 +82,53 @@ export const syncHeld = {
+     return () => listeners.delete(listener);
+   },
+ };
++
++/**
++ * What each list's sync is doing, as the engine reports it (collectionSyncEngine's report.status):
++ * `{ jobs: { status, at }, boards: { … } }`, `at` the Date the list last came to 'synced' (null
++ * before). A store the workspace's sync icon subscribes to (shell/CollectionSyncDot.jsx). Until
++ * R2-140-c the engine's status went nowhere: an error, or a sync the account's rules refuse, was
++ * only logged to the console.
++ */
++const idle = () => ({ status: 'idle', at: null });
++let statuses = { jobs: idle(), boards: idle() };
++const statusListeners = new Set();
++
++export const collectionSyncStatus = {
++  get: () => statuses,
++  set(name, status, at = new Date()) {
++    const was = statuses[name] ?? idle();
++    if (was.status === status && status !== 'synced') return;
++    statuses = { ...statuses, [name]: { status, at: status === 'synced' ? at : was.at } };
++    statusListeners.forEach((l) => l());
++  },
++  subscribe(listener) {
++    statusListeners.add(listener);
++    return () => statusListeners.delete(listener);
++  },
++};
++
++/** The report a list's engine is given: its status and its held-back items go to the two stores above. */
++export const collectionReport = (name) => ({
++  status: (status) => collectionSyncStatus.set(name, status),
++  held: (list) => syncHeld.set(name, list),
++});
++
++// The worst first: the one icon several lists share says what most needs saying. A sync that
++// fails or is refused outranks being offline, which outranks one on its way, which outranks done.
++const RANK = ['error', 'stopped', 'off', 'offline', 'syncing', 'synced', 'idle'];
++const rank = (status) => { const i = RANK.indexOf(status); return i < 0 ? RANK.length : i; };
++
++/**
++ * One status for the lists `names` of `all` (collectionSyncStatus.get()): the worst of theirs, and
++ * with 'synced' the time the latest of them synced. `{ status: 'idle', at: null }` when there are
++ * none (signed out: no icon).
++ */
++export function worstSyncStatus(all, names) {
++  const shown = names.map((n) => all[n]).filter(Boolean);
++  if (!shown.length) return idle();
++  const status = shown.map((x) => x.status).reduce((a, b) => (rank(b) < rank(a) ? b : a));
++  const times = shown.filter((x) => x.status === 'synced' && x.at).map((x) => x.at);
++  const at = status === 'synced' && times.length ? times.reduce((a, b) => (b > a ? b : a)) : null;
++  return { status, at };
++}
+diff --git a/tests/unit/collection-sync-status.unit.mjs b/tests/unit/collection-sync-status.unit.mjs
+new file mode 100644
+index 0000000..53b35e6
+--- /dev/null
++++ b/tests/unit/collection-sync-status.unit.mjs
+@@ -0,0 +1,159 @@
++// The jobs' and the boards' sync status on the workspace pages (R2-140-c). The résumés say what
++// their sync is doing in the header's cloud icon (AuthBar's SyncDot); the Job Tracker and the
++// boards said nothing: useCollectionSync passed the engine only a `held` report, so its status —
++// a sync error, or one the account's rules refuse ('off') — was logged to the console and went no
++// further. Now every list's status goes to a small store (collectionSyncStatus, fed by
++// collectionReport, the report the hook gives the engine) and the workspace's top bar shows the
++// résumés' own icon over the lists the page shows, the worst status winning.
++// The engine runs over the fake Firestore (tests/pdf/fake-firestore.mjs), as in job-sync.unit.mjs;
++// the top bar is mounted with react-dom/client over tests/pdf/fake-dom.mjs through Vite's SSR
++// loader, as in ui-shell.unit.mjs. Run: node --test tests/unit/collection-sync-status.unit.mjs
++import { before, after, describe, it } from 'node:test';
++import assert from 'node:assert/strict';
++import { createElement } from 'react';
++import { MemoryRouter } from 'react-router-dom';
++import { createServer } from 'vite';
++import { fileURLToPath } from 'node:url';
++import { mount, elements } from '../pdf/fake-dom.mjs';
++import { fakeFirestore, manualTimers, settle } from '../pdf/fake-firestore.mjs';
++import { createCollectionSync } from '../../src/utils/collectionSyncEngine.js';
++import { collectionIo } from '../../src/utils/collectionSyncIo.js';
++import { collectionReport, collectionSyncStatus, memoryMeta, worstSyncStatus } from '../../src/utils/collectionSyncMeta.js';
++import { completeJob, readJob } from '../../src/utils/normalizeJob.js';
++
++const A = { uid: 'A', email: 'a@example.com' };
++const job = (id, company, updatedAt = 1) => ({
++  id, company, role: 'Engineer', status: 'applied', todos: [],
++  statusHistory: [{ status: 'applied', changedAt: 1 }], createdAt: 1, updatedAt,
++});
++
++// The top bar through Vite's SSR loader (JSX, the `@/` alias); the store is read from the same
++// loader, so the test sets the very store the bar reads.
++const ROOT = fileURLToPath(new URL('../../', import.meta.url));
++let vite;
++before(async () => {
++  vite = await createServer({
++    root: ROOT, configFile: `${ROOT}vite.config.js`, appType: 'custom', logLevel: 'error',
++    server: { middlewareMode: true, hmr: false, ws: false },
++  });
++});
++after(() => vite?.close());
++
++/** The jobs' engine as useCollectionSync wires it: its report is collectionReport('jobs'). */
++function jobsSync(cloud, jobs = []) {
++  let list = jobs;
++  const store = {
++    items: () => list,
++    replace: (next) => { list = next; },
++    subscribe: () => () => {},
++    fromCloud: (d) => { const { kept } = readJob(d); return kept ? completeJob(kept) : null; },
++    label: (j) => [j.company, j.role].filter(Boolean).join(' — '),
++  };
++  return createCollectionSync({
++    name: 'jobs', io: collectionIo(cloud.fs, cloud.db, 'jobs'), store, meta: memoryMeta(),
++    report: collectionReport('jobs'), timers: manualTimers(),
++  });
++}
++
++describe('R2-140-c: the engine’s status reaches a store the pages read', () => {
++  it('a first sync that gets through is "synced", with the time it did', async () => {
++    collectionSyncStatus.set('jobs', 'idle');
++    const cloud = fakeFirestore();
++    const sync = jobsSync(cloud, [job('j1', 'Acme')]);
++    sync.start(A);
++    assert.equal(collectionSyncStatus.get().jobs.status, 'syncing');
++    await settle();
++    const { status, at } = collectionSyncStatus.get().jobs;
++    assert.equal(status, 'synced');
++    assert.ok(at instanceof Date, 'no time kept for "Synced HH:MM"');
++    sync.start(null);
++    assert.equal(collectionSyncStatus.get().jobs.status, 'idle', 'signed out: no status');
++  });
++
++  it('a sync the rules refuse is "off", a failed one "error" — not the console only', async () => {
++    collectionSyncStatus.set('jobs', 'idle');
++    const refused = fakeFirestore();
++    refused.fail.read = Object.assign(new Error('Missing or insufficient permissions.'), { code: 'permission-denied' });
++    const off = jobsSync(refused);
++    off.start(A);
++    await settle();
++    assert.equal(collectionSyncStatus.get().jobs.status, 'off');
++
++    const down = fakeFirestore();
++    down.fail.read = Object.assign(new Error('The service is currently unavailable.'), { code: 'unavailable' });
++    const failing = jobsSync(down);
++    failing.start(A);
++    await settle();
++    assert.equal(collectionSyncStatus.get().jobs.status, 'error');
++    off.cancel();
++    failing.cancel();
++    collectionSyncStatus.set('jobs', 'idle');
++  });
++
++  it('the lists shown share one status: the worst of theirs', () => {
++    const t1 = new Date(2026, 8, 26, 9, 5);
++    const t2 = new Date(2026, 8, 26, 9, 7);
++    const all = (jobs, boards) => ({ jobs: { status: jobs, at: t1 }, boards: { status: boards, at: t2 } });
++    const both = ['jobs', 'boards'];
++    assert.deepEqual(worstSyncStatus(all('synced', 'synced'), both), { status: 'synced', at: t2 }, 'the later time');
++    assert.equal(worstSyncStatus(all('syncing', 'synced'), both).status, 'syncing');
++    assert.equal(worstSyncStatus(all('synced', 'offline'), both).status, 'offline');
++    assert.equal(worstSyncStatus(all('offline', 'off'), both).status, 'off');
++    assert.equal(worstSyncStatus(all('error', 'off'), both).status, 'error');
++    assert.equal(worstSyncStatus(all('stopped', 'synced'), both).status, 'stopped');
++    assert.equal(worstSyncStatus(all('error', 'synced'), ['boards']).status, 'synced', 'a list not shown does not count');
++    assert.deepEqual(worstSyncStatus(all('idle', 'idle'), both), { status: 'idle', at: null });
++    assert.deepEqual(worstSyncStatus(all('syncing', 'synced'), both).at, null, 'no time unless synced');
++  });
++});
++
++/** The workspace's top bar at `path`: `dot()` its sync icon (none: undefined), `label()` its words. */
++async function topBarAt(path) {
++  const { TopBar } = await vite.ssrLoadModule('/src/components/shell/TopBar.jsx');
++  const App = () => createElement(MemoryRouter, { initialEntries: [path] }, createElement(TopBar, { projects: [] }));
++  const view = mount(App, {});
++  const dot = () => [...elements(view.container)].find((el) => el.getAttribute?.('data-testid') === 'sync-status');
++  return { view, dot, label: () => dot()?.getAttribute('aria-label') };
++}
++
++describe('R2-140-c: the workspace’s top bar shows the jobs’ and boards’ sync as the résumés’ icon', () => {
++  it('a job sync error shows on the Job Tracker, in the résumés’ words', async () => {
++    const { collectionSyncStatus: status } = await vite.ssrLoadModule('/src/utils/collectionSyncMeta.js');
++    status.set('jobs', 'error');
++    status.set('boards', 'synced');
++    const { view, dot, label } = await topBarAt('/jobs');
++    try {
++      assert.ok(dot(), 'the Job Tracker shows no sync status');
++      assert.equal(label(), 'Sync error — will retry');
++      view.act(() => status.set('jobs', 'synced'));
++      assert.match(label(), /^Synced/, 'the icon follows the store');
++      view.act(() => status.set('boards', 'off'));
++      assert.equal(label(), 'Sync is off — changes are saved in this browser', 'the sidebar’s projects count on the Job Tracker');
++    } finally { await view.unmount(); }
++  });
++
++  it('a board page shows the boards’ status; offline says so; a held project is named', async () => {
++    const { collectionSyncStatus: status, syncHeld } = await vite.ssrLoadModule('/src/utils/collectionSyncMeta.js');
++    status.set('jobs', 'error');
++    status.set('boards', 'offline');
++    const { view, label } = await topBarAt('/boards/b1');
++    try {
++      assert.equal(label(), 'Offline — changes saved locally', 'a job error does not show on a board page');
++      view.act(() => { syncHeld.set('boards', [{ id: 'b1', name: 'Life admin' }]); status.set('boards', 'stopped'); });
++      assert.equal(label(), '“Life admin” not synced (too large?) — saved in this browser');
++    } finally {
++      await view.unmount();
++      syncHeld.set('boards', []);
++    }
++  });
++
++  it('signed out (idle): no icon', async () => {
++    const { collectionSyncStatus: status } = await vite.ssrLoadModule('/src/utils/collectionSyncMeta.js');
++    status.set('jobs', 'idle');
++    status.set('boards', 'idle');
++    const { view, dot } = await topBarAt('/jobs');
++    try {
++      assert.equal(dot(), undefined);
++    } finally { await view.unmount(); }
++  });
++});

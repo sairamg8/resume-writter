@@ -1,0 +1,363 @@
+diff --git a/src/utils/importFile.js b/src/utils/importFile.js
+index a00b423..29dfe62 100644
+--- a/src/utils/importFile.js
++++ b/src/utils/importFile.js
+@@ -272,7 +272,8 @@ function withoutPageFurniture(items, index) {
+  * it continues (a list item's next line starts under its text; a paragraph's line before it ran to
+  * the right margin), a larger gap than a line's as a blank line, a page break as one too. A page in
+  * two columns is read a column at a time (pdfPageBlocks), each to its own right margin, with a blank
+- * line after each. A page's running header and page number (isPageFurniture) are left out.
++ * line after each. A page's running header and page number (isPageFurniture) are left out. A line
++ * that is one field alone at a block's right margin carries hint 'end' (a location under a date).
+  */
+ export function pdfLinesOfPages(pages) {
+   const out = [];
+@@ -280,6 +281,7 @@ export function pdfLinesOfPages(pages) {
+     for (const { items, column } of pdfPageBlocks(withoutPageFurniture(page, index))) {
+       const lines = pdfPageLines(items);
+       const right = Math.max(0, ...lines.map((l) => l.right));
++      const left = Math.min(...lines.map((l) => l.x));
+       let prev = null;
+       for (const line of lines) {
+         if (prev) {
+@@ -301,7 +303,11 @@ export function pdfLinesOfPages(pages) {
+           }
+           if (!near) out.push({ text: '' });
+         }
+-        out.push({ text: line.text });
++        // One field alone at the right margin, well right of the left edge: set at the end of its line
++        // on purpose, as a location right-aligned under a date is (Title "Inline" and "Side by side",
++        // Executive's jobs). Hinted, so the parser reads it as the entry's location (importText.js).
++        const atEnd = !line.text.includes('\t') && Math.abs(line.right - right) <= 2 && line.x - left > (right - left) / 2;
++        out.push(atEnd ? { text: line.text, hint: 'end' } : { text: line.text });
+         prev = { ...line, listed: false };
+       }
+       out.push({ text: '' });
+diff --git a/src/utils/importText.js b/src/utils/importText.js
+index e284e84..9f44544 100644
+--- a/src/utils/importText.js
++++ b/src/utils/importText.js
+@@ -217,6 +217,8 @@ const WEB = /^(?:https?:\/\/)?(?:www\.)?[a-z0-9][a-z0-9-]*(?:\.[a-z0-9-]+)*\.[a-
+ const SECOND_LINE = new Set(['experience', 'education', 'volunteering', 'custom']);
+ /** Types whose entries carry a location. */
+ const PLACED = new Set(['experience', 'education', 'volunteering', 'custom']);
++/** Types whose header names a role and an organisation: a job, a volunteering post. */
++const JOB = new Set(['experience', 'volunteering']);
+ 
+ const escapeHtml = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+ 
+@@ -268,7 +270,10 @@ function sectionOf(type, title, items) {
+  * An entry's header lines read as its fields: `parts` its text fields in order, `date`, `location`
+  * and the fields it names (`meta`). On a line with the date, what follows the date is the location
+  * ("Mar 2021 – Present | Portland, OR"); on the line under the title, what sits at the right tab is
+- * ("Senior Engineer ⇥ Portland, OR", the PDF's and Word's layout).
++ * ("Senior Engineer ⇥ Portland, OR", the PDF's and Word's layout). A place alone on a line of its own
++ * under the title is too: at the right margin (hint 'end', Executive's "Inline" jobs), or, for a job,
++ * right under a line that held both the role and the company (the Timeline's jobs: "Role ⇥ Company",
++ * "Role — Company", "Role, Company", R2-148).
+  */
+ function readHeader(type, header) {
+   const out = { parts: [], date: null, location: '', meta: {} };
+@@ -282,8 +287,13 @@ function readHeader(type, header) {
+     out.location = p;
+     return true;
+   };
++  // The text fields the line above gave: two when it held the role and the company ("Role ⇥ Company",
++  // "Role — Company", a job's "Role, Company"); one a line when they are stacked (the Sidebar's school).
++  let above = 0;
+   header.forEach((line, k) => {
+     const ps = pieces(line.text);
++    // The text fields found on the lines above this one: a title line came before it when there are any.
++    const titled = out.parts.length;
+     let at = -1;
+     if (!out.date) {
+       at = ps.findIndex((p) => readDateRange(p) || trailingDate(p));
+@@ -296,15 +306,39 @@ function readHeader(type, header) {
+     }
+     ps.forEach((p, j) => {
+       if (!p || field(p)) return;
+-      // After the date on its line; or at the right tab of the line under the title.
++      // After the date on its line; or at the right tab of the line under the title. Under a date
++      // alone ("Mar 2021 – Present" over "Role ⇥ Company", the Timeline's) that tab parts two fields.
+       if (at >= 0 && j > at && place(p)) return;
+-      if (at < 0 && k > 0 && j > 0 && j === ps.length - 1 && line.text.includes('\t') && place(p)) return;
++      if (at < 0 && k > 0 && j > 0 && j === ps.length - 1 && line.text.includes('\t') && titled && place(p)) return;
++      // A place alone on its line: at the right margin, or a job's, right under the line that held its
++      // role and company. Not any place under two fields: the Sidebar's school stacks its degree, school,
++      // field of study and place a line each, and that place is read by the education's own rule (entryOf).
++      if (at < 0 && k > 0 && ps.length === 1 && (line.hint === 'end' || (JOB.has(type) && above >= 2 && PLACE.test(p) && !ROLE.test(p))) && place(p)) return;
+       out.parts.push(...fieldsOf(p));
+     });
++    const gave = out.parts.slice(titled);
++    above = (JOB.has(type) ? inlinePair(gave) : gave).length;
+   });
+   return out;
+ }
+ 
++/**
++ * `parts` with a lone "Role, Company" split in two: Title "Inline" with an italic sub prints the role
++ * and the company as one run joined by a comma (Executive's jobs: "Senior Data Engineer, Northwind
++ * Analytics"). Split at the first comma with a job title's word on one side alone, so a company's own
++ * comma ("Acme, Inc.") and a place ("Portland, OR") stay whole. Other parts as they are.
++ */
++function inlinePair(parts) {
++  if (parts.length !== 1) return parts;
++  const [text] = parts;
++  for (const m of text.matchAll(/,\s+/g)) {
++    const a = text.slice(0, m.index).trim();
++    const b = text.slice(m.index + m[0].length).trim();
++    if (a && b && ROLE.test(a) !== ROLE.test(b)) return [a, b];
++  }
++  return parts;
++}
++
+ /** Two fields in the order the file printed them, `lead` the one that names the role when either does. */
+ function roleFirst(a, b, roleLeads) {
+   if (!b) return ROLE.test(a || '') ? [a, ''] : ['', a];
+@@ -316,7 +350,7 @@ function roleFirst(a, b, roleLeads) {
+ /** One entry of `type` from its header and body lines. */
+ function entryOf(type, header, body) {
+   const h = readHeader(type, header);
+-  const [p0 = '', p1 = '', ...rest] = h.parts;
++  const [p0 = '', p1 = '', ...rest] = JOB.has(type) ? inlinePair(h.parts) : h.parts;
+   const d = h.date || { start: '', end: '', current: false, text: '' };
+   const lead = rest.length ? [rest.join(' — ')] : [];
+   const description = (extra = []) => richText([...extra.map((x) => x), ...body.map((l) => l.text)]);
+@@ -387,9 +421,10 @@ function entryOf(type, header, body) {
+  * A section's lines as entries of `type`. An entry is found by its date: a line with text and a
+  * date is its title line ("Company ⇥ Mar 2021 – Present", the PDF's and Word's), with the role or
+  * degree on the line under it; a line that starts with the date is its meta line ("Mar 2021 –
+- * Present | Portland, OR", the ATS text's and Markdown's), under the title line(s) before it. A
+- * Markdown "### " line starts an entry too. What follows up to the next entry is its body. With no
+- * dates at all, a line after a gap or a list starts the next one.
++ * Present | Portland, OR", the ATS text's and Markdown's), under the title line(s) before it — or,
++ * a date alone with none before it, over them (the Timeline's). A Markdown "### " line starts an
++ * entry too. What follows up to the next entry is its body. With no dates at all, a line after a gap
++ * or a list starts the next one.
+  */
+ function entriesOf(type, lines) {
+   const info = lines.map((l, index) => {
+@@ -436,6 +471,17 @@ function entriesOf(type, lines) {
+           header.unshift(body.pop());
+           next = prev;
+         }
++        // None over it, and the date alone on its line: the date prints above its entry's title (the
++        // Timeline's rail: "Mar 2021 – Present", then "Role ⇥ Company", then the location). Its title is
++        // the line under it, and for a type with a second line (a role, a degree) the one under that
++        // when it holds two fields or a place. Before, such an entry had no title, and its title and
++        // company went into its description (R2-148).
++        const titleLike = (n) => n && !n.bullet && !n.gap && !n.date && n.hint !== 'entry' && n.text.length <= 100 && !/[.!?]$/.test(n.text) && !isMetaLine(n.text);
++        if (header.length === 1 && pieces(L.text).length === 1 && titleLike(info[i])) {
++          header.push(info[i++]);
++          const n = info[i];
++          if (SECOND_LINE.has(type) && titleLike(n) && (pieces(n.text).length > 1 || PLACE.test(n.text))) header.push(info[i++]);
++        }
+       } else if (SECOND_LINE.has(type) && i < info.length) {
+         const n = info[i];
+         if (!n.bullet && !n.gap && !n.date && n.hint !== 'entry' && n.text.length <= 100 && !/[.!?]$/.test(n.text)) { header.push(n); i += 1; }
+diff --git a/tests/pdf/99-import-roundtrip-entry-layouts.test.mjs b/tests/pdf/99-import-roundtrip-entry-layouts.test.mjs
+new file mode 100644
+index 0000000..a17fa73
+--- /dev/null
++++ b/tests/pdf/99-import-roundtrip-entry-layouts.test.mjs
+@@ -0,0 +1,68 @@
++// R2-148: Import reads each job's company, role and location back from the Executive and Timeline
++// PDFs, as from Classic's. Executive prints a job inline — "Role, Company" in one line, the date at
++// its right, the location alone at the right margin under it — and the import read the location as
++// the company and "Role, Company" as the role. The Timeline prints the date above the title, "Role ⇥
++// Company" side by side under it and the location under that, and the import found each job by its
++// date but left its company and role empty (they went into its description). A fictional résumé is
++// exported by the app's own react-pdf code on each template and read back by the import's pdf.js
++// reader. The same layouts built item by item: tests/unit/import-pdf-entry-layouts.unit.mjs.
++import { before, after, describe, it } from 'node:test';
++import assert from 'node:assert/strict';
++import { setup, teardown, resume, section, experience, render } from './harness.mjs';
++import { pdfLines } from '../../src/utils/importFile.js';
++import { resumeFromText } from '../../src/utils/importText.js';
++
++const TEMPLATES = ['classic', 'executive', 'timeline'];
++
++const content = () => ({
++  personal: {
++    name: 'Avery Quinn', title: 'Senior Data Engineer', email: 'avery.quinn@example.com', phone: '+1 555 0142',
++    location: 'Portland, OR',
++    summary: '<p>Data engineer with nine years of building reliable pipelines and warehouses for analytics teams.</p>',
++  },
++  sections: [
++    experience([
++      { company: 'Northwind Analytics', role: 'Senior Data Engineer', location: 'Portland, OR', startDate: 'Mar 2021', endDate: '', current: true,
++        description: '<ul><li>Built the streaming pipeline that feeds every product dashboard.</li><li>Cut warehouse costs by a third with partitioning and caching.</li></ul>' },
++      { company: 'Contoso Freight', role: 'Data Engineer', location: 'Remote', startDate: 'Jun 2017', endDate: 'Feb 2021',
++        description: '<ul><li>Moved the nightly batch jobs to Airflow.</li></ul>' },
++    ]),
++    section('skills', [{ category: 'Programming', skills: 'Python, SQL, Scala' }]),
++  ],
++});
++
++let ctx;
++const got = {};
++before(async () => {
++  ctx = await setup();
++  for (const template of TEMPLATES) {
++    const { personal, sections } = content();
++    const pdf = await render(resume({ template, personal, sections }));
++    const lines = await pdfLines(pdf, ctx.pdfjs);
++    got[template] = { resume: resumeFromText(lines), seen: lines.map((x) => `${x.text}${x.hint ? `  [${x.hint}]` : ''}`).join('\n') };
++  }
++}, { timeout: 120_000 });
++after(teardown);
++
++describe('Import reads each job\'s company, role and location back from the PDF', () => {
++  for (const template of TEMPLATES) {
++    describe(template, () => {
++      const jobs = () => got[template].resume.sections.find((s) => s.type === 'experience')?.items || [];
++      const why = () => `\n--- what the ${template} PDF reads as ---\n${got[template].seen}\n--- jobs ---\n${JSON.stringify(jobs(), null, 1)}`;
++
++      it('each job: company, role, location and dates', () => {
++        assert.deepEqual(jobs().map((j) => [j.company, j.role, j.location, j.startDate, j.endDate, j.current]), [
++          ['Northwind Analytics', 'Senior Data Engineer', 'Portland, OR', 'Mar 2021', '', true],
++          ['Contoso Freight', 'Data Engineer', 'Remote', 'Jun 2017', 'Feb 2021', false],
++        ], why());
++      });
++
++      it('its description holds its list, not its header', () => {
++        const [first, second] = jobs();
++        assert.match(first?.description || '', /^<ul><li>Built the streaming pipeline that feeds every product dashboard\.<\/li>/, why());
++        assert.doesNotMatch(first?.description || '', /Northwind|Portland/, why());
++        assert.doesNotMatch(second?.description || '', /Contoso|Remote/, why());
++      });
++    });
++  }
++});
+diff --git a/tests/pdf/99-import-roundtrip-one-column.test.mjs b/tests/pdf/99-import-roundtrip-one-column.test.mjs
+index 076f553..00dd158 100644
+--- a/tests/pdf/99-import-roundtrip-one-column.test.mjs
++++ b/tests/pdf/99-import-roundtrip-one-column.test.mjs
+@@ -4,8 +4,8 @@
+ // under a date stay on their entry's lines. Each single-column template exports a fictional résumé
+ // with the app's own react-pdf code; pdf.js reads each page's text, and no page is split into columns.
+ // The import then finds the name and both jobs with their dates. (Which field of an entry's header
+-// is the company is the text parser's guess, unchanged by the split: Executive's location on a line
+-// of its own and Timeline's date over the entry are read as other fields, as before.)
++// is the company, the role and the location — Executive's location on a line of its own, Timeline's
++// date over the entry — is tests/pdf/99-import-roundtrip-entry-layouts.test.mjs.)
+ import { before, after, describe, it } from 'node:test';
+ import assert from 'node:assert/strict';
+ import { setup, teardown, resume, section, experience, render } from './harness.mjs';
+diff --git a/tests/unit/import-pdf-entry-layouts.unit.mjs b/tests/unit/import-pdf-entry-layouts.unit.mjs
+new file mode 100644
+index 0000000..c96fc84
+--- /dev/null
++++ b/tests/unit/import-pdf-entry-layouts.unit.mjs
+@@ -0,0 +1,111 @@
++// R2-148: a PDF's job header read into the right fields on the layouts that do not set "Company ⇥
++// date" over "Role ⇥ location". Executive prints a job inline, "Role, Company ⇥ date", the role bold
++// and the company in italics in one line, with the location alone at the right margin under the date:
++// the import read the location as the company and the whole line as the role. The Timeline prints the
++// date above the title, "Role ⇥ Company" side by side under it and the location under that: the
++// import found each job by its date but gave it no title, and its role and company went into its
++// description. pdf.js items are built here as those templates place them; the round trip through the
++// templates themselves is tests/pdf/99-import-roundtrip-entry-layouts.test.mjs.
++import { test } from 'node:test';
++import assert from 'node:assert/strict';
++import { pdfLinesOfPages } from '../../src/utils/importFile.js';
++import { resumeFromText } from '../../src/utils/importText.js';
++
++const item = (str, x, y, w, h = 10) => ({ str, x, y, w, h });
++const JOBS = [
++  { company: 'Northwind Analytics', role: 'Senior Data Engineer', place: 'Portland, OR', dates: 'Mar 2021 – Present' },
++  { company: 'Contoso Freight', role: 'Data Engineer', place: 'Remote', dates: 'Jun 2017 – Feb 2021' },
++];
++const WANT = [
++  ['Northwind Analytics', 'Senior Data Engineer', 'Portland, OR', 'Mar 2021', '', true],
++  ['Contoso Freight', 'Data Engineer', 'Remote', 'Jun 2017', 'Feb 2021', false],
++];
++const head = [item('Avery Quinn', 40, 800, 110, 18), item('EXPERIENCE', 40, 770, 65)];
++const jobsOf = (page) => {
++  const r = resumeFromText(pdfLinesOfPages([page]));
++  return (r.sections.find((s) => s.type === 'experience')?.items || []);
++};
++const fields = (jobs) => jobs.map((j) => [j.company, j.role, j.location, j.startDate, j.endDate, j.current]);
++
++test('Executive: "Role, Company ⇥ date" over the location alone at the right margin', () => {
++  const page = [...head];
++  JOBS.forEach((job, k) => {
++    const y = 750 - k * 70;
++    page.push(item(`${job.role}, ${job.company}`, 40, y, 200), item(job.dates, 470, y, 85));
++    page.push(item(job.place, 555 - job.place.length * 5, y - 15, job.place.length * 5));
++    page.push(item('• Built the thing.', 40, y - 30, 100));
++  });
++  const jobs = jobsOf(page);
++  assert.deepEqual(fields(jobs), WANT, 'before: the company read as the location, the role as "Role, Company"');
++  assert.equal(jobs[0].description, '<ul><li>Built the thing.</li></ul>');
++});
++
++test('Timeline: the date above "Role ⇥ Company", then the location', () => {
++  const page = [...head];
++  JOBS.forEach((job, k) => {
++    const y = 750 - k * 80;
++    page.push(item(job.dates, 60, y, 80));
++    const w = job.role.length * 5;
++    page.push(item(job.role, 60, y - 14, w), item(job.company, 60 + w + 8, y - 14, 90));
++    page.push(item(job.place, 60, y - 28, job.place.length * 5));
++    page.push(item('• Built the thing.', 60, y - 42, 100));
++  });
++  const jobs = jobsOf(page);
++  assert.deepEqual(fields(jobs), WANT, 'before: no company, no role — they were in the description');
++  assert.equal(jobs[0].description, '<ul><li>Built the thing.</li></ul>');
++});
++
++// The Timeline's Title "Inline": the date, then "Role — Company" as one run (", " for an italic sub),
++// then the location under it where the title starts. A job's list runs on to the right margin.
++for (const [style, join] of [['Inline', ' — '], ['Inline with an italic sub', ', ']]) {
++  test(`Timeline, Title "${style}": the date above "Role${join}Company", then the location`, () => {
++    const page = [...head];
++    JOBS.forEach((job, k) => {
++      const y = 750 - k * 80;
++      const title = `${job.role}${join}${job.company}`;
++      page.push(item(job.dates, 60, y, 80), item(title, 60, y - 14, title.length * 5));
++      page.push(item(job.place, 60, y - 28, job.place.length * 5));
++      page.push(item('• Built the streaming pipeline that feeds every product dashboard and report.', 60, y - 42, 490));
++    });
++    const jobs = jobsOf(page);
++    assert.deepEqual(fields(jobs), WANT, 'before: no company, no role — they were in the description');
++    assert.equal(jobs[0].description, '<ul><li>Built the streaming pipeline that feeds every product dashboard and report.</li></ul>');
++  });
++}
++
++test('Classic\'s "Company ⇥ date" over "Role ⇥ location" reads as before', () => {
++  const page = [...head];
++  JOBS.forEach((job, k) => {
++    const y = 750 - k * 60;
++    page.push(item(job.company, 40, y, 100), item(job.dates, 470, y, 85));
++    page.push(item(job.role, 40, y - 13, 100), item(job.place, 555 - job.place.length * 5, y - 13, job.place.length * 5));
++    page.push(item('• Built the thing.', 40, y - 26, 100));
++  });
++  assert.deepEqual(fields(jobsOf(page)), WANT);
++});
++
++test('a company\'s own comma and a job with no role stay whole', () => {
++  const r = resumeFromText([
++    { text: 'Avery Quinn' }, { text: 'EXPERIENCE' },
++    { text: 'Acme, Inc.\tMar 2021 – Present' }, { text: 'Senior Data Engineer\tPortland, OR' },
++  ]);
++  const [job] = r.sections.find((s) => s.type === 'experience').items;
++  assert.deepEqual([job.company, job.role, job.location], ['Acme, Inc.', 'Senior Data Engineer', 'Portland, OR']);
++  const alone = resumeFromText([{ text: 'Avery Quinn' }, { text: 'EXPERIENCE' }, { text: 'Northwind, Portland\tMar 2021 – Present' }]);
++  assert.equal(alone.sections.find((s) => s.type === 'experience').items[0].company, 'Northwind, Portland');
++});
++
++// The Sidebar's side column stacks a school's degree, school, field of study and place a line each
++// over its dates. The place alone under two fields is the Timeline's job location only for a job: in
++// an education it is the school's place, and the line above it its field of study (gate 36221038666
++// read "Computer Science" into the entry's description when the first landing of this fix took any
++// place alone under two fields as the location).
++test('the Sidebar\'s stacked school keeps its field of study and its place', () => {
++  const r = resumeFromText([
++    { text: 'Avery Quinn' }, { text: 'EDUCATION' },
++    { text: 'B.S.' }, { text: 'Lakeside University' }, { text: 'Computer Science' }, { text: 'Seattle, WA' }, { text: '2013 – 2017' },
++  ]);
++  const [school] = r.sections.find((s) => s.type === 'education').items;
++  assert.deepEqual([school.institution, school.degree, school.fieldOfStudy, school.location, school.startDate, school.endDate, school.description],
++    ['Lakeside University', 'B.S.', 'Computer Science', 'Seattle, WA', '2013', '2017', '']);
++});

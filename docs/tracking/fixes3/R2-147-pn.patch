@@ -1,0 +1,68 @@
+diff --git a/src/templates/pdf/BannerTemplatePDF.jsx b/src/templates/pdf/BannerTemplatePDF.jsx
+index 2bed1c1..8461b36 100644
+--- a/src/templates/pdf/BannerTemplatePDF.jsx
++++ b/src/templates/pdf/BannerTemplatePDF.jsx
+@@ -116,6 +116,10 @@ export function BannerTemplatePDF({ data }) {
+ 
+         {/* On the band a link's Accent is the tint of it that reads there (Design → Links, R2-147). */}
+         <LinkGround.Provider value={accent}>
++        {/* The band never splits, but it sits in a plain breakable View, as every other template's header does:
++            react-pdf leaves the fixed elements after a page's own child that cannot break and is taller than a
++            page off that page, so a band longer than a page printed no page number on page 1 (R2-147-pn). */}
++        <View>
+         <View style={{ paddingBottom: bannerPadY(settings), marginBottom: summary ? g.summaryGap : g.headerGapBelow }} wrap={false}>
+           <View style={{ position: 'absolute', top: -bleedTop, left: -bleedSide, right: -bleedSide, bottom: 0, backgroundColor: accent }} />
+           <View style={rule}>
+@@ -132,6 +136,7 @@ export function BannerTemplatePDF({ data }) {
+             </View>
+           </View>
+         </View>
++        </View>
+         </LinkGround.Provider>
+ 
+         {summary && (
+diff --git a/src/templates/pdf/shared/PdfPage.jsx b/src/templates/pdf/shared/PdfPage.jsx
+index 5415a41..0b0a01d 100644
+--- a/src/templates/pdf/shared/PdfPage.jsx
++++ b/src/templates/pdf/shared/PdfPage.jsx
+@@ -90,8 +90,9 @@ export const abovePageNumbersPt = (settings) => (settings?.pageNumbers === true
+  * stays off the Sidebar's dark column. A template puts it LAST among its page's children: it is then
+  * the page's last text drawn, so text readers (pdftotext -raw, an ATS) still read the name first on
+  * page 1 and the running header first on the pages after. (react-pdf leaves the fixed elements that
+- * follow a node that cannot break and is taller than a page off that node's page: a Banner header
+- * longer than a page, already cut off, would print no number on page 1.) Off: nothing.
++ * follow a page's own child that cannot break and is taller than a page off that child's page, so no
++ * résumé template puts an unbreakable node straight on the page: the header row that never splits sits
++ * in a breakable View, whose split keeps the number on the page — R2-147-pn.) Off: nothing.
+  */
+ export function PdfPageNumbers({ settings }) {
+   if (settings?.pageNumbers !== true) return null;
+diff --git a/tests/pdf/94-page-numbers.test.mjs b/tests/pdf/94-page-numbers.test.mjs
+index 7bd76ad..a6dc8a3 100644
+--- a/tests/pdf/94-page-numbers.test.mjs
++++ b/tests/pdf/94-page-numbers.test.mjs
+@@ -62,6 +62,24 @@ describe('Design → Page numbers prints "Page n of N" on every page (R2-147)',
+     assert.deepEqual(wrong, []);
+   });
+ 
++  // react-pdf leaves the fixed elements after a page's own child that cannot break and is taller than a
++  // page off that page. The Banner's band never splits and stood straight on the page: a band longer than a
++  // page (here a job title of many lines) printed no number on page 1 (R2-147-pn).
++  it('Banner: a band longer than a page still prints page 1\'s number, last', async () => {
++    const title = Array.from({ length: 250 }, () => 'Principal platform engineer and team lead').join(' ');
++    const r = cv('banner', { pageNumbers: true });
++    r.personal = { ...r.personal, title };
++    const pages = await read(await render(r));
++    assert.ok(pages.length >= 2, 'the fixture runs past page 1');
++    pages.forEach((p, i) => {
++      const [f, ...more] = footers(p);
++      assert.ok(f, `page ${i + 1}: its number prints`);
++      assert.equal(more.length, 0, `page ${i + 1}: one number`);
++      assert.equal(f.str.trim(), `Page ${i + 1} of ${pages.length}`);
++      assert.equal(p.items[p.items.length - 1], f, `page ${i + 1}: the number is the last text drawn`);
++    });
++  });
++
+   it('a bottom margin under 10 mm grows to hold the number: it never prints over the last line', async () => {
+     const pages = await read(await render(cv('classic', { pageNumbers: true, marginV: 0 })));
+     for (const p of pages) {

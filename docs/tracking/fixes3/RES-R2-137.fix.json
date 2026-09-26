@@ -1,0 +1,39 @@
+{
+  "id": "RES-R2-137",
+  "area": "KWORD",
+  "outcome": "fixed",
+  "patch": "/mnt/Storage/my-learning/claude/flowcv/wip/execution-2026-09-26/fixes3/RES-R2-137.patch",
+  "after": [],
+  "failfirst_tests": [
+    "tests/pdf/92-word-header-band.test.mjs",
+    "tests/pdf/35-word-name-title-colors.test.mjs",
+    "tests/pdf/35-word-summary-look.test.mjs",
+    "tests/pdf/33-word-contact-marks.test.mjs",
+    "tests/pdf/47-header-title-contacts-gap.test.mjs",
+    "tests/pdf/83-templates-ui-leftovers.test.mjs"
+  ],
+  "other_tests": [
+    "tests/pdf/46-header-photo-text-gap.test.mjs",
+    "tests/pdf/23-cover-letter-looks-word.test.mjs",
+    "tests/pdf/33-cover-letter-header-rule.test.mjs",
+    "tests/pdf/33-cover-letter-inline-title.test.mjs",
+    "tests/pdf/92-header-spacing-rows.test.mjs",
+    "tests/pdf/45-header-name-title-gap.test.mjs",
+    "tests/pdf/87-word-photo.test.mjs",
+    "tests/pdf/87-word-grids.test.mjs",
+    "tests/pdf/34-word-header-align.test.mjs",
+    "tests/pdf/35-word-header-rule.test.mjs",
+    "tests/pdf/35-word-sidebar-about-me.test.mjs",
+    "tests/pdf/35-word-letter-contact-layout.test.mjs",
+    "tests/pdf/22-cover-letter-looks-options.test.mjs",
+    "tests/pdf/21-cover-letter-looks-panel.test.mjs",
+    "tests/pdf/68-banner-header.test.mjs",
+    "tests/pdf/74-academic-letter.test.mjs",
+    "tests/pdf/76-compact-letter.test.mjs",
+    "tests/pdf/12-cover-letter.test.mjs",
+    "tests/pdf/69-word-spacing.test.mjs"
+  ],
+  "commit_subject": "fix(word): the Word résumé prints Modern's and the Sidebar's header on its band, and the Word letter sets its contacts beside the name at Right of Name (RES-R2-137)",
+  "commit_body": "Cause: the Word résumé drew no band. buildPersonalSection printed Modern's banner header and the two-column Sidebar's header on the white page, in the colours a switch to Classic gives them (headerColorsOnPage). The Export menu's Word tooltip said the résumé prints without its banner. The Word letter drew the band, but it always put the contacts under the name. At Right of Name, the default Fields Position, the PDF sets them beside the name, so contactsSideGap had no Word counterpart.\n\nFix: wordExportLook.js now has frameTable, a borderless table for the header's frame. With a band, every cell is shaded in the band's fill (bandFill and hexOn move here from the letter module). The band's padding becomes the outer cells' margins. Modern's band sits inside the margins. A band that bleeds (the Sidebar's) runs padY into the margins through a negative table indent, and its text stays on the margins. With no band, the letterhead's rule becomes the table's bottom border, with its Text ↔ Border gap as the cells' bottom margin.\n\nThe résumé: Modern and the two-column Sidebar print their header in that table (headerBand). It holds the photo beside the name on Modern, the name, the title and the contacts, and on Modern the summary as a row across the band. Banner top & bottom and Banner sides are the padding. The band's padding takes in the space after the text's last line. Everything on the band is in the colours the PDF prints there: the name and title from letterheadLook with Modern's 90 % title, the contacts, bars and link tint of the band, Modern's summary in the header text colour at 85 %, and the photo's ring as it reads on the band. The page photo row is now the same frameTable with no band, and prints as before. Banner's and Banded's headers still print on the page.\n\nThe letter: at Right of Name, when the name and the contacts fit beside each other, the letterhead is a two-cell table. The name and title go in the first cell. The contacts go in the second, right-aligned, with contactsSideGap (else 12 pt) as its left margin. The table is framed by the band or the rule, and a gap paragraph gives the 16 pt (or Header ↔ First section) under it. Word cannot measure text, so the widths are estimated. When a name or title word would not fit beside the contacts, they go under the name, as the PDF's fit fallback does. Below Name, Below Everything and a centred letterhead print as before.\n\nThe Export menu's Word tooltip now says what the .docx still leaves out. For the résumé: Banner's and Banded's headers and the Sidebar's side column print on the white page. For the letter: it prints no photo.\n\nTest: tests/pdf/92-word-header-band covers the Modern and Sidebar résumé bands (fill, padding, indent, colours against the PDF's on the band, the photo's ring, the summary row) and the letter's Right of Name table (cells, gap, band, bleed, double rule, fallbacks). Tests that pinned Word drawing no band are updated to the intended behaviour: 35-word-name-title-colors, 35-word-summary-look, 33-word-contact-marks, 83-templates-ui-leftovers. 47's letter Title ↔ Contacts assertions now run at Below Name, where the letter's PDF prints that gap (its own PDF test shows Right of Name ignores it), and Right of Name is pinned too. 23, 33-cover-letter-header-rule and one case of 33-cover-letter-inline-title read the one-column letterhead's paragraph frame, so they now ask for Below Name. 46 reads the photo cell from a two-column table, because the Sidebar's band is a one-column table.",
+  "notes": "Confirmed at d11d5a0: buildPersonalSection draws no band for Modern or the Sidebar. headerColorsOnPage and summaryLook print their header in page colours, and the tooltip says so. buildCoverLetter always stacks the contacts under the name. The module comment says so (R1-10), and the letter ignores letterFieldsPosition.\n\nProduct calls:\n(1) The band is drawn for Modern and the two-column Sidebar only, as the item says. Banner's and Banded's headers still print on the page, pinned by 68-banner-header. The tooltip now names exactly what is left out instead of saying every band is dropped.\n(2) The Sidebar's band keeps the letter's existing bleed: 15 pt into the margins, capped at the margin. It is not centred, as the letter's Sidebar band is not.\n(3) At Right of Name, the letter's contacts are right-aligned in their cell. A 2 Grid keeps its tab stops, left-aligned. Word cannot measure text, so widths are estimated at 0.6 em per character (0.65 for a bold name). When a name or title word would not fit beside the contacts, they go under the name.\n(4) At Right of Name, the title (or name) ends its cell with no space after it. The PDF ignores Title ↔ Contacts there (47's PDF test).\n(5) The letter tooltip now says it prints without its photo. The old one wrongly said the résumé had no photo, which R2-126 fixed.\n\nStale tests updated with evidence: 35-word-name-title-colors, 35-word-summary-look and 33-word-contact-marks pinned the on-page colours. They now compare to the PDF's colours on the band, or to the letter's colours on the same band. 83 pinned the old tooltip. 47, 23, 33-cover-letter-header-rule and 33-cover-letter-inline-title read the paragraph-framed letterhead, which now exists at Below Name only. 46's offset read the first gridCol before the name, and the Sidebar's band is now a one-column table there.\n\nOther checks: I read 45, 48, 49, 50, 87-photo, 87-grids, 34-align, 35-rule, 35-about-me, 35-letter-layout, 21, 22, 68, 74, 76, 12, 69 and 92 against the new XML. They should pass unchanged, because tcPr and tblPr carry no w:spacing, w:color val, pPr or jc that their regexes pick up. None of this was run locally.\n\ndocs/knowledge/06-templates-export.md is updated. The tracker rows R2-137 and R2-133 still describe the old state and need the coordinator's update."
+}

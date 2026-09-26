@@ -1,0 +1,1043 @@
+[
+ {
+  "area": "find:ED",
+  "findings": [
+   {
+    "title": "Language proficiency dropdown shows a value the résumé does not print, and some levels cannot be picked",
+    "kind": "bug",
+    "severity": "medium",
+    "files": [
+     "src/components/SectionEditorLeafItems.jsx:52-61",
+     "src/components/SectionEditorLeafItems.jsx:160",
+     "src/utils/starterCompact.js:96",
+     "src/utils/importText.js:498-504",
+     "src/utils/jsonResumeSections.js:232",
+     "src/templates/pdf/shared/PdfSectionsTwo.jsx:180-185"
+    ],
+    "repro": "(a) Create a résumé from the Compact starter. Open Languages > Spanish (stored proficiency 'Conversational'). (b) Import a PDF, text or JSON Resume file whose languages say 'C1', 'Advanced', 'Elementary', or give only the language name (proficiency '').",
+    "actual": "The select is `value={item.proficiency || 'Professional'}` with only five options. When the value matches none of them, React selects the first option, so the editor shows 'Native' while the PDF, Word, Markdown and ATS text print 'Conversational' or 'C1'. When proficiency is '', the editor shows 'Professional' but nothing prints. Picking the option already shown ('Native' in case a, 'Professional' in the empty case) fires no change event, so the user cannot set that level at all. They have to pick some other level first and then pick it again.",
+    "expected": "The dropdown shows exactly what prints. A stored value outside the list appears as its own selected option, and an empty value shows as 'None / not set', so every listed level can be chosen in one step.",
+    "fix_hint": "Use `value={item.proficiency ?? ''}`. Add `<option value=''>—</option>`, and when the stored proficiency is not one of the five options, add `<option value={item.proficiency}>{item.proficiency}</option>`, as yearOptions does for unusual years. Test: render LanguageItem with 'Conversational' and with ''; the selected option must equal the stored value, and choosing 'Native' or 'Professional' must call onUpdate."
+   },
+   {
+    "title": "An image pasted into a description or the summary is saved as a multi-MB base64 blob that never prints",
+    "kind": "bug",
+    "severity": "medium",
+    "files": [
+     "src/components/RichTextEditor.jsx:35-37",
+     "src/components/RichTextEditor.jsx:56-63",
+     "src/components/RichTextEditor.jsx:99-101",
+     "src/components/RichTextEditor.jsx:118-120"
+    ],
+    "repro": "In Firefox (and Safari), copy a screenshot so the clipboard holds image data with no text or HTML. Click into an Experience description or the Professional Summary and press Ctrl/Cmd+V. Keep editing, then reload, or watch storage and cloud sync.",
+    "actual": "insertClean returns false when the clipboard has neither text/html nor text/plain, so onPaste does not call preventDefault. The browser pastes its own `<img src=\"data:image/png;base64,…\">` into the contentEditable. The input event then runs emit(), which stores raw `innerHTML` without sanitizing it, so the description now holds the whole base64 image (often 1-5 MB). The PDF parser drops <img>, so nothing prints, but every save stringifies it into localStorage. That leads to 'Not saved: browser storage is full', and the résumé's Firestore document goes over its 1 MB limit, so cloud sync fails. The editor keeps showing the image until the card is remounted.",
+    "expected": "Pasting an image into a rich-text field inserts nothing, because the editor has no image support. The stored description never holds <img> or data: URLs.",
+    "fix_hint": "In onPaste and onDrop, always call preventDefault when the transfer has files or image items (`[...data.items].some(i => i.kind === 'file')`), and not only when text was inserted. Also make emit() defensive: strip any img elements from ref.current before reading innerHTML, or emit sanitizeRichText(innerHTML) (keep the caret by only stripping imgs in place). Test: dispatch a paste with clipboardData holding only an image/png file; the emitted value must contain no '<img'."
+   },
+   {
+    "title": "An imported date period on a Custom entry shows as a single month, and any edit silently cuts it down",
+    "kind": "bug",
+    "severity": "medium",
+    "files": [
+     "src/utils/importText.js:382",
+     "src/components/SectionEditorEntryItems.jsx:118",
+     "src/components/SectionEditorShared.jsx:46-55"
+    ],
+    "repro": "Import a PDF, text or Markdown résumé with a section the importer maps to Custom (for example 'Leadership') whose entry reads 'Club President — Jan 2020 – Mar 2021', or '2019 – 2021'. Open that entry and look at 'Date / Period', then change the year.",
+    "actual": "importText stores the whole range in `date` ('Jan 2020 – Mar 2021'). The PDF prints the full range, but MonthPicker cannot parse it and falls back to `value.split(' ')`: it shows Month=Jan, Year=2020. For '2019 – 2021' the year half becomes '–', so both selects look blank while the × still shows. Picking any month or year writes `[m, y].join(' ')`, e.g. 'Jan 2021', and the period is lost without warning.",
+    "expected": "The editor shows what prints, and editing one half of the date never throws away the rest of a stored period.",
+    "fix_hint": "When parseMonthYear(value) is null and the value is not a bare month, render the Custom date as a text InputField showing the stored text, or a read-only line with the raw value plus a 'Replace with picker' action, instead of the two selects. Alternatively, give CustomItem a free-text 'Date / Period' input, since the field is named Period and the PDF prints it as stored. Test: MonthPicker or CustomItem with 'Jan 2020 – Mar 2021' must not write 'Jan 2021' when the year select changes."
+   },
+   {
+    "title": "Dragging selected text inside a rich-text field copies it instead of moving it",
+    "kind": "bug",
+    "severity": "low",
+    "files": [
+     "src/components/RichTextEditor.jsx:103-116"
+    ],
+    "repro": "In an Experience description, select a word or bullet text and drag it to another spot in the same editor.",
+    "actual": "onDrop always calls preventDefault and inserts the dragged HTML or text at the drop point with insertHTML. Because the browser's default move is cancelled, the source selection is never deleted, so the text ends up in both places. In Firefox, caretRangeFromPoint is missing, so the drop point is ignored and the text is inserted over the current selection instead.",
+    "expected": "Dragging within the editor moves the text, as in every text editor. A drop from outside inserts at the drop point.",
+    "fix_hint": "Track drags that start inside this editor (onDragStart on ref, save sel.getRangeAt(0).cloneRange()). On drop from an internal drag, either let the browser's default move happen and emit on the following input event, or delete the saved source range after insertClean. Use document.caretPositionFromPoint as the Firefox fallback for the drop point."
+   },
+   {
+    "title": "Header Bottom Border 'Thickness' box cannot be cleared, and typing into it gives the wrong value",
+    "kind": "bug",
+    "severity": "low",
+    "files": [
+     "src/components/PersonalInfoEditorHeader.jsx:121"
+    ],
+    "repro": "Personal Info > Header Customization (Classic) > Header Bottom Border on > Thickness shows 2. Click after the 2 and press Backspace, then type 5.",
+    "actual": "The number input is controlled by `s.headerBorderWidth || 2` and ignores an empty or NaN value, so React immediately puts '2' back and the box cannot be emptied. Typing then appends, giving '25', which is clamped and stored as 12 pt. Typing '0' also snaps back. This is the typed-box problem R2-032 fixed for GapStepper, SizeRow and NumberRow, but this box was never moved to useTypedNumber.",
+    "expected": "The user can type a value (e.g. 5) and have it stored on Enter or blur, with clamping to 1-12, as the other typed number boxes do.",
+    "fix_hint": "Use useTypedNumber({ shown: String(s.headerBorderWidth || 2), commit: t => { const v = parseInt(t, 10); if (Number.isFinite(v)) set('headerBorderWidth', clamp(v)); } }) with type='text' and inputMode='numeric', as in DesignPanelShared's rows."
+   },
+   {
+    "title": "Deleting a new, untouched Language row still asks 'Delete this entry?'",
+    "kind": "bug",
+    "severity": "low",
+    "files": [
+     "src/components/SectionEditor.jsx:65-69",
+     "src/components/SectionEditorLeafItems.jsx:160",
+     "src/utils/defaultDataSectionTypes.js:25"
+    ],
+    "repro": "Languages > Add Language, then click the trash icon on the new empty row without typing anything.",
+    "actual": "The rule is that an untouched entry is deleted without asking. hasContent treats any non-empty string field as content, and a new language row is created with proficiency 'Professional', so every new row triggers a confirm().",
+    "expected": "An empty new row (no language typed) is removed at once, like every other untouched entry.",
+    "fix_hint": "Ignore values equal to the factory defaults when checking hasContent: compare against NEW_ITEM[type]() fields, or skip the key 'proficiency' when 'language' is empty. Test: removing a fresh languages item must not call confirm."
+   },
+   {
+    "title": "'Add Experience' (and every Add button) adds a collapsed 'New Entry' card that must be clicked open before typing",
+    "kind": "design",
+    "severity": "low",
+    "files": [
+     "src/components/SectionEditorShared.jsx:111-112",
+     "src/components/SectionEditor.jsx:55-59"
+    ],
+    "repro": "In any card-based section (Experience, Education, Projects, Certifications…), click 'Add Experience'.",
+    "actual": "ItemCard defaults to `defaultOpen = false`, and handleAddItem gives the new card no way to open, so a collapsed row labelled 'New Entry' appears at the bottom. The user has to find it and click it before any field is visible. This happens for every new entry and for the first entry of a newly added section.",
+    "expected": "A newly added entry opens so its fields are ready to fill in, as FlowCV does. Existing entries can stay collapsed.",
+    "fix_hint": "Have addItem return, or record in SortableSection state, the new item's id, and pass defaultOpen={item.id === justAddedId} to ItemCard (via props through renderItem). Optionally scroll it into view and focus its first input."
+   }
+  ]
+ },
+ {
+  "area": "find:PDF",
+  "findings": [
+   {
+    "title": "Font-fallback notice above the editor preview is overwritten by template-gallery thumbnail builds",
+    "kind": "bug",
+    "severity": "medium",
+    "files": [
+     "src/utils/pdfBuild.js:26",
+     "src/utils/pdfBuild.js:63",
+     "src/utils/pdfBuild.js:97",
+     "src/utils/pageImage.js:11",
+     "src/components/TemplateThumb.jsx:49",
+     "src/templates/pdf/shared/pdfFontLoader.js:293",
+     "src/components/FontFallbackNotice.jsx:58"
+    ],
+    "repro": "1) Leave the résumé on the default Noto Sans, then go offline or block cdn.jsdelivr.net. 2) In the editor open Design → Browse templates. The gallery paints each card with pageImage → buildResumePdf. The Academic, Chronicle and Linen cards bring Source Serif 4, PT Serif and Lato, which cannot load. 3) Click Done. The reverse also happens: with a custom font that fails (for example 'Helvetica Neue'), the notice is up, and a gallery card that prints in a font that loads clears it.",
+    "actual": "pdfBuild sets lastBuild on every build, and onReply calls setFontFallback(data.fallback) for whichever build was asked for last. On the main-thread path resolvePdfFonts does the same through resolveCount. Gallery builds therefore own the notice. The editor says, for example, 'PT Serif could not be loaded — the PDF uses Noto Sans until you are back online' for a résumé that needs no web font. In the reverse case the notice disappears while the résumé still prints in Noto Sans. A preview build queued behind the gallery's is ignored because its id is no longer lastBuild. The wrong state stays until the next edit rebuilds the preview.",
+    "expected": "The notice describes only the open résumé's or letter's own builds (the preview, Export PDF, 1-Page Fit, ATS view). Page pictures for the gallery, dashboard cards and /new never touch it.",
+    "fix_hint": "Give build() a flag such as { reportFont: false } that pageImage passes. That build does not bump lastBuild, and onReply skips setFontFallback for it. On the main-thread path, thread the same flag through runHere → renderResumePdf/renderCoverLetterPdf → resolvePdfFonts, so it neither increments resolveCount nor calls setFontFallback."
+   },
+   {
+    "title": "A transient HTTP error from jsDelivr marks a font as missing for the whole session",
+    "kind": "bug",
+    "severity": "low",
+    "files": [
+     "src/utils/fontsource.js:16-27",
+     "src/templates/pdf/shared/pdfFontLoader.js:171",
+     "src/components/PdfPreview.jsx:185-189"
+    ],
+    "repro": "Pick Inter (or type a custom Google Font) while jsDelivr answers metadata.json with a 429, 503 or 502, for example under a rate limit or a brief outage. Then wait for the CDN to recover, or go offline and back online.",
+    "actual": "fetchMetadata caches `r.ok ? r.json() : null`. It removes the entry only when fetch throws, so a non-OK response stays cached as null. chosenFont then returns null on every later build, and the PDF prints in Noto Sans with the notice 'Inter could not be loaded'. The 'online' retry in PdfPreview rebuilds but reads the same cached null. The custom-font check (checkFont) reports a real font as not found for the session. Only a page reload recovers.",
+    "expected": "Only a definitive 'no such package' result (404) is cached. Any other failure is retried on the next build, as the offline path already is.",
+    "fix_hint": "In fetchMetadata, when !r.ok && r.status !== 404, call metadata.delete(pkg) before returning null (same as the catch). A related case: prepareFonts permanently gives a face that failed once (for example a bold that hit a network hiccup) a donor face's data and a resolved loadResultPromise. Consider resetting donor-filled sources on the next build so bold is tried again."
+   },
+   {
+    "title": "A photo stored as a URL that failed to fetch once never prints again in the session, even after reconnecting",
+    "kind": "bug",
+    "severity": "low",
+    "files": [
+     "src/utils/printableImage.js:49-57",
+     "src/utils/printableImage.js:95-108",
+     "src/utils/jsonResumeImport.js:134"
+    ],
+    "repro": "Import a JSON Resume whose basics.image is an https URL (it is kept as a URL). Open the editor while offline, or while the image host is slow for more than 15 s. Reconnect and keep editing, or press Retry or Export PDF.",
+    "actual": "copyOf → fetchedBlob returns null on a network error or timeout, and imageCopy stores made.set(key, null). printableNow then returns null for that key for good, so withPrintablePhotos keeps the URL, and PdfPhoto (drawableImage of a non-data URL is null) prints no photo in the preview and in the exported PDF until the page is reloaded. The only 'online' handler (PdfPreview) rebuilds only on a font fallback and never retries the photo.",
+    "expected": "A fetch that failed because of the network is tried again on a later build, especially after the browser comes back online. Only a definitive failure (an HTTP 4xx, or an image that cannot be decoded) is remembered.",
+    "fix_hint": "In imageCopy, do not cache null when the source is a URL and the fetch failed for a network reason. Have fetchedBlob return a distinguishable 'transient' result, delete the `making` entry and skip made.set. Optionally clear transient nulls on window 'online' and trigger a preview retry."
+   },
+   {
+    "title": "Sidebar (two-column) prints no name when Full Name is empty, while every other template, its Word export and its cover letter print 'Your Name'",
+    "kind": "bug",
+    "severity": "low",
+    "files": [
+     "src/templates/pdf/SidebarTemplatePDF.jsx:113",
+     "src/templates/pdf/SidebarTemplatePDF.jsx:155-160",
+     "src/utils/wordExportHeader.js:72",
+     "src/templates/pdf/CoverLetterHeaderPDF.jsx:117"
+    ],
+    "repro": "Create a résumé on the Sidebar template and leave Personal Info → Full Name empty. Compare the preview or PDF with Classic, and with the Sidebar's Word export and cover letter.",
+    "actual": "SidebarTemplatePDF renders {personal?.name} directly. The name block is an empty Text (with its margin), so the dark column starts with a blank gap under the photo. Classic, Modern, Minimal, Executive, Timeline, Banner, Academic, Compact and the designed layouts use `personal?.name || 'Your Name'`, and so do the Sidebar's .docx (wordExportHeader) and its letterhead.",
+    "expected": "The Sidebar's PDF prints the same name as Word and the other templates: 'Your Name' when none is set.",
+    "fix_hint": "const name = personal?.name || 'Your Name'; use it for fitFontSize (line 113) and for the name Text (line 159), as ClassicTemplatePDF.jsx:47 does."
+   }
+  ]
+ },
+ {
+  "area": "find:IMP",
+  "findings": [
+   {
+    "title": "A bulleted Certifications list imports as one certificate; every other certificate is hidden in a description the app never shows",
+    "kind": "bug",
+    "severity": "high",
+    "files": [
+     "src/utils/importText.js:454-461",
+     "src/utils/importText.js:369-377",
+     "src/utils/importText.js:396-398",
+     "src/components/SectionEditorLeafItems.jsx:77-93",
+     "src/templates/pdf/shared/PdfSectionsTwo.jsx:45-75"
+    ],
+    "repro": "Import a .txt or .md file that has:\nCERTIFICATIONS\n• AWS Certified Solutions Architect – 2022\n• Certified Kubernetes Administrator – 2021\n• PMP\nThen open the Certifications section.",
+    "actual": "You get one certification, 'AWS Certified Solutions Architect – 2022', with no date: dates are only read from lines that are not bullets (line 397). The other two go into that item's `description` as <ul> HTML. With no dates in the section, entriesOf's fallback never starts an entry on a bullet line (line 457 `starts = !L.bullet && …`), so each bullet is added to the first entry's body. A certification has no Description field in the editor (CertificationItem), in the PDF or in Word, so those certificates can't be seen or edited: silent data loss. The same happens to any extra lines or leftover fields under a dated certificate (line 377). Awards behave the same way: a bulleted 'Key Achievements' list becomes one award whose title is the first bullet and whose description holds the rest.",
+    "expected": "One certification (or award) per bullet, each with its own trailing date. Nothing should end up in a field the app can't display.",
+    "fix_hint": "In entriesOf, for certifications and awards, let a bullet line start a new entry when the current entry's header was itself a list line, and strip the bullet. Also read a trailing date on bullet lines in these two types. In entryOf 'certifications', don't write `description`: put left and body text in the 'Additional Information' custom section, titled with the certificate name, so it stays visible."
+   },
+   {
+    "title": "Markdown import drops link URLs: a contact shown as a label ('LinkedIn', 'GitHub') is lost completely, and a project's URL is lost on the app's own Markdown round trip",
+    "kind": "bug",
+    "severity": "high",
+    "files": [
+     "src/utils/importText.js:80",
+     "src/utils/importText.js:169",
+     "src/utils/importText.js:567",
+     "src/utils/markdownExport.js:136-142",
+     "src/utils/contacts.js:55-62"
+    ],
+    "repro": "(a) Import a .md résumé whose contact line is '[LinkedIn](https://linkedin.com/in/pat) | [GitHub](https://github.com/pat)'. This is the usual Markdown résumé style, and it is also what Export → Markdown writes once a contact has a Display label. (b) Export → Markdown a résumé with a project that has a URL, then import that .md.",
+    "actual": "(a) unmark() keeps only the link label (line 80), so the pieces become 'LinkedIn' and 'GitHub'. Both match BARE_LABEL, and takeContacts skips them with `continue` (line 567). The LinkedIn and GitHub fields stay empty and the URLs appear nowhere, not even in 'Additional Information'. A label such as 'My Portfolio' goes to Additional Information without its URL. (b) The export writes the project as '### [Name](href)' and leaves the URL out of the meta line (markdownExport.js:140-141). The import keeps only 'Name', so the project's URL is lost. A certification with a Link label loses its URL the same way (markdownExport.js:148).",
+    "expected": "The URL is kept: it goes into the contact field (linkedin, github or website), or into the project's or certification's url.",
+    "fix_hint": "In markdownLines, don't collapse links to their label alone. When the href is http(s), mailto: or tel: and the label is not already that address, emit the href: in a header or contact line emit the href itself, and on an entry title line emit 'label (href)' or 'label | href', so WEB/META fill project.url and contactOf maps the contact. Add the project URL and a labelled LinkedIn contact to the 99-import-roundtrip fixture."
+   },
+   {
+    "title": "Word import: a résumé using Heading 2/3 for job entries loses each job's title line and gets broken sections",
+    "kind": "bug",
+    "severity": "high",
+    "files": [
+     "src/utils/importFile.js:81",
+     "src/utils/importText.js:537-547",
+     "src/utils/importText.js:607"
+    ],
+    "repro": "Import a .docx in the layout of Word's built-in résumé templates: Heading 1 'Experience', Heading 2 'Senior Engineer | Acme Corp', Heading 3 'Mar 2021 – Present', then Normal paragraphs or bullets.",
+    "actual": "docxXmlLines gives every Heading level the same hint, 'heading' (line 81). Because the file has hints, only hinted lines count as headings (lines 546-547), and each non-section heading becomes a custom section. 'Experience' has an empty body, so it is dropped (line 607). 'Senior Engineer | Acme Corp' also has an empty body (the Heading 3 follows it immediately), so it is also dropped by `if (!body.length) return;`: the job title and company are lost. The date then becomes the title of a custom section 'Mar 2021 – Present' that holds the bullets. You end up with no Experience section at all.",
+    "expected": "Heading 1 (the top level used) starts sections. Heading 2 and deeper start entries, as Markdown's ### does. The text of a heading is never thrown away.",
+    "fix_hint": "In docxXmlLines, parse the level from the style (Heading(\\d)). In docxLines, hint the smallest level used as 'heading' and deeper levels as 'entry', the same as markdownLines. In resumeFromText, when a custom heading has an empty body, push its title to `other` (or into the next section) instead of returning."
+   },
+   {
+    "title": "Word import reads every text box twice",
+    "kind": "bug",
+    "severity": "medium",
+    "files": [
+     "src/utils/importFile.js:67-85"
+    ],
+    "repro": "Import a .docx built with text boxes, as most designed Word, Canva and Word-template résumés put the header or a side column in one. Word always saves a text box twice: once in <mc:Choice> (wps:txbx) and once in <mc:Fallback> (v:textbox), each with the same <w:txbxContent>.",
+    "actual": "docxXmlLines splits the whole body on </w:p> and doesn't skip <mc:Fallback>, so every paragraph in a text box comes out twice. You see the name twice, contacts duplicated (the second copy spills into 'Additional Information'), and sections and entries doubled. Text in the anchoring paragraph after the text box is also dropped, because its tail segment has no <w:p start (line 73 `continue`).",
+    "expected": "Each text box's text is read once.",
+    "fix_hint": "Before splitting, remove the fallback copies: `body.replace(/<mc:Fallback>[\\s\\S]*?<\\/mc:Fallback>/g, '')`. Add a unit case with an AlternateContent text box."
+   },
+   {
+    "title": "Word import ignores the page header, so a name and contacts placed there are lost",
+    "kind": "bug",
+    "severity": "medium",
+    "files": [
+     "src/utils/importFile.js:88-92"
+    ],
+    "repro": "Import a .docx whose name and contact line sit in the Word page header (Insert → Header), a common résumé layout.",
+    "actual": "docxLines reads only word/document.xml, so word/header1.xml etc. are never opened. The résumé gets no name (the first body line, often 'Summary' or 'Experience', becomes the name) and no contacts.",
+    "expected": "Header text is read before the body, and the name and contacts end up in the résumé header.",
+    "fix_hint": "In docxLines, also unzip the headers. Either read the default and first-page header references from sectPr plus word/_rels/document.xml.rels, or simply try word/header1.xml … header3.xml. Prepend their docxXmlLines (deduplicated) to the body's lines."
+   },
+   {
+    "title": "A .txt from Word's 'Save as Plain Text' (Windows-1252) or Notepad 'Unicode' (UTF-16) imports as garbage: bullets, dashes and quotes become '�', so dates and lists aren't recognised",
+    "kind": "bug",
+    "severity": "medium",
+    "files": [
+     "src/utils/importFile.js:16",
+     "src/utils/importFile.js:352"
+    ],
+    "repro": "In Word, save a résumé as Plain Text (.txt). The default encoding is 'Windows (Default)', i.e. cp1252. Import it. Or import a .txt saved by Notepad as 'Unicode' (UTF-16LE).",
+    "actual": "documentLines decodes every text or Markdown file as UTF-8 with no error check (`new TextDecoder()`). In cp1252, • (0x95), – (0x96), — (0x97) and ‘’“” are invalid UTF-8 and turn into U+FFFD. 'Mar 2021 – Present' no longer matches RANGE, and '• Led …' no longer matches BULLET, so no entries are found and everything lands in custom text full of '�'. A UTF-16 file decodes as NUL-separated mojibake.",
+    "expected": "Special characters in English text import correctly, whatever encoding Windows saved the file in.",
+    "fix_hint": "Check for a BOM first: FF FE means utf-16le, FE FF means utf-16be. Otherwise try `new TextDecoder('utf-8', { fatal: true })`, and if it throws, decode with `new TextDecoder('windows-1252')`."
+   },
+   {
+    "title": "A 'Technologies:' / 'Link:' / 'ID:' line under an entry's title is silently dropped for Experience, Volunteering, Awards and Education",
+    "kind": "bug",
+    "severity": "medium",
+    "files": [
+     "src/utils/importText.js:275-279",
+     "src/utils/importText.js:439-443",
+     "src/utils/importText.js:325-332",
+     "src/utils/importText.js:379-380",
+     "src/utils/importText.js:420"
+    ],
+    "repro": "Import a text résumé with:\nEXPERIENCE\nAcme Corp — Senior Engineer | Mar 2021 – Present\nTechnologies: React, Node.js, AWS\n• Built …",
+    "actual": "The line under the title is taken into the entry's header, either as SECOND_LINE (line 441) or by the isMetaLine loop (line 443). readHeader's field() then moves it into h.meta.technologies. The experience case reads only h.meta.location, so the technologies text is lost. The same happens to 'Link:', 'ID:', 'Expires:' and 'GPA:' on types that don't read that key: experience, volunteering, awards and custom read none of them except location, and education reads only gpa. Markdown '### Entry' followed by 'Technologies: …' loses it the same way.",
+    "expected": "Every line of the file is kept. A named field the entry type has no slot for is added to the entry's description, e.g. '<p>Technologies: React, Node.js, AWS</p>'.",
+    "fix_hint": "In entryOf, collect the meta keys the case did not use and prepend them to the description as 'Label: value' lines, through description(extra) or left."
+   },
+   {
+    "title": "Word résumé with the name styled Heading 1 and sections in bold Normal text: no sections are found and the whole résumé piles into the header",
+    "kind": "bug",
+    "severity": "medium",
+    "files": [
+     "src/utils/importText.js:536-547"
+    ],
+    "repro": "Import a .docx where only the name uses the Heading 1 style and the section titles ('EXPERIENCE', 'EDUCATION') are bold Normal paragraphs.",
+    "actual": "`hinted = lines.some(l => l.hint === 'heading')` is true only because of the name line, which is skipped as a heading anyway (i <= nameAt). In hinted mode no unhinted line can become a heading, so the résumé has no sections. Every line goes through takeContacts: lines of 60+ characters or ending in punctuation go into the Summary, the rest into one 'Additional Information' blob, and experience bullets end up in the summary.",
+    "expected": "The known section titles are still recognised, and you get Experience and Education sections with their entries.",
+    "fix_hint": "Count hints only after the name: `hinted = lines.some((l, i) => i > nameAt && l.hint === 'heading')`. Better still, in hinted mode also accept an unhinted line whose headingType() is known and that passes the non-hinted checks."
+   },
+   {
+    "title": "Importing the app's own Markdown export with 'Group roles by company' splits each company from its roles",
+    "kind": "bug",
+    "severity": "medium",
+    "files": [
+     "src/utils/markdownExport.js:172-185",
+     "src/utils/importText.js:99-104",
+     "src/utils/importText.js:417-422",
+     "src/utils/importText.js:309-314"
+    ],
+    "repro": "Turn on Group roles by company in an Experience section with two roles at Acme, then Export → Markdown and import the .md.",
+    "actual": "The export writes '### **Acme**' and '*Portland, OR*', then '#### **Senior Engineer**' and '*Mar 2021 – Present*' for each role. The import treats every ###/#### line as its own 'entry'. You get one experience item with company 'Acme', no role, no dates and the description 'Portland, OR', plus one item per role with no company (or with the role title put in Company when it has no ROLE word).",
+    "expected": "Each role comes back as its own experience entry with company 'Acme', its dates, and the group's location.",
+    "fix_hint": "In markdownLines, give '####' under a '###' a distinct hint such as 'role'. In entriesOf, when a '###' entry has no date and is followed by 'role' entries, pass its title (and its place line) to each of them as the company and location instead of creating a separate entry."
+   },
+   {
+    "title": "Contact links shown as a label in a PDF or Word file (the app's own exports with a Display label) lose their URL",
+    "kind": "bug",
+    "severity": "medium",
+    "files": [
+     "src/utils/importFile.js:324-342",
+     "src/utils/importFile.js:79-80",
+     "src/utils/importText.js:567"
+    ],
+    "repro": "Give LinkedIn a Display label 'LinkedIn' in the editor, Export PDF (or Word), then import that file.",
+    "actual": "pdfLines reads only getTextContent(), never the page's Link annotations. docxXmlLines reads only <w:t> text, never the hyperlink's r:id target in document.xml.rels. The piece 'LinkedIn' matches BARE_LABEL and is dropped, so the résumé has no LinkedIn URL at all.",
+    "expected": "The link target is read and fills the linkedin, github or website field.",
+    "fix_hint": "PDF: call page.getAnnotations() and give each text item that a Link annotation's rect covers the annotation's url, then substitute that url for the label in the header. Word: parse word/_rels/document.xml.rels and replace the text of <w:hyperlink r:id> with its Target when the text is a bare label."
+   },
+   {
+    "title": "A comma-separated Languages line becomes one language; 'English (Native), Spanish (Fluent)' is garbled",
+    "kind": "bug",
+    "severity": "low",
+    "files": [
+     "src/utils/importText.js:492-509"
+    ],
+    "repro": "Import a text résumé with 'LANGUAGES' followed by 'English, Spanish, French', or by 'English (Native), Spanish (Fluent)'.",
+    "actual": "Cells are split only on tab, |, • and ·. The first line gives one language named 'English, Spanish, French'. In the second, the lazy regex gives language 'English' with proficiency 'Native), Spanish (Fluent'.",
+    "expected": "Three languages in the first case. In the second, English: Native and Spanish: Fluent.",
+    "fix_hint": "Also split the cells on ',' and ';' when they are outside parentheses, e.g. `cell.split(/[,;](?![^()]*\\))/)`, before matching each language."
+   },
+   {
+    "title": "Document import shows no progress; a second click while a PDF is being read creates a duplicate résumé",
+    "kind": "bug",
+    "severity": "low",
+    "files": [
+     "src/pages/Dashboard.jsx:92-104",
+     "src/hooks/useEditorExports.js:120-123",
+     "src/utils/importDocument.js:24-36"
+    ],
+    "repro": "On a slow connection, import a multi-page PDF from the Dashboard. The first time, pdf.js and its worker are downloaded. Nothing changes on screen for several seconds, so click Import again and pick the file again.",
+    "actual": "There is no busy state or disabled button. Both imports finish and each creates a résumé, so two copies appear, and navigate() jumps to whichever finishes last, even if you have moved on to another page.",
+    "expected": "The Import control shows 'Reading…' and is disabled while a document is being read, and a finished import doesn't navigate you away from a page you have since opened.",
+    "fix_hint": "Keep an `importing` state (Dashboard, and ExportDropdown via useEditorExports). Disable the button and show a spinner or label while it is set. Ignore a second pick while busy."
+   },
+   {
+    "title": "A password-protected PDF fails with a cryptic 'No password given'",
+    "kind": "bug",
+    "severity": "low",
+    "files": [
+     "src/utils/importFile.js:324-342",
+     "src/utils/importDocument.js:31-34"
+    ],
+    "repro": "Import a PDF that needs a password to open.",
+    "actual": "pdf.js rejects with a PasswordException, and the Dashboard shows 'Could not import cv.pdf: No password given'.",
+    "expected": "A clear message, e.g. 'That PDF is password-protected. Save a copy without a password (or as Word) and import that.'",
+    "fix_hint": "In pdfLines, catch `e?.name === 'PasswordException'` and throw an Error with the clear message."
+   },
+   {
+    "title": "The Import file picker hides .markdown and .text files that the import supports",
+    "kind": "bug",
+    "severity": "low",
+    "files": [
+     "src/utils/importDocument.js:6",
+     "src/utils/importDocument.js:12",
+     "src/utils/importFile.js:353"
+    ],
+    "repro": "On macOS, click Import and look for a résumé saved as resume.markdown.",
+    "actual": "IMPORT_ACCEPT is '.json,.pdf,.docx,.txt,.md', so the picker greys out .markdown and .text files. isDocumentFile and documentLines handle both extensions, but that code can't be reached from the picker.",
+    "expected": "Every extension the import reads can be picked.",
+    "fix_hint": "Set IMPORT_ACCEPT to '.json,.pdf,.docx,.txt,.text,.md,.markdown'."
+   }
+  ]
+ },
+ {
+  "area": "find:EXP",
+  "findings": [
+   {
+    "title": "Markdown export does not escape user text: text in angle brackets disappears, __x__ turns bold, and a stray space in a field shows literal asterisks",
+    "kind": "bug",
+    "severity": "medium",
+    "files": [
+     "src/utils/markdownExport.js:28-35",
+     "src/utils/markdownExport.js:84-91",
+     "src/utils/markdownExport.js:221-222",
+     "src/utils/markdownExport.js:199-205"
+    ],
+    "repro": "1) In an Experience description type: Built the <DataGrid> component and wrote __init__ hooks. 2) Set Company to 'Acme Corp ' with a trailing space (common after a paste). 3) Export -> Markdown (.md), then open the file on GitHub or in any Markdown viewer.",
+    "actual": "parseRichText decodes &lt;DataGrid&gt; back to '<DataGrid>', and runText/blockLines write it out raw. GFM treats it as an inline HTML tag and hides it, so the line reads 'Built the  component'. '__init__' renders as a bold 'init'. heading() writes '**Acme Corp ** — *Role*'. A closing ** after a space is not right-flanking, so the viewer shows the asterisks literally. The same happens to the title line (`**${p.title}**`) and to the italic meta line when a location has a trailing space ('*… | London *').",
+    "expected": "The .md renders the same words the PDF prints, with no text lost and no stray markup.",
+    "fix_hint": "Add an mdEscape(text) that backslash-escapes \\ ` * _ [ ] < > and a leading '#', '+', '-' or 'N.'. Apply it to every user-text value (run.text in runText, the fields in heading(), italic(), listLines, the header name and title, contacts) before any syntax is added. Trim each field before wrapping it in ** or *. Add a unit test with '<DataGrid>', '__init__' and 'Acme Corp '."
+   },
+   {
+    "title": "Cover Letter Text (.txt) prints a contact's Display label in place of its address, so the pasted letter has no LinkedIn, GitHub or website",
+    "kind": "bug",
+    "severity": "medium",
+    "files": [
+     "src/utils/coverLetterText.js:48",
+     "src/utils/contacts.js:55-62"
+    ],
+    "repro": "1) Personal Info -> LinkedIn 'linkedin.com/in/jdoe' with Display label 'LinkedIn'. 2) Open the Cover Letter tab -> Export -> Export Cover Letter Text (.txt).",
+    "actual": "The contact line reads '... | LinkedIn'. contactItems() returns the label as `value`, and the text export joins only `value`. The href is dropped, and plain text cannot carry a link, so the profile address is lost.",
+    "expected": "Plain text keeps the address: 'LinkedIn (linkedin.com/in/jdoe)', or the bare address. This matches the ATS text, which prints raw values.",
+    "fix_hint": "In generateCoverLetterPlainText, for a link field whose label is set, print `${label} (${displayUrl(personal[`${key}Url`] || personal[key])})`, or print displayUrl of the address alone. Add a unit test with a labelled LinkedIn."
+   },
+   {
+    "title": "ATS text education line puts a dash before 'in': 'BSc - in Computer Science - MIT'",
+    "kind": "bug",
+    "severity": "low",
+    "files": [
+     "src/utils/atsPlainText.js:88"
+    ],
+    "repro": "Education entry: Degree 'BSc', Field of study 'Computer Science', Institution 'MIT'. Export -> ATS Text (.txt), or use the ATS tab's Copy or Download.",
+    "actual": "'BSc - in Computer Science - MIT'. With no degree the line starts with 'in Computer Science - MIT'.",
+    "expected": "'BSc in Computer Science - MIT' (or 'BSc, Computer Science - MIT', the PDF's form). With no degree: 'Computer Science - MIT'.",
+    "fix_hint": "Build the degree part first: const deg = joined([f('degree'), f('fieldOfStudy')], f('degree') ? ' in ' : ''). Then joined([deg, f('institution')], ' - ')."
+   },
+   {
+    "title": "Word prints Interests as the raw typed strings; the PDF splits and trims them",
+    "kind": "bug",
+    "severity": "low",
+    "files": [
+     "src/utils/wordExportBuilders.js:313-319",
+     "src/templates/pdf/shared/PdfSectionsThree.jsx:59-61"
+    ],
+    "repro": "Interests entry 'Chess,Hiking,' or 'Chess ,  Go'. Also add a second interests entry that holds only spaces. Export PDF and Word.",
+    "actual": "The PDF shows the chips 'Chess', 'Hiking' (and 'Chess', 'Go'). Word prints 'Chess,Hiking,' and 'Chess ,  Go', and a whitespace-only entry adds an empty ', ,' part. ATS text and Markdown both split and trim.",
+    "expected": "Word prints 'Chess, Hiking' and 'Chess, Go', as the PDF, ATS text and Markdown do.",
+    "fix_hint": "const all = shown(section).flatMap(i => String(i.interests || '').split(',').map(s => s.trim()).filter(Boolean)).join(', ')."
+   },
+   {
+    "title": "Export Word tooltip still says the .docx has no photo, but Word has printed the photo since R2-126",
+    "kind": "bug",
+    "severity": "low",
+    "files": [
+     "src/components/ExportDropdown.jsx:59-60",
+     "src/utils/wordExportHeader.js:92-95",
+     "src/utils/wordExportPhoto.js:104"
+    ],
+    "repro": "Add a photo, hover Export -> Export Word, then export the .docx.",
+    "actual": "The tooltip says 'A text document for ATS: no photo, …', yet the .docx contains the photo (wordPhoto/photoRow). This stale text was added in R2-133, before R2-126 added the photo.",
+    "expected": "The tooltip describes what the file holds.",
+    "fix_hint": "Remove 'no photo' from the title. The banner and column wording belongs to RES-R2-137, which is being fixed separately, so leave that part alone."
+   },
+   {
+    "title": "Word reference phone and e-mail links are built without the PDF's checks: a phone such as 'On request' becomes a clickable 'tel:' link",
+    "kind": "bug",
+    "severity": "low",
+    "files": [
+     "src/utils/wordExportBuilders.js:303-306",
+     "src/utils/contacts.js:38-48"
+    ],
+    "repro": "Reference entry with Phone 'Available on request'. Export PDF and Word.",
+    "actual": "The PDF prints plain text, because contactHref('phone') returns null for fewer than 3 digits. Word wraps it in an ExternalHyperlink to 'tel:' (the value with its non-digits stripped), so a click in Word opens an empty dialler link and the text takes the link look.",
+    "expected": "Word links only what the PDF links.",
+    "fix_hint": "Use contactHref('email', item) and contactHref('phone', item) as the hrefs; linked() already prints plain text for a null href."
+   },
+   {
+    "title": "Export file names are not sanitised: a title such as 'UI/UX Designer' puts path or reserved characters in the download name",
+    "kind": "bug",
+    "severity": "low",
+    "files": [
+     "src/utils/exportFilename.js:2",
+     "src/utils/download.js:9"
+    ],
+    "repro": "Job Title 'UI/UX Designer' (or 'Engineer: Payments', 'C#/.NET Dev?'). Export PDF, Word or any text export.",
+    "actual": "The a.download value is 'Jane_Doe_UI/UX_Designer.pdf'. Each browser then substitutes or strips '/', ':', '?' and '|' in its own way, so one résumé saves under different names on different browsers and OSes.",
+    "expected": "The app produces one predictable, valid name, e.g. 'Jane_Doe_UI-UX_Designer.pdf'.",
+    "fix_hint": "In filePart, also replace [\\\\/:*?\"<>|\\x00-\\x1f] with '-', collapse repeated '-' and '_', strip leading and trailing dots, and cap the length at about 120 characters."
+   }
+  ]
+ },
+ {
+  "area": "find:DSN",
+  "findings": [
+   {
+    "title": "Editor and /new crash when a saved design's engine is not stored in lower case (for example from an imported .json)",
+    "kind": "bug",
+    "severity": "medium",
+    "files": [
+     "src/constants/templatePresets.js",
+     "src/utils/templatePicker.js",
+     "src/pages/Editor.jsx",
+     "src/pages/NewResume.jsx"
+    ],
+    "repro": "Import a résumé .json (File, Import) whose settings.myDesigns holds { \"d1\": { \"label\": \"Mine\", \"engine\": \"Modern\", \"settings\": {} } }. For the résumé's own `template` the app accepts \"Modern\" or \" sidebar \" (R5-5). Then open any résumé in the editor, or go to Dashboard, New Resume.",
+    "expected": "The saved design shows as \"Mine · Your design · Modern\", or the bad entry is ignored. The editor opens.",
+    "actual": "ownDesign (templatePresets.js:84-89) accepts the engine through offersTemplate, which lower-cases and trims it, but returns the raw value. savedDesigns (:161-171) passes the raw \"Modern\" on. pickerCards then runs `TEMPLATES[d.engine].label` (templatePicker.js:87), which is TEMPLATES['Modern'].label and throws a TypeError. TemplateGallery is always mounted in the editor (Editor.jsx:215) and calls pickerCards with savedDesigns from every résumé (Editor.jsx:48), so the editor crashes for every résumé, not just the imported one. /new crashes the same way (NewResume.jsx:28). cardSelected would also never match 'Modern' against 'modern'.",
+    "fix_hint": "Normalise the engine in ownDesign: `return valid ? { ...own, engine: templateId(own.engine) } : null`. Optionally also have normalizeResume canonicalise settings.myDesigns[*].engine. Test: an imported myDesigns entry with engine 'Modern' lists as a card and pickerCards does not throw."
+   },
+   {
+    "title": "Picking a design, or Academic, Chronicle or Linen, does not apply its font when the résumé has a custom Google font",
+    "kind": "bug",
+    "severity": "medium",
+    "files": [
+     "src/utils/defaultData.js",
+     "src/constants/templatePresets.js",
+     "src/templates/pdf/shared/pdfFontLoader.js",
+     "src/utils/templatePicker.js"
+    ],
+    "repro": "Design, Typography, Add a Google Font: type \"Poppins\" and click Add, so customFont is 'Poppins' and font is ''. Then under Design, Template pick the design \"Harbor\" (its card says \"Classic in IBM Plex Sans\"), or pick Academic, Chronicle or Linen.",
+    "expected": "The résumé prints in the design's or template's font (IBM Plex Sans, Source Serif, PT Serif, Lato), the same as Reset on that design gives, and the same as clicking a font button, which clears customFont (DesignPanelTypography.jsx:107).",
+    "actual": "styleOnSwitch (defaultData.js:92-107) writes the incoming `font` but leaves `customFont: 'Poppins'` in place. The PDF prefers customFont (pdfFontLoader.js:168-169), so the preview and the PDF still print Poppins. The Harbor card is marked selected and still claims IBM Plex Sans, and Typography still shows Poppins active. Reset on the same design does give IBM Plex, because ATS_DEFAULTS.customFont is ''. The gallery's Serif filter also marks Ledger, Crimson and Academic as serif (templatePicker.js:42 reads look.font only) while they print the sans custom font.",
+    "fix_hint": "In styleOnSwitch, when `next` sets `font` and does not set `customFont` itself, also set `customFont: ''`. A saved design's look carries its own customFont, so it keeps it. Test: settings { customFont:'Poppins', font:'' } switched to preset harbor, and to academic, gives customFont ''."
+   },
+   {
+    "title": "With no résumé yet, the pictures on /new and the starter look row show accent colours the new résumé does not get",
+    "kind": "bug",
+    "severity": "medium",
+    "files": [
+     "src/pages/NewResume.jsx",
+     "src/components/StarterTemplateModal.jsx",
+     "src/components/TemplateThumb.jsx",
+     "src/hooks/useResumeStore.js",
+     "src/utils/defaultData.js"
+    ],
+    "repro": "On a fresh account (no résumés), go to Dashboard, New Resume (/new). Look at the Classic, Modern, Gridline or Keel cards: their headings, rules and Modern's banner are blue (or each designed layout's own accent). Click Classic. Separately, in \"Or start blank, or from a role example\", pick a look in the Template row and then a role starter.",
+    "expected": "The picture shows the page that the click makes (R3-012: \"as picking it will make it\").",
+    "actual": "With no source, the cards are built from `pickerCards({})` (NewResume.jsx:28; StarterTemplateModal.jsx:21). lookResume then draws the sample with only templateStyleDefaults (TemplateThumb.jsx:22-24): no accentColor, so the mock falls back to '#2563eb' (TemplateThumb.jsx:52) and the painted page to the PDF's per-template DEFAULTS accent (#2563eb, Gridline #1e40af, Keel #be123c…). The résumé that is made uses createBlankResume, i.e. defaultSettings = ATS_DEFAULTS with accentColor '#374151' and textColor '#111111' (defaultData.js:22-23,164), or getStarterSettings with '#374151' (useResumeStore.js createResume ~line 247-257). So the editor opens on a dark-grey page, not the blue one the user clicked. The app's own designs match because each brings its accent. The plain templates do not.",
+    "fix_hint": "Build the no-source cards from the settings the new résumé will really start with: in NewResume use `pickerCards(source?.settings || defaultSettings('classic'), …)`, and in StarterTemplateModal use `pickerCards(getStarterSettings('classic'))`, both of which carry accent #374151. Test: every non-preset card's look.accentColor equals the created résumé's settings.accentColor when there is no source."
+   },
+   {
+    "title": "Custom font check: an offline failure is reported as a misspelling, and a slow check overwrites a font picked meanwhile or lands on another résumé",
+    "kind": "bug",
+    "severity": "low",
+    "files": [
+     "src/components/DesignPanelTypography.jsx",
+     "src/utils/fontsource.js"
+    ],
+    "repro": "(a) Go offline and type \"Nunito\" in Design, Typography, Add a Google Font, then press Add. (b) Online on a slow link, type \"Raleway\" and press Add, then click the \"Lato\" font button (or open another résumé) before \"Checking…\" ends.",
+    "expected": "(a) A message that the font could not be checked because you are offline, with the name kept so you can try again. (b) Your later choice stands, and the result is applied to the résumé it was asked for, or dropped.",
+    "actual": "(a) fetchMetadata returns null on a network error (fontsource.js:21-24), so checkFont returns ok:false and the panel says “Nunito” was not found on Google Fonts and to check the spelling (DesignPanelTypography.jsx:62-64), which is wrong. (b) applyCustomFont awaits for up to 8 s with no staleness guard (DesignPanelTypography.jsx:57-71). It then calls chooseCustomFont, which runs updateSetting('customFont')/('font','') against whichever résumé is active now. That replaces the Lato the user picked, or changes another résumé. fitToOnePage in DesignPanel.jsx:84 has exactly this guard. applyCustomFont does not.",
+    "fix_hint": "Have checkFont tell a network error apart from a 404 (for example return { ok:false, offline:true } when fetch rejects or navigator.onLine is false) and show an offline message. In applyCustomFont, capture the résumé id and the font settings at the start, and skip chooseCustomFont if the active résumé or its font/customFont changed while waiting (pass `resume` or a stopped() check in from DesignPanel)."
+   },
+   {
+    "title": "Colour swatches show a colour the PDF does not print when unset, and pure black cannot be picked for Name or Job title",
+    "kind": "bug",
+    "severity": "low",
+    "files": [
+     "src/components/DesignPanelColors.jsx"
+    ],
+    "repro": "(a) On a Modern résumé with no Name colour set, open Design, Colors, Name & Title Colors: the Name swatch is black while the preview prints the name white on the banner. Open the picker and choose pure black #000000. (b) On a résumé with no stored accentColor (for example an older or imported file on Gridline), the Accent Custom swatch and hex read #2563eb while the PDF prints Gridline's #1e40af.",
+    "expected": "Each swatch shows the colour the PDF prints (as Text Color already does since R9-7, DesignPanelColors.jsx:40), and any colour can be chosen, including black.",
+    "actual": "Name and Job title use `value={settings[key] || '#000000'}` (DesignPanelColors.jsx:117). Choosing #000000 leaves the input's value unchanged, so no input or change event fires and nothing is written: black cannot be set. The swatch also misstates the printed colour. The Accent input and label use `settings.accentColor || '#2563eb'` (:66-67) instead of the template's DEFAULTS accent.",
+    "fix_hint": "Show the resolved colours: `resolveTemplateSettings(settings, headerTemplateId(template, settings))` gives nameColor, jobTitleColor and accentColor for the swatch value, and the placeholder text can stay \"Template default\". Because the swatch then holds the printed colour and not a fixed #000000, black becomes pickable wherever the default is not black."
+   },
+   {
+    "title": "The gallery keeps a \"My designs\" category that no longer exists and shows an empty grid telling the user to turn off a filter",
+    "kind": "bug",
+    "severity": "low",
+    "files": [
+     "src/components/TemplateGallery.jsx",
+     "src/pages/Editor.jsx"
+    ],
+    "repro": "Design, Browse templates, click the \"My designs\" chip, then Done. In the panel's \"Your designs\", delete every saved design. Click Browse templates again.",
+    "expected": "The gallery falls back to All, or at least shows a pressed chip the user can clear.",
+    "actual": "TemplateGallery is always mounted (Editor.jsx:215), so `category` stays 'mine' (TemplateGallery.jsx:16). categoriesOf no longer offers a My designs chip (:36), the All chip is not pressed, and no filter chip is pressed. Yet the grid is empty with the message \"No template has all of these. Turn a filter off to see more.\" (:45), and there is no filter to turn off.",
+    "fix_hint": "Derive the effective category: `const cat = categoriesOf(cards).some(c => c.id === category) ? category : ''`, and use `cat` for filtering and the pressed state. Or reset the category and filters when the dialog opens."
+   },
+   {
+    "title": "\"Browse templates (N)\" and the gallery title count different sets",
+    "kind": "bug",
+    "severity": "low",
+    "files": [
+     "src/components/DesignPanel.jsx",
+     "src/components/TemplateGallery.jsx"
+    ],
+    "repro": "Save two designs (Design, Template, Save my design), then look at the Browse templates button and open the gallery.",
+    "expected": "The same number in both places.",
+    "actual": "The button counts only the app's cards, `cards.filter((c) => !c.own).length` (DesignPanel.jsx:124), for example \"Browse templates (27)\". The gallery title counts every card including saved designs, `Templates (${cards.length})` (TemplateGallery.jsx:29), so it reads \"Templates (29)\".",
+    "fix_hint": "Use one count in both. Because the gallery lists saved designs too, the button should read cards.length (or say \"27 + 2 yours\")."
+   }
+  ]
+ },
+ {
+  "area": "find:JOB",
+  "findings": [
+   {
+    "title": "A job page's Details box always says Résumé: None, even when a résumé is linked",
+    "kind": "bug",
+    "severity": "medium",
+    "files": [
+     "src/pages/JobDetail.jsx",
+     "src/utils/jobQuery.js"
+    ],
+    "repro": "1. Open any job and go to the Overview tab. 2. Under Resume Used, pick an existing résumé. The Open-résumé icon appears, so the link is saved. 3. Look at the Details box in the right-hand aside.",
+    "actual": "The Résumé row reads 'None'. JobDetail.jsx:70 does `const resume = linkedResume(job, resumes)`, and :155 renders `{resume?.name}`. But linkedResume (jobQuery.js:229-234) returns `{ state, resume }`, not the résumé itself, so `.name` is always undefined. A link to a résumé that has since been deleted also reads 'None', when it should say the résumé is gone (the J-21 rule).",
+    "expected": "The row shows the linked résumé's name, or 'Résumé deleted' when the linked résumé no longer exists. It says 'None' only when nothing is linked.",
+    "fix_hint": "In JobDetail.jsx:70 rename the variable to `link = linkedResume(job, resumes)`, and at :155 render `link.state === 'linked' ? link.resume.name : link.state === 'deleted' ? 'Résumé deleted' : null`. Add a component test: a job with a resumeId that exists shows that name in the Details box. It fails today."
+   },
+   {
+    "title": "Nothing in the app can set follow-up date, work mode or source, so the 'Follow-ups due' card and three Details rows can never fill",
+    "kind": "bug",
+    "severity": "medium",
+    "files": [
+     "src/pages/JobForm.jsx",
+     "src/components/job/OverviewTab.jsx",
+     "src/pages/JobDetail.jsx",
+     "src/components/job/JobSummary.jsx",
+     "src/utils/jobEdits.js"
+    ],
+    "repro": "1. Open /jobs?view=summary: the 'Follow-ups due' card reads 'Nothing to chase today.' 2. Open any job: Details shows 'Follow up', 'Work mode' and 'Source' rows. 3. Look for a way to set any of them in Add job, Edit, or the Overview tab.",
+    "actual": "There is no input for followUpDate, workMode, source or excitement anywhere. `git grep` at d11d5a0 finds them only in the normaliser, the CSV export, jobQuery, the FORM_FIELDS list (jobEdits.js:10-13) and the read-only displays (JobDetail.jsx:149-154, JobSummary.jsx:61/97). The form's and the Overview's only date besides Applied is labelled 'Deadline / Follow-up' (JobForm.jsx:158, OverviewTab.jsx:79), and it writes `deadline`. So a user who sets a follow-up there never sees it under 'Follow-ups due', and the Details 'Follow up' row stays 'None'. These fields only get a value from an imported file.",
+    "expected": "Each field the tracker displays can be edited. Setting a follow-up date makes the job appear in 'Follow-ups due' once that day comes, and fills the Details row.",
+    "fix_hint": "Product call: add the editors rather than remove the displays. In JobForm, rename the date to 'Deadline' and add a 'Follow-up date' input (set('followUpDate')), plus Work mode and Source selects (WORK_MODES / JOB_SOURCES, '' = not set). All of these are already in FORM_FIELDS, so formPatch saves them. In OverviewTab, add a follow-up date input beside Deadline, and Work mode and Source selects that call set(). Test: a job given followUpDate = today through the form appears in JobSummary's Follow-ups list."
+   },
+   {
+    "title": "A Rejected or Withdrawn job still shows its passed deadline as red 'overdue' on the board and on its page",
+    "kind": "bug",
+    "severity": "low",
+    "files": [
+     "src/components/job/KanbanView.jsx",
+     "src/pages/JobDetail.jsx",
+     "src/components/job/OverviewTab.jsx"
+    ],
+    "repro": "1. Give a job a deadline that has passed, e.g. yesterday. 2. Mark it Rejected (or Withdrawn). 3. Look at its card in the Rejected column, the Details box on its page, and the Overview tab.",
+    "actual": "The card's DatePill (KanbanView.jsx:68) and the Details pills (JobDetail.jsx:148-149) are rendered without `done`, so they show red '1d overdue'. The Overview shows the red 'Deadline has passed' warning (OverviewTab.jsx:20-21, 94-97). This contradicts the Summary, which counts deadlines and follow-ups only for open jobs (isOpen, isFollowUpDue).",
+    "expected": "A closed job (on hold, rejected or withdrawn) has nothing to chase. Its deadline and follow-up pills are neutral, and the Overview shows no 'Deadline has passed' warning.",
+    "fix_hint": "Pass `done={!isOpen(job)}` (jobQuery.isOpen) to the deadline and follow-up DatePills in KanbanView.jsx:68 and JobDetail.jsx:148-149. In OverviewTab, compute `deadline = isOpen(job) ? deadlineState(job.deadline) : null`. Test: a rejected job with yesterday's deadline renders no 'overdue' text."
+   },
+   {
+    "title": "The job page lets you blank out both Company and Role, which the job form refuses",
+    "kind": "bug",
+    "severity": "low",
+    "files": [
+     "src/components/job/OverviewTab.jsx",
+     "src/components/job/Field.jsx",
+     "src/pages/JobForm.jsx"
+    ],
+    "repro": "1. Open a job's Overview tab. 2. Click the Company pencil, delete the text, press Enter. 3. Do the same for Role / Position.",
+    "actual": "Both are saved empty (Field.jsx:13-17 commits any change, OverviewTab.jsx:54-55). The job becomes 'Untitled Company / No role specified' on its page, '—' on the board and in the list, and search cannot find it. The Add/Edit form will not save such a job: canSave, JobForm.jsx:51, says 'A company or a role is enough to save the job'.",
+    "expected": "The same rule on both paths: at least one of Company or Role is kept.",
+    "fix_hint": "In OverviewTab, wrap the Company and Role onChange: when the new value trims to '' and the other field is also blank, keep the old value (Field then resets its draft through its value effect). Test: blanking the role while the company is already blank leaves the role unchanged."
+   }
+  ]
+ },
+ {
+  "area": "find:SYNC",
+  "findings": [
+   {
+    "title": "Publishing the same résumé from two tabs or devices leaves a public copy that can never be taken down",
+    "kind": "bug",
+    "severity": "medium",
+    "files": [
+     "src/utils/publicLink.js",
+     "src/components/ShareLinkModal.jsx"
+    ],
+    "repro": "Sign in and open the same résumé in two editor tabs, or on two devices. Open Export → Share a public link in both; each says it is not published. Click Publish in tab 1, then in tab 2. Tab 2 does not pass a shareId (ShareLinkModal.jsx:57, since its view read share=null), so publicLink.js:146 makes a new newId() and publicLink.js:151 overwrites users/{uid}/shares/{resumeId} with it. Now click Unpublish in tab 1: publicLink.js:157-161 deletes public/<id1> AND the share record, which points at <id2>. Clicking 'Update the public copy' in tab 1 instead re-points the record at <id1> and orphans <id2>. Related: if the copy is already gone (unpublished in the other tab), Unpublish's batch.delete(publicDoc) at publicLink.js:159 is refused by firestore.rules:31 (resource is null). The batch fails with 'Unpublishing failed (Missing or insufficient permissions.). Check your connection…' and every retry fails the same way.",
+    "actual": "A second copy at a live link stays public, but no share record names it. No panel can unpublish it, and neither Dashboard Delete (unpublishResume) nor the sync's unpublishDeleted ever finds it. Unpublish from a stale panel fails forever.",
+    "expected": "A résumé has at most one public copy. Publish reuses the link the account already recorded, and Unpublish takes down whatever copy the record names, including one already gone.",
+    "fix_hint": "In publicIo.publish, when no shareId is given, first getDocFromServer(shareDoc(uid, resume.id)) and reuse its shareId if there is one. In unpublish, read the share record and take down both the passed shareId and the recorded one, deleting a public doc only if it exists (reuse takeDown). Only then delete the record. Or have ShareLinkModal call readShare right before publish/unpublish and use that result."
+   },
+   {
+    "title": "Sync icon disappears when Firestore says 'client is offline' while the browser reports online",
+    "kind": "bug",
+    "severity": "medium",
+    "files": [
+     "src/components/AuthBar.jsx",
+     "src/utils/cloudSyncRetry.js"
+    ],
+    "repro": "Sign in on a network where navigator.onLine is true but Firestore can't be reached (Wi-Fi with no internet or a captive portal, or firestore.googleapis.com blocked). Then edit a résumé, or reload. getDocFromServer rejects with 'Failed to get document because the client is offline.' cloudSyncRetry.js:31/44 classifies this as 'offline' (isOfflineError) and failureReport reports status 'offline' (cloudSyncRetry.js:65). isOnline is still true, so SyncDot (AuthBar.jsx:58-74) matches no branch: 'offline' is only covered by !isOnline, so it falls through to `return null`.",
+    "actual": "The header's cloud icon disappears completely, so there is no sign that edits are not reaching the account, even though the engine keeps retrying (cloudSyncEngine.js:188).",
+    "expected": "The icon stays and says the account cannot be reached / changes are saved locally (the offline or 'will retry' state).",
+    "fix_hint": "In SyncDot, use the offline branch when `!isOnline || syncStatus === 'offline'`. Or map a 'client is offline' failure with navigator online to status 'error' ('Sync error — will retry')."
+   },
+   {
+    "title": "Public copy includes non-printing settings (saved-design names, hidden contacts' icons), so the panel wrongly says the résumé changed",
+    "kind": "bug",
+    "severity": "low",
+    "files": [
+     "src/utils/publicLink.js",
+     "src/components/ShareLinkModal.jsx"
+    ],
+    "repro": "Publish a résumé. In Design, save the current look as a design named e.g. 'For Acme' (useResumeDesignActions.js:33 writes settings.myDesigns and settings.templatePreset). Or delete a saved design on another résumé: buryDeletedDesigns bumps this one's settings.myDesigns. Reopen Share a public link. publicSnapshot copies `settings: resume.settings` whole (publicLink.js:70), and publishedIsCurrent (publicLink.js:112) compares all of it.",
+    "actual": "The panel says 'You have changed the résumé since: the link still shows it as it was…' and offers 'Update the public copy', although the PDF is identical. The public document at public/{id}, which anyone can read, also carries settings.myDesigns (the user's saved design names and looks) and settings.customContactIcons for contact fields hidden with their eye. Both contradict the stated rule that the copy 'holds what the résumé's PDF prints and nothing else'. The same false 'changed' notice appears for every published résumé after an app update migrates dataVersion.",
+    "expected": "Only settings that print are copied and compared, and saving or deleting a design does not mark the public copy out of date.",
+    "fix_hint": "In publicSnapshot, remove non-print keys from settings: myDesigns, templatePreset, and the customContactIcons entries whose field is in personal.hiddenFields (designLook's NOT_A_LOOK is a starting point). Leave dataVersion out of the publishedIsCurrent comparison."
+   },
+   {
+    "title": "Publish of an oversized résumé says 'Check your connection' with nested parentheses",
+    "kind": "bug",
+    "severity": "low",
+    "files": [
+     "src/components/ShareLinkModal.jsx",
+     "src/utils/publicLink.js"
+    ],
+    "repro": "Sign in, add a large photo and several custom contact icons so publicSnapshot's JSON exceeds 1,000,000 bytes (the cloud sync allows up to 1 MiB). Open Share a public link and click Publish. publicLink.js:148 throws TOO_LARGE, and ShareLinkModal.jsx:51 wraps every error the same way.",
+    "actual": "'Publishing failed (This résumé is too large to publish (over 1 MB, usually its photo). Use a smaller photo and try again.). Check your connection and try again.' It points the user to their connection, which has nothing to do with the problem.",
+    "expected": "Just the size message: 'This résumé is too large to publish (over 1 MB, usually its photo). Use a smaller photo and try again.'",
+    "fix_hint": "Tag the TOO_LARGE error (e.g. e.code = 'too-large') and have run() show e.message as it is for it. Keep the connection wording for network errors only."
+   },
+   {
+    "title": "Share panel's 'Copied' label never resets, even for a new link",
+    "kind": "bug",
+    "severity": "low",
+    "files": [
+     "src/components/ShareLinkModal.jsx"
+    ],
+    "repro": "Publish, click Copy (the label becomes 'Copied'). Click Unpublish, then Publish again: a new shareId is made (publicLink.js:146). Or close the panel and reopen it. `copied` (ShareLinkModal.jsx:24) is set at :98 and is never cleared: the component stays mounted while closed, and the open effect (:27-39) resets view and error but not copied.",
+    "actual": "The button says 'Copied' for a link that was never copied, so the user may paste the old, dead link.",
+    "expected": "The label goes back to 'Copy' when the link changes, when the panel reopens, or after a couple of seconds.",
+    "fix_hint": "setCopied(null) in the open effect and after publish/unpublish. Optionally clear it with a setTimeout."
+   },
+   {
+    "title": "'What is public' lists empty sections that the PDF and public page never print",
+    "kind": "bug",
+    "severity": "low",
+    "files": [
+     "src/utils/publicLink.js"
+    ],
+    "repro": "Create a résumé with an empty Projects section, or one whose entries are all hidden, and open Share a public link. publicSnapshot keeps every visible section (publicLink.js:61-67), and publicSummary lists each one (publicLink.js:95-98). The PDF prints only sections with a visible entry (PdfSections.jsx:220 sectionPrints).",
+    "actual": "The list shows lines like 'Projects: 0 entries' as public, but nothing of that section appears on the public page.",
+    "expected": "The list names only what anyone with the link actually sees.",
+    "fix_hint": "In publicSnapshot (or publicSummary), skip sections that have no visible items, matching sectionPrints."
+   }
+  ]
+ },
+ {
+  "area": "find:BRD",
+  "findings": [
+   {
+    "title": "Deleting a column that looks empty on the board moves (and reopens) every hidden issue in it, with no confirmation",
+    "kind": "bug",
+    "severity": "medium",
+    "files": [
+     "src/pages/Board.jsx:132-147",
+     "src/utils/boardView.js:26-28,59-68",
+     "src/utils/boardOps.js:95-101",
+     "src/utils/boardIssueOps.js:113-121"
+    ],
+    "repro": "Kanban project: Project settings > 'Hide done issues after' 0 days (or wait 14 days after resolving some issues). The board's Done column now shows 0 cards, and the notice says 'N done issues are hidden'. Open Done's menu and pick Delete column. The same happens on a scrum board with an active sprint when a column holds only backlog issues or epics: none of them are on the board.",
+    "actual": "n = list.cards.length counts only the cards the board shows. That leaves out old done issues, other sprints' issues and epics. With n = 0 no confirm appears. ops.deleteColumn moves ALL of the column's issues to lists[index-1], here 'In Progress'. setStatus then clears resolvedAt and logs a status change on each one, so every hidden resolved issue is silently reopened. The toast has no Undo.",
+    "expected": "The confirm counts every issue in the column (board.issues with that columnId, epics included) and says where they go. A column that really is empty is deleted without asking. Resolved issues are not reopened as a side effect of an adjacent-column default.",
+    "fix_hint": "In deleteColumn, set n = board.issues.filter(i => i.columnId === list.id).length. Choose the target by category first: another column of the same category if there is one, else the neighbour. Also name the category change in the confirm text. The Settings page already counts board.issues (BoardSettings.jsx:80); reuse that count."
+   },
+   {
+    "title": "The issue view keeps its state when it switches to another issue: an unsaved description or comment draft saves into the wrong issue",
+    "kind": "bug",
+    "severity": "medium",
+    "files": [
+     "src/components/board/useIssueActions.jsx:23-26",
+     "src/components/board/IssueDialog.jsx:20-31,92,177-190",
+     "src/components/board/IssueActivity.jsx:15-24,122-150"
+    ],
+    "repro": "Open an epic that has child issues. Click the description, type 'Epic plan' and do not save. Then click a row under 'Child issues' (or, from a child, click the epic in the breadcrumb). A variant: open the comment box, type a comment, then click a child issue.",
+    "actual": "IssueHost renders <IssueDialog issueId=…> with no key, so React reuses the same component instance for the new issue. The Description `draft`, the Composer's `text`/`open`, the checklistOpen flag and the Activity tab all carry over. The child opens with the epic's draft still in its description editor or comment box. Clicking Save writes the epic's text into the child's description or posts it as a comment on the child. The epic's draft is gone.",
+    "expected": "Opening another issue starts from that issue's own state. A draft belongs to the issue it was typed in.",
+    "fix_hint": "In IssueHost, render <IssueDialog key={route.found.issue.id} …>, or key the inner content by issue.id so the Dialog shell does not re-animate. Better still, save a pending description draft before switching (see the next finding)."
+   },
+   {
+    "title": "An unsaved description is thrown away without a word when the issue view is closed (Escape, overlay click, X, Back)",
+    "kind": "bug",
+    "severity": "medium",
+    "files": [
+     "src/components/board/IssueDialog.jsx:20-31,126",
+     "src/components/ui/Dialog.jsx:66-73,82-86"
+    ],
+    "repro": "Open any issue. Click 'Add a description…' and type several paragraphs. Press Escape, or click the dimmed page, or the X.",
+    "actual": "RichTextEditor does not handle Escape, so the Dialog's onKeyDown closes the issue view. The Description `draft` lives only in component state and is discarded. Reopening the issue shows the old description. Nothing warns before closing. Every other field in the view saves as you go (InlineEdit commits on blur, pickers save at once), so users expect the description to be kept too.",
+    "expected": "The typed description is kept: saved on close, as the other fields are.",
+    "fix_hint": "Product call: autosave. Keep the draft in a ref. When the dialog closes (onClose wrapper in IssueDialog) or unmounts, call onSave(draft) if draft !== null and it differs from value. Alternatively, have Description's wrapper handle Escape as Cancel with stopPropagation, so Escape does not close the dialog while editing, and save on the other close paths."
+   },
+   {
+    "title": "Typing a year into the Due date or Start date in an issue's Details clears the field (Chrome and Edge)",
+    "kind": "bug",
+    "severity": "medium",
+    "files": [
+     "src/components/board/IssueFields.jsx:169-182",
+     "src/components/board/IssueDetails.jsx:58-59",
+     "src/utils/boardIssueOps.js:202-203",
+     "src/utils/boardModel.js:37-42"
+    ],
+    "repro": "Open an issue with no due date. In Details > Due date, type the month and day with the keyboard, then type the year '2026' digit by digit.",
+    "actual": "After the first year digit Chrome reports the value '0002-09-26' and fires input. DateInput passes it straight to updateIssue. isLocalISO('0002-09-26') is false: new Date(2, 8, 26) is 1902, so parseLocalISO rejects it and the store keeps '' (or clears a due date that was already set, and logs that change). The input is controlled (value={value || ''}), so React forces the DOM value back to '' and every segment is wiped. You cannot type a full date. Only the picker popup works.",
+    "expected": "The typed date lands once the year is complete, and the half-typed field is not wiped.",
+    "fix_hint": "Give DateInput a local draft: onChange sets the draft, and it calls onChange(v) only when v === '' or /^\\d{4}-/.test(v) with a year of 1000 or more that isLocalISO accepts. Render value={draft ?? value}. Commit or reset on blur. The create dialog uses the same DateInput, so it gets the same fix."
+   },
+   {
+    "title": "Closing an issue pushes a new history entry, so the browser's Back button reopens the issue you just closed",
+    "kind": "bug",
+    "severity": "low",
+    "files": [
+     "src/components/board/useIssueActions.jsx:15-20",
+     "src/hooks/useUrlState.js:56-62"
+    ],
+    "repro": "On a board, click a card (the address gets ?issue=KEY-1, pushed). Close it with X or Escape. Press the browser's Back.",
+    "actual": "close() is setParam(null) with push: true, so closing pushes a third entry: board, board?issue=KEY-1, board. Back returns to ?issue=KEY-1 and the issue opens again. It takes two more Backs to leave the board. Deleting an issue from its view does the same.",
+    "expected": "Closing undoes the open. Back after a close goes to the page before the board, as the comment on useIssueRoute says ('pushed so Back closes it').",
+    "fix_hint": "In useIssueRoute, open with push and record it, e.g. navigate state { issueOpened: true }. In close(), call navigate(-1) when the current entry was pushed by open, else setParam(null) with replace. Or give useUrlState a per-call replace option and close with replace."
+   },
+   {
+    "title": "'Pro tip: press M to comment' never works: the shortcut sleeps inside the issue dialog it lives in",
+    "kind": "bug",
+    "severity": "low",
+    "files": [
+     "src/components/board/IssueActivity.jsx:124,151",
+     "src/hooks/useHotkeys.js:91"
+    ],
+    "repro": "Open any issue. Click on empty space in the view so no field has focus, then press M.",
+    "actual": "IssueActivity registers useHotkeys({ m }) without allowInDialog. useHotkeys returns early whenever an [aria-modal=\"true\"] element exists. IssueActivity is only ever rendered inside IssueDialog (a modal Dialog), so the handler never runs. The hint under the comment box advertises a control that does nothing.",
+    "expected": "M opens and focuses the comment box.",
+    "fix_hint": "useHotkeys({ m: () => setComposeKey(k => k + 1) }, { allowInDialog: true }). The typing-target guard still keeps it from firing in fields."
+   },
+   {
+    "title": "A backlog drag can never be called off: a row released anywhere still moves (B-17's fix covers only the board)",
+    "kind": "bug",
+    "severity": "low",
+    "files": [
+     "src/pages/Backlog.jsx:113,60-75"
+    ],
+    "repro": "On a scrum project's Backlog, start dragging a row and release it over the toolbar, the Epic panel, the project header, or far below the last section.",
+    "actual": "The backlog's DndContext uses closestCenter, which always names the nearest row or section. onDragEnd moves the issue there, into another sprint or to another rank, even though the pointer was outside every section. The board fixed the same defect with boardCollision (pointer-within) in B-17.",
+    "expected": "A drop outside every section moves nothing, as on the board.",
+    "fix_hint": "Use collisionDetection={boardCollision} (src/utils/boardDnd.js). Its isCard test checks type 'card', so generalise it to 'card' or 'row', or pass the type in, so a row under the pointer wins over its section."
+   },
+   {
+    "title": "In a Kanban project the Backlog hides every open issue that is still in a sprint",
+    "kind": "bug",
+    "severity": "low",
+    "files": [
+     "src/pages/Backlog.jsx:55-56",
+     "src/utils/boardQuery.js:189-199"
+    ],
+    "repro": "Scrum project: create a sprint and drag three issues into it (or start it). Go to Project settings > Way of working and choose Kanban. Open Backlog.",
+    "actual": "In Kanban mode the page keeps only the 'backlog' section, and backlogSections builds that from open issues in no active or future sprint. The three issues appear nowhere on the Backlog page. If they were the only open issues, it says 'Your backlog is empty.' The board still shows them.",
+    "expected": "A Kanban project 'plans in one backlog' (the page's own words): every open, non-epic issue is listed there, whatever sprint it was left in.",
+    "fix_hint": "For !scrum, build the backlog section from all open non-epic issues, e.g. backlogSections({ ...board, sprints: [] }, issues). A drop there already sets sprintId null."
+   },
+   {
+    "title": "Changing a column's category to Done resolves its issues but never creates their next occurrence and logs no history",
+    "kind": "bug",
+    "severity": "low",
+    "files": [
+     "src/utils/boardOps.js:74-89",
+     "src/pages/Board.jsx:158",
+     "src/pages/BoardSettings.jsx:96"
+    ],
+    "repro": "Put an issue that repeats weekly in a 'Review' column (category In progress). In the column menu choose Status category > Done, or change the category in Project settings.",
+    "actual": "updateColumn sets resolvedAt on the column's issues directly. It never calls spawnNext and writes no activity entry. The recurring issue is resolved but its next occurrence is never created. Moving it to another Done column later does not create one either, because withStatus/setStatus spawn only when resolvedAt goes from null to set. The History tab shows no status change.",
+    "expected": "A category change that resolves an issue behaves like moving it to Done: the next occurrence is created, and the history records the resolution.",
+    "fix_hint": "In updateColumn, when becameDone, collect the ids of the recurring issues whose resolvedAt was null and reduce them through spawnNext, which boardIssueOps would need to export or expose through setStatus. Add a logged 'status' entry (from the old category name to the new one) for each issue."
+   },
+   {
+    "title": "The Epic panel's 'Create epic' composer shows a Task/Story/Bug type picker that does nothing",
+    "kind": "bug",
+    "severity": "low",
+    "files": [
+     "src/components/board/BacklogParts.jsx:113",
+     "src/components/board/InlineCreate.jsx:62-63"
+    ],
+    "repro": "Backlog > Epic panel > Create epic. The composer shows a type picker set to 'Task'. Pick 'Bug', type a name and press Enter.",
+    "actual": "InlineCreate always renders TypePicker (allowEpic false, default task). EpicPanel calls onCreate(({ title }) => …) and drops the type, so it always creates an epic. The picker offers choices that are ignored, and 'Task' is shown while an epic is made.",
+    "expected": "No type picker when the type is fixed.",
+    "fix_hint": "Add a showType prop to InlineCreate (default true) and pass showType={false} from EpicPanel."
+   },
+   {
+    "title": "A new sprint after a deletion reuses an existing sprint's name ('LIFE Sprint 2' twice)",
+    "kind": "bug",
+    "severity": "low",
+    "files": [
+     "src/utils/boardOps.js:188-200"
+    ],
+    "repro": "Scrum project: Backlog > Create sprint twice (LIFE Sprint 1, LIFE Sprint 2). Delete LIFE Sprint 1. Create sprint again.",
+    "actual": "The unnamed sprint is named `${key} Sprint ${board.sprints.length + 1}`. After the deletion there is one sprint, so the new one is 'LIFE Sprint 2', the same as the existing one. The Move to menus, the Sprint picker and the Complete-sprint target list then show two identical names.",
+    "expected": "The next free number: LIFE Sprint 3.",
+    "fix_hint": "Name it 1 + the highest n among the names matching /^KEY Sprint (\\d+)$/ (or among all sprints ever made), and skip names that are already taken."
+   },
+   {
+    "title": "Project settings: after the chosen target column is deleted, 'Delete column' does nothing and the panel closes",
+    "kind": "bug",
+    "severity": "low",
+    "files": [
+     "src/pages/BoardSettings.jsx:76-119"
+    ],
+    "repro": "Settings > Columns. Click the trash on a column that holds issues. The panel opens with 'move to' = the first other column, say B. Without confirming, delete column B (empty) with its own trash. Back in the first panel, the select now shows another column. Click 'Delete column'.",
+    "actual": "`target` was initialised once from others[0].id and still holds B's id. The select shows the first remaining option, but state was never updated. store.deleteColumn refuses because the target is missing (it returns false), the panel closes anyway, and the column stays. There is no message.",
+    "expected": "The column is deleted into the column the select shows, or the refusal is explained.",
+    "fix_hint": "Derive the effective target: const chosen = others.some(c => c.id === target) ? target : others[0]?.id. Use it for the select's value and the delete. Keep the panel open with an error when deleteColumn returns false."
+   },
+   {
+    "title": "The board's 'Complete sprint' button only goes to the Backlog: the user must find and click Complete sprint again",
+    "kind": "design",
+    "severity": "low",
+    "files": [
+     "src/pages/Board.jsx:199",
+     "src/pages/Backlog.jsx:42,82,138"
+    ],
+    "repro": "Scrum project with an active sprint: on the Board, click 'Complete sprint' in the header.",
+    "actual": "It is a link to /boards/:id/backlog. No dialog opens. The user lands on the backlog and has to click the sprint's own Complete sprint button.",
+    "expected": "Clicking Complete sprint opens the Complete-sprint dialog, as its label says.",
+    "fix_hint": "Link to `/boards/:id/backlog?complete=1`. In Backlog, initialise `completing` from useUrlState('complete') and clear the param when the dialog closes. Or render CompleteSprintDialog on the Board page too."
+   }
+  ]
+ },
+ {
+  "area": "find:CL",
+  "findings": [
+   {
+    "title": "Auto-Generate ignores the letter's own Recipient and Company: Apply overwrites a typed recipient with \"Hiring Manager\" and the body says \"[Company Name]\" under a filled Company",
+    "kind": "bug",
+    "severity": "medium",
+    "files": [
+     "src/components/CoverLetterGeneratorModal.jsx:9-11",
+     "src/components/CoverLetterGeneratorModal.jsx:16-25",
+     "src/components/CoverLetterPanel.jsx:60-78",
+     "src/utils/coverLetterGenerator.js:112",
+     "src/utils/coverLetterGenerator.js:167-174"
+    ],
+    "repro": "Cover Letter tab: type Recipient Name \"Jane Smith\", Recipient Title \"Engineering Manager\", Company \"Acme\". Click Auto-Generate from Resume. The modal's Target Company is empty and its Recipient Name reads \"Hiring Manager\". Click Apply.",
+    "actual": "Recipient Name becomes \"Hiring Manager\" and prints in bold as if it were a person. The title the user typed is cleared, because the name changed. The body opens \"Dear Hiring Manager,\" and says \"...opportunity at [Company Name]\" three times. The recipient block still prints \"Acme\", because Apply writes company only when it is truthy (CoverLetterPanel.jsx:69). AUD-31's own row (docs/tracking/bug-status.md:143) left both halves \"for the owner\", so this is still pending.",
+    "expected": "The generator starts from the letter's own recipient and company: Recipient = cl.recipientName, or empty for \"Dear Hiring Team,\", and Target Company = cl.company. A generated letter then greets the recipient and names the company the letter already shows. Leaving Company blank in the generator also clears the old company, so the block and the body agree.",
+    "fix_hint": "CoverLetterGeneratorModal: add a `coverLetter` prop. Add a useEffect on isOpen that sets company, recipient (and role from cl.subject if wanted) from the letter when the modal opens, and default recipient to '' instead of 'Hiring Manager'. In handleApplyGenerated, write `company` unconditionally (updateCoverLetter('company', gen.company ?? '')), as recipientName already is. Tests: the unit test for generateCoverLetter keeps passing. Add a panel test: a typed recipient and company survive Apply, and a blank generator company clears cl.company."
+   },
+   {
+    "title": "Job-description scanner turns contractions into junk keywords (\"ll\", \"re\", \"ve\", \"don\", \"isn\"), and \"+\" writes them into Skills",
+    "kind": "bug",
+    "severity": "medium",
+    "files": [
+     "src/utils/atsChecker.js:331-333",
+     "src/utils/atsChecker.js:339-347",
+     "src/utils/atsChecker.js:152-175"
+    ],
+    "repro": "ATS Check tab: paste \"You'll join a team where we're shipping fast. We've got Kubernetes. Don't worry if you haven't used Go.\" into Target Job Description Scanner.",
+    "actual": "The tokenizer's class [^\\p{L}\\p{M}\\p{N}_\\s+#.-] replaces the apostrophe (both ' and ’) with a space before the stop-word check runs. \"You'll\" becomes \"You\" + \"ll\", \"we're\" becomes \"re\", \"We've\" becomes \"ve\", \"Don't\" becomes \"Don\", and \"haven't\" becomes \"haven\". The stop list's contraction entries (\"don't\", \"we're\", …) can never match. \"ll\", \"re\", \"ve\", \"Don\" and \"haven\" appear under Missing Keywords, lower the Match %, and clicking + adds \"ll\" to the Skills section.",
+    "expected": "Contractions and possessives are not keywords. \"You'll\", \"we're\" and \"don't\" are dropped as the stop words they are, and \"Stripe's\" reads as \"Stripe\".",
+    "fix_hint": "Before the punctuation strip, normalise curly apostrophes to ' and either keep the apostrophe inside words (add ' to the allowed class, then strip a trailing 's and check the whole token against COMMON_STOP_WORDS) or remove contraction tails with /\\b(\\p{L}+)['’](ll|re|ve|d|s|t|m)\\b/giu before tokenising, dropping the ones whose full form is a stop word. Add cases for ll/re/ve/don't/Stripe's to tests/unit/ats-job-keywords.unit.mjs."
+   },
+   {
+    "title": "The pasted job description is lost whenever the user leaves the ATS Check tab",
+    "kind": "bug",
+    "severity": "medium",
+    "files": [
+     "src/components/AtsCheckerPanel.jsx:62",
+     "src/pages/Editor.jsx:155-159",
+     "src/pages/Editor.jsx:34-46"
+    ],
+    "repro": "ATS Check tab: paste a long job posting into Target Job Description Scanner and see the missing keywords. Switch to the Résumé tab to add one of them to an Experience bullet, then come back to ATS Check.",
+    "actual": "The textarea is empty and the Match % and keyword lists are gone. jobDescription is useState inside AtsCheckerPanel, and Editor mounts the panel only while activeTab === 'ats', so every tab switch unmounts it. The user has to find the posting and paste it again after each edit, which defeats the edit-and-recheck loop the scanner is for. Editor already lifts other per-tab state for exactly this reason (\"so it survives a trip to Design or the letter\", Editor.jsx:34).",
+    "expected": "The pasted posting and its results survive a trip to another tab, at least for the résumé being edited in this session.",
+    "fix_hint": "Lift `jobDescription` into Editor (useState keyed by resume.id, e.g. a Map in a ref, or a plain state reset when id changes) and pass value/onChange to AtsCheckerPanel. Or keep it in sessionStorage under `ats-jd:<resumeId>`, with try/catch. Test: render the panel, type, unmount and remount (tab switch), and the text and jobMatch are still there."
+   },
+   {
+    "title": "STAR Optimizer opens on two lines merged into one word, and Apply deletes the other line, when the lines are split by Shift+Enter (a <br> inside a <div>/<p>)",
+    "kind": "bug",
+    "severity": "medium",
+    "files": [
+     "src/components/RichTextEditor.jsx:222-244",
+     "src/components/RichTextEditor.jsx:71-76",
+     "src/components/RichTextEditor.jsx:79-95"
+    ],
+    "repro": "In any description (or the cover letter body), type \"Built the billing API\", press Enter, type \"Handled QA\", press Shift+Enter, type \"Cut costs by 20%\". With the caret on the last line, click STAR Optimizer, then Apply to Resume.",
+    "actual": "Chrome stores this as `Built the billing API<div>Handled QA<br>Cut costs by 20%</div>`. statementRange walks up to the first STATEMENTS ancestor, the <div>, and selects its whole contents. range.toString() has no text for <br>, so the optimizer opens on \"Handled QACut costs by 20%\". Apply replaces both lines with that one statement, so the \"Handled QA\" line is lost, or the two are glued together. The <br> split in lines 234-243 only runs for bare text directly under the editor. The same happens in a <p> stored with <br> line breaks (pasted or imported descriptions).",
+    "expected": "The optimizer opens on the line the caret is in, bounded by <br> the same way as bare text, and Apply replaces only that line.",
+    "fix_hint": "In statementRange, after finding the STATEMENTS ancestor `n`, check whether it contains a <br> child. If it does, run the same sibling walk used for bare text (first/last over inLine siblings) starting from the caret's child of `n`, instead of selectNodeContents(n). Extend tests/pdf/57-optimizer-statement.test.mjs with `<div>A<br>B</div>`, caret in B: the expected text is \"B\"."
+   },
+   {
+    "title": "STAR Optimizer's Auto-Fix turns \"didn't\" into \"Deliveredn't\" (and flags it as a weak phrase)",
+    "kind": "bug",
+    "severity": "low",
+    "files": [
+     "src/utils/bulletOptimizer.js:39",
+     "src/utils/bulletOptimizer.js:187-190",
+     "src/utils/bulletOptimizer.js:236-247"
+    ],
+    "repro": "Open STAR Optimizer on \"Ensured releases didn't slip past the sprint deadline\" and click Auto-Fix.",
+    "actual": "The badge reports weak phrases, including \"did\". Auto-Fix produces \"Guaranteed releases deliveredn't slip past the sprint deadline\". /\\b(did)\\b/ matches the \"did\" in \"didn't\", because the apostrophe is a word boundary. The same happens with ’.",
+    "expected": "\"didn't\" is not the weak verb \"did\". It is neither flagged nor rewritten.",
+    "fix_hint": "Add a negative lookahead for an apostrophe to the pattern: /\\b(did)\\b(?!['’])/gi. It is simplest to add (?!['’]) to every WEAK_PHRASE_REPLACEMENTS pattern. Add \"didn't\" to tests/unit/bullet-optimizer-autofix.unit.mjs."
+   },
+   {
+    "title": "\"What a parser reads\" marks Company and Location as missing (red) on every role after the first when \"Group roles by company\" is on",
+    "kind": "bug",
+    "severity": "low",
+    "files": [
+     "src/utils/parserText.js:149-171",
+     "src/templates/pdf/shared/PdfSectionsOne.jsx:49-53",
+     "src/utils/roleGroups.js:47-54"
+    ],
+    "repro": "Experience: add three roles at \"Acme\", same location \"Austin, TX\", each with a two-line description. Turn on Section Options → Group roles by company. ATS Check → open \"What a parser reads\".",
+    "actual": "The PDF prints \"Acme\" and \"Austin, TX\" once, on the employer line above the first role (groupPlaces leaves a later role's location empty when it matches). jobFields looks for roles 2 and 3 only in their own header window: `around(at)` spans at-1..at+3 and is clamped to `from`, which the earlier role moved past the employer line. The company and location are never inside that window, so both badges show red \"not found in the text as it is typed\" although both are printed.",
+    "expected": "A grouped role's company and location count as found where the PDF prints them: on the employer header of its group.",
+    "fix_hint": "Pass the section grouping into jobFields: printedJobs can tag each job with its group's first index, or with `groupRoles` and employerOf. For a job that is not first in its group, reuse the company/location outcome of the group's first job, or search the employer header line found for it. Add a unit case with three grouped roles."
+   },
+   {
+    "title": "Clicking a power verb replaces whatever the first word is, producing broken sentences",
+    "kind": "bug",
+    "severity": "low",
+    "files": [
+     "src/components/BulletOptimizerModal.jsx:31-40"
+    ],
+    "repro": "Open STAR Optimizer on \"Responsible for migrating 12 services to AWS\" (or \"In 2023, built a billing API\") and click the verb chip \"Spearheaded\".",
+    "actual": "The text becomes \"Spearheaded for migrating 12 services to AWS\" or \"Spearheaded 2023, built a billing API\". handleInsertVerb always overwrites words[0], whether it is a verb or not. The comment says \"replace or prepend\", but it never prepends. The split/join also turns any line breaks in the statement into single spaces.",
+    "expected": "The verb replaces a leading action verb or a leading weak phrase (\"Responsible for\" → \"Spearheaded\"). Otherwise it is prepended, and the old first word keeps its text, lowercased.",
+    "fix_hint": "If leadsWithActionVerb(text), replace only the first word. Else if the text starts with a WEAK_PHRASE_REPLACEMENTS match (anchored ^\\s*), replace that phrase. Else set `${verb} ${first char lowercased}${rest}`. Use a regex on the original string (text.replace(/^\\s*\\S+/, verb)) instead of split/join, so whitespace and newlines are kept."
+   },
+   {
+    "title": "\"Add Quantifiable Impact\" chips append after the sentence's full stop (\"...latency. by 35%\")",
+    "kind": "bug",
+    "severity": "low",
+    "files": [
+     "src/components/BulletOptimizerModal.jsx:42-44"
+    ],
+    "repro": "Open STAR Optimizer on \"Reduced API latency for the checkout service.\" (or pick any Google X-Y-Z template, all of which end in '.') and click \"+ by 35%\".",
+    "actual": "\"Reduced API latency for the checkout service. by 35%\": the phrase lands after the final period. On an empty statement it gives \" by 35%\" with a leading space.",
+    "expected": "\"Reduced API latency for the checkout service by 35%.\": the phrase goes before trailing sentence punctuation, and no space is added when the text is empty.",
+    "fix_hint": "const m = prev.trimEnd().match(/^(.*?)([.!?;]*)$/s); return m[1] ? `${m[1]} ${metricStr}${m[2]}` : metricStr;"
+   },
+   {
+    "title": "A year counts as a \"Quantifiable Metric\" in the optimizer and in the ATS metrics score",
+    "kind": "bug",
+    "severity": "low",
+    "files": [
+     "src/utils/bulletOptimizer.js:118-121",
+     "src/utils/atsChecker.js:905-908"
+    ],
+    "repro": "Open STAR Optimizer on \"Joined Acme in 2021 as a backend engineer\", or have ATS bullets such as \"Migrated the platform to AWS in 2019\".",
+    "actual": "The optimizer shows a green \"Quantifiable Metric\" and scores the statement +30. The ATS tab counts these bullets toward \"Quantifiable Impact & Metrics\". hasMetric excludes a year only when the whole statement is exactly four digits.",
+    "expected": "A standalone calendar year (19xx/20xx) is not a measurable result. Only numbers that are not years count, such as \"12\", \"45%\", \"$1.2M\" or \"3x\".",
+    "fix_hint": "In hasMetric, test the text with years removed: const noYears = clean.replace(/(?<![\\p{L}\\d$])(?:19|20)\\d{2}(?![\\d%kKmMxX])/gu, ''); return /(?<!\\p{L})\\d/u.test(noYears). Add cases to tests/unit/bullet-optimizer-ats-agree.unit.mjs."
+   },
+   {
+    "title": "ATS bullet analysis merges a nested list item into its parent bullet (\"Led migrationCut costs by 30%\")",
+    "kind": "bug",
+    "severity": "low",
+    "files": [
+     "src/utils/atsChecker.js:33-40",
+     "src/utils/atsChecker.js:872-874"
+    ],
+    "repro": "Give an Experience entry a nested list, for example by pasting from Google Docs: `<ul><li>Led migration<ul><li>Cut costs by 30%</li></ul></li><li>Built CI</li></ul>`. Open ATS Check → Work Experience.",
+    "actual": "The non-greedy /<li[^>]*>([\\s\\S]*?)<\\/li>/ runs from the outer <li> to the inner </li>. The two statements become one bullet, \"Led migrationCut costs by 30%\", with the words glued together. The bullet count, the action-verb ratio and the metric ratio are computed on the wrong set: 2 bullets instead of 3, and the nested one's metric is credited to its parent.",
+    "expected": "Each list item, nested or not, is one bullet. That is how the PDF prints them (parseRichText gives each item its own block with an indent).",
+    "fix_hint": "Read the description through parseRichText, as printedText does: every block with a `marker` is a bullet (runs joined). Paragraph lines keep the existing typed-bullet/multi-line logic. Add the nested case to the ATS unit tests."
+   },
+   {
+    "title": "\"Non-standard heading\" warning counts sections that print no heading at all",
+    "kind": "bug",
+    "severity": "low",
+    "files": [
+     "src/utils/atsChecker.js:433-435",
+     "src/utils/atsChecker.js:735",
+     "src/utils/atsChecker.js:781-798"
+    ],
+    "repro": "Add a Projects section, rename it \"Side Stuff\", and leave it with no entries (or hide all its entries). Open ATS Check → Section Headings.",
+    "actual": "The report shows \"1 Non-standard heading(s) detected: \\\"Side Stuff\\\" → \\\"Projects\\\"\" and withholds 4 points, although the PDF prints nothing for that section: a section with no shown entries prints no heading (sectionPrints, R2-057), and the has_* checks just above already ignore such sections via visibleSections.",
+    "expected": "Only headings that actually print are judged. An empty or all-hidden section is neither flagged nor renamed.",
+    "fix_hint": "Make needsAtsTitle also require shownItems(section, template).length > 0: pass the template into needsAtsTitle and standardizeSectionsForAts (the panel has resume.template). Filter nonStandard from visibleSections, the same rule that has_exp/has_edu/has_skills use."
+   }
+  ]
+ }
+]

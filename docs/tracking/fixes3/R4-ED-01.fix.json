@@ -1,0 +1,12 @@
+{
+  "id": "R4-ED-01",
+  "area": "ED",
+  "outcome": "fixed",
+  "patch": "/mnt/Storage/my-learning/claude/flowcv/wip/execution-2026-09-26/fixes3/R4-ED-01.patch",
+  "after": [],
+  "failfirst_tests": ["tests/pdf/99-language-proficiency-select.test.mjs"],
+  "other_tests": ["tests/unit/language-level.unit.mjs"],
+  "commit_subject": "fix(editor): a language's Proficiency shows the level the résumé prints, and every level can be picked (R4-ED-01)",
+  "commit_body": "Cause: the Proficiency select was value={item.proficiency || 'Professional'} over five options. The Compact starter stores 'Conversational' and imports keep the file's words ('C1', 'Advanced') or none (''). With no option of the stored value the browser showed the first option ('Native') while the PDF, Word, Markdown and ATS text printed 'Conversational'; an unset level showed 'Professional' while nothing printed. Picking the option already on screen fires no change event, so that level could not be chosen without picking another first.\n\nFix: the select's value is the stored proficiency ('' when none). A 'Not set' option holds the empty value, and a stored level the five do not name is added as its own option, as the date pickers do for an unusual year. A new language still starts at Professional.\n\nTest: tests/pdf/99-language-proficiency-select.test.mjs renders LanguageItem with 'Conversational', 'C1', 'Advanced', '', undefined and each of the five; the selected option is the stored value, the unusual one is listed once, and picking Native over 'Conversational' or Professional over an unset level is a change that calls onUpdate.",
+  "notes": "Confirmed at d11d5a0: SectionEditorLeafItems.jsx:54 `value={item.proficiency || 'Professional'}` with five options; PdfSectionsTwo prints item.proficiency as stored and nothing for ''. Product call: the empty option is labelled 'Not set' (the item asked for 'None / not set'), placed first; an unusual stored level is listed last, after the five. New languages keep the 'Professional' default in NEW_ITEM. The stored value is shown via String() so a non-text value from a hand-written file cannot crash the select. No docs/knowledge line describes this select. Test calls LanguageItem as a plain function for the onChange check (it has no hooks) and uses renderToStaticMarkup's selected=\"\" marker for the selected option."
+}
