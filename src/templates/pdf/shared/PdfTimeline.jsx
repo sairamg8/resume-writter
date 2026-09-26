@@ -2,7 +2,7 @@ import { View } from '@react-pdf/renderer';
 import { Text } from './PdfText';
 import { solid, textShades } from './pdfColors';
 import { railColor, TIMELINE_RAIL } from './timelineRail';
-import { lineBox } from './pdfMeasure';
+import { capMiddle } from './pdfMeasure';
 import { EndRow, endField, fieldGap, getDateColor, onBaselineOf, wordRoom } from './PdfItemHeader';
 import { SPACER, gridRows } from './PdfSections';
 
@@ -44,13 +44,6 @@ export const INSET = 16;
 
 /** The date's size: a step under the body text, as a label over the title (never below 7 pt). */
 export const timelineDateSize = (settings) => Math.max(7, (settings?.fontSizeBase || 11) - 1);
-
-/**
- * pt from the top of a first line in `style` to the middle of its capitals: react-pdf sets a line's
- * baseline its ascent below the box's top, and a capital stands about 0.72 em over it (Noto Sans'
- * cap height; the fonts on offer range 0.66–0.73, well inside the dot).
- */
-const capMiddle = (style) => lineBox(style).ascent - 0.36 * style.fontSize;
 
 /** The dot on the rail, level with the middle of the entry's first line (`firstLine`, a lineBox style). */
 function Dot({ settings, firstLine }) {
