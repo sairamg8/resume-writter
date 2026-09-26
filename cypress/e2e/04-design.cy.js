@@ -138,6 +138,10 @@ describe('design — settings', () => {
     cy.get('@thickness').find('input[aria-label="Section border thickness (pt)"]').should('have.value', '1');
     cy.get('@thickness').contains('button', '+').click().click();
     cy.store().should((s) => expect(settingsOf(s).sectionBorderWidth).to.eq(3));
+    // The box can be emptied and typed: 5 after the 3 is 5, written on Enter, not 35 clamped (R4-LO-19).
+    cy.get('@thickness').find('input').clear().should('have.value', '').type('5{enter}');
+    cy.store().should((s) => expect(settingsOf(s).sectionBorderWidth).to.eq(5));
+    cy.get('@thickness').find('input').should('have.value', '5');
   });
 
   it('spacing steppers change the stored values within their limits', () => {

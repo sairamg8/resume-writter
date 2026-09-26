@@ -1,4 +1,5 @@
 import { ColorInput, DesignSection } from '@/components/DesignPanelShared';
+import { useTypedNumber } from '@/hooks/useTypedNumber';
 import { SECTION_BORDER_PT } from '@/constants/designNumbers';
 import { headerTemplateId, headingBorderControls, headingBorderExtraPt, upperSectionTitles } from '@/constants/templates';
 import { DEFAULTS } from '@/templates/pdf/shared/templateSettings';
@@ -13,6 +14,33 @@ const HEADING_STYLES = [
   { value: 'box',       label: 'Boxed' },
   { value: 'plain',     label: 'Plain' },
 ];
+
+/**
+ * Border thickness's box, between − and +: typed as the other stepper boxes are (useTypedNumber,
+ * R2-032) — what is typed is written once, on Enter or on leaving the box, and `onChange` clamps it.
+ * It was controlled by the stored value and ignored an empty box, so it could not be emptied: deleting
+ * the 2 put it back at once, and typing 5 after it stored 25, clamped to the most (R4-LO-19, as R4-ED-05).
+ */
+function BorderPtBox({ pt, min, max, disabled, onChange }) {
+  const typed = useTypedNumber({
+    shown: String(pt),
+    commit: (text) => {
+      const v = parseInt(text, 10);
+      if (Number.isFinite(v)) onChange(v);
+    },
+  });
+  return (
+    <input
+      type="number"
+      disabled={disabled}
+      aria-label="Section border thickness (pt)"
+      min={min}
+      max={max}
+      {...typed.inputProps}
+      className="w-10 text-center text-xs font-medium text-gray-700 border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-400 disabled:bg-gray-50 disabled:cursor-not-allowed h-6"
+    />
+  );
+}
 
 /**
  * Design → Section Headings, without its collapsible frame, so it can be rendered on its own.
@@ -98,16 +126,7 @@ export function HeadingControls({ settings, template, updateSetting }) {
             onClick={() => setBorderPt(borderPt - 1)}
             className="w-6 h-6 flex items-center justify-center border border-gray-200 rounded text-gray-600 enabled:hover:bg-gray-100 disabled:cursor-not-allowed text-base leading-none"
           >−</button>
-          <input
-            type="number"
-            disabled={!borderControls.thickness}
-            aria-label="Section border thickness (pt)"
-            min={1 + extraPt}
-            max={8 + extraPt}
-            value={borderPt}
-            onChange={e => { const v = parseInt(e.target.value, 10); if (!isNaN(v)) setBorderPt(v); }}
-            className="w-10 text-center text-xs font-medium text-gray-700 border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-400 disabled:bg-gray-50 disabled:cursor-not-allowed h-6"
-          />
+          <BorderPtBox pt={borderPt} min={1 + extraPt} max={8 + extraPt} disabled={!borderControls.thickness} onChange={setBorderPt} />
           <button
             type="button"
             disabled={!borderControls.thickness}
