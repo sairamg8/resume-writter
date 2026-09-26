@@ -87,6 +87,7 @@ function override(key, measure, scale = () => 1) {
     for (let i = 1; i < pts.length; i += 1) {
       const want = (pts[i][0] - pts[i - 1][0]) * 0.75 * k;
       if (pts[i][1] == null || pts[i - 1][1] == null) out.push('not found');
+      else if (pts[i - 1][2] === 'page' && pts[i][2] !== 'page') out.push(`${pts[i - 1][0]} → ${pts[i][0]} px moves the next title back from page ${pts[i - 1][1]} onto the section's own page`);
       else if (pts[i][2] !== pts[i - 1][2]) continue;
       else if (pts[i][2] === 'page') {
         if (pts[i][1] < pts[i - 1][1]) out.push(`${pts[i - 1][0]} → ${pts[i][0]} px moves the next title back from page ${pts[i - 1][1]} to page ${pts[i][1]}`);
