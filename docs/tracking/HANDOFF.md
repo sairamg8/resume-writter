@@ -32,8 +32,8 @@ RES-R2-126b `052b4c0`, RES-R2-137 note `977c89b`, R2-041b `cdd0dd7`, LC-FLIP `39
 11 fields outside the board + a source guard test, tests/unit/ime-enter-guard.unit.mjs), B-20c `edbca14` (the kit's Dialog
 and Popover ignore an input method's Escape), J-12 `1daf0f0` (job page one column on phones, long values wrap).
 Fail-first 36223043609, full gate 36223045204 on `1daf0f0` → green → `git push origin 1daf0f0:refs/heads/master`, rows.
-Still open for the next wave: R2-148-c (re-land its patch after fixing the Sidebar-education import regression), the
-RES-row annotations above, then the checklist.
+Still open for the next wave: R2-148-c (re-land its patch after fixing the Sidebar-education import regression), then
+the checklist. (The RES-row notes for today's fixes are in the rows.)
 **After that:** the checklist's rest (store `flowcv/CHECKLIST-2026-09-25*.md`), accessibility last.
 Pending-bug list: store `flowcv/wip/execution-2026-09-26/pending-bugs.md`.
 
