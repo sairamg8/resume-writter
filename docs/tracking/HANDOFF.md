@@ -1,34 +1,36 @@
 # Session Handoff — Resume Here
 
-## ⏩ COLD START HERE — 2026-09-26 (laptop session 26b8b31a) — owner: "merge everything to master, deploy, report pending bugs"
+## ⏩ COLD START HERE — 2026-09-26 ~11:15 IST (laptop session 26b8b31a, context 58% → handing over)
 
-The owner's hold is lifted. **Cloudflare branch builds are OFF** (verified: pushes 1aa18ee, 444cf33, e827952, 91c91c9 have
-no "Workers Builds" check run; 618c6c1 had one). Only a master push deploys.
+**Owner's orders today:** merge everything to master + deploy; fix the pending bugs; **English only** (locale parked);
+**no new agents** from here (owner, 11:10). Tests only on CI; master only on a green full gate of that exact commit.
+Cloudflare branch builds are OFF (only a master push deploys). Accessibility last.
 
-🔴 **Owner, 2026-09-26: English only for now.** `claude/wf-locale` (R2-148 language + right-to-left) is **parked at
-`ac50cf4`, not merged** — no language/RTL work until the owner reopens it. (It has the work branch merged in, `faf2c71`,
-and fixes `cd0fbc9` `3da8a07` `a33e548` `ac50cf4`, never gated; its runs were cancelled.)
+**Live: `master` = `e6b1a4a`** — batches 3–5: perf2 + section-look (`91c91c9`), owner-ui R3-009…012 (`f20a62d`), the ten
+designed layouts R2-138 + R3-008 (`e6b1a4a`, gate 36218934694). Parked, not merged: `claude/wf-locale` `ac50cf4` (English
+only), `claude/wf-templates` (a11y).
 
-**Deployed: `master` = `e6b1a4a`** = batch 5 (layouts R2-138 ✅, R3-008 ✅; gate 36218934694) on batch 4 (owner-ui, R3-009…012 ✅; gate 36217649197 15/15) on batch 3 (`91c91c9`): perf2 (`dcc0392`, report `1aa18ee`, R2-142 partial) + section-look (`91c91c9`,
-report `444cf33`, R2-147 partial); full gate 36216686987 15/15 green, fail-first 36216688486 (cf3ad0e) green.
+**Wave 1 — 17 bug fixes on the work branch, gating:** full gate **36221038666 on `45b6b60`** (its previous gate 36220057010
+on ebcaab4 failed only the J-38 test, fixed since). Every fix's fail-first is green except the reverted DatePill change.
+- B-20 `617f24f` · J-30 `5f86d40` · B-29 `4345a13` · RES-R2-140-b `5fc8925` · R2-148-a `9af32ac` · J-36 `62f024a` ·
+  B-05 `ff7e89a` + `9e20f77` · R2-041 `ba0a938` · RES-R2-126 `29fb954` · B-17 `f568ac3` · J-38 `ca13cdb` (+ test fix) ·
+  R2-148-d `53ee844` (**firestore.rules — the OWNER must publish them in the Firebase console after the deploy**) · B-13
+  `702fb61` · J-39 `d524d97` · RES-R2-135 `ead4f93` · RES-R2-045 `2b12f38` · RES-R2-104 `785b34a` · R2-148-c `95afab8`.
+  RES-R2-043 was already fixed (28b15c6). Owner decides: RES-R2-140-a (offline reorder lost to the cloud's order),
+  RES-R2-140-c (a sync icon for jobs/boards — where, what it says), RES-R2-137 (Word Modern banner: reverses R2-133).
+- **Next:** 36221038666 green → `git push origin 45b6b60:refs/heads/master` → `python3 docs/tracking/tools/deploy_rows.py
+  45b6b60` → set the fixed rows (tracker rows for the RES-* leftovers and Lane C B-/J- rows by hand; `update_tracker.py
+  --recount`) → bug-status.md header → this file. Red → read `gh run view <id> --log-failed`, fix, re-gate.
 
-**Batch 4 deployed** (`f20a62d`: owner-ui, review fixes `d861584` `c9f400b`). **Batch 5, gating:** full gate **36218934694**
-on `e6b1a4a` = R3-008 `c6eb880` (fail-first 36218191333 ✅; known limit in its row) + layouts merged (`e6b1a4a`, report
-`05381c4`, R2-138 ⏸): its gate 36217880697 on fa0e777 failed only two test-side checks, fixed in `abed7ce`; parity/31
-page-break measure `fa0e777` + `f0575a3`. Green → `git push origin e6b1a4a:refs/heads/master`, deploy_rows, recount.
-Then: the rest of the checklist (English only), accessibility last.
-**Bug fixes, streaming (owner: "start fixing the pending bugs"):** workflow `flowcv-bugfix-stream` (7 clusters: boards-dnd,
-boards-text, jobs, sync-public, sync-collections, pdf-word, data; English only, no a11y) writes each fix as a patch +
-manifest in the session scratch `fixes/<ID>.patch|.done.json` (base `4d32890`); the coordinator reviews and lands each as
-its own commit here (`scratchpad/land.sh <ID>`), then fail-first per commit and one gate per batch. Landed: B-20 `617f24f`
-✅ff, J-30 `5f86d40` ✅ff, B-29 `4345a13` ✅ff, RES-R2-140-b `5fc8925` (ff 36219546057; under review), R2-148-a `9af32ac`, J-36 `62f024a`, B-05 `ff7e89a` (ff 36219677444), R2-041 `ba0a938`, RES-R2-126 `29fb954` (ff 36219729075), B-17 `f568ac3`, J-38 `ca13cdb`, R2-148-d `53ee844` (firestore.rules — OWNER publishes), B-13; J-39, RES-R2-135 `ead4f93`, RES-R2-045 `2b12f38`; R2-041/J-38 fail-first were red WITH their fixes — causes: B-05's MeasuringStrategy.Always measured at render (fixed 9e20f77), DatePill's hidden date box under 16 px (fixed be5dffa); RES-R2-104 `785b34a`, R2-148-c `95afab8`; the J-38 test read the hidden file input as a text field (test fix after 95afab8). All 21 handed off; workflow done. Full gate 36220057010 on ebcaab4 (before R2-148-c); a final gate follows on the head; be5dffa (DatePill 16 px) reverted: no test could show it matters (fail-first passed without it twice) — the J-38 red was the test's type check; RES-R2-043 already fixed (28b15c6). Needs the owner:
-RES-R2-140-a (offline reorder lost to the cloud's order — needs a stored base order), RES-R2-140-c (a sync icon for jobs and
-boards — where and what it says). If the session dies: the patches are in scratch; re-run the stopped clusters from the store
-checklist (`flowcv/wip/execution-2026-09-26/pending-bugs.md`).
-**Wave 1 final gate:** run 36221038666 on `45b6b60` → green → `git push origin 45b6b60:refs/heads/master` (deploy), then the
-tracker rows. **Wave 2** (workflow `flowcv-bugfix-wave2`, patches in scratch `fixes2/`, base `45b6b60`; land with
-`FIXDIR=…/fixes2 scratchpad/land.sh <ID>`): RES-R2-151 `68f5d56`, J-38b `2ece50b`, RES-R2-131 (already shipped, ab74277; tracker note `b8e84eb`), B-29b `b9805bb`, RES-R2-126b `052b4c0`, R2-041b landed; RES-R2-137 needs the owner (Word Modern banner reverses R2-133; tracker note).
-Scout notes (diagnoses, R3-008 design, pending bugs): store `flowcv/wip/execution-2026-09-26/`.
+**Wave 2 — landing on the work branch after 45b6b60** (workflow `flowcv-bugfix-wave2`, may still be running; patches in the
+store `flowcv/wip/execution-2026-09-26/fixes2/` + the session scratch; land one with
+`FIXDIR=<dir> bash /mnt/Storage/my-learning/claude/flowcv/wip/execution-2026-09-26/land.sh <ID>`, then push and dispatch
+`gh workflow run ci.yml --ref claude/busy-darwin-yjb13t -f failfirst="<sha>:<tests>"`; `landed.txt` lists what landed).
+Landed: RES-R2-151 `68f5d56`, J-38b `2ece50b`, RES-R2-131 note `b8e84eb` (already shipped ab74277), B-29b `b9805bb`,
+RES-R2-126b `052b4c0`, RES-R2-137 note `977c89b`, R2-041b `cdd0dd7`. **Still to come:** B-20b (IME Enter in 6 more board
+fields), tracker hygiene (LC-FLIP, LC-TWINS, LC-WAVE1, H-02/03/06/07/09/11/13). Then one full gate → deploy.
+**After that:** the checklist's rest (store `flowcv/CHECKLIST-2026-09-25*.md`), accessibility last.
+Pending-bug list: store `flowcv/wip/execution-2026-09-26/pending-bugs.md`.
 
 ## ⏩ COLD START HERE — 2026-09-25 17:00 UTC (laptop session, owner's execution brief of 21:45 IST)
 
