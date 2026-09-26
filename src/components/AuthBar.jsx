@@ -35,8 +35,12 @@ const PRESS_FOCUS_MS = 1000;
  * reach it). Its words open on mouse hover, on keyboard focus, and on a tap, Enter or Space; a
  * second tap, Escape, leaving it, or a tap anywhere else closes them. A tap's emulated hover and
  * focus are not counted, so one tap opens the words and the next closes them.
+ *
+ * The workspace's top bar shows the same icon for the jobs and the boards (shell/CollectionSyncDot,
+ * R2-140-c): `heldLabel(held)` gives the 'stopped' words for what it holds back (the résumés'
+ * by default).
  */
-function SyncDot({ syncStatus, lastSynced, isOnline, heldResumes }) {
+export function SyncDot({ syncStatus, lastSynced, isOnline, heldResumes, heldLabel = stoppedLabel }) {
   const [hover, setHover] = useState(false);     // a mouse is over it
   const [focused, setFocused] = useState(false); // keyboard focus
   const [pinned, setPinned] = useState(false);   // opened by a tap, or Enter / Space
@@ -65,7 +69,7 @@ function SyncDot({ syncStatus, lastSynced, isOnline, heldResumes }) {
   } else if (syncStatus === 'error') {
     Icon = CloudAlert; color = '#ef4444'; label = 'Sync error — will retry';
   } else if (syncStatus === 'stopped') {
-    Icon = CloudAlert; color = '#ef4444'; label = stoppedLabel(heldResumes);
+    Icon = CloudAlert; color = '#ef4444'; label = heldLabel(heldResumes);
   } else if (syncStatus === 'off') {
     // No access to the cloud (its rules, or no database): nothing is retried until a reload.
     Icon = CloudOff; color = '#9ca3af'; label = 'Sync is off — changes are saved in this browser';

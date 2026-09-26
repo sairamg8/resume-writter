@@ -5,6 +5,7 @@ import { Button, IconButton, Menu, ShortcutsDialog, cx, isImeKey, useHotkeys } f
 import { IssueTypeIcon } from '../tracker/TrackerIcons.jsx';
 import { useWorkspace } from './workspaceContext.js';
 import { orderProjects } from './projects.js';
+import { CollectionSyncDot } from './CollectionSyncDot.jsx';
 import { projectPath } from './projectViews.js';
 
 const FOCUS = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60';
@@ -121,8 +122,8 @@ function QuickSearch({ search }) {
 /**
  * The workspace's top bar, across the whole window over the sidebar and the page: the menu
  * button (phones), the brand, Your work · Projects ▾ · Job Tracker · Résumés, the Create button
- * (a new issue — on the Job Tracker's pages, a new job), the quick search (`/`) and the
- * keyboard-shortcuts help (`?`).
+ * (a new issue — on the Job Tracker's pages, a new job), the quick search (`/`), the jobs' and
+ * boards' cloud icon (CollectionSyncDot, signed in only) and the keyboard-shortcuts help (`?`).
  *
  * - `onCreate()`: open the create-issue dialog; `search(query)` → results (utils/workspaceSearch).
  */
@@ -179,6 +180,7 @@ export function TopBar({ projects = [], onCreate, search }) {
       </Button>
       <div className="ml-auto flex min-w-0 flex-1 items-center justify-end gap-1">
         <QuickSearch search={search} />
+        <CollectionSyncDot />
         <IconButton icon={CircleHelp} label="Keyboard shortcuts" shortcut="?" onClick={() => setHelpOpen(true)} />
       </div>
       <ShortcutsDialog open={helpOpen} onClose={() => setHelpOpen(false)} groups={SHORTCUTS} />

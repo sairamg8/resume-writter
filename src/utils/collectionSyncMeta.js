@@ -2,8 +2,8 @@
 // with, the versions and the order that account's cloud holds as last seen here, and what was kept
 // aside for an account whose list left — under its own key, next to the list: `cpwtcv_jobs_sync_v1`,
 // `cpwtcv_boards_sync_v1`. A browser that never synced has none, and its list is its own. The
-// held-back notice (items the cloud will not take) lives here too, as a tiny store the board and
-// job pages read.
+// held-back notice (items the cloud will not take) and each list's sync status live here too, as
+// tiny stores the board and job pages read (SyncHeldNotice, the workspace's sync icon).
 
 /** Where each list's record lives. */
 export const JOBS_SYNC_KEY = 'cpwtcv_jobs_sync_v1';
@@ -82,3 +82,53 @@ export const syncHeld = {
     return () => listeners.delete(listener);
   },
 };
+
+/**
+ * What each list's sync is doing, as the engine reports it (collectionSyncEngine's report.status):
+ * `{ jobs: { status, at }, boards: { … } }`, `at` the Date the list last came to 'synced' (null
+ * before). A store the workspace's sync icon subscribes to (shell/CollectionSyncDot.jsx). Until
+ * R2-140-c the engine's status went nowhere: an error, or a sync the account's rules refuse, was
+ * only logged to the console.
+ */
+const idle = () => ({ status: 'idle', at: null });
+let statuses = { jobs: idle(), boards: idle() };
+const statusListeners = new Set();
+
+export const collectionSyncStatus = {
+  get: () => statuses,
+  set(name, status, at = new Date()) {
+    const was = statuses[name] ?? idle();
+    if (was.status === status && status !== 'synced') return;
+    statuses = { ...statuses, [name]: { status, at: status === 'synced' ? at : was.at } };
+    statusListeners.forEach((l) => l());
+  },
+  subscribe(listener) {
+    statusListeners.add(listener);
+    return () => statusListeners.delete(listener);
+  },
+};
+
+/** The report a list's engine is given: its status and its held-back items go to the two stores above. */
+export const collectionReport = (name) => ({
+  status: (status) => collectionSyncStatus.set(name, status),
+  held: (list) => syncHeld.set(name, list),
+});
+
+// The worst first: the one icon several lists share says what most needs saying. A sync that
+// fails or is refused outranks being offline, which outranks one on its way, which outranks done.
+const RANK = ['error', 'stopped', 'off', 'offline', 'syncing', 'synced', 'idle'];
+const rank = (status) => { const i = RANK.indexOf(status); return i < 0 ? RANK.length : i; };
+
+/**
+ * One status for the lists `names` of `all` (collectionSyncStatus.get()): the worst of theirs, and
+ * with 'synced' the time the latest of them synced. `{ status: 'idle', at: null }` when there are
+ * none (signed out: no icon).
+ */
+export function worstSyncStatus(all, names) {
+  const shown = names.map((n) => all[n]).filter(Boolean);
+  if (!shown.length) return idle();
+  const status = shown.map((x) => x.status).reduce((a, b) => (rank(b) < rank(a) ? b : a));
+  const times = shown.filter((x) => x.status === 'synced' && x.at).map((x) => x.at);
+  const at = status === 'synced' && times.length ? times.reduce((a, b) => (b > a ? b : a)) : null;
+  return { status, at };
+}

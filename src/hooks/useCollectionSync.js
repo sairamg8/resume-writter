@@ -5,7 +5,7 @@ import {
 import { db } from '@/utils/firebase';
 import { collectionIo } from '@/utils/collectionSyncIo';
 import { createCollectionSync } from '@/utils/collectionSyncEngine';
-import { BOARDS_SYNC_KEY, JOBS_SYNC_KEY, localMeta, syncHeld } from '@/utils/collectionSyncMeta';
+import { BOARDS_SYNC_KEY, JOBS_SYNC_KEY, collectionReport, localMeta } from '@/utils/collectionSyncMeta';
 import { browserCloudSync } from '@/utils/cloudSyncBrowser';
 import { completeJob, readJob } from '@/utils/normalizeJob';
 import { completeBoard, readBoard } from '@/utils/normalizeBoard';
@@ -52,13 +52,15 @@ export const boardSync = {
 /**
  * One list's cloud sync wired to the page (cloudSyncBrowser.js): the signed-in user and the
  * browser's online flag go in; the items the cloud will not take go to syncHeld, which the job and
- * board pages show (SyncHeldNotice). Signed out, it does nothing: the list stays this browser's.
+ * board pages show (SyncHeldNotice), and what the sync is doing to collectionSyncStatus, which the
+ * workspace's top bar shows as the résumés' cloud icon (CollectionSyncDot). Signed out, it does
+ * nothing: the list stays this browser's.
  */
 export function useCollectionSync(user, { name, store, meta }) {
   const [page] = useState(() => browserCloudSync(window, {
     name, store, meta: meta(),
     io: db ? collectionIo(fs, db, name) : null,
-    report: { held: (list) => syncHeld.set(name, list) },
+    report: collectionReport(name),
     log: (...args) => console.info(...args),
   }, createCollectionSync));
   const [isOnline, setIsOnline] = useState(() => page.online());
