@@ -25,6 +25,9 @@ its own commit here (`scratchpad/land.sh <ID>`), then fail-first per commit and 
 RES-R2-140-a (offline reorder lost to the cloud's order — needs a stored base order), RES-R2-140-c (a sync icon for jobs and
 boards — where and what it says). If the session dies: the patches are in scratch; re-run the stopped clusters from the store
 checklist (`flowcv/wip/execution-2026-09-26/pending-bugs.md`).
+**Wave 1 final gate:** run 36221038666 on `45b6b60` → green → `git push origin 45b6b60:refs/heads/master` (deploy), then the
+tracker rows. **Wave 2** (workflow `flowcv-bugfix-wave2`, patches in scratch `fixes2/`, base `45b6b60`; land with
+`FIXDIR=…/fixes2 scratchpad/land.sh <ID>`): RES-R2-151 landed.
 Scout notes (diagnoses, R3-008 design, pending bugs): store `flowcv/wip/execution-2026-09-26/`.
 
 ## ⏩ COLD START HERE — 2026-09-25 17:00 UTC (laptop session, owner's execution brief of 21:45 IST)
