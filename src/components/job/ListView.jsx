@@ -3,7 +3,7 @@ import { StatusBadge } from '@/components/job/StatusBadge';
 import { Avatar } from '@/components/ui';
 import { deadlineState } from '@/utils/dates';
 import { safeHref } from '@/utils/richText';
-import { sortJobs } from '@/utils/jobQuery';
+import { isOpen, sortJobs } from '@/utils/jobQuery';
 import { useSessionState } from '@/hooks/useSessionState';
 
 /** Last updated first: the order the list opens in, and the one a third header click returns to. */
@@ -109,7 +109,8 @@ export function ListView({ jobs, resumes, onNavigate, onDelete }) {
                 <td className="px-3 text-[13px] text-ink-subtle">{job.appliedDate || '—'}</td>
                 <td className="px-3 text-[13px]">
                   {job.deadline ? (() => {
-                    const state = deadlineState(job.deadline);
+                    // A closed job has nothing to chase: its passed deadline is no longer late.
+                    const state = isOpen(job) ? deadlineState(job.deadline) : null;
                     const past = state === 'past';
                     const soon = state === 'soon';
                     return (

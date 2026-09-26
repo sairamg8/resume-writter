@@ -11,7 +11,7 @@ import { OverviewTab } from '@/components/job/OverviewTab';
 import { NotesTab } from '@/components/job/NotesTab';
 import { JobsNotSavedAlert } from '@/components/job/JobsNotSavedAlert';
 import { jobTone } from '@/components/job/jobTone';
-import { linkedResume } from '@/utils/jobQuery';
+import { isOpen, linkedResume } from '@/utils/jobQuery';
 import { safeHref } from '@/utils/richText';
 import { formatDateTime, relativeTime } from '@/utils/uiFormat';
 
@@ -69,6 +69,8 @@ export function JobDetail({ store }) {
   const doneTodos = todos.filter(t => t.done).length;
   // { state, resume }: the résumé itself only when it is still there (J-21).
   const link = linkedResume(job, resumes);
+  // A closed job (on hold, rejected, withdrawn) has nothing to chase: its dates are never late.
+  const closed = !isOpen(job);
   const statuses = JOB_STATUSES.map((s) => ({ id: s.id, name: s.label, category: jobTone(s.id) }));
 
   return (
@@ -146,8 +148,8 @@ export function JobDetail({ store }) {
             <h2 className="border-b border-line px-3 py-2.5 text-sm font-semibold text-ink">Details</h2>
             <div className="flex flex-col px-2 py-1.5">
               <Row label="Applied">{job.appliedDate && <DatePill value={job.appliedDate} kind="plain" size="sm" />}</Row>
-              <Row label="Deadline">{job.deadline && <DatePill value={job.deadline} size="sm" />}</Row>
-              <Row label="Follow up">{job.followUpDate && <DatePill value={job.followUpDate} size="sm" />}</Row>
+              <Row label="Deadline">{job.deadline && <DatePill value={job.deadline} done={closed} size="sm" />}</Row>
+              <Row label="Follow up">{job.followUpDate && <DatePill value={job.followUpDate} done={closed} size="sm" />}</Row>
               <Row label="Location">{job.location}</Row>
               <Row label="Work mode">{nameIn(WORK_MODES, job.workMode)}</Row>
               <Row label="Salary">{job.salary}</Row>

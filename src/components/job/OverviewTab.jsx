@@ -4,7 +4,7 @@ import { Field } from '@/components/job/Field';
 import { Pipeline } from '@/components/job/Pipeline';
 import { StatusHistory } from '@/components/job/StatusHistory';
 import { deadlineState } from '@/utils/dates';
-import { linkedResume, resumeChoices } from '@/utils/jobQuery';
+import { isOpen, linkedResume, resumeChoices } from '@/utils/jobQuery';
 import { editorPath } from '@/utils/letters';
 
 /**
@@ -39,7 +39,8 @@ export function OverviewTab({ job, set, resumes, navigate }) {
   const isTerminal = CLOSED.includes(job.status);
   const isOnHold = job.status === 'on_hold';
   const resumeLink = linkedResume(job, resumes);
-  const deadline = deadlineState(job.deadline);
+  // A closed job (on hold, rejected, withdrawn) has nothing to chase: no 'Deadline has passed'.
+  const deadline = isOpen(job) ? deadlineState(job.deadline) : null;
   const isDeadlinePast = deadline === 'past';
   const isDeadlineSoon = deadline === 'soon';
 
