@@ -1,4 +1,4 @@
-import { useState, useId } from 'react';
+import { useEffect, useState, useId } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { useJobStore } from '@/hooks/useJobStore';
@@ -9,6 +9,7 @@ import { JOB_SOURCES, JOB_STATUSES, WORK_MODES } from '@/constants/jobs';
 import { InterviewStageSelector } from '@/components/job/InterviewStageSelector';
 import { JobsNotSavedAlert } from '@/components/job/JobsNotSavedAlert';
 import RichTextEditor from '@/components/RichTextEditor';
+import { useConfirmOptional } from '@/components/ui';
 
 /** A labelled control: `id` is the control's, so the label names it (M8). */
 function Field({ id, label, children }) {
@@ -50,6 +51,31 @@ export function JobForm({ store }) {
   const setStatus = v => setForm(f => withFormStatus(f, v, { isNew: !isEdit }));
   const canSave = Boolean((form.company || '').trim() || (form.role || '').trim());
   const backPath = isEdit && existing ? `/jobs/${id}` : '/jobs';
+  const confirm = useConfirmOptional();
+  // Typed something the job does not hold yet: the same test the save writes by (formPatch).
+  const dirty = Object.keys(formPatch(start, form)).length > 0;
+
+  // Cancel and the back arrow left at once and dropped everything typed (R4-DUX-06): with changes,
+  // ask first. The app's HashRouter is no data router, so useBlocker cannot hold the browser's Back
+  // or an in-app link; closing or reloading the tab is guarded below.
+  async function leave() {
+    if (dirty && !(await confirm({
+      title: 'Discard your changes?',
+      body: 'What you typed on this form has not been saved.',
+      confirmLabel: 'Discard',
+      cancelLabel: 'Keep editing',
+      tone: 'danger',
+    }))) return;
+    navigate(backPath);
+  }
+
+  // Closing or reloading the tab with changes: the browser's own "Leave site?" question.
+  useEffect(() => {
+    if (!dirty) return undefined;
+    const warn = (e) => { e.preventDefault(); e.returnValue = ''; };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [dirty]);
 
   function handleSave() {
     if (!canSave || gone) return;
@@ -86,12 +112,12 @@ export function JobForm({ store }) {
     <div className="flex-1 bg-white">
       <div className="bg-white border-b border-line sticky top-0 z-10">
         <div className="max-w-3xl mx-auto px-6 py-4 flex items-center gap-3">
-          <button type="button" onClick={() => navigate(backPath)} className="p-1.5 text-ink-subtlest hover:text-ink hover:bg-neutral-fill rounded-lg transition-colors shrink-0">
+          <button type="button" onClick={leave} className="p-1.5 text-ink-subtlest hover:text-ink hover:bg-neutral-fill rounded-lg transition-colors shrink-0">
             <ArrowLeft size={16} />
           </button>
           <h1 className="text-base font-bold text-ink">{isEdit ? 'Edit Job Application' : 'Add Job Application'}</h1>
           <div className="ml-auto flex gap-2">
-            <button type="button" onClick={() => navigate(backPath)} className="px-4 py-2 text-sm font-medium text-ink-subtle hover:bg-neutral-fill rounded-lg transition-colors">Cancel</button>
+            <button type="button" onClick={leave} className="px-4 py-2 text-sm font-medium text-ink-subtle hover:bg-neutral-fill rounded-lg transition-colors">Cancel</button>
             <button type="submit" form={formId} disabled={!canSave || gone} className="px-5 py-2 text-sm font-semibold text-white bg-brand hover:bg-brand-hover rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed shadow-sm">
               {isEdit ? 'Save Changes' : 'Add Job'}
             </button>
@@ -212,7 +238,7 @@ export function JobForm({ store }) {
         </section>
 
         <div className="flex justify-end gap-3 pb-8">
-          <button type="button" onClick={() => navigate(backPath)} className="px-5 py-2.5 text-sm font-medium text-ink-subtle bg-white border border-line rounded-md hover:bg-sunken transition-colors">Cancel</button>
+          <button type="button" onClick={leave} className="px-5 py-2.5 text-sm font-medium text-ink-subtle bg-white border border-line rounded-md hover:bg-sunken transition-colors">Cancel</button>
           <button type="submit" form={formId} disabled={!canSave || gone} className="px-6 py-2.5 text-sm font-semibold text-white bg-brand hover:bg-brand-hover rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed shadow-sm">
             {isEdit ? 'Save Changes' : 'Add Job'}
           </button>
