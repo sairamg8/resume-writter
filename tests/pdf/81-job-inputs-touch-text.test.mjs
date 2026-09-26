@@ -107,12 +107,12 @@ it('J-38: the Tasks tab\'s new-task box and a task being renamed are 16 px on a 
   }
 });
 
-it('J-38: the tracker\'s search box is 16 px on a touch screen (the kit\'s SearchInput, already so)', async () => {
+it('J-38: the tracker\'s search box (the kit\'s SearchInput, already so) and a card\'s date pill are 16 px on a touch screen', async () => {
   const { createElement: h } = await import('react');
   const { MemoryRouter, Routes, Route } = await import('react-router-dom');
   const { JobTracker } = await loadModule('/src/pages/JobTracker.jsx');
   const { _resetJobStoreForTest } = await loadModule('/src/hooks/useJobStore.js');
-  globalThis.localStorage = memoryStorage([[KEY, JSON.stringify({ jobs: [job], dataVersion: 2 })]]);
+  globalThis.localStorage = memoryStorage([[KEY, JSON.stringify({ jobs: [{ ...job, deadline: '2026-10-01' }], dataVersion: 2 })]]);
   _resetJobStoreForTest();
   function App() {
     return h(MemoryRouter, { initialEntries: ['/jobs'] }, h(Routes, null,
