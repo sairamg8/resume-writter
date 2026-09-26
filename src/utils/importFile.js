@@ -1,7 +1,7 @@
 // Import from a PDF, a Word file (.docx), Markdown or plain text (R2-148): the file's text as lines,
 // read by importText.js into a new résumé. JSON stays with the importers it always had (the
 // Dashboard's and the editor's); importDocument.js loads this on demand, and pdf.js only for a PDF.
-import { markdownLines, resumeFromText } from './importText.js';
+import { linkText, markdownLines, resumeFromText } from './importText.js';
 
 const NO_TEXT = 'No text could be read from that file. A scanned PDF holds pictures of its pages, not text: export it again as text, or import a Word, text or JSON file.';
 const SCANNED = 'That PDF looks like a scanned image: its pages have no text layer to read. Export the résumé again as a text PDF from the program it was written in, save it as a Word file, or run the scan through OCR (text recognition) first, and import that.';
@@ -69,16 +69,26 @@ const xmlText = (s) => s
  * the anchoring paragraph's own text (what comes before and after the box). Word saves every text box
  * twice, the drawing in <mc:Choice> and a VML copy in <mc:Fallback>: the copy is not read, or each
  * line of a designed résumé's header or side column came out twice (R4-IMP-04).
+ *
+ * `links`: the part's hyperlink targets by relationship id (docxLinks). A hyperlink whose text is not
+ * its address — a contact shown as its Display label, "LinkedIn" — reads as "LinkedIn (https://…)"
+ * (linkText), so the address is kept: the label alone was dropped, the URL nowhere (R4-IMP-10).
  */
-export function docxXmlLines(xml) {
+export function docxXmlLines(xml, links = {}) {
   const body = (String(xml).split(/<w:body\b[^>]*>/)[1] ?? String(xml))
     .replace(/<mc:Fallback\b[^>]*>[\s\S]*?<\/mc:Fallback>/g, '');
   const lines = [];
   const open = []; // the paragraphs being read, the innermost last
-  const TOKEN = /<w:p(?=[\s>])[^>]*>|<\/w:p>|<w:pPr>([\s\S]*?)<\/w:pPr>|<w:t(?:\s[^>]*)?>([^<]*)<\/w:t>|<w:(tab|br|cr)(?:\s[^>]*)?\/>/g;
+  const TOKEN = /<w:p(?=[\s>])[^>]*>|<\/w:p>|<w:pPr>([\s\S]*?)<\/w:pPr>|<w:t(?:\s[^>]*)?>([^<]*)<\/w:t>|<w:(tab|br|cr)(?:\s[^>]*)?\/>|<w:hyperlink\b([^>]*)>|<\/w:hyperlink>/g;
   for (const m of body.matchAll(TOKEN)) {
     const para = open[open.length - 1];
-    if (m[0] === '</w:p>') {
+    if (m[4] !== undefined) {
+      const id = /\br:id="([^"]*)"/.exec(m[4])?.[1];
+      if (para && !m[0].endsWith('/>')) para.link = { to: links[id], at: para.text.length };
+    } else if (m[0] === '</w:hyperlink>') {
+      if (para?.link?.to) para.text = para.text.slice(0, para.link.at) + linkText(para.text.slice(para.link.at), para.link.to);
+      if (para) para.link = null;
+    } else if (m[0] === '</w:p>') {
       if (!para) continue;
       open.pop();
       const style = /<w:pStyle w:val="([^"]*)"/.exec(para.props)?.[1] ?? '';
@@ -96,11 +106,22 @@ export function docxXmlLines(xml) {
   return lines;
 }
 
-/** A .docx file's text as lines (docxXmlLines). */
+/** A part's relationships file (word/_rels/<part>.rels) as its hyperlinks' targets, by id. */
+export function docxLinks(rels) {
+  const out = {};
+  for (const [, attrs] of String(rels ?? '').matchAll(/<Relationship\b([^>]*)>/g)) {
+    const attr = (name) => new RegExp(`\\b${name}="([^"]*)"`).exec(attrs)?.[1];
+    if ((attr('Type') || '').endsWith('/hyperlink') && attr('Target')) out[attr('Id')] = xmlText(attr('Target'));
+  }
+  return out;
+}
+
+/** A .docx file's text as lines (docxXmlLines), its hyperlinks' targets read from its relationships. */
 export async function docxLines(bytes) {
   const xml = await unzipEntry(bytes, 'word/document.xml');
   if (!xml) throw new Error('That Word file has no document in it.');
-  return docxXmlLines(decode(xml));
+  const rels = await unzipEntry(bytes, 'word/_rels/document.xml.rels');
+  return docxXmlLines(decode(xml), docxLinks(rels && decode(rels)));
 }
 
 // ── PDF ──────────────────────────────────────────────────────────────────────
@@ -343,6 +364,37 @@ async function loadPdfjs() {
   return lib;
 }
 
+/**
+ * A page's text items with its links' addresses: the text a Link annotation covers, when it is not
+ * the address itself (a contact shown as its Display label, "LinkedIn"), reads as "LinkedIn
+ * (https://…)" (linkText) — the text layer holds only the label, and the URL was lost (R4-IMP-10).
+ */
+function withLinks(items, links) {
+  if (!links.length) return items;
+  const out = items.map((it) => ({ ...it }));
+  const taken = new Set();
+  for (const { rect, url } of links) {
+    const [x1, y1, x2, y2] = [Math.min(rect[0], rect[2]), Math.min(rect[1], rect[3]), Math.max(rect[0], rect[2]), Math.max(rect[1], rect[3])];
+    // An item under the link: its middle inside the link's box (y is the baseline; the letters sit above it).
+    const covered = out.filter((it) => {
+      if (taken.has(it) || !it.str.trim()) return false;
+      const cx = it.x + (it.w || 0) / 2;
+      const cy = it.y + heightOf(it) * 0.3;
+      return cx >= x1 - 1 && cx <= x2 + 1 && cy >= y1 - 1 && cy <= y2 + 1;
+    }).sort((a, b) => b.y - a.y || a.x - b.x);
+    if (!covered.length) continue;
+    covered.forEach((it) => taken.add(it));
+    const label = covered.map((it) => it.str.trim()).join(' ');
+    // An address set in pieces ("linkedin.com/in/" "pat") is still the address.
+    if (linkText(label.replace(/\s+/g, ''), url) === label.replace(/\s+/g, '')) continue;
+    const text = linkText(label, url);
+    if (text === label) continue;
+    const last = covered[covered.length - 1];
+    last.str = `${last.str.trimEnd()}${text.slice(label.length)}`;
+  }
+  return out;
+}
+
 /** A PDF's text as lines (pdfLinesOfPages). `lib`: pdf.js, loaded here when not given (the tests give Node's). */
 export async function pdfLines(bytes, lib) {
   const pdfjs = lib || await loadPdfjs();
@@ -352,11 +404,14 @@ export async function pdfLines(bytes, lib) {
     const doc = await task.promise.catch((e) => { throw e?.name === 'PasswordException' ? new Error(LOCKED) : e; });
     const pages = [];
     for (let i = 1; i <= doc.numPages; i += 1) {
-      const content = await (await doc.getPage(i)).getTextContent();
+      const page = await doc.getPage(i);
+      const content = await page.getTextContent();
       // A marked-content item (pdf.js's beginMarkedContent) has no str and no transform: not text.
-      pages.push(content.items.filter((it) => typeof it.str === 'string' && it.transform).map((it) => ({
+      const items = content.items.filter((it) => typeof it.str === 'string' && it.transform).map((it) => ({
         str: it.str, x: it.transform[4], y: it.transform[5], w: it.width, h: it.height || Math.abs(it.transform[3]),
-      })));
+      }));
+      const annotations = await Promise.resolve(page.getAnnotations?.()).catch(() => []);
+      pages.push(withLinks(items, (annotations || []).filter((a) => a?.subtype === 'Link' && a.url && a.rect)));
     }
     // Pages, but not a letter of text on them: the pages are pictures, a scan or a photo.
     if (pages.length && !pages.some((p) => p.some((it) => it.str.trim()))) throw new Error(SCANNED);
