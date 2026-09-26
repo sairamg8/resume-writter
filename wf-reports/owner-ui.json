@@ -1,0 +1,77 @@
+{
+  "cluster": "owner-ui",
+  "branch": "claude/wf-owner-ui",
+  "base": "6e19667",
+  "rows": [
+    {
+      "id": "R3-009",
+      "outcome": "fixed",
+      "commits": [
+        "c4a7acc"
+      ],
+      "tests": [
+        "tests/unit/cursor-pointer.unit.mjs"
+      ],
+      "summary": "**Now:** a hand cursor shows over every enabled button, link, summary, select, checkbox / radio / file / colour / range input, a label around a checkbox or radio, and clickable ARIA roles (a base rule in src/index.css); a control's own cursor class still wins, and a disabled one keeps the arrow. The test also requires a cursor class or a covered role on every onClick <div>, <span>, <li>, <tr>."
+    },
+    {
+      "id": "R3-010",
+      "outcome": "fixed",
+      "commits": [
+        "01a70e9",
+        "c9f400b"
+      ],
+      "tests": [
+        "tests/pdf/96-modal-outside-click.test.mjs",
+        "tests/unit/ui-overlays.unit.mjs"
+      ],
+      "summary": "**Now:** the Bullet Optimizer, the Smart Cover Letter Generator and New Resume's starters close on a click beside the box, as every other modal does (useOverlayClose, the kit Dialog's rule). A click inside, text selected inside and released outside, or a drag begun outside and released inside, keeps the modal open."
+    },
+    {
+      "id": "R3-011",
+      "outcome": "fixed",
+      "commits": [
+        "a6ce775",
+        "734e278",
+        "d861584"
+      ],
+      "tests": [
+        "tests/pdf/96-dashboard.test.mjs",
+        "tests/pdf/93-picker-new-resume.test.mjs",
+        "cypress/e2e/30-starters-and-design.cy.js"
+      ],
+      "summary": "**Now:** a new résumé starts from the account's own data: a look on New Resume's page makes a copy of the most recently edited résumé (or the one picked under \"Your details from\") on that look — its Personal Info, sections and design; never a letter; the source is never changed. With no résumé yet, a blank résumé on that look. A second click before the editor opens makes no second résumé."
+    },
+    {
+      "id": "R3-012",
+      "outcome": "fixed",
+      "commits": [
+        "a6ce775",
+        "734e278",
+        "bf62e48",
+        "d861584"
+      ],
+      "tests": [
+        "tests/pdf/96-dashboard.test.mjs",
+        "tests/pdf/91-starter-modal.test.mjs",
+        "tests/pdf/93-picker-new-resume.test.mjs",
+        "cypress/e2e/01-dashboard.cy.js",
+        "cypress/e2e/30-starters-and-design.cy.js"
+      ],
+      "summary": "**Now:** New Resume opens /new: the picker's looks (templates, designs, saved designs) with category chips, each a picture of the user's own résumé on it; a click opens the new résumé. Blank and the role starters stay below the looks."
+    }
+  ],
+  "review": {
+    "issues": [
+      "Merging into the work branch conflicts in src/AppRoutes.jsx (perf2 made the pages lazy): NewResume is added as a lazy page",
+      "A second click on /new made a second résumé while the Editor chunk loaded (d861584)",
+      "A drag begun on a backdrop and released inside the box closed the modal; the kit Dialog too (c9f400b)"
+    ],
+    "fixedByReviewer": [
+      "d861584",
+      "c9f400b"
+    ]
+  },
+  "baselineFailures": [],
+  "notes": "Full gate 36216659416 on e827952 green (15/15). Fail-first: 01a70e9 36159872665, c4a7acc 36160131069, a6ce775/734e278 36161759155; d861584 + c9f400b in 36217583015. Reviewed by an independent agent (read-only) 2026-09-26: the /new copy path deep-copies (source never written), letters excluded twice, no owner data in the build; perf2's cf3ad0e clean. Deploy guard 4e68e6a merged in."
+}
