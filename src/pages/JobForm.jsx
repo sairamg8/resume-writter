@@ -11,11 +11,11 @@ import { JobsNotSavedAlert } from '@/components/job/JobsNotSavedAlert';
 import RichTextEditor from '@/components/RichTextEditor';
 
 /** A labelled control: `id` is the control's, so the label names it (M8). */
-function Field({ id, label, required, children }) {
+function Field({ id, label, children }) {
   return (
     <div>
       <label htmlFor={id} className="block text-xs font-semibold text-ink-subtle mb-1.5">
-        {label}{required && <span className="text-red-400 ml-0.5">*</span>}
+        {label}
       </label>
       {children}
     </div>
@@ -32,6 +32,7 @@ export function JobForm({ store }) {
   const resumes = appState.resumes;
   const { customStages, addCustomStage, removeCustomStage } = useJobStages();
   const uid = useId();
+  const formId = uid + 'form';
 
   const isEdit = !!id;
   const existing = isEdit ? jobs.find(j => j.id === id) : null;
@@ -49,10 +50,16 @@ export function JobForm({ store }) {
   const backPath = isEdit && existing ? `/jobs/${id}` : '/jobs';
 
   function handleSave() {
-    if (!canSave) return;
+    if (!canSave || gone) return;
     if (!isEdit) { navigate(`/jobs/${addJob(form)}`); return; }
     // The whole form wrote its stale to-dos, history and status over another tab's (J-02).
     if (updateJob(id, formPatch(start, form))) navigate(`/jobs/${id}`);
+  }
+
+  // Enter in a field saves, as in any form: the page had no <form>, so Enter did nothing (J-36).
+  function handleSubmit(e) {
+    e.preventDefault();
+    handleSave();
   }
 
   function saveAsNew() {
@@ -77,13 +84,13 @@ export function JobForm({ store }) {
     <div className="flex-1 bg-white">
       <div className="bg-white border-b border-line sticky top-0 z-10">
         <div className="max-w-3xl mx-auto px-6 py-4 flex items-center gap-3">
-          <button onClick={() => navigate(backPath)} className="p-1.5 text-ink-subtlest hover:text-ink hover:bg-neutral-fill rounded-lg transition-colors shrink-0">
+          <button type="button" onClick={() => navigate(backPath)} className="p-1.5 text-ink-subtlest hover:text-ink hover:bg-neutral-fill rounded-lg transition-colors shrink-0">
             <ArrowLeft size={16} />
           </button>
           <h1 className="text-base font-bold text-ink">{isEdit ? 'Edit Job Application' : 'Add Job Application'}</h1>
           <div className="ml-auto flex gap-2">
-            <button onClick={() => navigate(backPath)} className="px-4 py-2 text-sm font-medium text-ink-subtle hover:bg-neutral-fill rounded-lg transition-colors">Cancel</button>
-            <button onClick={handleSave} disabled={!canSave || gone} className="px-5 py-2 text-sm font-semibold text-white bg-brand hover:bg-brand-hover rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed shadow-sm">
+            <button type="button" onClick={() => navigate(backPath)} className="px-4 py-2 text-sm font-medium text-ink-subtle hover:bg-neutral-fill rounded-lg transition-colors">Cancel</button>
+            <button type="submit" form={formId} disabled={!canSave || gone} className="px-5 py-2 text-sm font-semibold text-white bg-brand hover:bg-brand-hover rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed shadow-sm">
               {isEdit ? 'Save Changes' : 'Add Job'}
             </button>
           </div>
@@ -102,71 +109,80 @@ export function JobForm({ store }) {
 
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-5">
 
-        <section className="bg-white rounded-md border border-line p-4 sm:p-6 space-y-4">
-          <h2 className="text-[11px] font-bold text-ink-subtlest uppercase tracking-widest">Basic Info</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Field id={uid + 'company'} label="Company" required>
-              <input id={uid + 'company'} autoFocus value={form.company} onChange={e => set('company', e.target.value)} placeholder="Google, Stripe, Notion…" className={INPUT} />
-            </Field>
-            <Field id={uid + 'role'} label="Role / Position" required>
-              <input id={uid + 'role'} value={form.role} onChange={e => set('role', e.target.value)} placeholder="Software Engineer, Product Manager…" className={INPUT} />
-            </Field>
-            <Field id={uid + 'location'} label="Location">
-              <input id={uid + 'location'} value={form.location} onChange={e => set('location', e.target.value)} placeholder="Remote, New York…" className={INPUT} />
-            </Field>
-            <Field id={uid + 'salary'} label="Salary / Comp">
-              <input id={uid + 'salary'} value={form.salary} onChange={e => set('salary', e.target.value)} placeholder="$150k – $200k" className={INPUT} />
-            </Field>
-            <div className="col-span-1 sm:col-span-2">
-              <Field id={uid + 'url'} label="Job Posting URL">
-                <input id={uid + 'url'} value={form.url} onChange={e => set('url', e.target.value)} placeholder="https://jobs.company.com/…" className={INPUT} />
+        {/* The fields are a <form>, and the header's and the footer's Save buttons submit it through
+            form=, so Enter in a field saves (J-36). The notes stay outside it: the STAR Optimizer the
+            notes editor opens has buttons with no type, which would submit the job instead. */}
+        <form id={formId} onSubmit={handleSubmit} noValidate className="space-y-5">
+          <section className="bg-white rounded-md border border-line p-4 sm:p-6 space-y-4">
+            <div>
+              <h2 className="text-[11px] font-bold text-ink-subtlest uppercase tracking-widest">Basic Info</h2>
+              {/* Either one is enough (canSave): a star on both said both were needed (J-36). */}
+              <p className="text-xs text-ink-subtlest mt-1">A company or a role is enough to save the job.</p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Field id={uid + 'company'} label="Company">
+                <input id={uid + 'company'} autoFocus value={form.company} onChange={e => set('company', e.target.value)} placeholder="Google, Stripe, Notion…" className={INPUT} />
+              </Field>
+              <Field id={uid + 'role'} label="Role / Position">
+                <input id={uid + 'role'} value={form.role} onChange={e => set('role', e.target.value)} placeholder="Software Engineer, Product Manager…" className={INPUT} />
+              </Field>
+              <Field id={uid + 'location'} label="Location">
+                <input id={uid + 'location'} value={form.location} onChange={e => set('location', e.target.value)} placeholder="Remote, New York…" className={INPUT} />
+              </Field>
+              <Field id={uid + 'salary'} label="Salary / Comp">
+                <input id={uid + 'salary'} value={form.salary} onChange={e => set('salary', e.target.value)} placeholder="$150k – $200k" className={INPUT} />
+              </Field>
+              <div className="col-span-1 sm:col-span-2">
+                <Field id={uid + 'url'} label="Job Posting URL">
+                  <input id={uid + 'url'} value={form.url} onChange={e => set('url', e.target.value)} placeholder="https://jobs.company.com/…" className={INPUT} />
+                </Field>
+              </div>
+            </div>
+          </section>
+
+          <section className="bg-white rounded-md border border-line p-4 sm:p-6 space-y-4">
+            <h2 className="text-[11px] font-bold text-ink-subtlest uppercase tracking-widest">Status & Dates</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <Field id={uid + 'status'} label="Application Status">
+                <select id={uid + 'status'} value={form.status} onChange={e => setStatus(e.target.value)} className={INPUT + ' bg-white cursor-pointer'}>
+                  {JOB_STATUSES.map((s, i) => (
+                    <option key={s.id} value={s.id}>{i + 1}. {s.label}</option>
+                  ))}
+                </select>
+              </Field>
+              <Field id={uid + 'appliedDate'} label="Applied Date">
+                <input id={uid + 'appliedDate'} type="date" value={form.appliedDate} onChange={e => set('appliedDate', e.target.value)} className={INPUT} />
+              </Field>
+              <Field id={uid + 'deadline'} label="Deadline / Follow-up">
+                <input id={uid + 'deadline'} type="date" value={form.deadline} onChange={e => set('deadline', e.target.value)} className={INPUT} />
               </Field>
             </div>
-          </div>
-        </section>
+          </section>
 
-        <section className="bg-white rounded-md border border-line p-4 sm:p-6 space-y-4">
-          <h2 className="text-[11px] font-bold text-ink-subtlest uppercase tracking-widest">Status & Dates</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <Field id={uid + 'status'} label="Application Status">
-              <select id={uid + 'status'} value={form.status} onChange={e => setStatus(e.target.value)} className={INPUT + ' bg-white cursor-pointer'}>
-                {JOB_STATUSES.map((s, i) => (
-                  <option key={s.id} value={s.id}>{i + 1}. {s.label}</option>
-                ))}
-              </select>
-            </Field>
-            <Field id={uid + 'appliedDate'} label="Applied Date">
-              <input id={uid + 'appliedDate'} type="date" value={form.appliedDate} onChange={e => set('appliedDate', e.target.value)} className={INPUT} />
-            </Field>
-            <Field id={uid + 'deadline'} label="Deadline / Follow-up">
-              <input id={uid + 'deadline'} type="date" value={form.deadline} onChange={e => set('deadline', e.target.value)} className={INPUT} />
-            </Field>
-          </div>
-        </section>
+          <InterviewStageSelector
+            stage={form.stage}
+            onStageChange={v => set('stage', v)}
+            customStages={customStages}
+            addCustomStage={addCustomStage}
+            removeCustomStage={removeCustomStage}
+          />
 
-        <InterviewStageSelector
-          stage={form.stage}
-          onStageChange={v => set('stage', v)}
-          customStages={customStages}
-          addCustomStage={addCustomStage}
-          removeCustomStage={removeCustomStage}
-        />
-
-        <section className="bg-white rounded-md border border-line p-4 sm:p-6 space-y-4">
-          <h2 className="text-[11px] font-bold text-ink-subtlest uppercase tracking-widest">Contact & Resume</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Field id={uid + 'contact'} label="Contact Person">
-              <input id={uid + 'contact'} value={form.contact} onChange={e => set('contact', e.target.value)} placeholder="Recruiter name, email…" className={INPUT} />
-            </Field>
-            <Field id={uid + 'resumeId'} label="Resume Used">
-              <select id={uid + 'resumeId'} value={form.resumeId} onChange={e => set('resumeId', e.target.value)} className={INPUT + ' bg-white cursor-pointer'}>
-                <option value="">— Not linked yet —</option>
-                {linkedResume(form, resumes).state === 'deleted' && <option value={form.resumeId}>Résumé deleted</option>}
-                {resumes.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
-              </select>
-            </Field>
-          </div>
-        </section>
+          <section className="bg-white rounded-md border border-line p-4 sm:p-6 space-y-4">
+            <h2 className="text-[11px] font-bold text-ink-subtlest uppercase tracking-widest">Contact & Resume</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Field id={uid + 'contact'} label="Contact Person">
+                <input id={uid + 'contact'} value={form.contact} onChange={e => set('contact', e.target.value)} placeholder="Recruiter name, email…" className={INPUT} />
+              </Field>
+              <Field id={uid + 'resumeId'} label="Resume Used">
+                <select id={uid + 'resumeId'} value={form.resumeId} onChange={e => set('resumeId', e.target.value)} className={INPUT + ' bg-white cursor-pointer'}>
+                  <option value="">— Not linked yet —</option>
+                  {linkedResume(form, resumes).state === 'deleted' && <option value={form.resumeId}>Résumé deleted</option>}
+                  {resumes.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+                </select>
+              </Field>
+            </div>
+          </section>
+        </form>
 
         <section className="bg-white rounded-md border border-line p-6 space-y-4">
           <h2 className="text-[11px] font-bold text-ink-subtlest uppercase tracking-widest">Notes</h2>
@@ -175,8 +191,8 @@ export function JobForm({ store }) {
         </section>
 
         <div className="flex justify-end gap-3 pb-8">
-          <button onClick={() => navigate(backPath)} className="px-5 py-2.5 text-sm font-medium text-ink-subtle bg-white border border-line rounded-md hover:bg-sunken transition-colors">Cancel</button>
-          <button onClick={handleSave} disabled={!canSave || gone} className="px-6 py-2.5 text-sm font-semibold text-white bg-brand hover:bg-brand-hover rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed shadow-sm">
+          <button type="button" onClick={() => navigate(backPath)} className="px-5 py-2.5 text-sm font-medium text-ink-subtle bg-white border border-line rounded-md hover:bg-sunken transition-colors">Cancel</button>
+          <button type="submit" form={formId} disabled={!canSave || gone} className="px-6 py-2.5 text-sm font-semibold text-white bg-brand hover:bg-brand-hover rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed shadow-sm">
             {isEdit ? 'Save Changes' : 'Add Job'}
           </button>
         </div>

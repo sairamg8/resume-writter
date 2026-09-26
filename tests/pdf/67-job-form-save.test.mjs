@@ -2,7 +2,9 @@
 // Vite for the `@/` aliases). J-02: Save Changes wrote the whole form — the to-dos, history and status
 // as they were when it opened — over the job, so a task or a status change another tab saved meanwhile
 // was lost and a false history entry added. J-16: /jobs/:id/edit for a job that does not exist, or
-// was deleted while the form was open, took input and threw it away on save.
+// was deleted while the form was open, took input and threw it away on save. J-36: the page had no
+// <form>, so Enter in a field did nothing, and Company and Role both wore a "required" star though
+// either one is enough.
 import { before, after, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { setup, teardown, loadModule } from './harness.mjs';
@@ -41,6 +43,7 @@ async function openForm(path, jobs) {
   function Detail() { return h('p', null, `DETAIL ${useParams().id}`); }
   function App() {
     return h(MemoryRouter, { initialEntries: [path] }, h(Routes, null,
+      h(Route, { path: '/jobs/new', element: h(JobForm, { store: { appState: { resumes: [] } } }) }),
       h(Route, { path: '/jobs/:id/edit', element: h(JobForm, { store: { appState: { resumes: [] } } }) }),
       h(Route, { path: '/jobs/:id', element: h(Detail) })));
   }
@@ -50,11 +53,32 @@ async function openForm(path, jobs) {
   const button = (text) => all().find((el) => el.tagName === 'BUTTON' && el.textContent.includes(text));
   return {
     view,
+    all,
     text: () => view.container.textContent,
     input,
     button,
     type(field, value) { view.act(() => dom.reactProps(input(field)).onChange({ target: { value } })); },
-    click(text) { view.act(() => dom.reactProps(button(text)).onClick({ preventDefault() {} })); },
+    click(text) {
+      const el = button(text);
+      const props = dom.reactProps(el);
+      // A submit button has no click handler of its own: the browser submits the form it names (J-36).
+      if (!props.onClick && el.getAttribute('type') === 'submit') {
+        const owner = all().find((f) => f.tagName === 'FORM' && f.getAttribute('id') === el.getAttribute('form'));
+        view.act(() => dom.reactProps(owner).onSubmit({ preventDefault() {} }));
+        return;
+      }
+      view.act(() => props.onClick({ preventDefault() {} }));
+    },
+    /** The form the fields are in, as the browser finds it for Enter in one of them; null when none is. */
+    formOf(field) { return all().find((el) => el.tagName === 'FORM' && el.contains(input(field))) ?? null; },
+    /** Enter in a field: the browser submits the field's form (implicit submission). */
+    pressEnterIn(field) {
+      const owner = this.formOf(field);
+      assert.ok(owner, `the ${field} field is in a <form>, so Enter in it submits`);
+      let prevented = false;
+      view.act(() => dom.reactProps(owner).onSubmit({ preventDefault() { prevented = true; } }));
+      assert.equal(prevented, true, 'the submit is the page\'s own, not a reload of the page');
+    },
     otherTabSaves(list) {
       const value = saved(list);
       localStorage.setItem(KEY, value);
@@ -113,6 +137,72 @@ it('J-16: a job deleted while its form was open keeps what was typed, and offers
     assert.notEqual(jobs[0].id, 'a');
     await form.settle();
     assert.match(form.text(), new RegExp(`DETAIL ${jobs[0].id}`));
+  } finally {
+    await form.close();
+  }
+});
+
+it('J-36: Enter in a field of a new job adds it and opens it, as Add Job does', async () => {
+  const form = await openForm('/jobs/new', []);
+  try {
+    form.type('company', 'Acme');
+    form.pressEnterIn('company');
+    const jobs = stored();
+    assert.equal(jobs.length, 1);
+    assert.equal(jobs[0].company, 'Acme');
+    await form.settle();
+    assert.match(form.text(), new RegExp(`DETAIL ${jobs[0].id}`));
+  } finally {
+    await form.close();
+  }
+});
+
+it('J-36: Enter in a field of an existing job saves the edit, as Save Changes does', async () => {
+  const form = await openForm('/jobs/a/edit', [acme]);
+  try {
+    form.type('location', 'Berlin');
+    form.pressEnterIn('location');
+    assert.equal(stored()[0].location, 'Berlin');
+    await form.settle();
+    assert.match(form.text(), /DETAIL a/);
+  } finally {
+    await form.close();
+  }
+});
+
+it('J-36: both Save buttons submit the fields\' form, every other button in it is a plain button, and Enter with neither company nor role saves nothing', async () => {
+  const form = await openForm('/jobs/new', []);
+  try {
+    const owner = form.formOf('company');
+    assert.ok(owner);
+    for (const field of ['role', 'location', 'salary', 'url', 'appliedDate', 'deadline', 'contact']) {
+      assert.equal(form.formOf(field), owner, `${field} is in the same form`);
+    }
+    const buttons = form.all().filter((el) => el.tagName === 'BUTTON');
+    const submits = buttons.filter((b) => b.getAttribute('type') === 'submit');
+    assert.equal(submits.length, 2, 'the header\'s and the footer\'s Add Job');
+    for (const b of submits) {
+      assert.equal(b.textContent.trim(), 'Add Job');
+      assert.equal(b.getAttribute('form'), owner.getAttribute('id'), 'it submits the fields\' form');
+    }
+    // A button with no type inside a form submits it: Cancel or a stage would save the job.
+    for (const b of buttons.filter((x) => owner.contains(x))) assert.equal(b.getAttribute('type'), 'button', b.textContent);
+
+    form.pressEnterIn('company');
+    assert.equal(stored().length, 0, 'a job with no company and no role is not added');
+    assert.ok(form.input('company'), 'the form stays open');
+  } finally {
+    await form.close();
+  }
+});
+
+it('J-36: Company and Role wear no "required" star, and the form says either one is enough', async () => {
+  const form = await openForm('/jobs/new', []);
+  try {
+    const labelOf = (field) => form.all().find((el) => el.tagName === 'LABEL' && (el.getAttribute('for') || '').endsWith(field));
+    assert.equal(labelOf('company').textContent, 'Company');
+    assert.equal(labelOf('role').textContent, 'Role / Position');
+    assert.match(form.text(), /A company or a role is enough to save the job\./);
   } finally {
     await form.close();
   }
