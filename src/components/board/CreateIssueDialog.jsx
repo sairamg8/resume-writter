@@ -35,12 +35,29 @@ function Row({ label, children }) {
   );
 }
 
-/** The form itself, keyed by the project it creates in: switching project starts it afresh. */
+/**
+ * `draft` moved to `board`: what the user typed that any project can hold (type, summary,
+ * description, priority, points, dates) stays; the status, labels, epic and sprint belong to the
+ * old project, so they start again from the new one's defaults.
+ */
+function moveDraft(draft, board, defaults) {
+  const { type, title, description, priority, estimate, startDate, due } = draft;
+  return { ...initialDraft(board, defaults), type, title, description, priority, estimate, startDate, due };
+}
+
+/** The form itself, in the project it creates in. */
 function CreateForm({ board, boards, defaults, onBoardChange, onClose }) {
   const store = useBoardStore();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [draft, setDraft] = useState(() => initialDraft(board, defaults));
+  // Another project (picked, or the open one gone): carry the typed fields over rather than
+  // remounting, which wiped the summary and description the user had written.
+  const [draftBoardId, setDraftBoardId] = useState(board.id);
+  if (draftBoardId !== board.id) {
+    setDraftBoardId(board.id);
+    setDraft((d) => moveDraft(d, board, defaults));
+  }
   const [another, setAnother] = useState(false);
   const [error, setError] = useState('');
   const [editorKey, setEditorKey] = useState(0);
@@ -147,7 +164,7 @@ export function CreateIssueDialog({ open, defaults = {}, onClose }) {
   return (
     <Dialog open={open} onClose={close} title="Create issue" size="lg" bodyClassName="px-5 pb-5 sm:px-6">
       {board ? (
-        <CreateForm key={board.id} board={board} boards={boards} defaults={board.id === defaults.boardId ? defaults : {}} onBoardChange={setChosenId} onClose={close} />
+        <CreateForm board={board} boards={boards} defaults={board.id === defaults.boardId ? defaults : {}} onBoardChange={setChosenId} onClose={close} />
       ) : (
         <EmptyState
           icon={FolderPlus}
