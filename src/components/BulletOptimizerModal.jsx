@@ -19,6 +19,10 @@ export default function BulletOptimizerModal({ isOpen, onClose, initialText = ''
   const [activeCategory, setActiveCategory] = useState('Technical & Engineering');
   // Copy's outcome, shown on the button for a moment: 'done', 'failed' or null.
   const [copied, setCopied] = useState(null);
+  // The statement as it was before a template replaced it, for Undo (R4-DUX-22); null when there is
+  // nothing to undo. It stays through further template picks (Undo goes back to the user's own text)
+  // and is dropped once the text is changed any other way.
+  const [beforeTemplate, setBeforeTemplate] = useState(null);
   const overlay = useOverlayClose(onClose);
 
   if (!isOpen) return null;
@@ -26,22 +30,35 @@ export default function BulletOptimizerModal({ isOpen, onClose, initialText = ''
   const analysis = analyzeBullet(text);
   const { score, hasActionVerb, hasMetric, weakPhrases, suggestions } = analysis;
 
+  /** Any change but a template: the statement is the user's own again, so Undo goes away. */
+  function editText(next) {
+    setText(next);
+    setBeforeTemplate(null);
+  }
+
   function handleAutoFix() {
-    setText(autoFixWeakPhrases(text));
+    editText(autoFixWeakPhrases(text));
   }
 
   // The verb in place of a leading verb or weak phrase, else before the first word; the metric before
   // the closing full stop (R4-CL-07, R4-CL-08).
   function handleInsertVerb(verb) {
-    setText(prev => insertActionVerb(prev, verb));
+    editText(prev => insertActionVerb(prev, verb));
   }
 
   function handleInsertMetric(metricStr) {
-    setText(prev => insertMetric(prev, metricStr));
+    editText(prev => insertMetric(prev, metricStr));
   }
 
+  // A template replaces the whole statement, so the text it replaced is kept for Undo.
   function handleInsertTemplate(tmpl) {
+    if (tmpl === text) return;
+    setBeforeTemplate(prev => (prev === null ? text : prev));
     setText(tmpl);
+  }
+
+  function handleUndoTemplate() {
+    editText(beforeTemplate);
   }
 
   function handleApply() {
@@ -101,10 +118,21 @@ export default function BulletOptimizerModal({ isOpen, onClose, initialText = ''
             <textarea
               rows={3}
               value={text}
-              onChange={e => setText(e.target.value)}
+              onChange={e => editText(e.target.value)}
               placeholder="e.g. Engineered distributed cache system, reducing API latency by 45% for 2M+ active users."
               className="w-full text-xs sm:text-sm p-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50/50 resize-none text-gray-800"
             />
+            {beforeTemplate !== null && (
+              <div className="flex items-center justify-between gap-3 text-[11px] text-gray-500">
+                <span>Template applied: your statement was replaced.</span>
+                <button
+                  onClick={handleUndoTemplate}
+                  className="font-semibold text-blue-600 hover:text-blue-800 hover:underline shrink-0"
+                >
+                  Undo
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Quality Indicators & Fixes */}
