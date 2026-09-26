@@ -10,12 +10,12 @@ Cloudflare branch builds are OFF (only a master push deploys). Accessibility las
 designed layouts R2-138 + R3-008 (`e6b1a4a`, gate 36218934694). Parked, not merged: `claude/wf-locale` `ac50cf4` (English
 only), `claude/wf-templates` (a11y).
 
-**Wave 1 — 17 bug fixes on the work branch, gating:** full gate **36221038666 on `45b6b60`** (its previous gate 36220057010
+**Wave 1 — 16 bug fixes (R2-148-c reverted) + wave 2, gating together on the head** (36221038666 on `45b6b60` failed only suite 3, R2-148-c) (its previous gate 36220057010
 on ebcaab4 failed only the J-38 test, fixed since). Every fix's fail-first is green except the reverted DatePill change.
 - B-20 `617f24f` · J-30 `5f86d40` · B-29 `4345a13` · RES-R2-140-b `5fc8925` · R2-148-a `9af32ac` · J-36 `62f024a` ·
   B-05 `ff7e89a` + `9e20f77` · R2-041 `ba0a938` · RES-R2-126 `29fb954` · B-17 `f568ac3` · J-38 `ca13cdb` (+ test fix) ·
   R2-148-d `53ee844` (**firestore.rules — the OWNER must publish them in the Firebase console after the deploy**) · B-13
-  `702fb61` · J-39 `d524d97` · RES-R2-135 `ead4f93` · RES-R2-045 `2b12f38` · RES-R2-104 `785b34a` · R2-148-c `95afab8`.
+  `702fb61` · J-39 `d524d97` · RES-R2-135 `ead4f93` · RES-R2-045 `2b12f38` · RES-R2-104 `785b34a` · ~~R2-148-c `95afab8`~~ **reverted** (gate 36221038666: 99-import-roundtrip-columns sidebar read the education's field of study into its description; R2-148-c open again — patch in the store `fixes/R2-148-c.patch`, fix its sidebar-education regression, then re-land).
   RES-R2-043 was already fixed (28b15c6). Owner decides: RES-R2-140-a (offline reorder lost to the cloud's order),
   RES-R2-140-c (a sync icon for jobs/boards — where, what it says), RES-R2-137 (Word Modern banner: reverses R2-133).
 - **Next:** 36221038666 green → `git push origin 45b6b60:refs/heads/master` → `python3 docs/tracking/tools/deploy_rows.py
