@@ -85,6 +85,9 @@ function linkParts(label, href) {
   const text = String(label ?? '').trim();
   const to = String(href ?? '').trim();
   if (!/^(?:https?:\/\/|mailto:|tel:)\S+$/i.test(to) && !WEB.test(to)) return [text || to];
+  // Always with its scheme, as the PDF follows it: "(linkedin.com/in/pat)" is not told apart from
+  // a project's "(Next.js)" by the readers of linkText's form (LINKED).
+  if (!/^[a-z]+:/i.test(to)) return linkParts(text, `https://${to}`);
   if (!text) return [to];
   if (bareAddress(text) === bareAddress(to)) return [text];
   if (/^tel:/i.test(to) && text.replace(/\D/g, '') === to.replace(/\D/g, '')) return [text];
@@ -104,8 +107,8 @@ export function linkText(label, href) {
 
 /**
  * Markdown's inline marks off: bold and italics, links to their text (linkText; `as` 'label' the
- * label alone, 'field' "label | address", a field of its own on an entry's title line), escapes,
- * inline code.
+ * label alone; an array, the label, each address pushed to it — an entry's title line gives them as
+ * fields of their own at its end), escapes, inline code.
  */
 function unmark(text, as) {
   return String(text)
@@ -114,7 +117,8 @@ function unmark(text, as) {
       if (as === 'label') return label || href;
       const [t, to] = linkParts(label, href);
       if (!to) return t;
-      return as === 'field' ? `${t} | ${to}` : `${t} (${to})`;
+      if (Array.isArray(as)) { as.push(to); return t; }
+      return `${t} (${to})`;
     })
     .replace(/<((?:https?:\/\/|mailto:)[^>]+)>/g, '$1')
     .replace(/`([^`]*)`/g, '$1')
@@ -145,8 +149,10 @@ export function markdownLines(md) {
         if (entryLevel && level > entryLevel) hint = 'role';
         else entryLevel = level;
       } else entryLevel = 0;
-      // An entry's linked title keeps its address as a field of its own: a project's URL (R4-IMP-02).
-      const text = unmark(h[2], hint === 'entry' ? 'field' : 'label');
+      // An entry's linked title keeps its address, as a field of its own at the line's end: a project's
+      // URL; a linked company's address (in its description), never its role (R4-IMP-02).
+      const links = [];
+      const text = unmark(h[2], hint === 'entry' || hint === 'role' ? links : 'label') + links.map((u) => ` | ${u}`).join('');
       if (hint === 'name') named = true;
       out.push({ text, hint });
       continue;
@@ -218,7 +224,9 @@ const BARE_LABEL = /^(?:e-?mail|mail|phone|tel|telephone|mobile|cell|linkedin|gi
 const digits = (s) => s.replace(/\D/g, '').length;
 
 /** A link as linkText writes it: "LinkedIn (https://linkedin.com/in/pat)" → its label and address. */
-const LINKED = /^(.*?)\s*\(((?:https?:\/\/|mailto:|tel:)[^()\s]+|[^()\s]+\.[a-z]{2,}(?:[/?#][^()\s]*)?)\)$/i;
+const LINKED = /^(.*?)\s*\(((?:https?:\/\/|mailto:|tel:)[^()\s]+)\)$/i;
+/** An address alone, with its scheme: a link's (linkText, an entry title's field). */
+const ADDRESS = /^(?:https?:\/\/|mailto:)[^\s()]+$/i;
 /** The contacts a Display label can stand for (contacts.js: the `link` fields). */
 const LABELLED_KEYS = new Set(['website', 'linkedin', 'github']);
 
@@ -330,7 +338,9 @@ function sectionOf(type, title, items) {
 function readHeader(type, header) {
   const out = { parts: [], date: null, location: '', meta: {}, named: [] };
   const field = (p) => {
-    const meta = metaOf(p);
+    // An address alone is the entry's link (a Markdown title's, R4-IMP-02): a project's or a
+    // certificate's URL; another type's description keeps it.
+    const meta = metaOf(p) || (ADDRESS.test(p) ? { key: 'link', value: p } : null);
     if (meta) out.meta[meta.key] = out.meta[meta.key] ? `${out.meta[meta.key]}, ${meta.value}` : meta.value;
     if (meta) out.named.push({ key: meta.key, text: p });
     return Boolean(meta);
@@ -471,14 +481,16 @@ function entryOf(type, header, body, aside = () => {}) {
       const fields = { name: p0, issuer: '', url: take('link'), credentialId: take('id'), date: d.start || d.end, expiry: take('expires') || (d.start ? d.end : '') };
       // Its link: an address, or a label with its address (linkText: "View Certificate (https://…)", the
       // Markdown export's link line under the entry) — the link's label kept as the Link label (R4-IMP-02).
-      const link = (text) => {
+      const link = (text, bare) => {
         const m = LINKED.exec(text);
-        if (m && m[1] && WEB.test(m[2].replace(/^https?:\/\//i, ''))) return { url: m[2], urlLabel: m[1] };
-        return WEB.test(text) ? { url: text } : null;
+        if (m && m[1] && /^https?:/i.test(m[2])) return { url: m[2], urlLabel: m[1] };
+        // A header field may be a bare domain, as before; a line under it only an address with its
+        // scheme or www. — "Node.js" there is no link.
+        return (bare ? WEB.test(text) : /^(?:https?:\/\/|www\.)\S+$/i.test(text)) ? { url: text } : null;
       };
       const left = [];
       for (const part of h.parts.slice(1)) {
-        const l = !fields.url && link(part);
+        const l = !fields.url && link(part, true);
         if (l) Object.assign(fields, l);
         else if (!fields.issuer) fields.issuer = part;
         else left.push(part);

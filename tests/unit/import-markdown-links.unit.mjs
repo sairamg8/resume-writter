@@ -68,3 +68,25 @@ test('the app\'s own Markdown: a labelled LinkedIn, a project\'s URL and a certi
   assert.deepEqual([cert?.name, cert?.issuer, cert?.url, cert?.urlLabel], ['AWS Certified Data Engineer', 'Amazon Web Services', 'https://verify.example.com/abc', 'Verify'], md);
   assert.equal(cert?.description, undefined, 'the link line is the URL, not a description');
 });
+
+// The review of R4-IMP-02: a bracketed word with a dot is a project's stack, not its URL; a linked
+// company on a job's title line keeps its role in place, its address in the description.
+test('"Portfolio Site (Next.js)": its stack, not its URL', () => {
+  const r = resumeFromText('Pat Sample\npat@example.com\n\nPROJECTS\nPortfolio Site (Next.js) | 2023\n• A static site.\nChat App (Socket.io) | 2022');
+  assert.deepEqual(items(r, 'projects').map((p) => [p.name, p.technologies, p.url]), [
+    ['Portfolio Site', 'Next.js', ''], ['Chat App', 'Socket.io', ''],
+  ]);
+});
+
+test('a linked company on a job\'s title line: the company and the role as written, the address kept', () => {
+  const r = fromMd('# Pat Sample\n\n## Experience\n### [Acme](https://acme.example.com) — Senior Engineer\n*Mar 2021 – Present*\n- Built it.\n');
+  const [job] = items(r, 'experience');
+  assert.deepEqual([job.company, job.role, job.startDate], ['Acme', 'Senior Engineer', 'Mar 2021']);
+  assert.match(job.description, /https:\/\/acme\.example\.com/);
+});
+
+test('a certificate\'s line "Node.js" under it is no link', () => {
+  const r = resumeFromText('Pat Sample\npat@example.com\n\nCERTIFICATIONS\nOpenJS Node.js Application Developer - OpenJS Foundation - Jun 2022\nNode.js');
+  const [cert] = items(r, 'certifications');
+  assert.equal(cert.url, '');
+});
