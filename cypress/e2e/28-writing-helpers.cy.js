@@ -87,7 +87,8 @@ describe('cover-letter generator', () => {
   });
 
   it('drafts a letter from the résumé for the company and role typed, and Apply fills the letter', () => {
-    dialog().find('input[placeholder="e.g. Google, Stripe"]').type('Northwind Traders', { delay: 0 });
+    // The generator opens on the letter's own company (R4-CL-01): replace it.
+    dialog().find('input[placeholder="e.g. Google, Stripe"]').clear().type('Northwind Traders', { delay: 0 });
     dialog().find('input[placeholder="Full Stack Engineer"]').type('Platform Engineer', { delay: 0 }); // the résumé's title as its hint
     dialog().find('input[placeholder="e.g. Hiring Manager"]').clear().type('Dana Reyes', { delay: 0 });
     dialog().contains('button', 'Strategic & Leadership').click();
