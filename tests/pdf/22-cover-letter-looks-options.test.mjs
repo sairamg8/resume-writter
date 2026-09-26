@@ -8,10 +8,16 @@ import { renderToString } from 'react-dom/server';
 import { setup, teardown, resume, render, renderCover, read, allItems, allText, drawState, overlaps, loadModule, readDocx, MM, TEMPLATES } from './harness.mjs';
 import { drawing, painted, pdftotext, PNG_2X2 as PNG } from './extractors.mjs';
 
-before(setup);
+const ACCENT = '#e11d48';
+let PALE = null; // Banded's band colour at ACCENT (designedMarks.js), read once the harness is up
+// One hook: a second root-level before() ran as it was registered, before setup() had built the harness,
+// and every suite failed on its hook (ctx.load was null).
+before(async () => {
+  await setup();
+  PALE = (await loadModule('/src/templates/pdf/shared/designedMarks.js')).bandedGround(ACCENT);
+});
 after(teardown);
 
-const ACCENT = '#e11d48';
 const CONTACTS = { email: 'pat@example.com', phone: '+1 555 0100', location: 'Berlin, Germany', website: 'pat.dev', linkedin: 'linkedin.com/in/pat' };
 const BLOCK = { body: '<p>Dear Sarah,</p>', date: '2026-01-15', recipientName: 'Sarah Smith', company: 'Globex Corp', subject: 'Re: the role' };
 
@@ -24,8 +30,6 @@ const letter = (template, { settings, personal, coverLetter } = {}) => resume({
 
 /** The looks whose letterhead is a band: Modern's accent, the Sidebar panel's navy, Banner's accent (T7), Banded's pale accent (R2-138 B2). */
 const BANDED = ['modern', 'sidebar', 'banner', 'banded'];
-let PALE = null; // Banded's band colour at ACCENT (designedMarks.js), read once the harness is up
-before(async () => { PALE = (await loadModule('/src/templates/pdf/shared/designedMarks.js')).bandedGround(ACCENT); });
 /** The band a banded look draws, else null. */
 const bandOf = (template, paths) => {
   const colour = { modern: ACCENT, sidebar: '#1e293b', banner: ACCENT, banded: PALE }[template];
