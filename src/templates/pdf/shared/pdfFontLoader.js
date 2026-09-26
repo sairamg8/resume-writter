@@ -381,6 +381,29 @@ function addStandIns(font, standIns = STAND_INS) {
 }
 
 /**
+ * Inflate a WOFF face's glyf table once, not once per glyph (PERF-1). Every font the PDF uses is a
+ * .woff (the bundled Noto Sans and every Fontsource face), and fontkit's WOFFFont answers each
+ * _getTableStream('glyf') by inflating the whole compressed table again (Noto Sans Latin's is 11 kB,
+ * 17.7 kB inflated). It asks per glyph: twice for every glyph a PDF embeds (TTFSubset._addGlyph reads
+ * the glyph's bytes, and glyph._decode its header) and once more for a glyph's bounding box. Every
+ * preview is a new PDF with new subsets, so every keystroke's build inflated each face's glyf table
+ * again for each of its glyphs. The inflated bytes now stay with the face, which react-pdf keeps for
+ * the session; every call gets a fresh stream over them at 0, as fontkit's own is, so no two readers
+ * share a position. Other tables are decoded once by fontkit itself (TTFFont._getTable caches them).
+ */
+function inflateGlyfOnce(font) {
+  const glyf = font.directory?.tables?.glyf;
+  if (font.type !== 'WOFF' || !glyf || glyf.compLength >= glyf.length || typeof font._getTableStream !== 'function') return;
+  const tableStream = font._getTableStream.bind(font);
+  let inflated = null;
+  font._getTableStream = (tag) => {
+    if (tag !== 'glyf') return tableStream(tag);
+    inflated ??= tableStream(tag);
+    return inflated && new inflated.constructor(inflated.buffer);
+  };
+}
+
+/**
  * Load every registered face of `families` and get their fontkit fonts ready to render;
  * returns the families that can be used, in order. Call before every render.
  *
@@ -398,6 +421,8 @@ function addStandIns(font, standIns = STAND_INS) {
  * 5. Draw a dash or space the face lacks with its stand-in (addStandIns), after the seeding in 1.
  *    The offline arrows' face (ARROWS) takes its arrows first and seeds them before its cmap, so
  *    each arrowhead glyph carries its arrow's text (RES-R2-045).
+ * 6. Keep a WOFF face's inflated glyf table (inflateGlyfOnce), so a build does not inflate it again
+ *    for every glyph it lays out and embeds (PERF-1).
  */
 export async function prepareFonts(families) {
   const store = Font.getRegisteredFonts();
@@ -425,6 +450,7 @@ export async function prepareFonts(families) {
       }
       for (const codePoint of font.characterSet || []) if (!isPresentationForm(codePoint)) font.glyphForCodePoint(codePoint);
       if (family !== ARROWS) addStandIns(font);
+      inflateGlyfOnce(font);
       if (typeof font.layout === 'function') {
         const base = font.layout.bind(font);
         const noLig = (string, features, ...rest) => base(string, features ?? noLigatures(), ...rest);

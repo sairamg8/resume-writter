@@ -1,8 +1,8 @@
 // Fonts are fetched and parsed once a session, not once a build (R2-142, part of PERF-1). Every
 // keystroke's preview is a new PDF build; react-pdf keeps each registered face's load (its fetch and
-// its fontkit font) for good, and pdfFontLoader registers a family once. This is a guard, not PERF-1's
-// fix: PERF-1's cost is fontkit re-inflating a WOFF font's glyf table once per glyph laid out
-// (fontkit's WOFFFont._getTableStream), which no cache here touches — that part is still open. It pins, for the
+// its fontkit font) for good, and pdfFontLoader registers a family once. This is a guard; PERF-1's other
+// cost, fontkit re-inflating a WOFF font's glyf table once per glyph laid out (fontkit's
+// WOFFFont._getTableStream), is fixed and pinned in 97-woff-glyf-once. It pins, for the
 // bundled Noto Sans and for a subset only some text needs (latin-ext), over builds of different
 // résumés and of the letter: the builds after the first fetch no font file — and react-pdf parses a
 // face only as its fetch arrives, so none is parsed again either. It also reports what a cold and a warm build cost here,
