@@ -360,6 +360,14 @@ function AtsCheck({ resume, store }) {
           className="w-full text-xs p-3 border border-gray-200 rounded-xl outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all text-gray-700 resize-none"
         />
 
+        {/* A posting the scan finds no keyword in ("We are looking for a strong candidate…") has no
+            match to show: without this line the box took the text and nothing happened (R4-DUX-24). */}
+        {!jobMatch && jobDescription.trim() && (
+          <p className="text-xs text-gray-500" data-testid="jd-no-keywords">
+            No skills or keywords found in this text — paste the full posting (requirements, tech stack).
+          </p>
+        )}
+
         {jobMatch && (
           <div className="space-y-3 pt-2">
             {jobMatch.missingKeywords.length > 0 && (
