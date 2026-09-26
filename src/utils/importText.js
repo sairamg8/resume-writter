@@ -77,7 +77,7 @@ function toLines(input) {
 const bareAddress = (s) => String(s).trim().toLowerCase().replace(/^(?:mailto:|tel:)/, '').replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/+$/, '');
 
 /**
- * A link as its label and, where the label does not show it, the address it goes to: ["LinkedIn",
+ * A link as its label and, where the label does not show it, the address it goes to: ["My profile",
  * "https://linkedin.com/in/pat"]; ["pat@example.com"] for a mailto: link that prints its address. A
  * link that goes nowhere a résumé can (a page anchor) is its label alone.
  */
@@ -98,7 +98,7 @@ function linkParts(label, href) {
  * A link's text as the parser reads it: "LinkedIn (https://linkedin.com/in/pat)" — the header reads
  * the address in brackets as the contact (takeContacts), an entry as its URL. A PDF's and a Word
  * file's links come this way too (importFile.js). Before, only the label was kept: a contact shown as
- * "LinkedIn" was dropped as a bare label, its address nowhere (R4-IMP-02, R4-IMP-10).
+ * "My profile" was dropped as a bare label, its address nowhere (R4-IMP-02, R4-IMP-10).
  */
 export function linkText(label, href) {
   const [text, to] = linkParts(label, href);

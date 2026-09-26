@@ -92,7 +92,7 @@ function withoutFallbacks(xml) {
  * line of a designed résumé's header or side column came out twice (R4-IMP-04).
  *
  * `links`: the part's hyperlink targets by relationship id (docxLinks). A hyperlink whose text is not
- * its address — a contact shown as its Display label, "LinkedIn" — reads as "LinkedIn (https://…)"
+ * its address — a contact shown as its Display label, "My profile" — reads as "My profile (https://…)"
  * (linkText), so the address is kept: the label alone was dropped, the URL nowhere (R4-IMP-10).
  */
 export function docxXmlLines(xml, links = {}) {
@@ -461,7 +461,7 @@ async function loadPdfjs() {
 
 /**
  * A page's text items with its links' addresses: the text a Link annotation covers, when it is not
- * the address itself (a contact shown as its Display label, "LinkedIn"), reads as "LinkedIn
+ * the address itself (a contact shown as its Display label, "My profile"), reads as "My profile
  * (https://…)" (linkText) — the text layer holds only the label, and the URL was lost (R4-IMP-10).
  * An item mostly inside the link's box is its text; one that runs well past it — a contact line set
  * as one run of text ("a | b | c", Design → Contact style Bar or Bullet), which pdf.js reads as one
