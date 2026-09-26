@@ -3,6 +3,7 @@ import { Outlet, useLocation } from 'react-router-dom';
 import { ConfirmProvider, ToastProvider } from '../ui/index.js';
 import { ErrorBoundary } from '../ErrorBoundary.jsx';
 import { useHotkeys } from '../../hooks/useHotkeys.js';
+import { useMediaQuery } from '../../hooks/useMediaQuery.js';
 import { Sidebar } from './Sidebar.jsx';
 import { TopBar } from './TopBar.jsx';
 import { WorkspaceContext } from './workspaceContext.js';
@@ -53,7 +54,10 @@ export function WorkspaceLayout({ projects = [], newProjectTo, renderCreate, sea
   // Forward — and coming Back to the entry it was opened on does not open it again.
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerKey, setDrawerKey] = useState(location.key);
-  if (drawerKey !== location.key) {
+  // md and up the drawer is only hidden by CSS: left open, it stayed a modal that turned every
+  // shortcut off (useHotkeys) until the next page. Widening the window past it closes it.
+  const wide = useMediaQuery('(min-width: 768px)');
+  if (drawerKey !== location.key || (wide && drawerOpen)) {
     setDrawerKey(location.key);
     setDrawerOpen(false);
   }

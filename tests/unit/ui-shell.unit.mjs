@@ -192,7 +192,7 @@ describe('the sidebar’s projects', () => {
  * `drawerOpen()` (the drawer is shown and not on its way out), `drawerLink(text)` (a link in the
  * drawer) and `click(a)` (a plain left click on it, as a browser sends it to the router's Link).
  */
-async function drawerShell(path) {
+async function drawerShell(path, { width } = {}) {
   const { WorkspaceLayout } = await loadModule('/src/components/shell/WorkspaceLayout.jsx');
   const { useWorkspace } = await loadModule('/src/components/shell/workspaceContext.js');
   let navigate = null;
@@ -202,7 +202,24 @@ async function drawerShell(path) {
     workspace = useWorkspace();
     return createElement('p', null, name);
   }
+  // A window `width` wide whose (min-width) lists fire `change` when resize() crosses them.
+  let viewport = width;
+  const lists = [];
+  const matchMedia = (query) => {
+    const min = Number(/\(min-width:\s*(\d+)px\)/.exec(query)?.[1] ?? 0);
+    const handlers = new Set();
+    const list = {
+      get matches() { return viewport >= min; },
+      addEventListener: (type, fn) => handlers.add(fn),
+      removeEventListener: (type, fn) => handlers.delete(fn),
+      fire: () => handlers.forEach((fn) => fn({ matches: list.matches })),
+      min,
+    };
+    lists.push(list);
+    return list;
+  };
   function App() {
+    if (width !== undefined) window.matchMedia = matchMedia; // before any hook below reads it
     return createElement(MemoryRouter, { initialEntries: [path] },
       createElement(Routes, null,
         createElement(Route, { element: createElement(WorkspaceLayout, { projects: [], newProjectTo: '/boards?create=1' }) },
@@ -234,6 +251,13 @@ async function drawerShell(path) {
       await settle();
     },
     go: async (to) => { view.act(() => navigate(to)); await settle(); },
+    resize: async (w) => {
+      const before = lists.map((l) => l.matches);
+      viewport = w;
+      view.act(() => lists.forEach((l, i) => { if (l.matches !== before[i]) l.fire(); }));
+      await settle();
+    },
+    modal: () => [...elements(view.document.body)].some((el) => el.getAttribute?.('aria-modal') === 'true'),
   };
 }
 
@@ -273,6 +297,26 @@ describe('R4-APP-03/04: the phone navigation drawer closes on every navigation',
       await s.click(link);
       assert.match(s.shown(), /BOARDS/);
       assert.ok(!s.drawerOpen(), 'the drawer stayed open over the create dialog');
+    } finally { await s.view.unmount(); }
+  });
+});
+
+// R4-APP-06: at md and up the drawer is only hidden by CSS. Left open while the window widened (a
+// tablet turned to landscape), it stayed mounted as a modal, and useHotkeys ignores every shortcut
+// while one is on the page: [, c, / and ? did nothing until the next page.
+describe('R4-APP-06: widening the window past the phone layout closes the drawer', () => {
+  it('opened at 375 px, the window widened to 1024 px: the drawer closes and goes', async () => {
+    const s = await drawerShell('/jobs', { width: 375 });
+    try {
+      s.openNav();
+      assert.ok(s.drawerOpen());
+      await s.resize(1024);
+      assert.ok(!s.drawerOpen(), 'the drawer stayed open at desktop width');
+      await new Promise((resolve) => { setTimeout(resolve, 300); }); // its 180 ms exit
+      s.view.act(() => {});
+      assert.ok(!s.modal(), 'a hidden modal stayed on the page, and the shortcuts with it');
+      await s.resize(375);
+      assert.ok(!s.drawerOpen(), 'narrowing again does not bring it back');
     } finally { await s.view.unmount(); }
   });
 });
