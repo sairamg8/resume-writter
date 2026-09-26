@@ -13,6 +13,19 @@ import { photoOption } from '../constants/photoOptions.js';
 const made = new Map();
 /** Copies being made, by saved data URL. */
 const making = new Map();
+/**
+ * Keys in `made` as null only because the fetch of a URL failed for a passing reason (no network, a
+ * timeout, a server error), each with the time it may be fetched again: the PDF prints none for now,
+ * and a build from then on fetches it again. A fetch that failed at once is tried by the next build; one
+ * that ran into the timeout waits a minute, or until the browser is back online, so a host that hangs
+ * does not hold every preview build for 15 s.
+ */
+const retry = new Map();
+const RETRY_AFTER_TIMEOUT_MS = 60_000;
+const due = (key) => retry.has(key) && Date.now() >= retry.get(key);
+if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+  window.addEventListener('online', () => { for (const key of retry.keys()) retry.set(key, 0); });
+}
 /** Copies kept: the résumé's photo and the letter's, and custom contact icons (and the store's, smallerPhotos.js). */
 const KEEP = 64;
 const listeners = new Set();
@@ -42,23 +55,35 @@ function blobOf(src) {
 /** How long a photo stored as a URL may take to fetch before it prints as none. */
 const FETCH_MS = 15_000;
 
+/** What fetchedBlob returns for a fetch that failed for a passing reason: try again later. */
+const TRY_AGAIN = Symbol('try again');
+/** …and for one that ran into the timeout: try again, but not at once. */
+const TIMED_OUT = Symbol('timed out');
+
 /**
- * The image at URL or path `src` (a JSON Resume file's basics.image), as a Blob; null when it cannot
- * be fetched — a missing file, a server that allows no cross-site read, no network (R2-093).
+ * The image at URL or path `src` (a JSON Resume file's basics.image), as a Blob; null when the server
+ * says it is not there (a 4xx: a missing file, no access); TRY_AGAIN when the fetch failed for a reason
+ * that may pass — no network, a timeout, a server error, a rate limit — or a server that allows no
+ * cross-site read, which fetch cannot tell from no network (R2-093, R4-PDF-03).
  */
 async function fetchedBlob(src) {
   try {
     const signal = typeof AbortSignal?.timeout === 'function' ? AbortSignal.timeout(FETCH_MS) : undefined;
     const res = await fetch(src, { signal });
-    return res.ok ? await res.blob() : null;
-  } catch {
-    return null;
+    if (res.ok) return await res.blob();
+    return res.status >= 400 && res.status < 500 && res.status !== 408 && res.status !== 429 ? null : TRY_AGAIN;
+  } catch (err) {
+    return err?.name === 'TimeoutError' ? TIMED_OUT : TRY_AGAIN;
   }
 }
 
-/** A copy of `src` (a data URL, or a URL fetched) the PDF can draw, made as an upload of it would be; null when there is none. */
+/**
+ * A copy of `src` (a data URL, or a URL fetched) the PDF can draw, made as an upload of it would be;
+ * null when there is none; TRY_AGAIN when a URL could not be fetched just now (fetchedBlob).
+ */
 async function copyOf(src, { kind = 'photo' } = {}) {
   const blob = src.startsWith('data:') ? blobOf(src) : await fetchedBlob(src);
+  if (blob === TRY_AGAIN || blob === TIMED_OUT) return blob;
   if (!blob) return null;
   try {
     return drawableImage(await readImageFile(blob, { kind }));
@@ -84,21 +109,32 @@ export function printableNow(src, { kind = 'photo' } = {}) {
 /** What the PDF prints for the saved image `src` (see printableNow), making its copy the first time. */
 export function printableImage(src, { kind = 'photo' } = {}) {
   const now = printableNow(src, { kind });
-  return now !== undefined ? Promise.resolve(now) : imageCopy(src, { kind });
+  return now !== undefined && !due(`${kind}:${src}`) ? Promise.resolve(now) : imageCopy(src, { kind });
 }
 
 /**
  * The copy of the saved data URL `src` made as an upload of it is (null when none can be), made
  * once a session and shared by all who ask: the PDF's copy of a WebP (printableImage) and the
- * store's smaller photo in place of one saved at camera size (smallerPhotos.js).
+ * store's smaller photo in place of one saved at camera size (smallerPhotos.js). A URL whose fetch
+ * failed for a passing reason is null for now and fetched again the next time it is asked for: it
+ * printed no photo for the rest of the session, even back online (R4-PDF-03).
  */
 export function imageCopy(src, { kind = 'photo' } = {}) {
   const key = `${kind}:${src}`;
-  if (made.has(key)) return Promise.resolve(made.get(key));
+  if (made.has(key) && !due(key)) return Promise.resolve(made.get(key));
   if (!making.has(key)) {
-    making.set(key, copyOf(src, { kind }).then((copy) => {
+    making.set(key, copyOf(src, { kind }).then((result) => {
+      const passing = result === TRY_AGAIN || result === TIMED_OUT;
+      const copy = passing ? null : result;
+      if (passing) retry.set(key, result === TIMED_OUT ? Date.now() + RETRY_AFTER_TIMEOUT_MS : 0);
+      else retry.delete(key);
+      made.delete(key); // set again below, as the newest
       made.set(key, copy);
-      if (made.size > KEEP) made.delete(made.keys().next().value);
+      if (made.size > KEEP) {
+        const oldest = made.keys().next().value;
+        made.delete(oldest);
+        retry.delete(oldest);
+      }
       making.delete(key);
       listeners.forEach((fn) => fn());
       return copy;
