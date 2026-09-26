@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ArrowRight } from 'lucide-react';
-import { Avatar, Button, TabPanel, Tabs, cx, useConfirmOptional, useHotkeys } from '@/components/ui';
+import { Avatar, Button, TabPanel, Tabs, cx, isImeKey, useConfirmOptional, useHotkeys } from '@/components/ui';
 import { describeActivity } from '@/utils/issueHistory';
 import { formatDateTime, relativeTime } from '@/utils/uiFormat';
 
@@ -42,6 +42,7 @@ function Composer({ initial = '', onSave, onCancel, autoFocus = false, saveLabel
         value={text}
         onChange={(e) => setText(e.target.value)}
         onKeyDown={(e) => {
+          if (isImeKey(e)) return; // the input method's Enter or Escape, not the comment's
           if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); save(); }
           if (e.key === 'Escape') { e.stopPropagation(); cancel(); }
         }}

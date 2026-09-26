@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Pencil } from 'lucide-react';
+import { isImeKey } from '@/components/ui/compose';
 
 export function Field({ label, value, onChange, type = 'text', icon: Icon, placeholder, readOnly = false }) {
   const [editing, setEditing] = useState(false);
@@ -41,7 +42,7 @@ export function Field({ label, value, onChange, type = 'text', icon: Icon, place
           onChange={e => setDraft(e.target.value)}
           onBlur={commit}
           onKeyDown={e => {
-            if (e.key === 'Enter') { e.preventDefault(); commit(); }
+            if (e.key === 'Enter' && !isImeKey(e)) { e.preventDefault(); commit(); }
             if (e.key === 'Escape') { setDraft(value || ''); setEditing(false); }
           }}
           // 16 px on touch screens: iOS Safari zooms the page into any smaller field it focuses (J-38).

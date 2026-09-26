@@ -1,7 +1,7 @@
 import { useId, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { ChevronDown, CircleHelp, Menu as MenuIcon, Plus, Search } from 'lucide-react';
-import { Button, IconButton, Menu, ShortcutsDialog, cx, useHotkeys } from '../ui/index.js';
+import { Button, IconButton, Menu, ShortcutsDialog, cx, isImeKey, useHotkeys } from '../ui/index.js';
 import { IssueTypeIcon } from '../tracker/TrackerIcons.jsx';
 import { useWorkspace } from './workspaceContext.js';
 import { orderProjects } from './projects.js';
@@ -61,7 +61,7 @@ function QuickSearch({ search }) {
   const onKeyDown = (e) => {
     if (e.key === 'ArrowDown') { e.preventDefault(); setActive((i) => Math.min(i + 1, results.length - 1)); }
     if (e.key === 'ArrowUp') { e.preventDefault(); setActive((i) => Math.max(i - 1, 0)); }
-    if (e.key === 'Enter') { e.preventDefault(); go(results[active]); }
+    if (e.key === 'Enter' && !isImeKey(e)) { e.preventDefault(); go(results[active]); }
     if (e.key === 'Escape') { setQuery(''); setOpen(false); inputRef.current?.blur(); }
   };
 

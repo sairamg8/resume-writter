@@ -3,6 +3,7 @@ import { Plus, CheckSquare } from 'lucide-react';
 import { TodoItem } from '@/components/job/TodoItem';
 import { addTodo as withTodo, toggleTodo } from '@/utils/jobEdits';
 import { visibleDone } from '@/utils/jobQuery';
+import { isImeKey } from '@/components/ui/compose';
 
 const DONE_PAGE_SIZE = 5;
 
@@ -42,7 +43,7 @@ export function TasksTab({ todos, onChange }) {
             aria-label="New task"
             value={input}
             onChange={e => setInput(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addTodo(input); } }}
+            onKeyDown={e => { if (e.key === 'Enter' && !isImeKey(e)) { e.preventDefault(); addTodo(input); } }}
             placeholder="New task… (Enter to add)"
             // 16 px on touch screens: iOS Safari zooms the page into any smaller field it focuses (J-38).
             className="flex-1 px-4 py-2.5 text-sm pointer-coarse:text-base border border-line rounded-md focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent placeholder-gray-300"

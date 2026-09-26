@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { CheckSquare, Square, X } from 'lucide-react';
+import { isImeKey } from '@/components/ui/compose';
 
 export function TodoItem({ todo, onToggle, onDelete, onRename }) {
   const [editing, setEditing] = useState(false);
@@ -34,7 +35,7 @@ export function TodoItem({ todo, onToggle, onDelete, onRename }) {
           onChange={e => setDraft(e.target.value)}
           onBlur={commit}
           onKeyDown={e => {
-            if (e.key === 'Enter') commit();
+            if (e.key === 'Enter' && !isImeKey(e)) commit();
             if (e.key === 'Escape') { setDraft(todo.text); setEditing(false); }
           }}
           // 16 px on touch screens: iOS Safari zooms the page into any smaller field it focuses (J-38).

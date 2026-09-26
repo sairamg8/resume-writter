@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { isImeKey } from '../components/ui/compose.js';
 
 /**
  * The typed box in the middle of a stepper (Header spacing's GapStepper, Design's SizeRow and
@@ -38,7 +39,7 @@ export function useTypedNumber({ shown, editText = shown, commit, select = false
         if (!done) write(e.target.value);
       },
       onKeyDown: (e) => {
-        if (e.key !== 'Enter' && e.key !== 'Escape') return;
+        if ((e.key !== 'Enter' && e.key !== 'Escape') || isImeKey(e)) return;
         const text = e.currentTarget.value;
         settled.current = true;
         setDraft(null);

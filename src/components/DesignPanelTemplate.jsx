@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Trash2 } from 'lucide-react';
 import { TemplateThumb } from '@/components/TemplateThumb';
+import { isImeKey } from '@/components/ui/compose';
 
 // Design → Template's pieces. The cards are made by a plain function, not a component, so the panel's
 // own element tree holds them (tests/pdf/93-template-presets walks it); the rest are components.
@@ -76,7 +77,7 @@ export function SavedDesigns({ cards, isOn, onPick, saveDesign, deleteDesign }) 
             value={name}
             maxLength={40}
             onChange={(e) => setName(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter') save(); if (e.key === 'Escape') setName(null); }}
+            onKeyDown={(e) => { if (isImeKey(e)) return; if (e.key === 'Enter') save(); if (e.key === 'Escape') setName(null); }}
             className="flex-1 min-w-0 px-2 py-1.5 text-xs border border-gray-300 rounded-lg focus:outline-none focus:border-blue-400"
           />
           <button type="button" onClick={save} disabled={!name.trim()} className="px-3 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg disabled:opacity-50">Save</button>

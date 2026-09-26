@@ -1,6 +1,7 @@
 import { useState, useId } from 'react';
 import { Plus, X as XIcon, CheckCircle2 } from 'lucide-react';
 import { PREDEFINED_STAGES } from '@/hooks/useJobStages';
+import { isImeKey } from '@/components/ui/compose';
 
 export function InterviewStageSelector({ stage, onStageChange, customStages, addCustomStage, removeCustomStage }) {
   const [newStageInput, setNewStageInput] = useState('');
@@ -89,7 +90,7 @@ export function InterviewStageSelector({ stage, onStageChange, customStages, add
                 id={inputId}
                 value={newStageInput}
                 onChange={e => setNewStageInput(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddStage(); } }}
+                onKeyDown={e => { if (e.key === 'Enter' && !isImeKey(e)) { e.preventDefault(); handleAddStage(); } }}
                 placeholder="e.g. 2nd Round, Founder Chat…"
                 // 16 px on touch screens: iOS Safari zooms the page into any smaller field it focuses (J-38).
                 className="flex-1 px-3 py-2 text-sm pointer-coarse:text-base border border-line rounded-md focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent"

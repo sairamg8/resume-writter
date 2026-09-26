@@ -5,6 +5,7 @@ import { FONT_SIZE_BASE, ICON_SIZE, SECTION_LETTER_SPACING, TYPE_SIZE_PT, deltaI
 import { titleTrackingPct } from '@/templates/pdf/shared/sectionHeadingLook';
 import { headerTemplateId } from '@/constants/templates';
 import { wordFontStandIns } from '@/utils/wordFonts';
+import { isImeKey } from '@/components/ui/compose';
 
 // The quick size buttons set the base size (pt) the PDF is laid out with.
 const SIZE_PRESETS = { small: 10, normal: 11, large: 12 };
@@ -149,7 +150,7 @@ export function TypographySection({ settings, template, updateSetting, onReset }
             type="text"
             value={customFontInput}
             onChange={e => { setCustomFontInput(e.target.value); setFontError(null); }}
-            onKeyDown={e => { if (e.key === 'Enter' && customFontInput.trim() && !checking) applyCustomFont(customFontInput.trim()); }}
+            onKeyDown={e => { if (e.key === 'Enter' && !isImeKey(e) && customFontInput.trim() && !checking) applyCustomFont(customFontInput.trim()); }}
             placeholder="e.g. Nunito, Raleway, Poppins"
             aria-invalid={fontError ? 'true' : undefined}
             aria-describedby={fontError ? 'custom-font-error' : undefined}

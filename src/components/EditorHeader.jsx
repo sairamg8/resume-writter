@@ -4,6 +4,7 @@ import AuthBar from '@/components/AuthBar';
 import { LayoutToggle } from '@/components/LayoutToggle';
 import { ExportDropdown } from '@/components/ExportDropdown';
 import { notSavedMessage } from '@/utils/storageBackup';
+import { isImeKey } from '@/components/ui/compose';
 
 /**
  * The editor panel's header: back to the dashboard, the résumé's name (click to rename), the
@@ -28,7 +29,7 @@ export function EditorHeader({ resume, rename, layoutMode, setLayoutMode, export
             onChange={e => rename.setDraft(e.target.value)}
             onBlur={rename.commit}
             onKeyDown={e => {
-              if (e.key === 'Enter') rename.commit();
+              if (e.key === 'Enter' && !isImeKey(e)) rename.commit();
               if (e.key === 'Escape') rename.cancel();
             }}
             className="w-full text-xs sm:text-sm font-semibold border-b border-blue-400 outline-none bg-transparent text-gray-800"

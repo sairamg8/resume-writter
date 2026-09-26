@@ -9,6 +9,7 @@ import ResumeThumbnail from '@/components/ResumeThumbnail';
 import { usePicture } from '@/hooks/usePicture';
 import { isLetter } from '@/utils/letters';
 import { printHash, savedPicture, savePicture } from '@/utils/pageImageStore';
+import { isImeKey } from '@/components/ui/compose';
 
 const KEEP_HINT = 'Your originals come back whenever none of them is left';
 const LAST_ORIGINAL_HINT = 'Your last original always comes back. To delete it, choose "Stop keeping" first.';
@@ -65,7 +66,7 @@ export function ResumeCard({ resume, onOpen, onDuplicate, onDelete, onRename, on
               onChange={e => rename.setDraft(e.target.value)}
               onBlur={rename.commit}
               onKeyDown={e => {
-                if (e.key === 'Enter') rename.commit();
+                if (e.key === 'Enter' && !isImeKey(e)) rename.commit();
                 if (e.key === 'Escape') rename.cancel();
               }}
               className="flex-1 text-sm font-semibold border-b border-blue-400 outline-none bg-transparent"
