@@ -1,5 +1,10 @@
 /** The characters Windows, macOS or Linux refuse in a file name. */
 const RESERVED = new Set('\\/:*?"<>|');
+/**
+ * Windows' device names: a file named one — "CON.pdf", "nul.x.docx", whatever follows the first dot —
+ * cannot be saved there at all.
+ */
+const DEVICE = /^(?:con|prn|aux|nul|com[0-9¹²³]|lpt[0-9¹²³])(?=\.|$)/i;
 
 /**
  * `value` as part of a file name, '' for anything not text: trimmed, inner runs of whitespace as one
@@ -18,7 +23,8 @@ function filePart(value) {
 }
 
 /**
- * An exported file's name, without its suffix: the résumé's name and title, as `Name_Title`. It
+ * An exported file's name, without its suffix: the résumé's name and title, as `Name_Title` (a Windows
+ * device name, DEVICE, with "_resume" after it). It
  * follows the résumé, never the signed-in account (AUD-30): a demo account, or anyone keeping a CV
  * for someone else, exports each résumé under the name printed on it. 'resume' when it has none.
  * Every file the editor saves takes its name from here — the Export menu's (useEditorExports) and
@@ -27,5 +33,7 @@ function filePart(value) {
 export function buildExportFilename(resume) {
   const name = filePart(resume?.personal?.name) || 'resume';
   const title = filePart(resume?.personal?.title);
-  return title ? `${name}_${title}` : name;
+  const base = title ? `${name}_${title}` : name;
+  // A device name ("Con", "NUL", "COM1") saves as "Con_resume": the name is still there, and Windows takes it.
+  return base.replace(DEVICE, '$&_resume');
 }
