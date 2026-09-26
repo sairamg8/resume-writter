@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useBackOrHome } from '@/hooks/useBackOrHome';
 import { SITE_OWNER } from '@/utils/siteOwner';
 import { FileText, ArrowLeft } from 'lucide-react';
@@ -135,13 +135,17 @@ export default function TermsPage() {
 
 function Footer() {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
+  // The link to the page already shown goes back to its top: navigating there added a second entry
+  // of the same page (Back needed one more press to leave) and kept the scroll (R4-APP-08).
+  const open = (to) => (to === pathname ? window.scrollTo(0, 0) : navigate(to));
   return (
     <div className="border-t border-gray-200 bg-white mt-12">
       <div className="max-w-3xl mx-auto px-6 py-6 flex flex-col sm:flex-row items-center justify-between gap-3">
         <p className="text-xs text-gray-400">© 2026 CPWT-CV. All rights reserved.</p>
         <div className="flex gap-4 text-xs text-gray-400">
-          <button onClick={() => navigate('/terms')} className="hover:text-gray-700 transition-colors">Terms</button>
-          <button onClick={() => navigate('/privacy')} className="hover:text-gray-700 transition-colors">Privacy Policy</button>
+          <button onClick={() => open('/terms')} className="hover:text-gray-700 transition-colors">Terms</button>
+          <button onClick={() => open('/privacy')} className="hover:text-gray-700 transition-colors">Privacy Policy</button>
         </div>
       </div>
     </div>
