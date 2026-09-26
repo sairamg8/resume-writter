@@ -3,6 +3,9 @@
 //    showed the new issue with the old one's state: a half-typed description (and Save wrote it into
 //    the new issue), an open comment box, the checklist's new row, the Activity tab. Each issue now
 //    starts from its own view.
+//  - R4-BRD-03: a description being edited was thrown away without a word when the view closed
+//    (the X, Escape) or another issue opened. The product call: autosave, as every other field of
+//    the view does — the draft is saved into the issue it was typed in; Cancel still discards it.
 // The real board page and the real board store are mounted with react-dom/client over fake-dom
 // (tests/pdf/fake-dom.mjs, the kit's harness), as tests/pdf/82-board-summary-labels.test.mjs does.
 // Run: node --test tests/pdf/82-issue-view-r4.test.mjs
@@ -100,6 +103,11 @@ function mountBoard(path) {
       editor.innerHTML = html;
       view.act(() => reactProps(editor).onInput(ev()));
     },
+    /** Escape in the view, as its dialog's keydown handler gets it. */
+    escape: () => {
+      const root = dialog().parentNode.parentNode; // panel → overlay → the dialog's root, which listens
+      view.act(() => reactProps(root).onKeyDown(ev({ key: 'Escape' })));
+    },
     back: () => view.act(() => nav(-1)),
     async settle() { for (let i = 0; i < 5; i += 1) { await new Promise((r) => { setImmediate(r); }); view.act(() => {}); } },
   };
@@ -145,6 +153,68 @@ it('R4-BRD-02: the comment box, the checklist\'s new row and the Activity tab st
     assert.ok(page.button('Add a comment…'));
     assert.equal(page.byId('issue-checklist-heading'), undefined, 'the epic (no checklist) opened with a checklist row to fill');
     assert.equal(page.tab('Comments').getAttribute('aria-selected'), 'true', 'the epic opened on the child\'s History tab');
+  } finally {
+    await page.view.unmount();
+  }
+});
+
+it('R4-BRD-03: a description left open is saved when the view closes with its X', async () => {
+  const page = mountBoard('/boards/p1?issue=HOME-2');
+  try {
+    page.click(page.byLabel('Edit description'));
+    page.typeDescription('Two coats of white');
+    page.click(page.byLabel('Close'));
+    await page.settle();
+    assert.equal(page.open(), null, 'the view closed');
+    assert.equal(issueNow('i2').description, 'Two coats of white', 'the typed description was thrown away');
+  } finally {
+    await page.view.unmount();
+  }
+});
+
+it('R4-BRD-03: a description left open is saved when the view closes with Escape', async () => {
+  const page = mountBoard('/boards/p1?issue=HOME-2');
+  try {
+    page.click(page.byLabel('Edit description'));
+    page.typeDescription('Sand it first');
+    page.escape();
+    await page.settle();
+    assert.equal(page.open(), null, 'Escape closed the view');
+    assert.equal(issueNow('i2').description, 'Sand it first', 'the typed description was thrown away');
+  } finally {
+    await page.view.unmount();
+  }
+});
+
+it('R4-BRD-03: a draft left open when a child opens is saved into the epic it was typed in, not the child', async () => {
+  const page = mountBoard('/boards/p1?issue=HOME-3');
+  try {
+    page.click(page.byLabel('Edit description'));
+    page.typeDescription('Plant the roses');
+    page.click(page.buttonWith('Fix the tap'));
+    await page.settle();
+    assert.equal(page.open(), 'HOME-1 Fix the tap');
+    assert.equal(issueNow('i3').description, 'Plant the roses', 'the epic\'s draft was thrown away');
+    assert.equal(issueNow('i1').description ?? '', '', 'the epic\'s draft went into the child');
+  } finally {
+    await page.view.unmount();
+  }
+});
+
+it('R4-BRD-03: Cancel still discards the draft, and an editor opened and left untouched saves nothing', async () => {
+  const page = mountBoard('/boards/p1?issue=HOME-2');
+  try {
+    const before = issueNow('i2');
+    page.click(page.byLabel('Edit description'));
+    page.typeDescription('Not this');
+    page.click(page.button('Cancel'));
+    page.click(page.byLabel('Edit description'));
+    page.click(page.byLabel('Close'));
+    await page.settle();
+    assert.equal(page.open(), null, 'the view closed');
+    assert.equal(issueNow('i2').description, 'White', 'Cancel kept the old description');
+    assert.equal(issueNow('i2').updatedAt, before.updatedAt, 'the untouched editor saved a change');
+    assert.equal((issueNow('i2').activity ?? []).length, (before.activity ?? []).length, 'the untouched editor logged a change');
   } finally {
     await page.view.unmount();
   }

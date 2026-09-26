@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { CheckSquare, Copy, Link2, ListPlus, MoreHorizontal, Trash2, X } from 'lucide-react';
 import { useBoardStore } from '@/hooks/useBoardStore';
@@ -16,9 +16,23 @@ import { IssueActivity } from './IssueActivity';
 import { IssueDetails } from './IssueDetails';
 import { AddButton } from './IssueFields';
 
-/** The description: its rich text, click to edit — an editor with Save / Cancel. */
+/**
+ * The description: its rich text, click to edit — an editor with Save / Cancel. A draft left open
+ * is saved when the view goes (the dialog closes, another issue opens): every other field of the
+ * view saves as you go, and closing used to throw the typed text away without a word.
+ */
 function Description({ value, onSave }) {
   const [draft, setDraft] = useState(null);
+  // The draft and this issue's value and save, as last rendered, for the unmount below: it runs
+  // after the view has moved on, and must save into the issue the draft was typed in.
+  const latest = useRef({ draft, value, onSave });
+  useLayoutEffect(() => {
+    latest.current = { draft, value, onSave };
+  });
+  useEffect(() => () => {
+    const { draft: left, value: saved, onSave: save } = latest.current;
+    if (left !== null && left !== (saved || '')) save(left);
+  }, []);
   if (draft !== null) {
     return (
       <div className="flex flex-col gap-2">
