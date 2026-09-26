@@ -27,7 +27,7 @@ store `flowcv/wip/execution-2026-09-26/fixes2/` + the session scratch; land one 
 `FIXDIR=<dir> bash /mnt/Storage/my-learning/claude/flowcv/wip/execution-2026-09-26/land.sh <ID>`, then push and dispatch
 `gh workflow run ci.yml --ref claude/busy-darwin-yjb13t -f failfirst="<sha>:<tests>"`; `landed.txt` lists what landed).
 Landed: RES-R2-151 `68f5d56`, J-38b `2ece50b`, RES-R2-131 note `b8e84eb` (already shipped ab74277), B-29b `b9805bb`,
-RES-R2-126b `052b4c0`, RES-R2-137 note `977c89b`, R2-041b `cdd0dd7`, LC-FLIP `395f5e5`, B-20b `e8c0e67`. **Still to come:** tracker hygiene (LC-FLIP, LC-TWINS, LC-WAVE1, H-02/03/06/07/09/11/13). Then one full gate → deploy.
+RES-R2-126b `052b4c0`, RES-R2-137 note `977c89b`, R2-041b `cdd0dd7`, LC-FLIP `395f5e5`, B-20b `e8c0e67` (ff 36221510003), LC-TWINS `2ccd722`, LC-WAVE1 `a1396a7`, H-02 `bf8c750`, H-03 `37e2f31`, H-06 `994e550`, H-07 `d818f80`, H-09 `0aea790`, H-11 `102ee1c`, H-13 — **wave 2 complete**. Then one full gate → deploy.
 **After that:** the checklist's rest (store `flowcv/CHECKLIST-2026-09-25*.md`), accessibility last.
 Pending-bug list: store `flowcv/wip/execution-2026-09-26/pending-bugs.md`.
 
