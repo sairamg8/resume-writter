@@ -14,7 +14,7 @@ import { IssueHost, useIssueActions, useIssueRoute } from '@/components/board/us
 import { IssueTypeIcon, PriorityIcon } from '@/components/tracker/TrackerIcons';
 import { BOARD_DRAG_INSTRUCTIONS } from '@/utils/cardKeys';
 import { boardCollision } from '@/utils/boardDnd';
-import { boardLists, boardSprint, dragPreview, dropTarget, hiddenDoneCount, previewLists } from '@/utils/boardView';
+import { boardLists, boardSprint, columnDeletion, dragPreview, dropTarget, hiddenDoneCount, previewLists } from '@/utils/boardView';
 import { filterIssues, swimlanes } from '@/utils/boardQuery';
 import { issueKey } from '@/utils/boardModel';
 
@@ -129,14 +129,17 @@ export function Board() {
     if (move?.kind === 'issue') store.moveIssue(board.id, move.issueId, move.target);
   }
 
-  async function deleteColumn(list, index) {
-    const target = lists[index + 1] ?? lists[index - 1];
+  async function deleteColumn(list) {
+    // Counted and moved off the project, not the columns as shown: a done column that looks empty
+    // can hold every issue resolved before hideDoneAfterDays, and a scrum board's column the
+    // backlog's issues and epics (R4-BRD-01).
+    const { count: n, target, change } = columnDeletion(board, list.id);
     if (!target) return;
-    const n = list.cards.length;
     if (n > 0) {
+      const effect = { reopen: ' and be reopened', resolve: ' and be marked done' }[change] ?? '';
       const ok = await confirm({
         title: `Delete the ${list.title || 'Untitled'} column?`,
-        body: `Its ${n} issue${n === 1 ? '' : 's'} will move to “${target.title || 'Untitled'}”.`,
+        body: `Its ${n} issue${n === 1 ? '' : 's'} will move to “${target.title || 'Untitled'}”${effect}.`,
         confirmLabel: 'Delete column',
         tone: 'danger',
       });
@@ -157,7 +160,7 @@ export function Board() {
         onLimit={() => setColumnEdit({ id: list.id, mode: 'limit' })}
         onCategory={(category) => store.updateColumn(board.id, list.id, { category })}
         onMove={(to) => store.moveColumn(board.id, list.id, to)}
-        onDelete={() => deleteColumn(list, index)}
+        onDelete={() => deleteColumn(list)}
       />
     );
   };
