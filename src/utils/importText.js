@@ -629,15 +629,21 @@ function languagesOf(lines) {
   const items = [];
   for (const line of lines) {
     let bare = null; // the language before on this line, with no level yet
-    for (const cell of line.text.replace(BULLET, '').split(/\t|\s+[|•·]\s+/).map((s) => s.trim()).filter(Boolean)) {
+    let last = null; // the language before on this line
+    // Cells: at tabs and | • ·, and at commas and semicolons outside brackets — "English, Spanish,
+    // French" is three languages, "English (Native), Spanish (Fluent)" two (R4-IMP-11).
+    const cells = line.text.replace(BULLET, '').split(/\t|\s+[|•·]\s+/).flatMap((c) => c.split(/[,;](?![^()]*\))/));
+    for (const cell of cells.map((s) => s.trim()).filter(Boolean)) {
       const m = /^(.+?)\s*(?::|\s[—–-]\s|\()\s*(.+?)\)?$/.exec(cell);
-      if (m) { items.push(itemOf('languages', { language: m[1], proficiency: m[2] })); bare = null; continue; }
+      if (m) { last = itemOf('languages', { language: m[1], proficiency: m[2] }); items.push(last); bare = null; continue; }
       const level = LEVEL.exec(cell);
       // A level alone, set apart from its language ("English ⇥ Native", a PDF's grid cells two to a
-      // row): the level of the language before it.
+      // row): the level of the language before it; a second one ("English: Full professional, C2") joins it.
       if (level && level.index === 0 && bare) { bare.proficiency = cell; bare = null; continue; }
-      if (level && level.index > 0) { items.push(itemOf('languages', { language: cell.slice(0, level.index).trim(), proficiency: level[0].trim() })); bare = null; continue; }
+      if (level && level.index === 0 && last) { last.proficiency = last.proficiency ? `${last.proficiency}, ${cell}` : cell; continue; }
+      if (level && level.index > 0) { last = itemOf('languages', { language: cell.slice(0, level.index).trim(), proficiency: level[0].trim() }); items.push(last); bare = null; continue; }
       bare = itemOf('languages', { language: cell, proficiency: '' });
+      last = bare;
       items.push(bare);
     }
   }
