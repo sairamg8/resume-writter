@@ -70,7 +70,11 @@ control repaints it.
 - `wordExportUtils.js`, `wordExportLook.js` — text/html helpers, headings, bullets, colours  
 - `wordExportPhoto.js` — the photo, as the PDF prints it  
 
-Not a pixel-perfect match to PDF; structural DOCX for ATS/HR systems.
+Not a pixel-perfect match to PDF; structural DOCX for ATS/HR systems. Modern's banner and the
+two-column Sidebar's header print on their band, a shaded table (`frameTable` in `wordExportLook.js`);
+Banner's and Banded's headers print on the white page. The letter's letterhead takes the same band or
+rule, and at Right of Name (its default Fields Position) its contacts sit beside the name in a two-cell
+table, under it where a name or title word would not fit beside them (R2-137).
 
 ## Text exports
 

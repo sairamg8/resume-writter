@@ -46,10 +46,16 @@ async function both(template, settings) {
 const ON = (headerBorderWidth) => ({ showHeaderBorder: true, headerBorderWidth });
 const OFF = (headerBorderWidth) => ({ showHeaderBorder: false, headerBorderWidth });
 
-/** The Word letter of `template` with `settings`. */
+/**
+ * The Word letter of `template` with `settings`, its contacts under the name (Below Name): one column,
+ * the rule its last line's bottom border. At Right of Name, the default, the rule is the bottom border
+ * of the name's and the contacts' table (R2-137, 92-word-header-band); the PDF draws the same rule.
+ */
 async function docx(template, settings) {
   const { renderCoverLetterDocx } = await loadModule('/src/utils/wordExport.js');
-  return readDocx(new Uint8Array(await (await renderCoverLetterDocx(make(template, settings))).arrayBuffer()));
+  const r = make(template, settings);
+  r.coverLetter = { ...r.coverLetter, fieldsPosition: 'below-name' };
+  return readDocx(new Uint8Array(await (await renderCoverLetterDocx(r)).arrayBuffer()));
 }
 
 /** Word's last letterhead line (the contacts): its bottom border's attributes, or null, and its spacing after, pt. */

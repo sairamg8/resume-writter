@@ -101,10 +101,17 @@ describe('Photo ↔ Text in the cover letter', () => {
 describe('Photo ↔ Text in Word', () => {
   // Word prints the photo now (R2-126): it no longer ignores the gap, it moves the text as the PDF does.
   it('each value moves the text beside the photo (its cell) or under it (the space after it) by exactly its change, on the PDF\'s axis', async () => {
-    /** Where Word's text starts against the photo, pt: the photo cell's width, or the space under the photo. */
+    /**
+     * Where Word's text starts against the photo, pt: the photo cell's width — the first column of the
+     * table the name is in, where it has two: Modern's and the Sidebar's band is a table too (R2-137),
+     * the Sidebar's of one column, its photo above the name — or the space under the photo.
+     */
     const offset = async (t, s) => {
       const { xml } = await renderDocx(cv(t, s));
-      const cell = /<w:gridCol w:w="(\d+)"\/>/.exec(xml.split('Jordan Rivera')[0])?.[1];
+      const head = xml.split('Jordan Rivera')[0];
+      const table = head.includes('<w:tbl>') ? head.slice(head.lastIndexOf('<w:tbl>')) : '';
+      const columns = [...table.matchAll(/<w:gridCol w:w="(\d+)"\/>/g)].map((m) => m[1]);
+      const cell = columns.length > 1 ? columns[0] : undefined;
       const under = /w:after="(\d+)"/.exec(xml.split('</w:p>').find((p) => p.includes('<w:drawing>')))?.[1];
       return cell ? { axis: 'x', pt: Number(cell) / 20 } : { axis: 'y', pt: Number(under) / 20 };
     };

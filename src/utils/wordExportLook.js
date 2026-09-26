@@ -1,6 +1,8 @@
 // How the Word résumé prints a section's entries (buildSection's `look`): the sizes, the spacing of
-// Design → Spacing (R2-062) and the colours (R2-063) its PDF prints the same section in.
-import { accent2Hex, wordContentTwips } from '@/utils/wordExportUtils';
+// Design → Spacing (R2-062) and the colours (R2-063) its PDF prints the same section in — and the
+// header's frame, the band or rule the résumé's header and the letter's letterhead sit in (R2-137).
+import { BorderStyle, ShadingType, Table, TableBorders, TableCell, TableLayoutType, TableRow, VerticalAlign, WidthType } from 'docx';
+import { accent2Hex, eighths, twips, wordContentTwips, wordMargins } from '@/utils/wordExportUtils';
 import { headerTemplateId, templateId } from '@/constants/templates';
 import { solid, textShades } from '@/templates/pdf/shared/pdfColors';
 import { getColumnWidth, getEffectiveSpacing } from '@/templates/pdf/shared/PdfSections';
@@ -121,4 +123,94 @@ export function sectionLook(section, settings, s, template, side) {
     template: tid,
     ink: entryInk(s, tid),
   };
+}
+
+/**
+ * A colour as Word's 'rrggbb', opaque over `on` (the band a run sits on, else the white page), at
+ * `alpha` times its own: what the PDF draws with that opacity (Word has none).
+ */
+export const hexOn = (color, on = '#ffffff', fallback, alpha = 1) => accent2Hex(solid(color, alpha, on), fallback);
+
+/**
+ * The fill Word shades a header band in (letterheadLook's `band`): the colour the PDF paints (a
+ * translucent one as it shows over the white page), else — a colour Word cannot take — the look's
+ * own band colour (band.fallback), so a template's band brings its fallback with it: Word chose it
+ * by the look's name, the Sidebar's slate or else Modern's blue (FIDB-51-VF7-NB2).
+ */
+export const bandFill = (band) => hexOn(band.color, '#ffffff', hexOn(band.fallback));
+
+/**
+ * How far a band's fill runs past its text on each side, twips: Modern's band sits inside the page
+ * margins, its text its Banner sides (padX) in; a band that bleeds (the Sidebar's, whose padX is 0)
+ * keeps its text on the margins and runs its fill padY into them — never past the paper's edge.
+ * The PDF runs that fill to the paper's edges; a Word table cannot reach above the top margin.
+ */
+function bandSide(band, settings) {
+  if (!band) return 0;
+  return band.bleed ? Math.min(twips(band.padY), wordMargins(settings).h) : twips(band.padX);
+}
+
+/**
+ * The width a header frame (frameTable) leaves its text, twips: the page's text less a band's
+ * padding on each side where the band sits inside the margins (Modern's).
+ */
+export const frameInner = (settings, band = null) => wordContentTwips(settings) - (band && !band.bleed ? 2 * bandSide(band, settings) : 0);
+
+/**
+ * The header's frame in Word (R2-137): a borderless table whose columns are `widths` (twips, summing
+ * to frameInner), `rows` its rows of cells `{ children, span?, valign?, margins? }` — `margins` twips
+ * added to the frame's own on that side of the cell (less where negative, never under 0). With
+ * `band` (letterheadLook's): every cell shaded in its fill (bandFill), the band's padding as the
+ * outer cells' margins, so the band is one block however its cells' heights differ — Modern's inside
+ * the margins, a band that bleeds (bandSide) running into them, its text on them. With `rules` (the
+ * letterhead's rules, top down; two are a double rule) and no band: the table's bottom border, `ruleGap`
+ * pt under the text. The photo row of a header on the white page is this frame with neither.
+ */
+export function frameTable(rows, widths, { settings, band = null, rules = [], ruleGap = 0 } = {}) {
+  const side = bandSide(band, settings);
+  const padY = band ? twips(band.padY) : 0;
+  const [rule, second] = band ? [] : rules;
+  const fill = band ? bandFill(band) : null;
+  const cols = widths.length;
+  const colWidths = widths.map((w, i) => w + (i === 0 ? side : 0) + (i === cols - 1 ? side : 0));
+  const total = colWidths.reduce((a, b) => a + b, 0);
+  const under = padY + (rule ? twips(ruleGap) : 0);
+  const at = (own, extra = 0) => Math.max(0, own + extra);
+  return new Table({
+    width: { size: total, type: WidthType.DXA },
+    columnWidths: colWidths,
+    layout: TableLayoutType.FIXED,
+    // A band that bleeds starts its fill `side` left of the margin: in the compatibility mode docx writes
+    // (Word 2013's), a table's indent is where its edge starts, not its text.
+    ...(band?.bleed && side ? { indent: { size: -side, type: WidthType.DXA } } : {}),
+    borders: rule
+      ? { ...TableBorders.NONE, bottom: { style: second ? BorderStyle.DOUBLE : BorderStyle.SINGLE, size: eighths(rule.width), color: hexOn(rule.color) } }
+      : TableBorders.NONE,
+    rows: rows.map((row, r) => {
+      let col = 0;
+      return new TableRow({
+        children: row.map((cell) => {
+          const span = Math.min(cell.span || 1, cols - col);
+          const [first, last] = [col === 0, col + span === cols];
+          const width = colWidths.slice(col, col + span).reduce((a, b) => a + b, 0);
+          col += span;
+          const m = cell.margins || {};
+          return new TableCell({
+            children: cell.children,
+            width: { size: width, type: WidthType.DXA },
+            ...(span > 1 ? { columnSpan: span } : {}),
+            verticalAlign: cell.valign || VerticalAlign.TOP,
+            ...(fill ? { shading: { type: ShadingType.CLEAR, color: 'auto', fill } } : {}),
+            margins: {
+              marginUnitType: WidthType.DXA,
+              top: at(r === 0 ? padY : 0, m.top),
+              bottom: at(r === rows.length - 1 ? under : 0, m.bottom),
+              left: at(first ? side : 0, m.left),
+              right: at(last ? side : 0, m.right),
+            },
+          });
+        }),
+      });
+    }),
+  });
 }

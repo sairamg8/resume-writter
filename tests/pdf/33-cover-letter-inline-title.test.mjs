@@ -138,7 +138,9 @@ describe('Word\'s letterhead follows Name & Title Layout "Inline" too (V2FIDB-51
       for (const headerAlign of ['left', 'center']) {
         const at = `${template}, ${headerAlign}`;
         // Header Bottom Border on: Classic's letter draws the résumé header's rule, and only then.
-        const doc = await coverDocx(make(template, { settings: inline({ headerAlign, nameColor: '#7c3aed', jobTitleColor: '#0d9488', showHeaderBorder: true }) }));
+        // Below Name: the one-column letterhead, its rule the contacts' bottom border (at Right of Name,
+        // the default, the rule underlines the name's and the contacts' table: 92-word-header-band).
+        const doc = await coverDocx(make(template, { settings: inline({ headerAlign, nameColor: '#7c3aed', jobTitleColor: '#0d9488', showHeaderBorder: true }), coverLetter: { fieldsPosition: 'below-name' } }));
         assert.deepEqual(doc.texts.slice(0, 3), ['Pat Sample Staff Engineer', 'pat@example.com  |  +1 555 0100  |  Berlin, Germany', '15 January 2026'], at);
         const [head, contacts] = doc.paragraphs.map((p) => p.xml);
         assert.deepEqual([colourOf(head, 'Pat Sample'), colourOf(head, 'Staff Engineer')], ['7c3aed', '0d9488'], `${at}: colours`);
