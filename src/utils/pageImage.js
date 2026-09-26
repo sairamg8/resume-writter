@@ -8,7 +8,10 @@ import { loadPdfjs } from './pdfjsLoader.js';
 
 /** Page 1 of `resume` (`letter`: of its cover letter), `width` px wide, as a data URL. */
 export async function pageImage(resume, { width = 240, letter = false } = {}) {
-  const [blob, pdfjs] = await Promise.all([letter ? buildCoverLetterPdf(resume) : buildResumePdf(resume), loadPdfjs()]);
+  // reportFont: false — a picture of some other résumé or template must not change the font notice
+  // above the editor's preview, which speaks of the open résumé only (R4-PDF-01).
+  const quiet = { reportFont: false };
+  const [blob, pdfjs] = await Promise.all([letter ? buildCoverLetterPdf(resume, quiet) : buildResumePdf(resume, quiet), loadPdfjs()]);
   const data = new Uint8Array(await blob.arrayBuffer());
   const pdf = await pdfjs.lib.getDocument({ data, worker: pdfjs.worker, isEvalSupported: false }).promise;
   const canvas = document.createElement('canvas');
