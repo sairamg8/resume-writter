@@ -1,7 +1,8 @@
 // The summary's look in the Word résumé (FIDB-51-VF3-NB2-NB1). The .docx printed every summary
 // italic in a fixed #374151. The PDF (= the preview) prints Classic's and Executive's upright in the
 // Text colour's body shade, Minimal's italic in its sub shade beside a 2 pt accent bar at 40 %, the
-// Sidebar's upright in the Text colour, Modern's on its banner (Word has none: as Classic's).
+// Sidebar's upright in the Text colour, Modern's on its banner — which Word draws since R2-137, the
+// summary on it in the header text colour at 85 %, as the PDF prints it.
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { setup, teardown, resume, render, renderDocx, read, allItems, drawState, loadModule, TEMPLATES } from './harness.mjs';
@@ -53,11 +54,17 @@ describe('the Word résumé prints the summary as the PDF does (FIDB-51-VF3-NB2-
     }
   });
 
-  it('Modern: no banner in Word — the summary prints upright as Classic\'s does, in the same Text colour', async () => {
-    for (const textColor of ['#1f2937', '#7c2d12']) {
-      const word = await wordSummary(cv('modern', { textColor }));
-      const classic = await pdfSummary(cv('classic', { textColor }));
-      assert.deepEqual([word.colour, word.italic], [classic.colour, false], textColor);
+  it('Modern: on its banner, upright, in the colour the PDF draws there — the header text colour at 85 % on the accent', async () => {
+    const { solid } = await loadModule('/src/templates/pdf/shared/pdfColors.js');
+    for (const settings of [{}, { headerTextColor: '#fef3c7' }, { accentColor: '#1e3a8a', textColor: '#7c2d12' }]) {
+      const r = cv('modern', settings);
+      const word = await wordSummary(r);
+      const [ink] = await drawState(await render(r), WORD);
+      // The PDF stores the 85 % in 255ths: Word's blend of it can differ by one per channel.
+      const pdf = solid(ink.fill, ink.alpha, r.settings.accentColor).toLowerCase();
+      const channels = (c) => [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16));
+      assert.ok(channels(word.colour).every((v, i) => Math.abs(v - channels(pdf)[i]) <= 2), `${JSON.stringify(settings)}: Word ${word.colour}, the PDF ${pdf}`);
+      assert.equal(word.italic, false);
     }
   });
 });

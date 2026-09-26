@@ -1,25 +1,27 @@
 // The cover letter as Word paragraphs: the same text, order, colours and hidden contacts as the
 // cover-letter PDF — letterhead (name, title, contacts in the résumé template's look), date,
 // recipient block, subject, body, closing and signature. Sizes follow the letter's base font
-// size. It is a text document: no photo, and the contacts are one line whatever the PDF's
-// layout (R1-10), Icon printing as Bar.
+// size. It is a text document: no photo; its contacts sit beside the name at Right of Name, the
+// default Fields Position (R2-137), else under it, in Cover Letter → Contact Style and Layout, Icon
+// printing as Bar.
 //
 // The letterhead takes the look the PDF's does (letterheadLook, FIDB-51): its colours, alignment
 // and Name & Title layout, Modern's accent band and the Sidebar panel's colour as a shaded band,
-// the résumé header's rule (else Minimal's hairline, Executive's double rule) as the last line's
-// bottom border. Word runs the Sidebar band 15 pt into the page margins, not to the paper's edges
-// as the PDF does, and prints the name and title in Word's own weights (Minimal's light name and
-// an Inline title's medium are regular).
+// the résumé header's rule (else Minimal's hairline, Executive's double rule) under it. Word runs
+// the Sidebar band 15 pt into the page margins, not to the paper's edges as the PDF does, and
+// prints the name and title in Word's own weights (Minimal's light name and an Inline title's
+// medium are regular).
 import { Paragraph, BorderStyle, ShadingType, AlignmentType } from 'docx';
 import { wordNameFont } from '@/utils/wordFonts';
-import { accent2Hex, bold, normal, descriptionToParagraphs, eighths, inlineGap, lineSpacing } from '@/utils/wordExportUtils';
+import { bold, normal, descriptionToParagraphs, eighths, gapPara, inlineGap, lineSpacing, twips } from '@/utils/wordExportUtils';
+import { bandFill, frameInner, frameTable, hexOn } from '@/utils/wordExportLook';
 import { contactRows } from '@/utils/wordExportContacts';
-import { contactItems } from '@/utils/contacts';
+import { CONTACT_GRID, contactItems } from '@/utils/contacts';
 import { hasRichText } from '@/utils/richText';
 import { linkLook } from '@/utils/linkStyle';
-import { letterBlock, letterContactFormat, letterHiddenFields, letterSignature } from '@/utils/coverLetter';
-import { solid } from '@/templates/pdf/shared/pdfColors';
-import { letterGrey, letterheadLook } from '@/templates/pdf/shared/letterhead';
+import { letterBlock, letterContactFormat, letterFieldsPosition, letterHiddenFields, letterSignature } from '@/utils/coverLetter';
+import { LETTER_CONTACTS_GAP, letterGrey, letterheadLook } from '@/templates/pdf/shared/letterhead';
+import { pxToPt } from '@/templates/pdf/shared/pdfUnits';
 import { resolveTemplateSettings } from '@/templates/pdf/shared/templateSettings';
 import { templateId } from '@/constants/templates';
 import { setGapPt } from '@/constants/headerSpacing';
@@ -28,23 +30,9 @@ const pt = (n) => Math.round(n * 20); // points → twips (paragraph spacing, in
 const line = (children, after = 0, extra = {}) => new Paragraph({ children, spacing: { after }, ...extra });
 
 /**
- * A colour as Word's 'rrggbb', opaque over `on` (the band a run sits on, else the white page), at
- * `alpha` times its own: what the PDF draws with that opacity (Word has none).
- */
-const hexOn = (color, on = '#ffffff', fallback, alpha = 1) => accent2Hex(solid(color, alpha, on), fallback);
-
-/**
- * The fill Word shades the letterhead's band in: the colour the PDF paints (a translucent one as it
- * shows over the white page), else — a colour Word cannot take — the look's own band colour
- * (letterheadLook's band.fallback), so a template's band brings its fallback with it: Word chose it
- * by the look's name, the Sidebar's slate or else Modern's blue (FIDB-51-VF7-NB2).
- */
-const bandFill = (band) => hexOn(band.color, '#ffffff', hexOn(band.fallback));
-
-/**
- * The paragraph formatting that frames the letterhead's rows: a band — each row shaded, with
- * borders of the band's own colour as its padding, so Word joins the rows into one block — or
- * the rule(s) under the last row.
+ * The paragraph formatting that frames the letterhead's rows, when they are one column (the contacts
+ * under the name): a band — each row shaded (bandFill), with borders of the band's own colour as its
+ * padding, so Word joins the rows into one block — or the rule(s) under the last row.
  */
 function frame(look, last) {
   const align = look.centered ? { alignment: AlignmentType.CENTER } : {};
@@ -78,6 +66,47 @@ function frame(look, last) {
   };
 }
 
+/**
+ * Word cannot measure text: a sans's average advance, em a character — generous, so a layout that
+ * sets two blocks side by side errs on the side of room — and a bold name's, wider.
+ */
+const EM = 0.6;
+const BOLD_EM = 0.65;
+/** Room added to each estimated width, pt. */
+const SLACK = 4;
+/** The width of `text` on one line at `size` half-points, pt, estimated at `em` a character. */
+const across = (text, size, em = EM) => [...String(text ?? '')].length * (size / 2) * em;
+/** Its widest word's: what cannot wrap. */
+const widestWord = (text, size, em = EM) => Math.max(0, ...String(text ?? '').split(/\s+/).map((word) => across(word, size, em)));
+
+/**
+ * Right of Name, the default Fields Position (R2-137), as the letter's PDF lays it out
+ * (CoverLetterHeaderPDF): the contacts beside the name, the letter's Name ↔ Contacts between them
+ * (contactsSideGap, else its 12 pt). The contacts get what their widest item needs (a 2 Grid two
+ * such cells), the name side what its lines need up to the rest; `{ name, contacts }` the two
+ * columns' widths, twips, the gap the contacts' left margin, and `width` the contacts' own, pt.
+ * Null where the PDF prints them under the name: another Fields Position, a centred letterhead
+ * (its centre line), no contacts, or a name or title word that does not fit beside them — the PDF's
+ * fit fallback. Word cannot measure text: the widths are estimates (across).
+ */
+function rightOfName(personal, cl, s, look, sizes, contacts, { contactStyle, layout }) {
+  if (look.centered || letterFieldsPosition(cl) !== 'right' || !contacts.length) return null;
+  const inner = frameInner(s, look.band);
+  const gap = setGapPt(s, 'contactsSideGap') ?? LETTER_CONTACTS_GAP;
+  const room = inner / 20 - gap;
+  // Justify keeps the mark after each value on its line; Single and 2 Grid put Bullet's before it.
+  const mark = layout === 'justify' ? across('  |  ', sizes.contact) : contactStyle === 'bullet' ? across('• ', sizes.contact) : 0;
+  const widest = Math.max(...contacts.map((c) => across(c.value, sizes.contact))) + mark;
+  const need = (layout === '2grid' && contacts.length > 1 ? 2 * widest + pxToPt(CONTACT_GRID.gapPx) : widest) + SLACK;
+  const nameEm = look.name.weight === 'bold' ? BOLD_EM : EM;
+  const name = personal.name || 'Your Name';
+  if (Math.max(widestWord(name, sizes.name, nameEm), widestWord(personal.title, sizes.title)) + SLACK + need > room) return null;
+  const title = personal.title ? across(personal.title, sizes.title) : 0;
+  const nameLine = look.inline && personal.title ? across(name, sizes.name, nameEm) + look.inline.gap + title : Math.max(across(name, sizes.name, nameEm), title);
+  const side = twips(Math.min(nameLine + SLACK, room - need));
+  return { name: side, contacts: inner - side, gap: twips(gap), width: (inner - side) / 20 - gap };
+}
+
 /** Name, title and contact line in the résumé template's look (letterheadLook). */
 function letterhead(personal, s, cl, sizes, look) {
   // Runs on a band blend onto the fill Word shades (bandFill), as the PDF's onto the band it paints —
@@ -105,17 +134,21 @@ function letterhead(personal, s, cl, sizes, look) {
   } else if (title) {
     rows.push({ runs: [title], after: pt(toContacts ?? 2), kept: toContacts != null });
   }
+  // Cover Letter → Contact Style and Layout (letterContactFormat) as the letter's PDF lays them out
+  // (FIDB-51-VF1-NB1-NB2-NB1), in the band's marks where there is one, else the page's greys
+  // (FIDB-51-VF1-NB1). A centred 2 Grid row is centred by its tab stops, not as a whole.
+  const format = letterContactFormat(cl, s);
+  const beside = rightOfName(personal, cl, s, look, sizes, contacts, format);
+  const contactLines = [];
   if (contacts.length) {
     const style = { size: sizes.contact, color: ink(look.contacts) };
-    // Cover Letter → Contact Style and Layout (letterContactFormat) as the letter's PDF lays them out
-    // (FIDB-51-VF1-NB1-NB2-NB1), in the band's marks where there is one, else the page's greys
-    // (FIDB-51-VF1-NB1). A centred 2 Grid row is centred by its tab stops, not as a whole.
-    const { style: contactStyle, layout } = letterContactFormat(cl, s);
     const marks = look.marks && ink(look.marks);
     // Design → Links (R2-147): on a band, the Accent tint that reads on the fill Word shades.
     const links = linkLook(s.linkStyle, s.accentColor, look.band ? on : null);
-    for (const row of contactRows(contacts, { contactStyle, layout, centered: look.centered, settings: s, style, markColor: marks, links })) {
-      rows.push({ runs: row.runs, extra: look.centered && !row.centred ? { ...row.extra, alignment: undefined } : row.extra });
+    // Beside the name a 2 Grid's second cell starts where it does in the contacts' own width.
+    const width = beside ? { width: beside.width } : {};
+    for (const row of contactRows(contacts, { contactStyle: format.style, layout: format.layout, centered: look.centered, settings: s, style, markColor: marks, links, ...width })) {
+      contactLines.push({ runs: row.runs, extra: look.centered && !row.centred ? { ...row.extra, alignment: undefined } : row.extra });
     }
   }
   // A band's rows touch (no white gap inside it). Word puts a bottom border's space between the
@@ -123,6 +156,22 @@ function letterhead(personal, s, cl, sizes, look) {
   // résumé's Header ↔ First section) below the rule or band — and, with neither (a Classic résumé's
   // border off, V2FIDB-51-2), the PDF's pad above it too.
   const below = look.gapBelow + (look.band || look.rules.length ? 0 : look.ruleGap);
+  if (beside) {
+    // Right of Name (R2-137): a two-cell borderless table — the name and title | the contacts, the
+    // gap the contacts' left margin — framed as the letterhead is (frameTable): the band shading both
+    // cells, or the rule(s) under both. Set against the right margin as the PDF's; a 2 Grid's rows
+    // keep their tab stops. The gap under it is a paragraph of its own: a table has no space after.
+    const name = rows.map((r, i) => line(r.runs, i === rows.length - 1 ? 0 : look.band && !r.kept ? 0 : r.after));
+    const right = format.layout === '2grid' ? {} : { alignment: AlignmentType.RIGHT };
+    const side = contactLines.map((r) => line(r.runs, 0, { ...r.extra, ...right }));
+    return [
+      frameTable([[{ children: name }, { children: side, margins: { left: beside.gap } }]], [beside.name, beside.contacts], {
+        settings: s, band: look.band, rules: look.rules, ruleGap: look.ruleGap,
+      }),
+      ...gapPara(below),
+    ];
+  }
+  rows.push(...contactLines);
   return rows.map((r, i) => {
     const last = i === rows.length - 1;
     return line(r.runs, last ? pt(below) : look.band && !r.kept ? 0 : r.after, { ...frame(look, last), ...r.extra });

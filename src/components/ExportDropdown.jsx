@@ -56,8 +56,11 @@ export function ExportDropdown({ exporting, keeps = false, letter = false, onExp
           <button
             onClick={() => { onExportWord(); setOpen(false); }}
             disabled={!!exporting}
-            // The .docx is text, for ATS: say what the PDF has that it leaves out — the letter keeps its band (R2-133).
-            title="A text document for ATS: no photo, and the résumé prints without its banner or coloured column"
+            // Say what the .docx leaves out that the PDF has (R2-133). The résumé prints its photo (R2-126) and
+            // Modern's and the Sidebar's header on their band (R2-137); the letter prints no photo.
+            title={letter
+              ? 'An editable document: the letter prints without its photo'
+              : "An editable document: Banner's and Banded's headers and the Sidebar's side column print on the white page"}
             className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 disabled:opacity-50"
           >
             <FileText size={12} className="text-emerald-500" /> {letter ? 'Export Cover Letter Word' : 'Export Word'}
