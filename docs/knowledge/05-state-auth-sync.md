@@ -238,7 +238,8 @@ publishedAt }`, `shareId` a random uuid) together with `users/{uid}/shares/{resu
 publishedAt }`) in one transaction; Publish first reads that record and reuses the link it names, so two tabs
 or devices never make two copies — two Publishes at the same moment included: the second's write is
 refused as the record changed since its read, and it runs again on the first one's link (R4-LO-22) — and Unpublish deletes the copy the panel shows and the one the record
-names (each only if it is still there) and the record, and so does deleting the résumé from the Dashboard while signed
+names (each only if it is still there) and the record, in one transaction too, so a Publish elsewhere between its read and
+its write never leaves a copy no record names (R4-LO-22), and so does deleting the résumé from the Dashboard while signed
 in (`unpublishResume`), which would otherwise leave a copy with no panel left to take it down. A
 résumé deleted on another device, offline, signed out or on an older build loses its copy at the next
 first sync of any device: the engine (`publicLinks`, wired in `useCloudSync`) passes the account's

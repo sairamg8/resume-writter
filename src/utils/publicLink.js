@@ -4,8 +4,8 @@
 // owner write; `users/{uid}/shares/{resumeId}` remembers which id a résumé has, under the account's
 // own rule. The copy holds what the résumé's PDF prints and nothing else: a hidden field's value, a
 // hidden section or entry, the cover letter and the résumé's name in the dashboard stay private.
-// The Firestore calls take the SDK's functions (`fs`: doc, getDocFromServer, writeBatch,
-// runTransaction for publish — and collection, getDocsFromServer for unpublishDeleted), so the
+// The Firestore calls take the SDK's functions (`fs`: doc, getDocFromServer, runTransaction — and
+// collection, getDocsFromServer for unpublishDeleted), so the
 // tests run this very code against tests/pdf/fake-firestore.mjs.
 import { newId } from '@/utils/ids';
 import { CONTACT_FIELDS, CONTACT_KEYS } from '@/utils/contacts';
@@ -144,26 +144,26 @@ export function publicIo(fs, db) {
   const publicDoc = (shareId) => fs.doc(db, 'public', shareId);
   const shareDoc = (uid, resumeId) => fs.doc(db, 'users', uid, 'shares', resumeId);
 
-  /** The link the account has recorded for résumé `resumeId`, or null: read from the server, never a stale cache. */
-  async function recordedId(uid, resumeId) {
-    const share = await fs.getDocFromServer(shareDoc(uid, resumeId));
-    return share.exists() ? share.data().shareId || null : null;
-  }
-
-  /** Adds to `batch` the deletion of each of these copies that is there (each id once). */
-  async function deleteCopies(batch, shareIds) {
-    for (const shareId of new Set(shareIds.filter(Boolean))) {
-      // The rules refuse deleting a copy that is not there (no owner to check), so only one that is.
-      if ((await fs.getDocFromServer(publicDoc(shareId))).exists()) batch.delete(publicDoc(shareId));
-    }
-  }
-
-  /** Deletes résumé `resumeId`'s copies at `shareIds`, those that are there, and its record of the link. */
+  /**
+   * Deletes résumé `resumeId`'s copies at `shareIds` and at the link the account records for it, those
+   * that are there, and its record of the link; resolves to whether it had a record. One transaction
+   * (R4-LO-22): read first and written after as a batch, a Publish on another device between the two
+   * put a new copy and record up, and the batch deleted the record and left that copy public with
+   * nothing naming it. Now the record read is checked at the commit, and a changed one runs it again.
+   */
   async function takeDown(uid, resumeId, shareIds) {
-    const batch = fs.writeBatch(db);
-    await deleteCopies(batch, shareIds);
-    batch.delete(shareDoc(uid, resumeId));
-    await batch.commit();
+    return fs.runTransaction(db, async (tx) => {
+      const share = await tx.get(shareDoc(uid, resumeId));
+      const recorded = share.exists() ? share.data().shareId || null : null;
+      const ids = [...new Set([...shareIds, recorded].filter(Boolean))];
+      // The rules refuse deleting a copy that is not there (no owner to check), so only one that is.
+      const there = [];
+      for (const id of ids) if ((await tx.get(publicDoc(id))).exists()) there.push(id);
+      if (!share.exists() && !there.length) return false;
+      for (const id of there) tx.delete(publicDoc(id));
+      tx.delete(shareDoc(uid, resumeId));
+      return share.exists();
+    });
   }
 
   return {
@@ -213,7 +213,7 @@ export function publicIo(fs, db) {
      * one already gone (unpublished elsewhere) is skipped, as the rules refuse deleting it.
      */
     async unpublish(uid, resumeId, shareId) {
-      await takeDown(uid, resumeId, [shareId, await recordedId(uid, resumeId)]);
+      await takeDown(uid, resumeId, [shareId]);
     },
 
     /**
@@ -222,10 +222,7 @@ export function publicIo(fs, db) {
      * there was one.
      */
     async unpublishResume(uid, resumeId) {
-      const share = await fs.getDocFromServer(shareDoc(uid, resumeId));
-      if (!share.exists()) return false;
-      await takeDown(uid, resumeId, [share.data().shareId]);
-      return true;
+      return takeDown(uid, resumeId, []);
     },
 
     /**
@@ -233,15 +230,15 @@ export function publicIo(fs, db) {
      * deletion list says — when they have one, and resolves to those ids. A résumé deleted on
      * another device, or offline, or on a build that did not unpublish, kept its copy public with
      * no panel left anywhere to take it down: the cloud sync calls this once it knows the list
-     * (cloudSyncEngine.js). One read of the account's links (`users/{uid}/shares`), then one batch
-     * for each copy to take down.
+     * (cloudSyncEngine.js). One read of the account's links (`users/{uid}/shares`), then one
+     * transaction for each copy to take down.
      */
     async unpublishDeleted(uid, ids) {
       const gone = new Set(ids);
       if (!gone.size) return [];
       const shares = await fs.getDocsFromServer(fs.collection(db, 'users', uid, 'shares'));
       const stale = shares.docs.filter((d) => gone.has(d.id));
-      for (const d of stale) await takeDown(uid, d.id, [d.data().shareId]);
+      for (const d of stale) await takeDown(uid, d.id, []);
       return stale.map((d) => d.id);
     },
 
