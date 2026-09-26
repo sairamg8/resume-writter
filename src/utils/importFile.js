@@ -357,12 +357,27 @@ export async function pdfLines(bytes, lib) {
 
 // ── Any of them ──────────────────────────────────────────────────────────────
 
+/**
+ * A text or Markdown file's text, in the encoding Windows saved it in: Notepad's "Unicode" is UTF-16
+ * behind its byte-order mark; Word's "Save as Plain Text" is Windows-1252 by default, where • – — and
+ * curly quotes are bytes UTF-8 cannot read (they became "�", and no date or list was found).
+ */
+function decodeText(bytes) {
+  if (bytes[0] === 0xff && bytes[1] === 0xfe) return new TextDecoder('utf-16le').decode(bytes);
+  if (bytes[0] === 0xfe && bytes[1] === 0xff) return new TextDecoder('utf-16be').decode(bytes);
+  try {
+    return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+  } catch {
+    return new TextDecoder('windows-1252').decode(bytes);
+  }
+}
+
 /** A file's text as the parser's lines, by its kind. `bytes` its contents. */
 export async function documentLines(name, bytes, { pdfjs } = {}) {
   if (/\.pdf$/i.test(name)) return pdfLines(bytes, pdfjs);
   // An older .doc is not a zip: docxLines says to save it as .docx (a .docx named .doc reads as one).
   if (/\.docx?$/i.test(name)) return docxLines(bytes);
-  const text = decode(bytes).replace(/^﻿/, '');
+  const text = decodeText(bytes).replace(/^﻿/, '');
   return /\.(md|markdown)$/i.test(name) ? markdownLines(text) : text;
 }
 
