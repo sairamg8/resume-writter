@@ -126,7 +126,9 @@ export function hasMetric(text) {
     .replace(/(?<![\p{L}\d$])(?:19|20)\d{2}\s*[–—/-]\s*\d{2}(?![\d%+kKmMbBxX$])/gu, '')
     .replace(/(?<![\p{L}\d$])\d{1,2}\/(?:19|20)\d{2}(?![\d%+kKmMbBxX$])/gu, '')
     .replace(/(?<![\p{L}\d$]|\d[.,])(?:19|20)\d{2}(?![\d%+kKmMbBxX$]|[.,]\d)/gu, '');
-  return /(?<!\p{L})\d/u.test(noYears) && !/^\d{4}$/.test(clean);
+  // A number starts where no letter or digit comes before it: the "021" of "FY2021" or the "0" of
+  // "v2.0" is inside a name, not a number of its own (R4-LO-15).
+  return /(?<![\p{L}\d]|[\p{L}\d][.,])\d/u.test(noYears) && !/^\d{4}$/.test(clean);
 }
 
 export const GOOGLE_XYZ_TEMPLATES = [
