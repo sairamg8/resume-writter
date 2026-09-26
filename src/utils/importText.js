@@ -128,15 +128,23 @@ function unmark(text, as) {
 
 /**
  * A Markdown résumé as the parser's lines: "# " the name, "## " a heading, "### " an entry's title,
- * a list item a "• " line (a numbered one keeps its number), the rest as text with its marks off.
+ * a list item a "• " line (a numbered one keeps its number), the rest as text with its marks off. A
+ * deeper heading under an entry's is a 'role' of it: Experience's "Group roles by company" exports the
+ * employer as "### Acme" and each role under it as "#### Senior Engineer" (R4-IMP-09).
  */
 export function markdownLines(md) {
   const out = [];
   let named = false;
+  let entryLevel = 0; // the level of the entry heading in force, 0 under none
   for (const line of String(md ?? '').split(/\r\n|\r|\n/)) {
     const h = /^\s{0,3}(#{1,6})\s+(.*?)\s*#*\s*$/.exec(line);
     if (h) {
-      const hint = h[1].length === 1 && !named ? 'name' : (h[1].length <= 2 ? 'heading' : 'entry');
+      const level = h[1].length;
+      let hint = level === 1 && !named ? 'name' : (level <= 2 ? 'heading' : 'entry');
+      if (hint === 'entry') {
+        if (entryLevel && level > entryLevel) hint = 'role';
+        else entryLevel = level;
+      } else entryLevel = 0;
       // An entry's linked title keeps its address as a field of its own: a project's URL (R4-IMP-02).
       const text = unmark(h[2], hint === 'entry' ? 'field' : 'label');
       if (hint === 'name') named = true;
@@ -410,13 +418,14 @@ function entryOf(type, header, body, aside = () => {}) {
   const description = (extra = []) => richText([...unnamed(), ...extra, ...body.map((l) => l.text)]);
   const dates = { startDate: d.start, endDate: d.end, current: d.current };
   switch (type) {
-    case 'experience': {
-      const [role, company] = roleFirst(p0, p1, false);
-      return itemOf(type, { company, role, location: h.location || take('location'), ...dates, description: description(lead) });
-    }
+    case 'experience':
     case 'volunteering': {
-      const [role, org] = roleFirst(p0, p1, true);
-      return itemOf(type, { org, role, location: h.location || take('location'), ...dates, description: description(lead) });
+      // A role under its employer (roleEntries): the employer and its place are the group's.
+      const group = header[0]?.group;
+      const [role, org] = group ? [[p0, p1].filter(Boolean).join(' — '), group.company] : roleFirst(p0, p1, type === 'volunteering');
+      const more = group ? group.lead.map((l) => l.text) : [];
+      const location = h.location || take('location') || (group ? group.place : '');
+      return itemOf(type, { [type === 'experience' ? 'company' : 'org']: org, role, location, ...dates, description: description([...more, ...lead]) });
     }
     case 'education': {
       const fields = { institution: '', degree: '', fieldOfStudy: '', gpa: take('gpa') };
@@ -500,6 +509,7 @@ function entryOf(type, header, body, aside = () => {}) {
  * or a list starts the next one.
  */
 function entriesOf(type, lines, aside) {
+  lines = roleEntries(type, lines);
   // A certificate or an award a list item each (R4-IMP-01): a section that opens with a list item is a
   // list of them, each with its date at its end ("• AWS Certified Solutions Architect – 2022"). A line
   // under an item is its own: its date or named fields, else its text. Before, the first item was the
@@ -599,6 +609,41 @@ function entriesOf(type, lines, aside) {
     entries[0].body.unshift(...preamble);
   }
   return entries.map((e) => entryOf(type, e.header, e.body, aside));
+}
+
+/**
+ * `lines` with Markdown's 'role' lines (markdownLines) as entries. A job's employer over its roles
+ * (Experience's "Group roles by company": "### Acme", its place, then "#### Senior Engineer" and its
+ * dates for each role) is no entry of its own: each role is one, `group` giving it the employer and
+ * the place; a line under the employer that is no place leads the first role's description. Before,
+ * the employer was an entry with no role and no dates, and each role one with no company (R4-IMP-09).
+ * An entry with a date under it is no employer: a heading under it is an entry of its own.
+ */
+function roleEntries(type, lines) {
+  if (!lines.some((l) => l.hint === 'role')) return lines;
+  const out = [];
+  let group = null;
+  for (let k = 0; k < lines.length; k += 1) {
+    const l = lines[k];
+    if (l.hint === 'entry') {
+      let next = k + 1;
+      while (next < lines.length && !lines[next].hint) next += 1;
+      const under = lines.slice(k + 1, next);
+      const dated = under.some((x) => pieces(x.text).some((p) => readDateRange(p) || trailingDate(p)));
+      if (JOB.has(type) && lines[next]?.hint === 'role' && !dated) {
+        const placeAt = under.findIndex((x) => PLACE.test(x.text));
+        group = { company: l.text, place: placeAt >= 0 ? under[placeAt].text : '', lead: under.filter((x, i) => i !== placeAt), first: true };
+        k = next - 1;
+        continue;
+      }
+      group = null;
+      out.push(l);
+    } else if (l.hint === 'role') {
+      out.push({ ...l, hint: 'entry', group: group && { ...group, lead: group.first ? group.lead : [] } });
+      if (group) group.first = false;
+    } else out.push(l);
+  }
+  return out;
 }
 
 /** Skills lines: "Category: a, b" as a group; a short line alone over a list as its category. */
