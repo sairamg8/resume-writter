@@ -57,14 +57,15 @@ export function InlineEdit({
   };
 
   const onKeyDown = (event) => {
+    // An input method's Enter picks a word and its Escape drops the word being composed, not the
+    // edit: isComposing alone missed Safari's, which comes after compositionend flagged only by
+    // keyCode 229 (isImeKey checks both). Its Escape reverted the whole edit (R4-LO-24, as B-20c).
+    if (isImeKey(event)) return;
     if (event.key === 'Escape') {
       event.preventDefault();
       event.stopPropagation();
       finish(false, { returnFocus: true });
     } else if (event.key === 'Enter' && (!multiline || !event.shiftKey || event.metaKey || event.ctrlKey)) {
-      // An input method's Enter picks a word, not the edit's end. isComposing alone missed Safari's,
-      // which comes after compositionend flagged only by keyCode 229 (isImeKey checks both).
-      if (isImeKey(event)) return;
       event.preventDefault();
       finish(true, { returnFocus: true });
     }
