@@ -3,6 +3,7 @@ import { Text } from './shared/PdfText';
 import { PdfPageNumbers, getPageStyle, getDocumentProps, pageMargins } from './shared/PdfPage';
 import { PdfRunningHeader } from './shared/PdfRunningHeader';
 import { headerRowWidth, PdfContactRow } from './shared/PdfContact';
+import { LinkGround } from './shared/PdfLinkStyle';
 import { fitFontSize } from './shared/pdfMeasure';
 import { nameFace, nameFamily } from './shared/pdfFaces';
 import { SectionRouter, getEffectiveSpacing, getVisibleSections } from './shared/PdfSections';
@@ -14,7 +15,7 @@ import { textShades } from './shared/pdfColors';
 import { MM_TO_PT } from './shared/pdfUnits';
 import { letterheadLook, headerTitleSize } from './shared/letterhead';
 import { bannerPadY, bannerStripPt } from './shared/bannerBand';
-import { photoTextAlignItems } from '@/constants/templates';
+import { photoRowDirection, photoTextAlignItems } from '@/constants/templates';
 import { pageSizeOf } from '@/constants/pageSize';
 
 /**
@@ -113,11 +114,13 @@ export function BannerTemplatePDF({ data }) {
         {/* First text on every page: after page 1 it prints "Name · Page 2" (ATS-7), below the strip. */}
         <PdfRunningHeader personal={personal} settings={settings} insetPt={strip} />
 
+        {/* On the band a link's Accent is the tint of it that reads there (Design → Links, R2-147). */}
+        <LinkGround.Provider value={accent}>
         <View style={{ paddingBottom: bannerPadY(settings), marginBottom: summary ? g.summaryGap : g.headerGapBelow }} wrap={false}>
           <View style={{ position: 'absolute', top: -bleedTop, left: -bleedSide, right: -bleedSide, bottom: 0, backgroundColor: accent }} />
           <View style={rule}>
             <View style={{
-              flexDirection: centered ? 'column' : 'row',
+              flexDirection: centered ? 'column' : photoRowDirection(settings), // Photo → Position (R2-147)
               alignItems: centered ? 'center' : photoTextAlignItems(settings),
               gap: g.photoTextGap,
             }}>
@@ -129,6 +132,7 @@ export function BannerTemplatePDF({ data }) {
             </View>
           </View>
         </View>
+        </LinkGround.Provider>
 
         {summary && (
           <View style={{ marginBottom: g.headerGapBelow }}>

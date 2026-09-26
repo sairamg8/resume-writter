@@ -22,9 +22,10 @@ const customised = (template) => resume({
     font: 'lato', fontSize: 'large', fontSizeBase: 13, fontSizeNameDelta: 12, fontSizeSectionDelta: 3, fontSizeEntryDelta: 2, customFont: 'Fictional Grotesk',
     sectionLetterSpacing: 12, fontSizeTitleDelta: 5, nameFont: 'ptserif', headingFont: 'Fictional Grotesk',
     lineHeightValue: 1.8, marginV: 25, marginH: 30, sectionGap: 28, itemGap: 15,
-    headingStyle: 'box', sectionTitleCase: 'normal', sectionBorderWidth: 4, sectionBorderColor: '#ea580c',
+    headingStyle: 'box', sectionTitleCase: 'normal', sectionBorderWidth: 4, sectionBorderColor: '#ea580c', sectionIcons: true,
     dateFormat: 'YYYY-MM',
     bulletStyle: 'dash',
+    linkStyle: 'underline',
     pageNumbers: true,
     // None of these is any ↺'s: Header Customization's style, the paper, the uploads.
     contactStyle: 'bar', pageSize: 'LETTER', customContactIcons: { email: 'icon:send' },
@@ -64,9 +65,11 @@ const CLASSIC = {
     // Name Font and Heading Font (R2-146): back to Font Family's.
     ['nameFont', ''], ['headingFont', '']],
   Spacing: [['lineHeightValue', 1.5], ['marginV', 14], ['marginH', 18], ['sectionGap', 16], ['itemGap', 8]],
-  'Section Headings': [['headingStyle', 'ruled'], ['sectionTitleCase', 'upper'], ['sectionBorderWidth', 1], ['sectionBorderColor', '']],
+  // Icons (R2-147): off, as every résumé printed before it.
+  'Section Headings': [['headingStyle', 'ruled'], ['sectionTitleCase', 'upper'], ['sectionBorderWidth', 1], ['sectionBorderColor', ''], ['sectionIcons', false]],
   Dates: [['dateFormat', 'asEntered']],
   Lists: [['bulletStyle', 'bullet']],
+  Links: [['linkStyle', 'plain']],
   // Page numbers (R2-147): off, as every résumé storing none prints.
   'Page numbers': [['pageNumbers', false]],
 };

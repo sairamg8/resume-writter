@@ -7,6 +7,7 @@ import { PdfRichText } from './shared/PdfRichText';
 import { hasRichText } from '@/utils/richText';
 import { PdfContactIcon } from './shared/PdfContactIcon';
 import { ContactValue, headerRowWidth } from './shared/PdfContact';
+import { LinkGround } from './shared/PdfLinkStyle';
 import { bannerContactPt } from './shared/contactSize';
 import { fitFontSize } from './shared/pdfMeasure';
 import { nameFace, nameFamily } from './shared/pdfFaces';
@@ -14,7 +15,7 @@ import { contactItems } from '@/utils/contacts';
 import { getPdfPhotoStyle } from './shared/pdfPhoto';
 import { PdfPhoto } from './shared/PdfPhoto';
 import { opacityFor } from './shared/pdfColors';
-import { photoTextAlignItems } from '@/constants/templates';
+import { photoRowDirection, photoTextAlignItems } from '@/constants/templates';
 import { pageSizeOf } from '@/constants/pageSize';
 import { headerTitleSize } from './shared/letterhead';
 
@@ -79,6 +80,8 @@ export function ModernTemplatePDF({ data }) {
         <PdfRunningHeader personal={personal} settings={settings} />
         {/* Personal Info → Header spacing: Banner top & bottom and Banner sides pad it (unset, px-6 py-5:
             15 / 18 pt), Header ↔ First section spaces what follows (unset, Between Sections). */}
+        {/* On the banner a link's Accent is the tint of it that reads there (Design → Links, R2-147). */}
+        <LinkGround.Provider value={accent}>
         <View style={{
           backgroundColor: accent,
           borderRadius: 2,
@@ -88,8 +91,9 @@ export function ModernTemplatePDF({ data }) {
           marginBottom: g.headerGapBelow,
         }}>
           {/* Breakable: a summary longer than a page continues on the next, on the banner's colour (R2-046);
-              the name row never splits. Photo → Text Position, as Classic, Minimal and Executive take it (R3-0). */}
-          <View style={{ flexDirection: 'row', alignItems: photoTextAlignItems(settings), gap: g.photoTextGap }} wrap={false}>
+              the name row never splits. Photo → Text Position, as Classic, Minimal and Executive take it (R3-0),
+              and Photo → Position: Right prints the photo right of the name (R2-147). */}
+          <View style={{ flexDirection: photoRowDirection(settings), alignItems: photoTextAlignItems(settings), gap: g.photoTextGap }} wrap={false}>
             {personal?.photo && !hidden.includes('photo') && (
               <PdfPhoto src={personal.photo} style={photoStyle} />
             )}
@@ -115,6 +119,7 @@ export function ModernTemplatePDF({ data }) {
             </View>
           )}
         </View>
+        </LinkGround.Provider>
 
         {getVisibleSections(sections).visible.map((section, index, list) => {
           const { marginBottom, spaceBefore, itemGap } = getEffectiveSpacing(section, settings, {

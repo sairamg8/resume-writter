@@ -15,6 +15,7 @@ import { ColorsSection } from '@/components/DesignPanelColors';
 import { TypographySection } from '@/components/DesignPanelTypography';
 import { DatesSection } from '@/components/DesignPanelDates';
 import { ListsSection } from '@/components/DesignPanelLists';
+import { LinksSection } from '@/components/DesignPanelLinks';
 import { PageNumbersSection } from '@/components/DesignPanelPageNumbers';
 import {
   ICON_SET_OPTIONS,
@@ -27,11 +28,12 @@ import { ONE_PAGE_FIT, fitOnePage, printedKey } from '@/utils/pageFit';
 const COLOR_KEYS      = ['accentColor', 'textColor', 'sidebarBg', 'headerTextColor', 'nameColor', 'jobTitleColor'];
 const TYPOGRAPHY_KEYS = ['font', 'fontSize', 'fontSizeBase', 'fontSizeNameDelta', 'fontSizeSectionDelta', 'fontSizeEntryDelta', 'customFont', 'iconSize', 'sectionLetterSpacing', 'fontSizeTitleDelta', 'nameFont', 'headingFont'];
 const SPACING_KEYS    = ['lineHeightValue', 'marginV', 'marginH', 'sectionGap', 'itemGap'];
-const HEADING_KEYS    = ['headingStyle', 'sectionTitleCase', 'sectionBorderWidth', 'sectionBorderColor'];
+const HEADING_KEYS    = ['headingStyle', 'sectionTitleCase', 'sectionBorderWidth', 'sectionBorderColor', 'sectionIcons'];
 // Not contactStyle: Header Customization's, and the ↺ here turned a Bar or Bullet header to Icon (R2-090).
 const ICON_KEYS       = ['iconSet', 'iconSize'];
 const DATE_KEYS       = ['dateFormat'];
 const LIST_KEYS       = ['bulletStyle'];
+const LINK_KEYS       = ['linkStyle'];
 const PAGE_NUMBER_KEYS = ['pageNumbers'];
 // The paper, by its name and size as the editor states them: "A4 · 210 × 297 mm".
 const PAGE_SIZE_OPTIONS = PAGE_SIZE_IDS.map(id => ({ label: `${PAGE_SIZES[id].label} · ${PAGE_SIZES[id].dims}`, value: id }));
@@ -298,6 +300,8 @@ export default function DesignPanel({
       <DatesSection settings={settings} updateSetting={updateSetting} onReset={() => resetSection(DATE_KEYS)} />
 
       <ListsSection settings={settings} updateSetting={updateSetting} onReset={() => resetSection(LIST_KEYS)} />
+
+      <LinksSection settings={settings} updateSetting={updateSetting} onReset={() => resetSection(LINK_KEYS)} />
 
       <PageNumbersSection settings={settings} updateSetting={updateSetting} onReset={() => resetSection(PAGE_NUMBER_KEYS)} />
 

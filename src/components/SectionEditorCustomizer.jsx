@@ -118,6 +118,17 @@ export function SectionCustomizer({ section, template, updateSectionSettings, se
         </>
       )}
 
+      {/* A language's proficiency drawn beside its word, in the main column and the Sidebar's side
+          column alike; the word always prints (R2-147). */}
+      {section.type === 'languages' && (
+        <SegmentRow
+          label="Level"
+          value={s.levelStyle || 'text'}
+          onChange={v => set('levelStyle', v)}
+          options={[{ label: 'Text', value: 'text' }, { label: 'Dots', value: 'dots' }, { label: 'Bar', value: 'bar' }]}
+        />
+      )}
+
       {section.type === 'experience' && (
         <SegmentRow
           label="Order"
@@ -142,6 +153,12 @@ export function SectionCustomizer({ section, template, updateSectionSettings, se
 
       {hasLocation && (
         <ToggleRow label="Show location" value={s.showLocation !== false} onChange={v => set('showLocation', v)} />
+      )}
+
+      {/* Consecutive roles at one company under one employer header, in the PDF, Word and Markdown;
+          the ATS text keeps every role with its company (src/utils/roleGroups.js, R2-147). */}
+      {section.type === 'experience' && (
+        <ToggleRow label="Group roles by company" value={s.groupRoles === true} onChange={v => set('groupRoles', v)} />
       )}
 
       <div className="pt-1 border-t border-slate-200 space-y-2">

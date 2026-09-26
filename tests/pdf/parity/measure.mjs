@@ -12,8 +12,45 @@ const times = (t, m) => [
 const neutral = (_, v) => (typeof v === 'number' ? Math.round(v * 100) / 100
   : typeof v === 'string' ? v.replace(/_d\d+_/g, '_d_') : v);
 
-/** One page's painted paths and images (extractors.painted's reading, for any page). */
-function paintedOf({ fnArray, argsArray }, page) {
+/**
+ * What an image op paints, read from its decoded pixels: { digest, grey }. The op itself names the
+ * image only by its object id and size, so a greyscale photo and a colour one drew "the same PDF"
+ * (R2-147); the digest — a hash of the pixels, sampled to at most ~64k of them — tells them apart, and
+ * `grey` says every sampled pixel has R = G = B (within 2, for a JPEG's rounding). Document-neutral: the
+ * pixels, not where the PDF keeps them. pdf.js decodes an image after the operator list that paints it
+ * is done, so this waits for it (5 s at most); undefined when it never comes.
+ */
+async function pixelsOf(page, op, args) {
+  let img = op === pdfjs.OPS.paintInlineImageXObject ? args[0] : null;
+  if (!img) {
+    const id = args[0];
+    const objs = typeof id === 'string' && id.startsWith('g_') ? page.commonObjs : page.objs;
+    let timer;
+    img = await Promise.race([
+      new Promise((resolve) => { objs.get(id, resolve); }),
+      new Promise((resolve) => { timer = setTimeout(resolve, 5000, null); }),
+    ]).finally(() => clearTimeout(timer));
+  }
+  const data = img?.data;
+  if (!data?.length) return undefined;
+  const K = pdfjs.ImageKind;
+  const step = img.kind === K.RGBA_32BPP ? 4 : img.kind === K.RGB_24BPP ? 3 : 0;
+  let h = 2166136261;
+  const every = Math.max(1, Math.ceil(data.length / (step || 1) / 65536));
+  let grey = true;
+  if (!step) {
+    for (let i = 0; i < data.length; i += every) h = Math.imul(h ^ data[i], 16777619) >>> 0;
+  } else {
+    for (let i = 0; i + step <= data.length; i += step * every) {
+      for (let c = 0; c < step; c += 1) h = Math.imul(h ^ data[i + c], 16777619) >>> 0;
+      if (Math.abs(data[i] - data[i + 1]) > 2 || Math.abs(data[i + 1] - data[i + 2]) > 2) grey = false;
+    }
+  }
+  return { digest: `${img.kind}:${img.width}x${img.height}:${h.toString(16)}`, grey };
+}
+
+/** One page's painted paths and images (extractors.painted's reading, for any page); `pixels(k)`: image op k's pixelsOf. */
+function paintedOf({ fnArray, argsArray }, page, pixels = () => undefined) {
   const O = pdfjs.OPS;
   const out = [];
   const stack = [];
@@ -37,14 +74,15 @@ function paintedOf({ fnArray, argsArray }, page) {
       if (clipping) { clipping = false; out.push({ page, paint: 'clip', ...box(a[2], g.m) }); return; }
       const stroke = a[0] === O.stroke;
       out.push({ page, paint: stroke ? 'stroke' : 'fill', colour: stroke ? g.stroke : g.fill, width: stroke ? g.lw / 2 : 0, ...box(a[2], g.m) });
-    } else if (fn === O.paintImageXObject || fn === O.paintInlineImageXObject) out.push({ page, paint: 'image', ...box([0, 0, 1, 1], g.m) });
+    } else if (fn === O.paintImageXObject || fn === O.paintInlineImageXObject) out.push({ page, paint: 'image', ...box([0, 0, 1, 1], g.m), ...pixels(k) });
   });
   return out;
 }
 
 /**
  * The document, measured: { pages: [{ W, H, items }], drawing, paint, colours, text }. items as
- * harness.read gives them ({ str, x, y, w, h, font }, y the baseline from the page bottom, pt).
+ * harness.read gives them ({ str, x, y, w, h, font }, y the baseline from the page bottom, pt). An
+ * image's paint carries { digest, grey } (pixelsOf), and its op in the drawing its digest.
  */
 export async function snapshot(bytes) {
   const doc = await pdfjs.getDocument({ data: bytes.slice(), isEvalSupported: false, verbosity: 0 }).promise;
@@ -64,9 +102,13 @@ export async function snapshot(bytes) {
       h: it.height || Math.abs(it.transform[3]), font: fontName(it.fontName).replace(/^[A-Z]{6}\+/, ''), page: i,
     }));
     pages.push({ W, H, items });
-    drawing.push(`page ${i} ${W}x${H}`, ...ops.fnArray.map((fn, k) => `${fn} ${JSON.stringify(ops.argsArray[k], neutral)}`));
+    const isImage = (fn) => fn === O.paintImageXObject || fn === O.paintInlineImageXObject;
+    const pixels = new Map((await Promise.all(ops.fnArray.map(async (fn, k) => [k, isImage(fn) ? await pixelsOf(page, fn, ops.argsArray[k]) : undefined]))).filter(([, v]) => v));
+    drawing.push(`page ${i} ${W}x${H}`, ...ops.fnArray.map((fn, k) => (isImage(fn)
+      ? `${fn} ${fn === O.paintInlineImageXObject ? '' : JSON.stringify(ops.argsArray[k], neutral)} ${pixels.get(k)?.digest ?? 'unread'}`
+      : `${fn} ${JSON.stringify(ops.argsArray[k], neutral)}`)));
     ops.fnArray.forEach((fn, k) => { if (fn === O.setFillRGBColor || fn === O.setStrokeRGBColor) colours.add(ops.argsArray[k][0]); });
-    paint.push(...paintedOf(ops, i));
+    paint.push(...paintedOf(ops, i, (k) => pixels.get(k)));
   }
   await doc.loadingTask.destroy();
   const text = pages.map((p) => p.items.map((t) => t.str).join(' ')).join(' ').replace(/\s+/g, ' ');

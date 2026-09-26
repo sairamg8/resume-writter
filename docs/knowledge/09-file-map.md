@@ -48,12 +48,15 @@ resume-writter/
 │   │                          # Backlog, BoardSettings, YourWork, PrivacyPage, TermsPage,
 │   │                          # PublicResume (#/r/:shareId)
 │   ├── templates/pdf/         # one react-pdf file per template, the cover letter, and shared/
+│   │                          # (shared/PdfLevel.jsx: Languages' Dots / Bar; PdfLinkStyle.js: Design → Links)
 │   └── utils/
 │       ├── normalizeResume.js, dataVersion.js, defaultData*.js, starter*.js  # the data model
 │       ├── pdfExportReactPDF.js                                      # PDF render + download
 │       ├── templatePicker.js   # Design → Template's cards, built from the table, designs and saved designs
 │       ├── pageImage.js, pageImageStore.js, pdfjsLoader.js  # page-1 pictures: painted, queued, kept
 │       ├── wordExport*.js, markdownExport.js, atsPlainText.js, jsonResume*.js  # the other exporters
+│       ├── roleGroups.js, languageLevel.js, linkStyle.js, sectionIconPaths.js  # Group roles by company,
+│       │                       # Languages → Level, Design → Links, Section Headings → Icons (R2-147)
 │       ├── atsChecker.js, bulletOptimizer.js, coverLetterGenerator.js
 │       ├── cloudSync*.js, syncMerge.js, localDeletions.js, demo*.js, siteOwner.js, firebase.js
 │       ├── job*.js, normalizeJob.js, board*.js, normalizeBoard.js

@@ -7,6 +7,7 @@
 // keeps the same copy in its place (smallerPhotos.js). A photo this browser cannot decode either
 // still prints none, and the editor says so (usePrintableImage).
 import { drawableImage, readImageFile } from './imageUpload.js';
+import { photoOption } from '../constants/photoOptions.js';
 
 /** Copies made (null: none could be), by saved data URL, oldest first. */
 const made = new Map();
@@ -112,12 +113,94 @@ export function onPrintableChange(fn) {
   return () => listeners.delete(fn);
 }
 
+// Photo → Tone Grayscale (R2-147): react-pdf draws an image as it is and has no filter, so the PDF
+// prints a greyscale copy of the photo, drawn through a canvas — the browser's, or the one a test
+// hands in (_setPhotoCanvasForTest). With none (Node, without a test's) the photo prints in colour:
+// a missing copy never breaks the render.
+
+/** The canvas the greyscale copies are drawn with: { createCanvas(w, h), loadImage(src) }, or null for the browser's. */
+let photoCanvas = null;
+
+/** Tests only: draw greyscale copies with `canvas` ({ createCanvas, loadImage }, e.g. @napi-rs/canvas); null restores the browser's. */
+export function _setPhotoCanvasForTest(canvas) {
+  photoCanvas = canvas;
+  greyMade.clear();
+}
+
+/** The browser's canvas, as the test seam's shape; null where there is no DOM (Node). */
+function browserCanvas() {
+  if (typeof document === 'undefined' || typeof Image === 'undefined') return null;
+  return {
+    createCanvas: (w, h) => Object.assign(document.createElement('canvas'), { width: w, height: h }),
+    loadImage: (src) => new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = reject;
+      img.src = src;
+    }),
+  };
+}
+
+/** Greyscale copies made (null: none could be), by the data URL they were made of, oldest first. */
+const greyMade = new Map();
+
+/**
+ * A greyscale copy of the data URL `src`: each pixel's luminance (0.299 R + 0.587 G + 0.114 B) in all
+ * three channels, its alpha kept — a PNG when the photo is see-through anywhere, else a JPEG as an
+ * upload stores one. Null when there is no canvas, or it cannot read `src`.
+ */
+async function greyCopyOf(src) {
+  const canvas = photoCanvas || browserCanvas();
+  if (!canvas) return null;
+  try {
+    const img = await canvas.loadImage(src);
+    const w = img.naturalWidth || img.width;
+    const h = img.naturalHeight || img.height;
+    if (!w || !h) return null;
+    const c = canvas.createCanvas(w, h);
+    const ctx = c.getContext('2d');
+    ctx.drawImage(img, 0, 0, w, h);
+    const pixels = ctx.getImageData(0, 0, w, h);
+    const d = pixels.data;
+    let seeThrough = false;
+    for (let i = 0; i < d.length; i += 4) {
+      const y = Math.round(0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]);
+      d[i] = y;
+      d[i + 1] = y;
+      d[i + 2] = y;
+      if (d[i + 3] < 255) seeThrough = true;
+    }
+    ctx.putImageData(pixels, 0, 0);
+    const out = seeThrough ? c.toDataURL('image/png') : c.toDataURL('image/jpeg', 0.9);
+    return drawableImage(out) ? out : null;
+  } catch {
+    return null;
+  }
+}
+
+/** The greyscale copy of `src` (see greyCopyOf), made once a session; null when none can be. */
+function greyCopy(src) {
+  if (!greyMade.has(src)) {
+    greyMade.set(src, greyCopyOf(src));
+    if (greyMade.size > KEEP) greyMade.delete(greyMade.keys().next().value);
+  }
+  return greyMade.get(src);
+}
+
+/** `src` (what the PDF prints for a photo) as Photo → Tone sets it: its greyscale copy for Grayscale, when one can be made. */
+async function toned(src, settings) {
+  if (photoOption('photoTone', settings?.photoTone) !== 'grayscale' || typeof src !== 'string' || !src.startsWith('data:')) return src;
+  return (await greyCopy(src)) || src;
+}
+
 /**
  * `resume` as its PDF prints it: the photo, the letter's own photo, and any custom contact icons
  * each replaced by the copy made of it (printableImage) when react-pdf cannot draw it. A photo or
  * icon no copy could be made of stays as it is — PdfPhoto prints nothing for it, and PdfContactIcon
- * falls back to the pack icon. The résumé itself is never changed; it comes back as it is when
- * there is nothing to replace.
+ * falls back to the pack icon. Photo → Tone Grayscale prints both photos as greyscale copies: the
+ * letter's photo takes the résumé's Shape, Size and Border too (getPdfPhotoStyle), so its Tone
+ * (R2-147). The résumé itself is never changed; it comes back as it is when there is nothing to
+ * replace.
  */
 export async function withPrintablePhotos(resume) {
   const photo = resume?.personal?.photo;
@@ -125,8 +208,8 @@ export async function withPrintablePhotos(resume) {
   const customIcons = resume?.settings?.customContactIcons;
 
   const [photoCopy, ownCopy] = await Promise.all([
-    (photo && await printableImage(photo, { kind: 'photo' })) || photo,
-    (own && await printableImage(own, { kind: 'photo' })) || own,
+    toned((photo && await printableImage(photo, { kind: 'photo' })) || photo, resume?.settings),
+    toned((own && await printableImage(own, { kind: 'photo' })) || own, resume?.settings),
   ]);
 
   let iconsCopy = customIcons;

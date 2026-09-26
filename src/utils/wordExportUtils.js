@@ -86,10 +86,19 @@ export function normal(text, extra = {}) {
   return new TextRun({ text: String(text || ''), ...extra });
 }
 
-/** Text that links to `href` when it is a safe link, plain text otherwise. */
-export function linked(text, href, extra = {}) {
+/**
+ * What Design → Links adds to a link's run in Word (`look`: linkLook's { underline, color }, R2-147):
+ * the PDF's underline, or its accent colour. {} for Plain, and for no look: a link prints as before.
+ */
+export const linkRun = (look) => ({
+  ...(look?.underline && { underline: {} }),
+  ...(look?.color && { color: accent2Hex(look.color) }),
+});
+
+/** Text that links to `href` when it is a safe link, plain text otherwise; `look`: Design → Links' on the link (linkRun). */
+export function linked(text, href, extra = {}, look = null) {
   const link = href && safeHref(href);
-  const run = new TextRun({ text: String(text || ''), ...extra });
+  const run = new TextRun({ text: String(text || ''), ...extra, ...(link && linkRun(look)) });
   return link ? new ExternalHyperlink({ link, children: [run] }) : run;
 }
 
@@ -219,6 +228,8 @@ function runsToDocx(runs, base) {
       italics: run.italic || base.italics || undefined,
       underline: run.underline ? {} : undefined,
       strike: run.strike || undefined,
+      // Design → Links (R2-147) on a link's text, as the PDF's.
+      ...(run.href && safeHref(run.href) && linkRun(base.links)),
     }));
     const link = run.href && safeHref(run.href);
     if (link) out.push(new ExternalHyperlink({ link, children: textRuns }));
@@ -231,7 +242,8 @@ function runsToDocx(runs, base) {
  * The editor's HTML as Word paragraphs — the same parse the PDF uses, so line breaks, blank
  * lines, nested and numbered lists, marks, alignment and links match the PDF.
  * `base` sets size (half-points), colour, whole-block bold/italics, `lineHeight` (Design → Line
- * Height, R2-062) and `bullet`, the glyph a bulleted item prints behind (Design → Lists, R2-147);
+ * Height, R2-062), `bullet`, the glyph a bulleted item prints behind (Design → Lists, R2-147), and
+ * `links`, Design → Links' look on its links (linkLook, R2-147);
  * `align` is the alignment of a block the editor did not align (a centred section's: 'center'), as
  * in the PDF.
  */

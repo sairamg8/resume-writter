@@ -4,6 +4,7 @@ import { sectionsOnSwitch } from '@/templates/pdf/shared/templateSectionDefaults
 import { DATA_VERSION } from '@/utils/normalizeResume';
 import { DEFAULT_DATE_FORMAT } from '@/utils/dates';
 import { DEFAULT_BULLET_STYLE } from '@/utils/richText';
+import { DEFAULT_LINK_STYLE } from '@/utils/linkStyle';
 import { DEFAULT_PAGE_SIZE, pageSizeOf } from '@/constants/pageSize';
 
 // ATS-safe defaults — proper dimensions, neutral colors, standard font
@@ -26,6 +27,10 @@ export const ATS_DEFAULTS = {
   dateFormat: DEFAULT_DATE_FORMAT,
   /** Design → Lists (src/utils/richText.js): Bullet prints '•', '–', '·' by depth, as every résumé storing no style (R2-147). */
   bulletStyle: DEFAULT_BULLET_STYLE,
+  /** Design → Links (src/utils/linkStyle.js): Plain prints a link as the text around it, as every résumé storing no style (R2-147). */
+  linkStyle: DEFAULT_LINK_STYLE,
+  /** Design → Section Headings → Icons: off, every title its words alone, as before R2-147. */
+  sectionIcons: false,
   /** Design → Page numbers (PdfPageNumbers): off, the page as every résumé storing none prints it (R2-147). */
   pageNumbers: false,
   sectionBorderWidth: 1,
@@ -45,6 +50,9 @@ export const ATS_DEFAULTS = {
   photoBorder: 'accent',
   photoHeight: 'match',
   photoTextAlign: 'center',
+  /** Personal Info → Photo → Position and Tone (R2-147): left of the name, in colour, as every résumé storing none. */
+  photoPosition: 'left',
+  photoTone: 'color',
   showHeaderBorder: false,
   headerBorderWidth: 2,
   customFont: '',

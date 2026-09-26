@@ -8,6 +8,7 @@ import { CONTACT_GRID, contactItems } from '@/utils/contacts';
 import { isDrawableImage } from '@/utils/imageUpload';
 import { PAGE_MARKS, textShades } from './pdfColors';
 import { rowContactPt } from './contactSize';
+import { useLinkLook } from './PdfLinkStyle';
 
 const NBSP = '\u00a0';
 /** A contact value never breaks across lines ("+1 555 0100", "New York, NY"). */
@@ -87,8 +88,9 @@ export function contactRowMinWidth(personal, settings, hidden, gaps = {}, { fold
 }
 
 /**
- * A contact value as printed: a link (same colour, no underline) when it has a target. Every
- * template's contacts go through here, with `value` and `href` from contactItems().
+ * A contact value as printed: a link (same colour, no underline — or as Design → Links says, R2-147)
+ * when it has a target. Every template's contacts, and every entry's URL, go through here, with
+ * `value` and `href` from contactItems().
  * The link's text is our own Text: react-pdf wraps a Link's bare string in a paragraph of its
  * own, which carries none of Text's settings, so a long value on its own (a Display label with
  * a URL in the Sidebar column) could break with a drawn hyphen (VM4-1). A Link holding a Text
@@ -96,8 +98,18 @@ export function contactRowMinWidth(personal, settings, hidden, gaps = {}, { fold
  * break, when it is a paragraph of its own (breakToFit in the Sidebar's column).
  */
 export function ContactValue({ value, href, style, hyphenationCallback }) {
+  const look = useLinkLook();
   if (!href) return <Text style={style} hyphenationCallback={hyphenationCallback}>{value}</Text>;
-  return <Link src={href} style={{ ...style, textDecoration: 'none' }}><Text hyphenationCallback={hyphenationCallback}>{value}</Text></Link>;
+  // Plain adds nothing: the link prints exactly as it always has.
+  const own = Object.keys(look).length ? look : undefined;
+  // react-pdf draws no underline for a Text inside a Link laid out as a box, only for a Link that is a
+  // run of a Text: Underline prints the value as that run, in a Text of the same style. The run is
+  // given the style's colour too: react-pdf starts every Link from its own blue, over what it inherits.
+  if (look.textDecoration) {
+    const color = [style].flat().reduce((c, s) => s?.color ?? c, undefined);
+    return <Text style={style} hyphenationCallback={hyphenationCallback}><Link src={href} style={{ textDecoration: 'none', ...(color && { color }), ...own }}>{value}</Link></Text>;
+  }
+  return <Link src={href} style={{ ...style, textDecoration: 'none', ...own }}><Text style={own} hyphenationCallback={hyphenationCallback}>{value}</Text></Link>;
 }
 
 /**

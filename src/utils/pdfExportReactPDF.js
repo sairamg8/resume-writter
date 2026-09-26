@@ -2,6 +2,7 @@ import React from 'react';
 import { pdf } from '@react-pdf/renderer';
 import { resolvePdfFonts, collectText } from '@/templates/pdf/shared/pdfFontLoader';
 import { BulletStyle } from '@/templates/pdf/shared/PdfRichText';
+import { LinkStyle } from '@/templates/pdf/shared/PdfLinkStyle';
 import { resolveTemplateSettings } from '@/templates/pdf/shared/templateSettings';
 import { resolveSection } from '@/templates/pdf/shared/templateSectionDefaults';
 import { downloadBlob } from '@/utils/download';
@@ -66,6 +67,11 @@ function printedText(value, settings) {
 /** `element` drawn with the résumé's Design → Lists style (PdfRichText's BulletStyle, R2-147). */
 const withBulletStyle = (element, settings) => React.createElement(BulletStyle.Provider, { value: settings?.bulletStyle }, element);
 
+/** `element` drawn with the résumé's Design → Lists and Links (PdfLinkStyle's LinkStyle: the style and the accent, R2-147). */
+const withListsAndLinks = (element, settings) => withBulletStyle(React.createElement(LinkStyle.Provider, {
+  value: { style: settings?.linkStyle, accent: settings?.accentColor },
+}, element), settings);
+
 /**
  * Warm caches used by Export PDF: fonts and the template chunk.
  * Call from the editor on mount / when template or font changes.
@@ -94,7 +100,7 @@ export async function renderResumePdf(resume) {
     withPrintablePhotos(resume),
   ]);
   const data = prepareResumeData(printable, fonts, key);
-  const instance = pdf(withBulletStyle(React.createElement(TemplatePDF, { data }), data.settings));
+  const instance = pdf(withListsAndLinks(React.createElement(TemplatePDF, { data }), data.settings));
   const blob = await instance.toBlob();
   // Free internal resources when the API supports it
   try { instance.reset?.(); } catch { /* no-op */ }
@@ -120,7 +126,7 @@ export async function renderCoverLetterPdf(resume, { preview = false } = {}) {
   }, templateKey);
 
   const data = { ...printable, settings: resolvedSettings, _preview: preview };
-  const instance = pdf(withBulletStyle(React.createElement(mod.CoverLetterTemplatePDF, { data }), resolvedSettings));
+  const instance = pdf(withListsAndLinks(React.createElement(mod.CoverLetterTemplatePDF, { data }), resolvedSettings));
   const blob = await instance.toBlob();
   try { instance.reset?.(); } catch { /* no-op */ }
   return blob;

@@ -8,10 +8,13 @@ import { walks } from './walk-cache.mjs';
 import { controlsOf, customiser, checkControl, forget, show } from './matrix.mjs';
 import { spec, familyOf, knownFor } from './registry.mjs';
 
-/** Every control of `families` on every variant; `skip()` → a reason to skip them all (e.g. offline). */
-export async function parityFamily(families, { skip = async () => null } = {}) {
+/**
+ * Every control of `families` on every variant; `skip()` → a reason to skip them all (e.g. offline);
+ * `prepare()` → run once the app is loaded, before any render (22's canvas for Photo → Tone, R2-147).
+ */
+export async function parityFamily(families, { skip = async () => null, prepare = async () => {} } = {}) {
   const W = await walks();
-  before(async () => { await setup(); await loadStore(); });
+  before(async () => { await setup(); await loadStore(); await prepare(); });
   after(teardown);
   for (const variant of W.variants) {
     const w = W.walks[variant.id];
