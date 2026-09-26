@@ -32,7 +32,8 @@ test('a school\'s credential ID and an award\'s link: in their descriptions; the
   assert.doesNotMatch(school.description, /GPA/);
   const [award] = items(r, 'awards');
   assert.equal(award.title, 'Employee of the Year');
-  assert.match(award.description, /Link: https:\/\/news\.example\.com\/award/);
+  // The address a link in the rich text (R4-LO-05).
+  assert.match(award.description, /Link: <a href="https:\/\/news\.example\.com\/award">https:\/\/news\.example\.com\/award<\/a>/);
 });
 
 test('a certificate\'s field it has no place for: under its name in "Additional Information"', () => {

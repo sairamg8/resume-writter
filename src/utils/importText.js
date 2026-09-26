@@ -61,15 +61,34 @@ const RULE = /^\s*[-=_─━—–]{3,}\s*$/;
 
 const clean = (s) => String(s ?? '').replace(/[   ]/g, ' ').replace(/[​­]/g, '').replace(/[ \f\v\r]+/g, ' ').replace(/ *\t[\t ]*/g, '\t').trim();
 
+/** How far a list item is indented, in columns (a tab four): a nested item's is more than its parent's. */
+const indentOf = (text) => {
+  const lead = /^[ \t]*/.exec(String(text ?? ''))[0];
+  return BULLET.test(String(text ?? '')) ? lead.replace(/\t/g, '    ').length : 0;
+};
+
 /**
- * Lines as the parser reads them: `{ text, hint }`. `hint` is what the file itself says a line is,
- * where it says so — 'name', 'heading' (a Word Heading style, a Markdown ##) or 'entry' (###).
+ * Lines as the parser reads them: `{ text, hint, depth }`. `hint` is what the file itself says a line
+ * is, where it says so — 'name', 'heading' (a Word Heading style, a Markdown ##) or 'entry' (###).
+ * `depth`: a list item's nesting, where the file says it (Markdown's and a text file's indent, Word's
+ * list level), 0 else — clean() takes the indent off (R4-LO-02).
  */
 function toLines(input) {
   const raw = Array.isArray(input) ? input : String(input ?? '').split(/\r\n|\r|\n/);
   return raw.flatMap((l) => {
-    if (l && typeof l === 'object') return String(l.text ?? '').split('\n').map((text, i) => ({ text: clean(text), hint: i ? undefined : l.hint }));
-    return [{ text: clean(l) }];
+    // Its links (a Markdown, Word or PDF line's, R4-LO-05) go with each of its lines: richText finds each by its text.
+    // A line after a break that starts at a tab with nothing before it is set at the right tab stop, as
+    // Word's entry header sets a location under its date ("⇥ Porto"): at the line's end, hint 'end'.
+    // Only under a first line set with a tab (a title and its date), and a place's words, not a school's,
+    // a degree's or a role's (an indented "⇥University of Porto" is a second field).
+    if (l && typeof l === 'object') {
+      const lines = String(l.text ?? '').split('\n');
+      const atEnd = (text) => lines[0].includes('\t') && /^\t[^\t]*\S[^\t]*$/.test(text) && ![SCHOOL, DEGREE, ROLE].some((re) => re.test(text));
+      return lines.map((text, i) => ({
+        text: clean(text), hint: i ? (atEnd(text) ? 'end' : undefined) : l.hint, depth: i ? 0 : (l.depth || 0), ...(l.links?.length ? { links: l.links } : {}),
+      }));
+    }
+    return [{ text: clean(l), depth: indentOf(l) }];
   });
 }
 
@@ -108,14 +127,20 @@ export function linkText(label, href) {
 /**
  * Markdown's inline marks off: bold and italics, links to their text (linkText; `as` 'label' the
  * label alone; an array, the label, each address pushed to it — an entry's title line gives them as
- * fields of their own at its end), escapes, inline code.
+ * fields of their own at its end), escapes, inline code. `found`: each link's label and address pushed
+ * to it, for the rich text to link (richText).
  */
-function unmark(text, as) {
+function unmark(text, as, found) {
   return String(text)
-    .replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1')
-    .replace(/\[([^\]]*)\]\(([^)\s]*)[^)]*\)/g, (_, label, href) => {
+    .replace(/!\[((?:\\.|[^\]\\])*)\]\([^)]*\)/g, '$1')
+    // A label may hold escaped brackets ("\[draft\]", the export's) and a pair of its own ("[v2]").
+    .replace(/\[((?:\\.|\[(?:\\.|[^\]\\])*\]|[^\]\\[])*)\]\(([^)\s]*)[^)]*\)/g, (_, label, href) => {
       if (as === 'label') return label || href;
       const [t, to] = linkParts(label, href);
+      if (found) {
+        const url = to || linkParts('', href)[0];
+        if (/^(?:https?:|mailto:|tel:)/i.test(url)) found.push({ label: unescape(t), url });
+      }
       if (!to) return t;
       if (Array.isArray(as)) { as.push(to); return t; }
       return `${t} (${to})`;
@@ -126,9 +151,10 @@ function unmark(text, as) {
     .replace(/__(.+?)__/g, '$1')
     .replace(/(^|[^\w*\\])\*(?!\s)(.+?)(?<![\s\\])\*(?![\w*])/g, '$1$2')
     .replace(/(^|[^\w\\])_(?!\s)(.+?)(?<![\s\\])_(?!\w)/g, '$1$2')
-    .replace(/\\([\\`*_{}[\]()#+\-.!|<>~=])/g, '$1')
+    .replace(/\\([\\`*_{}[\]()#+\-.!|<>~=&])/g, '$1')
     .replace(/ {2,}$/, '');
 }
+const unescape = (t) => String(t).replace(/\\([\\`*_{}[\]()#+\-.!|<>~=&])/g, '$1');
 
 /**
  * A Markdown résumé as the parser's lines: "# " the name, "## " a heading, "### " an entry's title,
@@ -141,7 +167,8 @@ export function markdownLines(md) {
   let named = false;
   let entryLevel = 0; // the level of the entry heading in force, 0 under none
   for (const line of String(md ?? '').split(/\r\n|\r|\n/)) {
-    const h = /^\s{0,3}(#{1,6})\s+(.*?)\s*#*\s*$/.exec(line);
+    // A closing run of #s only after a space: "## C#" is the heading "C#" (R4-LO-07).
+    const h = /^\s{0,3}(#{1,6})\s+(.*?)(?:\s+#+)?\s*$/.exec(line);
     if (h) {
       const level = h[1].length;
       let hint = level === 1 && !named ? 'name' : (level <= 2 ? 'heading' : 'entry');
@@ -159,8 +186,11 @@ export function markdownLines(md) {
     }
     if (/^\s*([-*_])(\s*\1){2,}\s*$/.test(line)) { out.push({ text: '' }); continue; } // a thematic break
     const item = /^\s*(?:[-*+]|(\d{1,3}[.)]))\s+(.*)$/.exec(line);
-    if (item) { out.push({ text: `${item[1] ? `${item[1]} ` : '• '}${unmark(item[2])}` }); continue; }
-    out.push({ text: unmark(line.replace(/^\s*>\s?/, '')) });
+    // Its links' labels and addresses, for the rich text (R4-LO-05).
+    const links = [];
+    const withLinks = (l) => (links.length ? { ...l, links } : l);
+    if (item) { out.push(withLinks({ text: `${item[1] ? `${item[1]} ` : '• '}${unmark(item[2], undefined, links)}`, ...(indentOf(line) ? { depth: indentOf(line) } : {}) })); continue; }
+    out.push(withLinks({ text: unmark(line.replace(/^\s*>\s?/, ''), undefined, links) }));
   }
   return out;
 }
@@ -270,6 +300,8 @@ const isMetaLine = (text) => { const p = pieces(text); return p.length > 0 && p.
 /** Words a job title holds, and a company's name rarely does: which of two fields is the role. */
 const ROLE = /\b(engineer|developer|programmer|manager|director|lead|head|intern|analyst|designer|consultant|specialist|scientist|officer|assistant|associate|coordinator|architect|administrator|admin|president|vp|founder|co-founder|owner|teacher|professor|lecturer|researcher|nurse|technician|accountant|writer|editor|producer|representative|supervisor|executive|advisor|adviser|strategist|principal|chief|cto|ceo|cfo|coo|partner|fellow|trainee|apprentice|volunteer|tutor|mentor|chair|secretary|treasurer|clerk|agent|operator|instructor|coach|counselor|therapist|physician|attorney|paralegal|sales|marketer|recruiter|contractor|freelancer|freelance)s?\b/i;
 const DEGREE = /\b(b\.?\s?[ase]\.?|b\.?sc|bsc|b\.?tech|b\.?eng|beng|bba|bfa|bcom|m\.?\s?[ase]\.?|m\.?sc|msc|m\.?tech|m\.?eng|meng|mba|mfa|ph\.?\s?d|phd|doctor(?:ate)?|bachelor'?s?|master'?s?|associate'?s?|diploma|certificate|high school|a-?levels?|gcse|degree|hnd|llb|llm|md|jd)\b/i;
+/** A subject a degree is in, as a field of study names one: "Computer Science", "Business Administration". */
+const SUBJECT = /\b(science|sciences|engineering|studies|mathematics|maths?|statistics|economics|business|administration|finance|accounting|marketing|management|psychology|biology|chemistry|physics|history|literature|english|philosophy|law|medicine|nursing|architecture|arts?|music|informatics|communications?|journalism|politics|political|sociology|linguistics|humanities|design|geography|anthropology|development|software|web|data|computing|technology|programming|stack)\b/i;
 const SCHOOL = /\b(university|universit[äéà]t?|college|institute|institut|school|academy|polytechnic|conservatory|seminary|lyc[ée]e|gymnasium)\b/i;
 const WEB = /^(?:https?:\/\/)?(?:www\.)?[a-z0-9][a-z0-9-]*(?:\.[a-z0-9-]+)*\.[a-z]{2,}(?:[/?#]\S*)?$/i;
 
@@ -282,24 +314,61 @@ const JOB = new Set(['experience', 'volunteering']);
 
 const escapeHtml = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
+/** A web or mail address written out in body text: "https://…", "www.…", "mailto:…". */
+const BARE_LINK = /\b(?:https?:\/\/|mailto:|www\.)[^\s<>()"]*[^\s<>()".,;:!?'’]/gi;
+
+/**
+ * A line's text as rich text, its links as links (R4-LO-05): each link the file gave (`links`, its
+ * label and address — a Markdown [label](url), a Word hyperlink, a PDF's link box), read as linkText
+ * wrote it, "label (url)", or as its label alone where that is its address; else an address written
+ * out ("see https://…"). Before, all of it was plain text.
+ */
+function linkedHtml(text, links = []) {
+  const anchor = (url, label) => `<a href="${escapeHtml(url).replace(/"/g, '&quot;')}">${label}</a>`;
+  let html = escapeHtml(text);
+  if (!links.length) {
+    return html.replace(BARE_LINK, (shown) => {
+      const url = shown.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+      return anchor(/^www\./i.test(url) ? `https://${url}` : url, shown);
+    });
+  }
+  let from = 0;
+  for (const { label, url } of links) {
+    const shown = escapeHtml(label);
+    const withUrl = `${shown} (${escapeHtml(url)})`;
+    let at = html.indexOf(withUrl, from);
+    let length = withUrl.length;
+    // The label alone (a link whose label is its address): a whole word of the text, not part of one ("Go" in "Google").
+    for (let k = at < 0 ? html.indexOf(shown, from) : -1; k >= 0 && at < 0; k = html.indexOf(shown, k + 1)) {
+      if (!/\w/.test(html[k - 1] || '') && !/\w/.test(html[k + shown.length] || '')) { at = k; length = shown.length; }
+    }
+    if (!shown || at < 0) continue;
+    const a = anchor(url, shown);
+    html = html.slice(0, at) + a + html.slice(at + length);
+    from = at + a.length;
+  }
+  return html;
+}
+
 /**
  * Body lines as the editor's rich text: a run of list items as a list (numbered ones as <ol>),
- * every other line a paragraph of its own.
+ * every other line a paragraph of its own. A line is its text, or `{ text, links }` (linkedHtml).
  */
 function richText(lines) {
   let html = '';
   let list = null;
   const close = () => { if (list) { html += `</${list}>`; list = null; } };
   for (const line of lines) {
-    const text = line.replace(/\t+/g, ' ').trim();
+    const { text: raw, links } = typeof line === 'string' ? { text: line } : line;
+    const text = String(raw ?? '').replace(/\t+/g, ' ').trim();
     if (!text) continue;
     if (BULLET.test(text)) {
       const kind = NUMBERED.test(text) && !/^\s*[-–—*+•]/.test(text) ? 'ol' : 'ul';
       if (list !== kind) { close(); html += `<${kind}>`; list = kind; }
-      html += `<li>${escapeHtml(text.replace(BULLET, ''))}</li>`;
+      html += `<li>${linkedHtml(text.replace(BULLET, ''), links)}</li>`;
     } else {
       close();
-      html += `<p>${escapeHtml(text)}</p>`;
+      html += `<p>${linkedHtml(text, links)}</p>`;
     }
   }
   close();
@@ -425,7 +494,7 @@ function entryOf(type, header, body, aside = () => {}) {
   const used = new Set();
   const take = (key) => { used.add(key); return h.meta[key] || ''; };
   const unnamed = () => h.named.filter((n) => !used.has(n.key)).map((n) => n.text);
-  const description = (extra = []) => richText([...unnamed(), ...extra, ...body.map((l) => l.text)]);
+  const description = (extra = []) => richText([...unnamed(), ...extra, ...body]);
   const dates = { startDate: d.start, endDate: d.end, current: d.current };
   switch (type) {
     case 'experience':
@@ -451,13 +520,26 @@ function entryOf(type, header, body, aside = () => {}) {
       }
       // A place on a line of its own (a side column's stacked fields): the location.
       let location = h.location || take('location');
-      const placeAt = location ? -1 : left.findIndex((p) => PLACE.test(p) && !DEGREE.test(p));
+      // Not "Bootcamp, Full Stack" nor "B.F.A., Graphic Design": a subject after the comma is a field.
+      const placeAt = location ? -1 : left.findIndex((p) => PLACE.test(p) && !DEGREE.test(p) && !SUBJECT.test(p.split(',').slice(1).join(',')));
       if (placeAt >= 0) location = left.splice(placeAt, 1)[0];
-      if (!fields.degree && left.length) fields.degree = left.shift();
+      // No degree named: a subject alone is the field of study — the exports print "Computer Science -
+      // MIT" for an entry with no degree — and the one field left beside it the school (R4-LO-06). Not
+      // "B.F.A., Graphic Design": what leads a comma is a degree.
+      const subjectAt = fields.degree || fields.fieldOfStudy ? -1 : left.findIndex((p) => SUBJECT.test(p.split(',')[0]) && !SCHOOL.test(p));
+      if (subjectAt >= 0) fields.fieldOfStudy = left.splice(subjectAt, 1)[0];
+      if (subjectAt < 0 || fields.institution || left.length > 1) {
+        // Of two fields with no degree word, the one with a comma is the degree ("Bootcamp, Full Stack"),
+        // wherever it prints (the PDF puts the school first).
+        const commaAt = !fields.degree && left.length > 1 ? left.findIndex((p) => /,\s/.test(p) && !SCHOOL.test(p)) : -1;
+        if (commaAt > 0) left.unshift(...left.splice(commaAt, 1));
+        if (!fields.degree && left.length) fields.degree = left.shift();
+      }
       if (!fields.institution && left.length) fields.institution = left.shift();
-      // "B.S., Computer Science": the degree and its field, as the exports print them.
+      // "B.S., Computer Science": the degree and its field, as the exports print them — a degree the
+      // import does not know too ("Bootcamp, Full Stack"): the exports print a degree and its field so.
       const comma = /^([^,]+),\s*(.+)$/.exec(fields.degree);
-      if (comma && !fields.fieldOfStudy && DEGREE.test(comma[1])) { fields.degree = comma[1].trim(); fields.fieldOfStudy = comma[2].trim(); }
+      if (comma && !fields.fieldOfStudy && (DEGREE.test(comma[1]) || !DEGREE.test(fields.degree))) { fields.degree = comma[1].trim(); fields.fieldOfStudy = comma[2].trim(); }
       // The degree and the school found, one field over, on a line of its own: the field of study.
       if (placeAt >= 0 && !fields.fieldOfStudy && left.length === 1) fields.fieldOfStudy = left.shift();
       return itemOf(type, { ...fields, location, ...dates, description: description(left) });
@@ -500,7 +582,7 @@ function entryOf(type, header, body, aside = () => {}) {
         if (found) Object.assign(fields, found);
         return !found;
       });
-      const extra = [...unnamed(), ...left, ...rest.map((l) => l.text)];
+      const extra = [...unnamed(), ...left, ...rest];
       if (extra.length) aside(fields.name || 'Certification', extra);
       return itemOf(type, fields);
     }
@@ -528,9 +610,12 @@ function entriesOf(type, lines, aside) {
   // one entry, and the others went into its description, which a certificate never shows.
   if ((type === 'certifications' || type === 'awards') && lines.length && BULLET.test(lines[0].text)) {
     const list = [];
+    // A list item nested under another (an award's "◦ For the tapir parser") is its entry's text, not an
+    // entry of its own: each became one (R4-LO-02).
+    const top = lines[0].depth || 0;
     for (const l of lines) {
       const last = list[list.length - 1];
-      if (BULLET.test(l.text)) list.push({ header: [{ ...l, text: l.text.replace(BULLET, '') }], body: [] });
+      if (BULLET.test(l.text) && !((l.depth || 0) > top)) list.push({ header: [{ ...l, text: l.text.replace(BULLET, '') }], body: [] });
       else if (!last.body.length && (isMetaLine(l.text) || readDateRange(l.text))) last.header.push(l);
       else last.body.push(l);
     }
@@ -556,6 +641,49 @@ function entriesOf(type, lines, aside) {
   const pool = () => (cur ? cur.body : preamble);
   const start = (header) => { cur = { header, body: [] }; entries.push(cur); };
 
+  // Experience's "Group roles by company" in the PDF and Word (R4-LO-01; Markdown's: roleEntries): the
+  // employer on a line of its own with no date — its place at its right ("Acme ⇥ Portland, OR") or on
+  // the line under it (Word's) — then each role with its dates and one field, the role. Before, the
+  // employer line went into the job above as text, and each role had no company.
+  let group = null;
+  /** The employer lines right over a dated line, taken out of the text above: { company, place }, or null. */
+  const employerOver = (L, timeline = false) => {
+    const body = pool();
+    const titleish = (n) => n && !n.bullet && !n.date && n.hint !== 'entry' && n.text.length <= 80 && !/[.!?:;,]$/.test(n.text) && !isMetaLine(n.text);
+    const over = (n, m) => n.index === m.index - 1 && !m.gap; // n on the line right over m
+    // It starts a block: after a gap, first in the section, or right after a list (the job above's).
+    const starts = (n) => n.gap || !info[n.index - 1] || info[n.index - 1].bullet;
+    const one = (n) => titleish(n) && pieces(n.text).length === 1;
+    const [a, b] = body.slice(-2).length === 2 ? body.slice(-2) : [null, body[body.length - 1]];
+    if (!titleish(b) || !over(b, L)) return null;
+    let found = null;
+    // Word's: the employer, and its place on the line under it.
+    // (Not over a Timeline role's date: there "Acme Corp" / "Senior Engineer" over a date is one job's title.)
+    if (!timeline && one(a) && one(b) && over(a, b) && starts(a)) found = { n: 2, company: a.text, place: b.text };
+    // Right after a list, only a line that is plainly an employer and its place: not a sentence ending the job above.
+    else if ((b.gap || !info[b.index - 1] || pieces(b.text).length === 2) && starts(b) && pieces(b.text).length <= 2 && !(timeline && titleish(a) && over(a, b))) {
+      // The PDF's: the employer, its place at the line's right end.
+      const [company, place = ''] = pieces(b.text);
+      found = { n: 1, company, place };
+    }
+    // One field: "Acme - Engineer" (the ATS text's job) is a job's title, not an employer over roles.
+    if (!found || fieldsOf(found.company).length !== 1) return null;
+    body.splice(body.length - found.n);
+    return { company: found.company, place: found.place, lead: [] };
+  };
+  /** A dated `header` read as a role of `group` — or of a group whose employer is right over it — else no group. */
+  const roleOfGroup = (header, active) => {
+    const h = readHeader('experience', header);
+    // A role's own place on the line under it, where it differs from the employer's (Word's).
+    const placed = h.parts.length === 2 && header.length === 2 && pieces(header[1].text).length === 1 && PLACE.test(h.parts[1]);
+    if (h.parts.length !== 1 && !placed) return null;
+    const next = employerOver(header[0]) || (active && cur?.header[0]?.group?.company === active.company ? active : null);
+    if (!next) return null;
+    if (placed) header[header.length - 1] = { ...header[header.length - 1], hint: 'end' };
+    header[0] = { ...header[0], group: next };
+    return next;
+  };
+
   for (let i = 0; i < info.length;) {
     const L = info[i];
     if (L.hint === 'entry') {
@@ -571,7 +699,23 @@ function entriesOf(type, lines, aside) {
     if (L.date && !L.bullet) {
       const header = [L];
       i += 1;
+      // The Timeline's grouped roles: the employer, then each role's date alone over the role (R4-LO-01).
+      const n = info[i];
+      if (type === 'experience' && L.date.first && pieces(L.text).length === 1 && n && !n.bullet && !n.gap && !n.date && n.hint !== 'entry'
+        && pieces(n.text).length === 1 && fieldsOf(n.text).length === 1 && n.text.length <= 60 && !/[.!?]$/.test(n.text)
+        && !PLACE.test(n.text) && (ROLE.test(n.text) || pieces(pool()[pool().length - 1]?.text || '').length === 2)) {
+        const g = employerOver(L, true) || (group && cur?.header[0]?.group?.company === group.company ? group : null);
+        if (g) {
+          group = g;
+          header[0] = { ...L, group: g };
+          header.push(info[i++]);
+          if (info[i] && info[i].hint === 'end' && !info[i].gap) header.push(info[i++]);
+          start(header);
+          continue;
+        }
+      }
       if (L.date.first) {
+        if (type === 'experience') group = null; // not a role of the group above
         // Its title line(s): the text lines right before it, not the previous entry's list.
         // A school in a side column stacks each field on a line of its own over its dates (Sidebar's
         // degree, school, field and place): up to four lines.
@@ -599,6 +743,7 @@ function entriesOf(type, lines, aside) {
         if (!n.bullet && !n.gap && !n.date && n.hint !== 'entry' && n.text.length <= 100 && !/[.!?]$/.test(n.text)) { header.push(n); i += 1; }
       }
       while (i < info.length && !info[i].bullet && !info[i].gap && isMetaLine(info[i].text)) header.push(info[i++]);
+      if (type === 'experience' && !L.date.first) group = roleOfGroup(header, group);
       start(header);
       continue;
     }
@@ -609,7 +754,7 @@ function entriesOf(type, lines, aside) {
   if (!entries.length) {
     // No dates and no entry titles: an entry per line after a gap or a list (one line each for a
     // certificate or an award); a custom section's text stays one entry, as written.
-    if (type === 'custom') return preamble.length ? [itemOf('custom', { description: richText(preamble.map((l) => l.text)) })] : [];
+    if (type === 'custom') return preamble.length ? [itemOf('custom', { description: richText(preamble) })] : [];
     for (const L of preamble) {
       const prev = cur?.body.length ? cur.body[cur.body.length - 1] : cur?.header[cur.header.length - 1];
       const starts = !L.bullet && (!cur || L.gap || prev?.bullet || type === 'certifications' || type === 'awards');
@@ -748,9 +893,18 @@ export function resumeFromText(input) {
   // Word résumé with some sections styled as headings and the others typed in bold capitals).
   const headingAt = new Map();
   let seen = false;
-  // In a file that marks its headings, an unmarked one in capitals must not be inside an entry the
-  // file marks (a job's "KEY ACHIEVEMENTS" is its own), and be of a type the file does not mark itself.
+  // In a file that marks its headings, an unmarked one in capitals must be of a type the file does not
+  // mark itself; and inside an entry the file marks, not a part of that entry: "SKILLS" or "PROJECTS"
+  // with another entry after it before the next heading (a job's own), or a title an entry uses for a
+  // part of it anywhere ("KEY ACHIEVEMENTS", "OVERVIEW"). Any other title ("AWARDS", "EDUCATION", and
+  // "SKILLS" after the last entry) starts its section: it stayed inside the last job (R4-LO-04).
   const marked = new Set(lines.filter((l, i) => i > nameAt && l.hint === 'heading').map((l) => headingType(l.text.replace(/\s*:$/, '').trim())));
+  const entryAfter = (i) => {
+    for (let j = i + 1; j < lines.length && lines[j].hint !== 'heading'; j += 1) if (lines[j].hint === 'entry' || lines[j].hint === 'role') return true;
+    return false;
+  };
+  const ownPart = (text, i) => (['skills', 'projects'].includes(headingType(text)) && entryAfter(i)) || headingType(text) === 'summary'
+    || /^(?:key)?achievements$|^recognitions$/.test(headingKey(text));
   let inEntry = false;
   lines.forEach((l, i) => {
     if (i <= nameAt) return;
@@ -761,14 +915,14 @@ export function resumeFromText(input) {
     let type = null;
     if (hinted) {
       if (l.hint === 'heading') type = headingType(text) || 'custom';
-      else if (!l.hint && plain && !inEntry && (isCaps(text) || l.ruled) && !marked.has(headingType(text))) type = headingType(text);
+      else if (!l.hint && plain && !(inEntry && ownPart(text, i)) && (isCaps(text) || l.ruled) && !marked.has(headingType(text))) type = headingType(text);
     } else if (plain) {
       const known = headingType(text);
       if (known && (l.ruled || isCaps(text) || l.gap || l.text.endsWith(':') || i === nameAt + 1 || headingAt.size === 0)) type = known;
       else if (l.ruled && !/\d/.test(text)) type = 'custom';
       else if (seen && isCaps(text) && !/\d/.test(text) && text.replace(/[^\p{L}]/gu, '').length >= 4 && text.split(/\s+/).length <= 5 && !BARE_LABEL.test(text)) type = 'custom';
     }
-    if (type) { headingAt.set(i, { type, title: text }); seen = true; }
+    if (type) { headingAt.set(i, { type, title: text }); seen = true; inEntry = false; }
   });
 
   const firstHeading = [...headingAt.keys()][0] ?? lines.length;
@@ -797,7 +951,7 @@ export function resumeFromText(input) {
         if (c && !personal[c.key]) personal[c.key] = c.value;
         else leftover.push(piece); // not a contact, or a second one of a kind
       }
-      if (leftover.length) spill(leftover.join(' | '), l);
+      if (leftover.length) spill(leftover.join(' | '), l.links);
     }
   };
 
@@ -816,7 +970,7 @@ export function resumeFromText(input) {
       rest.shift();
     }
     takeContacts(rest, {
-      spill: (text) => ((text.length >= 60 || /[.!?]$/.test(text)) ? summary : other).push(text),
+      spill: (text, links) => ((text.length >= 60 || /[.!?]$/.test(text)) ? summary : other).push({ text, links }),
     });
   }
 
@@ -827,9 +981,9 @@ export function resumeFromText(input) {
     const { type, title } = headingAt.get(at);
     const body = lines.slice(at + 1, starts[k + 1] ?? lines.length);
     const name = tamed(title);
-    if (type === 'summary') { summary.push(...body.map((l) => l.text)); return; }
+    if (type === 'summary') { summary.push(...body); return; }
     if (type === 'contact') {
-      takeContacts(body, { spill: (text) => other.push(text) });
+      takeContacts(body, { spill: (text, links) => other.push({ text, links }) });
       return;
     }
     // A heading with nothing under it keeps its words (R4-IMP-03): an unknown one is no section of its own.

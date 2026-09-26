@@ -100,14 +100,39 @@ export function docxXmlLines(xml, links = {}) {
   const lines = [];
   const levels = []; // each line's Heading level, 0 for none
   const open = []; // the paragraphs being read, the innermost last
-  const TOKEN = /<w:p(?=[\s>])[^>]*>|<\/w:p>|<w:pPr>([\s\S]*?)<\/w:pPr>|<w:t(?:\s[^>]*)?>([^<]*)<\/w:t>|<w:(tab|br|cr)(?:\s[^>]*)?\/>|<w:hyperlink\b([^>]*)>|<\/w:hyperlink>/g;
+  const TOKEN = /<w:p(?=[\s>])[^>]*>|<\/w:p>|<w:pPr>([\s\S]*?)<\/w:pPr>|<w:t(?:\s[^>]*)?>([^<]*)<\/w:t>|<w:(tab|br|cr)(?:\s[^>]*)?\/>|<w:hyperlink\b([^>]*)>|<\/w:hyperlink>|<w:fldChar\b[^>]*?w:fldCharType="(begin|separate|end)"[^>]*>|<w:instrText\b[^>]*>([^<]*)<\/w:instrText>|<w:fldSimple\b([^>]*?)(\/?)>|<\/w:fldSimple>/g;
+  // A field's result, as a link when its instruction is HYPERLINK: `field` the one ended, its text from `at`.
+  // `para`'s text from `at` as a link to `to` (linkText), kept in its links for the rich text (R4-LO-05).
+  const link = (para, at, to) => {
+    const label = para.text.slice(at);
+    para.text = para.text.slice(0, at) + linkText(label, to);
+    // Only an address the rich text may link (as the Markdown's and the PDF's): not javascript:, file: or a relative one.
+    if (label.trim() && /^(?:https?:|mailto:|tel:)/i.test(to)) (para.links || (para.links = [])).push({ label: label.trim(), url: to });
+  };
+  const linkField = (para, field) => {
+    const to = field && field.at >= 0 && hyperlinkTarget(field.instr);
+    if (to) link(para, field.at, to);
+  };
   for (const m of body.matchAll(TOKEN)) {
     const para = open[open.length - 1];
-    if (m[4] !== undefined) {
+    if (m[5] !== undefined || m[6] !== undefined || m[7] !== undefined || m[0] === '</w:fldSimple>') {
+      // A field (R4-LO-03): Word writes many a link as a HYPERLINK field, not a <w:hyperlink> — its
+      // instruction in <w:instrText> runs between "begin" and "separate", the text it shows after them
+      // up to "end"; or a <w:fldSimple w:instr="…"> around the text. Read as a <w:hyperlink> is.
+      if (!para) continue;
+      const fields = para.fields || (para.fields = []);
+      if (m[5] === 'begin') fields.push({ instr: '', at: -1 });
+      else if (m[5] === 'separate') { if (fields.length) fields[fields.length - 1].at = para.text.length; }
+      else if (m[5] === 'end') linkField(para, fields.pop());
+      else if (m[6] !== undefined) { if (fields.length) fields[fields.length - 1].instr += xmlText(m[6]); }
+      else if (m[7] !== undefined) {
+        if (!m[8]) fields.push({ instr: xmlText(/\bw:instr="([^"]*)"/.exec(m[7])?.[1] ?? ''), at: para.text.length, simple: true });
+      } else if (fields[fields.length - 1]?.simple) linkField(para, fields.pop());
+    } else if (m[4] !== undefined) {
       const id = /\br:id="([^"]*)"/.exec(m[4])?.[1];
       if (para && !m[0].endsWith('/>')) para.link = { to: links[id], at: para.text.length };
     } else if (m[0] === '</w:hyperlink>') {
-      if (para?.link?.to) para.text = para.text.slice(0, para.link.at) + linkText(para.text.slice(para.link.at), para.link.to);
+      if (para?.link?.to) link(para, para.link.at, para.link.to);
       if (para) para.link = null;
     } else if (m[0] === '</w:p>') {
       if (!para) continue;
@@ -121,7 +146,9 @@ export function docxXmlLines(xml, links = {}) {
       // page's header, over that title.
       const at = heading ? lines.length : para.start;
       levels.splice(at, 0, heading ? Number(heading[1] || 1) : 0);
-      lines.splice(at, 0, { text: list && para.text.trim() ? `• ${para.text}` : para.text, hint: heading ? 'heading' : (/^title$/i.test(style) ? 'name' : undefined) });
+      // A list item's level: a nested one's is 1 and more (R4-LO-02).
+      const depth = list ? Number(/<w:ilvl w:val="(\d+)"/.exec(para.props)?.[1] || 0) : 0;
+      lines.splice(at, 0, { text: list && para.text.trim() ? `• ${para.text}` : para.text, hint: heading ? 'heading' : (/^title$/i.test(style) ? 'name' : undefined), ...(depth ? { depth } : {}), ...(para.links ? { links: para.links } : {}) });
     } else if (m[0].startsWith('<w:p') && !m[0].startsWith('<w:pPr')) {
       if (!m[0].endsWith('/>')) open.push({ text: '', props: '', start: lines.length }); // <w:p/>: an empty one, no line (as before)
     }
@@ -131,6 +158,21 @@ export function docxXmlLines(xml, links = {}) {
     else para.text += m[3] === 'tab' ? '\t' : '\n';
   }
   return headingLevels(lines, levels);
+}
+
+/**
+ * A HYPERLINK field's address, from its instruction: ` HYPERLINK "https://…" \o "tip" `; null for one
+ * to a place in the document (`\l "bookmark"` alone) or for another field (PAGE, TOC …).
+ */
+function hyperlinkTarget(instr) {
+  const words = String(instr).match(/"[^"]*"|\S+/g) || [];
+  if (!/^hyperlink$/i.test(words[0] || '')) return null;
+  for (let i = 1; i < words.length; i += 1) {
+    if (/^\\[lotm]$/i.test(words[i])) { if (/^\\[lot]$/i.test(words[i])) i += 1; continue; }
+    if (words[i].startsWith('\\')) continue;
+    return words[i].replace(/^"|"$/g, '').trim() || null;
+  }
+  return null;
 }
 
 /**
@@ -353,7 +395,8 @@ export function pdfPageLines(items) {
       text += it.str;
     });
     const last = its[its.length - 1];
-    return { text: text.replace(/[ ]{2,}/g, ' ').trim(), x: its[0].x, textX, right: last.x + last.w, y: row.y, h: row.h };
+    const links = its.flatMap((it) => it.links || []);
+    return { text: text.replace(/[ ]{2,}/g, ' ').trim(), x: its[0].x, textX, right: last.x + last.w, y: row.y, h: row.h, ...(links.length ? { links } : {}) };
   });
 }
 
@@ -431,6 +474,7 @@ export function pdfLinesOfPages(pages) {
           if (continues) {
             const last = out[out.length - 1];
             last.text = last.text.endsWith('-') && /^\p{Ll}/u.test(line.text) ? last.text + line.text : `${last.text} ${line.text}`;
+            if (line.links) last.links = [...(last.links || []), ...line.links];
             prev = { ...line, x: prev.x, textX: prev.textX, listed };
             continue;
           }
@@ -440,7 +484,8 @@ export function pdfLinesOfPages(pages) {
         // on purpose, as a location right-aligned under a date is (Title "Inline" and "Side by side",
         // Executive's jobs). Hinted, so the parser reads it as the entry's location (importText.js).
         const atEnd = !line.text.includes('\t') && Math.abs(line.right - right) <= 2 && line.x - left > (right - left) / 2;
-        out.push(atEnd ? { text: line.text, hint: 'end' } : { text: line.text });
+        const links = line.links ? { links: line.links } : {};
+        out.push(atEnd ? { text: line.text, hint: 'end', ...links } : { text: line.text, ...links });
         prev = { ...line, listed: false };
       }
       out.push({ text: '' });
@@ -502,16 +547,21 @@ function withLinks(items, links) {
     }
     if (!hits.length) continue;
     hits.sort((p, q) => q.it.y - p.it.y || p.it.x - q.it.x);
-    const label = hits.map((h) => h.it.str.slice(h.from, h.to)).join(' ').replace(/^[\s|•·]+|[\s|•·]+$/g, '').replace(/\s+/g, ' ');
+    // A box snapped to a word's edge takes the punctuation after the word ("Tidewater,"): not the label's.
+    const label = hits.map((h) => h.it.str.slice(h.from, h.to)).join(' ').replace(/^[\s|•·]+|[\s|•·,.;:!?]+$/g, '').replace(/\s+/g, ' ');
     if (!label) continue;
     // An address set in pieces ("linkedin.com/in/" "pat") is still the address.
     if (linkText(label.replace(/\s+/g, ''), url) === label.replace(/\s+/g, '')) continue;
     const text = linkText(label, url);
+    // Its label and address, for the rich text (R4-LO-05): on the item its text ends in.
+    const kept = hits[hits.length - 1].it;
+    const to = text === label ? url : text.slice(label.length + 2, -1);
+    if (/^(?:https?:|mailto:|tel:)/i.test(to)) kept.links = [...(kept.links || []), { label, url: to }];
     if (text === label) continue;
     hits.forEach((h) => { if (h.from === 0 && h.to === h.it.str.length) whole.add(h.it); });
     const last = hits[hits.length - 1];
     // Never after the separator past its label: a box a little wider than its letters.
-    const end = last.it.str.slice(0, last.to).replace(/[\s|•·]+$/, '').length;
+    const end = last.it.str.slice(0, last.to).replace(/[\s|•·,.;:!?]+$/, '').length;
     inserts.set(last.it, [...(inserts.get(last.it) || []), { at: end, text: text.slice(label.length) }]);
   }
   for (const [it, list] of inserts) {

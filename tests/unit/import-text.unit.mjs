@@ -170,7 +170,9 @@ describe('the pieces', () => {
       { text: 'Avery Quinn', hint: 'name' }, { text: 'Data Engineer' }, { text: '' },
       { text: 'Experience', hint: 'heading' }, { text: 'Northwind — Engineer', hint: 'entry' },
       // A link keeps its address beside its text (R4-IMP-02).
-      { text: 'Mar 2021 – Present | Portland, OR' }, { text: '' }, { text: '• Built the pipeline (https://example.com)' },
+      // …and its label and address, for the rich text to link (R4-LO-05).
+      { text: 'Mar 2021 – Present | Portland, OR' }, { text: '' },
+      { text: '• Built the pipeline (https://example.com)', links: [{ label: 'the pipeline', url: 'https://example.com' }] },
     ]);
     const r = resumeFromText(lines);
     const [job] = byType(r, 'experience')[0].items;
