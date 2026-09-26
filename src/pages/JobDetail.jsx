@@ -67,7 +67,8 @@ export function JobDetail({ store }) {
 
   const todos = job.todos || [];
   const doneTodos = todos.filter(t => t.done).length;
-  const resume = linkedResume(job, resumes);
+  // { state, resume }: the résumé itself only when it is still there (J-21).
+  const link = linkedResume(job, resumes);
   const statuses = JOB_STATUSES.map((s) => ({ id: s.id, name: s.label, category: jobTone(s.id) }));
 
   return (
@@ -152,7 +153,7 @@ export function JobDetail({ store }) {
               <Row label="Salary">{job.salary}</Row>
               <Row label="Contact">{job.contact}</Row>
               <Row label="Source">{nameIn(JOB_SOURCES, job.source)}</Row>
-              <Row label="Résumé">{resume?.name}</Row>
+              <Row label="Résumé">{link.state === 'linked' ? (link.resume.name || 'Untitled') : link.state === 'deleted' ? 'Résumé deleted' : null}</Row>
             </div>
             {todos.length > 0 && (
               <div className="border-t border-line px-3 py-3">
