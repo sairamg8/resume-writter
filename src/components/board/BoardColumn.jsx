@@ -9,9 +9,11 @@ import { InlineCreate } from './InlineCreate';
 /**
  * A board column (a status): its name in caps, how many issues it holds (and its WIP limit —
  * red once over), a ⋯ menu for the column, the cards in rank order, and "+ Create issue" at the
- * foot. The column's body is a droppable (`data.type` 'list'), so a card dropped on its empty
- * space lands at its foot. With swimlanes the page renders one per lane (`droppableId` differs,
- * `showHeader` only in the header row).
+ * foot. The whole column is a droppable (`data.type` 'list'), so a card dropped on its name or its
+ * empty space lands at its foot: the board reads a drop off what is under the pointer, and one
+ * outside every column is called off (B-17), so the header must count as the column. With
+ * swimlanes the page renders one per lane (`droppableId` differs, `showHeader` only in the header
+ * row).
  */
 export function BoardColumn({
   list, droppableId = list.id, cards, renderCard, showHeader = true, onCreate, menu, className,
@@ -20,6 +22,7 @@ export function BoardColumn({
   const ids = cards.map((c) => c.id);
   return (
     <section
+      ref={setNodeRef}
       data-column={list.id}
       aria-label={showHeader ? `${list.title || 'Untitled'} column` : undefined}
       className={cx('flex w-[272px] shrink-0 snap-center flex-col rounded-md bg-sunken', className)}
@@ -38,7 +41,6 @@ export function BoardColumn({
         </header>
       )}
       <div
-        ref={setNodeRef}
         className={cx('flex min-h-24 flex-1 flex-col gap-1 px-1 pb-1 transition-colors', isOver && 'rounded-b-md bg-brand-subtle/60', !showHeader && 'pt-1')}
       >
         <SortableContext items={ids} strategy={verticalListSortingStrategy}>

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ChevronDown, Info, MoreHorizontal, Plus } from 'lucide-react';
-import { DndContext, DragOverlay, MeasuringStrategy, MouseSensor, TouchSensor, closestCorners, useSensor, useSensors } from '@dnd-kit/core';
+import { DndContext, DragOverlay, MeasuringStrategy, MouseSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { useBoardStore } from '@/hooks/useBoardStore';
 import { Button, EmptyState, IconButton, Menu, cx, useConfirmOptional, useToast } from '@/components/ui';
 import { useWorkspace } from '@/components/shell';
@@ -13,6 +13,7 @@ import { ProjectHeader } from '@/components/board/ProjectTabs';
 import { IssueHost, useIssueActions, useIssueRoute } from '@/components/board/useIssueActions';
 import { IssueTypeIcon, PriorityIcon } from '@/components/tracker/TrackerIcons';
 import { BOARD_DRAG_INSTRUCTIONS } from '@/utils/cardKeys';
+import { boardCollision } from '@/utils/boardDnd';
 import { boardLists, boardSprint, dragPreview, dropTarget, hiddenDoneCount, previewLists } from '@/utils/boardView';
 import { filterIssues, swimlanes } from '@/utils/boardQuery';
 import { issueKey } from '@/utils/boardModel';
@@ -219,7 +220,9 @@ export function Board() {
       <DndContext
         sensors={sensors}
         accessibility={{ screenReaderInstructions: BOARD_DRAG_INSTRUCTIONS }}
-        collisionDetection={closestCorners}
+        // What is under the pointer, not the nearest droppable: a card released outside every column
+        // (over the header, the toolbar, "Add column") gets no `over`, and the drop is called off (B-17).
+        collisionDetection={boardCollision}
         // A card moved into another column changes both columns' heights mid-drag: measure the
         // columns again as it happens, or what is under the pointer is read off their old boxes.
         measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
