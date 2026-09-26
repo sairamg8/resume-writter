@@ -17,6 +17,12 @@ on `e6b1a4a` = R3-008 `c6eb880` (fail-first 36218191333 ✅; known limit in its 
 `05381c4`, R2-138 ⏸): its gate 36217880697 on fa0e777 failed only two test-side checks, fixed in `abed7ce`; parity/31
 page-break measure `fa0e777` + `f0575a3`. Green → `git push origin e6b1a4a:refs/heads/master`, deploy_rows, recount.
 Then: the rest of the checklist (English only), accessibility last.
+**Bug fixes, streaming (owner: "start fixing the pending bugs"):** workflow `flowcv-bugfix-stream` (7 clusters: boards-dnd,
+boards-text, jobs, sync-public, sync-collections, pdf-word, data; English only, no a11y) writes each fix as a patch +
+manifest in the session scratch `fixes/<ID>.patch|.done.json` (base `4d32890`); the coordinator reviews and lands each as
+its own commit here (`scratchpad/land.sh <ID>`), then fail-first per commit and one gate per batch. Landed: B-20 `617f24f`
+(fail-first 36219454186). If the session dies: the patches are in scratch; re-run the stopped clusters from the store
+checklist (`flowcv/wip/execution-2026-09-26/pending-bugs.md`).
 Scout notes (diagnoses, R3-008 design, pending bugs): store `flowcv/wip/execution-2026-09-26/`.
 
 ## ⏩ COLD START HERE — 2026-09-25 17:00 UTC (laptop session, owner's execution brief of 21:45 IST)
