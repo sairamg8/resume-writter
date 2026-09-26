@@ -9,13 +9,13 @@ no "Workers Builds" check run; 618c6c1 had one). Only a master push deploys.
 `ac50cf4`, not merged** — no language/RTL work until the owner reopens it. (It has the work branch merged in, `faf2c71`,
 and fixes `cd0fbc9` `3da8a07` `a33e548` `ac50cf4`, never gated; its runs were cancelled.)
 
-**Deployed: `master` = `91c91c9`** = batch 3: perf2 (`dcc0392`, report `1aa18ee`, R2-142 partial) + section-look (`91c91c9`,
+**Deployed: `master` = `f20a62d`** = batch 4 (owner-ui, R3-009…012 ✅; gate 36217649197 15/15) on batch 3 (`91c91c9`): perf2 (`dcc0392`, report `1aa18ee`, R2-142 partial) + section-look (`91c91c9`,
 report `444cf33`, R2-147 partial); full gate 36216686987 15/15 green, fail-first 36216688486 (cf3ad0e) green.
 
 **Batch 4, in flight:**
-- owner-ui merged (`f20a62d`, report `9ee79bc`, R3-009…012 ⏸): review fixes `d861584` (a second click on /new made a
+- ✅ DEPLOYED — owner-ui merged (`f20a62d`, report `9ee79bc`, R3-009…012 ✅): review fixes `d861584` (a second click on /new made a
   second résumé) and `c9f400b` (a drag from the backdrop into a modal closed it; kit Dialog too) — fail-first 36217583015
-  ✅. AppRoutes conflict: NewResume is a lazy page. **Full gate 36217649197 on `f20a62d`.**
+  ✅. AppRoutes conflict: NewResume is a lazy page. Full gate 36217649197 on `f20a62d` green.
 - R3-008 `c6eb880` on the work branch (saved-design deletion syncs as `{ deleted: true }`; buryDeletedDesigns on first
   sync / put-back) — fail-first 36218191333.
 - layouts `claude/wf-layouts` `fa0e777`: work branch merged in (`af95b6b`; PdfDesigned gets Name font, Photo position,

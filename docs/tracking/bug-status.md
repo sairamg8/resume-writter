@@ -1,9 +1,9 @@
 # FlowCV Bug Tracker & Status Index
 
 > Location: `/mnt/Storage/Projects/flowcv/docs/tracking/bug-status.md` (moved from the repo root 2026-09-24)
-> Updated: 2026-09-26 · `origin/master` (deployed) = `91c91c9` — Round 3 batch 3 (perf2 R2-142 part, section-look R2-147 part; gate
-> 36216686987) on top of batches 1–2 (typography, public link, page numbers, picker; `6e19667`), Round 2 and the Jira-style revamp
-> **Open: 7** (0 here + 7 in [bug-status-r2/](bug-status-r2/README.md)) | Fixed, not pushed: 4 | **Closed: 253** (232 fixed + 21 ✖ without a code fix)
+> Updated: 2026-09-26 · `origin/master` (deployed) = `f20a62d` — Round 3 batch 4 (owner-ui: R3-009…012; gate 36217649197) on
+> batch 3 (perf2 R2-142 part, section-look R2-147 part; `91c91c9`), batches 1–2 (`6e19667`), Round 2 and the Jira-style revamp
+> **Open: 7** (0 here + 7 in [bug-status-r2/](bug-status-r2/README.md)) | Fixed, not pushed: 0 | **Closed: 257** (236 fixed + 21 ✖ without a code fix)
 
 ## Summary
 
@@ -15,8 +15,8 @@
 | Prompt tasks, 2026-09-14 → 09-21 | 33 | 33 | 0 | 0 | 0 |
 | Full audit, 2026-09-23 — defects (`R2-001`…`R2-134`, [bug-status-r2/](bug-status-r2/README.md)) | 134 | 115 | 0 | 19 | **0** |
 | Full audit, 2026-09-23 — features and test gaps (`R2-135`…`R2-171`) | 37 | 31 | 0 | 0 | **6** |
-| Found by the build lanes, 2026-09-24 (`R3-`, in [bug-status-r2/](bug-status-r2/README.md)) | 12 | 6 | 4 | 1 | **1** |
-| **Total** | **264** | **232** | **4** | **21** | **7** |
+| Found by the build lanes, 2026-09-24 (`R3-`, in [bug-status-r2/](bug-status-r2/README.md)) | 12 | 10 | 0 | 1 | **1** |
+| **Total** | **264** | **236** | **0** | **21** | **7** |
 
 - **Status:** ✅ fixed and pushed (on `origin/master`, so deployed) · ⏸ fixed and committed, not pushed · 🔴 open ·
   ✖ closed without a code fix (won't fix: a known limit; not a bug; a duplicate) — the proof is in the row, and it counts as closed.
