@@ -5,12 +5,12 @@ import { LayoutToggle } from '@/components/LayoutToggle';
 import { PdfPreview } from '@/components/PdfPreview';
 import { FontFallbackNotice } from '@/components/FontFallbackNotice';
 import { PAGE_SIZES, pageSizeOf } from '@/constants/pageSize';
+import { buildCoverLetterPdf, buildResumePdf } from '@/utils/pdfBuild';
 
-// Module-level so their identity is stable: PdfPreview re-renders when `render` changes.
-const renderResumePreview = (resume) =>
-  import('@/utils/pdfExportReactPDF').then((m) => m.renderResumePdf(resume));
-const renderCoverLetterPreview = (resume) =>
-  import('@/utils/pdfExportReactPDF').then((m) => m.renderCoverLetterPdf(resume, { preview: true }));
+// Module-level so their identity is stable: PdfPreview re-renders when `render` changes. Built in the
+// PDF worker, as Export PDF is (pdfBuild.js).
+const renderResumePreview = (resume) => buildResumePdf(resume);
+const renderCoverLetterPreview = (resume) => buildCoverLetterPdf(resume, { preview: true });
 
 /**
  * "Saved 2 min ago" under the preview; it owns the 30 s tick that keeps that time current. It reads

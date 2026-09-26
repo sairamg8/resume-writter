@@ -3,6 +3,11 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { fileURLToPath, URL } from 'node:url'
 import { ownerResume } from './vite-plugin-owner-resume.js'
+import { refusedBuild } from './vite-deploy-guard.js'
+
+// A branch's build on Cloudflare deploys the live site: only master's may (vite-deploy-guard.js).
+const refused = refusedBuild()
+if (refused) throw new Error(refused)
 
 export default defineConfig({
   // ownerResume: the owner's git-ignored résumé on the dev server only; null in every build.
@@ -17,7 +22,17 @@ export default defineConfig({
     // system's inotify watches (ENOSPC) and crashed `yarn dev`.
     watch: { ignored: ['**/qa-visual-compare/**', '**/.claude/**', '**/graphify-out/**', '**/dist/**'] },
   },
+  // The PDF worker (src/utils/pdfWorker.js, R2-142): an ES module worker, so the templates it builds
+  // with stay code-split as they are on the main thread, and JSX compiled as the app's is.
+  worker: {
+    format: 'es',
+    plugins: () => [react()],
+  },
   build: {
+    // Only the PDF engine is past the default 500 kB: react-pdf in the PDF worker (pdfWorker-*.js) and,
+    // for a browser with no worker, on the main thread (react-pdf-*.js) — one library, loaded only when a
+    // PDF is built, never at start-up. The start-up path has its own budget in 71-startup-chunks.
+    chunkSizeWarningLimit: 1600,
     rolldownOptions: {
       output: {
         // Named vendor chunks (R2-014). Rolldown pulls a group's dependencies into its chunk, so the
@@ -32,6 +47,9 @@ export default defineConfig({
             { name: 'react', test: /node_modules[\\/](react|react-dom)[\\/]/, priority: 30 },
             { name: 'react-pdf', test: /node_modules[\\/](@react-pdf|fontkit|yoga-layout)[\\/]/, priority: 20 },
             { name: 'docx', test: /node_modules[\\/](docx|pizzip|jszip)[\\/]/, priority: 10 },
+            // Firestore and the rest of Firebase (app, auth) apart: one 530 kB chunk was over the
+            // build's 500 kB warning, and the two load side by side (R2-142, PERF-5).
+            { name: 'firestore', test: /node_modules[\\/](@firebase[\\/](firestore|webchannel-wrapper)|firebase[\\/]firestore)[\\/]/, priority: 11 },
             { name: 'firebase', test: /node_modules[\\/](firebase|@firebase)[\\/]/, priority: 10 },
           ],
         },

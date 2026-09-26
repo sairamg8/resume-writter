@@ -1,41 +1,38 @@
-import { useCallback, useLayoutEffect, useMemo } from 'react';
+import { Suspense, lazy, useLayoutEffect } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigationType } from 'react-router-dom';
 import { Dashboard } from '@/pages/Dashboard';
-import { Editor } from '@/pages/Editor';
-import { JobTracker } from '@/pages/JobTracker';
-import { JobDetail } from '@/pages/JobDetail';
-import { JobForm } from '@/pages/JobForm';
-import { Boards } from '@/pages/Boards';
-import { Board } from '@/pages/Board';
-import { Backlog } from '@/pages/Backlog';
-import { BoardSettings } from '@/pages/BoardSettings';
-import { YourWork } from '@/pages/YourWork';
-import { ProjectSummary } from '@/pages/ProjectSummary';
-import { ProjectList } from '@/pages/ProjectList';
-import { ProjectCalendar } from '@/pages/ProjectCalendar';
-import { ProjectTimeline } from '@/pages/ProjectTimeline';
 import TermsPage from '@/pages/TermsPage';
 import PrivacyPage from '@/pages/PrivacyPage';
-import { PublicResume } from '@/pages/PublicResume';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
-import { WorkspaceLayout, sidebarProjects } from '@/components/shell';
-import { CreateIssueDialog } from '@/components/board/CreateIssueDialog';
-import { useBoardStore } from '@/hooks/useBoardStore';
-import { searchWorkspace } from '@/utils/workspaceSearch';
+import { loadPage } from '@/utils/lazyPage';
 
-const renderCreate = (props) => <CreateIssueDialog {...props} />;
+// The editor and the workspace pages are split from the start-up code (R2-142, PERF-5): the entry
+// held every page — the editor's panels, the ATS checker, the boards, drag and drop — so the
+// dashboard downloaded and parsed ~700 kB before its first paint. Each now loads when its route is
+// first opened; the dashboard and the legal pages, small and reached first, stay in the entry. A
+// page's file gone after a deploy reloads the tab once (lazyPage.js).
+const page = (load, name) => lazy(() => loadPage(load, name));
+const Editor        = page(() => import('@/pages/Editor'), 'Editor');
+const JobTracker    = page(() => import('@/pages/JobTracker'), 'JobTracker');
+const JobDetail     = page(() => import('@/pages/JobDetail'), 'JobDetail');
+const JobForm       = page(() => import('@/pages/JobForm'), 'JobForm');
+const Boards        = page(() => import('@/pages/Boards'), 'Boards');
+const Board         = page(() => import('@/pages/Board'), 'Board');
+const Backlog       = page(() => import('@/pages/Backlog'), 'Backlog');
+const BoardSettings = page(() => import('@/pages/BoardSettings'), 'BoardSettings');
+const YourWork      = page(() => import('@/pages/YourWork'), 'YourWork');
+// The workspace shell the Job Tracker and Boards pages sit in (layout route), with its Create dialog.
+export const WorkspaceRoute = page(() => import('@/components/shell/WorkspaceRoute'), 'WorkspaceRoute');
+const ProjectSummary  = page(() => import('@/pages/ProjectSummary'), 'ProjectSummary');
+const ProjectTimeline = page(() => import('@/pages/ProjectTimeline'), 'ProjectTimeline');
+const ProjectCalendar = page(() => import('@/pages/ProjectCalendar'), 'ProjectCalendar');
+const ProjectList     = page(() => import('@/pages/ProjectList'), 'ProjectList');
+// A published résumé (R2-148), opened from its link by anyone: its page, not the editor's code.
+const PublicResume    = page(() => import('@/pages/PublicResume'), 'PublicResume');
 
-/**
- * The workspace shell (top bar, sidebar, scrolling main) as a layout route, its sidebar's projects,
- * its quick search and its Create dialog reading the board store. Only the workspace pages mount
- * it, so the résumé dashboard and editor never load the boards. The mapping reads v1 and v2 boards
- * alike (shell/projects.js).
- */
-export function WorkspaceRoute() {
-  const { boards } = useBoardStore();
-  const projects = useMemo(() => sidebarProjects(boards), [boards]);
-  const search = useCallback((query) => searchWorkspace(boards, query), [boards]);
-  return <WorkspaceLayout projects={projects} search={search} renderCreate={renderCreate} />;
+/** What shows for the moment a page's code is on its way. */
+function PageLoading() {
+  return <div className="min-h-screen flex items-center justify-center text-sm text-gray-400">Loading…</div>;
 }
 
 /**
@@ -54,7 +51,7 @@ function RouteFrame({ children }) {
     // Only a new path moves the scroll; the way we came is read with it.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
-  return <ErrorBoundary resetKey={pathname}>{children}</ErrorBoundary>;
+  return <ErrorBoundary resetKey={pathname}><Suspense fallback={<PageLoading />}>{children}</Suspense></ErrorBoundary>;
 }
 
 /**

@@ -8,7 +8,7 @@ import { buildExportFilename } from '@/utils/exportFilename';
 
 // Module-level so its identity is stable: PdfPreview re-renders when `render` changes.
 const renderResumePreview = (resume) =>
-  import('@/utils/pdfExportReactPDF').then((m) => m.renderResumePdf(resume));
+  import('@/utils/pdfBuild').then((m) => m.buildResumePdf(resume));
 
 /**
  * `#/r/<shareId>` (R2-148): a résumé its owner published with Share a public link, read-only, as
@@ -42,8 +42,8 @@ export function PublicResume({ io = firebasePublicIo }) {
     setExporting(true);
     setExportError(null);
     try {
-      const { exportToPDFReact } = await import('@/utils/pdfExportReactPDF');
-      await exportToPDFReact(view.resume, `${buildExportFilename(view.resume)}.pdf`);
+      const { exportResumePdf } = await import('@/utils/pdfBuild');
+      await exportResumePdf(view.resume, `${buildExportFilename(view.resume)}.pdf`);
     } catch (e) {
       console.error('PDF download failed:', e);
       setExportError('The PDF could not be made. Check your connection and try again.');

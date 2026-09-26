@@ -1,6 +1,7 @@
-import { useState, useId } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { ChevronDown, RotateCcw } from 'lucide-react';
 import { useTypedNumber } from '@/hooks/useTypedNumber';
+import { coalescedWriter } from '@/utils/coalescedWrite';
 
 export function Label({ children }) {
   return <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-2">{children}</p>;
@@ -124,5 +125,32 @@ export function DesignSection({ title, defaultOpen = false, open: kept, onOpenCh
       </div>
       {open && <div className="px-4 pb-4 pt-2 border-t border-gray-100 space-y-4">{children}</div>}
     </div>
+  );
+}
+
+// A colour picker's drag sends a change for every step of the mouse — dozens a second — and each
+// one wrote the setting: the whole editor re-rendered, a save was held and the preview's build
+// re-armed at every step (R2-142, PERF-4). Its value is written as the store's saves are
+// (coalescedWrite.js, R2-077): the first step at once, then the latest COLOR_WAIT_MS after the
+// last and at least every COLOR_MAX_WAIT_MS while the drag goes on; the swatch follows the drag
+// meanwhile. Closing the picker (blur) or the panel writes what is held at once.
+const COLOR_WAIT_MS = 200;
+const COLOR_MAX_WAIT_MS = 500;
+
+/** An `<input type="color">` that writes its value through `onCommit`, coalesced. Other props go to the input. */
+export function ColorInput({ value, onCommit, onBlur, ...props }) {
+  const [draft, setDraft] = useState(value);
+  const commit = useRef(onCommit);
+  commit.current = onCommit;
+  const [writer] = useState(() => coalescedWriter((v) => commit.current(v), { wait: COLOR_WAIT_MS, maxWait: COLOR_MAX_WAIT_MS }));
+  useEffect(() => () => writer.flush(), [writer]);
+  return (
+    <input
+      type="color"
+      {...props}
+      value={writer.pending() ? draft : value}
+      onChange={(e) => { setDraft(e.target.value); writer.schedule(e.target.value); }}
+      onBlur={(e) => { writer.flush(); onBlur?.(e); }}
+    />
   );
 }

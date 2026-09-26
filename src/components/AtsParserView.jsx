@@ -12,8 +12,8 @@ import { jobFields, parserText, readPdfLines } from '@/utils/parserText';
  * clipboard.
  */
 
-/** The résumé's PDF, the one Export PDF downloads and the preview paints. */
-const renderResume = (resume) => import('@/utils/pdfExportReactPDF').then((m) => m.renderResumePdf(resume));
+/** The résumé's PDF, the one Export PDF downloads and the preview paints (built in the PDF worker, pdfBuild.js). */
+const renderResume = (resume) => import('@/utils/pdfBuild').then((m) => m.buildResumePdf(resume));
 
 let pdfjsPromise = null;
 /**
