@@ -31,18 +31,16 @@ export const ACTION_VERBS_BY_CATEGORY = {
   ]
 };
 
-// Each pattern ends where no apostrophe follows: \b sits before one, so "didn't" read as the weak
-// verb "did", and Auto-Fix wrote "deliveredn't" (R4-CL-05).
 export const WEAK_PHRASE_REPLACEMENTS = [
-  { match: /\b(was responsible for|responsible for)\b(?!['’])/gi, replacement: 'Led', alternatives: ['Directed', 'Oversaw', 'Spearheaded'] },
-  { match: /\b(worked on|worked with)\b(?!['’])/gi, replacement: 'Engineered', alternatives: ['Co-developed', 'Collaborated on', 'Built'] },
-  { match: /\b(helped with|helped to|assisted with|assisted in)\b(?!['’])/gi, replacement: 'Facilitated', alternatives: ['Supported delivery of', 'Co-engineered', 'Accelerated'] },
-  { match: /\b(handled)\b(?!['’])/gi, replacement: 'Managed', alternatives: ['Resolved', 'Administered', 'Executed'] },
-  { match: /\b(did)\b(?!['’])/gi, replacement: 'Delivered', alternatives: ['Conducted', 'Accomplished', 'Produced'] },
-  { match: /\b(made sure|ensured that|ensured)\b(?!['’])/gi, replacement: 'Guaranteed', alternatives: ['Maintained compliance with', 'Enforced', 'Safeguarded'] },
-  { match: /\b(changed)\b(?!['’])/gi, replacement: 'Transformed', alternatives: ['Modernized', 'Overhauled', 'Refactored'] },
-  { match: /\b(participated in)\b(?!['’])/gi, replacement: 'Contributed to', alternatives: ['Partnered in', 'Active member of', 'Drove'] },
-  { match: /\b(in charge of)\b(?!['’])/gi, replacement: 'Oversaw', alternatives: ['Led', 'Directed', 'Headed'] },
+  { match: /\b(was responsible for|responsible for)\b/gi, replacement: 'Led', alternatives: ['Directed', 'Oversaw', 'Spearheaded'] },
+  { match: /\b(worked on|worked with)\b/gi, replacement: 'Engineered', alternatives: ['Co-developed', 'Collaborated on', 'Built'] },
+  { match: /\b(helped with|helped to|assisted with|assisted in)\b/gi, replacement: 'Facilitated', alternatives: ['Supported delivery of', 'Co-engineered', 'Accelerated'] },
+  { match: /\b(handled)\b/gi, replacement: 'Managed', alternatives: ['Resolved', 'Administered', 'Executed'] },
+  { match: /\b(did)\b/gi, replacement: 'Delivered', alternatives: ['Conducted', 'Accomplished', 'Produced'] },
+  { match: /\b(made sure|ensured that|ensured)\b/gi, replacement: 'Guaranteed', alternatives: ['Maintained compliance with', 'Enforced', 'Safeguarded'] },
+  { match: /\b(changed)\b/gi, replacement: 'Transformed', alternatives: ['Modernized', 'Overhauled', 'Refactored'] },
+  { match: /\b(participated in)\b/gi, replacement: 'Contributed to', alternatives: ['Partnered in', 'Active member of', 'Drove'] },
+  { match: /\b(in charge of)\b/gi, replacement: 'Oversaw', alternatives: ['Led', 'Directed', 'Headed'] },
 ];
 
 // ── The one verb list: high-impact action verbs (150+), the ATS score's and the optimizer's ──

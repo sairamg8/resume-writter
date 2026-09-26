@@ -43,8 +43,9 @@ test('every weak phrase in a statement is fixed, each in its own case', () => {
   );
 });
 
-// R4-CL-05: "\b(did)\b" matched the "did" of "didn't" (the apostrophe is a word boundary), so the
-// badge called it weak and Auto-Fix wrote "deliveredn't". A contraction is not its weak verb.
+// R4-CL-05 (not a bug, kept as a guard): the report said "\b(did)\b" matched the "did" of "didn't",
+// so Auto-Fix wrote "deliveredn't". It cannot: "didn't" has no word boundary between "did" and "n".
+// This pins that a contraction is never read as its weak verb.
 test('"didn\'t" is neither flagged nor rewritten, with a straight or a curly apostrophe', () => {
   for (const apostrophe of ["'", '’']) {
     const text = `Ensured releases didn${apostrophe}t slip past the sprint deadline`;
