@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FolderPlus } from 'lucide-react';
 import { useBoardStore } from '@/hooks/useBoardStore';
-import { Button, Dialog, EmptyState, Select, TextField, isImeKey, useToast } from '@/components/ui';
+import { Button, Dialog, EmptyState, Select, TextField, isImeKey, useConfirmOptional, useToast } from '@/components/ui';
 import RichTextEditor from '@/components/RichTextEditor';
 import { activeSprint, defaultColumnId, issueKey } from '@/utils/boardModel';
+import { hasRichText } from '@/utils/richText';
 import { DateInput, EpicPicker, LabelsPicker, PointsInput, PriorityPicker, SprintPicker, TypePicker } from './IssueFields';
 
 /** The fields a new issue starts with in `board`, from what the opener asked for. */
@@ -36,7 +37,7 @@ function Row({ label, children }) {
 }
 
 /** The form itself, keyed by the project it creates in: switching project starts it afresh. */
-function CreateForm({ board, boards, defaults, onBoardChange, onClose }) {
+function CreateForm({ board, boards, defaults, onBoardChange, onClose, typedRef }) {
   const store = useBoardStore();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -46,6 +47,11 @@ function CreateForm({ board, boards, defaults, onBoardChange, onClose }) {
   const [editorKey, setEditorKey] = useState(0);
   const set = (patch) => setDraft((d) => ({ ...d, ...patch }));
   const scrum = board.mode === 'scrum' || board.sprints.length > 0;
+  // Tells the dialog whether closing it would throw typed words away (a summary or a description).
+  useEffect(() => {
+    typedRef.current = Boolean(draft.title.trim()) || hasRichText(draft.description);
+    return () => { typedRef.current = false; };
+  });
 
   function submit(e) {
     e?.preventDefault();
@@ -142,12 +148,27 @@ export function CreateIssueDialog({ open, defaults = {}, onClose }) {
   const [chosenId, setChosenId] = useState(null);
   const boardId = chosenId ?? defaults.boardId;
   const board = boards.find((b) => b.id === boardId) ?? boards[0] ?? null;
+  const confirm = useConfirmOptional();
+  const typedRef = useRef(false);
+  const askingRef = useRef(false);
   const close = () => { setChosenId(null); onClose(); };
+  // Escape and a click beside the dialog are easy to hit by accident: with a summary or a
+  // description typed, they ask before throwing it away. Cancel and the X close at once.
+  const dismiss = async (reason) => {
+    if ((reason === 'escape' || reason === 'overlay') && typedRef.current) {
+      if (askingRef.current) return;
+      askingRef.current = true;
+      const discard = await confirm({ title: 'Discard this issue?', body: 'What you typed will be lost.', confirmLabel: 'Discard', cancelLabel: 'Keep editing', tone: 'danger' });
+      askingRef.current = false;
+      if (!discard) return;
+    }
+    close();
+  };
 
   return (
-    <Dialog open={open} onClose={close} title="Create issue" size="lg" bodyClassName="px-5 pb-5 sm:px-6">
+    <Dialog open={open} onClose={dismiss} title="Create issue" size="lg" bodyClassName="px-5 pb-5 sm:px-6">
       {board ? (
-        <CreateForm key={board.id} board={board} boards={boards} defaults={board.id === defaults.boardId ? defaults : {}} onBoardChange={setChosenId} onClose={close} />
+        <CreateForm key={board.id} board={board} boards={boards} defaults={board.id === defaults.boardId ? defaults : {}} onBoardChange={setChosenId} onClose={close} typedRef={typedRef} />
       ) : (
         <EmptyState
           icon={FolderPlus}
