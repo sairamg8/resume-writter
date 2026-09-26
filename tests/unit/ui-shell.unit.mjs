@@ -33,7 +33,8 @@ after(() => vite?.close());
 const loadModule = (id) => vite.ssrLoadModule(id);
 
 /**
- * The shell at `path` over two stand-in pages, /jobs ("LIST") and /jobs/:id ("JOB"). Returns the
+ * The shell at `path` over two stand-in pages, /jobs ("LIST") and /jobs/:id ("JOB"), and / ("HOME")
+ * outside it. Returns the
  * mount, its <main>, `scroll(y)` (a user scroll), `go(to)` (router navigation, -1 is Back) and
  * the text the page shows.
  */
@@ -49,7 +50,9 @@ async function shellAt(path) {
       createElement(Routes, null,
         createElement(Route, { element: createElement(WorkspaceLayout, { projects: [] }) },
           createElement(Route, { path: '/jobs', element: createElement(Page, { name: 'LIST' }) }),
-          createElement(Route, { path: '/jobs/:id', element: createElement(Page, { name: 'JOB' }) }))));
+          createElement(Route, { path: '/jobs/:id', element: createElement(Page, { name: 'JOB' }) })),
+        // A page outside the shell (the résumés): going there unmounts the shell.
+        createElement(Route, { path: '/', element: createElement(Page, { name: 'HOME' }) })));
   }
   const view = mount(App, {});
   const main = () => [...elements(view.container)].find((el) => el.tagName === 'MAIN');
@@ -70,7 +73,7 @@ async function shellAt(path) {
     await settle();
   };
   await settle();
-  return { view, main, scroll, go, shown: () => main().textContent };
+  return { view, main, scroll, go, shown: () => main()?.textContent ?? view.container.textContent };
 }
 
 describe('J-40: a route change inside the workspace opens the new page at its top', () => {
@@ -120,6 +123,24 @@ describe('J-40: a route change inside the workspace opens the new page at its to
       assert.equal(main().scrollTop, 0);
       await go(-1);
       assert.equal(main().scrollTop, 700);
+    } finally { await view.unmount(); }
+  });
+
+  // R4-APP-07: the offsets were kept in the shell, which unmounts on a page outside it: Back from
+  // the résumés (the sidebar's Résumés, the logo) opened the Job Tracker at its top.
+  it('Back from a page outside the shell returns to the list where it was scrolled', async () => {
+    const { view, main, scroll, go, shown } = await shellAt('/jobs');
+    try {
+      scroll(900);
+      await go('/');
+      assert.equal(main(), undefined, 'the shell is gone on the résumés page');
+      assert.match(shown(), /HOME/);
+      await go(-1);
+      assert.match(shown(), /LIST/);
+      assert.equal(main().scrollTop, 900, 'the list opened at its top');
+      await go(1);
+      await go('/jobs/job_9'); // a new page after all that still opens at the top
+      assert.equal(main().scrollTop, 0);
     } finally { await view.unmount(); }
   });
 
