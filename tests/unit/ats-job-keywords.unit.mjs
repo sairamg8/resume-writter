@@ -60,3 +60,33 @@ test('decomposed accents and combining vowel signs stay inside their word', () =
   const decomposedPosting = matchResumeWithJob(resumeIn('München, Germany'), 'München München. Terraform.'.normalize('NFD'));
   assert.ok(decomposedPosting.matchedKeywords.includes('München'), JSON.stringify(decomposedPosting));
 });
+
+// R4-CL-02: the apostrophe was read as a space before the stop list ran, so "You'll", "we're",
+// "We've", "Don't" and "haven't" became the keywords "ll", "re", "ve", "Don" and "haven", listed as
+// missing and written into Skills by "+". A contraction is its stop word now, straight or curly, and
+// a possessive is its name.
+test('contractions are not keywords, typed with a straight or a curly apostrophe', () => {
+  const jd = "You'll join a team where we're shipping fast. We've got Kubernetes. Don't worry if you haven't used Go. It'll be fun, isn't it? I'm sure they'd agree.";
+  for (const text of [jd, jd.replace(/'/g, '’')]) {
+    const got = keywords(text);
+    for (const junk of ['ll', 're', 've', 'Don', 'haven', 'isn', 'It', 'd', 'm', 't', "You'll", "we're", "Don't", "It'll", "isn't", "they'd", "I'm"]) {
+      assert.ok(!got.some((k) => k.toLowerCase() === junk.toLowerCase()), `"${junk}" in ${got.join(', ')}`);
+    }
+    for (const word of ['Kubernetes', 'Go', 'shipping']) assert.ok(got.includes(word), `${word} in ${got.join(', ')}`);
+  }
+});
+
+test('a possessive reads as its name, and a name with an apostrophe stays whole', () => {
+  const got = keywords("Stripe's payments team. Stripe’s API. Work with O'Reilly authors. The company's goals.");
+  assert.ok(got.includes('Stripe'), got.join(', '));
+  assert.ok(!got.some((k) => /^stripe['’]s$/i.test(k) || k === 's'), got.join(', '));
+  assert.ok(got.includes("O'Reilly"), got.join(', '));
+  assert.ok(!got.some((k) => /^(o|reilly|company|company's)$/i.test(k)), got.join(', '));
+});
+
+test('a contraction in the posting is never a missing keyword the "+" could add', () => {
+  const r = resumeIn('Austin, TX');
+  const m = matchResumeWithJob(r, "We’re hiring. You'll use Terraform. We've shipped Go.");
+  assert.deepEqual(m.missingKeywords.filter((k) => /^(ll|re|ve)$/i.test(k)), []);
+  assert.ok(m.matchedKeywords.includes('Terraform') && m.matchedKeywords.includes('Go'), JSON.stringify(m));
+});

@@ -319,6 +319,11 @@ function chooseBestCasing(newWord, oldWord) {
  */
 const LETTER_ABBREVIATION = /^(?:\p{L}\.)+\p{L}?$/u;
 
+/** The apostrophes a pasted posting spells a contraction with: curly, modifier letter, prime. */
+const APOSTROPHES = /[\u2018\u2019\u02BC\u2032\uFF07]/g;
+/** A contraction's tail: "we'll", "they're", "I've", "she'd", "I'm", "isn't" (R4-CL-02). */
+const CONTRACTION = /^\p{L}+'(?:ll|re|ve|d|m)$|n't$/iu;
+
 /**
  * Extracts keywords & tech terms from a job description. A word is Unicode letters, their marks and
  * digits: `\w` is ASCII, and read with it "München" was the keyword "nchen" (R2-023). The text is
@@ -327,9 +332,12 @@ const LETTER_ABBREVIATION = /^(?:\p{L}\.)+\p{L}?$/u;
  */
 export function extractJobKeywords(jobDescriptionText) {
   if (!jobDescriptionText || typeof jobDescriptionText !== 'string') return [];
-  // Tokenize words, normalizing punctuation
+  // Tokenize words, normalizing punctuation. An apostrophe stays inside its word, typed straight or
+  // curly: read as a space, "You'll" and "we're" were the keywords "ll" and "re", which the stop
+  // list's "you'll" and "we're" could never catch, and "+" wrote them into Skills (R4-CL-02).
   const clean = jobDescriptionText.normalize('NFC')
-    .replace(/[^\p{L}\p{M}\p{N}_\s+#.-]/gu, ' ')
+    .replace(APOSTROPHES, "'")
+    .replace(/[^\p{L}\p{M}\p{N}_\s+#.'-]/gu, ' ')
     .replace(/\s+/g, ' ');
 
   const tokens = clean.split(' ');
@@ -342,6 +350,12 @@ export function extractJobKeywords(jobDescriptionText) {
     word = word.replace(/^[^\p{L}\p{M}\p{N}_+#]+|[^\p{L}\p{M}\p{N}_+#]+$/gu, '');
     if (word.length < 2 || word.length > 30) continue;
     if (LETTER_ABBREVIATION.test(word)) continue;
+    if (COMMON_STOP_WORDS.has(word.toLowerCase())) continue;
+    // "Stripe's" is the keyword "Stripe"; any other contraction ("it'll", "ain't") is no keyword.
+    // A name with an apostrophe ("O'Reilly") stays as it is.
+    word = word.replace(/'s$/i, '');
+    if (CONTRACTION.test(word)) continue;
+    if (word.length < 2) continue;
     const lower = word.toLowerCase();
     if (COMMON_STOP_WORDS.has(lower)) continue;
     if (/^\d+\+?$/.test(lower)) continue; // skip pure numbers and numbers with + (e.g. 5+)
@@ -387,7 +401,7 @@ export function matchResumeWithJob(resume, jobDescriptionText) {
   if (!jdKeywords.length) return null;
 
   // Composed, as the keywords are read (extractJobKeywords).
-  const resumeCorpus = extractResumeCorpus(resume).normalize('NFC').toLowerCase();
+  const resumeCorpus = extractResumeCorpus(resume).normalize('NFC').replace(APOSTROPHES, "'").toLowerCase();
   const matched = [];
   const missing = [];
 
