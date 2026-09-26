@@ -36,8 +36,16 @@ function RowDuplicate({ onDuplicate }) {
   );
 }
 
+const PROFICIENCIES = ['Native', 'Fluent', 'Professional', 'Intermediate', 'Basic'];
+
 export function LanguageItem({ item, onUpdate, onRemove, onDuplicate }) {
   const visible = item.visible !== false;
+  // The select shows exactly what the résumé prints. A starter, an import or a hand-written file can
+  // store a level the list does not name ('Conversational', 'C1') or none at all (''); with no option
+  // of that value the browser showed the first one instead, and picking the level already on screen
+  // fired no change, so it could not be chosen. An unset level is its own option, and an unusual one
+  // is added to the list, as the date pickers do for an unusual year.
+  const proficiency = item.proficiency == null ? '' : String(item.proficiency);
   return (
     <div className={`flex gap-2 items-center ${visible ? '' : 'opacity-50'}`}>
       <div className="flex-1 grid grid-cols-[2fr_3fr] gap-2">
@@ -51,13 +59,17 @@ export function LanguageItem({ item, onUpdate, onRemove, onDuplicate }) {
         />
         <select
           aria-label="Proficiency"
-          value={item.proficiency || 'Professional'}
+          value={proficiency}
           onChange={e => onUpdate({ ...item, proficiency: e.target.value })}
           className="px-2.5 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
         >
-          {['Native', 'Fluent', 'Professional', 'Intermediate', 'Basic'].map(p => (
+          <option value="">Not set</option>
+          {PROFICIENCIES.map(p => (
             <option key={p} value={p}>{p}</option>
           ))}
+          {proficiency && !PROFICIENCIES.includes(proficiency) && (
+            <option value={proficiency}>{proficiency}</option>
+          )}
         </select>
       </div>
       <button
