@@ -2,6 +2,7 @@ import { parseRichText } from './richText.js';
 import { formatDate, presentLabel } from './dates.js';
 import { resolveSection } from '../templates/pdf/shared/templateSectionDefaults.js';
 import { templateId } from '../constants/templates.js';
+import { contactItems } from './contacts.js';
 
 /**
  * The ATS plain-text export (Export → ATS Text, and the ATS tab's Copy / Download): the résumé as
@@ -159,14 +160,10 @@ export function generateAtsPlainText(resume) {
   if (p.name) lines.push(p.name.toUpperCase());
   if (p.title) lines.push(p.title);
 
-  // Contacts line
-  const contacts = [];
-  if (p.email && !hiddenPersonal.has('email')) contacts.push(p.email);
-  if (p.phone && !hiddenPersonal.has('phone')) contacts.push(p.phone);
-  if (p.location && !hiddenPersonal.has('location')) contacts.push(p.location);
-  if (p.linkedin && !hiddenPersonal.has('linkedin')) contacts.push(p.linkedin);
-  if (p.website && !hiddenPersonal.has('website')) contacts.push(p.website);
-  if (p.github && !hiddenPersonal.has('github')) contacts.push(p.github);
+  // Contacts line: the fields contactItems prints, in its order (CONTACT_FIELDS) — the PDF, Word and
+  // Markdown order — with each value as typed, not its "Display label" or bare domain: plain text
+  // carries no links, so the full URL is what a parser or recruiter can still follow (R4-DOUT-13).
+  const contacts = contactItems(p).map(({ key }) => String(p[key]).trim());
   if (contacts.length) lines.push(contacts.join(' | '));
   lines.push('');
 
