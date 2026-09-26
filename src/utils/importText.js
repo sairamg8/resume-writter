@@ -391,8 +391,12 @@ function roleFirst(a, b, roleLeads) {
   return roleLeads ? [a, b] : [b, a];
 }
 
-/** One entry of `type` from its header and body lines. */
-function entryOf(type, header, body) {
+/**
+ * One entry of `type` from its header and body lines. `aside(title, texts)`: text the entry has no
+ * field for and no description to hold it — a certificate's — kept in "Additional Information" under
+ * its name (R4-IMP-01); a description the app never shows would hide it.
+ */
+function entryOf(type, header, body, aside = () => {}) {
   const h = readHeader(type, header);
   const [p0 = '', p1 = '', ...rest] = JOB.has(type) ? inlinePair(h.parts) : h.parts;
   const d = h.date || { start: '', end: '', current: false, text: '' };
@@ -469,7 +473,8 @@ function entryOf(type, header, body) {
         if (found) Object.assign(fields, found);
         return !found;
       });
-      return itemOf(type, { ...fields, ...(left.length || rest.length ? { description: richText([...left, ...rest.map((l) => l.text)]) } : {}) });
+      if (left.length || rest.length) aside(fields.name || 'Certification', [...left, ...rest.map((l) => l.text)]);
+      return itemOf(type, fields);
     }
     case 'awards':
       return itemOf(type, { title: p0, issuer: p1, date: d.text ? (d.start || d.end) : '', description: description(lead) });
@@ -487,7 +492,21 @@ function entryOf(type, header, body) {
  * entry too. What follows up to the next entry is its body. With no dates at all, a line after a gap
  * or a list starts the next one.
  */
-function entriesOf(type, lines) {
+function entriesOf(type, lines, aside) {
+  // A certificate or an award a list item each (R4-IMP-01): a section that opens with a list item is a
+  // list of them, each with its date at its end ("• AWS Certified Solutions Architect – 2022"). A line
+  // under an item is its own: its date or named fields, else its text. Before, the first item was the
+  // one entry, and the others went into its description, which a certificate never shows.
+  if ((type === 'certifications' || type === 'awards') && lines.length && BULLET.test(lines[0].text)) {
+    const list = [];
+    for (const l of lines) {
+      const last = list[list.length - 1];
+      if (BULLET.test(l.text)) list.push({ header: [{ ...l, text: l.text.replace(BULLET, '') }], body: [] });
+      else if (!last.body.length && (isMetaLine(l.text) || readDateRange(l.text))) last.header.push(l);
+      else last.body.push(l);
+    }
+    return list.map((e) => entryOf(type, e.header, e.body, aside));
+  }
   const info = lines.map((l, index) => {
     const bullet = BULLET.test(l.text);
     let date = null;
@@ -572,7 +591,7 @@ function entriesOf(type, lines) {
   } else if (preamble.length) {
     entries[0].body.unshift(...preamble);
   }
-  return entries.map((e) => entryOf(type, e.header, e.body));
+  return entries.map((e) => entryOf(type, e.header, e.body, aside));
 }
 
 /** Skills lines: "Category: a, b" as a group; a short line alone over a list as its category. */
@@ -674,6 +693,7 @@ export function resumeFromText(input) {
   const personal = { name: '', title: '', email: '', phone: '', location: '', website: '', linkedin: '', github: '', summary: '', photo: null, hiddenFields: [] };
   const summary = [];
   const other = [];
+  const asides = []; // entries' text with nowhere to go in them (entryOf's `aside`)
 
   /** Header lines: contacts to their fields, the rest to the summary (sentences) or aside. */
   const takeContacts = (ls, { spill }) => {
@@ -738,12 +758,13 @@ export function resumeFromText(input) {
     else if (type === 'interests') {
       const all = body.map((l) => l.text.replace(BULLET, '')).join(', ').split(/\s*[,;\t•·|]\s*/).filter(Boolean);
       items = [itemOf('interests', { interests: all.join(', ') })];
-    } else items = entriesOf(type, body);
+    } else items = entriesOf(type, body, (heading, texts) => asides.push(itemOf('custom', { title: heading, description: richText(texts) })));
     if (items.length) sections.push(sectionOf(type, name, items));
   });
 
   personal.summary = richText(summary);
-  if (other.length) sections.push(sectionOf('custom', 'Additional Information', [itemOf('custom', { description: richText(other) })]));
+  const extra = [...(other.length ? [itemOf('custom', { description: richText(other) })] : []), ...asides];
+  if (extra.length) sections.push(sectionOf('custom', 'Additional Information', extra));
 
   return {
     id: newId('resume'),
