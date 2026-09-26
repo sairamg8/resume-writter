@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ArrowRight } from 'lucide-react';
 import { Avatar, Button, TabPanel, Tabs, cx, isImeKey, useConfirmOptional, useHotkeys } from '@/components/ui';
 import { describeActivity } from '@/utils/issueHistory';
@@ -11,10 +11,23 @@ function When({ at }) {
   return <time dateTime={new Date(at).toISOString()} title={formatDateTime(at)} className="text-[12px] text-ink-subtlest">{relativeTime(at)}</time>;
 }
 
-/** The box a comment is written in: a one-line prompt until focused, then a field with Save / Cancel. */
-function Composer({ initial = '', onSave, onCancel, autoFocus = false, saveLabel = 'Save' }) {
+/**
+ * The box a comment is written in: a one-line prompt until focused, then a field with Save / Cancel.
+ * Each new `summon` (the `m` shortcut) opens it, or goes back to it with what is typed kept.
+ */
+function Composer({ initial = '', onSave, onCancel, autoFocus = false, saveLabel = 'Save', summon = 0 }) {
   const [text, setText] = useState(initial);
   const [open, setOpen] = useState(autoFocus || !!initial);
+  const fieldRef = useRef(null);
+  const [summoned, setSummoned] = useState(summon);
+  if (summon !== summoned) {
+    setSummoned(summon);
+    setOpen(true);
+  }
+  // A closed box opens with its field focused (autoFocus); an open one gets the focus back here.
+  useEffect(() => {
+    if (summon) fieldRef.current?.focus();
+  }, [summon]);
   const save = () => {
     const t = text.trim();
     if (!t) return;
@@ -37,6 +50,7 @@ function Composer({ initial = '', onSave, onCancel, autoFocus = false, saveLabel
   return (
     <div className="flex flex-col gap-2">
       <textarea
+        ref={fieldRef}
         autoFocus
         rows={3}
         value={text}
@@ -157,7 +171,8 @@ export function IssueActivity({ issue, onAddComment, onUpdateComment, onDeleteCo
         <div className="flex gap-3">
           <Avatar name={WHO} size="md" decorative />
           <div className="min-w-0 flex-1">
-            <Composer key={composeKey} autoFocus={composeKey > 0} onSave={onAddComment} />
+            {/* Summoned, not re-keyed: a new key threw away a comment being typed. */}
+            <Composer summon={composeKey} onSave={onAddComment} />
             <p className="mt-1.5 text-[12px] text-ink-subtlest"><span className="font-semibold">Pro tip:</span> press <kbd className="rounded border border-line px-1">M</kbd> to comment</p>
           </div>
         </div>
