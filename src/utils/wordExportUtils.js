@@ -280,7 +280,7 @@ export function descriptionToParagraphs(html, base = { size: 20, color: '374151'
  * Options → Alignment "Center"), the line centred and the date centred on a line of its own below it.
  * Empty parts (null, false, '') are left out, so a line with nothing but a date prints the date
  * alone. `under` (runs: Title "Stacked"'s second field, R2-070) starts the line under the title, as
- * the PDF's sub line does. `place` ({ text, color, size }: the entry's location) ends that line — at
+ * the PDF's sub line does. `place` ({ text, color, size }: the entry's location; `italics` on Executive and Academic) ends that line — at
  * the same right tab, or on a centred line of its own — or has a line of its own there, never in the
  * title's text, where a parser reads it as part of the job title or the company (ATS-1), as the PDF
  * keeps it a field of its own.
@@ -289,7 +289,7 @@ export function dateRightPara(leftChildren, rightText, { color: colorHex, center
   const left = leftChildren.filter(Boolean);
   const sub = under.filter(Boolean);
   const date = rightText ? [new TextRun({ text: String(rightText), color: colorHex, size })] : [];
-  const where = place?.text ? [new TextRun({ text: String(place.text), color: place.color, size: place.size })] : [];
+  const where = place?.text ? [new TextRun({ text: String(place.text), color: place.color, size: place.size, italics: place.italics || undefined })] : [];
   // The lines that print, one after another: a line with nothing on it takes no break.
   const lines = (list) => list.filter((line) => line.length).flatMap((line, i) => (i ? [new TextRun({ break: 1 }), ...line] : line));
   if (centered) {

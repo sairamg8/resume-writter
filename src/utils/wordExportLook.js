@@ -91,6 +91,9 @@ function gridOf(section, width, side) {
   return { cols, cell, width, starts: Array.from({ length: cols }, (_, i) => Math.round(i * (cell + gap))) };
 }
 
+/** The templates whose PDF prints an entry's second field italic (their SectionRouter's italicSubs). */
+const ITALIC_SUBS = ['executive', 'academic'];
+
 /**
  * The `look` buildSection's builders print `section` in, from the résumé's `settings` and their
  * resolved `s`:
@@ -105,6 +108,8 @@ function gridOf(section, width, side) {
  * - `title` — Section Options → Title: 'stacked' (unset), 'inline' or 'sidebyside'; the Sidebar's
  *   side column offers none and stacks its entries (R2-070);
  * - `side` — the section is in the Sidebar's side column; `template` — the template's id;
+ * - `italicSub` — Executive and Academic, whose PDF passes italicSubs: an entry's second field, its
+ *   location and an issuer print italic, and Title "Inline" joins the two fields with ", " (R4-DOUT-02);
  * - `ink` — the entries' colours (entryInk).
  */
 export function sectionLook(section, settings, s, template, side) {
@@ -121,6 +126,7 @@ export function sectionLook(section, settings, s, template, side) {
     title: (!side && section.settings?.titleStyle) || 'stacked',
     side,
     template: tid,
+    italicSub: ITALIC_SUBS.includes(tid),
     ink: entryInk(s, tid),
   };
 }
