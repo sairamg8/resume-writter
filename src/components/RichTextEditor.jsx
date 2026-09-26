@@ -36,7 +36,9 @@ export default function RichTextEditor({ label, ariaLabel, value, onChange, plac
     if (el.innerHTML !== clean) el.innerHTML = clean;
     // A value stored with a picture's data in it (before R4-ED-02, a pasted screenshot's megabytes
     // of base64) is stored again without it, so it stops filling the browser's storage and the cloud
-    // copy. Only then: showing a value otherwise writes nothing.
+    // copy. Only then: showing a value otherwise writes nothing. The data: URL is looked for inside a
+    // tag, where a picture keeps it; the same words typed as text stay in the clean value, and matching
+    // them wrote the field again every time it was shown.
     if (DATA_URL.test(value || '')) onChange(clean);
   }, [value]);
 
@@ -118,9 +120,12 @@ export default function RichTextEditor({ label, ariaLabel, value, onChange, plac
   }
 
   function onDragStart(e) {
+    // Only a selection is moved. A drag with none (a link dragged by itself) has a collapsed range,
+    // and deleting that deleted the character before the caret.
     const sel = window.getSelection();
-    dragSource.current = sel?.rangeCount ? sel.getRangeAt(0).cloneRange() : null;
-    e.dataTransfer?.setData(MOVE_TYPE, moveMark);
+    const range = sel?.rangeCount ? sel.getRangeAt(0) : null;
+    dragSource.current = range && !range.collapsed ? range.cloneRange() : null;
+    if (dragSource.current) e.dataTransfer?.setData(MOVE_TYPE, moveMark);
   }
 
   // A drag that started in this editor is a move: the text leaves where it was and goes in at the
@@ -284,8 +289,8 @@ export function statementRange(el) {
 
 /** Elements a browser can paste or drop into a contentEditable that the editor cannot print. */
 const MEDIA = new Set(['IMG', 'PICTURE', 'VIDEO', 'AUDIO', 'SVG', 'CANVAS', 'IFRAME', 'OBJECT', 'EMBED']);
-/** A data: URL's base64 payload, as a browser's own paste of a picture stores it. */
-const DATA_URL = /\bdata:[^\s"'>,;]*;base64,/i;
+/** A data: URL's base64 payload inside a tag, as a browser's own paste of a picture stores it. */
+const DATA_URL = /<[^>]*\bdata:[^\s"'>,;]*;base64,/i;
 /** The type a drag from an editor carries, with that editor's own id, so its drop knows it as a move. */
 const MOVE_TYPE = 'application/x-resume-rich-text-move';
 

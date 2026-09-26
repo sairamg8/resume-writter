@@ -75,6 +75,16 @@ describe('dragging text inside a rich-text field moves it (R4-ED-04)', () => {
     } finally { await view.unmount(); }
   });
 
+  it('a drag with no text selected (a link dragged by itself) deletes nothing of the field', async () => {
+    const { view, commands, fire, dragStart } = await editor();
+    try {
+      const data = dragStart(4, 4); // a caret, no selection: deleting it would take the character before it
+      data.values['text/plain'] = 'https://example.com';
+      fire('onDrop', { dataTransfer: data, clientX: 10, clientY: 5 });
+      assert.deepEqual(commands, [['insertHTML', 'https://example.com', [10, 10]]], 'only the drop goes in');
+    } finally { await view.unmount(); }
+  });
+
   it('with no caretRangeFromPoint (Firefox), a drop goes at the drop point, not over the selection', async () => {
     const { view, line, commands, fire } = await editor();
     const doc = globalThis.document;

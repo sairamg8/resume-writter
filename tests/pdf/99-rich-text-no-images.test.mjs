@@ -71,5 +71,9 @@ describe('an image pasted or dropped into a rich-text field is never stored (R4-
     try {
       assert.deepEqual(plain.stored, [], 'showing a value with no picture data writes nothing');
     } finally { await plain.view.unmount(); }
+    const typed = await editor('<p>Inlined as data:image/png;base64,iVBOR in the CSS</p>');
+    try {
+      assert.deepEqual(typed.stored, [], 'the words typed as text are no picture: showing them writes nothing');
+    } finally { await typed.view.unmount(); }
   });
 });
