@@ -48,11 +48,12 @@ const PAGE_SIZE_OPTIONS = PAGE_SIZE_IDS.map(id => ({ label: `${PAGE_SIZES[id].la
  * Design → the résumé's look. Beyond the store's setting actions: `designs` (the ones the user saved,
  * savedDesigns) with `applyDesign`, `saveDesign` and `deleteDesign` (B4); `restoreDesign`, Undo after a
  * switch (A4); `onBrowseTemplates`, the gallery (A2); `templateOpen` / `onTemplateOpenChange`, whether
- * Template is open, kept by the editor across tabs (A12). Each is optional: without it, its control is not
+ * Template is open, kept by the editor across tabs (A12); `clearSettings`, a section reset's Undo deleting
+ * the keys that were unset (R4-DUX-14). Each is optional: without it, its control is not
  * offered.
  */
 export default function DesignPanel({
-  resume, updateSetting, setTemplate, resetSettings, designs = [], applyDesign, saveDesign, deleteDesign, restoreDesign,
+  resume, updateSetting, clearSettings, setTemplate, resetSettings, designs = [], applyDesign, saveDesign, deleteDesign, restoreDesign,
   onBrowseTemplates, templateOpen, onTemplateOpenChange,
 }) {
   const settings = resume.settings || {};
@@ -60,7 +61,7 @@ export default function DesignPanel({
   // Modern and Sidebar draw the pack whatever Contact style says, the others only with Icon.
   const drawsIcons = drawsContactIcons(current, settings);
   const [confirmReset, setConfirmReset] = useState(false);
-  const { toast } = useToast();
+  const { toast, dismiss } = useToast();
   const pageSizeLabelId = useId();
   const [fitting, setFitting] = useState(false);
   const [fitNotice, setFitNotice] = useState('');
@@ -70,6 +71,8 @@ export default function DesignPanel({
   const mounted = useRef(true);
   // Set again on mount: StrictMode's trial unmount (main.jsx) left it false, and every fit was dropped.
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
+  // A section reset's Undo leaves with the panel or the résumé: it would write into whichever is open.
+  useEffect(() => () => dismiss('design-section-reset'), [resume.id, dismiss]);
 
   /**
    * 1-Page Fit (R2-149): the preset at once, then the résumé is printed at it and, while it runs past
@@ -106,8 +109,9 @@ export default function DesignPanel({
   /**
    * A section's reset: its settings back to the template's defaults (Sidebar's plain headings, …), and
    * a notice with Undo (R4-DUX-14) — one click on a ↺ took back a whole group with no way back. Undo
-   * writes back only the keys the reset changed, as they were (an unset one back to undefined, which reads as unset), so what was
-   * edited since in another section stays; on another résumé opened meanwhile it does nothing.
+   * writes back only the keys the reset changed, as they were (an unset one deleted again, clearSettings),
+   * so what was edited since in another section stays; with the panel gone or another résumé open it does
+   * nothing (and the notice is dismissed then).
    */
   function resetSection(keys) {
     const updated = sectionReset(resume.template, keys, settings);
@@ -124,8 +128,10 @@ export default function DesignPanel({
       action: {
         label: 'Undo',
         onClick: () => {
-          if (mounted.current && latest.current?.id !== id) return;
-          before.forEach(([k, v]) => updateSetting(k, v));
+          if (!mounted.current || latest.current?.id !== id) return;
+          const unset = before.filter(([, v]) => v === undefined).map(([k]) => k);
+          before.forEach(([k, v]) => { if (v !== undefined || !clearSettings) updateSetting(k, v); });
+          if (unset.length) clearSettings?.(unset);
         },
       },
     });
