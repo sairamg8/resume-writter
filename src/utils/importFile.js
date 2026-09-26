@@ -149,7 +149,9 @@ function isTwoColumns(rows, at) {
  * width interleaves the columns line by line. So: find a gutter, an x band at least GUTTER wide that
  * no item crosses (a line that does, such as a full-width header or footer, is read across the page
  * as before); each run of rows between such lines that really is two columns (isTwoColumns) is read
- * column by column, the left one first, as a page is read. A page with no gutter is one block.
+ * column by column, the left one first, as a page is read. Each side is split the same way in turn,
+ * so a page in three or more columns is read a column at a time, left to right (R2-148-b); every
+ * block inside a side is a column's. A page with no gutter is one block.
  */
 export function pdfPageBlocks(items) {
   const one = [{ items, column: false }];
@@ -178,7 +180,10 @@ export function pdfPageBlocks(items) {
       if (whole.length) blocks.push({ items: whole, column: false });
       whole = [];
       const its = run.flatMap((r) => r.items);
-      blocks.push({ items: its.filter((it) => it.x < at), column: true }, { items: its.filter((it) => it.x >= at), column: true });
+      // Either side may be columns of its own (a third column beside the second): split it again.
+      // Each call has fewer items than the last, both sides holding lines, so this ends.
+      const side = (part) => pdfPageBlocks(part).map((b) => ({ items: b.items, column: true }));
+      blocks.push(...side(its.filter((it) => it.x < at)), ...side(its.filter((it) => it.x >= at)));
     } else whole.push(...run.flatMap((r) => r.items));
     run = [];
   };
@@ -271,8 +276,8 @@ function withoutPageFurniture(items, index) {
  * The lines of every page as the parser takes them: a line the PDF wrapped joined back to the one
  * it continues (a list item's next line starts under its text; a paragraph's line before it ran to
  * the right margin), a larger gap than a line's as a blank line, a page break as one too. A page in
- * two columns is read a column at a time (pdfPageBlocks), each to its own right margin, with a blank
- * line after each. A page's running header and page number (isPageFurniture) are left out. A line
+ * two or more columns is read a column at a time (pdfPageBlocks), each to its own right margin, with a
+ * blank line after each. A page's running header and page number (isPageFurniture) are left out. A line
  * that is one field alone at a block's right margin carries hint 'end' (a location under a date).
  */
 export function pdfLinesOfPages(pages) {

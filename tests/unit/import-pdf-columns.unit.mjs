@@ -114,3 +114,40 @@ test('the name and the job title on one line in two sizes (Compact\'s Inline lay
   // A word gap in one size stays a space.
   assert.deepEqual(pdfPageLines([item('Senior', 40, 700, 38), item('Data', 81, 700, 26)]).map((l) => l.text), ['Senior Data']);
 });
+
+// R2-148-b: a page in three columns. Only one gutter was split, so two of the three columns came back
+// as one block, interleaved line by line. Now each side is split again: left to right, one at a time.
+// Three columns at x 40, 220 and 400; no baseline of one is on a baseline of another.
+const COL_A = [
+  item('Robin Vale', 40, 800, 110, 18), item('Product Designer', 40, 780, 90),
+  item('CONTACT', 40, 750, 45), item('robin@example.org', 40, 735, 95), item('+1 555 0100', 40, 720, 60),
+];
+const COL_B = [
+  item('SKILLS', 220, 795, 35), item('Figma', 220, 775, 30), item('Sketch', 220, 760, 35), item('Prototyping, Motion', 220, 745, 90),
+];
+const COL_C = [
+  item('LANGUAGES', 400, 790, 55), item('English: Native', 400, 770, 80), item('Spanish: Fluent', 400, 755, 75), item('German: Basic', 400, 740, 70),
+];
+const THREE = [
+  'Robin Vale', 'Product Designer', 'CONTACT', 'robin@example.org', '+1 555 0100',
+  'SKILLS', 'Figma', 'Sketch', 'Prototyping, Motion',
+  'LANGUAGES', 'English: Native', 'Spanish: Fluent', 'German: Basic',
+];
+
+describe('a three-column PDF page reads a column at a time, left to right', () => {
+  test('the first gutter found between the left columns: the right two are split again', () => {
+    assert.deepEqual(texts([[...COL_A, ...COL_B, ...COL_C]]), THREE,
+      'before: the left column, then "SKILLS", "LANGUAGES", "Figma", "English: Native", … the other two interleaved');
+  });
+
+  test('the first gutter found between the right columns: the left two are split again', () => {
+    assert.deepEqual(texts([[...COL_C, ...COL_B, ...COL_A]]), THREE,
+      'before: "Robin Vale", "SKILLS", "Product Designer", "Figma", … the left two interleaved, then the right column');
+  });
+
+  test('read into a résumé: the contacts, then the skills and the languages as sections of their own', () => {
+    const r = resumeFromText(pdfLinesOfPages([[...COL_A, ...COL_B, ...COL_C]]));
+    assert.deepEqual([r.personal.name, r.personal.title, r.personal.email, r.personal.phone], ['Robin Vale', 'Product Designer', 'robin@example.org', '+1 555 0100']);
+    assert.deepEqual(r.sections.map((s) => s.type), ['skills', 'languages']);
+  });
+});
