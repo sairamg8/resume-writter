@@ -34,6 +34,10 @@ export default function RichTextEditor({ label, ariaLabel, value, onChange, plac
     if (!el || document.activeElement === el) return;
     const clean = sanitizeRichText(value || '');
     if (el.innerHTML !== clean) el.innerHTML = clean;
+    // A value stored with a picture's data in it (before R4-ED-02, a pasted screenshot's megabytes
+    // of base64) is stored again without it, so it stops filling the browser's storage and the cloud
+    // copy. Only then: showing a value otherwise writes nothing.
+    if (DATA_URL.test(value || '')) onChange(clean);
   }, [value]);
 
   // What the editor holds, with any picture dropped first (dropMedia): the stored value never keeps
@@ -108,6 +112,7 @@ export default function RichTextEditor({ label, ariaLabel, value, onChange, plac
   // <img src="data:…"> of 1–5 MB in the field, which never prints and filled the browser's storage
   // and the cloud copy's 1 MB (R4-ED-02). The editor has no pictures, so that inserts nothing.
   function onPaste(e) {
+    if (!e.clipboardData) return; // a browser with no clipboard data to read pastes as it always did
     e.preventDefault();
     insertClean(e.clipboardData);
   }
@@ -260,6 +265,8 @@ export function statementRange(el) {
 
 /** Elements a browser can paste or drop into a contentEditable that the editor cannot print. */
 const MEDIA = new Set(['IMG', 'PICTURE', 'VIDEO', 'AUDIO', 'SVG', 'CANVAS', 'IFRAME', 'OBJECT', 'EMBED']);
+/** A data: URL's base64 payload, as a browser's own paste of a picture stores it. */
+const DATA_URL = /\bdata:[^\s"'>,;]*;base64,/i;
 
 /** Remove every picture and other media element under `node`, in place (R4-ED-02). */
 function dropMedia(node) {

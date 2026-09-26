@@ -3,7 +3,8 @@
 // <img src="data:image/png;base64,…"> into the field. The input that followed stored innerHTML as it
 // was, so the description held 1–5 MB of base64 that never prints: 'browser storage is full', and the
 // résumé's cloud copy went over Firestore's 1 MB. Now a paste or a drop with no text inserts nothing,
-// and what the editor stores never keeps a picture, whichever way one got in.
+// what the editor stores never keeps a picture, whichever way one got in, and a field already stored
+// with a picture's base64 in it is stored again without it when it is shown.
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { setup, teardown, loadModule } from './harness.mjs';
@@ -21,10 +22,10 @@ const imageOnly = () => ({
   items: [{ kind: 'file', type: 'image/png' }],
 });
 
-async function editor() {
+async function editor(value = '<p>Led the team</p>') {
   const { default: RichTextEditor } = await loadModule('/src/components/RichTextEditor.jsx');
   const stored = [];
-  const view = mount(RichTextEditor, { label: 'Description', value: '<p>Led the team</p>', onChange: (v) => stored.push(v) });
+  const view = mount(RichTextEditor, { label: 'Description', value, onChange: (v) => stored.push(v) });
   const box = [...elements(view.container)].find((el) => el.getAttribute('role') === 'textbox');
   const fire = (name, event) => view.act(() => reactProps(box)[name](event));
   return { view, box, stored, fire };
@@ -59,5 +60,16 @@ describe('an image pasted or dropped into a rich-text field is never stored (R4-
       assert.equal(stored[0], '<p>Led the team</p><ul><li>Shipped it</li></ul>');
       assert.doesNotMatch(box.innerHTML, /<img/i, 'the field no longer shows it either');
     } finally { await view.unmount(); }
+  });
+
+  it('a field stored with a pasted picture\'s base64 is stored again without it; one without writes nothing', async () => {
+    const withBlob = await editor(`<p>Led the team<img src="${PNG}"></p>`);
+    try {
+      assert.deepEqual(withBlob.stored, ['<p>Led the team</p>']);
+    } finally { await withBlob.view.unmount(); }
+    const plain = await editor('<p>Led the team</p><img src="x">');
+    try {
+      assert.deepEqual(plain.stored, [], 'showing a value with no picture data writes nothing');
+    } finally { await plain.view.unmount(); }
   });
 });
