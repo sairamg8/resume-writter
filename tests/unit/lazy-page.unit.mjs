@@ -40,12 +40,12 @@ test("a page's file gone after a deploy: the tab reloads once, and the route wai
   const p = loadPage(gone, 'Editor', e);
   assert.equal(await settled(p), 'pending', 'no error shown while the page reloads');
   assert.equal(e.reloads, 1);
-  assert.equal(e.map.get(RELOADED_KEY), 'Editor', 'the mark names the page that reloaded (R4-APP-05)');
+  assert.deepEqual(JSON.parse(e.map.get(RELOADED_KEY)), ['Editor'], 'the mark names the page that reloaded (R4-APP-05)');
 });
 
 test('a second failure in a row shows the error: no reload loop', async () => {
   const e = env();
-  e.map.set(RELOADED_KEY, '1');
+  e.map.set(RELOADED_KEY, JSON.stringify(['Editor'])); // the reload this page made (R4-APP-05: each page its own)
   await assert.rejects(loadPage(gone, 'Editor', e), /Failed to fetch dynamically imported module/);
   assert.equal(e.reloads, 0);
 });
@@ -54,6 +54,7 @@ test('offline, or with no session storage, it fails as before: a reload would lo
   const off = env({ online: false });
   await assert.rejects(loadPage(gone, 'Editor', off), /Failed to fetch/);
   assert.equal(off.reloads, 0);
+  assert.equal(off.map.has(RELOADED_KEY), false, 'offline marks nothing: back online, a stale file still reloads once');
   const none = env({ storage: null });
   await assert.rejects(loadPage(gone, 'Editor', none), /Failed to fetch/);
   assert.equal(none.reloads, 0);
@@ -77,12 +78,22 @@ test("a page that keeps failing under a shell that loads: one reload, then the e
   assert.equal(e.reloads, 1);
   // After the reload: the shell loads again, then the page fails again — the error shows.
   await loadPage(shell, 'WorkspaceRoute', e);
-  assert.equal(e.map.get(RELOADED_KEY), 'Board', "the shell's load cleared the page's mark");
+  assert.deepEqual(JSON.parse(e.map.get(RELOADED_KEY)), ['Board'], "the shell's load cleared the page's mark");
   await assert.rejects(loadPage(failing, 'Board', e), /Unexpected token/);
   assert.equal(e.reloads, 1, 'the tab reloaded again: a loop');
   // Once the page itself loads, its mark goes, so a later deploy may reload again.
   await loadPage(async () => ({ Board: () => null }), 'Board', e);
   assert.equal(e.map.has(RELOADED_KEY), false);
+});
+
+test("one page's reload never blocks another's: each page reloads the tab at most once a session", async () => {
+  const e = env();
+  e.map.set(RELOADED_KEY, JSON.stringify(['Board'])); // a page that failed on every load, earlier
+  assert.equal(await settled(loadPage(gone, 'Editor', e)), 'pending', "the board's mark kept a deploy's stale editor from reloading");
+  assert.equal(e.reloads, 1);
+  assert.deepEqual(JSON.parse(e.map.get(RELOADED_KEY)), ['Board', 'Editor']);
+  await loadPage(async () => ({ Editor: () => null }), 'Editor', e);
+  assert.deepEqual(JSON.parse(e.map.get(RELOADED_KEY)), ['Board'], 'a load clears only its own page');
 });
 
 test('AppRoutes loads its lazy pages through loadPage', async () => {
