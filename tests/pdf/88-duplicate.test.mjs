@@ -1,7 +1,8 @@
 // There was no way to duplicate an entry or a section (R2-151). An entry's card now has a
 // Duplicate button and a section's ⋯ menu a "Duplicate section": the copy lands right after the
 // original, with the same content and fresh unique ids (the section's and every entry's), so
-// editing or deleting the copy never touches the original.
+// editing or deleting the copy never touches the original. Language and Interest rows are one line
+// each, with no card header, and had no Duplicate button: each row now has its own.
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { setup, teardown, resume, section, loadModule } from './harness.mjs';
@@ -81,5 +82,39 @@ describe('duplicate an entry or a section (R2-151)', () => {
       view.act(() => reactProps(menuItem).onClick());
       assert.deepEqual(calls, [['item', r.sections[0].id, r.sections[0].items[1].id], ['section', r.sections[0].id]]);
     } finally { await view.unmount(); }
+  });
+
+  it('a Language or Interest row offers it too, one button per row', async () => {
+    const { SortableSection } = await loadModule('/src/components/SectionEditor.jsx');
+    const r = resume({ sections: [
+      section('languages', [{ language: 'French', proficiency: 'Fluent' }, { language: 'Welsh' }]),
+      section('interests', [{ interests: 'Sailing' }, { interests: 'Knots' }]),
+    ] });
+    const noop = () => {};
+    for (const sec of r.sections) {
+      const calls = [];
+      const view = mount(SortableSection, {
+        section: sec, template: r.template, settings: r.settings, updateSection: noop, updateSectionSettings: noop,
+        removeSection: noop, addItem: noop, updateItem: noop, removeItem: noop, reorderItems: noop,
+        duplicateSection: noop, duplicateItem: (...a) => calls.push(a),
+      });
+      try {
+        const dup = [...elements(view.container)]
+          .filter((el) => el.tagName === 'BUTTON' && reactProps(el)['aria-label'] === 'Duplicate entry');
+        assert.equal(dup.length, 2, `${sec.type}: one per row`);
+        view.act(() => reactProps(dup[1]).onClick({ stopPropagation() {} }));
+        assert.deepEqual(calls, [[sec.id, sec.items[1].id]], `${sec.type}: duplicates that row`);
+      } finally { await view.unmount(); }
+    }
+  });
+
+  it('a Language row copies like any entry', async () => {
+    const r = resume({ sections: [section('languages', [{ language: 'French', proficiency: 'Fluent' }])] });
+    const { box, duplicateItem } = await actionsOn(r);
+    const [langs] = r.sections;
+    duplicateItem(langs.id, langs.items[0].id);
+    const items = box.r.sections[0].items;
+    assert.deepEqual(items.map((i) => [i.language, i.proficiency]), [['French', 'Fluent'], ['French', 'Fluent']]);
+    assert.notEqual(items[1].id, items[0].id);
   });
 });

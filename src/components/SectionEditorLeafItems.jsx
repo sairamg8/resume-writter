@@ -1,4 +1,4 @@
-import { Eye, EyeOff, Trash2 } from 'lucide-react';
+import { Copy, Eye, EyeOff, Trash2 } from 'lucide-react';
 import RichTextEditor from '@/components/RichTextEditor';
 import { newId } from '@/utils/ids';
 import { InputField, MonthPicker, FieldRow, ItemCard } from '@/components/SectionEditorShared';
@@ -23,7 +23,20 @@ export function SkillItem({ item, onUpdate, onRemove, onDuplicate }) {
   );
 }
 
-export function LanguageItem({ item, onUpdate, onRemove }) {
+/**
+ * The Duplicate button of a one-line row (a language, an interest), which has no card header to
+ * hold ItemCard's: the same button, beside the row's own show/hide and delete (R2-151).
+ */
+function RowDuplicate({ onDuplicate }) {
+  if (!onDuplicate) return null;
+  return (
+    <button onClick={onDuplicate} title="Duplicate entry" aria-label="Duplicate entry" className="p-1.5 text-gray-400 hover:text-blue-600 shrink-0">
+      <Copy size={13} />
+    </button>
+  );
+}
+
+export function LanguageItem({ item, onUpdate, onRemove, onDuplicate }) {
   const visible = item.visible !== false;
   return (
     <div className={`flex gap-2 items-center ${visible ? '' : 'opacity-50'}`}>
@@ -54,6 +67,7 @@ export function LanguageItem({ item, onUpdate, onRemove }) {
       >
         {visible ? <Eye size={13} /> : <EyeOff size={13} />}
       </button>
+      <RowDuplicate onDuplicate={onDuplicate} />
       <button onClick={onRemove} className="p-1.5 text-gray-400 hover:text-red-500 shrink-0">
         <Trash2 size={13} />
       </button>
@@ -111,7 +125,7 @@ export function ReferenceItem({ item, onUpdate, onRemove, onDuplicate }) {
   );
 }
 
-export function InterestItem({ item, onUpdate, onRemove }) {
+export function InterestItem({ item, onUpdate, onRemove, onDuplicate }) {
   const visible = item.visible !== false;
   return (
     <div className={`flex gap-2 items-center ${visible ? '' : 'opacity-50'}`}>
@@ -130,6 +144,7 @@ export function InterestItem({ item, onUpdate, onRemove }) {
       >
         {visible ? <Eye size={13} /> : <EyeOff size={13} />}
       </button>
+      <RowDuplicate onDuplicate={onDuplicate} />
       <button onClick={onRemove} className="p-1.5 text-gray-400 hover:text-red-500 shrink-0">
         <Trash2 size={13} />
       </button>
