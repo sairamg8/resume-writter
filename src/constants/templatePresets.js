@@ -111,6 +111,15 @@ export function presetOf(settings, template) {
  */
 export const designStyle = (template, settings) => ({ ...templateStyleDefaults(template), ...presetOf(settings, template)?.settings });
 
+/**
+ * `settings` with a template's or design's `style` over them. A style that brings a font (Academic's
+ * serif, a design's face) prints it: a custom Google font the résumé held gives way, as a font button
+ * clears it (R4-DSN-02) — the PDF prefers `customFont` over `font`. A saved design brings its own.
+ */
+export const withStyle = (settings, style) => ({
+  ...settings, ...('font' in style && !('customFont' in style) ? { customFont: '' } : {}), ...style,
+});
+
 /** A design's settings as the résumé stores them once it is picked: its own, and its id. */
 export const presetSettings = (id) => (Object.hasOwn(TEMPLATE_PRESETS, id) ? { ...TEMPLATE_PRESETS[id].settings, templatePreset: id } : {});
 
