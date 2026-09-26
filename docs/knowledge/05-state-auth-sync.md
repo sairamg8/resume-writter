@@ -233,7 +233,9 @@ deletion list, the ids its batch removed or flagged and the cloud's flagged orig
 merged list holds — to `unpublishDeleted`, which reads
 `users/{uid}/shares` once and takes down each listed résumé's copy — not waited for, a failure only
 logged (`tests/pdf/18-cloud-sync-public-links.test.mjs`). `firestore.rules` lets **anyone get** a `public/{shareId}` document
-(never list the collection) and only the account named its `owner` create, update or delete it —
+(never list the collection) and only the account named its `owner` create, update or delete it, a
+write carrying only `{ owner, resume, publishedAt }` with the copy's template, settings, personal,
+sections and data version, each of its type (`isPublishedCopy`, R2-148-d) —
 the only world-readable documents. The copy is not live: the panel says when the résumé changed since
 and offers "Update the public copy". The link `#/r/<shareId>` is served by this same app
 (`src/pages/PublicResume.jsx`): the editor's PDF preview of the copy and a Download PDF button; a

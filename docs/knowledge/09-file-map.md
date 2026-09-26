@@ -94,7 +94,7 @@ resume-writter/
 | `vite.config.js` | React, Tailwind, `@` alias, named vendor chunks (`codeSplitting.groups`), owner-résumé plugin |
 | `vite-plugin-owner-resume.js` | `virtual:owner-resume`: `private/sairam-resume.json` on the dev server, `null` in every build |
 | `jsconfig.json` | editor path alias |
-| `firestore.rules` | owner-only user subtree; `public/{shareId}` readable by id, written by its owner (public links) |
+| `firestore.rules` | owner-only user subtree; `public/{shareId}` readable by id, written by its owner with only the fields `publicLink.js` writes (public links) |
 | `playwright.config.js` | serves a built `./dist` (`PW_DIST`) on port 4173 (`PW_PORT`) for `tests/playwright/` |
 | `cypress.config.js` | the e2e build on 4173; tasks that read downloaded PDFs and .docx files |
 | `.github/workflows/ci.yml` | the CI gate and its dispatch inputs (08-testing.md) |

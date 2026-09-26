@@ -11,7 +11,8 @@
 // cannot reach the server, while getDocsFromServer/getDocFromServer fail. Set `cloud.auth` to the
 // signed-in uid (null: nobody) and the security rules apply: another account's documents are
 // permission-denied, as firestore.rules has it, and a published résumé (`public/{id}`) is read by
-// anyone but written only by its owner. `cloud.refuse` refuses chosen batches, as the
+// anyone but written only by its owner, with the fields publicLink.js writes and no other
+// (isPublishedCopy, R2-148-d). `cloud.refuse` refuses chosen batches, as the
 // server refuses one writing a document over 1 MiB. As the SDK, set() throws on a value holding
 // `undefined` (invalid-argument).
 
@@ -69,13 +70,21 @@ export function fakeFirestore(docs = {}) {
   // A published résumé (`public/{id}`, firestore.rules): anyone gets one by its id, nobody lists
   // them, and only the account named its `owner` writes one — the owner it has, and it keeps.
   const isPublic = (path) => /^public\/[^/]+$/.test(path);
+  // firestore.rules' isPublishedCopy: `{ owner, resume, publishedAt }` and nothing else, the copy
+  // publicSnapshot's template, settings, personal, sections and data version, each of its type.
+  const isMap = (v) => Boolean(v) && typeof v === 'object' && !Array.isArray(v);
+  const keysOf = (v, only, all = only) => isMap(v) && Object.keys(v).every((k) => only.includes(k)) && all.every((k) => k in v);
+  const publishedCopy = (d) => keysOf(d, ['owner', 'resume', 'publishedAt']) && typeof d.publishedAt === 'number'
+    && keysOf(d.resume, ['template', 'settings', 'personal', 'sections', 'dataVersion'], ['template', 'settings', 'personal', 'sections'])
+    && typeof d.resume.template === 'string' && isMap(d.resume.settings) && isMap(d.resume.personal)
+    && Array.isArray(d.resume.sections) && ['undefined', 'number'].includes(typeof d.resume.dataVersion);
   const allowed = (path) => api.auth === undefined || own(path) || isPublic(path);
   const writable = ([op, path, value]) => {
     if (api.auth === undefined) return true;
     if (!isPublic(path)) return own(path);
     const current = data.get(path);
     if (!api.auth || (current && current.owner !== api.auth)) return false;
-    return op === 'delete' ? Boolean(current) : value?.owner === api.auth;
+    return op === 'delete' ? Boolean(current) : value?.owner === api.auth && publishedCopy(value);
   };
   async function read(path, get, { server = false } = {}) {
     reads.push(path);

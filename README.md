@@ -95,9 +95,26 @@ service cloud.firestore {
     // A résumé its owner published (Share a public link, src/utils/publicLink.js): anyone with the
     // link reads it — one by its id, never the list — and only the account that owns it writes it.
     match /public/{shareId} {
+      // What publicLink.js writes and nothing else, as the only document anyone can read: its owner
+      // (the account writing it), when it was published, and the copy — publicSnapshot's template,
+      // design, header and sections, and the data version. Any other field is refused.
+      function isPublishedCopy(d) {
+        return d.keys().hasOnly(['owner', 'resume', 'publishedAt'])
+          && d.keys().hasAll(['owner', 'resume', 'publishedAt'])
+          && d.owner == request.auth.uid
+          && d.publishedAt is number
+          && d.resume is map
+          && d.resume.keys().hasOnly(['template', 'settings', 'personal', 'sections', 'dataVersion'])
+          && d.resume.keys().hasAll(['template', 'settings', 'personal', 'sections'])
+          && d.resume.template is string
+          && d.resume.settings is map
+          && d.resume.personal is map
+          && d.resume.sections is list
+          && d.resume.get('dataVersion', 0) is number;
+      }
       allow get: if true;
-      allow create: if request.auth != null && request.resource.data.owner == request.auth.uid;
-      allow update: if request.auth != null && resource.data.owner == request.auth.uid && request.resource.data.owner == request.auth.uid;
+      allow create: if request.auth != null && isPublishedCopy(request.resource.data);
+      allow update: if request.auth != null && resource.data.owner == request.auth.uid && isPublishedCopy(request.resource.data);
       allow delete: if request.auth != null && resource.data.owner == request.auth.uid;
     }
   }
@@ -106,7 +123,11 @@ service cloud.firestore {
 
 The second rule is what makes **Share a public link** work: a signed-in user can publish a read-only
 copy of one résumé at `https://<your site>/#/r/<id>`. Only published copies are readable by anyone;
-everything else stays owner-only. Without Firebase configured the feature is hidden.
+everything else stays owner-only. A published copy may hold only the fields the app writes (its owner,
+when it was published, and the printed résumé: template, settings, header, sections, data version),
+each of its type — any other write to it is refused. Without Firebase configured the feature is hidden.
+If you published the rules before this check was added, paste them again and **Publish**: the older
+rules still work, but they let a signed-in account put any field in its public copy.
 
 4. Click **Publish**
 
