@@ -10,10 +10,14 @@
 //              sprint from when the project used sprints.
 //   R4-BRD-10  the Epic panel's "Create epic" composer shows no Task/Story/Bug picker (it made
 //              epics whatever was picked).
+//   R4-BRD-13  the board's "Complete sprint" opens the backlog with the Complete-sprint dialog up
+//              (?complete=1); closing or completing it drops the param, as does a backlog with no
+//              sprint to complete.
 // Run: node --test tests/pdf/82-backlog-r4.test.mjs
 import { before, after, beforeEach, afterEach, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { createElement as h, Fragment } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { setup, teardown, loadModule } from './harness.mjs';
 
@@ -21,6 +25,7 @@ let dom;
 let harness;
 let store;
 let Backlog;
+let Board;
 let IssueDetails;
 let CreateIssueDialog;
 before(async () => {
@@ -30,6 +35,7 @@ before(async () => {
   harness.patchFakeDom();
   store = await loadModule('/src/hooks/useBoardStore.js');
   ({ Backlog } = await loadModule('/src/pages/Backlog.jsx'));
+  ({ Board } = await loadModule('/src/pages/Board.jsx'));
   ({ IssueDetails } = await loadModule('/src/components/board/IssueDetails.jsx'));
   ({ CreateIssueDialog } = await loadModule('/src/components/board/CreateIssueDialog.jsx'));
 });
@@ -287,5 +293,62 @@ describe('R4-BRD-10: the Epic panel\'s composer', () => {
       page.click(page.button('Create issue', backlog));
       assert.equal(typePickers(backlog).length, 1, 'the backlog\'s composer keeps its type picker');
     } finally { await page.view.unmount(); }
+  });
+});
+
+describe('R4-BRD-13: the board\'s "Complete sprint" opens the dialog', () => {
+  const active = { id: 's1', name: 'Sprint 1', goal: '', startDate: '2026-09-21', endDate: '2026-10-05', state: 'active', completedAt: null };
+  const future = { id: 's2', name: 'Sprint 2', goal: '', startDate: '', endDate: '', state: 'future', completedAt: null };
+  const issues = [issue('i1', 1, 'Fix the tap', 'c1', { sprintId: 's1' }), issue('i2', 2, 'Paint the fence', 'c3', { sprintId: 's1', resolvedAt: 1 })];
+  const scrum = (extra = {}) => project({ mode: 'scrum', sprints: [active, future], issues, ...extra });
+
+  it('the board\'s button links to the backlog with ?complete=1', () => {
+    open([scrum()]);
+    const html = renderToStaticMarkup(h(MemoryRouter, { initialEntries: ['/boards/p1'] }, h(Routes, null, h(Route, { path: '/boards/:id', element: h(Board) }))));
+    const link = /<a[^>]*href="([^"]*)"[^>]*>(?:(?!<\/a>).)*Complete sprint/s.exec(html);
+    assert.ok(link, 'the board shows "Complete sprint"');
+    assert.equal(link[1], '/boards/p1/backlog?complete=1');
+  });
+
+  it('the backlog opens with the dialog for the active sprint; Cancel closes it and drops the param', async () => {
+    open([scrum()]);
+    const page = mountBacklog('/boards/p1/backlog?complete=1');
+    try {
+      assert.ok(page.dialog(), 'the Complete-sprint dialog is open');
+      assert.match(page.dialog().textContent, /Complete Sprint 1/);
+      assert.match(page.dialog().textContent, /1 completed issue and 1 open issue/);
+      page.click(page.button('Cancel', page.dialog()));
+      await tick(); await tick();
+      assert.ok(!page.dialog(), 'the dialog closed');
+      assert.equal(address, '', 'the param is dropped');
+      assert.equal(boardNow().sprints[0].state, 'active', 'nothing completed');
+    } finally { await page.view.unmount(); }
+  });
+
+  it('completing from it closes the sprint and drops the param', async () => {
+    open([scrum()]);
+    const page = mountBacklog('/boards/p1/backlog?complete=1');
+    try {
+      assert.ok(page.dialog(), 'the Complete-sprint dialog is open');
+      page.click(page.button('Complete sprint', page.dialog()));
+      await tick(); await tick();
+      assert.equal(boardNow().sprints.find((s) => s.id === 's1').state, 'closed');
+      assert.ok(!page.dialog(), 'the dialog closed');
+      assert.equal(address, '');
+    } finally { await page.view.unmount(); }
+  });
+
+  it('with no active sprint (or on a Kanban project) it is just the backlog, and the param is dropped', async () => {
+    for (const [name, board] of [['no active sprint', scrum({ sprints: [future], issues: [] })], ['Kanban', scrum({ mode: 'kanban' })]]) {
+      store._resetBoardStoreForTest();
+      open([board]);
+      const page = mountBacklog('/boards/p1/backlog?complete=1');
+      try {
+        assert.ok(!page.dialog(), `${name}: no dialog`);
+        assert.ok(page.section('backlog'), `${name}: the backlog`);
+        await tick(); await tick();
+        assert.equal(address, '', `${name}: the param is dropped`);
+      } finally { await page.view.unmount(); }
+    }
   });
 });

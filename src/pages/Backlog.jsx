@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { ChevronDown, Layers, MoreHorizontal } from 'lucide-react';
 import { DndContext, MouseSensor, TouchSensor, useDroppable, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { useBoardStore } from '@/hooks/useBoardStore';
-import { Button, EmptyState, IconButton, InlineEdit, Menu, cx, useConfirmOptional, useToast } from '@/components/ui';
+import { Button, EmptyState, IconButton, InlineEdit, Menu, cx, useConfirmOptional, useToast, useUrlState } from '@/components/ui';
 import { BoardStorageNotice } from '@/components/board/BoardStorageNotice';
 import { BoardToolbar, EMPTY_FILTERS } from '@/components/board/BoardToolbar';
 import { ProjectHeader } from '@/components/board/ProjectTabs';
@@ -41,6 +41,14 @@ export function Backlog() {
   const [folded, setFolded] = useState(() => new Set());
   const [starting, setStarting] = useState(null);
   const [completing, setCompleting] = useState(false);
+  // The board's "Complete sprint" links here with ?complete=1, which opens the dialog for the
+  // active sprint (R4-BRD-13). With no sprint to complete, the page drops it from the address.
+  const [completeParam, setCompleteParam] = useUrlState('complete');
+  const canComplete = Boolean(board && board.mode === 'scrum' && activeSprint(board));
+  useEffect(() => {
+    if (completeParam && board && !canComplete) setCompleteParam(null);
+  }, [completeParam, board, canComplete, setCompleteParam]);
+  const stopCompleting = () => { setCompleting(false); setCompleteParam(null); };
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } }),
@@ -82,7 +90,7 @@ export function Backlog() {
     if (ok) { store.deleteSprint(board.id, sprint.id); toast({ title: `${sprint.name} deleted` }); }
   }
 
-  const completingSection = completing && active ? all.find((s) => s.id === active.id) : null;
+  const completingSection = (completing || completeParam) && active ? all.find((s) => s.id === active.id) : null;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -193,8 +201,8 @@ export function Backlog() {
         sprint={completingSection?.sprint}
         stats={completingSection?.stats}
         futures={futures}
-        onClose={() => setCompleting(false)}
-        onComplete={(moveOpenTo) => { store.completeSprint(board.id, active.id, { moveOpenTo }); setCompleting(false); toast({ tone: 'success', title: `${active.name} completed` }); }}
+        onClose={stopCompleting}
+        onComplete={(moveOpenTo) => { store.completeSprint(board.id, active.id, { moveOpenTo }); stopCompleting(); toast({ tone: 'success', title: `${active.name} completed` }); }}
       />
       <IssueHost route={route} />
     </div>

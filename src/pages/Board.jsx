@@ -199,7 +199,7 @@ export function Board() {
         board={board}
         actions={(
           <>
-            {sprint && <Button to={`/boards/${encodeURIComponent(board.id)}/backlog`} size="md">Complete sprint</Button>}
+            {sprint && <Button to={`/boards/${encodeURIComponent(board.id)}/backlog?complete=1`} size="md">Complete sprint</Button>}
             <Menu
               label="Board actions"
               items={[
