@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, FileText } from 'lucide-react';
 import { Chip } from '@/components/ui/Chip';
@@ -30,9 +30,17 @@ export function NewResume({ store }) {
 
   // The new résumé replaces /new in the history: Back from the editor goes to the dashboard.
   const open = (id) => navigate(`/resume/${id}`, { replace: true });
-  const start = (card) => open(source
+  // One résumé per visit: the editor opens as a transition, so this page stays clickable while its code
+  // loads — a second click (or a double-click) made a second résumé.
+  const made = useRef(false);
+  const once = (make) => {
+    if (made.current) return;
+    made.current = true;
+    open(make());
+  };
+  const start = (card) => once(() => (source
     ? store.createResume(NEW_RESUME_NAME, null, cardLook(card), source.id)
-    : store.createResume(NEW_RESUME_NAME, null, cardLook(card)));
+    : store.createResume(NEW_RESUME_NAME, null, cardLook(card))));
 
   return (
     <div className="min-h-screen bg-[#f5f3ef]" data-testid="new-resume-page">
@@ -110,8 +118,8 @@ export function NewResume({ store }) {
             inline
             isOpen
             onClose={goBack}
-            onSelectStarter={(starterId, look) => open(look ? store.createResume(NEW_RESUME_NAME, starterId, look) : store.createResume(NEW_RESUME_NAME, starterId))}
-            onSelectBlank={(look) => open(look ? store.createResume(NEW_RESUME_NAME, null, look) : store.createResume())}
+            onSelectStarter={(starterId, look) => once(() => (look ? store.createResume(NEW_RESUME_NAME, starterId, look) : store.createResume(NEW_RESUME_NAME, starterId)))}
+            onSelectBlank={(look) => once(() => (look ? store.createResume(NEW_RESUME_NAME, null, look) : store.createResume()))}
           />
         </div>
       </div>

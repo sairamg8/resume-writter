@@ -279,6 +279,31 @@ describe('the dashboard: new résumés (R2-167)', () => {
     } finally { await page.close(); }
   });
 
+  // The editor opens as a transition (its code loads with its route), so the page stays clickable meanwhile:
+  // a second click on a look, or on Blank, made a second résumé.
+  it('New Resume → a look clicked twice, or Blank clicked twice, before the editor opens: one résumé', async () => {
+    const list = samples();
+    const page = await dashboard(list);
+    const twice = (el) => page.view.act(() => {
+      const e = { preventDefault() {}, stopPropagation() {}, target: el, currentTarget: el };
+      reactProps(el).onClick(e);
+      reactProps(el).onClick(e);
+    });
+    try {
+      page.click(page.button('New Resume'));
+      twice(page.all().find((el) => el.getAttribute('data-testid') === 'new-template-modern'));
+      await settle();
+      assert.equal(page.resumes().length, 4, 'one copy, not two');
+    } finally { await page.close(); }
+    const empty = await dashboard();
+    try {
+      empty.click(empty.button('Create Resume'));
+      twice(empty.buttonWith('Start from Scratch (Blank)'));
+      await settle();
+      assert.equal(empty.resumes().length, 1, 'one blank résumé, not two');
+    } finally { await empty.close(); }
+  });
+
   it('New Resume → "Your details from" another résumé → a design: that résumé\'s details on the design', async () => {
     const list = samples();
     const page = await dashboard(list);
