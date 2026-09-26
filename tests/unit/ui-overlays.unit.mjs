@@ -349,6 +349,61 @@ describe('toasts', () => {
   });
 });
 
+/**
+ * Runs `fn` with focus() refused, as browsers refuse it, on an element that is visibility: hidden
+ * (its own inline style or an ancestor's): fake-dom has no CSS, so without this the kit's focus on
+ * open passed here and failed in every browser.
+ */
+async function withBrowserFocusRules(view, fn) {
+  const proto = Object.getPrototypeOf(view.document.body);
+  const focus = proto.focus;
+  proto.focus = function focusIfShown(...args) {
+    for (let n = this; n && n.nodeType === 1; n = n.parentNode) if (n.style?.visibility === 'hidden') return;
+    focus.apply(this, args);
+  };
+  try { await fn(); } finally { proto.focus = focus; }
+}
+
+// R4-APP-01: a panel's position is measured in a layout effect and rendered after it; until then
+// useFloating styled it visibility: hidden. Popover and MenuList move focus into it in that same
+// commit, so browsers refused it: a label picker's search box took no typing, a menu's arrows did
+// nothing, and Escape went to the dialog around them (closing the issue view).
+describe('R4-APP-01: focus goes into a popover or menu when it opens', () => {
+  it('a Popover’s data-autofocus search box has focus', async () => {
+    function Page({ open }) {
+      return h(ui.Popover, { open, onOpenChange: () => {}, label: 'Labels', trigger: h('button', null, 'Labels') },
+        h('input', { 'aria-label': 'Search labels', 'data-autofocus': true }));
+    }
+    const view = mount(Page, { open: false });
+    try {
+      await withBrowserFocusRules(view, async () => {
+        view.update({ open: true });
+        const search = byAttr(view.document.body, 'aria-label', 'Search labels')[0];
+        assert.ok(search, 'the panel is open');
+        assertSame(view.document.activeElement, search, 'the search box did not get focus');
+      });
+    } finally { await view.unmount(); }
+  });
+
+  it('a Menu opened from its trigger with ArrowDown focuses its first item', async () => {
+    function Page() {
+      return h(ui.Menu, { trigger: h('button', { id: 'more' }, 'More'), items: [{ label: 'Edit' }, { label: 'Delete', danger: true }] });
+    }
+    const view = mount(Page, {});
+    try {
+      await withBrowserFocusRules(view, async () => {
+        const trigger = byAttr(view.container, 'id', 'more')[0];
+        trigger.focus();
+        view.act(() => reactProps(trigger).onKeyDown(ev({ key: 'ArrowDown' })));
+        const first = byText(view.document.body, 'Edit');
+        assert.ok(first, 'the menu is open');
+        const item = first.closest('[role="menuitem"]') ?? first;
+        assertSame(view.document.activeElement, item, 'focus stayed on the trigger');
+      });
+    } finally { await view.unmount(); }
+  });
+});
+
 describe('Popover', () => {
   // An input method's Escape (Chinese, Japanese, Korean) drops the word being composed in a field of the
   // panel — the label search, a name — and leaves the panel open; a plain Escape closes it (B-20c).
