@@ -28,7 +28,7 @@ export { TextArea } from './TextArea.jsx';
 export { TextField } from './TextField.jsx';
 export { Toast, ToastProvider, useToast } from './Toast.jsx';
 export { Tooltip } from './Tooltip.jsx';
-export { cx, mergeRefs, composeHandlers, focusNeighbour, tabbables } from './compose.js';
+export { cx, mergeRefs, composeHandlers, focusNeighbour, isImeKey, tabbables } from './compose.js';
 // The kit's two hooks for pages, re-exported so one import serves a page.
 export { useHotkeys } from '../../hooks/useHotkeys.js';
 export { useUrlState } from '../../hooks/useUrlState.js';

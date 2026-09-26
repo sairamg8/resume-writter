@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FolderPlus } from 'lucide-react';
 import { useBoardStore } from '@/hooks/useBoardStore';
-import { Button, Dialog, EmptyState, Select, TextField, useToast } from '@/components/ui';
+import { Button, Dialog, EmptyState, Select, TextField, isImeKey, useToast } from '@/components/ui';
 import RichTextEditor from '@/components/RichTextEditor';
 import { activeSprint, defaultColumnId, issueKey } from '@/utils/boardModel';
 import { DateInput, EpicPicker, LabelsPicker, PointsInput, PriorityPicker, SprintPicker, TypePicker } from './IssueFields';
@@ -100,7 +100,8 @@ function CreateForm({ board, boards, defaults, onBoardChange, onClose }) {
         error={error || undefined}
         maxLength={255}
         onChange={(e) => { set({ title: e.target.value }); if (error) setError(''); }}
-        onKeyDown={(e) => { if (e.key === 'Enter') submit(e); }}
+        // The Enter that picks an input method's word is not a submit: it created the issue half-typed.
+        onKeyDown={(e) => { if (e.key === 'Enter' && !isImeKey(e)) submit(e); }}
       />
       <div className="flex flex-col gap-1.5">
         <span className="text-[12px] font-semibold text-ink-subtle">Description</span>

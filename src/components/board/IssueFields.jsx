@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { ChevronDown, Plus } from 'lucide-react';
 import { ISSUE_TYPES, LABEL_COLORS, PRIORITIES, RECURRENCES } from '@/constants/boards';
-import { Menu, MultiSelectPopover, cx } from '@/components/ui';
+import { Menu, MultiSelectPopover, cx, isImeKey } from '@/components/ui';
 import { IssueTypeIcon, PriorityIcon } from '@/components/tracker/TrackerIcons';
 import { epicsOf } from '@/utils/boardQuery';
 import { issueKey } from '@/utils/boardModel';
@@ -204,7 +204,8 @@ export function PointsInput({ value, onChange, label = 'Story points', className
       onChange={(e) => setDraft(e.target.value)}
       onBlur={commit}
       onKeyDown={(e) => {
-        if (e.key === 'Enter') { e.preventDefault(); commit(); }
+        // The Enter that picks an input method's word (a full-width digit) is not a save.
+        if (e.key === 'Enter' && !isImeKey(e)) { e.preventDefault(); commit(); }
         if (e.key === 'Escape' && draft !== null) { e.stopPropagation(); setDraft(null); }
       }}
       className={cx(

@@ -1,6 +1,7 @@
 // Small glue the kit's components share: joining class names, and handing one element several
 // refs and handlers — a Menu or Popover clones its trigger (often an IconButton, whose Tooltip clones
 // the same button again), and each layer must add its own without dropping the caller's.
+// And telling an input method's keystrokes from the field's own (isImeKey).
 
 /** Class names joined with spaces; false, null, undefined and '' are left out. */
 export function cx(...parts) {
@@ -59,4 +60,20 @@ export function focusNeighbour(from, backwards = false) {
   const at = items.indexOf(from);
   const target = at < 0 ? null : items[at + (backwards ? -1 : 1)];
   target?.focus?.({ preventScroll: false });
+}
+
+/**
+ * Whether a keydown belongs to an input method (Chinese, Japanese, Korean) rather than to the
+ * field it is typed in. An input method composes a word over several keys: Enter picks the word,
+ * Escape drops the composition, the arrows move through the candidates. A field that reads that
+ * Enter as its own saves, adds or submits the half-typed text before the word is chosen (B-20),
+ * so a key handler starts with `if (isImeKey(event)) return;`.
+ *
+ * Chrome and Firefox flag the keystroke with isComposing. Safari fires the Enter that ends a
+ * composition after compositionend, with isComposing already false, and says so only with
+ * keyCode 229, so both are checked. Takes React's event (the flag is on its nativeEvent) or a
+ * DOM event.
+ */
+export function isImeKey(event) {
+  return Boolean(event?.nativeEvent?.isComposing || event?.isComposing || event?.keyCode === 229);
 }

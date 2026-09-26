@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ChevronDown, Info, MoreHorizontal, Plus } from 'lucide-react';
 import { DndContext, DragOverlay, MeasuringStrategy, MouseSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { useBoardStore } from '@/hooks/useBoardStore';
-import { Button, EmptyState, IconButton, Menu, cx, useConfirmOptional, useToast } from '@/components/ui';
+import { Button, EmptyState, IconButton, Menu, cx, isImeKey, useConfirmOptional, useToast } from '@/components/ui';
 import { useWorkspace } from '@/components/shell';
 import { BoardStorageNotice } from '@/components/board/BoardStorageNotice';
 import { BoardColumn, ColumnDialog, ColumnMenu } from '@/components/board/BoardColumn';
@@ -31,7 +31,11 @@ function AddColumn({ onAdd }) {
       value={text}
       onChange={(e) => setText(e.target.value)}
       onBlur={add}
-      onKeyDown={(e) => { if (e.key === 'Enter') add(); if (e.key === 'Escape') setText(null); }}
+      onKeyDown={(e) => {
+        if (isImeKey(e)) return; // an input method's Enter picks a word; its Escape drops the composition
+        if (e.key === 'Enter') add();
+        if (e.key === 'Escape') setText(null);
+      }}
       placeholder="Column name"
       aria-label="Column name"
       className="h-9 w-[272px] shrink-0 rounded border-2 border-brand bg-white px-2 text-sm text-ink focus:outline-none"

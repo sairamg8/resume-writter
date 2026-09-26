@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef, useState } from 'react';
-import { cx } from './compose.js';
+import { cx, isImeKey } from './compose.js';
 
 /** Box model shared by the text and the field, so switching between them never shifts a pixel. */
 const BOX = '-mx-1.5 w-[calc(100%+0.75rem)] rounded-md border px-1.5 py-0.5';
@@ -62,7 +62,9 @@ export function InlineEdit({
       event.stopPropagation();
       finish(false, { returnFocus: true });
     } else if (event.key === 'Enter' && (!multiline || !event.shiftKey || event.metaKey || event.ctrlKey)) {
-      if (event.nativeEvent?.isComposing) return;
+      // An input method's Enter picks a word, not the edit's end. isComposing alone missed Safari's,
+      // which comes after compositionend flagged only by keyCode 229 (isImeKey checks both).
+      if (isImeKey(event)) return;
       event.preventDefault();
       finish(true, { returnFocus: true });
     }

@@ -1,7 +1,7 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Check, Plus, Search } from 'lucide-react';
 import { Popover } from './Popover.jsx';
-import { cx } from './compose.js';
+import { cx, isImeKey } from './compose.js';
 
 /**
  * A name as it is compared: runs of spaces one, trimmed, case-blind — the way the board store
@@ -83,6 +83,11 @@ function PickerBody({ options, value, onChange, onCreate, title, clearable, sear
   };
 
   const onKeyDown = (event) => {
+    // While an input method composes a label's name, Enter picks the word, the arrows move through
+    // its candidates and Escape drops the composition: they tick, create, move or clear nothing
+    // here. Kept from the popover too (stopPropagation, not preventDefault: the input method still
+    // gets its key), which otherwise closes on that Escape with the half-typed name.
+    if (isImeKey(event)) { event.stopPropagation(); return; }
     if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
       event.preventDefault();
       if (rows.length) setActive((active + (event.key === 'ArrowDown' ? 1 : -1) + rows.length) % rows.length);

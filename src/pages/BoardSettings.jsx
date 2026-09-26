@@ -4,7 +4,7 @@ import { ArrowDown, ArrowUp, Plus, Trash2 } from 'lucide-react';
 import { useBoardStore } from '@/hooks/useBoardStore';
 import { ProjectHeader } from '@/components/board/ProjectTabs';
 import { BoardStorageNotice } from '@/components/board/BoardStorageNotice';
-import { Button, EmptyState, useConfirmOptional, useToast } from '@/components/ui';
+import { Button, EmptyState, isImeKey, useConfirmOptional, useToast } from '@/components/ui';
 import { BOARD_COLORS, BOARD_MODES, COLUMN_CATEGORIES, DEFAULT_HIDE_DONE_DAYS, LABEL_COLORS } from '@/constants/boards';
 import { cleanTitle } from '@/utils/boardModel';
 
@@ -28,6 +28,7 @@ function CommitField({ value, onCommit, multiline = false, ...props }) {
       onChange={(e) => setDraft(e.target.value)}
       onBlur={commit}
       onKeyDown={(e) => {
+        if (isImeKey(e)) return; // an input method's Enter picks a word; its Escape drops the composition
         if (e.key === 'Enter' && !multiline) commit();
         if (e.key === 'Escape') setDraft(null);
       }}
@@ -130,7 +131,7 @@ function AddRow({ label, onAdd, colors }) {
   };
   return (
     <div className="flex flex-wrap items-center gap-2 pt-1">
-      <input aria-label={label} value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') add(); }} placeholder={`${label}…`} className={`${FIELD} flex-1 min-w-[8rem]`} />
+      <input aria-label={label} value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !isImeKey(e)) add(); }} placeholder={`${label}…`} className={`${FIELD} flex-1 min-w-[8rem]`} />
       {colors && (
         <select aria-label="New label colour" value={color} onChange={(e) => setColor(e.target.value)} className={FIELD}>
           {colors.map((c) => <option key={c.color} value={c.color}>{c.name}</option>)}
