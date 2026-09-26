@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { ArrowRight } from 'lucide-react';
 import { Avatar, Button, TabPanel, Tabs, cx, isImeKey, useConfirmOptional, useHotkeys } from '@/components/ui';
 import { describeActivity } from '@/utils/issueHistory';
@@ -121,8 +121,17 @@ function HistoryEntry({ entry }) {
 export function IssueActivity({ issue, onAddComment, onUpdateComment, onDeleteComment }) {
   const [tab, setTab] = useState('comments');
   const [composeKey, setComposeKey] = useState(0);
-  // The issue view is a modal dialog, where the page's shortcuts sleep: `m` is the view's own.
-  useHotkeys({ m: () => setComposeKey((k) => k + 1) }, { allowInDialog: true });
+  const sectionRef = useRef(null);
+  // The issue view is a modal dialog, where the page's shortcuts sleep: `m` is the view's own. It
+  // acts only while the view is the top dialog: under a confirm or the Create dialog opened from
+  // the view, the comment box opened behind them and took the focus out of the one on top.
+  useHotkeys({
+    m: () => {
+      const modals = document.querySelectorAll('[aria-modal="true"]');
+      if (!modals[modals.length - 1]?.contains(sectionRef.current)) return;
+      setComposeKey((k) => k + 1);
+    },
+  }, { allowInDialog: true });
   const comments = [...(issue.comments ?? [])].reverse();
   const history = [...(issue.activity ?? [])].filter((a) => a.kind !== 'comment').reverse();
   const rows = tab === 'history' ? history.map((h) => ({ kind: 'history', at: h.at, h }))
@@ -130,7 +139,7 @@ export function IssueActivity({ issue, onAddComment, onUpdateComment, onDeleteCo
       : [...comments.map((c) => ({ kind: 'comment', at: c.createdAt, c })), ...history.map((h) => ({ kind: 'history', at: h.at, h }))].sort((a, b) => b.at - a.at);
 
   return (
-    <section aria-labelledby="issue-activity-heading" className="flex flex-col gap-3">
+    <section ref={sectionRef} aria-labelledby="issue-activity-heading" className="flex flex-col gap-3">
       <h3 id="issue-activity-heading" className="text-sm font-semibold text-ink">Activity</h3>
       <Tabs
         id="issue-activity"

@@ -7,7 +7,7 @@
 // Run: node --test tests/pdf/82-issue-view-r4-06.test.mjs
 import { it } from 'node:test';
 import assert from 'node:assert/strict';
-import { useIssueViewPage, mountBoard, press } from './issue-view-page.mjs';
+import { useIssueViewPage, mountBoard, press, elements } from './issue-view-page.mjs';
 
 useIssueViewPage();
 
@@ -29,6 +29,30 @@ it('R4-BRD-06: M in the issue view opens the comment box; typed in a field it is
     assert.ok(page.byLabel('Comment'), 'M did not open the comment box');
     assert.equal(page.byLabel('Comment').tagName, 'TEXTAREA');
     assert.equal(pressed.defaultPrevented, true, 'the m is the shortcut\'s, not typed into the box it opens');
+  } finally {
+    await page.view.unmount();
+  }
+});
+
+it('R4-BRD-06: under a dialog stacked on the issue view (Delete\'s question), M leaves the comment box shut', async () => {
+  const page = mountBoard('/boards/p1?issue=HOME-2', { confirms: true });
+  try {
+    await page.settle();
+    page.click(page.byLabel('Issue actions'));
+    page.click(page.item('Delete'));
+    await page.settle();
+    const question = () => page.all().find((el) => el.getAttribute('role') === 'alertdialog');
+    assert.ok(question(), 'Delete asks first, in the kit\'s dialog over the issue view');
+    press(page.view, 'm', page.view.document.body);
+    assert.equal(page.byLabel('Comment'), undefined, 'M opened the comment box behind the question');
+
+    // Answered (and animated out), the issue view is on top again: M is its shortcut once more.
+    page.click([...elements(question())].find((el) => el.tagName === 'BUTTON' && el.textContent.trim() === 'Cancel'));
+    await new Promise((r) => { setTimeout(r, 300); });
+    await page.settle();
+    assert.equal(question(), undefined, 'the question went');
+    press(page.view, 'm', page.view.document.body);
+    assert.ok(page.byLabel('Comment'), 'M did not open the comment box once the question had gone');
   } finally {
     await page.view.unmount();
   }
