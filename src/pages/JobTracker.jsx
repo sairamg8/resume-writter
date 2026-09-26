@@ -208,7 +208,13 @@ export function JobTracker({ store }) {
             {view === 'list' ? (
               <ListView jobs={filteredJobs} resumes={resumes} onNavigate={open} onDelete={confirmDelete} />
             ) : (
-              <KanbanView jobs={filteredJobs} updateJob={updateJob} onNavigate={open} onDelete={confirmDelete} scrollToStatus={filterStatus} />
+              <KanbanView
+                jobs={filteredJobs} updateJob={updateJob} onNavigate={open} onDelete={confirmDelete} scrollToStatus={filterStatus}
+                // A search left from earlier over no jobs at all: clearing it would show nothing more.
+                filtering={filtering && jobs.length > 0}
+                onClearFilters={() => { setSearch(''); setFilterStatus(''); }}
+                onAdd={() => navigate('/jobs/new')}
+              />
             )}
           </div>
         </>

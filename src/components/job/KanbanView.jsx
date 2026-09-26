@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
-import { ArrowRightLeft, CheckSquare, ExternalLink, MapPin, Trash2 } from 'lucide-react';
+import { ArrowRightLeft, Briefcase, CheckSquare, ExternalLink, MapPin, Plus, SearchX, Trash2 } from 'lucide-react';
 import {
   DndContext, DragOverlay, MouseSensor, TouchSensor, useSensor, useSensors,
   useDroppable, useDraggable,
 } from '@dnd-kit/core';
 import { JOB_STATUSES } from '@/constants/jobs';
-import { Avatar, DatePill, IconButton, Menu, cx } from '@/components/ui';
+import { Avatar, Button, DatePill, EmptyState, IconButton, Menu, cx } from '@/components/ui';
 import { hasRichText, richTextToPlain, safeHref } from '@/utils/richText';
 import { JOB_DRAG_INSTRUCTIONS, openOnKey } from '@/utils/cardKeys';
 import { formatShortDay } from '@/utils/uiFormat';
@@ -151,8 +151,11 @@ function KanbanColumn({ status, jobs, onNavigate, onDelete, onMove }) {
  * The job board: a column per status, a card per job — drag a card to another column (a mouse
  * drags on a small move, a finger on a press-and-hold) or use its "Move to" menu; a click or
  * Enter opens the job. `scrollToStatus` brings a filtered status's column into view.
+ * With no card to show, one message replaces the columns — every column saying "Drop a job here"
+ * read as an empty board (R4-DUX-18): `filtering` (a search or status filter matched nothing)
+ * offers `onClearFilters`; otherwise there are no jobs yet, and it offers `onAdd`.
  */
-export function KanbanView({ jobs, updateJob, onNavigate, onDelete, scrollToStatus }) {
+export function KanbanView({ jobs, updateJob, onNavigate, onDelete, scrollToStatus, filtering = false, onClearFilters, onAdd }) {
   const [activeId, setActiveId] = useState(null);
   // A mouse drags on a small move, a finger on a press-and-hold, as on the boards: the pointer sensor
   // on a card without touch-action: none lost every touch drag to the page's scroll (R2-038), and a
@@ -170,6 +173,24 @@ export function KanbanView({ jobs, updateJob, onNavigate, onDelete, scrollToStat
     const el = containerRef.current?.querySelector(`#kanban-col-${scrollToStatus}`);
     el?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
   }, [scrollToStatus]);
+
+  if (jobs.length === 0) {
+    return filtering ? (
+      <EmptyState
+        icon={SearchX}
+        title="No jobs match"
+        description="Nothing matches the search or status filter."
+        action={onClearFilters && <Button onClick={onClearFilters}>Clear filters</Button>}
+      />
+    ) : (
+      <EmptyState
+        icon={Briefcase}
+        title="No jobs yet"
+        description="Add the applications you are tracking; each one shows here as a card in its status column."
+        action={onAdd && <Button variant="primary" leftIcon={Plus} onClick={onAdd}>Add job</Button>}
+      />
+    );
+  }
 
   return (
     <DndContext
