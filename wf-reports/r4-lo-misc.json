@@ -3,42 +3,132 @@
   "branch": "claude/wf-r4-lo-misc",
   "base": "e6edfc4",
   "rows": [
-    { "id": "R4-LO-17", "outcome": "fixed", "commits": ["1593271", "6ed8b10", "05bcd85", "8624425"],
-      "tests": ["tests/pdf/101-r4-lo-17-font-face-retry.test.mjs"],
+    {
+      "id": "R4-LO-17",
+      "outcome": "fixed",
+      "commits": [
+        "1593271",
+        "6ed8b10",
+        "05bcd85",
+        "8624425"
+      ],
+      "tests": [
+        "tests/pdf/101-r4-lo-17-font-face-retry.test.mjs"
+      ],
       "summary": "A font face that failed once (a bold on a CDN hiccup) no longer prints as a donor face for the whole session: prepareFonts fetches it again a minute on (at once if it failed offline, or as soon as the browser is back online) into a copy of its FontSource, waits at most 3 s for it, and puts its own data in right before priming it, so a stalled fetch never holds a build and no build lays out an unprimed face. fontFallback.js says whether a face is borrowing (relayed from the PDF worker), and the preview builds again for it on 'online'.",
-      "remaining": "" },
-    { "id": "R4-LO-18", "outcome": "fixed", "commits": ["c188382"],
-      "tests": ["tests/pdf/101-r4-lo-18-preview-photo-online.test.mjs"],
+      "remaining": ""
+    },
+    {
+      "id": "R4-LO-18",
+      "outcome": "fixed",
+      "commits": [
+        "c188382"
+      ],
+      "tests": [
+        "tests/pdf/101-r4-lo-18-preview-photo-online.test.mjs"
+      ],
       "summary": "Back online, the preview builds again when a photo stored as a URL is waiting for a retry (printableImage's imageRetryPending), so the photo reappears at once rather than on the next edit. A build that needs nothing from the web is still left alone.",
-      "remaining": "" },
-    { "id": "R4-LO-19", "outcome": "fixed", "commits": ["4448031", "941af90", "c7be254"],
-      "tests": ["tests/pdf/101-r4-lo-19-section-border-box.test.mjs", "tests/pdf/10-section-headings.test.mjs", "cypress/e2e/04-design.cy.js"],
+      "remaining": ""
+    },
+    {
+      "id": "R4-LO-19",
+      "outcome": "fixed",
+      "commits": [
+        "4448031",
+        "941af90",
+        "c7be254"
+      ],
+      "tests": [
+        "tests/pdf/101-r4-lo-19-section-border-box.test.mjs",
+        "tests/pdf/10-section-headings.test.mjs",
+        "cypress/e2e/04-design.cy.js"
+      ],
       "summary": "Design → Section Headings' Border thickness box is typed as the other stepper boxes (useTypedNumber): it can be emptied, and 5 typed after 2 is written as 5 on Enter or on leaving the box, clamped to the style's range (Left bar's pt still store 2 less). tests/pdf/10-section-headings pinned the old write-on-every-keystroke: its helper now walks inside a render pass and types by leaving the box (the intended behaviour); cypress 04-design now empties the box and types 5; 04-design-left-bar's min/max asserts still hold (the box keeps type=number, min, max).",
-      "remaining": "" },
-    { "id": "R4-LO-20", "outcome": "fixed", "commits": ["205bc35"],
-      "tests": ["tests/pdf/100-r4-lo-20-only-new-entry-opens.test.mjs", "tests/pdf/99-new-entry-open.test.mjs"],
+      "remaining": ""
+    },
+    {
+      "id": "R4-LO-20",
+      "outcome": "fixed",
+      "commits": [
+        "205bc35"
+      ],
+      "tests": [
+        "tests/pdf/100-r4-lo-20-only-new-entry-opens.test.mjs",
+        "tests/pdf/99-new-entry-open.test.mjs"
+      ],
       "summary": "Only the entry the user just added opens (Add, or the first entry of a section made by Add Section, which now returns its id and passes justAdded); a blank entry left from an earlier visit stays collapsed on load and on re-expand. untouched() counts any stored value but blank text (a number, true, a non-empty list or object) unless it is the new-entry default, so an entry holding only current:true asks before it goes; id, visible and hiddenFields are ignored. Product call: a just-added entry opens once, and comes back collapsed after its section is collapsed and re-expanded.",
-      "remaining": "" },
-    { "id": "R4-LO-21", "outcome": "fixed", "commits": ["ba051b2"],
-      "tests": ["tests/pdf/100-r4-lo-21-dates-kept-as-text.test.mjs"],
+      "remaining": ""
+    },
+    {
+      "id": "R4-LO-21",
+      "outcome": "fixed",
+      "commits": [
+        "ba051b2"
+      ],
+      "tests": [
+        "tests/pdf/100-r4-lo-21-dates-kept-as-text.test.mjs"
+      ],
       "summary": "R4-ED-03's rule is a shared DateField used by every entry date (Experience, Education, Projects, Volunteering Start/End, Certification Issue/Expiry, Award Date, Custom): a date the month picker cannot read ('2019 – 2021') is a text box showing it whole, never cut to one month. Product call: an End Date disabled because the entry is current stays the greyed picker.",
-      "remaining": "" },
-    { "id": "R4-LO-22", "outcome": "fixed", "commits": ["ddc8096", "f8246e1", "51ecdbd", "e428c8c", "8624425"],
-      "tests": ["tests/pdf/100-r4-lo-22-publish-race.test.mjs", "tests/pdf/100-r4-lo-22-unpublish-race.test.mjs", "tests/unit/firestore-rules.unit.mjs"],
+      "remaining": ""
+    },
+    {
+      "id": "R4-LO-22",
+      "outcome": "fixed",
+      "commits": [
+        "ddc8096",
+        "f8246e1",
+        "51ecdbd",
+        "e428c8c",
+        "8624425"
+      ],
+      "tests": [
+        "tests/pdf/100-r4-lo-22-publish-race.test.mjs",
+        "tests/pdf/100-r4-lo-22-unpublish-race.test.mjs",
+        "tests/unit/firestore-rules.unit.mjs"
+      ],
       "summary": "Publish is one runTransaction: two Publishes a moment apart share one link and leave one copy. The review found the take-down side had the same race (Unpublish reading no record, a Publish elsewhere, then its batch deleting the new record and orphaning that copy): takeDown (unpublish, unpublishResume, unpublishDeleted) is now one transaction too, and keeps every link an attempt found across retries. The fake Firestore gained runTransaction (server reads, reads before writes, rules on commit, retry on a changed read). firestore.rules is unchanged, so there is nothing for the owner to publish.",
-      "remaining": "" },
-    { "id": "R4-LO-23", "outcome": "fixed", "commits": ["fdf7393"],
-      "tests": ["tests/pdf/100-r4-lo-23-collection-dot-unreachable.test.mjs", "tests/unit/collection-sync-status.unit.mjs"],
+      "remaining": ""
+    },
+    {
+      "id": "R4-LO-23",
+      "outcome": "fixed",
+      "commits": [
+        "fdf7393"
+      ],
+      "tests": [
+        "tests/pdf/100-r4-lo-23-collection-dot-unreachable.test.mjs",
+        "tests/unit/collection-sync-status.unit.mjs"
+      ],
       "summary": "The workspace top bar's sync icon reads the browser's own online flag (window online/offline events), as the résumés' header icon does, so an 'offline' status from a failure while the browser is online says \"Cannot reach your account — changes saved locally, will retry\", and \"Offline\" only when the browser is offline. tests/unit/collection-sync-status.unit.mjs:141 updated to that intended behaviour (evidence in the commit body). Product call: with the browser offline, any status reads Offline, as in the header icon.",
-      "remaining": "" },
-    { "id": "R4-LO-24", "outcome": "fixed", "commits": ["6f08e68", "6e38264"],
-      "tests": ["tests/unit/r4-lo-24-inline-edit-ime-escape.unit.mjs", "tests/unit/ime-enter-guard.unit.mjs"],
+      "remaining": ""
+    },
+    {
+      "id": "R4-LO-24",
+      "outcome": "fixed",
+      "commits": [
+        "6f08e68",
+        "6e38264"
+      ],
+      "tests": [
+        "tests/unit/r4-lo-24-inline-edit-ime-escape.unit.mjs",
+        "tests/unit/ime-enter-guard.unit.mjs"
+      ],
       "summary": "InlineEdit leaves an input method's Escape (and Enter) to it: the field stays open with its text. The review found seven more text fields with the same bug (the top bar's search, the kit's SearchInput, a résumé's rename in the editor header and on the dashboard card, a job's field and task, an issue's number field); all now check isImeKey, and tests/unit/ime-enter-guard gained an Escape guard over src/ with the handlers on no text field listed.",
-      "remaining": "" },
-    { "id": "R4-LO-25", "outcome": "fixed", "commits": ["dd0ad4e", "c7be254"],
-      "tests": ["tests/unit/r4-lo-25-quick-search-shrunk-list.unit.mjs"],
+      "remaining": ""
+    },
+    {
+      "id": "R4-LO-25",
+      "outcome": "fixed",
+      "commits": [
+        "dd0ad4e",
+        "c7be254"
+      ],
+      "tests": [
+        "tests/unit/r4-lo-25-quick-search-shrunk-list.unit.mjs"
+      ],
       "summary": "The quick search clamps its highlighted row to the list as it is now, so Enter, the arrows and the highlight work after the list shrinks while open, or after ArrowDown with no results. shell/PlaceholderPage.jsx (PlaceholderPage, YourWorkPlaceholder, ProjectViewPlaceholder) was mounted by no route and is removed with its export.",
-      "remaining": "" }
+      "remaining": ""
+    }
   ],
   "review": {
     "issues": [
@@ -49,5 +139,5 @@
     "fixedByReviewer": []
   },
   "baselineFailures": [],
-  "notes": "CI: fail-first green for c188382, 4448031, 6f08e68, 205bc35, ba051b2, ddc8096, fdf7393 (run 36232861286), 1593271, 6ed8b10, dd0ad4e, 4448031 (with 10-section-headings), 6e38264 (run 36233460316), f8246e1 (run 36233856650); targeted tests of every changed module green (36233460316 tests job 753/754, its one failure fixed by e428c8c/51ecdbd and green in 36233856650); Cypress 04-design, 04-design-left-bar, 02-editor, 19-regressions-ids green (36232861286, 36233460316). Final run 36234271386 on 8624425 green: fail-first 51ecdbd and every lo-* test with the PDF-font and public-link suites. oxlint clean on every changed file. Seen, not a bug: SectionEditorCustomizer's Spacing Override boxes can be emptied and clamp only past 80. No firestore.rules change. docs/knowledge/05-state-auth-sync.md updated (public links: publish and take-down are transactions; the top bar's sync icon). Accessibility: none seen beyond the reports'."
+  "notes": "CI: fail-first green for c188382, 4448031, 6f08e68, 205bc35, ba051b2, ddc8096, fdf7393 (run 36232861286), 1593271, 6ed8b10, dd0ad4e, 4448031 (with 10-section-headings), 6e38264 (run 36233460316), f8246e1 (run 36233856650); targeted tests of every changed module green (36233460316 tests job 753/754, its one failure fixed by e428c8c/51ecdbd and green in 36233856650); Cypress 04-design, 04-design-left-bar, 02-editor, 19-regressions-ids green (36232861286, 36233460316). Final run 36234271386 on 8624425 green: fail-first 51ecdbd and every lo-* test with the PDF-font and public-link suites. oxlint clean on every changed file. Seen, not a bug: SectionEditorCustomizer's Spacing Override boxes can be emptied and clamp only past 80. No firestore.rules change. docs/knowledge/05-state-auth-sync.md updated (public links: publish and take-down are transactions; the top bar's sync icon). Accessibility: none seen beyond the reports'. The latest claude/awesome-cerf-t3sh88 (a0d42d6: brd and lo-cl merged) is merged in (11e9939, clean; only IssueFields.jsx touched on both sides); run 36234485350 on the merge green: every lo-* test, the kit/shell/board/sync/editor/preview suites and Cypress 04-design, 04-design-left-bar, 02-editor, 21-a11y."
 }
