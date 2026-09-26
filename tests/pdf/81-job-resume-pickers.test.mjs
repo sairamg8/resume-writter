@@ -22,9 +22,10 @@ const job = {
   appliedDate: '2026-09-01', deadline: '', resumeId: '', todos: [], statusHistory: [{ status: 'applied', changedAt: 1 }],
 };
 
-// The Resume Used picker's options: the Overview also has Work Mode and Source selects (R4-JOB-02).
+// The Resume Used picker's options (the Overview's or the form's): both also have Work Mode and Source selects (R4-JOB-02).
 const optionsOf = (dom, view) => {
-  const picker = [...dom.elements(view.container)].find((el) => el.tagName === 'SELECT' && el.getAttribute('aria-label') === 'Resume used');
+  const picker = [...dom.elements(view.container)].find((el) => el.tagName === 'SELECT'
+    && (el.getAttribute('aria-label') === 'Resume used' || (el.getAttribute('id') || '').endsWith('resumeId')));
   return [...dom.elements(picker)].filter((el) => el.tagName === 'OPTION').map((el) => el.textContent);
 };
 
