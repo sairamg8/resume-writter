@@ -1,5 +1,16 @@
 # Session Handoff — Resume Here
 
+## ⏩ COLD START HERE — 2026-09-26 (laptop session 26b8b31a) — owner: "merge everything to master, deploy, report pending bugs"
+
+The owner's hold is lifted. **Cloudflare branch builds are OFF** (verified: pushes 1aa18ee, 444cf33, e827952, 91c91c9 have
+no "Workers Builds" check run; 618c6c1 had one). Only a master push deploys.
+
+**Batch 3 on the work branch:** perf2 merged (`dcc0392`, report `1aa18ee`, R2-142 partial) + section-look merged (`91c91c9`,
+report `444cf33`, R2-147 partial) — no conflicts. **Full gate 36216686987 + fail-first 36216688486 (cf3ad0e:71-startup-chunks)
+on `91c91c9`.** Green → `git push origin 91c91c9:refs/heads/master`, `deploy_rows.py`, `update_tracker.py --recount`.
+owner-ui (`e827952`, R3-009…012): full gate 36216659416 running; an agent reviews it; then its report → merge → gate → deploy.
+Then: layouts (red) → locale (red) → R3-008 — a read-only scout workflow is diagnosing all three.
+
 ## ⏩ COLD START HERE — 2026-09-25 17:00 UTC (laptop session, owner's execution brief of 21:45 IST)
 
 🔴 **A push to ANY branch deploys the live site** (found 16:40 UTC by the revision session, confirmed here): Cloudflare
