@@ -4,6 +4,7 @@ import {
 } from 'docx';
 import { DEFAULT_BULLET_STYLE, bulletAt, bulletStyleOf, parseRichText, safeHref } from '@/utils/richText';
 import { PAGE_MARKS } from '@/templates/pdf/shared/pdfColors';
+import { fieldGap } from '@/templates/pdf/shared/PdfItemHeader';
 import { MARGIN_MM, pageMargins } from '@/constants/pageMargins';
 import { PAGE_SIZES, pageSizeOf } from '@/constants/pageSize';
 import { storedNumber } from '@/constants/spacingNumbers';
@@ -277,15 +278,17 @@ export function descriptionToParagraphs(html, base = { size: 20, color: '374151'
 /**
  * An entry's title line, its date (in `color`, `size` half-points) at the right margin — a right tab
  * at `tab` twips, the width between the page's margins (wordContentTwips) — or, `centered` (Section
- * Options → Alignment "Center"), the line centred and the date centred on a line of its own below it.
- * Empty parts (null, false, '') are left out, so a line with nothing but a date prints the date
- * alone. `under` (runs: Title "Stacked"'s second field, R2-070) starts the line under the title, as
+ * Options → Alignment "Center"), the line centred and the date centred on a line of its own below it
+ * — or, given a `sep` colour ('rrggbb'), at the line's end after a "·" in it, each a field's gap from
+ * the run before, as the PDF's CentredLine prints an ItemHeader's or a project's "Title · date"
+ * (R4-DOUT-03). Empty parts (null, false, '') are left out, so a line with nothing but a date prints
+ * the date alone. `under` (runs: Title "Stacked"'s second field, R2-070) starts the line under the title, as
  * the PDF's sub line does. `place` ({ text, color, size }: the entry's location) ends that line — at
  * the same right tab, or on a centred line of its own — or has a line of its own there, never in the
  * title's text, where a parser reads it as part of the job title or the company (ATS-1), as the PDF
  * keeps it a field of its own.
  */
-export function dateRightPara(leftChildren, rightText, { color: colorHex, centered = false, size = 20, place = null, tab, under = [] }) {
+export function dateRightPara(leftChildren, rightText, { color: colorHex, centered = false, size = 20, place = null, tab, under = [], sep = null }) {
   const left = leftChildren.filter(Boolean);
   const sub = under.filter(Boolean);
   const date = rightText ? [new TextRun({ text: String(rightText), color: colorHex, size })] : [];
@@ -293,7 +296,13 @@ export function dateRightPara(leftChildren, rightText, { color: colorHex, center
   // The lines that print, one after another: a line with nothing on it takes no break.
   const lines = (list) => list.filter((line) => line.length).flatMap((line, i) => (i ? [new TextRun({ break: 1 }), ...line] : line));
   if (centered) {
-    return new Paragraph({ children: lines([left, date, sub, where]), keepNext: true, ...centredIf(true) });
+    // `sep`: the PDF's CentredLine — the date on the title's line after a "·" run in the date's size,
+    // each a field's gap from the one before. Without a title, the date alone.
+    const gap = () => inlineGap(fieldGap(size / 2), size);
+    const titled = sep && left.length && date.length
+      ? [[...left, gap(), normal('·', { size, color: sep }), gap(), ...date]]
+      : [left, date];
+    return new Paragraph({ children: lines([...titled, sub, where]), keepNext: true, ...centredIf(true) });
   }
   const tabbed = (runs) => (runs.length ? [new TextRun({ text: '\t' }), ...runs] : []);
   return new Paragraph({

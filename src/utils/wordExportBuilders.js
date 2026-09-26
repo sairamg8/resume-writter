@@ -96,6 +96,13 @@ const place = (text, look) => (text ? { text, color: look.ink.place, size: look.
 const titleLine = (left, date, dateHex, centered, look, where = null, under = []) => dateRightPara(left, date, { color: dateHex, centered, size: look.date, place: where, tab: look.tab, under });
 
 /**
+ * titleLine as the PDF's ItemHeader and Projects print it: centred, the date on the title's line
+ * after a "·" in the Text colour's muted shade (CentredLine, R4-DOUT-03), not on a line of its own
+ * as a centred certification's.
+ */
+const headLine = (left, date, dateHex, centered, look, where = null, under = []) => dateRightPara(left, date, { color: dateHex, centered, size: look.date, place: where, tab: look.tab, under, sep: look.ink.muted });
+
+/**
  * An entry's first field, bold in the Text colour at Entry Header, and its second in the PDF's
  * colour and size for it (the sub line's, `look.sub`: Base, R2-118).
  */
@@ -112,12 +119,12 @@ const second = (text, look, color = look.ink.second, size = look.sub) => normal(
  */
 function header(primary, secondary, date, dateHex, centered, look, where) {
   const lead = [first(primary, look)];
-  if (secondary && look.title === 'stacked') return titleLine(lead, date, dateHex, centered, look, where, [second(secondary, look)]);
+  if (secondary && look.title === 'stacked') return headLine(lead, date, dateHex, centered, look, where, [second(secondary, look)]);
   // Side by side: ItemHeader's 6 pt between the two, the Timeline's field gap.
   const apart = primary && look.title === 'sidebyside' && !centered;
   const gap = apart ? [inlineGap(look.template === 'timeline' ? fieldGap(look.base / 2) : 6, look.sub)] : [];
   const rest = secondary ? [...gap, second(`${primary && !apart ? ' — ' : ''}${secondary}`, look)] : [];
-  return titleLine([...lead, ...rest], date, dateHex, centered, look, where);
+  return headLine([...lead, ...rest], date, dateHex, centered, look, where);
 }
 
 /**
@@ -237,7 +244,7 @@ function stackedSkills(category, skills, list, categoryInk, centered, look) {
 export function buildProjects(section, accentHex, settings, centered, dateHex, look) {
   const s = section.settings || {};
   return [sectionHeading(section.title, accentHex, centered, section.heading), ...entries(section, look, (item) => [
-    titleLine([
+    headLine([
       first(item.name, look),
       ...(item.technologies ? [second(` · ${item.technologies}`, look, look.ink.tech)] : []),
       ...(item.url ? [second(' · ', look, accentHex, look.link), linked(item.url, item.url, { size: look.link, color: accentHex }, look.links)] : []),
