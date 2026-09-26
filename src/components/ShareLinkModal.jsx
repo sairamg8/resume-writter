@@ -29,6 +29,7 @@ export default function ShareLinkModal({ isOpen, resume, uid, io = firebasePubli
     let live = true;
     setView({ state: 'loading', share: null });
     setError(null);
+    setCopied(null);
     io.readShare(uid, resumeId)
       .then((share) => { if (live) setView({ state: 'ready', share }); })
       .catch((e) => {
@@ -57,10 +58,13 @@ export default function ShareLinkModal({ isOpen, resume, uid, io = firebasePubli
   };
   const publish = () => run(async () => {
     const next = await io.publish(uid, resume, share ? { shareId: share.shareId } : undefined);
+    // 'Copied' was about the link as it was: a new one has not been copied.
+    if (next.shareId !== share?.shareId) setCopied(null);
     setView({ state: 'ready', share: next });
   }, 'Publishing');
   const unpublish = () => run(async () => {
     await io.unpublish(uid, resumeId, share.shareId);
+    setCopied(null);
     setView({ state: 'ready', share: null });
   }, 'Unpublishing');
   const url = share ? publicUrl(share.shareId) : '';
