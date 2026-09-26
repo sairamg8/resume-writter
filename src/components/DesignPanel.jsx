@@ -4,6 +4,8 @@ import { ATS_DEFAULTS, sectionReset } from '@/utils/defaultData';
 import { contactIconHint, drawsContactIcons, templateId, templateSwitchNote } from '@/constants/templates';
 import { pickerCards } from '@/utils/templatePicker';
 import { usePickCard } from '@/hooks/usePickCard';
+import { designSnapshot } from '@/utils/templateSwitch';
+import { useToast } from '@/components/ui/Toast';
 import { LetterheadNote, SavedDesigns, templateCard } from '@/components/DesignPanelTemplate';
 import { MARGIN_MM } from '@/constants/pageMargins';
 import { PAGE_SIZES, PAGE_SIZE_IDS, pageSizeOf } from '@/constants/pageSize';
@@ -35,6 +37,11 @@ const DATE_KEYS       = ['dateFormat'];
 const LIST_KEYS       = ['bulletStyle'];
 const LINK_KEYS       = ['linkStyle'];
 const PAGE_NUMBER_KEYS = ['pageNumbers'];
+// Spacing's two presets: each overwrites all five numbers, so a click offers Undo (R4-DUX-25).
+const SPACING_PRESETS = {
+  balanced: { label: 'Balanced', values: { marginV: 14, marginH: 18, sectionGap: 16, itemGap: 8, lineHeightValue: 1.5 } },
+  spacious: { label: 'Spacious', values: { marginV: 20, marginH: 22, sectionGap: 22, itemGap: 12, lineHeightValue: 1.65 } },
+};
 // The paper, by its name and size as the editor states them: "A4 · 210 × 297 mm".
 const PAGE_SIZE_OPTIONS = PAGE_SIZE_IDS.map(id => ({ label: `${PAGE_SIZES[id].label} · ${PAGE_SIZES[id].dims}`, value: id }));
 
@@ -58,6 +65,9 @@ export default function DesignPanel({
   const [fitting, setFitting] = useState(false);
   const [fitNotice, setFitNotice] = useState('');
   const fitRun = useRef(false); // a fit is measuring: a second click waits for it, not starts another
+  // The settings the fit's notice describes, and whether the résumé has shown them yet (R4-DUX-25).
+  const noticeFor = useRef({ key: '', reached: false });
+  const { toast } = useToast();
   const latest = useRef(resume);
   latest.current = resume;
   const mounted = useRef(true);
@@ -83,17 +93,48 @@ export default function DesignPanel({
     const keys = new Set([printedKey(resume), printedKey(measured)]);
     const stopped = () => !mounted.current || latest.current?.id !== id || !keys.has(printedKey(latest.current));
     let notice = '';
+    let printed = measured.settings; // what the notice speaks of
     try {
       const fit = await fitOnePage(measured, { stopped });
       if (!fit || stopped()) return;
       Object.entries(fit.settings).forEach(([k, v]) => { if (ONE_PAGE_FIT[k] !== v) updateSetting(k, v); });
+      printed = { ...measured.settings, ...fit.settings };
       if (fit.pages > 1) notice = `Still ${fit.pages} pages at the tightest spacing — shorten the content to fit one page.`;
     } catch {
       notice = 'Could not measure the pages: the tight spacing is applied, check the preview.';
     } finally {
       fitRun.current = false;
+      noticeFor.current = { key: printedKey({ settings: printed }), reached: false };
       if (mounted.current) { setFitting(false); setFitNotice(notice); }
     }
+  }
+
+  // The fit's notice speaks of the settings it left: once they change (a preset, a margin typed, Undo),
+  // it goes, as it no longer describes the page (R4-DUX-25). Only after the résumé has shown those
+  // settings: the fit's own writes may render after the notice does.
+  const settingsKey = printedKey({ settings });
+  useEffect(() => {
+    if (!fitNotice || fitting) return;
+    if (settingsKey === noticeFor.current.key) noticeFor.current.reached = true;
+    else if (noticeFor.current.reached) setFitNotice('');
+  }, [fitNotice, fitting, settingsKey]);
+
+  /**
+   * Balanced or Spacious: all five spacing numbers at once, over any the user tuned by hand — so a
+   * notice offers Undo, which puts back the look the résumé had (designSnapshot, as a template switch's
+   * Undo does).
+   */
+  function applySpacing({ label, values }) {
+    const before = designSnapshot(resume);
+    setFitNotice('');
+    Object.entries(values).forEach(([k, v]) => updateSetting(k, v));
+    toast({
+      id: 'spacing-preset',
+      title: `Spacing: ${label}`,
+      description: 'Margins, gaps and line height replaced.',
+      duration: 8000,
+      ...(restoreDesign ? { action: { label: 'Undo', onClick: () => restoreDesign(before) } } : {}),
+    });
   }
 
   /** A section's reset: its settings back to the template's defaults (Sidebar's plain headings, …). */
@@ -249,13 +290,7 @@ export default function DesignPanel({
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  updateSetting('marginV', 14);
-                  updateSetting('marginH', 18);
-                  updateSetting('sectionGap', 16);
-                  updateSetting('itemGap', 8);
-                  updateSetting('lineHeightValue', 1.5);
-                }}
+                onClick={() => applySpacing(SPACING_PRESETS.balanced)}
                 title="Standard ATS-optimized balanced spacing"
                 className="px-2 py-1.5 text-[11px] font-medium rounded-lg bg-white border border-gray-200 text-gray-700 hover:bg-gray-100 shadow-2xs transition-all text-center cursor-pointer"
               >
@@ -263,13 +298,7 @@ export default function DesignPanel({
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  updateSetting('marginV', 20);
-                  updateSetting('marginH', 22);
-                  updateSetting('sectionGap', 22);
-                  updateSetting('itemGap', 12);
-                  updateSetting('lineHeightValue', 1.65);
-                }}
+                onClick={() => applySpacing(SPACING_PRESETS.spacious)}
                 title="Generous spacing for 2-page or senior resumes"
                 className="px-2 py-1.5 text-[11px] font-medium rounded-lg bg-white border border-gray-200 text-gray-700 hover:bg-gray-100 shadow-2xs transition-all text-center cursor-pointer"
               >
