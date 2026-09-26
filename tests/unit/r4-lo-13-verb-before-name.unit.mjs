@@ -8,6 +8,8 @@ import { insertActionVerb } from '../../src/utils/bulletOptimizer.js';
 test('a name leading the statement keeps its capital', () => {
   assert.equal(insertActionVerb('Kubernetes cluster rollout for 40 services', 'Spearheaded'), 'Spearheaded Kubernetes cluster rollout for 40 services');
   assert.equal(insertActionVerb('Salesforce migration', 'Orchestrated'), 'Orchestrated Salesforce migration');
+  assert.equal(insertActionVerb('New Relic rollout for 40 services', 'Spearheaded'), 'Spearheaded New Relic rollout for 40 services');
+  assert.equal(insertActionVerb('I led a team of 5', 'Spearheaded'), 'Spearheaded I led a team of 5');
   assert.equal(insertActionVerb('- Stripe integration', 'Architected'), '- Architected Stripe integration');
 });
 
