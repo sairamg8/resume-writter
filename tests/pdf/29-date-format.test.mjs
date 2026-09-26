@@ -115,8 +115,10 @@ describe('each Date format in Word', () => {
   for (const format of ['asEntered', ...FORMATS]) {
     it(`${format}: every dated paragraph ends with its date`, async () => {
       const { texts } = await renderDocx(dated('classic', format));
-      // Its title line does: a Stacked entry's second field is on the line under it (R2-070).
-      const missing = PRINTS[format].filter((want) => !texts.some((t) => t.split('\n')[0].endsWith(`\t${want}`)));
+      // Its title line does: a Stacked entry's second field is on the line under it (R2-070). An award
+      // prints its date on the last of its stacked lines, as the PDF does (R4-DOUT-05).
+      const datedLine = (t, want) => t.split('\n')[0].endsWith(`\t${want}`) || (t.startsWith('Top Award\n') && t.split('\n').at(-1) === want);
+      const missing = PRINTS[format].filter((want) => !texts.some((t) => datedLine(t, want)));
       assert.deepEqual(missing, [], texts.join(' | '));
     });
   }

@@ -85,7 +85,12 @@ describe('Word: Section Options → Alignment "Center" centres what the PDF cent
           continue;
         }
         const lines = text.split('\n');
-        // A certification's and an award's PDF print their date under the name: Word keeps it there.
+        // An award stacks its title, issuer and date, as the PDF's AwardsSection does (R4-DOUT-05).
+        if (type === 'awards') {
+          assert.deepEqual(lines, ['AwardName', 'AwardIssuer', date], `${template} ${type}: ${JSON.stringify(text)}`);
+          continue;
+        }
+        // A certification's PDF prints its date under the name: Word keeps it there.
         if (!TITLED[type] && type !== 'projects') {
           assert.ok(lines[0].includes(word) && lines[1]?.startsWith(date) && !text.includes('\t'), `${template} ${type}: ${JSON.stringify(text)}`);
           continue;
@@ -135,7 +140,9 @@ describe('Word: Section Options → Alignment "Center" centres what the PDF cent
       const doc = byType(await renderDocx(everyType('classic', alignment)));
       for (const [type, { word, date }] of Object.entries(TYPES)) {
         for (const p of doc[type]) assert.equal(jc(p.xml), null, `${alignment} ${type}: ${JSON.stringify(p.text)}`);
-        if (date) assert.ok(doc[type].find((p) => p.text.includes(word)).text.includes(`\t${date}`), `${alignment} ${type}`);
+        // An award's date is the last of its stacked lines, as the PDF prints it (R4-DOUT-05).
+        const dateAt = type === 'awards' ? `\n${date}` : `\t${date}`;
+        if (date) assert.ok(doc[type].find((p) => p.text.includes(word)).text.includes(dateAt), `${alignment} ${type}`);
       }
     }
   });

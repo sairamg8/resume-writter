@@ -1,4 +1,4 @@
-import { BorderStyle, Paragraph, ShadingType } from 'docx';
+import { BorderStyle, Paragraph, ShadingType, TextRun } from 'docx';
 import {
   accent2Hex, bold, normal, linked, sectionHeading, bulletPoint, descriptionToParagraphs, dateRightPara, centredIf, eighths,
   gapPara, gridTable, inlineGap, lineSpacing, twips,
@@ -282,26 +282,45 @@ export function buildLanguages(section, accentHex, settings, centered, dateHex, 
 
 export function buildCertifications(section, accentHex, settings, centered, dateHex, look) {
   const s = section.settings || {};
-  return [sectionHeading(section.title, accentHex, centered, section.heading), ...entries(section, look, (item) => [
-    titleLine([
-      first(item.name || item.title, look),
+  return [sectionHeading(section.title, accentHex, centered, section.heading), ...entries(section, look, (item) => {
+    const name = item.name || item.title;
+    // A separator only after something printed: a certificate with no name printed " — Issuer" (R4-DOUT-05).
+    const after = (printed, mark) => (printed ? mark : '');
+    return [titleLine([
+      first(name, look),
       // The name's line at Entry Header, all of it, as the PDF prints it.
-      ...(item.issuer ? [second(` — ${item.issuer}`, look, look.ink.sub, look.entry, true)] : []),
-      ...(item.credentialId ? [second(` · ID: ${item.credentialId}`, look, look.ink.muted, look.entry)] : []),
-      ...(item.url ? [second(' · ', look, accentHex, look.entry), linked(item.urlLabel || item.url, item.url, { size: look.entry, color: accentHex }, look.links)] : []),
-    ], s.showDates !== false ? dateRange(item.date, item.expiry, settings) : '', dateHex, centered, look),
-  ])];
+      ...(item.issuer ? [second(`${after(name, ' — ')}${item.issuer}`, look, look.ink.sub, look.entry, true)] : []),
+      ...(item.credentialId ? [second(`${after(name || item.issuer, ' · ')}ID: ${item.credentialId}`, look, look.ink.muted, look.entry)] : []),
+      ...(item.url ? [
+        ...(name || item.issuer || item.credentialId ? [second(' · ', look, accentHex, look.entry)] : []),
+        linked(item.urlLabel || item.url, item.url, { size: look.entry, color: accentHex }, look.links),
+      ] : []),
+    ], s.showDates !== false ? dateRange(item.date, item.expiry, settings) : '', dateHex, centered, look)];
+  })];
 }
 
+/**
+ * An award as the PDF's AwardsSection prints it (R4-DOUT-05): the title bold, the issuer under it in the
+ * sub shade, the date under that in the date colour, each on a line of its own and left or centred with
+ * the section. Word printed "Title — Issuer" with the date at the right margin, and " — Issuer" with no title.
+ * The three lines keep with the description, as the PDF keeps them.
+ */
 export function buildAwards(section, accentHex, settings, centered, dateHex, look) {
   const s = section.settings || {};
-  return [sectionHeading(section.title, accentHex, centered, section.heading), ...entries(section, look, (item) => [
-    titleLine([
-      first(item.title, look),
-      ...(item.issuer ? [second(` — ${item.issuer}`, look, look.ink.sub, look.sub, true)] : []),
-    ], s.showDates !== false ? formatDate(item.date || '', settings) : '', dateHex, centered, look),
-    ...body(item, centered, look, look.ink.sub),
-  ])];
+  return [sectionHeading(section.title, accentHex, centered, section.heading), ...entries(section, look, (item) => {
+    const date = s.showDates !== false ? formatDate(item.date || '', settings) : '';
+    const lines = [
+      item.title ? [first(item.title, look)] : [],
+      item.issuer ? [second(item.issuer, look, look.ink.sub, look.sub, true)] : [],
+      date ? [normal(date, { size: look.date, color: dateHex })] : [],
+    ].filter((line) => line.length);
+    const head = lines.length ? [new Paragraph({
+      children: lines.flatMap((line, i) => (i ? [new TextRun({ break: 1 }), ...line] : line)),
+      keepNext: true,
+      ...centredIf(centered),
+    })] : [];
+    return [...head, ...body(item, centered, look, look.ink.sub)];
+  })];
 }
 
 export function buildVolunteering(section, accentHex, settings, centered, dateHex, look) {
