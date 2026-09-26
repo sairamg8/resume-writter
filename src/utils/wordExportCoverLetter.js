@@ -1,9 +1,9 @@
 // The cover letter as Word paragraphs: the same text, order, colours and hidden contacts as the
 // cover-letter PDF — letterhead (name, title, contacts in the résumé template's look), date,
 // recipient block, subject, body, closing and signature. Sizes follow the letter's base font
-// size. It is a text document: no photo; its contacts sit beside the name at Right of Name, the
-// default Fields Position (R2-137), else under it, in Cover Letter → Contact Style and Layout, Icon
-// printing as Bar.
+// size. The photo prints as the PDF's (wordLetterPhoto, R4-DOUT-06): above a centred name, else beside
+// the name at Photo → Position. The contacts sit beside the name at Right of Name, the default Fields
+// Position (R2-137), else under it, in Cover Letter → Contact Style and Layout, Icon printing as Bar.
 //
 // The letterhead takes the look the PDF's does (letterheadLook, FIDB-51): its colours, alignment
 // and Name & Title layout, Modern's accent band and the Sidebar panel's colour as a shaded band,
@@ -11,11 +11,12 @@
 // the Sidebar band 15 pt into the page margins, not to the paper's edges as the PDF does, and
 // prints the name and title in Word's own weights (Minimal's light name and an Inline title's
 // medium are regular).
-import { Paragraph, BorderStyle, ShadingType, AlignmentType } from 'docx';
+import { Paragraph, BorderStyle, ShadingType, AlignmentType, VerticalAlign } from 'docx';
 import { wordNameFont } from '@/utils/wordFonts';
 import { bold, normal, descriptionToParagraphs, eighths, gapPara, inlineGap, lineSpacing, twips } from '@/utils/wordExportUtils';
 import { bandFill, frameInner, frameTable, hexOn } from '@/utils/wordExportLook';
 import { contactRows } from '@/utils/wordExportContacts';
+import { wordLetterPhoto } from '@/utils/wordExportPhoto';
 import { CONTACT_GRID, contactItems } from '@/utils/contacts';
 import { hasRichText } from '@/utils/richText';
 import { linkLook } from '@/utils/linkStyle';
@@ -23,7 +24,7 @@ import { letterBlock, letterContactFormat, letterFieldsPosition, letterHiddenFie
 import { LETTER_CONTACTS_GAP, letterGrey, letterheadLook } from '@/templates/pdf/shared/letterhead';
 import { pxToPt } from '@/templates/pdf/shared/pdfUnits';
 import { resolveTemplateSettings } from '@/templates/pdf/shared/templateSettings';
-import { templateId } from '@/constants/templates';
+import { photoRowDirection, templateId } from '@/constants/templates';
 import { setGapPt } from '@/constants/headerSpacing';
 const pt = (n) => Math.round(n * 20); // points → twips (paragraph spacing, indents)
 
@@ -87,11 +88,13 @@ const widestWord = (text, size, em = EM) => Math.max(0, ...String(text ?? '').sp
  * the two columns' widths, twips, the gap the contacts' left margin, and `width` the contacts' own, pt.
  * Null where the PDF prints them under the name: another Fields Position, a centred letterhead
  * (its centre line), no contacts, or a name or title word that does not fit beside them — the PDF's
- * fit fallback. Word cannot measure text: the widths are estimates (across).
+ * fit fallback. Word cannot measure text: the widths are estimates (across). `photoCol`: the photo's
+ * column beside the name (its width and Photo ↔ Text, twips), which the name side and contacts share
+ * what is left of the row after, as the PDF's.
  */
-function rightOfName(personal, cl, s, look, sizes, contacts, { contactStyle, layout }) {
+function rightOfName(personal, cl, s, look, sizes, contacts, { contactStyle, layout }, photoCol = 0) {
   if (look.centered || letterFieldsPosition(cl) !== 'right' || !contacts.length) return null;
-  const inner = frameInner(s, look.band);
+  const inner = frameInner(s, look.band) - photoCol;
   const gap = setGapPt(s, 'contactsSideGap') ?? LETTER_CONTACTS_GAP;
   const room = inner / 20 - gap;
   // Justify keeps the mark after each value on its line; Single and 2 Grid put Bullet's before it.
@@ -147,7 +150,15 @@ function letterhead(personal, s, cl, sizes, look) {
   // (FIDB-51-VF1-NB1-NB2-NB1), in the band's marks where there is one, else the page's greys
   // (FIDB-51-VF1-NB1). A centred 2 Grid row is centred by its tab stops, not as a whole.
   const format = letterContactFormat(cl, s);
-  const beside = rightOfName(personal, cl, s, look, sizes, contacts, format);
+  // The photo (R4-DOUT-06): above a centred name, Photo ↔ Text (the résumé's set value, else 6 pt)
+  // under it; else in a column beside the name, the gap (else 10 pt) on its side facing the name.
+  const photo = wordLetterPhoto(cl, personal, s, look);
+  const photoGap = setGapPt(s, 'photoTextGap');
+  const photoCol = photo && !look.centered ? twips(photo.width + (photoGap ?? 10)) : 0;
+  const beside = rightOfName(personal, cl, s, look, sizes, contacts, format, photoCol);
+  // Under the name beside the photo (Below Name, or a Right of Name that does not fit), the contacts
+  // have what the photo's column leaves; Below Everything runs them across the row under both.
+  const belowAll = letterFieldsPosition(cl) === 'below-all';
   const contactLines = [];
   if (contacts.length) {
     const style = { size: sizes.contact, color: ink(look.contacts) };
@@ -155,7 +166,8 @@ function letterhead(personal, s, cl, sizes, look) {
     // Design → Links (R2-147): on a band, the Accent tint that reads on the fill Word shades.
     const links = linkLook(s.linkStyle, s.accentColor, look.band ? on : null);
     // Beside the name a 2 Grid's second cell starts where it does in the contacts' own width.
-    const width = beside ? { width: beside.width } : {};
+    const width = beside ? { width: beside.width }
+      : photoCol && !belowAll ? { width: (frameInner(s, look.band) - photoCol) / 20 } : {};
     for (const row of contactRows(contacts, { contactStyle: format.style, layout: format.layout, centered: look.centered, settings: s, style, markColor: marks, links, ...width })) {
       contactLines.push({ runs: row.runs, extra: look.centered && !row.centred ? { ...row.extra, alignment: undefined } : row.extra });
     }
@@ -165,21 +177,50 @@ function letterhead(personal, s, cl, sizes, look) {
   // résumé's Header ↔ First section) below the rule or band — and, with neither (a Classic résumé's
   // border off, V2FIDB-51-2), the PDF's pad above it too.
   const below = look.gapBelow + (look.band || look.rules.length ? 0 : look.ruleGap);
+  // The rows as paragraphs in a table cell: a band's touch, the last with no space after.
+  const cellParas = (list) => list.map((r, i) => line(r.runs, i === list.length - 1 ? 0 : look.band && !r.kept ? 0 : r.after, r.extra || {}));
+  const framed = (cells, widths) => [
+    frameTable(cells, widths, { settings: s, band: look.band, rules: look.rules, ruleGap: look.ruleGap }),
+    ...gapPara(below),
+  ];
+  // The photo's column beside the name, as the résumé header's photo row (wordExportHeader's
+  // photoRow): its gap padding on the side facing the name, Photo → Position Right putting it right
+  // of the name (the PDF's row-reverse), and the name aligned to it as the letter's Text Position sets.
+  const photoRight = photoRowDirection(s) === 'row-reverse';
+  const valign = { top: VerticalAlign.TOP, bottom: VerticalAlign.BOTTOM }[cl.photoTextAlign] || VerticalAlign.CENTER;
+  const photoCell = photoCol ? {
+    children: [line([photo.run], 0, photoRight ? { alignment: AlignmentType.RIGHT } : {})],
+    valign, margins: { [photoRight ? 'left' : 'right']: photoCol - twips(photo.width) },
+  } : null;
+  const withPhoto = (nameCell, width) => (photoRight ? [[{ ...nameCell, valign }, photoCell], [width, photoCol]] : [[photoCell, { ...nameCell, valign }], [photoCol, width]]);
   if (beside) {
     // Right of Name (R2-137): a two-cell borderless table — the name and title | the contacts, the
     // gap the contacts' left margin — framed as the letterhead is (frameTable): the band shading both
     // cells, or the rule(s) under both. Set against the right margin as the PDF's; a 2 Grid's rows
     // keep their tab stops. The gap under it is a paragraph of its own: a table has no space after.
-    const name = rows.map((r, i) => line(r.runs, i === rows.length - 1 ? 0 : look.band && !r.kept ? 0 : r.after));
+    // With a photo, its column comes first (or after the name, at Right), the contacts' last.
     const right = format.layout === '2grid' ? {} : { alignment: AlignmentType.RIGHT };
-    const side = contactLines.map((r) => line(r.runs, 0, { ...r.extra, ...right }));
-    return [
-      frameTable([[{ children: name }, { children: side, margins: { left: beside.gap } }]], [beside.name, beside.contacts], {
-        settings: s, band: look.band, rules: look.rules, ruleGap: look.ruleGap,
-      }),
-      ...gapPara(below),
-    ];
+    const side = { children: contactLines.map((r) => line(r.runs, 0, { ...r.extra, ...right })), margins: { left: beside.gap } };
+    const name = { children: cellParas(rows) };
+    if (!photoCell) return framed([[name, side]], [beside.name, beside.contacts]);
+    const [cells, widths] = withPhoto(name, beside.name);
+    return framed([[...cells, side]], [...widths, beside.contacts]);
   }
+  if (photoCell) {
+    // The photo beside the name and title, the contacts under them (Below Name) or across the row
+    // under both (Below Everything), the space above them the title's after.
+    const text = frameInner(s, look.band) - photoCol;
+    if (belowAll && contactLines.length) {
+      const [cells, widths] = withPhoto({ children: cellParas(rows) }, text);
+      const last = rows[rows.length - 1];
+      const above = look.band && !last.kept ? 0 : last.after;
+      return framed([cells, [{ children: cellParas(contactLines), span: 2, margins: { top: above } }]], widths);
+    }
+    const [cells, widths] = withPhoto({ children: cellParas([...rows, ...contactLines]) }, text);
+    return framed([cells], widths);
+  }
+  // Centred: the photo on the centre line above the name.
+  if (photo) rows.unshift({ runs: [photo.run], after: pt(photoGap ?? 6), kept: true });
   rows.push(...contactLines);
   return rows.map((r, i) => {
     const last = i === rows.length - 1;
