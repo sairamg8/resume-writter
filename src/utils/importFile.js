@@ -100,10 +100,28 @@ export function docxXmlLines(xml, links = {}) {
   const lines = [];
   const levels = []; // each line's Heading level, 0 for none
   const open = []; // the paragraphs being read, the innermost last
-  const TOKEN = /<w:p(?=[\s>])[^>]*>|<\/w:p>|<w:pPr>([\s\S]*?)<\/w:pPr>|<w:t(?:\s[^>]*)?>([^<]*)<\/w:t>|<w:(tab|br|cr)(?:\s[^>]*)?\/>|<w:hyperlink\b([^>]*)>|<\/w:hyperlink>/g;
+  const TOKEN = /<w:p(?=[\s>])[^>]*>|<\/w:p>|<w:pPr>([\s\S]*?)<\/w:pPr>|<w:t(?:\s[^>]*)?>([^<]*)<\/w:t>|<w:(tab|br|cr)(?:\s[^>]*)?\/>|<w:hyperlink\b([^>]*)>|<\/w:hyperlink>|<w:fldChar\b[^>]*?w:fldCharType="(begin|separate|end)"[^>]*>|<w:instrText\b[^>]*>([^<]*)<\/w:instrText>|<w:fldSimple\b([^>]*?)(\/?)>|<\/w:fldSimple>/g;
+  // A field's result, as a link when its instruction is HYPERLINK: `field` the one ended, its text from `at`.
+  const linkField = (para, field) => {
+    const to = field && field.at >= 0 && hyperlinkTarget(field.instr);
+    if (to) para.text = para.text.slice(0, field.at) + linkText(para.text.slice(field.at), to);
+  };
   for (const m of body.matchAll(TOKEN)) {
     const para = open[open.length - 1];
-    if (m[4] !== undefined) {
+    if (m[5] !== undefined || m[6] !== undefined || m[7] !== undefined || m[0] === '</w:fldSimple>') {
+      // A field (R4-LO-03): Word writes many a link as a HYPERLINK field, not a <w:hyperlink> — its
+      // instruction in <w:instrText> runs between "begin" and "separate", the text it shows after them
+      // up to "end"; or a <w:fldSimple w:instr="…"> around the text. Read as a <w:hyperlink> is.
+      if (!para) continue;
+      const fields = para.fields || (para.fields = []);
+      if (m[5] === 'begin') fields.push({ instr: '', at: -1 });
+      else if (m[5] === 'separate') { if (fields.length) fields[fields.length - 1].at = para.text.length; }
+      else if (m[5] === 'end') linkField(para, fields.pop());
+      else if (m[6] !== undefined) { if (fields.length) fields[fields.length - 1].instr += xmlText(m[6]); }
+      else if (m[7] !== undefined) {
+        if (!m[8]) fields.push({ instr: xmlText(/\bw:instr="([^"]*)"/.exec(m[7])?.[1] ?? ''), at: para.text.length, simple: true });
+      } else if (fields[fields.length - 1]?.simple) linkField(para, fields.pop());
+    } else if (m[4] !== undefined) {
       const id = /\br:id="([^"]*)"/.exec(m[4])?.[1];
       if (para && !m[0].endsWith('/>')) para.link = { to: links[id], at: para.text.length };
     } else if (m[0] === '</w:hyperlink>') {
@@ -131,6 +149,21 @@ export function docxXmlLines(xml, links = {}) {
     else para.text += m[3] === 'tab' ? '\t' : '\n';
   }
   return headingLevels(lines, levels);
+}
+
+/**
+ * A HYPERLINK field's address, from its instruction: ` HYPERLINK "https://…" \o "tip" `; null for one
+ * to a place in the document (`\l "bookmark"` alone) or for another field (PAGE, TOC …).
+ */
+function hyperlinkTarget(instr) {
+  const words = String(instr).match(/"[^"]*"|\S+/g) || [];
+  if (!/^hyperlink$/i.test(words[0] || '')) return null;
+  for (let i = 1; i < words.length; i += 1) {
+    if (/^\\[lotm]$/i.test(words[i])) { if (/^\\[lot]$/i.test(words[i])) i += 1; continue; }
+    if (words[i].startsWith('\\')) continue;
+    return words[i].replace(/^"|"$/g, '').trim() || null;
+  }
+  return null;
 }
 
 /**
