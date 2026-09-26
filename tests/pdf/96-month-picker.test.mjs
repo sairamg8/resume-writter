@@ -148,12 +148,12 @@ describe('the Experience card\'s dates, as every export prints them (R2-171)', (
     assert.ok(!out.ats.includes('Apr 2019') && out.ats.includes('Oct 2022'), out.ats);
   });
 
-  it('"Currently working here" clears the End Date and disables its picker; every export prints Present', async () => {
+  it('"Currently working here" blanks and disables the End Date picker (the date is kept, R4-DUX-26); every export prints Present', async () => {
     const c = await card({ ...JOB, id: 'exp_c', startDate: 'Apr 2019', endDate: 'Oct 2022' });
     try {
       assert.deepEqual(c.end(), { month: 'Oct', year: '2022', disabled: false, clear: true });
       c.current(true);
-      assert.deepEqual([c.item.current, c.item.endDate, c.item.startDate], [true, '', 'Apr 2019']);
+      assert.deepEqual([c.item.current, c.item.endDate, c.item.startDate], [true, 'Oct 2022', 'Apr 2019']);
       assert.deepEqual(c.end(), { month: '', year: '', disabled: true, clear: false });
     } finally { await c.view.unmount(); }
     const out = await printedAs(c.item);
@@ -162,23 +162,25 @@ describe('the Experience card\'s dates, as every export prints them (R2-171)', (
     printsRange(await printedAs(c.item, 'MM/YYYY'), '04/2019 – Present');
   });
 
-  it('unchecked again, the End Date stays empty (the old one is not restored) and can be picked', async () => {
+  // R4-DUX-26: ticking the box erased the End Date, so unticking it (a slip, or a job that ended)
+  // left the entry with no end — the date entered was lost. Unticked, it now comes back.
+  it('unchecked again, the End Date entered comes back (R4-DUX-26), and another can be picked', async () => {
     const c = await card({ ...JOB, id: 'exp_d', startDate: 'Apr 2019', endDate: 'Oct 2022' });
     let unchecked;
     try {
       c.current(true);
       c.current(false);
       unchecked = c.item;
-      assert.deepEqual([unchecked.current, unchecked.endDate], [false, '']);
-      assert.deepEqual(c.end(), { month: '', year: '', disabled: false, clear: false });
+      assert.deepEqual([unchecked.current, unchecked.endDate], [false, 'Oct 2022']);
+      assert.deepEqual(c.end(), { month: 'Oct', year: '2022', disabled: false, clear: true });
       c.pick('End Date month', 'Jan');
       c.pick('End Date year', '2024');
       assert.deepEqual([c.item.current, c.item.endDate], [false, 'Jan 2024']);
     } finally { await c.view.unmount(); }
     // Printed once the card is gone: the fake page's window must not be there while react-pdf renders.
-    for (const [k, text] of Object.entries(await printedAs(unchecked))) {
-      assert.ok(text.includes('Apr 2019') && !text.includes('Present') && !text.includes('Oct 2022'), `${k} prints the start alone: ${text}`);
-    }
+    const out = await printedAs(unchecked);
+    printsRange(out, 'Apr 2019 – Oct 2022');
+    for (const [k, text] of Object.entries(out)) assert.ok(!text.includes('Present'), `${k} prints no Present: ${text}`);
     printsRange(await printedAs(c.item), 'Apr 2019 – Jan 2024');
   });
 
