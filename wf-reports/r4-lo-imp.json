@@ -1,0 +1,141 @@
+{
+  "cluster": "r4-lo-imp",
+  "branch": "claude/wf-r4-lo-imp",
+  "base": "e6edfc4",
+  "rows": [
+    {
+      "id": "R4-LO-01",
+      "outcome": "fixed",
+      "commits": [
+        "5a9921a",
+        "955a3ed",
+        "493c352"
+      ],
+      "tests": [
+        "tests/unit/lo-imp-group-roles-pdf-word.unit.mjs",
+        "tests/pdf/lo-imp-group-roles-roundtrip.test.mjs"
+      ],
+      "summary": "The PDF's and Word's \"Group roles by company\" now import as a job per role at the employer, with its dates and the employer's place (or the role's own). This covers the employer line with its place at the right, Word's place on the line under it, and the Timeline's date over each role. The employer line no longer lands in the job above. Round trip on Classic, Timeline and Word.",
+      "remaining": ""
+    },
+    {
+      "id": "R4-LO-02",
+      "outcome": "fixed",
+      "commits": [
+        "6e482d5"
+      ],
+      "tests": [
+        "tests/unit/lo-imp-cert-award-sub-bullets.unit.mjs"
+      ],
+      "summary": "A certificate's or an award's nested list items are now that entry's own text (an award's description; a certificate's link, else its Additional Information), not entries of their own. The list depth comes from Markdown's indent, a text file's indent and a Word list's w:ilvl.",
+      "remaining": "PDF sub-bullets carry no depth, and a Word list whose level comes only from its style (List Bullet 2, no w:ilvl) reads as level 0; both are still an entry each. Nested items are one list level in the description."
+    },
+    {
+      "id": "R4-LO-03",
+      "outcome": "fixed",
+      "commits": [
+        "88dd9fd"
+      ],
+      "tests": [
+        "tests/unit/lo-imp-docx-hyperlink-fields.unit.mjs"
+      ],
+      "summary": "A Word link written as a HYPERLINK field (fldChar begin/instrText/separate/end, or fldSimple) now reads as a <w:hyperlink> does: \"label (address)\", so a contact shown as its Display label keeps its address. Other fields (PAGE) and links to a bookmark stay their text.",
+      "remaining": ""
+    },
+    {
+      "id": "R4-LO-04",
+      "outcome": "fixed",
+      "commits": [
+        "76a6af3",
+        "955a3ed",
+        "493c352"
+      ],
+      "tests": [
+        "tests/unit/lo-imp-docx-caps-section-after-entries.unit.mjs"
+      ],
+      "summary": "In a Word file with Heading 2 jobs, a later section typed in capitals now starts its section instead of staying in the last job. A title stays inside a job when it is SKILLS or PROJECTS with another entry after it before the next heading, or a title for a part of a job anywhere (KEY ACHIEVEMENTS, OVERVIEW/SUMMARY, RECOGNITIONS).",
+      "remaining": "A job's own SKILLS or PROJECTS sub-title in the last job reads as a section (the product call: a trailing capitals section is the common case)."
+    },
+    {
+      "id": "R4-LO-05",
+      "outcome": "fixed",
+      "commits": [
+        "a19150d",
+        "0a889ea",
+        "ff6b870"
+      ],
+      "tests": [
+        "tests/unit/lo-imp-body-links.unit.mjs",
+        "tests/pdf/lo-imp-body-links.test.mjs",
+        "tests/unit/import-unused-fields.unit.mjs",
+        "tests/unit/import-text.unit.mjs"
+      ],
+      "summary": "A link inside body text (a Markdown [label](url), a Word hyperlink or field, a PDF link box) now comes back as <a href=\"url\">label</a> in the description or the summary. An address written out in a text file is a link too. Lines carry their links' labels and addresses from markdownLines, docxXmlLines and the PDF reader; only http(s), mailto and tel addresses are linked. Two existing tests were updated to the intended behaviour: import-text's markdownLines line object now carries links, and import-unused-fields' award \"Link: https://…\" is now a link.",
+      "remaining": "A line that carries a link does not also autolink a bare address in it; a hand-written [**bold**](url) label is not linked."
+    },
+    {
+      "id": "R4-LO-06",
+      "outcome": "fixed",
+      "commits": [
+        "c4ff872",
+        "9097bd4"
+      ],
+      "tests": [
+        "tests/unit/lo-imp-education-no-degree.unit.mjs"
+      ],
+      "summary": "The text import now reads \"Computer Science - MIT\" as the field of study at MIT with no degree, and \"Bootcamp, Full Stack - GA\" as degree Bootcamp in Full Stack at GA, in the ATS text, Markdown and the PDF's school-first order. A \"Degree, Subject\" part is no longer taken for a place (\"B.F.A., Graphic Design\").",
+      "remaining": "Heuristic: a degree-less subject is recognised by a subject word list (SUBJECT). An unknown degree whose field has no subject word may still read as a place (\"Bootcamp, UX\")."
+    },
+    {
+      "id": "R4-LO-07",
+      "outcome": "fixed",
+      "commits": [
+        "f4b3a4d"
+      ],
+      "tests": [
+        "tests/unit/lo-imp-markdown-heading-hash.unit.mjs"
+      ],
+      "summary": "Markdown's \"## C#\" now imports as the heading \"C#\" (a closing # run counts only after a space), and a link label holding escaped or paired brackets (\"Tool \\[beta\\]\", \"Notes [v2]\") is read as a link. A project named with brackets round-trips.",
+      "remaining": ""
+    },
+    {
+      "id": "R4-LO-08",
+      "outcome": "fixed",
+      "commits": [
+        "f830f6b"
+      ],
+      "tests": [
+        "tests/unit/lo-imp-markdown-escape-amp-pipe.unit.mjs"
+      ],
+      "summary": "The Markdown export now escapes a typed \"|\" and an \"&\" that would read as an entity (\"&copy;\"); its own \" | \" separators are not escaped, and the import reads the escapes back off. A certificate's description, which only the Markdown export printed, is no longer printed there, so all four exports agree (the editor has no box for it).",
+      "remaining": "A typed \" | \" inside a heading or meta field still splits into two fields on Markdown import (it did before)."
+    },
+    {
+      "id": "R4-LO-09",
+      "outcome": "fixed",
+      "commits": [
+        "1cbcd11"
+      ],
+      "tests": [
+        "tests/unit/lo-imp-export-filename-device.unit.mjs"
+      ],
+      "summary": "An export file name that is a Windows device name (CON, PRN, AUX, NUL, COM0-9/¹²³, LPT0-9/¹²³, before any dot) now saves as \"CON_resume\" (\"Nul.x\" as \"Nul_resume.x\"). Other names are unchanged.",
+      "remaining": "CONIN$/CONOUT$ are not covered."
+    }
+  ],
+  "review": {
+    "issues": [
+      "R4-LO-01: a job after a group, role first with its company on the line under it, was put under the group's employer (the 'placed' test was too loose).",
+      "R4-LO-01: a job's last plain line after its list could be taken as an employer.",
+      "R4-LO-01: the Timeline (date over each role) was not covered.",
+      "R4-LO-04: a trailing SKILLS/PROJECTS after the last job still stayed in it, and in-job OVERVIEW/SUMMARY/AWARDS left the job.",
+      "R4-LO-05: Word link targets were not scheme-filtered (unsafe hrefs are dropped later by sanitizeRichText, but were stored); a label-only match could hit part of a word.",
+      "Second review of 955a3ed: the Timeline branch took a stacked 'Company / Role / date / place' title for an employer and role; entryAfter kept a capitals EDUCATION over Heading 2 schools inside the last job; Word's 'end' hint was too broad (an indented school became a place)."
+    ],
+    "fixedByReviewer": [
+      "All of the above were fixed in 955a3ed and 493c352, each with tests proven by failfirst on CI."
+    ]
+  },
+  "baselineFailures": [],
+  "notes": "Product calls: (1) R4-LO-09: a device name gets \"_resume\" after it. (2) R4-LO-08: the certificate description is dropped from Markdown rather than added to the others; \"&\" is escaped only before entity-like text. (3) R4-LO-06: a subject word list decides a degree-less field of study. (4) R4-LO-04: SKILLS/PROJECTS after the last Heading 2 entry is a section. (5) R4-LO-05: bare http(s)/www addresses in plain-text body are autolinked. Also changed: docs/knowledge/06-templates-export.md import section (links on lines, HYPERLINK fields, list levels, grouped roles). The PDF link reader now trims trailing punctuation from a link box's label (\"Tidewater,\"). Merged origin/claude/awesome-cerf-t3sh88 twice (a8b3d6d, then a0d42d6: its import comment rewording merged cleanly). CI: failfirst proven for every fix commit in runs 36232842564 (1cbcd11, f4b3a4d, f830f6b, 76a6af3), 36233120658 (88dd9fd, 6e482d5, 9097bd4), 36233361744 (5a9921a, a19150d, ff6b870), 36233718097 (955a3ed), 36233927256 (493c352); c4ff872 alone failed its fail-first run (its test also needed 9097bd4), and 9097bd4 was proven with that test. Final targeted run 36234053223 on the merged head 09d601a: every added and affected test green, including tests/pdf/31-contact-fields. No full gate run. Accessibility seen: none."
+}
