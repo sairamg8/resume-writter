@@ -90,3 +90,10 @@ test('a certificate\'s line "Node.js" under it is no link', () => {
   const [cert] = items(r, 'certifications');
   assert.equal(cert.url, '');
 });
+
+// The end-of-cluster review: a typed address without its scheme, in brackets or under a certificate.
+test('"LinkedIn (linkedin.com/in/pat)" typed in a text header, and a certificate\'s bare address line', () => {
+  const r = resumeFromText('Pat Sample\npat@example.com | LinkedIn (linkedin.com/in/pat-sample)\n\nCERTIFICATIONS\nAWS Certified Developer - Amazon Web Services - Jun 2022\ncredly.com/badges/pat-aws');
+  assert.equal(r.personal.linkedin, 'linkedin.com/in/pat-sample');
+  assert.equal(items(r, 'certifications')[0].url, 'credly.com/badges/pat-aws');
+});

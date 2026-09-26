@@ -224,7 +224,7 @@ const BARE_LABEL = /^(?:e-?mail|mail|phone|tel|telephone|mobile|cell|linkedin|gi
 const digits = (s) => s.replace(/\D/g, '').length;
 
 /** A link as linkText writes it: "LinkedIn (https://linkedin.com/in/pat)" → its label and address. */
-const LINKED = /^(.*?)\s*\(((?:https?:\/\/|mailto:|tel:)[^()\s]+)\)$/i;
+const LINKED = /^(.*?)\s*\(((?:https?:\/\/|mailto:|tel:)[^()\s]+|www\.[^()\s]+|[^()\s]+\.[a-z]{2,}\/[^()\s]*)\)$/i;
 /** An address alone, with its scheme: a link's (linkText, an entry title's field). */
 const ADDRESS = /^(?:https?:\/\/|mailto:)[^\s()]+$/i;
 /** The contacts a Display label can stand for (contacts.js: the `link` fields). */
@@ -486,7 +486,7 @@ function entryOf(type, header, body, aside = () => {}) {
         if (m && m[1] && /^https?:/i.test(m[2])) return { url: m[2], urlLabel: m[1] };
         // A header field may be a bare domain, as before; a line under it only an address with its
         // scheme or www. — "Node.js" there is no link.
-        return (bare ? WEB.test(text) : /^(?:https?:\/\/|www\.)\S+$/i.test(text)) ? { url: text } : null;
+        return (bare ? WEB.test(text) : /^(?:https?:\/\/|www\.)\S+$|^[a-z0-9-]+(?:\.[a-z0-9-]+)*\.[a-z]{2,}\/\S+$/i.test(text)) ? { url: text } : null;
       };
       const left = [];
       for (const part of h.parts.slice(1)) {
@@ -643,7 +643,7 @@ function roleEntries(type, lines) {
       const under = lines.slice(k + 1, next);
       const dated = under.some((x) => pieces(x.text).some((p) => readDateRange(p) || trailingDate(p)));
       // Not an entry whose title holds a role and a company ("### Acme — Engineer" over "#### Highlights").
-      const whole = fieldsOf(l.text).length > 1 || pieces(l.text).length > 1 || ROLE.test(l.text);
+      const whole = fieldsOf(l.text).length > 1 || pieces(l.text).length > 1;
       if (JOB.has(type) && lines[next]?.hint === 'role' && !dated && !whole) {
         const placeAt = under.findIndex((x) => PLACE.test(x.text));
         group = { company: l.text, place: placeAt >= 0 ? under[placeAt].text : '', lead: under.filter((x, i) => i !== placeAt), first: true };
@@ -700,7 +700,9 @@ function languagesOf(lines) {
       // row): the level of the language before it; a second one ("English: Full professional, C2") joins it.
       if (level && level.index === 0 && bare) { bare.proficiency = cell; bare = null; continue; }
       // So does a cell in lower case after a level ("Spanish: Working knowledge, written"): the level's rest.
-      if (last?.proficiency && ((level && level.index === 0) || /^\p{Ll}/u.test(cell))) { last.proficiency = `${last.proficiency}, ${cell}`; continue; }
+      // (only the line's last cell: "Native, german, french" are languages).
+      const rest = /^\p{Ll}/u.test(cell) && cell === cells.map((c) => c.trim()).filter(Boolean).at(-1);
+      if (last?.proficiency && ((level && level.index === 0) || rest)) { last.proficiency = `${last.proficiency}, ${cell}`; continue; }
       if (level && level.index === 0 && last) { last.proficiency = cell; continue; }
       if (level && level.index > 0) { last = itemOf('languages', { language: cell.slice(0, level.index).trim(), proficiency: level[0].trim() }); items.push(last); bare = null; continue; }
       bare = itemOf('languages', { language: cell, proficiency: '' });
@@ -746,9 +748,8 @@ export function resumeFromText(input) {
   // Word résumé with some sections styled as headings and the others typed in bold capitals).
   const headingAt = new Map();
   let seen = false;
-  // In a file that marks its headings, an unmarked one in capitals must stand apart (after a gap or
-  // over a rule), not inside an entry (a job's "KEY ACHIEVEMENTS" is its own), and be of a type the
-  // file does not mark itself.
+  // In a file that marks its headings, an unmarked one in capitals must not be inside an entry the
+  // file marks (a job's "KEY ACHIEVEMENTS" is its own), and be of a type the file does not mark itself.
   const marked = new Set(lines.filter((l, i) => i > nameAt && l.hint === 'heading').map((l) => headingType(l.text.replace(/\s*:$/, '').trim())));
   let inEntry = false;
   lines.forEach((l, i) => {
@@ -760,7 +761,7 @@ export function resumeFromText(input) {
     let type = null;
     if (hinted) {
       if (l.hint === 'heading') type = headingType(text) || 'custom';
-      else if (!l.hint && plain && !inEntry && (isCaps(text) || l.ruled) && (l.gap || l.ruled) && !marked.has(headingType(text))) type = headingType(text);
+      else if (!l.hint && plain && !inEntry && (isCaps(text) || l.ruled) && !marked.has(headingType(text))) type = headingType(text);
     } else if (plain) {
       const known = headingType(text);
       if (known && (l.ruled || isCaps(text) || l.gap || l.text.endsWith(':') || i === nameAt + 1 || headingAt.size === 0)) type = known;

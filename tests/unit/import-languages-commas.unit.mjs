@@ -32,3 +32,7 @@ test('the layouts read before read as before: a line each, and a grid of cells',
 test('"Spanish: Working knowledge, written": one language, its level whole', () => {
   assert.deepEqual(langs('Spanish: Working knowledge, written'), [['Spanish', 'Working knowledge, written']]);
 });
+
+test('"English: Native, german, french": the lower-case names are languages, not the level', () => {
+  assert.deepEqual(langs('English: Native, german, french').map(([l]) => l), ['English', 'german', 'french']);
+});

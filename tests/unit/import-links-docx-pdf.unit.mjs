@@ -90,3 +90,12 @@ test('PDF: a contact line read as one item: each link\'s address after its own l
   assert.deepEqual([p.email, p.linkedin, p.github, p.website], ['robin.vale@example.com', 'https://www.linkedin.com/in/robin-vale-sample', 'https://github.com/robin-vale-sample', 'robinvale.example.com']);
   assert.deepEqual([p.linkedinLabel, p.githubLabel], ['LinkedIn', 'Code']);
 });
+
+test('PDF: a link box wider than its label (a proportional font) never puts the address past the separator', async () => {
+  const line = 'robin.vale@example.com | LinkedIn | Code';
+  const at = (piece) => 50 + line.indexOf(piece) * 6;
+  const items = [{ str: 'Robin Vale', x: 50, y: 760, w: 90, h: 20 }, { str: line, x: 50, y: 735, w: line.length * 6, h: 10 }];
+  const links = [[[at('LinkedIn'), 732, at('LinkedIn') + (8 + 3) * 6, 745], 'https://www.linkedin.com/in/robin-vale-sample']];
+  const lines = await pdfLines(new Uint8Array([1]), pdfjsOf(items, links));
+  assert.equal(lines[1].text, 'robin.vale@example.com | LinkedIn (https://www.linkedin.com/in/robin-vale-sample) | Code');
+});

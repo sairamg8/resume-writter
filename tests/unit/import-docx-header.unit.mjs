@@ -67,3 +67,12 @@ test('a header of "Curriculum Vitae" and "Robin Vale – Resume": the name alone
   assert.equal(r.personal.name, 'Robin Vale');
   assert.doesNotMatch(lines.map((l) => l.text).join('\n'), /Curriculum Vitae|Resume|Confidential/);
 });
+
+test('a header "Robin Vale ⇥ Page 1", or a page number alone: the name alone, no number', async () => {
+  for (const header of [[new Paragraph({ children: [new TextRun('Robin Vale'), new TextRun({ text: '\tPage 1' })] })], [new Paragraph('1'), new Paragraph('Robin Vale')]]) {
+    const doc = new Document({ sections: [{ headers: { default: new Header({ children: header }) }, children: body() }] });
+    const lines = await docxLines(new Uint8Array(await Packer.toBuffer(doc)));
+    assert.equal(resumeFromText(lines).personal.name, 'Robin Vale');
+    assert.doesNotMatch(lines.map((l) => l.text).join('\n'), /Page|^1$/m);
+  }
+});

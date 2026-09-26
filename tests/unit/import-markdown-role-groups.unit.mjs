@@ -50,3 +50,12 @@ test('"### Acme — Engineer" over "#### Highlights" with no dates: Acme\'s job 
   const jobs = resumeFromText(markdownLines(md)).sections.find((s) => s.type === 'experience')?.items || [];
   assert.deepEqual([jobs[0]?.company, jobs[0]?.role], ['Acme', 'Engineer']);
 });
+
+// The end-of-cluster review: an employer whose name holds a job title's word is still an employer.
+test('"Principal Financial Group" over its roles: each role a job there', () => {
+  const md = '# Jordan Ellery\n\n## Experience\n### **Principal Financial Group**\n*Des Moines, IA*\n\n#### **Analyst**\n*2019 – 2021*\n\n#### **Senior Analyst**\n*2021 – Present*\n';
+  const jobs = resumeFromText(markdownLines(md)).sections.find((s) => s.type === 'experience')?.items || [];
+  assert.deepEqual(jobs.map((j) => [j.company, j.role, j.location]), [
+    ['Principal Financial Group', 'Analyst', 'Des Moines, IA'], ['Principal Financial Group', 'Senior Analyst', 'Des Moines, IA'],
+  ]);
+});

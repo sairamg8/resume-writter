@@ -38,7 +38,6 @@ test('some sections styled Heading 1, another typed in capitals: each is a secti
     { text: 'Robin Vale', hint: 'name' },
     { text: 'Experience', hint: 'heading' },
     { text: 'Juniper Labs — Senior Product Designer\tJan 2020 – Present' },
-    { text: '' },
     { text: 'SKILLS' },
     { text: 'Design: Figma, prototyping' },
   ];

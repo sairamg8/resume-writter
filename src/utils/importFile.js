@@ -176,8 +176,8 @@ async function docxPartLines(bytes, part) {
   return docxXmlLines(decode(xml), docxLinks(rels && decode(rels)));
 }
 
-const FURNITURE = /^(?:curriculum vitae|cv|r[ée]sum[ée]|confidential|draft|page\s*\d*(?:\s*of\s*\d+)?)$/i;
-const FURNITURE_TAIL = /\s+[-–—|·•]\s+(?:curriculum vitae|cv|r[ée]sum[ée]|page\s*\d*(?:\s*of\s*\d+)?)\s*$/i;
+const FURNITURE = /^(?:curriculum vitae|cv|r[ée]sum[ée]|confidential|draft|page\s*\d*(?:\s*of\s*\d+)?|\d{1,3})$/i;
+const FURNITURE_TAIL = /(?:\s+[-–—|·•]\s+|\s*\t\s*)(?:curriculum vitae|cv|r[ée]sum[ée]|confidential|draft|page\s*\d*(?:\s*of\s*\d+)?)\s*$/i;
 
 /**
  * The page header the first page shows, as lines, else []: many résumés set the name and the contact
@@ -510,7 +510,8 @@ function withLinks(items, links) {
     if (text === label) continue;
     hits.forEach((h) => { if (h.from === 0 && h.to === h.it.str.length) whole.add(h.it); });
     const last = hits[hits.length - 1];
-    const end = last.it.str.slice(0, last.to).trimEnd().length;
+    // Never after the separator past its label: a box a little wider than its letters.
+    const end = last.it.str.slice(0, last.to).replace(/[\s|•·]+$/, '').length;
     inserts.set(last.it, [...(inserts.get(last.it) || []), { at: end, text: text.slice(label.length) }]);
   }
   for (const [it, list] of inserts) {
