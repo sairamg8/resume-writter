@@ -8,6 +8,8 @@
 //              so the drop moves nothing: the page asks boardCollision, not closestCenter.
 //   R4-BRD-08  a Kanban project's backlog lists every open issue, including those still in a
 //              sprint from when the project used sprints.
+//   R4-BRD-10  the Epic panel's "Create epic" composer shows no Task/Story/Bug picker (it made
+//              epics whatever was picked).
 // Run: node --test tests/pdf/82-backlog-r4.test.mjs
 import { before, after, beforeEach, afterEach, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
@@ -263,6 +265,27 @@ describe('R4-BRD-08: a Kanban project plans in one backlog', () => {
       page.view.act(() => fiber.memoizedProps.onDragEnd({ active: { id: 'i2' }, over: { id: 'i1', data: { current: { type: 'row', sprintId: null } } } }));
       assert.equal(issueNow('i2').sprintId, null);
       assert.match(page.section('backlog').textContent, /Paint the fence.*Fix the tap/);
+    } finally { await page.view.unmount(); }
+  });
+});
+
+describe('R4-BRD-10: the Epic panel\'s composer', () => {
+  /** The type pickers under `node` (their button reads "Issue type: Task"). */
+  const typePickers = (node) => [...dom.elements(node)].filter((el) => String(el.getAttribute('aria-label')).startsWith('Issue type'));
+
+  it('"Create epic" shows no Task/Story/Bug picker; a section\'s "Create issue" still does', async () => {
+    open([project({ mode: 'scrum' })]);
+    const page = mountBacklog();
+    try {
+      page.click(page.button('Epic panel'));
+      const panel = page.byLabel('Epics');
+      page.click(page.button('Create epic', panel));
+      assert.ok(page.byLabel('Summary of the new issue', panel), 'the composer is open');
+      assert.equal(typePickers(panel).length, 0, 'a type picker in the Epic panel');
+
+      const backlog = page.section('backlog');
+      page.click(page.button('Create issue', backlog));
+      assert.equal(typePickers(backlog).length, 1, 'the backlog\'s composer keeps its type picker');
     } finally { await page.view.unmount(); }
   });
 });
