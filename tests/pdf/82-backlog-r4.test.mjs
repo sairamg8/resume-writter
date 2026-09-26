@@ -231,6 +231,24 @@ describe('R4-BRD-07: a backlog drag can be called off', () => {
       assert.deepEqual(detect(args(700, 340)).map((c) => c.id), ['i1', 'section:backlog']);
     } finally { await page.view.unmount(); }
   });
+
+  it('the whole section is the drop target — header, rows, "Create issue" row — not its body alone, so a drop on the header still lands', async () => {
+    open([project({ mode: 'scrum', sprints: [{ id: 's1', name: 'Sprint 1', goal: '', startDate: '', endDate: '', state: 'future', completedAt: null }] })]);
+    const page = mountBacklog();
+    try {
+      for (const id of ['s1', 'backlog']) {
+        const el = page.section(id);
+        const fiber = el[Object.keys(el).find((k) => k.startsWith('__reactFiber$'))];
+        assert.equal(typeof fiber.ref, 'function', `section ${id}: its <section> is the droppable's node (useDroppable's setNodeRef)`);
+        assert.equal(fiber.return.memoizedProps.id, id, `section ${id}: rendered by the droppable section`);
+        assert.equal(fiber.return.memoizedProps.sprintId, id === 'backlog' ? null : id);
+      }
+      // Folded, a section is its header alone: still a target.
+      page.click(page.byLabel('Fold Sprint 1'));
+      const folded = page.section('s1');
+      assert.equal(typeof folded[Object.keys(folded).find((k) => k.startsWith('__reactFiber$'))].ref, 'function', 'a folded section is still a target');
+    } finally { await page.view.unmount(); }
+  });
 });
 
 describe('R4-BRD-08: a Kanban project plans in one backlog', () => {

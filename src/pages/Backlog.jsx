@@ -15,10 +15,15 @@ import { backlogSections, filterIssues } from '@/utils/boardQuery';
 import { activeSprint, issueKey } from '@/utils/boardModel';
 import { boardCollision } from '@/utils/boardDnd';
 
-/** A section's droppable body: rows dropped on its empty space land at its foot. */
-function SectionBody({ id, sprintId, children }) {
+/**
+ * A sprint's (or the backlog's) section, droppable as a whole: a row dropped anywhere in it — its
+ * header, its empty space, its "Create issue" row, or the header of a folded section — lands at its
+ * foot. The whole section, not its body alone: the backlog asks what is under the pointer
+ * (R4-BRD-07), and a body alone refused drops on the header and the create row that used to land.
+ */
+function DroppableSection({ id, sprintId, children, ...props }) {
   const { setNodeRef, isOver } = useDroppable({ id: `section:${id}`, data: { type: 'section', sprintId } });
-  return <div ref={setNodeRef} className={cx('min-h-10 rounded-sm transition-colors', isOver && 'bg-brand-subtle')}>{children}</div>;
+  return <section ref={setNodeRef} {...props} className={cx('rounded-md p-2 transition-colors', isOver ? 'bg-brand-subtle' : 'bg-sunken')}>{children}</section>;
 }
 
 /**
@@ -129,7 +134,7 @@ export function Backlog() {
               const open = !folded.has(section.id);
               const sprintId = sprint?.id ?? null;
               return (
-                <section key={section.id} data-section={section.id} aria-label={sprint ? sprint.name : 'Backlog'} className="rounded-md bg-sunken p-2">
+                <DroppableSection key={section.id} id={section.id} sprintId={sprintId} data-section={section.id} aria-label={sprint ? sprint.name : 'Backlog'}>
                   <header className="flex flex-wrap items-center gap-2 px-1 py-1">
                     <button type="button" aria-expanded={open} aria-label={`${open ? 'Fold' : 'Unfold'} ${sprint ? sprint.name : 'the backlog'}`} onClick={() => toggleFold(section.id)} className="rounded p-1 text-ink-subtle hover:bg-neutral-fill">
                       <ChevronDown size={16} aria-hidden="true" className={cx('transition-transform', !open && '-rotate-90')} />
@@ -161,7 +166,7 @@ export function Backlog() {
                   </header>
                   {open && (
                     <div className="mt-1 flex flex-col gap-1">
-                      <SectionBody id={section.id} sprintId={sprintId}>
+                      <div className="min-h-10 rounded-sm">
                         {section.shown.length === 0 ? (
                           <p className="rounded border-2 border-dashed border-line px-4 py-3 text-center text-[13px] text-ink-subtlest">
                             {section.issues.length ? 'No issues here match the filters.' : sprint ? 'Plan this sprint: drag issues here from the backlog, or create one.' : 'Your backlog is empty.'}
@@ -185,11 +190,11 @@ export function Backlog() {
                             </ul>
                           </SortableContext>
                         )}
-                      </SectionBody>
+                      </div>
                       <InlineCreate variant="row" onCreate={({ title, type }) => store.addIssue(board.id, { title, type, sprintId })} />
                     </div>
                   )}
-                </section>
+                </DroppableSection>
               );
             })}
           </div>
