@@ -31,8 +31,12 @@ export function useIssueRoute(boards, board = null) {
   // a toast's "Open" (Duplicate's) is clicked after the view has closed, and with the depth of
   // its own render it pushed one entry too many, and the close after it stepped off the board.
   const live = useRef(location);
+  // The entry a close was asked from: a browser steps back a while later, and a second close
+  // meanwhile (Escape held down, a double-clicked X) stepped back twice, off the board.
+  const closedFrom = useRef(null);
   useLayoutEffect(() => {
     live.current = location;
+    if (closedFrom.current !== location.key) closedFrom.current = null;
   });
   const at = (loc, key) => ({ pathname: loc.pathname, search: withSearchParam(loc.search, 'issue', key), hash: loc.hash });
   return {
@@ -47,6 +51,8 @@ export function useIssueRoute(boards, board = null) {
     },
     close: () => {
       const loc = live.current;
+      if (closedFrom.current === loc.key) return;
+      closedFrom.current = loc.key;
       const depth = loc.state?.issueDepth ?? 0;
       if (depth > 0) navigate(-depth);
       else navigate(at(loc, null), { replace: true, state: loc.state });

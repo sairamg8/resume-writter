@@ -8,7 +8,7 @@
 // Run: node --test tests/pdf/82-issue-view-r4-05.test.mjs
 import { it } from 'node:test';
 import assert from 'node:assert/strict';
-import { useIssueViewPage, mountBoard, issueNow, elements } from './issue-view-page.mjs';
+import { useIssueViewPage, mountBoard, issueNow, elements, reactProps, ev } from './issue-view-page.mjs';
 
 useIssueViewPage();
 
@@ -143,6 +143,30 @@ it('R4-BRD-05: on the board, the trail\'s project link closes the view the same 
     assert.equal(page.path(), '/elsewhere', 'Back after the project link opened the issue again');
   } finally {
     await page.view.unmount();
+  }
+});
+
+it('R4-BRD-05: a second close before the first has landed (a double-clicked X, Escape held down) closes once, not off the board', async () => {
+  for (const how of ['X', 'Escape']) {
+    const page = mountBoard('/boards/p1');
+    try {
+      page.click(page.card('HOME-2 Paint the fence'));
+      await page.settle();
+      assert.equal(page.path(), '/boards/p1?issue=HOME-2');
+      // Both in one batch: a browser's Back lands a while after it is asked for.
+      const [el, handler, props] = how === 'X'
+        ? [page.byLabel('Close'), 'onClick', {}]
+        : [page.dialog().parentNode.parentNode, 'onKeyDown', { key: 'Escape', repeat: true }];
+      page.view.act(() => {
+        reactProps(el)[handler](ev(props));
+        reactProps(el)[handler](ev(props));
+      });
+      await page.settle();
+      assert.equal(page.open(), null, `${how}: the view closed`);
+      assert.equal(page.path(), '/boards/p1', `${how}: the second close stepped back off the board`);
+    } finally {
+      await page.view.unmount();
+    }
   }
 });
 
