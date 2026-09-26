@@ -220,3 +220,95 @@ describe('STAR Optimizer · a paragraph split by <br> is read line by line (R4-C
     }
   });
 });
+
+// R4-LO-12: a <br> inside an inline wrapper — `<p><b>Handled QA<br>Cut costs by 20%</b></p>`, bold
+// lines split by Shift+Enter — was not seen, as only the paragraph's own children were looked at: both
+// lines opened glued together and Apply replaced both. A list item holding a nested list opened with
+// the nested items' text too, and Apply wiped them. A line is now bounded by a <br> at any depth, and
+// by a block inside the statement.
+describe('STAR Optimizer · a line break inside bold or a link, and a nested list (R4-LO-12)', () => {
+  /** `<p><b>lines[0]<br>lines[1]</b></p>` in `host`; returns the <b> and its text nodes. */
+  function wrappedLines(document, host, lines) {
+    const b = host.appendChild(document.createElement('p')).appendChild(document.createElement('b'));
+    const texts = lines.map((t, i) => {
+      if (i) b.appendChild(document.createElement('br'));
+      return b.appendChild(document.createTextNode(t));
+    });
+    return { b, texts };
+  }
+
+  it('opens on the caret\'s line of a bold run split by <br>', () => {
+    const view = dom.mount(RichTextEditor, { label: 'Description', value: '', onChange: () => {} });
+    try {
+      const el = box(view);
+      const { b, texts: [qa, costs] } = wrappedLines(globalThis.document, el, ['Handled QA', 'Cut costs by 20%']);
+      globalThis.document.getSelection().collapse(costs, 3);
+      assert.equal(statementRange(el).toString(), 'Cut costs by 20%');
+      globalThis.document.getSelection().collapse(qa, 2);
+      assert.equal(statementRange(el).toString(), 'Handled QA');
+      globalThis.document.getSelection().collapse(b, 1);
+      assert.equal(statementRange(el).toString(), 'Handled QA', 'a caret just before the <br> is on the line it ends');
+    } finally {
+      view.unmount();
+    }
+  });
+
+  it('reads a line through several wrappers: plain, bold and a link on one line', () => {
+    const view = dom.mount(RichTextEditor, { label: 'Description', value: '', onChange: () => {} });
+    try {
+      const el = box(view);
+      const d = globalThis.document;
+      const p = el.appendChild(d.createElement('p'));
+      p.appendChild(d.createTextNode('Built '));
+      const b = p.appendChild(d.createElement('b'));
+      const api = b.appendChild(d.createTextNode('the API'));
+      b.appendChild(d.createElement('br'));
+      b.appendChild(d.createTextNode('Cut costs '));
+      const a = p.appendChild(d.createElement('a'));
+      const link = a.appendChild(d.createTextNode('by 20%'));
+      d.getSelection().collapse(api, 1);
+      assert.equal(statementRange(el).toString(), 'Built the API');
+      d.getSelection().collapse(link, 1);
+      assert.equal(statementRange(el).toString(), 'Cut costs by 20%');
+    } finally {
+      view.unmount();
+    }
+  });
+
+  it('Apply replaces only the caret\'s line, and the bold line before it stays', () => {
+    const view = dom.mount(RichTextEditor, { label: 'Description', value: '', onChange: () => {} });
+    try {
+      const el = box(view);
+      const { b, texts: [, costs] } = wrappedLines(globalThis.document, el, ['Handled QA', 'Cut costs by 20%']);
+      globalThis.document.getSelection().collapse(costs, 0);
+      const open = [...dom.elements(view.container)].find((e) => e.tagName === 'BUTTON' && e.getAttribute('title')?.includes('Optimizer'));
+      view.act(() => dom.reactProps(open).onMouseDown({ preventDefault() {} }));
+      const area = [...dom.elements(view.container)].find((e) => e.tagName === 'TEXTAREA');
+      assert.equal(dom.reactProps(area).value, 'Cut costs by 20%', 'it opens on the one line');
+      view.act(() => dom.reactProps(area).onChange({ target: { value: 'Reduced costs by 20%' } }));
+      const apply = [...dom.elements(view.container)].find((e) => e.tagName === 'BUTTON' && e.textContent.includes('Apply to Resume'));
+      view.act(() => dom.reactProps(apply).onClick());
+      assert.equal(b.textContent, 'Handled QAReduced costs by 20%', 'the first line is kept, the second replaced');
+    } finally {
+      view.unmount();
+    }
+  });
+
+  it('a list item with a nested list opens on its own line, not its sub-items', () => {
+    const view = dom.mount(RichTextEditor, { label: 'Description', value: '', onChange: () => {} });
+    try {
+      const el = box(view);
+      const d = globalThis.document;
+      const outer = el.appendChild(d.createElement('ul')).appendChild(d.createElement('li'));
+      const led = outer.appendChild(d.createTextNode('Led the migration'));
+      const inner = outer.appendChild(d.createElement('ul')).appendChild(d.createElement('li'));
+      const cut = inner.appendChild(d.createTextNode('Cut costs by 30%'));
+      d.getSelection().collapse(led, 2);
+      assert.equal(statementRange(el).toString(), 'Led the migration');
+      d.getSelection().collapse(cut, 2);
+      assert.equal(statementRange(el).toString(), 'Cut costs by 30%');
+    } finally {
+      view.unmount();
+    }
+  });
+});
