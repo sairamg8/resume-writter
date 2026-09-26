@@ -19,6 +19,7 @@ import { buildExportFilename } from '@/utils/exportFilename';
 import { newId } from '@/utils/ids';
 import { AtsParserView } from '@/components/AtsParserView';
 import { useSessionState } from '@/hooks/useSessionState';
+import { usePickCard } from '@/hooks/usePickCard';
 
 /**
  * The template the panel's costly layout fix moves a risky résumé to. One id, read both by the
@@ -35,7 +36,7 @@ const itemFixes = (item) => (item?.fixable ? (item.actions || [item.action]).fil
  * TUI-3). In the order it lists them: the Sidebar's own Layout toggle first, because it reaches the
  * same ATS-safe page while keeping the résumé's template, heading style and title case, and the
  * template switch after it, in a neutral tone rather than the recommended green, because it
- * replaces all three and nothing in the app undoes it. Every template name is templateLabel()'s.
+ * replaces all three (its notice's Undo puts them back, R4-DUX-03). Every template name is templateLabel()'s.
  */
 const LAYOUT_FIXES = {
   sidebar_single_column: {
@@ -48,7 +49,7 @@ const LAYOUT_FIXES = {
     Icon: Briefcase,
     tone: 'text-gray-700 bg-white hover:bg-gray-100 border-gray-300',
     label: () => `Switch to ${templateLabel(ATS_FALLBACK_TEMPLATE)}`,
-    title: (r) => `Replaces the ${templateLabel(r?.template)} template, its heading style and its title case. There is no undo.`,
+    title: (r) => `Replaces the ${templateLabel(r?.template)} template, its heading style and its title case. Undo puts them back.`,
   },
   // The section_grids warning's fix (R2-021): Grids 1 on the sections it names, nothing else.
   grids_one_column: {
@@ -86,6 +87,9 @@ function AtsCheck({ resume, store }) {
     skills: false,
     layout: false,
   });
+
+  // The Classic switch is Design → Template's pick (usePickCard), so it raises the same notice with Undo.
+  const { pick } = usePickCard(resume || {}, store || {});
 
   const analysis = useMemo(() => {
     return analyzeAtsScore(resume, jobDescription);
@@ -128,14 +132,15 @@ function AtsCheck({ resume, store }) {
 
   /**
    * The costly fix: a different template. setTemplate() overwrites the résumé's heading style and
-   * title case with the new template's (useResumeStore.js), and nothing in the app undoes any of
-   * it — so this is offered second, in a neutral tone, under a label that names the template it
-   * leaves behind. It used to be the panel's *only* layout fix, labelled with the name of the
-   * Layout toggle above: a Sidebar user clicking it to become ATS-safe lost the Sidebar (TUI-3).
+   * title case with the new template's (useResumeStore.js) — so this is offered second, in a neutral
+   * tone, under a label that names the template it leaves behind. It used to be the panel's *only*
+   * layout fix, labelled with the name of the Layout toggle above: a Sidebar user clicking it to
+   * become ATS-safe lost the Sidebar (TUI-3). It is picked as Design → Template picks a card, so the
+   * same "Template: …" notice comes up, whose Undo puts the old look back (R4-DUX-03).
    */
   function handleSwitchToClassic() {
     if (!store?.setTemplate) return;
-    store.setTemplate(ATS_FALLBACK_TEMPLATE);
+    pick({ engine: ATS_FALLBACK_TEMPLATE, preset: '', label: templateLabel(ATS_FALLBACK_TEMPLATE) });
   }
 
   /**

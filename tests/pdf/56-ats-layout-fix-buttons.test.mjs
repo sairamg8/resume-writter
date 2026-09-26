@@ -126,7 +126,7 @@ describe('ATS Check → a multi-column layout: the cheap fix first, the costly o
       const after = tab.saved();
       const { templateStyleDefaults } = await loadModule('/src/constants/templates.js');
       assert.equal(after.template, 'classic', `"${SWITCH_TEMPLATE}" switches the template`);
-      // What it costs, and why it is not offered first: setTemplate() overwrites both, with no undo.
+      // What it costs, and why it is not offered first: setTemplate() overwrites both (its notice's Undo puts them back, R4-DUX-03).
       assert.deepEqual(
         { headingStyle: after.settings.headingStyle, sectionTitleCase: after.settings.sectionTitleCase },
         templateStyleDefaults('classic'),
