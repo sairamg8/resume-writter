@@ -42,6 +42,8 @@ describe('the gallery\'s category when its cards are gone (R4-DSN-06)', () => {
       assert.doesNotMatch(root().textContent, /No template has all of these/);
       const all = byText(byAttr(root(), 'data-testid', 'template-gallery-categories')[0], 'All');
       assert.equal(all.getAttribute('aria-pressed'), 'true', 'All is the chip pressed');
+      view.act(() => setDesigns(MINE));
+      assert.ok(cards().includes('gallery-template-classic'), 'a design saved later: still All, not My designs again');
     } finally { await view.unmount(); }
   });
 });

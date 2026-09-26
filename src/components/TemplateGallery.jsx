@@ -19,6 +19,8 @@ export function TemplateGallery({ open, onClose, resume, designs = [], setTempla
   // The gallery stays mounted while closed: a category whose cards are all gone since (My designs, each
   // saved design deleted) offers no chip, so it is All, not an empty grid with nothing to turn off (R4-DSN-06).
   const cat = categoriesOf(cards).some((c) => c.id === category) ? category : '';
+  // …and forgotten, so a design saved later does not open the gallery on My designs again.
+  if (cat !== category) setCategory('');
   const shown = filterCards(cards, { category: cat, filters });
   const { pick, selected } = usePickCard(resume, { setTemplate, updateSetting, applyDesign, restoreDesign });
   const toggle = (id) => setFilters((f) => (f.includes(id) ? f.filter((x) => x !== id) : [...f, id]));
