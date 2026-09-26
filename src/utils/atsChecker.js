@@ -4,6 +4,7 @@ import { skillGroup } from './skills.js';
 import { ACTION_VERBS, hasMetric, leadsWithActionVerb } from './bulletOptimizer.js';
 import { ATS_TIER_POINTS, atsRating, hasHeaderControls, inSidebarColumn, templateId, templateLabel, TEMPLATE_PICKER } from '../constants/templates.js';
 import { resolveSection } from '../templates/pdf/shared/templateSectionDefaults.js';
+import { groupsRoles, roleGroups } from './roleGroups.js';
 
 // The ATS plain-text export lives in its own module; the ATS tab and Export menu import it from here.
 export { generateAtsPlainText } from './atsPlainText.js';
@@ -248,9 +249,19 @@ function shownItems(s, template) {
  */
 export function printedJobs(resume) {
   const template = templateId(resume?.template);
-  return (Array.isArray(resume?.sections) ? resume.sections : [])
-    .filter((s) => s?.type === 'experience' && s.visible !== false)
-    .flatMap((s) => shownItems(s, template));
+  const jobs = [];
+  for (const s of Array.isArray(resume?.sections) ? resume.sections : []) {
+    if (s?.type !== 'experience' || s.visible === false) continue;
+    // Section Options → "Group roles by company" prints a group's company, and a location its roles
+    // share, once, on the employer header above its first role (R2-147): each later role carries
+    // `groupLead`, the index of that first role here, so jobFields reads those fields where they
+    // print (R4-CL-06).
+    for (const group of roleGroups(shownItems(s, template), groupsRoles(s.settings))) {
+      const lead = jobs.length;
+      group.forEach((job, i) => jobs.push(i ? { ...job, groupLead: lead } : job));
+    }
+  }
+  return jobs;
 }
 
 /**
