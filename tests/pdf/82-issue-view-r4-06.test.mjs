@@ -62,7 +62,8 @@ it('R4-BRD-06: M on the History tab goes to Comments and opens the comment box',
     page.click(page.tab('History'));
     assert.equal(page.tab('History').getAttribute('aria-selected'), 'true');
     const box = page.button('Add a comment…');
-    assert.ok(!box || box.closest('.hidden'), 'the History tab shows no comment box');
+    const hidden = (el) => { for (let n = el; n; n = n.parentNode) if (String(n.getAttribute?.('class') ?? '').split(/\s+/).includes('hidden')) return true; return false; };
+    assert.ok(!box || hidden(box), 'the History tab shows no comment box');
     press(page.view, 'm', page.view.document.body);
     await page.settle();
     assert.equal(page.tab('Comments').getAttribute('aria-selected'), 'true', 'M left the History tab showing, and nothing happened');
