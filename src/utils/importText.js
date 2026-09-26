@@ -641,18 +641,24 @@ export function resumeFromText(input) {
 
   // The name: the file's own, else the first line.
   const nameAt = Math.max(0, lines.findIndex((l) => l.hint === 'name'));
-  const hinted = lines.some((l) => l.hint === 'heading');
+  // Only a heading after the name counts: a Word résumé whose name alone is styled Heading 1, its
+  // section titles bold Normal text, marks no heading (R4-IMP-08).
+  const hinted = lines.some((l, i) => i > nameAt && l.hint === 'heading');
 
-  // Headings. A file that marks its headings (Word's Heading styles, Markdown's ##) is taken at its word.
+  // Headings. A file that marks its headings (Word's Heading styles, Markdown's ##) is taken at its word;
+  // and a known title in capitals or over a rule is one there too, as it is in a file with no marks (a
+  // Word résumé with some sections styled as headings and the others typed in bold capitals).
   const headingAt = new Map();
   let seen = false;
   lines.forEach((l, i) => {
     if (i <= nameAt) return;
     const text = l.text.replace(/\s*:$/, '').trim();
+    const plain = !BULLET.test(l.text) && !/\t|\s\|\s|@/.test(text) && text.length <= 48 && !/[.!?,;]$/.test(text);
     let type = null;
     if (hinted) {
       if (l.hint === 'heading') type = headingType(text) || 'custom';
-    } else if (!BULLET.test(l.text) && !/\t|\s\|\s|@/.test(text) && text.length <= 48 && !/[.!?,;]$/.test(text)) {
+      else if (!l.hint && plain && (isCaps(text) || l.ruled)) type = headingType(text);
+    } else if (plain) {
       const known = headingType(text);
       if (known && (l.ruled || isCaps(text) || l.gap || l.text.endsWith(':') || i === nameAt + 1 || headingAt.size === 0)) type = known;
       else if (l.ruled && !/\d/.test(text)) type = 'custom';
