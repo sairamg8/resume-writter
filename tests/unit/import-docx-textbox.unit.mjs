@@ -47,10 +47,27 @@ test('the résumé: one name, the contacts in the header, nothing doubled into "
   assert.equal(r.sections[0].items.length, 1);
 });
 
-test('the anchoring paragraph\'s own text, before and after the box, is kept', () => {
+test('the anchoring paragraph\'s own text, before and after the box, is kept, and read before the box', () => {
   const xml = `<w:body>${anchored([para('In the box')], 'Before it ', 'after it')}</w:body>`;
   const texts = docxXmlLines(xml).map((l) => l.text);
-  assert.deepEqual(texts, ['In the box', 'Before it after it']);
+  assert.deepEqual(texts, ['Before it after it', 'In the box']);
+});
+
+test('a side column in a box anchored to the name: the name first, then the column', () => {
+  const xml = '<w:body>'
+    + anchored([para('CONTACT'), para('robin.vale@example.com'), para('SKILLS'), para('Figma, prototyping')], 'Robin Vale')
+    + para('EXPERIENCE') + '</w:body>';
+  assert.deepEqual(docxXmlLines(xml).map((l) => l.text), ['Robin Vale', 'CONTACT', 'robin.vale@example.com', 'SKILLS', 'Figma, prototyping', 'EXPERIENCE']);
+  assert.equal(resumeFromText(docxXmlLines(xml)).personal.name, 'Robin Vale');
+});
+
+test('a Fallback copy holding another text box is skipped whole; a self-closing Fallback skips nothing', () => {
+  const inner = `<mc:AlternateContent><mc:Choice Requires="wps">${box([para('Deep')])}</mc:Choice><mc:Fallback>${box([para('Deep')])}</mc:Fallback></mc:AlternateContent>`;
+  const nested = '<w:p><w:r><mc:AlternateContent><mc:Choice Requires="wps">' + box([para('Outer'), `<w:p><w:r>${inner}</w:r></w:p>`])
+    + '</mc:Choice><mc:Fallback>' + box([para('Outer'), `<w:p><w:r>${inner}</w:r></w:p>`]) + '</mc:Fallback></mc:AlternateContent></w:r></w:p>';
+  assert.deepEqual(docxXmlLines(`<w:body>${nested}${para('After')}</w:body>`).map((l) => l.text).filter(Boolean), ['Outer', 'Deep', 'After']);
+  const empty = `<w:body><w:p><w:r><mc:AlternateContent><mc:Choice Requires="wps">${box([para('Boxed')])}</mc:Choice><mc:Fallback/></mc:AlternateContent></w:r></w:p>${para('Kept')}<w:p><w:r><mc:AlternateContent><mc:Choice Requires="wps">${box([para('Second')])}</mc:Choice><mc:Fallback>${box([para('Second')])}</mc:Fallback></mc:AlternateContent></w:r></w:p></w:body>`;
+  assert.deepEqual(docxXmlLines(empty).map((l) => l.text).filter(Boolean), ['Boxed', 'Kept', 'Second']);
 });
 
 test('an empty <w:p/> still gives no line, and a table\'s cells a line each, as before', () => {

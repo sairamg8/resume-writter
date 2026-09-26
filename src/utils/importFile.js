@@ -61,11 +61,32 @@ const xmlText = (s) => s
   .replace(/&amp;/g, '&');
 
 /**
+ * `xml` without its <mc:Fallback> copies (docxXmlLines): each from its start to its own end — a copy
+ * may hold another AlternateContent, with a Fallback of its own — and a self-closing one alone.
+ */
+function withoutFallbacks(xml) {
+  let out = '';
+  let depth = 0;
+  let from = 0;
+  for (const m of xml.matchAll(/<mc:Fallback\b[^>]*?(\/?)>|<\/mc:Fallback>/g)) {
+    if (m[0].startsWith('</')) {
+      if (depth && --depth === 0) from = m.index + m[0].length;
+    } else if (!m[1]) {
+      if (depth++ === 0) out += xml.slice(from, m.index);
+    } else if (!depth) {
+      out += xml.slice(from, m.index);
+      from = m.index + m[0].length;
+    }
+  }
+  return depth ? out : out + xml.slice(from);
+}
+
+/**
  * word/document.xml as lines: a paragraph a line (its breaks as more lines, its tabs as tabs), a
  * list paragraph behind a "• ", an empty one as a blank line. A Heading style marks a heading, the
  * Title style the name — the app's Word export writes its section titles as Heading 1.
  *
- * A text box's paragraphs sit inside the paragraph that anchors it: each is a line of its own, before
+ * A text box's paragraphs sit inside the paragraph that anchors it: each is a line of its own, after
  * the anchoring paragraph's own text (what comes before and after the box). Word saves every text box
  * twice, the drawing in <mc:Choice> and a VML copy in <mc:Fallback>: the copy is not read, or each
  * line of a designed résumé's header or side column came out twice (R4-IMP-04).
@@ -75,8 +96,7 @@ const xmlText = (s) => s
  * (linkText), so the address is kept: the label alone was dropped, the URL nowhere (R4-IMP-10).
  */
 export function docxXmlLines(xml, links = {}) {
-  const body = (String(xml).split(/<w:body\b[^>]*>/)[1] ?? String(xml))
-    .replace(/<mc:Fallback\b[^>]*>[\s\S]*?<\/mc:Fallback>/g, '');
+  const body = withoutFallbacks(String(xml).split(/<w:body\b[^>]*>/)[1] ?? String(xml));
   const lines = [];
   const levels = []; // each line's Heading level, 0 for none
   const open = []; // the paragraphs being read, the innermost last
@@ -92,13 +112,16 @@ export function docxXmlLines(xml, links = {}) {
     } else if (m[0] === '</w:p>') {
       if (!para) continue;
       open.pop();
+      // Its own line before its text boxes' lines, read while it was open: a side column's box is
+      // anchored to the first paragraph, often the name, and the name comes first.
+      const at = para.start;
       const style = /<w:pStyle w:val="([^"]*)"/.exec(para.props)?.[1] ?? '';
       const list = /<w:numPr>/.test(para.props);
       const heading = /^(?:heading|berschrift|titre)\s*(\d)?/i.exec(style);
-      levels.push(heading ? Number(heading[1] || 1) : 0);
-      lines.push({ text: list && para.text.trim() ? `• ${para.text}` : para.text, hint: heading ? 'heading' : (/^title$/i.test(style) ? 'name' : undefined) });
+      levels.splice(at, 0, heading ? Number(heading[1] || 1) : 0);
+      lines.splice(at, 0, { text: list && para.text.trim() ? `• ${para.text}` : para.text, hint: heading ? 'heading' : (/^title$/i.test(style) ? 'name' : undefined) });
     } else if (m[0].startsWith('<w:p') && !m[0].startsWith('<w:pPr')) {
-      if (!m[0].endsWith('/>')) open.push({ text: '', props: '' }); // <w:p/>: an empty one, no line (as before)
+      if (!m[0].endsWith('/>')) open.push({ text: '', props: '', start: lines.length }); // <w:p/>: an empty one, no line (as before)
     }
     else if (!para) continue;
     else if (m[1] !== undefined) para.props = m[1];
