@@ -41,7 +41,8 @@ function assertRead(resume, how) {
   assert.ok(job, `${how}: the job is found by its date`);
   assert.deepEqual([job.company, job.role, job.startDate, job.current], ['Harbourside Logistics', 'Operations Manager', 'Mar 2021', true], how);
   assert.match(job.description, /<ul><li>Led the “Next Day” rollout across four depots\.<\/li><li>Cut late/, how);
-  assert.doesNotMatch(JSON.stringify(resume), /�|\u0000/, `${how}: no "�" and no NUL anywhere`);
+  const all = JSON.stringify(resume);
+  assert.ok(!all.includes('�') && !all.includes('\u0000'), `${how}: no "�" and no NUL anywhere`);
 }
 
 test('Word\'s "Save as Plain Text" (Windows-1252): bullets, dashes and quotes read as written', async () => {
