@@ -111,6 +111,19 @@ export function PdfRichText({ html, style = {}, breaks }) {
     // The glyph Design → Lists picked; the column is as wide whatever it draws, so a style never
     // moves the text. None draws nothing there: the text keeps its place by its own margin.
     const glyph = listMarker(block.marker, bulletStyle);
+    if (align === 'center' || align === 'right') {
+      // Centred or right-aligned (Section Options → Alignment, or the item's own alignment): the
+      // marker leads its text on one line, placed together — '• Cut costs 20%' — as Word places a
+      // centred list paragraph with its bullet. A marker column would leave it at the left margin.
+      return (
+        <View key={i} wrap={length > KEEP_TOGETHER_CHARS} style={{ ...edges, flexDirection: 'row', marginLeft: left || undefined }}>
+          <Text style={{ ...textStyle, textAlign: align, flex: 1 }} hyphenationCallback={breaks?.(left)}>
+            {glyph ? `${glyph} ` : null}
+            <Runs runs={block.runs} color={color} />
+          </Text>
+        </View>
+      );
+    }
     return (
       <View
         key={i}
