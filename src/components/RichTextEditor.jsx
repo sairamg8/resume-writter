@@ -32,8 +32,12 @@ export default function RichTextEditor({ label, ariaLabel, value, onChange, plac
     if (el.innerHTML !== clean) el.innerHTML = clean;
   }, [value]);
 
+  // What the editor holds, with any picture dropped first (dropMedia): the stored value never keeps
+  // an <img> or a data: URL, whichever way the browser put one in.
   function emit() {
-    onChange(ref.current?.innerHTML || '');
+    const el = ref.current;
+    if (el) dropMedia(el);
+    onChange(el?.innerHTML || '');
   }
 
   function exec(cmd, val = null) {
@@ -95,15 +99,19 @@ export default function RichTextEditor({ label, ariaLabel, value, onChange, plac
   }
 
   // Pasted and dropped content is reduced to what the editor itself can produce — no colours,
-  // fonts or backgrounds from Google Docs or web pages, and nothing executable.
+  // fonts or backgrounds from Google Docs or web pages, and nothing executable. The browser never
+  // inserts its own: a clipboard or a drop with no text (a copied screenshot, an image file) put an
+  // <img src="data:…"> of 1–5 MB in the field, which never prints and filled the browser's storage
+  // and the cloud copy's 1 MB (R4-ED-02). The editor has no pictures, so that inserts nothing.
   function onPaste(e) {
-    if (insertClean(e.clipboardData)) e.preventDefault();
+    e.preventDefault();
+    insertClean(e.clipboardData);
   }
 
   function onDrop(e) {
+    e.preventDefault();
     const data = e.dataTransfer;
     if (!data?.getData('text/html') && !data?.getData('text/plain')) return;
-    e.preventDefault();
     const range = document.caretRangeFromPoint?.(e.clientX, e.clientY);
     if (range) {
       const sel = window.getSelection();
@@ -241,6 +249,18 @@ export function statementRange(el) {
   range.setStartBefore(first);
   range.setEndAfter(last);
   return range.toString().trim() ? range : null;
+}
+
+/** Elements a browser can paste or drop into a contentEditable that the editor cannot print. */
+const MEDIA = new Set(['IMG', 'PICTURE', 'VIDEO', 'AUDIO', 'SVG', 'CANVAS', 'IFRAME', 'OBJECT', 'EMBED']);
+
+/** Remove every picture and other media element under `node`, in place (R4-ED-02). */
+function dropMedia(node) {
+  for (const child of Array.from(node.childNodes)) { // a copy: removing a child changes the live list
+    if (child.nodeType !== 1) continue;
+    if (MEDIA.has(child.nodeName.toUpperCase())) node.removeChild(child);
+    else dropMedia(child);
+  }
 }
 
 function Btn({ title, onExec, children }) {
