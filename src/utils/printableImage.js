@@ -16,12 +16,14 @@ const making = new Map();
 /**
  * Keys in `made` as null only because the fetch of a URL failed for a passing reason (no network, a
  * timeout, a server error), each with the time it may be fetched again: the PDF prints none for now,
- * and a build from then on fetches it again. A fetch that failed at once is tried by the next build; one
- * that ran into the timeout waits a minute, or until the browser is back online, so a host that hangs
- * does not hold every preview build for 15 s.
+ * and a build from then on fetches it again. Failed while the browser is offline, the next build tries
+ * it; any other passing failure (a timeout, a 5xx, a host that allows no cross-site read, which fetch
+ * cannot tell from no network) waits a minute, or until the browser is back online, so a slow or
+ * refusing host does not hold or re-download on every preview build.
  */
 const retry = new Map();
-const RETRY_AFTER_TIMEOUT_MS = 60_000;
+const RETRY_AFTER_MS = 60_000;
+const offlineNow = () => typeof navigator !== 'undefined' && navigator.onLine === false;
 const due = (key) => retry.has(key) && Date.now() >= retry.get(key);
 if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
   window.addEventListener('online', () => { for (const key of retry.keys()) retry.set(key, 0); });
@@ -57,8 +59,6 @@ const FETCH_MS = 15_000;
 
 /** What fetchedBlob returns for a fetch that failed for a passing reason: try again later. */
 const TRY_AGAIN = Symbol('try again');
-/** …and for one that ran into the timeout: try again, but not at once. */
-const TIMED_OUT = Symbol('timed out');
 
 /**
  * The image at URL or path `src` (a JSON Resume file's basics.image), as a Blob; null when the server
@@ -72,8 +72,8 @@ async function fetchedBlob(src) {
     const res = await fetch(src, { signal });
     if (res.ok) return await res.blob();
     return res.status >= 400 && res.status < 500 && res.status !== 408 && res.status !== 429 ? null : TRY_AGAIN;
-  } catch (err) {
-    return err?.name === 'TimeoutError' ? TIMED_OUT : TRY_AGAIN;
+  } catch {
+    return TRY_AGAIN;
   }
 }
 
@@ -83,7 +83,7 @@ async function fetchedBlob(src) {
  */
 async function copyOf(src, { kind = 'photo' } = {}) {
   const blob = src.startsWith('data:') ? blobOf(src) : await fetchedBlob(src);
-  if (blob === TRY_AGAIN || blob === TIMED_OUT) return blob;
+  if (blob === TRY_AGAIN) return TRY_AGAIN;
   if (!blob) return null;
   try {
     return drawableImage(await readImageFile(blob, { kind }));
@@ -124,9 +124,9 @@ export function imageCopy(src, { kind = 'photo' } = {}) {
   if (made.has(key) && !due(key)) return Promise.resolve(made.get(key));
   if (!making.has(key)) {
     making.set(key, copyOf(src, { kind }).then((result) => {
-      const passing = result === TRY_AGAIN || result === TIMED_OUT;
+      const passing = result === TRY_AGAIN;
       const copy = passing ? null : result;
-      if (passing) retry.set(key, result === TIMED_OUT ? Date.now() + RETRY_AFTER_TIMEOUT_MS : 0);
+      if (passing) retry.set(key, offlineNow() ? 0 : Date.now() + RETRY_AFTER_MS);
       else retry.delete(key);
       made.delete(key); // set again below, as the newest
       made.set(key, copy);
