@@ -31,9 +31,12 @@ Status legend: 🔴 open · ⏸ fixed on the work branch, not yet on master (not
 
 | Area | ✅ on master | ⏸ not deployed | 🔴 open |
 |---|---|---|---|
-| Boards (31) | 16 | 5 | 10 |
-| Jobs (41) | 27 | 4 | 10 |
-| **Total (72)** | **43** | **9** | **20** |
+| Boards (31) | 21 | 0 | 10 |
+| Jobs (41) | 32 | 0 | 9 |
+| **Total (72)** | **53** | **0** | **19** |
+
+(Updated 2026-09-26 13:59 UTC: the nine ⏸ rows below went live in `cb58695`, and J-12 in `1daf0f0`. The 19 🔴 rows are
+all accessibility, which the owner has deferred.)
 
 **✅ (43):**
 

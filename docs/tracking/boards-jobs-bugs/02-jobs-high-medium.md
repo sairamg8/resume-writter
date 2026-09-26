@@ -128,7 +128,7 @@ title: Job Tracker — verified bugs, High and Medium (J-01…J-15)
 - **Now (checked at `45b6b60`):** The list's table sits in its own `overflow-x-auto` box with a minimum width (src/components/job/ListView.jsx:44-45), inside the shell's `<main>` (min-w-0), so on a phone the table scrolls sideways and every column, Delete included, can be reached.
 - **Owner:** JOBS-UI · **Fix commit:** the Lane C redesign and the Jira-style revamp (merges `de0911f`, `75236a2`; on master `e6b1a4a`, deployed) · **Test:** —
 
-### J-12 · Medium · mobile · 🔴 Open (partly fixed by the revamp)
+### J-12 · Medium · mobile · ✅ Fixed
 **Job detail and form layouts do not collapse on phones: fixed 2-column grids, a 'Mark as' row that does not wrap, and long values overflow**
 - **Where:** `src/components/job/OverviewTab.jsx` : 17 (and src/components/job/Pipeline.jsx:169, src/components/job/InterviewStageSelector.jsx:32, 88-104, src/components/job/Field.jsx:52, src/pages/JobDetail.jsx:182-185)
 - **Repro:** 1. Open /#/jobs/demo_1 at 375px width and go to the Overview tab. 2. The Pipeline's 'Mark as:' chips run past the card edge, and the page scrolls sideways. 3. Role Info and Timeline are squeezed into two columns about 113px wide. 4. On Add Job, the Interview Stage 'Add Custom Stage' input and button do not fit. 5. On desktop, set a 120-character posting URL: it spills out of its card.
@@ -137,7 +137,9 @@ title: Job Tracker — verified bugs, High and Medium (J-01…J-15)
 - **Verified (WF-1):** Read the code and did the width arithmetic. At 375px the JobDetail content is 327px (px-6). OverviewTab's 'grid grid-cols-2 gap-5' has no breakpoint, which leaves about 113px inside the p-5 cards. Pipeline.jsx:169 is a flex row that does not wrap: the label plus three chips need about 360px inside a 287px card. index.css sets no overflow-x clip on body or #root, so the page scrolls sideways.
 - **Fail-first test:** Cypress at 375px on /#/jobs/demo_1, Overview tab: assert document.documentElement.scrollWidth <= 375.
 - **Now:** **Partly fixed by the revamp, still open (checked at `45b6b60`):** the pipeline's chips wrap (src/components/job/Pipeline.jsx:31, 64, 152) and the job page is one column below lg (src/pages/JobDetail.jsx:126). Still as filed: OverviewTab's `grid grid-cols-2` (src/components/job/OverviewTab.jsx:25) and InterviewStageSelector's (src/components/job/InterviewStageSelector.jsx:32) have no breakpoint, so Role Info and Timeline sit in two narrow columns on a phone, and Field's value (src/components/job/Field.jsx:54) has no min-w-0 or break-words for a long URL.
-- **Owner:** JOBS-UI · **Fix commit:** — · **Test:** —
+- **Deployed 2026-09-26:** `1daf0f0` (wave 3, gate 36223045204, on master since `843dded`) makes the rest one column
+  below sm: OverviewTab's cards and InterviewStageSelector's stages, and Field's value breaks a long URL.
+- **Owner:** JOBS-UI · **Fix commit:** `1daf0f0` · **Test:** tests/pdf/68-job-overview-phone.test.mjs
 
 ### J-13 · Medium · a11y · 🔴 Open
 **Icon-only buttons have no accessible name: task checkbox and delete, back arrows, search clear, add-task '+'**
