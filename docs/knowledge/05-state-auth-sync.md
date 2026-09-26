@@ -229,10 +229,13 @@ hidden otherwise) publishes a read-only copy of one résumé (`src/utils/publicL
 `src/components/ShareLinkModal.jsx`). The copy is `publicSnapshot(resume)`: template, design, and
 what the PDF prints — hidden fields' values blanked (a hidden contact's Display label and Link URL
 with it), only the `personal` keys the PDF reads, a section's dates with Show dates off and its
-locations with Show location off blanked, hidden sections and entries dropped, no cover letter, no
-dashboard name, no id. It is written to `public/{shareId}` (`{ owner, resume, publishedAt }`,
-`shareId` a random uuid) together with `users/{uid}/shares/{resumeId}` (`{ shareId, publishedAt }`) in
-one batch; Unpublish deletes both, and so does deleting the résumé from the Dashboard while signed
+locations with Show location off blanked, hidden sections and entries and sections with no shown
+entry dropped, the design's saved designs, last-applied look name and hidden contacts' icons left
+out, no cover letter, no dashboard name, no id. It is written to `public/{shareId}` (`{ owner, resume,
+publishedAt }`, `shareId` a random uuid) together with `users/{uid}/shares/{resumeId}` (`{ shareId,
+publishedAt }`) in one batch; Publish first reads that record and reuses the link it names, so two tabs
+or devices never make two copies, and Unpublish deletes the copy the panel shows and the one the record
+names (each only if it is still there) and the record, and so does deleting the résumé from the Dashboard while signed
 in (`unpublishResume`), which would otherwise leave a copy with no panel left to take it down. A
 résumé deleted on another device, offline, signed out or on an older build loses its copy at the next
 first sync of any device: the engine (`publicLinks`, wired in `useCloudSync`) passes the account's
@@ -244,7 +247,7 @@ logged (`tests/pdf/18-cloud-sync-public-links.test.mjs`). `firestore.rules` lets
 write carrying only `{ owner, resume, publishedAt }` with the copy's template, settings, personal,
 sections and data version, each of its type (`isPublishedCopy`, R2-148-d) —
 the only world-readable documents. The copy is not live: the panel says when the résumé changed since
-and offers "Update the public copy". The link `#/r/<shareId>` is served by this same app
+(its data version aside) and offers "Update the public copy". The link `#/r/<shareId>` is served by this same app
 (`src/pages/PublicResume.jsx`): the editor's PDF preview of the copy and a Download PDF button; a
 missing copy says it is not published. Tests: `tests/pdf/99-public-link.test.mjs` (over
 `tests/pdf/fake-firestore.mjs`, which applies the same rule), `tests/unit/firestore-rules.unit.mjs`.
