@@ -6,7 +6,7 @@
 // compared. A change that prints is still a change. Fictional data only.
 import { before, after, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { setup, teardown, loadModule, resume, render, read, allText } from './harness.mjs';
+import { setup, teardown, loadModule, resume, section, render, read, allText } from './harness.mjs';
 
 let link;
 before(async () => {
@@ -52,6 +52,13 @@ it('saving or deleting a design, or a new data version, leaves the copy current;
   assert.equal(link.publishedIsCurrent(copy, hiddenIcon), true, "a hidden contact's icon changed");
   assert.equal(link.publishedIsCurrent(copy, { ...r, settings: { ...r.settings, customContactIcons: {} } }), false, "a shown contact's icon is printed");
   assert.equal(link.publishedIsCurrent(copy, { ...r, personal: { ...r.personal, title: 'Art Director' } }), false);
+});
+
+it('a copy published before this fix, with the saved designs and an empty section, is still current', () => {
+  const r = { ...sample(), sections: [section('projects', [], {}, { title: 'Projects' })] };
+  const old = JSON.parse(JSON.stringify({ template: r.template, settings: r.settings, personal: link.publicSnapshot(r).personal, sections: r.sections, dataVersion: 2 }));
+  assert.equal(link.publishedIsCurrent(old, r), true);
+  assert.equal(link.publishedIsCurrent(old, { ...r, personal: { ...r.personal, title: 'Art Director' } }), false);
 });
 
 it('the copy still prints exactly as the résumé does', async () => {

@@ -129,8 +129,12 @@ const stable = (v) => JSON.stringify(v, (_, x) => (x && typeof x === 'object' &&
 /** A copy without its data version: an app update that migrates the résumé changes nothing it prints. */
 const printed = ({ dataVersion: _version, ...copy } = {}) => copy;
 
-/** Does the published copy print what `resume` prints now? */
-export const publishedIsCurrent = (copy, resume) => stable(printed(copy)) === stable(printed(publicSnapshot(resume)));
+/**
+ * Does the published copy print what `resume` prints now? The copy goes through publicSnapshot too
+ * (it keeps its own hidden fields, so that changes nothing it prints): one published before the
+ * copy left out saved designs and empty sections is not "changed since" for holding them.
+ */
+export const publishedIsCurrent = (copy, resume) => stable(printed(publicSnapshot(copy))) === stable(printed(publicSnapshot(resume)));
 
 const TOO_LARGE = 'This résumé is too large to publish (over 1 MB, usually its photo). Use a smaller photo and try again.';
 /** The error publish throws for a copy over MAX_PUBLIC_BYTES: its message is the whole story (no connection to check). */
@@ -183,17 +187,17 @@ export function publicIo(fs, db) {
      * own `shareId`, when the record names another, is taken down in the same batch: a résumé has
      * one public copy at most.
      */
-    async publish(uid, resume, { shareId, now = Date.now() } = {}) {
+    async publish(uid, resume, { shareId: shown, now = Date.now() } = {}) {
       const copy = publicSnapshot(resume);
       if (new Blob([JSON.stringify(copy)]).size > MAX_PUBLIC_BYTES) throw Object.assign(new Error(TOO_LARGE), { code: TOO_LARGE_CODE });
       const recorded = await recordedId(uid, resume.id);
-      const id = recorded || shareId || newId();
+      const shareId = recorded || shown || newId();
       const batch = fs.writeBatch(db);
-      if (shareId && shareId !== id) await deleteCopies(batch, [shareId]);
-      batch.set(publicDoc(id), { owner: uid, resume: copy, publishedAt: now });
-      batch.set(shareDoc(uid, resume.id), { shareId: id, publishedAt: now });
+      if (shown && shown !== shareId) await deleteCopies(batch, [shown]);
+      batch.set(publicDoc(shareId), { owner: uid, resume: copy, publishedAt: now });
+      batch.set(shareDoc(uid, resume.id), { shareId, publishedAt: now });
       await batch.commit();
-      return { shareId: id, publishedAt: now, copy };
+      return { shareId, publishedAt: now, copy };
     },
 
     /**
