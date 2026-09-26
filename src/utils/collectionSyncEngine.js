@@ -43,7 +43,7 @@ export function createCollectionSync({
     ready: false, // the account's first sync got through: changes are sent
     disabled: false, // the project refuses this account (rules, no database): local-only until a reload
     prev: null, // the list the queue last compared with
-    queue: null, // { writes: Map, deletes: Set, reordered }
+    queue: null, // { writes: Map, deletes: Map (id → the deleted copy's updatedAt), reordered }
     timer: null,
     retry: null,
     attempts: 0,
@@ -254,11 +254,14 @@ export function createCollectionSync({
     // this one has not heard of it yet: the empty list is no deletion of the account's items.
     if (meta.read().uid !== s.user.uid) { dropQueue(); s.ready = false; return; }
     const { writes, deletes, reordered } = diffLists(s.prev || [], list);
+    // The copy each deletion removed, as this browser had it: the flush checks the cloud has
+    // nothing newer before deleting (R2-140).
+    const was = new Map((s.prev || []).map((x) => [x.id, x]));
     s.prev = list;
     if (!writes.length && !deletes.length && !reordered) return;
-    const q = s.queue || { writes: new Map(), deletes: new Set(), reordered: false };
+    const q = s.queue || { writes: new Map(), deletes: new Map(), reordered: false };
     writes.forEach((x) => { q.writes.set(x.id, x); q.deletes.delete(x.id); });
-    deletes.forEach((id) => { q.writes.delete(id); q.deletes.add(id); });
+    deletes.forEach((id) => { q.writes.delete(id); q.deletes.set(id, was.get(id)?.updatedAt); });
     q.reordered ||= reordered;
     s.queue = q;
     timers.clear(s.timer);
@@ -279,8 +282,12 @@ export function createCollectionSync({
    * Send the queued changes as one batch. The cloud's copies of the items it writes are read
    * first: one another device changed later than this one's copy (its flush got there first) is
    * kept, and taken here — per-item last-writer-wins holds for every write, not only at a first
-   * sync. Flushes hand their batches over in the order they were made (`s.turn`), each after the
-   * one before it has read, so an older batch never lands after a newer one.
+   * sync. So are the copies of the items it deletes: one another device changed later than the
+   * copy deleted here was edited where the deletion was never seen, and that edit wins, as it does
+   * at a first sync (collectionSyncPlan.planFirstSync, R2-029) — the item is not deleted from the
+   * account but comes back here (R2-140). Flushes hand their batches over in the order they
+   * were made (`s.turn`), each after the one before it has read, so an older batch never lands
+   * after a newer one.
    */
   async function flush(user) {
     const q = s.queue;
@@ -296,7 +303,8 @@ export function createCollectionSync({
       await before;
       if (!current()) return;
       const queued = sendable(user.uid, [...q.writes.values()]);
-      const docs = queued.length ? await withDeadline(io.readItems(user.uid, queued.map((x) => x.id))) : [];
+      const reading = [...queued.map((x) => x.id), ...q.deletes.keys()];
+      const docs = reading.length ? await withDeadline(io.readItems(user.uid, reading)) : [];
       if (!current()) return;
       const cloudCopy = new Map(docs.map((d) => [d.id, d]));
       const newer = queued.map((x) => {
@@ -305,10 +313,26 @@ export function createCollectionSync({
       }).filter(Boolean);
       const skip = new Set(newer.map((x) => x.id));
       sets = queued.filter((x) => !skip.has(x.id));
-      const deletes = [...q.deletes];
-      const order = q.reordered || deletes.length || q.writes.size ? (s.prev || []).map((x) => x.id) : null;
+      // Deleted here, but changed in the cloud since the copy this browser deleted: kept, and taken back.
+      const edited = [...q.deletes].map(([id, at]) => {
+        const d = cloudCopy.get(id);
+        return d && Number.isFinite(d.updatedAt) && d.updatedAt > (at ?? 0) ? store.fromCloud(d) : null;
+      }).filter(Boolean);
+      const kept = new Set(edited.map((x) => x.id));
+      const deletes = [...q.deletes.keys()].filter((id) => !kept.has(id));
+      // One put back here meanwhile (Undo while the batch was read) is in the list already, and
+      // its own write is queued: it is not added a second time.
+      const lacking = (list) => edited.filter((x) => !list.some((y) => y.id === x.id));
+      const order = q.reordered || deletes.length || q.writes.size || edited.length
+        ? [...(s.prev || []), ...lacking(s.prev || [])].map((x) => x.id) : null;
       const sending = io.commit(user.uid, { sets, deletes, order });
       handedOver();
+      if (edited.length) {
+        // At the end of the list, where the order just sent has them; the list the queue compares
+        // with has them too, so they are not sent back as new.
+        s.prev = [...(s.prev || []), ...lacking(s.prev || [])];
+        store.replace([...store.items(), ...lacking(store.items())]);
+      }
       if (newer.length) {
         // Taken as the cloud has them: the list the queue compares with has them too, so they are not sent back.
         const list = store.items().map((x) => newer.find((n) => n.id === x.id) || x);
@@ -317,7 +341,7 @@ export function createCollectionSync({
       }
       await sending;
       if (!current()) return;
-      noteVersions(user.uid, [...sets, ...newer], deletes);
+      noteVersions(user.uid, [...sets, ...newer, ...edited], deletes);
       if (!s.timer) settled();
     } catch (e) {
       if (s.user?.uid !== user.uid) return;
