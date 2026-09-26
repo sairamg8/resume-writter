@@ -1,14 +1,15 @@
-import { useState, useId } from 'react';
+import { useEffect, useState, useId } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { useJobStore } from '@/hooks/useJobStore';
 import { useJobStages } from '@/hooks/useJobStages';
-import { formPatch, jobFormValues, withFormStatus } from '@/utils/jobEdits';
+import { FORM_FIELDS, formPatch, jobFormValues, withFormStatus } from '@/utils/jobEdits';
 import { linkedResume, resumeChoices } from '@/utils/jobQuery';
 import { JOB_SOURCES, JOB_STATUSES, WORK_MODES } from '@/constants/jobs';
 import { InterviewStageSelector } from '@/components/job/InterviewStageSelector';
 import { JobsNotSavedAlert } from '@/components/job/JobsNotSavedAlert';
 import RichTextEditor from '@/components/RichTextEditor';
+import { useConfirmOptional } from '@/components/ui';
 
 /** A labelled control: `id` is the control's, so the label names it (M8). */
 function Field({ id, label, children }) {
@@ -24,6 +25,24 @@ function Field({ id, label, children }) {
 
 // 16 px on touch screens, as the kit's controls (controlClass): iOS Safari zooms the page into any
 // smaller field it focuses (J-38).
+// The form's unsaved values in this tab's sessionStorage, so the browser's Back or an in-app link —
+// which the app's plain HashRouter cannot hold (no useBlocker) — no longer loses them (R4-DUX-06).
+// Storage can throw (private mode, blocked site data): then there is simply no draft.
+const draftKey = (id) => `jobform:${id || 'new'}`;
+function readDraft(key) {
+  try {
+    const raw = sessionStorage.getItem(key);
+    const draft = raw ? JSON.parse(raw) : null;
+    return draft && typeof draft === 'object' ? draft : null;
+  } catch { return null; }
+}
+function writeDraft(key, form) {
+  try { sessionStorage.setItem(key, JSON.stringify(form)); } catch { /* no draft, as without storage */ }
+}
+function clearDraft(key) {
+  try { sessionStorage.removeItem(key); } catch { /* nothing stored */ }
+}
+
 const INPUT = 'w-full px-3 py-2.5 text-sm pointer-coarse:text-base border border-line rounded-md focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent transition-colors';
 
 export function JobForm({ store }) {
@@ -41,7 +60,17 @@ export function JobForm({ store }) {
   // The job and the form's values as it opened: a save writes only what changed since (J-02).
   const [opened] = useState(() => existing ?? null);
   const [start] = useState(() => jobFormValues(existing));
-  const [form, setForm] = useState(start);
+  const key = draftKey(id);
+  // A draft left by a Back or a link away, restored when it differs from the job as it is now.
+  const [draft] = useState(() => {
+    const stored = readDraft(key);
+    if (!stored) return null;
+    const values = { ...start };
+    for (const k of FORM_FIELDS) if (k in stored && typeof stored[k] === typeof start[k]) values[k] = stored[k];
+    return Object.keys(formPatch(start, values)).length ? values : null;
+  });
+  const [form, setForm] = useState(draft ?? start);
+  const [restored, setRestored] = useState(Boolean(draft));
   // Deleted in another tab while this form was open: keep the input, offer it as a new job (J-16).
   const gone = isEdit && Boolean(opened) && !existing;
 
@@ -50,12 +79,50 @@ export function JobForm({ store }) {
   const setStatus = v => setForm(f => withFormStatus(f, v, { isNew: !isEdit }));
   const canSave = Boolean((form.company || '').trim() || (form.role || '').trim());
   const backPath = isEdit && existing ? `/jobs/${id}` : '/jobs';
+  const confirm = useConfirmOptional();
+  // Typed something the job does not hold yet: the same test the save writes by (formPatch).
+  const dirty = Object.keys(formPatch(start, form)).length > 0;
+
+  // Cancel and the back arrow left at once and dropped everything typed (R4-DUX-06): with changes,
+  // ask first. The app's HashRouter is no data router, so useBlocker cannot hold the browser's Back
+  // or an in-app link; closing or reloading the tab is guarded below.
+  async function leave() {
+    if (dirty && !(await confirm({
+      title: 'Discard your changes?',
+      body: 'What you typed on this form has not been saved.',
+      confirmLabel: 'Discard',
+      cancelLabel: 'Keep editing',
+      tone: 'danger',
+    }))) return;
+    clearDraft(key);
+    navigate(backPath);
+  }
+
+  // Keep the draft while the form differs from its start; none once it is back there.
+  useEffect(() => {
+    if (dirty) writeDraft(key, form);
+    else clearDraft(key);
+  }, [dirty, form, key]);
+
+  function discardRestored() {
+    clearDraft(key);
+    setForm(start);
+    setRestored(false);
+  }
+
+  // Closing or reloading the tab with changes: the browser's own "Leave site?" question.
+  useEffect(() => {
+    if (!dirty) return undefined;
+    const warn = (e) => { e.preventDefault(); e.returnValue = ''; };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [dirty]);
 
   function handleSave() {
     if (!canSave || gone) return;
-    if (!isEdit) { navigate(`/jobs/${addJob(form)}`); return; }
+    if (!isEdit) { clearDraft(key); navigate(`/jobs/${addJob(form)}`); return; }
     // The whole form wrote its stale to-dos, history and status over another tab's (J-02).
-    if (updateJob(id, formPatch(start, form))) navigate(`/jobs/${id}`);
+    if (updateJob(id, formPatch(start, form))) { clearDraft(key); navigate(`/jobs/${id}`); }
   }
 
   // Enter in a field saves, as in any form: the page had no <form>, so Enter did nothing (J-36).
@@ -65,7 +132,7 @@ export function JobForm({ store }) {
   }
 
   function saveAsNew() {
-    if (canSave) navigate(`/jobs/${addJob(form)}`);
+    if (canSave) { clearDraft(key); navigate(`/jobs/${addJob(form)}`); }
   }
 
   // An unknown id is not a blank form whose Save throws the input away (J-16).
@@ -86,12 +153,12 @@ export function JobForm({ store }) {
     <div className="flex-1 bg-white">
       <div className="bg-white border-b border-line sticky top-0 z-10">
         <div className="max-w-3xl mx-auto px-6 py-4 flex items-center gap-3">
-          <button type="button" onClick={() => navigate(backPath)} className="p-1.5 text-ink-subtlest hover:text-ink hover:bg-neutral-fill rounded-lg transition-colors shrink-0">
+          <button type="button" onClick={leave} className="p-1.5 text-ink-subtlest hover:text-ink hover:bg-neutral-fill rounded-lg transition-colors shrink-0">
             <ArrowLeft size={16} />
           </button>
           <h1 className="text-base font-bold text-ink">{isEdit ? 'Edit Job Application' : 'Add Job Application'}</h1>
           <div className="ml-auto flex gap-2">
-            <button type="button" onClick={() => navigate(backPath)} className="px-4 py-2 text-sm font-medium text-ink-subtle hover:bg-neutral-fill rounded-lg transition-colors">Cancel</button>
+            <button type="button" onClick={leave} className="px-4 py-2 text-sm font-medium text-ink-subtle hover:bg-neutral-fill rounded-lg transition-colors">Cancel</button>
             <button type="submit" form={formId} disabled={!canSave || gone} className="px-5 py-2 text-sm font-semibold text-white bg-brand hover:bg-brand-hover rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed shadow-sm">
               {isEdit ? 'Save Changes' : 'Add Job'}
             </button>
@@ -100,6 +167,14 @@ export function JobForm({ store }) {
       </div>
 
       <JobsNotSavedAlert error={persistError} className="max-w-3xl mx-auto px-4 sm:px-6 pt-4 sm:pt-6" />
+      {restored && (
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 pt-4 sm:pt-6">
+          <p className="text-xs text-ink-subtle bg-sunken border border-line rounded-lg px-3 py-2 flex flex-wrap items-center gap-2">
+            <span className="flex-1">Restored your unsaved changes</span>
+            <button type="button" onClick={discardRestored} className="font-semibold underline hover:text-ink">Discard</button>
+          </p>
+        </div>
+      )}
       {gone && (
         <div className="max-w-3xl mx-auto px-4 sm:px-6 pt-4 sm:pt-6">
           <p role="alert" className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 flex flex-wrap items-center gap-2">
@@ -212,7 +287,7 @@ export function JobForm({ store }) {
         </section>
 
         <div className="flex justify-end gap-3 pb-8">
-          <button type="button" onClick={() => navigate(backPath)} className="px-5 py-2.5 text-sm font-medium text-ink-subtle bg-white border border-line rounded-md hover:bg-sunken transition-colors">Cancel</button>
+          <button type="button" onClick={leave} className="px-5 py-2.5 text-sm font-medium text-ink-subtle bg-white border border-line rounded-md hover:bg-sunken transition-colors">Cancel</button>
           <button type="submit" form={formId} disabled={!canSave || gone} className="px-6 py-2.5 text-sm font-semibold text-white bg-brand hover:bg-brand-hover rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed shadow-sm">
             {isEdit ? 'Save Changes' : 'Add Job'}
           </button>
