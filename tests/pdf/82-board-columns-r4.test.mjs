@@ -19,10 +19,12 @@ const KEY = 'cpwtcv_boards_v2';
 const DAY = 24 * 60 * 60 * 1000;
 
 let Board;
+let BoardSettings;
 let store;
 before(async () => {
   await setup();
   ({ Board } = await loadModule('/src/pages/Board.jsx'));
+  ({ BoardSettings } = await loadModule('/src/pages/BoardSettings.jsx'));
   store = await loadModule('/src/hooks/useBoardStore.js');
 });
 after(teardown);
@@ -146,6 +148,31 @@ it('R4-BRD-01: on a scrum board with an active sprint, a column holding only bac
     assert.deepEqual(asked, ['Delete the To Do column?']);
     assert.deepEqual(boardNow().columns.map((c) => c.id), ['c1', 'c2', 'c3']);
     assert.deepEqual(boardNow().issues.filter((i) => i.columnId === 'c1').map((i) => i.id), ['i1', 'e1']);
+  } finally {
+    await page.view.unmount();
+  }
+});
+
+it('R4-BRD-12: Settings — the picked "move to" column deleted meanwhile: Delete column moves the issues to the column the select shows', async () => {
+  open(project({ columns: [col('c1', 'To Do'), col('c4', 'Waiting'), col('c2', 'Doing', 'inprogress'), col('c3', 'Done', 'done')] }));
+  const page = await mountAt('/boards/p1/settings', '/boards/:id/settings', BoardSettings);
+  globalThis.confirm = () => true;
+  page.view.window.confirm = () => true;
+  try {
+    const row = (id) => page.find('data-column', id);
+    page.click(page.byLabel('Delete column', row('c1')));
+    const select = () => page.byLabel('Move its issues to', row('c1'));
+    assert.equal(page.props(select()).value, 'c4', 'the panel opens on the other to-do column');
+    // Waiting holds nothing: its own trash deletes it after a plain question.
+    page.click(page.byLabel('Delete column', row('c4')));
+    await tick();
+    assert.deepEqual(boardNow().columns.map((c) => c.id), ['c1', 'c2', 'c3']);
+    const shown = page.props(select()).value;
+    assert.equal(shown, 'c2', 'the select shows a column that exists');
+    page.click(page.button('Delete column', row('c1')));
+    const b = boardNow();
+    assert.deepEqual(b.columns.map((c) => c.id), ['c2', 'c3'], 'the column is deleted');
+    assert.equal(b.issues.find((i) => i.id === 'i1').columnId, 'c2', 'its issue went where the select said');
   } finally {
     await page.view.unmount();
   }
