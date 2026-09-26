@@ -9,7 +9,7 @@
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
-import { setup, teardown, resume, renderDocx, loadModule, TEMPLATES } from './harness.mjs';
+import { setup, teardown, resume, renderDocx, loadModule, installPhotoCanvas, TEMPLATES } from './harness.mjs';
 
 before(setup);
 after(teardown);
@@ -17,6 +17,8 @@ after(teardown);
 /** A 4 × 2 px PNG, twice as wide as tall, and a 2 × 2 JPEG, as the editor stores uploads. */
 const PNG_4X2 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAQAAAACCAIAAADwyuo0AAAAEElEQVR4nGP4z8AARwzIHABvqgf5gNwAKAAAAABJRU5ErkJggg==';
 const JPEG_2X2 = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgMCAgMDAwMEAwMEBQgFBQQEBQoHBwYIDAoMDAsKCwsNDhIQDQ4RDgsLEBYQERMUFRUVDA8XGBYUGBIUFRT/wAALCAACAAIBAREA/8QAFAABAAAAAAAAAAAAAAAAAAAAB//EABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEAAD8AGn//2Q==';
+/** A red 4 × 2 SVG, as an upload of one stores it: react-pdf draws it as vectors (RES-R2-126). */
+const SVG_4X2 = `data:image/svg+xml;base64,${Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="4" height="2" viewBox="0 0 4 2"><rect width="4" height="2" fill="#ff0000"/></svg>').toString('base64')}`;
 const GIF = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
 const EMU = 12700; // per pt
 
@@ -148,6 +150,33 @@ describe('Word: the résumé prints the photo, as the PDF does (R2-126)', () => 
       Object.assign(globalThis, saved);
       if (saved.document === undefined) delete globalThis.document;
       if (saved.createImageBitmap === undefined) delete globalThis.createImageBitmap;
+    }
+  });
+
+  // RES-R2-126: the PDF prints an SVG photo, drawn as vectors; a Word picture must be a PNG or a JPEG,
+  // and the .docx printed no photo. Word prints a PNG copy of it, drawn through the photo canvas (the
+  // browser's; @napi-rs/canvas here, as the greyscale copies are drawn in these tests).
+  it('an SVG photo prints as a PNG copy of it, its shape the SVG\'s, cropped to its box (RES-R2-126)', async () => {
+    await installPhotoCanvas();
+    const { svgPhotoCopy, _setPhotoCanvasForTest } = await loadModule('/src/utils/printableImage.js');
+    try {
+      const { xml } = await renderDocx(cv('classic', { photo: SVG_4X2 }, { photoShape: 'square', photoHeight: 'match' }));
+      const [pic] = pictures(xml);
+      assert.ok(pic, 'the photo prints');
+      assert.deepEqual(pic.crop, { l: 25000, t: 0, r: 25000, b: 0 }, 'the 4 × 2 copy, cropped to its square box');
+      // The copy is the SVG's picture — red, twice as wide as tall — not an empty box of its size.
+      const copy = await svgPhotoCopy(SVG_4X2);
+      assert.match(copy, /^data:image\/png;base64,/);
+      const canvas = await import('@napi-rs/canvas');
+      const img = await canvas.loadImage(Buffer.from(copy.slice(copy.indexOf(',') + 1), 'base64'));
+      assert.equal(img.width, 2 * img.height, `${img.width} × ${img.height}`);
+      const g = canvas.createCanvas(img.width, img.height).getContext('2d');
+      g.drawImage(img, 0, 0);
+      assert.deepEqual([...g.getImageData(img.width / 2, img.height / 2, 1, 1).data], [255, 0, 0, 255]);
+      // A PNG or a JPEG needs no copy: it prints as it is saved.
+      assert.equal(await svgPhotoCopy(PNG_4X2), null);
+    } finally {
+      _setPhotoCanvasForTest(null);
     }
   });
 });

@@ -6,7 +6,7 @@
 // holds, so old data loads unchanged — unless it is larger than any upload stores, when the store
 // keeps the same copy in its place (smallerPhotos.js). A photo this browser cannot decode either
 // still prints none, and the editor says so (usePrintableImage).
-import { drawableImage, readImageFile } from './imageUpload.js';
+import { KINDS, drawableImage, readImageFile } from './imageUpload.js';
 import { photoOption } from '../constants/photoOptions.js';
 
 /** Copies made (null: none could be), by saved data URL, oldest first. */
@@ -191,6 +191,63 @@ function greyCopy(src) {
 async function toned(src, settings) {
   if (photoOption('photoTone', settings?.photoTone) !== 'grayscale' || typeof src !== 'string' || !src.startsWith('data:')) return src;
   return (await greyCopy(src)) || src;
+}
+
+// An SVG photo in Word (RES-R2-126): react-pdf draws an SVG as vectors, but a Word picture must be a
+// PNG or a JPEG, and the .docx printed no photo where the PDF printed it. Word prints a PNG copy of it,
+// drawn through the same canvas as the greyscale copies; with none (Node, without a test's) it still
+// prints none, as before.
+
+/** The longest side, px, of the PNG copy of an SVG photo: an upload's photo side (KINDS.photo), well over what Word prints. */
+const SVG_COPY_SIDE = KINDS.photo.maxSide;
+
+/**
+ * The width / height the root <svg> of the base64 data URL `src` declares — by its viewBox, else by a
+ * width and height in plain numbers or px — or null when it declares neither. A browser may load an
+ * SVG with neither size attribute as 0 × 0 (Firefox does), and then only the viewBox tells its shape.
+ */
+function svgAspect(src) {
+  let text;
+  try {
+    const b64 = src.slice(src.indexOf(',') + 1).replace(/[^\w+/-]/g, '').replace(/-/g, '+').replace(/_/g, '/');
+    text = atob(b64.slice(0, b64.length - (b64.length % 4)));
+  } catch {
+    return null;
+  }
+  const root = /<svg[\s/>][^>]*>?/i.exec(text)?.[0] || '';
+  const n = '([+]?(?:\\d+\\.?\\d*|\\.\\d+)(?:e[+-]?\\d+)?)';
+  const box = new RegExp(`(?:^|\\s)viewBox\\s*=\\s*["']\\s*[^\\s,"']+[\\s,]+[^\\s,"']+[\\s,]+${n}[\\s,]+${n}`, 'i').exec(root);
+  const attr = (name) => parseFloat(new RegExp(`(?:^|\\s)${name}\\s*=\\s*["']\\s*${n}\\s*(?:px)?\\s*["']`, 'i').exec(root)?.[1]);
+  const [w, h] = box ? [parseFloat(box[1]), parseFloat(box[2])] : [attr('width'), attr('height')];
+  return w > 0 && h > 0 ? w / h : null;
+}
+
+/**
+ * A PNG copy of the SVG photo `src` (a base64 data URL), its longer side SVG_COPY_SIDE px and its shape
+ * the SVG's, for the Word export (wordExportPhoto.js); a PNG keeps what the SVG leaves see-through.
+ * Null when `src` is no SVG, there is no canvas, or the canvas cannot draw it.
+ */
+export async function svgPhotoCopy(src) {
+  // What react-pdf draws: an SVG's bytes under whatever label they were saved with, labelled as an SVG.
+  const svg = drawableImage(src);
+  if (!svg || !/^data:image\/svg(?:\+xml)?;/i.test(svg)) return null;
+  const canvas = photoCanvas || browserCanvas();
+  if (!canvas) return null;
+  try {
+    const img = await canvas.loadImage(svg);
+    const nw = img.naturalWidth || img.width;
+    const nh = img.naturalHeight || img.height;
+    const aspect = nw > 0 && nh > 0 ? nw / nh : svgAspect(svg);
+    if (!aspect) return null;
+    const w = Math.max(1, Math.round(aspect >= 1 ? SVG_COPY_SIDE : SVG_COPY_SIDE * aspect));
+    const h = Math.max(1, Math.round(aspect >= 1 ? SVG_COPY_SIDE / aspect : SVG_COPY_SIDE));
+    const c = canvas.createCanvas(w, h);
+    c.getContext('2d').drawImage(img, 0, 0, w, h);
+    const out = c.toDataURL('image/png');
+    return drawableImage(out)?.startsWith('data:image/png;') ? out : null;
+  } catch {
+    return null;
+  }
 }
 
 /**

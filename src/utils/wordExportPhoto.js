@@ -3,7 +3,7 @@
 import { ImageRun } from 'docx';
 import { getPdfPhotoStyle } from '@/templates/pdf/shared/pdfPhoto';
 import { drawableImage } from '@/utils/imageUpload';
-import { withPrintablePhotos } from '@/utils/printableImage';
+import { svgPhotoCopy, withPrintablePhotos } from '@/utils/printableImage';
 import { templateId } from '@/constants/templates';
 import { photoOption } from '@/constants/photoOptions';
 import { accent2Hex } from '@/utils/wordExportUtils';
@@ -95,8 +95,9 @@ class ShapedImageRun extends ImageRun {
  * Sidebar's scaled to its column; the picture cropped to fill it. A Circle prints as an ellipse, Rounded
  * and Square as a rectangle with the PDF's corners. Border Thin and Accent ring it in the colour they
  * take on the white page — Word draws no banner or panel for the white ring they take there.
- * An SVG photo prints none: Word needs a PNG copy of it that the export cannot draw. A photo
- * react-pdf reads from elsewhere reaches here as bytes (withWordPhoto). Photo → Tone Grayscale
+ * An SVG photo reaches here as the PNG copy withWordPhoto makes of it (RES-R2-126); one no copy could
+ * be made of prints none, as Word takes no SVG without a PNG beside it. A photo react-pdf reads from
+ * elsewhere reaches here as bytes (withWordPhoto). Photo → Tone Grayscale
  * prints it grey (ShapedImageRun's <a:grayscl/>; R2-147).
  * Returns { run, width }: `width` the box's, pt.
  */
@@ -150,8 +151,10 @@ async function fetchedImage(url) {
  * `resume` with its photo as the PDF export draws it, for wordPhoto to print (R2-126): the copy
  * the PDF prints of a WebP or GIF saved before uploads were converted (withPrintablePhotos, as
  * pdfExportReactPDF takes it), and the picture at a plain URL (a JSON Resume's `image`) fetched, as
- * react-pdf fetches it. Word printed neither. A photo that cannot be read stays as it is, and prints
- * none; a hidden one is not fetched. The résumé itself is never changed.
+ * react-pdf fetches it. Word printed neither. An SVG, saved or fetched, is drawn as a PNG copy
+ * (svgPhotoCopy): react-pdf draws it as vectors, but a Word picture must be a PNG or a JPEG, and the
+ * .docx printed no photo where the PDF printed it (RES-R2-126). A photo that cannot be read stays as
+ * it is, and prints none; a hidden one is not fetched. The résumé itself is never changed.
  */
 export async function withWordPhoto(resume) {
   const personal = resume?.personal;
@@ -162,8 +165,8 @@ export async function withWordPhoto(resume) {
   } catch {
     // no copy: the photo stays as saved
   }
-  const photo = out.personal.photo;
-  if (typeof photo !== 'string' || !/^https?:\/\//i.test(photo)) return out;
-  const fetched = await fetchedImage(photo);
-  return fetched ? { ...out, personal: { ...out.personal, photo: fetched } } : out;
+  let photo = out.personal.photo;
+  if (typeof photo === 'string' && /^https?:\/\//i.test(photo)) photo = (await fetchedImage(photo)) || photo;
+  photo = (await svgPhotoCopy(photo)) || photo;
+  return photo === out.personal.photo ? out : { ...out, personal: { ...out.personal, photo } };
 }
