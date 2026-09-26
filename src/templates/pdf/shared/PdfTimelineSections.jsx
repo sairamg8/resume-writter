@@ -44,9 +44,10 @@ const FIELDS = {
   education: (item, s, settings) => {
     const degree = [item.degree, item.fieldOfStudy || ''].filter(Boolean).join(', ');
     return {
-      primary: item.institution,
-      // Joined, not appended, so a GPA without a degree prints no leading separator (R4-DOUT-01).
-      sub: [degree, item.gpa ? `GPA: ${item.gpa}` : ''].filter(Boolean).join(' · '),
+      // Word's rule (R4-DOUT-01): without a school the degree leads and the GPA stays on the sub line;
+      // joined, not appended, so a GPA without a degree prints no leading separator.
+      primary: item.institution || degree,
+      sub: [item.institution ? degree : '', item.gpa ? `GPA: ${item.gpa}` : ''].filter(Boolean).join(' · '),
       loc: s.showLocation !== false ? (item.location || '') : '',
       dateStr: s.showDates !== false ? dateRange(startDateOf(item), endDateOf(item, settings), settings) : '',
       desc: item.description,

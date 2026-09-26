@@ -274,10 +274,11 @@ export function EducationSection({ section, settings, marginBottom, spaceBefore,
   // An entry's header fields, as ItemHeader prints them.
   const head = (item) => {
     const degree  = [item.degree, item.fieldOfStudy ? item.fieldOfStudy : ''].filter(Boolean).join(', ');
-    // Joined, not appended, so a GPA without a degree prints no leading separator (R4-DOUT-01).
-    const sub     = [degree, item.gpa ? `GPA: ${item.gpa}` : ''].filter(Boolean).join(' · ');
+    // Word's rule (R4-DOUT-01): without a school the degree leads and the GPA stays on the sub line;
+    // joined, not appended, so a GPA without a degree prints no leading separator.
+    const sub     = [item.institution ? degree : '', item.gpa ? `GPA: ${item.gpa}` : ''].filter(Boolean).join(' · ');
     return {
-      primary: item.institution,
+      primary: item.institution || degree,
       sub: sub || undefined,
       loc: (showLoc && item.location ? item.location : '') || undefined,
       dateStr: showDates ? dateRange(startDateOf(item), endDateOf(item, settings), settings) : '',

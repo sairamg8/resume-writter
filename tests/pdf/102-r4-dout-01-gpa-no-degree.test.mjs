@@ -1,6 +1,7 @@
 // R4-DOUT-01: an Education entry with a GPA but no degree or field prints "GPA: 3.8" on its sub line,
 // with no stray leading " · " separator — in Classic (EducationSection) and Timeline (its own
-// education fields) alike; with no school the sub leads the title line, and it too starts "GPA".
+// education fields) alike; with no school the degree leads the title line and the GPA stays under it,
+// as Word prints it (with neither, "GPA: 3.8" leads).
 // With a degree the separator stays between the two. Word already joins them this way.
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
@@ -31,6 +32,16 @@ for (const template of ['classic', 'timeline']) {
       assert.ok(text.includes('GPA: 3.8'), text);
       assert.doesNotMatch(text, /·\s*GPA/, text);
       for (const t of gpaItems) assert.ok(!t.str.trim().startsWith('·'), `text item "${t.str}" starts with a separator`);
+    });
+
+    it('with no school, the degree leads and the GPA prints on the line under it, as in Word', async () => {
+      const pages = await read(await render(resume({ template, sections: [section('education', [{ ...ENTRY, institution: '', degree: 'B.Sc' }])] })));
+      const text = allText(pages);
+      const degree = itemsWith(pages, 'B.Sc');
+      const gpa = itemsWith(pages, 'GPA: 3.8');
+      assert.ok(degree.length > 0 && gpa.length > 0, text);
+      assert.doesNotMatch(text, /B\.Sc\s*·\s*GPA/, text);
+      assert.ok(degree.every((d) => gpa.every((g) => Math.abs(d.y - g.y) >= 1)), 'degree and GPA print on different lines');
     });
 
     it('with a degree, the separator stays between degree and GPA', async () => {
