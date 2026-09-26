@@ -83,9 +83,11 @@ async function printed(r) {
 const count = (lines, s) => lines.filter((l) => l === s).length;
 
 describe('the generator\'s Apply writes only the recipient the user typed (AUD-31)', () => {
-  it('the modal\'s own "Hiring Manager" prints once in the block, with no "Hiring Team" title, in the PDF and the .docx', async () => {
-    const { r, opened } = await generateOver(person({ body: '<p>Hello</p>' }));
-    assert.equal(opened, 'Hiring Manager', 'the modal still starts at its default');
+  it('a typed "Hiring Manager" prints once in the block, with no "Hiring Team" title, in the PDF and the .docx', async () => {
+    // A letter with no recipient opens the modal on none — it used to open on "Hiring Manager", which
+    // Apply then wrote over a name the letter had (R4-CL-01, tests/pdf/r4cl-generator-letter-fields).
+    const { r, opened } = await generateOver(person({ body: '<p>Hello</p>' }), 'Hiring Manager');
+    assert.equal(opened, '', 'the modal starts from the letter\'s own recipient: none');
     assert.equal(r.coverLetter.recipientName, 'Hiring Manager');
     assert.equal(r.coverLetter.recipientTitle, '', 'the generator asks for no title, so it stores none');
     const out = await printed(r);

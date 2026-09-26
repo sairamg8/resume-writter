@@ -85,3 +85,27 @@ test('a verb the optimizer calls weak is not a strong verb: "Ensured" is replace
   assert.equal(a.weakPhrases.length, 1);
   assert.equal(a.hasActionVerb, false, 'not both a weak phrase and a strong verb');
 });
+
+// R4-CL-09: a year inside a statement counted as a "Quantifiable Metric" in the optimizer (+30) and
+// toward the ATS score's metrics ratio; only a statement that was nothing but a year was excluded.
+test('a calendar year is no metric, in the optimizer and in the ATS score alike', () => {
+  const metric = (t) => analyzeBullet(t).hasMetric;
+  for (const t of [
+    'Joined Acme in 2021 as a backend engineer',
+    'Migrated the platform to AWS in 2019',
+    'Led the rewrite from 2019–2022',
+    'Maintained the 1990s billing system',
+    'Promoted in Jan, 2020.',
+    'Led the rewrite from 2019–22',
+    'Ran the 2019/20 hiring round',
+    'Promoted to lead in 05/2021',
+  ]) {
+    assert.equal(metric(t), false, t);
+    assert.equal(atsVerdict(t).metric, false, `ATS: ${t}`);
+  }
+  // A number beside a year still counts, and so do figures that only look like one.
+  for (const t of ['Cut costs 30% in 2021', 'Served 2000+ users', 'Saved $2019 a month', 'Grew sign-ups 2020%', 'Served 2020k requests']) {
+    assert.equal(metric(t), true, t);
+    assert.equal(atsVerdict(t).metric, true, `ATS: ${t}`);
+  }
+});

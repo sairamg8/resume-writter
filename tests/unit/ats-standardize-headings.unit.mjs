@@ -15,15 +15,18 @@ import {
   analyzeAtsScore,
 } from '../../src/utils/atsChecker.js';
 
-/** Visible headings the report flags, visible ones it passes, a hidden one and a custom one. */
+/**
+ * Visible headings the report flags, visible ones it passes, a hidden one and a custom one — each
+ * with an entry, as a section with none prints no heading at all (R4-CL-11).
+ */
 const mixedSections = () => [
-  { id: 'exp', type: 'experience', title: 'Work Experience', visible: true, settings: { titleOrder: 'company' }, items: [] },
-  { id: 'edu', type: 'education', title: 'My College', visible: true, settings: {}, items: [] },
-  { id: 'skl', type: 'skills', title: 'Technical Skills', visible: true, settings: {}, items: [] },
-  { id: 'prj', type: 'projects', title: 'Side Quests', visible: false, settings: {}, items: [] },
-  { id: 'awd', type: 'awards', title: 'Awards', visible: true, settings: {}, items: [] },
-  { id: 'hob', type: 'custom', title: 'Hobbies', visible: true, settings: {}, items: [] },
-  { id: 'vol', type: 'volunteering', title: 'Giving Back', settings: {}, items: [] }, // no `visible`: shown
+  { id: 'exp', type: 'experience', title: 'Work Experience', visible: true, settings: { titleOrder: 'company' }, items: [{ id: 'i' }] },
+  { id: 'edu', type: 'education', title: 'My College', visible: true, settings: {}, items: [{ id: 'i' }] },
+  { id: 'skl', type: 'skills', title: 'Technical Skills', visible: true, settings: {}, items: [{ id: 'i' }] },
+  { id: 'prj', type: 'projects', title: 'Side Quests', visible: false, settings: {}, items: [{ id: 'i' }] },
+  { id: 'awd', type: 'awards', title: 'Awards', visible: true, settings: {}, items: [{ id: 'i' }] },
+  { id: 'hob', type: 'custom', title: 'Hobbies', visible: true, settings: {}, items: [{ id: 'i' }] },
+  { id: 'vol', type: 'volunteering', title: 'Giving Back', settings: {}, items: [{ id: 'i' }] }, // no `visible`: shown
 ];
 
 const stdHeadings = (sections) => analyzeAtsScore({ template: 'classic', settings: {}, personal: {}, sections })
@@ -61,7 +64,7 @@ test('standardizeSectionsForAts: writes no title order — that is the separate 
   assert.equal(exp.settings.titleOrder, 'company');
   // Nor on an experience section it does rename.
   const [renamed] = standardizeSectionsForAts([
-    { id: 'e', type: 'experience', title: 'Where I Worked', settings: { titleOrder: 'company' } },
+    { id: 'e', type: 'experience', title: 'Where I Worked', settings: { titleOrder: 'company' }, items: [{ id: 'i' }] },
   ]);
   assert.equal(renamed.title, ATS_STANDARD_SECTIONS.experience.canonical);
   assert.equal(renamed.titleOrder, undefined);
@@ -100,4 +103,24 @@ test('standardizeSectionsForAts: headings that all pass come back untouched; odd
   const oddOut = standardizeSectionsForAts(odd);
   assert.equal(oddOut[0], null);
   assert.equal(oddOut[1], odd[1]);
+});
+
+// R4-CL-11: a section with no shown entry prints no heading (sectionPrints, R2-057), yet the report
+// called its heading non-standard and withheld 4 points, and the fix renamed it. Only headings that
+// print are judged — the rule has_exp, has_edu and has_skills already use.
+test('an empty or all-hidden section is neither flagged nor renamed', () => {
+  const sections = [
+    { id: 'exp', type: 'experience', title: 'Work Experience', items: [{ id: 'e1', role: 'Engineer', company: 'Acme' }] },
+    { id: 'empty', type: 'projects', title: 'Side Stuff', items: [] },
+    { id: 'none', type: 'awards', title: 'Shiny Things' },
+    { id: 'hidden', type: 'education', title: 'My College', items: [{ id: 'd1', degree: 'BSc', visible: false }] },
+  ];
+  const item = stdHeadings(sections);
+  assert.equal(item.status, 'pass', item.detail);
+  const out = standardizeSectionsForAts(sections, 'classic');
+  sections.forEach((s, i) => assert.equal(out[i], s, `${s.title} is untouched`));
+  // With an entry shown, the same heading is flagged and renamed.
+  const shown = sections.map((s) => (s.id === 'empty' ? { ...s, items: [{ id: 'p1', name: 'Tool' }] } : s));
+  assert.match(stdHeadings(shown).detail, /"Side Stuff" → "Projects"/);
+  assert.equal(standardizeSectionsForAts(shown, 'classic').find((s) => s.id === 'empty').title, 'Projects');
 });

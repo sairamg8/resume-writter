@@ -269,14 +269,26 @@ export function statementRange(el) {
   const at = sel.getRangeAt(0);
   if (!at.collapsed && at.toString().trim()) return at.cloneRange();
   const range = document.createRange();
+  // The paragraph or item the caret is in, else the editor itself. A paragraph whose lines are split
+  // by <br> (Shift+Enter, a pasted or imported description) is read line by line, as bare text is:
+  // read whole, its two lines opened glued into one ("Handled QACut costs") and Apply replaced both
+  // (R4-CL-04).
+  let host = el;
   for (let n = at.startContainer; n && n !== el; n = n.parentNode) {
-    if (n.nodeType === 1 && STATEMENTS.has(n.nodeName)) {
-      range.selectNodeContents(n);
-      return range.toString().trim() ? range : null;
-    }
+    if (n.nodeType === 1 && STATEMENTS.has(n.nodeName)) { host = n; break; }
   }
-  let node = at.startContainer === el ? el.childNodes[at.startOffset] || el.lastChild : at.startContainer;
-  while (node && node.parentNode !== el) node = node.parentNode;
+  if (host !== el && ![...host.childNodes].some((c) => c.nodeName === 'BR')) {
+    range.selectNodeContents(host);
+    return range.toString().trim() ? range : null;
+  }
+  let node = at.startContainer;
+  if (node === host) {
+    // A caret between two children: the one after it, but just before a <br> it is at the end of the
+    // line that break closes.
+    const [before, after] = [host.childNodes[at.startOffset - 1], host.childNodes[at.startOffset]];
+    node = after && (after.nodeName !== 'BR' || !before || !inLine(before)) ? after : before || host.lastChild;
+  }
+  while (node && node.parentNode !== host) node = node.parentNode;
   if (!node || !inLine(node)) return null;
   let first = node;
   let last = node;

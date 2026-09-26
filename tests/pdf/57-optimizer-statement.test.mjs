@@ -141,3 +141,82 @@ describe('STAR Optimizer · what Apply leaves behind (AUD-09)', () => {
     }
   });
 });
+
+// R4-CL-04: lines split by Shift+Enter inside a paragraph — Chrome stores
+// `Built the billing API<div>Handled QA<br>Cut costs by 20%</div>`, and a pasted or imported
+// description `<p>A<br>B</p>` — opened as the whole block, its lines glued ("Handled QACut costs by
+// 20%"), and Apply replaced both. The caret's line is the statement, bounded by <br> as bare text is.
+describe('STAR Optimizer · a paragraph split by <br> is read line by line (R4-CL-04)', () => {
+  /** `<tag>lines[0]<br>lines[1]…</tag>` in `host`, built by hand; returns the element and its text nodes. */
+  function brBlock(document, host, tag, lines) {
+    const block = host.appendChild(document.createElement(tag));
+    const texts = lines.map((t, i) => {
+      if (i) block.appendChild(document.createElement('br'));
+      return block.appendChild(document.createTextNode(t));
+    });
+    return { block, texts };
+  }
+
+  for (const tag of ['div', 'p']) {
+    it(`opens on the caret's line of a <${tag}>, not on its lines glued together`, () => {
+      const view = dom.mount(RichTextEditor, { label: 'Description', value: '', onChange: () => {} });
+      try {
+        const el = box(view);
+        el.appendChild(globalThis.document.createTextNode('Built the billing API'));
+        const { texts: [qa, costs] } = brBlock(globalThis.document, el, tag, ['Handled QA', 'Cut costs by 20%']);
+        globalThis.document.getSelection().collapse(costs, 3);
+        assert.equal(statementRange(el).toString(), 'Cut costs by 20%');
+        globalThis.document.getSelection().collapse(qa, 0);
+        assert.equal(statementRange(el).toString(), 'Handled QA');
+      } finally {
+        view.unmount();
+      }
+    });
+  }
+
+  it('a caret set just before the <br> is on the line that break ends', () => {
+    const view = dom.mount(RichTextEditor, { label: 'Description', value: '', onChange: () => {} });
+    try {
+      const el = box(view);
+      const { block } = brBlock(globalThis.document, el, 'div', ['Handled QA', 'Cut costs by 20%']);
+      globalThis.document.getSelection().collapse(block, 1);
+      assert.equal(statementRange(el).toString(), 'Handled QA');
+    } finally {
+      view.unmount();
+    }
+  });
+
+  it('Apply replaces only the caret\'s line, and the other line stays', () => {
+    const view = dom.mount(RichTextEditor, { label: 'Description', value: '', onChange: () => {} });
+    try {
+      const el = box(view);
+      const { block, texts: [, costs] } = brBlock(globalThis.document, el, 'div', ['Handled QA', 'Cut costs by 20%']);
+      globalThis.document.getSelection().collapse(costs, 0);
+      const open = [...dom.elements(view.container)].find((e) => e.tagName === 'BUTTON' && e.getAttribute('title')?.includes('Optimizer'));
+      view.act(() => dom.reactProps(open).onMouseDown({ preventDefault() {} }));
+      const area = [...dom.elements(view.container)].find((e) => e.tagName === 'TEXTAREA');
+      assert.equal(dom.reactProps(area).value, 'Cut costs by 20%', 'it opens on the one line');
+      view.act(() => dom.reactProps(area).onChange({ target: { value: 'Reduced costs by 20%' } }));
+      const apply = [...dom.elements(view.container)].find((e) => e.tagName === 'BUTTON' && e.textContent.includes('Apply to Resume'));
+      view.act(() => dom.reactProps(apply).onClick());
+      assert.ok(block.textContent.startsWith('Handled QA'), `the other line is kept: ${block.textContent}`);
+      assert.ok(block.textContent.endsWith('Reduced costs by 20%'), block.textContent);
+      assert.ok(!block.textContent.includes('Cut costs'), block.textContent);
+    } finally {
+      view.unmount();
+    }
+  });
+
+  it('a list item split by <br> is read line by line too, never glued', () => {
+    const view = dom.mount(RichTextEditor, { label: 'Description', value: '', onChange: () => {} });
+    try {
+      const el = box(view);
+      const ul = el.appendChild(globalThis.document.createElement('ul'));
+      const { texts: [, second] } = brBlock(globalThis.document, ul, 'li', ['Led the migration', 'of 40 services']);
+      globalThis.document.getSelection().collapse(second, 2);
+      assert.equal(statementRange(el).toString(), 'of 40 services');
+    } finally {
+      view.unmount();
+    }
+  });
+});

@@ -42,3 +42,17 @@ test('every weak phrase in a statement is fixed, each in its own case', () => {
     'Led billing; facilitated onboarding. Managed refunds.',
   );
 });
+
+// R4-CL-05 (not a bug, kept as a guard): the report said "\b(did)\b" matched the "did" of "didn't",
+// so Auto-Fix wrote "deliveredn't". It cannot: "didn't" has no word boundary between "did" and "n".
+// This pins that a contraction is never read as its weak verb.
+test('"didn\'t" is neither flagged nor rewritten, with a straight or a curly apostrophe', () => {
+  for (const apostrophe of ["'", '’']) {
+    const text = `Ensured releases didn${apostrophe}t slip past the sprint deadline`;
+    assert.equal(autoFixWeakPhrases(text), `Guaranteed releases didn${apostrophe}t slip past the sprint deadline`);
+    assert.deepEqual(analyzeBullet(text).weakPhrases.map((w) => w.phrase), ['Ensured']);
+    assert.deepEqual(analyzeBullet(`It didn${apostrophe}t change`).weakPhrases, []);
+  }
+  // The verb itself is still weak.
+  assert.equal(autoFixWeakPhrases('Did the migration'), 'Delivered the migration');
+});

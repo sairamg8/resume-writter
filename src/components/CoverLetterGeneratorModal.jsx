@@ -4,12 +4,26 @@ import { COVER_LETTER_ARCHETYPES, generateCoverLetter } from '@/utils/coverLette
 import { sanitizeRichText } from '@/utils/richText';
 import { useOverlayClose } from '@/hooks/useOverlayClose';
 
-export default function CoverLetterGeneratorModal({ isOpen, onClose, resume, onApply }) {
+export default function CoverLetterGeneratorModal({ isOpen, onClose, resume, coverLetter, onApply }) {
   const [archetype, setArchetype] = useState('impact');
   const [company, setCompany] = useState('');
   const [role, setRole] = useState('');
-  const [recipient, setRecipient] = useState('Hiring Manager');
+  const [recipient, setRecipient] = useState('');
   const overlay = useOverlayClose(onClose);
+
+  // Each opening starts from the letter's own recipient and company, so Apply greets the person the
+  // letter is addressed to and names the company its block prints: it used to start from a blank
+  // company and "Hiring Manager", and Apply wrote "[Company Name]" under a filled Company and replaced
+  // a typed name (R4-CL-01). A letter with no name is greeted "Dear Hiring Team,". Set while rendering
+  // the opening, so its first preview is already the letter's.
+  const [wasOpen, setWasOpen] = useState(false);
+  if (!!isOpen !== wasOpen) {
+    setWasOpen(!!isOpen);
+    if (isOpen) {
+      setCompany(String(coverLetter?.company ?? '').trim());
+      setRecipient(String(coverLetter?.recipientName ?? '').trim());
+    }
+  }
 
   // The Cover Letter panel mounts this closed: the letter is written only while it is open, not on
   // every render of the tab (a throw here used to blank the editor before the generator was opened).

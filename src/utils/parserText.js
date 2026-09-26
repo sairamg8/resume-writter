@@ -148,25 +148,36 @@ function datesIn(lines, years) {
  */
 export function jobFields(pages, jobs) {
   const all = (Array.isArray(pages) ? pages : []).flat();
+  const list = Array.isArray(jobs) ? jobs : [];
+  const out = [];
   let from = 0;
-  return (Array.isArray(jobs) ? jobs : []).map((job) => {
+  for (const job of list) {
     const title = norm(job?.role);
     const company = norm(job?.company);
     const around = (i) => all.slice(Math.max(from, i - 1), i + 4);
     const holds = (lines, want) => lines.some((runs) => runs.some((r) => norm(r).includes(want)));
     const find = (want, near) => (want ? all.findIndex((runs, i) => i >= from && holds([runs], want) && (!near || holds(around(i), near))) : -1);
+    // A later role of a group (printedJobs' `groupLead`) prints under its employer header, which the
+    // group's first role was read at: its company, and a location it shares with that role, are
+    // printed there once, so they take that role's outcome — read in its own header they were red
+    // "not found" on every role but the first (R4-CL-06). Its title is looked for alone.
+    const lead = Number.isInteger(job?.groupLead) && job.groupLead < out.length ? job.groupLead : -1;
     // Its title with its company beside it — the headline under the name can repeat a job's title, and
     // a company can head the job before it too — then either one alone.
-    const at = [find(title, company), find(company, title), find(title), find(company)].find((i) => i >= 0) ?? -1;
-    const header = at >= 0 ? around(at) : all;
+    const tries = lead >= 0 ? [find(title)] : [find(title, company), find(company, title), find(title), find(company)];
+    const at = tries.find((i) => i >= 0) ?? -1;
+    // A grouped role that prints no title is read just after the role before it, not over every line.
+    const header = at >= 0 ? around(at) : lead >= 0 ? all.slice(from, from + 4) : all;
     if (at >= 0) from = at + 1;
     const years = [job?.startDate, job?.current ? '' : job?.endDate]
       .map((d) => String(d ?? '').match(YEAR)?.[0]).filter(Boolean);
-    return {
+    const sharesPlace = lead >= 0 && norm(job?.location) === norm(list[lead]?.location);
+    out.push({
       title: fieldIn(header, job?.role),
-      company: fieldIn(header, job?.company),
+      company: lead >= 0 ? out[lead].company : fieldIn(header, job?.company),
       dates: datesIn(header, years),
-      location: fieldIn(header, job?.location),
-    };
-  });
+      location: sharesPlace ? out[lead].location : fieldIn(header, job?.location),
+    });
+  }
+  return out;
 }
