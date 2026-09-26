@@ -76,7 +76,8 @@ const indentOf = (text) => {
 function toLines(input) {
   const raw = Array.isArray(input) ? input : String(input ?? '').split(/\r\n|\r|\n/);
   return raw.flatMap((l) => {
-    if (l && typeof l === 'object') return String(l.text ?? '').split('\n').map((text, i) => ({ text: clean(text), hint: i ? undefined : l.hint, depth: i ? 0 : (l.depth || 0) }));
+    // Its links (a Markdown, Word or PDF line's, R4-LO-05) go with each of its lines: richText finds each by its text.
+    if (l && typeof l === 'object') return String(l.text ?? '').split('\n').map((text, i) => ({ text: clean(text), hint: i ? undefined : l.hint, depth: i ? 0 : (l.depth || 0), ...(l.links?.length ? { links: l.links } : {}) }));
     return [{ text: clean(l), depth: indentOf(l) }];
   });
 }
@@ -116,15 +117,20 @@ export function linkText(label, href) {
 /**
  * Markdown's inline marks off: bold and italics, links to their text (linkText; `as` 'label' the
  * label alone; an array, the label, each address pushed to it — an entry's title line gives them as
- * fields of their own at its end), escapes, inline code.
+ * fields of their own at its end), escapes, inline code. `found`: each link's label and address pushed
+ * to it, for the rich text to link (richText).
  */
-function unmark(text, as) {
+function unmark(text, as, found) {
   return String(text)
     .replace(/!\[((?:\\.|[^\]\\])*)\]\([^)]*\)/g, '$1')
     // A label may hold escaped brackets ("\[draft\]", the export's) and a pair of its own ("[v2]").
     .replace(/\[((?:\\.|\[(?:\\.|[^\]\\])*\]|[^\]\\[])*)\]\(([^)\s]*)[^)]*\)/g, (_, label, href) => {
       if (as === 'label') return label || href;
       const [t, to] = linkParts(label, href);
+      if (found) {
+        const url = to || linkParts('', href)[0];
+        if (/^(?:https?:|mailto:|tel:)/i.test(url)) found.push({ label: unescape(t), url });
+      }
       if (!to) return t;
       if (Array.isArray(as)) { as.push(to); return t; }
       return `${t} (${to})`;
@@ -138,6 +144,7 @@ function unmark(text, as) {
     .replace(/\\([\\`*_{}[\]()#+\-.!|<>~=&])/g, '$1')
     .replace(/ {2,}$/, '');
 }
+const unescape = (t) => String(t).replace(/\\([\\`*_{}[\]()#+\-.!|<>~=&])/g, '$1');
 
 /**
  * A Markdown résumé as the parser's lines: "# " the name, "## " a heading, "### " an entry's title,
@@ -169,8 +176,11 @@ export function markdownLines(md) {
     }
     if (/^\s*([-*_])(\s*\1){2,}\s*$/.test(line)) { out.push({ text: '' }); continue; } // a thematic break
     const item = /^\s*(?:[-*+]|(\d{1,3}[.)]))\s+(.*)$/.exec(line);
-    if (item) { out.push({ text: `${item[1] ? `${item[1]} ` : '• '}${unmark(item[2])}`, ...(indentOf(line) ? { depth: indentOf(line) } : {}) }); continue; }
-    out.push({ text: unmark(line.replace(/^\s*>\s?/, '')) });
+    // Its links' labels and addresses, for the rich text (R4-LO-05).
+    const links = [];
+    const withLinks = (l) => (links.length ? { ...l, links } : l);
+    if (item) { out.push(withLinks({ text: `${item[1] ? `${item[1]} ` : '• '}${unmark(item[2], undefined, links)}`, ...(indentOf(line) ? { depth: indentOf(line) } : {}) })); continue; }
+    out.push(withLinks({ text: unmark(line.replace(/^\s*>\s?/, ''), undefined, links) }));
   }
   return out;
 }
@@ -294,24 +304,58 @@ const JOB = new Set(['experience', 'volunteering']);
 
 const escapeHtml = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
+/** A web or mail address written out in body text: "https://…", "www.…", "mailto:…". */
+const BARE_LINK = /\b(?:https?:\/\/|mailto:|www\.)[^\s<>()"]*[^\s<>()".,;:!?'’]/gi;
+
+/**
+ * A line's text as rich text, its links as links (R4-LO-05): each link the file gave (`links`, its
+ * label and address — a Markdown [label](url), a Word hyperlink, a PDF's link box), read as linkText
+ * wrote it, "label (url)", or as its label alone where that is its address; else an address written
+ * out ("see https://…"). Before, all of it was plain text.
+ */
+function linkedHtml(text, links = []) {
+  const anchor = (url, label) => `<a href="${escapeHtml(url).replace(/"/g, '&quot;')}">${label}</a>`;
+  let html = escapeHtml(text);
+  if (!links.length) {
+    return html.replace(BARE_LINK, (shown) => {
+      const url = shown.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+      return anchor(/^www\./i.test(url) ? `https://${url}` : url, shown);
+    });
+  }
+  let from = 0;
+  for (const { label, url } of links) {
+    const shown = escapeHtml(label);
+    const withUrl = `${shown} (${escapeHtml(url)})`;
+    let at = html.indexOf(withUrl, from);
+    let length = withUrl.length;
+    if (at < 0) { at = html.indexOf(shown, from); length = shown.length; }
+    if (!shown || at < 0) continue;
+    const a = anchor(url, shown);
+    html = html.slice(0, at) + a + html.slice(at + length);
+    from = at + a.length;
+  }
+  return html;
+}
+
 /**
  * Body lines as the editor's rich text: a run of list items as a list (numbered ones as <ol>),
- * every other line a paragraph of its own.
+ * every other line a paragraph of its own. A line is its text, or `{ text, links }` (linkedHtml).
  */
 function richText(lines) {
   let html = '';
   let list = null;
   const close = () => { if (list) { html += `</${list}>`; list = null; } };
   for (const line of lines) {
-    const text = line.replace(/\t+/g, ' ').trim();
+    const { text: raw, links } = typeof line === 'string' ? { text: line } : line;
+    const text = String(raw ?? '').replace(/\t+/g, ' ').trim();
     if (!text) continue;
     if (BULLET.test(text)) {
       const kind = NUMBERED.test(text) && !/^\s*[-–—*+•]/.test(text) ? 'ol' : 'ul';
       if (list !== kind) { close(); html += `<${kind}>`; list = kind; }
-      html += `<li>${escapeHtml(text.replace(BULLET, ''))}</li>`;
+      html += `<li>${linkedHtml(text.replace(BULLET, ''), links)}</li>`;
     } else {
       close();
-      html += `<p>${escapeHtml(text)}</p>`;
+      html += `<p>${linkedHtml(text, links)}</p>`;
     }
   }
   close();
@@ -437,7 +481,7 @@ function entryOf(type, header, body, aside = () => {}) {
   const used = new Set();
   const take = (key) => { used.add(key); return h.meta[key] || ''; };
   const unnamed = () => h.named.filter((n) => !used.has(n.key)).map((n) => n.text);
-  const description = (extra = []) => richText([...unnamed(), ...extra, ...body.map((l) => l.text)]);
+  const description = (extra = []) => richText([...unnamed(), ...extra, ...body]);
   const dates = { startDate: d.start, endDate: d.end, current: d.current };
   switch (type) {
     case 'experience':
@@ -525,7 +569,7 @@ function entryOf(type, header, body, aside = () => {}) {
         if (found) Object.assign(fields, found);
         return !found;
       });
-      const extra = [...unnamed(), ...left, ...rest.map((l) => l.text)];
+      const extra = [...unnamed(), ...left, ...rest];
       if (extra.length) aside(fields.name || 'Certification', extra);
       return itemOf(type, fields);
     }
@@ -637,7 +681,7 @@ function entriesOf(type, lines, aside) {
   if (!entries.length) {
     // No dates and no entry titles: an entry per line after a gap or a list (one line each for a
     // certificate or an award); a custom section's text stays one entry, as written.
-    if (type === 'custom') return preamble.length ? [itemOf('custom', { description: richText(preamble.map((l) => l.text)) })] : [];
+    if (type === 'custom') return preamble.length ? [itemOf('custom', { description: richText(preamble) })] : [];
     for (const L of preamble) {
       const prev = cur?.body.length ? cur.body[cur.body.length - 1] : cur?.header[cur.header.length - 1];
       const starts = !L.bullet && (!cur || L.gap || prev?.bullet || type === 'certifications' || type === 'awards');
@@ -828,7 +872,7 @@ export function resumeFromText(input) {
         if (c && !personal[c.key]) personal[c.key] = c.value;
         else leftover.push(piece); // not a contact, or a second one of a kind
       }
-      if (leftover.length) spill(leftover.join(' | '), l);
+      if (leftover.length) spill(leftover.join(' | '), l.links);
     }
   };
 
@@ -847,7 +891,7 @@ export function resumeFromText(input) {
       rest.shift();
     }
     takeContacts(rest, {
-      spill: (text) => ((text.length >= 60 || /[.!?]$/.test(text)) ? summary : other).push(text),
+      spill: (text, links) => ((text.length >= 60 || /[.!?]$/.test(text)) ? summary : other).push({ text, links }),
     });
   }
 
@@ -858,9 +902,9 @@ export function resumeFromText(input) {
     const { type, title } = headingAt.get(at);
     const body = lines.slice(at + 1, starts[k + 1] ?? lines.length);
     const name = tamed(title);
-    if (type === 'summary') { summary.push(...body.map((l) => l.text)); return; }
+    if (type === 'summary') { summary.push(...body); return; }
     if (type === 'contact') {
-      takeContacts(body, { spill: (text) => other.push(text) });
+      takeContacts(body, { spill: (text, links) => other.push({ text, links }) });
       return;
     }
     // A heading with nothing under it keeps its words (R4-IMP-03): an unknown one is no section of its own.
