@@ -231,9 +231,13 @@ export function Board() {
         onDragEnd={onDragEnd}
         onDragCancel={() => { setActive(null); setPreview(null); }}
       >
-        <div className="min-h-0 flex-1 overflow-auto px-4 pb-6 md:px-8">
+        {/* On a phone each swipe settles on one column (their snap-center), the next one peeking. The
+            snap belongs on the element that scrolls: on the row inside it, it did nothing (B-13). It
+            is off while a card is dragged, or dnd-kit's auto-scroll toward a far column would be
+            pulled back to a snap point at each step. Swimlanes stay unsnapped, as they always were. */}
+        <div className={cx('min-h-0 flex-1 overflow-auto px-4 pb-6 md:px-8', groupBy === 'none' && !active && 'snap-x snap-mandatory md:snap-none')}>
           {groupBy === 'none' ? (
-            <div className="flex min-h-full snap-x snap-mandatory items-start gap-2 md:snap-none">
+            <div className="flex min-h-full items-start gap-2">
               {shownLists.map((list, index) => (
                 <BoardColumn
                   key={list.id}
