@@ -92,3 +92,27 @@ test('jobs printed the usual way are read as before', () => {
     ['Contoso Freight', 'Data Engineer', 'Jun 2017', 'Feb 2021', false, 'Remote'],
   ]);
 });
+
+// The second review of R4-LO-01: a job's stacked title over its date alone is no employer and role, a
+// job's last line is no employer over a one-field role, and a Word line indented under a dated line
+// that names a school stays a field.
+test('a stacked title over a date alone: one job, as before', () => {
+  assert.deepEqual(jobs(['Acme Corp', 'Senior Engineer', '2020 – Present', 'Portland, OR', '• Did X']).map((j) => [j[0], j[1]]),
+    [['Acme Corp', 'Senior Engineer']]);
+  const [job] = resumeFromText([...HEAD, 'Acme Corp', '2020 – Present', 'Led payments team of five']).sections[0].items;
+  assert.equal(job.company, 'Acme Corp');
+  assert.match(job.description, /Led payments team of five/);
+});
+
+test('a job\'s last line after its list is no employer over a one-field role', () => {
+  const got = jobs(['Northwind\t2021 – Present', 'Analyst\tLeeds', '• Built X', 'Promoted twice in two years', 'Engineer\t2019 – 2021', '• Shipped.']);
+  assert.equal(got[0][0], 'Northwind');
+  assert.notEqual(got[1][0], 'Promoted twice in two years');
+  assert.match(JSON.stringify(resumeFromText([...HEAD, 'Northwind\t2021 – Present', 'Analyst\tLeeds', '• Built X', 'Promoted twice in two years', 'Engineer\t2019 – 2021', '• Shipped.']).sections[0].items[0].description), /Promoted twice/);
+});
+
+test('Word: a school indented under a dated line is a field, not a place', () => {
+  const r = resumeFromText([{ text: 'Robin Vale', hint: 'name' }, { text: 'EDUCATION' }, { text: 'B.Sc. Computer Science\t2016 – 2020\n\tUniversity of Porto' }]);
+  const [school] = r.sections.find((s) => s.type === 'education').items;
+  assert.deepEqual([school.institution, school.location], ['University of Porto', '']);
+});

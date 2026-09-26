@@ -77,3 +77,18 @@ test('"SKILLS" inside a job with another job after it, and "OVERVIEW" in the las
   assert.match(last.description, /OVERVIEW.*A team of four designers.*KEY ACHIEVEMENTS.*Won the redesign pitch/s);
   assert.equal(r.personal.summary, '');
 });
+
+// The second review: a capitals section whose items are Heading 2 entries like the jobs is a section.
+test('"EDUCATION" in capitals over Heading 2 schools, after Heading 2 jobs, is a section', () => {
+  const r = resumeFromText([
+    ...lines.slice(0, 11),
+    { text: 'EDUCATION' },
+    { text: 'B.Sc. Computer Science | Lakeside University', hint: 'entry' },
+    { text: '2012 – 2016' },
+    { text: 'Skills', hint: 'heading' },
+    { text: 'Figma' },
+  ]);
+  assert.deepEqual(r.sections.map((s) => s.type), ['experience', 'education', 'skills']);
+  assert.equal(r.sections[0].items.length, 2);
+  assert.equal(r.sections[1].items[0].institution, 'Lakeside University');
+});
