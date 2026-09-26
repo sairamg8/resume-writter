@@ -66,9 +66,9 @@ describe('Save my design (B4)', () => {
     assert.equal(presetOf(a.settings, a.template)?.label, 'Violet');
   });
 
-  it('never saves the uploaded icons, the paper or the designs themselves into a look', async () => {
+  it('never saves the uploaded icons, the paper, the language or the designs themselves into a look', async () => {
     const { designLook } = await loadModule('/src/constants/templatePresets.js');
-    const look = designLook({ ...MINE, customContactIcons: { email: 'data:image/png;base64,AAAA' }, pageSize: 'LETTER', templatePreset: 'x', myDesigns: { x: {} }, bad: { nested: 1 } });
+    const look = designLook({ ...MINE, customContactIcons: { email: 'data:image/png;base64,AAAA' }, pageSize: 'LETTER', language: 'ar', templatePreset: 'x', myDesigns: { x: {} }, bad: { nested: 1 } });
     assert.deepEqual(look, MINE);
   });
 

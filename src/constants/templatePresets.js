@@ -112,11 +112,12 @@ export const designStyle = (template, settings) => ({ ...templateStyleDefaults(t
 export const presetSettings = (id) => (Object.hasOwn(TEMPLATE_PRESETS, id) ? { ...TEMPLATE_PRESETS[id].settings, templatePreset: id } : {});
 
 // What of a résumé's settings is its look, for a design the user saves (B4): everything but the contact
-// icons they uploaded (their own images), the paper (where the résumé is sent, kept by Reset too), and
-// the design bookkeeping itself. Only plain values: a look is font, colour, size and layout choices —
+// icons they uploaded (their own images), the paper (where the résumé is sent, kept by Reset too), the
+// language (what the résumé is written in, R2-148: a design saved from an Arabic résumé turned an English
+// one's page right to left), and the design bookkeeping itself. Only plain values: a look is font, colour, size and layout choices —
 // and null, which is one: Job Title's size and Title Spacing unset print their own (R2-146), so a
 // design saved with them unset brings them unset.
-const NOT_A_LOOK = ['customContactIcons', 'pageSize', 'templatePreset', 'myDesigns'];
+const NOT_A_LOOK = ['customContactIcons', 'pageSize', 'language', 'templatePreset', 'myDesigns'];
 
 /** The look `settings` print: what a design saved from them brings (ownDesign). */
 export function designLook(settings) {
