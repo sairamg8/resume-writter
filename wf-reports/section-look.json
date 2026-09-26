@@ -1,0 +1,68 @@
+{
+  "cluster": "section-look",
+  "branch": "claude/wf-section-look",
+  "base": "c5acb93",
+  "rows": [
+    {
+      "id": "R2-147",
+      "outcome": "partial",
+      "commits": [
+        "5e3b576",
+        "a944f65",
+        "18b7574",
+        "1f57d86",
+        "b11a955",
+        "c8c4ed0",
+        "b8fec20",
+        "9b8d479",
+        "99e78b0",
+        "1d1b95a",
+        "e87aa95",
+        "761696d",
+        "0c0ef29",
+        "a11e174"
+      ],
+      "tests": [
+        "tests/pdf/94-look-links.test.mjs",
+        "tests/pdf/94-look-levels.test.mjs",
+        "tests/pdf/94-look-section-icons.test.mjs",
+        "tests/pdf/94-look-photo.test.mjs",
+        "tests/pdf/94-look-grouped-roles.test.mjs",
+        "tests/unit/language-level.unit.mjs",
+        "tests/unit/role-groups.unit.mjs",
+        "tests/unit/photo-options.unit.mjs",
+        "tests/pdf/parity/19-links.test.mjs",
+        "tests/pdf/parity/22-photo-visibility.test.mjs",
+        "tests/pdf/91-design-resets.test.mjs",
+        "tests/playwright/parity-ui-controls.spec.mjs",
+        "cypress/e2e/04-design.cy.js"
+      ],
+      "summary": "**Now:** Design → Links prints every link Plain, Underlined (in the contact's own colour, keeping a strike-through) or in the accent — contacts, entry URLs, summary, descriptions and the cover letter. Design → Section Headings → Icons prints a small icon before every section title on every template, in the title's colour and size. Languages → Level offers Text, Dots or Bar (\"Non-native\" is no level). Experience → Group roles by company prints consecutive roles at one company under one employer header. Personal Info → Photo offers Position (Left, Right — the cover letter follows it) and Tone (Color, Grayscale).",
+      "remaining": "Column layout (details top/left/right, one/two/mixed columns, adjustable widths — PENDING-ALL.md:83, R2-147-col); a per-skill level (side-column bars are a fixed 80%). Levels map Professional = Intermediate = 3; no editor word gives 2 (a design call)."
+    }
+  ],
+  "review": {
+    "issues": [
+      "sectionIconPaths.js looked a section type up through the prototype: 'constructor', 'toString' … crashed (e87aa95)",
+      "PdfRichText: Underline replaced a struck link's line-through (761696d)",
+      "The cover letter ignored Photo → Position (0c0ef29)",
+      "\"Non-native\" drew Native's five dots (a11e174)",
+      "Underline printed in react-pdf's default link blue (1d1b95a)",
+      "The photo-options guard matched a board column's Move left/right ids (e3ff5bc)",
+      "Claimed: Word's Sidebar Single photo stacked above the name — false; wordExport.js already passes 'classic'. e62647b reverted by 9c7ef6e (fail-first 36162454609: its test passes without it); the test stays as a pin",
+      "Not verified: a long proficiency word with Dots in a narrow main-column grid"
+    ],
+    "fixedByReviewer": [
+      "1d1b95a",
+      "e3ff5bc",
+      "e87aa95",
+      "761696d",
+      "0c0ef29",
+      "a11e174",
+      "3dc5ff2",
+      "9c7ef6e"
+    ]
+  },
+  "baselineFailures": [],
+  "notes": "The work branch is merged in (9fe4865) and the deploy guard 4e68e6a. Full gate 36162458781 on 3dc5ff2: 15/15 green. Fail-first 36162454609: e87aa95, 761696d, 0c0ef29, a11e174 green; e62647b fails as expected (reverted). Earlier: fail-first 36159488813 (1d1b95a) green; the red full gate 36109013388 on fe43eab (parity linkStyle ×10, Cypress 13-regressions-fonts NEW-1) is fixed by 1d1b95a and green since."
+}
