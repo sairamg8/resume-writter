@@ -80,7 +80,9 @@ export function publicSnapshot(resume) {
       ...s,
       items: (Array.isArray(s.items) ? s.items : []).filter((item) => item && item.visible !== false)
         .map((item) => asSectionPrints(withoutHidden(item), s)),
-    }));
+    }))
+    // As the PDF (sectionPrints): a section with no shown entry prints nothing, not even its title.
+    .filter((s) => s.items.length > 0);
   const copy = {
     template: resume?.template || 'classic',
     settings: printedSettings(resume?.settings || {}, resume?.personal?.hiddenFields),
