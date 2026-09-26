@@ -7,7 +7,7 @@
 // Fictional data only.
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { setup, teardown, resume, section, renderDocx, loadModule } from './harness.mjs';
+import { setup, teardown, resume, section, experience, renderDocx, loadModule } from './harness.mjs';
 
 before(setup);
 after(teardown);
@@ -36,6 +36,17 @@ describe('Word: Languages print as the PDF does — no dash, the level as glyphs
     assert.ok(doc.texts.includes('Latin\tReading only'), doc.texts.join(' | '));
     for (const l of LANGS) assert.ok(!para(doc, l.language).text.includes(' — '), para(doc, l.language).text);
     assert.match(para(doc, 'Portuguese').xml, /<w:tab w:val="right" w:pos="\d+"\/>/);
+  });
+
+  it('one column: the proficiency\'s right tab is the dates\' own, flush with the right margin as the PDF\'s now is (R4-DOUT-14)', async () => {
+    const doc = await renderDocx(resume({
+      template: 'classic',
+      sections: [experience([{ company: 'Harbourlight' }]), section('languages', LANGS, { columns: 1 })],
+    }));
+    const tabOf = (p) => /<w:tab w:val="right" w:pos="(\d+)"\/>/.exec(p.xml)?.[1];
+    const date = tabOf(doc.paragraphs.find((p) => p.text.includes('Harbourlight')));
+    assert.ok(date, 'the entry\'s date is at a right tab');
+    assert.equal(tabOf(para(doc, 'Portuguese')), date, 'no 12 pt inset');
   });
 
   it('Level Dots: five dots, the level\'s filled, in the accent in front of the proficiency; nothing for an unknown one', async () => {

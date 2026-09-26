@@ -296,7 +296,8 @@ function levelGlyphs(proficiency, sectionSettings) {
 
 /**
  * Languages as the PDF's LanguagesSection prints them (R4-DOUT-11): the language, and its proficiency
- * apart from it, no dash — at the right of the column (a right tab, the PDF's 12 pt short of it), beside
+ * apart from it, no dash — at the right of the column (a right tab: the dates' own, flush with the right
+ * margin or its cell's edge as the PDF's now is, R4-DOUT-14), beside
  * it a field's gap away on Compact, 6 pt away when centred. Level Dots or Bar prints its glyphs in the
  * accent in front of the proficiency, as the PDF draws the mark there; in the Sidebar's side column on
  * a line of its own under them, as the PDF puts it.
@@ -320,7 +321,7 @@ export function buildLanguages(section, accentHex, settings, centered, dateHex, 
         ...(look.side && mark.length ? [new TextRun({ break: 1 }), ...mark] : []),
       ],
       spacing: { after: 0 },
-      ...(tabbed ? { tabStops: [{ type: TabStopType.RIGHT, position: look.tab - twips(12) }] } : {}),
+      ...(tabbed ? { tabStops: [{ type: TabStopType.RIGHT, position: look.tab }] } : {}),
       ...centredIf(centered),
     })];
   })];
