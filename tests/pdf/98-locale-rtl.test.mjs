@@ -77,11 +77,19 @@ describe('the PDF of a right-to-left résumé is its left-to-right page mirrored
     for (const template of TEMPLATES) assert.equal(await drawing(await render(make(template))), await drawing(await render(make(template, 'en'))), template);
   });
 
-  it('the cover letter: its body on the right', async () => {
+  // A right-to-left paragraph's closing period is a neutral at its end: it takes the paragraph's direction and
+  // prints at the left end of a Latin sentence (UAX #9, as Word and a dir="rtl" page show it), where pdf.js
+  // reads it in front of the sentence or as a run of its own.
+  it("the cover letter: its body on the right, its closing period at the sentence's left end", async () => {
     const letter = (language) => { const r = make('classic', language); r.coverLetter = { ...r.coverLetter, body: '<p>Thank you for reading.</p>' }; return r; };
+    const ltr = await read(await renderCover(letter()));
     const rtl = await read(await renderCover(letter('he')));
-    const [a, b] = [first(await read(await renderCover(letter())), 'Thank you for reading.'), first(rtl, 'Thank you for reading.')];
+    const body = (pages) => allItems(pages).find((t) => t.str.includes('Thank you for reading'));
+    const [a, b] = [body(ltr), body(rtl)];
     assert.ok(a && b, 'the body prints');
+    assert.equal(a.str.trim(), 'Thank you for reading.', 'left to right: the period after the sentence');
+    const dot = allItems(rtl).find((t) => t.str.trim() === '.');
+    assert.ok(b.str.trim().startsWith('.') || (dot && dot.x + dot.w <= b.x + 0.5), `right to left: the period left of the sentence (${JSON.stringify(b.str)})`);
     const { W } = rtl[0];
     assert.ok(near(W - (b.x + b.w), a.x), `the body's right edge is ${(W - (b.x + b.w)).toFixed(1)} pt from the right; left to right it starts ${a.x.toFixed(1)} pt from the left`);
   });

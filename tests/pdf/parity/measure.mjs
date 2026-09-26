@@ -140,8 +140,17 @@ export function flow(snap, run) {
   return (run.page - 1) * H + (H - run.y);
 }
 
-/** Does the document print `mark`, ignoring case and line breaks? */
-export const prints = (snap, mark) => snap.text.toLowerCase().includes(mark.toLowerCase().replace(/\s+/g, ' '));
+/**
+ * Does the document print `mark`, ignoring case and line breaks? A right-to-left paragraph's closing
+ * punctuation prints at the left end of its last line (UAX #9), where pdf.js reads it in front of that
+ * line's first word ('.engineer'): punctuation standing before a word is set aside for a second look.
+ */
+const LEADING_PUNCT = /(^|\s)[.,;:!?؟،]+\s*(?=[^\s.,;:!?؟،])/gu;
+export const prints = (snap, mark) => {
+  const want = mark.toLowerCase().replace(/\s+/g, ' ');
+  const text = snap.text.toLowerCase();
+  return text.includes(want) || text.replace(LEADING_PUNCT, '$1').includes(want);
+};
 
 /** Pairs of different text runs whose boxes overlap, on any page (harness.overlaps' rule). */
 export function overlapping(snap) {
