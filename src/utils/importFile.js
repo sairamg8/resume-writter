@@ -139,7 +139,9 @@ export function docxXmlLines(xml, links = {}) {
       // page's header, over that title.
       const at = heading ? lines.length : para.start;
       levels.splice(at, 0, heading ? Number(heading[1] || 1) : 0);
-      lines.splice(at, 0, { text: list && para.text.trim() ? `• ${para.text}` : para.text, hint: heading ? 'heading' : (/^title$/i.test(style) ? 'name' : undefined) });
+      // A list item's level: a nested one's is 1 and more (R4-LO-02).
+      const depth = list ? Number(/<w:ilvl w:val="(\d+)"/.exec(para.props)?.[1] || 0) : 0;
+      lines.splice(at, 0, { text: list && para.text.trim() ? `• ${para.text}` : para.text, hint: heading ? 'heading' : (/^title$/i.test(style) ? 'name' : undefined), ...(depth ? { depth } : {}) });
     } else if (m[0].startsWith('<w:p') && !m[0].startsWith('<w:pPr')) {
       if (!m[0].endsWith('/>')) open.push({ text: '', props: '', start: lines.length }); // <w:p/>: an empty one, no line (as before)
     }

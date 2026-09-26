@@ -61,15 +61,23 @@ const RULE = /^\s*[-=_─━—–]{3,}\s*$/;
 
 const clean = (s) => String(s ?? '').replace(/[   ]/g, ' ').replace(/[​­]/g, '').replace(/[ \f\v\r]+/g, ' ').replace(/ *\t[\t ]*/g, '\t').trim();
 
+/** How far a list item is indented, in columns (a tab four): a nested item's is more than its parent's. */
+const indentOf = (text) => {
+  const lead = /^[ \t]*/.exec(String(text ?? ''))[0];
+  return BULLET.test(String(text ?? '')) ? lead.replace(/\t/g, '    ').length : 0;
+};
+
 /**
- * Lines as the parser reads them: `{ text, hint }`. `hint` is what the file itself says a line is,
- * where it says so — 'name', 'heading' (a Word Heading style, a Markdown ##) or 'entry' (###).
+ * Lines as the parser reads them: `{ text, hint, depth }`. `hint` is what the file itself says a line
+ * is, where it says so — 'name', 'heading' (a Word Heading style, a Markdown ##) or 'entry' (###).
+ * `depth`: a list item's nesting, where the file says it (Markdown's and a text file's indent, Word's
+ * list level), 0 else — clean() takes the indent off (R4-LO-02).
  */
 function toLines(input) {
   const raw = Array.isArray(input) ? input : String(input ?? '').split(/\r\n|\r|\n/);
   return raw.flatMap((l) => {
-    if (l && typeof l === 'object') return String(l.text ?? '').split('\n').map((text, i) => ({ text: clean(text), hint: i ? undefined : l.hint }));
-    return [{ text: clean(l) }];
+    if (l && typeof l === 'object') return String(l.text ?? '').split('\n').map((text, i) => ({ text: clean(text), hint: i ? undefined : l.hint, depth: i ? 0 : (l.depth || 0) }));
+    return [{ text: clean(l), depth: indentOf(l) }];
   });
 }
 
@@ -161,7 +169,7 @@ export function markdownLines(md) {
     }
     if (/^\s*([-*_])(\s*\1){2,}\s*$/.test(line)) { out.push({ text: '' }); continue; } // a thematic break
     const item = /^\s*(?:[-*+]|(\d{1,3}[.)]))\s+(.*)$/.exec(line);
-    if (item) { out.push({ text: `${item[1] ? `${item[1]} ` : '• '}${unmark(item[2])}` }); continue; }
+    if (item) { out.push({ text: `${item[1] ? `${item[1]} ` : '• '}${unmark(item[2])}`, ...(indentOf(line) ? { depth: indentOf(line) } : {}) }); continue; }
     out.push({ text: unmark(line.replace(/^\s*>\s?/, '')) });
   }
   return out;
@@ -544,9 +552,12 @@ function entriesOf(type, lines, aside) {
   // one entry, and the others went into its description, which a certificate never shows.
   if ((type === 'certifications' || type === 'awards') && lines.length && BULLET.test(lines[0].text)) {
     const list = [];
+    // A list item nested under another (an award's "◦ For the tapir parser") is its entry's text, not an
+    // entry of its own: each became one (R4-LO-02).
+    const top = lines[0].depth || 0;
     for (const l of lines) {
       const last = list[list.length - 1];
-      if (BULLET.test(l.text)) list.push({ header: [{ ...l, text: l.text.replace(BULLET, '') }], body: [] });
+      if (BULLET.test(l.text) && !((l.depth || 0) > top)) list.push({ header: [{ ...l, text: l.text.replace(BULLET, '') }], body: [] });
       else if (!last.body.length && (isMetaLine(l.text) || readDateRange(l.text))) last.header.push(l);
       else last.body.push(l);
     }
