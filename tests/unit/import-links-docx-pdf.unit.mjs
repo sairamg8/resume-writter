@@ -66,3 +66,27 @@ test('PDF: the text under a Link annotation reads with its address when it is a 
   assert.equal(p.website, 'robinvale.example.com', JSON.stringify(lines));
   assert.deepEqual([p.linkedinLabel, p.githubLabel], ['LinkedIn', 'Code']);
 });
+
+// The review of R4-IMP-10: Design → Contact style Bar or Bullet sets the contact line as one run of
+// text, which pdf.js reads as one item. Each link gives it only the letters its box holds.
+test('PDF: a contact line read as one item: each link\'s address after its own label, the others as they were', async () => {
+  // 6 pt a letter: every piece's box is its letters' share of the line.
+  const line = 'robin.vale@example.com | LinkedIn | Code | robinvale.example.com';
+  const at = (piece) => 50 + line.indexOf(piece) * 6;
+  const box = (piece) => [at(piece) - 0.5, 732, at(piece) + piece.length * 6 + 0.5, 745];
+  const items = [
+    { str: 'Robin Vale', x: 50, y: 760, w: 90, h: 20 },
+    { str: line, x: 50, y: 735, w: line.length * 6, h: 10 },
+  ];
+  const links = [
+    [box('robin.vale@example.com'), 'mailto:robin.vale@example.com'],
+    [box('LinkedIn'), 'https://www.linkedin.com/in/robin-vale-sample'],
+    [box('Code'), 'https://github.com/robin-vale-sample'],
+    [box('robinvale.example.com'), 'https://robinvale.example.com'],
+  ];
+  const lines = await pdfLines(new Uint8Array([1]), pdfjsOf(items, links));
+  assert.equal(lines[1].text, 'robin.vale@example.com | LinkedIn (https://www.linkedin.com/in/robin-vale-sample) | Code (https://github.com/robin-vale-sample) | robinvale.example.com');
+  const p = resumeFromText(lines).personal;
+  assert.deepEqual([p.email, p.linkedin, p.github, p.website], ['robin.vale@example.com', 'https://www.linkedin.com/in/robin-vale-sample', 'https://github.com/robin-vale-sample', 'robinvale.example.com']);
+  assert.deepEqual([p.linkedinLabel, p.githubLabel], ['LinkedIn', 'Code']);
+});

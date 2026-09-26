@@ -453,29 +453,58 @@ async function loadPdfjs() {
  * A page's text items with its links' addresses: the text a Link annotation covers, when it is not
  * the address itself (a contact shown as its Display label, "LinkedIn"), reads as "LinkedIn
  * (https://…)" (linkText) — the text layer holds only the label, and the URL was lost (R4-IMP-10).
+ * An item mostly inside the link's box is its text; one that runs well past it — a contact line set
+ * as one run of text ("a | b | c", Design → Contact style Bar or Bullet), which pdf.js reads as one
+ * item — gives it the letters its share of the width holds, to the nearest word's edge.
  */
 function withLinks(items, links) {
   if (!links.length) return items;
   const out = items.map((it) => ({ ...it }));
-  const taken = new Set();
+  const whole = new Set();
+  const inserts = new Map(); // item → [{ at, text }], put in once every link is read
+  const edge = (str, i) => {
+    for (let d = 0; d <= 8; d += 1) {
+      for (const j of [i - d, i + d]) {
+        if (j >= 0 && j <= str.length && (j === 0 || j === str.length || /\s/.test(str[j]) || /\s/.test(str[j - 1]))) return j;
+      }
+    }
+    return Math.max(0, Math.min(str.length, i));
+  };
   for (const { rect, url } of links) {
     const [x1, y1, x2, y2] = [Math.min(rect[0], rect[2]), Math.min(rect[1], rect[3]), Math.max(rect[0], rect[2]), Math.max(rect[1], rect[3])];
-    // An item under the link: its middle inside the link's box (y is the baseline; the letters sit above it).
-    const covered = out.filter((it) => {
-      if (taken.has(it) || !it.str.trim()) return false;
-      const cx = it.x + (it.w || 0) / 2;
+    const hits = [];
+    for (const it of out) {
+      if (whole.has(it) || !it.str.trim()) continue;
+      // Its letters sit above its baseline, y.
       const cy = it.y + heightOf(it) * 0.3;
-      return cx >= x1 - 1 && cx <= x2 + 1 && cy >= y1 - 1 && cy <= y2 + 1;
-    }).sort((a, b) => b.y - a.y || a.x - b.x);
-    if (!covered.length) continue;
-    covered.forEach((it) => taken.add(it));
-    const label = covered.map((it) => it.str.trim()).join(' ');
+      if (cy < y1 - 1 || cy > y2 + 1) continue;
+      const w = it.w || 0;
+      const a = Math.max(x1 - 1, it.x);
+      const b = Math.min(x2 + 1, it.x + w);
+      if (!w ? it.x < x1 - 1 || it.x > x2 + 1 : b <= a) continue;
+      if (!w || (b - a) / w >= 0.8) hits.push({ it, from: 0, to: it.str.length });
+      else {
+        const n = it.str.length;
+        const from = edge(it.str, Math.round(((a - it.x) / w) * n));
+        const to = edge(it.str, Math.round(((b - it.x) / w) * n));
+        if (to > from) hits.push({ it, from, to });
+      }
+    }
+    if (!hits.length) continue;
+    hits.sort((p, q) => q.it.y - p.it.y || p.it.x - q.it.x);
+    const label = hits.map((h) => h.it.str.slice(h.from, h.to)).join(' ').replace(/^[\s|•·]+|[\s|•·]+$/g, '').replace(/\s+/g, ' ');
+    if (!label) continue;
     // An address set in pieces ("linkedin.com/in/" "pat") is still the address.
     if (linkText(label.replace(/\s+/g, ''), url) === label.replace(/\s+/g, '')) continue;
     const text = linkText(label, url);
     if (text === label) continue;
-    const last = covered[covered.length - 1];
-    last.str = `${last.str.trimEnd()}${text.slice(label.length)}`;
+    hits.forEach((h) => { if (h.from === 0 && h.to === h.it.str.length) whole.add(h.it); });
+    const last = hits[hits.length - 1];
+    const end = last.it.str.slice(0, last.to).trimEnd().length;
+    inserts.set(last.it, [...(inserts.get(last.it) || []), { at: end, text: text.slice(label.length) }]);
+  }
+  for (const [it, list] of inserts) {
+    for (const { at, text } of list.sort((p, q) => q.at - p.at)) it.str = it.str.slice(0, at) + text + it.str.slice(at);
   }
   return out;
 }

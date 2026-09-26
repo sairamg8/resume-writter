@@ -13,7 +13,8 @@ const read = {};
 
 before(async () => {
   ctx = await setup();
-  const fixture = resume({
+  const fixture = (settings = {}) => resume({
+    settings,
     personal: {
       name: 'Robin Vale', title: 'Product Designer', email: 'robin.vale@example.com', phone: '+1 555 0199', location: 'Austin, TX',
       linkedin: 'linkedin.com/in/robin-vale-sample', linkedinLabel: 'LinkedIn',
@@ -21,17 +22,20 @@ before(async () => {
       summary: '<p>Product designer who ships design systems.</p>',
     },
   });
+  // Contact style Bar sets the contact line as one run of text (the review of R4-IMP-10).
+  const bar = fixture({ contactStyle: 'bar' });
   const { renderResumeDocx } = await loadModule('/src/utils/wordExport.js');
   const lines = {
-    PDF: await pdfLines(await render(fixture), ctx.pdfjs),
-    Word: await docxLines(new Uint8Array(await (await renderResumeDocx(fixture)).arrayBuffer())),
+    PDF: await pdfLines(await render(fixture()), ctx.pdfjs),
+    'PDF, contact style Bar': await pdfLines(await render(bar), ctx.pdfjs),
+    Word: await docxLines(new Uint8Array(await (await renderResumeDocx(fixture())).arrayBuffer())),
   };
   for (const [kind, l] of Object.entries(lines)) read[kind] = { personal: resumeFromText(l).personal, seen: l.map((x) => x.text).join('\n') };
 }, { timeout: 120_000 });
 after(teardown);
 
 describe('a contact shown as its Display label keeps its URL through the app\'s own exports', () => {
-  for (const kind of ['PDF', 'Word']) {
+  for (const kind of ['PDF', 'PDF, contact style Bar', 'Word']) {
     it(kind, () => {
       const { personal: p, seen } = read[kind];
       const why = `\n--- ${kind} read as ---\n${seen}\n--- personal ---\n${JSON.stringify(p, null, 1)}`;
