@@ -5,7 +5,7 @@ import { IconButton } from './IconButton.jsx';
 import { usePresence } from './usePresence.js';
 import { useFocusTrap } from './useFocusTrap.js';
 import { useScrollLock } from './useScrollLock.js';
-import { cx } from './compose.js';
+import { cx, isImeKey } from './compose.js';
 
 const SIZES = {
   sm: 'md:max-w-sm',
@@ -65,7 +65,8 @@ export function Dialog({
 
   const onKeyDown = (event) => {
     onTrapKeyDown(event);
-    if (event.key === 'Escape' && closeOnEscape && !event.defaultPrevented) {
+    // An input method's Escape drops the word being composed in a field of the dialog, not the dialog.
+    if (event.key === 'Escape' && closeOnEscape && !event.defaultPrevented && !isImeKey(event)) {
       event.stopPropagation();
       close('escape');
     }

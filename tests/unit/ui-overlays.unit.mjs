@@ -134,6 +134,14 @@ describe('Dialog', () => {
       view.act(() => reactProps(overlay).onClick(ev({ target: overlay, currentTarget: overlay })));
       assert.deepEqual(closes, ['escape', 'overlay'], 'nor a drag begun on the overlay and released inside the panel');
     } finally { await view.unmount(); }
+    // An input method's Escape (Chinese, Japanese, Korean) drops the word being composed in the dialog's
+    // field; the dialog stays (B-20c).
+    const typing = dialogPage();
+    try {
+      typing.view.act(() => reactProps(typing.layer()).onKeyDown(ev({ key: 'Escape', nativeEvent: { isComposing: true } })));
+      typing.view.act(() => reactProps(typing.layer()).onKeyDown(ev({ key: 'Escape', keyCode: 229 })));
+      assert.deepEqual(typing.closes, [], 'an input method\'s Escape closed the dialog');
+    } finally { await typing.view.unmount(); }
     const kept = dialogPage({ closeOnEscape: false });
     try {
       kept.view.act(() => reactProps(kept.layer()).onKeyDown(ev({ key: 'Escape' })));
@@ -306,5 +314,27 @@ describe('toasts', () => {
     const view2 = mount(() => { api = ui.useToast(); return null; }, {});
     assert.equal(api.toast({ title: 'x' }), null);
     await view2.unmount();
+  });
+});
+
+describe('Popover', () => {
+  // An input method's Escape (Chinese, Japanese, Korean) drops the word being composed in a field of the
+  // panel — the label search, a name — and leaves the panel open; a plain Escape closes it (B-20c).
+  it('closes on Escape, but not on an input method\'s', async () => {
+    const changes = [];
+    function Page() {
+      return h(ui.Popover, { open: true, onOpenChange: (o) => changes.push(o), label: 'Labels', trigger: h('button', null, 'Labels') },
+        h('input', { 'aria-label': 'Search labels' }));
+    }
+    const view = mount(Page, {});
+    try {
+      const panel = byAttr(view.document.body, 'role', 'dialog').find((el) => el.getAttribute('aria-label') === 'Labels');
+      assert.ok(panel, 'the panel is open');
+      view.act(() => reactProps(panel).onKeyDown(ev({ key: 'Escape', nativeEvent: { isComposing: true } })));
+      view.act(() => reactProps(panel).onKeyDown(ev({ key: 'Escape', keyCode: 229 })));
+      assert.deepEqual(changes, [], 'an input method\'s Escape closed the panel');
+      view.act(() => reactProps(panel).onKeyDown(ev({ key: 'Escape' })));
+      assert.deepEqual(changes, [false], 'a plain Escape closes it');
+    } finally { await view.unmount(); }
   });
 });

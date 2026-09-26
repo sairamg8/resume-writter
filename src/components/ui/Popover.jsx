@@ -2,7 +2,7 @@ import { Children, cloneElement, isValidElement, useCallback, useId, useLayoutEf
 import { Portal } from './Portal.jsx';
 import { useFloating } from './useFloating.js';
 import { useDismiss } from './useDismiss.js';
-import { composeHandlers, cx, focusNeighbour, mergeRefs, tabbables } from './compose.js';
+import { composeHandlers, cx, focusNeighbour, isImeKey, mergeRefs, tabbables } from './compose.js';
 
 /**
  * A panel anchored to a trigger — the base of pickers and filters (MultiSelectPopover, a date or
@@ -62,7 +62,8 @@ export function Popover({
   if (!isValidElement(child)) return null;
 
   const onKeyDown = (event) => {
-    if (event.key === 'Escape') {
+    // An input method's Escape drops the word being composed in a field inside the panel, not the panel.
+    if (event.key === 'Escape' && !isImeKey(event)) {
       event.stopPropagation();
       event.preventDefault();
       close();
