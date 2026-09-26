@@ -160,7 +160,10 @@ export function IssueDialog({ board, issueId, onClose, onOpenIssue }) {
         <div className="flex min-w-0 flex-col gap-6">
           <div className="flex flex-col gap-3">
             <h2 className="text-2xl font-medium leading-8 text-ink">
-              <InlineEdit value={issue.title} onCommit={(title) => update({ title })} label="Summary" className="text-2xl font-medium" />
+              {/* break-words wraps a word too long for the line (a pasted URL) at the column's edge;
+                  without it the word ran past the summary's box and the issue view scrolled
+                  sideways. The box already has the column's width, so nothing else has to shrink. */}
+              <InlineEdit value={issue.title} onCommit={(title) => update({ title })} label="Summary" className="break-words text-2xl font-medium" />
             </h2>
             <div className="flex flex-wrap gap-2">
               <Button size="sm" leftIcon={CheckSquare} onClick={() => setChecklistOpen(true)}>Add checklist item</Button>
