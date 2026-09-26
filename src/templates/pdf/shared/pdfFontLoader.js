@@ -425,7 +425,11 @@ const retryAt = () => (typeof navigator !== 'undefined' && navigator.onLine === 
 const retryDue = (source) => borrowed.has(source) && Date.now() >= borrowed.get(source);
 // globalThis: the PDF worker (pdfWorker.js) builds with these fonts, and a worker has no window.
 if (typeof globalThis.addEventListener === 'function') {
-  globalThis.addEventListener('online', () => { for (const source of borrowed.keys()) borrowed.set(source, 0); });
+  // A face whose fetch is still on its way (Infinity) is left to it: a second one could succeed and
+  // the first then fail, marking the face borrowing again though it has its own data.
+  globalThis.addEventListener('online', () => {
+    for (const [source, at] of borrowed) if (at !== Infinity) borrowed.set(source, 0);
+  });
 }
 
 /**
@@ -440,7 +444,7 @@ function retryBorrowed(source) {
   });
   return copy.load().then(
     () => { borrowed.delete(source); fetched.set(source, copy.data); },
-    () => { borrowed.set(source, retryAt()); },
+    () => { if (borrowed.get(source) === Infinity) borrowed.set(source, retryAt()); },
   );
 }
 

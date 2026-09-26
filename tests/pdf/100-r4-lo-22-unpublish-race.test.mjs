@@ -42,6 +42,9 @@ function noOrphan(c, what) {
   for (const p of copies(c)) assert.equal(p, `public/${record?.shareId}`, `${what}: ${p} is public with no record naming it`);
 }
 
+// Only the first case fails with the old read-then-batch (fail-first); the other two are guards that
+// the transaction keeps them right: the old unpublishResume wrote nothing once it read no record, and
+// the old unpublishDeleted never read the record itself.
 for (const [what, takeDown] of [
   ['Unpublish from a panel that showed no link', (io) => io.unpublish('uid_owner', RID, 'panel_link')],
   ['a deleted résumé\'s copy taken down', (io) => io.unpublishResume('uid_owner', RID)],
@@ -60,3 +63,21 @@ for (const [what, takeDown] of [
     noOrphan(c, what);
   });
 }
+
+it('a take-down run again still deletes a copy an earlier attempt found recorded, when the record moved meanwhile', async () => {
+  // A client that wrote a new link beside the recorded one (an older build) between this take-down's
+  // read and its commit: the retry reads the new record, and must still take the first copy down.
+  const c = fakeFirestore();
+  c.auth = 'uid_owner';
+  const io = link.publicIo(c.fs, c.db);
+  const { shareId: first } = await io.publish('uid_owner', cv());
+  c.afterRead = (path) => {
+    if (path !== SHARE) return;
+    c.afterRead = null;
+    c.data.set('public/moved_link', { owner: 'uid_owner', resume: link.publicSnapshot(cv()), publishedAt: 3 });
+    c.data.set(SHARE, { shareId: 'moved_link', publishedAt: 3 });
+  };
+  assert.equal(await io.unpublishResume('uid_owner', RID), true);
+  assert.deepEqual(copies(c), [], `nothing left public (the first copy was ${first})`);
+  assert.equal(c.data.get(SHARE), undefined, 'the record is gone');
+});
