@@ -73,7 +73,8 @@ export function AppRoutes({ store, auth, sync, seed }) {
         <Route path="/resume/:id" element={<Editor    store={store} auth={auth} sync={sync} />} />
         {/* New Resume: every look drawn with the user's own résumé (R3-012). */}
         <Route path="/new"        element={<NewResume store={store} />} />
-        <Route element={<WorkspaceRoute />}>
+        {/* The account (sign in, sign out) in the workspace's top bar too (R4-DUX-07). */}
+        <Route element={<WorkspaceRoute auth={auth} />}>
           <Route path="/jobs"                element={<JobTracker store={store} />} />
           <Route path="/jobs/new"            element={<JobForm    store={store} />} />
           <Route path="/jobs/:id/edit"       element={<JobForm    store={store} />} />
