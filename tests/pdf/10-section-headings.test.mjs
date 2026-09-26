@@ -120,13 +120,13 @@ async function headingControls(settings, template = 'classic') {
   const updateSetting = (key, value) => { if (key === 'sectionBorderWidth') stored.push(value); };
   // Walked inside a render pass: the thickness box is typed with a hook (R4-LO-19).
   let nodes = [];
+  let rowNodes = [];
   function Capture() {
     nodes = [...walk(HeadingControls({ settings, template, updateSetting }))];
+    rowNodes = [...walk(nodes.find((n) => textOf(n).startsWith('Border thickness')))];
     return null;
   }
   renderToString(createElement(Capture));
-  const row = nodes.find((n) => textOf(n).startsWith('Border thickness'));
-  const rowNodes = [...walk(row)];
   return {
     text: nodes.map(textOf).join('\n'),
     input: rowNodes.find((n) => n.type === 'input'),
