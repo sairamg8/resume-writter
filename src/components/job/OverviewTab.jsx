@@ -43,6 +43,12 @@ export function OverviewTab({ job, set, resumes, navigate }) {
   const deadline = isOpen(job) ? deadlineState(job.deadline) : null;
   const isDeadlinePast = deadline === 'past';
   const isDeadlineSoon = deadline === 'soon';
+  // The job form's rule (canSave): a company or a role is enough, but not neither. Blanking one
+  // while the other is blank keeps it as it was — the job read 'Untitled Company' and search lost it.
+  const named = (key, other) => (v) => {
+    if (!String(v || '').trim() && !String(job[other] || '').trim()) return;
+    set(key, v);
+  };
 
   return (
     // One column on a phone, two from sm up: two fixed columns squeezed every card to half a phone's
@@ -74,8 +80,8 @@ export function OverviewTab({ job, set, resumes, navigate }) {
       <div className="space-y-4">
         <div className="bg-white rounded-md border border-line p-5 shadow-sm space-y-4">
           <p className="text-[10px] font-bold text-ink-subtlest uppercase tracking-widest">Role Info</p>
-          <Field label="Company"          value={job.company}   onChange={v => set('company', v)}  icon={Briefcase} placeholder="Company name" />
-          <Field label="Role / Position"  value={job.role}      onChange={v => set('role', v)}     icon={FileText}  placeholder="Job title" />
+          <Field label="Company"          value={job.company}   onChange={named('company', 'role')}  icon={Briefcase} placeholder="Company name" />
+          <Field label="Role / Position"  value={job.role}      onChange={named('role', 'company')}     icon={FileText}  placeholder="Job title" />
           {job.stage && (
             <div className="flex items-center gap-2 px-3 py-2">
               <Briefcase size={13} className="text-ink-subtlest shrink-0" />
