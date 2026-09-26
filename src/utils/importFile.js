@@ -78,6 +78,7 @@ export function docxXmlLines(xml, links = {}) {
   const body = (String(xml).split(/<w:body\b[^>]*>/)[1] ?? String(xml))
     .replace(/<mc:Fallback\b[^>]*>[\s\S]*?<\/mc:Fallback>/g, '');
   const lines = [];
+  const levels = []; // each line's Heading level, 0 for none
   const open = []; // the paragraphs being read, the innermost last
   const TOKEN = /<w:p(?=[\s>])[^>]*>|<\/w:p>|<w:pPr>([\s\S]*?)<\/w:pPr>|<w:t(?:\s[^>]*)?>([^<]*)<\/w:t>|<w:(tab|br|cr)(?:\s[^>]*)?\/>|<w:hyperlink\b([^>]*)>|<\/w:hyperlink>/g;
   for (const m of body.matchAll(TOKEN)) {
@@ -93,8 +94,9 @@ export function docxXmlLines(xml, links = {}) {
       open.pop();
       const style = /<w:pStyle w:val="([^"]*)"/.exec(para.props)?.[1] ?? '';
       const list = /<w:numPr>/.test(para.props);
-      const hint = /^(heading|berschrift|titre)/i.test(style) ? 'heading' : (/^title$/i.test(style) ? 'name' : undefined);
-      lines.push({ text: list && para.text.trim() ? `• ${para.text}` : para.text, hint });
+      const heading = /^(?:heading|berschrift|titre)\s*(\d)?/i.exec(style);
+      levels.push(heading ? Number(heading[1] || 1) : 0);
+      lines.push({ text: list && para.text.trim() ? `• ${para.text}` : para.text, hint: heading ? 'heading' : (/^title$/i.test(style) ? 'name' : undefined) });
     } else if (m[0].startsWith('<w:p') && !m[0].startsWith('<w:pPr')) {
       if (!m[0].endsWith('/>')) open.push({ text: '', props: '' }); // <w:p/>: an empty one, no line (as before)
     }
@@ -103,7 +105,29 @@ export function docxXmlLines(xml, links = {}) {
     else if (m[2] !== undefined) para.text += xmlText(m[2]);
     else para.text += m[3] === 'tab' ? '\t' : '\n';
   }
-  return lines;
+  return headingLevels(lines, levels);
+}
+
+/**
+ * The Heading levels a Word file uses, as Markdown's: the top one used starts the sections ('heading'),
+ * a deeper one an entry ('entry'), as Word's own résumé templates set them (Heading 1 "Experience",
+ * Heading 2 "Senior Engineer | Acme Corp", Heading 3 its dates). Every level was a section, so a job's
+ * title line became a section with nothing under it and was dropped (R4-IMP-03). A top-level heading
+ * that is the file's first line and its only one of that level, over deeper ones, is the name.
+ */
+function headingLevels(lines, levels) {
+  const used = levels.filter(Boolean);
+  if (!used.length) return lines;
+  let top = Math.min(...used);
+  const first = lines.findIndex((l) => l.text.trim());
+  const named = !lines.some((l) => l.hint === 'name') && levels[first] === top
+    && used.filter((v) => v === top).length === 1 && used.some((v) => v > top);
+  if (named) top = Math.min(...used.filter((v) => v !== top));
+  return lines.map((l, i) => {
+    if (!levels[i]) return l;
+    if (named && i === first) return { ...l, hint: 'name' };
+    return levels[i] > top ? { ...l, hint: 'entry' } : l;
+  });
 }
 
 /** A part's relationships file (word/_rels/<part>.rels) as its relationships: { id, type, target }. */

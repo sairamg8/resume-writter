@@ -513,7 +513,10 @@ function entriesOf(type, lines) {
     if (L.hint === 'entry') {
       const header = [L];
       i += 1;
-      while (i < info.length && !info[i].bullet && !info[i].gap && info[i].hint !== 'entry' && header.length < 3 && (info[i].date || isMetaLine(info[i].text))) header.push(info[i++]);
+      // Its date and named fields under it — a line of their own marked an entry too (a Word heading one
+      // level deeper: Heading 3 "Mar 2021 – Present" under Heading 2 "Senior Engineer | Acme Corp").
+      const under = (n) => (n.hint !== 'entry' ? Boolean(n.date) : Boolean(n.date?.first)) || isMetaLine(n.text);
+      while (i < info.length && !info[i].bullet && !info[i].gap && header.length < 3 && under(info[i])) header.push(info[i++]);
       start(header);
       continue;
     }
@@ -727,7 +730,8 @@ export function resumeFromText(input) {
       takeContacts(body, { spill: (text) => other.push(text) });
       return;
     }
-    if (!body.length) return;
+    // A heading with nothing under it keeps its words (R4-IMP-03): an unknown one is no section of its own.
+    if (!body.length) { if (type === 'custom') other.push(title); return; }
     let items;
     if (type === 'skills') items = skillsOf(body);
     else if (type === 'languages') items = languagesOf(body);
