@@ -234,14 +234,21 @@ function stackedSkills(category, skills, list, categoryInk, centered, look) {
   return paras;
 }
 
+/**
+ * A project as the PDF prints it: the name alone with the date on the title line, and the technologies
+ * and the link on the line under it, a " · " only between the two (R4-DOUT-04). Without a name the
+ * date's line prints the date alone, and the technologies stay on the line under it, as in the PDF.
+ */
 export function buildProjects(section, accentHex, settings, centered, dateHex, look) {
   const s = section.settings || {};
   return [sectionHeading(section.title, accentHex, centered, section.heading), ...entries(section, look, (item) => [
-    titleLine([
-      first(item.name, look),
-      ...(item.technologies ? [second(` · ${item.technologies}`, look, look.ink.tech)] : []),
-      ...(item.url ? [second(' · ', look, accentHex, look.link), linked(item.url, item.url, { size: look.link, color: accentHex }, look.links)] : []),
-    ], s.showDates !== false ? dateRange(startDateOf(item), endDateOf(item, settings), settings) : '', dateHex, centered, look),
+    titleLine([first(item.name, look)], s.showDates !== false ? dateRange(startDateOf(item), endDateOf(item, settings), settings) : '', dateHex, centered, look, null, [
+      ...(item.technologies ? [second(item.technologies, look, look.ink.tech)] : []),
+      ...(item.url ? [
+        ...(item.technologies ? [second(' · ', look, accentHex, look.link)] : []),
+        linked(item.url, item.url, { size: look.link, color: accentHex }, look.links),
+      ] : []),
+    ]),
     ...body(item, centered, look),
   ])];
 }
