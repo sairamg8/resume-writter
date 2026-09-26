@@ -21,7 +21,7 @@ Then: the rest of the checklist (English only), accessibility last.
 boards-text, jobs, sync-public, sync-collections, pdf-word, data; English only, no a11y) writes each fix as a patch +
 manifest in the session scratch `fixes/<ID>.patch|.done.json` (base `4d32890`); the coordinator reviews and lands each as
 its own commit here (`scratchpad/land.sh <ID>`), then fail-first per commit and one gate per batch. Landed: B-20 `617f24f`
-✅ff, J-30 `5f86d40` ✅ff, B-29 `4345a13` ✅ff, RES-R2-140-b `5fc8925` (ff 36219546057; under review), R2-148-a `9af32ac`, J-36 `62f024a`, B-05 `ff7e89a` (ff 36219677444), R2-041 `ba0a938`, RES-R2-126 `29fb954` (ff 36219729075), B-17 `f568ac3`. Needs the owner:
+✅ff, J-30 `5f86d40` ✅ff, B-29 `4345a13` ✅ff, RES-R2-140-b `5fc8925` (ff 36219546057; under review), R2-148-a `9af32ac`, J-36 `62f024a`, B-05 `ff7e89a` (ff 36219677444), R2-041 `ba0a938`, RES-R2-126 `29fb954` (ff 36219729075), B-17 `f568ac3`, J-38 `ca13cdb`, R2-148-d `53ee844` (firestore.rules — OWNER publishes), B-13; RES-R2-043 already fixed (28b15c6). Needs the owner:
 RES-R2-140-a (offline reorder lost to the cloud's order — needs a stored base order), RES-R2-140-c (a sync icon for jobs and
 boards — where and what it says). If the session dies: the patches are in scratch; re-run the stopped clusters from the store
 checklist (`flowcv/wip/execution-2026-09-26/pending-bugs.md`).
