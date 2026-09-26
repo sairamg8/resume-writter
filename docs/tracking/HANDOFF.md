@@ -28,6 +28,11 @@ store `flowcv/wip/execution-2026-09-26/fixes2/` + the session scratch; land one 
 `gh workflow run ci.yml --ref claude/busy-darwin-yjb13t -f failfirst="<sha>:<tests>"`; `landed.txt` lists what landed).
 Landed: RES-R2-151 `68f5d56`, J-38b `2ece50b`, RES-R2-131 note `b8e84eb` (already shipped ab74277), B-29b `b9805bb`,
 RES-R2-126b `052b4c0`, RES-R2-137 note `977c89b`, R2-041b `cdd0dd7`, LC-FLIP `395f5e5`, B-20b `e8c0e67` (ff 36221510003), LC-TWINS `2ccd722`, LC-WAVE1 `a1396a7`, H-02 `bf8c750`, H-03 `37e2f31`, H-06 `994e550`, H-07 `d818f80`, H-09 `0aea790`, H-11 `102ee1c`, H-13 — **wave 2 complete**. Then one full gate → deploy.
+**Found by wave 2, not fixed (next wave):** the IME Enter bug outside the board — DesignPanelTemplate.jsx:79,
+DesignPanelTypography.jsx:152, EditorHeader.jsx:31, ResumeCard.jsx:68, job/Field.jsx:44, job/InterviewStageSelector.jsx:92,
+job/TasksTab.jsx:45, job/TodoItem.jsx:37, shell/TopBar.jsx:64, hooks/useTypedNumber.js:45 (use `isImeKey` from
+'@/components/ui', e8c0e67); the kit's Dialog/Popover/Menu close on an input method's Escape; J-12 still open (OverviewTab.jsx:25,
+InterviewStageSelector.jsx:32 `grid-cols-2` with no breakpoint; job/Field.jsx:54 does not break a long URL).
 **After that:** the checklist's rest (store `flowcv/CHECKLIST-2026-09-25*.md`), accessibility last.
 Pending-bug list: store `flowcv/wip/execution-2026-09-26/pending-bugs.md`.
 
