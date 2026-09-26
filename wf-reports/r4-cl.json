@@ -1,0 +1,161 @@
+{
+  "cluster": "r4-cl",
+  "branch": "claude/wf-r4-cl",
+  "base": "fd1f439",
+  "rows": [
+    {
+      "id": "R4-CL-01",
+      "outcome": "fixed",
+      "commits": [
+        "16a3bf7",
+        "6dbf47c"
+      ],
+      "tests": [
+        "tests/pdf/r4cl-generator-letter-fields.test.mjs",
+        "tests/pdf/61-cover-letter-generator-recipient.test.mjs",
+        "cypress/e2e/28-writing-helpers.cy.js"
+      ],
+      "summary": "Each opening of Auto-Generate reads the letter's own Recipient Name and Company (a letter with no name is greeted \"Dear Hiring Team,\", no more \"Hiring Manager\" default), so a typed recipient and the title typed for them survive Apply and the body names the company the block prints; Apply writes the company whole, so a blank generator Company clears the old one. Product call: the Target Role is not prefilled (the letter stores no role, only a subject).",
+      "remaining": ""
+    },
+    {
+      "id": "R4-CL-02",
+      "outcome": "fixed",
+      "commits": [
+        "bcb98e8"
+      ],
+      "tests": [
+        "tests/unit/ats-job-keywords.unit.mjs"
+      ],
+      "summary": "The job-description scanner keeps an apostrophe (straight or curly) inside its word: \"You'll\", \"we're\", \"don't\" are the stop words they are, any other contraction is dropped, \"Stripe's\" reads as \"Stripe\" and \"O'Reilly\" stays whole; the résumé corpus reads curly apostrophes as straight too.",
+      "remaining": ""
+    },
+    {
+      "id": "R4-CL-03",
+      "outcome": "fixed",
+      "commits": [
+        "2d0d6b1"
+      ],
+      "tests": [
+        "tests/pdf/r4cl-ats-jd-kept.test.mjs"
+      ],
+      "summary": "The pasted job description is kept for the browser tab's session (sessionStorage, key cpwtcv_ats_jd:<résumé id>, via useSessionState) and the ATS panel is keyed by the résumé id, so the posting and its Match % survive a trip to another tab, and another résumé's scanner starts empty.",
+      "remaining": ""
+    },
+    {
+      "id": "R4-CL-04",
+      "outcome": "fixed",
+      "commits": [
+        "76d248e",
+        "26ac1f4"
+      ],
+      "tests": [
+        "tests/pdf/57-optimizer-statement.test.mjs"
+      ],
+      "summary": "statementRange reads a paragraph or list item that holds a <br> line by line, as bare text already was: the STAR Optimizer opens on the caret's line and Apply replaces only it; a caret just before a <br> is on the line it ends. Product call: a list item split by Shift+Enter is read line by line too, so it is never glued.",
+      "remaining": "A <br> nested inside an inline wrapper (<p><b>A<br>B</b></p>) is still read as one statement (low; rare)."
+    },
+    {
+      "id": "R4-CL-05",
+      "outcome": "not-a-bug",
+      "commits": [
+        "5f99091",
+        "78582e9"
+      ],
+      "tests": [
+        "tests/unit/bullet-optimizer-autofix.unit.mjs"
+      ],
+      "summary": "/\\b(did)\\b/ cannot match inside \"didn't\": there is no word boundary between \"did\" and \"n\", so Auto-Fix never wrote \"deliveredn't\". A lookahead fix (5f99091) was proven unnecessary by failfirst (its test passed without it) and reverted (78582e9); the test stays as a guard. Reviewer B checked every weak phrase: none can precede an apostrophe in realistic text.",
+      "remaining": ""
+    },
+    {
+      "id": "R4-CL-06",
+      "outcome": "fixed",
+      "commits": [
+        "0cd1320",
+        "0fdeffa"
+      ],
+      "tests": [
+        "tests/pdf/r4cl-parser-grouped-roles.test.mjs"
+      ],
+      "summary": "With \"Group roles by company\" on, printedJobs tags each later role of a group with its first role (groupLead), and jobFields gives it that role's company outcome, and its location outcome where the location is the shared one the employer header prints; a role's own differing location is read under it, and a grouped role with no title is read just after the role before it.",
+      "remaining": ""
+    },
+    {
+      "id": "R4-CL-07",
+      "outcome": "fixed",
+      "commits": [
+        "e1a79b7",
+        "0a014a7"
+      ],
+      "tests": [
+        "tests/pdf/r4cl-optimizer-chips.test.mjs"
+      ],
+      "summary": "A power verb chip replaces a leading action verb, a multi-word verb phrase Auto-Fix writes (\"Contributed to\") or a leading weak phrase (\"Responsible for\" → \"Spearheaded\"); otherwise it goes before the first word, lowercased when it is an ordinary capitalised word (\"AWS\" stays). Line breaks, bullet marks and quotes are kept (insertActionVerb in bulletOptimizer.js).",
+      "remaining": "A proper noun leading the statement (\"Kubernetes cluster…\") is lowercased when the verb is prepended (low)."
+    },
+    {
+      "id": "R4-CL-08",
+      "outcome": "fixed",
+      "commits": [
+        "e1a79b7"
+      ],
+      "tests": [
+        "tests/pdf/r4cl-optimizer-chips.test.mjs"
+      ],
+      "summary": "A metric chip goes before the statement's closing punctuation (\"…checkout service by 35%.\"), and on an empty statement it is the phrase alone, no leading space (insertMetric).",
+      "remaining": "A statement ending in an abbreviation's dot (\"etc.\") loses it before the metric (low)."
+    },
+    {
+      "id": "R4-CL-09",
+      "outcome": "fixed",
+      "commits": [
+        "3b75d22",
+        "7690b90"
+      ],
+      "tests": [
+        "tests/unit/bullet-optimizer-ats-agree.unit.mjs"
+      ],
+      "summary": "hasMetric (the optimizer's and the ATS score's one rule) reads calendar years, decades, year ranges and month/year dates (\"in 2021\", \"the 1990s\", \"2019–22\", \"05/2021\") as no number; \"2000+\", \"$2019\", \"2019%\" and \"2020k\" still count.",
+      "remaining": "A bare count that looks like a year (\"Served 2000 users\") now reads as no metric — the trade-off of the finding's own rule. \"FY2021\" still counts (pre-existing: the digit rule checks only the first digit)."
+    },
+    {
+      "id": "R4-CL-10",
+      "outcome": "fixed",
+      "commits": [
+        "28b931d"
+      ],
+      "tests": [
+        "tests/unit/ats-checker.unit.mjs"
+      ],
+      "summary": "extractBulletsFromItem reads a list description through parseRichText, as the PDF prints it: every list item, nested or not, is its own bullet, and an item's continuation paragraph stays with it.",
+      "remaining": "Text after a nested list inside the same outer item joins the nested bullet, not the outer one (low, count unchanged)."
+    },
+    {
+      "id": "R4-CL-11",
+      "outcome": "fixed",
+      "commits": [
+        "4c84973"
+      ],
+      "tests": [
+        "tests/unit/ats-standardize-headings.unit.mjs",
+        "tests/unit/ats-checker.unit.mjs"
+      ],
+      "summary": "needsAtsTitle also asks for a shown entry on the résumé's template, the rule has_exp/has_edu/has_skills use, so an empty or all-hidden section is neither flagged as a non-standard heading nor renamed by Standardize Headings (the panel passes resume.template).",
+      "remaining": ""
+    }
+  ],
+  "review": {
+    "issues": [
+      "R4-CL-04: the caret-before-<br> case read previousSibling, which the fake DOM lacks — CI failed; now picked by child index (26ac1f4).",
+      "R4-CL-01: cypress/e2e/28-writing-helpers.cy.js typed into the now-prefilled Company field without clearing (6dbf47c).",
+      "R4-CL-07: \"Contributed to …\" became \"Spearheaded to …\", \"- Led\" read as no verb (0a014a7).",
+      "R4-CL-09: \"2019/20\", \"2019–22\", \"05/2021\" still counted as metrics (7690b90).",
+      "R4-CL-06: a grouped role with no title was read over every line (0fdeffa).",
+      "R4-CL-05: confirmed not a bug."
+    ],
+    "fixedByReviewer": []
+  },
+  "baselineFailures": [],
+  "notes": "Updated tests pinning old behaviour, with the reason: tests/pdf/61 case 1 (the generator's old \"Hiring Manager\" default, the behaviour R4-CL-01 calls a bug); tests/unit/ats-standardize-headings and ats-checker's standardize case (fixtures used entry-less sections to stand for printed headings; each now has an entry). New bugs seen, not fixed (outside the rows): Auto-Fix rewrites \"did not\" to \"delivered not\" (the helper verb is treated as weak); atsChecker's WEAK_PHRASES check uses lower.includes(), so \"Networked with\" counts as \"worked with\" and \"unhandled\" as \"handled\". No accessibility work done or seen. CI evidence: failfirst runs 36230573616 (CL-01/02/03/09/07-08 ok; CL-05 passed without its fix → reverted as not-a-bug; CL-04 red → fixed), 36230777888 (CL-06/10/11), 36230876499 (CL-04 both commits), 36231114834 (CL-06/07/09 follow-ups); regression runs 36230875418 (60 test files of the changed modules) and 36231117510 (follow-up files, cypress 28-writing-helpers, playwright bullet-optimizer and pdf-cover-letter): all green. The latest claude/awesome-cerf-t3sh88 (aa31c3f) is merged in (366ffba)."
+}
