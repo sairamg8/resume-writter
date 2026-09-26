@@ -9,10 +9,11 @@ live. The coordinator's push to master was refused by the session's auto-mode ch
 1. **Owner: deploy** — `git push origin 94b4d9b:refs/heads/master` (a fast-forward; the commits after it are docs only),
    or merge the work branch on GitHub at that commit. Then `python3 docs/tracking/tools/r4_tracker.py --deployed 94b4d9b`,
    commit, push. No firestore.rules change in Round 4: nothing to publish.
-2. **Wave 2 (design) did not run:** dsg-layout (session_01K2dRPYe8fZU5xwrczhag7U) and dsg-flow
-   (session_01AmmKmEdcQjMsXCr6cxbAXZ) hit the five-hour usage limit at 10:20 UTC, seven minutes in, and pushed nothing.
-   Restart them (a message to each session, or fresh sessions from the work branch with the same prompts:
-   [fixes3/R4-CLUSTERS.md](fixes3/R4-CLUSTERS.md) "Wave 2").
+2. **Wave 2 (design) is paused, nothing fixed:** both sessions resumed after the 13:20 UTC reset and saved their
+   findings, not yet confirmed, before stopping again. dsg-flow (session_01AmmKmEdcQjMsXCr6cxbAXZ) has 48 rows in
+   `wf-reports/r4-dsg-flow-findings.md`. dsg-layout (session_01K2dRPYe8fZU5xwrczhag7U) has 36 rows from 3 of 4 finders in
+   `wf-reports/r4-dsg-layout.findings.md`. Both are idle, waiting for a message to carry on. The whole done/pending list
+   is in [STATUS.md](STATUS.md).
 3. **Wave 3 (final sweep):** the small leftovers the clusters saw and left, listed in R4-CLUSTERS.md "Wave 3".
 4. Tracker rows R2-137 and R2-133 (bug-status-r2) still describe the old Word band: set them from
    `fixes3/reports/r4-exp.json` (RES-R2-137, commits `39b3bf7` `a96cebb`).
