@@ -47,13 +47,16 @@ export function CertificationsSection({ section, settings, marginBottom, spaceBe
           const dateStr = showDates ? dateRange(item.date, item.expiry, settings) : '';
           const font = settings?._pdfFontFamily;
           const onName = onBaselineOf([{ fontFamily: font, fontSize: entrySize, fontWeight: 'bold' }, { fontFamily: font, fontSize: entrySize }], { fontFamily: font, fontSize: baseSize });
+          // Each separator only between two fields that print: a certification with no name starts at its
+          // issuer, or its ID, never at a dangling ' — ' or ' · ' (R4-DOUT-17).
+          const certName = item.name || item.title;
           const nameLine = (
             // A link that does not fit its line breaks inside it rather than run out (R2-105).
             <Text style={{ fontSize: entrySize, color: textColor, textAlign }} hyphenationCallback={item.url ? breakLinks : undefined}>
-              <Text style={{ fontWeight: 'bold' }}>{item.name || item.title}</Text>
-              {item.issuer ? <Text style={{ color: shade.sub, fontStyle: italicSubs ? 'italic' : 'normal' }}>{' — '}{item.issuer}</Text> : null}
-              {item.credentialId ? <Text style={{ color: shade.muted }}>{` · ID: ${item.credentialId}`}</Text> : null}
-              {item.url ? <Text style={{ color: accent }}>{' · '}<ContactValue value={item.urlLabel || item.url} href={safeHref(item.url)} style={{ color: accent }} /></Text> : null}
+              {certName ? <Text style={{ fontWeight: 'bold' }}>{certName}</Text> : null}
+              {item.issuer ? <Text style={{ color: shade.sub, fontStyle: italicSubs ? 'italic' : 'normal' }}>{certName ? ' — ' : ''}{item.issuer}</Text> : null}
+              {item.credentialId ? <Text style={{ color: shade.muted }}>{`${certName || item.issuer ? ' · ' : ''}ID: ${item.credentialId}`}</Text> : null}
+              {item.url ? <Text style={{ color: accent }}>{certName || item.issuer || item.credentialId ? ' · ' : ''}<ContactValue value={item.urlLabel || item.url} href={safeHref(item.url)} style={{ color: accent }} /></Text> : null}
             </Text>
           );
           // The name line's widest word, which the date wraps under rather than prints over (R3-002).
