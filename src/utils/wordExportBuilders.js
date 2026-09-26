@@ -23,7 +23,8 @@ import { employerOf, groupPlaces, groupsRoles, roleGroups } from '@/utils/roleGr
  * Design → Section Headings in Word, as PdfSectionTitle draws them (ONB-12-NB1), from the résumé's
  * resolved settings `s`: the title in the template's colour for the style (sectionHeadingLook), and
  * Ruled, Underline and Line as a bottom border, Left bar as a left border, Boxed as the paragraph's
- * shading — at the stored Thickness (Left bar's the wider bar the PDF prints) and Border colour.
+ * shading — at the stored Thickness (Left bar's the wider bar the PDF prints) and Border colour —
+ * or, on a designed layout, its own mark (headingFrame, sectionHeadingLook's `variant`).
  * Word has no rule beside a title: Line's rules print under it. Plain, and a style the app does not
  * offer (the PDF's plain), print the title alone; so does a Thickness no rule is drawn at. Lectern's titles
  * are centred whatever the section's Alignment, as its PDF centres them (sectionHeadingLook's `center`, R2-138 B2).
@@ -38,11 +39,23 @@ function headingFrame(s, template) {
   const hex = (c) => accent2Hex(solid(c), accent2Hex(solid(s.accentColor), '2563eb'));
   const width = Number(s.sectionBorderWidth);
   const drawn = Number.isFinite(width) && width > 0;
-  const rule = (side, color, pt, space) => ({ border: { [side]: { style: BorderStyle.SINGLE, size: eighths(pt), color: hex(color), space } } });
+  const line = (color, pt, space, style = BorderStyle.SINGLE) => ({ style, size: eighths(pt), color: hex(color), space });
+  const rule = (side, color, pt, space, style) => ({ border: { [side]: line(color, pt, space, style) } });
   const color = hex(look.text);
   const size = Math.round(((s.fontSizeBase ?? 11) + (s.fontSizeSectionDelta ?? 1)) * 2);
-  if (s.headingStyle === 'box') return { color, size, shading: { type: ShadingType.CLEAR, color: 'auto', fill: hex(look.box) } };
+  const shading = { type: ShadingType.CLEAR, color: 'auto', fill: hex(look.box) };
+  // Keystone: the tinted box with a bar of Border colour at its left edge, 3 pt whatever the Thickness
+  // (PdfSection.jsx KEYSTONE_EDGE: Boxed takes none).
+  if (s.headingStyle === 'box' && look.variant === 'edge') return { color, size, shading, ...rule('left', look.bar, 3, 6) };
+  if (s.headingStyle === 'box') return { color, size, shading };
   if (!drawn) return { color, size };
+  // The designed layouts' own marks (look.variant, R2-138 B2), as PdfSectionTitle draws them: Broadsheet's
+  // rule over the title and none under it, Gridline's above and under, Registry's dotted underline and
+  // Chronicle's double one. Linen's short underline prints as a full one: a paragraph's border cannot stop short.
+  if (look.variant === 'overline') return { color, size, ...rule('top', look.ruled, width, 1) };
+  if (look.variant === 'framed') return { color, size, border: { top: line(look.ruled, width, 1), bottom: line(look.ruled, width, 2) } };
+  if (look.variant === 'dotted') return { color, size, ...rule('bottom', look.underline, width, 2, BorderStyle.DOTTED) };
+  if (look.variant === 'double') return { color, size, ...rule('bottom', look.underline, width, 2, BorderStyle.DOUBLE) };
   if (s.headingStyle === 'ruled') return { color, size, ...rule('bottom', look.ruled, width, 2) };
   if (s.headingStyle === 'underline') return { color, size, ...rule('bottom', look.underline, width, 2) };
   if (s.headingStyle === 'line') return { color, size, ...rule('bottom', look.line, width, 2) };
