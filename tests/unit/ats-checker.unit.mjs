@@ -805,3 +805,25 @@ test('AUD-17: analyzeAtsScore recognizes Sidebar Single · ATS-safe layout as pa
 
 
 
+
+// R4-CL-10: /<li[^>]*>([\s\S]*?)<\/li>/ ran from an outer item to its nested item's </li>, so a
+// sub-bullet was glued into its parent ("Led migrationCut costs by 30%"): 2 bullets instead of 3, and
+// the nested one's metric credited to the parent. Each list item is one bullet, as the PDF prints it.
+test('extractBulletsFromItem: a nested list item is a bullet of its own', async () => {
+  const { extractBulletsFromItem } = await import('../../src/utils/atsChecker.js');
+  const nested = { description: '<ul><li>Led migration<ul><li>Cut costs by 30%</li></ul></li><li>Built CI</li></ul>' };
+  assert.deepEqual(extractBulletsFromItem(nested), ['Led migration', 'Cut costs by 30%', 'Built CI']);
+  // Entities decoded, inline markup dropped, a continuation paragraph kept with its item.
+  const rich = { description: '<ul><li><b>Cut</b> p95 to &lt;200ms</li><li><p>Owned billing</p><p>for 3 regions</p></li></ul>' };
+  assert.deepEqual(extractBulletsFromItem(rich), ['Cut p95 to <200ms', 'Owned billing for 3 regions']);
+  // The ATS score reads three bullets, only one with a metric.
+  const r = {
+    id: 'n', template: 'classic', settings: {}, personal: { name: 'Kim Park', hiddenFields: [] },
+    sections: [{ id: 'exp', type: 'experience', title: 'Experience', visible: true, items: [
+      { id: 'e1', company: 'Initech', role: 'Engineer', startDate: '2020-01', current: true, ...nested },
+    ] }],
+  };
+  const items = analyzeAtsScore(r).categories.experience.items;
+  assert.match(items.find((i) => i.id === 'action_verbs').detail, /of 3 bullets/);
+  assert.ok(!items.some((i) => i.id === 'bullets_count'), 'three bullets is not "few"');
+});

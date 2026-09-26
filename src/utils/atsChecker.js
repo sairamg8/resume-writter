@@ -29,14 +29,20 @@ export function extractBulletsFromItem(item) {
   if (item.description && typeof item.description === 'string') {
     const desc = item.description;
 
-    // Check for <li> tags
-    const liMatches = [...desc.matchAll(/<li[^>]*>([\s\S]*?)<\/li>/gi)];
-    if (liMatches.length > 0) {
-      for (const m of liMatches) {
-        const clean = decodeEntities(m[1].replace(/<[^>]+>/g, '')).trim();
-        if (clean && !bullets.includes(clean)) {
-          bullets.push(clean);
-        }
+    // A list: each item is a bullet, nested or not, read as the PDF prints it (parseRichText). A
+    // pattern from <li> to the next </li> ran from an outer item to its nested one's end, so
+    // "Led migration" and its sub-item "Cut costs by 30%" were one bullet, "Led migrationCut costs by
+    // 30%" (R4-CL-10). An item's continuation paragraph belongs to it; body text outside the list is
+    // no bullet, as before.
+    if (/<li[\s>]/i.test(desc)) {
+      const items = [];
+      for (const block of parseRichText(desc)) {
+        const text = block.runs.map((r) => r.text).join('').replace(/\s+/g, ' ').trim();
+        if (block.marker) items.push(text);
+        else if (block.indent >= 1 && items.length) items[items.length - 1] = `${items[items.length - 1]} ${text}`.trim();
+      }
+      for (const clean of items) {
+        if (clean && !bullets.includes(clean)) bullets.push(clean);
       }
     } else {
       // Look for bullet characters or line breaks (<br>, </p>, </div>, \n)
