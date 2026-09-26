@@ -1,8 +1,10 @@
 import { useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
-// One piece of page state kept in the address — the job tracker's ?view=, ?q=, ?status=, the
-// board's ?issue= — so Back, refresh and a shared link all show the same page. Writes REPLACE the
+// One piece of page state kept in the address — the job tracker's ?view=, the board's ?issue= —
+// so Back, refresh and a shared link all show the same page. (The tracker's search box is not
+// here: the router commits a navigation in a transition, and a text box whose value follows one
+// drops keystrokes; it, the status filter and the list sort are in useSessionState.) Writes REPLACE the
 // history entry (typing a search must not leave one entry per letter), keep every other param
 // and the router state, and never scroll the page (WorkspaceLayout resets scroll only when the
 // path changes).

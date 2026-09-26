@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Briefcase, Download, FileSpreadsheet, LayoutDashboard, List, MoreHorizontal, Plus, SquareKanban, Upload } from 'lucide-react';
 import { useJobStore } from '@/hooks/useJobStore';
+import { useSessionState } from '@/hooks/useSessionState';
 import { JOB_STATUSES } from '@/constants/jobs';
 import { Button, IconButton, Menu, SearchInput, cx, useConfirmOptional, useToast, useUrlState } from '@/components/ui';
 import { PageHeader } from '@/components/shell';
@@ -62,8 +63,9 @@ export function JobTracker({ store }) {
   const { appState } = store;
   const { resumes } = appState;
   const [view, setView] = useUrlState('view', 'kanban');
-  const [search, setSearch] = useState('');
-  const [filterStatus, setFilterStatus] = useState('');
+  // Kept for the tab's session: opening a job and coming back cleared them (J-30).
+  const [search, setSearch] = useSessionState('cpwtcv_jobs_search', '', v => typeof v === 'string');
+  const [filterStatus, setFilterStatus] = useSessionState('cpwtcv_jobs_status', '', v => v === '' || JOB_STATUSES.some(s => s.id === v));
   const importRef = useRef(null);
   const [importNotice, setImportNotice] = useState(null); // { kind, text } (importMessage)
 

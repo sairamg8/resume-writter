@@ -1,10 +1,10 @@
-import { useState } from 'react';
 import { ExternalLink, Trash2, ChevronUp, ChevronDown } from 'lucide-react';
 import { StatusBadge } from '@/components/job/StatusBadge';
 import { Avatar } from '@/components/ui';
 import { deadlineState } from '@/utils/dates';
 import { safeHref } from '@/utils/richText';
 import { sortJobs } from '@/utils/jobQuery';
+import { useSessionState } from '@/hooks/useSessionState';
 
 /** Last updated first: the order the list opens in, and the one a third header click returns to. */
 const DEFAULT_SORT = { key: 'updatedAt', dir: 'desc' };
@@ -14,8 +14,23 @@ function SortIcon({ active, dir }) {
   return dir === 'asc' ? <ChevronUp size={11} className="inline ml-0.5" /> : <ChevronDown size={11} className="inline ml-0.5" />;
 }
 
+const COLS = [
+  { key: 'company',     label: 'Company' },
+  { key: 'role',        label: 'Role' },
+  { key: 'status',      label: 'Status' },
+  { key: 'location',    label: 'Location' },
+  { key: 'salary',      label: 'Salary' },
+  { key: 'appliedDate', label: 'Applied' },
+  { key: 'deadline',    label: 'Deadline' },
+  { key: 'contact',     label: 'Contact' },
+];
+
+/** A sort saved earlier in the tab is restored only while it names the default or a column still here. */
+const validSort = s => Boolean(s) && (s.key === DEFAULT_SORT.key || COLS.some(c => c.key === s.key)) && (s.dir === 'asc' || s.dir === 'desc');
+
 export function ListView({ jobs, resumes, onNavigate, onDelete }) {
-  const [sort, setSort] = useState(DEFAULT_SORT);
+  // Kept for the tab's session: opening a job and coming back put the list in its default order (J-30).
+  const [sort, setSort] = useSessionState('cpwtcv_jobs_sort', DEFAULT_SORT, validSort);
 
   // asc → desc → the default order again, which no header click used to reach (J-18).
   function toggleSort(key) {
@@ -25,23 +40,12 @@ export function ListView({ jobs, resumes, onNavigate, onDelete }) {
   // Each column by its own kind — status in pipeline order, salary by amount, blanks last (J-18).
   const sorted = sortJobs(jobs, sort.key, sort.dir);
 
-  const cols = [
-    { key: 'company',     label: 'Company' },
-    { key: 'role',        label: 'Role' },
-    { key: 'status',      label: 'Status' },
-    { key: 'location',    label: 'Location' },
-    { key: 'salary',      label: 'Salary' },
-    { key: 'appliedDate', label: 'Applied' },
-    { key: 'deadline',    label: 'Deadline' },
-    { key: 'contact',     label: 'Contact' },
-  ];
-
   return (
     <div className="overflow-x-auto rounded-md border border-line bg-white">
       <table className="w-full min-w-[60rem] text-sm">
         <thead>
           <tr className="border-b-2 border-line">
-            {cols.map(col => (
+            {COLS.map(col => (
               <th
                 key={col.key}
                 aria-sort={sort.key !== col.key ? 'none' : sort.dir === 'asc' ? 'ascending' : 'descending'}
