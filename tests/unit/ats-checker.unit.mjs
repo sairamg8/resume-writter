@@ -154,9 +154,10 @@ test('Standard ATS Headings: identifies standard vs custom section titles', () =
 
 test('standardizeSectionsForAts: converts non-standard titles to canonical Workday headings and leaves titleOrder alone', () => {
   const customSections = [
-    { id: '1', type: 'experience', title: 'Where I Worked', settings: { titleOrder: 'company' } },
-    { id: '2', type: 'education', title: 'My College' },
-    { id: '3', type: 'skills', title: 'What I Know' },
+    // Each with an entry: a section with none prints no heading, so it is not renamed (R4-CL-11).
+    { id: '1', type: 'experience', title: 'Where I Worked', settings: { titleOrder: 'company' }, items: [{ id: 'e1', role: 'Engineer' }] },
+    { id: '2', type: 'education', title: 'My College', items: [{ id: 'd1', degree: 'BSc' }] },
+    { id: '3', type: 'skills', title: 'What I Know', items: [{ id: 's1', skills: 'Go' }] },
   ];
   const standardized = standardizeSectionsForAts(customSections);
   assert.equal(standardized[0].title, 'Professional Experience');

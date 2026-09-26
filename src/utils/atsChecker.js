@@ -439,26 +439,28 @@ export function matchResumeWithJob(resume, jobDescriptionText) {
 }
 
 /**
- * Whether the ATS report flags this section's heading: the section is shown and its title is not on
+ * Whether the ATS report flags this section's heading: the section prints (it is shown and so is one
+ * of its entries on `template` — an empty one prints no heading, R4-CL-11) and its title is not on
  * its type's alias list. The one rule for both the report's std_headings item (analyzeAtsScore) and
  * the fix it offers (standardizeSectionsForAts), so the button cannot change a heading the report
  * passed — it did, and hidden sections too, before TUI-7.
  */
-function needsAtsTitle(section) {
-  return !!section && section.visible !== false && !isStandardAtsTitle(section);
+function needsAtsTitle(section, template) {
+  return !!section && section.visible !== false && shownItems(section, template).length > 0 && !isStandardAtsTitle(section);
 }
 
 /**
  * Renames the headings the ATS report flags to their canonical Workday / Taleo title, and nothing
- * else. A hidden section, a title already on its type's alias list ("Work Experience", "Technical
+ * else. A hidden or empty section, a title already on its type's alias list ("Work Experience", "Technical
  * Skills") and a custom section are returned as the same object. It writes no title order: leading
  * experience entries with the job title is the report's separate "Put Job Title First" fix, and this
  * one used to set it on every experience section behind a label that only names headings (TUI-7).
  */
-export function standardizeSectionsForAts(sections) {
+export function standardizeSectionsForAts(sections, template) {
   if (!Array.isArray(sections)) return sections;
+  const id = templateId(template);
   return sections.map((s) => {
-    const spec = needsAtsTitle(s) && ATS_STANDARD_SECTIONS[s.type];
+    const spec = needsAtsTitle(s, id) && ATS_STANDARD_SECTIONS[s.type];
     return spec ? { ...s, title: spec.canonical } : s;
   });
 }
@@ -792,7 +794,7 @@ export function analyzeAtsScore(resume, jobDescriptionText = '') {
   }
 
   // Heading naming standardization check (4 pts) — needsAtsTitle, the rule its fix also uses
-  const nonStandard = sections.filter(needsAtsTitle)
+  const nonStandard = sections.filter((s) => needsAtsTitle(s, currentTemplate))
     .map(s => ({ title: s.title, type: s.type, canonical: ATS_STANDARD_SECTIONS[s.type]?.canonical }));
 
   if (nonStandard.length === 0) {

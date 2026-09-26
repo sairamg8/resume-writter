@@ -97,12 +97,12 @@ function AtsCheck({ resume, store }) {
 
   /**
    * Both "Standardize" buttons: renames the headings the std_headings warning lists, and nothing
-   * else — not the titles it passed, not hidden sections, not the experience title order, which is
+   * else — not the titles it passed, not hidden or empty sections, not the experience title order, which is
    * "Put Job Title First" below (TUI-7).
    */
   function handleStandardizeHeadings() {
     if (!resume || !Array.isArray(resume.sections)) return;
-    const updated = standardizeSectionsForAts(resume.sections);
+    const updated = standardizeSectionsForAts(resume.sections, resume.template);
     store.updateSections(updated);
   }
 
