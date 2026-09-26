@@ -6,7 +6,8 @@ import { computePlacement } from './placement.js';
 // in the same commit, before its position renders, so a picker's search box and a menu's items
 // never had it (typing went nowhere, Escape reached the dialog around it — R4-APP-01). Its entry
 // animation waits too: running, it would override the opacity and show a panel never measured (an
-// anchor with no box) at the corner; paused, it holds its first frame and plays once placed.
+// anchor ref that reaches no element) at the corner; paused, it holds its first frame and plays once
+// placed.
 const HIDDEN = { position: 'fixed', top: 0, left: 0, opacity: 0, pointerEvents: 'none', animationPlayState: 'paused' };
 
 /**

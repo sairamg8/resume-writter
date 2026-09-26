@@ -13,7 +13,7 @@ const entryOf = (key, pathname) => `${key} ${pathname}`;
  * the top, Back and Forward return to where that visit was scrolled, and a change of the search
  * alone (a filter, ?view=, ?issue=) leaves the scroll alone.
  *
- * Each history entry (location.key) keeps the last offset the user scrolled it to — recorded from
+ * Each history entry (location.key and its path) keeps the last offset the user scrolled it to — recorded from
  * the scroll events, so it is the offset before the next page's content could clamp it. Returns
  * the onScroll handler for <main>.
  */
