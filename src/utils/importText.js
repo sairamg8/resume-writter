@@ -272,6 +272,8 @@ const isMetaLine = (text) => { const p = pieces(text); return p.length > 0 && p.
 /** Words a job title holds, and a company's name rarely does: which of two fields is the role. */
 const ROLE = /\b(engineer|developer|programmer|manager|director|lead|head|intern|analyst|designer|consultant|specialist|scientist|officer|assistant|associate|coordinator|architect|administrator|admin|president|vp|founder|co-founder|owner|teacher|professor|lecturer|researcher|nurse|technician|accountant|writer|editor|producer|representative|supervisor|executive|advisor|adviser|strategist|principal|chief|cto|ceo|cfo|coo|partner|fellow|trainee|apprentice|volunteer|tutor|mentor|chair|secretary|treasurer|clerk|agent|operator|instructor|coach|counselor|therapist|physician|attorney|paralegal|sales|marketer|recruiter|contractor|freelancer|freelance)s?\b/i;
 const DEGREE = /\b(b\.?\s?[ase]\.?|b\.?sc|bsc|b\.?tech|b\.?eng|beng|bba|bfa|bcom|m\.?\s?[ase]\.?|m\.?sc|msc|m\.?tech|m\.?eng|meng|mba|mfa|ph\.?\s?d|phd|doctor(?:ate)?|bachelor'?s?|master'?s?|associate'?s?|diploma|certificate|high school|a-?levels?|gcse|degree|hnd|llb|llm|md|jd)\b/i;
+/** A subject a degree is in, as a field of study names one: "Computer Science", "Business Administration". */
+const SUBJECT = /\b(science|sciences|engineering|studies|mathematics|maths?|statistics|economics|business|administration|finance|accounting|marketing|management|psychology|biology|chemistry|physics|history|literature|english|philosophy|law|medicine|nursing|architecture|arts?|music|informatics|communications?|journalism|politics|political|sociology|linguistics|humanities|design|geography|anthropology)\b/i;
 const SCHOOL = /\b(university|universit[äéà]t?|college|institute|institut|school|academy|polytechnic|conservatory|seminary|lyc[ée]e|gymnasium)\b/i;
 const WEB = /^(?:https?:\/\/)?(?:www\.)?[a-z0-9][a-z0-9-]*(?:\.[a-z0-9-]+)*\.[a-z]{2,}(?:[/?#]\S*)?$/i;
 
@@ -455,11 +457,23 @@ function entryOf(type, header, body, aside = () => {}) {
       let location = h.location || take('location');
       const placeAt = location ? -1 : left.findIndex((p) => PLACE.test(p) && !DEGREE.test(p));
       if (placeAt >= 0) location = left.splice(placeAt, 1)[0];
-      if (!fields.degree && left.length) fields.degree = left.shift();
+      // No degree named: a subject alone is the field of study — the exports print "Computer Science -
+      // MIT" for an entry with no degree — and the one field left beside it the school (R4-LO-06). Not
+      // "B.F.A., Graphic Design": what leads a comma is a degree.
+      const subjectAt = fields.degree || fields.fieldOfStudy ? -1 : left.findIndex((p) => SUBJECT.test(p.split(',')[0]) && !SCHOOL.test(p));
+      if (subjectAt >= 0) fields.fieldOfStudy = left.splice(subjectAt, 1)[0];
+      if (subjectAt < 0 || fields.institution || left.length > 1) {
+        // Of two fields with no degree word, the one with a comma is the degree ("Bootcamp, Full Stack"),
+        // wherever it prints (the PDF puts the school first).
+        const commaAt = !fields.degree && left.length > 1 ? left.findIndex((p) => /,\s/.test(p) && !SCHOOL.test(p)) : -1;
+        if (commaAt > 0) left.unshift(...left.splice(commaAt, 1));
+        if (!fields.degree && left.length) fields.degree = left.shift();
+      }
       if (!fields.institution && left.length) fields.institution = left.shift();
-      // "B.S., Computer Science": the degree and its field, as the exports print them.
+      // "B.S., Computer Science": the degree and its field, as the exports print them — a degree the
+      // import does not know too ("Bootcamp, Full Stack"): the exports print a degree and its field so.
       const comma = /^([^,]+),\s*(.+)$/.exec(fields.degree);
-      if (comma && !fields.fieldOfStudy && DEGREE.test(comma[1])) { fields.degree = comma[1].trim(); fields.fieldOfStudy = comma[2].trim(); }
+      if (comma && !fields.fieldOfStudy && (DEGREE.test(comma[1]) || !DEGREE.test(fields.degree))) { fields.degree = comma[1].trim(); fields.fieldOfStudy = comma[2].trim(); }
       // The degree and the school found, one field over, on a line of its own: the field of study.
       if (placeAt >= 0 && !fields.fieldOfStudy && left.length === 1) fields.fieldOfStudy = left.shift();
       return itemOf(type, { ...fields, location, ...dates, description: description(left) });
