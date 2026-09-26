@@ -58,6 +58,9 @@ const project = () => ({
 });
 
 const boardNow = () => store.snapshot().boards.find((b) => b.id === 'p1');
+/** The store's actions (a change made outside the view, as another tab's sync or a toast's Undo makes one). */
+export const boardActions = () => store.boardActions;
+
 /** Issue `id` of the project as the store has it now. */
 export const issueNow = (id) => boardNow().issues.find((i) => i.id === id);
 

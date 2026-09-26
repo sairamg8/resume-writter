@@ -8,7 +8,7 @@
 // Run: node --test tests/pdf/82-issue-view-r4-05.test.mjs
 import { it } from 'node:test';
 import assert from 'node:assert/strict';
-import { useIssueViewPage, mountBoard, issueNow, elements, reactProps, ev } from './issue-view-page.mjs';
+import { useIssueViewPage, mountBoard, issueNow, boardActions, elements, reactProps, ev } from './issue-view-page.mjs';
 
 useIssueViewPage();
 
@@ -256,6 +256,25 @@ it('R4-BRD-05: a close whose step back never lands (history shorter than the cou
     assert.equal(calls[1][1].search, '', 'the retry drops ?issue= in place');
   } finally {
     Date.now = realNow;
+    await page.view.unmount();
+  }
+});
+
+it('R4-BRD-05: an open still landing (the app\'s router commits it later) survives a render meanwhile: a second click pushes nothing', async () => {
+  // The stuck history stands for a navigation not yet committed: the address stays HOME-1.
+  const calls = [];
+  const page = mountBoard('/boards/p1?issue=HOME-1', { stuck: { state: { issueDepth: 1 }, calls } });
+  try {
+    await page.settle();
+    const trail = () => page.buttonWith('HOME-3');
+    page.click(trail());
+    assert.equal(calls.filter(([how]) => how === 'push').length, 1);
+    // A render before it lands: a change to the project from outside the view.
+    page.view.act(() => { boardActions().updateIssue('p1', 'i2', { title: 'Paint the fence white' }); });
+    await page.settle();
+    page.click(trail());
+    assert.equal(calls.filter(([how]) => how === 'push').length, 1, 'the render put the old address back, and the second click pushed the epic again');
+  } finally {
     await page.view.unmount();
   }
 });

@@ -39,9 +39,17 @@ export function useIssueRoute(boards, board = null) {
   // CLOSE_WAIT_MS on the same entry the step back never landed (a count longer than the history a
   // restored tab kept): that close drops the param in place, or the view could never close.
   const closedFrom = useRef(null);
+  // Taken over only when an address lands (a new key): the app's router commits a navigation later,
+  // in a transition, and a render before it (a store update) would put the old address back over
+  // the pending one. A close asked from the pending address keeps its guard on the one that lands.
+  const landed = useRef(location.key);
   useLayoutEffect(() => {
+    if (location.key === landed.current) return;
+    landed.current = location.key;
+    const pending = live.current.pending ? live.current.key : null;
     live.current = location;
-    if (closedFrom.current?.key !== location.key) closedFrom.current = null;
+    if (closedFrom.current && closedFrom.current.key === pending) closedFrom.current = { ...closedFrom.current, key: location.key };
+    else if (closedFrom.current?.key !== location.key) closedFrom.current = null;
   });
   const at = (loc, key) => ({ pathname: loc.pathname, search: withSearchParam(loc.search, 'issue', key), hash: loc.hash });
   return {
@@ -57,7 +65,7 @@ export function useIssueRoute(boards, board = null) {
       navigate(to, { replace, state });
       // The address it is going to, until it lands: a second open meanwhile (a double-clicked
       // row) is then the same issue, and pushes nothing.
-      live.current = { ...loc, ...to, state, key: `${loc.key}:${key}` };
+      live.current = { ...loc, ...to, state, key: `${loc.key}:${key}`, pending: true };
     },
     close: () => {
       const loc = live.current;
