@@ -24,6 +24,7 @@ import {
 } from '@/utils/contactIcons';
 import { CONTACT_FIELDS } from '@/utils/contacts';
 import { ONE_PAGE_FIT, fitOnePage, printedKey } from '@/utils/pageFit';
+import { useToast } from '@/components/ui/Toast';
 
 const COLOR_KEYS      = ['accentColor', 'textColor', 'sidebarBg', 'headerTextColor', 'nameColor', 'jobTitleColor'];
 const TYPOGRAPHY_KEYS = ['font', 'fontSize', 'fontSizeBase', 'fontSizeNameDelta', 'fontSizeSectionDelta', 'fontSizeEntryDelta', 'customFont', 'iconSize', 'sectionLetterSpacing', 'fontSizeTitleDelta', 'nameFont', 'headingFont'];
@@ -35,6 +36,11 @@ const DATE_KEYS       = ['dateFormat'];
 const LIST_KEYS       = ['bulletStyle'];
 const LINK_KEYS       = ['linkStyle'];
 const PAGE_NUMBER_KEYS = ['pageNumbers'];
+// Each ↺'s section, as its header reads, for the notice its reset raises (R4-DUX-14).
+const SECTION_NAMES = new Map([
+  [COLOR_KEYS, 'Colors'], [TYPOGRAPHY_KEYS, 'Typography'], [SPACING_KEYS, 'Spacing'], [HEADING_KEYS, 'Section Headings'],
+  [ICON_KEYS, 'Contact icons'], [DATE_KEYS, 'Dates'], [LIST_KEYS, 'Lists'], [LINK_KEYS, 'Links'], [PAGE_NUMBER_KEYS, 'Page numbers'],
+]);
 // The paper, by its name and size as the editor states them: "A4 · 210 × 297 mm".
 const PAGE_SIZE_OPTIONS = PAGE_SIZE_IDS.map(id => ({ label: `${PAGE_SIZES[id].label} · ${PAGE_SIZES[id].dims}`, value: id }));
 
@@ -54,6 +60,7 @@ export default function DesignPanel({
   // Modern and Sidebar draw the pack whatever Contact style says, the others only with Icon.
   const drawsIcons = drawsContactIcons(current, settings);
   const [confirmReset, setConfirmReset] = useState(false);
+  const { toast } = useToast();
   const pageSizeLabelId = useId();
   const [fitting, setFitting] = useState(false);
   const [fitNotice, setFitNotice] = useState('');
@@ -96,10 +103,32 @@ export default function DesignPanel({
     }
   }
 
-  /** A section's reset: its settings back to the template's defaults (Sidebar's plain headings, …). */
+  /**
+   * A section's reset: its settings back to the template's defaults (Sidebar's plain headings, …), and
+   * a notice with Undo (R4-DUX-14) — one click on a ↺ took back a whole group with no way back. Undo
+   * writes back only the keys the reset changed, as they were (an unset one back to undefined, which reads as unset), so what was
+   * edited since in another section stays; on another résumé opened meanwhile it does nothing.
+   */
   function resetSection(keys) {
     const updated = sectionReset(resume.template, keys, settings);
     keys.forEach(k => { if (k in updated) updateSetting(k, updated[k]); });
+    // Nothing moved (already at the defaults): no notice, nothing to undo.
+    const changed = keys.filter(k => k in updated && updated[k] !== settings[k]);
+    if (!changed.length) return;
+    const before = changed.map(k => [k, settings[k]]);
+    const id = resume.id;
+    toast({
+      id: 'design-section-reset',
+      title: `${SECTION_NAMES.get(keys) || 'Section'} reset`,
+      duration: 8000,
+      action: {
+        label: 'Undo',
+        onClick: () => {
+          if (mounted.current && latest.current?.id !== id) return;
+          before.forEach(([k, v]) => updateSetting(k, v));
+        },
+      },
+    });
   }
 
   // Every card, from the data (utils/templatePicker.js): the templates — the Sidebar's single column a
