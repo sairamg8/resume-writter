@@ -320,10 +320,11 @@ function sectionOf(type, title, items) {
  * "Role — Company", "Role, Company", R2-148).
  */
 function readHeader(type, header) {
-  const out = { parts: [], date: null, location: '', meta: {} };
+  const out = { parts: [], date: null, location: '', meta: {}, named: [] };
   const field = (p) => {
     const meta = metaOf(p);
     if (meta) out.meta[meta.key] = out.meta[meta.key] ? `${out.meta[meta.key]}, ${meta.value}` : meta.value;
+    if (meta) out.named.push({ key: meta.key, text: p });
     return Boolean(meta);
   };
   const place = (p) => {
@@ -401,19 +402,24 @@ function entryOf(type, header, body, aside = () => {}) {
   const [p0 = '', p1 = '', ...rest] = JOB.has(type) ? inlinePair(h.parts) : h.parts;
   const d = h.date || { start: '', end: '', current: false, text: '' };
   const lead = rest.length ? [rest.join(' — ')] : [];
-  const description = (extra = []) => richText([...extra.map((x) => x), ...body.map((l) => l.text)]);
+  // A field named on its line ("Technologies: …", "Link: …") that this type has a place for, taken;
+  // one it has none for (a job's technologies) leads its description, as written (R4-IMP-07).
+  const used = new Set();
+  const take = (key) => { used.add(key); return h.meta[key] || ''; };
+  const unnamed = () => h.named.filter((n) => !used.has(n.key)).map((n) => n.text);
+  const description = (extra = []) => richText([...unnamed(), ...extra, ...body.map((l) => l.text)]);
   const dates = { startDate: d.start, endDate: d.end, current: d.current };
   switch (type) {
     case 'experience': {
       const [role, company] = roleFirst(p0, p1, false);
-      return itemOf(type, { company, role, location: h.location || h.meta.location || '', ...dates, description: description(lead) });
+      return itemOf(type, { company, role, location: h.location || take('location'), ...dates, description: description(lead) });
     }
     case 'volunteering': {
       const [role, org] = roleFirst(p0, p1, true);
-      return itemOf(type, { org, role, location: h.location || h.meta.location || '', ...dates, description: description(lead) });
+      return itemOf(type, { org, role, location: h.location || take('location'), ...dates, description: description(lead) });
     }
     case 'education': {
-      const fields = { institution: '', degree: '', fieldOfStudy: '', gpa: h.meta.gpa || '' };
+      const fields = { institution: '', degree: '', fieldOfStudy: '', gpa: take('gpa') };
       const left = [];
       for (const part of h.parts) {
         const gpa = /^(?:c?gpa|grade)\s*:?\s*(.+)$/i.exec(part);
@@ -425,7 +431,7 @@ function entryOf(type, header, body, aside = () => {}) {
         else left.push(part);
       }
       // A place on a line of its own (a side column's stacked fields): the location.
-      let location = h.location || h.meta.location || '';
+      let location = h.location || take('location');
       const placeAt = location ? -1 : left.findIndex((p) => PLACE.test(p) && !DEGREE.test(p));
       if (placeAt >= 0) location = left.splice(placeAt, 1)[0];
       if (!fields.degree && left.length) fields.degree = left.shift();
@@ -442,8 +448,8 @@ function entryOf(type, header, body, aside = () => {}) {
       const linked = LINKED.exec(p0);
       const named = !linked && /^(.*?)\s*\(([^()]+)\)$/.exec(p0);
       const fields = linked
-        ? { name: linked[1], technologies: h.meta.technologies || '', url: linked[2] }
-        : { name: named ? named[1] : p0, technologies: named ? named[2] : (h.meta.technologies || ''), url: h.meta.link || '' };
+        ? { name: linked[1], technologies: take('technologies'), url: linked[2] }
+        : { name: named ? named[1] : p0, technologies: named ? named[2] : take('technologies'), url: take('link') };
       const left = [];
       for (const part of h.parts.slice(1)) {
         if (!fields.url && WEB.test(part)) fields.url = part;
@@ -453,7 +459,7 @@ function entryOf(type, header, body, aside = () => {}) {
       return itemOf(type, { ...fields, ...dates, description: description(left) });
     }
     case 'certifications': {
-      const fields = { name: p0, issuer: '', url: h.meta.link || '', credentialId: h.meta.id || '', date: d.start || d.end, expiry: h.meta.expires || (d.start ? d.end : '') };
+      const fields = { name: p0, issuer: '', url: take('link'), credentialId: take('id'), date: d.start || d.end, expiry: take('expires') || (d.start ? d.end : '') };
       // Its link: an address, or a label with its address (linkText: "View Certificate (https://…)", the
       // Markdown export's link line under the entry) — the link's label kept as the Link label (R4-IMP-02).
       const link = (text) => {
@@ -473,13 +479,14 @@ function entryOf(type, header, body, aside = () => {}) {
         if (found) Object.assign(fields, found);
         return !found;
       });
-      if (left.length || rest.length) aside(fields.name || 'Certification', [...left, ...rest.map((l) => l.text)]);
+      const extra = [...unnamed(), ...left, ...rest.map((l) => l.text)];
+      if (extra.length) aside(fields.name || 'Certification', extra);
       return itemOf(type, fields);
     }
     case 'awards':
       return itemOf(type, { title: p0, issuer: p1, date: d.text ? (d.start || d.end) : '', description: description(lead) });
     default:
-      return itemOf('custom', { title: p0, subtitle: [p1, ...rest].filter(Boolean).join(' — '), date: d.text ? d.text.replace(/\s+-\s+/, ' – ') : '', location: h.location || h.meta.location || '', description: description() });
+      return itemOf('custom', { title: p0, subtitle: [p1, ...rest].filter(Boolean).join(' — '), date: d.text ? d.text.replace(/\s+-\s+/, ' – ') : '', location: h.location || take('location'), description: description() });
   }
 }
 
