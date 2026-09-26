@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { Camera, ChevronDown, ChevronRight, Eye, EyeOff } from 'lucide-react';
 import { Chip } from '@/components/PersonalInfoEditorHeader';
 import { readImageFile } from '@/utils/imageUpload';
@@ -29,7 +29,13 @@ export function PhotoSection({ resume: whole, personal, updatePersonal, toggleFi
   // this browser cannot read either prints nothing, and the panel says so instead of "Added" (R7-7).
   const printable = usePrintableImage(personal.photo);
   const unprintable = Boolean(personal.photo) && printable === null;
-  const { toast } = useToast();
+  const { toast, dismiss } = useToast();
+  // The résumé as it is now, for an Undo clicked later: updatePersonal writes to whichever résumé is
+  // active, so Undo checks it is still this one and still has no photo.
+  const latest = useRef(null);
+  useEffect(() => { latest.current = { id: whole?.id, personal }; });
+  // Another résumé opened (or imported) takes this one's Undo away with it.
+  useEffect(() => () => dismiss('photo-removed'), [whole?.id, dismiss]);
 
   function handlePhotoChange(e) {
     const file = e.target.files?.[0];
@@ -42,15 +48,22 @@ export function PhotoSection({ resume: whole, personal, updatePersonal, toggleFi
 
   // Remove takes the upload out at once, with a notice whose Undo puts the same photo back, so a
   // slip costs no re-upload (R4-DUX-27). The photo is the one field it clears: its Shape, Size and
-  // the rest are Design settings and its eye is hiddenFields, and both stay as they were.
+  // the rest are Design settings and its eye is hiddenFields, and both stay as they were. Undo writes
+  // nothing once another résumé is open or a new photo was uploaded since: it would land there.
   function removePhoto() {
     const photo = personal.photo;
+    const id = whole?.id;
     updatePersonal('photo', null);
     toast({
       id: 'photo-removed',
       title: 'Photo removed',
       duration: 8000,
-      action: { label: 'Undo', onClick: () => updatePersonal('photo', photo) },
+      action: {
+        label: 'Undo',
+        onClick: () => {
+          if (latest.current?.id === id && !latest.current?.personal?.photo) updatePersonal('photo', photo);
+        },
+      },
     });
   }
 
