@@ -36,7 +36,8 @@ export const WEAK_PHRASE_REPLACEMENTS = [
   { match: /\b(worked on|worked with)\b/gi, replacement: 'Engineered', alternatives: ['Co-developed', 'Collaborated on', 'Built'] },
   { match: /\b(helped with|helped to|assisted with|assisted in)\b/gi, replacement: 'Facilitated', alternatives: ['Supported delivery of', 'Co-engineered', 'Accelerated'] },
   { match: /\b(handled)\b/gi, replacement: 'Managed', alternatives: ['Resolved', 'Administered', 'Executed'] },
-  { match: /\b(did)\b/gi, replacement: 'Delivered', alternatives: ['Conducted', 'Accomplished', 'Produced'] },
+  // "did" as a main verb only: in "did not" it is a helper verb, and Auto-Fix wrote "delivered not" (R4-LO-10).
+  { match: /\b(did)\b(?!\s+(?:not|never)\b)/gi, replacement: 'Delivered', alternatives: ['Conducted', 'Accomplished', 'Produced'] },
   { match: /\b(made sure|ensured that|ensured)\b/gi, replacement: 'Guaranteed', alternatives: ['Maintained compliance with', 'Enforced', 'Safeguarded'] },
   { match: /\b(changed)\b/gi, replacement: 'Transformed', alternatives: ['Modernized', 'Overhauled', 'Refactored'] },
   { match: /\b(participated in)\b/gi, replacement: 'Contributed to', alternatives: ['Partnered in', 'Active member of', 'Drove'] },
@@ -124,8 +125,14 @@ export function hasMetric(text) {
     // A year range or a month and year ("2019–22", "2019/20", "05/2021") is dates too, all of it.
     .replace(/(?<![\p{L}\d$])(?:19|20)\d{2}\s*[–—/-]\s*\d{2}(?![\d%+kKmMbBxX$])/gu, '')
     .replace(/(?<![\p{L}\d$])\d{1,2}\/(?:19|20)\d{2}(?![\d%+kKmMbBxX$])/gu, '')
-    .replace(/(?<![\p{L}\d$]|\d[.,])(?:19|20)\d{2}(?![\d%+kKmMbBxX$]|[.,]\d)/gu, '');
-  return /(?<!\p{L})\d/u.test(noYears) && !/^\d{4}$/.test(clean);
+    .replace(/(?<![\p{L}\d$]|\d[.,])(?:19|20)\d{2}(?![\d%+kKmMbBxX$]|[.,]\d)/gu, '')
+    // A fiscal year ("FY2021", "FY21-22", "FY '21") is a date too (R4-LO-15).
+    .replace(/(?<!\p{L})FY\s*['’-]?\s*\d{2}(?:\d{2})?(?:\s*[–—/-]\s*\d{2,4})?(?![\d%+kKmMbBxX$])/giu, '')
+    // A multiplier or currency written before its number ("x10", "Rs.500", "EUR500k") leaves the number whole.
+    .replace(/(?<!\p{L})(?:x|rs\.?|inr|usd|eur|gbp|aud|cad|chf|jpy|cny|sgd)(?=\s?\d)/giu, ' ');
+  // Digits glued to letters are part of a name, all of them: the "021" of "FY2021" and the "0" of
+  // "v2.0" counted as a number of their own, only the first digit was checked (R4-LO-15).
+  return /(?<!\p{L}[\d.,]*)\d/u.test(noYears) && !/^\d{4}$/.test(clean);
 }
 
 export const GOOGLE_XYZ_TEMPLATES = [
@@ -233,9 +240,10 @@ export function analyzeBullet(text = '') {
 /**
  * The statement with power verb `verb` clicked in (R4-CL-07): it replaces a leading action verb, or a
  * leading weak phrase ("Responsible for" → "Spearheaded"), and otherwise goes before the first word,
- * which is lowercased when it is an ordinary capitalised word ("In 2023, built" → "Spearheaded in
- * 2023, built"; "AWS" stays). It always replaced the first word, whatever it was ("Spearheaded for
- * migrating…"), and joined the lines of the statement into one. Every other character is kept.
+ * which is lowercased only when it is a word that is never a name ("In 2023, built" → "Spearheaded in
+ * 2023, built"; "AWS" and "Kubernetes" stay, R4-LO-13). It always replaced the first word, whatever
+ * it was ("Spearheaded for migrating…"), and joined the lines of the statement into one. Every other
+ * character is kept.
  */
 export function insertActionVerb(text, verb) {
   const s = String(text ?? '');
@@ -252,9 +260,25 @@ export function insertActionVerb(text, verb) {
     const weak = new RegExp(`^${wp.match.source}`, 'iu');
     if (weak.test(rest)) return lead + rest.replace(weak, verb);
   }
-  const [word] = rest.match(/^\S*/u);
-  return `${lead}${verb} ${/^\p{Lu}\p{Ll}+(?!\p{L})/u.test(word) ? word[0].toLowerCase() + rest.slice(1) : rest}`;
+  const [word] = rest.match(/^\p{L}*/u);
+  return `${lead}${verb} ${FUNCTION_WORDS.has(word.toLowerCase()) && /^\p{Lu}\p{Ll}*$/u.test(word) ? word[0].toLowerCase() + rest.slice(1) : rest}`;
 }
+
+/**
+ * The words lowercased when a power verb goes before them ("In 2023" → "Spearheaded in 2023"): words
+ * that are never a name. Any other capitalised word keeps its case, as it may be one — "Kubernetes
+ * cluster…" read "Spearheaded kubernetes cluster…" (R4-LO-13).
+ */
+const FUNCTION_WORDS = new Set([
+  'a', 'an', 'the', 'this', 'that', 'these', 'those', 'my', 'our', 'your', 'his', 'her', 'its', 'their',
+  'we', 'you', 'he', 'she', 'it', 'they', 'each', 'every', 'all', 'both', 'some', 'many', 'several',
+  'multiple', 'various', 'other', 'another', 'any', 'no', 'more', 'most', 'over', 'under', 'in', 'on',
+  'at', 'by', 'for', 'from', 'to', 'into', 'onto', 'with', 'within', 'without', 'across', 'after',
+  'before', 'during', 'since', 'until', 'through', 'throughout', 'while', 'when', 'as', 'of', 'about',
+  'above', 'below', 'between', 'among', 'along', 'around', 'behind', 'beyond', 'despite', 'via', 'per',
+  'and', 'or', 'but', 'also', 'then', 'not', 'did', 'was', 'were', 'is', 'are', 'has', 'had', 'have',
+  'been', 'being', 'be', 'successfully',
+]);
 
 /** The verb phrases of more than one word among Auto-Fix's replacements and their alternatives. */
 const LEADING_VERB_PHRASE = new RegExp(`^(?:${WEAK_PHRASE_REPLACEMENTS
@@ -269,9 +293,15 @@ const LEADING_VERB_PHRASE = new RegExp(`^(?:${WEAK_PHRASE_REPLACEMENTS
  * 35%", and an empty statement is the phrase alone (R4-CL-08).
  */
 export function insertMetric(text, metric) {
-  const [, body, stop] = String(text ?? '').trim().match(/^([\s\S]*?)([.!?;:]*)$/);
+  let [, body, stop] = String(text ?? '').trim().match(/^([\s\S]*?)([.!?;:]*)$/);
+  // An abbreviation's dot ("etc.", "Inc.", "U.S.") is part of its word and stays on it; the sentence
+  // still ends with one after the metric. "…APIs, etc." read "…APIs, etc by 35%." (R4-LO-14).
+  if (stop.startsWith('.') && ABBREVIATION_END.test(body)) body += '.';
   return body.trim() ? `${body.trimEnd()} ${metric}${stop}` : metric;
 }
+
+/** Text ending in a word written with a dot: a known abbreviation, or letters split by dots ("e.g", "U.S"). */
+const ABBREVIATION_END = /(?:(?<![\p{L}\d])(?:etc|inc|ltd|co|corp|llc|jr|sr|vs|approx|dept|misc|mr|mrs|dr)|\p{L}\.\p{L})$/iu;
 
 /**
  * Whether the text before a phrase ends where a sentence starts: nothing, or a line break or a
