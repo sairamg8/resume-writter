@@ -2,12 +2,20 @@
 
 The open rows in this folder's trackers are split into **clusters**, one per subsystem. Each cluster is
 fixed by one cloud session on its own branch `claude/wf-<cluster>`; a coordinator session merges every
-branch into the work branch `claude/confident-goldberg-2uig8b` (it was `claude/beautiful-heisenberg-x3bsvo` in
-Round 1, until `859c3c7`), updates the tracker rows and totals, runs the full CI on
-GitHub (Actions → ci → Run workflow on that branch), and deletes the `claude/wf-*` branch once merged.
-The cluster list and its state: [HANDOFF.md](HANDOFF.md).
+branch into the work branch `claude/busy-darwin-yjb13t` (since 2026-09-25; before it `claude/sweet-feynman-ro5q2g`,
+`claude/confident-goldberg-2uig8b` and, in Round 1, `claude/beautiful-heisenberg-x3bsvo` — all frozen), updates the
+tracker rows and totals, runs the full CI on GitHub (Actions → ci → Run workflow on that branch), and deletes the
+`claude/wf-*` branch once merged. The work branch in force, the cluster list and its state: [HANDOFF.md](HANDOFF.md)
+— if it names another work branch than this file, HANDOFF.md wins.
 
 ## Set-up
+
+**The owner's laptop: no yarn, no tests.** The repo's CLAUDE.md runs tests only on CI and keeps the machine under
+80% CPU and memory, and heavy local work has crashed it. A session or agent on the laptop runs no `yarn install`,
+`node`, test, build, `vite`, `oxlint`, Playwright or Cypress: it reads the code (with `git show` and `git grep` when
+the checkout is shared), writes its change, pushes, and lets CI run everything.
+
+On a cloud session's own machine only:
 
 ```bash
 corepack enable && yarn install --immutable     # for oxlint and reading node_modules — not for running tests
@@ -73,7 +81,8 @@ The rows live in `docs/tracking/bug-status-r2/01-high-medium.md` (High/Medium), 
 - Never skip, disable or delete a test to make it pass. If an existing test pins the behaviour a row calls
   a bug, change that assertion only when the row clearly says so, and say so in your report.
 - No private data: fixtures are fictional people.
-- Run `./node_modules/.bin/oxlint <changed files>` and fix what it reports in your changes.
+- On a cloud machine, run `./node_modules/.bin/oxlint <changed files>` and fix what it reports in your changes. On the
+  laptop, lint runs only on CI (the gate's lint job).
 - A row that is really a feature-sized job: do the safe core that fixes the user-visible defect, report
   the rest as remaining.
 - Don't open a pull request.
@@ -90,8 +99,9 @@ branch, your base commit, your per-row report, and this brief:
 > ci workflow's `failfirst` input, see Set-up): each fix commit's tests must fail without its src/ changes;
 > strengthen any test that passes without its fix. Run every added or changed test file plus the existing
 > tests of the changed modules on CI (the `tests` input) — never locally. Check that each
-> closed row's proof is true. Run oxlint on the changed files. Fix every real problem you find (commit with
-> the same style and trailers), and report the issues and any row whose outcome should change.
+> closed row's proof is true. Run oxlint on the changed files (a cloud machine; on the laptop, CI's lint job).
+> Fix every real problem you find (commit with the same style and trailers), and report the issues and any row
+> whose outcome should change.
 
 Check its fixes, push.
 
