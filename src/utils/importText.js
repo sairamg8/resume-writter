@@ -73,11 +73,49 @@ function toLines(input) {
   });
 }
 
-/** Markdown's inline marks off: bold and italics, links to their text, escapes, inline code. */
-function unmark(text) {
+/** An address as a résumé prints it, to tell a link's label from its address: "https://www.x.com/" → "x.com". */
+const bareAddress = (s) => String(s).trim().toLowerCase().replace(/^(?:mailto:|tel:)/, '').replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/+$/, '');
+
+/**
+ * A link as its label and, where the label does not show it, the address it goes to: ["LinkedIn",
+ * "https://linkedin.com/in/pat"]; ["pat@example.com"] for a mailto: link that prints its address. A
+ * link that goes nowhere a résumé can (a page anchor) is its label alone.
+ */
+function linkParts(label, href) {
+  const text = String(label ?? '').trim();
+  const to = String(href ?? '').trim();
+  if (!/^(?:https?:\/\/|mailto:|tel:)\S+$/i.test(to) && !WEB.test(to)) return [text || to];
+  if (!text) return [to];
+  if (bareAddress(text) === bareAddress(to)) return [text];
+  if (/^tel:/i.test(to) && text.replace(/\D/g, '') === to.replace(/\D/g, '')) return [text];
+  return [text, to];
+}
+
+/**
+ * A link's text as the parser reads it: "LinkedIn (https://linkedin.com/in/pat)" — the header reads
+ * the address in brackets as the contact (takeContacts), an entry as its URL. A PDF's and a Word
+ * file's links come this way too (importFile.js). Before, only the label was kept: a contact shown as
+ * "LinkedIn" was dropped as a bare label, its address nowhere (R4-IMP-02, R4-IMP-10).
+ */
+export function linkText(label, href) {
+  const [text, to] = linkParts(label, href);
+  return to ? `${text} (${to})` : text;
+}
+
+/**
+ * Markdown's inline marks off: bold and italics, links to their text (linkText; `as` 'label' the
+ * label alone, 'field' "label | address", a field of its own on an entry's title line), escapes,
+ * inline code.
+ */
+function unmark(text, as) {
   return String(text)
     .replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1')
-    .replace(/\[([^\]]*)\]\(([^)\s]*)[^)]*\)/g, (_, label, href) => label || href)
+    .replace(/\[([^\]]*)\]\(([^)\s]*)[^)]*\)/g, (_, label, href) => {
+      if (as === 'label') return label || href;
+      const [t, to] = linkParts(label, href);
+      if (!to) return t;
+      return as === 'field' ? `${t} | ${to}` : `${t} (${to})`;
+    })
     .replace(/<((?:https?:\/\/|mailto:)[^>]+)>/g, '$1')
     .replace(/`([^`]*)`/g, '$1')
     .replace(/\*\*(.+?)\*\*/g, '$1')
@@ -98,8 +136,9 @@ export function markdownLines(md) {
   for (const line of String(md ?? '').split(/\r\n|\r|\n/)) {
     const h = /^\s{0,3}(#{1,6})\s+(.*?)\s*#*\s*$/.exec(line);
     if (h) {
-      const text = unmark(h[2]);
       const hint = h[1].length === 1 && !named ? 'name' : (h[1].length <= 2 ? 'heading' : 'entry');
+      // An entry's linked title keeps its address as a field of its own: a project's URL (R4-IMP-02).
+      const text = unmark(h[2], hint === 'entry' ? 'field' : 'label');
       if (hint === 'name') named = true;
       out.push({ text, hint });
       continue;
@@ -169,6 +208,11 @@ const LABEL = /^(?:e-?mail|mail|phone|tel|telephone|mobile|cell|linkedin|github|
 const BARE_LABEL = /^(?:e-?mail|mail|phone|tel|telephone|mobile|cell|linkedin|github|website|web|site|portfolio|url|location|address)$/i;
 
 const digits = (s) => s.replace(/\D/g, '').length;
+
+/** A link as linkText writes it: "LinkedIn (https://linkedin.com/in/pat)" → its label and address. */
+const LINKED = /^(.*?)\s*\(((?:https?:\/\/|mailto:|tel:)[^()\s]+|[^()\s]+\.[a-z]{2,}(?:[/?#][^()\s]*)?)\)$/i;
+/** The contacts a Display label can stand for (contacts.js: the `link` fields). */
+const LABELLED_KEYS = new Set(['website', 'linkedin', 'github']);
 
 /** What a piece of header text is: { key, value } for a contact, else null. */
 function contactOf(segment) {
@@ -390,8 +434,12 @@ function entryOf(type, header, body) {
       return itemOf(type, { ...fields, location, ...dates, description: description(left) });
     }
     case 'projects': {
-      const named = /^(.*?)\s*\(([^()]+)\)$/.exec(p0);
-      const fields = { name: named ? named[1] : p0, technologies: named ? named[2] : (h.meta.technologies || ''), url: h.meta.link || '' };
+      // "Name (https://…)": a linked name, its address the URL (linkText); "Name (Rust, Kafka)" its stack.
+      const linked = LINKED.exec(p0);
+      const named = !linked && /^(.*?)\s*\(([^()]+)\)$/.exec(p0);
+      const fields = linked
+        ? { name: linked[1], technologies: h.meta.technologies || '', url: linked[2] }
+        : { name: named ? named[1] : p0, technologies: named ? named[2] : (h.meta.technologies || ''), url: h.meta.link || '' };
       const left = [];
       for (const part of h.parts.slice(1)) {
         if (!fields.url && WEB.test(part)) fields.url = part;
@@ -402,13 +450,26 @@ function entryOf(type, header, body) {
     }
     case 'certifications': {
       const fields = { name: p0, issuer: '', url: h.meta.link || '', credentialId: h.meta.id || '', date: d.start || d.end, expiry: h.meta.expires || (d.start ? d.end : '') };
+      // Its link: an address, or a label with its address (linkText: "View Certificate (https://…)", the
+      // Markdown export's link line under the entry) — the link's label kept as the Link label (R4-IMP-02).
+      const link = (text) => {
+        const m = LINKED.exec(text);
+        if (m && m[1] && WEB.test(m[2].replace(/^https?:\/\//i, ''))) return { url: m[2], urlLabel: m[1] };
+        return WEB.test(text) ? { url: text } : null;
+      };
       const left = [];
       for (const part of h.parts.slice(1)) {
-        if (!fields.url && WEB.test(part)) fields.url = part;
+        const l = !fields.url && link(part);
+        if (l) Object.assign(fields, l);
         else if (!fields.issuer) fields.issuer = part;
         else left.push(part);
       }
-      return itemOf(type, { ...fields, ...(left.length || body.length ? { description: description(left) } : {}) });
+      const rest = body.filter((l) => {
+        const found = !fields.url && link(l.text.replace(BULLET, '').trim());
+        if (found) Object.assign(fields, found);
+        return !found;
+      });
+      return itemOf(type, { ...fields, ...(left.length || rest.length ? { description: richText([...left, ...rest.map((l) => l.text)]) } : {}) });
     }
     case 'awards':
       return itemOf(type, { title: p0, issuer: p1, date: d.text ? (d.start || d.end) : '', description: description(lead) });
@@ -611,6 +672,16 @@ export function resumeFromText(input) {
       const leftover = [];
       for (const piece of headerPieces(l.text)) {
         if (BARE_LABEL.test(piece)) continue; // the name over a contact: its value says what it is
+        // A link shown as its label, "LinkedIn (https://…)": the address is the contact, and the label
+        // it was shown as its Display label (R4-IMP-02).
+        const linked = LINKED.exec(piece);
+        const lc = linked && contactOf(linked[2]);
+        if (lc && lc.key !== 'location') {
+          if (personal[lc.key]) { leftover.push(piece); continue; }
+          personal[lc.key] = lc.value;
+          if (LABELLED_KEYS.has(lc.key) && linked[1]) personal[`${lc.key}Label`] = linked[1];
+          continue;
+        }
         const c = contactOf(piece);
         if (c && !personal[c.key]) personal[c.key] = c.value;
         else leftover.push(piece); // not a contact, or a second one of a kind
