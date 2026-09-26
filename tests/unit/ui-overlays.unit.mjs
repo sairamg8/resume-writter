@@ -127,6 +127,12 @@ describe('Dialog', () => {
       view.act(() => reactProps(overlay).onPointerDown(ev({ target: panel, currentTarget: overlay })));
       view.act(() => reactProps(overlay).onClick(ev({ target: overlay, currentTarget: overlay })));
       assert.deepEqual(closes, ['escape', 'overlay'], 'a drag that started inside the panel does not close it');
+      // Begun on the overlay and released inside the panel (selecting its text): the browser sends the click
+      // to the overlay, the two ends' common ancestor.
+      view.act(() => reactProps(overlay).onPointerDown(ev({ target: overlay, currentTarget: overlay })));
+      view.act(() => reactProps(overlay).onPointerUp?.(ev({ target: panel, currentTarget: overlay })));
+      view.act(() => reactProps(overlay).onClick(ev({ target: overlay, currentTarget: overlay })));
+      assert.deepEqual(closes, ['escape', 'overlay'], 'nor a drag begun on the overlay and released inside the panel');
     } finally { await view.unmount(); }
     const kept = dialogPage({ closeOnEscape: false });
     try {

@@ -15,15 +15,15 @@ export function InterviewStageSelector({ stage, onStageChange, customStages, add
   }
 
   return (
-    <section className="bg-white rounded-2xl border border-gray-100 p-6 space-y-4">
+    <section className="bg-white rounded-md border border-line p-6 space-y-4">
       <div className="flex items-start justify-between">
         <div>
-          <h2 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Interview Stage</h2>
-          <p className="text-xs text-gray-400 mt-1">Select where you are in the process. Custom stages are saved for future use.</p>
+          <h2 className="text-[11px] font-bold text-ink-subtlest uppercase tracking-widest">Interview Stage</h2>
+          <p className="text-xs text-ink-subtlest mt-1">Select where you are in the process. Custom stages are saved for future use.</p>
         </div>
         {stage && (
-          <div className="flex items-center gap-1.5 text-xs font-semibold text-indigo-700 bg-indigo-50 px-3 py-1.5 rounded-full border border-indigo-200 shrink-0 ml-4">
-            <CheckCircle2 size={12} className="text-indigo-500" />
+          <div className="flex items-center gap-1.5 text-xs font-semibold text-brand bg-brand-subtle px-3 py-1.5 rounded-full border border-brand-subtle-hover shrink-0 ml-4">
+            <CheckCircle2 size={12} className="text-brand" />
             {stage}
           </div>
         )}
@@ -31,7 +31,7 @@ export function InterviewStageSelector({ stage, onStageChange, customStages, add
 
       <div className="grid grid-cols-2 gap-6">
         <div>
-          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2.5">Predefined</p>
+          <p className="text-[10px] font-bold text-ink-subtlest uppercase tracking-widest mb-2.5">Predefined</p>
           <div className="space-y-0.5">
             {PREDEFINED_STAGES.map((s, i) => {
               const active = stage === s;
@@ -40,11 +40,11 @@ export function InterviewStageSelector({ stage, onStageChange, customStages, add
                   key={s}
                   type="button"
                   onClick={() => onStageChange(active ? '' : s)}
-                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-left text-sm transition-all ${active ? 'bg-indigo-50 text-indigo-700 font-semibold' : 'text-gray-600 hover:bg-gray-50'}`}
+                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-left text-sm transition-all ${active ? 'bg-brand-subtle text-brand font-semibold' : 'text-ink-subtle hover:bg-sunken'}`}
                 >
-                  <span className={`text-[11px] font-bold w-5 text-right shrink-0 tabular-nums ${active ? 'text-indigo-400' : 'text-gray-300'}`}>{i + 1}.</span>
+                  <span className={`text-[11px] font-bold w-5 text-right shrink-0 tabular-nums ${active ? 'text-indigo-400' : 'text-ink-subtlest'}`}>{i + 1}.</span>
                   <span className="flex-1 leading-snug">{s}</span>
-                  {active && <div className="w-2 h-2 rounded-full bg-indigo-500 shrink-0" />}
+                  {active && <div className="w-2 h-2 rounded-full bg-brand shrink-0" />}
                 </button>
               );
             })}
@@ -52,25 +52,25 @@ export function InterviewStageSelector({ stage, onStageChange, customStages, add
         </div>
 
         <div className="flex flex-col">
-          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2.5">Your Stages</p>
+          <p className="text-[10px] font-bold text-ink-subtlest uppercase tracking-widest mb-2.5">Your Stages</p>
           <div className="flex-1">
             {customStages.length === 0 ? (
-              <p className="text-xs text-gray-400 italic py-2">No custom stages yet — add one below.</p>
+              <p className="text-xs text-ink-subtlest italic py-2">No custom stages yet — add one below.</p>
             ) : (
               <div className="space-y-0.5">
                 {customStages.map((s, i) => {
                   const active = stage === s;
                   return (
-                    <div key={s} className={`flex items-center gap-1 px-2 py-1.5 rounded-lg transition-all ${active ? 'bg-indigo-50' : 'hover:bg-gray-50'}`}>
+                    <div key={s} className={`flex items-center gap-1 px-2 py-1.5 rounded-lg transition-all ${active ? 'bg-brand-subtle' : 'hover:bg-sunken'}`}>
                       <button type="button" onClick={() => onStageChange(active ? '' : s)} className="flex-1 flex items-center gap-2.5 text-left">
-                        <span className={`text-[11px] font-bold w-5 text-right shrink-0 tabular-nums ${active ? 'text-indigo-400' : 'text-gray-300'}`}>{i + 1}.</span>
-                        <span className={`text-sm flex-1 leading-snug ${active ? 'text-indigo-700 font-semibold' : 'text-gray-600'}`}>{s}</span>
-                        {active && <div className="w-2 h-2 rounded-full bg-indigo-500 shrink-0" />}
+                        <span className={`text-[11px] font-bold w-5 text-right shrink-0 tabular-nums ${active ? 'text-indigo-400' : 'text-ink-subtlest'}`}>{i + 1}.</span>
+                        <span className={`text-sm flex-1 leading-snug ${active ? 'text-brand font-semibold' : 'text-ink-subtle'}`}>{s}</span>
+                        {active && <div className="w-2 h-2 rounded-full bg-brand shrink-0" />}
                       </button>
                       <button
                         type="button"
                         onClick={() => { if (stage === s) onStageChange(''); removeCustomStage(s); }}
-                        className="p-1 text-gray-300 hover:text-red-400 rounded transition-colors shrink-0"
+                        className="p-1 text-ink-subtlest hover:text-red-400 rounded transition-colors shrink-0"
                         title="Remove"
                       >
                         <XIcon size={11} />
@@ -82,8 +82,8 @@ export function InterviewStageSelector({ stage, onStageChange, customStages, add
             )}
           </div>
 
-          <div className="mt-4 pt-4 border-t border-gray-100">
-            <label htmlFor={inputId} className="block text-[10px] font-semibold text-gray-400 mb-2">Add Custom Stage</label>
+          <div className="mt-4 pt-4 border-t border-line">
+            <label htmlFor={inputId} className="block text-[10px] font-semibold text-ink-subtlest mb-2">Add Custom Stage</label>
             <div className="flex gap-2">
               <input
                 id={inputId}
@@ -91,13 +91,13 @@ export function InterviewStageSelector({ stage, onStageChange, customStages, add
                 onChange={e => setNewStageInput(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddStage(); } }}
                 placeholder="e.g. 2nd Round, Founder Chat…"
-                className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="flex-1 px-3 py-2 text-sm border border-line rounded-md focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent"
               />
               <button
                 type="button"
                 onClick={handleAddStage}
                 disabled={!newStageInput.trim()}
-                className="flex items-center gap-1 px-3 py-2 text-sm font-semibold text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors shrink-0"
+                className="flex items-center gap-1 px-3 py-2 text-sm font-semibold text-white bg-brand rounded-md hover:bg-brand-hover disabled:opacity-40 disabled:cursor-not-allowed transition-colors shrink-0"
               >
                 <Plus size={14} /> Add
               </button>

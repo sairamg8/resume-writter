@@ -35,10 +35,14 @@ async function verdict(template, settings) {
 }
 
 describe('the template picker\'s ATS badge follows the résumé\'s settings (R2-011)', () => {
+  // Since R2-139 A9 each Sidebar Layout is a card of its own, and picking it sets that Layout: each card's
+  // badge is the ATS Check's verdict on the page that card prints, whatever Layout the résumé has now.
+  const SINGLE = 'Sidebar · Single column';
+
   it('Sidebar in Single · ATS-safe: its card carries the badge, as the ATS Check calls it ATS-Certified', async () => {
     const settings = { sidebarSingleColumn: true };
     assert.equal(await verdict('sidebar', settings), 'pass', 'the ATS Check passes the single column');
-    assert.equal((await badges('sidebar', settings)).Sidebar, true, 'and the Sidebar card shows the ATS badge');
+    assert.equal((await badges('sidebar', settings))[SINGLE], true, 'and the single-column card shows the ATS badge');
   });
 
   it('Sidebar in Two columns: no badge, as the ATS Check warns', async () => {
@@ -47,22 +51,25 @@ describe('the template picker\'s ATS badge follows the résumé\'s settings (R2-
     assert.equal((await badges('sidebar', settings)).Sidebar, false);
   });
 
-  it('on another template, the Sidebar card shows what picking it would print: its stored Layout', async () => {
-    // The Layout is kept across a template switch (setTemplate), so picking the Sidebar prints it.
-    assert.equal((await badges('classic', { sidebarSingleColumn: true })).Sidebar, true);
-    assert.equal((await badges('classic', { sidebarSingleColumn: false })).Sidebar, false);
+  it('on another template, each Sidebar card shows what picking it prints: its own Layout, whatever is stored', async () => {
+    for (const sidebarSingleColumn of [true, false]) {
+      const shown = await badges('classic', { sidebarSingleColumn });
+      assert.equal(shown.Sidebar, false, `stored ${sidebarSingleColumn}: the two columns`);
+      assert.equal(shown[SINGLE], true, `stored ${sidebarSingleColumn}: the single column`);
+    }
   });
 
-  it('every card, in both Layouts, agrees with the ATS Check\'s verdict on that template', async () => {
+  it('every card, in both Layouts, agrees with the ATS Check\'s verdict on the page it prints', async () => {
     const { templateLabel } = await loadModule('/src/constants/templates.js');
     const wrong = [];
     for (const sidebarSingleColumn of [false, true]) {
-      const settings = { sidebarSingleColumn };
-      const shown = await badges('classic', settings);
+      const shown = await badges('classic', { sidebarSingleColumn });
       for (const id of TEMPLATES) {
-        const pass = (await verdict(id, settings)) === 'pass';
-        if (shown[templateLabel(id)] !== pass) wrong.push(`${id} (single ${sidebarSingleColumn}): badge ${shown[templateLabel(id)]}, ATS Check ${pass ? 'pass' : 'warn'}`);
+        const pass = (await verdict(id, { sidebarSingleColumn: false })) === 'pass';
+        if (shown[templateLabel(id)] !== pass) wrong.push(`${id} (stored single ${sidebarSingleColumn}): badge ${shown[templateLabel(id)]}, ATS Check ${pass ? 'pass' : 'warn'}`);
       }
+      const single = (await verdict('sidebar', { sidebarSingleColumn: true })) === 'pass';
+      if (shown[SINGLE] !== single) wrong.push(`${SINGLE} (stored single ${sidebarSingleColumn}): badge ${shown[SINGLE]}, ATS Check ${single ? 'pass' : 'warn'}`);
     }
     assert.deepEqual(wrong, []);
   });

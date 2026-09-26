@@ -1,7 +1,7 @@
 import { cx } from './compose.js';
 
 const TONES = {
-  indigo: 'bg-indigo-600',
+  indigo: 'bg-brand',
   success: 'bg-emerald-500',
   warning: 'bg-amber-500',
   danger: 'bg-red-500',

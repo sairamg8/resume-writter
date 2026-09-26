@@ -1,4 +1,4 @@
-import { DesignSection } from '@/components/DesignPanelShared';
+import { ColorInput, DesignSection } from '@/components/DesignPanelShared';
 import { SECTION_BORDER_PT } from '@/constants/designNumbers';
 import { headerTemplateId, headingBorderControls, headingBorderExtraPt, upperSectionTitles } from '@/constants/templates';
 import { DEFAULTS } from '@/templates/pdf/shared/templateSettings';
@@ -50,7 +50,7 @@ export function HeadingControls({ settings, template, updateSetting }) {
       {/* Only the two-column page has a side column: Single · ATS-safe prints Classic's (R2-082). */}
       {headerTemplateId(template, settings) === 'sidebar' && (
         <p className="text-[11px] text-gray-400 leading-relaxed">
-          These style the main column&apos;s headings. The side column keeps its own small headings and rule; only Title case applies there.
+          These style the main column&apos;s headings. The side column keeps its own small headings and rule; only Title case and Icons apply there.
         </p>
       )}
       <div className="flex items-center justify-between">
@@ -62,6 +62,25 @@ export function HeadingControls({ settings, template, updateSetting }) {
               onClick={() => updateSetting('sectionTitleCase', opt.value)}
               className={`px-3 py-1 text-xs font-semibold rounded border transition-all ${
                 titleCase === opt.value
+                  ? 'bg-blue-600 border-blue-600 text-white'
+                  : 'border-gray-200 text-gray-500 hover:border-blue-300'
+              }`}
+            >{opt.label}</button>
+          ))}
+        </div>
+      </div>
+
+      {/* A small icon before each title, one per section type, in its colour and size (R2-147): the
+          PDF (= the preview) only — the words print as before, and Word, Markdown and ATS text keep them alone. */}
+      <div className="flex items-center justify-between">
+        <span className="text-xs text-gray-500">Icons</span>
+        <div className="flex gap-1">
+          {[{ value: false, label: 'Off' }, { value: true, label: 'On' }].map(opt => (
+            <button
+              key={opt.label}
+              onClick={() => updateSetting('sectionIcons', opt.value)}
+              className={`px-3 py-1 text-xs font-semibold rounded border transition-all ${
+                !!settings.sectionIcons === opt.value
                   ? 'bg-blue-600 border-blue-600 text-white'
                   : 'border-gray-200 text-gray-500 hover:border-blue-300'
               }`}
@@ -114,11 +133,10 @@ export function HeadingControls({ settings, template, updateSetting }) {
       <div className={`flex items-center justify-between ${!borderControls.color ? 'opacity-40' : ''}`}>
         <span className="text-xs text-gray-500">Border color</span>
         <div className="flex items-center gap-2">
-          <input
-            type="color"
+          <ColorInput
             disabled={!borderControls.color}
             value={settings.sectionBorderColor || borderDefault?.color || settings.accentColor || '#374151'}
-            onChange={e => updateSetting('sectionBorderColor', e.target.value)}
+            onCommit={v => updateSetting('sectionBorderColor', v)}
             className="h-6 w-10 rounded border border-gray-200 cursor-pointer disabled:cursor-not-allowed p-0.5"
             title="Pick border color"
             aria-label="Section border color"

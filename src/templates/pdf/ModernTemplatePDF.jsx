@@ -1,19 +1,21 @@
 import { Document, Page, View } from '@react-pdf/renderer';
 import { Text } from './shared/PdfText';
-import { getPageStyle, getDocumentProps } from './shared/PdfPage';
+import { PdfPageNumbers, getPageStyle, getDocumentProps } from './shared/PdfPage';
 import { PdfRunningHeader } from './shared/PdfRunningHeader';
 import { SectionRouter, getEffectiveSpacing, getVisibleSections } from './shared/PdfSections';
 import { PdfRichText } from './shared/PdfRichText';
 import { hasRichText } from '@/utils/richText';
 import { PdfContactIcon } from './shared/PdfContactIcon';
 import { ContactValue, headerRowWidth } from './shared/PdfContact';
+import { LinkGround } from './shared/PdfLinkStyle';
 import { bannerContactPt } from './shared/contactSize';
 import { fitFontSize } from './shared/pdfMeasure';
+import { nameFace, nameFamily } from './shared/pdfFaces';
 import { contactItems } from '@/utils/contacts';
 import { getPdfPhotoStyle } from './shared/pdfPhoto';
 import { PdfPhoto } from './shared/PdfPhoto';
 import { opacityFor } from './shared/pdfColors';
-import { photoTextAlignItems } from '@/constants/templates';
+import { photoRowDirection, photoTextAlignItems } from '@/constants/templates';
 import { pageSizeOf } from '@/constants/pageSize';
 import { headerTitleSize } from './shared/letterhead';
 
@@ -67,7 +69,7 @@ export function ModernTemplatePDF({ data }) {
   // paper: it prints at the largest size that holds it.
   const name = personal?.name || 'Your Name';
   const nameRow = headerRowWidth(settings, personal, { photoWidth: photoStyle.width, gap: g.photoTextGap }) - 2 * g.headerPadX;
-  const nameFit = fitFontSize(name, { fontFamily: settings._pdfFontFamily, fontSize: nameSize, fontWeight: 'bold' }, nameRow);
+  const nameFit = fitFontSize(name, { fontFamily: nameFamily(settings), fontSize: nameSize, fontWeight: 'bold' }, nameRow);
 
   const pageStyle = getPageStyle(settings);
 
@@ -78,6 +80,8 @@ export function ModernTemplatePDF({ data }) {
         <PdfRunningHeader personal={personal} settings={settings} />
         {/* Personal Info → Header spacing: Banner top & bottom and Banner sides pad it (unset, px-6 py-5:
             15 / 18 pt), Header ↔ First section spaces what follows (unset, Between Sections). */}
+        {/* On the banner a link's Accent is the tint of it that reads there (Design → Links, R2-147). */}
+        <LinkGround.Provider value={accent}>
         <View style={{
           backgroundColor: accent,
           borderRadius: 2,
@@ -87,13 +91,14 @@ export function ModernTemplatePDF({ data }) {
           marginBottom: g.headerGapBelow,
         }}>
           {/* Breakable: a summary longer than a page continues on the next, on the banner's colour (R2-046);
-              the name row never splits. Photo → Text Position, as Classic, Minimal and Executive take it (R3-0). */}
-          <View style={{ flexDirection: 'row', alignItems: photoTextAlignItems(settings), gap: g.photoTextGap }} wrap={false}>
+              the name row never splits. Photo → Text Position, as Classic, Minimal and Executive take it (R3-0),
+              and Photo → Position: Right prints the photo right of the name (R2-147). */}
+          <View style={{ flexDirection: photoRowDirection(settings), alignItems: photoTextAlignItems(settings), gap: g.photoTextGap }} wrap={false}>
             {personal?.photo && !hidden.includes('photo') && (
               <PdfPhoto src={personal.photo} style={photoStyle} />
             )}
             <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: nameFit, fontWeight: 'bold', color: nameColor, marginBottom: personal?.title ? g.nameTitleGap : 1, lineHeight: 1.2 }}>
+              <Text style={{ ...nameFace(settings), fontSize: nameFit, fontWeight: 'bold', color: nameColor, marginBottom: personal?.title ? g.nameTitleGap : 1, lineHeight: 1.2 }}>
                 {name}
               </Text>
               {personal?.title && (
@@ -114,6 +119,7 @@ export function ModernTemplatePDF({ data }) {
             </View>
           )}
         </View>
+        </LinkGround.Provider>
 
         {getVisibleSections(sections).visible.map((section, index, list) => {
           const { marginBottom, spaceBefore, itemGap } = getEffectiveSpacing(section, settings, {
@@ -130,6 +136,8 @@ export function ModernTemplatePDF({ data }) {
             />
           );
         })}
+        {/* Last on every page: its footer is the page's last line drawn, after the résumé's own text (R2-147). */}
+        <PdfPageNumbers settings={settings} />
       </Page>
     </Document>
   );

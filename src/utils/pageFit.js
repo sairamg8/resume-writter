@@ -49,10 +49,10 @@ export function countPdfPages(bytes) {
   return (text.match(/\/Type\s*\/Page(?![A-Za-z])/g) || []).length;
 }
 
-/** The résumé's page count as the preview and Export PDF print it. */
+/** The résumé's page count as the preview and Export PDF print it — built as they are, in the PDF worker (pdfBuild.js). */
 async function printedPages(resume) {
-  const { renderResumePdf } = await import('./pdfExportReactPDF.js');
-  const blob = await renderResumePdf(resume);
+  const { buildResumePdf } = await import('./pdfBuild.js');
+  const blob = await buildResumePdf(resume);
   return countPdfPages(new Uint8Array(await blob.arrayBuffer()));
 }
 

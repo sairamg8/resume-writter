@@ -5,7 +5,7 @@ import { loadModule } from '../harness.mjs';
 import { item, flow, fillsOf, prints } from './measure.mjs';
 import { PERSONAL, baseResume } from './store.mjs';
 import { shot } from './matrix.mjs';
-import { headingMarks, iconBefore, STYLE_MARK } from './marks.mjs';
+import { headingMarks, headingIcon, iconBefore, titleRuns, STYLE_MARK } from './marks.mjs';
 import { bulletAt } from '../../../src/utils/richText.js';
 
 export const valueOf = (run, key) => run.writes.find((w) => `${w.kind}.${w.key}` === key || w.kind === key)?.value;
@@ -65,6 +65,21 @@ async function headerColour({ runs, before, variant }, key, needle) {
   return out;
 }
 
+/** Lines for runs whose `find(snap)` text does not print in the face of the picker font `key` wrote. */
+async function printsIn(runs, key, find, what) {
+  const { FONTS } = await loadModule('/src/utils/fonts.js');
+  const norm = (x) => String(x).replace(/[^a-z0-9]/gi, '').toLowerCase();
+  const out = [];
+  for (const r of runs) {
+    const f = FONTS.find((x) => x.id === valueOf(r, key));
+    if (!f) continue;
+    const t = find(r.snap);
+    if (!t) out.push(`${f.id}: ${what} not found`);
+    else if (!norm(t.font).startsWith(norm(f.name))) out.push(`${f.id}: ${what} prints in ${t.font}, not ${f.name}`);
+  }
+  return out;
+}
+
 const CONTACTS = [PERSONAL.email, PERSONAL.phone, PERSONAL.location, PERSONAL.website, PERSONAL.linkedin, PERSONAL.github];
 
 /** What prints in front of `text` on its line, within a list marker's reach: '' for nothing, null when `text` does not print. */
@@ -88,14 +103,16 @@ const DATES = { asEntered: '01/2021', 'MMM YYYY': 'Jan 2021', 'MMMM YYYY': 'Janu
   'MM.YYYY': '01.2021', 'YYYY-MM': '2021-01', 'YYYY.MM': '2021.01', YYYY: '2021' };
 
 export const DESIGN = {
-  // A template picked from its defaults prints exactly what a résumé started on it prints.
+  // A template picked from its defaults prints exactly what a résumé started on it prints — with the
+  // Layout its card sets, for a Layout's own card (the Sidebar's single column, R2-139 A9).
   template: {
     family: 'template',
     check: async ({ runs, variant }) => {
       const out = [];
       for (const r of runs) {
         const v = valueOf(r, 'template');
-        const fresh = await shot(baseResume(v, variant.settings, { compact: true }));
+        const layout = Object.fromEntries(r.writes.filter((w) => w.kind === 'setting').map((w) => [w.key, w.value]));
+        const fresh = await shot(baseResume(v, { ...variant.settings, ...layout }, { compact: true }));
         if (r.snap.drawing !== fresh.drawing) out.push(`${v}: switched to, it does not print what a résumé started on ${v} prints`);
       }
       return out;
@@ -183,6 +200,10 @@ export const DESIGN = {
       return out;
     },
   },
+  // Name Font and Heading Font (R2-146): the name, and the Experience title, print in the face picked
+  // (its first word: a large name wraps). "Same as text" ('') is the reset back to Font Family's.
+  'setting.nameFont': { family: 'fonts', check: ({ runs }) => printsIn(runs, 'setting.nameFont', (snap) => item(snap, 'Jordan'), 'the name') },
+  'setting.headingFont': { family: 'fonts', check: ({ runs }) => printsIn(runs, 'setting.headingFont', (snap) => heading(snap, /^professional( experience)?$/i), 'the Experience title') },
   // Picking a face writes it with Font Family (customFont ''), whose check covers both; a Google font
   // typed into Custom font is fetched from the network when applied — not a probe the walker can type.
   'setting.customFont': { family: 'fonts', with: 'setting.font' },
@@ -274,6 +295,32 @@ export const DESIGN = {
       return m ? m.below ?? m.beside ?? m.bar : null;
     }, 'the heading mark\'s thickness'),
   },
+  // On: an icon about the title's size just left of every section title page 1 prints, in both of the
+  // Sidebar's columns, and every title still prints; Off: none, where there was none (R2-147).
+  'setting.sectionIcons': {
+    family: 'headings',
+    check: ({ runs, before }) => runs.flatMap((r) => {
+      const v = valueOf(r, 'setting.sectionIcons');
+      const titles = titleRuns(r.snap, r.state);
+      const out = titleRuns(before.snap, before.state).filter((b) => !titles.some((t) => t.str.trim() === b.str.trim()))
+        .map((b) => `${v}: the title "${b.str.trim()}" no longer prints`);
+      if (!titles.length) out.push(`${v}: no section title prints on page 1`);
+      for (const t of titles) {
+        const icon = headingIcon(r.snap, t);
+        const name = t.str.trim();
+        if (!v) {
+          const was = titleRuns(before.snap, before.state).find((b) => b.str.trim() === name);
+          if (icon && icon.sig !== (was && headingIcon(before.snap, was))?.sig) out.push(`${v}: an icon prints before "${name}"`);
+        } else if (!icon) out.push(`${v}: no icon before "${name}"`);
+        else {
+          if (icon.size < t.h * 0.5 || icon.size > t.h * 1.3) out.push(`${v}: the icon before "${name}" is ${icon.size.toFixed(1)} pt, the title ${t.h.toFixed(1)} pt`);
+          if (icon.gap > t.h) out.push(`${v}: the icon before "${name}" is ${icon.gap.toFixed(1)} pt from it`);
+          if (icon.mid < -t.h * 0.2 || icon.mid > t.h * 0.9) out.push(`${v}: the icon before "${name}" is off its line (${icon.mid.toFixed(1)} pt from the baseline)`);
+        }
+      }
+      return out;
+    }),
+  },
   'setting.sectionTitleCase': {
     family: 'headings',
     check: ({ runs }) => runs.flatMap((r) => {
@@ -296,6 +343,53 @@ export const DESIGN = {
         if (Math.abs(t.x + t.w - (was.x + was.w)) > 0.5 || Math.abs(t.y - was.y) > 0.5) out.push(`${v}: "${li}" moved`);
         return out;
       });
+    }),
+  },
+  // Underline strokes a line under the e-mail (a contact every template links); Accent paints it in
+  // another colour than Plain does — the accent, or on a banner or the Sidebar's column the tint of it
+  // that reads there — with no line under it (R2-147).
+  'setting.linkStyle': {
+    family: 'links',
+    check: async ({ runs, before }) => {
+      const plain = await fillsOf(before.snap.bytes, PERSONAL.email);
+      if (!plain.length) return [`"${PERSONAL.email}" does not print before the click`];
+      const out = [];
+      for (const r of runs) {
+        const v = valueOf(r, 'setting.linkStyle');
+        const at = item(r.snap, PERSONAL.email);
+        if (!at) { out.push(`${v}: "${PERSONAL.email}" does not print`); continue; }
+        const under = r.snap.paint.some((p) => p.paint === 'stroke' && p.page === at.page && p.y1 - p.y0 < 1.5
+          && p.y1 <= at.y + 0.5 && p.y0 >= at.y - 4 && p.x0 >= at.x - 1 && p.x1 <= at.x + at.w + 1 && p.x1 - p.x0 > 10);
+        if (under !== (v === 'underline')) out.push(`${v}: ${under ? 'a line prints' : 'no line prints'} under "${PERSONAL.email}"`);
+        const fill = await fillsOf(r.snap.bytes, PERSONAL.email);
+        const recoloured = JSON.stringify(fill) !== JSON.stringify(plain);
+        if (recoloured !== (v === 'accent')) out.push(`${v}: "${PERSONAL.email}" prints in ${fill.join(', ')}, Plain in ${plain.join(', ')}`);
+      }
+      return out;
+    },
+  },
+  // Page numbers on: "Page n of N" on every page, below everything else in the bottom margin, at the
+  // right margin, and nothing else moves; off: none, and the page as before (R2-147).
+  'setting.pageNumbers': {
+    family: 'footer',
+    check: ({ runs, before }) => runs.flatMap((r) => {
+      const on = valueOf(r, 'setting.pageNumbers') === true;
+      const footers = r.snap.pages.map((p) => p.items.filter((t) => /^Page \d+ of \d+$/.test(t.str.trim())));
+      if (!on) return footers.some((f) => f.length) ? ['off: a page number prints'] : [];
+      const out = [];
+      const pages = r.snap.pages.length;
+      r.snap.pages.forEach((p, i) => {
+        const [f, ...more] = footers[i];
+        if (!f || more.length) return out.push(`page ${i + 1}: ${f ? 'two page numbers' : 'no page number'}`);
+        if (f.str.trim() !== `Page ${i + 1} of ${pages}`) out.push(`page ${i + 1}: "${f.str.trim()}"`);
+        const rest = p.items.filter((t) => t !== f);
+        if (rest.some((t) => t.y - 1 <= f.y + f.h)) out.push(`page ${i + 1}: the page number is not below the content`);
+        if (f.x + f.w > p.W - 5 || f.y < 2) out.push(`page ${i + 1}: the page number is off the paper's margin`);
+      });
+      if (pages !== before.snap.pages.length) out.push(`${before.snap.pages.length} page(s) became ${pages}`);
+      const where = (s) => s.pages.flatMap((p, i) => p.items.filter((t) => !/^Page \d+ of \d+$/.test(t.str.trim())).map((t) => `${i}:${t.str}@${t.x.toFixed(1)},${t.y.toFixed(1)}`));
+      if (pages === before.snap.pages.length && where(r.snap).join('|') !== where(before.snap).join('|')) out.push('the content moved');
+      return out;
     }),
   },
   // Design → Language (R2-148): the current job ends in the language's "Present" — each of its words, as

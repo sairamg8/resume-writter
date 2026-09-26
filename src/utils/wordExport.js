@@ -1,4 +1,4 @@
-import { AlignmentType, Document, Header, Packer, PageNumber, Paragraph, TextRun } from 'docx';
+import { AlignmentType, Document, Footer, Header, Packer, PageNumber, Paragraph, TextRun } from 'docx';
 import { accent2Hex, bulletNumbering, wordMargins } from '@/utils/wordExportUtils';
 import { buildSection, sectionSpaceAfter } from '@/utils/wordExportBuilders';
 import { buildPersonalSection } from '@/utils/wordExportHeader';
@@ -9,15 +9,32 @@ import { downloadBlob } from '@/utils/download';
 import { PAGE_SIZES, pageSizeOf } from '@/constants/pageSize';
 import { templateId } from '@/constants/templates';
 import { resolveTemplateSettings } from '@/templates/pdf/shared/templateSettings';
-import { FONTS } from '@/utils/fonts';
+import { entryInk } from '@/utils/wordExportLook';
+import { resolveWordFont, wordFontTable } from '@/utils/wordFonts';
 import { RUNNING_HEADER_PT, runningHeaderLead, runningHeaderTop } from '@/constants/runningHeader';
 import { textShades } from '@/templates/pdf/shared/pdfColors';
 import { isRtl, withPrintedTitles } from '@/utils/resumeLanguage';
 
-export function resolveWordFont(settings = {}) {
-  if (settings?.customFont?.trim()) return settings.customFont.trim();
-  const fontObj = FONTS.find((f) => f.id === settings?.font);
-  return fontObj?.label || fontObj?.name || 'Noto Sans';
+export { resolveWordFont };
+
+/** The least bottom margin, twips, that holds the page-number footer: the PDF's 10 mm (bottomMarginMm). */
+const PAGE_NUMBER_ROOM = Math.round((10 * 1440) / 25.4);
+const PAGE_NUMBER_SIZE = 16; // half-points: the PDF's 8 pt
+
+/**
+ * Design → Page numbers in Word (R2-147): "Page 1 of 2" in the page's footer at the right margin,
+ * Word's own page and page-count fields, in the Text colour's meta grey as the PDF prints it.
+ */
+function pageNumberFooter(settings, template) {
+  const color = entryInk(resolveTemplateSettings(settings, templateId(template)), templateId(template)).meta;
+  const run = { size: PAGE_NUMBER_SIZE, color };
+  return new Footer({
+    children: [new Paragraph({
+      alignment: AlignmentType.RIGHT,
+      spacing: { before: 0, after: 0 },
+      children: [new TextRun({ ...run, children: ['Page ', PageNumber.CURRENT, ' of ', PageNumber.TOTAL_PAGES] })],
+    })],
+  });
 }
 
 /**
@@ -44,13 +61,18 @@ function runningHeader(name, color, margin) {
 /**
  * A one-section document on the résumé's paper (A4 or US Letter, PAR-01), in Design → Spacing's page
  * margins (wordMargins, R2-062) — the résumé's and its letter's, as their PDFs print them — with the
- * bullets of Design → Lists (bulletNumbering, R2-147). `running`: the résumé's name and Text colour, for
- * its running header (ATS-7; the letter has none).
+ * bullets of Design → Lists (bulletNumbering, R2-147). `pageNumbers` (the résumé's Design → Page
+ * numbers, R2-147; never the letter's): a footer with them, set in the middle of a bottom margin of at
+ * least the PDF's room for it, as the PDF prints it. `running`: the résumé's name and Text colour, for its
+ * running header (ATS-7; the letter has none).
  */
-function buildDocument(children, settings, { running = null } = {}) {
+function buildDocument(children, settings, { pageNumbers = false, template, running = null } = {}) {
   const font = resolveWordFont(settings);
   const margin = wordMargins(settings);
   const rh = running && runningHeader(running.name, running.color, margin);
+  const bottom = pageNumbers ? Math.max(margin.v, PAGE_NUMBER_ROOM) : margin.v;
+  // The footer's distance from the paper's edge: its line centred in the bottom margin.
+  const footerAt = Math.max(0, Math.round((bottom - PAGE_NUMBER_SIZE * 10 * 1.2) / 2));
   const baseSize = Math.round((settings?.fontSizeBase ?? 11) * 2);
   return new Document({
     styles: {
@@ -80,10 +102,15 @@ function buildDocument(children, settings, { running = null } = {}) {
         ...(rh ? { titlePage: true } : {}),
         page: {
           size: PAGE_SIZES[pageSizeOf(settings)].twips,
-          margin: { top: margin.v, right: margin.h, bottom: margin.v, left: margin.h, ...(rh ? { header: rh.distance } : {}) },
+          margin: {
+            top: margin.v, right: margin.h, bottom, left: margin.h,
+            ...(rh ? { header: rh.distance } : {}), ...(pageNumbers ? { footer: footerAt } : {}),
+          },
         },
       },
       ...(rh ? { headers: { default: rh.header } } : {}),
+      // With a running header the first page is a title page (no header): its footer is the others' too.
+      ...(pageNumbers ? { footers: { default: pageNumberFooter(settings, template), ...(rh ? { first: pageNumberFooter(settings, template) } : {}) } } : {}),
       children,
     }],
   });
@@ -120,7 +147,7 @@ export async function renderResumeDocx(resume) {
       : paras)),
   ];
   const running = { name: personal?.name, color: resolveTemplateSettings(settings, own).textColor };
-  return Packer.toBlob(buildDocument(children, settings, { running }));
+  return Packer.toBlob(buildDocument(children, settings, { pageNumbers: settings.pageNumbers === true, template: own, running }), false, [await wordFontTable(settings)]);
 }
 
 export async function exportToWord(resume, filename = 'resume.docx') {
@@ -129,7 +156,7 @@ export async function exportToWord(resume, filename = 'resume.docx') {
 
 /** The cover letter as a .docx Blob — the same content as the cover-letter PDF. */
 export async function renderCoverLetterDocx(resume) {
-  return Packer.toBlob(buildDocument(buildCoverLetter(resume), resume?.settings));
+  return Packer.toBlob(buildDocument(buildCoverLetter(resume), resume?.settings), false, [await wordFontTable(resume?.settings)]);
 }
 
 export async function exportCoverLetterToWord(resume, filename = 'cover-letter.docx') {

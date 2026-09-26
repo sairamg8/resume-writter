@@ -113,9 +113,13 @@ it('R2-156: a card opens its job; delete asks first and removes it only on OK', 
     const asked = [];
     page.view.window.confirm = globalThis.confirm = (q) => { asked.push(q); return answers.shift(); };
     const deleteOf = () => page.all().filter((el) => el.getAttribute('aria-label') === 'Delete application')[0];
+    // The question is the kit's dialog in the shell — the browser's here, outside it — and answers later.
+    const tick = async () => { for (let n = 0; n < 5; n += 1) await new Promise((r) => { setImmediate(r); }); await new Promise((r) => { setTimeout(r, 0); }); };
     page.fire(deleteOf(), 'onClick');
+    await tick();
     assert.deepEqual(shown(), ['Acme', 'Beta Labs', 'Cobalt'], 'Cancel keeps it');
     page.fire(deleteOf(), 'onClick');
+    await tick();
     assert.deepEqual(asked, ['Delete Acme?', 'Delete Acme?']);
     assert.deepEqual(shown(), ['Beta Labs', 'Cobalt']);
     assert.deepEqual(stored().map((j) => j.id), ['b', 'c'], 'and it is saved');

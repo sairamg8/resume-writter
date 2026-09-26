@@ -38,6 +38,17 @@ export function PhotoSection({ resume: whole, personal, updatePersonal, toggleFi
     readImageFile(file, { kind: 'photo', resume, replacing: personal.photo }).then((dataUrl) => updatePersonal('photo', dataUrl), (err) => alert(err.message));
   }
 
+  // Where no text sits beside the photo — the Sidebar's column, a centred header — Text Position and
+  // Position have nothing to place, and say so instead (R3-0, R2-147).
+  const beside = photoTextPositionApplies(s, template);
+  const besideNote = (testId) => (
+    <p className="text-[11px] text-gray-400" data-testid={testId}>
+      {templateId(template) === 'sidebar'
+        ? 'The Sidebar template prints the photo above your name.'
+        : 'A centered header prints the photo above your name. Align the header left to place the text beside it.'}
+    </p>
+  );
+
   return (
     <div className="bg-gray-50 rounded-xl border border-gray-100">
       <button onClick={onToggle} className="w-full flex items-center justify-between p-3 text-left">
@@ -120,15 +131,19 @@ export function PhotoSection({ resume: whole, personal, updatePersonal, toggleFi
 
           <div>
             <p className="text-xs font-semibold text-gray-700 mb-1.5">Text Position</p>
-            {photoTextPositionApplies(s, template) ? (
-              <PhotoChips control="photoTextAlign" s={s} set={set} />
-            ) : (
-              <p className="text-[11px] text-gray-400" data-testid="photo-text-position-note">
-                {templateId(template) === 'sidebar'
-                  ? 'The Sidebar template prints the photo above your name.'
-                  : 'A centered header prints the photo above your name. Align the header left to place the text beside it.'}
-              </p>
-            )}
+            {beside ? <PhotoChips control="photoTextAlign" s={s} set={set} /> : besideNote('photo-text-position-note')}
+          </div>
+
+          {/* The photo's side of the name (R2-147): only where it sits beside the name, as Text Position. */}
+          <div>
+            <p className="text-xs font-semibold text-gray-700 mb-1.5">Position</p>
+            {beside ? <PhotoChips control="photoPosition" s={s} set={set} /> : besideNote('photo-position-note')}
+          </div>
+
+          {/* A greyscale copy prints in the PDF and Word; the upload itself is kept as it is (R2-147). */}
+          <div>
+            <p className="text-xs font-semibold text-gray-700 mb-1.5">Tone</p>
+            <PhotoChips control="photoTone" s={s} set={set} />
           </div>
         </div>
       )}

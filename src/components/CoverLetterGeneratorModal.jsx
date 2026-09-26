@@ -2,12 +2,14 @@ import { useState, useMemo } from 'react';
 import { Sparkles, X, Check, ArrowRight, Building, User, Briefcase } from 'lucide-react';
 import { COVER_LETTER_ARCHETYPES, generateCoverLetter } from '@/utils/coverLetterGenerator';
 import { sanitizeRichText } from '@/utils/richText';
+import { useOverlayClose } from '@/hooks/useOverlayClose';
 
 export default function CoverLetterGeneratorModal({ isOpen, onClose, resume, onApply }) {
   const [archetype, setArchetype] = useState('impact');
   const [company, setCompany] = useState('');
   const [role, setRole] = useState('');
   const [recipient, setRecipient] = useState('Hiring Manager');
+  const overlay = useOverlayClose(onClose);
 
   // The Cover Letter panel mounts this closed: the letter is written only while it is open, not on
   // every render of the tab (a throw here used to blank the editor before the generator was opened).
@@ -30,7 +32,7 @@ export default function CoverLetterGeneratorModal({ isOpen, onClose, resume, onA
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150" {...overlay}>
       <div className="bg-white w-full max-w-3xl rounded-2xl shadow-2xl border border-gray-100 flex flex-col max-h-[90vh] overflow-hidden">
         
         {/* Header */}

@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect } from 'react';
-import { Download, FileText, Upload, ChevronDown, Pin, FileCode, FileJson } from 'lucide-react';
+import { Download, FileText, Upload, ChevronDown, Pin, FileCode, FileJson, Globe } from 'lucide-react';
 import { ORIGINALS_HINT } from '@/components/ImportMenu';
 import { isJsonResume, jsonResumeToCpwtResume } from '@/utils/jsonResume';
 import { DOCUMENT_HINT, IMPORT_ACCEPT, isDocumentFile } from '@/utils/importDocument';
@@ -10,9 +10,10 @@ import { DOCUMENT_HINT, IMPORT_ACCEPT, isDocumentFile } from '@/utils/importDocu
  * account, whose originals come back (useDemoSeed) — adds "Import as my original", as the
  * dashboard's Import menu has (V2OWNER-DATA-3). `letter`: the Cover Letter tab is open, where PDF
  * and Word export the letter, Cover Letter Text the letter as plain text (`onExportLetterText`), and
- * the other text exports still the résumé — each item says which (R2-131).
+ * the other text exports still the résumé — each item says which (R2-131). `onShare`: Share a public
+ * link (R2-148), given only to a signed-in account on a site with a cloud.
  */
-export function ExportDropdown({ exporting, keeps = false, letter = false, onExportPDF, onExportWord, onExportJSON, onExportMarkdown, onExportAtsText, onExportJsonResume, onExportLetterText, onImportJSON, onImportFile, onImportError }) {
+export function ExportDropdown({ exporting, keeps = false, letter = false, onExportPDF, onExportWord, onExportJSON, onExportMarkdown, onExportAtsText, onExportJsonResume, onExportLetterText, onImportJSON, onImportFile, onImportError, onShare }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   const importRef = useRef(null);
@@ -98,6 +99,14 @@ export function ExportDropdown({ exporting, keeps = false, letter = false, onExp
           >
             <Download size={12} className="text-gray-400" /> Export Backup JSON
           </button>
+          {onShare && (
+            <button
+              onClick={() => { onShare(); setOpen(false); }}
+              className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-blue-50 hover:text-blue-700"
+            >
+              <Globe size={12} className="text-blue-500" /> Share a public link…
+            </button>
+          )}
           <div className="my-1 border-t border-gray-100" />
           <button
             onClick={() => pickImport(false)}

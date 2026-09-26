@@ -20,14 +20,15 @@ const twips = (pt) => Math.round(pt * 20);
  * pushes the next one along, where the PDF gives it a row of its own. Under Single and 2 Grid,
  * Bullet prints a bullet before each value, Icon and Bar nothing. `style` the values' run style,
  * `markColor` the marks' ('rrggbb'; the page's greys where none); `width` the row's, pt, when a photo
- * beside it leaves less than the page's text (R2-126).
+ * beside it leaves less than the page's text (R2-126); `links` Design → Links' look on the values
+ * that link (linkLook, R2-147).
  */
-export function contactRows(items, { contactStyle, layout, centered, settings, style, markColor, width: rowPt }) {
+export function contactRows(items, { contactStyle, layout, centered, settings, style, markColor, width: rowPt, links = null }) {
   if (layout !== 'single' && layout !== '2grid') {
-    return [{ runs: items.flatMap((c, i) => [...(i ? [contactSeparator(contactStyle, style, markColor)] : []), linked(c.value, c.href, style)]), centred: centered, extra: {} }];
+    return [{ runs: items.flatMap((c, i) => [...(i ? [contactSeparator(contactStyle, style, markColor)] : []), linked(c.value, c.href, style, links)]), centred: centered, extra: {} }];
   }
   const mark = contactStyle === 'bullet' ? [normal('• ', { ...style, color: markColor || accent2Hex(PAGE_MARKS.bullet) })] : [];
-  const cell = (item) => [...mark, linked(item.value, item.href, style)];
+  const cell = (item) => [...mark, linked(item.value, item.href, style, links)];
   if (layout === 'single') return items.map((item) => ({ runs: cell(item), centred: centered, extra: {} }));
   const width = rowPt ?? wordContentTwips(settings) / 20;
   const cellPt = CONTACT_GRID.cell * width;

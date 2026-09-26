@@ -4,6 +4,7 @@ import { contactHref, contactItems } from './contacts.js';
 import { resolveSection } from '../templates/pdf/shared/templateSectionDefaults.js';
 import { templateId } from '../constants/templates.js';
 import { languageWords, sectionTitle } from './resumeLanguage.js';
+import { employerOf, groupPlaces, groupsRoles, roleGroups } from './roleGroups.js';
 
 /**
  * Markdown Resume Exporter (Export → Markdown (.md)): the résumé as GitHub Flavored Markdown.
@@ -163,6 +164,27 @@ function itemLines(type, item, f, body, settings, opts = {}) {
   }
 }
 
+/**
+ * Experience's "Group roles by company" (R2-147), as the PDF groups them (roleGroups): the employer as
+ * the entry's heading with the first role's location under it, then each role as a heading of its own
+ * level with its dates (and a location only where it differs) and its description. A job alone at its
+ * company is the entry it always was.
+ */
+function groupLines(group, fieldOf, settings, opts, one) {
+  if (group.length === 1) return one(group[0]);
+  const place = (item) => (opts.showLocation !== false ? fieldOf(item)('location') : '');
+  const places = groupPlaces(group, place);
+  const lines = entryLines(heading(employerOf(group[0]), ''), [italic(places.header)], []);
+  group.forEach((item, k) => {
+    const f = fieldOf(item);
+    const end = (item.hiddenFields || []).includes('endDate') ? '' : (item.current ? presentLabel(settings) : f('endDate'));
+    const dates = opts.showDates !== false ? dateRange(f('startDate'), end, settings) : '';
+    const role = entryLines(heading(f('role'), ''), [italic(joined([dates, places.roles[k]], ' | '))], markdownBody(f('description'), item.bullets));
+    lines.push(...(role[0]?.startsWith('### ') ? [`#${role[0]}`, ...role.slice(1)] : role));
+  });
+  return lines;
+}
+
 /** A list section's lines: skills and languages one bullet per entry, interests one line for all. */
 function listLines(type, items, fieldOf) {
   if (type === 'interests') {
@@ -223,12 +245,16 @@ export function generateMarkdownResume(resume) {
   for (const s of Array.isArray(resume.sections) ? resume.sections : []) {
     if (!s || s.visible === false) continue;
     const items = (Array.isArray(s.items) ? s.items : []).filter((i) => i && i.visible !== false);
+    const opts = resolveSection(s, templateId(resume.template)).settings;
+    const one = (item) => {
+      const f = fieldOf(item);
+      return itemLines(s.type, item, f, () => markdownBody(f('description'), item.bullets), settings, opts);
+    };
     const body = LIST_TYPES.has(s.type)
       ? listLines(s.type, items, fieldOf)
-      : items.flatMap((item) => {
-        const f = fieldOf(item);
-        return itemLines(s.type, item, f, () => markdownBody(f('description'), item.bullets), settings, resolveSection(s, templateId(resume.template)).settings);
-      });
+      : s.type === 'experience' && groupsRoles(opts)
+        ? roleGroups(items).flatMap((g) => groupLines(g, fieldOf, settings, opts, one))
+        : items.flatMap(one);
     if (!body.some((l) => l.trim())) continue;
     lines.push(`## ${sectionTitle(s, settings) || s.type}`, ...body);
   }

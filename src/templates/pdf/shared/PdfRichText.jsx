@@ -2,6 +2,7 @@ import { createContext, useContext } from 'react';
 import { View, Link } from '@react-pdf/renderer';
 import { Text } from './PdfText';
 import { listMarker, parseRichText, safeHref } from '@/utils/richText';
+import { useLinkLook } from './PdfLinkStyle';
 
 /**
  * Design → Lists → Bullet (settings.bulletStyle, R2-147) of the document being drawn. renderResumePdf
@@ -37,10 +38,16 @@ function runStyle(run, color) {
 }
 
 function Runs({ runs, color }) {
+  // Design → Links (R2-147): an underline, or the accent, over the link's own look; Plain adds nothing.
+  const look = useLinkLook();
   return runs.map((run, i) => {
     const style = runStyle(run, color);
     const href = run.href && safeHref(run.href);
-    if (href) return <Link key={i} src={href} style={style}>{run.text}</Link>;
+    if (href) {
+      // Underline adds its line to a struck-through link's, as Word keeps both.
+      const deco = look.textDecoration && run.strike ? { textDecoration: 'underline line-through' } : {};
+      return <Link key={i} src={href} style={{ ...style, ...look, ...deco }}>{run.text}</Link>;
+    }
     return Object.keys(style).length ? <Text key={i} style={style}>{run.text}</Text> : run.text;
   });
 }

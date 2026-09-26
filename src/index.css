@@ -12,6 +12,34 @@
   box-sizing: border-box;
 }
 
+/* A hand over everything clickable (the owner's ask, R3-009). Tailwind v4's preflight leaves a button
+   the browser's arrow, and the app wrote cursor-pointer on only some controls. In the base layer, so a
+   control's own cursor class (cursor-grab, cursor-default on a disabled item, disabled:cursor-not-allowed)
+   still wins; a disabled control keeps the arrow. A clickable element that is none of these writes
+   cursor-pointer itself (tests/unit/cursor-pointer.unit.mjs checks every onClick in src/). */
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  [role="link"],
+  [role="tab"],
+  [role="menuitem"]:not([aria-disabled="true"]),
+  [role="option"]:not([aria-disabled="true"]),
+  [role="switch"],
+  a[href],
+  summary,
+  select:not(:disabled),
+  input[type="checkbox"]:not(:disabled),
+  input[type="radio"]:not(:disabled),
+  input[type="file"]:not(:disabled),
+  input[type="color"]:not(:disabled),
+  input[type="range"]:not(:disabled),
+  label:has(> input[type="checkbox"]:not(:disabled)),
+  label:has(> input[type="radio"]:not(:disabled)),
+  ::file-selector-button {
+    cursor: pointer;
+  }
+}
+
 html {
   height: 100%;
 }
@@ -80,6 +108,35 @@ body {
   @keyframes ui-drawer-out { from { transform: translateX(0); } to { transform: translateX(-100%); } }
   @keyframes ui-toast-in { from { opacity: 0; transform: translateY(8px) scale(0.98); } to { opacity: 1; transform: none; } }
   @keyframes ui-shimmer { 0% { background-position: 100% 0; } 100% { background-position: -100% 0; } }
+}
+
+/* ── Workspace colours (Boards + Job Tracker): a calm, dense tracker look ────────────────────
+   Ink for text (primary, subtle, subtlest), lines, the sunken surface board columns sit on, the
+   neutral fills of default buttons and hovered rows, the brand blue, and the three status
+   categories' lozenges (to do grey, in progress blue, done green) — each fill with an ink that
+   reads at 4.5:1 or more on it. Used as `text-ink`, `bg-sunken`, `bg-loz-done`, `text-brand`… */
+@theme {
+  --color-ink: #172b4d;
+  --color-ink-subtle: #44546f;
+  --color-ink-subtlest: #626f86;
+  --color-line: #dcdfe4;
+  --color-line-subtle: #ebecf0;
+  --color-sunken: #f7f8f9;
+  --color-hovered: #f1f2f4;
+  --color-pressed: #dcdfe4;
+  --color-neutral-fill: #091e420f;
+  --color-neutral-fill-hover: #091e4224;
+  --color-brand: #0c66e4;
+  --color-brand-hover: #0055cc;
+  --color-brand-pressed: #09326c;
+  --color-brand-subtle: #e9f2ff;
+  --color-brand-subtle-hover: #cce0ff;
+  --color-loz-todo: #dcdfe4;
+  --color-loz-todo-ink: #44546f;
+  --color-loz-progress: #cce0ff;
+  --color-loz-progress-ink: #0055cc;
+  --color-loz-done: #baf3db;
+  --color-loz-done-ink: #216e4e;
 }
 
 /* Reduced motion: the workspace shell and every kit layer (Portal) carry data-ui-motion; there,

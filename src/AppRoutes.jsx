@@ -1,30 +1,40 @@
-import { useLayoutEffect, useMemo } from 'react';
+import { Suspense, lazy, useLayoutEffect } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigationType } from 'react-router-dom';
 import { Dashboard } from '@/pages/Dashboard';
-import { Editor } from '@/pages/Editor';
-import { JobTracker } from '@/pages/JobTracker';
-import { JobDetail } from '@/pages/JobDetail';
-import { JobForm } from '@/pages/JobForm';
-import { Boards } from '@/pages/Boards';
-import { Board } from '@/pages/Board';
-import { Backlog } from '@/pages/Backlog';
-import { BoardSettings } from '@/pages/BoardSettings';
-import { YourWork } from '@/pages/YourWork';
 import TermsPage from '@/pages/TermsPage';
 import PrivacyPage from '@/pages/PrivacyPage';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
-import { WorkspaceLayout, sidebarProjects } from '@/components/shell';
-import { useBoardStore } from '@/hooks/useBoardStore';
+import { loadPage } from '@/utils/lazyPage';
 
-/**
- * The workspace shell (sidebar + scrolling main) as a layout route, its sidebar's projects read
- * from the board store. Only the workspace pages mount it, so the résumé dashboard and editor never
- * load the boards. The mapping reads v1 and v2 boards alike (shell/projects.js).
- */
-export function WorkspaceRoute() {
-  const { boards } = useBoardStore();
-  const projects = useMemo(() => sidebarProjects(boards), [boards]);
-  return <WorkspaceLayout projects={projects} />;
+// The editor and the workspace pages are split from the start-up code (R2-142, PERF-5): the entry
+// held every page — the editor's panels, the ATS checker, the boards, drag and drop — so the
+// dashboard downloaded and parsed ~700 kB before its first paint. Each now loads when its route is
+// first opened; the dashboard and the legal pages, small and reached first, stay in the entry. A
+// page's file gone after a deploy reloads the tab once (lazyPage.js).
+const page = (load, name) => lazy(() => loadPage(load, name));
+const Editor        = page(() => import('@/pages/Editor'), 'Editor');
+// New Resume's page of looks (R3-012): the picker's cards and page pictures load with it.
+const NewResume     = page(() => import('@/pages/NewResume'), 'NewResume');
+const JobTracker    = page(() => import('@/pages/JobTracker'), 'JobTracker');
+const JobDetail     = page(() => import('@/pages/JobDetail'), 'JobDetail');
+const JobForm       = page(() => import('@/pages/JobForm'), 'JobForm');
+const Boards        = page(() => import('@/pages/Boards'), 'Boards');
+const Board         = page(() => import('@/pages/Board'), 'Board');
+const Backlog       = page(() => import('@/pages/Backlog'), 'Backlog');
+const BoardSettings = page(() => import('@/pages/BoardSettings'), 'BoardSettings');
+const YourWork      = page(() => import('@/pages/YourWork'), 'YourWork');
+// The workspace shell the Job Tracker and Boards pages sit in (layout route), with its Create dialog.
+export const WorkspaceRoute = page(() => import('@/components/shell/WorkspaceRoute'), 'WorkspaceRoute');
+const ProjectSummary  = page(() => import('@/pages/ProjectSummary'), 'ProjectSummary');
+const ProjectTimeline = page(() => import('@/pages/ProjectTimeline'), 'ProjectTimeline');
+const ProjectCalendar = page(() => import('@/pages/ProjectCalendar'), 'ProjectCalendar');
+const ProjectList     = page(() => import('@/pages/ProjectList'), 'ProjectList');
+// A published résumé (R2-148), opened from its link by anyone: its page, not the editor's code.
+const PublicResume    = page(() => import('@/pages/PublicResume'), 'PublicResume');
+
+/** What shows for the moment a page's code is on its way. */
+function PageLoading() {
+  return <div className="min-h-screen flex items-center justify-center text-sm text-gray-400">Loading…</div>;
 }
 
 /**
@@ -43,7 +53,7 @@ function RouteFrame({ children }) {
     // Only a new path moves the scroll; the way we came is read with it.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
-  return <ErrorBoundary resetKey={pathname}>{children}</ErrorBoundary>;
+  return <ErrorBoundary resetKey={pathname}><Suspense fallback={<PageLoading />}>{children}</Suspense></ErrorBoundary>;
 }
 
 /**
@@ -61,6 +71,8 @@ export function AppRoutes({ store, auth, sync, seed }) {
       <Routes>
         <Route path="/"           element={<Dashboard store={store} auth={auth} sync={sync} originalsWaiting={seed.waiting} />} />
         <Route path="/resume/:id" element={<Editor    store={store} auth={auth} sync={sync} />} />
+        {/* New Resume: every look drawn with the user's own résumé (R3-012). */}
+        <Route path="/new"        element={<NewResume store={store} />} />
         <Route element={<WorkspaceRoute />}>
           <Route path="/jobs"                element={<JobTracker store={store} />} />
           <Route path="/jobs/new"            element={<JobForm    store={store} />} />
@@ -70,10 +82,16 @@ export function AppRoutes({ store, auth, sync, seed }) {
           <Route path="/work"                element={<YourWork />} />
           <Route path="/boards/:id"          element={<Board />} />
           <Route path="/boards/:id/backlog"  element={<Backlog />} />
+          <Route path="/boards/:id/summary"  element={<ProjectSummary />} />
+          <Route path="/boards/:id/timeline" element={<ProjectTimeline />} />
+          <Route path="/boards/:id/calendar" element={<ProjectCalendar />} />
+          <Route path="/boards/:id/list"     element={<ProjectList />} />
           <Route path="/boards/:id/settings" element={<BoardSettings />} />
         </Route>
         <Route path="/terms"      element={<TermsPage />} />
         <Route path="/privacy"    element={<PrivacyPage />} />
+        {/* A published résumé, read-only, for anyone with its link (R2-148). */}
+        <Route path="/r/:shareId" element={<PublicResume />} />
         <Route path="*"           element={<Navigate to="/" replace />} />
       </Routes>
     </RouteFrame>

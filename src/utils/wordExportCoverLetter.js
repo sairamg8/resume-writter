@@ -11,10 +11,12 @@
 // as the PDF does, and prints the name and title in Word's own weights (Minimal's light name and
 // an Inline title's medium are regular).
 import { Paragraph, BorderStyle, ShadingType, AlignmentType } from 'docx';
+import { wordNameFont } from '@/utils/wordFonts';
 import { accent2Hex, bold, normal, descriptionToParagraphs, eighths, inlineGap, lineSpacing } from '@/utils/wordExportUtils';
 import { contactRows } from '@/utils/wordExportContacts';
 import { contactItems } from '@/utils/contacts';
 import { hasRichText } from '@/utils/richText';
+import { linkLook } from '@/utils/linkStyle';
 import { letterBlock, letterContactFormat, letterHiddenFields, letterSignature } from '@/utils/coverLetter';
 import { solid } from '@/templates/pdf/shared/pdfColors';
 import { letterGrey, letterheadLook } from '@/templates/pdf/shared/letterhead';
@@ -92,7 +94,7 @@ function letterhead(personal, s, cl, sizes, look) {
   const nameGap = personal.title && !look.inline ? setGapPt(s, 'nameTitleGap') : null;
   const toContacts = contacts.length ? setGapPt(s, 'titleContactsGap') : null;
   const afterName = personal.title && !look.inline ? nameGap : toContacts;
-  const rows = [{ runs: [nameRun(personal.name || 'Your Name', { size: sizes.name, color: ink(look.name.color) })], after: pt(afterName ?? (look.inline && personal.title ? 2 : 1)), kept: afterName != null }];
+  const rows = [{ runs: [nameRun(personal.name || 'Your Name', { size: sizes.name, color: ink(look.name.color), ...wordNameFont(s) })], after: pt(afterName ?? (look.inline && personal.title ? 2 : 1)), kept: afterName != null }];
   // Modern's title prints at 90 % on its band (look.title.opacity, R5-9): the same blend here.
   // Academic's title is italic (look.title.italic), as its PDF letterhead prints it.
   const title = personal.title ? normal(personal.title, { size: sizes.title, color: ink(look.title.color, look.title.opacity), ...(look.title.italic ? { italics: true } : {}) }) : null;
@@ -110,7 +112,9 @@ function letterhead(personal, s, cl, sizes, look) {
     // (FIDB-51-VF1-NB1). A centred 2 Grid row is centred by its tab stops, not as a whole.
     const { style: contactStyle, layout } = letterContactFormat(cl, s);
     const marks = look.marks && ink(look.marks);
-    for (const row of contactRows(contacts, { contactStyle, layout, centered: look.centered, settings: s, style, markColor: marks })) {
+    // Design → Links (R2-147): on a band, the Accent tint that reads on the fill Word shades.
+    const links = linkLook(s.linkStyle, s.accentColor, look.band ? on : null);
+    for (const row of contactRows(contacts, { contactStyle, layout, centered: look.centered, settings: s, style, markColor: marks, links })) {
       rows.push({ runs: row.runs, extra: look.centered && !row.centred ? { ...row.extra, alignment: undefined } : row.extra });
     }
   }
@@ -162,7 +166,7 @@ export function buildCoverLetter(resume) {
   // The body and the closing at Design → Line Height, as the letter's PDF prints them (R2-062), the
   // body's lists behind Design → Lists' glyph (R2-147).
   if (hasRichText(cl.body)) {
-    paras.push(...descriptionToParagraphs(cl.body, { ...text, lineHeight: s.lineHeightValue, bullet: s.bulletStyle }));
+    paras.push(...descriptionToParagraphs(cl.body, { ...text, lineHeight: s.lineHeightValue, bullet: s.bulletStyle, links: linkLook(s.linkStyle, s.accentColor) }));
     paras.push(line([], pt(16)));
   }
 

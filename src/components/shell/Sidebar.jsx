@@ -23,8 +23,8 @@ export function Sidebar({ projects, collapsed, onToggleCollapsed, drawerOpen, on
       <aside
         aria-label="Sidebar"
         className={cx(
-          'hidden shrink-0 border-r border-slate-200 bg-white transition-[width] duration-200 ease-out md:block',
-          collapsed ? 'w-16' : 'w-[248px]',
+          'hidden shrink-0 border-r border-line bg-white transition-[width] duration-200 ease-out md:block',
+          collapsed ? 'w-16' : 'w-[240px]',
         )}
       >
         <SidebarContent projects={projects} collapsed={collapsed} onToggleCollapsed={onToggleCollapsed} newProjectTo={newProjectTo} />

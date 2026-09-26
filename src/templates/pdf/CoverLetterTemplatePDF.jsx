@@ -32,8 +32,10 @@ export function CoverLetterTemplatePDF({ data }) {
   const block     = letterBlock(cl, settings);
   const blockLine = { fontSize: baseSize, color: textColor, lineHeight: 1.3 };
 
+  // The letter prints no page numbers (a résumé's Design setting, R2-147), so none of their margin.
   const pageStyle = getPageStyle({
     ...settings,
+    pageNumbers: false,
     _pdfFontFamily: settings._pdfFontFamily || 'NotoSans',
   });
 

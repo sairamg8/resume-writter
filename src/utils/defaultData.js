@@ -4,6 +4,7 @@ import { sectionsOnSwitch } from '@/templates/pdf/shared/templateSectionDefaults
 import { DATA_VERSION } from '@/utils/normalizeResume';
 import { DEFAULT_DATE_FORMAT } from '@/utils/dates';
 import { DEFAULT_BULLET_STYLE } from '@/utils/richText';
+import { DEFAULT_LINK_STYLE } from '@/utils/linkStyle';
 import { DEFAULT_PAGE_SIZE, pageSizeOf } from '@/constants/pageSize';
 import { DEFAULT_LANGUAGE, languageOf } from '@/utils/resumeLanguage';
 
@@ -27,6 +28,12 @@ export const ATS_DEFAULTS = {
   dateFormat: DEFAULT_DATE_FORMAT,
   /** Design → Lists (src/utils/richText.js): Bullet prints '•', '–', '·' by depth, as every résumé storing no style (R2-147). */
   bulletStyle: DEFAULT_BULLET_STYLE,
+  /** Design → Links (src/utils/linkStyle.js): Plain prints a link as the text around it, as every résumé storing no style (R2-147). */
+  linkStyle: DEFAULT_LINK_STYLE,
+  /** Design → Section Headings → Icons: off, every title its words alone, as before R2-147. */
+  sectionIcons: false,
+  /** Design → Page numbers (PdfPageNumbers): off, the page as every résumé storing none prints it (R2-147). */
+  pageNumbers: false,
   sectionBorderWidth: 1,
   sectionBorderColor: '',
   headerAlign: 'left',
@@ -44,9 +51,15 @@ export const ATS_DEFAULTS = {
   photoBorder: 'accent',
   photoHeight: 'match',
   photoTextAlign: 'center',
+  /** Personal Info → Photo → Position and Tone (R2-147): left of the name, in colour, as every résumé storing none. */
+  photoPosition: 'left',
+  photoTone: 'color',
   showHeaderBorder: false,
   headerBorderWidth: 2,
   customFont: '',
+  /** Typography → Name Font and Heading Font: a picker id or a custom font's name; '' prints Font Family's (R2-146). */
+  nameFont: '',
+  headingFont: '',
   iconSize: 11,
   /** Design → Title Spacing, % of the title's size; null prints the titles' own 0.7 pt (R2-146). */
   sectionLetterSpacing: null,
@@ -81,7 +94,9 @@ export function styleOnSwitch(settings, from, to, preset = '') {
   // A design (R2-138) is a template's style and more: what it set leaves with it where the résumé
   // still holds it, as a template's own does, and the design picked brings its whole look.
   const was = designStyle(from, settings);
-  const next = designStyle(to, { templatePreset: preset });
+  // A design the user saved is looked up in the résumé's own (ownDesign, B4).
+  const picked = { templatePreset: preset, myDesigns: settings?.myDesigns };
+  const next = designStyle(to, picked);
   const out = { ...settings };
   delete out.templatePreset;
   for (const [key, value] of Object.entries(was)) {
@@ -89,7 +104,7 @@ export function styleOnSwitch(settings, from, to, preset = '') {
     if (key in ATS_DEFAULTS) out[key] = ATS_DEFAULTS[key];
     else delete out[key];
   }
-  return { ...out, ...next, ...(presetOf({ templatePreset: preset }, to) ? { templatePreset: preset } : {}) };
+  return { ...out, ...next, ...(presetOf(picked, to) ? { templatePreset: preset } : {}) };
 }
 
 /**
@@ -102,7 +117,8 @@ export function styleOnSwitch(settings, from, to, preset = '') {
  * Spacing → Page size, R2-136): it is where the résumé is sent, not a look of the template's, and
  * no template has one of its own — a US Letter résumé stays on Letter. A4 is stored as none. So is
  * the language (Design → Language, R2-148): it is what the résumé is written in, and Reset turned an
- * Arabic résumé's page left to right. English is stored as none.
+ * Arabic résumé's page left to right. English is stored as none. And the designs the user saved
+ * (`myDesigns`, B4): they are theirs to delete, not a look Reset undoes.
  */
 export function resetDesignSettings(settings, template) {
   const icons = settings?.customContactIcons;
@@ -111,7 +127,8 @@ export function resetDesignSettings(settings, template) {
   const design = presetOf(settings, template) ? { templatePreset: settings.templatePreset } : {};
   const paper = pageSizeOf(settings) !== DEFAULT_PAGE_SIZE ? { pageSize: pageSizeOf(settings) } : {};
   const language = languageOf(settings) !== DEFAULT_LANGUAGE ? { language: languageOf(settings) } : {};
-  return { ...defaultSettings(template, settings), ...layout, ...design, ...paper, ...language, customContactIcons: uploads };
+  const mine = settings?.myDesigns && typeof settings.myDesigns === 'object' ? { myDesigns: settings.myDesigns } : {};
+  return { ...defaultSettings(template, settings), ...layout, ...design, ...paper, ...language, ...mine, customContactIcons: uploads };
 }
 
 /**

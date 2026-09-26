@@ -38,7 +38,9 @@ See [AGENT_MEMORY.md](../tracking/AGENT_MEMORY.md) for the locked table. High le
 | Signed in (Google) | Resumes mirrored to Firestore under the user’s UID; OAuth name/email/photo used for account UI |
 | Jobs | Always local-only today |
 
-Security rules: `firestore.rules` — only `request.auth.uid == uid` may read/write `users/{uid}/**`.
+Security rules: `firestore.rules` — only `request.auth.uid == uid` may read/write `users/{uid}/**`;
+a published résumé (`public/{shareId}`, Share a public link) is readable by anyone who has its id and
+written only by its owner.
 
 ## Feature pillars
 

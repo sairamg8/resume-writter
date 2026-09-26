@@ -187,10 +187,20 @@ test.describe('every design control changes the preview, through the UI', () => 
 
   test('classic: Personal Info (Header Customization, Photo, the eyes) and Section Options', async ({ page }) => {
     await hookPreviewPdfs(page);
-    // Two jobs: the first section's Spacing and Grids have a gap between entries to change.
-    const sections = ALL_SECTION_TYPES.map((s) => (s.type !== 'experience' ? s : {
-      ...s, items: [...s.items, { ...s.items[0], id: 'exp2', company: 'Globex', role: 'Engineer', location: 'Boston', startDate: '03/2019', endDate: '12/2022', current: false }],
-    }));
+    // Two jobs: the first section's Spacing and Grids have a gap between entries to change — and a second
+    // role at Acme Corp under its first, so Group roles by company has two roles to group. Three
+    // languages, two rows of the grid, for Languages' Spacing; each proficiency one Level draws (R2-147).
+    const sections = ALL_SECTION_TYPES.map((s) => (s.type === 'experience' ? {
+      ...s,
+      items: [
+        s.items[0],
+        { ...s.items[0], id: 'exp1b', role: 'Developer', startDate: '06/2020', endDate: '12/2022', current: false },
+        ...s.items.slice(1),
+        { ...s.items[0], id: 'exp2', company: 'Globex', role: 'Engineer', location: 'Boston', startDate: '03/2019', endDate: '12/2022', current: false },
+      ],
+    } : s.type === 'languages' ? {
+      ...s, items: [...s.items, { id: 'lang2', language: 'Spanish', proficiency: 'Fluent' }, { id: 'lang3', language: 'French', proficiency: 'Conversational' }],
+    } : s));
     await visitEditor(page, 'classic', { personal: { photo: PNG_2X2 }, sections });
     await settledPreview(page);
     await page.locator('button:has-text("Header Customization")').click();
@@ -198,15 +208,21 @@ test.describe('every design control changes the preview, through the UI', () => 
     // The first section's ⋯ menu → Customize layout opens its Section Options.
     await page.locator('button[title="Section options"]').first().click();
     await page.locator('button:has-text("Customize layout")').first().click();
-    // The walk's roots: Header Customization's box, the Photo box, each field's eye, and the first
-    // section's options — not the rest of Personal Info (the summary's editor opens the STAR optimizer).
+    // And Languages' — its Level (Text, Dots, Bar) is its own (R2-147): its card is the one titled Languages.
+    await page.evaluate(() => {
+      const title = [...document.querySelectorAll('input[aria-label="Section title"]')].find((i) => i.value === 'Languages');
+      title.closest('div.rounded-xl').dataset.pwLanguages = '1';
+    });
+    await page.locator('[data-pw-languages] button[title="Section options"]').click();
+    await page.locator('[data-pw-languages] button:has-text("Customize layout")').click();
+    // The walk's roots: Header Customization's box, the Photo box, each field's eye, and the two
+    // sections' options — not the rest of Personal Info (the summary's editor opens the STAR optimizer).
     await page.evaluate(() => {
       const byText = (t) => [...document.querySelectorAll('button')].find((x) => [...x.querySelectorAll('p')].some((p) => p.textContent.trim() === t));
       byText('Header Customization').closest('div.rounded-xl').dataset.pwRoot = 'header';
       byText('Photo').closest('div.rounded-xl').dataset.pwRoot = 'photo';
       for (const eye of document.querySelectorAll('button[title="Hide on resume"], button[title="Hide summary from resume"]')) eye.parentElement.dataset.pwRoot = 'eye';
-      const so = [...document.querySelectorAll('p')].find((p) => p.textContent.trim() === 'Section Options');
-      so.parentNode.dataset.pwRoot = 'section';
+      for (const so of [...document.querySelectorAll('p')].filter((p) => p.textContent.trim() === 'Section Options')) so.parentNode.dataset.pwRoot = 'section';
     });
     // Uploads, the icon picker, and removing or hiding the photo (the photo's own controls come after):
     // its eye reads "Hide photo from the résumé and cover letter" since R2-092.

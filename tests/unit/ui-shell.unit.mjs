@@ -126,8 +126,10 @@ describe('J-40: a route change inside the workspace opens the new page at its to
   it('the shell fills the dynamic viewport (h-dvh, not h-screen) and <main> is the scroll box', async () => {
     const { view, main } = await shellAt('/jobs');
     try {
-      const root = main().parentNode;
+      // The top bar spans the window; the sidebar and <main> share the row under it.
+      const root = main().parentNode.parentNode;
       assert.match(root.className, /\bh-dvh\b/);
+      assert.match(main().parentNode.className, /\bmin-h-0\b/, 'the row gives <main> the rest of the height');
       assert.doesNotMatch(root.className, /\bh-screen\b/);
       assert.match(main().className, /\boverflow-y-auto\b/);
     } finally { await view.unmount(); }
@@ -145,7 +147,10 @@ describe('AppRoutes: which pages sit inside the workspace shell', () => {
       assert.ok(inShell(path), `${path} is not inside the workspace shell`);
       assert.notEqual(matchRoutes(routes, path).at(-1).route.path, '*', `${path} falls through to the catch-all`);
     }
-    for (const path of ['/', '/resume/r1', '/terms', '/privacy']) assert.ok(!inShell(path), `${path} should stay outside the shell`);
+    for (const path of ['/', '/new', '/resume/r1', '/terms', '/privacy']) {
+      assert.ok(!inShell(path), `${path} should stay outside the shell`);
+      assert.notEqual(matchRoutes(routes, path).at(-1).route.path, '*', `${path} falls through to the catch-all`);
+    }
   });
 });
 

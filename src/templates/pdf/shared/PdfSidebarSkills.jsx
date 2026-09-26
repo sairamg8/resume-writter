@@ -34,7 +34,7 @@ export function SideSkills({ section, sectionGap, itemGap, accent, shades = side
   if (style === 'bars') {
     return (
       <View style={{ marginBottom: sectionGap }}>
-        <SideSectionTitle title={section.title} shades={shades} titleCase={titleCase} settings={settings} />
+        <SideSectionTitle title={section.title} type={section.type} shades={shades} titleCase={titleCase} settings={settings} />
         <View style={{ gap: itemGap }}>
           {groups.map(({ category, list }, i) => (
             <View key={i}>
@@ -61,7 +61,7 @@ export function SideSkills({ section, sectionGap, itemGap, accent, shades = side
   if (style === 'tags') {
     return (
       <View style={{ marginBottom: sectionGap }}>
-        <SideSectionTitle title={section.title} shades={shades} titleCase={titleCase} settings={settings} />
+        <SideSectionTitle title={section.title} type={section.type} shades={shades} titleCase={titleCase} settings={settings} />
         <View style={{ gap: itemGap }}>
           {groups.map(({ category, list }, i) => (
             <View key={i}>
@@ -89,7 +89,7 @@ export function SideSkills({ section, sectionGap, itemGap, accent, shades = side
   if (style === 'stacked') {
     return (
       <View style={{ marginBottom: sectionGap }}>
-        <SideSectionTitle title={section.title} shades={shades} titleCase={titleCase} settings={settings} />
+        <SideSectionTitle title={section.title} type={section.type} shades={shades} titleCase={titleCase} settings={settings} />
         <View style={{ gap: itemGap }}>
           {groups.map(({ category, list }, i) => (
             <View key={i}>
@@ -111,7 +111,7 @@ export function SideSkills({ section, sectionGap, itemGap, accent, shades = side
   const bullet = style === 'bullet';
   return (
     <View style={{ marginBottom: sectionGap }}>
-      <SideSectionTitle title={section.title} shades={shades} titleCase={titleCase} settings={settings} />
+      <SideSectionTitle title={section.title} type={section.type} shades={shades} titleCase={titleCase} settings={settings} />
       <View style={{ gap: itemGap }}>
         {groups.map(({ category, skills }, i) => (
           <View key={i} style={bullet ? { flexDirection: 'row' } : undefined}>

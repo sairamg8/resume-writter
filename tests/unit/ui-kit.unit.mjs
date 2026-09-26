@@ -288,21 +288,27 @@ describe('shell: PageHeader and the sidebar', () => {
     assert.match(current[0], /href="\/jobs"/);
     assert.ok(out.indexOf('Life admin') < out.indexOf('Website'), 'starred first');
     assert.match(out, /<nav aria-label="Workspace"/);
-    for (const label of ['Résumés', 'Job Tracker', 'Boards', 'Your work', 'New project']) assert.match(out, new RegExp(label));
+    for (const label of ['Résumés', 'Job Tracker', 'Projects', 'Your work', 'Create project']) assert.match(out, new RegExp(label));
     assert.match(out, /href="\/boards\?create=1"/);
   });
 
-  it('on a project page the project, not "Boards", is the current item', () => {
+  it('on a project page the project opens as a tree of its views, the page\'s view current — not "Projects"', () => {
     const projects = [{ id: 'p2', name: 'Life admin', key: 'LIFE', color: null, starred: false, updatedAt: 0 }];
     const out = html(h(shell.SidebarContent, { projects }), '/boards/p2/settings');
     const current = tags(out, 'a').filter((a) => /aria-current="page"/.test(a));
     assert.equal(current.length, 1);
-    assert.match(current[0], /href="\/boards\/p2"/);
+    assert.match(current[0], /href="\/boards\/p2\/settings"/);
+    assert.match(out, /aria-label="Life admin views"/);
+    for (const view of ['summary', 'timeline', 'backlog', 'calendar', 'list']) assert.match(out, new RegExp(`href="/boards/p2/${view}"`));
+    const board = html(h(shell.SidebarContent, { projects }), '/boards/p2');
+    const onBoard = tags(board, 'a').filter((a) => /aria-current="page"/.test(a));
+    assert.equal(onBoard.length, 1);
+    assert.match(onBoard[0], /href="\/boards\/p2"/, 'the Board view, the project\'s home');
   });
 
   it('the collapsed rail names each icon (aria-label), and the toggle says what it does', () => {
     const out = html(h(shell.SidebarContent, { projects: [{ id: 'p', name: 'Life', key: 'LIFE', color: null, starred: false, updatedAt: 0 }], collapsed: true, onToggleCollapsed: () => {} }));
-    for (const label of ['Résumés', 'Job Tracker', 'Boards', 'Your work', 'Life · LIFE', 'New project']) {
+    for (const label of ['Résumés', 'Job Tracker', 'Projects', 'Your work', 'Life · LIFE', 'Create project']) {
       assert.match(out, new RegExp(`aria-label="${label}"`));
     }
     assert.match(out, /aria-label="Expand sidebar"[^>]*aria-expanded="false"|aria-expanded="false"[^>]*aria-label="Expand sidebar"/);

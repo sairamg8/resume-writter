@@ -74,6 +74,9 @@ function entryLines(type, item, f, hidden, settings, opts) {
   switch (type) {
     case 'experience':
     case 'volunteering': {
+      // Experience's "Group roles by company" (R2-147) is left out here on purpose: every role keeps its
+      // own "Company - Role" line, the form an ATS parser reads a job in — a role under an employer
+      // heading would read as a job without a company.
       const org = f('company') || f('org');
       return [
         type === 'experience' && opts.titleOrder !== 'role' ? joined([org, f('role')], ' - ') : joined([f('role'), org], ' - '),

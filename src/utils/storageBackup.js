@@ -2,6 +2,9 @@
 // ever destroying what cannot be read. No imports, so Node's test runner loads this file as it
 // is (tests/unit/storage-backup.unit.mjs).
 
+/** The page pictures' cache (pageImageStore.js): the first thing a full storage drops. */
+export const PAGE_IMAGES_KEY = 'cpwtcv_page_images';
+
 /** How many backups of one key are kept: older ones are removed as a new one is made (R4-8). */
 export const BACKUPS_KEPT = 3;
 const BACKUP_KEY = /^(.+)_backup_(\d+)$/;
@@ -88,6 +91,11 @@ export function setItemWithRoom(key, value, spare = () => false) {
       flushUnpersistedNotices();
       return;
     } catch (e) {
+      // The page pictures (C1) are a cache: they go before any backup, and are painted again.
+      if (isQuotaError(e) && key !== PAGE_IMAGES_KEY && stored(PAGE_IMAGES_KEY)) {
+        remove(PAGE_IMAGES_KEY);
+        continue;
+      }
       backups ??= listBackups().filter((b) => b.key !== key && !spare(b));
       if (!isQuotaError(e) || !backups.length) {
         putBack(removed);
@@ -98,6 +106,11 @@ export function setItemWithRoom(key, value, spare = () => false) {
       remove(gone);
     }
   }
+}
+
+/** Does storage hold `key`? (No when it cannot be read.) */
+function stored(key) {
+  try { return localStorage.getItem(key) !== null; } catch { return false; }
 }
 
 /** Write back the backups a write removed and still did not fit: they all fitted before it. */

@@ -27,7 +27,7 @@ export function letterSources(resumes) {
 }
 
 /** What a letter says to its reader. A new one starts with these empty. */
-const LETTER_CONTENT = ['date', 'recipientName', 'recipientTitle', 'company', 'subject', 'body'];
+export const LETTER_CONTENT = ['date', 'recipientName', 'recipientTitle', 'company', 'subject', 'body'];
 
 /**
  * A new letter `id`, made at `now`, from the résumé `source`: a copy of it — its Personal Info (the

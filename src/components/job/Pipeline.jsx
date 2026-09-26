@@ -20,14 +20,14 @@ export function Pipeline({ status, onChange }) {
     return (
       <div className="space-y-4">
         <div
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-md text-sm font-semibold"
           style={{ color: t.text, background: t.color + '15', border: `1px solid ${t.color}30` }}
         >
           <XCircle size={14} style={{ color: t.color }} />
           {t.label}
         </div>
         <div>
-          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Restart Application As</p>
+          <p className="text-[10px] font-bold text-ink-subtlest uppercase tracking-widest mb-2">Restart Application As</p>
           <div className="flex items-center gap-2 flex-wrap">
             {PIPELINE.map(id => {
               const s = STATUS_MAP[id];
@@ -53,14 +53,14 @@ export function Pipeline({ status, onChange }) {
     return (
       <div className="space-y-4">
         <div
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-md text-sm font-semibold"
           style={{ color: holdStatus.text, background: holdStatus.color + '15', border: `1px solid ${holdStatus.color}30` }}
         >
           <Pause size={14} style={{ color: holdStatus.color }} />
           On Hold
         </div>
         <div>
-          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Resume Application</p>
+          <p className="text-[10px] font-bold text-ink-subtlest uppercase tracking-widest mb-2">Resume Application</p>
           <div className="flex items-center gap-2 flex-wrap">
             {PIPELINE.map(id => {
               const s = STATUS_MAP[id];
@@ -78,8 +78,8 @@ export function Pipeline({ status, onChange }) {
             })}
           </div>
         </div>
-        <div className="flex items-center gap-2 pt-1 border-t border-gray-100">
-          <span className="text-[10px] text-gray-400 font-semibold uppercase tracking-widest">Close as:</span>
+        <div className="flex items-center gap-2 pt-1 border-t border-line">
+          <span className="text-[10px] text-ink-subtlest font-semibold uppercase tracking-widest">Close as:</span>
           {[
             { id: 'rejected',  icon: XCircle, label: 'Rejected' },
             { id: 'withdrawn', icon: LogOut,  label: 'Withdrawn' },
@@ -136,12 +136,12 @@ export function Pipeline({ status, onChange }) {
                     : <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: active ? s.color : '#d1d5db' }} />
                   }
                 </div>
-                <span className={`text-[10px] font-semibold whitespace-nowrap ${active ? 'text-gray-800' : done ? 'text-gray-500' : 'text-gray-400 group-hover:text-gray-600'}`}>
+                <span className={`text-[10px] font-semibold whitespace-nowrap ${active ? 'text-ink' : done ? 'text-ink-subtle' : 'text-ink-subtlest group-hover:text-ink-subtle'}`}>
                   {s.label}
                 </span>
               </button>
               {!isLast && (
-                <div className={`h-0.5 flex-1 mx-1.5 mb-5 rounded-full transition-colors ${done ? 'bg-gray-300' : 'bg-gray-100'}`} />
+                <div className={`h-0.5 flex-1 mx-1.5 mb-5 rounded-full transition-colors ${done ? 'bg-gray-300' : 'bg-neutral-fill'}`} />
               )}
             </div>
           );
@@ -149,11 +149,11 @@ export function Pipeline({ status, onChange }) {
       </div>
 
       {/* Action row */}
-      <div className="flex items-center gap-2 flex-wrap pt-1 border-t border-gray-100">
+      <div className="flex items-center gap-2 flex-wrap pt-1 border-t border-line">
         {nextStatus && (
           <button
             onClick={() => onChange(nextId)}
-            className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-xl text-white shadow-sm transition-all hover:scale-[1.02]"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-md text-white shadow-sm transition-all hover:scale-[1.02]"
             style={{ backgroundColor: nextStatus.color }}
           >
             <ArrowRight size={13} />
@@ -162,7 +162,7 @@ export function Pipeline({ status, onChange }) {
         )}
 
         <div className="flex items-center gap-2 ml-auto">
-          <span className="text-[10px] text-gray-400 font-semibold uppercase tracking-widest">Mark as:</span>
+          <span className="text-[10px] text-ink-subtlest font-semibold uppercase tracking-widest">Mark as:</span>
           <button
             onClick={() => onChange(ON_HOLD)}
             className="inline-flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-full border font-semibold transition-all hover:scale-105"

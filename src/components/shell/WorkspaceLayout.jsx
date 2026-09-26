@@ -1,10 +1,10 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
-import { Menu } from 'lucide-react';
-import { ConfirmProvider, IconButton, ToastProvider } from '../ui/index.js';
+import { ConfirmProvider, ToastProvider } from '../ui/index.js';
 import { ErrorBoundary } from '../ErrorBoundary.jsx';
 import { useHotkeys } from '../../hooks/useHotkeys.js';
 import { Sidebar } from './Sidebar.jsx';
+import { TopBar } from './TopBar.jsx';
 import { WorkspaceContext } from './workspaceContext.js';
 import { useScrollMemory } from './useScrollMemory.js';
 
@@ -27,21 +27,12 @@ function writeCollapsed(collapsed) {
   }
 }
 
-/** A page without a PageHeader still needs the menu button on a phone: this bar carries it. */
-function FallbackTopBar({ onOpenNav }) {
-  return (
-    <div className="sticky top-0 z-20 flex h-12 shrink-0 items-center gap-2 border-b border-slate-200 bg-white/90 px-3 backdrop-blur-md md:hidden">
-      <IconButton icon={Menu} label="Open navigation" onClick={onOpenNav} tooltip={false} />
-      <span className="text-sm font-semibold tracking-tight text-slate-900">CPWT-CV</span>
-    </div>
-  );
-}
-
 /**
  * The workspace shell around the Job Tracker and Boards pages (a layout route: the page renders in
- * its <Outlet/>): the Sidebar, and a <main> that is the page's scroll box, filling the dynamic
- * viewport (h-dvh, so a phone's collapsing address bar never hides the bottom). A page that wants a
- * fixed height (the board view scrolls sideways itself) makes its root `flex-1 min-h-0`.
+ * its <Outlet/>): the TopBar across the window, and under it the Sidebar and a <main> that is the
+ * page's scroll box, filling the dynamic viewport (h-dvh, so a phone's collapsing address bar never
+ * hides the bottom). A page that wants a fixed height (the board view scrolls sideways itself)
+ * makes its root `flex-1 min-h-0`.
  *
  * Mounted once here for every page inside: the toast stack (useToast) and the confirm host
  * (useConfirm). `[` collapses / expands the sidebar. <main> opens every new page at its top and
@@ -50,13 +41,17 @@ function FallbackTopBar({ onOpenNav }) {
  * - `projects`: `[{ id, name, key, color, starred, updatedAt }]` for the sidebar's Projects group
  *   (AppRoutes maps them from the board store, shell/projects.js).
  * - `newProjectTo`: where "+ New project" goes ('/boards?create=1').
+ * - `renderCreate({ open, defaults, onClose })`: the create-issue dialog, which the top bar's
+ *   Create button, the `c` key and any page (`useWorkspace().openCreate(defaults)`) open.
+ * - `search(query)`: the top bar's quick search (utils/workspaceSearch over the boards).
  */
-export function WorkspaceLayout({ projects = [], newProjectTo }) {
+export function WorkspaceLayout({ projects = [], newProjectTo, renderCreate, search }) {
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(readCollapsed);
   // The drawer belongs to the page it was opened on: following a link closes it, no effect needed.
   const [drawerPath, setDrawerPath] = useState(null);
-  const [headers, setHeaders] = useState(0);
+  // The create dialog: null when closed, else the fields it opens with ({ boardId, columnId, … }).
+  const [createDefaults, setCreateDefaults] = useState(null);
   const mainRef = useRef(null);
   // A new page opens at the top, Back returns to where it was (J-40 / R2-073).
   const onMainScroll = useScrollMemory(mainRef);
@@ -70,20 +65,17 @@ export function WorkspaceLayout({ projects = [], newProjectTo }) {
 
   const openNav = useCallback(() => setDrawerPath(location.pathname), [location.pathname]);
   const closeNav = useCallback(() => setDrawerPath(null), []);
-  const registerHeader = useCallback(() => {
-    setHeaders((n) => n + 1);
-    return () => setHeaders((n) => n - 1);
-  }, []);
+  const openCreate = useCallback((defaults = {}) => setCreateDefaults(defaults), []);
   const workspace = useMemo(
-    () => ({ openNav, closeNav, registerHeader, projects }),
-    [openNav, closeNav, registerHeader, projects],
+    () => ({ openNav, closeNav, openCreate, projects }),
+    [openNav, closeNav, openCreate, projects],
   );
 
   return (
     <WorkspaceContext.Provider value={workspace}>
       <ToastProvider>
         <ConfirmProvider>
-          <div data-ui-motion="" className="flex h-dvh overflow-hidden bg-slate-50 text-slate-900">
+          <div data-ui-motion="" className="flex h-dvh flex-col overflow-hidden bg-white text-ink">
             <button
               type="button"
               onClick={() => mainRef.current?.focus()}
@@ -91,6 +83,8 @@ export function WorkspaceLayout({ projects = [], newProjectTo }) {
             >
               Skip to content
             </button>
+            <TopBar projects={projects} onCreate={() => openCreate({})} search={search} />
+            <div className="flex min-h-0 flex-1">
             <Sidebar
               projects={projects}
               collapsed={collapsed}
@@ -105,13 +99,14 @@ export function WorkspaceLayout({ projects = [], newProjectTo }) {
               onScroll={onMainScroll}
               className="relative flex min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto overscroll-contain focus:outline-none"
             >
-              {headers === 0 && <FallbackTopBar onOpenNav={openNav} />}
               {/* A page that crashes takes only itself down: the sidebar still leads elsewhere,
                   and the next path starts with a fresh boundary. */}
               <ErrorBoundary key={location.pathname}>
                 <Outlet />
               </ErrorBoundary>
             </main>
+            </div>
+            {renderCreate?.({ open: createDefaults !== null, defaults: createDefaults ?? {}, onClose: () => setCreateDefaults(null) })}
           </div>
         </ConfirmProvider>
       </ToastProvider>

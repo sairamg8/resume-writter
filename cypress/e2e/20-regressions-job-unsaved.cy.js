@@ -24,7 +24,10 @@ describe('regressions — a job storage refused, when another tab saves (R6-2)',
     cy.window().then((win) => {
       const original = win.Storage.prototype.setItem;
       cy.stub(win.Storage.prototype, 'setItem').callsFake(function setItem(key, value) {
-        if (key === JOBS_KEY && storage.full) throw new win.DOMException('The quota has been exceeded.', 'QuotaExceededError');
+        if (key === JOBS_KEY && storage.full) {
+          storage.refused = JSON.parse(value).jobs; // the list this tab holds, which it could not save
+          throw new win.DOMException('The quota has been exceeded.', 'QuotaExceededError');
+        }
         return original.call(this, key, value);
       });
       // The other tab's write fits (it adds little, or deletes), and fires a storage event here.
@@ -34,13 +37,15 @@ describe('regressions — a job storage refused, when another tab saves (R6-2)',
         win.dispatchEvent(new win.StorageEvent('storage', { key: JOBS_KEY, newValue: value }));
       };
     });
-    cy.contains('button', 'Add Job').click();
+    cy.contains('button', /^Add job$/).click(); // the page header's (the top bar's reads "Add job" twice, for phones)
     formField('Company').type('Stripe');
     cy.contains('button', /^Add Job$/).click();
     cy.contains('h1', 'Stripe').should('be.visible');
 
     cy.then(() => storage.otherTab((jobs) => [...jobs, job('job_other', 'Other Tab Inc', 'Engineer')]));
-    cy.contains('span', /^Apps$/).prev('span').should('have.text', '3'); // before: 2, the list taken as it was
+    // The list this tab now holds, as it saves it again at once (refused). Not cy.jobStore(): storage keeps the
+    // other tab's two. The job page's count of the list ("Apps") went with the tracker revamp.
+    cy.wrap(storage).its('refused').should('have.length', 3); // before: 2, the list taken as it was
     cy.contains('h1', 'Stripe').should('be.visible'); // before: "Job not found."
     cy.contains('[role="alert"]', 'not being saved').should('be.visible');
     goTo('#/jobs');

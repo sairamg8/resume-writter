@@ -121,6 +121,21 @@ export function experience(items, settings = {}) {
 
 // ── Rendering ────────────────────────────────────────────────────────────────
 
+/**
+ * Photo → Tone Grayscale draws its greyscale copy through a canvas (printableImage.js, R2-147); Node
+ * has none, and the photo prints in colour. After setup(), this hands the app @napi-rs/canvas (a
+ * devDependency, as tests/pdf/11-photo reads it) so the PDF prints the grey copy, as the browser does.
+ */
+export async function installPhotoCanvas() {
+  const canvas = await import('@napi-rs/canvas');
+  const { _setPhotoCanvasForTest } = await loadModule('/src/utils/printableImage.js');
+  _setPhotoCanvasForTest({
+    createCanvas: (w, h) => canvas.createCanvas(w, h),
+    // Its bytes, not the data URL: what @napi-rs/canvas reads for certain.
+    loadImage: (src) => canvas.loadImage(Buffer.from(src.slice(src.indexOf(',') + 1), 'base64')),
+  });
+}
+
 export async function render(r) {
   const blob = await ctx.pdf.renderResumePdf(r);
   return new Uint8Array(await blob.arrayBuffer());

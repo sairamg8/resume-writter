@@ -4,7 +4,9 @@
 // another starter's id, a blank that built a starter, a close that created a résumé, or a store
 // that ignored the starter passed. The real Dashboard is mounted over the fake DOM (as in
 // 80-dashboard-import-read-error) with a spy store; the store's own createResume is then run as
-// the Dashboard calls it (useAppStore, as 91-page-size-control runs it).
+// the Dashboard calls it (useAppStore, as 91-page-size-control runs it). Since R3-012 New Resume opens its
+// own page (/new, NewResume.jsx), the looks drawn with the user's résumé and these starters below them; the
+// page is mounted beside the Dashboard while the address is /new, and Back leaves it.
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { createElement } from 'react';
@@ -14,15 +16,17 @@ import { setup, teardown, resume, loadModule } from './harness.mjs';
 import { elements, mount, reactProps } from './fake-dom.mjs';
 
 let Dashboard;
+let NewResume;
 let STARTER_TEMPLATES;
 before(async () => {
   await setup();
   ({ Dashboard } = await loadModule('/src/pages/Dashboard.jsx'));
+  ({ NewResume } = await loadModule('/src/pages/NewResume.jsx'));
   ({ STARTER_TEMPLATES } = await loadModule('/src/utils/starterTemplates.js'));
 });
 after(teardown);
 
-const TITLE = 'Choose a Resume Starter';
+const TITLE = 'Or start blank, or from a role example';
 
 /** Lets React run what it scheduled — the router commits a navigation as a transition — for `ms`, or until `ready()`. */
 async function settle(ready = () => false, ms = 500) {
@@ -35,16 +39,22 @@ function Where({ seen }) {
   return null;
 }
 
+/** New Resume's page while the address is /new. */
+function NewPage({ store }) {
+  return useLocation().pathname === '/new' ? createElement(NewResume, { store }) : null;
+}
+
 function Page({ store, seen }) {
   const auth = { user: null, authLoading: false, cloudAvailable: false, signInWithGoogle: () => {}, signOut: () => {} };
   const sync = { syncStatus: 'idle', lastSynced: null, isOnline: true, heldResumes: [] };
-  return createElement(MemoryRouter, { initialEntries: ['/'] }, createElement(Dashboard, { store, auth, sync }), createElement(Where, { seen }));
+  return createElement(MemoryRouter, { initialEntries: ['/'] }, createElement(Dashboard, { store, auth, sync }),
+    createElement(NewPage, { store }), createElement(Where, { seen }));
 }
 
 /**
  * The Dashboard over a store that records createResume's arguments (`created`) and answers
- * 'resume_new': `open()` clicks New Resume, `picker()` is the open picker's box (or null),
- * `pick(h3)` clicks the card whose heading reads `h3`, `close()` clicks the picker's ×, `seen.path`.
+ * 'resume_new': `await open()` clicks New Resume, `picker()` is New Resume's starters (or null),
+ * `pick(h3)` clicks the card whose heading reads `h3`, `close()` clicks the page's Back, `seen.path`.
  */
 function dashboard() {
   const created = [];
@@ -59,19 +69,20 @@ function dashboard() {
   const all = () => [...elements(view.container)];
   const picker = () => {
     const h2 = all().find((el) => el.tagName === 'H2' && el.textContent.trim() === TITLE);
-    return h2 ? h2.parentNode.parentNode.parentNode.parentNode : null;
+    return h2 ? h2.parentNode.parentNode : null;
   };
-  const header = () => all().find((el) => el.tagName === 'H2' && el.textContent.trim() === TITLE).parentNode.parentNode.parentNode;
   const clickEl = (el) => view.act(() => reactProps(el).onClick());
   return {
     created,
     seen,
     picker,
-    open() {
+    async open() {
       const button = all().find((el) => el.tagName === 'BUTTON' && el.textContent.trim() === 'New Resume');
       assert.ok(button, 'New Resume');
       clickEl(button);
-      assert.ok(picker(), 'New Resume opens the starters');
+      await settle(() => picker());
+      assert.equal(seen.path, '/new', 'New Resume opens its page');
+      assert.ok(picker(), 'with the starters');
     },
     headings: () => [...elements(picker())].filter((el) => el.tagName === 'H3').map((el) => el.textContent.trim()),
     pick(text) {
@@ -81,8 +92,8 @@ function dashboard() {
       clickEl(el);
     },
     close() {
-      const button = [...elements(header())].find((el) => el.tagName === 'BUTTON');
-      assert.ok(button, 'the picker\'s ×');
+      const button = all().find((el) => el.tagName === 'BUTTON' && el.getAttribute('aria-label') === 'Back');
+      assert.ok(button, 'the page\'s Back');
       clickEl(button);
     },
     unmount: () => view.unmount(),
@@ -94,7 +105,7 @@ describe('New Resume → the starter picker (R2-157)', () => {
     const view = dashboard();
     try {
       assert.equal(view.picker(), null, 'closed until New Resume');
-      view.open();
+      await view.open();
       assert.deepEqual(view.headings(), ['Start from Scratch (Blank)', ...STARTER_TEMPLATES.map((t) => t.name)]);
       assert.deepEqual(view.created, [], 'opening creates nothing');
     } finally { await view.unmount(); }
@@ -105,11 +116,11 @@ describe('New Resume → the starter picker (R2-157)', () => {
     for (const starter of STARTER_TEMPLATES) {
       const view = dashboard();
       try {
-        view.open();
+        await view.open();
         view.pick(starter.name);
         assert.deepEqual(view.created, [['Untitled Resume', starter.id]], starter.id);
+        await settle(() => view.seen.path !== '/new');
         assert.equal(view.picker(), null, `${starter.id}: closed`);
-        await settle(() => view.seen.path !== '/');
         assert.equal(view.seen.path, '/resume/resume_new', `${starter.id}: the editor`);
       } finally { await view.unmount(); }
     }
@@ -118,23 +129,23 @@ describe('New Resume → the starter picker (R2-157)', () => {
   it('Start from Scratch creates a blank résumé — no starter — and opens it', async () => {
     const view = dashboard();
     try {
-      view.open();
+      await view.open();
       view.pick('Start from Scratch (Blank)');
       assert.deepEqual(view.created, [[]]);
+      await settle(() => view.seen.path !== '/new');
       assert.equal(view.picker(), null);
-      await settle(() => view.seen.path !== '/');
       assert.equal(view.seen.path, '/resume/resume_new');
     } finally { await view.unmount(); }
   });
 
-  it('the × closes it: nothing created, still on the dashboard', async () => {
+  it('Back leaves it: nothing created, back on the dashboard', async () => {
     const view = dashboard();
     try {
-      view.open();
+      await view.open();
       view.close();
+      await settle(() => view.seen.path !== '/new');
       assert.equal(view.picker(), null);
       assert.deepEqual(view.created, []);
-      await settle(() => view.seen.path !== '/', 100);
       assert.equal(view.seen.path, '/');
     } finally { await view.unmount(); }
   });

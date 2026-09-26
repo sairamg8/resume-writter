@@ -11,6 +11,10 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { setup, teardown, loadModule } from './harness.mjs';
 
+/** ui-dom-harness's assertSame, loaded with the fake DOM: assert.equal's report on a node inspects the whole DOM
+ * and React's fibers until the process runs out of memory (R3-005; 82-your-work-page, CI run 36092746492). */
+let assertSame;
+
 const KEY = 'cpwtcv_boards_v2';
 
 let Backlog;
@@ -64,30 +68,43 @@ const boardText = () => renderToStaticMarkup(routes('/boards/p1')).replace(/<[^>
 
 async function mountBacklog() {
   const dom = await import('./fake-dom.mjs');
+  const harness = await import('../unit/ui-dom-harness.mjs');
+  harness.patchFakeDom();
+  ({ assertSame } = harness);
   const view = dom.mount(() => routes('/boards/p1/backlog'), {});
-  const ev = { stopPropagation() {}, preventDefault() {}, key: '' };
-  const all = (node = view.container) => [...dom.elements(node)];
+  const ev = (extra = {}) => ({ stopPropagation() {}, preventDefault() {}, key: '', nativeEvent: {}, ...extra });
+  // The whole document: menus and dialogs open in portals at the end of <body>.
+  const all = (node = view.document.body) => [...dom.elements(node)];
+  const dialog = () => all().find((el) => el.getAttribute('role') === 'dialog');
   return {
     view,
-    text: () => view.container.textContent,
+    text: () => view.document.body.textContent,
     section: (id) => all().find((el) => el.getAttribute('data-section') === id),
+    dialog,
     button: (text, node) => all(node).find((el) => el.tagName === 'BUTTON' && el.textContent.trim() === text),
     byLabel: (label, node) => all(node).find((el) => el.getAttribute('aria-label') === label),
-    click: (el) => view.act(() => dom.reactProps(el).onClick(ev)),
-    change: (el, value) => view.act(() => dom.reactProps(el).onChange({ ...ev, target: { value } })),
-    key: (el, key) => view.act(() => dom.reactProps(el).onKeyDown({ ...ev, key })),
+    /** The control a <label> names (TextField, Select), under `node`. */
+    field: (label, node) => {
+      const tag = all(node).find((el) => el.tagName === 'LABEL' && el.textContent.replace('*', '').trim() === label);
+      return tag && all().find((el) => el.getAttribute('id') === tag.getAttribute('for'));
+    },
+    item: (label) => all().find((el) => String(el.getAttribute('role')).startsWith('menuitem') && el.textContent.trim() === label),
+    click: (el) => view.act(() => dom.reactProps(el).onClick(ev())),
+    change: (el, value) => view.act(() => dom.reactProps(el).onChange(ev({ target: { value } }))),
+    key: (el, key) => view.act(() => dom.reactProps(el).onKeyDown(ev({ key }))),
   };
 }
 
 const boardNow = () => store.snapshot().boards.find((b) => b.id === 'p1');
 const sprintOf = (id) => boardNow().issues.find((i) => i.id === id).sprintId;
+const tick = async () => { for (let n = 0; n < 5; n += 1) await new Promise((r) => { setImmediate(r); }); await new Promise((r) => { setTimeout(r, 0); }); };
 
-it('a Kanban project switches to sprints; a sprint is created, filled, started — and the board shows it', async () => {
+it('a Kanban project switches to sprints; a sprint is created, filled from row menus, started — and the board shows it', async () => {
   open([project()]);
   const page = await mountBacklog();
   try {
-    assert.match(page.text(), /This project is Kanban/);
-    assert.equal(page.button('Create sprint'), undefined, 'no sprints on a Kanban project');
+    assert.match(page.text(), /This project runs as Kanban/);
+    assertSame(page.button('Create sprint'), undefined, 'no sprints on a Kanban project');
     page.click(page.button('Use sprints'));
     assert.equal(boardNow().mode, 'scrum');
 
@@ -95,21 +112,25 @@ it('a Kanban project switches to sprints; a sprint is created, filled, started �
     const [sprint] = boardNow().sprints;
     assert.equal(sprint.name, 'HOME Sprint 1');
     assert.equal(sprint.state, 'future');
+    assert.ok(page.button('Start sprint', page.section(sprint.id)).getAttribute('disabled') !== null, 'an empty sprint cannot start');
 
-    // Two issues from the backlog into the sprint.
-    page.change(page.byLabel('Move HOME-1 to'), sprint.id);
-    page.change(page.byLabel('Move HOME-2 to'), sprint.id);
+    // Two issues from the backlog into the sprint, each from its row's menu.
+    for (const key of ['HOME-1', 'HOME-2']) {
+      page.click(page.byLabel(`${key} actions`));
+      page.click(page.item('Move to'));
+      page.click(page.item('HOME Sprint 1'));
+    }
     assert.deepEqual([sprintOf('i1'), sprintOf('i2'), sprintOf('i3')], [sprint.id, sprint.id, null]);
     assert.match(page.section(sprint.id).textContent, /Fix the tap.*Paint the fence/);
-    assert.match(page.section(sprint.id).textContent, /2 issues · 0 done/);
+    assert.match(page.section(sprint.id).textContent, /\(2 issues\)/);
     assert.doesNotMatch(page.section('backlog').textContent, /Fix the tap/);
 
     // Start it: today and two weeks on by default, a new name and a goal.
-    page.click(page.button('Start sprint'));
-    const form = page.section(sprint.id);
-    assert.equal(page.byLabel('Start date', form).getAttribute('value') ?? page.byLabel('Start date', form).value, model.todayISO());
-    page.change(page.byLabel('Sprint name', form), 'Fence week');
-    page.change(page.byLabel('Sprint goal', form), 'The fence is done');
+    page.click(page.button('Start sprint', page.section(sprint.id)));
+    const form = page.dialog();
+    assert.equal(page.field('Start date', form).value ?? page.field('Start date', form).getAttribute('value'), model.todayISO());
+    page.change(page.field('Sprint name', form), 'Fence week');
+    page.change(page.field('Sprint goal', form), 'The fence is done');
     page.click(page.button('Start', form));
     const started = boardNow().sprints[0];
     assert.equal(started.state, 'active');
@@ -117,11 +138,11 @@ it('a Kanban project switches to sprints; a sprint is created, filled, started �
     assert.equal(started.goal, 'The fence is done');
     assert.equal(started.startDate, model.todayISO());
     assert.equal(started.endDate, model.addDays(model.todayISO(), 14));
-    assert.match(page.text(), /Active/);
+    assert.match(page.section(sprint.id).textContent, /Active/);
 
-    // The board now shows the sprint and only its issues; a card added there joins it.
+    // The board now shows the sprint and only its issues.
     const t = boardText();
-    assert.match(t, /Sprint: Fence week/);
+    assert.match(t, /Fence week · ends/);
     assert.match(t, /Fix the tap/);
     assert.doesNotMatch(t, /Buy nails/);
   } finally {
@@ -134,21 +155,21 @@ it('one sprint at a time; completing it sends its open issues to the backlog or 
     { id: 's1', name: 'Sprint 1', goal: '', startDate: '2026-09-21', endDate: '2026-10-05', state: 'active', completedAt: null },
     { id: 's2', name: 'Sprint 2', goal: '', startDate: '', endDate: '', state: 'future', completedAt: null },
   ];
-  const issues = [issue('i1', 1, 'Open one', 'c1', { sprintId: 's1' }), issue('i2', 2, 'Done one', 'c3', { sprintId: 's1', resolvedAt: 1 }), issue('i3', 3, 'Later', 'c1')];
+  const issues = [issue('i1', 1, 'Open one', 'c1', { sprintId: 's1' }), issue('i2', 2, 'Done one', 'c3', { sprintId: 's1', resolvedAt: 1 }), issue('i3', 3, 'Later', 'c1', { sprintId: 's2' })];
   open([project({ mode: 'scrum', sprints, issues })]);
   const page = await mountBacklog();
   try {
     assert.ok(page.button('Start sprint', page.section('s2')).getAttribute('disabled') !== null, 'no second active sprint');
-    page.click(page.button('Complete sprint'));
-    const section = page.section('s1');
-    assert.match(section.textContent, /1 open issue move to/);
-    page.change(page.byLabel('Move open issues to', section), 's2');
-    page.click(page.button('Complete', section));
+    page.click(page.button('Complete sprint', page.section('s1')));
+    const dialog = page.dialog();
+    assert.match(dialog.textContent, /1 completed issue and 1 open issue/);
+    page.change(page.field('Move open issues to', dialog), 's2');
+    page.click(page.button('Complete sprint', dialog));
     const b = boardNow();
     assert.equal(b.sprints.find((s) => s.id === 's1').state, 'closed');
     assert.equal(sprintOf('i1'), 's2', 'open: on to the next sprint');
     assert.equal(sprintOf('i2'), 's1', 'done: keeps the closed sprint as its record');
-    assert.equal(page.section('s1'), undefined, 'a closed sprint leaves the backlog page');
+    assertSame(page.section('s1'), undefined, 'a closed sprint leaves the backlog page');
     // Now the next one can start.
     assert.equal(page.button('Start sprint', page.section('s2')).getAttribute('disabled'), null);
   } finally {
@@ -156,27 +177,31 @@ it('one sprint at a time; completing it sends its open issues to the backlog or 
   }
 });
 
-it('a sprint is renamed and deleted (its issues go to the backlog); an issue is added to a section', async () => {
+it('a sprint is renamed in place and deleted (its issues go to the backlog); issues are created in a section', async () => {
   const sprints = [{ id: 's2', name: 'Sprint 2', goal: '', startDate: '', endDate: '', state: 'future', completedAt: null }];
   open([project({ mode: 'scrum', sprints, issues: [issue('i1', 1, 'Planned', 'c1', { sprintId: 's2' })] })]);
   const page = await mountBacklog();
-  globalThis.confirm = () => true;
+  page.view.window.confirm = () => true;
   try {
-    page.click(page.button('Sprint 2'));
+    page.click(page.button('Sprint 2, edit Sprint name'));
     page.change(page.byLabel('Sprint name', page.section('s2')), 'Garden sprint');
     page.key(page.byLabel('Sprint name', page.section('s2')), 'Enter');
     assert.equal(boardNow().sprints[0].name, 'Garden sprint');
 
-    page.change(page.byLabel('New issue', page.section('s2')), 'Weed the beds');
-    page.click(page.button('Add', page.section('s2')));
-    const added = boardNow().issues.find((i) => i.title === 'Weed the beds');
-    assert.equal(added.sprintId, 's2');
-
-    page.change(page.byLabel('New issue', page.section('backlog')), 'Mow the lawn');
-    page.key(page.byLabel('New issue', page.section('backlog')), 'Enter');
+    const create = (sectionId, title) => {
+      page.click(page.button('Create issue', page.section(sectionId)));
+      const box = page.byLabel('Summary of the new issue', page.section(sectionId));
+      page.change(box, title);
+      page.key(box, 'Enter');
+    };
+    create('s2', 'Weed the beds');
+    assert.equal(boardNow().issues.find((i) => i.title === 'Weed the beds').sprintId, 's2');
+    create('backlog', 'Mow the lawn');
     assert.equal(boardNow().issues.find((i) => i.title === 'Mow the lawn').sprintId, null);
 
-    page.click(page.byLabel('Delete sprint', page.section('s2')));
+    page.click(page.byLabel('Garden sprint actions'));
+    page.click(page.item('Delete sprint'));
+    await tick();
     assert.deepEqual(boardNow().sprints, []);
     assert.deepEqual(boardNow().issues.map((i) => i.sprintId), [null, null, null]);
     assert.match(page.section('backlog').textContent, /Planned.*Weed the beds.*Mow the lawn/);
@@ -189,37 +214,37 @@ it('the board links to its backlog, and a scrum board with no sprint says where 
   open([project({ mode: 'scrum' })]);
   const t = boardText();
   assert.match(t, /Backlog/);
-  assert.match(t, /No sprint is active, so every card is shown. Start one from the backlog./);
+  assert.match(t, /No sprint is active, so every issue is shown. Plan one in the backlog./);
 });
 
-it('epics: listed on their own with their progress, never in a sprint or the backlog; added, renamed, deleted (children stay)', async () => {
+it('epics: in the Epic panel with their progress, never in the backlog list; a click filters to its issues; new ones are made there', async () => {
   const issues = [
     issue('e1', 1, 'Garden makeover', 'c1', { type: 'epic' }),
     issue('i2', 2, 'Dig the beds', 'c3', { epicId: 'e1', resolvedAt: 1 }),
     issue('i3', 3, 'Plant roses', 'c1', { epicId: 'e1' }),
+    issue('i4', 4, 'Fix the tap', 'c1'),
   ];
-  open([project({ mode: 'scrum', issues, nextNumber: 4 })]);
+  open([project({ mode: 'scrum', issues, nextNumber: 5 })]);
   const page = await mountBacklog();
-  globalThis.confirm = () => true;
   try {
-    const epics = () => page.section('epics');
-    assert.match(epics().textContent, /HOME-1Garden makeover1\/2 done/);
-    assert.doesNotMatch(page.section('backlog').textContent, /Garden makeover/);
+    assertSame(page.byLabel('HOME-1 Garden makeover', page.section('backlog')), undefined, 'the epic has no row of its own');
+    assert.match(page.section('backlog').textContent, /Plant roses.*Garden makeover.*Fix the tap/, 'its child names it in a lozenge');
+    page.click(page.button('Epic panel'));
+    const panel = () => page.byLabel('Epics');
+    assert.match(panel().textContent, /Garden makeover.*HOME-1.*1 of 2 issues done/);
+
+    page.click(page.button('Garden makeover', panel()));
     assert.match(page.section('backlog').textContent, /Plant roses/);
+    assert.doesNotMatch(page.section('backlog').textContent, /Fix the tap/, 'only the epic\'s issues');
+    page.click(page.button('Garden makeover', panel()));
+    assert.match(page.section('backlog').textContent, /Fix the tap/, 'a second click shows all again');
 
-    page.change(page.byLabel('New epic', epics()), 'Kitchen refit');
-    page.click(page.button('Add', epics()));
+    page.click(page.button('Create epic', panel()));
+    const box = page.byLabel('Summary of the new issue', panel());
+    page.change(box, 'Kitchen refit');
+    page.key(box, 'Enter');
     assert.equal(boardNow().issues.find((i) => i.title === 'Kitchen refit')?.type, 'epic');
-    assert.doesNotMatch(page.section('backlog').textContent, /Kitchen refit/);
-
-    page.click(page.button('Garden makeover', epics()));
-    page.change(page.byLabel('Epic title', epics()), 'Garden redo');
-    page.key(page.byLabel('Epic title', epics()), 'Enter');
-    assert.equal(boardNow().issues.find((i) => i.id === 'e1').title, 'Garden redo');
-
-    page.click(page.byLabel('Delete epic', epics()));
-    assert.ok(!boardNow().issues.some((i) => i.id === 'e1'));
-    assert.deepEqual(boardNow().issues.filter((i) => ['i2', 'i3'].includes(i.id)).map((i) => i.epicId), [null, null], 'its issues stay, in no epic');
+    assertSame(page.byLabel('HOME-5 Kitchen refit', page.section('backlog')), undefined, 'HOME-5 has no row in the backlog');
   } finally {
     await page.view.unmount();
   }
