@@ -764,9 +764,12 @@ export function resumeFromText(input) {
   // Word résumé with some sections styled as headings and the others typed in bold capitals).
   const headingAt = new Map();
   let seen = false;
-  // In a file that marks its headings, an unmarked one in capitals must not be inside an entry the
-  // file marks (a job's "KEY ACHIEVEMENTS" is its own), and be of a type the file does not mark itself.
+  // In a file that marks its headings, an unmarked one in capitals must be of a type the file does not
+  // mark itself; and inside an entry the file marks, not a title an entry uses for a part of its own (a
+  // job's "KEY ACHIEVEMENTS", "PROJECTS", "SKILLS"). Any other title there ("AWARDS", "EDUCATION" after
+  // the last job) starts its section: it stayed inside the last job (R4-LO-04).
   const marked = new Set(lines.filter((l, i) => i > nameAt && l.hint === 'heading').map((l) => headingType(l.text.replace(/\s*:$/, '').trim())));
+  const ownPart = (text) => ['skills', 'projects'].includes(headingType(text)) || /^(?:key)?achievements$/.test(headingKey(text));
   let inEntry = false;
   lines.forEach((l, i) => {
     if (i <= nameAt) return;
@@ -777,14 +780,14 @@ export function resumeFromText(input) {
     let type = null;
     if (hinted) {
       if (l.hint === 'heading') type = headingType(text) || 'custom';
-      else if (!l.hint && plain && !inEntry && (isCaps(text) || l.ruled) && !marked.has(headingType(text))) type = headingType(text);
+      else if (!l.hint && plain && !(inEntry && ownPart(text)) && (isCaps(text) || l.ruled) && !marked.has(headingType(text))) type = headingType(text);
     } else if (plain) {
       const known = headingType(text);
       if (known && (l.ruled || isCaps(text) || l.gap || l.text.endsWith(':') || i === nameAt + 1 || headingAt.size === 0)) type = known;
       else if (l.ruled && !/\d/.test(text)) type = 'custom';
       else if (seen && isCaps(text) && !/\d/.test(text) && text.replace(/[^\p{L}]/gu, '').length >= 4 && text.split(/\s+/).length <= 5 && !BARE_LABEL.test(text)) type = 'custom';
     }
-    if (type) { headingAt.set(i, { type, title: text }); seen = true; }
+    if (type) { headingAt.set(i, { type, title: text }); seen = true; inEntry = false; }
   });
 
   const firstHeading = [...headingAt.keys()][0] ?? lines.length;
