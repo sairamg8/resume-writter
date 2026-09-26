@@ -16,23 +16,44 @@ describe('New Resume → role starters', () => {
   beforeEach(() => {
     cy.visitDashboard(buildTestState('classic'));
     cy.contains('button', 'New Resume').click();
-    cy.contains('h2', 'Choose a Resume Starter').should('be.visible');
+    // New Resume's page (R3-012): the looks, then blank and the role starters below them.
+    cy.location('hash').should('eq', '#/new');
+    cy.contains('h2', 'Or start blank, or from a role example').should('be.visible');
   });
 
-  it('offers a blank résumé and every role starter (STARTER_TEMPLATES); closing it creates nothing', () => {
-    const picker = () => cy.contains('h2', 'Choose a Resume Starter').parents('.rounded-2xl').first();
+  it('offers a blank résumé and every role starter (STARTER_TEMPLATES); leaving the page creates nothing', () => {
+    const picker = () => cy.get('[data-testid="starter-chooser"]');
     // One button per starter, and the blank one: a starter added to the list is offered too.
     picker().find('button h3').should('have.length', STARTER_TEMPLATES.length + 1);
     cy.contains('button', 'Start from Scratch (Blank)').should('be.visible');
     STARTER_TEMPLATES.forEach(({ name }) => {
       cy.contains('button h3', name).scrollIntoView().should('be.visible');
     });
-    picker().find('.border-b button').click();
-    cy.contains('h2', 'Choose a Resume Starter').should('not.exist');
-    // Still the dashboard, with its one résumé: the page first, as a store read straight after the
-    // close can be one taken before a write lands.
+    cy.get('button[aria-label="Back"]').click();
+    cy.location('hash').should('eq', '#/');
+    cy.contains('h1', 'Pick a look to start').should('not.exist');
+    // Still the dashboard, with its one résumé: the page first, as a store read straight after
+    // leaving can be one taken before a write lands.
     cy.get(CARD).should('have.length', 1).and('contain.text', 'Test Classic');
     cy.store().its('resumes').should('have.length', 1);
+  });
+
+  // The owner's asks of 2026-09-24 (R3-011, R3-012): a look starts a résumé with the user's own details.
+  it('a look starts a new résumé with the user\'s own details on it, in the editor', () => {
+    cy.store().then((s) => {
+      const mine = s.resumes[0];
+      cy.get('[data-testid="new-template-modern"]').click();
+      cy.location('hash').should('match', /^#\/resume\/resume_[\w-]+$/);
+      cy.get('input[placeholder="John Doe"]').should('have.value', mine.personal.name);
+      cy.store().should((after) => {
+        expect(after.resumes).to.have.length(2);
+        const r = active(after);
+        expect(r.id).not.to.eq(mine.id);
+        expect(r.name).to.eq('Untitled Resume');
+        expect(r.template).to.eq('modern');
+        expect(r.personal).to.deep.eq(mine.personal);
+      });
+    });
   });
 
   it('a starter opens as a new, filled-in résumé in the editor, printed in the PDF', () => {

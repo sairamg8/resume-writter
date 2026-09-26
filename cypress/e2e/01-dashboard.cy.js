@@ -17,10 +17,12 @@ describe('dashboard — first visit', () => {
     cy.contains('Your Name').should('be.visible'); // career panel placeholder
   });
 
-  // Create Resume and New Resume ask first: a blank résumé or one of the role starters.
+  // Create Resume and New Resume open New Resume's page (R3-012): the looks, then a blank résumé or
+  // one of the role starters below them.
   it('Create Resume → Start from Scratch opens a blank résumé in the editor', () => {
     cy.contains('button', 'Create Resume').click();
-    cy.contains('h2', 'Choose a Resume Starter').should('be.visible');
+    cy.location('hash').should('eq', '#/new');
+    cy.contains('h1', 'Pick a look to start').should('be.visible');
     cy.contains('button', 'Start from Scratch (Blank)').click();
     cy.location('hash').should('match', /^#\/resume\/resume_[\w-]+$/);
     cy.contains('button', 'Export').should('be.visible');

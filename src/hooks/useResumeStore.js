@@ -13,6 +13,7 @@ import { backupRaw, notSavedReason, pendingRecovery, readSavedList, rememberReco
 import { savedDeletions } from '@/utils/localDeletions';
 import { isOriginal, withKeep } from '@/utils/demoSeed';
 import { isLetter, letterFrom, LETTER_KIND, LETTER_NAME } from '@/utils/letters';
+import { resumeFrom } from '@/utils/newResume';
 import { useSmallerPhotos } from '@/hooks/useSmallerPhotos';
 import { keepUnsaved } from '@/utils/unsavedJobs';
 import { coalescedWriter } from '@/utils/coalescedWrite';
@@ -239,15 +240,21 @@ export function useAppStore() {
   /**
    * A new résumé: blank, or from the role starter `starterId`. `look`: a card of the picker's
    * (utils/templatePicker.js) picked beside the starters (D1) — the résumé starts on that template or
-   * design instead of the starter's own, as picking it in Design would put it there.
+   * design instead of the starter's own, as picking it in Design would put it there. `fromId`: a look
+   * picked on /new (R3-011) — the résumé is a copy of the user's own résumé `fromId` (resumeFrom) on that
+   * look; one that is gone, or a letter, gives a blank résumé as before.
    */
-  function createResume(name = 'Untitled Resume', starterId = null, look = null) {
+  function createResume(name = 'Untitled Resume', starterId = null, look = null, fromId = null) {
     const id = newId('resume');
-    const built = starterId
-      ? buildResumeFromStarter(starterId, id)
-      : createBlankResume({ id, name });
-    const newResume = look?.engine ? withLook(built, look) : built;
-    setAppState(prev => ({ ...prev, resumes: [...prev.resumes, newResume], activeId: id }));
+    const now = Date.now();
+    setAppState(prev => {
+      const source = !starterId && fromId ? prev.resumes.find(r => r.id === fromId && !isLetter(r)) : null;
+      const built = starterId
+        ? buildResumeFromStarter(starterId, id)
+        : source ? resumeFrom(source, { id, now, name }) : createBlankResume({ id, name });
+      const newResume = look?.engine ? withLook(built, look) : built;
+      return { ...prev, resumes: [...prev.resumes, newResume], activeId: id };
+    });
     return id;
   }
 

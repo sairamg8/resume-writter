@@ -147,7 +147,10 @@ describe('AppRoutes: which pages sit inside the workspace shell', () => {
       assert.ok(inShell(path), `${path} is not inside the workspace shell`);
       assert.notEqual(matchRoutes(routes, path).at(-1).route.path, '*', `${path} falls through to the catch-all`);
     }
-    for (const path of ['/', '/resume/r1', '/terms', '/privacy']) assert.ok(!inShell(path), `${path} should stay outside the shell`);
+    for (const path of ['/', '/new', '/resume/r1', '/terms', '/privacy']) {
+      assert.ok(!inShell(path), `${path} should stay outside the shell`);
+      assert.notEqual(matchRoutes(routes, path).at(-1).route.path, '*', `${path} falls through to the catch-all`);
+    }
   });
 });
 

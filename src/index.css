@@ -12,6 +12,34 @@
   box-sizing: border-box;
 }
 
+/* A hand over everything clickable (the owner's ask, R3-009). Tailwind v4's preflight leaves a button
+   the browser's arrow, and the app wrote cursor-pointer on only some controls. In the base layer, so a
+   control's own cursor class (cursor-grab, cursor-default on a disabled item, disabled:cursor-not-allowed)
+   still wins; a disabled control keeps the arrow. A clickable element that is none of these writes
+   cursor-pointer itself (tests/unit/cursor-pointer.unit.mjs checks every onClick in src/). */
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  [role="link"],
+  [role="tab"],
+  [role="menuitem"]:not([aria-disabled="true"]),
+  [role="option"]:not([aria-disabled="true"]),
+  [role="switch"],
+  a[href],
+  summary,
+  select:not(:disabled),
+  input[type="checkbox"]:not(:disabled),
+  input[type="radio"]:not(:disabled),
+  input[type="file"]:not(:disabled),
+  input[type="color"]:not(:disabled),
+  input[type="range"]:not(:disabled),
+  label:has(> input[type="checkbox"]:not(:disabled)),
+  label:has(> input[type="radio"]:not(:disabled)),
+  ::file-selector-button {
+    cursor: pointer;
+  }
+}
+
 html {
   height: 100%;
 }

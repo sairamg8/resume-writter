@@ -13,6 +13,8 @@ import { loadPage } from '@/utils/lazyPage';
 // page's file gone after a deploy reloads the tab once (lazyPage.js).
 const page = (load, name) => lazy(() => loadPage(load, name));
 const Editor        = page(() => import('@/pages/Editor'), 'Editor');
+// New Resume's page of looks (R3-012): the picker's cards and page pictures load with it.
+const NewResume     = page(() => import('@/pages/NewResume'), 'NewResume');
 const JobTracker    = page(() => import('@/pages/JobTracker'), 'JobTracker');
 const JobDetail     = page(() => import('@/pages/JobDetail'), 'JobDetail');
 const JobForm       = page(() => import('@/pages/JobForm'), 'JobForm');
@@ -69,6 +71,8 @@ export function AppRoutes({ store, auth, sync, seed }) {
       <Routes>
         <Route path="/"           element={<Dashboard store={store} auth={auth} sync={sync} originalsWaiting={seed.waiting} />} />
         <Route path="/resume/:id" element={<Editor    store={store} auth={auth} sync={sync} />} />
+        {/* New Resume: every look drawn with the user's own résumé (R3-012). */}
+        <Route path="/new"        element={<NewResume store={store} />} />
         <Route element={<WorkspaceRoute />}>
           <Route path="/jobs"                element={<JobTracker store={store} />} />
           <Route path="/jobs/new"            element={<JobForm    store={store} />} />

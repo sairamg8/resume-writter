@@ -54,6 +54,7 @@ export function Dialog({
   const { mounted, state } = usePresence(open, 150);
   const panelRef = useRef(null);
   const pressStartedOnOverlay = useRef(false);
+  const releasedInside = useRef(false);
   const titleId = useId();
   const descriptionId = useId();
   const onTrapKeyDown = useFocusTrap(panelRef, open && mounted, { initialFocusRef });
@@ -70,11 +71,17 @@ export function Dialog({
     }
   };
   // Closes only when the press both starts and ends on the overlay: selecting text inside and
-  // releasing outside must not throw the dialog away.
-  const onOverlayPointerDown = (event) => { pressStartedOnOverlay.current = event.target === event.currentTarget; };
+  // releasing outside must not throw the dialog away, nor a drag begun outside and released inside
+  // (the browser sends its click to the overlay, the two ends' common ancestor).
+  const onOverlayPointerDown = (event) => {
+    pressStartedOnOverlay.current = event.target === event.currentTarget;
+    releasedInside.current = false;
+  };
+  const onOverlayPointerUp = (event) => { releasedInside.current = event.target !== event.currentTarget; };
   const onOverlayClick = (event) => {
-    if (closeOnOverlay && pressStartedOnOverlay.current && event.target === event.currentTarget) close('overlay');
+    if (closeOnOverlay && pressStartedOnOverlay.current && !releasedInside.current && event.target === event.currentTarget) close('overlay');
     pressStartedOnOverlay.current = false;
+    releasedInside.current = false;
   };
 
   const closing = state === 'closed';
@@ -93,6 +100,7 @@ export function Dialog({
             large && 'max-sm:p-0',
           )}
           onPointerDown={onOverlayPointerDown}
+          onPointerUp={onOverlayPointerUp}
           onClick={onOverlayClick}
         >
           <div

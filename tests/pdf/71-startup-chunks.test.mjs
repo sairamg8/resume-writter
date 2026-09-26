@@ -96,7 +96,7 @@ describe('the start-up path loads no PDF or Word library (R2-014)', () => {
 // downloaded and parsed before its first paint, and Firebase came as one 532 kB chunk. Each page but
 // the dashboard and the legal pages now loads when its route opens, and no start-up chunk is over the
 // build's 500 kB warning.
-const PAGES = /[\\/]src[\\/]pages[\\/](Editor|JobTracker|JobDetail|JobForm|Boards|Board|Backlog|BoardSettings|YourWork|ProjectSummary|ProjectList|ProjectCalendar|ProjectTimeline|PublicResume)\.jsx$/;
+const PAGES = /[\\/]src[\\/]pages[\\/](Editor|NewResume|JobTracker|JobDetail|JobForm|Boards|Board|Backlog|BoardSettings|YourWork|ProjectSummary|ProjectList|ProjectCalendar|ProjectTimeline|PublicResume)\.jsx$/;
 const KB = 1024;
 
 describe('the dashboard loads light: the other pages are split from the start-up path (R2-142, PERF-5)', () => {

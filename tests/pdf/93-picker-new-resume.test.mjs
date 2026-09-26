@@ -1,8 +1,9 @@
-// Dashboard → New Resume: the content and the look in one step (R2-139, D1). The role starters were text
+// New Resume's starters: the content and the look in one step (R2-139, D1). The role starters were text
 // only, and each quietly put the new résumé on a template (Classic, Modern, Executive…) it never named.
 // Now each starter says its template, and a row of looks above them — every card of the Design panel's
 // picker, pictures included — puts the new résumé on another template or design; left on "Each starter's
-// own", a pick creates exactly what it did before. The store then makes the résumé on that look.
+// own", a pick creates exactly what it did before. The store then makes the résumé on that look. Since
+// R3-012 they sit on New Resume's page (/new), below the looks drawn with the user's own résumé.
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { createElement } from 'react';
@@ -11,22 +12,20 @@ import { MemoryRouter } from 'react-router-dom';
 import { setup, teardown, loadModule } from './harness.mjs';
 import { elements, mount, reactProps } from './fake-dom.mjs';
 
-let Dashboard;
+let NewResume;
 let STARTER_TEMPLATES;
 before(async () => {
   await setup();
-  ({ Dashboard } = await loadModule('/src/pages/Dashboard.jsx'));
+  ({ NewResume } = await loadModule('/src/pages/NewResume.jsx'));
   ({ STARTER_TEMPLATES } = await loadModule('/src/utils/starterTemplates.js'));
 });
 after(teardown);
 
 function Page({ store }) {
-  const auth = { user: null, authLoading: false, cloudAvailable: false, signInWithGoogle: () => {}, signOut: () => {} };
-  const sync = { syncStatus: 'idle', lastSynced: null, isOnline: true, heldResumes: [] };
-  return createElement(MemoryRouter, { initialEntries: ['/'] }, createElement(Dashboard, { store, auth, sync }));
+  return createElement(MemoryRouter, { initialEntries: ['/new'] }, createElement(NewResume, { store }));
 }
 
-/** The Dashboard with New Resume open, over a store that records createResume's arguments. */
+/** New Resume's page (/new) with no résumé yet, over a store that records createResume's arguments. */
 function newResume() {
   const created = [];
   const store = {
@@ -38,7 +37,6 @@ function newResume() {
   const view = mount(Page, { store });
   const all = () => [...elements(view.container)];
   const click = (el) => view.act(() => reactProps(el).onClick());
-  click(all().find((el) => el.tagName === 'BUTTON' && el.textContent.trim() === 'New Resume'));
   const byTestid = (id) => all().find((el) => el.getAttribute('data-testid') === id);
   const card = (h3) => {
     let el = all().find((x) => x.tagName === 'H3' && x.textContent.trim() === h3);
