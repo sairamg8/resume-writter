@@ -215,6 +215,23 @@ test('a column that becomes done resolves its issues as a move to Done does: wha
   assert.equal(ops.updateColumn(b, 'rev', { category: 'done' }, ctx), b, 'no change, nothing saved');
 });
 
+test('an unnamed sprint takes the next free number, never a name a sprint has (R4-BRD-11)', () => {
+  let b = boardWith([], { mode: 'scrum' });
+  b = ops.addSprint(b, { id: 's1' });
+  b = ops.addSprint(b, { id: 's2' });
+  b = ops.deleteSprint(b, 's1', ctx);
+  b = ops.addSprint(b, { id: 's3' });
+  assert.deepEqual(b.sprints.map((s) => s.name), ['LIFE Sprint 2', 'LIFE Sprint 3']);
+  b = ops.addSprint(b, { id: 's4', name: 'life sprint 4' });
+  b = ops.addSprint(b, { id: 's5', name: 'Holiday' });
+  b = ops.addSprint(b, { id: 's6' });
+  assert.equal(b.sprints.at(-1).name, 'LIFE Sprint 5', 'past every number taken, case aside');
+  b = ops.deleteSprint(b, 's3', ctx);
+  assert.equal(ops.addSprint(b, { id: 's7' }).sprints.at(-1).name, 'LIFE Sprint 6', 'one past the highest number left');
+  const renamed = ops.addSprint(boardWith([], { mode: 'scrum', sprints: [{ id: 'x', name: 'Alpha', goal: '', startDate: '', endDate: '', state: 'future', completedAt: null }] }), { id: 'y' });
+  assert.equal(renamed.sprints.at(-1).name, 'LIFE Sprint 2', 'a sprint of another name still counts');
+});
+
 test('deleteColumn: its issues move to the target (never lost); no target, no delete; never the last column', () => {
   const b = boardWith(['A', 'B']);
   assert.equal(ops.deleteColumn(b, 'todo'), b, 'holds issues, no target');

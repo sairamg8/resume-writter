@@ -184,11 +184,22 @@ export function deleteComment(board, issueId, commentId, ctx = {}) {
 
 const dateOr = (v, fallback) => (isLocalISO(v) ? v : fallback);
 
-/** Add a future sprint; unnamed, it is "<KEY> Sprint <n>". */
+/**
+ * The name of the next unnamed sprint: "<KEY> Sprint <n>", n one past the sprint count and past the
+ * highest n a sprint's name already has (R4-BRD-11: from the count alone, a sprint deleted made the
+ * next one repeat the last one's name).
+ */
+function nextSprintName(board) {
+  const pattern = new RegExp(`^${board.key.replace(/[^A-Za-z0-9]/g, '\\$&')} Sprint (\\d+)$`, 'i');
+  const numbers = board.sprints.map((s) => Number(pattern.exec(s.name)?.[1] ?? 0));
+  return `${board.key} Sprint ${Math.max(board.sprints.length, ...numbers) + 1}`;
+}
+
+/** Add a future sprint; unnamed, it is "<KEY> Sprint <n>" (nextSprintName). */
 export function addSprint(board, { id = newId('sprint'), name, goal, startDate, endDate } = {}) {
   const sprint = {
     id,
-    name: cleanTitle(name) || `${board.key} Sprint ${board.sprints.length + 1}`,
+    name: cleanTitle(name) || nextSprintName(board),
     goal: text(goal),
     startDate: dateOr(startDate, ''),
     endDate: dateOr(endDate, ''),
