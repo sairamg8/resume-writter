@@ -65,8 +65,7 @@ describe('editor — content', () => {
 
   it('a new experience entry, once filled in, shows in the preview', () => {
     sectionCard('Professional Experience').within(() => {
-      cy.contains('button', 'Add Experience').click();
-      cy.contains('span', 'New Entry').click();
+      cy.contains('button', 'Add Experience').click(); // the new entry opens with its fields (R4-ED-07)
       cy.get('input[placeholder="Company Name"]').last().type('Globex');
       cy.get('input[placeholder="Software Engineer"]').last().type('Platform Lead');
     });
