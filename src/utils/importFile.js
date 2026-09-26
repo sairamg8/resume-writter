@@ -519,7 +519,11 @@ function decodeText(bytes) {
   try {
     return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
   } catch {
-    return new TextDecoder('windows-1252').decode(bytes);
+    // UTF-8 with a stray bad byte (a paste, a cut-off file) stays UTF-8, its one bad byte a "�": read as
+    // Windows-1252, every "–" and "é" in it would turn to "â€“". A file with no UTF-8 letter at all is
+    // Windows-1252.
+    const utf8 = new TextDecoder('utf-8').decode(bytes);
+    return /[\u0080-\ufffc\ufffe\uffff]/.test(utf8) ? utf8 : new TextDecoder('windows-1252').decode(bytes);
   }
 }
 
