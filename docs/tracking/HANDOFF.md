@@ -1,5 +1,17 @@
 # Session Handoff — Resume Here
 
+## ⏩ COLD START HERE — 2026-09-26 ~15:00 IST (cloud coordinator session_013BXDvmy7T9XQ7CsZWdofVX)
+
+**Work branch now `claude/awesome-cerf-t3sh88`** (master `843dded` + the six reviewed fixes of `fixes3/`: R2-148-c
+`50b9566`, R2-148-b `9af536c`, RES-R2-140-a `746afa7`, RES-R2-140-c `00b6d78`, R2-147-pn `b58b87f`, PERF-1 `c036c8d`;
+oxlint clean). Their fail-first and tests runs were dispatched on the branch (read the two newest `ci.yml`
+workflow_dispatch runs on it). The owner is resetting the laptop: nothing depends on it any more; its store's
+checklist and pending-bugs.md were not copied up, so work goes on from `fixes3/` alone.
+**Round 4 clusters** — the brief and the row lists: [fixes3/R4-CLUSTERS.md](fixes3/R4-CLUSTERS.md). Wave 1 (bugs): eight
+cloud sessions on `claude/wf-r4-<cluster>` (imp, brd, cl, exp, ed, dsn-pdf, sync-job, app); each is done when
+`wf-reports/r4-<cluster>.json` is on its branch. Then: merge each into the work branch → one full gate → master →
+tracker rows; wave 2 (design: dsg-layout, dsg-flow) from the merged branch.
+
 ## ⏩ COLD START HERE — 2026-09-26 ~14:10 IST (cloud session; only `master` exists)
 
 **Live: `master` = this commit** = wave 3 (B-20c, J-12; full gate 36223045204 ✅ on `1daf0f0`) + docs. Every other branch was
