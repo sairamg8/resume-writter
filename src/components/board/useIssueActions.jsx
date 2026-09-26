@@ -1,3 +1,4 @@
+import { useLayoutEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useBoardStore } from '@/hooks/useBoardStore';
 import { useConfirmOptional, useToast } from '@/components/ui';
@@ -26,18 +27,29 @@ export function useIssueRoute(boards, board = null) {
   const param = new URLSearchParams(location.search).get('issue');
   const hit = param ? findIssueByKey(boards, param) : null;
   const found = hit && (!board || hit.board.id === board.id) ? hit : null;
-  const depth = location.state?.issueDepth ?? 0;
-  const at = (key) => ({ pathname: location.pathname, search: withSearchParam(location.search, 'issue', key), hash: location.hash });
+  // open() and close() read the address as it is now, not as it was when they were handed out:
+  // a toast's "Open" (Duplicate's) is clicked after the view has closed, and with the depth of
+  // its own render it pushed one entry too many, and the close after it stepped off the board.
+  const live = useRef(location);
+  useLayoutEffect(() => {
+    live.current = location;
+  });
+  const at = (loc, key) => ({ pathname: loc.pathname, search: withSearchParam(loc.search, 'issue', key), hash: loc.hash });
   return {
     found,
     open: (key) => {
-      if (key === param) return;
-      if (param && depth === 0) navigate(at(key), { replace: true, state: location.state });
-      else navigate(at(key), { state: { ...location.state, issueDepth: depth + 1 } });
+      const loc = live.current;
+      const current = new URLSearchParams(loc.search).get('issue');
+      const depth = loc.state?.issueDepth ?? 0;
+      if (key === current) return;
+      if (current && depth === 0) navigate(at(loc, key), { replace: true, state: loc.state });
+      else navigate(at(loc, key), { state: { ...loc.state, issueDepth: depth + 1 } });
     },
     close: () => {
+      const loc = live.current;
+      const depth = loc.state?.issueDepth ?? 0;
       if (depth > 0) navigate(-depth);
-      else navigate(at(null), { replace: true, state: location.state });
+      else navigate(at(loc, null), { replace: true, state: loc.state });
     },
   };
 }

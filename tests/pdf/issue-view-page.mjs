@@ -13,6 +13,7 @@ import { patchFakeDom, ev } from '../unit/ui-dom-harness.mjs';
 export { elements, reactProps, ev };
 
 let Board;
+let ToastProvider;
 let store;
 
 /** Registers the file's hooks: Vite's loader, the board page and store, a fresh store per test. */
@@ -21,6 +22,7 @@ export function useIssueViewPage() {
     await setup();
     patchFakeDom(); // the issue view's focus trap and menus query the document
     ({ Board } = await loadModule('/src/pages/Board.jsx'));
+    ({ ToastProvider } = await loadModule('/src/components/ui/index.js'));
     store = await loadModule('/src/hooks/useBoardStore.js');
   });
   after(teardown);
@@ -63,7 +65,7 @@ export const issueNow = (id) => boardNow().issues.find((i) => i.id === id);
  * test can read where Back goes. Navigations commit at once (useTransitions: false), inside the
  * act() that caused them.
  */
-export function mountBoard(path) {
+export function mountBoard(path, { toasts = false } = {}) {
   globalThis.localStorage = new Storage([['cpwtcv_boards_v2', JSON.stringify({ boards: [project()], dataVersion: 2 })]]);
   store.subscribe(() => {});
   let nav = null;
@@ -73,11 +75,13 @@ export function mountBoard(path) {
     loc = useLocation();
     return null;
   }
+  const routes = h(Routes, null,
+    h(Route, { path: '/elsewhere', element: h('p', null, 'Elsewhere') }),
+    h(Route, { path: '/boards/:id', element: h(Board) }));
+  // `toasts`: under the kit's ToastProvider, so a toast (and its action) is on the page.
   const Page = () => h(MemoryRouter, { initialEntries: ['/elsewhere', path], initialIndex: 1, useTransitions: false },
     h(Probe),
-    h(Routes, null,
-      h(Route, { path: '/elsewhere', element: h('p', null, 'Elsewhere') }),
-      h(Route, { path: '/boards/:id', element: h(Board) })));
+    toasts ? h(ToastProvider, null, routes) : routes);
   const view = mount(Page, {});
   // The whole document: the issue view opens in a portal at the end of <body>.
   const all = (node = view.document.body) => [...elements(node)];

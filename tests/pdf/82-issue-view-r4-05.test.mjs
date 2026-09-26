@@ -145,3 +145,31 @@ it('R4-BRD-05: on the board, the trail\'s project link closes the view the same 
     await page.view.unmount();
   }
 });
+
+it('R4-BRD-05: a duplicate opened from its toast after the view closed closes back to the board, not off it', async () => {
+  const page = mountBoard('/boards/p1', { toasts: true });
+  try {
+    page.click(page.card('HOME-2 Paint the fence'));
+    await page.settle();
+    page.click(page.byLabel('Issue actions'));
+    page.click(page.item('Duplicate'));
+    await page.settle();
+    page.click(page.byLabel('Close'));
+    await page.settle();
+    assert.equal(page.path(), '/boards/p1');
+    // The toast's "Open" was handed out while HOME-2 was open, one entry deep.
+    const open = page.all().find((el) => el.tagName === 'BUTTON' && el.textContent.trim() === 'Open');
+    assert.ok(open, 'the Duplicate toast offers to open the copy');
+    page.click(open);
+    await page.settle();
+    assert.equal(page.path(), '/boards/p1?issue=HOME-4');
+    page.click(page.byLabel('Close'));
+    await page.settle();
+    assert.equal(page.path(), '/boards/p1', 'closing the copy stepped back past the board');
+    page.back();
+    await page.settle();
+    assert.equal(page.path(), '/elsewhere');
+  } finally {
+    await page.view.unmount();
+  }
+});
