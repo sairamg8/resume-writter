@@ -225,7 +225,9 @@ export function Board() {
         collisionDetection={boardCollision}
         // A card moved into another column changes both columns' heights mid-drag: measure the
         // columns again as it happens, or what is under the pointer is read off their old boxes.
-        measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
+        // Only while a card is dragged: measured always, every render of the board read each
+        // column's box, for nothing, when no card moves.
+        measuring={{ droppable: { strategy: active ? MeasuringStrategy.Always : MeasuringStrategy.WhileDragging } }}
         onDragStart={({ active: a }) => { setActive(a.id); setPreview(null); }}
         onDragOver={onDragOver}
         onDragEnd={onDragEnd}
