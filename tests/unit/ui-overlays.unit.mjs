@@ -304,14 +304,14 @@ describe('toasts', () => {
   it('a toast that replaces one with its id counts its own full duration', async () => {
     const { view, toast, toasts, region } = toastPage();
     try {
-      toast({ id: 'template-switch', title: 'Template: Classic', duration: 1000 });
-      await wait(700);
-      toast({ id: 'template-switch', title: 'Template: Modern', duration: 1000 });
-      await wait(600); // 1300 ms: the first toast's time (1000) and its exit are over
+      toast({ id: 'template-switch', title: 'Template: Classic', duration: 2000 });
+      await wait(1200);
+      toast({ id: 'template-switch', title: 'Template: Modern', duration: 2000 });
+      await wait(1400); // 2600 ms: the first toast's time (2000) and its exit are over
       view.act(() => {});
       assert.equal(toasts().length, 1, 'the replacement went with the first toast’s time');
       assert.match(region().textContent, /Template: Modern/);
-      await wait(700); // 2000 ms: its own 1000 ms from 700, and the exit
+      await wait(1400); // 4000 ms: its own 2000 ms from 1200, and the exit
       view.act(() => {});
       assert.equal(toasts().length, 0, 'and goes when its own time is up');
     } finally { await view.unmount(); }
