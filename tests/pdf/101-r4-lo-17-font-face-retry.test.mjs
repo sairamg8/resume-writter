@@ -2,7 +2,7 @@
 // face's data (prepareFonts, pdfFontLoader.js) for the rest of the session: the bold printed as the
 // regular until the tab was reloaded. Pinned: the face is fetched again a minute later (not on every
 // build, so a face the CDN lacks is not re-downloaded per preview build), and then prints with its
-// own data; meanwhile facesBorrowed() says a face is borrowing, so the preview builds again when the
+// own data — fetched aside, so the face never lays out empty or unprimed; meanwhile facesBorrowed() says a face is borrowing, so the preview builds again when the
 // browser is back online.
 // Run: node --test tests/pdf/101-r4-lo-17-font-face-retry.test.mjs
 import { before, after, afterEach, describe, it } from 'node:test';
@@ -17,20 +17,27 @@ const NOTO = readFileSync(path.join(ROOT, 'node_modules/@fontsource/noto-sans/fi
 const realFetch = globalThis.fetch;
 const realNow = Date.now;
 
-/** The CDN: one font, "Testface Bold", with a 400 and a 700; its 700 file fails while `boldFails`. */
+/**
+ * The CDN: fonts "Testface Bold" and "Testface Stall", each with a 400 and a 700. A 700 file fails
+ * while `boldFails`, and waits for `stall` (a promise) while one is set.
+ */
 let boldFails = false;
+let stall = null;
 const boldFetches = [];
 function network() {
   globalThis.fetch = async (url, opts) => {
     const u = String(url);
     if (!u.includes('cdn.jsdelivr.net')) return realFetch(url, opts);
-    if (u.endsWith('/testface-bold@5/metadata.json')) {
-      return new Response(JSON.stringify({ family: 'Testface Bold', weights: [400, 700], styles: ['normal'], subsets: ['latin'] }), { status: 200 });
+    const pkg = u.match(/@fontsource\/(testface-(?:bold|stall))@5\//)?.[1];
+    if (pkg && u.endsWith('/metadata.json')) {
+      const family = pkg === 'testface-bold' ? 'Testface Bold' : 'Testface Stall';
+      return new Response(JSON.stringify({ family, weights: [400, 700], styles: ['normal'], subsets: ['latin'] }), { status: 200 });
     }
-    if (u.includes('/testface-bold@5/files/') && u.endsWith('.woff')) {
+    if (pkg && u.includes('/files/') && u.endsWith('.woff')) {
       if (u.includes('-700-')) {
         boldFetches.push(u);
         if (boldFails) throw new TypeError('fetch failed');
+        if (stall) await stall;
       }
       return new Response(NOTO, { status: 200 });
     }
@@ -60,10 +67,12 @@ describe('a face that failed once is fetched again later, not borrowed for the s
     const first = await loader.resolvePdfFonts(settings, 'Pat Example');
     assert.equal([first.fontFamily].flat()[0], 'Testface Bold', 'the font itself loads');
     const sources = Font.getRegisteredFonts()['Testface Bold'].sources;
-    const regular = sources.find((s) => s.fontWeight === 400 && s.fontStyle === 'normal');
     const bold = sources.find((s) => s.fontWeight === 700 && s.fontStyle === 'normal');
-    assert.ok(regular.data, 'the regular loaded');
-    assert.equal(bold.data, regular.data, 'the failed bold prints with the regular for now');
+    // The faces that load: 400, and 500 (the font has no 500, so its 400 file) in both styles.
+    const others = sources.filter((s) => s.fontWeight !== 700);
+    assert.ok(others.every((s) => s.data), 'the regular faces loaded');
+    const donor = others.find((s) => s.data === bold.data);
+    assert.ok(donor, 'the failed bold prints with a regular face\'s data for now');
     assert.equal(fallback.facesBorrowed(), true, 'the preview learns a face is borrowing');
 
     // The network is back, but a build right after does not fetch the bold again (a face the CDN
@@ -72,7 +81,7 @@ describe('a face that failed once is fetched again later, not borrowed for the s
     const tries = boldFetches.length;
     await loader.resolvePdfFonts(settings, 'Pat Example');
     assert.equal(boldFetches.length, tries, 'not fetched again within the minute');
-    assert.equal(bold.data, regular.data);
+    assert.equal(bold.data, donor.data);
 
     // A minute on, the next build fetches it, and the bold prints with its own data.
     const later = realNow() + 61_000;
@@ -80,8 +89,37 @@ describe('a face that failed once is fetched again later, not borrowed for the s
     await loader.resolvePdfFonts(settings, 'Pat Example');
     assert.ok(boldFetches.length > tries, 'the bold is fetched again');
     assert.ok(bold.data, 'the bold has data');
-    assert.notEqual(bold.data, regular.data, 'the bold prints with its own face, not the regular');
+    assert.ok(others.every((s) => s.data !== bold.data), 'the bold prints with its own face, not a regular one');
     assert.equal(typeof bold.data.glyphForCodePoint, 'function', 'a fontkit font');
     assert.equal(fallback.facesBorrowed(), false, 'nothing borrows any more');
+  });
+
+  it('a fetch again that stalls does not hold the build: the bold is put in by a build after it arrives', async () => {
+    const settings = { customFont: 'Testface Stall' };
+    network();
+    boldFails = true;
+    await loader.resolvePdfFonts(settings, 'Pat Example');
+    const sources = Font.getRegisteredFonts()['Testface Stall'].sources;
+    const bold = sources.find((s) => s.fontWeight === 700 && s.fontStyle === 'normal');
+    const others = sources.filter((s) => s.fontWeight !== 700);
+    const donorData = bold.data;
+    assert.ok(others.some((s) => s.data === donorData), 'borrowing');
+
+    // A minute on, the CDN answers the bold only when `open` is called: a stalled connection.
+    boldFails = false;
+    let open;
+    stall = new Promise((resolve) => { open = resolve; });
+    const later = realNow() + 61_000;
+    Date.now = () => later;
+    const started = realNow();
+    try {
+      await loader.resolvePdfFonts(settings, 'Pat Example');
+      assert.ok(realNow() - started < 10_000, 'the build went on without the stalled face');
+      assert.equal(bold.data, donorData, 'the face keeps the donor while its own is on its way');
+    } finally { open(); stall = null; }
+    await new Promise((resolve) => { setTimeout(resolve, 50); });
+    await loader.resolvePdfFonts(settings, 'Pat Example');
+    assert.ok(others.every((s) => s.data !== bold.data), 'the next build puts the bold\'s own data in');
+    assert.equal(fallback.facesBorrowed(), false);
   });
 });

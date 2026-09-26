@@ -411,11 +411,16 @@ function inflateGlyfOnce(font) {
  * may be fetched again. A bold that failed once (a CDN hiccup) printed as the regular for the rest
  * of the session (R4-LO-17). Failed while the browser is offline, the next build tries it; any other
  * failure waits a minute, or until the browser is back online, so a face the CDN truly lacks is not
- * fetched again on every preview build. The donor's data stays until the face's own arrives, so a
- * build laying out meanwhile never finds the face empty.
+ * fetched again on every preview build.
  */
 const borrowed = new Map();
+/** Borrowing faces whose own data has arrived, to be put in by the next prepareFonts before it primes them. */
+const fetched = new Map();
 const RETRY_AFTER_MS = 60_000;
+// How long a build waits for such a fetch: a stalled one (a captive portal) must not hold every
+// preview and export behind it — the build goes on with the donor, and the face's own data is put
+// in by the build after it arrives.
+const RETRY_WAIT_MS = 3_000;
 const retryAt = () => (typeof navigator !== 'undefined' && navigator.onLine === false ? 0 : Date.now() + RETRY_AFTER_MS);
 const retryDue = (source) => borrowed.has(source) && Date.now() >= borrowed.get(source);
 // globalThis: the PDF worker (pdfWorker.js) builds with these fonts, and a worker has no window.
@@ -423,16 +428,23 @@ if (typeof globalThis.addEventListener === 'function') {
   globalThis.addEventListener('online', () => { for (const source of borrowed.keys()) borrowed.set(source, 0); });
 }
 
-/** Fetch borrowed face `source`'s own data again (react-pdf's FontSource._load sets it only on success). */
-async function retryBorrowed(source) {
+/**
+ * Fetch borrowed face `source`'s own data again, into a copy of its react-pdf FontSource: the face
+ * keeps the donor's data meanwhile, so a build laying out never finds it empty or unprimed.
+ */
+function retryBorrowed(source) {
   borrowed.set(source, Infinity); // one attempt at a time, whoever asks meanwhile
-  try {
-    await source._load();
-    borrowed.delete(source);
-  } catch {
-    borrowed.set(source, retryAt());
-  }
+  const { src, fontFamily, fontStyle, fontWeight, options } = source;
+  const copy = Object.assign(Object.create(Object.getPrototypeOf(source)), {
+    src, fontFamily, fontStyle, fontWeight, options, data: null, loadResultPromise: null,
+  });
+  return copy.load().then(
+    () => { borrowed.delete(source); fetched.set(source, copy.data); },
+    () => { borrowed.set(source, retryAt()); },
+  );
 }
+
+const pause = (ms) => new Promise((resolve) => { setTimeout(resolve, ms)?.unref?.(); });
 
 /**
  * Load every registered face of `families` and get their fontkit fonts ready to render;
@@ -460,7 +472,8 @@ export async function prepareFonts(families) {
   const usable = [];
   for (const family of families) {
     const sources = store[family]?.sources || [];
-    await Promise.all(sources.filter(retryDue).map(retryBorrowed));
+    const retries = sources.filter(retryDue).map(retryBorrowed);
+    if (retries.length) await Promise.race([Promise.all(retries), pause(RETRY_WAIT_MS)]);
     const loaded = await Promise.all(sources.map((source) => source.load().then(() => true, () => false)));
     if (!loaded.some(Boolean)) continue; // nothing of this family loads: leave it out of the chain
     // A face that failed (a CDN hiccup) borrows the nearest loaded face of the family, or
@@ -475,6 +488,12 @@ export async function prepareFonts(families) {
       source.loadResultPromise = Promise.resolve();
       borrowed.set(source, retryAt());
     });
+    // A borrowing face whose own data has arrived takes it now, with no await before it is primed below.
+    for (const source of sources) {
+      if (!fetched.has(source)) continue;
+      source.data = fetched.get(source);
+      fetched.delete(source);
+    }
     for (const { data: font } of sources) {
       if (!font || primedFonts.has(font) || typeof font.glyphForCodePoint !== 'function') continue;
       if (family === ARROWS) {
@@ -497,6 +516,6 @@ export async function prepareFonts(families) {
     }
     usable.push(family);
   }
-  setFacesBorrowed(borrowed.size > 0);
+  setFacesBorrowed(borrowed.size > 0 || fetched.size > 0);
   return usable;
 }
