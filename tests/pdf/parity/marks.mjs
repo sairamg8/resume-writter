@@ -96,7 +96,10 @@ export function iconBefore(snap, needle) {
  */
 export function headingIcon(snap, t) {
   const reach = t.h * 2;
-  const ps = drawn(snap, t.page).filter((p) => p.paint === 'stroke' && p.x1 <= t.x + 0.5 && p.x0 >= t.x - reach
+  // A straight rule at least as long as the title is tall is the heading's own border (Keystone's accent
+  // edge, R2-138 B2), not an icon: an icon's lines stay inside its 24-unit box's 20-unit drawing, 0.83 of it.
+  const rule = (p) => (p.x1 - p.x0 < 0.5 || p.y1 - p.y0 < 0.5) && Math.max(p.x1 - p.x0, p.y1 - p.y0) >= t.h;
+  const ps = drawn(snap, t.page).filter((p) => p.paint === 'stroke' && !rule(p) && p.x1 <= t.x + 0.5 && p.x0 >= t.x - reach
     && p.x1 - p.x0 <= reach && p.y1 - p.y0 <= reach && p.y1 >= t.y - t.h * 0.6 && p.y0 <= t.y + t.h * 1.4);
   if (!ps.length) return null;
   const box = union(ps);
