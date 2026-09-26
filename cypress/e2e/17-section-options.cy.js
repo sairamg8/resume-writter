@@ -145,7 +145,7 @@ describe('Word prints Section Options → Alignment as the PDF does', () => {
     return { text: docx.paragraphs[i], align: docx.aligns[i] };
   };
 
-  it('Center centres the section in the .docx, the date on a line of its own; Left keeps the date at the right margin', () => {
+  it('Center centres the section in the .docx, "Title · date" on its first line; Left keeps the date at the right margin', () => {
     cy.visitEditor('classic', { sections: [EXPERIENCE] });
     cy.exportDocx().then((docx) => {
       ['PROFESSIONAL EXPERIENCE', 'Acme Corp', 'Built amazing products.'].forEach((needle) => expect(para(docx, needle).align, needle).to.eq(null));

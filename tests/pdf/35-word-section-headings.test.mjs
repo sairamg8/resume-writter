@@ -3,7 +3,9 @@
 // or Plain in each template's colours at the stored Thickness and Border colour; every heading of
 // the .docx was the accent over a 0.5 pt accent underline. Word now takes the PDF's look from the
 // one table both read (sectionHeadingLook): a bottom border (Ruled, Underline — and Line, whose rules
-// beside the title Word cannot draw), a left border (Left bar) or shading (Boxed).
+// beside the title Word cannot draw), a left border (Left bar) or shading (Boxed) — and, on a designed
+// layout, its own mark (R4-DOUT-10): Broadsheet's rule above, Gridline's above and under, Registry's
+// dotted and Chronicle's double underline, Keystone's bar at its box's left edge.
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { setup, teardown, resume, section, experience, render, renderDocx, read, allItems, drawState, loadModule, TEMPLATES } from './harness.mjs';
@@ -18,16 +20,17 @@ const BORDERS = [{}, { sectionBorderColor: '#0d9488', sectionBorderWidth: 4 }];
 
 const cv = (template, settings = {}, sections = [experience([{}])]) => resume({ template, settings: { accentColor: ACCENT, sectionTitleCase: 'upper', ...settings }, sections, personal: { name: 'Pat Sample' } });
 
-/** The .docx paragraph titled `title`: its run colour, bottom and left borders, shading. */
+/** The .docx paragraph titled `title`: its run colour, top, bottom and left borders (a style other than single named), shading. */
 async function wordHeading(r, title = 'PROFESSIONAL EXPERIENCE') {
   const p = (await renderDocx(r)).paragraphs.find((q) => q.text === title);
   assert.ok(p, `a "${title}" heading in Word`);
   const border = (side) => {
-    const m = new RegExp(`<w:${side} w:val="single" w:color="([0-9a-fA-F]{6})" w:sz="(\\d+)" w:space="(\\d+)"/>`).exec(p.xml);
-    return m ? { colour: `#${m[1].toLowerCase()}`, size: Number(m[2]) } : null;
+    const m = new RegExp(`<w:${side} w:val="(\\w+)" w:color="([0-9a-fA-F]{6})" w:sz="(\\d+)" w:space="(\\d+)"/>`).exec(p.xml);
+    return m ? { colour: `#${m[2].toLowerCase()}`, size: Number(m[3]), ...(m[1] === 'single' ? {} : { style: m[1] }) } : null;
   };
   return {
     text: `#${(/<w:color w:val="([0-9a-fA-F]{6})"/.exec(p.xml.replace(/<w:pPr>.*?<\/w:pPr>/s, ''))?.[1] || '').toLowerCase()}`,
+    top: border('top'),
     bottom: border('bottom'),
     left: border('left'),
     shading: /<w:shd [^>]*w:fill="([0-9a-fA-F]{6})"/.exec(p.xml)?.[1]?.toLowerCase() ?? null,
@@ -59,8 +62,15 @@ describe('the Word résumé prints Design → Section Headings as the PDF does (
           const [word, pdf] = [await wordHeading(r), await pdfHeading(r)];
           assert.equal(word.text, pdf.text, `${at}: the title's colour`);
           const rule = { ruled: look.ruled, underline: look.underline, line: look.line }[headingStyle];
-          assert.deepEqual(word.bottom, rule ? { colour: opaque(rule), size: eighths(width) } : null, `${at}: bottom border`);
-          assert.deepEqual(word.left, headingStyle === 'leftbar' ? { colour: opaque(look.bar), size: eighths(width + 2) } : null, `${at}: left bar`);
+          // The designed layouts' marks (look.variant, R4-DOUT-10): Broadsheet's rule is over the title, none
+          // under it; Gridline's over and under; Registry's underline dotted, Chronicle's double; Keystone's box
+          // has a 3 pt bar at its left edge. Linen's and Banded's print their style's plain form.
+          const v = look.variant;
+          const style = v === 'dotted' || v === 'double' ? { style: v } : {};
+          assert.deepEqual(word.bottom, rule && v !== 'overline' ? { colour: opaque(rule), size: eighths(width), ...style } : null, `${at}: bottom border`);
+          assert.deepEqual(word.top, v === 'overline' || v === 'framed' ? { colour: opaque(look.ruled), size: eighths(width) } : null, `${at}: top border`);
+          const left = headingStyle === 'leftbar' ? { colour: opaque(look.bar), size: eighths(width + 2) } : v === 'edge' ? { colour: opaque(look.bar), size: eighths(3) } : null;
+          assert.deepEqual(word.left, left, `${at}: left bar`);
           assert.equal(word.shading, headingStyle === 'box' ? opaque(look.box).slice(1) : null, `${at}: box`);
           // The PDF paints that decoration, in that colour, that thick.
           const [paint] = pdf.paints;
@@ -79,7 +89,7 @@ describe('the Word résumé prints Design → Section Headings as the PDF does (
       for (const sectionBorderWidth of [0, -3]) {
         for (const headingStyle of ['ruled', 'underline', 'line']) {
           const word = await wordHeading(cv(template, { headingStyle, sectionBorderWidth }));
-          assert.deepEqual([word.bottom, word.left, word.shading], [null, null, null], `${template} ${headingStyle} ${sectionBorderWidth}`);
+          assert.deepEqual([word.top, word.bottom, word.left, word.shading], [null, null, null, null], `${template} ${headingStyle} ${sectionBorderWidth}`);
         }
         assert.notEqual((await wordHeading(cv(template, { headingStyle: 'box', sectionBorderWidth }))).shading, null, `${template} box ${sectionBorderWidth}`);
       }
@@ -98,7 +108,7 @@ describe('the Word résumé prints Design → Section Headings as the PDF does (
           const [word, pdf] = [await wordHeading(r), await pdfHeading(r)];
           const at = `${template} ${JSON.stringify(settings)}`;
           assert.equal(word.text, pdf.text, `${at}: the title's colour`);
-          assert.equal(!!(word.bottom || word.left || word.shading), pdf.paints.length > 0, `${at}: a decoration where the PDF paints one: ${JSON.stringify(pdf.paints)}`);
+          assert.equal(!!(word.top || word.bottom || word.left || word.shading), pdf.paints.length > 0, `${at}: a decoration where the PDF paints one: ${JSON.stringify(pdf.paints)}`);
         }
       }
     }
@@ -109,7 +119,7 @@ describe('the Word résumé prints Design → Section Headings as the PDF does (
     const sections = [experience([{}]), section('skills', [{ category: 'Tools', skills: 'Git' }])];
     for (const headingStyle of ['box', 'leftbar', 'plain']) {
       const word = await wordHeading(cv('sidebar', { headingStyle, sectionBorderWidth: 4 }, sections), 'SKILLS');
-      assert.deepEqual(word, { text: ACCENT, bottom: { colour: ACCENT, size: 4 }, left: null, shading: null }, `sidebar skills, ${headingStyle}`);
+      assert.deepEqual(word, { text: ACCENT, top: null, bottom: { colour: ACCENT, size: 4 }, left: null, shading: null }, `sidebar skills, ${headingStyle}`);
     }
   });
 });

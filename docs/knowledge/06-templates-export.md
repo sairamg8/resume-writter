@@ -74,7 +74,9 @@ Not a pixel-perfect match to PDF; structural DOCX for ATS/HR systems. Modern's b
 two-column Sidebar's header print on their band, a shaded table (`frameTable` in `wordExportLook.js`);
 Banner's and Banded's headers print on the white page. The letter's letterhead takes the same band or
 rule, and at Right of Name (its default Fields Position) its contacts sit beside the name in a two-cell
-table, under it where a name or title word would not fit beside them (R2-137).
+table, under it where a name or title word would not fit beside them (R2-137). Its photo prints as the
+letter PDF's — the letter's own, else the résumé's, none with Show photo off — above a centred name, else
+in a column beside it at Photo → Position (`wordLetterPhoto`, R4-DOUT-06).
 
 ## Text exports
 

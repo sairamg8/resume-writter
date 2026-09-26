@@ -3,7 +3,8 @@
 // as Classic) instead of the name the editor shows (templateLabel). And Export Word gave no hint of
 // what the .docx leaves out. It now prints the photo (R2-126) and Modern's and the Sidebar's header on
 // their band (R2-137): the hint names what is left — Banner's and Banded's headers and the Sidebar's
-// side column print on the white page, and the letter prints no photo.
+// side column print on the white page. The letter's .docx prints its photo too (R4-DOUT-06), so its
+// hint no longer says it is left out.
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { createElement } from 'react';
@@ -50,6 +51,8 @@ describe('Templates UI leftovers (R2-133)', () => {
     assert.match(resumeHint, /designed layouts' rules and bars are left out/);
     assert.match(resumeHint, /Sidebar's side column/);
     assert.doesNotMatch(resumeHint, /photo|coloured column|without its banner/i);
-    assert.match(await hint(true, 'Export Cover Letter Word'), /without its photo/);
+    const letterHint = await hint(true, 'Export Cover Letter Word');
+    assert.match(letterHint, /An editable document/);
+    assert.doesNotMatch(letterHint, /without its photo/, 'the letter\'s .docx prints its photo (R4-DOUT-06)');
   });
 });

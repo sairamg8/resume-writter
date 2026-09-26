@@ -2,7 +2,8 @@
 // proficiency beside its word in the PDF (= the preview) on every template, the main column's and the
 // Sidebar's side column: Dots — five small circles, the level's filled — or Bar — a track and its fill.
 // The words still print. A proficiency the scale does not know draws nothing. Text and unset print the
-// same page. Word, Markdown and ATS text print the words alone, as before. There was no Level: every
+// same page. Markdown and ATS text print the words alone, as before; Word adds the level's glyphs in
+// front of the word (R4-DOUT-11, tests/pdf/102-r4-dout-11-word-language-level.test.mjs). There was no Level: every
 // language printed its word only.
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
@@ -79,14 +80,16 @@ describe('Languages: Level → Dots or Bar draws the proficiency beside its word
     }
   });
 
-  it('Word, Markdown and ATS text print the words alone, exactly as unset', async () => {
+  it('Word prints the words as unset, plus the level\'s glyphs (R4-DOUT-11); Markdown and ATS text print the words alone, exactly as unset', async () => {
     const { generateMarkdownResume } = await loadModule('/src/utils/markdownExport.js');
     const { generateAtsPlainText } = await loadModule('/src/utils/atsPlainText.js');
     for (const v of [{ template: 'classic', settings: {} }, { template: 'sidebar', settings: {} }]) {
       const plain = cv(v, undefined);
       for (const s of ['dots', 'bar']) {
         const drawn = { ...plain, sections: plain.sections.map((x) => ({ ...x, settings: { ...x.settings, levelStyle: s } })) };
-        assert.deepEqual((await renderDocx(drawn)).texts, (await renderDocx(plain)).texts, `${name(v)} ${s}: Word`);
+        // Word: the same words, the level's glyphs (and the gap after them, or the break before them) aside.
+        const words = (texts) => texts.map((t) => t.replace(/\n?[●○▰▱]+ ?/g, ''));
+        assert.deepEqual(words((await renderDocx(drawn)).texts), (await renderDocx(plain)).texts, `${name(v)} ${s}: Word`);
         assert.equal(generateMarkdownResume(drawn), generateMarkdownResume(plain), `${name(v)} ${s}: Markdown`);
         assert.equal(generateAtsPlainText(drawn), generateAtsPlainText(plain), `${name(v)} ${s}: ATS text`);
         assert.match(allText(await read(await render(drawn))).replace(/\s+/g, ' '), /English\s*Fluent|English.*Fluent/, `${name(v)} ${s}: the PDF's words`);
