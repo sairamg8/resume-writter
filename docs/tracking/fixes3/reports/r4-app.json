@@ -1,0 +1,81 @@
+{
+  "cluster": "r4-app",
+  "branch": "claude/wf-r4-app",
+  "base": "fd1f439",
+  "rows": [
+    {
+      "id": "R4-APP-01", "severity": "medium", "outcome": "fixed",
+      "title": "Popovers and menus never take focus when they open (a picker's search box takes no typing, a menu's arrows do nothing, Escape closes the dialog around them)",
+      "files": ["src/components/ui/useFloating.js:4-11", "src/components/ui/Popover.jsx:51-59", "src/components/ui/MenuList.jsx:56-69"],
+      "commits": ["cd1fb2f", "66b806b", "5a4a698", "3e8ef15"], "tests": ["tests/unit/ui-overlays.unit.mjs"],
+      "summary": "Now: until a panel is measured useFloating makes it transparent and unclickable (opacity 0, pointer-events none, its entry animation paused) instead of visibility: hidden, which browsers refuse to focus. Popover's and MenuList's focus-on-open (same commit, before the position renders) lands: the issue view's Labels picker and the board toolbar's filters take typing at once, a Menu opened with ArrowDown or a click has its first item or list focused, and Escape closes the panel, not the IssueDialog. The review's hardening (66b806b) pauses the entry animation so a panel whose anchor ref reaches no element never fades in at the corner."
+    },
+    {
+      "id": "R4-APP-02", "severity": "medium", "outcome": "fixed",
+      "title": "A toast that replaces one with the same id keeps the old countdown and vanishes early (the editor's template-switch Undo toast); one shown during its namesake's exit is removed with it",
+      "files": ["src/components/ui/Toast.jsx:24-40", "src/components/ui/Toast.jsx:80-104", "src/hooks/usePickCard.js:33-39"],
+      "commits": ["d9e0924", "66b806b"], "tests": ["tests/unit/ui-overlays.unit.mjs"],
+      "summary": "Now: each toast() call is an instance; a replacement with the same id restarts its countdown from its full duration, so a template picked 6 s after another keeps its 'Template: … · Undo' toast for 8 s. The exit's removal drops only the toast that is leaving, so one shown with the same id within the 150 ms fade stays."
+    },
+    {
+      "id": "R4-APP-03", "severity": "medium", "outcome": "fixed",
+      "title": "Back re-opens the phone navigation drawer on the page it was opened from",
+      "files": ["src/components/shell/WorkspaceLayout.jsx:51-62"],
+      "commits": ["188327e", "ea3605e"], "tests": ["tests/unit/ui-shell.unit.mjs"],
+      "summary": "Now: the drawer belongs to the history entry (its key and path) it was opened on and closes during render on any navigation; Back to the page it was opened on keeps it closed, and so does an address typed into the bar (HashRouter's shared 'default' key; the review's follow-up ea3605e)."
+    },
+    {
+      "id": "R4-APP-04", "severity": "medium", "outcome": "fixed",
+      "title": "A drawer link to the page already shown leaves the drawer open (Job Tracker on /jobs; Create project on /boards opens the create dialog under the open drawer)",
+      "files": ["src/components/shell/SidebarContent.jsx:31-38,150-157", "src/components/shell/WorkspaceLayout.jsx:51-62"],
+      "commits": ["188327e"], "tests": ["tests/unit/ui-shell.unit.mjs"],
+      "summary": "Now: same root cause and fix as R4-APP-03 — a Link to the current address replaces the entry (a new key), so the drawer closes; Create project on /boards closes it before the create dialog opens."
+    },
+    {
+      "id": "R4-APP-05", "severity": "medium", "outcome": "fixed",
+      "title": "A workspace page whose code keeps failing to load reloads the tab forever (its shell's load cleared the reload-once mark)",
+      "files": ["src/utils/lazyPage.js", "src/AppRoutes.jsx:27,76-90"],
+      "commits": ["7e26f8e", "6d4b945"], "tests": ["tests/unit/lazy-page.unit.mjs"],
+      "summary": "Now: the session mark is the list of pages that reloaded the tab (JSON); a failing page reloads once if it is not listed, only its own load removes its name, and offline nothing is marked. A page failing under a shell that loads reloads once, then shows the ErrorBoundary; one page's mark never stops another page's reload after a deploy (the review found the first version's single mark did). An older build's '1' names no page and is cleared by any load. The existing tests that set or read the single mark now use the list."
+    },
+    {
+      "id": "R4-APP-06", "severity": "low", "outcome": "fixed",
+      "title": "Widening the window with the phone drawer open turns every workspace shortcut off until the next page",
+      "files": ["src/components/shell/Sidebar.jsx:33-63", "src/hooks/useHotkeys.js:91", "src/components/shell/WorkspaceLayout.jsx"],
+      "commits": ["83f6b38"], "tests": ["tests/unit/ui-shell.unit.mjs"],
+      "summary": "Now: WorkspaceLayout reads (min-width: 768px) and closes the drawer once it matches, so the CSS-hidden aria-modal drawer unmounts after its exit and [, c, / and ? work again; narrowing again does not reopen it."
+    },
+    {
+      "id": "R4-APP-07", "severity": "low", "outcome": "fixed",
+      "title": "Back into the workspace from outside it (Résumés, the logo, the editor) opens the Job Tracker or board page at the top",
+      "files": ["src/components/shell/useScrollMemory.js"],
+      "commits": ["92f2abd", "f0600fd"], "tests": ["tests/unit/ui-shell.unit.mjs"],
+      "summary": "Now: offsets live in a module-level Map for the tab's life, filed under each entry's key and path, and the shell files the shown entry's offset when it unmounts; Back from / returns the list to where it was scrolled. The review's follow-up keys by path too, so a typed address (HashRouter's 'default' key) never takes another page's offset. A reload still starts every page at the top (the map is in memory)."
+    },
+    {
+      "id": "R4-APP-08", "severity": "low", "outcome": "fixed",
+      "title": "The Terms / Privacy footer link to the page already shown adds a duplicate history entry and seems to do nothing",
+      "files": ["src/pages/TermsPage.jsx:136-150", "src/pages/PrivacyPage.jsx:168-182"],
+      "commits": ["59b2e3c"], "tests": ["tests/unit/legal-footer.unit.mjs"],
+      "summary": "Now: the footer link to the page shown scrolls the window to its top and navigates nowhere (no second entry, Back leaves in one press); the other link still opens the other page."
+    },
+    {
+      "id": "R4-APP-09", "severity": "low", "outcome": "fixed",
+      "title": "A dashboard import error shown soon after another is cleared early by the earlier error's timer",
+      "files": ["src/pages/Dashboard.jsx:36-45,100-140"],
+      "commits": ["3f5441d"], "tests": ["tests/pdf/80-dashboard-import-read-error.test.mjs"],
+      "summary": "Now: showImportError clears the running timer before it shows a message and starts that message's own (4 s, or 8 s for a document import); the timer is cleared on unmount. A failed PDF then a bad .json 6 s later keeps the second message its full 4 s."
+    }
+  ],
+  "review": {
+    "issues": [
+      "Per-fix review (kit): R4-APP-01's opacity:0 let a never-measured panel's running entry animation (fill-mode both) show it at the corner — fixed in 66b806b (animation paused until placed; pinned in 5a4a698). R4-APP-02's first test had ~150 ms timing slack — widened (66b806b).",
+      "Per-fix review (shell/app): R4-APP-05's single mark was left by an offline failure and by a page that always fails, blocking every other page's deploy reload for the session — fixed in 6d4b945 (per-page list, offline marks nothing). R4-APP-07's module-level offsets keyed by location.key alone could hand a typed address (HashRouter 'default' key) another page's offset — fixed in f0600fd (key + path).",
+      "End-of-cluster review: R4-APP-03 closed the drawer on a key change alone, so a typed address (key 'default' again) left it open — fixed in ea3605e (key + path). Comment wording in useFloating/useScrollMemory corrected (ee0670f).",
+      "Not changed (cosmetic, noted): Toast.jsx remove() — if a replacement toast is itself dismissed within 150 ms of its namesake's dismissal, the first exit timer ends the replacement's fade-out up to 150 ms early; nothing wrong is removed. The trailing-slash address /terms/ still pushes from the footer (negligible)."
+    ],
+    "fixedByReviewer": []
+  },
+  "baselineFailures": [],
+  "notes": "Found by three finder agents (routing/dashboard/hooks, shell, UI kit) and each finding confirmed by a second agent before its fix; every fix then reviewed adversarially and an end-of-cluster reviewer ran on top. CI: tests + fail-first green on cd1fb2f (run 36230829326: all 8 original fix commits fail without their src change) and on the merge 1164fdf (run 36231048831: 29 test files, fail-first for the review commits); and the final run 36231236214 on ee0670f (14 test files incl. the changed modules' existing tests; fail-first ea3605e, 66b806b, 188327e, 83f6b38) is green. oxlint clean on every changed file. Product calls made: the drawer closes on any navigation (including a same-address link and widening past md); a legal page's link to itself scrolls to the top instead of navigating; each lazy page may reload the tab at most once per session. Accessibility seen, not fixed (owner's deferral): InlineEdit handles an input method's Escape without isImeKey (B-20c fixed only Dialog/Popover); after R4-APP-01, focus lands in a panel whose anchor ref reaches no element even though it stays invisible. Seen, not reported as bugs: ProjectViewPlaceholder (shell/PlaceholderPage.jsx) is mounted by no route (dead code); the create-issue dialog stays open across a browser Back (by design); QuickSearch's active index can point past a list that shrank while open (Enter does nothing, rare). docs/knowledge states none of the changed behaviours; nothing there needed updating."
+}

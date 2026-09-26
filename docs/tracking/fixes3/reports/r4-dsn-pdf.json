@@ -1,0 +1,153 @@
+{
+  "cluster": "r4-dsn-pdf",
+  "branch": "claude/wf-r4-dsn-pdf",
+  "base": "fd1f439",
+  "rows": [
+    {
+      "id": "R4-DSN-01",
+      "outcome": "fixed",
+      "commits": [
+        "f39d48c"
+      ],
+      "tests": [
+        "tests/pdf/r4dsn-saved-design-engine.test.mjs"
+      ],
+      "summary": "A saved design whose file stores its engine as \"Modern\" or \" modern \" is read as 'modern' (ownDesign returns templateId(engine)), so it lists as \"Mine · Your design · Modern\", is marked selected, and the editor and /new open instead of throwing in pickerCards."
+    },
+    {
+      "id": "R4-DSN-02",
+      "outcome": "fixed",
+      "commits": [
+        "42b619e",
+        "f71190a"
+      ],
+      "tests": [
+        "tests/pdf/r4dsn-design-font-over-custom.test.mjs",
+        "tests/pdf/93-template-picker-copy.test.mjs"
+      ],
+      "summary": "Picking a design or template that brings a font (Harbor, Academic, Chronicle, Linen…) over a custom Google font clears customFont (new withStyle in templatePresets.js), as Reset and a font button do; a template bringing no font keeps it, a saved design brings its own, and the picker's card looks and Serif chip are built the same way. It clears only where a custom font is set, so a switch adds no setting it did not hold (93-template-picker-copy A5)."
+    },
+    {
+      "id": "R4-DSN-03",
+      "outcome": "fixed",
+      "commits": [
+        "2d4e4f0"
+      ],
+      "tests": [
+        "tests/pdf/r4dsn-new-resume-look-colours.test.mjs"
+      ],
+      "summary": "With no résumé yet, /new's looks are built over defaultSettings('classic') and the starters' Template row over getStarterSettings('classic'), so each picture is drawn in #374151, the accent the created résumé gets, not each template's default blue/navy/red."
+    },
+    {
+      "id": "R4-DSN-04",
+      "outcome": "fixed",
+      "commits": [
+        "6473dfb",
+        "77bbc1c"
+      ],
+      "tests": [
+        "tests/pdf/r4dsn-custom-font-check.test.mjs",
+        "tests/unit/r4pdf-fontsource-retry.unit.mjs",
+        "tests/pdf/91-design-typography.test.mjs"
+      ],
+      "summary": "checkFont returns offline:true when the lookup failed just now (fetch rejected, timed out, 5xx/429) and the panel says it could not check, keeping the typed name; a remembered 404 still says not found. applyCustomFont captures the résumé id, font and customFont and does not select the font if any changed while it waited (it is still kept as a chip, also when the panel closed meanwhile). 91-design-typography's stub now answers an unknown font with jsDelivr's real 404 (it sent no status, which now reads as could-not-check)."
+    },
+    {
+      "id": "R4-DSN-05",
+      "outcome": "fixed",
+      "commits": [
+        "61c196f",
+        "5708691"
+      ],
+      "tests": [
+        "tests/pdf/r4dsn-colour-swatches.test.mjs",
+        "cypress/e2e/04-design.cy.js"
+      ],
+      "summary": "The Accent, Name and Job title swatches hold the colour resolveTemplateSettings resolves for the template (white on Modern's banner, Gridline's #1e40af), as the Text swatch has since R9-7; so they show what the PDF prints and pure black fires a change wherever the printed colour is not black. The labels still read \"Template default\" when unset. Cypress 04-design's NB-1 test picked #ffffff for the Sidebar's Name colour, now already the swatch's value (no change fires): it picks #fafafa, same intent (5708691)."
+    },
+    {
+      "id": "R4-DSN-06",
+      "outcome": "fixed",
+      "commits": [
+        "8b19154",
+        "5f49105"
+      ],
+      "tests": [
+        "tests/unit/r4dsn-gallery-category.unit.mjs"
+      ],
+      "summary": "A gallery category that offers no chip any more (My designs after every saved design is deleted) is All, pressed, and is forgotten, so a design saved later does not reopen the gallery filtered to My designs."
+    },
+    {
+      "id": "R4-DSN-07",
+      "outcome": "fixed",
+      "commits": [
+        "cfeb594"
+      ],
+      "tests": [
+        "tests/unit/r4dsn-gallery-count.unit.mjs"
+      ],
+      "summary": "\"Browse templates (N)\" counts every card the gallery lists, saved designs included, so it matches the gallery's \"Templates (N)\" title (product call: one total, not \"27 + 2 yours\")."
+    },
+    {
+      "id": "R4-PDF-01",
+      "outcome": "fixed",
+      "commits": [
+        "71580c1"
+      ],
+      "tests": [
+        "tests/pdf/r4pdf-font-notice.test.mjs"
+      ],
+      "summary": "Page pictures (gallery, dashboard cards, /new) build with { reportFont: false }: on the worker path they do not bump lastBuild and their reply never calls setFontFallback; on the main thread the flag goes through renderResumePdf/renderCoverLetterPdf to resolvePdfFonts, which then neither counts nor sets the notice. The preview, Export PDF, 1-Page Fit, the ATS view and the public page still report."
+    },
+    {
+      "id": "R4-PDF-02",
+      "outcome": "partial",
+      "commits": [
+        "514b6c2"
+      ],
+      "tests": [
+        "tests/unit/r4pdf-fontsource-retry.unit.mjs"
+      ],
+      "summary": "fetchMetadata remembers only a 404; a 429, 5xx or network failure is asked again by the next build, so Inter or a custom font prints once jsDelivr recovers and checkFont stops calling a real font missing.",
+      "remaining": "The fix_hint's optional related case: prepareFonts permanently gives a face that failed once (e.g. a bold on a network hiccup) a donor face's data; resetting donor-filled faces needs tracking which were filled and would refetch truly missing faces every build — not a small change, left."
+    },
+    {
+      "id": "R4-PDF-03",
+      "outcome": "fixed",
+      "commits": [
+        "9234717",
+        "5c68032"
+      ],
+      "tests": [
+        "tests/unit/r4pdf-photo-retry.unit.mjs",
+        "tests/pdf/80-photo-url.test.mjs"
+      ],
+      "summary": "A photo URL whose fetch failed for a passing reason (network, timeout, 5xx, 408, 429) prints none for now (printableNow null, the panel still says so) and is fetched again: by the next build if the browser was offline, otherwise a minute on or at the browser's 'online' event, so a slow or refusing host does not hold every preview build. A 4xx or undecodable image is still remembered. 80-photo-url's once-a-session check now uses a 404 (a rejected fetch is the transient case this row fixes)."
+    },
+    {
+      "id": "R4-PDF-04",
+      "outcome": "fixed",
+      "commits": [
+        "3b9afcf"
+      ],
+      "tests": [
+        "tests/pdf/r4pdf-sidebar-no-name.test.mjs"
+      ],
+      "summary": "The two-column Sidebar prints 'Your Name' in its column when Full Name is empty (also used for its fit-to-column size), as every other template, its Word export and its letterhead do."
+    }
+  ],
+  "review": {
+    "issues": [
+      "R4-DSN-06: the effective category fell back to All but the state kept 'mine', so a later saved design reopened the gallery filtered — fixed (5f49105).",
+      "R4-DSN-02: withStyle wrote customFont '' onto settings storing none; caught by 93-template-picker-copy's A5 check on CI — fixed (f71190a).",
+      "R4-DSN-04: a remembered 404 checked offline said 'could not check'; a check finishing after unmount did not keep the chip — fixed (77bbc1c).",
+      "R4-PDF-03: a host blocking cross-site reads (indistinguishable from offline) or answering 5xx was refetched on every build, and a hanging host held each build 15 s — backoff added (5c68032).",
+      "R4-DSN-02 (not changed): the card of the template the résumé is already on draws without the user's custom font while the page prints it (a click on it is a no-op); the same class of mismatch already existed for heading style on that card.",
+      "R4-PDF-02 (not changed): a 429 is asked again on every build, no backoff.",
+      "Full gate (run 290 at 5c68032): 6 node shards, Playwright, build, lint, Cypress 1/3/4 green; Cypress 04-design NB-1 failed because the Name swatch now holds the printed white — test updated to a near-white (5708691), 04-design green in run 300."
+    ],
+    "fixedByReviewer": []
+  },
+  "baselineFailures": [],
+  "notes": "Two reviewer subagents read every diff (neither wrote code); their findings were fixed by the session in follow-up commits (above). Every fix commit's tests passed CI's failfirst (runs 261, 269, 282, 289) and the targeted tests of the changed modules passed (runs 270, 282; Cypress 13-regressions-fonts and 24-image-uploads in 270). Full gate on 5c68032 (run 290) green except Cypress 04-design, fixed by 5708691 and green in run 300. PDF-01 changed the signatures of renderResumePdf/renderCoverLetterPdf/resolvePdfFonts/buildResumePdf (an optional options argument, defaults unchanged). MERGE NOT DONE: `git merge origin/claude/awesome-cerf-t3sh88` was refused by this session's permission classifier, so the latest work branch is not merged in — the coordinator must merge it (a merge commit) and re-run the gate. Not fixed (optional parts): PdfPreview's 'online' handler still rebuilds only after a font fallback, so a photo reappears on the next edit rather than the moment the connection returns. Accessibility noted, not fixed: the font box's aria-invalid is now also set for the 'could not check' message."
+}

@@ -75,3 +75,40 @@ a repro, what the user sees and should see. No speculation, no style nits. Then 
 
 Each finds its rows first (`R4-DPH-`, `R4-DVIS-`, `R4-DUX-`, `R4-DOUT-`), then fixes them as above. The fake DOM has
 no layout: a layout fix's test asserts the classes or structure that make the layout right.
+
+## Wave 1b — leftovers the wave 1 clusters found and left out of their rows (the owner: zero pending)
+
+From the reports in [reports/](reports/) (`notes` and `remaining`). Each is a row like the others: confirm it at your
+base, fix it with a fail-first test and a second-agent review, or close it with the proof. Accessibility items in the
+reports stay deferred and are not listed.
+
+**`lo-imp` — import and Markdown**
+- R4-LO-01 PDF and Word "Group roles by company": the employer line with no date over dated roles goes into the previous job and the roles get no company (R4-IMP-09 fixed only Markdown).
+- R4-LO-02 A bulleted certificate or award with indented sub-bullets becomes one entry per sub-bullet (markdownLines/clean lose the list depth).
+- R4-LO-03 Word hyperlinks written as HYPERLINK field codes (w:instrText) are not read as links.
+- R4-LO-04 A Word file with Heading-2 job entries and a later section typed in bold capitals keeps that section inside the last job (R4-IMP-08's guard).
+- R4-LO-05 A link inside body text ("text (url)", a Markdown [text](url)) imports as plain text instead of a link in the rich text.
+- R4-LO-06 The text import reads "Computer Science - MIT" (no degree) or an unknown degree ("Bootcamp, Full Stack - GA") with the field as the degree.
+- R4-LO-07 markdownLines' heading regex drops a trailing "#" ("## C#" → "C"); a link label holding [ ] does not round-trip.
+- R4-LO-08 The Markdown export leaves & and | unescaped; a certificate's description prints only in the Markdown export (markdownExport.js certifications) — make the exporters agree.
+- R4-LO-09 Export file names: Windows device names (CON, NUL, COM1 …) are not handled (R4-EXP-07).
+
+**`lo-cl` — the writing tools**
+- R4-LO-10 STAR Auto-Fix rewrites "did not" to "delivered not" (a helper verb treated as weak).
+- R4-LO-11 atsChecker's WEAK_PHRASES uses includes(): "Networked with" counts as "worked with", "unhandled" as "handled".
+- R4-LO-12 A <br> inside an inline wrapper (<p><b>A<br>B</b></p>) reads as one statement (R4-CL-04).
+- R4-LO-13 A proper noun leading a statement ("Kubernetes cluster…") is lowercased when a power verb is put before it (R4-CL-07).
+- R4-LO-14 A statement ending in an abbreviation's dot ("etc.") loses it before the metric (R4-CL-08).
+- R4-LO-15 "FY2021" counts as a metric: the year rule checks only the first digit (R4-CL-09).
+- R4-LO-16 Text after a nested list inside the same outer item joins the nested bullet, not the outer one (R4-CL-10).
+
+**`lo-misc` — PDF, editor, sync, shell**
+- R4-LO-17 prepareFonts gives a face that failed once (a bold on a network hiccup) a donor face's data for the whole session (R4-PDF-02's other half).
+- R4-LO-18 PdfPreview's 'online' handler rebuilds only after a font fallback, so a photo that failed offline comes back only on the next edit.
+- R4-LO-19 Design → Section Headings' "Section border thickness (pt)" box cannot be emptied, and typing 5 after 2 stores the maximum (the R4-ED-05 bug in DesignPanelHeadings.jsx; update tests/pdf/10-section-headings and cypress/e2e/04-design-left-bar to the intended behaviour).
+- R4-LO-20 R4-ED-07 opens any untouched entry, so a blank entry left from an earlier visit opens on load and on each re-expand; untouched() ignores non-string fields (an entry holding only current:true is deleted without asking).
+- R4-LO-21 The other month pickers (Experience/Education Start/End, Award and Certificate dates) cut free text they cannot read (R4-ED-03's other half).
+- R4-LO-22 Two Publishes within one round trip can both read "no record" and leave an orphan public copy: close it with runTransaction in publicIo.publish (R4-SYNC-01's race).
+- R4-LO-23 CollectionSyncDot maps 'offline' to isOnline=false, but failureReport can give 'offline' while the browser is online (update tests/unit/collection-sync-status.unit.mjs:141 to the intended behaviour).
+- R4-LO-24 InlineEdit acts on an input method's Escape (and Enter) without isImeKey — the B-20c bug class (IME handling is not accessibility).
+- R4-LO-25 QuickSearch's active index can point past a list that shrank while it is open, so Enter does nothing; shell/PlaceholderPage.jsx's ProjectViewPlaceholder is mounted by no route (remove it if nothing uses it).
