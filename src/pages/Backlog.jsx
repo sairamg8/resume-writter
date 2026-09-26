@@ -53,8 +53,10 @@ export function Backlog() {
   const scrum = board.mode === 'scrum';
   const active = activeSprint(board);
   const futures = board.sprints.filter((s) => s.state === 'future');
-  const all = backlogSections(board, board.issues.filter((i) => i.type !== 'epic'));
-  const sections = all.filter((s) => scrum || s.kind === 'backlog').map((s) => ({ ...s, shown: filterIssues(board, filters, { issues: s.issues }) }));
+  // A Kanban project plans in one backlog, with no sprint sections: every open issue belongs in
+  // it, including one still in a sprint from when the project used sprints (R4-BRD-08).
+  const all = backlogSections(scrum ? board : { ...board, sprints: [] }, board.issues.filter((i) => i.type !== 'epic'));
+  const sections = all.map((s) => ({ ...s, shown: filterIssues(board, filters, { issues: s.issues }) }));
   const targets = [...(active ? [active] : []), ...futures].map((s) => ({ id: s.id, name: s.name })).concat({ id: null, name: 'Backlog' });
   const toggleFold = (sid) => setFolded((f) => { const n = new Set(f); if (n.has(sid)) n.delete(sid); else n.add(sid); return n; });
 

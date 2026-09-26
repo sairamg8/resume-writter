@@ -6,6 +6,8 @@
 //              day lands once its year is whole.
 //   R4-BRD-07  a backlog row released where no section is (the toolbar, far below) is over nothing,
 //              so the drop moves nothing: the page asks boardCollision, not closestCenter.
+//   R4-BRD-08  a Kanban project's backlog lists every open issue, including those still in a
+//              sprint from when the project used sprints.
 // Run: node --test tests/pdf/82-backlog-r4.test.mjs
 import { before, after, beforeEach, afterEach, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
@@ -219,6 +221,48 @@ describe('R4-BRD-07: a backlog drag can be called off', () => {
       assert.deepEqual(detect(args(600, 900)), [], 'far below the last section');
       // Over a row: that row first (a drop there takes its place), then its section.
       assert.deepEqual(detect(args(700, 340)).map((c) => c.id), ['i1', 'section:backlog']);
+    } finally { await page.view.unmount(); }
+  });
+});
+
+describe('R4-BRD-08: a Kanban project plans in one backlog', () => {
+  const sprints = [
+    { id: 's0', name: 'Sprint 0', goal: '', startDate: '2026-08-01', endDate: '2026-08-15', state: 'closed', completedAt: 1 },
+    { id: 's1', name: 'Sprint 1', goal: '', startDate: '2026-09-21', endDate: '2026-10-05', state: 'active', completedAt: null },
+    { id: 's2', name: 'Sprint 2', goal: '', startDate: '', endDate: '', state: 'future', completedAt: null },
+  ];
+  const issues = [
+    issue('i1', 1, 'Fix the tap', 'c1', { sprintId: 's1' }),
+    issue('i2', 2, 'Paint the fence', 'c2', { sprintId: 's2' }),
+    issue('i3', 3, 'Buy nails', 'c1', { sprintId: null }),
+    issue('i4', 4, 'Sweep the yard', 'c3', { sprintId: 's1', resolvedAt: 1 }),
+    issue('i5', 5, 'Oil the gate', 'c1', { sprintId: 's0' }),
+  ];
+
+  it('every open issue is listed, whatever sprint it was left in; a done one is not', async () => {
+    open([project({ mode: 'kanban', sprints, issues, nextNumber: 6 })]);
+    const page = mountBacklog();
+    try {
+      const backlog = page.section('backlog');
+      assert.ok(backlog, 'the backlog section');
+      for (const title of ['Fix the tap', 'Paint the fence', 'Buy nails', 'Oil the gate']) assert.ok(backlog.textContent.includes(title), `${title} is missing`);
+      assert.ok(!backlog.textContent.includes('Sweep the yard'), 'resolved: out of the backlog');
+      assert.match(backlog.textContent, /\(4 issues\)/);
+      assert.ok(!page.section('s1') && !page.section('s2'), 'no sprint sections on a Kanban project');
+    } finally { await page.view.unmount(); }
+  });
+
+  it('a row dragged within that backlog leaves its old sprint and takes its place', async () => {
+    open([project({ mode: 'kanban', sprints, issues, nextNumber: 6 })]);
+    const page = mountBacklog();
+    try {
+      const el = page.section('backlog');
+      let fiber = el[Object.keys(el).find((k) => k.startsWith('__reactFiber$'))];
+      while (fiber && typeof fiber.memoizedProps?.onDragEnd !== 'function') fiber = fiber.return;
+      // 'Paint the fence' (left in Sprint 2) dropped on 'Fix the tap' (left in Sprint 1): both rows are the backlog's.
+      page.view.act(() => fiber.memoizedProps.onDragEnd({ active: { id: 'i2' }, over: { id: 'i1', data: { current: { type: 'row', sprintId: null } } } }));
+      assert.equal(issueNow('i2').sprintId, null);
+      assert.match(page.section('backlog').textContent, /Paint the fence.*Fix the tap/);
     } finally { await page.view.unmount(); }
   });
 });
