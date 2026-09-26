@@ -20,6 +20,10 @@ export default function RichTextEditor({ label, ariaLabel, value, onChange, plac
   // the selection, else the bullet or line the caret is in; null to add the result as a new bullet.
   const [optimizerText, setOptimizerText] = useState('');
   const optimizerTarget = useRef(null);
+  // A drag that starts in this editor is a move, and the browser does it (onDrop): the text leaves
+  // where it was, and the input events that follow store the result. Inserting it at the drop point
+  // ourselves cancelled the move, so the text ended up in both places (R4-ED-04).
+  const dragFromHere = useRef(false);
 
   // Adopt `value` whenever it changes from outside (another resume opened, an import, a cloud
   // pull), but never while this editor has focus: there the DOM is the source of truth and
@@ -109,10 +113,11 @@ export default function RichTextEditor({ label, ariaLabel, value, onChange, plac
   }
 
   function onDrop(e) {
+    if (dragFromHere.current) return;
     e.preventDefault();
     const data = e.dataTransfer;
     if (!data?.getData('text/html') && !data?.getData('text/plain')) return;
-    const range = document.caretRangeFromPoint?.(e.clientX, e.clientY);
+    const range = dropRange(e.clientX, e.clientY);
     if (range) {
       const sel = window.getSelection();
       sel.removeAllRanges();
@@ -192,6 +197,8 @@ export default function RichTextEditor({ label, ariaLabel, value, onChange, plac
           onInput={onInput}
           onPaste={onPaste}
           onDrop={onDrop}
+          onDragStart={() => { dragFromHere.current = true; }}
+          onDragEnd={() => { dragFromHere.current = false; }}
           onCompositionStart={() => { isComposing.current = true; }}
           onCompositionEnd={() => { isComposing.current = false; onInput(); }}
           className="px-3 py-2 text-sm pointer-coarse:text-base focus:outline-none empty-placeholder rich-text-output"
@@ -261,6 +268,22 @@ function dropMedia(node) {
     if (MEDIA.has(child.nodeName.toUpperCase())) node.removeChild(child);
     else dropMedia(child);
   }
+}
+
+/**
+ * The caret position under a drop point, as a Range: caretRangeFromPoint (Chromium, Safari), else
+ * caretPositionFromPoint (Firefox, which has no caretRangeFromPoint — the drop point was ignored
+ * there and the text went over the selection instead, R4-ED-04). null when neither finds one.
+ */
+function dropRange(x, y) {
+  const range = document.caretRangeFromPoint?.(x, y);
+  if (range) return range;
+  const pos = document.caretPositionFromPoint?.(x, y);
+  if (!pos?.offsetNode) return null;
+  const at = document.createRange();
+  at.setStart(pos.offsetNode, pos.offset);
+  at.setEnd(pos.offsetNode, pos.offset);
+  return at;
 }
 
 function Btn({ title, onExec, children }) {
