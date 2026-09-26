@@ -1,6 +1,32 @@
 # Session Handoff — Resume Here
 
-## ⏩ COLD START HERE — 2026-09-26 10:15 UTC (cloud coordinator session_013BXDvmy7T9XQ7CsZWdofVX)
+## ⏩ COLD START HERE — 2026-09-26 13:50 UTC (coordinator session_013BXDvmy7T9XQ7CsZWdofVX; the owner's usage is spent)
+
+**State:** every Round 4 bug is fixed on the work branch `claude/awesome-cerf-t3sh88`, and **gate 36235083234 on
+`94b4d9b` is GREEN** (full suite, build, lint, Playwright, Cypress). `master` is still `843dded` — nothing of Round 4 is
+live. The coordinator's push to master was refused by the session's auto-mode check ("Production Deploy"), so:
+
+1. **Owner: deploy** — `git push origin 94b4d9b:refs/heads/master` (a fast-forward; the commits after it are docs only),
+   or merge the work branch on GitHub at that commit. Then `python3 docs/tracking/tools/r4_tracker.py --deployed 94b4d9b`,
+   commit, push. No firestore.rules change in Round 4: nothing to publish.
+2. **Wave 2 (design) did not run:** dsg-layout (session_01K2dRPYe8fZU5xwrczhag7U) and dsg-flow
+   (session_01AmmKmEdcQjMsXCr6cxbAXZ) hit the five-hour usage limit at 10:20 UTC, seven minutes in, and pushed nothing.
+   Restart them (a message to each session, or fresh sessions from the work branch with the same prompts:
+   [fixes3/R4-CLUSTERS.md](fixes3/R4-CLUSTERS.md) "Wave 2").
+3. **Wave 3 (final sweep):** the small leftovers the clusters saw and left, listed in R4-CLUSTERS.md "Wave 3".
+4. Tracker rows R2-137 and R2-133 (bug-status-r2) still describe the old Word band: set them from
+   `fixes3/reports/r4-exp.json` (RES-R2-137, commits `39b3bf7` `a96cebb`).
+
+**Round 4 by cluster** (row lists in R4-CLUSTERS.md, outcomes in [fixes3/R4-TRACKER.md](fixes3/R4-TRACKER.md), reports in
+`fixes3/reports/`): the six fixes3 patches (6/6, fail-first 36230047589) · imp 14/14 · brd 13/13 · cl 10/11 (CL-05 not a
+bug) · exp 7/8 + RES-R2-137 (EXP-05 already fixed by it) · ed 7/7 (incl. R4-ED-01) · dsn-pdf 10/11 + PDF-02 partly (its
+other half is LO-17, fixed) · sync-job 10/10 · app 9/9 (found by the session) · lo-imp 9/9 · lo-cl 7/7 · lo-misc 9/9 —
+108 rows: 106 fixed, 1 already fixed, 1 not a bug; every fix fail-first on CI and reviewed by a second agent.
+Merges: `bb200f4` (seven clusters; Dashboard.jsx conflict kept R4-IMP-12 and R4-APP-09), `d1af2c5` (the first gate's
+three test-only failures), `17c6af2` (brd, lo-cl), `f049af8` (lo-imp, lo-misc). Cluster branches `claude/wf-r4-*` are
+merged; the owner may delete them on GitHub (the git proxy refuses deletes).
+
+## ⏩ 2026-09-26 10:15 UTC (cloud coordinator session_013BXDvmy7T9XQ7CsZWdofVX)
 
 **Gate 36233934185 on `5f94749` is GREEN** (eight wave-1 clusters + lo-cl + the six fixes3 fixes + the gate's test fixes
 `d1af2c5`). The coordinator's `git push origin 5f94749:refs/heads/master` was refused by the session's auto-mode

@@ -112,3 +112,27 @@ reports stay deferred and are not listed.
 - R4-LO-23 CollectionSyncDot maps 'offline' to isOnline=false, but failureReport can give 'offline' while the browser is online (update tests/unit/collection-sync-status.unit.mjs:141 to the intended behaviour).
 - R4-LO-24 InlineEdit acts on an input method's Escape (and Enter) without isImeKey — the B-20c bug class (IME handling is not accessibility).
 - R4-LO-25 QuickSearch's active index can point past a list that shrank while it is open, so Enter does nothing; shell/PlaceholderPage.jsx's ProjectViewPlaceholder is mounted by no route (remove it if nothing uses it).
+
+## Status 2026-09-26 13:50 UTC
+
+Waves 1 and 1b are merged and gated green on `94b4d9b` (gate 36235083234), waiting on the owner's push to master.
+Wave 2 did not run: both design sessions stopped at the five-hour usage limit at 10:20 UTC with nothing pushed; start
+them again with the Wave 2 brief above.
+
+## Wave 3 — final sweep (the leftovers the clusters saw and left; low, pre-existing)
+
+One session, rows R4-SW-NN in this order, same rules as above. Accessibility items in the reports stay deferred.
+- boards (reports/r4-brd.json): a column delete's toast has no Undo; a Kanban row still in a sprint dropped on the
+  backlog's foot lands after the last row in no sprint, and the row menu's Move to still lists sprints in Kanban; the
+  Epic panel's composer placeholder still reads "What needs to be done?"; R4-BRD-05's second close in the gap before a
+  pending open commits has a code guard (0da56a4) but no test.
+- writing tools (reports/r4-lo-cl.json): body text after a list (a blockquote) joins the last ATS bullet; text after a
+  nested list opens as its own line in the optimizer but joins the outer item in the ATS bullets; the ATS and optimizer
+  weak-phrase lists differ ("did", "changed", "ensured" / "tasked with"); a power-verb chip on a negative statement
+  ("Did not miss…") gives "Spearheaded did not miss…".
+- import (reports/r4-lo-imp.json): PDF sub-bullets carry no depth, and a Word list whose level comes only from its style
+  (List Bullet 2, no w:ilvl) reads as level 0; a line that holds a link does not also autolink a bare address; a
+  [**bold**](url) label is not linked; a typed " | " inside a Markdown heading or meta field splits into two fields on
+  import; CONIN$/CONOUT$ file names.
+- Word (reports/r4-exp.json): the Sidebar's Word band can grow when Contacts ↔ Summary exceeds its padding; the Markdown
+  import drops a trailing "#" was fixed as R4-LO-07 — check the rest of that note still holds.
