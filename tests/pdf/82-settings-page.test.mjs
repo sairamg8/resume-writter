@@ -156,6 +156,34 @@ it('labels: add, rename (a taken name refused), recolour, delete off every issue
   }
 });
 
+it('R2-041b: a label name the board has, typed with other spacing or case, is refused and said so, adding or renaming', async () => {
+  const page = await mountSettings();
+  try {
+    page.change(page.byLabel('New label'), 'Needs parts');
+    page.click(page.button('Add', page.byLabel('New label').parentNode));
+    assert.equal(p1().labels.length, 3, 'a new name is added');
+
+    // The store keeps a label's name with runs of spaces made one (cleanTitle) and refuses a second
+    // label with that name, case aside. The page compared names only trimmed and lower-cased, so
+    // "needs   PARTS" was not taken to it: nothing was said, and the store refused it silently.
+    page.change(page.byLabel('New label'), 'needs   PARTS');
+    page.click(page.button('Add', page.byLabel('New label').parentNode));
+    assert.equal(p1().labels.length, 3, 'no second "Needs parts"');
+    assert.match(page.text(), /A label called “needs PARTS” already exists\./, 'the refusal is said, the name shown as it would be saved');
+
+    const row = (id) => page.find('data-label', id);
+    page.enter(page.byLabel('Label name', row('l2')), 'Needs    parts');
+    assert.equal(p1().labels.find((l) => l.id === 'l2').name, 'Home', 'a taken name, in other spacing, is refused');
+    assert.match(page.text(), /Another label is already called “Needs parts”\./);
+
+    page.enter(page.byLabel('Label name', row('l2')), 'Needs  more   parts');
+    assert.equal(p1().labels.find((l) => l.id === 'l2').name, 'Needs more parts', 'a name that is free is saved, cleaned');
+    assert.doesNotMatch(page.text(), /already/, 'the message goes once a name is accepted');
+  } finally {
+    await page.view.unmount();
+  }
+});
+
 it('done issues: the days are set, hiding is turned off (null) and on again; the project is deleted', async () => {
   const page = await mountSettings();
   globalThis.confirm = () => true;

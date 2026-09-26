@@ -6,6 +6,7 @@ import { ProjectHeader } from '@/components/board/ProjectTabs';
 import { BoardStorageNotice } from '@/components/board/BoardStorageNotice';
 import { Button, EmptyState, useConfirmOptional, useToast } from '@/components/ui';
 import { BOARD_COLORS, BOARD_MODES, COLUMN_CATEGORIES, DEFAULT_HIDE_DONE_DAYS, LABEL_COLORS } from '@/constants/boards';
+import { cleanTitle } from '@/utils/boardModel';
 
 const FIELD = 'text-sm px-2 py-1.5 rounded-lg border border-line focus:outline-none focus:ring-2 focus:ring-brand';
 
@@ -165,15 +166,20 @@ export function BoardSettings() {
 
   const hides = board.hideDoneAfterDays !== null;
 
+  // A label name as the store compares it: cleanTitle (runs of spaces one, trimmed), case aside.
+  // Compared only trimmed and lower-cased here, "Needs  parts" was not "Needs parts": no message
+  // was shown, and the store then refused the name without a word (R2-041b).
+  const sameLabelName = (a, b) => cleanTitle(a).toLowerCase() === cleanTitle(b).toLowerCase();
+
   function renameLabel(label, name) {
-    const taken = board.labels.some((l) => l.id !== label.id && l.name.toLowerCase() === name.trim().toLowerCase());
-    setLabelRefused(taken ? `Another label is already called “${name.trim()}”.` : null);
+    const taken = board.labels.some((l) => l.id !== label.id && sameLabelName(l.name, name));
+    setLabelRefused(taken ? `Another label is already called “${cleanTitle(name)}”.` : null);
     if (!taken) store.updateLabel(board.id, label.id, { name });
   }
 
   function addLabel(name, color) {
-    const taken = board.labels.some((l) => l.name.toLowerCase() === name.toLowerCase());
-    setLabelRefused(taken ? `A label called “${name}” already exists.` : null);
+    const taken = board.labels.some((l) => sameLabelName(l.name, name));
+    setLabelRefused(taken ? `A label called “${cleanTitle(name)}” already exists.` : null);
     if (!taken) store.addLabel(board.id, { name, color });
   }
 
