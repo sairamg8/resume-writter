@@ -253,6 +253,15 @@ describe('menu and picker logic', () => {
     assert.ok(!canCreate(options, ' design '));
     assert.ok(!canCreate(options, '   '));
   });
+
+  it('filterOptions and canCreate: spacing aside too, as the board store compares a label\'s name (R2-041)', () => {
+    const { filterOptions, canCreate } = multiSelect;
+    const options = [{ value: 'n', label: 'Needs parts' }, { value: 'u', label: 'Urgent' }];
+    assert.deepEqual(filterOptions(options, 'needs   parts').map((o) => o.value), ['n'], 'the label the board has is found');
+    assert.deepEqual(filterOptions(options, 'NEEDS\tPARTS').map((o) => o.value), ['n']);
+    assert.ok(!canCreate(options, '  needs   PARTS '), 'no "Create" for a name the store would refuse as taken');
+    assert.ok(canCreate(options, 'Needs paint'));
+  });
 });
 
 describe('shell: PageHeader and the sidebar', () => {

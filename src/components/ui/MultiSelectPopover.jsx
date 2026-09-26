@@ -3,16 +3,24 @@ import { Check, Plus, Search } from 'lucide-react';
 import { Popover } from './Popover.jsx';
 import { cx } from './compose.js';
 
-/** The options whose label holds `query` (case-blind), in their order. Exported for the unit test. */
+/**
+ * A name as it is compared: runs of spaces one, trimmed, case-blind — the way the board store
+ * keeps a label's name (cleanTitle) and refuses a second one (R2-041). Compared on the trimmed
+ * text alone, "needs  parts" was not "Needs parts": the search showed nothing and offered to
+ * create it, and the store then handed back the label the board already had.
+ */
+const sameText = (text) => String(text).replace(/\s+/g, ' ').trim().toLowerCase();
+
+/** The options whose label holds `query` (case-blind, spacing aside), in their order. Exported for the unit test. */
 export function filterOptions(options, query) {
-  const q = query.trim().toLowerCase();
-  return q ? options.filter((o) => String(o.label).toLowerCase().includes(q)) : options;
+  const q = sameText(query);
+  return q ? options.filter((o) => sameText(o.label).includes(q)) : options;
 }
 
-/** Whether "Create “query”" is offered: there is text, and no option is already called that. */
+/** Whether "Create “query”" is offered: there is text, and no option is already called that (case and spacing aside). */
 export function canCreate(options, query) {
-  const q = query.trim().toLowerCase();
-  return !!q && !options.some((o) => String(o.label).trim().toLowerCase() === q);
+  const q = sameText(query);
+  return !!q && !options.some((o) => sameText(o.label) === q);
 }
 
 /**
@@ -52,7 +60,8 @@ function PickerBody({ options, value, onChange, onCreate, title, clearable, sear
   const id = useId();
   const shown = useMemo(() => filterOptions(options, query), [options, query]);
   const creatable = !!onCreate && canCreate(options, query);
-  const rows = creatable ? [...shown, { create: true, label: query.trim() }] : shown;
+  // The name as it will be saved (one space between words), so the row says what it makes.
+  const rows = creatable ? [...shown, { create: true, label: query.replace(/\s+/g, ' ').trim() }] : shown;
   const chosen = new Set(value);
   const active = Math.min(activeRaw, Math.max(rows.length - 1, 0));
   useEffect(() => {
