@@ -208,7 +208,9 @@ after a 1.5 s pause. Failures, retries and 'off' reuse `cloudSyncRetry.js`; an i
 doing goes to `collectionSyncStatus` (`collectionSyncMeta.js`) and shows in the workspace's top bar
 as the résumés' cloud icon, with its words (`shell/CollectionSyncDot.jsx`, R2-140-c): the jobs and
 the projects on the Job Tracker's pages, the projects elsewhere, the worst status winning
-(`worstSyncStatus`: error, stopped, off, offline, syncing, synced); none while signed out. This browser's record of a
+(`worstSyncStatus`: error, stopped, off, offline, syncing, synced); none while signed out. It reads
+the browser's online flag as the résumés' icon does, so 'offline' with the browser online (a server
+the sync cannot reach) says "Cannot reach your account", and "Offline" only when the browser is (R4-LO-23). This browser's record of a
 list — the account it last synced with, the versions and the order its cloud holds, what was kept
 aside — is `cpwtcv_jobs_sync_v1` / `cpwtcv_boards_sync_v1` (`collectionSyncMeta.js`; a record saved
 before the order was kept reads with none). The order merges on that base: a move made before a
@@ -233,9 +235,11 @@ locations with Show location off blanked, hidden sections and entries and sectio
 entry dropped, the design's saved designs, last-applied look name and hidden contacts' icons left
 out, no cover letter, no dashboard name, no id. It is written to `public/{shareId}` (`{ owner, resume,
 publishedAt }`, `shareId` a random uuid) together with `users/{uid}/shares/{resumeId}` (`{ shareId,
-publishedAt }`) in one batch; Publish first reads that record and reuses the link it names, so two tabs
-or devices never make two copies, and Unpublish deletes the copy the panel shows and the one the record
-names (each only if it is still there) and the record, and so does deleting the résumé from the Dashboard while signed
+publishedAt }`) in one transaction; Publish first reads that record and reuses the link it names, so two tabs
+or devices never make two copies — two Publishes at the same moment included: the second's write is
+refused as the record changed since its read, and it runs again on the first one's link (R4-LO-22) — and Unpublish deletes the copy the panel shows and the one the record
+names (each only if it is still there) and the record, in one transaction too, so a Publish elsewhere between its read and
+its write never leaves a copy no record names (R4-LO-22), and so does deleting the résumé from the Dashboard while signed
 in (`unpublishResume`), which would otherwise leave a copy with no panel left to take it down. A
 résumé deleted on another device, offline, signed out or on an older build loses its copy at the next
 first sync of any device: the engine (`publicLinks`, wired in `useCloudSync`) passes the account's

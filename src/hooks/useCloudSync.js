@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import {
-  arrayRemove, arrayUnion, collection, doc, getDocFromServer, getDocsFromServer, writeBatch,
+  arrayRemove, arrayUnion, collection, doc, getDocFromServer, getDocsFromServer, runTransaction, writeBatch,
 } from 'firebase/firestore';
 import { db } from '@/utils/firebase';
 import { isDemoAccount } from '@/utils/demoSeed';
@@ -17,7 +17,7 @@ const io = db
 
 /** The public links' calls (publicLink.js): the sync takes down a deleted résumé's copy (R2-148). */
 const publicLinks = db
-  ? publicIo({ collection, doc, getDocFromServer, getDocsFromServer, writeBatch }, db)
+  ? publicIo({ collection, doc, getDocFromServer, getDocsFromServer, runTransaction }, db)
   : null;
 
 /**

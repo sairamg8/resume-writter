@@ -118,9 +118,15 @@ async function headingControls(settings, template = 'classic') {
   const { HeadingControls } = await loadModule('/src/components/DesignPanelHeadings.jsx');
   const stored = [];
   const updateSetting = (key, value) => { if (key === 'sectionBorderWidth') stored.push(value); };
-  const nodes = [...walk(HeadingControls({ settings, template, updateSetting }))];
-  const row = nodes.find((n) => textOf(n).startsWith('Border thickness'));
-  const rowNodes = [...walk(row)];
+  // Walked inside a render pass: the thickness box is typed with a hook (R4-LO-19).
+  let nodes = [];
+  let rowNodes = [];
+  function Capture() {
+    nodes = [...walk(HeadingControls({ settings, template, updateSetting }))];
+    rowNodes = [...walk(nodes.find((n) => textOf(n).startsWith('Border thickness')))];
+    return null;
+  }
+  renderToString(createElement(Capture));
   return {
     text: nodes.map(textOf).join('\n'),
     input: rowNodes.find((n) => n.type === 'input'),
@@ -145,7 +151,7 @@ describe('Left bar: Border thickness says the width the bar prints (ONB-12)', ()
     for (const width of [undefined, 1, 2, 4, 8]) {
       const [printed] = await fillWidths(await ruled('classic', 'leftbar', width));
       const { input } = await headingControls({ headingStyle: 'leftbar', sectionBorderWidth: width });
-      assert.equal(input.props.value, printed, `stored ${width}: the box says what the PDF prints`);
+      assert.equal(input.props.value, String(printed), `stored ${width}: the box says what the PDF prints`);
       assert.equal(input.props.min, 3, 'the thinnest bar is 3 pt');
       assert.equal(input.props.max, 10, 'the thickest bar is 10 pt');
     }
@@ -154,8 +160,10 @@ describe('Left bar: Border thickness says the width the bar prints (ONB-12)', ()
   it('a Left bar width typed or stepped prints at that width: it stores 2 pt less, within 1–8', async () => {
     const at = async (sectionBorderWidth) => headingControls({ headingStyle: 'leftbar', sectionBorderWidth });
     for (const [typed, stores] of [['6', 4], ['3', 1], ['10', 8], ['2', 1], ['1', 1], ['99', 8]]) {
-      const c = await at(4);
-      c.input.props.onChange({ target: { value: typed } });
+      // From a stored 5 (the box says 7 pt), so every value typed differs from what it shows:
+      // typed, then written on leaving the box (R4-LO-19: not on every keystroke).
+      const c = await at(5);
+      c.input.props.onBlur({ target: { value: typed } });
       assert.deepEqual(c.stored, [stores], `typed ${typed}`);
       const [printed] = await fillWidths(await ruled('classic', 'leftbar', stores));
       assert.equal(printed, Math.min(10, Math.max(3, Number(typed))), `typed ${typed} prints that width, within 3–10`);
@@ -181,18 +189,18 @@ describe('Left bar: Border thickness says the width the bar prints (ONB-12)', ()
     for (const headingStyle of ['ruled', 'line', 'underline']) {
       for (const width of [undefined, 1, 4, 8]) {
         const { input } = await headingControls({ headingStyle, sectionBorderWidth: width });
-        assert.equal(input.props.value, width ?? 1, `${headingStyle} ${width}`);
+        assert.equal(input.props.value, String(width ?? 1), `${headingStyle} ${width}`);
         assert.deepEqual([input.props.min, input.props.max], [1, 8], `${headingStyle} range`);
       }
       const c = await headingControls({ headingStyle, sectionBorderWidth: 4 });
-      c.input.props.onChange({ target: { value: '6' } });
+      c.input.props.onBlur({ target: { value: '6' } });
       c.button('−').props.onClick();
       c.button('+').props.onClick();
       assert.deepEqual(c.stored, [6, 3, 5], `${headingStyle}: typed 6, − and + from 4`);
     }
     // With nothing stored the panel marks, and the PDF prints, the template's own style (R5-3).
     const { input } = await headingControls({}, 'sidebar');
-    assert.equal(input.props.value, 1, 'Sidebar with no stored style prints plain headings');
+    assert.equal(input.props.value, '1', 'Sidebar with no stored style prints plain headings');
   });
 });
 

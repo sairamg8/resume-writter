@@ -7,4 +7,3 @@ export { SidebarContent } from './SidebarContent.jsx';
 export { useWorkspace, WorkspaceContext } from './workspaceContext.js';
 export { useScrollMemory } from './useScrollMemory.js';
 export { sidebarProjects, orderProjects } from './projects.js';
-export { PlaceholderPage, YourWorkPlaceholder, ProjectViewPlaceholder } from './PlaceholderPage.jsx';

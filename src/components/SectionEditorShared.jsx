@@ -87,6 +87,29 @@ export function MonthPicker({ label, value, onChange, disabled }) {
   );
 }
 
+/**
+ * An entry's date: the month picker, or, for a stored date the picker cannot hold — an imported
+ * period ('Jan 2020 – Mar 2021', '2019 – 2021'), a season, 'Present' — a text box showing it as the
+ * PDF prints it. The picker showed only its first month and year, or blanks, and any pick wrote
+ * 'Jan 2021' over the whole of it (R4-ED-03, R4-LO-21). Once a text box, it stays one while the entry
+ * is on screen, so it does not turn into the picker mid-typing (a period retyped passes through
+ * '2019', which the picker reads). Disabled (an End Date while the entry is current), it is the
+ * picker, greyed out as before.
+ */
+export function DateField({ label, value, onChange, disabled, placeholder = 'Jan 2020' }) {
+  const [asText, setAsText] = useState(false);
+  if (!asText && isPeriodText(value)) setAsText(true);
+  return asText && !disabled
+    ? <InputField label={label} value={value} onChange={onChange} placeholder={placeholder} />
+    : <MonthPicker label={label} value={value} onChange={onChange} disabled={disabled} />;
+}
+
+/** A date the month picker cannot show and write back whole: text that is no month and year, nor a bare month. */
+function isPeriodText(value) {
+  if (typeof value !== 'string' || !value.trim()) return false;
+  return !parseMonthYear(value) && !MONTHS.includes(value.trim());
+}
+
 export function FieldRow({ label, field, hiddenSet, onToggle, children }) {
   const isHidden = hiddenSet.has(field);
   const id = useId();

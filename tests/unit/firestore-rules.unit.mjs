@@ -77,7 +77,8 @@ test('a published copy carries only what publicLink.js writes, each of its type 
 
 test('the keys the rule allows are the ones publicLink.js writes', () => {
   const src = readFileSync(new URL('../../src/utils/publicLink.js', import.meta.url), 'utf8');
-  const write = src.match(/batch\.set\(publicDoc\(shareId\), \{([^}]*)\}\)/)?.[1];
+  // publish() writes in a transaction (tx.set) since R4-LO-22.
+  const write = src.match(/tx\.set\(publicDoc\(shareId\), \{([^}]*)\}\)/)?.[1];
   assert.deepEqual(write.split(',').map((kv) => kv.split(':')[0].trim()), keysIn('d', 'hasOnly'), 'the document publish() sets');
   const copy = src.match(/const copy = \{([\s\S]*?)\n {2}\};/)?.[1];
   const copyKeys = [...copy.matchAll(/^\s*(\w+)\s*[:,]/gm)].map((m) => m[1]);

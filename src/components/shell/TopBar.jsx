@@ -50,6 +50,9 @@ function QuickSearch({ search }) {
   const inputRef = useRef(null);
   const listId = useId();
   const results = open && search ? search(query) : [];
+  // The highlighted row, within the list as it is now: the list can shrink while it is open (an issue
+  // deleted, a sync, another tab), and an index past its end made Enter do nothing (R4-LO-25).
+  const at = Math.max(0, Math.min(active, results.length - 1));
   useHotkeys({ '/': () => { inputRef.current?.focus(); inputRef.current?.select(); } });
 
   const go = (hit) => {
@@ -60,10 +63,10 @@ function QuickSearch({ search }) {
     navigate(hit.to);
   };
   const onKeyDown = (e) => {
-    if (e.key === 'ArrowDown') { e.preventDefault(); setActive((i) => Math.min(i + 1, results.length - 1)); }
-    if (e.key === 'ArrowUp') { e.preventDefault(); setActive((i) => Math.max(i - 1, 0)); }
-    if (e.key === 'Enter' && !isImeKey(e)) { e.preventDefault(); go(results[active]); }
-    if (e.key === 'Escape') { setQuery(''); setOpen(false); inputRef.current?.blur(); }
+    if (e.key === 'ArrowDown') { e.preventDefault(); setActive(Math.max(0, Math.min(at + 1, results.length - 1))); }
+    if (e.key === 'ArrowUp') { e.preventDefault(); setActive(Math.max(at - 1, 0)); }
+    if (e.key === 'Enter' && !isImeKey(e)) { e.preventDefault(); go(results[at]); }
+    if (e.key === 'Escape' && !isImeKey(e)) { setQuery(''); setOpen(false); inputRef.current?.blur(); }
   };
 
   return (
@@ -76,7 +79,7 @@ function QuickSearch({ search }) {
         aria-label="Search issues and projects"
         aria-expanded={results.length > 0}
         aria-controls={results.length ? listId : undefined}
-        aria-activedescendant={results.length ? `${listId}-${active}` : undefined}
+        aria-activedescendant={results.length ? `${listId}-${at}` : undefined}
         placeholder="Search"
         value={query}
         onChange={(e) => { setQuery(e.target.value); setActive(0); setOpen(true); }}
@@ -97,10 +100,10 @@ function QuickSearch({ search }) {
                   key={`${hit.kind}-${hit.id}`}
                   id={`${listId}-${i}`}
                   role="option"
-                  aria-selected={i === active}
+                  aria-selected={i === at}
                   onMouseDown={(e) => { e.preventDefault(); go(hit); }}
                   onMouseEnter={() => setActive(i)}
-                  className={cx('flex cursor-pointer items-center gap-2.5 px-3 py-1.5', i === active ? 'bg-brand-subtle' : 'hover:bg-hovered')}
+                  className={cx('flex cursor-pointer items-center gap-2.5 px-3 py-1.5', i === at ? 'bg-brand-subtle' : 'hover:bg-hovered')}
                 >
                   {hit.kind === 'issue'
                     ? <IssueTypeIcon type={hit.type} />

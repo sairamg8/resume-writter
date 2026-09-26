@@ -4,9 +4,9 @@
 // owner write; `users/{uid}/shares/{resumeId}` remembers which id a résumé has, under the account's
 // own rule. The copy holds what the résumé's PDF prints and nothing else: a hidden field's value, a
 // hidden section or entry, the cover letter and the résumé's name in the dashboard stay private.
-// The Firestore calls take the SDK's functions (`fs`: doc, getDocFromServer, writeBatch — and
-// collection, getDocsFromServer for unpublishDeleted), so the tests run this very code against
-// tests/pdf/fake-firestore.mjs.
+// The Firestore calls take the SDK's functions (`fs`: doc, getDocFromServer, runTransaction — and
+// collection, getDocsFromServer for unpublishDeleted), so the
+// tests run this very code against tests/pdf/fake-firestore.mjs.
 import { newId } from '@/utils/ids';
 import { CONTACT_FIELDS, CONTACT_KEYS } from '@/utils/contacts';
 
@@ -144,26 +144,27 @@ export function publicIo(fs, db) {
   const publicDoc = (shareId) => fs.doc(db, 'public', shareId);
   const shareDoc = (uid, resumeId) => fs.doc(db, 'users', uid, 'shares', resumeId);
 
-  /** The link the account has recorded for résumé `resumeId`, or null: read from the server, never a stale cache. */
-  async function recordedId(uid, resumeId) {
-    const share = await fs.getDocFromServer(shareDoc(uid, resumeId));
-    return share.exists() ? share.data().shareId || null : null;
-  }
-
-  /** Adds to `batch` the deletion of each of these copies that is there (each id once). */
-  async function deleteCopies(batch, shareIds) {
-    for (const shareId of new Set(shareIds.filter(Boolean))) {
-      // The rules refuse deleting a copy that is not there (no owner to check), so only one that is.
-      if ((await fs.getDocFromServer(publicDoc(shareId))).exists()) batch.delete(publicDoc(shareId));
-    }
-  }
-
-  /** Deletes résumé `resumeId`'s copies at `shareIds`, those that are there, and its record of the link. */
+  /**
+   * Deletes résumé `resumeId`'s copies at `shareIds` and at the link the account records for it, those
+   * that are there, and its record of the link; resolves to whether it had a record. One transaction
+   * (R4-LO-22): read first and written after as a batch, a Publish on another device between the two
+   * put a new copy and record up, and the batch deleted the record and left that copy public with
+   * nothing naming it. Now the record read is checked at the commit, and a changed one runs it again.
+   */
   async function takeDown(uid, resumeId, shareIds) {
-    const batch = fs.writeBatch(db);
-    await deleteCopies(batch, shareIds);
-    batch.delete(shareDoc(uid, resumeId));
-    await batch.commit();
+    // Every link an attempt found recorded stays on the list when the transaction runs again.
+    const ids = new Set(shareIds.filter(Boolean));
+    return fs.runTransaction(db, async (tx) => {
+      const share = await tx.get(shareDoc(uid, resumeId));
+      if (share.exists() && share.data().shareId) ids.add(share.data().shareId);
+      // The rules refuse deleting a copy that is not there (no owner to check), so only one that is.
+      const there = [];
+      for (const id of ids) if ((await tx.get(publicDoc(id))).exists()) there.push(id);
+      if (!share.exists() && !there.length) return false;
+      for (const id of there) tx.delete(publicDoc(id));
+      tx.delete(shareDoc(uid, resumeId));
+      return share.exists();
+    });
   }
 
   return {
@@ -184,19 +185,26 @@ export function publicIo(fs, db) {
      * current state there. Resolves when the server has it. The record is read first: a panel
      * opened in another tab or on another device before this one published saw no link, and its
      * Publish made a second copy the record no longer named, public for good. A copy at the panel's
-     * own `shareId`, when the record names another, is taken down in the same batch: a résumé has
-     * one public copy at most.
+     * own `shareId`, when the record names another, is taken down in the same write: a résumé has
+     * one public copy at most. It is one transaction (R4-LO-22): two Publishes a moment apart both
+     * read "no record", and as a read then a batch each made its own copy, the first left with no
+     * record naming it; now the server refuses the second's write, as the record changed since it
+     * was read, and the SDK runs it again, when it reads the first one's link and reuses it.
      */
     async publish(uid, resume, { shareId: shown, now = Date.now() } = {}) {
       const copy = publicSnapshot(resume);
       if (new Blob([JSON.stringify(copy)]).size > MAX_PUBLIC_BYTES) throw Object.assign(new Error(TOO_LARGE), { code: TOO_LARGE_CODE });
-      const recorded = await recordedId(uid, resume.id);
-      const shareId = recorded || shown || newId();
-      const batch = fs.writeBatch(db);
-      if (shown && shown !== shareId) await deleteCopies(batch, [shown]);
-      batch.set(publicDoc(shareId), { owner: uid, resume: copy, publishedAt: now });
-      batch.set(shareDoc(uid, resume.id), { shareId, publishedAt: now });
-      await batch.commit();
+      // A transaction reads from the server, all its reads before its writes.
+      const shareId = await fs.runTransaction(db, async (tx) => {
+        const share = await tx.get(shareDoc(uid, resume.id));
+        const shareId = (share.exists() && share.data().shareId) || shown || newId();
+        // The rules refuse deleting a copy that is not there (no owner to check), so only one that is.
+        const stray = shown && shown !== shareId && (await tx.get(publicDoc(shown))).exists();
+        if (stray) tx.delete(publicDoc(shown));
+        tx.set(publicDoc(shareId), { owner: uid, resume: copy, publishedAt: now });
+        tx.set(shareDoc(uid, resume.id), { shareId, publishedAt: now });
+        return shareId;
+      });
       return { shareId, publishedAt: now, copy };
     },
 
@@ -206,7 +214,7 @@ export function publicIo(fs, db) {
      * one already gone (unpublished elsewhere) is skipped, as the rules refuse deleting it.
      */
     async unpublish(uid, resumeId, shareId) {
-      await takeDown(uid, resumeId, [shareId, await recordedId(uid, resumeId)]);
+      await takeDown(uid, resumeId, [shareId]);
     },
 
     /**
@@ -215,10 +223,7 @@ export function publicIo(fs, db) {
      * there was one.
      */
     async unpublishResume(uid, resumeId) {
-      const share = await fs.getDocFromServer(shareDoc(uid, resumeId));
-      if (!share.exists()) return false;
-      await takeDown(uid, resumeId, [share.data().shareId]);
-      return true;
+      return takeDown(uid, resumeId, []);
     },
 
     /**
@@ -226,8 +231,8 @@ export function publicIo(fs, db) {
      * deletion list says — when they have one, and resolves to those ids. A résumé deleted on
      * another device, or offline, or on a build that did not unpublish, kept its copy public with
      * no panel left anywhere to take it down: the cloud sync calls this once it knows the list
-     * (cloudSyncEngine.js). One read of the account's links (`users/{uid}/shares`), then one batch
-     * for each copy to take down.
+     * (cloudSyncEngine.js). One read of the account's links (`users/{uid}/shares`), then one
+     * transaction for each copy to take down.
      */
     async unpublishDeleted(uid, ids) {
       const gone = new Set(ids);

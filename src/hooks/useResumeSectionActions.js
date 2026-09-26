@@ -34,7 +34,10 @@ export function createSectionActions(patchActive) {
     });
   }
 
-  /** A new section, laid out in its template's own Grids where it has one (Compact's grid, T9: newSectionGrid). */
+  /**
+   * A new section, laid out in its template's own Grids where it has one (Compact's grid, T9:
+   * newSectionGrid). Returns its id, so the editor can open its first entry (R4-LO-20).
+   */
   function addSection(type, initialItem) {
     const id = newId(type);
     const factory = SECTION_TYPE_DEFAULTS[type] || SECTION_TYPE_DEFAULTS.custom;
@@ -43,6 +46,7 @@ export function createSectionActions(patchActive) {
       section.items = [initialItem];
     }
     patchActive(r => ({ ...r, sections: [...r.sections, newSectionGrid(section, r.template)] }));
+    return id;
   }
 
   function removeSection(sectionId) {

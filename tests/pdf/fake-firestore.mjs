@@ -1,5 +1,5 @@
 // A Firestore stand-in for the cloud-sync tests: the SDK functions cloudSyncIo.js calls
-// (collection, doc, getDocs, getDoc, writeBatch, …) over an in-memory map of document paths, plus
+// (collection, doc, getDocs, getDoc, writeBatch, runTransaction, …) over an in-memory map of document paths, plus
 // the timers, store and report the sync engine needs. The tests then run the app's own io,
 // engine, store updaters and demo restore — nothing here re-implements what they decide.
 //
@@ -115,6 +115,21 @@ export function fakeFirestore(docs = {}) {
     data.set(path, next);
   }
 
+  /** A batch's (or a transaction's) writes: applied as the server takes them, or refused. */
+  function commit(ops) {
+    if (!ops.every(writable)) return Promise.reject(denied());
+    if (fail.commit) return Promise.reject(fail.commit);
+    const ack = hold.commit;
+    const refusal = api.refuse?.(ops);
+    if (refusal) {
+      refused.push(ops);
+      return ack ? ack.then(() => { throw refusal; }) : Promise.reject(refusal);
+    }
+    ops.forEach(apply);
+    commits.push(ops);
+    return ack ? ack.then(() => undefined) : Promise.resolve();
+  }
+
   const fs = {
     collection: (_db, ...segs) => ({ path: segs.join('/') }),
     doc: (_db, ...segs) => ({ path: segs.join('/'), id: segs.at(-1) }),
@@ -132,20 +147,37 @@ export function fakeFirestore(docs = {}) {
           ops.push(['set', ref.path, clone(value), options]);
         },
         delete(ref) { ops.push(['delete', ref.path]); },
-        commit() {
-          if (!ops.every(writable)) return Promise.reject(denied());
-          if (fail.commit) return Promise.reject(fail.commit);
-          const ack = hold.commit;
-          const refusal = api.refuse?.(ops);
-          if (refusal) {
-            refused.push(ops);
-            return ack ? ack.then(() => { throw refusal; }) : Promise.reject(refusal);
-          }
-          ops.forEach(apply);
-          commits.push(ops);
-          return ack ? ack.then(() => undefined) : Promise.resolve();
-        },
+        commit: () => commit(ops),
       };
+    },
+    // As the SDK's: `update(tx)` reads with tx.get — from the server, every read before any write
+    // — and queues tx.set / tx.delete; its writes are committed together, as a batch's are, unless
+    // a document it read has changed since (another tab's or device's write): then the server
+    // refuses them and `update` runs again, at most five times. Resolves to what `update` did.
+    runTransaction: async (_db, update) => {
+      for (let attempt = 1; ; attempt += 1) {
+        const seen = new Map(); // path → the stored value its read saw (the fake's version of it)
+        const ops = [];
+        const tx = {
+          async get(ref) {
+            if (ops.length) throw Object.assign(new Error('Firestore transactions require all reads to be executed before all writes.'), { code: 'invalid-argument' });
+            return read(ref.path, (snap, source) => { seen.set(ref.path, source.get(ref.path)); return snap(ref.path); }, { server: true });
+          },
+          set(ref, value, options) {
+            if (holdsUndefined(value)) throw undefinedField(ref.path);
+            ops.push(['set', ref.path, clone(value), options]);
+            return tx;
+          },
+          delete(ref) { ops.push(['delete', ref.path]); return tx; },
+        };
+        const result = await update(tx);
+        // Checked and applied in one step, as the server does: no other write comes between.
+        if ([...seen].every(([path, value]) => data.get(path) === value)) {
+          await commit(ops);
+          return result;
+        }
+        if (attempt >= 5) throw Object.assign(new Error('Transaction failed: a document it read kept changing.'), { code: 'failed-precondition' });
+      }
     },
   };
   const api = {

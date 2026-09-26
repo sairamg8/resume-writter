@@ -1,7 +1,7 @@
 import { Copy, Eye, EyeOff, Trash2 } from 'lucide-react';
 import RichTextEditor from '@/components/RichTextEditor';
 import { newId } from '@/utils/ids';
-import { InputField, MonthPicker, FieldRow, ItemCard } from '@/components/SectionEditorShared';
+import { InputField, DateField, FieldRow, ItemCard } from '@/components/SectionEditorShared';
 
 export function SkillItem({ item, onUpdate, onRemove, onDuplicate, defaultOpen }) {
   const u = (k, v) => onUpdate({ ...item, [k]: v });
@@ -95,8 +95,8 @@ export function CertificationItem({ item, onUpdate, onRemove, onDuplicate, defau
       <InputField label="Certification Name" value={item.name} onChange={v => u('name', v)} placeholder="AWS Certified Developer" />
       <InputField label="Issuing Organization" value={item.issuer} onChange={v => u('issuer', v)} placeholder="Amazon Web Services" />
       <div className="grid grid-cols-2 gap-2">
-        <MonthPicker label="Issue Date" value={item.date} onChange={v => u('date', v)} />
-        <MonthPicker label="Expiry Date" value={item.expiry} onChange={v => u('expiry', v)} />
+        <DateField label="Issue Date" value={item.date} onChange={v => u('date', v)} />
+        <DateField label="Expiry Date" value={item.expiry} onChange={v => u('expiry', v)} />
       </div>
       <InputField label="Credential ID (optional)" value={item.credentialId} onChange={v => u('credentialId', v)} placeholder="ABC-12345" />
       <InputField label="Link URL (optional)" value={item.url} onChange={v => u('url', v)} placeholder="https://credential.example.com" />
@@ -114,7 +114,7 @@ export function AwardItem({ item, onUpdate, onRemove, onDuplicate, defaultOpen }
     <ItemCard label={item.title} onRemove={onRemove} onDuplicate={onDuplicate} visible={visible} defaultOpen={defaultOpen} onToggleVisibility={() => onUpdate({ ...item, visible: !visible })}>
       <InputField label="Award Title" value={item.title} onChange={v => u('title', v)} placeholder="Dean's List Award" />
       <InputField label="Issuing Organization" value={item.issuer} onChange={v => u('issuer', v)} placeholder="University of California" />
-      <MonthPicker label="Date" value={item.date} onChange={v => u('date', v)} />
+      <DateField label="Date" value={item.date} onChange={v => u('date', v)} />
       <RichTextEditor key={item.id + '_desc'} label="Description (optional)" value={item.description} onChange={v => u('description', v)} placeholder="Brief description of the award..." rows={2} />
     </ItemCard>
   );

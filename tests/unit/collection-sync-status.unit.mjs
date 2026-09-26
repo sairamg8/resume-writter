@@ -138,7 +138,14 @@ describe('R2-140-c: the workspace’s top bar shows the jobs’ and boards’ sy
     status.set('boards', 'offline');
     const { view, label } = await topBarAt('/boards/b1');
     try {
-      assert.equal(label(), 'Offline — changes saved locally', 'a job error does not show on a board page');
+      // 'offline' with the browser online is a server the sync cannot reach (failureReport), in the
+      // résumés' icon's words for it (R4-SYNC-02); "Offline" is the browser's own flag (R4-LO-23).
+      assert.equal(label(), 'Cannot reach your account — changes saved locally, will retry', 'a job error does not show on a board page');
+      view.window.navigator.onLine = false;
+      view.act(() => view.window.dispatchEvent({ type: 'offline' }));
+      assert.equal(label(), 'Offline — changes saved locally');
+      view.window.navigator.onLine = true;
+      view.act(() => view.window.dispatchEvent({ type: 'online' }));
       view.act(() => { syncHeld.set('boards', [{ id: 'b1', name: 'Life admin' }]); status.set('boards', 'stopped'); });
       assert.equal(label(), '“Life admin” not synced (too large?) — saved in this browser');
     } finally {

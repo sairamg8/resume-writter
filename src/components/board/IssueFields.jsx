@@ -224,7 +224,7 @@ export function PointsInput({ value, onChange, label = 'Story points', className
       onKeyDown={(e) => {
         // The Enter that picks an input method's word (a full-width digit) is not a save.
         if (e.key === 'Enter' && !isImeKey(e)) { e.preventDefault(); commit(); }
-        if (e.key === 'Escape' && draft !== null) { e.stopPropagation(); setDraft(null); }
+        if (e.key === 'Escape' && draft !== null && !isImeKey(e)) { e.stopPropagation(); setDraft(null); }
       }}
       className={cx(
         'h-8 w-full min-w-0 rounded border border-transparent bg-transparent px-2 text-sm text-ink placeholder:text-ink-subtlest transition-colors hover:bg-neutral-fill focus:border-brand focus:bg-white focus:outline-none',

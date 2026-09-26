@@ -1,5 +1,5 @@
 import { withPrintablePhotos } from '@/utils/printableImage';
-import { setFontFallback } from '@/utils/fontFallback';
+import { setFacesBorrowed, setFontFallback } from '@/utils/fontFallback';
 import { downloadBlob } from '@/utils/download';
 
 /**
@@ -61,7 +61,10 @@ function onReply({ data }, w) {
   proven = true;
   // As resolvePdfFonts does on the main thread: a slow build for a font since changed must not name it,
   // and a page picture (reportFont: false) never speaks for the open résumé.
-  if (entry.job.options?.reportFont !== false && data.id === lastBuild) setFontFallback(data.fallback);
+  if (entry.job.options?.reportFont !== false && data.id === lastBuild) {
+    setFontFallback(data.fallback);
+    setFacesBorrowed(data.borrowed);
+  }
   entry.resolve(new Blob([data.bytes], { type: 'application/pdf' }));
 }
 

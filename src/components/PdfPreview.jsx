@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { previewBox } from '@/constants/pageSize';
-import { fontFallback } from '@/utils/fontFallback';
+import { facesBorrowed, fontFallback } from '@/utils/fontFallback';
+import { imageRetryPending } from '@/utils/printableImage';
 import { loadPdfjs, setPdfjsForTest } from '@/utils/pdfjsLoader';
 
 /**
@@ -180,10 +181,12 @@ export function PdfPreview({ render, input, zoom = 1, textId, title = 'Résumé'
     return () => clearTimeout(timer);
   }, [input, render, retry, active]);
 
-  // Back online while the pages print in Noto Sans for a font that could not be loaded: build again,
-  // now with that font (R2-146). A build that needs no font from the web is left alone.
+  // Back online while the pages print in Noto Sans for a font that could not be loaded, in another
+  // face for one of its faces that failed, or with no photo for one whose fetch failed: build again,
+  // now with that font (R2-146), face (R4-LO-17) or photo (R4-LO-18). A build that needs nothing
+  // from the web is left alone.
   useEffect(() => {
-    const again = () => { if (fontFallback()) setRetry((n) => n + 1); };
+    const again = () => { if (fontFallback() || facesBorrowed() || imageRetryPending()) setRetry((n) => n + 1); };
     window.addEventListener('online', again);
     return () => window.removeEventListener('online', again);
   }, []);

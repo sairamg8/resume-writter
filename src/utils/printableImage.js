@@ -28,6 +28,12 @@ const due = (key) => retry.has(key) && Date.now() >= retry.get(key);
 if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
   window.addEventListener('online', () => { for (const key of retry.keys()) retry.set(key, 0); });
 }
+/**
+ * Whether an image printed as none only for a passing reason and will be fetched again (see `retry`):
+ * the preview builds again when the browser is back online, so the photo comes back then rather than
+ * on the next edit (R4-LO-18).
+ */
+export const imageRetryPending = () => retry.size > 0;
 /** Copies kept: the résumé's photo and the letter's, and custom contact icons (and the store's, smallerPhotos.js). */
 const KEEP = 64;
 const listeners = new Set();
