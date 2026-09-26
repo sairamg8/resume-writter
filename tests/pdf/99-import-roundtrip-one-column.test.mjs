@@ -4,8 +4,8 @@
 // under a date stay on their entry's lines. Each single-column template exports a fictional résumé
 // with the app's own react-pdf code; pdf.js reads each page's text, and no page is split into columns.
 // The import then finds the name and both jobs with their dates. (Which field of an entry's header
-// is the company is the text parser's guess, unchanged by the split: Executive's location on a line
-// of its own and Timeline's date over the entry are read as other fields, as before.)
+// is the company, the role and the location — Executive's location on a line of its own, Timeline's
+// date over the entry — is tests/pdf/99-import-roundtrip-entry-layouts.test.mjs.)
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { setup, teardown, resume, section, experience, render } from './harness.mjs';
