@@ -51,14 +51,17 @@ export function WorkspaceLayout({ projects = [], newProjectTo, renderCreate, sea
   const [collapsed, setCollapsed] = useState(readCollapsed);
   // The drawer belongs to the history entry it was opened on: any navigation closes it — a link to
   // another page, a link to the page it is on (the router replaces the entry: a new key), Back and
-  // Forward — and coming Back to the entry it was opened on does not open it again.
+  // Forward — and coming Back to the entry it was opened on does not open it again. The entry is its
+  // key and its path: HashRouter gives the key 'default' to the first entry and to every address
+  // typed into the bar.
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [drawerKey, setDrawerKey] = useState(location.key);
+  const entry = `${location.key} ${location.pathname}`;
+  const [drawerEntry, setDrawerEntry] = useState(entry);
   // md and up the drawer is only hidden by CSS: left open, it stayed a modal that turned every
   // shortcut off (useHotkeys) until the next page. Widening the window past it closes it.
   const wide = useMediaQuery('(min-width: 768px)');
-  if (drawerKey !== location.key || (wide && drawerOpen)) {
-    setDrawerKey(location.key);
+  if (drawerEntry !== entry || (wide && drawerOpen)) {
+    setDrawerEntry(entry);
     setDrawerOpen(false);
   }
   // The create dialog: null when closed, else the fields it opens with ({ boardId, columnId, … }).

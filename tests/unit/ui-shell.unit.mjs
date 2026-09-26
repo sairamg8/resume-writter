@@ -233,7 +233,7 @@ describe('the sidebar’s projects', () => {
  * `drawerOpen()` (the drawer is shown and not on its way out), `drawerLink(text)` (a link in the
  * drawer) and `click(a)` (a plain left click on it, as a browser sends it to the router's Link).
  */
-async function drawerShell(path, { width } = {}) {
+async function drawerShell(path, { width, entries = [path] } = {}) {
   patchFakeDom(); // the drawer's focus trap queries and moves focus
   const { WorkspaceLayout } = await loadModule('/src/components/shell/WorkspaceLayout.jsx');
   const { useWorkspace } = await loadModule('/src/components/shell/workspaceContext.js');
@@ -262,7 +262,7 @@ async function drawerShell(path, { width } = {}) {
   };
   function App() {
     if (width !== undefined) window.matchMedia = matchMedia; // before any hook below reads it
-    return createElement(MemoryRouter, { initialEntries: [path] },
+    return createElement(MemoryRouter, { initialEntries: entries, initialIndex: 0 },
       createElement(Routes, null,
         createElement(Route, { element: createElement(WorkspaceLayout, { projects: [], newProjectTo: '/boards?create=1' }) },
           createElement(Route, { path: '/jobs', element: createElement(Page, { name: 'LIST' }) }),
@@ -317,6 +317,17 @@ describe('R4-APP-03/04: the phone navigation drawer closes on every navigation',
       assert.ok(!s.drawerOpen(), 'Back to /jobs opened the drawer again');
       await s.go(1);
       assert.ok(!s.drawerOpen());
+    } finally { await s.view.unmount(); }
+  });
+
+  // HashRouter gives the key 'default' to the first entry and to every address typed into the bar.
+  it('an address typed into the bar closes it, though it shares the first entry’s key', async () => {
+    const s = await drawerShell('/jobs', { entries: [{ pathname: '/jobs', key: 'default' }, { pathname: '/boards', key: 'default' }] });
+    try {
+      s.openNav();
+      await s.go(1);
+      assert.match(s.shown(), /BOARDS/);
+      assert.ok(!s.drawerOpen(), 'the drawer stayed open on the typed page');
     } finally { await s.view.unmount(); }
   });
 
