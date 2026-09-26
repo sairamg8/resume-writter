@@ -29,7 +29,7 @@ it('a section with no shown entry is not in the copy, nor in what the panel list
   assert.deepEqual(copy.sections.map((s) => s.type), ['experience']);
   const lines = link.publicSummary(copy);
   assert.ok(!lines.some((l) => /^(Projects|Skills):/.test(l)), lines.join(' | '));
-  assert.ok(lines.some((l) => /: 1 entry$/.test(l)));
+  assert.ok(lines.some((l) => l.endsWith(': 1 entry')));
 });
 
 it('the copy still prints exactly as the résumé does', async () => {
