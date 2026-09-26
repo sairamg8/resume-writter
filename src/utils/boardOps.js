@@ -190,9 +190,10 @@ const dateOr = (v, fallback) => (isLocalISO(v) ? v : fallback);
  * next one repeat the last one's name).
  */
 function nextSprintName(board) {
-  const pattern = new RegExp(`^${board.key.replace(/[^A-Za-z0-9]/g, '\\$&')} Sprint (\\d+)$`, 'i');
+  const key = String(board.key ?? '');
+  const pattern = new RegExp(`^${key.replace(/[^A-Za-z0-9]/g, '\\$&')} Sprint (\\d+)$`, 'i');
   const numbers = board.sprints.map((s) => Number(pattern.exec(s.name)?.[1] ?? 0));
-  return `${board.key} Sprint ${Math.max(board.sprints.length, ...numbers) + 1}`;
+  return `${key} Sprint ${Math.max(board.sprints.length, ...numbers) + 1}`;
 }
 
 /** Add a future sprint; unnamed, it is "<KEY> Sprint <n>" (nextSprintName). */

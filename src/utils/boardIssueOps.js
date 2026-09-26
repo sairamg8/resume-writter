@@ -131,7 +131,9 @@ function spawnNext(board, issueId, ctx) {
   if (!issue || !RECURRENCE_IDS.includes(issue.recurrence) || issue.recurrence === 'none') return board;
   if (issue.recurrenceNextId && issueById(board, issue.recurrenceNextId)) return board;
   const now = nowOf(ctx);
-  const column = firstColumnOf(board, 'todo') ?? board.columns[0];
+  // An open column, never a done one: made in one it would be born resolved and never repeat again
+  // (a board's only to-do column turned Done, R4-BRD-09).
+  const column = firstColumnOf(board, 'todo') ?? board.columns.find((c) => !isDoneColumn(c)) ?? board.columns[0];
   const next = makeIssue(board, {
     ...issue,
     columnId: column.id,

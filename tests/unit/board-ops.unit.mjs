@@ -215,6 +215,13 @@ test('a column that becomes done resolves its issues as a move to Done does: wha
   assert.equal(ops.updateColumn(b, 'rev', { category: 'done' }, ctx), b, 'no change, nothing saved');
 });
 
+test('the only to-do column turned Done: the next occurrence goes to an open column, not born resolved (R4-BRD-09)', () => {
+  let b = ops.addIssue(boardWith([]), { id: 'R', title: 'Water the plants', due: '2026-09-23', recurrence: 'weekly' }, ctx);
+  b = ops.updateColumn(b, 'todo', { category: 'done' }, ctx);
+  const next = b.issues.find((i) => i.id === get(b, 'R').recurrenceNextId);
+  assert.deepEqual([next?.columnId, next?.resolvedAt], ['doing', null]);
+});
+
 test('an unnamed sprint takes the next free number, never a name a sprint has (R4-BRD-11)', () => {
   let b = boardWith([], { mode: 'scrum' });
   b = ops.addSprint(b, { id: 's1' });
