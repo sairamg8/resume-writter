@@ -298,6 +298,38 @@ describe('toasts', () => {
     } finally { await view.unmount(); }
   });
 
+  // R4-APP-02: a toast that replaced one with the same id (the editor's 'template-switch', 8 s with
+  // its Undo) kept the first one's countdown and went when the first one's time was up; and one
+  // shown within the 150 ms exit of a dismissed toast with its id was removed with it.
+  it('a toast that replaces one with its id counts its own full duration', async () => {
+    const { view, toast, toasts, region } = toastPage();
+    try {
+      toast({ id: 'template-switch', title: 'Template: Classic', duration: 1000 });
+      await wait(700);
+      toast({ id: 'template-switch', title: 'Template: Modern', duration: 1000 });
+      await wait(600); // 1300 ms: the first toast's time (1000) and its exit are over
+      view.act(() => {});
+      assert.equal(toasts().length, 1, 'the replacement went with the first toast’s time');
+      assert.match(region().textContent, /Template: Modern/);
+      await wait(700); // 2000 ms: its own 1000 ms from 700, and the exit
+      view.act(() => {});
+      assert.equal(toasts().length, 0, 'and goes when its own time is up');
+    } finally { await view.unmount(); }
+  });
+
+  it('a toast shown with the id of one on its way out stays', async () => {
+    const { view, toast, toasts, region } = toastPage();
+    try {
+      toast({ id: 'saved', title: 'Saved', duration: Infinity });
+      view.act(() => reactProps(byAttr(region(), 'aria-label', 'Dismiss notification')[0]).onClick(ev()));
+      toast({ id: 'saved', title: 'Saved again', duration: Infinity });
+      await wait(300);
+      view.act(() => {});
+      assert.equal(toasts().length, 1, 'the new toast was removed with the dismissed one');
+      assert.match(region().textContent, /Saved again/);
+    } finally { await view.unmount(); }
+  });
+
   it('keeps at most four; the same id replaces its toast; useToast outside a provider is a no-op', async () => {
     const { view, toast, toasts, region } = toastPage();
     try {

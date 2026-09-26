@@ -22,9 +22,16 @@ const TONES = {
  * focused), keeping what is left across pauses, then asks to be dismissed.
  */
 export function Toast({ toast, paused, onDismiss }) {
-  const { id, title, description, action, tone = 'neutral', duration = DURATION, leaving } = toast;
+  const { id, title, description, action, tone = 'neutral', duration = DURATION, leaving, instance } = toast;
   const remaining = useRef(duration);
+  const counting = useRef(instance);
   useEffect(() => {
+    // A toast that replaced this one (the same id: the same element) counts its own full duration:
+    // it kept the first one's timer, and went when the first one's time was up (R4-APP-02).
+    if (counting.current !== instance) {
+      counting.current = instance;
+      remaining.current = duration;
+    }
     if (paused || leaving || !Number.isFinite(duration) || duration <= 0) return undefined;
     const started = Date.now();
     const timer = setTimeout(() => onDismiss(id), remaining.current);
@@ -32,7 +39,7 @@ export function Toast({ toast, paused, onDismiss }) {
       clearTimeout(timer);
       remaining.current = Math.max(800, remaining.current - (Date.now() - started));
     };
-  }, [paused, leaving, duration, id, onDismiss]);
+  }, [paused, leaving, duration, id, instance, onDismiss]);
 
   const Icon = TONES[tone]?.icon;
   return (
@@ -81,16 +88,18 @@ export function ToastProvider({ children }) {
     setToasts((list) => list.map((t) => (t.id === id && !t.leaving ? { ...t, leaving: true } : t)));
     const timer = setTimeout(() => {
       timers.current.delete(timer);
-      setToasts((list) => list.filter((t) => t.id !== id));
+      // Only the toast that went out: one shown with the same id since then stays.
+      setToasts((list) => list.filter((t) => !(t.id === id && t.leaving)));
     }, EXIT_MS);
     timers.current.add(timer);
   }, []);
 
   const toast = useCallback((options = {}) => {
     seq.current += 1;
-    const id = options.id ?? `toast-${seq.current}`;
+    const instance = seq.current;
+    const id = options.id ?? `toast-${instance}`;
     setToasts((list) => {
-      const next = [...list.filter((t) => t.id !== id), { ...options, id, leaving: false }];
+      const next = [...list.filter((t) => t.id !== id), { ...options, id, instance, leaving: false }];
       const live = next.filter((t) => !t.leaving);
       const overflow = live.length - MAX_VISIBLE;
       return overflow > 0 ? next.filter((t) => !live.slice(0, overflow).includes(t)) : next;
