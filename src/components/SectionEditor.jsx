@@ -59,17 +59,23 @@ export function SortableSection({
     addItem(section.id, factory());
   }
 
+  // An entry nobody has filled in yet: every text field empty, or still the value a new entry starts
+  // with (a new language's 'Professional'). Deleting one does not ask (R4-ED-06), and its card opens,
+  // so the entry Add just made, or a new section's first one, shows its fields at once instead of a
+  // collapsed 'New Entry' to find and click (R4-ED-07).
+  function untouched(item) {
+    const fresh = factory();
+    return !Object.entries(item).some(([k, v]) => k !== 'id' && typeof v === 'string' && v.trim() && v !== fresh[k]);
+  }
+
   function renderItem(item) {
     const props = {
       item,
+      defaultOpen: untouched(item),
       onUpdate: u => updateItem(section.id, item.id, () => u),
       onRemove: () => {
-        // An untouched new entry goes without asking; anything with content asks first. A field
-        // still holding the value a new entry starts with is not content: a new language starts
-        // at 'Professional', and every fresh row asked (R4-ED-06).
-        const fresh = factory();
-        const hasContent = Object.entries(item).some(([k, v]) => k !== 'id' && typeof v === 'string' && v.trim() && v !== fresh[k]);
-        if (!hasContent || confirm('Delete this entry?')) removeItem(section.id, item.id);
+        // An untouched new entry goes without asking; anything with content asks first.
+        if (untouched(item) || confirm('Delete this entry?')) removeItem(section.id, item.id);
       },
       onDuplicate: duplicateItem && (() => duplicateItem(section.id, item.id)),
     };
