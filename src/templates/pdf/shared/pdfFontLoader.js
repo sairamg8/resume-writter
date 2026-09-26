@@ -358,6 +358,28 @@ function addStandIns(font) {
 }
 
 /**
+ * A glyph laid out for other characters than the ones fontkit first cached it with carries the characters
+ * it was laid out for. fontkit keeps one glyph object per id, with the characters of its first request,
+ * and the PDF's ToUnicode entry is written from them, so two characters one glyph draws read back as the
+ * first one asked for: Source Serif 4's ’ (U+2019) as ʼ (U+02BC), seeded first in code-point order; a
+ * Persian keheh (ک) that joins the next letter as the Arabic kaf (ك) an earlier résumé printed. A glyph
+ * asked for with no characters (a composite's part) or with its own gets the cached object, as before.
+ */
+function glyphsAsLaidOut(font) {
+  if (typeof font.getGlyph !== 'function') return;
+  const getGlyph = font.getGlyph.bind(font);
+  const views = new Map();
+  font.getGlyph = (id, characters = []) => {
+    const glyph = getGlyph(id, characters);
+    const cps = glyph?.codePoints;
+    if (!glyph || !characters?.length || (cps && cps.length === characters.length && cps.every((c, i) => c === characters[i]))) return glyph;
+    const key = `${id}:${characters.join(',')}`;
+    if (!views.has(key)) views.set(key, Object.create(glyph, { codePoints: { value: [...characters], enumerable: true } }));
+    return views.get(key);
+  };
+}
+
+/**
  * Load every registered face of `families` and get their fontkit fonts ready to render;
  * returns the families that can be used, in order. Call before every render.
  *
@@ -373,6 +395,8 @@ function addStandIns(font) {
  * 4. Widen a too-narrow space in the laid-out run (widenNarrowSpace), so `pdftotext -raw` reads the
  *    narrow-space fonts' words apart instead of glued.
  * 5. Draw a dash or space the face lacks with its stand-in (addStandIns), after the seeding in 1.
+ * 6. Give a glyph laid out for other characters than its cached ones those characters (glyphsAsLaidOut),
+ *    so its text reads back as typed; the seeding in 1 still names the composites' parts.
  */
 export async function prepareFonts(families) {
   const store = Font.getRegisteredFonts();
@@ -396,6 +420,7 @@ export async function prepareFonts(families) {
       if (!font || primedFonts.has(font) || typeof font.glyphForCodePoint !== 'function') continue;
       for (const codePoint of font.characterSet || []) if (!isPresentationForm(codePoint)) font.glyphForCodePoint(codePoint);
       addStandIns(font);
+      glyphsAsLaidOut(font);
       if (typeof font.layout === 'function') {
         const base = font.layout.bind(font);
         const noLig = (string, features, ...rest) => base(string, features ?? noLigatures(), ...rest);
