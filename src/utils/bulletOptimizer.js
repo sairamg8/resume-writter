@@ -120,7 +120,11 @@ export function hasMetric(text) {
   // A calendar year ("in 2021", "2019–2022", "the 2020s") measures nothing: it is read as no number
   // at all, or "Joined Acme in 2021" scored as a quantified result (R4-CL-09). "$2019", "2019%",
   // "2000+" and "2010k" stay numbers.
-  const noYears = clean.replace(/(?<![\p{L}\d$]|\d[.,])(?:19|20)\d{2}(?![\d%+kKmMbBxX$]|[.,]\d)/gu, '');
+  const noYears = clean
+    // A year range or a month and year ("2019–22", "2019/20", "05/2021") is dates too, all of it.
+    .replace(/(?<![\p{L}\d$])(?:19|20)\d{2}\s*[–—/-]\s*\d{2}(?![\d%+kKmMbBxX$])/gu, '')
+    .replace(/(?<![\p{L}\d$])\d{1,2}\/(?:19|20)\d{2}(?![\d%+kKmMbBxX$])/gu, '')
+    .replace(/(?<![\p{L}\d$]|\d[.,])(?:19|20)\d{2}(?![\d%+kKmMbBxX$]|[.,]\d)/gu, '');
   return /(?<!\p{L})\d/u.test(noYears) && !/^\d{4}$/.test(clean);
 }
 

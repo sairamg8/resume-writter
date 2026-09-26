@@ -96,6 +96,9 @@ test('a calendar year is no metric, in the optimizer and in the ATS score alike'
     'Led the rewrite from 2019–2022',
     'Maintained the 1990s billing system',
     'Promoted in Jan, 2020.',
+    'Led the rewrite from 2019–22',
+    'Ran the 2019/20 hiring round',
+    'Promoted to lead in 05/2021',
   ]) {
     assert.equal(metric(t), false, t);
     assert.equal(atsVerdict(t).metric, false, `ATS: ${t}`);
