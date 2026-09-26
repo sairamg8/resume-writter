@@ -43,3 +43,10 @@ test('an entry with its own dates and a heading under it: both stay entries, as 
   assert.equal(jobs[0].startDate, 'Mar 2021');
   assert.match(JSON.stringify(jobs), /Highlights/);
 });
+
+// The review of R4-IMP-09: an entry whose title holds a role and a company is no employer over roles.
+test('"### Acme — Engineer" over "#### Highlights" with no dates: Acme\'s job as written', () => {
+  const md = '# Jordan Ellery\n\n## Experience\n### Acme — Engineer\n#### Highlights\n- Built it.\n';
+  const jobs = resumeFromText(markdownLines(md)).sections.find((s) => s.type === 'experience')?.items || [];
+  assert.deepEqual([jobs[0]?.company, jobs[0]?.role], ['Acme', 'Engineer']);
+});

@@ -27,3 +27,8 @@ test('the layouts read before read as before: a line each, and a grid of cells',
   assert.deepEqual(langs('English: Native\nSpanish — Professional'), [['English', 'Native'], ['Spanish', 'Professional']]);
   assert.deepEqual(langs('English\tNative\tSpanish\tConversational'), [['English', 'Native'], ['Spanish', 'Conversational']]);
 });
+
+// The review of R4-IMP-11: a level's own comma, its rest in lower case, is no language.
+test('"Spanish: Working knowledge, written": one language, its level whole', () => {
+  assert.deepEqual(langs('Spanish: Working knowledge, written'), [['Spanish', 'Working knowledge, written']]);
+});

@@ -642,7 +642,9 @@ function roleEntries(type, lines) {
       while (next < lines.length && !lines[next].hint) next += 1;
       const under = lines.slice(k + 1, next);
       const dated = under.some((x) => pieces(x.text).some((p) => readDateRange(p) || trailingDate(p)));
-      if (JOB.has(type) && lines[next]?.hint === 'role' && !dated) {
+      // Not an entry whose title holds a role and a company ("### Acme — Engineer" over "#### Highlights").
+      const whole = fieldsOf(l.text).length > 1 || pieces(l.text).length > 1 || ROLE.test(l.text);
+      if (JOB.has(type) && lines[next]?.hint === 'role' && !dated && !whole) {
         const placeAt = under.findIndex((x) => PLACE.test(x.text));
         group = { company: l.text, place: placeAt >= 0 ? under[placeAt].text : '', lead: under.filter((x, i) => i !== placeAt), first: true };
         k = next - 1;
@@ -697,7 +699,9 @@ function languagesOf(lines) {
       // A level alone, set apart from its language ("English ⇥ Native", a PDF's grid cells two to a
       // row): the level of the language before it; a second one ("English: Full professional, C2") joins it.
       if (level && level.index === 0 && bare) { bare.proficiency = cell; bare = null; continue; }
-      if (level && level.index === 0 && last) { last.proficiency = last.proficiency ? `${last.proficiency}, ${cell}` : cell; continue; }
+      // So does a cell in lower case after a level ("Spanish: Working knowledge, written"): the level's rest.
+      if (last?.proficiency && ((level && level.index === 0) || /^\p{Ll}/u.test(cell))) { last.proficiency = `${last.proficiency}, ${cell}`; continue; }
+      if (level && level.index === 0 && last) { last.proficiency = cell; continue; }
       if (level && level.index > 0) { last = itemOf('languages', { language: cell.slice(0, level.index).trim(), proficiency: level[0].trim() }); items.push(last); bare = null; continue; }
       bare = itemOf('languages', { language: cell, proficiency: '' });
       last = bare;
