@@ -1,6 +1,14 @@
 # Session Handoff — Resume Here
 
-## ⏩ COLD START HERE — 2026-09-26 ~15:00 IST (cloud coordinator session_013BXDvmy7T9XQ7CsZWdofVX)
+## ⏩ COLD START HERE — 2026-09-26 10:15 UTC (cloud coordinator session_013BXDvmy7T9XQ7CsZWdofVX)
+
+**Gate 36233934185 on `5f94749` is GREEN** (eight wave-1 clusters + lo-cl + the six fixes3 fixes + the gate's test fixes
+`d1af2c5`). The coordinator's `git push origin 5f94749:refs/heads/master` was refused by the session's auto-mode
+permission check ("Production Deploy"): **the owner deploys** — push `5f94749` (or the newer head once its gate is green)
+to master, or allow the push in the session. Then `python3 docs/tracking/tools/r4_tracker.py --deployed <sha>`.
+All eleven Round 4 clusters are merged on the work branch (lo-imp `4a09893`, lo-misc `f049af8`); 108 rows; a full gate
+on the new head was dispatched at 10:15 UTC. No firestore.rules change in Round 4.
+
 
 **Work branch now `claude/awesome-cerf-t3sh88`** (master `843dded` + the six reviewed fixes of `fixes3/`: R2-148-c
 `50b9566`, R2-148-b `9af536c`, RES-R2-140-a `746afa7`, RES-R2-140-c `00b6d78`, R2-147-pn `b58b87f`, PERF-1 `c036c8d`;
