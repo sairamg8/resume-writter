@@ -16,7 +16,7 @@ const TYPES = {
   experience: { word: 'ExpCo', date: '01/2020', place: 'ExpCity', items: [{ company: 'ExpCo', role: 'ExpRole', location: 'ExpCity', startDate: '01/2020', endDate: '12/2021', description: '<p>ExpText</p><ul><li>ExpBullet</li></ul>', bullets: ['ExpLegacy'] }] },
   education: { word: 'EduUni', date: '2012', place: 'EduCity', items: [{ institution: 'EduUni', degree: 'EduDeg', location: 'EduCity', startDate: '2012', endDate: '2016', description: '<p>EduText</p>' }] },
   skills: { word: 'SkillCat', items: [{ category: 'SkillCat', skills: 'SkillList' }] },
-  projects: { word: 'ProjName', date: '2021', items: [{ name: 'ProjName', technologies: 'ProjTech', startDate: '2021', endDate: '2022', description: '<p>ProjText</p>' }] },
+  projects: { word: 'ProjName', date: '2021', under: 'ProjTech', items: [{ name: 'ProjName', technologies: 'ProjTech', startDate: '2021', endDate: '2022', description: '<p>ProjText</p>' }] },
   languages: { word: 'LangName', items: [{ language: 'LangName', proficiency: 'LangLevel' }] },
   certifications: { word: 'CertName', date: '2020', items: [{ name: 'CertName', issuer: 'CertIssuer', date: '2020' }] },
   awards: { word: 'AwardName', date: '2019', items: [{ title: 'AwardName', issuer: 'AwardIssuer', date: '2019', description: '<p>AwardText</p>' }] },
@@ -74,7 +74,7 @@ describe('Word: Section Options → Alignment "Center" centres what the PDF cent
       const { resolveSection } = await loadModule('/src/templates/pdf/shared/templateSectionDefaults.js');
       const r = everyType(template, 'center');
       const doc = byType(await renderDocx(r));
-      for (const [type, { word, date, place }] of Object.entries(TYPES)) {
+      for (const [type, { word, date, place, under }] of Object.entries(TYPES)) {
         if (!date) continue;
         const text = doc[type].find((p) => p.text.includes(word)).text;
         if (template === 'sidebar' && SIDEBAR_COLUMN_TYPES.includes(type)) {
@@ -100,6 +100,9 @@ describe('Word: Section Options → Alignment "Center" centres what the PDF cent
         assert.ok(!lines.slice(1).some((l) => l.includes(date)), `${template} ${type}: no date line of its own: ${JSON.stringify(text)}`);
         const title = stacked ? [head, lines[1]].sort().join() === [...fields].sort().join() : head.includes(word);
         assert.ok(title, `${template} ${type}: ${JSON.stringify(text)}`);
+        // A project's technologies and link: a centred line of their own under the title, as the PDF's (R4-DOUT-04).
+        assert.equal(lines.length, 1 + (stacked ? 1 : 0) + (under ? 1 : 0) + (place ? 1 : 0), `${template} ${type}: ${JSON.stringify(text)}`);
+        if (under) assert.equal(lines[1], under, `${template} ${type}: ${JSON.stringify(text)}`);
         if (place) assert.equal(lines.at(-1), place, `${template} ${type}: the location on a line of its own (ATS-1)`);
       }
     });
