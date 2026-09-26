@@ -61,7 +61,8 @@ it('R4-BRD-06: M on the History tab goes to Comments and opens the comment box',
     await page.settle();
     page.click(page.tab('History'));
     assert.equal(page.tab('History').getAttribute('aria-selected'), 'true');
-    assert.equal(page.button('Add a comment…'), undefined, 'the History tab has no comment box');
+    const box = page.button('Add a comment…');
+    assert.ok(!box || box.closest('.hidden'), 'the History tab shows no comment box');
     press(page.view, 'm', page.view.document.body);
     await page.settle();
     assert.equal(page.tab('Comments').getAttribute('aria-selected'), 'true', 'M left the History tab showing, and nothing happened');
@@ -91,6 +92,47 @@ it('R4-BRD-06: under a dialog stacked on the issue view (Delete\'s question), M 
     assert.equal(question(), undefined, 'the question went');
     press(page.view, 'm', page.view.document.body);
     assert.ok(page.byLabel('Comment'), 'M did not open the comment box once the question had gone');
+  } finally {
+    await page.view.unmount();
+  }
+});
+
+it('R4-BRD-06: an M used, then Cancel, History and back to Comments: the box stays shut; a comment being typed survives History', async () => {
+  const page = mountBoard('/boards/p1?issue=HOME-2');
+  try {
+    await page.settle();
+    press(page.view, 'm', page.view.document.body);
+    await page.settle();
+    assert.ok(page.byLabel('Comment'));
+    page.click(page.button('Cancel'));
+    page.click(page.tab('History'));
+    page.click(page.tab('Comments'));
+    await page.settle();
+    assert.equal(page.byLabel('Comment'), undefined, 'coming back to Comments counted the old M again and opened the box');
+
+    page.click(page.button('Add a comment…'));
+    page.view.act(() => reactProps(page.byLabel('Comment')).onChange(ev({ target: { value: 'Half a thought' } })));
+    page.click(page.tab('History'));
+    page.click(page.tab('Comments'));
+    assert.equal(reactProps(page.byLabel('Comment')).value, 'Half a thought', 'a look at History threw the comment away');
+  } finally {
+    await page.view.unmount();
+  }
+});
+
+it('R4-BRD-06: M on a popover over the issue view (the Labels picker) leaves the comment box shut', async () => {
+  const page = mountBoard('/boards/p1?issue=HOME-2');
+  try {
+    await page.settle();
+    page.click(page.byLabel('Labels: none'));
+    await page.settle();
+    // The picker's panel (a non-modal role="dialog" in a portal layer of its own), focus on it.
+    const inPopover = page.all().find((el) => el.getAttribute('role') === 'dialog' && el !== page.dialog());
+    assert.ok(inPopover, 'the Labels picker opened');
+    assert.ok(inPopover.closest('[data-ui-portal]') !== page.dialog().closest('[data-ui-portal]'), 'in a layer of its own');
+    assert.equal(inPopover.getAttribute('aria-modal'), null, 'not modal: the top-dialog check alone lets M through');
+    press(page.view, 'm', inPopover);
+    assert.equal(page.byLabel('Comment'), undefined, 'M from the popover opened the comment box behind it');
   } finally {
     await page.view.unmount();
   }

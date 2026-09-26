@@ -19,8 +19,8 @@ function Composer({ initial = '', onSave, onCancel, autoFocus = false, saveLabel
   const [text, setText] = useState(initial);
   const [open, setOpen] = useState(autoFocus || !!initial);
   const fieldRef = useRef(null);
-  // From 0: a box that mounts already summoned (M on the History tab brings it in) opens.
-  const [summoned, setSummoned] = useState(0);
+  // Only a summon made while it is mounted opens it (it stays mounted on the History tab, hidden).
+  const [summoned, setSummoned] = useState(summon);
   if (summon !== summoned) {
     setSummoned(summon);
     setOpen(true);
@@ -141,9 +141,12 @@ export function IssueActivity({ issue, onAddComment, onUpdateComment, onDeleteCo
   // acts only while the view is the top dialog: under a confirm or the Create dialog opened from
   // the view, the comment box opened behind them and took the focus out of the one on top.
   useHotkeys({
-    m: () => {
+    m: (event) => {
       const modals = document.querySelectorAll('[aria-modal="true"]');
       if (!modals[modals.length - 1]?.contains(sectionRef.current)) return;
+      // Nor from a popover over the view (the Labels picker's buttons): the box's focus would close it.
+      const layer = event?.target?.closest?.('[data-ui-portal]');
+      if (layer && !layer.contains(sectionRef.current)) return;
       // The History tab has no comment box: M goes to Comments, where it is.
       setTab((t) => (t === 'history' ? 'comments' : t));
       setComposeKey((k) => k + 1);
@@ -170,16 +173,16 @@ export function IssueActivity({ issue, onAddComment, onUpdateComment, onDeleteCo
         ]}
       />
       <TabPanel tabsId="issue-activity" value={tab} current={tab} className="flex flex-col gap-5">
-      {tab !== 'history' && (
-        <div className="flex gap-3">
-          <Avatar name={WHO} size="md" decorative />
-          <div className="min-w-0 flex-1">
-            {/* Summoned, not re-keyed: a new key threw away a comment being typed. */}
-            <Composer summon={composeKey} onSave={onAddComment} />
-            <p className="mt-1.5 text-[12px] text-ink-subtlest"><span className="font-semibold">Pro tip:</span> press <kbd className="rounded border border-line px-1">M</kbd> to comment</p>
-          </div>
+      {/* Hidden, not unmounted, on the History tab: a comment being typed stays, and coming back
+          to Comments does not count an old M again. */}
+      <div className={cx('flex gap-3', tab === 'history' && 'hidden')}>
+        <Avatar name={WHO} size="md" decorative />
+        <div className="min-w-0 flex-1">
+          {/* Summoned, not re-keyed: a new key threw away a comment being typed. */}
+          <Composer summon={composeKey} onSave={onAddComment} />
+          <p className="mt-1.5 text-[12px] text-ink-subtlest"><span className="font-semibold">Pro tip:</span> press <kbd className="rounded border border-line px-1">M</kbd> to comment</p>
         </div>
-      )}
+      </div>
       <ul className={cx('flex flex-col gap-5', rows.length === 0 && 'hidden')}>
         {rows.map((r) => (r.kind === 'comment'
           ? <Comment key={`c-${r.c.id}`} comment={r.c} onUpdate={(t) => onUpdateComment(r.c.id, t)} onDelete={() => onDeleteComment(r.c.id)} />
