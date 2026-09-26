@@ -253,9 +253,25 @@ export function insertActionVerb(text, verb) {
     const weak = new RegExp(`^${wp.match.source}`, 'iu');
     if (weak.test(rest)) return lead + rest.replace(weak, verb);
   }
-  const [word] = rest.match(/^\S*/u);
-  return `${lead}${verb} ${/^\p{Lu}\p{Ll}+(?!\p{L})/u.test(word) ? word[0].toLowerCase() + rest.slice(1) : rest}`;
+  const [word] = rest.match(/^\p{L}*/u);
+  return `${lead}${verb} ${FUNCTION_WORDS.has(word.toLowerCase()) && /^\p{Lu}\p{Ll}*$/u.test(word) ? word[0].toLowerCase() + rest.slice(1) : rest}`;
 }
+
+/**
+ * The words lowercased when a power verb goes before them ("In 2023" → "Spearheaded in 2023"): words
+ * that are never a name. Any other capitalised word keeps its case, as it may be one — "Kubernetes
+ * cluster…" read "Spearheaded kubernetes cluster…" (R4-LO-13).
+ */
+const FUNCTION_WORDS = new Set([
+  'a', 'an', 'the', 'this', 'that', 'these', 'those', 'my', 'our', 'your', 'his', 'her', 'its', 'their',
+  'i', 'we', 'you', 'he', 'she', 'it', 'they', 'each', 'every', 'all', 'both', 'some', 'many', 'several',
+  'multiple', 'various', 'other', 'another', 'any', 'no', 'more', 'most', 'over', 'under', 'in', 'on',
+  'at', 'by', 'for', 'from', 'to', 'into', 'onto', 'with', 'within', 'without', 'across', 'after',
+  'before', 'during', 'since', 'until', 'through', 'throughout', 'while', 'when', 'as', 'of', 'about',
+  'above', 'below', 'between', 'among', 'along', 'around', 'behind', 'beyond', 'despite', 'via', 'per',
+  'and', 'or', 'but', 'also', 'then', 'not', 'did', 'was', 'were', 'is', 'are', 'has', 'had', 'have',
+  'been', 'being', 'be', 'new', 'first', 'successfully',
+]);
 
 /** The verb phrases of more than one word among Auto-Fix's replacements and their alternatives. */
 const LEADING_VERB_PHRASE = new RegExp(`^(?:${WEAK_PHRASE_REPLACEMENTS
