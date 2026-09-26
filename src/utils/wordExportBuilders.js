@@ -1,4 +1,4 @@
-import { BorderStyle, Paragraph, ShadingType, TextRun } from 'docx';
+import { BorderStyle, Paragraph, ShadingType, TabStopType, TextRun } from 'docx';
 import {
   accent2Hex, bold, normal, linked, sectionHeading, bulletPoint, descriptionToParagraphs, dateRightPara, centredIf, eighths,
   gapPara, gridTable, inlineGap, lineSpacing, twips,
@@ -11,6 +11,8 @@ import { sectionHeadingLook, titleTracking } from '@/templates/pdf/shared/sectio
 import { resolveTemplateSettings } from '@/templates/pdf/shared/templateSettings';
 import { getDateColor, getEffectiveSpacing } from '@/templates/pdf/shared/PdfSections';
 import { fieldGap } from '@/templates/pdf/shared/PdfItemHeader';
+import { pxToPt } from '@/templates/pdf/shared/pdfUnits';
+import { LEVEL_STEPS, languageLevel, languageLevelStyle } from '@/utils/languageLevel';
 import { hasRichText } from '@/utils/richText';
 import { contactHref } from '@/utils/contacts';
 import { dateRange, endDateOf, formatDate, presentLabel, startDateOf } from '@/utils/dates';
@@ -266,18 +268,49 @@ export function buildProjects(section, accentHex, settings, centered, dateHex, l
   ])];
 }
 
+/**
+ * A language's level as Word prints it (Section Options → Level, R2-147): LEVEL_STEPS glyphs, the
+ * level's filled — Dots "●●●○○", Bar "▰▰▰▱▱" — where the PDF draws its circles or its track (PdfLevel).
+ * '' for Text (unset), and for a proficiency the scale does not know: the PDF draws nothing there either.
+ */
+function levelGlyphs(proficiency, sectionSettings) {
+  const style = languageLevelStyle(sectionSettings);
+  const level = style && languageLevel(proficiency);
+  if (!level) return '';
+  const [on, off] = style === 'bar' ? ['▰', '▱'] : ['●', '○'];
+  return on.repeat(level) + off.repeat(LEVEL_STEPS - level);
+}
+
+/**
+ * Languages as the PDF's LanguagesSection prints them (R4-DOUT-11): the language, and its proficiency
+ * apart from it, no dash — at the right of the column (a right tab, the PDF's 12 pt short of it), beside
+ * it a field's gap away on Compact, 6 pt away when centred. Level Dots or Bar prints its glyphs in the
+ * accent in front of the proficiency, as the PDF draws the mark there; in the Sidebar's side column on
+ * a line of its own under them, as the PDF puts it.
+ */
 export function buildLanguages(section, accentHex, settings, centered, dateHex, look) {
-  return [sectionHeading(section.title, accentHex, centered, section.heading), ...entries(section, look, (item) => (!item.language && !item.proficiency ? [] : [
-    new Paragraph({
+  const compact = look.template === 'compact';
+  return [sectionHeading(section.title, accentHex, centered, section.heading), ...entries(section, look, (item) => {
+    if (!item.language && !item.proficiency) return [];
+    const glyphs = levelGlyphs(item.proficiency, section.settings);
+    const mark = glyphs ? [normal(glyphs, { size: look.base, color: accentHex })] : [];
+    // Both at Base, as the PDF prints them (R2-118).
+    const word = item.proficiency ? [second(item.proficiency, look, look.ink.sub, look.base)] : [];
+    // The mark and its word PdfLevel's 6 px apart.
+    const right = [...(look.side ? [] : mark), ...(mark.length && word.length && !look.side ? [inlineGap(pxToPt(6), look.base)] : []), ...word];
+    const apart = centered ? inlineGap(pxToPt(8), look.base) : compact ? inlineGap(fieldGap(look.base / 2), look.base) : normal('\t', { size: look.base });
+    const tabbed = !centered && !compact;
+    return [new Paragraph({
       children: [
-        // Both at Base, as the PDF prints them (R2-118).
         ...(item.language ? [bold(item.language, { size: look.base, color: look.ink.text })] : []),
-        ...(item.proficiency ? [second(`${item.language ? ' — ' : ''}${item.proficiency}`, look, look.ink.sub, look.base)] : []),
+        ...(right.length ? [apart, ...right] : []),
+        ...(look.side && mark.length ? [new TextRun({ break: 1 }), ...mark] : []),
       ],
       spacing: { after: 0 },
+      ...(tabbed ? { tabStops: [{ type: TabStopType.RIGHT, position: look.tab - twips(12) }] } : {}),
       ...centredIf(centered),
-    }),
-  ]))];
+    })];
+  })];
 }
 
 export function buildCertifications(section, accentHex, settings, centered, dateHex, look) {

@@ -1,7 +1,8 @@
 // Section Options → Level for Languages (R2-147): how a language's proficiency may be drawn beside its
 // word — Text (the word alone, as always), Dots (five, the level's filled) or Bar (a track filled to
-// level/5). The word always prints: a drawing never replaces it, and the Word, Markdown and ATS text
-// exports print the word alone. Pure, no imports: the PDF's renderers and the tests read it alike.
+// level/5). The word always prints: a drawing never replaces it. Word prints the level as glyphs in front
+// of the word (R4-DOUT-11); the Markdown and ATS text exports print the word alone. Pure, no imports: the
+// PDF's renderers, the Word export and the tests read it alike.
 
 /**
  * A proficiency's level, 0–5 steps read off its words, first match wins — the scale LinkedIn and the ILR
