@@ -5,6 +5,7 @@ import { readImageFile } from '@/utils/imageUpload';
 import { UNLOADABLE_PHOTO, UNPRINTABLE_PHOTO, usePrintableImage } from '@/hooks/usePrintableImage';
 import { photoTextPositionApplies, templateId } from '@/constants/templates';
 import { PHOTO_OPTIONS, photoOption } from '@/constants/photoOptions';
+import { useToast } from '@/components/ui/Toast';
 
 /**
  * One photo control's chips, from the list the PDF clamps to (src/constants/photoOptions.js): the
@@ -28,6 +29,7 @@ export function PhotoSection({ resume: whole, personal, updatePersonal, toggleFi
   // this browser cannot read either prints nothing, and the panel says so instead of "Added" (R7-7).
   const printable = usePrintableImage(personal.photo);
   const unprintable = Boolean(personal.photo) && printable === null;
+  const { toast } = useToast();
 
   function handlePhotoChange(e) {
     const file = e.target.files?.[0];
@@ -36,6 +38,20 @@ export function PhotoSection({ resume: whole, personal, updatePersonal, toggleFi
     // The whole résumé, sections and all: an upload may take only what its cloud document has left (R2-097).
     const resume = { ...whole, personal, settings: s, template, coverLetter };
     readImageFile(file, { kind: 'photo', resume, replacing: personal.photo }).then((dataUrl) => updatePersonal('photo', dataUrl), (err) => alert(err.message));
+  }
+
+  // Remove takes the upload out at once, with a notice whose Undo puts the same photo back, so a
+  // slip costs no re-upload (R4-DUX-27). The photo is the one field it clears: its Shape, Size and
+  // the rest are Design settings and its eye is hiddenFields, and both stay as they were.
+  function removePhoto() {
+    const photo = personal.photo;
+    updatePersonal('photo', null);
+    toast({
+      id: 'photo-removed',
+      title: 'Photo removed',
+      duration: 8000,
+      action: { label: 'Undo', onClick: () => updatePersonal('photo', photo) },
+    });
   }
 
   // Where no text sits beside the photo — the Sidebar's column, a centred header — Text Position and
@@ -101,7 +117,7 @@ export function PhotoSection({ resume: whole, personal, updatePersonal, toggleFi
                 </p>
               )}
               {personal.photo && (
-                <button onClick={() => updatePersonal('photo', null)} className="text-[11px] text-red-500 hover:text-red-600 mt-1">Remove photo</button>
+                <button onClick={removePhoto} className="text-[11px] text-red-500 hover:text-red-600 mt-1">Remove photo</button>
               )}
             </div>
           </div>
