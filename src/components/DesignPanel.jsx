@@ -23,7 +23,7 @@ import {
   getIconSetId,
 } from '@/utils/contactIcons';
 import { CONTACT_FIELDS } from '@/utils/contacts';
-import { ONE_PAGE_FIT, fitOnePage, printedKey } from '@/utils/pageFit';
+import { MIN_FIT_BASE_PT, ONE_PAGE_FIT, fitOnePage, fitSizeNotice, printedKey } from '@/utils/pageFit';
 
 const COLOR_KEYS      = ['accentColor', 'textColor', 'sidebarBg', 'headerTextColor', 'nameColor', 'jobTitleColor'];
 const TYPOGRAPHY_KEYS = ['font', 'fontSize', 'fontSizeBase', 'fontSizeNameDelta', 'fontSizeSectionDelta', 'fontSizeEntryDelta', 'customFont', 'iconSize', 'sectionLetterSpacing', 'fontSizeTitleDelta', 'nameFont', 'headingFont'];
@@ -88,6 +88,7 @@ export default function DesignPanel({
       if (!fit || stopped()) return;
       Object.entries(fit.settings).forEach(([k, v]) => { if (ONE_PAGE_FIT[k] !== v) updateSetting(k, v); });
       if (fit.pages > 1) notice = `Still ${fit.pages} pages at the tightest spacing — shorten the content to fit one page.`;
+      else notice = fitSizeNotice(settings, fit); // a smaller text size is said, never done silently
     } catch {
       notice = 'Could not measure the pages: the tight spacing is applied, check the preview.';
     } finally {
@@ -242,7 +243,7 @@ export default function DesignPanel({
                 type="button"
                 onClick={fitToOnePage}
                 disabled={fitting}
-                title="Fit more onto 1 page by safely tightening margins and line heights"
+                title={`Fit more onto 1 page by tightening margins, gaps and line heights — and, if that is not enough, reducing the text size (down to ${MIN_FIT_BASE_PT} pt)`}
                 className="px-2 py-1.5 text-[11px] font-medium rounded-lg bg-white border border-blue-200 text-blue-700 hover:bg-blue-100/70 shadow-2xs transition-all text-center cursor-pointer disabled:opacity-60 disabled:cursor-wait"
               >
                 {fitting ? 'Fitting…' : '📄 1-Page Fit'}
