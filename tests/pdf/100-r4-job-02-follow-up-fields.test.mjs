@@ -62,7 +62,7 @@ it('the Overview tab edits the follow-up date, work mode and source', async () =
     const pencil = [...title.parentNode.childNodes].flatMap((n) => [n, ...(n.childNodes || [])]).find((el) => el.tagName === 'BUTTON');
     page.fire(pencil, 'onClick');
     const input = labelled('Follow-up Date');
-    assert.equal(input.getAttribute('type'), 'date');
+    assert.equal(page.props(input).type, 'date');
     page.fire(input, 'onChange', { target: { value: '2026-10-01' } });
     page.fire(labelled('Follow-up Date'), 'onKeyDown', { key: 'Enter', nativeEvent: {} });
     assert.deepEqual(edits, [['workMode', 'remote'], ['source', 'linkedin'], ['followUpDate', '2026-10-01']]);

@@ -12,11 +12,12 @@ import assert from 'node:assert/strict';
 import { setup, teardown, loadModule, resume } from './harness.mjs';
 import { fakeFirestore } from './fake-firestore.mjs';
 
-before(setup);
-after(teardown);
-
 let link;
-before(async () => { link = await loadModule('/src/utils/publicLink.js'); });
+before(async () => {
+  await setup();
+  link = await loadModule('/src/utils/publicLink.js');
+});
+after(teardown);
 
 function cloud() {
   const c = fakeFirestore();
