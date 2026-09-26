@@ -1,8 +1,8 @@
 # FlowCV Bug Tracker & Status Index
 
 > Location: `/mnt/Storage/Projects/flowcv/docs/tracking/bug-status.md` (moved from the repo root 2026-09-24)
-> Updated: 2026-09-25 · `origin/master` (deployed) = `6e19667` — Round 3 batches 1–2 (typography, public link, page numbers, picker;
-> gate runs 36109292470 on `e006835`, 36158213786 on `6e19667`) on top of Round 2 and the Jira-style revamp (`0a79974`)
+> Updated: 2026-09-26 · `origin/master` (deployed) = `91c91c9` — Round 3 batch 3 (perf2 R2-142 part, section-look R2-147 part; gate
+> 36216686987) on top of batches 1–2 (typography, public link, page numbers, picker; `6e19667`), Round 2 and the Jira-style revamp
 > **Open: 11** (0 here + 11 in [bug-status-r2/](bug-status-r2/README.md)) | Fixed, not pushed: 0 | **Closed: 253** (232 fixed + 21 ✖ without a code fix)
 
 ## Summary
