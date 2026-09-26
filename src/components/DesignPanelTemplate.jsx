@@ -35,14 +35,18 @@ export function templateCard(c, { on, onPick }) {
 
 /**
  * The designs the user saved (B4) — each card with its Delete, asked twice — and "Save my design": the
- * résumé's look now, under a name, listed with the designs and picked like one.
+ * résumé's look now, under a name, listed with the designs and picked like one. A name one of them has
+ * already (any case, spaces trimmed) replaces that design, and the field says so (R4-DUX-30): two cards
+ * of the same name could not be told apart.
  */
 export function SavedDesigns({ cards, isOn, onPick, saveDesign, deleteDesign }) {
   const [name, setName] = useState(null); // the name being typed, or null: the field closed
   const [deleting, setDeleting] = useState('');
+  const typed = name?.trim() || '';
+  const same = typed ? cards.find((c) => c.label.trim().toLowerCase() === typed.toLowerCase()) : null;
   const save = () => {
-    if (!name?.trim()) return;
-    saveDesign(name.trim());
+    if (!typed) return;
+    saveDesign(typed, same?.preset || null);
     setName(null);
   };
   return (
@@ -69,19 +73,22 @@ export function SavedDesigns({ cards, isOn, onPick, saveDesign, deleteDesign }) 
           Save my design
         </button>
       ) : (
-        <div className="flex items-center gap-1.5">
-          <input
-            autoFocus
-            aria-label="Design name"
-            placeholder="Name this design"
-            value={name}
-            maxLength={40}
-            onChange={(e) => setName(e.target.value)}
-            onKeyDown={(e) => { if (isImeKey(e)) return; if (e.key === 'Enter') save(); if (e.key === 'Escape') setName(null); }}
-            className="flex-1 min-w-0 px-2 py-1.5 text-xs border border-gray-300 rounded-lg focus:outline-none focus:border-blue-400"
-          />
-          <button type="button" onClick={save} disabled={!name.trim()} className="px-3 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg disabled:opacity-50">Save</button>
-          <button type="button" onClick={() => setName(null)} className="px-2 py-1.5 text-xs font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg">Cancel</button>
+        <div className="space-y-1">
+          <div className="flex items-center gap-1.5">
+            <input
+              autoFocus
+              aria-label="Design name"
+              placeholder="Name this design"
+              value={name}
+              maxLength={40}
+              onChange={(e) => setName(e.target.value)}
+              onKeyDown={(e) => { if (isImeKey(e)) return; if (e.key === 'Enter') save(); if (e.key === 'Escape') setName(null); }}
+              className="flex-1 min-w-0 px-2 py-1.5 text-xs border border-gray-300 rounded-lg focus:outline-none focus:border-blue-400"
+            />
+            <button type="button" onClick={save} disabled={!name.trim()} className="px-3 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg disabled:opacity-50">Save</button>
+            <button type="button" onClick={() => setName(null)} className="px-2 py-1.5 text-xs font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg">Cancel</button>
+          </div>
+          {same && <p data-testid="design-name-taken" className="text-[10px] text-amber-700">You already have a design named {same.label} — saving replaces it.</p>}
         </div>
       ))}
     </div>
