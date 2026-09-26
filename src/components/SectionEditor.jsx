@@ -52,9 +52,10 @@ export function SortableSection({
     if (oldIndex !== -1 && newIndex !== -1) reorderItems(section.id, oldIndex, newIndex);
   }
 
+  // By its own key only: a type named like an Object member ('valueOf') is a custom section (R1-LEFT-c).
+  const factory = Object.hasOwn(NEW_ITEM, section.type) ? NEW_ITEM[section.type] : NEW_ITEM.custom;
+
   function handleAddItem() {
-    // By its own key only: a type named like an Object member ('valueOf') is a custom section (R1-LEFT-c).
-    const factory = Object.hasOwn(NEW_ITEM, section.type) ? NEW_ITEM[section.type] : NEW_ITEM.custom;
     addItem(section.id, factory());
   }
 
@@ -63,8 +64,11 @@ export function SortableSection({
       item,
       onUpdate: u => updateItem(section.id, item.id, () => u),
       onRemove: () => {
-        // An untouched new entry goes without asking; anything with content asks first.
-        const hasContent = Object.entries(item).some(([k, v]) => k !== 'id' && typeof v === 'string' && v.trim());
+        // An untouched new entry goes without asking; anything with content asks first. A field
+        // still holding the value a new entry starts with is not content: a new language starts
+        // at 'Professional', and every fresh row asked (R4-ED-06).
+        const fresh = factory();
+        const hasContent = Object.entries(item).some(([k, v]) => k !== 'id' && typeof v === 'string' && v.trim() && v !== fresh[k]);
         if (!hasContent || confirm('Delete this entry?')) removeItem(section.id, item.id);
       },
       onDuplicate: duplicateItem && (() => duplicateItem(section.id, item.id)),
