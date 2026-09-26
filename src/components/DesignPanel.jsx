@@ -175,7 +175,7 @@ export default function DesignPanel({
           {cards.filter((c) => c.preset && !c.own).map(card)}
           <p className="text-[10px] text-gray-400">A design brings its font, colours and heading style too; picking its template plainly takes back what you kept of them, and Reset returns to the design.</p>
           {(saveDesign || designs.length > 0) && (
-            <SavedDesigns cards={cards.filter((c) => c.own)} isOn={selected} onPick={pick} saveDesign={saveDesign} deleteDesign={deleteDesign} />
+            <SavedDesigns cards={cards.filter((c) => c.own)} isOn={selected} onPick={pick} saveDesign={saveDesign} deleteDesign={deleteDesign} engine={current} />
           )}
         </div>
         {current === 'sidebar' && (
