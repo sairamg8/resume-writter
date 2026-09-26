@@ -82,7 +82,8 @@ export function OverviewTab({ job, set, resumes, navigate }) {
                 aria-label="Deadline / Follow-up"
                 value={job.deadline || ''}
                 onChange={e => set('deadline', e.target.value)}
-                className={`flex-1 text-sm bg-transparent focus:outline-none ${
+                // 16 px on touch screens: iOS Safari zooms the page into any smaller field it focuses (J-38).
+                className={`flex-1 text-sm pointer-coarse:text-base bg-transparent focus:outline-none ${
                   isDeadlinePast ? 'text-red-600 font-medium' : isDeadlineSoon ? 'text-amber-600 font-medium' : 'text-ink'
                 }`}
               />
@@ -107,7 +108,7 @@ export function OverviewTab({ job, set, resumes, navigate }) {
                 aria-label="Resume used"
                 value={job.resumeId || ''}
                 onChange={e => set('resumeId', e.target.value)}
-                className="flex-1 text-sm bg-transparent focus:outline-none cursor-pointer text-ink"
+                className="flex-1 text-sm pointer-coarse:text-base bg-transparent focus:outline-none cursor-pointer text-ink"
               >
                 <option value="">— Not linked yet —</option>
                 {/* A linked résumé deleted since: said so, not 'Not linked yet' (J-21). */}

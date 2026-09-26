@@ -44,7 +44,8 @@ export function Field({ label, value, onChange, type = 'text', icon: Icon, place
             if (e.key === 'Enter') { e.preventDefault(); commit(); }
             if (e.key === 'Escape') { setDraft(value || ''); setEditing(false); }
           }}
-          className="w-full px-3 py-2 text-sm border border-indigo-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand bg-white"
+          // 16 px on touch screens: iOS Safari zooms the page into any smaller field it focuses (J-38).
+          className="w-full px-3 py-2 text-sm pointer-coarse:text-base border border-indigo-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand bg-white"
           placeholder={placeholder}
         />
       ) : (

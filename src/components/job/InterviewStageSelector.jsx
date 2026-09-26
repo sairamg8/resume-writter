@@ -91,7 +91,8 @@ export function InterviewStageSelector({ stage, onStageChange, customStages, add
                 onChange={e => setNewStageInput(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddStage(); } }}
                 placeholder="e.g. 2nd Round, Founder Chat…"
-                className="flex-1 px-3 py-2 text-sm border border-line rounded-md focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent"
+                // 16 px on touch screens: iOS Safari zooms the page into any smaller field it focuses (J-38).
+                className="flex-1 px-3 py-2 text-sm pointer-coarse:text-base border border-line rounded-md focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent"
               />
               <button
                 type="button"

@@ -22,7 +22,9 @@ function Field({ id, label, children }) {
   );
 }
 
-const INPUT = 'w-full px-3 py-2.5 text-sm border border-line rounded-md focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent transition-colors';
+// 16 px on touch screens, as the kit's controls (controlClass): iOS Safari zooms the page into any
+// smaller field it focuses (J-38).
+const INPUT = 'w-full px-3 py-2.5 text-sm pointer-coarse:text-base border border-line rounded-md focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent transition-colors';
 
 export function JobForm({ store }) {
   const navigate = useNavigate();
