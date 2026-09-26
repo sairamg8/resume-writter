@@ -11,6 +11,9 @@ import { importDocument } from '@/utils/importDocument';
 import { normalizeResume } from '@/utils/normalizeResume';
 import { editorPath } from '@/utils/letters';
 
+/** The exports that load code or fonts over the network when they run (lazy chunks, font files). */
+const NETWORK_EXPORTS = new Set(['pdf', 'word']);
+
 /**
  * The editor's Export menu: PDF and Word of the tab on screen (résumé or cover letter), the
  * résumé as Markdown, ATS text, JSON Resume and JSON whichever tab is open — `letterTab` tells the
@@ -32,7 +35,12 @@ export function useEditorExports({ resume, activeTab, authUser, importResume, na
   shownId.current = resume?.id;
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
 
-  /** Run one export, keeping the button state and a visible error message honest. */
+  /**
+   * Run one export, keeping the button state and a visible error message honest. Only PDF and Word
+   * fetch anything (their renderer's code, and the PDF's fonts), so only they point at the
+   * connection; the text and JSON files are made in the browser, where a network hint would send the
+   * user after the wrong cause (R4-DUX-28).
+   */
   async function runExport(kind, label, fn) {
     setExporting(kind);
     setExportError(null);
@@ -40,7 +48,8 @@ export function useEditorExports({ resume, activeTab, authUser, importResume, na
       await fn();
     } catch (e) {
       console.error(`${label} failed:`, e);
-      setExportError(`${label} failed${e?.message ? ` (${e.message})` : ''}. Check your connection and try again.`);
+      const advice = NETWORK_EXPORTS.has(kind) ? 'Check your connection and try again.' : 'Try again, or reload the page if it keeps failing.';
+      setExportError(`${label} failed${e?.message ? ` (${e.message})` : ''}. ${advice}`);
     } finally {
       setExporting(null);
     }
