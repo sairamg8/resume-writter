@@ -181,3 +181,98 @@ describe('the sidebar’s projects', () => {
     assert.deepEqual(orderProjects(list, 1).shown.map((x) => x.id), ['e', 'c']);
   });
 });
+
+// R4-APP-03 / R4-APP-04: the phone navigation drawer was open whenever the page's path was the one
+// it was opened on. Nothing closed it on a navigation, so Back to that page opened it again, and a
+// link in it to the page already shown (the Job Tracker on /jobs, "+ New project" on /boards, whose
+// ?create=1 opens the create dialog) left it open over the page.
+/**
+ * The shell at `path` over stand-in pages /jobs and /boards, with `newProjectTo` '/boards?create=1'
+ * as AppRoutes passes it. Returns `openNav()` (the page's menu button, useWorkspace().openNav),
+ * `drawerOpen()` (the drawer is shown and not on its way out), `drawerLink(text)` (a link in the
+ * drawer) and `click(a)` (a plain left click on it, as a browser sends it to the router's Link).
+ */
+async function drawerShell(path) {
+  const { WorkspaceLayout } = await loadModule('/src/components/shell/WorkspaceLayout.jsx');
+  const { useWorkspace } = await loadModule('/src/components/shell/workspaceContext.js');
+  let navigate = null;
+  let workspace = null;
+  function Page({ name }) {
+    navigate = useNavigate();
+    workspace = useWorkspace();
+    return createElement('p', null, name);
+  }
+  function App() {
+    return createElement(MemoryRouter, { initialEntries: [path] },
+      createElement(Routes, null,
+        createElement(Route, { element: createElement(WorkspaceLayout, { projects: [], newProjectTo: '/boards?create=1' }) },
+          createElement(Route, { path: '/jobs', element: createElement(Page, { name: 'LIST' }) }),
+          createElement(Route, { path: '/boards', element: createElement(Page, { name: 'BOARDS' }) }))));
+  }
+  const view = mount(App, {});
+  const settle = async () => {
+    for (let i = 0; i < 40; i += 1) {
+      await new Promise((resolve) => { setTimeout(resolve, 0); });
+      view.act(() => {});
+    }
+  };
+  await settle();
+  const drawer = () => [...elements(view.document.body)].find((el) => el.getAttribute?.('aria-label') === 'Navigation');
+  const main = () => [...elements(view.container)].find((el) => el.tagName === 'MAIN');
+  return {
+    view,
+    shown: () => main().textContent,
+    openNav: () => view.act(() => workspace.openNav()),
+    drawerOpen: () => Boolean(drawer()?.className.includes('animate-ui-drawer-in')),
+    drawerLink: (text) => [...elements(drawer())].find((el) => el.tagName === 'A' && el.textContent.trim() === text),
+    click: async (a) => {
+      const event = {
+        button: 0, metaKey: false, altKey: false, ctrlKey: false, shiftKey: false, defaultPrevented: false,
+        target: a, currentTarget: a, preventDefault() { this.defaultPrevented = true; },
+      };
+      view.act(() => reactProps(a).onClick(event));
+      await settle();
+    },
+    go: async (to) => { view.act(() => navigate(to)); await settle(); },
+  };
+}
+
+describe('R4-APP-03/04: the phone navigation drawer closes on every navigation', () => {
+  it('a link to another page closes it, and Back to the page it was opened on does not open it again', async () => {
+    const s = await drawerShell('/jobs');
+    try {
+      s.openNav();
+      assert.ok(s.drawerOpen(), 'the menu button opens the drawer');
+      await s.click(s.drawerLink('Projects'));
+      assert.match(s.shown(), /BOARDS/);
+      assert.ok(!s.drawerOpen(), 'following a link closes the drawer');
+      await s.go(-1);
+      assert.match(s.shown(), /LIST/);
+      assert.ok(!s.drawerOpen(), 'Back to /jobs opened the drawer again');
+      await s.go(1);
+      assert.ok(!s.drawerOpen());
+    } finally { await s.view.unmount(); }
+  });
+
+  it('a link to the page already shown closes it', async () => {
+    const s = await drawerShell('/jobs');
+    try {
+      s.openNav();
+      await s.click(s.drawerLink('Job Tracker'));
+      assert.match(s.shown(), /LIST/);
+      assert.ok(!s.drawerOpen(), 'the Job Tracker link on /jobs left the drawer open');
+    } finally { await s.view.unmount(); }
+  });
+
+  it('"Create project" on /boards closes it before the create dialog opens', async () => {
+    const s = await drawerShell('/boards');
+    try {
+      s.openNav();
+      const link = s.drawerLink('Create project');
+      assert.equal(link.getAttribute('href'), '/boards?create=1', 'the drawer’s Create project link');
+      await s.click(link);
+      assert.match(s.shown(), /BOARDS/);
+      assert.ok(!s.drawerOpen(), 'the drawer stayed open over the create dialog');
+    } finally { await s.view.unmount(); }
+  });
+});

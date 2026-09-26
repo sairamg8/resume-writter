@@ -48,14 +48,20 @@ function writeCollapsed(collapsed) {
 export function WorkspaceLayout({ projects = [], newProjectTo, renderCreate, search }) {
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(readCollapsed);
-  // The drawer belongs to the page it was opened on: following a link closes it, no effect needed.
-  const [drawerPath, setDrawerPath] = useState(null);
+  // The drawer belongs to the history entry it was opened on: any navigation closes it — a link to
+  // another page, a link to the page it is on (the router replaces the entry: a new key), Back and
+  // Forward — and coming Back to the entry it was opened on does not open it again.
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerKey, setDrawerKey] = useState(location.key);
+  if (drawerKey !== location.key) {
+    setDrawerKey(location.key);
+    setDrawerOpen(false);
+  }
   // The create dialog: null when closed, else the fields it opens with ({ boardId, columnId, … }).
   const [createDefaults, setCreateDefaults] = useState(null);
   const mainRef = useRef(null);
   // A new page opens at the top, Back returns to where it was (J-40 / R2-073).
   const onMainScroll = useScrollMemory(mainRef);
-  const drawerOpen = drawerPath === location.pathname;
 
   const toggleCollapsed = () => {
     writeCollapsed(!collapsed);
@@ -63,8 +69,8 @@ export function WorkspaceLayout({ projects = [], newProjectTo, renderCreate, sea
   };
   useHotkeys({ '[': toggleCollapsed });
 
-  const openNav = useCallback(() => setDrawerPath(location.pathname), [location.pathname]);
-  const closeNav = useCallback(() => setDrawerPath(null), []);
+  const openNav = useCallback(() => setDrawerOpen(true), []);
+  const closeNav = useCallback(() => setDrawerOpen(false), []);
   const openCreate = useCallback((defaults = {}) => setCreateDefaults(defaults), []);
   const workspace = useMemo(
     () => ({ openNav, closeNav, openCreate, projects }),
