@@ -3,8 +3,9 @@
 // only their × or Cancel closed them, while Share a public link, New Cover Letter and the icon picker
 // closed on a click beside the box. Each is mounted open over the fake DOM and its backdrop pressed as a
 // browser does (pointerdown, then click, each with its target): a press that starts and ends on the
-// backdrop closes it; a click inside the box, or a press that starts inside (selecting text) and is
-// released on the backdrop, does not — the kit's Dialog closes the same way.
+// backdrop closes it; a click inside the box, a press that starts inside (selecting text) and is
+// released on the backdrop, or one begun on the backdrop and released inside, does not — the kit's
+// Dialog closes the same way.
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { setup, teardown, resume, loadModule } from './harness.mjs';
@@ -28,10 +29,12 @@ async function opened(name) {
   const backdrop = [...elements(view.container)].find((el) => /\bfixed inset-0\b/.test(el.getAttribute('class') || ''));
   assert.ok(backdrop, `${name}: a full-screen backdrop`);
   const box = backdrop.firstChild;
-  /** A press that goes down on `down` and is released on `up`, as the backdrop's handlers see it. */
+  /** A press that goes down on `down` and is released on `up`, as the backdrop's handlers see it: the
+   *  click goes to the two ends' common ancestor — the backdrop when they differ. */
   const press = (down, up) => view.act(() => {
     reactProps(backdrop).onPointerDown?.({ target: down, currentTarget: backdrop });
-    reactProps(backdrop).onClick?.({ target: up, currentTarget: backdrop });
+    reactProps(backdrop).onPointerUp?.({ target: up, currentTarget: backdrop });
+    reactProps(backdrop).onClick?.({ target: down === up ? up : backdrop, currentTarget: backdrop });
   });
   return { view, backdrop, box, press, closed: () => closes };
 }
@@ -53,6 +56,16 @@ for (const name of Object.keys(MODALS)) {
         assert.equal(m.closed(), 0, 'a click inside');
         m.press(m.box, m.backdrop);
         assert.equal(m.closed(), 0, 'text selected inside, released outside');
+        m.press(m.backdrop, m.backdrop);
+        assert.equal(m.closed(), 1, 'then a click beside it still closes it');
+      } finally { await m.view.unmount(); }
+    });
+
+    it('a drag begun beside the box and released inside it (selecting its text) keeps it open', async () => {
+      const m = await opened(name);
+      try {
+        m.press(m.backdrop, m.box);
+        assert.equal(m.closed(), 0, 'released inside: the browser clicks the backdrop, the modal stays');
         m.press(m.backdrop, m.backdrop);
         assert.equal(m.closed(), 1, 'then a click beside it still closes it');
       } finally { await m.view.unmount(); }
