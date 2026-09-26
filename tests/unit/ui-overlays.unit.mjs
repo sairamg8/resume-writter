@@ -381,6 +381,12 @@ describe('R4-APP-01: focus goes into a popover or menu when it opens', () => {
         const search = byAttr(view.document.body, 'aria-label', 'Search labels')[0];
         assert.ok(search, 'the panel is open');
         assertSame(view.document.activeElement, search, 'the search box did not get focus');
+        // Not yet measured (fake-dom has no boxes): unseen, unclickable, its entry animation held — a
+        // running one (fill-mode both) would override the opacity and show it at the corner.
+        const panel = byAttr(view.document.body, 'role', 'dialog').find((el) => el.getAttribute('aria-label') === 'Labels');
+        assert.equal(panel.style.opacity, 0);
+        assert.equal(panel.style.pointerEvents, 'none');
+        assert.equal(panel.style.animationPlayState, 'paused');
       });
     } finally { await view.unmount(); }
   });
