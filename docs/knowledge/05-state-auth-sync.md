@@ -205,11 +205,14 @@ the ids deleted for good (`deleted`) and the list's order (`order`). The existin
 stays deleted unless edited where the deletion was never seen); then changes are sent in one batch
 after a 1.5 s pause. Failures, retries and 'off' reuse `cloudSyncRetry.js`; an item over Firestore's
 1 MiB is held back on its own and named on the page (`SyncHeldNotice`). This browser's record of a
-list — the account it last synced with, the versions its cloud holds, what was kept aside — is
-`cpwtcv_jobs_sync_v1` / `cpwtcv_boards_sync_v1` (`collectionSyncMeta.js`). Signing out (or another
-account signing in) takes the list off the browser as the résumés' is (`leaveList`: unsent
-changes kept aside for that account's next sign-in); signed out, nothing runs and the list is
-this browser's, as before. Two guards against losing the account's items: a first visit's demo
+list — the account it last synced with, the versions and the order its cloud holds, what was kept
+aside — is `cpwtcv_jobs_sync_v1` / `cpwtcv_boards_sync_v1` (`collectionSyncMeta.js`; a record saved
+before the order was kept reads with none). The order merges on that base: a move made before a
+first sync (offline, signed out, a failed sync) leads when the cloud's order is still the base's,
+and the cloud's order leads otherwise (R2-140). Signing out (or another account signing in) takes
+the list off the browser as the résumés' is (`leaveList`: unsent changes, a move among them, kept
+aside for that account's next sign-in); signed out, nothing runs and the list is this browser's, as
+before. Two guards against losing the account's items: a first visit's demo
 job or project, untouched (`isUntouchedDemoJob` / `isUntouchedDemoBoard`, the store's `seed`),
 never wins over the account's copy of it, though dated newer; and a saved list the store could not
 read in full makes the record forget the versions (`forgetSynced`), so the items left out are

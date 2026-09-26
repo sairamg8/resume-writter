@@ -1,6 +1,6 @@
 // What this browser keeps about a synced list (collectionSyncPlan.js) — the account it last synced
-// with, the versions that account's cloud holds as last seen here, and what was kept aside for an
-// account whose list left — under its own key, next to the list: `cpwtcv_jobs_sync_v1`,
+// with, the versions and the order that account's cloud holds as last seen here, and what was kept
+// aside for an account whose list left — under its own key, next to the list: `cpwtcv_jobs_sync_v1`,
 // `cpwtcv_boards_sync_v1`. A browser that never synced has none, and its list is its own. The
 // held-back notice (items the cloud will not take) lives here too, as a tiny store the board and
 // job pages read.
@@ -9,13 +9,15 @@
 export const JOBS_SYNC_KEY = 'cpwtcv_jobs_sync_v1';
 export const BOARDS_SYNC_KEY = 'cpwtcv_boards_sync_v1';
 
-const empty = () => ({ uid: null, versions: {}, stashed: {} });
+const empty = () => ({ uid: null, versions: {}, order: null, stashed: {} });
 const isMap = (v) => Boolean(v && typeof v === 'object' && !Array.isArray(v));
 
 /**
- * The record under `key` as { read() → { uid, versions, stashed }, write(meta) }: what cannot be
- * read is an empty record (the list then joins the next account's, and nothing is lost); a write
- * storage refuses is dropped — the next sync finds more to send, never less.
+ * The record under `key` as { read() → { uid, versions, order, stashed }, write(meta) }: what
+ * cannot be read is an empty record (the list then joins the next account's, and nothing is lost);
+ * a write storage refuses is dropped — the next sync finds more to send, never less. A record
+ * saved before the order was kept has none (`order` null): its first sync lets the cloud's order
+ * lead, as it always did.
  */
 export function localMeta(key, storage = () => globalThis.localStorage) {
   return {
@@ -26,6 +28,7 @@ export function localMeta(key, storage = () => globalThis.localStorage) {
         return {
           uid: typeof saved.uid === 'string' && saved.uid ? saved.uid : null,
           versions: isMap(saved.versions) ? saved.versions : {},
+          order: Array.isArray(saved.order) ? saved.order.filter((id) => typeof id === 'string') : null,
           stashed: isMap(saved.stashed) ? saved.stashed : {},
         };
       } catch {
@@ -47,11 +50,12 @@ export function localMeta(key, storage = () => globalThis.localStorage) {
  * what was kept aside: called when the saved list could not be read in full. Without it, every
  * item left out looked deleted here, and the next first sync deleted it from the account — and so
  * from every other device. Forgotten, the first sync merges instead: the cloud's copies come back.
+ * The order goes too: what is left of the list is no move, and the cloud's order leads.
  */
 export function forgetSynced(key, storage) {
   const record = localMeta(key, storage);
   const m = record.read();
-  if (Object.keys(m.versions).length) record.write({ ...m, versions: {} });
+  if (Object.keys(m.versions).length || m.order) record.write({ ...m, versions: {}, order: null });
 }
 
 /** A record in memory, for a test or a page with no storage. */

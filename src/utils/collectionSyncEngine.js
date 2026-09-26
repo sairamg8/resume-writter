@@ -81,12 +81,13 @@ export function createCollectionSync({
     if (changed) heldChanged();
   }
 
-  const noteVersions = (uid, sets, deletes) => {
+  /** What a flush got into account `uid`'s cloud: the versions of `sets`, `deletes` gone, and the `order` it sent (null: none). */
+  const noteVersions = (uid, sets, deletes, order) => {
     const m = meta.read();
     if (m.uid !== uid) return;
     const versions = { ...m.versions, ...versionsOf(sets) };
     deletes.forEach((id) => { delete versions[id]; });
-    meta.write({ ...m, versions });
+    meta.write({ ...m, versions, ...(order ? { order } : {}) });
   };
 
   function dropQueue() {
@@ -205,7 +206,11 @@ export function createCollectionSync({
       const ownIds = new Set(own.map((x) => x.id));
       const localDeletes = [...stash.deletes, ...(mine ? Object.keys(record.versions).filter((id) => !ownIds.has(id)) : [])]
         .filter((id) => !local.some((x) => x.id === id));
-      const plan = planFirstSync({ local, versions, localDeletes, docs, deleted: cloud.deleted, order: cloud.order, seed: store.seed });
+      // The order the cloud held when this browser last synced, so a move made here since (offline,
+      // signed out, a failed sync) is told from one made on another device: this account's own
+      // record, or the move kept aside when the list left (leaveList).
+      const moved = mine ? { baseOrder: record.order } : { baseOrder: stash.base, localOrder: stash.order ?? [] };
+      const plan = planFirstSync({ local, versions, localDeletes, docs, deleted: cloud.deleted, order: cloud.order, ...moved, seed: store.seed });
 
       sets = sendable(uid, plan.sets);
       const sameOrder = plan.order.length === cloud.order.length && plan.order.every((id, i) => cloud.order[i] === id);
@@ -226,7 +231,7 @@ export function createCollectionSync({
 
       const cloudVersions = { ...versionsOf(docs.filter((d) => !plan.deletes.includes(d.id))), ...versionsOf(sets) };
       const { [uid]: _gone, ...stashed } = record.stashed;
-      meta.write({ uid, versions: cloudVersions, stashed });
+      meta.write({ uid, versions: cloudVersions, order: plan.order, stashed });
       s.prev = plan.merged;
       s.ready = true;
       s.readAt = now();
@@ -341,7 +346,7 @@ export function createCollectionSync({
       }
       await sending;
       if (!current()) return;
-      noteVersions(user.uid, [...sets, ...newer, ...edited], deletes);
+      noteVersions(user.uid, [...sets, ...newer, ...edited], deletes, order);
       if (!s.timer) settled();
     } catch (e) {
       if (s.user?.uid !== user.uid) return;
