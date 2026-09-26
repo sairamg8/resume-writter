@@ -71,6 +71,7 @@ describe('Header Bottom Border → Thickness can be typed (R4-ED-05)', () => {
       try {
         f.focus();
         f.type(typed);
+        assert.deepEqual(f.writes, [], `typed '${typed}': nothing is written until the box is left`);
         f.leave();
         assert.deepEqual(f.writes, want, `typed '${typed}'`);
       } finally { await f.done(); }
