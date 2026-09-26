@@ -12,7 +12,8 @@ import { acme, atRoute, dayFromToday, render } from './100-r4-job-helpers.mjs';
 before(setup);
 after(teardown);
 
-const yesterday = dayFromToday(-1);
+// Three days late: a pill reads "3d overdue" (one day late reads "Yesterday").
+const yesterday = dayFromToday(-3);
 const late = (status) => ({
   ...acme, status, deadline: yesterday, followUpDate: yesterday,
   statusHistory: [{ status: 'applied', changedAt: 1 }, { status, changedAt: 2 }],
@@ -59,7 +60,7 @@ describe('a closed job is never overdue', () => {
     const job = late('applied');
     const { KanbanView } = await loadModule('/src/components/job/KanbanView.jsx');
     const board = await render(KanbanView, { jobs: [job], updateJob() {}, onNavigate() {}, onDelete() {} });
-    try { assert.match(board.text(), /1d overdue/); } finally { await board.view.unmount(); }
+    try { assert.match(board.text(), /3d overdue/); } finally { await board.view.unmount(); }
     const { OverviewTab } = await loadModule('/src/components/job/OverviewTab.jsx');
     const overview = await render(OverviewTab, { job, set() {}, resumes: [], navigate() {} });
     try { assert.match(overview.text(), /Deadline has passed/); } finally { await overview.view.unmount(); }
