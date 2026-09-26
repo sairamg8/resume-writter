@@ -226,7 +226,13 @@ locations with Show location off blanked, hidden sections and entries dropped, n
 dashboard name, no id. It is written to `public/{shareId}` (`{ owner, resume, publishedAt }`,
 `shareId` a random uuid) together with `users/{uid}/shares/{resumeId}` (`{ shareId, publishedAt }`) in
 one batch; Unpublish deletes both, and so does deleting the résumé from the Dashboard while signed
-in (`unpublishResume`), which would otherwise leave a copy with no panel left to take it down. `firestore.rules` lets **anyone get** a `public/{shareId}` document
+in (`unpublishResume`), which would otherwise leave a copy with no panel left to take it down. A
+résumé deleted on another device, offline, signed out or on an older build loses its copy at the next
+first sync of any device: the engine (`publicLinks`, wired in `useCloudSync`) passes the account's
+deletion list, the ids its batch removed or flagged and the cloud's flagged originals — none the
+merged list holds — to `unpublishDeleted`, which reads
+`users/{uid}/shares` once and takes down each listed résumé's copy — not waited for, a failure only
+logged (`tests/pdf/18-cloud-sync-public-links.test.mjs`). `firestore.rules` lets **anyone get** a `public/{shareId}` document
 (never list the collection) and only the account named its `owner` create, update or delete it —
 the only world-readable documents. The copy is not live: the panel says when the résumé changed since
 and offers "Update the public copy". The link `#/r/<shareId>` is served by this same app

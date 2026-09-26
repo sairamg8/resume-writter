@@ -4,8 +4,9 @@
 // owner write; `users/{uid}/shares/{resumeId}` remembers which id a résumé has, under the account's
 // own rule. The copy holds what the résumé's PDF prints and nothing else: a hidden field's value, a
 // hidden section or entry, the cover letter and the résumé's name in the dashboard stay private.
-// The Firestore calls take the SDK's functions (`fs`: doc, getDocFromServer, writeBatch), so the
-// tests run this very code against tests/pdf/fake-firestore.mjs.
+// The Firestore calls take the SDK's functions (`fs`: doc, getDocFromServer, writeBatch — and
+// collection, getDocsFromServer for unpublishDeleted), so the tests run this very code against
+// tests/pdf/fake-firestore.mjs.
 import { newId } from '@/utils/ids';
 import { CONTACT_FIELDS, CONTACT_KEYS } from '@/utils/contacts';
 
@@ -116,6 +117,16 @@ export function publicIo(fs, db) {
   const publicDoc = (shareId) => fs.doc(db, 'public', shareId);
   const shareDoc = (uid, resumeId) => fs.doc(db, 'users', uid, 'shares', resumeId);
 
+  /** Deletes résumé `resumeId`'s copy at `shareId`, if it is there, and its record of the link. */
+  async function takeDown(uid, resumeId, shareId) {
+    const pub = await fs.getDocFromServer(publicDoc(shareId));
+    const batch = fs.writeBatch(db);
+    // The rules refuse deleting a copy that is not there (no owner to check), so only one that is.
+    if (pub.exists()) batch.delete(publicDoc(shareId));
+    batch.delete(shareDoc(uid, resumeId));
+    await batch.commit();
+  }
+
   return {
     /** The résumé's public copy as it is now: `{ shareId, publishedAt, copy }`, or null when it has none. */
     async readShare(uid, resumeId) {
@@ -158,14 +169,25 @@ export function publicIo(fs, db) {
     async unpublishResume(uid, resumeId) {
       const share = await fs.getDocFromServer(shareDoc(uid, resumeId));
       if (!share.exists()) return false;
-      const { shareId } = share.data();
-      const pub = await fs.getDocFromServer(publicDoc(shareId));
-      const batch = fs.writeBatch(db);
-      // The rules refuse deleting a copy that is not there (no owner to check), so only one that is.
-      if (pub.exists()) batch.delete(publicDoc(shareId));
-      batch.delete(shareDoc(uid, resumeId));
-      await batch.commit();
+      await takeDown(uid, resumeId, share.data().shareId);
       return true;
+    },
+
+    /**
+     * Takes down the copies of the résumés with these ids — the ones the account deleted, as its
+     * deletion list says — when they have one, and resolves to those ids. A résumé deleted on
+     * another device, or offline, or on a build that did not unpublish, kept its copy public with
+     * no panel left anywhere to take it down: the cloud sync calls this once it knows the list
+     * (cloudSyncEngine.js). One read of the account's links (`users/{uid}/shares`), then one batch
+     * for each copy to take down.
+     */
+    async unpublishDeleted(uid, ids) {
+      const gone = new Set(ids);
+      if (!gone.size) return [];
+      const shares = await fs.getDocsFromServer(fs.collection(db, 'users', uid, 'shares'));
+      const stale = shares.docs.filter((d) => gone.has(d.id));
+      for (const d of stale) await takeDown(uid, d.id, d.data().shareId);
+      return stale.map((d) => d.id);
     },
 
     /** A published copy by its id, for anyone: the résumé to print, or null when there is none. */

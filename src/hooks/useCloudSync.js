@@ -6,12 +6,18 @@ import { db } from '@/utils/firebase';
 import { isDemoAccount } from '@/utils/demoSeed';
 import { DEMO_ACCOUNTS } from '@/utils/demoAccounts';
 import { cloudIo } from '@/utils/cloudSyncIo';
+import { publicIo } from '@/utils/publicLink';
 import { browserCloudSync } from '@/utils/cloudSyncBrowser';
 import { liveStore } from '@/hooks/useResumeSyncActions';
 
 /** The real Firestore calls (cloudSyncIo); null in a build without a cloud. */
 const io = db
   ? cloudIo({ collection, doc, getDocsFromServer, getDocFromServer, writeBatch, arrayUnion, arrayRemove }, db)
+  : null;
+
+/** The public links' calls (publicLink.js): the sync takes down a deleted résumé's copy (R2-148). */
+const publicLinks = db
+  ? publicIo({ collection, doc, getDocFromServer, getDocsFromServer, writeBatch }, db)
   : null;
 
 /**
@@ -41,6 +47,7 @@ export function useCloudSync({ user, appState, store }) {
     store: liveStore(() => latest.current),
     report: { status: setSyncStatus, synced: setLastSynced, account: setAccount, held: setHeldResumes },
     isDemo: (u) => isDemoAccount(u, DEMO_ACCOUNTS),
+    publicLinks,
     log: (...args) => console.info(...args),
   }));
   const { sync } = page;

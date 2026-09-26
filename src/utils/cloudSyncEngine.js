@@ -31,6 +31,8 @@ import { stashOf } from '@/utils/cloudSyncLeave';
  *             list), the cloud's originals (demoSeed.js), deleted ones included, and its deletion
  *             list, as the first sync read them
  *   isDemo    user → true for a demo account (its deleted originals are flagged, not removed)
+ *   publicLinks  publicIo(...) (publicLink.js), or null: after each first sync the public copies of
+ *             the résumés the account deleted are taken down (unpublishDeleted, R2-148)
  *   online    () → whether the browser says it is online; hidden () → whether the tab is hidden
  *   timers    { set(fn, ms) → id, clear(id) }; flushDelay (ms) before queued changes are sent;
  *             cloudTimeout (ms) readCloudCopies waits for an answer; retryDelay (ms) before a
@@ -45,7 +47,7 @@ export function createCloudSync({
   // clearTimeout throw "Illegal invocation" on any `this` but the window (the live site went blank).
   online = () => true, hidden = () => false, timers = { set: (fn, ms) => setTimeout(fn, ms), clear: (id) => clearTimeout(id) },
   flushDelay = 1500, cloudTimeout = 5000, retryDelay = 30000, maxRetryDelay = 600000, refreshAfter = 10000,
-  now = () => Date.now(), log = () => {},
+  now = () => Date.now(), log = () => {}, publicLinks = null,
 }) {
   const s = {
     user: null,
@@ -258,6 +260,16 @@ export function createCloudSync({
       setAccount({ uid: user.uid, cloud: true, cloudOriginals, cloudDeleted: [...listed] });
       s.attempts = 0;
       settled();
+      // A résumé deleted anywhere takes its public copy with it (R2-148): the Dashboard's Delete does
+      // only on the device that deletes, signed in and online; one deleted elsewhere, offline or signed
+      // out stayed public with no panel left to unpublish it. None the merged list holds (R2-029: an
+      // edit the deletion never saw is back). Not waited for; the next first sync tries again.
+      const loaded = new Set(plan.merged.map((r) => r.id));
+      const gone = [...new Set([...listed, ...plan.listAdd, ...plan.flags, ...cloud.docs.filter((r) => r.deleted).map((r) => r.id)])]
+        .filter((id) => !loaded.has(id));
+      if (publicLinks && gone.length) {
+        publicLinks.unpublishDeleted(user.uid, gone).catch((e) => log('Taking down the public link of a deleted résumé failed:', e));
+      }
     } catch (e) {
       if (gen !== s.gen) return;
       failed(e, user, 'sync');
