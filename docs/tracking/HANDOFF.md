@@ -1,6 +1,13 @@
 # Session Handoff — Resume Here
 
-## ⏩ COLD START HERE — 2026-09-26 ~11:15 IST (laptop session 26b8b31a, context 58% → handing over)
+## ⏩ COLD START HERE — 2026-09-26 ~13:00 IST (session 26b8b31a ended; owner starts a new session)
+
+**▶ FIRST, a new session does exactly this:** read CI run **36223045204** (full gate on `1daf0f0` = wave 3):
+`gh run view 36223045204 -R sairamg8/resume-writter --json conclusion,jobs`. Green → `git push origin 1daf0f0:refs/heads/master`
+(deploys B-20c `5b5c048` + `edbca14` and J-12 `1daf0f0`; fail-first 36223043609 ✅) → in `docs/tracking/boards-jobs-bugs/`
+mark J-12 ✅ (deployed in 1daf0f0) → bug-status.md header "deployed = 1daf0f0" → this block → commit, push. Red → read
+`gh run view 36223045204 --log-failed`, fix on the work branch, one gate, deploy. Then: R2-148-c (below), the checklist.
+Laptop rules: no local tests/builds (CI only), no worktrees, stage explicit paths, ≤5 agents (owner may say none).
 
 **Owner's orders today:** merge everything to master + deploy; fix the pending bugs; **English only** (locale parked);
 **no new agents** from here (owner, 11:10). Tests only on CI; master only on a green full gate of that exact commit.
