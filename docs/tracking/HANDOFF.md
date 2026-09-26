@@ -11,6 +11,11 @@ checklist and pending-bugs.md were not copied up, so work goes on from `fixes3/`
 cloud sessions on `claude/wf-r4-<cluster>` (imp, brd, cl, exp, ed, dsn-pdf, sync-job, app); each is done when
 `wf-reports/r4-<cluster>.json` is on its branch. Then: merge each into the work branch → one full gate → master →
 tracker rows; wave 2 (design: dsg-layout, dsg-flow) from the merged branch.
+Sessions (08:34 UTC): imp session_016ehqgYvX9wwgL1x6gEQyZz · brd session_019hpMafzJsJDtWkUkC8kn1A · cl
+session_01LpUCmQtmevxSyTxCJCWFzT · exp session_01T22uErGMhDgQM2AoHvteUv · ed session_01RmULbsAQNiRSHXyGfvj1ut · dsn-pdf
+session_015jr7EiFHdBDX2DFKBB3yU7 · sync-job session_018ykA8zSVUR3WwqSd69zRP6 · app session_014snET2MtPBA5AvN32tmnF7.
+Check: `for c in imp brd cl exp ed dsn-pdf sync-job app; do git fetch -q origin claude/wf-r4-$c && git cat-file -e
+FETCH_HEAD:wf-reports/r4-$c.json && echo "$c REPORTED"; done`.
 
 ## ⏩ COLD START HERE — 2026-09-26 ~14:10 IST (cloud session; only `master` exists)
 
