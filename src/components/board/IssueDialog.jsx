@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { CheckSquare, Copy, Link2, ListPlus, MoreHorizontal, Trash2, X } from 'lucide-react';
 import { useBoardStore } from '@/hooks/useBoardStore';
 import { Button, Dialog, IconButton, InlineEdit, Menu, useConfirmOptional, useToast } from '@/components/ui';
@@ -99,6 +99,8 @@ function IssueView({ board, issue, onClose, onOpenIssue }) {
   const confirm = useConfirmOptional();
   const { toast } = useToast();
   const [checklistOpen, setChecklistOpen] = useState(false);
+  const boardPath = `/boards/${encodeURIComponent(board.id)}`;
+  const onBoardPage = useLocation().pathname === boardPath;
 
   const key = issueKey(board, issue);
   const epic = issue.epicId ? issueById(board, issue.epicId) : null;
@@ -133,7 +135,11 @@ function IssueView({ board, issue, onClose, onOpenIssue }) {
     <>
       <div className="sticky top-0 z-10 flex items-center gap-2 border-b border-line bg-white px-4 py-2.5 sm:px-6">
         <nav aria-label="Issue" className="flex min-w-0 flex-1 items-center gap-1.5 text-sm text-ink-subtle">
-          <Link to={`/boards/${encodeURIComponent(board.id)}`} onClick={onClose} className="flex min-w-0 items-center gap-1.5 rounded px-1 hover:underline">
+          {/* On the board itself the project link only closes the view: closing steps back over
+              the entries opening pushed, and following the link as well would push the board on
+              top of the issue, which Back then opened again. From another page the link goes to
+              the board, and the view goes with the page it was open on. */}
+          <Link to={boardPath} onClick={(e) => { if (onBoardPage) { e.preventDefault(); onClose(); } }} className="flex min-w-0 items-center gap-1.5 rounded px-1 hover:underline">
             <span aria-hidden="true" className="size-4 shrink-0 rounded-[3px]" style={{ backgroundColor: board.color }} />
             <span className="truncate">{board.title}</span>
           </Link>

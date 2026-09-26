@@ -1,5 +1,7 @@
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useBoardStore } from '@/hooks/useBoardStore';
-import { useConfirmOptional, useToast, useUrlState } from '@/components/ui';
+import { useConfirmOptional, useToast } from '@/components/ui';
+import { withSearchParam } from '@/hooks/useUrlState';
 import { copyText } from '@/utils/clipboard';
 import { findIssueByKey, issueKey } from '@/utils/boardModel';
 import { IssueDialog } from './IssueDialog';
@@ -11,12 +13,33 @@ export const issueLink = (board, issue) => `${window.location.origin}${window.lo
  * The issue a project page shows over itself, named in the address (`?issue=LIFE-12`, pushed so
  * Back closes it): `{ found ({ board, issue } | null), open(key), close() }`. With `board`, only
  * an issue of that project opens there.
+ *
+ * Closing undoes the opening: each open() pushes an entry and counts it in the entry's state
+ * (`issueDepth`: an epic, then its child, is 2), and close() steps back over all of them, so Back
+ * after a close leaves the page instead of opening the issue again. An issue the address named
+ * some other way (a shared link) has no count: close() then drops the param in place, and an issue
+ * opened from it replaces it — stepping back to the shared one would not close the view.
  */
 export function useIssueRoute(boards, board = null) {
-  const [param, setParam] = useUrlState('issue', null, { push: true });
+  const location = useLocation();
+  const navigate = useNavigate();
+  const param = new URLSearchParams(location.search).get('issue');
   const hit = param ? findIssueByKey(boards, param) : null;
   const found = hit && (!board || hit.board.id === board.id) ? hit : null;
-  return { found, open: (key) => setParam(key), close: () => setParam(null) };
+  const depth = location.state?.issueDepth ?? 0;
+  const at = (key) => ({ pathname: location.pathname, search: withSearchParam(location.search, 'issue', key), hash: location.hash });
+  return {
+    found,
+    open: (key) => {
+      if (key === param) return;
+      if (param && depth === 0) navigate(at(key), { replace: true, state: location.state });
+      else navigate(at(key), { state: { ...location.state, issueDepth: depth + 1 } });
+    },
+    close: () => {
+      if (depth > 0) navigate(-depth);
+      else navigate(at(null), { replace: true, state: location.state });
+    },
+  };
 }
 
 /** The open issue's dialog, when the address names one. */
