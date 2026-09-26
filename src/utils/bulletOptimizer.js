@@ -286,9 +286,15 @@ const LEADING_VERB_PHRASE = new RegExp(`^(?:${WEAK_PHRASE_REPLACEMENTS
  * 35%", and an empty statement is the phrase alone (R4-CL-08).
  */
 export function insertMetric(text, metric) {
-  const [, body, stop] = String(text ?? '').trim().match(/^([\s\S]*?)([.!?;:]*)$/);
+  let [, body, stop] = String(text ?? '').trim().match(/^([\s\S]*?)([.!?;:]*)$/);
+  // An abbreviation's dot ("etc.", "Inc.", "U.S.") is part of its word and stays on it; the sentence
+  // still ends with one after the metric. "…APIs, etc." read "…APIs, etc by 35%." (R4-LO-14).
+  if (stop.startsWith('.') && ABBREVIATION_END.test(body)) body += '.';
   return body.trim() ? `${body.trimEnd()} ${metric}${stop}` : metric;
 }
+
+/** Text ending in a word written with a dot: a known abbreviation, or letters split by dots ("e.g", "U.S"). */
+const ABBREVIATION_END = /(?:(?<!\p{L})(?:etc|inc|ltd|co|corp|llc|jr|sr|vs|approx|dept|est|misc|no|mr|mrs|ms|dr|st)|\p{L}\.\p{L})$/iu;
 
 /**
  * Whether the text before a phrase ends where a sentence starts: nothing, or a line break or a
