@@ -34,6 +34,22 @@ function withoutHidden(fields) {
 const PERSONAL_KEYS = ['name', 'title', 'summary', 'photo', 'hiddenFields', ...CONTACT_KEYS.flatMap((k) => [k, `${k}Label`, `${k}Url`])];
 const printedPersonal = (personal) => Object.fromEntries(PERSONAL_KEYS.filter((k) => k in personal).map((k) => [k, personal[k]]));
 
+/**
+ * The design as the PDF reads it: the saved designs and the name of the look last applied
+ * (useResumeDesignActions) print nothing, and an uploaded icon for a contact hidden with its eye
+ * prints no more than the contact does, so none of them is copied — nor, saved or deleted, makes
+ * the copy look out of date.
+ */
+function printedSettings(settings, hiddenFields) {
+  const { myDesigns: _designs, templatePreset: _preset, ...out } = settings;
+  const hidden = new Set(Array.isArray(hiddenFields) ? hiddenFields : []);
+  const icons = settings.customContactIcons;
+  if (icons && typeof icons === 'object' && hidden.size) {
+    out.customContactIcons = Object.fromEntries(Object.entries(icons).filter(([key]) => !hidden.has(key)));
+  }
+  return out;
+}
+
 /** The section types whose Location a section's "Show location" hides (a custom section prints it always). */
 const LOCATION_SWITCH = new Set(['experience', 'education', 'volunteering']);
 
@@ -64,10 +80,12 @@ export function publicSnapshot(resume) {
       ...s,
       items: (Array.isArray(s.items) ? s.items : []).filter((item) => item && item.visible !== false)
         .map((item) => asSectionPrints(withoutHidden(item), s)),
-    }));
+    }))
+    // As the PDF (sectionPrints): a section with no shown entry prints nothing, not even its title.
+    .filter((s) => s.items.length > 0);
   const copy = {
     template: resume?.template || 'classic',
-    settings: resume?.settings || {},
+    settings: printedSettings(resume?.settings || {}, resume?.personal?.hiddenFields),
     personal: printedPersonal(withoutHidden(resume?.personal || {})),
     sections,
   };
@@ -108,21 +126,42 @@ export function publicUrl(shareId, origin = globalThis.location?.origin || '') {
 const stable = (v) => JSON.stringify(v, (_, x) => (x && typeof x === 'object' && !Array.isArray(x)
   ? Object.fromEntries(Object.keys(x).sort().map((k) => [k, x[k]])) : x));
 
-/** Does the published copy print what `resume` prints now? */
-export const publishedIsCurrent = (copy, resume) => stable(copy) === stable(publicSnapshot(resume));
+/** A copy without its data version: an app update that migrates the résumé changes nothing it prints. */
+const printed = ({ dataVersion: _version, ...copy } = {}) => copy;
+
+/**
+ * Does the published copy print what `resume` prints now? The copy goes through publicSnapshot too
+ * (it keeps its own hidden fields, so that changes nothing it prints): one published before the
+ * copy left out saved designs and empty sections is not "changed since" for holding them.
+ */
+export const publishedIsCurrent = (copy, resume) => stable(printed(publicSnapshot(copy))) === stable(printed(publicSnapshot(resume)));
 
 const TOO_LARGE = 'This résumé is too large to publish (over 1 MB, usually its photo). Use a smaller photo and try again.';
+/** The error publish throws for a copy over MAX_PUBLIC_BYTES: its message is the whole story (no connection to check). */
+export const TOO_LARGE_CODE = 'too-large';
 
 export function publicIo(fs, db) {
   const publicDoc = (shareId) => fs.doc(db, 'public', shareId);
   const shareDoc = (uid, resumeId) => fs.doc(db, 'users', uid, 'shares', resumeId);
 
-  /** Deletes résumé `resumeId`'s copy at `shareId`, if it is there, and its record of the link. */
-  async function takeDown(uid, resumeId, shareId) {
-    const pub = await fs.getDocFromServer(publicDoc(shareId));
+  /** The link the account has recorded for résumé `resumeId`, or null: read from the server, never a stale cache. */
+  async function recordedId(uid, resumeId) {
+    const share = await fs.getDocFromServer(shareDoc(uid, resumeId));
+    return share.exists() ? share.data().shareId || null : null;
+  }
+
+  /** Adds to `batch` the deletion of each of these copies that is there (each id once). */
+  async function deleteCopies(batch, shareIds) {
+    for (const shareId of new Set(shareIds.filter(Boolean))) {
+      // The rules refuse deleting a copy that is not there (no owner to check), so only one that is.
+      if ((await fs.getDocFromServer(publicDoc(shareId))).exists()) batch.delete(publicDoc(shareId));
+    }
+  }
+
+  /** Deletes résumé `resumeId`'s copies at `shareIds`, those that are there, and its record of the link. */
+  async function takeDown(uid, resumeId, shareIds) {
     const batch = fs.writeBatch(db);
-    // The rules refuse deleting a copy that is not there (no owner to check), so only one that is.
-    if (pub.exists()) batch.delete(publicDoc(shareId));
+    await deleteCopies(batch, shareIds);
     batch.delete(shareDoc(uid, resumeId));
     await batch.commit();
   }
@@ -140,25 +179,34 @@ export function publicIo(fs, db) {
     },
 
     /**
-     * Publishes `resume` (publicSnapshot) at its link — the one it has, else a new one that cannot
-     * be guessed — or puts its current state there. Resolves when the server has it.
+     * Publishes `resume` (publicSnapshot) at its link — the one the account has recorded, else
+     * `shareId` (the link the panel shows), else a new one that cannot be guessed — or puts its
+     * current state there. Resolves when the server has it. The record is read first: a panel
+     * opened in another tab or on another device before this one published saw no link, and its
+     * Publish made a second copy the record no longer named, public for good. A copy at the panel's
+     * own `shareId`, when the record names another, is taken down in the same batch: a résumé has
+     * one public copy at most.
      */
-    async publish(uid, resume, { shareId = newId(), now = Date.now() } = {}) {
+    async publish(uid, resume, { shareId: shown, now = Date.now() } = {}) {
       const copy = publicSnapshot(resume);
-      if (new Blob([JSON.stringify(copy)]).size > MAX_PUBLIC_BYTES) throw new Error(TOO_LARGE);
+      if (new Blob([JSON.stringify(copy)]).size > MAX_PUBLIC_BYTES) throw Object.assign(new Error(TOO_LARGE), { code: TOO_LARGE_CODE });
+      const recorded = await recordedId(uid, resume.id);
+      const shareId = recorded || shown || newId();
       const batch = fs.writeBatch(db);
+      if (shown && shown !== shareId) await deleteCopies(batch, [shown]);
       batch.set(publicDoc(shareId), { owner: uid, resume: copy, publishedAt: now });
       batch.set(shareDoc(uid, resume.id), { shareId, publishedAt: now });
       await batch.commit();
       return { shareId, publishedAt: now, copy };
     },
 
-    /** Takes the résumé's copy down: its link then finds nothing. */
+    /**
+     * Takes the résumé's copy down: its link then finds nothing. The copy at `shareId` (the link
+     * the panel shows) and the one the account has recorded, when another tab moved it, both go;
+     * one already gone (unpublished elsewhere) is skipped, as the rules refuse deleting it.
+     */
     async unpublish(uid, resumeId, shareId) {
-      const batch = fs.writeBatch(db);
-      batch.delete(publicDoc(shareId));
-      batch.delete(shareDoc(uid, resumeId));
-      await batch.commit();
+      await takeDown(uid, resumeId, [shareId, await recordedId(uid, resumeId)]);
     },
 
     /**
@@ -169,7 +217,7 @@ export function publicIo(fs, db) {
     async unpublishResume(uid, resumeId) {
       const share = await fs.getDocFromServer(shareDoc(uid, resumeId));
       if (!share.exists()) return false;
-      await takeDown(uid, resumeId, share.data().shareId);
+      await takeDown(uid, resumeId, [share.data().shareId]);
       return true;
     },
 
@@ -186,7 +234,7 @@ export function publicIo(fs, db) {
       if (!gone.size) return [];
       const shares = await fs.getDocsFromServer(fs.collection(db, 'users', uid, 'shares'));
       const stale = shares.docs.filter((d) => gone.has(d.id));
-      for (const d of stale) await takeDown(uid, d.id, d.data().shareId);
+      for (const d of stale) await takeDown(uid, d.id, [d.data().shareId]);
       return stale.map((d) => d.id);
     },
 

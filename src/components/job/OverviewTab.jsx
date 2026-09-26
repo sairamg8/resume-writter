@@ -1,9 +1,10 @@
-import { Info, Briefcase, MapPin, DollarSign, Calendar, User, Link2, FileText, ExternalLink } from 'lucide-react';
+import { Info, Briefcase, MapPin, DollarSign, Calendar, CalendarClock, User, Link2, FileText, ExternalLink, Building2, Compass } from 'lucide-react';
+import { JOB_SOURCES, WORK_MODES } from '@/constants/jobs';
 import { Field } from '@/components/job/Field';
 import { Pipeline } from '@/components/job/Pipeline';
 import { StatusHistory } from '@/components/job/StatusHistory';
 import { deadlineState } from '@/utils/dates';
-import { linkedResume, resumeChoices } from '@/utils/jobQuery';
+import { isOpen, linkedResume, resumeChoices } from '@/utils/jobQuery';
 import { editorPath } from '@/utils/letters';
 
 /**
@@ -13,13 +14,41 @@ import { editorPath } from '@/utils/letters';
  */
 const CLOSED = ['rejected', 'withdrawn'];
 
+/** A labelled choice from `options` (`{ id, label }`), '' for not set: saved as soon as it is picked. */
+function Choice({ label, value, options, onChange, icon: Icon }) {
+  return (
+    <div>
+      <p className="text-[10px] font-bold uppercase tracking-widest mb-1 text-ink-subtlest">{label}</p>
+      <div className="flex items-center gap-2 px-3 py-2 rounded-md border border-transparent hover:border-line hover:bg-sunken transition-all">
+        <Icon size={13} className="text-ink-subtlest shrink-0" />
+        <select
+          aria-label={label}
+          value={value || ''}
+          onChange={e => onChange(e.target.value)}
+          className="flex-1 text-sm pointer-coarse:text-base bg-transparent focus:outline-none cursor-pointer text-ink"
+        >
+          <option value="">— Not set —</option>
+          {options.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
+        </select>
+      </div>
+    </div>
+  );
+}
+
 export function OverviewTab({ job, set, resumes, navigate }) {
   const isTerminal = CLOSED.includes(job.status);
   const isOnHold = job.status === 'on_hold';
   const resumeLink = linkedResume(job, resumes);
-  const deadline = deadlineState(job.deadline);
+  // A closed job (on hold, rejected, withdrawn) has nothing to chase: no 'Deadline has passed'.
+  const deadline = isOpen(job) ? deadlineState(job.deadline) : null;
   const isDeadlinePast = deadline === 'past';
   const isDeadlineSoon = deadline === 'soon';
+  // The job form's rule (canSave): a company or a role is enough, but not neither. Blanking one
+  // while the other is blank keeps it as it was — the job read 'Untitled Company' and search lost it.
+  const named = (key, other) => (v) => {
+    if (!String(v || '').trim() && !String(job[other] || '').trim()) return;
+    set(key, v);
+  };
 
   return (
     // One column on a phone, two from sm up: two fixed columns squeezed every card to half a phone's
@@ -51,8 +80,8 @@ export function OverviewTab({ job, set, resumes, navigate }) {
       <div className="space-y-4">
         <div className="bg-white rounded-md border border-line p-5 shadow-sm space-y-4">
           <p className="text-[10px] font-bold text-ink-subtlest uppercase tracking-widest">Role Info</p>
-          <Field label="Company"          value={job.company}   onChange={v => set('company', v)}  icon={Briefcase} placeholder="Company name" />
-          <Field label="Role / Position"  value={job.role}      onChange={v => set('role', v)}     icon={FileText}  placeholder="Job title" />
+          <Field label="Company"          value={job.company}   onChange={named('company', 'role')}  icon={Briefcase} placeholder="Company name" />
+          <Field label="Role / Position"  value={job.role}      onChange={named('role', 'company')}     icon={FileText}  placeholder="Job title" />
           {job.stage && (
             <div className="flex items-center gap-2 px-3 py-2">
               <Briefcase size={13} className="text-ink-subtlest shrink-0" />
@@ -63,6 +92,9 @@ export function OverviewTab({ job, set, resumes, navigate }) {
           <Field label="Location"         value={job.location}  onChange={v => set('location', v)} icon={MapPin}    placeholder="City / Remote" />
           <Field label="Salary / Comp"    value={job.salary}    onChange={v => set('salary', v)}   icon={DollarSign} placeholder="$120k – $160k" />
           <Field label="Job Posting URL"  value={job.url}       onChange={v => set('url', v)}      icon={Link2}     placeholder="https://…" />
+          {/* The Details box shows both: nothing could set them but an imported file (R4-JOB-02). */}
+          <Choice label="Work Mode" value={job.workMode} options={WORK_MODES} onChange={v => set('workMode', v)} icon={Building2} />
+          <Choice label="Source"    value={job.source}   options={JOB_SOURCES} onChange={v => set('source', v)}  icon={Compass} />
         </div>
       </div>
 
@@ -76,13 +108,13 @@ export function OverviewTab({ job, set, resumes, navigate }) {
           {/* Deadline */}
           <div>
             <p className="text-[10px] font-bold uppercase tracking-widest mb-1 text-ink-subtlest">
-              Deadline / Follow-up
+              Deadline
             </p>
             <div className="flex items-center gap-2 px-3 py-2 rounded-md border border-transparent hover:border-line hover:bg-sunken transition-all">
               <Calendar size={13} className={`shrink-0 ${isDeadlinePast ? 'text-red-400' : isDeadlineSoon ? 'text-amber-400' : 'text-ink-subtlest'}`} />
               <input
                 type="date"
-                aria-label="Deadline / Follow-up"
+                aria-label="Deadline"
                 value={job.deadline || ''}
                 onChange={e => set('deadline', e.target.value)}
                 // 16 px on touch screens: iOS Safari zooms the page into any smaller field it focuses (J-38).
@@ -97,6 +129,10 @@ export function OverviewTab({ job, set, resumes, navigate }) {
               </p>
             )}
           </div>
+
+          {/* Its own day: the deadline was labelled 'Deadline / Follow-up', so a follow-up set there
+              never reached 'Follow-ups due' (R4-JOB-02). */}
+          <Field label="Follow-up Date" value={job.followUpDate} onChange={v => set('followUpDate', v)} type="date" icon={CalendarClock} />
 
           <Field label="Contact Person" value={job.contact} onChange={v => set('contact', v)} icon={User} placeholder="Recruiter name · email" />
 

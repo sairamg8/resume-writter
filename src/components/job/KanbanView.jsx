@@ -9,6 +9,7 @@ import { Avatar, DatePill, IconButton, Menu, cx } from '@/components/ui';
 import { hasRichText, richTextToPlain, safeHref } from '@/utils/richText';
 import { JOB_DRAG_INSTRUCTIONS, openOnKey } from '@/utils/cardKeys';
 import { formatShortDay } from '@/utils/uiFormat';
+import { isOpen } from '@/utils/jobQuery';
 
 /** Keeps a press on a control inside a card from starting the card's drag (mouse or touch). */
 const stopDrag = { onMouseDown: e => e.stopPropagation(), onTouchStart: e => e.stopPropagation() };
@@ -65,7 +66,8 @@ function KanbanCard({ job, onDelete, onMove, overlay = false }) {
       {(job.appliedDate || job.deadline || todos.length > 0) && (
         <div className="flex flex-wrap items-center gap-2">
           {job.appliedDate && <span className="text-[11px] text-ink-subtlest" title={`Applied ${job.appliedDate}`}>Applied {formatShortDay(job.appliedDate) || job.appliedDate}</span>}
-          {job.deadline && <DatePill value={job.deadline} size="sm" />}
+          {/* A closed job (on hold, rejected, withdrawn) has nothing to chase: never 'overdue'. */}
+          {job.deadline && <DatePill value={job.deadline} done={!isOpen(job)} size="sm" />}
           {todos.length > 0 && (
             <span className={cx('ml-auto inline-flex items-center gap-1 text-[11px] font-medium', allDone ? 'text-loz-done-ink' : 'text-ink-subtlest')}>
               <CheckSquare size={12} aria-hidden="true" /> {todoDone}/{todos.length} tasks
