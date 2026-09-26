@@ -208,7 +208,9 @@ after a 1.5 s pause. Failures, retries and 'off' reuse `cloudSyncRetry.js`; an i
 doing goes to `collectionSyncStatus` (`collectionSyncMeta.js`) and shows in the workspace's top bar
 as the résumés' cloud icon, with its words (`shell/CollectionSyncDot.jsx`, R2-140-c): the jobs and
 the projects on the Job Tracker's pages, the projects elsewhere, the worst status winning
-(`worstSyncStatus`: error, stopped, off, offline, syncing, synced); none while signed out. This browser's record of a
+(`worstSyncStatus`: error, stopped, off, offline, syncing, synced); none while signed out. It reads
+the browser's online flag as the résumés' icon does, so 'offline' with the browser online (a server
+the sync cannot reach) says "Cannot reach your account", and "Offline" only when the browser is (R4-LO-23). This browser's record of a
 list — the account it last synced with, the versions and the order its cloud holds, what was kept
 aside — is `cpwtcv_jobs_sync_v1` / `cpwtcv_boards_sync_v1` (`collectionSyncMeta.js`; a record saved
 before the order was kept reads with none). The order merges on that base: a move made before a
