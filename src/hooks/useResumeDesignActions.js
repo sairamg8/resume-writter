@@ -37,7 +37,8 @@ export function createDesignActions(patchActive, setAppState) {
 
   /**
    * A saved design deleted (B4): from every résumé that holds it, so it leaves the picker. A résumé on it
-   * keeps its look, now its own settings — nothing it prints changes.
+   * keeps its look, now its own settings — nothing it prints changes. It leaves { deleted: true } in its
+   * place, which syncs with the résumés, so every device drops it (R3-008).
    */
   function deleteDesign(id) {
     setAppState((prev) => {

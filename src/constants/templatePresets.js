@@ -77,7 +77,8 @@ export const PRESET_IDS = Object.keys(TEMPLATE_PRESETS);
 
 /**
  * A design the user saved (B4): `settings.myDesigns[id]`, a { label, engine, settings } of their own look,
- * where it is one — a name, a template the app offers and a map of settings. The résumé carries the
+ * where it is one — a name, a template the app offers and a map of settings ({ deleted: true } is a
+ * deletion, R3-008: none). The résumé carries the
  * designs it was saved on or picked from, so the design it is on syncs, backs up and exports with it.
  */
 export function ownDesign(settings, id) {
@@ -137,25 +138,68 @@ function ownDesignsOf(settings) {
 }
 
 /**
+ * A saved design deleted (R3-008): its id stays in `myDesigns` as { deleted: true }, so a copy of a résumé
+ * another device still holds it on — edited before that device saw the deletion — does not bring it back.
+ * ownDesign reads it as no design.
+ */
+const isDeletedDesign = (d) => Boolean(d && typeof d === 'object' && !Array.isArray(d) && d.deleted === true);
+
+/** The ids of the saved designs deleted on any of `resumes` (R3-008). */
+export function deletedDesignIds(resumes) {
+  const gone = new Set();
+  for (const r of resumes || []) {
+    for (const [id, d] of Object.entries(ownDesignsOf(r?.settings))) if (isDeletedDesign(d)) gone.add(id);
+  }
+  return gone;
+}
+
+/**
  * Every design the user saved, across `resumes` (each carries the ones it was saved on or picked from):
- * [{ id, label, engine, settings }], one per id, by name. The picker lists them with the app's designs.
+ * [{ id, label, engine, settings }], one per id, by name — none deleted on any of them (R3-008). The
+ * picker lists them with the app's designs.
  */
 export function savedDesigns(resumes) {
+  const gone = deletedDesignIds(resumes);
   const byId = new Map();
   for (const r of resumes || []) {
     for (const id of Object.keys(ownDesignsOf(r?.settings))) {
       const d = ownDesign(r.settings, id);
-      if (d && !byId.has(id) && !Object.hasOwn(TEMPLATE_PRESETS, id)) byId.set(id, { id, ...d });
+      if (d && !gone.has(id) && !byId.has(id) && !Object.hasOwn(TEMPLATE_PRESETS, id)) byId.set(id, { id, ...d });
     }
   }
   return [...byId.values()].sort((a, b) => a.label.localeCompare(b.label));
 }
 
-/** `settings` without the saved design `id`: gone from its designs, and no longer the one it is on (its look stays). */
+/**
+ * `settings` with the saved design `id` deleted: { deleted: true } in its place (R3-008), and no longer
+ * the one it is on (its look stays). The same object when there is nothing to change.
+ */
 export function withoutOwnDesign(settings, id) {
   const mine = ownDesignsOf(settings);
-  if (!Object.hasOwn(mine, id) && settings?.templatePreset !== id) return settings;
-  const out = { ...settings, myDesigns: Object.fromEntries(Object.entries(mine).filter(([k]) => k !== id)) };
-  if (out.templatePreset === id) delete out.templatePreset;
+  const on = settings?.templatePreset === id;
+  if (!on && (!Object.hasOwn(mine, id) || isDeletedDesign(mine[id]))) return settings;
+  const out = { ...settings, myDesigns: { ...mine, [id]: { deleted: true } } };
+  if (on) delete out.templatePreset;
   return out;
+}
+
+/**
+ * `resumes` with every saved design deleted on any of them deleted on each (withoutOwnDesign): a copy
+ * that synced in from a device that had not seen the deletion — edited there, or given the design by a
+ * picker that still listed it — keeps its look, not the design (R3-008). A résumé changed goes one version
+ * on, so the sync writes it — the same version on every device that does this, so two of them never
+ * make a conflict copy of it (versions are compared for equality). The same array when nothing changed.
+ */
+export function buryDeletedDesigns(resumes) {
+  const gone = deletedDesignIds(resumes);
+  if (!gone.size) return resumes;
+  let changed = false;
+  const out = resumes.map((r) => {
+    let settings = r?.settings;
+    for (const id of gone) settings = withoutOwnDesign(settings, id);
+    if (settings === r?.settings) return r;
+    changed = true;
+    return { ...r, settings, updatedAt: (Number.isFinite(r.updatedAt) ? r.updatedAt : 0) + 1 };
+  });
+  return changed ? out : resumes;
 }

@@ -7,6 +7,16 @@ import { normalizeResume } from '@/utils/normalizeResume';
 import { withDeletion, withoutDeletions } from '@/utils/localDeletions';
 import { afterSync } from '@/utils/cloudSyncPlan';
 import { leaveAccount as leaving } from '@/utils/cloudSyncLeave';
+import { buryDeletedDesigns } from '@/constants/templatePresets';
+
+/**
+ * The store with a saved design deleted on any résumé deleted on all (R3-008): a copy that came in from a
+ * device that had not seen the deletion. The same state when nothing changed.
+ */
+const withDesignsBuried = (state) => {
+  const resumes = buryDeletedDesigns(state.resumes);
+  return resumes === state.resumes ? state : { ...state, resumes };
+};
 
 /** `setAppState(prev => next)` as React's; `now()` → ms, when a deletion is made. */
 export function createSyncActions(setAppState, now = () => Date.now()) {
@@ -20,22 +30,28 @@ export function createSyncActions(setAppState, now = () => Date.now()) {
       : prev));
   }
 
-  /** A first cloud sync's result, applied to the store as it is now (cloudSyncPlan.afterSync). */
+  /**
+   * A first cloud sync's result, applied to the store as it is now (cloudSyncPlan.afterSync) — a saved
+   * design deleted on any résumé it brought, deleted on all (R3-008).
+   */
   function applyCloudSync(result) {
-    setAppState(prev => afterSync(prev, result));
+    setAppState(prev => withDesignsBuried(afterSync(prev, result)));
   }
 
-  /** Put résumés back (replacing any with the same id) and forget that they were deleted. */
+  /**
+   * Put résumés back (replacing any with the same id) and forget that they were deleted — a saved design
+   * deleted on any of them (a flush's conflict copy may carry it), deleted on all (R3-008).
+   */
   function restoreResumes(list) {
     const ids = new Set(list.map(r => r.id));
     setAppState(prev => {
       const resumes = [...prev.resumes.filter(r => !ids.has(r.id)), ...list.map(normalizeResume)];
-      return {
+      return withDesignsBuried({
         ...prev,
         resumes,
         activeId: resumes.some(r => r.id === prev.activeId) ? prev.activeId : (resumes[0]?.id ?? null),
         ...withoutDeletions(prev, ids),
-      };
+      });
     });
   }
 

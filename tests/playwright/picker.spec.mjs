@@ -116,7 +116,8 @@ test('a design saved on one résumé is picked on another and deleted (B4)', asy
   await page.getByRole('button', { name: 'Delete design Violet' }).click();
   await page.getByRole('button', { name: 'Delete', exact: true }).click();
   await expect(page.getByTestId(`design-${id}`)).toHaveCount(0);
-  await expect.poll(async () => (await store(page)).resumes.filter((r) => r.settings.myDesigns?.[id]).length).toBe(0);
+  // Gone from every résumé: in its place the deletion ({ deleted: true }), which syncs so no device lists it again (R3-008).
+  await expect.poll(async () => (await store(page)).resumes.filter((r) => r.settings.myDesigns?.[id] && !r.settings.myDesigns[id].deleted).length).toBe(0);
   const s = await store(page);
   expect(s.resumes.find((x) => x.id === 'test_other').settings.font).toBe('literata');
 });

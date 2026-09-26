@@ -123,9 +123,18 @@ describe('Save my design (B4)', () => {
     assert.deepEqual(savedDesigns(resumes), []);
     for (const r of resumes) {
       assert.equal(r.settings.templatePreset, undefined, r.id);
-      assert.equal(r.settings.myDesigns?.[id], undefined, r.id);
+      assert.deepEqual(r.settings.myDesigns?.[id], { deleted: true }, `${r.id}: its deletion, kept for every device (R3-008)`);
       assert.equal(r.settings.font, MINE.font, `${r.id}: prints as it did`);
     }
+  });
+
+  it('deleted in one browser, a résumé from another that still holds it does not list it again (R3-008)', async () => {
+    const { savedDesigns, presetOf } = await loadModule('/src/constants/templatePresets.js');
+    const { id, a, b } = await saved();
+    const { resumes: [, stale] } = await inStore([a, b], 'resume_b', (s) => s.applyDesign(savedDesigns([a])[0])); // the other browser's copy
+    const { resumes: [gone] } = await inStore([a], 'resume_a', (s) => s.deleteDesign(id));
+    assert.deepEqual(savedDesigns([gone, stale]), [], "before: [Violet] — the other browser's copy listed it again");
+    assert.equal(presetOf(gone.settings, gone.template), null);
   });
 
   it('a JSON Resume export carries it, and its import comes back on it', async () => {
