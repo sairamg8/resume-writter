@@ -77,7 +77,11 @@ export function Backlog() {
     if (!over || over.id === a.id) return;
     const from = sections.find((s) => s.shown.some((i) => i.id === a.id));
     const data = over.data.current ?? {};
-    const sprintId = data.sprintId ?? null;
+    // A Kanban project's one backlog holds issues of every sprint (R4-BRD-08): a row still in one
+    // leaves it (null); one in none keeps none, and its place is read off the whole backlog
+    // (undefined), not off the issues in no sprint alone — or a drop among the others was a no-op.
+    const dragged = board.issues.find((i) => i.id === a.id);
+    const sprintId = scrum ? data.sprintId ?? null : (dragged?.sprintId ? null : undefined);
     let beforeId = null;
     if (data.type === 'row') {
       beforeId = over.id;

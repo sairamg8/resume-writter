@@ -291,6 +291,21 @@ describe('R4-BRD-08: a Kanban project plans in one backlog', () => {
       assert.match(page.section('backlog').textContent, /Paint the fence.*Fix the tap/);
     } finally { await page.view.unmount(); }
   });
+
+  it('a row in no sprint dragged before one still in a sprint takes that place (the whole backlog is its rank)', async () => {
+    open([project({ mode: 'kanban', sprints, issues, nextNumber: 6 })]);
+    const page = mountBacklog();
+    try {
+      const el = page.section('backlog');
+      let fiber = el[Object.keys(el).find((k) => k.startsWith('__reactFiber$'))];
+      while (fiber && typeof fiber.memoizedProps?.onDragEnd !== 'function') fiber = fiber.return;
+      // 'Buy nails' (in no sprint) dropped on 'Fix the tap' (left in Sprint 1), above it.
+      page.view.act(() => fiber.memoizedProps.onDragEnd({ active: { id: 'i3' }, over: { id: 'i1', data: { current: { type: 'row', sprintId: null } } } }));
+      assert.match(page.section('backlog').textContent, /Buy nails.*Fix the tap/, 'the drop was ignored');
+      assert.equal(issueNow('i3').sprintId, null);
+      assert.equal(issueNow('i1').sprintId, 's1', 'the row it was dropped on is untouched');
+    } finally { await page.view.unmount(); }
+  });
 });
 
 describe('R4-BRD-10: the Epic panel\'s composer', () => {
