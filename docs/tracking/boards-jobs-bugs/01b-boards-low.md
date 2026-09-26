@@ -40,7 +40,7 @@ title: Boards — verified bugs, Low (B-14…B-31)
 - **Now (checked at `45b6b60`):** Deleting an issue asks first and then offers Undo: the issue view's Delete (src/components/board/IssueDialog.jsx:102-113) and the card and backlog-row menus (src/components/board/useIssueActions.jsx:37-42) confirm, then show a toast whose Undo puts the issue, its place and its children back (`restoreIssue`, src/utils/boardIssueOps.js:262).
 - **Owner:** BOARDS-UI-A · **Fix commit:** the Lane C redesign and the Jira-style revamp (merges `de0911f`, `75236a2`; on master `e6b1a4a`, deployed) · **Test:** tests/unit/board-ops.unit.mjs, tests/unit/board-store.unit.mjs
 
-### B-17 · Low · ux-defect · ⏸ Fixed (not deployed)
+### B-17 · Low · ux-defect · ✅ Fixed (deployed in cb58695, 2026-09-26)
 **A drop is never cancelled: closestCorners always returns a target, so a card released over the header or the Add-list column is still moved, and a list drag shows no preview while over a list that has cards**
 - **Where:** `src/pages/Board.jsx` : 109-119, 204
 - **Repro:** On the demo board: 1) Drag 'Pick hero image' and release it over the page header: it moves to the top of 'To do'. 2) Release it over the dashed 'Add list' button: it moves to the top of 'Done'. 3) Drag the 'To do' list by its grip over 'In progress': no column moves aside during the drag, but the order changes on release.
@@ -73,7 +73,7 @@ title: Boards — verified bugs, Low (B-14…B-31)
 - **Now (checked at `45b6b60`):** The issue checklist adds any non-blank text (src/components/board/IssueChecklist.jsx:16-21): no duplicate-text check, so 'Review' can be added again after one is ticked.
 - **Owner:** BOARDS-UI-A · **Fix commit:** the Lane C redesign and the Jira-style revamp (merges `de0911f`, `75236a2`; on master `e6b1a4a`, deployed) · **Test:** —
 
-### B-20 · Low · bug · ⏸ Fixed (not deployed)
+### B-20 · Low · bug · ✅ Fixed (deployed in cb58695, 2026-09-26)
 **Enter handlers ignore IME composition, so the Enter that confirms a CJK conversion adds the card, list or checklist item too early**
 - **Where:** `src/components/board/AddCard.jsx` : 42 (src/pages/Board.jsx:47, 160; src/components/board/BoardColumn.jsx:57; src/components/job/TasksTab.jsx:42; src/components/job/TodoItem.jsx:37)
 - **Repro:** 1) Turn on a Japanese IME. 2) In 'Add a card', type 'かいもの' and press Enter to confirm the conversion to 買い物. 3) A card is created from the unconfirmed text, and the composer resets while the IME is still composing.
@@ -167,7 +167,7 @@ title: Boards — verified bugs, Low (B-14…B-31)
 - **Fail-first test:** Playwright: Tab to 'Add a card', press Enter, then Escape, and expect document.activeElement's text to be 'Add a card'. Fails today.
 - **Owner:** BOARDS-UI-A · **Fix commit:** — · **Test:** —
 
-### B-29 · Low · mobile · ⏸ Fixed (not deployed)
+### B-29 · Low · mobile · ✅ Fixed (deployed in cb58695, 2026-09-26)
 **A long unbroken checklist item (such as a URL) overflows its row and makes the card sheet scroll sideways**
 - **Where:** `src/components/job/TodoItem.jsx` : 43-48
 - **Repro:** 1) At 375px width, open a card. 2) Add the checklist item 'https://docs.google.com/document/d/1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789/edit'. 3) The sheet scrolls horizontally, and the item's delete X is pushed off-screen.

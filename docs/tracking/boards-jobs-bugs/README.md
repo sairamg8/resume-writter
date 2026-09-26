@@ -44,7 +44,7 @@ Status legend: 🔴 open · ⏸ fixed on the work branch, not yet on master (not
 - 11 were fixed by the Lane C redesign and the Jira-style revamp (merges `de0911f`, `75236a2`), each checked at
   `45b6b60` with file:line in its row: B-14, B-16, B-18, B-19, B-21, B-22, B-23, B-30, B-31, J-11, J-25.
 
-**⏸ (9), fixed on the work branch by wave 1 of the 2026-09-26 bug-fix stream, not yet on master:** B-05 (`ff7e89a`,
+**Deployed 2026-09-26 in `cb58695` (were ⏸):** B-05, B-13, B-17, B-20, B-29, J-30, J-36, J-38, J-39 → ✅. **⏸ (9), fixed on the work branch by wave 1 of the 2026-09-26 bug-fix stream, not yet on master:** B-05 (`ff7e89a`,
 `9e20f77`), B-13 (`702fb61`), B-17 (`f568ac3`), B-20 (`617f24f`), B-29 (`4345a13`), J-30 (`5f86d40`), J-36 (`62f024a`),
 J-38 (`ca13cdb`), J-39 (`d524d97`).
 

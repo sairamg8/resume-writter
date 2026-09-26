@@ -6,11 +6,11 @@
 **no new agents** from here (owner, 11:10). Tests only on CI; master only on a green full gate of that exact commit.
 Cloudflare branch builds are OFF (only a master push deploys). Accessibility last.
 
-**Live: `master` = `e6b1a4a`** — batches 3–5: perf2 + section-look (`91c91c9`), owner-ui R3-009…012 (`f20a62d`), the ten
+**Live: `master` = `cb58695`** (waves 1–2 of the bug fixes, combined gate 36221896125, deployed 2026-09-26; before it `e6b1a4a`) — batches 3–5: perf2 + section-look (`91c91c9`), owner-ui R3-009…012 (`f20a62d`), the ten
 designed layouts R2-138 + R3-008 (`e6b1a4a`, gate 36218934694). Parked, not merged: `claude/wf-locale` `ac50cf4` (English
 only), `claude/wf-templates` (a11y).
 
-**Wave 1 — 16 bug fixes (R2-148-c reverted) + wave 2, gating together on the head** (36221038666 on `45b6b60` failed only suite 3, R2-148-c) (its previous gate 36220057010
+**✅ DEPLOYED in `cb58695` — Wave 1 (16 bug fixes, R2-148-c reverted) + wave 2** (36221038666 on `45b6b60` failed only suite 3, R2-148-c) (its previous gate 36220057010
 on ebcaab4 failed only the J-38 test, fixed since). Every fix's fail-first is green except the reverted DatePill change.
 - B-20 `617f24f` · J-30 `5f86d40` · B-29 `4345a13` · RES-R2-140-b `5fc8925` · R2-148-a `9af32ac` · J-36 `62f024a` ·
   B-05 `ff7e89a` + `9e20f77` · R2-041 `ba0a938` · RES-R2-126 `29fb954` · B-17 `f568ac3` · J-38 `ca13cdb` (+ test fix) ·
@@ -33,6 +33,10 @@ DesignPanelTypography.jsx:152, EditorHeader.jsx:31, ResumeCard.jsx:68, job/Field
 job/TasksTab.jsx:45, job/TodoItem.jsx:37, shell/TopBar.jsx:64, hooks/useTypedNumber.js:45 (use `isImeKey` from
 '@/components/ui', e8c0e67); the kit's Dialog/Popover/Menu close on an input method's Escape; J-12 still open (OverviewTab.jsx:25,
 InterviewStageSelector.jsx:32 `grid-cols-2` with no breakpoint; job/Field.jsx:54 does not break a long URL).
+**Next (tracker):** the RES-* leftovers fixed today live inside ✅ rows of `bug-status-r2/` — annotate each row with its
+commit: RES-R2-045 `2b12f38`, RES-R2-104 `785b34a`, RES-R2-126 `29fb954` (+ RES-R2-126b `052b4c0`), RES-R2-135 `ead4f93`,
+RES-R2-140-b `5fc8925`, RES-R2-151 `68f5d56`, R2-041 `ba0a938` (+ R2-041b `cdd0dd7`), R2-148-a `9af32ac`, R2-148-d `53ee844`.
+**Owner:** publish `firestore.rules` (R2-148-d) in the Firebase console now — the app is live with it expected.
 **After that:** the checklist's rest (store `flowcv/CHECKLIST-2026-09-25*.md`), accessibility last.
 Pending-bug list: store `flowcv/wip/execution-2026-09-26/pending-bugs.md`.
 

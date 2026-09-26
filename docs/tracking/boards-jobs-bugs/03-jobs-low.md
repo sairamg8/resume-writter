@@ -161,7 +161,7 @@ title: Job Tracker — verified bugs, Low (J-16…J-41)
 - **Now:** The demo job is built by `demoJobs(now)` (src/utils/jobEdits.js): applied ten days ago, its history on that day and the days after (never after now), the deadline five days ahead, notes as editor HTML; id still 'demo_1'. `JOB_VERSION` is unchanged, so no user's list gets the demo back. Fail-first: the J-29 test could not load at HEAD (fixed 2025/2026 constants in the store); passes now.
 - **Owner:** JOBS-FIX · **Fix commit:** `9e6102d` (`fix(jobs): the job page's history, résumé link, closed-job rule, tasks and demo job tell the truth (J-20, J-21, J-24, J-26, J-27, J-29)`) · **Test:** tests/unit/job-edits.unit.mjs · **On master:** Lane C's merge `de0911f` (an ancestor of master `e6b1a4a`, deployed)
 
-### J-30 · Low · ux-defect · ⏸ Fixed (not deployed)
+### J-30 · Low · ux-defect · ✅ Fixed (deployed in cb58695, 2026-09-26)
 **The tracker's view, sort, search and filter reset every time the user opens a job and comes back**
 - **Where:** `src/pages/JobTracker.jsx` : 23-25 (and src/components/job/ListView.jsx:13, src/pages/JobDetail.jsx:62)
 - **Repro:** 1. On /jobs, switch to List view, sort by Deadline and search 'eng'. 2. Click a row, then the back arrow. 3. The Kanban view is back, unsorted, with the search cleared.
@@ -222,7 +222,7 @@ title: Job Tracker — verified bugs, Low (J-16…J-41)
 - **Fail-first test:** Cypress: /jobs has exactly one h1 and a main element, and on /jobs/demo_1 document.title contains 'Google'.
 - **Owner:** JOBS-UI · **Fix commit:** — · **Test:** —
 
-### J-36 · Low · ux-defect · ⏸ Fixed (not deployed)
+### J-36 · Low · ux-defect · ✅ Fixed (deployed in cb58695, 2026-09-26)
 **On the Add/Edit job form, Enter does not submit, and both Company and Role are marked required although one is enough**
 - **Where:** `src/pages/JobForm.jsx` : 52, 55-59, 85-90
 - **Repro:** 1. Click Add Job, type 'Acme' in Company and press Enter: nothing happens. 2. Role shows a red asterisk, yet saving without it works. 3. With both fields empty, Save is greyed out and no reason is given.
@@ -243,7 +243,7 @@ title: Job Tracker — verified bugs, Low (J-16…J-41)
 - **Fail-first test:** Cypress at 375px: every button's getBoundingClientRect() is at least 24x24.
 - **Owner:** JOBS-UI · **Fix commit:** — · **Test:** —
 
-### J-38 · Low · mobile · ⏸ Fixed (not deployed)
+### J-38 · Low · mobile · ✅ Fixed (deployed in cb58695, 2026-09-26)
 **iOS Safari zooms the page when any tracker input is focused, because the inputs use 12-14px text**
 - **Where:** `src/pages/JobTracker.jsx` : 267 (and src/pages/JobForm.jsx:23, src/components/job/TasksTab.jsx:44, src/components/job/Field.jsx:46, src/components/job/InterviewStageSelector.jsx:94)
 - **Repro:** 1. On an iPhone, open /jobs and tap Search: the page zooms in and stays zoomed. 2. Open Add Job and tap Company: the page zooms again.
@@ -254,7 +254,7 @@ title: Job Tracker — verified bugs, Low (J-16…J-41)
 - **Now:** The job form, the job page's pencil fields, its deadline and résumé pickers, the custom-stage box and the tasks' boxes add `pointer-coarse:text-base`, the kit's own rule (controlClass in src/components/ui/Field.jsx): 16 px on a touch screen, 14 px with a mouse. The tracker's search is the kit's SearchInput and was already 16 px on touch; the test covers it too. The Notes editor followed in `2ece50b` (J-38b). A change to the date pill's hidden picker box (`be5dffa`) was reverted (`d4db465`): no test could show it matters.
 - **Owner:** JOBS-UI · **Fix commit:** `ca13cdb` (its test read a hidden file input as a text field until `a59d492`) (work branch, not deployed) · **Test:** tests/pdf/81-job-inputs-touch-text.test.mjs
 
-### J-39 · Low · mobile · ⏸ Fixed (not deployed)
+### J-39 · Low · mobile · ✅ Fixed (deployed in cb58695, 2026-09-26)
 **On phones, the recovery notice's buttons, which do not wrap, squeeze the explanation into a sliver and overflow**
 - **Where:** `src/components/RecoveryNotice.jsx` : 43-57
 - **Repro:** 1. At 375px width, load /jobs with an unreadable cpwtcv_jobs_v1 so the recovery notice appears. 2. The red alert puts 'Download the copy' and Dismiss (and 'Download the earlier copy' if there is one) beside a message column only a few words wide, and the row overflows.

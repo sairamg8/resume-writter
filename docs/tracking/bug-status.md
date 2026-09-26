@@ -1,8 +1,8 @@
 # FlowCV Bug Tracker & Status Index
 
 > Location: `/mnt/Storage/Projects/flowcv/docs/tracking/bug-status.md` (moved from the repo root 2026-09-24)
-> Updated: 2026-09-26 · `origin/master` (deployed) = `e6b1a4a` — Round 3 batch 5 (the ten designed layouts R2-138 B2, R3-008;
-> gate 36218934694) on batch 4 (owner-ui R3-009…012, `f20a62d`), batch 3 (perf2, section-look), batches 1–2, Round 2 and the revamp
+> Updated: 2026-09-26 · `origin/master` (deployed) = `cb58695` — the bug-fix waves 1–2 (Lane C B-05/13/17/20/29, J-30/36/38/39;
+> sync R2-140-b, public link R2-148-a/d; RES-R2-045/104/126/135/151; gate 36221896125) on batch 5 (`e6b1a4a`: layouts, R3-008) and earlier
 > **Open: 5** (0 here + 5 in [bug-status-r2/](bug-status-r2/README.md)) | Fixed, not pushed: 0 | **Closed: 259** (238 fixed + 21 ✖ without a code fix)
 
 ## Summary

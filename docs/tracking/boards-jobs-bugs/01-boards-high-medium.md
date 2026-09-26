@@ -51,7 +51,7 @@ title: Boards — verified bugs, High and Medium (B-01…B-13)
 - **Now:** Fixed under its twin **R2-140**: signed in, the boards sync with the account (one document per board, per-board last-writer-wins, on the same engine as the jobs), so clearing site data or another device brings them back; the Privacy page names résumés, jobs and boards as what syncs (src/pages/PrivacyPage.jsx:47-61). R2-140's own 'Left for later' (an offline reorder yields to the cloud's order; no sync icon for boards) stays with that row.
 - **Owner:** BOARDS-MODEL (export/import fns) + BOARDS-UI-B (UI + PrivacyPage.jsx) · **Fix commit:** under **R2-140** — `e96514b`, `8cd4901` (on master `e6b1a4a`, deployed) · **Test:** tests/unit/board-sync.unit.mjs, tests/pdf/95-sync-privacy-notices.test.mjs
 
-### B-05 · Medium · bug · ⏸ Fixed (drop side not deployed; model half ✅)
+### B-05 · Medium · bug · ✅ Fixed (deployed in cb58695, 2026-09-26)
 **A card dragged to another list can never land at the bottom of a list with 2 or more cards: it is inserted above the last card, and no placeholder shows during the drag**
 - **Where:** `src/pages/Board.jsx` : 122-135, 204
 - **Repro:** On the demo 'Product launch' board: 1) Drag 'Build pricing page' out of 'In progress'. 2) Release it just below 'Pick hero image', the last card of 'To do' (over its 'Add a card' button), or anywhere lower. 3) It lands between 'Draft landing copy' and 'Pick hero image'. No gap opened in 'To do' during the drag.
@@ -135,7 +135,7 @@ title: Boards — verified bugs, High and Medium (B-01…B-13)
 - **Fail-first test:** Playwright: open a card, Tab to 'Bullet list', press Enter, and expect a <ul> in the description. Fails today.
 - **Owner:** BOARDS-UI-A · **Fix commit:** — · **Test:** —
 
-### B-13 · Medium · mobile · ⏸ Fixed (not deployed)
+### B-13 · Medium · mobile · ✅ Fixed (deployed in cb58695, 2026-09-26)
 **Column scroll-snap never works on phones: snap-x snap-mandatory is on the inner flex row, not on the overflow-x-auto scroller**
 - **Where:** `src/pages/Board.jsx` : 205-206
 - **Repro:** 1) Open a board at 375px width (a phone, or DevTools device mode). 2) Swipe horizontally and let go between two columns. 3) The board stops wherever the fling ends, showing half of each of two columns.
