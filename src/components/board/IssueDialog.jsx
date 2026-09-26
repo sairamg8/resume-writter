@@ -138,8 +138,16 @@ function IssueView({ board, issue, onClose, onOpenIssue }) {
           {/* On the board itself the project link only closes the view: closing steps back over
               the entries opening pushed, and following the link as well would push the board on
               top of the issue, which Back then opened again. From another page the link goes to
-              the board, and the view goes with the page it was open on. */}
-          <Link to={boardPath} onClick={(e) => { if (onBoardPage) { e.preventDefault(); onClose(); } }} className="flex min-w-0 items-center gap-1.5 rounded px-1 hover:underline">
+              the board, and the view goes with the page it was open on. Only a plain left click:
+              a middle, Ctrl, ⌘ or Shift click still opens the board in a new tab or window. */}
+          <Link
+            to={boardPath}
+            onClick={(e) => {
+              if (!onBoardPage || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+              e.preventDefault();
+              onClose();
+            }}
+            className="flex min-w-0 items-center gap-1.5 rounded px-1 hover:underline">
             <span aria-hidden="true" className="size-4 shrink-0 rounded-[3px]" style={{ backgroundColor: board.color }} />
             <span className="truncate">{board.title}</span>
           </Link>

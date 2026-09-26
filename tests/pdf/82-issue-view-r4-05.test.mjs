@@ -146,6 +146,25 @@ it('R4-BRD-05: on the board, the trail\'s project link closes the view the same 
   }
 });
 
+it('R4-BRD-05: a middle, Ctrl, ⌘ or Shift click on the trail\'s project link is left to the browser (a new tab or window)', async () => {
+  const page = mountBoard('/boards/p1');
+  try {
+    page.click(page.card('HOME-2 Paint the fence'));
+    await page.settle();
+    const link = () => [...elements(page.dialog())].find((el) => el.tagName === 'A' && el.textContent.trim() === 'Home jobs');
+    for (const click of [{ button: 1 }, { button: 0, ctrlKey: true }, { button: 0, metaKey: true }, { button: 0, shiftKey: true }]) {
+      const e = page.clickLink(link(), click);
+      await page.settle();
+      const name = JSON.stringify(click);
+      assert.equal(e.defaultPrevented, false, `${name}: the browser was stopped from opening the link`);
+      assert.equal(page.open(), 'HOME-2 Paint the fence', `${name}: the view closed`);
+      assert.equal(page.path(), '/boards/p1?issue=HOME-2', `${name}: this tab moved`);
+    }
+  } finally {
+    await page.view.unmount();
+  }
+});
+
 it('R4-BRD-05: a second close before the first has landed (a double-clicked X, Escape held down) closes once, not off the board', async () => {
   for (const how of ['X', 'Escape']) {
     const page = mountBoard('/boards/p1');
