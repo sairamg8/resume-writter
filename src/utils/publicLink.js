@@ -112,6 +112,8 @@ const stable = (v) => JSON.stringify(v, (_, x) => (x && typeof x === 'object' &&
 export const publishedIsCurrent = (copy, resume) => stable(copy) === stable(publicSnapshot(resume));
 
 const TOO_LARGE = 'This résumé is too large to publish (over 1 MB, usually its photo). Use a smaller photo and try again.';
+/** The error publish throws for a copy over MAX_PUBLIC_BYTES: its message is the whole story (no connection to check). */
+export const TOO_LARGE_CODE = 'too-large';
 
 export function publicIo(fs, db) {
   const publicDoc = (shareId) => fs.doc(db, 'public', shareId);
@@ -145,7 +147,7 @@ export function publicIo(fs, db) {
      */
     async publish(uid, resume, { shareId = newId(), now = Date.now() } = {}) {
       const copy = publicSnapshot(resume);
-      if (new Blob([JSON.stringify(copy)]).size > MAX_PUBLIC_BYTES) throw new Error(TOO_LARGE);
+      if (new Blob([JSON.stringify(copy)]).size > MAX_PUBLIC_BYTES) throw Object.assign(new Error(TOO_LARGE), { code: TOO_LARGE_CODE });
       const batch = fs.writeBatch(db);
       batch.set(publicDoc(shareId), { owner: uid, resume: copy, publishedAt: now });
       batch.set(shareDoc(uid, resume.id), { shareId, publishedAt: now });

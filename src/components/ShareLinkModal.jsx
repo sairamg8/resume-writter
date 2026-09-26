@@ -2,7 +2,7 @@ import { useEffect, useId, useState } from 'react';
 import { Globe, X, Copy, ExternalLink } from 'lucide-react';
 import { doc, getDocFromServer, writeBatch } from 'firebase/firestore';
 import { db } from '@/utils/firebase';
-import { publicIo, publicSummary, publicUrl, publishedIsCurrent, publicSnapshot } from '@/utils/publicLink';
+import { publicIo, publicSummary, publicUrl, publishedIsCurrent, publicSnapshot, TOO_LARGE_CODE } from '@/utils/publicLink';
 import { timeAgo } from '@/utils/resume';
 import { copyText } from '@/utils/clipboard';
 
@@ -48,7 +48,9 @@ export default function ShareLinkModal({ isOpen, resume, uid, io = firebasePubli
       await fn();
     } catch (e) {
       console.error(`${label} failed:`, e);
-      setError(`${label} failed${e?.message ? ` (${e.message})` : ''}. Check your connection and try again.`);
+      // A copy too large to publish says so and only so: the connection has nothing to do with it.
+      setError(e?.code === TOO_LARGE_CODE ? e.message
+        : `${label} failed${e?.message ? ` (${e.message})` : ''}. Check your connection and try again.`);
     } finally {
       setBusy(false);
     }
