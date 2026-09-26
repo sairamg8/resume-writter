@@ -59,9 +59,10 @@ export function ExportDropdown({ exporting, importing = false, keeps = false, le
             disabled={!!exporting}
             // Say what the .docx leaves out that the PDF has (R2-133). The résumé prints its photo (R2-126) and
             // Modern's and the Sidebar's header on their band (R2-137); the designed layouts' own marks (Registry's
-            // bar, Timeline's rail, the rules of Bookend, Chronicle, Keel…) are not drawn; the letter prints no photo.
+            // bar, Timeline's rail, the rules of Bookend, Chronicle, Keel…) are not drawn. The letter prints its
+            // letterhead, photo included (R4-DOUT-06), and its text as the PDF does.
             title={letter
-              ? 'An editable document: the letter prints without its photo'
+              ? 'An editable document: the letter with the letterhead, photo and text of its PDF'
               : "An editable document: Banner's and Banded's headers and the Sidebar's side column print on the white page, and the designed layouts' rules and bars are left out"}
             className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 disabled:opacity-50"
           >
