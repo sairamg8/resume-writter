@@ -11,12 +11,14 @@ import CoverLetterGeneratorModal from '@/components/CoverLetterGeneratorModal';
 import { PHOTO_OPTIONS, photoOption } from '@/constants/photoOptions';
 import { GapStepper } from '@/components/HeaderSpacingControls';
 import { letterSideGapRow } from '@/utils/headerSpacingRows';
+import { useToast } from '@/components/ui/Toast';
 
 /** This panel's lucide icon per field — the names and their order come from CONTACT_FIELDS. */
 const ICONS = { email: Mail, phone: Phone, location: MapPin, website: Globe, linkedin: Link2, github: Code };
 
 export default function CoverLetterPanel({ resume, coverLetter, personal, settings, template, updateCoverLetter, updateSetting, clearSettings }) {
   const [generatorOpen, setGeneratorOpen] = useState(false);
+  const { toast } = useToast(); // the Editor's notices; outside a ToastProvider, none
   const cl = coverLetter || {};
   const contacts = letterContactFormat(cl, settings); // what the letter prints until a chip sets its own
   const photoInputRef = useRef(null);
@@ -62,21 +64,35 @@ export default function CoverLetterPanel({ resume, coverLetter, personal, settin
     // The recipient block is written whole, so it names whom the body greets (AUD-31): a blank
     // name clears the last letter's (the body says "Dear Hiring Team,"), and a new name drops the
     // last person's title. A title typed for this same person stays; the generator asks for none.
+    const next = {};
     const name = gen.recipientName ?? '';
     const samePerson = name !== '' && name === String(cl.recipientName ?? '').trim();
-    updateCoverLetter('recipientName', name);
-    if (gen.recipientTitle || !samePerson) updateCoverLetter('recipientTitle', gen.recipientTitle ?? '');
+    next.recipientName = name;
+    if (gen.recipientTitle || !samePerson) next.recipientTitle = gen.recipientTitle ?? '';
     // The company too: a blank generator Company clears the last one, so the block and the body
     // (which then says "[Company Name]") agree (R4-CL-01).
-    updateCoverLetter('company', gen.company ?? '');
-    if (gen.subject) updateCoverLetter('subject', gen.subject);
-    if (gen.body) updateCoverLetter('body', gen.body);
-    if (gen.closing) updateCoverLetter('closing', gen.closing);
-    // The generated letter signs with the résumé's name and title as they are when it prints, so
-    // Apply clears the letter's own: a name filled in later reaches the signature, and one an
-    // earlier Apply stored ('Candidate', a name since changed) no longer pins it (R2-043).
-    updateCoverLetter('signatureName', '');
-    updateCoverLetter('signatureDesignation', '');
+    next.company = gen.company ?? '';
+    if (gen.subject) next.subject = gen.subject;
+    if (gen.body) next.body = gen.body;
+    if (gen.closing) next.closing = gen.closing;
+    // The generator writes no signature, so a Signature Name or Designation the user typed stays
+    // (R4-DUX-04); an empty one signs with the résumé's name and title as they are when it prints.
+    // Only the placeholders an old generator stored ('Candidate', beside 'Professional') go (R2-043).
+    if (cl.signatureName === 'Candidate') {
+      next.signatureName = '';
+      if (cl.signatureDesignation === 'Professional') next.signatureDesignation = '';
+    }
+    const before = Object.fromEntries(Object.keys(next).map(key => [key, cl[key]]));
+    for (const [key, value] of Object.entries(next)) updateCoverLetter(key, value);
+    // Apply writes over what the user wrote (the body above all), so its notice has an Undo that
+    // puts back every field Apply touched, as it was (R4-DUX-04).
+    toast({
+      id: 'letter-generated',
+      title: 'Generated letter applied',
+      description: 'Its body, subject and recipient replaced the letter\'s.',
+      duration: 10000,
+      action: { label: 'Undo', onClick: () => { for (const [key, value] of Object.entries(before)) updateCoverLetter(key, value); } },
+    });
   }
 
   const effectiveResume = resume || { personal, settings, template, coverLetter: cl };
