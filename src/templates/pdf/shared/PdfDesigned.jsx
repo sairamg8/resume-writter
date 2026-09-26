@@ -73,9 +73,9 @@ export function PdfDesignedHeader({ personal, settings, top = null, beside = nul
   );
   const summary = !hidden.includes('summary') && personal?.summary && hasRichText(personal.summary);
 
-  return (
-    // Breakable: a summary longer than a page continues on the next (R2-046); the name row never splits.
-    <View style={[{ marginBottom: g.headerGapBelow }, bleed ? { ...frame, backgroundColor: undefined } : frame, headerBorderStyle]}>
+  const frameStyle = bleed ? { ...frame, backgroundColor: undefined } : frame;
+  const body = (
+    <>
       {bleed && <View style={{ position: 'absolute', top: -bleed.top, left: -bleed.side, right: -bleed.side, bottom: 0, backgroundColor: frame.backgroundColor }} />}
       {top}
       {beside && centered && <View style={{ alignSelf: 'center', marginBottom: beside.gap }}>{beside.node}</View>}
@@ -102,8 +102,16 @@ export function PdfDesignedHeader({ personal, settings, top = null, beside = nul
         </View>
       )}
       {bottom}
-    </View>
+    </>
   );
+  // react-pdf strokes a box's side at the widest of its sides' widths: the header rule sharing Keel's box with
+  // its 4 pt bar printed 4 pt thick, whatever its Thickness, and the letter's rule (the résumé's) did not
+  // match. A frame with a border at its side gets a box of its own inside the rule's.
+  const sideBorder = Boolean(frame.borderLeftWidth || frame.borderRightWidth);
+  // Breakable: a summary longer than a page continues on the next (R2-046); the name row never splits.
+  return sideBorder
+    ? <View style={[{ marginBottom: g.headerGapBelow }, headerBorderStyle]}><View style={frameStyle}>{body}</View></View>
+    : <View style={[{ marginBottom: g.headerGapBelow }, frameStyle, headerBorderStyle]}>{body}</View>;
 }
 
 /**
