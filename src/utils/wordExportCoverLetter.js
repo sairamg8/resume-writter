@@ -83,8 +83,8 @@ const widestWord = (text, size, em = EM) => Math.max(0, ...String(text ?? '').sp
  * Right of Name, the default Fields Position (R2-137), as the letter's PDF lays it out
  * (CoverLetterHeaderPDF): the contacts beside the name, the letter's Name ↔ Contacts between them
  * (contactsSideGap, else its 12 pt). The contacts get what their widest item needs (a 2 Grid two
- * such cells), the name side what its lines need up to the rest; `{ name, contacts }` the two
- * columns' widths, twips, the gap the contacts' left margin, and `width` the contacts' own, pt.
+ * such cells, its whole column), the name side what its lines need up to the rest; `{ name, contacts }`
+ * the two columns' widths, twips, the gap the contacts' left margin, and `width` the contacts' own, pt.
  * Null where the PDF prints them under the name: another Fields Position, a centred letterhead
  * (its centre line), no contacts, or a name or title word that does not fit beside them — the PDF's
  * fit fallback. Word cannot measure text: the widths are estimates (across).
@@ -97,13 +97,22 @@ function rightOfName(personal, cl, s, look, sizes, contacts, { contactStyle, lay
   // Justify keeps the mark after each value on its line; Single and 2 Grid put Bullet's before it.
   const mark = layout === 'justify' ? across('  |  ', sizes.contact) : contactStyle === 'bullet' ? across('• ', sizes.contact) : 0;
   const widest = Math.max(...contacts.map((c) => across(c.value, sizes.contact))) + mark;
-  const need = (layout === '2grid' && contacts.length > 1 ? 2 * widest + pxToPt(CONTACT_GRID.gapPx) : widest) + SLACK;
+  // A 2 Grid's two cells, each at least as wide as its widest item at the grid's 46 %, and never
+  // narrower than the row its two cells and gap fit in (the PDF's contactRowMinWidth).
+  const gridGap = pxToPt(CONTACT_GRID.gapPx);
+  const twoCells = layout === '2grid' && contacts.length > 1;
+  const need = (twoCells ? Math.max(widest / CONTACT_GRID.cell, gridGap / (1 - 2 * CONTACT_GRID.cell)) : widest) + SLACK;
   const nameEm = look.name.weight === 'bold' ? BOLD_EM : EM;
   const name = personal.name || 'Your Name';
   if (Math.max(widestWord(name, sizes.name, nameEm), widestWord(personal.title, sizes.title)) + SLACK + need > room) return null;
   const title = personal.title ? across(personal.title, sizes.title) : 0;
   const nameLine = look.inline && personal.title ? across(name, sizes.name, nameEm) + look.inline.gap + title : Math.max(across(name, sizes.name, nameEm), title);
-  const side = twips(Math.min(nameLine + SLACK, room - need));
+  // A 2 Grid does not wrap a name and title that fit on their lines: it goes under the name then.
+  if (twoCells && nameLine + SLACK + need > room) return null;
+  // A 2 Grid's cells are tab stops across its column: the column is what the grid needs, against the
+  // right margin, and the name side has the rest. Single and Justify, right-aligned, have all the name
+  // leaves them, so a value never wraps inside itself on an estimate that was short.
+  const side = twoCells ? inner - twips(need + gap) : twips(Math.min(nameLine + SLACK, room - need));
   return { name: side, contacts: inner - side, gap: twips(gap), width: (inner - side) / 20 - gap };
 }
 

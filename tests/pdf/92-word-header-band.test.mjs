@@ -136,7 +136,7 @@ describe('the Word résumé draws Modern\'s and the Sidebar\'s header on its ban
     assert.deepEqual([cell.margins.left, cell.margins.right, cell.margins.top], [300, 300, 300], 'its text on the margins');
     assert.ok(cell.text.includes(EMAIL) && !cell.text.includes(SUMMARY), 'the contacts on the band, the summary not');
     const bytes = await render(r);
-    for (const [text, word] of [[NAME, 'Pat'], [TITLE, 'Staff']]) {
+    for (const [text, word] of [[NAME, 'Pat'], [TITLE, 'Staff'], [EMAIL, EMAIL]]) {
       const [pdf, got] = [await pdfOn(bytes, word, '#1e293b'), colourOf(xml, text)];
       assert.ok(near(got, pdf), `${text}: Word ${got}, the PDF ${pdf}`);
     }
@@ -167,6 +167,23 @@ describe('the Word letter sets its contacts beside the name at Right of Name (R2
     // Cover Letter → Header Layout → Name ↔ Contacts.
     const [, set] = tableWith((await docx(cv('classic', { contactsSideGap: 32 }), true)).xml, NAME).rows[0];
     assert.equal(set.margins.left, 480, '32 px = 24 pt');
+  });
+
+  it('a 2 Grid sits against the right margin, as wide as its two cells: the name side takes the rest', async () => {
+    const head = tableWith((await docx(cv('classic', {}, {}, { headerLayout: '2grid' }), true)).xml, NAME);
+    assert.ok(head, 'a table');
+    const [name, contacts] = head.columns;
+    assert.ok(contacts < name, `the contacts' column ${contacts} is narrower than the name's ${name}`);
+    // Two 46 % cells and the 18 pt gap: at least the 225 pt row, plus the 12 pt Name ↔ Contacts.
+    assert.ok(contacts >= (225 + 12) * 20 && contacts <= (260 + 12) * 20, String(contacts));
+  });
+
+  it('a 2 Grid beside a name and title that would wrap goes under the name, as the PDF\'s', async () => {
+    const title = 'Senior Staff Software Engineer, Platform Infrastructure';
+    const { xml } = await docx(cv('classic', {}, { title }, { headerLayout: '2grid' }), true);
+    assert.equal(tables(xml).length, 0);
+    // Single keeps them beside the name: its contacts need one item's width, not two cells'.
+    assert.ok(tableWith((await docx(cv('classic', {}, { title }, { headerLayout: 'single' }), true)).xml, NAME));
   });
 
   it('Below Name, a centred letterhead, or a name word that does not fit beside the contacts: under the name, no table', async () => {

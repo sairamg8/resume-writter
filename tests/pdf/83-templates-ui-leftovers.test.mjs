@@ -47,6 +47,7 @@ describe('Templates UI leftovers (R2-133)', () => {
     };
     const resumeHint = await hint(false, 'Export Word');
     assert.match(resumeHint, /Banner's and Banded's headers/);
+    assert.match(resumeHint, /designed layouts' rules and bars are left out/);
     assert.match(resumeHint, /Sidebar's side column/);
     assert.doesNotMatch(resumeHint, /photo|coloured column|without its banner/i);
     assert.match(await hint(true, 'Export Cover Letter Word'), /without its photo/);

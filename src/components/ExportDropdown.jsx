@@ -57,10 +57,11 @@ export function ExportDropdown({ exporting, keeps = false, letter = false, onExp
             onClick={() => { onExportWord(); setOpen(false); }}
             disabled={!!exporting}
             // Say what the .docx leaves out that the PDF has (R2-133). The résumé prints its photo (R2-126) and
-            // Modern's and the Sidebar's header on their band (R2-137); the letter prints no photo.
+            // Modern's and the Sidebar's header on their band (R2-137); the designed layouts' own marks (Registry's
+            // bar, Timeline's rail, the rules of Bookend, Chronicle, Keel…) are not drawn; the letter prints no photo.
             title={letter
               ? 'An editable document: the letter prints without its photo'
-              : "An editable document: Banner's and Banded's headers and the Sidebar's side column print on the white page"}
+              : "An editable document: Banner's and Banded's headers and the Sidebar's side column print on the white page, and the designed layouts' rules and bars are left out"}
             className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 disabled:opacity-50"
           >
             <FileText size={12} className="text-emerald-500" /> {letter ? 'Export Cover Letter Word' : 'Export Word'}
