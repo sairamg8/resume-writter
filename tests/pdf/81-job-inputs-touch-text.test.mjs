@@ -46,8 +46,10 @@ async function render(component, props) {
  * passes with `pointer-coarse:text-base`, or with an unprefixed `text-base` that no breakpoint shrinks.
  */
 function under16OnTouch(page) {
+  // React sets an <input>'s type as a property, not an attribute, and the fake DOM keeps them apart:
+  // read both, or the tracker's hidden file input reads as a text field.
   const fields = page.all().filter((el) => ['INPUT', 'SELECT', 'TEXTAREA'].includes(el.tagName)
-    && !['file', 'hidden', 'checkbox', 'radio'].includes(el.getAttribute('type')));
+    && !['file', 'hidden', 'checkbox', 'radio'].includes(el.getAttribute('type') ?? el.type));
   assert.ok(fields.length > 0, 'the page has fields to check');
   return fields.filter((el) => {
     const cls = el.getAttribute('class') ?? '';
