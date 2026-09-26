@@ -34,6 +34,15 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false, publicL
   const navigate = useNavigate();
   const importRef = useRef(null);
   const [importError, setImportError] = useState(null);
+  // One timer for whichever import error shows: an earlier error's timer cleared a newer one early
+  // (a failed PDF's 8 s, then a bad .json 6 s later, gone after 2 s — R4-APP-09).
+  const importErrorTimer = useRef(0);
+  const showImportError = (message, ms = 4000) => {
+    clearTimeout(importErrorTimer.current);
+    setImportError(message);
+    importErrorTimer.current = setTimeout(() => setImportError(null), ms);
+  };
+  useEffect(() => () => clearTimeout(importErrorTimer.current), []);
   const [letterModalOpen, setLetterModalOpen] = useState(false);
   // A demo account keeps originals: the cards and Import offer "Keep as my original".
   const keeps = isDemoAccount(auth.user, DEMO_ACCOUNTS);
@@ -108,7 +117,7 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false, publicL
       importDocument(file, {
         importResume: store.importResume, keep: keeps && importAsOriginal.current,
         navigate: (...args) => { if (mounted.current) navigate(...args); },
-        onError: (message) => { setImportError(message); setTimeout(() => setImportError(null), 8000); },
+        onError: (message) => showImportError(message, 8000),
       }).finally(() => {
         importBusy.current = false;
         if (mounted.current) setImporting(false);
@@ -130,19 +139,16 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false, publicL
           setImportError(null);
           navigate(`/resume/${id}`);
         } else {
-          setImportError('Invalid resume file — must be a CPWT-CV backup or standard JSON Resume (.json).');
-          setTimeout(() => setImportError(null), 4000);
+          showImportError('Invalid resume file — must be a CPWT-CV backup or standard JSON Resume (.json).');
         }
       } catch {
-        setImportError('Could not parse file. Make sure it\'s a valid CPWT-CV or standard JSON Resume (.json).');
-        setTimeout(() => setImportError(null), 4000);
+        showImportError('Could not parse file. Make sure it\'s a valid CPWT-CV or standard JSON Resume (.json).');
       }
     };
     // A file the browser will not hand over — a permission error, a removed drive, a folder — never
     // reaches onload, and without this the import said nothing (R2-085; the editor's: AUD-23).
     reader.onerror = reader.onabort = () => {
-      setImportError('That file could not be read. Check it is still there and try again.');
-      setTimeout(() => setImportError(null), 4000);
+      showImportError('That file could not be read. Check it is still there and try again.');
     };
     reader.readAsText(file);
     e.target.value = '';

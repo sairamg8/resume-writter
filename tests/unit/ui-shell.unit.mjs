@@ -18,6 +18,7 @@ import { createServer } from 'vite';
 import { fileURLToPath } from 'node:url';
 import { mount, elements, reactProps } from '../pdf/fake-dom.mjs';
 import { sidebarProjects, orderProjects } from '../../src/components/shell/projects.js';
+import { patchFakeDom } from './ui-dom-harness.mjs';
 
 // JSX and the `@/` alias through Vite's SSR loader, as tests/pdf/harness.mjs does — without the
 // PDF modules and font server that harness also starts.
@@ -33,11 +34,12 @@ after(() => vite?.close());
 const loadModule = (id) => vite.ssrLoadModule(id);
 
 /**
- * The shell at `path` over two stand-in pages, /jobs ("LIST") and /jobs/:id ("JOB"). Returns the
+ * The shell at `path` over two stand-in pages, /jobs ("LIST") and /jobs/:id ("JOB"), and / ("HOME")
+ * outside it. Returns the
  * mount, its <main>, `scroll(y)` (a user scroll), `go(to)` (router navigation, -1 is Back) and
  * the text the page shows.
  */
-async function shellAt(path) {
+async function shellAt(path, entries = [path]) {
   const { WorkspaceLayout } = await loadModule('/src/components/shell/WorkspaceLayout.jsx');
   let navigate = null;
   function Page({ name }) {
@@ -45,11 +47,13 @@ async function shellAt(path) {
     return createElement('p', null, name);
   }
   function App() {
-    return createElement(MemoryRouter, { initialEntries: [path] },
+    return createElement(MemoryRouter, { initialEntries: entries, initialIndex: 0 },
       createElement(Routes, null,
         createElement(Route, { element: createElement(WorkspaceLayout, { projects: [] }) },
           createElement(Route, { path: '/jobs', element: createElement(Page, { name: 'LIST' }) }),
-          createElement(Route, { path: '/jobs/:id', element: createElement(Page, { name: 'JOB' }) }))));
+          createElement(Route, { path: '/jobs/:id', element: createElement(Page, { name: 'JOB' }) })),
+        // A page outside the shell (the résumés): going there unmounts the shell.
+        createElement(Route, { path: '/', element: createElement(Page, { name: 'HOME' }) })));
   }
   const view = mount(App, {});
   const main = () => [...elements(view.container)].find((el) => el.tagName === 'MAIN');
@@ -70,7 +74,7 @@ async function shellAt(path) {
     await settle();
   };
   await settle();
-  return { view, main, scroll, go, shown: () => main().textContent };
+  return { view, main, scroll, go, shown: () => main()?.textContent ?? view.container.textContent };
 }
 
 describe('J-40: a route change inside the workspace opens the new page at its top', () => {
@@ -120,6 +124,43 @@ describe('J-40: a route change inside the workspace opens the new page at its to
       assert.equal(main().scrollTop, 0);
       await go(-1);
       assert.equal(main().scrollTop, 700);
+    } finally { await view.unmount(); }
+  });
+
+  // R4-APP-07: the offsets were kept in the shell, which unmounts on a page outside it: Back from
+  // the résumés (the sidebar's Résumés, the logo) opened the Job Tracker at its top.
+  it('Back from a page outside the shell returns to the list where it was scrolled', async () => {
+    const { view, main, scroll, go, shown } = await shellAt('/jobs');
+    try {
+      scroll(900);
+      await go('/');
+      assert.equal(main(), undefined, 'the shell is gone on the résumés page');
+      assert.match(shown(), /HOME/);
+      await go(-1);
+      assert.match(shown(), /LIST/);
+      assert.equal(main().scrollTop, 900, 'the list opened at its top');
+      await go(1);
+      await go('/jobs/job_9'); // a new page after all that still opens at the top
+      assert.equal(main().scrollTop, 0);
+    } finally { await view.unmount(); }
+  });
+
+  // The review of R4-APP-07: HashRouter gives the key 'default' to the first entry and to every
+  // address typed into the bar, and the offsets now outlive the shell: filed by key alone, a page
+  // opened by typing its address took the first page's offset.
+  it('an entry that shares another page’s key (HashRouter’s "default") opens at its own top', async () => {
+    const entries = [{ pathname: '/jobs', key: 'default' }, '/', { pathname: '/jobs/job_5', key: 'default' }];
+    const { view, main, scroll, go, shown } = await shellAt('/jobs', entries);
+    try {
+      scroll(900);
+      await go(1); // the résumés: the shell files /jobs at 900 under 'default'
+      assert.match(shown(), /HOME/);
+      await go(1); // a typed address, key 'default' again
+      assert.match(shown(), /JOB/);
+      assert.equal(main().scrollTop, 0, 'the job page took the list’s offset');
+      await go(-2);
+      assert.match(shown(), /LIST/);
+      assert.equal(main().scrollTop, 900);
     } finally { await view.unmount(); }
   });
 
@@ -179,5 +220,156 @@ describe('the sidebar’s projects', () => {
     assert.equal(hidden, 1);
     // Starred projects are never cut, even past the limit.
     assert.deepEqual(orderProjects(list, 1).shown.map((x) => x.id), ['e', 'c']);
+  });
+});
+
+// R4-APP-03 / R4-APP-04: the phone navigation drawer was open whenever the page's path was the one
+// it was opened on. Nothing closed it on a navigation, so Back to that page opened it again, and a
+// link in it to the page already shown (the Job Tracker on /jobs, "+ New project" on /boards, whose
+// ?create=1 opens the create dialog) left it open over the page.
+/**
+ * The shell at `path` over stand-in pages /jobs and /boards, with `newProjectTo` '/boards?create=1'
+ * as AppRoutes passes it. Returns `openNav()` (the page's menu button, useWorkspace().openNav),
+ * `drawerOpen()` (the drawer is shown and not on its way out), `drawerLink(text)` (a link in the
+ * drawer) and `click(a)` (a plain left click on it, as a browser sends it to the router's Link).
+ */
+async function drawerShell(path, { width, entries = [path] } = {}) {
+  patchFakeDom(); // the drawer's focus trap queries and moves focus
+  const { WorkspaceLayout } = await loadModule('/src/components/shell/WorkspaceLayout.jsx');
+  const { useWorkspace } = await loadModule('/src/components/shell/workspaceContext.js');
+  let navigate = null;
+  let workspace = null;
+  function Page({ name }) {
+    navigate = useNavigate();
+    workspace = useWorkspace();
+    return createElement('p', null, name);
+  }
+  // A window `width` wide whose (min-width) lists fire `change` when resize() crosses them.
+  let viewport = width;
+  const lists = [];
+  const matchMedia = (query) => {
+    const min = Number(/\(min-width:\s*(\d+)px\)/.exec(query)?.[1] ?? 0);
+    const handlers = new Set();
+    const list = {
+      get matches() { return viewport >= min; },
+      addEventListener: (type, fn) => handlers.add(fn),
+      removeEventListener: (type, fn) => handlers.delete(fn),
+      fire: () => handlers.forEach((fn) => fn({ matches: list.matches })),
+      min,
+    };
+    lists.push(list);
+    return list;
+  };
+  function App() {
+    if (width !== undefined) window.matchMedia = matchMedia; // before any hook below reads it
+    return createElement(MemoryRouter, { initialEntries: entries, initialIndex: 0 },
+      createElement(Routes, null,
+        createElement(Route, { element: createElement(WorkspaceLayout, { projects: [], newProjectTo: '/boards?create=1' }) },
+          createElement(Route, { path: '/jobs', element: createElement(Page, { name: 'LIST' }) }),
+          createElement(Route, { path: '/boards', element: createElement(Page, { name: 'BOARDS' }) }))));
+  }
+  const view = mount(App, {});
+  const settle = async () => {
+    for (let i = 0; i < 40; i += 1) {
+      await new Promise((resolve) => { setTimeout(resolve, 0); });
+      view.act(() => {});
+    }
+  };
+  await settle();
+  const drawer = () => [...elements(view.document.body)].find((el) => el.getAttribute?.('aria-label') === 'Navigation');
+  const main = () => [...elements(view.container)].find((el) => el.tagName === 'MAIN');
+  return {
+    view,
+    shown: () => main().textContent,
+    openNav: () => view.act(() => workspace.openNav()),
+    drawerOpen: () => Boolean(drawer()?.className.includes('animate-ui-drawer-in')),
+    drawerLink: (text) => [...elements(drawer())].find((el) => el.tagName === 'A' && el.textContent.trim() === text),
+    click: async (a) => {
+      const event = {
+        button: 0, metaKey: false, altKey: false, ctrlKey: false, shiftKey: false, defaultPrevented: false,
+        target: a, currentTarget: a, preventDefault() { this.defaultPrevented = true; },
+      };
+      view.act(() => reactProps(a).onClick(event));
+      await settle();
+    },
+    go: async (to) => { view.act(() => navigate(to)); await settle(); },
+    resize: async (w) => {
+      const before = lists.map((l) => l.matches);
+      viewport = w;
+      view.act(() => lists.forEach((l, i) => { if (l.matches !== before[i]) l.fire(); }));
+      await settle();
+    },
+    modal: () => [...elements(view.document.body)].some((el) => el.getAttribute?.('aria-modal') === 'true'),
+  };
+}
+
+describe('R4-APP-03/04: the phone navigation drawer closes on every navigation', () => {
+  it('a link to another page closes it, and Back to the page it was opened on does not open it again', async () => {
+    const s = await drawerShell('/jobs');
+    try {
+      s.openNav();
+      assert.ok(s.drawerOpen(), 'the menu button opens the drawer');
+      await s.click(s.drawerLink('Projects'));
+      assert.match(s.shown(), /BOARDS/);
+      assert.ok(!s.drawerOpen(), 'following a link closes the drawer');
+      await s.go(-1);
+      assert.match(s.shown(), /LIST/);
+      assert.ok(!s.drawerOpen(), 'Back to /jobs opened the drawer again');
+      await s.go(1);
+      assert.ok(!s.drawerOpen());
+    } finally { await s.view.unmount(); }
+  });
+
+  // HashRouter gives the key 'default' to the first entry and to every address typed into the bar.
+  it('an address typed into the bar closes it, though it shares the first entry’s key', async () => {
+    const s = await drawerShell('/jobs', { entries: [{ pathname: '/jobs', key: 'default' }, { pathname: '/boards', key: 'default' }] });
+    try {
+      s.openNav();
+      await s.go(1);
+      assert.match(s.shown(), /BOARDS/);
+      assert.ok(!s.drawerOpen(), 'the drawer stayed open on the typed page');
+    } finally { await s.view.unmount(); }
+  });
+
+  it('a link to the page already shown closes it', async () => {
+    const s = await drawerShell('/jobs');
+    try {
+      s.openNav();
+      await s.click(s.drawerLink('Job Tracker'));
+      assert.match(s.shown(), /LIST/);
+      assert.ok(!s.drawerOpen(), 'the Job Tracker link on /jobs left the drawer open');
+    } finally { await s.view.unmount(); }
+  });
+
+  it('"Create project" on /boards closes it before the create dialog opens', async () => {
+    const s = await drawerShell('/boards');
+    try {
+      s.openNav();
+      const link = s.drawerLink('Create project');
+      assert.equal(link.getAttribute('href'), '/boards?create=1', 'the drawer’s Create project link');
+      await s.click(link);
+      assert.match(s.shown(), /BOARDS/);
+      assert.ok(!s.drawerOpen(), 'the drawer stayed open over the create dialog');
+    } finally { await s.view.unmount(); }
+  });
+});
+
+// R4-APP-06: at md and up the drawer is only hidden by CSS. Left open while the window widened (a
+// tablet turned to landscape), it stayed mounted as a modal, and useHotkeys ignores every shortcut
+// while one is on the page: [, c, / and ? did nothing until the next page.
+describe('R4-APP-06: widening the window past the phone layout closes the drawer', () => {
+  it('opened at 375 px, the window widened to 1024 px: the drawer closes and goes', async () => {
+    const s = await drawerShell('/jobs', { width: 375 });
+    try {
+      s.openNav();
+      assert.ok(s.drawerOpen());
+      await s.resize(1024);
+      assert.ok(!s.drawerOpen(), 'the drawer stayed open at desktop width');
+      await new Promise((resolve) => { setTimeout(resolve, 300); }); // its 180 ms exit
+      s.view.act(() => {});
+      assert.ok(!s.modal(), 'a hidden modal stayed on the page, and the shortcuts with it');
+      await s.resize(375);
+      assert.ok(!s.drawerOpen(), 'narrowing again does not bring it back');
+    } finally { await s.view.unmount(); }
   });
 });

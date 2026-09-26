@@ -3,6 +3,7 @@ import { Outlet, useLocation } from 'react-router-dom';
 import { ConfirmProvider, ToastProvider } from '../ui/index.js';
 import { ErrorBoundary } from '../ErrorBoundary.jsx';
 import { useHotkeys } from '../../hooks/useHotkeys.js';
+import { useMediaQuery } from '../../hooks/useMediaQuery.js';
 import { Sidebar } from './Sidebar.jsx';
 import { TopBar } from './TopBar.jsx';
 import { WorkspaceContext } from './workspaceContext.js';
@@ -48,14 +49,26 @@ function writeCollapsed(collapsed) {
 export function WorkspaceLayout({ projects = [], newProjectTo, renderCreate, search }) {
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(readCollapsed);
-  // The drawer belongs to the page it was opened on: following a link closes it, no effect needed.
-  const [drawerPath, setDrawerPath] = useState(null);
+  // The drawer belongs to the history entry it was opened on: any navigation closes it — a link to
+  // another page, a link to the page it is on (the router replaces the entry: a new key), Back and
+  // Forward — and coming Back to the entry it was opened on does not open it again. The entry is its
+  // key and its path: HashRouter gives the key 'default' to the first entry and to every address
+  // typed into the bar.
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const entry = `${location.key} ${location.pathname}`;
+  const [drawerEntry, setDrawerEntry] = useState(entry);
+  // md and up the drawer is only hidden by CSS: left open, it stayed a modal that turned every
+  // shortcut off (useHotkeys) until the next page. Widening the window past it closes it.
+  const wide = useMediaQuery('(min-width: 768px)');
+  if (drawerEntry !== entry || (wide && drawerOpen)) {
+    setDrawerEntry(entry);
+    setDrawerOpen(false);
+  }
   // The create dialog: null when closed, else the fields it opens with ({ boardId, columnId, … }).
   const [createDefaults, setCreateDefaults] = useState(null);
   const mainRef = useRef(null);
   // A new page opens at the top, Back returns to where it was (J-40 / R2-073).
   const onMainScroll = useScrollMemory(mainRef);
-  const drawerOpen = drawerPath === location.pathname;
 
   const toggleCollapsed = () => {
     writeCollapsed(!collapsed);
@@ -63,8 +76,8 @@ export function WorkspaceLayout({ projects = [], newProjectTo, renderCreate, sea
   };
   useHotkeys({ '[': toggleCollapsed });
 
-  const openNav = useCallback(() => setDrawerPath(location.pathname), [location.pathname]);
-  const closeNav = useCallback(() => setDrawerPath(null), []);
+  const openNav = useCallback(() => setDrawerOpen(true), []);
+  const closeNav = useCallback(() => setDrawerOpen(false), []);
   const openCreate = useCallback((defaults = {}) => setCreateDefaults(defaults), []);
   const workspace = useMemo(
     () => ({ openNav, closeNav, openCreate, projects }),

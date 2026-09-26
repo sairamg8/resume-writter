@@ -298,6 +298,38 @@ describe('toasts', () => {
     } finally { await view.unmount(); }
   });
 
+  // R4-APP-02: a toast that replaced one with the same id (the editor's 'template-switch', 8 s with
+  // its Undo) kept the first one's countdown and went when the first one's time was up; and one
+  // shown within the 150 ms exit of a dismissed toast with its id was removed with it.
+  it('a toast that replaces one with its id counts its own full duration', async () => {
+    const { view, toast, toasts, region } = toastPage();
+    try {
+      toast({ id: 'template-switch', title: 'Template: Classic', duration: 2000 });
+      await wait(1200);
+      toast({ id: 'template-switch', title: 'Template: Modern', duration: 2000 });
+      await wait(1400); // 2600 ms: the first toast's time (2000) and its exit are over
+      view.act(() => {});
+      assert.equal(toasts().length, 1, 'the replacement went with the first toast’s time');
+      assert.match(region().textContent, /Template: Modern/);
+      await wait(1400); // 4000 ms: its own 2000 ms from 1200, and the exit
+      view.act(() => {});
+      assert.equal(toasts().length, 0, 'and goes when its own time is up');
+    } finally { await view.unmount(); }
+  });
+
+  it('a toast shown with the id of one on its way out stays', async () => {
+    const { view, toast, toasts, region } = toastPage();
+    try {
+      toast({ id: 'saved', title: 'Saved', duration: Infinity });
+      view.act(() => reactProps(byAttr(region(), 'aria-label', 'Dismiss notification')[0]).onClick(ev()));
+      toast({ id: 'saved', title: 'Saved again', duration: Infinity });
+      await wait(300);
+      view.act(() => {});
+      assert.equal(toasts().length, 1, 'the new toast was removed with the dismissed one');
+      assert.match(region().textContent, /Saved again/);
+    } finally { await view.unmount(); }
+  });
+
   it('keeps at most four; the same id replaces its toast; useToast outside a provider is a no-op', async () => {
     const { view, toast, toasts, region } = toastPage();
     try {
@@ -314,6 +346,67 @@ describe('toasts', () => {
     const view2 = mount(() => { api = ui.useToast(); return null; }, {});
     assert.equal(api.toast({ title: 'x' }), null);
     await view2.unmount();
+  });
+});
+
+/**
+ * Runs `fn` with focus() refused, as browsers refuse it, on an element that is visibility: hidden
+ * (its own inline style or an ancestor's): fake-dom has no CSS, so without this the kit's focus on
+ * open passed here and failed in every browser.
+ */
+async function withBrowserFocusRules(view, fn) {
+  const proto = Object.getPrototypeOf(view.document.body);
+  const focus = proto.focus;
+  proto.focus = function focusIfShown(...args) {
+    for (let n = this; n && n.nodeType === 1; n = n.parentNode) if (n.style?.visibility === 'hidden') return;
+    focus.apply(this, args);
+  };
+  try { await fn(); } finally { proto.focus = focus; }
+}
+
+// R4-APP-01: a panel's position is measured in a layout effect and rendered after it; until then
+// useFloating styled it visibility: hidden. Popover and MenuList move focus into it in that same
+// commit, so browsers refused it: a label picker's search box took no typing, a menu's arrows did
+// nothing, and Escape went to the dialog around them (closing the issue view).
+describe('R4-APP-01: focus goes into a popover or menu when it opens', () => {
+  it('a Popover’s data-autofocus search box has focus', async () => {
+    function Page({ open }) {
+      return h(ui.Popover, { open, onOpenChange: () => {}, label: 'Labels', trigger: h('button', null, 'Labels') },
+        h('input', { 'aria-label': 'Search labels', 'data-autofocus': true }));
+    }
+    const view = mount(Page, { open: false });
+    try {
+      await withBrowserFocusRules(view, async () => {
+        view.update({ open: true });
+        const search = byAttr(view.document.body, 'aria-label', 'Search labels')[0];
+        assert.ok(search, 'the panel is open');
+        assertSame(view.document.activeElement, search, 'the search box did not get focus');
+        // Not yet measured (fake-dom has no boxes): unseen, unclickable, its entry animation held — a
+        // running one (fill-mode both) would override the opacity and show it at the corner.
+        const panel = byAttr(view.document.body, 'role', 'dialog').find((el) => el.getAttribute('aria-label') === 'Labels');
+        assert.equal(String(panel.style.opacity), '0');
+        assert.equal(panel.style.pointerEvents, 'none');
+        assert.equal(panel.style.animationPlayState, 'paused');
+      });
+    } finally { await view.unmount(); }
+  });
+
+  it('a Menu opened from its trigger with ArrowDown focuses its first item', async () => {
+    function Page() {
+      return h(ui.Menu, { trigger: h('button', { id: 'more' }, 'More'), items: [{ label: 'Edit' }, { label: 'Delete', danger: true }] });
+    }
+    const view = mount(Page, {});
+    try {
+      await withBrowserFocusRules(view, async () => {
+        const trigger = byAttr(view.container, 'id', 'more')[0];
+        trigger.focus();
+        view.act(() => reactProps(trigger).onKeyDown(ev({ key: 'ArrowDown' })));
+        const first = byText(view.document.body, 'Edit');
+        assert.ok(first, 'the menu is open');
+        const item = first.closest('[role="menuitem"]') ?? first;
+        assertSame(view.document.activeElement, item, 'focus stayed on the trigger');
+      });
+    } finally { await view.unmount(); }
   });
 });
 
