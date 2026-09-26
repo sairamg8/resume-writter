@@ -8,6 +8,8 @@ permission check ("Production Deploy"): **the owner deploys** — push `5f94749`
 to master, or allow the push in the session. Then `python3 docs/tracking/tools/r4_tracker.py --deployed <sha>`.
 All eleven Round 4 clusters are merged on the work branch (lo-imp `4a09893`, lo-misc `f049af8`); 108 rows; a full gate
 on the new head was dispatched at 10:15 UTC. No firestore.rules change in Round 4.
+Wave 2 (design) sessions from `94b4d9b` (10:13 UTC): dsg-layout session_01K2dRPYe8fZU5xwrczhag7U · dsg-flow
+session_01AmmKmEdcQjMsXCr6cxbAXZ (branches `claude/wf-r4-dsg-*`, reports `wf-reports/r4-dsg-*.json`).
 
 
 **Work branch now `claude/awesome-cerf-t3sh88`** (master `843dded` + the six reviewed fixes of `fixes3/`: R2-148-c
