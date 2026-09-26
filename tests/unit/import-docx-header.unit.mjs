@@ -55,3 +55,15 @@ test('a header line the body starts with too is read once', async () => {
   const lines = await docxLines(new Uint8Array(await Packer.toBuffer(doc)));
   assert.equal(lines.filter((l) => l.text === 'Robin Vale').length, 1);
 });
+
+// The review of R4-IMP-05: a header of the document's own furniture is no name.
+test('a header of "Curriculum Vitae" and "Robin Vale – Resume": the name alone, the furniture left out', async () => {
+  const doc = new Document({ sections: [{
+    headers: { default: new Header({ children: [new Paragraph('Curriculum Vitae'), new Paragraph('Robin Vale – Resume'), new Paragraph('Confidential')] }) },
+    children: body(),
+  }] });
+  const lines = await docxLines(new Uint8Array(await Packer.toBuffer(doc)));
+  const r = resumeFromText(lines);
+  assert.equal(r.personal.name, 'Robin Vale');
+  assert.doesNotMatch(lines.map((l) => l.text).join('\n'), /Curriculum Vitae|Resume|Confidential/);
+});

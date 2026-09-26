@@ -174,6 +174,9 @@ async function docxPartLines(bytes, part) {
   return docxXmlLines(decode(xml), docxLinks(rels && decode(rels)));
 }
 
+const FURNITURE = /^(?:curriculum vitae|cv|r[ée]sum[ée]|confidential|draft|page\s*\d*(?:\s*of\s*\d+)?)$/i;
+const FURNITURE_TAIL = /\s+[-–—|·•]\s+(?:curriculum vitae|cv|r[ée]sum[ée]|page\s*\d*(?:\s*of\s*\d+)?)\s*$/i;
+
 /**
  * The page header the first page shows, as lines, else []: many résumés set the name and the contact
  * line in Word's page header (Insert → Header), which is not in word/document.xml — they were lost,
@@ -191,7 +194,12 @@ async function docxHeaderLines(bytes, xml) {
   if (!id) return [];
   const rels = await unzipEntry(bytes, 'word/_rels/document.xml.rels');
   const target = docxRels(rels && decode(rels)).find((r) => r.id === id)?.target.replace(/^\/?word\//, '');
-  return (target && await docxPartLines(bytes, target)) || [];
+  const lines = (target && await docxPartLines(bytes, target)) || [];
+  // A header's furniture is no name: "Curriculum Vitae", "Confidential", "Page 1"; and "Robin Vale –
+  // Resume" is the name alone.
+  return lines
+    .map((l) => ({ ...l, text: l.text.replace(FURNITURE_TAIL, '') }))
+    .filter((l) => !FURNITURE.test(l.text.trim()));
 }
 
 /**
