@@ -112,8 +112,9 @@ export function linkText(label, href) {
  */
 function unmark(text, as) {
   return String(text)
-    .replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1')
-    .replace(/\[([^\]]*)\]\(([^)\s]*)[^)]*\)/g, (_, label, href) => {
+    .replace(/!\[((?:\\.|[^\]\\])*)\]\([^)]*\)/g, '$1')
+    // A label may hold escaped brackets ("\[draft\]", the export's) and a pair of its own ("[v2]").
+    .replace(/\[((?:\\.|\[(?:\\.|[^\]\\])*\]|[^\]\\[])*)\]\(([^)\s]*)[^)]*\)/g, (_, label, href) => {
       if (as === 'label') return label || href;
       const [t, to] = linkParts(label, href);
       if (!to) return t;
@@ -141,7 +142,8 @@ export function markdownLines(md) {
   let named = false;
   let entryLevel = 0; // the level of the entry heading in force, 0 under none
   for (const line of String(md ?? '').split(/\r\n|\r|\n/)) {
-    const h = /^\s{0,3}(#{1,6})\s+(.*?)\s*#*\s*$/.exec(line);
+    // A closing run of #s only after a space: "## C#" is the heading "C#" (R4-LO-07).
+    const h = /^\s{0,3}(#{1,6})\s+(.*?)(?:\s+#+)?\s*$/.exec(line);
     if (h) {
       const level = h[1].length;
       let hint = level === 1 && !named ? 'name' : (level <= 2 ? 'heading' : 'entry');
