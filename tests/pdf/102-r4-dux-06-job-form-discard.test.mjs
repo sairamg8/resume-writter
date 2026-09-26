@@ -2,6 +2,9 @@
 // typed. Now, with changes, they ask "Discard your changes?" first (the kit's confirm, or the
 // browser's confirm() where no ConfirmProvider is mounted, as here), an untouched form still leaves
 // at once, and while there are changes closing the tab is guarded by a beforeunload listener.
+// The browser's Back and in-app links cannot be held on the plain HashRouter, so a changed form
+// keeps its draft in sessionStorage ('jobform:new' / 'jobform:<id>') and restores it on return,
+// with a "Restored your unsaved changes" line whose Discard goes back to the start values.
 // On the real JobForm and store (tests/pdf/fake-dom.mjs, loaded through Vite for the `@/` aliases).
 import { before, after, it } from 'node:test';
 import assert from 'node:assert/strict';
@@ -27,7 +30,7 @@ const orbit = {
 };
 
 /** JobForm at `path`, with the tracker and the job page as probes; `answer` is what confirm() replies. */
-async function openForm(path, jobs = [orbit]) {
+async function openForm(path, jobs = [orbit], session = new MemoryStorage()) {
   const dom = await import('./fake-dom.mjs');
   const { createElement: h } = await import('react');
   const { MemoryRouter, Routes, Route, useParams } = await import('react-router-dom');
@@ -35,6 +38,7 @@ async function openForm(path, jobs = [orbit]) {
   const { _resetJobStoreForTest } = await loadModule('/src/hooks/useJobStore.js');
   globalThis.localStorage = new MemoryStorage();
   localStorage.setItem(KEY, JSON.stringify({ jobs, dataVersion: 2 }));
+  globalThis.sessionStorage = session;
   _resetJobStoreForTest();
   const store = { appState: { resumes: [] } };
   function Detail() { return h('p', null, `DETAIL ${useParams().id}`); }
@@ -71,8 +75,15 @@ async function openForm(path, jobs = [orbit]) {
       await done;
       await settle();
     },
+    has: (text) => buttons().some((b) => b.textContent.trim() === text),
+    /** Submit the fields' form, as its Save button or Enter does. */
+    submit() {
+      const owner = all().find((el) => el.tagName === 'FORM');
+      view.act(() => dom.reactProps(owner).onSubmit({ preventDefault() {} }));
+    },
+    settle,
     beforeunloadListeners: () => view.window.listeners('beforeunload'),
-    async close() { await view.unmount(); delete globalThis.localStorage; },
+    async close() { await view.unmount(); delete globalThis.localStorage; delete globalThis.sessionStorage; },
   };
 }
 
@@ -139,5 +150,71 @@ it('R4-DUX-06: closing the tab is guarded while the form has changes, and only t
     assert.equal(form.beforeunloadListeners(), 0, 'back to the starting values: no guard');
   } finally {
     await form.close();
+  }
+});
+
+it('R4-DUX-06: a changed form left without Cancel (Back, a link) comes back with what was typed', async () => {
+  const session = new MemoryStorage();
+  const first = await openForm('/jobs/o/edit', [orbit], session);
+  try {
+    first.type('role', 'Principal Engineer');
+    assert.ok(session.getItem('jobform:o'), 'the draft is kept while the form differs');
+  } finally {
+    await first.close(); // unmounted as the browser's Back would, with no question asked
+  }
+  const again = await openForm('/jobs/o/edit', [orbit], session);
+  try {
+    assert.equal(again.value('role'), 'Principal Engineer', 'the typed value is back');
+    assert.match(again.text(), /Restored your unsaved changes/);
+    await again.click('Discard');
+    assert.equal(again.value('role'), 'Engineer', 'Discard goes back to the job as it is');
+    assert.doesNotMatch(again.text(), /Restored your unsaved changes/);
+    assert.equal(session.getItem('jobform:o'), null, 'Discard clears the draft');
+    assert.equal(again.beforeunloadListeners(), 0);
+  } finally {
+    await again.close();
+  }
+});
+
+it('R4-DUX-06: a new job\'s draft comes back too, and Add Job clears it', async () => {
+  const session = new MemoryStorage();
+  const first = await openForm('/jobs/new', [], session);
+  try {
+    first.type('company', 'Quillfeather Co');
+  } finally {
+    await first.close();
+  }
+  assert.ok(session.getItem('jobform:new'));
+  const again = await openForm('/jobs/new', [], session);
+  try {
+    assert.equal(again.value('company'), 'Quillfeather Co');
+    assert.match(again.text(), /Restored your unsaved changes/);
+    again.submit();
+    await again.settle();
+    assert.equal(session.getItem('jobform:new'), null, 'a saved job leaves no draft');
+    assert.match(again.text(), /DETAIL /);
+  } finally {
+    await again.close();
+  }
+});
+
+it('R4-DUX-06: Discard in the Cancel question clears the draft; an untouched form restores nothing', async () => {
+  const session = new MemoryStorage();
+  const form = await openForm('/jobs/o/edit', [orbit], session);
+  try {
+    form.type('location', 'Lisbon');
+    form.state.answer = true;
+    await form.click('Cancel');
+    assert.equal(session.getItem('jobform:o'), null);
+  } finally {
+    await form.close();
+  }
+  const again = await openForm('/jobs/o/edit', [orbit], session);
+  try {
+    assert.equal(again.value('location'), '');
+    assert.doesNotMatch(again.text(), /Restored your unsaved changes/);
+    assert.equal(again.has('Discard'), false);
+  } finally {
+    await again.close();
   }
 });

@@ -51,6 +51,7 @@ Jobs may store `resumeId` pointing at a resume in `cpwtcv_v1`. Tracker can show 
 - No Firestore sync  
 - Demo Google job seeded for first-time UX (`demoJobs`, `utils/jobEdits.js`)  
 - Multi-tab: another tab's save is taken in through the `storage` event, keeping what this tab has not saved (`utils/unsavedJobs.js`)  
+- Job form (`JobForm.jsx`): with changes, Cancel and ← ask "Discard your changes?" and closing the tab is guarded (`beforeunload`). The plain HashRouter cannot hold the browser's Back or a link, so the changed values are kept in sessionStorage (`jobform:new` / `jobform:<id>`) and restored on return with a "Restored your unsaved changes" line and Discard; Save and Discard clear the draft  
 
 ## Future ideas (not implemented)
 
