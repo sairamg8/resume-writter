@@ -12,10 +12,11 @@ const renderCreate = (props) => <CreateIssueDialog {...props} />;
  * it, so the résumé dashboard and editor never load the boards. The mapping reads v1 and v2 boards
  * alike (shell/projects.js). Its own module, loaded with the first workspace page (AppRoutes.jsx): the
  * shell, the Create dialog and its pickers are not on the dashboard's start-up path (R2-142).
+ * `auth` (useAuth) goes on to the top bar's account button (R4-DUX-07).
  */
-export function WorkspaceRoute() {
+export function WorkspaceRoute({ auth }) {
   const { boards } = useBoardStore();
   const projects = useMemo(() => sidebarProjects(boards), [boards]);
   const search = useCallback((query) => searchWorkspace(boards, query), [boards]);
-  return <WorkspaceLayout projects={projects} search={search} renderCreate={renderCreate} />;
+  return <WorkspaceLayout projects={projects} search={search} renderCreate={renderCreate} auth={auth} />;
 }
