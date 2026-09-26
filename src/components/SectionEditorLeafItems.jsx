@@ -3,7 +3,7 @@ import RichTextEditor from '@/components/RichTextEditor';
 import { newId } from '@/utils/ids';
 import { InputField, MonthPicker, FieldRow, ItemCard } from '@/components/SectionEditorShared';
 
-export function SkillItem({ item, onUpdate, onRemove, onDuplicate }) {
+export function SkillItem({ item, onUpdate, onRemove, onDuplicate, defaultOpen }) {
   const u = (k, v) => onUpdate({ ...item, [k]: v });
   const visible = item.visible !== false;
   const itemHidden = new Set(item.hiddenFields || []);
@@ -12,7 +12,7 @@ export function SkillItem({ item, onUpdate, onRemove, onDuplicate }) {
     onUpdate({ ...item, hiddenFields: itemHidden.has(f) ? cur.filter(x => x !== f) : [...cur, f] });
   }
   return (
-    <ItemCard label={item.category || 'Skill Group'} onRemove={onRemove} onDuplicate={onDuplicate} visible={visible} onToggleVisibility={() => onUpdate({ ...item, visible: !visible })}>
+    <ItemCard label={item.category || 'Skill Group'} onRemove={onRemove} onDuplicate={onDuplicate} visible={visible} defaultOpen={defaultOpen} onToggleVisibility={() => onUpdate({ ...item, visible: !visible })}>
       <FieldRow label="Title / Category" field="category" hiddenSet={itemHidden} onToggle={toggleField}>
         <InputField value={item.category} onChange={v => u('category', v)} placeholder="e.g. Frontend Development" />
       </FieldRow>
@@ -36,8 +36,16 @@ function RowDuplicate({ onDuplicate }) {
   );
 }
 
+const PROFICIENCIES = ['Native', 'Fluent', 'Professional', 'Intermediate', 'Basic'];
+
 export function LanguageItem({ item, onUpdate, onRemove, onDuplicate }) {
   const visible = item.visible !== false;
+  // The select shows exactly what the résumé prints. A starter, an import or a hand-written file can
+  // store a level the list does not name ('Conversational', 'C1') or none at all (''); with no option
+  // of that value the browser showed the first one instead, and picking the level already on screen
+  // fired no change, so it could not be chosen. An unset level is its own option, and an unusual one
+  // is added to the list, as the date pickers do for an unusual year.
+  const proficiency = item.proficiency == null ? '' : String(item.proficiency);
   return (
     <div className={`flex gap-2 items-center ${visible ? '' : 'opacity-50'}`}>
       <div className="flex-1 grid grid-cols-[2fr_3fr] gap-2">
@@ -51,13 +59,17 @@ export function LanguageItem({ item, onUpdate, onRemove, onDuplicate }) {
         />
         <select
           aria-label="Proficiency"
-          value={item.proficiency || 'Professional'}
+          value={proficiency}
           onChange={e => onUpdate({ ...item, proficiency: e.target.value })}
           className="px-2.5 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
         >
-          {['Native', 'Fluent', 'Professional', 'Intermediate', 'Basic'].map(p => (
+          <option value="">Not set</option>
+          {PROFICIENCIES.map(p => (
             <option key={p} value={p}>{p}</option>
           ))}
+          {proficiency && !PROFICIENCIES.includes(proficiency) && (
+            <option value={proficiency}>{proficiency}</option>
+          )}
         </select>
       </div>
       <button
@@ -75,11 +87,11 @@ export function LanguageItem({ item, onUpdate, onRemove, onDuplicate }) {
   );
 }
 
-export function CertificationItem({ item, onUpdate, onRemove, onDuplicate }) {
+export function CertificationItem({ item, onUpdate, onRemove, onDuplicate, defaultOpen }) {
   const u = (k, v) => onUpdate({ ...item, [k]: v });
   const visible = item.visible !== false;
   return (
-    <ItemCard label={item.name} onRemove={onRemove} onDuplicate={onDuplicate} visible={visible} onToggleVisibility={() => onUpdate({ ...item, visible: !visible })}>
+    <ItemCard label={item.name} onRemove={onRemove} onDuplicate={onDuplicate} visible={visible} defaultOpen={defaultOpen} onToggleVisibility={() => onUpdate({ ...item, visible: !visible })}>
       <InputField label="Certification Name" value={item.name} onChange={v => u('name', v)} placeholder="AWS Certified Developer" />
       <InputField label="Issuing Organization" value={item.issuer} onChange={v => u('issuer', v)} placeholder="Amazon Web Services" />
       <div className="grid grid-cols-2 gap-2">
@@ -95,11 +107,11 @@ export function CertificationItem({ item, onUpdate, onRemove, onDuplicate }) {
   );
 }
 
-export function AwardItem({ item, onUpdate, onRemove, onDuplicate }) {
+export function AwardItem({ item, onUpdate, onRemove, onDuplicate, defaultOpen }) {
   const u = (k, v) => onUpdate({ ...item, [k]: v });
   const visible = item.visible !== false;
   return (
-    <ItemCard label={item.title} onRemove={onRemove} onDuplicate={onDuplicate} visible={visible} onToggleVisibility={() => onUpdate({ ...item, visible: !visible })}>
+    <ItemCard label={item.title} onRemove={onRemove} onDuplicate={onDuplicate} visible={visible} defaultOpen={defaultOpen} onToggleVisibility={() => onUpdate({ ...item, visible: !visible })}>
       <InputField label="Award Title" value={item.title} onChange={v => u('title', v)} placeholder="Dean's List Award" />
       <InputField label="Issuing Organization" value={item.issuer} onChange={v => u('issuer', v)} placeholder="University of California" />
       <MonthPicker label="Date" value={item.date} onChange={v => u('date', v)} />
@@ -108,11 +120,11 @@ export function AwardItem({ item, onUpdate, onRemove, onDuplicate }) {
   );
 }
 
-export function ReferenceItem({ item, onUpdate, onRemove, onDuplicate }) {
+export function ReferenceItem({ item, onUpdate, onRemove, onDuplicate, defaultOpen }) {
   const u = (k, v) => onUpdate({ ...item, [k]: v });
   const visible = item.visible !== false;
   return (
-    <ItemCard label={item.name} onRemove={onRemove} onDuplicate={onDuplicate} visible={visible} onToggleVisibility={() => onUpdate({ ...item, visible: !visible })}>
+    <ItemCard label={item.name} onRemove={onRemove} onDuplicate={onDuplicate} visible={visible} defaultOpen={defaultOpen} onToggleVisibility={() => onUpdate({ ...item, visible: !visible })}>
       <InputField label="Name" value={item.name} onChange={v => u('name', v)} placeholder="Jane Smith" />
       <InputField label="Job Title" value={item.jobTitle} onChange={v => u('jobTitle', v)} placeholder="Engineering Manager" />
       <InputField label="Company" value={item.company} onChange={v => u('company', v)} placeholder="Acme Corp" />
