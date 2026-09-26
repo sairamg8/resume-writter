@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Plus, ChevronDown, ChevronUp, GripVertical, Settings2, Eye, EyeOff, MoreHorizontal, RotateCcw, Trash2, Copy } from 'lucide-react';
 import { SECTION_TYPE_DEFAULTS } from '@/utils/defaultData';
 import { DndContext, closestCenter, PointerSensor, KeyboardSensor, useSensor, useSensors } from '@dnd-kit/core';
@@ -62,10 +62,13 @@ export function SortableSection({
   // An entry nobody has filled in yet: every text field empty, or still the value a new entry starts
   // with (a new language's 'Professional'). Deleting one does not ask (R4-ED-06), and its card opens,
   // so the entry Add just made, or a new section's first one, shows its fields at once instead of a
-  // collapsed 'New Entry' to find and click (R4-ED-07).
+  // collapsed 'New Entry' to find and click (R4-ED-07). Bullets (older data's list, which prints)
+  // are content too.
+  const fresh = useMemo(() => factory(), [factory]);
   function untouched(item) {
-    const fresh = factory();
-    return !Object.entries(item).some(([k, v]) => k !== 'id' && typeof v === 'string' && v.trim() && v !== fresh[k]);
+    return !Object.entries(item).some(([k, v]) => k !== 'id' && (typeof v === 'string'
+      ? v.trim() && v !== fresh[k]
+      : k === 'bullets' && Array.isArray(v) && v.some(b => String(b ?? '').trim())));
   }
 
   function renderItem(item) {

@@ -67,4 +67,12 @@ describe('deleting an untouched entry does not ask (R4-ED-06)', () => {
       assert.deepEqual((await remove(section(type, [{ ...fresh, [key]: 'Something' }]))).asked, ['Delete this entry?'], `${type}: ${key} typed`);
     }
   });
+
+  it('an entry whose only content is its bullets (older data, which prints them) still asks', async () => {
+    const { NEW_ITEM } = await loadModule('/src/components/SectionEditorLeafItems.jsx');
+    const item = { ...NEW_ITEM.experience(), bullets: ['Kept the light burning'] };
+    assert.deepEqual((await remove(section('experience', [item]))).asked, ['Delete this entry?']);
+    const blank = { ...NEW_ITEM.experience(), bullets: ['', '  '] };
+    assert.deepEqual((await remove(section('experience', [blank]))).asked, [], 'empty bullets are no content');
+  });
 });
