@@ -204,7 +204,7 @@ export function Backlog() {
           </div>
         </DndContext>
       </div>
-      <StartSprintDialog key={starting?.id ?? 'none'} sprint={starting} onClose={() => setStarting(null)} onStart={(f) => { store.startSprint(board.id, starting.id, f); setStarting(null); toast({ tone: 'success', title: `${f.name || starting.name} started` }); }} />
+      <StartSprintDialog key={starting?.id ?? 'none'} sprint={starting} onClose={() => setStarting(null)} onStart={(f) => { store.startSprint(board.id, starting.id, f); setStarting(null); toast({ tone: 'success', title: `${f.name?.trim() || starting.name} started` }); }} />
       <CompleteSprintDialog
         key={completingSection ? 'open' : 'closed'}
         sprint={completingSection?.sprint}

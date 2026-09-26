@@ -125,15 +125,21 @@ export function StartSprintDialog({ sprint, onStart, onClose }) {
     endDate: sprint.endDate || addDays(sprint.startDate || today, DEFAULT_SPRINT_DAYS),
   }));
   const set = (patch) => setF((x) => ({ ...x, ...patch }));
+  // A blank name, or an end before the start, is said under its field and Start waits for it —
+  // the store would otherwise keep the old name, or clamp the end to a 0-day sprint (R4-DUX-21).
+  const nameError = f && !f.name.trim() ? 'Enter a name' : undefined;
+  // ISO days compare as text; a cleared date falls back to the store's default, so it is no error.
+  const endError = f?.startDate && f.endDate && f.endDate < f.startDate ? 'End date must be on or after the start date' : undefined;
+  const valid = !!f && !nameError && !endError;
   return (
     <Dialog open={!!sprint} onClose={onClose} title={`Start ${sprint?.name ?? 'sprint'}`} description="Plan the dates and the goal of this sprint." size="md"
-      footer={<><Button variant="ghost" onClick={onClose}>Cancel</Button><Button variant="primary" onClick={() => onStart(f)}>Start</Button></>}>
+      footer={<><Button variant="ghost" onClick={onClose}>Cancel</Button><Button variant="primary" disabled={!valid} onClick={() => valid && onStart({ ...f, name: f.name.trim() })}>Start</Button></>}>
       {f && (
         <div className="flex flex-col gap-4">
-          <TextField label="Sprint name" required value={f.name} onChange={(e) => set({ name: e.target.value })} data-autofocus />
+          <TextField label="Sprint name" required value={f.name} error={nameError} onChange={(e) => set({ name: e.target.value })} data-autofocus />
           <div className="grid gap-4 sm:grid-cols-2">
             <TextField label="Start date" type="date" value={f.startDate} onChange={(e) => set({ startDate: e.target.value })} />
-            <TextField label="End date" type="date" value={f.endDate} onChange={(e) => set({ endDate: e.target.value })} />
+            <TextField label="End date" type="date" value={f.endDate} error={endError} onChange={(e) => set({ endDate: e.target.value })} />
           </div>
           <TextArea label="Sprint goal" value={f.goal} onChange={(e) => set({ goal: e.target.value })} rows={3} />
         </div>

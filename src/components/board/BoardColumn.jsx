@@ -80,10 +80,12 @@ export function ColumnMenu({ column, index, count, onRename, onLimit, onCategory
 /** The fields ColumnDialog edits, kept as typed until saved. */
 function ColumnForm({ column, mode, onSave, onClose }) {
   const [value, setValue] = useState(mode === 'rename' ? column.title : column.wipLimit ?? '');
+  // A name of only spaces is no name: say so and hold Save, rather than Save doing nothing (R4-DUX-21).
+  const nameError = mode === 'rename' && !String(value ?? '').trim() ? 'Enter a name' : undefined;
   const save = (e) => {
     e.preventDefault();
     if (mode === 'rename') {
-      if (value.trim()) onSave({ title: value.trim() });
+      if (!nameError) onSave({ title: value.trim() });
       return;
     }
     const n = Number(value);
@@ -92,7 +94,7 @@ function ColumnForm({ column, mode, onSave, onClose }) {
   return (
     <form onSubmit={save} className="flex flex-col gap-4">
       {mode === 'rename' ? (
-        <TextField label="Column name" data-autofocus value={value} onChange={(e) => setValue(e.target.value)} maxLength={60} required />
+        <TextField label="Column name" data-autofocus value={value} error={nameError} onChange={(e) => setValue(e.target.value)} maxLength={60} required />
       ) : (
         <TextField
           label="Maximum issues"
@@ -106,7 +108,7 @@ function ColumnForm({ column, mode, onSave, onClose }) {
       )}
       <div className="flex justify-end gap-2">
         <Button variant="ghost" onClick={onClose}>Cancel</Button>
-        <Button variant="primary" type="submit">Save</Button>
+        <Button variant="primary" type="submit" disabled={!!nameError}>Save</Button>
       </div>
     </form>
   );
