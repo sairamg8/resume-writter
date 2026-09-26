@@ -4,7 +4,7 @@ import { ISSUE_TYPES, LABEL_COLORS, PRIORITIES, RECURRENCES } from '@/constants/
 import { Menu, MultiSelectPopover, cx, isImeKey } from '@/components/ui';
 import { IssueTypeIcon, PriorityIcon } from '@/components/tracker/TrackerIcons';
 import { epicsOf } from '@/utils/boardQuery';
-import { issueKey } from '@/utils/boardModel';
+import { isLocalISO, issueKey } from '@/utils/boardModel';
 
 // The pickers an issue's fields are set with — in the issue view's Details panel and in the
 // Create dialog alike: each a quiet button showing the value (hover shows it can change), opening
@@ -165,14 +165,32 @@ export function RecurrencePicker({ value, onChange, label = 'Repeats' }) {
   );
 }
 
-/** A day ('YYYY-MM-DD'), picked with the browser's own date picker; '' clears it. */
+/** What DateInput hands on: '' (cleared) or a real day in a four-digit year. */
+const isWholeDay = (v) => v === '' || (isLocalISO(v) && Number(v.slice(0, 4)) >= 1000);
+
+/**
+ * A day ('YYYY-MM-DD'), picked with the browser's own date picker; '' clears it. While a year is
+ * typed, Chrome and Edge report every keystroke as a day ('0002-09-26' after the first digit).
+ * Handed on, the store refused it, or cleared the day already set, and the field, held to the
+ * store's value, lost every segment. So what is typed stays here until it is a whole day, and
+ * leaving the field with half a year typed puts the saved day back.
+ */
 export function DateInput({ value, onChange, label, className }) {
+  const [draft, setDraft] = useState(null);
+  // A new value from outside (another issue, an undo) replaces what was being typed.
+  const [shown, setShown] = useState(value);
+  if (shown !== value) { setShown(value); setDraft(null); }
   return (
     <input
       type="date"
       aria-label={label}
-      value={value || ''}
-      onChange={(e) => onChange(e.target.value)}
+      value={draft ?? (value || '')}
+      onChange={(e) => {
+        const v = e.target.value;
+        setDraft(v);
+        if (isWholeDay(v)) onChange(v);
+      }}
+      onBlur={() => setDraft(null)}
       className={cx(
         'h-8 w-full min-w-0 rounded border border-transparent bg-transparent px-2 text-sm text-ink transition-colors hover:bg-neutral-fill focus:border-brand focus:bg-white focus:outline-none',
         !value && 'text-ink-subtlest', className,

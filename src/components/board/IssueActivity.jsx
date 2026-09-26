@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ArrowRight } from 'lucide-react';
 import { Avatar, Button, TabPanel, Tabs, cx, isImeKey, useConfirmOptional, useHotkeys } from '@/components/ui';
 import { describeActivity } from '@/utils/issueHistory';
@@ -11,10 +11,24 @@ function When({ at }) {
   return <time dateTime={new Date(at).toISOString()} title={formatDateTime(at)} className="text-[12px] text-ink-subtlest">{relativeTime(at)}</time>;
 }
 
-/** The box a comment is written in: a one-line prompt until focused, then a field with Save / Cancel. */
-function Composer({ initial = '', onSave, onCancel, autoFocus = false, saveLabel = 'Save' }) {
+/**
+ * The box a comment is written in: a one-line prompt until focused, then a field with Save / Cancel.
+ * Each new `summon` (the `m` shortcut) opens it, or goes back to it with what is typed kept.
+ */
+function Composer({ initial = '', onSave, onCancel, autoFocus = false, saveLabel = 'Save', summon = 0 }) {
   const [text, setText] = useState(initial);
   const [open, setOpen] = useState(autoFocus || !!initial);
+  const fieldRef = useRef(null);
+  // Only a summon made while it is mounted opens it (it stays mounted on the History tab, hidden).
+  const [summoned, setSummoned] = useState(summon);
+  if (summon !== summoned) {
+    setSummoned(summon);
+    setOpen(true);
+  }
+  // A closed box opens with its field focused (autoFocus); an open one gets the focus back here.
+  useEffect(() => {
+    if (summon) fieldRef.current?.focus();
+  }, [summon]);
   const save = () => {
     const t = text.trim();
     if (!t) return;
@@ -37,6 +51,7 @@ function Composer({ initial = '', onSave, onCancel, autoFocus = false, saveLabel
   return (
     <div className="flex flex-col gap-2">
       <textarea
+        ref={fieldRef}
         autoFocus
         rows={3}
         value={text}
@@ -121,7 +136,22 @@ function HistoryEntry({ entry }) {
 export function IssueActivity({ issue, onAddComment, onUpdateComment, onDeleteComment }) {
   const [tab, setTab] = useState('comments');
   const [composeKey, setComposeKey] = useState(0);
-  useHotkeys({ m: () => setComposeKey((k) => k + 1) });
+  const sectionRef = useRef(null);
+  // The issue view is a modal dialog, where the page's shortcuts sleep: `m` is the view's own. It
+  // acts only while the view is the top dialog: under a confirm or the Create dialog opened from
+  // the view, the comment box opened behind them and took the focus out of the one on top.
+  useHotkeys({
+    m: (event) => {
+      const modals = document.querySelectorAll('[aria-modal="true"]');
+      if (!modals[modals.length - 1]?.contains(sectionRef.current)) return;
+      // Nor from a popover over the view (the Labels picker's buttons): the box's focus would close it.
+      const layer = event?.target?.closest?.('[data-ui-portal]');
+      if (layer && !layer.contains(sectionRef.current)) return;
+      // The History tab has no comment box: M goes to Comments, where it is.
+      setTab((t) => (t === 'history' ? 'comments' : t));
+      setComposeKey((k) => k + 1);
+    },
+  }, { allowInDialog: true });
   const comments = [...(issue.comments ?? [])].reverse();
   const history = [...(issue.activity ?? [])].filter((a) => a.kind !== 'comment').reverse();
   const rows = tab === 'history' ? history.map((h) => ({ kind: 'history', at: h.at, h }))
@@ -129,7 +159,7 @@ export function IssueActivity({ issue, onAddComment, onUpdateComment, onDeleteCo
       : [...comments.map((c) => ({ kind: 'comment', at: c.createdAt, c })), ...history.map((h) => ({ kind: 'history', at: h.at, h }))].sort((a, b) => b.at - a.at);
 
   return (
-    <section aria-labelledby="issue-activity-heading" className="flex flex-col gap-3">
+    <section ref={sectionRef} aria-labelledby="issue-activity-heading" className="flex flex-col gap-3">
       <h3 id="issue-activity-heading" className="text-sm font-semibold text-ink">Activity</h3>
       <Tabs
         id="issue-activity"
@@ -143,15 +173,16 @@ export function IssueActivity({ issue, onAddComment, onUpdateComment, onDeleteCo
         ]}
       />
       <TabPanel tabsId="issue-activity" value={tab} current={tab} className="flex flex-col gap-5">
-      {tab !== 'history' && (
-        <div className="flex gap-3">
-          <Avatar name={WHO} size="md" decorative />
-          <div className="min-w-0 flex-1">
-            <Composer key={composeKey} autoFocus={composeKey > 0} onSave={onAddComment} />
-            <p className="mt-1.5 text-[12px] text-ink-subtlest"><span className="font-semibold">Pro tip:</span> press <kbd className="rounded border border-line px-1">M</kbd> to comment</p>
-          </div>
+      {/* Hidden, not unmounted, on the History tab: a comment being typed stays, and coming back
+          to Comments does not count an old M again. */}
+      <div className={cx('flex gap-3', tab === 'history' && 'hidden')}>
+        <Avatar name={WHO} size="md" decorative />
+        <div className="min-w-0 flex-1">
+          {/* Summoned, not re-keyed: a new key threw away a comment being typed. */}
+          <Composer summon={composeKey} onSave={onAddComment} />
+          <p className="mt-1.5 text-[12px] text-ink-subtlest"><span className="font-semibold">Pro tip:</span> press <kbd className="rounded border border-line px-1">M</kbd> to comment</p>
         </div>
-      )}
+      </div>
       <ul className={cx('flex flex-col gap-5', rows.length === 0 && 'hidden')}>
         {rows.map((r) => (r.kind === 'comment'
           ? <Comment key={`c-${r.c.id}`} comment={r.c} onUpdate={(t) => onUpdateComment(r.c.id, t)} onDelete={() => onDeleteComment(r.c.id)} />

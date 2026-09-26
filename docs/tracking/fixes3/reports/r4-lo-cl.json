@@ -1,0 +1,33 @@
+{
+  "cluster": "r4-lo-cl",
+  "branch": "claude/wf-r4-lo-cl",
+  "base": "e6edfc4",
+  "rows": [
+    { "id": "R4-LO-10", "outcome": "fixed", "commits": ["a733d9f", "9a20764"], "tests": ["tests/unit/r4-lo-10-did-not.unit.mjs"],
+      "summary": "\"did\" is weak only as a main verb: Auto-Fix leaves \"did not\" and \"did never\" as written (no more \"Delivered not miss\"), the optimizer no longer flags them, and \"Did the audit\" still becomes \"Delivered the audit\".", "remaining": "" },
+    { "id": "R4-LO-11", "outcome": "fixed", "commits": ["6343229"], "tests": ["tests/unit/r4-lo-11-weak-phrase-words.unit.mjs"],
+      "summary": "The ATS score counts a weak phrase only as whole words: \"Networked with\", \"unhandled\" and \"Reworked\" are no longer passive language; \"Worked with\" and \"handled\" still are.", "remaining": "" },
+    { "id": "R4-LO-12", "outcome": "fixed", "commits": ["c7fdc28", "a5997d9"], "tests": ["tests/pdf/57-optimizer-statement.test.mjs"],
+      "summary": "statementRange reads the paragraph or item as a flat run of text and line breaks through inline wrappers, so a <br> inside bold or a link splits lines (<p><b>A<br>B</b></p> opens on the caret's line and Apply replaces only it), a caret at any element boundary finds the line beside it, and a list item holding a nested list opens on its own line; before this, it opened with the sub-items' text and Apply wiped them.", "remaining": "" },
+    { "id": "R4-LO-13", "outcome": "fixed", "commits": ["36853e2", "f00455a"], "tests": ["tests/unit/r4-lo-13-verb-before-name.unit.mjs"],
+      "summary": "A power verb put before a first word that is no verb lowercases it only when the word is never a name (an article, preposition, pronoun, determiner, conjunction or helper verb): \"Kubernetes cluster\", \"New Relic\" and \"I led\" keep their capital, and \"In 2023\" and \"The checkout\" become lowercase. Product call: an ordinary capitalised noun (\"Customer onboarding\") now keeps its capital too, since no word list can tell it from a name and lowercasing a name is the worse mistake.", "remaining": "" },
+    { "id": "R4-LO-14", "outcome": "fixed", "commits": ["0736754", "8da703d"], "tests": ["tests/unit/r4-lo-14-metric-after-abbreviation.unit.mjs"],
+      "summary": "A metric chip after a statement ending in an abbreviation (etc., Inc., Ltd., Co., Jr., vs., U.S., e.g.) keeps the abbreviation's dot and still ends the sentence: \"…SDKs, etc. by 35%.\". A unit or ordinal (\"200 ms.\", \"1st.\") is treated as an ordinary sentence end.", "remaining": "" },
+    { "id": "R4-LO-15", "outcome": "fixed", "commits": ["ab2a498", "c649753"], "tests": ["tests/unit/r4-lo-15-fiscal-year.unit.mjs"],
+      "summary": "hasMetric (the optimizer's and the ATS score's single metric rule) treats every digit glued to letters as part of a name, not only the first one, and reads a fiscal year in any spelling (FY2021, FY21-22, FY 21, FY-21, FY'21) as a date. \"FY2021\" and \"v2.0\" no longer count as metrics; \"x10\", \"Rs.500\", \"EUR500k\", \"INR5,00,000\", \"3.5x\" and \"$1.2M\" still do.", "remaining": "" },
+    { "id": "R4-LO-16", "outcome": "fixed", "commits": ["f32be48"], "tests": ["tests/unit/r4-lo-16-text-after-nested-list.unit.mjs"],
+      "summary": "extractBulletsFromItem keeps track of the open item at each list depth, so text after a nested list continues the outer bullet the PDF prints it under (\"Led migration for 3 regions\"), and a nested item's continuation paragraph stays with that nested item. Checked at three depths.", "remaining": "" }
+  ],
+  "review": {
+    "issues": [
+      "R4-LO-15: the first rule was too broad (\"x10\", \"Rs.500\", \"EUR500k\" stopped counting) and missed \"FY2021-22\" / \"FY 21\"; reworked in c649753.",
+      "R4-LO-14: \"200 ms.\" and \"1st.\" were read as abbreviations; fixed in 8da703d.",
+      "R4-LO-13: \"I led\" became \"i led\", and \"New\"/\"First\" were lowercased before a name (\"New Relic\"); fixed in f00455a, along with the stale JSDoc.",
+      "R4-LO-12: a caret at an element boundary (the edge of a wrapper, or just before a nested list) gave no statement; fixed in a5997d9 by mapping the boundary onto the flat leaf list.",
+      "R4-LO-10: \"did never\" was still rewritten; fixed in 9a20764."
+    ],
+    "fixedByReviewer": []
+  },
+  "baselineFailures": [],
+  "notes": "CI: failfirst 36232700934 (7 row commits) and 36232995614 (5 review commits), all green; regressions 36232710159 and 36233004149 (57 node test files covering bulletOptimizer, atsChecker and RichTextEditor, plus knowledge-docs, cypress 27-ats-checker and 28-writing-helpers, playwright bullet-optimizer, lint and build), all green. The latest claude/awesome-cerf-t3sh88 (a8b3d6d) is merged in (e1585a8, docs only). No docs/knowledge line describes these behaviours. Seen, not fixed (pre-existing, low): (1) body text after a list, e.g. <ul><li>A</li></ul><blockquote>Quote</blockquote>, still joins the last ATS bullet (parseRichText gives the blockquote indent 1, which cannot be told apart from an item's continuation); (2) the optimizer opens text after a nested list (\"for 3 regions\") as its own line, while the ATS bullets count it as part of the outer item; (3) the ATS weak-phrase list and the optimizer's still differ (\"did\", \"changed\", \"ensured\" are only in the optimizer's; \"tasked with\" only in the ATS's); (4) the power verb chip on \"Did not miss…\" gives \"Spearheaded did not miss…\" (it was \"Spearheaded not miss…\"): a chip cannot make a negative statement into an action. No accessibility work done or seen."
+}

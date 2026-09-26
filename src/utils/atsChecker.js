@@ -37,10 +37,18 @@ export function extractBulletsFromItem(item) {
     // no bullet, as before.
     if (/<li[\s>]/i.test(desc)) {
       const items = [];
+      // The item open at each depth: text after a nested list, inside the same outer item, prints at
+      // the outer item's depth and continues it, not the nested bullet above it (R4-LO-16).
+      const openAt = [];
       for (const block of parseRichText(desc)) {
         const text = block.runs.map((r) => r.text).join('').replace(/\s+/g, ' ').trim();
-        if (block.marker) items.push(text);
-        else if (block.indent >= 1 && items.length) items[items.length - 1] = `${items[items.length - 1]} ${text}`.trim();
+        if (block.marker) {
+          openAt.length = block.indent;
+          openAt[block.indent] = items.push(text) - 1;
+        } else if (block.indent >= 1) {
+          const at = openAt.slice(0, block.indent + 1).findLast((i) => i !== undefined);
+          if (at !== undefined) items[at] = `${items[at]} ${text}`.trim();
+        }
       }
       for (const clean of items) {
         if (clean && !bullets.includes(clean)) bullets.push(clean);
@@ -89,6 +97,9 @@ export const WEAK_PHRASES = [
   'assisted in', 'tasked with', 'handled', 'was involved in', 'participated in',
   'tried to', 'attempted to',
 ];
+// Each phrase as whole words: a substring match read "Networked with" as "worked with" and
+// "unhandled" as "handled" (R4-LO-11).
+const WEAK_PHRASE_WORDS = WEAK_PHRASES.map((wp) => new RegExp(`(?<![\\p{L}\\d])${wp}(?![\\p{L}\\d])`, 'u'));
 
 // Standard ATS Section Categories & Workday Canonical Headings
 export const ATS_STANDARD_SECTIONS = {
@@ -929,8 +940,8 @@ export function analyzeAtsScore(resume, jobDescriptionText = '') {
           actionVerbCount++;
         }
         // Check for weak phrases
-        for (const wp of WEAK_PHRASES) {
-          if (lower.includes(wp)) {
+        for (const wp of WEAK_PHRASE_WORDS) {
+          if (wp.test(lower)) {
             weakPhraseCount++;
             break;
           }

@@ -20,6 +20,9 @@ in `fixes3/reports/`, tracker `fixes3/R4-TRACKER.md` (`python3 docs/tracking/too
 Wave 1b leftovers (R4-LO-01…25, clusters lo-imp, lo-cl, lo-misc) in R4-CLUSTERS.md.
 Wave 1b sessions (09:20 UTC, from `e6edfc4`): lo-imp session_01SgWdHjxzSS97CRbYHJW6Wj · lo-cl session_01CefnMCJBUjNUyADrJ4H76X ·
 lo-misc session_01VnvtdsZ8V9QekYoa8wYrEF. Wave 2 (design) starts once wave 1 + 1b are merged and gated.
+**09:55 UTC:** gate 36232347364 on `bb200f4` red on 3 test-only causes, fixed in `d1af2c5` (contact guard comments, job-form
+stages below the fold, Thickness box counted); brd + lo-cl merged (`17c6af2`); full gate dispatched on `5f94749`. Still
+working: lo-imp, lo-misc. Small pre-existing leftovers named in the brd/lo-cl reports' notes go to the final sweep.
 Check: `for c in imp brd cl exp ed dsn-pdf sync-job app; do git fetch -q origin claude/wf-r4-$c && git cat-file -e
 FETCH_HEAD:wf-reports/r4-$c.json && echo "$c REPORTED"; done`.
 

@@ -131,7 +131,9 @@ function spawnNext(board, issueId, ctx) {
   if (!issue || !RECURRENCE_IDS.includes(issue.recurrence) || issue.recurrence === 'none') return board;
   if (issue.recurrenceNextId && issueById(board, issue.recurrenceNextId)) return board;
   const now = nowOf(ctx);
-  const column = firstColumnOf(board, 'todo') ?? board.columns[0];
+  // An open column, never a done one: made in one it would be born resolved and never repeat again
+  // (a board's only to-do column turned Done, R4-BRD-09).
+  const column = firstColumnOf(board, 'todo') ?? board.columns.find((c) => !isDoneColumn(c)) ?? board.columns[0];
   const next = makeIssue(board, {
     ...issue,
     columnId: column.id,
@@ -154,6 +156,24 @@ export function setStatus(board, ids, columnId, ctx = {}) {
     return next;
   });
   if (issues.every((i, n) => i === board.issues[n])) return board;
+  return resolved.reduce((b, id) => spawnNext(b, id, ctx), { ...board, issues });
+}
+
+/**
+ * The issues of column `columnId` once its category changed so that it is done (`done` true) or no
+ * longer done, `from` and `to` naming the categories as the history shows them. Resolved, each one's
+ * next occurrence is made, as a move into a done column makes it; reopened, resolvedAt clears. A
+ * status entry goes in each one's history either way (R4-BRD-09: the resolution was written straight
+ * onto the issues, so a repeating one never came back and the history said nothing).
+ */
+export function recategorized(board, columnId, done, { from, to }, ctx = {}) {
+  const now = nowOf(ctx);
+  const resolved = [];
+  const issues = board.issues.map((i) => {
+    if (i.columnId !== columnId) return i;
+    if (done && !i.resolvedAt) resolved.push(i.id);
+    return logged({ ...i, resolvedAt: done ? i.resolvedAt ?? now : null, updatedAt: now }, fieldEntry('status', from, to), now);
+  });
   return resolved.reduce((b, id) => spawnNext(b, id, ctx), { ...board, issues });
 }
 

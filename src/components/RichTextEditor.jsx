@@ -252,8 +252,6 @@ export default function RichTextEditor({ label, ariaLabel, value, onChange, plac
 /** The elements a statement can be: a list item or a paragraph (Chrome writes a new line as a div). */
 const STATEMENTS = new Set(['LI', 'P', 'DIV', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'BLOCKQUOTE']);
 const BLOCKS = new Set([...STATEMENTS, 'UL', 'OL']);
-/** A node that sits inside a line of text: text, or an inline element other than <br>. */
-const inLine = (n) => n.nodeType === 3 || (n.nodeType === 1 && !BLOCKS.has(n.nodeName) && n.nodeName !== 'BR');
 
 /**
  * The statement being edited in `el`, as a Range: the selection when it is inside `el` and not
@@ -277,26 +275,54 @@ export function statementRange(el) {
   for (let n = at.startContainer; n && n !== el; n = n.parentNode) {
     if (n.nodeType === 1 && STATEMENTS.has(n.nodeName)) { host = n; break; }
   }
-  if (host !== el && ![...host.childNodes].some((c) => c.nodeName === 'BR')) {
+  // Its line: the text between line breaks, a <br> at any depth ("<p><b>A<br>B</b></p>" is two lines,
+  // R4-LO-12) or a block inside it (a nested list is its own statements, not part of its item's).
+  const leaves = lineLeaves(host);
+  if (host !== el && !leaves.some(isBreak)) {
     range.selectNodeContents(host);
     return range.toString().trim() ? range : null;
   }
   let node = at.startContainer;
-  if (node === host) {
-    // A caret between two children: the one after it, but just before a <br> it is at the end of the
-    // line that break closes.
-    const [before, after] = [host.childNodes[at.startOffset - 1], host.childNodes[at.startOffset]];
-    node = after && (after.nodeName !== 'BR' || !before || !inLine(before)) ? after : before || host.lastChild;
+  if (node.nodeType === 1 && !leaves.includes(node)) {
+    // A caret between two nodes, at any depth: the leaf after it, but just before a line break it is
+    // at the end of the line that break closes.
+    const child = node.childNodes[at.startOffset];
+    const pos = child ? leaves.indexOf(edgeLeaf(child, 'first')) : leaves.indexOf(edgeLeaf(node.lastChild, 'last')) + 1;
+    if (pos < 0 || (!child && !node.lastChild)) return null;
+    const [before, after] = [leaves[pos - 1], leaves[pos]];
+    node = after && (!isBreak(after) || !before || isBreak(before)) ? after : before;
   }
-  while (node && node.parentNode !== host) node = node.parentNode;
-  if (!node || !inLine(node)) return null;
-  let first = node;
-  let last = node;
-  while (first.previousSibling && inLine(first.previousSibling)) first = first.previousSibling;
-  while (last.nextSibling && inLine(last.nextSibling)) last = last.nextSibling;
-  range.setStartBefore(first);
-  range.setEndAfter(last);
+  let i = leaves.indexOf(node);
+  // A caret inside a nested block's own text is outside this host's lines.
+  if (i < 0 || isBreak(leaves[i])) return null;
+  let j = i;
+  while (i > 0 && !isBreak(leaves[i - 1])) i -= 1;
+  while (j < leaves.length - 1 && !isBreak(leaves[j + 1])) j += 1;
+  range.setStartBefore(leaves[i]);
+  range.setEndAfter(leaves[j]);
   return range.toString().trim() ? range : null;
+}
+
+/** A line break: a <br>, or a block element, which starts a line of its own. */
+const isBreak = (n) => n.nodeName === 'BR' || (n.nodeType === 1 && BLOCKS.has(n.nodeName));
+/** Whether `n` is an inline element holding nodes of its own (<b>, <a>, <span>…), read through. */
+const isWrapper = (n) => n.nodeType === 1 && !isBreak(n) && n.childNodes.length > 0;
+
+/** `host`'s lines as a flat list, in order: text and empty inline nodes, and the breaks between them. */
+function lineLeaves(host) {
+  const out = [];
+  for (const child of host.childNodes) {
+    if (isWrapper(child)) out.push(...lineLeaves(child));
+    else out.push(child);
+  }
+  return out;
+}
+
+/** The first or last of `node`'s leaves, reading through inline wrappers; null for no node. */
+function edgeLeaf(node, edge) {
+  let n = node;
+  while (n && isWrapper(n)) n = edge === 'first' ? n.firstChild : n.lastChild;
+  return n ?? null;
 }
 
 /** Elements a browser can paste or drop into a contentEditable that the editor cannot print. */
