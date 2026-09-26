@@ -29,11 +29,17 @@
 
 ### Next in queue
 
-1. The AUD list is done: every row is ✅ (AUD-32 and AUD-33 last).
-2. ATS-4 is ✅ (`58f4f96`), ATS-6 is ✅ (`32a5972`; PENDING-ALL D3 closed: Heading styles, look unchanged). ATS-1/2/5 are ✅ (`417db1e`, one entry-header layout). TUI-6 is filed as ATS-7; ATS-3 and ATS-7 are ✖ known limits (`c950ae7`, `a67caa3`). The ATS list is closed.
-3. The TUI list is closed (TUI-6 filed as ATS-7).
+What is next — and what is deployed now — is [HANDOFF.md](HANDOFF.md) (its COLD START block) and the header above; the
+open rows are in [bug-status-r2/](bug-status-r2/README.md). The lists in this file are all closed:
 
-✅ **Deployed:** `origin/master` = `9a49f83` (2026-09-24 ~15:30 UTC), fast-forwarded from `504b313`: 250 commits — all 15 Round 1
+1. AUD: every row is ✅ (AUD-32 and AUD-33 last).
+2. ATS: ATS-1/2/5 ✅ (`417db1e`, one entry-header layout), ATS-4 ✅ (`58f4f96`), ATS-6 ✅ (`32a5972`; PENDING-ALL D3
+   closed: Heading styles, look unchanged), ATS-7 ✅ (was ✖ `a67caa3`; the running header on pages 2+, `38f35b5`,
+   deployed with Round 2), ATS-3 ✖ known limit (`c950ae7`).
+3. TUI: closed (TUI-6 filed as ATS-7).
+
+✅ **Round 1's deploy (history — superseded; the deployed commit now is in the header):** `origin/master` = `9a49f83`
+(2026-09-24 ~15:30 UTC), fast-forwarded from `504b313`: 250 commits — all 15 Round 1
 clusters (ats, pdf-pagination, design-sidebar, word, text-exports, jobs, app-shell, boards, preview, import-data, sections, sync,
 letter, pdf-text, cypress), the coordinator's merge and CI fixes, and the open-source docs. Gate on that exact commit: GitHub Actions
 run 36018983145 — the node suite on 6 machines, Playwright on 3, Cypress on 4, build and lint, **every job green**. Every ⏸ row's
