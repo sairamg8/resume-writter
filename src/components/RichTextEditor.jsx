@@ -169,7 +169,9 @@ export default function RichTextEditor({ label, ariaLabel, value, onChange, plac
           </button>
         </div>
 
-        {/* Editable area */}
+        {/* Editable area. 16 px on touch screens: iOS zooms the page into any smaller field it
+            focuses, a contenteditable included (J-38b). A mouse keeps 14 px, so the résumé
+            editor looks as it did on a desktop. */}
         <div
           ref={ref}
           id={ids.id}
@@ -184,7 +186,7 @@ export default function RichTextEditor({ label, ariaLabel, value, onChange, plac
           onDrop={onDrop}
           onCompositionStart={() => { isComposing.current = true; }}
           onCompositionEnd={() => { isComposing.current = false; onInput(); }}
-          className="px-3 py-2 text-sm focus:outline-none empty-placeholder rich-text-output"
+          className="px-3 py-2 text-sm pointer-coarse:text-base focus:outline-none empty-placeholder rich-text-output"
           style={{ minHeight: minH }}
           data-placeholder={placeholder}
         />

@@ -127,3 +127,62 @@ it('J-38: the tracker\'s search box is 16 px on a touch screen (the kit\'s Searc
     delete globalThis.localStorage;
   }
 });
+
+// J-38b: the rich-text editor (RichTextEditor) is a contenteditable <div role="textbox">, not an
+// <input>, so under16OnTouch above never looked at it — and at 14 px, iOS zoomed the page into the
+// job's Notes (on the job page and on the Add job form) as into any field. The same editor writes
+// every résumé description, the cover letter and a board card's description.
+
+/** Each rich-text editor's editable box on the page. */
+const editors = (page) => page.all().filter((el) => el.tagName === 'DIV' && el.getAttribute('role') === 'textbox');
+
+it('J-38b: the job page\'s Notes editor is 16 px on a touch screen', async () => {
+  const { NotesTab } = await loadModule('/src/components/job/NotesTab.jsx');
+  const page = await render(NotesTab, { job, set: () => {} });
+  try {
+    const boxes = editors(page);
+    assert.equal(boxes.length, 1, 'the Notes editor is on the tab');
+    assert.equal(boxes[0].getAttribute('aria-label'), 'Notes');
+    assert.match(boxes[0].getAttribute('class') ?? '', /(^|\s)pointer-coarse:text-base(\s|$)/);
+  } finally {
+    await page.view.unmount();
+  }
+});
+
+it('J-38b: the Add job form\'s Notes editor is 16 px on a touch screen', async () => {
+  const { createElement: h } = await import('react');
+  const { MemoryRouter, Routes, Route } = await import('react-router-dom');
+  const { JobForm } = await loadModule('/src/pages/JobForm.jsx');
+  const { _resetJobStoreForTest } = await loadModule('/src/hooks/useJobStore.js');
+  globalThis.localStorage = memoryStorage([[KEY, JSON.stringify({ jobs: [], dataVersion: 2 })]]);
+  _resetJobStoreForTest();
+  function App() {
+    return h(MemoryRouter, { initialEntries: ['/jobs/new'] }, h(Routes, null,
+      h(Route, { path: '/jobs/new', element: h(JobForm, { store: { appState: { resumes: [] } } }) })));
+  }
+  const page = await render(App, {});
+  try {
+    const notes = editors(page).find((el) => el.getAttribute('aria-label') === 'Notes');
+    assert.ok(notes, 'the Notes editor is on the form');
+    assert.match(notes.getAttribute('class') ?? '', /(^|\s)pointer-coarse:text-base(\s|$)/);
+  } finally {
+    await page.view.unmount();
+    delete globalThis.localStorage;
+  }
+});
+
+it('J-38b: the résumé editor\'s description box is 16 px on a touch screen and still 14 px with a mouse', async () => {
+  const { default: RichTextEditor } = await loadModule('/src/components/RichTextEditor.jsx');
+  const page = await render(RichTextEditor, { label: 'Description', value: '', onChange: () => {} });
+  try {
+    const [box] = editors(page);
+    assert.ok(box, 'the editor has its editable box');
+    const cls = box.getAttribute('class') ?? '';
+    assert.match(cls, /(^|\s)pointer-coarse:text-base(\s|$)/);
+    // The desktop look is unchanged: 14 px, and no unprefixed 16 px that would win over it.
+    assert.match(cls, /(^|\s)text-sm(\s|$)/);
+    assert.doesNotMatch(cls, /(^|\s)text-base(\s|$)/);
+  } finally {
+    await page.view.unmount();
+  }
+});
