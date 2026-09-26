@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ChevronDown, Info, MoreHorizontal, Plus } from 'lucide-react';
-import { DndContext, DragOverlay, MouseSensor, TouchSensor, closestCorners, useSensor, useSensors } from '@dnd-kit/core';
+import { DndContext, DragOverlay, MeasuringStrategy, MouseSensor, TouchSensor, closestCorners, useSensor, useSensors } from '@dnd-kit/core';
 import { useBoardStore } from '@/hooks/useBoardStore';
 import { Button, EmptyState, IconButton, Menu, cx, useConfirmOptional, useToast } from '@/components/ui';
 import { useWorkspace } from '@/components/shell';
@@ -13,7 +13,7 @@ import { ProjectHeader } from '@/components/board/ProjectTabs';
 import { IssueHost, useIssueActions, useIssueRoute } from '@/components/board/useIssueActions';
 import { IssueTypeIcon, PriorityIcon } from '@/components/tracker/TrackerIcons';
 import { BOARD_DRAG_INSTRUCTIONS } from '@/utils/cardKeys';
-import { boardLists, boardSprint, dropTarget, hiddenDoneCount } from '@/utils/boardView';
+import { boardLists, boardSprint, dragPreview, dropTarget, hiddenDoneCount, previewLists } from '@/utils/boardView';
 import { filterIssues, swimlanes } from '@/utils/boardQuery';
 import { issueKey } from '@/utils/boardModel';
 
@@ -72,6 +72,9 @@ export function Board() {
   const [groupBy, setGroupBy] = useState('none');
   const [folded, setFolded] = useState(() => new Set());
   const [active, setActive] = useState(null);
+  // Where the dragged card shows while it is over another column (boardView's dragPreview), so
+  // that column opens a gap where it will land; null: in its own place.
+  const [preview, setPreview] = useState(null);
   const [columnEdit, setColumnEdit] = useState(null);
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
@@ -98,12 +101,26 @@ export function Board() {
   const lanes = swimlanes(board, allCards.filter((c) => shown.has(c.id)), groupBy);
   const doneIds = new Set(board.columns.filter((c) => c.category === 'done').map((c) => c.id));
   const activeCard = active ? allCards.find((c) => c.id === active) : null;
+  // The columns as they show: with the dragged card moved into the column it is over (B-05).
+  const shownLists = active ? previewLists(lists, active, preview) : lists;
+
+  /** dnd-kit's `over` as boardView takes it: a column's body (in a swimlane too) as that column. */
+  const dropOn = (over) => (over.data.current?.type === 'list' ? { id: over.data.current.listId, data: { type: 'list' } } : { id: over.id, data: over.data.current });
+
+  function onDragOver({ active: a, over }) {
+    const r = a.rect.current.translated;
+    const below = !!(r && over?.rect && r.top + r.height / 2 > over.rect.top + over.rect.height / 2);
+    const next = dragPreview(lists, a.id, over && dropOn(over), preview, { below });
+    // Set only on a change: each set re-renders the board, and dnd-kit calls this on every move.
+    if (next?.columnId !== preview?.columnId || next?.beforeId !== preview?.beforeId) setPreview(next);
+  }
 
   function onDragEnd({ active: a, over }) {
     setActive(null);
+    setPreview(null);
     if (!over) return;
-    const target = over.data.current?.type === 'list' ? { id: over.data.current.listId, data: { type: 'list' } } : { id: over.id, data: over.data.current };
-    const move = dropTarget(board, { id: a.id, type: 'card' }, target, { now });
+    // Read off the lists as shown, so the card lands in the gap it opened in another column.
+    const move = dropTarget(board, { id: a.id, type: 'card' }, dropOn(over), { now, lists: shownLists });
     if (move?.kind === 'issue') store.moveIssue(board.id, move.issueId, move.target);
   }
 
@@ -203,14 +220,18 @@ export function Board() {
         sensors={sensors}
         accessibility={{ screenReaderInstructions: BOARD_DRAG_INSTRUCTIONS }}
         collisionDetection={closestCorners}
-        onDragStart={({ active: a }) => setActive(a.id)}
+        // A card moved into another column changes both columns' heights mid-drag: measure the
+        // columns again as it happens, or what is under the pointer is read off their old boxes.
+        measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
+        onDragStart={({ active: a }) => { setActive(a.id); setPreview(null); }}
+        onDragOver={onDragOver}
         onDragEnd={onDragEnd}
-        onDragCancel={() => setActive(null)}
+        onDragCancel={() => { setActive(null); setPreview(null); }}
       >
         <div className="min-h-0 flex-1 overflow-auto px-4 pb-6 md:px-8">
           {groupBy === 'none' ? (
             <div className="flex min-h-full snap-x snap-mandatory items-start gap-2 md:snap-none">
-              {lists.map((list, index) => (
+              {shownLists.map((list, index) => (
                 <BoardColumn
                   key={list.id}
                   list={list}
@@ -225,7 +246,7 @@ export function Board() {
           ) : (
             <div className="flex w-max min-w-full flex-col gap-1">
               <div className="sticky top-0 z-10 flex gap-2 bg-white pb-1">
-                {lists.map((list) => (
+                {shownLists.map((list) => (
                   <div key={list.id} className="flex h-10 w-[272px] shrink-0 items-center gap-2 rounded-md bg-sunken px-3 text-[12px] font-semibold uppercase tracking-[0.03em] text-ink-subtle">
                     {list.title || 'Untitled'} <span className="text-ink-subtlest">{list.cards.filter((c) => shown.has(c.id)).length}</span>
                   </div>
@@ -240,7 +261,7 @@ export function Board() {
                     <LaneHeader lane={lane} open={open} onToggle={() => setFolded((f) => { const n = new Set(f); if (n.has(lane.id)) n.delete(lane.id); else n.add(lane.id); return n; })} />
                     {open && (
                       <div className="flex items-stretch gap-2">
-                        {lists.map((list) => (
+                        {shownLists.map((list) => (
                           <BoardColumn key={list.id} list={list} droppableId={`${lane.id}:${list.id}`} showHeader={false} cards={list.cards.filter((c) => inLane.has(c.id))} renderCard={renderCard(list.id)} />
                         ))}
                       </div>
