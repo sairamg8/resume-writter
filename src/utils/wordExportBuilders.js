@@ -382,17 +382,16 @@ export function buildReferences(section, accentHex, settings, centered, dateHex,
   const { ink } = look;
   return [sectionHeading(section.title, accentHex, centered, section.heading), ...entries(section, look, (item) => {
     // A card of Base-size lines, the name's too, as the PDF prints it (R2-118).
+    // Each field on its own line, as the PDF's card prints them: job title and company, e-mail and
+    // phone were joined as "CTO, Acme" and "j@a.co  |  555 0100" (R4-DOUT-12).
     const paras = [line([bold(item.name, { size: look.base, color: ink.text })])];
-    const role = [item.jobTitle, item.company].filter(Boolean).join(', ');
-    if (role) paras.push(line([normal(role, { size: look.base, color: ink.sub })]));
+    if (item.jobTitle) paras.push(line([normal(item.jobTitle, { size: look.base, color: ink.sub })]));
+    if (item.company) paras.push(line([normal(item.company, { size: look.base, color: ink.sub })]));
     if (item.relationship) paras.push(line([normal(item.relationship, { size: look.base, color: ink.meta, italics: true })]));
     // Linked through contactHref, as the PDF links them: a phone with under three digits ("On request")
     // prints as text, not as an empty tel: link.
-    const reach = [
-      item.email && linked(item.email, contactHref('email', item), { size: look.base, color: accentHex }, look.links),
-      item.phone && linked(item.phone, contactHref('phone', item), { size: look.base, color: ink.meta }, look.links),
-    ].filter(Boolean);
-    if (reach.length) paras.push(line(reach.flatMap((r, i) => (i ? [normal('  |  ', { size: look.base, color: ink.muted }), r] : [r]))));
+    if (item.email) paras.push(line([linked(item.email, contactHref('email', item), { size: look.base, color: accentHex }, look.links)]));
+    if (item.phone) paras.push(line([linked(item.phone, contactHref('phone', item), { size: look.base, color: ink.meta }, look.links)]));
     return paras;
   })];
 }
