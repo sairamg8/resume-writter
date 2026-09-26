@@ -2,6 +2,9 @@
 
 Branch `boards-jobs-ui`, worktree `/mnt/Storage/Projects/flowcv-boards-jobs`, off master `8409472` (2026-09-23).
 
+> **Done and merged:** the lane landed by `de0911f` (2026-09-24) and the Jira-style revamp built on it (`75236a2`);
+> both are on master. This plan is history; the bugs' state is in [../boards-jobs-bugs/README.md](../boards-jobs-bugs/README.md).
+
 **Owner's order (verbatim):** *"improve job portal and boards i do not like that existing UI. I Need smooth
 professional UI. Boards sole task is to manage day 2 day project and life tasks just like jira i need a core part
 of that process as clone here. and second tracking jobs need to be improved i believe in both of there are at least
@@ -31,6 +34,14 @@ Within a chain an agent inherits its predecessor's files once that agent has fin
 Never edit a file another *running* agent owns. Anything outside your row → report it, do not touch it.
 
 ## Rules every agent follows
+
+> ⛔ **Superseded (2026-09-24 onwards) — do not follow the local-run rules below.** They were Lane C's, on a laptop
+> worktree. Since then: tests, the build and lint run **only on CI** (the repo's CLAUDE.md; dispatch
+> `.github/workflows/ci.yml`), and **on the owner's laptop no yarn and no tests** — no `node --test`, `yarn test`,
+> `vite build`, dev server, Playwright screenshots or Cypress (rules 5–8). Work goes to the work branch named in
+> [../HANDOFF.md](../HANDOFF.md), per [../CLUSTER-PROTOCOL.md](../CLUSTER-PROTOCOL.md), not to this lane's worktree and
+> ledger (rules 1, 2 and 4). Still true: fail-first fixes (3), source files ≤ 300 lines (9), never destroy saved data
+> (10), no `window.confirm` / `alert` / `prompt` in Boards or Jobs (11), honest reports (12).
 
 1. **Work only in the worktree.** Never touch `/mnt/Storage/Projects/flowcv` (other sessions work there). Never push.
    Never `git add -A` / `git add .`; never stash, reset or checkout another agent's file.

@@ -4,6 +4,11 @@
 (localStorage), Google sync stays out of scope (boards-plan.md phase 3) but the model keeps per-board
 `updatedAt` for it.
 
+> **Superseded — boards sync now.** "Google sync stays out of scope" held for this plan only: boards-plan.md's
+> Phase 3 and 4 shipped under R2-140 (`e96514b`, `8cd4901`, on master) — signed in, each board is one document with
+> per-board last-writer-wins on `updatedAt`, on the same sync engine as the jobs
+> ([R2-140](../bug-status-r2/03-features-and-test-gaps.md)).
+
 ## Data model (v2) — `src/utils/boardModel.js` (pure)
 
 ```
