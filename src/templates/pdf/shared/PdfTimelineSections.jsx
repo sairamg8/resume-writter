@@ -1,4 +1,3 @@
-import { cloneElement } from 'react';
 import { View } from '@react-pdf/renderer';
 import { Text } from './PdfText';
 import { PdfRichText } from './PdfRichText';
@@ -131,7 +130,8 @@ function TimelineSection({ section, settings, marginBottom, spaceBefore, itemGap
   const presence = !items.length ? 0
     : firstGroup ? headPresence({ lines: groupLoc ? 2 : 1, styles: [{ fontFamily: settings?._pdfFontFamily, fontSize: entrySize, fontWeight: 'bold' }], keep: groupKeep, extra: 2 + (groupLoc ? 1 : 0) })
     : timelineHeadPresence({ ...head(items[0]), settings, centered });
-  const title = cloneElement(SectionTitleOf({ section, settings, centered }), { presence });
+  // Through SectionTitleOf, which never keeps less than its own three lines.
+  const title = SectionTitleOf({ section, settings, centered, presence });
 
   const one = (item) => {
     const f = fields(item, s, settings);
