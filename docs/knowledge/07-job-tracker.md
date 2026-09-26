@@ -19,7 +19,7 @@ Help users track applications alongside tailored resumes — a differentiator vs
 - **List:** `components/job/ListView.jsx`  
 - Search + status filter on tracker page  
 - Import/export jobs as JSON, export as CSV (`utils/jobCsv.js`)  
-- `clearDemoData` ("Clear all jobs and start fresh?") empties the list  
+- ⋯ → "Clear all jobs" (disabled with none) asks with the count, `clearDemoData` empties the list and returns it, and the "N jobs cleared" toast's Undo puts it back (`restoreJobs`; the sync sends them again, R4-DUX-02)  
 
 ## Detail tabs / widgets
 
