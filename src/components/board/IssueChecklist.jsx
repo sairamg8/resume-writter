@@ -42,11 +42,14 @@ export function IssueChecklist({ items = [], onChange, autoFocus = false }) {
                 aria-label={`Done: ${c.text}`}
                 className="size-4 shrink-0 accent-[#0c66e4]"
               />
+              {/* min-w-0 lets the text shrink below its longest word (a flex item will not, by
+                  default) and break-words wraps that word at the row's edge: a pasted URL stays in
+                  its row instead of pushing the issue view sideways. */}
               <InlineEdit
                 value={c.text}
                 onCommit={(next) => set(c.id, { text: next })}
                 label="Checklist item"
-                className={c.done ? 'flex-1 text-sm text-ink-subtlest line-through' : 'flex-1 text-sm text-ink'}
+                className={`min-w-0 flex-1 break-words text-sm ${c.done ? 'text-ink-subtlest line-through' : 'text-ink'}`}
               />
               <IconButton
                 icon={Trash2}
