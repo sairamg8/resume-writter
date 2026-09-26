@@ -33,16 +33,9 @@ function deletePrompt(resume, keeps) {
 export function Dashboard({ store, auth, sync, originalsWaiting = false, publicLinks = firebasePublicIo }) {
   const navigate = useNavigate();
   const importRef = useRef(null);
+  // An import error stays until the user dismisses it or starts another import (R4-DUX-11): it used
+  // to go after 4 or 8 s, before the longer ones (a scanned PDF's steps) could be read.
   const [importError, setImportError] = useState(null);
-  // One timer for whichever import error shows: an earlier error's timer cleared a newer one early
-  // (a failed PDF's 8 s, then a bad .json 6 s later, gone after 2 s — R4-APP-09).
-  const importErrorTimer = useRef(0);
-  const showImportError = (message, ms = 4000) => {
-    clearTimeout(importErrorTimer.current);
-    setImportError(message);
-    importErrorTimer.current = setTimeout(() => setImportError(null), ms);
-  };
-  useEffect(() => () => clearTimeout(importErrorTimer.current), []);
   const [letterModalOpen, setLetterModalOpen] = useState(false);
   // A demo account keeps originals: the cards and Import offer "Keep as my original".
   const keeps = isDemoAccount(auth.user, DEMO_ACCOUNTS);
@@ -109,6 +102,8 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false, publicL
     const file = e.target.files?.[0];
     if (!file) return;
     if (importBusy.current) { e.target.value = ''; return; }
+    // A new import starts clean: the last one's error no longer applies.
+    setImportError(null);
     // A PDF, Word, Markdown or text résumé: read best-effort into a new one (R2-148).
     if (isDocumentFile(file)) {
       e.target.value = '';
@@ -117,7 +112,7 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false, publicL
       importDocument(file, {
         importResume: store.importResume, keep: keeps && importAsOriginal.current,
         navigate: (...args) => { if (mounted.current) navigate(...args); },
-        onError: (message) => showImportError(message, 8000),
+        onError: setImportError,
       }).finally(() => {
         importBusy.current = false;
         if (mounted.current) setImporting(false);
@@ -139,16 +134,16 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false, publicL
           setImportError(null);
           navigate(`/resume/${id}`);
         } else {
-          showImportError('Invalid resume file — must be a CPWT-CV backup or standard JSON Resume (.json).');
+          setImportError('Invalid resume file — must be a CPWT-CV backup or standard JSON Resume (.json).');
         }
       } catch {
-        showImportError('Could not parse file. Make sure it\'s a valid CPWT-CV or standard JSON Resume (.json).');
+        setImportError('Could not parse file. Make sure it\'s a valid CPWT-CV or standard JSON Resume (.json).');
       }
     };
     // A file the browser will not hand over — a permission error, a removed drive, a folder — never
     // reaches onload, and without this the import said nothing (R2-085; the editor's: AUD-23).
     reader.onerror = reader.onabort = () => {
-      showImportError('That file could not be read. Check it is still there and try again.');
+      setImportError('That file could not be read. Check it is still there and try again.');
     };
     reader.readAsText(file);
     e.target.value = '';
@@ -221,7 +216,10 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false, publicL
         )}
         {importError && (
           <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-3">
-            <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{importError}</p>
+            <div className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 flex items-start gap-2">
+              <span className="flex-1">{importError}</span>
+              <button type="button" onClick={() => setImportError(null)} className="font-semibold hover:text-red-800 shrink-0">Dismiss</button>
+            </div>
           </div>
         )}
         {originalsWaiting && (
