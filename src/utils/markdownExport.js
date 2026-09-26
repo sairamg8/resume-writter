@@ -24,15 +24,24 @@ const BREAK = '  ';
 /** A nested list's indent per level: enough for every Markdown flavour, and never a code block. */
 const NEST = '    ';
 
+/**
+ * User text as Markdown prints it, not as markup (R4-EXP-01): every character Markdown reads as syntax
+ * inside a line is backslash-escaped, so "<DataGrid>" is not hidden as an HTML tag, "__init__" is not
+ * bold and a "*" or "[" stays a character. `lead` escapes what a line may not start with either.
+ */
+const esc = (text) => String(text ?? '').replace(/[\\`*_[\]<>~]/g, '\\$&');
+/** A line that starts with user text: a leading "#", "-", "+", "=" or "3." prints, never a heading or list. */
+const lead = (line) => line.replace(/^([#+=-])/, '\\$1').replace(/^(\d+)([.)])(?=\s|$)/, '$1\\$2');
+
 /** A run's text; a run the PDF links, as [text](href) — one it would not follow, as its text. */
 function runText(run) {
   const href = run.href ? safeHref(run.href) : null;
-  return href && run.text.trim() ? `[${run.text}](${href})` : run.text;
+  return href && run.text.trim() ? `[${esc(run.text)}](${href})` : esc(run.text);
 }
 
 /** A parsed block's lines (one per line break), whitespace collapsed, empty lines left out. */
 const blockLines = (block) => block.runs.map(runText).join('').split('\n')
-  .map((l) => l.replace(/\s+/g, ' ').trim()).filter(Boolean);
+  .map((l) => lead(l.replace(/\s+/g, ' ').trim())).filter(Boolean);
 
 /**
  * Rich text (a description, the summary), then an entry's legacy bullets, as Markdown lines in the
@@ -75,20 +84,25 @@ function markdownBody(html, bullets = []) {
   }
   for (const b of Array.isArray(bullets) ? bullets : []) {
     const text = String(b ?? '').replace(/\s+/g, ' ').trim();
-    if (text) item([text], 1, '•');
+    if (text) item([lead(esc(text))], 1, '•');
   }
   return out;
 }
 
-/** An entry's heading: "**primary** — *secondary*", either alone when the other is empty. */
+/**
+ * An entry's heading: "**primary** — *secondary*", either alone when the other is empty. Each is
+ * trimmed first: "**Acme Corp **" shows its asterisks, since a closing mark may not follow a space.
+ */
 function heading(primary, secondary) {
-  if (primary && secondary) return `**${primary}** — *${secondary}*`;
-  if (primary) return `**${primary}**`;
-  return secondary ? `*${secondary}*` : '';
+  const [a, b] = [String(primary || '').trim(), String(secondary || '').trim()];
+  if (a && b) return `**${esc(a)}** — *${esc(b)}*`;
+  if (a) return `**${esc(a)}**`;
+  return b ? `*${esc(b)}*` : '';
 }
 
 const joined = (parts, sep) => parts.filter(Boolean).join(sep);
-const italic = (text) => (text ? `*${text}*` : '');
+/** A meta line in italics; its parts are user text, trimmed and escaped here. */
+const italic = (text) => (String(text || '').trim() ? `*${esc(String(text).trim())}*` : '');
 
 /**
  * One entry: its `### ` heading, each meta line on a line of its own (a hard break between them),
@@ -106,7 +120,7 @@ function entryLines(title, meta, body) {
 /** A link the PDF follows as [label](href); one it would not follow as the address it prints. */
 function link(url, label) {
   const href = safeHref(url);
-  return href ? `[${label || url}](${href})` : url;
+  return href ? `[${esc(label || url)}](${href})` : lead(esc(url));
 }
 
 /**
@@ -137,7 +151,7 @@ function itemLines(type, item, f, body, settings, opts = {}) {
       const url = f('url');
       const href = safeHref(url);
       const name = f('name');
-      const title = href ? `[${name || url}](${href})` : name;
+      const title = href ? `[${esc(name || url)}](${href})` : esc(name);
       const meta = [f('technologies') ? `Technologies: ${f('technologies')}` : '', shown(dateRange(f('startDate'), end, settings)), href ? '' : url];
       return entryLines(title, [italic(joined(meta, ' | '))], body());
     }
@@ -151,9 +165,9 @@ function itemLines(type, item, f, body, settings, opts = {}) {
       return entryLines(heading(f('title') || f('name'), f('issuer')), [italic(shown(formatDate(f('date'), settings)))], body());
     case 'references': {
       const mailto = f('email') ? contactHref('email', item) : null;
-      const email = mailto ? `[${f('email')}](${mailto})` : f('email');
+      const email = mailto ? `[${esc(f('email'))}](${mailto})` : esc(f('email'));
       return entryLines(heading(f('name'), joined([f('jobTitle'), f('company')], ', ')),
-        [italic(f('relationship')), joined([email, f('phone')], ' | ')], []);
+        [italic(f('relationship')), lead(joined([email, esc(f('phone'))], ' | '))], []);
     }
     default: { // custom, and any type this build does not know; the PDF prints its location whatever the options
       const dates = f('date') ? formatDate(f('date'), settings) : dateRange(f('startDate'), f('endDate'), settings);
@@ -188,11 +202,11 @@ function groupLines(group, fieldOf, settings, opts, one) {
 function listLines(type, items, fieldOf) {
   if (type === 'interests') {
     const all = items.flatMap((item) => String(fieldOf(item)('interests')).split(',').map((s) => s.trim()).filter(Boolean));
-    return all.length ? [all.join(', '), ''] : [];
+    return all.length ? [lead(all.map(esc).join(', ')), ''] : [];
   }
   const lines = [];
   for (const item of items) {
-    const f = fieldOf(item);
+    const f = (key) => esc(String(fieldOf(item)(key)).trim());
     if (type === 'skills') {
       const cat = f('category');
       const skl = f('skills');
@@ -218,17 +232,17 @@ export function generateMarkdownResume(resume) {
   const lines = [];
 
   // Header
-  if (p.name) lines.push(`# ${p.name}`);
-  if (p.title) lines.push(`**${p.title}**`);
+  if (String(p.name || '').trim()) lines.push(`# ${esc(p.name.trim())}`);
+  if (String(p.title || '').trim()) lines.push(`**${esc(p.title.trim())}**`);
   lines.push('');
 
   // Contact details: the PDF's contact lines — each field's Display label, else its address, linked
   // where the PDF links it (a Link URL override through safeHref). R2-129: a label never printed,
   // and an override went in as the link unchecked.
-  const contacts = contactItems(p).map(({ value, href }) => (href ? `[${value}](${href})` : value));
+  const contacts = contactItems(p).map(({ value, href }) => (href ? `[${esc(value)}](${href})` : esc(value)));
 
   if (contacts.length > 0) {
-    lines.push(contacts.join(' • '));
+    lines.push(lead(contacts.join(' • ')));
     lines.push('');
   }
 
@@ -255,7 +269,7 @@ export function generateMarkdownResume(resume) {
         ? roleGroups(items).flatMap((g) => groupLines(g, fieldOf, settings, opts, one))
         : items.flatMap(one);
     if (!body.some((l) => l.trim())) continue;
-    lines.push(`## ${s.title || s.type}`, ...body);
+    lines.push(`## ${esc(s.title || s.type)}`, ...body);
   }
 
   return lines.join('\n');
