@@ -42,6 +42,11 @@ const SPACING_PRESETS = {
   balanced: { label: 'Balanced', values: { marginV: 14, marginH: 18, sectionGap: 16, itemGap: 8, lineHeightValue: 1.5 } },
   spacious: { label: 'Spacious', values: { marginV: 20, marginH: 22, sectionGap: 22, itemGap: 12, lineHeightValue: 1.65 } },
 };
+// Each ↺'s section, as its header reads, for the notice its reset raises (R4-DUX-14).
+const SECTION_NAMES = new Map([
+  [COLOR_KEYS, 'Colors'], [TYPOGRAPHY_KEYS, 'Typography'], [SPACING_KEYS, 'Spacing'], [HEADING_KEYS, 'Section Headings'],
+  [ICON_KEYS, 'Contact icons'], [DATE_KEYS, 'Dates'], [LIST_KEYS, 'Lists'], [LINK_KEYS, 'Links'], [PAGE_NUMBER_KEYS, 'Page numbers'],
+]);
 // The paper, by its name and size as the editor states them: "A4 · 210 × 297 mm".
 const PAGE_SIZE_OPTIONS = PAGE_SIZE_IDS.map(id => ({ label: `${PAGE_SIZES[id].label} · ${PAGE_SIZES[id].dims}`, value: id }));
 
@@ -49,11 +54,12 @@ const PAGE_SIZE_OPTIONS = PAGE_SIZE_IDS.map(id => ({ label: `${PAGE_SIZES[id].la
  * Design → the résumé's look. Beyond the store's setting actions: `designs` (the ones the user saved,
  * savedDesigns) with `applyDesign`, `saveDesign` and `deleteDesign` (B4); `restoreDesign`, Undo after a
  * switch (A4); `onBrowseTemplates`, the gallery (A2); `templateOpen` / `onTemplateOpenChange`, whether
- * Template is open, kept by the editor across tabs (A12). Each is optional: without it, its control is not
+ * Template is open, kept by the editor across tabs (A12); `clearSettings`, a section reset's Undo deleting
+ * the keys that were unset (R4-DUX-14). Each is optional: without it, its control is not
  * offered.
  */
 export default function DesignPanel({
-  resume, updateSetting, setTemplate, resetSettings, designs = [], applyDesign, saveDesign, deleteDesign, restoreDesign,
+  resume, updateSetting, clearSettings, setTemplate, resetSettings, designs = [], applyDesign, saveDesign, deleteDesign, restoreDesign,
   onBrowseTemplates, templateOpen, onTemplateOpenChange,
 }) {
   const settings = resume.settings || {};
@@ -61,18 +67,20 @@ export default function DesignPanel({
   // Modern and Sidebar draw the pack whatever Contact style says, the others only with Icon.
   const drawsIcons = drawsContactIcons(current, settings);
   const [confirmReset, setConfirmReset] = useState(false);
+  const { toast, dismiss } = useToast();
   const pageSizeLabelId = useId();
   const [fitting, setFitting] = useState(false);
   const [fitNotice, setFitNotice] = useState('');
   const fitRun = useRef(false); // a fit is measuring: a second click waits for it, not starts another
   // The settings the fit's notice describes, and whether the résumé has shown them yet (R4-DUX-25).
   const noticeFor = useRef({ key: '', reached: false });
-  const { toast } = useToast();
   const latest = useRef(resume);
   latest.current = resume;
   const mounted = useRef(true);
   // Set again on mount: StrictMode's trial unmount (main.jsx) left it false, and every fit was dropped.
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
+  // A section reset's Undo leaves with the panel or the résumé: it would write into whichever is open.
+  useEffect(() => () => dismiss('design-section-reset'), [resume.id, dismiss]);
 
   /**
    * 1-Page Fit (R2-149): the preset at once, then the résumé is printed at it and, while it runs past
@@ -138,10 +146,35 @@ export default function DesignPanel({
     });
   }
 
-  /** A section's reset: its settings back to the template's defaults (Sidebar's plain headings, …). */
+  /**
+   * A section's reset: its settings back to the template's defaults (Sidebar's plain headings, …), and
+   * a notice with Undo (R4-DUX-14) — one click on a ↺ took back a whole group with no way back. Undo
+   * writes back only the keys the reset changed, as they were (an unset one deleted again, clearSettings),
+   * so what was edited since in another section stays; with the panel gone or another résumé open it does
+   * nothing (and the notice is dismissed then).
+   */
   function resetSection(keys) {
     const updated = sectionReset(resume.template, keys, settings);
     keys.forEach(k => { if (k in updated) updateSetting(k, updated[k]); });
+    // Nothing moved (already at the defaults): no notice, nothing to undo.
+    const changed = keys.filter(k => k in updated && updated[k] !== settings[k]);
+    if (!changed.length) return;
+    const before = changed.map(k => [k, settings[k]]);
+    const id = resume.id;
+    toast({
+      id: 'design-section-reset',
+      title: `${SECTION_NAMES.get(keys) || 'Section'} reset`,
+      duration: 8000,
+      action: {
+        label: 'Undo',
+        onClick: () => {
+          if (!mounted.current || latest.current?.id !== id) return;
+          const unset = before.filter(([, v]) => v === undefined).map(([k]) => k);
+          before.forEach(([k, v]) => { if (v !== undefined || !clearSettings) updateSetting(k, v); });
+          if (unset.length) clearSettings?.(unset);
+        },
+      },
+    });
   }
 
   // Every card, from the data (utils/templatePicker.js): the templates — the Sidebar's single column a
