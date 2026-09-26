@@ -546,7 +546,8 @@ function withLinks(items, links) {
     }
     if (!hits.length) continue;
     hits.sort((p, q) => q.it.y - p.it.y || p.it.x - q.it.x);
-    const label = hits.map((h) => h.it.str.slice(h.from, h.to)).join(' ').replace(/^[\s|•·]+|[\s|•·]+$/g, '').replace(/\s+/g, ' ');
+    // A box snapped to a word's edge takes the punctuation after the word ("Tidewater,"): not the label's.
+    const label = hits.map((h) => h.it.str.slice(h.from, h.to)).join(' ').replace(/^[\s|•·]+|[\s|•·,.;:!?]+$/g, '').replace(/\s+/g, ' ');
     if (!label) continue;
     // An address set in pieces ("linkedin.com/in/" "pat") is still the address.
     if (linkText(label.replace(/\s+/g, ''), url) === label.replace(/\s+/g, '')) continue;
@@ -559,7 +560,7 @@ function withLinks(items, links) {
     hits.forEach((h) => { if (h.from === 0 && h.to === h.it.str.length) whole.add(h.it); });
     const last = hits[hits.length - 1];
     // Never after the separator past its label: a box a little wider than its letters.
-    const end = last.it.str.slice(0, last.to).replace(/[\s|•·]+$/, '').length;
+    const end = last.it.str.slice(0, last.to).replace(/[\s|•·,.;:!?]+$/, '').length;
     inserts.set(last.it, [...(inserts.get(last.it) || []), { at: end, text: text.slice(label.length) }]);
   }
   for (const [it, list] of inserts) {

@@ -96,12 +96,15 @@ The Dashboard's and the editor's Import accept `.json,.pdf,.docx,.txt,.text,.md,
   tabs, wrapped lines joined, a Link annotation's address after a label it covers), a `.docx` by
   unzipping `word/document.xml` with `DecompressionStream` (the top Heading level used marks sections,
   deeper ones entries; the first page's header read first; a text box once; a hyperlink's target after
-  a label), Markdown through `markdownLines` (`#` name, `##` headings, `###` entries, a deeper heading
-  under an entry a grouped role; a link as "label (address)"), and text in UTF-8, UTF-16 (with its
-  mark) or Windows-1252. A password-protected PDF is told so (R4-IMP).
+  a label, a HYPERLINK field's too; a list item's level), Markdown through `markdownLines` (`#` name,
+  `##` headings, `###` entries, a deeper heading under an entry a grouped role; a link as "label
+  (address)"; an indented list item nested), and text in UTF-8, UTF-16 (with its mark) or Windows-1252.
+  Each line keeps its links' labels and addresses, so a link in body text is a link in the rich text
+  (R4-LO-05). A password-protected PDF is told so (R4-IMP).
 - `importText.js` (pure) reads the lines: name, job title, contacts, summary; a section per known
   heading (the app's titles and `ATS_STANDARD_SECTIONS` aliases), others custom; entries found by
-  their dates; every line it cannot place in a custom "Additional Information".
+  their dates (the PDF's and Word's "Group roles by company": the undated employer line over dated
+  roles, R4-LO-01); every line it cannot place in a custom "Additional Information".
 - The editor then shows a dismissable notice (`useImportNotice`, route state `importNotice`).
 - Tests: `tests/unit/import-text.unit.mjs`, round trip of the four exports in
   `tests/pdf/99-import-roundtrip.test.mjs`, the UI in `tests/pdf/99-import-ui.test.mjs`.
