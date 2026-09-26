@@ -4,10 +4,10 @@ title: Job Tracker — verified bugs, Low (J-16…J-41)
 
 # Job Tracker — verified bugs, Low (J-16…J-41)
 
-> Part of [README.md](README.md). Status: 🔴 open · ⏸ fixed on `boards-jobs-ui` (not merged) · ✅ merged to master · ✖ not a bug.
+> Part of [README.md](README.md). Status: 🔴 open · ⏸ fixed on the work branch, not yet on master (not deployed) · ✅ on master (deployed) · ✖ not a bug.
 > Set the row (status + commit + test) in the SAME commit as the fix. Found by WF-1 `wf_a523cc8e-2ca` at `8409472`, 2026-09-23.
 
-### J-16 · Low · data-loss · ⏸ Fixed · links **R2-075**
+### J-16 · Low · data-loss · ✅ Fixed · links **R2-075**
 **/jobs/:id/edit for an unknown or deleted job shows an editable form whose Save discards the input without a message**
 - **Where:** `src/pages/JobForm.jsx` : 34-35, 55-58
 - **Repro:** 1. Visit /#/jobs/nope/edit. 2. Fill in Company and Role and click Save Changes. 3. 'Job not found.' appears, and what was typed is gone. The same happens when another tab deletes the job while its edit form is open.
@@ -16,9 +16,9 @@ title: Job Tracker — verified bugs, Low (J-16…J-41)
 - **Verified (WF-1):** Read the code: isEdit comes from the URL param alone (34), and existing is undefined for an unknown id. Ran verify-jobs/v-store.mjs: updateJob('nope', {...}) left storage as ['Acme'] with no 'nope' job. The navigate at 57 then lands on JobDetail's 'Job not found.' view (JobDetail.jsx:28-38).
 - **Fail-first test:** Store test: updateJob('missing', {...}) returns false (or reports not found). Cypress: /#/jobs/nope/edit shows a not-found state and no inputs.
 - **Now:** `updateJob` returns false and writes nothing when the job is gone. The form renders 'Job not found' for an unknown id (no inputs); when the job is deleted while its form is open it keeps the input, says so (role=alert) and offers 'Save as a new job'. Fail-first: both J-16 tests in 67-job-form-save.test.mjs failed at HEAD (the form rendered for /jobs/nope/edit; Save threw the input away), and the store test got undefined; all pass now.
-- **Owner:** JOBS-FIX · **Fix commit:** this commit (`fix(jobs): the job form saves only what it edited, keeps input for a deleted job, and dates follow the status (J-02, J-10, J-16)`) · **Test:** tests/pdf/67-job-form-save.test.mjs, tests/unit/job-store-edits.unit.mjs
+- **Owner:** JOBS-FIX · **Fix commit:** `7f4a3f8` (`fix(jobs): the job form saves only what it edited, keeps input for a deleted job, and dates follow the status (J-02, J-10, J-16)`) · **Test:** tests/pdf/67-job-form-save.test.mjs, tests/unit/job-store-edits.unit.mjs · **On master:** Lane C's merge `de0911f` (an ancestor of master `e6b1a4a`, deployed)
 
-### J-17 · Low · security · ⏸ Fixed · links **R2-102**
+### J-17 · Low · security · ✅ Fixed · links **R2-102**
 **CSV export does not neutralise formula cells (CSV/formula injection)**
 - **Where:** `src/utils/jobCsv.js` : 8-12
 - **Repro:** 1. Import a job JSON whose company is '=HYPERLINK("http://evil.example","Click")', or type it. 2. Export CSV and open the file in Excel or Sheets: the cell is evaluated as a formula or link.
@@ -27,9 +27,9 @@ title: Job Tracker — verified bugs, Low (J-16…J-41)
 - **Verified (WF-1):** Ran verify-jobs/v-pure.mjs: the row was written as "=HYPERLINK(""http://evil.example"",""Click"")","+SUM(1,1)", unchanged apart from the quote doubling.
 - **Fail-first test:** job-csv.unit.mjs: escapeCsvField('=1+1') === "\"'=1+1\"", and the same for values starting with +, -, @, \t and \r.
 - **Now:** `escapeCsvField` prefixes an apostrophe when a value starts with = + - @, a tab or a carriage return, then quotes it as before. Fail-first: the J-17 test failed at HEAD, passes now.
-- **Owner:** JOBS-FIX · **Fix commit:** this commit (`fix(jobs): the CSV export opens clean in Excel — plain-text notes, a BOM, formulas as text (J-08, J-09, J-17)`) · **Test:** tests/unit/job-csv.unit.mjs
+- **Owner:** JOBS-FIX · **Fix commit:** `7e49d33` (`fix(jobs): the CSV export opens clean in Excel — plain-text notes, a BOM, formulas as text (J-08, J-09, J-17)`) · **Test:** tests/unit/job-csv.unit.mjs · **On master:** Lane C's merge `de0911f` (an ancestor of master `e6b1a4a`, deployed)
 
-### J-18 · Low · bug · ⏸ Fixed
+### J-18 · Low · bug · ✅ Fixed
 **List view sorts every column as text: Status by internal id, Salary as a string, and blank dates first**
 - **Where:** `src/components/job/ListView.jsx` : 13-23
 - **Repro:** 1. On /jobs switch to List view. 2. Click Status: Phone Screen sorts after Offer and On Hold. 3. Click Salary: $90k sorts above $180k. 4. Click Deadline: rows without a deadline come first. 5. After clicking any header, the default order (last updated) cannot be chosen again.
@@ -38,9 +38,9 @@ title: Job Tracker — verified bugs, Low (J-16…J-41)
 - **Verified (WF-1):** Ran verify-jobs/v-pure.mjs with the comparator copied verbatim from ListView.jsx:19-23. Status ascending gave 'applied < interview < offer < on_hold < phone_screen < rejected < saved < withdrawn'. Salary ascending gave '"" < "$120,000" < "$180k – $250k" < "$90k"'. Deadline ascending put "" first.
 - **Fail-first test:** Extract the comparator to src/utils/jobSort.js. Test status in JOB_STATUSES order, blanks last in both directions, and $90k < $120,000 < $180k.
 - **Now:** The list view sorts through `sortJobs(jobs, key, dir)` in `src/utils/jobQuery.js`: status in pipeline order (then the closed ones), dates as dates, salary by its first amount (`salaryValue`: k / m / LPA / lakh / Cr), text with a base-sensitivity collator; blanks last in both directions, ties keep the list's order. A third click on a header returns to the default order (last updated). Fail-first: the test file could not load at HEAD (no module), and the old comparator, run verbatim on the same fixtures in scratch, gave 'applied < interview < offer < on_hold < phone_screen …', '"" < $120,000 < $180k – $250k < $90k' and a blank deadline first; the J-18 tests pass now.
-- **Owner:** JOBS-FIX · **Fix commit:** this commit (`feat(jobs): jobQuery — tested filters, sorting, KPI stats and funnel; the list sorts each column by its kind (J-18)`) · **Test:** tests/unit/job-query.unit.mjs
+- **Owner:** JOBS-FIX · **Fix commit:** `f7a15c8` (`feat(jobs): jobQuery — tested filters, sorting, KPI stats and funnel; the list sorts each column by its kind (J-18)`) · **Test:** tests/unit/job-query.unit.mjs · **On master:** Lane C's merge `de0911f` (an ancestor of master `e6b1a4a`, deployed)
 
-### J-19 · Low · bug · ⏸ Fixed
+### J-19 · Low · bug · ✅ Fixed
 **Imported status history and to-dos are not normalised like the job: wrong rejection count, no 'Current', 'Invalid Date', and done:'false' counted as done**
 - **Where:** `src/utils/normalizeJob.js` : 42-48, 66-70, 122-125 (rendered by src/components/job/StatusHistory.jsx:15, 42-43, 62, 77-79)
 - **Repro:** 1. Import [{"company":"X","status":"Rejected","statusHistory":[{"status":"Applied","changedAt":"yesterday"},{"status":"Rejected"}],"todos":[{"text":"a","done":"false"}]}]. 2. Open X, then Overview: there is no 'Rejected 1×' badge and no 'Current', and 'Invalid Date' appears under Applied. 3. On Tasks, task 'a' is listed as completed.
@@ -49,9 +49,9 @@ title: Job Tracker — verified bugs, Low (J-16…J-41)
 - **Verified (WF-1):** Ran verify-jobs/v-pure.mjs with the real readJob and completeJob. The job status became 'rejected' and lost was false. The history was kept as [{"status":"Applied","changedAt":"yesterday"},{"status":"Rejected"},{"status":"ghosted","changedAt":5}], and todo.done stayed "false". STATUS_MAP['Rejected'] is undefined, so StatusHistory counts 0 rejections and never shows 'Current'. fmt('yesterday') returned 'Invalid Date', and Boolean('false') is true.
 - **Fail-first test:** normalize-job.unit.mjs: completeJob maps history 'Rejected' to 'rejected', drops 'ghosted' with lost=true, drops changedAt 'yesterday', and turns done:'false' into false.
 - **Now:** `readJob` keeps a history entry only when it names a tracker status (in any case; 'ghosted' is left out, a loss), turns a date or number written as text into its time and drops a `changedAt` that is no time (a loss); a to-do's non-boolean `done` becomes true only for true/'true'/1 (not a loss). `completeJob` maps the history's statuses to ids ('Rejected' → 'rejected'), so the Rejected count and 'Current' work. Fail-first: the four J-19 tests failed at HEAD (`# fail 4`), pass now.
-- **Owner:** JOBS-FIX · **Fix commit:** this commit (`fix(jobs): imported history and to-dos are read like the job — status ids, real times, boolean done (J-19)`) · **Test:** tests/unit/normalize-job.unit.mjs
+- **Owner:** JOBS-FIX · **Fix commit:** `8658513` (`fix(jobs): imported history and to-dos are read like the job — status ids, real times, boolean done (J-19)`) · **Test:** tests/unit/normalize-job.unit.mjs · **On master:** Lane C's merge `de0911f` (an ancestor of master `e6b1a4a`, deployed)
 
-### J-20 · Low · bug · ⏸ Fixed · links **R2-101**
+### J-20 · Low · bug · ✅ Fixed · links **R2-101**
 **Status history labels an On Hold that was later closed as Rejected or Withdrawn '→ reopened'**
 - **Where:** `src/components/job/StatusHistory.jsx` : 3, 72-74
 - **Repro:** 1. On a job's Overview, click Mark as: On Hold. 2. Click Close as: Rejected. 3. Application History reads 'On Hold → reopened'.
@@ -60,9 +60,9 @@ title: Job Tracker — verified bugs, Low (J-16…J-41)
 - **Verified (WF-1):** Read the code. TERMINAL includes 'on_hold' (3), and any terminal entry that is not the last gets '→ reopened' (72-74). Pipeline.jsx:86-105 offers Close as Rejected/Withdrawn from On Hold, which produces [.., on_hold, rejected].
 - **Fail-first test:** Extract historyLabels(history). For [applied, on_hold, rejected] the on_hold label is not 'reopened'. For [rejected, applied] the rejected label is 'reopened'.
 - **Now:** StatusHistory renders `historyLabels(history)` (src/utils/jobQuery.js): '→ reopened' only when a pipeline status follows a closed one, so On Hold → Rejected is not 'reopened' while Rejected → Applied is; an entry with no time prints none. Fail-first: the J-20 test could not load at HEAD (no helper; the component labelled every non-last closed entry); passes now.
-- **Owner:** JOBS-FIX · **Fix commit:** this commit (`fix(jobs): the job page's history, résumé link, closed-job rule, tasks and demo job tell the truth (J-20, J-21, J-24, J-26, J-27, J-29)`) · **Test:** tests/unit/job-query.unit.mjs
+- **Owner:** JOBS-FIX · **Fix commit:** `9e6102d` (`fix(jobs): the job page's history, résumé link, closed-job rule, tasks and demo job tell the truth (J-20, J-21, J-24, J-26, J-27, J-29)`) · **Test:** tests/unit/job-query.unit.mjs · **On master:** Lane C's merge `de0911f` (an ancestor of master `e6b1a4a`, deployed)
 
-### J-21 · Low · bug · ⏸ Fixed · links **R2-100**
+### J-21 · Low · bug · ✅ Fixed · links **R2-100**
 **After its résumé is deleted, a job shows 'Not linked yet' next to an Open-resume button that bounces to the dashboard**
 - **Where:** `src/components/job/OverviewTab.jsx` : 118-135 (and src/pages/JobForm.jsx:139-142)
 - **Repro:** 1. Link a job to a résumé. 2. Delete that résumé on the dashboard. 3. Open the job's Overview: it reads 'Not linked yet', with an open icon beside it. 4. Click the icon: you land on the dashboard.
@@ -71,7 +71,7 @@ title: Job Tracker — verified bugs, Low (J-16…J-41)
 - **Verified (WF-1):** Read the code. The select's value is job.resumeId, which matches no option, so React selects the first option ('— Not linked yet —'). The button renders whenever job.resumeId is truthy (127) and navigates to /resume/<id>. useOpenResume.js:16 then redirects to '/' because that résumé does not exist. A grep shows nothing clears resumeId when a résumé is deleted.
 - **Fail-first test:** Pure helper linkedResume(job, resumes) returns {state:'deleted'} for a dangling id. Cypress: the Open button is hidden for a dangling id.
 - **Now:** `linkedResume(job, resumes)` tells 'linked', 'none' and 'deleted' apart. Overview and the job form show a 'Résumé deleted' option for a dangling id (the form's patch save no longer writes the id back unless it is changed), and the Open-résumé button appears only for a résumé that exists. Fail-first: the J-21 component test (tests/pdf/68-job-overview.test.mjs) found no 'Résumé deleted' option at HEAD; it and the pure test pass now.
-- **Owner:** JOBS-FIX · **Fix commit:** this commit (`fix(jobs): the job page's history, résumé link, closed-job rule, tasks and demo job tell the truth (J-20, J-21, J-24, J-26, J-27, J-29)`) · **Test:** tests/pdf/68-job-overview.test.mjs, tests/unit/job-query.unit.mjs
+- **Owner:** JOBS-FIX · **Fix commit:** `9e6102d` (`fix(jobs): the job page's history, résumé link, closed-job rule, tasks and demo job tell the truth (J-20, J-21, J-24, J-26, J-27, J-29)`) · **Test:** tests/pdf/68-job-overview.test.mjs, tests/unit/job-query.unit.mjs · **On master:** Lane C's merge `de0911f` (an ancestor of master `e6b1a4a`, deployed)
 
 ### J-22 · Low · bug · 🔴 Open · links **R2-099**
 **Clicking a kanban card's 'Open job posting' icon also navigates the tracker to the job page**
@@ -83,7 +83,7 @@ title: Job Tracker — verified bugs, Low (J-16…J-41)
 - **Fail-first test:** Cypress: remove the anchor's target attribute, click the kanban posting icon, and assert the hash stays '#/jobs'.
 - **Owner:** JOBS-UI · **Fix commit:** — · **Test:** —
 
-### J-23 · Low · bug · ⏸ Fixed · links **R2-117**
+### J-23 · Low · bug · ✅ Fixed · links **R2-117**
 **Job Tracker import shows no message when the browser cannot read the file**
 - **Where:** `src/pages/JobTracker.jsx` : 38-56
 - **Repro:** 1. Click Import and pick a file on a removable or network drive that is then unavailable, or revoke read access. 2. Nothing happens and no error is shown.
@@ -92,9 +92,9 @@ title: Job Tracker — verified bugs, Low (J-16…J-41)
 - **Verified (WF-1):** Read the code: only reader.onload is set (42-53). There is no onerror or onabort.
 - **Fail-first test:** Extract readImportFile(file, {onText, onError}) and test it with a fake FileReader that fires 'error': onError is called.
 - **Now:** The tracker reads the file through `readImportFile(file, { onText, onError })`, which handles `onerror`, `onabort` and a reader that throws with 'Could not read that file.' Fail-first: the J-23 test (a fake FileReader that fires error/abort/throws) could not load at HEAD — no such helper, and JobTracker set only `onload`; passes now.
-- **Owner:** JOBS-FIX · **Fix commit:** this commit (`fix(jobs): re-importing a backup never duplicates jobs, an import reports its counts, a read error says so (J-04, J-23)`) · **Test:** tests/unit/job-import.unit.mjs
+- **Owner:** JOBS-FIX · **Fix commit:** `e9c48c3` (`fix(jobs): re-importing a backup never duplicates jobs, an import reports its counts, a read error says so (J-04, J-23)`) · **Test:** tests/unit/job-import.unit.mjs · **On master:** Lane C's merge `de0911f` (an ancestor of master `e6b1a4a`, deployed)
 
-### J-24 · Low · ux-defect · ⏸ Fixed
+### J-24 · Low · ux-defect · ✅ Fixed
 **The 'read-only' lock on Rejected/Withdrawn jobs is bypassed by the Edit form and by a kanban drag, and the reopen confirmation guards only one of three paths**
 - **Where:** `src/components/job/OverviewTab.jsx` : 7, 26-34 (with src/pages/JobDetail.jsx:119-125, src/components/job/KanbanView.jsx:156-163, src/pages/JobForm.jsx:108-113, src/components/job/Pipeline.jsx:15-21)
 - **Repro:** 1. Mark a job Rejected: Overview says the fields are read-only and tells you to restart from the pipeline. 2. Click the Edit pencil, change Company and set Status to Interview, then save: no reopen confirmation appears. 3. Or drag its card from Rejected to Applied on /jobs: it reopens with no confirmation.
@@ -103,7 +103,7 @@ title: Job Tracker — verified bugs, Low (J-16…J-41)
 - **Verified (WF-1):** Read the code. OverviewTab locks the fields for rejected and withdrawn jobs (7, 26-34). The header pencil always opens JobForm, where every field and the status select can be edited, and saving calls updateJob with no confirmation. KanbanView's onDragEnd calls updateJob directly (156-163). Pipeline.confirmReopen (15-21) is the only confirmation.
 - **Fail-first test:** Cypress: reject a job, then check that the pencil and a drag follow the same rule as the Pipeline (the same confirm, or the same editable state).
 - **Now:** One rule: closed jobs stay editable. Overview no longer makes Rejected/Withdrawn fields read-only or says so (an info line points to the pipeline to restart), and the pipeline's restart calls `onChange` directly — no `window.confirm`, as the Edit form and a board drag never asked; every status change is recorded in the history (JOBS-UI adds the Undo toast). Fail-first: both J-24 tests in tests/pdf/68-job-overview.test.mjs failed at HEAD ('read-only' text; restart threw calling window.confirm); pass now.
-- **Owner:** JOBS-FIX · **Fix commit:** this commit (`fix(jobs): the job page's history, résumé link, closed-job rule, tasks and demo job tell the truth (J-20, J-21, J-24, J-26, J-27, J-29)`) · **Test:** tests/pdf/68-job-overview.test.mjs
+- **Owner:** JOBS-FIX · **Fix commit:** `9e6102d` (`fix(jobs): the job page's history, résumé link, closed-job rule, tasks and demo job tell the truth (J-20, J-21, J-24, J-26, J-27, J-29)`) · **Test:** tests/pdf/68-job-overview.test.mjs · **On master:** Lane C's merge `de0911f` (an ancestor of master `e6b1a4a`, deployed)
 
 ### J-25 · Low · ux-defect · 🔴 Open
 **The list says 'No jobs tracked yet' when a search or filter matches nothing, and the kanban has no empty state**
@@ -115,7 +115,7 @@ title: Job Tracker — verified bugs, Low (J-16…J-41)
 - **Fail-first test:** Cypress: in List view, search 'zzz' and expect 'No applications match'.
 - **Owner:** JOBS-UI · **Fix commit:** — · **Test:** —
 
-### J-26 · Low · ux-defect · ⏸ Fixed
+### J-26 · Low · ux-defect · ✅ Fixed
 **Adding a task whose text matches any existing task, even a completed one, does nothing and says nothing**
 - **Where:** `src/components/job/TasksTab.jsx` : 18-24
 - **Repro:** 1. On a job's Tasks tab, add 'Send thank-you email' and tick it. 2. Type 'Send thank-you email' again and press Enter or click +: nothing happens, and the input keeps the text.
@@ -124,9 +124,9 @@ title: Job Tracker — verified bugs, Low (J-16…J-41)
 - **Verified (WF-1):** Read the code: addTodo returns early when todos.some(td => td.text === t) (20). verify-jobs/v-pure.mjs showed the guard also matches a completed task's text (true).
 - **Fail-first test:** Extract addTodo into a pure helper and test that adding the text of a completed task adds a new to-do, or returns a reason the UI shows.
 - **Now:** The Tasks tab adds through `addTodo(todos, text)` (src/utils/jobEdits.js): any non-blank text is added, even one another task — done or not — has; ids keep them apart. Fail-first: the J-26 test could not load at HEAD (no helper; the tab returned early on a matching text); passes now.
-- **Owner:** JOBS-FIX · **Fix commit:** this commit (`fix(jobs): the job page's history, résumé link, closed-job rule, tasks and demo job tell the truth (J-20, J-21, J-24, J-26, J-27, J-29)`) · **Test:** tests/unit/job-edits.unit.mjs
+- **Owner:** JOBS-FIX · **Fix commit:** `9e6102d` (`fix(jobs): the job page's history, résumé link, closed-job rule, tasks and demo job tell the truth (J-20, J-21, J-24, J-26, J-27, J-29)`) · **Test:** tests/unit/job-edits.unit.mjs · **On master:** Lane C's merge `de0911f` (an ancestor of master `e6b1a4a`, deployed)
 
-### J-27 · Low · ux-defect · ⏸ Fixed
+### J-27 · Low · ux-defect · ✅ Fixed
 **With five or more completed tasks, the task just ticked disappears behind 'Show N more completed'**
 - **Where:** `src/components/job/TasksTab.jsx` : 6, 13-15, 26, 102
 - **Repro:** 1. Have a job with 5 completed tasks and 2 pending ones. 2. Tick the newest pending task: it vanishes from both lists.
@@ -135,9 +135,9 @@ title: Job Tracker — verified bugs, Low (J-16…J-41)
 - **Verified (WF-1):** verify-jobs/v-pure.mjs replayed TasksTab.jsx:13-15 and 26 with 5 done tasks and 2 pending. After ticking Task 7, the visible done list was 'Task 1, Task 2, Task 3, Task 4, Task 5' and pending was 'Task 6', so Task 7 appears in neither.
 - **Fail-first test:** Pure helper visibleDone(todos, 5), sorted by completedAt descending: the task just ticked is first.
 - **Now:** Ticking a task stamps `completedAt` (`toggleTodo`; unticking removes it) and the Completed list is `visibleDone(todos)` — newest first, older ones without a time after in their order — so the task just ticked is first, never behind 'Show N more'. Fail-first: the J-27 tests could not load at HEAD; pass now.
-- **Owner:** JOBS-FIX · **Fix commit:** this commit (`fix(jobs): the job page's history, résumé link, closed-job rule, tasks and demo job tell the truth (J-20, J-21, J-24, J-26, J-27, J-29)`) · **Test:** tests/unit/job-query.unit.mjs, tests/unit/job-edits.unit.mjs
+- **Owner:** JOBS-FIX · **Fix commit:** `9e6102d` (`fix(jobs): the job page's history, résumé link, closed-job rule, tasks and demo job tell the truth (J-20, J-21, J-24, J-26, J-27, J-29)`) · **Test:** tests/unit/job-query.unit.mjs, tests/unit/job-edits.unit.mjs · **On master:** Lane C's merge `de0911f` (an ancestor of master `e6b1a4a`, deployed)
 
-### J-28 · Low · bug · ⏸ Fixed
+### J-28 · Low · bug · ✅ Fixed
 **A custom stage that differs from an existing one only in case is not added, but the job still gets the text as typed**
 - **Where:** `src/components/job/InterviewStageSelector.jsx` : 9-15 (with src/utils/jobStages.js:93-98)
 - **Repro:** 1. Click Add Job, then under Interview Stage enter 'hr round' in Add Custom Stage and click Add. 2. The badge shows 'hr round', but neither 'HR Round' nor any custom stage is selected.
@@ -146,9 +146,9 @@ title: Job Tracker — verified bugs, Low (J-16…J-41)
 - **Verified (WF-1):** Ran verify-jobs/v-stages.mjs with the real src/utils/jobStages.js, replaying handleAddStage. It printed custom stages [], job stage "hr round", predefined item active false, custom item active false.
 - **Fail-first test:** job-stages.unit.mjs: addCustomStage('hr round') returns 'HR Round' and leaves the custom list unchanged.
 - **Now:** `addCustomStage(label)` returns the stage the job is to get: the existing one (predefined or custom) when it differs only in case or spacing, else the new one (trimmed); '' for a blank label. InterviewStageSelector passes that to `onStageChange`. Fail-first: the J-28 test failed at HEAD (`addCustomStage` returned undefined), passes now.
-- **Owner:** JOBS-FIX · **Fix commit:** this commit (`fix(jobs): a custom stage that differs only in case selects the existing one (J-28)`) · **Test:** tests/unit/job-stages.unit.mjs
+- **Owner:** JOBS-FIX · **Fix commit:** `3148f94` (`fix(jobs): a custom stage that differs only in case selects the existing one (J-28)`) · **Test:** tests/unit/job-stages.unit.mjs · **On master:** Lane C's merge `de0911f` (an ancestor of master `e6b1a4a`, deployed)
 
-### J-29 · Low · bug · ⏸ Fixed
+### J-29 · Low · bug · ✅ Fixed
 **The demo job's dates contradict each other: history in June 2025, applied in June 2026, and a deadline already past**
 - **Where:** `src/hooks/useJobStore.js` : 9-30
 - **Repro:** 1. In a fresh browser, open /#/jobs. 2. The Google card shows 'Deadline passed 2026-06-30'. 3. Open it, then Overview: Application History is dated Jun 9-12, 2025, while the Applied Date is 2026-06-10.
@@ -157,7 +157,7 @@ title: Job Tracker — verified bugs, Low (J-16…J-41)
 - **Verified (WF-1):** Ran verify-jobs/v-store.mjs with empty storage. The demo history dates were 2025-06-09, 2025-06-10, 2025-06-11 and 2025-06-12, with appliedDate 2026-06-10 and deadline 2026-06-30. deadlineState(deadline, 2026-09-23) returned 'past'.
 - **Fail-first test:** Unit test on a demoJobs(now) factory: the deadline is not 'past', and every history time lies between the applied date and now.
 - **Now:** The demo job is built by `demoJobs(now)` (src/utils/jobEdits.js): applied ten days ago, its history on that day and the days after (never after now), the deadline five days ahead, notes as editor HTML; id still 'demo_1'. `JOB_VERSION` is unchanged, so no user's list gets the demo back. Fail-first: the J-29 test could not load at HEAD (fixed 2025/2026 constants in the store); passes now.
-- **Owner:** JOBS-FIX · **Fix commit:** this commit (`fix(jobs): the job page's history, résumé link, closed-job rule, tasks and demo job tell the truth (J-20, J-21, J-24, J-26, J-27, J-29)`) · **Test:** tests/unit/job-edits.unit.mjs
+- **Owner:** JOBS-FIX · **Fix commit:** `9e6102d` (`fix(jobs): the job page's history, résumé link, closed-job rule, tasks and demo job tell the truth (J-20, J-21, J-24, J-26, J-27, J-29)`) · **Test:** tests/unit/job-edits.unit.mjs · **On master:** Lane C's merge `de0911f` (an ancestor of master `e6b1a4a`, deployed)
 
 ### J-30 · Low · ux-defect · 🔴 Open
 **The tracker's view, sort, search and filter reset every time the user opens a job and comes back**

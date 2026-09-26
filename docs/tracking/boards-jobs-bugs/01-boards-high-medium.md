@@ -4,10 +4,10 @@ title: Boards — verified bugs, High and Medium (B-01…B-13)
 
 # Boards — verified bugs, High and Medium (B-01…B-13)
 
-> Part of [README.md](README.md). Status: 🔴 open · ⏸ fixed on `boards-jobs-ui` (not merged) · ✅ merged to master · ✖ not a bug.
+> Part of [README.md](README.md). Status: 🔴 open · ⏸ fixed on the work branch, not yet on master (not deployed) · ✅ on master (deployed) · ✖ not a bug.
 > Set the row (status + commit + test) in the SAME commit as the fix. Found by WF-1 `wf_a523cc8e-2ca` at `8409472`, 2026-09-23.
 
-### B-01 · High · data-loss · ⏸ Fixed
+### B-01 · High · data-loss · ✅ Fixed
 **After you leave the board pages, the store stops listening to other tabs. When you come back it shows a stale list, and the next edit overwrites boards another tab saved**
 - **Where:** `src/hooks/useBoardStore.js` : 101-120 (subscribe), 79-82 (snapshot), 127-133 (setBoards)
 - **Repro:** 1) Tab A: open /#/boards, then click the back arrow to the dashboard. 2) Tab B: open /#/boards, click New board and add a card to it. 3) Tab A: click Boards. B's board is missing. 4) Tab A: rename any board. 5) B's board is removed from storage and from tab B. Reloading either tab does not bring it back, and there is no backup or notice.
@@ -16,9 +16,9 @@ title: Boards — verified bugs, High and Medium (B-01…B-13)
 - **Verified (WF-1):** Code read at useBoardStore.js:101-120: init() runs only while !initialized. The 'storage' listener is removed when listeners.size hits 0, but `current` and `initialized` stay as they are, so a later subscribe re-adds the listener without re-reading storage. grep shows only Boards.jsx and Board.jsx import useBoardStore, so any visit to the dashboard, editor or jobs leaves the store deaf. Ran scratchpad/audit/verify-boards/v1-stale.mjs: two module instances (two tabs) share one fake localStorage that fires storage events to the other tab's window, with react stubbed. Printed: "storage after B adds a board : ['Product launch','Made in B']", "tab A shows on return : ['Product launch']", "storage after one edit in A : ['Renamed in A']", "tab B now shows : ['Renamed in A']".
 - **Fail-first test:** tests/unit/board-store.unit.mjs: register a react stub with node:module register, then import useBoardStore.js twice with different ?tab queries sharing one fake localStorage that dispatches storage events to the other tab's window stub. A subscribes and unsubscribes, B calls addBoard, A subscribes again. Assert A.snapshot().boards contains B's board. Then call A.updateBoard and assert the stored JSON still holds B's board. Fails today.
 - **Now:** When the first board page subscribes again after none was open, the store compares storage with the value it last wrote or took, and when another tab saved in between it takes that list through the same path as a 'storage' event (keepUnsaved keeps anything storage refused here). Unchanged storage keeps the very same snapshot, so a StrictMode remount costs no re-render. The v2 store keeps this. useJobStore.js has the same shape; it belongs to JOBS-FIX and was not touched here. Fail-first: the row's two-tab test printed `tab A shows ["Product launch"]` at HEAD.
-- **Owner:** BOARDS-MODEL · **Fix commit:** this commit (`fix(boards): a tab coming back to the boards takes what other tabs saved (B-01)`) · **Test:** tests/unit/board-store.unit.mjs
+- **Owner:** BOARDS-MODEL · **Fix commit:** `8ec7f2e` (`fix(boards): a tab coming back to the boards takes what other tabs saved (B-01)`) · **Test:** tests/unit/board-store.unit.mjs · **On master:** Lane C's merge `de0911f` (an ancestor of master `e6b1a4a`, deployed)
 
-### B-02 · Medium · crash · ⏸ Fixed · links **R2-041**
+### B-02 · Medium · crash · ✅ Fixed · links **R2-041**
 **A saved list whose cards array is missing or null passes normalisation and crashes /boards and /boards/:id on every load, with no backup or recovery notice**
 - **Where:** `src/utils/normalizeBoard.js` : 118, 178 (crash sites: src/pages/Boards.jsx:68, src/pages/Board.jsx:196 and 99-100, src/components/board/BoardColumn.jsx:24, src/hooks/useBoardStore.js:213)
 - **Repro:** 1) In DevTools set localStorage cpwtcv_boards_v1 to {"boards":[{"id":"b","title":"B","lists":[{"id":"l","title":"x"}]}],"dataVersion":1}. 2) Open /#/boards: the ErrorBoundary replaces the page. 3) Reload: it crashes again. 4) /#/boards/b crashes as well.
@@ -27,7 +27,7 @@ title: Boards — verified bugs, High and Medium (B-01…B-13)
 - **Verified (WF-1):** Code read: readList repairs cards only when list.cards != null (normalizeBoard.js:118), and completeLists skips non-arrays (L178). Ran verify-boards/v2-nocards.mjs with lists [{id:'l'},{id:'m',cards:null}]. Printed: 'recovery notice: null'. Storage was rewritten unchanged by init. 'backup keys: []', 'Boards.jsx:68 expression throws: Cannot read properties of undefined (reading 'length')', 'useBoardStore addCard throws: l.cards is not iterable'. The throw is caught by the ErrorBoundary in AppRoutes.jsx:20.
 - **Fail-first test:** tests/unit/normalize-board.unit.mjs (the file normalizeBoard.js:6 already cites): completeBoard(readBoard({id:'b',lists:[{id:'l'},{id:'m',cards:null}]}).kept).lists.every(l => Array.isArray(l.cards)) must be true. Fails today.
 - **Now:** readList repairs a missing, null or non-list `cards` to `[]` (a loss only when it held something that is not a list), and completeLists defaults it for any other caller. The v2 reader keeps this for v1 data (the migration reads v1 lists through it). Fail-first: the row's own assertion was `false` at HEAD (`# fail 1`), passes now.
-- **Owner:** BOARDS-MODEL · **Fix commit:** this commit (`fix(boards): a list with no cards reads as an empty list (B-02)`) · **Test:** tests/unit/normalize-board.unit.mjs
+- **Owner:** BOARDS-MODEL · **Fix commit:** `a9eacee` (`fix(boards): a list with no cards reads as an empty list (B-02)`) · **Test:** tests/unit/normalize-board.unit.mjs · **On master:** Lane C's merge `de0911f` (an ancestor of master `e6b1a4a`, deployed)
 
 ### B-03 · Medium · data-loss · 🔴 Open · links **R2-037**
 **The board page never shows the storage-full alert or the recovery notice, so edits made there are lost on reload without warning**
@@ -49,7 +49,7 @@ title: Boards — verified bugs, High and Medium (B-01…B-13)
 - **Fail-first test:** tests/unit/board-transfer.unit.mjs for a new exportBoards/importBoards pair: export → JSON → import round-trips every board, list, card and checklist item with lost=false. Also an SSR render of Boards asserting an 'Export boards' control. Fails today (the functions do not exist).
 - **Owner:** BOARDS-MODEL (export/import fns) + BOARDS-UI-B (UI + PrivacyPage.jsx) · **Fix commit:** — · **Test:** —
 
-### B-05 · Medium · bug · 🔴 Open · model half ⏸
+### B-05 · Medium · bug · 🔴 Open · model half ✅
 **A card dragged to another list can never land at the bottom of a list with 2 or more cards: it is inserted above the last card, and no placeholder shows during the drag**
 - **Where:** `src/pages/Board.jsx` : 122-135, 204
 - **Repro:** On the demo 'Product launch' board: 1) Drag 'Build pricing page' out of 'In progress'. 2) Release it just below 'Pick hero image', the last card of 'To do' (over its 'Add a card' button), or anywhere lower. 3) It lands between 'Draft landing copy' and 'Pick hero image'. No gap opened in 'To do' during the drag.
@@ -58,7 +58,7 @@ title: Boards — verified bugs, High and Medium (B-01…B-13)
 - **Verified (WF-1):** Ran verify-boards/v5-dnd.mjs, which runs dnd-kit 6.3.1's own closestCorners on a layout taken from the Board, BoardColumn and BoardCard classes. With the overlay 8, 30, 60 and 200px below 'Pick hero image', every drop gave over=hero, i.e. 'insert at index 1 of todo (above hero)' (hero:59.6 vs todo:100.19 at +8px). A 4-card list gave 'insert at index 3 of todo (above c4)'. Analytically, the column rect wins only when its top is within about 42px of the last card's top, which means 0 or 1 cards. No preview: sortable.esm.js:310-314 gives activeIndex -1 and overIndex ≠ -1 in the target list, so disableTransforms is true, and there is no onDragOver. Same-list moves are correct, because strip-then-insert matches arrayMove.
 - **Fail-first test:** Extract onDragEnd's target maths into a pure resolveCardDrop(board, activeId, over, activeRect, overRect) in src/utils/boardDnd.js. tests/unit/board-dnd.unit.mjs feeds it closestCorners output on the v5 geometry and asserts that a drop below the last card of a 2-card list gives toIndex 2 (append). Fails today (gives 1).
 - **Now:** Model half (BOARDS-MODEL): `moveIssue(board, issueId, { columnId, sprintId, beforeId })` splices the issue into the global rank — before `beforeId`, or after the last issue of the target column/sprint when it is null — and `beforeIdAt(visibleIds, index, activeId)` turns a drop index (dnd-kit's arrayMove index, or the hovered index in another column) into that beforeId, null at or past the end. Tests drop a card at every index of a 2-card column, the bottom included, and reorder within a column to the bottom. The drop side (collision detection, the onDragOver gap, calling moveIssue with beforeIdAt) is BOARDS-UI-A's; the row stays 🔴 until it lands. Fail-first: at HEAD neither function existed (both test files failed to import). Honest note: the v1 store's `moveCard(toIndex null)` did append; the defect is the drop handler's target index.
-- **Owner:** BOARDS-MODEL (moveIssue maths) + BOARDS-UI-A (drop handling) · **Fix commit:** model half: this commit (`feat(boards): the v2 model, its mutations and its queries, pure and tested`); drop side: — (BOARDS-UI-A) · **Test:** tests/unit/board-ops.unit.mjs, tests/unit/board-query.unit.mjs (model half)
+- **Owner:** BOARDS-MODEL (moveIssue maths) + BOARDS-UI-A (drop handling) · **Fix commit:** model half: `4734406` (`feat(boards): the v2 model, its mutations and its queries, pure and tested`, on master through `de0911f`); drop side: — (BOARDS-UI-A) · **Test:** tests/unit/board-ops.unit.mjs, tests/unit/board-query.unit.mjs (model half)
 
 ### B-06 · Medium · a11y · 🔴 Open · links **R2-039**
 **Keyboard users cannot open a board card: the focusable role=button card ignores Enter and Space (the 'open' part of R2-039)**

@@ -2,7 +2,7 @@
 title: Boards + Job Tracker bug tracker (Lane C)
 ---
 
-# Boards + Job Tracker — bug tracker (Lane C, branch `boards-jobs-ui`)
+# Boards + Job Tracker — bug tracker (Lane C)
 
 Found by WF-1 (`wf_a523cc8e-2ca`, 2026-09-23, at master `8409472`): 4 finders (boards-logic, boards-UX, jobs-logic,
 jobs-UX) reported 108 raw findings; one adversarial verifier per area merged duplicates, re-read every cited line,
@@ -14,7 +14,10 @@ ran throwaway node scripts where decisive, and refuted what did not hold. **Noth
 | Jobs | 41 (1 High · 14 Medium · 26 Low) | 6 |
 | **Total** | **72 (2 High · 26 Medium · 44 Low)** | **9** |
 
-Status legend: 🔴 open · ⏸ fixed on `boards-jobs-ui` (not merged) · ✅ merged to master · ✖ not a bug.
+Lane C's branch `boards-jobs-ui` was merged by `de0911f` (2026-09-24), an ancestor of master `e6b1a4a` (deployed):
+every row fixed there is ✅.
+
+Status legend: 🔴 open · ⏸ fixed on the work branch, not yet on master (not deployed) · ✅ on master (deployed) · ✖ not a bug.
 
 | File | Rows |
 |---|---|
@@ -24,10 +27,21 @@ Status legend: 🔴 open · ⏸ fixed on `boards-jobs-ui` (not merged) · ✅ me
 | [03-jobs-low.md](03-jobs-low.md) | J-16 … J-41 |
 | [04-refuted-and-proposals.md](04-refuted-and-proposals.md) | 9 refuted + the merged proposals |
 
+## Status now
+
+| Area | ✅ on master | ⏸ not deployed | 🔴 open |
+|---|---|---|---|
+| Boards (31) | 3 | 0 | 28 |
+| Jobs (41) | 19 | 0 | 22 |
+| **Total (72)** | **22** | **0** | **50** |
+
+The 22 ✅ are Lane C's own fixes, each row naming its commit: B-01, B-02, B-15, J-01 … J-04, J-08 … J-10, J-16 … J-21,
+J-23, J-24, J-26 … J-29.
+
 ## Links to the master tracker (`bug-status-r2/`)
 
-These R2 rows are the same defects; Lane C fixes them here. If Lane A lands one on master first, take master into
-this branch and mark the row ✅ with Lane A's commit.
+These R2 rows are the same defects. Where one was fixed under its R2 row instead, this tracker's row is ✅ with
+that R2 row and its commits.
 
 | R2 | Here |
 |---|---|
