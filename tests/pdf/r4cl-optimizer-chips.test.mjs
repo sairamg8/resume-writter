@@ -61,6 +61,12 @@ describe('a power verb chip (R4-CL-07)', () => {
     assert.equal(await after_('Led, with two peers, the migration', ['Spearheaded', 'Leadership']), 'Spearheaded, with two peers, the migration');
   });
 
+  it('replaces a whole verb phrase Auto-Fix writes, and keeps a leading bullet mark', async () => {
+    assert.equal(await after_('Contributed to the hackathon', ['Spearheaded', 'Leadership']), 'Spearheaded the hackathon');
+    assert.equal(await after_('Collaborated on the SDK', ['Architected']), 'Architected the SDK');
+    assert.equal(await after_('- Led the migration', ['Spearheaded', 'Leadership']), '- Spearheaded the migration');
+  });
+
   it('keeps the statement\'s line breaks', async () => {
     assert.equal(await after_('Built the API\nCut costs by 20%', ['Architected']), 'Architected the API\nCut costs by 20%');
   });

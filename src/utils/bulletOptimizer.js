@@ -240,13 +240,28 @@ export function analyzeBullet(text = '') {
 export function insertActionVerb(text, verb) {
   const s = String(text ?? '');
   if (!s.trim()) return `${verb} `;
-  if (leadsWithActionVerb(s)) return s.replace(/^(\s*[^\p{L}\s]*)\p{L}[\p{L}'’-]*/u, (_, lead) => lead + verb);
+  // Bullet marks, quotes and spaces before the first word stay where they are ("- Led …").
+  const lead = s.match(/^[\s•\-*–—◦▪▸‣⁃"'“‘(]*/u)[0];
+  const rest = s.slice(lead.length);
+  // A verb phrase Auto-Fix or the tips write ("Contributed to", "Collaborated on") goes whole, or the
+  // chip left "Spearheaded to the hackathon".
+  const phrase = rest.match(LEADING_VERB_PHRASE);
+  if (phrase) return lead + verb + rest.slice(phrase[0].length);
+  if (leadsWithActionVerb(rest)) return lead + rest.replace(/^\p{L}[\p{L}'’-]*/u, verb);
   for (const wp of WEAK_PHRASE_REPLACEMENTS) {
-    const weak = new RegExp(`^(\\s*[^\\p{L}\\s]*)${wp.match.source}`, 'iu');
-    if (weak.test(s)) return s.replace(weak, (_, lead) => lead + verb);
+    const weak = new RegExp(`^${wp.match.source}`, 'iu');
+    if (weak.test(rest)) return lead + rest.replace(weak, verb);
   }
-  return s.replace(/^(\s*)(\S*)/u, (_, space, word) => `${space}${verb} ${/^\p{Lu}\p{Ll}+(?!\p{L})/u.test(word) ? word[0].toLowerCase() + word.slice(1) : word}`);
+  const [word] = rest.match(/^\S*/u);
+  return `${lead}${verb} ${/^\p{Lu}\p{Ll}+(?!\p{L})/u.test(word) ? word[0].toLowerCase() + rest.slice(1) : rest}`;
 }
+
+/** The verb phrases of more than one word among Auto-Fix's replacements and their alternatives. */
+const LEADING_VERB_PHRASE = new RegExp(`^(?:${WEAK_PHRASE_REPLACEMENTS
+  .flatMap(({ replacement, alternatives }) => [replacement, ...alternatives])
+  .filter((p) => p.includes(' '))
+  .map((p) => p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+  .join('|')})\\b`, 'iu');
 
 /**
  * The statement with a metric phrase ("by 35%") added at its end, before its closing punctuation:
