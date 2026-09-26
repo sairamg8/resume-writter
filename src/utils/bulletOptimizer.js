@@ -37,7 +37,7 @@ export const WEAK_PHRASE_REPLACEMENTS = [
   { match: /\b(helped with|helped to|assisted with|assisted in)\b/gi, replacement: 'Facilitated', alternatives: ['Supported delivery of', 'Co-engineered', 'Accelerated'] },
   { match: /\b(handled)\b/gi, replacement: 'Managed', alternatives: ['Resolved', 'Administered', 'Executed'] },
   // "did" as a main verb only: in "did not" it is a helper verb, and Auto-Fix wrote "delivered not" (R4-LO-10).
-  { match: /\b(did)\b(?!\s+not\b)/gi, replacement: 'Delivered', alternatives: ['Conducted', 'Accomplished', 'Produced'] },
+  { match: /\b(did)\b(?!\s+(?:not|never)\b)/gi, replacement: 'Delivered', alternatives: ['Conducted', 'Accomplished', 'Produced'] },
   { match: /\b(made sure|ensured that|ensured)\b/gi, replacement: 'Guaranteed', alternatives: ['Maintained compliance with', 'Enforced', 'Safeguarded'] },
   { match: /\b(changed)\b/gi, replacement: 'Transformed', alternatives: ['Modernized', 'Overhauled', 'Refactored'] },
   { match: /\b(participated in)\b/gi, replacement: 'Contributed to', alternatives: ['Partnered in', 'Active member of', 'Drove'] },

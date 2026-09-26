@@ -8,6 +8,7 @@ import { analyzeBullet, autoFixWeakPhrases } from '../../src/utils/bulletOptimiz
 test('Auto-Fix leaves "did not" alone and still replaces "did" as a main verb', () => {
   assert.equal(autoFixWeakPhrases('Did not miss a deadline in 3 years'), 'Did not miss a deadline in 3 years');
   assert.equal(autoFixWeakPhrases('Shipped 4 releases and did not miss one'), 'Shipped 4 releases and did not miss one');
+  assert.equal(autoFixWeakPhrases('Did never miss a deadline in 3 years'), 'Did never miss a deadline in 3 years');
   assert.equal(autoFixWeakPhrases('Did the quarterly audit; did not miss one'), 'Delivered the quarterly audit; did not miss one');
 });
 
