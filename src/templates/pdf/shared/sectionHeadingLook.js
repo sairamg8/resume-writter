@@ -33,7 +33,9 @@ export const titleTrackingPct = (size, pct) => (typeof pct === 'number' ? pct : 
  *              long, in Border colour, else the accent at full strength. Word prints Line after as a
  *              bottom border on every template: a paragraph's border cannot stop short.
  *   variant    the designed layouts' own mark under their own heading style (R2-138 B2), else null —
- *              drawn by PdfSectionTitle; Word prints the style's plain form, as it does Compact's:
+ *              drawn by PdfSectionTitle, and by Word as paragraph borders (wordExportBuilders.js
+ *              headingFrame, R4-DOUT-10) — save soft, whose underline Word prints full width, and
+ *              bleed, whose band Word shades inside the margins:
  *                framed    Ruled with a rule above the title as well (Gridline)
  *                overline  Ruled with the rule above the title, none under it (Broadsheet)
  *                dotted    Underline dotted (Registry)
