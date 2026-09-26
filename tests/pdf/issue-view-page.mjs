@@ -5,7 +5,7 @@
 // One file per row, so a fail-first run on CI tells which fix a failure belongs to.
 import { before, after, beforeEach, afterEach } from 'node:test';
 import { createElement as h } from 'react';
-import { MemoryRouter, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
+import { MemoryRouter, Router, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import { setup, teardown, loadModule } from './harness.mjs';
 import { mount, elements, reactProps } from './fake-dom.mjs';
 import { patchFakeDom, ev } from '../unit/ui-dom-harness.mjs';
@@ -66,7 +66,7 @@ export const issueNow = (id) => boardNow().issues.find((i) => i.id === id);
  * test can read where Back goes. Navigations commit at once (useTransitions: false), inside the
  * act() that caused them.
  */
-export function mountBoard(path, { toasts = false, confirms = false } = {}) {
+export function mountBoard(path, { toasts = false, confirms = false, stuck = null } = {}) {
   globalThis.localStorage = new Storage([['cpwtcv_boards_v2', JSON.stringify({ boards: [project()], dataVersion: 2 })]]);
   store.subscribe(() => {});
   let nav = null;
@@ -82,9 +82,22 @@ export function mountBoard(path, { toasts = false, confirms = false } = {}) {
   // `toasts`: under the kit's ToastProvider, so a toast (and its action) is on the page;
   // `confirms`: under its ConfirmProvider, so a question is the kit's dialog, not window.confirm.
   const withConfirms = confirms ? h(ConfirmProvider, null, routes) : routes;
-  const Page = () => h(MemoryRouter, { initialEntries: ['/elsewhere', path], initialIndex: 1, useTransitions: false },
-    h(Probe),
-    toasts ? h(ToastProvider, null, withConfirms) : withConfirms);
+  const inner = [h(Probe, { key: 'probe' }), toasts ? h(ToastProvider, { key: 'page' }, withConfirms) : h('div', { key: 'page', className: 'contents' }, withConfirms)];
+  // `stuck` ({ state, calls }): a history that never moves — each navigation is recorded in
+  // `calls` and the address stays `path` with `state` (a browser tab restored without its back
+  // entries, where history.go() past the start does nothing).
+  const [pathname, search = ''] = path.split('?');
+  const Page = stuck
+    ? () => h(Router, {
+      location: { pathname, search: search && `?${search}`, hash: '', state: stuck.state ?? null, key: 'stuck' },
+      navigator: {
+        createHref: (to) => (typeof to === 'string' ? to : `${to.pathname ?? ''}${to.search ?? ''}`),
+        go: (n) => stuck.calls.push(['go', n]),
+        push: (to) => stuck.calls.push(['push', to]),
+        replace: (to) => stuck.calls.push(['replace', to]),
+      },
+    }, ...inner)
+    : () => h(MemoryRouter, { initialEntries: ['/elsewhere', path], initialIndex: 1, useTransitions: false }, ...inner);
   const view = mount(Page, {});
   // The whole document: the issue view opens in a portal at the end of <body>.
   const all = (node = view.document.body) => [...elements(node)];

@@ -216,3 +216,46 @@ it('R4-BRD-05: a duplicate opened from its toast after the view closed closes ba
     await page.view.unmount();
   }
 });
+
+it('R4-BRD-05: a row clicked twice before its issue opens pushes one entry, so one close still closes the view', async () => {
+  const page = mountBoard('/boards/p1');
+  try {
+    page.click(page.card('HOME-1 Fix the tap'));
+    await page.settle();
+    const trail = page.buttonWith('HOME-3');
+    page.view.act(() => {
+      reactProps(trail).onClick(ev());
+      reactProps(trail).onClick(ev());
+    });
+    await page.settle();
+    assert.equal(page.open(), 'HOME-3 Garden makeover');
+    page.escape();
+    await page.settle();
+    assert.equal(page.open(), null, 'the second click pushed the epic twice: closing stepped back onto it');
+    assert.equal(page.path(), '/boards/p1');
+  } finally {
+    await page.view.unmount();
+  }
+});
+
+it('R4-BRD-05: a close whose step back never lands (history shorter than the count) can be tried again, and then drops the issue in place', async () => {
+  const calls = [];
+  const page = mountBoard('/boards/p1?issue=HOME-2', { stuck: { state: { issueDepth: 3 }, calls } });
+  const realNow = Date.now;
+  try {
+    await page.settle();
+    page.click(page.byLabel('Close'));
+    assert.deepEqual(calls, [['go', -3]], 'the first close steps back over the count');
+    page.click(page.byLabel('Close'));
+    assert.deepEqual(calls, [['go', -3]], 'a second close at once (a double click) waits for the first');
+    const later = realNow() + 5000;
+    Date.now = () => later;
+    page.click(page.byLabel('Close'));
+    assert.equal(calls.length, 2, 'the view could never be closed again');
+    assert.equal(calls[1][0], 'replace');
+    assert.equal(calls[1][1].search, '', 'the retry drops ?issue= in place');
+  } finally {
+    Date.now = realNow;
+    await page.view.unmount();
+  }
+});

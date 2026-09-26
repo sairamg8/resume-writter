@@ -7,6 +7,9 @@ import { copyText } from '@/utils/clipboard';
 import { findIssueByKey, issueKey } from '@/utils/boardModel';
 import { IssueDialog } from './IssueDialog';
 
+/** How long a close waits for its step back to land before a second close may drop the param. */
+const CLOSE_WAIT_MS = 1000;
+
 /** The address of an issue, for "Copy link". */
 export const issueLink = (board, issue) => `${window.location.origin}${window.location.pathname}#/boards/${encodeURIComponent(board.id)}?issue=${encodeURIComponent(issueKey(board, issue))}`;
 
@@ -31,12 +34,14 @@ export function useIssueRoute(boards, board = null) {
   // a toast's "Open" (Duplicate's) is clicked after the view has closed, and with the depth of
   // its own render it pushed one entry too many, and the close after it stepped off the board.
   const live = useRef(location);
-  // The entry a close was asked from: a browser steps back a while later, and a second close
-  // meanwhile (Escape held down, a double-clicked X) stepped back twice, off the board.
+  // The entry a close was asked from, and when: a browser steps back a while later, and a second
+  // close meanwhile (Escape held down, a double-clicked X) stepped back twice, off the board. Past
+  // CLOSE_WAIT_MS on the same entry the step back never landed (a count longer than the history a
+  // restored tab kept): that close drops the param in place, or the view could never close.
   const closedFrom = useRef(null);
   useLayoutEffect(() => {
     live.current = location;
-    if (closedFrom.current !== location.key) closedFrom.current = null;
+    if (closedFrom.current?.key !== location.key) closedFrom.current = null;
   });
   const at = (loc, key) => ({ pathname: loc.pathname, search: withSearchParam(loc.search, 'issue', key), hash: loc.hash });
   return {
@@ -46,16 +51,22 @@ export function useIssueRoute(boards, board = null) {
       const current = new URLSearchParams(loc.search).get('issue');
       const depth = loc.state?.issueDepth ?? 0;
       if (key === current) return;
-      if (current && depth === 0) navigate(at(loc, key), { replace: true, state: loc.state });
-      else navigate(at(loc, key), { state: { ...loc.state, issueDepth: depth + 1 } });
+      const to = at(loc, key);
+      const replace = Boolean(current && depth === 0);
+      const state = replace ? loc.state : { ...loc.state, issueDepth: depth + 1 };
+      navigate(to, { replace, state });
+      // The address it is going to, until it lands: a second open meanwhile (a double-clicked
+      // row) is then the same issue, and pushes nothing.
+      live.current = { ...loc, ...to, state, key: `${loc.key}:${key}` };
     },
     close: () => {
       const loc = live.current;
-      if (closedFrom.current === loc.key) return;
-      closedFrom.current = loc.key;
+      const again = closedFrom.current?.key === loc.key;
+      if (again && Date.now() - closedFrom.current.at < CLOSE_WAIT_MS) return;
+      closedFrom.current = { key: loc.key, at: Date.now() };
       const depth = loc.state?.issueDepth ?? 0;
-      if (depth > 0) navigate(-depth);
-      else navigate(at(loc, null), { replace: true, state: loc.state });
+      if (depth > 0 && !again) navigate(-depth);
+      else navigate(at(loc, null), { replace: true, state: { ...loc.state, issueDepth: 0 } });
     },
   };
 }
