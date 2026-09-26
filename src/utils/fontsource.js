@@ -49,8 +49,8 @@ export async function checkFont(name) {
   if (!pkg) return { ok: false, family: null, pkg, offline: false };
   const { meta, transient } = await lookup(pkg);
   if (meta) return { ok: true, family: meta.family || String(name).trim(), pkg };
-  const offline = transient || (typeof navigator !== 'undefined' && navigator.onLine === false);
-  return { ok: false, family: null, pkg, offline };
+  // Only a lookup that failed just now: a 404 remembered from earlier is an answer, offline or not.
+  return { ok: false, family: null, pkg, offline: transient };
 }
 
 /** URL of one static face: subset latin, weight 400, style normal by default. */

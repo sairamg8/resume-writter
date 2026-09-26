@@ -71,7 +71,11 @@ export function TypographySection({ settings, template, resumeId, updateSetting,
     setChecking(true);
     setFontError(null);
     const result = await checkFont(input);
-    if (!mounted.current) return;
+    if (!mounted.current) {
+      // The panel closed meanwhile: a font that checked out is still kept as a chip.
+      if (result.ok) saveCustomFont(result.family);
+      return;
+    }
     setChecking(false);
     const now = latest.current;
     const moved = now.resumeId !== asked.resumeId || now.font !== asked.font || now.customFont !== asked.customFont;

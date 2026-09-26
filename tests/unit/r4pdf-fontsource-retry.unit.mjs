@@ -57,3 +57,15 @@ test('a 404 (no such package) is remembered: not asked again', async () => {
   assert.equal(await fetchMetadata(pkg), null);
   assert.equal(times(pkg), 1, 'asked once');
 });
+
+// R4-DSN-04 (review): a check answered by a 404 earlier in the session is an answer, offline or not —
+// the panel says the font was not found, not that it could not check.
+test('a 404 remembered earlier, checked while offline: not found, not "could not check"', async () => {
+  const pkg = 'missing-grotesk';
+  answers = { [pkg]: [404] };
+  assert.equal((await checkFont('Missing Grotesk')).offline, false);
+  Object.defineProperty(globalThis.navigator, 'onLine', { value: false, configurable: true });
+  try {
+    assert.deepEqual(await checkFont('Missing Grotesk'), { ok: false, family: null, pkg, offline: false });
+  } finally { delete globalThis.navigator.onLine; }
+});
