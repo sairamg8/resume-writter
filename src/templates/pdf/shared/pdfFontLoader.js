@@ -3,7 +3,7 @@ import { decodeEntities } from '@/utils/richText';
 import { FONTSOURCE_CDN as CDN, fetchMetadata, fontsourceId } from '@/utils/fontsource';
 import { chosenWebFont, setFontFallback } from '@/utils/fontFallback';
 import { fontChoice } from '@/utils/fonts';
-import { glyphCodePoints, isPresentationForm, needsOf, scriptCandidates, scriptClaims, STAND_INS } from './pdfFontCoverage';
+import { ARROW_STAND_INS, glyphCodePoints, isPresentationForm, needsOf, scriptCandidates, scriptClaims, STAND_INS } from './pdfFontCoverage';
 
 /**
  * Fonts for the PDF (which is also the editor preview).
@@ -129,6 +129,22 @@ const fallbackFamilies = new Set();
 registerNoto('latin');
 ensureNoHyphenation();
 
+/**
+ * The offline arrows' face (RES-R2-045): the bundled Noto Sans Latin Extended files, registered
+ * apart from 'NotoSans latin-ext' so that react-pdf loads fontkit fonts of their own, and only these
+ * draw ← ↑ → ↓ as their arrowheads (ARROW_STAND_INS). familyChain adds it last, and only when no
+ * other face draws an arrow — offline, where Noto Sans Math cannot be fetched.
+ */
+const ARROWS = 'NotoSans arrows';
+function registerArrows() {
+  if (!registeredFamilies.has(ARROWS)) {
+    registerFaces(ARROWS, (w, s) => NOTO_FILES[`latin-ext-${w}-${s}`]);
+    registeredFamilies.add(ARROWS);
+    fallbackFamilies.add(ARROWS);
+  }
+  return ARROWS;
+}
+
 // ── Fontsource (CDN) fonts ───────────────────────────────────────────────────
 
 const nearest = (weights, target) => weights.reduce((best, w) => (Math.abs(w - target) < Math.abs(best - target) ? w : best));
@@ -246,6 +262,11 @@ async function familyChain(settings, text) {
     usable = await prepareFonts(['NotoSans', ...usable]);
   }
   usable = [...usable, ...(await scriptFallbacks(text, usable))];
+  // An arrow no face draws — offline, Noto Sans Math is out of reach — prints as the bundled
+  // arrowhead instead of an empty box (RES-R2-045); online the chain is as it was.
+  if (undrawn(glyphCodePoints(text), usable).some((cp) => ARROW_STAND_INS.has(cp))) {
+    usable = [...usable, ...(await prepareFonts([registerArrows()]))];
+  }
   // Its metadata could not be fetched (chosenFont null), or none of its faces loaded.
   const fallback = (!primary || missed) ? chosenWebFont(settings) : null;
   return { fontFamily: usable.length > 1 ? usable : usable[0], fallback };
@@ -344,16 +365,18 @@ function widenNarrowSpace(font, layout) {
  * Draw a character the face lacks with its stand-in (STAND_INS: ‐ as '-', U+202F as ' '), when the
  * face has that. It answers through the face's cmap, so textkit picks this face for the character,
  * layout draws the stand-in's glyph, and that glyph — seeded from the cmap first — keeps the
- * stand-in's text in the PDF's ToUnicode.
+ * stand-in's text in the PDF's ToUnicode. The arrows' face takes ARROW_STAND_INS instead, and
+ * prepareFonts seeds the arrows before its cmap, so there the arrowhead's glyph keeps the arrow's
+ * text: the PDF prints ˄ and reads ↑.
  */
-function addStandIns(font) {
+function addStandIns(font, standIns = STAND_INS) {
   const cmap = font._cmapProcessor;
   if (!cmap || typeof cmap.lookup !== 'function') return;
   const lookup = cmap.lookup.bind(cmap);
   cmap.lookup = (codePoint, variationSelector) => {
     const glyph = lookup(codePoint, variationSelector);
-    if (glyph || variationSelector || !STAND_INS.has(codePoint)) return glyph;
-    return lookup(STAND_INS.get(codePoint));
+    if (glyph || variationSelector || !standIns.has(codePoint)) return glyph;
+    return lookup(standIns.get(codePoint));
   };
 }
 
@@ -373,6 +396,8 @@ function addStandIns(font) {
  * 4. Widen a too-narrow space in the laid-out run (widenNarrowSpace), so `pdftotext -raw` reads the
  *    narrow-space fonts' words apart instead of glued.
  * 5. Draw a dash or space the face lacks with its stand-in (addStandIns), after the seeding in 1.
+ *    The offline arrows' face (ARROWS) takes its arrows first and seeds them before its cmap, so
+ *    each arrowhead glyph carries its arrow's text (RES-R2-045).
  */
 export async function prepareFonts(families) {
   const store = Font.getRegisteredFonts();
@@ -394,8 +419,12 @@ export async function prepareFonts(families) {
     });
     for (const { data: font } of sources) {
       if (!font || primedFonts.has(font) || typeof font.glyphForCodePoint !== 'function') continue;
+      if (family === ARROWS) {
+        addStandIns(font, ARROW_STAND_INS);
+        for (const codePoint of ARROW_STAND_INS.keys()) font.glyphForCodePoint(codePoint);
+      }
       for (const codePoint of font.characterSet || []) if (!isPresentationForm(codePoint)) font.glyphForCodePoint(codePoint);
-      addStandIns(font);
+      if (family !== ARROWS) addStandIns(font);
       if (typeof font.layout === 'function') {
         const base = font.layout.bind(font);
         const noLig = (string, features, ...rest) => base(string, features ?? noLigatures(), ...rest);

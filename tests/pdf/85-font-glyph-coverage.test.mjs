@@ -60,6 +60,27 @@ describe('dashes and spaces the Latin face lacks print as its own stand-ins (R2-
   });
 });
 
+// RES-R2-045: offline, Noto Sans Math cannot be fetched, and ← ↑ → ↓ printed as .notdef — an empty
+// box, read as nothing. The bundled Noto Sans draws the arrowhead of each direction (˂ ˄ ˃ ˅, its
+// Latin Extended file), and its own face prints that in the arrow's place: the page shows an
+// arrowhead, and the text layer reads the arrow as typed. Before the online test below: once this
+// process has loaded Noto Sans Math, it draws the arrows, online or not.
+describe('offline, arrows print as the bundled font\'s arrowheads and read as arrows (RES-R2-045)', () => {
+  it('← ↑ → ↓ with the default font, offline', async () => {
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = (url, ...rest) => (String(url).startsWith('https://') ? Promise.reject(new Error('offline')) : realFetch(url, ...rest));
+    try {
+      const pages = await read(await renderLine('Revenue ↑ 40%, churn ↓ 12%, ← back, next →'));
+      const text = allText(pages);
+      for (const s of ['Revenue ↑ 40%', 'churn ↓ 12%', '← back', 'next →']) assert.ok(text.includes(s), `${s} in: ${text}`);
+      assert.ok(fontsOf(pages).some((f) => /NotoSansarrows$/.test(f)), `the arrows' own face prints them: ${fontsOf(pages).join(', ')}`);
+      assert.ok(!fontsOf(pages).some((f) => /NotoSansMath/.test(f)), 'no web font was fetched');
+    } finally {
+      globalThis.fetch = realFetch;
+    }
+  });
+});
+
 describe('arrows in the Latin range print as arrows (R2-045)', () => {
   it('↑ and ↓ bring in Noto Sans Math, as → does', async (t) => {
     if (!(await isOnline())) return t.skip('offline');

@@ -107,6 +107,15 @@ export const STAND_INS = new Map([
   ...[0x2000, 0x2001, 0x2002, 0x2003, 0x2004, 0x2005, 0x2006, 0x2007, 0x2008, 0x2009, 0x200a, 0x202f, 0x205f].map((cp) => [cp, 0x20]),
 ]);
 
+/**
+ * The arrows ← ↑ → ↓ and the arrowhead of the same direction the bundled Noto Sans draws (its
+ * Latin Extended file's modifier letters ˂ ˄ ˃ ˅), for a PDF made offline (RES-R2-045). Online they
+ * come from Noto Sans Math, a web font; offline no face drew them and each printed as .notdef, an
+ * empty box. prepareFonts gives these only to a face of its own (ARROWS in pdfFontLoader.js), added
+ * last and only when no other face draws the arrow, so an arrow Noto Sans Math draws never changes.
+ */
+export const ARROW_STAND_INS = new Map([[0x2190, 0x2c2], [0x2191, 0x2c4], [0x2192, 0x2c3], [0x2193, 0x2c5]]);
+
 // Characters that draw nothing (joiners, direction marks, separators): never a reason to load a font.
 const INVISIBLE = /[\p{Cf}\p{Zl}\p{Zp}]/u;
 
