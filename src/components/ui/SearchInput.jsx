@@ -3,7 +3,7 @@ import { Search, X } from 'lucide-react';
 import { useHotkeys } from '../../hooks/useHotkeys.js';
 import { Kbd } from './Kbd.jsx';
 import { controlClass } from './Field.jsx';
-import { cx, mergeRefs } from './compose.js';
+import { cx, isImeKey, mergeRefs } from './compose.js';
 
 /**
  * A search box: magnifier inside on the left, a clear button once there is text.
@@ -27,7 +27,8 @@ export function SearchInput({
   };
   const handleKeyDown = (event) => {
     onKeyDown?.(event);
-    if (event.defaultPrevented || event.key !== 'Escape') return;
+    // An input method's Escape drops the word being composed, not the search (R4-LO-24).
+    if (event.defaultPrevented || event.key !== 'Escape' || isImeKey(event)) return;
     event.preventDefault();
     event.stopPropagation();
     if (value) onChange?.('');

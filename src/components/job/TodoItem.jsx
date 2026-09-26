@@ -36,7 +36,7 @@ export function TodoItem({ todo, onToggle, onDelete, onRename }) {
           onBlur={commit}
           onKeyDown={e => {
             if (e.key === 'Enter' && !isImeKey(e)) commit();
-            if (e.key === 'Escape') { setDraft(todo.text); setEditing(false); }
+            if (e.key === 'Escape' && !isImeKey(e)) { setDraft(todo.text); setEditing(false); }
           }}
           // 16 px on touch screens: iOS Safari zooms the page into any smaller field it focuses (J-38).
           className="flex-1 text-sm pointer-coarse:text-base bg-transparent focus:outline-none border-b border-indigo-300 pb-0.5"

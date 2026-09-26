@@ -30,7 +30,7 @@ export function EditorHeader({ resume, rename, layoutMode, setLayoutMode, export
             onBlur={rename.commit}
             onKeyDown={e => {
               if (e.key === 'Enter' && !isImeKey(e)) rename.commit();
-              if (e.key === 'Escape') rename.cancel();
+              if (e.key === 'Escape' && !isImeKey(e)) rename.cancel();
             }}
             className="w-full text-xs sm:text-sm font-semibold border-b border-blue-400 outline-none bg-transparent text-gray-800"
           />

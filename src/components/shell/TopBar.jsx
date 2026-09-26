@@ -66,7 +66,7 @@ function QuickSearch({ search }) {
     if (e.key === 'ArrowDown') { e.preventDefault(); setActive(Math.max(0, Math.min(at + 1, results.length - 1))); }
     if (e.key === 'ArrowUp') { e.preventDefault(); setActive(Math.max(at - 1, 0)); }
     if (e.key === 'Enter' && !isImeKey(e)) { e.preventDefault(); go(results[at]); }
-    if (e.key === 'Escape') { setQuery(''); setOpen(false); inputRef.current?.blur(); }
+    if (e.key === 'Escape' && !isImeKey(e)) { setQuery(''); setOpen(false); inputRef.current?.blur(); }
   };
 
   return (
