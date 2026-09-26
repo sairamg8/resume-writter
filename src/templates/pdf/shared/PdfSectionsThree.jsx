@@ -8,6 +8,7 @@ import { tint } from './pdfColors';
 import { ContactValue } from './PdfContact';
 import { lineBox } from './pdfMeasure';
 import { itemHeadPresence } from './PdfItemHeader';
+import { CSS_PX_TO_PT, DEFAULT_ITEM_GAP_PX } from './pdfUnits';
 import {
   SPACER,
   SectionTitleOf,
@@ -54,6 +55,14 @@ export function ReferencesSection({ section, settings, marginBottom, spaceBefore
   );
 }
 
+const CHIP_GAP_PT = 3;
+const DEFAULT_ITEM_GAP_PT = DEFAULT_ITEM_GAP_PX * CSS_PX_TO_PT;
+
+/**
+ * The chips sit 3 pt apart at the default Between Items (6 pt, Normal) — the skill tags' gap, so the
+ * two kinds of chip look alike — and move with Spacing in proportion, as the Sidebar's do (R2-6).
+ * They took the whole item gap, twice the tags' spacing (R4-DOUT-15).
+ */
 export function InterestsSection({ section, settings, marginBottom, spaceBefore, itemGap, centered }) {
   const baseSize = settings?.fontSizeBase || 11;
   const accent   = settings?.accentColor || '#2563eb';
@@ -66,7 +75,7 @@ export function InterestsSection({ section, settings, marginBottom, spaceBefore,
     <View style={{ marginBottom, marginTop: spaceBefore }}>
       {SPACER}
       <SectionTitleOf section={section} settings={settings} centered={centered} />
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: itemGap, justifyContent: centered ? 'center' : 'flex-start' }}>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: (CHIP_GAP_PT * itemGap) / DEFAULT_ITEM_GAP_PT, justifyContent: centered ? 'center' : 'flex-start' }}>
         {allInterests.map((interest, i) => (
           <View key={i} style={{ backgroundColor: tint(accent, 0x12 / 255), borderRadius: 3, paddingHorizontal: 6, paddingVertical: 1 }}>
             <Text style={{ fontSize: baseSize, color: accent }}>{interest}</Text>
