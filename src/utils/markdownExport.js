@@ -27,9 +27,10 @@ const NEST = '    ';
 /**
  * User text as Markdown prints it, not as markup (R4-EXP-01): every character Markdown reads as syntax
  * inside a line is backslash-escaped, so "<DataGrid>" is not hidden as an HTML tag, "__init__" is not
- * bold and a "*" or "[" stays a character. `lead` escapes what a line may not start with either.
+ * bold and a "*" or "[" stays a character; a "|" is no table cell's edge, and an "&" before what reads
+ * as an entity ("&copy;") prints as typed, never "©" (R4-LO-08). `lead` escapes what a line may not start with either.
  */
-const esc = (text) => String(text ?? '').replace(/[\\`*_[\]<>~]/g, '\\$&');
+const esc = (text) => String(text ?? '').replace(/[\\`*_[\]<>~|]/g, '\\$&').replace(/&(?=#?[a-z0-9]+;)/gi, '\\&');
 /** A line that starts with user text: a leading "#", "-", "+", "=" or "3." prints, never a heading or list. */
 const lead = (line) => line.replace(/^([#+=-])/, '\\$1').replace(/^(\d+)([.)])(?=\s|$)/, '$1\\$2');
 
@@ -101,8 +102,14 @@ function heading(primary, secondary) {
 }
 
 const joined = (parts, sep) => parts.filter(Boolean).join(sep);
-/** A meta line in italics; its parts are user text, trimmed and escaped here. */
-const italic = (text) => (String(text || '').trim() ? `*${esc(String(text).trim())}*` : '');
+/**
+ * A meta line in italics: user text, trimmed and escaped here — an array of it its parts, joined by
+ * " | " after each is escaped, so the separator is not escaped as a typed "|" is.
+ */
+const italic = (text) => {
+  const line = (Array.isArray(text) ? text : [text]).map((t) => esc(String(t || '').trim())).filter(Boolean).join(' | ');
+  return line ? `*${line}*` : '';
+};
 
 /**
  * One entry: its `### ` heading, each meta line on a line of its own (a hard break between them),
@@ -139,13 +146,13 @@ function itemLines(type, item, f, body, settings, opts = {}) {
     case 'volunteering': {
       const org = type === 'volunteering' ? (f('org') || f('organization')) : f('company');
       const title = type === 'experience' && opts.titleOrder !== 'role' ? heading(org, f('role')) : heading(f('role'), org);
-      return entryLines(title, [italic(joined([shown(dateRange(f('startDate'), end, settings)), place()], ' | '))], body());
+      return entryLines(title, [italic([shown(dateRange(f('startDate'), end, settings)), place()])], body());
     }
     case 'education': {
       const gpa = f('gpa') ? `GPA: ${f('gpa')}` : '';
       const dates = shown(dateRange(f('startDate'), end, settings));
       return entryLines(heading(joined([f('degree'), f('fieldOfStudy')], ', '), f('institution')),
-        [italic(joined([dates, place(), gpa], ' | '))], body());
+        [italic([dates, place(), gpa])], body());
     }
     case 'projects': {
       const url = f('url');
@@ -153,13 +160,15 @@ function itemLines(type, item, f, body, settings, opts = {}) {
       const name = f('name');
       const title = href ? `[${esc(String(name || url).trim())}](${href})` : esc(name);
       const meta = [f('technologies') ? `Technologies: ${f('technologies')}` : '', shown(dateRange(f('startDate'), end, settings)), href ? '' : url];
-      return entryLines(title, [italic(joined(meta, ' | '))], body());
+      return entryLines(title, [italic(meta)], body());
     }
     case 'certifications': {
       const id = f('credentialId') ? `ID: ${f('credentialId')}` : '';
       const url = f('url');
       return entryLines(heading(f('name') || f('title'), f('issuer')),
-        [italic(joined([shown(dateRange(f('date'), f('expiry'), settings)), id], ' | ')), url ? link(url, f('urlLabel')) : ''], body());
+        // No description: a certificate has none to edit, and the PDF, Word and the ATS text print none
+        // (older data may hold one; it printed here alone, R4-LO-08).
+        [italic([shown(dateRange(f('date'), f('expiry'), settings)), id]), url ? link(url, f('urlLabel')) : ''], []);
     }
     case 'awards':
       return entryLines(heading(f('title') || f('name'), f('issuer')), [italic(shown(formatDate(f('date'), settings)))], body());
@@ -172,7 +181,7 @@ function itemLines(type, item, f, body, settings, opts = {}) {
     default: { // custom, and any type this build does not know; the PDF prints its location whatever the options
       const dates = f('date') ? formatDate(f('date'), settings) : dateRange(f('startDate'), f('endDate'), settings);
       const sub = f('subtitle') || f('org') || f('organization') || f('company') || f('issuer');
-      return entryLines(heading(f('title') || f('name') || f('role'), sub), [italic(joined([shown(dates), f('location')], ' | '))], body());
+      return entryLines(heading(f('title') || f('name') || f('role'), sub), [italic([shown(dates), f('location')])], body());
     }
   }
 }
@@ -192,7 +201,7 @@ function groupLines(group, fieldOf, settings, opts, one) {
     const f = fieldOf(item);
     const end = (item.hiddenFields || []).includes('endDate') ? '' : (item.current ? presentLabel(settings) : f('endDate'));
     const dates = opts.showDates !== false ? dateRange(f('startDate'), end, settings) : '';
-    const role = entryLines(heading(f('role'), ''), [italic(joined([dates, places.roles[k]], ' | '))], markdownBody(f('description'), item.bullets));
+    const role = entryLines(heading(f('role'), ''), [italic([dates, places.roles[k]])], markdownBody(f('description'), item.bullets));
     lines.push(...(role[0]?.startsWith('### ') ? [`#${role[0]}`, ...role.slice(1)] : role));
   });
   return lines;
