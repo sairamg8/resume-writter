@@ -86,9 +86,7 @@ export function DatePill({
         aria-hidden="true"
         value={info ? value.trim() : ''}
         onChange={(e) => onChange(e.target.value)}
-        // 16 px on touch screens, as the kit's fields: the picker focuses this box, and iOS Safari
-        // zooms the page into any smaller field it focuses (J-38).
-        className="pointer-events-none absolute inset-0 size-full opacity-0 pointer-coarse:text-base"
+        className="pointer-events-none absolute inset-0 size-full opacity-0"
       />
     </span>
   );
