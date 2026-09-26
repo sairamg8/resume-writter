@@ -65,4 +65,19 @@ describe('"What a parser reads" with roles grouped by company (R4-CL-06)', () =>
       { role: 'Senior Engineer', company: 'Acme', location: 'Denver, CO', startDate: '2019', endDate: '2020' }]);
     assert.equal(alone[1].company, 'missing');
   });
+
+  it('a later grouped role that prints no title reads its dates just after the role before it', async () => {
+    const { jobFields } = await loadModule('/src/utils/parserText.js');
+    const pages = [[
+      ['Acme', 'Austin, TX'],
+      ['Staff Engineer', '2021 – Present'], ['• Led the team.'],
+      ['• Built billing.'], ['• Ran on-call.'], ['• Mentored two.'], ['• Wrote docs.'],
+      ['Contoso', 'Denver, CO'], ['Engineer', '2016 – 2018'],
+    ]];
+    const got = jobFields(pages, [
+      { role: 'Staff Engineer', company: 'Acme', location: 'Austin, TX', startDate: '2021', current: true },
+      { role: '', company: 'Acme', location: 'Austin, TX', startDate: '2016', endDate: '2018', groupLead: 0 },
+    ]);
+    assert.equal(got[1].dates, 'missing', 'another job\'s 2016 – 2018 is not this role\'s');
+  });
 });
