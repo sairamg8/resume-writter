@@ -237,10 +237,14 @@ export function statementRange(el) {
     range.selectNodeContents(host);
     return range.toString().trim() ? range : null;
   }
-  let node = at.startContainer === host ? host.childNodes[at.startOffset] || host.lastChild : at.startContainer;
+  let node = at.startContainer;
+  if (node === host) {
+    // A caret between two children: the one after it, but just before a <br> it is at the end of the
+    // line that break closes.
+    const [before, after] = [host.childNodes[at.startOffset - 1], host.childNodes[at.startOffset]];
+    node = after && (after.nodeName !== 'BR' || !before || !inLine(before)) ? after : before || host.lastChild;
+  }
   while (node && node.parentNode !== host) node = node.parentNode;
-  // A caret just before a <br> is at the end of the line that break closes.
-  if (node?.nodeName === 'BR' && node.previousSibling && inLine(node.previousSibling)) node = node.previousSibling;
   if (!node || !inLine(node)) return null;
   let first = node;
   let last = node;
