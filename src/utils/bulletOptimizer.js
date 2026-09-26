@@ -301,7 +301,7 @@ export function insertMetric(text, metric) {
 }
 
 /** Text ending in a word written with a dot: a known abbreviation, or letters split by dots ("e.g", "U.S"). */
-const ABBREVIATION_END = /(?:(?<!\p{L})(?:etc|inc|ltd|co|corp|llc|jr|sr|vs|approx|dept|est|misc|no|mr|mrs|ms|dr|st)|\p{L}\.\p{L})$/iu;
+const ABBREVIATION_END = /(?:(?<![\p{L}\d])(?:etc|inc|ltd|co|corp|llc|jr|sr|vs|approx|dept|misc|mr|mrs|dr)|\p{L}\.\p{L})$/iu;
 
 /**
  * Whether the text before a phrase ends where a sentence starts: nothing, or a line break or a

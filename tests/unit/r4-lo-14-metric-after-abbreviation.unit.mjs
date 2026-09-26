@@ -13,5 +13,7 @@ test('an abbreviation at the end keeps its dot', () => {
 
 test('an ordinary sentence end still moves after the metric', () => {
   assert.equal(insertMetric('Reduced API latency for the checkout service.', 'by 35%'), 'Reduced API latency for the checkout service by 35%.');
+  assert.equal(insertMetric('Cut latency to 200 ms.', 'for 1M users'), 'Cut latency to 200 ms for 1M users.');
+  assert.equal(insertMetric('Ranked 1st.', 'of 40 teams'), 'Ranked 1st of 40 teams.');
   assert.equal(insertMetric('Cut costs for the sales co-op.', 'by 35%'), 'Cut costs for the sales co-op by 35%.');
 });
