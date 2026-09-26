@@ -8,9 +8,10 @@ export const ORIGINALS_HINT = 'Your originals come back whenever none of them is
 /**
  * The dashboard's Import in a demo account: a plain import, or one kept as the account's original
  * — it comes back whenever none of the originals is left (useDemoSeed). `onPick(keep)` then opens
- * the file picker. Other accounts get the plain Import button.
+ * the file picker. Other accounts get the plain Import button. `busy`: a document is being read, so
+ * Import says "Reading…" and is disabled until it is done (R4-IMP-12).
  */
-export function ImportMenu({ onPick, className }) {
+export function ImportMenu({ onPick, busy = false, className }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
@@ -31,8 +32,8 @@ export function ImportMenu({ onPick, className }) {
 
   return (
     <div ref={ref} className="relative">
-      <button onClick={() => setOpen(o => !o)} aria-expanded={open} className={className}>
-        <Upload size={15} /> Import <ChevronDown size={13} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
+      <button onClick={() => setOpen(o => !o)} disabled={busy} aria-expanded={open} className={`${className} disabled:opacity-60`}>
+        <Upload size={15} /> {busy ? 'Reading…' : 'Import'} <ChevronDown size={13} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
       {open && (
         <div className="absolute right-0 top-full mt-1 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-20 py-1">

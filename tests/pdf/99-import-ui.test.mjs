@@ -47,7 +47,8 @@ describe('Dashboard → Import of a document', () => {
     const view = mount(DashboardPage, { store: dashboardStore([]) });
     try {
       const input = [...elements(view.container)].find((el) => el.tagName === 'INPUT' && el.type === 'file');
-      assert.equal(reactProps(input).accept, '.json,.pdf,.docx,.txt,.md');
+      // .text and .markdown too: the import reads both (R4-IMP-14).
+      assert.equal(reactProps(input).accept, '.json,.pdf,.docx,.txt,.text,.md,.markdown');
     } finally {
       await view.unmount();
     }

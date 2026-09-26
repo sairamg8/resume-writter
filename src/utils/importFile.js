@@ -1,7 +1,7 @@
 // Import from a PDF, a Word file (.docx), Markdown or plain text (R2-148): the file's text as lines,
 // read by importText.js into a new résumé. JSON stays with the importers it always had (the
 // Dashboard's and the editor's); importDocument.js loads this on demand, and pdf.js only for a PDF.
-import { markdownLines, resumeFromText } from './importText.js';
+import { linkText, markdownLines, resumeFromText } from './importText.js';
 
 const NO_TEXT = 'No text could be read from that file. A scanned PDF holds pictures of its pages, not text: export it again as text, or import a Word, text or JSON file.';
 const SCANNED = 'That PDF looks like a scanned image: its pages have no text layer to read. Export the résumé again as a text PDF from the program it was written in, save it as a Word file, or run the scan through OCR (text recognition) first, and import that.';
@@ -10,6 +10,7 @@ const SCANNED = 'That PDF looks like a scanned image: its pages have no text lay
 export const MAX_IMPORT_BYTES = 20 * 1024 * 1024;
 const TOO_BIG = 'That file is too large to be a résumé (over 20 MB). Import the résumé itself as a PDF, Word, text or JSON file.';
 const DAMAGED = 'That Word file is damaged and cannot be read. Save it again as .docx (or PDF) and import that.';
+const LOCKED = 'That PDF is password-protected. Save a copy without a password (or as a Word file) and import that.';
 
 // ── Word (.docx) ─────────────────────────────────────────────────────────────
 
@@ -60,35 +61,162 @@ const xmlText = (s) => s
   .replace(/&amp;/g, '&');
 
 /**
+ * `xml` without its <mc:Fallback> copies (docxXmlLines): each from its start to its own end — a copy
+ * may hold another AlternateContent, with a Fallback of its own — and a self-closing one alone.
+ */
+function withoutFallbacks(xml) {
+  let out = '';
+  let depth = 0;
+  let from = 0;
+  for (const m of xml.matchAll(/<mc:Fallback\b[^>]*?(\/?)>|<\/mc:Fallback>/g)) {
+    if (m[0].startsWith('</')) {
+      if (depth && --depth === 0) from = m.index + m[0].length;
+    } else if (!m[1]) {
+      if (depth++ === 0) out += xml.slice(from, m.index);
+    } else if (!depth) {
+      out += xml.slice(from, m.index);
+      from = m.index + m[0].length;
+    }
+  }
+  return depth ? out : out + xml.slice(from);
+}
+
+/**
  * word/document.xml as lines: a paragraph a line (its breaks as more lines, its tabs as tabs), a
  * list paragraph behind a "• ", an empty one as a blank line. A Heading style marks a heading, the
  * Title style the name — the app's Word export writes its section titles as Heading 1.
+ *
+ * A text box's paragraphs sit inside the paragraph that anchors it: each is a line of its own, after
+ * the anchoring paragraph's own text (what comes before and after the box). Word saves every text box
+ * twice, the drawing in <mc:Choice> and a VML copy in <mc:Fallback>: the copy is not read, or each
+ * line of a designed résumé's header or side column came out twice (R4-IMP-04).
+ *
+ * `links`: the part's hyperlink targets by relationship id (docxLinks). A hyperlink whose text is not
+ * its address — a contact shown as its Display label, "LinkedIn" — reads as "LinkedIn (https://…)"
+ * (linkText), so the address is kept: the label alone was dropped, the URL nowhere (R4-IMP-10).
  */
-export function docxXmlLines(xml) {
-  const body = String(xml).split(/<w:body\b[^>]*>/)[1] ?? String(xml);
+export function docxXmlLines(xml, links = {}) {
+  const body = withoutFallbacks(String(xml).split(/<w:body\b[^>]*>/)[1] ?? String(xml));
   const lines = [];
-  for (const para of body.split(/<\/w:p>/)) {
-    // The paragraph's own start (not a <w:pPr> or <w:pStyle> inside it, nor a table's markup before it).
-    const starts = [...para.matchAll(/<w:p[\s>]/g)];
-    if (!starts.length) continue;
-    const p = para.slice(starts[starts.length - 1].index);
-    const props = /<w:pPr>([\s\S]*?)<\/w:pPr>/.exec(p)?.[1] ?? '';
-    const style = /<w:pStyle w:val="([^"]*)"/.exec(props)?.[1] ?? '';
-    const list = /<w:numPr>/.test(props);
-    const runs = p.replace(/<w:pPr>[\s\S]*?<\/w:pPr>/, '');
-    const text = [...runs.matchAll(/<w:t(?:\s[^>]*)?>([^<]*)<\/w:t>|<w:(tab|br|cr)(?:\s[^>]*)?\/>/g)]
-      .map((m) => (m[1] !== undefined ? xmlText(m[1]) : (m[2] === 'tab' ? '\t' : '\n'))).join('');
-    const hint = /^(heading|berschrift|titre)/i.test(style) ? 'heading' : (/^title$/i.test(style) ? 'name' : undefined);
-    lines.push({ text: list && text.trim() ? `• ${text}` : text, hint });
+  const levels = []; // each line's Heading level, 0 for none
+  const open = []; // the paragraphs being read, the innermost last
+  const TOKEN = /<w:p(?=[\s>])[^>]*>|<\/w:p>|<w:pPr>([\s\S]*?)<\/w:pPr>|<w:t(?:\s[^>]*)?>([^<]*)<\/w:t>|<w:(tab|br|cr)(?:\s[^>]*)?\/>|<w:hyperlink\b([^>]*)>|<\/w:hyperlink>/g;
+  for (const m of body.matchAll(TOKEN)) {
+    const para = open[open.length - 1];
+    if (m[4] !== undefined) {
+      const id = /\br:id="([^"]*)"/.exec(m[4])?.[1];
+      if (para && !m[0].endsWith('/>')) para.link = { to: links[id], at: para.text.length };
+    } else if (m[0] === '</w:hyperlink>') {
+      if (para?.link?.to) para.text = para.text.slice(0, para.link.at) + linkText(para.text.slice(para.link.at), para.link.to);
+      if (para) para.link = null;
+    } else if (m[0] === '</w:p>') {
+      if (!para) continue;
+      open.pop();
+      const style = /<w:pStyle w:val="([^"]*)"/.exec(para.props)?.[1] ?? '';
+      const list = /<w:numPr>/.test(para.props);
+      const heading = /^(?:heading|berschrift|titre)\s*(\d)?/i.exec(style);
+      // Its own line before its text boxes' lines, read while it was open: a side column's box is
+      // anchored to the first paragraph, often the name, and the name comes first. A heading's after
+      // them: a box of the name and contacts anchored to the first section's title ("PROFILE") is the
+      // page's header, over that title.
+      const at = heading ? lines.length : para.start;
+      levels.splice(at, 0, heading ? Number(heading[1] || 1) : 0);
+      lines.splice(at, 0, { text: list && para.text.trim() ? `• ${para.text}` : para.text, hint: heading ? 'heading' : (/^title$/i.test(style) ? 'name' : undefined) });
+    } else if (m[0].startsWith('<w:p') && !m[0].startsWith('<w:pPr')) {
+      if (!m[0].endsWith('/>')) open.push({ text: '', props: '', start: lines.length }); // <w:p/>: an empty one, no line (as before)
+    }
+    else if (!para) continue;
+    else if (m[1] !== undefined) para.props = m[1];
+    else if (m[2] !== undefined) para.text += xmlText(m[2]);
+    else para.text += m[3] === 'tab' ? '\t' : '\n';
   }
-  return lines;
+  return headingLevels(lines, levels);
 }
 
-/** A .docx file's text as lines (docxXmlLines). */
+/**
+ * The Heading levels a Word file uses, as Markdown's: the top one used starts the sections ('heading'),
+ * a deeper one an entry ('entry'), as Word's own résumé templates set them (Heading 1 "Experience",
+ * Heading 2 "Senior Engineer | Acme Corp", Heading 3 its dates). Every level was a section, so a job's
+ * title line became a section with nothing under it and was dropped (R4-IMP-03). A top-level heading
+ * that is the file's first line and its only one of that level, over deeper ones, is the name.
+ */
+function headingLevels(lines, levels) {
+  const used = levels.filter(Boolean);
+  if (!used.length) return lines;
+  let top = Math.min(...used);
+  const first = lines.findIndex((l) => l.text.trim());
+  const named = !lines.some((l) => l.hint === 'name') && levels[first] === top
+    && used.filter((v) => v === top).length === 1 && used.some((v) => v > top);
+  if (named) top = Math.min(...used.filter((v) => v !== top));
+  return lines.map((l, i) => {
+    if (!levels[i]) return l;
+    if (named && i === first) return { ...l, hint: 'name' };
+    return levels[i] > top ? { ...l, hint: 'entry' } : l;
+  });
+}
+
+/** A part's relationships file (word/_rels/<part>.rels) as its relationships: { id, type, target }. */
+function docxRels(rels) {
+  return [...String(rels ?? '').matchAll(/<Relationship\b([^>]*)>/g)].map(([, attrs]) => {
+    const attr = (name) => xmlText(new RegExp(`\\b${name}="([^"]*)"`).exec(attrs)?.[1] ?? '');
+    return { id: attr('Id'), type: attr('Type'), target: attr('Target') };
+  });
+}
+
+/** A part's relationships file as its hyperlinks' targets, by id. */
+export function docxLinks(rels) {
+  return Object.fromEntries(docxRels(rels).filter((r) => r.type.endsWith('/hyperlink') && r.target).map((r) => [r.id, r.target]));
+}
+
+/** One part of a .docx (word/document.xml, word/header1.xml) as lines, with its own hyperlinks' targets. */
+async function docxPartLines(bytes, part) {
+  const xml = await unzipEntry(bytes, `word/${part}`);
+  if (!xml) return null;
+  const rels = await unzipEntry(bytes, `word/_rels/${part}.rels`);
+  return docxXmlLines(decode(xml), docxLinks(rels && decode(rels)));
+}
+
+const FURNITURE = /^(?:curriculum vitae|cv|r[ée]sum[ée]|confidential|draft|page\s*\d*(?:\s*of\s*\d+)?|\d{1,3})$/i;
+const FURNITURE_TAIL = /(?:\s+[-–—|·•]\s+|\s*\t\s*)(?:curriculum vitae|cv|r[ée]sum[ée]|confidential|draft|page\s*\d*(?:\s*of\s*\d+)?)\s*$/i;
+
+/**
+ * The page header the first page shows, as lines, else []: many résumés set the name and the contact
+ * line in Word's page header (Insert → Header), which is not in word/document.xml — they were lost,
+ * and the first body line ("Summary") became the name (R4-IMP-05). The first section's "first page"
+ * header when it has a different first page (<w:titlePg/>), else its default one. The app's own export
+ * has a different first page with no header on it, its running header ("Name · Page 2") on the others:
+ * none of that is read.
+ */
+async function docxHeaderLines(bytes, xml) {
+  const sect = /<w:sectPr\b[\s\S]*?<\/w:sectPr>/.exec(xml)?.[0] ?? '';
+  const titlePage = /<w:titlePg(?:\s+w:val="(?:1|true|on)")?\s*\/>/.test(sect);
+  const ref = [...sect.matchAll(/<w:headerReference\b[^>]*>/g)].map(([tag]) => tag)
+    .find((tag) => new RegExp(`w:type="${titlePage ? 'first' : 'default'}"`).test(tag));
+  const id = ref && /\br:id="([^"]*)"/.exec(ref)?.[1];
+  if (!id) return [];
+  const rels = await unzipEntry(bytes, 'word/_rels/document.xml.rels');
+  const target = docxRels(rels && decode(rels)).find((r) => r.id === id)?.target.replace(/^\/?word\//, '');
+  const lines = (target && await docxPartLines(bytes, target)) || [];
+  // A header's furniture is no name: "Curriculum Vitae", "Confidential", "Page 1"; and "Robin Vale –
+  // Resume" is the name alone.
+  return lines
+    .map((l) => ({ ...l, text: l.text.replace(FURNITURE_TAIL, '') }))
+    .filter((l) => !FURNITURE.test(l.text.trim()));
+}
+
+/**
+ * A .docx file's text as lines (docxXmlLines), its hyperlinks' targets read from its relationships:
+ * the first page's header first (docxHeaderLines), less any line the body starts with too, then the body.
+ */
 export async function docxLines(bytes) {
   const xml = await unzipEntry(bytes, 'word/document.xml');
   if (!xml) throw new Error('That Word file has no document in it.');
-  return docxXmlLines(decode(xml));
+  const text = decode(xml);
+  const rels = await unzipEntry(bytes, 'word/_rels/document.xml.rels');
+  const body = docxXmlLines(text, docxLinks(rels && decode(rels)));
+  const opening = new Set(body.map((l) => l.text.trim()).filter(Boolean).slice(0, 12));
+  const header = (await docxHeaderLines(bytes, text)).filter((l) => !l.text.trim() || !opening.has(l.text.trim()));
+  return header.some((l) => l.text.trim()) ? [...header, { text: '', hint: undefined }, ...body] : body;
 }
 
 // ── PDF ──────────────────────────────────────────────────────────────────────
@@ -331,19 +459,84 @@ async function loadPdfjs() {
   return lib;
 }
 
+/**
+ * A page's text items with its links' addresses: the text a Link annotation covers, when it is not
+ * the address itself (a contact shown as its Display label, "LinkedIn"), reads as "LinkedIn
+ * (https://…)" (linkText) — the text layer holds only the label, and the URL was lost (R4-IMP-10).
+ * An item mostly inside the link's box is its text; one that runs well past it — a contact line set
+ * as one run of text ("a | b | c", Design → Contact style Bar or Bullet), which pdf.js reads as one
+ * item — gives it the letters its share of the width holds, to the nearest word's edge.
+ */
+function withLinks(items, links) {
+  if (!links.length) return items;
+  const out = items.map((it) => ({ ...it }));
+  const whole = new Set();
+  const inserts = new Map(); // item → [{ at, text }], put in once every link is read
+  const edge = (str, i) => {
+    for (let d = 0; d <= 8; d += 1) {
+      for (const j of [i - d, i + d]) {
+        if (j >= 0 && j <= str.length && (j === 0 || j === str.length || /\s/.test(str[j]) || /\s/.test(str[j - 1]))) return j;
+      }
+    }
+    return Math.max(0, Math.min(str.length, i));
+  };
+  for (const { rect, url } of links) {
+    const [x1, y1, x2, y2] = [Math.min(rect[0], rect[2]), Math.min(rect[1], rect[3]), Math.max(rect[0], rect[2]), Math.max(rect[1], rect[3])];
+    const hits = [];
+    for (const it of out) {
+      if (whole.has(it) || !it.str.trim()) continue;
+      // Its letters sit above its baseline, y.
+      const cy = it.y + heightOf(it) * 0.3;
+      if (cy < y1 - 1 || cy > y2 + 1) continue;
+      const w = it.w || 0;
+      const a = Math.max(x1 - 1, it.x);
+      const b = Math.min(x2 + 1, it.x + w);
+      if (!w ? it.x < x1 - 1 || it.x > x2 + 1 : b <= a) continue;
+      if (!w || (b - a) / w >= 0.8) hits.push({ it, from: 0, to: it.str.length });
+      else {
+        const n = it.str.length;
+        const from = edge(it.str, Math.round(((a - it.x) / w) * n));
+        const to = edge(it.str, Math.round(((b - it.x) / w) * n));
+        if (to > from) hits.push({ it, from, to });
+      }
+    }
+    if (!hits.length) continue;
+    hits.sort((p, q) => q.it.y - p.it.y || p.it.x - q.it.x);
+    const label = hits.map((h) => h.it.str.slice(h.from, h.to)).join(' ').replace(/^[\s|•·]+|[\s|•·]+$/g, '').replace(/\s+/g, ' ');
+    if (!label) continue;
+    // An address set in pieces ("linkedin.com/in/" "pat") is still the address.
+    if (linkText(label.replace(/\s+/g, ''), url) === label.replace(/\s+/g, '')) continue;
+    const text = linkText(label, url);
+    if (text === label) continue;
+    hits.forEach((h) => { if (h.from === 0 && h.to === h.it.str.length) whole.add(h.it); });
+    const last = hits[hits.length - 1];
+    // Never after the separator past its label: a box a little wider than its letters.
+    const end = last.it.str.slice(0, last.to).replace(/[\s|•·]+$/, '').length;
+    inserts.set(last.it, [...(inserts.get(last.it) || []), { at: end, text: text.slice(label.length) }]);
+  }
+  for (const [it, list] of inserts) {
+    for (const { at, text } of list.sort((p, q) => q.at - p.at)) it.str = it.str.slice(0, at) + text + it.str.slice(at);
+  }
+  return out;
+}
+
 /** A PDF's text as lines (pdfLinesOfPages). `lib`: pdf.js, loaded here when not given (the tests give Node's). */
 export async function pdfLines(bytes, lib) {
   const pdfjs = lib || await loadPdfjs();
   const task = pdfjs.getDocument({ data: bytes.slice(), isEvalSupported: false, verbosity: 0 });
   try {
-    const doc = await task.promise;
+    // A PDF that needs a password to open: pdf.js's own words are "No password given".
+    const doc = await task.promise.catch((e) => { throw e?.name === 'PasswordException' ? new Error(LOCKED) : e; });
     const pages = [];
     for (let i = 1; i <= doc.numPages; i += 1) {
-      const content = await (await doc.getPage(i)).getTextContent();
+      const page = await doc.getPage(i);
+      const content = await page.getTextContent();
       // A marked-content item (pdf.js's beginMarkedContent) has no str and no transform: not text.
-      pages.push(content.items.filter((it) => typeof it.str === 'string' && it.transform).map((it) => ({
+      const items = content.items.filter((it) => typeof it.str === 'string' && it.transform).map((it) => ({
         str: it.str, x: it.transform[4], y: it.transform[5], w: it.width, h: it.height || Math.abs(it.transform[3]),
-      })));
+      }));
+      const annotations = await Promise.resolve(page.getAnnotations?.()).catch(() => []);
+      pages.push(withLinks(items, (annotations || []).filter((a) => a?.subtype === 'Link' && a.url && a.rect)));
     }
     // Pages, but not a letter of text on them: the pages are pictures, a scan or a photo.
     if (pages.length && !pages.some((p) => p.some((it) => it.str.trim()))) throw new Error(SCANNED);
@@ -355,12 +548,31 @@ export async function pdfLines(bytes, lib) {
 
 // ── Any of them ──────────────────────────────────────────────────────────────
 
+/**
+ * A text or Markdown file's text, in the encoding Windows saved it in: Notepad's "Unicode" is UTF-16
+ * behind its byte-order mark; Word's "Save as Plain Text" is Windows-1252 by default, where • – — and
+ * curly quotes are bytes UTF-8 cannot read (they became "�", and no date or list was found).
+ */
+function decodeText(bytes) {
+  if (bytes[0] === 0xff && bytes[1] === 0xfe) return new TextDecoder('utf-16le').decode(bytes);
+  if (bytes[0] === 0xfe && bytes[1] === 0xff) return new TextDecoder('utf-16be').decode(bytes);
+  try {
+    return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+  } catch {
+    // UTF-8 with a stray bad byte (a paste, a cut-off file) stays UTF-8, its one bad byte a "�": read as
+    // Windows-1252, every "–" and "é" in it would turn to "â€“". A file with no UTF-8 letter at all is
+    // Windows-1252.
+    const utf8 = new TextDecoder('utf-8').decode(bytes);
+    return /[\u0080-\ufffc\ufffe\uffff]/.test(utf8) ? utf8 : new TextDecoder('windows-1252').decode(bytes);
+  }
+}
+
 /** A file's text as the parser's lines, by its kind. `bytes` its contents. */
 export async function documentLines(name, bytes, { pdfjs } = {}) {
   if (/\.pdf$/i.test(name)) return pdfLines(bytes, pdfjs);
   // An older .doc is not a zip: docxLines says to save it as .docx (a .docx named .doc reads as one).
   if (/\.docx?$/i.test(name)) return docxLines(bytes);
-  const text = decode(bytes).replace(/^﻿/, '');
+  const text = decodeText(bytes).replace(/^﻿/, '');
   return /\.(md|markdown)$/i.test(name) ? markdownLines(text) : text;
 }
 

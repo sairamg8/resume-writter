@@ -169,7 +169,8 @@ describe('the pieces', () => {
     assert.deepEqual(lines, [
       { text: 'Avery Quinn', hint: 'name' }, { text: 'Data Engineer' }, { text: '' },
       { text: 'Experience', hint: 'heading' }, { text: 'Northwind — Engineer', hint: 'entry' },
-      { text: 'Mar 2021 – Present | Portland, OR' }, { text: '' }, { text: '• Built the pipeline' },
+      // A link keeps its address beside its text (R4-IMP-02).
+      { text: 'Mar 2021 – Present | Portland, OR' }, { text: '' }, { text: '• Built the pipeline (https://example.com)' },
     ]);
     const r = resumeFromText(lines);
     const [job] = byType(r, 'experience')[0].items;

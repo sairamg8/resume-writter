@@ -89,12 +89,16 @@ Full resume object (with a new id on import: `importResume`). Every import goes 
 
 ## Import from a PDF, Word, Markdown or text (R2-148)
 
-The Dashboard's and the editor's Import accept `.json,.pdf,.docx,.txt,.md` (`IMPORT_ACCEPT`,
+The Dashboard's and the editor's Import accept `.json,.pdf,.docx,.txt,.text,.md,.markdown` (`IMPORT_ACCEPT`,
 `src/utils/importDocument.js`); a `.json` goes the JSON way above, the rest are read best-effort:
 
 - `importFile.js` gets the text out as lines: a PDF through pdf.js (lines by baseline, wide gaps as
-  tabs, wrapped lines joined), a `.docx` by unzipping `word/document.xml` with `DecompressionStream`
-  (Heading styles marked), Markdown through `markdownLines` (`#` name, `##` headings, `###` entries).
+  tabs, wrapped lines joined, a Link annotation's address after a label it covers), a `.docx` by
+  unzipping `word/document.xml` with `DecompressionStream` (the top Heading level used marks sections,
+  deeper ones entries; the first page's header read first; a text box once; a hyperlink's target after
+  a label), Markdown through `markdownLines` (`#` name, `##` headings, `###` entries, a deeper heading
+  under an entry a grouped role; a link as "label (address)"), and text in UTF-8, UTF-16 (with its
+  mark) or Windows-1252. A password-protected PDF is told so (R4-IMP).
 - `importText.js` (pure) reads the lines: name, job title, contacts, summary; a section per known
   heading (the app's titles and `ATS_STANDARD_SECTIONS` aliases), others custom; entries found by
   their dates; every line it cannot place in a custom "Additional Information".

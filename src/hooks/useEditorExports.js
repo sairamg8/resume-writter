@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { downloadBlob } from '@/utils/download';
 import { buildExportFilename } from '@/utils/exportFilename';
 import { isDemoAccount } from '@/utils/demoSeed';
@@ -22,6 +22,15 @@ export function useEditorExports({ resume, activeTab, authUser, importResume, na
   const [exporting, setExporting] = useState(null);
   const [exportError, setExportError] = useState(null);
   const keeps = isDemoAccount(authUser, DEMO_ACCOUNTS);
+  // A document being read (R4-IMP-12): the Export menu says "Reading…" and a second pick meanwhile is
+  // ignored — the ref catches two in the same tick. One that ends after the editor is gone, or has
+  // moved to another résumé, still imports, but no longer navigates.
+  const [importing, setImporting] = useState(false);
+  const importBusy = useRef(false);
+  const mounted = useRef(true);
+  const shownId = useRef(resume?.id);
+  shownId.current = resume?.id;
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
 
   /** Run one export, keeping the button state and a visible error message honest. */
   async function runExport(kind, label, fn) {
@@ -117,13 +126,25 @@ export function useEditorExports({ resume, activeTab, authUser, importResume, na
   }
 
   /** A PDF, Word, Markdown or text résumé, read best-effort into a new one (R2-148). */
-  function handleImportFile(file, asOriginal = false) {
+  async function handleImportFile(file, asOriginal = false) {
+    if (importBusy.current) return null;
+    importBusy.current = true;
+    setImporting(true);
     setExportError(null);
-    return importDocument(file, { importResume, navigate, onError: setExportError, keep: keeps && asOriginal });
+    const from = resume?.id;
+    try {
+      return await importDocument(file, {
+        importResume, onError: setExportError, keep: keeps && asOriginal,
+        navigate: (...args) => { if (mounted.current && shownId.current === from) navigate(...args); },
+      });
+    } finally {
+      importBusy.current = false;
+      if (mounted.current) setImporting(false);
+    }
   }
 
   return {
-    exporting, exportError, setExportError, keeps, letterTab: activeTab === 'coverletter',
+    exporting, importing, exportError, setExportError, keeps, letterTab: activeTab === 'coverletter',
     handleExportPDF, handleExportWord, handleExportJSON, handleExportMarkdown, handleExportAtsText, handleExportJsonResume, handleExportLetterText, handleImportJSON, handleImportFile,
   };
 }
