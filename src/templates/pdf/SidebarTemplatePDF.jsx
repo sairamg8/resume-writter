@@ -110,7 +110,9 @@ export function SidebarTemplatePDF({ data }) {
   // 35-letter surname even at the default 19 pt, "Softwareentwicklungsingenieurin" at 11 pt): each
   // prints at the largest size that holds it.
   const room = sideColumnRoom(settings);
-  const nameFit = fitFontSize(personal?.name, { fontFamily: nameFamily(settings), fontSize: nameSize, fontWeight: 'bold' }, room);
+  // No name yet prints 'Your Name', as every other template, its Word export and its letterhead do (R4-PDF-04).
+  const name = personal?.name || 'Your Name';
+  const nameFit = fitFontSize(name, { fontFamily: nameFamily(settings), fontSize: nameSize, fontWeight: 'bold' }, room);
   const titleFit = fitFontSize(personal?.title, { fontFamily: settings._pdfFontFamily, fontSize: entrySize }, room);
 
   // Top and bottom margins belong to the page, so react-pdf repeats them on every page; a
@@ -156,7 +158,7 @@ export function SidebarTemplatePDF({ data }) {
               ...nameFace(settings), fontSize: nameFit, fontWeight: 'bold', color: nameColor,
               textAlign: 'center', marginBottom: personal?.title ? g.nameTitleGap : 2, lineHeight: 1.2,
             }}>
-              {personal?.name}
+              {name}
             </Text>
             {personal?.title && (
               <Text style={{

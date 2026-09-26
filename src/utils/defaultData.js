@@ -1,5 +1,5 @@
 import { BLANK_PERSONAL, blankSections, BASE_COVER_LETTER } from '@/utils/defaultDataContent';
-import { designStyle, presetOf } from '@/constants/templatePresets';
+import { designStyle, presetOf, withStyle } from '@/constants/templatePresets';
 import { sectionsOnSwitch } from '@/templates/pdf/shared/templateSectionDefaults';
 import { DATA_VERSION } from '@/utils/normalizeResume';
 import { DEFAULT_DATE_FORMAT } from '@/utils/dates';
@@ -103,7 +103,7 @@ export function styleOnSwitch(settings, from, to, preset = '') {
     if (key in ATS_DEFAULTS) out[key] = ATS_DEFAULTS[key];
     else delete out[key];
   }
-  return { ...out, ...next, ...(presetOf(picked, to) ? { templatePreset: preset } : {}) };
+  return { ...withStyle(out, next), ...(presetOf(picked, to) ? { templatePreset: preset } : {}) };
 }
 
 /**

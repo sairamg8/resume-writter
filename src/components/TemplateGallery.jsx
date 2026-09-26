@@ -16,7 +16,12 @@ export function TemplateGallery({ open, onClose, resume, designs = [], setTempla
   const [category, setCategory] = useState('');
   const [filters, setFilters] = useState([]);
   const cards = pickerCards(resume.settings || {}, designs);
-  const shown = filterCards(cards, { category, filters });
+  // The gallery stays mounted while closed: a category whose cards are all gone since (My designs, each
+  // saved design deleted) offers no chip, so it is All, not an empty grid with nothing to turn off (R4-DSN-06).
+  const cat = categoriesOf(cards).some((c) => c.id === category) ? category : '';
+  // …and forgotten, so a design saved later does not open the gallery on My designs again.
+  if (cat !== category) setCategory('');
+  const shown = filterCards(cards, { category: cat, filters });
   const { pick, selected } = usePickCard(resume, { setTemplate, updateSetting, applyDesign, restoreDesign });
   const toggle = (id) => setFilters((f) => (f.includes(id) ? f.filter((x) => x !== id) : [...f, id]));
 
@@ -32,9 +37,9 @@ export function TemplateGallery({ open, onClose, resume, designs = [], setTempla
     >
       <div data-testid="template-gallery" className="space-y-3">
         <div className="flex flex-wrap gap-1.5" data-testid="template-gallery-categories">
-          <Chip size="sm" onClick={() => setCategory('')} pressed={category === ''}>All</Chip>
+          <Chip size="sm" onClick={() => setCategory('')} pressed={cat === ''}>All</Chip>
           {categoriesOf(cards).map((c) => (
-            <Chip key={c.id} size="sm" onClick={() => setCategory(category === c.id ? '' : c.id)} pressed={category === c.id} data-category={c.id}>{c.label}</Chip>
+            <Chip key={c.id} size="sm" onClick={() => setCategory(cat === c.id ? '' : c.id)} pressed={cat === c.id} data-category={c.id}>{c.label}</Chip>
           ))}
         </div>
         <div className="flex flex-wrap gap-1.5" data-testid="template-gallery-filters">

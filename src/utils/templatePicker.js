@@ -5,7 +5,7 @@
 // its filter chips and the new-résumé picker all read these.
 import { atsRating, headerTemplateId, templateDesc, TEMPLATE_PICKER, templateStyleDefaults } from '@/constants/templates';
 import { TEMPLATES } from '@/constants/templateTable';
-import { PRESET_IDS, TEMPLATE_PRESETS } from '@/constants/templatePresets';
+import { PRESET_IDS, TEMPLATE_PRESETS, withStyle } from '@/constants/templatePresets';
 import { FONTS } from '@/utils/fonts';
 
 /** The gallery's categories (B3), in chip order; a template names one in the table (none: Simple). */
@@ -61,7 +61,7 @@ export function pickerCards(settings = {}, mine = []) {
     const layouts = row.variant ? [false, true] : [null];
     for (const on of layouts) {
       const variant = on === null ? null : { [row.variant.key]: on };
-      const look = { ...settings, ...templateStyleDefaults(t.id), ...variant };
+      const look = { ...withStyle(settings, templateStyleDefaults(t.id)), ...variant };
       cards.push({
         ...base, variant, look,
         testid: on ? `template-${t.id}-single` : `template-${t.id}`,
@@ -73,7 +73,7 @@ export function pickerCards(settings = {}, mine = []) {
   }
   for (const id of PRESET_IDS) {
     const p = TEMPLATE_PRESETS[id];
-    const look = { ...settings, ...templateStyleDefaults(p.engine), ...p.settings };
+    const look = withStyle(settings, { ...templateStyleDefaults(p.engine), ...p.settings });
     cards.push({
       testid: `preset-${id}`, engine: p.engine, preset: id, own: false, variant: null, look,
       label: p.label, desc: p.desc, category: p.category || TEMPLATES[p.engine].category || 'simple', accent: p.settings.accentColor,
@@ -81,7 +81,7 @@ export function pickerCards(settings = {}, mine = []) {
     });
   }
   for (const d of mine) {
-    const look = { ...settings, ...templateStyleDefaults(d.engine), ...d.settings };
+    const look = withStyle(settings, { ...templateStyleDefaults(d.engine), ...d.settings });
     cards.push({
       testid: `design-${d.id}`, engine: d.engine, preset: d.id, own: true, design: d, variant: null, look,
       label: d.label, desc: `Your design · ${TEMPLATES[d.engine].label}`, category: 'mine', accent: d.settings.accentColor || settings.accentColor,

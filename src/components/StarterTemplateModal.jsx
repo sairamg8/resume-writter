@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { FileText, Sparkles, X, ArrowRight } from 'lucide-react';
-import { STARTER_TEMPLATES } from '@/utils/starterTemplates';
+import { getStarterSettings, STARTER_TEMPLATES } from '@/utils/starterTemplates';
 import { templateLabel } from '@/constants/templates';
 import { pickerCards } from '@/utils/templatePicker';
 import { TemplateThumb } from '@/components/TemplateThumb';
@@ -18,7 +18,9 @@ export default function StarterTemplateModal({ isOpen, onClose, onSelectStarter,
   const [look, setLook] = useState(null); // a card of pickerCards, or null: each starter's own
   const overlay = useOverlayClose(onClose);
   if (!isOpen) return null;
-  const looks = pickerCards({});
+  // Over the settings a starter or a blank résumé starts with, so each look is drawn in the colours the
+  // new résumé gets (R4-DSN-03).
+  const looks = pickerCards(getStarterSettings('classic'));
   const lookOf = (c) => (c ? { engine: c.engine, preset: c.preset, variant: c.variant } : null);
   const templateOf = (starter) => (look ? look.label : templateLabel(starter.template));
 

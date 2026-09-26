@@ -63,8 +63,10 @@ describe('design — templates', () => {
   it('NB-1: a white Name color picked for the Sidebar column goes back to Classic\'s own when Classic is picked, and the name prints', () => {
     cy.visitEditor('sidebar');
     openDesign('Colors');
-    pickColor('Name color', '#ffffff');
-    cy.store().should((s) => expect(settingsOf(s).nameColor).to.eq('#ffffff'));
+    // A near-white: the swatch already holds the column's white it prints (R4-DSN-05), and a colour
+    // input fires no change for the value it holds.
+    pickColor('Name color', '#fafafa');
+    cy.store().should((s) => expect(settingsOf(s).nameColor).to.eq('#fafafa'));
     cy.get('[data-testid="template-classic"]').click();
     cy.store().should((s) => expect([active(s).template, settingsOf(s).nameColor]).to.deep.eq(['classic', '']));
     cy.get('input[aria-label="Name color"]').parent().should('contain.text', 'Template default');

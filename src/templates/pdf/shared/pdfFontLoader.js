@@ -279,9 +279,12 @@ async function familyChain(settings, text) {
  * longer silently: `fallback` names it, and so does fontFallback.js, which the editor shows (R2-146).
  * Typography's Name Font and Heading Font (settings.nameFont, headingFont; '' = the body's) come
  * as `nameFontFamily` and `headingFontFamily`, null while unset, and are named alike when they fail.
+ * `reportFont: false` (a page picture for the gallery, a dashboard card or /new) leaves the editor's
+ * notice alone: it speaks of the open résumé only, and a picture of another template must neither
+ * name a font the résumé does not use nor clear one it failed to load (R4-PDF-01).
  */
-export async function resolvePdfFonts(settings, text = '') {
-  const build = ++resolveCount;
+export async function resolvePdfFonts(settings, text = '', { reportFont = true } = {}) {
+  const build = reportFont ? ++resolveCount : 0;
   ensureNoHyphenation();
   const body = await familyChain(settings, text);
   const own = async (value) => (value ? familyChain(fontChoice(value), text) : null);
@@ -290,7 +293,7 @@ export async function resolvePdfFonts(settings, text = '') {
   const fallback = missing.length ? missing.join(' and ') : null;
   // Only the latest build says what the editor shows: a slow one for a font since changed (a fetch
   // that times out) must not name it after a later build printed the new font.
-  if (build === resolveCount) setFontFallback(fallback);
+  if (reportFont && build === resolveCount) setFontFallback(fallback);
   return { fontFamily: body.fontFamily, nameFontFamily: name?.fontFamily ?? null, headingFontFamily: heading?.fontFamily ?? null, fallback };
 }
 
