@@ -184,6 +184,16 @@ function entryPresence(settings, fields) {
 const SIDE_TEXT = { fontSize: 9 };
 const SIDE_NAME = { fontSize: 9, fontWeight: 'bold' };
 
+/**
+ * What an education's unbreakable head keeps under it when text follows it — its coursework or
+ * bullets, 9 pt at lineHeight 1.3 after a 2 pt margin — pt: two lines of that text, as the main
+ * column's entry header keeps two lines of body text (headerKeep). Without it the head was left at
+ * the foot of a page and all of its text went to the next (RES-R2-104).
+ */
+const EDU_TEXT_KEEP = Math.ceil(2 + 2 * 9 * 1.3);
+/** True when an education entry prints text under its head: a description or bullets. */
+const eduHasText = (item) => hasRichText(item.description) || (item.bullets || []).some((b) => b && String(b).trim());
+
 export function SideEducation({ section, sectionGap, itemGap, shades = NAVY, titleCase, settings }) {
   const s        = section.settings || {};
   const showDates = s.showDates !== false;
@@ -196,10 +206,12 @@ export function SideEducation({ section, sectionGap, itemGap, shades = NAVY, tit
   const listBreaks = (inset) => sideBreaks(settings, { fontSize: 9, fontWeight: 'bold' }, inset);
   const dates = (item) => (showDates ? dateRange(startDateOf(item), endDateOf(item, settings), settings) : '');
   const first = visibleItems[0];
-  const presence = first ? entryPresence(settings, [
+  const head = first ? entryPresence(settings, [
     [first.degree, { fontSize: 10, fontWeight: 'bold' }], [first.institution, SIDE_TEXT], [first.fieldOfStudy, SIDE_TEXT],
     [showLoc && first.location, SIDE_TEXT], [first.gpa && `GPA: ${first.gpa}`, SIDE_TEXT], [dates(first), SIDE_TEXT, true],
   ]) : undefined;
+  // The title keeps what its first head keeps too, or the head could move and leave the title alone.
+  const presence = head && eduHasText(first) ? head + EDU_TEXT_KEEP : head;
 
   return (
     <View style={{ marginBottom: sectionGap }}>
@@ -207,8 +219,12 @@ export function SideEducation({ section, sectionGap, itemGap, shades = NAVY, tit
       <View style={{ gap: itemGap }}>
         {visibleItems.map((item, i) => (
           <View key={i}>
-            {/* Degree to dates unbreakable: an entry never splits across two pages (R2-104). */}
-            <View wrap={false}>
+            {/* The head's previous sibling, which its minPresenceAhead needs (SPACER). */}
+            {SPACER}
+            {/* Degree to dates unbreakable: an entry never splits across two pages (R2-104); kept with
+                two lines of the text under it, when there is some (EDU_TEXT_KEEP, RES-R2-104). With
+                none it keeps nothing: react-pdf would move a last head that has no sibling after it. */}
+            <View wrap={false} minPresenceAhead={eduHasText(item) ? EDU_TEXT_KEEP : undefined}>
               <Text style={{ fontSize: 10, fontWeight: 'bold', color: shades.strong, lineHeight: 1.2 }} hyphenationCallback={degreeBreaks}>{item.degree}</Text>
               {item.institution && <Text style={{ fontSize: 9, color: shades.label, lineHeight: 1.2 }} hyphenationCallback={textBreaks}>{item.institution}</Text>}
               {item.fieldOfStudy && <Text style={{ fontSize: 9, color: shades.label, lineHeight: 1.2 }} hyphenationCallback={textBreaks}>{item.fieldOfStudy}</Text>}
