@@ -31,17 +31,35 @@ export const ACTION_VERBS_BY_CATEGORY = {
   ]
 };
 
+/**
+ * A weak-phrase entry: `phrases` matched as whole words — not inside a longer word ("Networked with",
+ * "unhandled", R4-LO-11), accented letters counted as letters — with `after` a further condition on
+ * what follows. `match` has one capture group (autoFixWeakPhrases reads its offset from that).
+ */
+const weak = (phrases, replacement, alternatives, after = '') => ({
+  phrases,
+  replacement,
+  alternatives,
+  match: new RegExp(`(?<![\\p{L}\\d])(${phrases.join('|')})(?![\\p{L}\\d])${after}`, 'giu'),
+});
+
+// ── The one weak-phrase list: the ATS score's "passive language" and the optimizer's ──
+// Each kept its own, and they disagreed: "Tasked with…" was passive to the score while the optimizer
+// said "No Weak Words" and Auto-Fix could not touch it; "Ensured…" was the reverse (R4-SW-WT-03). The
+// ATS score reads this list too (atsChecker.js), so every phrase it counts has a replacement here.
 export const WEAK_PHRASE_REPLACEMENTS = [
-  { match: /\b(was responsible for|responsible for)\b/gi, replacement: 'Led', alternatives: ['Directed', 'Oversaw', 'Spearheaded'] },
-  { match: /\b(worked on|worked with)\b/gi, replacement: 'Engineered', alternatives: ['Co-developed', 'Collaborated on', 'Built'] },
-  { match: /\b(helped with|helped to|assisted with|assisted in)\b/gi, replacement: 'Facilitated', alternatives: ['Supported delivery of', 'Co-engineered', 'Accelerated'] },
-  { match: /\b(handled)\b/gi, replacement: 'Managed', alternatives: ['Resolved', 'Administered', 'Executed'] },
+  weak(['was responsible for', 'responsible for', 'responsibilities included', 'duties included', 'tasked with'], 'Led', ['Directed', 'Oversaw', 'Spearheaded']),
+  weak(['worked on', 'worked with'], 'Engineered', ['Co-developed', 'Collaborated on', 'Built']),
+  weak(['helped with', 'helped to', 'assisted with', 'assisted in'], 'Facilitated', ['Supported delivery of', 'Co-engineered', 'Accelerated']),
+  weak(['handled'], 'Managed', ['Resolved', 'Administered', 'Executed']),
   // "did" as a main verb only: in "did not" it is a helper verb, and Auto-Fix wrote "delivered not" (R4-LO-10).
-  { match: /\b(did)\b(?!\s+(?:not|never)\b)/gi, replacement: 'Delivered', alternatives: ['Conducted', 'Accomplished', 'Produced'] },
-  { match: /\b(made sure|ensured that|ensured)\b/gi, replacement: 'Guaranteed', alternatives: ['Maintained compliance with', 'Enforced', 'Safeguarded'] },
-  { match: /\b(changed)\b/gi, replacement: 'Transformed', alternatives: ['Modernized', 'Overhauled', 'Refactored'] },
-  { match: /\b(participated in)\b/gi, replacement: 'Contributed to', alternatives: ['Partnered in', 'Active member of', 'Drove'] },
-  { match: /\b(in charge of)\b/gi, replacement: 'Oversaw', alternatives: ['Led', 'Directed', 'Headed'] },
+  weak(['did'], 'Delivered', ['Conducted', 'Accomplished', 'Produced'], '(?!\\s+(?:not|never)(?![\\p{L}\\d]))'),
+  weak(['made sure', 'ensured that', 'ensured'], 'Guaranteed', ['Maintained compliance with', 'Enforced', 'Safeguarded']),
+  weak(['changed'], 'Transformed', ['Modernized', 'Overhauled', 'Refactored']),
+  weak(['participated in', 'was involved in'], 'Contributed to', ['Partnered in', 'Active member of', 'Drove']),
+  weak(['in charge of'], 'Oversaw', ['Led', 'Directed', 'Headed']),
+  // "Tried to cut costs" → "Led efforts to cut costs": a bare verb read "Drove cut costs".
+  weak(['tried to', 'attempted to'], 'Led efforts to', ['Drove efforts to', 'Spearheaded efforts to', 'Championed efforts to']),
 ];
 
 // ── The one verb list: high-impact action verbs (150+), the ATS score's and the optimizer's ──
@@ -200,7 +218,7 @@ export function analyzeBullet(text = '') {
   // its badge, score and Auto-Fix flickered (bug audit 2026-09-22). `phrase`: the words it found.
   const detectedWeakPhrases = [];
   for (const wp of WEAK_PHRASE_REPLACEMENTS) {
-    const found = clean.match(new RegExp(wp.match.source, 'i'));
+    const found = clean.match(new RegExp(wp.match.source, 'iu'));
     if (found) detectedWeakPhrases.push({ ...wp, phrase: found[0] });
   }
 

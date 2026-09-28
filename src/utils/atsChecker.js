@@ -1,7 +1,7 @@
 import { decodeEntities, hasRichText, parseRichText } from './richText.js';
 import { contactItems } from './contacts.js';
 import { skillGroup } from './skills.js';
-import { ACTION_VERBS, hasMetric, leadsWithActionVerb } from './bulletOptimizer.js';
+import { ACTION_VERBS, WEAK_PHRASE_REPLACEMENTS, hasMetric, leadsWithActionVerb } from './bulletOptimizer.js';
 import { ATS_TIER_POINTS, atsRating, hasHeaderControls, inSidebarColumn, templateId, templateLabel, TEMPLATE_PICKER } from '../constants/templates.js';
 import { resolveSection } from '../templates/pdf/shared/templateSectionDefaults.js';
 import { groupsRoles, roleGroups } from './roleGroups.js';
@@ -93,16 +93,12 @@ export function extractBulletsFromItem(item) {
 // ── 1. High-Impact Action Verbs: the one list the score and the STAR Optimizer read (R2-025) ──
 export { ACTION_VERBS };
 
-// Weak or passive phrases that hurt ATS score and recruiter impression
-export const WEAK_PHRASES = [
-  'responsible for', 'responsibilities included', 'duties included',
-  'worked on', 'worked with', 'helped with', 'helped to', 'assisted with',
-  'assisted in', 'tasked with', 'handled', 'was involved in', 'participated in',
-  'tried to', 'attempted to',
-];
-// Each phrase as whole words: a substring match read "Networked with" as "worked with" and
-// "unhandled" as "handled" (R4-LO-11).
-const WEAK_PHRASE_WORDS = WEAK_PHRASES.map((wp) => new RegExp(`(?<![\\p{L}\\d])${wp}(?![\\p{L}\\d])`, 'u'));
+// Weak or passive phrases that hurt ATS score and recruiter impression: the STAR Optimizer's own list,
+// so a bullet it calls clean is never passive language here, nor the reverse (R4-SW-WT-03). Its
+// patterns match whole words only ("Networked with" is not "worked with", R4-LO-11) and "did" only as
+// a main verb (R4-LO-10).
+export const WEAK_PHRASES = WEAK_PHRASE_REPLACEMENTS.flatMap(({ phrases }) => phrases);
+const WEAK_PHRASE_WORDS = WEAK_PHRASE_REPLACEMENTS.map(({ match }) => new RegExp(match.source, 'iu'));
 
 // Standard ATS Section Categories & Workday Canonical Headings
 export const ATS_STANDARD_SECTIONS = {
