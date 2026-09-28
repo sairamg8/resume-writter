@@ -175,6 +175,22 @@ const inlineOff = (text, kept = []) => String(text)
   .replace(/\uE001(\d+)\uE001/g, (_, i) => kept[i]);
 
 /**
+ * A "|" the Markdown escapes ("\|", the export's for one the user typed: "R&D \| Ops"), held as this
+ * character through the parse, so no split at " | " parts it from its field (R4-SW-I-05); resumeFromText
+ * gives it back as "|". A Unicode noncharacter: no file holds one. An unescaped " | " (the one the export
+ * writes between a meta line's parts) still parts fields; a text or PDF file has no escapes.
+ */
+const TYPED_PIPE = '\uFDD0';
+const typed = (text) => text.replace(/\\([\\|])/g, (m, c) => (c === '|' ? TYPED_PIPE : m));
+/** `value` with each TYPED_PIPE back as "|": a string, or every string in an array or object. */
+function untyped(value) {
+  if (typeof value === 'string') return value.replaceAll(TYPED_PIPE, '|');
+  if (Array.isArray(value)) return value.map(untyped);
+  if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, untyped(v)]));
+  return value;
+}
+
+/**
  * A Markdown résumé as the parser's lines: "# " the name, "## " a heading, "### " an entry's title,
  * a list item a "• " line (a numbered one keeps its number), the rest as text with its marks off. A
  * deeper heading under an entry's is a 'role' of it: Experience's "Group roles by company" exports the
@@ -197,7 +213,7 @@ export function markdownLines(md) {
       // An entry's linked title keeps its address, as a field of its own at the line's end: a project's
       // URL; a linked company's address (in its description), never its role (R4-IMP-02).
       const links = [];
-      const text = unmark(h[2], hint === 'entry' || hint === 'role' ? links : 'label') + links.map((u) => ` | ${u}`).join('');
+      const text = unmark(typed(h[2]), hint === 'entry' || hint === 'role' ? links : 'label') + links.map((u) => ` | ${u}`).join('');
       if (hint === 'name') named = true;
       out.push({ text, hint });
       continue;
@@ -207,8 +223,8 @@ export function markdownLines(md) {
     // Its links' labels and addresses, for the rich text (R4-LO-05).
     const links = [];
     const withLinks = (l) => (links.length ? { ...l, links } : l);
-    if (item) { out.push(withLinks({ text: `${item[1] ? `${item[1]} ` : '• '}${unmark(item[2], undefined, links)}`, ...(indentOf(line) ? { depth: indentOf(line) } : {}) })); continue; }
-    out.push(withLinks({ text: unmark(line.replace(/^\s*>\s?/, ''), undefined, links) }));
+    if (item) { out.push(withLinks({ text: `${item[1] ? `${item[1]} ` : '• '}${unmark(typed(item[2]), undefined, links)}`, ...(indentOf(line) ? { depth: indentOf(line) } : {}) })); continue; }
+    out.push(withLinks({ text: unmark(typed(line.replace(/^\s*>\s?/, '')), undefined, links) }));
   }
   return out;
 }
@@ -1026,8 +1042,8 @@ export function resumeFromText(input) {
     dataVersion: DATA_VERSION, // built now: no migration applies
     template: 'classic',
     settings: getStarterSettings('classic'),
-    personal,
-    sections,
+    personal: untyped(personal),
+    sections: untyped(sections),
     coverLetter: { ...BASE_COVER_LETTER },
   };
 }
