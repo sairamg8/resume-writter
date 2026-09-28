@@ -1,6 +1,6 @@
 import { ExternalLink, Trash2, ChevronUp, ChevronDown } from 'lucide-react';
 import { StatusBadge } from '@/components/job/StatusBadge';
-import { Avatar } from '@/components/ui';
+import { Avatar, IconButton } from '@/components/ui';
 import { deadlineState } from '@/utils/dates';
 import { safeHref } from '@/utils/richText';
 import { isOpen, sortJobs } from '@/utils/jobQuery';
@@ -149,14 +149,16 @@ export function ListView({ jobs, resumes, onNavigate, onDelete }) {
                 </td>
                 <td className="px-3">
                   <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 no-hover:opacity-100 transition-opacity">
-                    <button
-                      onClick={e => { e.stopPropagation(); onDelete(job.id); }}
+                    {/* The kit's small button, as the boards' row menus have (a hand-rolled box was 25 px). */}
+                    <IconButton
+                      icon={Trash2}
+                      label="Delete application"
+                      size="sm"
+                      variant="danger"
+                      tooltip={false}
                       title="Delete application"
-                      aria-label="Delete application"
-                      className="rounded p-1.5 text-ink-subtlest transition-colors hover:bg-red-50 hover:text-red-700"
-                    >
-                      <Trash2 size={13} />
-                    </button>
+                      onClick={e => { e.stopPropagation(); onDelete(job.id); }}
+                    />
                   </div>
                 </td>
               </tr>
