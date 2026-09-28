@@ -63,6 +63,34 @@ describe('R5-BRD-02: the store puts a deleted sprint back', () => {
     assert.deepEqual(b.sprints.filter((s) => s.state === 'active').map((s) => s.id), ['s3']);
     assert.equal(b.issues.find((i) => i.id === 'i4').sprintId, 's1');
   });
+
+  // A sprint's default name counts the sprints the board has now, so one made while the Undo is on
+  // offer can take the deleted sprint's name: the sprint that comes back takes a free one.
+  it('a name another sprint took meanwhile: a default name becomes the next default, any other gets " (2)"', () => {
+    const named = [
+      sprint('s1', 'HOME Sprint 1', 'active'),
+      sprint('s2', 'HOME Sprint 2', 'future', { goal: 'The gate' }),
+      sprint('s3', 'Garden week', 'future'),
+    ];
+    const { a, board } = actionsOver(project({ mode: 'scrum', sprints: named, issues: issues(), nextNumber: 6 }));
+    const removed = a.deleteSprint('p1', 's2');
+    a.addSprint('p1');
+    assert.equal(board().sprints.at(-1).name, 'HOME Sprint 2', 'the new sprint takes the deleted one\'s default name');
+    assert.equal(a.restoreSprint('p1', removed), true);
+    const names = board().sprints.map((s) => s.name);
+    assert.deepEqual(names, ['HOME Sprint 1', 'HOME Sprint 3', 'Garden week', 'HOME Sprint 2'], 'the sprint back at its place, under a free name');
+    const back = board().sprints.find((s) => s.id === 's2');
+    assert.equal(back.goal, 'The gate');
+    assert.equal(back.state, 'future');
+    assert.equal(sprintIds(board()), 'i1:s2 i2:s2 i3:s2 i4:s1 i5:-');
+
+    const garden = a.deleteSprint('p1', 's3');
+    a.addSprint('p1', { name: 'garden WEEK' });
+    a.addSprint('p1', { name: 'Garden week (2)' });
+    a.restoreSprint('p1', garden);
+    assert.equal(board().sprints.find((s) => s.id === 's3').name, 'Garden week (3)', 'case aside, and past a " (2)" taken too');
+    assert.equal(new Set(board().sprints.map((s) => s.name.toLowerCase())).size, board().sprints.length, 'no two sprints share a name');
+  });
 });
 
 it('the Backlog page: Delete sprint, then the toast\'s Undo brings the sprint section and its issues back', async () => {
@@ -77,5 +105,21 @@ it('the Backlog page: Delete sprint, then the toast\'s Undo brings the sprint se
     assert.match(page.section('s2').textContent, /Fix the tap.*Paint the fence.*Oil the gate/);
     assert.match(page.section('s2').textContent, /\(3 issues\)/);
     assert.equal(boardNow().sprints.find((s) => s.id === 's2').goal, 'The gate');
+  } finally { await page.close(); }
+});
+
+it('the Backlog page: Delete the last sprint, Create sprint, then Undo: two sections, two names', async () => {
+  const named = [sprint('s1', 'HOME Sprint 1', 'active'), sprint('s2', 'HOME Sprint 2', 'future')];
+  const page = mountBacklog(project({ mode: 'scrum', sprints: named, issues: issues(), nextNumber: 6 }));
+  try {
+    page.click(page.byLabel('HOME Sprint 2 actions'));
+    page.click(page.item('Delete sprint'));
+    await tick();
+    page.click(page.button('Create sprint'));
+    assert.deepEqual(boardNow().sprints.map((s) => s.name), ['HOME Sprint 1', 'HOME Sprint 2']);
+    page.click(page.undoOf('HOME Sprint 2 deleted'));
+    assert.deepEqual(boardNow().sprints.map((s) => s.name), ['HOME Sprint 1', 'HOME Sprint 3', 'HOME Sprint 2']);
+    assert.ok(page.byLabel('HOME Sprint 3 actions') && page.byLabel('HOME Sprint 2 actions'), 'each section under its own name');
+    assert.match(page.section('s2').textContent, /HOME Sprint 3.*Fix the tap.*Paint the fence.*Oil the gate/);
   } finally { await page.close(); }
 });

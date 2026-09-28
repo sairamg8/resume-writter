@@ -226,6 +226,8 @@ export function deleteComment(board, issueId, commentId, ctx = {}) {
 // ── Sprints (scrum) ───────────────────────────────────────────────────────────────────────
 
 const dateOr = (v, fallback) => (isLocalISO(v) ? v : fallback);
+/** A default sprint name, "<KEY> Sprint <n>" (case aside); its group 1 is n. */
+const sprintNamePattern = (board) => new RegExp(`^${String(board.key ?? '').replace(/[^A-Za-z0-9]/g, '\\$&')} Sprint (\\d+)$`, 'i');
 
 /**
  * The name of the next unnamed sprint: "<KEY> Sprint <n>", n one past the sprint count and past the
@@ -233,10 +235,23 @@ const dateOr = (v, fallback) => (isLocalISO(v) ? v : fallback);
  * next one repeat the last one's name).
  */
 function nextSprintName(board) {
-  const key = String(board.key ?? '');
-  const pattern = new RegExp(`^${key.replace(/[^A-Za-z0-9]/g, '\\$&')} Sprint (\\d+)$`, 'i');
+  const pattern = sprintNamePattern(board);
   const numbers = board.sprints.map((s) => Number(pattern.exec(s.name)?.[1] ?? 0));
-  return `${key} Sprint ${Math.max(board.sprints.length, ...numbers) + 1}`;
+  return `${String(board.key ?? '')} Sprint ${Math.max(board.sprints.length, ...numbers) + 1}`;
+}
+
+/**
+ * `name`, or — when another sprint on the board has it, case aside — a free one (R5-BRD-02: a sprint
+ * made while a deleted one's Undo was on offer can take its default name): a default name becomes the
+ * next default name (nextSprintName), any other name gets " (2)", " (3)"…
+ */
+function freeSprintName(board, name) {
+  const taken = (n) => board.sprints.some((s) => sameName(String(s.name ?? ''), n));
+  if (!taken(name)) return name;
+  if (sprintNamePattern(board).test(name)) return nextSprintName(board);
+  let n = 2;
+  while (taken(`${name} (${n})`)) n += 1;
+  return `${name} (${n})`;
 }
 
 /** Add a future sprint; unnamed, it is "<KEY> Sprint <n>" (nextSprintName). */
@@ -315,12 +330,13 @@ export function removedSprint(board, sprintId) {
  * Put back what deleteSprint took (`removed` from removedSprint, R5-BRD-02): the sprint at its old
  * place, as it was — or future, when it was active and another sprint was started since (a project
  * never has two active) — and its issues that are still in the backlog; one moved elsewhere since
- * stays where it is.
+ * stays where it is. A name another sprint took meanwhile is made free (freeSprintName).
  */
 export function restoreSprint(board, removed, ctx = {}) {
   if (!removed?.sprint || sprintById(board, removed.sprint.id)) return board;
   const second = removed.sprint.state === 'active' && board.sprints.some((s) => s.state === 'active');
-  const sprint = second ? { ...removed.sprint, state: 'future' } : removed.sprint;
+  const name = freeSprintName(board, removed.sprint.name);
+  const sprint = second || name !== removed.sprint.name ? { ...removed.sprint, name, ...(second ? { state: 'future' } : {}) } : removed.sprint;
   const sprints = [...board.sprints];
   sprints.splice(Math.max(0, Math.min(removed.index ?? sprints.length, sprints.length)), 0, sprint);
   const ids = new Set(removed.issueIds || []);
