@@ -165,7 +165,7 @@ export function JobTracker({ store }) {
           <JobSummary jobs={jobs} onOpen={open} />
           <aside aria-label="Career history" className="flex flex-col gap-2">
             <h2 className="text-[12px] font-semibold uppercase tracking-wide text-ink-subtle">Career history</h2>
-            <CareerHistoryPanel resumes={resumes} activeId={appState.activeId} showJobTrackerLink={false} />
+            <CareerHistoryPanel resumes={resumes} activeId={appState.activeId} showJobTrackerLink={false} variant="workspace" />
           </aside>
         </div>
       ) : (
