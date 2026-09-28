@@ -76,7 +76,8 @@ export function ResumeCard({ resume, onOpen, onDuplicate, onDelete, onRename, on
           </div>
         ) : (
           <div className="flex items-center gap-1 group/name">
-            <p className="text-sm font-semibold text-gray-800 truncate flex-1">{resume.name}</p>
+            {/* The full name on hover: a long one is cut to fit the card (R4-DVIS-28). */}
+            <p title={resume.name} className="text-sm font-semibold text-gray-800 truncate flex-1">{resume.name}</p>
             <button
               onClick={rename.start}
               title="Rename"

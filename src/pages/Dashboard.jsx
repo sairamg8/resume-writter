@@ -261,7 +261,9 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false, publicL
                 </button>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+              // Three to a row only from xl (R4-DVIS-28): at lg the Career History sidebar leaves ~645 px, and
+              // three ~200 px cards cut every name past ~21 characters, so a résumé and its "(Copy)" looked alike.
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5">
                 {resumes.map(r => card(r, id => navigate(`/resume/${id}`)))}
                 <button
                   onClick={newResume}
@@ -284,7 +286,7 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false, publicL
                     {letters.length} letter{letters.length !== 1 ? 's' : ''}
                   </p>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5">
                   {letters.map(r => card(r, openLetter))}
                   <button
                     onClick={startLetter}
