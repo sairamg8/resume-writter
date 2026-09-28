@@ -186,7 +186,9 @@ export function Backlog() {
                         />
                       )}
                     </span>
-                    {sprint?.goal && <p className="basis-full pl-9 text-[13px] text-ink-subtle">{sprint.goal}</p>}
+                    {/* min-w-0 and break-words: a goal with a long unbroken word (a link) breaks at
+                        the header's edge instead of widening it and scrolling the backlog sideways. */}
+                    {sprint?.goal && <p className="min-w-0 basis-full break-words pl-9 text-[13px] text-ink-subtle">{sprint.goal}</p>}
                   </header>
                   {open && (
                     <div className="mt-1 flex flex-col gap-1">

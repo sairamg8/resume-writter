@@ -120,8 +120,12 @@ export function ListView({ jobs, resumes, onNavigate, onDelete }) {
                     );
                   })() : <span className="text-ink-subtlest">—</span>}
                 </td>
-                <td className="max-w-[140px] truncate px-3 text-[13px] text-ink-subtle">
-                  {job.contact || <span className="text-ink-subtlest">—</span>}
+                <td className="px-3 text-[13px] text-ink-subtle">
+                  {/* A table cell ignores max-width, so a long contact widened the column on one
+                      line; a block inside the cell holds it to 140px and ends it with an ellipsis. */}
+                  <div className="max-w-[140px] truncate" title={job.contact || undefined}>
+                    {job.contact || <span className="text-ink-subtlest">—</span>}
+                  </div>
                 </td>
                 <td className="px-3">
                   {(job.todos?.length > 0) && (() => {
