@@ -122,9 +122,11 @@ function ColumnRow({ board, column, index, store }) {
       </div>
       {deleting && (
         <div className="flex flex-wrap items-center gap-2 bg-red-50 border border-red-100 rounded-md p-2 text-xs text-ink-subtle">
-          <label className="flex items-center gap-2">
+          {/* The select may shrink below its longest column title (titles run to 255 characters) and
+              wraps under its words: at its own width it ran past the card on a phone (R4-DPH-17). */}
+          <label className="flex min-w-0 max-w-full flex-wrap items-center gap-2">
             Its {count} issue{count === 1 ? '' : 's'} move to
-            <select aria-label="Move its issues to" value={target} onChange={(e) => { setPicked(e.target.value); setRefused(false); }} className={`${CONTROL} px-2 py-1`}>
+            <select aria-label="Move its issues to" value={target} onChange={(e) => { setPicked(e.target.value); setRefused(false); }} className={`${CONTROL} min-w-0 max-w-full px-2 py-1`}>
               {others.map((c) => <option key={c.id} value={c.id}>{c.title}</option>)}
             </select>
           </label>
