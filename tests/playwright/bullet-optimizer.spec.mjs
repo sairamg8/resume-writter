@@ -86,4 +86,33 @@ test('a list item split by a nested list opens and applies as one statement, its
   await expect(editor.locator('li')).toHaveText(['Led the migration of 40 services across 3 regionsCut costs by 30%', 'Cut costs by 30%', 'Built the ledger service']);
   await expect.poll(() => savedDescription(page)).toContain('<li>Cut costs by 30%</li>');
   await expect.poll(() => savedDescription(page)).not.toContain('for 3 regions<');
+  // Nothing is left where the later run was: no <br> placeholder or empty line after the sub-list,
+  // which the PDF printed as a blank line inside the bullet (review of R4-SW-WT-02).
+  await expect.poll(() => savedDescription(page)).toBe('<ul><li>Led the migration of 40 services across 3 regions<ul><li>Cut costs by 30%</li></ul></li><li>Built the ledger service</li></ul>');
+});
+
+// R4-SW-WT-02: an item whose statement is two paragraphs ('<li><p>A</p><p>B</p></li>') opens as "A B",
+// and Apply deletes the second paragraph whole — Chrome's delete over a block, not the fake DOM's —
+// leaving one paragraph and no empty line in the item.
+test('a list item split in paragraphs opens and applies as one statement, with no empty line left', async ({ page }) => {
+  const paragraphs = '<ul><li><p>Owned billing</p><p>for 3 regions</p></li><li>Built the ledger service</li></ul>';
+  await visitEditor(page, 'classic', { sections: [{ ...SECTIONS[0], items: [{ ...SECTIONS[0].items[0], description: paragraphs }] }] });
+  await page.getByText('Staff Engineer', { exact: true }).first().click();
+  const editor = page.locator('[contenteditable="true"]').filter({ hasText: 'Built the ledger service' });
+  await expect(editor).toBeVisible();
+  // The caret in "for 3 regions", the second paragraph.
+  await editor.evaluate((el) => {
+    el.focus();
+    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    let node = walker.nextNode();
+    while (node && !node.nodeValue.includes('for 3 regions')) node = walker.nextNode();
+    document.getSelection().collapse(node, 4);
+  });
+  await editor.locator('xpath=..').getByTitle('Bullet Optimizer & STAR Formula Helper').click();
+  const statement = page.locator('textarea').last();
+  await expect(statement).toHaveValue('Owned billing for 3 regions');
+  await statement.fill('Owned billing for 3 regions, cutting costs 20%');
+  await page.getByRole('button', { name: 'Apply to Resume' }).click();
+  await expect(editor.locator('li')).toHaveText(['Owned billing for 3 regions, cutting costs 20%', 'Built the ledger service']);
+  await expect.poll(() => savedDescription(page)).toBe('<ul><li><p>Owned billing for 3 regions, cutting costs 20%</p></li><li>Built the ledger service</li></ul>');
 });
