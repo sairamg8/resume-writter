@@ -52,7 +52,8 @@ describe('the Header Icon picker is the kit\'s Dialog (R4-DVIS-25)', () => {
       for (const text of ['Recommended', 'Style Packs (5)', 'Reset to Default', 'Upload Image', 'Close']) {
         assert.ok(p.all().some((el) => label(el) === text || label(el).startsWith(`${text} (`)), text);
       }
-      assert.ok(p.all().some((el) => el.tagName === 'INPUT' && el.getAttribute('type') === 'file'), 'the Upload Image file input');
+      // React sets an input's type as a property, which the fake DOM does not mirror as an attribute.
+      assert.ok(p.all().some((el) => el.tagName === 'INPUT' && reactProps(el).type === 'file'), 'the Upload Image file input');
     } finally { await p.unmount(); }
   });
 
