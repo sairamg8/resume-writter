@@ -369,9 +369,12 @@ export default function DesignPanel({
 
       <PageNumbersSection settings={settings} updateSetting={updateSetting} onReset={() => resetSection(PAGE_NUMBER_KEYS)} />
 
+      {/* The buttons go under the text when the row cannot hold both — in a panel dragged under about
+          320 px Yes, Reset and Cancel ran out of the box and were cut off (R4-DVIS-35). The text takes
+          the room left (flex-1), so at the usual widths they stay beside it as before. */}
       <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl">
-        <div className="flex items-start justify-between gap-3">
-          <div>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="flex-1 min-w-24">
             <p className="text-xs font-semibold text-amber-800">Reset Design Settings</p>
             <p className="text-[10px] text-amber-600 mt-0.5">
               {confirmReset
