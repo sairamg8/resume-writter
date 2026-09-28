@@ -27,7 +27,9 @@ function Breadcrumbs({ items }) {
 }
 
 /**
- * The top bar of a workspace page, sticky at the top of the shell's scroll box.
+ * The top bar of a workspace page, sticky at the top of the shell's scroll box from md up. On a
+ * phone it scrolls away with the page: breadcrumbs, a title, wrapped actions and tabs pinned there
+ * took a quarter of the screen for good (R4-DPH-07).
  *
  * - `title` (the page's h1); with `onTitleChange(next)` it is an InlineEdit (click to rename a
  *   project) named by `titleLabel`. `subtitle`: one muted line under it. `icon`: a node before it
@@ -39,7 +41,7 @@ function Breadcrumbs({ items }) {
  */
 export function PageHeader({ title, onTitleChange, titleLabel = 'Title', subtitle, icon, breadcrumbs, actions, tabs, className, children }) {
   return (
-    <header className={cx('sticky top-0 z-20 shrink-0 bg-white', tabs && 'border-b border-line', className)}>
+    <header className={cx('z-20 shrink-0 bg-white md:sticky md:top-0', tabs && 'border-b border-line', className)}>
       <div className={cx('flex flex-col gap-1 px-4 pt-4 md:px-8', tabs ? 'pb-1' : 'pb-3')}>
         {breadcrumbs?.length > 0 && (
           <div className="flex items-center gap-2">

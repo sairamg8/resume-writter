@@ -1,7 +1,8 @@
 import { useId, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { ChevronDown, CircleHelp, Menu as MenuIcon, Plus, Search } from 'lucide-react';
-import { Button, IconButton, Menu, ShortcutsDialog, cx, isImeKey, useHotkeys } from '../ui/index.js';
+import { ChevronDown, CircleHelp, Menu as MenuIcon, Plus, Search, X } from 'lucide-react';
+import { Button, IconButton, Kbd, Menu, ShortcutsDialog, controlClass, cx, isImeKey, useHotkeys } from '../ui/index.js';
 import { IssueTypeIcon } from '../tracker/TrackerIcons.jsx';
 import { useWorkspace } from './workspaceContext.js';
 import { orderProjects } from './projects.js';
@@ -42,11 +43,16 @@ function TopLink({ to, label, active }) {
   );
 }
 
-/** The search box and its results (projects, then issues), searched as the user types. */
+/**
+ * The search box and its results (projects, then issues), searched as the user types. Below sm the
+ * bar has no room for it: a search button (or '/') opens it as a bar over the top bar, and Escape, its X, a
+ * result picked or a tap elsewhere puts it away (R4-DPH-04).
+ */
 function QuickSearch({ search }) {
   const navigate = useNavigate();
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
+  const [phoneOpen, setPhoneOpen] = useState(false);
   const [active, setActive] = useState(0);
   const inputRef = useRef(null);
   const listId = useId();
@@ -54,83 +60,119 @@ function QuickSearch({ search }) {
   // The highlighted row, within the list as it is now: the list can shrink while it is open (an issue
   // deleted, a sync, another tab), and an index past its end made Enter do nothing (R4-LO-25).
   const at = Math.max(0, Math.min(active, results.length - 1));
-  useHotkeys({ '/': () => { inputRef.current?.focus(); inputRef.current?.select(); } });
+  // Shown, then focused, in one go: below sm the box is display:none until the phone bar opens, and
+  // iOS raises the keyboard only for a focus the tap itself makes. '/' opens it too, so a narrow
+  // window or a phone with a keyboard does not focus a box that is not shown (R4-DPH-04).
+  const openAndFocus = () => {
+    flushSync(() => setPhoneOpen(true));
+    inputRef.current?.focus();
+  };
+  useHotkeys({ '/': () => { openAndFocus(); inputRef.current?.select(); } });
 
   const go = (hit) => {
     if (!hit) return;
     setQuery('');
     setOpen(false);
+    setPhoneOpen(false);
     inputRef.current?.blur();
     navigate(hit.to);
   };
+  const close = () => { setQuery(''); setOpen(false); setPhoneOpen(false); inputRef.current?.blur(); };
   const onKeyDown = (e) => {
     if (e.key === 'ArrowDown') { e.preventDefault(); setActive(Math.max(0, Math.min(at + 1, results.length - 1))); }
     if (e.key === 'ArrowUp') { e.preventDefault(); setActive(Math.max(at - 1, 0)); }
     if (e.key === 'Enter' && !isImeKey(e)) { e.preventDefault(); go(results[at]); }
-    if (e.key === 'Escape' && !isImeKey(e)) { setQuery(''); setOpen(false); inputRef.current?.blur(); }
+    if (e.key === 'Escape' && !isImeKey(e)) close();
   };
 
   return (
-    <div className="relative hidden w-full max-w-[20rem] sm:block">
-      <Search size={16} aria-hidden="true" className="pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-ink-subtlest" />
-      <input
-        ref={inputRef}
-        type="text"
-        role="combobox"
-        aria-label="Search issues and projects"
-        aria-expanded={results.length > 0}
-        aria-controls={results.length ? listId : undefined}
-        aria-activedescendant={results.length ? `${listId}-${at}` : undefined}
-        placeholder="Search"
-        value={query}
-        onChange={(e) => { setQuery(e.target.value); setActive(0); setOpen(true); }}
-        onFocus={() => setOpen(true)}
-        onBlur={() => setTimeout(() => setOpen(false), 120)}
-        onKeyDown={onKeyDown}
-        className="h-8 w-full rounded border border-line bg-white pr-8 pl-8 text-sm text-ink placeholder:text-ink-subtlest transition-colors hover:bg-hovered focus:border-brand focus:bg-white focus:outline-none focus:ring-1 focus:ring-brand"
-      />
-      <kbd aria-hidden="true" className="pointer-events-none absolute top-1/2 right-2 -translate-y-1/2 rounded border border-line px-1 text-[11px] text-ink-subtlest">/</kbd>
-      {open && query.trim() && (
-        <div className="absolute top-10 right-0 left-0 z-50 overflow-hidden rounded-md border border-line bg-white py-1 shadow-xl">
-          {results.length === 0 ? (
-            <p className="px-3 py-3 text-sm text-ink-subtlest">No issues or projects match “{query.trim()}”.</p>
-          ) : (
-            <ul id={listId} role="listbox" aria-label="Search results">
-              {results.map((hit, i) => (
-                <li
-                  key={`${hit.kind}-${hit.id}`}
-                  id={`${listId}-${i}`}
-                  role="option"
-                  aria-selected={i === at}
-                  onMouseDown={(e) => { e.preventDefault(); go(hit); }}
-                  onMouseEnter={() => setActive(i)}
-                  className={cx('flex cursor-pointer items-center gap-2.5 px-3 py-1.5', i === at ? 'bg-brand-subtle' : 'hover:bg-hovered')}
-                >
-                  {hit.kind === 'issue'
-                    ? <IssueTypeIcon type={hit.type} />
-                    : <span aria-hidden="true" className="size-4 shrink-0 rounded-[3px]" style={{ backgroundColor: hit.color || '#94a3b8' }} />}
-                  <span className="min-w-0 flex-1">
-                    <span className={cx('block truncate text-sm text-ink', hit.done && 'line-through decoration-ink-subtlest')}>{hit.title}</span>
-                    <span className="block truncate text-[11px] text-ink-subtlest">{hit.kind === 'issue' ? `${hit.key} · ${hit.subtitle}` : `Project · ${hit.subtitle}`}</span>
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      )}
-    </div>
+    <>
+      <IconButton icon={Search} label="Search" onClick={openAndFocus} className="sm:hidden" tooltip={false} />
+      <div
+        className={cx(
+          'relative w-full max-w-[20rem] sm:block',
+          // On a phone, opened: fixed over the top bar's row (its h-8 box 12 px from the top of the
+          // 56 px bar), as wide as the screen but for the bar's 8 px gutters.
+          phoneOpen ? 'max-sm:fixed max-sm:inset-x-2 max-sm:top-3 max-sm:z-40 max-sm:w-auto max-sm:max-w-none' : 'hidden',
+        )}
+      >
+        <Search size={16} aria-hidden="true" className="pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-ink-subtlest" />
+        <input
+          ref={inputRef}
+          type="text"
+          role="combobox"
+          aria-label="Search issues and projects"
+          aria-expanded={results.length > 0}
+          aria-controls={results.length ? listId : undefined}
+          aria-activedescendant={results.length ? `${listId}-${at}` : undefined}
+          placeholder="Search"
+          value={query}
+          onChange={(e) => { setQuery(e.target.value); setActive(0); setOpen(true); }}
+          onFocus={() => setOpen(true)}
+          onBlur={() => setTimeout(() => { setOpen(false); setPhoneOpen(false); }, 120)}
+          onKeyDown={onKeyDown}
+          // The kit's control, as the page toolbars' SearchInput draws it (R4-DVIS-15): its border and
+          // 13 px text, 16 px on touch screens, where iOS Safari zooms into any smaller field (R4-DPH-11).
+          className={cx(controlClass({ size: 'sm' }), 'h-8 pr-8 pl-8')}
+        />
+        {/* The kit's key cap, hidden below md as SearchInput's is (no keyboard to press it on a phone or
+            a tablet); the wrapper keeps it silent to screen readers, as the bare cap was. */}
+        <span aria-hidden="true" className="pointer-events-none absolute top-1/2 right-2 flex -translate-y-1/2 max-md:hidden">
+          <Kbd>/</Kbd>
+        </span>
+        {phoneOpen && (
+          <button
+            type="button"
+            aria-label="Close search"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={close}
+            className="absolute top-1/2 right-1.5 inline-flex size-6 -translate-y-1/2 items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60 sm:hidden"
+          >
+            <X size={14} aria-hidden="true" />
+          </button>
+        )}
+        {open && query.trim() && (
+          <div className="absolute top-10 right-0 left-0 z-50 overflow-hidden rounded-md border border-line bg-white py-1 shadow-xl">
+            {results.length === 0 ? (
+              <p className="px-3 py-3 text-sm text-ink-subtlest">No issues or projects match “{query.trim()}”.</p>
+            ) : (
+              <ul id={listId} role="listbox" aria-label="Search results">
+                {results.map((hit, i) => (
+                  <li
+                    key={`${hit.kind}-${hit.id}`}
+                    id={`${listId}-${i}`}
+                    role="option"
+                    aria-selected={i === at}
+                    onMouseDown={(e) => { e.preventDefault(); go(hit); }}
+                    onMouseEnter={() => setActive(i)}
+                    className={cx('flex cursor-pointer items-center gap-2.5 px-3 py-1.5', i === at ? 'bg-brand-subtle' : 'hover:bg-hovered')}
+                  >
+                    {hit.kind === 'issue'
+                      ? <IssueTypeIcon type={hit.type} />
+                      : <span aria-hidden="true" className="size-4 shrink-0 rounded-[3px]" style={{ backgroundColor: hit.color || '#94a3b8' }} />}
+                    <span className="min-w-0 flex-1">
+                      <span className={cx('block truncate text-sm text-ink', hit.done && 'line-through decoration-ink-subtlest')}>{hit.title}</span>
+                      <span className="block truncate text-[11px] text-ink-subtlest">{hit.kind === 'issue' ? `${hit.key} · ${hit.subtitle}` : `Project · ${hit.subtitle}`}</span>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+      </div>
+    </>
   );
 }
 
 /**
  * The workspace's top bar, across the whole window over the sidebar and the page: the menu
  * button (phones), the brand, Your work · Projects ▾ · Job Tracker · Résumés, the Create button
- * (a new issue — on the Job Tracker's pages, a new job), the quick search (`/`), the jobs' and
- * boards' cloud icon (CollectionSyncDot, signed in only), the keyboard-shortcuts help (`?`) and
- * the account: the Dashboard's and Editor's AuthBar, compact — Sign in with Google while signed
- * out, the avatar and its Sign out menu while signed in. The jobs and the boards sync with the
- * account, yet these pages had no way to sign in or out (R4-DUX-07).
+ * (a new issue — on the Job Tracker's pages, a new job), the quick search (`/`; on a phone behind a
+ * search button), the jobs' and boards' cloud icon (CollectionSyncDot, signed in only), the
+ * keyboard-shortcuts help (`?`) and the account: the Dashboard's and Editor's AuthBar, compact — Sign
+ * in with Google while signed out, the avatar and its Sign out menu while signed in. The jobs and the
+ * boards sync with the account, yet these pages had no way to sign in or out (R4-DUX-07).
  *
  * - `onCreate()`: open the create-issue dialog; `search(query)` → results (utils/workspaceSearch).
  * - `auth`: the account (useAuth). No résumé sync is passed: AuthBar's own cloud icon stays away,
