@@ -9,7 +9,7 @@ import { JOB_SOURCES, JOB_STATUSES, WORK_MODES } from '@/constants/jobs';
 import { InterviewStageSelector } from '@/components/job/InterviewStageSelector';
 import { JobsNotSavedAlert } from '@/components/job/JobsNotSavedAlert';
 import RichTextEditor from '@/components/RichTextEditor';
-import { Button, Select, TextField, useConfirmOptional } from '@/components/ui';
+import { Button, EmptyState, Select, TextField, useConfirmOptional } from '@/components/ui';
 import { PageHeader } from '@/components/shell';
 
 // The form's unsaved values in this tab's sessionStorage, so a reload, a crash or a closed tab no
@@ -155,18 +155,10 @@ export function JobForm({ store }) {
     if (canSave) { clearDraft(key); leaveTo(`/jobs/${addJob(form)}`); }
   }
 
-  // An unknown id is not a blank form whose Save throws the input away (J-16).
+  // An unknown id is not a blank form whose Save throws the input away (J-16). The job page's own
+  // missing-job state, as the project pages' are: here it was a grey line and a text link (R5-JOB-02).
   if (isEdit && !opened) {
-    return (
-      <div className="flex flex-1 items-center justify-center bg-white">
-        <div className="text-center">
-          <p className="text-ink-subtle mb-3">Job not found.</p>
-          <button onClick={() => navigate('/jobs')} className="text-brand text-sm font-medium hover:underline">
-            ← Back to Job Tracker
-          </button>
-        </div>
-      </div>
-    );
+    return <EmptyState className="m-auto" title="Job not found" description="It may have been deleted, or the link is wrong." action={<Button variant="primary" to="/jobs">← Back to Job Tracker</Button>} />;
   }
 
   const title = isEdit ? 'Edit job application' : 'Add job application';
