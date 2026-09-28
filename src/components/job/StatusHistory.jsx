@@ -17,7 +17,8 @@ export function StatusHistory({ history }) {
   return (
     <div className="bg-white rounded-md border border-line p-5 shadow-sm">
       <div className="flex items-center justify-between mb-4">
-        <p className="text-[10px] font-bold text-ink-subtlest uppercase tracking-widest">Application History</p>
+        {/* The job page's card heading, as its Details box draws one (R4-DVIS-09). */}
+        <p className="text-sm font-semibold text-ink">Application History</p>
         <div className="flex gap-2">
           {rejections > 0 && (
             <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-red-50 text-red-600 border border-red-100">

@@ -6,6 +6,7 @@ import { StatusHistory } from '@/components/job/StatusHistory';
 import { deadlineState } from '@/utils/dates';
 import { isOpen, linkedResume, resumeChoices } from '@/utils/jobQuery';
 import { editorPath } from '@/utils/letters';
+import { controlClass, cx } from '@/components/ui';
 
 /**
  * A closed (rejected / withdrawn) job stays editable here: its "read-only" lock was bypassed by the
@@ -14,19 +15,32 @@ import { editorPath } from '@/utils/letters';
  */
 const CLOSED = ['rejected', 'withdrawn'];
 
+// A field's name as the kit's Field draws its label (the job form's are the same 12 px semibold), and
+// a card's heading as the job page's Details box draws its own (R4-DVIS-09). Both were 10 px bold
+// capitals, a look no other label or heading on the page had.
+const LABEL = 'text-[12px] font-semibold leading-5 text-ink-subtle';
+const HEADING = 'text-sm font-semibold text-ink';
+// The kit's box (controlClass) for the controls that are always live — the selects and the deadline —
+// 36 px tall as the kit's Select and TextField draw theirs, 44 on a touch screen; min-w-0 lets it
+// shrink in its row (R4-DPH-14). A click-to-edit value stays a plain row until its pencil opens it.
+const BOX = 'h-9 pointer-coarse:h-11 min-w-0 flex-1 px-3';
+// The deadline's date box without the kit's own ink: its red or amber takes its place, and one text
+// colour per element leaves nothing to the stylesheet's order.
+const DATE_BOX = controlClass().split(' ').filter((c) => c !== 'text-ink').join(' ');
+
 /** A labelled choice from `options` (`{ id, label }`), '' for not set: saved as soon as it is picked. */
 function Choice({ label, value, options, onChange, icon: Icon }) {
   return (
     <div>
-      <p className="text-[10px] font-bold uppercase tracking-widest mb-1 text-ink-subtlest">{label}</p>
-      <div className="flex items-center gap-2 px-3 py-2 rounded-md border border-transparent hover:border-line hover:bg-sunken transition-all">
+      <p className={`${LABEL} mb-1`}>{label}</p>
+      <div className="flex items-center gap-2 px-3">
         <Icon size={13} className="text-ink-subtlest shrink-0" />
         {/* min-w-0: a select in a flex row is as wide as its longest option unless it may shrink. */}
         <select
           aria-label={label}
           value={value || ''}
           onChange={e => onChange(e.target.value)}
-          className="min-w-0 flex-1 text-sm pointer-coarse:text-base bg-transparent focus:outline-none cursor-pointer text-ink"
+          className={cx(controlClass(), BOX, 'cursor-pointer')}
         >
           <option value="">— Not set —</option>
           {options.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
@@ -58,7 +72,7 @@ export function OverviewTab({ job, set, resumes, navigate }) {
 
       {/* Pipeline — always interactive so user can reopen */}
       <div className="sm:col-span-2 bg-white rounded-md border border-line p-5 shadow-sm">
-        <p className="text-[10px] font-bold text-ink-subtlest uppercase tracking-widest mb-5">Application Stage</p>
+        <p className={`${HEADING} mb-5`}>Application Stage</p>
         <Pipeline status={job.status} onChange={val => set('status', val)} />
       </div>
 
@@ -80,13 +94,13 @@ export function OverviewTab({ job, set, resumes, navigate }) {
       {/* Left col — Role Info */}
       <div className="space-y-4">
         <div className="bg-white rounded-md border border-line p-5 shadow-sm space-y-4">
-          <p className="text-[10px] font-bold text-ink-subtlest uppercase tracking-widest">Role Info</p>
+          <p className={HEADING}>Role Info</p>
           <Field label="Company"          value={job.company}   onChange={named('company', 'role')}  icon={Briefcase} placeholder="Company name" />
           <Field label="Role / Position"  value={job.role}      onChange={named('role', 'company')}     icon={FileText}  placeholder="Job title" />
           {job.stage && (
             <div className="flex items-center gap-2 px-3 py-2">
               <Briefcase size={13} className="text-ink-subtlest shrink-0" />
-              <span className="text-[10px] font-bold text-ink-subtlest uppercase tracking-widest mr-2">Stage</span>
+              <span className={`${LABEL} mr-2`}>Stage</span>
               <span className="text-xs font-semibold text-brand bg-brand-subtle px-2.5 py-0.5 rounded-full border border-brand-subtle-hover">{job.stage}</span>
             </div>
           )}
@@ -102,24 +116,25 @@ export function OverviewTab({ job, set, resumes, navigate }) {
       {/* Right col — Timeline & Contact */}
       <div className="space-y-4">
         <div className="bg-white rounded-md border border-line p-5 shadow-sm space-y-4">
-          <p className="text-[10px] font-bold text-ink-subtlest uppercase tracking-widest">Timeline & Contact</p>
+          <p className={HEADING}>Timeline & Contact</p>
 
           <Field label="Applied Date"   value={job.appliedDate} onChange={v => set('appliedDate', v)} type="date" icon={Calendar} />
 
           {/* Deadline */}
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-widest mb-1 text-ink-subtlest">
+            <p className={`${LABEL} mb-1`}>
               Deadline
             </p>
-            <div className="flex items-center gap-2 px-3 py-2 rounded-md border border-transparent hover:border-line hover:bg-sunken transition-all">
+            <div className="flex items-center gap-2 px-3">
               <Calendar size={13} className={`shrink-0 ${isDeadlinePast ? 'text-red-400' : isDeadlineSoon ? 'text-amber-400' : 'text-ink-subtlest'}`} />
               <input
                 type="date"
                 aria-label="Deadline"
                 value={job.deadline || ''}
                 onChange={e => set('deadline', e.target.value)}
-                // 16 px on touch screens: iOS Safari zooms the page into any smaller field it focuses (J-38).
-                className={`min-w-0 flex-1 text-sm pointer-coarse:text-base bg-transparent focus:outline-none ${
+                // The kit's box, 16 px on touch screens as iOS Safari zooms the page into any smaller
+                // field it focuses (J-38), in the deadline's own colour.
+                className={`${DATE_BOX} ${BOX} ${
                   isDeadlinePast ? 'text-red-600 font-medium' : isDeadlineSoon ? 'text-amber-600 font-medium' : 'text-ink'
                 }`}
               />
@@ -139,10 +154,10 @@ export function OverviewTab({ job, set, resumes, navigate }) {
 
           {/* Resume */}
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-widest mb-1 text-ink-subtlest">
+            <p className={`${LABEL} mb-1`}>
               Resume Used
             </p>
-            <div className="flex items-center gap-2 px-3 py-2 rounded-md border border-transparent hover:border-line hover:bg-sunken transition-all">
+            <div className="flex items-center gap-2 px-3">
               <FileText size={13} className="text-ink-subtlest shrink-0" />
               {/* min-w-0: a long résumé name pushed the select, and its Open button, out of the card;
                   the name is cut inside the select now. */}
@@ -150,7 +165,7 @@ export function OverviewTab({ job, set, resumes, navigate }) {
                 aria-label="Resume used"
                 value={job.resumeId || ''}
                 onChange={e => set('resumeId', e.target.value)}
-                className="min-w-0 flex-1 text-sm pointer-coarse:text-base bg-transparent focus:outline-none cursor-pointer text-ink"
+                className={cx(controlClass(), BOX, 'cursor-pointer')}
               >
                 <option value="">— Not linked yet —</option>
                 {/* A linked résumé deleted since: said so, not 'Not linked yet' (J-21). */}

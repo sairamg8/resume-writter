@@ -27,7 +27,9 @@ export function Pipeline({ status, onChange }) {
           {t.label}
         </div>
         <div>
-          <p className="text-[10px] font-bold text-ink-subtlest uppercase tracking-widest mb-2">Restart Application As</p>
+          {/* Drawn as the kit's Field draws a label, as are "Close as:" and "Mark as:" below: 10 px
+              bold capitals were no other label's look (R4-DVIS-09). */}
+          <p className="text-[12px] font-semibold leading-5 text-ink-subtle mb-2">Restart Application As</p>
           <div className="flex items-center gap-2 flex-wrap">
             {PIPELINE.map(id => {
               const s = STATUS_MAP[id];
@@ -60,7 +62,7 @@ export function Pipeline({ status, onChange }) {
           On Hold
         </div>
         <div>
-          <p className="text-[10px] font-bold text-ink-subtlest uppercase tracking-widest mb-2">Resume Application</p>
+          <p className="text-[12px] font-semibold leading-5 text-ink-subtle mb-2">Resume Application</p>
           <div className="flex items-center gap-2 flex-wrap">
             {PIPELINE.map(id => {
               const s = STATUS_MAP[id];
@@ -79,7 +81,7 @@ export function Pipeline({ status, onChange }) {
           </div>
         </div>
         <div className="flex items-center gap-2 pt-1 border-t border-line">
-          <span className="text-[10px] text-ink-subtlest font-semibold uppercase tracking-widest">Close as:</span>
+          <span className="text-[12px] font-semibold leading-5 text-ink-subtle">Close as:</span>
           {[
             { id: 'rejected',  icon: XCircle, label: 'Rejected' },
             { id: 'withdrawn', icon: LogOut,  label: 'Withdrawn' },
@@ -168,7 +170,7 @@ export function Pipeline({ status, onChange }) {
         {/* Wider than a phone's card on one line: it wraps between its pills — never inside one, nor
             inside "Mark as:" — so each stays whole (R4-DPH-13). */}
         <div className="flex flex-wrap items-center gap-2 ml-auto">
-          <span className="text-[10px] text-ink-subtlest font-semibold uppercase tracking-widest whitespace-nowrap">Mark as:</span>
+          <span className="text-[12px] font-semibold leading-5 text-ink-subtle whitespace-nowrap">Mark as:</span>
           <button
             onClick={() => onChange(ON_HOLD)}
             className="inline-flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-full border font-semibold whitespace-nowrap transition-all hover:scale-105"

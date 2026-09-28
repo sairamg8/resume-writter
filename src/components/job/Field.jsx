@@ -2,6 +2,10 @@ import { useState, useRef, useEffect } from 'react';
 import { Pencil } from 'lucide-react';
 import { isImeKey } from '@/components/ui/compose';
 
+// A field's name as the kit's Field and the job form draw theirs, 12 px semibold: it was in 10 px
+// bold capitals, which no other label had (R4-DVIS-09).
+const LABEL = 'text-[12px] font-semibold leading-5 text-ink-subtle mb-1';
+
 export function Field({ label, value, onChange, type = 'text', icon: Icon, placeholder, readOnly = false }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value || '');
@@ -19,7 +23,7 @@ export function Field({ label, value, onChange, type = 'text', icon: Icon, place
   if (readOnly) {
     return (
       <div>
-        <p className="text-[10px] font-bold text-ink-subtlest uppercase tracking-widest mb-1">{label}</p>
+        <p className={LABEL}>{label}</p>
         <div className="flex items-center gap-2 px-3 py-2">
           {Icon && <Icon size={13} className="text-ink-subtlest shrink-0" />}
           <span className={`flex-1 text-sm ${value ? 'text-ink-subtle' : 'text-ink-subtlest italic'}`}>
@@ -32,7 +36,7 @@ export function Field({ label, value, onChange, type = 'text', icon: Icon, place
 
   return (
     <div>
-      <p className="text-[10px] font-bold text-ink-subtlest uppercase tracking-widest mb-1">{label}</p>
+      <p className={LABEL}>{label}</p>
       {editing ? (
         <input
           ref={ref}
