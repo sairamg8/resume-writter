@@ -45,7 +45,12 @@ export function BacklogRow({ board, issue, sprintId, targets, onOpen, onStatus, 
   const epic = issue.epicId ? board.issues.find((i) => i.id === issue.epicId) : null;
   const statuses = board.columns.map((c) => ({ id: c.id, name: c.title || 'Untitled', category: c.category }));
   const stop = { onClick: (e) => e.stopPropagation(), onKeyDown: (e) => e.stopPropagation(), onPointerDown: (e) => e.stopPropagation() };
-  const moveItem = (t) => ({ id: t.id ?? 'backlog', label: t.name, checked: (t.id ?? null) === (sprintId ?? null), radio: true, onSelect: () => onMove(t.id ?? null) });
+  const moveItem = (t) => {
+    const here = (t.id ?? null) === (sprintId ?? null);
+    // The section it is in (the ticked one) moves nothing: sent on, it put the row at that
+    // section's foot. The board card's Move to does the same (R5-BRD-01).
+    return { id: t.id ?? 'backlog', label: t.name, checked: here, radio: true, onSelect: () => { if (!here) onMove(t.id ?? null); } };
+  };
   return (
     <li
       ref={setNodeRef}
