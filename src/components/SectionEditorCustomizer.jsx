@@ -22,7 +22,9 @@ export function SegmentRow({ label, options, value, onChange }) {
   return (
     <div className="flex items-center justify-between gap-3">
       <span className="text-xs text-gray-600 shrink-0">{label}</span>
-      <div className="flex gap-1">
+      {/* The choices wrap onto a second line, kept to the right, when the panel is dragged narrow:
+          in one line Skills' Style lost 'Tags' and Rows 'Spacious' past the card's edge (R4-DVIS-30). */}
+      <div className="flex flex-wrap justify-end gap-1">
         {options.map(opt => (
           <button
             key={opt.value}
@@ -172,6 +174,8 @@ export function SectionCustomizer({ section, template, updateSectionSettings, se
             <div key={key} className="flex flex-col gap-1">
               <label htmlFor={uid + key} className="text-[10px] text-slate-400">{label}</label>
               <div className="flex items-center gap-0.5">
+                {/* 16 px on a touch screen, as the section's other fields are: iOS zooms the page into
+                    a smaller field it focuses (R4-DPH-29). A mouse keeps 12 px. */}
                 <input
                   id={uid + key}
                   type="number"
@@ -187,7 +191,7 @@ export function SectionCustomizer({ section, template, updateSectionSettings, se
                     const v = sectionOverridePx(e.target.value);
                     if (v !== undefined) set(key, v);
                   }}
-                  className="w-full text-xs border border-gray-200 rounded px-1.5 py-1 text-center outline-none focus:border-blue-400 bg-white"
+                  className="w-full text-xs pointer-coarse:text-base border border-gray-200 rounded px-1.5 py-1 text-center outline-none focus:border-blue-400 bg-white"
                 />
                 {s[key] != null && (
                   <button title="Reset" onClick={() => set(key, undefined)} className="text-gray-300 hover:text-gray-500 shrink-0">

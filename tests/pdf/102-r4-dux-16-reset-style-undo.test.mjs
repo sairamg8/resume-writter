@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { createElement as h, useState } from 'react';
 import { setup, teardown, loadModule } from './harness.mjs';
 import { mount, elements, reactProps } from './fake-dom.mjs';
-import { patchFakeDom } from '../unit/ui-dom-harness.mjs';
+import { patchFakeDom, ev } from '../unit/ui-dom-harness.mjs';
 
 before(async () => {
   await setup();
@@ -39,7 +39,8 @@ async function resetStyle() {
   }
   const view = mount(Page, {});
   const all = () => [...elements(view.document.body)];
-  view.act(() => reactProps(all().find((el) => el.tagName === 'BUTTON' && el.getAttribute('title') === 'Section options')).onClick());
+  // The ⋯ button opens the kit's Menu, whose click handler reads the click (R4-DPH-24).
+  view.act(() => reactProps(all().find((el) => el.tagName === 'BUTTON' && el.getAttribute('title') === 'Section options')).onClick(ev()));
   const reset = all().find((el) => el.tagName === 'BUTTON' && el.textContent.trim() === 'Reset style');
   assert.ok(reset, 'the options menu is open');
   view.act(() => reactProps(reset).onClick());

@@ -219,16 +219,18 @@ it('the STAR Optimizer\'s Apply, with no caret in the notes, adds its statement 
   try {
     t.view.document.getSelection().removeAllRanges();
     t.fire(t.tool('Bullet Optimizer & STAR Formula Helper'), 'onMouseDown');
-    const area = t.all().find((el) => el.tagName === 'TEXTAREA');
+    // The optimizer opens in a portal at the end of <body>, outside the tab (R4-DVIS-23).
+    const page = () => [...dom.elements(t.view.document.body)];
+    const area = page().find((el) => el.tagName === 'TEXTAREA');
     assert.ok(area, 'the optimizer opens');
     t.fire(area, 'onChange', ev({ target: { value: 'Prepared a 3-person panel, cutting answer time 40%' } }));
-    t.fire(t.all().find((el) => el.tagName === 'BUTTON' && el.textContent.includes('Apply to Resume')), 'onClick');
+    t.fire(page().find((el) => el.tagName === 'BUTTON' && el.textContent.includes('Apply to Resume')), 'onClick');
 
     const box = t.box();
     assert.deepEqual(tagsIn(box), ['P', 'UL', 'LI']);
     assert.equal(box.lastChild.textContent, 'Prepared a 3-person panel, cutting answer time 40%');
     assert.deepEqual(t.writes, [['notes', '<p>Call Ana</p><ul><li>Prepared a 3-person panel, cutting answer time 40%</li></ul>']]);
-    assert.equal(t.all().filter((el) => el.tagName === 'TEXTAREA').length, 0, 'and it closes');
+    assert.equal(page().filter((el) => el.tagName === 'TEXTAREA').length, 0, 'and it closes');
   } finally {
     await t.view.unmount();
   }

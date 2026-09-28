@@ -5,6 +5,10 @@ import { CSS } from '@dnd-kit/utilities';
 import { FieldIdsContext, useFieldIds } from '@/hooks/useFieldIds';
 import { parseMonthYear } from '@/utils/dates';
 
+/**
+ * A section's text box. 16 px on a touch screen, as every field of the section editor is: iOS zooms
+ * the page into any smaller field it focuses (R4-DPH-28). A mouse keeps 14 px.
+ */
 export function InputField({ label, value, onChange, placeholder, type = 'text' }) {
   const { id } = useFieldIds(label);
   return (
@@ -16,7 +20,7 @@ export function InputField({ label, value, onChange, placeholder, type = 'text' 
         value={value || ''}
         onChange={e => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full px-2.5 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="w-full px-2.5 py-1.5 text-sm pointer-coarse:text-base border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
       />
     </div>
   );
@@ -57,13 +61,16 @@ export function MonthPicker({ label, value, onChange, disabled }) {
   return (
     <div className={disabled ? 'opacity-40 pointer-events-none' : ''}>
       {label && <label htmlFor={id} className="block text-xs text-gray-500 mb-1">{label}</label>}
+      {/* The selects may shrink below their widest option (min-w-0), so a narrow picker stays in its
+          own cell instead of running under the one beside it (R4-DPH-27); 16 px on touch, as
+          InputField is (R4-DPH-28). */}
       <div className="flex gap-1 items-center">
         <select
           id={id}
           aria-label={name ? `${name} month` : 'Month'}
           value={monthStr}
           onChange={e => update(e.target.value, yearStr)}
-          className="flex-1 px-2 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+          className="flex-1 min-w-0 px-2 py-1.5 text-sm pointer-coarse:text-base border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
         >
           <option value="">Month</option>
           {MONTHS.map(m => <option key={m} value={m}>{m}</option>)}
@@ -72,7 +79,7 @@ export function MonthPicker({ label, value, onChange, disabled }) {
           aria-label={name ? `${name} year` : 'Year'}
           value={yearStr}
           onChange={e => update(monthStr, e.target.value)}
-          className="flex-1 px-2 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+          className="flex-1 min-w-0 px-2 py-1.5 text-sm pointer-coarse:text-base border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
         >
           <option value="">Year</option>
           {yearOptions(yearStr).map(y => <option key={y} value={y}>{y}</option>)}
@@ -161,7 +168,10 @@ export function ItemCard({ label, onRemove, onDuplicate, onToggleVisibility, vis
           {open ? <ChevronUp size={13} className="text-gray-400" /> : <ChevronDown size={13} className="text-gray-400" />}
         </div>
       </div>
-      {open && <div className="p-3 space-y-2.5">{children}</div>}
+      {/* A size container: the fields' two-column rows (@sm:grid-cols-2) go side by side only when
+          the card is wide enough for two date pickers, not when the window is — in the 360 px editor
+          panel and on a phone they stack (R4-DPH-27). */}
+      {open && <div className="@container p-3 space-y-2.5">{children}</div>}
     </div>
   );
 }
