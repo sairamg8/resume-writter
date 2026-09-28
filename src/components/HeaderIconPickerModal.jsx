@@ -129,12 +129,14 @@ export default function HeaderIconPickerModal({
       <div className="sticky top-0 z-10 px-5 pt-4 pb-2 space-y-3 bg-gray-50 border-y border-gray-100">
         <div className="relative">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          {/* 16 px on a touch screen: iOS zooms the page into any smaller field it focuses (R4-DPH-30).
+              A mouse keeps 12 px. */}
           <input
             type="text"
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search icons (e.g. mail, phone, globe, arrow, star)..."
-            className="w-full pl-9 pr-3 py-1.5 text-xs bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+            className="w-full pl-9 pr-3 py-1.5 text-xs pointer-coarse:text-base bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
           />
           {search && (
             <button
