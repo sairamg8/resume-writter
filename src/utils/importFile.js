@@ -472,6 +472,9 @@ export function pdfLinesOfPages(pages) {
       const right = Math.max(0, ...lines.map((l) => l.right));
       const left = Math.min(...lines.map((l) => l.x));
       let prev = null;
+      // The list items still open in this block, outermost first: each one's marker x, where its text
+      // starts and its middle — for a list item's depth (R4-SW-I-01).
+      let open = [];
       for (let line of lines) {
         if (prev) {
           const dy = prev.y - line.y;
@@ -497,14 +500,33 @@ export function pdfLinesOfPages(pages) {
             prev = { ...line, x: prev.x, textX: prev.textX, listed };
             continue;
           }
-          if (!near) out.push({ text: '' });
+          if (!near) { out.push({ text: '' }); open = []; }
+        }
+        // A list item's depth: its marker right of an open item's (by more than 2 pt) and at or past
+        // where that item's text starts is nested under it — the app prints a nested item's marker where
+        // its parent's text starts — and its depth is how many are still open to its left. Markers at one
+        // x are siblings, and so are centred items (Section Options → Alignment), whose x moves with their
+        // length, not their level. A line of text at the list's left edge ends it. Before, every PDF list
+        // item was level 0: an award's or a certificate's sub-point came in as an entry of its own.
+        let depth = 0;
+        const mid = (line.x + line.right) / 2;
+        if (MARKER.test(line.text.split(' ')[0])) {
+          while (open.length && open[open.length - 1].x >= line.x - 2) open.pop();
+          const top = open[open.length - 1];
+          if (top && (line.x < top.textX - 2 || Math.abs(mid - top.mid) < 1.5)) open.pop();
+          depth = open.length;
+          open.push({ x: line.x, textX: line.textX, mid });
+        } else {
+          // Text is a further paragraph of the open item whose text it starts under; left of that, it
+          // closes the item (an entry's next title line, a paragraph at the margin).
+          while (open.length && line.x < open[open.length - 1].textX - 2) open.pop();
         }
         // One field alone at the right margin, well right of the left edge: set at the end of its line
         // on purpose, as a location right-aligned under a date is (Title "Inline" and "Side by side",
         // Executive's jobs). Hinted, so the parser reads it as the entry's location (importText.js).
         const atEnd = !line.text.includes('\t') && Math.abs(line.right - right) <= 2 && line.x - left > (right - left) / 2;
         const links = line.links ? { links: line.links } : {};
-        out.push(atEnd ? { text: line.text, hint: 'end', ...links } : { text: line.text, ...links });
+        out.push({ text: line.text, ...(atEnd ? { hint: 'end' } : {}), ...(depth ? { depth } : {}), ...links });
         prev = { ...line, listed: false };
       }
       out.push({ text: '' });
