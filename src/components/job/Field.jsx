@@ -15,14 +15,18 @@ export function Field({ label, value, onChange, type = 'text', icon: Icon, place
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value || '');
   const ref = useRef(null);
+  // The value the pencil opened: a draft left as it was is no edit, even if the job changed since.
+  const opened = useRef('');
 
   useEffect(() => { if (editing) ref.current?.focus(); }, [editing]);
-  useEffect(() => { setDraft(value || ''); }, [value]);
+  // Only while closed: another tab's write or a sync replaced what was being typed (R5-JOB-06).
+  useEffect(() => { if (!editing) setDraft(value || ''); }, [value, editing]);
 
   function commit() {
     setEditing(false);
     // Shown as '' when the job has no value: closing it untouched wrote '' — an edit of nothing.
-    if (draft !== (value || '')) onChange(draft);
+    // Untouched while another tab changed the job: nothing either, so its newer value stays.
+    if (draft !== opened.current && draft !== (value || '')) onChange(draft);
   }
 
   if (readOnly) {
@@ -72,7 +76,7 @@ export function Field({ label, value, onChange, type = 'text', icon: Icon, place
           </span>
           <button
             // From the value as it is: an edit the page refused (OverviewTab's blank name) left its draft behind.
-            onClick={() => { setDraft(value || ''); setEditing(true); }}
+            onClick={() => { opened.current = value || ''; setDraft(opened.current); setEditing(true); }}
             className="opacity-0 group-hover/field:opacity-100 no-hover:opacity-100 p-1 text-ink-subtlest hover:text-brand hover:bg-brand-subtle rounded-lg transition-all"
             title="Edit"
           >
