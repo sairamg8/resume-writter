@@ -3,6 +3,7 @@ import { Download, FileText, Upload, ChevronDown, Pin, FileCode, FileJson, Globe
 import { ORIGINALS_HINT } from '@/components/ImportMenu';
 import { isJsonResume, jsonResumeToCpwtResume } from '@/utils/jsonResume';
 import { DOCUMENT_HINT, IMPORT_ACCEPT, isDocumentFile } from '@/utils/importDocument';
+import { useFloating } from '@/components/ui/useFloating';
 
 /**
  * The editor's Export menu, with "Import as a new résumé" (R4-DUX-17) of JSON: `onImportJSON(data, asOriginal)`, and a PDF, Word,
@@ -17,10 +18,18 @@ import { DOCUMENT_HINT, IMPORT_ACCEPT, isDocumentFile } from '@/utils/importDocu
 export function ExportDropdown({ exporting, importing = false, keeps = false, letter = false, onExportPDF, onExportWord, onExportJSON, onExportMarkdown, onExportAtsText, onExportJsonResume, onExportLetterText, onImportJSON, onImportFile, onImportError, onShare }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
+  const buttonRef = useRef(null);
+  const menuRef = useRef(null);
   const importRef = useRef(null);
   // Whether the file being picked is imported as the account's original.
   const asOriginal = useRef(false);
   const pickImport = (keep) => { asOriginal.current = keep; importRef.current?.click(); setOpen(false); };
+  // The kit places the menu (useFloating): a fixed panel under the button's right edge, slid back
+  // inside the window and capped to its height. Hung `absolute right-0` off the button, the Cover
+  // Letter tab's 288 px menu ran ~66 px off the left edge of a signed-in 360 px split panel, whose
+  // overflow-hidden cut it as well (R4-DVIS-22). It stays here rather than in a Portal, so Tab still
+  // goes from Export into its items; no ancestor has a transform, which would pin `fixed` to it.
+  const { style: menuStyle } = useFloating(open, buttonRef, menuRef, { placement: 'bottom-end', offset: 4 });
 
   useEffect(() => {
     if (!open) return;
@@ -34,6 +43,7 @@ export function ExportDropdown({ exporting, importing = false, keeps = false, le
   return (
     <div ref={ref} className="relative">
       <button
+        ref={buttonRef}
         onClick={() => setOpen(o => !o)}
         disabled={!!exporting || importing}
         className={`flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg border transition-colors disabled:opacity-60 ${
@@ -46,7 +56,7 @@ export function ExportDropdown({ exporting, importing = false, keeps = false, le
       </button>
 
       {open && (
-        <div className={`absolute right-0 top-full mt-1 ${letter ? 'w-72' : 'w-52'} bg-white border border-gray-200 rounded-lg shadow-lg z-20 py-1`}>
+        <div ref={menuRef} style={menuStyle} className={`${letter ? 'w-72' : 'w-52'} overflow-y-auto bg-white border border-gray-200 rounded-lg shadow-lg z-20 py-1`}>
           <button
             onClick={() => { onExportPDF(); setOpen(false); }}
             disabled={!!exporting}

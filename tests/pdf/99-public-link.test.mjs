@@ -18,6 +18,11 @@ import { resume, section, experience, render, read, allText, loadModule } from '
 import { elements, mount, reactProps } from './fake-dom.mjs';
 import { fakeFirestore } from './fake-firestore.mjs';
 
+// The Export menu is placed by the kit's useFloating (R4-DVIS-22), which cancels its animation frame
+// when the menu closes; Node has none (tests/unit/ui-dom-harness.mjs gives the kit's tests the same two).
+globalThis.requestAnimationFrame ??= (fn) => setTimeout(fn, 0);
+globalThis.cancelAnimationFrame ??= (id) => clearTimeout(id);
+
 let link;
 let ShareLinkModal;
 let firebasePublicIo;
