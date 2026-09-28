@@ -133,13 +133,15 @@ describe('a face that failed once is fetched again later, not borrowed for the s
       assert.ok(realNow() - started < 10_000, 'the build went on without the stalled face');
       assert.equal(bold.data, donorData, 'the face keeps the donor while its own is on its way');
     } finally { open(); stall = null; }
-    // Waited for, not slept on: the fetch's reply goes through fontkit before the word comes.
+    // Waited for, not slept on: the fetch's reply goes through fontkit before the word comes. Each
+    // late face says so (the font's 700 normal and 700 italic both borrow here): at most one each.
     let asked = 0;
     let stop;
     await new Promise((resolve) => { stop = fallback.onFaceFetched(() => { asked += 1; resolve(); }); });
-    await new Promise((resolve) => { setTimeout(resolve, 20); });
+    await new Promise((resolve) => { setTimeout(resolve, 50); });
     stop();
-    assert.equal(asked, 1, 'its arrival after the build asks for a build again, once');
+    const late = sources.filter((s) => s.fontWeight === 700).length;
+    assert.ok(asked >= 1 && asked <= late, `its arrival after the build asks for a build again (${asked} for ${late} faces)`);
     assert.equal(bold.data, donorData, 'arrived, but not put in until a build primes it');
     await loader.resolvePdfFonts(settings, 'Pat Example');
     assert.ok(others.every((s) => s.data !== bold.data), 'the next build puts the bold\'s own data in');
