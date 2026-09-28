@@ -67,7 +67,8 @@ test('a list item split by a nested list opens and applies as one statement, its
   const nested = '<ul><li>Led migration<ul><li>Cut costs by 30%</li></ul> for 3 regions</li><li>Built the ledger service</li></ul>';
   await visitEditor(page, 'classic', { sections: [{ ...SECTIONS[0], items: [{ ...SECTIONS[0].items[0], description: nested }] }] });
   await page.getByText('Staff Engineer', { exact: true }).first().click();
-  const editor = page.locator('[contenteditable="true"]').filter({ hasText: 'Led migration' });
+  // Found by the bullet Apply leaves alone: the one it rewrites changes its text.
+  const editor = page.locator('[contenteditable="true"]').filter({ hasText: 'Built the ledger service' });
   await expect(editor).toBeVisible();
   // The caret in " for 3 regions", the text after the nested list.
   await editor.evaluate((el) => {
