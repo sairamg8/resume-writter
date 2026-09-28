@@ -2,9 +2,10 @@ import { View } from '@react-pdf/renderer';
 import { Text } from './PdfText';
 import { solid, textShades } from './pdfColors';
 import { railColor, TIMELINE_RAIL } from './timelineRail';
-import { capMiddle, lineBox } from './pdfMeasure';
-import { EndRow, endField, fieldGap, getDateColor, headPresence, headerKeep, onBaselineOf, wordRoom } from './PdfItemHeader';
-import { SPACER, gridRows } from './PdfSections';
+import { capMiddle, lineBox, textWidth, wrappedLines } from './pdfMeasure';
+import { EndRow, endField, endRowLines, fieldGap, getDateColor, headPresence, headerKeep, onBaselineOf, wordRoom } from './PdfItemHeader';
+import { SPACER, getColumnWidth, gridRows } from './PdfSections';
+import { contentWidthPt } from './PdfPage';
 
 /**
  * The Timeline template's rail (TimelineTemplatePDF.jsx): a vertical accent line down the left of a
@@ -182,28 +183,46 @@ export function TimelineHead({ primary: first, sub: second, subLine, loc, dateSt
 }
 
 /**
- * How much a section title keeps under it so its first entry's TimelineHead (these props) prints on the
- * title's page (SectionTitleOf's `presence`, pt): the date line, the title lines as TimelineHead lays
- * them out (one more for a field that wraps, headPresence), its margins and the two lines it keeps. A
- * fixed five lines fell short of a centred Stacked head with a sub and a location, or of a title that
- * wraps: the section title stayed alone at the foot of a page while the head moved on (R4-DOUT-07).
+ * The width an entry's text on the rail is laid out in, pt: the page's text less the rail's INSET, a
+ * grid cell's (Section Options → Grids, getColumnWidth's share of it) in a grid.
  */
-export function timelineHeadPresence({ primary: first, sub: second, subLine, loc, dateStr, settings, titleStyle = 'stacked', centered = false }) {
+export const railTextWidth = (settings, cols = 1) => contentWidthPt(settings) * (parseFloat(getColumnWidth(cols)) / 100) - INSET;
+
+/**
+ * How much a section title keeps under it so its first entry's TimelineHead (these props) prints on the
+ * title's page (SectionTitleOf's `presence`, pt): the date line, the title's lines as TimelineHead lays
+ * them out, each field wrapped at the rail's text width (`cols`: the section's Grids; `subText`, the
+ * words of a `subLine`), one line more to spare (headPresence), its margins and the two lines it keeps.
+ * A fixed five lines fell short of a centred Stacked head with a sub and a location (R4-DOUT-07); a
+ * count of one line a field fell short of a field that wraps onto a third line, or of a title and a sub
+ * that both wrap, and the section title stayed alone at the foot of a page while the head moved on.
+ */
+export function timelineHeadPresence({ primary: first, sub: second, subLine, subText: subWords, loc, dateStr, settings, titleStyle = 'stacked', centered = false, cols = 1 }) {
   const primary = first || second;
-  const subText = subLine || (first ? second : undefined);
+  // The sub's words: a subLine (a project's technologies and link) is one line when they are not given.
+  const sub = subLine ? (subWords || '') : (first ? second : '');
+  const hasSub = Boolean(subLine || sub);
   const style = subLine ? 'stacked' : titleStyle;
   const oneLine = style === 'inline' || style === 'sidebyside';
   const baseSize = settings?.fontSizeBase || 11;
   const font = settings?._pdfFontFamily;
   const primaryBox = { fontFamily: font, fontSize: baseSize + (settings?.fontSizeEntryDelta ?? 0), fontWeight: 'bold' };
   const subBox = { fontFamily: font, fontSize: baseSize };
-  // One-line styles: both fields on one line; centred Stacked: each field on its own; Stacked: the
-  // primary, then one row of the sub and the location. A location under a one-line or centred title
-  // is a line of its own, 1 pt below it.
+  const gap = fieldGap(baseSize);
+  const width = railTextWidth(settings, cols);
+  const wrap = (text, box) => wrappedLines(text, box, width);
+  const subLines = hasSub ? Math.max(1, wrap(sub, subBox)) : 0;
+  // One-line styles: both fields on one line where they fit (Inline one text, measured in the
+  // primary's wider bold), else each wrapped on its own; centred Stacked: each field on its own lines;
+  // Stacked: the primary, then the sub with the location at its right end (EndRow). A location under a
+  // one-line or centred title is a line of its own, 1 pt below it.
   const ownLoc = Boolean(loc) && (centered || oneLine);
-  const lines = oneLine ? (primary || subText ? 1 : 0) + (loc ? 1 : 0)
-    : centered ? [primary, subText, loc].filter(Boolean).length
-    : (primary ? 1 : 0) + (subText || loc ? 1 : 0);
+  const titleLines = style === 'inline' ? wrap([primary, sub].filter(Boolean).join(' — '), primaryBox)
+    : primary && hasSub && textWidth(primary, primaryBox) + gap + textWidth(sub, subBox) <= width ? 1
+    : wrap(primary, primaryBox) + subLines;
+  const lines = oneLine ? titleLines + wrap(loc, subBox)
+    : centered ? wrap(primary, primaryBox) + subLines + wrap(loc, subBox)
+    : wrap(primary, primaryBox) + (subLine ? subLines : endRowLines({ text: sub, box: subBox, end: loc, endBox: subBox, gap, width }));
   const dateH = dateStr ? lineBox({ fontFamily: font, fontSize: timelineDateSize(settings), fontWeight: 'bold' }).height + 1 : 0;
   return headPresence({ lines, styles: [primaryBox, subBox], keep: headerKeep(settings), extra: dateH + 2 + (ownLoc ? 1 : 0) });
 }

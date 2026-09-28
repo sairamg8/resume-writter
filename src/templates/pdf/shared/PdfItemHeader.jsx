@@ -1,7 +1,7 @@
 import { View } from '@react-pdf/renderer';
 import { Text } from './PdfText';
 import { tint, textShades } from './pdfColors';
-import { lineBox, textWidth, widestWord } from './pdfMeasure';
+import { lineBox, textWidth, widestWord, wrappedLines } from './pdfMeasure';
 import { headerTemplateId } from '@/constants/templates';
 
 /**
@@ -96,6 +96,19 @@ export function EndRow({ left, leftMin = 0, children }) {
       {children}
     </View>
   );
+}
+
+/**
+ * The lines an EndRow `width` pt wide takes (for a title's presence, R4-DOUT-07): its `text` in `box`
+ * wrapped in what the field `end` (in `endBox`, `gap` before it) leaves it, the field on its last
+ * line — or, where the text's widest word does not fit beside the field, the text at the full width
+ * and the field on a line of its own under it, as EndRow wraps it.
+ */
+export function endRowLines({ text, box, end, endBox, gap, width }) {
+  if (!end) return wrappedLines(text, box, width);
+  if (!text) return 1;
+  const room = width - textWidth(end, endBox) - gap;
+  return wordRoom([text, box]) + WORD_SLACK > room ? wrappedLines(text, box, width) + 1 : Math.max(1, wrappedLines(text, box, room));
 }
 
 /** A field at an EndRow's right end, on the last line of the text beside it, `gap` from what precedes it. */

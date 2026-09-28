@@ -6,8 +6,9 @@ import { breakLinks } from './pdfFontLoader';
 import { hasRichText, safeHref } from '@/utils/richText';
 import { dateRange, endDateOf, formatDate, presentLabel, startDateOf } from '@/utils/dates';
 import { SPACER, SectionTitleOf, SectionRouter, RenderBullets, shadesOf } from './PdfSections';
-import { TimelineEntries, TimelineHead, timelineHeadPresence } from './PdfTimeline';
-import { EmployerHeader, headPresence } from './PdfItemHeader';
+import { TimelineEntries, TimelineHead, railTextWidth, timelineHeadPresence } from './PdfTimeline';
+import { EmployerHeader, endRowLines, fieldGap, headPresence } from './PdfItemHeader';
+import { wrappedLines } from './pdfMeasure';
 import { employerOf, groupPlaces, groupsRoles, roleGroups } from '@/utils/roleGroups';
 
 /**
@@ -69,10 +70,12 @@ const FIELDS = {
     desc: item.description,
     step: 0.5,
   }),
-  // A project's technologies and link are its sub line (subLine), as ProjectsSection prints them.
+  // A project's technologies and link are its sub line (subLine), as ProjectsSection prints them;
+  // subText its words, which its section title measures (timelineHeadPresence).
   projects: (item, s, settings) => ({
     primary: item.name,
     subLine: projectLine(item, settings),
+    subText: [item.technologies, item.url].filter(Boolean).join(' · '),
     loc: '',
     dateStr: s.showDates !== false ? dateRange(startDateOf(item), endDateOf(item, settings), settings) : '',
     desc: item.description,
@@ -91,6 +94,21 @@ function projectLine(item, settings) {
       {item.url ? <Text style={{ color: accent }}>{item.technologies ? ' · ' : ''}<ContactValue value={item.url} href={safeHref(item.url)} style={{ color: accent }} /></Text> : null}
     </Text>
   );
+}
+
+/**
+ * timelineHeadPresence for a group's EmployerHeader: the employer, bold, wrapped at the rail's text
+ * width — its location at its last line's right end (EndRow), or centred on a line of its own under it.
+ */
+function groupPresence(company, loc, { settings, centered, cols, keep }) {
+  const baseSize = settings?.fontSizeBase || 11;
+  const box = { fontFamily: settings?._pdfFontFamily, fontSize: baseSize + (settings?.fontSizeEntryDelta ?? 0), fontWeight: 'bold' };
+  const locBox = { fontFamily: settings?._pdfFontFamily, fontSize: baseSize };
+  const width = railTextWidth(settings, cols);
+  const lines = centered
+    ? Math.max(1, wrappedLines(company, box, width)) + (loc ? wrappedLines(loc, locBox, width) : 0)
+    : Math.max(1, endRowLines({ text: company, box, end: loc, endBox: locBox, gap: fieldGap(baseSize), width }));
+  return headPresence({ lines, styles: [box, locBox], keep, extra: 2 + (centered && loc ? 1 : 0) });
 }
 
 /** Section types with a renderer of their own; any other type prints as a custom section (SectionRouter's default). */
@@ -112,7 +130,7 @@ function TimelineSection({ section, settings, marginBottom, spaceBefore, itemGap
 
   const head = (item) => {
     const f = fields(item, s, settings);
-    return { primary: f.primary, sub: f.sub || undefined, subLine: f.subLine, loc: f.loc || undefined, dateStr: f.dateStr, titleStyle: f.stacked ? 'stacked' : (s.titleStyle || 'stacked') };
+    return { primary: f.primary, sub: f.sub || undefined, subLine: f.subLine, subText: f.subText, loc: f.loc || undefined, dateStr: f.dateStr, titleStyle: f.stacked ? 'stacked' : (s.titleStyle || 'stacked') };
   };
 
   // Experience's "Group roles by company" (R2-147, roleGroups): a group is one entry on the rail — the
@@ -126,12 +144,14 @@ function TimelineSection({ section, settings, marginBottom, spaceBefore, itemGap
   // measured from the header's own layout (timelineHeadPresence), as every other template measures
   // its first ItemHeader (R2-047): a fixed 5 lines fell short of a centred Stacked head with a sub and
   // a location, or a title that wraps, and left the heading alone at a page foot (R4-DOUT-07). A group
-  // leads with its employer line (and, centred, its location under it) and the lines it keeps.
+  // leads with its employer line (and, centred, its location under it) and the lines it keeps. Each is
+  // wrapped at the rail's text width: a long employer name or title takes more than one line.
+  const cols = s.columns || 1;
   const firstGroup = groups?.[0]?.length > 1 ? groups[0] : null;
-  const groupLoc = firstGroup && centered ? groupPlaces(firstGroup, (item) => fields(item, s, settings).loc).header : '';
+  const groupLoc = firstGroup ? groupPlaces(firstGroup, (item) => fields(item, s, settings).loc).header : '';
   const presence = !items.length ? 0
-    : firstGroup ? headPresence({ lines: groupLoc ? 2 : 1, styles: [{ fontFamily: settings?._pdfFontFamily, fontSize: entrySize, fontWeight: 'bold' }], keep: groupKeep, extra: 2 + (groupLoc ? 1 : 0) })
-    : timelineHeadPresence({ ...head(items[0]), settings, centered });
+    : firstGroup ? groupPresence(employerOf(firstGroup[0]), groupLoc, { settings, centered, cols, keep: groupKeep })
+    : timelineHeadPresence({ ...head(items[0]), settings, centered, cols });
   // Through SectionTitleOf, which never keeps less than its own three lines.
   const title = SectionTitleOf({ section, settings, centered, presence });
 
