@@ -182,13 +182,14 @@ export default function BulletOptimizerModal({ isOpen, onClose, initialText = ''
           </div>
         )}
 
-        {/* 1-Click Action Verbs Selector */}
+        {/* 1-Click Action Verbs Selector. The categories wrap, beside the heading or under it: a
+            280 px sideways strip hid half of them, most of all on a phone (R4-DPH-42). */}
         <div className="space-y-2 pt-1">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <span className="text-xs font-semibold text-gray-700 flex items-center gap-1">
               <Zap size={13} className="text-blue-500" /> Choose Strong Power Verb
             </span>
-            <div className="flex gap-1 overflow-x-auto no-scrollbar max-w-[280px]">
+            <div className="flex flex-wrap gap-1">
               {Object.keys(ACTION_VERBS_BY_CATEGORY).map(cat => (
                 <button
                   key={cat}
