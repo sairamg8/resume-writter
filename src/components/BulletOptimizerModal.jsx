@@ -94,8 +94,9 @@ export default function BulletOptimizerModal({ isOpen, onClose, initialText = ''
   // with the page behind held still. On a phone it fills the screen, its body scrolling between the
   // title and the action row (R4-DPH-37); the action row wraps rather than squeezing its buttons (R4-DPH-38).
   // A click beside the box closes it only while the statement is still the one it opened with: once
-  // it is rewritten, a stray click must not throw the rewrite away — Cancel, × and Escape still close
-  // it (R4-DUX-09).
+  // it is rewritten, a stray click must not throw the rewrite away (R4-DUX-09). Escape likewise: it is
+  // pressed by reflex in a text field, and the kit's default closed a rewrite with one key (R5-OPT-01).
+  // Cancel and × always close it; Apply saves.
   return (
     <Dialog
       open
@@ -104,6 +105,7 @@ export default function BulletOptimizerModal({ isOpen, onClose, initialText = ''
       title="Bullet Optimizer & STAR Formula"
       description="Transform weak descriptions into Google X-Y-Z high-impact achievements"
       closeOnOverlay={text === initialText}
+      closeOnEscape={text === initialText}
       footer={(
         <>
           <button
