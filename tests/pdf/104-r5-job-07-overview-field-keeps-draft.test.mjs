@@ -1,4 +1,4 @@
-// R5-JOB-06 (Overview Field): an open click-to-edit value on the job Overview reset its draft to
+// R5-JOB-07 (Overview Field; 811a282 was filed as R5-JOB-06, which is the List Summary row): an open click-to-edit value on the job Overview reset its draft to
 // the job's value on every change of it, even mid-edit, so another tab's save or a sync replaced
 // what the user was typing, and the blur then wrote nothing. Now the draft belongs to the person
 // typing while the field is open: their text is saved on Enter or blur (the last write wins, as
@@ -39,7 +39,7 @@ async function field(value) {
   };
 }
 
-it('R5-JOB-06: another tab\'s change keeps what is being typed, and the typed text is saved on blur', async () => {
+it('R5-JOB-07: another tab\'s change keeps what is being typed, and the typed text is saved on blur', async () => {
   const f = await field('Acme');
   try {
     f.open();
@@ -53,7 +53,7 @@ it('R5-JOB-06: another tab\'s change keeps what is being typed, and the typed te
   }
 });
 
-it('R5-JOB-06: the typed text survives a change, and Enter saves it', async () => {
+it('R5-JOB-07: the typed text survives a change, and Enter saves it', async () => {
   const f = await field('Acme');
   try {
     f.open();
@@ -66,7 +66,7 @@ it('R5-JOB-06: the typed text survives a change, and Enter saves it', async () =
   }
 });
 
-it('R5-JOB-06: an untouched open field writes nothing when another tab changed the job, and shows the new value', async () => {
+it('R5-JOB-07: an untouched open field writes nothing when another tab changed the job, and shows the new value', async () => {
   const f = await field('Acme');
   try {
     f.open();
@@ -80,7 +80,7 @@ it('R5-JOB-06: an untouched open field writes nothing when another tab changed t
   }
 });
 
-it('R5-JOB-06: Escape drops the draft and shows the value as it is now', async () => {
+it('R5-JOB-07: Escape drops the draft and shows the value as it is now', async () => {
   const f = await field('Acme');
   try {
     f.open();

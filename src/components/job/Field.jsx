@@ -19,7 +19,7 @@ export function Field({ label, value, onChange, type = 'text', icon: Icon, place
   const opened = useRef('');
 
   useEffect(() => { if (editing) ref.current?.focus(); }, [editing]);
-  // Only while closed: another tab's write or a sync replaced what was being typed (R5-JOB-06).
+  // Only while closed: another tab's write or a sync replaced what was being typed (R5-JOB-07).
   useEffect(() => { if (!editing) setDraft(value || ''); }, [value, editing]);
 
   function commit() {
