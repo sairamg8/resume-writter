@@ -2,8 +2,10 @@ import RichTextEditor from '@/components/RichTextEditor';
 
 export function NotesTab({ job, set }) {
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
-      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4">Notes</p>
+    // The job page's card, as the Overview and Tasks tabs draw theirs: this one alone was rounder,
+    // lighter-edged and more padded, which showed on switching tabs (R4-DPH-20).
+    <div className="bg-white rounded-md border border-line p-5 shadow-sm">
+      <p className="text-[10px] font-bold text-ink-subtlest uppercase tracking-widest mb-4">Notes</p>
       <RichTextEditor
         key={job.id}
         ariaLabel="Notes"
