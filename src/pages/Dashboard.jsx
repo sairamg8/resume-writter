@@ -151,16 +151,18 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false, publicL
 
   return (
     <div className="min-h-screen bg-[#f5f3ef]">
-      {/* Nav */}
+      {/* Nav. The actions only fit one row beside the logo from lg (~800 px of them): on a tablet they
+          wrapped into two ragged rows (R4-DVIS-26), so below lg the header stacks as on a phone, the
+          compact sign-in beside the logo and the actions in one row under it. */}
       <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
-          <div className="flex items-center justify-between w-full md:w-auto">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
+          <div className="flex items-center justify-between w-full lg:w-auto shrink-0">
             {/* The workspace's own mark (TopBar), so the brand is one mark on every page. */}
             <div className="flex items-center gap-2">
               <span className="flex size-7 items-center justify-center rounded-md bg-brand text-[11px] font-bold tracking-tight text-white">CV</span>
               <span className="text-[15px] font-semibold tracking-tight text-ink">CPWT-CV</span>
             </div>
-            <div className="md:hidden flex items-center gap-2">
+            <div className="lg:hidden flex items-center gap-2">
               <AuthBar {...auth} {...sync} compact />
             </div>
           </div>
@@ -196,8 +198,8 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false, publicL
             >
               <Plus size={14} /> New Resume
             </button>
-            <div className="w-px h-5 bg-gray-200 hidden md:block" />
-            <div className="hidden md:block">
+            <div className="w-px h-5 bg-gray-200 hidden lg:block" />
+            <div className="hidden lg:block">
               <AuthBar {...auth} {...sync} />
             </div>
           </div>
@@ -259,7 +261,9 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false, publicL
                 </button>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+              // Three to a row only from xl (R4-DVIS-28): at lg the Career History sidebar leaves ~645 px, and
+              // three ~200 px cards cut every name past ~21 characters, so a résumé and its "(Copy)" looked alike.
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5">
                 {resumes.map(r => card(r, id => navigate(`/resume/${id}`)))}
                 <button
                   onClick={newResume}
@@ -282,7 +286,7 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false, publicL
                     {letters.length} letter{letters.length !== 1 ? 's' : ''}
                   </p>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5">
                   {letters.map(r => card(r, openLetter))}
                   <button
                     onClick={startLetter}
@@ -298,9 +302,11 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false, publicL
             )}
           </div>
 
-          {/* Sidebar — career history */}
-          <div className="w-full lg:w-72 shrink-0 lg:sticky lg:top-6 mt-4 lg:mt-0">
-            <div className="mb-3 flex items-center justify-between">
+          {/* Sidebar — career history. Pinned from lg, it is never taller than the window (R4-DVIS-29): a
+              long history scrolls inside the panel's timeline, so the panel's end and "Open Job Tracker →"
+              stay on screen instead of below the fold until the page's end. */}
+          <div className="w-full lg:w-72 shrink-0 lg:sticky lg:top-6 mt-4 lg:mt-0 lg:flex lg:flex-col lg:max-h-[calc(100dvh-3rem)]">
+            <div className="mb-3 flex items-center justify-between shrink-0">
               <h2 className="text-sm font-bold text-gray-700">Career History</h2>
               <button
                 onClick={() => navigate('/jobs')}

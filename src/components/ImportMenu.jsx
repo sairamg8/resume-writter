@@ -36,7 +36,10 @@ export function ImportMenu({ onPick, busy = false, className }) {
         <Upload size={15} /> {busy ? 'Reading…' : 'Import'} <ChevronDown size={13} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
       {open && (
-        <div className="absolute right-0 top-full mt-1 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-20 py-1">
+        // Opens from the trigger's left edge (R4-DPH-25): Import is the first action in the header's row,
+        // so on a phone it sits near the screen's left, and a menu hung from its right edge (w-64 is wider
+        // than the trigger) ran ~140 px off the left of the screen, cutting the labels.
+        <div className="absolute left-0 top-full mt-1 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-20 py-1">
           <button onClick={() => pick(false)} className={item}>
             <Upload size={14} className="text-gray-400" aria-hidden="true" /> Import JSON, PDF, Word or text
           </button>

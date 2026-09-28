@@ -84,9 +84,11 @@ export default function StarterTemplateModal({ isOpen, onClose, onSelectStarter,
           className="w-full text-left p-3.5 rounded-xl border border-gray-200 hover:border-blue-400 hover:bg-blue-50/30 transition-all flex items-center justify-between group shadow-2xs"
         >
           <div className="min-w-0 pr-3">
-            <div className="flex items-center gap-2">
+            {/* On a phone a long name and its badge do not fit one line (R4-DPH-39): the badge moves under
+                the name, whole, instead of being squeezed until its pill breaks in two. */}
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
               <h3 className="text-sm font-bold text-gray-900 group-hover:text-blue-700 transition-colors">{t.name}</h3>
-              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-100">{t.badge}</span>
+              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-100 whitespace-nowrap shrink-0">{t.badge}</span>
             </div>
             <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{t.description}</p>
             <p className="text-[11px] text-gray-400 mt-0.5">Template: {templateOf(t)}</p>

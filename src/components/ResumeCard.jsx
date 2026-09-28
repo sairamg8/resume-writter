@@ -69,13 +69,15 @@ export function ResumeCard({ resume, onOpen, onDuplicate, onDelete, onRename, on
                 if (e.key === 'Enter' && !isImeKey(e)) rename.commit();
                 if (e.key === 'Escape' && !isImeKey(e)) rename.cancel();
               }}
-              className="flex-1 text-sm font-semibold border-b border-blue-400 outline-none bg-transparent"
+              // 16 px on a touch screen, as the kit's fields are (R4-DPH-26): under that iOS zooms the page on focus.
+              className="flex-1 text-sm pointer-coarse:text-base font-semibold border-b border-blue-400 outline-none bg-transparent"
             />
             <button onClick={rename.commit} aria-label="Save name" className="p-0.5 text-blue-600"><Check size={13} /></button>
           </div>
         ) : (
           <div className="flex items-center gap-1 group/name">
-            <p className="text-sm font-semibold text-gray-800 truncate flex-1">{resume.name}</p>
+            {/* The full name on hover: a long one is cut to fit the card (R4-DVIS-28). */}
+            <p title={resume.name} className="text-sm font-semibold text-gray-800 truncate flex-1">{resume.name}</p>
             <button
               onClick={rename.start}
               title="Rename"
