@@ -39,7 +39,9 @@ export function TasksTab({ todos, onChange }) {
     <div className="space-y-6">
       {/* Add task */}
       <div className="bg-white rounded-md border border-line p-4 shadow-sm">
-        <p className="text-[10px] font-bold text-ink-subtlest uppercase tracking-widest mb-3">Add Task</p>
+        {/* The job page's card and section headings, as its Details box and this tab's Progress card
+            draw theirs: they were 10 px bold capitals (R4-DVIS-09). */}
+        <p className="text-sm font-semibold text-ink mb-3">Add Task</p>
         <div className="flex gap-2">
           <input
             ref={inputRef}
@@ -92,7 +94,7 @@ export function TasksTab({ todos, onChange }) {
       {/* Pending tasks */}
       {pending.length > 0 && (
         <div className="space-y-2">
-          <p className="text-[10px] font-bold text-ink-subtlest uppercase tracking-widest px-1">To Do</p>
+          <p className="text-sm font-semibold text-ink px-1">To Do</p>
           <div className="space-y-2">
             {pending.map(t => (
               <TodoItem
@@ -110,7 +112,7 @@ export function TasksTab({ todos, onChange }) {
       {/* Done tasks */}
       {done.length > 0 && (
         <div className="space-y-2">
-          <p className="text-[10px] font-bold text-ink-subtlest uppercase tracking-widest px-1">
+          <p className="text-sm font-semibold text-ink px-1">
             Completed ({done.length})
           </p>
           <div className="space-y-2">

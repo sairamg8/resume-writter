@@ -5,7 +5,8 @@ export function NotesTab({ job, set }) {
     // The job page's card, as the Overview and Tasks tabs draw theirs: this one alone was rounder,
     // lighter-edged and more padded, which showed on switching tabs (R4-DPH-20).
     <div className="bg-white rounded-md border border-line p-5 shadow-sm">
-      <p className="text-[10px] font-bold text-ink-subtlest uppercase tracking-widest mb-4">Notes</p>
+      {/* The job page's card heading, as its Details box draws one (R4-DVIS-09). */}
+      <p className="text-sm font-semibold text-ink mb-4">Notes</p>
       <RichTextEditor
         key={job.id}
         ariaLabel="Notes"
