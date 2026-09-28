@@ -172,6 +172,8 @@ export function SectionCustomizer({ section, template, updateSectionSettings, se
             <div key={key} className="flex flex-col gap-1">
               <label htmlFor={uid + key} className="text-[10px] text-slate-400">{label}</label>
               <div className="flex items-center gap-0.5">
+                {/* 16 px on a touch screen, as the section's other fields are: iOS zooms the page into
+                    a smaller field it focuses (R4-DPH-29). A mouse keeps 12 px. */}
                 <input
                   id={uid + key}
                   type="number"
@@ -187,7 +189,7 @@ export function SectionCustomizer({ section, template, updateSectionSettings, se
                     const v = sectionOverridePx(e.target.value);
                     if (v !== undefined) set(key, v);
                   }}
-                  className="w-full text-xs border border-gray-200 rounded px-1.5 py-1 text-center outline-none focus:border-blue-400 bg-white"
+                  className="w-full text-xs pointer-coarse:text-base border border-gray-200 rounded px-1.5 py-1 text-center outline-none focus:border-blue-400 bg-white"
                 />
                 {s[key] != null && (
                   <button title="Reset" onClick={() => set(key, undefined)} className="text-gray-300 hover:text-gray-500 shrink-0">
