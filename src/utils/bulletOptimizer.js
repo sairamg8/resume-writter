@@ -288,8 +288,13 @@ export function insertActionVerb(text, verb) {
 /** Bullet marks, quotes and spaces before a statement's first word. */
 const LEAD_MARKS = /^[\s•\-*–—◦▪▸‣⁃"'“‘(]*/u;
 
-/** A helper verb or a negation as a statement's first word: "Did not", "Didn't", "Was", "Has", "Never"… */
-const AUXILIARY_LEAD = /^(?:did|does|do|was|were|is|are|has|have|had|been|being|never|not)(?:n['’]t)?(?![\p{L}\d])/iu;
+/**
+ * A helper verb or a negation as a statement's first word: "Did not", "Didn't", "Was", "Has", "Never"…,
+ * and the modal ones: "Could not", "Can't", "Cannot", "Won't", "Should", "Must", "Might"… — they took a
+ * chip's verb in front ("Spearheaded Could not reproduce…", review of R4-SW-WT-04). "May" before a
+ * number is the month ("May 2023: shipped…"), not the helper verb.
+ */
+const AUXILIARY_LEAD = /^(?:did|does|do|was|were|is|are|has|have|had|been|being|never|not|cannot|can|could|will|would|shall|should|must|might|may(?!\s*\d)|(?:wo|sha)(?=n['’]t))(?:n['’]t)?(?![\p{L}\d])/iu;
 
 /**
  * Whether a power-verb chip leaves `text` as it is because it opens with a helper verb or a negation
