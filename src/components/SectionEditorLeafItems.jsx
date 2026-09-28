@@ -97,7 +97,8 @@ export function CertificationItem({ item, onUpdate, onRemove, onDuplicate, defau
     <ItemCard label={item.name} onRemove={onRemove} onDuplicate={onDuplicate} visible={visible} defaultOpen={defaultOpen} onToggleVisibility={() => onUpdate({ ...item, visible: !visible })}>
       <InputField label="Certification Name" value={item.name} onChange={v => u('name', v)} placeholder="AWS Certified Developer" />
       <InputField label="Issuing Organization" value={item.issuer} onChange={v => u('issuer', v)} placeholder="Amazon Web Services" />
-      <div className="grid grid-cols-2 gap-2">
+      {/* One date under the other until the card has room for two pickers side by side (R4-DPH-27). */}
+      <div className="grid grid-cols-1 @sm:grid-cols-2 gap-2">
         <DateField label="Issue Date" value={item.date} onChange={v => u('date', v)} />
         <DateField label="Expiry Date" value={item.expiry} onChange={v => u('expiry', v)} />
       </div>
