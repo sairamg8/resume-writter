@@ -144,7 +144,7 @@ export function Backlog() {
                       <ChevronDown size={16} aria-hidden="true" className={cx('transition-transform', !open && '-rotate-90')} />
                     </button>
                     {sprint
-                      ? <InlineEdit value={sprint.name} onCommit={(name) => store.updateSprint(board.id, sprint.id, { name })} label="Sprint name" className="text-sm font-semibold text-ink" />
+                      ? <InlineEdit value={sprint.name} onCommit={(name) => store.updateSprint(board.id, sprint.id, { name })} label="Sprint name" className="text-sm font-semibold text-ink" inputClassName="pointer-coarse:text-base" />
                       : <h2 className="text-sm font-semibold text-ink">Backlog</h2>}
                     {sprint?.state === 'active' && <span className="rounded-[3px] bg-loz-progress px-1 text-[11px] font-bold uppercase text-loz-progress-ink">Active</span>}
                     {sprintDates(sprint) && <span className="text-[13px] text-ink-subtle">{sprintDates(sprint)}</span>}

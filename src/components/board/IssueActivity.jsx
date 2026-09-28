@@ -63,7 +63,8 @@ function Composer({ initial = '', onSave, onCancel, autoFocus = false, saveLabel
         }}
         aria-label="Comment"
         placeholder="Add a comment…"
-        className="w-full resize-y rounded border border-brand bg-white px-3 py-2 text-sm text-ink ring-1 ring-brand focus:outline-none"
+        // 16 px on touch screens: iOS Safari zooms the page into any smaller field it focuses (R4-DPH-11).
+        className="w-full resize-y rounded border border-brand bg-white px-3 py-2 text-sm text-ink ring-1 ring-brand focus:outline-none pointer-coarse:text-base"
       />
       <div className="flex gap-2">
         <Button variant="primary" size="sm" onClick={save} disabled={!text.trim()}>{saveLabel}</Button>

@@ -60,7 +60,8 @@ export function InlineCreate({ onCreate, label = 'Create issue', className, vari
         }}
         placeholder="What needs to be done?"
         aria-label="Summary of the new issue"
-        className="min-w-0 flex-1 resize-none bg-transparent text-sm text-ink placeholder:text-ink-subtlest focus:outline-none"
+        // 16 px on touch screens: iOS Safari zooms the page into any smaller field it focuses (R4-DPH-11).
+        className="min-w-0 flex-1 resize-none bg-transparent text-sm text-ink placeholder:text-ink-subtlest focus:outline-none pointer-coarse:text-base"
       />
       <div className="flex items-center gap-2">
         {showType && <div className="w-32"><TypePicker value={type} onChange={setType} allowEpic={false} /></div>}
