@@ -1,16 +1,17 @@
 import { View } from '@react-pdf/renderer';
 import { Text } from './PdfText';
 import { PdfRichText } from './PdfRichText';
-import { hasRichText } from '@/utils/richText';
+import { hasRichText, safeHref } from '@/utils/richText';
 import { dateRange, endDateOf, presentLabel, startDateOf } from '@/utils/dates';
 import { SectionTitleOf, RenderBullets, RenderColGrid, hexAlpha, SectionRouter, SPACER, ItemHeader, shadesOf } from './PdfSections';
 import { CentredLine, EmployerHeader, EndRow, endField, fieldGap, headPresence, itemHeadPresence, onBaselineOf, wordRoom } from './PdfItemHeader';
 import { employerOf, groupPlaces, groupsRoles, roleGroups } from '@/utils/roleGroups';
 import {
-  SIDEBAR_TYPES, SideSectionTitle, EntryLink, SideEducation, SideLanguages, SideCertifications, SideInterests, SideReferences,
+  SIDEBAR_TYPES, SideSectionTitle, SideEducation, SideLanguages, SideCertifications, SideInterests, SideReferences,
 } from './PdfSidebarColumn';
 import { SideSkills } from './PdfSidebarSkills';
 import { breakLinks } from './pdfFontLoader';
+import { ContactValue } from './PdfContact';
 import { capMiddle } from './pdfMeasure';
 
 export { SIDEBAR_TYPES, SideSectionTitle };
@@ -54,12 +55,12 @@ function CardItem({ firstLine, children }) {
 /**
  * A card's header, laid out as ItemHeader lays out the other templates' (PdfItemHeader.jsx — ATS-1,
  * ATS-2, ATS-5): the bold `first` line with the date at its right end, on its last line; under it the
- * `details` line with the location at its right end; then `extra` (a project's link). Under Section
+ * `details` line (a job's second field; a project's technologies and link) with the location at its right end. Under Section
  * Options → Alignment "Center" all of it is centred on the card (R6-1): the date after the first
  * line's " · ", the location on a line of its own. `firstMin` / `detailsMin`: their widest words
  * (cardWordRooms), which the date and the location wrap under rather than print over (R3-002).
  */
-function CardHeader({ centered, entrySize, lineH, first, firstMin, details, detailsMin, loc, locStyle, extra, dateStr, dateStyle, sepColor }) {
+function CardHeader({ centered, entrySize, lineH, first, firstMin, details, detailsMin, loc, locStyle, dateStr, dateStyle, sepColor }) {
   const keep = { wrap: false, minPresenceAhead: cardKeep(entrySize, lineH) };
   if (centered) {
     return (
@@ -67,7 +68,6 @@ function CardHeader({ centered, entrySize, lineH, first, firstMin, details, deta
         <CentredLine first={first} date={dateStr} dateStyle={dateStyle} sepColor={sepColor} gap={fieldGap(dateStyle.fontSize)} />
         {details}
         {loc ? <Text style={{ ...locStyle, textAlign: 'center' }}>{loc}</Text> : null}
-        {extra}
       </View>
     );
   }
@@ -75,7 +75,6 @@ function CardHeader({ centered, entrySize, lineH, first, firstMin, details, deta
     <View {...keep}>
       <EndRow left={first} leftMin={firstMin}>{endField(dateStr, dateStyle, 6)}</EndRow>
       {details || loc ? <EndRow left={details} leftMin={detailsMin}>{loc ? endField(loc, locStyle, fieldGap(locStyle.fontSize)) : null}</EndRow> : null}
-      {extra}
     </View>
   );
 }
@@ -242,10 +241,23 @@ export function SidebarMainProjects({ section, settings, marginBottom, spaceBefo
   const centered   = s.alignment === 'center';
   const textAlign  = centered ? 'center' : 'left';
   const dateStyle  = cardDateStyle(settings, entrySize, shade.muted);
-  // The title keeps the first card's header — its name and date, technologies, link — and the lines it
-  // keeps with it (R2-047).
+  // The title keeps the first card's header — its name and date, then its technologies and link on
+  // one line — and the lines it keeps with it (R2-047).
   const first      = visibleItems[0];
-  const presence   = first ? cardPresence(settings, entrySize, lineH, 1 + [first.technologies, first.url].filter(Boolean).length) : 0;
+  const presence   = first ? cardPresence(settings, entrySize, lineH, 1 + (first.technologies || first.url ? 1 : 0)) : 0;
+  // A card's technologies and link on the one line under its name, a " · " only between the two, as
+  // the other templates and the Word export print them (R4-DOUT-04): the link used to print on a line
+  // of its own. Each keeps its size and colour; a link too long for the line breaks inside it.
+  const techLine = (item) => (item.technologies || item.url ? (
+    <Text style={{ fontSize: entrySize - 1, color: hexAlpha(accent, 0.7), lineHeight: 1.2, textAlign }} hyphenationCallback={item.url ? breakLinks : undefined}>
+      {item.technologies}
+      {item.url ? (
+        <Text style={{ fontSize: entrySize - 1.5, color: accent }}>
+          {item.technologies ? ' · ' : ''}<ContactValue value={item.url} href={safeHref(item.url)} style={{ color: accent }} />
+        </Text>
+      ) : null}
+    </Text>
+  ) : null);
 
   return (
     <View style={{ marginBottom, marginTop: spaceBefore }}>
@@ -264,8 +276,7 @@ export function SidebarMainProjects({ section, settings, marginBottom, spaceBefo
                 centered={centered} entrySize={entrySize} lineH={lineH} dateStr={dateStr} dateStyle={dateStyle} sepColor={shade.muted}
                 {...cardWordRooms(settings, entrySize, item.name, item.technologies)}
                 first={item.name ? <Text style={{ fontSize: entrySize, fontWeight: 'bold', color: textColor, lineHeight: 1.2, textAlign }}>{item.name}</Text> : null}
-                details={item.technologies ? <Text style={{ fontSize: entrySize - 1, color: hexAlpha(accent, 0.7), lineHeight: 1.2, textAlign }}>{item.technologies}</Text> : null}
-                extra={item.url ? <EntryLink url={item.url} style={{ fontSize: entrySize - 1.5, color: accent, textAlign }} hyphenationCallback={breakLinks} /> : null}
+                details={techLine(item)}
               />
               {hasRichText(item.description) ? (
                 <PdfRichText html={item.description} style={{ fontSize: entrySize - 0.5, color: shade.body, lineHeight: lineH, marginTop: 2, textAlign }} />
