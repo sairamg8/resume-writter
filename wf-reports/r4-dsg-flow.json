@@ -1,0 +1,776 @@
+{
+ "cluster": "r4-dsg-flow",
+ "branch": "claude/wf-r4-dsg-flow",
+ "base": "94b4d9b",
+ "rows": [
+  {
+   "id": "R4-DUX-01",
+   "severity": "high",
+   "title": "Create issue: changing the Project wipes the typed summary, description, priority, dates and points (`key={board.id}` remounts the form)",
+   "outcome": "fixed",
+   "commits": [
+    "f295350"
+   ],
+   "tests": [
+    "tests/pdf/102-r4-dux-01-create-issue-project-switch.test.mjs"
+   ],
+   "summary": "Now: picking another Project in Create issue keeps type, summary, description, priority, points and dates; only status, labels, epic and sprint reset to the new project's defaults.",
+   "product_call": "",
+   "remaining": ""
+  },
+  {
+   "id": "R4-DUX-02",
+   "severity": "high",
+   "title": "Job Tracker → Clear all jobs: no Undo, the confirm gives no count and doesn't say it's permanent, enabled with 0 jobs",
+   "outcome": "fixed",
+   "commits": [
+    "129485b"
+   ],
+   "tests": [
+    "tests/pdf/102-r4-dux-02-clear-all-undo.test.mjs"
+   ],
+   "summary": "Now: Clear all jobs names the count and says it can be undone; afterwards an 'N jobs cleared' toast's Undo restores the list (restoreJobs) and it syncs back; the item is disabled with no jobs.",
+   "product_call": "",
+   "remaining": ""
+  },
+  {
+   "id": "R4-DUX-03",
+   "severity": "high",
+   "title": "ATS → \"Switch to Classic\" changes the template with no Undo toast (Design's switch has one)",
+   "outcome": "fixed",
+   "commits": [
+    "0000dd3"
+   ],
+   "tests": [
+    "tests/pdf/102-r4-dux-03-ats-classic-undo.test.mjs"
+   ],
+   "summary": "Now: ATS Check → Switch to Classic goes through Design's own pick (usePickCard), so the same 'Template: Classic' toast with Undo appears; the tooltip no longer says there is no undo.",
+   "product_call": "",
+   "remaining": ""
+  },
+  {
+   "id": "R4-DUX-04",
+   "severity": "high",
+   "title": "Cover letter → Apply generated overwrites a written body and blanks the signature, with no confirm or undo",
+   "outcome": "fixed",
+   "commits": [
+    "4a598be"
+   ],
+   "tests": [
+    "tests/pdf/102-r4-dux-04-letter-apply-undo.test.mjs"
+   ],
+   "summary": "Now: Apply to Cover Letter shows a 'Generated letter applied' toast whose Undo restores every field it wrote; a signature the user typed is no longer blanked (only the old 'Candidate'/'Professional' placeholder is cleared).",
+   "product_call": "Undo toast rather than confirm; keep the user's signature",
+   "remaining": ""
+  },
+  {
+   "id": "R4-DUX-05",
+   "severity": "medium",
+   "title": "Create issue / Create project dialogs lose typed input on Escape or a backdrop click",
+   "outcome": "fixed",
+   "commits": [
+    "aaeca08"
+   ],
+   "tests": [
+    "tests/pdf/102-r4-dux-05-discard-typed-create.test.mjs"
+   ],
+   "summary": "Now: with something typed, Escape or a backdrop click on Create issue / Create project asks 'Discard this issue?' / 'Discard this project?' (Keep editing / Discard); empty forms close at once; Cancel and × close deliberately.",
+   "product_call": "only Escape and backdrop ask",
+   "remaining": ""
+  },
+  {
+   "id": "R4-DUX-06",
+   "severity": "medium",
+   "title": "Job form: Cancel, ← and browser Back discard the typed input with no warning",
+   "outcome": "fixed",
+   "commits": [
+    "38dae4a",
+    "f4fa699"
+   ],
+   "tests": [
+    "tests/pdf/102-r4-dux-06-job-form-discard.test.mjs"
+   ],
+   "summary": "Now: a changed job form asks 'Discard your changes?' (Keep editing / Discard) on Cancel and ←; while changed, closing or reloading the tab brings the browser's leave prompt.",
+   "product_call": "",
+   "remaining": "browser Back/in-app links not guarded: plain HashRouter has no useBlocker"
+  },
+  {
+   "id": "R4-DUX-07",
+   "severity": "medium",
+   "title": "No sign-in, account or sign-out control in the Job Tracker or Boards (auth reaches only Dashboard and Editor)",
+   "outcome": "fixed",
+   "commits": [
+    "7fe2827"
+   ],
+   "tests": [
+    "tests/pdf/102-r4-dux-07-workspace-account.test.mjs"
+   ],
+   "summary": "Now: the Job Tracker and Boards top bar has the compact AuthBar: Sign in when signed out, the avatar menu with Sign out when signed in.",
+   "product_call": "auth only; the résumé cloud icon stays hidden, CollectionSyncDot shows jobs/boards sync",
+   "remaining": ""
+  },
+  {
+   "id": "R4-DUX-08",
+   "severity": "medium",
+   "title": "Board with filters: no \"no matches\" line with Group by None, and an issue created in a column that doesn't match the filter vanishes silently",
+   "outcome": "fixed",
+   "commits": [
+    "da001fb"
+   ],
+   "tests": [
+    "tests/pdf/102-r4-dux-08-board-filtered.test.mjs"
+   ],
+   "summary": "Now: with filters and no match, the columns view shows 'No issues match these filters.' with Clear filters; an issue created that the filters hide gets a '<KEY> created — hidden by your filters' toast with Open.",
+   "product_call": "",
+   "remaining": ""
+  },
+  {
+   "id": "R4-DUX-09",
+   "severity": "medium",
+   "title": "STAR Optimizer loses every edit on a backdrop click",
+   "outcome": "fixed",
+   "commits": [
+    "89ac232"
+   ],
+   "tests": [
+    "tests/pdf/102-r4-dux-09-optimizer-backdrop-keeps-edits.test.mjs"
+   ],
+   "summary": "Now: once the statement differs from what the modal opened with, a backdrop click is ignored (Cancel and × still close); untouched, a backdrop click still closes it (R3-010).",
+   "product_call": "ignore backdrop click rather than confirm, matching other modals",
+   "remaining": ""
+  },
+  {
+   "id": "R4-DUX-10",
+   "severity": "medium",
+   "title": "Share → Unpublish kills the public link in one click with no confirm; publishing again gives a new address",
+   "outcome": "fixed",
+   "commits": [
+    "df0e80c"
+   ],
+   "tests": [
+    "tests/pdf/102-r4-dux-10-unpublish-confirm.test.mjs"
+   ],
+   "summary": "Now: Unpublish opens an inline warning (anyone with the link loses access; publishing again makes a new link) with 'Yes, unpublish' / Cancel; only the confirm takes it down.",
+   "product_call": "inline two-step confirm like DesignPanel's Reset",
+   "remaining": ""
+  },
+  {
+   "id": "R4-DUX-11",
+   "severity": "medium",
+   "title": "Dashboard import errors vanish after 4–8 s and cannot be dismissed (the long scanned-PDF advice is gone before it can be read)",
+   "outcome": "fixed",
+   "commits": [
+    "9c21ddf"
+   ],
+   "tests": [
+    "tests/pdf/102-r4-dux-11-import-error-stays.test.mjs",
+    "tests/pdf/80-dashboard-import-read-error.test.mjs"
+   ],
+   "summary": "Now: a Dashboard import error stays until Dismiss or the next import; the 4 s/8 s timers are gone (80-dashboard-import-read-error updated to the intended behaviour).",
+   "product_call": "",
+   "remaining": ""
+  },
+  {
+   "id": "R4-DUX-12",
+   "severity": "medium",
+   "title": "ATS one-click fixes (standardize headings, job title first, Grids 1) rewrite sections with no feedback or undo",
+   "outcome": "fixed",
+   "commits": [
+    "d0c0a21"
+   ],
+   "tests": [
+    "tests/pdf/102-r4-dux-12-ats-fix-undo.test.mjs"
+   ],
+   "summary": "Now: each ATS section fix shows a toast naming what changed with an Undo that restores just the field it wrote on the sections it changed.",
+   "product_call": "",
+   "remaining": ""
+  },
+  {
+   "id": "R4-DUX-13",
+   "severity": "medium",
+   "title": "Auto-Generate on a Blank letter (no résumé content) silently writes generic filler",
+   "outcome": "fixed",
+   "commits": [
+    "87346fe"
+   ],
+   "tests": [
+    "tests/pdf/102-r4-dux-13-generator-no-details.test.mjs"
+   ],
+   "summary": "Now: the generator shows an amber notice above the preview when the record has no experience, skills or title to draw on.",
+   "product_call": "",
+   "remaining": ""
+  },
+  {
+   "id": "R4-DUX-14",
+   "severity": "medium",
+   "title": "Design → a section's ↺ reset wipes a whole group (colours, typography…) with no confirm or undo",
+   "outcome": "fixed",
+   "commits": [
+    "439fbd7",
+    "80160eb",
+    "e66a48b"
+   ],
+   "tests": [
+    "tests/unit/r4-dux-14-section-reset-undo.unit.mjs"
+   ],
+   "summary": "Now: a Design section's ↺ reset shows a '<Section> reset' toast whose Undo writes back only the keys the reset changed.",
+   "product_call": "",
+   "remaining": ""
+  },
+  {
+   "id": "R4-DUX-15",
+   "severity": "medium",
+   "title": "1-Page Fit's tooltip says margins and line heights, but it also lowers the font size (to 9 pt) and says nothing",
+   "outcome": "fixed",
+   "commits": [
+    "15c1e76"
+   ],
+   "tests": [
+    "tests/pdf/102-r4-dux-15-fit-size-notice.test.mjs"
+   ],
+   "summary": "Now: the 1-Page Fit tooltip says it may reduce the text size (down to 9 pt), and a fit that lowered the base size shows 'Fits on 1 page — text size 11 → 9 pt.'",
+   "product_call": "",
+   "remaining": ""
+  },
+  {
+   "id": "R4-DUX-16",
+   "severity": "medium",
+   "title": "Section ⋯ → Reset style discards every layout option with no confirm or undo (Delete beside it asks)",
+   "outcome": "fixed",
+   "commits": [
+    "b015993",
+    "7770533"
+   ],
+   "tests": [
+    "tests/pdf/102-r4-dux-16-reset-style-undo.test.mjs"
+   ],
+   "summary": "Now: a section's Reset style shows a 'Section style reset' toast whose Undo puts the previous settings back.",
+   "product_call": "",
+   "remaining": ""
+  },
+  {
+   "id": "R4-DUX-17",
+   "severity": "medium",
+   "title": "Editor → Import opens a new résumé under the same name with no notice; users think they restored the open one",
+   "outcome": "fixed",
+   "commits": [
+    "f283ec9",
+    "45582c2"
+   ],
+   "tests": [
+    "tests/pdf/102-r4-dux-17-import-new-resume-notice.test.mjs"
+   ],
+   "summary": "Now: the editor's item reads 'Import as a new résumé (JSON, PDF, Word or text)', and both editor import paths open the new résumé with 'Imported as a new résumé: the one you had open is unchanged, on the dashboard.'",
+   "product_call": "",
+   "remaining": ""
+  },
+  {
+   "id": "R4-DUX-18",
+   "severity": "low",
+   "title": "Job Board view says \"Drop a job here\" in every column when a search matches nothing or there are no jobs",
+   "outcome": "fixed",
+   "commits": [
+    "317e9ca"
+   ],
+   "tests": [
+    "tests/pdf/102-r4-dux-18-board-empty.test.mjs"
+   ],
+   "summary": "Now: an empty job Board shows one EmptyState: 'No jobs match' with Clear filters when filtering, 'No jobs yet' with Add job when there are none; 'Drop a job here' stays for a genuinely empty column.",
+   "product_call": "",
+   "remaining": ""
+  },
+  {
+   "id": "R4-DUX-19",
+   "severity": "low",
+   "title": "Your work → ✓ Mark done: no toast, no Undo, the row disappears",
+   "outcome": "fixed",
+   "commits": [
+    "f558af6",
+    "b426437"
+   ],
+   "tests": [
+    "tests/pdf/102-r4-dux-19-mark-done-undo.test.mjs"
+   ],
+   "summary": "Now: Your work's ✓ shows '<KEY> marked done' with Undo that moves the issue back to its column and rank.",
+   "product_call": "",
+   "remaining": ""
+  },
+  {
+   "id": "R4-DUX-20",
+   "severity": "low",
+   "title": "Job tasks and issue checklist items are deleted in one click with no undo",
+   "outcome": "fixed",
+   "commits": [
+    "1321834"
+   ],
+   "tests": [
+    "tests/pdf/102-r4-dux-20-undo-task-delete.test.mjs"
+   ],
+   "summary": "Now: deleting a job task or an issue checklist item shows 'Task deleted' / 'Checklist item deleted' with Undo that puts it back at its index (useRemoveWithUndo), keeping later edits.",
+   "product_call": "",
+   "remaining": ""
+  },
+  {
+   "id": "R4-DUX-21",
+   "severity": "low",
+   "title": "Start sprint accepts an end date before the start date and a blank name (\"   started\" toast); Rename column with spaces does nothing silently",
+   "outcome": "fixed",
+   "commits": [
+    "287f7b0"
+   ],
+   "tests": [
+    "tests/pdf/102-r4-dux-21-sprint-column-errors.test.mjs"
+   ],
+   "summary": "Now: Start sprint shows 'Enter a name' / 'End date must be on or after the start date' and stays disabled until valid; the toast uses the trimmed or existing name; Rename column with only spaces shows 'Enter a name' with Save disabled.",
+   "product_call": "",
+   "remaining": ""
+  },
+  {
+   "id": "R4-DUX-22",
+   "severity": "low",
+   "title": "STAR Optimizer → Use Template replaces the edited statement with no way back",
+   "outcome": "fixed",
+   "commits": [
+    "80ac401"
+   ],
+   "tests": [
+    "tests/pdf/102-r4-dux-22-template-undo.test.mjs"
+   ],
+   "summary": "Now: after a template card replaces the statement, 'Template applied: your statement was replaced.' with an Undo link restores the user's own text.",
+   "product_call": "",
+   "remaining": ""
+  },
+  {
+   "id": "R4-DUX-23",
+   "severity": "low",
+   "title": "Generated letter copy: \"With over several years of hands-on experience\"",
+   "outcome": "fixed",
+   "commits": [
+    "cf23751"
+   ],
+   "tests": [
+    "tests/unit/r4-dux-23-letter-wording.unit.mjs"
+   ],
+   "summary": "Now: the impact letter reads 'With several years of hands-on experience…'; a scan of all archetypes found no other broken copy.",
+   "product_call": "",
+   "remaining": ""
+  },
+  {
+   "id": "R4-DUX-24",
+   "severity": "low",
+   "title": "Job description scanner shows nothing at all when the pasted text yields no keywords",
+   "outcome": "fixed",
+   "commits": [
+    "21f5439",
+    "e66a48b",
+    "a3c6814"
+   ],
+   "tests": [
+    "tests/pdf/102-r4-dux-24-jd-no-keywords.test.mjs"
+   ],
+   "summary": "Now: pasted text that yields no keywords shows 'No skills or keywords found in this text — paste the full posting (requirements, tech stack).'",
+   "product_call": "",
+   "remaining": ""
+  },
+  {
+   "id": "R4-DUX-25",
+   "severity": "low",
+   "title": "Spacing presets overwrite tuned spacing with no undo; a stale \"Still 3 pages…\" 1-Page Fit notice stays after changes",
+   "outcome": "fixed",
+   "commits": [
+    "36a14ce"
+   ],
+   "tests": [
+    "tests/pdf/102-r4-dux-25-spacing-presets.test.mjs"
+   ],
+   "summary": "Now: the 1-Page Fit notice clears once the settings it describes change (a preset, a typed margin, Undo, Reset); Balanced/Spacious show a 'Spacing: <label>' toast whose Undo restores the previous look.",
+   "product_call": "",
+   "remaining": ""
+  },
+  {
+   "id": "R4-DUX-26",
+   "severity": "low",
+   "title": "Ticking \"Currently working here\" erases the End Date, so unticking loses it",
+   "outcome": "fixed",
+   "commits": [
+    "5122acd"
+   ],
+   "tests": [
+    "tests/pdf/102-r4-dux-26-current-keeps-end-date.test.mjs",
+    "tests/pdf/96-month-picker.test.mjs",
+    "tests/pdf/88-present-entries.test.mjs"
+   ],
+   "summary": "Now: ticking 'Currently working here' keeps the End Date (hidden and disabled), so unticking brings it back; every exporter already prints 'Present' while current, and the public copy now blanks a current entry's End Date. 96-month-picker (R2-171) and 88-present-entries (R2-150) updated to the intended behaviour.",
+   "product_call": "",
+   "remaining": ""
+  },
+  {
+   "id": "R4-DUX-27",
+   "severity": "low",
+   "title": "Remove photo deletes the upload at once, no confirm or undo",
+   "outcome": "fixed",
+   "commits": [
+    "6c4d062",
+    "b4d2d8c",
+    "e66a48b"
+   ],
+   "tests": [
+    "tests/unit/r4dux-27-photo-remove-undo.unit.mjs"
+   ],
+   "summary": "Now: Remove photo shows a 'Photo removed' toast whose Undo puts the same upload back.",
+   "product_call": "",
+   "remaining": ""
+  },
+  {
+   "id": "R4-DUX-28",
+   "severity": "low",
+   "title": "Local exports (Markdown, ATS text, JSON) that fail say \"Check your connection\"",
+   "outcome": "fixed",
+   "commits": [
+    "c5586ea"
+   ],
+   "tests": [
+    "tests/pdf/102-r4-dux-28-export-error-advice.test.mjs"
+   ],
+   "summary": "Now: only PDF and Word export failures say 'Check your connection'; local exports say 'Try again, or reload the page if it keeps failing.'",
+   "product_call": "",
+   "remaining": ""
+  },
+  {
+   "id": "R4-DUX-29",
+   "severity": "low",
+   "title": "A non-image file picked as a custom contact icon silently does nothing",
+   "outcome": "fixed",
+   "commits": [
+    "4f887b7",
+    "e66a48b"
+   ],
+   "tests": [
+    "tests/pdf/102-r4-dux-29-icon-upload-not-image.test.mjs"
+   ],
+   "summary": "Now: a non-image file picked as a contact icon (field Upload or the icon picker) alerts 'That image could not be read. Please upload a PNG, JPEG, WebP or GIF file.' — the same message as the photo upload.",
+   "product_call": "",
+   "remaining": ""
+  },
+  {
+   "id": "R4-DUX-30",
+   "severity": "low",
+   "title": "Save my design accepts a name already used, making identical cards",
+   "outcome": "fixed",
+   "commits": [
+    "5de40a3",
+    "be7eed9"
+   ],
+   "tests": [
+    "tests/pdf/102-r4-dux-30-design-name-replaces.test.mjs"
+   ],
+   "summary": "Now: a Save my design name matching an existing one shows 'You already have a design named Clean — saving replaces it.' and Save overwrites that design by id instead of adding a duplicate.",
+   "product_call": "",
+   "remaining": ""
+  },
+  {
+   "id": "R4-DOUT-01",
+   "severity": "high",
+   "title": "Education with a GPA but no degree/field prints a stray leading \" · \" (main column and Timeline); Word is right. With no school, PDF and Word split the header differently",
+   "outcome": "fixed",
+   "commits": [
+    "45c8df3",
+    "3e3746f"
+   ],
+   "tests": [
+    "tests/pdf/102-r4-dout-01-gpa-no-degree.test.mjs"
+   ],
+   "summary": "Now: the PDF's Education (shared and Timeline) filter-joins degree and GPA, so an entry with no degree prints 'GPA: 3.8' with no leading ' · ', as Word, Markdown and ATS text already did.",
+   "product_call": "",
+   "remaining": ""
+  },
+  {
+   "id": "R4-DOUT-02",
+   "severity": "medium",
+   "title": "Executive/Academic: PDF italicises the second field, location and issuer and joins Inline titles with \", \"; Word is upright and uses \" — \"",
+   "outcome": "fixed",
+   "commits": [
+    "8e17008"
+   ],
+   "tests": [
+    "tests/pdf/102-r4-dout-02-italic-subs-word.test.mjs",
+    "tests/pdf/04-word-export.test.mjs"
+   ],
+   "summary": "Now: Word italicises the second field, location and issuer on Executive and Academic, and joins an Inline title with ', ' ('Acme, Engineer'), as their PDF does; other templates unchanged. 04-word-export's Executive 'Lead — Acme' updated to 'Lead, Acme'.",
+   "product_call": "",
+   "remaining": ""
+  },
+  {
+   "id": "R4-DOUT-03",
+   "severity": "medium",
+   "title": "Centred sections: Word puts the date on its own line; the PDF prints \"Title · date\" (tests/pdf/10-section-alignment-word pins the old Word layout)",
+   "outcome": "fixed",
+   "commits": [
+    "2a90450",
+    "3457f1e"
+   ],
+   "tests": [
+    "tests/pdf/102-r4-dout-03-centred-date-line.test.mjs",
+    "tests/pdf/10-section-alignment-word.test.mjs"
+   ],
+   "summary": "Now: a centred dated entry in Word prints 'Title · date' on its first line, then the sub and location, as the PDF's CentredLine; certifications and awards keep the date under the name as their PDF does.",
+   "product_call": "",
+   "remaining": ""
+  },
+  {
+   "id": "R4-DOUT-04",
+   "severity": "medium",
+   "title": "Projects in Word: technologies and link on the title line, a leading \" · \" when the name is empty; the PDF puts them on the next line",
+   "outcome": "fixed",
+   "commits": [
+    "bcb0e27"
+   ],
+   "tests": [
+    "tests/pdf/102-r4-dout-04-project-tech-line.test.mjs",
+    "tests/pdf/10-section-alignment-word.test.mjs"
+   ],
+   "summary": "Now: Word Projects print the name alone on the date line and technologies · link on the next line, with ' · ' only between two present parts, as the PDF does.",
+   "product_call": "",
+   "remaining": "Sidebar PDF project card prints tech and link on two lines (not this row)"
+  },
+  {
+   "id": "R4-DOUT-05",
+   "severity": "medium",
+   "title": "Awards in Word: \" — Issuer\" with a leading dash when the title is empty; the PDF stacks title, issuer and date",
+   "outcome": "fixed",
+   "commits": [
+    "bed5bee"
+   ],
+   "tests": [
+    "tests/pdf/102-r4-dout-05-word-awards-stacked.test.mjs",
+    "tests/pdf/10-section-alignment-word.test.mjs",
+    "tests/pdf/29-date-format.test.mjs"
+   ],
+   "summary": "Now: Word awards stack title, issuer and date on their own lines as the PDF does, never with a leading ' — '; a certificate with no name no longer starts with ' — ' or ' · ' in Word.",
+   "product_call": "",
+   "remaining": ""
+  },
+  {
+   "id": "R4-DOUT-06",
+   "severity": "medium",
+   "title": "The PDF letterhead prints the photo; the Word letter never does",
+   "outcome": "fixed",
+   "commits": [
+    "6d498da"
+   ],
+   "tests": [
+    "tests/pdf/102-r4-dout-06-letter-word-photo.test.mjs",
+    "tests/pdf/83-templates-ui-leftovers.test.mjs"
+   ],
+   "summary": "Now: the Word letter's letterhead prints the same photo as its PDF (same source rules, same position: above a centred name, else in a column beside it).",
+   "product_call": "",
+   "remaining": ""
+  },
+  {
+   "id": "R4-DOUT-07",
+   "severity": "medium",
+   "title": "Timeline: a section heading can be orphaned at a page foot (fixed 5-line keep < first entry head + its keep)",
+   "outcome": "fixed",
+   "commits": [
+    "84145bc",
+    "1b1aacf"
+   ],
+   "tests": [
+    "tests/pdf/102-r4-dout-07-timeline-title-keep.test.mjs"
+   ],
+   "summary": "Now: a Timeline section title keeps the space its first entry's head really takes (timelineHeadPresence), so it moves to the next page with that head instead of being left alone.",
+   "product_call": "",
+   "remaining": "wrap case has ~0.4 pt margin; 3-line wraps fall short as on other templates"
+  },
+  {
+   "id": "R4-DOUT-08",
+   "severity": "medium",
+   "title": "Alignment Center: bullet markers stay at the left margin while the text is centred",
+   "outcome": "fixed",
+   "commits": [
+    "cb65c6c"
+   ],
+   "tests": [
+    "tests/pdf/102-r4-dout-08-centred-bullets.test.mjs"
+   ],
+   "summary": "Now: a centred or right-aligned list item prints its marker inline with its text ('• Cut costs 20%'), matching Word; left and justify keep the marker column.",
+   "product_call": "",
+   "remaining": ""
+  },
+  {
+   "id": "R4-DOUT-09",
+   "severity": "medium",
+   "title": "Letter's stacked job title is Regular where its résumé's is Medium (Banner, Timeline, Compact, designed); reversed on Academic Inline",
+   "outcome": "fixed",
+   "commits": [
+    "baa81ac"
+   ],
+   "tests": [
+    "tests/pdf/102-r4-dout-09-letter-title-weight.test.mjs"
+   ],
+   "summary": "Now: the letter's job title uses its résumé template's title weight in the same layout (Medium on Banner, Timeline, Compact and designed layouts; Regular stacked on Classic/Minimal/Executive; Academic 400 italic).",
+   "product_call": "",
+   "remaining": ""
+  },
+  {
+   "id": "R4-DOUT-10",
+   "severity": "low",
+   "title": "Broadsheet's heading rule is above the title in the PDF, below in Word; Gridline/Registry/Chronicle/Keystone marks drop to plain in Word",
+   "outcome": "fixed",
+   "commits": [
+    "712f8b3"
+   ],
+   "tests": [
+    "tests/pdf/102-r4-dout-10-word-heading-variants.test.mjs",
+    "tests/pdf/35-word-section-headings.test.mjs",
+    "tests/pdf/86-heading-border-colour.test.mjs"
+   ],
+   "summary": "Now: Word section headings follow the PDF's variant: Broadsheet rule on top, Gridline top and bottom, Registry dotted, Chronicle double, Keystone a 3 pt left bar with shading.",
+   "product_call": "",
+   "remaining": ""
+  },
+  {
+   "id": "R4-DOUT-11",
+   "severity": "low",
+   "title": "Languages in Word print \"English — Native\" and ignore Level (dots/bar)",
+   "outcome": "fixed",
+   "commits": [
+    "0d5e1dc",
+    "3e1e87d"
+   ],
+   "tests": [
+    "tests/pdf/102-r4-dout-11-word-language-level.test.mjs",
+    "tests/pdf/94-look-levels.test.mjs"
+   ],
+   "summary": "Now: Word Languages drop the ' — ', put the proficiency at a right tab, and show Dots/Bar levels as accent glyphs (●●●○○ / ▰▰▰▱▱).",
+   "product_call": "",
+   "remaining": ""
+  },
+  {
+   "id": "R4-DOUT-12",
+   "severity": "low",
+   "title": "References in Word join title+company and email+phone (\"  \\|  \"); the PDF uses one line each",
+   "outcome": "fixed",
+   "commits": [
+    "977662c"
+   ],
+   "tests": [
+    "tests/pdf/102-r4-dout-12-word-reference-lines.test.mjs",
+    "tests/pdf/04-word-export.test.mjs"
+   ],
+   "summary": "Now: Word references print job title, company, email and phone each on its own line like the PDF card, no ', ' or ' | '; links kept.",
+   "product_call": "",
+   "remaining": ""
+  },
+  {
+   "id": "R4-DOUT-13",
+   "severity": "low",
+   "title": "ATS plain text lists LinkedIn before Website and ignores display labels; every other export follows CONTACT_FIELDS order",
+   "outcome": "fixed",
+   "commits": [
+    "4515aec"
+   ],
+   "tests": [
+    "tests/unit/r4-dout-13-ats-contact-order.unit.mjs"
+   ],
+   "summary": "Now: the ATS text contact line follows contactItems' fields and order (email, phone, location, website, linkedin, github), keeping raw values.",
+   "product_call": "",
+   "remaining": ""
+  },
+  {
+   "id": "R4-DOUT-14",
+   "severity": "low",
+   "title": "Languages: proficiency ends 12 pt short of the right margin, out of line with the dates",
+   "outcome": "fixed",
+   "commits": [
+    "ba5b4a6"
+   ],
+   "tests": [
+    "tests/pdf/102-r4-dout-14-language-right-edge.test.mjs"
+   ],
+   "summary": "Now: a Languages proficiency in the PDF ends at the right margin, in line with the dates (no 12 pt padding; a minimum fieldGap between name and proficiency).",
+   "product_call": "",
+   "remaining": ""
+  },
+  {
+   "id": "R4-DOUT-15",
+   "severity": "low",
+   "title": "Interest chips are spaced twice as far apart as skill tags and grow with Spacing",
+   "outcome": "fixed",
+   "commits": [
+    "0fb3f65"
+   ],
+   "tests": [
+    "tests/pdf/102-r4-dout-15-interest-chip-gap.test.mjs"
+   ],
+   "summary": "Now: main-column interest chips are 3 pt apart at Normal and scale with Spacing like the Sidebar's, matching skill tags at Normal.",
+   "product_call": "",
+   "remaining": ""
+  },
+  {
+   "id": "R4-DOUT-16",
+   "severity": "low",
+   "title": "Sidebar column Skills \"Bars\": double gap between groups and 4 pt extra under the section",
+   "outcome": "fixed",
+   "commits": [
+    "ef87b10"
+   ],
+   "tests": [
+    "tests/pdf/102-r4-dout-16-sidebar-bars-gaps.test.mjs"
+   ],
+   "summary": "Now: Sidebar side-column Bars are 4 pt apart within a group, groups are separated by the item gap alone, and the section ends at its last bar.",
+   "product_call": "",
+   "remaining": ""
+  },
+  {
+   "id": "R4-DOUT-17",
+   "severity": "low",
+   "title": "A certification with no name prints a leading \" — Issuer\" (or \"· ID: …\")",
+   "outcome": "fixed",
+   "commits": [
+    "baf1a80"
+   ],
+   "tests": [
+    "tests/pdf/102-r4-dout-17-cert-no-name.test.mjs"
+   ],
+   "summary": "Now: a PDF certification prints separators only between present fields ('Amazon Web Services · ID: ABC123'; 'ID: ABC123' with neither name nor issuer).",
+   "product_call": "",
+   "remaining": ""
+  },
+  {
+   "id": "R4-DOUT-18",
+   "severity": "low",
+   "title": "Sidebar main-column card dot sits at a fixed 4 pt, so it rides high at larger entry sizes",
+   "outcome": "fixed",
+   "commits": [
+    "ed81391"
+   ],
+   "tests": [
+    "tests/pdf/102-r4-dout-18-sidebar-card-dot.test.mjs"
+   ],
+   "summary": "Now: the Sidebar card's dot is centred on the title's capitals at every entry size (capMiddle shared with the Timeline, moved to pdfMeasure.js).",
+   "product_call": "",
+   "remaining": ""
+  }
+ ],
+ "review": {
+  "issues": [
+   "R4-DOUT-01: the no-school case still split the header differently from Word — fixed (3e3746f).",
+   "R4-DOUT-07: the Timeline title's keep skipped SectionTitleOf's 3-line floor — fixed (1b1aacf).",
+   "R4-DOUT-04 × R4-DOUT-03: the centred project line and its test had to be combined — resolved in the Word merge.",
+   "R4-DOUT-11: Word's proficiency tab stopped 12 pt short after R4-DOUT-14 made the PDF flush — fixed (3e1e87d).",
+   "R4-DOUT-03: a centred Timeline entry must keep its date on its own line in Word, as its PDF does — fixed (3457f1e).",
+   "R4-DUX-14, R4-DUX-16, R4-DUX-27: an Undo could write into another résumé opened meanwhile — guarded (80160eb, 7770533, b4d2d8c).",
+   "R4-DUX-30: replacing a same-name design saved on another template silently moved other résumés off it — such a name is now refused (be7eed9).",
+   "R4-DUX-19: Undo of Mark done left a recurring issue's next occurrence behind — removed when untouched (b426437).",
+   "R4-DUX-06: browser Back still lost the job form — the draft is kept in sessionStorage and restored (f4fa699).",
+   "R4-DUX-17: a cover letter's file imported in the editor said 'new résumé' — says 'new cover letter' (45582c2).",
+   "CI: a notice dismissed by an unmounting panel set a timer after the ToastProvider was gone ('window is not defined') — Toast.jsx ignores dismissals after unmount (e66a48b)."
+  ],
+  "fixedByReviewer": [
+   "All the above were fixed by the row's own agent or the coordinator after a second-agent review; seven reviewers covered every row."
+  ]
+ },
+ "baselineFailures": [],
+ "notes": "48 findings (30 R4-DUX flow/UX, 18 R4-DOUT printed output) found by five finder agents, each fixed by its own agent in a worktree, reviewed by a second agent, merged into this branch. Product calls are in each row's product_call. Not done (noted, out of scope): accessibility items seen (TodoItem delete button has no accessible name); DUX-22's Undo disappears on the first edit after a template (kept to one step); the Sidebar PDF project card prints tech and link on two lines while other templates join them; Word's reference e-mail has no 2 pt top gap like the PDF card; ExportDropdown's Word hint about designed layouts' rules is now partly stale (pinned by 83-templates-ui-leftovers). The tests/pdf/parity section.itemGap check was updated for R4-DOUT-15's intended chip gap. docs/tracking was not edited."
+}

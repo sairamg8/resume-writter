@@ -18,7 +18,7 @@ const SPACING_STEPS = [
 ];
 
 /** The smallest base size the ladder shrinks the text to: smaller stops reading as a résumé. */
-const MIN_FIT_BASE_PT = Math.max(FONT_SIZE_BASE.min, 9);
+export const MIN_FIT_BASE_PT =Math.max(FONT_SIZE_BASE.min, 9);
 const DEFAULT_BASE_PT = 11; // what an unset fontSizeBase prints at (DesignPanelTypography)
 
 /**
@@ -41,6 +41,19 @@ export function fitLadder(settings = {}) {
     steps.push(step);
   }
   return steps;
+}
+
+/**
+ * What the panel says after a fit that printed on one page (R4-DUX-15): nothing when only spacing
+ * moved, but the text size when a step brought it down — the user asked to fit the page, not to
+ * shrink their text, so they are told it went from `settings`' base (the résumé's as clicked) to
+ * the step's.
+ */
+export function fitSizeNotice(settings = {}, fit) {
+  if (!fit || fit.pages > 1 || fit.settings?.fontSizeBase === undefined) return '';
+  const base = Number.isFinite(settings.fontSizeBase) ? settings.fontSizeBase : DEFAULT_BASE_PT;
+  if (fit.settings.fontSizeBase === base) return '';
+  return `Fits on 1 page — text size ${base} → ${fit.settings.fontSizeBase} pt.`;
 }
 
 /** The number of pages in a PDF react-pdf wrote: its page objects, which it never compresses. */

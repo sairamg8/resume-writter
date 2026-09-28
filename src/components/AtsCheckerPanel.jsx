@@ -19,6 +19,8 @@ import { buildExportFilename } from '@/utils/exportFilename';
 import { newId } from '@/utils/ids';
 import { AtsParserView } from '@/components/AtsParserView';
 import { useSessionState } from '@/hooks/useSessionState';
+import { usePickCard } from '@/hooks/usePickCard';
+import { useToast } from '@/components/ui/Toast';
 
 /**
  * The template the panel's costly layout fix moves a risky résumé to. One id, read both by the
@@ -35,7 +37,7 @@ const itemFixes = (item) => (item?.fixable ? (item.actions || [item.action]).fil
  * TUI-3). In the order it lists them: the Sidebar's own Layout toggle first, because it reaches the
  * same ATS-safe page while keeping the résumé's template, heading style and title case, and the
  * template switch after it, in a neutral tone rather than the recommended green, because it
- * replaces all three and nothing in the app undoes it. Every template name is templateLabel()'s.
+ * replaces all three (its notice's Undo puts them back, R4-DUX-03). Every template name is templateLabel()'s.
  */
 const LAYOUT_FIXES = {
   sidebar_single_column: {
@@ -48,7 +50,7 @@ const LAYOUT_FIXES = {
     Icon: Briefcase,
     tone: 'text-gray-700 bg-white hover:bg-gray-100 border-gray-300',
     label: () => `Switch to ${templateLabel(ATS_FALLBACK_TEMPLATE)}`,
-    title: (r) => `Replaces the ${templateLabel(r?.template)} template, its heading style and its title case. There is no undo.`,
+    title: (r) => `Replaces the ${templateLabel(r?.template)} template, its heading style and its title case. Undo puts them back.`,
   },
   // The section_grids warning's fix (R2-021): Grids 1 on the sections it names, nothing else.
   grids_one_column: {
@@ -70,7 +72,22 @@ export default function AtsCheckerPanel(props) {
 /** A string, the only thing the scanner's box saves. */
 const isText = (v) => typeof v === 'string';
 
+/** "1 section heading", "3 section headings". */
+const count = (n, noun) => `${n} ${noun}${n === 1 ? '' : 's'}`;
+
+/** A section's heading as the notice quotes it. */
+const headingOf = (s) => `"${s?.title || s?.type || 'Untitled'}"`;
+
+/** An Undo's restore for one of a section's settings: the value it had, or no key where it had none. */
+const restoreSetting = (key) => (s, prev) => {
+  const settings = { ...s.settings };
+  if (prev.settings && Object.hasOwn(prev.settings, key)) settings[key] = prev.settings[key];
+  else delete settings[key];
+  return { ...s, settings };
+};
+
 function AtsCheck({ resume, store }) {
+  const { toast } = useToast();
   // The pasted posting is kept for the tab's session under the résumé's id: the Editor mounts this
   // panel only while ATS Check is open, so a trip to the Résumé tab to add a missing keyword emptied
   // the box and its results, which is the loop the scanner is for (R4-CL-03).
@@ -87,6 +104,9 @@ function AtsCheck({ resume, store }) {
     layout: false,
   });
 
+  // The Classic switch is Design → Template's pick (usePickCard), so it raises the same notice with Undo.
+  const { pick } = usePickCard(resume || {}, store || {});
+
   const analysis = useMemo(() => {
     return analyzeAtsScore(resume, jobDescription);
   }, [resume, jobDescription]);
@@ -102,8 +122,38 @@ function AtsCheck({ resume, store }) {
    */
   function handleStandardizeHeadings() {
     if (!resume || !Array.isArray(resume.sections)) return;
-    const updated = standardizeSectionsForAts(resume.sections, resume.template);
+    applySectionFix('ats-fix-headings', standardizeSectionsForAts(resume.sections, resume.template), {
+      title: (n) => `Renamed ${count(n, 'section heading')}`,
+      description: (pairs) => pairs.map(([was, now]) => `${headingOf(was)} → ${headingOf(now)}`).join(', '),
+      restore: (s, prev) => ({ ...s, title: prev.title }),
+    });
+  }
+
+  /**
+   * One of the section fixes below (R4-DUX-12): writes `updated`, then a notice naming what it
+   * changed, with an Undo. They used to write at once and say nothing — the button just went, and a
+   * custom heading, a Co. / Role order or a Grids setting was gone for good. The Undo puts back, on
+   * just the sections the fix changed, the one field it wrote (`restore(section, before)`), so an edit
+   * made while the notice is up is kept. Each fix has its own notice (`id`), so running a second
+   * one does not take the first one's Undo away. Nothing changed: nothing written, no notice.
+   */
+  function applySectionFix(id, updated, { title, description, restore }) {
+    const before = resume.sections;
+    const pairs = updated.flatMap((s, i) => (s !== before[i] ? [[before[i], s]] : []));
+    if (!pairs.length) return;
     store.updateSections(updated);
+    toast({
+      id,
+      title: title(pairs.length),
+      description: description(pairs),
+      duration: 8000,
+      ...(store.updateSection ? {
+        action: {
+          label: 'Undo',
+          onClick: () => pairs.forEach(([prev]) => store.updateSection(prev.id, (s) => restore(s, prev))),
+        },
+      } : {}),
+    });
   }
 
   /**
@@ -112,7 +162,11 @@ function AtsCheck({ resume, store }) {
    */
   function handleOptimizeExperienceOrder() {
     if (!resume || !Array.isArray(resume.sections)) return;
-    store.updateSections(jobTitleFirst(resume.sections, resume.template));
+    applySectionFix('ats-fix-title-order', jobTitleFirst(resume.sections, resume.template), {
+      title: (n) => `Job title first (Role / Co.) in ${count(n, 'experience section')}`,
+      description: (pairs) => pairs.map(([was]) => headingOf(was)).join(', '),
+      restore: restoreSetting('titleOrder'),
+    });
   }
 
   /**
@@ -128,14 +182,15 @@ function AtsCheck({ resume, store }) {
 
   /**
    * The costly fix: a different template. setTemplate() overwrites the résumé's heading style and
-   * title case with the new template's (useResumeStore.js), and nothing in the app undoes any of
-   * it — so this is offered second, in a neutral tone, under a label that names the template it
-   * leaves behind. It used to be the panel's *only* layout fix, labelled with the name of the
-   * Layout toggle above: a Sidebar user clicking it to become ATS-safe lost the Sidebar (TUI-3).
+   * title case with the new template's (useResumeStore.js) — so this is offered second, in a neutral
+   * tone, under a label that names the template it leaves behind. It used to be the panel's *only*
+   * layout fix, labelled with the name of the Layout toggle above: a Sidebar user clicking it to
+   * become ATS-safe lost the Sidebar (TUI-3). It is picked as Design → Template picks a card, so the
+   * same "Template: …" notice comes up, whose Undo puts the old look back (R4-DUX-03).
    */
   function handleSwitchToClassic() {
     if (!store?.setTemplate) return;
-    store.setTemplate(ATS_FALLBACK_TEMPLATE);
+    pick({ engine: ATS_FALLBACK_TEMPLATE, preset: '', label: templateLabel(ATS_FALLBACK_TEMPLATE) });
   }
 
   /**
@@ -145,7 +200,11 @@ function AtsCheck({ resume, store }) {
    */
   function handleGridsOneColumn() {
     if (!resume || !Array.isArray(resume.sections)) return;
-    store.updateSections(entriesInOneColumn(resume.sections, resume.template, resume.settings));
+    applySectionFix('ats-fix-grids', entriesInOneColumn(resume.sections, resume.template, resume.settings), {
+      title: (n) => `Grids 1 in ${count(n, 'section')}: entries print one under another`,
+      description: (pairs) => pairs.map(([was]) => headingOf(was)).join(', '),
+      restore: restoreSetting('columns'),
+    });
   }
 
   /** Each layout fix's handler, by the id the checker names it with. */
@@ -359,6 +418,14 @@ function AtsCheck({ resume, store }) {
           placeholder="Paste job posting description here (requirements, qualifications, tech stack)..."
           className="w-full text-xs p-3 border border-gray-200 rounded-xl outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all text-gray-700 resize-none"
         />
+
+        {/* A posting the scan finds no keyword in ("We are looking for a strong candidate…") has no
+            match to show: without this line the box took the text and nothing happened (R4-DUX-24). */}
+        {!jobMatch && jobDescription.trim() && (
+          <p className="text-xs text-gray-500" data-testid="jd-no-keywords">
+            No skills or keywords found in this text — paste the full posting (requirements, tech stack).
+          </p>
+        )}
 
         {jobMatch && (
           <div className="space-y-3 pt-2">

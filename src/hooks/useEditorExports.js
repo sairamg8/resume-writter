@@ -7,9 +7,12 @@ import { generateAtsPlainText } from '@/utils/atsChecker';
 import { generateMarkdownResume } from '@/utils/markdownExport';
 import { generateCoverLetterPlainText } from '@/utils/coverLetterText';
 import { isJsonResume, jsonResumeToCpwtResume, cpwtResumeToJsonResume } from '@/utils/jsonResume';
-import { importDocument } from '@/utils/importDocument';
+import { importDocument, IMPORT_NOTICE, NEW_LETTER_NOTICE, NEW_RESUME_NOTICE } from '@/utils/importDocument';
 import { normalizeResume } from '@/utils/normalizeResume';
-import { editorPath } from '@/utils/letters';
+import { editorPath, isLetter } from '@/utils/letters';
+
+/** The exports that load code or fonts over the network when they run (lazy chunks, font files). */
+const NETWORK_EXPORTS = new Set(['pdf', 'word']);
 
 /**
  * The editor's Export menu: PDF and Word of the tab on screen (résumé or cover letter), the
@@ -32,7 +35,12 @@ export function useEditorExports({ resume, activeTab, authUser, importResume, na
   shownId.current = resume?.id;
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
 
-  /** Run one export, keeping the button state and a visible error message honest. */
+  /**
+   * Run one export, keeping the button state and a visible error message honest. Only PDF and Word
+   * fetch anything (their renderer's code, and the PDF's fonts), so only they point at the
+   * connection; the text and JSON files are made in the browser, where a network hint would send the
+   * user after the wrong cause (R4-DUX-28).
+   */
   async function runExport(kind, label, fn) {
     setExporting(kind);
     setExportError(null);
@@ -40,7 +48,8 @@ export function useEditorExports({ resume, activeTab, authUser, importResume, na
       await fn();
     } catch (e) {
       console.error(`${label} failed:`, e);
-      setExportError(`${label} failed${e?.message ? ` (${e.message})` : ''}. Check your connection and try again.`);
+      const advice = NETWORK_EXPORTS.has(kind) ? 'Check your connection and try again.' : 'Try again, or reload the page if it keeps failing.';
+      setExportError(`${label} failed${e?.message ? ` (${e.message})` : ''}. ${advice}`);
     } finally {
       setExporting(null);
     }
@@ -117,8 +126,10 @@ export function useEditorExports({ resume, activeTab, authUser, importResume, na
     try {
       const resumeData = isJsonResume(data) ? jsonResumeToCpwtResume(data) : data;
       const newId = importResume(resumeData, { keep: keeps && asOriginal });
-      // A letter's file (an older build's 'Cover Letter' too, marked on import) opens on its letter.
-      navigate(editorPath(newId, normalizeResume(resumeData)));
+      // A letter's file (an older build's 'Cover Letter' too, marked on import) opens on its letter,
+      // saying it is a new one (letter or résumé): it keeps the file's name, so it looks like the one open.
+      const record = normalizeResume(resumeData);
+      navigate(editorPath(newId, record), { state: { importNotice: isLetter(record) ? NEW_LETTER_NOTICE : NEW_RESUME_NOTICE } });
     } catch (e) {
       console.error('Import failed:', e);
       setExportError(`Import failed${e?.message ? ` (${e.message})` : ''}. Check the file and try again.`);
@@ -134,7 +145,7 @@ export function useEditorExports({ resume, activeTab, authUser, importResume, na
     const from = resume?.id;
     try {
       return await importDocument(file, {
-        importResume, onError: setExportError, keep: keeps && asOriginal,
+        importResume, onError: setExportError, keep: keeps && asOriginal, notice: `${NEW_RESUME_NOTICE} ${IMPORT_NOTICE}`,
         navigate: (...args) => { if (mounted.current && shownId.current === from) navigate(...args); },
       });
     } finally {

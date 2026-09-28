@@ -52,7 +52,7 @@ async function borderRow(template, settings) {
 async function wordDecoration(r) {
   const p = (await renderDocx(r)).paragraphs.find((q) => /experience/i.test(q.text));
   assert.ok(p, 'the experience heading in Word');
-  return [...p.xml.matchAll(/<w:(?:bottom|left|shd) [^>]*w:(?:color|fill)="([0-9a-fA-F]{6})"/g)].map((m) => m[1].toLowerCase()).join(' ');
+  return [...p.xml.matchAll(/<w:(?:top|bottom|left|shd) [^>]*w:(?:color|fill)="([0-9a-fA-F]{6})"/g)].map((m) => m[1].toLowerCase()).join(' ');
 }
 
 describe('Border colour with none picked shows what prints (R2-088)', () => {

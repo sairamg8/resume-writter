@@ -1,12 +1,12 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Check } from 'lucide-react';
 import { useBoardStore } from '@/hooks/useBoardStore';
-import { Button, Dialog, TextArea, TextField, cx } from '@/components/ui';
+import { Button, Dialog, TextArea, TextField, cx, useConfirmOptional } from '@/components/ui';
 import { BOARD_COLORS, BOARD_TEMPLATES } from '@/constants/boards';
 import { deriveKey, keyInput } from '@/utils/boardModel';
 
 /** The form, fresh each time the dialog opens. */
-function ProjectForm({ onCreated, onClose }) {
+function ProjectForm({ onCreated, onClose, typedRef }) {
   const store = useBoardStore();
   const [title, setTitle] = useState('');
   const [key, setKey] = useState('');
@@ -18,6 +18,11 @@ function ProjectForm({ onCreated, onClose }) {
   const shownKey = keyTouched ? key : (title.trim() ? deriveKey(title, store.boards.map((b) => b.key)) : '');
   const keyProblem = shownKey ? store.keyError(shownKey) : null;
   const nameProblem = tried && !title.trim() ? 'A project needs a name.' : null;
+  // Tells the dialog whether closing it would throw typed words away (a name, a key or a description).
+  useEffect(() => {
+    typedRef.current = Boolean(title.trim() || (keyTouched && key) || description.trim());
+    return () => { typedRef.current = false; };
+  });
 
   function submit(e) {
     e.preventDefault();
@@ -82,9 +87,24 @@ function ProjectForm({ onCreated, onClose }) {
  * `onCreated(board)` gets the new project.
  */
 export function CreateProjectDialog({ open, onClose, onCreated }) {
+  const confirm = useConfirmOptional();
+  const typedRef = useRef(false);
+  const askingRef = useRef(false);
+  // Escape and a click beside the dialog are easy to hit by accident: with a name, a key or a
+  // description typed, they ask before throwing it away. Cancel and the X close at once.
+  const dismiss = async (reason) => {
+    if ((reason === 'escape' || reason === 'overlay') && typedRef.current) {
+      if (askingRef.current) return;
+      askingRef.current = true;
+      const discard = await confirm({ title: 'Discard this project?', body: 'What you typed will be lost.', confirmLabel: 'Discard', cancelLabel: 'Keep editing', tone: 'danger' });
+      askingRef.current = false;
+      if (!discard) return;
+    }
+    onClose();
+  };
   return (
-    <Dialog open={open} onClose={onClose} title="Create project" size="lg">
-      {open && <ProjectForm onCreated={onCreated} onClose={onClose} />}
+    <Dialog open={open} onClose={dismiss} title="Create project" size="lg">
+      {open && <ProjectForm onCreated={onCreated} onClose={onClose} typedRef={typedRef} />}
     </Dialog>
   );
 }

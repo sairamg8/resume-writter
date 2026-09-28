@@ -147,7 +147,7 @@ export function generateCoverLetter({
     // Default: 'impact'
     paragraphs = [
       `Dear ${recipient},`,
-      `I am writing to apply for ${theRole} opportunity at ${targetCompany}. With over several years of hands-on experience${asTitle}, I have dedicated my career to designing high-performance solutions, optimizing workflows, and delivering measurable business outcomes.`,
+      `I am writing to apply for ${theRole} opportunity at ${targetCompany}. With several years of hands-on experience${asTitle}, I have dedicated my career to designing high-performance solutions, optimizing workflows, and delivering measurable business outcomes.`,
       `${mostRecent ? `During my tenure ${mostRecent}` : 'In my recent roles'}, I led critical initiatives utilizing ${skillsStr}. By emphasizing architectural rigor and quantifiable metrics, my work directly enhanced system reliability, user satisfaction, and team delivery velocity.`,
       `I have long admired ${targetCompany}'s achievements and innovative products. I am eager to bring my problem-solving mindset, engineering discipline, and passion for excellence to your team.`,
       `I look forward to discussing how my background and accomplishments align with the goals of ${targetCompany}. Thank you for your time and consideration.`,

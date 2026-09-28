@@ -2,13 +2,15 @@ import RichTextEditor from '@/components/RichTextEditor';
 import { InputField, DateField, FieldRow, ItemCard } from '@/components/SectionEditorShared';
 
 /**
- * The current flag: the entry ends "Present" and its End Date is cleared. A job's, and an
+ * The current flag: the entry ends "Present", its End Date greyed out and blank. A job's, and an
  * education's, project's or volunteering role's (R2-150), which printed their start date alone.
+ * The End Date entered is kept, not erased (R4-DUX-26): unticked again, it comes back. While the
+ * entry is current nothing prints it — every export reads "Present" in its place (endDateOf).
  */
 function CurrentBox({ item, onUpdate, label }) {
   return (
     <label className="flex items-center gap-2 text-xs text-gray-600 cursor-pointer">
-      <input type="checkbox" checked={item.current || false} onChange={e => onUpdate({ ...item, current: e.target.checked, endDate: '' })} className="rounded" />
+      <input type="checkbox" checked={item.current || false} onChange={e => onUpdate({ ...item, current: e.target.checked })} className="rounded" />
       {label}
     </label>
   );

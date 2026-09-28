@@ -128,11 +128,15 @@ const gapBelow = (reg, snap) => {
 };
 
 /**
- * The Sidebar column's interest chips sit 2.5 pt apart at the default 6 pt item gap and follow a changed
- * one in that proportion, on purpose (R2-6, PdfSidebarColumn.jsx SideInterests): every other gap is the
- * value itself.
+ * Interest chips sit a fixed share of the item gap apart and follow a changed one in that proportion, on
+ * purpose: 2.5 pt at the default 6 pt in the Sidebar column (R2-6, PdfSidebarColumn.jsx SideInterests),
+ * 3 pt in the main column, as close as skill tags (R4-DOUT-15, PdfSectionsThree.jsx InterestsSection).
+ * Every other gap is the value itself.
  */
-const chipScale = (variant, type) => (type === 'interests' && inSidebarColumn(variant.template, type, variant.settings) ? 2.5 / 6 : 1);
+const chipScale = (variant, type) => {
+  if (type !== 'interests') return 1;
+  return inSidebarColumn(variant.template, type, variant.settings) ? 2.5 / 6 : 3 / 6;
+};
 
 /**
  * Per language entry (`entries`: its run, in the section's order), the shapes painted for it: each small

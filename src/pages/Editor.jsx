@@ -136,6 +136,7 @@ export function Editor({ store, auth, sync }) {
                 resume={resume}
                 {...lookActions}
                 resetSettings={store.resetSettings}
+                clearSettings={store.clearSettings}
                 designs={designs}
                 saveDesign={store.saveDesign}
                 deleteDesign={store.deleteDesign}

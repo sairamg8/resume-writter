@@ -1,8 +1,9 @@
-// The Word résumé's profile photo (R2-126): Personal Info → Photo as the PDF's header prints it — its
+// The Word résumé's profile photo (R2-126), and the cover letter's (R4-DOUT-06): Personal Info → Photo as the PDF prints it — its
 // box, shape, ring and "cover" crop — as a docx ImageRun.
 import { ImageRun } from 'docx';
 import { getPdfPhotoStyle } from '@/templates/pdf/shared/pdfPhoto';
-import { drawableImage } from '@/utils/imageUpload';
+import { drawableImage, isDrawableImage } from '@/utils/imageUpload';
+import { letterResumePhoto } from '@/utils/coverLetter';
 import { svgPhotoCopy, withPrintablePhotos } from '@/utils/printableImage';
 import { templateId } from '@/constants/templates';
 import { photoOption } from '@/constants/photoOptions';
@@ -104,32 +105,55 @@ class ShapedImageRun extends ImageRun {
  */
 export function wordPhoto(personal = {}, s = {}, template = 'classic', { onBand = false } = {}) {
   if ((personal.hiddenFields || []).includes('photo')) return null;
-  const src = drawableImage(personal.photo);
-  const match = /^data:image\/(png|jpeg|jpg);base64,(.*)$/is.exec(src || '');
-  if (!match) return null;
-  const bytes = base64Bytes(match[2]);
-  const size = bytes && imageSize(bytes);
-  if (!size?.w || !size?.h) return null;
   const tid = templateId(template);
   const accent = s.accentColor || '#2563eb';
   const box = getPdfPhotoStyle(s, accent, ['modern', 'banner'].includes(tid) ? 'modern' : 'classic');
   // The Sidebar's column photo: Classic's scaled by one factor (SidebarTemplatePDF's sidePhoto).
   const scale = tid === 'sidebar' ? Math.min(0.55, 90 / box.width) : 1;
-  const w = box.width * scale;
-  const h = box.height * scale;
-  const radius = Math.min(box.borderRadius, w / 2);
-  const round = s.photoShape === 'circle' || radius >= Math.min(w, h) / 2 ? { prst: 'ellipse' } : { prst: 'roundRect', adj: Math.round((radius / Math.min(w, h)) * 100000) };
   // On the band, the ring the PDF draws there: white on Modern's banner (ModernTemplatePDF), the
   // accent that reads on the Sidebar's panel (SidebarTemplatePDF's lightBorder).
   const ring = !onBand ? getPdfPhotoStyle(s, accent, 'classic')
     : tid === 'sidebar' ? getPdfPhotoStyle(s, accent, 'classic', { lightBorder: true })
       : getPdfPhotoStyle(s, '#ffffff', 'modern');
+  return photoRun(personal.photo, s, { ...box, width: box.width * scale, height: box.height * scale }, ring.borderColor, personal.name);
+}
+
+/**
+ * The cover letter's letterhead photo as its PDF prints it (CoverLetterHeaderPDF), or null where it
+ * prints none: Show photo off, or neither the letter's own photo nor the résumé's (none when hidden
+ * under Personal Info → Photo, letterResumePhoto) is one the PDF can draw — else the first that is, as
+ * the PDF picks it (R4-DOUT-06). Its box and ring are the letter's: getPdfPhotoStyle's 'cover', in
+ * `look.photo`'s ring (one that reads on the letterhead's band); `look` from letterheadLook.
+ * Returns { run, width } as wordPhoto does.
+ */
+export function wordLetterPhoto(cl = {}, personal = {}, s = {}, look = {}) {
+  if (cl?.showPhoto === false) return null;
+  const src = [cl?.clPhoto, letterResumePhoto(personal)].find(isDrawableImage);
+  if (!src) return null;
+  const [ring = s.accentColor || '#2563eb', ringOpts = {}] = look.photo || [];
+  const box = getPdfPhotoStyle(s, ring, 'cover', ringOpts);
+  return photoRun(src, s, box, box.borderColor, personal?.name);
+}
+
+/**
+ * The photo `src` as a Word picture in `box` (getPdfPhotoStyle's, pt), ringed in `ringColor`, or null
+ * when its bytes are no PNG or JPEG Word can take. Returns { run, width }: `width` the box's, pt.
+ */
+function photoRun(src, s, box, ringColor, name) {
+  const match = /^data:image\/(png|jpeg|jpg);base64,(.*)$/is.exec(drawableImage(src) || '');
+  if (!match) return null;
+  const bytes = base64Bytes(match[2]);
+  const size = bytes && imageSize(bytes);
+  if (!size?.w || !size?.h) return null;
+  const { width: w, height: h } = box;
+  const radius = Math.min(box.borderRadius, w / 2);
+  const round = s.photoShape === 'circle' || radius >= Math.min(w, h) / 2 ? { prst: 'ellipse' } : { prst: 'roundRect', adj: Math.round((radius / Math.min(w, h)) * 100000) };
   const run = new ShapedImageRun({
     type: match[1].toLowerCase() === 'png' ? 'png' : 'jpg',
     data: bytes,
     transformation: { width: w * PX_PER_PT, height: h * PX_PER_PT },
-    altText: { name: 'Photo', description: personal.name || 'Photo', title: 'Photo' },
-    ...(box.borderWidth ? { outline: { type: 'solidFill', solidFillType: 'rgb', value: accent2Hex(ring.borderColor), width: Math.round(box.borderWidth * EMU_PER_PT) } } : {}),
+    altText: { name: 'Photo', description: name || 'Photo', title: 'Photo' },
+    ...(box.borderWidth ? { outline: { type: 'solidFill', solidFillType: 'rgb', value: accent2Hex(ringColor), width: Math.round(box.borderWidth * EMU_PER_PT) } } : {}),
   }, round, coverCrop(size, w, h), photoOption('photoTone', s.photoTone) === 'grayscale');
   return { run, width: w };
 }
@@ -160,18 +184,31 @@ async function fetchedImage(url) {
  * (svgPhotoCopy): react-pdf draws it as vectors, but a Word picture must be a PNG or a JPEG, and the
  * .docx printed no photo where the PDF printed it (RES-R2-126). A photo that cannot be read stays as
  * it is, and prints none; a hidden one is not fetched. The résumé itself is never changed.
+ * `{ letter: true }`: for the cover letter's letterhead (wordLetterPhoto, R4-DOUT-06) — the letter's own
+ * photo too, as its PDF build copies both (withPrintablePhotos); none with Show photo off; and a plain
+ * URL is not fetched, as the letter's PDF prints only a picture it holds (isDrawableImage).
  */
-export async function withWordPhoto(resume) {
+export async function withWordPhoto(resume, { letter = false } = {}) {
   const personal = resume?.personal;
-  if (!personal?.photo || (personal.hiddenFields || []).includes('photo')) return resume;
+  if (letter && resume?.coverLetter?.showPhoto === false) return resume;
+  const shown = !!personal?.photo && !(personal.hiddenFields || []).includes('photo');
+  const own = letter ? resume?.coverLetter?.clPhoto : null;
+  if (!shown && !own) return resume;
   let out = resume;
   try {
     out = await withPrintablePhotos(resume);
   } catch {
     // no copy: the photo stays as saved
   }
-  let photo = out.personal.photo;
-  if (typeof photo === 'string' && /^https?:\/\//i.test(photo)) photo = (await fetchedImage(photo)) || photo;
-  photo = (await svgPhotoCopy(photo)) || photo;
-  return photo === out.personal.photo ? out : { ...out, personal: { ...out.personal, photo } };
+  if (shown) {
+    let photo = out.personal.photo;
+    if (!letter && typeof photo === 'string' && /^https?:\/\//i.test(photo)) photo = (await fetchedImage(photo)) || photo;
+    photo = (await svgPhotoCopy(photo)) || photo;
+    if (photo !== out.personal.photo) out = { ...out, personal: { ...out.personal, photo } };
+  }
+  if (own) {
+    const clPhoto = (await svgPhotoCopy(out.coverLetter.clPhoto)) || out.coverLetter.clPhoto;
+    if (clPhoto !== out.coverLetter.clPhoto) out = { ...out, coverLetter: { ...out.coverLetter, clPhoto } };
+  }
+  return out;
 }

@@ -10,6 +10,7 @@ import { SkillItem, LanguageItem, CertificationItem, AwardItem, ReferenceItem, I
 import { SectionCustomizer } from '@/components/SectionEditorCustomizer';
 import { newSectionGrid } from '@/templates/pdf/shared/templateSectionDefaults';
 import { templateId } from '@/constants/templates';
+import { useToast } from '@/components/ui/Toast';
 
 export function SortableSection({
   section, template, updateSection, updateSectionSettings,
@@ -22,6 +23,7 @@ export function SortableSection({
   const [sectionOpen, setSectionOpen] = useState(true);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -150,8 +152,27 @@ export function SortableSection({
                   const factory = Object.hasOwn(SECTION_TYPE_DEFAULTS, section.type) ? SECTION_TYPE_DEFAULTS[section.type] : SECTION_TYPE_DEFAULTS.custom;
                   // In its template's own Grids where it has one (Compact's grid, T9), as a new section is.
                   const fresh = newSectionGrid(factory(section.id), templateId(template));
-                  updateSection(section.id, s => ({ ...s, settings: { ...fresh.settings } }));
+                  // Grids, title style, order and spacing all go at once, without asking: a notice with
+                  // Undo puts the section's own settings back (R4-DUX-16). Only while the section still
+                  // holds the very settings the reset wrote: ids repeat across résumés ('experience' in
+                  // every blank one), so after opening another résumé, or a later edit, Undo writes nothing.
+                  const before = section.settings;
+                  const reset = { ...fresh.settings };
+                  updateSection(section.id, s => ({ ...s, settings: reset }));
                   setMenuOpen(false);
+                  const undo = s => {
+                    if (s.settings !== reset) return s;
+                    if (before !== undefined) return { ...s, settings: before };
+                    const { settings: _reset, ...rest } = s;
+                    return rest;
+                  };
+                  toast({
+                    id: `section-style-reset-${section.id}`,
+                    title: 'Section style reset',
+                    description: section.title || undefined,
+                    duration: 8000,
+                    action: { label: 'Undo', onClick: () => updateSection(section.id, undo) },
+                  });
                 }}
                 className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-gray-50"
               >

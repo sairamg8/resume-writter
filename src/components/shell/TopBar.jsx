@@ -6,6 +6,7 @@ import { IssueTypeIcon } from '../tracker/TrackerIcons.jsx';
 import { useWorkspace } from './workspaceContext.js';
 import { orderProjects } from './projects.js';
 import { CollectionSyncDot } from './CollectionSyncDot.jsx';
+import AuthBar from '../AuthBar.jsx';
 import { projectPath } from './projectViews.js';
 
 const FOCUS = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60';
@@ -126,11 +127,16 @@ function QuickSearch({ search }) {
  * The workspace's top bar, across the whole window over the sidebar and the page: the menu
  * button (phones), the brand, Your work · Projects ▾ · Job Tracker · Résumés, the Create button
  * (a new issue — on the Job Tracker's pages, a new job), the quick search (`/`), the jobs' and
- * boards' cloud icon (CollectionSyncDot, signed in only) and the keyboard-shortcuts help (`?`).
+ * boards' cloud icon (CollectionSyncDot, signed in only), the keyboard-shortcuts help (`?`) and
+ * the account: the Dashboard's and Editor's AuthBar, compact — Sign in with Google while signed
+ * out, the avatar and its Sign out menu while signed in. The jobs and the boards sync with the
+ * account, yet these pages had no way to sign in or out (R4-DUX-07).
  *
  * - `onCreate()`: open the create-issue dialog; `search(query)` → results (utils/workspaceSearch).
+ * - `auth`: the account (useAuth). No résumé sync is passed: AuthBar's own cloud icon stays away,
+ *   CollectionSyncDot shows these pages' sync.
  */
-export function TopBar({ projects = [], onCreate, search }) {
+export function TopBar({ projects = [], onCreate, search, auth }) {
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const workspace = useWorkspace();
@@ -185,6 +191,8 @@ export function TopBar({ projects = [], onCreate, search }) {
         <QuickSearch search={search} />
         <CollectionSyncDot />
         <IconButton icon={CircleHelp} label="Keyboard shortcuts" shortcut="?" onClick={() => setHelpOpen(true)} />
+        {/* isOnline: the offline state is CollectionSyncDot's to show, from the browser's flag. */}
+        {auth && <AuthBar {...auth} isOnline compact />}
       </div>
       <ShortcutsDialog open={helpOpen} onClose={() => setHelpOpen(false)} groups={SHORTCUTS} />
     </header>

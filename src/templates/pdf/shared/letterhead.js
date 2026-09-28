@@ -76,6 +76,12 @@ export function inlineLayout(look, s) {
 }
 
 /**
+ * The job title's weight on the Banner, Timeline, Compact and designed headers: medium, stacked or
+ * Inline, as their résumés print it (fontWeight 500) — the letter printed it regular under the name.
+ */
+const mediumTitle = (base) => ({ ...base, title: { ...base.title, weight: 500 } });
+
+/**
  * Each template's letterhead (V2FIDB-51-6): the look's changes to letterheadLook()'s shared `base`,
  * given the résumé's resolved settings `s`, its `accent` and the résumé header's rule `rule` (null
  * where the résumé prints none). One entry per template the app offers, pinned to TEMPLATE_IDS by
@@ -124,7 +130,7 @@ export const LOOKS = {
   },
   // Timeline's rail laid flat: a line in the rail's colour and width (PdfTimeline.jsx) under the letterhead.
   timeline: (base, { accent, rule }) => ({
-    ...base,
+    ...mediumTitle(base),
     rules: rule || [{ width: TIMELINE_RAIL.width, color: railColor(accent) }],
   }),
   // Banner's band: the accent from the paper's top and side edges, the text on the page margins, the
@@ -133,7 +139,7 @@ export const LOOKS = {
   banner: (base, { s, accent, rule }) => {
     const headerText = s.headerTextColor || '#ffffff';
     return {
-      ...base,
+      ...mediumTitle(base),
       contacts: headerText,
       marks: bandMarks(headerText, solid(accent)),
       band: { color: accent, fallback: DEFAULTS.banner.accentColor, padX: 0, padY: bannerPadY(s), bleed: true },
@@ -143,43 +149,44 @@ export const LOOKS = {
   },
   // Academic's letterhead: its résumé's centred header — the position under the name in italic, as
   // AcademicTemplatePDF prints it — over the hairline its section titles print on (sectionHeadingLook),
-  // 0.75 pt, where the résumé's header rule is off.
+  // 0.75 pt, where the résumé's header rule is off. Regular Inline too: its résumé prints no medium title.
   academic: (base, { s, accent, rule }) => ({
     ...base,
-    title: { ...base.title, italic: true },
+    title: { ...base.title, italic: true, weight: 400 },
     rules: rule || [{ width: ACADEMIC_HAIRLINE, color: solid(s.sectionBorderColor || accent, s.sectionBorderColor ? 1 : 0.55) }],
   }),
   // Compact's letterhead: its résumé's header — the title on the name's line where the résumé prints it
   // Inline (its default; `inline`) — over a 1 pt rule in the colour of its section titles' short rules
   // (a picked Border colour, else the accent), where the résumé's header rule is off.
   compact: (base, { s, accent, rule }) => ({
-    ...base,
+    ...mediumTitle(base),
     rules: rule || [{ width: COMPACT_RULE, color: solid(s.sectionBorderColor || accent) }],
   }),
   // The designed layouts (R2-138 B2): the letter closes its letterhead on the mark the résumé's header
   // draws (designedMarks.js), where the résumé's header rule is off — Banded's sits on its pale band.
-  gridline: (base, { accent, rule }) => ({ ...base, rules: rule || [{ width: GRID_HAIRLINE, color: gridHairlineColor(accent) }] }),
-  registry: (base, { accent, rule }) => ({ ...base, rules: rule || [{ width: REGISTRY_BAR, color: solid(accent) }] }),
-  bookend: (base, { accent, rule }) => ({ ...base, rules: rule || [{ width: BOOKEND_RULE, color: solid(accent) }] }),
-  lectern: (base, { accent, rule }) => ({ ...base, rules: rule || [{ width: LECTERN_RULE.height, color: solid(accent) }] }),
+  // Their title in medium, as PdfDesignedHeader prints it (mediumTitle).
+  gridline: (base, { accent, rule }) => ({ ...mediumTitle(base), rules: rule || [{ width: GRID_HAIRLINE, color: gridHairlineColor(accent) }] }),
+  registry: (base, { accent, rule }) => ({ ...mediumTitle(base), rules: rule || [{ width: REGISTRY_BAR, color: solid(accent) }] }),
+  bookend: (base, { accent, rule }) => ({ ...mediumTitle(base), rules: rule || [{ width: BOOKEND_RULE, color: solid(accent) }] }),
+  lectern: (base, { accent, rule }) => ({ ...mediumTitle(base), rules: rule || [{ width: LECTERN_RULE.height, color: solid(accent) }] }),
   chronicle: (base, { accent, rule }) => ({
-    ...base,
+    ...mediumTitle(base),
     rules: rule || [{ width: CHRONICLE_RULES.thick, color: solid(accent) }, { width: CHRONICLE_RULES.thin, color: solid(accent) }],
   }),
-  keystone: (base, { accent, rule }) => ({ ...base, rules: rule || [{ width: 2, color: solid(accent) }] }),
+  keystone: (base, { accent, rule }) => ({ ...mediumTitle(base), rules: rule || [{ width: 2, color: solid(accent) }] }),
   // Its contacts and their marks keep the page's inks and greys, as its résumé's header prints them on the band.
   banded: (base, { accent, rule }) => {
     const ground = bandedGround(accent);
     return {
-      ...base,
+      ...mediumTitle(base),
       // pageInks: its text keeps the page's own colours, not Header Text Color (DesignPanelColors offers none).
       band: { color: ground, fallback: bandedGround(DEFAULTS.banded.accentColor), padX: 0, padY: BANDED_PAD, bleed: true, pageInks: true },
       rules: rule || [],
     };
   },
-  keel: (base, { accent, rule }) => ({ ...base, rules: rule || [{ width: KEEL_BAR, color: solid(accent) }] }),
-  linen: (base, { accent, rule }) => ({ ...base, rules: rule || [{ width: LINEN_STITCH.height, color: solid(accent) }] }),
-  broadsheet: (base, { s, rule }) => ({ ...base, rules: rule || [{ width: BROADSHEET_RULE, color: solid(s.nameColor || s.textColor || '#111111') }] }),
+  keel: (base, { accent, rule }) => ({ ...mediumTitle(base), rules: rule || [{ width: KEEL_BAR, color: solid(accent) }] }),
+  linen: (base, { accent, rule }) => ({ ...mediumTitle(base), rules: rule || [{ width: LINEN_STITCH.height, color: solid(accent) }] }),
+  broadsheet: (base, { s, rule }) => ({ ...mediumTitle(base), rules: rule || [{ width: BROADSHEET_RULE, color: solid(s.nameColor || s.textColor || '#111111') }] }),
 };
 
 /** The hairline under Academic's letterhead, pt: Minimal's. */
@@ -196,7 +203,10 @@ export const COMPACT_RULE = 1;
  *   centered  the résumé's header is centred (letterheadCentered): photo, name and contacts on the centre line
  *   inline    null, or { gap }: the résumé's header prints the title on the name's line (inlineLayout)
  *   name      { color, weight, letterSpacing? }: Design → Name color, else the template's own
- *   title     { color, opacity?, italic? }: Design → Job title color, else the template's own (Academic's italic)
+ *   title     { color, size, weight, opacity?, italic? }: Design → Job title color, else the template's own
+ *             (Academic's italic); `weight` the résumé header's: medium (500) Inline on Classic, Minimal
+ *             and Executive and always on Banner, Timeline, Compact and the designed layouts
+ *             (mediumTitle), else regular (400)
  *   contacts  the colour of the contact icons and values
  *   marks     the colour of the Bar and Bullet marks on a band (bandMarks), else null: the
  *             page's light greys, as the résumé's header prints them
@@ -237,12 +247,14 @@ export function letterheadLook(template, s = {}) {
   const look = headerTemplateId(template, s);
   const accent = s.accentColor || '#2563eb';
   const text = s.textColor || '#1e293b';
+  const inline = inlineLayout(look, s);
   const base = {
     look,
     centered: letterheadCentered(s, look),
-    inline: inlineLayout(look, s),
+    inline,
     name: { color: s.nameColor || text, weight: 'bold' },
-    title: { color: s.jobTitleColor || accent, size: headerTitleSize(s) },
+    // Classic's, Minimal's and Executive's headers print an Inline title medium, a stacked one regular.
+    title: { color: s.jobTitleColor || accent, size: headerTitleSize(s), weight: inline ? 500 : 400 },
     // Contacts in the Text colour's grey (R1-13): the résumé header's (letterGrey, R9-13).
     contacts: letterGrey(text),
     marks: null,

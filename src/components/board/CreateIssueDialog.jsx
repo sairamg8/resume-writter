@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FolderPlus } from 'lucide-react';
 import { useBoardStore } from '@/hooks/useBoardStore';
-import { Button, Dialog, EmptyState, Select, TextField, isImeKey, useToast } from '@/components/ui';
+import { Button, Dialog, EmptyState, Select, TextField, isImeKey, useConfirmOptional, useToast } from '@/components/ui';
 import RichTextEditor from '@/components/RichTextEditor';
 import { activeSprint, defaultColumnId, issueKey } from '@/utils/boardModel';
+import { hasRichText } from '@/utils/richText';
 import { DateInput, EpicPicker, LabelsPicker, PointsInput, PriorityPicker, SprintPicker, TypePicker } from './IssueFields';
 
 /** The fields a new issue starts with in `board`, from what the opener asked for. */
@@ -35,17 +36,39 @@ function Row({ label, children }) {
   );
 }
 
-/** The form itself, keyed by the project it creates in: switching project starts it afresh. */
-function CreateForm({ board, boards, defaults, onBoardChange, onClose }) {
+/**
+ * `draft` moved to `board`: what the user typed that any project can hold (type, summary,
+ * description, priority, points, dates) stays; the status, labels, epic and sprint belong to the
+ * old project, so they start again from the new one's defaults.
+ */
+function moveDraft(draft, board, defaults) {
+  const { type, title, description, priority, estimate, startDate, due } = draft;
+  return { ...initialDraft(board, defaults), type, title, description, priority, estimate, startDate, due };
+}
+
+/** The form itself, in the project it creates in. */
+function CreateForm({ board, boards, defaults, onBoardChange, onClose, typedRef }) {
   const store = useBoardStore();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [draft, setDraft] = useState(() => initialDraft(board, defaults));
+  // Another project (picked, or the open one gone): carry the typed fields over rather than
+  // remounting, which wiped the summary and description the user had written.
+  const [draftBoardId, setDraftBoardId] = useState(board.id);
+  if (draftBoardId !== board.id) {
+    setDraftBoardId(board.id);
+    setDraft((d) => moveDraft(d, board, defaults));
+  }
   const [another, setAnother] = useState(false);
   const [error, setError] = useState('');
   const [editorKey, setEditorKey] = useState(0);
   const set = (patch) => setDraft((d) => ({ ...d, ...patch }));
   const scrum = board.mode === 'scrum' || board.sprints.length > 0;
+  // Tells the dialog whether closing it would throw typed words away (a summary or a description).
+  useEffect(() => {
+    typedRef.current = Boolean(draft.title.trim()) || hasRichText(draft.description);
+    return () => { typedRef.current = false; };
+  });
 
   function submit(e) {
     e?.preventDefault();
@@ -142,12 +165,27 @@ export function CreateIssueDialog({ open, defaults = {}, onClose }) {
   const [chosenId, setChosenId] = useState(null);
   const boardId = chosenId ?? defaults.boardId;
   const board = boards.find((b) => b.id === boardId) ?? boards[0] ?? null;
+  const confirm = useConfirmOptional();
+  const typedRef = useRef(false);
+  const askingRef = useRef(false);
   const close = () => { setChosenId(null); onClose(); };
+  // Escape and a click beside the dialog are easy to hit by accident: with a summary or a
+  // description typed, they ask before throwing it away. Cancel and the X close at once.
+  const dismiss = async (reason) => {
+    if ((reason === 'escape' || reason === 'overlay') && typedRef.current) {
+      if (askingRef.current) return;
+      askingRef.current = true;
+      const discard = await confirm({ title: 'Discard this issue?', body: 'What you typed will be lost.', confirmLabel: 'Discard', cancelLabel: 'Keep editing', tone: 'danger' });
+      askingRef.current = false;
+      if (!discard) return;
+    }
+    close();
+  };
 
   return (
-    <Dialog open={open} onClose={close} title="Create issue" size="lg" bodyClassName="px-5 pb-5 sm:px-6">
+    <Dialog open={open} onClose={dismiss} title="Create issue" size="lg" bodyClassName="px-5 pb-5 sm:px-6">
       {board ? (
-        <CreateForm key={board.id} board={board} boards={boards} defaults={board.id === defaults.boardId ? defaults : {}} onBoardChange={setChosenId} onClose={close} />
+        <CreateForm board={board} boards={boards} defaults={board.id === defaults.boardId ? defaults : {}} onBoardChange={setChosenId} onClose={close} typedRef={typedRef} />
       ) : (
         <EmptyState
           icon={FolderPlus}

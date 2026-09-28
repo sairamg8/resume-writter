@@ -1,0 +1,23 @@
+{
+  "cluster": "r4-lo-misc",
+  "branch": "claude/wf-r4-lo-misc",
+  "base": "9df46f1",
+  "followUp": "The owner asked (2026-09-28) to fix the items the first lo-misc report left open; the branch was restarted from the work branch at 9df46f1 (its earlier work is merged there as f049af8).",
+  "rows": [
+    { "id": "R4-LO-17", "outcome": "fixed", "commits": ["d0a5f28", "a04deb8", "7058a05", "41517ae"],
+      "tests": ["tests/pdf/101-r4-lo-17-font-face-retry.test.mjs", "tests/pdf/101-r4-lo-17-face-fetched-rebuild.test.mjs"],
+      "summary": "A font face that failed and is fetched again, arriving after its build stopped waiting (3 s), now makes the preview build again at once: prepareFonts marks the attempts it stopped waiting for, a late one's arrival calls fontFallback.js's faceFetched, the PDF worker relays it ({ faceFetched }), pdfBuild passes it on and PdfPreview rebuilds. Before, the stand-in face (a bold printed as the regular) stayed until the next edit. Also pinned now: arrived data goes in only at build time, right before priming; an 'online' while a fetch is on its way starts no second one (8624425).",
+      "remaining": "" }
+  ],
+  "review": {
+    "issues": [
+      "The worker's relay line had no test — added (a stand-in worker scope).",
+      "faceFetched's listener loop could stop at a throwing listener — each is now called on its own.",
+      "Two tests slept 50 ms for the late face — they now wait for the signal.",
+      "CI then showed a font's two bold faces (normal, italic) each signal: one extra preview build at most, accepted; the test allows one per late face."
+    ],
+    "fixedByReviewer": []
+  },
+  "baselineFailures": [],
+  "notes": "Run 36367613129 on 41517ae green: fail-first d0a5f28 (both test files) and 8624425 (the 'online' case), every tests/pdf/101-r4-lo-* file, 92-font-fallback-notice, 97-pdf-worker, r4pdf-font-notice, 97-woff-glyf-once, 97-font-cache, 05-fonts-scripts, 93-name-heading-font, 90-preview-*, 01-text-extraction, Cypress 13-regressions-fonts. oxlint clean. No firestore.rules change. The first lo-misc report is in docs/tracking/fixes3/reports/; nothing else is left open from it."
+}

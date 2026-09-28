@@ -152,7 +152,9 @@ export async function exportToWord(resume, filename = 'resume.docx') {
 
 /** The cover letter as a .docx Blob — the same content as the cover-letter PDF. */
 export async function renderCoverLetterDocx(resume) {
-  return Packer.toBlob(buildDocument(buildCoverLetter(resume), resume?.settings), false, [await wordFontTable(resume?.settings)]);
+  // The letterhead's photo as the letter's PDF draws it: the copies its build prints (R4-DOUT-06).
+  const letter = await withWordPhoto(resume, { letter: true });
+  return Packer.toBlob(buildDocument(buildCoverLetter(letter), resume?.settings), false, [await wordFontTable(resume?.settings)]);
 }
 
 export async function exportCoverLetterToWord(resume, filename = 'cover-letter.docx') {

@@ -55,11 +55,13 @@ const LOCATION_SWITCH = new Set(['experience', 'education', 'volunteering']);
 
 /**
  * An entry as its section prints it: with the section's Show dates off no date prints, and with Show
- * location off (where it applies) no location, so neither is copied.
+ * location off (where it applies) no location, so neither is copied; nor is a current entry's End Date.
  */
 function asSectionPrints(item, section) {
   const s = section.settings || {};
   const out = { ...item };
+  // A current entry prints "Present", not the End Date it keeps for when it is unticked (R4-DUX-26).
+  if (out.current && 'endDate' in out) out.endDate = '';
   if (s.showDates === false) {
     for (const key of ['startDate', 'endDate', 'date', 'expiry']) if (key in out) out[key] = '';
     if ('current' in out) out.current = false;

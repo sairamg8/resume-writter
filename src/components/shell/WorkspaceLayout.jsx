@@ -45,8 +45,9 @@ function writeCollapsed(collapsed) {
  * - `renderCreate({ open, defaults, onClose })`: the create-issue dialog, which the top bar's
  *   Create button, the `c` key and any page (`useWorkspace().openCreate(defaults)`) open.
  * - `search(query)`: the top bar's quick search (utils/workspaceSearch over the boards).
+ * - `auth`: the account (useAuth), for the top bar's sign-in / account button.
  */
-export function WorkspaceLayout({ projects = [], newProjectTo, renderCreate, search }) {
+export function WorkspaceLayout({ projects = [], newProjectTo, renderCreate, search, auth }) {
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(readCollapsed);
   // The drawer belongs to the history entry it was opened on: any navigation closes it — a link to
@@ -96,7 +97,7 @@ export function WorkspaceLayout({ projects = [], newProjectTo, renderCreate, sea
             >
               Skip to content
             </button>
-            <TopBar projects={projects} onCreate={() => openCreate({})} search={search} />
+            <TopBar projects={projects} onCreate={() => openCreate({})} search={search} auth={auth} />
             <div className="flex min-h-0 flex-1">
             <Sidebar
               projects={projects}

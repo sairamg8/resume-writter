@@ -64,7 +64,8 @@ describe('Word export', () => {
   it('follows the section\'s title order and the template default (Executive: role first)', async () => {
     const entry = [{ company: 'Acme', role: 'Lead', location: '' }];
     const exec = await renderDocx(resume({ template: 'executive', sections: [experience(entry)] }));
-    assert.ok(exec.texts.some((t) => t.startsWith('Lead — Acme')), exec.texts.join(' | '));
+    // Executive's Inline title joins the two with ", ", as its PDF prints them (R4-DOUT-02).
+    assert.ok(exec.texts.some((t) => t.startsWith('Lead, Acme')), exec.texts.join(' | '));
     // Classic's Title is Stacked: the role on the line under the company (R2-070).
     const classic = await renderDocx(resume({ sections: [experience(entry)] }));
     assert.ok(classic.texts.some((t) => t.startsWith('Acme\t') && t.includes('\nLead')), classic.texts.join(' | '));
@@ -72,6 +73,6 @@ describe('Word export', () => {
 
   it('references print phone and relationship', async () => {
     const doc = await renderDocx(resume({ sections: [section('references', [{ name: 'Jane', jobTitle: 'CTO', company: 'Acme', relationship: 'Manager', email: 'jane@acme.com', phone: '+1 555 0101' }])] }));
-    for (const s of ['Jane', 'CTO, Acme', 'Manager', 'jane@acme.com', '+1 555 0101']) assert.ok(has(doc, s), s);
+    for (const s of ['Jane', 'CTO', 'Acme', 'Manager', 'jane@acme.com', '+1 555 0101']) assert.ok(has(doc, s), s);
   });
 });

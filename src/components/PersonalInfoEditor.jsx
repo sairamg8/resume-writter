@@ -117,7 +117,9 @@ export default function PersonalInfoEditor({ resume: whole, personal, updatePers
   }
 
   function onPickIconFile(field, file) {
-    if (!file || !file.type.startsWith('image/')) return;
+    if (!file) return;
+    // A file that is not an image (a PDF picked under "All files") is refused by readImageFile with
+    // its message, as the photo upload is: returning here did nothing, and said nothing (R4-DUX-29).
     const prev = s.customContactIcons || {};
     // The whole résumé, sections and all: an upload may take only what its cloud document has left (R2-097).
     const resume = { ...whole, personal, settings: s, template, coverLetter };

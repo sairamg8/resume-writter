@@ -44,6 +44,7 @@ it('"Copied" goes back to "Copy" for a new link, and when the panel opens again'
     await copy();
 
     click(view, buttonNamed(view, 'Unpublish'));
+    click(view, buttonNamed(view, 'Yes, unpublish')); // it asks first (R4-DUX-10)
     await until(() => buttonNamed(view, 'Publish'));
     click(view, buttonNamed(view, 'Publish'));
     await until(() => copyButton(view));

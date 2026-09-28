@@ -22,6 +22,9 @@ export default function ShareLinkModal({ isOpen, resume, uid, io = firebasePubli
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const [copied, setCopied] = useState(null);
+  // Unpublish asks first (R4-DUX-10): it breaks every link already sent, and publishing again
+  // makes a new one, so one click beside Publish must not do it.
+  const [confirmUnpublish, setConfirmUnpublish] = useState(false);
   const resumeId = resume?.id;
 
   useEffect(() => {
@@ -30,6 +33,7 @@ export default function ShareLinkModal({ isOpen, resume, uid, io = firebasePubli
     setView({ state: 'loading', share: null });
     setError(null);
     setCopied(null);
+    setConfirmUnpublish(false);
     io.readShare(uid, resumeId)
       .then((share) => { if (live) setView({ state: 'ready', share }); })
       .catch((e) => {
@@ -63,6 +67,7 @@ export default function ShareLinkModal({ isOpen, resume, uid, io = firebasePubli
     setView({ state: 'ready', share: next });
   }, 'Publishing');
   const unpublish = () => run(async () => {
+    setConfirmUnpublish(false);
     await io.unpublish(uid, resumeId, share.shareId);
     setCopied(null);
     setView({ state: 'ready', share: null });
@@ -127,12 +132,25 @@ export default function ShareLinkModal({ isOpen, resume, uid, io = firebasePubli
                     {share ? 'Update the public copy' : 'Publish'}
                   </button>
                 )}
-                {share && (
-                  <button onClick={unpublish} disabled={busy} className="px-3 py-1.5 rounded-lg border border-red-200 text-red-700 font-semibold hover:bg-red-50 disabled:opacity-60">
+                {share && !confirmUnpublish && (
+                  <button onClick={() => setConfirmUnpublish(true)} disabled={busy} className="px-3 py-1.5 rounded-lg border border-red-200 text-red-700 font-semibold hover:bg-red-50 disabled:opacity-60">
                     Unpublish
                   </button>
                 )}
               </div>
+              {share && confirmUnpublish && (
+                <div className="p-3 rounded-xl border border-red-200 bg-red-50 space-y-2">
+                  <p className="text-red-800">Anyone with this link will no longer be able to open it. Publishing again later makes a new link, so the one you shared stays dead.</p>
+                  <div className="flex flex-wrap gap-2">
+                    <button onClick={unpublish} disabled={busy} className="px-3 py-1.5 rounded-lg bg-red-600 text-white font-semibold hover:bg-red-700 disabled:opacity-60">
+                      Yes, unpublish
+                    </button>
+                    <button onClick={() => setConfirmUnpublish(false)} disabled={busy} className="px-3 py-1.5 rounded-lg bg-gray-100 text-gray-700 font-semibold hover:bg-gray-200 disabled:opacity-60">
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
             </>
           )}
         </div>

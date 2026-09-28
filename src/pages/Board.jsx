@@ -7,7 +7,7 @@ import { Button, EmptyState, IconButton, Menu, cx, isImeKey, useConfirmOptional,
 import { useWorkspace } from '@/components/shell';
 import { BoardStorageNotice } from '@/components/board/BoardStorageNotice';
 import { BoardColumn, ColumnDialog, ColumnMenu } from '@/components/board/BoardColumn';
-import { BoardToolbar, EMPTY_FILTERS } from '@/components/board/BoardToolbar';
+import { BoardToolbar, EMPTY_FILTERS, hasFilters } from '@/components/board/BoardToolbar';
 import { IssueCardMenu, IssueCardView, SortableIssueCard } from '@/components/board/IssueCard';
 import { ProjectHeader } from '@/components/board/ProjectTabs';
 import { IssueHost, useIssueActions, useIssueRoute } from '@/components/board/useIssueActions';
@@ -40,6 +40,16 @@ function AddColumn({ onAdd }) {
       aria-label="Column name"
       className="h-9 w-[272px] shrink-0 rounded border-2 border-brand bg-white px-2 text-sm text-ink focus:outline-none"
     />
+  );
+}
+
+/** The line in place of the cards when the filters leave none, and a way out of them. */
+function NoMatch({ onClear, className = 'py-8' }) {
+  return (
+    <p className={cx('sticky left-0 text-center text-sm text-ink-subtlest', className)}>
+      No issues match these filters.
+      {onClear && <> <button type="button" onClick={onClear} className="font-medium text-brand hover:underline">Clear filters</button></>}
+    </p>
   );
 }
 
@@ -191,7 +201,17 @@ export function Board() {
     );
   };
 
-  const create = (listId) => ({ title, type }) => store.addIssue(board.id, { title, type, columnId: listId, sprintId: sprint?.id ?? null });
+  // A new issue the filters don't match never shows up: say it was made, and offer to open it,
+  // or "+ Create issue" looks like it failed (R4-DUX-08).
+  const create = (listId) => ({ title, type }) => {
+    const made = store.addIssue(board.id, { title, type, columnId: listId, sprintId: sprint?.id ?? null });
+    if (!made || filterIssues(board, filters, { now, issues: [made] }).length > 0) return;
+    const key = issueKey(board, made);
+    toast({ tone: 'success', title: `${key} created — hidden by your filters`, action: { label: 'Open', onClick: () => route.open(key) } });
+  };
+  // With filters set and no card left, the columns say so instead of just standing empty.
+  const noMatch = hasFilters(filters) && shown.size === 0;
+  const clearFilters = () => setFilters(EMPTY_FILTERS);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -246,19 +266,22 @@ export function Board() {
             pulled back to a snap point at each step. Swimlanes stay unsnapped, as they always were. */}
         <div className={cx('min-h-0 flex-1 overflow-auto px-4 pb-6 md:px-8', groupBy === 'none' && !active && 'snap-x snap-mandatory md:snap-none')}>
           {groupBy === 'none' ? (
-            <div className="flex min-h-full items-start gap-2">
-              {shownLists.map((list, index) => (
-                <BoardColumn
-                  key={list.id}
-                  list={list}
-                  cards={list.cards.filter((c) => shown.has(c.id))}
-                  renderCard={renderCard(list.id)}
-                  onCreate={create(list.id)}
-                  menu={columnMenu(list, index)}
-                />
-              ))}
-              <AddColumn onAdd={(title) => store.addColumn(board.id, { title, index: board.columns.length })} />
-            </div>
+            <>
+              {noMatch && <NoMatch onClear={clearFilters} className="pb-3" />}
+              <div className="flex min-h-full items-start gap-2">
+                {shownLists.map((list, index) => (
+                  <BoardColumn
+                    key={list.id}
+                    list={list}
+                    cards={list.cards.filter((c) => shown.has(c.id))}
+                    renderCard={renderCard(list.id)}
+                    onCreate={create(list.id)}
+                    menu={columnMenu(list, index)}
+                  />
+                ))}
+                <AddColumn onAdd={(title) => store.addColumn(board.id, { title, index: board.columns.length })} />
+              </div>
+            </>
           ) : (
             <div className="flex w-max min-w-full flex-col gap-1">
               <div className="sticky top-0 z-10 flex gap-2 bg-white pb-1">
@@ -268,7 +291,7 @@ export function Board() {
                   </div>
                 ))}
               </div>
-              {lanes.length === 0 && <p className="py-8 text-center text-sm text-ink-subtlest">No issues match these filters.</p>}
+              {lanes.length === 0 && <NoMatch onClear={hasFilters(filters) ? clearFilters : null} />}
               {lanes.map((lane) => {
                 const open = !folded.has(lane.id);
                 const inLane = new Set(lane.issues.map((i) => i.id));

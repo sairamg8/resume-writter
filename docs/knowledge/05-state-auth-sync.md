@@ -144,7 +144,7 @@ Marking one (demo accounts only):
 - **Dashboard → Import** is a menu there: "Import JSON" or **"Import as my original"**
   (`importResume(data, { keep })`; a file's own `keep` field is ignored). The editor's **Export**
   menu offers the same two (`ExportDropdown` `keeps`, `useEditorExports`); other accounts get
-  the plain Import JSON in both places.
+  the plain import in both places (the editor's is labelled "Import as a new résumé").
 - **Delete** on an original says it comes back, and to "Stop keeping" first to delete it for good.
   On the list's last original it is disabled instead (`demoSeed.comesStraightBack`: the list left
   would need the restore, which puts that very copy back), and the card says so: "Your last

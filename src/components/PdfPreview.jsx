@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { previewBox } from '@/constants/pageSize';
-import { facesBorrowed, fontFallback } from '@/utils/fontFallback';
+import { facesBorrowed, fontFallback, onFaceFetched } from '@/utils/fontFallback';
 import { imageRetryPending } from '@/utils/printableImage';
 import { loadPdfjs, setPdfjsForTest } from '@/utils/pdfjsLoader';
 
@@ -190,6 +190,10 @@ export function PdfPreview({ render, input, zoom = 1, textId, title = 'Résumé'
     window.addEventListener('online', again);
     return () => window.removeEventListener('online', again);
   }, []);
+
+  // A font face that failed arrived after the build that fetched it again stopped waiting for it:
+  // build again, so it prints in its own face now rather than on the next edit (R4-LO-17).
+  useEffect(() => onFaceFetched(() => setRetry((n) => n + 1)), []);
 
   // Repaint the current document when the zoom (or the column's width) changes — not while hidden,
   // where the column measures 0 and the pages would be painted at the 240 px floor for nobody.

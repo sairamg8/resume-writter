@@ -71,7 +71,7 @@ const PAGES = {
   'editor header: Export menu, then renaming'() {
     cy.visitEditor('classic');
     cy.contains('button', 'Export').click();
-    cy.contains('button', 'Import JSON').should('be.visible');
+    cy.contains('button', 'Import as a new résumé').should('be.visible');
     cy.get('button[title="Rename resume"]').click();
     cy.focused().should('have.prop', 'tagName', 'INPUT');
   },

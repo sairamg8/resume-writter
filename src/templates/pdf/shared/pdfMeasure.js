@@ -86,6 +86,14 @@ export function lineBox(styles) {
 }
 
 /**
+ * pt from the top of a first line in `styles` (lineBox's) to the middle of its capitals at `size`
+ * (the first style's): react-pdf sets a line's baseline its ascent below the box's top, and a capital
+ * stands about 0.72 em over it (Noto Sans' cap height; the fonts on offer range 0.66–0.73). Where a
+ * marker drawn beside an entry's title (the Timeline's dot, the Sidebar card's) centres on its line.
+ */
+export const capMiddle = (styles, size = [].concat(styles)[0].fontSize) => lineBox(styles).ascent - 0.36 * size;
+
+/**
  * The narrowest box `text` prints in with no word running out of it: the width of its widest
  * unbreakable piece in `style`. textkit breaks a line only at spaces, and inside a long token at
  * the marks the registered hyphenation callback puts in it (breakLongWords); `tail` is glued to

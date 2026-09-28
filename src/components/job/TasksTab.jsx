@@ -5,6 +5,7 @@ import { addTodo as withTodo, toggleTodo } from '@/utils/jobEdits';
 import { visibleDone } from '@/utils/jobQuery';
 import { isImeKey } from '@/components/ui/compose';
 import { IconButton, controlClass, cx } from '@/components/ui';
+import { useRemoveWithUndo } from '@/hooks/useRemoveWithUndo';
 
 const DONE_PAGE_SIZE = 5;
 
@@ -12,6 +13,8 @@ export function TasksTab({ todos, onChange }) {
   const [input, setInput] = useState('');
   const [showAllDone, setShowAllDone] = useState(false);
   const inputRef = useRef(null);
+  // A delete is one click, so it offers Undo, as a job's own delete does (R4-DUX-20).
+  const removeWithUndo = useRemoveWithUndo(todos, onChange);
 
   const pending = todos.filter(t => !t.done);
   // Newest completed first: the task just ticked never hides behind 'Show more' (J-27).
@@ -29,7 +32,7 @@ export function TasksTab({ todos, onChange }) {
   }
 
   function toggle(id) { onChange(toggleTodo(todos, id)); }
-  function remove(id) { onChange(todos.filter(t => t.id !== id)); }
+  function remove(id) { removeWithUndo(id, 'Task deleted'); }
   function rename(id, text) { onChange(todos.map(t => t.id === id ? { ...t, text } : t)); }
 
   return (

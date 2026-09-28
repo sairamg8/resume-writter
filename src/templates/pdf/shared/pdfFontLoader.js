@@ -1,7 +1,7 @@
 import { Font } from '@react-pdf/renderer';
 import { decodeEntities } from '@/utils/richText';
 import { FONTSOURCE_CDN as CDN, fetchMetadata, fontsourceId } from '@/utils/fontsource';
-import { chosenWebFont, setFacesBorrowed, setFontFallback } from '@/utils/fontFallback';
+import { chosenWebFont, faceFetched, setFacesBorrowed, setFontFallback } from '@/utils/fontFallback';
 import { fontChoice } from '@/utils/fonts';
 import { ARROW_STAND_INS, glyphCodePoints, isPresentationForm, needsOf, scriptCandidates, scriptClaims, STAND_INS } from './pdfFontCoverage';
 
@@ -434,18 +434,30 @@ if (typeof globalThis.addEventListener === 'function') {
 
 /**
  * Fetch borrowed face `source`'s own data again, into a copy of its react-pdf FontSource: the face
- * keeps the donor's data meanwhile, so a build laying out never finds it empty or unprimed.
+ * keeps the donor's data meanwhile, so a build laying out never finds it empty or unprimed. Resolves
+ * to `attempt`; prepareFonts marks it `late` when it stops waiting for it, and data that arrives
+ * after that says so (faceFetched), so the preview builds again to put it in.
  */
 function retryBorrowed(source) {
+  const attempt = { settled: false, late: false };
   borrowed.set(source, Infinity); // one attempt at a time, whoever asks meanwhile
   const { src, fontFamily, fontStyle, fontWeight, options } = source;
   const copy = Object.assign(Object.create(Object.getPrototypeOf(source)), {
     src, fontFamily, fontStyle, fontWeight, options, data: null, loadResultPromise: null,
   });
-  return copy.load().then(
-    () => { borrowed.delete(source); fetched.set(source, copy.data); },
-    () => { if (borrowed.get(source) === Infinity) borrowed.set(source, retryAt()); },
+  attempt.done = copy.load().then(
+    () => {
+      attempt.settled = true;
+      borrowed.delete(source);
+      fetched.set(source, copy.data);
+      if (attempt.late) faceFetched();
+    },
+    () => {
+      attempt.settled = true;
+      if (borrowed.get(source) === Infinity) borrowed.set(source, retryAt());
+    },
   );
+  return attempt;
 }
 
 const pause = (ms) => new Promise((resolve) => { setTimeout(resolve, ms)?.unref?.(); });
@@ -477,7 +489,10 @@ export async function prepareFonts(families) {
   for (const family of families) {
     const sources = store[family]?.sources || [];
     const retries = sources.filter(retryDue).map(retryBorrowed);
-    if (retries.length) await Promise.race([Promise.all(retries), pause(RETRY_WAIT_MS)]);
+    if (retries.length) {
+      await Promise.race([Promise.all(retries.map((a) => a.done)), pause(RETRY_WAIT_MS)]);
+      for (const attempt of retries) if (!attempt.settled) attempt.late = true;
+    }
     const loaded = await Promise.all(sources.map((source) => source.load().then(() => true, () => false)));
     if (!loaded.some(Boolean)) continue; // nothing of this family loads: leave it out of the chain
     // A face that failed (a CDN hiccup) borrows the nearest loaded face of the family, or

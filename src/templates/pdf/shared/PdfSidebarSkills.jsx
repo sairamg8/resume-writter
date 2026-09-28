@@ -43,8 +43,10 @@ export function SideSkills({ section, sectionGap, itemGap, accent, shades = side
                   {category}
                 </Text>
               ) : null}
+              {/* 4 pt between a group's bars, none after the last: groups are apart by the item gap
+                  alone and the section ends at its last bar, as the column's other sections do (R4-DOUT-16). */}
               {list.map((sk, index) => (
-                <View key={index} style={{ marginBottom: 4 }}>
+                <View key={index} style={{ marginTop: index ? 4 : 0 }}>
                   <Text style={{ fontSize: 8.5, color: shades.value, marginBottom: 1, lineHeight: 1.2 }} hyphenationCallback={valBreaks}>{sk}</Text>
                   <View style={{ height: 3, borderRadius: 2, backgroundColor: shades.fill }}>
                     <View style={{ width: '80%', height: 3, borderRadius: 2, backgroundColor: hexAlpha(accent, 0.5) }} />

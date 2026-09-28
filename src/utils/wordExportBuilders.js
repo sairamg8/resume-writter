@@ -1,4 +1,4 @@
-import { BorderStyle, Paragraph, ShadingType } from 'docx';
+import { BorderStyle, Paragraph, ShadingType, TabStopType, TextRun } from 'docx';
 import {
   accent2Hex, bold, normal, linked, sectionHeading, bulletPoint, descriptionToParagraphs, dateRightPara, centredIf, eighths,
   gapPara, gridTable, inlineGap, lineSpacing, twips,
@@ -11,6 +11,8 @@ import { sectionHeadingLook, titleTracking } from '@/templates/pdf/shared/sectio
 import { resolveTemplateSettings } from '@/templates/pdf/shared/templateSettings';
 import { getDateColor, getEffectiveSpacing } from '@/templates/pdf/shared/PdfSections';
 import { fieldGap } from '@/templates/pdf/shared/PdfItemHeader';
+import { pxToPt } from '@/templates/pdf/shared/pdfUnits';
+import { LEVEL_STEPS, languageLevel, languageLevelStyle } from '@/utils/languageLevel';
 import { hasRichText } from '@/utils/richText';
 import { contactHref } from '@/utils/contacts';
 import { dateRange, endDateOf, formatDate, presentLabel, startDateOf } from '@/utils/dates';
@@ -21,7 +23,8 @@ import { employerOf, groupPlaces, groupsRoles, roleGroups } from '@/utils/roleGr
  * Design → Section Headings in Word, as PdfSectionTitle draws them (ONB-12-NB1), from the résumé's
  * resolved settings `s`: the title in the template's colour for the style (sectionHeadingLook), and
  * Ruled, Underline and Line as a bottom border, Left bar as a left border, Boxed as the paragraph's
- * shading — at the stored Thickness (Left bar's the wider bar the PDF prints) and Border colour.
+ * shading — at the stored Thickness (Left bar's the wider bar the PDF prints) and Border colour —
+ * or, on a designed layout, its own mark (headingFrame, sectionHeadingLook's `variant`).
  * Word has no rule beside a title: Line's rules print under it. Plain, and a style the app does not
  * offer (the PDF's plain), print the title alone; so does a Thickness no rule is drawn at. Lectern's titles
  * are centred whatever the section's Alignment, as its PDF centres them (sectionHeadingLook's `center`, R2-138 B2).
@@ -36,11 +39,23 @@ function headingFrame(s, template) {
   const hex = (c) => accent2Hex(solid(c), accent2Hex(solid(s.accentColor), '2563eb'));
   const width = Number(s.sectionBorderWidth);
   const drawn = Number.isFinite(width) && width > 0;
-  const rule = (side, color, pt, space) => ({ border: { [side]: { style: BorderStyle.SINGLE, size: eighths(pt), color: hex(color), space } } });
+  const line = (color, pt, space, style = BorderStyle.SINGLE) => ({ style, size: eighths(pt), color: hex(color), space });
+  const rule = (side, color, pt, space, style) => ({ border: { [side]: line(color, pt, space, style) } });
   const color = hex(look.text);
   const size = Math.round(((s.fontSizeBase ?? 11) + (s.fontSizeSectionDelta ?? 1)) * 2);
-  if (s.headingStyle === 'box') return { color, size, shading: { type: ShadingType.CLEAR, color: 'auto', fill: hex(look.box) } };
+  const shading = { type: ShadingType.CLEAR, color: 'auto', fill: hex(look.box) };
+  // Keystone: the tinted box with a bar of Border colour at its left edge, 3 pt whatever the Thickness
+  // (PdfSection.jsx KEYSTONE_EDGE: Boxed takes none).
+  if (s.headingStyle === 'box' && look.variant === 'edge') return { color, size, shading, ...rule('left', look.bar, 3, 6) };
+  if (s.headingStyle === 'box') return { color, size, shading };
   if (!drawn) return { color, size };
+  // The designed layouts' own marks (look.variant, R2-138 B2), as PdfSectionTitle draws them: Broadsheet's
+  // rule over the title and none under it, Gridline's above and under, Registry's dotted underline and
+  // Chronicle's double one. Linen's short underline prints as a full one: a paragraph's border cannot stop short.
+  if (look.variant === 'overline') return { color, size, ...rule('top', look.ruled, width, 1) };
+  if (look.variant === 'framed') return { color, size, border: { top: line(look.ruled, width, 1), bottom: line(look.ruled, width, 2) } };
+  if (look.variant === 'dotted') return { color, size, ...rule('bottom', look.underline, width, 2, BorderStyle.DOTTED) };
+  if (look.variant === 'double') return { color, size, ...rule('bottom', look.underline, width, 2, BorderStyle.DOUBLE) };
   if (s.headingStyle === 'ruled') return { color, size, ...rule('bottom', look.ruled, width, 2) };
   if (s.headingStyle === 'underline') return { color, size, ...rule('bottom', look.underline, width, 2) };
   if (s.headingStyle === 'line') return { color, size, ...rule('bottom', look.line, width, 2) };
@@ -87,37 +102,50 @@ function entries(section, look, build, items = shown(section)) {
 
 /**
  * An entry's location for dateRightPara: a line of its own under the date, in the size and the
- * colour the PDF prints it in (`place`: the Text colour's muted shade, Compact's meta) — the PDF
+ * colour the PDF prints it in (`place`: the Text colour's muted shade, Compact's meta), italic on
+ * Executive and Academic (`look.italicSub`, R4-DOUT-02) — the PDF
  * prints it with the date, never in the title's text (ATS-1).
  */
-const place = (text, look) => (text ? { text, color: look.ink.place, size: look.place } : null);
+const place = (text, look, italics = look.italicSub) => (text ? { text, color: look.ink.place, size: look.place, italics } : null);
 
 /** An entry's title line (dateRightPara) with its `date` in `dateHex`, at the look's right tab; `under` the line under it. */
 const titleLine = (left, date, dateHex, centered, look, where = null, under = []) => dateRightPara(left, date, { color: dateHex, centered, size: look.date, place: where, tab: look.tab, under });
 
 /**
+ * titleLine as the PDF's ItemHeader and Projects print it: centred, the date on the title's line
+ * after a "·" in the Text colour's muted shade (CentredLine, R4-DOUT-03), not on a line of its own
+ * as a centred certification's. Not on the Timeline: its rail (TimelineHead) prints the date on a
+ * line of its own, above the title, never joined to it, so the date keeps its own line there.
+ */
+const headLine = (left, date, dateHex, centered, look, where = null, under = []) => dateRightPara(left, date, { color: dateHex, centered, size: look.date, place: where, tab: look.tab, under, sep: look.template === 'timeline' ? null : look.ink.muted });
+
+/**
  * An entry's first field, bold in the Text colour at Entry Header, and its second in the PDF's
- * colour and size for it (the sub line's, `look.sub`: Base, R2-118).
+ * colour and size for it (the sub line's, `look.sub`: Base, R2-118). `slant`: italic where the PDF
+ * prints it so — an entry's second field and an issuer on Executive and Academic (R4-DOUT-02).
  */
 const first = (text, look) => text && bold(text, { size: look.entry, color: look.ink.text });
-const second = (text, look, color = look.ink.second, size = look.sub) => normal(text, { size, color });
+const second = (text, look, color = look.ink.second, size = look.sub, slant = false) => normal(text, { size, color, ...(slant && look.italicSub ? { italics: true } : {}) });
 
 /**
  * The header of an entry with a Title (Section Options → Title, `look.title`; R2-070) — a job, a
  * school, a volunteer role, a custom entry — laid out as the PDF's ItemHeader lays it out: "Stacked"
  * the first field with the date and the second on the line under it, with the location; "Inline"
  * "first — second" with the date; "Side by side" both with the date, a field's gap apart (centred,
- * joined as Inline, as the PDF centres them). Under a one-line title the location has a line of its
+ * joined as Inline, as the PDF centres them) — ", " on Executive and Academic, whose second field
+ * prints italic (R4-DOUT-02). Under a one-line title the location has a line of its
  * own (ATS-1). Word printed every entry Inline.
  */
 function header(primary, secondary, date, dateHex, centered, look, where) {
   const lead = [first(primary, look)];
-  if (secondary && look.title === 'stacked') return titleLine(lead, date, dateHex, centered, look, where, [second(secondary, look)]);
+  if (secondary && look.title === 'stacked') return headLine(lead, date, dateHex, centered, look, where, [second(secondary, look, look.ink.second, look.sub, true)]);
   // Side by side: ItemHeader's 6 pt between the two, the Timeline's field gap.
   const apart = primary && look.title === 'sidebyside' && !centered;
   const gap = apart ? [inlineGap(look.template === 'timeline' ? fieldGap(look.base / 2) : 6, look.sub)] : [];
-  const rest = secondary ? [...gap, second(`${primary && !apart ? ' — ' : ''}${secondary}`, look)] : [];
-  return titleLine([...lead, ...rest], date, dateHex, centered, look, where);
+  // Joined as ItemHeader joins them: ", " before an italic second field (Executive, Academic), else " — ".
+  const joiner = look.italicSub ? ', ' : ' — ';
+  const rest = secondary ? [...gap, second(`${primary && !apart ? joiner : ''}${secondary}`, look, look.ink.second, look.sub, true)] : [];
+  return headLine([...lead, ...rest], date, dateHex, centered, look, where);
 }
 
 /**
@@ -160,7 +188,8 @@ export function buildExperience(section, accentHex, settings, centered, dateHex,
       titleLine([first(employerOf(g[0]), look)], '', dateHex, centered, look, place(places.header, look)),
       ...g.flatMap((item, k) => [
         ...(k ? gapPara(look.gap / 2) : []),
-        header(field(item, 'role'), '', datesOf(item), dateHex, centered, look, place(places.roles[k], look)),
+        // A grouped role's own location upright, as the PDF's role header prints it (no italicSub).
+        header(field(item, 'role'), '', datesOf(item), dateHex, centered, look, place(places.roles[k], look, false)),
         ...body(item, centered, look),
       ]),
     ];
@@ -234,54 +263,112 @@ function stackedSkills(category, skills, list, categoryInk, centered, look) {
   return paras;
 }
 
+/**
+ * A project as the PDF prints it: the name alone with the date on the title line, and the technologies
+ * and the link on the line under it, a " · " only between the two (R4-DOUT-04). Without a name the
+ * date's line prints the date alone, and the technologies stay on the line under it, as in the PDF.
+ */
 export function buildProjects(section, accentHex, settings, centered, dateHex, look) {
   const s = section.settings || {};
   return [sectionHeading(section.title, accentHex, centered, section.heading), ...entries(section, look, (item) => [
-    titleLine([
-      first(item.name, look),
-      ...(item.technologies ? [second(` · ${item.technologies}`, look, look.ink.tech)] : []),
-      ...(item.url ? [second(' · ', look, accentHex, look.link), linked(item.url, item.url, { size: look.link, color: accentHex }, look.links)] : []),
-    ], s.showDates !== false ? dateRange(startDateOf(item), endDateOf(item, settings), settings) : '', dateHex, centered, look),
+    headLine([first(item.name, look)], s.showDates !== false ? dateRange(startDateOf(item), endDateOf(item, settings), settings) : '', dateHex, centered, look, null, [
+      ...(item.technologies ? [second(item.technologies, look, look.ink.tech)] : []),
+      ...(item.url ? [
+        ...(item.technologies ? [second(' · ', look, accentHex, look.link)] : []),
+        linked(item.url, item.url, { size: look.link, color: accentHex }, look.links),
+      ] : []),
+    ]),
     ...body(item, centered, look),
   ])];
 }
 
+/**
+ * A language's level as Word prints it (Section Options → Level, R2-147): LEVEL_STEPS glyphs, the
+ * level's filled — Dots "●●●○○", Bar "▰▰▰▱▱" — where the PDF draws its circles or its track (PdfLevel).
+ * '' for Text (unset), and for a proficiency the scale does not know: the PDF draws nothing there either.
+ */
+function levelGlyphs(proficiency, sectionSettings) {
+  const style = languageLevelStyle(sectionSettings);
+  const level = style && languageLevel(proficiency);
+  if (!level) return '';
+  const [on, off] = style === 'bar' ? ['▰', '▱'] : ['●', '○'];
+  return on.repeat(level) + off.repeat(LEVEL_STEPS - level);
+}
+
+/**
+ * Languages as the PDF's LanguagesSection prints them (R4-DOUT-11): the language, and its proficiency
+ * apart from it, no dash — at the right of the column (a right tab: the dates' own, flush with the right
+ * margin or its cell's edge as the PDF's now is, R4-DOUT-14), beside
+ * it a field's gap away on Compact, 6 pt away when centred. Level Dots or Bar prints its glyphs in the
+ * accent in front of the proficiency, as the PDF draws the mark there; in the Sidebar's side column on
+ * a line of its own under them, as the PDF puts it.
+ */
 export function buildLanguages(section, accentHex, settings, centered, dateHex, look) {
-  return [sectionHeading(section.title, accentHex, centered, section.heading), ...entries(section, look, (item) => (!item.language && !item.proficiency ? [] : [
-    new Paragraph({
+  const compact = look.template === 'compact';
+  return [sectionHeading(section.title, accentHex, centered, section.heading), ...entries(section, look, (item) => {
+    if (!item.language && !item.proficiency) return [];
+    const glyphs = levelGlyphs(item.proficiency, section.settings);
+    const mark = glyphs ? [normal(glyphs, { size: look.base, color: accentHex })] : [];
+    // Both at Base, as the PDF prints them (R2-118).
+    const word = item.proficiency ? [second(item.proficiency, look, look.ink.sub, look.base)] : [];
+    // The mark and its word PdfLevel's 6 px apart.
+    const right = [...(look.side ? [] : mark), ...(mark.length && word.length && !look.side ? [inlineGap(pxToPt(6), look.base)] : []), ...word];
+    const apart = centered ? inlineGap(pxToPt(8), look.base) : compact ? inlineGap(fieldGap(look.base / 2), look.base) : normal('\t', { size: look.base });
+    const tabbed = !centered && !compact;
+    return [new Paragraph({
       children: [
-        // Both at Base, as the PDF prints them (R2-118).
         ...(item.language ? [bold(item.language, { size: look.base, color: look.ink.text })] : []),
-        ...(item.proficiency ? [second(`${item.language ? ' — ' : ''}${item.proficiency}`, look, look.ink.sub, look.base)] : []),
+        ...(right.length ? [apart, ...right] : []),
+        ...(look.side && mark.length ? [new TextRun({ break: 1 }), ...mark] : []),
       ],
       spacing: { after: 0 },
+      ...(tabbed ? { tabStops: [{ type: TabStopType.RIGHT, position: look.tab }] } : {}),
       ...centredIf(centered),
-    }),
-  ]))];
+    })];
+  })];
 }
 
 export function buildCertifications(section, accentHex, settings, centered, dateHex, look) {
   const s = section.settings || {};
-  return [sectionHeading(section.title, accentHex, centered, section.heading), ...entries(section, look, (item) => [
-    titleLine([
-      first(item.name || item.title, look),
+  return [sectionHeading(section.title, accentHex, centered, section.heading), ...entries(section, look, (item) => {
+    const name = item.name || item.title;
+    // A separator only after something printed: a certificate with no name printed " — Issuer" (R4-DOUT-05).
+    const after = (printed, mark) => (printed ? mark : '');
+    return [titleLine([
+      first(name, look),
       // The name's line at Entry Header, all of it, as the PDF prints it.
-      ...(item.issuer ? [second(` — ${item.issuer}`, look, look.ink.sub, look.entry)] : []),
-      ...(item.credentialId ? [second(` · ID: ${item.credentialId}`, look, look.ink.muted, look.entry)] : []),
-      ...(item.url ? [second(' · ', look, accentHex, look.entry), linked(item.urlLabel || item.url, item.url, { size: look.entry, color: accentHex }, look.links)] : []),
-    ], s.showDates !== false ? dateRange(item.date, item.expiry, settings) : '', dateHex, centered, look),
-  ])];
+      ...(item.issuer ? [second(`${after(name, ' — ')}${item.issuer}`, look, look.ink.sub, look.entry, true)] : []),
+      ...(item.credentialId ? [second(`${after(name || item.issuer, ' · ')}ID: ${item.credentialId}`, look, look.ink.muted, look.entry)] : []),
+      ...(item.url ? [
+        ...(name || item.issuer || item.credentialId ? [second(' · ', look, accentHex, look.entry)] : []),
+        linked(item.urlLabel || item.url, item.url, { size: look.entry, color: accentHex }, look.links),
+      ] : []),
+    ], s.showDates !== false ? dateRange(item.date, item.expiry, settings) : '', dateHex, centered, look)];
+  })];
 }
 
+/**
+ * An award as the PDF's AwardsSection prints it (R4-DOUT-05): the title bold, the issuer under it in the
+ * sub shade, the date under that in the date colour, each on a line of its own and left or centred with
+ * the section. Word printed "Title — Issuer" with the date at the right margin, and " — Issuer" with no title.
+ * The three lines keep with the description, as the PDF keeps them.
+ */
 export function buildAwards(section, accentHex, settings, centered, dateHex, look) {
   const s = section.settings || {};
-  return [sectionHeading(section.title, accentHex, centered, section.heading), ...entries(section, look, (item) => [
-    titleLine([
-      first(item.title, look),
-      ...(item.issuer ? [second(` — ${item.issuer}`, look, look.ink.sub)] : []),
-    ], s.showDates !== false ? formatDate(item.date || '', settings) : '', dateHex, centered, look),
-    ...body(item, centered, look, look.ink.sub),
-  ])];
+  return [sectionHeading(section.title, accentHex, centered, section.heading), ...entries(section, look, (item) => {
+    const date = s.showDates !== false ? formatDate(item.date || '', settings) : '';
+    const lines = [
+      item.title ? [first(item.title, look)] : [],
+      item.issuer ? [second(item.issuer, look, look.ink.sub, look.sub, true)] : [],
+      date ? [normal(date, { size: look.date, color: dateHex })] : [],
+    ].filter((line) => line.length);
+    const head = lines.length ? [new Paragraph({
+      children: lines.flatMap((line, i) => (i ? [new TextRun({ break: 1 }), ...line] : line)),
+      keepNext: true,
+      ...centredIf(centered),
+    })] : [];
+    return [...head, ...body(item, centered, look, look.ink.sub)];
+  })];
 }
 
 export function buildVolunteering(section, accentHex, settings, centered, dateHex, look) {
@@ -297,17 +384,16 @@ export function buildReferences(section, accentHex, settings, centered, dateHex,
   const { ink } = look;
   return [sectionHeading(section.title, accentHex, centered, section.heading), ...entries(section, look, (item) => {
     // A card of Base-size lines, the name's too, as the PDF prints it (R2-118).
+    // Each field on its own line, as the PDF's card prints them: job title and company, e-mail and
+    // phone were joined as "CTO, Acme" and "j@a.co  |  555 0100" (R4-DOUT-12).
     const paras = [line([bold(item.name, { size: look.base, color: ink.text })])];
-    const role = [item.jobTitle, item.company].filter(Boolean).join(', ');
-    if (role) paras.push(line([normal(role, { size: look.base, color: ink.sub })]));
+    if (item.jobTitle) paras.push(line([normal(item.jobTitle, { size: look.base, color: ink.sub })]));
+    if (item.company) paras.push(line([normal(item.company, { size: look.base, color: ink.sub })]));
     if (item.relationship) paras.push(line([normal(item.relationship, { size: look.base, color: ink.meta, italics: true })]));
     // Linked through contactHref, as the PDF links them: a phone with under three digits ("On request")
     // prints as text, not as an empty tel: link.
-    const reach = [
-      item.email && linked(item.email, contactHref('email', item), { size: look.base, color: accentHex }, look.links),
-      item.phone && linked(item.phone, contactHref('phone', item), { size: look.base, color: ink.meta }, look.links),
-    ].filter(Boolean);
-    if (reach.length) paras.push(line(reach.flatMap((r, i) => (i ? [normal('  |  ', { size: look.base, color: ink.muted }), r] : [r]))));
+    if (item.email) paras.push(line([linked(item.email, contactHref('email', item), { size: look.base, color: accentHex }, look.links)]));
+    if (item.phone) paras.push(line([linked(item.phone, contactHref('phone', item), { size: look.base, color: ink.meta }, look.links)]));
     return paras;
   })];
 }

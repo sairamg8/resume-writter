@@ -39,10 +39,7 @@ describe('Dashboard → Import, a file the browser cannot read', () => {
         importResume: (r) => { imported.push(r); return 'x'; },
       };
       const view = mount(Page, { store });
-      const saved = { FileReader: globalThis.FileReader, setTimeout: globalThis.setTimeout };
-      // The message's 4 s timer, held here to run while the page is still mounted.
-      const later = [];
-      globalThis.setTimeout = (fn, ms, ...rest) => (ms === 4000 ? later.push(fn) : saved.setTimeout(fn, ms, ...rest));
+      const saved = { FileReader: globalThis.FileReader };
       globalThis.FileReader = failingReader(outcome);
       try {
         const input = [...elements(view.container)].find((el) => el.tagName === 'INPUT' && el.type === 'file');
@@ -51,8 +48,7 @@ describe('Dashboard → Import, a file the browser cannot read', () => {
         await new Promise((resolve) => { setTimeout(resolve, 50); });
         assert.match(view.container.textContent, /could not be read/i);
         assert.deepEqual(imported, []);
-        view.act(() => later.forEach((fn) => fn()));
-        assert.doesNotMatch(view.container.textContent, /could not be read/i, 'and goes, as the other import errors do');
+        // It stays until dismissed (R4-DUX-11: tests/pdf/102-r4-dux-11-import-error-stays.test.mjs).
       } finally {
         Object.assign(globalThis, saved);
         await view.unmount();
@@ -63,9 +59,10 @@ describe('Dashboard → Import, a file the browser cannot read', () => {
 
 // R4-APP-09: each import error started its own timer and none was ever cleared, so an earlier
 // error's timer took a newer error off the screen early (a failed PDF's 8 s, then a bad .json 6 s
-// later: gone after 2 s). Now one timer serves whichever error shows.
+// later: gone after 2 s). Since R4-DUX-11 no timer takes an import error away at all: it stays
+// until dismissed or another import starts, so a second error stays however long it is up.
 describe('Dashboard → Import, a second error soon after the first', () => {
-  it('stays its full time: the first error’s timer no longer clears it', async () => {
+  it('stays: no timer of the first error, or its own, takes it away', async () => {
     const store = {
       appState: { resumes: [], deletedIds: [], activeId: null, jobs: [] },
       persistError: null,
@@ -74,11 +71,11 @@ describe('Dashboard → Import, a second error soon after the first', () => {
     };
     const view = mount(Page, { store });
     const saved = { FileReader: globalThis.FileReader, setTimeout: globalThis.setTimeout, clearTimeout: globalThis.clearTimeout };
-    // The messages' timers (4 s), held here: run by hand, cleared as the page clears them.
+    // Any long timer the page sets (4 s and over), held here: run by hand, cleared as the page clears them.
     const held = new Map();
     let next = 1e6;
     globalThis.setTimeout = (fn, ms, ...rest) => {
-      if (ms !== 4000) return saved.setTimeout(fn, ms, ...rest);
+      if (!(ms >= 4000)) return saved.setTimeout(fn, ms, ...rest);
       next += 1;
       held.set(next, fn);
       return next;
@@ -92,15 +89,10 @@ describe('Dashboard → Import, a second error soon after the first', () => {
         await new Promise((resolve) => { saved.setTimeout(resolve, 50); });
       };
       await pick();
-      const [firstId, first] = [...held][0];
-      await pick(); // the second error, while the first's timer still runs
+      await pick(); // the second error, soon after the first
       assert.match(view.container.textContent, /could not be read/i);
-      // The first error's time is up: its timer, had it been left running, fires now.
-      if (held.has(firstId)) view.act(() => first());
-      assert.match(view.container.textContent, /could not be read/i, 'the second error went with the first one’s timer');
-      assert.equal(held.size, 1, 'one timer for the message on screen');
       view.act(() => [...held.values()].forEach((fn) => fn()));
-      assert.doesNotMatch(view.container.textContent, /could not be read/i, 'and goes when its own time is up');
+      assert.match(view.container.textContent, /could not be read/i, 'the second error went on a timer');
     } finally {
       Object.assign(globalThis, saved);
       await view.unmount();
