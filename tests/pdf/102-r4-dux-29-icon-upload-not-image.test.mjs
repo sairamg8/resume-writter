@@ -44,7 +44,7 @@ it('a non-image file picked as a contact icon is refused with a message, from th
     const label = all().find((el) => el.tagName === 'LABEL' && el.textContent.trim() === text);
     assert.ok(label, `a "${text}" upload`);
     const input = [...elements(label)].find((el) => el.tagName === 'INPUT');
-    assert.equal(input.getAttribute('type'), 'file');
+    assert.equal(reactProps(input).type, 'file'); // React sets it as a property, which the fake DOM does not mirror as an attribute
     return input;
   };
   const pick = (input) => view.act(() => reactProps(input).onChange({ target: { files: [pdf()], value: 'C:\\fakepath\\letter.pdf' } }));

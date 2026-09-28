@@ -23,10 +23,14 @@ function memoryStorage() {
   };
 }
 
-const r = {
-  ...resume({ template: 'classic', sections: [{ ...section('skills', [{ category: 'Tools', skills: 'Terraform' }]), id: 'sk' }] }),
-  id: 'res-dux-24',
-};
+// Built once the harness has loaded the app's modules: section() reads them.
+let r;
+before(() => {
+  r = {
+    ...resume({ template: 'classic', sections: [{ ...section('skills', [{ category: 'Tools', skills: 'Terraform' }]), id: 'sk' }] }),
+    id: 'res-dux-24',
+  };
+});
 const store = { updateSections() {}, updateSetting() {}, setTemplate() {} };
 
 /** The scanner's box, its "no keywords" line (or null), and whether a % Match badge shows. */

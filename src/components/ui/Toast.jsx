@@ -83,8 +83,12 @@ export function ToastProvider({ children }) {
   const [paused, setPaused] = useState(false);
   const seq = useRef(0);
   const timers = useRef(new Set());
+  // False once the provider is gone: a child's unmount cleanup that dismisses its notice (the Design
+  // panel's, the photo's) may run after this provider's own, and must not start a timer nobody clears.
+  const live = useRef(true);
 
   const remove = useCallback((id) => {
+    if (!live.current) return;
     setToasts((list) => list.map((t) => (t.id === id && !t.leaving ? { ...t, leaving: true } : t)));
     const timer = setTimeout(() => {
       timers.current.delete(timer);
@@ -107,7 +111,10 @@ export function ToastProvider({ children }) {
     return id;
   }, []);
 
-  useEffect(() => () => { for (const timer of timers.current) clearTimeout(timer); }, []);
+  useEffect(() => {
+    live.current = true; // StrictMode's trial unmount runs the cleanup once before the real mount
+    return () => { live.current = false; for (const timer of timers.current) clearTimeout(timer); };
+  }, []);
   const value = useMemo(() => ({ toast, dismiss: remove }), [toast, remove]);
 
   return (
