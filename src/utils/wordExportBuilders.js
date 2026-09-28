@@ -380,7 +380,7 @@ export function buildVolunteering(section, accentHex, settings, centered, dateHe
 }
 
 export function buildReferences(section, accentHex, settings, centered, dateHex, look) {
-  const line = (children, after = 20) => new Paragraph({ children, spacing: { after }, ...centredIf(centered) });
+  const line = (children, after = 20, before = 0) => new Paragraph({ children, spacing: { after, ...(before ? { before } : {}) }, ...centredIf(centered) });
   const { ink } = look;
   return [sectionHeading(section.title, accentHex, centered, section.heading), ...entries(section, look, (item) => {
     // A card of Base-size lines, the name's too, as the PDF prints it (R2-118).
@@ -392,7 +392,9 @@ export function buildReferences(section, accentHex, settings, centered, dateHex,
     if (item.relationship) paras.push(line([normal(item.relationship, { size: look.base, color: ink.meta, italics: true })]));
     // Linked through contactHref, as the PDF links them: a phone with under three digits ("On request")
     // prints as text, not as an empty tel: link.
-    if (item.email) paras.push(line([linked(item.email, contactHref('email', item), { size: look.base, color: accentHex }, look.links)]));
+    // The e-mail 2 pt below the line above it, as the main column's card prints it (R5-OUT-01); the
+    // Sidebar's column prints it flush (SideReferences).
+    if (item.email) paras.push(line([linked(item.email, contactHref('email', item), { size: look.base, color: accentHex }, look.links)], 20, look.side ? 0 : 40));
     if (item.phone) paras.push(line([linked(item.phone, contactHref('phone', item), { size: look.base, color: ink.meta }, look.links)]));
     return paras;
   })];
