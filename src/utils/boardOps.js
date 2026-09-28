@@ -107,7 +107,8 @@ const alike = (a, b) => a === b || JSON.stringify(a) === JSON.stringify(b);
  * before and just after deleteColumn. The column comes back at its old place with its title,
  * category and WIP limit; each issue the delete changed and nothing changed since goes back as it
  * was (its column, resolvedAt, history), and a next occurrence the delete made for a repeating
- * issue goes again while untouched. An edit made after the delete is kept. Refused (the board as
+ * issue goes again while untouched and that issue is put back. An edit made after the delete is
+ * kept: an issue edited since stays as it is, with its next occurrence. Refused (the board as
  * it is) when the column is not in `before`, or is on the board again.
  */
 export function restoreColumn(board, removed) {
@@ -116,13 +117,22 @@ export function restoreColumn(board, removed) {
   if (!column || !after || columnById(board, columnId)) return board;
   const was = new Map(before.issues.map((i) => [i.id, i]));
   const made = new Map(after.issues.map((i) => [i.id, i]));
-  // What the delete made (a repeat's next occurrence), still as it made it: it goes.
-  const spawned = (i) => !was.has(i.id) && made.has(i.id) && alike(i, made.get(i.id));
+  // An issue the delete changed and nothing has changed since: it goes back as it was.
+  const putBack = (i) => was.has(i.id) && made.has(i.id) && alike(i, made.get(i.id)) && !alike(was.get(i.id), i);
+  const back = new Set(board.issues.filter(putBack).map((i) => i.id));
+  // The issue each next occurrence was made for by the delete.
+  const madeFor = new Map(after.issues
+    .filter((i) => i.recurrenceNextId && was.has(i.id) && was.get(i.id).recurrenceNextId !== i.recurrenceNextId)
+    .map((i) => [i.recurrenceNextId, i.id]));
+  // What the delete made (a repeat's next occurrence), still as it made it, goes, but only when the
+  // issue it came from is put back: one kept as edited since keeps its next occurrence.
+  const spawned = (i) => !was.has(i.id) && made.has(i.id) && alike(i, made.get(i.id))
+    && (!madeFor.has(i.id) || back.has(madeFor.get(i.id)));
   const issues = board.issues.filter((i) => !spawned(i));
   const kept = new Set(issues.map((i) => i.id));
   const restored = issues.map((i) => {
     const old = was.get(i.id);
-    if (!old || !made.has(i.id) || !alike(i, made.get(i.id)) || alike(old, i)) return i;
+    if (!back.has(i.id)) return i;
     // A next occurrence that stays (edited since) is still this issue's: it is not made twice.
     const nextId = i.recurrenceNextId && i.recurrenceNextId !== old.recurrenceNextId && kept.has(i.recurrenceNextId) ? i.recurrenceNextId : old.recurrenceNextId;
     return nextId === old.recurrenceNextId ? old : { ...old, recurrenceNextId: nextId };
