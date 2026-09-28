@@ -86,6 +86,7 @@ function toLines(input) {
       const atEnd = (text) => lines[0].includes('\t') && /^\t[^\t]*\S[^\t]*$/.test(text) && ![SCHOOL, DEGREE, ROLE].some((re) => re.test(text));
       return lines.map((text, i) => ({
         text: clean(text), hint: i ? (atEnd(text) ? 'end' : undefined) : l.hint, depth: i ? 0 : (l.depth || 0), ...(l.links?.length ? { links: l.links } : {}),
+        ...(l.fields && !i ? { fields: l.fields } : {}),
       }));
     }
     return [{ text: clean(l), depth: indentOf(l) }];
@@ -191,6 +192,22 @@ function untyped(value) {
 }
 
 /**
+ * An entry heading's fields where its marks show where each ends: the export's "**primary** — *secondary*",
+ * or either alone. A dash typed inside one is the user's, not a field's edge: "**Deloitte - Consulting**
+ * — *Engineer*" is the company "Deloitte - Consulting" and the role "Engineer", where splitting its
+ * text at every " - " and " — " made three fields (R5-IMP-02). `{ fields }` only for a heading whose
+ * fields hold such a dash, so every other line reads as before; a heading without these marks (a
+ * hand-written "### Acme — Engineer", a text or PDF file's) is split at its dashes as it always was.
+ */
+function headingFields(raw, hint) {
+  if (hint !== 'entry' && hint !== 'role') return {};
+  const m = /^\*\*((?:\\.|[^*\\])+)\*\*(?:\s+—\s+\*((?:\\.|[^*\\])+)\*)?$|^\*((?:\\.|[^*\\])+)\*$/.exec(raw.trim());
+  if (!m) return {};
+  const fields = [m[1], m[2], m[3]].filter(Boolean).map((f) => unmark(f, []).trim());
+  return fields.every(Boolean) && fields.some((f) => fieldsOf(f).length > 1) ? { fields } : {};
+}
+
+/**
  * A Markdown résumé as the parser's lines: "# " the name, "## " a heading, "### " an entry's title,
  * a list item a "• " line (a numbered one keeps its number), the rest as text with its marks off. A
  * deeper heading under an entry's is a 'role' of it: Experience's "Group roles by company" exports the
@@ -215,7 +232,7 @@ export function markdownLines(md) {
       const links = [];
       const text = unmark(typed(h[2]), hint === 'entry' || hint === 'role' ? links : 'label') + links.map((u) => ` | ${u}`).join('');
       if (hint === 'name') named = true;
-      out.push({ text, hint });
+      out.push({ text, hint, ...headingFields(typed(h[2]), hint) });
       continue;
     }
     if (/^\s*([-*_])(\s*\1){2,}\s*$/.test(line)) { out.push({ text: '' }); continue; } // a thematic break
@@ -457,6 +474,8 @@ function readHeader(type, header) {
   let above = 0;
   header.forEach((line, k) => {
     const ps = pieces(line.text);
+    // A Markdown heading's own fields (headingFields), kept whole where its text is still theirs.
+    const whole = line.fields?.join(' — ');
     // The text fields found on the lines above this one: a title line came before it when there are any.
     const titled = out.parts.length;
     let at = -1;
@@ -479,7 +498,7 @@ function readHeader(type, header) {
       // role and company. Not any place under two fields: the Sidebar's school stacks its degree, school,
       // field of study and place a line each, and that place is read by the education's own rule (entryOf).
       if (at < 0 && k > 0 && ps.length === 1 && (line.hint === 'end' || (JOB.has(type) && above >= 2 && PLACE.test(p) && !ROLE.test(p))) && place(p)) return;
-      out.parts.push(...fieldsOf(p));
+      out.parts.push(...(p === whole ? line.fields : fieldsOf(p)));
     });
     const gave = out.parts.slice(titled);
     above = (JOB.has(type) ? inlinePair(gave) : gave).length;
@@ -821,7 +840,7 @@ function roleEntries(type, lines) {
       const under = lines.slice(k + 1, next);
       const dated = under.some((x) => pieces(x.text).some((p) => readDateRange(p) || trailingDate(p)));
       // Not an entry whose title holds a role and a company ("### Acme — Engineer" over "#### Highlights").
-      const whole = fieldsOf(l.text).length > 1 || pieces(l.text).length > 1;
+      const whole = (l.fields || fieldsOf(l.text)).length > 1 || pieces(l.text).length > 1;
       if (JOB.has(type) && lines[next]?.hint === 'role' && !dated && !whole) {
         const placeAt = under.findIndex((x) => PLACE.test(x.text));
         group = { company: l.text, place: placeAt >= 0 ? under[placeAt].text : '', lead: under.filter((x, i) => i !== placeAt), first: true };
