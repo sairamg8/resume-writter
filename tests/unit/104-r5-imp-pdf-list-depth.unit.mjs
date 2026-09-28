@@ -41,7 +41,7 @@ test('markers at one x are siblings; a title line at the margin ends the list', 
     item('•', 48, 636, 4), item('Ran the on-call rota', 56, 636, 100),
     item('Globex', 40, 610, 40), item('2018 – 2020', 450, 610, 70), item('Analyst', 40, 596, 50),
     item('•', 48, 570, 4), item('Wrote the reports', 56, 570, 90)];
-  const listed = pdfLinesOfPages([page]).filter((l) => /^•/.test(l.text));
+  const listed = pdfLinesOfPages([page]).filter((l) => l.text.startsWith('•'));
   assert.deepEqual(listed.map((l) => l.depth || 0), [0, 0, 0]);
 });
 
