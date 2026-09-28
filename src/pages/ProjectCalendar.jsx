@@ -47,13 +47,15 @@ export function ProjectCalendar() {
       <BoardToolbar board={board} filters={filters} onChange={setFilters} />
       {/* The month controls sit above the grid's scroller, not in it: on a phone the 48rem grid pans
           sideways in its own box, as the board's columns do, and Today / previous / next / the month
-          stay on screen instead of sliding away with the first days of the week. */}
-      <div className="flex items-center gap-2 px-4 pb-3 md:px-8">
+          stay on screen instead of sliding away with the first days of the week. The row wraps: on a
+          phone the "no due date" note takes a line of its own under the controls, where squeezed
+          beside the month it broke both into a word per line. */}
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 px-4 pb-3 md:px-8">
         <Button size="md" onClick={() => setMonth(`${today.slice(0, 7)}-01`)}>Today</Button>
         <IconButton icon={ChevronLeft} label="Previous month" onClick={() => setMonth((m) => shiftMonth(m, -1))} />
         <IconButton icon={ChevronRight} label="Next month" onClick={() => setMonth((m) => shiftMonth(m, 1))} />
-        <h2 className="ml-1 text-lg font-semibold text-ink" aria-live="polite">{title}</h2>
-        {undated > 0 && <span className="ml-auto text-[13px] text-ink-subtlest">{undated} issue{undated === 1 ? ' has' : 's have'} no due date</span>}
+        <h2 className="ml-1 whitespace-nowrap text-lg font-semibold text-ink" aria-live="polite">{title}</h2>
+        {undated > 0 && <span className="w-full text-[13px] text-ink-subtlest sm:ml-auto sm:w-auto">{undated} issue{undated === 1 ? ' has' : 's have'} no due date</span>}
       </div>
       <div className="min-h-0 flex-1 overflow-auto px-4 pb-8 md:px-8">
         <div role="grid" aria-label={`${title} calendar`} className="min-w-[48rem] overflow-hidden rounded-md border border-line">
