@@ -205,7 +205,29 @@ function headingFields(raw, hint) {
   const m = /^\*\*((?:\\.|[^*\\])+)\*\*(?:\s+—\s+\*((?:\\.|[^*\\])+)\*)?$|^\*((?:\\.|[^*\\])+)\*$/.exec(raw.trim());
   if (!m) return {};
   const fields = [m[1], m[2], m[3]].filter(Boolean).map((f) => unmark(f, []).trim());
-  return fields.every(Boolean) && fields.some((f) => fieldsOf(f).length > 1) ? { fields } : {};
+  if (!fields.every(Boolean) || !fields.some((f) => fieldsOf(f).length > 1)) return {};
+  // One bold or italic run alone is the export's only when the file shows it (markdownLines): people
+  // and AI tools also bold a whole "### **Software Engineer — Google**", role and company in one.
+  return { fields, ...(m[2] ? {} : { lone: true }) };
+}
+
+/**
+ * A heading wholly bold or italic (headingFields' `lone`) is one field only where the file is the
+ * export's: a grouped employer (role headings under it) or a grouped role, or a file whose entry
+ * headings use the export's "**primary** — *secondary*" — its single-field entries print one run. Else
+ * it is hand-written, "### **Software Engineer — Google**", and split at its dashes as it always was.
+ */
+function loneFields(out) {
+  const exported = out.some((l) => (l.hint === 'entry' || l.hint === 'role') && /^\*\*(?:\\.|[^*\\])+\*\*\s+—\s+\*(?:\\.|[^*\\])+\*$/.test(l.raw));
+  out.forEach((l, k) => {
+    if (l.lone) {
+      const next = out.slice(k + 1).find((x) => x.hint);
+      if (!exported && l.hint !== 'role' && next?.hint !== 'role') delete l.fields;
+      delete l.lone;
+    }
+    delete l.raw;
+  });
+  return out;
 }
 
 /**
@@ -233,7 +255,7 @@ export function markdownLines(md) {
       const links = [];
       const text = unmark(typed(h[2]), hint === 'entry' || hint === 'role' ? links : 'label') + links.map((u) => ` | ${u}`).join('');
       if (hint === 'name') named = true;
-      out.push({ text, hint, ...headingFields(typed(h[2]), hint) });
+      out.push({ text, hint, raw: typed(h[2]).trim(), ...headingFields(typed(h[2]), hint) });
       continue;
     }
     if (/^\s*([-*_])(\s*\1){2,}\s*$/.test(line)) { out.push({ text: '' }); continue; } // a thematic break
@@ -244,7 +266,7 @@ export function markdownLines(md) {
     if (item) { out.push(withLinks({ text: `${item[1] ? `${item[1]} ` : '• '}${unmark(typed(item[2]), undefined, links)}`, ...(indentOf(line) ? { depth: indentOf(line) } : {}) })); continue; }
     out.push(withLinks({ text: unmark(typed(line.replace(/^\s*>\s?/, '')), undefined, links) }));
   }
-  return out;
+  return loneFields(out);
 }
 
 // ── Dates ────────────────────────────────────────────────────────────────────

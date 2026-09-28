@@ -22,7 +22,7 @@ test('a dash in the italic part, or in a bold part alone, stays in its field', (
   const r = fromMd('# Pat Sample\n\n## Experience\n### **Acme** — *Engineer — Backend*\n*2020 – 2021*\n\n### **Globex – East**\n*2019*\n');
   const [a, b] = items(r, 'experience');
   assert.deepEqual([a.company, a.role, a.description || ''], ['Acme', 'Engineer — Backend', '']);
-  assert.deepEqual([b.company + b.role, b.description || ''], ['Globex – East', '']);
+  assert.deepEqual([b.company, b.role, b.description || ''], ['Globex – East', '', '']);
 });
 
 test('a heading without the export\'s marks is split at its dashes as before', () => {
@@ -57,4 +57,16 @@ test('"Group roles by company": an employer with a dash is still the group\'s co
   assert.deepEqual(items(r, 'experience').map((j) => [j.company, j.role]), [
     ['Deloitte - Consulting', 'Senior Engineer'], ['Deloitte - Consulting', 'Engineer'],
   ]);
+});
+
+// A heading wholly bold or italic is the export's single field only where the file shows it is the
+// export's (its entry headings in "**primary** — *secondary*", or a grouped employer or role). A
+// hand-written or AI-written "### **Software Engineer — Google**" holds role and company in one run,
+// and is split at its dash as before; keeping it whole left the company empty.
+test('a hand-written heading wholly in bold or italics is still split at its dash', () => {
+  const at = (heading) => items(fromMd(`# Robin Vale\n\n## Experience\n\n### ${heading}\n*Jan 2020 – Present*\n\n- Built things\n`), 'experience')[0];
+  const a = at('**Software Engineer — Google**');
+  assert.deepEqual([a.company, a.role, a.description], ['Google', 'Software Engineer', '<ul><li>Built things</li></ul>']);
+  assert.deepEqual(['**Acme - Senior Engineer**', '*Acme – Engineer*'].map((h) => [at(h).company, at(h).role]),
+    [['Acme', 'Senior Engineer'], ['Acme', 'Engineer']]);
 });
