@@ -123,8 +123,17 @@ export function buildPersonalSection(personal = {}, settings = {}, template = 'c
   const gap = s.headerGaps?.photoTextGap ?? 12;
   const beside = photo && !centered && templateId(template) !== 'sidebar';
   if (photo && !beside) paragraphs.push(new Paragraph({ children: [photo.run], spacing: { after: twips(gap) }, ...centredIf(centered) }));
+  // Modern prints its summary on the banner; the Sidebar under "About Me" on the page.
+  const summaryOnBand = summary && band && templateId(template) === 'modern';
+  // On a band, the space under its last line is Banner top & bottom exactly, as the PDF's (R4-SW-W-01):
+  // the band's padding under the text takes in the space after its last paragraph (headerBand), and
+  // where that space is more than the padding it is cut to it — a cell's margin cannot go under 0, so
+  // the rest printed as fill under the text (4 pt under Modern's contacts at a padding of 0).
+  const bandPad = band ? twips(band.padY) : null;
+  const lastOnBand = (after) => (band && !summaryOnBand ? Math.min(after, bandPad) : after);
   // The space after the text's last line, twips: on a band it comes off the band's padding under it.
   let textAfter = stacked ? setTwips('nameTitleGap') ?? 40 : next ?? (inline ? 60 : 40);
+  if (!stacked && !contacts.length) textAfter = lastOnBand(textAfter);
   paragraphs.push(new Paragraph({
     children: inline ? [name, inlineGap(inline.gap, titleSize), title] : [name],
     // A stacked title follows Name ↔ Title when set, else Word's own 2 pt; the contacts after the name
@@ -135,6 +144,7 @@ export function buildPersonalSection(personal = {}, settings = {}, template = 'c
 
   if (stacked) {
     textAfter = next ?? 60;
+    if (!contacts.length) textAfter = lastOnBand(textAfter);
     paragraphs.push(new Paragraph({
       children: [title],
       spacing: { after: textAfter },
@@ -151,16 +161,15 @@ export function buildPersonalSection(personal = {}, settings = {}, template = 'c
     const width = beside ? room - photo.width - gap : band ? room : undefined;
     // On a band, its marks and the Accent link tint that reads on the fill Word shades (Design → Links, R2-147).
     const onBand = band ? { marks: look.marks ? hexOn(look.marks, on) : undefined, links: linkLook(s.linkStyle, s.accentColor, on) } : {};
-    textAfter = toSummary ?? 80;
+    textAfter = lastOnBand(toSummary ?? 80);
     paragraphs.push(...contactParagraphs(contacts, s, hasHeaderControls(template, settings), style, centered, width, textAfter, onBand));
   }
-  // Modern prints its summary on the banner; the Sidebar under "About Me" on the page.
-  const summaryOnBand = summary && band && templateId(template) === 'modern';
   const summaryParas = () => {
     const { run, frame } = summaryLook(s, template, summaryOnBand ? on : null);
     const links = linkLook(s.linkStyle, s.accentColor, summaryOnBand ? on : null);
     // At Design → Line Height, as the PDF's summary (R2-062), its lists behind Design → Lists' glyph (R2-147).
-    return descriptionToParagraphs(personal.summary, { size: Math.round(baseSize * 2), lineHeight: s.lineHeightValue, bullet: s.bulletStyle, links, ...run }, centered ? 'center' : null, frame);
+    // On the banner its last paragraph's 1 pt after is cut to the padding under it, as the text's is.
+    return descriptionToParagraphs(personal.summary, { size: Math.round(baseSize * 2), lineHeight: s.lineHeightValue, bullet: s.bulletStyle, links, ...run }, centered ? 'center' : null, frame, summaryOnBand ? Math.min(20, bandPad) : undefined);
   };
   if (band) {
     paragraphs.splice(0, paragraphs.length, headerBand(band, s, { photo: beside ? photo : null, gap, text: paragraphs, textAfter, summary: summaryOnBand ? summaryParas() : null }));
@@ -214,8 +223,9 @@ function photoRow(photo, gap, text, s, { band = null, textMargins, rows = [] } =
  * it takes in, so the band ends its padding under the text as the PDF's does.
  */
 function headerBand(band, s, { photo, gap, text, textAfter, summary }) {
-  // The summary's paragraphs keep 1 pt after them (descriptionToParagraphs): the padding takes it in too.
-  const rows = summary ? [[{ children: summary, span: 2, margins: { bottom: -20 } }]] : [];
+  // The summary's paragraphs keep 1 pt after them (descriptionToParagraphs), the last no more than the
+  // padding under it (buildPersonalSection): the padding takes it in too.
+  const rows = summary ? [[{ children: summary, span: 2, margins: { bottom: -Math.min(20, twips(band.padY)) } }]] : [];
   const textMargins = { bottom: -textAfter };
   if (photo) return photoRow(photo, gap, text, s, { band, textMargins, rows });
   return frameTable([[{ children: text, margins: textMargins }], ...rows], [frameInner(s, band)], { settings: s, band });
