@@ -44,7 +44,9 @@ export function TodoItem({ todo, onToggle, onDelete, onRename }) {
       ) : (
         <span
           onDoubleClick={() => { setDraft(todo.text); setEditing(true); }}
-          className={`flex-1 text-sm leading-relaxed cursor-default ${todo.done ? 'line-through text-ink-subtlest' : 'text-ink'}`}
+          // A URL or a long word wraps inside the row: unbroken, it widened the text past a phone's
+          // screen and took the delete X with it, out of reach (R4-DPH-03; as job/Field.jsx, J-12).
+          className={`min-w-0 flex-1 break-words text-sm leading-relaxed cursor-default ${todo.done ? 'line-through text-ink-subtlest' : 'text-ink'}`}
         >
           {todo.text}
         </span>
