@@ -41,3 +41,11 @@ test('the export\'s own Markdown: a description link and an address typed as tex
   assert.equal(job(r).description,
     '<ul><li>Wrote <a href="https://x.com/_foo_/a__b__c">the guide</a></li><li>Mirror at <a href="https://x.com/_bar_">https://x.com/_bar_</a> now</li></ul>');
 });
+
+// An address in a code span took its closing backtick into the kept address, so the code pass found one
+// backtick and left both: "See `<a href=\"https://x.com/a`\">…`</a> now". Both backticks come off again.
+test('an address in a code span loses both its backticks, not only the opening one', () => {
+  assert.equal(markdownLines('- See `https://x.com/a` now')[0].text, '• See https://x.com/a now');
+  assert.equal(description(['- See `https://x.com/a` now']), '<ul><li>See <a href="https://x.com/a">https://x.com/a</a> now</li></ul>');
+  assert.equal(description(['- `https://code.com/_x_` in code']), '<ul><li><a href="https://code.com/_x_">https://code.com/_x_</a> in code</li></ul>');
+});

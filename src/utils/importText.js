@@ -156,9 +156,10 @@ function unmark(text, as, found) {
 /**
  * An address written out in Markdown text: "https://x.com/_a_/b", "www.…", "mailto:…". It ends before
  * a closing emphasis mark or an escape ("**https://x.com**", the export's "https://x.com/\\_a\\_"), and
- * never takes in an address already kept aside (unmark).
+ * never takes in an address already kept aside (unmark), nor a backtick: an address in a code span
+ * ("`https://x.com/a`") leaves both its backticks to the code pass, which takes them off (R5-IMP-01).
  */
-const MD_ADDRESS = /\b(?:https?:\/\/|mailto:|www\.)[^\s<>()"\uE001]*[^\s<>()".,;:!?'’*_\\\uE001]/gi;
+const MD_ADDRESS = /\b(?:https?:\/\/|mailto:|www\.)[^\s<>()"`\uE001]*[^\s<>()"`.,;:!?'’*_\\\uE001]/gi;
 /**
  * Inline code, bold and italics, and backslash escapes off a run of Markdown text. An address in it is
  * kept as written: "https://x.com/_foo_" is not "https://x.com/foo" (R5-IMP-01). `kept`: addresses
