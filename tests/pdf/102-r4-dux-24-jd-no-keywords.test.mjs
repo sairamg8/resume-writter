@@ -23,13 +23,10 @@ function memoryStorage() {
   };
 }
 
-// Built once the harness has loaded the app's modules: section() reads them.
-let r;
-before(() => {
-  r = {
-    ...resume({ template: 'classic', sections: [{ ...section('skills', [{ category: 'Tools', skills: 'Terraform' }]), id: 'sk' }] }),
-    id: 'res-dux-24',
-  };
+// Built inside the test, once the harness has loaded the app's modules: section() reads them.
+const cv = () => ({
+  ...resume({ template: 'classic', sections: [{ ...section('skills', [{ category: 'Tools', skills: 'Terraform' }]), id: 'sk' }] }),
+  id: 'res-dux-24',
 });
 const store = { updateSections() {}, updateSetting() {}, setTemplate() {} };
 
@@ -46,6 +43,7 @@ function scanner(view) {
 describe('the job scanner says when a pasted posting has no keywords (R4-DUX-24)', () => {
   it('shows a line asking for the full posting, and hides it for an empty box or a real posting', async () => {
     globalThis.sessionStorage = memoryStorage();
+    const r = cv();
     const { default: AtsCheckerPanel } = await loadModule('/src/components/AtsCheckerPanel.jsx');
     const view = mount(() => createElement(AtsCheckerPanel, { resume: r, store }), {});
     try {
