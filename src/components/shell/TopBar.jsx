@@ -86,7 +86,8 @@ function QuickSearch({ search }) {
         onFocus={() => setOpen(true)}
         onBlur={() => setTimeout(() => setOpen(false), 120)}
         onKeyDown={onKeyDown}
-        className="h-8 w-full rounded border border-line bg-white pr-8 pl-8 text-sm text-ink placeholder:text-ink-subtlest transition-colors hover:bg-hovered focus:border-brand focus:bg-white focus:outline-none focus:ring-1 focus:ring-brand"
+        // 16 px on touch screens: iOS Safari zooms the page into any smaller field it focuses (R4-DPH-11).
+        className="h-8 w-full rounded border border-line bg-white pr-8 pl-8 text-sm text-ink placeholder:text-ink-subtlest transition-colors hover:bg-hovered focus:border-brand focus:bg-white focus:outline-none focus:ring-1 focus:ring-brand pointer-coarse:text-base"
       />
       <kbd aria-hidden="true" className="pointer-events-none absolute top-1/2 right-2 -translate-y-1/2 rounded border border-line px-1 text-[11px] text-ink-subtlest">/</kbd>
       {open && query.trim() && (
