@@ -39,9 +39,11 @@ export function InlineCreate({ onCreate, label = 'Create issue', className, vari
     );
   }
 
+  // The row variant (a backlog section) puts the field beside the type and Create from sm up only:
+  // on a phone they left it about 100px, narrower than its own placeholder, so it stacks there.
   return (
     <div
-      className={cx('flex flex-col gap-2 rounded border-2 border-brand bg-white p-2', variant === 'row' && 'flex-row items-center', className)}
+      className={cx('flex flex-col gap-2 rounded border-2 border-brand bg-white p-2', variant === 'row' && 'sm:flex-row sm:items-center', className)}
       onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget) && !text.trim()) setOpen(false); }}
     >
       <textarea
