@@ -165,11 +165,13 @@ export function Pipeline({ status, onChange }) {
           </button>
         )}
 
-        <div className="flex items-center gap-2 ml-auto">
-          <span className="text-[10px] text-ink-subtlest font-semibold uppercase tracking-widest">Mark as:</span>
+        {/* Wider than a phone's card on one line: it wraps between its pills — never inside one, nor
+            inside "Mark as:" — so each stays whole (R4-DPH-13). */}
+        <div className="flex flex-wrap items-center gap-2 ml-auto">
+          <span className="text-[10px] text-ink-subtlest font-semibold uppercase tracking-widest whitespace-nowrap">Mark as:</span>
           <button
             onClick={() => onChange(ON_HOLD)}
-            className="inline-flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-full border font-semibold transition-all hover:scale-105"
+            className="inline-flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-full border font-semibold whitespace-nowrap transition-all hover:scale-105"
             style={{ color: STATUS_MAP[ON_HOLD].text, backgroundColor: STATUS_MAP[ON_HOLD].bg, borderColor: STATUS_MAP[ON_HOLD].color + '50' }}
           >
             <Pause size={10} />
@@ -177,7 +179,7 @@ export function Pipeline({ status, onChange }) {
           </button>
           <button
             onClick={() => onChange('rejected')}
-            className="inline-flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-full border font-semibold transition-all hover:scale-105"
+            className="inline-flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-full border font-semibold whitespace-nowrap transition-all hover:scale-105"
             style={{ color: STATUS_MAP.rejected.text, backgroundColor: STATUS_MAP.rejected.bg, borderColor: STATUS_MAP.rejected.color + '40' }}
           >
             <XCircle size={11} />
@@ -185,7 +187,7 @@ export function Pipeline({ status, onChange }) {
           </button>
           <button
             onClick={() => onChange('withdrawn')}
-            className="inline-flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-full border font-semibold transition-all hover:scale-105"
+            className="inline-flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-full border font-semibold whitespace-nowrap transition-all hover:scale-105"
             style={{ color: STATUS_MAP.withdrawn.text, backgroundColor: STATUS_MAP.withdrawn.bg, borderColor: STATUS_MAP.withdrawn.color + '40' }}
           >
             <LogOut size={11} />
