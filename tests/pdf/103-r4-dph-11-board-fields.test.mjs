@@ -11,7 +11,7 @@
 import { before, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { createElement as h } from 'react';
-import { loadModule } from './harness.mjs';
+import { setup, loadModule } from './harness.mjs';
 import { mount } from './fake-dom.mjs';
 import { useBacklogPage, mountBacklog, project, futureSprint, issue, elements, reactProps, ev, tokens } from './103-r4-backlog-page.mjs';
 
@@ -23,6 +23,9 @@ let IssueActivity;
 let DateInput;
 let PointsInput;
 before(async () => {
+  // Vite's loader first: setup() returns the loader the page hook made, or makes it if this hook
+  // runs first — the order of two root before-hooks from two modules is not one to lean on.
+  await setup();
   ({ InlineCreate } = await loadModule('/src/components/board/InlineCreate.jsx'));
   ({ IssueChecklist } = await loadModule('/src/components/board/IssueChecklist.jsx'));
   ({ IssueActivity } = await loadModule('/src/components/board/IssueActivity.jsx'));
