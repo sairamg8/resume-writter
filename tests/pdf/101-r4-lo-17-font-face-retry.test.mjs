@@ -2,8 +2,12 @@
 // face's data (prepareFonts, pdfFontLoader.js) for the rest of the session: the bold printed as the
 // regular until the tab was reloaded. Pinned: the face is fetched again a minute later (not on every
 // build, so a face the CDN lacks is not re-downloaded per preview build), and then prints with its
-// own data — fetched aside, so the face never lays out empty or unprimed; meanwhile facesBorrowed() says a face is borrowing, so the preview builds again when the
-// browser is back online.
+// own data — fetched aside and put in only by a build, right before it primes it, so the face never
+// lays out empty or unprimed; meanwhile facesBorrowed() says a face is borrowing, so the preview builds
+// again when the browser is back online. Data that arrives after its build stopped waiting says so
+// (onFaceFetched), so the preview builds again then rather than on the next edit. And an 'online'
+// while a fetch is on its way does not start a second one (Node has no global 'online': the file
+// catches the loader's listener with a stand-in addEventListener, as tests/unit/job-stages does).
 // Run: node --test tests/pdf/101-r4-lo-17-font-face-retry.test.mjs
 import { before, after, afterEach, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
@@ -17,6 +21,11 @@ const NOTO = readFileSync(path.join(ROOT, 'node_modules/@fontsource/noto-sans/fi
 const realFetch = globalThis.fetch;
 const realNow = Date.now;
 
+// Before pdfFontLoader.js loads: it listens for 'online' on globalThis, which Node lacks.
+const onlineListeners = [];
+globalThis.addEventListener = (type, fn) => { if (type === 'online') onlineListeners.push(fn); };
+const backOnline = () => onlineListeners.forEach((fn) => fn());
+
 /**
  * The CDN: fonts "Testface Bold" and "Testface Stall", each with a 400 and a 700. A 700 file fails
  * while `boldFails`, and waits for `stall` (a promise) while one is set.
@@ -28,9 +37,9 @@ function network() {
   globalThis.fetch = async (url, opts) => {
     const u = String(url);
     if (!u.includes('cdn.jsdelivr.net')) return realFetch(url, opts);
-    const pkg = u.match(/@fontsource\/(testface-(?:bold|stall))@5\//)?.[1];
+    const pkg = u.match(/@fontsource\/(testface-[a-z]+)@5\//)?.[1];
     if (pkg && u.endsWith('/metadata.json')) {
-      const family = pkg === 'testface-bold' ? 'Testface Bold' : 'Testface Stall';
+      const family = pkg.split('-').map((w) => w[0].toUpperCase() + w.slice(1)).join(' ');
       return new Response(JSON.stringify({ family, weights: [400, 700], styles: ['normal'], subsets: ['latin'] }), { status: 200 });
     }
     if (pkg && u.includes('/files/') && u.endsWith('.woff')) {
@@ -58,7 +67,7 @@ describe('a face that failed once is fetched again later, not borrowed for the s
     ({ Font } = await loadModule('/tests/fixtures/reactPdfFont.js'));
   });
   afterEach(() => { globalThis.fetch = realFetch; Date.now = realNow; });
-  after(teardown);
+  after(() => { delete globalThis.addEventListener; return teardown(); });
 
   it('the bold borrows the regular after a failed fetch, and gets its own data a minute on', async () => {
     const settings = { customFont: 'Testface Bold' };
@@ -83,10 +92,17 @@ describe('a face that failed once is fetched again later, not borrowed for the s
     assert.equal(boldFetches.length, tries, 'not fetched again within the minute');
     assert.equal(bold.data, donor.data);
 
-    // A minute on, the next build fetches it, and the bold prints with its own data.
+    // A minute on, the next build fetches it, and the bold prints with its own data. It arrived
+    // while that build waited: no build again is asked for.
     const later = realNow() + 61_000;
     Date.now = () => later;
-    await loader.resolvePdfFonts(settings, 'Pat Example');
+    let asked = 0;
+    const stop = fallback.onFaceFetched(() => { asked += 1; });
+    try {
+      await loader.resolvePdfFonts(settings, 'Pat Example');
+      await new Promise((resolve) => { setTimeout(resolve, 50); });
+    } finally { stop(); }
+    assert.equal(asked, 0, 'the build that waited put it in itself');
     assert.ok(boldFetches.length > tries, 'the bold is fetched again');
     assert.ok(bold.data, 'the bold has data');
     assert.ok(others.every((s) => s.data !== bold.data), 'the bold prints with its own face, not a regular one');
@@ -117,9 +133,40 @@ describe('a face that failed once is fetched again later, not borrowed for the s
       assert.ok(realNow() - started < 10_000, 'the build went on without the stalled face');
       assert.equal(bold.data, donorData, 'the face keeps the donor while its own is on its way');
     } finally { open(); stall = null; }
+    // Waited for, not slept on: the fetch's reply goes through fontkit before the word comes. Each
+    // late face says so (the font's 700 normal and 700 italic both borrow here): at most one each.
+    let asked = 0;
+    let stop;
+    await new Promise((resolve) => { stop = fallback.onFaceFetched(() => { asked += 1; resolve(); }); });
     await new Promise((resolve) => { setTimeout(resolve, 50); });
+    stop();
+    const late = sources.filter((s) => s.fontWeight === 700).length;
+    assert.ok(asked >= 1 && asked <= late, `its arrival after the build asks for a build again (${asked} for ${late} faces)`);
+    assert.equal(bold.data, donorData, 'arrived, but not put in until a build primes it');
     await loader.resolvePdfFonts(settings, 'Pat Example');
     assert.ok(others.every((s) => s.data !== bold.data), 'the next build puts the bold\'s own data in');
     assert.equal(fallback.facesBorrowed(), false);
+  });
+
+  it('back online while a fetch again is on its way: no second fetch of the face', { timeout: 20_000 }, async () => {
+    const settings = { customFont: 'Testface Online' };
+    network();
+    boldFails = true;
+    await loader.resolvePdfFonts(settings, 'Pat Example');
+    boldFails = false;
+    let open;
+    stall = new Promise((resolve) => { open = resolve; });
+    const later = realNow() + 61_000;
+    Date.now = () => later;
+    try {
+      await loader.resolvePdfFonts(settings, 'Pat Example'); // its fetch again stalls; the build goes on
+      const tries = boldFetches.length;
+      backOnline();
+      await loader.resolvePdfFonts(settings, 'Pat Example');
+      assert.equal(boldFetches.length, tries, 'the face on its way is not fetched a second time');
+    } finally { open(); stall = null; }
+    await new Promise((resolve) => { const stop = fallback.onFaceFetched(() => { stop(); resolve(); }); });
+    await loader.resolvePdfFonts(settings, 'Pat Example');
+    assert.equal(fallback.facesBorrowed(), false, 'the one fetch put it in');
   });
 });

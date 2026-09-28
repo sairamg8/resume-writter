@@ -42,6 +42,24 @@ export function setFacesBorrowed(value) {
   borrowing = Boolean(value);
 }
 
+const fetchedListeners = new Set();
+
+/**
+ * Call `fn` when a borrowing face's own data arrives after the build that asked for it stopped
+ * waiting: the next build puts it in, so the preview builds again rather than waiting for an edit.
+ * Returns the unsubscribe. The PDF worker relays it to the main thread (pdfWorker.js, pdfBuild.js).
+ */
+export function onFaceFetched(fn) {
+  fetchedListeners.add(fn);
+  return () => fetchedListeners.delete(fn);
+}
+
+/** Tell every onFaceFetched subscriber that a face's own data is waiting to be put in. */
+export function faceFetched() {
+  // One subscriber failing must not keep the word from the others (nor reject the font's fetch).
+  fetchedListeners.forEach((fn) => { try { fn(); } catch (e) { console.error(e); } });
+}
+
 /**
  * The name the editor shows for the font `settings` choose from the web: the custom font as typed,
  * or the picker's label ("Georgia", printed in Gelasio). Null for Noto Sans, or an id the picker
