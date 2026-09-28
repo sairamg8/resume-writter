@@ -77,7 +77,8 @@ async function dashboard(resumes = [], { user = null } = {}) {
   const view = mount(Page, {});
   await settle();
   const all = (within = view.container) => [...elements(within)];
-  const nameOf = (card) => all(card).find((el) => el.tagName === 'P' && /\btruncate\b/.test(el.className));
+  // A card's name: the <p> with the full name as its title (no longer one `truncate` line: R4-DVIS-28).
+  const nameOf = (card) => all(card).find((el) => el.tagName === 'P' && el.getAttribute('title') != null);
   const page = {
     view,
     storage,

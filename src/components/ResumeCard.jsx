@@ -12,7 +12,16 @@ import { printHash, savedPicture, savePicture } from '@/utils/pageImageStore';
 import { isImeKey } from '@/components/ui/compose';
 
 const KEEP_HINT = 'Your originals come back whenever none of them is left';
-const LAST_ORIGINAL_HINT = 'Your last original always comes back. To delete it, choose "Stop keeping" first.';
+// The endings Copy (useResumeStore's duplicate) and a sync conflict (cloudSyncLineage) add to a name.
+const COPY_SUFFIX = /(?: \((?:Copy|conflict copy)\))+$/;
+
+/** `name` as its base and its copy ending (' (Copy)', ' (Copy) (Copy)', ' (conflict copy)'), or no ending. */
+function splitName(name = '') {
+  const m = COPY_SUFFIX.exec(name);
+  return m && m.index > 0 ? { base: name.slice(0, m.index), suffix: m[0] } : { base: name, suffix: '' };
+}
+
+const LAST_ORIGINAL_HINT ='Your last original always comes back. To delete it, choose "Stop keeping" first.';
 
 /**
  * A résumé on the dashboard. `onKeep(id, keep)` — only in a demo account, whose originals come
@@ -23,6 +32,7 @@ const LAST_ORIGINAL_HINT = 'Your last original always comes back. To delete it, 
 export function ResumeCard({ resume, onOpen, onDuplicate, onDelete, onRename, onKeep, lastOriginal = false }) {
   const rename = useRename(resume, (name) => onRename(resume.id, name));
   const hintId = useId();
+  const name = splitName(resume.name);
   const accent = resume.settings?.accentColor || '#2563eb';
   // Its real page 1 (C1) — a letter's, for a letter — painted once the card is on screen and kept
   // until the résumé prints differently (printHash): the drawn page shows until then.
@@ -75,14 +85,18 @@ export function ResumeCard({ resume, onOpen, onDuplicate, onDelete, onRename, on
             <button onClick={rename.commit} aria-label="Save name" className="p-0.5 text-blue-600"><Check size={13} /></button>
           </div>
         ) : (
-          <div className="flex items-center gap-1 group/name">
-            {/* The full name on hover: a long one is cut to fit the card (R4-DVIS-28). */}
-            <p title={resume.name} className="text-sm font-semibold text-gray-800 truncate flex-1">{resume.name}</p>
+          <div className="flex items-start gap-1 group/name">
+            {/* Up to two lines, and a copy's "(Copy)" never cut: a touch screen has no hover to show the
+                title, so a long name and its copy must differ on the card itself (R4-DVIS-28). */}
+            <p title={resume.name} className="flex-1 min-w-0 flex text-sm font-semibold text-gray-800">
+              <span className="line-clamp-2 break-words min-w-0">{name.base}</span>
+              {name.suffix && <span className="shrink-0 whitespace-pre">{name.suffix}</span>}
+            </p>
             <button
               onClick={rename.start}
               title="Rename"
               aria-label="Rename"
-              className="opacity-0 group-hover/name:opacity-100 no-hover:opacity-100 p-0.5 text-gray-400 hover:text-gray-600 transition-opacity shrink-0"
+              className="opacity-0 group-hover/name:opacity-100 no-hover:opacity-100 mt-0.5 p-0.5 text-gray-400 hover:text-gray-600 transition-opacity shrink-0"
             >
               <Edit2 size={11} />
             </button>

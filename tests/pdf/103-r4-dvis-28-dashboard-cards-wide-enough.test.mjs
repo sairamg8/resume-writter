@@ -64,10 +64,13 @@ it('the résumé and cover-letter grids are three to a row only from xl, two at 
   } finally { await page.close(); }
 });
 
-it('a card\'s name, cut to fit, shows in full on hover, so a résumé and its "(Copy)" can be told apart', async () => {
+// The name is no longer one `truncate` line (R5 follow-up, tests/pdf/104-r5-dash-card-name-two-lines): a
+// touch screen shows no title, so it wraps to two lines and a "(Copy)" ending is never cut. The title
+// stays, for a mouse, on the name's <p>.
+it('a card\'s name shows in full on hover, so a résumé and its "(Copy)" can be told apart', async () => {
   const page = await dashboard();
   try {
-    const names = page.all().filter((el) => el.tagName === 'P' && tokens(el).includes('truncate') && text(el).startsWith(LONG));
+    const names = page.all().filter((el) => el.tagName === 'P' && el.getAttribute('title') != null && text(el).startsWith(LONG));
     assert.deepEqual(names.map(text), [LONG, `${LONG} (Copy)`], 'both cards\' names, in the store\'s order');
     for (const name of names) assert.equal(name.getAttribute('title'), text(name), `the full name on hover: ${text(name)}`);
   } finally { await page.close(); }
