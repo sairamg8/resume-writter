@@ -8,10 +8,10 @@
 // size. Mounted with react-dom/client over fake-dom (tests/pdf/fake-dom.mjs); fake-dom has no
 // layout or media queries, so the fields' class tokens are checked.
 // Run: node --test tests/pdf/103-r4-dph-11-board-fields.test.mjs
-import { before, it } from 'node:test';
+import { it } from 'node:test';
 import assert from 'node:assert/strict';
 import { createElement as h } from 'react';
-import { setup, loadModule } from './harness.mjs';
+import { loadModule } from './harness.mjs';
 import { mount } from './fake-dom.mjs';
 import { useBacklogPage, mountBacklog, project, futureSprint, issue, elements, reactProps, ev, tokens } from './103-r4-backlog-page.mjs';
 
@@ -22,15 +22,15 @@ let IssueChecklist;
 let IssueActivity;
 let DateInput;
 let PointsInput;
-before(async () => {
-  // Vite's loader first: setup() returns the loader the page hook made, or makes it if this hook
-  // runs first — the order of two root before-hooks from two modules is not one to lean on.
-  await setup();
+// Loaded inside each test, once the page hook's before() has made Vite's loader: a second root
+// before() here overlapped it (the loader still null, or a second Vite server left open).
+async function components() {
+  if (InlineCreate) return;
   ({ InlineCreate } = await loadModule('/src/components/board/InlineCreate.jsx'));
   ({ IssueChecklist } = await loadModule('/src/components/board/IssueChecklist.jsx'));
   ({ IssueActivity } = await loadModule('/src/components/board/IssueActivity.jsx'));
   ({ DateInput, PointsInput } = await loadModule('/src/components/board/IssueFields.jsx'));
-});
+}
 
 /** The text fields under `root`: not ticks, radios, file or hidden inputs (as tests/pdf/81 reads them). */
 function textFields(root) {
@@ -66,6 +66,7 @@ const byLabel = (root, label) => [...elements(root)].find((el) => el.getAttribut
 const click = (view, el) => view.act(() => reactProps(el).onClick(ev()));
 
 it('R4-DPH-11: the "+ Create issue" composer\'s field is 16 px on a touch screen', async () => {
+  await components();
   const view = mount(InlineCreate, { onCreate: () => {}, variant: 'row' });
   try {
     click(view, [...elements(view.container)].find((el) => el.tagName === 'BUTTON' && el.textContent.trim() === 'Create issue'));
@@ -77,6 +78,7 @@ it('R4-DPH-11: the "+ Create issue" composer\'s field is 16 px on a touch screen
 });
 
 it('R4-DPH-11: a checklist\'s "Add an item" box and an item being renamed are 16 px on a touch screen', async () => {
+  await components();
   const view = mount(IssueChecklist, { items: [{ id: 'chk_1', text: 'Buy screws', done: false }], onChange: () => {} });
   try {
     assertTouchText(byLabel(view.container, 'Add a checklist item'), '"Add an item"');
@@ -92,6 +94,7 @@ it('R4-DPH-11: a checklist\'s "Add an item" box and an item being renamed are 16
 });
 
 it('R4-DPH-11: the comment box is 16 px on a touch screen', async () => {
+  await components();
   const view = mount(IssueActivity, {
     issue: { id: 'i1', comments: [], activity: [] }, onAddComment: () => {}, onUpdateComment: () => {}, onDeleteComment: () => {},
   });
@@ -107,6 +110,7 @@ it('R4-DPH-11: the comment box is 16 px on a touch screen', async () => {
 });
 
 it('R4-DPH-11: an issue\'s start and due dates and its story points are 16 px on a touch screen', async () => {
+  await components();
   const Fields = () => h('div', null,
     h(DateInput, { label: 'Start date', value: '', onChange: () => {} }),
     h(DateInput, { label: 'Due date', value: '2026-10-01', onChange: () => {} }),
