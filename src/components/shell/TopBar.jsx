@@ -1,7 +1,7 @@
 import { useId, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { ChevronDown, CircleHelp, Menu as MenuIcon, Plus, Search } from 'lucide-react';
-import { Button, IconButton, Menu, ShortcutsDialog, cx, isImeKey, useHotkeys } from '../ui/index.js';
+import { Button, IconButton, Kbd, Menu, ShortcutsDialog, controlClass, cx, isImeKey, useHotkeys } from '../ui/index.js';
 import { IssueTypeIcon } from '../tracker/TrackerIcons.jsx';
 import { useWorkspace } from './workspaceContext.js';
 import { orderProjects } from './projects.js';
@@ -86,10 +86,15 @@ function QuickSearch({ search }) {
         onFocus={() => setOpen(true)}
         onBlur={() => setTimeout(() => setOpen(false), 120)}
         onKeyDown={onKeyDown}
-        // 16 px on touch screens: iOS Safari zooms the page into any smaller field it focuses (R4-DPH-11).
-        className="h-8 w-full rounded border border-line bg-white pr-8 pl-8 text-sm text-ink placeholder:text-ink-subtlest transition-colors hover:bg-hovered focus:border-brand focus:bg-white focus:outline-none focus:ring-1 focus:ring-brand pointer-coarse:text-base"
+        // The kit's control, as the page toolbars' SearchInput draws it (R4-DVIS-15): its border and
+        // 13 px text, 16 px on touch screens, where iOS Safari zooms into any smaller field (R4-DPH-11).
+        className={cx(controlClass({ size: 'sm' }), 'h-8 pr-8 pl-8')}
       />
-      <kbd aria-hidden="true" className="pointer-events-none absolute top-1/2 right-2 -translate-y-1/2 rounded border border-line px-1 text-[11px] text-ink-subtlest">/</kbd>
+      {/* The kit's key cap, hidden below md as SearchInput's is (no keyboard to press it on a phone or
+          a tablet); the wrapper keeps it silent to screen readers, as the bare cap was. */}
+      <span aria-hidden="true" className="pointer-events-none absolute top-1/2 right-2 flex -translate-y-1/2 max-md:hidden">
+        <Kbd>/</Kbd>
+      </span>
       {open && query.trim() && (
         <div className="absolute top-10 right-0 left-0 z-50 overflow-hidden rounded-md border border-line bg-white py-1 shadow-xl">
           {results.length === 0 ? (
