@@ -1,5 +1,5 @@
 import { withPrintablePhotos } from '@/utils/printableImage';
-import { setFacesBorrowed, setFontFallback } from '@/utils/fontFallback';
+import { faceFetched, setFacesBorrowed, setFontFallback } from '@/utils/fontFallback';
 import { downloadBlob } from '@/utils/download';
 
 /**
@@ -46,6 +46,8 @@ function giveUp(worker) {
 }
 
 function onReply({ data }, w) {
+  // Not a reply: the worker says a font face's own data arrived after its build (fontFallback.js).
+  if (data?.faceFetched) { faceFetched(); return; }
   const entry = pending.get(data?.id);
   if (!entry) return;
   pending.delete(data.id);
