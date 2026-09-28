@@ -21,11 +21,12 @@ function Choice({ label, value, options, onChange, icon: Icon }) {
       <p className="text-[10px] font-bold uppercase tracking-widest mb-1 text-ink-subtlest">{label}</p>
       <div className="flex items-center gap-2 px-3 py-2 rounded-md border border-transparent hover:border-line hover:bg-sunken transition-all">
         <Icon size={13} className="text-ink-subtlest shrink-0" />
+        {/* min-w-0: a select in a flex row is as wide as its longest option unless it may shrink. */}
         <select
           aria-label={label}
           value={value || ''}
           onChange={e => onChange(e.target.value)}
-          className="flex-1 text-sm pointer-coarse:text-base bg-transparent focus:outline-none cursor-pointer text-ink"
+          className="min-w-0 flex-1 text-sm pointer-coarse:text-base bg-transparent focus:outline-none cursor-pointer text-ink"
         >
           <option value="">— Not set —</option>
           {options.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
@@ -118,7 +119,7 @@ export function OverviewTab({ job, set, resumes, navigate }) {
                 value={job.deadline || ''}
                 onChange={e => set('deadline', e.target.value)}
                 // 16 px on touch screens: iOS Safari zooms the page into any smaller field it focuses (J-38).
-                className={`flex-1 text-sm pointer-coarse:text-base bg-transparent focus:outline-none ${
+                className={`min-w-0 flex-1 text-sm pointer-coarse:text-base bg-transparent focus:outline-none ${
                   isDeadlinePast ? 'text-red-600 font-medium' : isDeadlineSoon ? 'text-amber-600 font-medium' : 'text-ink'
                 }`}
               />
@@ -143,11 +144,13 @@ export function OverviewTab({ job, set, resumes, navigate }) {
             </p>
             <div className="flex items-center gap-2 px-3 py-2 rounded-md border border-transparent hover:border-line hover:bg-sunken transition-all">
               <FileText size={13} className="text-ink-subtlest shrink-0" />
+              {/* min-w-0: a long résumé name pushed the select, and its Open button, out of the card;
+                  the name is cut inside the select now. */}
               <select
                 aria-label="Resume used"
                 value={job.resumeId || ''}
                 onChange={e => set('resumeId', e.target.value)}
-                className="flex-1 text-sm pointer-coarse:text-base bg-transparent focus:outline-none cursor-pointer text-ink"
+                className="min-w-0 flex-1 text-sm pointer-coarse:text-base bg-transparent focus:outline-none cursor-pointer text-ink"
               >
                 <option value="">— Not linked yet —</option>
                 {/* A linked résumé deleted since: said so, not 'Not linked yet' (J-21). */}
