@@ -74,8 +74,10 @@ export function JobSummary({ jobs, onOpen }) {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card title="Pipeline" description="How far your applications got — each step counts the jobs that reached it.">
           <ol className="flex flex-col gap-3">
+            {/* 6rem fits the longest step ("Phone Screen") and leaves the bar room even in the
+                narrow two-column cards of a desktop, not only on a phone. */}
             {funnel.map((step) => (
-              <li key={step.id} className="grid grid-cols-[7.5rem_1fr_5.5rem] items-center gap-3 text-sm" title={`${step.label}: ${step.count}`}>
+              <li key={step.id} className="grid grid-cols-[6rem_1fr_5.5rem] items-center gap-2 text-sm" title={`${step.label}: ${step.count}`}>
                 <span className="text-ink">{step.label}</span>
                 <span className="h-6 rounded bg-hovered">
                   {step.count > 0 && (
