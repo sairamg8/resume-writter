@@ -7,11 +7,15 @@ import { before, after, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { setup, teardown, loadModule, resume } from './harness.mjs';
 import { elements, mount, reactProps } from './fake-dom.mjs';
+import { patchFakeDom } from '../unit/ui-dom-harness.mjs';
 import { fakeFirestore } from './fake-firestore.mjs';
 
 let link;
 let ShareLinkModal;
+// Share a public link is the kit's Dialog (R4-DVIS-07): it renders in a portal at the end of <body>, so the
+// page is searched from there, and its focus trap needs patchFakeDom.
 before(async () => {
+  patchFakeDom();
   await setup();
   link = await loadModule('/src/utils/publicLink.js');
   ({ default: ShareLinkModal } = await loadModule('/src/components/ShareLinkModal.jsx'));
@@ -19,8 +23,8 @@ before(async () => {
 after(teardown);
 
 const until = async (done) => { for (const end = Date.now() + 30_000; !done() && Date.now() < end;) await new Promise((r) => { setTimeout(r, 10); }); };
-const buttonNamed = (view, name) => [...elements(view.container)].find((el) => el.tagName === 'BUTTON' && el.textContent.trim() === name);
-const alertText = (view) => [...elements(view.container)].find((el) => el.getAttribute('role') === 'alert')?.textContent;
+const buttonNamed = (view, name) => [...elements(view.document.body)].find((el) => el.tagName === 'BUTTON' && el.textContent.trim() === name);
+const alertText = (view) => [...elements(view.document.body)].find((el) => el.getAttribute('role') === 'alert')?.textContent;
 
 async function publishIn(r, cloud) {
   const io = link.publicIo(cloud.fs, cloud.db);

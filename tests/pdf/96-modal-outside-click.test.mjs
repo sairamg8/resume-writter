@@ -8,6 +8,12 @@
 // Dialog closes the same way. The Bullet Optimizer is the kit's Dialog now (R4-DVIS-07): it renders in a
 // portal at the end of <body>, so each page is searched from there (patchFakeDom for its focus trap),
 // and its backdrop is the overlay layer that takes the press.
+//
+// R5-DLG-01 / R5-DLG-03: Share a public link, New Cover Letter and the Header Icon picker closed on any
+// click that reached their backdrop — the picker's `onClick={onClose}`, the other two's
+// `e.target === e.currentTarget` — so selecting the public link or the icon search text and releasing
+// beside the box threw the dialog away, as did a drag begun beside it and released inside. They are the
+// kit's Dialog now (R4-DVIS-07, R4-DVIS-25) and are held to the same three cases.
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { setup, teardown, resume, loadModule } from './harness.mjs';
@@ -24,6 +30,10 @@ const MODALS = {
   'Bullet Optimizer': ['/src/components/BulletOptimizerModal.jsx', () => ({ initialText: 'Led a team of five', onApply() {} })],
   'Smart Cover Letter Generator': ['/src/components/CoverLetterGeneratorModal.jsx', () => ({ resume: resume(), onApply() {} })],
   'New Resume starters': ['/src/components/StarterTemplateModal.jsx', () => ({ onSelectStarter() {}, onSelectBlank() {} })],
+  'Header icon picker': ['/src/components/HeaderIconPickerModal.jsx', () => ({ fieldKey: 'email', fieldLabel: 'Email', onSelectIcon() {}, onPickIconFile() {}, onClearIcon() {} })],
+  'New Cover Letter': ['/src/components/NewLetterModal.jsx', () => ({ sources: [resume()], onPick() {} })],
+  // A fake io: the résumé is not published (nothing is read from a cloud).
+  'Share a public link': ['/src/components/ShareLinkModal.jsx', () => ({ resume: resume(), uid: 'uid_owner', io: { readShare: async () => null } })],
 };
 
 /** `name`'s modal mounted open; `closed()` counts its onClose calls, `backdrop` and `box` its two layers. */

@@ -16,6 +16,7 @@ import { MemoryStorage, settle } from './resume-tab.mjs';
 import { setupPreview, teardownPreview } from './preview-stub.mjs';
 import { resume, section, experience, render, read, allText, loadModule } from './harness.mjs';
 import { elements, mount, reactProps } from './fake-dom.mjs';
+import { patchFakeDom } from '../unit/ui-dom-harness.mjs';
 import { fakeFirestore } from './fake-firestore.mjs';
 
 // The Export menu is placed by the kit's useFloating (R4-DVIS-22), which cancels its animation frame
@@ -30,7 +31,10 @@ let PublicResume;
 let ExportDropdown;
 let PrivacyPage;
 let setPdfjs;
+// Share a public link is the kit's Dialog (R4-DVIS-07): it renders in a portal at the end of <body>, so the
+// page is searched from there, and its focus trap needs patchFakeDom.
 before(async () => {
+  patchFakeDom();
   await setupPreview();
   link = await loadModule('/src/utils/publicLink.js');
   ({ default: ShareLinkModal, firebasePublicIo } = await loadModule('/src/components/ShareLinkModal.jsx'));
@@ -44,7 +48,7 @@ after(teardownPreview);
 const flush = async () => { for (let i = 0; i < 20; i += 1) await new Promise((r) => { setImmediate(r); }); };
 /** Waits, up to 30 s, for `done()`. */
 const until = async (done) => { for (const end = Date.now() + 30_000; !done() && Date.now() < end;) await new Promise((r) => { setTimeout(r, 10); }); };
-const buttonNamed = (view, name) => [...elements(view.container)].find((el) => el.tagName === 'BUTTON' && el.textContent.trim() === name);
+const buttonNamed = (view, name) => [...elements(view.document.body)].find((el) => el.tagName === 'BUTTON' && el.textContent.trim() === name);
 const click = (view, el) => view.act(() => reactProps(el).onClick({ preventDefault() {}, stopPropagation() {} }));
 
 /** A fictional résumé with a hidden phone, a hidden job's location, a hidden entry, a hidden section and a letter. */
@@ -255,14 +259,14 @@ describe('Share a public link', () => {
     const view = mount(ShareLinkModal, props);
     try {
       await until(() => buttonNamed(view, 'Publish'));
-      const text = () => view.container.textContent;
+      const text = () => view.document.body.textContent;
       assert.match(text(), /What would be public:.*Name: Jordan Ellery.*Email: jordan\.ellery@example\.org/);
       assert.doesNotMatch(text(), /555 0199/);
       assert.match(text(), /Fields and sections you hid, the cover letter and this résumé's name in your list stay private/);
 
       click(view, buttonNamed(view, 'Publish'));
       await until(() => buttonNamed(view, 'Unpublish'));
-      const input = [...elements(view.container)].find((el) => el.tagName === 'INPUT');
+      const input = [...elements(view.document.body)].find((el) => el.tagName === 'INPUT');
       const url = reactProps(input).value;
       const shareId = decodeURIComponent(url.split('#/r/')[1]);
       assert.match(url, /#\/r\/[0-9a-f-]{20,}$/i);
@@ -274,7 +278,7 @@ describe('Share a public link', () => {
       view.update({ ...props, isOpen: false });
       view.update({ ...props });
       await until(() => buttonNamed(view, 'Unpublish'));
-      assert.equal(reactProps([...elements(view.container)].find((el) => el.tagName === 'INPUT')).value, url);
+      assert.equal(reactProps([...elements(view.document.body)].find((el) => el.tagName === 'INPUT')).value, url);
 
       const edited = { ...r, personal: { ...r.personal, title: 'Principal Designer' } };
       view.update({ ...props, resume: edited });

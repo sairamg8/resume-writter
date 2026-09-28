@@ -1,5 +1,6 @@
-import { useEffect, useId, useState } from 'react';
-import { Globe, X, Copy, ExternalLink } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Copy, ExternalLink } from 'lucide-react';
+import { Dialog } from '@/components/ui/Dialog';
 import { doc, getDocFromServer, runTransaction } from 'firebase/firestore';
 import { db } from '@/utils/firebase';
 import { publicIo, publicSummary, publicUrl, publishedIsCurrent, publicSnapshot, TOO_LARGE_CODE } from '@/utils/publicLink';
@@ -14,9 +15,14 @@ export const firebasePublicIo = db ? publicIo({ doc, getDocFromServer, runTransa
  * its current state there, or take it down — and, before and after, exactly what anyone with the
  * link sees (publicSummary). `uid` the signed-in account; `io` publicLink.js's calls (the tests
  * pass a fake Firestore's). Escape, the close button or a click beside the box is `onClose()`.
+ *
+ * The kit's Dialog (R4-DVIS-07), as the editor's other dialogs are: in a portal at the end of <body>,
+ * focus moved into it as it opens so Escape closes it at once, from wherever the Export menu left focus
+ * (R5-DLG-02); capped at the screen that shows with its body scrolling (R4-DPH-37); a click beside the
+ * box closes it only when the press both starts and ends there, so selecting the link and releasing
+ * past the edge keeps it (R5-DLG-03).
  */
 export default function ShareLinkModal({ isOpen, resume, uid, io = firebasePublicIo, onClose }) {
-  const titleId = useId();
   // { state: 'loading' | 'ready' | 'error', share: { shareId, publishedAt, copy } | null }
   const [view, setView] = useState({ state: 'loading', share: null });
   const [busy, setBusy] = useState(false);
@@ -78,83 +84,65 @@ export default function ShareLinkModal({ isOpen, resume, uid, io = firebasePubli
   const current = share ? publishedIsCurrent(share.copy, resume) : true;
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm"
-      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
-      onKeyDown={e => { if (e.key === 'Escape') onClose(); }}
-    >
-      <div role="dialog" aria-modal="true" aria-labelledby={titleId} className="bg-white rounded-2xl shadow-2xl border border-gray-200 max-w-md w-full flex flex-col overflow-hidden">
-        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between gap-3 bg-gray-50/70">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-sm shrink-0">
-              <Globe size={16} aria-hidden="true" />
-            </div>
-            <h2 id={titleId} className="text-sm sm:text-base font-bold text-gray-900">Share a public link</h2>
-          </div>
-          <button onClick={onClose} aria-label="Close" className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors shrink-0">
-            <X size={16} />
-          </button>
-        </div>
-
-        <div className="p-5 space-y-3 max-h-[70vh] overflow-y-auto text-xs text-gray-700">
-          {view.state === 'loading' && <p>Checking whether this résumé is published…</p>}
-          {view.state === 'error' && <p role="alert" className="text-red-700">Could not reach your account to check this résumé's link. Check your connection and try again.</p>}
-          {view.state === 'ready' && (
-            <>
-              {share ? (
-                <>
-                  <p>This résumé is published: anyone with this link can open a read-only copy and download it as a PDF.</p>
-                  <div className="flex items-center gap-1.5">
-                    <input readOnly value={url} aria-label="Public link" onFocus={e => e.target.select()} className="flex-1 min-w-0 px-2 py-1.5 border border-gray-200 rounded-lg bg-gray-50 text-gray-800" />
-                    <button onClick={() => copyText(url).then(() => setCopied('Copied'), () => setCopied('Copy failed'))} className="flex items-center gap-1 px-2 py-1.5 border border-gray-200 rounded-lg hover:bg-gray-50 shrink-0">
-                      <Copy size={12} aria-hidden="true" /> {copied || 'Copy'}
-                    </button>
-                    <a href={url} target="_blank" rel="noreferrer" className="flex items-center gap-1 px-2 py-1.5 border border-gray-200 rounded-lg hover:bg-gray-50 shrink-0">
-                      <ExternalLink size={12} aria-hidden="true" /> Open
-                    </a>
-                  </div>
-                  <p className="text-gray-500">Published {timeAgo(share.publishedAt).toLowerCase()}.{current ? '' : ' You have changed the résumé since: the link still shows it as it was until you update it.'}</p>
-                </>
-              ) : (
-                <p>Publish a read-only copy of this résumé at a web address anyone with the link can open, and download as a PDF. It stays public until you unpublish it.</p>
-              )}
-              <div>
-                <p className="font-semibold text-gray-800">{share ? 'What is public:' : 'What would be public:'}</p>
-                <ul className="list-disc pl-5 mt-1 space-y-0.5">
-                  {shown.map((line, i) => <li key={i}>{line}</li>)}
-                </ul>
-                <p className="mt-1 text-gray-500">Fields and sections you hid, the cover letter and this résumé's name in your list stay private.</p>
-              </div>
-              {error && <p role="alert" className="text-red-700">{error}</p>}
-              <div className="flex flex-wrap gap-2 pt-1">
-                {(!share || !current) && (
-                  <button onClick={publish} disabled={busy} className="px-3 py-1.5 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 disabled:opacity-60">
-                    {share ? 'Update the public copy' : 'Publish'}
+    <Dialog open onClose={onClose} size="md" title="Share a public link">
+      <div className="space-y-3 text-xs text-gray-700">
+        {view.state === 'loading' && <p>Checking whether this résumé is published…</p>}
+        {view.state === 'error' && <p role="alert" className="text-red-700">Could not reach your account to check this résumé's link. Check your connection and try again.</p>}
+        {view.state === 'ready' && (
+          <>
+            {share ? (
+              <>
+                <p>This résumé is published: anyone with this link can open a read-only copy and download it as a PDF.</p>
+                <div className="flex items-center gap-1.5">
+                  <input readOnly value={url} aria-label="Public link" onFocus={e => e.target.select()} className="flex-1 min-w-0 px-2 py-1.5 border border-gray-200 rounded-lg bg-gray-50 text-gray-800" />
+                  <button onClick={() => copyText(url).then(() => setCopied('Copied'), () => setCopied('Copy failed'))} className="flex items-center gap-1 px-2 py-1.5 border border-gray-200 rounded-lg hover:bg-gray-50 shrink-0">
+                    <Copy size={12} aria-hidden="true" /> {copied || 'Copy'}
                   </button>
-                )}
-                {share && !confirmUnpublish && (
-                  <button onClick={() => setConfirmUnpublish(true)} disabled={busy} className="px-3 py-1.5 rounded-lg border border-red-200 text-red-700 font-semibold hover:bg-red-50 disabled:opacity-60">
-                    Unpublish
-                  </button>
-                )}
-              </div>
-              {share && confirmUnpublish && (
-                <div className="p-3 rounded-xl border border-red-200 bg-red-50 space-y-2">
-                  <p className="text-red-800">Anyone with this link will no longer be able to open it. Publishing again later makes a new link, so the one you shared stays dead.</p>
-                  <div className="flex flex-wrap gap-2">
-                    <button onClick={unpublish} disabled={busy} className="px-3 py-1.5 rounded-lg bg-red-600 text-white font-semibold hover:bg-red-700 disabled:opacity-60">
-                      Yes, unpublish
-                    </button>
-                    <button onClick={() => setConfirmUnpublish(false)} disabled={busy} className="px-3 py-1.5 rounded-lg bg-gray-100 text-gray-700 font-semibold hover:bg-gray-200 disabled:opacity-60">
-                      Cancel
-                    </button>
-                  </div>
+                  <a href={url} target="_blank" rel="noreferrer" className="flex items-center gap-1 px-2 py-1.5 border border-gray-200 rounded-lg hover:bg-gray-50 shrink-0">
+                    <ExternalLink size={12} aria-hidden="true" /> Open
+                  </a>
                 </div>
+                <p className="text-gray-500">Published {timeAgo(share.publishedAt).toLowerCase()}.{current ? '' : ' You have changed the résumé since: the link still shows it as it was until you update it.'}</p>
+              </>
+            ) : (
+              <p>Publish a read-only copy of this résumé at a web address anyone with the link can open, and download as a PDF. It stays public until you unpublish it.</p>
+            )}
+            <div>
+              <p className="font-semibold text-gray-800">{share ? 'What is public:' : 'What would be public:'}</p>
+              <ul className="list-disc pl-5 mt-1 space-y-0.5">
+                {shown.map((line, i) => <li key={i}>{line}</li>)}
+              </ul>
+              <p className="mt-1 text-gray-500">Fields and sections you hid, the cover letter and this résumé's name in your list stay private.</p>
+            </div>
+            {error && <p role="alert" className="text-red-700">{error}</p>}
+            <div className="flex flex-wrap gap-2 pt-1">
+              {(!share || !current) && (
+                <button onClick={publish} disabled={busy} className="px-3 py-1.5 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 disabled:opacity-60">
+                  {share ? 'Update the public copy' : 'Publish'}
+                </button>
               )}
-            </>
-          )}
-        </div>
+              {share && !confirmUnpublish && (
+                <button onClick={() => setConfirmUnpublish(true)} disabled={busy} className="px-3 py-1.5 rounded-lg border border-red-200 text-red-700 font-semibold hover:bg-red-50 disabled:opacity-60">
+                  Unpublish
+                </button>
+              )}
+            </div>
+            {share && confirmUnpublish && (
+              <div className="p-3 rounded-xl border border-red-200 bg-red-50 space-y-2">
+                <p className="text-red-800">Anyone with this link will no longer be able to open it. Publishing again later makes a new link, so the one you shared stays dead.</p>
+                <div className="flex flex-wrap gap-2">
+                  <button onClick={unpublish} disabled={busy} className="px-3 py-1.5 rounded-lg bg-red-600 text-white font-semibold hover:bg-red-700 disabled:opacity-60">
+                    Yes, unpublish
+                  </button>
+                  <button onClick={() => setConfirmUnpublish(false)} disabled={busy} className="px-3 py-1.5 rounded-lg bg-gray-100 text-gray-700 font-semibold hover:bg-gray-200 disabled:opacity-60">
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
+        )}
       </div>
-    </div>
+    </Dialog>
   );
 }
