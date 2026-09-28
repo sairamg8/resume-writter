@@ -148,12 +148,13 @@ export function SortableSection({
         <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-500 touch-none shrink-0">
           <GripVertical size={15} />
         </button>
+        {/* 16 px on touch: iOS zooms the page into a smaller field it focuses (R4-DPH-28). */}
         <input
           type="text"
           aria-label="Section title"
           value={section.title}
           onChange={e => updateSection(section.id, s => ({ ...s, title: e.target.value }))}
-          className={`flex-1 text-sm font-semibold bg-transparent focus:outline-none min-w-0 ${isHidden ? 'text-gray-400 line-through' : 'text-gray-700'}`}
+          className={`flex-1 text-sm pointer-coarse:text-base font-semibold bg-transparent focus:outline-none min-w-0 ${isHidden ? 'text-gray-400 line-through' : 'text-gray-700'}`}
         />
         {isHidden && (
           <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 bg-gray-200 px-1.5 py-0.5 rounded shrink-0">Hidden</span>

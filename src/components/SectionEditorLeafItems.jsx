@@ -50,7 +50,7 @@ export function LanguageItem({ item, onUpdate, onRemove, onDuplicate }) {
     <div className={`flex gap-2 items-center ${visible ? '' : 'opacity-50'}`}>
       {/* The two fields give up width, not the row's buttons: grown to the text box's and the list's
           own widths, they pushed Duplicate and Delete past the card's edge, which cut them off, on a
-          phone and in the 360 px editor panel alike (R4-DPH-23). */}
+          phone and in the 360 px editor panel alike (R4-DPH-23). 16 px on touch, as InputField is (R4-DPH-28). */}
       <div className="flex-1 min-w-0 grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-2">
         <input
           type="text"
@@ -58,13 +58,13 @@ export function LanguageItem({ item, onUpdate, onRemove, onDuplicate }) {
           value={item.language || ''}
           onChange={e => onUpdate({ ...item, language: e.target.value })}
           placeholder="Language"
-          className="w-full min-w-0 px-2.5 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full min-w-0 px-2.5 py-1.5 text-sm pointer-coarse:text-base border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
         <select
           aria-label="Proficiency"
           value={proficiency}
           onChange={e => onUpdate({ ...item, proficiency: e.target.value })}
-          className="w-full min-w-0 px-2.5 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+          className="w-full min-w-0 px-2.5 py-1.5 text-sm pointer-coarse:text-base border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
         >
           <option value="">Not set</option>
           {PROFICIENCIES.map(p => (
@@ -145,14 +145,15 @@ export function InterestItem({ item, onUpdate, onRemove, onDuplicate }) {
   const visible = item.visible !== false;
   return (
     <div className={`flex gap-2 items-center ${visible ? '' : 'opacity-50'}`}>
-      {/* May shrink below its own width, as a language's fields do, so the buttons stay in the card (R4-DPH-23). */}
+      {/* May shrink below its own width, as a language's fields do, so the buttons stay in the card
+          (R4-DPH-23); 16 px on touch (R4-DPH-28). */}
       <input
         type="text"
         aria-label="Interests"
         value={item.interests || ''}
         onChange={e => onUpdate({ ...item, interests: e.target.value })}
         placeholder="e.g. Photography, Hiking, Open Source"
-        className="flex-1 min-w-0 px-2.5 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="flex-1 min-w-0 px-2.5 py-1.5 text-sm pointer-coarse:text-base border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
       />
       <button
         onClick={() => onUpdate({ ...item, visible: !visible })}
