@@ -7,6 +7,11 @@ import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { setup, teardown, loadModule } from './harness.mjs';
 
+// The Export menu is placed by the kit's useFloating (R4-DVIS-22), which cancels its animation frame
+// when the menu closes; Node has none (tests/unit/ui-dom-harness.mjs gives the kit's tests the same two).
+globalThis.requestAnimationFrame ??= (fn) => setTimeout(fn, 0);
+globalThis.cancelAnimationFrame ??= (id) => clearTimeout(id);
+
 before(setup);
 after(teardown);
 

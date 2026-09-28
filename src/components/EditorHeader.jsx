@@ -32,7 +32,8 @@ export function EditorHeader({ resume, rename, layoutMode, setLayoutMode, export
               if (e.key === 'Enter' && !isImeKey(e)) rename.commit();
               if (e.key === 'Escape' && !isImeKey(e)) rename.cancel();
             }}
-            className="w-full text-xs sm:text-sm font-semibold border-b border-blue-400 outline-none bg-transparent text-gray-800"
+            // 16 px on a touch screen, or iOS Safari zooms the page as the box opens (R4-DPH-29).
+            className="w-full text-xs sm:text-sm pointer-coarse:text-base font-semibold border-b border-blue-400 outline-none bg-transparent text-gray-800"
           />
         ) : (
           <button onClick={rename.start} title="Rename resume" className="text-xs sm:text-sm font-semibold text-gray-800 hover:text-gray-600 truncate block w-full text-left">
@@ -61,7 +62,9 @@ export function EditorHeader({ resume, rename, layoutMode, setLayoutMode, export
           onShare={onShare}
         />
         <div className="w-px h-4 bg-gray-200 self-center hidden sm:block" />
-        <AuthBar {...auth} {...sync} compact />
+        {/* No first name beside the avatar in the split panel: 360 px wide in a wider window, it took the résumé
+            name's room (R4-DVIS-31). Editor-only and the phone layout span the window and keep it. */}
+        <AuthBar {...auth} {...sync} compact hideName={!isMobile && layoutMode === 'split'} />
       </div>
     </div>
   );

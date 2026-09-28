@@ -59,7 +59,8 @@ export function GapStepper({ row, onChange, onReset }) {
             else if (e.key === 'ArrowDown') { e.preventDefault(); typed.drop(); onChange(down); }
             else typed.inputProps.onKeyDown(e);
           }}
-          className={`w-12 text-center text-xs border border-gray-200 rounded h-6 focus:outline-none focus:ring-1 focus:ring-blue-400 ${set ? 'font-medium text-gray-700' : 'text-gray-400'}`}
+          // 16 px on a touch screen, or iOS Safari zooms the page into the box; wider there so the digits fit (R4-DPH-29).
+          className={`w-12 pointer-coarse:w-16 text-center text-xs pointer-coarse:text-base border border-gray-200 rounded h-6 focus:outline-none focus:ring-1 focus:ring-blue-400 ${set ? 'font-medium text-gray-700' : 'text-gray-400'}`}
         />
         <button type="button" onClick={() => onChange(up)} disabled={valuePx >= max} className={STEP_BTN} aria-label={`Increase ${lower}`}>+</button>
         <span className="text-[11px] text-gray-400 w-4">px</span>

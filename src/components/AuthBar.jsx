@@ -118,9 +118,14 @@ export function SyncDot({ syncStatus, lastSynced, isOnline, heldResumes, heldLab
   );
 }
 
-/** `compact` renders the signed-out state as an icon-only button, for narrow headers. */
+/**
+ * `compact` renders the signed-out state as an icon-only button, for narrow headers. `hideName`
+ * leaves the first name beside the avatar off the screen: the editor's header, in a 360 px split
+ * panel, was left ~60 px for the résumé's name (R4-DVIS-31); it passes it in the split panel only.
+ */
 export default function AuthBar({
   user, authLoading, cloudAvailable = true, signInWithGoogle, signOut, syncStatus, lastSynced, isOnline, heldResumes, compact = false,
+  hideName = false,
 }) {
   const [signingIn, setSigningIn] = useState(false);
   const [menuOpen, setMenuOpen]   = useState(false);
@@ -155,7 +160,9 @@ export default function AuthBar({
           disabled={signingIn}
           title={compact ? 'Sign in with Google' : undefined}
           aria-label={compact ? 'Sign in with Google' : undefined}
-          className={`flex items-center gap-2 ${compact ? 'p-1.5' : 'px-3 py-1.5'} bg-white border border-gray-200 text-gray-700 rounded-lg text-xs font-semibold hover:bg-gray-50 transition-colors shadow-sm disabled:opacity-60 shrink-0`}
+          // The full button sits in the Dashboard's toolbar (from md up): sized as the buttons beside it,
+          // 38 px tall with 14 px text from sm, not 30 px with 12 px (R4-DVIS-27).
+          className={`flex items-center gap-2 ${compact ? 'p-1.5' : 'px-3 sm:px-4 py-1.5 sm:py-2 sm:text-sm whitespace-nowrap'} bg-white border border-gray-200 text-gray-700 rounded-lg text-xs font-semibold hover:bg-gray-50 transition-colors shadow-sm disabled:opacity-60 shrink-0`}
         >
           <GoogleIcon />
           {!compact && (signingIn ? 'Signing in…' : 'Sign in with Google')}
@@ -191,7 +198,8 @@ export default function AuthBar({
               {user.displayName?.[0] || 'U'}
             </div>
           )}
-          <span className="text-xs font-medium text-gray-700 max-w-[100px] truncate hidden sm:block">
+          {/* hideName: sm:sr-only, not dropped, so from sm up the button still reads out the name as before. */}
+          <span className={`text-xs font-medium text-gray-700 max-w-[100px] truncate hidden sm:block${hideName ? ' sm:sr-only' : ''}`}>
             {user.displayName?.split(' ')[0]}
           </span>
         </button>
