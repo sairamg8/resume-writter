@@ -11,6 +11,7 @@ import { SectionCustomizer } from '@/components/SectionEditorCustomizer';
 import { newSectionGrid } from '@/templates/pdf/shared/templateSectionDefaults';
 import { templateId } from '@/constants/templates';
 import { useToast } from '@/components/ui/Toast';
+import { Menu } from '@/components/ui/Menu';
 
 export function SortableSection({
   section, template, updateSection, updateSectionSettings,
@@ -22,17 +23,7 @@ export function SortableSection({
   const [customizerOpen, setCustomizerOpen] = useState(false);
   const [sectionOpen, setSectionOpen] = useState(true);
   const [menuOpen, setMenuOpen] = useState(false);
-  const menuRef = useRef(null);
   const { toast } = useToast();
-
-  useEffect(() => {
-    if (!menuOpen) return;
-    function handleClick(e) {
-      if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false);
-    }
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, [menuOpen]);
 
   useEffect(() => {
     if (forceOpenKey > 0) setSectionOpen(forceOpen);
@@ -108,6 +99,49 @@ export function SortableSection({
     }
   }
 
+  function resetStyle() {
+    const factory = Object.hasOwn(SECTION_TYPE_DEFAULTS, section.type) ? SECTION_TYPE_DEFAULTS[section.type] : SECTION_TYPE_DEFAULTS.custom;
+    // In its template's own Grids where it has one (Compact's grid, T9), as a new section is.
+    const fresh = newSectionGrid(factory(section.id), templateId(template));
+    // Grids, title style, order and spacing all go at once, without asking: a notice with
+    // Undo puts the section's own settings back (R4-DUX-16). Only while the section still
+    // holds the very settings the reset wrote: ids repeat across résumés ('experience' in
+    // every blank one), so after opening another résumé, or a later edit, Undo writes nothing.
+    const before = section.settings;
+    const reset = { ...fresh.settings };
+    updateSection(section.id, s => ({ ...s, settings: reset }));
+    const undo = s => {
+      if (s.settings !== reset) return s;
+      if (before !== undefined) return { ...s, settings: before };
+      const { settings: _reset, ...rest } = s;
+      return rest;
+    };
+    toast({
+      id: `section-style-reset-${section.id}`,
+      title: 'Section style reset',
+      description: section.title || undefined,
+      duration: 8000,
+      action: { label: 'Undo', onClick: () => updateSection(section.id, undo) },
+    });
+  }
+
+  function deleteSection() {
+    const n = section.items.length;
+    const what = n ? ` and its ${n} ${n === 1 ? 'entry' : 'entries'}` : '';
+    if (confirm(`Delete the "${section.title}" section${what}?`)) removeSection(section.id);
+  }
+
+  // The ⋯ menu, on the kit's Menu: it opens in a layer of its own beside the button, kept inside the
+  // window. Drawn inside the card, the card's overflow-hidden cut it off: on a collapsed or short
+  // section only its top showed, and Delete section could not be reached (R4-DPH-24). A pick closes it.
+  const menuItems = [
+    { label: customizerOpen ? 'Hide options' : 'Customize layout', icon: Settings2, onSelect: () => setCustomizerOpen(o => !o) },
+    { label: 'Reset style', icon: RotateCcw, onSelect: resetStyle },
+    ...(duplicateSection ? [{ label: 'Duplicate section', icon: Copy, onSelect: () => duplicateSection(section.id) }] : []),
+    { type: 'separator' },
+    { label: 'Delete section', icon: Trash2, danger: true, onSelect: deleteSection },
+  ];
+
   return (
     <div ref={setNodeRef} style={style} className={`bg-white border rounded-xl shadow-sm overflow-hidden transition-colors ${isHidden ? 'border-gray-100 opacity-60' : 'border-gray-200'}`}>
       <div className={`flex items-center gap-1.5 px-3 py-2.5 border-b border-gray-100 ${isHidden ? 'bg-gray-50/50' : 'bg-gray-50'}`}>
@@ -131,76 +165,21 @@ export function SortableSection({
         >
           {isHidden ? <EyeOff size={13} /> : <Eye size={13} />}
         </button>
-        <div ref={menuRef} className="relative shrink-0">
-          <button
-            onClick={() => setMenuOpen(o => !o)}
-            className={`p-1.5 rounded transition-colors ${menuOpen ? 'text-blue-600 bg-blue-50' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'}`}
-            title="Section options"
-          >
-            <MoreHorizontal size={14} />
-          </button>
-          {menuOpen && (
-            <div className="absolute right-0 top-full mt-1 w-44 bg-white border border-gray-200 rounded-lg shadow-lg z-20 py-1">
-              <button
-                onClick={() => { setCustomizerOpen(o => !o); setMenuOpen(false); }}
-                className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-gray-50"
-              >
-                <Settings2 size={13} /> {customizerOpen ? 'Hide options' : 'Customize layout'}
-              </button>
-              <button
-                onClick={() => {
-                  const factory = Object.hasOwn(SECTION_TYPE_DEFAULTS, section.type) ? SECTION_TYPE_DEFAULTS[section.type] : SECTION_TYPE_DEFAULTS.custom;
-                  // In its template's own Grids where it has one (Compact's grid, T9), as a new section is.
-                  const fresh = newSectionGrid(factory(section.id), templateId(template));
-                  // Grids, title style, order and spacing all go at once, without asking: a notice with
-                  // Undo puts the section's own settings back (R4-DUX-16). Only while the section still
-                  // holds the very settings the reset wrote: ids repeat across résumés ('experience' in
-                  // every blank one), so after opening another résumé, or a later edit, Undo writes nothing.
-                  const before = section.settings;
-                  const reset = { ...fresh.settings };
-                  updateSection(section.id, s => ({ ...s, settings: reset }));
-                  setMenuOpen(false);
-                  const undo = s => {
-                    if (s.settings !== reset) return s;
-                    if (before !== undefined) return { ...s, settings: before };
-                    const { settings: _reset, ...rest } = s;
-                    return rest;
-                  };
-                  toast({
-                    id: `section-style-reset-${section.id}`,
-                    title: 'Section style reset',
-                    description: section.title || undefined,
-                    duration: 8000,
-                    action: { label: 'Undo', onClick: () => updateSection(section.id, undo) },
-                  });
-                }}
-                className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-gray-50"
-              >
-                <RotateCcw size={13} /> Reset style
-              </button>
-              {duplicateSection && (
-                <button
-                  onClick={() => { duplicateSection(section.id); setMenuOpen(false); }}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-gray-50"
-                >
-                  <Copy size={13} /> Duplicate section
-                </button>
-              )}
-              <div className="my-1 border-t border-gray-100" />
-              <button
-                onClick={() => {
-                  setMenuOpen(false);
-                  const n = section.items.length;
-                  const what = n ? ` and its ${n} ${n === 1 ? 'entry' : 'entries'}` : '';
-                  if (confirm(`Delete the "${section.title}" section${what}?`)) removeSection(section.id);
-                }}
-                className="w-full flex items-center gap-2 px-3 py-2 text-xs text-red-600 hover:bg-red-50"
-              >
-                <Trash2 size={13} /> Delete section
-              </button>
-            </div>
-          )}
-        </div>
+        <Menu
+          open={menuOpen}
+          onOpenChange={setMenuOpen}
+          items={menuItems}
+          minWidth={176}
+          label="Section options"
+          trigger={
+            <button
+              className={`p-1.5 rounded transition-colors shrink-0 ${menuOpen ? 'text-blue-600 bg-blue-50' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'}`}
+              title="Section options"
+            >
+              <MoreHorizontal size={14} />
+            </button>
+          }
+        />
         <button
           onClick={() => setSectionOpen(o => !o)}
           className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors shrink-0"

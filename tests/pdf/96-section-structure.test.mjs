@@ -11,8 +11,13 @@ import assert from 'node:assert/strict';
 import { setup, teardown, resume, section, loadModule, render, read, allText } from './harness.mjs';
 import { reactProps } from './fake-dom.mjs';
 import { resumeTab } from './resume-tab.mjs';
+// A section's ⋯ menu is the kit's Menu (R4-DPH-24): its focus and animation frames.
+import { patchFakeDom } from '../unit/ui-dom-harness.mjs';
 
-before(setup);
+before(async () => {
+  await setup();
+  patchFakeDom();
+});
 after(teardown);
 
 /** A fictional pilot's résumé: two jobs, a project, a skill group — in that order. */
@@ -110,14 +115,16 @@ describe('the Résumé tab: sections (R2-158)', () => {
     let deleted;
     try {
       const before = tab.saved();
+      // The menu opens in a portal at the end of <body>, outside the card (R4-DPH-24).
+      const page = tab.view.document.body;
       const deleteFrom = (title) => {
         tab.click(tab.button('Section options', tab.card(title)));
-        tab.click(tab.button('Delete section', tab.card(title)));
+        tab.click(tab.button('Delete section', page));
       };
       deleteFrom('Professional Experience');
       assert.deepEqual(confirm.asked, ['Delete the "Professional Experience" section and its 2 entries?']);
       assert.equal(tab.saved(), before, 'Cancel: nothing changes');
-      assert.ok(!tab.all().some((el) => el.tagName === 'BUTTON' && el.textContent.trim() === 'Delete section'), 'the menu closed');
+      assert.ok(!tab.all(page).some((el) => el.tagName === 'BUTTON' && el.textContent.trim() === 'Delete section'), 'the menu closed');
       answer = true;
       deleteFrom('Projects');
       assert.equal(confirm.asked[1], 'Delete the "Projects" section and its 1 entry?');

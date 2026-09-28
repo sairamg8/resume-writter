@@ -214,7 +214,8 @@ test.describe('every design control changes the preview, through the UI', () => 
       title.closest('div.rounded-xl').dataset.pwLanguages = '1';
     });
     await page.locator('[data-pw-languages] button[title="Section options"]').click();
-    await page.locator('[data-pw-languages] button:has-text("Customize layout")').click();
+    // The ⋯ menu opens in a portal at the end of <body>, not inside the card (R4-DPH-24): its open menu.
+    await page.locator('[role="menu"] button:has-text("Customize layout")').click();
     // The walk's roots: Header Customization's box, the Photo box, each field's eye, and the two
     // sections' options — not the rest of Personal Info (the summary's editor opens the STAR optimizer).
     await page.evaluate(() => {

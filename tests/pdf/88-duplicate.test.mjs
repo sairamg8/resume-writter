@@ -7,8 +7,13 @@ import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { setup, teardown, resume, section, loadModule } from './harness.mjs';
 import { mount, elements, reactProps } from './fake-dom.mjs';
+// The section's ⋯ menu is the kit's Menu (R4-DPH-24): its focus and animation frames.
+import { patchFakeDom, ev } from '../unit/ui-dom-harness.mjs';
 
-before(setup);
+before(async () => {
+  await setup();
+  patchFakeDom();
+});
 after(teardown);
 
 /** The section actions over one résumé held in `box.r`. */
@@ -76,8 +81,9 @@ describe('duplicate an entry or a section (R2-151)', () => {
       const entryDup = buttons().filter((b) => reactProps(b)['aria-label'] === 'Duplicate entry');
       assert.equal(entryDup.length, 2, 'one per entry');
       view.act(() => reactProps(entryDup[1]).onClick({ stopPropagation() {} }));
-      view.act(() => reactProps(titled('Section options')).onClick());
-      const menuItem = buttons().find((b) => b.textContent.includes('Duplicate section'));
+      view.act(() => reactProps(titled('Section options')).onClick(ev()));
+      // The menu opens in a portal at the end of <body>, outside the card (R4-DPH-24).
+      const menuItem = [...elements(view.document.body)].find((b) => b.tagName === 'BUTTON' && b.textContent.includes('Duplicate section'));
       assert.ok(menuItem, 'in the section menu');
       view.act(() => reactProps(menuItem).onClick());
       assert.deepEqual(calls, [['item', r.sections[0].id, r.sections[0].items[1].id], ['section', r.sections[0].id]]);

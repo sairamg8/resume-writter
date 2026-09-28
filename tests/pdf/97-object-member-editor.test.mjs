@@ -8,8 +8,13 @@ import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { setup, teardown, resume, loadModule } from './harness.mjs';
 import { mount, elements, reactProps } from './fake-dom.mjs';
+// The section's ⋯ menu is the kit's Menu (R4-DPH-24): its focus and animation frames.
+import { patchFakeDom, ev } from '../unit/ui-dom-harness.mjs';
 
-before(setup);
+before(async () => {
+  await setup();
+  patchFakeDom();
+});
 after(teardown);
 
 const TYPES = ['constructor', 'toString', 'hasOwnProperty', 'valueOf', '__proto__'];
@@ -39,8 +44,9 @@ describe('a section typed like an Object member is edited as a custom one (R1-LE
         assert.equal(typeof added[0], 'object', `the new entry is ${typeof added[0]}`);
         assert.match(String(added[0].id), /^cust/, 'a custom entry, with its id');
 
-        view.act(() => reactProps(buttons(view).find((b) => b.getAttribute('title') === 'Section options')).onClick());
-        const reset = buttonWith(view, 'Reset style');
+        view.act(() => reactProps(buttons(view).find((b) => b.getAttribute('title') === 'Section options')).onClick(ev()));
+        // The menu opens in a portal at the end of <body>, outside the card (R4-DPH-24).
+        const reset = [...elements(view.document.body)].find((b) => b.tagName === 'BUTTON' && b.textContent.includes('Reset style'));
         assert.ok(reset, 'the options menu is open');
         view.act(() => reactProps(reset).onClick());
         assert.equal(updates.length, 1);
