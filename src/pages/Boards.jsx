@@ -11,6 +11,12 @@ import { issueCounts } from '@/utils/boardQuery';
 import { relativeTime } from '@/utils/uiFormat';
 
 /**
+ * The columns a phone does without (Key, Type, Lead, Updated), in the header and every row: the
+ * table then fits a 375px screen, with each row's menu in view. Shown again from sm up.
+ */
+const PHONE_HIDDEN = 'hidden sm:table-cell';
+
+/**
  * Projects (/boards): every project as a row — star, name, key, type, lead, open and total
  * issues, last update — searchable, with "Create project" (also `?create=1`, the sidebar's link)
  * and a row menu (open, settings, delete — asked first, then Undo).
@@ -51,17 +57,17 @@ export function Boards() {
           <>
             <SearchInput value={query} onChange={setQuery} placeholder="Search projects" size="sm" className="w-full sm:w-64" />
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[48rem] border-separate border-spacing-0 text-sm">
+              <table className="w-full border-separate border-spacing-0 text-sm sm:min-w-[48rem]">
                 <caption className="sr-only">Projects</caption>
                 <thead>
                   <tr className="text-left text-[12px] font-semibold text-ink-subtle">
                     <th scope="col" className="w-10 border-b-2 border-line px-2 py-2"><span className="sr-only">Starred</span><Star size={14} aria-hidden="true" /></th>
                     <th scope="col" className="border-b-2 border-line px-2 py-2">Name</th>
-                    <th scope="col" className="w-24 border-b-2 border-line px-2 py-2">Key</th>
-                    <th scope="col" className="w-28 border-b-2 border-line px-2 py-2">Type</th>
-                    <th scope="col" className="w-28 border-b-2 border-line px-2 py-2">Lead</th>
+                    <th scope="col" className={`w-24 border-b-2 border-line px-2 py-2 ${PHONE_HIDDEN}`}>Key</th>
+                    <th scope="col" className={`w-28 border-b-2 border-line px-2 py-2 ${PHONE_HIDDEN}`}>Type</th>
+                    <th scope="col" className={`w-28 border-b-2 border-line px-2 py-2 ${PHONE_HIDDEN}`}>Lead</th>
                     <th scope="col" className="w-32 border-b-2 border-line px-2 py-2">Issues</th>
-                    <th scope="col" className="w-28 border-b-2 border-line px-2 py-2">Updated</th>
+                    <th scope="col" className={`w-28 border-b-2 border-line px-2 py-2 ${PHONE_HIDDEN}`}>Updated</th>
                     <th scope="col" className="w-12 border-b-2 border-line px-2 py-2"><span className="sr-only">Actions</span></th>
                   </tr>
                 </thead>
@@ -74,16 +80,18 @@ export function Boards() {
                           <IconButton icon={Star} size="sm" label={b.starred ? `Unstar ${b.title}` : `Star ${b.title}`} pressed={b.starred} onClick={() => store.toggleStar(b.id)} className={b.starred ? '[&_svg]:fill-amber-400 [&_svg]:text-amber-500' : 'opacity-60 group-hover:opacity-100'} />
                         </td>
                         <td className="border-b border-line-subtle px-2">
-                          <button type="button" onClick={() => open(b)} className="flex min-w-0 items-center gap-2.5 text-left font-medium text-brand hover:underline">
+                          {/* On a phone a long name is cut short in the cell (inline-size containment: it
+                              no longer sets the column's width), so it cannot push the menu off screen. */}
+                          <button type="button" onClick={() => open(b)} className="flex min-w-0 items-center gap-2.5 text-left font-medium text-brand hover:underline max-sm:w-full max-sm:contain-inline-size">
                             <ProjectAvatar board={b} size={24} />
                             <span className="truncate">{b.title || 'Untitled project'}</span>
                           </button>
                         </td>
-                        <td className="border-b border-line-subtle px-2 text-ink-subtle">{b.key}</td>
-                        <td className="border-b border-line-subtle px-2 text-ink-subtle">{b.mode === 'scrum' ? 'Scrum' : 'Kanban'}</td>
-                        <td className="border-b border-line-subtle px-2"><span className="flex items-center gap-2 text-ink-subtle"><Avatar name="You" size="xs" decorative />You</span></td>
+                        <td className={`border-b border-line-subtle px-2 text-ink-subtle ${PHONE_HIDDEN}`}>{b.key}</td>
+                        <td className={`border-b border-line-subtle px-2 text-ink-subtle ${PHONE_HIDDEN}`}>{b.mode === 'scrum' ? 'Scrum' : 'Kanban'}</td>
+                        <td className={`border-b border-line-subtle px-2 ${PHONE_HIDDEN}`}><span className="flex items-center gap-2 text-ink-subtle"><Avatar name="You" size="xs" decorative />You</span></td>
                         <td className="border-b border-line-subtle px-2 text-ink-subtle">{counts.open} open · {counts.total} total</td>
-                        <td className="border-b border-line-subtle px-2 text-ink-subtle">{relativeTime(b.updatedAt)}</td>
+                        <td className={`border-b border-line-subtle px-2 text-ink-subtle ${PHONE_HIDDEN}`}>{relativeTime(b.updatedAt)}</td>
                         <td className="border-b border-line-subtle px-2">
                           <Menu
                             label={`${b.title} actions`}
