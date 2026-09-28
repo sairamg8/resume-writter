@@ -280,7 +280,8 @@ export function JobForm({ store }) {
           </section>
         </form>
 
-        <section className="bg-white rounded-md border border-line p-6 space-y-4">
+        {/* The other cards' padding: a bare p-6 made a phone's notes editor 16 px narrower than the fields (R4-DPH-20). */}
+        <section className="bg-white rounded-md border border-line p-4 sm:p-6 space-y-4">
           <h2 className="text-[11px] font-bold text-ink-subtlest uppercase tracking-widest">Notes</h2>
           {/* The Notes tab's editor and format: plain text here was stripped there (J-03). */}
           <RichTextEditor ariaLabel="Notes" value={form.notes} onChange={html => set('notes', html)} rows={4} placeholder="Key contacts, interview format, compensation details, next steps…" />
