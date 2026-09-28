@@ -19,7 +19,7 @@ const MAX_IN_DAY = 3;
 /**
  * A project's Calendar (/boards/:id/calendar): a month of weeks with each issue on its due date,
  * filtered by the toolbar — a click opens it, "+" on a day creates one due that day. Issues with
- * no due date are counted under the grid.
+ * no due date are counted in the month controls' row above the grid.
  */
 export function ProjectCalendar() {
   const { id } = useParams();
