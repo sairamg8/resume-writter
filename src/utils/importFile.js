@@ -387,10 +387,17 @@ export function pdfPageLines(items) {
     // its text starts the marker's share of the run in, where a wrapped line of the item starts.
     const inline = /^\s*[•◦▪▸‣⁃●○■–-]\s+/.exec(its[0].str);
     if (inline && its[0].w) textX = its[0].x + (its[0].w * inline[0].length) / its[0].str.length;
+    // A lone "·" first — in a run of its own or leading one — is the third level's list marker
+    // (richText's BULLETS) or a separator a wrapped line starts with: pdfLinesOfPages tells which by
+    // the line above. Where the text after it starts, for when it is a marker (R5-IMP-01b).
+    let dotX;
+    const dot = /^\s*·\s+/.exec(its[0].str);
+    if (dot && its[0].str.trim() !== '·' && its[0].w) dotX = its[0].x + (its[0].w * dot[0].length) / its[0].str.length;
     its.forEach((it, i) => {
       if (i) {
         const prev = its[i - 1];
         const gap = it.x - (prev.x + prev.w);
+        if (i === 1 && prev.str.trim() === '·') dotX = it.x;
         const marker = i === 1 && MARKER.test(prev.str.trim());
         if (marker) { text = `${text.trim()} `; textX = it.x; }
         // A run in a much larger or smaller size is a field of its own: the name and the job title
@@ -402,7 +409,7 @@ export function pdfPageLines(items) {
     });
     const last = its[its.length - 1];
     const links = its.flatMap((it) => it.links || []);
-    return { text: text.replace(/[ ]{2,}/g, ' ').trim(), x: its[0].x, textX, right: last.x + last.w, y: row.y, h: row.h, ...(links.length ? { links } : {}) };
+    return { text: text.replace(/[ ]{2,}/g, ' ').trim(), x: its[0].x, textX, right: last.x + last.w, y: row.y, h: row.h, ...(dotX === undefined ? {} : { dotX }), ...(links.length ? { links } : {}) };
   });
 }
 
@@ -465,10 +472,16 @@ export function pdfLinesOfPages(pages) {
       const right = Math.max(0, ...lines.map((l) => l.right));
       const left = Math.min(...lines.map((l) => l.x));
       let prev = null;
-      for (const line of lines) {
+      for (let line of lines) {
         if (prev) {
           const dy = prev.y - line.y;
           const near = dy <= Math.max(prev.h, line.h) * 1.9;
+          // A "·" leading a line right under a list item is the next level's marker (the default Bullet
+          // style's third, '•', '–', '·'), not a separator: read as a list item's, so the item is not
+          // joined to its parent's text ("B · C") nor split at its gap (R5-IMP-01b).
+          if (near && /^·\s/.test(line.text) && (MARKER.test(prev.text.split(' ')[0]) || prev.listed)) {
+            line = { ...line, text: `• ${line.text.slice(1).trim()}`, textX: line.dotX ?? line.textX };
+          }
           const sameSize = Math.abs(prev.h - line.h) < 1;
           const plain = !line.text.includes('\t') && !prev.text.includes('\t') && !MARKER.test(line.text.split(' ')[0]);
           const listed = MARKER.test(prev.text.split(' ')[0]) || prev.listed;
