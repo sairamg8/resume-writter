@@ -56,7 +56,8 @@ export function onFaceFetched(fn) {
 
 /** Tell every onFaceFetched subscriber that a face's own data is waiting to be put in. */
 export function faceFetched() {
-  fetchedListeners.forEach((fn) => fn());
+  // One subscriber failing must not keep the word from the others (nor reject the font's fetch).
+  fetchedListeners.forEach((fn) => { try { fn(); } catch (e) { console.error(e); } });
 }
 
 /**

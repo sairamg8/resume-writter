@@ -2,7 +2,7 @@
 // in by the next build — and nothing asked for one, so the preview kept the stand-in face until the
 // next edit. Pinned here: the preview builds again when fontFallback.js's faceFetched says so, and
 // pdfBuild.js passes on the PDF worker's { faceFetched } message (pdfWorker.js), which is no build's
-// reply. The font loader's side is in tests/pdf/101-r4-lo-17-font-face-retry.
+// reply, and pdfWorker.js posts it when the worker's own fontFallback hears it. The font loader's side is in tests/pdf/101-r4-lo-17-font-face-retry.
 // Run: node --test tests/pdf/101-r4-lo-17-face-fetched-rebuild.test.mjs
 import { before, after, it } from 'node:test';
 import assert from 'node:assert/strict';
@@ -47,5 +47,22 @@ it('the worker\'s { faceFetched } reaches the main thread\'s subscribers, and is
   } finally {
     stop();
     build._setPdfWorkerForTest(null);
+  }
+});
+
+it('the PDF worker posts { faceFetched } to the main thread when its font loader says so', async () => {
+  // pdfWorker.js as a worker runs it: `self` is the worker's scope (a stand-in here, set before it loads).
+  const posted = [];
+  const hadSelf = 'self' in globalThis;
+  const savedSelf = globalThis.self;
+  globalThis.self = { postMessage: (m) => posted.push(m), onmessage: null };
+  try {
+    await loadModule('/src/utils/pdfWorker.js');
+    const fonts = await loadModule('/src/utils/fontFallback.js');
+    fonts.faceFetched();
+    assert.deepEqual(posted, [{ faceFetched: true }]);
+  } finally {
+    if (hadSelf) globalThis.self = savedSelf;
+    else delete globalThis.self;
   }
 });

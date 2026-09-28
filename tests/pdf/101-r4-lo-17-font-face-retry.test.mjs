@@ -133,12 +133,13 @@ describe('a face that failed once is fetched again later, not borrowed for the s
       assert.ok(realNow() - started < 10_000, 'the build went on without the stalled face');
       assert.equal(bold.data, donorData, 'the face keeps the donor while its own is on its way');
     } finally { open(); stall = null; }
+    // Waited for, not slept on: the fetch's reply goes through fontkit before the word comes.
     let asked = 0;
-    const stop = fallback.onFaceFetched(() => { asked += 1; });
-    try {
-      await new Promise((resolve) => { setTimeout(resolve, 50); });
-    } finally { stop(); }
-    assert.equal(asked, 1, 'its arrival after the build asks for a build again');
+    let stop;
+    await new Promise((resolve) => { stop = fallback.onFaceFetched(() => { asked += 1; resolve(); }); });
+    await new Promise((resolve) => { setTimeout(resolve, 20); });
+    stop();
+    assert.equal(asked, 1, 'its arrival after the build asks for a build again, once');
     assert.equal(bold.data, donorData, 'arrived, but not put in until a build primes it');
     await loader.resolvePdfFonts(settings, 'Pat Example');
     assert.ok(others.every((s) => s.data !== bold.data), 'the next build puts the bold\'s own data in');
@@ -162,7 +163,7 @@ describe('a face that failed once is fetched again later, not borrowed for the s
       await loader.resolvePdfFonts(settings, 'Pat Example');
       assert.equal(boldFetches.length, tries, 'the face on its way is not fetched a second time');
     } finally { open(); stall = null; }
-    await new Promise((resolve) => { setTimeout(resolve, 50); });
+    await new Promise((resolve) => { const stop = fallback.onFaceFetched(() => { stop(); resolve(); }); });
     await loader.resolvePdfFonts(settings, 'Pat Example');
     assert.equal(fallback.facesBorrowed(), false, 'the one fetch put it in');
   });
