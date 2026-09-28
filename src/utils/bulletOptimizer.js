@@ -261,13 +261,15 @@ export function analyzeBullet(text = '') {
  * which is lowercased only when it is a word that is never a name ("In 2023, built" → "Spearheaded in
  * 2023, built"; "AWS" and "Kubernetes" stay, R4-LO-13). It always replaced the first word, whatever
  * it was ("Spearheaded for migrating…"), and joined the lines of the statement into one. Every other
- * character is kept.
+ * character is kept. A statement opening with a helper verb or a negation ("Did not miss…", "Was
+ * promoted…", "Never missed…") is returned as it is (opensWithAuxiliary): no verb can go before it —
+ * "Spearheaded did not miss…" — and dropping the words would change what it says (R4-SW-WT-04).
  */
 export function insertActionVerb(text, verb) {
   const s = String(text ?? '');
   if (!s.trim()) return `${verb} `;
   // Bullet marks, quotes and spaces before the first word stay where they are ("- Led …").
-  const lead = s.match(/^[\s•\-*–—◦▪▸‣⁃"'“‘(]*/u)[0];
+  const lead = s.match(LEAD_MARKS)[0];
   const rest = s.slice(lead.length);
   // A verb phrase Auto-Fix or the tips write ("Contributed to", "Collaborated on") goes whole, or the
   // chip left "Spearheaded to the hackathon".
@@ -278,8 +280,25 @@ export function insertActionVerb(text, verb) {
     const weak = new RegExp(`^${wp.match.source}`, 'iu');
     if (weak.test(rest)) return lead + rest.replace(weak, verb);
   }
+  if (AUXILIARY_LEAD.test(rest)) return s;
   const [word] = rest.match(/^\p{L}*/u);
   return `${lead}${verb} ${FUNCTION_WORDS.has(word.toLowerCase()) && /^\p{Lu}\p{Ll}*$/u.test(word) ? word[0].toLowerCase() + rest.slice(1) : rest}`;
+}
+
+/** Bullet marks, quotes and spaces before a statement's first word. */
+const LEAD_MARKS = /^[\s•\-*–—◦▪▸‣⁃"'“‘(]*/u;
+
+/** A helper verb or a negation as a statement's first word: "Did not", "Didn't", "Was", "Has", "Never"… */
+const AUXILIARY_LEAD = /^(?:did|does|do|was|were|is|are|has|have|had|been|being|never|not)(?:n['’]t)?(?![\p{L}\d])/iu;
+
+/**
+ * Whether a power-verb chip leaves `text` as it is because it opens with a helper verb or a negation
+ * ("Did not miss a release deadline"): the optimizer then asks for a rewrite instead (R4-SW-WT-04).
+ * "Did" as a main verb ("Did the audit") is a weak phrase the chip replaces, and is not one of these.
+ */
+export function opensWithAuxiliary(text) {
+  const rest = String(text ?? '').replace(LEAD_MARKS, '');
+  return AUXILIARY_LEAD.test(rest) && insertActionVerb(text, 'Led') === String(text ?? '');
 }
 
 /**

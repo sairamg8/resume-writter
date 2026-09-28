@@ -10,6 +10,7 @@ import {
   autoFixWeakPhrases,
   insertActionVerb,
   insertMetric,
+  opensWithAuxiliary,
   ACTION_VERBS_BY_CATEGORY,
   GOOGLE_XYZ_TEMPLATES
 } from '@/utils/bulletOptimizer';
@@ -27,6 +28,9 @@ export default function BulletOptimizerModal({ isOpen, onClose, initialText = ''
   // back), and through further template picks (it is the user's own text that comes back). It goes once
   // it is restored, or once the text is that statement again; Apply and closing unmount the modal.
   const [beforeTemplate, setBeforeTemplate] = useState(null);
+  // A power verb was picked for a statement that opens with "Did not…", "Was…" or "Never…": no verb
+  // can go before those words, so the text is left alone and a tip asks for a rewrite (R4-SW-WT-04).
+  const [verbBlocked, setVerbBlocked] = useState(false);
 
   if (!isOpen) return null;
 
@@ -50,6 +54,10 @@ export default function BulletOptimizerModal({ isOpen, onClose, initialText = ''
   // The verb in place of a leading verb or weak phrase, else before the first word; the metric before
   // the closing full stop (R4-CL-07, R4-CL-08).
   function handleInsertVerb(verb) {
+    if (opensWithAuxiliary(text)) {
+      setVerbBlocked(true);
+      return;
+    }
     editText(prev => insertActionVerb(prev, verb));
   }
 
@@ -215,6 +223,13 @@ export default function BulletOptimizerModal({ isOpen, onClose, initialText = ''
               ))}
             </div>
           </div>
+          {/* Shown while the statement still opens that way: rewriting it takes the tip away. */}
+          {verbBlocked && opensWithAuxiliary(text) && (
+            <p className="text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded-xl p-2.5">
+              This starts with &ldquo;{text.replace(/^[^\p{L}]+/u, '').split(/\s+/).slice(0, 2).join(' ')}&rdquo;, so a verb can&rsquo;t go in front of it.
+              {' '}Rewrite it as something you did, e.g. &ldquo;Shipped every release on time&rdquo;, then pick a verb.
+            </p>
+          )}
           <div className="flex flex-wrap gap-1.5 max-h-20 overflow-y-auto p-1 bg-gray-50/60 rounded-xl border border-gray-100">
             {ACTION_VERBS_BY_CATEGORY[activeCategory]?.map(verb => (
               <button
