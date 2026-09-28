@@ -4,6 +4,7 @@ import { TodoItem } from '@/components/job/TodoItem';
 import { addTodo as withTodo, toggleTodo } from '@/utils/jobEdits';
 import { visibleDone } from '@/utils/jobQuery';
 import { isImeKey } from '@/components/ui/compose';
+import { IconButton, controlClass, cx } from '@/components/ui';
 
 const DONE_PAGE_SIZE = 5;
 
@@ -45,16 +46,22 @@ export function TasksTab({ todos, onChange }) {
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter' && !isImeKey(e)) { e.preventDefault(); addTodo(input); } }}
             placeholder="New task… (Enter to add)"
-            // 16 px on touch screens: iOS Safari zooms the page into any smaller field it focuses (J-38).
-            className="flex-1 px-4 py-2.5 text-sm pointer-coarse:text-base border border-line rounded-md focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent placeholder-gray-300"
+            // The kit's text box, as TextField draws it: 36 px tall (44 on a touch screen), and 16 px text
+            // on touch, as iOS Safari zooms the page into any smaller field it focuses (J-38). It and its
+            // button were a hand-sized 42 px beside the kit's 32–36 px controls.
+            className={cx(controlClass(), 'h-9 pointer-coarse:h-11 min-w-0 flex-1 px-3')}
           />
-          <button
+          {/* The kit's 36 px icon button, level with the box on a touch screen too. */}
+          <IconButton
+            icon={Plus}
+            label="Add task"
+            variant="primary"
+            size="lg"
+            tooltip={false}
+            className="pointer-coarse:size-11"
             onClick={() => addTodo(input)}
             disabled={!input.trim()}
-            className="px-4 py-2.5 text-sm font-semibold text-white bg-brand rounded-md hover:bg-brand-hover disabled:opacity-30 disabled:cursor-not-allowed transition-colors shadow-sm"
-          >
-            <Plus size={16} />
-          </button>
+          />
         </div>
       </div>
 

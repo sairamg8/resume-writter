@@ -93,15 +93,17 @@ function KanbanCard({ job, onDelete, onMove, overlay = false }) {
               />
             </span>
           )}
-          <button
+          {/* The kit's small button, the size of the Move-to one beside it (a hand-rolled box was 22 px). */}
+          <IconButton
             {...stopDrag}
-            onClick={e => { e.stopPropagation(); onDelete(job.id); }}
+            icon={Trash2}
+            label="Delete application"
+            size="sm"
+            variant="danger"
+            tooltip={false}
             title="Delete application"
-            aria-label="Delete application"
-            className="rounded p-1 text-ink-subtlest transition-colors hover:bg-red-50 hover:text-red-700"
-          >
-            <Trash2 size={14} />
-          </button>
+            onClick={e => { e.stopPropagation(); onDelete(job.id); }}
+          />
         </div>
       )}
     </div>
