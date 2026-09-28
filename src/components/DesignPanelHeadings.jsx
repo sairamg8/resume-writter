@@ -37,7 +37,7 @@ function BorderPtBox({ pt, min, max, disabled, onChange }) {
       min={min}
       max={max}
       {...typed.inputProps}
-      className="w-10 text-center text-xs font-medium text-gray-700 border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-400 disabled:bg-gray-50 disabled:cursor-not-allowed h-6"
+      className="w-10 text-center text-xs pointer-coarse:text-base font-medium text-gray-700 border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-400 disabled:bg-gray-50 disabled:cursor-not-allowed h-6"
     />
   );
 }

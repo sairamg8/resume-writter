@@ -25,7 +25,7 @@ function OwnFontRow({ label, value, customFonts, onChange }) {
         id={id}
         value={value || ''}
         onChange={e => onChange(e.target.value)}
-        className="min-w-0 max-w-[60%] px-2 py-1.5 text-xs border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+        className="min-w-0 max-w-[60%] px-2 py-1.5 text-xs pointer-coarse:text-base border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
       >
         <option value="">Same as text</option>
         {FONTS.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
@@ -178,7 +178,7 @@ export function TypographySection({ settings, template, resumeId, updateSetting,
             placeholder="e.g. Nunito, Raleway, Poppins"
             aria-invalid={fontError ? 'true' : undefined}
             aria-describedby={fontError ? 'custom-font-error' : undefined}
-            className="flex-1 px-2.5 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="flex-1 px-2.5 py-1.5 text-sm pointer-coarse:text-base border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           <button
             onClick={() => { if (customFontInput.trim()) applyCustomFont(customFontInput.trim()); }}
