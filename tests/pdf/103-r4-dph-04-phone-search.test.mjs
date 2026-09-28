@@ -3,9 +3,9 @@
 // box that was not shown. No other search on a phone reaches across the projects. Pinned (the
 // coordinator's product call): below sm a search button in the top bar opens the same search box as
 // a bar over the top bar, focused within the tap (iOS raises its keyboard only for a focus the tap
-// makes), and Escape, its X, a result picked or a tap elsewhere puts it away. From sm up the box is
-// as it was: its classes then are exactly the old ones, and whatever the phone bar adds applies below
-// sm only. The real TopBar is mounted over tests/pdf/fake-dom.mjs through Vite's SSR loader, as in
+// makes); '/' opens it the same way; Escape, its X, a result picked or a tap elsewhere puts it away.
+// From sm up the box is as it was: its classes then are exactly the old ones, and whatever the phone
+// bar adds applies below sm only. The real TopBar is mounted over tests/pdf/fake-dom.mjs through Vite's SSR loader, as in
 // tests/unit/r4-lo-25-quick-search-shrunk-list.unit.mjs.
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
@@ -70,7 +70,14 @@ describe('the quick search on a phone (R4-DPH-04)', () => {
       assert.deepEqual(sorted(t.frame()), sorted(CLOSED), 'closed, the box is as it was: hidden below sm, shown from sm up');
       assert.equal(t.closeButton(), undefined, 'no X while it is closed');
 
+      // The box is shown before it is focused, within the tap: a display:none field takes no focus,
+      // and a focus left for later (a frame, a timer) raises no keyboard on iOS.
+      const box = t.box();
+      const focus = box.focus;
+      let shownAtFocus = null;
+      box.focus = function focusSpy() { shownAtFocus = !tokensOf(this.parentNode).includes('hidden'); return focus.call(this); };
       t.tap();
+      assert.equal(shownAtFocus, true, 'focused within the tap, once the box is shown (null: not focused in the tap)');
       const open = t.frame();
       assert.ok(!open.includes('hidden'), `opened, the box is shown on a phone: ${open.join(' ')}`);
       for (const token of ['max-sm:fixed', 'max-sm:inset-x-2', 'max-sm:top-3', 'max-sm:z-40', 'max-sm:w-auto', 'max-sm:max-w-none']) {
@@ -83,6 +90,27 @@ describe('the quick search on a phone (R4-DPH-04)', () => {
       const close = t.closeButton();
       assert.ok(close, 'an X to put it away');
       assert.ok(tokensOf(close).includes('sm:hidden'), 'the X is the phone bar\'s only');
+    } finally { await t.view.unmount(); }
+  });
+
+  it("'/' opens the bar too, so a narrow window's '/' focuses a box that is shown", async () => {
+    const t = topBar();
+    try {
+      await t.settle(); // the hotkeys' window listener is added in an effect
+      const box = t.box();
+      box.select = () => {}; // fake-dom's input has no select()
+      const focus = box.focus;
+      let shownAtFocus = null;
+      box.focus = function focusSpy() { shownAtFocus = !tokensOf(this.parentNode).includes('hidden'); return focus.call(this); };
+      const key = ev({ type: 'keydown', key: '/', target: t.view.document.body, repeat: false, isComposing: false });
+      t.view.act(() => t.view.window.dispatchEvent(key));
+      assert.ok(key.defaultPrevented, "the top bar took the '/'");
+      assert.equal(shownAtFocus, true, "'/' focused the box once it was shown");
+      const open = t.frame();
+      assert.ok(!open.includes('hidden') && open.includes('max-sm:fixed'), `the phone bar is open: ${open.join(' ')}`);
+      assertSame(t.view.document.activeElement, box, 'the box has the focus');
+      // From sm up it stays the box in the bar: only phone classes are added.
+      assert.deepEqual(open.filter((c) => !CLOSED.includes(c) && !c.startsWith('max-sm:')), []);
     } finally { await t.view.unmount(); }
   });
 

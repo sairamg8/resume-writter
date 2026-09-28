@@ -44,7 +44,7 @@ function TopLink({ to, label, active }) {
 
 /**
  * The search box and its results (projects, then issues), searched as the user types. Below sm the
- * bar has no room for it: a search button opens it as a bar over the top bar, and Escape, its X, a
+ * bar has no room for it: a search button (or '/') opens it as a bar over the top bar, and Escape, its X, a
  * result picked or a tap elsewhere puts it away (R4-DPH-04).
  */
 function QuickSearch({ search }) {
@@ -59,7 +59,14 @@ function QuickSearch({ search }) {
   // The highlighted row, within the list as it is now: the list can shrink while it is open (an issue
   // deleted, a sync, another tab), and an index past its end made Enter do nothing (R4-LO-25).
   const at = Math.max(0, Math.min(active, results.length - 1));
-  useHotkeys({ '/': () => { inputRef.current?.focus(); inputRef.current?.select(); } });
+  // Shown, then focused, in one go: below sm the box is display:none until the phone bar opens, and
+  // iOS raises the keyboard only for a focus the tap itself makes. '/' opens it too, so a narrow
+  // window or a phone with a keyboard does not focus a box that is not shown (R4-DPH-04).
+  const openAndFocus = () => {
+    flushSync(() => setPhoneOpen(true));
+    inputRef.current?.focus();
+  };
+  useHotkeys({ '/': () => { openAndFocus(); inputRef.current?.select(); } });
 
   const go = (hit) => {
     if (!hit) return;
@@ -76,15 +83,10 @@ function QuickSearch({ search }) {
     if (e.key === 'Enter' && !isImeKey(e)) { e.preventDefault(); go(results[at]); }
     if (e.key === 'Escape' && !isImeKey(e)) close();
   };
-  // Shown, then focused within the tap itself: iOS raises the keyboard only for a focus the tap makes.
-  const openOnPhone = () => {
-    flushSync(() => setPhoneOpen(true));
-    inputRef.current?.focus();
-  };
 
   return (
     <>
-      <IconButton icon={Search} label="Search" onClick={openOnPhone} className="sm:hidden" tooltip={false} />
+      <IconButton icon={Search} label="Search" onClick={openAndFocus} className="sm:hidden" tooltip={false} />
       <div
         className={cx(
           'relative w-full max-w-[20rem] sm:block',
