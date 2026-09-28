@@ -34,7 +34,8 @@ export function extractBulletsFromItem(item) {
     // pattern from <li> to the next </li> ran from an outer item to its nested one's end, so
     // "Led migration" and its sub-item "Cut costs by 30%" were one bullet, "Led migrationCut costs by
     // 30%" (R4-CL-10). An item's continuation paragraph belongs to it; body text outside the list is
-    // no bullet, as before.
+    // no bullet, as before, and ends every open item: a quote after the list (indented as a top-level
+    // item is) was glued onto the last bullet, which the PDF prints apart from it (R4-SW-WT-01).
     if (/<li[\s>]/i.test(desc)) {
       const items = [];
       // The item open at each depth: text after a nested list, inside the same outer item, prints at
@@ -42,7 +43,9 @@ export function extractBulletsFromItem(item) {
       const openAt = [];
       for (const block of parseRichText(desc)) {
         const text = block.runs.map((r) => r.text).join('').replace(/\s+/g, ' ').trim();
-        if (block.marker) {
+        if (!block.inList) {
+          openAt.length = 0;
+        } else if (block.marker) {
           openAt.length = block.indent;
           openAt[block.indent] = items.push(text) - 1;
         } else if (block.indent >= 1) {

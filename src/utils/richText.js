@@ -12,13 +12,16 @@
  * so a pasted colour is an accident — and "background-color: transparent" used to become
  * invisible text in the PDF.
  *
- * Block: { runs, align, indent, marker }
+ * Block: { runs, align, indent, marker, inList }
  *   runs   [{ text, bold, italic, underline, strike, href }] — "\n" inside a run is a <br>
  *   align  'left' | 'center' | 'right' | 'justify' | null (null: the caller's alignment)
  *   indent list depth: 0 for body text; list items at depth n and their continuation
  *          paragraphs share indent n + 1 for the text, the marker hangs in the gutter
  *   marker '•' / '–' / '·' (by depth) or '1.' / 'a.' / 'i.' for list items, else null; the glyph a
  *          bullet prints with is listMarker's (Design → Lists)
+ *   inList true for a block inside a list (an item, or its continuation); false for body text. A
+ *          quote or <dd> outside any list shares a top-level item's indent, and only this tells it
+ *          from that item's continuation (the ATS bullets, R4-SW-WT-01)
  */
 
 const BLOCK_TAGS = new Set([
@@ -256,7 +259,7 @@ export function parseRichText(html) {
   let cur = null; // { parts: [{ text, fmt } | { br: true }], align, indent, marker }
 
   const start = (ctx) => {
-    cur = { parts: [], align: ctx.align || null, indent: ctx.indent, marker: null };
+    cur = { parts: [], align: ctx.align || null, indent: ctx.indent, marker: null, inList: ctx.depth > 0 };
     if (ctx.li && !ctx.li.used) {
       cur.marker = ctx.li.marker;
       ctx.li.used = true;
@@ -377,7 +380,7 @@ function finish(block) {
     if (!parts.length) push('\u00a0', {}); // an empty line keeps its height
     for (const { text, fmt } of parts) push(text, fmt);
   });
-  return { runs, align: block.align, indent: block.indent, marker: block.marker };
+  return { runs, align: block.align, indent: block.indent, marker: block.marker, inList: block.inList };
 }
 
 /** True when the HTML prints anything (a lone <br> or &nbsp; line counts as nothing). */
