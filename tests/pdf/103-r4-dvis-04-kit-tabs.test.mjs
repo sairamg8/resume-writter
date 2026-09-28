@@ -16,6 +16,9 @@ after(teardown);
 
 const tokens = (value) => String(value || '').split(/\s+/).filter(Boolean).sort();
 const classOf = (el) => tokens(el.getAttribute('class'));
+// The router's navigation is a transition, which the fake DOM's act (flushSync) leaves to React's
+// scheduler (setImmediate in Node): a few turns let the new ?view= render.
+const settle = async () => { for (let i = 0; i < 10; i += 1) await new Promise((r) => { setImmediate(r); }); };
 
 it('the Job Tracker\'s view tabs wear the kit\'s tabClass, and a click still moves ?view= and the selection', async () => {
   const { patchFakeDom } = await import('../unit/ui-dom-harness.mjs');
@@ -38,6 +41,7 @@ it('the Job Tracker\'s view tabs wear the kit\'s tabClass, and a click still mov
     };
     check('Summary');
     page.fire(tabs().find((b) => b.textContent.trim() === 'List'), 'onClick');
+    await settle();
     check('List');
     assert.ok(page.all().some((el) => el.tagName === 'TABLE'), 'the List view is shown');
   } finally {

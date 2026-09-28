@@ -18,7 +18,10 @@ it('R4-DPH-11: every input, select and textarea on Project settings is 16 px on 
   const page = await mountSettings();
   try {
     page.openDeleteStrip(); // To Do holds an issue: its strip asks where it goes, with a select
-    const fields = page.all(page.cards()).filter((el) => ['INPUT', 'SELECT', 'TEXTAREA'].includes(el.tagName) && el.getAttribute('type') !== 'checkbox');
+    // React sets an <input>'s type as a property, not an attribute, and the fake DOM keeps them apart:
+    // read both (as tests/pdf/81 does), or the "hide done issues" tick counts as a text field.
+    const fields = page.all(page.cards()).filter((el) => ['INPUT', 'SELECT', 'TEXTAREA'].includes(el.tagName)
+      && (el.getAttribute('type') ?? el.type) !== 'checkbox');
     const names = fields.map((el) => el.getAttribute('aria-label'));
     for (const label of ['Project name', 'Project key', 'Project description', 'Project mode', 'Column title', 'Column category', 'WIP limit',
       'Move its issues to', 'New column', 'Label name', 'Label colour', 'New label', 'New label colour', 'Days before done issues are hidden']) {
