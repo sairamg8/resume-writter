@@ -40,8 +40,12 @@ function JobRow({ job, date, onOpen }) {
           <span className="block truncate text-sm font-medium text-ink">{job.company || '—'}</span>
           <span className="block truncate text-[12px] text-ink-subtlest">{job.role || '—'}</span>
         </span>
-        <StatusBadge statusId={job.status} />
-        {date && <DatePill value={date} size="sm" />}
+        {/* On a phone the status sits over the date, at the row's right: side by side they took
+            ~175px of a ~300px row and left the company and role about nine characters. */}
+        <span className="flex shrink-0 items-center gap-3 max-sm:flex-col max-sm:items-end max-sm:gap-1">
+          <StatusBadge statusId={job.status} />
+          {date && <DatePill value={date} size="sm" />}
+        </span>
       </button>
     </li>
   );
