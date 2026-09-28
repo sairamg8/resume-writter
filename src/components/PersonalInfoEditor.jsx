@@ -98,7 +98,10 @@ export default function PersonalInfoEditor({ resume: whole, personal, updatePers
     : drawsContactIcons(template, s) ? 'Resume icon' : 'Cover letter icon';
   const [headerOpen, setHeaderOpen] = useState(false);
   const [photoOpen, setPhotoOpen] = useState(false);
+  // The field whose icon picker is open, or was last: it is kept while the picker closes, so the picker
+  // animates out still showing that field (R4-DVIS-25). The picker starts fresh on each opening itself.
   const [pickerField, setPickerField] = useState(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const activePickerField = FIELDS.find(f => f.key === pickerField);
   const uid = useId();
   const templateLabel = getTemplateLabel(template);
@@ -209,7 +212,7 @@ export default function PersonalInfoEditor({ resume: whole, personal, updatePers
                     s={s}
                     onPickIconFile={onPickIconFile}
                     setCustomIcon={setCustomIcon}
-                    onOpenPicker={setPickerField}
+                    onOpenPicker={key => { setPickerField(key); setPickerOpen(true); }}
                   />
                 )}
               </div>
@@ -232,12 +235,11 @@ export default function PersonalInfoEditor({ resume: whole, personal, updatePers
         <RichTextEditor ariaLabel="Professional summary" value={personal.summary || ''} onChange={v => updatePersonal('summary', v)} placeholder="Brief professional summary highlighting your experience, skills, and goals..." rows={4} />
       </div>
 
-      {/* Keyed by the field: each open starts on Recommended with an empty search, not on the last
-          field's (it stays mounted while closed). */}
+      {/* Keyed by the field: another field's picker is a new one. */}
       <HeaderIconPickerModal
         key={pickerField || ''}
-        isOpen={Boolean(pickerField)}
-        onClose={() => setPickerField(null)}
+        isOpen={pickerOpen}
+        onClose={() => setPickerOpen(false)}
         fieldKey={pickerField}
         fieldLabel={activePickerField?.label}
         currentCustomIcon={pickerField ? s.customContactIcons?.[pickerField] : null}
