@@ -3,9 +3,10 @@
 // past the whole 375px screen — behind Type, Key and a 16rem Summary. Below sm the Type, Labels,
 // Parent, Points and Updated columns are hidden, in the header and in every row, the 64rem floor
 // applies from sm up only, and Summary's floor is 10rem there (16rem from sm up, as before); the
-// Summary button is contained inline on a phone, so a long summary is cut short in its cell
-// rather than widening the column. Key, Summary, Status, Priority and Due date stay. From sm up
-// every column is back (sm:table-cell) and the table is as it was.
+// Summary button is contained inline, so a long summary is cut short in its cell rather than
+// widening the column. Key, Summary, Status, Priority and Due date stay. From sm up every column
+// is back (sm:table-cell). R5-JOB-06: the Summary button was contained on a phone only, so from sm
+// up a long summary still widened the table past its floor; it is contained at every width now.
 // fake-dom has no layout: the real page is rendered over the real board store through Vite's
 // loader (tests/pdf/harness.mjs) with react-dom/server, and the classes that make the layout are read.
 // Run: node --test tests/pdf/103-r4-dph-09-project-list-phone.test.mjs
@@ -124,6 +125,6 @@ it('on a phone Summary is 10rem at least (16rem from sm up) and a long summary i
   const button = /<button\b([^>]*)>([\s\S]*?)<\/button>/.exec(cell.inner);
   assert.ok(button && text(button[2]) === SUMMARY, 'the Summary button, with the issue\'s summary');
   const cls = classOf(button[1]);
-  for (const t of ['max-sm:w-full', 'max-sm:contain-inline-size', 'truncate', 'max-w-full']) assert.ok(cls.includes(t), `the Summary button has ${t}: ${cls.join(' ')}`);
-  assert.ok(!cls.includes('w-full') && !cls.includes('contain-inline-size'), 'from sm up the Summary button is as it was');
+  for (const t of ['w-full', 'contain-inline-size', 'truncate', 'max-w-full']) assert.ok(cls.includes(t), `the Summary button has ${t}: ${cls.join(' ')}`);
+  assert.ok(!cls.some((c) => /^[\w-]+:(w-full|contain-inline-size)$/.test(c)), `contained at every width, not behind a breakpoint (R5-JOB-06): ${cls.join(' ')}`);
 });
