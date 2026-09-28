@@ -167,14 +167,22 @@ export function createBoardActions({ boardsNow, setBoards, now = () => Date.now(
   const startSprint = (boardId, sprintId, fields) => change(boardId, (b, ctx) => ops.startSprint(b, sprintId, fields, ctx));
   /** Complete the active sprint: open issues to `{ moveOpenTo }` (a future sprint's id) or the backlog. */
   const completeSprint = (boardId, sprintId, options) => change(boardId, (b, ctx) => ops.completeSprint(b, sprintId, options, ctx));
-  /** Delete a sprint; its issues go to the backlog. */
-  const deleteSprint = (boardId, sprintId) => change(boardId, (b, ctx) => ops.deleteSprint(b, sprintId, ctx));
+  /** Delete a sprint (its issues go to the backlog); returns `{ sprint, index, issueIds }` for restoreSprint (the toast's Undo), or null. */
+  function deleteSprint(boardId, sprintId) {
+    const board = findBoard(boardId);
+    const removed = board && ops.removedSprint(board, sprintId);
+    if (!removed) return null;
+    change(boardId, (b, ctx) => ops.deleteSprint(b, sprintId, ctx));
+    return removed;
+  }
+  /** Put a deleted sprint back, with its issues still in the backlog; true when it came back. */
+  const restoreSprint = (boardId, removed) => change(boardId, (b, ctx) => ops.restoreSprint(b, removed, ctx));
 
   return {
     keyError, addBoard, updateBoard, deleteBoard, restoreBoard, toggleStar,
     addColumn, updateColumn, deleteColumn, restoreColumn, moveColumn, addLabel, updateLabel, deleteLabel,
     addIssue, updateIssue, moveIssue, deleteIssue, restoreIssue, duplicateIssue,
     addComment, updateComment, deleteComment,
-    addSprint, updateSprint, startSprint, completeSprint, deleteSprint,
+    addSprint, updateSprint, startSprint, completeSprint, deleteSprint, restoreSprint,
   };
 }

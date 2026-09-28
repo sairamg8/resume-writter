@@ -294,6 +294,31 @@ export function completeSprint(board, sprintId, { moveOpenTo = null } = {}, ctx 
   return { ...board, issues, sprints: mapById(board.sprints, sprintId, (x) => ({ ...x, state: 'closed', completedAt: now })) };
 }
 
+/** What deleteSprint takes away, for its Undo (restoreSprint): the sprint, its place, its issues' ids. */
+export function removedSprint(board, sprintId) {
+  const index = board.sprints.findIndex((s) => s.id === sprintId);
+  if (index === -1) return null;
+  return { sprint: board.sprints[index], index, issueIds: board.issues.filter((i) => i.sprintId === sprintId).map((i) => i.id) };
+}
+
+/**
+ * Put back what deleteSprint took (`removed` from removedSprint, R5-BRD-02): the sprint at its old
+ * place, as it was — or future, when it was active and another sprint was started since (a project
+ * never has two active) — and its issues that are still in the backlog; one moved elsewhere since
+ * stays where it is.
+ */
+export function restoreSprint(board, removed, ctx = {}) {
+  if (!removed?.sprint || sprintById(board, removed.sprint.id)) return board;
+  const second = removed.sprint.state === 'active' && board.sprints.some((s) => s.state === 'active');
+  const sprint = second ? { ...removed.sprint, state: 'future' } : removed.sprint;
+  const sprints = [...board.sprints];
+  sprints.splice(Math.max(0, Math.min(removed.index ?? sprints.length, sprints.length)), 0, sprint);
+  const ids = new Set(removed.issueIds || []);
+  const now = nowOf(ctx);
+  const issues = board.issues.map((i) => (ids.has(i.id) && (i.sprintId ?? null) === null ? { ...i, sprintId: sprint.id, updatedAt: now } : i));
+  return { ...board, sprints, issues };
+}
+
 /** Delete a sprint: its issues go to the backlog. */
 export function deleteSprint(board, sprintId, ctx = {}) {
   if (!sprintById(board, sprintId)) return board;

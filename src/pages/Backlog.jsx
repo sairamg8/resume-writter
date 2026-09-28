@@ -100,8 +100,11 @@ export function Backlog() {
   }
 
   async function removeSprint(sprint) {
-    const ok = await confirm({ title: `Delete ${sprint.name}?`, body: 'Its issues move to the backlog.', confirmLabel: 'Delete sprint', tone: 'danger' });
-    if (ok) { store.deleteSprint(board.id, sprint.id); toast({ title: `${sprint.name} deleted` }); }
+    const ok = await confirm({ title: `Delete ${sprint.name}?`, body: 'Its issues move to the backlog. You can undo this for a few seconds.', confirmLabel: 'Delete sprint', tone: 'danger' });
+    if (!ok) return;
+    // Undo brings the sprint back with its issues, as an issue's or a project's delete does (R5-BRD-02).
+    const removed = store.deleteSprint(board.id, sprint.id);
+    if (removed) toast({ title: `${sprint.name} deleted`, action: { label: 'Undo', onClick: () => store.restoreSprint(board.id, removed) } });
   }
 
   const completingSection = (completing || completeParam) && active ? all.find((s) => s.id === active.id) : null;
