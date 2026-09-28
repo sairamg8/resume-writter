@@ -122,12 +122,14 @@ export default function BulletOptimizerModal({ isOpen, onClose, initialText = ''
               Quality: {score}/100
             </div>
           </div>
+          {/* 16 px on a touch screen: iOS zooms the page into any smaller field it focuses (R4-DPH-30).
+              A mouse keeps 12 px on a narrow window and 14 px from sm, as before. */}
           <textarea
             rows={3}
             value={text}
             onChange={e => editText(e.target.value)}
             placeholder="e.g. Engineered distributed cache system, reducing API latency by 45% for 2M+ active users."
-            className="w-full text-xs sm:text-sm p-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50/50 resize-none text-gray-800"
+            className="w-full text-xs sm:text-sm pointer-coarse:text-base p-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50/50 resize-none text-gray-800"
           />
           {beforeTemplate !== null && (
             <div className="flex items-center justify-between gap-3 text-[11px] text-gray-500">
