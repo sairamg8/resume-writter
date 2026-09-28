@@ -3,7 +3,8 @@
 // squeezed the description into a narrow column, and a long custom stage (they have no length cap) ran
 // past the section's border. The section also kept p-6 where the form's other sections are p-4 sm:p-6.
 // Now the header wraps (the pill goes under the heading when the two do not fit), the pill is at most
-// the section's width and its stage wraps inside it, and the section is p-4 on a phone. The fake DOM
+// the section's width and its stage wraps inside it, the same stage wraps in its "Your Stages" row too,
+// and the section is p-4 on a phone. The fake DOM
 // has no layout, so this reads the classes the browser lays the section out by, on the real component
 // (tests/pdf/fake-dom.mjs, loaded through Vite).
 import { before, after, it } from 'node:test';
@@ -43,6 +44,19 @@ it('R4-DPH-19: the picked stage\'s pill wraps under the heading and inside itsel
     assert.ok(p.includes('max-w-full') && p.includes('min-w-0'), `at most the section's width: ${p.join(' ')}`);
     assert.ok(p.includes('[overflow-wrap:anywhere]'), `a long stage wraps inside it: ${p.join(' ')}`);
     assert.ok(!p.includes('shrink-0') && !p.includes('ml-4'), `no fixed width, and no margin left over when it wraps: ${p.join(' ')}`);
+
+    // The same long custom stage in the "Your Stages" list wraps in its row too: its button and its
+    // name shrink to the row (min-w-0) and the name breaks (break-words), so the row's Remove X stays
+    // in the section.
+    const name = all.find((el) => el.tagName === 'SPAN' && el.textContent === LONG);
+    assert.ok(name, 'the custom stage is listed');
+    const n = classes(name);
+    assert.ok(n.includes('min-w-0') && n.includes('break-words'), `the listed stage wraps: ${n.join(' ')}`);
+    const pick = name.parentNode;
+    assert.equal(pick.tagName, 'BUTTON');
+    assert.ok(classes(pick).includes('min-w-0') && classes(pick).includes('flex-1'), `its button shrinks to the row: ${classes(pick).join(' ')}`);
+    const remove = pick.parentNode.childNodes.find((el) => el.tagName === 'BUTTON' && el.getAttribute('title') === 'Remove');
+    assert.ok(remove && classes(remove).includes('shrink-0'), 'and the row keeps its Remove X');
   } finally {
     await view.unmount();
   }

@@ -67,9 +67,11 @@ export function InterviewStageSelector({ stage, onStageChange, customStages, add
                   const active = stage === s;
                   return (
                     <div key={s} className={`flex items-center gap-1 px-2 py-1.5 rounded-lg transition-all ${active ? 'bg-brand-subtle' : 'hover:bg-sunken'}`}>
-                      <button type="button" onClick={() => onStageChange(active ? '' : s)} className="flex-1 flex items-center gap-2.5 text-left">
+                      {/* min-w-0 and break-words: a long custom stage wraps in its row, as in the pill
+                          above, instead of running out of the section with its Remove X (R4-DPH-19). */}
+                      <button type="button" onClick={() => onStageChange(active ? '' : s)} className="flex-1 min-w-0 flex items-center gap-2.5 text-left">
                         <span className={`text-[11px] font-bold w-5 text-right shrink-0 tabular-nums ${active ? 'text-indigo-400' : 'text-ink-subtlest'}`}>{i + 1}.</span>
-                        <span className={`text-sm flex-1 leading-snug ${active ? 'text-brand font-semibold' : 'text-ink-subtle'}`}>{s}</span>
+                        <span className={`text-sm flex-1 min-w-0 break-words leading-snug ${active ? 'text-brand font-semibold' : 'text-ink-subtle'}`}>{s}</span>
                         {active && <div className="w-2 h-2 rounded-full bg-brand shrink-0" />}
                       </button>
                       <button
