@@ -22,7 +22,9 @@ export function SegmentRow({ label, options, value, onChange }) {
   return (
     <div className="flex items-center justify-between gap-3">
       <span className="text-xs text-gray-600 shrink-0">{label}</span>
-      <div className="flex gap-1">
+      {/* The choices wrap onto a second line, kept to the right, when the panel is dragged narrow:
+          in one line Skills' Style lost 'Tags' and Rows 'Spacious' past the card's edge (R4-DVIS-30). */}
+      <div className="flex flex-wrap justify-end gap-1">
         {options.map(opt => (
           <button
             key={opt.value}
