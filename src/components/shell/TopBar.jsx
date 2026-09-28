@@ -1,4 +1,4 @@
-import { useId, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { ChevronDown, CircleHelp, Menu as MenuIcon, Plus, Search, X } from 'lucide-react';
@@ -55,6 +55,7 @@ function QuickSearch({ search }) {
   const [phoneOpen, setPhoneOpen] = useState(false);
   const [active, setActive] = useState(0);
   const inputRef = useRef(null);
+  const listRef = useRef(null);
   const listId = useId();
   const results = open && search ? search(query) : [];
   // The highlighted row, within the list as it is now: the list can shrink while it is open (an issue
@@ -68,6 +69,11 @@ function QuickSearch({ search }) {
     inputRef.current?.focus();
   };
   useHotkeys({ '/': () => { openAndFocus(); inputRef.current?.select(); } });
+  // The panel scrolls when its rows do not fit (R5-JOB-03): the arrow keys keep the highlighted row
+  // in view, so Enter never opens a result the user cannot see.
+  useEffect(() => {
+    listRef.current?.querySelector('[aria-selected="true"]')?.scrollIntoView?.({ block: 'nearest' });
+  }, [at, open, results.length]);
 
   const go = (hit) => {
     if (!hit) return;
@@ -132,11 +138,14 @@ function QuickSearch({ search }) {
           </button>
         )}
         {open && query.trim() && (
-          <div className="absolute top-10 right-0 left-0 z-50 overflow-hidden rounded-md border border-line bg-white py-1 shadow-xl">
+          // At most 24rem, or what is left of the window under the box (it starts ~52 px down), and it
+          // scrolls inside: 8 two-line rows ran past a short window's bottom, where the shell clips
+          // them and nothing could reach them (R5-JOB-03).
+          <div className="absolute top-10 right-0 left-0 z-50 max-h-[min(24rem,calc(100dvh-4.5rem))] overflow-y-auto overscroll-contain rounded-md border border-line bg-white py-1 shadow-xl">
             {results.length === 0 ? (
               <p className="px-3 py-3 text-sm text-ink-subtlest">No issues or projects match “{query.trim()}”.</p>
             ) : (
-              <ul id={listId} role="listbox" aria-label="Search results">
+              <ul ref={listRef} id={listId} role="listbox" aria-label="Search results">
                 {results.map((hit, i) => (
                   <li
                     key={`${hit.kind}-${hit.id}`}
