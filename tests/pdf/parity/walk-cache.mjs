@@ -12,7 +12,7 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(fileURLToPath(new URL('../../..', import.meta.url)));
 const INPUTS = ['src', 'tests/pdf/parity/walker.mjs', 'tests/pdf/parity/panels.mjs', 'tests/pdf/parity/store.mjs',
-  'tests/pdf/parity/walk-cli.mjs', 'tests/pdf/fake-dom.mjs', 'tests/pdf/harness.mjs', 'tests/pdf/extractors.mjs', 'package.json', 'yarn.lock'];
+  'tests/pdf/parity/walk-cli.mjs', 'tests/pdf/fake-dom.mjs', 'tests/unit/ui-dom-harness.mjs', 'tests/pdf/harness.mjs', 'tests/pdf/extractors.mjs', 'package.json', 'yarn.lock'];
 
 function files(p) {
   const abs = path.join(ROOT, p);

@@ -10,9 +10,15 @@
 // the panel re-walked for elements it did not show before. The parity matrix (tests/pdf/parity/*)
 // renders every action this finds, so a control added to a panel is in the matrix by construction,
 // and 00-registry pins the setting keys so a new one without a measure fails.
+// A dialog a panel opens (the Header Icon picker) is the kit's Dialog, in a portal at the end of <body>
+// beside the mount's container: so the whole page is walked, not the container, and the fake DOM gets
+// the focus and selectors the kit's focus trap uses (patchFakeDom).
 import { createElement } from 'react';
 import { mount, elements, reactProps } from '../fake-dom.mjs';
 import { loadModule } from '../harness.mjs';
+import { patchFakeDom } from '../../unit/ui-dom-harness.mjs';
+
+patchFakeDom();
 
 /** An event a handler can read: the value a probe types, and no-op propagation calls. */
 const evt = (value = '') => {
@@ -70,14 +76,16 @@ function walkOnce(render, { openers: given = null, onlyNew = null } = {}) {
   const spy = (w) => writes.push(w);
   const [Component, props] = render(spy);
   let view = mount(Component, props);
-  const count = () => [...elements(view.container)].length;
-  const sigsNow = () => controls(view.container).map((c) => c.sig).join('\n');
+  // The page, not the container: a portal's dialog is beside it.
+  const page = () => view.document.body;
+  const count = () => [...elements(page())].length;
+  const sigsNow = () => controls(page()).map((c) => c.sig).join('\n');
   const openers = given ? [...given] : [];
   const replay = () => {
     view.unmount();
     view = mount(Component, props);
     for (const sig of openers) {
-      const c = controls(view.container).find((x) => x.sig === sig);
+      const c = controls(page()).find((x) => x.sig === sig);
       if (c) view.act(() => c.props.onClick(evt()));
     }
     writes = [];
@@ -87,7 +95,7 @@ function walkOnce(render, { openers: given = null, onlyNew = null } = {}) {
   const tried = new Set();
   for (let changed = !given; changed;) {
     changed = false;
-    for (const c of controls(view.container)) {
+    for (const c of controls(page())) {
       if (tried.has(c.sig) || c.el.tagName !== 'BUTTON' || !c.props.onClick) continue;
       tried.add(c.sig);
       const before = count();
@@ -100,7 +108,7 @@ function walkOnce(render, { openers: given = null, onlyNew = null } = {}) {
     }
   }
   const actions = [];
-  let all = controls(view.container);
+  let all = controls(page());
   const sigs = new Set(all.map((c) => c.sig));
   if (onlyNew && all.every((c) => onlyNew.has(c.sig))) { view.unmount(); return { actions, sigs, openers }; }
   let bySig = new Map(all.map((c) => [c.sig, c.el]));
@@ -115,7 +123,7 @@ function walkOnce(render, { openers: given = null, onlyNew = null } = {}) {
     if (writes.length) actions.push({ sig, name: nameOf(el, new Map()), writes });
     if (count() !== before) {
       replay();
-      bySig = new Map(controls(view.container).map((c) => [c.sig, c.el]));
+      bySig = new Map(controls(page()).map((c) => [c.sig, c.el]));
     }
     writes = [];
   };
