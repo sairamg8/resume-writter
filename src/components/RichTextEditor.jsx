@@ -6,7 +6,6 @@ import {
 import { sanitizeRichText, sanitizeForInsert, plainTextToHtml, safeHref } from '@/utils/richText';
 import { useFieldIds } from '@/hooks/useFieldIds';
 import BulletOptimizerModal from '@/components/BulletOptimizerModal';
-import { Portal } from '@/components/ui/Portal';
 
 /**
  * `label` draws a label above the editor; without one, the editor is named by the FieldRow it
@@ -237,20 +236,18 @@ export default function RichTextEditor({ label, ariaLabel, value, onChange, plac
         />
       </div>
 
-      {/* Mounted only while open: its statement starts from the one it opens on, every time. In a
-          portal at the end of <body>: drawn here, it sat inside the entry, section or field around
-          the editor, and when that one is hidden (faded with opacity) the optimizer was faded with it,
-          and controls placed later on the page (the panel's resize handle, the phone's Edit | Preview
-          pill) painted over it and took its clicks (R4-DVIS-23). */}
+      {/* Mounted only while open: its statement starts from the one it opens on, every time. The kit's
+          Dialog draws it in a portal at the end of <body>: drawn here, it sat inside the entry, section
+          or field around the editor, and when that one is hidden (faded with opacity) the optimizer was
+          faded with it, and controls placed later on the page (the panel's resize handle, the phone's
+          Edit | Preview pill) painted over it and took its clicks (R4-DVIS-23). */}
       {optimizerOpen && (
-        <Portal>
-          <BulletOptimizerModal
-            isOpen
-            onClose={() => setOptimizerOpen(false)}
-            initialText={optimizerText}
-            onApply={handleApplyOptimizedText}
-          />
-        </Portal>
+        <BulletOptimizerModal
+          isOpen
+          onClose={() => setOptimizerOpen(false)}
+          initialText={optimizerText}
+          onApply={handleApplyOptimizedText}
+        />
       )}
     </div>
   );

@@ -3,16 +3,18 @@
 // hidden section (SortableSection `opacity-60`) or a hidden Description field (FieldRow `opacity-50`), it
 // was faded with it — opacity below 1 groups every descendant, fixed ones too — and, that ancestor being
 // its own stacking context, controls placed later on the page (the panel's resize handle, the phone's
-// Edit | Preview pill) painted over it and took its clicks. It opens in a portal at the end of <body>
-// now, outside anything faded. The fake DOM has no layout, so this reads where the optimizer is drawn
-// and the classes of everything around it, on the real components (tests/pdf/fake-dom.mjs, loaded
-// through Vite).
+// Edit | Preview pill) painted over it and took its clicks. It is the kit's Dialog now (R4-DVIS-07),
+// which opens in a portal at the end of <body>, outside anything faded. The fake DOM has no layout, so
+// this reads where the optimizer is drawn and the classes of everything around it, on the real
+// components (tests/pdf/fake-dom.mjs, loaded through Vite). The Dialog's focus trap looks its first
+// focus up with querySelector, which the bare fake DOM lacks: patchFakeDom first.
 import { before, after, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { setup, teardown, loadModule } from './harness.mjs';
 import { mount, elements, reactProps } from './fake-dom.mjs';
+import { patchFakeDom } from '../unit/ui-dom-harness.mjs';
 
-before(setup);
+before(async () => { await setup(); patchFakeDom(); });
 after(teardown);
 
 const classes = (el) => (el.getAttribute('class') || '').split(/\s+/).filter(Boolean);
