@@ -1,0 +1,109 @@
+{
+ "cluster": "r5-dash",
+ "branch": "claude/wf-r5-dash",
+ "base": "e9393400224ba8ff850910045ebef08d329e22c6",
+ "rows": [
+  {
+   "id": "R4-DVIS-28",
+   "title": "1024–~1150px (iPad landscape, small laptops): dashboard cards are ≈200px wide in three columns beside the Career History sidebar. Names over ≈21 characters are truncated, so a résumé and its '(Copy)' look identical, and there is no tooltip to read the full name.",
+   "severity": "low",
+   "outcome": "fixed",
+   "commits": [
+    "6b38b4ef7db854adb6e62ab9aecb57c7a9052440",
+    "6cfc383f071b64669c5cddb0455fb52b2d6e41e9",
+    "1d693cb41c049543d6ab61c82009c0cacc5702b8",
+    "71f5a7a44653fdd6373a89a3946f053c887283df"
+   ],
+   "tests": [
+    "tests/pdf/104-r5-dash-card-name-two-lines.test.mjs",
+    "tests/pdf/103-r4-dvis-28-dashboard-cards-wide-enough.test.mjs",
+    "tests/pdf/96-dashboard.test.mjs",
+    "tests/pdf/99-cover-letters.test.mjs",
+    "tests/pdf/89-rename-fresh-name.test.mjs",
+    "tests/pdf/103-r4-dph-26-rename-box-touch-text.test.mjs",
+    "tests/pdf/83-dashboard-thumbnails.test.mjs",
+    "tests/pdf/93-picker-pictures.test.mjs",
+    "tests/pdf/83-templates-ui-leftovers.test.mjs",
+    "tests/unit/touch-reveal.unit.mjs",
+    "cypress/e2e/01-dashboard.cy.js",
+    "cypress/e2e/11-demo-account-keep.cy.js"
+   ],
+   "summary": "Now: a résumé card's name wraps onto up to two lines instead of being cut to one, so about 70 characters show on a lg/xl card. A copy's ending (\" (Copy)\", \" (Copy) (Copy)\", \" (conflict copy)\") always shows. Three or more of one ending in a row show as one with a count (\" (Copy ×6)\"). A name that fits in two lines is one run of text, with the ending right after the last word. A longer name clamps only its base, and the ending stands beside the base's last line. The card measures this before paint, and again when the name or its width changes. Third review (71f5a7a): the reviewer's blocking finding is real. On 1d693cb the measurement was compared with the width the ResizeObserver last saw. That observer is off while Rename is open and while the name has no ending. So if the card was resized or rotated in those moments and the name then changed, every measurement looked stale and was redone before paint, until React threw \"Maximum update depth exceeded\" and the dashboard went blank. Now each measurement also records the width it was taken at, so the card measures once. The hover title and the stored name still hold the full text, and the two-column lg grid from 8a17031 is unchanged.",
+   "product_call": "A card must show enough of the name to tell a résumé from its copies on every device, touch included; the hover title does not count as the fix. The name wraps to at most two lines (line-clamp-2, break-words). A trailing copy ending always shows. A name that fits in two lines reads as one run, with the ending right after the last word. A longer name has only its base clamped with an ellipsis, and its ending stands beside the base's last line. This needs a layout measurement (scrollHeight vs clientHeight). The width a measurement was taken at is the width the card compares against from then on, so a width change the observer missed never causes repeated measuring. A name that is only \"(Copy)\", or has \"(Copy)\" in the middle, is not split. One or two of the same ending show as they are; three or more in a row show as one with a count, e.g. \" (Copy ×4)\". Only what the card shows changes: the stored name, the Rename field and the title keep the full text. A split ending never takes more than half the row. The Rename pencil lines up with the first line.",
+   "remaining": "There is still no real-browser layout check at 1024 px. tests/pdf/104 uses a crude fake line layout (every `cpl` characters is one line), not real text metrics. A browser that reports scrollHeight one pixel over clientHeight for a name that fits would show the split layout, which is still correct but has a small gap. The name is not measured again when only the web fonts finish loading at the same width. Edge case left as is: a mixed chain of endings long enough to wrap the split ending onto two lines beside a one-line base puts part of the ending above the base's line. It needs repeated conflicts between devices. No accessibility items noted.",
+   "ci": "failfirst 36461465598 (71f5a7a: tests/pdf/104 fails '# fail 1' with the diff reversed, passes restored). Tests 36461471458 green: 7 node files (104, 103-r4-dvis-28, 96, 89, 83-dashboard-thumbnails, 103-r4-dph-26, 99), Cypress 01-dashboard, lint. Earlier: 36459923657 (failfirst 1d693cb green), 36459956917 (green, incl. Cypress 11-demo-account-keep), 36457600624 (failfirst 6cfc383 green), 36457604417 (green), 36455773051 (failfirst 6b38b4e green), 36455778707 attempt 2 (green)."
+  }
+ ],
+ "review": {
+  "issues": [
+   {
+    "round": 1,
+    "row": "R4-DVIS-28",
+    "severity": "minor",
+    "file": "src/components/ResumeCard.jsx",
+    "problem": "The name's <p> is a flex row (default stretch), so when the base wraps to two lines the copy ending shows beside the first line, reading as if \"(Copy)\" sits mid-name; the test checked only textContent order.",
+    "resolution": "Fixed in 6cfc383 (items-end: ending beside the base's last line) and 1d693cb (a name that fits in two lines is one inline run, ending right after the last word)."
+   },
+   {
+    "round": 1,
+    "row": "R4-DVIS-28",
+    "severity": "minor",
+    "file": "src/components/ResumeCard.jsx",
+    "problem": "Stacked copy endings (\" (Copy) (Copy) ...\") never shrink or wrap, so after ~5-6 copies the ending takes the whole row and the base vanishes.",
+    "resolution": "Fixed in 6cfc383: three or more of one ending in a row collapse to \" (Copy ×N)\"; the split ending is max-w-1/2 with whitespace-pre-wrap."
+   },
+   {
+    "round": 1,
+    "row": "R4-DVIS-28",
+    "severity": "minor",
+    "file": "src/components/ResumeCard.jsx",
+    "problem": "Duplicate of the first round-1 finding (ending beside the first line of a two-line name).",
+    "resolution": "Fixed with the first round-1 finding (6cfc383, 1d693cb)."
+   },
+   {
+    "round": 1,
+    "row": "R4-DVIS-28",
+    "severity": "minor",
+    "file": "src/components/ResumeCard.jsx",
+    "problem": "Unrelated formatting noise: the space before '=' in LAST_ORIGINAL_HINT was dropped and the new helper split the two hint constants.",
+    "resolution": "Fixed in 6cfc383."
+   },
+   {
+    "round": 2,
+    "row": "R4-DVIS-28",
+    "severity": "minor",
+    "file": "src/components/ResumeCard.jsx",
+    "problem": "With items-end, a base that wraps without clamping leaves a wide gap before the ending, because the shrinking base box fills the row; the ending sits at the box's right edge, not after the last word.",
+    "resolution": "Fixed in 1d693cb: the card measures (scrollHeight vs clientHeight); a name that fits in two lines renders as one inline run with the ending right after the last word; only a clamped base uses the split layout."
+   },
+   {
+    "round": 2,
+    "row": "R4-DVIS-28",
+    "severity": "minor",
+    "file": "src/components/ResumeCard.jsx",
+    "problem": "Duplicate of the round-2 gap finding (report overstated where the ending sits).",
+    "resolution": "Fixed with the round-2 gap finding (1d693cb)."
+   },
+   {
+    "round": 2,
+    "row": "R4-DVIS-28",
+    "severity": "minor",
+    "file": "tests/pdf/104-r5-dash-card-name-two-lines.test.mjs",
+    "problem": "endsTheName accepted any max-w-* token (max-w-none/max-w-full would pass) and did not reject a self-start/self-center on the ending.",
+    "resolution": "Fixed in 1d693cb: the test accepts only a fractional max-w-N/M cap and rejects any self-* other than self-end on the ending."
+   },
+   {
+    "round": 3,
+    "row": "R4-DVIS-28",
+    "severity": "blocking",
+    "file": "src/components/ResumeCard.jsx",
+    "problem": "useSplitEnding compared each measurement against the ResizeObserver's last width; with the observer off (Rename open, or no ending) a width change followed by a name change made every measurement stale, looping in useLayoutEffect until React threw \"Maximum update depth exceeded\" and the dashboard went blank.",
+    "resolution": "Fixed in 71f5a7a: each measurement also records the width it was taken at, so the card measures once; tests/pdf/104 adds the rename-while-resized path (failfirst 36461465598 green)."
+   }
+  ],
+  "fixedByReviewer": []
+ },
+ "a11yNoted": [],
+ "baselineFailures": [],
+ "notes": "Three review rounds; every finding was fixed by the fixer's follow-up commits (none by the reviewer). Round 3 found one blocking crash (render loop in useSplitEnding), fixed in 71f5a7a and proved with failfirst 36461465598. No rejected candidates. Open: no real-browser layout check at 1024 px (tests/pdf/104 uses a fake line layout), no re-measure on web-font load at unchanged width, and a rare mixed chain of endings can wrap the split ending above the base's line. Product calls are recorded in the row's product_call."
+}
