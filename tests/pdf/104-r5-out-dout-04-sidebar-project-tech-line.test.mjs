@@ -20,7 +20,14 @@ async function pdfLine(r, word) {
   assert.ok(at, `"${word}" printed: ${items.map((i) => i.str).join(' | ')}`);
   return items.filter((i) => Math.abs(i.y - at.y) < 0.5).toSorted((a, b) => a.x - b.x);
 }
-const joined = (line) => line.map((i) => i.str).join('').replace(/\s+/g, ' ').trim();
+/**
+ * A line's text, its runs in order, a space between two that do not touch (the reader drops a run of
+ * spaces alone), spaces made single: "Reactx · link".
+ */
+const joined = (line) => line.reduce((out, t, k) => {
+  const prev = line[k - 1];
+  return out + (prev && t.x - (prev.x + prev.w) > 0.8 ? ' ' : '') + t.str;
+}, '').replace(/\s+/g, ' ').replace(/\s*·\s*/g, ' · ').trim();
 
 /** The Word export's line under the project's name. */
 async function wordLine(r) {
