@@ -138,7 +138,11 @@ export function docxXmlLines(xml, links = {}) {
       if (!para) continue;
       open.pop();
       const style = /<w:pStyle w:val="([^"]*)"/.exec(para.props)?.[1] ?? '';
-      const list = /<w:numPr>/.test(para.props);
+      // Word's built-in list styles (List Bullet, List Bullet 2 … List Number 5) keep their numbering in
+      // styles.xml: a paragraph in one is a list item with no numPr of its own (R4-SW-I-02). List
+      // Paragraph has none, so it is one only with a numPr.
+      const styled = /^List\s?(?:Bullet|Number)\s?(\d)?$/i.exec(style);
+      const list = /<w:numPr>/.test(para.props) || Boolean(styled);
       const heading = /^(?:heading|berschrift|titre)\s*(\d)?/i.exec(style);
       // Its own line before its text boxes' lines, read while it was open: a side column's box is
       // anchored to the first paragraph, often the name, and the name comes first. A heading's after
@@ -146,8 +150,10 @@ export function docxXmlLines(xml, links = {}) {
       // page's header, over that title.
       const at = heading ? lines.length : para.start;
       levels.splice(at, 0, heading ? Number(heading[1] || 1) : 0);
-      // A list item's level: a nested one's is 1 and more (R4-LO-02).
-      const depth = list ? Number(/<w:ilvl w:val="(\d+)"/.exec(para.props)?.[1] || 0) : 0;
+      // A list item's level: a nested one's is 1 and more (R4-LO-02). Its own w:ilvl, else its list
+      // style's number less one: List Bullet 2 is a level-1 item (R4-SW-I-02).
+      const ilvl = /<w:ilvl w:val="(\d+)"/.exec(para.props)?.[1];
+      const depth = list ? Number(ilvl ?? Math.max(0, Number(styled?.[1] || 1) - 1)) : 0;
       lines.splice(at, 0, { text: list && para.text.trim() ? `• ${para.text}` : para.text, hint: heading ? 'heading' : (/^title$/i.test(style) ? 'name' : undefined), ...(depth ? { depth } : {}), ...(para.links ? { links: para.links } : {}) });
     } else if (m[0].startsWith('<w:p') && !m[0].startsWith('<w:pPr')) {
       if (!m[0].endsWith('/>')) open.push({ text: '', props: '', start: lines.length }); // <w:p/>: an empty one, no line (as before)
