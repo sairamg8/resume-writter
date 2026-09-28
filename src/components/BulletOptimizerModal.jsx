@@ -20,9 +20,12 @@ export default function BulletOptimizerModal({ isOpen, onClose, initialText = ''
   const [activeCategory, setActiveCategory] = useState('Technical & Engineering');
   // Copy's outcome, shown on the button for a moment: 'done', 'failed' or null.
   const [copied, setCopied] = useState(null);
-  // The statement as it was before a template replaced it, for Undo (R4-DUX-22); null when there is
-  // nothing to undo. It stays through further template picks (Undo goes back to the user's own text)
-  // and is dropped once the text is changed any other way.
+  // The statement as it was before a template replaced it, for "Restore my statement" (R4-DUX-22); null
+  // when there is nothing to restore. A template is full of placeholders ("[X]%", "[feature/system]"), so
+  // the text is always edited next: the saved statement stays through typing, Auto-Fix and the chips
+  // (dropping it on the first keystroke left Cancel, and the whole session with it, as the only way
+  // back), and through further template picks (it is the user's own text that comes back). It goes once
+  // it is restored, or once the text is that statement again; Apply and closing unmount the modal.
   const [beforeTemplate, setBeforeTemplate] = useState(null);
 
   if (!isOpen) return null;
@@ -30,10 +33,14 @@ export default function BulletOptimizerModal({ isOpen, onClose, initialText = ''
   const analysis = analyzeBullet(text);
   const { score, hasActionVerb, hasMetric, weakPhrases, suggestions } = analysis;
 
-  /** Any change but a template: the statement is the user's own again, so Undo goes away. */
+  /**
+   * Any change but a template (typing, Auto-Fix, a chip): `next` is the new text, or a function of the
+   * current one. The saved statement is kept for restoring, unless the text is that statement again.
+   */
   function editText(next) {
-    setText(next);
-    setBeforeTemplate(null);
+    const value = typeof next === 'function' ? next(text) : next;
+    setText(value);
+    if (value === beforeTemplate) setBeforeTemplate(null);
   }
 
   function handleAutoFix() {
@@ -50,15 +57,17 @@ export default function BulletOptimizerModal({ isOpen, onClose, initialText = ''
     editText(prev => insertMetric(prev, metricStr));
   }
 
-  // A template replaces the whole statement, so the text it replaced is kept for Undo.
+  // A template replaces the whole statement, so the text it replaced is kept for restoring.
   function handleInsertTemplate(tmpl) {
     if (tmpl === text) return;
     setBeforeTemplate(prev => (prev === null ? text : prev));
     setText(tmpl);
   }
 
-  function handleUndoTemplate() {
-    editText(beforeTemplate);
+  // Back to the user's own statement: the edits made to the template go, as the button says.
+  function handleRestoreStatement() {
+    setText(beforeTemplate);
+    setBeforeTemplate(null);
   }
 
   function handleApply() {
@@ -135,10 +144,11 @@ export default function BulletOptimizerModal({ isOpen, onClose, initialText = ''
             <div className="flex items-center justify-between gap-3 text-[11px] text-gray-500">
               <span>Template applied: your statement was replaced.</span>
               <button
-                onClick={handleUndoTemplate}
+                onClick={handleRestoreStatement}
+                title="Puts your statement back as it was before the template; changes made to the template are discarded."
                 className="font-semibold text-blue-600 hover:text-blue-800 hover:underline shrink-0"
               >
-                Undo
+                Restore my statement
               </button>
             </div>
           )}
