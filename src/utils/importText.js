@@ -213,16 +213,23 @@ function headingFields(raw, hint) {
 
 /**
  * A heading wholly bold or italic (headingFields' `lone`) is one field only where the file is the
- * export's: a grouped employer (role headings under it) or a grouped role, or a file whose entry
- * headings use the export's "**primary** — *secondary*" — its single-field entries print one run. Else
- * it is hand-written, "### **Software Engineer — Google**", and split at its dashes as it always was.
+ * export's: a grouped employer (a role heading under it with no date between, as roleEntries reads a
+ * group) or a role under one, or a file whose entry headings use the export's "**primary** —
+ * *secondary*" — its single-field entries print one run. Else it is hand-written, "### **Software
+ * Engineer — Google**" with its date under it (and maybe a "#### Highlights"), and split at its dashes
+ * as it always was.
  */
 function loneFields(out) {
   const exported = out.some((l) => (l.hint === 'entry' || l.hint === 'role') && /^\*\*(?:\\.|[^*\\])+\*\*\s+—\s+\*(?:\\.|[^*\\])+\*$/.test(l.raw));
+  let group = false; // whether the entry heading in force is a grouped employer
   out.forEach((l, k) => {
+    if (l.hint === 'entry') {
+      let next = k + 1;
+      while (next < out.length && !out[next].hint) next += 1;
+      group = out[next]?.hint === 'role' && !out.slice(k + 1, next).some(dated);
+    } else if (l.hint && l.hint !== 'role') group = false;
     if (l.lone) {
-      const next = out.slice(k + 1).find((x) => x.hint);
-      if (!exported && l.hint !== 'role' && next?.hint !== 'role') delete l.fields;
+      if (!exported && !group) delete l.fields;
       delete l.lone;
     }
     delete l.raw;
@@ -357,6 +364,8 @@ const headerPieces = (text) => text.split(/\t|\s+[|•·◆⋅∙▪]\s+|\s{3,}/
 
 /** The pieces of an entry's header line: tabs and | · • marks. */
 const pieces = (text) => text.split(/\t|\s+[|·•]\s+/).map((s) => s.trim()).filter(Boolean);
+/** Whether a line holds a date: an entry heading with one under it is no grouped employer (loneFields, roleEntries). */
+const dated = (l) => pieces(l.text).some((p) => readDateRange(p) || trailingDate(p));
 /** A header piece's fields: "Company — Role", "Company - Role". */
 const fieldsOf = (text) => text.split(/\s+[—–]\s+|\s+-\s+/).map((s) => s.trim()).filter(Boolean);
 
@@ -861,10 +870,10 @@ function roleEntries(type, lines) {
       let next = k + 1;
       while (next < lines.length && !lines[next].hint) next += 1;
       const under = lines.slice(k + 1, next);
-      const dated = under.some((x) => pieces(x.text).some((p) => readDateRange(p) || trailingDate(p)));
+      const hasDate = under.some(dated);
       // Not an entry whose title holds a role and a company ("### Acme — Engineer" over "#### Highlights").
       const whole = (l.fields || fieldsOf(l.text)).length > 1 || pieces(l.text).length > 1;
-      if (JOB.has(type) && lines[next]?.hint === 'role' && !dated && !whole) {
+      if (JOB.has(type) && lines[next]?.hint === 'role' && !hasDate && !whole) {
         const placeAt = under.findIndex((x) => PLACE.test(x.text));
         group = { company: l.text, place: placeAt >= 0 ? under[placeAt].text : '', lead: under.filter((x, i) => i !== placeAt), first: true };
         k = next - 1;

@@ -70,3 +70,18 @@ test('a hand-written heading wholly in bold or italics is still split at its das
   assert.deepEqual(['**Acme - Senior Engineer**', '*Acme – Engineer*'].map((h) => [at(h).company, at(h).role]),
     [['Acme', 'Senior Engineer'], ['Acme', 'Engineer']]);
 });
+
+// A "####" heading under a dated one is no role of a grouped employer: a date under the entry heading
+// shows it is a job of its own (roleEntries), so "### **Software Engineer — Google**" dated, over a
+// "#### Highlights", is hand-written and split at its dash. Keeping it whole whenever a "####" followed
+// it left the company empty.
+test('a hand-written bold heading with its date under it and a "####" sub-heading is still split at its dash', () => {
+  const r = fromMd('# Robin Vale\n\n## Experience\n\n### **Software Engineer — Google**\n*Jan 2020 – Present*\n\n#### Highlights\n- Built things\n');
+  const [job] = items(r, 'experience');
+  assert.deepEqual([job.company, job.role], ['Google', 'Software Engineer']);
+  // A grouped employer (no date under it) still keeps its dash, and so do its roles.
+  const g = fromMd('# Pat Sample\n\n## Experience\n### **Deloitte - Consulting**\n*Portland, OR*\n\n#### **Senior Engineer - Backend**\n*2022 – Present*\n\n#### **Engineer**\n*2020 – 2022*\n');
+  assert.deepEqual(items(g, 'experience').map((j) => [j.company, j.role]), [
+    ['Deloitte - Consulting', 'Senior Engineer - Backend'], ['Deloitte - Consulting', 'Engineer'],
+  ]);
+});
