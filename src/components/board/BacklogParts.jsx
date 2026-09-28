@@ -120,8 +120,9 @@ export function EpicPanel({ board, selected = [], onToggle, onOpen, onCreate, on
           );
         })}
       </ul>
-      {/* Only epics are made here: a Task/Story/Bug picker would be ignored (R4-BRD-10). */}
-      <InlineCreate label="Create epic" showType={false} onCreate={({ title }) => onCreate(title)} />
+      {/* Only epics are made here: a Task/Story/Bug picker would be ignored (R4-BRD-10), and the
+          prompt asks for an epic, not a task (R4-SW-B-04). */}
+      <InlineCreate label="Create epic" showType={false} placeholder="What is this epic?" onCreate={({ title }) => onCreate(title)} />
     </aside>
   );
 }
