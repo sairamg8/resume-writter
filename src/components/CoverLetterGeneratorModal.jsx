@@ -86,7 +86,8 @@ export default function CoverLetterGeneratorModal({ isOpen, onClose, resume, cov
       )}
     >
       <div className="space-y-5">
-        {/* Target Position Form */}
+        {/* Target Position Form. Its fields are 16 px on a touch screen: iOS zooms the page into any
+            smaller field it focuses (R4-DPH-36). A mouse keeps 12 px. */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
             <label className="block text-xs font-semibold text-gray-700 mb-1 flex items-center gap-1.5">
@@ -97,7 +98,7 @@ export default function CoverLetterGeneratorModal({ isOpen, onClose, resume, cov
               value={company}
               onChange={e => setCompany(e.target.value)}
               placeholder="e.g. Google, Stripe"
-              className="w-full text-xs px-3 py-2 border border-gray-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full text-xs pointer-coarse:text-base px-3 py-2 border border-gray-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
           <div>
@@ -109,7 +110,7 @@ export default function CoverLetterGeneratorModal({ isOpen, onClose, resume, cov
               value={role}
               onChange={e => setRole(e.target.value)}
               placeholder={resume?.personal?.title || "e.g. Staff Software Engineer"}
-              className="w-full text-xs px-3 py-2 border border-gray-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full text-xs pointer-coarse:text-base px-3 py-2 border border-gray-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
           <div>
@@ -121,7 +122,7 @@ export default function CoverLetterGeneratorModal({ isOpen, onClose, resume, cov
               value={recipient}
               onChange={e => setRecipient(e.target.value)}
               placeholder="e.g. Hiring Manager"
-              className="w-full text-xs px-3 py-2 border border-gray-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full text-xs pointer-coarse:text-base px-3 py-2 border border-gray-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
         </div>

@@ -94,7 +94,9 @@ export default function ShareLinkModal({ isOpen, resume, uid, io = firebasePubli
               <>
                 <p>This résumé is published: anyone with this link can open a read-only copy and download it as a PDF.</p>
                 <div className="flex items-center gap-1.5">
-                  <input readOnly value={url} aria-label="Public link" onFocus={e => e.target.select()} className="flex-1 min-w-0 px-2 py-1.5 border border-gray-200 rounded-lg bg-gray-50 text-gray-800" />
+                  {/* 16 px on a touch screen: a tap focuses it (and selects the link), and iOS zooms the page
+                      into any focused field under 16 px (R4-DPH-36). A mouse keeps 12 px. */}
+                  <input readOnly value={url} aria-label="Public link" onFocus={e => e.target.select()} className="flex-1 min-w-0 px-2 py-1.5 text-xs pointer-coarse:text-base border border-gray-200 rounded-lg bg-gray-50 text-gray-800" />
                   <button onClick={() => copyText(url).then(() => setCopied('Copied'), () => setCopied('Copy failed'))} className="flex items-center gap-1 px-2 py-1.5 border border-gray-200 rounded-lg hover:bg-gray-50 shrink-0">
                     <Copy size={12} aria-hidden="true" /> {copied || 'Copy'}
                   </button>
