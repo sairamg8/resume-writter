@@ -104,16 +104,17 @@ export default function BulletOptimizerModal({ isOpen, onClose, initialText = ''
   // A click beside the box closes it only while the statement is still the one it opened with: once
   // it is rewritten, a stray click must not throw the rewrite away (R4-DUX-09). Escape likewise: it is
   // pressed by reflex in a text field, and the kit's default closed a rewrite with one key (R5-OPT-01).
+  // The Dialog still takes that Escape and ignores it here, rather than being told not to handle it:
+  // unhandled, it went on to the dialog the editor sits in (an issue's), which closed instead.
   // Cancel and × always close it; Apply saves.
   return (
     <Dialog
       open
-      onClose={onClose}
+      onClose={(reason) => { if (reason !== 'escape' || text === initialText) onClose(); }}
       size="lg"
       title="Bullet Optimizer & STAR Formula"
       description="Transform weak descriptions into Google X-Y-Z high-impact achievements"
       closeOnOverlay={text === initialText}
-      closeOnEscape={text === initialText}
       footer={(
         <>
           <button
