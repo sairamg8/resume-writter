@@ -278,3 +278,34 @@ it('R4-BRD-05: an open still landing (the app\'s router commits it later) surviv
     await page.view.unmount();
   }
 });
+
+// R4-SW-B-05: the close guard of 0da56a4 on an open still landing. HOME-1 is open; its trail's
+// epic (HOME-3) is clicked, and before that push lands the HOME-1 view still showing is closed:
+// that close steps back over the pending count (go -2) and records itself on the pending address.
+// The push then lands under a new key; a second close before the step back lands (a double-clicked
+// X, Escape held down) must do nothing — the guard carried over to the address that landed —
+// or it steps back two more, off the board.
+it('R4-BRD-05 / R4-SW-B-05: a close asked while an open is still landing keeps its guard when that open lands: a second close steps back no further', async () => {
+  for (const how of ['X', 'Escape']) {
+    const calls = [];
+    const page = mountBoard('/boards/p1?issue=HOME-1', { deferred: { state: { issueDepth: 1 }, calls } });
+    const close = () => (how === 'X' ? page.click(page.byLabel('Close')) : page.escape());
+    try {
+      await page.settle();
+      assert.equal(page.open(), 'HOME-1 Fix the tap');
+      page.click(page.buttonWith('HOME-3'));
+      assert.equal(calls.filter(([h]) => h === 'push').length, 1, `${how}: the epic's open is pushed`);
+      assert.equal(page.open(), 'HOME-1 Fix the tap', `${how}: the push has not landed yet`);
+      close();
+      assert.deepEqual(calls.filter(([h]) => h === 'go'), [['go', -2]], `${how}: the close steps back over both entries`);
+      page.commit(); // the epic's address lands, under a new key
+      await page.settle();
+      assert.equal(page.open(), 'HOME-3 Garden makeover');
+      close();
+      assert.deepEqual(calls.filter(([h]) => h === 'go'), [['go', -2]], `${how}: the second close stepped back again, off the board`);
+      assert.equal(calls.filter(([h]) => h === 'replace').length, 0, `${how}: nor dropped the param in place`);
+    } finally {
+      await page.view.unmount();
+    }
+  }
+});
