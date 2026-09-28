@@ -144,8 +144,9 @@ export default function BulletOptimizerModal({ isOpen, onClose, initialText = ''
           )}
         </div>
 
-        {/* Quality Indicators & Fixes */}
-        <div className="grid grid-cols-3 gap-2 text-xs">
+        {/* Quality Indicators & Fixes. Stacked on a phone: a third of its width is narrower than
+            "Quantifiable", which ran through its tile's border (R4-DPH-41). */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
           <div className={`p-2.5 rounded-xl border flex items-center gap-1.5 ${hasActionVerb ? 'bg-emerald-50/80 border-emerald-200 text-emerald-800' : 'bg-amber-50/80 border-amber-200 text-amber-800'}`}>
             {hasActionVerb ? <CheckCircle2 size={14} className="text-emerald-600 shrink-0" /> : <AlertTriangle size={14} className="text-amber-600 shrink-0" />}
             <span className="font-semibold">{hasActionVerb ? 'Strong Action Verb' : 'Verb Missing'}</span>
