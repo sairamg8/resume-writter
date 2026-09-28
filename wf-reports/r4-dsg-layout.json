@@ -1,0 +1,1109 @@
+{
+ "cluster": "r4-dsg-layout",
+ "branch": "claude/wf-r4-dsg-layout",
+ "base": "94b4d9b",
+ "rows": [
+  {
+   "id": "R4-DPH-01",
+   "severity": "high",
+   "title": "At 375px the Timeline's sticky 320px name column fills almost the whole scroll box, so only about one day of the grid shows beside it and the bars pass under the names as you scroll.",
+   "commits": [
+    "686f435"
+   ],
+   "tests": [
+    "tests/pdf/103-r4-dph-01-timeline-name-column.test.mjs"
+   ],
+   "outcome": "fixed",
+   "summary": "Now the Timeline grid sets two variables. --name-w is 10rem below sm and 20rem (the old 320px) from sm up. --depth-w is 12px below sm and 24px from sm up. The header's Issue cell and every row's name cell use w-(--name-w). A child's padding is calc(12px + depth * var(--depth-w)), and the today line sits at calc(var(--name-w) + N px). At 375px about six days show beside a 160px name column. Desktop and tablet stay exactly as before: 320px column, 24px step, today line at 320 + N. Product call (from the coordinator): 10rem on phones and a halved child indent."
+  },
+  {
+   "id": "R4-DPH-02",
+   "severity": "high",
+   "title": "Job Tracker Summary view: grids with no column template below xl/lg widen past the phone screen when a job row has ordinary-length text",
+   "commits": [
+    "c69c42c"
+   ],
+   "tests": [
+    "tests/pdf/103-r4-dph-02-summary-grid-columns.test.mjs"
+   ],
+   "outcome": "fixed",
+   "summary": "Now: the Summary's page grid (JobTracker.jsx) and its stat and cards grids (JobSummary.jsx) are grid-cols-1 below their breakpoints. So the one column is minmax(0,1fr), not an implicit auto track that grew to the min-content of a job row's nowrap company or role. The grid items get no automatic minimum, and at 375px the cards, the pipeline and the CareerHistoryPanel aside are stretched to the screen width. The xl:grid-cols-[1fr_18rem], lg:grid-cols-2, sm:grid-cols-2 and xl:grid-cols-4 templates are unchanged. Test traced: the fixtures render the Upcoming-deadlines row, the parentNode chains reach the right grids, no other rendered component has a responsive-only grid, and the assertions fail with the src change reverted."
+  },
+  {
+   "id": "R4-DPH-03",
+   "severity": "high",
+   "title": "A job task with a URL or a long word pushes its delete X off-screen",
+   "commits": [
+    "914463f"
+   ],
+   "tests": [
+    "tests/pdf/103-r4-dph-03-task-long-word-wraps.test.mjs"
+   ],
+   "outcome": "fixed",
+   "summary": "Now a task's text span is `min-w-0 flex-1 break-words`, the same as job/Field.jsx (J-12). A URL or long word wraps inside its row, and the shrink-0 delete X stays on screen. This holds for pending and done tasks; TodoItem's only caller is TasksTab. The test mounts the real TasksTab with both kinds of task. Reverting the src change makes its min-w-0/break-words assertion fail."
+  },
+  {
+   "id": "R4-DPH-04",
+   "severity": "high",
+   "title": "Top-bar quick search is display:none below 640px, so phones cannot search issues and projects",
+   "commits": [
+    "7a0afd8",
+    "60b2f6e"
+   ],
+   "tests": [
+    "tests/pdf/103-r4-dph-04-phone-search.test.mjs"
+   ],
+   "outcome": "fixed",
+   "summary": "Now: below sm a search IconButton (sm:hidden) opens the same QuickSearch as a fixed bar over the top-bar row, using only max-sm: classes. It is shown with flushSync and then focused within the same tap, so iOS raises the keyboard. Escape, the X, picking a result, or blur after 120ms close it. The '/' hotkey now opens the bar and focuses it the same way, so on a narrow window or a phone with a keyboard it no longer focuses a hidden box. From sm up nothing changes visually: the wrapper's classes are the old set plus max-sm: ones only. The test records whether the box was shown at the moment focus() ran, so focusing before the bar opens, or later through a frame or timer, fails."
+  },
+  {
+   "id": "R4-DPH-05",
+   "severity": "medium",
+   "title": "On a 375px phone the Calendar grid is 768px wide and pans sideways inside the page scroller, and the Today / previous / next / month-title row sits in that same scroller, so it slides off to the left as soon as you pan to see Thursday to Sunday.",
+   "commits": [
+    "f2d9466"
+   ],
+   "tests": [
+    "tests/pdf/103-r4-dph-05-calendar-controls-outside-scroller.test.mjs"
+   ],
+   "outcome": "fixed",
+   "summary": "Now the Today / previous / next / month-title row sits outside the scroller, which holds only the min-w-[48rem] grid. On a 375px phone the grid pans sideways in its own box, as Board.jsx and ProjectTimeline.jsx already do, and the controls stay on screen. Desktop keeps the same 12px gap: the old gap-3 became pb-3 on the row. One side effect: on a tall month the controls no longer scroll away vertically. Product call (coordinator): no agenda view. The test finds the grid's nearest overflow-auto/overflow-x-auto ancestor. With the src change reverted, that ancestor is the old scroller, which contains the Today button, so the assertion fails."
+  },
+  {
+   "id": "R4-DPH-06",
+   "severity": "medium",
+   "title": "Board page at 375: the project header, the wrapping filter toolbar and the sprint note use about half the height, which leaves a short kanban area",
+   "commits": [
+    "9d87fb3"
+   ],
+   "tests": [
+    "tests/pdf/103-r4-dph-06-board-toolbar-filters.test.mjs"
+   ],
+   "outcome": "fixed",
+   "summary": "Now below md the project toolbar (used by Board, ProjectList, ProjectCalendar and Backlog) has two things on one row: the search (flex-1 min-w-0, where it used to fill a row of its own) and a md:hidden 'Filters' button. The button shows how many values are ticked plus the quick filter. Tapping it shows Epic/Type/Label/Priority, Overdue/Due this week, Clear filters and the right slot with Group by as a wrapped w-full row. From md up the wrapper is display:contents and the button is hidden, so the toolbar is the same single row as before (the search is w-52 with the default flex). Product call carried over from the fixer: on a phone, ProjectList's 'N of M issues' and the Backlog's 'Epic panel' button also sit behind Filters. They stay in the DOM, so the existing node tests that click 'Epic panel' still find them."
+  },
+  {
+   "id": "R4-DPH-07",
+   "severity": "medium",
+   "title": "PageHeader stays sticky on phones and pins about 175px of header on the scrolling pages",
+   "commits": [
+    "64b255d"
+   ],
+   "tests": [
+    "tests/pdf/103-r4-dph-07-page-header-phone-static.test.mjs"
+   ],
+   "outcome": "fixed",
+   "summary": "Now: from md up PageHeader is sticky as before ('md:sticky md:top-0'). Below 768px it is static, so a phone scrolls it away. z-20, shrink-0, bg-white and the tab border are kept at every width. I checked all five callers (ProjectHeader, JobDetail, JobTracker, YourWork, Boards): none passes a className that depends on sticky. If the commit is reverted, the test sees a bare 'sticky' and no 'md:sticky', so it fails. Product call (coordinator): a toolbar passed as children also scrolls away on a phone."
+  },
+  {
+   "id": "R4-DPH-08",
+   "severity": "medium",
+   "title": "Projects table (/boards) is 768px wide on a phone, so the row's actions menu (Summary, Project settings, Delete) needs a sideways pan",
+   "commits": [
+    "3ef9d2e"
+   ],
+   "tests": [
+    "tests/pdf/103-r4-dph-08-projects-table-phone.test.mjs"
+   ],
+   "outcome": "fixed",
+   "summary": "Now: below sm (640px), the Projects table at /boards hides the Key, Type, Lead and Updated columns, in the header and in every row (`hidden sm:table-cell`). Its 48rem minimum width applies only from sm up. At 375px the remaining columns are star (about 44px, because the 28px IconButton plus padding beats w-10), Name, Issues (128px) and actions (48px). They fit the 343px content box, so each row's menu ends inside the screen. Product call (fixer's): on a phone the Name button is `max-sm:w-full max-sm:contain-inline-size`, so a long name is cut short with an ellipsis instead of widening the table. Every new class is scoped with sm: or max-sm:, so from sm up the table is unchanged."
+  },
+  {
+   "id": "R4-DPH-09",
+   "severity": "medium",
+   "title": "Project List table is at least 1024px on a phone and Status starts about 424px in. Hiding only Labels, Parent, Points and Updated does not bring Status into view",
+   "commits": [
+    "613cc75"
+   ],
+   "tests": [
+    "tests/pdf/103-r4-dph-09-project-list-phone.test.mjs"
+   ],
+   "outcome": "fixed",
+   "summary": "Now: below sm, the project List hides Type, Labels, Parent, Points and Updated, in the header (COLUMNS) and in every body row. The 64rem table minimum applies only from sm up, and Summary's minimum is 10rem on a phone (16rem from sm up). At 375px the Status control starts about 280px from the screen edge (16px gutter, 96px Key, 160px Summary, 8px padding). A 'To Do' control (about 72px) is fully in view. For 'In Progress' (about 105px) the label is in view and only the chevron may be cut by a few px. Priority and Due date are a short pan away. Product call (fixer's): on a phone the Summary button is `max-sm:w-full max-sm:contain-inline-size`, so a long summary is cut short instead of pushing Status off screen. From sm up nothing changes."
+  },
+  {
+   "id": "R4-DPH-10",
+   "severity": "medium",
+   "title": "InlineCreate row variant keeps the summary field beside a w-32 type picker and the Create button on phones, leaving it about 100px wide",
+   "commits": [
+    "584097c"
+   ],
+   "tests": [
+    "tests/pdf/103-r4-dph-10-row-composer-stacks.test.mjs"
+   ],
+   "outcome": "fixed",
+   "summary": "Now the row variant of InlineCreate uses the base 'flex flex-col' below sm and 'sm:flex-row sm:items-center' from sm up. At 375px the summary textarea is full width, with the type picker and Create on the line under it. This covers both callers (Backlog sections and ProjectList). The column variant, used by BoardColumn and the Epic panel, is unchanged, and the handlers are untouched. With the src change reverted, the test fails on the missing sm:flex-row and on the bare flex-row/items-center."
+  },
+  {
+   "id": "R4-DPH-11",
+   "severity": "medium",
+   "title": "Board text fields are 14px on touch screens, so iOS zooms the page when one is focused",
+   "commits": [
+    "70b167e",
+    "b1645f1",
+    "6ef9736",
+    "489eabf",
+    "322a9bb",
+    "1bb7765",
+    "88143ab"
+   ],
+   "tests": [
+    "tests/pdf/103-r4-dph-11-add-column.test.mjs",
+    "tests/pdf/103-r4-dph-11-board-fields.test.mjs",
+    "tests/pdf/103-r4-dph-11-settings-fields.test.mjs",
+    "tests/pdf/103-r4-dph-11-topbar-search.test.mjs"
+   ],
+   "outcome": "fixed",
+   "summary": "Now all 22 inputs, selects and textareas on BoardSettings carry pointer-coarse:text-base through controlClass, including the 'Move its issues to' select. The count checks out: details 4, three columns × 3, the strip 1, New column 1, two labels × 2, New label 2, days 1. The checkbox is excluded. leading-5 keeps the line height (Tailwind v4 text-base yields to --tw-leading), so heights do not jump on touch. Against the parent file, every field lacks the token and the test fails. Now every text field in the owned files carries pointer-coarse:text-base, next to text-sm: the InlineCreate textarea, the checklist's add input, the comment Composer textarea, and DateInput and PointsInput. The checklist item's InlineEdit and the Backlog sprint name's InlineEdit get it through inputClassName. So each field is 16px on touch screens and 14px with a mouse, the same pattern as the kit's Field.jsx. Tail"
+  },
+  {
+   "id": "R4-DPH-12",
+   "severity": "medium",
+   "title": "On a phone, the job stage stepper's 'Phone Screen' label runs into 'Interview' and the connectors shrink to 0",
+   "commits": [
+    "5274fde"
+   ],
+   "tests": [
+    "tests/pdf/103-r4-dph-12-stepper-labels-wrap.test.mjs"
+   ],
+   "outcome": "fixed",
+   "summary": "Now a stepper button can shrink and its label wraps, centred. Each connector keeps 8 px (min-w-2) and sits at mt-[17px], on the circles' centre line, and steps are top-aligned. At 375 px a step is about 60 px: the button gets about 48 px, 'Phone Screen' wraps onto two lines, and the connector stays. Product call (the fixer's): labels no longer use nowrap at any width, so at lg with the sidebar open 'Phone Screen' can also wrap. The only other desktop change is that the connector moves up about 1.5 px. The test reads the real Pipeline; the shrink-0 and nowrap assertions fail without the fix."
+  },
+  {
+   "id": "R4-DPH-13",
+   "severity": "medium",
+   "title": "The 'Mark as: On Hold / Rejected / Withdrawn' group does not wrap; on a phone its label and pills break onto two lines each",
+   "commits": [
+    "845a9ea"
+   ],
+   "tests": [
+    "tests/pdf/103-r4-dph-13-mark-as-wraps.test.mjs"
+   ],
+   "outcome": "fixed",
+   "summary": "Now the 'Mark as:' group is flex-wrap, and its label and pills are whitespace-nowrap. On a phone the group takes its own line in the action row (which already wraps) and wraps between pills, so no pill and not 'Mark as:' breaks inside itself. Where the group fits, as on desktop, nothing changes. The test fails without flex-wrap and nowrap."
+  },
+  {
+   "id": "R4-DPH-14",
+   "severity": "medium",
+   "title": "Overview 'Resume Used' select has no min-w-0: a long résumé name pushes the select and the Open-resume button past the card",
+   "commits": [
+    "5c9bc63"
+   ],
+   "tests": [
+    "tests/pdf/103-r4-dph-14-resume-select-shrinks.test.mjs"
+   ],
+   "outcome": "fixed",
+   "summary": "Now: the Overview's Resume Used select is min-w-0 flex-1, so a long résumé name is cut off inside its own box, and the shrink-0 Open-resume button stays in the card. The Choice selects named at :28 (Work Mode, Source) and the Deadline date input get the same class. I checked the chain above it: JobDetail's column is min-w-0, and Tailwind v4's grid-cols-1 and grid-cols-2 are minmax(0,1fr). Nothing up the chain widens the card, at 375 px or beside the lg aside. Nothing changes when there is room."
+  },
+  {
+   "id": "R4-DPH-15",
+   "severity": "low",
+   "title": "Kit Select with a long option does not overflow the Create issue dialog at 375px",
+   "commits": [],
+   "tests": [],
+   "outcome": "not-a-bug",
+   "summary": "Now: nothing changes. The kit Select's <select> is w-full inside a stretched flex column (Field root min-w-0), so a flex item with a specified width has an automatic minimum of at most 100%; a long option is clipped inside the native control, and no ancestor takes its width from it (second agent's proof)."
+  },
+  {
+   "id": "R4-DPH-16",
+   "severity": "medium",
+   "title": "JobForm's sticky header crams arrow, title and two buttons into one non-wrapping row at 375px",
+   "commits": [
+    "b7c4b3d",
+    "86b5ad5"
+   ],
+   "tests": [
+    "tests/pdf/103-r4-dph-16-job-form-header-wraps.test.mjs"
+   ],
+   "outcome": "fixed",
+   "summary": "Now: the header row is PageHeader's flex-wrap. The title block is min-w-0 flex-1 basis-56 with a truncating h1, so at 375px Cancel/Save (whitespace-nowrap kit Buttons) wrap under the title, at a px-4 gutter. Reviewer fix 86b5ad5: PageHeader's non-last crumbs are shrink-0, and this is the only page with a user-named middle crumb, so a long company name ran the breadcrumb row off a 375px screen (clipped by the shell's overflow-x-hidden) and hid the page's crumb. That crumb now truncates at max-w-40 (md:max-w-xs), with the full name as title. A new test in the same file covers it."
+  },
+  {
+   "id": "R4-DPH-17",
+   "severity": "low",
+   "title": "Column-delete strip: the 'move to' select is as wide as the longest column title and can push past the card at 375",
+   "commits": [
+    "a697381"
+   ],
+   "tests": [
+    "tests/pdf/103-r4-dph-17-move-to-select-fits.test.mjs"
+   ],
+   "outcome": "fixed",
+   "summary": "Now the strip's label is 'flex min-w-0 max-w-full flex-wrap items-center gap-2' and the select is 'min-w-0 max-w-full' with no w-full. At 375px a long column title makes the select drop under its words and shrink to the strip's width. Because the select is a compressible control with a percentage max-width, its min-content contribution is zero, so it cannot widen any ancestor either. The commit reverses cleanly, and the test's min-w-0 and max-w-full assertions then fail."
+  },
+  {
+   "id": "R4-DPH-18",
+   "severity": "low",
+   "title": "On a 375px phone, when some filtered issues have no due date, the controls row squeezes both the month title and the 'N issues have no due date' note: the title breaks onto two lines ('September / 2026') and the note wraps to about 2 to 3 lines in a narrow column on the right.",
+   "commits": [
+    "63db813",
+    "4c56bd0"
+   ],
+   "tests": [
+    "tests/pdf/103-r4-dph-18-calendar-controls-wrap.test.mjs"
+   ],
+   "outcome": "fixed",
+   "summary": "Now the controls row wraps (flex-wrap gap-x-2 gap-y-1). Below 640px the 'N issues have no due date' note is w-full on a line of its own, and from sm up it goes back to the right end (sm:ml-auto sm:w-auto). The month title is whitespace-nowrap, so it never breaks. The horizontal gap is the same on desktop. The test fails at f2d9466: no flex-wrap, and a bare ml-auto instead of w-full. 4c56bd0 only corrects the component's doc comment, which said the undated count sits under the grid when it sits in the controls row above it."
+  },
+  {
+   "id": "R4-DPH-19",
+   "severity": "low",
+   "title": "In the Interview Stage header, a long custom stage pill overflows the section and a predefined one squeezes the description; the section's padding is not responsive",
+   "commits": [
+    "67e9bec",
+    "3d1fc23"
+   ],
+   "tests": [
+    "tests/pdf/103-r4-dph-19-stage-pill-wraps.test.mjs"
+   ],
+   "outcome": "fixed",
+   "summary": "Now the Interview Stage section is p-4 sm:p-6, like JobForm's other sections. The header wraps (gap-x-4 gap-y-2), and the picked-stage pill is max-w-full min-w-0 [overflow-wrap:anywhere], so a long custom stage wraps inside it. The reviewer added 3d1fc23: the same long custom stage in the 'Your Stages' list now also wraps (min-w-0 on its button, min-w-0 break-words on its name). Its row's Remove X stays in the section. The test now checks the list row too."
+  },
+  {
+   "id": "R4-DPH-20",
+   "severity": "low",
+   "title": "The Notes tab card does not match the job page's other cards",
+   "commits": [
+    "96441a6",
+    "e94c880"
+   ],
+   "tests": [
+    "tests/pdf/103-r4-dph-20-job-form-notes.test.mjs",
+    "tests/pdf/103-r4-dph-20-notes-card.test.mjs"
+   ],
+   "outcome": "fixed",
+   "summary": "Now the Notes card is `bg-white rounded-md border border-line p-5 shadow-sm` and its label is text-ink-subtlest. These are the same tokens as the OverviewTab, TasksTab and StatusHistory cards (checked in their source). Product call (the fixer's): p-5 to match the sibling cards rather than p-4 sm:p-6. The test mounts the real NotesTab with patchFakeDom, which JobForm's own tests show is enough for RichTextEditor, and fails on rounded-2xl, border-gray-100 and p-6. Now: the job form's Notes card is p-4 sm:p-6 like its four sibling cards, InterviewStageSelector included (checked in its source). The test fails on the old bare p-6."
+  },
+  {
+   "id": "R4-DPH-21",
+   "severity": "low",
+   "title": "Pipeline funnel rows leave the bar about 54–78px, and the narrowest case is desktop xl, not the phone",
+   "commits": [
+    "7c9e01e"
+   ],
+   "tests": [
+    "tests/pdf/103-r4-dph-21-pipeline-columns.test.mjs"
+   ],
+   "outcome": "fixed",
+   "summary": "Now: each Pipeline row is grid-cols-[6rem_1fr_5.5rem] gap-2 at every width. 6rem (96px) fits 'Phone Screen' at text-sm (about 87px), and the label can wrap anyway. At 375px the bar is about 103px. Product call (kept): tighten at all widths, because the lg two-column desktop cards were the narrowest case. Test traced: the funnel labels are Applied, Phone Screen, Interview, Offer (FUNNEL in jobQuery.js), and it fails with the change reverted."
+  },
+  {
+   "id": "R4-DPH-22",
+   "severity": "low",
+   "title": "Job Summary rows leave ~50-70px for company/role wherever the card is ~300px wide: on a phone, and on desktop from lg up to ~1400px",
+   "commits": [
+    "69f129f"
+   ],
+   "tests": [
+    "tests/pdf/103-r4-dph-22-summary-row-stacks.test.mjs"
+   ],
+   "outcome": "fixed",
+   "summary": "Now, below sm, a Summary row in both Upcoming deadlines and Follow-ups due stacks the status lozenge over the date pill in one right-aligned wrapper ('flex shrink-0 items-center gap-3 max-sm:flex-col max-sm:items-end max-sm:gap-1'). At 375px that leaves the company and role about 160px instead of about 66px. From sm up the wrapper is a row with the same 0.75rem gap and centring as before, so tablet and desktop look the same. Product call: phone only."
+  },
+  {
+   "id": "R4-DPH-23",
+   "severity": "high",
+   "title": "At 375px, and in the default 360px split panel on desktop, each Languages row's Duplicate and Delete buttons (and at least part of the show/hide eye) are pushed past the section card's right edge. The card clips them, so a language can't be duplicated or deleted.",
+   "commits": [
+    "0ae1bf0"
+   ],
+   "tests": [
+    "tests/pdf/103-r4-dph-23-language-row-buttons.test.mjs"
+   ],
+   "outcome": "fixed",
+   "summary": "Now a Languages row's grid is `flex-1 min-w-0 grid-cols-[minmax(0,2fr)_minmax(0,3fr)]` and its two fields are `w-full min-w-0`, so the eye, Duplicate and Delete (all shrink-0) stay inside the card at 375 px and in the 360 px panel. The Interests box is `min-w-0` too. The test reads the real LanguageItem and InterestItem. With the src change reverted, its min-w-0 and minmax assertions fail."
+  },
+  {
+   "id": "R4-DPH-24",
+   "severity": "high",
+   "title": "At every width (375px included), a section's ⋯ menu opens clipped inside the section card. On a collapsed section (after Collapse All, or collapsed by hand) only a sliver shows. On an open section whose one entry is collapsed, 'Delete section' is cut off.",
+   "commits": [
+    "88981ae"
+   ],
+   "tests": [
+    "tests/pdf/103-r4-dph-24-section-menu-unclipped.test.mjs"
+   ],
+   "outcome": "fixed",
+   "summary": "Now a section's ⋯ menu is the kit Menu, controlled by menuOpen, in a portal at the end of <body>. The card's overflow-hidden can no longer clip it, whether the section is collapsed or short. It keeps all four actions and their handlers (Reset style still has its Undo toast, Delete still asks first), and a pick closes it. Product call: minWidth 176 (the old w-44) and label=\"Section options\". The test opens the menu on a collapsed section and checks that Delete section is outside the card; the old in-card menu fails that check. Every cypress spec finds the items with a global `cy.contains('button', …)` and the trigger keeps title=\"Section options\" in the header, so none needed changing."
+  },
+  {
+   "id": "R4-DPH-25",
+   "severity": "medium",
+   "title": "Demo account, below 768px (375 phone included): the dashboard's Import menu opens about 140px off the left edge of the screen. The two item labels show only their endings ('…Word or text', '…ginal'), and the left half of every hint line is cut off.",
+   "commits": [
+    "9da9218"
+   ],
+   "tests": [
+    "tests/pdf/103-r4-dph-25-import-menu-left-edge.test.mjs"
+   ],
+   "outcome": "fixed",
+   "summary": "Now the demo account's Import menu (ImportMenu) opens from the trigger's left edge (`left-0` instead of `right-0`). It spans x≈16..272 on a 375 px phone and still fits beside the desktop header's actions, because Import is the first, left-most action at every width. Product call: I kept the small `left-0` swap and did not rebuild it on the kit Menu; both items and their handlers are unchanged.",
+   "review": "not reviewed by a second agent: the review stage was stopped at the owner's usage limit; the fix is covered by its fail-first test on CI"
+  },
+  {
+   "id": "R4-DPH-26",
+   "severity": "medium",
+   "title": "Phone or tablet (touch): tapping a résumé card's Rename opens a 14px name box, so iOS Safari zooms the dashboard on focus and stays zoomed after the rename",
+   "commits": [
+    "3dc10e8"
+   ],
+   "tests": [
+    "tests/pdf/103-r4-dph-26-rename-box-touch-text.test.mjs"
+   ],
+   "outcome": "fixed",
+   "summary": "Now a résumé card's rename box is `text-sm pointer-coarse:text-base`: 16 px on a touch screen, so iOS no longer zooms in on focus, and still 14 px with a mouse. The test opens Rename on the real ResumeCard, checks the box with the same under-16-px-on-touch logic as 81-job-inputs-touch-text, and checks that Enter still renames.",
+   "review": "not reviewed by a second agent: the review stage was stopped at the owner's usage limit; the fix is covered by its fail-first test on CI"
+  },
+  {
+   "id": "R4-DPH-27",
+   "severity": "medium",
+   "title": "At 375px (and in the 360px desktop panel), an open Certifications entry puts Issue Date and Expiry Date pickers side by side in about 133px each. The Issue picker's year select and × run under the Expiry month select, and Expiry's year arrow and × are clipped at the card edge.",
+   "commits": [
+    "7b51259"
+   ],
+   "tests": [
+    "tests/pdf/103-r4-dph-27-certification-dates-stack.test.mjs"
+   ],
+   "outcome": "fixed",
+   "summary": "Now a certification's Issue and Expiry dates sit in `grid-cols-1 @sm:grid-cols-2` against ItemCard's `@container` body, so they stack until the card is 24rem wide, both on a phone and in the 360 px panel. Both MonthPicker selects are `flex-1 min-w-0`. ItemCard, MonthPicker and DateField are used only by the section editor files. The test fails without the change (grid-cols-2 at every width)."
+  },
+  {
+   "id": "R4-DPH-28",
+   "severity": "medium",
+   "title": "On a phone or other touch screen, tapping almost any field of a résumé section zooms the page in iOS Safari: section title, entry fields, date selects, language and interest fields. Only the rich-text descriptions are 16px.",
+   "commits": [
+    "da47697"
+   ],
+   "tests": [
+    "tests/pdf/103-r4-dph-28-section-fields-touch-text.test.mjs"
+   ],
+   "outcome": "fixed",
+   "summary": "Now every section field is `text-sm pointer-coarse:text-base`, so 16 px on touch while a mouse keeps 14 px. That covers InputField, the MonthPicker month and year selects, a language's name and level, the Interests box and the section title. The owned files have no other text field: the Customizer's inputs are DPH-29 and the rich-text area was already 16 px. The test runs the under-16 check on every open entry type, a period-text date and a SortableSection. The unchanged InputField fails it."
+  },
+  {
+   "id": "R4-DPH-29",
+   "severity": "medium",
+   "title": "On a phone, the Personal Info fields and the editor's own boxes zoom the page on focus in iOS Safari: Full Name, Job Title and the contact fields, a link's display label and URL, the résumé-name rename box, the header spacing and border steppers, and Section Options' spacing boxes.",
+   "commits": [
+    "8c0f787",
+    "f22ec1b"
+   ],
+   "tests": [
+    "tests/pdf/103-r4-dph-29-personal-info.test.mjs",
+    "tests/pdf/103-r4-dph-29-section-options.test.mjs"
+   ],
+   "outcome": "fixed",
+   "summary": "Now Section Options' Spacing Override boxes (Before, After, Item gap) are `text-xs pointer-coarse:text-base`, so 16 px on touch while a mouse keeps 12 px. This group covers only the SectionEditorCustomizer part of the row; the Personal Info, EditorHeader and GapStepper parts belong to group R2. The test fails on text-xs alone. Now on a touch screen these boxes are pointer-coarse:text-base (16 px): Full Name, Job Title, the six contacts, a link's Display label and Link URL, the rename box, and Header Customization's Thickness and header-spacing stepper boxes. The w-12 and w-14 stepper boxes grow to pointer-coarse:w-16. Tailwind 4.3 registers pointer-coarse after the breakpoints, so it beats sm:text-sm on a touch tablet. A mouse keeps the old sizes. GapStepper's other caller, CoverLetterPanel, gets the same box, which is what we want."
+  },
+  {
+   "id": "R4-DPH-30",
+   "severity": "medium",
+   "title": "On a phone, the STAR Optimizer's statement box, opened from any description's STAR button, and the header-icon picker's search box, opened from Personal Info → Choose Icon, zoom the page on focus in iOS Safari.",
+   "commits": [
+    "8e97533"
+   ],
+   "tests": [
+    "tests/pdf/103-r4-dph-30-optimizer.test.mjs"
+   ],
+   "outcome": "partial",
+   "summary": "Now: the statement textarea has pointer-coarse:text-base, so it is 16 px on any touch screen and iOS no longer zooms into it. Tailwind v4 registers pointer-coarse after the breakpoints, so it beats sm:text-sm. A mouse keeps text-xs / sm:text-sm (12 px, 14 px from sm): desktop is unchanged. Only this dialog's part of the row: HeaderIconPickerModal's search belongs to another group.",
+   "remaining": "The Bullet Optimizer part is fixed; NewLetterModal and ShareLinkModal (DVIS-07) and the Cover Letter Generator / Header Icon picker parts (DPH-30, 37, 38) were not done: the R6b group was stopped at the usage limit.",
+   "review": "not reviewed by a second agent: the review stage was stopped at the owner's usage limit; the fix is covered by its fail-first test on CI"
+  },
+  {
+   "id": "R4-DPH-31",
+   "severity": "medium",
+   "title": "On a phone, the floating Edit | Preview pill covers the bottom of the Design, Cover Letter and ATS Check tabs. Scrolled to the end, the middle of the Cover Letter's last field (Signature Designation) stays under the pill. From 640–767px, the pill also covers the preview's Saved · Terms · Privacy footer.",
+   "commits": [
+    "d7b3175"
+   ],
+   "tests": [
+    "tests/pdf/103-r4-dph-31-pill-clears-tab-bottom.test.mjs"
+   ],
+   "outcome": "fixed",
+   "summary": "Now: below md (the same 768px edge where useIsMobile shows the pill), the editor's tab box keeps 64px of padding under every tab (max-md:pb-16). The pill is about 38px tall at bottom-4, so it reaches 54px up, and the last lines of Design, Cover Letter, ATS Check and the Résumé all scroll clear of it. The preview pane keeps pb-24 until md (pt-4 sm:pt-8 … pb-24 md:pb-8), so from 640 to 767px the footer no longer sits under the pill. From md up the padding is the same as before: 32px top and bottom, and the tab box gets none. I checked the test by hand: without the src change, bottomPadding comes back as [] for the tab box and as py-4/sm:py-8/pb-24/sm:pb-8 for the pane, so both assertions fail."
+  },
+  {
+   "id": "R4-DPH-32",
+   "severity": "medium",
+   "title": "375px phone: the fixed Edit | Preview pill covers the bottom of the Design and Cover Letter tabs (most of the Signature Designation field, and the last line of the Reset Design Settings text), and neither tab can scroll past it",
+   "commits": [],
+   "tests": [],
+   "outcome": "duplicate",
+   "summary": "The same defect as R4-DPH-31 (the fixed Edit | Preview pill over the bottom of the editor tabs), seen by two finders; fixed once by DPH-31."
+  },
+  {
+   "id": "R4-DPH-33",
+   "severity": "medium",
+   "title": "Phone (iOS): tapping any number box or select on the Design tab zooms the page, because every field there is 12-14px",
+   "commits": [
+    "7242eea"
+   ],
+   "tests": [
+    "tests/pdf/103-r4-dph-33-design-fields-touch-text.test.mjs"
+   ],
+   "outcome": "fixed",
+   "summary": "Now: every text field on the Design tab carries pointer-coarse:text-base, so it is 16 px on a touch screen and iOS no longer zooms when one is tapped. That covers the SizeRow/NumberRow boxes (Typography, Spacing), Border thickness, the Name Font, Heading Font and Date format pickers, the Add a Google Font box and the Save my design name box. With a mouse each keeps its 12-14 px. The test opens every Design section plus Save my design and checks that no field is under 16 px on touch.",
+   "review": "not reviewed by a second agent: the review stage was stopped at the owner's usage limit; the fix is covered by its fail-first test on CI"
+  },
+  {
+   "id": "R4-DPH-34",
+   "severity": "medium",
+   "title": "Phone (iOS): every text field on the Cover Letter tab (Date, Recipient, Company, Subject, Closing, Signature) zooms the page when tapped (14px), while the letter body editor next to them is already 16px on touch",
+   "commits": [
+    "ad01d3c"
+   ],
+   "tests": [
+    "tests/pdf/103-r4-dph-34-letter-fields-touch-text.test.mjs"
+   ],
+   "outcome": "fixed",
+   "summary": "Now: the Cover Letter tab's Field (CoverLetterPanelShared) box is `text-sm pointer-coarse:text-base`. Date, Recipient Name and Title, Company, Subject, Closing Phrase, Signature Name and Signature Designation are 16 px on touch, like the letter body beside them, and 14 px with a mouse.",
+   "review": "not reviewed by a second agent: the review stage was stopped at the owner's usage limit; the fix is covered by its fail-first test on CI"
+  },
+  {
+   "id": "R4-DPH-35",
+   "severity": "medium",
+   "title": "Phone (iOS): the ATS tab's job-description box is 12px, so pasting or typing a posting zooms the page",
+   "commits": [
+    "3495e55"
+   ],
+   "tests": [
+    "tests/pdf/103-r4-dph-35-ats-job-box-touch-text.test.mjs"
+   ],
+   "outcome": "fixed",
+   "summary": "Now: the ATS job description box is `text-xs pointer-coarse:text-base`. It is 16 px on touch, so pasting or typing a posting no longer zooms the page, and it stays 12 px with a mouse.",
+   "review": "not reviewed by a second agent: the review stage was stopped at the owner's usage limit; the fix is covered by its fail-first test on CI"
+  },
+  {
+   "id": "R4-DPH-36",
+   "severity": "medium",
+   "title": "Phone (iOS): the main fields of the editor's modals zoom the page when tapped: the Bullet Optimizer statement, the Cover Letter Generator's Company, Role and Recipient, and the Header Icon search",
+   "commits": [],
+   "tests": [],
+   "outcome": "partial",
+   "summary": "Duplicate of DPH-30 for this dialog, per the verifier: the Bullet Optimizer's main field is the same textarea (the modal's only field). It is fixed by DPH-30's commit and pinned by its test, which runs the under16OnTouch rule over every field of the real modal. The Cover Letter Generator and icon-picker fields in this row belong to other groups.",
+   "remaining": "The Cover Letter Generator and Header Icon picker fields (the R6b dialogs group) were not done: the lane was stopped at the owner's usage limit.",
+   "review": "not reviewed by a second agent: the review stage was stopped at the owner's usage limit; the fix is covered by its fail-first test on CI"
+  },
+  {
+   "id": "R4-DPH-37",
+   "severity": "medium",
+   "title": "iOS Safari in the editor: the Bullet Optimizer and Cover Letter Generator are taller than the visible screen, so their header top and Cancel/Apply footer are partly cut off and cannot be scrolled to (the Header Icon picker by only a few px)",
+   "commits": [
+    "e3b2030"
+   ],
+   "tests": [
+    "tests/pdf/103-r4-dph-37-optimizer.test.mjs"
+   ],
+   "outcome": "partial",
+   "summary": "Now: the root cause is fixed by the same kit Dialog commit as DVIS-07 (one root cause, one commit). No max-h-[90vh] is left. Below sm the panel fills the screen (max-sm:h-dvh max-sm:max-h-dvh, on an overlay with max-sm:p-0); above sm it is capped at max-h-[calc(100dvh-2rem)] in an overlay that scrolls (overflow-y-auto). Its body is the scroll region (min-h-0 flex-1 overflow-y-auto), and the title, × and footer stay outside it, so iOS Safari no longer clips the header or the Cancel/Apply row. Only this dialog's part of the row: the Cover Letter Generator and the icon picker belong to other groups.",
+   "remaining": "The Bullet Optimizer part is fixed; NewLetterModal and ShareLinkModal (DVIS-07) and the Cover Letter Generator / Header Icon picker parts (DPH-30, 37, 38) were not done: the R6b group was stopped at the usage limit.",
+   "review": "not reviewed by a second agent: the review stage was stopped at the owner's usage limit; the fix is covered by its fail-first test on CI"
+  },
+  {
+   "id": "R4-DPH-38",
+   "severity": "medium",
+   "title": "375px phone: the Cover Letter Generator's footer cannot wrap, so the 'Apply to Cover Letter' button is squeezed to about 86px and its label breaks one word per line",
+   "commits": [
+    "e3b2030"
+   ],
+   "tests": [
+    "tests/pdf/103-r4-dph-38-optimizer.test.mjs"
+   ],
+   "outcome": "partial",
+   "summary": "Now: Copy, Cancel and Apply to Resume sit together in the kit Dialog footer, one flex-wrap row with no non-wrapping inner group (same commit as DVIS-07). Every button is a kit button (whitespace-nowrap shrink-0), so none shrinks or breaks its label, and Copy is held at the row's start with mr-auto. At 375 px the three fit on one row; after 'Copy failed', Apply wraps to a second line instead of squeezing. Only this dialog's part of the row: the Cover Letter Generator footer belongs to another group.",
+   "remaining": "The Bullet Optimizer part is fixed; NewLetterModal and ShareLinkModal (DVIS-07) and the Cover Letter Generator / Header Icon picker parts (DPH-30, 37, 38) were not done: the R6b group was stopped at the usage limit.",
+   "review": "not reviewed by a second agent: the review stage was stopped at the owner's usage limit; the fix is covered by its fail-first test on CI"
+  },
+  {
+   "id": "R4-DPH-39",
+   "severity": "low",
+   "title": "/new at 375px: in 'Or start blank, or from a role example', the role starters' badge pills break onto two lines ('Tech &' / 'Engineering', 'AI &' / 'Data') beside titles that also wrap",
+   "commits": [
+    "10dc2a5"
+   ],
+   "tests": [
+    "tests/pdf/103-r4-dph-39-starter-badge-wraps-whole.test.mjs"
+   ],
+   "outcome": "fixed",
+   "summary": "Now each role starter's name row is `flex flex-wrap items-center gap-x-2 gap-y-1` and its badge has `whitespace-nowrap shrink-0`. At 375 px the badge moves under a long name in one piece instead of breaking inside its pill, and from sm, where both fit, nothing moves. The test checks every STARTER_TEMPLATES entry, both inline on /new and in the modal.",
+   "review": "not reviewed by a second agent: the review stage was stopped at the owner's usage limit; the fix is covered by its fail-first test on CI"
+  },
+  {
+   "id": "R4-DPH-40",
+   "severity": "low",
+   "title": "On a phone's Preview tab, the 'Updating preview…' chip sits partly under the Edit | Preview pill, so its start reads cut off.",
+   "commits": [
+    "d9d39ec"
+   ],
+   "tests": [
+    "tests/pdf/103-r4-dph-40-updating-chip-above-pill.test.mjs"
+   ],
+   "outcome": "fixed",
+   "summary": "Now: below md the 'Updating preview…' chip sits at bottom-16 (64px), above the pill's 54px top, so the pill no longer covers it. From md up it stays at bottom-4 right-4. Product call, kept as it was: on a phone the public résumé page, which has no pill, shows the chip a little higher. I checked the test by hand: status turns 'rendering' as soon as the input changes (PdfPreview line 129), before the 350ms debounce, so the chip is on screen when the test reads it, and without the fix the max-md:bottom-16 assertion fails."
+  },
+  {
+   "id": "R4-DPH-41",
+   "severity": "low",
+   "title": "At 375px in the STAR Optimizer, the 'Quantifiable Metric' indicator's word 'Quantifiable' runs through its tile's right border.",
+   "commits": [
+    "d529431"
+   ],
+   "tests": [
+    "tests/pdf/103-r4-dph-41-quality-tiles.test.mjs"
+   ],
+   "outcome": "fixed",
+   "summary": "Now: the three quality tiles are grid grid-cols-1 sm:grid-cols-3. They stack below 640 px, so 'Quantifiable Metric' has the full width and no longer runs through its tile's border, and they are three to a row from sm, as before (desktop unchanged). Even in the full-screen dialog, a third of a phone's width leaves the label about 64 px against the roughly 70 px 'Quantifiable' needs, so this change was needed on top of the Dialog commit.",
+   "review": "not reviewed by a second agent: the review stage was stopped at the owner's usage limit; the fix is covered by its fail-first test on CI"
+  },
+  {
+   "id": "R4-DPH-42",
+   "severity": "low",
+   "title": "375px phone: in the Bullet Optimizer, the six power-verb categories are squeezed into a ~217px sideways strip beside the heading, with Performance cut and the last three off-strip; on desktop the strip is capped at 280px and shows a stray scrollbar on classic-scrollbar systems",
+   "commits": [
+    "e4cc82f"
+   ],
+   "tests": [
+    "tests/pdf/103-r4-dph-42-verb-categories.test.mjs"
+   ],
+   "outcome": "fixed",
+   "summary": "Now: the power-verb row is flex flex-wrap items-center justify-between gap-2, and the categories are flex flex-wrap gap-1; overflow-x-auto, the undefined no-scrollbar and max-w-[280px] are gone. On a desktop (about 632 px of body) all six categories fit beside the heading. On a phone they drop onto their own lines under it, so none is cut or hidden. Product call: the desktop change is intended, because the row says the 280 px cap hid about 130 px of categories behind a stray scrollbar there too.",
+   "review": "not reviewed by a second agent: the review stage was stopped at the owner's usage limit; the fix is covered by its fail-first test on CI"
+  },
+  {
+   "id": "R4-DPH-43",
+   "severity": "low",
+   "title": "375px phone: in the Bullet Optimizer's three quality chips, 'Quantifiable' is wider than its chip and runs onto the chip's right border, and the labels wrap to 3 lines",
+   "commits": [],
+   "tests": [],
+   "outcome": "duplicate",
+   "summary": "The same root as R4-DPH-41 (the optimizer's quality tiles): fixed by DPH-41's commit, which stacks the tiles on a phone.",
+   "review": "not reviewed by a second agent: the review stage was stopped at the owner's usage limit; the fix is covered by its fail-first test on CI"
+  },
+  {
+   "id": "R4-DVIS-01",
+   "severity": "medium",
+   "title": "JobForm builds its own header instead of the shell PageHeader its sibling pages use",
+   "commits": [
+    "b7c4b3d",
+    "b8ec561"
+   ],
+   "tests": [
+    "tests/pdf/103-r4-dvis-01-job-form-page-header.test.mjs"
+   ],
+   "outcome": "fixed",
+   "summary": "Now: JobForm uses the shell's PageHeader (border-b border-line). Its breadcrumbs are Job Tracker › the company (edit only, links to /jobs/:id) › the page. The title is 'Edit job application' / 'Add job application' (the coordinator's sentence-case call) at the 24px truncate size. The unchanged back arrow is the first button and calls leave(), and kit Cancel (ghost) and Save (primary, submit form=) are the actions. The body and banners are left-aligned at max-w-3xl px-4 md:px-8. Product call kept: the breadcrumb links skip leave(), and the R4-DUX-06 draft covers that (docs/knowledge/07-job-tracker.md:54). 86b5ad5 makes the company crumb a truncating span; the test still reads 'Acme' as the link text."
+  },
+  {
+   "id": "R4-DVIS-02",
+   "severity": "medium",
+   "title": "JobForm's Cancel/Save buttons are hand-rolled, differ between header and footer, and do not match the kit Button",
+   "commits": [
+    "d646c6a"
+   ],
+   "tests": [
+    "tests/pdf/103-r4-dvis-02-job-form-kit-buttons.test.mjs"
+   ],
+   "outcome": "fixed",
+   "summary": "Now: the header's and footer's Cancel/Save pairs are identical kit Buttons (h-8, rounded, flat, whitespace-nowrap). Cancel is ghost and calls leave(); Save is primary, type=submit form={formId}, disabled={!canSave || gone}, and keeps the labels 'Add Job' / 'Save Changes'. The footer gap is 2. Product call kept: Cancel is ghost in both places. Checked: Button forwards form= through ...rest, and the Cypress cy.contains('button', /^Add Job$/) still matches through the inner span."
+  },
+  {
+   "id": "R4-DVIS-03",
+   "severity": "medium",
+   "title": "JobForm's inputs and selects are hand-rolled (42px, 6px radius, native select chrome) instead of the kit TextField/Select",
+   "commits": [
+    "986f90c"
+   ],
+   "tests": [
+    "tests/pdf/103-r4-dvis-03-job-form-kit-fields.test.mjs"
+   ],
+   "outcome": "fixed",
+   "summary": "Now: every field is the kit's TextField or Select (controlClass, h-9 / pointer-coarse:h-11, 16px on touch, appearance-none + chevron on selects). The kit Field labels keep the same uid+field ids. The 'Not set' / 'Not linked yet' empty choices stay pickable <option>s, and URL keeps sm:col-span-2. Checked: Cypress formField(label).parent().find(...) and the 67/81/100/102 id-suffix lookups still resolve."
+  },
+  {
+   "id": "R4-DVIS-04",
+   "severity": "medium",
+   "title": "Job Tracker view tabs and JobDetail tabs are hand-rolled and differ from the kit's tabClass/TabCount used by the other page headers",
+   "commits": [
+    "e921e90",
+    "322a9bb"
+   ],
+   "tests": [
+    "tests/pdf/103-r4-dvis-04-kit-tabs.test.mjs"
+   ],
+   "outcome": "fixed",
+   "summary": "Now: the Job Tracker's Summary/Board/List tabs and a job page's Overview/Tasks/Notes tabs use the kit's tabClass(selected), and the Tasks count is TabCount. The container keeps NavTabs' 'flex items-end gap-5 overflow-x-auto', and after:-bottom-px sits on PageHeader's border-b as NavTabs does. The tabs stay buttons with aria-current, and ?view=, the titles and onClick are unchanged. cx is still used in JobTracker (status chips) and was cleanly removed from JobDetail. Deep imports from '@/components/ui/Tabs.jsx' have precedent (NewResume, TemplateGallery). Test traced: the only BUTTON with aria-current is the Tasks tab (the breadcrumb's is a span), renderToStaticMarkup with a loadModule component follows 82-backlog-page, and the class deepEqual fails with the old hand-drawn classes."
+  },
+  {
+   "id": "R4-DVIS-05",
+   "severity": "medium",
+   "title": "Project settings content is a centred max-w-3xl column with sm:px-6, while ProjectHeader and every sibling project view are left-aligned at px-4 md:px-8",
+   "commits": [
+    "f6dd3ba"
+   ],
+   "tests": [
+    "tests/pdf/103-r4-dvis-05-settings-left-aligned.test.mjs"
+   ],
+   "outcome": "fixed",
+   "summary": "Now the 'Project settings' title, the storage notice wrapper and the cards' frame use px-4 md:px-8, the same padding as PageHeader and Board, Backlog and Calendar, with no mx-auto. The cards keep max-w-3xl through an inner wrapper. At 375px nothing changes (still px-4). From 640 to 767px the padding goes from 24px to 16px, which matches the header. I traced the test: store init() persists on the first subscribe, so a Storage that refuses the boards key really does set persistError, and the notice's wrapper div carries the page className. With the src change reverted, mx-auto comes back on the title, the notice and the cards, so the assertions fail."
+  },
+  {
+   "id": "R4-DVIS-06",
+   "severity": "medium",
+   "title": "Settings controls are hand-rolled (FIELD, Save key/Add/Delete column buttons, gray icon buttons) beside a kit <Button variant=danger>",
+   "commits": [
+    "489eabf"
+   ],
+   "tests": [
+    "tests/pdf/103-r4-dvis-06-settings-kit-controls.test.mjs"
+   ],
+   "outcome": "fixed",
+   "summary": "Now every place the finding listed (lines 12, 68, 109-121, 147 and 262) uses the kit: FIELD is controlClass sm without w-full; Save key and Add are Button primary sm; the strip's Delete column is danger sm and Cancel is ghost sm; move, delete-column and delete-label are IconButton sm, with danger on the deletes. The Details captions use the Field label type. Tooltip clones its child without a wrapper, so the flex rows keep their structure. The last-column explanation moved to a title on a span wrapper. Removing text-xs from the caption wrappers changes nothing inside them, because every child sets its own size. Field height stays 34px, as before. Each test finder resolves to the element it means (the IconButton's textContent is empty, so button('Delete column') finds the strip's button), and every assertion fails against the parent file."
+  },
+  {
+   "id": "R4-DVIS-07",
+   "severity": "medium",
+   "title": "The Bullet Optimizer is a hand-built modal rather than the kit Dialog, so it looks and behaves differently from TemplateGallery and the workspace dialogs",
+   "commits": [
+    "e3b2030"
+   ],
+   "tests": [
+    "tests/pdf/103-r4-dvis-07-optimizer.test.mjs"
+   ],
+   "outcome": "partial",
+   "summary": "Now: BulletOptimizerModal is the kit Dialog (size lg, same as TemplateGallery). It renders a role=dialog panel in a [data-ui-portal] layer at the end of <body>, drawn rounded-lg with ring-1, with the kit's text-xl title and description, the kit IconButton close, a scroll lock, and Copy (buttonClass secondary + mr-auto), Cancel (ghost) and Apply (primary + ArrowRight) as kit buttons in the footer prop. The blur backdrop and the undefined animate-in/zoom-in-95 classes are gone. Product calls: (1) the amber Sparkles badge beside the title is dropped, because kit dialogs have none. (2) closeOnOverlay={text === initialText} keeps R4-DUX-09, and useOverlayClose is dropped here. (3) Escape now closes, even after a rewrite; it is a deliberate close like × and Cancel, and is the kit default. Template Undo (R4-DUX-22) is unchanged. The Portal also lifts the dialog out of a hidden entry's faded sub",
+   "remaining": "The Bullet Optimizer part is fixed; NewLetterModal and ShareLinkModal (DVIS-07) and the Cover Letter Generator / Header Icon picker parts (DPH-30, 37, 38) were not done: the R6b group was stopped at the usage limit.",
+   "review": "not reviewed by a second agent: the review stage was stopped at the owner's usage limit; the fix is covered by its fail-first test on CI"
+  },
+  {
+   "id": "R4-DVIS-08",
+   "severity": "low",
+   "title": "JobDetail 'Posting' link copies the kit button classes by hand; the layout claims do not hold, and only the pressed state and transition differ",
+   "commits": [
+    "d6116ef"
+   ],
+   "tests": [
+    "tests/pdf/103-r4-dvis-08-posting-link.test.mjs"
+   ],
+   "outcome": "fixed",
+   "summary": "Now: the job page's Posting link is className={buttonClass()} with a shrink-0 ExternalLink and a <span class=\"truncate\">Posting</span>, laid out like Button and matching Edit beside it. href (safeHref), target, rel and title are unchanged. Test traced: safeHref keeps the https fixture URL, lucide's svg is created by createElementNS with the lowercase tagName 'svg' and its class holds shrink-0, and the old markup (no span, hand classes) fails the assertions."
+  },
+  {
+   "id": "R4-DVIS-09",
+   "severity": "low",
+   "title": "Job Overview/Tasks controls use the job module's own uppercase 10px labels and hand-sized controls, not the kit",
+   "commits": [
+    "62aaf0e",
+    "f912de6"
+   ],
+   "tests": [
+    "tests/pdf/103-r4-dvis-09-job-labels.test.mjs",
+    "tests/pdf/103-r4-dvis-09-task-add-row.test.mjs"
+   ],
+   "outcome": "fixed",
+   "summary": "Now: the Tasks tab's new-task box is the kit's control: controlClass plus TextField's h-9, pointer-coarse:h-11 and px-3. It keeps 16 px text on touch (J-38). The + button is the kit's IconButton (primary, lg: size-9, pointer-coarse:size-11), level with the box on desktop and on touch. Enter and a click still add the task. Product call (the fixer's): the Overview's 10 px uppercase labels and its hand-rolled selects stay as they are. They are the job module's own convention and should change in one module-wide pass. Now every field name on a job's Overview uses the kit's Field label (text-[12px] font-semibold leading-5 text-ink-subtle). That covers job/Field (both branches), Work Mode, Source, Deadline, Resume Used and the inline Stage, plus the Pipeline's Mark as: (still nowrap), Close as:, Resume Application and Restart Application As. Every card and section heading (Application Stage, R"
+  },
+  {
+   "id": "R4-DVIS-10",
+   "severity": "low",
+   "title": "Kanban card and list-row Delete buttons are hand-rolled at 22px/25px beside kit IconButton sm (28px)",
+   "commits": [
+    "cde38e8"
+   ],
+   "tests": [
+    "tests/pdf/103-r4-dvis-10-delete-buttons.test.mjs"
+   ],
+   "outcome": "fixed",
+   "summary": "Now: the Delete on a kanban card and on a list row is the kit's IconButton (sm, size-7, danger: the same red hover). On the card it matches the Move-to IconButton in the same footer. These are kept: title and aria-label 'Delete application', the card's stopDrag onMouseDown/onTouchStart (they pass through IconButton's rest props), the stopPropagation on click, and the focus-within and no-hover reveal row."
+  },
+  {
+   "id": "R4-DVIS-11",
+   "severity": "low",
+   "title": "'Epic panel' toggle shows no pressed look while the panel is open, unlike the toolbar's quick filters",
+   "commits": [
+    "ef569a5"
+   ],
+   "tests": [
+    "tests/pdf/103-r4-dvis-11-epic-panel-pressed.test.mjs"
+   ],
+   "outcome": "fixed",
+   "summary": "Now the Epic panel Button has 'aria-pressed:bg-brand-subtle aria-pressed:text-brand aria-pressed:hover:bg-brand-subtle-hover'. While the panel is open it matches the toolbar's active quick-filter look, and closed it keeps the grey secondary look. I checked the order in Tailwind 4.3.3's dist/lib.js: the aria variant is registered after hover and active, so it outranks hover:bg-neutral-fill-hover and hover:text-ink. aria-pressed and onClick are unchanged. With the change reverted, the test fails because the aria-pressed tokens are missing."
+  },
+  {
+   "id": "R4-DVIS-12",
+   "severity": "medium",
+   "title": "Editor mode tabs spill out of their box and under the Design button when the split panel is narrow",
+   "commits": [
+    "aded64d",
+    "5af9251"
+   ],
+   "tests": [
+    "tests/pdf/103-r4-dvis-12-editor-tabs-truncate.test.mjs"
+   ],
+   "outcome": "fixed",
+   "summary": "Now from sm up each Resume / Cover Letter / ATS Check tab is flex-1 with sm:min-w-0, and its label is a span with 'min-w-0 truncate'. In a 240-360 px split panel the tabs share the group's width and ellipsize, so they no longer slide under the Design button. Below sm each tab is min-w-max, as before the fix, so a 375 px phone shows every label whole and the row scrolls. aded64d's bare min-w-0 had cut 'Cover Letter' on the phone. Product call: no icon-only @container mode."
+  },
+  {
+   "id": "R4-DVIS-13",
+   "severity": "medium",
+   "title": "New Resume 'Your details from' select zooms iOS on focus, is hand-rolled next to kit Chips, and uses a narrower container than the Dashboard",
+   "commits": [
+    "38f03da"
+   ],
+   "tests": [
+    "tests/pdf/103-r4-dvis-13-new-resume-source-select.test.mjs"
+   ],
+   "outcome": "fixed",
+   "summary": "Now New Resume's 'Your details from' picker is the kit Select (size sm, pointer-coarse:text-base). It is 16 px on touch, so iOS does not zoom into it, and data-testid, value and onChange are kept. max-w-56 now sits on the kit's Field wrapper, which is min-w-0 with a w-full select. Both page rows are max-w-7xl like the Dashboard. Product call: the kit's focus ring and pointer-coarse:h-11 height come with the component and were not made as accessibility changes."
+  },
+  {
+   "id": "R4-DVIS-14",
+   "severity": "low",
+   "title": "Dashboard calls /boards 'Boards' while the shell calls it 'Projects'; the Dashboard brand mark differs from the TopBar mark",
+   "commits": [
+    "806c1c8"
+   ],
+   "tests": [
+    "tests/pdf/103-r4-dvis-14-dashboard-projects-brand.test.mjs"
+   ],
+   "outcome": "fixed",
+   "summary": "Now the Dashboard's /boards button reads 'Projects' with LayoutGrid, the same as SidebarContent, TopBar and the Boards PageHeader, and it still navigates to /boards. Its brand uses TopBar's classes exactly: a size-7 bg-brand 'CV' square plus a 15px semibold text-ink 'CPWT-CV'. The phone Cypress spec was updated from 'Boards' to 'Projects' without weakening it."
+  },
+  {
+   "id": "R4-DVIS-15",
+   "severity": "medium",
+   "title": "Top-bar search is hand-rolled and does not match the kit SearchInput used in the page toolbars",
+   "commits": [
+    "85c6232"
+   ],
+   "tests": [
+    "tests/pdf/103-r4-dvis-15-topbar-search-kit.test.mjs"
+   ],
+   "outcome": "fixed",
+   "summary": "Now: the top-bar search input is controlClass({ size: 'sm' }) plus 'h-8 pr-8 pl-8'. That gives the kit border and 13px text (16px on touch), with no size or padding tokens clashing with the kit's classes. The '/' cap is the kit's Kbd inside an aria-hidden span that is hidden below md (max-md:hidden), as in SearchInput. The focus ring, role, aria and handlers are unchanged. If the commit is reverted, the test sees border-line and a bare <kbd> without h-[18px], so it fails."
+  },
+  {
+   "id": "R4-DVIS-16",
+   "severity": "low",
+   "title": "The backlog row's issue key sits in a w-16 box with no truncate: a long key (up to 10 characters + \"-NNN\") overflows onto the summary, at every width",
+   "commits": [
+    "29a3d5c"
+   ],
+   "tests": [
+    "tests/pdf/103-r4-dvis-16-backlog-key-column.test.mjs"
+   ],
+   "outcome": "fixed",
+   "summary": "Now the BacklogRow key span is 'min-w-16 shrink-0 whitespace-nowrap'. Keys of 64px or less still line up in a 64px column. A key of up to 10 letters stays on one line and widens its column, while the 'min-w-0 flex-1 truncate' summary gives way. The row's handlers and menus are unchanged. Product call: the key is never truncated. With the change reverted, the test fails on the missing whitespace-nowrap/min-w-16 and on the present w-16."
+  },
+  {
+   "id": "R4-DVIS-17",
+   "severity": "low",
+   "title": "In the backlog's sprint header, the sprint name (InlineEdit) takes the full width and always drops to its own line under the fold chevron",
+   "commits": [
+    "b5112b6"
+   ],
+   "tests": [
+    "tests/pdf/103-r4-dvis-17-sprint-name-inline.test.mjs"
+   ],
+   "outcome": "fixed",
+   "summary": "Now the sprint-name InlineEdit sits in a 'min-w-0 max-w-full' div, and that div is the header's flex item. The box's calc(100%+0.75rem) width resolves against a wrapper as wide as the text, not the whole header. Browsers treat that cyclic percentage as auto for intrinsic size, and the -mx-1.5 margins cancel the extra 0.75rem, so the content box is exactly the text's width. The name stays beside the chevron at every width, and InlineEdit.jsx is not touched. Product call: while a name is being edited, the field is the input's default width. With the change reverted, the test fails because the name's parent is the header."
+  },
+  {
+   "id": "R4-DVIS-18",
+   "severity": "low",
+   "title": "List view contact cell never truncates: max-w on an auto-layout <td> is ignored, so a long contact widens the column on one line",
+   "commits": [
+    "7e93c95"
+   ],
+   "tests": [
+    "tests/pdf/103-r4-dvis-18-list-contact-truncates.test.mjs"
+   ],
+   "outcome": "fixed",
+   "summary": "Now the list's Contact td is plain 'px-3 text-[13px] text-ink-subtle', and a block inside it ('max-w-[140px] truncate') holds the contact. The block's max-width caps the auto-layout column's width, so a long contact ends in an ellipsis at 140px and no longer widens the column. Product call: the block has title={contact} so the full text shows on hover, and no title when there is no contact (the dash still shows)."
+  },
+  {
+   "id": "R4-DVIS-19",
+   "severity": "low",
+   "title": "Backlog sprint goal with a long unbroken word (URL) overflows the sprint section and scrolls the list sideways",
+   "commits": [
+    "7d975a3"
+   ],
+   "tests": [
+    "tests/pdf/103-r4-dvis-19-sprint-goal-wraps.test.mjs"
+   ],
+   "outcome": "fixed",
+   "summary": "Now a sprint goal in the backlog header is 'min-w-0 basis-full break-words pl-9 …'. The flex item's automatic minimum is no longer its longest word, so a goal holding a long link takes the header's width and breaks at its edge instead of scrolling the backlog sideways. The header keeps its width because the flex-col stretches it. Ordinary goals wrap as before."
+  },
+  {
+   "id": "R4-DVIS-20",
+   "severity": "low",
+   "title": "Timeline row hover highlight stops at the sticky name column (opaque bg-white with no hover variant)",
+   "commits": [
+    "8b708ec"
+   ],
+   "tests": [
+    "tests/pdf/103-r4-dvis-20-timeline-row-hover.test.mjs"
+   ],
+   "outcome": "fixed",
+   "summary": "Now each Timeline row is a hover group ('group flex h-10 … hover:bg-hovered'). Its sticky name cell keeps bg-white at rest and turns to group-hover:bg-hovered, so the hover grey runs across the name as well as the days. --color-hovered is the opaque #f1f2f4, so bars scrolled under the column stay hidden. The header's Issue cell and the grid are not groups, and nothing inside a row uses group-hover."
+  },
+  {
+   "id": "R4-DVIS-21",
+   "severity": "medium",
+   "title": "On desktop and tablet, in the default 360px split panel, an open Experience, Education, Projects, Volunteering or Custom entry puts Start and End date pickers side by side in about 125px each. The Start picker's year select and × run under the End month select, and the End year select's arrow and × are clipped at the entry card's edge.",
+   "commits": [
+    "37315dd"
+   ],
+   "tests": [
+    "tests/pdf/103-r4-dvis-21-entry-dates-by-card-width.test.mjs"
+   ],
+   "outcome": "fixed",
+   "summary": "Now the date rows of Experience, CurrentDates (Education, Projects, Volunteering) and Custom (Date/Location) use `@sm:grid-cols-2` against the card's container, not the viewport's `sm:`. They stack in the 360 px panel and go side by side in a panel wide enough (up to 640 px). On a phone nothing changes, because they already stacked below 640 px. The test fails with the old `sm:grid-cols-2`."
+  },
+  {
+   "id": "R4-DVIS-22",
+   "severity": "medium",
+   "title": "On desktop and tablet in split view, a signed-in user who opens Export on the Cover Letter tab gets a menu that runs about 66px off the screen's left edge. Every item's icon and its first few letters are cut.",
+   "commits": [
+    "1595086"
+   ],
+   "tests": [
+    "tests/pdf/103-r4-dvis-22-export-menu-on-screen.test.mjs"
+   ],
+   "outcome": "fixed",
+   "summary": "Now useFloating places the Export menu (bottom-end, offset 4) as a fixed panel. It slides back inside the window: the letter menu's left edge is 8 px, not -66 px. It escapes the panel's overflow-hidden, is capped to the window height and scrolls. Checked: no ancestor of EditorHeader has a transform, filter, backdrop or contain (Editor root, ToastProvider, AppRoutes, index.css). The z-index stacking is the same as before. EditorHeader is the only caller. The four existing tests that open the menu get only the rAF/cAF polyfills the hook's cleanup needs; their assertions are unchanged."
+  },
+  {
+   "id": "R4-DVIS-23",
+   "severity": "medium",
+   "title": "At all widths, the STAR Optimizer opened from a description in a hidden entry, hidden section or hidden Description field appears washed out at 50–60% opacity, with the editor showing through. Later positioned controls (other sections' ⋯ wrappers, the resize handle, and on a phone the Edit | Preview pill) paint and take clicks on top of it.",
+   "commits": [
+    "5f52d43"
+   ],
+   "tests": [
+    "tests/pdf/103-r4-dvis-23-optimizer-not-faded.test.mjs"
+   ],
+   "outcome": "fixed",
+   "summary": "Now RichTextEditor renders BulletOptimizerModal inside the kit Portal, so a hidden entry, section or field no longer fades it. I checked the dialog hosts (IssueDialog, CreateIssueDialog). The kit Dialog is also a z-50 portal and the optimizer's portal is added after it, so the optimizer paints on top. The Dialog's overlay-close ignores clicks that come from the optimizer's overlay, the focus trap lets focus into [data-ui-portal], and Escape bubbles through the React tree as it did before. The new test fails when the modal is drawn inside the editor. The stale lookups in 57 and 95 were moved to document.body with their assertions unchanged."
+  },
+  {
+   "id": "R4-DVIS-24",
+   "severity": "medium",
+   "title": "Desktop/tablet split view at the default 360px panel, ATS Check tab: the score badge spills out of its card and is cut off at the panel's right edge, and the title column is squeezed to about 107px",
+   "commits": [
+    "e8afbaa"
+   ],
+   "tests": [
+    "tests/pdf/103-r4-dvis-24-ats-rows-by-panel-width.test.mjs"
+   ],
+   "outcome": "fixed",
+   "summary": "Now: the ATS tab's root is an @container, and every viewport sm: variant in AtsCheckerPanel is now @md: (a tab at least 448 px wide). This covers the score row, badge, title sizes, plain-text card, the job scanner card's padding and header, and the Match pill. In the 360 px split panel the score card, plain-text card and scanner header stack, so the badge stays inside its card. Phones stack as before, and wide panels or the full-width editor are side by side as before. Product call: the '% Match' pill also got shrink-0, so it no longer squeezes onto two lines beside the scanner title.",
+   "review": "not reviewed by a second agent: the review stage was stopped at the owner's usage limit; the fix is covered by its fail-first test on CI"
+  },
+  {
+   "id": "R4-DVIS-25",
+   "severity": "medium",
+   "title": "Desktop editor: the Cover Letter Generator and Header Icon picker are hand-built dialogs that look different from the kit Dialog the Template Gallery uses on the same screen",
+   "commits": [],
+   "tests": [],
+   "outcome": "not-fixed",
+   "summary": "Not done: the Cover Letter Generator and the Header Icon picker are still hand-built dialogs.",
+   "remaining": "Rebuild both on the kit Dialog (size lg), keeping every field and handler and dsg-flow R4-DUX-13; the R6b group was stopped at the owner's usage limit before its fixer committed."
+  },
+  {
+   "id": "R4-DVIS-26",
+   "severity": "low",
+   "title": "Tablet 768–~950px: the dashboard header's actions wrap into two ragged, left-aligned rows beside the logo, with New Resume and Sign in dropping under Import",
+   "commits": [
+    "3a8770c"
+   ],
+   "tests": [
+    "tests/pdf/103-r4-dvis-26-dashboard-header-stacks-until-lg.test.mjs"
+   ],
+   "outcome": "fixed",
+   "summary": "Now the Dashboard header stays stacked until lg: `flex-col lg:flex-row`, the logo row `lg:w-auto shrink-0`, the compact sign-in `lg:hidden`, and the divider and full sign-in `hidden lg:block`. At 768-1023 the compact sign-in sits beside the logo and the five actions fit one row under it (~640 px of 720). From lg the header is the old single row, which fits there (~810 px against ~850). The DVIS-14 mark and the Projects button are kept.",
+   "review": "not reviewed by a second agent: the review stage was stopped at the owner's usage limit; the fix is covered by its fail-first test on CI"
+  },
+  {
+   "id": "R4-DVIS-27",
+   "severity": "low",
+   "title": "≥640px, signed out: in the dashboard toolbar the 'Sign in with Google' button is 30px tall with 12px text, beside 38px buttons with 14px text (and the blue New Resume is 36px)",
+   "commits": [
+    "36d26c0"
+   ],
+   "tests": [
+    "tests/pdf/103-r4-dvis-27-sign-in-button.test.mjs"
+   ],
+   "outcome": "fixed",
+   "summary": "Now AuthBar's full Sign in with Google button (shown only in the Dashboard toolbar, from md up) is px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm whitespace-nowrap. That makes it 38 px tall with 14 px text, like Job Tracker, Projects and New Cover. The compact icon button used in the phone header, the editor and the TopBar keeps p-1.5."
+  },
+  {
+   "id": "R4-DVIS-28",
+   "severity": "low",
+   "title": "1024–~1150px (iPad landscape, small laptops): dashboard cards are ≈200px wide in three columns beside the Career History sidebar. Names over ≈21 characters are truncated, so a résumé and its '(Copy)' look identical, and there is no tooltip to read the full name.",
+   "commits": [
+    "8a17031"
+   ],
+   "tests": [
+    "tests/pdf/103-r4-dvis-28-dashboard-cards-wide-enough.test.mjs"
+   ],
+   "outcome": "fixed",
+   "summary": "Now both dashboard grids (résumés and cover letters) are `grid-cols-1 sm:grid-cols-2 xl:grid-cols-3`: two ~312 px cards at lg beside the sidebar, three ~292 px cards from xl. A card's cut name also carries `title={resume.name}`, so the full name, or its '(Copy)', shows on hover.",
+   "review": "not reviewed by a second agent: the review stage was stopped at the owner's usage limit; the fix is covered by its fail-first test on CI"
+  },
+  {
+   "id": "R4-DVIS-29",
+   "severity": "low",
+   "title": "Desktop ≥1024px with a long career history (≈7+ entries on a ~650px-tall window) and a taller résumé column: the sticky Career History sidebar's bottom (last entries, 'Open Job Tracker →') stays below the fold until the end of the page",
+   "commits": [
+    "b02da95"
+   ],
+   "tests": [
+    "tests/pdf/103-r4-dvis-29-career-sidebar-fits-window.test.mjs"
+   ],
+   "outcome": "fixed",
+   "summary": "Now the pinned sidebar is `lg:flex lg:flex-col lg:max-h-[calc(100dvh-3rem)]` (heading row `shrink-0`). CareerHistoryPanel is a `flex flex-col min-h-0` column: its header and footer are `shrink-0` and only its timeline scrolls (`min-h-0 overflow-y-auto`). Product call: I scroll the timeline rather than put the row's suggested overflow on the whole sidebar. That keeps the panel header and 'Open Job Tracker →' in view and does not clip the card's shadow. Below lg and in the Job Tracker's aside nothing limits the panel's height, so nothing scrolls.",
+   "review": "not reviewed by a second agent: the review stage was stopped at the owner's usage limit; the fix is covered by its fail-first test on CI"
+  },
+  {
+   "id": "R4-DVIS-30",
+   "severity": "low",
+   "title": "With the editor panel dragged narrow (240 to about 305px, within the allowed range) on desktop or tablet, the Section Options rows made of one-word chips can't wrap: Skills Style 'Tags' and Rows 'Spacious' are cut off. Personal Info's link Display-label / Link-URL row stays side by side and the URL box is clipped.",
+   "commits": [
+    "7597980",
+    "abd55dd"
+   ],
+   "tests": [
+    "tests/pdf/103-r4-dvis-30-personal-info.test.mjs",
+    "tests/pdf/103-r4-dvis-30-section-options.test.mjs"
+   ],
+   "outcome": "fixed",
+   "summary": "Now each SegmentRow's chip box is `flex flex-wrap justify-end gap-1`. A wrapping flex box's min-content is its widest chip, so the box can shrink beside the shrink-0 label, and in a 240–305 px panel the chips wrap onto a second right-aligned line instead of losing 'Tags' or 'Spacious'. SegmentRow is used only in this file. The cypress 17 `chip()` helper still finds chips through `row().parent().contains('button', …)`. The test fails on the old `flex gap-1`. Now each Personal Info field block is an @container. A link's Display label and Link URL are flex-col @sm:flex-row (side by side from a 24rem field) with min-w-0, so they stack in a 240-360 px panel and on a phone instead of being cut. Only the field block is a container: the icon picker modal renders outside it, and CustomIconControl has no fixed children, so layout containment pins nothing. Product call kept: the default 360 px pane"
+  },
+  {
+   "id": "R4-DVIS-31",
+   "severity": "low",
+   "title": "On desktop and tablet in the default 360px split view, a signed-in user's résumé name in the editor header gets about 60px, showing about 8 characters ('Software…'). A long first name leaves only the ellipsis.",
+   "commits": [
+    "b434a9f",
+    "cae5cc4"
+   ],
+   "tests": [
+    "tests/pdf/103-r4-dvis-31-editor-account-name.test.mjs"
+   ],
+   "outcome": "fixed",
+   "summary": "Now only the editor header in the desktop split panel passes AuthBar hideName (!isMobile && layoutMode === 'split'). There the first name beside the avatar is sm:sr-only, so the résumé name gets the room and the button reads out the same name as before. Editor-only on desktop and the phone layout from 640 to 767 px span the window and still show the name, as do the workspace TopBar and the Dashboard. Product call kept: a dragged-wide split panel also hides the name. A container query would make the header a containing block for fixed elements and break the fixed Export menu."
+  },
+  {
+   "id": "R4-DVIS-32",
+   "severity": "low",
+   "title": "On the Job Tracker's Summary view, the Career History card uses the résumé side's look (16px radius, shadow, gray-100 border, gray text) beside the workspace kit panels (6px radius, `border-line`, flat, ink tokens).",
+   "commits": [
+    "b514074"
+   ],
+   "tests": [
+    "tests/pdf/103-r4-dvis-32-career-panel-workspace-look.test.mjs"
+   ],
+   "outcome": "fixed",
+   "summary": "Now CareerHistoryPanel takes `variant` ('dashboard' by default, unchanged). 'workspace' draws it like the kit cards: `rounded-md border border-line`, no shadow, a `border-line` rule, a `rounded-md` avatar, and `text-ink` / `text-ink-subtlest` text. JobTracker.jsx's Summary aside passes `variant=\"workspace\"`, the only edit in that file. The test puts the panel beside the real Pipeline card on /jobs?view=summary and checks that the Dashboard look keeps rounded-2xl and shadow-sm.",
+   "review": "not reviewed by a second agent: the review stage was stopped at the owner's usage limit; the fix is covered by its fail-first test on CI"
+  },
+  {
+   "id": "R4-DVIS-33",
+   "severity": "low",
+   "title": "Desktop at the default 360px panel (and on phones): 3 or 4 of the six ATS category titles are cut off with an ellipsis ('Contact & Header Informa…', 'Work Experience & Action…')",
+   "commits": [
+    "82905e3"
+   ],
+   "tests": [
+    "tests/pdf/103-r4-dvis-33-ats-category-titles-wrap.test.mjs"
+   ],
+   "outcome": "fixed",
+   "summary": "Now: each ATS category title wraps onto a second line (leading-snug instead of truncate) inside its min-w-0 column, so 'Work Experience & Action Verbs' and the others are read in full in the 360 px panel and on phones. Product calls: the header button gets gap-3 so a wrapped title keeps clear of the points badge. The status dot gets shrink-0 so it stays round beside a two-line title. The button keeps items-center.",
+   "review": "not reviewed by a second agent: the review stage was stopped at the owner's usage limit; the fix is covered by its fail-first test on CI"
+  },
+  {
+   "id": "R4-DVIS-34",
+   "severity": "low",
+   "title": "All widths: in Design → Colors, the Name color and Job title color rows show 'Templat…' instead of 'Template default'",
+   "commits": [
+    "24b78d1"
+   ],
+   "tests": [
+    "tests/pdf/103-r4-dvis-34-colors-template-default.test.mjs"
+   ],
+   "outcome": "fixed",
+   "summary": "Now: the Name color and Job title color labels are max-w-28 truncate instead of a fixed w-16. 'Template default' (about 106 px) reads in full rather than 'Templat…', and a picked hex takes only its own width. Product call: the placeholder text is kept rather than shortened to 'Default'.",
+   "review": "not reviewed by a second agent: the review stage was stopped at the owner's usage limit; the fix is covered by its fail-first test on CI"
+  },
+  {
+   "id": "R4-DVIS-35",
+   "severity": "low",
+   "title": "Desktop with the panel dragged to 240-280px: in the Design tab, Typography's 'Add' (Google font) button and the Reset box's 'Yes, Reset / Cancel' buttons are pushed past their boxes and clipped",
+   "commits": [
+    "3347bca"
+   ],
+   "tests": [
+    "tests/pdf/103-r4-dvis-35-narrow-design-panel.test.mjs"
+   ],
+   "outcome": "fixed",
+   "summary": "Now: the Add a Google Font box has min-w-0, so it narrows and Add stays inside Typography in a 240-280 px panel. The Reset Design Settings row is flex-wrap and its text column is flex-1 min-w-24, so Yes, Reset and Cancel go under the text only when they cannot sit beside it (below about a 320 px panel) instead of running out of the amber box. Product call: plain flex-wrap (the verifier's fix) would have sent the buttons under the text even at the default 360 px, because the text's one-line width claims a line of its own. flex-1 min-w-24 keeps the 360 px layout exactly as it was.",
+   "review": "not reviewed by a second agent: the review stage was stopped at the owner's usage limit; the fix is covered by its fail-first test on CI"
+  }
+ ],
+ "review": {
+  "issues": [
+   "DPH-19 missed variant in the same file: the unbroken long custom stage that the fix wrapped in the pill still overflowed in the 'Your Stages' list below it (InterviewStageSelector.jsx ~line 70). Neither the button nor the name span had min-w-0, so on a phone the row ran past the section and took its Remove X with it.",
+   "Not fixed (out of scope, the fixer noted it too): Pipeline's on-hold 'Close as:' row has no flex-wrap. It fits at 375 px (about 261 of 301 px) and would only overflow below about 330 px.",
+   "Checked with no problem found: all fake-dom and harness APIs used (elements, mount/unmount, childNodes arrays, getAttribute('class'), patchFakeDom) exist. Each fixture renders the element its test looks for. No test in tests/, cypress/ or tests/playwright/ pins the old classes or markup. Pipeline's only caller is OverviewTab and InterviewStageSelector's only caller is JobForm; no handlers changed.",
+   "The finding cites src/components/ui/Select.jsx:278-292, but the file has only 59 lines, so the location it names is stale or wrong.",
+   "The fixer's branch has no commits beyond the base (a35db30 = claude/wf-r4-dsg-layout), so there is no src or test diff to review. Nothing was run and nothing was linted, because no files changed.",
+   "No defect found in the four commits. Every src change fixes its row, desktop and tablet templates are unchanged, and the handlers, ?view=, href, target and rel are untouched. The rows are based on the current claude/wf-r4-dsg-layout tip (a35db30).",
+   "Flag for the orchestrator, not changed: DVIS-04 and DVIS-08 take the kit's tabClass and buttonClass whole. So the kit's FOCUS_RING (a focus-visible ring), pointer-coarse:h-11 on the tabs and HIT_AREA.md on the Posting link arrive with the look. The old hand-drawn tabs and link had no focus ring. Strictly, that is a focus and target-size change. It was kept because keeping the old look would need a",
+   "Checked and not a defect: JobDetail's main grid (grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px]) also has no base template. Both of its children are min-w-0, so the implicit auto track cannot outgrow the container at 375px.",
+   "Stale-spec sweep: no cypress/, tests/playwright/ or existing tests/pdf spec selects the old tab classes, the 7.5rem pipeline column or the old Posting markup. cy.contains('button','Tasks'/'Overview'), h2 'Career history' + next(), and the button titles all still match.",
+   "oxlint is clean on JobTracker.jsx, JobDetail.jsx, JobSummary.jsx and the four new tests. node --check is clean on all four tests. Nothing was run otherwise.",
+   "I found nothing that needed a change. All three commits fix what their rows name in the owned files, and each new test fails with its commit's src/ change undone. DPH-14: without the fix, min-w-0 is missing. DVIS-09: there is no 'Add task' button and no size-9. DVIS-10: the button has no size-7 and still has p-1 or p-1.5.",
+   "I traced every test by hand. The imports resolve: harness exports setup, teardown and loadModule; fake-dom exports mount, elements and reactProps; ui/index.js exports IconButton, controlClass and cx. React writes className as the 'class' attribute. The fixtures render the elements the tests look for: linkedResume gives 'linked', so the Open resume button shows, and resumeChoices lists the long nam",
+   "Existing tests still hold. 81-job-tracker-ui and 81-job-tracker-page find Delete by aria-label, and its parentNode is still the focus-within reveal row. 82-job-pipeline-tasks clicks the BUTTON in the input's parent, which is the bare IconButton because tooltip={false}. The under16OnTouch check in 81-job-inputs-touch-text sees pointer-coarse:text-base from controlClass. touch-reveal.unit and cursor",
+   "The DVIS-10 test's opened==[] check proves nothing on its own, because the fake DOM does not bubble events. The stopPropagation assertion does the real work, so I left it as is.",
+   "Accessibility seen, not fixed (deferred): the Overview 'Open resume' button has only a title, an 11 px icon and a small target. The kanban and list 'Open job posting' links are small. In the kanban card, a keydown on Delete bubbles to the card, but openOnKey ignores it because it checks e.target === e.currentTarget. That was already so before these commits.",
+   "oxlint on the 4 changed src files and the 3 new tests: clean. node --check on the 3 new tests: clean. No docs/knowledge line describes these controls, so none needed an update.",
+   "The ProjectCalendar doc comment was stale: it said issues with no due date are counted 'under the grid', but the count is in the controls row above it. I fixed it in 4c56bd0 (comment only, no behaviour change).",
+   "No other problems found. I traced both tests line by line against fake-dom.mjs (withInnerHtml parser, contains, parentNode, getAttribute, uppercase tagName), Button (the 'Today' text sits in a span inside a button whose parent is the row) and IconButton/Tooltip (no bubble in SSR, and aria-label is on the button). The store setup is the same as 82-board-pages. Every import and export exists (_reset",
+   "No existing unit, pdf, Cypress or Playwright test pins the calendar's controls markup. 82-board-pages renders the calendar but only checks the notice text. No docs/knowledge line describes this layout.",
+   "Checked 375px: the controls fit about 302px of the 343px content width, so Today, prev/next and the title share one line and the note wraps below. At sm-md and above, the layout matches desktop.",
+   "No real defect found in the src changes or the tests. I checked:\n- the imports: IconButton and controlClass are exported from src/components/ui/index.js;\n- every fake-DOM path: mount, act, reactProps, elements and unmount exist in fake-dom.mjs;\n- that the refused-storage notice shows: init() persists on the first subscribe;\n- that Tooltip clones its child and adds no wrapper;\n- that the existing t",
+   "Out of scope, noted only: IconButton sm's touch hit area (after:-inset-2, 44px) overlaps its neighbours across the gap-2 row gap. This is accessibility and target size, so I did not touch it.",
+   "Minor, not fixed: no test covers the title 'A project keeps at least one column' on the new span wrapper. The shared fixture always has three columns. The behaviour is kept, so this is not a regression.",
+   "oxlint on BoardSettings.jsx and on all five 103-r4 test and helper files: exit 0. node --check: ok on all five.",
+   "No real defects found in the five fix commits after tracing each one: the src at 375px and at desktop, every caller of InlineCreate (BoardColumn, EpicPanel, ProjectList, Backlog), DateInput and PointsInput (IssueDetails, CreateIssueDialog), and each test line by line. I checked each test's fixture code path, how fake-dom stores class and aria-pressed, React 19 setting input.type as a property (whi",
+   "Mental revert: every new test's main assertion fails with its commit's src change undone. The DPH-10 'column variant' test and the under16OnTouch sweeps are guards and pass either way, as intended.",
+   "Stale tests: none. No existing test in tests/, cypress/ or tests/playwright asserts w-16, a bare flex-row items-center, the Epic panel classes or the sprint header's structure. 82-backlog-page's 'Sprint 2, edit Sprint name' lookup, board-checklist-wrap (min-w-0/flex-1/break-words) and the other groups' 103-r4 tests are unaffected. The new file names do not collide with the G7, G8 or G10 branches.",
+   "No docs/knowledge line describes these classes, so no docs change.",
+   "oxlint is clean on all 12 changed files, and node --check passes on all six test and helper files.",
+   "Not a defect, left as the fixer's documented product call (DVIS-17): while a long sprint name is being edited, the field is the input's default width, not the full header. If the owner wants the field to fill the rest of the header line while editing, one option is 'has-[input]:grow' on the wrapper.",
+   "DPH-04: the '/' hotkey still focused a display:none box below sm. The row's own test header names this as part of the defect, but the fix left it unchanged, so on a narrow window or a phone with a hardware keyboard '/' did nothing visible.",
+   "DPH-04 test: the check 'the box is focused within the tap' would have passed without flushSync. fake-dom's patched focus() sets activeElement even on a hidden element, so it did not prove the box was shown before it was focused, which is the whole iOS keyboard point.",
+   "No blocking defects found; no commits added. Checked: (a) both tables at 375px, working out column widths by hand, including the 28px IconButton plus px-2 in the star and actions cells; hidden columns are consistent between the header and every row; every new class is scoped with sm: or max-sm:, so desktop and tablet are unchanged; both files are page components with no other importers whose API c",
+   "Minor, not changed: at 375px a StatusMenu with a long status name such as 'In Progress' may lose a few px of its chevron at the right edge (the control starts about 280px in). The status name itself is in view, which is what the row asks for. Narrowing it further would override the verifier's 10rem Summary call.",
+   "Accessibility note, out of scope, left unchanged: nothing observed.",
+   "DVIS-12 (real regression at 375 px): aded64d put a bare min-w-0 on every flex-1 tab. On a phone the group gets about 316 px (375 minus row padding, the gap and the ~33 px Design button), so equal thirds give about 99 px a tab. 'Cover Letter' needs about 105-113 px (16 px padding + 13 px icon + 4 px gap + label), so a phone showed 'Cover Le…'. Before the fix, the tab's automatic min-width kept it w",
+   "DVIS-12 trade-off (not fixed): from sm up the tabs are flex-1 (basis 0) with min-w-0, so they stay equal thirds even when unequal widths would fit. For a split panel of about 400-440 px (the range is 240-640 and the default is 360), 'Cover Letter' is now slightly truncated where it used to fit. Avoiding that without changing the equal-width desktop look would need a container query.",
+   "Tests checked line by line: the imports and exports exist (fake-dom elements/mount/reactProps, harness setup/teardown/loadModule/resume, resume-tab MemoryStorage), and fake-dom's select.options and the class attribute are read the way the fake DOM stores them. The fixtures render the elements the tests look for (resumeSources sorts by updatedAt, so Lighthouse CV comes first; the Dashboard's first ",
+   "The branch sits on a35db30. claude/wf-r4-dsg-layout has since moved to 26b2f84, which removed other groups' tests, so `git diff base..head` shows unrelated deletions and the merge must bring in only these four commits. No other cypress, Playwright or node spec refers to 'Boards' on the Dashboard, the old brand classes, max-w-6xl or the raw select's classes. The class change touches no specs: cypre",
+   "No defects found; no commits added. What I checked: flex-1 overrides controlClass's w-full as the flex basis, so the Resume select still shrinks and the shrink-0 Open button stays beside it at 375px. DATE_BOX drops only the 'text-ink' token, so pointer-coarse:text-base, border and rounded stay. The readOnly branch of job/Field has no caller, so it is effectively dead code. The desktop look changes"
+  ],
+  "fixedByReviewer": [
+   "3d1fc23 fix(jobs): a long custom stage wraps in its \"Your Stages\" row too, so the row's Remove X stays in the section (R4-DPH-19). Adds min-w-0 to the stage's button and min-w-0 break-words to its name, and extends tests/pdf/103-r4-dph-19-stage-pill-wraps.test.mjs to check those classes and the row's shrink-0 Remove X. Without the src change the new assertions fail.",
+   "4c56bd0: corrected the stale ProjectCalendar doc comment on where the no-due-date count is shown",
+   "60b2f6e fix(shell) (R4-DPH-04): the '/' hotkey now calls the same show-then-focus helper as the phone button (openOnPhone renamed openAndFocus; flushSync, then focus, then select). On desktop nothing changes visually: the added classes are max-sm: only and the X is sm:hidden. QuickSearch's JSDoc now mentions '/'.",
+   "60b2f6e test (R4-DPH-04): the tap test now spies on the input's focus() and asserts the frame had no 'hidden' at the moment focus ran. A new test dispatches a '/' keydown on the fake window after the hotkey effects have run, and asserts the key was taken (defaultPrevented), the box was shown when focused, the phone bar classes are present, the box is activeElement, and only max-sm: classes were ad",
+   "5af9251 fix(editor) (R4-DVIS-12): the tabs are min-w-max below sm and sm:min-w-0 from sm up, instead of a bare min-w-0, so a 375 px phone keeps 'Cover Letter' whole. The doc comment is updated. The test now requires min-w-max and sm:min-w-0 and forbids a bare min-w-0. It fails on aded64d alone and on the base.",
+   "86b5ad5 fix(jobs): a long company name in the job form's breadcrumbs truncates, so the header row fits a phone (R4-DPH-16). src/pages/JobForm.jsx: the company crumb label is <span title={company} className=\"block max-w-40 truncate md:max-w-xs\">. tests/pdf/103-r4-dph-16-job-form-header-wraps.test.mjs: a new it() mounts Edit with a 60-character company and asserts the crumb link holds a truncate + u",
+   "cae5cc4 fix(editor): only the split panel's header hides the account's first name (R4-DVIS-31). EditorHeader now passes hideName={!isMobile && layoutMode === 'split'}, and the AuthBar doc comment says so. The test gains an 'editor-only and the phone layout still show the first name' case, which fails on b434a9f's always-hide and passes with the fix. Fail-first: cae5cc4:tests/pdf/103-r4-dvis-31-edi"
+  ]
+ },
+ "baselineFailures": [],
+ "notes": "78 layout rows (43 R4-DPH phone ≤640px, 35 R4-DVIS desktop/tablet kit consistency) found by five read-only finders, each confirmed by a second agent before it was fixed; fixed in file-disjoint groups, one worktree agent per group, each group adversarially reviewed by another agent (except R3 dashboard, R5 panels, R6a optimizer, whose reviews were stopped at the owner's usage limit), every fix with a fail-first test (tests/pdf/103-r4-*). Merged claude/wf-r4-dsg-flow (finished cluster) at 1761511 so the JobForm and dialog rows build on its final files; conflicts resolved in TasksTab.jsx imports, TopBar.jsx's doc comment, tests/pdf/95-job-notes-tab.test.mjs's comment. Product calls: Timeline name column 10rem on phones (20rem from sm); Calendar keeps its 48rem grid panning in its own box with the controls outside it (no agenda view); Board toolbar filters behind a 'Filters' toggle below md; PageHeader static below md, sticky from md; phone QuickSearch behind a search button opening a full-width bar; JobForm on the shell PageHeader (its breadcrumbs skip the discard question, the R4-DUX-06 draft keeps the typing); CareerHistoryPanel takes a workspace look in the Job Tracker; the Bullet Optimizer rebuilt on the kit Dialog. Adopting kit tabClass/buttonClass/controlClass also brings the kit's focus ring and touch heights on those controls (consistency, not an a11y pass). Test fixes of our own tests after CI: 322a9bb, 1bb7765, 88143ab, b8ec561. Noted, not rowed: the Overview's click-to-edit input is hand-rolled (job/Field.jsx); JobForm's 'Job not found' is a text link; Quick-search results have no max height on short screens; the Projects table's Name cell cannot truncate; src/templates/pdf/shared/letterhead.js has an unused import from dsg-flow (oxlint warning). Accessibility seen and left (deferred): Overview 'Open résumé' has only a title; IconButton sm hit areas overlap in BoardSettings rows."
+}
