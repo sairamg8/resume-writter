@@ -91,7 +91,9 @@ export function Backlog() {
         if (ids.indexOf(over.id) > ids.indexOf(a.id)) beforeId = ids[ids.indexOf(over.id) + 1] ?? null;
       }
     }
-    store.moveIssue(board.id, a.id, { sprintId, beforeId });
+    // Kanban ranks over that whole backlog too, so a drop on its foot lands after its last row,
+    // not after the last issue in no sprint with rows still in a sprint below it (R4-SW-B-02).
+    store.moveIssue(board.id, a.id, { sprintId, beforeId, ...(scrum ? {} : { rankIn: {} }) });
   }
 
   async function removeSprint(sprint) {
