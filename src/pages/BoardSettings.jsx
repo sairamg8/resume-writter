@@ -91,6 +91,10 @@ function ColumnRow({ board, column, index, store }) {
   // as a pick alone, a column deleted meanwhile stayed the target the select no longer showed,
   // and "Delete column" did nothing (R4-BRD-12).
   const target = others.some((c) => c.id === picked) ? picked : nearest?.id ?? '';
+  // What the move to the column picked does to the issues, said as the board's delete says it: a
+  // pick of another done state resolves or reopens them (R5-BRD-01).
+  const { change } = columnDeletion(board, column.id, target);
+  const effect = { reopen: 'and will be reopened', resolve: 'and will be marked done' }[change];
   const last = board.columns.length === 1;
   const confirm = useConfirmOptional();
   const { toast } = useToast();
@@ -137,6 +141,7 @@ function ColumnRow({ board, column, index, store }) {
             <select aria-label="Move its issues to" value={target} onChange={(e) => { setPicked(e.target.value); setRefused(false); }} className={`${CONTROL} min-w-0 max-w-full px-2 py-1`}>
               {others.map((c) => <option key={c.id} value={c.id}>{c.title}</option>)}
             </select>
+            {effect && <span data-effect="">{effect}</span>}
           </label>
           <Button variant="danger" size="sm" onClick={() => { const done = drop(target); setRefused(!done); if (done) setDeleting(false); }}>Delete column</Button>
           <Button variant="ghost" size="sm" onClick={() => { setDeleting(false); setRefused(false); }}>Cancel</Button>
