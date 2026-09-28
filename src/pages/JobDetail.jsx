@@ -3,7 +3,8 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { AlignLeft, ExternalLink, Info, LayoutList, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 import { useJobStore } from '@/hooks/useJobStore';
 import { JOB_SOURCES, JOB_STATUSES, WORK_MODES } from '@/constants/jobs';
-import { Avatar, Button, DatePill, EmptyState, IconButton, Menu, ProgressBar, cx, useConfirmOptional, useToast } from '@/components/ui';
+import { Avatar, Button, DatePill, EmptyState, IconButton, Menu, ProgressBar, TabCount, useConfirmOptional, useToast } from '@/components/ui';
+import { tabClass } from '@/components/ui/Tabs.jsx';
 import { PageHeader } from '@/components/shell';
 import { StatusMenu } from '@/components/tracker/Lozenge';
 import { TasksTab } from '@/components/job/TasksTab';
@@ -96,6 +97,8 @@ export function JobDetail({ store }) {
           </>
         )}
         tabs={(
+          // The kit's tab look and count (tabClass, TabCount), as the other page headers wear; still
+          // buttons marking the open tab with aria-current, not the kit's role="tab" Tabs.
           <div className="flex items-end gap-5 overflow-x-auto">
             {TABS.map(tab => {
               const active = activeTab === tab.id;
@@ -106,18 +109,11 @@ export function JobDetail({ store }) {
                   type="button"
                   aria-current={active ? 'page' : undefined}
                   onClick={() => setActiveTab(tab.id)}
-                  className={cx(
-                    'relative flex h-10 shrink-0 items-center gap-1.5 text-sm font-medium transition-colors after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:rounded-full',
-                    active ? 'text-brand after:bg-brand' : 'text-ink-subtle hover:text-ink after:bg-transparent hover:after:bg-line',
-                  )}
+                  className={tabClass(active)}
                 >
                   <Icon size={15} aria-hidden="true" />
                   {tab.label}
-                  {tab.id === 'tasks' && todos.length > 0 && (
-                    <span className={cx('rounded-full px-1.5 text-[11px] font-semibold', active ? 'bg-brand-subtle-hover text-brand' : 'bg-neutral-fill-hover text-ink-subtle')}>
-                      {todos.length}
-                    </span>
-                  )}
+                  {tab.id === 'tasks' && todos.length > 0 && <TabCount>{todos.length}</TabCount>}
                 </button>
               );
             })}

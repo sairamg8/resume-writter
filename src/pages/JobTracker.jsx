@@ -5,6 +5,7 @@ import { useJobStore } from '@/hooks/useJobStore';
 import { useSessionState } from '@/hooks/useSessionState';
 import { JOB_STATUSES } from '@/constants/jobs';
 import { Button, IconButton, Menu, SearchInput, cx, useConfirmOptional, useToast, useUrlState } from '@/components/ui';
+import { tabClass } from '@/components/ui/Tabs.jsx';
 import { PageHeader } from '@/components/shell';
 import { KanbanView } from '@/components/job/KanbanView';
 import { ListView } from '@/components/job/ListView';
@@ -25,7 +26,11 @@ const VIEWS = [
   { id: 'list', label: 'List', icon: List },
 ];
 
-/** The views as tabs under the title: Summary · Board · List (`?view=`). */
+/**
+ * The views as tabs under the title: Summary · Board · List (`?view=`). They wear the kit's tab
+ * look (tabClass), as a project's Board · Backlog · Settings do, but stay buttons marking the
+ * current view with aria-current, not the kit's role="tab" Tabs.
+ */
 function ViewTabs({ view, onChange }) {
   return (
     <nav aria-label="Job tracker views" className="flex items-end gap-5 overflow-x-auto">
@@ -36,10 +41,7 @@ function ViewTabs({ view, onChange }) {
           title={`${v.label === 'Board' ? 'Kanban' : v.label} view`}
           aria-current={view === v.id ? 'page' : undefined}
           onClick={() => onChange(v.id)}
-          className={cx(
-            'relative flex h-10 shrink-0 items-center gap-1.5 text-sm font-medium transition-colors after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:rounded-full',
-            view === v.id ? 'text-brand after:bg-brand' : 'text-ink-subtle hover:text-ink after:bg-transparent hover:after:bg-line',
-          )}
+          className={tabClass(view === v.id)}
         >
           <v.icon size={15} aria-hidden="true" /> {v.label}
         </button>
