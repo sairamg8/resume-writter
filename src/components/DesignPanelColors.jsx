@@ -130,7 +130,8 @@ export function ColorsSection({ resume, settings, updateSetting, onReset }) {
             <span className="text-xs text-gray-600">{label}</span>
             <div className="flex items-center gap-2">
               <ColorInput value={swatch(printed[key])} onCommit={v => updateSetting(key, v)} className="h-6 w-10 rounded border border-gray-200 cursor-pointer p-0.5" title={label} aria-label={label} />
-              <span className="text-[11px] text-gray-400 font-mono w-16 truncate">{settings[key] || placeholder}</span>
+              {/* Room for "Template default", what every résumé starts with: a fixed w-16 cut it to "Templat…" (R4-DVIS-34). */}
+              <span className="text-[11px] text-gray-400 font-mono max-w-28 truncate">{settings[key] || placeholder}</span>
               {settings[key] && (
                 <button onClick={() => updateSetting(key, '')} className="text-[11px] text-gray-400 hover:text-gray-600" title="Reset to template default">↺</button>
               )}
