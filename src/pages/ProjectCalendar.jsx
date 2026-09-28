@@ -19,7 +19,7 @@ const MAX_IN_DAY = 3;
 /**
  * A project's Calendar (/boards/:id/calendar): a month of weeks with each issue on its due date,
  * filtered by the toolbar — a click opens it, "+" on a day creates one due that day. Issues with
- * no due date are counted under the grid.
+ * no due date are counted in the month controls' row above the grid.
  */
 export function ProjectCalendar() {
   const { id } = useParams();
@@ -45,14 +45,19 @@ export function ProjectCalendar() {
       <ProjectHeader board={board} />
       <BoardStorageNotice persistError={store.persistError} recovery={store.recovery} onDismissRecovery={store.dismissRecovery} className="px-4 pt-3 md:px-8" />
       <BoardToolbar board={board} filters={filters} onChange={setFilters} />
-      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-auto px-4 pb-8 md:px-8">
-        <div className="flex items-center gap-2">
-          <Button size="md" onClick={() => setMonth(`${today.slice(0, 7)}-01`)}>Today</Button>
-          <IconButton icon={ChevronLeft} label="Previous month" onClick={() => setMonth((m) => shiftMonth(m, -1))} />
-          <IconButton icon={ChevronRight} label="Next month" onClick={() => setMonth((m) => shiftMonth(m, 1))} />
-          <h2 className="ml-1 text-lg font-semibold text-ink" aria-live="polite">{title}</h2>
-          {undated > 0 && <span className="ml-auto text-[13px] text-ink-subtlest">{undated} issue{undated === 1 ? ' has' : 's have'} no due date</span>}
-        </div>
+      {/* The month controls sit above the grid's scroller, not in it: on a phone the 48rem grid pans
+          sideways in its own box, as the board's columns do, and Today / previous / next / the month
+          stay on screen instead of sliding away with the first days of the week. The row wraps: on a
+          phone the "no due date" note takes a line of its own under the controls, where squeezed
+          beside the month it broke both into a word per line. */}
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 px-4 pb-3 md:px-8">
+        <Button size="md" onClick={() => setMonth(`${today.slice(0, 7)}-01`)}>Today</Button>
+        <IconButton icon={ChevronLeft} label="Previous month" onClick={() => setMonth((m) => shiftMonth(m, -1))} />
+        <IconButton icon={ChevronRight} label="Next month" onClick={() => setMonth((m) => shiftMonth(m, 1))} />
+        <h2 className="ml-1 whitespace-nowrap text-lg font-semibold text-ink" aria-live="polite">{title}</h2>
+        {undated > 0 && <span className="w-full text-[13px] text-ink-subtlest sm:ml-auto sm:w-auto">{undated} issue{undated === 1 ? ' has' : 's have'} no due date</span>}
+      </div>
+      <div className="min-h-0 flex-1 overflow-auto px-4 pb-8 md:px-8">
         <div role="grid" aria-label={`${title} calendar`} className="min-w-[48rem] overflow-hidden rounded-md border border-line">
           <div role="row" className="grid grid-cols-7 border-b border-line bg-sunken">
             {WEEKDAYS.map((d) => <div key={d} role="columnheader" className="px-2 py-1.5 text-[12px] font-semibold uppercase text-ink-subtle">{d}</div>)}
