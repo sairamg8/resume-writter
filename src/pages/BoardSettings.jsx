@@ -93,10 +93,18 @@ function ColumnRow({ board, column, index, store }) {
   const target = others.some((c) => c.id === picked) ? picked : nearest?.id ?? '';
   const last = board.columns.length === 1;
   const confirm = useConfirmOptional();
+  const { toast } = useToast();
+
+  /** Delete the column (its issues to `to`); a toast says so, with Undo, as the board's delete does (R4-SW-B-01). */
+  function drop(to) {
+    const removed = store.deleteColumn(board.id, column.id, to);
+    if (removed) toast({ title: `Column “${column.title || 'Untitled'}” deleted`, action: { label: 'Undo', onClick: () => store.restoreColumn(removed) } });
+    return removed;
+  }
 
   async function remove() {
     if (count === 0) {
-      if (await confirm({ title: `Delete the ${column.title} column?`, body: 'It holds no issues.', confirmLabel: 'Delete column', tone: 'danger' })) store.deleteColumn(board.id, column.id);
+      if (await confirm({ title: `Delete the ${column.title} column?`, body: 'It holds no issues.', confirmLabel: 'Delete column', tone: 'danger' })) drop(null);
       return;
     }
     setDeleting(true);
@@ -130,7 +138,7 @@ function ColumnRow({ board, column, index, store }) {
               {others.map((c) => <option key={c.id} value={c.id}>{c.title}</option>)}
             </select>
           </label>
-          <Button variant="danger" size="sm" onClick={() => { const done = store.deleteColumn(board.id, column.id, target); setRefused(!done); if (done) setDeleting(false); }}>Delete column</Button>
+          <Button variant="danger" size="sm" onClick={() => { const done = drop(target); setRefused(!done); if (done) setDeleting(false); }}>Delete column</Button>
           <Button variant="ghost" size="sm" onClick={() => { setDeleting(false); setRefused(false); }}>Cancel</Button>
           {refused && <p role="alert" className="w-full text-red-600">The column could not be deleted. Pick where its issues go and try again.</p>}
         </div>

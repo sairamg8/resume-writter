@@ -94,8 +94,18 @@ export function createBoardActions({ boardsNow, setBoards, now = () => Date.now(
     return change(boardId, (b) => ops.addColumn(b, { ...fields, id })) ? findIn(boardId, 'columns', id) : null;
   }
   const updateColumn = (boardId, columnId, patch) => change(boardId, (b, ctx) => ops.updateColumn(b, columnId, patch, ctx));
-  /** Delete a column, its issues moving to `targetColumnId`; false when refused (no target, last column). */
-  const deleteColumn = (boardId, columnId, targetColumnId) => change(boardId, (b, ctx) => ops.deleteColumn(b, columnId, targetColumnId, ctx));
+  /**
+   * Delete a column, its issues moving to `targetColumnId`; returns `{ boardId, columnId, before,
+   * after }` (the board either side of it) for restoreColumn — the toast's Undo — or null when
+   * refused (no target, last column).
+   */
+  function deleteColumn(boardId, columnId, targetColumnId) {
+    const before = findBoard(boardId);
+    if (!change(boardId, (b, ctx) => ops.deleteColumn(b, columnId, targetColumnId, ctx))) return null;
+    return { boardId, columnId, before, after: findBoard(boardId) };
+  }
+  /** Put a deleted column back (boardOps.restoreColumn), edits made since kept; true when it came back. */
+  const restoreColumn = (removed) => Boolean(removed?.boardId) && change(removed.boardId, (b) => ops.restoreColumn(b, removed));
   const moveColumn = (boardId, columnId, toIndex) => change(boardId, (b) => ops.moveColumn(b, columnId, toIndex));
 
   /** Add a label (`{ name, color }`); returns it — or the label that already has that name — or null. */
@@ -162,7 +172,7 @@ export function createBoardActions({ boardsNow, setBoards, now = () => Date.now(
 
   return {
     keyError, addBoard, updateBoard, deleteBoard, restoreBoard, toggleStar,
-    addColumn, updateColumn, deleteColumn, moveColumn, addLabel, updateLabel, deleteLabel,
+    addColumn, updateColumn, deleteColumn, restoreColumn, moveColumn, addLabel, updateLabel, deleteLabel,
     addIssue, updateIssue, moveIssue, deleteIssue, restoreIssue, duplicateIssue,
     addComment, updateComment, deleteComment,
     addSprint, updateSprint, startSprint, completeSprint, deleteSprint,

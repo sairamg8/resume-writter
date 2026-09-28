@@ -99,6 +99,39 @@ export function deleteColumn(board, columnId, targetColumnId = null, ctx = {}) {
   return { ...moved, columns: moved.columns.filter((c) => c.id !== columnId) };
 }
 
+/** Two stored values alike (the same object, or the same data read back from storage). */
+const alike = (a, b) => a === b || JSON.stringify(a) === JSON.stringify(b);
+
+/**
+ * Undo a column delete (R4-SW-B-01): `removed` is `{ columnId, before, after }`, the board just
+ * before and just after deleteColumn. The column comes back at its old place with its title,
+ * category and WIP limit; each issue the delete changed and nothing changed since goes back as it
+ * was (its column, resolvedAt, history), and a next occurrence the delete made for a repeating
+ * issue goes again while untouched. An edit made after the delete is kept. Refused (the board as
+ * it is) when the column is not in `before`, or is on the board again.
+ */
+export function restoreColumn(board, removed) {
+  const { columnId, before, after } = removed ?? {};
+  const column = before && columnById(before, columnId);
+  if (!column || !after || columnById(board, columnId)) return board;
+  const was = new Map(before.issues.map((i) => [i.id, i]));
+  const made = new Map(after.issues.map((i) => [i.id, i]));
+  // What the delete made (a repeat's next occurrence), still as it made it: it goes.
+  const spawned = (i) => !was.has(i.id) && made.has(i.id) && alike(i, made.get(i.id));
+  const issues = board.issues.filter((i) => !spawned(i));
+  const kept = new Set(issues.map((i) => i.id));
+  const restored = issues.map((i) => {
+    const old = was.get(i.id);
+    if (!old || !made.has(i.id) || !alike(i, made.get(i.id)) || alike(old, i)) return i;
+    // A next occurrence that stays (edited since) is still this issue's: it is not made twice.
+    const nextId = i.recurrenceNextId && i.recurrenceNextId !== old.recurrenceNextId && kept.has(i.recurrenceNextId) ? i.recurrenceNextId : old.recurrenceNextId;
+    return nextId === old.recurrenceNextId ? old : { ...old, recurrenceNextId: nextId };
+  });
+  const columns = [...board.columns];
+  columns.splice(Math.max(0, Math.min(before.columns.indexOf(column), columns.length)), 0, column);
+  return { ...board, columns, issues: restored };
+}
+
 /** Move a column to `toIndex` (clamped). */
 export function moveColumn(board, columnId, toIndex) {
   const from = board.columns.findIndex((c) => c.id === columnId);
