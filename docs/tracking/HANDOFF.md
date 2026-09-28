@@ -1,5 +1,30 @@
 # Session Handoff — Resume Here
 
+## ⏩ COLD START HERE — 2026-09-28 17:10 UTC (coordinator session_01PeuUcY5NWWpCxy878FtEE1, scheduled run; owner offline)
+
+**What happened on 28 Sep:** `master` was pushed to `b8d7667` (Round 4 + wave 2 dsg-flow + dsg-layout) at **03:05 UTC,
+before its gate finished**, and Cloudflare deployed it (the deploy does not wait for ci.yml). That gate (run
+36372350271) was **red on one job, `suite (3/6)`**: both R4-DVIS-23 tests (`tests/pdf/103-r4-dvis-23-optimizer-not-faded`)
+crashed with `container.querySelector is not a function` in the kit Dialog's focus trap — a stale test (it never called
+`patchFakeDom` after e3b2030 moved the optimizer onto the kit Dialog), not an app regression. **Fixed in `56e42bf`** on
+`claude/r4-green`: the test patches the fake DOM; the redundant outer Portal in RichTextEditor is removed, so the test is
+proven fail-first against e3b2030 (run 36453755199: fails 2 without, passes with). 5f52d43's old red fail-first is
+thereby resolved: the Dialog's own portal is the fix now. Full gate on `56e42bf`: run 36453759135.
+
+**Work branch:** `claude/r4-green` (from master `b8d7667`). Round 5 clusters (branches `claude/wf-r5-<key>`, reports
+`wf-reports/r5-<key>.json`, run by workflows in this session): opt (optimizer review + DUX-22 + wave-3 writing tools),
+dash (dashboard review), panels (Design/CL/ATS review), dlg (R4-DVIS-25 + DVIS-07 rest: CL Generator, Header Icon,
+NewLetter, ShareLink on the kit Dialog), job (R4-DUX-06 Back/links, Field.jsx, Job not found, quick-search height,
+Projects Name cell, Pipeline Close-as wrap), out (DOUT-04/07 leftovers, Word reference e-mail gap, ExportDropdown hint,
+Word band), brd (wave 3 boards), imp (wave 3 import). Then a loop-until-dry finder pass over the whole app.
+Each cluster is done when its report is on its branch: merge into `claude/r4-green`, one full gate per batch,
+fast-forward master only on a green full gate of that exact commit.
+
+**Owner-only:** delete the 14 merged `claude/wf-r4-*` branches (the git proxy refuses deletes) and, once merged, the
+`claude/wf-r5-*` ones; tag `v0.1.0`; confirm the Terms and Privacy pages against the hosting domain.
+**Trackers:** R4-TRACKER.md now also carries wave 2 (dsg-flow, dsg-layout) and Round 5 rows (`r4_tracker.py` reads
+`fixes3/reports/r4-*.json` and `r5-*.json`); R2-137 and R2-133 updated from r4-exp.json (RES-R2-137).
+
 ## ⏩ COLD START HERE — 2026-09-26 13:50 UTC (coordinator session_013BXDvmy7T9XQ7CsZWdofVX; the owner's usage is spent)
 
 **State:** every Round 4 bug is fixed on the work branch `claude/awesome-cerf-t3sh88`, and **gate 36235083234 on

@@ -1,5 +1,11 @@
 # Project status — done and pending (2026-09-26 14:00 UTC)
 
+> **2026-09-28 17:10 UTC — superseded in part.** `master` = `b8d7667` since 03:05 UTC on 28 Sep (Round 4 + wave 2 design),
+> pushed on a gate red on one stale test; fixed in `56e42bf` on `claude/r4-green`. Round 5 (reviews of the unreviewed
+> dsg-layout fixes, the R6b dialogs, dsg-flow leftovers, wave 3) is running: see [HANDOFF.md](HANDOFF.md). Sections below
+> are as of 26 Sep.
+
+
 Rechecked from the source at this time: every cloud session, the branches, CI, `master` and every tracker.
 The live resume point is [HANDOFF.md](HANDOFF.md); this page is the whole list in one place.
 
