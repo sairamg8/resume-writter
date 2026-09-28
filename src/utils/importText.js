@@ -131,7 +131,7 @@ export function linkText(label, href) {
  * to it, for the rich text to link (richText).
  */
 function unmark(text, as, found) {
-  return String(text)
+  return inlineOff(String(text)
     .replace(/!\[((?:\\.|[^\]\\])*)\]\([^)]*\)/g, '$1')
     // A label may hold escaped brackets ("\[draft\]", the export's) and a pair of its own ("[v2]").
     .replace(/\[((?:\\.|\[(?:\\.|[^\]\\])*\]|[^\]\\[])*)\]\(([^)\s]*)[^)]*\)/g, (_, label, href) => {
@@ -139,22 +139,24 @@ function unmark(text, as, found) {
       const [t, to] = linkParts(label, href);
       if (found) {
         const url = to || linkParts('', href)[0];
-        if (/^(?:https?:|mailto:|tel:)/i.test(url)) found.push({ label: unescape(t), url });
+        // Its label as the line prints it, its marks off too: "[**Bold**](url)" is found as "Bold" (R4-SW-I-04).
+        if (/^(?:https?:|mailto:|tel:)/i.test(url)) found.push({ label: inlineOff(t), url });
       }
       if (!to) return t;
       if (Array.isArray(as)) { as.push(to); return t; }
       return `${t} (${to})`;
     })
-    .replace(/<((?:https?:\/\/|mailto:)[^>]+)>/g, '$1')
-    .replace(/`([^`]*)`/g, '$1')
-    .replace(/\*\*(.+?)\*\*/g, '$1')
-    .replace(/__(.+?)__/g, '$1')
-    .replace(/(^|[^\w*\\])\*(?!\s)(.+?)(?<![\s\\])\*(?![\w*])/g, '$1$2')
-    .replace(/(^|[^\w\\])_(?!\s)(.+?)(?<![\s\\])_(?!\w)/g, '$1$2')
-    .replace(/\\([\\`*_{}[\]()#+\-.!|<>~=&])/g, '$1')
+    .replace(/<((?:https?:\/\/|mailto:)[^>]+)>/g, '$1'))
     .replace(/ {2,}$/, '');
 }
-const unescape = (t) => String(t).replace(/\\([\\`*_{}[\]()#+\-.!|<>~=&])/g, '$1');
+/** Inline code, bold and italics, and backslash escapes off a run of Markdown text. */
+const inlineOff = (text) => String(text)
+  .replace(/`([^`]*)`/g, '$1')
+  .replace(/\*\*(.+?)\*\*/g, '$1')
+  .replace(/__(.+?)__/g, '$1')
+  .replace(/(^|[^\w*\\])\*(?!\s)(.+?)(?<![\s\\])\*(?![\w*])/g, '$1$2')
+  .replace(/(^|[^\w\\])_(?!\s)(.+?)(?<![\s\\])_(?!\w)/g, '$1$2')
+  .replace(/\\([\\`*_{}[\]()#+\-.!|<>~=&])/g, '$1');
 
 /**
  * A Markdown résumé as the parser's lines: "# " the name, "## " a heading, "### " an entry's title,
