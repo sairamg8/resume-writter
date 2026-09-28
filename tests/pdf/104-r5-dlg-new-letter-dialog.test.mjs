@@ -75,3 +75,25 @@ it('R5-DLG-04: the page behind is held still while it is open, and let go when i
     assert.notEqual(body.style.overflow, 'hidden', 'the page scrolls again');
   } finally { await m.unmount(); }
 });
+
+// R4-DVIS-07 (review): the picker now stays on screen for its 150 ms exit animation. A double-click on a
+// résumé (or Blank letter) reached the second onPick while it closed, and the dashboard, which is still
+// showing while the editor's page loads, made two letters. A pick while it closes is ignored.
+it('R4-DVIS-07: a double-click picks once: nothing is picked while it animates out', async () => {
+  const picks = [];
+  const onPick = (id) => picks.push(id);
+  const m = await openModal('/src/components/NewLetterModal.jsx', { sources: sources(), onPick });
+  const button = (text) => m.all().find((el) => el.tagName === 'BUTTON' && label(el).startsWith(text));
+  try {
+    m.view.act(() => reactProps(button('Newest CV')).onClick());
+    assert.deepEqual(picks, ['resume_new']);
+    // The dashboard closes it on the pick (Dashboard.newLetter); it animates out.
+    m.view.update({ isOpen: false, sources: sources(), onPick, onClose() {} });
+    const closing = m.all().find((el) => el.getAttribute('role') === 'dialog');
+    assert.equal(closing?.getAttribute('data-state'), 'closed', 'still on screen while it animates out');
+    assert.ok(button('Newest CV') && button('Blank letter'), 'its buttons are still there');
+    m.view.act(() => reactProps(button('Newest CV')).onClick());
+    m.view.act(() => reactProps(button('Blank letter')).onClick());
+    assert.deepEqual(picks, ['resume_new'], 'the second click of a double-click makes no second letter');
+  } finally { await m.unmount(); }
+});
