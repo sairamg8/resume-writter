@@ -302,9 +302,11 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false, publicL
             )}
           </div>
 
-          {/* Sidebar — career history */}
-          <div className="w-full lg:w-72 shrink-0 lg:sticky lg:top-6 mt-4 lg:mt-0">
-            <div className="mb-3 flex items-center justify-between">
+          {/* Sidebar — career history. Pinned from lg, it is never taller than the window (R4-DVIS-29): a
+              long history scrolls inside the panel's timeline, so the panel's end and "Open Job Tracker →"
+              stay on screen instead of below the fold until the page's end. */}
+          <div className="w-full lg:w-72 shrink-0 lg:sticky lg:top-6 mt-4 lg:mt-0 lg:flex lg:flex-col lg:max-h-[calc(100dvh-3rem)]">
+            <div className="mb-3 flex items-center justify-between shrink-0">
               <h2 className="text-sm font-bold text-gray-700">Career History</h2>
               <button
                 onClick={() => navigate('/jobs')}
