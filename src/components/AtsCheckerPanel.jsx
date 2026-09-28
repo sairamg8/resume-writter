@@ -484,11 +484,13 @@ function AtsCheck({ resume, store }) {
             <div key={catKey} className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm transition-all">
               <button
                 onClick={() => toggleCat(catKey)}
-                className="w-full px-4 py-3.5 flex items-center justify-between text-left hover:bg-gray-50 transition-colors"
+                className="w-full px-4 py-3.5 flex items-center justify-between gap-3 text-left hover:bg-gray-50 transition-colors"
               >
+                {/* The title wraps rather than truncates, clear of its points: in the 360 px panel and on a phone
+                    "Work Experience & Action Verbs" and three more were cut to an ellipsis (R4-DVIS-33). */}
                 <div className="flex items-center gap-2.5 min-w-0">
-                  <span className={`w-2 h-2 rounded-full ${hasErrors ? 'bg-red-500' : hasWarnings ? 'bg-amber-500' : 'bg-emerald-500'}`} />
-                  <span className="text-sm font-bold text-gray-800 truncate">{cat.label}</span>
+                  <span className={`w-2 h-2 rounded-full shrink-0 ${hasErrors ? 'bg-red-500' : hasWarnings ? 'bg-amber-500' : 'bg-emerald-500'}`} />
+                  <span className="text-sm font-bold text-gray-800 leading-snug">{cat.label}</span>
                 </div>
                 <div className="flex items-center gap-3 shrink-0">
                   <span className="text-xs font-bold text-gray-600 bg-gray-100 px-2 py-0.5 rounded-md">
