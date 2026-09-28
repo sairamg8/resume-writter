@@ -58,3 +58,31 @@ test('opened with no caret in the field: an empty statement, added as a new bull
   await page.getByRole('button', { name: 'Apply to Resume' }).click();
   await expect(editor.locator('li')).toHaveText(['Was responsible for the payments team of 5', 'Built the ledger service', 'Shipped the new checkout, lifting conversion 12%']);
 });
+
+// R4-SW-WT-02: text after a nested list continues its item (the ATS bullet "Led migration for 3
+// regions", R4-LO-16). The optimizer opens that whole statement from a caret in either run, and Apply
+// writes the result in the first run and deletes the later one, the nested list kept — in a real
+// browser's contentEditable, whose delete and insertText the fake DOM only imitates.
+test('a list item split by a nested list opens and applies as one statement, its sub-list kept', async ({ page }) => {
+  const nested = '<ul><li>Led migration<ul><li>Cut costs by 30%</li></ul> for 3 regions</li><li>Built the ledger service</li></ul>';
+  await visitEditor(page, 'classic', { sections: [{ ...SECTIONS[0], items: [{ ...SECTIONS[0].items[0], description: nested }] }] });
+  await page.getByText('Staff Engineer', { exact: true }).first().click();
+  const editor = page.locator('[contenteditable="true"]').filter({ hasText: 'Led migration' });
+  await expect(editor).toBeVisible();
+  // The caret in " for 3 regions", the text after the nested list.
+  await editor.evaluate((el) => {
+    el.focus();
+    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    let node = walker.nextNode();
+    while (node && !node.nodeValue.includes('for 3 regions')) node = walker.nextNode();
+    document.getSelection().collapse(node, 4);
+  });
+  await editor.locator('xpath=..').getByTitle('Bullet Optimizer & STAR Formula Helper').click();
+  const statement = page.locator('textarea').last();
+  await expect(statement).toHaveValue('Led migration for 3 regions');
+  await statement.fill('Led the migration of 40 services across 3 regions');
+  await page.getByRole('button', { name: 'Apply to Resume' }).click();
+  await expect(editor.locator('li')).toHaveText(['Led the migration of 40 services across 3 regionsCut costs by 30%', 'Cut costs by 30%', 'Built the ledger service']);
+  await expect.poll(() => savedDescription(page)).toContain('<li>Cut costs by 30%</li>');
+  await expect.poll(() => savedDescription(page)).not.toContain('for 3 regions<');
+});
