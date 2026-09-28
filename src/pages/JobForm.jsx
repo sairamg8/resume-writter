@@ -9,22 +9,8 @@ import { JOB_SOURCES, JOB_STATUSES, WORK_MODES } from '@/constants/jobs';
 import { InterviewStageSelector } from '@/components/job/InterviewStageSelector';
 import { JobsNotSavedAlert } from '@/components/job/JobsNotSavedAlert';
 import RichTextEditor from '@/components/RichTextEditor';
-import { useConfirmOptional } from '@/components/ui';
+import { Select, TextField, useConfirmOptional } from '@/components/ui';
 
-/** A labelled control: `id` is the control's, so the label names it (M8). */
-function Field({ id, label, children }) {
-  return (
-    <div>
-      <label htmlFor={id} className="block text-xs font-semibold text-ink-subtle mb-1.5">
-        {label}
-      </label>
-      {children}
-    </div>
-  );
-}
-
-// 16 px on touch screens, as the kit's controls (controlClass): iOS Safari zooms the page into any
-// smaller field it focuses (J-38).
 // The form's unsaved values in this tab's sessionStorage, so the browser's Back or an in-app link —
 // which the app's plain HashRouter cannot hold (no useBlocker) — no longer loses them (R4-DUX-06).
 // Storage can throw (private mode, blocked site data): then there is simply no draft.
@@ -42,8 +28,6 @@ function writeDraft(key, form) {
 function clearDraft(key) {
   try { sessionStorage.removeItem(key); } catch { /* nothing stored */ }
 }
-
-const INPUT = 'w-full px-3 py-2.5 text-sm pointer-coarse:text-base border border-line rounded-md focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent transition-colors';
 
 export function JobForm({ store }) {
   const navigate = useNavigate();
@@ -196,61 +180,41 @@ export function JobForm({ store }) {
               {/* Either one is enough (canSave): a star on both said both were needed (J-36). */}
               <p className="text-xs text-ink-subtlest mt-1">A company or a role is enough to save the job.</p>
             </div>
+            {/* The kit's fields and labels, as the job page's and the other workspace forms': 36 px
+                (44 px and 16 px text on a touch screen, so iOS does not zoom in, J-38), and each id is the
+                control's, so its label names it (M8). The empty choices are <option>s, not a placeholder,
+                so a work mode, a source or a résumé can be unset again. */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Field id={uid + 'company'} label="Company">
-                <input id={uid + 'company'} autoFocus value={form.company} onChange={e => set('company', e.target.value)} placeholder="Google, Stripe, Notion…" className={INPUT} />
-              </Field>
-              <Field id={uid + 'role'} label="Role / Position">
-                <input id={uid + 'role'} value={form.role} onChange={e => set('role', e.target.value)} placeholder="Software Engineer, Product Manager…" className={INPUT} />
-              </Field>
-              <Field id={uid + 'location'} label="Location">
-                <input id={uid + 'location'} value={form.location} onChange={e => set('location', e.target.value)} placeholder="Remote, New York…" className={INPUT} />
-              </Field>
-              <Field id={uid + 'salary'} label="Salary / Comp">
-                <input id={uid + 'salary'} value={form.salary} onChange={e => set('salary', e.target.value)} placeholder="$150k – $200k" className={INPUT} />
-              </Field>
+              <TextField id={uid + 'company'} label="Company" autoFocus value={form.company} onChange={e => set('company', e.target.value)} placeholder="Google, Stripe, Notion…" />
+              <TextField id={uid + 'role'} label="Role / Position" value={form.role} onChange={e => set('role', e.target.value)} placeholder="Software Engineer, Product Manager…" />
+              <TextField id={uid + 'location'} label="Location" value={form.location} onChange={e => set('location', e.target.value)} placeholder="Remote, New York…" />
+              <TextField id={uid + 'salary'} label="Salary / Comp" value={form.salary} onChange={e => set('salary', e.target.value)} placeholder="$150k – $200k" />
               {/* The page's Details box shows both: nothing could set them but an imported file (R4-JOB-02). */}
-              <Field id={uid + 'workMode'} label="Work Mode">
-                <select id={uid + 'workMode'} value={form.workMode} onChange={e => set('workMode', e.target.value)} className={INPUT + ' bg-white cursor-pointer'}>
-                  <option value="">— Not set —</option>
-                  {WORK_MODES.map(m => <option key={m.id} value={m.id}>{m.label}</option>)}
-                </select>
-              </Field>
-              <Field id={uid + 'source'} label="Source">
-                <select id={uid + 'source'} value={form.source} onChange={e => set('source', e.target.value)} className={INPUT + ' bg-white cursor-pointer'}>
-                  <option value="">— Not set —</option>
-                  {JOB_SOURCES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
-                </select>
-              </Field>
-              <div className="col-span-1 sm:col-span-2">
-                <Field id={uid + 'url'} label="Job Posting URL">
-                  <input id={uid + 'url'} value={form.url} onChange={e => set('url', e.target.value)} placeholder="https://jobs.company.com/…" className={INPUT} />
-                </Field>
-              </div>
+              <Select id={uid + 'workMode'} label="Work Mode" value={form.workMode} onChange={e => set('workMode', e.target.value)}>
+                <option value="">— Not set —</option>
+                {WORK_MODES.map(m => <option key={m.id} value={m.id}>{m.label}</option>)}
+              </Select>
+              <Select id={uid + 'source'} label="Source" value={form.source} onChange={e => set('source', e.target.value)}>
+                <option value="">— Not set —</option>
+                {JOB_SOURCES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
+              </Select>
+              <TextField id={uid + 'url'} label="Job Posting URL" className="sm:col-span-2" value={form.url} onChange={e => set('url', e.target.value)} placeholder="https://jobs.company.com/…" />
             </div>
           </section>
 
           <section className="bg-white rounded-md border border-line p-4 sm:p-6 space-y-4">
             <h2 className="text-[11px] font-bold text-ink-subtlest uppercase tracking-widest">Status & Dates</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Field id={uid + 'status'} label="Application Status">
-                <select id={uid + 'status'} value={form.status} onChange={e => setStatus(e.target.value)} className={INPUT + ' bg-white cursor-pointer'}>
-                  {JOB_STATUSES.map((s, i) => (
-                    <option key={s.id} value={s.id}>{i + 1}. {s.label}</option>
-                  ))}
-                </select>
-              </Field>
-              <Field id={uid + 'appliedDate'} label="Applied Date">
-                <input id={uid + 'appliedDate'} type="date" value={form.appliedDate} onChange={e => set('appliedDate', e.target.value)} className={INPUT} />
-              </Field>
-              <Field id={uid + 'deadline'} label="Deadline">
-                <input id={uid + 'deadline'} type="date" value={form.deadline} onChange={e => set('deadline', e.target.value)} className={INPUT} />
-              </Field>
+              <Select id={uid + 'status'} label="Application Status" value={form.status} onChange={e => setStatus(e.target.value)}>
+                {JOB_STATUSES.map((s, i) => (
+                  <option key={s.id} value={s.id}>{i + 1}. {s.label}</option>
+                ))}
+              </Select>
+              <TextField id={uid + 'appliedDate'} label="Applied Date" type="date" value={form.appliedDate} onChange={e => set('appliedDate', e.target.value)} />
+              <TextField id={uid + 'deadline'} label="Deadline" type="date" value={form.deadline} onChange={e => set('deadline', e.target.value)} />
               {/* Its own day: the one date labelled 'Deadline / Follow-up' wrote the deadline, so a
                   follow-up set there never reached 'Follow-ups due' (R4-JOB-02). */}
-              <Field id={uid + 'followUpDate'} label="Follow-up Date">
-                <input id={uid + 'followUpDate'} type="date" value={form.followUpDate} onChange={e => set('followUpDate', e.target.value)} className={INPUT} />
-              </Field>
+              <TextField id={uid + 'followUpDate'} label="Follow-up Date" type="date" value={form.followUpDate} onChange={e => set('followUpDate', e.target.value)} />
             </div>
           </section>
 
@@ -265,17 +229,13 @@ export function JobForm({ store }) {
           <section className="bg-white rounded-md border border-line p-4 sm:p-6 space-y-4">
             <h2 className="text-[11px] font-bold text-ink-subtlest uppercase tracking-widest">Contact & Resume</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Field id={uid + 'contact'} label="Contact Person">
-                <input id={uid + 'contact'} value={form.contact} onChange={e => set('contact', e.target.value)} placeholder="Recruiter name, email…" className={INPUT} />
-              </Field>
-              <Field id={uid + 'resumeId'} label="Resume Used">
-                <select id={uid + 'resumeId'} value={form.resumeId} onChange={e => set('resumeId', e.target.value)} className={INPUT + ' bg-white cursor-pointer'}>
-                  <option value="">— Not linked yet —</option>
-                  {linkedResume(form, resumes).state === 'deleted' && <option value={form.resumeId}>Résumé deleted</option>}
-                  {/* Résumés only: a cover letter is no résumé to have applied with (R2-135). */}
-                  {resumeChoices(form, resumes).map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
-                </select>
-              </Field>
+              <TextField id={uid + 'contact'} label="Contact Person" value={form.contact} onChange={e => set('contact', e.target.value)} placeholder="Recruiter name, email…" />
+              <Select id={uid + 'resumeId'} label="Resume Used" value={form.resumeId} onChange={e => set('resumeId', e.target.value)}>
+                <option value="">— Not linked yet —</option>
+                {linkedResume(form, resumes).state === 'deleted' && <option value={form.resumeId}>Résumé deleted</option>}
+                {/* Résumés only: a cover letter is no résumé to have applied with (R2-135). */}
+                {resumeChoices(form, resumes).map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+              </Select>
             </div>
           </section>
         </form>
