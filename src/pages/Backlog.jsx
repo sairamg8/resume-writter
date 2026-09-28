@@ -70,7 +70,10 @@ export function Backlog() {
   // it, including one still in a sprint from when the project used sprints (R4-BRD-08).
   const all = backlogSections(scrum ? board : { ...board, sprints: [] }, board.issues.filter((i) => i.type !== 'epic'));
   const sections = all.map((s) => ({ ...s, shown: filterIssues(board, filters, { issues: s.issues }) }));
-  const targets = [...(active ? [active] : []), ...futures].map((s) => ({ id: s.id, name: s.name })).concat({ id: null, name: 'Backlog' });
+  // Where a row's ⋯ menu can move it: a sprint or the backlog — on a Scrum project only. A Kanban
+  // backlog is one section, whose board ignores sprints: a sprint picked there changed nothing
+  // the user could see, and 'Backlog' was ticked for a row still in one (R4-SW-B-03).
+  const targets = scrum ? [...(active ? [active] : []), ...futures].map((s) => ({ id: s.id, name: s.name })).concat({ id: null, name: 'Backlog' }) : [];
   const toggleFold = (sid) => setFolded((f) => { const n = new Set(f); if (n.has(sid)) n.delete(sid); else n.add(sid); return n; });
 
   function onDragEnd({ active: a, over }) {
