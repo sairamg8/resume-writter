@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FileText, Plus, Upload, Mail as MailIcon, Briefcase, Columns2 } from 'lucide-react';
+import { FileText, Plus, Upload, Mail as MailIcon, Briefcase, LayoutGrid } from 'lucide-react';
 import AuthBar from '@/components/AuthBar';
 import { ResumeCard } from '@/components/ResumeCard';
 import { CareerHistoryPanel } from '@/components/CareerHistoryPanel';
@@ -160,11 +160,10 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false, publicL
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
           <div className="flex items-center justify-between w-full md:w-auto">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                <FileText size={16} className="text-white" />
-              </div>
-              <span className="text-xl font-bold text-gray-900">CPWT-CV</span>
+            {/* The workspace's own mark (TopBar), so the brand is one mark on every page. */}
+            <div className="flex items-center gap-2">
+              <span className="flex size-7 items-center justify-center rounded-md bg-brand text-[11px] font-bold tracking-tight text-white">CV</span>
+              <span className="text-[15px] font-semibold tracking-tight text-ink">CPWT-CV</span>
             </div>
             <div className="md:hidden flex items-center gap-2">
               <AuthBar {...auth} {...sync} compact />
@@ -183,11 +182,12 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false, publicL
             >
               <Briefcase size={14} /> Job Tracker
             </button>
+            {/* /boards is "Projects" everywhere else: the sidebar, the top bar and the page's own title. */}
             <button
               onClick={() => navigate('/boards')}
               className="flex items-center gap-1.5 px-2.5 sm:px-4 py-1.5 sm:py-2 bg-white border border-gray-200 text-gray-700 rounded-lg text-xs sm:text-sm font-semibold hover:bg-gray-50 transition-colors shadow-sm whitespace-nowrap"
             >
-              <Columns2 size={14} /> Boards
+              <LayoutGrid size={14} /> Projects
             </button>
             <button
               onClick={startLetter}
