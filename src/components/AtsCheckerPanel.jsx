@@ -411,12 +411,13 @@ function AtsCheck({ resume, store }) {
           )}
         </div>
 
+        {/* 16 px on a touch screen: iOS zooms the page into any smaller field it focuses (R4-DPH-35). */}
         <textarea
           rows={3}
           value={jobDescription}
           onChange={e => setJobDescription(e.target.value)}
           placeholder="Paste job posting description here (requirements, qualifications, tech stack)..."
-          className="w-full text-xs p-3 border border-gray-200 rounded-xl outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all text-gray-700 resize-none"
+          className="w-full text-xs pointer-coarse:text-base p-3 border border-gray-200 rounded-xl outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all text-gray-700 resize-none"
         />
 
         {/* A posting the scan finds no keyword in ("We are looking for a strong candidate…") has no
