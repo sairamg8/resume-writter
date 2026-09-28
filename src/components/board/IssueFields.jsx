@@ -192,7 +192,8 @@ export function DateInput({ value, onChange, label, className }) {
       }}
       onBlur={() => setDraft(null)}
       className={cx(
-        'h-8 w-full min-w-0 rounded border border-transparent bg-transparent px-2 text-sm text-ink transition-colors hover:bg-neutral-fill focus:border-brand focus:bg-white focus:outline-none',
+        // 16 px on touch screens: iOS Safari zooms the page into any smaller field it focuses (R4-DPH-11).
+        'h-8 w-full min-w-0 rounded border border-transparent bg-transparent px-2 text-sm text-ink transition-colors hover:bg-neutral-fill focus:border-brand focus:bg-white focus:outline-none pointer-coarse:text-base',
         !value && 'text-ink-subtlest', className,
       )}
     />
@@ -227,7 +228,8 @@ export function PointsInput({ value, onChange, label = 'Story points', className
         if (e.key === 'Escape' && draft !== null && !isImeKey(e)) { e.stopPropagation(); setDraft(null); }
       }}
       className={cx(
-        'h-8 w-full min-w-0 rounded border border-transparent bg-transparent px-2 text-sm text-ink placeholder:text-ink-subtlest transition-colors hover:bg-neutral-fill focus:border-brand focus:bg-white focus:outline-none',
+        // 16 px on touch screens, as DateInput (R4-DPH-11).
+        'h-8 w-full min-w-0 rounded border border-transparent bg-transparent px-2 text-sm text-ink placeholder:text-ink-subtlest transition-colors hover:bg-neutral-fill focus:border-brand focus:bg-white focus:outline-none pointer-coarse:text-base',
         className,
       )}
     />

@@ -44,12 +44,14 @@ export function IssueChecklist({ items = [], onChange, autoFocus = false }) {
               />
               {/* min-w-0 lets the text shrink below its longest word (a flex item will not, by
                   default) and break-words wraps that word at the row's edge: a pasted URL stays in
-                  its row instead of pushing the issue view sideways. */}
+                  its row instead of pushing the issue view sideways. Its field is 16 px on touch
+                  screens: iOS Safari zooms the page into any smaller field it focuses (R4-DPH-11). */}
               <InlineEdit
                 value={c.text}
                 onCommit={(next) => set(c.id, { text: next })}
                 label="Checklist item"
                 className={`min-w-0 flex-1 break-words text-sm ${c.done ? 'text-ink-subtlest line-through' : 'text-ink'}`}
+                inputClassName="pointer-coarse:text-base"
               />
               <IconButton
                 icon={Trash2}
@@ -77,7 +79,8 @@ export function IssueChecklist({ items = [], onChange, autoFocus = false }) {
         onBlur={add}
         placeholder="Add an item (Enter to add)"
         aria-label="Add a checklist item"
-        className="h-8 rounded border border-transparent bg-transparent px-2 text-sm text-ink placeholder:text-ink-subtlest transition-colors hover:bg-neutral-fill focus:border-brand focus:bg-white focus:outline-none"
+        // 16 px on touch screens, as the item's field above (R4-DPH-11).
+        className="h-8 rounded border border-transparent bg-transparent px-2 text-sm text-ink placeholder:text-ink-subtlest transition-colors hover:bg-neutral-fill focus:border-brand focus:bg-white focus:outline-none pointer-coarse:text-base"
       />
     </section>
   );

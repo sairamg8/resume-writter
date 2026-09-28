@@ -61,7 +61,11 @@ export function BacklogRow({ board, issue, sprintId, targets, onOpen, onStatus, 
       )}
     >
       <IssueTypeIcon type={issue.type} />
-      <span className={cx('w-16 shrink-0 text-[13px] text-ink-subtle', column?.category === 'done' && 'line-through')}>{key}</span>
+      {/* The key on one line, at least 64px so short keys line up: a key of up to ten letters and
+          its number is wider than that, and it widens its column while the summary gives way —
+          held to w-16 it wrapped after the '-' or ran over the summary. Never truncated: the
+          number is what tells the issue apart. */}
+      <span className={cx('min-w-16 shrink-0 whitespace-nowrap text-[13px] text-ink-subtle', column?.category === 'done' && 'line-through')}>{key}</span>
       <span className="min-w-0 flex-1 truncate text-ink">{issue.title}</span>
       {epic && <EpicLozenge title={epic.title} className="hidden max-w-[10rem] sm:inline-flex" />}
       <span {...stop} className="hidden shrink-0 sm:block"><StatusMenu size="sm" value={column?.id} options={statuses} onChange={onStatus} /></span>
