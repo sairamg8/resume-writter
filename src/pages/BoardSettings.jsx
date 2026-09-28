@@ -4,12 +4,19 @@ import { ArrowDown, ArrowUp, Plus, Trash2 } from 'lucide-react';
 import { useBoardStore } from '@/hooks/useBoardStore';
 import { ProjectHeader } from '@/components/board/ProjectTabs';
 import { BoardStorageNotice } from '@/components/board/BoardStorageNotice';
-import { Button, EmptyState, isImeKey, useConfirmOptional, useToast } from '@/components/ui';
+import { Button, EmptyState, IconButton, controlClass, isImeKey, useConfirmOptional, useToast } from '@/components/ui';
 import { BOARD_COLORS, BOARD_MODES, COLUMN_CATEGORIES, DEFAULT_HIDE_DONE_DAYS, LABEL_COLORS } from '@/constants/boards';
 import { cleanTitle } from '@/utils/boardModel';
 import { columnDeletion } from '@/utils/boardView';
 
-const FIELD = 'text-sm px-2 py-1.5 rounded-lg border border-line focus:outline-none focus:ring-2 focus:ring-brand';
+// The kit's control (controlClass: its border and focus ring, and 16 px text on a touch screen,
+// which iOS would otherwise zoom into) without its w-full: most fields here sit in a row at their
+// own width. Hand-rolled, they had other corners and rings than the kit's, and 14 px text on a
+// phone (R4-DVIS-06, R4-DPH-11).
+const CONTROL = controlClass({ size: 'sm' }).split(' ').filter((c) => c !== 'w-full').join(' ');
+const FIELD = `${CONTROL} px-2 py-1.5 leading-5`;
+/** A field's caption, as the kit's Field draws its label. */
+const CAPTION = 'block text-[12px] font-semibold leading-5 text-ink-subtle';
 
 /**
  * A text field that saves when it is left or Enter is pressed (Escape puts the saved value back),
@@ -63,9 +70,9 @@ function KeyField({ board, keyError, onSave }) {
   }
   return (
     <div className="space-y-1">
-      <div className="flex gap-2">
+      <div className="flex items-center gap-2">
         <input aria-label="Project key" value={draft} onChange={(e) => { setDraft(e.target.value); setRefused(null); }} className={`${FIELD} w-32 font-mono uppercase`} />
-        <button onClick={save} disabled={next === board.key || Boolean(problem)} className="px-3 py-1.5 text-xs font-semibold text-white bg-brand rounded-lg hover:bg-brand-hover disabled:opacity-40">Save key</button>
+        <Button variant="primary" size="sm" onClick={save} disabled={next === board.key || Boolean(problem)}>Save key</Button>
       </div>
       {(problem || refused) && <p role="alert" className="text-xs text-red-600">{refused || problem}</p>}
       <p className="text-xs text-ink-subtlest">Issue keys use it: {board.key}-1 becomes {next || board.key}-1.</p>
@@ -106,20 +113,23 @@ function ColumnRow({ board, column, index, store }) {
           <CommitField aria-label="WIP limit" type="number" min="1" placeholder="none" value={column.wipLimit ?? ''} onCommit={(v) => store.updateColumn(board.id, column.id, { wipLimit: v })} className={`${FIELD} w-20`} />
         </label>
         <span className="text-xs text-ink-subtlest w-16">{count} issue{count === 1 ? '' : 's'}</span>
-        <button aria-label="Move column up" title="Move up" disabled={index === 0} onClick={() => store.moveColumn(board.id, column.id, index - 1)} className="p-1 text-ink-subtlest hover:text-ink-subtle disabled:opacity-30"><ArrowUp size={14} /></button>
-        <button aria-label="Move column down" title="Move down" disabled={index === board.columns.length - 1} onClick={() => store.moveColumn(board.id, column.id, index + 1)} className="p-1 text-ink-subtlest hover:text-ink-subtle disabled:opacity-30"><ArrowDown size={14} /></button>
-        <button aria-label="Delete column" title={last ? 'A project keeps at least one column' : 'Delete column'} disabled={last} onClick={remove} className="p-1 text-gray-300 hover:text-red-500 disabled:opacity-30"><Trash2 size={14} /></button>
+        <IconButton size="sm" icon={ArrowUp} label="Move column up" disabled={index === 0} onClick={() => store.moveColumn(board.id, column.id, index - 1)} />
+        <IconButton size="sm" icon={ArrowDown} label="Move column down" disabled={index === board.columns.length - 1} onClick={() => store.moveColumn(board.id, column.id, index + 1)} />
+        {/* A disabled kit button takes no pointer: the wrapper's title still says why. */}
+        <span title={last ? 'A project keeps at least one column' : undefined} className="inline-flex">
+          <IconButton size="sm" variant="danger" icon={Trash2} label="Delete column" disabled={last} onClick={remove} />
+        </span>
       </div>
       {deleting && (
         <div className="flex flex-wrap items-center gap-2 bg-red-50 border border-red-100 rounded-md p-2 text-xs text-ink-subtle">
           <label className="flex items-center gap-2">
             Its {count} issue{count === 1 ? '' : 's'} move to
-            <select aria-label="Move its issues to" value={target} onChange={(e) => { setPicked(e.target.value); setRefused(false); }} className="text-xs px-2 py-1 rounded-lg border border-line">
+            <select aria-label="Move its issues to" value={target} onChange={(e) => { setPicked(e.target.value); setRefused(false); }} className={`${CONTROL} px-2 py-1`}>
               {others.map((c) => <option key={c.id} value={c.id}>{c.title}</option>)}
             </select>
           </label>
-          <button onClick={() => { const done = store.deleteColumn(board.id, column.id, target); setRefused(!done); if (done) setDeleting(false); }} className="px-3 py-1 font-semibold text-white bg-red-600 rounded-lg hover:bg-red-700">Delete column</button>
-          <button onClick={() => { setDeleting(false); setRefused(false); }} className="px-3 py-1 font-semibold text-ink-subtle">Cancel</button>
+          <Button variant="danger" size="sm" onClick={() => { const done = store.deleteColumn(board.id, column.id, target); setRefused(!done); if (done) setDeleting(false); }}>Delete column</Button>
+          <Button variant="ghost" size="sm" onClick={() => { setDeleting(false); setRefused(false); }}>Cancel</Button>
           {refused && <p role="alert" className="w-full text-red-600">The column could not be deleted. Pick where its issues go and try again.</p>}
         </div>
       )}
@@ -144,7 +154,7 @@ function AddRow({ label, onAdd, colors }) {
           {colors.map((c) => <option key={c.color} value={c.color}>{c.name}</option>)}
         </select>
       )}
-      <button onClick={add} disabled={!name.trim()} className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-white bg-brand rounded-lg hover:bg-brand-hover disabled:opacity-40"><Plus size={12} /> Add</button>
+      <Button variant="primary" size="sm" leftIcon={Plus} onClick={add} disabled={!name.trim()}>Add</Button>
     </div>
   );
 }
@@ -215,16 +225,16 @@ export function BoardSettings() {
       <div className="px-4 py-5 md:px-8">
         <div className="max-w-3xl space-y-4">
           <Card title="Details">
-            <label className="block text-xs text-ink-subtle space-y-1">Name
+            <label className="block space-y-1"><span className={CAPTION}>Name</span>
               <CommitField aria-label="Project name" value={board.title} onCommit={(title) => store.updateBoard(board.id, { title })} className={`${FIELD} w-full`} />
             </label>
-            <div className="text-xs text-ink-subtle space-y-1">Key
+            <div className="space-y-1"><span className={CAPTION}>Key</span>
               <KeyField key={board.key} board={board} keyError={store.keyError} onSave={(key) => store.updateBoard(board.id, { key })} />
             </div>
-            <label className="block text-xs text-ink-subtle space-y-1">Description
+            <label className="block space-y-1"><span className={CAPTION}>Description</span>
               <CommitField multiline rows={3} aria-label="Project description" value={board.description} onCommit={(description) => store.updateBoard(board.id, { description })} className={`${FIELD} w-full`} />
             </label>
-            <div className="text-xs text-ink-subtle space-y-1">Colour
+            <div className="space-y-1"><span className={CAPTION}>Colour</span>
               <div className="flex flex-wrap gap-1.5">
                 {BOARD_COLORS.map((c) => (
                   <button
@@ -238,7 +248,7 @@ export function BoardSettings() {
                 ))}
               </div>
             </div>
-            <label className="block text-xs text-ink-subtle space-y-1">Way of working
+            <label className="block space-y-1"><span className={CAPTION}>Way of working</span>
               <select aria-label="Project mode" value={board.mode} onChange={(e) => store.updateBoard(board.id, { mode: e.target.value })} className={`${FIELD} w-full`}>
                 {BOARD_MODES.map((m) => <option key={m.id} value={m.id}>{m.name} — {m.description}</option>)}
               </select>
@@ -262,7 +272,7 @@ export function BoardSettings() {
                   <select aria-label="Label colour" value={l.color} onChange={(e) => store.updateLabel(board.id, l.id, { color: e.target.value })} className={FIELD}>
                     {labelColors(l.color).map((c) => <option key={c.color} value={c.color}>{c.name}</option>)}
                   </select>
-                  <button aria-label="Delete label" title="Delete label" onClick={() => deleteLabel(l)} className="p-1 text-gray-300 hover:text-red-500"><Trash2 size={14} /></button>
+                  <IconButton size="sm" variant="danger" icon={Trash2} label="Delete label" onClick={() => deleteLabel(l)} />
                 </li>
               ))}
             </ul>
