@@ -15,17 +15,24 @@ import { filterIssues, sortIssues } from '@/utils/boardQuery';
 import { issueKey, statusColumn } from '@/utils/boardModel';
 import { relativeTime } from '@/utils/uiFormat';
 
+/**
+ * The columns a phone does without (Type, Labels, Parent, Points, Updated), in the header and every
+ * row, with a narrower Summary: Status then starts about 256px in, on a 375px screen, and Priority
+ * and Due date are a short pan away. Shown again from sm up.
+ */
+const PHONE_HIDDEN = 'hidden sm:table-cell';
+
 const COLUMNS = [
-  { id: 'type', label: 'Type', sort: 'type', className: 'w-14' },
+  { id: 'type', label: 'Type', sort: 'type', className: `w-14 ${PHONE_HIDDEN}` },
   { id: 'key', label: 'Key', sort: 'key', className: 'w-24' },
-  { id: 'title', label: 'Summary', sort: 'title', className: 'min-w-[16rem]' },
+  { id: 'title', label: 'Summary', sort: 'title', className: 'min-w-[10rem] sm:min-w-[16rem]' },
   { id: 'status', label: 'Status', sort: 'status', className: 'w-40' },
   { id: 'priority', label: 'Priority', sort: 'priority', className: 'w-28' },
-  { id: 'labels', label: 'Labels', className: 'w-44' },
-  { id: 'epic', label: 'Parent', className: 'w-44' },
+  { id: 'labels', label: 'Labels', className: `w-44 ${PHONE_HIDDEN}` },
+  { id: 'epic', label: 'Parent', className: `w-44 ${PHONE_HIDDEN}` },
   { id: 'due', label: 'Due date', sort: 'due', className: 'w-32' },
-  { id: 'estimate', label: 'Points', sort: 'estimate', className: 'w-20' },
-  { id: 'updated', label: 'Updated', sort: 'updated', className: 'w-28' },
+  { id: 'estimate', label: 'Points', sort: 'estimate', className: `w-20 ${PHONE_HIDDEN}` },
+  { id: 'updated', label: 'Updated', sort: 'updated', className: `w-28 ${PHONE_HIDDEN}` },
 ];
 
 /** A header cell: a sort button with its direction (aria-sort on the cell). */
@@ -69,7 +76,7 @@ export function ProjectList() {
       <BoardStorageNotice persistError={store.persistError} recovery={store.recovery} onDismissRecovery={store.dismissRecovery} className="px-4 pt-3 md:px-8" />
       <BoardToolbar board={board} filters={filters} onChange={setFilters} right={<span className="text-[13px] text-ink-subtlest">{rows.length} of {board.issues.length} issues</span>} />
       <div className="min-h-0 flex-1 overflow-auto px-4 pb-8 md:px-8">
-        <table className="w-full min-w-[64rem] border-separate border-spacing-0 text-sm">
+        <table className="w-full border-separate border-spacing-0 text-sm sm:min-w-[64rem]">
           <caption className="sr-only">Issues of {board.title}</caption>
           <thead className="sticky top-0 z-10">
             <tr>{COLUMNS.map((col) => <Th key={col.id} col={col} sort={sort} onSort={onSort} />)}</tr>
@@ -83,10 +90,12 @@ export function ProjectList() {
               const epic = epicOf(issue);
               return (
                 <tr key={issue.id} className="group h-10 hover:bg-hovered">
-                  <td className="border-b border-line-subtle px-3"><IssueTypeIcon type={issue.type} /></td>
+                  <td className={cx('border-b border-line-subtle px-3', PHONE_HIDDEN)}><IssueTypeIcon type={issue.type} /></td>
                   <td className={cx('border-b border-line-subtle px-2 text-ink-subtle', done && 'line-through')}>{key}</td>
                   <td className="border-b border-line-subtle px-2">
-                    <button type="button" onClick={() => route.open(key)} className="max-w-full truncate text-left text-ink hover:text-brand hover:underline">{issue.title}</button>
+                    {/* On a phone a long summary is cut short in the cell (inline-size containment: it
+                        no longer sets the column's width), so it cannot push Status off screen. */}
+                    <button type="button" onClick={() => route.open(key)} className="max-w-full truncate text-left text-ink hover:text-brand hover:underline max-sm:w-full max-sm:contain-inline-size">{issue.title}</button>
                   </td>
                   <td className="border-b border-line-subtle px-2">
                     <StatusMenu size="sm" value={column?.id} options={statuses} onChange={(columnId) => store.updateIssue(board.id, issue.id, { columnId })} label={`Status of ${key}`} />
@@ -94,13 +103,13 @@ export function ProjectList() {
                   <td className="border-b border-line-subtle px-2">
                     <span className="inline-flex items-center gap-1.5 text-ink"><PriorityIcon priority={issue.priority} decorative />{priorityOf(issue.priority).name}</span>
                   </td>
-                  <td className="border-b border-line-subtle px-2">
+                  <td className={cx('border-b border-line-subtle px-2', PHONE_HIDDEN)}>
                     <span className="flex gap-1 overflow-hidden">{labels.slice(0, 2).map((l) => <LabelPill key={l.id} label={l} className="max-w-[6rem]" />)}{labels.length > 2 && <span className="text-[11px] text-ink-subtlest">+{labels.length - 2}</span>}</span>
                   </td>
-                  <td className="border-b border-line-subtle px-2">{epic && <EpicLozenge title={epic.title} className="max-w-[10rem]" />}</td>
+                  <td className={cx('border-b border-line-subtle px-2', PHONE_HIDDEN)}>{epic && <EpicLozenge title={epic.title} className="max-w-[10rem]" />}</td>
                   <td className="border-b border-line-subtle px-2">{issue.due && <DatePill value={issue.due} done={done} size="sm" />}</td>
-                  <td className="border-b border-line-subtle px-2"><Points value={issue.estimate} /></td>
-                  <td className="border-b border-line-subtle px-2 text-[13px] text-ink-subtle">{relativeTime(issue.updatedAt)}</td>
+                  <td className={cx('border-b border-line-subtle px-2', PHONE_HIDDEN)}><Points value={issue.estimate} /></td>
+                  <td className={cx('border-b border-line-subtle px-2 text-[13px] text-ink-subtle', PHONE_HIDDEN)}>{relativeTime(issue.updatedAt)}</td>
                 </tr>
               );
             })}
