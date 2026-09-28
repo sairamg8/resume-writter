@@ -132,7 +132,8 @@ describe('dashboard on a phone (375 × 812)', () => {
     cy.contains('Test Classic').should('be.visible');
     // One column: the card spans the row (two to a row start at sm, 640 px).
     cy.get(CARD).first().invoke('outerWidth').should('be.greaterThan', PHONE[0] * 0.8);
-    ['Import', 'Job Tracker', 'Boards', 'New Cover', 'New Resume'].forEach((label) => {
+    // /boards is "Projects" on the Dashboard as in the workspace (R4-DVIS-14).
+    ['Import', 'Job Tracker', 'Projects', 'New Cover', 'New Resume'].forEach((label) => {
       cy.contains('button', label).should('be.visible');
     });
     fitsTheScreen();

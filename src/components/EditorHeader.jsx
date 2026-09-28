@@ -95,28 +95,34 @@ export function EditorAlerts({ exportError, onDismiss, persistError, importNotic
   );
 }
 
-/** Résumé | Cover Letter | ATS Check, and the Design button (a toggle back to the résumé). */
+/**
+ * Résumé | Cover Letter | ATS Check, and the Design button (a toggle back to the résumé).
+ * From sm up the tabs share the group's width (flex-1, sm:min-w-0) and their labels truncate: in a
+ * narrow split panel (240–360 px) they kept their full width, spilled past the group and slid
+ * under the Design button. A phone keeps each tab whole (min-w-max on the tab and the group) and
+ * scrolls the row instead: with min-w-0 there, equal thirds of a 375 px row cut "Cover Letter".
+ */
 export function EditorModeBar({ activeTab, setActiveTab }) {
   return (
     <div className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-2 sm:py-3 border-b border-gray-200 bg-gray-50/60 overflow-x-auto no-scrollbar">
       <div className="flex gap-1 flex-1 min-w-max sm:min-w-0 bg-white border border-gray-200 rounded-xl p-1">
         <button
           onClick={() => setActiveTab('resume')}
-          className={`flex-1 flex items-center justify-center gap-1 sm:gap-1.5 py-1.5 sm:py-2 px-2 sm:px-2.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${activeTab === 'resume' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+          className={`flex-1 min-w-max sm:min-w-0 flex items-center justify-center gap-1 sm:gap-1.5 py-1.5 sm:py-2 px-2 sm:px-2.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${activeTab === 'resume' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
         >
-          <User size={13} className="shrink-0" /> Resume
+          <User size={13} className="shrink-0" /> <span className="min-w-0 truncate">Resume</span>
         </button>
         <button
           onClick={() => setActiveTab('coverletter')}
-          className={`flex-1 flex items-center justify-center gap-1 sm:gap-1.5 py-1.5 sm:py-2 px-2 sm:px-2.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${activeTab === 'coverletter' ? 'bg-violet-600 text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+          className={`flex-1 min-w-max sm:min-w-0 flex items-center justify-center gap-1 sm:gap-1.5 py-1.5 sm:py-2 px-2 sm:px-2.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${activeTab === 'coverletter' ? 'bg-violet-600 text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
         >
-          <MailIcon size={13} className="shrink-0" /> Cover Letter
+          <MailIcon size={13} className="shrink-0" /> <span className="min-w-0 truncate">Cover Letter</span>
         </button>
         <button
           onClick={() => setActiveTab('ats')}
-          className={`flex-1 flex items-center justify-center gap-1 sm:gap-1.5 py-1.5 sm:py-2 px-2 sm:px-2.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${activeTab === 'ats' ? 'bg-emerald-600 text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+          className={`flex-1 min-w-max sm:min-w-0 flex items-center justify-center gap-1 sm:gap-1.5 py-1.5 sm:py-2 px-2 sm:px-2.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${activeTab === 'ats' ? 'bg-emerald-600 text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
         >
-          <ShieldCheck size={13} className="shrink-0" /> ATS Check
+          <ShieldCheck size={13} className="shrink-0" /> <span className="min-w-0 truncate">ATS Check</span>
         </button>
       </div>
       <button

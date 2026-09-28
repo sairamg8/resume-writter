@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, FileText } from 'lucide-react';
 import { Chip } from '@/components/ui/Chip';
+import { Select } from '@/components/ui/Select';
 import StarterTemplateModal from '@/components/StarterTemplateModal';
 import { TemplateThumb, cardLook } from '@/components/TemplateThumb';
 import { useBackOrHome } from '@/hooks/useBackOrHome';
@@ -47,8 +48,9 @@ export function NewResume({ store }) {
 
   return (
     <div className="min-h-screen bg-[#f5f3ef]" data-testid="new-resume-page">
+      {/* The Dashboard's width (max-w-7xl), so the content edge stays put between the two pages. */}
       <div className="bg-white border-b border-gray-200">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center gap-3">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center gap-3">
           <button onClick={goBack} aria-label="Back" title="Back" className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors">
             <ArrowLeft size={16} />
           </button>
@@ -61,7 +63,7 @@ export function NewResume({ store }) {
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
         <section className="space-y-3">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
@@ -75,14 +77,16 @@ export function NewResume({ store }) {
             {sources.length > 1 && (
               <label className="flex items-center gap-2 text-sm text-gray-600">
                 Your details from
-                <select
+                {/* The kit's select, as the Chips below are the kit's: 16 px on a touch screen, where a
+                    smaller field makes iOS zoom the page when it is tapped. */}
+                <Select
+                  size="sm"
                   data-testid="new-resume-source"
                   value={source.id}
                   onChange={(e) => setFromId(e.target.value)}
-                  className="max-w-56 rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-sm text-gray-800"
-                >
-                  {sources.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
-                </select>
+                  className="max-w-56"
+                  options={sources.map((r) => ({ value: r.id, label: r.name }))}
+                />
               </label>
             )}
           </div>
