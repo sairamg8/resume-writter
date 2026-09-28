@@ -1,4 +1,4 @@
-import { useId, useMemo } from 'react';
+import { useEffect, useId, useLayoutEffect, useMemo, useState } from 'react';
 import { Copy, Trash2, Edit2, Check, Pin } from 'lucide-react';
 import { timeAgo } from '@/utils/resume';
 import { isOriginal } from '@/utils/demoSeed';
@@ -40,6 +40,31 @@ function splitName(name = '') {
 }
 
 /**
+ * Whether the name's copy ending must stand apart from its clamped base, and the ref for the name's
+ * <p>. While the whole name fits in two lines it is one run of text, so the ending sits right after
+ * the last word; once it runs past them the ending would be cut, so it is split off beside the base's
+ * last line (R4-DVIS-28). The one-run layout is measured before paint, and again when the name or its
+ * width changes.
+ */
+function useSplitEnding(name, hasEnding) {
+  const [el, setEl] = useState(null); // the name's <p>: a new one each time Rename closes
+  const [measured, setMeasured] = useState(null); // { name, width, split }, from the one-run layout
+  const [width, setWidth] = useState(null); // the name's width, as a ResizeObserver last saw it
+  const stale = !measured || measured.name !== name || (width !== null && width !== measured.width);
+  useLayoutEffect(() => {
+    if (!hasEnding || !el || !stale) return;
+    setMeasured({ name, width: el.clientWidth, split: el.scrollHeight > el.clientHeight });
+  });
+  useEffect(() => {
+    if (!hasEnding || !el || typeof ResizeObserver !== 'function') return undefined;
+    const observer = new ResizeObserver(() => setWidth(el.clientWidth));
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [el, hasEnding]);
+  return [setEl, hasEnding && !stale && measured.split];
+}
+
+/**
  * A résumé on the dashboard. `onKeep(id, keep)` — only in a demo account, whose originals come
  * back (useDemoSeed) — adds "Keep as my original" / "Stop keeping" and the "Original" badge.
  * `lastOriginal`: deleted, it would come straight back (demoSeed.comesStraightBack), so Delete is
@@ -49,6 +74,7 @@ export function ResumeCard({ resume, onOpen, onDuplicate, onDelete, onRename, on
   const rename = useRename(resume, (name) => onRename(resume.id, name));
   const hintId = useId();
   const name = splitName(resume.name);
+  const [nameRef, split] = useSplitEnding(resume.name, Boolean(name.suffix));
   const accent = resume.settings?.accentColor || '#2563eb';
   // Its real page 1 (C1) — a letter's, for a letter — painted once the card is on screen and kept
   // until the résumé prints differently (printHash): the drawn page shows until then.
@@ -103,13 +129,20 @@ export function ResumeCard({ resume, onOpen, onDuplicate, onDelete, onRename, on
         ) : (
           <div className="flex items-start gap-1 group/name">
             {/* Up to two lines, and a copy's "(Copy)" never cut: a touch screen has no hover to show the
-                title, so a long name and its copy must differ on the card itself (R4-DVIS-28). The ending
-                sits on the base's last line (items-end), right after the name, and takes at most half the
-                row, wrapping between endings, so the base always keeps room. */}
-            <p title={resume.name} className="flex-1 min-w-0 flex items-end text-sm font-semibold text-gray-800">
-              <span className="line-clamp-2 break-words min-w-0">{name.base}</span>
-              {name.suffix && <span className="shrink-0 max-w-1/2 whitespace-pre-wrap">{name.suffix}</span>}
-            </p>
+                title, so a long name and its copy must differ on the card itself (R4-DVIS-28). A name
+                that fits in two lines is one run of text, its ending right after the last word. A longer
+                one clamps only its base, and the ending stands beside the base's last line (items-end),
+                taking at most half the row and wrapping between endings, so the base keeps room. */}
+            {split ? (
+              <p ref={nameRef} title={resume.name} className="flex-1 min-w-0 flex items-end text-sm font-semibold text-gray-800">
+                <span className="line-clamp-2 break-words min-w-0">{name.base}</span>
+                <span className="shrink-0 max-w-1/2 whitespace-pre-wrap">{name.suffix}</span>
+              </p>
+            ) : (
+              <p ref={nameRef} title={resume.name} className="flex-1 min-w-0 line-clamp-2 break-words text-sm font-semibold text-gray-800">
+                <span>{name.base}</span>{name.suffix && <span>{name.suffix}</span>}
+              </p>
+            )}
             <button
               onClick={rename.start}
               title="Rename"
