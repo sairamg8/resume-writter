@@ -12,16 +12,32 @@ import { printHash, savedPicture, savePicture } from '@/utils/pageImageStore';
 import { isImeKey } from '@/components/ui/compose';
 
 const KEEP_HINT = 'Your originals come back whenever none of them is left';
+const LAST_ORIGINAL_HINT = 'Your last original always comes back. To delete it, choose "Stop keeping" first.';
+
 // The endings Copy (useResumeStore's duplicate) and a sync conflict (cloudSyncLineage) add to a name.
 const COPY_SUFFIX = /(?: \((?:Copy|conflict copy)\))+$/;
+// Three or more of one ending in a row show as one with a count, so pressing Copy on the newest copy
+// again and again never grows the ending across the card (R4-DVIS-28).
+const RUN_AS_COUNT = 3;
 
-/** `name` as its base and its copy ending (' (Copy)', ' (Copy) (Copy)', ' (conflict copy)'), or no ending. */
+/**
+ * `name` as its base and its copy ending (' (Copy)', ' (Copy) (Copy)', ' (conflict copy)'), or no
+ * ending. A run of RUN_AS_COUNT or more of one ending reads ' (Copy ×4)'; the title keeps the full name.
+ */
 function splitName(name = '') {
   const m = COPY_SUFFIX.exec(name);
-  return m && m.index > 0 ? { base: name.slice(0, m.index), suffix: m[0] } : { base: name, suffix: '' };
+  if (!m || m.index === 0) return { base: name, suffix: '' };
+  const runs = [];
+  for (const [, kind] of m[0].matchAll(/ \(([^)]+)\)/g)) {
+    const last = runs.at(-1);
+    if (last?.kind === kind) last.count += 1;
+    else runs.push({ kind, count: 1 });
+  }
+  const suffix = runs
+    .map(({ kind, count }) => (count >= RUN_AS_COUNT ? ` (${kind} ×${count})` : ` (${kind})`.repeat(count)))
+    .join('');
+  return { base: name.slice(0, m.index), suffix };
 }
-
-const LAST_ORIGINAL_HINT ='Your last original always comes back. To delete it, choose "Stop keeping" first.';
 
 /**
  * A résumé on the dashboard. `onKeep(id, keep)` — only in a demo account, whose originals come
@@ -87,10 +103,12 @@ export function ResumeCard({ resume, onOpen, onDuplicate, onDelete, onRename, on
         ) : (
           <div className="flex items-start gap-1 group/name">
             {/* Up to two lines, and a copy's "(Copy)" never cut: a touch screen has no hover to show the
-                title, so a long name and its copy must differ on the card itself (R4-DVIS-28). */}
-            <p title={resume.name} className="flex-1 min-w-0 flex text-sm font-semibold text-gray-800">
+                title, so a long name and its copy must differ on the card itself (R4-DVIS-28). The ending
+                sits on the base's last line (items-end), right after the name, and takes at most half the
+                row, wrapping between endings, so the base always keeps room. */}
+            <p title={resume.name} className="flex-1 min-w-0 flex items-end text-sm font-semibold text-gray-800">
               <span className="line-clamp-2 break-words min-w-0">{name.base}</span>
-              {name.suffix && <span className="shrink-0 whitespace-pre">{name.suffix}</span>}
+              {name.suffix && <span className="shrink-0 max-w-1/2 whitespace-pre-wrap">{name.suffix}</span>}
             </p>
             <button
               onClick={rename.start}
