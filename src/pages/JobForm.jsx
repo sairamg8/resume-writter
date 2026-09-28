@@ -36,7 +36,7 @@ function clearDraft(key) {
  * Discard goes on to where the user was going, Keep editing stays (R4-DUX-06). useBlocker needs the
  * app's data router (main.jsx, createHashRouter); JobForm renders this only inside one.
  */
-function LeaveGuard({ shouldBlock, ask, onDiscard }) {
+function LeaveGuard({ shouldBlock, asking, ask, onDiscard }) {
   const blocker = useBlocker(({ currentLocation, nextLocation }) => (
     currentLocation.pathname !== nextLocation.pathname && shouldBlock()
   ));
@@ -44,6 +44,10 @@ function LeaveGuard({ shouldBlock, ask, onDiscard }) {
   useEffect(() => { latest.current = blocker; });
   useEffect(() => {
     if (blocker.state !== 'blocked') return undefined;
+    // The question is already up (Cancel's, or the back arrow's): that answer decides, so this way out
+    // is dropped. A second question queued behind it outlived the form: after Discard it showed on
+    // the page the form went to, where answering did nothing (R4-DUX-06 review).
+    if (asking()) { latest.current.reset?.(); return undefined; }
     let live = true;
     Promise.resolve(ask()).then((discard) => {
       if (!live) return;
@@ -101,18 +105,28 @@ export function JobForm({ store }) {
   // Cancel, the back arrow, the browser's Back and every in-app link left at once and dropped
   // everything typed (R4-DUX-06): with changes, each asks this first. Closing or reloading the tab
   // is guarded below.
-  const askDiscard = () => confirm({
-    title: 'Discard your changes?',
-    body: 'What you typed on this form has not been saved.',
-    confirmLabel: 'Discard',
-    cancelLabel: 'Keep editing',
-    tone: 'danger',
-  });
+  // Set while the question is up: never a second one behind it (LeaveGuard drops that way out).
+  const askingRef = useRef(false);
+  const askDiscard = async () => {
+    askingRef.current = true;
+    try {
+      return await confirm({
+        title: 'Discard your changes?',
+        body: 'What you typed on this form has not been saved.',
+        confirmLabel: 'Discard',
+        cancelLabel: 'Keep editing',
+        tone: 'danger',
+      });
+    } finally {
+      askingRef.current = false;
+    }
+  };
   function leaveTo(path) {
     leavingRef.current = true;
     navigate(path);
   }
   async function leave() {
+    if (askingRef.current) return; // the question already up answers for this way out too
     if (dirty && !(await askDiscard())) return;
     clearDraft(key);
     leaveTo(backPath);
@@ -175,6 +189,7 @@ export function JobForm({ store }) {
       {holdsNavigation && (
         <LeaveGuard
           shouldBlock={() => dirty && !leavingRef.current}
+          asking={() => askingRef.current}
           ask={askDiscard}
           onDiscard={() => { leavingRef.current = true; clearDraft(key); }}
         />
