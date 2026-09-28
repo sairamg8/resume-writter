@@ -1,8 +1,8 @@
 // R4-DVIS-12: in a narrow split panel (240–360 px wide) the editor's Resume | Cover Letter | ATS Check
 // tabs kept their full no-wrap width — a flex item's min-width is its content — so they spilled past
 // their rounded group and slid under the Design button, which hid ATS Check and part of Cover Letter.
-// From sm up the tabs now share the group's width (flex-1 with min-w-0) and each label is a span that
-// truncates; a phone still keeps the group whole (min-w-max) and scrolls the row. The fake DOM has no
+// From sm up the tabs now share the group's width (flex-1 with sm:min-w-0) and each label is a span that
+// truncates; a phone still keeps each tab and the group whole (min-w-max) and scrolls the row. The fake DOM has no
 // layout, so this pins the classes that make it on the real EditorModeBar, mounted with
 // react-dom/client over tests/pdf/fake-dom.mjs.
 import { before, after, it } from 'node:test';
@@ -26,7 +26,11 @@ it('each tab shrinks with its group and truncates its label, instead of spilling
         const tab = all.find((el) => el.tagName === 'BUTTON' && el.textContent.trim() === label);
         assert.ok(tab, `${activeTab}: the ${label} tab`);
         assert.ok(tokens(tab).includes('flex-1'), `${label}: the tabs share the group's width`);
-        assert.ok(tokens(tab).includes('min-w-0'), `${label}: without min-w-0 the tab keeps its full no-wrap width and overflows the group`);
+        assert.ok(tokens(tab).includes('sm:min-w-0'), `${label}: without sm:min-w-0 the tab keeps its full no-wrap width and overflows the group`);
+        // On a phone each tab stays whole: a bare min-w-0 there splits a 375 px row into equal thirds,
+        // too narrow for "Cover Letter", which was cut to "Cover Le…" where it used to fit.
+        assert.ok(tokens(tab).includes('min-w-max'), `${label}: a phone keeps the tab at its full width`);
+        assert.ok(!tokens(tab).includes('min-w-0'), `${label}: no min-w-0 below sm, where the row scrolls instead`);
         const text = [...elements(tab)].find((el) => el.tagName === 'SPAN' && el.textContent === label);
         assert.ok(text, `${label}: its label is a span that can truncate, not a bare text node`);
         for (const t of ['min-w-0', 'truncate']) assert.ok(tokens(text).includes(t), `${label}: the label span has ${t}`);
