@@ -4,7 +4,7 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  main.jsx  (StrictMode + HashRouter)                        │
+│  main.jsx  (StrictMode + createHashRouter)                  │
 └───────────────────────────┬─────────────────────────────────┘
                             ▼
 ┌─────────────────────────────────────────────────────────────┐
@@ -29,7 +29,8 @@
 
 ## Routing strategy
 
-- **`HashRouter`** so static hosting works without rewrite rules (`#/resume/xyz`).
+- **A hash router** (`createHashRouter`, a data router, so the job form can hold Back and links with
+  `useBlocker`, R4-DUX-06) so static hosting works without rewrite rules (`#/resume/xyz`).
 - Resume editor syncs URL `:id` to `store.activeId`; an id not in the store → navigate home
   (`useOpenResume`).
 - The editor's tab is in the address: `#/resume/:id?tab=design|coverletter|ats` (`useEditorTab`); no

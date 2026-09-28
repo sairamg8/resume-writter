@@ -1,5 +1,5 @@
-import { useEffect, useState, useId } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useContext, useEffect, useRef, useState, useId } from 'react';
+import { UNSAFE_DataRouterContext, useBlocker, useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { useJobStore } from '@/hooks/useJobStore';
 import { useJobStages } from '@/hooks/useJobStages';
@@ -12,8 +12,8 @@ import RichTextEditor from '@/components/RichTextEditor';
 import { Button, Select, TextField, useConfirmOptional } from '@/components/ui';
 import { PageHeader } from '@/components/shell';
 
-// The form's unsaved values in this tab's sessionStorage, so the browser's Back or an in-app link —
-// which the app's plain HashRouter cannot hold (no useBlocker) — no longer loses them (R4-DUX-06).
+// The form's unsaved values in this tab's sessionStorage, so a reload, a crash or a closed tab no
+// longer loses them (R4-DUX-06): every way out inside the app asks first (LeaveGuard, leave()).
 // Storage can throw (private mode, blocked site data): then there is simply no draft.
 const draftKey = (id) => `jobform:${id || 'new'}`;
 function readDraft(key) {
@@ -30,9 +30,39 @@ function clearDraft(key) {
   try { sessionStorage.removeItem(key); } catch { /* nothing stored */ }
 }
 
+/**
+ * Holds the browser's Back and every in-app link (a breadcrumb, the sidebar, the top bar, quick
+ * search) while `shouldBlock()` says the form has changes, and asks `ask()` the form's question:
+ * Discard goes on to where the user was going, Keep editing stays (R4-DUX-06). useBlocker needs the
+ * app's data router (main.jsx, createHashRouter); JobForm renders this only inside one.
+ */
+function LeaveGuard({ shouldBlock, ask, onDiscard }) {
+  const blocker = useBlocker(({ currentLocation, nextLocation }) => (
+    currentLocation.pathname !== nextLocation.pathname && shouldBlock()
+  ));
+  const latest = useRef(blocker);
+  useEffect(() => { latest.current = blocker; });
+  useEffect(() => {
+    if (blocker.state !== 'blocked') return undefined;
+    let live = true;
+    Promise.resolve(ask()).then((discard) => {
+      if (!live) return;
+      if (discard) { onDiscard(); latest.current.proceed?.(); } else latest.current.reset?.();
+    });
+    return () => { live = false; };
+    // One question per blocked navigation: the blocker's state, not each render's callbacks.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [blocker.state]);
+  return null;
+}
+
 export function JobForm({ store }) {
   const navigate = useNavigate();
   const { id } = useParams();
+  // The app's router is a data router, which can hold a navigation; a test's plain one cannot.
+  const holdsNavigation = Boolean(useContext(UNSAFE_DataRouterContext));
+  // Set just before the form itself navigates away (Save, a confirmed Cancel): no second question.
+  const leavingRef = useRef(false);
   const { jobs, persistError, addJob, updateJob } = useJobStore();
   const { appState } = store;
   const resumes = appState.resumes;
@@ -68,19 +98,24 @@ export function JobForm({ store }) {
   // Typed something the job does not hold yet: the same test the save writes by (formPatch).
   const dirty = Object.keys(formPatch(start, form)).length > 0;
 
-  // Cancel and the back arrow left at once and dropped everything typed (R4-DUX-06): with changes,
-  // ask first. The app's HashRouter is no data router, so useBlocker cannot hold the browser's Back
-  // or an in-app link; closing or reloading the tab is guarded below.
+  // Cancel, the back arrow, the browser's Back and every in-app link left at once and dropped
+  // everything typed (R4-DUX-06): with changes, each asks this first. Closing or reloading the tab
+  // is guarded below.
+  const askDiscard = () => confirm({
+    title: 'Discard your changes?',
+    body: 'What you typed on this form has not been saved.',
+    confirmLabel: 'Discard',
+    cancelLabel: 'Keep editing',
+    tone: 'danger',
+  });
+  function leaveTo(path) {
+    leavingRef.current = true;
+    navigate(path);
+  }
   async function leave() {
-    if (dirty && !(await confirm({
-      title: 'Discard your changes?',
-      body: 'What you typed on this form has not been saved.',
-      confirmLabel: 'Discard',
-      cancelLabel: 'Keep editing',
-      tone: 'danger',
-    }))) return;
+    if (dirty && !(await askDiscard())) return;
     clearDraft(key);
-    navigate(backPath);
+    leaveTo(backPath);
   }
 
   // Keep the draft while the form differs from its start; none once it is back there.
@@ -105,9 +140,9 @@ export function JobForm({ store }) {
 
   function handleSave() {
     if (!canSave || gone) return;
-    if (!isEdit) { clearDraft(key); navigate(`/jobs/${addJob(form)}`); return; }
+    if (!isEdit) { clearDraft(key); leaveTo(`/jobs/${addJob(form)}`); return; }
     // The whole form wrote its stale to-dos, history and status over another tab's (J-02).
-    if (updateJob(id, formPatch(start, form))) { clearDraft(key); navigate(`/jobs/${id}`); }
+    if (updateJob(id, formPatch(start, form))) { clearDraft(key); leaveTo(`/jobs/${id}`); }
   }
 
   // Enter in a field saves, as in any form: the page had no <form>, so Enter did nothing (J-36).
@@ -117,7 +152,7 @@ export function JobForm({ store }) {
   }
 
   function saveAsNew() {
-    if (canSave) { clearDraft(key); navigate(`/jobs/${addJob(form)}`); }
+    if (canSave) { clearDraft(key); leaveTo(`/jobs/${addJob(form)}`); }
   }
 
   // An unknown id is not a blank form whose Save throws the input away (J-16).
@@ -141,10 +176,17 @@ export function JobForm({ store }) {
   // 16 px title, so Edit and the job page jumped in size and place. Its row wraps on a phone —
   // the title truncates and the buttons go under it — where arrow, title and both buttons were
   // squeezed into one row and wrapped mid-label at 375 px (R4-DPH-16). The body sits at the header's
-  // padding, left-aligned, as the job page's. The breadcrumbs are plain links that do not ask
-  // leave()'s question; what was typed is kept by the draft (R4-DUX-06) and comes back on return.
+  // padding, left-aligned, as the job page's. The breadcrumbs are links: with changes, LeaveGuard
+  // asks leave()'s question before they go (R4-DUX-06).
   return (
     <div className="flex-1 bg-white">
+      {holdsNavigation && (
+        <LeaveGuard
+          shouldBlock={() => dirty && !leavingRef.current}
+          ask={askDiscard}
+          onDiscard={() => { leavingRef.current = true; clearDraft(key); }}
+        />
+      )}
       <PageHeader
         className="border-b border-line"
         breadcrumbs={[

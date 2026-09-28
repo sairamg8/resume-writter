@@ -15,7 +15,7 @@ resume-writter/
 │   └── tracking/              # every tracker, plan, audit and session log — see its README
 ├── public/                    # favicon, icons
 ├── src/
-│   ├── main.jsx               # StrictMode + HashRouter
+│   ├── main.jsx               # StrictMode + createHashRouter (a data router) + RouterProvider
 │   ├── App.jsx                # the app's state: store, account, sync, demo restore
 │   ├── AppRoutes.jsx          # the routes, and what each page gets from App
 │   ├── index.css
