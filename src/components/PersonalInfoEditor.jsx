@@ -188,12 +188,13 @@ export default function PersonalInfoEditor({ resume: whole, personal, updatePers
                   value={personal[key] || ''}
                   onChange={e => updatePersonal(key, e.target.value)}
                   placeholder={placeholder}
-                  className={`w-full px-2.5 py-1.5 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${isHidden ? 'border-gray-100 bg-gray-50 text-gray-400' : 'border-gray-200 bg-white'}`}
+                  // 16 px on a touch screen: iOS Safari zooms the page into a smaller field it focuses (R4-DPH-29).
+                  className={`w-full px-2.5 py-1.5 text-sm pointer-coarse:text-base border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${isHidden ? 'border-gray-100 bg-gray-50 text-gray-400' : 'border-gray-200 bg-white'}`}
                 />
                 {hasUrl && hasValue && (
                   <div className="mt-1 flex flex-col sm:flex-row gap-1.5">
-                    <input type="text" aria-label={`${label} display label`} value={personal[labelKey] || ''} onChange={e => updatePersonal(labelKey, e.target.value)} placeholder="Display label (optional)" className="flex-1 px-2 py-1 text-xs border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-400 bg-gray-50 text-gray-600 placeholder-gray-300" />
-                    <input type="text" aria-label={`${label} link URL`} value={personal[urlKey] || ''} onChange={e => updatePersonal(urlKey, e.target.value)} placeholder="Link URL (e.g. https://...)" className="flex-1 px-2 py-1 text-xs border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-400 bg-gray-50 text-gray-600 placeholder-gray-300" />
+                    <input type="text" aria-label={`${label} display label`} value={personal[labelKey] || ''} onChange={e => updatePersonal(labelKey, e.target.value)} placeholder="Display label (optional)" className="flex-1 px-2 py-1 text-xs pointer-coarse:text-base border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-400 bg-gray-50 text-gray-600 placeholder-gray-300" />
+                    <input type="text" aria-label={`${label} link URL`} value={personal[urlKey] || ''} onChange={e => updatePersonal(urlKey, e.target.value)} placeholder="Link URL (e.g. https://...)" className="flex-1 px-2 py-1 text-xs pointer-coarse:text-base border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-400 bg-gray-50 text-gray-600 placeholder-gray-300" />
                   </div>
                 )}
                 {showIconControls && (

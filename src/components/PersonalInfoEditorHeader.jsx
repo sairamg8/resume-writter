@@ -72,7 +72,8 @@ function BorderWidthBox({ width, onChange }) {
   return (
     <>
       <button onClick={() => onChange(clamp(width - 1))} className="w-6 h-6 flex items-center justify-center border border-gray-200 rounded text-gray-600 hover:bg-gray-100 text-base leading-none">−</button>
-      <input type="text" inputMode="numeric" aria-label="Header border thickness (pt)" {...typed.inputProps} className="w-14 text-center text-xs font-medium text-gray-700 border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-400 h-6" />
+      {/* 16 px on a touch screen, or iOS Safari zooms the page into the box; wider there so the digits fit (R4-DPH-29). */}
+      <input type="text" inputMode="numeric" aria-label="Header border thickness (pt)" {...typed.inputProps} className="w-14 pointer-coarse:w-16 text-center text-xs pointer-coarse:text-base font-medium text-gray-700 border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-400 h-6" />
       <button onClick={() => onChange(clamp(width + 1))} className="w-6 h-6 flex items-center justify-center border border-gray-200 rounded text-gray-600 hover:bg-gray-100 text-base leading-none">+</button>
     </>
   );

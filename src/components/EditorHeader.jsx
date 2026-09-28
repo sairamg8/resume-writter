@@ -32,7 +32,8 @@ export function EditorHeader({ resume, rename, layoutMode, setLayoutMode, export
               if (e.key === 'Enter' && !isImeKey(e)) rename.commit();
               if (e.key === 'Escape' && !isImeKey(e)) rename.cancel();
             }}
-            className="w-full text-xs sm:text-sm font-semibold border-b border-blue-400 outline-none bg-transparent text-gray-800"
+            // 16 px on a touch screen, or iOS Safari zooms the page as the box opens (R4-DPH-29).
+            className="w-full text-xs sm:text-sm pointer-coarse:text-base font-semibold border-b border-blue-400 outline-none bg-transparent text-gray-800"
           />
         ) : (
           <button onClick={rename.start} title="Rename resume" className="text-xs sm:text-sm font-semibold text-gray-800 hover:text-gray-600 truncate block w-full text-left">
