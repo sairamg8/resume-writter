@@ -121,7 +121,7 @@ export function SyncDot({ syncStatus, lastSynced, isOnline, heldResumes, heldLab
 /**
  * `compact` renders the signed-out state as an icon-only button, for narrow headers. `hideName`
  * leaves the first name beside the avatar off the screen: the editor's header, in a 360 px split
- * panel, was left ~60 px for the résumé's name (R4-DVIS-31).
+ * panel, was left ~60 px for the résumé's name (R4-DVIS-31); it passes it in the split panel only.
  */
 export default function AuthBar({
   user, authLoading, cloudAvailable = true, signInWithGoogle, signOut, syncStatus, lastSynced, isOnline, heldResumes, compact = false,

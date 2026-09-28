@@ -62,8 +62,9 @@ export function EditorHeader({ resume, rename, layoutMode, setLayoutMode, export
           onShare={onShare}
         />
         <div className="w-px h-4 bg-gray-200 self-center hidden sm:block" />
-        {/* No first name beside the avatar: in the 360 px split panel it took the résumé name's room (R4-DVIS-31). */}
-        <AuthBar {...auth} {...sync} compact hideName />
+        {/* No first name beside the avatar in the split panel: 360 px wide in a wider window, it took the résumé
+            name's room (R4-DVIS-31). Editor-only and the phone layout span the window and keep it. */}
+        <AuthBar {...auth} {...sync} compact hideName={!isMobile && layoutMode === 'split'} />
       </div>
     </div>
   );
