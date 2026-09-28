@@ -3,16 +3,19 @@ import { Text } from './PdfText';
 import { PdfRichText } from './PdfRichText';
 import { hasRichText, safeHref } from '@/utils/richText';
 import { dateRange, endDateOf, presentLabel, startDateOf } from '@/utils/dates';
-import { SectionTitleOf, RenderBullets, RenderColGrid, hexAlpha, SectionRouter, SPACER, ItemHeader, shadesOf } from './PdfSections';
-import { CentredLine, EmployerHeader, EndRow, endField, fieldGap, headPresence, itemHeadPresence, onBaselineOf, wordRoom } from './PdfItemHeader';
+import { SectionTitleOf, RenderBullets, RenderColGrid, hexAlpha, SectionRouter, SPACER, ItemHeader, shadesOf, getColumnWidth } from './PdfSections';
+import { CentredLine, EmployerHeader, EndRow, endField, endRowLines, fieldGap, headPresence, itemHeadPresence, onBaselineOf, wordRoom } from './PdfItemHeader';
 import { employerOf, groupPlaces, groupsRoles, roleGroups } from '@/utils/roleGroups';
 import {
-  SIDEBAR_TYPES, SideSectionTitle, SideEducation, SideLanguages, SideCertifications, SideInterests, SideReferences,
+  SIDEBAR_TYPES, SIDE_COL, SideSectionTitle, SideEducation, SideLanguages, SideCertifications, SideInterests, SideReferences,
 } from './PdfSidebarColumn';
 import { SideSkills } from './PdfSidebarSkills';
 import { breakLinks } from './pdfFontLoader';
 import { ContactValue } from './PdfContact';
-import { capMiddle } from './pdfMeasure';
+import { capMiddle, textWidth, wrappedLines } from './pdfMeasure';
+import { MM_TO_PT } from './pdfUnits';
+import { pageBoxPt } from '@/constants/pageSize';
+import { pageMargins } from '@/constants/pageMargins';
 
 export { SIDEBAR_TYPES, SideSectionTitle };
 
@@ -36,6 +39,20 @@ export function renderSideSection(section, sectionGap, itemGap, accent, shades, 
 
 /** The card's dot, pt: its diameter. */
 const CARD_DOT = 6;
+/** The card's left border and its padding past it, pt (CardItem): the room its text loses. */
+const CARD_INSET = 2 + 9;
+/** The main column's padding on the dark column's side, pt (SidebarTemplatePDF). */
+const MAIN_PAD_LEFT = 14;
+
+/**
+ * The width a main-column card's text is laid out in, pt: the paper less the dark column, the main
+ * column's padding and the page's right margin, a Grids cell's share of that (getColumnWidth), less
+ * the card's border and padding.
+ */
+const cardTextWidth = (settings, cols = 1) => {
+  const main = pageBoxPt(settings).width * (1 - SIDE_COL) - MAIN_PAD_LEFT - pageMargins(settings).h * MM_TO_PT;
+  return main * (parseFloat(getColumnWidth(cols)) / 100) - CARD_INSET;
+};
 
 /**
  * A card: its left border, and the dot on it level with the middle of the header's first line
@@ -229,6 +246,32 @@ export function SidebarMainExperience({ section, settings, marginBottom, spaceBe
   );
 }
 
+/**
+ * The lines a project card's header (CardHeader) takes: its bold name with the date at its last line's
+ * right end (EndRow; centred, after a " · ", on a line of its own when the name wraps or both do not
+ * fit), then its technologies and link on one line, each wrapped at the card's text width — `cols`,
+ * the section's Grids. Counted as one line, a joined line that wraps (long technologies, a long link)
+ * left the title's keep a line short, two with a name that wraps too, and the title alone at the foot
+ * of a page while the card moved on (R4-DOUT-04); it counted the link as a line of its own before the
+ * two were joined. Greedy (wrappedLines), so it errs on more lines; the spare line stays (headPresence).
+ */
+function projectCardLines(item, { settings, entrySize, centered, showDates, cols }) {
+  const width = cardTextWidth(settings, cols);
+  const font = settings?._pdfFontFamily;
+  const nameBox = { fontFamily: font, fontSize: entrySize, fontWeight: 'bold' };
+  const dateBox = { fontFamily: font, fontSize: entrySize - 1.5 };
+  const name = item.name || '';
+  const date = showDates ? dateRange(startDateOf(item), endDateOf(item, settings), settings) : '';
+  const nameLines = wrappedLines(name, nameBox, width);
+  const gap = fieldGap(dateBox.fontSize);
+  const head = !centered ? Math.max(1, endRowLines({ text: name, box: nameBox, end: date, endBox: dateBox, gap: 6, width }))
+    : !date ? Math.max(1, nameLines)
+    : !name ? 1
+    : nameLines > 1 || textWidth(name, nameBox) + 2 * gap + textWidth(`· ${date}`, dateBox) > width ? nameLines + 1 : 1;
+  const details = [item.technologies, item.url].filter(Boolean).join(' · ');
+  return head + wrappedLines(details, { fontFamily: font, fontSize: entrySize - 1 }, width);
+}
+
 export function SidebarMainProjects({ section, settings, marginBottom, spaceBefore, itemGap }) {
   const s = section.settings || {};
   const showDates = s.showDates !== false;
@@ -241,10 +284,10 @@ export function SidebarMainProjects({ section, settings, marginBottom, spaceBefo
   const centered   = s.alignment === 'center';
   const textAlign  = centered ? 'center' : 'left';
   const dateStyle  = cardDateStyle(settings, entrySize, shade.muted);
-  // The title keeps the first card's header — its name and date, then its technologies and link on
-  // one line — and the lines it keeps with it (R2-047).
+  // The title keeps the first card's header and the lines it keeps with it (R2-047), each of its lines
+  // wrapped at the card's text width (projectCardLines).
   const first      = visibleItems[0];
-  const presence   = first ? cardPresence(settings, entrySize, lineH, 1 + (first.technologies || first.url ? 1 : 0)) : 0;
+  const presence   = first ? cardPresence(settings, entrySize, lineH, projectCardLines(first, { settings, entrySize, centered, showDates, cols: s.columns || 1 })) : 0;
   // A card's technologies and link on the one line under its name, a " · " only between the two, as
   // the other templates and the Word export print them (R4-DOUT-04): the link used to print on a line
   // of its own. Each keeps its size and colour; a link too long for the line breaks inside it.
