@@ -101,6 +101,27 @@ describe('R4-SW-B-01: the store puts a deleted column back', () => {
     assert.deepEqual(byId(back, 'i1'), original.issues[0], 'the untouched moved issue is put back');
   });
 
+  it('the next occurrence the delete made, edited since, stays, and the untouched repeating issue comes back pointing at it', () => {
+    const original = project();
+    const { a, board } = actionsOver([original]);
+    const removed = a.deleteColumn('p1', 'rev', 'c3');
+    const next = byId(board(), 'i2').recurrenceNextId;
+    assert.ok(next && byId(board(), next), 'resolving the weekly issue made its next occurrence');
+    a.updateIssue('p1', next, { title: 'Water the plants, the herbs too' });
+
+    assert.equal(a.restoreColumn(removed), true);
+    const back = board();
+    assert.equal(byId(back, next).title, 'Water the plants, the herbs too', 'the edited next occurrence is kept');
+    assert.deepEqual(byId(back, 'i2'), { ...original.issues[1], recurrenceNextId: next },
+      'the untouched repeating issue is back in Review, reopened, still pointing at its next occurrence');
+    // Resolved again, it makes no second next occurrence: it already has one.
+    const count = back.issues.length;
+    a.moveIssue('p1', 'i2', { columnId: 'c3' });
+    assert.ok(byId(board(), 'i2').resolvedAt, 'resolved again');
+    assert.equal(board().issues.length, count, 'no second next occurrence');
+    assert.equal(board().issues.filter((i) => i.title.startsWith('Water the plants')).length, 2);
+  });
+
   it('an empty column comes back too; with its project gone, Undo does nothing', () => {
     const original = project({ columns: [...project().columns, col('c4', 'Waiting', 'todo', 2)] });
     const { a, board, drop } = actionsOver([original]);
