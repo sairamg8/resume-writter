@@ -253,7 +253,7 @@ it('R4-DUX-06: the app mounts a data router, so the job form can hold the browse
   const main = readFileSync(new URL('../../src/main.jsx', import.meta.url), 'utf8');
   assert.match(main, /createHashRouter\(/);
   assert.match(main, /<RouterProvider router=\{router\} \/>/);
-  assert.doesNotMatch(main, /<HashRouter>/, 'the plain HashRouter has no useBlocker');
+  assert.doesNotMatch(main, /import \{[^}]*\bHashRouter\b/, 'the plain HashRouter has no useBlocker');
 });
 
 it('R4-DUX-06: the Job Tracker crumb on a changed form asks; Keep editing stays with the typing, Discard goes on', async () => {
