@@ -2,15 +2,19 @@
 // the user's statement with the template, and the modal had no way back. Now an Undo link shows under
 // the statement after a template replaces it and restores the text as it was before the first template
 // picked (a second template keeps that text); once the text is changed any other way, Undo goes away.
-// The real modal is mounted (react-dom/client over tests/pdf/fake-dom.mjs). Fictional data only.
+// The real modal is mounted (react-dom/client over tests/pdf/fake-dom.mjs). Fictional data only. It is
+// the kit's Dialog (R4-DVIS-07), in a portal at the end of <body>: the page is searched from there, and
+// patchFakeDom gives its focus trap the querySelector it needs.
 import { before, after, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { setup, teardown, loadModule } from './harness.mjs';
 import { mount, elements, reactProps } from './fake-dom.mjs';
+import { patchFakeDom } from '../unit/ui-dom-harness.mjs';
 
 let BulletOptimizerModal;
 let TEMPLATES;
 before(async () => {
+  patchFakeDom();
   await setup();
   ({ default: BulletOptimizerModal } = await loadModule('/src/components/BulletOptimizerModal.jsx'));
   ({ GOOGLE_XYZ_TEMPLATES: TEMPLATES } = await loadModule('/src/utils/bulletOptimizer.js'));
@@ -21,7 +25,7 @@ const OWN = 'Rebuilt the Quillmark invoicing service for 40 regional shops';
 
 function optimizer(initialText) {
   const view = mount(BulletOptimizerModal, { isOpen: true, onClose() {}, onApply() {}, initialText });
-  const all = () => [...elements(view.container)];
+  const all = () => [...elements(view.document.body)];
   const buttons = () => all().filter((el) => el.tagName === 'BUTTON');
   const textarea = () => all().find((el) => el.tagName === 'TEXTAREA');
   return {

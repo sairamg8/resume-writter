@@ -6,12 +6,18 @@
 // - R4-CL-08: a metric chip was added after the sentence's full stop ("…service. by 35%"), and to an
 //   empty statement with a space in front. It now goes before the closing punctuation.
 // The real modal is mounted (react-dom/client over tests/pdf/fake-dom.mjs) and its chips are clicked.
+// It is the kit's Dialog (R4-DVIS-07), in a portal at the end of <body>: the page is searched from
+// there, and patchFakeDom gives its focus trap the querySelector it needs.
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { setup, teardown, loadModule } from './harness.mjs';
 import { mount, elements, reactProps } from './fake-dom.mjs';
+import { patchFakeDom } from '../unit/ui-dom-harness.mjs';
 
-before(setup);
+before(async () => {
+  patchFakeDom();
+  await setup();
+});
 after(teardown);
 
 /** The optimizer open on `initialText`, `click(label)` a chip by its text, `text()` the statement. */
@@ -22,14 +28,14 @@ async function optimizer(initialText) {
   return {
     click(text, category) {
       if (category) {
-        const tab = [...elements(view.container)].find((el) => el.tagName === 'BUTTON' && label(el) === category);
+        const tab = [...elements(view.document.body)].find((el) => el.tagName === 'BUTTON' && label(el) === category);
         view.act(() => reactProps(tab).onClick());
       }
-      const chip = [...elements(view.container)].find((el) => el.tagName === 'BUTTON' && label(el) === text);
+      const chip = [...elements(view.document.body)].find((el) => el.tagName === 'BUTTON' && label(el) === text);
       assert.ok(chip, `a chip reads "${text}"`);
       view.act(() => reactProps(chip).onClick());
     },
-    text: () => reactProps([...elements(view.container)].find((el) => el.tagName === 'TEXTAREA')).value,
+    text: () => reactProps([...elements(view.document.body)].find((el) => el.tagName === 'TEXTAREA')).value,
     unmount: () => view.unmount(),
   };
 }

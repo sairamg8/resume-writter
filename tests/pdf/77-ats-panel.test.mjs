@@ -352,13 +352,20 @@ describe('ATS Plain Text: Copy Text and the .txt download (R2-080, R2-166)', () 
 });
 
 describe('STAR Optimizer → Copy: a refused clipboard is said, not silent (R2-080)', () => {
+  // The optimizer is the kit's Dialog (R4-DVIS-07), in a portal at the end of <body>: its buttons are
+  // looked for from there, and patchFakeDom gives its focus trap the querySelector it needs.
+  before(async () => {
+    const { patchFakeDom } = await import('../unit/ui-dom-harness.mjs');
+    patchFakeDom();
+  });
+
   async function optimizer() {
     const { default: BulletOptimizerModal } = await loadModule('/src/components/BulletOptimizerModal.jsx');
     mock.timers.reset();
   mock.timers.enable({ apis: ['setTimeout'] });
     const view = mount(BulletOptimizerModal, { isOpen: true, onClose() {}, onApply() {}, initialText: 'Led 3 migrations' });
     const text = (el) => el.textContent.replace(/\s+/g, ' ').trim();
-    const buttons = () => [...elements(view.container)].filter((el) => el.tagName === 'BUTTON');
+    const buttons = () => [...elements(view.document.body)].filter((el) => el.tagName === 'BUTTON');
     return {
       labels: () => buttons().map(text),
       button: (label) => buttons().find((el) => text(el) === label),

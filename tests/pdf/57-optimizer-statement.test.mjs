@@ -2,7 +2,9 @@
 // that statement as text (AUD-09). The fix landed with a Playwright spec only, which `yarn test`
 // never runs — so nothing in the push gate covered it. This is that cover: the statement the caret
 // picks out, and what Apply leaves behind, over the fake DOM's Range and insertText.
-// Real Chromium still checks the rest: tests/playwright/bullet-optimizer.spec.mjs.
+// Real Chromium still checks the rest: tests/playwright/bullet-optimizer.spec.mjs. The optimizer is
+// the kit's Dialog (R4-DVIS-07), in a portal at the end of <body>: its statement and Apply are looked
+// for from there, and patchFakeDom gives its focus trap the querySelector and focus it needs.
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { setup, teardown, loadModule } from './harness.mjs';
@@ -14,6 +16,8 @@ before(async () => {
   await setup();
   ({ statementRange, default: RichTextEditor } = await loadModule('/src/components/RichTextEditor.jsx'));
   dom = await import('./fake-dom.mjs');
+  const { patchFakeDom } = await import('../unit/ui-dom-harness.mjs');
+  patchFakeDom();
 });
 after(teardown);
 

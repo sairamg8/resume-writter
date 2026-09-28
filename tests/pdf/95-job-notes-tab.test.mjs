@@ -219,7 +219,7 @@ it('the STAR Optimizer\'s Apply, with no caret in the notes, adds its statement 
   try {
     t.view.document.getSelection().removeAllRanges();
     t.fire(t.tool('Bullet Optimizer & STAR Formula Helper'), 'onMouseDown');
-    // The optimizer opens in a portal at the end of <body>, outside the tab (R4-DVIS-23).
+    // The optimizer is the kit's Dialog (R4-DVIS-07), in a portal at the end of <body>, outside the tab (R4-DVIS-23).
     const page = () => [...dom.elements(t.view.document.body)];
     const area = page().find((el) => el.tagName === 'TEXTAREA');
     assert.ok(area, 'the optimizer opens');

@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import {
-  Sparkles, CheckCircle2, AlertTriangle, X, ArrowRight,
+  CheckCircle2, AlertTriangle, ArrowRight,
   TrendingUp, Copy, Check, Zap, Wand2
 } from 'lucide-react';
+import { Button, buttonClass } from '@/components/ui/Button';
+import { Dialog } from '@/components/ui/Dialog';
 import {
   analyzeBullet,
   autoFixWeakPhrases,
@@ -12,7 +14,6 @@ import {
   GOOGLE_XYZ_TEMPLATES
 } from '@/utils/bulletOptimizer';
 import { copyText } from '@/utils/clipboard';
-import { useOverlayClose } from '@/hooks/useOverlayClose';
 
 export default function BulletOptimizerModal({ isOpen, onClose, initialText = '', onApply }) {
   const [text, setText] = useState(initialText);
@@ -23,9 +24,6 @@ export default function BulletOptimizerModal({ isOpen, onClose, initialText = ''
   // nothing to undo. It stays through further template picks (Undo goes back to the user's own text)
   // and is dropped once the text is changed any other way.
   const [beforeTemplate, setBeforeTemplate] = useState(null);
-  // A click beside the box closes it only while the statement is still the one it opened with: once
-  // it is rewritten, a stray click must not throw the rewrite away — Cancel and × still close it (R4-DUX-09).
-  const overlay = useOverlayClose(() => { if (text === initialText) onClose(); });
 
   if (!isOpen) return null;
 
@@ -82,206 +80,185 @@ export default function BulletOptimizerModal({ isOpen, onClose, initialText = ''
     ? 'text-blue-600 bg-blue-50 border-blue-300'
     : 'text-amber-600 bg-amber-50 border-amber-300';
 
+  // The kit's Dialog, as the template gallery opened from the same editor is (R4-DVIS-07): drawn like
+  // the workspace dialogs, in a portal over the page (so a faded or clipped parent never reaches it),
+  // with the page behind held still. On a phone it fills the screen, its body scrolling between the
+  // title and the action row (R4-DPH-37); the action row wraps rather than squeezing its buttons (R4-DPH-38).
+  // A click beside the box closes it only while the statement is still the one it opened with: once
+  // it is rewritten, a stray click must not throw the rewrite away — Cancel, × and Escape still close
+  // it (R4-DUX-09).
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm" {...overlay}>
-      <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-        
-        {/* Header */}
-        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/70">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center shadow-sm">
-              <Sparkles size={16} />
-            </div>
-            <div>
-              <h2 className="text-sm sm:text-base font-bold text-gray-900">Bullet Optimizer & STAR Formula</h2>
-              <p className="text-[11px] text-gray-500">Transform weak descriptions into Google X-Y-Z high-impact achievements</p>
-            </div>
-          </div>
+    <Dialog
+      open
+      onClose={onClose}
+      size="lg"
+      title="Bullet Optimizer & STAR Formula"
+      description="Transform weak descriptions into Google X-Y-Z high-impact achievements"
+      closeOnOverlay={text === initialText}
+      footer={(
+        <>
           <button
-            onClick={onClose}
-            className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+            type="button"
+            onClick={handleCopy}
+            title={copied === 'failed' ? 'The browser did not allow copying to the clipboard. Select the text above and copy it with Ctrl+C (⌘C on a Mac).' : undefined}
+            className={buttonClass({ variant: 'secondary', className: 'mr-auto' })}
           >
-            <X size={16} />
+            {copied === 'done' && <><Check size={16} className="text-emerald-600" /> Copied</>}
+            {copied === 'failed' && <><AlertTriangle size={16} className="text-red-600" /> Copy failed</>}
+            {!copied && <><Copy size={16} /> Copy</>}
           </button>
-        </div>
-
-        {/* Body */}
-        <div className="p-5 overflow-y-auto space-y-4 flex-1">
-
-          {/* Current Text Area */}
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-semibold text-gray-700">Achievement Statement</label>
-              <div className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${scoreColor} flex items-center gap-1`}>
-                <TrendingUp size={12} />
-                Quality: {score}/100
-              </div>
-            </div>
-            <textarea
-              rows={3}
-              value={text}
-              onChange={e => editText(e.target.value)}
-              placeholder="e.g. Engineered distributed cache system, reducing API latency by 45% for 2M+ active users."
-              className="w-full text-xs sm:text-sm p-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50/50 resize-none text-gray-800"
-            />
-            {beforeTemplate !== null && (
-              <div className="flex items-center justify-between gap-3 text-[11px] text-gray-500">
-                <span>Template applied: your statement was replaced.</span>
-                <button
-                  onClick={handleUndoTemplate}
-                  className="font-semibold text-blue-600 hover:text-blue-800 hover:underline shrink-0"
-                >
-                  Undo
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* Quality Indicators & Fixes */}
-          <div className="grid grid-cols-3 gap-2 text-xs">
-            <div className={`p-2.5 rounded-xl border flex items-center gap-1.5 ${hasActionVerb ? 'bg-emerald-50/80 border-emerald-200 text-emerald-800' : 'bg-amber-50/80 border-amber-200 text-amber-800'}`}>
-              {hasActionVerb ? <CheckCircle2 size={14} className="text-emerald-600 shrink-0" /> : <AlertTriangle size={14} className="text-amber-600 shrink-0" />}
-              <span className="font-semibold">{hasActionVerb ? 'Strong Action Verb' : 'Verb Missing'}</span>
-            </div>
-            <div className={`p-2.5 rounded-xl border flex items-center gap-1.5 ${hasMetric ? 'bg-emerald-50/80 border-emerald-200 text-emerald-800' : 'bg-amber-50/80 border-amber-200 text-amber-800'}`}>
-              {hasMetric ? <CheckCircle2 size={14} className="text-emerald-600 shrink-0" /> : <AlertTriangle size={14} className="text-amber-600 shrink-0" />}
-              <span className="font-semibold">{hasMetric ? 'Quantifiable Metric' : 'Metric Missing'}</span>
-            </div>
-            <div className={`p-2.5 rounded-xl border flex items-center gap-1.5 ${weakPhrases.length === 0 ? 'bg-emerald-50/80 border-emerald-200 text-emerald-800' : 'bg-red-50/80 border-red-200 text-red-800'}`}>
-              {weakPhrases.length === 0 ? <CheckCircle2 size={14} className="text-emerald-600 shrink-0" /> : <AlertTriangle size={14} className="text-red-600 shrink-0" />}
-              <span className="font-semibold">{weakPhrases.length === 0 ? 'No Weak Words' : `${weakPhrases.length} Weak Phrases`}</span>
+          <Button variant="ghost" onClick={onClose}>Cancel</Button>
+          <Button variant="primary" rightIcon={ArrowRight} onClick={handleApply} disabled={!text.trim()}>Apply to Resume</Button>
+        </>
+      )}
+    >
+      <div className="space-y-4">
+        {/* Current Text Area */}
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-semibold text-gray-700">Achievement Statement</label>
+            <div className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${scoreColor} flex items-center gap-1`}>
+              <TrendingUp size={12} />
+              Quality: {score}/100
             </div>
           </div>
-
-          {/* Suggestions & Weak Words Auto-fix */}
-          {weakPhrases.length > 0 && (
-            <div className="p-3 bg-red-50/80 border border-red-200 rounded-xl flex items-center justify-between gap-3 text-xs">
-              <span className="text-red-700">
-                Detected weak phrase: <strong>&ldquo;{weakPhrases[0].phrase}&rdquo;</strong>. Replace with power verb?
-              </span>
+          {/* 16 px on a touch screen: iOS zooms the page into any smaller field it focuses (R4-DPH-30).
+              A mouse keeps 12 px on a narrow window and 14 px from sm, as before. */}
+          <textarea
+            rows={3}
+            value={text}
+            onChange={e => editText(e.target.value)}
+            placeholder="e.g. Engineered distributed cache system, reducing API latency by 45% for 2M+ active users."
+            className="w-full text-xs sm:text-sm pointer-coarse:text-base p-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50/50 resize-none text-gray-800"
+          />
+          {beforeTemplate !== null && (
+            <div className="flex items-center justify-between gap-3 text-[11px] text-gray-500">
+              <span>Template applied: your statement was replaced.</span>
               <button
-                onClick={handleAutoFix}
-                className="px-2.5 py-1 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 shrink-0 transition-colors flex items-center gap-1"
+                onClick={handleUndoTemplate}
+                className="font-semibold text-blue-600 hover:text-blue-800 hover:underline shrink-0"
               >
-                <Wand2 size={12} /> Auto-Fix
+                Undo
               </button>
             </div>
           )}
-
-          {suggestions.length > 0 && score < 80 && (
-            <div className="text-[11px] text-gray-500 bg-gray-50 p-2.5 rounded-xl border border-gray-100">
-              <span className="font-bold text-gray-700">Tip: </span>{suggestions[0]}
-            </div>
-          )}
-
-          {/* 1-Click Action Verbs Selector */}
-          <div className="space-y-2 pt-1">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-gray-700 flex items-center gap-1">
-                <Zap size={13} className="text-blue-500" /> Choose Strong Power Verb
-              </span>
-              <div className="flex gap-1 overflow-x-auto no-scrollbar max-w-[280px]">
-                {Object.keys(ACTION_VERBS_BY_CATEGORY).map(cat => (
-                  <button
-                    key={cat}
-                    onClick={() => setActiveCategory(cat)}
-                    className={`px-2 py-0.5 rounded-md text-[10px] font-semibold whitespace-nowrap transition-colors ${
-                      activeCategory === cat ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                    }`}
-                  >
-                    {cat.split('&')[0].trim()}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="flex flex-wrap gap-1.5 max-h-20 overflow-y-auto p-1 bg-gray-50/60 rounded-xl border border-gray-100">
-              {ACTION_VERBS_BY_CATEGORY[activeCategory]?.map(verb => (
-                <button
-                  key={verb}
-                  onClick={() => handleInsertVerb(verb)}
-                  className="px-2 py-0.5 bg-white hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300 border border-gray-200 rounded-md text-xs font-medium text-gray-700 transition-all shadow-2xs"
-                >
-                  {verb}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Metric Prompt Helpers */}
-          <div className="space-y-1.5">
-            <span className="text-xs font-semibold text-gray-700">Add Quantifiable Impact Placeholders:</span>
-            <div className="flex flex-wrap gap-1.5">
-              {[
-                'by 35%',
-                'saving $25K annually',
-                'reducing latency by 50ms',
-                'serving 100K+ users',
-                'accelerating delivery by 2 weeks',
-                'across 5 cross-functional teams'
-              ].map(metric => (
-                <button
-                  key={metric}
-                  onClick={() => handleInsertMetric(metric)}
-                  className="px-2 py-1 text-[11px] bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-lg hover:bg-emerald-100 transition-colors"
-                >
-                  + {metric}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Proven Formula Templates */}
-          <div className="space-y-1.5 pt-1">
-            <span className="text-xs font-semibold text-gray-700">Google X-Y-Z Proven Templates:</span>
-            <div className="space-y-1.5 max-h-32 overflow-y-auto">
-              {GOOGLE_XYZ_TEMPLATES.map(t => (
-                <button
-                  key={t.label}
-                  onClick={() => handleInsertTemplate(t.template)}
-                  className="w-full text-left p-2 rounded-xl border border-gray-100 bg-gray-50/50 hover:bg-blue-50/50 hover:border-blue-200 transition-all group"
-                >
-                  <div className="flex items-center justify-between text-[10px] font-bold text-gray-400 group-hover:text-blue-600">
-                    <span>{t.role} · {t.label}</span>
-                    <span className="text-blue-600 opacity-0 group-hover:opacity-100">Use Template →</span>
-                  </div>
-                  <p className="text-xs text-gray-700 mt-0.5 line-clamp-2">{t.template}</p>
-                </button>
-              ))}
-            </div>
-          </div>
-
         </div>
 
-        {/* Footer */}
-        <div className="px-5 py-3 border-t border-gray-100 bg-gray-50 flex items-center justify-between gap-3">
-          <button
-            onClick={handleCopy}
-            title={copied === 'failed' ? 'The browser did not allow copying to the clipboard. Select the text above and copy it with Ctrl+C (⌘C on a Mac).' : undefined}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-gray-600 hover:text-gray-800 bg-white border border-gray-200 rounded-xl hover:bg-gray-100 transition-colors"
-          >
-            {copied === 'done' && <><Check size={13} className="text-emerald-600" /> Copied</>}
-            {copied === 'failed' && <><AlertTriangle size={13} className="text-red-600" /> Copy failed</>}
-            {!copied && <><Copy size={13} /> Copy</>}
-          </button>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={onClose}
-              className="px-4 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-200 rounded-xl transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleApply}
-              disabled={!text.trim()}
-              className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-sm transition-colors disabled:opacity-50"
-            >
-              <span>Apply to Resume</span>
-              <ArrowRight size={13} />
-            </button>
+        {/* Quality Indicators & Fixes. Stacked on a phone: a third of its width is narrower than
+            "Quantifiable", which ran through its tile's border (R4-DPH-41). */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+          <div className={`p-2.5 rounded-xl border flex items-center gap-1.5 ${hasActionVerb ? 'bg-emerald-50/80 border-emerald-200 text-emerald-800' : 'bg-amber-50/80 border-amber-200 text-amber-800'}`}>
+            {hasActionVerb ? <CheckCircle2 size={14} className="text-emerald-600 shrink-0" /> : <AlertTriangle size={14} className="text-amber-600 shrink-0" />}
+            <span className="font-semibold">{hasActionVerb ? 'Strong Action Verb' : 'Verb Missing'}</span>
+          </div>
+          <div className={`p-2.5 rounded-xl border flex items-center gap-1.5 ${hasMetric ? 'bg-emerald-50/80 border-emerald-200 text-emerald-800' : 'bg-amber-50/80 border-amber-200 text-amber-800'}`}>
+            {hasMetric ? <CheckCircle2 size={14} className="text-emerald-600 shrink-0" /> : <AlertTriangle size={14} className="text-amber-600 shrink-0" />}
+            <span className="font-semibold">{hasMetric ? 'Quantifiable Metric' : 'Metric Missing'}</span>
+          </div>
+          <div className={`p-2.5 rounded-xl border flex items-center gap-1.5 ${weakPhrases.length === 0 ? 'bg-emerald-50/80 border-emerald-200 text-emerald-800' : 'bg-red-50/80 border-red-200 text-red-800'}`}>
+            {weakPhrases.length === 0 ? <CheckCircle2 size={14} className="text-emerald-600 shrink-0" /> : <AlertTriangle size={14} className="text-red-600 shrink-0" />}
+            <span className="font-semibold">{weakPhrases.length === 0 ? 'No Weak Words' : `${weakPhrases.length} Weak Phrases`}</span>
           </div>
         </div>
 
+        {/* Suggestions & Weak Words Auto-fix */}
+        {weakPhrases.length > 0 && (
+          <div className="p-3 bg-red-50/80 border border-red-200 rounded-xl flex items-center justify-between gap-3 text-xs">
+            <span className="text-red-700">
+              Detected weak phrase: <strong>&ldquo;{weakPhrases[0].phrase}&rdquo;</strong>. Replace with power verb?
+            </span>
+            <button
+              onClick={handleAutoFix}
+              className="px-2.5 py-1 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 shrink-0 transition-colors flex items-center gap-1"
+            >
+              <Wand2 size={12} /> Auto-Fix
+            </button>
+          </div>
+        )}
+
+        {suggestions.length > 0 && score < 80 && (
+          <div className="text-[11px] text-gray-500 bg-gray-50 p-2.5 rounded-xl border border-gray-100">
+            <span className="font-bold text-gray-700">Tip: </span>{suggestions[0]}
+          </div>
+        )}
+
+        {/* 1-Click Action Verbs Selector. The categories wrap, beside the heading or under it: a
+            280 px sideways strip hid half of them, most of all on a phone (R4-DPH-42). */}
+        <div className="space-y-2 pt-1">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className="text-xs font-semibold text-gray-700 flex items-center gap-1">
+              <Zap size={13} className="text-blue-500" /> Choose Strong Power Verb
+            </span>
+            <div className="flex flex-wrap gap-1">
+              {Object.keys(ACTION_VERBS_BY_CATEGORY).map(cat => (
+                <button
+                  key={cat}
+                  onClick={() => setActiveCategory(cat)}
+                  className={`px-2 py-0.5 rounded-md text-[10px] font-semibold whitespace-nowrap transition-colors ${
+                    activeCategory === cat ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  {cat.split('&')[0].trim()}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-1.5 max-h-20 overflow-y-auto p-1 bg-gray-50/60 rounded-xl border border-gray-100">
+            {ACTION_VERBS_BY_CATEGORY[activeCategory]?.map(verb => (
+              <button
+                key={verb}
+                onClick={() => handleInsertVerb(verb)}
+                className="px-2 py-0.5 bg-white hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300 border border-gray-200 rounded-md text-xs font-medium text-gray-700 transition-all shadow-2xs"
+              >
+                {verb}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Metric Prompt Helpers */}
+        <div className="space-y-1.5">
+          <span className="text-xs font-semibold text-gray-700">Add Quantifiable Impact Placeholders:</span>
+          <div className="flex flex-wrap gap-1.5">
+            {[
+              'by 35%',
+              'saving $25K annually',
+              'reducing latency by 50ms',
+              'serving 100K+ users',
+              'accelerating delivery by 2 weeks',
+              'across 5 cross-functional teams'
+            ].map(metric => (
+              <button
+                key={metric}
+                onClick={() => handleInsertMetric(metric)}
+                className="px-2 py-1 text-[11px] bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-lg hover:bg-emerald-100 transition-colors"
+              >
+                + {metric}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Proven Formula Templates */}
+        <div className="space-y-1.5 pt-1">
+          <span className="text-xs font-semibold text-gray-700">Google X-Y-Z Proven Templates:</span>
+          <div className="space-y-1.5 max-h-32 overflow-y-auto">
+            {GOOGLE_XYZ_TEMPLATES.map(t => (
+              <button
+                key={t.label}
+                onClick={() => handleInsertTemplate(t.template)}
+                className="w-full text-left p-2 rounded-xl border border-gray-100 bg-gray-50/50 hover:bg-blue-50/50 hover:border-blue-200 transition-all group"
+              >
+                <div className="flex items-center justify-between text-[10px] font-bold text-gray-400 group-hover:text-blue-600">
+                  <span>{t.role} · {t.label}</span>
+                  <span className="text-blue-600 opacity-0 group-hover:opacity-100">Use Template →</span>
+                </div>
+                <p className="text-xs text-gray-700 mt-0.5 line-clamp-2">{t.template}</p>
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
-    </div>
+    </Dialog>
   );
 }
