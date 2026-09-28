@@ -69,11 +69,17 @@ function QuickSearch({ search }) {
     inputRef.current?.focus();
   };
   useHotkeys({ '/': () => { openAndFocus(); inputRef.current?.select(); } });
-  // The panel scrolls when its rows do not fit (R5-JOB-03): the arrow keys keep the highlighted row
-  // in view, so Enter never opens a result the user cannot see.
+  // The panel scrolls when its rows do not fit (R5-JOB-03): the arrow keys and typing keep the
+  // highlighted row in view, so Enter never opens a result the user cannot see. Only those: a row
+  // highlighted by the pointer is never scrolled, or resting it on a row cut off at the panel's edge
+  // scrolled the list, the browser's mouse move after the scroll highlighted the next row, and the
+  // list crept to its end on its own (R5-JOB-03 review).
+  const keyed = useRef(false);
   useEffect(() => {
+    if (!keyed.current) return;
+    keyed.current = false;
     listRef.current?.querySelector('[aria-selected="true"]')?.scrollIntoView?.({ block: 'nearest' });
-  }, [at, open, results.length]);
+  });
 
   const go = (hit) => {
     if (!hit) return;
@@ -85,6 +91,7 @@ function QuickSearch({ search }) {
   };
   const close = () => { setQuery(''); setOpen(false); setPhoneOpen(false); inputRef.current?.blur(); };
   const onKeyDown = (e) => {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') keyed.current = true;
     if (e.key === 'ArrowDown') { e.preventDefault(); setActive(Math.max(0, Math.min(at + 1, results.length - 1))); }
     if (e.key === 'ArrowUp') { e.preventDefault(); setActive(Math.max(at - 1, 0)); }
     if (e.key === 'Enter' && !isImeKey(e)) { e.preventDefault(); go(results[at]); }
@@ -113,7 +120,7 @@ function QuickSearch({ search }) {
           aria-activedescendant={results.length ? `${listId}-${at}` : undefined}
           placeholder="Search"
           value={query}
-          onChange={(e) => { setQuery(e.target.value); setActive(0); setOpen(true); }}
+          onChange={(e) => { keyed.current = true; setQuery(e.target.value); setActive(0); setOpen(true); }}
           onFocus={() => setOpen(true)}
           onBlur={() => setTimeout(() => { setOpen(false); setPhoneOpen(false); }, 120)}
           onKeyDown={onKeyDown}
@@ -153,7 +160,7 @@ function QuickSearch({ search }) {
                     role="option"
                     aria-selected={i === at}
                     onMouseDown={(e) => { e.preventDefault(); go(hit); }}
-                    onMouseEnter={() => setActive(i)}
+                    onMouseEnter={() => { keyed.current = false; setActive(i); }}
                     className={cx('flex cursor-pointer items-center gap-2.5 px-3 py-1.5', i === at ? 'bg-brand-subtle' : 'hover:bg-hovered')}
                   >
                     {hit.kind === 'issue'

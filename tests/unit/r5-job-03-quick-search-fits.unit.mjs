@@ -84,3 +84,34 @@ it('R5-JOB-03: ArrowDown keeps the highlighted row scrolled into view', async ()
     if (had) Element.scrollIntoView = saved; else delete Element.scrollIntoView;
   }
 });
+
+// Review of R5-JOB-03: the scroll ran on every change of the highlighted row, hover included.
+// Resting the pointer on a row cut off at the panel's bottom scrolled the list; the browser's mouse
+// move after a scroll then highlighted the row now under the still pointer, which scrolled again,
+// and the list crept to its end on its own. Only the keyboard (the arrows, typing) scrolls now.
+it('R5-JOB-03: a row highlighted by the pointer is not scrolled into view', async () => {
+  const Element = Object.getPrototypeOf(fakeWindow().document.body);
+  const had = Object.hasOwn(Element, 'scrollIntoView');
+  const saved = Element.scrollIntoView;
+  const calls = [];
+  Element.scrollIntoView = function scrollIntoView(options) { calls.push({ id: this.getAttribute('id'), options }); };
+  const t = topBar();
+  try {
+    t.type('project');
+    const rows = () => byAttr(t.list(), 'role', 'option');
+    const before = calls.length;
+    t.view.act(() => reactProps(rows()[7]).onMouseEnter());
+    assert.equal(rows()[7].getAttribute('aria-selected'), 'true', 'the hovered row is highlighted');
+    t.view.act(() => reactProps(rows()[6]).onMouseEnter());
+    assert.equal(rows()[6].getAttribute('aria-selected'), 'true', 'and the next one hovered');
+    assert.equal(calls.length, before, `the pointer never scrolls the list: ${JSON.stringify(calls.slice(before))}`);
+    t.key('ArrowDown');
+    assert.equal(calls.at(-1)?.id, rows()[7].getAttribute('id'), 'the arrow keys still do');
+    t.type('projec');
+    assert.equal(rows()[0].getAttribute('aria-selected'), 'true', 'typing highlights the first row');
+    assert.equal(calls.at(-1)?.id, rows()[0].getAttribute('id'), 'and scrolls it into view');
+  } finally {
+    await t.view.unmount();
+    if (had) Element.scrollIntoView = saved; else delete Element.scrollIntoView;
+  }
+});
