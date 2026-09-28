@@ -9,7 +9,7 @@ import { JOB_SOURCES, JOB_STATUSES, WORK_MODES } from '@/constants/jobs';
 import { InterviewStageSelector } from '@/components/job/InterviewStageSelector';
 import { JobsNotSavedAlert } from '@/components/job/JobsNotSavedAlert';
 import RichTextEditor from '@/components/RichTextEditor';
-import { Select, TextField, useConfirmOptional } from '@/components/ui';
+import { Button, Select, TextField, useConfirmOptional } from '@/components/ui';
 
 // The form's unsaved values in this tab's sessionStorage, so the browser's Back or an in-app link —
 // which the app's plain HashRouter cannot hold (no useBlocker) — no longer loses them (R4-DUX-06).
@@ -141,11 +141,12 @@ export function JobForm({ store }) {
             <ArrowLeft size={16} />
           </button>
           <h1 className="text-base font-bold text-ink">{isEdit ? 'Edit Job Application' : 'Add Job Application'}</h1>
+          {/* The kit's buttons, the same pair as the footer's: the four were each their own height and corner (R4-DVIS-02). */}
           <div className="ml-auto flex gap-2">
-            <button type="button" onClick={leave} className="px-4 py-2 text-sm font-medium text-ink-subtle hover:bg-neutral-fill rounded-lg transition-colors">Cancel</button>
-            <button type="submit" form={formId} disabled={!canSave || gone} className="px-5 py-2 text-sm font-semibold text-white bg-brand hover:bg-brand-hover rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed shadow-sm">
+            <Button variant="ghost" onClick={leave}>Cancel</Button>
+            <Button variant="primary" type="submit" form={formId} disabled={!canSave || gone}>
               {isEdit ? 'Save Changes' : 'Add Job'}
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -247,11 +248,11 @@ export function JobForm({ store }) {
           <RichTextEditor ariaLabel="Notes" value={form.notes} onChange={html => set('notes', html)} rows={4} placeholder="Key contacts, interview format, compensation details, next steps…" />
         </section>
 
-        <div className="flex justify-end gap-3 pb-8">
-          <button type="button" onClick={leave} className="px-5 py-2.5 text-sm font-medium text-ink-subtle bg-white border border-line rounded-md hover:bg-sunken transition-colors">Cancel</button>
-          <button type="submit" form={formId} disabled={!canSave || gone} className="px-6 py-2.5 text-sm font-semibold text-white bg-brand hover:bg-brand-hover rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed shadow-sm">
+        <div className="flex justify-end gap-2 pb-8">
+          <Button variant="ghost" onClick={leave}>Cancel</Button>
+          <Button variant="primary" type="submit" form={formId} disabled={!canSave || gone}>
             {isEdit ? 'Save Changes' : 'Add Job'}
-          </button>
+          </Button>
         </div>
       </div>
     </div>
