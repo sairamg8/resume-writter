@@ -118,9 +118,14 @@ export function SyncDot({ syncStatus, lastSynced, isOnline, heldResumes, heldLab
   );
 }
 
-/** `compact` renders the signed-out state as an icon-only button, for narrow headers. */
+/**
+ * `compact` renders the signed-out state as an icon-only button, for narrow headers. `hideName`
+ * leaves the first name beside the avatar off the screen: the editor's header, in a 360 px split
+ * panel, was left ~60 px for the résumé's name (R4-DVIS-31).
+ */
 export default function AuthBar({
   user, authLoading, cloudAvailable = true, signInWithGoogle, signOut, syncStatus, lastSynced, isOnline, heldResumes, compact = false,
+  hideName = false,
 }) {
   const [signingIn, setSigningIn] = useState(false);
   const [menuOpen, setMenuOpen]   = useState(false);
@@ -191,7 +196,8 @@ export default function AuthBar({
               {user.displayName?.[0] || 'U'}
             </div>
           )}
-          <span className="text-xs font-medium text-gray-700 max-w-[100px] truncate hidden sm:block">
+          {/* hideName: sm:sr-only, not dropped, so from sm up the button still reads out the name as before. */}
+          <span className={`text-xs font-medium text-gray-700 max-w-[100px] truncate hidden sm:block${hideName ? ' sm:sr-only' : ''}`}>
             {user.displayName?.split(' ')[0]}
           </span>
         </button>
