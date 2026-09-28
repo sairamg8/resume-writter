@@ -43,7 +43,7 @@ function Row({ board, issue, span, from, depth = 0, open, onToggle, onOpen }) {
   const clippedWidth = left === null ? 0 : Math.min(width - (clippedLeft - left), DAYS - clippedLeft);
   return (
     <div className="flex h-10 border-b border-line-subtle hover:bg-hovered">
-      <div className="sticky left-0 z-10 flex w-80 shrink-0 items-center gap-2 border-r border-line bg-white px-3" style={{ paddingLeft: 12 + depth * 24 }}>
+      <div className="sticky left-0 z-10 flex w-(--name-w) shrink-0 items-center gap-2 border-r border-line bg-white px-3" style={{ paddingLeft: `calc(12px + ${depth} * var(--depth-w))` }}>
         {onToggle ? (
           <button type="button" aria-expanded={open} aria-label={`${open ? 'Hide' : 'Show'} the issues of ${issue.title}`} onClick={onToggle} className="rounded p-0.5 text-ink-subtle hover:bg-neutral-fill">
             <ChevronDown size={14} aria-hidden="true" className={cx('transition-transform', !open && '-rotate-90')} />
@@ -106,9 +106,11 @@ export function ProjectTimeline() {
         <span className="ml-1 text-sm text-ink-subtle">{formatShortDay(days[0])} – {formatShortDay(days.at(-1))}</span>
       </div>
       <div className="min-h-0 flex-1 overflow-auto px-4 pb-8 md:px-8">
-        <div className="relative w-max min-w-full rounded-md border border-line">
+        {/* The name column is 20rem from sm up; on a phone 10rem, with a child's indent halved, so
+            the days still show beside it. The rows, the header and the today line all read it. */}
+        <div className="relative w-max min-w-full rounded-md border border-line [--depth-w:12px] [--name-w:10rem] sm:[--depth-w:24px] sm:[--name-w:20rem]">
           <div className="sticky top-0 z-20 flex border-b border-line bg-white">
-            <div className="sticky left-0 z-10 flex w-80 shrink-0 items-center border-r border-line bg-white px-3 text-[12px] font-semibold text-ink-subtle">Issue</div>
+            <div className="sticky left-0 z-10 flex w-(--name-w) shrink-0 items-center border-r border-line bg-white px-3 text-[12px] font-semibold text-ink-subtle">Issue</div>
             <div className="flex">
               {days.map((d) => (
                 <div key={d} className={cx('flex h-9 shrink-0 flex-col items-center justify-center border-l border-line-subtle text-[11px]', d === today ? 'font-bold text-brand' : 'text-ink-subtlest')} style={{ width: DAY_W }}>
@@ -120,7 +122,7 @@ export function ProjectTimeline() {
             </div>
           </div>
           {todayAt !== null && todayAt >= 0 && todayAt < DAYS && (
-            <span aria-hidden="true" className="pointer-events-none absolute top-0 bottom-0 z-0 w-0.5 bg-brand/70" style={{ left: 320 + todayAt * DAY_W + DAY_W / 2 }} />
+            <span aria-hidden="true" className="pointer-events-none absolute top-0 bottom-0 z-0 w-0.5 bg-brand/70" style={{ left: `calc(var(--name-w) + ${todayAt * DAY_W + DAY_W / 2}px)` }} />
           )}
           {epics.map((e) => {
             const open = !folded.has(e.id);
