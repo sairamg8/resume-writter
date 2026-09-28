@@ -50,7 +50,9 @@ const weak = (phrases, replacement, alternatives, after = '') => ({
 export const WEAK_PHRASE_REPLACEMENTS = [
   weak(['was responsible for', 'responsible for', 'responsibilities included', 'duties included', 'tasked with'], 'Led', ['Directed', 'Oversaw', 'Spearheaded']),
   weak(['worked on', 'worked with'], 'Engineered', ['Co-developed', 'Collaborated on', 'Built']),
-  weak(['helped with', 'helped to', 'assisted with', 'assisted in'], 'Facilitated', ['Supported delivery of', 'Co-engineered', 'Accelerated']),
+  weak(['helped with', 'assisted with', 'assisted in'], 'Facilitated', ['Supported delivery of', 'Co-engineered', 'Accelerated']),
+  // "Helped to cut costs" has a verb after it, as "tried to" has: "Facilitated cut costs" was no sentence.
+  weak(['helped to'], 'Facilitated efforts to', ['Supported efforts to', 'Drove efforts to', 'Accelerated efforts to']),
   weak(['handled'], 'Managed', ['Resolved', 'Administered', 'Executed']),
   // "did" as a main verb only: in "did not" it is a helper verb, and Auto-Fix wrote "delivered not" (R4-LO-10).
   weak(['did'], 'Delivered', ['Conducted', 'Accomplished', 'Produced'], '(?!\\s+(?:not|never)(?![\\p{L}\\d]))'),
@@ -273,12 +275,16 @@ export function insertActionVerb(text, verb) {
   const rest = s.slice(lead.length);
   // A verb phrase Auto-Fix or the tips write ("Contributed to", "Collaborated on") goes whole, or the
   // chip left "Spearheaded to the hackathon".
+  // "Led efforts to" keeps its "efforts to", which has a verb after it: "Led efforts to cut costs"
+  // read "Spearheaded cut costs" (review of R4-SW-WT-03).
   const phrase = rest.match(LEADING_VERB_PHRASE);
-  if (phrase) return lead + verb + rest.slice(phrase[0].length);
+  if (phrase) return lead + verb + (/ efforts to$/i.test(phrase[0]) ? ' efforts to' : '') + rest.slice(phrase[0].length);
   if (leadsWithActionVerb(rest)) return lead + rest.replace(/^\p{L}[\p{L}'’-]*/u, verb);
   for (const wp of WEAK_PHRASE_REPLACEMENTS) {
     const weak = new RegExp(`^${wp.match.source}`, 'iu');
-    if (weak.test(rest)) return lead + rest.replace(weak, verb);
+    // "Tried to", "Attempted to" and "Helped to" have a verb after them: the chip keeps it one, as
+    // Auto-Fix does ("Spearheaded efforts to cut costs", not "Spearheaded cut costs").
+    if (weak.test(rest)) return lead + rest.replace(weak, (_, found) => (/\sto$/i.test(found) ? `${verb} efforts to` : verb));
   }
   if (AUXILIARY_LEAD.test(rest)) return s;
   const [word] = rest.match(/^\p{L}*/u);
