@@ -207,93 +207,97 @@ export function BoardSettings() {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <ProjectHeader board={board} />
-      <h2 className="mx-auto w-full max-w-3xl px-4 pt-5 text-xl font-semibold text-ink sm:px-6">Project settings</h2>
-      <BoardStorageNotice persistError={store.persistError} recovery={store.recovery} onDismissRecovery={store.dismissRecovery} className="max-w-3xl w-full mx-auto px-4 sm:px-6 pt-3" />
+      {/* Left-aligned under the header at its padding (px-4, md:px-8), as every other project view:
+          a centred column drifted up to 300 px right of the header on a wide screen (R4-DVIS-05). */}
+      <h2 className="px-4 pt-5 text-xl font-semibold text-ink md:px-8">Project settings</h2>
+      <BoardStorageNotice persistError={store.persistError} recovery={store.recovery} onDismissRecovery={store.dismissRecovery} className="px-4 pt-3 md:px-8" />
 
-      <div className="max-w-3xl w-full mx-auto px-4 sm:px-6 py-5 space-y-4">
-        <Card title="Details">
-          <label className="block text-xs text-ink-subtle space-y-1">Name
-            <CommitField aria-label="Project name" value={board.title} onCommit={(title) => store.updateBoard(board.id, { title })} className={`${FIELD} w-full`} />
-          </label>
-          <div className="text-xs text-ink-subtle space-y-1">Key
-            <KeyField key={board.key} board={board} keyError={store.keyError} onSave={(key) => store.updateBoard(board.id, { key })} />
-          </div>
-          <label className="block text-xs text-ink-subtle space-y-1">Description
-            <CommitField multiline rows={3} aria-label="Project description" value={board.description} onCommit={(description) => store.updateBoard(board.id, { description })} className={`${FIELD} w-full`} />
-          </label>
-          <div className="text-xs text-ink-subtle space-y-1">Colour
-            <div className="flex flex-wrap gap-1.5">
-              {BOARD_COLORS.map((c) => (
-                <button
-                  key={c}
-                  aria-label={`Colour ${c}`}
-                  aria-pressed={board.color === c}
-                  onClick={() => store.updateBoard(board.id, { color: c })}
-                  className={`h-7 w-7 rounded-full border-2 ${board.color === c ? 'border-gray-900' : 'border-transparent'}`}
-                  style={{ backgroundColor: c }}
-                />
-              ))}
-            </div>
-          </div>
-          <label className="block text-xs text-ink-subtle space-y-1">Way of working
-            <select aria-label="Project mode" value={board.mode} onChange={(e) => store.updateBoard(board.id, { mode: e.target.value })} className={`${FIELD} w-full`}>
-              {BOARD_MODES.map((m) => <option key={m.id} value={m.id}>{m.name} — {m.description}</option>)}
-            </select>
-          </label>
-        </Card>
-
-        <Card title="Columns" note="Issues in a Done column count as resolved. A WIP limit turns a column's count red when it holds more.">
-          <ul className="divide-y divide-line-subtle">
-            {board.columns.map((c, n) => <ColumnRow key={c.id} board={board} column={c} index={n} store={store} />)}
-          </ul>
-          <AddRow label="New column" onAdd={(title) => store.addColumn(board.id, { title, index: board.columns.length })} />
-        </Card>
-
-        <Card title="Labels">
-          {board.labels.length === 0 && <p className="text-xs text-ink-subtlest">No labels yet.</p>}
-          <ul className="divide-y divide-line-subtle">
-            {board.labels.map((l) => (
-              <li key={l.id} data-label={l.id} className="flex flex-wrap items-center gap-2 py-2">
-                <span className="h-3 w-3 rounded-full shrink-0" style={{ backgroundColor: l.color }} />
-                <CommitField aria-label="Label name" value={l.name} onCommit={(name) => renameLabel(l, name)} className={`${FIELD} flex-1 min-w-[8rem]`} />
-                <select aria-label="Label colour" value={l.color} onChange={(e) => store.updateLabel(board.id, l.id, { color: e.target.value })} className={FIELD}>
-                  {labelColors(l.color).map((c) => <option key={c.color} value={c.color}>{c.name}</option>)}
-                </select>
-                <button aria-label="Delete label" title="Delete label" onClick={() => deleteLabel(l)} className="p-1 text-gray-300 hover:text-red-500"><Trash2 size={14} /></button>
-              </li>
-            ))}
-          </ul>
-          {labelRefused && <p role="alert" className="text-xs text-red-600">{labelRefused}</p>}
-          <AddRow label="New label" colors={LABEL_COLORS} onAdd={addLabel} />
-        </Card>
-
-        <Card title="Done issues on the board" note="Done issues resolved longer ago than this leave the board; they stay in the project.">
-          <div className="flex flex-wrap items-center gap-3 text-sm text-ink-subtle">
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                aria-label="Hide old done issues"
-                checked={hides}
-                onChange={() => store.updateBoard(board.id, { hideDoneAfterDays: hides ? null : DEFAULT_HIDE_DONE_DAYS })}
-              />
-              Hide done issues after
+      <div className="px-4 py-5 md:px-8">
+        <div className="max-w-3xl space-y-4">
+          <Card title="Details">
+            <label className="block text-xs text-ink-subtle space-y-1">Name
+              <CommitField aria-label="Project name" value={board.title} onCommit={(title) => store.updateBoard(board.id, { title })} className={`${FIELD} w-full`} />
             </label>
-            <CommitField
-              aria-label="Days before done issues are hidden"
-              type="number"
-              min="0"
-              disabled={!hides}
-              value={hides ? board.hideDoneAfterDays : ''}
-              onCommit={(v) => { const n = Number(v); if (v.trim() !== '' && Number.isInteger(n) && n >= 0) store.updateBoard(board.id, { hideDoneAfterDays: n }); }}
-              className={`${FIELD} w-20 disabled:opacity-40`}
-            />
-            days
-          </div>
-        </Card>
+            <div className="text-xs text-ink-subtle space-y-1">Key
+              <KeyField key={board.key} board={board} keyError={store.keyError} onSave={(key) => store.updateBoard(board.id, { key })} />
+            </div>
+            <label className="block text-xs text-ink-subtle space-y-1">Description
+              <CommitField multiline rows={3} aria-label="Project description" value={board.description} onCommit={(description) => store.updateBoard(board.id, { description })} className={`${FIELD} w-full`} />
+            </label>
+            <div className="text-xs text-ink-subtle space-y-1">Colour
+              <div className="flex flex-wrap gap-1.5">
+                {BOARD_COLORS.map((c) => (
+                  <button
+                    key={c}
+                    aria-label={`Colour ${c}`}
+                    aria-pressed={board.color === c}
+                    onClick={() => store.updateBoard(board.id, { color: c })}
+                    className={`h-7 w-7 rounded-full border-2 ${board.color === c ? 'border-gray-900' : 'border-transparent'}`}
+                    style={{ backgroundColor: c }}
+                  />
+                ))}
+              </div>
+            </div>
+            <label className="block text-xs text-ink-subtle space-y-1">Way of working
+              <select aria-label="Project mode" value={board.mode} onChange={(e) => store.updateBoard(board.id, { mode: e.target.value })} className={`${FIELD} w-full`}>
+                {BOARD_MODES.map((m) => <option key={m.id} value={m.id}>{m.name} — {m.description}</option>)}
+              </select>
+            </label>
+          </Card>
 
-        <Card title="Delete project" tone="danger" note="Deletes the project with every issue, sprint and label in it.">
-          <Button variant="danger" onClick={deleteProject}>Delete project</Button>
-        </Card>
+          <Card title="Columns" note="Issues in a Done column count as resolved. A WIP limit turns a column's count red when it holds more.">
+            <ul className="divide-y divide-line-subtle">
+              {board.columns.map((c, n) => <ColumnRow key={c.id} board={board} column={c} index={n} store={store} />)}
+            </ul>
+            <AddRow label="New column" onAdd={(title) => store.addColumn(board.id, { title, index: board.columns.length })} />
+          </Card>
+
+          <Card title="Labels">
+            {board.labels.length === 0 && <p className="text-xs text-ink-subtlest">No labels yet.</p>}
+            <ul className="divide-y divide-line-subtle">
+              {board.labels.map((l) => (
+                <li key={l.id} data-label={l.id} className="flex flex-wrap items-center gap-2 py-2">
+                  <span className="h-3 w-3 rounded-full shrink-0" style={{ backgroundColor: l.color }} />
+                  <CommitField aria-label="Label name" value={l.name} onCommit={(name) => renameLabel(l, name)} className={`${FIELD} flex-1 min-w-[8rem]`} />
+                  <select aria-label="Label colour" value={l.color} onChange={(e) => store.updateLabel(board.id, l.id, { color: e.target.value })} className={FIELD}>
+                    {labelColors(l.color).map((c) => <option key={c.color} value={c.color}>{c.name}</option>)}
+                  </select>
+                  <button aria-label="Delete label" title="Delete label" onClick={() => deleteLabel(l)} className="p-1 text-gray-300 hover:text-red-500"><Trash2 size={14} /></button>
+                </li>
+              ))}
+            </ul>
+            {labelRefused && <p role="alert" className="text-xs text-red-600">{labelRefused}</p>}
+            <AddRow label="New label" colors={LABEL_COLORS} onAdd={addLabel} />
+          </Card>
+
+          <Card title="Done issues on the board" note="Done issues resolved longer ago than this leave the board; they stay in the project.">
+            <div className="flex flex-wrap items-center gap-3 text-sm text-ink-subtle">
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  aria-label="Hide old done issues"
+                  checked={hides}
+                  onChange={() => store.updateBoard(board.id, { hideDoneAfterDays: hides ? null : DEFAULT_HIDE_DONE_DAYS })}
+                />
+                Hide done issues after
+              </label>
+              <CommitField
+                aria-label="Days before done issues are hidden"
+                type="number"
+                min="0"
+                disabled={!hides}
+                value={hides ? board.hideDoneAfterDays : ''}
+                onCommit={(v) => { const n = Number(v); if (v.trim() !== '' && Number.isInteger(n) && n >= 0) store.updateBoard(board.id, { hideDoneAfterDays: n }); }}
+                className={`${FIELD} w-20 disabled:opacity-40`}
+              />
+              days
+            </div>
+          </Card>
+
+          <Card title="Delete project" tone="danger" note="Deletes the project with every issue, sprint and label in it.">
+            <Button variant="danger" onClick={deleteProject}>Delete project</Button>
+          </Card>
+        </div>
       </div>
     </div>
   );
