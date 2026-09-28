@@ -1,5 +1,10 @@
 # Session Handoff — Resume Here
 
+> **OWNER — DEPLOY (the session's master push is refused as a 'Production Deploy'):**
+> `git push origin 56e42bf:refs/heads/master` — full gate run 36453759135 on that exact commit is GREEN (a fast-forward
+> from `b8d7667`; the app change is one redundant Portal removed; it turns master's red gate green). Then
+> `python3 docs/tracking/tools/r4_tracker.py --deployed 56e42bf`, commit, push. A newer green sha will replace this line.
+
 ## ⏩ COLD START HERE — 2026-09-28 17:10 UTC (coordinator session_01PeuUcY5NWWpCxy878FtEE1, scheduled run; owner offline)
 
 **What happened on 28 Sep:** `master` was pushed to `b8d7667` (Round 4 + wave 2 dsg-flow + dsg-layout) at **03:05 UTC,
