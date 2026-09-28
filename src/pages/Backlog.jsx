@@ -143,8 +143,15 @@ export function Backlog() {
                     <button type="button" aria-expanded={open} aria-label={`${open ? 'Fold' : 'Unfold'} ${sprint ? sprint.name : 'the backlog'}`} onClick={() => toggleFold(section.id)} className="rounded p-1 text-ink-subtle hover:bg-neutral-fill">
                       <ChevronDown size={16} aria-hidden="true" className={cx('transition-transform', !open && '-rotate-90')} />
                     </button>
+                    {/* The sprint's name in a wrapper as wide as its text: InlineEdit's box is
+                        calc(100% + 0.75rem) wide, and as a flex item of its own that took the whole
+                        header, so the name always wrapped onto a line of its own under the chevron. */}
                     {sprint
-                      ? <InlineEdit value={sprint.name} onCommit={(name) => store.updateSprint(board.id, sprint.id, { name })} label="Sprint name" className="text-sm font-semibold text-ink" inputClassName="pointer-coarse:text-base" />
+                      ? (
+                        <div className="min-w-0 max-w-full">
+                          <InlineEdit value={sprint.name} onCommit={(name) => store.updateSprint(board.id, sprint.id, { name })} label="Sprint name" className="text-sm font-semibold text-ink" inputClassName="pointer-coarse:text-base" />
+                        </div>
+                      )
                       : <h2 className="text-sm font-semibold text-ink">Backlog</h2>}
                     {sprint?.state === 'active' && <span className="rounded-[3px] bg-loz-progress px-1 text-[11px] font-bold uppercase text-loz-progress-ink">Active</span>}
                     {sprintDates(sprint) && <span className="text-[13px] text-ink-subtle">{sprintDates(sprint)}</span>}
