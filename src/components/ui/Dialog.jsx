@@ -43,6 +43,7 @@ function panelMotion({ sheet, large, closing }) {
  *   the panel, and returns to whatever opened the dialog when it closes.
  * - Escape and a click on the overlay close it unless `closeOnEscape` / `closeOnOverlay` are false.
  *   A menu or popover open inside handles its own Escape first.
+ * - While it animates out the panel is inert (no clicks, no keys), so nothing in it acts twice.
  * - `role`: 'dialog' (default) or 'alertdialog' (ConfirmDialog). `flush`: the body has no padding
  *   (a view that draws its own header and panes, like an issue's).
  */
@@ -85,6 +86,9 @@ export function Dialog({
     releasedInside.current = false;
   };
 
+  // While it animates out the panel is inert and takes no pointer: a double-click on one of its
+  // buttons must not act twice (R4-DVIS-07). The second press lands on the overlay, which closes
+  // nothing any more, and never on the page behind.
   const closing = state === 'closed';
   const large = LARGE.has(size);
   return (
@@ -113,6 +117,7 @@ export function Dialog({
             aria-describedby={description ? descriptionId : undefined}
             tabIndex={-1}
             data-state={state}
+            inert={closing || undefined}
             className={cx(
               'relative flex w-full flex-col overflow-hidden rounded-lg bg-white shadow-2xl ring-1 ring-slate-900/5 outline-none',
               'max-h-[calc(100dvh-2rem)] md:max-h-[calc(100dvh-3rem)]',
@@ -123,6 +128,7 @@ export function Dialog({
                 : 'max-md:max-h-[calc(100dvh-1.5rem)] max-md:rounded-b-none'),
               sheet && size === 'full' && 'sm:max-md:h-[calc(100dvh-1.5rem)]',
               panelMotion({ sheet, large, closing }),
+              closing && 'pointer-events-none',
               className,
             )}
           >

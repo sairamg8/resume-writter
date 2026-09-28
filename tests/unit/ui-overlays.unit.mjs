@@ -149,6 +149,27 @@ describe('Dialog', () => {
     } finally { await kept.view.unmount(); }
   });
 
+  it('R4-DVIS-07: while it animates out the panel takes no clicks or keys (inert), and the overlay still catches the press', async () => {
+    const { view, panel, layer, closes } = dialogPage();
+    try {
+      assert.ok(!panel().hasAttribute('inert'), 'open, it takes clicks');
+      assert.doesNotMatch(panel().className, /pointer-events-none/);
+      view.update({ open: false });
+      const p = panel();
+      assert.ok(p, 'still on screen while it animates out');
+      assert.equal(p.getAttribute('data-state'), 'closed');
+      // A double-click on one of its buttons: the second press must not act again.
+      assert.ok(p.hasAttribute('inert'), 'the closing panel is inert');
+      assert.match(p.className, /(^|\s)pointer-events-none(\s|$)/, 'and a pointer goes through it');
+      // …to the overlay, not to the page behind: the overlay still takes the press, and closes nothing.
+      const overlay = layer().childNodes[1];
+      assert.doesNotMatch(overlay.className, /pointer-events-none/);
+      view.act(() => reactProps(overlay).onPointerDown(ev({ target: overlay, currentTarget: overlay })));
+      view.act(() => reactProps(overlay).onClick(ev({ target: overlay, currentTarget: overlay })));
+      assert.deepEqual(closes, [], 'a press while it closes does not close it again');
+    } finally { await view.unmount(); }
+  });
+
   it('holds the page still while open (body overflow hidden) and lets go after it leaves', async () => {
     const { view } = dialogPage();
     try {
