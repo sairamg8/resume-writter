@@ -42,7 +42,8 @@ for (const [path, title, crumbs] of [
   it(`R4-DVIS-01: ${path} — the shell's PageHeader: breadcrumbs, the page title at its size, the arrow and the actions`, async () => {
     const { page, header, within } = await openForm(path);
     try {
-      tokens(header, 'the header', { has: ['sticky', 'top-0', 'bg-white', 'border-b', 'border-line'] });
+      // Sticky from md up, and scrolled away with the page on a phone (PageHeader, R4-DPH-07).
+      tokens(header, 'the header', { has: ['md:sticky', 'md:top-0', 'bg-white', 'border-b', 'border-line'], hasNot: ['sticky', 'top-0'] });
       tokens(header.childNodes[0], 'the header\'s frame', { has: ['px-4', 'md:px-8'], hasNot: ['max-w-3xl', 'mx-auto', 'px-6'] });
 
       const h1 = within(header).find((el) => el.tagName === 'H1');
