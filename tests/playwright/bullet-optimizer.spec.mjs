@@ -23,6 +23,8 @@ async function description(page) {
 
 /** The saved résumé's first entry's description (localStorage, as the app saved it). */
 const savedDescription = (page) => page.evaluate(() => JSON.parse(localStorage.getItem('cpwtcv_v1')).resumes[0].sections[0].items[0].description);
+/** `html` with every character outside printable ASCII written as \uXXXX, so a failure shows one. */
+const visible = (html) => html.replace(/[^\x20-\x7e]/g, (c) => `\\u${c.charCodeAt(0).toString(16).padStart(4, '0')}`);
 
 test('opens on the bullet the caret is in, and Apply replaces that bullet', async ({ page }) => {
   const { editor, star } = await description(page);
@@ -88,7 +90,7 @@ test('a list item split by a nested list opens and applies as one statement, its
   await expect.poll(() => savedDescription(page)).not.toContain('for 3 regions<');
   // Nothing is left where the later run was: no <br> placeholder or empty line after the sub-list,
   // which the PDF printed as a blank line inside the bullet (review of R4-SW-WT-02).
-  await expect.poll(() => savedDescription(page)).toBe('<ul><li>Led the migration of 40 services across 3 regions<ul><li>Cut costs by 30%</li></ul></li><li>Built the ledger service</li></ul>');
+  await expect.poll(async () => visible(await savedDescription(page))).toBe('<ul><li>Led the migration of 40 services across 3 regions<ul><li>Cut costs by 30%</li></ul></li><li>Built the ledger service</li></ul>');
 });
 
 // R4-SW-WT-02: an item whose statement is two paragraphs ('<li><p>A</p><p>B</p></li>') opens as "A B",
@@ -116,5 +118,5 @@ test('a list item split in paragraphs opens and applies as one statement, with n
   await expect(editor.locator('li')).toHaveText(['Owned billing for 3 regions, cutting costs 20%', 'Built the ledger service']);
   // Chrome's delete over the second paragraph merges it into the first, and may unwrap it: either is
   // one line. What must not be left is an empty paragraph or a <br>.
-  await expect.poll(() => savedDescription(page)).toMatch(/^<ul><li>(?:<p>)?Owned billing for 3 regions, cutting costs 20%(?:<\/p>)?<\/li><li>Built the ledger service<\/li><\/ul>$/);
+  await expect.poll(async () => visible(await savedDescription(page))).toMatch(/^<ul><li>(?:<p>)?Owned billing for 3 regions, cutting costs 20%(?:<\/p>)?<\/li><li>Built the ledger service<\/li><\/ul>$/);
 });

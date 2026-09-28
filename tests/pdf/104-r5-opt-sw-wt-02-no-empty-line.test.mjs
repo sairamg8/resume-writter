@@ -26,16 +26,23 @@ after(teardown);
 const NESTED = '<ul><li>Led migration<ul><li>Cut costs by 30%</li></ul> for 3 regions</li><li>Built CI</li></ul>';
 
 /**
- * document.execCommand with the placeholders Chrome left (run 36459579010): a delete that empties a line
- * leaves <p><br></p> there, and insertText over the text before a nested list leaves a <br> before it.
+ * `doc`'s execCommand with the placeholders Chrome left (runs 36459579010, 36460322150): a delete that
+ * empties a line leaves <p><br></p> there — or, with `emptyTheParagraph`, a delete of a whole paragraph
+ * leaves that paragraph holding a <br> — and insertText over the text before a nested list leaves a
+ * <br> before it.
  */
-function withChromePlaceholders() {
-  const doc = globalThis.document;
+function withChromePlaceholders(doc, { emptyTheParagraph = false } = {}) {
   const exec = doc.execCommand;
   doc.execCommand = function (command, ui, text) {
     const range = doc.getSelection().getRangeAt(0);
     const at = range.startContainer;
     const i = range.startOffset;
+    const whole = at === range.endContainer && range.endOffset === i + 1 ? at.childNodes[i] : null;
+    if (command === 'delete' && emptyTheParagraph && whole?.nodeName === 'P') {
+      whole.replaceChildren(doc.createElement('br'));
+      doc.getSelection().removeAllRanges();
+      return true;
+    }
     const done = exec.call(doc, command, ui, text);
     if (command === 'delete' && at.nodeType === 1) {
       const p = doc.createElement('p');
@@ -48,14 +55,14 @@ function withChromePlaceholders() {
     }
     return done;
   };
-  return () => { doc.execCommand = exec; };
 }
 
 /** The editor holding `html`, the caret in the text node holding `t`; Apply `result` and return what it emits. */
-function applyAt(html, t, result) {
+function applyAt(html, t, result, chrome = {}) {
   let emitted = null;
   const view = dom.mount(RichTextEditor, { label: 'Description', value: '', onChange: (v) => { emitted = v; } });
   try {
+    withChromePlaceholders(view.document, chrome);
     const el = [...dom.elements(view.container)].find((e) => e.getAttribute('role') === 'textbox');
     el.innerHTML = html;
     const walk = function* (n) { yield n; for (const c of n.childNodes) yield* walk(c); };
@@ -76,27 +83,23 @@ function applyAt(html, t, result) {
 
 describe('STAR Optimizer · Apply leaves no empty line in the item it rewrote (R4-SW-WT-02)', () => {
   it('the repro: no <br> before the nested list and no <p><br></p> after it', () => {
-    const restore = withChromePlaceholders();
-    try {
-      const saved = applyAt(NESTED, ' for 3 regions', 'Led the migration of 40 services across 3 regions');
-      assert.equal(saved, '<ul><li>Led the migration of 40 services across 3 regions<ul><li>Cut costs by 30%</li></ul></li><li>Built CI</li></ul>');
-      // What the PDF prints: the bullet, its sub-item, the next bullet — no blank line among them.
-      const lines = parseRichText(saved).flatMap((b) => b.runs.map((r) => r.text).join('').split('\n'));
-      assert.equal(lines.length, 3, JSON.stringify(lines));
-      assert.ok(!lines.some((l) => !l.trim()), `no blank line: ${JSON.stringify(lines)}`);
-    } finally {
-      restore();
-    }
+    const saved = applyAt(NESTED, ' for 3 regions', 'Led the migration of 40 services across 3 regions');
+    assert.equal(saved, '<ul><li>Led the migration of 40 services across 3 regions<ul><li>Cut costs by 30%</li></ul></li><li>Built CI</li></ul>');
+    // What the PDF prints: the bullet, its sub-item, the next bullet — no blank line among them.
+    const lines = parseRichText(saved).flatMap((b) => b.runs.map((r) => r.text).join('').split('\n'));
+    assert.equal(lines.length, 3, JSON.stringify(lines));
+    assert.ok(!lines.some((l) => !l.trim()), `no blank line: ${JSON.stringify(lines)}`);
   });
 
   it('the <p>s and <br>s the item already had stay', () => {
-    const restore = withChromePlaceholders();
-    try {
-      // The first paragraph is the user's and holds the result; a nested item's own <br> is not the item's.
-      const saved = applyAt('<ul><li><p>Owned billing</p><ul><li>Cut A<br>Cut B</li></ul><p>for 3 regions</p></li></ul>', 'for 3 regions', 'Owned billing for 3 regions');
-      assert.equal(saved, '<ul><li><p>Owned billing for 3 regions</p><ul><li>Cut A<br>Cut B</li></ul></li></ul>');
-    } finally {
-      restore();
-    }
+    // The first paragraph is the user's and holds the result; a nested item's own <br> is not the item's.
+    const saved = applyAt('<ul><li><p>Owned billing</p><ul><li>Cut A<br>Cut B</li></ul><p>for 3 regions</p></li></ul>', 'for 3 regions', 'Owned billing for 3 regions');
+    assert.equal(saved, '<ul><li><p>Owned billing for 3 regions</p><ul><li>Cut A<br>Cut B</li></ul></li></ul>');
+  });
+
+  it('a paragraph of the item that the delete emptied goes too, not only one it added', () => {
+    // Chrome may empty the later run's own <p> rather than remove it (run 36460322150 saved "<p></p>").
+    const saved = applyAt('<ul><li><p>Owned billing</p><ul><li>Cut A</li></ul><p>for 3 regions</p></li></ul>', 'for 3 regions', 'Owned billing for 3 regions', { emptyTheParagraph: true });
+    assert.equal(saved, '<ul><li><p>Owned billing for 3 regions</p><ul><li>Cut A</li></ul></li></ul>');
   });
 });

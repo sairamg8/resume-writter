@@ -105,8 +105,9 @@ export default function RichTextEditor({ label, ariaLabel, value, onChange, plac
     const removals = statement?.removals ?? [];
     if (range && [range, ...removals].every((r) => el.contains(r.commonAncestorContainer))) {
       const sel = window.getSelection();
-      // The item's own elements before the edit: what dropPlaceholders may remove is only what it adds.
-      const kept = statement?.item ? new Set(ownElements(statement.item)) : null;
+      // The item's own elements before the edit, each with whether it was blank: dropPlaceholders
+      // removes only what the edit added or emptied.
+      const kept = statement?.item ? new Map(ownElements(statement.item).map((n) => [n, isBlank(n)])) : null;
       // The later runs go first, last to first, so the ranges before them keep their place.
       for (const run of removals) {
         sel.removeAllRanges();
@@ -404,21 +405,34 @@ function ownElements(node, out = []) {
   return out;
 }
 
+/** Whether element `n` holds no text and nothing but <br>s: an empty line. */
+const isBlank = (n) => !n.textContent.replace(/[\s\u200b\ufeff]/g, '') && ownElements(n).every((c) => c.nodeName === 'BR');
+
 /**
  * The empty lines Chrome's delete and insertText leave in an item Apply rewrote: a <p><br></p> where a
  * deleted run after a nested list was, and a <br> before that nested list. The PDF printed each as a
- * blank line inside the bullet (review of R4-SW-WT-02). Only elements not in `kept` go: the item's own
- * <p>s and <br>s stay (an item with a <br> of its own is never read as one statement, ownRuns).
+ * blank line inside the bullet (review of R4-SW-WT-02). A block goes when it is blank now and the edit
+ * added it or emptied it; a <br> goes when the edit added it and it ends a line before a block or the
+ * item's end. The item's own blank lines and <br>s stay (an item with a <br> of its own is never read
+ * as one statement anyway, ownRuns). Repeated until nothing changes: removing one can expose another.
  */
 function dropPlaceholders(item, kept) {
-  for (const n of ownElements(item)) {
-    if (kept.has(n) || !item.contains(n)) continue;
-    if (n.nodeName === 'BR') {
-      let next = n.nextSibling;
-      while (next && next.nodeType === 3 && !next.nodeValue.trim()) next = next.nextSibling;
-      if (!next || BLOCKS.has(next.nodeName)) n.parentNode.removeChild(n);
-    } else if (BLOCKS.has(n.nodeName) && !n.textContent.trim() && ownElements(n).every((c) => c.nodeName === 'BR')) {
-      n.parentNode.removeChild(n);
+  for (let changed = true; changed;) {
+    changed = false;
+    for (const n of ownElements(item)) {
+      if (!item.contains(n) || (kept.has(n) && (n.nodeName === 'BR' || kept.get(n)))) continue;
+      let drop = false;
+      if (n.nodeName === 'BR') {
+        let next = n.nextSibling;
+        while (next && next.nodeType === 3 && !next.nodeValue.replace(/[\s\u200b\ufeff]/g, '')) next = next.nextSibling;
+        drop = !next || BLOCKS.has(next.nodeName);
+      } else {
+        drop = BLOCKS.has(n.nodeName) && isBlank(n);
+      }
+      if (drop) {
+        n.parentNode.removeChild(n);
+        changed = true;
+      }
     }
   }
 }
