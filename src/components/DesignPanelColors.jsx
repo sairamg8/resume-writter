@@ -126,14 +126,17 @@ export function ColorsSection({ resume, settings, updateSetting, onReset }) {
           { key: 'nameColor',     label: 'Name color',     placeholder: 'Template default' },
           { key: 'jobTitleColor', label: 'Job title color', placeholder: 'Template default' },
         ].map(({ key, label, placeholder }) => (
-          <div key={key} className="flex items-center justify-between">
+          <div key={key} className="flex items-center justify-between gap-2">
             <span className="text-xs text-gray-600">{label}</span>
-            <div className="flex items-center gap-2">
-              <ColorInput value={swatch(printed[key])} onCommit={v => updateSetting(key, v)} className="h-6 w-10 rounded border border-gray-200 cursor-pointer p-0.5" title={label} aria-label={label} />
+            {/* min-w-0: without it this group cannot narrow below the full "Template default", so in a panel
+                dragged to 240 px the row ran past the section's edge and was cut mid-letter. Now the value
+                text gives way with an ellipsis; the swatch and ↺ keep their size (shrink-0). */}
+            <div className="flex items-center gap-2 min-w-0">
+              <ColorInput value={swatch(printed[key])} onCommit={v => updateSetting(key, v)} className="h-6 w-10 shrink-0 rounded border border-gray-200 cursor-pointer p-0.5" title={label} aria-label={label} />
               {/* Room for "Template default", what every résumé starts with: a fixed w-16 cut it to "Templat…" (R4-DVIS-34). */}
               <span className="text-[11px] text-gray-400 font-mono max-w-28 truncate">{settings[key] || placeholder}</span>
               {settings[key] && (
-                <button onClick={() => updateSetting(key, '')} className="text-[11px] text-gray-400 hover:text-gray-600" title="Reset to template default">↺</button>
+                <button onClick={() => updateSetting(key, '')} className="shrink-0 text-[11px] text-gray-400 hover:text-gray-600" title="Reset to template default">↺</button>
               )}
             </div>
           </div>
