@@ -532,6 +532,8 @@ export function pdfLinesOfPages(pages) {
             const last = out[out.length - 1];
             last.text = last.text.endsWith('-') && /^\p{Ll}/u.test(line.text) ? last.text + line.text : `${last.text} ${line.text}`;
             if (line.links) last.links = [...(last.links || []), ...line.links];
+            // Where the item's last line ends: a justified item's first line runs to the edge, its last not.
+            if (listed && open.length) open[open.length - 1].right = line.right;
             prev = { ...line, x: prev.x, textX: prev.textX, listed };
             continue;
           }
@@ -541,16 +543,19 @@ export function pdfLinesOfPages(pages) {
         // where that item's text starts is nested under it — the app prints a nested item's marker where
         // its parent's text starts — and its depth is how many are still open to its left. Markers at one
         // x are siblings, and so are centred items (Section Options → Alignment), whose x moves with their
-        // length, not their level. A line of text at the list's left edge ends it. Before, every PDF list
+        // length, not their level, and right-aligned ones (the editor's Align right): the line and the
+        // item above both end at the block's right edge. A line of text at the list's left edge ends it. Before, every PDF list
         // item was level 0: an award's or a certificate's sub-point came in as an entry of its own.
         let depth = 0;
         const mid = (line.x + line.right) / 2;
         if (MARKER.test(line.text.split(' ')[0])) {
           while (open.length && open[open.length - 1].x >= line.x - 2) open.pop();
           const top = open[open.length - 1];
-          if (top && (line.x < top.textX - 2 || Math.abs(mid - top.mid) < 1.5)) open.pop();
+          // Right-aligned items end at the block's right edge, each (its last line) as the one above.
+          const rightSet = top && Math.abs(line.right - right) <= 2 && Math.abs(top.right - right) <= 2;
+          if (top && (line.x < top.textX - 2 || Math.abs(mid - top.mid) < 1.5 || rightSet)) open.pop();
           depth = open.length;
-          open.push({ x: line.x, textX: line.textX, mid, glyph: line.dot ? '·' : line.text.split(' ')[0] });
+          open.push({ x: line.x, textX: line.textX, mid, right: line.right, glyph: line.dot ? '·' : line.text.split(' ')[0] });
         } else {
           // Text is a further paragraph of the open item whose text it starts under; left of that, it
           // closes the item (an entry's next title line, a paragraph at the margin).

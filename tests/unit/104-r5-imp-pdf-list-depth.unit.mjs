@@ -52,3 +52,25 @@ test('centred items, whose x moves with their length, stay siblings', () => {
   assert.deepEqual(pdfLinesOfPages([page]).filter((l) => l.text).slice(-2).map((l) => l.depth || 0), [0, 0]);
   assert.equal(awards(page).length, 2);
 });
+
+// Right-aligned items (the editor's Align right; PdfRichText sets them as it sets centred ones, the
+// marker leading the text) end at one right edge, and their x moves with their length: a shorter item
+// after a longer one sits right of it, at or past where its text starts. Read as nested, every award
+// after the first folded into the first one's description.
+test('right-aligned items, which all end at the block\'s right edge, stay siblings', () => {
+  const page = [...head,
+    item('• Best Paper Award for the tapir parser – 2022', 300, 690, 240),
+    item('• Dean List – 2021', 440, 676, 100),
+    item('• Hackathon – 2020', 438, 662, 102)];
+  assert.deepEqual(pdfLinesOfPages([page]).filter((l) => l.text).slice(-3).map((l) => l.depth || 0), [0, 0, 0]);
+  assert.deepEqual(awards(page).map((a) => [a.title, a.date, a.description || '']),
+    [['Best Paper Award for the tapir parser', '2022', ''], ['Dean List', '2021', ''], ['Hackathon', '2020', '']]);
+});
+
+test('an item whose wrapped first line ran to the edge (justified) still nests the sub-point under it', () => {
+  const page = [...head,
+    item('•', 40, 690, 4), item('Best Paper Award for the tapir parser in the year of the', 49, 690, 491),
+    item('conference 2022', 49, 676, 80),
+    item('–', 49, 662, 5), item('For the tapir parser and everything else in the whole world ok', 58, 662, 482)];
+  assert.deepEqual(pdfLinesOfPages([page]).filter((l) => l.text).slice(-2).map((l) => l.depth || 0), [0, 1]);
+});
