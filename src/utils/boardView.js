@@ -41,7 +41,7 @@ export function hiddenDoneCount(board, { now = Date.now() } = {}) {
  * (after, else before); null for the only column. `change` is what the move does to them: 'reopen'
  * (out of a done column), 'resolve' (into one) or null. `targetId`, a column picked instead (in
  * Project settings), is the target when it is another column of the board, so `change` says what
- * the move to it does (R5-BRD-01).
+ * the move to it does (R5-BRD-01b).
  */
 export function columnDeletion(board, columnId, targetId = null) {
   const at = board.columns.findIndex((c) => c.id === columnId);

@@ -1,4 +1,4 @@
-// R5-BRD-01 (Project settings' column delete): its "Its N issues move to [column]" panel let the
+// R5-BRD-01b (Project settings' column delete): its "Its N issues move to [column]" panel let the
 // user pick a column of another done state and said nothing, so Delete column silently marked the
 // issues done (a repeating one making its next occurrence) or reopened them — the board's own
 // delete says " and be marked done" / " and be reopened". columnDeletion worked the change out for

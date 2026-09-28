@@ -92,7 +92,7 @@ function ColumnRow({ board, column, index, store }) {
   // and "Delete column" did nothing (R4-BRD-12).
   const target = others.some((c) => c.id === picked) ? picked : nearest?.id ?? '';
   // What the move to the column picked does to the issues, said as the board's delete says it: a
-  // pick of another done state resolves or reopens them (R5-BRD-01).
+  // pick of another done state resolves or reopens them (R5-BRD-01b).
   const { change } = columnDeletion(board, column.id, target);
   const effect = { reopen: 'and will be reopened', resolve: 'and will be marked done' }[change];
   const last = board.columns.length === 1;
