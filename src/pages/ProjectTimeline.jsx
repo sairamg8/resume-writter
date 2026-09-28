@@ -42,8 +42,10 @@ function Row({ board, issue, span, from, depth = 0, open, onToggle, onOpen }) {
   const clippedLeft = left === null ? null : Math.max(left, 0);
   const clippedWidth = left === null ? 0 : Math.min(width - (clippedLeft - left), DAYS - clippedLeft);
   return (
-    <div className="flex h-10 border-b border-line-subtle hover:bg-hovered">
-      <div className="sticky left-0 z-10 flex w-(--name-w) shrink-0 items-center gap-2 border-r border-line bg-white px-3" style={{ paddingLeft: `calc(12px + ${depth} * var(--depth-w))` }}>
+    <div className="group flex h-10 border-b border-line-subtle hover:bg-hovered">
+      {/* The sticky name cell is opaque so bars scrolled under it stay hidden; it takes the row's
+          hover colour itself, or the highlight stopped at its edge. */}
+      <div className="sticky left-0 z-10 flex w-(--name-w) shrink-0 items-center gap-2 border-r border-line bg-white px-3 group-hover:bg-hovered" style={{ paddingLeft: `calc(12px + ${depth} * var(--depth-w))` }}>
         {onToggle ? (
           <button type="button" aria-expanded={open} aria-label={`${open ? 'Hide' : 'Show'} the issues of ${issue.title}`} onClick={onToggle} className="rounded p-0.5 text-ink-subtle hover:bg-neutral-fill">
             <ChevronDown size={14} aria-hidden="true" className={cx('transition-transform', !open && '-rotate-90')} />
