@@ -286,8 +286,10 @@ export function PdfPreview({ render, input, zoom = 1, textId, title = 'Résumé'
         </div>
       )}
 
+      {/* Below md it rides above the editor's Edit | Preview pill, which sits at the same bottom-4
+          and hid the chip's start (R4-DPH-40). */}
       {status === 'rendering' && view && (
-        <span className="fixed bottom-4 right-4 text-[11px] text-gray-500 bg-white/90 border border-gray-200 rounded-full px-3 py-1 shadow-sm">
+        <span className="fixed bottom-4 max-md:bottom-16 right-4 text-[11px] text-gray-500 bg-white/90 border border-gray-200 rounded-full px-3 py-1 shadow-sm">
           Updating preview…
         </span>
       )}
