@@ -160,7 +160,9 @@ export default function AuthBar({
           disabled={signingIn}
           title={compact ? 'Sign in with Google' : undefined}
           aria-label={compact ? 'Sign in with Google' : undefined}
-          className={`flex items-center gap-2 ${compact ? 'p-1.5' : 'px-3 py-1.5'} bg-white border border-gray-200 text-gray-700 rounded-lg text-xs font-semibold hover:bg-gray-50 transition-colors shadow-sm disabled:opacity-60 shrink-0`}
+          // The full button sits in the Dashboard's toolbar (from md up): sized as the buttons beside it,
+          // 38 px tall with 14 px text from sm, not 30 px with 12 px (R4-DVIS-27).
+          className={`flex items-center gap-2 ${compact ? 'p-1.5' : 'px-3 sm:px-4 py-1.5 sm:py-2 sm:text-sm whitespace-nowrap'} bg-white border border-gray-200 text-gray-700 rounded-lg text-xs font-semibold hover:bg-gray-50 transition-colors shadow-sm disabled:opacity-60 shrink-0`}
         >
           <GoogleIcon />
           {!compact && (signingIn ? 'Signing in…' : 'Sign in with Google')}
