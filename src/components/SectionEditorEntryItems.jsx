@@ -16,12 +16,18 @@ function CurrentBox({ item, onUpdate, label }) {
   );
 }
 
-/** Start and End Date, the End disabled while the entry is current, and its current flag. */
+/**
+ * Start and End Date, the End disabled while the entry is current, and its current flag.
+ * The two dates go side by side by the entry card's own width (@sm, a size container on ItemCard's
+ * body), not the window's: on a tablet or a desktop the editor is a 360 px panel however wide the
+ * window, and there two pickers side by side overlapped and the End one was cut off at the card's
+ * edge (R4-DVIS-21).
+ */
 function CurrentDates({ item, onUpdate, label }) {
   const u = (k, v) => onUpdate({ ...item, [k]: v });
   return (
     <>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+      <div className="grid grid-cols-1 @sm:grid-cols-2 gap-2">
         <DateField label="Start Date" value={item.startDate} onChange={v => u('startDate', v)} />
         <DateField label="End Date" value={item.current ? '' : item.endDate} onChange={v => u('endDate', v)} disabled={item.current} />
       </div>
@@ -49,7 +55,8 @@ export function ExperienceItem({ item, onUpdate, onRemove, onDuplicate, defaultO
       <FieldRow label="Location" field="location" hiddenSet={itemHidden} onToggle={toggleField}>
         <InputField value={item.location} onChange={v => u('location', v)} placeholder="City, State" />
       </FieldRow>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+      {/* By the card's width, as CurrentDates is (R4-DVIS-21). */}
+      <div className="grid grid-cols-1 @sm:grid-cols-2 gap-2">
         <FieldRow label="Start Date" field="startDate" hiddenSet={itemHidden} onToggle={toggleField}>
           <DateField value={item.startDate} onChange={v => u('startDate', v)} />
         </FieldRow>
@@ -116,7 +123,8 @@ export function CustomItem({ item, onUpdate, onRemove, onDuplicate, defaultOpen 
     <ItemCard label={item.title} onRemove={onRemove} onDuplicate={onDuplicate} visible={visible} defaultOpen={defaultOpen} onToggleVisibility={() => onUpdate({ ...item, visible: !visible })}>
       <InputField label="Title" value={item.title} onChange={v => u('title', v)} placeholder="Entry Title" />
       <InputField label="Subtitle" value={item.subtitle} onChange={v => u('subtitle', v)} placeholder="Organization or Context" />
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+      {/* By the card's width, as CurrentDates is (R4-DVIS-21). */}
+      <div className="grid grid-cols-1 @sm:grid-cols-2 gap-2">
         <DateField label="Date / Period" value={item.date} onChange={v => u('date', v)} placeholder="Jan 2020 – Mar 2021" />
         <InputField label="Location" value={item.location} onChange={v => u('location', v)} placeholder="City, State" />
       </div>
