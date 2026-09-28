@@ -114,5 +114,7 @@ test('a list item split in paragraphs opens and applies as one statement, with n
   await statement.fill('Owned billing for 3 regions, cutting costs 20%');
   await page.getByRole('button', { name: 'Apply to Resume' }).click();
   await expect(editor.locator('li')).toHaveText(['Owned billing for 3 regions, cutting costs 20%', 'Built the ledger service']);
-  await expect.poll(() => savedDescription(page)).toBe('<ul><li><p>Owned billing for 3 regions, cutting costs 20%</p></li><li>Built the ledger service</li></ul>');
+  // Chrome's delete over the second paragraph merges it into the first, and may unwrap it: either is
+  // one line. What must not be left is an empty paragraph or a <br>.
+  await expect.poll(() => savedDescription(page)).toMatch(/^<ul><li>(?:<p>)?Owned billing for 3 regions, cutting costs 20%(?:<\/p>)?<\/li><li>Built the ledger service<\/li><\/ul>$/);
 });

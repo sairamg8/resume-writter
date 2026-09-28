@@ -105,6 +105,8 @@ export default function RichTextEditor({ label, ariaLabel, value, onChange, plac
     const removals = statement?.removals ?? [];
     if (range && [range, ...removals].every((r) => el.contains(r.commonAncestorContainer))) {
       const sel = window.getSelection();
+      // The item's own elements before the edit: what dropPlaceholders may remove is only what it adds.
+      const kept = statement?.item ? new Set(ownElements(statement.item)) : null;
       // The later runs go first, last to first, so the ranges before them keep their place.
       for (const run of removals) {
         sel.removeAllRanges();
@@ -114,6 +116,7 @@ export default function RichTextEditor({ label, ariaLabel, value, onChange, plac
       sel.removeAllRanges();
       sel.addRange(range);
       document.execCommand('insertText', false, text);
+      if (kept) dropPlaceholders(statement.item, kept);
     } else {
       el.innerHTML = sanitizeRichText(`${el.innerHTML}<ul><li>${plainTextToHtml(text)}</li></ul>`);
     }
@@ -299,7 +302,7 @@ export function statementRange(el) {
   // Range over them all would take the nested list with it, and Apply wiped the sub-items (R4-LO-12).
   const item = itemOf(host, el);
   const runs = item && ownRuns(item);
-  if (runs?.length > 1) return ownStatement(runs);
+  if (runs?.length > 1) return ownStatement(item, runs);
   // Its line: the text between line breaks, a <br> at any depth ("<p><b>A<br>B</b></p>" is two lines,
   // R4-LO-12) or a block inside it (a nested list is its own statements, not part of its item's).
   const leaves = lineLeaves(host);
@@ -367,8 +370,11 @@ function ownRuns(item) {
   return split ? null : runs.filter((r) => r.leaves.some((n) => n.textContent.trim()));
 }
 
-/** An item's statement from its runs (ownRuns): the first to write into, the rest to delete, last first. */
-function ownStatement(runs) {
+/**
+ * An item's statement from its runs (ownRuns): the first to write into, the rest to delete, last first;
+ * `item` for Apply to tidy afterwards (dropPlaceholders).
+ */
+function ownStatement(item, runs) {
   const span = (from, to) => {
     const r = document.createRange();
     r.setStartBefore(from);
@@ -378,6 +384,7 @@ function ownStatement(runs) {
   const text = (run) => span(run.leaves[0], run.leaves[run.leaves.length - 1]);
   const [first, ...rest] = runs;
   return {
+    item,
     target: text(first),
     // A run that is a whole paragraph goes with its paragraph, so no empty line is left in the item.
     removals: rest.reverse().map((run) => (run.block && run.block.textContent.trim() === text(run).toString().trim()
@@ -385,6 +392,35 @@ function ownStatement(runs) {
       : text(run))),
     toString: () => runs.map((run) => text(run).toString().trim()).join(' '),
   };
+}
+
+/** Every element in `node`, in order, outside its nested lists: an item's own markup. */
+function ownElements(node, out = []) {
+  for (const child of node.childNodes) {
+    if (child.nodeType !== 1 || child.nodeName === 'UL' || child.nodeName === 'OL') continue;
+    out.push(child);
+    ownElements(child, out);
+  }
+  return out;
+}
+
+/**
+ * The empty lines Chrome's delete and insertText leave in an item Apply rewrote: a <p><br></p> where a
+ * deleted run after a nested list was, and a <br> before that nested list. The PDF printed each as a
+ * blank line inside the bullet (review of R4-SW-WT-02). Only elements not in `kept` go: the item's own
+ * <p>s and <br>s stay (an item with a <br> of its own is never read as one statement, ownRuns).
+ */
+function dropPlaceholders(item, kept) {
+  for (const n of ownElements(item)) {
+    if (kept.has(n) || !item.contains(n)) continue;
+    if (n.nodeName === 'BR') {
+      let next = n.nextSibling;
+      while (next && next.nodeType === 3 && !next.nodeValue.trim()) next = next.nextSibling;
+      if (!next || BLOCKS.has(next.nodeName)) n.parentNode.removeChild(n);
+    } else if (BLOCKS.has(n.nodeName) && !n.textContent.trim() && ownElements(n).every((c) => c.nodeName === 'BR')) {
+      n.parentNode.removeChild(n);
+    }
+  }
 }
 
 /** A line break: a <br>, or a block element, which starts a line of its own. */
