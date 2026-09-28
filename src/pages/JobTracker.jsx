@@ -151,7 +151,9 @@ export function JobTracker({ store }) {
       <ImportNotice notice={importNotice} onDismiss={() => setImportNotice(null)} className="px-4 pt-3 md:px-8" />
 
       {view === 'summary' ? (
-        <div className="grid flex-1 content-start gap-4 bg-sunken px-4 py-6 md:px-8 xl:grid-cols-[1fr_18rem]">
+        // grid-cols-1, not an implicit column: that one grows to the widest unwrapped line inside (a
+        // long role in a job row), and below xl it would push the cards off a phone's right edge.
+        <div className="grid flex-1 grid-cols-1 content-start gap-4 bg-sunken px-4 py-6 md:px-8 xl:grid-cols-[1fr_18rem]">
           <JobSummary jobs={jobs} onOpen={open} />
           <aside aria-label="Career history" className="flex flex-col gap-2">
             <h2 className="text-[12px] font-semibold uppercase tracking-wide text-ink-subtle">Career history</h2>

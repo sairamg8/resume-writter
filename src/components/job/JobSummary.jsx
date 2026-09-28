@@ -63,13 +63,15 @@ export function JobSummary({ jobs, onOpen }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      {/* Both grids name their narrow column (grid-cols-1): an implicit one grows to the widest
+          unwrapped line inside, and would push the cards past a phone's edge. */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Stat icon={Briefcase} tone="bg-loz-progress text-loz-progress-ink" value={s.active} label="active" hint={`of ${s.total} tracked`} />
         <Stat icon={CalendarClock} tone="bg-[#dfd8fd] text-[#5e4db2]" value={s.interviewing} label="interviewing" hint="phone screens and interviews" />
         <Stat icon={Trophy} tone="bg-loz-done text-loz-done-ink" value={s.offers} label={s.offers === 1 ? 'offer' : 'offers'} hint="at the offer stage" />
         <Stat icon={MessageSquareReply} tone="bg-[#f8e6a0] text-[#7f5f01]" value={s.responseRate === null ? '—' : `${s.responseRate}%`} label="response rate" hint={`${s.responded} of ${s.applied} applications heard back`} />
       </div>
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card title="Pipeline" description="How far your applications got — each step counts the jobs that reached it.">
           <ol className="flex flex-col gap-3">
             {funnel.map((step) => (
