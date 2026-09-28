@@ -65,3 +65,31 @@ it('R4-DPH-16: the job form\'s header row wraps on a phone — a one-line title 
     delete globalThis.localStorage;
   }
 });
+
+// The Edit form's breadcrumbs put the company between "Job Tracker" and the page, and a crumb
+// before the last never shrinks (PageHeader): a long company name ran the row past a 375 px screen
+// (the shell clips it) and left no room for the page's own crumb. The company's crumb truncates at
+// a width of its own now, and keeps the full name as its title.
+it('R4-DPH-16: a long company name in the Edit form\'s breadcrumbs truncates at a set width, so the row fits a phone', async () => {
+  const LONG = 'Johnson & Johnson Innovative Medicine Research and Development';
+  const { JobForm } = await loadModule('/src/pages/JobForm.jsx');
+  const { elements } = await import('./fake-dom.mjs');
+  const form = h(JobForm, { store: { appState: { resumes: [] } } });
+  const page = await atRoute('/jobs/a/edit', { '/jobs/:id/edit': form, '/jobs/:id': h('p', null, 'DETAIL') }, [{ ...acme, company: LONG }]);
+  try {
+    const nav = page.all().find((el) => el.tagName === 'NAV' && el.getAttribute('aria-label') === 'Breadcrumb');
+    assert.ok(nav, 'the form has its breadcrumbs');
+    const link = [...elements(nav)].find((el) => el.tagName === 'A' && (el.getAttribute('href') || '').endsWith('/jobs/a'));
+    assert.equal(link?.textContent, LONG, 'the company\'s crumb links to its job');
+    // The link or a box inside it truncates under a width cap that holds on a phone (no breakpoint prefix).
+    const box = [...elements(link)].find((el) => classes(el).includes('truncate') && classes(el).some((t) => t.startsWith('max-w-')));
+    assert.ok(box, `the company's crumb truncates at a set width (${[...elements(link)].map((el) => el.getAttribute('class')).join(' | ')})`);
+    assert.equal(box.textContent, LONG);
+    assert.equal(box.getAttribute('title'), LONG, 'the full name is still there to read');
+    const here = [...elements(nav)].find((el) => el.getAttribute('aria-current') === 'page');
+    assert.equal(here?.textContent, 'Edit job application', 'the page\'s crumb is still last');
+  } finally {
+    await page.view.unmount();
+    delete globalThis.localStorage;
+  }
+});

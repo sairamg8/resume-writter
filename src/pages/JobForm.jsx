@@ -135,6 +135,7 @@ export function JobForm({ store }) {
   }
 
   const title = isEdit ? 'Edit job application' : 'Add job application';
+  const company = existing ? existing.company || 'Untitled Company' : '';
 
   // The workspace's page header, as the job page's (R4-DVIS-01): its own bar here was a centred
   // 16 px title, so Edit and the job page jumped in size and place. Its row wraps on a phone —
@@ -148,7 +149,12 @@ export function JobForm({ store }) {
         className="border-b border-line"
         breadcrumbs={[
           { label: 'Job Tracker', to: '/jobs' },
-          ...(isEdit && existing ? [{ label: existing.company || 'Untitled Company', to: `/jobs/${id}` }] : []),
+          // A crumb before the last does not shrink: a long company name ran the row off a phone's
+          // screen and hid this page's crumb, so it truncates at a width of its own.
+          ...(isEdit && existing ? [{
+            label: <span title={company} className="block max-w-40 truncate md:max-w-xs">{company}</span>,
+            to: `/jobs/${id}`,
+          }] : []),
           { label: title },
         ]}
         icon={(
