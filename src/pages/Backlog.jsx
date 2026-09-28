@@ -109,7 +109,20 @@ export function Backlog() {
         board={board}
         filters={filters}
         onChange={setFilters}
-        right={<Button size="md" leftIcon={Layers} onClick={() => setEpicsOpen((o) => !o)} aria-pressed={epicsOpen}>Epic panel</Button>}
+        // Drawn selected while the panel is open, as the quick filters beside it are when on. The
+        // aria-pressed variants outrank the button's own grey and its hover; a plain bg-brand-subtle
+        // would only tie with its bg-neutral-fill (cx does not merge classes).
+        right={(
+          <Button
+            size="md"
+            leftIcon={Layers}
+            onClick={() => setEpicsOpen((o) => !o)}
+            aria-pressed={epicsOpen}
+            className="aria-pressed:bg-brand-subtle aria-pressed:text-brand aria-pressed:hover:bg-brand-subtle-hover"
+          >
+            Epic panel
+          </Button>
+        )}
       />
       {!scrum && (
         <div className="mx-4 mb-3 flex flex-wrap items-center gap-3 rounded-md border border-line bg-sunken px-4 py-3 md:mx-8">
