@@ -10,6 +10,7 @@ import { InterviewStageSelector } from '@/components/job/InterviewStageSelector'
 import { JobsNotSavedAlert } from '@/components/job/JobsNotSavedAlert';
 import RichTextEditor from '@/components/RichTextEditor';
 import { Button, Select, TextField, useConfirmOptional } from '@/components/ui';
+import { PageHeader } from '@/components/shell';
 
 // The form's unsaved values in this tab's sessionStorage, so the browser's Back or an in-app link —
 // which the app's plain HashRouter cannot hold (no useBlocker) — no longer loses them (R4-DUX-06).
@@ -133,27 +134,43 @@ export function JobForm({ store }) {
     );
   }
 
+  const title = isEdit ? 'Edit job application' : 'Add job application';
+
+  // The workspace's page header, as the job page's (R4-DVIS-01): its own bar here was a centred
+  // 16 px title, so Edit and the job page jumped in size and place. Its row wraps on a phone —
+  // the title truncates and the buttons go under it — where arrow, title and both buttons were
+  // squeezed into one row and wrapped mid-label at 375 px (R4-DPH-16). The body sits at the header's
+  // padding, left-aligned, as the job page's. The breadcrumbs are plain links that do not ask
+  // leave()'s question; what was typed is kept by the draft (R4-DUX-06) and comes back on return.
   return (
     <div className="flex-1 bg-white">
-      <div className="bg-white border-b border-line sticky top-0 z-10">
-        <div className="max-w-3xl mx-auto px-6 py-4 flex items-center gap-3">
+      <PageHeader
+        className="border-b border-line"
+        breadcrumbs={[
+          { label: 'Job Tracker', to: '/jobs' },
+          ...(isEdit && existing ? [{ label: existing.company || 'Untitled Company', to: `/jobs/${id}` }] : []),
+          { label: title },
+        ]}
+        icon={(
           <button type="button" onClick={leave} className="p-1.5 text-ink-subtlest hover:text-ink hover:bg-neutral-fill rounded-lg transition-colors shrink-0">
             <ArrowLeft size={16} />
           </button>
-          <h1 className="text-base font-bold text-ink">{isEdit ? 'Edit Job Application' : 'Add Job Application'}</h1>
-          {/* The kit's buttons, the same pair as the footer's: the four were each their own height and corner (R4-DVIS-02). */}
-          <div className="ml-auto flex gap-2">
+        )}
+        title={title}
+        actions={(
+          // The kit's buttons, the same pair as the footer's: the four were each their own height and corner (R4-DVIS-02).
+          <>
             <Button variant="ghost" onClick={leave}>Cancel</Button>
             <Button variant="primary" type="submit" form={formId} disabled={!canSave || gone}>
               {isEdit ? 'Save Changes' : 'Add Job'}
             </Button>
-          </div>
-        </div>
-      </div>
+          </>
+        )}
+      />
 
-      <JobsNotSavedAlert error={persistError} className="max-w-3xl mx-auto px-4 sm:px-6 pt-4 sm:pt-6" />
+      <JobsNotSavedAlert error={persistError} className="max-w-3xl px-4 md:px-8 pt-4 sm:pt-6" />
       {restored && (
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 pt-4 sm:pt-6">
+        <div className="max-w-3xl px-4 md:px-8 pt-4 sm:pt-6">
           <p className="text-xs text-ink-subtle bg-sunken border border-line rounded-lg px-3 py-2 flex flex-wrap items-center gap-2">
             <span className="flex-1">Restored your unsaved changes</span>
             <button type="button" onClick={discardRestored} className="font-semibold underline hover:text-ink">Discard</button>
@@ -161,7 +178,7 @@ export function JobForm({ store }) {
         </div>
       )}
       {gone && (
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 pt-4 sm:pt-6">
+        <div className="max-w-3xl px-4 md:px-8 pt-4 sm:pt-6">
           <p role="alert" className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 flex flex-wrap items-center gap-2">
             <span className="flex-1">This job was deleted in another tab. What you typed is still here.</span>
             <button type="button" onClick={saveAsNew} disabled={!canSave} className="font-semibold underline hover:text-amber-900 disabled:opacity-40">Save as a new job</button>
@@ -169,7 +186,7 @@ export function JobForm({ store }) {
         </div>
       )}
 
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-5">
+      <div className="max-w-3xl px-4 md:px-8 py-6 sm:py-8 space-y-5">
 
         {/* The fields are a <form>, and the header's and the footer's Save buttons submit it through
             form=, so Enter in a field saves (J-36). The notes stay outside it: the STAR Optimizer the

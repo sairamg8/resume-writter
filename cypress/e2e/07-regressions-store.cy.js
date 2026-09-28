@@ -250,7 +250,7 @@ describe('regressions — job store', () => {
         win.localStorage.setItem(JOBS_KEY, '{ this is not json');
       },
     });
-    cy.contains('h1', 'Add Job Application').should('be.visible'); // the form page read (and repaired) the list
+    cy.contains('h1', 'Add job application').should('be.visible'); // the form page read (and repaired) the list
     cy.window().then((win) => expect(Object.values(jobBackups(win))).to.deep.eq(['{ this is not json']));
     cy.reload(); // what refreshing the form does: the stored list is already the repaired one
     cy.visit('/#/jobs');

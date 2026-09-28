@@ -173,7 +173,7 @@ describe('regressions — the Add Job form and its saved interview stages', () =
       },
     });
     cy.contains('button', /^Add job$/).click(); // the page header's (the top bar's reads "Add job" twice, for phones)
-    cy.contains('h1', 'Add Job Application').should('be.visible');
+    cy.contains('h1', 'Add job application').should('be.visible');
     formField('Company').type('Stripe');
     cy.get('input[placeholder^="e.g."]').type('Culture Round');
     cy.contains('button', /^\s*Add$/).click();
@@ -190,7 +190,7 @@ describe('regressions — the Add Job form and its saved interview stages', () =
         win.localStorage.setItem(STAGES_KEY, '{"not":"a list"}');
       },
     });
-    cy.contains('h1', 'Add Job Application').should('be.visible');
+    cy.contains('h1', 'Add job application').should('be.visible');
     cy.contains('No custom stages yet').scrollIntoView().should('be.visible'); // below the fold of the form
   });
 

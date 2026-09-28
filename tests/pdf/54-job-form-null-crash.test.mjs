@@ -70,7 +70,7 @@ describe('AUD-24: Jobs edit null crash and ErrorBoundary', () => {
       mountedWithoutError = true;
 
       const all = [...elements(view.container)];
-      const heading = all.find((el) => el.tagName === 'H1' && el.textContent.includes('Edit Job Application'));
+      const heading = all.find((el) => el.tagName === 'H1' && el.textContent.includes('Edit job application'));
       assert.ok(heading, 'JobForm should render edit title without crashing');
 
       // The save button should be disabled because both company and role are empty/null
