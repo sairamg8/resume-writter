@@ -69,16 +69,16 @@ describe('R5-BRD-02: the store puts a deleted sprint back', () => {
   it('a name another sprint took meanwhile: a default name becomes the next default, any other gets " (2)"', () => {
     const named = [
       sprint('s1', 'HOME Sprint 1', 'active'),
-      sprint('s2', 'HOME Sprint 2', 'future', { goal: 'The gate' }),
+      sprint('s2', 'HOME Sprint 3', 'future', { goal: 'The gate' }),
       sprint('s3', 'Garden week', 'future'),
     ];
     const { a, board } = actionsOver(project({ mode: 'scrum', sprints: named, issues: issues(), nextNumber: 6 }));
     const removed = a.deleteSprint('p1', 's2');
     a.addSprint('p1');
-    assert.equal(board().sprints.at(-1).name, 'HOME Sprint 2', 'the new sprint takes the deleted one\'s default name');
+    assert.equal(board().sprints.at(-1).name, 'HOME Sprint 3', 'the new sprint takes the deleted one\'s default name (two sprints left: 3)');
     assert.equal(a.restoreSprint('p1', removed), true);
     const names = board().sprints.map((s) => s.name);
-    assert.deepEqual(names, ['HOME Sprint 1', 'HOME Sprint 3', 'Garden week', 'HOME Sprint 2'], 'the sprint back at its place, under a free name');
+    assert.deepEqual(names, ['HOME Sprint 1', 'HOME Sprint 4', 'Garden week', 'HOME Sprint 3'], 'the sprint back at its place, under a free name');
     const back = board().sprints.find((s) => s.id === 's2');
     assert.equal(back.goal, 'The gate');
     assert.equal(back.state, 'future');
