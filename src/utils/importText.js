@@ -131,11 +131,14 @@ export function linkText(label, href) {
  * to it, for the rich text to link (richText).
  */
 function unmark(text, as, found) {
+  // A link's address is no text to format: kept aside, as written, from the passes over the rest (R5-IMP-01).
+  const kept = [];
+  const keep = (address) => `\uE001${kept.push(address) - 1}\uE001`;
   return inlineOff(String(text)
     .replace(/!\[((?:\\.|[^\]\\])*)\]\([^)]*\)/g, '$1')
     // A label may hold escaped brackets ("\[draft\]", the export's) and a pair of its own ("[v2]").
     .replace(/\[((?:\\.|\[(?:\\.|[^\]\\])*\]|[^\]\\[])*)\]\(([^)\s]*)[^)]*\)/g, (_, label, href) => {
-      if (as === 'label') return label || href;
+      if (as === 'label') return label || keep(href);
       const [t, to] = linkParts(label, href);
       if (found) {
         const url = to || linkParts('', href)[0];
@@ -144,19 +147,32 @@ function unmark(text, as, found) {
       }
       if (!to) return t;
       if (Array.isArray(as)) { as.push(to); return t; }
-      return `${t} (${to})`;
+      return `${t} (${keep(to)})`;
     })
-    .replace(/<((?:https?:\/\/|mailto:)[^>]+)>/g, '$1'))
+    .replace(/<((?:https?:\/\/|mailto:)[^>]+)>/g, (_, address) => keep(address)), kept)
     .replace(/ {2,}$/, '');
 }
-/** Inline code, bold and italics, and backslash escapes off a run of Markdown text. */
-const inlineOff = (text) => String(text)
+/**
+ * An address written out in Markdown text: "https://x.com/_a_/b", "www.…", "mailto:…". It ends before
+ * a closing emphasis mark or an escape ("**https://x.com**", the export's "https://x.com/\\_a\\_"), and
+ * never takes in an address already kept aside (unmark).
+ */
+const MD_ADDRESS = /\b(?:https?:\/\/|mailto:|www\.)[^\s<>()"\uE001]*[^\s<>()".,;:!?'’*_\\\uE001]/gi;
+/**
+ * Inline code, bold and italics, and backslash escapes off a run of Markdown text. An address in it is
+ * kept as written: "https://x.com/_foo_" is not "https://x.com/foo" (R5-IMP-01). `kept`: addresses
+ * unmark set aside, each written in the text as its index between two U+E001s (a private-use
+ * character, never a résumé's), put back here.
+ */
+const inlineOff = (text, kept = []) => String(text)
+  .replace(MD_ADDRESS, (address) => `\uE001${kept.push(address.replace(/\\([\\`*_{}[\]()#+\-.!|<>~=&])/g, '$1')) - 1}\uE001`)
   .replace(/`([^`]*)`/g, '$1')
   .replace(/\*\*(.+?)\*\*/g, '$1')
   .replace(/__(.+?)__/g, '$1')
   .replace(/(^|[^\w*\\])\*(?!\s)(.+?)(?<![\s\\])\*(?![\w*])/g, '$1$2')
   .replace(/(^|[^\w\\])_(?!\s)(.+?)(?<![\s\\])_(?!\w)/g, '$1$2')
-  .replace(/\\([\\`*_{}[\]()#+\-.!|<>~=&])/g, '$1');
+  .replace(/\\([\\`*_{}[\]()#+\-.!|<>~=&])/g, '$1')
+  .replace(/\uE001(\d+)\uE001/g, (_, i) => kept[i]);
 
 /**
  * A Markdown résumé as the parser's lines: "# " the name, "## " a heading, "### " an entry's title,
