@@ -50,7 +50,11 @@ test('every weak phrase is weak to both, and Auto-Fix clears both', () => {
   assert.deepEqual([...WEAK_PHRASES].sort(), [...UNION].sort(), 'the ATS list is the union, nothing more');
 });
 
-test('Auto-Fix writes a sentence for the new phrases', () => {
+// What Auto-Fix writes for the phrases only the ATS score had. "Tasked with", like "Responsible for" before
+// it (tests/unit/bullet-optimizer-ats-agree), becomes "Led", with a gerund after it as its object when
+// one followed: grammatical but plain; rewriting "rebuilding" as "Rebuilt" would need verb forms Auto-Fix
+// does not have, and misreads "-ing" nouns ("Responsible for engineering at Acme").
+test('Auto-Fix replaces the phrases only the ATS score had', () => {
   assert.equal(autoFixWeakPhrases('Tasked with rebuilding the billing API'), 'Led rebuilding the billing API');
   assert.equal(autoFixWeakPhrases('Tried to cut hosting costs by 20%'), 'Led efforts to cut hosting costs by 20%');
   assert.equal(autoFixWeakPhrases('Was involved in the SOC 2 audit'), 'Contributed to the SOC 2 audit');
