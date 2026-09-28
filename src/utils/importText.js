@@ -338,18 +338,12 @@ const BARE_LINK = /\b(?:https?:\/\/|mailto:|www\.)[^\s<>()"]*[^\s<>()".,;:!?'’
 /**
  * A line's text as rich text, its links as links (R4-LO-05): each link the file gave (`links`, its
  * label and address — a Markdown [label](url), a Word hyperlink, a PDF's link box), read as linkText
- * wrote it, "label (url)", or as its label alone where that is its address; else an address written
- * out ("see https://…"). Before, all of it was plain text.
+ * wrote it, "label (url)", or as its label alone where that is its address; then every address written
+ * out ("see https://…") outside them. Before, all of it was plain text.
  */
 function linkedHtml(text, links = []) {
   const anchor = (url, label) => `<a href="${escapeHtml(url).replace(/"/g, '&quot;')}">${label}</a>`;
   let html = escapeHtml(text);
-  if (!links.length) {
-    return html.replace(BARE_LINK, (shown) => {
-      const url = shown.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
-      return anchor(/^www\./i.test(url) ? `https://${url}` : url, shown);
-    });
-  }
   let from = 0;
   for (const { label, url } of links) {
     const shown = escapeHtml(label);
@@ -365,7 +359,12 @@ function linkedHtml(text, links = []) {
     html = html.slice(0, at) + a + html.slice(at + length);
     from = at + a.length;
   }
-  return html;
+  // Then every address written out, outside the links placed: on a line with a link of the file's
+  // too, "… and https://b.com" is a link as it is on a line with none (R4-SW-I-03).
+  return html.split(/(<a\b[^>]*>.*?<\/a>)/).map((part, i) => (i % 2 ? part : part.replace(BARE_LINK, (shown) => {
+    const url = shown.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+    return anchor(/^www\./i.test(url) ? `https://${url}` : url, shown);
+  }))).join('');
 }
 
 /**
