@@ -53,7 +53,12 @@ function useSplitEnding(name, hasEnding) {
   const stale = !measured || measured.name !== name || (width !== null && width !== measured.width);
   useLayoutEffect(() => {
     if (!hasEnding || !el || !stale) return;
-    setMeasured({ name, width: el.clientWidth, split: el.scrollHeight > el.clientHeight });
+    // The width measured here is the width from now on too: the observer may have missed a change
+    // (it is off while Rename is open, or while the name has no ending), and a `width` left behind
+    // would call every new measurement stale, measuring over and over until React gives up.
+    const now = el.clientWidth;
+    setWidth(now);
+    setMeasured({ name, width: now, split: el.scrollHeight > el.clientHeight });
   });
   useEffect(() => {
     if (!hasEnding || !el || typeof ResizeObserver !== 'function') return undefined;

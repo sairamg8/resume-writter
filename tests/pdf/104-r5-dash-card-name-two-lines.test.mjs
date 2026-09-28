@@ -19,7 +19,7 @@
 import { before, after, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { setup, teardown, loadModule } from './harness.mjs';
-import { elements, mount, fakeWindow } from './fake-dom.mjs';
+import { elements, mount, fakeWindow, reactProps } from './fake-dom.mjs';
 
 const tokens = (el) => (el.getAttribute('class') ?? '').split(/\s+/).filter(Boolean);
 const ONE_LINE = ['truncate', 'whitespace-nowrap', 'line-clamp-1', 'text-ellipsis'];
@@ -198,6 +198,66 @@ it('the card measures again when it is widened or narrowed, or the name changes'
     await view.unmount();
   }
   assert.equal(observers.size, 0, 'the card stops watching once it is gone');
+});
+
+// The width the card last measured must also be the width it compares against. The observer is off
+// while Rename is open (the name's <p> is gone) and while the name has no ending, so a width change
+// then goes unseen; a card that kept the observer's old width called each new measurement stale and
+// measured again before paint, over and over, until React threw "Maximum update depth exceeded" and
+// the dashboard went blank (R4-DVIS-28, second review of 1d693cb).
+it('a card whose width changed while nothing watched it measures once and still shows the name', async () => {
+  const { ResumeCard } = await loadModule('/src/components/ResumeCard.jsx');
+  const byTitle = (view, title) => [...elements(view.container)].find((el) => el.getAttribute('title') === title);
+  const call = (view, el, handler, event = {}) => {
+    const fn = reactProps(el)?.[handler];
+    assert.ok(fn, `no ${handler} on <${el?.tagName}>`);
+    view.act(() => fn({ preventDefault() {}, stopPropagation() {}, target: el, currentTarget: el, ...event }));
+  };
+  const errors = [];
+  const caught = (e) => { errors.push(e); };
+  process.prependListener('uncaughtException', caught);
+  const renames = [];
+  const props = (name) => ({ ...cardProps(name), onRename: (id, n) => renames.push(n) });
+  const first = `${LONG} (Copy)`;
+  const view = mount(ResumeCard, props(first));
+  const observe = async () => { view.act(() => { for (const o of observers) o.cb([]); }); await settle(); };
+  try {
+    await settle();
+    await observe(); // the observer has seen the card at 40 characters a line
+    splitOff(read(view, first), 'at 40 characters a line');
+
+    // Rename opens (the observer stops with the name's <p>), the iPad turns, and the new name is saved.
+    call(view, byTitle(view, 'Rename'), 'onClick');
+    await settle();
+    assert.equal(observers.size, 0, 'nothing watches the name while Rename is open');
+    cpl = 100;
+    const renamed = `${MID} v2 (Copy)`;
+    const box = [...elements(view.container)].find((el) => el.tagName === 'INPUT');
+    call(view, box, 'onChange', { target: { value: renamed } });
+    call(view, [...elements(view.container)].find((el) => el.getAttribute('aria-label') === 'Save name'), 'onClick');
+    await settle();
+    assert.deepEqual(renames, [renamed]);
+    view.update(props(renamed)); // the store's rename, as the dashboard hands it down
+    await settle();
+    assert.deepEqual(errors.map((e) => e.message), [], 'the card does not measure itself into a crash');
+    oneRun(read(view, renamed), 'renamed after the card widened');
+
+    // The name loses its ending (the observer stops), the window narrows, and it gains one again.
+    view.update(props(LONG));
+    await settle();
+    cpl = 40;
+    const conflict = `${LONG} (conflict copy)`;
+    view.update(props(conflict));
+    await settle();
+    assert.deepEqual(errors.map((e) => e.message), [], 'the card does not measure itself into a crash');
+    splitOff(read(view, conflict), 'an ending gained after the card narrowed');
+    await observe(); // the observer, back on, sees the same width: nothing changes
+    splitOff(read(view, conflict), 'after the observer catches up');
+  } finally {
+    cpl = 40;
+    process.removeListener('uncaughtException', caught);
+    await view.unmount();
+  }
 });
 
 it('a name that is only an ending stays whole, and "Copy" inside a name is not split off', async () => {
