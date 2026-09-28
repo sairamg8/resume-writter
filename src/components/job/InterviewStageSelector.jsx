@@ -16,14 +16,17 @@ export function InterviewStageSelector({ stage, onStageChange, customStages, add
   }
 
   return (
-    <section className="bg-white rounded-md border border-line p-6 space-y-4">
-      <div className="flex items-start justify-between">
+    // p-4 on a phone, as the form's other sections. The picked stage's pill goes under the heading
+    // when the two do not fit side by side, and a long custom stage wraps inside it: it had a fixed
+    // width, so it squeezed the description or ran out of the section (R4-DPH-19).
+    <section className="bg-white rounded-md border border-line p-4 sm:p-6 space-y-4">
+      <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
         <div>
           <h2 className="text-[11px] font-bold text-ink-subtlest uppercase tracking-widest">Interview Stage</h2>
           <p className="text-xs text-ink-subtlest mt-1">Select where you are in the process. Custom stages are saved for future use.</p>
         </div>
         {stage && (
-          <div className="flex items-center gap-1.5 text-xs font-semibold text-brand bg-brand-subtle px-3 py-1.5 rounded-full border border-brand-subtle-hover shrink-0 ml-4">
+          <div className="flex items-center gap-1.5 text-xs font-semibold text-brand bg-brand-subtle px-3 py-1.5 rounded-full border border-brand-subtle-hover max-w-full min-w-0 [overflow-wrap:anywhere]">
             <CheckCircle2 size={12} className="text-brand" />
             {stage}
           </div>
@@ -64,9 +67,11 @@ export function InterviewStageSelector({ stage, onStageChange, customStages, add
                   const active = stage === s;
                   return (
                     <div key={s} className={`flex items-center gap-1 px-2 py-1.5 rounded-lg transition-all ${active ? 'bg-brand-subtle' : 'hover:bg-sunken'}`}>
-                      <button type="button" onClick={() => onStageChange(active ? '' : s)} className="flex-1 flex items-center gap-2.5 text-left">
+                      {/* min-w-0 and break-words: a long custom stage wraps in its row, as in the pill
+                          above, instead of running out of the section with its Remove X (R4-DPH-19). */}
+                      <button type="button" onClick={() => onStageChange(active ? '' : s)} className="flex-1 min-w-0 flex items-center gap-2.5 text-left">
                         <span className={`text-[11px] font-bold w-5 text-right shrink-0 tabular-nums ${active ? 'text-indigo-400' : 'text-ink-subtlest'}`}>{i + 1}.</span>
-                        <span className={`text-sm flex-1 leading-snug ${active ? 'text-brand font-semibold' : 'text-ink-subtle'}`}>{s}</span>
+                        <span className={`text-sm flex-1 min-w-0 break-words leading-snug ${active ? 'text-brand font-semibold' : 'text-ink-subtle'}`}>{s}</span>
                         {active && <div className="w-2 h-2 rounded-full bg-brand shrink-0" />}
                       </button>
                       <button

@@ -105,19 +105,23 @@ export function Pipeline({ status, onChange }) {
   // Active pipeline
   return (
     <div className="space-y-5">
-      {/* Stage stepper */}
-      <div className="flex items-center">
+      {/* Stage stepper. A step can be narrower than its label on one line ("Phone Screen" in a
+          ~60 px step on a phone): the label then wraps under its circle, and each connector keeps
+          8 px, so the labels do not run into one another and the line between the steps stays
+          (R4-DPH-12). Where the labels fit, they stay on one line as before. Top-aligned, with the
+          connector on the circles' centre line, so a two-line label moves no circle or connector. */}
+      <div className="flex items-start">
         {PIPELINE.map((id, i) => {
           const s = STATUS_MAP[id];
           const done = i < activeIdx;
           const active = i === activeIdx;
           const isLast = i === PIPELINE.length - 1;
           return (
-            <div key={id} className="flex items-center flex-1 min-w-0">
+            <div key={id} className="flex items-start flex-1 min-w-0">
               <button
                 onClick={() => onChange(id)}
                 title={s.label}
-                className="flex flex-col items-center gap-2 group shrink-0"
+                className="flex flex-col items-center gap-2 group"
               >
                 <div
                   className={`w-9 h-9 rounded-full flex items-center justify-center border-2 transition-all ${
@@ -136,12 +140,12 @@ export function Pipeline({ status, onChange }) {
                     : <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: active ? s.color : '#d1d5db' }} />
                   }
                 </div>
-                <span className={`text-[10px] font-semibold whitespace-nowrap ${active ? 'text-ink' : done ? 'text-ink-subtle' : 'text-ink-subtlest group-hover:text-ink-subtle'}`}>
+                <span className={`text-[10px] font-semibold text-center ${active ? 'text-ink' : done ? 'text-ink-subtle' : 'text-ink-subtlest group-hover:text-ink-subtle'}`}>
                   {s.label}
                 </span>
               </button>
               {!isLast && (
-                <div className={`h-0.5 flex-1 mx-1.5 mb-5 rounded-full transition-colors ${done ? 'bg-gray-300' : 'bg-neutral-fill'}`} />
+                <div className={`h-0.5 flex-1 min-w-2 mt-[17px] mx-0.5 sm:mx-1.5 rounded-full transition-colors ${done ? 'bg-gray-300' : 'bg-neutral-fill'}`} />
               )}
             </div>
           );
@@ -161,11 +165,13 @@ export function Pipeline({ status, onChange }) {
           </button>
         )}
 
-        <div className="flex items-center gap-2 ml-auto">
-          <span className="text-[10px] text-ink-subtlest font-semibold uppercase tracking-widest">Mark as:</span>
+        {/* Wider than a phone's card on one line: it wraps between its pills — never inside one, nor
+            inside "Mark as:" — so each stays whole (R4-DPH-13). */}
+        <div className="flex flex-wrap items-center gap-2 ml-auto">
+          <span className="text-[10px] text-ink-subtlest font-semibold uppercase tracking-widest whitespace-nowrap">Mark as:</span>
           <button
             onClick={() => onChange(ON_HOLD)}
-            className="inline-flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-full border font-semibold transition-all hover:scale-105"
+            className="inline-flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-full border font-semibold whitespace-nowrap transition-all hover:scale-105"
             style={{ color: STATUS_MAP[ON_HOLD].text, backgroundColor: STATUS_MAP[ON_HOLD].bg, borderColor: STATUS_MAP[ON_HOLD].color + '50' }}
           >
             <Pause size={10} />
@@ -173,7 +179,7 @@ export function Pipeline({ status, onChange }) {
           </button>
           <button
             onClick={() => onChange('rejected')}
-            className="inline-flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-full border font-semibold transition-all hover:scale-105"
+            className="inline-flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-full border font-semibold whitespace-nowrap transition-all hover:scale-105"
             style={{ color: STATUS_MAP.rejected.text, backgroundColor: STATUS_MAP.rejected.bg, borderColor: STATUS_MAP.rejected.color + '40' }}
           >
             <XCircle size={11} />
@@ -181,7 +187,7 @@ export function Pipeline({ status, onChange }) {
           </button>
           <button
             onClick={() => onChange('withdrawn')}
-            className="inline-flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-full border font-semibold transition-all hover:scale-105"
+            className="inline-flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-full border font-semibold whitespace-nowrap transition-all hover:scale-105"
             style={{ color: STATUS_MAP.withdrawn.text, backgroundColor: STATUS_MAP.withdrawn.bg, borderColor: STATUS_MAP.withdrawn.color + '40' }}
           >
             <LogOut size={11} />
