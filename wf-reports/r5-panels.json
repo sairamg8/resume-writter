@@ -1,0 +1,53 @@
+{
+  "cluster": "r5-panels",
+  "branch": "claude/wf-r5-panels",
+  "base": "b66da7c0446079fd7c38511cf3fb22639e0e1317",
+  "rows": [
+    {
+      "id": "R4-DVIS-34",
+      "title": "Name & Title Colors row runs past the Colors section edge in a 240 px split panel",
+      "severity": "low",
+      "outcome": "fixed",
+      "commits": [
+        "ecc3304d0c7543f1abbffff21623ab6474d57506"
+      ],
+      "tests": [
+        "tests/pdf/104-r5-panels-colors-narrow.test.mjs"
+      ],
+      "summary": "Now: in Design > Colors > Name & Title Colors, the swatch-and-value group has min-w-0. In a split panel dragged to the 240 px minimum, 'Template default' (or a picked value) shortens with an ellipsis ('Template d…') and stays inside the Colors section. Before, the row ran past the section edge and was cut mid-letter when a classic scrollbar was showing. The swatch and the reset button are shrink-0 so they keep their size, and the row has gap-2 so the label never touches the swatch. At the usual 360 px panel 'Template default' still shows in full, because max-w-28 is unchanged. The new test mounts the real DesignPanel over fake-dom and checks class tokens, because fake-dom has no layout: min-w-0 on the group, shrink-0 on the swatch and on the reset button, truncate and max-w-28 on the value, gap-2 on the row. No existing test had to change: 103-r4-dvis-34 still passes, since it only checks for max-w-28 and truncate and the absence of w-16.",
+      "product_call": "'Template default' shows in full wherever it fits, including the usual 360 px panel. In a narrower panel (from 240 px to about 255 px) the value text gives way first and shortens with an ellipsis inside the row. It never runs past the section edge or gets cut mid-letter. The swatch and the reset button always stay at full size. The row label may still wrap ('Job title / color') at 240 px, which is acceptable. I kept max-w-28 rather than a fixed w-28 because a fixed width would leave a gap of about 66 px between a picked #hex and its reset button. The two rows' swatches can still sit a few tens of px apart when one row shows a picked hex and the other shows 'Template default'. That was also true before R4-DVIS-34 (18 px then) and is minor polish, not a blocker.",
+      "remaining": "The two rows' swatches can sit out of line (see product_call). This is cosmetic polish and does not need to be fixed. The fix is checked with class tokens only; no Playwright spec measures the row at a real 240 px panel.",
+      "failfirst_run": "36456276265 (green: the test fails without the fix with 2 failures, passes with it); named-tests run 36456282357 (green)"
+    },
+    {
+      "id": "R4-DVIS-34 (defect 2: 'Template default' up to 112 px pushes the row out at 240 px)",
+      "title": "'Template default' up to 112 px pushes the color row out at 240 px",
+      "severity": "low",
+      "outcome": "duplicate",
+      "commits": [
+        "ecc3304d0c7543f1abbffff21623ab6474d57506"
+      ],
+      "tests": [
+        "tests/pdf/104-r5-panels-colors-narrow.test.mjs"
+      ],
+      "summary": "Now: this is the same root cause as defect 1: the nested flex group in the Name/Job title color row has no min-w-0, so truncate cannot take effect. It is fixed by the same commit, ecc3304: min-w-0 on the group, shrink-0 on the swatch and the reset button, gap-2 on the row.",
+      "product_call": "Same as defect 1: the value text shortens with an ellipsis at narrow panel widths, and the swatch and reset button keep their full size.",
+      "remaining": "None beyond defect 1.",
+      "failfirst_run": "36456276265 (green); 36456282357 (green)"
+    }
+  ],
+  "review": {
+    "rounds": [
+      {
+        "round": 1,
+        "issues": []
+      }
+    ],
+    "issues": [],
+    "fixedByReviewer": []
+  },
+  "rejected": [],
+  "a11yNoted": [],
+  "baselineFailures": [],
+  "notes": "One row (R4-DVIS-34) was reopened for a 240 px split panel. Both reported defects share one root cause (no min-w-0 on the nested flex group) and are fixed by ecc3304. Fail-first run 36456276265 and named-tests run 36456282357 are green. Review round 1 found no issues. No skeptic-refuted candidates and no accessibility items. Severity 'low' is carried over from the R4 dsg-layout report."
+}
