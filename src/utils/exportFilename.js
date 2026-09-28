@@ -2,9 +2,10 @@
 const RESERVED = new Set('\\/:*?"<>|');
 /**
  * Windows' device names: a file named one — "CON.pdf", "nul.x.docx", whatever follows the first dot —
- * cannot be saved there at all.
+ * cannot be saved there at all. The console's CONIN$ and CONOUT$ are ones too (and CLOCK$, which
+ * Chrome's download names treat as one), not only the DOS names (R4-SW-I-06).
  */
-const DEVICE = /^(?:con|prn|aux|nul|com[0-9¹²³]|lpt[0-9¹²³])(?=\.|$)/i;
+const DEVICE = /^(?:con(?:in\$|out\$)?|clock\$|prn|aux|nul|com[0-9¹²³]|lpt[0-9¹²³])(?=\.|$)/i;
 
 /**
  * `value` as part of a file name, '' for anything not text: trimmed, inner runs of whitespace as one
