@@ -14,10 +14,12 @@ export function EditorTabContent({ activeTab, children }) {
   }, [activeTab]);
 
   return (
-    /* Independent scroll; overscroll-behavior blocks scroll chaining to body */
+    /* Independent scroll; overscroll-behavior blocks scroll chaining to body. Below md a phone's
+       Edit | Preview pill (Editor.jsx) floats over the foot of this box, up to 54px from the
+       bottom: the 64px under every tab lets its last field scroll clear of the pill (R4-DPH-31). */
     <div
       ref={box}
-      className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden"
+      className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden max-md:pb-16"
       style={{ overscrollBehavior: 'contain' }}
     >
       {children}

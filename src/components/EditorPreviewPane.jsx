@@ -39,9 +39,12 @@ export function EditorPreviewPane({ resume, activeTab, layoutMode, setLayoutMode
   const navigate = useNavigate();
   const shown = layoutMode !== 'editor';
 
+  // The room under the footer clears a phone's Edit | Preview pill, which shows up to md (768px),
+  // not sm: from 640 to 767 the footer sat under it. Top and bottom apart: a sm:py-8 would
+  // outrank pb-24 there and bring the short bottom back (R4-DPH-31).
   return (
     <div
-      className={`${shown ? 'flex-1 min-w-0 min-h-0 h-full' : 'hidden'} overflow-auto bg-[#f5f3ef] flex flex-col items-center py-4 sm:py-8 px-2 sm:px-4 pb-24 sm:pb-8`}
+      className={`${shown ? 'flex-1 min-w-0 min-h-0 h-full' : 'hidden'} overflow-auto bg-[#f5f3ef] flex flex-col items-center pt-4 sm:pt-8 px-2 sm:px-4 pb-24 md:pb-8`}
       style={{ overscrollBehavior: 'contain' }}
     >
       <div className="mb-3 sm:mb-4 flex flex-wrap items-center justify-center gap-2 sm:gap-3 shrink-0">
