@@ -38,7 +38,9 @@ function AddColumn({ onAdd }) {
       }}
       placeholder="Column name"
       aria-label="Column name"
-      className="h-9 w-[272px] shrink-0 rounded border-2 border-brand bg-white px-2 text-sm text-ink focus:outline-none"
+      // 16 px on a touch screen, as the kit's controls are (controlClass): iOS Safari zooms the
+      // page into a field whose text is smaller as it focuses it, and this one focuses at once.
+      className="h-9 w-[272px] shrink-0 rounded border-2 border-brand bg-white px-2 text-sm pointer-coarse:text-base text-ink focus:outline-none"
     />
   );
 }
