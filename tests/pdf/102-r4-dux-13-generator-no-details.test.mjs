@@ -3,11 +3,14 @@
 // best practices" — as if it were tailored. The open generator now says, above the preview, that
 // the letter has no résumé details to draw on; a letter with any experience, skill or title does
 // not show it.
+//
+// The generator is the kit's Dialog now (R4-DVIS-25): it renders in a portal at the end of <body>, which
+// the server renderer does not draw, so the open modal is mounted over the fake DOM and its page read
+// (104-r5-dlg-helpers.mjs).
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { createElement } from 'react';
-import { renderToString } from 'react-dom/server';
-import { setup, teardown, resume, section, experience, loadModule } from './harness.mjs';
+import { setup, teardown, resume, section, experience } from './harness.mjs';
+import { openModal } from './104-r5-dlg-helpers.mjs';
 
 before(setup);
 after(teardown);
@@ -16,9 +19,11 @@ const NOTICE = 'This letter has no résumé details to draw on';
 
 /** The open generator over `r`, as text. */
 async function opened(r) {
-  const { default: Modal } = await loadModule('/src/components/CoverLetterGeneratorModal.jsx');
-  const html = renderToString(createElement(Modal, { isOpen: true, onClose: () => {}, onApply: () => {}, resume: r, coverLetter: r.coverLetter }));
-  return html.replace(/<[^>]*>/g, ' ').replace(/&#x27;/g, "'").replace(/\s+/g, ' ');
+  const g = await openModal('/src/components/CoverLetterGeneratorModal.jsx', { onApply: () => {}, resume: r, coverLetter: r.coverLetter });
+  const dialog = g.dialog();
+  const text = dialog ? dialog.textContent.replace(/\s+/g, ' ') : '';
+  await g.unmount();
+  return text;
 }
 
 describe('the generator says when there is nothing to write the letter from (R4-DUX-13)', () => {

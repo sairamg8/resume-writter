@@ -17,8 +17,14 @@ import assert from 'node:assert/strict';
 import { createElement, useState } from 'react';
 import { setup, teardown, resume, experience, renderCover, read, allItems, allText, loadModule, readDocx } from './harness.mjs';
 import { mount, elements, reactProps } from './fake-dom.mjs';
+import { patchFakeDom } from '../unit/ui-dom-harness.mjs';
 
-before(setup);
+// The Smart Cover Letter Generator is the kit's Dialog (R4-DVIS-25): it renders in a portal at the end of
+// <body>, so its controls are looked up from there, and its focus trap needs patchFakeDom.
+before(async () => {
+  patchFakeDom();
+  await setup();
+});
 after(teardown);
 
 /** A letter already addressed to someone, as a user who wrote to Sarah before would have it. */
@@ -51,12 +57,12 @@ async function generateOver(r, recipient) {
   try {
     const text = (el) => el.textContent.replace(/\s+/g, ' ').trim();
     const button = (label) => {
-      const b = [...elements(view.container)].find((el) => el.tagName === 'BUTTON' && text(el) === label);
+      const b = [...elements(view.document.body)].find((el) => el.tagName === 'BUTTON' && text(el) === label);
       assert.ok(b, `a button reads "${label}"`);
       return b;
     };
     view.act(() => reactProps(button('Auto-Generate from Resume')).onClick());
-    const input = [...elements(view.container)].find((el) => el.tagName === 'INPUT' && el.getAttribute('placeholder') === 'e.g. Hiring Manager');
+    const input = [...elements(view.document.body)].find((el) => el.tagName === 'INPUT' && el.getAttribute('placeholder') === 'e.g. Hiring Manager');
     assert.ok(input, 'the generator\'s Recipient Name input is open');
     const opened = reactProps(input).value;
     if (recipient !== undefined) view.act(() => reactProps(input).onChange({ target: { value: recipient } }));

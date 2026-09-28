@@ -6,11 +6,14 @@
 // preview sanitises what it inserts. Escaping is also what keeps ordinary text intact: `R&D <b>Labs</b>`
 // used to lose its tags' text in the PDF and print bold; it now prints as typed, with no `&amp;`, in
 // the preview, the PDF and the .docx.
+//
+// The generator is the kit's Dialog now (R4-DVIS-25): it renders in a portal at the end of <body>, which
+// the server renderer does not draw, so the preview is read from the modal mounted over the fake DOM
+// (104-r5-dlg-helpers.mjs) — the HTML React inserts, as the browser gets it.
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { createElement } from 'react';
-import { renderToString } from 'react-dom/server';
 import { setup, teardown, resume, section, experience, renderCover, read, allText, loadModule, readDocx } from './harness.mjs';
+import { openModal } from './104-r5-dlg-helpers.mjs';
 
 before(setup);
 after(teardown);
@@ -44,11 +47,11 @@ async function applied(opts = {}) {
 
 describe('the cover letter generator escapes what it writes (HTML injection)', () => {
   it('the modal\'s live preview inserts no element from the résumé — only <p> and its blank lines, with the markup shown as text', async () => {
-    const { default: Modal } = await loadModule('/src/components/CoverLetterGeneratorModal.jsx');
-    const html = renderToString(createElement(Modal, { isOpen: true, onClose: () => {}, onApply: () => {}, resume: hostile() }));
-    const preview = /class="prose[^"]*"[^>]*>(.*?)<\/div>/s.exec(html);
+    const g = await openModal('/src/components/CoverLetterGeneratorModal.jsx', { onApply: () => {}, resume: hostile() });
+    const preview = g.all().find((el) => /^prose\b/.test(el.getAttribute('class') || ''));
+    await g.unmount();
     assert.ok(preview, 'the preview is rendered');
-    const inner = preview[1];
+    const inner = String(preview.innerHTML);
     assert.ok(inner.length > 200, 'the preview holds the letter');
     // <br> only as the generator's blank line between two paragraphs (R2-130).
     assert.deepEqual([...new Set(tags(inner))].sort(), ['</p>', '<br>', '<p>'], inner);

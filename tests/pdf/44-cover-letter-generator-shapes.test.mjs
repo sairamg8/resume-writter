@@ -6,11 +6,16 @@
 // value as text (src/utils/storedText.js), and it runs only while the modal is open. The résumés
 // here are passed as stored, not loaded: the generator must not rely on normalizeResume() having
 // made them text first (16-saved-data-text-fields).
+//
+// The generator is the kit's Dialog now (R4-DVIS-25): it renders in a portal at the end of <body>, which
+// the server renderer does not draw, so the open preview is read from the modal mounted over the fake
+// DOM (104-r5-dlg-helpers.mjs).
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { createElement } from 'react';
 import { renderToString } from 'react-dom/server';
 import { setup, teardown, resume, section, experience, loadModule } from './harness.mjs';
+import { openModal } from './104-r5-dlg-helpers.mjs';
 
 before(setup);
 after(teardown);
@@ -35,9 +40,9 @@ const panel = (r, CoverLetterPanel) => createElement(CoverLetterPanel, {
 
 /** The open generator's live preview, as text. */
 async function preview(r) {
-  const { default: Modal } = await loadModule('/src/components/CoverLetterGeneratorModal.jsx');
-  const html = renderToString(createElement(Modal, { isOpen: true, onClose: () => {}, onApply: () => {}, resume: r }));
-  const inner = /class="prose[^"]*"[^>]*>(.*?)<\/div>/s.exec(html)?.[1] ?? '';
+  const g = await openModal('/src/components/CoverLetterGeneratorModal.jsx', { onApply: () => {}, resume: r });
+  const inner = String(g.all().find((el) => /^prose\b/.test(el.getAttribute('class') || ''))?.innerHTML ?? '');
+  await g.unmount();
   return inner.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ');
 }
 

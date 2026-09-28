@@ -12,8 +12,14 @@ import assert from 'node:assert/strict';
 import { createElement, useState } from 'react';
 import { setup, teardown, resume, experience, loadModule } from './harness.mjs';
 import { mount, elements, reactProps } from './fake-dom.mjs';
+import { patchFakeDom } from '../unit/ui-dom-harness.mjs';
 
-before(setup);
+// The Smart Cover Letter Generator is the kit's Dialog (R4-DVIS-25): it renders in a portal at the end of
+// <body>, so its controls are looked up from there, and its focus trap needs patchFakeDom.
+before(async () => {
+  patchFakeDom();
+  await setup();
+});
 after(teardown);
 
 const person = (coverLetter) => resume({
@@ -40,12 +46,12 @@ async function generate(r, edits = {}) {
   try {
     const text = (el) => el.textContent.replace(/\s+/g, ' ').trim();
     const button = (label) => {
-      const b = [...elements(view.container)].find((el) => el.tagName === 'BUTTON' && text(el) === label);
+      const b = [...elements(view.document.body)].find((el) => el.tagName === 'BUTTON' && text(el) === label);
       assert.ok(b, `a button reads "${label}"`);
       return b;
     };
     const input = (placeholder) => {
-      const el = [...elements(view.container)].find((e) => e.tagName === 'INPUT' && e.getAttribute('placeholder') === placeholder);
+      const el = [...elements(view.document.body)].find((e) => e.tagName === 'INPUT' && e.getAttribute('placeholder') === placeholder);
       assert.ok(el, `the generator has the "${placeholder}" input`);
       return el;
     };
@@ -104,8 +110,8 @@ describe('the generator starts from the letter\'s own recipient and company (R4-
     const view = mount(() => createElement(CoverLetterPanel, { coverLetter: r.coverLetter, personal: r.personal, settings: r.settings, template: r.template, updateCoverLetter: () => {} }), {});
     try {
       const text = (el) => el.textContent.replace(/\s+/g, ' ').trim();
-      const button = (label) => [...elements(view.container)].find((el) => el.tagName === 'BUTTON' && text(el) === label);
-      const company = () => [...elements(view.container)].find((e) => e.tagName === 'INPUT' && e.getAttribute('placeholder') === 'e.g. Google, Stripe');
+      const button = (label) => [...elements(view.document.body)].find((el) => el.tagName === 'BUTTON' && text(el) === label);
+      const company = () => [...elements(view.document.body)].find((e) => e.tagName === 'INPUT' && e.getAttribute('placeholder') === 'e.g. Google, Stripe');
       view.act(() => reactProps(button('Auto-Generate from Resume')).onClick());
       view.act(() => reactProps(company()).onChange({ target: { value: 'Initech' } }));
       view.act(() => reactProps(button('Cancel')).onClick());
