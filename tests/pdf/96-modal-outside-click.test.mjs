@@ -5,13 +5,19 @@
 // browser does (pointerdown, then click, each with its target): a press that starts and ends on the
 // backdrop closes it; a click inside the box, a press that starts inside (selecting text) and is
 // released on the backdrop, or one begun on the backdrop and released inside, does not — the kit's
-// Dialog closes the same way.
+// Dialog closes the same way. The Bullet Optimizer is the kit's Dialog now (R4-DVIS-07): it renders in a
+// portal at the end of <body>, so each page is searched from there (patchFakeDom for its focus trap),
+// and its backdrop is the overlay layer that takes the press.
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { setup, teardown, resume, loadModule } from './harness.mjs';
 import { mount, elements, reactProps } from './fake-dom.mjs';
+import { patchFakeDom } from '../unit/ui-dom-harness.mjs';
 
-before(setup);
+before(async () => {
+  patchFakeDom();
+  await setup();
+});
 after(teardown);
 
 const MODALS = {
@@ -26,7 +32,8 @@ async function opened(name) {
   const { default: Modal } = await loadModule(path);
   let closes = 0;
   const view = mount(Modal, { ...props(), isOpen: true, onClose: () => { closes += 1; } });
-  const backdrop = [...elements(view.container)].find((el) => /\bfixed inset-0\b/.test(el.getAttribute('class') || ''));
+  // The full-screen layer beside the box that takes a press: a modal's own backdrop, or the kit Dialog's overlay.
+  const backdrop = [...elements(view.document.body)].find((el) => /\binset-0\b/.test(el.getAttribute('class') || '') && reactProps(el)?.onPointerDown);
   assert.ok(backdrop, `${name}: a full-screen backdrop`);
   const box = backdrop.firstChild;
   /** A press that goes down on `down` and is released on `up`, as the backdrop's handlers see it: the

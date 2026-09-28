@@ -2,7 +2,9 @@
 // that statement as text (AUD-09). The fix landed with a Playwright spec only, which `yarn test`
 // never runs — so nothing in the push gate covered it. This is that cover: the statement the caret
 // picks out, and what Apply leaves behind, over the fake DOM's Range and insertText.
-// Real Chromium still checks the rest: tests/playwright/bullet-optimizer.spec.mjs.
+// Real Chromium still checks the rest: tests/playwright/bullet-optimizer.spec.mjs. The optimizer is
+// the kit's Dialog (R4-DVIS-07), in a portal at the end of <body>: its statement and Apply are looked
+// for from there, and patchFakeDom gives its focus trap the querySelector and focus it needs.
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { setup, teardown, loadModule } from './harness.mjs';
@@ -14,6 +16,8 @@ before(async () => {
   await setup();
   ({ statementRange, default: RichTextEditor } = await loadModule('/src/components/RichTextEditor.jsx'));
   dom = await import('./fake-dom.mjs');
+  const { patchFakeDom } = await import('../unit/ui-dom-harness.mjs');
+  patchFakeDom();
 });
 after(teardown);
 
@@ -82,7 +86,7 @@ describe('STAR Optimizer · the statement it opens on (AUD-09)', () => {
     try {
       const el = box(view);
       const [li] = bullets(globalThis.document, el, ['Led the migration']);
-      const textareas = () => [...dom.elements(view.container)].filter((e) => e.tagName === 'TEXTAREA');
+      const textareas = () => [...dom.elements(view.document.body)].filter((e) => e.tagName === 'TEXTAREA');
       assert.deepEqual(textareas(), [], 'nothing of the optimizer is in the tree while it is closed');
 
       globalThis.document.getSelection().collapse(li.firstChild, 0);
@@ -104,9 +108,9 @@ describe('STAR Optimizer · what Apply leaves behind (AUD-09)', () => {
     globalThis.document.getSelection().collapse(caret, 0);
     const open = [...dom.elements(view.container)].find((e) => e.tagName === 'BUTTON' && e.getAttribute('title')?.includes('Optimizer'));
     view.act(() => dom.reactProps(open).onMouseDown({ preventDefault() {} }));
-    const apply = [...dom.elements(view.container)].find((e) => e.tagName === 'BUTTON' && e.textContent.includes('Apply to Resume'));
+    const apply = [...dom.elements(view.document.body)].find((e) => e.tagName === 'BUTTON' && e.textContent.includes('Apply to Resume'));
     assert.ok(apply, 'the modal offers Apply to Resume');
-    const area = [...dom.elements(view.container)].find((e) => e.tagName === 'TEXTAREA');
+    const area = [...dom.elements(view.document.body)].find((e) => e.tagName === 'TEXTAREA');
     view.act(() => dom.reactProps(area).onChange({ target: { value: text } }));
     view.act(() => dom.reactProps(apply).onClick());
   };
@@ -194,10 +198,10 @@ describe('STAR Optimizer · a paragraph split by <br> is read line by line (R4-C
       globalThis.document.getSelection().collapse(costs, 0);
       const open = [...dom.elements(view.container)].find((e) => e.tagName === 'BUTTON' && e.getAttribute('title')?.includes('Optimizer'));
       view.act(() => dom.reactProps(open).onMouseDown({ preventDefault() {} }));
-      const area = [...dom.elements(view.container)].find((e) => e.tagName === 'TEXTAREA');
+      const area = [...dom.elements(view.document.body)].find((e) => e.tagName === 'TEXTAREA');
       assert.equal(dom.reactProps(area).value, 'Cut costs by 20%', 'it opens on the one line');
       view.act(() => dom.reactProps(area).onChange({ target: { value: 'Reduced costs by 20%' } }));
-      const apply = [...dom.elements(view.container)].find((e) => e.tagName === 'BUTTON' && e.textContent.includes('Apply to Resume'));
+      const apply = [...dom.elements(view.document.body)].find((e) => e.tagName === 'BUTTON' && e.textContent.includes('Apply to Resume'));
       view.act(() => dom.reactProps(apply).onClick());
       assert.ok(block.textContent.startsWith('Handled QA'), `the other line is kept: ${block.textContent}`);
       assert.ok(block.textContent.endsWith('Reduced costs by 20%'), block.textContent);
@@ -283,10 +287,10 @@ describe('STAR Optimizer · a line break inside bold or a link, and a nested lis
       globalThis.document.getSelection().collapse(costs, 0);
       const open = [...dom.elements(view.container)].find((e) => e.tagName === 'BUTTON' && e.getAttribute('title')?.includes('Optimizer'));
       view.act(() => dom.reactProps(open).onMouseDown({ preventDefault() {} }));
-      const area = [...dom.elements(view.container)].find((e) => e.tagName === 'TEXTAREA');
+      const area = [...dom.elements(view.document.body)].find((e) => e.tagName === 'TEXTAREA');
       assert.equal(dom.reactProps(area).value, 'Cut costs by 20%', 'it opens on the one line');
       view.act(() => dom.reactProps(area).onChange({ target: { value: 'Reduced costs by 20%' } }));
-      const apply = [...dom.elements(view.container)].find((e) => e.tagName === 'BUTTON' && e.textContent.includes('Apply to Resume'));
+      const apply = [...dom.elements(view.document.body)].find((e) => e.tagName === 'BUTTON' && e.textContent.includes('Apply to Resume'));
       view.act(() => dom.reactProps(apply).onClick());
       assert.equal(b.textContent, 'Handled QAReduced costs by 20%', 'the first line is kept, the second replaced');
     } finally {
