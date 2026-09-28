@@ -10,6 +10,8 @@ export function Label({ children }) {
 // SizeRow and NumberRow write a typed value on Enter or on leaving the box, and only when it differs
 // from the one shown; Escape writes nothing (useTypedNumber, R2-032). Clicking in and out used to
 // store the shown value — Contact Icons with nothing stored became a stored 11, Line Height 1.15 a 1.1.
+// Their box, and every other field of the Design tab, is 16 px on a touch screen (pointer-coarse:text-base,
+// as the kit's controlClass): iOS zooms the page into any smaller field it focuses (R4-DPH-33).
 export function SizeRow({ label, value, onChange, min = 6, max = 40, unit = 'pt' }) {
   const labelId = useId();
   const current = Number.isFinite(value) ? value : min;
@@ -31,7 +33,7 @@ export function SizeRow({ label, value, onChange, min = 6, max = 40, unit = 'pt'
           type="text"
           aria-labelledby={labelId}
           {...typed.inputProps}
-          className="w-14 text-center text-xs font-medium text-gray-700 border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-400 focus:border-blue-400 h-6 cursor-text"
+          className="w-14 text-center text-xs pointer-coarse:text-base font-medium text-gray-700 border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-400 focus:border-blue-400 h-6 cursor-text"
         />
         <button onClick={() => onChange(Math.min(max, current + 1))} className="w-6 h-6 flex items-center justify-center border border-gray-200 rounded text-gray-600 hover:bg-gray-100 text-base leading-none">+</button>
       </div>
@@ -65,7 +67,7 @@ export function NumberRow({ label, value, onChange, min = 1, max = 200, step = 1
           type="text"
           aria-labelledby={labelId}
           {...typed.inputProps}
-          className="w-14 text-center text-xs font-medium text-gray-700 border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-400 focus:border-blue-400 h-6 cursor-text"
+          className="w-14 text-center text-xs pointer-coarse:text-base font-medium text-gray-700 border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-400 focus:border-blue-400 h-6 cursor-text"
         />
         <button onClick={() => onChange(Math.min(max, Math.round((current + step) / step) * step))} className="w-6 h-6 flex items-center justify-center border border-gray-200 rounded text-gray-600 hover:bg-gray-100 text-base leading-none">+</button>
       </div>

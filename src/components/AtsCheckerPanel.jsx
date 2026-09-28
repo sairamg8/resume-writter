@@ -291,28 +291,31 @@ function AtsCheck({ resume, store }) {
   // parser that reads by position does not — the parser view says so beside its text (R2-141).
   const columnsWarned = categories.layout.items.some(i => (i.id === 'template' || i.id === 'section_grids') && i.status === 'warn');
 
+  // The tab lays out by its own width (@container), not the window's: in the editor's 360 px split
+  // panel on a desktop every sm: row was on, and the score badge ran out of its card and was cut at
+  // the panel's edge (R4-DVIS-24). Its rows go side by side from a 448 px tab (@md), where they fit.
   return (
-    <div className="space-y-5 text-gray-800 pb-12">
+    <div className="@container space-y-5 text-gray-800 pb-12">
       {/* ── Top Header & Score Card ─────────────────────────────── */}
       <div className="p-5 bg-white border border-gray-200 rounded-2xl shadow-sm space-y-4">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
+        <div className="flex flex-col @md:flex-row items-start @md:items-center justify-between gap-3 @md:gap-4">
           <div>
             <div className="flex items-center gap-2">
               <span className="p-2 rounded-xl bg-blue-50 text-blue-600 shrink-0">
                 <ShieldCheck size={20} />
               </span>
               <div>
-                <h2 className="text-sm sm:text-base font-bold text-gray-900 leading-tight">ATS Score & Parser Checker</h2>
+                <h2 className="text-sm @md:text-base font-bold text-gray-900 leading-tight">ATS Score & Parser Checker</h2>
                 {/* No vendor's parser is tested, so none is named; the battery's readers are (R2-141). */}
-                <p className="text-[11px] sm:text-xs text-gray-500 mt-0.5">Scored on what a résumé parser needs to find — see below what it reads from your PDF</p>
+                <p className="text-[11px] @md:text-xs text-gray-500 mt-0.5">Scored on what a résumé parser needs to find — see below what it reads from your PDF</p>
               </div>
             </div>
           </div>
 
           {/* Big Score Badge */}
-          <div className={`flex flex-col items-center justify-center px-4 py-2 rounded-2xl border ${scoreColor} shrink-0 self-stretch sm:self-auto`}>
-            <div className="text-xl sm:text-2xl font-black tracking-tight leading-none">{totalScore}<span className="text-xs font-semibold text-gray-500">/100</span></div>
-            <div className="text-[10px] sm:text-[11px] font-bold uppercase mt-1 tracking-wider">{grade} · {gradeLabel}</div>
+          <div className={`flex flex-col items-center justify-center px-4 py-2 rounded-2xl border ${scoreColor} shrink-0 self-stretch @md:self-auto`}>
+            <div className="text-xl @md:text-2xl font-black tracking-tight leading-none">{totalScore}<span className="text-xs font-semibold text-gray-500">/100</span></div>
+            <div className="text-[10px] @md:text-[11px] font-bold uppercase mt-1 tracking-wider">{grade} · {gradeLabel}</div>
           </div>
         </div>
 
@@ -360,7 +363,7 @@ function AtsCheck({ resume, store }) {
       </div>
 
       {/* ── ATS Plain Text Export Card ─────────────────────────── */}
-      <div className="p-4 bg-gradient-to-br from-gray-50 to-blue-50/40 border border-gray-200 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+      <div className="p-4 bg-gradient-to-br from-gray-50 to-blue-50/40 border border-gray-200 rounded-2xl flex flex-col @md:flex-row items-start @md:items-center justify-between gap-3">
         <div className="min-w-0">
           <h3 className="text-xs font-bold text-gray-900 flex items-center gap-1.5">
             <FileText size={14} className="text-blue-600" /> ATS Plain Text (For Direct Copy-Paste)
@@ -369,7 +372,7 @@ function AtsCheck({ resume, store }) {
             Standard ASCII text format for pasting directly into Workday or Taleo application text boxes.
           </p>
         </div>
-        <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+        <div className="flex items-center gap-2 shrink-0 self-end @md:self-auto">
           <button
             onClick={handleCopyPlainText}
             title={copiedText === 'failed' ? 'The browser did not allow copying to the clipboard. Download the .txt file instead.' : undefined}
@@ -393,8 +396,8 @@ function AtsCheck({ resume, store }) {
       <AtsParserView resume={resume} columnsWarned={columnsWarned} />
 
       {/* ── Target Job Description Matcher ─────────────────────── */}
-      <div className="p-4 sm:p-5 bg-white border border-gray-200 rounded-2xl shadow-sm space-y-3">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+      <div className="p-4 @md:p-5 bg-white border border-gray-200 rounded-2xl shadow-sm space-y-3">
+        <div className="flex flex-col @md:flex-row items-start @md:items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <span className="p-1.5 rounded-lg bg-purple-50 text-purple-600 shrink-0">
               <Target size={16} />
@@ -405,18 +408,19 @@ function AtsCheck({ resume, store }) {
             </div>
           </div>
           {jobMatch && (
-            <div className="text-xs font-bold px-2.5 py-1 rounded-full bg-purple-100 text-purple-700 border border-purple-200 self-start sm:self-auto">
+            <div className="text-xs font-bold px-2.5 py-1 rounded-full bg-purple-100 text-purple-700 border border-purple-200 shrink-0 self-start @md:self-auto">
               {jobMatch.matchPercentage}% Match
             </div>
           )}
         </div>
 
+        {/* 16 px on a touch screen: iOS zooms the page into any smaller field it focuses (R4-DPH-35). */}
         <textarea
           rows={3}
           value={jobDescription}
           onChange={e => setJobDescription(e.target.value)}
           placeholder="Paste job posting description here (requirements, qualifications, tech stack)..."
-          className="w-full text-xs p-3 border border-gray-200 rounded-xl outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all text-gray-700 resize-none"
+          className="w-full text-xs pointer-coarse:text-base p-3 border border-gray-200 rounded-xl outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all text-gray-700 resize-none"
         />
 
         {/* A posting the scan finds no keyword in ("We are looking for a strong candidate…") has no
@@ -480,11 +484,13 @@ function AtsCheck({ resume, store }) {
             <div key={catKey} className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm transition-all">
               <button
                 onClick={() => toggleCat(catKey)}
-                className="w-full px-4 py-3.5 flex items-center justify-between text-left hover:bg-gray-50 transition-colors"
+                className="w-full px-4 py-3.5 flex items-center justify-between gap-3 text-left hover:bg-gray-50 transition-colors"
               >
+                {/* The title wraps rather than truncates, clear of its points: in the 360 px panel and on a phone
+                    "Work Experience & Action Verbs" and three more were cut to an ellipsis (R4-DVIS-33). */}
                 <div className="flex items-center gap-2.5 min-w-0">
-                  <span className={`w-2 h-2 rounded-full ${hasErrors ? 'bg-red-500' : hasWarnings ? 'bg-amber-500' : 'bg-emerald-500'}`} />
-                  <span className="text-sm font-bold text-gray-800 truncate">{cat.label}</span>
+                  <span className={`w-2 h-2 rounded-full shrink-0 ${hasErrors ? 'bg-red-500' : hasWarnings ? 'bg-amber-500' : 'bg-emerald-500'}`} />
+                  <span className="text-sm font-bold text-gray-800 leading-snug">{cat.label}</span>
                 </div>
                 <div className="flex items-center gap-3 shrink-0">
                   <span className="text-xs font-bold text-gray-600 bg-gray-100 px-2 py-0.5 rounded-md">

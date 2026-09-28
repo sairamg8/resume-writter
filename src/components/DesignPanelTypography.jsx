@@ -25,7 +25,7 @@ function OwnFontRow({ label, value, customFonts, onChange }) {
         id={id}
         value={value || ''}
         onChange={e => onChange(e.target.value)}
-        className="min-w-0 max-w-[60%] px-2 py-1.5 text-xs border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+        className="min-w-0 max-w-[60%] px-2 py-1.5 text-xs pointer-coarse:text-base border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
       >
         <option value="">Same as text</option>
         {FONTS.map(f => <option key={f.id} value={f.id}>{f.label}</option>)}
@@ -168,6 +168,8 @@ export function TypographySection({ settings, template, resumeId, updateSetting,
           </div>
         )}
         <label htmlFor="custom-font-input" className="block text-[11px] text-gray-400 mb-1">Add a Google Font:</label>
+        {/* min-w-0: the box narrows below its default 20 characters, so Add stays in the section in a
+            panel dragged to 240-280 px — it was pushed past the edge and cut off (R4-DVIS-35). */}
         <div className="flex gap-1.5">
           <input
             id="custom-font-input"
@@ -178,7 +180,7 @@ export function TypographySection({ settings, template, resumeId, updateSetting,
             placeholder="e.g. Nunito, Raleway, Poppins"
             aria-invalid={fontError ? 'true' : undefined}
             aria-describedby={fontError ? 'custom-font-error' : undefined}
-            className="flex-1 px-2.5 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="flex-1 min-w-0 px-2.5 py-1.5 text-sm pointer-coarse:text-base border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           <button
             onClick={() => { if (customFontInput.trim()) applyCustomFont(customFontInput.trim()); }}

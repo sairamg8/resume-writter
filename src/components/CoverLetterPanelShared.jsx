@@ -3,7 +3,10 @@
 import { useState, useId } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 
-/** A labelled text input; `children` (e.g. a "Today" button) sit inside the input's right end. */
+/**
+ * A labelled text input; `children` (e.g. a "Today" button) sit inside the input's right end. 16 px on
+ * a touch screen, as the letter body beside it is: iOS zooms the page into any smaller field it focuses.
+ */
 export function Field({ label, value, onChange, placeholder, children }) {
   const id = useId();
   return (
@@ -15,7 +18,7 @@ export function Field({ label, value, onChange, placeholder, children }) {
         value={value || ''}
         onChange={e => onChange(e.target.value)}
         placeholder={placeholder}
-        className={`w-full px-2.5 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${children ? 'pr-14' : ''}`}
+        className={`w-full px-2.5 py-1.5 text-sm pointer-coarse:text-base border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${children ? 'pr-14' : ''}`}
       />
       {children}
     </div>

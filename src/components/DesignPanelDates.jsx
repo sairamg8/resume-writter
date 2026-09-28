@@ -26,7 +26,7 @@ export function DatesSection({ settings, updateSetting, onReset }) {
           id={id}
           value={dateFormatOf(settings)}
           onChange={e => updateSetting('dateFormat', e.target.value)}
-          className="px-2 py-1.5 text-xs border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+          className="px-2 py-1.5 text-xs pointer-coarse:text-base border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
         >
           {DATE_FORMATS.map(f => <option key={f} value={f}>{optionLabel(f)}</option>)}
         </select>
