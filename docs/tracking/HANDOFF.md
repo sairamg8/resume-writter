@@ -1,10 +1,11 @@
 # Session Handoff — Resume Here
 
 > **OWNER — DEPLOY (the session's master push is refused as a 'Production Deploy'):**
-> `git push origin a89bdd2:refs/heads/master` — full gate run 36524194907 on that exact commit is GREEN (a fast-forward
-> from `b8d7667`: 56e42bf's stale-test fix + all eight Round 5 clusters (dash, panels, dlg, job, brd, out, opt, imp), the
-> start-up size fix and R2-148's public-link takedown on deletion). Then `python3 docs/tracking/tools/r4_tracker.py --deployed a89bdd2`,
-> commit, push. A newer green sha will replace this line.
+> `git push origin 54b9ec2:refs/heads/master` — full gate run 36531535738 on that exact commit is GREEN (a fast-forward
+> from `b8d7667`: 56e42bf's stale-test fix + all eight Round 5 clusters, the start-up size fix, R2-148's public-link
+> takedown, and hunt round 1's 13 fixes incl. two high: a late import took over the open editor; another tab's sign-out
+> could delete every cloud résumé). Then `python3 docs/tracking/tools/r4_tracker.py --deployed 54b9ec2`, commit, push.
+> A newer green sha will replace this line.
 
 ## ⏩ COLD START HERE — 2026-09-29 03:15 UTC (coordinator session_013S3xa7VBjcBV3avHWTbYQF, scheduled run; owner travelling)
 
@@ -22,7 +23,7 @@ open editor (editor); another tab's sign-out could delete every cloud résumé (
 'letter's JSON… opens on its letter') — stale tests after the hunt1-editor importResume change (the test pages lacked the editor's useOpenResume);
 fixed test-only in 0cdc8f3 (CI 36531274182 green, 351/351). Candidate for hunt round 3: the editor's first render after
 /resume/:id may briefly show the previous résumé (useOpenResume runs in useEffect).
-Deploy line stays at a89bdd2. Running: hunt round 2 (same 9 areas; the round-1
+Gate 36531535738 on 54b9ec2 GREEN (deploy line above). Running: hunt round 2 (same 9 areas; the round-1
 titles are passed as 'seen'). Loop rounds until two in a row find nothing new. Batch gate 36517981819 on 0f03b71 was red only on
 71-startup-chunks (the data router for R4-DUX-06 + the kit Dialog on the Dashboard: 1107 kB > 1100 kB); fixed by ea59ac6
 (1097 kB, fail-first 36520176676; margin ~3 kB). Full gate 36520793636 on ea59ac6 GREEN (owner deploy line above). The 20 dsg-layout rows
