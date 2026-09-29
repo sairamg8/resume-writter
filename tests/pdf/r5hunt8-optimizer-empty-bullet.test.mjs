@@ -21,7 +21,7 @@ before(async () => {
 after(teardown);
 
 // `typed`: what the box holds after typing, before any save comes back (Chrome's Enter writes an
-// empty bullet as <li><br></li>; the stored value, sanitized, holds it as <li> </li>).
+// empty bullet as <li><br></li>; the stored value, sanitized, holds it as <li>&nbsp;</li>).
 function editor(value, typed) {
   const stored = [];
   const props = { label: 'Description', value, onChange: (v) => stored.push(v) };
@@ -58,10 +58,10 @@ describe('STAR Optimizer · opened from an empty bullet or line (R5-HUNT8)', () 
     } finally { await e.view.unmount(); }
   });
 
-  it('an empty bullet as it is stored (<li> </li>) is filled too', async () => {
+  it('an empty bullet as it is stored (<li>&nbsp;</li>) is filled too', async () => {
     const e = editor('<ul><li>Led the team</li><li><br></li><li>Ran QA</li></ul>');
     try {
-      assert.equal(e.el.innerHTML, '<ul><li>Led the team</li><li> </li><li>Ran QA</li></ul>');
+      assert.equal(e.el.innerHTML, '<ul><li>Led the team</li><li>&nbsp;</li><li>Ran QA</li></ul>');
       e.caretIn(e.el.firstChild.childNodes[1].firstChild, 0);
       e.open();
       e.apply('Cut costs by 30%');
