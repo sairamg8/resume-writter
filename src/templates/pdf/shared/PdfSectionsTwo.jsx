@@ -230,10 +230,16 @@ export function AwardsSection({ section, settings, marginBottom, spaceBefore, it
   const keepOf     = (item) => (hasRichText(item.description) ? headerKeep(settings) : 0);
   // The section's title keeps the first award's block and what the block keeps with it: its own three
   // lines were less, and it was left alone at the foot of a page while that block moved on (R2-047).
+  // The title and issuer each wrapped at the entry's width (a Grids cell's), as Projects' header is
+  // (R4-DOUT-04): counted as one line each, a title that wrapped onto a third line took more than the
+  // spare line, and the section title stayed alone while the award moved on (R5-HUNT3-AWARDS-TITLE-KEEP-UNMEASURED).
   const first      = visibleItems[0];
+  const titleBox   = { fontFamily: font, fontSize: entrySize, fontWeight: 'bold' };
+  const issuerBox  = { fontFamily: font, fontSize: baseSize };
+  const width      = entryTextWidth(settings, cols);
   const presence   = first ? headPresence({
-    lines: 1 + (first.issuer ? 1 : 0) + (dateOf(first) ? 1 : 0),
-    styles: [{ fontFamily: font, fontSize: entrySize, fontWeight: 'bold' }, { fontFamily: font, fontSize: baseSize }],
+    lines: Math.max(1, wrappedLines(first.title, titleBox, width)) + wrappedLines(first.issuer, issuerBox, width) + (dateOf(first) ? 1 : 0),
+    styles: [titleBox, issuerBox],
     keep: keepOf(first),
     extra: dateOf(first) ? 1 : 0,
   }) : 0;
