@@ -63,12 +63,17 @@ export function createCollectionSync({
   const held = new Map();
   const heldChanged = () => report.held?.([...held.values()].map((x) => ({ id: x.id, name: store.label(x) })));
   const tooLarge = (uid, x) => docSize(itemPath(name, uid, x.id), x) > maxBytes;
-  /** `list` without what is held, holding first what is too large for a document. */
+  /**
+   * `list` without what is held, holding first what the cloud cannot take: too large for a
+   * document, or an id it cannot name. One with two "/" ("greenhouse/acme/12345") was no refused
+   * path but a document nested under the list, written and never read back: gone from every other
+   * device, and dropped here by the next first sync as removed from the cloud (R5-HUNT8 review).
+   */
   function sendable(uid, list) {
     let changed = false;
     const out = list.filter((x) => {
       if (held.get(x.id) === x) return false;
-      if (!tooLarge(uid, x)) return true;
+      if (cloudCanName(x.id) && !tooLarge(uid, x)) return true;
       held.set(x.id, x);
       changed = true;
       return false;
@@ -260,7 +265,10 @@ export function createCollectionSync({
       const mine = record.uid === uid;
       const stash = stashOf(record, uid);
       const local = [...own, ...stash.items.filter((x) => !own.some((o) => o.id === x.id))];
-      const versions = { ...stash.versions, ...(mine ? record.versions : {}) };
+      // An id the cloud cannot name is in no copy of it: its version (a nested document an older
+      // build wrote) would have the job dropped here as removed from the cloud.
+      const versions = Object.fromEntries(Object.entries({ ...stash.versions, ...(mine ? record.versions : {}) })
+        .filter(([id]) => cloudCanName(id)));
       const ownIds = new Set(own.map((x) => x.id));
       const localDeletes = [...stash.deletes, ...(mine ? Object.keys(record.versions).filter((id) => !ownIds.has(id)) : [])]
         .filter((id) => !local.some((x) => x.id === id));
