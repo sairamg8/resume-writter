@@ -21,15 +21,8 @@
    "head": "1b82c51"
   },
   "6": {
-   "partialB": {
-    "areas": [
-     "boards",
-     "jobs",
-     "dash",
-     "sync"
-    ],
-    "confirmed": 13
-   }
+   "confirmed": 25,
+   "head": "8acb6877"
   }
  },
  "seen": [
@@ -129,6 +122,23 @@
   "After a cover letter is opened, the Dashboard's Career History switches to the oldest résumé instead of the one the user was working on",
   "When a second tab of the app is open, one conflict between devices produces two identical \"(conflict copy)\" résumés, and they show up on every device",
   "Undo on a deleted job, cleared job list or deleted project after signing out puts the previous account's data back in the browser with no owner, and the next account to sign in uploads it to its own cloud",
-  "An old sign-in error bubble reappears under 'Sign in with Google' after signing out, although a later sign-in worked"
+  "An old sign-in error bubble reappears under 'Sign in with Google' after signing out, although a later sign-in worked",
+  "Design → Line Height saves values like 1.4000000000000001, and clicking into the box shows that long number instead of 1.4",
+  "A dashboard résumé card keeps showing a wrong picture of page 1 (in Noto Sans instead of the résumé's font, or with no photo) after one visit where the font or photo could not be downloaded. It stays wrong on later visits until the résumé is edited.",
+  "1-Page Fit has no Undo. It replaces all five spacing numbers and can shrink the text to 9 pt, and the résumé's previous margins, gaps, line height and text sizes cannot be brought back. Balanced and Spacious both offer Undo.",
+  "A section whose entries are all blank (for example a Skills section just added, or one whose groups have Category and Skills hidden with their eyes) prints its heading alone in the PDF and in Word. Markdown, ATS text and the ATS checker all treat it as not printed.",
+  "Text/PDF/Word import: a same-year range such as 'Jun – Aug 2021' or 'May – August 2020' is not read as a date, so the job's role becomes 'Jun', its start date becomes the end month, and the real job title goes into the description",
+  "Markdown, ATS-text or PDF round trip of a Sidebar, Executive, Timeline (or any role-first) résumé swaps role and company for every job whose title has no word from the importer's role list, e.g. 'Sous Chef', 'Barista', 'Cashier', 'Pharmacist'",
+  "Text/PDF/Word import of a two-column profile such as LinkedIn's 'Save to PDF' gives the résumé the name 'Contact', files the real name, headline and location as Certifications, and puts the LinkedIn URL and 'Top Skills' into 'Additional Information' (refuted)",
+  "Text/PDF/Word import: an education dated 'Graduated May 2021' or 'Class of 2020' becomes the Degree, and the real degree lands in the description",
+  "Text/PDF/Word import: a company line written 'Company, City, ST' (e.g. 'Google, Mountain View, CA') keeps the city in the company name and leaves Location empty",
+  "Text/PDF/Word/Markdown import: a header location with a ZIP code ('Chicago, IL 60601') or a street address is not read as the location and is printed as an 'Additional Information' section",
+  "Cover Letter Text (.txt) prints the typed website/LinkedIn/GitHub value instead of its Link URL when the field has no Display label, so the address is lost",
+  "JSON Resume export writes the typed LinkedIn/GitHub/website value, not its Link URL, into the schema's profile url and basics.url, so other JSON Resume tools get a broken link",
+  "Share panel's 'What is public' list names a section whose title was cleared by its internal type id, e.g. 'custom: 2 entries' or 'experience: 3 entries'",
+  "Job Tracker's Career History shows the cover letter you last opened, not your résumé: a blank letter shows 'Your Name' and one empty job, and a letter made from a résumé shows an old copy of its jobs (refuted)",
+  "STAR Optimizer opened on a selection that spans two bullets (or two paragraphs) joins them with no space ('Led migrationCut costs by 30%'), and Apply saves that joined text as one bullet (refuted)",
+  "STAR Optimizer on a word selected with its trailing space (a Windows double-click) glues the rewritten word to the next word on Apply, e.g. 'handled QA' becomes 'ManagedQA' (refuted)",
+  "Cover letter generator cuts a skill list in the middle of a parenthesis, writing '…utilizing Java, Python, Go, AWS (EC2.' into the letter (refuted)"
  ]
 }

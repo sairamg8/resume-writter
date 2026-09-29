@@ -1,12 +1,12 @@
 # Session Handoff — Resume Here
 
-**HUNT ROUND 6 RUNNING (coordinator session_01FdiasXrhydMkPZHWFFd4KS, started 2026-09-29 16:44 UTC).** Base a79efd8b.
-Workflow B (boards, jobs, dash, sync) DONE: 13 confirmed + fixed + reviewed, merged into claude/r4-green (d539d84,
-334fb65, 232d80e, 5f478e0) + merge-fix 8f0e3ad (category Undo gets the sync branch's sign-out guard; own test).
-Fail-first for 8f0e3ad and the full gate on 8f0e3ad dispatched ~18:0x UTC. Seen-list updated for B.
-Workflow A (editor, pdf, import, export, tools) still running. If this run dies: merge any
-claude/wf-r5-hunt6-<area> whose report has review.readyToMerge (merge_cluster.sh, BUT restore wf-reports/ after it —
-the script drops the tracked folder — and add only the area's report), rerun areas without a report, update seen-list.
+**HUNT ROUND 6 DONE and merged (coordinator session_01FdiasXrhydMkPZHWFFd4KS, 2026-09-29):** 25 confirmed + fixed +
+reviewed (boards 3, jobs 3, dash 4, sync 3, editor 1, pdf 3, import 5, export 3; tools dry; Website-freeze lead: no loop
+found). Merge fixes: 8f0e3ad (category Undo sign-out guard, own test), 8acb687 (duplicate listOwner from jobs+sync broke
+lint/build: gate 36608111378 on 9c4aaec red for that only). Full gate on 8acb687 dispatched ~18:45 UTC. Round 7 next,
+base 8acb687 (script: workflows r5-hunt6 script; finders must only git show/grep, never checkout the shared tree).
+Merge note: merge_cluster.sh drops the tracked wf-reports/ — run `git checkout HEAD -- wf-reports` after it and add only
+the area's report.
 
 **BUG HUNT RESUMED by the owner 2026-09-29 ~17:00 UTC.** The coordinator routine trig_01NqtyqnKGMDHRm8VnNuJLYL is
 re-enabled (every 3 h). Next: resume hunt round 6 from the state below and loop until two consecutive dry rounds.
