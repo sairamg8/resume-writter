@@ -288,7 +288,10 @@ const SEASON = '(?:spring|summer|fall|autumn|winter)';
 /** One date as the app's Date formats print it, or as people type it: "Mar 2021", "03/2021", "2021-03", "2021". */
 const DAY = `(?:${MONTH},?\\s+\\d{4}|${SEASON}\\s+\\d{4}|\\d{1,2}\\s*[/.]\\s*\\d{4}|\\d{1,2}-\\d{4}|\\d{4}\\s*[/.-]\\s*(?:0?[1-9]|1[0-2])(?!\\d)|(?:19|20)\\d{2})`;
 const NOW = '(?:present|current|currently|now|today|ongoing|till date|to date)';
-const SEP = '\\s*(?:[-–—~]|to|until|through)\\s*';
+// A hyphen typed as Unicode's own, the non-breaking one ("2019‑2021" in a PDF of a Word file, text
+// pasted from one) or the minus sign, is a dash too.
+const DASHES = '\\u2010\\u2011\\u2012\\u2212';
+const SEP = `\\s*(?:[-${DASHES}–—~]|to|until|through)\\s*`;
 // "Expected May 2025", "Anticipated graduation date: 2025", "May 2025 (Expected)": a date still to
 // come is when the entry ends, alone or after its start ("Aug 2021 – Expected May 2025").
 const AHEAD = '(?:expected|anticipated)(?:\\s+(?:graduation|completion))?(?:\\s+date)?\\s*:?\\s*';
@@ -298,7 +301,7 @@ const LENGTH = '(?:less than (?:a|one) (?:year|month)|\\d+\\+?\\s*(?:years?|yrs?
 const LENGTH_AFTER = `(?:\\s*\\(\\s*${LENGTH}\\s*\\)?|\\s+[·•]\\s+${LENGTH})`;
 const RANGE = new RegExp(`^(since\\s+)?(${DAY})(?:${SEP}(?:${AHEAD})?(${DAY}|${NOW}|\\d{2}(?!\\d)))?(${AHEAD_AFTER})?(?:${LENGTH_AFTER})?$`, 'i');
 const LENGTH_ONLY = new RegExp(`^${LENGTH}$`, 'i');
-const END_ONLY = new RegExp(`^(?:(?:[-–—]|to|until)\\s*(?:${AHEAD})?|${AHEAD})(${DAY}|${NOW})(?:${AHEAD_AFTER})?$`, 'i');
+const END_ONLY = new RegExp(`^(?:(?:[-${DASHES}–—]|to|until)\\s*(?:${AHEAD})?|${AHEAD})(${DAY}|${NOW})(?:${AHEAD_AFTER})?$`, 'i');
 const IS_NOW = new RegExp(`^${NOW}$`, 'i');
 
 /** A whole piece of text read as a date or a range: { start, end, current, text }, else null. */
@@ -348,7 +351,7 @@ function trailingDate(text) {
 
 const EMAIL = /^(?:mailto:)?[^\s@|,;:<>()]+@[^\s@|,;:<>()]+\.[a-z]{2,}$/i;
 const URL_LIKE = /^(?:https?:\/\/)?(?:www\.)?[a-z0-9][a-z0-9-]*(?:\.[a-z0-9-]+)*\.[a-z]{2,}(?:[/?#]\S*)?$/i;
-const PHONE = /^(?:tel:)?\+?[\d\s().\-/]{7,}$/;
+const PHONE = /^(?:tel:)?\+?[\d\s().\-/\u2010\u2011\u2012\u2212]{7,}$/;
 /** "Portland, OR", "Leeds, United Kingdom", "Remote": a place as a header prints one. */
 const ONE_PLACE = /^(?:[\p{L}][\p{L}.'’\- ]{0,40},\s*[\p{L}][\p{L}.'’\- ]{0,40}(?:,\s*[\p{L}][\p{L}.'’\- ]{0,30})?|remote|hybrid)$/iu;
 /** A part of a place with a "|" typed in it: "London" in "London | Remote". */
