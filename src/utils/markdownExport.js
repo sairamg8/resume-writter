@@ -325,7 +325,10 @@ export function generateMarkdownResume(resume) {
         ? roleGroups(items).flatMap((g) => groupLines(g, fieldOf, settings, opts, one))
         : items.flatMap(one);
     if (!body.some((l) => l.trim())) continue;
-    lines.push(`## ${closeSafe(esc(s.title || s.type))}`, ...body);
+    // A title the user cleared prints no heading, as on the PDF and in Word: it printed the type's
+    // internal key ('## custom'). A section with no title at all (never normalized) keeps its type.
+    const title = s.title == null ? s.type : String(s.title).trim();
+    lines.push(...(title ? [`## ${closeSafe(esc(title))}`] : []), ...body);
   }
 
   return lines.join('\n');
