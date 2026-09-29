@@ -1,0 +1,90 @@
+{
+  "cluster": "r5-dsgv",
+  "branch": "claude/wf-r5-dsgv",
+  "base": "536656f894cca0d8f2a5e585f072d9e58556e728",
+  "rows": [],
+  "review": {
+    "rounds": [],
+    "issues": [],
+    "fixedByReviewer": []
+  },
+  "rejected": [],
+  "a11yNoted": [
+    {
+      "id": "R4-DPH-25",
+      "note": "Deferred, noted only: the hand-rolled menu has no role=menu or arrow-key handling and its items have no focus styling. That was already so before this fix."
+    },
+    {
+      "id": "R4-DPH-33",
+      "note": "Deferred, noted only: the size and thickness boxes and their -/+ steppers are h-6 (24 px) targets on touch."
+    },
+    {
+      "id": "R4-DVIS-29",
+      "note": "Deferred, noted only: the timeline is a new scroll region with no tabindex (axe scrollable-region-focusable). Older browsers cannot scroll it from the keyboard; Chrome 130+ makes scrollers focusable by default."
+    }
+  ],
+  "baselineFailures": [],
+  "dsgLayoutVerdicts": [
+    {
+      "id": "R4-DPH-25",
+      "verdict": "fixed-verified",
+      "evidence": "Fix 9da9218, in src/components/ImportMenu.jsx (unchanged since). At the head of claude/r4-green the menu is `absolute left-0 top-full mt-1 w-64` inside the `relative` wrapper that hugs the trigger (line ~42). Dashboard.jsx:169-171: the ImportMenu (shown only when `keeps`, i.e. a demo account) is the first child of the `flex flex-wrap` actions row, so it always starts a row. Below lg the header stacks (`flex-col lg:flex-row`, px-4 / sm:px-6), so the trigger sits at x=16 on phones, 24 from sm, and the 256 px menu spans 16..272. That is inside 320 and 375 px screens, and inside 640-1023 px, which covers the whole <768 px range the finding names plus the stacked tablet layout. At lg+ the row is right-justified and the ~800 px of actions put Import's left edge around x≈200 at 1024 px, so the menu (≈200..456) stays on screen. No overflow-hidden ancestor clips it. ImportMenu is used only by the Dashboard (ExportDropdown imports only ORIGINALS_HINT), so no other screen is affected. Both items and their handlers are unchanged. Test tests/pdf/103-r4-dph-25-import-menu-left-edge.test.mjs asserts `left-0` and no `right-0`, so it fails on the parent (`right-0`). No fail-first CI job for 9da9218 is recorded: runs 36371889367, 36371880365 and 36372088441 have no pair for it. I checked the revert by reading instead, and the named test is in the green gate history of r4-green (e.g. 36516263453 on 1f99a1a)."
+    },
+    {
+      "id": "R4-DPH-26",
+      "verdict": "fixed-verified",
+      "evidence": "Fix 3dc10e8. At the head, src/components/ResumeCard.jsx:130 gives the rename input `flex-1 text-sm pointer-coarse:text-base ...`. Tailwind is ^4.3.1, where `pointer-coarse:` is a built-in @media (pointer: coarse) variant that comes after the base utilities, so the box is 16 px on touch and 14 px with a mouse. The later DVIS-28 commits (8a17031..71f5a7a) changed only the name measuring, which is off while Rename is open, and left the input's class alone. ResumeCard is the only dashboard card with a Rename (the only title/aria-label=\"Rename\" in src). The Editor header's rename box is a separate row (DPH-29). The test tests/pdf/103-r4-dph-26-rename-box-touch-text.test.mjs requires the `pointer-coarse:text-base` token, so it fails on the parent. No fail-first CI job for 3dc10e8 is recorded in the dsg-layout runs, so I checked the revert by reading. Enter still renames, and the test checks that."
+    },
+    {
+      "id": "R4-DPH-33",
+      "verdict": "fixed-verified",
+      "evidence": "Fix 7242eea. I listed every input, select and textarea in the Design tab's files at the head: DesignPanel.jsx and its sections Colors, Typography, Dates, Headings, Lists, Links, PageNumbers, Shared and Template. SizeRow and NumberRow (DesignPanelShared.jsx:37,71), BorderPtBox (DesignPanelHeadings.jsx:41), the Date format select (DesignPanelDates.jsx:28), the OwnFontRow Name/Heading Font select (DesignPanelTypography.jsx:24), the Google Font box (:174) and the Design name box (DesignPanelTemplate.jsx:87) all carry pointer-coarse:text-base. The only other fields are ColorInput `type=color` swatches, which iOS does not zoom into. Lists, Links and PageNumbers have no text fields. Later commits to these files (24b78d1, 3347bca, ecc3304) kept the token. With a mouse the boxes keep text-xs/text-sm. At 16 px, values like '10.5' still fit the w-14 and w-10 boxes. Fail-first run 36371889367, job 'failfirst (7242eea:tests/pdf/103-r4-dph-33-design-fields-touch-text.test.mjs)': success. The test opens every section and Save my design and runs the under-16-on-touch sweep."
+    },
+    {
+      "id": "R4-DPH-34",
+      "verdict": "fixed-verified",
+      "evidence": "Fix ad01d3c. CoverLetterPanelShared.jsx:21: Field's input is `text-sm pointer-coarse:text-base`. In CoverLetterPanel.jsx every text field the row names (Date, Recipient Name and Title, Company, Subject, Closing, Signature Name and Designation, lines ~289-347) is a <Field>. The panel's only other inputs are the hidden photo file input, GapStepper (HeaderSpacingControls, already pointer-coarse since DPH-29) and the RichTextEditor body. Date's 'Today' button is anchored `absolute right-1.5 bottom-1.5`, so it stays inside the input when the box gets taller at 16 px. No later commit touched the file. Fail-first run 36371889367, job 'failfirst (ad01d3c:tests/pdf/103-r4-dph-34-letter-fields-touch-text.test.mjs)': success."
+    },
+    {
+      "id": "R4-DPH-35",
+      "verdict": "fixed-verified",
+      "evidence": "Fix 3495e55. AtsCheckerPanel.jsx:418: the job-description textarea, the tab's only field, is `text-xs pointer-coarse:text-base`. The later commits e8afbaa and 82905e3 (DVIS-24/33) left it as it is. Fail-first run 36371889367, job 'failfirst (3495e55:tests/pdf/103-r4-dph-35-ats-job-box-touch-text.test.mjs)': success."
+    },
+    {
+      "id": "R4-DPH-39",
+      "verdict": "fixed-verified",
+      "evidence": "Fix 10dc2a5. StarterTemplateModal.jsx:~87-91: the name row is `flex flex-wrap items-center gap-x-2 gap-y-1` and the badge is `whitespace-nowrap shrink-0`. The wrapper is `min-w-0 pr-3` and the arrow is shrink-0. At 375 px a long name ('Software Engineer (Full Stack)', 'Data Scientist & AI Engineer') wraps inside its h3, which has min-width auto, i.e. min-content. The badge ('Tech & Engineering', 'AI & Data', 'Product & Strategy', about 100 px at 10 px text) then drops to the next line whole and never breaks inside its pill. When both fit on one line, as from sm, the layout is the same as before. The component's only caller is NewResume.jsx (inline). No later commits. Fail-first run 36371889367, job 'failfirst (10dc2a5:tests/pdf/103-r4-dph-39-starter-badge-wraps-whole.test.mjs)': success."
+    },
+    {
+      "id": "R4-DVIS-24",
+      "verdict": "fixed-verified",
+      "evidence": "Fix e8afbaa, unchanged at the head of claude/r4-green (src/components/AtsCheckerPanel.jsx:298-318, 366, 375, 399-411). The tab root is now `@container` (Tailwind v4.3, so container queries are built in). Every sm: variant in the tab moved to @md: (448 px); no sm:, md: or lg: variant is left in AtsCheckerPanel, and AtsParserView has none either. The root's parent in Editor.jsx:156 is a block `px-4 py-4` div, so inline-size containment cannot collapse the root. In the default 360 px panel the tab is 328 px, below 448, so the score header stacks: the title gets the full card width and the badge (self-stretch) spans the card, so it cannot spill. The longest grade label, 'B · GOOD - MINOR TWEAKS NEEDED', is about 240 px and fits the stacked 286 px card. At the 448 px threshold the card's inner width is about 406 px, and badge + gap + the title's min-content come to about 363 px, so the side-by-side row fits. Phones (<448 px tab) stack as before. A 640-767 px phone in landscape and the full-width editor still go side by side. The plain-text card and the scanner header follow the same rule, and the '% Match' pill is now shrink-0. Fail-first on CI: run 36371889367, job 108769815215: 'fail without the fix (its diff reversed): # fail 1', then 'pass with it'. Residual, not a defect: in a panel dragged to about 480-520 px (tab 448-488) the title column beside the badge is still fairly narrow (about 110-150 px), but nothing overflows."
+    },
+    {
+      "id": "R4-DVIS-26",
+      "verdict": "fixed-verified",
+      "evidence": "Fix 3a8770c. At the head, Dashboard.jsx:158-205: the header is `flex-col lg:flex-row lg:items-center`, the logo row is `w-full lg:w-auto shrink-0`, the compact AuthBar is `lg:hidden`, and the divider and full AuthBar are `hidden lg:block`. From 768 to 1023 px the header stacks. The row holds five visible actions (Import, Job Tracker, Projects, New Cover, New Resume; the hidden divider and sign-in add no gap), about 610-640 px against the 720 px available at 768, so they form one row. The compact sign-in sits beside the logo, and a signed-in user sees the SyncDot and avatar there. From lg the single row needs about 937 px: the finder's own wrap threshold was ~985 px, minus the 48 px of padding. At 1024 px there are 976 px available (about 961 with a classic 17 px scrollbar), so it fits with a margin of roughly 20-40 px. The row's '~810 of ~850' figures are off, but its conclusion holds. Phones (<640 px) and 640-767 px were already stacked and are unchanged. Cypress runs at 1440x900, so it still sees the full header. No spec selects md:hidden or md:flex-row on the Dashboard; the only e2e edit is the comment in 11-demo-account.cy.js. Fail-first on CI: run 36371889367, job 108769815286, succeeded (the test failed without the fix and passed with it)."
+    },
+    {
+      "id": "R4-DVIS-29",
+      "verdict": "fixed-verified",
+      "evidence": "Fix b02da95. At the head, the sidebar (Dashboard.jsx:313) is `lg:sticky lg:top-6 lg:flex lg:flex-col lg:max-h-[calc(100dvh-3rem)]`. It sits in an `items-start` flex row, so it is not stretched and sticky still works. Its heading row is shrink-0. CareerHistoryPanel.jsx:44-104 is `overflow-hidden flex flex-col min-h-0`: its header and footer are shrink-0, and the timeline is `min-h-0 overflow-y-auto` with the default flex-shrink. On a window about 650 px tall with 7+ entries, the timeline scrolls inside the panel while 'Open Job Tracker →' stays pinned in view. The timeline dots (-left-6 inside pl-6, ring-2) stay within the scroller's px-4 padding, so nothing is clipped. Below lg the sidebar is block with no max-h, so the panel is content height and nothing scrolls. In JobTracker.jsx:164-169 the aside is an unconstrained flex column in a content-start grid, so the panel keeps its content height there too. The Dashboard look is unchanged apart from the flex-column classes. Fail-first on CI: run 36371889367, job 108769815257, succeeded."
+    },
+    {
+      "id": "R4-DVIS-32",
+      "verdict": "fixed-verified",
+      "evidence": "Fix b514074. At the head, CareerHistoryPanel.jsx:20-29 has LOOKS.workspace = `rounded-md border border-line`, no shadow, a `border-line` rule, a `rounded-md` avatar, and `text-ink` / `text-ink-subtlest`. These tokens exist in src/index.css:119-122 and match JobSummary.jsx:11/23 (`rounded-md border border-line bg-white`). JobTracker.jsx:168 passes variant=\"workspace\", its only caller besides the Dashboard. The Dashboard default reproduces the old classes byte for byte (diff checked: rounded-2xl, border-gray-100, shadow-sm, text-gray-900/400, rounded-xl avatar), so the Dashboard does not regress. The class strings are written out in full, so Tailwind emits them. Fail-first on CI: run 36371889367, job 108769815304, succeeded. Minor leftover, not part of the row: the timeline's decorative gradient still ends in gray-100, and the colored role/NOW accents stay, both by design."
+    },
+    {
+      "id": "R4-DVIS-33",
+      "verdict": "fixed-verified",
+      "evidence": "Fix 82905e3. At the head (AtsCheckerPanel.jsx:485-500) the category header button is `flex items-center justify-between gap-3`. The left column is `flex items-center gap-2.5 min-w-0`, the dot is `shrink-0`, and the title span is `text-sm font-bold leading-snug` with no truncate or nowrap, so as a flex item it can shrink to its longest word and wrap. The points badge and chevron are shrink-0. In the 360 px panel the title gets about 165 px, so 'Work Experience & Action Verbs', 'Contact & Header Information', 'ATS Standard Section Headings' and 'ATS Layout & Parser Safety' wrap to two lines. On a 320 px phone the title gets about 125 px: some titles take three lines, but none is cut, and the longest word ('Credentials', about 80 px) fits. cypress/e2e/27-ats-checker.cy.js matches the titles by text, which wrapping does not affect. Fail-first on CI: run 36371889367, job 108769815219, succeeded."
+    },
+    {
+      "id": "R4-DVIS-35",
+      "verdict": "fixed-verified",
+      "evidence": "Fix 3347bca. At the head, DesignPanelTypography.jsx:183: the font box is `flex-1 min-w-0`, so it narrows and 'Add' / 'Checking…' stays inside the section at a 240-280 px panel (usePanelResize MIN = 240). DesignPanel.jsx:375-392: the Reset row is `flex flex-wrap items-start justify-between gap-3` and the text column is `flex-1 min-w-24`. In confirm state the buttons (Yes, Reset + Cancel) are about 156 px. A 240 px panel leaves the box about 182 px inside; 96 + 12 + 156 = 264 > 182, so the buttons wrap under the text and fit on their own line. A 360 px panel leaves about 302 px, 264 fits, so the buttons stay beside the text as before: the flex-basis 0 plus min-w-24 check holds, and the wrap starts below a panel of about 322 px, matching the row. The non-confirm 'Reset' button is unaffected. Fail-first on CI: run 36371889367, job 108769815258, succeeded."
+    }
+  ],
+  "notes": "All 12 R4 dsg-layout rows came back fixed-verified from the reviewer, so no row was open and none needed a second-agent check or a fix. No commits other than this report, so no CI run was dispatched. Two rows (R4-DPH-25 9da9218, R4-DPH-26 3dc10e8) have no recorded fail-first CI job; the reviewer checked the revert by reading, and their named tests are in r4-green's green gate history. Accessibility items are listed under a11yNoted and deferred."
+}
