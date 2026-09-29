@@ -288,7 +288,7 @@ export function VolunteeringSection({ section, settings, marginBottom, spaceBefo
     dateStr: showDates ? dateRange(startDateOf(item), endDateOf(item, settings), settings) : '',
   });
   // The title keeps the first entry's header and the lines it keeps with it (R2-047).
-  const presence = visibleItems.length ? itemHeadPresence({ ...head(visibleItems[0]), settings, titleStyle, centered }) : 0;
+  const presence = visibleItems.length ? itemHeadPresence({ ...head(visibleItems[0]), settings, titleStyle, centered, width: entryTextWidth(settings, cols) }) : 0;
 
   return (
     <View style={{ marginBottom, marginTop: spaceBefore }}>

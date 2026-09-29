@@ -13,6 +13,7 @@ import {
   ItemHeader,
   RenderBullets,
   shadesOf,
+  entryTextWidth,
 } from './PdfSections';
 import { EmployerHeader, itemHeadPresence } from './PdfItemHeader';
 import { employerOf, groupPlaces, groupsRoles, roleGroups } from '@/utils/roleGroups';
@@ -54,8 +55,8 @@ export function ExperienceSection({ section, settings, marginBottom, spaceBefore
   // The title keeps the first entry's header and the lines it keeps with it (R2-047): a group's employer
   // line and its first role's, two lines as a Stacked header.
   const presence = !visibleItems.length ? 0
-    : groups?.[0].length > 1 ? itemHeadPresence({ primary: employerOf(groups[0][0]), sub: roleOf(groups[0][0]) || undefined, settings, centered })
-    : itemHeadPresence({ ...head(visibleItems[0]), settings, titleStyle, centered });
+    : groups?.[0].length > 1 ? itemHeadPresence({ primary: employerOf(groups[0][0]), sub: roleOf(groups[0][0]) || undefined, settings, centered, width: entryTextWidth(settings, cols) })
+    : itemHeadPresence({ ...head(visibleItems[0]), settings, titleStyle, centered, width: entryTextWidth(settings, cols) });
   const descOf = (item) => ((item.hiddenFields || []).includes('description') ? '' : item.description);
   const one = (item) => {
     const desc = descOf(item);
@@ -88,7 +89,7 @@ export function ExperienceSection({ section, settings, marginBottom, spaceBefore
           settings={settings}
           italicSub={italicSubs}
           centered={centered}
-          keep={itemHeadPresence({ primary: roleOf(g[0]), loc: places.roles[0] || undefined, settings, titleStyle, centered })}
+          keep={itemHeadPresence({ primary: roleOf(g[0]), loc: places.roles[0] || undefined, dateStr: head(g[0]).dateStr, settings, titleStyle, centered, width: entryTextWidth(settings, cols) })}
         />
         {g.map((item, k) => {
           const desc = descOf(item);
@@ -285,7 +286,7 @@ export function EducationSection({ section, settings, marginBottom, spaceBefore,
     };
   };
   // The title keeps the first entry's header and the lines it keeps with it (R2-047).
-  const presence = visibleItems.length ? itemHeadPresence({ ...head(visibleItems[0]), settings, titleStyle, centered }) : 0;
+  const presence = visibleItems.length ? itemHeadPresence({ ...head(visibleItems[0]), settings, titleStyle, centered, width: entryTextWidth(settings, cols) }) : 0;
 
   return (
     <View style={{ marginBottom, marginTop: spaceBefore }}>

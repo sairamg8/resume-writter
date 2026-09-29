@@ -16,6 +16,7 @@ import {
   ItemHeader,
   RenderBullets,
   getColumnWidth,
+  entryTextWidth,
   shadesOf,
 } from './PdfSections';
 
@@ -105,7 +106,7 @@ export function CustomSection({ section, settings, marginBottom, spaceBefore, it
     dateStr: showDates ? formatDate(item.date || '', settings) : '',
   });
   // The title keeps the first entry's header and the lines it keeps with it (R2-047).
-  const presence = visibleItems.length ? itemHeadPresence({ ...head(visibleItems[0]), settings, titleStyle, centered }) : 0;
+  const presence = visibleItems.length ? itemHeadPresence({ ...head(visibleItems[0]), settings, titleStyle, centered, width: entryTextWidth(settings, cols) }) : 0;
 
   return (
     <View style={{ marginBottom, marginTop: spaceBefore }}>

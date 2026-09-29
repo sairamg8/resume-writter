@@ -160,12 +160,26 @@ export function SidebarMainExperience({ section, settings, marginBottom, spaceBe
     };
   };
   // The title keeps the first card's header and the lines it keeps with it (R2-047). Stacked, the
-  // header is CardHeader's: its title line, then its details and location (centred, a line each).
+  // header is CardHeader's: its title with the date at its last line's right end (centred, after a
+  // " · "), then its details with the location at theirs (centred, each on lines of its own), each
+  // wrapped at the card's text width. Counted as one line a field, a title that wrapped onto a third
+  // line left the title alone at the foot of a page while the card moved on (R4-DOUT-07).
   const firstHead  = visibleItems.length ? head(visibleItems[0]) : null;
-  const cardLines  = (h) => 1 + (centered ? [h.secondary, h.loc].filter(Boolean).length : (h.secondary || h.loc ? 1 : 0));
+  const width      = cardTextWidth(settings, s.columns || 1);
+  const cardLines  = (h) => {
+    const font = settings?._pdfFontFamily;
+    const dateBox = { fontFamily: font, fontSize: entrySize - 1.5 };
+    const detailsBox = { fontFamily: font, fontSize: entrySize - 1 };
+    const title = centered ? centredLines({ text: h.primary, box: titleBox, date: h.dateStr, dateBox, gap: fieldGap(dateBox.fontSize), width })
+      : Math.max(1, endRowLines({ text: h.primary, box: titleBox, end: h.dateStr, endBox: dateBox, gap: 6, width }));
+    const under = centered ? wrappedLines(h.secondary, detailsBox, width) + wrappedLines(h.loc, detailsBox, width)
+      : h.secondary ? endRowLines({ text: h.secondary, box: detailsBox, end: h.loc, endBox: detailsBox, gap: fieldGap(detailsBox.fontSize), width })
+      : h.loc ? 1 : 0;
+    return title + under;
+  };
   const presence   = !firstHead ? 0
     : titleStyle === 'stacked' ? cardPresence(settings, entrySize, lineH, cardLines(firstHead))
-    : itemHeadPresence({ primary: firstHead.primary, sub: firstHead.secondary || undefined, loc: firstHead.loc || undefined, settings, titleStyle, centered });
+    : itemHeadPresence({ primary: firstHead.primary, sub: firstHead.secondary || undefined, loc: firstHead.loc || undefined, dateStr: firstHead.dateStr, settings, titleStyle, centered, width });
 
   // A card's header: CardHeader Stacked, the shared one-line header in Title "Inline" / "Side by side",
   // as the other templates print it.
