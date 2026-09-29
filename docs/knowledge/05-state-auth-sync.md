@@ -204,7 +204,9 @@ the ids deleted for good (`deleted`) and the list's order (`order`). The existin
 (`collectionSyncPlan.planFirstSync`: newer `updatedAt` wins, nothing typed is lost, a deleted id
 stays deleted unless edited where the deletion was never seen); then changes are sent in one batch
 after a 1.5 s pause. Failures, retries and 'off' reuse `cloudSyncRetry.js`; an item over Firestore's
-1 MiB is held back on its own and named on the page (`SyncHeldNotice`). What each list's sync is
+1 MiB is held back on its own and named on the page (`SyncHeldNotice`); a batch of several refused
+for good (an imported id the cloud cannot name, a list inside a list) goes to a first sync, which
+takes it apart and holds only the item refused on its own (`commitApart`, R5-HUNT7). What each list's sync is
 doing goes to `collectionSyncStatus` (`collectionSyncMeta.js`) and shows in the workspace's top bar
 as the résumés' cloud icon, with its words (`shell/CollectionSyncDot.jsx`, R2-140-c): the jobs and
 the projects on the Job Tracker's pages, the projects elsewhere, the worst status winning
@@ -218,7 +220,9 @@ first sync (offline, signed out, a failed sync) leads when the cloud's order is 
 and the cloud's order leads otherwise (R2-140). Signing out (or another account signing in) takes
 the list off the browser as the résumés' is (`leaveList`: unsent changes, a move among them, kept
 aside for that account's next sign-in); signed out, nothing runs and the list is this browser's, as
-before. Two guards against losing the account's items: a first visit's demo
+before. Storage too full to take the record with what was kept aside: the list goes first to make
+room, and when the record is still refused the list stays, still that account's, and another
+account's first sync waits (retried) rather than taking it in (R5-HUNT7). Two guards against losing the account's items: a first visit's demo
 job or project, untouched (`isUntouchedDemoJob` / `isUntouchedDemoBoard`, the store's `seed`),
 never wins over the account's copy of it, though dated newer, and never joins an account that
 already has items or deletions of its own; and the demo deleted on a browser before its first
