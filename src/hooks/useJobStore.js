@@ -340,11 +340,27 @@ function dismissRecovery() {
   update({ recovery: null });
 }
 
-/** The list left this browser with its account: its notice and backups go with it (forgetRecovery). */
+/** The job form's unsaved values in sessionStorage are kept under this prefix and the job's id (JobForm). */
+export const JOB_DRAFT_PREFIX = 'jobform:';
+
+/**
+ * The list left this browser with its account: its notice and backups go with it (forgetRecovery),
+ * and so do the job forms' drafts. `left` counts these leaves, so a job form open on the account's
+ * list sees it went: an empty list read as a job deleted in another tab, and its "Save as a new
+ * job" put the account's job in the signed-out list, which the next account uploaded (R5-HUNT6).
+ */
 function leaveRecovery() {
   if (!initialized) init();
   forgetRecovery(KEY);
-  update({ recovery: null });
+  try {
+    const drafts = [];
+    for (let i = 0; i < sessionStorage.length; i += 1) {
+      const k = sessionStorage.key(i);
+      if (k?.startsWith(JOB_DRAFT_PREFIX)) drafts.push(k);
+    }
+    drafts.forEach((k) => sessionStorage.removeItem(k));
+  } catch { /* no storage: no drafts */ }
+  update({ recovery: null, left: (snapshot().left ?? 0) + 1 });
 }
 
 export function _resetJobStoreForTest() {
@@ -360,10 +376,10 @@ export function _resetJobStoreForTest() {
 export { snapshot, subscribe, addJob, updateJob, moveJob, deleteJob, restoreJob, importJobs, clearDemoData, restoreJobs, dismissRecovery, leaveRecovery, jobsNow, replaceJobs };
 
 export function useJobStore() {
-  const { jobs, persistError, recovery } = useSyncExternalStore(subscribe, snapshot);
+  const { jobs, persistError, recovery, left } = useSyncExternalStore(subscribe, snapshot);
   const persistReason = notSavedReason(persistError);
   return {
-    jobs, persistError, persistReason, recovery, dismissRecovery,
+    jobs, persistError, persistReason, recovery, dismissRecovery, left: left ?? 0,
     addJob, updateJob, moveJob, deleteJob, restoreJob, importJobs, clearDemoData, restoreJobs,
   };
 }
