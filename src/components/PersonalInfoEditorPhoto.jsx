@@ -43,7 +43,9 @@ export function PhotoSection({ resume: whole, personal, updatePersonal, toggleFi
     if (!file) return;
     // The whole résumé, sections and all: an upload may take only what its cloud document has left (R2-097).
     const resume = { ...whole, personal, settings: s, template, coverLetter };
-    readImageFile(file, { kind: 'photo', resume, replacing: personal.photo }).then((dataUrl) => updatePersonal('photo', dataUrl), (err) => alert(err.message));
+    // Written to this résumé by its id: a large photo takes a while to decode and shrink, and by then
+    // another résumé may be open, which updatePersonal alone would give it to (R5-HUNT2).
+    readImageFile(file, { kind: 'photo', resume, replacing: personal.photo }).then((dataUrl) => updatePersonal('photo', dataUrl, whole?.id), (err) => alert(err.message));
   }
 
   // Remove takes the upload out at once, with a notice whose Undo puts the same photo back, so a

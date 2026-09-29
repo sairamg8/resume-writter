@@ -219,12 +219,17 @@ export function useAppStore() {
     setAppState(prev => (prev.activeId === id ? prev : { ...prev, activeId: id }));
   }
 
-  /** The active résumé as `updater` returns it, stamped as an edit — unless it returns the same résumé: nothing changed. */
-  function patchActive(updater) {
+  /**
+   * The active résumé as `updater` returns it, stamped as an edit — unless it returns the same résumé:
+   * nothing changed. `id`: that résumé instead, open or not — for a write that lands after a wait (an
+   * upload's decode), by when the user may have opened another (R5-HUNT2).
+   */
+  function patchActive(updater, id) {
     setAppState(prev => {
       let changed = false;
+      const target = id ?? prev.activeId;
       const resumes = prev.resumes.map(r => {
-        if (r.id !== prev.activeId) return r;
+        if (r.id !== target) return r;
         const next = updater(r);
         if (next === r) return r;
         changed = true;
@@ -326,8 +331,9 @@ export function useAppStore() {
   // or a number box handing back what it shows) is not an edit: no new updatedAt, no store write, no
   // preview build, nothing to sync (R2-142) — as the same name is no rename (R2-084).
 
-  function updatePersonal(field, value) {
-    patchActive(r => (r.personal?.[field] === value ? r : { ...r, personal: { ...r.personal, [field]: value } }));
+  /** `id`: the résumé to write to, when not the open one (patchActive). */
+  function updatePersonal(field, value, id) {
+    patchActive(r => (r.personal?.[field] === value ? r : { ...r, personal: { ...r.personal, [field]: value } }), id);
   }
 
   function toggleFieldVisibility(field) {

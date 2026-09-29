@@ -126,7 +126,12 @@ export default function PersonalInfoEditor({ resume: whole, personal, updatePers
     const prev = s.customContactIcons || {};
     // The whole résumé, sections and all: an upload may take only what its cloud document has left (R2-097).
     const resume = { ...whole, personal, settings: s, template, coverLetter };
-    readImageFile(file, { kind: 'icon', resume, replacing: prev[field] }).then(dataUrl => setCustomIcon(field, dataUrl), err => alert(err.message));
+    // Written to this résumé by its id, into its icons as they are when the upload is done: another
+    // résumé may be open by then, or another icon changed meanwhile, and a map built from this render
+    // replaced that résumé's icons, or undid the change (R5-HUNT2).
+    const id = whole?.id;
+    readImageFile(file, { kind: 'icon', resume, replacing: prev[field] })
+      .then(dataUrl => updateSetting?.('customContactIcons', (icons) => ({ ...(icons || {}), [field]: dataUrl }), id), err => alert(err.message));
   }
 
   return (
