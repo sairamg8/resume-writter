@@ -1,0 +1,23 @@
+{
+  "cluster": "r5-hunt7-dash",
+  "branch": "claude/wf-r5-hunt7-dash",
+  "base": "a5b1814a",
+  "rows": [
+    {
+      "id": "R5-HUNT7-DASH-STARTER-DROPS-PAPER-AND-ICONS",
+      "title": "The own-details role starter on /new drops the user's US Letter paper size and uploaded contact icons, so the new résumé prints on A4 with stock icons",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": ["a16314bf387bd70aedfee8f0b85551fdca30ebac"],
+      "tests": ["tests/unit/r5hunt7-starter-keeps-paper-icons.unit.mjs", "tests/pdf/r5hunt7-starter-look-keeps-paper-icons.test.mjs"],
+      "summary": "Now: a role starter on /new takes the user's paper size and uploaded contact icons along with their name, contacts and photo, so a US Letter user's new résumé stays on US Letter (612 x 792 pt) and shows their own LinkedIn image. This holds on the starter's own look and on every look card, because withLook keeps both settings. The fix is in starterFrom (src/utils/newResume.js). It merges source.settings.customContactIcons (a deep copy, and only when it is a map) and pageSize (through pageSizeOf, with A4 stored as none, as resetDesignSettings does) onto the starter's settings. The rest of the starter's design is unchanged. This matches the look-card path (resumeFrom, then withLook), which already kept both. In templatePresets NOT_A_LOOK and templateSwitch KEPT_ON_UNDO, both keys belong to the user, not to a look.",
+      "product_call": "myDesigns (the designs the user saved) is also in NOT_A_LOOK. The row did not name it, so starterFrom does not carry it across. The look-card path copies it with the whole résumé.",
+      "remaining": null
+    }
+  ],
+  "review": null,
+  "baselineFailures": [
+    "tests/pdf/91-starter-modal.test.mjs 'each starter's card creates a résumé from that starter…' and tests/pdf/93-picker-new-resume.test.mjs 'a look picked, then a starter…' failed in run 36613594237 on a16314bf. They expected createResume(name, starterId[, look]) without the fromId argument that the own-details starter added on the base. These tests were stale on the base (a5b1814a) and were updated on claude/r4-green in edf0c8f ('master gate red only on 4 stale starter tests'). After origin/claude/r4-green was merged in (5307022d), they pass in run 36614497922."
+  ],
+  "notes": "CI: failfirst run 36613589011 on a16314bf passed: without the src change both new tests fail, and with it they pass. Named-tests run 36613594237 on a16314bf failed only on the 2 stale base tests listed under baselineFailures; the new tests and the other named tests passed. After merging origin/claude/r4-green (41b2a7a3) into the branch as 5307022d, named-tests run 36614497922 passed: the 12 named node test files (new tests, r5-starter-own-details, starter-templates, 93-picker-new-resume, 103-r4-dvis-13, 91-starter-modal, 96-dashboard, 91-page-size-round-trip, 93-picker-undo, 106-r5-hunt4-design-undo-keeps-icons-paper, page-size), playwright picker.spec on 3 shards, build and lint. Base run 36614140565 on r4-green 41b2a7a3 with 93-picker-new-resume and 91-starter-modal also passed. No new eager imports: newResume.js now also imports constants/pageSize.js, a plain module with no imports. No new Design keys and no DATA_VERSION change."
+}
