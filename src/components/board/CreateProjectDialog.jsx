@@ -15,6 +15,10 @@ function ProjectForm({ onCreated, onClose, typedRef }) {
   const [color, setColor] = useState(BOARD_COLORS[store.boards.length % BOARD_COLORS.length]);
   const [description, setDescription] = useState('');
   const [tried, setTried] = useState(false);
+  // One project per opening: the project's board opens as a transition, so this dialog stays open,
+  // and its button live, while the board's code loads — the second click of a double-click (or a
+  // second Enter) made a second project, keyed HR2.
+  const made = useRef(false);
   const shownKey = keyTouched ? key : (title.trim() ? deriveKey(title, store.boards.map((b) => b.key)) : '');
   const keyProblem = shownKey ? store.keyError(shownKey) : null;
   const nameProblem = tried && !title.trim() ? 'A project needs a name.' : null;
@@ -27,7 +31,8 @@ function ProjectForm({ onCreated, onClose, typedRef }) {
   function submit(e) {
     e.preventDefault();
     setTried(true);
-    if (!title.trim() || keyProblem) return;
+    if (made.current || !title.trim() || keyProblem) return;
+    made.current = true;
     const board = store.addBoard({ title: title.trim(), key: shownKey || undefined, template, color, description });
     onCreated(board);
   }
