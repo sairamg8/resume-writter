@@ -1,0 +1,182 @@
+{
+  "cluster": "r5-brd",
+  "branch": "claude/wf-r5-brd",
+  "base": "b8d7667ae7ace64a83872e84b413bc6a68d71521",
+  "rows": [
+    {
+      "id": "R4-SW-B-01",
+      "title": "A column delete had no Undo (board toast without an action; Project settings with no toast at all)",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": [
+        "6dc571b",
+        "0c7d6cc",
+        "7dc0318",
+        "baf3d63"
+      ],
+      "tests": [
+        "tests/pdf/104-r5-brd-sw-b-01-column-delete-undo.test.mjs",
+        "tests/pdf/104-r5-brd-rev-02-delete-column-orphan.test.mjs"
+      ],
+      "summary": "Now: every column delete, on the board and in Project settings, shows 'Column “X” deleted' with Undo. Undo puts the column back at its place with its title, category and WIP limit, puts each moved issue back (column, resolvedAt, history), and removes a next occurrence the move made for a repeating issue. Edits made after the delete are kept (0c7d6cc, 7dc0318). Since the review (baf3d63), a next occurrence made while the deleted column was still the first to-do column goes into a column that stays on the board, so it is no longer left hidden in a deleted column.",
+      "product_call": "Undo is on offer while the toast shows and restores only what the delete changed; later edits win. When a delete into Done resolves a repeating issue, its next occurrence goes to the first to-do column left, else the first open column, else the first column. If only a Done column is left, the occurrence is born resolved there, as spawnNext already does on a board with only done columns.",
+      "remaining": "None.",
+      "failfirst_run": "36457020956 (6dc571b green), 36459151826 (0c7d6cc green), 36462546944 (6dc571b re-proved at 7903c8a green), 36517478453 (baf3d63: 3 fail without, pass with)"
+    },
+    {
+      "id": "R4-SW-B-02",
+      "title": "A Kanban row still in a sprint dropped on the backlog's foot lands after the last row in no sprint",
+      "severity": "low",
+      "outcome": "fixed",
+      "commits": [
+        "5cb3121"
+      ],
+      "tests": [
+        "tests/pdf/104-r5-brd-sw-b-02-kanban-foot-drop.test.mjs",
+        "tests/pdf/104-r5-brd-helpers.mjs"
+      ],
+      "summary": "Now: on a Kanban project a row dropped on the backlog's foot (or after its last row) lands last in the list, even when rows below it are still in a sprint the Kanban view does not show. Scrum is unchanged.",
+      "product_call": "",
+      "remaining": "None.",
+      "failfirst_run": "36457020956 (green: 2 of 3 fail without)"
+    },
+    {
+      "id": "R4-SW-B-03",
+      "title": "The backlog row menu's Move to still lists sprints on a Kanban project",
+      "severity": "low",
+      "outcome": "fixed",
+      "commits": [
+        "4f83a03"
+      ],
+      "tests": [
+        "tests/pdf/104-r5-brd-sw-b-03-kanban-row-menu.test.mjs"
+      ],
+      "summary": "Now: on a Kanban project a backlog row's menu no longer offers Move to a sprint the project does not show.",
+      "product_call": "",
+      "remaining": "None.",
+      "failfirst_run": "36457020956 (green)"
+    },
+    {
+      "id": "R4-SW-B-04",
+      "title": "The Epic panel's composer placeholder reads 'What needs to be done?'",
+      "severity": "low",
+      "outcome": "fixed",
+      "commits": [
+        "ed8f99e"
+      ],
+      "tests": [
+        "tests/pdf/104-r5-brd-sw-b-04-epic-composer-prompt.test.mjs"
+      ],
+      "summary": "Now: the Epic panel's composer asks 'What is this epic?', not the issue prompt.",
+      "product_call": "",
+      "remaining": "Its aria-label still says 'Summary of the new issue' (accessibility, deferred).",
+      "failfirst_run": "36457020956 (green)"
+    },
+    {
+      "id": "R4-SW-B-05",
+      "title": "R4-BRD-05's second close before a pending open commits has a code guard (0da56a4) but no test",
+      "severity": "low",
+      "outcome": "fixed",
+      "commits": [
+        "a1fe778"
+      ],
+      "tests": [
+        "tests/pdf/82-issue-view-r4-05.test.mjs",
+        "tests/pdf/issue-view-page.mjs"
+      ],
+      "summary": "Now: a test pins the guard: a close asked while an open is still landing keeps its guard when that open lands, so a second close pushes no second step back. Test only; the guard is 0da56a4.",
+      "product_call": "",
+      "remaining": "None.",
+      "failfirst_run": "36457020956 (failfirst 0da56a4 against the new test: green); tests run 36457041254 green"
+    },
+    {
+      "id": "R5-BRD-01",
+      "title": "Picking the section a row is already in from Move to re-sorts the row",
+      "severity": "low",
+      "outcome": "fixed",
+      "commits": [
+        "18af598"
+      ],
+      "tests": [
+        "tests/pdf/104-r5-brd-01-move-to-same-section.test.mjs"
+      ],
+      "summary": "Now: picking the ticked section in a backlog row's Move to menu leaves the row where it is.",
+      "product_call": "",
+      "remaining": "The ticked item closes the menu with no feedback (noted, accessibility/UX polish, not worked).",
+      "failfirst_run": "36457020956 (green); tests run 36456616287 green"
+    },
+    {
+      "id": "R5-BRD-01b",
+      "title": "Project settings' column delete does not say the picked column will mark its issues done or reopen them",
+      "severity": "low",
+      "outcome": "fixed",
+      "commits": [
+        "3d7aa4c",
+        "dd30edb"
+      ],
+      "tests": [
+        "tests/pdf/104-r5-brd-01b-settings-delete-effect.test.mjs"
+      ],
+      "summary": "Now: Project settings' column delete says 'and will be marked done' or 'and will be reopened' when the column picked for its issues changes their status. The subject of 3d7aa4c says R5-BRD-01; dd30edb corrects only the comments.",
+      "product_call": "",
+      "remaining": "The effect text is not in a live region (accessibility, deferred).",
+      "failfirst_run": "36457020956 (green)"
+    },
+    {
+      "id": "R5-BRD-02",
+      "title": "A sprint's delete toast offers no Undo",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": [
+        "7913ad0",
+        "8ce3ea0",
+        "7903c8a",
+        "acd3c0c"
+      ],
+      "tests": [
+        "tests/pdf/104-r5-brd-02-sprint-delete-undo.test.mjs"
+      ],
+      "summary": "Now: '<Sprint> deleted' offers Undo, which brings the sprint back at its place as it was, with its issues still in the backlog; an active sprint comes back future if another was started meanwhile. A name another sprint took while Undo was on offer gets a free one (8ce3ea0); since the review (acd3c0c), a name another sprint already shared when the sprint was deleted is kept, since the app allows duplicate sprint names.",
+      "product_call": "Only a clash made after the delete (a new sprint, or a rename to that name) renames the restored sprint: a default name to the next default, any other to ' (2)', ' (3)'.",
+      "remaining": "None.",
+      "failfirst_run": "36457020956 (7913ad0 green), 36462546944 (8ce3ea0 green at 7903c8a), 36517478453 (acd3c0c: 2 fail without, pass with)"
+    }
+  ],
+  "review": {
+    "rounds": [
+      {
+        "round": 1,
+        "issues": [
+          "BRD-REV-01",
+          "BRD-REV-02"
+        ]
+      }
+    ],
+    "issues": [
+      {
+        "id": "BRD-REV-01",
+        "row": "R5-BRD-02",
+        "severity": "low",
+        "issue": "Undo renamed a restored sprint whenever another sprint had its name, even one that already had it before the delete (duplicate names are allowed by addSprint and renames), so it did not come back as it was.",
+        "resolution": "Confirmed by reading boardOps.freeSprintName/restoreSprint. Fixed in acd3c0c: removedSprint records the other sprints' names (id -> name) at delete time and freeSprintName ignores a sprint that already had that name then. Three store tests added (shared name kept, shared default-pattern name kept, a rename during the Undo window still a clash). Failfirst 36517478453 green."
+      },
+      {
+        "id": "BRD-REV-02",
+        "row": "R4-SW-B-01 / R5-BRD-01b",
+        "severity": "low",
+        "issue": "deleteColumn moved issues (setStatus, spawning a repeating issue's next occurrence in the first to-do column) before removing the column, so deleting the first to-do column into Done left the next occurrence in the deleted column, hidden on the Board and in the backlog.",
+        "resolution": "Confirmed by reading boardOps.deleteColumn and boardIssueOps.spawnNext. Fixed in baf3d63: an issue left in the deleted column goes to the column spawnNext would pick without it (first to-do, else first open, else first; resolved if that is done). Undo still removes it. New test file with 3 cases; failfirst 36517478453 green (3 fail without)."
+      }
+    ],
+    "fixedByReviewer": []
+  },
+  "rejected": [],
+  "a11yNoted": [
+    "src/components/board/InlineCreate.jsx:63: the Epic panel's composer keeps aria-label 'Summary of the new issue' while its placeholder asks 'What is this epic?'.",
+    "src/pages/BoardSettings.jsx:144: the column-delete effect span ('and will be marked done' / 'and will be reopened') is not in a live region, and the select's aria-label 'Move its issues to' overrides the label text.",
+    "src/components/board/BacklogParts.jsx:50-53: picking the ticked Move to item closes the menu with no feedback."
+  ],
+  "baselineFailures": [],
+  "dsgLayoutVerdicts": [],
+  "notes": "All Wave 3 boards rows plus R5-BRD-01, R5-BRD-01b and R5-BRD-02 are fixed. The two review findings were confirmed and fixed (acd3c0c, baf3d63); failfirst and named-tests run 36517478453 is green (tests job: the 104-r5-brd files plus the existing board unit and 82-* page tests; lint green). The last full gate is 36462553059 on 7903c8a (green); the two review fixes after it are covered by the named-tests run only, so the coordinator's batch gate should cover them. Cancelled runs 36461286711 and 36461283331 are superseded (7903c8a fixed the test premise). dsgLayoutVerdicts is empty: none of the listed DPH/DVIS rows' commits touch files this cluster changed (they are in résumé-editor panels, the Dashboard and the Job tracker). The branch also carries 56e42bf and e939340 from the work line, which are not this cluster's."
+}
