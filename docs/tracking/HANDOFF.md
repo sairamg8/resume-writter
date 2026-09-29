@@ -3,8 +3,8 @@
 **2026-09-29 21:20 UTC — COORDINATOR RUN session_01CAwUZJx2CYW1r6VSh7tBT6 (scheduled; lock on claude/coordinator-lock, refreshed every 30 min):**
 - The 18:31 coordinator (session_01RkixKL4TAb2mizpdwJHkot) stalled at 18:54 on a permission prompt; its six round-7 areas were all
   finished (CI fail-first + second-agent review) and are now **merged into claude/r4-green** (dash, pdf, boards, sync, editor, jobs:
-  11 fixes; aa4fef8b..7bf94d30; seen-list updated 9519ef6b, 125 entries). **Full gate on `9519ef6b` dispatched ~21:10 UTC.**
-- PR #3 (r4-green → master) now carries this round-7 code too: merge it only once the full gate on its head is green.
+  11 fixes; aa4fef8b..7bf94d30; seen-list updated 9519ef6b, 125 entries). **Full gate 36630881766 on `9519ef6b` GREEN (21:21 UTC).** Owner deploy: merge PR #3, or `git push origin 9519ef6b:refs/heads/master`.
+- PR #3 (r4-green → master) carries round 7 + the starter-test fix; body updated; its head is 9519ef6b + docs only. If more code lands on r4-green before it is merged, gate the new head first.
 - Running: workflow wf_4ea29045-3a8 = **round 7 import, export, tools**; workflow wf_e11feb54-e85 = **round 8 dash, pdf, boards,
   sync, editor (+ Website-freeze lead), jobs** (base 9519ef6b). Script: flowcv-hunt-round (finder → skeptic → fixer with fail-first
   on claude/wf-r5-hunt<N>-<area> → reviewer). Still to run: round 8 import, export, tools (after round 7's merge).
