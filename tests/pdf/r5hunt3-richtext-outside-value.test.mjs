@@ -76,4 +76,36 @@ describe('a rich-text box with the caret takes in a value changed from outside (
       assert.equal(t.box.innerHTML, '<p style="color:red">Led the team</p>');
     } finally { await t.view.unmount(); }
   });
+
+  // Review: a word composed with an IME ends (compositionend) before the box loses focus, and on
+  // most Android keyboards every word is composed, so the blur path above is rarely what runs.
+  it('a value that comes while a word is being composed is shown when the composition ends, and the old text is not written back', async () => {
+    const t = await editor('<p>Old</p>');
+    try {
+      t.fire('onCompositionStart');
+      t.box.innerHTML = '<p>Old ka</p>';
+      t.setValue('<p>NEW TEXT</p>'); // another tab's save reaches the store mid-word
+      t.fire('onCompositionEnd');
+      assert.equal(t.box.innerHTML, '<p>NEW TEXT</p>', 'the store\'s newer text is shown');
+      assert.deepEqual(t.stored, [], 'the text typed over the old value is not written over the newer one');
+      t.fire('onInput'); // Firefox fires input after compositionend
+      t.type('<p>NEW TEXT!</p>');
+      assert.deepEqual(t.stored.filter((v) => !v.includes('Old')), t.stored, 'the old text is never written back');
+      assert.equal(t.stored.at(-1), '<p>NEW TEXT!</p>');
+    } finally { await t.view.unmount(); }
+  });
+
+  // Review: an outside value equal to one this editor wrote earlier (another tab's undo back to it,
+  // a stale copy saved elsewhere) was taken for its own echo and never shown.
+  it('an outside value equal to text this editor wrote earlier is shown, not taken for its echo', async () => {
+    const t = await editor('<p>A</p>');
+    try {
+      t.type('<p>AB</p>');
+      t.type('<p>ABC</p>');
+      t.setValue('<p>AB</p>'); // another tab puts back the earlier text
+      assert.equal(t.box.innerHTML, '<p>AB</p>', 'the box shows what the store holds');
+      t.type('<p>ABD</p>');
+      assert.deepEqual(t.stored, ['<p>AB</p>', '<p>ABC</p>', '<p>ABD</p>'], 'the next keystroke builds on the store\'s text');
+    } finally { await t.view.unmount(); }
+  });
 });

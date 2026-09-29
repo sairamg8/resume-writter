@@ -65,7 +65,11 @@ export default function RichTextEditor({ label, ariaLabel, value, onChange, plac
     const el = ref.current;
     if (!el) return;
     if (document.activeElement !== el) { adopt(value); return; }
-    if (emitted.current.includes(value ?? '')) return;
+    // Its own echo: the store has taken this value and every one emitted before it, so those are
+    // dropped. An older value of its own that comes back later (another tab's undo, a stale copy
+    // saved elsewhere) is then an outside value again, and shown, not kept off screen for good.
+    const echo = emitted.current.lastIndexOf(value ?? '');
+    if (echo !== -1) { emitted.current = emitted.current.slice(echo + 1); return; }
     if (el.innerHTML === synced.current && !isComposing.current) adopt(value);
     else pending.current = true;
   }, [value]);
@@ -76,13 +80,24 @@ export default function RichTextEditor({ label, ariaLabel, value, onChange, plac
     if (pending.current && ref.current) adopt(latest.current);
   }
 
+  // A word composed with an IME (and every word on most Android keyboards) ends before the box loses
+  // focus, and emitting then wrote the box's text, typed over the old value, back over an outside
+  // value that came meanwhile. The store's newer text is taken in instead; the composed word, typed
+  // over text that is no longer there, goes (R5-HUNT3).
+  function onCompositionEnd() {
+    isComposing.current = false;
+    if (pending.current && ref.current) adopt(latest.current);
+    else onInput();
+  }
+
   // What the editor holds, with any picture dropped first (dropMedia): the stored value never keeps
   // an <img> or a data: URL, whichever way the browser put one in.
   function emit() {
     const el = ref.current;
     if (el) dropMedia(el);
     const html = el?.innerHTML || '';
-    emitted.current = [...emitted.current.slice(-9), html];
+    // What the store holds already comes back as no new value, so it is no echo to wait for.
+    if (html !== (latest.current ?? '')) emitted.current = [...emitted.current.slice(-9), html];
     synced.current = el ? el.innerHTML : null;
     pending.current = false;
     onChange(html);
@@ -284,7 +299,7 @@ export default function RichTextEditor({ label, ariaLabel, value, onChange, plac
           onDragStart={onDragStart}
           onDragEnd={() => { dragSource.current = null; }}
           onCompositionStart={() => { isComposing.current = true; }}
-          onCompositionEnd={() => { isComposing.current = false; onInput(); }}
+          onCompositionEnd={onCompositionEnd}
           className="px-3 py-2 text-sm pointer-coarse:text-base focus:outline-none empty-placeholder rich-text-output"
           style={{ minHeight: minH }}
           data-placeholder={placeholder}
