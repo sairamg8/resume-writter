@@ -331,8 +331,10 @@ export function extractResumeCorpus(resume, { addresses = true } = {}) {
         continue;
       }
       parts.push(...PRINTED_FIELDS.map((key) => (addresses || key !== 'email' ? fieldText(item[key]) : '')));
-      // A certificate prints its link's label where it has one, a project its link.
-      parts.push(fieldText(item.urlLabel) || (addresses ? fieldText(item.url) : ''));
+      // A certificate prints its link's label where it has one, a project its link. A label whose URL
+      // was cleared prints nowhere and the editor hides its box, so it is not counted
+      // (R5-HUNT9-CERT-LINK-LABEL-WITHOUT-URL-COUNTED).
+      if (fieldText(item.url).trim()) parts.push(fieldText(item.urlLabel) || (addresses ? fieldText(item.url) : ''));
       parts.push(printedText(fieldText(item.description)));
       if (Array.isArray(item.bullets)) parts.push(...item.bullets.map(fieldText));
     }
