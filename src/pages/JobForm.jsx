@@ -80,7 +80,8 @@ export function JobForm({ store }) {
   const [opened] = useState(() => existing ?? null);
   const [start] = useState(() => jobFormValues(existing));
   const key = draftKey(id);
-  // A draft left by a Back or a link away, restored when it differs from the job as it is now.
+  // A draft left by a Back or a link away — the fields typed — laid over the job as it is now, and
+  // restored when that differs from it.
   const [draft] = useState(() => {
     const stored = readDraft(key);
     if (!stored) return null;
@@ -132,11 +133,14 @@ export function JobForm({ store }) {
     leaveTo(backPath);
   }
 
-  // Keep the draft while the form differs from its start; none once it is back there.
+  // Keep the draft while the form differs from its start; none once it is back there. Only the
+  // fields typed are kept: the whole form held every other field as it was then, and restored over
+  // a job moved or edited since (the board, another tab), Save wrote those back and moved the job
+  // back to its old status with a false history entry, as J-02's overwrite (R5-HUNT1).
   useEffect(() => {
-    if (dirty) writeDraft(key, form);
+    if (dirty) writeDraft(key, formPatch(start, form));
     else clearDraft(key);
-  }, [dirty, form, key]);
+  }, [dirty, form, key, start]);
 
   function discardRestored() {
     clearDraft(key);

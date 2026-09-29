@@ -62,7 +62,11 @@ export function JobSummary({ jobs, onOpen }) {
   const top = Math.max(1, funnel[0]?.count ?? 0);
   const today = todayLocalISO();
   const soon = jobs.filter((j) => isOpen(j) && j.deadline && j.deadline >= today).sort((a, b) => a.deadline.localeCompare(b.deadline)).slice(0, 6);
-  const followUps = jobs.filter((j) => isFollowUpDue(j)).slice(0, 6);
+  // The most overdue first, as the deadlines are by date: in board order the six shown were
+  // whichever sat first, and the rest were hidden without a word (R5-HUNT1).
+  const due = jobs.filter((j) => isFollowUpDue(j)).sort((a, b) => a.followUpDate.localeCompare(b.followUpDate));
+  const followUps = due.slice(0, 6);
+  const moreDue = due.length - followUps.length;
   const parts = JOB_STATUSES.map((st) => ({ id: st.id, label: st.label, value: jobs.filter((j) => j.status === st.id).length, color: st.color })).filter((p) => p.value > 0);
 
   return (
@@ -102,7 +106,12 @@ export function JobSummary({ jobs, onOpen }) {
           {soon.length ? <ul className="-mx-2 flex flex-col">{soon.map((j) => <JobRow key={j.id} job={j} date={j.deadline} onOpen={onOpen} />)}</ul> : <p className="text-sm text-ink-subtlest">No deadlines ahead.</p>}
         </Card>
         <Card title="Follow-ups due" description="Open applications whose follow-up date has come.">
-          {followUps.length ? <ul className="-mx-2 flex flex-col">{followUps.map((j) => <JobRow key={j.id} job={j} date={j.followUpDate} onOpen={onOpen} />)}</ul> : (
+          {followUps.length ? (
+            <>
+              <ul className="-mx-2 flex flex-col">{followUps.map((j) => <JobRow key={j.id} job={j} date={j.followUpDate} onOpen={onOpen} />)}</ul>
+              {moreDue > 0 && <p className="text-[12px] text-ink-subtlest">+{moreDue} more {moreDue === 1 ? 'follow-up' : 'follow-ups'} due</p>}
+            </>
+          ) : (
             <p className="flex items-center gap-2 text-sm text-ink-subtlest"><BellRing size={16} aria-hidden="true" /> Nothing to chase today.</p>
           )}
         </Card>
