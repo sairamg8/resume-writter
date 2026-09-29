@@ -8,7 +8,7 @@
 // still prints none, and the editor says so (usePrintableImage).
 import { KINDS, drawableImage, readImageFile } from './imageUpload.js';
 import { photoOption } from '../constants/photoOptions.js';
-import { isContactIconImage } from './contactIconPaths.js';
+import { isContactIconImage } from './contactIconImage.js';
 
 /** Copies made (null: none could be), by saved data URL, oldest first. */
 const made = new Map();

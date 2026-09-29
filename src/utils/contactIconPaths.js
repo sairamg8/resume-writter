@@ -147,14 +147,7 @@ export function getCustomContactIcon(field, settings) {
   return typeof src === 'string' && src.trim() ? src.trim() : null;
 }
 
-/**
- * True when a field's icon (getCustomContactIcon) is an image to draw — a data URL or a web
- * address — rather than a picker choice drawn from the shapes. The editor and the PDF both ask
- * this, so a picked icon cannot be taken for an image address in one and not the other.
- */
-export function isContactIconImage(src) {
-  return typeof src === 'string' && /^(data:image\/|https?:\/\/)/.test(src);
-}
+export { isContactIconImage } from './contactIconImage.js';
 
 /**
  * Curated registry of selectable header vector icons for each contact field and general use.
