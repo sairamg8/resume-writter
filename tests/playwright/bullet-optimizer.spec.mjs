@@ -23,6 +23,8 @@ async function description(page) {
 
 /** The saved résumé's first entry's description (localStorage, as the app saved it). */
 const savedDescription = (page) => page.evaluate(() => JSON.parse(localStorage.getItem('cpwtcv_v1')).resumes[0].sections[0].items[0].description);
+/** `html` with every character outside printable ASCII written as \uXXXX, so a failure shows one. */
+const visible = (html) => html.replace(/[^\x20-\x7e]/g, (c) => `\\u${c.charCodeAt(0).toString(16).padStart(4, '0')}`);
 
 test('opens on the bullet the caret is in, and Apply replaces that bullet', async ({ page }) => {
   const { editor, star } = await description(page);
@@ -57,4 +59,64 @@ test('opened with no caret in the field: an empty statement, added as a new bull
   await statement.fill('Shipped the new checkout, lifting conversion 12%');
   await page.getByRole('button', { name: 'Apply to Resume' }).click();
   await expect(editor.locator('li')).toHaveText(['Was responsible for the payments team of 5', 'Built the ledger service', 'Shipped the new checkout, lifting conversion 12%']);
+});
+
+// R4-SW-WT-02: text after a nested list continues its item (the ATS bullet "Led migration for 3
+// regions", R4-LO-16). The optimizer opens that whole statement from a caret in either run, and Apply
+// writes the result in the first run and deletes the later one, the nested list kept — in a real
+// browser's contentEditable, whose delete and insertText the fake DOM only imitates.
+test('a list item split by a nested list opens and applies as one statement, its sub-list kept', async ({ page }) => {
+  const nested = '<ul><li>Led migration<ul><li>Cut costs by 30%</li></ul> for 3 regions</li><li>Built the ledger service</li></ul>';
+  await visitEditor(page, 'classic', { sections: [{ ...SECTIONS[0], items: [{ ...SECTIONS[0].items[0], description: nested }] }] });
+  await page.getByText('Staff Engineer', { exact: true }).first().click();
+  // Found by the bullet Apply leaves alone: the one it rewrites changes its text.
+  const editor = page.locator('[contenteditable="true"]').filter({ hasText: 'Built the ledger service' });
+  await expect(editor).toBeVisible();
+  // The caret in " for 3 regions", the text after the nested list.
+  await editor.evaluate((el) => {
+    el.focus();
+    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    let node = walker.nextNode();
+    while (node && !node.nodeValue.includes('for 3 regions')) node = walker.nextNode();
+    document.getSelection().collapse(node, 4);
+  });
+  await editor.locator('xpath=..').getByTitle('Bullet Optimizer & STAR Formula Helper').click();
+  const statement = page.locator('textarea').last();
+  await expect(statement).toHaveValue('Led migration for 3 regions');
+  await statement.fill('Led the migration of 40 services across 3 regions');
+  await page.getByRole('button', { name: 'Apply to Resume' }).click();
+  await expect(editor.locator('li')).toHaveText(['Led the migration of 40 services across 3 regionsCut costs by 30%', 'Cut costs by 30%', 'Built the ledger service']);
+  await expect.poll(() => savedDescription(page)).toContain('<li>Cut costs by 30%</li>');
+  await expect.poll(() => savedDescription(page)).not.toContain('for 3 regions<');
+  // Nothing is left where the later run was: no <br> placeholder or empty line after the sub-list,
+  // which the PDF printed as a blank line inside the bullet (review of R4-SW-WT-02).
+  await expect.poll(async () => visible(await savedDescription(page))).toBe('<ul><li>Led the migration of 40 services across 3 regions<ul><li>Cut costs by 30%</li></ul></li><li>Built the ledger service</li></ul>');
+});
+
+// R4-SW-WT-02: an item whose statement is two paragraphs ('<li><p>A</p><p>B</p></li>') opens as "A B",
+// and Apply deletes the second paragraph whole — Chrome's delete over a block, not the fake DOM's —
+// leaving one paragraph and no empty line in the item.
+test('a list item split in paragraphs opens and applies as one statement, with no empty line left', async ({ page }) => {
+  const paragraphs = '<ul><li><p>Owned billing</p><p>for 3 regions</p></li><li>Built the ledger service</li></ul>';
+  await visitEditor(page, 'classic', { sections: [{ ...SECTIONS[0], items: [{ ...SECTIONS[0].items[0], description: paragraphs }] }] });
+  await page.getByText('Staff Engineer', { exact: true }).first().click();
+  const editor = page.locator('[contenteditable="true"]').filter({ hasText: 'Built the ledger service' });
+  await expect(editor).toBeVisible();
+  // The caret in "for 3 regions", the second paragraph.
+  await editor.evaluate((el) => {
+    el.focus();
+    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    let node = walker.nextNode();
+    while (node && !node.nodeValue.includes('for 3 regions')) node = walker.nextNode();
+    document.getSelection().collapse(node, 4);
+  });
+  await editor.locator('xpath=..').getByTitle('Bullet Optimizer & STAR Formula Helper').click();
+  const statement = page.locator('textarea').last();
+  await expect(statement).toHaveValue('Owned billing for 3 regions');
+  await statement.fill('Owned billing for 3 regions, cutting costs 20%');
+  await page.getByRole('button', { name: 'Apply to Resume' }).click();
+  await expect(editor.locator('li')).toHaveText(['Owned billing for 3 regions, cutting costs 20%', 'Built the ledger service']);
+  // Chrome's delete over the second paragraph merges it into the first, and may unwrap it: either is
+  // one line. What must not be left is an empty paragraph or a <br>.
+  await expect.poll(async () => visible(await savedDescription(page))).toMatch(/^<ul><li>(?:<p>)?Owned billing for 3 regions, cutting costs 20%(?:<\/p>)?<\/li><li>Built the ledger service<\/li><\/ul>$/);
 });

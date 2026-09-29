@@ -199,14 +199,19 @@ class FakeDocument extends FakeNode {
   createRange() { return new FakeRange(this); }
   getSelection() { return this.selection; }
   /**
-   * `insertText` only — the one command the editors run outside a browser (RichTextEditor's Apply,
-   * AUD-09): the selection's text replaced by `text`, left as text, and the caret after it. Every
-   * other command returns false rather than pretending.
+   * `insertText` and `delete` only — the commands the editors run outside a browser (RichTextEditor's
+   * Apply, AUD-09, R4-SW-WT-02): the selection's text replaced by `text`, left as text, and the caret
+   * after it; or the selection's text removed. Every other command returns false rather than pretending.
    */
   execCommand(command, _ui, text) {
-    if (command !== 'insertText') return false;
+    if (command !== 'insertText' && command !== 'delete') return false;
     const range = this.selection.getRangeAt(0);
     if (!range) return false;
+    if (command === 'delete') {
+      range.deleteContents();
+      this.selection.removeAllRanges();
+      return true;
+    }
     const at = range.deleteContents() ?? range.startContainer;
     if (at.nodeType === 3) {
       const cut = at === range.startContainer ? range.startOffset : at.nodeValue.length;

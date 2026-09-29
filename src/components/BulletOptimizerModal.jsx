@@ -10,6 +10,7 @@ import {
   autoFixWeakPhrases,
   insertActionVerb,
   insertMetric,
+  opensWithAuxiliary,
   ACTION_VERBS_BY_CATEGORY,
   GOOGLE_XYZ_TEMPLATES
 } from '@/utils/bulletOptimizer';
@@ -20,20 +21,30 @@ export default function BulletOptimizerModal({ isOpen, onClose, initialText = ''
   const [activeCategory, setActiveCategory] = useState('Technical & Engineering');
   // Copy's outcome, shown on the button for a moment: 'done', 'failed' or null.
   const [copied, setCopied] = useState(null);
-  // The statement as it was before a template replaced it, for Undo (R4-DUX-22); null when there is
-  // nothing to undo. It stays through further template picks (Undo goes back to the user's own text)
-  // and is dropped once the text is changed any other way.
+  // The statement as it was before a template replaced it, for "Restore my statement" (R4-DUX-22); null
+  // when there is nothing to restore. A template is full of placeholders ("[X]%", "[feature/system]"), so
+  // the text is always edited next: the saved statement stays through typing, Auto-Fix and the chips
+  // (dropping it on the first keystroke left Cancel, and the whole session with it, as the only way
+  // back), and through further template picks (it is the user's own text that comes back). It goes once
+  // it is restored, or once the text is that statement again; Apply and closing unmount the modal.
   const [beforeTemplate, setBeforeTemplate] = useState(null);
+  // A power verb was picked for a statement that opens with "Did not…", "Was…" or "Never…": no verb
+  // can go before those words, so the text is left alone and a tip asks for a rewrite (R4-SW-WT-04).
+  const [verbBlocked, setVerbBlocked] = useState(false);
 
   if (!isOpen) return null;
 
   const analysis = analyzeBullet(text);
   const { score, hasActionVerb, hasMetric, weakPhrases, suggestions } = analysis;
 
-  /** Any change but a template: the statement is the user's own again, so Undo goes away. */
+  /**
+   * Any change but a template (typing, Auto-Fix, a chip): `next` is the new text, or a function of the
+   * current one. The saved statement is kept for restoring, unless the text is that statement again.
+   */
   function editText(next) {
-    setText(next);
-    setBeforeTemplate(null);
+    const value = typeof next === 'function' ? next(text) : next;
+    setText(value);
+    if (value === beforeTemplate) setBeforeTemplate(null);
   }
 
   function handleAutoFix() {
@@ -43,6 +54,10 @@ export default function BulletOptimizerModal({ isOpen, onClose, initialText = ''
   // The verb in place of a leading verb or weak phrase, else before the first word; the metric before
   // the closing full stop (R4-CL-07, R4-CL-08).
   function handleInsertVerb(verb) {
+    if (opensWithAuxiliary(text)) {
+      setVerbBlocked(true);
+      return;
+    }
     editText(prev => insertActionVerb(prev, verb));
   }
 
@@ -50,15 +65,17 @@ export default function BulletOptimizerModal({ isOpen, onClose, initialText = ''
     editText(prev => insertMetric(prev, metricStr));
   }
 
-  // A template replaces the whole statement, so the text it replaced is kept for Undo.
+  // A template replaces the whole statement, so the text it replaced is kept for restoring.
   function handleInsertTemplate(tmpl) {
     if (tmpl === text) return;
     setBeforeTemplate(prev => (prev === null ? text : prev));
     setText(tmpl);
   }
 
-  function handleUndoTemplate() {
-    editText(beforeTemplate);
+  // Back to the user's own statement: the edits made to the template go, as the button says.
+  function handleRestoreStatement() {
+    setText(beforeTemplate);
+    setBeforeTemplate(null);
   }
 
   function handleApply() {
@@ -85,12 +102,15 @@ export default function BulletOptimizerModal({ isOpen, onClose, initialText = ''
   // with the page behind held still. On a phone it fills the screen, its body scrolling between the
   // title and the action row (R4-DPH-37); the action row wraps rather than squeezing its buttons (R4-DPH-38).
   // A click beside the box closes it only while the statement is still the one it opened with: once
-  // it is rewritten, a stray click must not throw the rewrite away — Cancel, × and Escape still close
-  // it (R4-DUX-09).
+  // it is rewritten, a stray click must not throw the rewrite away (R4-DUX-09). Escape likewise: it is
+  // pressed by reflex in a text field, and the kit's default closed a rewrite with one key (R5-OPT-01).
+  // The Dialog still takes that Escape and ignores it here, rather than being told not to handle it:
+  // unhandled, it went on to the dialog the editor sits in (an issue's), which closed instead.
+  // Cancel and × always close it; Apply saves.
   return (
     <Dialog
       open
-      onClose={onClose}
+      onClose={(reason) => { if (reason !== 'escape' || text === initialText) onClose(); }}
       size="lg"
       title="Bullet Optimizer & STAR Formula"
       description="Transform weak descriptions into Google X-Y-Z high-impact achievements"
@@ -135,10 +155,11 @@ export default function BulletOptimizerModal({ isOpen, onClose, initialText = ''
             <div className="flex items-center justify-between gap-3 text-[11px] text-gray-500">
               <span>Template applied: your statement was replaced.</span>
               <button
-                onClick={handleUndoTemplate}
+                onClick={handleRestoreStatement}
+                title="Puts your statement back as it was before the template; changes made to the template are discarded."
                 className="font-semibold text-blue-600 hover:text-blue-800 hover:underline shrink-0"
               >
-                Undo
+                Restore my statement
               </button>
             </div>
           )}
@@ -203,6 +224,13 @@ export default function BulletOptimizerModal({ isOpen, onClose, initialText = ''
               ))}
             </div>
           </div>
+          {/* Shown while the statement still opens that way: rewriting it takes the tip away. */}
+          {verbBlocked && opensWithAuxiliary(text) && (
+            <p className="text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded-xl p-2.5">
+              This starts with &ldquo;{text.replace(/^[^\p{L}]+/u, '').split(/\s+/).slice(0, 2).join(' ')}&rdquo;, so a verb can&rsquo;t go in front of it.
+              {' '}Rewrite it as something you did, e.g. &ldquo;Shipped every release on time&rdquo;, then pick a verb.
+            </p>
+          )}
           <div className="flex flex-wrap gap-1.5 max-h-20 overflow-y-auto p-1 bg-gray-50/60 rounded-xl border border-gray-100">
             {ACTION_VERBS_BY_CATEGORY[activeCategory]?.map(verb => (
               <button

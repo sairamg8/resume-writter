@@ -83,25 +83,41 @@ export default function RichTextEditor({ label, ariaLabel, value, onChange, plac
    * original left as it was (bug audit 2026-09-22).
    */
   function openOptimizer() {
-    const range = statementRange(ref.current);
-    optimizerTarget.current = range;
-    setOptimizerText(range ? range.toString().replace(/\s+/g, ' ').trim() : '');
+    const statement = statementRange(ref.current);
+    optimizerTarget.current = statement;
+    setOptimizerText(statement ? statement.toString().replace(/\s+/g, ' ').trim() : '');
     setOptimizerOpen(true);
   }
 
-  /** The optimizer's result in place of the statement it opened on, as text; with none, a new bullet. */
+  /**
+   * The optimizer's result in place of the statement it opened on, as text; with none, a new bullet.
+   * A list item's own statement split by a nested list (statementRange) takes it in its first run of
+   * text, and its later runs are deleted: the nested list between them is never touched (R4-SW-WT-02).
+   */
   function handleApplyOptimizedText(optimizedText) {
     const el = ref.current;
     const text = String(optimizedText || '').trim();
-    const range = optimizerTarget.current;
+    const statement = optimizerTarget.current;
     optimizerTarget.current = null;
     if (!el || !text) return;
     el.focus();
-    if (range && el.contains(range.commonAncestorContainer)) {
+    const range = statement?.target ?? statement;
+    const removals = statement?.removals ?? [];
+    if (range && [range, ...removals].every((r) => el.contains(r.commonAncestorContainer))) {
       const sel = window.getSelection();
+      // The item's own elements before the edit, each with whether it was blank: dropPlaceholders
+      // removes only what the edit added or emptied.
+      const kept = statement?.item ? new Map(ownElements(statement.item).map((n) => [n, isBlank(n)])) : null;
+      // The later runs go first, last to first, so the ranges before them keep their place.
+      for (const run of removals) {
+        sel.removeAllRanges();
+        sel.addRange(run);
+        document.execCommand('delete');
+      }
       sel.removeAllRanges();
       sel.addRange(range);
       document.execCommand('insertText', false, text);
+      if (kept) dropPlaceholders(statement.item, kept);
     } else {
       el.innerHTML = sanitizeRichText(`${el.innerHTML}<ul><li>${plainTextToHtml(text)}</li></ul>`);
     }
@@ -262,6 +278,10 @@ const BLOCKS = new Set([...STATEMENTS, 'UL', 'OL']);
  * empty; else, around the caret, the list item or paragraph it is in — or, in text that is not
  * in one (the first line Chrome leaves bare, lines split by <br>), the run of text between line
  * breaks. null when the caret is not in `el`, or sits on no text.
+ * A list item whose own text is split by a nested list or by paragraphs inside it is one statement,
+ * as the ATS score reads it and the PDF prints it ("Led migration" + sub-list + "for 3 regions" is
+ * "Led migration for 3 regions", R4-LO-16): then it is { target, removals, toString() } — the item's
+ * first run of text, which Apply replaces, and its later runs, which Apply deletes (R4-SW-WT-02).
  * Exported for tests/pdf/57-optimizer-statement: which statement the optimizer opens on is the
  * half of this fix a browser is not needed to check (AUD-09).
  */
@@ -279,6 +299,11 @@ export function statementRange(el) {
   for (let n = at.startContainer; n && n !== el; n = n.parentNode) {
     if (n.nodeType === 1 && STATEMENTS.has(n.nodeName)) { host = n; break; }
   }
+  // A list item's own statement, when a nested list or a paragraph inside it splits it in runs. One
+  // Range over them all would take the nested list with it, and Apply wiped the sub-items (R4-LO-12).
+  const item = itemOf(host, el);
+  const runs = item && ownRuns(item);
+  if (runs?.length > 1) return ownStatement(item, runs);
   // Its line: the text between line breaks, a <br> at any depth ("<p><b>A<br>B</b></p>" is two lines,
   // R4-LO-12) or a block inside it (a nested list is its own statements, not part of its item's).
   const leaves = lineLeaves(host);
@@ -305,6 +330,111 @@ export function statementRange(el) {
   range.setStartBefore(leaves[i]);
   range.setEndAfter(leaves[j]);
   return range.toString().trim() ? range : null;
+}
+
+/** The list item a statement host belongs to: itself, or the item its paragraph sits in; else null. */
+function itemOf(host, el) {
+  for (let n = host; n && n !== el; n = n.parentNode) {
+    if (n.nodeName === 'LI') return n;
+    if (n.nodeName === 'UL' || n.nodeName === 'OL') return null;
+  }
+  return null;
+}
+
+/**
+ * `item`'s own text as runs, in order: [{ leaves, block }], a run ending at each block inside it; its
+ * nested lists are skipped, as they are statements of their own. `block` is the paragraph a run is in
+ * (null for text straight in the item). Runs with no text are left out. null when a <br> splits the
+ * item's own text: its lines are then read one by one (R4-CL-04).
+ */
+function ownRuns(item) {
+  const runs = [];
+  let run = null;
+  let split = false;
+  const read = (node, block) => {
+    for (const child of node.childNodes) {
+      if (child.nodeName === 'BR') { split = true; return; }
+      if (['UL', 'OL', 'LI'].includes(child.nodeName)) { run = null; continue; }
+      if (isBreak(child)) {
+        run = null;
+        read(child, child);
+        run = null;
+      } else if (isWrapper(child)) {
+        read(child, block);
+      } else {
+        if (!run) runs.push(run = { leaves: [], block });
+        run.leaves.push(child);
+      }
+    }
+  };
+  read(item, null);
+  return split ? null : runs.filter((r) => r.leaves.some((n) => n.textContent.trim()));
+}
+
+/**
+ * An item's statement from its runs (ownRuns): the first to write into, the rest to delete, last first;
+ * `item` for Apply to tidy afterwards (dropPlaceholders).
+ */
+function ownStatement(item, runs) {
+  const span = (from, to) => {
+    const r = document.createRange();
+    r.setStartBefore(from);
+    r.setEndAfter(to);
+    return r;
+  };
+  const text = (run) => span(run.leaves[0], run.leaves[run.leaves.length - 1]);
+  const [first, ...rest] = runs;
+  return {
+    item,
+    target: text(first),
+    // A run that is a whole paragraph goes with its paragraph, so no empty line is left in the item.
+    removals: rest.reverse().map((run) => (run.block && run.block.textContent.trim() === text(run).toString().trim()
+      ? span(run.block, run.block)
+      : text(run))),
+    toString: () => runs.map((run) => text(run).toString().trim()).join(' '),
+  };
+}
+
+/** Every element in `node`, in order, outside its nested lists: an item's own markup. */
+function ownElements(node, out = []) {
+  for (const child of node.childNodes) {
+    if (child.nodeType !== 1 || child.nodeName === 'UL' || child.nodeName === 'OL') continue;
+    out.push(child);
+    ownElements(child, out);
+  }
+  return out;
+}
+
+/** Whether element `n` holds no text and nothing but <br>s: an empty line. */
+const isBlank = (n) => !n.textContent.replace(/[\s\u200b\ufeff]/g, '') && ownElements(n).every((c) => c.nodeName === 'BR');
+
+/**
+ * The empty lines Chrome's delete and insertText leave in an item Apply rewrote: a <p><br></p> where a
+ * deleted run after a nested list was, and a <br> before that nested list. The PDF printed each as a
+ * blank line inside the bullet (review of R4-SW-WT-02). A block goes when it is blank now and the edit
+ * added it or emptied it; a <br> goes when the edit added it and it ends a line before a block or the
+ * item's end. The item's own blank lines and <br>s stay (an item with a <br> of its own is never read
+ * as one statement anyway, ownRuns). Repeated until nothing changes: removing one can expose another.
+ */
+function dropPlaceholders(item, kept) {
+  for (let changed = true; changed;) {
+    changed = false;
+    for (const n of ownElements(item)) {
+      if (!item.contains(n) || (kept.has(n) && (n.nodeName === 'BR' || kept.get(n)))) continue;
+      let drop = false;
+      if (n.nodeName === 'BR') {
+        let next = n.nextSibling;
+        while (next && next.nodeType === 3 && !next.nodeValue.replace(/[\s\u200b\ufeff]/g, '')) next = next.nextSibling;
+        drop = !next || BLOCKS.has(next.nodeName);
+      } else {
+        drop = BLOCKS.has(n.nodeName) && isBlank(n);
+      }
+      if (drop) {
+        n.parentNode.removeChild(n);
+        changed = true;
+      }
+    }
+  }
 }
 
 /** A line break: a <br>, or a block element, which starts a line of its own. */

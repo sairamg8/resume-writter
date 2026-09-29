@@ -31,17 +31,37 @@ export const ACTION_VERBS_BY_CATEGORY = {
   ]
 };
 
+/**
+ * A weak-phrase entry: `phrases` matched as whole words — not inside a longer word ("Networked with",
+ * "unhandled", R4-LO-11), accented letters counted as letters — with `after` a further condition on
+ * what follows. `match` has one capture group (autoFixWeakPhrases reads its offset from that).
+ */
+const weak = (phrases, replacement, alternatives, after = '') => ({
+  phrases,
+  replacement,
+  alternatives,
+  match: new RegExp(`(?<![\\p{L}\\d])(${phrases.join('|')})(?![\\p{L}\\d])${after}`, 'giu'),
+});
+
+// ── The one weak-phrase list: the ATS score's "passive language" and the optimizer's ──
+// Each kept its own, and they disagreed: "Tasked with…" was passive to the score while the optimizer
+// said "No Weak Words" and Auto-Fix could not touch it; "Ensured…" was the reverse (R4-SW-WT-03). The
+// ATS score reads this list too (atsChecker.js), so every phrase it counts has a replacement here.
 export const WEAK_PHRASE_REPLACEMENTS = [
-  { match: /\b(was responsible for|responsible for)\b/gi, replacement: 'Led', alternatives: ['Directed', 'Oversaw', 'Spearheaded'] },
-  { match: /\b(worked on|worked with)\b/gi, replacement: 'Engineered', alternatives: ['Co-developed', 'Collaborated on', 'Built'] },
-  { match: /\b(helped with|helped to|assisted with|assisted in)\b/gi, replacement: 'Facilitated', alternatives: ['Supported delivery of', 'Co-engineered', 'Accelerated'] },
-  { match: /\b(handled)\b/gi, replacement: 'Managed', alternatives: ['Resolved', 'Administered', 'Executed'] },
+  weak(['was responsible for', 'responsible for', 'responsibilities included', 'duties included', 'tasked with'], 'Led', ['Directed', 'Oversaw', 'Spearheaded']),
+  weak(['worked on', 'worked with'], 'Engineered', ['Co-developed', 'Collaborated on', 'Built']),
+  weak(['helped with', 'assisted with', 'assisted in'], 'Facilitated', ['Supported delivery of', 'Co-engineered', 'Accelerated']),
+  // "Helped to cut costs" has a verb after it, as "tried to" has: "Facilitated cut costs" was no sentence.
+  weak(['helped to'], 'Facilitated efforts to', ['Supported efforts to', 'Drove efforts to', 'Accelerated efforts to']),
+  weak(['handled'], 'Managed', ['Resolved', 'Administered', 'Executed']),
   // "did" as a main verb only: in "did not" it is a helper verb, and Auto-Fix wrote "delivered not" (R4-LO-10).
-  { match: /\b(did)\b(?!\s+(?:not|never)\b)/gi, replacement: 'Delivered', alternatives: ['Conducted', 'Accomplished', 'Produced'] },
-  { match: /\b(made sure|ensured that|ensured)\b/gi, replacement: 'Guaranteed', alternatives: ['Maintained compliance with', 'Enforced', 'Safeguarded'] },
-  { match: /\b(changed)\b/gi, replacement: 'Transformed', alternatives: ['Modernized', 'Overhauled', 'Refactored'] },
-  { match: /\b(participated in)\b/gi, replacement: 'Contributed to', alternatives: ['Partnered in', 'Active member of', 'Drove'] },
-  { match: /\b(in charge of)\b/gi, replacement: 'Oversaw', alternatives: ['Led', 'Directed', 'Headed'] },
+  weak(['did'], 'Delivered', ['Conducted', 'Accomplished', 'Produced'], '(?!\\s+(?:not|never)(?![\\p{L}\\d]))'),
+  weak(['made sure', 'ensured that', 'ensured'], 'Guaranteed', ['Maintained compliance with', 'Enforced', 'Safeguarded']),
+  weak(['changed'], 'Transformed', ['Modernized', 'Overhauled', 'Refactored']),
+  weak(['participated in', 'was involved in'], 'Contributed to', ['Partnered in', 'Active member of', 'Drove']),
+  weak(['in charge of'], 'Oversaw', ['Led', 'Directed', 'Headed']),
+  // "Tried to cut costs" → "Led efforts to cut costs": a bare verb read "Drove cut costs".
+  weak(['tried to', 'attempted to'], 'Led efforts to', ['Drove efforts to', 'Spearheaded efforts to', 'Championed efforts to']),
 ];
 
 // ── The one verb list: high-impact action verbs (150+), the ATS score's and the optimizer's ──
@@ -200,7 +220,7 @@ export function analyzeBullet(text = '') {
   // its badge, score and Auto-Fix flickered (bug audit 2026-09-22). `phrase`: the words it found.
   const detectedWeakPhrases = [];
   for (const wp of WEAK_PHRASE_REPLACEMENTS) {
-    const found = clean.match(new RegExp(wp.match.source, 'i'));
+    const found = clean.match(new RegExp(wp.match.source, 'iu'));
     if (found) detectedWeakPhrases.push({ ...wp, phrase: found[0] });
   }
 
@@ -243,25 +263,56 @@ export function analyzeBullet(text = '') {
  * which is lowercased only when it is a word that is never a name ("In 2023, built" → "Spearheaded in
  * 2023, built"; "AWS" and "Kubernetes" stay, R4-LO-13). It always replaced the first word, whatever
  * it was ("Spearheaded for migrating…"), and joined the lines of the statement into one. Every other
- * character is kept.
+ * character is kept. A statement opening with a helper verb or a negation ("Did not miss…", "Was
+ * promoted…", "Never missed…") is returned as it is (opensWithAuxiliary): no verb can go before it —
+ * "Spearheaded did not miss…" — and dropping the words would change what it says (R4-SW-WT-04).
  */
 export function insertActionVerb(text, verb) {
   const s = String(text ?? '');
   if (!s.trim()) return `${verb} `;
   // Bullet marks, quotes and spaces before the first word stay where they are ("- Led …").
-  const lead = s.match(/^[\s•\-*–—◦▪▸‣⁃"'“‘(]*/u)[0];
+  const lead = s.match(LEAD_MARKS)[0];
   const rest = s.slice(lead.length);
   // A verb phrase Auto-Fix or the tips write ("Contributed to", "Collaborated on") goes whole, or the
   // chip left "Spearheaded to the hackathon".
+  // "Led efforts to" keeps its "efforts to", which has a verb after it: "Led efforts to cut costs"
+  // read "Spearheaded cut costs" (review of R4-SW-WT-03).
   const phrase = rest.match(LEADING_VERB_PHRASE);
-  if (phrase) return lead + verb + rest.slice(phrase[0].length);
+  if (phrase) return lead + verb + (/ efforts to$/i.test(phrase[0]) ? ' efforts to' : '') + rest.slice(phrase[0].length);
   if (leadsWithActionVerb(rest)) return lead + rest.replace(/^\p{L}[\p{L}'’-]*/u, verb);
   for (const wp of WEAK_PHRASE_REPLACEMENTS) {
     const weak = new RegExp(`^${wp.match.source}`, 'iu');
-    if (weak.test(rest)) return lead + rest.replace(weak, verb);
+    // "Tried to", "Attempted to" and "Helped to" have a verb after them: the chip keeps it one, as
+    // Auto-Fix does ("Spearheaded efforts to cut costs", not "Spearheaded cut costs").
+    if (weak.test(rest)) return lead + rest.replace(weak, (_, found) => (/\sto$/i.test(found) ? `${verb} efforts to` : verb));
   }
+  if (AUXILIARY_LEAD.test(rest)) return s;
   const [word] = rest.match(/^\p{L}*/u);
   return `${lead}${verb} ${FUNCTION_WORDS.has(word.toLowerCase()) && /^\p{Lu}\p{Ll}*$/u.test(word) ? word[0].toLowerCase() + rest.slice(1) : rest}`;
+}
+
+/** Bullet marks, quotes and spaces before a statement's first word. */
+const LEAD_MARKS = /^[\s•\-*–—◦▪▸‣⁃"'“‘(]*/u;
+
+/**
+ * A helper verb or a negation as a statement's first word: "Did not", "Didn't", "Was", "Has", "Never"…,
+ * and the modal ones: "Could not", "Can't", "Cannot", "Won't", "Should", "Must", "Might"… — they took a
+ * chip's verb in front ("Spearheaded Could not reproduce…", review of R4-SW-WT-04). "May" before a
+ * number is the month ("May 2023: shipped…"), not the helper verb. A statement opening with another
+ * negative — "No", "Nobody", "None", "Nothing", "Neither", "Nor", "Zero" — took it too: "Spearheaded no
+ * customer data was lost…" (review of R4-SW-WT-03); "No-code …" and "Zero-downtime …" are
+ * a noun's first word, and still take a verb.
+ */
+const AUXILIARY_LEAD = /^(?:(?:did|does|do|was|were|is|are|has|have|had|been|being|never|not|cannot|can|could|will|would|shall|should|must|might|may(?!\s*\d)|(?:wo|sha)(?=n['’]t))(?:n['’]t)?(?![\p{L}\d])|(?:no(?:body|ne|thing)?|neither|nor|zero)(?![\p{L}\d.-]))/iu;
+
+/**
+ * Whether a power-verb chip leaves `text` as it is because it opens with a helper verb or a negation
+ * ("Did not miss a release deadline"): the optimizer then asks for a rewrite instead (R4-SW-WT-04).
+ * "Did" as a main verb ("Did the audit") is a weak phrase the chip replaces, and is not one of these.
+ */
+export function opensWithAuxiliary(text) {
+  const rest = String(text ?? '').replace(LEAD_MARKS, '');
+  return AUXILIARY_LEAD.test(rest) && insertActionVerb(text, 'Led') === String(text ?? '');
 }
 
 /**
