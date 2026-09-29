@@ -90,7 +90,7 @@ equality only, never by clock. The store keeps the cloud's versions it last knew
 
 | When | What happens |
 |------|--------------|
-| A flush finds a copy in the cloud this page never saw (another device edited it since) | both kept: this page's copy under its id, the other one as a new résumé **"<name> (conflict copy)"** — on every device |
+| A flush finds a copy in the cloud this page never saw (another device edited it since) | both kept: this page's copy under its id, the other one as a new résumé **"<name> (conflict copy)"** — on every device; its id comes from the résumé and the other device's version, so two tabs that find the same conflict write one copy (R5-HUNT6) |
 | A deletion made from a copy older than the cloud's | not sent: the newer copy comes back (as R8-0 at a first sync) |
 | First sync: the copy here is one the cloud had, the cloud's is newer | the cloud's loads, whatever the clocks say |
 | First sync: changed on both sides (an offline edit, even across a reload) | both kept, as above |

@@ -52,8 +52,17 @@ export function createLineage() {
   };
 }
 
+/**
+ * The id of the conflict copy of `doc`, the same wherever the fork is found: from the résumé's id
+ * and the other device's version. Two tabs of one browser (or two devices) that read the cloud
+ * before either wrote both find the same fork; each used to make its copy under a new random id,
+ * and the account got two identical "(conflict copy)" résumés, on every device. Now both write
+ * the one copy.
+ */
+export const conflictId = (doc) => (Number.isFinite(doc.updatedAt) ? `${doc.id}-conflict-${doc.updatedAt}` : newId('resume'));
+
 /** `doc` — another device's copy — as a new résumé of its own: "<name> (conflict copy)", no original. */
-export function conflictCopy(doc, id = newId('resume')) {
+export function conflictCopy(doc, id = conflictId(doc)) {
   const { keep: _keep, deleted: _deleted, restoredAt: _restoredAt, ...rest } = doc;
   return { ...rest, id, name: `${doc.name || 'Untitled Resume'} (conflict copy)` };
 }
@@ -66,7 +75,7 @@ export function conflictCopy(doc, id = newId('resume')) {
  *   forked  ids changed on both sides: the copy here is kept and written
  *   copies  the cloud's copies of the forked ones, as new résumés (conflictCopy)
  */
-export function sortOut(local, docs, lineage, copyId = () => newId('resume')) {
+export function sortOut(local, docs, lineage, copyId = conflictId) {
   const here = new Map(local.filter(Boolean).map((r) => [r.id, r]));
   const pulled = new Set();
   const forked = new Set();
@@ -77,7 +86,7 @@ export function sortOut(local, docs, lineage, copyId = () => newId('resume')) {
     if (lineage.isSynced(doc.id, mine.updatedAt)) pulled.add(doc.id);
     else {
       forked.add(doc.id);
-      copies.push(conflictCopy(doc, copyId()));
+      copies.push(conflictCopy(doc, copyId(doc)));
     }
   }
   return { pulled, forked, copies };
@@ -91,13 +100,13 @@ export function sortOut(local, docs, lineage, copyId = () => newId('resume')) {
  *   back     those cloud copies: not deleted — put back in the store
  * A flagged copy (a demo account's deleted original) or none at all is nobody's edit: as before.
  */
-export function checkFlush({ writes, deletes, docs, lineage, copyId = () => newId('resume') }) {
+export function checkFlush({ writes, deletes, docs, lineage, copyId = conflictId }) {
   const cloud = new Map(docs.filter((d) => d && !d.deleted).map((d) => [d.id, d]));
   const theirs = (id, mine) => {
     const doc = cloud.get(id);
     return doc && doc.updatedAt !== mine && lineage.elsewhere(id, doc.updatedAt) ? doc : null;
   };
-  const copies = writes.map((r) => theirs(r.id, r.updatedAt)).filter(Boolean).map((doc) => conflictCopy(doc, copyId()));
+  const copies = writes.map((r) => theirs(r.id, r.updatedAt)).filter(Boolean).map((doc) => conflictCopy(doc, copyId(doc)));
   const back = deletes.map((id) => theirs(id, undefined)).filter(Boolean);
   const kept = new Set(back.map((d) => d.id));
   return { writes, copies, deletes: deletes.filter((id) => !kept.has(id)), back };

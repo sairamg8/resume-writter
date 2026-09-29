@@ -11,11 +11,18 @@ import * as ops from './boardOps.js';
 /**
  * The actions, given the store's `boardsNow()` (the list now, loaded first) and
  * `setBoards(change)` (the list becomes change(list); the same list back saves nothing).
- * `now()` is the time in ms.
+ * `now()` is the time in ms; `owner()` the account the list belongs to (its sync record), or null.
  */
-export function createBoardActions({ boardsNow, setBoards, now = () => Date.now() }) {
+export function createBoardActions({ boardsNow, setBoards, now = () => Date.now(), owner = () => null }) {
   const findBoard = (id) => boardsNow().find((b) => b.id === id) ?? null;
   const findIn = (boardId, part, id) => findBoard(boardId)?.[part].find((x) => x.id === id) ?? null;
+  // What a delete took, with the account whose list it left (`owner`), for its toast's Undo; the
+  // Undo puts nothing back once another account's list, or none, is here. A project's issue,
+  // column or sprint went back into any project with its id — and the demo project has the same
+  // id in every account: one deleted in one account's demo came back in the next one's, and was
+  // uploaded to it (R5-HUNT6 review).
+  const taken = (removed) => (removed ? { ...removed, owner: owner() } : null);
+  const stillOwner = (removed) => !removed?.owner || removed.owner === owner();
 
   /**
    * Apply the pure mutation `fn(board, ctx)` to board `boardId`; when it changes the board, save it
@@ -65,18 +72,25 @@ export function createBoardActions({ boardsNow, setBoards, now = () => Date.now(
 
   const toggleStar = (id) => change(id, (b) => ops.updateBoardFields(b, { starred: !b.starred }));
 
-  /** Delete a project; returns `{ board, index }` for restoreBoard (the toast's Undo), or null. */
+  /** Delete a project; returns `{ board, index, owner }` for restoreBoard (the toast's Undo), or null. */
   function deleteBoard(id) {
     const boards = boardsNow();
     const index = boards.findIndex((b) => b.id === id);
     if (index === -1) return null;
+    const removed = taken({ board: boards[index], index });
     setBoards((list) => list.filter((b) => b.id !== id));
-    return { board: boards[index], index };
+    return removed;
   }
 
-  /** Put a deleted project back where it was (a key another project took meanwhile is re-derived); true when it came back. */
+  /**
+   * Put a deleted project back where it was (a key another project took meanwhile is re-derived);
+   * true when it came back. Not once its account's list has left this browser (a sign-out, here or
+   * in another tab, while the toast was up): put into the list with no owner, the next account to
+   * sign in took it for its own and uploaded it.
+   */
   function restoreBoard(removed) {
     if (!removed?.board || findBoard(removed.board.id)) return false;
+    if (!stillOwner(removed)) return false;
     setBoards((boards) => {
       const taken = boards.map((b) => b.key);
       const board = taken.includes(removed.board.key) ? { ...removed.board, key: deriveKey(removed.board.title, taken) } : removed.board;
@@ -96,16 +110,16 @@ export function createBoardActions({ boardsNow, setBoards, now = () => Date.now(
   const updateColumn = (boardId, columnId, patch) => change(boardId, (b, ctx) => ops.updateColumn(b, columnId, patch, ctx));
   /**
    * Delete a column, its issues moving to `targetColumnId`; returns `{ boardId, columnId, before,
-   * after }` (the board either side of it) for restoreColumn — the toast's Undo — or null when
+   * after, owner }` (the board either side of it) for restoreColumn — the toast's Undo — or null when
    * refused (no target, last column).
    */
   function deleteColumn(boardId, columnId, targetColumnId) {
     const before = findBoard(boardId);
     if (!change(boardId, (b, ctx) => ops.deleteColumn(b, columnId, targetColumnId, ctx))) return null;
-    return { boardId, columnId, before, after: findBoard(boardId) };
+    return taken({ boardId, columnId, before, after: findBoard(boardId) });
   }
   /** Put a deleted column back (boardOps.restoreColumn), edits made since kept; true when it came back. */
-  const restoreColumn = (removed) => Boolean(removed?.boardId) && change(removed.boardId, (b) => ops.restoreColumn(b, removed));
+  const restoreColumn = (removed) => Boolean(removed?.boardId) && stillOwner(removed) && change(removed.boardId, (b) => ops.restoreColumn(b, removed));
   /**
    * Set a column's category (its issues resolved or reopened when it becomes or stops being done);
    * returns `{ boardId, columnId, before, after }` (the board either side of it) for
@@ -141,16 +155,16 @@ export function createBoardActions({ boardsNow, setBoards, now = () => Date.now(
   /** Move an issue: `{ columnId, sprintId, beforeId }` (see boardOps.moveIssue). */
   const moveIssue = (boardId, issueId, target) => change(boardId, (b, ctx) => ops.moveIssue(b, issueId, target, ctx));
 
-  /** Delete an issue; returns `{ issue, index, childIds }` for restoreIssue (the toast's Undo), or null. */
+  /** Delete an issue; returns `{ issue, index, childIds, owner }` for restoreIssue (the toast's Undo), or null. */
   function deleteIssue(boardId, issueId) {
     const board = findBoard(boardId);
     const removed = board && ops.removedIssue(board, issueId);
     if (!removed) return null;
     change(boardId, (b) => ops.deleteIssue(b, issueId));
-    return removed;
+    return taken(removed);
   }
   /** Put a deleted issue back where it was, with its number; true when it came back. */
-  const restoreIssue = (boardId, removed) => change(boardId, (b) => ops.restoreIssue(b, removed));
+  const restoreIssue = (boardId, removed) => stillOwner(removed) && change(boardId, (b) => ops.restoreIssue(b, removed));
 
   /** Copy an issue (right after it); returns the copy, or null. */
   function duplicateIssue(boardId, issueId) {
@@ -179,16 +193,16 @@ export function createBoardActions({ boardsNow, setBoards, now = () => Date.now(
   const startSprint = (boardId, sprintId, fields) => change(boardId, (b, ctx) => ops.startSprint(b, sprintId, fields, ctx));
   /** Complete the active sprint: open issues to `{ moveOpenTo }` (a future sprint's id) or the backlog. */
   const completeSprint = (boardId, sprintId, options) => change(boardId, (b, ctx) => ops.completeSprint(b, sprintId, options, ctx));
-  /** Delete a sprint (its issues go to the backlog); returns `{ sprint, index, issueIds, names }` for restoreSprint (the toast's Undo), or null. */
+  /** Delete a sprint (its issues go to the backlog); returns `{ sprint, index, issueIds, names, owner }` for restoreSprint (the toast's Undo), or null. */
   function deleteSprint(boardId, sprintId) {
     const board = findBoard(boardId);
     const removed = board && ops.removedSprint(board, sprintId);
     if (!removed) return null;
     change(boardId, (b, ctx) => ops.deleteSprint(b, sprintId, ctx));
-    return removed;
+    return taken(removed);
   }
   /** Put a deleted sprint back, with its issues still in the backlog; true when it came back. */
-  const restoreSprint = (boardId, removed) => change(boardId, (b, ctx) => ops.restoreSprint(b, removed, ctx));
+  const restoreSprint = (boardId, removed) => stillOwner(removed) && change(boardId, (b, ctx) => ops.restoreSprint(b, removed, ctx));
 
   return {
     keyError, addBoard, updateBoard, deleteBoard, restoreBoard, toggleStar,
