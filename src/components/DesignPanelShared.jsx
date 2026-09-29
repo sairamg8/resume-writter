@@ -55,7 +55,9 @@ export function NumberRow({ label, value, onChange, min = 1, max = 200, step = 1
   const snap = (n) => Number((Math.round(n / step) * step).toFixed(decimals));
   const typed = useTypedNumber({
     shown: Number.isInteger(current / step) && step >= 1 ? current + unit : (step < 1 ? fraction : current.toFixed(0)) + unit,
-    editText: String(current),
+    // A value saved with float error before the fix above (1.4000000000000001) shows as 1.4 in the
+    // focused box, not its long digits; a template's 1.35 still shows 1.35 (R5-HUNT6-LINE-HEIGHT-FLOAT).
+    editText: String(Number(current.toPrecision(15))),
     commit: (str) => {
       const n = parseFloat(str);
       if (!isNaN(n)) onChange(Math.min(max, Math.max(min, snap(n))));
