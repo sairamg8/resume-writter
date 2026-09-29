@@ -1,0 +1,32 @@
+{
+  "cluster": "r5-hunt7-editor",
+  "branch": "claude/wf-r5-hunt7-editor",
+  "base": "6a245810",
+  "rows": [
+    {
+      "id": "R5-HUNT7-LIST-TYPE",
+      "title": "A lettered or Roman-numbered list (a., i., A., I.) turned into 1., 2. when pasted or when an imported description was edited, and two numbered lists side by side merged into one count",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": ["8007a62c1436f9518fd53aa9e7520bdf7eb5e7b3"],
+      "tests": ["tests/unit/r5-hunt7-list-type.unit.mjs"],
+      "summary": "Now: a lettered or Roman-numbered list keeps its a. / i. / A. / I. markers and its start number (a list starting at c. still starts at c.) when it is pasted, including from Word for desktop, and after the editor stores it. The preview, PDF, Word, Markdown and ATS text all show the same markers. Two numbered lists side by side stay two lists, so the second starts again at 1. How: parseRichText now records, for each list item, which list it belongs to, that list's number type and the item's number. sanitizeRichText writes type= and start= back from these and closes an <ol> when the next item belongs to a different list. The stored HTML is stable: sanitizing it a second time changes nothing.",
+      "product_call": null,
+      "remaining": ""
+    },
+    {
+      "id": "R5-HUNT7-LINE-HEIGHT-COMMA",
+      "title": "Design > Spacing > Line Height typed with a decimal comma (1,6) was stored as 1, so the whole resume was squeezed with no message",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": ["c0927963468b09d547e61d9589879fb14348df76"],
+      "tests": ["tests/pdf/108-r5-hunt7-line-height-comma.test.mjs"],
+      "summary": "Now: typing 1,6 or 2,4 in a Design number box (NumberRow, which includes Line Height) and pressing Enter stores 1.6 or 2.4, the same as typing 1.6. The header-spacing box already worked this way. Before the fix, parseFloat stopped at the comma and the minimum clamp kept 1.",
+      "product_call": null,
+      "remaining": ""
+    }
+  ],
+  "review": null,
+  "baselineFailures": [],
+  "notes": "CI on head c0927963: failfirst run 36612663577 green (8007a62c: tests/unit/r5-hunt7-list-type.unit.mjs, 4 tests fail without the fix and pass with it; c0927963: tests/pdf/108-r5-hunt7-line-height-comma.test.mjs, 1 test fails without the fix and passes with it). Named-tests run 36612677918 green: 305/305 across 40 files. These are the two new tests plus every node test that imports richText.js or DesignPanelShared.jsx, and knowledge-docs, contact-fields and design-resets. Lint is green in both runs. No Playwright or Cypress spec covers list types or typing a decimal comma. cypress/e2e/30-starters-and-design.cy.js touches Line Height only through its buttons and presets, so it was left to the full gate. Accessibility: nothing noted."
+}
