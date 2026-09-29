@@ -1,10 +1,10 @@
 # Session Handoff — Resume Here
 
 > **OWNER — DEPLOY (the session's master push is refused as a 'Production Deploy'):**
-> `git push origin 27bfddf:refs/heads/master` — full gate run 36522551523 on that exact commit is GREEN (a fast-forward
-> from `b8d7667`: 56e42bf's stale-test fix + all eight Round 5 clusters: dash, panels, dlg, job, brd, out, opt, imp + the
-> start-up size fix). Then `python3 docs/tracking/tools/r4_tracker.py --deployed 27bfddf`, commit, push. A newer green sha
-> (with R2-148, gate running on a89bdd2) will replace this line.
+> `git push origin a89bdd2:refs/heads/master` — full gate run 36524194907 on that exact commit is GREEN (a fast-forward
+> from `b8d7667`: 56e42bf's stale-test fix + all eight Round 5 clusters (dash, panels, dlg, job, brd, out, opt, imp), the
+> start-up size fix and R2-148's public-link takedown on deletion). Then `python3 docs/tracking/tools/r4_tracker.py --deployed a89bdd2`,
+> commit, push. A newer green sha will replace this line.
 
 ## ⏩ COLD START HERE — 2026-09-29 03:15 UTC (coordinator session_013S3xa7VBjcBV3avHWTbYQF, scheduled run; owner travelling)
 
