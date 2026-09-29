@@ -19,12 +19,16 @@ function valuePrints(key, value) {
 
 /**
  * Whether `item`, an entry of a section of `type`, prints anything: it is shown and has a field its eye
- * does not hide that holds text. A skill group is decided by skillGroupPrints, as its renderers filter it.
+ * does not hide that holds text. A language prints only with its language (a proficiency alone does
+ * not). A skill group is decided by skillGroupPrints, as its renderers filter it.
  */
 export function entryPrints(type, item) {
   if (!item || item.visible === false) return false;
   if (type === 'skills') return skillGroupPrints(item);
   const hidden = new Set(item.hiddenFields || []);
+  // A proficiency is its language's label: alone ("Professional", every new row's default) it prints
+  // nothing, as Markdown and the ATS text already had it (R5-HUNT9-LANGUAGE-DEFAULT-PROFICIENCY-PRINTS-ALONE).
+  if (type === 'languages') return !hidden.has('language') && valuePrints('language', item.language);
   return Object.entries(item).some(([k, v]) => !NOT_PRINTED.has(k) && !hidden.has(k) && valuePrints(k, v));
 }
 
