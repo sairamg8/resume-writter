@@ -87,13 +87,17 @@ export default function DesignPanel({
    * one page, at each tighter step (pageFit.js) — the first that fits is written. Left mid-measure
    * (another résumé, the editor closed) or changed while it measures (another template, a margin
    * typed, Reset), it stops and writes nothing more: the steps were measured on a résumé no longer
-   * there, and updateSetting writes to whichever résumé is open.
+   * there, and updateSetting writes to whichever résumé is open. It replaces all five spacing numbers
+   * and may lower the text size, so, as Balanced and Spacious do, it offers Undo back to the look the
+   * résumé had (R5-HUNT6-FIT-UNDO) — unless an edit stopped it: Undo would take that edit back too.
    */
   async function fitToOnePage() {
     if (fitRun.current) return;
     fitRun.current = true;
     setFitting(true);
     setFitNotice('');
+    const before = designSnapshot(resume);
+    let edited = false;
     // The preset, but never looser than a number the résumé already has tighter (fitLadder).
     const preset = fitLadder(settings)[0];
     Object.entries(preset).forEach(([k, v]) => updateSetting(k, v));
@@ -106,7 +110,7 @@ export default function DesignPanel({
     let printed = measured.settings; // what the notice speaks of
     try {
       const fit = await fitOnePage(measured, { stopped });
-      if (!fit || stopped()) return;
+      if (!fit || stopped()) { edited = mounted.current && latest.current?.id === id; return; }
       Object.entries(fit.settings).forEach(([k, v]) => { if (preset[k] !== v) updateSetting(k, v); });
       printed = { ...measured.settings, ...fit.settings };
       notice = fitSizeNotice(settings, fit); // still over a page, or a smaller text size: said, never done silently
@@ -116,6 +120,15 @@ export default function DesignPanel({
       fitRun.current = false;
       noticeFor.current = { key: printedKey({ settings: printed }), reached: false };
       if (mounted.current) { setFitting(false); setFitNotice(notice); }
+      if (restoreDesign && !edited && mounted.current && latest.current?.id === id) {
+        toast({
+          id: 'spacing-preset',
+          title: 'Spacing: 1-Page Fit',
+          description: 'Margins, gaps, line height and text sizes replaced.',
+          duration: 8000,
+          action: { label: 'Undo', onClick: () => restoreDesign(before) },
+        });
+      }
     }
   }
 
