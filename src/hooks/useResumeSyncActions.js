@@ -110,6 +110,11 @@ export function liveStore(latest) {
     forgetDeletions: (ids, before, uid) => latest().store.forgetDeletions(ids, before, uid),
     restoreResumes: (list) => latest().store.restoreResumes(list),
     noteCloudVersions: (uid, versions) => latest().store.noteCloudVersions(uid, versions),
-    leaveAccount: (uid) => latest().store.leaveAccount(uid),
+    leaveAccount: (uid) => {
+      const { appState, store } = latest();
+      // Its recovery notice and backups copy the list: they leave with it (storageBackup.forgetRecovery).
+      if (uid && appState.syncedUid === uid) store.leaveRecovery?.();
+      store.leaveAccount(uid);
+    },
   };
 }

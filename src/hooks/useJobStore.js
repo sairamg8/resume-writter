@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react';
-import { backupRaw, loadSavedList, notSavedReason, pendingRecovery, readSavedList, rememberRecovery, setItemWithRoom } from '../utils/storageBackup.js';
+import { backupRaw, forgetRecovery, loadSavedList, notSavedReason, pendingRecovery, readSavedList, rememberRecovery, setItemWithRoom } from '../utils/storageBackup.js';
 import { newId } from '../utils/ids.js';
 import { addressableJobs, completeJob, readJob, statusId } from '../utils/normalizeJob.js';
 import { keepUnsaved } from '../utils/unsavedJobs.js';
@@ -340,6 +340,13 @@ function dismissRecovery() {
   update({ recovery: null });
 }
 
+/** The list left this browser with its account: its notice and backups go with it (forgetRecovery). */
+function leaveRecovery() {
+  if (!initialized) init();
+  forgetRecovery(KEY);
+  update({ recovery: null });
+}
+
 export function _resetJobStoreForTest() {
   current = null;
   stored = null;
@@ -350,7 +357,7 @@ export function _resetJobStoreForTest() {
 }
 
 // The actions as plain functions too: node tests drive the store without React.
-export { snapshot, subscribe, addJob, updateJob, moveJob, deleteJob, restoreJob, importJobs, clearDemoData, restoreJobs, dismissRecovery, jobsNow, replaceJobs };
+export { snapshot, subscribe, addJob, updateJob, moveJob, deleteJob, restoreJob, importJobs, clearDemoData, restoreJobs, dismissRecovery, leaveRecovery, jobsNow, replaceJobs };
 
 export function useJobStore() {
   const { jobs, persistError, recovery } = useSyncExternalStore(subscribe, snapshot);

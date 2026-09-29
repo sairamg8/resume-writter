@@ -277,3 +277,14 @@ export function rememberRecovery(key, recovery) {
   return notice;
 }
 
+/**
+ * The notice for `key` and every backup of it gone: the list they copy has left this browser with
+ * its account (it signed out, or another one signed in — cloudSyncLeave.js, collectionSyncPlan
+ * leaveList, R2-005). Left behind, they were offered to whoever used the browser next: the notice
+ * showed again whoever was signed in, and its "Download the copy" saved the last account's whole
+ * list (R5-HUNT4).
+ */
+export function forgetRecovery(key) {
+  rememberRecovery(key, null);
+  listBackups().filter((b) => b.of === key).forEach((b) => remove(b.key));
+}

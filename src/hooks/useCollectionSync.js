@@ -11,8 +11,8 @@ import { completeJob, readJob } from '@/utils/normalizeJob';
 import { completeBoard, readBoard } from '@/utils/normalizeBoard';
 import { isUntouchedDemoJob } from '@/utils/jobEdits';
 import { isUntouchedDemoBoard } from '@/utils/boardDemo';
-import { jobsNow, replaceJobs, subscribe as subscribeJobs } from '@/hooks/useJobStore';
-import { boardsNow, replaceBoards, subscribe as subscribeBoards } from '@/hooks/boardStoreState';
+import { jobsNow, leaveRecovery as leaveJobsRecovery, replaceJobs, subscribe as subscribeJobs } from '@/hooks/useJobStore';
+import { boardsNow, leaveRecovery as leaveBoardsRecovery, replaceBoards, subscribe as subscribeBoards } from '@/hooks/boardStoreState';
 
 const fs = { collection, doc, getDocsFromServer, getDocFromServer, writeBatch, arrayUnion, arrayRemove };
 
@@ -34,6 +34,7 @@ export const jobSync = {
     fromCloud: fromCloud(readJob, completeJob),
     label: (j) => [j.company, j.role].filter(Boolean).join(' — ') || 'Untitled job',
     seed: isUntouchedDemoJob,
+    leaveRecovery: leaveJobsRecovery,
   },
   meta: () => localMeta(JOBS_SYNC_KEY),
 };
@@ -45,6 +46,7 @@ export const boardSync = {
     fromCloud: fromCloud(readBoard, completeBoard),
     label: (b) => b.title || 'Untitled project',
     seed: isUntouchedDemoBoard,
+    leaveRecovery: leaveBoardsRecovery,
   },
   meta: () => localMeta(BOARDS_SYNC_KEY),
 };

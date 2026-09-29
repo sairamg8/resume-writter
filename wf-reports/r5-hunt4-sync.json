@@ -1,0 +1,86 @@
+{
+  "cluster": "r5-hunt4-sync",
+  "branch": "claude/wf-r5-hunt4-sync",
+  "base": "0a0148f150f67eab7994cff4601626fe7542181d",
+  "rows": [
+    {
+      "id": "R5-HUNT4-RECOVERY-BACKUP-SURVIVES-SIGNOUT",
+      "title": "After an account signs out (or another account signs in), its résumé, job or board list leaves the browser, but that list's recovery notice and raw backups stay. The next person can 'Download the copy' of the previous account's whole list.",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": [
+        "381cc6addcbe26940f220cb4d04fb53058b11bea",
+        "772c3b3fff321b8d79450b5a17ebd33a06707342"
+      ],
+      "tests": [
+        "tests/unit/recovery-leaves-with-account.unit.mjs",
+        "tests/pdf/106-r5-hunt4-resume-recovery-leaves-with-account.test.mjs"
+      ],
+      "summary": "Now: when an account's résumés, jobs or boards leave this browser (it signs out, or another account signs in while the list is still the last one's: R2-005), the list's recovery notice (<key>_recovery, including a notice held in memory because storage was full) and every raw backup of it (<key>_backup_<ms>) leave too. The notice is also taken off the open page. The next person can no longer download the previous account's list from the Dashboard, the Job Tracker or the board pages. How: a new storageBackup.forgetRecovery(key), and leaveRecovery() in useAppStore, useJobStore and boardStoreState. For jobs and boards, collectionSyncEngine.leave calls store.leaveRecovery?.() only after leaveList has confirmed the list is that account's (meta.uid === uid); jobSync and boardSync pass the stores' functions. For résumés, liveStore.leaveAccount calls store.leaveRecovery?.() only when appState.syncedUid === uid, the same condition cloudSyncLeave.leaveAccount uses. A list no account ever synced, or one in a build with no cloud, keeps its notice and backups, because it is still this browser's. Trade-off: entries of the account's own list that could not be read, and were never in its cloud, are deleted on sign-out rather than kept aside for its next sign-in. The finding named deleting as acceptable. Review: the tests now load without the fix and fail at their assertions. Two added cases drive the real useAppStore through liveStore.",
+      "remaining": "(1) A second tab that already shows the notice keeps showing it until reload, but its Download finds nothing because the backup is gone. Nothing leaks. (2) A résumé store whose whole value is unparseable JSON loads with syncedUid null. If the owner's session ended before that load, nobody's leave matches the list, and its backup and notice stay for the next account. This needs a corrupt store and an expired session together, and the owner cannot be read from an unreadable value. (3) Notices and backups left behind by builds before this fix cannot be attributed to an account, so they are not cleaned up.",
+      "failfirst_run": "36555944155 (green: with 381cc6a's src diff reversed on the review head 772c3b3, both files load and fail at their assertions with '# fail 7' (unit 4, pdf 3), and they pass with the fix; named-tests job green: the 2 new files plus 18-cloud-sync-sign-out, 105-r5-hunt3-other-tab-sign-out-unsaved, storage-backup and storage-recovery-durability; lint green). The fixer's run 36554318767 ('# fail 2') failed only at import and did not show that any assertion catches the bug."
+    }
+  ],
+  "review": {
+    "rounds": [
+      {
+        "round": 1,
+        "issues": [
+          "The fixer's fail-first run 36554318767 reported '# fail 2': both files failed at import, because they import the new named exports forgetRecovery and leaveRecovery. No assertion was shown to catch the bug. The reviewer fixed this in 772c3b3.",
+          "useAppStore.leaveRecovery was not tested, because the pdf test used a stand-in. The reviewer added real-store cases in 772c3b3.",
+          "Checked that the leave conditions match the list-leave conditions: leaveList meta.uid === uid for jobs and boards, and syncedUid === uid for résumés. Guest and no-cloud lists keep their notice.",
+          "Residual edge cases are recorded in the row's remaining: the stale notice in a second tab, a fully unparseable résumé store with an expired session, and leftovers from older builds."
+        ]
+      }
+    ],
+    "issues": [
+      {
+        "issue": "Does the fail-first run really fail without the fix?",
+        "resolution": "Not as submitted. Run 36554318767 failed both files at import (SyntaxError on the missing named exports: '# fail 2'), so nothing showed that the assertions catch the bug. Fixed by the reviewer in 772c3b3: namespace imports let the files load without the fix. Run 36555944155 then fails with '# fail 7', every one at an assertion. That number matches the 7 non-guard cases (unit: forgetRecovery, A signs out, B signs in, boards; pdf: A signs out, B signs in, real useAppStore). The 3 guard cases (a never-synced list, another account's leave) pass either way, as intended. All pass with the fix."
+      },
+      {
+        "issue": "useAppStore.leaveRecovery and the liveStore wiring were covered only through a stand-in store.",
+        "resolution": "Fixed by the reviewer (772c3b3). Two cases mount the real useAppStore over a saved store with an unreadable résumé and syncedUid 'A', then call liveStore(...).leaveAccount. For 'A', the list leaves, store.recovery becomes null, and the notice and backups are gone from storage. For 'B', the list, the notice and the backup all stay."
+      },
+      {
+        "issue": "Could the fix delete the notice or backups of a list that is not the leaving account's (a guest list, or a no-cloud build)?",
+        "resolution": "No. The engine calls leaveRecovery only after leaveList returns non-null (meta.uid === uid), and liveStore only when syncedUid === uid. Both are the same conditions under which the list itself leaves. With io null the engine never leaves. The guard tests cover the never-synced case for jobs and résumés."
+      },
+      {
+        "issue": "Could forgetRecovery remove another list's backups?",
+        "resolution": "No. listBackups parses '<of>_backup_<ms>' and the filter is b.of === key exactly, so cpwtcv_v1, cpwtcv_jobs_v1, cpwtcv_boards_v2 and cpwtcv_job_stages_v1 are kept apart. The unit test checks that the résumé notice and backup survive forgetRecovery(jobs). The local job-stages list (never synced) is untouched."
+      },
+      {
+        "issue": "Stale render: liveStore reads appState from the last render, while store.leaveAccount's updater reads the newest state.",
+        "resolution": "Accepted, no change. They differ only if a sign-out lands between applyCloudSync's setState and the next render. A click cannot fall inside that window, and start() and initialSync already read owner from the same latest() snapshot."
+      },
+      {
+        "issue": "A board list migrated from the v1 key with an unreadable entry backs up under cpwtcv_boards_v1_backup_*, which forgetRecovery(BOARDS_KEY) does not remove.",
+        "resolution": "Accepted, no change. The notice is removed, so nothing offers the copy any more. The v1 raw key itself was never removed by the app and holds the same data, and a v1 list predates sync and is this browser's own."
+      },
+      {
+        "issue": "Unreadable entries of the account's own list are deleted on sign-out and not stashed for its next sign-in.",
+        "resolution": "Accepted trade-off, as the finding allowed. It is recorded in the row summary."
+      }
+    ],
+    "fixedByReviewer": [
+      {
+        "commit": "772c3b3fff321b8d79450b5a17ebd33a06707342",
+        "what": "Tests only: namespace imports so the fail-first run fails at assertions, and two real-useAppStore cases through liveStore.leaveAccount. No src change."
+      }
+    ]
+  },
+  "rejected": [
+    {
+      "candidate": "Second tab keeps showing the recovery notice after another tab's sign-out removed the backups",
+      "reason": "Nothing leaks: the download has nothing to save, and the notice goes away on reload. Cosmetic, recorded in remaining."
+    },
+    {
+      "candidate": "Unpersisted in-memory notice in a second tab re-written to storage by flushUnpersistedNotices after the first tab's sign-out",
+      "reason": "This needs full storage and a second tab together. The re-written notice points at a backup that is already gone, so no data is offered."
+    }
+  ],
+  "a11yNoted": [],
+  "baselineFailures": [],
+  "notes": "One row, fixed by 381cc6a. The reviewer strengthened its tests in 772c3b3 (tests only). Fail-first run 36555944155 is green, with 7 assertion failures without the fix and all passing with it. The named-tests and lint jobs are green. The fixer's run 36554318767 was also green, but it failed only at import. Build, full suite, Playwright and Cypress did not run, because these were targeted runs. The batch gate covers them."
+}

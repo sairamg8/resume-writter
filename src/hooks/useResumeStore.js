@@ -9,7 +9,7 @@ import { newId } from '@/utils/ids';
 import { HEADER_READS, withHeaderColorsBack } from '@/templates/pdf/shared/headerColors';
 import { withLook, withTemplate } from '@/utils/templateSwitch';
 import { DATA_VERSION, normalizeResume } from '@/utils/normalizeResume';
-import { backupRaw, notSavedReason, pendingRecovery, readSavedList, rememberRecovery, setItemWithRoom } from '@/utils/storageBackup';
+import { backupRaw, forgetRecovery, notSavedReason, pendingRecovery, readSavedList, rememberRecovery, setItemWithRoom } from '@/utils/storageBackup';
 import { savedDeletions } from '@/utils/localDeletions';
 import { isOriginal, withKeep } from '@/utils/demoSeed';
 import { isLetter, letterFrom, LETTER_KIND, LETTER_NAME } from '@/utils/letters';
@@ -117,6 +117,12 @@ export function useAppStore() {
 
   function dismissRecovery() {
     rememberRecovery(STORAGE_KEY, null);
+    setRecovery(null);
+  }
+
+  /** The list left this browser with its account: its notice and backups go with it (forgetRecovery). */
+  function leaveRecovery() {
+    forgetRecovery(STORAGE_KEY);
     setRecovery(null);
   }
 
@@ -423,6 +429,7 @@ export function useAppStore() {
     savedAt,
     recovery,
     dismissRecovery,
+    leaveRecovery,
     activeResume,
     setActiveId,
     createResume,
