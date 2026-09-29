@@ -1,0 +1,67 @@
+{
+  "cluster": "r5-hunt8-boards",
+  "branch": "claude/wf-r5-hunt8-boards",
+  "base": "420f48750a442a9f052818176561b609c550075b",
+  "rows": [
+    {
+      "id": "R5-HUNT8-POINTS-INVALID-TEXT-CLEARS",
+      "title": "Story points: typing an unreadable number such as '2,5' (a decimal comma) erases the issue's points instead of keeping them",
+      "severity": "low",
+      "outcome": "fixed",
+      "commits": [
+        "e26066cc94ee45354baa3073a572ec99d96c148e"
+      ],
+      "tests": [
+        "tests/pdf/r5hunt8-points-invalid-text.test.mjs"
+      ],
+      "summary": "Now: if the Story points field holds text the number field cannot read ('2,5' in Firefox or Safari, '1e' or a lone '-' in Chrome), pressing Tab or Enter keeps the saved points and the field shows them again. Before, the browser reported that text as '', and the field took it as a clear. PointsInput's commit (src/components/board/IssueFields.jsx) now reads the input's validity.badInput from the blur or Enter event and leaves the value alone when it is set. A field that is really emptied still clears the points, and a valid number still saves. The fix covers both the issue view's Details and the Create issue dialog.",
+      "ci": [
+        36635436901
+      ]
+    },
+    {
+      "id": "R5-HUNT8-SETTINGS-WIP-FRACTION-CLEARS-LIMIT",
+      "title": "Project settings: a fractional WIP limit ('2.5') silently removes the column's limit, while the board's own limit dialog saves it as 2",
+      "severity": "low",
+      "outcome": "fixed",
+      "commits": [
+        "76e5940be312041b7fc59e6c04d8620e54312fda"
+      ],
+      "tests": [
+        "tests/pdf/r5hunt8-settings-wip-fraction.test.mjs"
+      ],
+      "summary": "Now: 2.5 typed into Project settings → Columns → WIP saves a limit of 2, the same as the board's limit dialog. wipOf in src/utils/boardOps.js rounds a finite number of 1 or more down, where before it returned null (no limit) for any fraction. Anything under 1, or anything that is not a number, still means no limit. The settings page's CommitField (src/pages/BoardSettings.jsx) also no longer commits when the number field reports unreadable text ('2,5' in Firefox or Safari, which arrives as '' with badInput set), so that text keeps the saved limit instead of clearing it. Emptying the field on purpose still removes the limit.",
+      "ci": [
+        36635436901
+      ]
+    }
+  ],
+  "review": {
+    "by": "second agent",
+    "verdict": "fixed",
+    "issues": [
+      {
+        "id": "R5-HUNT8-REV-UNREADABLE-TEXT-STAYS",
+        "severity": "low",
+        "outcome": "fixed",
+        "summary": "Both fixes kept the saved value when a number field held unreadable text, but did not clear that text. When nothing was saved (an issue with no points, a column with no WIP limit), React had nothing to write over it, because the field already read ''. So '2,5' (Firefox or Safari) or '3e' (Chrome) stayed on screen as if it were saved, and a reload showed nothing. In Story points, 'e' typed into a blank field sends no change, so commit returned early on draft === null and never looked at badInput. Escape left the text in place too. Now dropUnreadable (src/components/ui/compose.js, exported from the kit) wipes the text on Tab, Enter and Escape in PointsInput and in BoardSettings' CommitField, so the field shows the saved value. Readable text is not touched.",
+        "commits": [
+          "09bca5f981dfe23674b18fa4eb9c4110267e1327"
+        ],
+        "tests": [
+          "tests/pdf/r5hunt8-rev-unreadable-text-stays.test.mjs"
+        ]
+      }
+    ],
+    "commits": [
+      "09bca5f981dfe23674b18fa4eb9c4110267e1327"
+    ],
+    "ci": [
+      36635436901,
+      36636435712
+    ],
+    "notes": "Both original fixes were checked against origin/claude/r4-green. The root causes are fixed: wipOf now floors as the board limit dialog (BoardColumn ColumnForm) does, and badInput is treated as not-a-clear. The fail-first run 36635436901 is genuine: 2 of 3 points tests and 3 of 4 WIP tests failed with each fix reversed, and all passed with it restored. Other callers checked: addColumn and updateColumn are the only users of boardOps.wipOf, and the app never stores a fraction, so boardReaders.wipOf (stored and imported data) still reads a stored fraction as none. That is consistent and was left alone. CommitField's other number field (days before done issues are hidden) already ignored ''. Its text and title fields have badInput false and behave as before. The board's limit dialog needs no badInput guard: it is a form without noValidate, so the browser blocks Save while the field holds unreadable text. Nothing here touches undo, sync or exports beyond what the store already did. Review fix CI run 36636435712: failfirst 09bca5f9 passed (4 failures without the fix, all passing with it). The named tests passed: the three r5hunt8 tests, 82-board-ime-enter, 82-settings-page, 82-board-columns-r4, 103-r4-dph-11-board-fields, 103-r4-dph-11-settings-fields, 103-r4-dvis-06-settings-kit-controls, 104-r5-brd-sw-b-01-column-delete-undo, 107-r5-hunt6-column-category-undo-since, board-ops.unit, board-ime-enter.unit, ui-helpers.unit, ui-kit.unit, ui-overlays.unit, ime-enter-guard.unit and 71-startup-chunks. Lint passed. One similar bug was noted outside this cluster and not fixed: SectionEditorCustomizer's section spacing inputs (Before, After, Item gap) remove the override as soon as the field turns unreadable mid-typing (for example '2,' in Firefox reads ''), and the unreadable text then stays on screen over the removed value. It is for a later résumé-editor hunt."
+  },
+  "baselineFailures": [],
+  "notes": "The base branch origin/claude/r4-green was at 420f4875 when the branch was cut, not the 9519ef6b named in the task. One CI dispatch, run 36635436901: both fail-first checks passed (each test failed with its fix reversed and passed with it restored). The tests input ran the new tests plus the existing board and settings tests (82-board-ime-enter, 82-settings-page, 82-board-columns-r4, 103-r4-dph-11-board-fields, 103-r4-dph-11-settings-fields, 103-r4-dvis-06-settings-kit-controls, 104-r5-brd-sw-b-01-column-delete-undo, 107-r5-hunt6-column-category-undo, board-ops.unit, board-ime-enter.unit), the knowledge-docs and 71-startup-chunks guards, and lint. All passed. docs/knowledge/ does not describe story points or WIP-limit parsing, so no docs change was needed. boardReaders.js has its own wipOf for stored or imported data and still reads a fractional limit as none. It was left alone because the app never stores a fraction."
+}

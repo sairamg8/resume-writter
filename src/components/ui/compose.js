@@ -77,3 +77,17 @@ export function focusNeighbour(from, backwards = false) {
 export function isImeKey(event) {
   return Boolean(event?.nativeEvent?.isComposing || event?.isComposing || event?.keyCode === 229);
 }
+
+/**
+ * A number field whose text it cannot read ('2,5' in Firefox or Safari, '1e' in Chrome) reports its
+ * value as '' with validity.badInput set. Wipes that text, so the field shows the saved value again:
+ * React skips writing a blank over a value that already reads '', and the text stayed on screen as if
+ * it were saved (R5-HUNT8-REV-UNREADABLE-TEXT-STAYS). Takes the field's event; true when there was
+ * such text.
+ */
+export function dropUnreadable(event) {
+  const el = event?.target;
+  if (!el?.validity?.badInput) return false;
+  el.value = '';
+  return true;
+}

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { ChevronDown, Plus } from 'lucide-react';
 import { ISSUE_TYPES, LABEL_COLORS, PRIORITIES, RECURRENCES } from '@/constants/boards';
-import { Menu, MultiSelectPopover, cx, isImeKey } from '@/components/ui';
+import { Menu, MultiSelectPopover, cx, dropUnreadable, isImeKey } from '@/components/ui';
 import { IssueTypeIcon, PriorityIcon } from '@/components/tracker/TrackerIcons';
 import { epicsOf } from '@/utils/boardQuery';
 import { isLocalISO, issueKey } from '@/utils/boardModel';
@@ -200,10 +200,18 @@ export function DateInput({ value, onChange, label, className }) {
   );
 }
 
-/** Story points: a number ≥ 0, blank for none — kept as typed until Enter or leaving the field. */
+/**
+ * Story points: a number ≥ 0, blank for none — kept as typed until Enter or leaving the field.
+ * Text that is no number keeps the saved points.
+ */
 export function PointsInput({ value, onChange, label = 'Story points', className }) {
   const [draft, setDraft] = useState(null);
-  const commit = () => {
+  const commit = (e) => {
+    // The number field reports text it cannot read ('2,5', '1e') as '' with badInput set: that is
+    // not a clear, so the saved points stay (R5-HUNT8-POINTS-INVALID-TEXT-CLEARS). Its text is wiped
+    // too, even with no draft ('e' typed in a blank field sends no change): React cannot write a saved
+    // blank over it, so it stayed on screen as if saved (R5-HUNT8-REV-UNREADABLE-TEXT-STAYS).
+    if (dropUnreadable(e)) { setDraft(null); return; }
     if (draft === null) return;
     const text = draft.trim();
     const n = Number(text);
@@ -224,8 +232,8 @@ export function PointsInput({ value, onChange, label = 'Story points', className
       onBlur={commit}
       onKeyDown={(e) => {
         // The Enter that picks an input method's word (a full-width digit) is not a save.
-        if (e.key === 'Enter' && !isImeKey(e)) { e.preventDefault(); commit(); }
-        if (e.key === 'Escape' && draft !== null && !isImeKey(e)) { e.stopPropagation(); setDraft(null); }
+        if (e.key === 'Enter' && !isImeKey(e)) { e.preventDefault(); commit(e); }
+        if (e.key === 'Escape' && !isImeKey(e) && (dropUnreadable(e) || draft !== null)) { e.stopPropagation(); setDraft(null); }
       }}
       className={cx(
         // 16 px on touch screens, as DateInput (R4-DPH-11).
