@@ -1,0 +1,57 @@
+{
+  "cluster": "r5-hunt3-jobs",
+  "branch": "claude/wf-r5-hunt3-jobs",
+  "base": "c16dc7e49bbee19240c9300c7c17167774a2e42b",
+  "rows": [
+    {
+      "id": "R5-HUNT3-JOB-STORE-STALE-WRITE-AFTER-LEAVING-JOB-PAGES",
+      "title": "An Undo toast or a job form reopened after leaving the job pages writes this tab's old job list over what another tab saved meanwhile",
+      "severity": "high",
+      "outcome": "fixed",
+      "commits": [
+        "d0ab6e3ec36a6fb41b08454a449e4cbe9af5bc8b",
+        "4c250801601774960192ff8497a1f6b0bd1ca07d",
+        "6488d67c5c0c71521f705b23f309504a0cb23b81"
+      ],
+      "tests": [
+        "tests/unit/job-store-detached.unit.mjs"
+      ],
+      "summary": "Now: while no job page is open, the job store stops listening to other tabs (J-01). Before it reads or writes its list, snapshot() now calls catchUp(). catchUp() compares the raw stored value with what this tab last saw (seenRaw). Only when that value has changed does it read the list again with the pure readStored/peek and keep what storage refused in this tab (keepUnsaved). Because it runs only on a change, the snapshot stays the same object while storage is unchanged, and a render still writes nothing (NB-6). As a result, an Undo on a deleted job, on 'N jobs cleared' or on a deleted task, clicked after leaving the job pages, puts back only what was deleted and keeps the other tab's jobs and edits. A job form reopened later first renders the job as it is stored now, not this tab's old copy. Review fix 4c25080: the re-read made no backup, so an Undo or edit wrote over a value that could not be read in full and lost it. That value can come from another tab of a newer build saving a status this one does not know. Now setJobs copies it first (backupRaw), as load() does. Signed in with the cloud on, the sync keeps a subscription open, so the old path (storage event) still applies there. The change is in src/hooks/useJobStore.js only, and the knowledge docs (05) are updated.",
+      "failfirst_run": "36544710980 (green: all 5 tests fail with d0ab6e3's diff reversed ('# fail 5') and pass with it); 36547875560 (green: review fix 4c25080's backup test fails with its diff reversed ('# fail 1') and passes with it; 13 named job-store/sync/storage/knowledge test files 89/89 pass; lint green); 36547930498 (green on 6488d67: knowledge-docs and job-store-detached tests, lint)"
+    }
+  ],
+  "review": {
+    "rounds": [
+      {
+        "round": 1,
+        "issues": [
+          "catchUp read the other tab's list with the pure peek, which makes no backup. The next write (Undo, edit, add) then replaced a stored value it could not read in full, for example a status unknown to this build, with nothing kept. The subscribe path (takeOtherTabsList -> load) backs it up.",
+          "useBoardStore has the same shape: an in-memory list that is re-read only on resubscribe, so a project-board Undo toast clicked after leaving the boards can write a stale list over another tab's. This was flagged by the fixer. It is a separate bug, out of this row's scope, and no tracker row exists for it.",
+          "Theoretical race: unsubscribe records seenRaw from storage, so a storage event another tab queued but not yet delivered at that instant is taken as already seen."
+        ]
+      }
+    ],
+    "issues": [
+      {
+        "issue": "Detached re-read (catchUp) made no backup of a value it could not read in full before the next write replaced it",
+        "resolution": "fixed in 4c25080. readStored() returns the unreadable raw value. catchUp keeps it in unreadRaw, and setJobs calls backupRaw(KEY, unreadRaw) before it persists. init and takeOtherTabsList clear it, because load() already backs up. Two tests were added to job-store-detached.unit.mjs. Fail-first run 36547875560."
+      },
+      {
+        "issue": "useBoardStore: the same stale write through project-board Undo toasts after leaving the board pages",
+        "resolution": "not fixed here: a separate store and a separate bug. Proposed as a follow-up row (apply the same catchUp to src/hooks/useBoardStore.js)."
+      },
+      {
+        "issue": "Race at unsubscribe: a storage event that is pending while seenRaw is read from storage",
+        "resolution": "no change. The window is the gap between the browser updating another tab's localStorage view and dispatching the event (sub-millisecond). It would also need to meet an unmount exactly then. The code before the fix lost every such write anyway."
+      }
+    ],
+    "fixedByReviewer": [
+      "4c250801601774960192ff8497a1f6b0bd1ca07d",
+      "6488d67c5c0c71521f705b23f309504a0cb23b81"
+    ]
+  },
+  "rejected": [],
+  "a11yNoted": [],
+  "baselineFailures": [],
+  "notes": "The fixer's fail-first run 36544710980 was read from the CI log: 'fail without the fix (its diff reversed): # fail 5', then 'pass with it'. The review confirmed that the root cause is cured for every write path (setJobs, updateJob, placeOf, clearDemoData, importJobs, jobsNow) and for the first render. keepUnsaved keeps refused writes, and the snapshot is stable while storage is unchanged. There is no change to the stored format, exporters or callers. Follow-up: the same fix for useBoardStore."
+}
