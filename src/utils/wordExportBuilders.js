@@ -17,6 +17,7 @@ import { hasRichText } from '@/utils/richText';
 import { contactHref } from '@/utils/contacts';
 import { dateRange, endDateOf, formatDate, presentLabel, startDateOf } from '@/utils/dates';
 import { skillCategory, skillGroup, skillSeparator } from '@/utils/skills';
+import { entryPrints } from '@/utils/entryPrints';
 import { employerOf, groupPlaces, groupsRoles, roleGroups } from '@/utils/roleGroups';
 
 /**
@@ -83,8 +84,11 @@ export function buildSectionTitle(title, settings, template) {
   return sectionHeading(upperSectionTitles(s.sectionTitleCase) ? text.toUpperCase() : text, accent2Hex(settings?.accentColor), false, heading);
 }
 
-/** Items the user has not hidden (the eye toggle on an entry). */
-const shown = (section) => (section.items || []).filter((item) => item && item.visible !== false);
+/**
+ * Items the user has not hidden (the eye toggle on an entry), nor left blank (a section just added,
+ * every field's eye off): over those alone the section's heading printed by itself (entryPrints, R5-HUNT6).
+ */
+const shown = (section) => (section.items || []).filter((item) => entryPrints(section.type, item));
 /** A field of an entry, or '' when its eye toggle hides it. */
 const field = (item, key) => ((item.hiddenFields || []).includes(key) ? '' : (item[key] || ''));
 
