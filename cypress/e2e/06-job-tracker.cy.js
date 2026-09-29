@@ -128,14 +128,26 @@ describe('job tracker', () => {
         cy.jobStore().its('jobs').should('have.length', 1);
 
         const [google] = exported;
+        // The job here is the untouched demo: a file's own demo_1 replaces it, in its place, as a
+        // backup of the edited demo restored in a fresh browser does (R5-HUNT2-IMPORT-BACKUP-SKIPS-EDITED-DEMO-JOB).
         importJobs([
           { ...google, id: 'job_from_elsewhere', company: 'Initech' },
           // The same id as the job here, and no createdAt / updatedAt (JSON leaves undefined out).
           { ...google, company: 'Hooli', createdAt: undefined, updatedAt: undefined },
         ], 'other.json');
-        cy.contains('Imported 2 job applications.').should('be.visible');
+        cy.contains('Imported 1 job application, updated 1.').should('be.visible');
         cy.jobStore().should((s) => {
-          expect(s.jobs.map((j) => j.company)).to.deep.eq(['Google', 'Initech', 'Hooli']);
+          expect(s.jobs.map((j) => j.company)).to.deep.eq(['Hooli', 'Initech']);
+          expect(s.jobs.map((j) => j.id)).to.deep.eq([google.id, 'job_from_elsewhere']);
+        });
+        stat('Total').should('have.text', '2');
+
+        // A user's job with that id is here now: a different one in a file, with no time to tell
+        // which is newer, is added as a copy with an id of its own, and nothing is dropped.
+        importJobs([{ ...google, company: 'Umbrella', createdAt: undefined, updatedAt: undefined }], 'more.json');
+        cy.contains('Imported 1 job application.').should('be.visible');
+        cy.jobStore().should((s) => {
+          expect(s.jobs.map((j) => j.company)).to.deep.eq(['Hooli', 'Initech', 'Umbrella']);
           const [here, elsewhere, copy] = s.jobs.map((j) => j.id);
           expect(here).to.eq(google.id);
           expect(elsewhere, 'an id not here yet is kept').to.eq('job_from_elsewhere');
