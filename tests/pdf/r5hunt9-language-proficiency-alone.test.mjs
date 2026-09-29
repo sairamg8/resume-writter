@@ -18,7 +18,8 @@ const JUST_ADDED = () => section('languages', [NEW_ROW()], {}, { title: 'Tongues
 const sample = (extra, template = 'classic') => resume({
   template,
   personal: { name: 'Robin Vale', title: 'Staff Engineer', email: 'robin.vale@example.com' },
-  sections: [experience([{ company: 'Fabrikam Studio', role: 'Lead Engineer' }]), ...extra],
+  // Titled apart from "Professional Experience", so "Professional" can only be a language's proficiency.
+  sections: [{ ...experience([{ company: 'Fabrikam Studio', role: 'Lead Engineer' }]), title: 'Work History' }, ...extra],
 });
 
 describe('A language row with no language prints nothing (R5-HUNT9-LANGUAGE-DEFAULT-PROFICIENCY-PRINTS-ALONE)', () => {
