@@ -795,6 +795,11 @@ function entriesOf(type, lines, aside) {
     const one = (n) => titleish(n) && pieces(n.text).length === 1;
     const [a, b] = body.slice(-2).length === 2 ? body.slice(-2) : [null, body[body.length - 1]];
     if (!titleish(b) || !over(b, L)) return null;
+    // "Senior Engineer" over "Acme Corp ⇥ Jan 2020 – Present": a job title over its company's dated
+    // line is that job's own title (entriesOf), no employer over grouped roles. Before, the title
+    // became the company and the company the role, and the next job took the same company.
+    const [field = ''] = datedFields(L.text);
+    if (!timeline && pieces(b.text).length === 1 && ROLE.test(b.text) && !ROLE.test(field)) return null;
     let found = null;
     // Word's: the employer, and its place on the line under it.
     // (Not over a Timeline role's date: there "Acme Corp" / "Senior Engineer" over a date is one job's title.)

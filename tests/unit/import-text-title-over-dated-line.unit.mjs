@@ -18,3 +18,20 @@ test('a degree over "School ⇥ dates" is the entry\'s degree, not its descripti
       ['University of Oregon', 'Bachelor of Science in Computer Science', '2014', '2018', ''], dated);
   }
 });
+
+test('"Role" over "Company ⇥ dates" is that job\'s role and company, not an employer over grouped roles (R5-HUNT2-TEXT-IMPORT-ROLE-OVER-COMPANY-DATE-READ-AS-EMPLOYER-GROUP)', () => {
+  for (const [a, b] of [['Acme Corp\tJan 2020 – Present', 'Globex\t2017 – 2019'], ['Acme Corp, Jan 2020 – Present', 'Globex, 2017 – 2019']]) {
+    const r = resumeFromText(`Jane Doe\njane@x.com\n\nExperience\nSenior Engineer\n${a}\n• Built things\nEngineer\n${b}\n• Did stuff`);
+    const jobs = section(r, 'experience').items;
+    assert.deepEqual(jobs.map((j) => [j.company, j.role, j.startDate, j.endDate, j.current, j.description]), [
+      ['Acme Corp', 'Senior Engineer', 'Jan 2020', '', true, '<ul><li>Built things</li></ul>'],
+      ['Globex', 'Engineer', '2017', '2019', false, '<ul><li>Did stuff</li></ul>'],
+    ], a);
+  }
+});
+
+test('an employer with no role word over its roles is still the group\'s employer', () => {
+  const r = resumeFromText('Jane Doe\njane@x.com\n\nExperience\nAcme Corp\nSenior Engineer\tJan 2020 – Present\n• Built things');
+  const [job] = section(r, 'experience').items;
+  assert.deepEqual([job.company, job.role], ['Acme Corp', 'Senior Engineer']);
+});
