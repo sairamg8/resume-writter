@@ -3,7 +3,7 @@ import { backupRaw, forgetRecovery, loadSavedList, notSavedReason, pendingRecove
 import { newId } from '../utils/ids.js';
 import { addressableJobs, completeJob, readJob, statusId } from '../utils/normalizeJob.js';
 import { keepUnsaved } from '../utils/unsavedJobs.js';
-import { applyEdits, demoJobs, moveInList, newJobDefaults } from '../utils/jobEdits.js';
+import { applyEdits, demoJobs, moveInList, newJobDefaults, undoStatusChange } from '../utils/jobEdits.js';
 import { mergeImport } from '../utils/jobMerge.js';
 import { forgetSynced, JOBS_SYNC_KEY, localMeta } from '../utils/collectionSyncMeta.js';
 
@@ -309,6 +309,31 @@ function moveJob(id, { status, beforeId = null } = {}) {
   return was;
 }
 
+/**
+ * Move job `id` to `status` where it is (updateJob: one history entry, maybe the applied date) and
+ * return `{ id, before, after }` for undoStatus — null when no job has that id or it is there
+ * already. The board, the job page's stepper and its status menu offer Undo with it (R5-HUNT7).
+ */
+function changeStatus(id, status) {
+  const was = placeOf(id);
+  if (!was) return null;
+  updateJob(id, { status });
+  const now = placeOf(id);
+  if (!now || now.job === was.job) return null;
+  const change = { id, before: was.job, after: now.job };
+  takenFrom.set(change, listOwner());
+  return change;
+}
+
+/** Undo `change` (changeStatus): the job's status, history and filled-in applied date as they were (undoStatusChange). */
+function undoStatus(change) {
+  if (!change?.id || !stillOwner(change)) return;
+  const job = placeOf(change.id)?.job;
+  if (!job) return;
+  const back = undoStatusChange(job, change.before, change.after, Date.now());
+  if (back !== job) setJobs(jobs => jobs.map(j => (j.id === change.id ? back : j)));
+}
+
 /** Delete job `id`; returns it and its place, `{ job, index }`, for restoreJob (Undo) — null when there was none. */
 function deleteJob(id) {
   const was = placeOf(id);
@@ -424,14 +449,14 @@ export function _resetJobStoreForTest() {
 }
 
 // The actions as plain functions too: node tests drive the store without React.
-export { snapshot, subscribe, addJob, updateJob, moveJob, deleteJob, restoreJob, importJobs, clearDemoData, restoreJobs, dismissRecovery, leaveRecovery, jobsNow, replaceJobs };
+export { snapshot, subscribe, addJob, updateJob, changeStatus, undoStatus, moveJob, deleteJob, restoreJob, importJobs, clearDemoData, restoreJobs, dismissRecovery, leaveRecovery, jobsNow, replaceJobs };
 
 export function useJobStore() {
   const { jobs, persistError, recovery, left } = useSyncExternalStore(subscribe, snapshot);
   const persistReason = notSavedReason(persistError);
   return {
     jobs, persistError, persistReason, recovery, dismissRecovery, left: left ?? 0,
-    addJob, updateJob, moveJob, deleteJob, restoreJob, importJobs, clearDemoData, restoreJobs,
+    addJob, updateJob, changeStatus, undoStatus, moveJob, deleteJob, restoreJob, importJobs, clearDemoData, restoreJobs,
   };
 }
 

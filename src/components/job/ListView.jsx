@@ -3,7 +3,7 @@ import { StatusBadge } from '@/components/job/StatusBadge';
 import { Avatar, IconButton } from '@/components/ui';
 import { deadlineState } from '@/utils/dates';
 import { safeHref } from '@/utils/richText';
-import { isOpen, sortJobs } from '@/utils/jobQuery';
+import { isOpen, linkedResume, sortJobs } from '@/utils/jobQuery';
 import { useSessionState } from '@/hooks/useSessionState';
 
 /** Last updated first: the order the list opens in, and the one a third header click returns to. */
@@ -69,7 +69,8 @@ export function ListView({ jobs, resumes, onNavigate, onDelete }) {
         </thead>
         <tbody>
           {sorted.map(job => {
-            const resume = resumes.find(r => r.id === job.resumeId);
+            // A link to a résumé since deleted says so, as the job page does, not '—' as if never linked (J-21).
+            const link = linkedResume(job, resumes);
             return (
               <tr
                 key={job.id}
@@ -146,9 +147,11 @@ export function ListView({ jobs, resumes, onNavigate, onDelete }) {
                   })()}
                 </td>
                 <td className="px-3 text-right">
-                  {resume
-                    ? <span className="rounded-[3px] bg-brand-subtle px-1.5 py-0.5 text-[12px] text-brand">{resume.name}</span>
-                    : <span className="text-[12px] text-ink-subtlest">—</span>
+                  {link.state === 'linked'
+                    ? <span className="rounded-[3px] bg-brand-subtle px-1.5 py-0.5 text-[12px] text-brand">{link.resume.name}</span>
+                    : link.state === 'deleted'
+                      ? <span className="text-[12px] whitespace-nowrap text-ink-subtlest">Résumé deleted</span>
+                      : <span className="text-[12px] text-ink-subtlest">—</span>
                   }
                 </td>
                 <td className="px-3">

@@ -8,6 +8,9 @@ import { completeJob, readJob } from './normalizeJob.js';
 
 const isTime = (v) => typeof v === 'number' && Number.isFinite(v);
 
+/** A company or a role, the one thing the job form asks for (canSave): an entry with neither is no job. */
+const named = (job) => Boolean(String(job.company ?? '').trim() || String(job.role ?? '').trim());
+
 /** JSON with every object's keys in order: two copies of a job compare equal however they were written. */
 function stable(value) {
   if (Array.isArray(value)) return `[${value.map(stable).join(',')}]`;
@@ -42,8 +45,11 @@ function asOver(theirs, kept, mine) {
  *   an older copy, or as new        → skipped: a backup never overwrites a later edit
  *   the untouched demo job is here  → the file's copy replaces it (isUntouchedDemoJob)
  *   different, and no time to tell  → added as a copy with a new id: nothing is dropped
- * `lossy` is true when an entry, or a detail of one, could not be read and was left out. A job
- * with no time of its own gets `now`. The input is never changed.
+ * An entry naming neither a company nor a role (another tracker's 'companyName'/'jobTitle', an
+ * empty object) is left out and makes the import `lossy`: each became a blank 'Untitled Company'
+ * card, which the job form and the Overview both refuse (R5-HUNT7). `lossy` is true when an entry,
+ * or a detail of one, could not be read and was left out. A job with no time of its own gets
+ * `now`. The input is never changed.
  */
 export function mergeImport(current, incoming, now = Date.now()) {
   const jobs = [...current];
@@ -56,6 +62,7 @@ export function mergeImport(current, incoming, now = Date.now()) {
     const { kept, lost } = readJob(entry);
     lossy = lossy || lost;
     if (!kept) continue;
+    if (!named(kept)) { lossy = true; continue; }
     const theirs = completeJob({
       status: 'saved', todos: [], ...kept,
       createdAt: isTime(kept.createdAt) ? kept.createdAt : now,

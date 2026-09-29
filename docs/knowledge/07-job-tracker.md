@@ -40,7 +40,7 @@ Under `src/components/job/`:
 
 From `constants/jobs.js`: Saved → Applied → Phone Screen → Interview → Offer, plus On Hold / Rejected / Withdrawn.
 
-Changing status appends to `statusHistory`.
+Changing status appends to `statusHistory`. A move on the board (drag or "Move to"), the job page's stepper or its status menu goes through the store's `changeStatus` and shows a toast with Undo: `undoStatus` puts the status, the history and an applied date the move filled in back as they were (`undoStatusChange`, `utils/jobEdits.js`, R5-HUNT7).
 
 ## Resume linkage
 
