@@ -345,7 +345,9 @@ export async function withPrintablePhotos(resume) {
           // A pick from Select Header Icon ('icon:<id>', 'pack:<id>') is a vector shape PdfContactIcon
           // draws, not an image: fetching it failed on every build and left a retry pending, so the
           // dashboard never kept that résumé's card picture (R5-HUNT9-PICKED-ICON-FETCHED-AS-IMAGE).
-          if (!isContactIconImage(src)) return [field, src];
+          // Asked of the value trimmed, as PdfContactIcon and the editor ask it (getCustomContactIcon),
+          // so an image saved with spaces around it is still copied and printed (R5-HUNT9-REVIEW-PADDED-ICON).
+          if (!isContactIconImage(typeof src === 'string' ? src.trim() : src)) return [field, src];
           const copy = await printableImage(src, { kind: 'icon' });
           return [field, copy || src];
         })
