@@ -380,6 +380,41 @@ test('R2-145: a fresh demo job (site data cleared) never goes over the demo job 
   assert.equal(isUntouchedDemoJob(d.job('demo_1')), false);
 });
 
+test('R5-HUNT4-FRESH-BROWSER-UPLOADS-DEMO-JOB-TO-ACCOUNT: a fresh browser\'s untouched demo job never joins an account with jobs of its own', async () => {
+  // Signed out, the user deleted the demo job and added Acme, then signed in: the deletion never
+  // reached the cloud (it had no synced version). A fresh browser (another device, site data
+  // cleared) starts with the demo again; its first sync used to send it to the account, and every
+  // device got it back.
+  const cloud = fakeFirestore();
+  const d1 = device(cloud, [job('j_acme', 'Acme', 5)]);
+  await d1.start(A);
+  const d2 = device(cloud, demoJobs());
+  assert.ok(isUntouchedDemoJob(d2.job('demo_1')));
+  await d2.start(A);
+
+  assert.deepEqual(Object.keys(cloudJobs(cloud, 'A')), ['j_acme'], 'the demo is not sent to the account');
+  assert.deepEqual(d2.ids(), ['j_acme'], 'the fresh browser shows the account\'s jobs only');
+  assert.equal(d2.seen.status, 'synced');
+  await d1.refresh();
+  assert.deepEqual(d1.ids(), ['j_acme'], 'the deleted demo stays deleted on the first device');
+
+  // An account whose only history is deletions has a list of its own too.
+  const cloud2 = fakeFirestore({ [metaPath('A')]: { order: [], deleted: ['j_old'] } });
+  const d3 = device(cloud2, demoJobs());
+  await d3.start(A);
+  assert.deepEqual(Object.keys(cloudJobs(cloud2, 'A')), []);
+  assert.deepEqual(d3.ids(), []);
+
+  // A new account (nothing in its cloud) still adopts the demo, as before; once edited, it is a job like any other.
+  const cloud3 = fakeFirestore();
+  const d4 = device(cloud3, demoJobs());
+  await d4.start(A);
+  assert.deepEqual(Object.keys(cloudJobs(cloud3, 'A')), ['demo_1']);
+  const d5 = device(cloud, [{ ...demoJobs()[0], notes: '<p>Mine</p>', updatedAt: Date.now() + 1000 }]);
+  await d5.start(A);
+  assert.equal(cloudJobs(cloud, 'A').demo_1?.notes, '<p>Mine</p>', 'an edited demo is sent');
+});
+
 test('R2-145: a saved job list that cannot be read deletes nothing from the account; its jobs come back', async (t) => {
   globalThis.localStorage = new MemoryStorage();
   jobStore._resetJobStoreForTest();

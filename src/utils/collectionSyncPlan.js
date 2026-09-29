@@ -62,6 +62,7 @@ function weave(lead, other) {
  *     for good, or it is one this browser knew and deleted since;
  *   - on both sides, the newer `updatedAt` wins (this browser's on a tie) — but for this
  *     browser's untouched demo (`seed(item)`), never synced here: the account's copy wins;
+ *   - that demo on this browser only joins an account with no items and no deletions, and no other;
  *   - a deleted id stays deleted, but for a copy changed where the deletion was never seen (its
  *     version newer than the one this browser last saw): that edit wins, as a résumé's does (R2-029);
  *   - one deleted here that another device changed since this browser last saw it comes back.
@@ -104,6 +105,10 @@ export function planFirstSync({ local, versions = {}, localDeletes = [], docs, d
       // Known here and gone from the cloud with no deletion listed (removed by hand): gone, unless
       // changed here since.
       if (known(id) && !changedSince(mine)) continue;
+      // A first visit's untouched demo, on this browser only, does not join an account that has a
+      // list of its own (items, or deletions): the user may have deleted it before signing in
+      // anywhere — a deletion that never reached the cloud — and sent, it came back on every device.
+      if (!known(id) && seed(mine) && (docs.length || gone.size)) continue;
       keep.set(id, mine);
       sets.push(mine);
     } else keep.set(id, theirs);

@@ -220,7 +220,9 @@ the list off the browser as the résumés' is (`leaveList`: unsent changes, a mo
 aside for that account's next sign-in); signed out, nothing runs and the list is this browser's, as
 before. Two guards against losing the account's items: a first visit's demo
 job or project, untouched (`isUntouchedDemoJob` / `isUntouchedDemoBoard`, the store's `seed`),
-never wins over the account's copy of it, though dated newer; and a saved list the store could not
+never wins over the account's copy of it, though dated newer, and never joins an account that
+already has items or deletions of its own (deleted before the first sign-in, it stays deleted:
+R5-HUNT4); and a saved list the store could not
 read in full makes the record forget the versions (`forgetSynced`), so the items left out are
 merged back from the cloud instead of being deleted from it.
 
