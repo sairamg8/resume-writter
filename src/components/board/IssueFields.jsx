@@ -200,11 +200,17 @@ export function DateInput({ value, onChange, label, className }) {
   );
 }
 
-/** Story points: a number ≥ 0, blank for none — kept as typed until Enter or leaving the field. */
+/**
+ * Story points: a number ≥ 0, blank for none — kept as typed until Enter or leaving the field.
+ * Text that is no number keeps the saved points.
+ */
 export function PointsInput({ value, onChange, label = 'Story points', className }) {
   const [draft, setDraft] = useState(null);
-  const commit = () => {
+  const commit = (e) => {
     if (draft === null) return;
+    // The number field reports text it cannot read ('2,5', '1e') as '' with badInput set: that is
+    // not a clear, so the saved points stay (R5-HUNT8-POINTS-INVALID-TEXT-CLEARS).
+    if (e?.target?.validity?.badInput) { setDraft(null); return; }
     const text = draft.trim();
     const n = Number(text);
     if (text === '') onChange(null);
@@ -224,7 +230,7 @@ export function PointsInput({ value, onChange, label = 'Story points', className
       onBlur={commit}
       onKeyDown={(e) => {
         // The Enter that picks an input method's word (a full-width digit) is not a save.
-        if (e.key === 'Enter' && !isImeKey(e)) { e.preventDefault(); commit(); }
+        if (e.key === 'Enter' && !isImeKey(e)) { e.preventDefault(); commit(e); }
         if (e.key === 'Escape' && draft !== null && !isImeKey(e)) { e.stopPropagation(); setDraft(null); }
       }}
       className={cx(
