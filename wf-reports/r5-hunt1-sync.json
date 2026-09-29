@@ -1,0 +1,43 @@
+{
+  "cluster": "r5-hunt1-sync",
+  "branch": "claude/wf-r5-hunt1-sync",
+  "base": "5e26a0f91c1184c5fa1fa8031bd110055ec5c90c",
+  "rows": [
+    {
+      "id": "R5-HUNT1-RESUME-SYNC-OTHER-TAB-SIGNOUT-DELETES-ALL",
+      "title": "Signing out (or switching account) in another tab makes this tab delete every résumé from the account's cloud",
+      "severity": "high",
+      "outcome": "fixed",
+      "commits": [
+        "2a354d3b084ef74b774eb1ae30de9366891bdc9c",
+        "56c71592efc6a06e2ab58c9cd4f6f4e00d6e5b89"
+      ],
+      "tests": [
+        "tests/pdf/18-cloud-sync-sign-out.test.mjs"
+      ],
+      "summary": "Now: when another tab takes this tab's résumé list away before this tab's own Firebase Auth has noticed, this tab sends nothing. That happens when the other tab signs out (cloudSyncLeave.js empties the list and sets syncedUid null) or signs in as another account (the list becomes that account's). A hidden tab's auth poll is throttled, so the gap can be long. resumesChanged (src/utils/cloudSyncQueue.js) now checks whether the store's syncedUid is still the signed-in uid. If it is not, it drops its queue, sets initialSyncDone = false and returns. The sync starts again at the next first sync, which runs when this tab's auth reports the sign-out or the new account. Before this fix, the list that arrived was compared with the account's list. An empty list was sent as hard-deletes plus deletion-list entries for every résumé, so every device dropped its copies too. Another account's list was written into this account's cloud. The guard is the same one collectionSyncEngine.js already had for jobs and boards (meta uid !== s.user.uid). The store's syncedUid always equals the uid once a first sync has applied (afterSync). Only cloudSyncLeave sets it to anything else, and every store updater spreads prev. So an ordinary same-account session never hits the guard. useCloudSync updates its latest-state ref in an effect declared before the resumesChanged effect, so the guard reads the same render's state.",
+      "remaining": "While this tab's auth has not caught up, its sync icon keeps its last status ('synced', or 'syncing' if a flush was pending) until start() runs. This is cosmetic, and the jobs and boards sync behaves the same way.",
+      "failfirst_run": "36525795637 (green: with 2a354d3's src diff reversed, tests/pdf/18-cloud-sync-sign-out.test.mjs fails 2 tests ('# fail 2'); with the fix it passes). The same run's tests job ran all 19 tests/pdf/18-cloud-sync-*.test.mjs files, 104-r5-r2148, 31-contact-fields, 91-design-resets and knowledge-docs: 179/179 pass. The earlier run 36525362035 on 2a354d3 failed only on the test's missing listPath import and is superseded."
+    }
+  ],
+  "review": {
+    "rounds": [
+      {
+        "round": 1,
+        "issues": [
+          "Checked whether any legitimate path leaves syncedUid different from the signed-in uid while initialSyncDone is true. None does: afterSync sets it to uid, only leaveAccount changes it, every setAppState updater spreads prev, and withOtherTabsSave takes the incoming syncedUid, which is exactly the case being guarded. No change needed.",
+          "Checked whether the guard could read a stale store (liveStore reads the last render's appState). The latest ref effect is declared before the resumesChanged effect in useCloudSync, so both see the same commit. No change needed.",
+          "Checked other callers and tests of the résumé engine. Only the 18-cloud-sync-* files and 104-r5-r2148 drive it through fake-firestore's store, which has syncedUid, and all ran green in 36525795637. No change needed.",
+          "Queued edits of this account dropped by the guard are not lost. If this tab's save reached storage before the other tab left, the leave stashes them for the account. An unsaved edit is kept in this tab's list by keepUnsaved, and deletions made here stay in deletedIds with their uid. No change needed.",
+          "Pre-existing and not introduced by this fix (noted only): in the gap before this tab's auth catches up, start(A) can still run in this tab. It runs on an online/offline toggle, and on the 'stopped' branch of resumesChanged, which comes before the new guard and schedules a retry on any list change. Its first sync then reloads A's list into the browser the other tab just signed out of. The 'stopped' path is rare (a batch refused for good), and an online toggle inside that gap is rare too. The same is true of an in-flight flush's putBack, which lands in a list that has already left. Left for a later hunt."
+        ]
+      }
+    ],
+    "issues": [],
+    "fixedByReviewer": []
+  },
+  "rejected": [],
+  "a11yNoted": [],
+  "baselineFailures": [],
+  "notes": "One high-severity cloud-sync bug, fixed with a one-line guard in src/utils/cloudSyncQueue.js that mirrors collectionSyncEngine.js, and 2 new tests in tests/pdf/18-cloud-sync-sign-out.test.mjs. Fail-first run 36525795637 is green, and its log shows '# fail 2' without the fix and a pass with it. The review found no problem that needed a change. The full gate (suite, Playwright, Cypress, build) has not run on this branch; the coordinator runs it per batch before master is fast-forwarded."
+}
