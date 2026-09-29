@@ -249,7 +249,11 @@ describe('the dashboard: new résumés (R2-167)', () => {
       assert.equal(page.resumes().length, 4);
       assert.equal(made.name, starter.name, 'named after the starter, not "Untitled Resume"');
       assert.equal(made.template, starter.template || 'classic');
-      assert.deepEqual(plain(made.personal), plain(starter.personal));
+      // The owner's idea (2026-09-29): the user's own name and contacts, from their most recently edited
+      // résumé (Chart Maker CV, Marlo Quint), not the starter's sample person; the role's title and summary stay.
+      const latest = page.resumes().find((r) => r.name === 'Chart Maker CV');
+      assert.deepEqual(plain(made.personal), { ...plain(latest.personal), title: starter.personal.title, summary: starter.personal.summary });
+      assert.notEqual(made.personal.name, starter.personal.name, 'not the sample person');
       assert.deepEqual(plain(made.sections), plain(starter.sections));
       assert.notEqual(made.sections, starter.sections, 'a copy: editing it never changes the starter');
       assert.equal(page.store().appState.activeId, made.id);

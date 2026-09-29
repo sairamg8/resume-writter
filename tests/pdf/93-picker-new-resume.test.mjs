@@ -74,7 +74,8 @@ describe('New Resume: the content and the look in one step (D1)', () => {
       v.click(v.byTestid('look-template-sidebar-single'));
       for (const s of STARTER_TEMPLATES) assert.match(v.card(s.name).textContent, /Template: Sidebar · Single column/, s.id);
       v.click(v.card(STARTER_TEMPLATES[0].name));
-      assert.deepEqual(v.created, [['Untitled Resume', STARTER_TEMPLATES[0].id, { engine: 'sidebar', preset: '', variant: { sidebarSingleColumn: true } }]]);
+      // The fourth argument is the résumé the starter takes the user's details from (starterFrom): none here.
+      assert.deepEqual(v.created, [['Untitled Resume', STARTER_TEMPLATES[0].id, { engine: 'sidebar', preset: '', variant: { sidebarSingleColumn: true } }, null]]);
     } finally { await v.view.unmount(); }
   });
 

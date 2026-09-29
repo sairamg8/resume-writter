@@ -135,11 +135,14 @@ test('the dashboard shows each résumé\'s real page 1, kept across visits (C1)'
 
 test('New Resume: a look picked beside the starters makes the résumé on it (D1)', async ({ page }) => {
   await visit(page, buildTestState('classic'));
+  // The starter takes the user's own name from their résumé, not its sample person's (the owner's idea, 2026-09-29).
+  const mine = (await store(page)).resumes[0].personal.name;
+  expect(mine).not.toBe('Sarah Chen');
   await page.getByRole('button', { name: 'New Resume' }).first().click();
   await expect(page.getByText('Template: Modern')).toBeVisible(); // the Product Manager starter names its own
   await page.getByTestId('look-preset-harbor').click();
   await page.getByRole('button', { name: /Product Manager/ }).click();
   await page.waitForURL(/#\/resume\/resume_/);
   await expect.poll(async () => { const r = active(await store(page)); return `${r.template}/${r.settings.templatePreset}/${r.personal.name}`; })
-    .toBe('classic/harbor/Sarah Chen');
+    .toBe(`classic/harbor/${mine}`);
 });
