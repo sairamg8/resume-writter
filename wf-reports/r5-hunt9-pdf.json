@@ -1,0 +1,25 @@
+{
+  "cluster": "r5-hunt9-pdf",
+  "branch": "claude/wf-r5-hunt9-pdf",
+  "base": "22fb602e3abb77edfff8874b2152362ed6efa980",
+  "rows": [
+    {
+      "id": "R5-HUNT9-PICKED-ICON-FETCHED-AS-IMAGE",
+      "title": "A contact icon picked from the header icon picker ('icon:<id>' / 'pack:<id>') was fetched as an image URL on every PDF build, leaving a retry pending so the dashboard card picture was never kept",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": [
+        "9c128d5a179c00a0b3c49b03d26f53409988361c",
+        "65548059fc5bab6de058a39e5e77c48b21bf507b"
+      ],
+      "tests": [
+        "tests/unit/r5-hunt9-picked-icon-fetched.unit.mjs"
+      ],
+      "summary": "Now: withPrintablePhotos makes a printable copy only of contact icons that are images (isContactIconImage: a data:image/ or http(s) URL); a picker choice is left as it is, nothing is fetched, no retry is set, so pageImage no longer marks the résumé incomplete and the dashboard keeps its card picture. isContactIconImage moved to the small src/utils/contactIconImage.js (re-exported from contactIconPaths.js) so the start-up path does not carry the icon shape registry (71-startup-chunks stays under 1.1 MB).",
+      "ci": [36644506931, 36644704045]
+    }
+  ],
+  "review": null,
+  "baselineFailures": [],
+  "notes": "Base named in the task was ca009d49; origin/claude/r4-green head was 22fb602e when the branch was cut. Run 36644506931: failfirst for 9c128d5a passed (test fails without the fix, passes with it); its named-tests job failed only on 71-startup-chunks (start-up path 1106 kB > 1100 kB) because printableImage.js imported contactIconPaths.js; fixed in 65548059 by moving isContactIconImage to its own module. Run 36644704045 (named tests incl. 71-startup-chunks, 31-contact-fields, knowledge-docs, contact-icon and photo tests) is green. No docs/knowledge text describes this path, so no doc change was needed."
+}
