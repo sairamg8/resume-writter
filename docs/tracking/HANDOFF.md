@@ -1,5 +1,13 @@
 # Session Handoff — Resume Here
 
+**HUNT ROUND 6 RUNNING (coordinator session_01FdiasXrhydMkPZHWFFd4KS, started 2026-09-29 16:44 UTC).** Base a79efd8b.
+Workflow B (boards, jobs, dash, sync) DONE: 13 confirmed + fixed + reviewed, merged into claude/r4-green (d539d84,
+334fb65, 232d80e, 5f478e0) + merge-fix 8f0e3ad (category Undo gets the sync branch's sign-out guard; own test).
+Fail-first for 8f0e3ad and the full gate on 8f0e3ad dispatched ~18:0x UTC. Seen-list updated for B.
+Workflow A (editor, pdf, import, export, tools) still running. If this run dies: merge any
+claude/wf-r5-hunt6-<area> whose report has review.readyToMerge (merge_cluster.sh, BUT restore wf-reports/ after it —
+the script drops the tracked folder — and add only the area's report), rerun areas without a report, update seen-list.
+
 **BUG HUNT RESUMED by the owner 2026-09-29 ~17:00 UTC.** The coordinator routine trig_01NqtyqnKGMDHRm8VnNuJLYL is
 re-enabled (every 3 h). Next: resume hunt round 6 from the state below and loop until two consecutive dry rounds.
 **Commits (owner rule, 2026-09-29):** author and committer `sairamgudiputi <sairamgudiputi8@gmail.com>`, with no
