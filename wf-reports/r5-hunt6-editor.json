@@ -1,0 +1,26 @@
+{
+  "cluster": "r5-hunt6-editor",
+  "branch": "claude/wf-r5-hunt6-editor",
+  "base": "a79efd8b",
+  "rows": [
+    {
+      "id": "R5-HUNT6-LINE-HEIGHT-FLOAT",
+      "title": "Design → Line Height saves values like 1.4000000000000001, and clicking into the box shows that long number instead of 1.4",
+      "severity": "low",
+      "outcome": "fixed",
+      "commits": [
+        "fe57f92f72b1522ce6d6dd9e74527dc7071ad258"
+      ],
+      "tests": [
+        "tests/pdf/106-r5-hunt6-line-height-float.test.mjs"
+      ],
+      "summary": "Now: Line Height's − / + buttons and a typed value store a clean number. − from 1.5 stores 1.4, and typing 1.4 then Enter stores 1.4, so the focused box and the JSON export show 1.4, not 1.4000000000000001. The fix is in NumberRow (src/components/DesignPanelShared.jsx). One snap() helper rounds Math.round(n / step) * step to the step's decimals (step 0.1 gives 1 decimal, step 1 gives 0). The typed commit and both buttons use it. Rows with a whole-number step are unchanged. Nothing that prints changes, because the layout already read the same value.",
+      "product_call": null,
+      "remaining": "Values already saved with float error (e.g. 1.4000000000000001) are not migrated. The next − / + or typed value on that row stores a clean one. The Website-field freeze lead did not reproduce (see the hunter's note) and was not pursued.",
+      "failfirst_run": "36602322653 (green: with fe57f92 reversed, '# fail 2'; pass with it)"
+    }
+  ],
+  "review": null,
+  "baselineFailures": [],
+  "notes": "One bug fixed in fe57f92. CI: failfirst run 36602322653 is green: the new test fails 2 of 2 without the fix and passes with it; lint green. Named-tests run 36602327379 is green: tests/pdf/106-r5-hunt6-line-height-float, 73-typed-number-fields, 86-icon-size-steps, 103-r4-dph-33-design-fields-touch-text, 86-heading-border-colour, 16-saved-data-spacing and tests/unit/spacing-numbers; lint green. No baseline failures seen."
+}
