@@ -46,9 +46,50 @@ function runText(run) {
   return href && run.text.trim() ? `[${esc(run.text)}](${href})` : esc(run.text);
 }
 
+/**
+ * The marks a run prints with, as the PDF and Word draw them (R5-HUNT2): bold "**", italic "*",
+ * strike-through GFM's "~~". Underline has no Markdown of its own (a raw <u> would print as its tag in
+ * many viewers and come back as text from the app's import), so it is left out, as the ATS text leaves
+ * out every mark.
+ */
+const MARKS = [['bold', '**'], ['italic', '*'], ['strike', '~~']];
+
+/**
+ * One line of runs as Markdown with their marks. A mark opens just before a run's first character
+ * and closes just after its last, never next to a space ("**led **" shows its asterisks), and marks
+ * shared by neighbouring runs stay open across them, so "**a *b***" never reads "**a*****b***".
+ */
+function markedLine(runs) {
+  let out = '';
+  let space = ''; // whitespace waiting to be written: after any mark that closes, before any that opens
+  const open = []; // the delimiters open, outermost first
+  for (const run of runs) {
+    const [, before, core, after] = /^(\s*)([\s\S]*?)(\s*)$/.exec(run.text);
+    space += before;
+    if (core) {
+      const want = MARKS.filter(([k]) => run[k]).map(([, d]) => d);
+      const keep = open.findIndex((d) => !want.includes(d));
+      if (keep >= 0) out += open.splice(keep).reverse().join('');
+      out += space + want.filter((d) => !open.includes(d)).join('');
+      open.push(...want.filter((d) => !open.includes(d)));
+      out += runText({ ...run, text: core });
+      space = '';
+    }
+    space += after;
+  }
+  return out + open.reverse().join('');
+}
+
 /** A parsed block's lines (one per line break), whitespace collapsed, empty lines left out. */
-const blockLines = (block) => block.runs.map(runText).join('').split('\n')
-  .map((l) => lead(l.replace(/\s+/g, ' ').trim())).filter(Boolean);
+const blockLines = (block) => {
+  // A line break inside a run ends its line: each line opens and closes its own marks.
+  const lines = [[]];
+  block.runs.forEach((run) => String(run.text).split('\n').forEach((text, i) => {
+    if (i) lines.push([]);
+    lines[lines.length - 1].push({ ...run, text });
+  }));
+  return lines.map((runs) => lead(markedLine(runs).replace(/\s+/g, ' ').trim())).filter(Boolean);
+};
 
 /**
  * Rich text (a description, the summary), then an entry's legacy bullets, as Markdown lines in the

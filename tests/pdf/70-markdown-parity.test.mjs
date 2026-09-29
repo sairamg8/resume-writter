@@ -79,7 +79,7 @@ describe('the Markdown keeps the PDF\'s order inside an entry, and its links abs
     const { generateMarkdownResume } = await loadModule('/src/utils/markdownExport.js');
     const md = generateMarkdownResume(fullResume('classic'));
     const entry = md.slice(md.indexOf('### **Acmecorp**'), md.indexOf('## ', md.indexOf('### **Acmecorp**') + 4));
-    const expected = 'Owned the zephyr billing platform.\n\n- Cut quokka costs 30%\n    - Nested ibex child\n- Led five engineers\n\nClosing wombat note.\n\n- Legacy walrus bullet';
+    const expected = 'Owned the zephyr billing platform.\n\n- Cut quokka costs 30%\n    - Nested ibex child\n- Led **five** engineers\n\nClosing wombat note.\n\n- Legacy walrus bullet';
     assert.ok(entry.includes(expected), `entry:\n${entry}`);
   });
 
