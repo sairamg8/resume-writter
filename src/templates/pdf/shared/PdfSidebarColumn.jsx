@@ -8,6 +8,7 @@ import { CSS_PX_TO_PT, DEFAULT_ITEM_GAP_PX, MM_TO_PT, tracking } from './pdfUnit
 import { breakToFit, fitsOnLine, textWidth } from './pdfMeasure';
 import { pageBoxPt } from '@/constants/pageSize';
 import { pageMargins } from '@/constants/pageMargins';
+import { SIDE_COL } from './PdfPage';
 import { sidebarShades } from './pdfColors';
 import { titleTracking } from './sectionHeadingLook';
 import { headingFace } from './pdfFaces';
@@ -30,8 +31,8 @@ const NAVY = sidebarShades();
 // Sections that live in the dark sidebar column (the section editor reads the same list)
 export const SIDEBAR_TYPES = new Set(SIDEBAR_COLUMN_TYPES);
 
-/** The dark column: its share of the paper, and its padding on the main column's side, pt. */
-export const SIDE_COL = 0.38;
+/** The dark column: its share of the paper (PdfPage.jsx), and its padding on the main column's side, pt. */
+export { SIDE_COL };
 export const SIDE_PAD_RIGHT = 10;
 
 /** The width the column's text is laid out in, pt: its share of the paper inside its padding. */

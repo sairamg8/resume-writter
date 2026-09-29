@@ -3,19 +3,16 @@ import { Text } from './PdfText';
 import { PdfRichText } from './PdfRichText';
 import { hasRichText, safeHref } from '@/utils/richText';
 import { dateRange, endDateOf, presentLabel, startDateOf } from '@/utils/dates';
-import { SectionTitleOf, RenderBullets, RenderColGrid, hexAlpha, SectionRouter, SPACER, ItemHeader, shadesOf, getColumnWidth } from './PdfSections';
-import { CentredLine, EmployerHeader, EndRow, endField, endRowLines, fieldGap, headPresence, itemHeadPresence, onBaselineOf, wordRoom } from './PdfItemHeader';
+import { SectionTitleOf, RenderBullets, RenderColGrid, hexAlpha, SectionRouter, SPACER, ItemHeader, shadesOf, entryTextWidth } from './PdfSections';
+import { CentredLine, EmployerHeader, EndRow, centredLines, endField, endRowLines, fieldGap, headPresence, itemHeadPresence, onBaselineOf, wordRoom } from './PdfItemHeader';
 import { employerOf, groupPlaces, groupsRoles, roleGroups } from '@/utils/roleGroups';
 import {
-  SIDEBAR_TYPES, SIDE_COL, SideSectionTitle, SideEducation, SideLanguages, SideCertifications, SideInterests, SideReferences,
+  SIDEBAR_TYPES, SideSectionTitle, SideEducation, SideLanguages, SideCertifications, SideInterests, SideReferences,
 } from './PdfSidebarColumn';
 import { SideSkills } from './PdfSidebarSkills';
 import { breakLinks } from './pdfFontLoader';
 import { ContactValue } from './PdfContact';
-import { capMiddle, textWidth, wrappedLines } from './pdfMeasure';
-import { MM_TO_PT } from './pdfUnits';
-import { pageBoxPt } from '@/constants/pageSize';
-import { pageMargins } from '@/constants/pageMargins';
+import { capMiddle, wrappedLines } from './pdfMeasure';
 
 export { SIDEBAR_TYPES, SideSectionTitle };
 
@@ -41,18 +38,13 @@ export function renderSideSection(section, sectionGap, itemGap, accent, shades, 
 const CARD_DOT = 6;
 /** The card's left border and its padding past it, pt (CardItem): the room its text loses. */
 const CARD_INSET = 2 + 9;
-/** The main column's padding on the dark column's side, pt (SidebarTemplatePDF). */
-const MAIN_PAD_LEFT = 14;
 
 /**
- * The width a main-column card's text is laid out in, pt: the paper less the dark column, the main
- * column's padding and the page's right margin, a Grids cell's share of that (getColumnWidth), less
- * the card's border and padding.
+ * The width a main-column card's text is laid out in, pt: the main column (mainTextWidthPt: the paper
+ * less the dark column, the main column's padding and the page's right margin), a Grids cell's share of
+ * that (entryTextWidth), less the card's border and padding.
  */
-const cardTextWidth = (settings, cols = 1) => {
-  const main = pageBoxPt(settings).width * (1 - SIDE_COL) - MAIN_PAD_LEFT - pageMargins(settings).h * MM_TO_PT;
-  return main * (parseFloat(getColumnWidth(cols)) / 100) - CARD_INSET;
-};
+const cardTextWidth = (settings, cols = 1) => entryTextWidth(settings, cols) - CARD_INSET;
 
 /**
  * A card: its left border, and the dot on it level with the middle of the header's first line
@@ -262,12 +254,8 @@ function projectCardLines(item, { settings, entrySize, centered, showDates, cols
   const dateBox = { fontFamily: font, fontSize: entrySize - 1.5 };
   const name = item.name || '';
   const date = showDates ? dateRange(startDateOf(item), endDateOf(item, settings), settings) : '';
-  const nameLines = wrappedLines(name, nameBox, width);
-  const gap = fieldGap(dateBox.fontSize);
   const head = !centered ? Math.max(1, endRowLines({ text: name, box: nameBox, end: date, endBox: dateBox, gap: 6, width }))
-    : !date ? Math.max(1, nameLines)
-    : !name ? 1
-    : nameLines > 1 || textWidth(name, nameBox) + 2 * gap + textWidth(`· ${date}`, dateBox) > width ? nameLines + 1 : 1;
+    : centredLines({ text: name, box: nameBox, date, dateBox, gap: fieldGap(dateBox.fontSize), width });
   const details = [item.technologies, item.url].filter(Boolean).join(' · ');
   return head + wrappedLines(details, { fontFamily: font, fontSize: entrySize - 1 }, width);
 }

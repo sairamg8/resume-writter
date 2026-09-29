@@ -111,6 +111,18 @@ export function endRowLines({ text, box, end, endBox, gap, width }) {
   return wordRoom([text, box]) + WORD_SLACK > room ? wrappedLines(text, box, width) + 1 : Math.max(1, wrappedLines(text, box, room));
 }
 
+/**
+ * The lines a CentredLine `width` pt wide takes (for a title's presence): its `text` in `box`, the
+ * date (in `dateBox`) after a " · " on its line — or, when the text wraps or both do not fit, the
+ * text's lines and the date on a line of its own under them, as the row wraps.
+ */
+export function centredLines({ text, box, date, dateBox, gap, width }) {
+  const lines = wrappedLines(text, box, width);
+  if (!date) return Math.max(1, lines);
+  if (!text) return 1;
+  return lines > 1 || textWidth(text, box) + 2 * gap + textWidth(`· ${date}`, dateBox) > width ? lines + 1 : 1;
+}
+
 /** A field at an EndRow's right end, on the last line of the text beside it, `gap` from what precedes it. */
 export const endField = (text, style, gap) => (text ? <Text style={{ ...style, marginLeft: gap, alignSelf: 'flex-end' }}>{text}</Text> : null);
 

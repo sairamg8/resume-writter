@@ -16,10 +16,12 @@ import {
   ItemHeader,
   RenderBullets,
   getColumnWidth,
+  entryTextWidth,
   getDateColor,
   shadesOf,
 } from './PdfSections';
-import { CentredLine, EndRow, endField, fieldGap, headPresence, headerKeep, itemHeadPresence, onBaselineOf, wordRoom } from './PdfItemHeader';
+import { CentredLine, EndRow, centredLines, endField, endRowLines, fieldGap, headPresence, headerKeep, itemHeadPresence, onBaselineOf, wordRoom } from './PdfItemHeader';
+import { wrappedLines } from './pdfMeasure';
 
 export function CertificationsSection({ section, settings, marginBottom, spaceBefore, itemGap, italicSubs, centered }) {
   const s        = section.settings || {};
@@ -103,11 +105,24 @@ export function ProjectsSection({ section, settings, marginBottom, spaceBefore, 
   const shade      = shadesOf(settings);
   const font       = settings?._pdfFontFamily;
   // The title keeps the first project's header — its name and date, its technologies and link — and the
-  // lines it keeps with it (R2-047).
+  // lines it keeps with it (R2-047), each wrapped at the entry's width (a Grids cell's): the name with
+  // the date at its last line's right end (centred, after a " · "), then the technologies and link on
+  // one line. Counted as one line each, long technologies with a link that wrapped onto a third line
+  // left the title alone at the foot of a page while the project moved on (R4-DOUT-04).
   const first      = visibleItems[0];
+  const nameBox    = { fontFamily: font, fontSize: entrySize, fontWeight: 'bold' };
+  const metaBox    = { fontFamily: font, fontSize: baseSize };
+  const headLines  = (item) => {
+    const width = entryTextWidth(settings, cols);
+    const date = showDates ? dateRange(startDateOf(item), endDateOf(item, settings), settings) : '';
+    const gap = fieldGap(baseSize);
+    const name = centered ? centredLines({ text: item.name, box: nameBox, date, dateBox: metaBox, gap, width })
+      : Math.max(1, endRowLines({ text: item.name || '', box: nameBox, end: date, endBox: metaBox, gap, width }));
+    return name + wrappedLines([item.technologies, item.url].filter(Boolean).join(' · '), metaBox, width);
+  };
   const presence   = first ? headPresence({
-    lines: 1 + (first.technologies || first.url ? 1 : 0),
-    styles: [{ fontFamily: font, fontSize: entrySize, fontWeight: 'bold' }, { fontFamily: font, fontSize: baseSize }],
+    lines: headLines(first),
+    styles: [nameBox, metaBox],
     keep: headerKeep(settings),
     extra: 2,
   }) : 0;

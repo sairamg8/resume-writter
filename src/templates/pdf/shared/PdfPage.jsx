@@ -3,6 +3,7 @@ import { Text } from './PdfText';
 import { solid, textShades } from './pdfColors';
 import { HEADER_BORDER_PAD_PT, MM_TO_PT } from './pdfUnits';
 import { pageBoxPt } from '@/constants/pageSize';
+import { headerTemplateId } from '@/constants/templates';
 
 
 /**
@@ -23,6 +24,20 @@ import { pageMargins } from '@/constants/pageMargins';
 
 /** The width between the page's left and right margins, in pt, on the résumé's paper (A4 or US Letter). */
 export const contentWidthPt = (settings) => pageBoxPt(settings).width - 2 * pageMargins(settings).h * MM_TO_PT;
+
+/** The Sidebar's dark column: its share of the paper (PdfSidebarColumn.jsx). */
+export const SIDE_COL = 0.38;
+/** The Sidebar's main column: its padding on the dark column's side, pt (SidebarTemplatePDF). */
+export const MAIN_PAD_LEFT = 14;
+
+/**
+ * The width a page's entries are laid out in, pt: the page's text (contentWidthPt), or on the
+ * two-column Sidebar its main column — the paper less the dark column, the main column's padding and
+ * the page's right margin. Its "Single · ATS-safe" page prints Classic's (headerTemplateId).
+ */
+export const mainTextWidthPt = (settings) => (headerTemplateId(settings?._template, settings) === 'sidebar'
+  ? pageBoxPt(settings).width * (1 - SIDE_COL) - MAIN_PAD_LEFT - pageMargins(settings).h * MM_TO_PT
+  : contentWidthPt(settings));
 
 export function getPageStyle(settings) {
   // Note: page-level lineHeight is intentionally omitted — it can inflate yoga
