@@ -54,7 +54,7 @@ function editor(value) {
 }
 
 describe('STAR Optimizer · Apply after the description changed elsewhere (R5-HUNT7)', () => {
-  it('the rewrite replaces the statement it opened on, in the new content', () => {
+  it('the rewrite replaces the statement it opened on, in the new content', async () => {
     const e = editor(BEFORE);
     try {
       e.caret('Handled QA', 3);
@@ -64,10 +64,10 @@ describe('STAR Optimizer · Apply after the description changed elsewhere (R5-HU
       e.apply('Owned QA for 12 releases, cutting escaped defects by 40%');
       assert.equal(e.el.innerHTML, '<ul><li>Led the whole team</li><li>Owned QA for 12 releases, cutting escaped defects by 40%</li></ul>');
       assert.equal(e.stored.at(-1), e.el.innerHTML, 'the change is saved');
-    } finally { e.view.unmount(); }
+    } finally { await e.view.unmount(); }
   });
 
-  it('a saved Range collapsed to the editor\'s start (a browser\'s live range) is not written there', () => {
+  it('a saved Range collapsed to the editor\'s start (a browser\'s live range) is not written there', async () => {
     const e = editor(BEFORE);
     const doc = e.view.document;
     const made = [];
@@ -82,17 +82,18 @@ describe('STAR Optimizer · Apply after the description changed elsewhere (R5-HU
       for (const r of made) { r.setStart(e.el, 0); r.setEnd(e.el, 0); }
       e.apply('Owned QA for 12 releases');
       assert.equal(e.el.innerHTML, '<ul><li>Led the whole team</li><li>Owned QA for 12 releases</li></ul>', 'no loose text above the list, no old bullet');
-    } finally { doc.createRange = create; e.view.unmount(); }
+    } finally { doc.createRange = create; await e.view.unmount(); }
   });
 
-  it('a statement no longer there: the rewrite is a new bullet, nothing else changes', () => {
+  it('a statement no longer there: the rewrite is a new bullet, nothing else changes', async () => {
     const e = editor(BEFORE);
     try {
       e.caret('Handled QA', 3);
       e.open();
       e.outside('<ul><li>Led the team</li><li>Ran QA</li></ul>');
       e.apply('Owned QA for 12 releases');
-      assert.equal(e.el.innerHTML, '<ul><li>Led the team</li><li>Ran QA</li></ul><ul><li>Owned QA for 12 releases</li></ul>');
-    } finally { e.view.unmount(); }
+      // sanitizeRichText joins the new list to the one before it: a bullet at the end of the list.
+      assert.equal(e.el.innerHTML, '<ul><li>Led the team</li><li>Ran QA</li><li>Owned QA for 12 releases</li></ul>');
+    } finally { await e.view.unmount(); }
   });
 });
