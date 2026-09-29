@@ -14,9 +14,10 @@ import { IssueHost, useIssueActions, useIssueRoute } from '@/components/board/us
 import { IssueTypeIcon, PriorityIcon } from '@/components/tracker/TrackerIcons';
 import { BOARD_DRAG_INSTRUCTIONS } from '@/utils/cardKeys';
 import { boardCollision } from '@/utils/boardDnd';
-import { boardLists, boardSprint, columnDeletion, dragPreview, dropTarget, hiddenDoneCount, previewLists } from '@/utils/boardView';
+import { boardLists, boardSprint, columnDeletion, columnRecategorization, dragPreview, dropTarget, hiddenDoneCount, previewLists } from '@/utils/boardView';
 import { filterIssues, liveFilters, swimlanes } from '@/utils/boardQuery';
 import { issueKey } from '@/utils/boardModel';
+import { COLUMN_CATEGORIES } from '@/constants/boards';
 
 /** "+" at the end of the columns: a new column, named at once. */
 function AddColumn({ onAdd }) {
@@ -162,6 +163,25 @@ export function Board() {
     if (removed) toast({ title: `Column “${list.title || 'Untitled'}” deleted`, action: { label: 'Undo', onClick: () => store.restoreColumn(removed) } });
   }
 
+  // A category change that reopens or resolves the column's issues asks first, and its toast offers
+  // Undo, as a column's delete does: a reopen wipes each issue's resolved date, and setting the
+  // category back stamped them all "now", long-done issues flooding back onto the board (R5-HUNT6).
+  async function setCategory(list, category) {
+    const { count: n, change } = columnRecategorization(board, list.id, category);
+    const name = COLUMN_CATEGORIES.find((c) => c.id === category)?.name ?? category;
+    const title = list.title || 'Untitled';
+    if (n > 0 && change) {
+      const ok = await confirm({
+        title: `Make ${title} a “${name}” column?`,
+        body: `Its ${n} issue${n === 1 ? '' : 's'} will be ${change === 'reopen' ? 'reopened' : 'marked done'}.`,
+        confirmLabel: 'Change category',
+      });
+      if (!ok) return;
+    }
+    const changed = store.setColumnCategory(board.id, list.id, category);
+    if (changed && n > 0 && change) toast({ title: `Column “${title}” is now ${name}`, action: { label: 'Undo', onClick: () => store.restoreCategory(changed) } });
+  }
+
   const columnMenu = (list, index) => {
     const column = board.columns.find((c) => c.id === list.id);
     return (
@@ -171,7 +191,7 @@ export function Board() {
         count={lists.length}
         onRename={() => setColumnEdit({ id: list.id, mode: 'rename' })}
         onLimit={() => setColumnEdit({ id: list.id, mode: 'limit' })}
-        onCategory={(category) => store.updateColumn(board.id, list.id, { category })}
+        onCategory={(category) => setCategory(list, category)}
         onMove={(to) => store.moveColumn(board.id, list.id, to)}
         onDelete={() => deleteColumn(list)}
       />

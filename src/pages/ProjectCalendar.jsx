@@ -44,7 +44,7 @@ export function ProjectCalendar() {
     <div className="flex min-h-0 flex-1 flex-col">
       <ProjectHeader board={board} />
       <BoardStorageNotice persistError={store.persistError} recovery={store.recovery} onDismissRecovery={store.dismissRecovery} className="px-4 pt-3 md:px-8" />
-      <BoardToolbar board={board} filters={filters} onChange={setFilters} />
+      <BoardToolbar board={board} filters={filters} onChange={setFilters} withEpics />
       {/* The month controls sit above the grid's scroller, not in it: on a phone the 48rem grid pans
           sideways in its own box, as the board's columns do, and Today / previous / next / the month
           stay on screen instead of sliding away with the first days of the week. The row wraps: on a
