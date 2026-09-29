@@ -4,7 +4,7 @@
 // board actions and the pure mutations under them (boardActions.js, boardOps.js …), which only the
 // board pages need and which load with them (71-startup-chunks). One list: every importer shares
 // this module's singleton.
-import { pendingRecovery, rememberRecovery } from '../utils/storageBackup.js';
+import { forgetRecovery, pendingRecovery, rememberRecovery } from '../utils/storageBackup.js';
 import { keepUnsaved } from '../utils/unsavedJobs.js';
 import { BOARDS_KEY } from '../constants/boards.js';
 import { addressableBoards } from '../utils/normalizeBoard.js';
@@ -117,6 +117,13 @@ function dismissRecovery() {
   update({ recovery: null });
 }
 
+/** The list left this browser with its account: its notice and backups go with it (forgetRecovery). */
+function leaveRecovery() {
+  if (!initialized) init();
+  forgetRecovery(BOARDS_KEY);
+  update({ recovery: null });
+}
+
 export function _resetBoardStoreForTest() {
   current = null;
   stored = null;
@@ -130,4 +137,4 @@ function replaceBoards(list) {
   setBoards((boards) => (list === boards ? boards : addressableBoards(list)));
 }
 
-export { snapshot, subscribe, setBoards, boardsNow, replaceBoards, dismissRecovery };
+export { snapshot, subscribe, setBoards, boardsNow, replaceBoards, dismissRecovery, leaveRecovery };

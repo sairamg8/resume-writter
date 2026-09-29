@@ -24,7 +24,8 @@ import { itemPath } from './collectionSyncIo.js';
  *   io        collectionIo(...) — null when this build has no cloud
  *   store     { items() → the list now, replace(list), subscribe(fn) → unsubscribe, fromCloud(doc)
  *             → the item as the store holds one (null: not one), label(item) → its name, seed(item)
- *             → whether it is the first visit's demo, untouched (optional) }
+ *             → whether it is the first visit's demo, untouched (optional), leaveRecovery() → the list's
+ *             recovery notice and backups forgotten as it leaves this browser (optional) }
  *   meta      { read(), write(m) } — collectionSyncMeta.js
  *   report    { status('idle'|'syncing'|'synced'|'offline'|'error'|'stopped'|'off'), held([{ id, name }]) }
  *   online, hidden, timers, flushDelay, retryDelay, maxRetryDelay, refreshAfter, now, log — as
@@ -112,6 +113,8 @@ export function createCollectionSync({
     if (!left) return;
     meta.write(left.meta);
     store.replace(left.list);
+    // Its recovery notice and backups copy it: they leave with it (storageBackup.forgetRecovery).
+    store.leaveRecovery?.();
   }
 
   /** Whenever the signed-in user (or null) changes, or the browser goes online or offline. */
