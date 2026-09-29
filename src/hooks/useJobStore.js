@@ -276,9 +276,6 @@ function updateJob(id, updates) {
   return true;
 }
 
-/** The account the list belongs to (its sync record's uid): null signed out, or never synced. */
-const listOwner = () => localMeta(JOBS_SYNC_KEY).read().uid;
-
 /**
  * Whose list each job (deleteJob, moveJob) or whole list (clearDemoData) an Undo can put back was
  * taken from. An Undo toast outlives a sign-out, here or in another tab: its restore wrote the
