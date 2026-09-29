@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import {
   analyzeAtsScore,
+  atsHeadingLabel,
   entriesInOneColumn,
   jobTitleFirst,
   keywordSkillTarget,
@@ -88,8 +89,8 @@ const isText = (v) => typeof v === 'string';
 /** "1 section heading", "3 section headings". */
 const count = (n, noun) => `${n} ${noun}${n === 1 ? '' : 's'}`;
 
-/** A section's heading as the notice quotes it. */
-const headingOf = (s) => `"${s?.title || s?.type || 'Untitled'}"`;
+/** A section's heading as the notice quotes it (atsHeadingLabel: a cleared one by its canonical title). */
+const headingOf = atsHeadingLabel;
 
 /**
  * An Undo's restore for one of a section's settings: the value it had, or no key where it had none —

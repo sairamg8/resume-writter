@@ -418,6 +418,28 @@ const FIGURE_UNIT = '(?:[kmb]|x|ms|s|secs?|mins?|hrs?|h|[kmgtp]b|st|nd|rd|th)?';
 const FIGURE = new RegExp(`^#?\\d+(?:\\.\\d+)*${FIGURE_UNIT}(?:-\\d+(?:\\.\\d+)*${FIGURE_UNIT})*\\+?$`);
 
 /**
+ * A posting's web and e-mail addresses and its hashtags, which name no skill: "https://careers.acme.com/jobs",
+ * "jobs@acme.com", a bare "acme.com" and LinkedIn's "#LI-Remote", "#hiring" were the keywords "https",
+ * "careers.acme.com", "acme.com", "#LI-Remote" and "#hiring", listed as missing and written into Skills
+ * by "+" (R5-HUNT8-ATS-JD-ADDRESSES-HASHTAGS-AS-KEYWORDS). A bare host is read by the endings no tech
+ * name has (".com", ".org", ".gov", ".edu"): "Node.js", "socket.io" and "ASP.NET" stay. A "#" after a
+ * letter ("C#", "F#") is no hashtag; "#1" is a rank (FIGURE).
+ * A host is read whole with a country ending ("seek.com.au", "acme.gov.in") and so is one under
+ * ".co." or ".ac." ("acme.co.uk", "ox.ac.uk"): blanked only to its ".com", "seek.com.au" left the
+ * keyword ".au", found after any word ending in "au" and written into Skills by "+", and "acme.co.uk"
+ * stayed a keyword. "B.Com" and "M.Com" are degrees (Bachelor, Master of Commerce) and stay keywords
+ * (review of R5-HUNT8-ATS-JD-ADDRESSES-HASHTAGS-AS-KEYWORDS).
+ */
+const POSTING_ADDRESS = new RegExp([
+  String.raw`(?:(?<![\p{L}\p{N}])[a-z][a-z0-9+.-]*:\/\/|(?<![\p{L}\p{N}.])www\.)\S*`,
+  String.raw`\S*[^\s@]@[^\s@]\S*`,
+  String.raw`(?<![\p{L}\p{M}\p{N}_.-])(?![bm]\.com(?![\p{L}\p{N}-]|\.[\p{L}\p{N}]))[\p{L}\p{N}-]+(?:\.[\p{L}\p{N}-]+)*\.(?:(?:com|org|gov|edu)(?:\.\p{L}{2})?|(?:co|ac)\.\p{L}{2})(?![\p{L}\p{N}])(?:\/\S*)?`,
+  String.raw`(?<![\p{L}\p{M}\p{N}_+#])#\p{L}[\p{L}\p{M}\p{N}_-]*`,
+].join('|'), 'giu');
+/** The text with its addresses and hashtags blanked at their length, so the phrase finds keep their indexes. */
+const blankPostingAddresses = (text) => text.replace(POSTING_ADDRESS, (m) => ' '.repeat(m.length));
+
+/**
  * Extracts keywords & tech terms from a job description. A word is Unicode letters, their marks and
  * digits: `\w` is ASCII, and read with it "München" was the keyword "nchen" (R2-023). The text is
  * read composed (NFC), and a combining mark is part of its word: pasted from a PDF or a Mac, "ü" is
@@ -428,7 +450,7 @@ export function extractJobKeywords(jobDescriptionText) {
   // Tokenize words, normalizing punctuation. An apostrophe stays inside its word, typed straight or
   // curly: read as a space, "You'll" and "we're" were the keywords "ll" and "re", which the stop
   // list's "you'll" and "we're" could never catch, and "+" wrote them into Skills (R4-CL-02).
-  const clean = jobDescriptionText.normalize('NFC')
+  const clean = blankPostingAddresses(jobDescriptionText.normalize('NFC'))
     .replace(APOSTROPHES, "'")
     .replace(/[^\p{L}\p{M}\p{N}_\s+#.'-]/gu, ' ')
     .replace(/\s+/g, ' ');
@@ -467,7 +489,7 @@ export function extractJobKeywords(jobDescriptionText) {
   // "learning-based", and taking a time off "learning" dropped the posting's own "continuous
   // learning" (review of R5-HUNT2-ats-jd-phrase-and-its-words-counted-separately). The phrase's
   // tokens are read from the text around each find, cleaned as above but kept at the text's length.
-  const text = jobDescriptionText.normalize('NFC');
+  const text = blankPostingAddresses(jobDescriptionText.normalize('NFC'));
   const spaced = text.replace(APOSTROPHES, "'")
     .replace(/[^\p{L}\p{M}\p{N}_\s+#.'-]/gu, (c) => ' '.repeat(c.length));
   for (const phrase of multiWordPhrases) {
@@ -638,6 +660,19 @@ export function keywordSkillTarget(sections) {
     if (item) return { section, item };
   }
   return shown.length ? { section: shown[0] } : null;
+}
+
+/**
+ * A section's heading as the ATS report and its fix notices quote it: its title, or for one the user
+ * cleared (it prints no heading), its type's canonical title marked so. They quoted the internal type
+ * id ("experience") or an empty '""' (R5-HUNT8-ATS-FIX-NOTICE-CLEARED-TITLE-TYPE-ID), as Markdown / ATS
+ * text (R5-HUNT5) and the share panel (R5-HUNT6) did before.
+ */
+export function atsHeadingLabel(section) {
+  const title = String(section?.title || '').trim();
+  if (title) return `"${title}"`;
+  const canonical = Object.hasOwn(ATS_STANDARD_SECTIONS, section?.type ?? '') ? ATS_STANDARD_SECTIONS[section.type].canonical : '';
+  return canonical ? `"${canonical}" (no heading)` : '"Untitled"';
 }
 
 /**
@@ -919,7 +954,7 @@ export function analyzeAtsScore(resume, jobDescriptionText = '') {
       detail: 'All section titles match standard Workday and Taleo taxonomy dictionaries.',
     });
   } else {
-    const listStr = nonStandard.map(n => `"${n.title}" → "${n.canonical}"`).join(', ');
+    const listStr = nonStandard.map(n => `${atsHeadingLabel(n)} → "${n.canonical}"`).join(', ');
     results.categories.headings.items.push({
       id: 'std_headings', status: 'warn', text: `${nonStandard.length} Non-standard heading(s) detected`,
       detail: `Custom headings can confuse older ATS: ${listStr}. Click "Standardize Headings" below to fix.`,

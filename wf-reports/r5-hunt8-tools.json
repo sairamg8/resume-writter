@@ -1,0 +1,79 @@
+{
+  "cluster": "r5-hunt8-tools",
+  "branch": "claude/wf-r5-hunt8-tools",
+  "base": "22fb602e3abb77edfff8874b2152362ed6efa980",
+  "rows": [
+    {
+      "id": "R5-HUNT8-ATS-JD-ADDRESSES-HASHTAGS-AS-KEYWORDS",
+      "title": "Job scanner reads a posting's web addresses, e-mail domains and hashtags as missing keywords, and '+' writes them into Skills",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": [
+        "e999d7d89f7b15662b5e08657ef4820b3c7bab8b"
+      ],
+      "tests": [
+        "tests/unit/r5-hunt8-ats-jd-addresses-hashtags.unit.mjs"
+      ],
+      "summary": "Now: extractJobKeywords blanks a posting's URLs (scheme:// or www.), e-mail addresses, bare .com/.org/.gov/.edu hosts and hashtags (#LI-Remote, #hiring) before it reads words and phrases, so they are never JD keywords, missing keywords or '+' Skills; C#, F#, .NET, ASP.NET, Node.js, socket.io and CI/CD stay keywords.",
+      "ci": [
+        36643956205,
+        36644256464
+      ]
+    },
+    {
+      "id": "R5-HUNT8-OPTIMIZER-EMPTY-BULLET-APPLY-AT-END",
+      "title": "STAR Optimizer opened from an empty bullet (or empty line) puts its result at the end of the description and leaves the empty bullet printing a bare bullet",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": [
+        "e630806bc4f9df96b44f1786811ba9d183f8677c",
+        "842094bd4b3e68bb6c85e279b0ddd4994b496bfa"
+      ],
+      "tests": [
+        "tests/pdf/r5hunt8-optimizer-empty-bullet.test.mjs"
+      ],
+      "summary": "Now: opened with the caret in an empty bullet, empty paragraph or blank line between breaks, the optimizer remembers that spot (blankSpot) and Apply writes the result into it, so it stays in its own list (numbered stays numbered) and no empty bullet is left; with no caret in the field, or if the editor changed meanwhile, the result is still a new bullet at the end.",
+      "ci": [
+        36643956205,
+        36644256464
+      ]
+    },
+    {
+      "id": "R5-HUNT8-ATS-FIX-NOTICE-CLEARED-TITLE-TYPE-ID",
+      "title": "ATS Check's fix notices name a section whose title was cleared by its internal type id, and the headings warning lists it as an empty quote",
+      "severity": "low",
+      "outcome": "fixed",
+      "commits": [
+        "db03cdb8d92b651f810d2657d765176fc8190409"
+      ],
+      "tests": [
+        "tests/pdf/r5hunt8-ats-fix-notice-cleared-title.test.mjs"
+      ],
+      "summary": "Now: atsHeadingLabel quotes a cleared section by its type's standard heading marked '(no heading)' in the std_headings warning and in the Standardize Headings, Put Job Title First and Grids notices, never as \"experience\" or \"\".",
+      "ci": [
+        36643956205,
+        36644256464
+      ]
+    }
+  ],
+  "review": {
+    "by": "second agent",
+    "verdict": "fixed",
+    "issues": [
+      "R5-HUNT8-ATS-JD-ADDRESSES-HASHTAGS-AS-KEYWORDS: a bare host was blanked only up to its .com/.org/.gov/.edu, so 'seek.com.au', 'acme.gov.in', 'acme.org.uk' left the keywords '.au', '.in', '.uk' (a leading-dot keyword is found after any word ending in those letters and '+' wrote it into Skills), and hosts under .co./.ac. ('acme.co.uk', 'acme.co.in', 'ox.ac.uk') stayed keywords. Fixed in 4510e0c5: a country ending and .co./.ac. hosts are read whole.",
+      "R5-HUNT8-ATS-JD-ADDRESSES-HASHTAGS-AS-KEYWORDS: the degrees 'B.Com' and 'M.Com' (Bachelor / Master of Commerce), keywords before, were read as hosts and dropped from the job match. Fixed in 4510e0c5: b./m. + .com is no host.",
+      "R5-HUNT8-OPTIMIZER-EMPTY-BULLET-APPLY-AT-END: the empty bullet was filled only when the editor already held text; a list just started from the toolbar in an empty box (<ul><li><br></li></ul>, or <ol>) still got a second, bulleted list under it and the empty bullet printing a bare bullet. Fixed in 7c1e9e10: an empty list item is filled even in an editor with no text; an empty box still gets a new bullet."
+    ],
+    "commits": [
+      "4510e0c55ec457c158f5e9a5dd2e4cc190d41705",
+      "7c1e9e10722e7c5728d40d682e27aec4e66933ec"
+    ],
+    "ci": [
+      36644256464,
+      36645119007
+    ],
+    "notes": "Checked run 36644256464: failfirst green for all three original fix commits (each test fails without its fix and passes with it), area tests, bullet-optimizer Playwright spec, build and lint. R5-HUNT8-ATS-FIX-NOTICE-CLEARED-TITLE-TYPE-ID is clean (atsHeadingLabel gets title and type in both the std_headings warning and the panel notices). Run 36645119007 on 7c1e9e10: failfirst green for both review commits (tests/unit/r5-hunt8-review-ats-jd-country-hosts.unit.mjs fails 4 without 4510e0c5; tests/pdf/r5hunt8-review-optimizer-empty-list.test.mjs fails 3 without 7c1e9e10, its empty-box guard passes both ways), 1057 ATS/optimizer/rich-text node tests plus the guards (31-contact-fields, 91-design-resets, 71-startup-chunks, knowledge-docs) with 0 failures, tests/playwright/bullet-optimizer.spec.mjs, build and lint green. Noted, not changed: a hashtag naming a skill ('#Python') is now dropped rather than kept as the unmatchable '#Python'; 'Salesforce.com' reads as a host (the product is still found as 'Salesforce'); Standardize Headings still gives a heading to a section whose title the user cleared (pre-existing, outside these rows). No accessibility changes."
+  },
+  "baselineFailures": [],
+  "notes": "The three fix commits came from an earlier fixer cut off by a usage limit. This run verified them, found the empty-bullet test's precondition expected a literal space where the editor's HTML writes &nbsp; (fixed in test commit 842094bd; the assertion on the result is unchanged), added the docs/knowledge/04-features.md rows (5f014617) and got run 36644256464 green: failfirst for all three fix commits (each fails without its fix, passes with it), the touched area's ATS/optimizer node tests plus the guards (31-contact-fields, 91-design-resets, 71-startup-chunks, knowledge-docs), tests/playwright/bullet-optimizer.spec.mjs, build and lint. Run 36643956205 was the same dispatch before the test fix (only that precondition failed). No accessibility changes."
+}
