@@ -8,11 +8,13 @@
 ## ⏩ COLD START HERE — 2026-09-29 03:15 UTC (coordinator session_013S3xa7VBjcBV3avHWTbYQF, scheduled run; owner travelling)
 
 **Lock:** `claude/coordinator-lock` (LOCK refreshed every 30 min while this run works).
-**Done this run:** opt (58b8460; R6a verdicts hold; review fixed the sanitizer closing a list before a quote, and the verb chip on No/Nobody/Zero openers), out (4c404e4, 6 rows; review widened the keep-with-next measuring to Projects and every item header; Awards/Certifications title keep still counts one line per field — for the hunt), brd (72af18e, 8 rows + 2 review fixes in boardOps), job (0ffbe5b, 8 rows fixed, reviewer found nothing; main.jsx is now a data router for the Back guard), dash (2d7d165), panels (182e232) and dlg (04ec3bf; 10 rows fixed, product call: the CL Generator ignores a click
+**Done this run:** imp (3e4b2e5; 9 rows, review fixed 4 import regressions; open: IMP-REV-4 dash in an issuer-less
+certificate/award or a project name splits it — as on master, needs an export-side change; a Word custom list style numbered only in
+styles.xml), opt (58b8460; R6a verdicts hold; review fixed the sanitizer closing a list before a quote, and the verb chip on No/Nobody/Zero openers), out (4c404e4, 6 rows; review widened the keep-with-next measuring to Projects and every item header; Awards/Certifications title keep still counts one line per field — for the hunt), brd (72af18e, 8 rows + 2 review fixes in boardOps), job (0ffbe5b, 8 rows fixed, reviewer found nothing; main.jsx is now a data router for the Back guard), dash (2d7d165), panels (182e232) and dlg (04ec3bf; 10 rows fixed, product call: the CL Generator ignores a click
 beside it once a field is edited, as the optimizer does) merged into `claude/r4-green` (1f99a1a). Gate 36515623771 on 3426a09
 (dash+panels) was dispatched; the batch gate for the merged head is still to run.
 **In progress:** unfinished r5 clusters, two at a time, each = finish scope → adversarial review → fix → report
-`wf-reports/r5-<key>.json` on `claude/wf-r5-<key>`. Running: imp. Batch gate 36517981819 on 0f03b71 was red only on
+`wf-reports/r5-<key>.json` on `claude/wf-r5-<key>`. All 8 r5 clusters merged; running: R2-148. Batch gate 36517981819 on 0f03b71 was red only on
 71-startup-chunks (the data router for R4-DUX-06 + the kit Dialog on the Dashboard: 1107 kB > 1100 kB); fixed by ea59ac6
 (1097 kB, fail-first 36520176676; margin ~3 kB). Full gate 36520793636 on ea59ac6 GREEN (owner deploy line above). The 20 dsg-layout rows
 all have verdicts (12 in r5-dsgv.json, all fixed-verified; the rest in r5-dash/panels/dlg/opt). Next: R2-148 (deleted résumé keeps its public link), the whole-app hunt (dry twice).
