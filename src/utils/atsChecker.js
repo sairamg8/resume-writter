@@ -356,6 +356,17 @@ const APOSTROPHES = /[\u2018\u2019\u02BC\u2032\uFF07]/g;
 const CONTRACTION = /^\p{L}+'(?:ll|re|ve|d|m)$|n't$/iu;
 
 /**
+ * A case-insensitive search for `keyword` as a whole word or phrase: boundaries of Unicode letters,
+ * as the keywords are read — with `\w` the keyword "rich" was found inside "Zürich" (R2-023).
+ */
+function wholeWord(keyword) {
+  const esc = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const lead = /^[\p{L}\p{M}\p{N}_]/u.test(keyword) ? '(?<![\\p{L}\\p{M}\\p{N}_])' : '(?<!\\S)';
+  const trail = /[\p{L}\p{M}\p{N}_]$/u.test(keyword) ? '(?![\\p{L}\\p{M}\\p{N}_])' : '(?![\\p{L}\\p{M}\\p{N}_+#])';
+  return new RegExp(`${lead}${esc}${trail}`, 'iu');
+}
+
+/**
  * Extracts keywords & tech terms from a job description. A word is Unicode letters, their marks and
  * digits: `\w` is ASCII, and read with it "München" was the keyword "nchen" (R2-023). The text is
  * read composed (NFC), and a combining mark is part of its word: pasted from a PDF or a Mac, "ü" is
@@ -406,13 +417,15 @@ export function extractJobKeywords(jobDescriptionText) {
     'microservices architecture', 'problem solving', 'system design',
   ];
 
-  const lowerJd = jobDescriptionText.toLowerCase();
+  // As whole words, and cased from the text they were found in: found with a bare indexOf, "front
+  // end" was read inside "storefront endpoints", and sliced at a lowercased index a posting's "İ"
+  // shifted the casing ("achine Learning") (R5-HUNT1-ats-jd-phrase-substring-match).
+  const text = jobDescriptionText.normalize('NFC');
   for (const phrase of multiWordPhrases) {
-    const idx = lowerJd.indexOf(phrase);
-    if (idx !== -1) {
+    const found = wholeWord(phrase).exec(text);
+    if (found) {
       counts.set(phrase, Math.max(counts.get(phrase) || 0, 2));
-      const actual = jobDescriptionText.slice(idx, idx + phrase.length);
-      casingMap.set(phrase, actual || phrase);
+      casingMap.set(phrase, found[0] || phrase);
     }
   }
 
@@ -439,19 +452,9 @@ export function matchResumeWithJob(resume, jobDescriptionText) {
   for (const item of jdKeywords) {
     const kw = item.keyword;
     const lowerKw = kw.toLowerCase();
-    // Word boundary regex for single words, direct include for phrases
-    let isPresent = false;
-    if (lowerKw.includes(' ') || lowerKw.includes('/') || lowerKw.includes('.')) {
-      isPresent = resumeCorpus.includes(lowerKw);
-    } else {
-      // Boundaries of Unicode letters, as the keywords are read: with `\w` the keyword "rich" was
-      // found inside "Zürich" (R2-023).
-      const esc = lowerKw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const lead = /^[\p{L}\p{M}\p{N}_]/u.test(lowerKw) ? '(?<![\\p{L}\\p{M}\\p{N}_])' : '(?<!\\S)';
-      const trail = /[\p{L}\p{M}\p{N}_]$/u.test(lowerKw) ? '(?![\\p{L}\\p{M}\\p{N}_])' : '(?![\\p{L}\\p{M}\\p{N}_+#])';
-      const regex = new RegExp(`${lead}${esc}${trail}`, 'iu');
-      isPresent = regex.test(resumeCorpus);
-    }
+    // A whole word, a phrase too: found with a bare includes, "system design" was matched by
+    // "ecosystem design" (R5-HUNT1-ats-jd-phrase-substring-match).
+    const isPresent = wholeWord(lowerKw).test(resumeCorpus);
 
     if (isPresent) {
       matched.push(kw);
