@@ -4,6 +4,7 @@
 // large photo picked on résumé A, with résumé B opened meanwhile, landed on B; and an icon upload wrote
 // A's whole icon set, as it was when the upload started, over B's. The upload is now written to the
 // résumé it was started on, into that résumé's icons as they are when it is done.
+// The Cover Letter panel's own photo upload had the same flaw and is written by id too (review).
 // The real Personal Info editor is mounted over the real store (useAppStore); the browser's image
 // decode is held until the test lets it finish. Fictional data only.
 import { before, after, it } from 'node:test';
@@ -131,4 +132,40 @@ it('an icon changed while an upload ran is kept when the upload lands', async ()
     assert.equal(icons.github, ICON_B, 'the icon set meanwhile stays');
     assert.match(icons.email || '', /^data:image\/png;base64,/, 'and the upload is added');
   } finally { await page.close(); }
+});
+
+// The Cover Letter panel's own photo (the letter's clPhoto) waits for the same decode, and its
+// updateCoverLetter wrote to whichever résumé was open by then (R5-HUNT2 review).
+it("a cover letter photo whose upload finishes after another résumé was opened goes to the letter it was picked on", async () => {
+  const { useAppStore } = await loadModule('/src/hooks/useResumeStore.js');
+  const { default: CoverLetterPanel } = await loadModule('/src/components/CoverLetterPanel.jsx');
+  const resumes = [cv('resume_a', 'Robin Sample'), cv('resume_b', 'Casey Example')];
+  globalThis.localStorage = new MemoryStorage([[KEY, JSON.stringify({ resumes, activeId: 'resume_a' })]]);
+  const box = { store: null };
+  function Page() {
+    const store = useAppStore();
+    box.store = store;
+    const r = store.activeResume;
+    return createElement(CoverLetterPanel, {
+      key: r.id, resume: r, coverLetter: r.coverLetter, personal: r.personal, settings: r.settings, template: r.template,
+      updateCoverLetter: store.updateCoverLetter, updateSetting: store.updateSetting, clearSettings: store.clearSettings,
+    });
+  }
+  const view = mount(Page, {});
+  try {
+    await settle();
+    const input = [...elements(view.document.body)].find((el) => el.tagName === 'INPUT' && reactProps(el).type === 'file');
+    assert.ok(input, "the letter's photo upload");
+    view.act(() => reactProps(input).onChange({ target: { files: [png()], value: 'C:\\fakepath\\me.png' } }));
+    await settle();
+    view.act(() => box.store.setActiveId('resume_b'));
+    release();
+    await settle();
+    const of = (id) => box.store.appState.resumes.find((r) => r.id === id);
+    assert.equal(of('resume_b').coverLetter?.clPhoto ?? null, null, 'no photo put on the letter opened meanwhile');
+    assert.match(of('resume_a').coverLetter?.clPhoto || '', /^data:image\/png;base64,/, 'the photo is on the letter it was picked on');
+  } finally {
+    await view.unmount();
+    delete globalThis.localStorage;
+  }
 });

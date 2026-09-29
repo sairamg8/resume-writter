@@ -396,8 +396,9 @@ export function useAppStore() {
     patchActive(r => withTemplate(r, template, preset));
   }
 
-  function updateCoverLetter(field, value) {
-    patchActive(r => (r.coverLetter?.[field] === value ? r : { ...r, coverLetter: { ...r.coverLetter, [field]: value } }));
+  /** `id`: the résumé to write to, when not the open one (patchActive). */
+  function updateCoverLetter(field, value, id) {
+    patchActive(r => (r.coverLetter?.[field] === value ? r : { ...r, coverLetter: { ...r.coverLetter, [field]: value } }), id);
   }
 
   const sectionActions = createSectionActions(patchActive);
