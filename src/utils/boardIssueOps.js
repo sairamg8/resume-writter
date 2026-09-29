@@ -8,7 +8,7 @@ import { richTextToPlain } from './richText.js';
 import { ACTIVITY_CAP, PRIORITY_IDS, RECURRENCE_IDS, TYPE_IDS } from '../constants/boards.js';
 import {
   cleanTitle, columnById, defaultColumnId, firstColumnOf, isDoneColumn, isLocalISO, issueById, issueKey,
-  nextDue, sprintById, statusColumn, todayISO,
+  nextDue, recurrenceDay, sprintById, statusColumn, todayISO,
 } from './boardModel.js';
 import { matchesGroup } from './boardQuery.js';
 
@@ -134,13 +134,16 @@ function spawnNext(board, issueId, ctx) {
   // An open column, never a done one: made in one it would be born resolved and never repeat again
   // (a board's only to-do column turned Done, R4-BRD-09).
   const column = firstColumnOf(board, 'todo') ?? board.columns.find((c) => !isDoneColumn(c)) ?? board.columns[0];
-  const next = makeIssue(board, {
+  const today = todayISO(now);
+  const made = makeIssue(board, {
     ...issue,
     columnId: column.id,
-    due: nextDue(issue.due, issue.recurrence, todayISO(now)),
+    due: nextDue(issue.due, issue.recurrence, today, issue.recurrenceDay),
     startDate: '',
     checklist: issue.checklist.map((c) => ({ text: c.text, done: false })),
   }, { now, createdFrom: issueKey(board, issue) });
+  // A monthly issue carries the day it started on: its due, clamped in a short month, is not it.
+  const next = issue.recurrence === 'monthly' ? { ...made, recurrenceDay: recurrenceDay(issue.due || today, issue.recurrenceDay) } : made;
   const issues = board.issues.map((i) => (i.id === issueId ? { ...i, recurrenceNextId: next.id } : i));
   return { ...board, nextNumber: board.nextNumber + 1, issues: [...issues, next] };
 }
