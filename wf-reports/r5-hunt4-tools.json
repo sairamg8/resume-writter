@@ -1,0 +1,70 @@
+{
+  "cluster": "r5-hunt4-tools",
+  "branch": "claude/wf-r5-hunt4-tools",
+  "base": "1b074c5026ab5b67e3a8e25b5ade1757786ec2d6",
+  "rows": [
+    {
+      "id": "R5-HUNT4-QUICK-SEARCH-EXACT-KEY-CROWDED-OUT",
+      "title": "Quick search 'LIFE-1' lists LIFE-10…LIFE-17 and never LIFE-1 once a project has 8 or more longer keys ahead of it",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": [
+        "a05f04a77ded5d254c8a637602fbc19729b21581"
+      ],
+      "tests": [
+        "tests/unit/r5-hunt4-quick-search-exact-key.unit.mjs"
+      ],
+      "summary": "Now: an issue whose key matches the query (ignoring case and spacing, so 'LIFE-1' and 'life 1' both count) is the first issue result, open or done. LIFE-1 therefore always shows ahead of LIFE-10…LIFE-16. Otherwise the order is unchanged: projects first, then issues matched by key, then issues matched by title, with open issues before done ones. The change is one sort key in src/utils/workspaceSearch.js. TopBar, WorkspaceLayout and WorkspaceRoute use this function and do not reorder its results.",
+      "failfirst_run": "36554841742 (job 109361446184: 2 tests fail with the fix reversed and pass with it restored)"
+    },
+    {
+      "id": "R5-HUNT4-ATS-TEXT-IGNORES-LINK-URL-OVERRIDE",
+      "title": "ATS plain text ignores the website/LinkedIn/GitHub 'Link URL' override, so a handle in the field loses the profile address",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": [
+        "dd4433f45823df9fcb87245d691c7442438bb2e3"
+      ],
+      "tests": [
+        "tests/unit/r5-hunt4-ats-text-link-url.unit.mjs"
+      ],
+      "summary": "Now: when a website, LinkedIn or GitHub has a Link URL override, the ATS plain-text contact line (Export → ATS Text, and the ATS tab's Copy and Download) prints that override. It is the same address the PDF, Word and Markdown exports link to (contactHref). Without an override the line prints the value as typed, as R4-DOUT-13 set up. A Display label still never replaces the value. The override is printed only when contactHref gives a link. An override the PDF would not follow (javascript:, or one with spaces) returns no link, so the typed value prints instead. A hidden field and an empty field still print nothing, because contactItems filters them out first. Old stored data is safe: a missing, null or blank override falls back to the typed value.",
+      "failfirst_run": "36554841742 (job 109361446196: 1 test fails with the fix reversed and passes with it restored)"
+    },
+    {
+      "id": "R5-HUNT4-ATS-PHONE-OVER-15-DIGITS-CALLED-SHORT",
+      "title": "ATS Check says a phone field with more than 15 digits (two numbers or a long extension) is 'short' and tells the user to add an area code",
+      "severity": "low",
+      "outcome": "fixed",
+      "commits": [
+        "9e60bb5c2e9d14843aab2cdaa62f05805468aaf4"
+      ],
+      "tests": [
+        "tests/unit/r5-hunt4-ats-phone-too-long.unit.mjs"
+      ],
+      "summary": "Now: a phone field with more than 15 digits (the E.164 limit) gets the warning 'Phone field holds more than one number'. It is told to list a single reachable number, and it keeps the same 2 of 4 points. It is no longer called short or told to add an area or country code. 10–15 digits still pass, and 7–9 digits still get the short-number warning. A hidden phone still gets the 'hidden' failure, because shown() returns '' for it. Nothing in src/ reads the old warning text. The change is in src/utils/atsChecker.js.",
+      "failfirst_run": "36554841742 (job 109361446106: 1 test fails with the fix reversed and passes with it restored)"
+    }
+  ],
+  "review": {
+    "rounds": [
+      {
+        "round": 1,
+        "issues": [
+          "Coverage gap: the fixer's named-tests run left out some existing callers of the ATS text and contacts (json-resume-hidden, markdown-export-contacts, r4-lo-25-quick-search-shrunk-list, tests/pdf/98-ats-parser-view, 98-ats-claims, 96-visibility-exports, 99-import-roundtrip, 16-saved-data-text-fields, 98-exp-letter-text-contacts). Ran them on CI in run 36557864857: 168/168 pass. It is a coverage gap only, not a defect."
+        ]
+      }
+    ],
+    "issues": [
+      {
+        "issue": "The fixer's CI run did not cover every existing test that calls generateAtsPlainText or the quick search.",
+        "resolution": "The reviewer ran those files on CI (run 36557864857): 168/168 passed, 0 skipped, and lint passed. No code change was needed."
+      }
+    ],
+    "fixedByReviewer": []
+  },
+  "rejected": [],
+  "a11yNoted": [],
+  "baselineFailures": [],
+  "notes": "All 3 fixes were reviewed against the diff origin/claude/r4-green...origin/claude/wf-r5-hunt4-tools. Each one fixes the root cause, and no caller, exporter or stored-data path regresses. The fail-first logs in run 36554841742 show each new test failing with its fix reversed ('its diff reversed') and passing with it restored. The named-tests run in that job passed 115/115, and lint passed. Reviewer run 36557864857 re-ran the other ATS-text, contacts and quick-search tests: 168/168 pass. Minor note, not fixed: the header comment in src/utils/workspaceSearch.js still names tests/unit/workspace-search.unit.mjs, which does not exist (its tests are in tracker-views.unit.mjs). That comment predates this branch. No accessibility issues were seen, and docs/tracking was not edited."
+}
