@@ -8,8 +8,12 @@
       "title": "A double-click on Create project, or pressing Enter twice in its Name field, makes two identical projects, the second keyed HR2",
       "severity": "medium",
       "outcome": "fixed",
-      "commits": ["40b257821ce79fcb70f68adb7f57a9fde952f1df"],
-      "tests": ["tests/pdf/106-r5-hunt7-create-project-double-submit.test.mjs"],
+      "commits": [
+        "40b257821ce79fcb70f68adb7f57a9fde952f1df"
+      ],
+      "tests": [
+        "tests/pdf/106-r5-hunt7-create-project-double-submit.test.mjs"
+      ],
       "summary": "Now: the Create project dialog makes one project each time it is opened. The new board opens as a lazy page, so the dialog and its button stay on screen while the board's code loads. Before the fix, each extra click or Enter in that moment ran addBoard again. ProjectForm in src/components/board/CreateProjectDialog.jsx now keeps a `made` ref, and a submit after the first is ignored. A submit refused for a missing name or a bad key does not count, so a later submit with a name still makes the project. The form is mounted only while the dialog is open, so a new opening starts fresh.",
       "product_call": null,
       "remaining": "No Playwright or Cypress spec covers the Create project dialog. It is checked over fake-dom."
@@ -19,14 +23,37 @@
       "title": "Closing an issue with its Description editor open, even with nothing typed, writes the old text over a newer description saved meanwhile in another tab or pulled from the cloud",
       "severity": "medium",
       "outcome": "fixed",
-      "commits": ["5364d8b1d43b86778b2eef9c58a50d6d5cb0d44a"],
-      "tests": ["tests/pdf/106-r5-hunt7-description-close-keeps-newer.test.mjs"],
-      "summary": "Now: closing the issue view saves an open description draft only when it was changed from the text the editor opened on. An untouched editor leaves a newer description from another tab or a cloud pull as it is, and logs nothing. A draft the user did type is still saved on close, as R4-BRD-03 made it. Description in src/components/board/IssueDialog.jsx records the opening text (`opened`) when the editor opens. Its save-on-unmount compares the draft with that text, not with the issue's current value.",
-      "product_call": "A typed draft still wins over a newer description saved elsewhere while the editor was open (last write wins, as for every other field). Merging or warning about the conflict would be a new feature.",
+      "commits": [
+        "5364d8b1d43b86778b2eef9c58a50d6d5cb0d44a",
+        "62b19b691611aa942ebc32d074b6182f7f52493f"
+      ],
+      "tests": [
+        "tests/pdf/106-r5-hunt7-description-close-keeps-newer.test.mjs",
+        "tests/pdf/106-r5-hunt7-description-untouched-follows-newer.test.mjs"
+      ],
+      "summary": "Now: closing the issue view saves an open description draft only when it was changed from the text the editor opened on. An untouched editor leaves a newer description from another tab or a cloud pull as it is, and logs nothing. A draft the user did type is still saved on close, as R4-BRD-03 made it. Description in src/components/board/IssueDialog.jsx records the opening text (`opened`) when the editor opens. Its save-on-unmount compares the draft with that text, not with the issue's current value. Review follow-up (R5-HUNT7-DESCRIPTION-UNTOUCHED-FOLLOWS-NEWER): the fix stopped only the save on close; an untouched editor still showed the old text, so its Save, or the first key typed, wrote the old text over the newer description. Description now takes the newer value into an untouched draft (draft still equal to the text it opened on), as RichTextEditor itself adopts an outside value when nothing was typed (R5-HUNT3). A typed draft is left alone.",
+      "product_call": "A typed draft still wins over a newer description saved elsewhere while the editor was open (last write wins, as for every other field). An untouched editor follows the newer description. Merging or warning about the conflict would be a new feature.",
       "remaining": "No Playwright or Cypress spec covers the issue view's description. It is checked over fake-dom."
     }
   ],
-  "review": null,
+  "review": {
+    "by": "second agent",
+    "verdict": "fixed",
+    "issues": [
+      "R5-HUNT7-DESCRIPTION-CLOSE-OVERWRITES-NEWER was fixed only for the save on close: an open, untouched Description editor kept showing the old text after a newer description landed from another tab or a cloud pull, so pressing its Save, or typing a first key and saving/closing, still wrote the old text back over the newer one. Fixed in 62b19b69 (the untouched draft follows the newer value; a typed draft is kept), with a fail-first test.",
+      "R5-HUNT7-CREATE-PROJECT-DOUBLE-SUBMIT: fix and test reviewed, sound (refused submits do not latch; the form remounts per opening). Minor, not fixed: after the project is made and before the board lands, Escape would still ask 'Discard this project?' because typedRef stays true; the project is already saved, so nothing is lost."
+    ],
+    "commits": [
+      "62b19b691611aa942ebc32d074b6182f7f52493f"
+    ],
+    "ci": [
+      36612382776,
+      36612390145,
+      36613562155,
+      36613569557,
+      36613713654
+    ]
+  },
   "baselineFailures": [],
-  "notes": "CI on 5364d8b1 (branch head before this report): failfirst run 36612382776 green. 40b25782 failed 2 without its fix and passed with it; 5364d8b1 failed 1 without its fix and passed with it, both by reversing the diff. Named-tests run 36612390145 green: 103/103 tests passed across 18 files, the two new tests plus the existing board, issue-view, backlog and project tests that load CreateProjectDialog or IssueDialog. Lint was green in both runs. Playwright and Cypress were not run: no spec covers these dialogs. The full gate has not run on this branch."
+  "notes": "CI on 5364d8b1 (branch head before this report): failfirst run 36612382776 green. 40b25782 failed 2 without its fix and passed with it; 5364d8b1 failed 1 without its fix and passed with it, both by reversing the diff. Named-tests run 36612390145 green: 103/103 tests passed across 18 files, the two new tests plus the existing board, issue-view, backlog and project tests that load CreateProjectDialog or IssueDialog. Lint was green in both runs. Playwright and Cypress were not run: no spec covers these dialogs. The full gate has not run on this branch. Review: failfirst run 36613562155 green (62b19b69 failed 1 without its fix, passed with it); named-tests runs 36613569557 (11 board/issue-view/project files) and 36613713654 (8 more files that load the board page) on 62b19b69."
 }
