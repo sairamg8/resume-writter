@@ -1,9 +1,10 @@
 # Session Handoff — Resume Here
 
 > **OWNER — DEPLOY (the session's master push is refused as a 'Production Deploy'):**
-> `git push origin ea59ac6:refs/heads/master` — full gate run 36520793636 on that exact commit is GREEN (a fast-forward
-> from `b8d7667`: 56e42bf's stale-test fix + Round 5 dash, panels, dlg, job, brd, out, opt + the start-up size fix). Then
-> `python3 docs/tracking/tools/r4_tracker.py --deployed ea59ac6`, commit, push. A newer green sha will replace this line.
+> `git push origin 27bfddf:refs/heads/master` — full gate run 36522551523 on that exact commit is GREEN (a fast-forward
+> from `b8d7667`: 56e42bf's stale-test fix + all eight Round 5 clusters: dash, panels, dlg, job, brd, out, opt, imp + the
+> start-up size fix). Then `python3 docs/tracking/tools/r4_tracker.py --deployed 27bfddf`, commit, push. A newer green sha
+> (with R2-148, gate running on a89bdd2) will replace this line.
 
 ## ⏩ COLD START HERE — 2026-09-29 03:15 UTC (coordinator session_013S3xa7VBjcBV3avHWTbYQF, scheduled run; owner travelling)
 
@@ -14,7 +15,7 @@ styles.xml), opt (58b8460; R6a verdicts hold; review fixed the sanitizer closing
 beside it once a field is edited, as the optimizer does) merged into `claude/r4-green` (1f99a1a). Gate 36515623771 on 3426a09
 (dash+panels) was dispatched; the batch gate for the merged head is still to run.
 **In progress:** unfinished r5 clusters, two at a time, each = finish scope → adversarial review → fix → report
-`wf-reports/r5-<key>.json` on `claude/wf-r5-<key>`. All 8 r5 clusters merged (27bfddf; full gate dispatched). R2-148 merged (0222f6b: the sync's flush takes a deleted résumé's public copy
+`wf-reports/r5-<key>.json` on `claude/wf-r5-<key>`. All 8 r5 clusters merged (27bfddf; full gate 36522551523 GREEN). R2-148 merged (0222f6b: the sync's flush takes a deleted résumé's public copy
 down; the takedown skips a résumé that is back; known limit: an unrecorded stray public/ copy can't be listed). Running: whole-app hunt
 round 1 (9 areas: editor, pdf, export, import, dash, sync, jobs, boards, tools; branches claude/wf-r5-hunt1-<area>, reports
 wf-reports/r5-hunt1-<area>.json; finder → skeptic → fixer (fail-first) → reviewer). Loop rounds until two in a row find nothing new. Batch gate 36517981819 on 0f03b71 was red only on
