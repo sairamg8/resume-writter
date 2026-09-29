@@ -1,4 +1,4 @@
-import { shortcutKeys } from '../../utils/uiFormat.js';
+import { shortcutKeys } from '../../utils/shortcutKeys.js';
 import { cx } from './compose.js';
 
 /** A Mac (⌘ glyphs) or not (Ctrl words) — read from the browser; false on the server. */

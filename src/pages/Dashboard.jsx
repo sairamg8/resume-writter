@@ -7,7 +7,7 @@ import { CareerHistoryPanel } from '@/components/CareerHistoryPanel';
 import { RecoveryNotice } from '@/components/RecoveryNotice';
 import { ImportMenu } from '@/components/ImportMenu';
 import NewLetterModal from '@/components/NewLetterModal';
-import { firebasePublicIo } from '@/components/ShareLinkModal';
+import { firebasePublicIo } from '@/utils/firebasePublicIo';
 import { notSavedMessage } from '@/utils/storageBackup';
 import { comesStraightBack, isDemoAccount, isOriginal } from '@/utils/demoSeed';
 import { DEMO_ACCOUNTS } from '@/utils/demoAccounts';

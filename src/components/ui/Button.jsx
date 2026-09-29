@@ -1,9 +1,10 @@
 import { Link } from 'react-router-dom';
 import { LoaderCircle } from 'lucide-react';
 import { cx } from './compose.js';
+import { FOCUS_RING } from './focusRing.js';
 
-/** The kit's focus ring: every interactive element wears it for keyboard focus only. */
-export const FOCUS_RING = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/60 focus-visible:ring-offset-1 focus-visible:ring-offset-white';
+// The kit's focus ring (focusRing.js), still exported here for the kit's other controls.
+export { FOCUS_RING };
 
 /**
  * A control smaller than the hit target the spec asks for (36 px, 44 px on a touch screen) keeps

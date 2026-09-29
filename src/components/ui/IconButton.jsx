@@ -1,5 +1,5 @@
 import { Tooltip } from './Tooltip.jsx';
-import { FOCUS_RING } from './Button.jsx';
+import { FOCUS_RING } from './focusRing.js';
 import { cx } from './compose.js';
 
 const VARIANTS = {

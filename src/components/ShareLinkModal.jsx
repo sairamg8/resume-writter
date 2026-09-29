@@ -1,14 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Copy, ExternalLink } from 'lucide-react';
 import { Dialog } from '@/components/ui/Dialog';
-import { doc, getDocFromServer, runTransaction } from 'firebase/firestore';
-import { db } from '@/utils/firebase';
-import { publicIo, publicSummary, publicUrl, publishedIsCurrent, publicSnapshot, TOO_LARGE_CODE } from '@/utils/publicLink';
+import { firebasePublicIo } from '@/utils/firebasePublicIo';
+import { publicSummary, publicUrl, publishedIsCurrent, publicSnapshot, TOO_LARGE_CODE } from '@/utils/publicLink';
 import { timeAgo } from '@/utils/resume';
 import { copyText } from '@/utils/clipboard';
 
-/** The real Firestore calls (publicLink.js); null in a build without a cloud, where sharing is not offered. */
-export const firebasePublicIo = db ? publicIo({ doc, getDocFromServer, runTransaction }, db) : null;
+/** The real Firestore calls (utils/firebasePublicIo.js), re-exported for the modal's callers and tests. */
+export { firebasePublicIo };
 
 /**
  * Export → Share a public link (R2-148): publish a read-only copy of `resume` at a web address, put

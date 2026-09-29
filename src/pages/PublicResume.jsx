@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Download } from 'lucide-react';
 import { PdfPreview } from '@/components/PdfPreview';
-import { firebasePublicIo } from '@/components/ShareLinkModal';
+import { firebasePublicIo } from '@/utils/firebasePublicIo';
 import { normalizeResume } from '@/utils/normalizeResume';
 import { buildExportFilename } from '@/utils/exportFilename';
 
