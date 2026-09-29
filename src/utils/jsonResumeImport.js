@@ -119,7 +119,10 @@ export function jsonResumeToCpwtResume(jsonResume, customId) {
     const net = storedText(p.network).toLowerCase();
     const user = storedText(p.username).trim().replace(/^@/, '');
     const site = Object.keys(PROFILE_URL).find((k) => net.includes(k));
-    const url = storedText(p.url) || (site && user ? PROFILE_URL[site] + user : '');
+    // A username that is the address already ("https://linkedin.com/in/jane") stays as it is; one
+    // that is no handle ("Jane Doe") builds none: the link would be broken.
+    const built = !site || !user ? '' : user.toLowerCase().includes(`${site}.com`) ? user : /^[\p{L}\p{N}_.-]+$/u.test(user) ? PROFILE_URL[site] + user : '';
+    const url = storedText(p.url) || built;
     if (!linkedin && (net.includes('linkedin') || url.includes('linkedin.com'))) linkedin = url;
     if (!github && (net.includes('github') || url.includes('github.com'))) github = url;
   }

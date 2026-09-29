@@ -48,3 +48,13 @@ test('a profile url still wins over its username', () => {
   const r = jsonResumeToCpwtResume({ basics: { name: 'A', profiles: [{ network: 'GitHub', username: 'x', url: 'https://github.com/real' }] } });
   assert.equal(r.personal.github, 'https://github.com/real');
 });
+
+// Review: a username that is the address already is used as it is, not appended to the site's
+// address ("linkedin.com/in/https://…"), and a display name that is no handle builds no broken link.
+test('a username that is an address, or no handle, builds no broken link', () => {
+  const r = jsonResumeToCpwtResume({
+    basics: { name: 'A', profiles: [{ network: 'LinkedIn', username: 'https://www.linkedin.com/in/jane' }, { network: 'GitHub', username: 'Jane Doe' }] },
+  });
+  assert.equal(r.personal.linkedin, 'https://www.linkedin.com/in/jane');
+  assert.equal(r.personal.github, '');
+});
