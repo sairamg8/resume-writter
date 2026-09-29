@@ -193,7 +193,9 @@ export function Board() {
             columnId={card.columnId}
             priority={card.priority}
             onOpen={() => route.open(key)}
-            onMove={(columnId) => store.moveIssue(board.id, card.id, { columnId, sprintId: card.sprintId, beforeId: null })}
+            // Ranked over the whole column, as a drop on it is: a column can show several sprints'
+            // issues (Kanban, or no active sprint), and the card goes below every one of them.
+            onMove={(columnId) => store.moveIssue(board.id, card.id, { columnId, beforeId: null })}
             onPriority={(priority) => store.updateIssue(board.id, card.id, { priority })}
             onCopyLink={() => actions.copyLink(card)}
             onDuplicate={() => actions.duplicate(card)}
