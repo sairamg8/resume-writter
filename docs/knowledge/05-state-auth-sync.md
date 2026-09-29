@@ -206,7 +206,7 @@ stays deleted unless edited where the deletion was never seen); then changes are
 after a 1.5 s pause. Failures, retries and 'off' reuse `cloudSyncRetry.js`; an item over Firestore's
 1 MiB is held back on its own and named on the page (`SyncHeldNotice`); a batch of several refused
 for good (an imported id the cloud cannot name, a list inside a list) goes to a first sync, which
-takes it apart and holds only the item refused on its own (`commitApart`, R5-HUNT7). What each list's sync is
+takes it apart and holds only the item refused on its own (`commitApart`, R5-HUNT7). Deleting such a held item (or clearing the list with it) sends no deletion for an id the cloud cannot name (`cloudCanName`: it was never there), so the other deletions go and the sync ends synced (R5-HUNT8). What each list's sync is
 doing goes to `collectionSyncStatus` (`collectionSyncMeta.js`) and shows in the workspace's top bar
 as the résumés' cloud icon, with its words (`shell/CollectionSyncDot.jsx`, R2-140-c): the jobs and
 the projects on the Job Tracker's pages, the projects elsewhere, the worst status winning

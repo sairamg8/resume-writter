@@ -16,7 +16,7 @@
 import { backoff, failureKind, failureReport } from './cloudSyncRetry.js';
 import { docSize, MAX_DOC_BYTES } from './cloudSyncHeld.js';
 import { DELETED, diffLists, leaveList, planFirstSync, stashOf, versionsOf } from './collectionSyncPlan.js';
-import { itemPath } from './collectionSyncIo.js';
+import { cloudCanName, itemPath } from './collectionSyncIo.js';
 
 /** A first sync that waits: the last account's list could not be set aside — tried again later. */
 const noRoom = () => Object.assign(new Error('Storage is full: the last account\'s list could not be set aside.'), { code: 'resource-exhausted' });
@@ -379,7 +379,11 @@ export function createCollectionSync({
       await before;
       if (!current()) return;
       queued = sendable(user.uid, [...q.writes.values()]);
-      const reading = [...queued.map((x) => x.id), ...q.deletes.keys()];
+      // An id the cloud cannot name was never in it (an imported job held for it): nothing to
+      // delete there. Read, its path was refused, and the flush — every other deletion with it —
+      // stopped the sync (R5-HUNT8-SYNC-DELETE-REFUSED-ID-STOPS).
+      const gone = [...q.deletes].filter(([id]) => cloudCanName(id));
+      const reading = [...queued.map((x) => x.id), ...gone.map(([id]) => id)];
       const docs = reading.length ? await withDeadline(io.readItems(user.uid, reading)) : [];
       if (!current()) return;
       const cloudCopy = new Map(docs.map((d) => [d.id, d]));
@@ -390,16 +394,16 @@ export function createCollectionSync({
       const skip = new Set(newer.map((x) => x.id));
       sets = queued.filter((x) => !skip.has(x.id));
       // Deleted here, but changed in the cloud since the copy this browser deleted: kept, and taken back.
-      const edited = [...q.deletes].map(([id, at]) => {
+      const edited = gone.map(([id, at]) => {
         const d = cloudCopy.get(id);
         return d && Number.isFinite(d.updatedAt) && d.updatedAt > (at ?? 0) ? store.fromCloud(d) : null;
       }).filter(Boolean);
       const kept = new Set(edited.map((x) => x.id));
-      const deletes = [...q.deletes.keys()].filter((id) => !kept.has(id));
+      const deletes = gone.map(([id]) => id).filter((id) => !kept.has(id));
       // One put back here meanwhile (Undo while the batch was read) is in the list already, and
       // its own write is queued: it is not added a second time.
       const lacking = (list) => edited.filter((x) => !list.some((y) => y.id === x.id));
-      const order = q.reordered || deletes.length || q.writes.size || edited.length
+      const order = q.reordered || q.deletes.size || q.writes.size || edited.length
         ? [...(s.prev || []), ...lacking(s.prev || [])].map((x) => x.id) : null;
       const sending = io.commit(user.uid, { sets, deletes, order });
       handedOver();
