@@ -27,3 +27,11 @@ export function entryPrints(type, item) {
   const hidden = new Set(item.hiddenFields || []);
   return Object.entries(item).some(([k, v]) => !NOT_PRINTED.has(k) && !hidden.has(k) && valuePrints(k, v));
 }
+
+/**
+ * Whether section `s` prints: it is shown and at least one of its entries prints something
+ * (entryPrints). The PDF's every template (PdfSections.jsx), the ATS Check's section and heading items
+ * and its job-match corpus (atsChecker.js) read this one rule, so the report never names a section the
+ * page leaves out (R2-057, R1-LEFT-d, R5-HUNT6-BLANK-SECTION-HEADING).
+ */
+export const sectionPrints = (s) => s.visible !== false && (s.items || []).some((i) => entryPrints(s.type, i));

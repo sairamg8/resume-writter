@@ -2,7 +2,7 @@ import { View } from '@react-pdf/renderer';
 import { PdfSectionTitle } from './PdfSection';
 import { headingFace } from './pdfFaces';
 import { PdfRichText } from './PdfRichText';
-import { entryPrints } from '@/utils/entryPrints';
+import { sectionPrints } from '@/utils/entryPrints';
 import { CSS_PX_TO_PT, DEFAULT_ITEM_GAP_PX, MM_TO_PT, SECTION_SPACING_PX } from './pdfUnits';
 import { pageMargins } from '@/constants/pageMargins';
 import { mainTextWidthPt } from './PdfPage';
@@ -227,7 +227,7 @@ export function getEffectiveSpacing(section, settings, { isLast = false } = {}) 
  * just added, skill groups with both eyes off (R5-HUNT6) — printed a bare heading, which Markdown and
  * ATS text leave out.
  */
-export const sectionPrints = (s) => s.visible !== false && (s.items || []).some(i => entryPrints(s.type, i));
+export { sectionPrints };
 
 /** Printing sections in order + last id (for isLast spacing). */
 export function getVisibleSections(sections = []) {
