@@ -289,7 +289,7 @@ const SEASON = '(?:spring|summer|fall|autumn|winter)';
 const DAY = `(?:${MONTH},?\\s+\\d{4}|${SEASON}\\s+\\d{4}|\\d{1,2}\\s*[/.]\\s*\\d{4}|\\d{1,2}-\\d{4}|\\d{4}\\s*[/.-]\\s*\\d{1,2}(?!\\d)|(?:19|20)\\d{2})`;
 const NOW = '(?:present|current|currently|now|today|ongoing|till date|to date)';
 const SEP = '\\s*(?:[-–—~]|to|until|through)\\s*';
-const RANGE = new RegExp(`^(?:since\\s+)?(${DAY})(?:${SEP}(${DAY}|${NOW}))?$`, 'i');
+const RANGE = new RegExp(`^(since\\s+)?(${DAY})(?:${SEP}(${DAY}|${NOW}))?$`, 'i');
 // "Expected May 2025", "Anticipated graduation: 2025": a date still to come is when the entry ends.
 const END_ONLY = new RegExp(`^(?:[-–—]|to|until|(?:expected|anticipated)(?:\\s+(?:graduation|completion))?:?)\\s*(${DAY}|${NOW})$`, 'i');
 const IS_NOW = new RegExp(`^${NOW}$`, 'i');
@@ -301,8 +301,9 @@ export function readDateRange(text) {
   const tidy = (d) => d.replace(/\s+/g, ' ').replace(/(\d)\s*([/.-])\s*(?=\d)/g, '$1$2');
   let m = RANGE.exec(t);
   if (m) {
-    const now = m[2] && IS_NOW.test(m[2]);
-    return { start: tidy(m[1]), end: m[2] && !now ? tidy(m[2]) : '', current: Boolean(now), text: t };
+    // "Since 2019" is a range still running, as "2019 – Present" is.
+    const now = m[3] ? IS_NOW.test(m[3]) : Boolean(m[1]);
+    return { start: tidy(m[2]), end: m[3] && !now ? tidy(m[3]) : '', current: now, text: t };
   }
   m = END_ONLY.exec(t);
   if (m) {
