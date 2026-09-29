@@ -5,6 +5,15 @@
 > from `b8d7667`; the app change is one redundant Portal removed; it turns master's red gate green). Then
 > `python3 docs/tracking/tools/r4_tracker.py --deployed 56e42bf`, commit, push. A newer green sha will replace this line.
 
+## ⏩ COLD START HERE — 2026-09-29 03:15 UTC (coordinator session_013S3xa7VBjcBV3avHWTbYQF, scheduled run; owner travelling)
+
+**Lock:** `claude/coordinator-lock` (LOCK refreshed every 30 min while this run works).
+**Done this run:** dash (2d7d165) and panels (182e232) merged into `claude/r4-green` (329ef58, reports copied, tracker run).
+**In progress:** unfinished r5 clusters, two at a time, each = finish scope → adversarial review → fix → report
+`wf-reports/r5-<key>.json` on `claude/wf-r5-<key>`. Order: out + dlg, then job + brd, then opt + imp. Then the
+20-row dsg-layout verdict check, R2-148 (deleted résumé keeps its public link), the whole-app hunt (dry twice).
+A cluster is done only when its report is on its branch; merge it then. No full gate yet on the merged head.
+
 ## ⏩ COLD START HERE — 2026-09-28 17:10 UTC (coordinator session_01PeuUcY5NWWpCxy878FtEE1, scheduled run; owner offline)
 
 **What happened on 28 Sep:** `master` was pushed to `b8d7667` (Round 4 + wave 2 dsg-flow + dsg-layout) at **03:05 UTC,
