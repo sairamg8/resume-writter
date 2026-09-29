@@ -182,6 +182,21 @@ export function savedDesigns(resumes) {
 }
 
 /**
+ * The saved designs `resume` holds that none of `others` holds, live or deleted — { id: design }, none:
+ * {}. The designs the user saved live on the résumés (there is no list of them apart), so these are the
+ * ones deleting `resume` would take out of every picker (R5-HUNT6-DASH).
+ */
+export function designsOnlyIn(resume, others) {
+  const held = new Set((others || []).flatMap((r) => Object.keys(ownDesignsOf(r?.settings))));
+  const out = {};
+  for (const id of Object.keys(ownDesignsOf(resume?.settings))) {
+    const d = ownDesign(resume.settings, id);
+    if (d && !held.has(id) && !Object.hasOwn(TEMPLATE_PRESETS, id)) out[id] = d;
+  }
+  return out;
+}
+
+/**
  * `settings` with the saved design `id` deleted: { deleted: true } in its place (R3-008), and no longer
  * the one it is on (its look stays). The same object when there is nothing to change.
  */

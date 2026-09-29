@@ -58,6 +58,21 @@ export function columnDeletion(board, columnId, targetId = null) {
   return { count, target, change };
 }
 
+/**
+ * What setting column `columnId`'s category to `category` does to its issues: `count` of them, and
+ * `change` — 'reopen' (it stops being done: every issue reopens, its resolved date wiped), 'resolve'
+ * (it becomes done: every issue is marked done) or null — so the board and Project settings ask
+ * first, as a column's delete does (R5-HUNT6).
+ */
+export function columnRecategorization(board, columnId, category) {
+  const column = board.columns.find((c) => c.id === columnId);
+  if (!column) return { count: 0, change: null };
+  const count = board.issues.filter((i) => i.columnId === columnId).length;
+  const done = isDoneColumn({ ...column, category });
+  const change = done === isDoneColumn(column) ? null : (done ? 'resolve' : 'reopen');
+  return { count, change };
+}
+
 /** A label as a card shows it — `{ id, name, color }` — for each of the issue's labels that exists. */
 function labelsOf(board, issue) {
   return issue.labelIds.map((id) => board.labels.find((l) => l.id === id)).filter(Boolean);

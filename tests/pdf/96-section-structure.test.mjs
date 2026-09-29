@@ -52,7 +52,7 @@ function confirming(answer) {
 }
 
 describe('the Résumé tab: sections (R2-158)', () => {
-  it('Add Section → a type: that section at the end, open with its first entry; the picker closes; the PDF prints its title', async () => {
+  it('Add Section → a type: that section at the end, open with its first entry; the picker closes; the PDF prints its title once the entry holds something', async () => {
     const tab = await resumeTab(sample());
     let added;
     try {
@@ -66,7 +66,13 @@ describe('the Résumé tab: sections (R2-158)', () => {
       assert.ok(tab.button('Add Award', tab.card('Awards & Honors')), 'open, with its Add button');
       assert.ok(!tab.all().some((el) => el.tagName === 'BUTTON' && el.textContent.trim() === 'Awards & Honors'), 'the picker closed');
     } finally { await tab.close(); }
-    assert.match(await printed(added), /awards & honors/i);
+    // Still blank, the new section prints nothing, not its heading alone — as Word, Markdown and the
+    // ATS text leave it out (R5-HUNT6-BLANK-SECTION-HEADING); its first entry typed, its title prints.
+    assert.doesNotMatch(await printed(added), /awards & honors/i);
+    const typed = { ...added, sections: added.sections.map((s, i) => (i === 3 ? { ...s, items: [{ ...s.items[0], title: 'Harbor Medal' }] } : s)) };
+    const text = await printed(typed);
+    assert.match(text, /awards & honors/i);
+    assert.match(text, /Harbor Medal/);
   });
 
   it("a section's title box renames it: the store keeps the new title, the PDF prints it", async () => {

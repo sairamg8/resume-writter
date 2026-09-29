@@ -1,10 +1,34 @@
 # Session Handoff — Resume Here
 
-> **OWNER — DEPLOY (the session's master push is refused as a 'Production Deploy'):**
-> `git push origin 3e9f28d:refs/heads/master` — full gate run 36558724989 on that exact commit is GREEN. A fast-forward
-> from `b8d7667`: 56e42bf's stale-test fix + all eight Round 5 clusters, R2-148's public-link takedown, hunt rounds 1–4
-> (64 bug fixes), two start-up size trims. Then `python3 docs/tracking/tools/r4_tracker.py --deployed 3e9f28d`, commit,
-> push. A newer green sha will replace this line.
+**HUNT ROUND 6 DONE and merged (coordinator session_01FdiasXrhydMkPZHWFFd4KS, 2026-09-29):** 25 confirmed + fixed +
+reviewed (boards 3, jobs 3, dash 4, sync 3, editor 1, pdf 3, import 5, export 3; tools dry; Website-freeze lead: no loop
+found). Merge fixes: 8f0e3ad (category Undo sign-out guard, own test), 8acb687 (duplicate listOwner from jobs+sync broke
+lint/build: gate 36608111378 on 9c4aaec red for that only). Full gate on 8acb687 dispatched ~18:45 UTC. Round 7 next,
+base 8acb687 (script: workflows r5-hunt6 script; finders must only git show/grep, never checkout the shared tree).
+Merge note: merge_cluster.sh drops the tracked wf-reports/ — run `git checkout HEAD -- wf-reports` after it and add only
+the area's report.
+
+**BUG HUNT RESUMED by the owner 2026-09-29 ~17:00 UTC.** The coordinator routine trig_01NqtyqnKGMDHRm8VnNuJLYL is
+re-enabled (every 3 h). Next: resume hunt round 6 from the state below and loop until two consecutive dry rounds.
+**Commits (owner rule, 2026-09-29):** author and committer `sairamgudiputi <sairamgudiputi8@gmail.com>`, with no
+Co-Authored-By, no Claude-Session trailer and no "Generated with" line. See CLAUDE.md, "Commits carry the owner's identity only".
+**DoD progress (2026-09-29, sessions 521f8276 + 45558ac8):** 8 real applications submitted with the owner's résumé, rendered
+by FlowCV's own react-pdf code: GitLab, Atlassian and Netflix, then abroad Brex, Databricks, Verkada, Harvey and OpenTable.
+Eightfold parsed the PDF header correctly. Greenhouse and Ashby don't parse, and iCIMS kept old profile data. No export
+bug found. One editor freeze was seen while typing in Personal Info → Website, not yet reproduced; worth a hunt finder.
+Do NOT touch `private/` or the owner's FlowCV app data (owner: "repo data is clean, leave it"). Job-hunt state/next steps live OUTSIDE the repo: `~/Documents/job-hunt/README.md`, `applications.md`,
+`shortlist.md` (57 roles abroad, top 20 ranked). Owner's résumé source of truth: `private/sairam-resume.json` (website now
+itsairam.netlify.app — owner does not own sairamg.dev). Idea from the owner (not started): for the owner's account, starter
+templates should prefill from the private résumé instead of sample people ("Alex Morgan").
+Latest green: `910237e` — DEPLOYED to master 2026-09-29 (full gate run 36567126236 GREEN).
+Stopped: hunt round 6 (had just started its finders; nothing pushed), the coordinator routine trig_01NqtyqnKGMDHRm8VnNuJLYL
+(disabled), the lock refresher. Hunt state to resume from: rounds 1–5 merged (78 fixes; seen-list wf-reports/r5-hunt-seen.json;
+round script = finder → skeptic → fixer with fail-first → reviewer per area); not yet dry. Not yet done: STATUS.md/tracker row
+updates for Round 5 and ROUND 5 COMPLETE.
+
+> **DEPLOYED 2026-09-29 ~21:45 IST by the owner:** `master` fast-forwarded `17c1430 → 910237e1` (full gate 36567126236
+> green; Round 5 + hunt rounds 1–5, 78 fixes). Tracker marked with `r4_tracker.py --deployed 910237e1` (354 ✅). Local
+> checkout synced. Nothing newer is green yet.
 
 ## ⏩ COLD START HERE — 2026-09-29 03:15 UTC (coordinator session_013S3xa7VBjcBV3avHWTbYQF, scheduled run; owner travelling)
 
@@ -27,7 +51,7 @@ Gate 36531535738 on 54b9ec2 GREEN (deploy line above). Hunt round 2 DONE and mer
 never shows after a jobs JSON round-trip; likely hunt2-jobs backup-restore fix) — stale spec (the file's demo_1 now replaces the untouched
 demo on purpose); fixed spec-only in 7a05d0f (CI 36539433206 green). Gate 36540411545 on 17c1430 GREEN (deploy line above).
 Hunt round 3 DONE and merged (6770951): 15 bugs confirmed + fixed in 9 areas; full gate 36548527667 on e164a94 RED only on 71-startup-chunks (start-up path over 1100 kB again) — trimmed by 885d0d9 (1,078 kB, 22.7 kB margin; fail-first 36551269699, tests 36551295397); gate 36551804673 on 0a0148f GREEN (deploy line above). Hunt round 4 DONE and merged (3e9f28d): 17 bugs confirmed + fixed (export dry; quick-search
-exact-key fixed twice — boards' kept, tools' test kept as -limit). Gate 36558724989 on 3e9f28d GREEN. Hunt round 5 DONE and merged (1b82c51): 14 confirmed + fixed (dash, sync dry). Full gate dispatched. Next: hunt round 6
+exact-key fixed twice — boards' kept, tools' test kept as -limit). Gate 36558724989 on 3e9f28d GREEN. Hunt round 5 DONE and merged (1b82c51): 14 confirmed + fixed (dash, sync dry). Gate 36567126236 on 910237e GREEN. Running since 12:53: hunt round 6
 (seen = wf-reports/r5-hunt-seen.json on claude/r4-green; the
 round script: 9 area finders → skeptic → fixer with fail-first → reviewer, branches claude/wf-r5-hunt<N>-<area>). Loop rounds until two in a row find nothing new. Batch gate 36517981819 on 0f03b71 was red only on
 71-startup-chunks (the data router for R4-DUX-06 + the kit Dialog on the Dashboard: 1107 kB > 1100 kB); fixed by ea59ac6

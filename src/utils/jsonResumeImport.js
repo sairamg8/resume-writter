@@ -141,15 +141,19 @@ export function jsonResumeToCpwtResume(jsonResume, customId) {
   const listed = new Set([website]);
   const profiles = others.filter((o) => !listed.has(o.address) && listed.add(o.address)).map((o) => ({ id: newId('cust'), title: o.network || 'Profile', subtitle: o.address, date: '', location: '', description: '' }));
 
+  // The value as typed of a website, LinkedIn or GitHub whose schema url the export filled with its
+  // Link URL (`${key}Text`, R5-HUNT6-JSON-RESUME-IGNORES-LINK-URL-OVERRIDE): the field gets it back.
+  const typed = (key, found) => (found && storedText(b[`${key}Text`]).trim() ? storedText(b[`${key}Text`]) : found);
+
   const personal = {
     name: storedText(b.name),
     title: storedText(b.label),
     email: storedText(b.email),
     phone: storedText(b.phone),
     location: locStr,
-    website,
-    linkedin,
-    github,
+    website: typed('website', website),
+    linkedin: typed('linkedin', linkedin),
+    github: typed('github', github),
     ...linkFields(b),
     summary: richFrom(b.summary, b.summaryHtml),
     photo: [b.image, b.picture].find((v) => typeof v === 'string' && v) || null,

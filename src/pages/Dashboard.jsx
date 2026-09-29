@@ -14,7 +14,7 @@ import { DEMO_ACCOUNTS } from '@/utils/demoAccounts';
 import { isJsonResume, jsonResumeToCpwtResume } from '@/utils/jsonResume';
 import { editorPath, isLetter, letterSources } from '@/utils/letters';
 import { normalizeResume } from '@/utils/normalizeResume';
-import { DOCUMENT_HINT, IMPORT_ACCEPT, importDocument, isDocumentFile } from '@/utils/importDocument';
+import { DOCUMENT_HINT, IMPORT_ACCEPT, importDocument, importingFor, isDocumentFile } from '@/utils/importDocument';
 
 const IMPORT_BUTTON = 'flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 bg-white border border-gray-200 text-gray-700 rounded-lg text-xs sm:text-sm font-semibold hover:bg-gray-50 transition-colors shadow-sm whitespace-nowrap';
 
@@ -48,6 +48,9 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false, publicL
   // A read that ends after the Dashboard is gone still imports, but no longer drags the user back.
   const mounted = useRef(true);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
+  // The account the list is now (syncedUid), for a read that ends after it signed out.
+  const listOwner = useRef(store.appState.syncedUid);
+  useEffect(() => { listOwner.current = store.appState.syncedUid; }, [store.appState.syncedUid]);
 
   function pickImport(keep) {
     importAsOriginal.current = keep;
@@ -127,8 +130,15 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false, publicL
       e.target.value = '';
       importBusy.current = true;
       setImporting(true);
+      // The read takes seconds: an account that signs out meanwhile gets the résumé kept aside for it
+      // (importResume's `account`), not the signed-out list, and it is not opened
+      // (R5-HUNT6-DASH-IMPORT-AFTER-SIGN-OUT).
+      const importResume = importingFor(store.importResume, {
+        account: store.appState.syncedUid ?? null, ownerNow: () => listOwner.current, name: file.name,
+        onLeft: (message) => { if (mounted.current) setImportError(message); },
+      });
       importDocument(file, {
-        importResume: store.importResume, keep: keeps && importAsOriginal.current,
+        importResume, keep: keeps && importAsOriginal.current,
         navigate: (...args) => { if (mounted.current) navigate(...args); },
         onError: setImportError,
       }).finally(() => {

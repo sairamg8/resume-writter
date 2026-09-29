@@ -28,18 +28,34 @@ export const NEW_LETTER_NOTICE = 'Imported as a new cover letter: the one you ha
 /**
  * Reads `file` into a new résumé, as the JSON import does: `importResume(resume, { keep })`, then
  * the editor at it, which shows `notice` (IMPORT_NOTICE unless given). `onError(message)` when it
- * cannot be read.
+ * cannot be read. An `importResume` that answers null did not add it to the list: nothing to open.
  */
 export async function importDocument(file, { importResume, navigate, onError, keep = false, notice = IMPORT_NOTICE }) {
   try {
     const { resumeFromFile } = await import('./importFile.js');
     const resume = await resumeFromFile(file);
     const id = importResume(resume, { keep });
-    navigate(`/resume/${id}`, { state: { importNotice: notice } });
+    if (id) navigate(`/resume/${id}`, { state: { importNotice: notice } });
     return id;
   } catch (e) {
     console.error('Import failed:', e);
     onError(`Could not import ${file?.name || 'that file'}${e?.message ? `: ${e.message}` : '.'}`);
     return null;
   }
+}
+
+/**
+ * `importResume` for a document picked while the list was account `account`'s (the store's syncedUid;
+ * null: no account's). The read takes seconds, and an account that signs out meanwhile gets the résumé
+ * kept aside for it (the store's importResume `account`), not the signed-out list; then this answers
+ * null — nothing to open — and `onLeft(message)` says why. `ownerNow()`: the account the list is now.
+ * The Dashboard's Import and the editor's (R5-HUNT6-DASH-IMPORT-AFTER-SIGN-OUT).
+ */
+export function importingFor(importResume, { account = null, ownerNow, onLeft, name = 'the file' }) {
+  return (resume, options) => {
+    const id = importResume(resume, { ...options, account });
+    if (!account || ownerNow() === account) return id;
+    onLeft(`You signed out while ${name} was being read. It is kept for that account and comes back when it signs in again.`);
+    return null;
+  };
 }

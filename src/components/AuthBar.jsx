@@ -132,6 +132,9 @@ export default function AuthBar({
   // What the last sign-in failure was, in words (signInErrorMessage): it used to go to the
   // console only, so a blocked popup or an unauthorized domain looked like nothing (R2-086).
   const [signInError, setSignInError] = useState(null);
+  // A sign-in that did not come through this button (another tab, another header) worked too: the
+  // old failure is over, and would otherwise come back under the button at the next sign-out.
+  if (user && signInError) setSignInError(null);
 
   async function handleSignIn() {
     setSigningIn(true);

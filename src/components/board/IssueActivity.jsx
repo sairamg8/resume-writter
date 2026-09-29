@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { ArrowRight } from 'lucide-react';
 import { Avatar, Button, TabPanel, Tabs, cx, isImeKey, useConfirmOptional, useHotkeys } from '@/components/ui';
 import { describeActivity } from '@/utils/issueHistory';
@@ -13,12 +13,24 @@ function When({ at }) {
 
 /**
  * The box a comment is written in: a one-line prompt until focused, then a field with Save / Cancel.
- * Each new `summon` (the `m` shortcut) opens it, or goes back to it with what is typed kept.
+ * Each new `summon` (the `m` shortcut) opens it, or goes back to it with what is typed kept. Text
+ * left in it is saved when it goes (the view closes, another issue opens), as the description's
+ * draft is: it used to vanish without a word.
  */
 function Composer({ initial = '', onSave, onCancel, autoFocus = false, saveLabel = 'Save', summon = 0 }) {
   const [text, setText] = useState(initial);
   const [open, setOpen] = useState(autoFocus || !!initial);
   const fieldRef = useRef(null);
+  // What is typed and this issue's save, as last rendered, for the unmount below; Save and Cancel
+  // clear it at once, as the box can go in the same render (an edited comment's box does).
+  const left = useRef({ text: '', onSave });
+  useLayoutEffect(() => {
+    left.current = { text: text.trim() !== initial.trim() ? text.trim() : '', onSave };
+  });
+  useEffect(() => () => {
+    const { text: t, onSave: keep } = left.current;
+    if (t) keep(t);
+  }, []);
   // Only a summon made while it is mounted opens it (it stays mounted on the History tab, hidden).
   const [summoned, setSummoned] = useState(summon);
   if (summon !== summoned) {
@@ -32,11 +44,12 @@ function Composer({ initial = '', onSave, onCancel, autoFocus = false, saveLabel
   const save = () => {
     const t = text.trim();
     if (!t) return;
+    left.current.text = '';
     onSave(t);
     setText('');
     setOpen(!!initial);
   };
-  const cancel = () => { setText(initial); setOpen(false); onCancel?.(); };
+  const cancel = () => { left.current.text = ''; setText(initial); setOpen(false); onCancel?.(); };
   if (!open) {
     return (
       <button

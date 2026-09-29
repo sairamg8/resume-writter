@@ -1,7 +1,7 @@
 import { useContext, useEffect, useRef, useState, useId } from 'react';
 import { UNSAFE_DataRouterContext, useBlocker, useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
-import { useJobStore } from '@/hooks/useJobStore';
+import { JOB_DRAFT_PREFIX, listOwner, useJobStore } from '@/hooks/useJobStore';
 import { useJobStages } from '@/hooks/useJobStages';
 import { FORM_FIELDS, formPatch, jobFormValues, withFormStatus } from '@/utils/jobEdits';
 import { linkedResume, resumeChoices } from '@/utils/jobQuery';
@@ -15,7 +15,7 @@ import { PageHeader } from '@/components/shell';
 // The form's unsaved values in this tab's sessionStorage, so a reload, a crash or a closed tab no
 // longer loses them (R4-DUX-06): every way out inside the app asks first (LeaveGuard, leave()).
 // Storage can throw (private mode, blocked site data): then there is simply no draft.
-const draftKey = (id) => `jobform:${id || 'new'}`;
+const draftKey = (id) => `${JOB_DRAFT_PREFIX}${id || 'new'}`;
 function readDraft(key) {
   try {
     const raw = sessionStorage.getItem(key);
@@ -23,8 +23,12 @@ function readDraft(key) {
     return draft && typeof draft === 'object' ? draft : null;
   } catch { return null; }
 }
-function writeDraft(key, form) {
-  try { sessionStorage.setItem(key, JSON.stringify(form)); } catch { /* no draft, as without storage */ }
+// A draft typed on an account's list names it (DRAFT_OWNER), and is restored only while this browser
+// holds that account's list (listOwner): a tab that heard nothing as the list left with its account
+// gave its Add job draft to the next account (R5-HUNT6 review). One typed signed out names none.
+const DRAFT_OWNER = '_owner';
+function writeDraft(key, form, owner) {
+  try { sessionStorage.setItem(key, JSON.stringify(owner ? { ...form, [DRAFT_OWNER]: owner } : form)); } catch { /* no draft, as without storage */ }
 }
 function clearDraft(key) {
   try { sessionStorage.removeItem(key); } catch { /* nothing stored */ }
@@ -67,7 +71,7 @@ export function JobForm({ store }) {
   const holdsNavigation = Boolean(useContext(UNSAFE_DataRouterContext));
   // Set just before the form itself navigates away (Save, a confirmed Cancel): no second question.
   const leavingRef = useRef(false);
-  const { jobs, persistError, addJob, updateJob } = useJobStore();
+  const { jobs, persistError, addJob, updateJob, left } = useJobStore();
   const { appState } = store;
   const resumes = appState.resumes;
   const { customStages, addCustomStage, removeCustomStage } = useJobStages();
@@ -82,17 +86,24 @@ export function JobForm({ store }) {
   const key = draftKey(id);
   // A draft left by a Back or a link away — the fields typed — laid over the job as it is now, and
   // restored when that differs from it.
+  const [owner] = useState(listOwner);
   const [draft] = useState(() => {
     const stored = readDraft(key);
-    if (!stored) return null;
+    if (!stored || (stored[DRAFT_OWNER] && stored[DRAFT_OWNER] !== owner)) return null;
     const values = { ...start };
     for (const k of FORM_FIELDS) if (k in stored && typeof stored[k] === typeof start[k]) values[k] = stored[k];
     return Object.keys(formPatch(start, values)).length ? values : null;
   });
   const [form, setForm] = useState(draft ?? start);
   const [restored, setRestored] = useState(Boolean(draft));
+  // The list left with its account (signed out, or another account signed in) while this form was
+  // open: what it holds is that account's, so it is neither kept nor saved into the list now here.
+  // Its empty list read as the job deleted in another tab, and "Save as a new job" copied the job
+  // into the signed-out list, which the next account to sign in uploaded (R5-HUNT6).
+  const [openedLeft] = useState(left);
+  const accountLeft = left !== openedLeft;
   // Deleted in another tab while this form was open: keep the input, offer it as a new job (J-16).
-  const gone = isEdit && Boolean(opened) && !existing;
+  const gone = isEdit && Boolean(opened) && !existing && !accountLeft;
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
   // A new job's untouched applied date follows the status: none for Saved (J-10).
@@ -138,9 +149,9 @@ export function JobForm({ store }) {
   // a job moved or edited since (the board, another tab), Save wrote those back and moved the job
   // back to its old status with a false history entry, as J-02's overwrite (R5-HUNT1).
   useEffect(() => {
-    if (dirty) writeDraft(key, formPatch(start, form));
+    if (dirty) writeDraft(key, formPatch(start, form), owner);
     else clearDraft(key);
-  }, [dirty, form, key, start]);
+  }, [dirty, form, key, start, owner]);
 
   function discardRestored() {
     clearDraft(key);
@@ -156,8 +167,18 @@ export function JobForm({ store }) {
     return () => window.removeEventListener('beforeunload', warn);
   }, [dirty]);
 
+  // The account's list went: back to the tracker, the draft with it (the store dropped every job
+  // form's draft as the list left; this form's own is dropped again, in case it was written since).
+  useEffect(() => {
+    if (!accountLeft) return;
+    clearDraft(key);
+    leaveTo('/jobs');
+    // Once, as the list leaves.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accountLeft]);
+
   function handleSave() {
-    if (!canSave || gone) return;
+    if (!canSave || gone || accountLeft) return;
     if (!isEdit) { clearDraft(key); leaveTo(`/jobs/${addJob(form)}`); return; }
     // The whole form wrote its stale to-dos, history and status over another tab's (J-02).
     if (updateJob(id, formPatch(start, form))) { clearDraft(key); leaveTo(`/jobs/${id}`); }
@@ -170,7 +191,7 @@ export function JobForm({ store }) {
   }
 
   function saveAsNew() {
-    if (canSave) { clearDraft(key); leaveTo(`/jobs/${addJob(form)}`); }
+    if (canSave && !accountLeft) { clearDraft(key); leaveTo(`/jobs/${addJob(form)}`); }
   }
 
   // An unknown id is not a blank form whose Save throws the input away (J-16). The job page's own

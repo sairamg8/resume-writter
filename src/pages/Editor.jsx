@@ -51,7 +51,7 @@ export function Editor({ store, auth, sync }) {
   };
 
   const exportMenu = useEditorExports({
-    resume, activeTab, authUser: auth?.user, importResume: store.importResume, navigate,
+    resume, activeTab, authUser: auth?.user, importResume: store.importResume, navigate, account: store.appState.syncedUid ?? null,
   });
   const { panelWidth, separatorProps } = usePanelResize();
   const importNotice = useImportNotice();

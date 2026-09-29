@@ -2,6 +2,7 @@ import { View } from '@react-pdf/renderer';
 import { PdfSectionTitle } from './PdfSection';
 import { headingFace } from './pdfFaces';
 import { PdfRichText } from './PdfRichText';
+import { sectionPrints } from '@/utils/entryPrints';
 import { CSS_PX_TO_PT, DEFAULT_ITEM_GAP_PX, MM_TO_PT, SECTION_SPACING_PX } from './pdfUnits';
 import { pageMargins } from '@/constants/pageMargins';
 import { mainTextWidthPt } from './PdfPage';
@@ -221,10 +222,12 @@ export function getEffectiveSpacing(section, settings, { isLast = false } = {}) 
 }
 
 /**
- * Whether a section prints: it is shown and at least one of its entries is. One whose entries are
- * all hidden or all deleted printed a bare heading, which Word, Markdown and ATS text leave out (R2-057).
+ * Whether a section prints: it is shown and at least one of its entries is, with something in it
+ * (entryPrints). One whose entries are all hidden or all deleted (R2-057), or all blank — a section
+ * just added, skill groups with both eyes off (R5-HUNT6) — printed a bare heading, which Markdown and
+ * ATS text leave out.
  */
-export const sectionPrints = (s) => s.visible !== false && (s.items || []).some(i => i && i.visible !== false);
+export { sectionPrints };
 
 /** Printing sections in order + last id (for isLast spacing). */
 export function getVisibleSections(sections = []) {

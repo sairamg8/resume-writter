@@ -5,6 +5,23 @@
 // (pdfBuild: in the Web Worker, R2-142), so a gallery filling up never freezes the editor.
 import { buildCoverLetterPdf, buildResumePdf } from './pdfBuild.js';
 import { loadPdfjs } from './pdfjsLoader.js';
+import { buildNote } from './fontFallback.js';
+import { imageRetryPendingFor } from './printableImage.js';
+import { markIncomplete } from './pageImageStore.js';
+
+/**
+ * Whether the build of `resume` printed without what it asks for: its font (Noto Sans in its place, or
+ * a face borrowing another's data) or an image whose fetch failed for a passing reason. The picture is
+ * shown but not kept, so a later visit paints it again (R5-HUNT6-CARD-PICTURE-KEPT-DEGRADED).
+ */
+function printedIncomplete(resume, blob) {
+  const note = buildNote(blob);
+  if (note?.fallback || note?.borrowed) return true;
+  const photos = [resume?.personal?.photo, resume?.coverLetter?.clPhoto];
+  const icons = Object.values(resume?.settings?.customContactIcons || {});
+  const pending = (src, kind) => typeof src === 'string' && src !== '' && imageRetryPendingFor(src, { kind });
+  return photos.some((src) => pending(src, 'photo')) || icons.some((src) => pending(src, 'icon'));
+}
 
 /** Page 1 of `resume` (`letter`: of its cover letter), `width` px wide, as a data URL. */
 export async function pageImage(resume, { width = 240, letter = false } = {}) {
@@ -21,7 +38,9 @@ export async function pageImage(resume, { width = 240, letter = false } = {}) {
     canvas.width = Math.round(viewport.width);
     canvas.height = Math.round(viewport.height);
     await page.render({ canvasContext: canvas.getContext('2d'), viewport, canvas }).promise;
-    return canvas.toDataURL('image/jpeg', 0.82);
+    const url = canvas.toDataURL('image/jpeg', 0.82);
+    markIncomplete(url, printedIncomplete(resume, blob));
+    return url;
   } finally {
     // Its pixels freed now, not when collected: iOS Safari caps a page's canvas memory (R2-170).
     canvas.width = 0;

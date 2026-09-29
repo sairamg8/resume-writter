@@ -42,14 +42,17 @@ function bodyLines(html) {
 /**
  * A contact as plain text prints it: text cannot carry a link, so a website, LinkedIn or GitHub shown
  * under a Display label keeps its address beside the label ("LinkedIn (linkedin.com/in/jdoe)"), the
- * address its Link URL override points to when set. Anything else prints as the letter shows it.
+ * address its Link URL override points to when set. One with a Link URL override and no label keeps
+ * that address beside the value as typed ("@jdoe (github.com/jdoe)"): the value alone left no address
+ * to follow (R5-HUNT6-LETTER-TEXT-IGNORES-LINK-URL-OVERRIDE). Anything else prints as the letter shows it.
  */
 function contactText(personal, { key, value }) {
   const label = String(personal[`${key}Label`] || '').trim();
+  const override = String(personal[`${key}Url`] || '').trim();
   // A Link URL the PDF would not follow (a javascript: address) is not printed either.
-  if (!label || !['website', 'linkedin', 'github'].includes(key) || !contactHref(key, personal)) return value;
-  const address = displayUrl(String(personal[`${key}Url`] || '').trim() || personal[key]);
-  return address && address !== label ? `${label} (${address})` : label;
+  if ((!label && !override) || !['website', 'linkedin', 'github'].includes(key) || !contactHref(key, personal)) return value;
+  const address = displayUrl(override || personal[key]);
+  return address && address !== value ? `${value} (${address})` : value;
 }
 
 /** The letter of `resume` as plain text; '' for no résumé. */

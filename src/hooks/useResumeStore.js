@@ -303,13 +303,19 @@ export function useAppStore() {
    * that finishes after the user opened another résumé does not go there, and making it the open one
    * here showed it — and took the edits — under that one's address (R5-HUNT1-LATE-IMPORT-HIJACKS-OPEN-EDITOR);
    * the editor that puts its own back meanwhile flashed the old résumé after every import from the editor,
-   * the address changing a render later (a router transition).
+   * the address changing a render later (a router transition). `account`: the account the list was
+   * (syncedUid) when the file was picked, for a read that takes seconds. When the list has left that
+   * account since — signed out, or another signed in — the résumé is kept aside for it, as leaveAccount
+   * keeps what it had not sent, and its next sign-in brings it: added to the list, it stayed in the
+   * signed-out browser and went to the next account's cloud (R5-HUNT6-DASH-IMPORT-AFTER-SIGN-OUT).
    */
-  function importResume(data, { keep = false } = {}) {
+  function importResume(data, { keep = false, account = null } = {}) {
     const id = newId('resume');
     const imported = withKeep(normalizeResume({ ...JSON.parse(JSON.stringify(data)), id }), keep, Date.now());
     // With none open (an empty list), it is: the one activeResume shows, and edits go to.
-    setAppState(prev => ({
+    setAppState(prev => (account && prev.syncedUid !== account ? {
+      ...prev, stashed: leaveAccount({ ...prev, resumes: [imported], syncedUid: account, cloudVersions: {} }, account).stashed,
+    } : {
       ...prev, resumes: [...prev.resumes, imported],
       activeId: prev.resumes.some(r => r.id === prev.activeId) ? prev.activeId : id,
     }));

@@ -9,6 +9,8 @@
 // tests run this very code against tests/pdf/fake-firestore.mjs.
 import { newId } from '@/utils/ids';
 import { CONTACT_FIELDS, CONTACT_KEYS } from '@/utils/contacts';
+import { entryPrints } from '@/utils/entryPrints';
+import { SECTION_TYPE_DEFAULTS } from '@/utils/defaultDataSectionTypes';
 
 /** The largest copy the cloud takes (Firestore's 1 MiB a document), less room for the rest. */
 export const MAX_PUBLIC_BYTES = 1_000_000;
@@ -83,8 +85,10 @@ export function publicSnapshot(resume) {
       items: (Array.isArray(s.items) ? s.items : []).filter((item) => item && item.visible !== false)
         .map((item) => asSectionPrints(withoutHidden(item), s)),
     }))
-    // As the PDF (sectionPrints): a section with no shown entry prints nothing, not even its title.
-    .filter((s) => s.items.length > 0);
+    // As the PDF (sectionPrints): a section with no shown entry, or whose shown entries are all blank,
+    // prints nothing, not even its title (R4-SYNC-06, R5-HUNT6). A blank entry beside one that prints
+    // stays: the page leaves its gap.
+    .filter((s) => s.items.some((item) => entryPrints(s.type, item)));
   const copy = {
     template: resume?.template || 'classic',
     settings: printedSettings(resume?.settings || {}, resume?.personal?.hiddenFields),
@@ -97,6 +101,18 @@ export function publicSnapshot(resume) {
 }
 
 const plain = (html) => String(html || '').replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+
+/**
+ * A section as the share panel names it: its title, or for one the user cleared (the PDF prints no
+ * heading) its type's own name ("Custom Section"), not the internal key 'custom'
+ * (R5-HUNT6-SHARE-SUMMARY-CLEARED-TITLE-TYPE-ID).
+ */
+function sectionName(s) {
+  const title = String(s.title ?? '').trim();
+  if (title) return title;
+  const factory = Object.hasOwn(SECTION_TYPE_DEFAULTS, s.type) ? SECTION_TYPE_DEFAULTS[s.type] : SECTION_TYPE_DEFAULTS.custom;
+  return factory('sec').title;
+}
 
 /**
  * What anyone with the link sees, in words, from a published copy: each header field with its
@@ -114,7 +130,7 @@ export function publicSummary(copy) {
   if (plain(p.summary)) lines.push('Your summary');
   for (const s of copy?.sections || []) {
     const n = s.items?.length || 0;
-    lines.push(`${s.title || s.type}: ${n} ${n === 1 ? 'entry' : 'entries'}`);
+    lines.push(`${sectionName(s)}: ${n} ${n === 1 ? 'entry' : 'entries'}`);
   }
   return lines;
 }

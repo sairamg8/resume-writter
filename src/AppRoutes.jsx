@@ -1,4 +1,4 @@
-import { Suspense, lazy, useLayoutEffect } from 'react';
+import { Suspense, lazy, useEffect, useLayoutEffect, useRef } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigationType } from 'react-router-dom';
 import { Dashboard } from '@/pages/Dashboard';
 import TermsPage from '@/pages/TermsPage';
@@ -37,20 +37,53 @@ function PageLoading() {
   return <div className="min-h-screen flex items-center justify-center text-sm text-gray-400">Loading…</div>;
 }
 
+// The window's offset each history entry was left at (its key and its path, as useScrollMemory files
+// the workspace's), for the tab's life.
+const windowOffsets = new Map();
+const entryOf = (key, pathname) => `${key} ${pathname}`;
+
 /**
  * Around every page: a new path gets a fresh ErrorBoundary — one page's crash used to stay on
  * screen through Back and every link until a reload (R2-072) — and opens at the top of the window,
  * which HashRouter never resets: the Privacy Policy opened from the dashboard's footer showed its
- * end (R2-073). Back and Forward leave the scroll to the browser, and a change of the search alone
- * (the editor's ?tab=) is not a new page. The workspace pages scroll their own <main>
- * (useScrollMemory).
+ * end (R2-073). A change of the search alone (the editor's ?tab=) is not a new page. The workspace
+ * pages scroll their own <main> (useScrollMemory).
+ *
+ * Back and Forward return the window to where that entry was scrolled. They were left to the
+ * browser, but the editor (fixed, the full window) and the workspace (its own <main>) leave the
+ * document nothing to scroll, and the browser puts the offset back before the Dashboard is drawn
+ * again, so it was clamped to 0: Back from a card's Edit opened the Dashboard at its top
+ * (R5-HUNT6-DASH-BACK-LOSES-SCROLL). The offset is recorded from the scroll events, so it is the one
+ * before the next page could clamp it. An entry with none recorded, or left at its top, is still
+ * left to the browser.
  */
 function RouteFrame({ children }) {
-  const { pathname } = useLocation();
+  const { key, pathname } = useLocation();
   const navigationType = useNavigationType();
+  const lastOffset = useRef(0);
+  const shown = useRef(entryOf(key, pathname));
+  useEffect(() => {
+    const onScroll = () => { lastOffset.current = window.scrollY; };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+  // Leaving an entry — to another page or to the same page with another search — files its offset.
   useLayoutEffect(() => {
-    if (navigationType !== 'POP') window.scrollTo(0, 0);
-    // Only a new path moves the scroll; the way we came is read with it.
+    const entry = entryOf(key, pathname);
+    if (shown.current === entry) return;
+    windowOffsets.set(shown.current, lastOffset.current);
+    shown.current = entry;
+  }, [key, pathname]);
+  useLayoutEffect(() => {
+    const saved = navigationType === 'POP' ? windowOffsets.get(entryOf(key, pathname)) : 0;
+    // Back or Forward to an entry left at its top, or never left here, is the browser's as before.
+    if (navigationType === 'POP' && !(saved > 0)) {
+      lastOffset.current = window.scrollY || 0;
+      return;
+    }
+    window.scrollTo(0, saved);
+    lastOffset.current = saved;
+    // Only a new path moves the scroll; the entry and the way we came are read with it.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
   return <ErrorBoundary resetKey={pathname}><Suspense fallback={<PageLoading />}>{children}</Suspense></ErrorBoundary>;

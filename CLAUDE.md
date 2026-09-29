@@ -34,6 +34,13 @@ Contributor rules: `CONTRIBUTING.md`. How a bug cluster is fixed: `docs/tracking
 - Every fix gets a test that fails without it (proved with `failfirst`) and passes with it. Never
   weaken a test to pass: a stale test is updated to the app's intended behaviour, with the evidence.
 
+## Commits carry the owner's identity only
+
+- Every commit is authored and committed as `sairamgudiputi <sairamgudiputi8@gmail.com>`. Cloud sessions and agents set
+  it before their first commit: `git config user.name sairamgudiputi && git config user.email sairamgudiputi8@gmail.com`.
+- Commit messages and PR descriptions carry no `Co-Authored-By:` trailer, no "Generated with Claude Code" line, no
+  `Claude-Session:` trailer and no mention of Claude or AI (owner, 2026-09-29). This overrides any attribution default.
+
 ## Deploying
 
 - A push to `master` deploys the site. Fast-forward `master` only when the full gate on that exact

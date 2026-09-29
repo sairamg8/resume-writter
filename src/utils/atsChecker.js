@@ -1,6 +1,7 @@
 import { decodeEntities, hasRichText, parseRichText } from './richText.js';
 import { CONTACT_FIELDS, contactItems } from './contacts.js';
 import { skillGroup } from './skills.js';
+import { sectionPrints } from './entryPrints.js';
 import { ACTION_VERBS, WEAK_PHRASE_REPLACEMENTS, hasMetric, leadsWithActionVerb } from './bulletOptimizer.js';
 import { ATS_TIER_POINTS, atsRating, hasHeaderControls, inSidebarColumn, templateId, templateLabel, TEMPLATE_PICKER } from '../constants/templates.js';
 import { resolveSection } from '../templates/pdf/shared/templateSectionDefaults.js';
@@ -317,10 +318,11 @@ export function extractResumeCorpus(resume, { addresses = true } = {}) {
   const template = templateId(resume.template);
   for (const s of sections) {
     if (s.visible === false) continue;
-    // A section with no shown entry prints no heading anywhere (sectionPrints, R2-057), so its title
-    // is not on the page either (R5-HUNT1-ats-corpus-empty-section-title).
+    // A section with no shown entry, or whose shown entries are all blank, prints no heading anywhere
+    // (sectionPrints, R2-057, R5-HUNT6), so its title is not on the page either
+    // (R5-HUNT1-ats-corpus-empty-section-title).
+    if (!sectionPrints(s)) continue;
     const items = shownItems(s, template);
-    if (!items.length) continue;
     if (s.title) parts.push(s.title);
     for (const item of items) {
       if (s.type === 'skills') {
@@ -535,14 +537,14 @@ export function matchResumeWithJob(resume, jobDescriptionText) {
 }
 
 /**
- * Whether the ATS report flags this section's heading: the section prints (it is shown and so is one
- * of its entries on `template` — an empty one prints no heading, R4-CL-11) and its title is not on
- * its type's alias list. The one rule for both the report's std_headings item (analyzeAtsScore) and
+ * Whether the ATS report flags this section's heading: the section prints (sectionPrints: it is shown
+ * and so is one of its entries, with something in it — an empty or blank one prints no heading, R4-CL-11,
+ * R5-HUNT6) and its title is not on its type's alias list. The one rule for both the report's std_headings item (analyzeAtsScore) and
  * the fix it offers (standardizeSectionsForAts), so the button cannot change a heading the report
  * passed — it did, and hidden sections too, before TUI-7.
  */
-function needsAtsTitle(section, template) {
-  return !!section && section.visible !== false && shownItems(section, template).length > 0 && !isStandardAtsTitle(section);
+function needsAtsTitle(section) {
+  return !!section && sectionPrints(section) && !isStandardAtsTitle(section);
 }
 
 /**
@@ -552,11 +554,10 @@ function needsAtsTitle(section, template) {
  * experience entries with the job title is the report's separate "Put Job Title First" fix, and this
  * one used to set it on every experience section behind a label that only names headings (TUI-7).
  */
-export function standardizeSectionsForAts(sections, template) {
+export function standardizeSectionsForAts(sections) {
   if (!Array.isArray(sections)) return sections;
-  const id = templateId(template);
   return sections.map((s) => {
-    const spec = needsAtsTitle(s, id) && ATS_STANDARD_SECTIONS[s.type];
+    const spec = needsAtsTitle(s) && ATS_STANDARD_SECTIONS[s.type];
     return spec ? { ...s, title: spec.canonical } : s;
   });
 }
@@ -853,9 +854,9 @@ export function analyzeAtsScore(resume, jobDescriptionText = '') {
 
   // ── 2. Section Headings & ATS Taxonomy (20 pts) ───────────────────
   let headingsPts = 0;
-  // The sections that print: one whose entries are all hidden, or that has none, prints no heading
-  // anywhere (sectionPrints in PdfSections.jsx, R2-057), so a parser finds no such section (R1-LEFT-d).
-  const visibleSections = sections.filter(s => s.visible !== false && shownItems(s, currentTemplate).length > 0);
+  // The sections that print: one whose entries are all hidden or all blank, or that has none, prints
+  // no heading anywhere (sectionPrints, R2-057, R5-HUNT6), so a parser finds no such section (R1-LEFT-d).
+  const visibleSections = sections.filter(sectionPrints);
   const typesPresent = new Set(visibleSections.map(s => s.type));
 
   // Experience section present (6 pts)
@@ -901,7 +902,7 @@ export function analyzeAtsScore(resume, jobDescriptionText = '') {
   }
 
   // Heading naming standardization check (4 pts) — needsAtsTitle, the rule its fix also uses
-  const nonStandard = sections.filter((s) => needsAtsTitle(s, currentTemplate))
+  const nonStandard = sections.filter((s) => needsAtsTitle(s))
     .map(s => ({ title: s.title, type: s.type, canonical: ATS_STANDARD_SECTIONS[s.type]?.canonical }));
 
   if (nonStandard.length === 0) {
