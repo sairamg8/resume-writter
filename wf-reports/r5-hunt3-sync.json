@@ -1,0 +1,61 @@
+{
+  "cluster": "r5-hunt3-sync",
+  "branch": "claude/wf-r5-hunt3-sync",
+  "base": "17c14301f30ff27534a17eede47c480d1f00332c",
+  "rows": [
+    {
+      "id": "R5-HUNT3-OTHER-TAB-SIGNOUT-KEEPS-UNSAVED-RESUMES-UNOWNED",
+      "title": "After a sign-out in another tab, this tab keeps its unsaved résumés in a list with no owner. They stay on screen, and the next account to sign in uploads them to its own cloud.",
+      "severity": "high",
+      "outcome": "fixed",
+      "commits": [
+        "91ffa66a97481c61319d4c1c9e08f2466a0ff162"
+      ],
+      "tests": [
+        "tests/pdf/105-r5-hunt3-other-tab-sign-out-unsaved.test.mjs"
+      ],
+      "summary": "Now: when another tab saves the résumé list with a different owner (a sign-out writes syncedUid null, or another account signs in), withOtherTabsSave (src/hooks/useResumeStore.js) takes that tab's list. This tab's unsaved résumés (a coalesced keystroke not yet written, or an edit that storage refused) no longer stay in the list. They go through cloudSyncLeave.leaveAccount into stashed[uid] for the account that left, merged with what the other tab already stashed, and this tab's copy wins. Only résumés whose updatedAt differs from the account's cloudVersions are stashed. The save effect also writes when only `stashed` changed, and writes at once because the owner changed, so the stash reaches storage right away. After that, this tab's own leaveAccount(uid) finds nothing left to do, and the account's next first sync sends the stash (cloudSyncEngine.initialSync, stashOf). A list that had no owner still keeps its unsaved résumés when an account signs in elsewhere, as before.",
+      "remaining": "The same leak is still open in the job and board stores (takeOtherTabsList in src/hooks/useJobStore.js and src/hooks/useBoardStore.js). A job or project that storage refused in a second tab stays in that tab's list after a sign-out in another tab. It only happens when storage refused the write, because those stores write synchronously and do not coalesce. Those stores keep the owner in a separate sync-meta key (collectionSyncMeta), so the fix needs its own change. Proposed as a follow-up row.",
+      "failfirst_run": "36543679751 (green: the fail-first job reversed the diff and the test file had '# fail 3'; with the fix it passes; the named-tests job ran 20 files incl. 16-saved-data-two-tabs, 97-store-*, 89-store-save-coalesced, 18-cloud-sync-*, sign-out-leave, unsaved-jobs and knowledge-docs, all green; lint green)"
+    }
+  ],
+  "review": {
+    "rounds": [
+      {
+        "round": 1,
+        "issues": [
+          "Fail-first check: the job log for run 36543679751 shows 3 of the 4 tests fail with the diff reversed ('# fail 3') and all pass with it. The 4th test is a guard that the old no-owner behaviour is unchanged. The proof is real.",
+          "Narrow race: when another tab writes an out-of-date list with no owner at the same moment as this tab's first sync writes the account's list, this tab reads that as a sign-out. Its unsaved résumés then move to stashed[uid] and not to the list, until the account's next first sync. Before the fix, the same race already dropped the owner and this tab's saved résumés, so this is not a regression. Nothing is lost: the stash is written to storage, and initialSync merges stashOf(user.uid) whatever the list's owner.",
+          "The job and board stores have the same gap (see the row's remaining)."
+        ]
+      }
+    ],
+    "issues": [
+      {
+        "issue": "Does the fail-first run really fail without the fix?",
+        "resolution": "Yes. In CI job 109324889919 the test fails with 3 failures when the diff is reversed, and passes with the fix restored."
+      },
+      {
+        "issue": "A narrow race: an out-of-date no-owner write from another tab during this tab's first sync is read as a sign-out, and the unsaved résumés are stashed, not listed.",
+        "resolution": "Accepted, no change. It is not a regression: the old code lost the owner and dropped this tab's saved résumés in the same race. Nothing is lost, because the stash is written at once and the next first sync for the account merges it."
+      },
+      {
+        "issue": "Old stored data: a store with no `stashed` field, or a non-object one.",
+        "resolution": "Safe. leaveAccount and stashOf treat any non-map `stashed` as empty. The no-stash path spreads `incoming` as before, and the effect's equality check (appState.stashed === other.stashed) holds when nothing was stashed, so another tab's save is not written back."
+      },
+      {
+        "issue": "StrictMode double-invokes the updater, and saver.hold also runs withOtherTabsSave on the held save.",
+        "resolution": "Safe. The function stays pure: it builds a new state object and does not mutate prev or incoming."
+      },
+      {
+        "issue": "The job and board stores have the same leak for jobs or projects that storage refused.",
+        "resolution": "Not fixed here. It is outside this row's scope (the owner lives in a separate sync-meta key there) and is proposed as a follow-up row."
+      }
+    ],
+    "fixedByReviewer": []
+  },
+  "rejected": [],
+  "a11yNoted": [],
+  "baselineFailures": [],
+  "notes": "One row, fixed by 91ffa66. The reviewer read the diff, leaveAccount, keepUnsaved, the store's save effect and the sync engine's leave and first-sync paths, and made no code change. Fail-first run 36543679751 is green, with 3 of 4 tests failing without the fix. Follow-up: the same other-tab sign-out leak in the job and board stores (useJobStore/useBoardStore takeOtherTabsList)."
+}
