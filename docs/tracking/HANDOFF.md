@@ -1,5 +1,10 @@
 # Session Handoff — Resume Here
 
+**2026-09-29 23:45 UTC — ROUND 8 DONE (all 9 areas, 13 fixes) and merged: `1f7ed0e8`.** import 4 (+review fixes: undated entry,
+bracket dates), export 1 (Word line tab glued words), tools 3 (+review fixes). dash and jobs dry. Seen-list 148. **Full gate on
+`1f7ed0e8` dispatched ~23:45 UTC**; when green, pin `claude/deploy-r8-1f7ed0e` and open a deploy PR that supersedes #5. Running:
+wf_0a064088-d78 (round 9 dash/pdf/boards/sync/editor/jobs, base ca009d49) and wf_3bfd91c4-700 (round 9 import/export/tools, base 1f7ed0e8).
+
 **2026-09-29 23:15 UTC — DEPLOY: PR #5** (`claude/deploy-r8-ca009d4`, rounds 7 + 8-first-six = 26 fixes, full gate 36638036654 on
 `ca009d49` GREEN) supersedes PR #4; owner merges #5 (or `git push origin ca009d49:refs/heads/master`). A usage limit (reset 22:50)
 killed agents mid-run; resumed at 23:10 with the same run ids: wf_df15e7b0-cf8 (round 8 import: fixer partial on its branch,
