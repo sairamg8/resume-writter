@@ -406,9 +406,16 @@ function jobKeywordOf(raw) {
   // was the keywords "150K" and "180K", always missing and written into Skills by "+"
   // (R5-HUNT2-ats-jd-salary-figures-as-keywords): "150k", "1.5m", "2b+", "120k-140k", "150-180k", and
   // with no scale, "120000-150000", "120,000-150,000" (read "000-150") and "3-5" (years), "12-15".
-  if (/^\d+(?:\.\d+)*[kmb]?(?:-\d+(?:\.\d+)*[kmb]?)*\+?$/.test(lower)) return null;
+  // So is a figure with a unit, a rank or an ordinal: "3x", "10x", "200ms", "5s", "16gb", "#1", "1st"
+  // (R5-HUNT7-ATS-JD-UNIT-FIGURES-AS-KEYWORDS), numbers to bulletOptimizer's hasMetric too. A digit
+  // with letters that name a thing stays: "5G", "3D", "2FA", "S3", "EC2", "Web3".
+  if (FIGURE.test(lower)) return null;
   return word;
 }
+
+/** A figure, lower-cased: a number with a scale or a unit, a range of them, a "#" rank, an ordinal. */
+const FIGURE_UNIT = '(?:[kmb]|x|ms|s|secs?|mins?|hrs?|h|[kmgtp]b|st|nd|rd|th)?';
+const FIGURE = new RegExp(`^#?\\d+(?:\\.\\d+)*${FIGURE_UNIT}(?:-\\d+(?:\\.\\d+)*${FIGURE_UNIT})*\\+?$`);
 
 /**
  * Extracts keywords & tech terms from a job description. A word is Unicode letters, their marks and
