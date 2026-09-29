@@ -50,7 +50,9 @@ export default function CoverLetterPanel({ resume, coverLetter, personal, settin
     if (!file) return;
     // The whole résumé, sections and all: an upload may take only what its cloud document has left (R2-097).
     const whole = { ...resume, personal, settings, template, coverLetter: cl };
-    readImageFile(file, { kind: 'photo', resume: whole, replacing: cl.clPhoto }).then(dataUrl => updateCoverLetter('clPhoto', dataUrl), err => alert(err.message));
+    // Written to this letter's résumé by its id: a large photo takes a while to decode and shrink, and
+    // by then another résumé may be open, which updateCoverLetter alone would give it to (R5-HUNT2).
+    readImageFile(file, { kind: 'photo', resume: whole, replacing: cl.clPhoto }).then(dataUrl => updateCoverLetter('clPhoto', dataUrl, resume?.id), err => alert(err.message));
   }
 
   // Whether the letter prints a photo, and the line saying which one, or why none (R7-7).

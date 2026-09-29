@@ -219,12 +219,17 @@ export function useAppStore() {
     setAppState(prev => (prev.activeId === id ? prev : { ...prev, activeId: id }));
   }
 
-  /** The active résumé as `updater` returns it, stamped as an edit — unless it returns the same résumé: nothing changed. */
-  function patchActive(updater) {
+  /**
+   * The active résumé as `updater` returns it, stamped as an edit — unless it returns the same résumé:
+   * nothing changed. `id`: that résumé instead, open or not — for a write that lands after a wait (an
+   * upload's decode), by when the user may have opened another (R5-HUNT2).
+   */
+  function patchActive(updater, id) {
     setAppState(prev => {
       let changed = false;
+      const target = id ?? prev.activeId;
       const resumes = prev.resumes.map(r => {
-        if (r.id !== prev.activeId) return r;
+        if (r.id !== target) return r;
         const next = updater(r);
         if (next === r) return r;
         changed = true;
@@ -326,8 +331,9 @@ export function useAppStore() {
   // or a number box handing back what it shows) is not an edit: no new updatedAt, no store write, no
   // preview build, nothing to sync (R2-142) — as the same name is no rename (R2-084).
 
-  function updatePersonal(field, value) {
-    patchActive(r => (r.personal?.[field] === value ? r : { ...r, personal: { ...r.personal, [field]: value } }));
+  /** `id`: the résumé to write to, when not the open one (patchActive). */
+  function updatePersonal(field, value, id) {
+    patchActive(r => (r.personal?.[field] === value ? r : { ...r, personal: { ...r.personal, [field]: value } }), id);
   }
 
   function toggleFieldVisibility(field) {
@@ -341,10 +347,13 @@ export function useAppStore() {
    * One Design setting. Layout → "Single · ATS-safe" is the one key that moves the ground the header
    * prints on — the Sidebar's dark column becomes Classic's white page — so it re-checks the picked
    * Name and Job title colours exactly as a template switch does (TUI-1). Without it a white name
-   * picked for the column printed white on the white page, at 1.0:1.
+   * picked for the column printed white on the white page, at 1.0:1. `next` may be a function of the
+   * setting as the résumé holds it, as a state setter's is; `id`: the résumé to write to, when not the
+   * open one (patchActive).
    */
-  function updateSetting(key, value) {
+  function updateSetting(key, next, id) {
     patchActive(r => {
+      const value = typeof next === 'function' ? next(r.settings?.[key]) : next;
       if (r.settings?.[key] === value) return r;
       const settings = { ...r.settings, [key]: value };
       return {
@@ -353,7 +362,7 @@ export function useAppStore() {
           ? withHeaderColorsBack(settings, r.template, { below: HEADER_READS })
           : settings,
       };
-    });
+    }, id);
   }
 
   /**
@@ -387,8 +396,9 @@ export function useAppStore() {
     patchActive(r => withTemplate(r, template, preset));
   }
 
-  function updateCoverLetter(field, value) {
-    patchActive(r => (r.coverLetter?.[field] === value ? r : { ...r, coverLetter: { ...r.coverLetter, [field]: value } }));
+  /** `id`: the résumé to write to, when not the open one (patchActive). */
+  function updateCoverLetter(field, value, id) {
+    patchActive(r => (r.coverLetter?.[field] === value ? r : { ...r, coverLetter: { ...r.coverLetter, [field]: value } }), id);
   }
 
   const sectionActions = createSectionActions(patchActive);
