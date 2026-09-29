@@ -20,6 +20,9 @@ export default function RichTextEditor({ label, ariaLabel, value, onChange, plac
   // the selection, else the bullet or line the caret is in; null to add the result as a new bullet.
   const [optimizerText, setOptimizerText] = useState('');
   const optimizerTarget = useRef(null);
+  // Where that statement sat (anchorOf): found again by its text after an outside value, the one at
+  // its place is taken, not the first with the same text (R5-HUNT7 review).
+  const optimizerAnchor = useRef(null);
   // A drag that starts in this editor: the text it drags (a Range), and the mark it puts on the drag
   // so its own drop knows it (onDrop). A drag from anywhere else carries no such mark.
   const dragSource = useRef(null);
@@ -138,6 +141,7 @@ export default function RichTextEditor({ label, ariaLabel, value, onChange, plac
   function openOptimizer() {
     const statement = statementRange(ref.current);
     optimizerTarget.current = statement;
+    optimizerAnchor.current = statement ? anchorOf(ref.current, statement) : null;
     setOptimizerText(statement ? statement.toString().replace(/\s+/g, ' ').trim() : '');
     setOptimizerOpen(true);
   }
@@ -151,14 +155,19 @@ export default function RichTextEditor({ label, ariaLabel, value, onChange, plac
     const el = ref.current;
     const text = String(optimizedText || '').trim();
     let statement = optimizerTarget.current;
+    const anchor = optimizerAnchor.current;
     optimizerTarget.current = null;
+    optimizerAnchor.current = null;
     if (!el || !text) return;
     // A value taken in from outside while the optimizer was open (another tab's save, a cloud pull)
     // replaced the editor's nodes, and the saved Range collapsed to the editor's start: Apply wrote the
     // result there, as loose text above the bullets, and left the statement as it was
     // (R5-HUNT7-OPTIMIZER-APPLY-AFTER-OUTSIDE-CHANGE). A Range that no longer covers the statement the
-    // optimizer opened on is found again by its text; with none, the result is a new bullet.
-    if (statement && !covers(el, statement, optimizerText)) statement = findStatement(el, optimizerText);
+    // optimizer opened on is found again by its text; with none, the result is a new bullet. Of several
+    // with that text (a word selected in one bullet that another bullet has too, two equal bullets), the
+    // one with the same text around it, nearest its old place, is taken: the first one was, and Apply
+    // rewrote another bullet than the one the optimizer opened on (R5-HUNT7 review).
+    if (statement && !covers(el, statement, optimizerText)) statement = findStatement(el, optimizerText, anchor);
     el.focus();
     const range = statement?.target ?? statement;
     const removals = statement?.removals ?? [];
@@ -401,11 +410,40 @@ function covers(el, statement, opened) {
   return ranges.every((r) => el.contains(r.commonAncestorContainer)) && flat(statement.toString()) === opened;
 }
 
+/** Runs of white space as one space, not trimmed: offsets in a text read in parts add up. */
+const spaced = (s) => String(s).replace(/\s+/g, ' ');
+
 /**
- * The statement in `el` whose text is `opened`, as statementRange reads it with the caret in each line
- * in turn; else the first text node holding `opened` as it is (a selection inside a line); else null.
+ * Where `statement` (statementRange) sits in `el`: the offset of its start in el's text (spaced), and
+ * up to 40 characters of that text on either side of it.
  */
-function findStatement(el, opened) {
+function anchorOf(el, statement) {
+  const first = statement.target ?? statement;
+  const last = statement.removals?.[0] ?? first; // the removals run last to first
+  const before = document.createRange();
+  before.setStart(el, 0);
+  before.setEnd(first.startContainer, first.startOffset);
+  const after = document.createRange();
+  after.setStart(last.endContainer, last.endOffset);
+  after.setEnd(el, el.childNodes.length);
+  const head = spaced(before.toString());
+  return { at: head.length, before: head.slice(-40), after: spaced(after.toString()).slice(0, 40) };
+}
+
+/** How many characters `a` and `b` share at their ends (`fromEnd`) or at their starts. */
+function shared(a, b, fromEnd) {
+  let n = 0;
+  while (n < a.length && n < b.length && a[fromEnd ? a.length - 1 - n : n] === b[fromEnd ? b.length - 1 - n : n]) n += 1;
+  return n;
+}
+
+/**
+ * The statement in `el` whose text is `opened`: each statement statementRange reads with the caret in
+ * each line in turn, and each place a text node holds `opened` as it is (a selection inside a line).
+ * Of several, the one whose text around it is most like `anchor`'s (anchorOf), then the one nearest
+ * its place; a whole statement before a place in a line when both are as like. null with none.
+ */
+function findStatement(el, opened, anchor) {
   if (!opened) return null;
   const sel = window.getSelection?.();
   const texts = [];
@@ -414,6 +452,7 @@ function findStatement(el, opened) {
       if (child.nodeType === 3) { if (child.nodeValue.trim()) texts.push(child); } else read(child);
     }
   })(el);
+  const found = [];
   if (sel) {
     for (const node of texts) {
       const caret = document.createRange();
@@ -422,18 +461,28 @@ function findStatement(el, opened) {
       sel.removeAllRanges();
       sel.addRange(caret);
       const statement = statementRange(el);
-      if (statement && flat(statement.toString()) === opened) return statement;
+      if (statement && flat(statement.toString()) === opened) found.push(statement);
     }
   }
   for (const node of texts) {
-    const at = node.nodeValue.indexOf(opened);
-    if (at < 0) continue;
-    const range = document.createRange();
-    range.setStart(node, at);
-    range.setEnd(node, at + opened.length);
-    return range;
+    for (let at = node.nodeValue.indexOf(opened); at >= 0; at = node.nodeValue.indexOf(opened, at + 1)) {
+      const range = document.createRange();
+      range.setStart(node, at);
+      range.setEnd(node, at + opened.length);
+      found.push(range);
+    }
   }
-  return null;
+  if (!anchor || found.length < 2) return found[0] ?? null;
+  let best = null;
+  let bestLike = -1;
+  let bestOff = Infinity;
+  for (const statement of found) {
+    const here = anchorOf(el, statement);
+    const like = shared(here.before, anchor.before, true) + shared(here.after, anchor.after, false);
+    const off = Math.abs(here.at - anchor.at);
+    if (like > bestLike || (like === bestLike && off < bestOff)) [best, bestLike, bestOff] = [statement, like, off];
+  }
+  return best;
 }
 
 /** The list item a statement host belongs to: itself, or the item its paragraph sits in; else null. */
