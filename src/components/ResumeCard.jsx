@@ -1,4 +1,4 @@
-import { useId, useMemo } from 'react';
+import { useEffect, useId, useLayoutEffect, useMemo, useState } from 'react';
 import { Copy, Trash2, Edit2, Check, Pin } from 'lucide-react';
 import { timeAgo } from '@/utils/resume';
 import { isOriginal } from '@/utils/demoSeed';
@@ -14,6 +14,61 @@ import { isImeKey } from '@/components/ui/compose';
 const KEEP_HINT = 'Your originals come back whenever none of them is left';
 const LAST_ORIGINAL_HINT = 'Your last original always comes back. To delete it, choose "Stop keeping" first.';
 
+// The endings Copy (useResumeStore's duplicate) and a sync conflict (cloudSyncLineage) add to a name.
+const COPY_SUFFIX = /(?: \((?:Copy|conflict copy)\))+$/;
+// Three or more of one ending in a row show as one with a count, so pressing Copy on the newest copy
+// again and again never grows the ending across the card (R4-DVIS-28).
+const RUN_AS_COUNT = 3;
+
+/**
+ * `name` as its base and its copy ending (' (Copy)', ' (Copy) (Copy)', ' (conflict copy)'), or no
+ * ending. A run of RUN_AS_COUNT or more of one ending reads ' (Copy ×4)'; the title keeps the full name.
+ */
+function splitName(name = '') {
+  const m = COPY_SUFFIX.exec(name);
+  if (!m || m.index === 0) return { base: name, suffix: '' };
+  const runs = [];
+  for (const [, kind] of m[0].matchAll(/ \(([^)]+)\)/g)) {
+    const last = runs.at(-1);
+    if (last?.kind === kind) last.count += 1;
+    else runs.push({ kind, count: 1 });
+  }
+  const suffix = runs
+    .map(({ kind, count }) => (count >= RUN_AS_COUNT ? ` (${kind} ×${count})` : ` (${kind})`.repeat(count)))
+    .join('');
+  return { base: name.slice(0, m.index), suffix };
+}
+
+/**
+ * Whether the name's copy ending must stand apart from its clamped base, and the ref for the name's
+ * <p>. While the whole name fits in two lines it is one run of text, so the ending sits right after
+ * the last word; once it runs past them the ending would be cut, so it is split off beside the base's
+ * last line (R4-DVIS-28). The one-run layout is measured before paint, and again when the name or its
+ * width changes.
+ */
+function useSplitEnding(name, hasEnding) {
+  const [el, setEl] = useState(null); // the name's <p>: a new one each time Rename closes
+  const [measured, setMeasured] = useState(null); // { name, width, split }, from the one-run layout
+  const [width, setWidth] = useState(null); // the name's width, as a ResizeObserver last saw it
+  const stale = !measured || measured.name !== name || (width !== null && width !== measured.width);
+  useLayoutEffect(() => {
+    if (!hasEnding || !el || !stale) return;
+    // The width measured here is the width from now on too: the observer may have missed a change
+    // (it is off while Rename is open, or while the name has no ending), and a `width` left behind
+    // would call every new measurement stale, measuring over and over until React gives up.
+    const now = el.clientWidth;
+    setWidth(now);
+    setMeasured({ name, width: now, split: el.scrollHeight > el.clientHeight });
+  });
+  useEffect(() => {
+    if (!hasEnding || !el || typeof ResizeObserver !== 'function') return undefined;
+    const observer = new ResizeObserver(() => setWidth(el.clientWidth));
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [el, hasEnding]);
+  return [setEl, hasEnding && !stale && measured.split];
+}
+
 /**
  * A résumé on the dashboard. `onKeep(id, keep)` — only in a demo account, whose originals come
  * back (useDemoSeed) — adds "Keep as my original" / "Stop keeping" and the "Original" badge.
@@ -23,6 +78,8 @@ const LAST_ORIGINAL_HINT = 'Your last original always comes back. To delete it, 
 export function ResumeCard({ resume, onOpen, onDuplicate, onDelete, onRename, onKeep, lastOriginal = false }) {
   const rename = useRename(resume, (name) => onRename(resume.id, name));
   const hintId = useId();
+  const name = splitName(resume.name);
+  const [nameRef, split] = useSplitEnding(resume.name, Boolean(name.suffix));
   const accent = resume.settings?.accentColor || '#2563eb';
   // Its real page 1 (C1) — a letter's, for a letter — painted once the card is on screen and kept
   // until the résumé prints differently (printHash): the drawn page shows until then.
@@ -75,14 +132,27 @@ export function ResumeCard({ resume, onOpen, onDuplicate, onDelete, onRename, on
             <button onClick={rename.commit} aria-label="Save name" className="p-0.5 text-blue-600"><Check size={13} /></button>
           </div>
         ) : (
-          <div className="flex items-center gap-1 group/name">
-            {/* The full name on hover: a long one is cut to fit the card (R4-DVIS-28). */}
-            <p title={resume.name} className="text-sm font-semibold text-gray-800 truncate flex-1">{resume.name}</p>
+          <div className="flex items-start gap-1 group/name">
+            {/* Up to two lines, and a copy's "(Copy)" never cut: a touch screen has no hover to show the
+                title, so a long name and its copy must differ on the card itself (R4-DVIS-28). A name
+                that fits in two lines is one run of text, its ending right after the last word. A longer
+                one clamps only its base, and the ending stands beside the base's last line (items-end),
+                taking at most half the row and wrapping between endings, so the base keeps room. */}
+            {split ? (
+              <p ref={nameRef} title={resume.name} className="flex-1 min-w-0 flex items-end text-sm font-semibold text-gray-800">
+                <span className="line-clamp-2 break-words min-w-0">{name.base}</span>
+                <span className="shrink-0 max-w-1/2 whitespace-pre-wrap">{name.suffix}</span>
+              </p>
+            ) : (
+              <p ref={nameRef} title={resume.name} className="flex-1 min-w-0 line-clamp-2 break-words text-sm font-semibold text-gray-800">
+                <span>{name.base}</span>{name.suffix && <span>{name.suffix}</span>}
+              </p>
+            )}
             <button
               onClick={rename.start}
               title="Rename"
               aria-label="Rename"
-              className="opacity-0 group-hover/name:opacity-100 no-hover:opacity-100 p-0.5 text-gray-400 hover:text-gray-600 transition-opacity shrink-0"
+              className="opacity-0 group-hover/name:opacity-100 no-hover:opacity-100 mt-0.5 p-0.5 text-gray-400 hover:text-gray-600 transition-opacity shrink-0"
             >
               <Edit2 size={11} />
             </button>
