@@ -4,7 +4,7 @@ import { newId } from '../utils/ids.js';
 import { addressableJobs, completeJob, readJob, statusId } from '../utils/normalizeJob.js';
 import { keepUnsaved } from '../utils/unsavedJobs.js';
 import { applyEdits, demoJobs, moveInList, newJobDefaults } from '../utils/jobEdits.js';
-import { mergeImport } from '../utils/jobImport.js';
+import { mergeImport } from '../utils/jobMerge.js';
 import { forgetSynced, JOBS_SYNC_KEY } from '../utils/collectionSyncMeta.js';
 
 const KEY = 'cpwtcv_jobs_v1';

@@ -1,5 +1,5 @@
 // The board store's test harness (not a test file itself): tabs are instances of
-// src/hooks/useBoardStore.js (a ?tab query each) sharing one fake localStorage, which sends a
+// src/hooks/useBoardStore.js (a ?tab query each, its boardStoreState.js with it) sharing one fake localStorage, which sends a
 // 'storage' event to every other tab's window, as a browser does, and can be made full. React
 // is replaced by a stub whose useSyncExternalStore just reads the snapshot, so useBoardStore()
 // hands out the actions outside a component. Events arrive later, as in a browser: `await
@@ -9,6 +9,12 @@ import { register } from 'node:module';
 const REACT_STUB = 'export const useSyncExternalStore = (subscribe, getSnapshot) => getSnapshot();';
 const HOOKS = `export async function resolve(specifier, context, next) {
   if (specifier === 'react') return { url: 'data:text/javascript,' + encodeURIComponent(${JSON.stringify(REACT_STUB)}), shortCircuit: true };
+  // The list lives in boardStoreState.js: each tab's store module gets its own copy of it too.
+  const tab = /[?]tab=\\d+$/.exec(context.parentURL ?? '');
+  if (tab && specifier === './boardStoreState.js') {
+    const found = await next(specifier, context);
+    return { ...found, url: found.url + tab[0] };
+  }
   return next(specifier, context);
 }`;
 register(`data:text/javascript,${encodeURIComponent(HOOKS)}`);
