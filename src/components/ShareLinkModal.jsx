@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Copy, ExternalLink } from 'lucide-react';
 import { Dialog } from '@/components/ui/Dialog';
 import { firebasePublicIo } from '@/utils/firebasePublicIo';
@@ -31,6 +31,12 @@ export default function ShareLinkModal({ isOpen, resume, uid, io = firebasePubli
   // makes a new one, so one click beside Publish must not do it.
   const [confirmUnpublish, setConfirmUnpublish] = useState(false);
   const resumeId = resume?.id;
+  // The résumé the panel shows now. The Editor stays mounted across /resume/:id (browser Back, an
+  // import), so a Publish or Unpublish still running when another résumé opens must not paint its
+  // result, or its error, into that résumé's panel: its Update or Unpublish would then act at the
+  // first résumé's link (R5-HUNT4-SHARE-MODAL-PUBLISH-LANDS-ON-OTHER-RESUME).
+  const shownId = useRef(resumeId);
+  shownId.current = resumeId;
 
   useEffect(() => {
     if (!isOpen || !io || !uid || !resumeId) return undefined;
@@ -52,12 +58,15 @@ export default function ShareLinkModal({ isOpen, resume, uid, io = firebasePubli
 
   const { share } = view;
   const run = async (fn, label) => {
+    const forId = resumeId;
+    const still = () => shownId.current === forId;
     setBusy(true);
     setError(null);
     try {
-      await fn();
+      await fn(still);
     } catch (e) {
       console.error(`${label} failed:`, e);
+      if (!still()) return;
       // A copy too large to publish says so and only so: the connection has nothing to do with it.
       setError(e?.code === TOO_LARGE_CODE ? e.message
         : `${label} failed${e?.message ? ` (${e.message})` : ''}. Check your connection and try again.`);
@@ -65,15 +74,17 @@ export default function ShareLinkModal({ isOpen, resume, uid, io = firebasePubli
       setBusy(false);
     }
   };
-  const publish = () => run(async () => {
+  const publish = () => run(async (still) => {
     const next = await io.publish(uid, resume, share ? { shareId: share.shareId } : undefined);
+    if (!still()) return;
     // 'Copied' was about the link as it was: a new one has not been copied.
     if (next.shareId !== share?.shareId) setCopied(null);
     setView({ state: 'ready', share: next });
   }, 'Publishing');
-  const unpublish = () => run(async () => {
+  const unpublish = () => run(async (still) => {
     setConfirmUnpublish(false);
     await io.unpublish(uid, resumeId, share.shareId);
+    if (!still()) return;
     setCopied(null);
     setView({ state: 'ready', share: null });
   }, 'Unpublishing');
