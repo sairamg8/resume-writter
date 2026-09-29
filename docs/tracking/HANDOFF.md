@@ -1,9 +1,9 @@
 # Session Handoff — Resume Here
 
 > **OWNER — DEPLOY (the session's master push is refused as a 'Production Deploy'):**
-> `git push origin 3426a09:refs/heads/master` — full gate run 36515623771 on that exact commit is GREEN (a fast-forward
-> from `b8d7667`: 56e42bf's stale-test fix + Round 5 dash (R4-DVIS-28) and panels (R4-DVIS-34)). Then
-> `python3 docs/tracking/tools/r4_tracker.py --deployed 3426a09`, commit, push. A newer green sha will replace this line.
+> `git push origin ea59ac6:refs/heads/master` — full gate run 36520793636 on that exact commit is GREEN (a fast-forward
+> from `b8d7667`: 56e42bf's stale-test fix + Round 5 dash, panels, dlg, job, brd, out, opt + the start-up size fix). Then
+> `python3 docs/tracking/tools/r4_tracker.py --deployed ea59ac6`, commit, push. A newer green sha will replace this line.
 
 ## ⏩ COLD START HERE — 2026-09-29 03:15 UTC (coordinator session_013S3xa7VBjcBV3avHWTbYQF, scheduled run; owner travelling)
 
@@ -14,7 +14,7 @@ beside it once a field is edited, as the optimizer does) merged into `claude/r4-
 **In progress:** unfinished r5 clusters, two at a time, each = finish scope → adversarial review → fix → report
 `wf-reports/r5-<key>.json` on `claude/wf-r5-<key>`. Running: imp. Batch gate 36517981819 on 0f03b71 was red only on
 71-startup-chunks (the data router for R4-DUX-06 + the kit Dialog on the Dashboard: 1107 kB > 1100 kB); fixed by ea59ac6
-(1097 kB, fail-first 36520176676; margin ~3 kB). Full gate on ea59ac6 dispatched. The 20 dsg-layout rows
+(1097 kB, fail-first 36520176676; margin ~3 kB). Full gate 36520793636 on ea59ac6 GREEN (owner deploy line above). The 20 dsg-layout rows
 all have verdicts (12 in r5-dsgv.json, all fixed-verified; the rest in r5-dash/panels/dlg/opt). Next: R2-148 (deleted résumé keeps its public link), the whole-app hunt (dry twice).
 A cluster is done only when its report is on its branch; merge it then. No full gate yet on the merged head.
 
