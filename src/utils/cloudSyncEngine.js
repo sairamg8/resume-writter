@@ -223,6 +223,12 @@ export function createCloudSync({
   async function initialSync(user, gen) {
     report.status('syncing');
     try {
+      // The copies the cloud held as this browser knew them BEFORE the read: another tab's sync
+      // may land while this one reads, and its record (cloudVersions, through the storage event)
+      // would count as the cloud's here although this read predates it. A copy of the other tab's
+      // then looked synced, and the other device's copy was pulled over it: the edit just typed
+      // was gone from both tabs (R5-HUNT6).
+      const known = store.getState();
       const cloud = await io.readCloud(user.uid);
       if (gen !== s.gen) return;
 
@@ -236,7 +242,7 @@ export function createCloudSync({
       const own = other ? [] : appState.resumes;
       const stash = stashOf(appState, user.uid);
       const local = stash ? [...own, ...stash.resumes.filter((r) => !own.some((o) => o.id === r.id))] : own;
-      if (appState.syncedUid === user.uid) s.lineage.base(appState.cloudVersions);
+      if (appState.syncedUid === user.uid && known.syncedUid === user.uid) s.lineage.base(known.cloudVersions);
       if (stash) s.lineage.base(stash.versions);
       const plan = planInitialSync({
         local, deletions: deletionEntries(appState), cloud: cloud.docs, cloudDeleted: cloud.deleted,
