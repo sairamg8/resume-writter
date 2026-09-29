@@ -670,6 +670,12 @@ function inlinePair(parts) {
   return parts;
 }
 
+/** "Google, Mountain View, CA" → ["Google", "Mountain View, CA"]: a name, then its city and state or country after a comma; else null. */
+function placeAfterComma(text) {
+  const m = /^(.+?),\s*([^,]+,\s*[^,]+)$/.exec(text);
+  return m && PLACE.test(m[2]) && REGION_END.test(m[2]) && !ROLE.test(m[1]) && !ROLE.test(m[2]) ? [m[1].trim(), m[2].trim()] : null;
+}
+
 /** Two fields in the order the file printed them, `lead` the one that names the role when either does. */
 function roleFirst(a, b, roleLeads) {
   if (!b) return ROLE.test(a || '') ? [a, ''] : ['', a];
@@ -703,6 +709,18 @@ function entryOf(type, header, body, aside = () => {}) {
     if (pair.length === 2 && ROLE.test(pair[0]) && !ROLE.test(pair[1]) && PLACE.test(place) && !ROLE.test(place) && !CORPORATE.test(place)) {
       h.location = place;
       h.parts = pair;
+    }
+  }
+  // "Google, Mountain View, CA" beside "Software Engineer": a company with its place after a comma,
+  // the city and a state or country, gives the job its location. Only beside a field that names the
+  // role, so a place alone ("Portland, Oregon, USA") is not cut. Before, the company kept the place.
+  if (JOB.has(type) && !header[0]?.group && !h.location && !h.meta.location) {
+    const pair = inlinePair(h.parts);
+    const at = pair.length >= 2 ? [0, 1].find((k) => ROLE.test(pair[1 - k]) && !ROLE.test(pair[k])) : undefined;
+    const placed = at === undefined ? null : placeAfterComma(pair[at]);
+    if (placed) {
+      h.location = placed[1];
+      h.parts = pair.map((p, k) => (k === at ? placed[0] : p));
     }
   }
   const [p0 = '', p1 = '', ...rest] = JOB.has(type) ? inlinePair(h.parts) : h.parts;
@@ -909,6 +927,9 @@ function entriesOf(type, lines, aside) {
     // place on one line, split at its dash — neither names a role, and the second is a place.
     const [co, at, ...more] = found ? fieldsOf(found.company) : [];
     if (found && !found.place && at && !more.length && !ROLE.test(co) && !ROLE.test(at) && PLACE.test(at) && !CORPORATE.test(at)) found = { ...found, company: co, place: at };
+    // "Acme Corp, Austin, TX": the place after a comma, as a city and its state or country.
+    const placed = found && !found.place && placeAfterComma(found.company);
+    if (placed) found = { ...found, company: placed[0], place: placed[1] };
     // One field: "Acme - Engineer" (the ATS text's job) is a job's title, not an employer over roles.
     if (!found || fieldsOf(found.company).length !== 1) return null;
     body.splice(body.length - found.n);
