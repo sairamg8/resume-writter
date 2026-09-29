@@ -399,6 +399,8 @@ function metaOf(piece) {
   const key = m[1].toLowerCase();
   return { key: META_KEYS[key] || key, value: m[2].trim() };
 }
+/** A dated line's text fields, its date left out: "Acme Corp ⇥ Jan 2020 – Present", "Acme Corp, 2020" → ["Acme Corp"]. */
+const datedFields = (text) => pieces(text).flatMap((p) => (readDateRange(p) ? [] : [trailingDate(p)?.rest ?? p])).filter(Boolean);
 const isMetaLine = (text) => { const p = pieces(text); return p.length > 0 && p.every((x) => metaOf(x)); };
 
 /** Words a job title holds, and a company's name rarely does: which of two fields is the role. */
@@ -794,6 +796,11 @@ function entriesOf(type, lines, aside) {
     const one = (n) => titleish(n) && pieces(n.text).length === 1;
     const [a, b] = body.slice(-2).length === 2 ? body.slice(-2) : [null, body[body.length - 1]];
     if (!titleish(b) || !over(b, L)) return null;
+    // "Senior Engineer" over "Acme Corp ⇥ Jan 2020 – Present": a job title over its company's dated
+    // line is that job's own title (entriesOf), no employer over grouped roles. Before, the title
+    // became the company and the company the role, and the next job took the same company.
+    const [field = ''] = datedFields(L.text);
+    if (!timeline && pieces(b.text).length === 1 && ROLE.test(b.text) && !ROLE.test(field)) return null;
     let found = null;
     // Word's: the employer, and its place on the line under it.
     // (Not over a Timeline role's date: there "Acme Corp" / "Senior Engineer" over a date is one job's title.)
@@ -824,6 +831,35 @@ function entriesOf(type, lines, aside) {
     if (placed) header[header.length - 1] = { ...header[header.length - 1], hint: 'end' };
     header[0] = { ...header[0], group: next };
     return next;
+  };
+
+  // The title printed on the line over its dated line, one field before its date ("Bachelor of Science"
+  // over "University of Oregon ⇥ 2014 – 2018", "Senior Engineer" over "Acme Corp ⇥ …"). A line is one
+  // where it starts a block (first in the section or after a gap); right after the entry above (its
+  // list or its title), only where it plainly names the role (or the degree) its dated line does not:
+  // not the job above's last line ("Promoted twice in two years").
+  const KIND = JOB.has(type) ? ROLE : type === 'education' ? DEGREE : null;
+  const titleLine = (b) => !b.bullet && !b.date && b.hint !== 'entry' && b.text.length <= 100 && !/[.!?:;,]$/.test(b.text)
+    && !isMetaLine(b.text) && pieces(b.text).length === 1;
+  const oneField = (L) => Boolean(L.date && !L.date.first && !L.bullet && L.hint !== 'entry' && SECOND_LINE.has(type) && datedFields(L.text).length === 1);
+  const names = (b, L) => Boolean(KIND && KIND.test(b.text) && !KIND.test(datedFields(L.text)[0]));
+  /** That line over `L`, or null. */
+  const titleOver = (L) => {
+    const body = pool();
+    const b = body[body.length - 1];
+    const before = b && info[b.index - 1];
+    return oneField(L) && b && b.index === L.index - 1 && !L.gap && titleLine(b)
+      && (b.gap || !before || ((before.bullet || cur?.header.includes(before)) && names(b, L))) ? b : null;
+  };
+  // The line under a dated line that is the next entry's title over its own dated line (the next degree
+  // over the next school), where this entry's is over it too and names its degree (or role) the same
+  // way: that entry's, not this one's second line. Before, "Bachelor of Science" under "Stanford
+  // University ⇥ 2018 – 2020" became Stanford's degree, Stanford's own ("Master of Science", over it)
+  // went into its description, and the University of Oregon had none.
+  const titleOfNext = (L, n) => {
+    const b = titleOver(L);
+    const m = info[n.index + 1];
+    return Boolean(b && names(b, L) && m && !m.gap && oneField(m) && titleLine(n) && names(n, m));
   };
 
   for (let i = 0; i < info.length;) {
@@ -882,10 +918,14 @@ function entriesOf(type, lines, aside) {
         }
       } else if (SECOND_LINE.has(type) && i < info.length) {
         const n = info[i];
-        if (!n.bullet && !n.gap && !n.date && n.hint !== 'entry' && n.text.length <= 100 && !/[.!?]$/.test(n.text)) { header.push(n); i += 1; }
+        if (!n.bullet && !n.gap && !n.date && n.hint !== 'entry' && n.text.length <= 100 && !/[.!?]$/.test(n.text)
+          && !titleOfNext(L, n)) { header.push(n); i += 1; }
       }
       while (i < info.length && !info[i].bullet && !info[i].gap && isMetaLine(info[i].text)) header.push(info[i++]);
       if (type === 'experience' && !L.date.first) group = roleOfGroup(header, group);
+      // Nothing under it but its named fields ("GPA: 3.9"), and its title over it (titleOver). Before,
+      // that line went into the description, or the job above's.
+      if (!header[0].group && header.slice(1).every((h) => isMetaLine(h.text)) && titleOver(L)) header.unshift(pool().pop());
       start(header);
       continue;
     }
@@ -1048,6 +1088,22 @@ export function resumeFromText(input) {
   const ownPart = (text, i) => (['skills', 'projects'].includes(headingType(text)) && entryAfter(i)) || headingType(text) === 'summary'
     || /^(?:key)?achievements$|^recognitions$/.test(headingKey(text));
   let inEntry = false;
+  // The type of the section a line is in, and whether the line under it holds a date: an employer or a
+  // school typed in capitals over its entry's dated line ("ACME CORP" over "Senior Engineer ⇥ Jan 2020
+  // – Present") is that entry's, not a section of its own. Before, it started a custom section named
+  // after it, and the Experience or Education heading over it, left empty, was dropped.
+  // Only first in its section (right under the heading), or where the section's first entry printed
+  // its employer so: a line in capitals right after a job's list, over a dated line, in a section
+  // whose entries do not ("TEACHING" over "Lecturer ⇥ Stanford ⇥ 2016 – 2017", with no blank line
+  // between them: Word's spacing before a bold heading is none) still starts a section of its own.
+  let within = null;
+  let capsOver = false; // this section's first entry printed its employer or school in capitals over it
+  const entriesIn = (t) => t && !['custom', 'summary', 'contact', 'skills', 'languages', 'interests'].includes(t);
+  const overDate = (i) => {
+    const n = lines[i + 1];
+    return Boolean(n && !n.gap && !BULLET.test(n.text) && pieces(n.text).some((p) => readDateRange(p) || trailingDate(p)));
+  };
+  const capsEntry = (l, i) => entriesIn(within) && !l.gap && overDate(i) && (headingAt.has(i - 1) || capsOver);
   lines.forEach((l, i) => {
     if (i <= nameAt) return;
     if (l.hint === 'heading') inEntry = false;
@@ -1062,9 +1118,10 @@ export function resumeFromText(input) {
       const known = headingType(text);
       if (known && (l.ruled || isCaps(text) || l.gap || l.text.endsWith(':') || i === nameAt + 1 || headingAt.size === 0)) type = known;
       else if (l.ruled && !/\d/.test(text)) type = 'custom';
-      else if (seen && isCaps(text) && !/\d/.test(text) && text.replace(/[^\p{L}]/gu, '').length >= 4 && text.split(/\s+/).length <= 5 && !BARE_LABEL.test(text)) type = 'custom';
+      else if (seen && isCaps(text) && !capsEntry(l, i) && !/\d/.test(text) && text.replace(/[^\p{L}]/gu, '').length >= 4 && text.split(/\s+/).length <= 5 && !BARE_LABEL.test(text)) type = 'custom';
+      if (!type && isCaps(text) && capsEntry(l, i)) capsOver = true;
     }
-    if (type) { headingAt.set(i, { type, title: text }); seen = true; inEntry = false; }
+    if (type) { headingAt.set(i, { type, title: text }); seen = true; inEntry = false; within = type; capsOver = false; }
   });
 
   const firstHeading = [...headingAt.keys()][0] ?? lines.length;

@@ -1,0 +1,95 @@
+{
+  "cluster": "r5-hunt2-import",
+  "branch": "claude/wf-r5-hunt2-import",
+  "base": "988681d40338da769cb7bc87f794ce722203289d",
+  "rows": [
+    {
+      "id": "R5-HUNT2-TEXT-IMPORT-DEGREE-OVER-SCHOOL-DATE-GOES-TO-DESCRIPTION",
+      "title": "Text/PDF/Word import: a degree (or job title) printed over its 'School ⇥ dates' line goes into the description",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": [
+        "9fb8e4ca66eb48cdbffac6906ccccf47e73a9335",
+        "9a163b11021bc7934cf157d67b0d73439f03eb75",
+        "3cf7dda54d64e250fdc31b42ec8b6c15794c01ac"
+      ],
+      "tests": [
+        "tests/unit/import-text-title-over-dated-line.unit.mjs",
+        "tests/unit/lo-imp-group-roles-pdf-word.unit.mjs"
+      ],
+      "summary": "Now: when a dated line has one field before its date ('University of Oregon ⇥ 2014 – 2018', or the same with a comma), the line right over it becomes the entry's title. That gives degree 'Bachelor of Science in Computer Science' (or a job's or volunteering post's role), and the description stays empty. The line over is taken when it starts a block (first in the section or after a gap). Right after the entry above, it is taken only when it names a role or degree that the dated line does not, so a job's last line such as 'Promoted twice in two years' stays in that job (9a163b1). Review fix 3cf7dda covers two more cases. First, several such entries in a row with no blank line between them: each degree is now its own school's. Before, the second degree became the first school's degree, and the first degree went into the first school's description. Second, a named field under the dated line ('GPA: 3.9') no longer stops the title over it from being taken. Layouts that print the degree under the dated line are unchanged, including one with a stray line over the first school.",
+      "remaining": "Some lines under the dated line are still taken as its second line (degree or role), and the title over it then stays in the description. This happens with a line that is not a named field, such as 'Magna Cum Laude' or a paragraph without a full stop. It also happens with a dated line that holds two fields ('Acme Corp ⇥ San Francisco, CA ⇥ dates'). Both behave as before this branch. A role with no word the importer knows as a role ('Board Member') is not taken over a later entry.",
+      "failfirst_run": "36531265402 (9fb8e4c: '# fail 4' without it, passes with it); 36531814114 (9a163b1: lo-imp-group-roles-pdf-word '# fail 1' without it); 36534930741 (3cf7dda: '# fail 1' without it, passes with it)"
+    },
+    {
+      "id": "R5-HUNT2-TEXT-IMPORT-ROLE-OVER-COMPANY-DATE-READ-AS-EMPLOYER-GROUP",
+      "title": "Text/PDF/Word import: 'Role' over 'Company ⇥ dates' is read as a grouped employer, swapping role and company for every job after it",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": [
+        "4415b874abc9027c4b5ff05a535c80a99a124a0a"
+      ],
+      "tests": [
+        "tests/unit/import-text-title-over-dated-line.unit.mjs"
+      ],
+      "summary": "Now: employerOver no longer reads a line as a 'Group roles by company' employer when it is one field, names a job title, and sits over a dated line whose field has no role word. So 'Senior Engineer' over 'Acme Corp ⇥ Jan 2020 – Present' (tab or comma) gives role Senior Engineer at Acme Corp. The next job gets role Engineer at Globex, and no text leaks into the description of the job above. An employer with no role word over a 'Role ⇥ date' line is still the group's employer, and the Timeline layout's grouped roles are untouched (the timeline flag).",
+      "remaining": "A company name that holds a role word ('Engineering Partners', 'Smith & Associates') under a title is still read as a grouped employer. The ROLE word list cannot tell the two lines apart there, which is the same limit the importer has everywhere else.",
+      "failfirst_run": "36531265402 (4415b87: '# fail 1' without it, passes with it)"
+    },
+    {
+      "id": "R5-HUNT2-TEXT-IMPORT-CAPS-EMPLOYER-BECOMES-SECTION",
+      "title": "Text/PDF/Word import: an employer or school typed in capitals over its dated line starts a custom section and drops Experience/Education",
+      "severity": "high",
+      "outcome": "fixed",
+      "commits": [
+        "4b23d9f4a8817b6130cd9c5bd48e2f57ec2d047a",
+        "3025090848b3e7715843e7c9fc77f55029d31c1e"
+      ],
+      "tests": [
+        "tests/unit/import-text-title-over-dated-line.unit.mjs"
+      ],
+      "summary": "Now: in a file with no heading marks, a capitals line right under an entry section's heading (experience, education, projects and the like), with a dated line right under it, belongs to that entry. It no longer starts a section of its own. The same holds further down that section when its first entry printed its employer in capitals this way. The repro gives Experience (company ACME CORP, role Senior Engineer, Jan 2020 – Present) and Education (institution STANFORD UNIVERSITY, 2014 – 2018). Review fix 3025090 corrects a regression in 4b23d9f. That commit read any capitals line with no blank line before it, over a dated line, as an entry's employer. So a Word résumé's bold 'TEACHING', 'RESEARCH EXPERIENCE' or 'LEADERSHIP' heading, set right after a job's list with spacing but no empty paragraph, was swallowed: the heading went into that job's description and its entries into Experience. A capitals heading after a gap still starts its own section (pinned by a test).",
+      "remaining": "Two cases are left. A capitals employer after a blank line inside a section is still read as a custom heading, so real headings after gaps keep working. A second employer right after the first employer's list is taken neither as a section nor as a new group ('GLOBEX INC' goes into the job above, and its role keeps the first employer). The importer handles a mixed-case 'Globex Inc' there the same way, so this predates this branch. The degree also comes out as 'BSc Computer Science', not split into BSc / Computer Science, which matches the importer elsewhere.",
+      "failfirst_run": "36531265402 (4b23d9f: '# fail 1' without it, passes with it); 36534930741 (3025090: '# fail 1' without it, passes with it)"
+    }
+  ],
+  "review": {
+    "rounds": [
+      {
+        "round": 1,
+        "issues": [
+          "R5-HUNT2-TEXT-IMPORT-DEGREE-OVER-SCHOOL-DATE-GOES-TO-DESCRIPTION: incomplete. Two or more 'Degree' over 'School ⇥ dates' entries with no blank line between them (the common Education layout) were still wrong: the second degree was taken as the first school's second line, so the first school had the wrong degree, the first degree went into its description, and the second school had none. A 'GPA: 3.9' under the dated line also blocked the fix (header.length === 1).",
+          "R5-HUNT2-TEXT-IMPORT-CAPS-EMPLOYER-BECOMES-SECTION: regression in 4b23d9f. A capitals custom heading (TEACHING, RESEARCH, LEADERSHIP, TEACHING EXPERIENCE, FELLOWSHIPS, GRANTS…) with no blank line before it, right after a job's list and over a dated line, was read as an employer. The whole section was merged into Experience and the heading went into the job's description. Word's unstyled headings with spacing before (no empty paragraph) import this way; the base branch got these right."
+        ]
+      }
+    ],
+    "issues": [
+      {
+        "issue": "Consecutive degree-over-school entries (no gap) and a GPA line under the dated line not covered by 9fb8e4c/9a163b1",
+        "resolution": "fixed by reviewer in 3cf7dda: the title-over test is factored into titleOver(L). The dated line's second-line grab leaves a line for the next entry when this entry's title over it names a degree or role and that line does the same over the next one-field dated line (titleOfNext). Named fields under the dated line no longer block the title over it. Guard test: degree-under layouts, with or without a stray line over the first school, are unchanged. Fail-first in run 36534930741."
+      },
+      {
+        "issue": "4b23d9f swallows a capitals custom section that follows a job's list with no blank line",
+        "resolution": "fixed by reviewer in 3025090: a capitals line over a dated line is kept as an entry's employer or school only when it sits right under its section heading, or when that section's first entry was printed that way (capsOver). Test covering TEACHING / RESEARCH EXPERIENCE / LEADERSHIP after a job's list. Fail-first in run 36534930741."
+      }
+    ],
+    "fixedByReviewer": [
+      "3cf7dda54d64e250fdc31b42ec8b6c15794c01ac",
+      "3025090848b3e7715843e7c9fc77f55029d31c1e"
+    ]
+  },
+  "rejected": [
+    {
+      "candidate": "A job whose dated line has no role, after a job whose last line names a role ('Promoted to Senior Engineer', no full stop), takes that line as its role",
+      "reason": "The layout is inconsistent: one job prints 'Role ⇥ Company ⇥ dates' and the next prints only 'Company ⇥ dates'. The line is a plausible title for the second job, and the case the fixer pinned ('Promoted twice in two years', no role word) stays in the job above. Not changed."
+    },
+    {
+      "candidate": "Certifications/Projects: 'Name' over 'Issuer ⇥ date' still puts the issuer in the name",
+      "reason": "Behaves the same on the base branch. These types are not in SECOND_LINE, and this branch does not claim them. Left for a separate hunt, not a regression."
+    }
+  ],
+  "a11yNoted": [],
+  "baselineFailures": [],
+  "notes": "Fail-first logs were read for every commit. Run 36531265402 at 4b23d9f: 9fb8e4c '# fail 4', 4415b87 '# fail 1', 4b23d9f '# fail 1', each passing with its fix. That run's named-tests job failed on lo-imp-group-roles-pdf-word, and 9a163b1 fixed it. Run 36531814114 at 9a163b1: lo-imp-group-roles-pdf-word '# fail 1' without the fix, and the named tests are green. Reviewer run 36534930741 at 3025090 runs the fail-first checks for 3cf7dda and 3025090 and every node test that touches the importer (tests/unit import*/lo-imp*/104-105 r5-imp*/r5-hunt1*, tests/pdf import round trips), plus the guard tests 31-contact-fields, 91-design-resets and knowledge-docs: 313 of 313 pass, and lint is green. The full gate (suite, Playwright, Cypress, build) has not been run on this branch; it is left for the batch gate. No exporter, template or stored-data code changed: only src/utils/importText.js (resumeFromText and entriesOf) and the new test file.",
+  "head": "3025090848b3e7715843e7c9fc77f55029d31c1e"
+}
