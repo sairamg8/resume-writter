@@ -19,7 +19,17 @@
       "remaining": "Nothing for this row. Fail-first (run 36612482108) and named tests (run 36612494843) are both green on 06f6f0c."
     }
   ],
-  "review": null,
+  "review": {
+    "by": "second agent",
+    "verdict": "clean",
+    "issues": [],
+    "commits": [],
+    "ci": [
+      36612482108,
+      36612494843
+    ],
+    "notes": "Reviewed 06f6f0c: every PDF entry renderer that listed a section's items (Experience, Education, Certifications, Projects, Languages, Awards, Volunteering, References, Interests, Custom, the Timeline renderer, the sidebar column's side sections and the sidebar main-column cards) now draws printedEntries(section), the same entryPrints rule as Word's shown and the PDF's sectionPrints; skills already filtered with skillGroupPrints; no other src/templates code reads section.items. Grouped roles, grids and the Timeline heading keep (items[0]) all read the filtered list, so the root cause is covered. Render-only change: no stored data, sync or undo path touched; null entries in older data are now skipped instead of throwing. Word, Markdown, ATS and JSON exporters are untouched. CI checked: failfirst 36612482108 completed/success (40 failures with the src diff reversed, pass with it); named tests 36612494843 completed/success on 06f6f0c (1937 pass, 0 fail). Commit identity and messages carry no trailers. Noted, not changed (pre-existing, outside this row): entryPrints counts any stored text field, so an entry holding only a field its section never prints (e.g. a new language's default proficiency alone, or a date with Show Dates off) still takes its place — the same in Word."
+  },
   "baselineFailures": [],
   "notes": "CI on 06f6f0c (the fix commit): failfirst run 36612482108 green — tests/pdf/r5hunt7-blank-entry.test.mjs fails without the src/ change (40 failures, its diff reversed) and passes with it; named-tests run 36612494843 green — 28 files (the new test plus the PDF/Word/ATS tests that exercise entryPrints, the grids, Timeline, sidebar, grouped roles and title keeps), 1939 tests, 1937 pass, 0 fail, 2 todo; lint green on both. No baseline failures. The full gate still runs once for the batch before master is moved."
 }
