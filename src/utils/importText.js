@@ -641,6 +641,13 @@ function richText(lines) {
   return html;
 }
 
+/**
+ * A label a job or a school prints over a part of it — "Key Responsibilities", "Highlights", "Selected
+ * Clients", "Technologies Used", "Relevant Coursework", "Activities", "Promoted to Senior Engineer" — a
+ * sub-heading inside its entry, no entry of its own (entriesOf's undatedEntry).
+ */
+const SUBHEADING = /^(?:(?:key|main|major|core|notable|selected|relevant|select|other|additional|related)\s+)?(?:responsibilities|duties|highlights|achievements|accomplishments|contributions|results|impact|clients|customers|projects|technologies(?:\s+used)?|tools(?:\s+used)?|tech(?:nology)?\s+stack|skills(?:\s+used)?|course\s*work|courses|modules|subjects|activities|societies|honou?rs|awards)$|^promoted\s+to\b/i;
+
 /** Title Case for a line typed in capitals ("PROFESSIONAL EXPERIENCE", "AVERY QUINN"); others as they are. */
 const SMALL = new Set(['and', 'of', 'the', 'in', 'for', 'at', 'on', 'to', 'a', 'an', 'or', '&']);
 function tamed(text) {
@@ -1157,6 +1164,11 @@ function entriesOf(type, lines, aside) {
     // above has no text to hold (a certificate).
     if (cur && !cur.body.length && type !== 'certifications' && !block.every((b) => isMetaLine(b.text))
       && !(KIND && KIND.test(L.text)) && !(type === 'education' && SCHOOL.test(L.text))) return false;
+    // A label over a part of the entry above, with text of its own or not ("Key Responsibilities",
+    // "Highlights", "Relevant Coursework", "Activities", "Promoted to Senior Engineer"): that entry's
+    // text, not an entry. Before, it became a blank entry of its own, its list taken from its entry
+    // (R5-HUNT9-SUBHEADING-BECOMES-ENTRY).
+    if (cur && SUBHEADING.test(L.text)) return false;
     return true;
   };
 
