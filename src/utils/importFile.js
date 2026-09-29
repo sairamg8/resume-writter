@@ -100,7 +100,7 @@ export function docxXmlLines(xml, links = {}) {
   const lines = [];
   const levels = []; // each line's Heading level, 0 for none
   const open = []; // the paragraphs being read, the innermost last
-  const TOKEN = /<w:p(?=[\s>])[^>]*>|<\/w:p>|<w:pPr>([\s\S]*?)<\/w:pPr>|<w:t(?:\s[^>]*)?>([^<]*)<\/w:t>|<w:(tab|br|cr|noBreakHyphen|softHyphen)(?:\s[^>]*)?\/>|<w:hyperlink\b([^>]*)>|<\/w:hyperlink>|<w:fldChar\b[^>]*?w:fldCharType="(begin|separate|end)"[^>]*>|<w:instrText\b[^>]*>([^<]*)<\/w:instrText>|<w:fldSimple\b([^>]*?)(\/?)>|<\/w:fldSimple>/g;
+  const TOKEN = /<w:p(?=[\s>])[^>]*>|<\/w:p>|<w:pPr>([\s\S]*?)<\/w:pPr>|<w:t(?:\s[^>]*)?>([^<]*)<\/w:t>|<w:(tab|ptab|br|cr|noBreakHyphen|softHyphen)(?:\s[^>]*)?\/>|<w:hyperlink\b([^>]*)>|<\/w:hyperlink>|<w:fldChar\b[^>]*?w:fldCharType="(begin|separate|end)"[^>]*>|<w:instrText\b[^>]*>([^<]*)<\/w:instrText>|<w:fldSimple\b([^>]*?)(\/?)>|<\/w:fldSimple>/g;
   // A field's result, as a link when its instruction is HYPERLINK: `field` the one ended, its text from `at`.
   // `para`'s text from `at` as a link to `to` (linkText), kept in its links for the rich text (R4-LO-05).
   const link = (para, at, to) => {
@@ -155,7 +155,7 @@ export function docxXmlLines(xml, links = {}) {
       const ilvl = /<w:ilvl w:val="(\d+)"/.exec(para.props)?.[1];
       const depth = list ? Number(ilvl ?? Math.max(0, Number(styled?.[1] || 1) - 1)) : 0;
       lines.splice(at, 0, { text: list && para.text.trim() ? `• ${para.text}` : para.text, hint: heading ? 'heading' : (/^title$/i.test(style) ? 'name' : undefined), ...(depth ? { depth } : {}), ...(para.links ? { links: para.links } : {}) });
-    } else if (m[0].startsWith('<w:p') && !m[0].startsWith('<w:pPr')) {
+    } else if (/^<w:p[\s>]/.test(m[0])) { // a paragraph's start (not <w:pPr>, not <w:ptab/>)
       if (!m[0].endsWith('/>')) open.push({ text: '', props: '', start: lines.length }); // <w:p/>: an empty one, no line (as before)
     }
     else if (!para) continue;
@@ -164,7 +164,9 @@ export function docxXmlLines(xml, links = {}) {
     // A non-breaking hyphen (Ctrl+Shift+-, "2019‑2021" kept on one line) is a hyphen; a soft one
     // (an optional break) is nothing. Before, both were dropped, and "2019‑2021" read "20192021".
     else if (m[3] === 'noBreakHyphen') para.text += '-';
-    else if (m[3] !== 'softHyphen') para.text += m[3] === 'tab' ? '\t' : '\n';
+    // An alignment tab (<w:ptab/>, Insert Alignment Tab: a date pushed to the right margin) is a tab too;
+    // skipped before, "Acme Corp" and its date ran together and no date was read (R5-HUNT7-DOCX-ALIGNMENT-TAB-DROPPED).
+    else if (m[3] !== 'softHyphen') para.text += m[3] === 'tab' || m[3] === 'ptab' ? '\t' : '\n';
   }
   return headingLevels(lines, levels);
 }
