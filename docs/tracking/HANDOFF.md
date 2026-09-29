@@ -24,7 +24,9 @@ open editor (editor); another tab's sign-out could delete every cloud résumé (
 fixed test-only in 0cdc8f3 (CI 36531274182 green, 351/351). Candidate for hunt round 3: the editor's first render after
 /resume/:id may briefly show the previous résumé (useOpenResume runs in useEffect).
 Gate 36531535738 on 54b9ec2 GREEN (deploy line above). Hunt round 2 DONE and merged (8e2ab9e): 19 bugs confirmed + fixed in all 9 areas
-(reports wf-reports/r5-hunt2-<area>.json). Next: hunt round 3 (seen = wf-reports/r5-hunt-seen.json on claude/r4-green; the
+(reports wf-reports/r5-hunt2-<area>.json). Gate 36537511498 on 397f1bb RED only on cypress 06-job-tracker ('Imported 2 job applications.'
+never shows after a jobs JSON round-trip; likely hunt2-jobs backup-restore fix) — being fixed on claude/r4-green-gatefix2.
+Running since 07:55: hunt round 3 (seen = wf-reports/r5-hunt-seen.json on claude/r4-green; the
 round script: 9 area finders → skeptic → fixer with fail-first → reviewer, branches claude/wf-r5-hunt<N>-<area>). Loop rounds until two in a row find nothing new. Batch gate 36517981819 on 0f03b71 was red only on
 71-startup-chunks (the data router for R4-DUX-06 + the kit Dialog on the Dashboard: 1107 kB > 1100 kB); fixed by ea59ac6
 (1097 kB, fail-first 36520176676; margin ~3 kB). Full gate 36520793636 on ea59ac6 GREEN (owner deploy line above). The 20 dsg-layout rows
