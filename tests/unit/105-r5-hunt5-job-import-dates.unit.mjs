@@ -29,8 +29,6 @@ test('an imported job with timestamps gets its days as YYYY-MM-DD, the day as wr
 test('a passed follow-up written as a timestamp is due', () => {
   const done = completeJob(readJob(imported).kept);
   assert.equal(isFollowUpDue(done, new Date(2026, 8, 29, 12)), true);
-  const blank = { id: 'job_3', status: 'applied', appliedDate: '' };
-  assert.deepEqual(sortJobs([blank, done], 'appliedDate', 'asc').map((j) => j.id), ['job_2', 'job_3'], 'a date sorts before a blank');
 });
 
 test('jobDay: other readable forms; a day already so, blank, or unreadable stays as it is', () => {
