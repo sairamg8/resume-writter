@@ -25,25 +25,27 @@ const GROUPS = [
 ];
 const CATEGORIES = new Set(GROUPS.map((g) => g.category.toUpperCase()));
 const LAST = GROUPS[GROUPS.length - 1].category;
+/** A line of categories only: one, or a Grids row's side by side. */
+const ONLY_CATEGORIES = new RegExp(`^(${[...CATEGORIES].join('|')})+$`);
 
-const skills = (skillsStyle) => section('skills', GROUPS, { skillsStyle }, { title: 'Toolbox' });
+const skills = (skillsStyle, columns = 1) => section('skills', GROUPS, { skillsStyle, columns }, { title: 'Toolbox' });
 
 /**
  * The résumé with `n` filler lines and a gap of `px` above the Skills section: bullets of an Experience
  * entry in the main column, languages in the Sidebar's side column (the column Skills prints in there).
  */
-function cv(template, skillsStyle, n, px) {
+function cv(template, skillsStyle, n, px, cols = 1) {
   if (template === 'sidebar') {
     const lead = section('languages', Array.from({ length: n }, (_, i) => ({ language: `Filler ${i + 1}`, proficiency: '' })), { spaceAfter: px });
-    return resume({ template, sections: [lead, skills(skillsStyle)] });
+    return resume({ template, sections: [lead, skills(skillsStyle, cols)] });
   }
   const lis = Array.from({ length: n }, (_, i) => `<li>Filler bullet ${i + 1}</li>`).join('');
   const lead = experience([{ description: `<ul>${lis}</ul>` }]);
   lead.settings = { ...lead.settings, spaceAfter: px };
-  return resume({ template, sections: [lead, skills(skillsStyle)] });
+  return resume({ template, sections: [lead, skills(skillsStyle, cols)] });
 }
 
-const layout = async (template, style, n, px) => read(await render(cv(template, style, n, px)));
+const layout = async (template, style, n, px, cols = 1) => read(await render(cv(template, style, n, px, cols)));
 
 /** The items of the Skills column on each page (the side column's in the Sidebar, the page's elsewhere). */
 const columnOf = (template, items, pages) => items.filter((i) => (template === 'sidebar'
@@ -75,14 +77,14 @@ function categoryAlone(template, pages) {
     if (!on.length) continue;
     const lowest = Math.min(...on.map((i) => i.y));
     const text = lineText(on.filter((i) => Math.abs(i.y - lowest) < 1));
-    if (CATEGORIES.has(text)) found.push(`page ${p} ends with "${text}"`);
+    if (ONLY_CATEGORIES.test(text)) found.push(`page ${p} ends with "${text}"`);
   }
   return found;
 }
 
 /** The fewest filler lines that print the last group's category on page 2. */
-async function footOf(template, style) {
-  const page = async (n) => pageOf(template, await layout(template, style, n, 0), LAST);
+async function footOf(template, style, cols = 1) {
+  const page = async (n) => pageOf(template, await layout(template, style, n, 0, cols), LAST);
   let [lo, hi] = [1, 200];
   if (await page(hi) < 2) throw new Error(`${template} ${style}: "${LAST}" never reaches page 2`);
   while (hi - lo > 1) {
@@ -93,13 +95,13 @@ async function footOf(template, style) {
 }
 
 /** Every layout from the section's first line on page 1 to its last group's category on page 2. */
-async function sweep(template, style, span) {
-  const to = await footOf(template, style);
+async function sweep(template, style, span, cols = 1) {
+  const to = await footOf(template, style, cols);
   const found = [];
   const firstPages = new Set();
   for (let n = Math.max(1, to - span); n <= to; n += 1) {
     for (let px = 0; px <= 15; px += 3) {
-      const pages = await layout(template, style, n, px);
+      const pages = await layout(template, style, n, px, cols);
       firstPages.add(pageOf(template, pages, GROUPS[0].category));
       for (const p of categoryAlone(template, pages)) found.push(`n=${n} px=${px}: ${p}`);
     }
@@ -123,6 +125,12 @@ describe('A skill group\'s category never ends a page without its skills (R5-HUN
   });
   it('Sidebar\'s side column, Tags', async () => {
     assert.deepEqual(await sweep('sidebar', 'tags', 16), []);
+  });
+  it('Sidebar\'s side column, Bars', async () => {
+    assert.deepEqual(await sweep('sidebar', 'bars', 30), []);
+  });
+  it('Classic, Stacked in two Grids', async () => {
+    assert.deepEqual(await sweep('classic', 'stacked', 26, 2), []);
   });
 
   it('Word, Stacked: the category paragraph keeps with its skills', async () => {
