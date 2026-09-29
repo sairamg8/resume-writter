@@ -1,0 +1,68 @@
+{
+  "cluster": "r5-hunt2-sync",
+  "branch": "claude/wf-r5-hunt2-sync",
+  "base": "54b9ec28f19e9684778b75d74230b204737ff3b2",
+  "rows": [
+    {
+      "id": "R5-HUNT2-COLLECTION-UNDO-DELETE-LOST-IF-RESTORE-FLUSH-MISSES",
+      "title": "A job or project put back with Undo after its deletion synced is deleted again if its own write never lands (reload, offline or sign-out within the 1.5 s pause)",
+      "severity": "high",
+      "outcome": "fixed",
+      "commits": [
+        "daf589f9554cfffdaff6bffe1660dc9a626e1e72",
+        "e3c57a46158484d4686baba58e4bc64939204013",
+        "8fe5194a1d76370af2403e3ff9f3c52ac33ee235"
+      ],
+      "tests": [
+        "tests/unit/job-sync-undo-after-delete.unit.mjs",
+        "tests/unit/job-sync.unit.mjs"
+      ],
+      "summary": "Now: a job or project brought back with Undo after its deletion reached the cloud stays back, even when its own write never lands (a reload or going offline within 1.5 s, or signing out). This browser's sync record now keeps each deletion it sent as version 0 (DELETED, collectionSyncPlan.js) until the next first sync. Before, the version was dropped. With version 0 on record, planFirstSync treats the restored copy as changed here: it keeps the copy, writes it, and takes it off the account's deleted list. A device that only held the item still drops it. When the list leaves the browser (leaveList), a deletion already sent is not stashed to be sent again (review fix 8fe5194). Changed in src/utils/collectionSyncEngine.js (noteVersions, and firstSync's record of its own deletes) and src/utils/collectionSyncPlan.js (DELETED, leaveList). The job-sync.unit.mjs assertion changed from ['j2'] to { j1: 0, j2: 1 } because of this intended change to the record.",
+      "failfirst_run": "36533043984 (daf589f: 3 of 4 tests fail without the fix, all pass with it); 36535545966 (8fe5194: the review test fails without it)"
+    },
+    {
+      "id": "R5-HUNT2-COLLECTION-FLUSH-NEWER-OVERWRITES-CONCURRENT-LOCAL-EDIT",
+      "title": "A job/board flush that finds another device's newer copy erases an edit typed while it was reading the cloud",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": [
+        "f7673b17dca16226e28e07e5e8228260e46463c2"
+      ],
+      "tests": [
+        "tests/unit/job-sync-flush-keeps-edit.unit.mjs"
+      ],
+      "summary": "Now: when a flush finds another device's newer copy, it replaces the local copy (in the store and in s.prev) only if the local copy is no newer than the cloud's. An edit typed while the flush was reading the cloud stays on screen, and its queued write reaches the cloud, so this device and the cloud agree. With no edit during the read, the newer cloud copy is still taken. noteVersions still records the cloud copy's version, so a reload before the next flush makes the first sync send the edit (it is newer than the cloud's copy). Changed in src/utils/collectionSyncEngine.js flush().",
+      "failfirst_run": "36533043984 (f7673b1: 1 of 2 tests fails without the fix; the other is a guard for the unchanged path; both pass with it)"
+    }
+  ],
+  "review": {
+    "rounds": [
+      {
+        "round": 1,
+        "issues": [
+          "R5-HUNT2-COLLECTION-UNDO-DELETE-LOST-IF-RESTORE-FLUSH-MISSES: with sent deletions now kept as version 0, leaveList (sign-out, or another account signing in) counted each one as an unsent deletion and stashed it. At the next sign-in the stash had no version for the id, so planFirstSync deleted the account's copy again. That copy could be one another device, which never saw the deletion, had edited and written back (taking it off the deleted list). That device's edit was deleted everywhere. Before the branch, a sent deletion left no trace and the edited copy came back. Every sign-out after a synced delete also left an empty-looking stash entry."
+        ]
+      }
+    ],
+    "issues": [
+      {
+        "issue": "leaveList re-sent already-synced deletions after a sign-out and deleted another device's later edit (regression introduced by daf589f).",
+        "resolution": "Fixed in 8fe5194. DELETED moved to collectionSyncPlan.js, and leaveList skips ids whose version is DELETED. A restored item still carries version 0 into the stash, so the sign-out Undo case still works. New test in tests/unit/job-sync-undo-after-delete.unit.mjs, fail-first proved in run 36535545966."
+      }
+    ],
+    "fixedByReviewer": [
+      "8fe5194a1d76370af2403e3ff9f3c52ac33ee235"
+    ],
+    "checked": [
+      "The fail-first logs of run 36533043984 were read. daf589f reversed: '# fail 3', then all pass with it. f7673b1 reversed: '# fail 1', then pass with it.",
+      "planFirstSync with version 0: a deleted id that was not put back and is on the cloud's deleted list with no doc is skipped, then drops out of the record at the next first sync. The record is bounded.",
+      "Another device's edit of an item this browser deleted, when the item was taken off the deleted list, now comes back on a same-account first sync (changedSince against 0). Before, the edit was re-deleted. This matches planFirstSync's documented rule that 'one deleted here that another device changed since comes back'.",
+      "Records stored before this branch have no 0 entries and behave as before. localMeta keeps 0 as a number.",
+      "flush take(): the local copy is kept only when strictly newer. A tie or a missing updatedAt takes the cloud copy, as before."
+    ]
+  },
+  "rejected": [],
+  "a11yNoted": [],
+  "baselineFailures": [],
+  "notes": "Both fixes are confined to the job/board collection sync engine (collectionSyncEngine.js, collectionSyncPlan.js). Résumé sync, templates and exporters are untouched. Review found one regression in the first fix (a synced deletion re-sent after sign-out); it is fixed in 8fe5194 with a fail-first test. Run 36535545966 is green on 8fe5194: 11 named sync test files, the fail-first check (# fail 1 without the fix, pass with it) and lint."
+}
