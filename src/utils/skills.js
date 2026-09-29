@@ -26,6 +26,16 @@ export function skillGroup(item = {}) {
 }
 
 /**
+ * Whether `item` prints anything: a category or skills (skillGroup's). A group added and left blank, or
+ * with both eyes off, takes no row, marker or gap in the PDF, as Word, Markdown and the ATS text leave
+ * it out (R5-HUNT4-PDF-EMPTY-SKILL-GROUP-LONE-BULLET).
+ */
+export function skillGroupPrints(item) {
+  const { category, skills } = skillGroup(item);
+  return Boolean(category || skills);
+}
+
+/**
  * A group's `category` in the case it prints in: in capitals in the Sidebar's side column
  * (`sideColumn`, every style) and in the main column's Tags and Bars (`style`, the stored Skills
  * style); as typed in Inline, Bullet, Stacked and a style the app does not offer, which prints as
