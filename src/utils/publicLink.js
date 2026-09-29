@@ -10,6 +10,7 @@
 import { newId } from '@/utils/ids';
 import { CONTACT_FIELDS, CONTACT_KEYS } from '@/utils/contacts';
 import { entryPrints } from '@/utils/entryPrints';
+import { SECTION_TYPE_DEFAULTS } from '@/utils/defaultDataSectionTypes';
 
 /** The largest copy the cloud takes (Firestore's 1 MiB a document), less room for the rest. */
 export const MAX_PUBLIC_BYTES = 1_000_000;
@@ -102,6 +103,18 @@ export function publicSnapshot(resume) {
 const plain = (html) => String(html || '').replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
 
 /**
+ * A section as the share panel names it: its title, or for one the user cleared (the PDF prints no
+ * heading) its type's own name ("Custom Section"), not the internal key 'custom'
+ * (R5-HUNT6-SHARE-SUMMARY-CLEARED-TITLE-TYPE-ID).
+ */
+function sectionName(s) {
+  const title = String(s.title ?? '').trim();
+  if (title) return title;
+  const factory = Object.hasOwn(SECTION_TYPE_DEFAULTS, s.type) ? SECTION_TYPE_DEFAULTS[s.type] : SECTION_TYPE_DEFAULTS.custom;
+  return factory('sec').title;
+}
+
+/**
  * What anyone with the link sees, in words, from a published copy: each header field with its
  * value, the photo, the summary, and each section with its number of entries. The share panel
  * lists it, so the owner knows exactly what is public.
@@ -117,7 +130,7 @@ export function publicSummary(copy) {
   if (plain(p.summary)) lines.push('Your summary');
   for (const s of copy?.sections || []) {
     const n = s.items?.length || 0;
-    lines.push(`${s.title || s.type}: ${n} ${n === 1 ? 'entry' : 'entries'}`);
+    lines.push(`${sectionName(s)}: ${n} ${n === 1 ? 'entry' : 'entries'}`);
   }
   return lines;
 }
