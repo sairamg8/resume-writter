@@ -361,7 +361,9 @@ const CONTRACTION = /^\p{L}+'(?:ll|re|ve|d|m)$|n't$/iu;
  */
 function wholeWord(keyword) {
   const esc = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const lead = /^[\p{L}\p{M}\p{N}_]/u.test(keyword) ? '(?<![\\p{L}\\p{M}\\p{N}_])' : '(?<!\\S)';
+  // A leading dot is its own boundary: ".NET" is found in "ASP.NET", never in "net".
+  const lead = keyword.startsWith('.') ? ''
+    : /^[\p{L}\p{M}\p{N}_]/u.test(keyword) ? '(?<![\\p{L}\\p{M}\\p{N}_])' : '(?<!\\S)';
   const trail = /[\p{L}\p{M}\p{N}_]$/u.test(keyword) ? '(?![\\p{L}\\p{M}\\p{N}_])' : '(?![\\p{L}\\p{M}\\p{N}_+#])';
   return new RegExp(`${lead}${esc}${trail}`, 'iu');
 }
@@ -389,7 +391,12 @@ export function extractJobKeywords(jobDescriptionText) {
   for (let raw of tokens) {
     let word = raw.trim();
     // Strip trailing periods/commas
-    word = word.replace(/^[^\p{L}\p{M}\p{N}_+#]+|[^\p{L}\p{M}\p{N}_+#]+$/gu, '');
+    word = word.replace(/[^\p{L}\p{M}\p{N}_+#]+$/u, '');
+    // And leading ones, but for the one dot of a name such as ".NET": stripped, it was the keyword
+    // "NET", matched by "net revenue" and written into Skills so (R5-HUNT1-ats-jd-dotnet-stripped).
+    const lead = word.match(/^[^\p{L}\p{M}\p{N}_+#]+/u)?.[0] || '';
+    word = word.slice(lead.length);
+    if (/(?:^|[^.])\.$/.test(lead) && /^\p{L}/u.test(word)) word = `.${word}`;
     if (word.length < 2 || word.length > 30) continue;
     if (LETTER_ABBREVIATION.test(word)) continue;
     if (COMMON_STOP_WORDS.has(word.toLowerCase())) continue;
