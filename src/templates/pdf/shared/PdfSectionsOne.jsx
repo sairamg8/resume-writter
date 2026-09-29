@@ -15,7 +15,8 @@ import {
   shadesOf,
   entryTextWidth,
 } from './PdfSections';
-import { EmployerHeader, itemHeadPresence } from './PdfItemHeader';
+import { EmployerHeader, headPresence, itemHeadPresence } from './PdfItemHeader';
+import { textWidth, wrappedLines } from './pdfMeasure';
 import { employerOf, groupPlaces, groupsRoles, roleGroups } from '@/utils/roleGroups';
 
 export function ExperienceSection({ section, settings, marginBottom, spaceBefore, itemGap, italicSubs, centered }) {
@@ -138,8 +139,20 @@ export function SkillsSection({ section, settings, marginBottom, spaceBefore, it
   const isModern   = settings?._template === 'modern';
   const isMinimal  = settings?._template === 'minimal';
   const shade      = shadesOf(settings);
+  // Inline and Bullet (and a style the app does not offer, printed as Inline) print each group as one
+  // unbreakable row: the title keeps the first one, its line wrapped at the entry's width (less a
+  // Bullet's marker), measured in the category's bolder face so it errs on more lines. With only its own three lines, a first group that wrapped onto four left the
+  // title alone at the foot of a page while the group moved on (R5-HUNT4-PDF-SKILLS-TITLE-ORPHAN-LONG-INLINE-GROUP).
+  const first      = visibleItems[0];
+  const rowBox     = { fontFamily: settings?._pdfFontFamily, fontSize: entrySize, fontWeight: 'bold', lineHeight: entrySize * lineH };
+  const rowLines   = (item) => {
+    const { category, skills } = skillGroup(item);
+    const marker = isBullet ? textWidth('•', rowBox) + 4 : 0;
+    return Math.max(1, wrappedLines(`${category}${category && skills ? sep : ''}${skills}`, rowBox, entryTextWidth(settings, cols) - marker));
+  };
+  const presence   = first && !['bars', 'stacked', 'tags'].includes(style) ? headPresence({ lines: rowLines(first), styles: [rowBox] }) : 0;
   // Printed by the grid, with its first row (RenderColGrid).
-  const title      = <SectionTitleOf section={section} settings={settings} centered={centered} />;
+  const title      = <SectionTitleOf section={section} settings={settings} centered={centered} presence={presence} />;
 
   return (
     <View style={{ marginBottom, marginTop: spaceBefore }}>
