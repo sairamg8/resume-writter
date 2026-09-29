@@ -9,7 +9,7 @@
 import { newId } from './ids.js';
 import { SECTION_TYPE_DEFAULTS } from './defaultDataSectionTypes.js';
 import { isText, storedText } from './storedText.js';
-import { describe, entries, flattened, isoDate, joined, listOf, listText, month, richDescription, richFrom } from './jsonResumeText.js';
+import { described, descriptionFrom, entries, flattened, isoDate, joined, listOf, listText, month, richDescription, richFrom } from './jsonResumeText.js';
 
 const text = (v) => storedText(v);
 const lines = (parts, sep) => parts.filter(Boolean).join(sep);
@@ -17,8 +17,7 @@ const each = (fn) => (list) => list.map(fn);
 
 /** A custom entry — title, subtitle, date, location, description — as the export keeps it in `meta`, and back. */
 export function customEntry(item) {
-  const { summary, highlights } = describe(item.description, item.bullets);
-  return { title: item.title || '', subtitle: item.subtitle || '', date: isoDate(item.date), location: item.location || '', summary, highlights };
+  return { title: item.title || '', subtitle: item.subtitle || '', date: isoDate(item.date), location: item.location || '', ...described(item.description, item.bullets) };
 }
 
 export const customItem = (c) => ({
@@ -27,7 +26,7 @@ export const customItem = (c) => ({
   subtitle: text(c.subtitle),
   date: month(c.date),
   location: text(c.location),
-  description: richDescription(c.summary, c.highlights),
+  description: descriptionFrom(c.summary, c.highlights, c.descriptionHtml),
 });
 
 /**
@@ -58,19 +57,15 @@ const ongoing = (item) => (item?.current ? { current: true } : {});
 export const SECTION_KEYS = {
   experience: {
     key: 'work',
-    out: (item) => {
-      const { summary, highlights } = describe(item.description, item.bullets);
-      return {
-        name: item.company || '',
-        position: item.role || '',
-        location: item.location || '',
-        startDate: isoDate(item.startDate),
-        endDate: item.current ? '' : isoDate(item.endDate),
-        current: Boolean(item.current),
-        summary,
-        highlights,
-      };
-    },
+    out: (item) => ({
+      name: item.company || '',
+      position: item.role || '',
+      location: item.location || '',
+      startDate: isoDate(item.startDate),
+      endDate: item.current ? '' : isoDate(item.endDate),
+      current: Boolean(item.current),
+      ...described(item.description, item.bullets),
+    }),
     in: each((w) => {
       const startDate = month(w.startDate);
       const endDate = month(w.endDate);
@@ -85,7 +80,7 @@ export const SECTION_KEYS = {
         // came back current and printed "Present". A file with no flag — another tool's — keeps the
         // schema's convention: a job with a start and no end is the current one.
         current: typeof w.current === 'boolean' ? w.current : !endDate && Boolean(startDate),
-        description: richDescription(w.summary, w.highlights),
+        description: descriptionFrom(w.summary, w.highlights, w.descriptionHtml),
       };
     }),
   },
@@ -102,7 +97,7 @@ export const SECTION_KEYS = {
       ...ongoing(item),
       score: item.gpa || '',
       courses: [],
-      ...describe(item.description, item.bullets),
+      ...described(item.description, item.bullets),
     }),
     in: each((ed) => ({
       id: newId('edu'),
@@ -114,7 +109,7 @@ export const SECTION_KEYS = {
       endDate: month(ed.endDate),
       ...ongoing(ed),
       gpa: text(ed.score) || text(ed.gpa), // `gpa`: the pre-1.0 schema's name for it
-      description: richDescription(ed.summary, ed.highlights, Array.isArray(ed.courses) && ed.courses.length > 0 ? `Relevant courses: ${joined(ed.courses)}` : ''),
+      description: descriptionFrom(ed.summary, ed.highlights, ed.descriptionHtml, Array.isArray(ed.courses) && ed.courses.length > 0 ? `Relevant courses: ${joined(ed.courses)}` : ''),
     })),
   },
   skills: {
@@ -135,11 +130,12 @@ export const SECTION_KEYS = {
   projects: {
     key: 'projects',
     out: (item) => {
-      const { summary, highlights } = describe(item.description, item.bullets);
+      const { summary, highlights, descriptionHtml } = described(item.description, item.bullets);
       return {
         name: item.name || '',
         description: summary,
         highlights,
+        ...(descriptionHtml ? { descriptionHtml } : {}),
         keywords: listOf(item.technologies), // the schema's name for what the app calls Technologies
         url: item.url || item.link || '', // `link`: what earlier builds' import stored
         roles: item.role ? [item.role] : [],
@@ -157,7 +153,7 @@ export const SECTION_KEYS = {
       startDate: month(p.startDate),
       endDate: month(p.endDate),
       ...ongoing(p),
-      description: richDescription(p.description, p.highlights),
+      description: descriptionFrom(p.description, p.highlights, p.descriptionHtml),
     })),
   },
   certifications: {
@@ -202,19 +198,15 @@ export const SECTION_KEYS = {
   },
   volunteering: {
     key: 'volunteer',
-    out: (item) => {
-      const { summary, highlights } = describe(item.description, item.bullets);
-      return {
-        organization: item.org || '',
-        position: item.role || '',
-        location: item.location || '',
-        startDate: isoDate(item.startDate),
-        endDate: item.current ? '' : isoDate(item.endDate),
-        ...ongoing(item),
-        summary,
-        highlights,
-      };
-    },
+    out: (item) => ({
+      organization: item.org || '',
+      position: item.role || '',
+      location: item.location || '',
+      startDate: isoDate(item.startDate),
+      endDate: item.current ? '' : isoDate(item.endDate),
+      ...ongoing(item),
+      ...described(item.description, item.bullets),
+    }),
     in: each((v) => ({
       id: newId('vol'),
       org: text(v.organization),
@@ -223,7 +215,7 @@ export const SECTION_KEYS = {
       startDate: month(v.startDate),
       endDate: month(v.endDate),
       ...ongoing(v),
-      description: richDescription(v.summary, v.highlights),
+      description: descriptionFrom(v.summary, v.highlights, v.descriptionHtml),
     })),
   },
   languages: {

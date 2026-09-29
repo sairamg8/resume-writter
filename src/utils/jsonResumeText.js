@@ -85,11 +85,45 @@ export function describe(html, bullets) {
     else if (TYPED_BULLET.test(text)) highlights.push(text.replace(TYPED_BULLET, '').trim());
     else summary.push(text);
   }
-  for (const b of Array.isArray(bullets) ? bullets : []) {
-    const text = storedText(b).replace(/\s+/g, ' ').trim();
-    if (text) highlights.push(text);
-  }
+  highlights.push(...legacyBullets(bullets));
   return { summary: summary.join('\n'), highlights };
+}
+
+/** An entry's legacy `bullets` as the text each prints (describe). */
+const legacyBullets = (bullets) => (Array.isArray(bullets) ? bullets : []).map((b) => storedText(b).replace(/\s+/g, ' ').trim()).filter(Boolean);
+
+/**
+ * An entry's description as the file holds it: `summary` and `highlights` (describe) for every
+ * tool, and — when those alone would come back differently (richDescription): a paragraph after a
+ * list, a second paragraph, bold, a link, a numbered or nested list — the description itself,
+ * sanitized, with its legacy bullets as the list they print as, under `descriptionHtml`. The import
+ * reads it back while the summary and highlights are still the ones written beside it
+ * (descriptionFrom). Until then a trip put every paragraph above one flat list of plain bullets.
+ */
+export function described(html, bullets) {
+  const out = describe(html, bullets);
+  const legacy = legacyBullets(bullets);
+  const clean = sanitizeRichText(`${storedText(html)}${legacy.length ? `<ul>${legacy.map((b) => `<li>${richText(b)}</li>`).join('')}</ul>` : ''}`);
+  return sanitizeRichText(richDescription(out.summary, out.highlights)) === clean ? out : { ...out, descriptionHtml: clean };
+}
+
+/**
+ * An entry's rich text from the file: `html`, the export's own copy (described), while the
+ * `summary` and `highlights` beside it are still the ones it was written with — sanitized, as the
+ * editor reads any HTML — and a last paragraph (`after`) as richDescription adds one. Otherwise
+ * (another tool's file, or one edited since the export) the summary and highlights (richDescription).
+ */
+export function descriptionFrom(summary, highlights, html, after = '') {
+  if (typeof html === 'string' && html) {
+    const clean = sanitizeRichText(html);
+    const own = describe(clean);
+    const list = Array.isArray(highlights) ? highlights.map(storedText) : [];
+    if (own.summary === storedText(summary) && own.highlights.length === list.length && own.highlights.every((h, i) => h === list[i])) {
+      const tail = richText(after);
+      return tail ? `${clean}<p>${tail}</p>` : clean;
+    }
+  }
+  return richDescription(summary, highlights, after);
 }
 
 /** Rich text (the summary, an award's description) as plain text: one line per paragraph or list item. */
