@@ -1,0 +1,69 @@
+{
+  "cluster": "r5-hunt5-editor",
+  "branch": "claude/wf-r5-hunt5-editor",
+  "base": "87ffebb1151e9a8f1d7e91ab04896a66f2b3bd50",
+  "rows": [
+    {
+      "id": "R5-HUNT5-PASTE-WORD-BULLETS-BECOME-MIDDOT-PARAGRAPHS",
+      "title": "A bulleted or numbered list pasted from Word for desktop becomes '·' / '1.' paragraphs, not a list",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": [
+        "c08852d89d6223ea0bb55295b6f0806b874b1c28",
+        "bd23db66014a6bd0085470072c224965a6dfb139"
+      ],
+      "tests": [
+        "tests/unit/r5-hunt5-paste-word-bullets.unit.mjs",
+        "tests/unit/r5-hunt5-paste-word-lists-review.unit.mjs"
+      ],
+      "summary": "Now: a list pasted from Word for desktop becomes a real <ul> or <ol>. Word writes each item as a paragraph styled mso-list:lN levelM, with the marker inside <![if !supportLists]> (or the <!--[if !supportLists]--> comment form). Items nest by mso-list level. A numbered marker such as '1.' or 'a)' makes an <ol>. A new list starts when the kind changes, or when the list id changes at level 1. The Symbol, Courier or Wingdings marker, its &nbsp; padding and the mso-list:Ignore spans are dropped. After review, three more cases work. A paragraph in a Word list style ('List Bullet', 'List Number 2'), whose mso-list is only in the skipped <style> sheet, also becomes a list item; its level comes from the class (MsoListBullet2 gives level 2). An Outlook or Word-HTML list that is already <ol><li style='mso-list:…'> is left as it is, so it stays one numbered list. Before the review fix it was wrapped in a second <ul> and printed as bullets. A marker Word never closed (a cut-off paste) is kept as text and no longer swallows the rest of its paragraph. All of this is in parseRichText (src/utils/richText.js): buildTree keeps the marker in its own #mso-marker node, marked closed at <![endif]>; wordLists() groups p/div/h* items; the walk skips only closed markers. The PDF, the Word and Markdown exports, Design → Lists and the ATS checker all read that one parse. Descriptions saved before the fix, which already start with '·', are not migrated.",
+      "product_call": "Multi-level legal numbering such as '1.1.' is not read as a number, so that level becomes a bulleted sub-list. The text is kept and only the numbering style differs. A Word heading with list numbering (<h2 style='mso-list:…'>) becomes a numbered item and loses the heading's bold.",
+      "remaining": "Descriptions stored before the fix keep their literal '·' paragraphs; nothing migrates them. No Playwright spec pastes real Word clipboard HTML in a browser. The fix is checked through sanitizeForInsert and parseRichText in node tests.",
+      "failfirst_run": "36562560294 (green: with c08852d reversed, 2 of 3 tests fail; the third checks that a plain Word paragraph stays a paragraph); 36564399042 (green: review fix bd23db6, 3 of 3 fail without it, pass with it; named tests and lint green)"
+    }
+  ],
+  "review": {
+    "rounds": [
+      { "round": 1, "issues": ["HUNT5-REV-01", "HUNT5-REV-02", "HUNT5-REV-03"] },
+      { "round": 2, "issues": [] }
+    ],
+    "issues": [
+      {
+        "id": "HUNT5-REV-01",
+        "severity": "medium",
+        "file": "src/utils/richText.js:wordLists",
+        "row": "R5-HUNT5-PASTE-WORD-BULLETS-BECOME-MIDDOT-PARAGRAPHS",
+        "problem": "wordLists took any block with an inline mso-list, <li> included. Outlook emails and Word's HTML export already write real lists as <ol><li style='mso-list:l0 level1 lfo1'>. Those items were wrapped in a second <ul> inside the <ol>. The parse gave depth-2 '–' items, and sanitizeRichText saved <ul><li>One</li><li>Two</li></ul>, so a numbered list pasted from Outlook became bullets. On r4-green it stayed <ol>.",
+        "resolution": "Fixed in bd23db6: only p, div and h1–h6 become Word list items (WORD_ITEM_TAGS), and an <li> is left in its own list. Pinned by tests/unit/r5-hunt5-paste-word-lists-review.unit.mjs test 1."
+      },
+      {
+        "id": "HUNT5-REV-02",
+        "severity": "medium",
+        "file": "src/utils/richText.js:wordLists / walk",
+        "row": "R5-HUNT5-PASTE-WORD-BULLETS-BECOME-MIDDOT-PARAGRAPHS",
+        "problem": "The walk dropped every supportLists marker, but only paragraphs with an inline mso-list became list items. A paragraph in Word's 'List Bullet' / 'List Number' style keeps its mso-list in the <style> sheet, which the parser skips. It lost its bullet and became a plain paragraph: <p>One</p>. On r4-green it at least kept '· One'.",
+        "resolution": "Fixed in bd23db6: a p/div/h* with a closed supportLists marker and no inline mso-list is a list item. Its level comes from the class (MsoListBullet2 / MsoListNumber3), or 1. Its marker text still decides between <ul> and <ol>. Pinned by test 2."
+      },
+      {
+        "id": "HUNT5-REV-03",
+        "severity": "low",
+        "file": "src/utils/richText.js:buildTree",
+        "row": "R5-HUNT5-PASTE-WORD-BULLETS-BECOME-MIDDOT-PARAGRAPHS",
+        "problem": "The #mso-marker node stayed open until <![endif]>. When the endif never came (cut-off or hand-edited clipboard HTML), the rest of the paragraph's text went into the marker, and the walk dropped it: '<![if !supportLists]>· Led the migration</p>' lost 'Led the migration'.",
+        "resolution": "Fixed in bd23db6: <![endif]> marks the marker closed, and only a closed marker is skipped or read as the item's marker. An unclosed one is walked as ordinary inline text. Pinned by test 3."
+      }
+    ],
+    "fixedByReviewer": [
+      {
+        "commit": "bd23db66014a6bd0085470072c224965a6dfb139",
+        "issues": ["HUNT5-REV-01", "HUNT5-REV-02", "HUNT5-REV-03"],
+        "tests": ["tests/unit/r5-hunt5-paste-word-lists-review.unit.mjs"],
+        "failfirst_run": "36564399042 (green: with bd23db6 reversed, 3 of 3 tests fail; with it they pass)"
+      }
+    ]
+  },
+  "rejected": [],
+  "a11yNoted": [],
+  "baselineFailures": [],
+  "notes": "One bug was hunted and fixed: c08852d. Its fail-first run, 36562560294, is read from the log: 'fail without the fix (its diff reversed): # fail 2', then 'pass with it'. The review checked stored data: sanitised descriptions carry no mso-list and no conditional comments, so old data parses exactly as before. The review found three regressions or gaps (REV-01 to REV-03) and fixed them in bd23db6 with a fail-first test. CI run 36564399042 ran the review test and the 16 rich-text, ATS and export tests the fixer ran, plus fail-first and lint. The full gate has not run on this branch; it is left for the batch."
+}

@@ -15,6 +15,10 @@
   "4": {
    "confirmed": 17,
    "head": "3e9f28d"
+  },
+  "5": {
+   "confirmed": 14,
+   "head": "1b82c51"
   }
  },
  "seen": [
@@ -82,6 +86,22 @@
   "Changing an epic's Issue type to Task/Story/Bug silently and permanently unlinks all its child issues, with no warning or Undo",
   "Quick search can't find an issue by its exact key when 8 or more longer keys start with it (LIFE-1 hidden by LIFE-10…LIFE-17)",
   "ATS plain text (Export → ATS text, ATS tab Copy/Download) prints a website/LinkedIn/GitHub's typed value instead of its Link URL, so the profile address is lost",
-  "ATS Check calls a phone field with more than 15 digits 'Short phone number format' and asks for an area/country code"
+  "ATS Check calls a phone field with more than 15 digits 'Short phone number format' and asks for an area/country code",
+  "Bullets pasted from Microsoft Word become plain paragraphs that start with '·' and a run of spaces, not a list",
+  "Design → Typography shows no font selected when the résumé's custom Google font is not in this browser's saved list, so the font it prints in cannot be seen or picked again",
+  "JSON Resume export then import moves a description's paragraphs above its bullets and drops bold, links, numbering and nesting (jobs, education, projects, volunteering, custom sections)",
+  "A section whose title the user cleared prints its internal type id ('## custom', '## experience', 'CUSTOM') in Markdown and ATS text",
+  "Text/PDF/Word/Markdown import: a job title with a comma ('Software Engineer, Backend') becomes the location, and the real location goes to 'Additional Information'",
+  "Text/PDF/Word import: a date range followed by its length, e.g. 'January 2020 - Present (4 years 9 months)' as in LinkedIn's PDF, is not read as a date, so each job loses its role and dates",
+  "Text/PDF/Word import: a range with a two-digit end year ('2011-12', '2019-21', '2019–21') becomes a month ('Dec 2011'), or is not a date at all and ends up as the Degree",
+  "Word import drops non-breaking hyphens, so '2019‑2021' becomes '20192021' (no dates, read as the job title) and '555‑0100' becomes '5550100'",
+  "Imported job dates written any other way than YYYY-MM-DD (e.g. a timestamp) are kept but vanish from the card, the job page and the Summary",
+  "An imported job's `position` / `appliedAt` appear in the CSV export but nowhere in the tracker",
+  "Scrum backlog: a row dropped at the foot of the Backlog lands above reopened issues from a completed sprint, or doesn't move at all",
+  "Board grouped by Epic/Priority/Type with no issues says 'No issues match these filters.' when no filter is set, and shows no columns to create in",
+  "Undo of an issue deleted before its epic was deleted brings it back linked to the gone epic: 'Issues without an epic' hides it and the Parent epic picker can't clear it",
+  "List view: sorting by Summary uses raw code-point order, so accented titles sort after 'z' and 'Item 10' before 'Item 2'",
+  "Clicking into an issue title, sprint name or project name and clicking away without typing puts back the old text over another tab's newer edit",
+  "ATS Check says 'Missing or invalid candidate name' (critical, 0 pts) for a full name that includes pronouns or a nickname in parentheses"
  ]
 }

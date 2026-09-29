@@ -27,7 +27,7 @@ Gate 36531535738 on 54b9ec2 GREEN (deploy line above). Hunt round 2 DONE and mer
 never shows after a jobs JSON round-trip; likely hunt2-jobs backup-restore fix) — stale spec (the file's demo_1 now replaces the untouched
 demo on purpose); fixed spec-only in 7a05d0f (CI 36539433206 green). Gate 36540411545 on 17c1430 GREEN (deploy line above).
 Hunt round 3 DONE and merged (6770951): 15 bugs confirmed + fixed in 9 areas; full gate 36548527667 on e164a94 RED only on 71-startup-chunks (start-up path over 1100 kB again) — trimmed by 885d0d9 (1,078 kB, 22.7 kB margin; fail-first 36551269699, tests 36551295397); gate 36551804673 on 0a0148f GREEN (deploy line above). Hunt round 4 DONE and merged (3e9f28d): 17 bugs confirmed + fixed (export dry; quick-search
-exact-key fixed twice — boards' kept, tools' test kept as -limit). Gate 36558724989 on 3e9f28d GREEN. Running since 11:00: hunt round 5
+exact-key fixed twice — boards' kept, tools' test kept as -limit). Gate 36558724989 on 3e9f28d GREEN. Hunt round 5 DONE and merged (1b82c51): 14 confirmed + fixed (dash, sync dry). Full gate dispatched. Next: hunt round 6
 (seen = wf-reports/r5-hunt-seen.json on claude/r4-green; the
 round script: 9 area finders → skeptic → fixer with fail-first → reviewer, branches claude/wf-r5-hunt<N>-<area>). Loop rounds until two in a row find nothing new. Batch gate 36517981819 on 0f03b71 was red only on
 71-startup-chunks (the data router for R4-DUX-06 + the kit Dialog on the Dashboard: 1107 kB > 1100 kB); fixed by ea59ac6

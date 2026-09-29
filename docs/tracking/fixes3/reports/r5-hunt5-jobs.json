@@ -1,0 +1,72 @@
+{
+  "cluster": "r5-hunt5-jobs",
+  "branch": "claude/wf-r5-hunt5-jobs",
+  "base": "87ffebb1151e9a8f1d7e91ab04896a66f2b3bd50",
+  "rows": [
+    {
+      "id": "R5-HUNT5-JOB-IMPORT-NON-ISO-DATES-INVISIBLE",
+      "title": "An imported job's Applied, Deadline and Follow-up days written as timestamps (or with spaces around them) did not show, sort, or count as due",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": [
+        "ae784fe3e38265016323c675e8288c9da97c6843",
+        "c42c6245e3e77b90add692275d85879c92bbaee3",
+        "f3a386f769484b353fbcb3eae0a78a14a280c89c"
+      ],
+      "tests": [
+        "tests/unit/105-r5-hunt5-job-import-dates.unit.mjs",
+        "tests/pdf/105-r5-hunt5-job-import-dates.test.mjs"
+      ],
+      "summary": "Now: completeJob (src/utils/normalizeJob.js) runs on every import, every load from storage and every cloud copy. Through the new exported jobDay(), it rewrites appliedDate, deadline and followUpDate as 'YYYY-MM-DD'. An ISO timestamp becomes the day as written, with no time-zone shift: '2026-10-15T00:00:00.000Z' and '2026-10-15T23:30:00-07:00' both become '2026-10-15'. \"15 Jan 2026\" is read with dates.parseDayDate. A day with spaces around it (' 2026-09-25 ') loses the spaces; this case was added in review. After this, the Kanban card, the Details box, the Overview picker, the Summary, the List sorts and isFollowUpDue all read the date, and a follow-up date that has passed counts as due. A value it cannot read ('next week', '10/15/2026' where day and month order is unclear, '2026-02-31') is left as written. The Details box in src/pages/JobDetail.jsx now shows such a value as text instead of an empty row. A job whose days are already 'YYYY-MM-DD' comes back as the same object, and readJob reports nothing as lost. dates.js has no imports and is already on the start-up path through jobEdits, so Node still loads normalizeJob.js as it is.",
+      "remaining": "The Kanban deadline pill, the Overview date picker and the Summary's 'Upcoming deadlines' still do nothing useful with a value no one can read ('next week'). That value is left as written on purpose. A day saved as epoch milliseconds (readJob keeps it as its digits) is also left as written; see review issue 3.",
+      "failfirst_run": "36566220353 (green): ae784fe fails without the fix (its parent's files, # fail 5) and passes with it; c42c624 fails without the fix (its diff reversed, # fail 1) and passes with it. The named-tests job passed 101/101: the 2 new files plus normalize-job, job-import, job-query, job-store-resync, job-sync, pdf/81-job-tracker-ui and knowledge-docs. Lint passed. The fixer's earlier run was 36563643543."
+    }
+  ],
+  "review": {
+    "rounds": [
+      {
+        "round": 1,
+        "issues": [
+          "jobDay-padded-iso-day",
+          "failfirst-unit-by-missing-export",
+          "epoch-ms-days"
+        ]
+      }
+    ],
+    "issues": [
+      {
+        "id": "jobDay-padded-iso-day",
+        "severity": "low",
+        "detail": "jobDay trimmed the value to test it, but when the trimmed value was already 'YYYY-MM-DD' it returned the original, untrimmed string. ' 2026-09-25 ' therefore stayed as written. isFollowUpDue and the List sorts (jobQuery's ISO_DAY has no trim) and the Summary's string comparisons did not read it, so a follow-up date that had passed was never due. This is the same root cause the fix was meant to cure.",
+        "resolution": "fixed in c42c6245: jobDay returns the trimmed day. The new unit test 'a day with spaces around it is the bare day' checks completeJob, isFollowUpDue and sortJobs. The fail-first in run 36566220353 fails without the fix (# fail 1) and passes with it. f3a386f moves a sort assertion that my first edit had also put, by mistake, into the timestamp test, where the job has a generated id; run 36565900605 caught that."
+      },
+      {
+        "id": "failfirst-unit-by-missing-export",
+        "severity": "low",
+        "detail": "In the fixer's run 36563643543, the unit file failed without the fix only because it imported { jobDay }, and the parent commit does not export it. The whole file failed to load (# fail 2 = 1 unit file load failure + 1 pdf test). So the run never showed that its behaviour checks (timestamp → day, follow-up due) fail on their assertions.",
+        "resolution": "fixed in c42c6245: the unit file imports normalizeJob.js as a namespace and calls jobDay lazily. Without the fix, each test now fails on its own assertion. Run 36566220353 shows # fail 5 against ae784fe's parent files, with the file loading."
+      },
+      {
+        "id": "epoch-ms-days",
+        "severity": "low",
+        "detail": "A day another tool saved as epoch milliseconds (1760486400000) becomes its digits in readJob, and jobDay leaves it as written. The Details box now shows the digits as text; before, it showed an empty row.",
+        "resolution": "not changed: an instant has no single day without a time zone, and the fix only claims days written readably. The value is shown, not dropped. Noted in the row's 'remaining'."
+      }
+    ],
+    "fixedByReviewer": [
+      "c42c6245e3e77b90add692275d85879c92bbaee3",
+      "f3a386f769484b353fbcb3eae0a78a14a280c89c"
+    ],
+    "checked": [
+      "Every caller of completeJob (useJobStore load/readStored, mergeImport, useCollectionSync fromCloud) gets the same days. Local and cloud copies normalise alike, so the sync does not see a spurious difference, the same as the existing source/workMode repairs.",
+      "mergeImport's stable(mine) === stable(asOver(theirs, …)) compares two completed jobs. Re-importing a file with timestamps is skipped, not added again.",
+      "An old stored job with 'YYYY-MM-DD' days is returned as the same object, with no write and no recovery notice.",
+      "JobForm and OverviewTab write days from <input type=date>, which is already 'YYYY-MM-DD'.",
+      "jobsToCsv exports the normalised day."
+    ]
+  },
+  "rejected": [],
+  "a11yNoted": [],
+  "baselineFailures": [],
+  "notes": "One bug. The fixer's fix (ae784fe) cures the root cause for timestamps and 'D Mon YYYY'. Review found two issues and fixed them. First, a day with spaces around it was still unreadable by jobQuery (c42c624). Second, the unit fail-first proved only a missing export (the namespace import in c42c624, and a test-placement correction in f3a386f). Epoch-ms days are left as written by design. Final named run 36566220353 is green. The full gate has not run on this branch."
+}

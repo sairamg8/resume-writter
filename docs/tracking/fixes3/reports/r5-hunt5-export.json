@@ -1,0 +1,71 @@
+{
+  "cluster": "r5-hunt5-export",
+  "branch": "claude/wf-r5-hunt5-export",
+  "base": "87ffebb1151e9a8f1d7e91ab04896a66f2b3bd50",
+  "rows": [
+    {
+      "id": "R5-HUNT5-JSONRESUME-ROUNDTRIP-DESCRIPTION-REORDERED-AND-FLATTENED",
+      "title": "A JSON Resume export and import put every paragraph of an entry's description above one flat list of plain bullets",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": [
+        "20d90224ecc2992bc2d27e527c508a631b682c91"
+      ],
+      "tests": [
+        "tests/unit/r5-hunt5-jsonresume-description-roundtrip.unit.mjs"
+      ],
+      "summary": "Now: exporting to JSON Resume and importing the file back returns each description exactly as it printed. This covers jobs, education, projects, volunteering and custom sections. Block order, separate paragraphs, bold, italic, underline, strike, links, numbered lists and nesting all survive. The export still writes the plain summary and highlights (a project's description) that other tools read. It adds the sanitized rich text as descriptionHtml only when those alone would not rebuild the description, and legacy bullets count as a list after it. The import (descriptionFrom in src/utils/jsonResumeText.js) uses descriptionHtml only while the summary and highlights beside it are still the ones it was written with. Otherwise, for another tool's file or a file edited since, it rebuilds from them as before. This follows the same pattern as R2-006's summaryHtml. Hidden fields are blanked before the entry is built, so descriptionHtml never carries a hidden description. descriptionHtml is sanitized again on import, so an untrusted file cannot inject markup.",
+      "failfirst_run": "36563015643 (green: the test file fails without the fix with 1 failure, the round trip; it passes with the fix; the other 3 tests check behaviour that already held)"
+    },
+    {
+      "id": "R5-HUNT5-CLEARED-SECTION-TITLE-PRINTS-TYPE-ID-MD-ATS",
+      "title": "A section title the user cleared printed the internal type key ('## custom', 'CUSTOM') in the Markdown and ATS text exports",
+      "severity": "low",
+      "outcome": "fixed",
+      "commits": [
+        "65f416a2c06e616c04446f2aadc63c16df8166f7"
+      ],
+      "tests": [
+        "tests/unit/r5-hunt5-cleared-section-title-md-ats.unit.mjs"
+      ],
+      "summary": "Now: a section title that is empty or only spaces prints no heading in Markdown (src/utils/markdownExport.js). In ATS text (src/utils/atsPlainText.js) it prints only the rule. This matches the PDF and Word, which print no title text (Word uses String(section.title || '')). A null or missing title still falls back to the type. That case never reaches an export, because withSectionShapes (src/utils/sectionShapes.js) fills a null title with the type's default title and keeps an empty string as the user's choice. A typed title is now trimmed in both exports.",
+      "failfirst_run": "36563015643 (green: the test file fails without the fix with 3 failures and passes with it)"
+    }
+  ],
+  "review": {
+    "rounds": [
+      {
+        "round": 1,
+        "issues": [
+          "Markdown: a cleared-title section has no heading, so its entries read under the previous '## ' heading, and a Markdown import attaches them to the previous section",
+          "The share panel's publicSummary (src/utils/publicLink.js:117) still lists a cleared-title section by its type key",
+          "JSON Resume: when sanitizing a stored description would change its text, the import's comparison fails and falls back to the old summary + highlights rebuild",
+          "The fixer ran node --test locally once, against CLAUDE.md"
+        ]
+      }
+    ],
+    "issues": [
+      {
+        "issue": "Markdown: a cleared-title section has no heading, so its entries read under the previous '## ' heading, and a Markdown import attaches them to the previous section",
+        "resolution": "Accepted, no change. The PDF and Word also print no title for this section, so importing them has the same result. Import is best-effort (R2-148). Printing the raw type key was the defect, and a made-up heading would print text the résumé does not show."
+      },
+      {
+        "issue": "The share panel's publicSummary (src/utils/publicLink.js:117) still lists a cleared-title section by its type key ('custom: 1 entry')",
+        "resolution": "Not changed: this is an owner-facing list of what the link shows, not an export, and the owner needs some label to identify the section. It is outside this cluster's export scope."
+      },
+      {
+        "issue": "JSON Resume: when sanitizing a stored description would change its text, the import's comparison fails and falls back to the old summary + highlights rebuild",
+        "resolution": "Accepted: this only degrades to the pre-fix behaviour and never loses text. Stored descriptions are already editor-sanitized, and sanitizeRichText rebuilds from parsed blocks, so it is canonical and idempotent."
+      },
+      {
+        "issue": "The fixer ran node --test locally once, against CLAUDE.md",
+        "resolution": "Process note only. All evidence used is from CI run 36563015643. Both fail-first logs were read and the named-test job passed 467/467 across 62 files, including every JSON Resume, Markdown and ATS unit test and pdf tests 70-markdown-parity and 99-import-roundtrip."
+      }
+    ],
+    "fixedByReviewer": []
+  },
+  "rejected": [],
+  "a11yNoted": [],
+  "baselineFailures": [],
+  "notes": "Review checked every exporter and caller. Callers of SECTION_KEYS: jsonResumeExport.js and jsonResumeImport.js. Callers of customEntry/customItem: meta custom sections. Other 'title || type' fallbacks: only publicLink.js. The Word heading path was checked for empty titles, and the Cypress specs 29-exports-imports and 03-export only assert fields that are unchanged. Old files without descriptionHtml import as before. CI run 36563015643 was green (lint, both failfirst jobs, named tests). Build, the full node suite, Playwright and Cypress were skipped, so the batch gate must cover them before master."
+}
