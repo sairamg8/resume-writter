@@ -1,0 +1,48 @@
+{
+  "cluster": "r5-hunt6-export",
+  "branch": "claude/wf-r5-hunt6-export",
+  "base": "a79efd8b",
+  "rows": [
+    {
+      "id": "R5-HUNT6-LETTER-TEXT-IGNORES-LINK-URL-OVERRIDE",
+      "title": "Cover Letter Text (.txt) dropped an unlabelled website/LinkedIn/GitHub's Link URL",
+      "outcome": "fixed",
+      "commits": ["18810c12d7309302191ff51d7890ae42b49a423a"],
+      "tests": ["tests/pdf/r5hunt6-letter-text-link-url.test.mjs"],
+      "summary": "Now: an unlabelled link with a Link URL prints 'value (address)', as the labelled case does. When the address is the typed value again it prints once, and an override the PDF would not follow adds nothing. Fix in src/utils/coverLetterText.js contactText.",
+      "failfirst_run": "36603709820 (green: fails with the diff reversed, passes with it)"
+    },
+    {
+      "id": "R5-HUNT6-JSON-RESUME-IGNORES-LINK-URL-OVERRIDE",
+      "title": "JSON Resume basics.url / profiles[].url held the typed value, not the Link URL override",
+      "outcome": "fixed",
+      "commits": ["ab219156177e47f869f9d79c95b6e9a007e39641"],
+      "tests": ["tests/unit/r5-hunt6-jsonresume-link-url.unit.mjs"],
+      "summary": "Now: the schema's url fields hold the override when it is set and safe (contactHref). The typed value rides as the app key basics.<key>Text, and jsonResumeImport puts it back. Files from older versions have no <key>Text and import as before. Fix in src/utils/jsonResumeExport.js and src/utils/jsonResumeImport.js.",
+      "failfirst_run": "36603709820 (green: # fail 1 with the diff reversed, passes with it)"
+    },
+    {
+      "id": "R5-HUNT6-SHARE-SUMMARY-CLEARED-TITLE-TYPE-ID",
+      "title": "Share panel listed a section with a cleared title by its internal key ('custom: 2 entries')",
+      "outcome": "fixed",
+      "commits": ["2014e01828df81ea86b9f01e8107df59ba9cc3f2"],
+      "tests": ["tests/pdf/r5hunt6-share-summary-cleared-title.test.mjs"],
+      "summary": "Now: publicSummary names such a section by its type's default name ('Custom Section', 'Professional Experience'). A title of only spaces counts as cleared. Fix in src/utils/publicLink.js sectionName.",
+      "failfirst_run": "36603709820 (green)"
+    }
+  ],
+  "review": {
+    "issuesFound": [],
+    "issuesFixed": [],
+    "open": [
+      "Not blocking, outside this cluster: in atsChecker.js, 'Entries printed side by side' names a custom section with a cleared title by its type key ('\"custom\"'). This is the same family as R5-HUNT6-SHARE-SUMMARY-CLEARED-TITLE-TYPE-ID. It is part of the Grids/column-layout check (R2-147, out of scope), so it was noted, not fixed."
+    ],
+    "ciRuns": [
+      "36603709820 (fail-first for all 3 commits, plus lint: green; logs read by the reviewer)",
+      "36603725069 (named tests on 2014e01: 293 pass, 0 fail)"
+    ],
+    "notes": "Reviewed a79efd8b..2014e01 adversarially. Each fix addresses the root cause. The other exports already follow the Link URL: the PDF, Word (résumé and letter) and Markdown through contactItems' href, and the ATS text since R5-HUNT4. No existing test was changed. All 3 commits have author and committer sairamgudiputi <sairamgudiputi8@gmail.com>, carry no trailers and use the fix(<area>) style. The JSON import reads <key>Text only when the matching url was found, so hand-written files and files from older versions are unaffected."
+  },
+  "a11yNoted": [],
+  "baselineFailures": []
+}
