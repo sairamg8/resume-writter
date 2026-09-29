@@ -398,6 +398,8 @@ function metaOf(piece) {
   const key = m[1].toLowerCase();
   return { key: META_KEYS[key] || key, value: m[2].trim() };
 }
+/** A dated line's text fields, its date left out: "Acme Corp ⇥ Jan 2020 – Present", "Acme Corp, 2020" → ["Acme Corp"]. */
+const datedFields = (text) => pieces(text).flatMap((p) => (readDateRange(p) ? [] : [trailingDate(p)?.rest ?? p])).filter(Boolean);
 const isMetaLine = (text) => { const p = pieces(text); return p.length > 0 && p.every((x) => metaOf(x)); };
 
 /** Words a job title holds, and a company's name rarely does: which of two fields is the role. */
@@ -885,6 +887,18 @@ function entriesOf(type, lines, aside) {
       }
       while (i < info.length && !info[i].bullet && !info[i].gap && isMetaLine(info[i].text)) header.push(info[i++]);
       if (type === 'experience' && !L.date.first) group = roleOfGroup(header, group);
+      // Nothing under it, and one field before its date: the title prints on the line over it ("Bachelor
+      // of Science" over "University of Oregon ⇥ 2014 – 2018", "Senior Engineer" over "Acme Corp ⇥ …"),
+      // where it starts a block. Before, that line went into the description, or the job above's.
+      if (!L.date.first && !header[0].group && header.length === 1 && SECOND_LINE.has(type)
+        && datedFields(L.text).length === 1) {
+        const body = pool();
+        const b = body[body.length - 1];
+        const before = b && info[b.index - 1];
+        if (b && b.index === L.index - 1 && !L.gap && !b.bullet && !b.date && b.hint !== 'entry' && b.text.length <= 100
+          && !/[.!?:;,]$/.test(b.text) && !isMetaLine(b.text) && pieces(b.text).length === 1
+          && (b.gap || !before || before.bullet || cur?.header.includes(before))) header.unshift(body.pop());
+      }
       start(header);
       continue;
     }
