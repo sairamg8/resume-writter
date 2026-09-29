@@ -1,0 +1,131 @@
+{
+  "cluster": "r5-hunt1-import",
+  "branch": "claude/wf-r5-hunt1-import",
+  "base": "5e26a0f91c1184c5fa1fa8031bd110055ec5c90c",
+  "rows": [
+    {
+      "id": "R5-HUNT1-JSONRESUME-LEGACY-SCHEMA-FIELDS-LOST",
+      "title": "A pre-1.0 JSON Resume file loses every job's company, the GPA, website, photo and publication links, and a username-only profile gets no LinkedIn or GitHub",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": [
+        "3070341f125058c5f98b85a23bfe5bb6f56fab25",
+        "16bc1822f7574a2a00927ad683eb1c0576aca570"
+      ],
+      "tests": [
+        "tests/unit/json-resume-legacy-fields.unit.mjs"
+      ],
+      "summary": "Now: if a v1.0.0 field name is missing, the JSON Resume import reads the pre-1.0 name instead. work.company fills the company, education.gpa the GPA, basics.website the website, basics.picture the photo, and publications.website the publication's link. When a file has both names, the v1 value is used. A LinkedIn or GitHub profile with a username and no url gets linkedin.com/in/<user> or github.com/<user>. A url still takes priority when there is one. Review fix 16bc182: a username that is already the address ('https://www.linkedin.com/in/jane') is used as it is. Before, that became 'linkedin.com/in/https://www.linkedin.com/in/jane'. A username that is not a handle ('Jane Doe') no longer builds a broken link.",
+      "failfirst_run": "36524639503 (green: 3070341's test fails without it, 2 failures); 36526846562 (green: 16bc182's test fails without it)"
+    },
+    {
+      "id": "R5-HUNT1-TEXT-IMPORT-EDUCATION-DEGREE-COMMA-SCHOOL",
+      "title": "An education line typed 'Degree Subject, School' imports the school as the field of study, and 'School, Degree' as all school",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": [
+        "13e171e0fdf427f20738f212bf19f9db0b455a82",
+        "d9728a6360b7669297cdb30dce69fc39a05474dd"
+      ],
+      "tests": [
+        "tests/unit/r5-hunt1-education-degree-comma-school.unit.mjs"
+      ],
+      "summary": "Now: 'BSc Computer Science, Stanford University', 'B.S. Computer Science, Georgia Tech' and 'BSc in Computer Science, MIT' import as that degree at that institution when no school was found elsewhere in the entry. 'Massachusetts Institute of Technology, BSc Computer Science' splits into the institution and the degree. Review fix d9728a6 addresses three problems. (1) A degree's own name ('of Science', 'of Arts') no longer counts as its subject, so 'Bachelor of Science, Biochemistry', 'Bachelor of Arts, French' and 'Master of Science, Neuroscience' keep the field of study they had before. (2) A grade ('2:1', '3.8/4.0') or a place ('Boston, MA') after the comma is not read as a school. (3) The 'School, Degree' split skips a place, so 'Harvard University, Cambridge, MA' over 'BA Economics' keeps BA Economics as the degree. Before, the state code 'MA' or 'MD' was read as the degree and the real degree went into the description. 'B.S., Computer Science', 'Master of Science, Computer Science' and 'University of California, Berkeley' import as before.",
+      "failfirst_run": "36524639503 (green: 13e171e's test fails without it, 2 failures); 36526846562 (green: d9728a6's test fails without it)"
+    },
+    {
+      "id": "R5-HUNT1-TEXT-IMPORT-COMPANY-LOCATION-AS-ROLE",
+      "title": "'Company — City, ST' over the job title imports the city as the role and the title as description",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": [
+        "db916e3815e3a48d8aec53d95a4f6a6a210f5512",
+        "f7e749ebffbfcaf9dd1371ea8a025740f338392b",
+        "72f96188b4528f4acbe937d0193da5fbe8979cbd"
+      ],
+      "tests": [
+        "tests/unit/r5-hunt1-company-place-over-role.unit.mjs"
+      ],
+      "summary": "Now: 'Google — Mountain View, CA' over 'Software Engineer' imports as company Google, location 'Mountain View, CA' and role Software Engineer. Review fix 72f9618 covers the usual layout, where the dates sit at the right of the role line ('Software Engineer ⇥ Jan 2020 – Present'). There the employer line was read as a two-field job title, went into the description, and the job had no company. It is now the employer and its place, and each role under it gets both. 'Acme - Engineer ⇥ dates' still imports as one job title. Review fix f7e749e: a company's legal ending after its comma ('Blue Bottle, LLC', 'Acme, Inc.') is not a place, and when neither field has a role word it marks the company. So 'Barista — Blue Bottle, LLC' and 'Member of Technical Staff — Acme, Inc.' import with the right company and role. After the first fix those companies had become the location, and before any fix the company and role were swapped. Two-letter endings that are also place codes (CO, SA, AB, NV) are not treated as legal endings, so 'Google — Denver, CO' still gets its location.",
+      "failfirst_run": "36524639503 (green: db916e3's test fails without it, 2 failures); 36526846562 (green: f7e749e); 36526935917 (green: 72f9618)"
+    }
+  ],
+  "review": {
+    "rounds": [
+      {
+        "round": 1,
+        "issues": [
+          "education-degree-name-as-subject",
+          "education-state-code-as-degree",
+          "education-grade-as-school",
+          "company-legal-ending-as-location",
+          "company-place-dated-role-line-uncovered",
+          "profile-username-url-doubled"
+        ]
+      }
+    ]
+    ,
+    "issues": [
+      {
+        "id": "education-degree-name-as-subject",
+        "severity": "medium",
+        "detail": "13e171e counted 'of Science' in 'Bachelor of Science' as the degree's subject. So any field after the comma that SUBJECT does not list became the institution: 'Bachelor of Science, Biochemistry', 'Bachelor of Arts, French', 'Master of Science, Neuroscience'. The base imported these as the field of study. This was a regression, and also a round-trip loss for an entry exported with a degree and a field but no school.",
+        "resolution": "fixed in d9728a6: a DEGREE_NAME pattern removes the degree's own name before the subject check. Test added; fail-first run 36526846562 is green."
+      },
+      {
+        "id": "education-state-code-as-degree",
+        "severity": "medium",
+        "detail": "13e171e's 'School, Degree' split matched the state codes MA, MD, MS and ME as degrees. 'Harvard University, Cambridge, MA' over 'BA Economics' imported with degree 'Cambridge, MA', and the real degree went into the description. This was a regression on a common US line.",
+        "resolution": "fixed in d9728a6: the split now requires that the part after the comma is not a place. Test added."
+      },
+      {
+        "id": "education-grade-as-school",
+        "severity": "low",
+        "detail": "13e171e read 'BSc Computer Science, 2:1' and 'BSc Computer Science, 3.8/4.0' with the grade as the institution. The base imported the grade as the field of study.",
+        "resolution": "fixed in d9728a6: the school must start with a letter and contain no digits, and must not be a place. Test added."
+      },
+      {
+        "id": "company-legal-ending-as-location",
+        "severity": "medium",
+        "detail": "db916e3 matched any 'X, Y' second field as a place. So 'Barista — Blue Bottle, LLC' and 'Member of Technical Staff — Acme, Inc.' with a third header line imported the company as the location and that third line as the role. A test in the original commit, 'Senior Engineer — Acme, Inc.', only passed because its title had a role word.",
+        "resolution": "fixed in f7e749e: a CORPORATE pattern excludes legal endings from the place rule, and roleFirst uses it to pick the company when neither field has a role word. Two-letter place codes (CO, SA, AB, NV) are left out of the pattern. Tests added, including 'Google — Denver, CO'."
+      },
+      {
+        "id": "company-place-dated-role-line-uncovered",
+        "severity": "medium",
+        "detail": "db916e3 fixed only the layout where the role is on its own line over the dates. With the dates at the right of the role line ('Software Engineer ⇥ Jan 2020 – Present', the common layout), employerOver rejected 'Google — Mountain View, CA' as a two-field job title. The line went into the description and the job had no company. This is the same root cause and was not cured.",
+        "resolution": "fixed in 72f9618: employerOver splits a dash-joined employer and place when neither names a role, the second is a place and it has no legal ending. Grouped roles and consecutive jobs are covered, and 'Acme - Engineer ⇥ dates' is unchanged. Test added; fail-first run 36526935917 is green."
+      },
+      {
+        "id": "profile-username-url-doubled",
+        "severity": "low",
+        "detail": "3070341 built the address by string concatenation. A username holding the full address became 'linkedin.com/in/https://www.linkedin.com/in/jane', and a display name became 'github.com/Jane Doe', which is a broken link printed in every export.",
+        "resolution": "fixed in 16bc182: a username that already contains the site's domain is used as it is, and only a handle ([letters, digits, _ . -]) builds an address. Test added."
+      }
+    ],
+    "fixedByReviewer": [
+      "d9728a6360b7669297cdb30dce69fc39a05474dd",
+      "f7e749ebffbfcaf9dd1371ea8a025740f338392b",
+      "16bc1822f7574a2a00927ad683eb1c0576aca570",
+      "72f96188b4528f4acbe937d0193da5fbe8979cbd"
+    ],
+    "failfirstLogsChecked": "Read the Fail-first step logs of run 36524639503. Each of the fixer's three tests reports 'fail without the fix (its diff reversed): # fail 2', then 'pass with it'. The reviewer's four commits have green fail-first jobs in runs 36526846562 and 36526935917."
+  },
+  "rejected": [
+    {
+      "candidate": "Other pre-1.0 JSON Resume names (work.website, volunteer.website)",
+      "reason": "The importer never reads the v1 url for work or volunteer entries either, so this is not a gap in the legacy-name fix. The other v0 names (awards.title, languages, skills) are the same in v1."
+    },
+    {
+      "candidate": "'BSc Computer Science, Neuroscience' (a second subject SUBJECT does not list) reads the second subject as the school",
+      "reason": "Rare, and ambiguous without a list of subjects. The common 'Bachelor of X, Field' form is fixed by d9728a6."
+    },
+    {
+      "candidate": "An employer line with no blank line before it, right after the previous job's bullets, is not taken as a grouped employer",
+      "reason": "This was already true before the branch and applies the same way to a bare 'Google' line. employerOver keeps this conservative on purpose so that a sentence ending the job above is not read as an employer."
+    }
+  ],
+  "a11yNoted": [],
+  "baselineFailures": [],
+  "notes": "Only importer code changed (src/utils/importText.js, src/utils/jsonResumeImport.js, src/utils/jsonResumeSections.js), so the PDF, Word, Markdown and ATS exporters and stored data are untouched. The import runs only on new files. Named-test runs 36526846562 (on 16bc182) and 36526935917 (on 72f9618) are green: 76 files, covering every test that touches importText, jsonResume, importFile or importDocument, plus the guards 31-contact-fields, 91-design-resets and knowledge-docs, along with lint and all fail-first jobs. Playwright, Cypress, the suite shards and build were skipped by input, so the full gate still has to run before master is fast-forwarded. Nothing under docs/tracking was edited."
+}
