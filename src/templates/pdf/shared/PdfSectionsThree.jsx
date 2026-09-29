@@ -6,8 +6,8 @@ import { contactHref } from '@/utils/contacts';
 import { formatDate } from '@/utils/dates';
 import { tint } from './pdfColors';
 import { ContactValue } from './PdfContact';
-import { lineBox } from './pdfMeasure';
-import { itemHeadPresence } from './PdfItemHeader';
+import { wrappedLines } from './pdfMeasure';
+import { headPresence, itemHeadPresence } from './PdfItemHeader';
 import { CSS_PX_TO_PT, DEFAULT_ITEM_GAP_PX } from './pdfUnits';
 import {
   SPACER,
@@ -29,12 +29,19 @@ export function ReferencesSection({ section, settings, marginBottom, spaceBefore
   const shade     = shadesOf(settings);
   const visibleItems = (section.items || []).filter(i => i.visible !== false);
   const alignStyle = centered ? { textAlign: 'center' } : {};
-  // A card is unbreakable: its title keeps the first row's tallest card with it — a line per field, one
-  // more for a field that wraps, its padding — or the title was left alone at a page's foot, its cards
-  // on the next page (T9: a long Compact résumé at Letter).
-  const line = lineBox({ fontFamily: settings?._pdfFontFamily, fontSize: baseSize }).height;
-  const fields = (item) => [item.name, item.jobTitle, item.company, item.relationship, item.email, item.phone].filter(Boolean).length;
-  const card = Math.ceil((Math.max(0, ...visibleItems.slice(0, cols).map(fields)) + 1) * line + 12);
+  // A card is unbreakable: its title keeps the first row's tallest card with it — each field's lines,
+  // wrapped at the card's text width (a Grids cell's, less its padding and border), one more, its padding
+  // — or the title was left alone at a page's foot, its cards on the next page (T9: a long Compact résumé
+  // at Letter). Counted as one line a field, a card whose job title and company wrapped was taller than
+  // that, and the title stayed while the card moved on (R5-HUNT4-PDF-REFERENCES-TITLE-PRESENCE-UNMEASURED).
+  const font = settings?._pdfFontFamily;
+  const nameBox = { fontFamily: font, fontSize: baseSize, fontWeight: 'bold' };
+  const textBox = { fontFamily: font, fontSize: baseSize };
+  const cardWidth = entryTextWidth(settings, cols) - 11;
+  const lines = (item) => wrappedLines(item.name, nameBox, cardWidth)
+    + [item.jobTitle, item.company, item.relationship, item.email, item.phone].reduce((n, f) => n + wrappedLines(f, textBox, cardWidth), 0);
+  const firstRow = visibleItems.slice(0, cols);
+  const card = firstRow.length ? headPresence({ lines: Math.max(...firstRow.map(lines)), styles: [nameBox, textBox], extra: 12 }) : 0;
 
   return (
     <View style={{ marginBottom, marginTop: spaceBefore }}>
