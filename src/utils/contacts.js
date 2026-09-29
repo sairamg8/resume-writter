@@ -49,8 +49,10 @@ export function contactHref(key, personal) {
 
 /**
  * The contact lines to print: [{ key, value, href }]. `value` is the "Display label" when the
- * field has one (website, LinkedIn, GitHub), else the value. `hidden` defaults to the résumé's
- * hidden fields; the cover letter passes its own.
+ * field has one (website, LinkedIn, GitHub), else the value. A field whose printed value is empty
+ * is left out — a website typed as just "https://" or "www." prints nothing, so it is no contact
+ * (R5-HUNT8-EMPTY-WEBSITE-CONTACT). `hidden` defaults to the résumé's hidden fields; the cover
+ * letter passes its own.
  */
 export function contactItems(personal, hidden = personal?.hiddenFields || []) {
   return CONTACT_KEYS
@@ -59,7 +61,8 @@ export function contactItems(personal, hidden = personal?.hiddenFields || []) {
       const raw = String(personal[key]).trim();
       const label = String(personal[`${key}Label`] || '').trim();
       return { key, value: label || (LINK_FIELDS.has(key) ? displayUrl(raw) : raw), href: contactHref(key, personal) };
-    });
+    })
+    .filter(({ value }) => value);
 }
 
 /** A URL as a résumé prints it: "https://www.linkedin.com/in/me/" → "linkedin.com/in/me". */
