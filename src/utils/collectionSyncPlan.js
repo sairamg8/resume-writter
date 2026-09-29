@@ -63,6 +63,10 @@ function weave(lead, other) {
  *   - on both sides, the newer `updatedAt` wins (this browser's on a tie) — but for this
  *     browser's untouched demo (`seed(item)`), never synced here: the account's copy wins;
  *   - that demo on this browser only joins an account with no items and no deletions, and no other;
+ *   - a demo (`seedIds`: the ids a first visit shows) this browser has not, never synced here and
+ *     not in the account either, was deleted here before any sign-in: it is listed as deleted, so
+ *     another browser's untouched demo does not bring it back to an account with nothing else in
+ *     it; an edited copy of the demo still wins over that deletion, as nothing typed is lost;
  *   - a deleted id stays deleted, but for a copy changed where the deletion was never seen (its
  *     version newer than the one this browser last saw): that edit wins, as a résumé's does (R2-029);
  *   - one deleted here that another device changed since this browser last saw it comes back.
@@ -72,7 +76,7 @@ function weave(lead, other) {
  * leads, and what only this browser has follows as this browser had it. Moved on both sides, the
  * cloud's wins: the device that sent first.
  */
-export function planFirstSync({ local, versions = {}, localDeletes = [], docs, deleted = [], order = [], baseOrder = null, localOrder = [], seed = () => false }) {
+export function planFirstSync({ local, versions = {}, localDeletes = [], docs, deleted = [], order = [], baseOrder = null, localOrder = [], seed = () => false, seedIds = [] }) {
   const gone = new Set(deleted);
   const dropped = new Set(localDeletes);
   const cloudById = new Map(docs.map((d) => [d.id, d]));
@@ -92,7 +96,10 @@ export function planFirstSync({ local, versions = {}, localDeletes = [], docs, d
       continue;
     }
     if (gone.has(id)) {
-      if (mine && changedSince(mine)) { keep.set(id, mine); sets.push(mine); } else if (theirs) deletes.push(id);
+      // The demo, filled in on this browser before its first sync, is typed work like any edit made
+      // where the deletion was never seen: it wins (the demo's id is the same on every browser).
+      const filledDemo = mine && !known(id) && seedIds.includes(id) && !seed(mine);
+      if (mine && (changedSince(mine) || filledDemo)) { keep.set(id, mine); sets.push(mine); } else if (theirs) deletes.push(id);
       continue;
     }
     if (mine && theirs) {
@@ -112,6 +119,12 @@ export function planFirstSync({ local, versions = {}, localDeletes = [], docs, d
       keep.set(id, mine);
       sets.push(mine);
     } else keep.set(id, theirs);
+  }
+  // The demo deleted here before this browser ever synced: nothing else would tell the account, and
+  // the next fresh browser's untouched demo, sent to an account with no list of its own, came back
+  // on every device (R5-HUNT4 review).
+  for (const id of seedIds) {
+    if (!localById.has(id) && !cloudById.has(id) && !gone.has(id) && !dropped.has(id) && !known(id)) deletes.push(id);
   }
 
   const here = [...new Set([...localOrder, ...local.map((x) => x.id)])];

@@ -221,8 +221,11 @@ aside for that account's next sign-in); signed out, nothing runs and the list is
 before. Two guards against losing the account's items: a first visit's demo
 job or project, untouched (`isUntouchedDemoJob` / `isUntouchedDemoBoard`, the store's `seed`),
 never wins over the account's copy of it, though dated newer, and never joins an account that
-already has items or deletions of its own (deleted before the first sign-in, it stays deleted:
-R5-HUNT4); and a saved list the store could not
+already has items or deletions of its own; and the demo deleted on a browser before its first
+sign-in (`seedIds`, the demo's fixed id, absent here, from the account and from this browser's
+record) is listed as deleted at that first sync, so it stays deleted even in an account with no
+other item, while a demo filled in on another browser before its first sign-in still wins over that
+deletion (R5-HUNT4); and a saved list the store could not
 read in full makes the record forget the versions (`forgetSynced`), so the items left out are
 merged back from the cloud instead of being deleted from it.
 

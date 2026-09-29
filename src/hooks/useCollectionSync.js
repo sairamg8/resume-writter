@@ -9,8 +9,8 @@ import { BOARDS_SYNC_KEY, JOBS_SYNC_KEY, collectionReport, localMeta } from '@/u
 import { browserCloudSync } from '@/utils/cloudSyncBrowser';
 import { completeJob, readJob } from '@/utils/normalizeJob';
 import { completeBoard, readBoard } from '@/utils/normalizeBoard';
-import { isUntouchedDemoJob } from '@/utils/jobEdits';
-import { isUntouchedDemoBoard } from '@/utils/boardDemo';
+import { DEMO_JOB_ID, isUntouchedDemoJob } from '@/utils/jobEdits';
+import { DEMO_BOARD_ID, isUntouchedDemoBoard } from '@/utils/boardDemo';
 import { jobsNow, replaceJobs, subscribe as subscribeJobs } from '@/hooks/useJobStore';
 import { boardsNow, replaceBoards, subscribe as subscribeBoards } from '@/hooks/boardStoreState';
 
@@ -33,7 +33,7 @@ export const jobSync = {
     items: jobsNow, replace: replaceJobs, subscribe: subscribeJobs,
     fromCloud: fromCloud(readJob, completeJob),
     label: (j) => [j.company, j.role].filter(Boolean).join(' — ') || 'Untitled job',
-    seed: isUntouchedDemoJob,
+    seed: isUntouchedDemoJob, seedIds: [DEMO_JOB_ID],
   },
   meta: () => localMeta(JOBS_SYNC_KEY),
 };
@@ -44,7 +44,7 @@ export const boardSync = {
     items: boardsNow, replace: replaceBoards, subscribe: subscribeBoards,
     fromCloud: fromCloud(readBoard, completeBoard),
     label: (b) => b.title || 'Untitled project',
-    seed: isUntouchedDemoBoard,
+    seed: isUntouchedDemoBoard, seedIds: [DEMO_BOARD_ID],
   },
   meta: () => localMeta(BOARDS_SYNC_KEY),
 };

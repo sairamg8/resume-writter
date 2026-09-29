@@ -54,6 +54,9 @@ const ISSUES = [
   ['task', 'Pay the electricity bill', 'done', 'medium', ['finance'], null, { ageDays: 6, doneDays: 1 }],
 ];
 
+/** The id of the demo project a first visit shows (makeDemoBoards): the same on every browser. */
+export const DEMO_BOARD_ID = 'demo_board_life';
+
 /**
  * The demo project as of `now` (ms): due dates from today (none overdue), timestamps a few days
  * back so "Recently updated" and "Created" read naturally.
@@ -97,7 +100,7 @@ export function makeDemoBoards(now = Date.now()) {
     };
   });
   return [{
-    id: 'demo_board_life',
+    id: DEMO_BOARD_ID,
     key: 'LIFE',
     title: 'Personal & Projects',
     description: 'Day-to-day life and side projects: capture in the Inbox, plan the week, focus on today.',
@@ -124,5 +127,5 @@ export function makeDemoBoards(now = Date.now()) {
  * the day it was shown, it looked newer than the demo project the user adopted and filled in.
  */
 export function isUntouchedDemoBoard(board) {
-  return board?.id === 'demo_board_life' && board.updatedAt === board.createdAt + 21 * DAY - HOUR;
+  return board?.id === DEMO_BOARD_ID && board.updatedAt === board.createdAt + 21 * DAY - HOUR;
 }

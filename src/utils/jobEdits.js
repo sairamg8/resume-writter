@@ -158,6 +158,9 @@ export function toggleTodo(todos, id, now = Date.now()) {
 
 const DAY = 24 * 60 * 60 * 1000;
 
+/** The id of the demo job a first visit shows (demoJobs): the same on every browser. */
+export const DEMO_JOB_ID = 'demo_1';
+
 /**
  * The demo job a first visit shows, dated from `now`: applied ten days ago, the steps since on the
  * days after, the next deadline five days ahead. Fixed dates in 2025/2026 contradicted each other
@@ -173,7 +176,7 @@ export function demoJobs(now = new Date()) {
     { status: 'interview', changedAt: Math.min(at(7, 10), now.getTime()) },
   ];
   return [{
-    id: 'demo_1', company: 'Google', role: 'Senior Frontend Engineer', status: 'interview',
+    id: DEMO_JOB_ID, company: 'Google', role: 'Senior Frontend Engineer', status: 'interview',
     url: '', location: 'Mountain View, CA', salary: '$180k – $250k',
     appliedDate: todayLocalISO(appliedDay), deadline: todayLocalISO(new Date(now.getTime() + 5 * DAY)),
     contact: 'Sarah Kim (Recruiter) · sarah@google.com',
@@ -198,6 +201,6 @@ export function demoJobs(now = new Date()) {
  */
 export function isUntouchedDemoJob(job) {
   const history = job?.statusHistory;
-  return job?.id === 'demo_1' && Array.isArray(history) && history.length === 4
+  return job?.id === DEMO_JOB_ID && Array.isArray(history) && history.length === 4
     && job.updatedAt === history[3]?.changedAt && job.createdAt === history[0]?.changedAt;
 }
