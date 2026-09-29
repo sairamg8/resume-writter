@@ -1,0 +1,20 @@
+{
+  "cluster": "r5-hunt8-export",
+  "branch": "claude/wf-r5-hunt8-export",
+  "base": "3d6ce27296ff0c635c46eba0303bb68049dc0853",
+  "rows": [
+    {
+      "id": "R5-HUNT8-WORD-XMLSAFE-GLUES-WORDS",
+      "title": "Word export joins the two words around a line-tab (U+000B) or form feed (U+000C) into one word, where Markdown and ATS text keep them apart",
+      "severity": "low",
+      "outcome": "fixed",
+      "commits": ["2714caa2daca2ea50e3717c4e888d9ef26ba1dd1"],
+      "tests": ["tests/pdf/r5hunt8-word-line-tab.test.mjs", "tests/pdf/r5hunt7-word-control-chars.test.mjs"],
+      "summary": "Now: xmlSafe turns a line tab or form feed into a space (other C0 controls and lone surrogates are still dropped), so the résumé and cover-letter .docx read 'Cut costs Saved time' / 'Led the team Shipped v2', as the Markdown and ATS text do, and the file still opens. The R5-HUNT7 test's glued 'AcmeCorp'/'Linebreak' expectations were updated to 'Acme Corp'/'Line break' (they only recorded that fix's side effect).",
+      "ci": [36638058733]
+    }
+  ],
+  "review": null,
+  "baselineFailures": [],
+  "notes": "CI run 36638058733: failfirst ok (4 fail without the fix, pass with it), named Word/docx/guard tests green, lint green. Base is origin/claude/r4-green at 3d6ce272 (the task text said 186c06ab; the branch had moved on)."
+}
