@@ -1,0 +1,47 @@
+{
+  "cluster": "r5-hunt1-editor",
+  "branch": "claude/wf-r5-hunt1-editor",
+  "base": "a89bdd239fc446369f4022218388e4f8e83c4daa",
+  "rows": [
+    {
+      "id": "R5-HUNT1-LATE-IMPORT-HIJACKS-OPEN-EDITOR",
+      "title": "An import that finishes after another résumé was opened takes over that résumé's editor",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": [
+        "5a7dd1881690a5daf3a682aa2e8ce24ddd84f456",
+        "72ead4bb0993f595286e1aa300d87dbc6a3f3d3e"
+      ],
+      "tests": [
+        "tests/pdf/52-editor-route.test.mjs"
+      ],
+      "summary": "Now: when an import finishes after you have opened another résumé, the imported résumé is added to the list but is not opened. The editor at /resume/B keeps showing and editing B the whole time; before, it showed and edited the imported résumé under B's address. There are two parts. (1) importResume (src/hooks/useResumeStore.js) no longer makes the imported résumé the open one. Every import that should open it navigates to /resume/:id, and useOpenResume opens it from there. Into an empty list the imported résumé is still the open one, so activeId always names a stored résumé. (2) useOpenResume (src/hooks/useOpenResume.js) now puts the address's résumé back whenever the store's activeId differs from it, not only when the address changes. An import made from the editor opens the imported résumé once; the old one no longer flashes back in between. Tests in 52-editor-route: (a) a stand-in store whose activeId moves while the address stays /resume/resume_b; (b) with the app's real store, an import plus navigation from the editor shows the imported résumé without A coming back, and a late import never shows in B's editor; (c) an import into an empty list is the open one.",
+      "failfirst_run": "36524080372 (5a7dd18: '# fail 1' without the fix, passes with it); 36526315678 (72ead4b: '# fail 2' without the fix, passes with it; named tests 38/38 incl. 16-saved-data-import, 16-saved-data-two-tabs, imp-import-busy, 102-r4-dux-17, 99-import-ui, knowledge-docs; Cypress 01-dashboard and 11-demo-account-keep green)"
+    }
+  ],
+  "review": {
+    "rounds": [
+      {
+        "round": 1,
+        "issues": [
+          "useOpenResume re-syncing on every activeId change, while importResume still opened the imported résumé, made every import from the editor flash: the imported résumé, then the old one, then the imported one again. React Router v7's RouterProvider applies the address change in a startTransition, one render after the store's update, and in that render the hook put the old résumé back."
+        ]
+      }
+    ],
+    "issues": [
+      {
+        "issue": "Regression from 5a7dd18: after an import from the editor, the old résumé flashed back for a render or two before the imported one (the store update and the router's transition render separately).",
+        "resolution": "fixed in 72ead4b: importResume adds the résumé without opening it (except into an empty list), so the navigation to /resume/:id is what opens it. The real-store test fails without it ('# fail 2', run 36526315678) and passes with it."
+      }
+    ],
+    "fixedByReviewer": [
+      "72ead4bb0993f595286e1aa300d87dbc6a3f3d3e"
+    ]
+  },
+  "rejected": [
+    "A JSON import (Dashboard or editor FileReader onload) that finishes after the user left still navigates to the imported résumé, because its navigate is not gated like the document import's. Reading a JSON file takes milliseconds, so the user has practically no chance to open another résumé first. Not reported."
+  ],
+  "a11yNoted": [],
+  "baselineFailures": [],
+  "notes": "Fixer's fail-first (run 36524080372) is genuine: its diff reversed gives '# fail 1', and the test passes with it. The review found the fix correct for the late import but found it made every import from the editor flash the old résumé. 72ead4b fixes the root cause in the store (importResume no longer opens the imported résumé) and keeps the hook change as a safety net. Callers checked: useEditorExports (JSON and document), importDocument, Dashboard (JSON and document). All that open the import navigate to /resume/:id. docs/knowledge/02-architecture.md is updated."
+}

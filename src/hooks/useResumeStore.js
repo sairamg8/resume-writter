@@ -278,12 +278,21 @@ export function useAppStore() {
   /**
    * A résumé from a file, as a new one. `keep`: marked as the account's original (useDemoSeed) —
    * never because the file says so. Made current against the file's own `updatedAt` — which build
-   * last saved it (normalizeResume) — before it is stamped as new here.
+   * last saved it (normalizeResume) — before it is stamped as new here. It is not made the open one:
+   * the caller goes to it (/resume/:id, whose useOpenResume opens it) when it still should. An import
+   * that finishes after the user opened another résumé does not go there, and making it the open one
+   * here showed it — and took the edits — under that one's address (R5-HUNT1-LATE-IMPORT-HIJACKS-OPEN-EDITOR);
+   * the editor that puts its own back meanwhile flashed the old résumé after every import from the editor,
+   * the address changing a render later (a router transition).
    */
   function importResume(data, { keep = false } = {}) {
     const id = newId('resume');
     const imported = withKeep(normalizeResume({ ...JSON.parse(JSON.stringify(data)), id }), keep, Date.now());
-    setAppState(prev => ({ ...prev, resumes: [...prev.resumes, imported], activeId: id }));
+    // With none open (an empty list), it is: the one activeResume shows, and edits go to.
+    setAppState(prev => ({
+      ...prev, resumes: [...prev.resumes, imported],
+      activeId: prev.resumes.some(r => r.id === prev.activeId) ? prev.activeId : id,
+    }));
     return id;
   }
 
