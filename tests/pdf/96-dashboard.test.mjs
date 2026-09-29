@@ -9,7 +9,7 @@
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { createElement } from 'react';
-import { MemoryRouter, useLocation } from 'react-router-dom';
+import { MemoryRouter, useLocation, matchPath } from 'react-router-dom';
 import { setup, teardown, resume, section, loadModule } from './harness.mjs';
 import { mount, elements, reactProps } from './fake-dom.mjs';
 import { patchFakeDom } from '../unit/ui-dom-harness.mjs';
@@ -59,6 +59,7 @@ async function dashboard(resumes = [], { user = null } = {}) {
   const { useAppStore } = await loadModule('/src/hooks/useResumeStore.js');
   const { Dashboard } = await loadModule('/src/pages/Dashboard.jsx');
   const { NewResume } = await loadModule('/src/pages/NewResume.jsx');
+  const { useOpenResume } = await loadModule('/src/hooks/useOpenResume.js');
   const storage = new MemoryStorage(resumes.length ? [[KEY, JSON.stringify({ resumes, activeId: resumes[0].id })]] : []);
   globalThis.localStorage = storage;
   const auth = { user, authLoading: false, cloudAvailable: false, signInWithGoogle: () => {}, signOut: () => {} };
@@ -73,11 +74,17 @@ async function dashboard(resumes = [], { user = null } = {}) {
   function NewPage({ store }) {
     return useLocation().pathname === '/new' ? createElement(NewResume, { store }) : null;
   }
+  // At /resume/:id, what the editor does first (Editor.jsx): it opens that résumé (useOpenResume) —
+  // an import adds its résumé without opening it, and going to /resume/:id opens it (R5-HUNT1 review).
+  function Opens({ store }) {
+    useOpenResume(store, matchPath('/resume/:id', useLocation().pathname)?.params.id);
+    return null;
+  }
   // The Dashboard stays on screen when it navigates: `where` says where it went.
   function Page() {
     box.store = useAppStore();
     return createElement(MemoryRouter, { initialEntries: ['/'], useTransitions: false },
-      createElement(Where), createElement(Dashboard, { store: box.store, auth, sync }), createElement(NewPage, { store: box.store }));
+      createElement(Where), createElement(Dashboard, { store: box.store, auth, sync }), createElement(NewPage, { store: box.store }), createElement(Opens, { store: box.store }));
   }
   const view = mount(Page, {});
   await settle();

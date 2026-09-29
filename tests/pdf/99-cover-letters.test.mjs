@@ -11,7 +11,7 @@ import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { createElement } from 'react';
 import { renderToString } from 'react-dom/server';
-import { MemoryRouter, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
+import { MemoryRouter, Routes, Route, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { setup, teardown, loadModule, renderCover, render, read, readDocx, allText } from './harness.mjs';
 import { mount, elements, reactProps } from './fake-dom.mjs';
 import { patchFakeDom } from '../unit/ui-dom-harness.mjs';
@@ -69,10 +69,15 @@ function cv(id, name, personal, updatedAt, extra = {}) {
 const text = (el) => el.textContent.replace(/\s+/g, ' ').trim();
 const inside = (el, tag) => { for (let n = el; n; n = n.parentNode) if (n.tagName === tag) return true; return false; };
 
-/** Where the page is: the path and query on the editor's route, or the dashboard. */
-function Editor() {
+/**
+ * Where the page is: the path and query on the editor's route, or the dashboard. Like the editor
+ * (Editor.jsx), it opens the address's résumé (useOpenResume): an import adds its résumé without
+ * opening it, and going to /resume/:id is what opens it (R5-HUNT1 review).
+ */
+function Editor({ store, useOpenResume }) {
   const location = useLocation();
   const navigate = useNavigate();
+  useOpenResume(store, useParams().id);
   return createElement('div', null,
     createElement('p', { 'data-where': '' }, location.pathname + location.search),
     createElement('button', { onClick: () => navigate('/') }, 'Back to dashboard'));
@@ -85,6 +90,7 @@ const sync = { syncStatus: 'idle', lastSynced: null, isOnline: true, heldResumes
 async function openApp(resumes, dataVersion = 13) {
   const { useAppStore } = await loadModule('/src/hooks/useResumeStore.js');
   const { Dashboard } = await loadModule('/src/pages/Dashboard.jsx');
+  const { useOpenResume } = await loadModule('/src/hooks/useOpenResume.js');
   globalThis.localStorage = new MemoryStorage([[KEY, JSON.stringify({ resumes, activeId: resumes[0]?.id ?? null, dataVersion, deletedIds: [] })]]);
   const saved = globalThis.confirm;
   globalThis.confirm = () => true;
@@ -94,7 +100,7 @@ async function openApp(resumes, dataVersion = 13) {
     return createElement(MemoryRouter, { initialEntries: ['/'] },
       createElement(Routes, null,
         createElement(Route, { path: '/', element: createElement(Dashboard, { store, auth, sync }) }),
-        createElement(Route, { path: '/resume/:id', element: createElement(Editor) })));
+        createElement(Route, { path: '/resume/:id', element: createElement(Editor, { store, useOpenResume }) })));
   }
   const view = mount(App, {});
   // The router commits a navigation from an effect, and the store saves from one: let them run.
