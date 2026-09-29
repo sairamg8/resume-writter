@@ -9,7 +9,7 @@
 import { before, after, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { createElement } from 'react';
-import { MemoryRouter, useLocation } from 'react-router-dom';
+import { MemoryRouter, useLocation, useNavigate } from 'react-router-dom';
 import { setup, teardown, resume, loadModule } from './harness.mjs';
 import { mount, elements, reactProps } from './fake-dom.mjs';
 import { patchFakeDom } from '../unit/ui-dom-harness.mjs';
@@ -31,10 +31,11 @@ async function dashboard(resumes) {
   globalThis.localStorage = new MemoryStorage(resumes.length ? [[KEY, JSON.stringify({ resumes, activeId: resumes[0].id })]] : []);
   const auth = { user: null, authLoading: false, cloudAvailable: false, signInWithGoogle() {}, signOut() {} };
   const sync = { syncStatus: 'idle', lastSynced: null, isOnline: true, heldResumes: [] };
-  const box = { store: null, where: null };
+  const box = { store: null, where: null, navigate: null };
   function Where() {
     const at = useLocation();
     box.where = at.pathname + at.search;
+    box.navigate = useNavigate();
     return null;
   }
   function Page() {
@@ -67,6 +68,11 @@ async function dashboard(resumes) {
     button, card, doubleClick,
     resumes: () => box.store.appState.resumes,
     where: () => box.where,
+    // The browser's Back while the editor's code is still on its way: the dashboard never went away.
+    async back() {
+      view.act(() => { box.navigate(-1); });
+      await settle();
+    },
     async close() {
       await view.unmount();
       delete globalThis.localStorage;
@@ -114,5 +120,35 @@ it('a double-click on the dashed New Cover Letter card makes one letter', async 
     assert.equal(letters.length, 2, `the one there was and one new: ${letters.map((r) => r.name).join(' | ')}`);
     const made = letters.find((r) => r.id !== 'resume_l');
     assert.equal(page.where(), `/resume/${made.id}?tab=coverletter`);
+  } finally { await page.close(); }
+});
+
+// Review follow-up: Back before the editor arrives leaves the Dashboard mounted with its guard used, so
+// Copy and New Cover did nothing until the page mounted again. Back at "/" is a new visit.
+it("Back to the dashboard before the editor opens: a card's Copy works again, once", async () => {
+  const page = await dashboard([cv('resume_a', 'Harbor Pilot CV')]);
+  try {
+    await page.doubleClick(page.button('Copy', page.card('Harbor Pilot CV')));
+    assert.equal(page.resumes().length, 2, 'one copy');
+    await page.back();
+    assert.equal(page.where(), '/');
+    await page.doubleClick(page.button('Copy', page.card('Harbor Pilot CV')));
+    const copies = page.resumes().filter((r) => r.name === 'Harbor Pilot CV (Copy)');
+    assert.equal(copies.length, 2, `a second copy after Back, and only one: ${page.resumes().map((r) => r.name).join(' | ')}`);
+    assert.equal(page.where(), `/resume/${copies[1].id}`);
+  } finally { await page.close(); }
+});
+
+it('Back to the dashboard before the editor opens: New Cover works again, once', async () => {
+  const page = await dashboard([]);
+  try {
+    await page.doubleClick(page.button('New Cover'));
+    assert.equal(page.resumes().filter((r) => r.kind === 'letter').length, 1, 'one letter');
+    await page.back();
+    assert.equal(page.where(), '/');
+    await page.doubleClick(page.button('New Cover'));
+    const letters = page.resumes().filter((r) => r.kind === 'letter');
+    assert.equal(letters.length, 2, 'a second letter after Back, and only one');
+    assert.equal(page.where(), `/resume/${letters[1].id}?tab=coverletter`);
   } finally { await page.close(); }
 });

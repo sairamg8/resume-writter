@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { FileText, Plus, Upload, Mail as MailIcon, Briefcase, LayoutGrid } from 'lucide-react';
 import AuthBar from '@/components/AuthBar';
 import { ResumeCard } from '@/components/ResumeCard';
@@ -68,6 +68,12 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false, publicL
   // the dashboard stays clickable while its code loads — the second click of a double-click on New
   // Cover or a card's Copy made a second one.
   const made = useRef(false);
+  // Back to the dashboard before the editor's code arrives leaves this page mounted: the address it
+  // shows again is a new visit, so Copy and New Cover work again. While the editor is loading, the
+  // dashboard never shows another address (its route is the one waiting), so a double-click is still
+  // one.
+  const location = useLocation();
+  useEffect(() => { if (location.pathname === '/') made.current = false; }, [location]);
   function once(make, open) {
     if (made.current) return;
     const id = make();
