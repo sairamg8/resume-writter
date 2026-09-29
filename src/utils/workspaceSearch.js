@@ -8,8 +8,9 @@ const norm = (s) => String(s ?? '').toLowerCase().replace(/\s+/g, ' ').trim();
 /**
  * Up to `limit` results for `query` in `boards`: `[{ kind: 'project' | 'issue', id, title,
  * subtitle, key, type, color, to }]` — projects first, then issues whose key starts with the
- * query, then those whose title holds every word of it, open issues before done ones. An empty
- * query finds nothing.
+ * query (the one whose key is the query itself first: LIFE-10…LIFE-17 must not crowd LIFE-1 past
+ * the limit, as no longer query could reach it), then those whose title holds every word of it,
+ * open issues before done ones. An empty query finds nothing.
  */
 export function searchWorkspace(boards, query, { limit = 8 } = {}) {
   const q = norm(query);
@@ -37,5 +38,6 @@ export function searchWorkspace(boards, query, { limit = 8 } = {}) {
     }
   }
   const openFirst = (a, b) => Number(a.done) - Number(b.done);
-  return [...projects, ...byKey.sort(openFirst), ...byTitle.sort(openFirst)].slice(0, limit);
+  const exactFirst = (a, b) => Number(b.key.toLowerCase() === keyQuery) - Number(a.key.toLowerCase() === keyQuery) || openFirst(a, b);
+  return [...projects, ...byKey.sort(exactFirst), ...byTitle.sort(openFirst)].slice(0, limit);
 }
