@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import {
   ShieldCheck, AlertTriangle, XCircle, CheckCircle2, ChevronDown,
   Sparkles, Copy, Download, Briefcase, Columns2, FileText, Target, Plus, Check, Rows3
@@ -61,12 +61,25 @@ const LAYOUT_FIXES = {
   },
 };
 
+/** The section fixes' notice ids. */
+const FIX_NOTICES = ['ats-fix-headings', 'ats-fix-title-order', 'ats-fix-grids'];
+
 /**
  * The ATS Check tab. Its panel is one per résumé (keyed by its id), so the job description kept for
  * one is never shown, or saved, under another.
  */
 export default function AtsCheckerPanel(props) {
-  return <AtsCheck key={props.resume?.id ?? ''} {...props} />;
+  const { dismiss } = useToast();
+  const id = props.resume?.id;
+  // The fixes' notices go when another résumé opens here (the Editor, and its notices, stay mounted
+  // from /resume/A to /resume/B): their Undo is about the one they changed (R5-HUNT3).
+  const shown = useRef(id);
+  useEffect(() => {
+    if (shown.current === id) return;
+    shown.current = id;
+    FIX_NOTICES.forEach((notice) => dismiss(notice));
+  }, [id, dismiss]);
+  return <AtsCheck key={id ?? ''} {...props} />;
 }
 
 /** A string, the only thing the scanner's box saves. */
@@ -78,8 +91,12 @@ const count = (n, noun) => `${n} ${noun}${n === 1 ? '' : 's'}`;
 /** A section's heading as the notice quotes it. */
 const headingOf = (s) => `"${s?.title || s?.type || 'Untitled'}"`;
 
-/** An Undo's restore for one of a section's settings: the value it had, or no key where it had none. */
-const restoreSetting = (key) => (s, prev) => {
+/**
+ * An Undo's restore for one of a section's settings: the value it had, or no key where it had none —
+ * only while the section still holds the value the fix wrote (`now`), so a later edit is kept.
+ */
+const restoreSetting = (key) => (s, prev, now) => {
+  if (s.settings?.[key] !== now.settings?.[key]) return s;
   const settings = { ...s.settings };
   if (prev.settings && Object.hasOwn(prev.settings, key)) settings[key] = prev.settings[key];
   else delete settings[key];
@@ -125,7 +142,7 @@ function AtsCheck({ resume, store }) {
     applySectionFix('ats-fix-headings', standardizeSectionsForAts(resume.sections, resume.template), {
       title: (n) => `Renamed ${count(n, 'section heading')}`,
       description: (pairs) => pairs.map(([was, now]) => `${headingOf(was)} → ${headingOf(now)}`).join(', '),
-      restore: (s, prev) => ({ ...s, title: prev.title }),
+      restore: (s, prev, now) => (s.title === now.title ? { ...s, title: prev.title } : s),
     });
   }
 
@@ -136,9 +153,13 @@ function AtsCheck({ resume, store }) {
    * just the sections the fix changed, the one field it wrote (`restore(section, before)`), so an edit
    * made while the notice is up is kept. Each fix has its own notice (`id`), so running a second
    * one does not take the first one's Undo away. Nothing changed: nothing written, no notice.
+   * The Undo writes into the résumé the fix changed, never the one open when it is clicked: section
+   * ids repeat across résumés ('experience' in every blank one), and a restore writes only while the
+   * section still holds what the fix wrote (R5-HUNT3).
    */
   function applySectionFix(id, updated, { title, description, restore }) {
     const before = resume.sections;
+    const fixed = resume.id;
     const pairs = updated.flatMap((s, i) => (s !== before[i] ? [[before[i], s]] : []));
     if (!pairs.length) return;
     store.updateSections(updated);
@@ -150,7 +171,7 @@ function AtsCheck({ resume, store }) {
       ...(store.updateSection ? {
         action: {
           label: 'Undo',
-          onClick: () => pairs.forEach(([prev]) => store.updateSection(prev.id, (s) => restore(s, prev))),
+          onClick: () => pairs.forEach(([prev, now]) => store.updateSection(prev.id, (s) => restore(s, prev, now), fixed)),
         },
       } : {}),
     });
