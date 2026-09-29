@@ -428,6 +428,14 @@ function contactOf(segment) {
 /** A header line's pieces: split at tabs (a PDF's wide gaps, Word's tab stops) and at | • · ◆ ⋅ marks. */
 const headerPieces = (text) => text.split(/\t|\s+[|•·◆⋅∙▪]\s+|\s{3,}/).map((s) => s.trim()).filter(Boolean);
 
+/**
+ * A header piece without a list mark before it: contacts set as a bulleted list ("• jane@x.com", the
+ * Markdown's "- Email: …", a Word list) are read as contacts. Before, the mark stayed on the piece, so
+ * none was: the email became the job title, the rest went to "Additional Information", and a link's
+ * Display label began "• " (R5-HUNT7-BULLETED-HEADER-CONTACTS). Numbering ("1.") is no such mark here.
+ */
+const unbulleted = (piece) => piece.replace(/^[•◦▪▫▸►‣⁃●○■□✓✔➢➤*+\-–—]\s+/, '');
+
 /** Whether a header piece is a contact: one alone, or a link as linkText writes it, "GitHub (https://…)". */
 const isContact = (piece) => Boolean(contactOf(piece) || (LINKED.exec(piece) && contactOf(LINKED.exec(piece)[2])));
 
@@ -1314,21 +1322,22 @@ export function resumeFromText(input) {
   const takeContacts = (ls, { spill }) => {
     for (const l of ls) {
       const leftover = [];
-      for (const piece of headerPieces(l.text).flatMap((p) => contactRun(p) || [p])) {
+      for (const listed of headerPieces(l.text).flatMap((p) => contactRun(unbulleted(p)) || [p])) {
+        const piece = unbulleted(listed);
         if (BARE_LABEL.test(piece)) continue; // the name over a contact: its value says what it is
         // A link shown as its label, "LinkedIn (https://…)": the address is the contact, and the label
         // it was shown as its Display label (R4-IMP-02).
         const linked = LINKED.exec(piece);
         const lc = linked && contactOf(linked[2]);
         if (lc && lc.key !== 'location') {
-          if (personal[lc.key]) { leftover.push(piece); continue; }
+          if (personal[lc.key]) { leftover.push(listed); continue; }
           personal[lc.key] = lc.value;
           if (LABELLED_KEYS.has(lc.key) && linked[1]) personal[`${lc.key}Label`] = linked[1];
           continue;
         }
         const c = contactOf(piece);
         if (c && !personal[c.key]) personal[c.key] = c.value;
-        else leftover.push(piece); // not a contact, or a second one of a kind
+        else leftover.push(listed); // not a contact, or a second one of a kind
       }
       if (leftover.length) spill(leftover.join(' | '), l.links);
     }
@@ -1343,7 +1352,8 @@ export function resumeFromText(input) {
     const rest = [...head.slice(0, nameAt), ...(more.length ? [{ text: more.join('\t') }] : []), ...head.slice(nameAt + 1)];
     // The job title is the next line, or the one field set beside the name on its line (Compact's
     // Inline layout, "Name ⇥ Job Title"); a name line with more fields than that is a contact line.
-    const t = rest[0] && more.length <= 1 ? rest[0] : null;
+    // Without a list mark before it: a bulleted contact list's first line is no job title.
+    const t = rest[0] && more.length <= 1 ? { ...rest[0], text: unbulleted(rest[0].text) } : null;
     // A contact line set apart at dashes or commas is none either; one led by a field that is no
     // contact ("Backend Engineer — alex@kim.dev — Seattle, WA") gives the job title that field.
     const run = t && headerPieces(t.text).length === 1 ? contactRun(t.text) : null;
