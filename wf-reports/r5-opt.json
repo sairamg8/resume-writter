@@ -1,0 +1,112 @@
+{
+ "cluster": "r5-opt",
+ "branch": "claude/wf-r5-opt",
+ "base": "b8d7667",
+ "rows": [
+  {
+   "id": "R6a-review",
+   "outcome": "already-fixed",
+   "commits": [
+    "8e97533",
+    "e3b2030",
+    "d529431",
+    "e4cc82f",
+    "5f52d43",
+    "56e42bf"
+   ],
+   "tests": [
+    "tests/pdf/103-r4-dph-30-optimizer.test.mjs",
+    "tests/pdf/103-r4-dph-37-optimizer.test.mjs",
+    "tests/pdf/103-r4-dph-38-optimizer.test.mjs",
+    "tests/pdf/103-r4-dvis-07-optimizer.test.mjs",
+    "tests/pdf/103-r4-dph-41-quality-tiles.test.mjs",
+    "tests/pdf/103-r4-dph-42-verb-categories.test.mjs",
+    "tests/pdf/103-r4-dvis-23-optimizer-not-faded.test.mjs"
+   ],
+   "summary": "Review of the R6a (Bullet Optimizer) rows, all verdicts HOLD, no code change. Fail-first run 36518113356 (green): 8e97533 (DPH-30), e3b2030 (DVIS-07, DPH-37, DPH-38, and DVIS-23's test), d529431 (DPH-41), e4cc82f (DPH-42) each fail without their src change and pass with it; full gate 36463569183 on 9d40631 green. Code read at HEAD: textarea pointer-coarse:text-base (DPH-30/36); kit Dialog size lg, max-sm:h-dvh, overlay max-sm:p-0, body min-h-0 flex-1 overflow-y-auto (DPH-37); footer flex-wrap, kit buttons, Copy mr-auto (DPH-38); tiles grid-cols-1 sm:grid-cols-3 (DPH-41/43); verb row and categories flex-wrap, no max-w-[280px]/overflow-x-auto (DPH-42); the Dialog's own portal (DVIS-23, via 56e42bf; 5f52d43's outer Portal is gone, proven against e3b2030 in 36453755199 and again in 36518113356). Two claims were superseded on purpose: DVIS-07's 'Escape closes even after a rewrite' is reversed by R5-OPT-01, and DVIS-23's 'inside the kit Portal' is now the Dialog's portal.",
+   "remaining": "DPH-30/36/37/38 and DVIS-07 stay partial in the tracker only for their non-optimizer dialogs (Cover Letter Generator, Header Icon picker, NewLetter, ShareLink), which are the dlg cluster's scope."
+  },
+  {
+   "id": "R4-DUX-22",
+   "outcome": "fixed",
+   "commits": [
+    "8c430b5"
+   ],
+   "tests": [
+    "tests/pdf/104-r5-opt-dux-22-restore-through-edits.test.mjs",
+    "tests/pdf/102-r4-dux-22-template-undo.test.mjs"
+   ],
+   "summary": "Now: 'Restore my statement' stays after a template through typing, Auto-Fix, chips and more template picks, and brings back the user's own statement; it goes once used or once the text is that statement again. Fail-first run 36456232667."
+  },
+  {
+   "id": "R5-OPT-01",
+   "outcome": "fixed",
+   "commits": [
+    "bea64b2",
+    "0e3e18d"
+   ],
+   "tests": [
+    "tests/pdf/104-r5-opt-01-escape-keeps-edits.test.mjs"
+   ],
+   "summary": "Now: Escape closes the optimizer only while the statement is unchanged; after a rewrite it is ignored, and the ignored Escape stops at the optimizer so an issue dialog around the editor stays open. Fail-first runs 36456232667 (bea64b2), 36457682925 (0e3e18d)."
+  },
+  {
+   "id": "R4-SW-WT-01",
+   "outcome": "fixed",
+   "commits": [
+    "6d9ac2a"
+   ],
+   "tests": [
+    "tests/unit/r4-sw-wt-01-body-after-list.unit.mjs"
+   ],
+   "summary": "Now: body text after a list (a blockquote, a <dd>, a paragraph) ends the open ATS bullet and is not scored as a bullet. Fail-first run 36456232667."
+  },
+  {
+   "id": "R4-SW-WT-02",
+   "outcome": "fixed",
+   "commits": [
+    "39a5788",
+    "058d471",
+    "9d40631",
+    "681fecc",
+    "f9971a8"
+   ],
+   "tests": [
+    "tests/pdf/104-r5-opt-sw-wt-02-item-statement.test.mjs",
+    "tests/pdf/104-r5-opt-sw-wt-02-no-empty-line.test.mjs",
+    "tests/playwright/bullet-optimizer.spec.mjs"
+   ],
+   "summary": "Now: the optimizer opens a list item's whole own statement (text before and after a nested list), as the ATS scores it, and Apply rewrites it keeping the sub-list, leaving no <br> or empty paragraph (checked in Chromium). Fail-first runs 36456882224 (39a5788), 36462478655 (058d471, 9d40631)."
+  },
+  {
+   "id": "R4-SW-WT-03",
+   "outcome": "fixed",
+   "commits": [
+    "bc196c0",
+    "abe8409",
+    "f849efd",
+    "837fc9b",
+    "fe78717"
+   ],
+   "tests": [
+    "tests/unit/r4-sw-wt-03-one-weak-list.unit.mjs",
+    "tests/unit/r4-sw-wt-03-chip-keeps-infinitive.unit.mjs",
+    "tests/pdf/104-r5-opt-sw-wt-04-verb-chip-negative.test.mjs",
+    "tests/unit/r4-sw-wt-04-modal-helpers.unit.mjs"
+   ],
+   "summary": "Now: the ATS score and the optimizer read one weak-phrase list, every phrase with an Auto-Fix; a power-verb chip leaves a statement opening with a helper verb or negation (Did not, Was, Never, Could not, Can't, Won't) unchanged and shows a rewrite tip, and keeps 'efforts to' after 'Led'. The negative-chip part was filed as R4-SW-WT-04 in the commits. Fail-first runs 36456882224 (bc196c0, 837fc9b), 36459969462 (abe8409, fe78717)."
+  }
+ ],
+ "review": {
+  "issues": [
+   "Reviewer findings on 39a5788 (Chrome placeholders) and on the WT-03 test title were fixed in 058d471, 9d40631, f849efd, f9971a8, 681fecc"
+  ],
+  "fixedByReviewer": [
+   "058d471",
+   "9d40631",
+   "f849efd"
+  ]
+ },
+ "baselineFailures": [],
+ "notes": "Full gate on 9d40631: run 36463569183 green (suite 6/6, Playwright 3/3, Cypress 4/4, build, lint). Merges with claude/r4-green cleanly (git merge-tree). r4-green's Dialog makes a closing panel inert and pointer-events-none; the optimizer's Escape handling is in its onClose(reason) and Dialog's keydown on the wrapper, and close() is a no-op once open is false, so it is compatible. 5f52d43 is not re-proven on its own: 56e42bf removed its outer Portal, so the DVIS-23 test is proven against e3b2030 (the Dialog's portal)."
+}
