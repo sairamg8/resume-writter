@@ -132,7 +132,7 @@ export function jsonResumeToCpwtResume(jsonResume, customId) {
     // kept, not dropped: a web page as the website when the file names none, the rest listed under
     // "Profiles" to review, as the text import keeps the contacts it cannot place. An address with no
     // dot and no username ("42") names no page.
-    else if ((/\S\.\S/.test(url) || user) && url !== linkedin && url !== github) others.push({ network: storedText(p.network).trim(), address: /\S\.\S/.test(url) ? url : `@${user}` });
+    else if ((/\S\.\S/.test(url) || user) && !(url && (url === linkedin || url === github))) others.push({ network: storedText(p.network).trim(), address: /\S\.\S/.test(url) ? url : `@${user}` });
   }
   let website = storedText(b.url) || storedText(b.website); // `website`, `picture`: the pre-1.0 schema's names
   const webAt = website ? -1 : others.findIndex((o) => /website|portfolio|homepage|personal|blog/i.test(o.network) && !o.address.startsWith('@'));
