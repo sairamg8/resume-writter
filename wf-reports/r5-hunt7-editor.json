@@ -8,25 +8,52 @@
       "title": "A lettered or Roman-numbered list (a., i., A., I.) turned into 1., 2. when pasted or when an imported description was edited, and two numbered lists side by side merged into one count",
       "severity": "medium",
       "outcome": "fixed",
-      "commits": ["8007a62c1436f9518fd53aa9e7520bdf7eb5e7b3"],
-      "tests": ["tests/unit/r5-hunt7-list-type.unit.mjs"],
+      "commits": [
+        "8007a62c1436f9518fd53aa9e7520bdf7eb5e7b3",
+        "31d4969da6399128f6148d3f9e96c4ed836c24ea"
+      ],
+      "tests": [
+        "tests/unit/r5-hunt7-list-type.unit.mjs",
+        "tests/unit/r5-hunt7-word-list-start.unit.mjs"
+      ],
       "summary": "Now: a lettered or Roman-numbered list keeps its a. / i. / A. / I. markers and its start number (a list starting at c. still starts at c.) when it is pasted, including from Word for desktop, and after the editor stores it. The preview, PDF, Word, Markdown and ATS text all show the same markers. Two numbered lists side by side stay two lists, so the second starts again at 1. How: parseRichText now records, for each list item, which list it belongs to, that list's number type and the item's number. sanitizeRichText writes type= and start= back from these and closes an <ol> when the next item belongs to a different list. The stored HTML is stable: sanitizing it a second time changes nothing.",
       "product_call": null,
-      "remaining": ""
+      "remaining": "Markdown export writes a lettered item as '- a. text' and two side-by-side numbered lists as 1., 2., 1., which a Markdown renderer may read as one list (a Markdown limit, left as is). An <li value=...> in the middle of a list is still not written back (as before this round). The importer (importText) still makes a bare <ol> from 'a.' / 'i.' lines."
     },
     {
       "id": "R5-HUNT7-LINE-HEIGHT-COMMA",
       "title": "Design > Spacing > Line Height typed with a decimal comma (1,6) was stored as 1, so the whole resume was squeezed with no message",
       "severity": "medium",
       "outcome": "fixed",
-      "commits": ["c0927963468b09d547e61d9589879fb14348df76"],
-      "tests": ["tests/pdf/108-r5-hunt7-line-height-comma.test.mjs"],
+      "commits": [
+        "c0927963468b09d547e61d9589879fb14348df76"
+      ],
+      "tests": [
+        "tests/pdf/108-r5-hunt7-line-height-comma.test.mjs"
+      ],
       "summary": "Now: typing 1,6 or 2,4 in a Design number box (NumberRow, which includes Line Height) and pressing Enter stores 1.6 or 2.4, the same as typing 1.6. The header-spacing box already worked this way. Before the fix, parseFloat stopped at the comma and the minimum clamp kept 1.",
       "product_call": null,
       "remaining": ""
     }
   ],
-  "review": null,
+  "review": {
+    "by": "second agent",
+    "verdict": "fixed",
+    "issues": [
+      "R5-HUNT7-LIST-TYPE: a lettered list copied from Word for desktop from a later item ('c)', 'd)', 'l)', 'm)') came in as a Roman list (i., ii.), since every letter that is also a Roman digit was read as Roman, and a lettered or Roman Word list never kept where it starts ('iv.' became i.). This contradicted the row's claim that the start is kept on a Word paste. Fixed in 31d4969d: the typed marker gives both the type and the start; one letter is Roman only for i, v, x.",
+      "R5-HUNT7-LIST-TYPE (8007a62c) otherwise checked: only <ol> lists are split by list id, so the editor's own append of a bullet (<ul> merged by sanitizeRichText) is unchanged; nested lists, continuation paragraphs and body text after a list close as before; PDF, Word, ATS and cover-letter text read block.marker, so they keep a./i.; the extra block.list field is read by no exporter.",
+      "R5-HUNT7-LINE-HEIGHT-COMMA (c0927963) checked: root cause fixed in the shared NumberRow commit (Enter and blur); matches HeaderSpacingControls; the integer StepRow uses parseInt, where '12,5' still gives 12 as before. No issue."
+    ],
+    "commits": [
+      "31d4969da6399128f6148d3f9e96c4ed836c24ea"
+    ],
+    "ci": [
+      36612663577,
+      36612677918,
+      36614315686,
+      36614323932
+    ]
+  },
   "baselineFailures": [],
-  "notes": "CI on head c0927963: failfirst run 36612663577 green (8007a62c: tests/unit/r5-hunt7-list-type.unit.mjs, 4 tests fail without the fix and pass with it; c0927963: tests/pdf/108-r5-hunt7-line-height-comma.test.mjs, 1 test fails without the fix and passes with it). Named-tests run 36612677918 green: 305/305 across 40 files. These are the two new tests plus every node test that imports richText.js or DesignPanelShared.jsx, and knowledge-docs, contact-fields and design-resets. Lint is green in both runs. No Playwright or Cypress spec covers list types or typing a decimal comma. cypress/e2e/30-starters-and-design.cy.js touches Line Height only through its buttons and presets, so it was left to the full gate. Accessibility: nothing noted."
+  "notes": "CI on head c0927963: failfirst run 36612663577 green (8007a62c: tests/unit/r5-hunt7-list-type.unit.mjs, 4 tests fail without the fix and pass with it; c0927963: tests/pdf/108-r5-hunt7-line-height-comma.test.mjs, 1 test fails without the fix and passes with it). Named-tests run 36612677918 green: 305/305 across 40 files. These are the two new tests plus every node test that imports richText.js or DesignPanelShared.jsx, and knowledge-docs, contact-fields and design-resets. Lint is green in both runs. No Playwright or Cypress spec covers list types or typing a decimal comma. cypress/e2e/30-starters-and-design.cy.js touches Line Height only through its buttons and presets, so it was left to the full gate. Accessibility: nothing noted. Review: failfirst run 36614315686 green (31d4969d: tests/unit/r5-hunt7-word-list-start.unit.mjs, 2 tests fail without the fix and pass with it). Named-tests run 36614323932 green on 31d4969d: every node test that imports richText.js plus the two new tests of this round and the line-height test."
 }
