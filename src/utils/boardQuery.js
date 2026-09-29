@@ -48,6 +48,21 @@ export function dueBucket(due, today) {
 const anyOf = (list) => Array.isArray(list) && list.length > 0;
 
 /**
+ * `filters` without the epic and label ids that no longer name one of `board`'s epics or labels:
+ * the filters are page state, and an epic deleted (or retyped) from the issue view, or a label
+ * deleted, left an id that matched nothing and that no option could untick. The same object when
+ * nothing is stale.
+ */
+export function liveFilters(board, filters = {}) {
+  const epics = new Set(board.issues.filter((i) => i.type === 'epic').map((i) => i.id));
+  const labels = new Set(board.labels.map((l) => l.id));
+  const epicIds = Array.isArray(filters.epicIds) ? filters.epicIds.filter((id) => id === 'none' || epics.has(id)) : filters.epicIds;
+  const labelIds = Array.isArray(filters.labelIds) ? filters.labelIds.filter((id) => labels.has(id)) : filters.labelIds;
+  const same = (a, b) => a === b || (Array.isArray(a) && Array.isArray(b) && a.length === b.length);
+  return same(epicIds, filters.epicIds) && same(labelIds, filters.labelIds) ? filters : { ...filters, epicIds, labelIds };
+}
+
+/**
  * The issues of `board` (or the given `issues`) that match the filter bar, in rank order:
  *   text       over the key ('life-12'), the title and the description as plain text, case aside
  *   types / priorities / labelIds   any of them (empty: all); labelIds — an issue with any of them
@@ -55,7 +70,8 @@ const anyOf = (list) => Array.isArray(list) && list.length > 0;
  *   due        'overdue' (open and past due), 'today', 'week' (today to 7 days on), 'none'
  *   onlyOpen   leave out resolved issues (in a done column)
  */
-export function filterIssues(board, filters = {}, { now = Date.now(), issues = board.issues } = {}) {
+export function filterIssues(board, raw = {}, { now = Date.now(), issues = board.issues } = {}) {
+  const filters = liveFilters(board, raw); // an epic or label since deleted filters nothing
   const today = todayISO(now);
   const q = typeof filters.text === 'string' ? filters.text.trim().toLowerCase() : '';
   return issues.filter((i) => {

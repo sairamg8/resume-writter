@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { ISSUE_TYPES, PRIORITIES } from '@/constants/boards';
 import { Menu, MultiSelectPopover, SearchInput, cx } from '@/components/ui';
-import { epicsOf } from '@/utils/boardQuery';
+import { epicsOf, liveFilters } from '@/utils/boardQuery';
 
 export const EMPTY_FILTERS = { text: '', types: [], priorities: [], labelIds: [], epicIds: [], due: '' };
 
@@ -49,8 +49,10 @@ function FilterButton({ label, count, className, ...rest }) {
  * under it: wrapped over three or four rows they took about 150px of a phone's height, above a
  * board that scrolls in what is left (R4-DPH-06). From md up it is the one row it always was.
  */
-export function BoardToolbar({ board, filters, onChange, groupBy, onGroupBy, right }) {
+export function BoardToolbar({ board, filters: raw, onChange, groupBy, onGroupBy, right }) {
   const [open, setOpen] = useState(false);
+  // An epic or label deleted since it was ticked is neither counted nor kept by the next change.
+  const filters = liveFilters(board, raw);
   const set = (patch) => onChange({ ...filters, ...patch });
   const epics = epicsOf(board);
   // The values ticked and the quick filter; the search needs no count, its text is in the box.
