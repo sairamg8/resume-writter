@@ -1,5 +1,16 @@
 # Session Handoff — Resume Here
 
+**2026-09-29 18:25 UTC (owner's live session, session_01ETYRFaE8puvYdti25f3jzT):**
+- **master = `a561259c`** (owner merged PR #1, `claude/r4-green` → master, at 18:18 UTC, before its gate finished).
+  Its code is exactly `8acb687` (round 6 + listOwner fix); full gate 36610064297 on `8acb687` was still running
+  (lint, build, fail-first green). If that gate is red, the live site has the failure: fix it first.
+- **Owner's idea done:** role starters on /new take the user's own name, contacts, links and photo from their latest
+  résumé, not a sample person; the role's title, summary and sections stay as the example (`starterFrom`,
+  src/utils/newResume.js; `3a8c295`, test `9e8817a`). Fail-first + unit + Cypress 30 green (run 36611048610), second-agent
+  review clean. Now on `claude/r4-green` (`9e8817a`); full gate 36611051400 running on it. PR #2 (r4-green → master)
+  opened for the owner — merge only on a green full gate of its head.
+- The owner deploys by merging the r4-green → master PR on GitHub (no local push needed).
+
 **HUNT ROUND 6 DONE and merged (coordinator session_01FdiasXrhydMkPZHWFFd4KS, 2026-09-29):** 25 confirmed + fixed +
 reviewed (boards 3, jobs 3, dash 4, sync 3, editor 1, pdf 3, import 5, export 3; tools dry; Website-freeze lead: no loop
 found). Merge fixes: 8f0e3ad (category Undo sign-out guard, own test), 8acb687 (duplicate listOwner from jobs+sync broke
