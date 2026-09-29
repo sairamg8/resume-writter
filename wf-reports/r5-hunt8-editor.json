@@ -1,0 +1,26 @@
+{
+  "cluster": "r5-hunt8-editor",
+  "branch": "claude/wf-r5-hunt8-editor",
+  "base": "420f48750a442a9f052818176561b609c550075b",
+  "rows": [
+    {
+      "id": "R5-HUNT8-EMPTY-WEBSITE-CONTACT",
+      "title": "A website, LinkedIn or GitHub typed as just 'https://', 'http://' or 'www.' prints as a blank contact in the PDF, Word, Markdown and the cover letter",
+      "severity": "low",
+      "outcome": "fixed",
+      "commits": [
+        "e04e328ab672a069c48193472b6cee98e247f9d1",
+        "f2a8cf502001a34c1cd2fc4e204e4ac7d74efcd6"
+      ],
+      "tests": [
+        "tests/unit/r5-hunt8-empty-website-contact.unit.mjs",
+        "tests/pdf/r5hunt8-empty-website-contact.test.mjs"
+      ],
+      "summary": "Now: contactItems (src/utils/contacts.js) leaves out a contact whose printed value is empty, so a Website, LinkedIn or GitHub holding only a scheme or 'www.' prints no bare icon and no empty slot between separators, and the ATS check and header spacing do not count it, in every template and export. A Display label over such an address still prints.",
+      "ci": [36634654504]
+    }
+  ],
+  "review": null,
+  "baselineFailures": [],
+  "notes": "Base was origin/claude/r4-green at 420f487 when the branch was cut (the task text named 9519ef6b). First dispatch 36634419420 failed only because the unit test imported coverLetterText.js, which uses @/ aliases; the letter check moved to a harness test in f2a8cf5. Run 36634654504 was green: failfirst proves both tests fail without e04e328 and pass with it, and the contact, ATS, Markdown, JSON Resume, knowledge-docs and 31-contact-fields tests pass."
+}
