@@ -54,7 +54,8 @@ const entryOf = (key, pathname) => `${key} ${pathname}`;
  * document nothing to scroll, and the browser puts the offset back before the Dashboard is drawn
  * again, so it was clamped to 0: Back from a card's Edit opened the Dashboard at its top
  * (R5-HUNT6-DASH-BACK-LOSES-SCROLL). The offset is recorded from the scroll events, so it is the one
- * before the next page could clamp it. An entry with none recorded is still left to the browser.
+ * before the next page could clamp it. An entry with none recorded, or left at its top, is still
+ * left to the browser.
  */
 function RouteFrame({ children }) {
   const { key, pathname } = useLocation();
@@ -75,7 +76,11 @@ function RouteFrame({ children }) {
   }, [key, pathname]);
   useLayoutEffect(() => {
     const saved = navigationType === 'POP' ? windowOffsets.get(entryOf(key, pathname)) : 0;
-    if (saved === undefined) return;
+    // Back or Forward to an entry left at its top, or never left here, is the browser's as before.
+    if (navigationType === 'POP' && !(saved > 0)) {
+      lastOffset.current = window.scrollY || 0;
+      return;
+    }
     window.scrollTo(0, saved);
     lastOffset.current = saved;
     // Only a new path moves the scroll; the entry and the way we came are read with it.

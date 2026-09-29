@@ -22,6 +22,7 @@ before(async () => {
 });
 after(teardown);
 
+let visits = 0;
 async function app() {
   const { useAppStore } = await loadModule('/src/hooks/useResumeStore.js');
   const { AppRoutes } = await loadModule('/src/AppRoutes.jsx');
@@ -34,15 +35,21 @@ async function app() {
     box.where = useLocation().pathname;
     return null;
   }
-  function Page() {
+  // A key of its own for each test's first entry: the offsets are kept for the tab's life, and a
+  // MemoryRouter's first entry is always 'default'.
+  visits += 1;
+  const first = { pathname: '/', key: `visit${visits}` };
+  function Page({ ready }) {
     const store = useAppStore();
-    return createElement(MemoryRouter, { initialEntries: ['/'], useTransitions: false },
+    if (!ready) return null;
+    return createElement(MemoryRouter, { initialEntries: [first], useTransitions: false },
       createElement(Probe), createElement(AppRoutes, { store, auth, sync, seed: { waiting: false } }));
   }
-  const view = mount(Page, {});
+  const view = mount(Page, { ready: false });
   const scrolls = [];
   view.window.scrollY = 0;
   view.window.scrollTo = (x, y) => { scrolls.push(y); view.window.scrollY = y; };
+  view.update({ ready: true });
   await settle();
   return {
     scrolls,
@@ -66,11 +73,12 @@ it('Back to the Dashboard returns it to where it was scrolled, not its top', asy
     await page.go(-1);
     assert.equal(page.where(), '/');
     assert.equal(page.scrolls.at(-1), 800, `Back left the Dashboard at its top: ${JSON.stringify(page.scrolls)}`);
-    // And Forward to where that page was.
+    // Forward to a page left at its top is the browser's, as before; Back again finds the new offset.
     page.scroll(640);
+    const calls = page.scrolls.length;
     await page.go(1);
     assert.equal(page.where(), '/terms');
-    assert.equal(page.scrolls.at(-1), 0);
+    assert.equal(page.scrolls.length, calls, 'Forward to a page left at its top moved the window');
     await page.go(-1);
     assert.equal(page.scrolls.at(-1), 640, 'the offset the Dashboard was left at the second time');
   } finally { await page.close(); }
