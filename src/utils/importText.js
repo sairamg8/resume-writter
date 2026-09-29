@@ -1245,7 +1245,12 @@ export function resumeFromText(input) {
     // A contact line set apart at dashes or commas is none either; one led by a field that is no
     // contact ("Backend Engineer — alex@kim.dev — Seattle, WA") gives the job title that field.
     const run = t && headerPieces(t.text).length === 1 ? contactRun(t.text) : null;
-    if (t && headerPieces(t.text).length === 1 && !contactOf(t.text) && !run && t.text.length <= 80 && !/[.!?]$/.test(t.text)) {
+    // A job title with a comma in it ("Product Manager, Payments") reads as a place: a role word says
+    // it is the title, as the entries' rules check. Before, it became the location, and the real one
+    // on the contact line went to "Additional Information".
+    const contact = t && contactOf(t.text);
+    const role = contact?.key === 'location' && !LABEL.test(t.text) && ROLE.test(t.text);
+    if (t && headerPieces(t.text).length === 1 && (!contact || role) && !run && t.text.length <= 80 && !/[.!?]$/.test(t.text)) {
       personal.title = t.text;
       rest.shift();
     } else if (run && !isContact(run[0])) {
