@@ -1,0 +1,52 @@
+{
+  "cluster": "r5-hunt1-export",
+  "branch": "claude/wf-r5-hunt1-export",
+  "base": "5e26a0f91c1184c5fa1fa8031bd110055ec5c90c",
+  "rows": [
+    {
+      "id": "R5-HUNT1-WORD-LIST-INDENT-360-VS-720",
+      "title": "Word export: numbered items and in-item paragraphs indent on a 360-twip step while bullets use 720, so nested numbered lists show no nesting",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": [
+        "bcbd2156da87be0c8a628769b9d682558756bdfe"
+      ],
+      "tests": [
+        "tests/pdf/105-r5-hunt1-word-list-indent.test.mjs"
+      ],
+      "summary": "Now: in the Word export (résumé descriptions, the summary and the cover-letter body), numbered list items use the same geometry at every level as bullets. An item at level n has its text at 720 × (n + 1) twips, and its marker hangs 360 in front of it. That is how docx's default bullets (checked in docx 9.7.1: 720/1440/2160…, hanging 360) and bulletNumbering place theirs. A numbered list nested in a bullet now prints its '1.' at 1080, past the bullet's text at 720, and its text at 1440. Before, the '1.' sat in the bullet's glyph column and the text sat flush with the bullet's text. A top-level numbered list now lines up with top-level bullets (left 720). A further paragraph inside a list item starts at that item's text instead of under its glyph. A quote or <dd> outside any list lines up with a top-level item's text, as richText.js documents. The fix is in src/utils/wordExportUtils.js: LEVEL_TWIPS goes from 360 to 720, and a new MARKER_TWIPS = 360 sets the hanging indent. The Word importer reads list depth from w:ilvl or the list style, not from w:ind, so importing an exported file behaves as before. Stored data is not touched.",
+      "failfirst_run": "36524940186 (green: with the diff reversed the new test fails 3 of 3 ('# fail 3'), and it passes with the fix; the named-tests job passed 94/94 across 11 files; lint green)"
+    }
+  ],
+  "review": {
+    "rounds": [
+      {
+        "round": 1,
+        "issues": [
+          "Numbered list levels are not capped at 8 as bullet levels are (Math.min(level, 8)). At 720 twips a level, very deep nesting (about level 12 or more) would run past the right margin sooner than before.",
+          "A numbered marker wider than the 360-twip hang (for example '100.' at 10 pt, or 'xviii.' at 12 pt) pushes the text to the next default tab stop. The PDF sizes its marker column to the longest marker.",
+          "Legacy bullets[] (bulletPoint) and Skills 'bullet' style override the indent to left 360, which puts their glyph at 0. Description bullets have text at 720."
+        ]
+      }
+    ],
+    "issues": [
+      {
+        "issue": "Numbered list levels are not capped at 8 as bullet levels are, so very deep nesting would run past the margin sooner at 720 twips a level.",
+        "resolution": "No change. The PDF does not cap depth either, and a résumé does not nest 12 levels deep. This was already so before the fix (it only happened later at 360 twips) and is not a regression."
+      },
+      {
+        "issue": "A marker wider than the 360-twip hang pushes the text to the next default tab stop.",
+        "resolution": "No change. The hang was already 360 before the fix, so this is not a regression. It only affects lists of 100 or more items, or long Roman numerals at large sizes."
+      },
+      {
+        "issue": "Legacy bullets[] and Skills 'bullet' style sit at left 360 while description bullets have text at 720.",
+        "resolution": "No change. This predates the fix and the diff does not touch it. normalizeResume moves legacy bullets[] into the description (R2-112), so bulletPoint rarely prints anything. Skills bullets are a separate list and are not nested with descriptions."
+      }
+    ],
+    "fixedByReviewer": []
+  },
+  "rejected": [],
+  "a11yNoted": [],
+  "baselineFailures": [],
+  "notes": "The reviewer read the diff, every caller of descriptionToParagraphs (entry descriptions, the header summary frame, which has no indent, and the cover-letter body), docx's default bullet indents, PdfRichText's nesting and the .docx importer. The importer does not read w:ind. The fail-first log (job 109265805871) shows the new test failing 3 of 3 with the diff reversed and passing with it. No test elsewhere asserts the old 360-twip Word list indents. No confirmed problems were found, so the reviewer made no extra commits. Build, the full suite, Playwright and Cypress did not run on this branch. The batch gate runs them."
+}
