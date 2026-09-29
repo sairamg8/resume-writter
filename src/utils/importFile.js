@@ -494,15 +494,19 @@ function dotMarker(line, prev, open, dy, pitch, right) {
  */
 export function pdfLinesOfPages(pages) {
   const out = [];
+  // The list items open where the last page ended, when it ended in one block across the page: a
+  // sub-point atop the next page nests under its item as it would on one page (IMP-REV-5).
+  let carried = [];
   for (const [index, page] of pages.entries()) {
-    for (const { items, column } of pdfPageBlocks(withoutPageFurniture(page, index))) {
+    const blocks = pdfPageBlocks(withoutPageFurniture(page, index));
+    for (const [b, { items, column }] of blocks.entries()) {
       const lines = pdfPageLines(items);
       const right = Math.max(0, ...lines.map((l) => l.right));
       const left = Math.min(...lines.map((l) => l.x));
       let prev = null;
       // The list items still open in this block, outermost first: each one's marker x, where its text
       // starts and its middle — for a list item's depth (R4-SW-I-01).
-      let open = [];
+      let open = b === 0 && !column ? carried : [];
       // This list's line steps: a wrapped line's and a new item's, the last of each (dotMarker).
       let pitch = {};
       for (let line of lines) {
@@ -570,6 +574,7 @@ export function pdfLinesOfPages(pages) {
         prev = { ...line, listed: false };
       }
       out.push({ text: '' });
+      if (b === blocks.length - 1) carried = column ? [] : open;
     }
   }
   return out;
