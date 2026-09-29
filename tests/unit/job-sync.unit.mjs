@@ -44,7 +44,7 @@ const label = (j) => [j.company, j.role].filter(Boolean).join(' — ') || 'Untit
  * `cloud` (null: a build with no cloud). `edit` / `add` / `remove` / `reorder` change the list as
  * the tracker would (new objects), and the engine hears of it at once, as it does from the store.
  */
-function device(cloud, jobs = [], { online = () => true, meta = memoryMeta() } = {}) {
+function device(cloud, jobs = [], { online = () => true, meta = memoryMeta(), seedIds } = {}) {
   let list = jobs;
   const listeners = new Set();
   const set = (next) => { list = next; listeners.forEach((l) => l()); };
@@ -52,7 +52,7 @@ function device(cloud, jobs = [], { online = () => true, meta = memoryMeta() } =
     items: () => list,
     replace: set,
     subscribe: (fn) => { listeners.add(fn); return () => listeners.delete(fn); },
-    fromCloud, label, seed: isUntouchedDemoJob,
+    fromCloud, label, seed: isUntouchedDemoJob, ...(seedIds ? { seedIds } : {}),
   };
   const timers = manualTimers();
   const { seen, report } = recorder();
@@ -378,6 +378,75 @@ test('R2-145: a fresh demo job (site data cleared) never goes over the demo job 
   await d.timers.fire();
   assert.equal(cloud.doc(jobPath('A', 'demo_1')).notes, '<p>Offer!</p>');
   assert.equal(isUntouchedDemoJob(d.job('demo_1')), false);
+});
+
+test('R5-HUNT4-FRESH-BROWSER-UPLOADS-DEMO-JOB-TO-ACCOUNT: a fresh browser\'s untouched demo job never joins an account with jobs of its own', async () => {
+  // Signed out, the user deleted the demo job and added Acme, then signed in: the deletion never
+  // reached the cloud (it had no synced version). A fresh browser (another device, site data
+  // cleared) starts with the demo again; its first sync used to send it to the account, and every
+  // device got it back.
+  const cloud = fakeFirestore();
+  const d1 = device(cloud, [job('j_acme', 'Acme', 5)]);
+  await d1.start(A);
+  const d2 = device(cloud, demoJobs());
+  assert.ok(isUntouchedDemoJob(d2.job('demo_1')));
+  await d2.start(A);
+
+  assert.deepEqual(Object.keys(cloudJobs(cloud, 'A')), ['j_acme'], 'the demo is not sent to the account');
+  assert.deepEqual(d2.ids(), ['j_acme'], 'the fresh browser shows the account\'s jobs only');
+  assert.equal(d2.seen.status, 'synced');
+  await d1.refresh();
+  assert.deepEqual(d1.ids(), ['j_acme'], 'the deleted demo stays deleted on the first device');
+
+  // An account whose only history is deletions has a list of its own too.
+  const cloud2 = fakeFirestore({ [metaPath('A')]: { order: [], deleted: ['j_old'] } });
+  const d3 = device(cloud2, demoJobs());
+  await d3.start(A);
+  assert.deepEqual(Object.keys(cloudJobs(cloud2, 'A')), []);
+  assert.deepEqual(d3.ids(), []);
+
+  // A new account (nothing in its cloud) still adopts the demo, as before; once edited, it is a job like any other.
+  const cloud3 = fakeFirestore();
+  const d4 = device(cloud3, demoJobs());
+  await d4.start(A);
+  assert.deepEqual(Object.keys(cloudJobs(cloud3, 'A')), ['demo_1']);
+  const d5 = device(cloud, [{ ...demoJobs()[0], notes: '<p>Mine</p>', updatedAt: Date.now() + 1000 }]);
+  await d5.start(A);
+  assert.equal(cloudJobs(cloud, 'A').demo_1?.notes, '<p>Mine</p>', 'an edited demo is sent');
+});
+
+test('R5-HUNT4 review: a demo job deleted before the first sign-in stays deleted though the account has no other job', async () => {
+  // As jobSync wires the store: the demo job's id is a seed id. Signed out, the user deleted the
+  // demo job and added nothing, then signed in: the account's cloud stayed empty, so a fresh
+  // browser's untouched demo joined it (the account had no list of its own) and came back here.
+  const seedIds = ['demo_1'];
+  const cloud = fakeFirestore();
+  const d1 = device(cloud, [], { seedIds });
+  await d1.start(A);
+  assert.deepEqual(cloud.doc(metaPath('A'))?.deleted, ['demo_1'], 'the deletion made before the sign-in reaches the account');
+
+  const d2 = device(cloud, demoJobs(), { seedIds });
+  assert.ok(isUntouchedDemoJob(d2.job('demo_1')));
+  await d2.start(A);
+  assert.deepEqual(Object.keys(cloudJobs(cloud, 'A')), [], 'the demo is not sent to the account');
+  assert.deepEqual(d2.ids(), [], 'the fresh browser shows the account\'s (empty) list');
+  await d1.refresh();
+  assert.deepEqual(d1.ids(), [], 'the deleted demo stays deleted on the first device');
+
+  // The demo filled in on another browser before its first sign-in is typed work: it wins over that deletion.
+  const d3 = device(cloud, [{ ...demoJobs()[0], notes: '<p>Mine</p>', updatedAt: Date.now() + 1000 }], { seedIds });
+  await d3.start(A);
+  assert.equal(cloudJobs(cloud, 'A').demo_1?.notes, '<p>Mine</p>', 'the edited demo is sent');
+  assert.deepEqual(cloud.doc(metaPath('A')).deleted, [], 'and comes off the deletion list');
+  await d1.refresh();
+  assert.deepEqual(d1.ids(), ['demo_1']);
+
+  // A new account on a fresh browser still adopts the untouched demo, and lists nothing as deleted.
+  const cloud2 = fakeFirestore();
+  const d4 = device(cloud2, demoJobs(), { seedIds });
+  await d4.start(A);
+  assert.deepEqual(Object.keys(cloudJobs(cloud2, 'A')), ['demo_1']);
+  assert.deepEqual(cloud2.doc(metaPath('A'))?.deleted ?? [], []);
 });
 
 test('R2-145: a saved job list that cannot be read deletes nothing from the account; its jobs come back', async (t) => {

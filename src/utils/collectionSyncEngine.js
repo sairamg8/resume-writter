@@ -220,7 +220,7 @@ export function createCollectionSync({
       // signed out, a failed sync) is told from one made on another device: this account's own
       // record, or the move kept aside when the list left (leaveList).
       const moved = mine ? { baseOrder: record.order } : { baseOrder: stash.base, localOrder: stash.order ?? [] };
-      const plan = planFirstSync({ local, versions, localDeletes, docs, deleted: cloud.deleted, order: cloud.order, ...moved, seed: store.seed });
+      const plan = planFirstSync({ local, versions, localDeletes, docs, deleted: cloud.deleted, order: cloud.order, ...moved, seed: store.seed, seedIds: store.seedIds ?? [] });
 
       sets = sendable(uid, plan.sets);
       const sameOrder = plan.order.length === cloud.order.length && plan.order.every((id, i) => cloud.order[i] === id);
