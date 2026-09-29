@@ -1,5 +1,11 @@
 # Session Handoff — Resume Here
 
+**2026-09-29 22:35 UTC — ROUND 8 (first six areas) merged: `ca009d49`.** dash and jobs dry; pdf 1 (Skills Stacked/Tags/Bars category
+orphan), boards 2 (+1 review fix), sync 1 (+1 review fix: nested job id), editor 1 (bare 'https://' prints an empty contact). Website-freeze
+lead: the editor finder found no loop or pathological regex (still unreproduced). Seen-list 140. **Full gate on `ca009d49` dispatched
+~22:35 UTC**; gate on 186c06ab also running. Running: wf_df15e7b0-cf8 (round 8 import/export/tools), wf_0a064088-d78 (round 9 dash, pdf,
+boards, sync, editor, jobs; base ca009d49). Round 9 import/export/tools follow round 8's.
+
 **2026-09-29 22:00 UTC — HUNT ROUND 7 DONE (all 9 areas, 21 fixes) and merged into claude/r4-green `186c06ab`.** import (4 +1 review fix),
 export (3 +1 review fix: lone surrogate), tools (3 +1 review fix: optimizer Apply anchor) merged after the six below; seen-list 135.
 **Full gate on `186c06ab` dispatched ~22:00 UTC** (PR #3's head now includes it; 9519ef6b was the last green). Round 8 running:
