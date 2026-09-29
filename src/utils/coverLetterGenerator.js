@@ -35,6 +35,12 @@ export const BLANK_LINE = '<p><br></p>';
 const isEntry = (v) => Boolean(v) && typeof v === 'object' && !Array.isArray(v);
 
 /**
+ * `item[key]` as text, '' when its eye hid it: the letter cites only what the résumé prints, as the
+ * PDF, Word and Markdown leave out a hidden field (a confidential employer, a skill group's skills).
+ */
+const shown = (item, key) => (Array.isArray(item?.hiddenFields) && item.hiddenFields.includes(key) ? '' : storedText(item?.[key]));
+
+/**
  * Extracts top accomplishments and skills from resume state. Every value is read as text
  * (storedText), whether or not the résumé has been through normalizeResume(): a skill group's
  * skills stored as a list, a number or an object threw here as the Cover Letter tab rendered, and
@@ -50,12 +56,12 @@ export function extractResumeHighlights(resume) {
   const topExperiences = [];
   if (expSec && Array.isArray(expSec.items)) {
     for (const item of expSec.items.filter(i => isEntry(i) && i.visible !== false)) {
-      const role = storedText(item.role).trim();
-      const company = storedText(item.company).trim();
+      const role = shown(item, 'role').trim();
+      const company = shown(item, 'company').trim();
       // A new Experience section starts with one blank entry: an entry with neither a role nor a
       // company has nothing to cite, so the letter cites the next one (R2-103).
       if (!role && !company) continue;
-      topExperiences.push({ role, company, description: storedText(item.description) });
+      topExperiences.push({ role, company, description: shown(item, 'description') });
       if (topExperiences.length === 2) break;
     }
   }
@@ -63,7 +69,9 @@ export function extractResumeHighlights(resume) {
   const topSkills = [];
   if (skillsSec && Array.isArray(skillsSec.items)) {
     for (const item of skillsSec.items.filter(i => isEntry(i) && i.visible !== false)) {
-      const list = (storedText(item.skills) || storedText(item.name)).split(/[,•;]+/).map(s => s.trim()).filter(Boolean);
+      // Hidden skills print nothing (skillGroup), so the group cites nothing, not its name instead.
+      const hidden = Array.isArray(item.hiddenFields) && item.hiddenFields.includes('skills');
+      const list = (hidden ? '' : storedText(item.skills) || storedText(item.name)).split(/[,•;]+/).map(s => s.trim()).filter(Boolean);
       topSkills.push(...list);
     }
   }
@@ -73,7 +81,7 @@ export function extractResumeHighlights(resume) {
   return {
     candidateName: storedText(p.name).trim(),
     candidateTitle: storedText(p.title).trim(),
-    summary: storedText(p.summary),
+    summary: shown(p, 'summary'),
     topExperiences,
     topSkills: topSkills.slice(0, 8),
   };
