@@ -8,23 +8,47 @@
       "title": "If a task is renamed in another tab or on another device while its text box is open, clicking away without typing puts the old text back over the newer one",
       "severity": "low",
       "outcome": "fixed",
-      "commits": ["767ba30ea4ec4614b0321d531a6b662b1734dc87"],
-      "tests": ["tests/pdf/r5hunt9-task-edit-stale-writeback.test.mjs"],
+      "commits": [
+        "767ba30ea4ec4614b0321d531a6b662b1734dc87"
+      ],
+      "tests": [
+        "tests/pdf/r5hunt9-task-edit-stale-writeback.test.mjs"
+      ],
       "summary": "Now: TodoItem (src/components/job/TodoItem.jsx) remembers the text its box opened with (an `opened` ref set on double-click, as job/Field.jsx does since R5-JOB-07). commit() renames only when the trimmed draft differs from that text and from the task's current text, so a box left untouched writes nothing on blur or Enter, and another tab's or a sync's newer rename stays. A real edit is still saved. docs/knowledge/07-job-tracker.md notes the behaviour.",
-      "ci": [36646826369, 36646831850]
+      "ci": [
+        36646826369,
+        36646831850
+      ]
     },
     {
       "id": "R5-HUNT9-JOB-IMPORT-MONTH-FIRST-DATES",
       "title": "An imported job's day written month-first ('Oct 15, 2026') or as 'YYYY/MM/DD' / '2026-1-5' is left as text, and the Summary lists even a passed one under 'Upcoming deadlines'",
       "severity": "medium",
       "outcome": "fixed",
-      "commits": ["e49ef401604ab8208198fe62183ccb27b4e3c124"],
-      "tests": ["tests/unit/r5-hunt9-job-import-month-first-dates.unit.mjs"],
+      "commits": [
+        "e49ef401604ab8208198fe62183ccb27b4e3c124"
+      ],
+      "tests": [
+        "tests/unit/r5-hunt9-job-import-month-first-dates.unit.mjs"
+      ],
       "summary": "Now: jobDay (src/utils/normalizeJob.js, which completeJob runs on every import, load and cloud copy) also reads 'Oct 15, 2026', 'October 15 2026', 'Sept. 1, 2026', '2026/10/15', '2026/1/5' and '2026-1-5' as 'YYYY-MM-DD'. It checks them through parseDayDate, so an impossible day like 'Feb 31, 2026' or '2026/13/01' stays as written, and so does an ambiguous '10/15/2026'. So the card shows its deadline pill, a passed follow-up counts as due, the List sorts these jobs by date, and the Overview's pickers show the day. The Summary's 'Upcoming deadlines' now uses isDeadlineUpcoming (src/utils/jobQuery.js), which takes only an open job's 'YYYY-MM-DD' deadline of today or later. A deadline it cannot compare is left out and no longer compared as text. docs/knowledge/07-job-tracker.md describes it.",
-      "ci": [36646826369, 36646831850]
+      "ci": [
+        36646826369,
+        36646831850
+      ]
     }
   ],
-  "review": null,
+  "review": {
+    "by": "second agent",
+    "verdict": "clean",
+    "issues": [],
+    "commits": [],
+    "ci": [
+      36646826369,
+      36646831850
+    ],
+    "notes": "Reviewed 767ba30e and e49ef401 against origin/claude/r4-green (185192d7). Fail-first logs checked: 767ba30e fails 2 tests without its diff and passes with it; e49ef401 fails 3 without and passes with it (run 36646826369); area tests and lint green (36646831850). TodoItem: the opened-text ref fixes the root cause (commit compared the draft only with the current text), matches job/Field.jsx (R5-JOB-07), a real edit still saves, and Escape still resets; todo text is always a string after readJob, so .trim() is safe. jobDay: month-first and YYYY/M/D forms are rewritten into forms parseDayDate already validates, so impossible days (Feb 31, month 13) and ambiguous 10/15/2026 stay as written; completeJob runs on load, import (jobMerge) and cloud copies (useCollectionSync), and the same normalisation path already existed for \"15 Jan 2026\" (R5-HUNT5), so no new sync churn. isDeadlineUpcoming keeps the Summary list to ISO days, so the localeCompare sort only compares ISO days. Other deadline readers (ListView, KanbanView, OverviewTab, JobDetail via DatePill/deadlineState) are unchanged and get ISO days now. Not in scope: interview dates are not normalised by jobDay (existing behaviour, not caused by this fix)."
+  },
   "baselineFailures": [],
   "notes": "Base head was 185192d7 (origin/claude/r4-green at fetch), not ca009d49 as the task text said. No earlier fixer branch existed. CI: 36646826369 = failfirst for both commits (each failed without its fix: 2 and 3 failing tests, then passed with it) plus lint; 36646831850 = tests run over the touched area (normalize-job, job-query, hunt5 job dates, dates, knowledge-docs, the job Tasks/Summary/tracker pdf tests, and the 31-contact-fields, 91-design-resets and 71-startup-chunks guards), all green."
 }
