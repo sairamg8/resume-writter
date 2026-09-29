@@ -5,7 +5,7 @@ import { addressableJobs, completeJob, readJob, statusId } from '../utils/normal
 import { keepUnsaved } from '../utils/unsavedJobs.js';
 import { applyEdits, demoJobs, moveInList, newJobDefaults } from '../utils/jobEdits.js';
 import { mergeImport } from '../utils/jobMerge.js';
-import { forgetSynced, JOBS_SYNC_KEY } from '../utils/collectionSyncMeta.js';
+import { forgetSynced, JOBS_SYNC_KEY, localMeta } from '../utils/collectionSyncMeta.js';
 
 const KEY = 'cpwtcv_jobs_v1';
 
@@ -139,6 +139,33 @@ function catchUp() {
 
 function onStorage(e) {
   if (e.key === KEY && e.newValue) takeOtherTabsList();
+  // Another tab took the account's list out of this browser (collectionSyncEngine.leave: the sync
+  // record's account goes first, then the list). The tab that runs the leave is whichever hears the
+  // sign-out first; every other tab only saw its list empty, and a job form open there took that for
+  // a job deleted in another tab and offered "Save as a new job" (R5-HUNT6 review).
+  else if (e.key === JOBS_SYNC_KEY) {
+    const was = ownerIn(e.oldValue);
+    if (was && was !== ownerIn(e.newValue)) listLeft();
+  }
+}
+
+/** The account a stored sync record names (collectionSyncMeta), or null: none, or unreadable. */
+function ownerIn(raw) {
+  try {
+    const m = JSON.parse(raw ?? 'null');
+    return m && typeof m.uid === 'string' && m.uid ? m.uid : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The account whose list this browser holds now (its sync record), or null: signed out, or never
+ * synced. A job form's draft carries it, so a draft typed on one account's list is not restored on
+ * another's, even in a tab that heard nothing as the list left (JobForm).
+ */
+export function listOwner() {
+  return localMeta(JOBS_SYNC_KEY).read().uid;
 }
 
 /**
@@ -340,11 +367,32 @@ function dismissRecovery() {
   update({ recovery: null });
 }
 
-/** The list left this browser with its account: its notice and backups go with it (forgetRecovery). */
+/** The job form's unsaved values in sessionStorage are kept under this prefix and the job's id (JobForm). */
+export const JOB_DRAFT_PREFIX = 'jobform:';
+
+/**
+ * The list left this browser with its account: its notice and backups go with it (forgetRecovery),
+ * and so do the job forms' drafts. `left` counts these leaves, so a job form open on the account's
+ * list sees it went: an empty list read as a job deleted in another tab, and its "Save as a new
+ * job" put the account's job in the signed-out list, which the next account uploaded (R5-HUNT6).
+ */
 function leaveRecovery() {
   if (!initialized) init();
   forgetRecovery(KEY);
-  update({ recovery: null });
+  listLeft();
+}
+
+/** In this tab: every job form's draft goes, and `left` counts one more leave (leaveRecovery, onStorage). */
+function listLeft() {
+  try {
+    const drafts = [];
+    for (let i = 0; i < sessionStorage.length; i += 1) {
+      const k = sessionStorage.key(i);
+      if (k?.startsWith(JOB_DRAFT_PREFIX)) drafts.push(k);
+    }
+    drafts.forEach((k) => sessionStorage.removeItem(k));
+  } catch { /* no storage: no drafts */ }
+  update({ recovery: null, left: (snapshot().left ?? 0) + 1 });
 }
 
 export function _resetJobStoreForTest() {
@@ -360,10 +408,10 @@ export function _resetJobStoreForTest() {
 export { snapshot, subscribe, addJob, updateJob, moveJob, deleteJob, restoreJob, importJobs, clearDemoData, restoreJobs, dismissRecovery, leaveRecovery, jobsNow, replaceJobs };
 
 export function useJobStore() {
-  const { jobs, persistError, recovery } = useSyncExternalStore(subscribe, snapshot);
+  const { jobs, persistError, recovery, left } = useSyncExternalStore(subscribe, snapshot);
   const persistReason = notSavedReason(persistError);
   return {
-    jobs, persistError, persistReason, recovery, dismissRecovery,
+    jobs, persistError, persistReason, recovery, dismissRecovery, left: left ?? 0,
     addJob, updateJob, moveJob, deleteJob, restoreJob, importJobs, clearDemoData, restoreJobs,
   };
 }

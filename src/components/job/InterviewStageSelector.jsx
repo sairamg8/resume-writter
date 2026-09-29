@@ -6,6 +6,7 @@ import { isImeKey } from '@/components/ui/compose';
 export function InterviewStageSelector({ stage, onStageChange, customStages, addCustomStage, removeCustomStage }) {
   const [newStageInput, setNewStageInput] = useState('');
   const inputId = useId();
+  const unlisted = Boolean(stage) && !PREDEFINED_STAGES.includes(stage) && !customStages.includes(stage);
 
   function handleAddStage() {
     // The stage as the lists hold it: 'hr round' is the existing 'HR Round', not a stray spelling (J-28).
@@ -29,6 +30,19 @@ export function InterviewStageSelector({ stage, onStageChange, customStages, add
           <div className="flex items-center gap-1.5 text-xs font-semibold text-brand bg-brand-subtle px-3 py-1.5 rounded-full border border-brand-subtle-hover max-w-full min-w-0 [overflow-wrap:anywhere]">
             <CheckCircle2 size={12} className="text-brand" />
             {stage}
+            {/* A stage in neither list (imported, synced from another browser, or a custom stage
+                removed since) has no button of its own to click off: the pill clears it
+                (R5-HUNT6-UNLISTED-STAGE-CLEAR). */}
+            {unlisted && (
+              <button
+                type="button"
+                onClick={() => onStageChange('')}
+                className="p-0.5 -mr-1 text-brand hover:text-red-400 rounded transition-colors shrink-0"
+                title="Clear stage"
+              >
+                <XIcon size={11} />
+              </button>
+            )}
           </div>
         )}
       </div>
