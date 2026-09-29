@@ -1,0 +1,103 @@
+{
+  "cluster": "r5-hunt3-import",
+  "branch": "claude/wf-r5-hunt3-import",
+  "base": "17c14301f30ff27534a17eede47c480d1f00332c",
+  "rows": [
+    {
+      "id": "R5-HUNT3-TEXT-IMPORT-EXPECTED-GRAD-DATE",
+      "title": "Text/PDF/Word import: an 'Expected May 2025' graduation date becomes the Degree, and the real degree goes into the description",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": [
+        "0aa656b5d3287d40424a248c2e8a6c7a753d0b58",
+        "5f375a16e18ba9e15383fa91b632e8c9e8b96e08"
+      ],
+      "tests": [
+        "tests/unit/r5-hunt3-text-import-expected-grad-date.unit.mjs",
+        "tests/unit/r5-hunt3-text-import-expected-grad-date-forms.unit.mjs"
+      ],
+      "summary": "Now: the text import, which the PDF and Word imports share, reads a graduation date that is still to come as the entry's end date. 'Expected May 2025', 'Expected 2025', 'Anticipated May 2025', 'Expected graduation: 05/2025' and 'Expected Graduation Date: May 2025' before the date all count, and so does '(Expected)' after it ('May 2025 (Expected)'). After a start date it is the end of the range: 'Aug 2021 - Expected May 2025' and 'Aug 2021 – May 2025 (Expected)' give start Aug 2021 and end May 2025. 'University of Oregon ⇥ Expected May 2025' over 'B.S. Computer Science' gives Institution 'University of Oregon', Degree 'B.S. Computer Science', End 'May 2025' and an empty description, and the exports print '– May 2025'. The first commit (0aa656b) handled only the 'Expected' prefix on a date on its own. The review commit adds the '(Expected)' suffix, 'Graduation Date:' and a start date before the expected end (see review issues 1 and 2). A custom section keeps the date text as written, closing bracket included. The change is to AHEAD, AHEAD_AFTER, RANGE, END_ONLY and readDateRange in src/utils/importText.js.",
+      "remaining": "'Graduating May 2025' and 'Exp. May 2025' are still not read as dates. 'Exp.' is left out on purpose, because on a certificate it means 'Expires'. 'Expected Present' reads as current, which is harmless.",
+      "failfirst_run": "36543016983 (0aa656b: fails without the fix with 3 failures (its parent's files), passes with it); 36546535126 (5f375a1: fails without the fix with 2 failures (diff reversed), passes with it)"
+    },
+    {
+      "id": "R5-HUNT3-TEXT-IMPORT-SINCE-NOT-CURRENT",
+      "title": "Text/PDF/Word import: a job dated 'Since 2019' is not current and prints a bare '2019'",
+      "severity": "low",
+      "outcome": "fixed",
+      "commits": [
+        "9abcd3bc9ff717d87aa4dc7072831929ad5565c3"
+      ],
+      "tests": [
+        "tests/unit/r5-hunt3-text-import-since-not-current.unit.mjs"
+      ],
+      "summary": "Now: 'Since 2019' and 'since Mar 2021' read as start 2019 (or Mar 2021) with current true, so the job prints '2019 – Present', the same as '2019 – Present' in the file would. 'Since 2019 - 2021' keeps its end date and is not current. A bare '2019' is still not current. readDateRange in src/utils/importText.js now captures the 'since' prefix. Certifications and awards read only the start date, and custom sections read the text as written, so neither is affected.",
+      "failfirst_run": "36543016983 (9abcd3b: fails without the fix with 2 failures (diff reversed), passes with it)"
+    },
+    {
+      "id": "R5-HUNT3-JSONRESUME-OTHER-PROFILES-DROPPED",
+      "title": "JSON Resume import drops every profile except the first LinkedIn and GitHub (GitLab, X/Twitter, Stack Overflow, a portfolio)",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": [
+        "97b6b6a48f3845c990e5c20bbd0fdef8ec24ac03",
+        "de79946041eda5d670ba1473730995c4d953638d",
+        "2d432f0c22e99faa796fb8f4b58d9f235e088a5c"
+      ],
+      "tests": [
+        "tests/unit/r5-hunt3-jsonresume-other-profiles.unit.mjs",
+        "tests/unit/r5-hunt3-jsonresume-profiles-dedupe.unit.mjs"
+      ],
+      "summary": "Now: a JSON Resume profile the header has no field for is kept, not dropped silently. When basics.url and basics.website are empty, a website, portfolio, homepage, personal or blog profile with an address fills Website. Every other profile goes into a custom 'Profiles' section, one item each: the title is the network ('Profile' when there is none), and the subtitle is the URL, or '@username' when the profile has only a username. This covers GitLab, X/Twitter, Stack Overflow, a portfolio and a second LinkedIn or GitHub. A profile at the Website's address, or at an address already listed, is not listed again (review commit 2d432f0). A profile whose address has no dot and that has no username (such as '42') is still dropped. A file with only LinkedIn and GitHub adds no section. The app's own export writes only LinkedIn and GitHub profiles, and keeps a custom section in meta, so a round trip adds no section and nothing is listed twice. This is an import-side change only (src/utils/jsonResumeImport.js). The editor's JSON import, the Dashboard's import and the editor's JSON restore all call this function.",
+      "failfirst_run": "36546535126 (97b6b6a: fails without it with 2 failures (its parent's files), passes at head); 36543262346 (de79946: fails without it with 1 failure (diff reversed), passes with it); 36546535126 (2d432f0: fails without it with 2 failures (diff reversed), passes with it). 36543016983 failed only because 97b6b6a dropped a username-only profile, which de79946 fixes."
+    }
+  ],
+  "review": {
+    "rounds": [
+      {
+        "round": 1,
+        "issues": [1, 2, 3, 4]
+      }
+    ],
+    "issues": [
+      {
+        "id": 1,
+        "row": "R5-HUNT3-TEXT-IMPORT-EXPECTED-GRAD-DATE",
+        "severity": "medium",
+        "issue": "The root cause was only half cured: 'May 2025 (Expected)' and 'Expected Graduation Date: May 2025', which are as common as the prefix form, still left the entry with no date. The date became the Degree and 'B.S. Computer Science' went into the description.",
+        "resolution": "Fixed in 5f375a1. AHEAD now takes an optional 'date' and ':' after 'expected/anticipated [graduation|completion]', and AHEAD_AFTER accepts an '(Expected)' suffix. A single date with that suffix is read as the end, not the start. Test: r5-hunt3-text-import-expected-grad-date-forms.unit.mjs, fail-first 36546535126."
+      },
+      {
+        "id": 2,
+        "row": "R5-HUNT3-TEXT-IMPORT-EXPECTED-GRAD-DATE",
+        "severity": "medium",
+        "issue": "0aa656b introduced a regression: 'Aug 2021 - Expected May 2025' now split at the dash, so the end date was read but the start date 'Aug 2021' was left as a field and went into the description. Before 0aa656b the whole date was unread.",
+        "resolution": "Fixed in 5f375a1. RANGE accepts the 'Expected' marker after the separator, so the result is start Aug 2021 and end May 2025, with an empty description. The same test covers it."
+      },
+      {
+        "id": 3,
+        "row": "R5-HUNT3-TEXT-IMPORT-EXPECTED-GRAD-DATE",
+        "severity": "low",
+        "issue": "The leading and trailing bracket trim in readDateRange would give a '(Expected)' date the text 'May 2025 (Expected', and a custom section prints that text as its date.",
+        "resolution": "Fixed in 5f375a1. The text gets its closing bracket back when it has an unclosed '('. The test checks .text."
+      },
+      {
+        "id": 4,
+        "row": "R5-HUNT3-JSONRESUME-OTHER-PROFILES-DROPPED",
+        "severity": "low",
+        "issue": "A Portfolio or Website profile at the same address as basics.url was listed again under 'Profiles'. Two profiles at one address (for example 'Website' and 'Portfolio') were listed twice, or one filled Website and the other was listed again.",
+        "resolution": "Fixed in 2d432f0. The Profiles items skip the Website's address and any address already listed. Test: r5-hunt3-jsonresume-profiles-dedupe.unit.mjs, fail-first 36546535126."
+      }
+    ],
+    "fixedByReviewer": [
+      "5f375a16e18ba9e15383fa91b632e8c9e8b96e08",
+      "2d432f0c22e99faa796fb8f4b58d9f235e088a5c"
+    ],
+    "failfirstVerified": "I read the CI logs. Each fail-first job printed 'fail without the fix' with a non-zero '# fail' count and then 'pass with it': 0aa656b (# fail 3), 9abcd3b (# fail 2) and de79946 (# fail 1) on the fixer's runs. On run 36543016983, 97b6b6a's fail-first failed its 'pass with it' step, so I ran it again at head on 36546535126, where it fails without the fix (# fail 2) and passes with it. The job took about one second, because the node tests are small; the log shows they really ran.",
+    "testsRun": "36546535126 at 2d432f0: green. The tests job ran 72 files (467 tests, 0 failures): every import, JSON Resume and round-trip test, plus the guards 31-contact-fields, 91-design-resets and knowledge-docs. Lint and the three fail-first jobs were green too."
+  },
+  "rejected": [],
+  "a11yNoted": [],
+  "baselineFailures": [],
+  "notes": "All three fixes are import-side (src/utils/importText.js, src/utils/jsonResumeImport.js). No exporter, template or stored-data shape changed: the new 'Profiles' section is an ordinary custom section. Review round 1 found four issues, and all four are fixed with fail-first tests. The full gate (node suite, Playwright, Cypress, build) has not run on this branch; it runs with the batch before master is fast-forwarded. Nothing under docs/tracking was edited."
+}

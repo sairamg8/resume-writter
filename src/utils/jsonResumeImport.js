@@ -113,6 +113,7 @@ export function jsonResumeToCpwtResume(jsonResume, customId) {
   // Extract profiles
   let linkedin = '';
   let github = '';
+  const others = [];
   // A profile may give only its username (the schema asks for neither): the address is built from it.
   const PROFILE_URL = { linkedin: 'linkedin.com/in/', github: 'github.com/' };
   for (const p of entries(b.profiles)) {
@@ -123,9 +124,22 @@ export function jsonResumeToCpwtResume(jsonResume, customId) {
     // that is no handle ("Jane Doe") builds none: the link would be broken.
     const built = !site || !user ? '' : user.toLowerCase().includes(`${site}.com`) ? user : /^[\p{L}\p{N}_.-]+$/u.test(user) ? PROFILE_URL[site] + user : '';
     const url = storedText(p.url) || built;
-    if (!linkedin && (net.includes('linkedin') || url.includes('linkedin.com'))) linkedin = url;
-    if (!github && (net.includes('github') || url.includes('github.com'))) github = url;
+    const isLinkedin = net.includes('linkedin') || url.includes('linkedin.com');
+    const isGithub = net.includes('github') || url.includes('github.com');
+    if (!linkedin && isLinkedin) linkedin = url;
+    else if (!github && isGithub) github = url;
+    // Any other profile (GitLab, X, a portfolio, a second LinkedIn) the header has no field for is
+    // kept, not dropped: a web page as the website when the file names none, the rest listed under
+    // "Profiles" to review, as the text import keeps the contacts it cannot place. An address with no
+    // dot and no username ("42") names no page.
+    else if ((/\S\.\S/.test(url) || user) && !(url && (url === linkedin || url === github))) others.push({ network: storedText(p.network).trim(), address: /\S\.\S/.test(url) ? url : `@${user}` });
   }
+  let website = storedText(b.url) || storedText(b.website); // `website`, `picture`: the pre-1.0 schema's names
+  const webAt = website ? -1 : others.findIndex((o) => /website|portfolio|homepage|personal|blog/i.test(o.network) && !o.address.startsWith('@'));
+  if (webAt >= 0) website = others.splice(webAt, 1)[0].address;
+  // Not the website again, nor one address twice ("Portfolio" and "Website" to one page).
+  const listed = new Set([website]);
+  const profiles = others.filter((o) => !listed.has(o.address) && listed.add(o.address)).map((o) => ({ id: newId('cust'), title: o.network || 'Profile', subtitle: o.address, date: '', location: '', description: '' }));
 
   const personal = {
     name: storedText(b.name),
@@ -133,7 +147,7 @@ export function jsonResumeToCpwtResume(jsonResume, customId) {
     email: storedText(b.email),
     phone: storedText(b.phone),
     location: locStr,
-    website: storedText(b.url) || storedText(b.website), // `website`, `picture`: the pre-1.0 schema's names
+    website,
     linkedin,
     github,
     ...linkFields(b),
@@ -174,7 +188,7 @@ export function jsonResumeToCpwtResume(jsonResume, customId) {
     template,
     settings: { ...getStarterSettings(template), ...design, ...(DATE_FORMATS.includes(dateFormat) ? { dateFormat } : {}), ...(single ? { sidebarSingleColumn: true } : {}), ...(pageSize !== DEFAULT_PAGE_SIZE ? { pageSize } : {}) },
     personal,
-    sections: sectionsOf(jsonResume),
+    sections: [...sectionsOf(jsonResume), ...(profiles.length ? [sectionOf('custom', 'Profiles', profiles)] : [])],
     coverLetter: { ...BASE_COVER_LETTER },
   };
 }

@@ -289,19 +289,28 @@ const SEASON = '(?:spring|summer|fall|autumn|winter)';
 const DAY = `(?:${MONTH},?\\s+\\d{4}|${SEASON}\\s+\\d{4}|\\d{1,2}\\s*[/.]\\s*\\d{4}|\\d{1,2}-\\d{4}|\\d{4}\\s*[/.-]\\s*\\d{1,2}(?!\\d)|(?:19|20)\\d{2})`;
 const NOW = '(?:present|current|currently|now|today|ongoing|till date|to date)';
 const SEP = '\\s*(?:[-–—~]|to|until|through)\\s*';
-const RANGE = new RegExp(`^(?:since\\s+)?(${DAY})(?:${SEP}(${DAY}|${NOW}))?$`, 'i');
-const END_ONLY = new RegExp(`^(?:[-–—]|to|until)\\s*(${DAY}|${NOW})$`, 'i');
+// "Expected May 2025", "Anticipated graduation date: 2025", "May 2025 (Expected)": a date still to
+// come is when the entry ends, alone or after its start ("Aug 2021 – Expected May 2025").
+const AHEAD = '(?:expected|anticipated)(?:\\s+(?:graduation|completion))?(?:\\s+date)?\\s*:?\\s*';
+const AHEAD_AFTER = '\\s*\\(?\\s*(?:expected|anticipated)\\s*\\)?';
+const RANGE = new RegExp(`^(since\\s+)?(${DAY})(?:${SEP}(?:${AHEAD})?(${DAY}|${NOW}))?(${AHEAD_AFTER})?$`, 'i');
+const END_ONLY = new RegExp(`^(?:(?:[-–—]|to|until)\\s*(?:${AHEAD})?|${AHEAD})(${DAY}|${NOW})(?:${AHEAD_AFTER})?$`, 'i');
 const IS_NOW = new RegExp(`^${NOW}$`, 'i');
 
 /** A whole piece of text read as a date or a range: { start, end, current, text }, else null. */
 export function readDateRange(text) {
-  const t = String(text ?? '').trim().replace(/^[(*_[]+|[)*_\]]+$/g, '').trim();
+  let t = String(text ?? '').trim().replace(/^[(*_[]+|[)*_\]]+$/g, '').trim();
   if (!t) return null;
   const tidy = (d) => d.replace(/\s+/g, ' ').replace(/(\d)\s*([/.-])\s*(?=\d)/g, '$1$2');
   let m = RANGE.exec(t);
+  // "May 2025 (Expected)" lost its closing bracket with the trim above: the text as written.
+  if (/\([^)]*$/.test(t)) t = `${t})`;
   if (m) {
-    const now = m[2] && IS_NOW.test(m[2]);
-    return { start: tidy(m[1]), end: m[2] && !now ? tidy(m[2]) : '', current: Boolean(now), text: t };
+    // "May 2025 (Expected)": one date still to come is the end, not the start.
+    if (m[4] && !m[3] && !m[1]) return { start: '', end: tidy(m[2]), current: false, text: t };
+    // "Since 2019" is a range still running, as "2019 – Present" is.
+    const now = m[3] ? IS_NOW.test(m[3]) : Boolean(m[1]);
+    return { start: tidy(m[2]), end: m[3] && !now ? tidy(m[3]) : '', current: now, text: t };
   }
   m = END_ONLY.exec(t);
   if (m) {
