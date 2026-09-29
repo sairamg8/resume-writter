@@ -13,7 +13,8 @@
 //   Sprint { id, name, goal, startDate, endDate, state: 'future'|'active'|'closed', completedAt }
 //   Issue  { id, number, type, title, description, columnId, priority, labelIds, due, startDate,
 //            estimate, epicId, sprintId, checklist, comments, activity, recurrence,
-//            recurrenceNextId, createdAt, updatedAt, resolvedAt }
+//            recurrenceNextId, recurrenceDay?, createdAt, updatedAt, resolvedAt }
+//   (recurrenceDay: a monthly occurrence's day of the month to keep, 1–31 — its due may be clamped)
 import { newId } from './ids.js';
 import {
   BOARD_COLORS, BOARD_DATA_VERSION, BOARD_TEMPLATES, DEFAULT_HIDE_DONE_DAYS, KEY_PATTERN,
@@ -72,18 +73,30 @@ const STEP = {
 };
 
 /**
+ * The day of the month a monthly issue due `due` keeps: `day` (its recurrenceDay) while `due` is
+ * that day clamped to its month's end — 28 Feb of a 31st stays a 31st, so March is the 31st again —
+ * else `due`'s own day (none stored, or the due date was moved by hand). null without a due date.
+ */
+export function recurrenceDay(due, day) {
+  const d = parseLocalISO(due);
+  if (!d) return null;
+  const last = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+  return Number.isInteger(day) && day >= 1 && day <= 31 && Math.min(day, last) === d.getDate() ? day : d.getDate();
+}
+
+/**
  * The due date of a recurring issue's next occurrence: one step of `recurrence` from its old
  * `due` (from `today` when it had none), stepped on until it is after `today` — an issue done
  * three weeks late gets one next occurrence, not three already overdue. Weekdays skip Saturday
- * and Sunday; monthly keeps the day of the month, clamped to a shorter month's end (31 Jan →
- * 28/29 Feb). '' for 'none' or an unknown rule.
+ * and Sunday; monthly keeps the day of the month (`day`, see recurrenceDay), clamped to a shorter
+ * month's end (31 Jan → 28/29 Feb → 31 Mar). '' for 'none' or an unknown rule.
  */
-export function nextDue(due, recurrence, today = todayISO()) {
+export function nextDue(due, recurrence, today = todayISO(), day = null) {
   const step = STEP[recurrence];
   const floor = parseLocalISO(today);
   if (!step || !floor) return '';
   const start = parseLocalISO(due) ?? floor;
-  const anchor = start.getDate();
+  const anchor = recurrenceDay(toLocalISO(start), day);
   let next = step(start, anchor);
   for (let i = 0; next <= floor && i < 5000; i += 1) next = step(next, anchor);
   if (next <= floor) next = step(floor, anchor); // a due date centuries ago: from today

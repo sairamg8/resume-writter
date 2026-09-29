@@ -1,0 +1,98 @@
+{
+  "cluster": "r5-hunt2-boards",
+  "branch": "claude/wf-r5-hunt2-boards",
+  "base": "54b9ec28f19e9684778b75d74230b204737ff3b2",
+  "rows": [
+    {
+      "id": "R5-HUNT2-MONTHLY-RECURRENCE-ANCHOR-DRIFT",
+      "title": "A monthly issue due on the 29th-31st slides to the 28th forever after February",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": [
+        "296953954595052b7546ad587264b27746a617a3",
+        "88fe80f392cd87cdfd3b49c8e5934524d1001f45"
+      ],
+      "tests": [
+        "tests/unit/board-ops.unit.mjs"
+      ],
+      "summary": "Now: each monthly occurrence stores recurrenceDay, the day of the month the series started on. When a short month has clamped the due date, the next occurrence goes back to that day, so a series that starts on the 31st runs 31 Jan, 28 Feb, 31 Mar, 30 Apr, 31 May. A due date changed by hand to a different day becomes the new day to keep. Duplicating an occurrence now copies its recurrenceDay (added in review): before, a copy of the 28 Feb occurrence repeated on the 28th from then on. Changes: boardModel.js adds recurrenceDay() and gives nextDue() a day parameter. In boardIssueOps.js, spawnNext and duplicateIssue pass the day on. Stored data: readIssue keeps the field when a board is loaded (it spreads raw), and a non-integer value is ignored. Issues that were already clamped before this fix have no recorded day, so they keep the 28th.",
+      "failfirst_run": "36533422972 (296953954: board-ops fails without the fix, # fail 1, and passes with it); 36536054336 (88fe80f: the duplicate case fails without the fix and passes with it)"
+    },
+    {
+      "id": "R5-HUNT2-KANBAN-MOVE-TO-RANK-BY-SPRINT",
+      "title": "Kanban: a card's 'Move to' puts it above cards from another sprint instead of at the bottom of the column",
+      "severity": "low",
+      "outcome": "fixed",
+      "commits": [
+        "a930ec0a9ffcbd96e802b599c23dc7b769158d93"
+      ],
+      "tests": [
+        "tests/pdf/104-r5-hunt2-kanban-move-to-bottom.test.mjs"
+      ],
+      "summary": "Now: a card's ⋯ 'Move to' places the card against the whole target column, just as a drop on the column's empty space does (dropTarget returns { columnId, beforeId: null }). On a Kanban board the card lands at the bottom of the column, even when that column holds issues from other sprints. The card's sprint does not change: moveIssue leaves sprintId alone when it is undefined. On a Scrum board with an active sprint the card still goes after every card the board shows. Change: Board.jsx no longer passes sprintId: card.sprintId to moveIssue.",
+      "failfirst_run": "36533422972 (a930ec0: fails without the fix, # fail 1, and passes with it)"
+    },
+    {
+      "id": "R5-HUNT2-STALE-EPIC-FILTER-AFTER-EPIC-DELETED",
+      "title": "Deleting (or retyping) an epic or label that is ticked in the filter bar hides every issue on the Board, Backlog, List and Calendar",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": [
+        "c1e409ba5451089629da972922afa67ad476cdab",
+        "522d28b0dbb7b6d663b5e0a1625d8da8c3ffa5f7"
+      ],
+      "tests": [
+        "tests/unit/board-query.unit.mjs",
+        "tests/pdf/104-r5-hunt2-board-stale-filter.test.mjs"
+      ],
+      "summary": "Now: filter ids for an epic or label that no longer exists (deleted, or an epic changed to another type) are ignored, so the Board, Backlog, List and Calendar show their issues again. Changes: boardQuery.js adds liveFilters(board, filters) and filterIssues applies it. BoardToolbar.jsx works from the pruned filters, so it does not count those ids and the next filter change drops them. Board.jsx now reads liveFilters when it decides whether any filter is set (added in review). Before that, a project left with no cards showed 'No issues match these filters.' and 'Clear filters' for a filter that no longer existed.",
+      "failfirst_run": "36533422972 (c1e409b: board-query fails without the fix, # fail 1, and passes with it); 36536054336 (522d28b: the Board page test fails without the fix and passes with it)"
+    }
+  ],
+  "review": {
+    "rounds": [
+      {
+        "round": 1,
+        "issues": [
+          "monthly recurrence: duplicateIssue built the copy with makeIssue, which drops recurrenceDay",
+          "stale epic filter: Board.jsx read hasFilters from the raw filters, so an empty board said no issues match"
+        ]
+      }
+    ],
+    "issues": [
+      {
+        "issue": "duplicateIssue builds the copy with makeIssue, which lists its fields explicitly and does not include recurrenceDay. A copy of a clamped monthly occurrence (28 Feb of a 31st) therefore repeats on the 28th from then on. This is the same root cause, reached by another path.",
+        "resolution": "fixed in 88fe80f: the copy keeps recurrenceDay(original.due, original.recurrenceDay) for a monthly issue. Fail-first test added to tests/unit/board-ops.unit.mjs."
+      },
+      {
+        "issue": "Board.jsx still called hasFilters on the raw filters (the fixer's report noted this as minor). With a ticked epic deleted and no card left, the board showed 'No issues match these filters.' and 'Clear filters' over a project that simply has no issues.",
+        "resolution": "fixed in 522d28b: noMatch and the swimlane NoMatch's Clear button read hasFilters(liveFilters(board, filters)). Fail-first test tests/pdf/104-r5-hunt2-board-stale-filter.test.mjs added."
+      }
+    ],
+    "fixedByReviewer": [
+      "88fe80f392cd87cdfd3b49c8e5934524d1001f45",
+      "522d28b0dbb7b6d663b5e0a1625d8da8c3ffa5f7"
+    ]
+  },
+  "rejected": [
+    {
+      "candidate": "Monthly: an occurrence stored with recurrenceDay 31 whose due is changed by hand to another month's last day (such as 30 Jun) keeps the 31st instead of the 30th.",
+      "reason": "The intent is ambiguous: a due date on a clamped month-end matches both readings. Keeping the day the series started on is the documented behaviour, and any other hand edit resets it."
+    },
+    {
+      "candidate": "Monthly: issues whose due dates were already clamped to the 28th before this fix stay on the 28th.",
+      "reason": "No data records the original day, so it cannot be recovered. From now on, new series keep their day."
+    },
+    {
+      "candidate": "Backlog's epic side panel toggles the raw filters.epicIds, so a stale id stays in page state until the next toolbar change.",
+      "reason": "This is harmless: filterIssues ignores the stale id, and the id is not counted anywhere. If the user undoes the epic delete, the same epic id comes back and its filter applies again, which is consistent."
+    },
+    {
+      "candidate": "'Move to' on a Scrum board ranks the card over the whole column (backlog issues included) rather than only the active sprint.",
+      "reason": "The card still ends up after every card the board shows. A drop on the column does the same, and the order within the Backlog sprint section changed under the old code too."
+    }
+  ],
+  "a11yNoted": [],
+  "baselineFailures": [],
+  "notes": "The three hunt2 board fixes were reviewed adversarially. The CI logs of run 36533422972 confirm that each fix's test fails with its diff reversed (# fail 1) and passes with it. The review found two more paths with the same root causes and fixed both with fail-first tests: a duplicated monthly occurrence lost its day, and the Board no-match state counted a deleted epic as a filter. Run 36536054336 is green: lint passed, 63 of 63 named tests passed (board unit tests, both 104 hunt2 page tests, 82-board-summary-labels, 103 toolbar filters and the 31/91 guards), and both reviewer fail-first jobs failed without their fix (# fail 1) and passed with it. The old stored data was checked: readIssue and completeBoard spread the raw issue, so recurrenceDay survives a reload, and liveFilters handles missing arrays. Playwright and Cypress were not needed (none)."
+}

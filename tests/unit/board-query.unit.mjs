@@ -51,6 +51,22 @@ test('filterIssues: text over key, title and plain description; types, prioritie
   assert.deepEqual(ids(q.filterIssues(b, { labelIds: ['home'], due: 'today' }, ctx)), ['tap'], 'filters combine');
 });
 
+test('filterIssues: an epic or label deleted since it was ticked filters nothing (R5-HUNT2-STALE-EPIC-FILTER-AFTER-EPIC-DELETED)', () => {
+  // The filters are page state: deleting the epic from the issue view left its id ticked, no option
+  // to untick it, and every issue hidden.
+  const b = life();
+  const all = ids(q.filterIssues(b, {}, ctx));
+  const gone = ops.deleteIssue(b, 'epic', ctx);
+  assert.deepEqual(ids(q.filterIssues(gone, { epicIds: ['epic'] }, ctx)), all.filter((id) => id !== 'epic'), 'the deleted epic');
+  const retyped = ops.updateIssue(b, 'epic', { type: 'task' }, ctx);
+  assert.deepEqual(ids(q.filterIssues(retyped, { epicIds: ['epic'] }, ctx)), all, 'an epic that is a task now');
+  assert.deepEqual(ids(q.filterIssues(gone, { epicIds: ['epic', 'none'] }, ctx)), all.filter((id) => id !== 'epic'), 'the live values still filter');
+  const noHome = { ...b, labels: b.labels.filter((l) => l.id !== 'home') };
+  assert.deepEqual(ids(q.filterIssues(noHome, { labelIds: ['home'] }, ctx)), all, 'a deleted label');
+  assert.deepEqual(ids(q.filterIssues(noHome, { labelIds: ['home', 'work'] }, ctx)), ['tax']);
+  assert.deepEqual(ids(q.filterIssues(b, { epicIds: ['epic'] }, ctx)), ['van'], 'an epic that exists filters as before');
+});
+
 test('dueBucket: overdue, today, the next 7 days, later, none', () => {
   const t = '2026-09-23';
   assert.deepEqual(['2026-09-22', t, '2026-09-24', '2026-09-30', '2026-10-01', ''].map((d) => q.dueBucket(d, t)),

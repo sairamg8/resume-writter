@@ -114,6 +114,36 @@ test('recurrence: done spawns the next occurrence once — first to-do column, d
   assert.equal(b.issues[1].number, 3, 'numbers are never reused');
 });
 
+test('recurrence: a monthly issue keeps the day it started on after a short month (R5-HUNT2-MONTHLY-RECURRENCE-ANCHOR-DRIFT)', () => {
+  // Each occurrence is done on its due date; the dues are 31 Jan, 28 Feb, 31 Mar, 30 Apr, 31 May —
+  // not 28 Mar / 28 Apr once February clamped the 31st.
+  let b = ops.addIssue(boardWith([]), { id: 'M', title: 'Pay rent', due: '2026-01-31', recurrence: 'monthly' }, ctx);
+  const dues = [];
+  let id = 'M';
+  for (let n = 0; n < 4; n += 1) {
+    const due = get(b, id).due;
+    const [y, m, d] = due.split('-').map(Number);
+    b = ops.moveIssue(b, id, { columnId: 'done' }, { now: new Date(y, m - 1, d, 10, 0).getTime() });
+    id = get(b, id).recurrenceNextId;
+    dues.push(get(b, id).due);
+  }
+  assert.deepEqual(dues, ['2026-02-28', '2026-03-31', '2026-04-30', '2026-05-31']);
+  // A due date moved by hand is the new day to keep.
+  b = ops.updateIssue(b, id, { due: '2026-05-15' }, ctx);
+  b = ops.moveIssue(b, id, { columnId: 'done' }, { now: new Date(2026, 4, 15, 10, 0).getTime() });
+  assert.equal(get(b, get(b, id).recurrenceNextId).due, '2026-06-15');
+});
+
+test('recurrence: a copy of a monthly occurrence clamped to a short month keeps its day (R5-HUNT2-MONTHLY-RECURRENCE-ANCHOR-DRIFT)', () => {
+  let b = ops.addIssue(boardWith([]), { id: 'M', title: 'Pay rent', due: '2026-01-31', recurrence: 'monthly' }, ctx);
+  b = ops.moveIssue(b, 'M', { columnId: 'done' }, { now: new Date(2026, 0, 31, 10, 0).getTime() });
+  const feb = get(b, 'M').recurrenceNextId;
+  assert.equal(get(b, feb).due, '2026-02-28');
+  b = ops.duplicateIssue(b, feb, ctx, { id: 'COPY' });
+  b = ops.moveIssue(b, 'COPY', { columnId: 'done' }, { now: new Date(2026, 1, 28, 10, 0).getTime() });
+  assert.equal(get(b, get(b, 'COPY').recurrenceNextId).due, '2026-03-31', 'the copy repeats on the 31st, not the 28th');
+});
+
 test('updateIssue: a status change through columnId spawns too; a plain issue done spawns nothing', () => {
   let b = ops.addIssue(boardWith(['P']), { id: 'D', title: 'Daily', recurrence: 'daily' }, ctx);
   b = ops.updateIssue(b, 'D', { columnId: 'done' }, ctx);
