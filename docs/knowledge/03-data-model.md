@@ -26,7 +26,8 @@ A store or résumé that cannot be read is copied to a backup key before the nex
 ```ts
 type Resume = {
   id: string;                 // `resume_<uuid>` (newId, src/utils/ids.js)
-  name: string;
+  name: string;               // always text: normalizeResume stores a number's digits, and none /
+                              // no text as 'Untitled Resume' ('Cover Letter' for a letter)
   updatedAt: number;          // ms epoch; conflict resolution key
   dataVersion: number;        // the one-time migrations it has had (DATA_VERSION when current)
   dataVersionAhead?: number;  // a newer build's version, kept until this build catches up (AUD-26)

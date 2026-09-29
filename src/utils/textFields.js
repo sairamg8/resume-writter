@@ -6,6 +6,8 @@
 // in, whatever their data version, so a résumé already saved that way is text once loaded.
 import { CONTACT_FIELDS } from '@/utils/contacts';
 import { storedText } from '@/utils/storedText';
+import { LETTER_NAME, isLetter } from '@/utils/letters';
+import { NEW_RESUME_NAME } from '@/utils/newResume';
 
 /**
  * The fields a résumé keeps as text. Personal info's, with a link field's Display label and Link
@@ -59,12 +61,26 @@ function withSectionsText(sections) {
 }
 
 /**
- * `r` with every field it keeps as text holding text (the lists above). A list of skills is
+ * The record's own name as text (R5-HUNT9-RESUME-NAME-NOT-TEXT): the dashboard card, the editor's
+ * header, Rename, the Delete prompt and /new all print it or trim it. A native .json can hold an
+ * object there, which React refused to render (the editor and the dashboard crashed on every load,
+ * and on every device the record synced to), or a number, which Rename threw on. Text stays exactly
+ * as it is; a number becomes its digits. None, or none with text in it, gets the name a new record
+ * gets ('Untitled Resume', or 'Cover Letter' for a letter), never a blank card or "undefined".
+ */
+function recordName(r) {
+  if (typeof r.name === 'string' && r.name.trim()) return r.name;
+  return storedText(r.name).trim() || (isLetter(r) ? LETTER_NAME : NEW_RESUME_NAME);
+}
+
+/**
+ * `r` with every field it keeps as text holding text (the lists above), its own name included. A list of skills is
  * stored as the line every export already printed for it, so the documents print as they did.
  * Nothing else is touched. The same object when every field holds text already.
  */
 export function withTextFields(r) {
   const next = {
+    name: recordName(r),
     personal: withText(r.personal, PERSONAL_TEXT),
     sections: withSectionsText(r.sections),
     coverLetter: withText(withText(r.coverLetter, LETTER_TEXT), SIGNATURE_TEXT, null),
