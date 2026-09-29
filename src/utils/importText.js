@@ -242,6 +242,24 @@ function loneFields(out) {
   return out;
 }
 
+/** A link reference definition: "[li]: https://…", "[li]: <https://…> "Title"". */
+const REF_DEF = /^\s{0,3}\[((?:\\.|[^\]\\])+)\]:\s*(?:<([^>\s]*)>|(\S+))(?:\s+(?:"[^"]*"|'[^']*'|\([^)]*\)))?\s*$/;
+/** A reference's label as CommonMark matches it: case and runs of spaces aside. */
+const refKey = (label) => label.trim().replace(/\s+/g, ' ').toLowerCase();
+/**
+ * `line` with each reference link it defines ("[text][id]", "[text][]", "[text]") as an inline one
+ * ("[text](url)"), for unmark to read; a reference with no definition stays as written.
+ */
+const refsOff = (line, defs) => line
+  .replace(/(!?)\[((?:\\.|[^\]\\])*)\]\s?\[((?:\\.|[^\]\\])*)\]/g, (m, bang, text, id) => {
+    const url = defs.get(refKey(id || text));
+    return url === undefined ? m : `${bang}[${text}](${url})`;
+  })
+  .replace(/(!?)(?<![\]\\])\[((?:\\.|[^\]\\])+)\](?![([:])/g, (m, bang, text) => {
+    const url = defs.get(refKey(text));
+    return url === undefined ? m : `${bang}[${text}](${url})`;
+  });
+
 /**
  * A Markdown résumé as the parser's lines: "# " the name, "## " a heading, "### " an entry's title,
  * a list item a "• " line (a numbered one keeps its number), the rest as text with its marks off. A
@@ -252,7 +270,23 @@ export function markdownLines(md) {
   const out = [];
   let named = false;
   let entryLevel = 0; // the level of the entry heading in force, 0 under none
-  for (const line of String(md ?? '').split(/\r\n|\r|\n/)) {
+  const all = String(md ?? '').split(/\r\n|\r|\n/);
+  // Reference-style links ("[LinkedIn][li]" with a "[li]: https://…" line, CommonMark's): each read as
+  // the inline link it stands for, its definition line no text of the résumé. Before, the contacts lost
+  // their addresses, the labels went to "Additional Information" and the definitions into the last
+  // entry's description (R5-HUNT8-MD-REFERENCE-LINKS).
+  const defs = new Map();
+  const lines = all.filter((line) => {
+    const d = REF_DEF.exec(line);
+    const url = d && (d[2] !== undefined ? d[2] : d[3]);
+    // Only an address: "[Note]: see below" is the résumé's own text.
+    if (!d || !/^(?:[a-z][a-z\d+.-]*:|www\.|[/#]|\S*\.[a-z]{2,}(?:[/?#]|$))/i.test(url)) return true;
+    const key = refKey(d[1]);
+    if (!defs.has(key)) defs.set(key, url);
+    return false;
+  });
+  for (const raw of lines) {
+    const line = defs.size ? refsOff(raw, defs) : raw;
     // A closing run of #s only after a space: "## C#" is the heading "C#" (R4-LO-07).
     const h = /^\s{0,3}(#{1,6})\s+(.*?)(?:\s+#+)?\s*$/.exec(line);
     if (h) {
@@ -348,11 +382,34 @@ function trailingDate(text) {
   // The earliest split whose rest is a date: "Role - Mar 2021 - Present" keeps the whole range.
   const seps = [...text.matchAll(/\s[-–—|]\s|,\s|\(/g)];
   for (const sep of seps) {
-    const rest = text.slice(sep.index + sep[0].length).replace(/\)\s*$/, '');
+    const before = text.slice(0, sep.index);
+    const after = text.slice(sep.index + sep[0].length);
+    if ((before.match(/\(/g) || []).length > (before.match(/\)/g) || []).length) {
+      // A split inside brackets: "Dean’s List (2018, 2019)" is no "Dean’s List (2018" dated 2019 — its
+      // years stay in its title, as written (R5-HUNT8-AWARD-MULTI-YEAR-PAREN). But "Acme (Remote, Jan
+      // 2020 – Present)" is dated, its bracket closed over what it says before its date: "Acme (Remote)".
+      const inner = before.slice(before.lastIndexOf('(') + 1);
+      if (!/\)\s*$/.test(after) || inner.split(/,\s|\s[-–—|]\s/).some((p) => readDateRange(p.trim()))) continue;
+      const date = readDateRange(after.replace(/\)\s*$/, ''));
+      if (date) return { date, rest: `${before.trim()})` };
+      continue;
+    }
+    const rest = after.replace(/\)\s*$/, '');
     const date = readDateRange(rest);
-    if (date) return { date, rest: text.slice(0, sep.index).trim() };
+    if (date) return { date, rest: before.trim() };
   }
   return null;
+}
+
+/**
+ * Several dates in brackets at a text's end — "Dean’s List (2018, 2019)", "(Fall 2018, Spring 2019)" —
+ * which trailingDate leaves in the title: no one date of the entry, but its line an entry's, dated as
+ * the line of a certificate or an award with one date is. Else, not dated, it went into the entry above.
+ */
+function bracketDates(text) {
+  const m = /\(([^()]+)\)\s*$/.exec(text);
+  const dates = m ? m[1].split(/\s*[,;&]\s*|\s+and\s+/) : [];
+  return dates.length > 1 && dates.every((d) => readDateRange(d));
 }
 
 // ── Contacts ─────────────────────────────────────────────────────────────────
@@ -501,6 +558,8 @@ const ROLE_ALL = new RegExp(ROLE.source, 'gi');
 const DEGREE = /\b(b\.?\s?[ase]\.?|b\.?sc|bsc|b\.?tech|b\.?eng|beng|bba|bfa|bcom|m\.?\s?[ase]\.?|m\.?sc|msc|m\.?tech|m\.?eng|meng|mba|mfa|ph\.?\s?d|phd|doctor(?:ate)?|bachelor'?s?|master'?s?|associate'?s?|diploma|certificate|high school|a-?levels?|gcse|degree|hnd|llb|llm|md|jd)\b/i;
 /** A subject a degree is in, as a field of study names one: "Computer Science", "Business Administration". */
 const SUBJECT = /\b(science|sciences|engineering|studies|mathematics|maths?|statistics|economics|business|administration|finance|accounting|marketing|management|psychology|biology|chemistry|physics|history|literature|english|philosophy|law|medicine|nursing|architecture|arts?|music|informatics|communications?|journalism|politics|political|sociology|linguistics|humanities|design|geography|anthropology|development|software|web|data|computing|technology|programming|stack)\b/i;
+/** A GPA after a comma, a semicolon or in brackets, and an honour right after it: "…, GPA: 3.9/4.0, Cum Laude". */
+const GPA_AFTER = /\s*(?:[,;]|\()\s*c?gpa\s*:?\s*(\d+(?:\.\d+)?(?:\s*\/\s*\d+(?:\.\d+)?)?)\s*\)?(?:\s*[,;]\s*((?:(?:summa|magna)\s+)?cum laude|with (?:high(?:est)?\s+)?(?:honou?rs|distinction)|(?:first[- ]class\s+)?honou?rs|distinction))?(?=\s*(?:[,;(]|$))/i;
 /** What may follow a degree after its comma and is no school: "First Class Honours", "Minor in Math". */
 const HONOURS = /\b(honou?rs|distinction|merit|cum laude|summa|magna|first|second|third|class|minor|major|concentration|speciali[sz]ation|track|option|gpa|grade)\b/i;
 /** A degree's own name, which is no subject it is in: the "of Science" of "Bachelor of Science". */
@@ -810,8 +869,19 @@ function entryOf(type, header, body, aside = () => {}, roleLeads = type === 'vol
     case 'education': {
       const fields = { institution: '', degree: '', fieldOfStudy: '', gpa: take('gpa') };
       const left = [];
-      for (const part of h.parts) {
+      const honours = [];
+      for (let part of h.parts) {
         const gpa = /^(?:c?gpa|grade)\s*:?\s*(.+)$/i.exec(part);
+        // "B.S. Computer Science, GPA 3.8", "…; GPA: 3.9/4.0, Cum Laude", "… (GPA 3.9)": a GPA after the
+        // degree or the school on its line is the GPA, an honour right after it the description's. Before,
+        // it became the field of study (or stayed in the degree or the school) and the GPA was empty
+        // (R5-HUNT8-EDU-GPA-AFTER-COMMA).
+        const inner = !gpa && GPA_AFTER.exec(part);
+        if (inner) {
+          if (!fields.gpa) fields.gpa = inner[1].replace(/\s+/g, '');
+          if (inner[2]) honours.push(inner[2]);
+          part = `${part.slice(0, inner.index)}${part.slice(inner.index + inner[0].length)}`.trim();
+        }
         const field = /^in\s+(.+)$/i.exec(part);
         if (gpa && !fields.gpa) fields.gpa = gpa[1];
         else if (field && !fields.fieldOfStudy) fields.fieldOfStudy = field[1];
@@ -858,7 +928,7 @@ function entryOf(type, header, body, aside = () => {}, roleLeads = type === 'vol
       else if (comma && !fields.fieldOfStudy && (DEGREE.test(comma[1]) || !DEGREE.test(fields.degree))) { fields.degree = comma[1].trim(); fields.fieldOfStudy = comma[2].trim(); }
       // The degree and the school found, one field over, on a line of its own: the field of study.
       if (placeAt >= 0 && !fields.fieldOfStudy && left.length === 1) fields.fieldOfStudy = left.shift();
-      return itemOf(type, { ...fields, location, ...dates, description: description(left) });
+      return itemOf(type, { ...fields, location, ...dates, description: description([...left, ...honours]) });
     }
     case 'projects': {
       // "Name (https://…)": a linked name, its address the URL (linkText); "Name (Rust, Kafka)" its stack.
@@ -942,7 +1012,7 @@ function entriesOf(type, lines, aside) {
     let date = null;
     if (!bullet) {
       const ps = pieces(l.text);
-      const at = ps.findIndex((p) => readDateRange(p) || trailingDate(p));
+      const at = ps.findIndex((p) => readDateRange(p) || trailingDate(p) || bracketDates(p));
       if (at >= 0) {
         // Starts with its date: every piece before it is a date or a field by name ("Technologies: …").
         const first = ps.slice(0, at).every((p) => metaOf(p)) && Boolean(readDateRange(ps[at]));
@@ -1060,8 +1130,47 @@ function entriesOf(type, lines, aside) {
     return Boolean(b && names(b, L) && m && !m.gap && oneField(m) && titleLine(n) && way(n, m) === way(b, L));
   };
 
+  // A block with no date — first in the section, or after a blank line, up to the next one — whose
+  // first line reads as a title, where the section's other entries are dated: an entry of its own (an
+  // undated project, a freelance job, a certificate with no date: the ATS text's own). Before, it went
+  // into the dated entry next to it, its title that entry's text, and a certificate "Additional
+  // Information" (R5-HUNT8-UNDATED-ENTRY-MERGED). Not in a Markdown file's sections, whose entries are
+  // its "###" headings and whose blank lines part an entry's paragraphs; nor in a custom section.
+  const datedSection = type !== 'custom' && !info.some((l) => l.hint === 'entry') && info.some((l) => l.date);
+  // No title but a sentence: three words or more in lower case that are no "of", "the"… (bracketed
+  // words aside: "Resume Builder (react, node)").
+  const sentence = (text) => text.replace(/\([^)]*\)/g, ' ').split(/\s+/).filter((w) => /^\p{Ll}/u.test(w) && !SMALL.has(w)).length >= 3;
+  const undatedEntry = (L) => {
+    if (!datedSection || L.bullet || L.date || L.hint || (!L.gap && L.index > 0)) return false;
+    if (L.text.length > 100 || /[.!?:;,]$/.test(L.text) || isMetaLine(L.text) || sentence(L.text)) return false;
+    const block = [];
+    for (let k = L.index + 1; k < info.length && !info[k].gap; k += 1) {
+      if (info[k].date || info[k].hint === 'entry') return false;
+      block.push(info[k]);
+    }
+    // A sentence run on to the next line ("…, cutting deploy" over "time by 80%"): a paragraph.
+    if (block[0] && !block[0].bullet && /^\p{Ll}/u.test(block[0].text)) return false;
+    // Right after a dated entry with nothing under it yet — its title, a blank line, then this — the
+    // block is that entry's text ("Relevant Coursework" over its list, a paragraph), as it was before:
+    // unless it is a line alone (with its named fields: the ATS text's next entry, after one with no
+    // description), or it names a role (a degree, a school) as the section's entries do, or the entry
+    // above has no text to hold (a certificate).
+    if (cur && !cur.body.length && type !== 'certifications' && !block.every((b) => isMetaLine(b.text))
+      && !(KIND && KIND.test(L.text)) && !(type === 'education' && SCHOOL.test(L.text))) return false;
+    return true;
+  };
+
   for (let i = 0; i < info.length;) {
     const L = info[i];
+    if (undatedEntry(L)) {
+      // Its named fields under it ("Link: …", "Expires: … | ID: …") its own, as a dated entry's are:
+      // they went into its description, which a certificate never shows.
+      const header = [L];
+      i += 1;
+      while (i < info.length && !info[i].bullet && !info[i].gap && isMetaLine(info[i].text)) header.push(info[i++]);
+      start(header);
+      continue;
+    }
     if (L.hint === 'entry') {
       const header = [L];
       i += 1;

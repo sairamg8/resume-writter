@@ -1,0 +1,93 @@
+{
+  "cluster": "r5-hunt8-import",
+  "branch": "claude/wf-r5-hunt8-import",
+  "base": "2b93a3c22e29b87e34c6924d51919ee9ab1a3274",
+  "rows": [
+    {
+      "id": "R5-HUNT8-UNDATED-ENTRY-MERGED",
+      "title": "Text/PDF/Word import: an undated entry in a dated section is swallowed by its neighbour, even after a blank line; the ATS-text export does not round-trip",
+      "severity": "high",
+      "outcome": "fixed",
+      "commits": [
+        "5ef8f5371cf68265b7a34895761fbec099b8c80d"
+      ],
+      "tests": [
+        "tests/unit/r5-hunt8-undated-entry-merged.unit.mjs"
+      ],
+      "summary": "Now: in a section where other entries are dated, an undated block (first in the section, or after a blank line, with no date up to the next blank line) whose first line reads as a title is an entry of its own. Undated projects, freelance jobs and certificates with no date come back as separate entries, and the app's own ATS-text export round-trips. Markdown '###' sections and custom sections are unchanged. Fail-first: 3 subtests fail without the fix and pass with it.",
+      "ci": [
+        36638947372
+      ]
+    },
+    {
+      "id": "R5-HUNT8-EDU-GPA-AFTER-COMMA",
+      "title": "Text/PDF/Word import: 'B.S. Computer Science, GPA 3.8' puts 'GPA 3.8' in Field of Study and leaves GPA empty",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": [
+        "a5a82450ee82368efbd6f064a924703e37fe2fef",
+        "d3a35b94001d1c00397a583c6d3cb5f302368ad0"
+      ],
+      "tests": [
+        "tests/unit/r5-hunt8-edu-gpa-after-comma.unit.mjs"
+      ],
+      "summary": "Now: a GPA after the degree or the school on its line (', GPA 3.8', '; GPA: 3.8/4.0', '(GPA 3.9)') fills the GPA field and is taken out of the degree, field of study and school. An honour right after it (', Cum Laude') goes to the description. d3a35b94 only moves a doc comment back above HONOURS. Fail-first on a5a82450: the test fails without the fix and passes with it.",
+      "ci": [
+        36638947372,
+        36643873390
+      ]
+    },
+    {
+      "id": "R5-HUNT8-MD-REFERENCE-LINKS",
+      "title": "Markdown import: reference-style links are not read; contacts lose addresses and definition lines land in the last entry",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": [
+        "0d6ee92f82918ee9ea1a0a325f750731abe94e41"
+      ],
+      "tests": [
+        "tests/unit/r5-hunt8-md-reference-links.unit.mjs"
+      ],
+      "summary": "Now: markdownLines collects '[id]: address' definition lines (address-like targets only), drops them from the text and reads '[text][id]', '[text][]' and '[text]' as the inline links they stand for. LinkedIn and website fill, a project heading gets its URL, and no bracket junk or definition line reaches the résumé. Fail-first: the test fails without the fix and passes with it.",
+      "ci": [
+        36638947372
+      ]
+    },
+    {
+      "id": "R5-HUNT8-AWARD-MULTI-YEAR-PAREN",
+      "title": "Text/PDF/Word import: 'Dean’s List (2018, 2019)' gets the title 'Dean’s List (2018' and only the last year as its date",
+      "severity": "low",
+      "outcome": "fixed",
+      "commits": [
+        "9356fe04cde67a6781c7d1765e7019fc536d7a0e"
+      ],
+      "tests": [
+        "tests/unit/r5-hunt8-award-multi-year-paren.unit.mjs"
+      ],
+      "summary": "Now: trailingDate never splits inside an open bracket, so 'Dean’s List (2018, 2019)' keeps its whole title with its years as written, with no unclosed bracket. 'Hackathon Winner, 2019' is still dated 2019. Fail-first: the test fails without the fix and passes with it.",
+      "ci": [
+        36638947372
+      ]
+    }
+  ],
+  "review": {
+    "by": "second agent",
+    "verdict": "fixed",
+    "issues": [
+      "R5-HUNT8-UNDATED-ENTRY-MERGED (5ef8f537) over-reached: any unpunctuated line after a blank line in a dated section became an entry, so a job whose title and text are parted by a blank line got a bogus job for its opening paragraph (role \"Led a team of 5 engineers building the payments platform\"), a paragraph wrapped onto a second line became a job whose company was half a sentence, and an education entry's \"Relevant Coursework\" list became a degree. Fixed in 8bf4341f: a sentence (three or more lower-case words other than of/the/and...) is no title, a block whose second line starts in lower case is a paragraph, and right under an entry with no text yet only a line alone (with its named fields), a line naming a role/degree/school, or a certificate starts an entry.",
+      "R5-HUNT8-UNDATED-ENTRY-MERGED (5ef8f537): an undated entry's named fields under its title (the ATS text's \"Link: ...\", \"Expires: ... | ID: ...\") went into its description, so an undated project lost its URL and an undated certificate its expiry, ID and link (a certificate never shows its description). Fixed in 8bf4341f: they are read into its header, as a dated entry's are.",
+      "R5-HUNT8-AWARD-MULTI-YEAR-PAREN (9356fe04) stopped every split inside brackets, so \"Software Engineer, Acme (Remote, Jan 2020 - Present)\" and \"Acme Corp (Remote, 2019 - 2021)\" lost their dates entirely (company \"Present)\" / role \"2021)\"), and an unmarked award line \"Dean's List (2018, 2019)\", no longer dated, went into the award above's description. Fixed in ca25bc90: a date after a non-date word in brackets is the date again with the bracket closed (\"Acme (Remote)\"); only several dates in brackets stay in the title, and bracketDates keeps such a line dated for entry detection."
+    ],
+    "commits": [
+      "8bf4341f8d31b8d06b532effe7208b1a318aee1f",
+      "ca25bc90af939cce252c3a03e7f9384f11427f7f"
+    ],
+    "ci": [
+      36644765289,
+      36644773795
+    ],
+    "notes": "Checked all four fixes against origin/claude/r4-green. The fixer's fail-first run 36638947372 is green for all four (each test failed without its fix and passed with it); 36643873390 covered the comment-only d3a35b94. EDU-GPA-AFTER-COMMA (a5a82450) and MD-REFERENCE-LINKS (0d6ee92f) are sound: probed a GPA after the degree, the school and in brackets, with an honour, and an existing GPA kept; reference definitions are taken only for address-like targets, \"[Note]: see below\" stays text, unknown references are untouched. Run 36644765289: failfirst green for both review commits (tests/unit/r5-hunt8-undated-entry-review.unit.mjs fails 4 without 8bf4341f; tests/unit/r5-hunt8-bracket-date-review.unit.mjs fails 2 without ca25bc90; both pass with them). Run 36644773795: the full gate on ca25bc90 (node suite 6 shards, Playwright 3, Cypress 4, build, lint) green. Noted, not changed: an employer line parted from its roles by a blank line is now an employer-only entry (before: the first role's description); neither is the grouped form, which needs the employer right over its roles. No accessibility issues seen."
+  },
+  "baselineFailures": [],
+  "notes": "An earlier fixer made the four fix commits before a usage limit cut it off. I checked them here: identity and messages are clean, and run 36638947372 proved all four fail-first and passed the import-area tests (293/293) and lint. Base is 2b93a3c2, the r4-green commit the branch was cut from. The follow-up commit d3a35b94 is comment-only and was checked with run 36643873390 (area tests). The full gate has not been run on this branch."
+}
