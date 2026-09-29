@@ -7,7 +7,7 @@ import { BoardStorageNotice } from '@/components/board/BoardStorageNotice';
 import { Button, EmptyState, IconButton, controlClass, isImeKey, useConfirmOptional, useToast } from '@/components/ui';
 import { BOARD_COLORS, BOARD_MODES, COLUMN_CATEGORIES, DEFAULT_HIDE_DONE_DAYS, LABEL_COLORS } from '@/constants/boards';
 import { cleanTitle } from '@/utils/boardModel';
-import { columnDeletion } from '@/utils/boardView';
+import { columnDeletion, columnRecategorization } from '@/utils/boardView';
 
 // The kit's control (controlClass: its border and focus ring, and 16 px text on a touch screen,
 // which iOS would otherwise zoom into) without its w-full: most fields here sit in a row at their
@@ -106,6 +106,26 @@ function ColumnRow({ board, column, index, store }) {
     return removed;
   }
 
+  /**
+   * Set the category: one that reopens or resolves the column's issues asks first, and its toast
+   * offers Undo, as the board's column menu does (R5-HUNT6).
+   */
+  async function recategorize(category) {
+    const { count: n, change: effect } = columnRecategorization(board, column.id, category);
+    const name = COLUMN_CATEGORIES.find((c) => c.id === category)?.name ?? category;
+    const title = column.title || 'Untitled';
+    if (n > 0 && effect) {
+      const ok = await confirm({
+        title: `Make ${title} a “${name}” column?`,
+        body: `Its ${n} issue${n === 1 ? '' : 's'} will be ${effect === 'reopen' ? 'reopened' : 'marked done'}.`,
+        confirmLabel: 'Change category',
+      });
+      if (!ok) return;
+    }
+    const changed = store.setColumnCategory(board.id, column.id, category);
+    if (changed && n > 0 && effect) toast({ title: `Column “${title}” is now ${name}`, action: { label: 'Undo', onClick: () => store.restoreCategory(changed) } });
+  }
+
   async function remove() {
     if (count === 0) {
       if (await confirm({ title: `Delete the ${column.title} column?`, body: 'It holds no issues.', confirmLabel: 'Delete column', tone: 'danger' })) drop(null);
@@ -118,7 +138,7 @@ function ColumnRow({ board, column, index, store }) {
     <li data-column={column.id} className="py-2 space-y-2">
       <div className="flex flex-wrap items-center gap-2">
         <CommitField aria-label="Column title" value={column.title} onCommit={(title) => store.updateColumn(board.id, column.id, { title })} className={`${FIELD} flex-1 min-w-[8rem]`} />
-        <select aria-label="Column category" value={column.category} onChange={(e) => store.updateColumn(board.id, column.id, { category: e.target.value })} className={FIELD}>
+        <select aria-label="Column category" value={column.category} onChange={(e) => recategorize(e.target.value)} className={FIELD}>
           {COLUMN_CATEGORIES.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
         <label className="flex items-center gap-1 text-xs text-ink-subtlest">WIP

@@ -124,31 +124,59 @@ export function restoreColumn(board, removed) {
   const { columnId, before, after } = removed ?? {};
   const column = before && columnById(before, columnId);
   if (!column || !after || columnById(board, columnId)) return board;
+  const issues = issuesPutBack(board, before, after);
+  const columns = [...board.columns];
+  columns.splice(Math.max(0, Math.min(before.columns.indexOf(column), columns.length)), 0, column);
+  return { ...board, columns, issues };
+}
+
+/**
+ * The issues of `board` with what one change did to them undone, `before` and `after` the board
+ * either side of it: each issue it changed and nothing changed since goes back as it was (its
+ * column, resolvedAt, history), and a next occurrence it made for a repeating issue goes again
+ * while untouched and that issue is put back. An edit made since is kept: an issue edited since
+ * stays as it is, with its next occurrence.
+ */
+function issuesPutBack(board, before, after) {
   const was = new Map(before.issues.map((i) => [i.id, i]));
   const made = new Map(after.issues.map((i) => [i.id, i]));
-  // An issue the delete changed and nothing has changed since: it goes back as it was.
+  // An issue the change changed and nothing has changed since: it goes back as it was.
   const putBack = (i) => was.has(i.id) && made.has(i.id) && alike(i, made.get(i.id)) && !alike(was.get(i.id), i);
   const back = new Set(board.issues.filter(putBack).map((i) => i.id));
-  // The issue each next occurrence was made for by the delete.
+  // The issue each next occurrence was made for by the change.
   const madeFor = new Map(after.issues
     .filter((i) => i.recurrenceNextId && was.has(i.id) && was.get(i.id).recurrenceNextId !== i.recurrenceNextId)
     .map((i) => [i.recurrenceNextId, i.id]));
-  // What the delete made (a repeat's next occurrence), still as it made it, goes, but only when the
+  // What the change made (a repeat's next occurrence), still as it made it, goes, but only when the
   // issue it came from is put back: one kept as edited since keeps its next occurrence.
   const spawned = (i) => !was.has(i.id) && made.has(i.id) && alike(i, made.get(i.id))
     && (!madeFor.has(i.id) || back.has(madeFor.get(i.id)));
   const issues = board.issues.filter((i) => !spawned(i));
   const kept = new Set(issues.map((i) => i.id));
-  const restored = issues.map((i) => {
+  return issues.map((i) => {
     const old = was.get(i.id);
     if (!back.has(i.id)) return i;
     // A next occurrence that stays (edited since) is still this issue's: it is not made twice.
     const nextId = i.recurrenceNextId && i.recurrenceNextId !== old.recurrenceNextId && kept.has(i.recurrenceNextId) ? i.recurrenceNextId : old.recurrenceNextId;
     return nextId === old.recurrenceNextId ? old : { ...old, recurrenceNextId: nextId };
   });
-  const columns = [...board.columns];
-  columns.splice(Math.max(0, Math.min(before.columns.indexOf(column), columns.length)), 0, column);
-  return { ...board, columns, issues: restored };
+}
+
+/**
+ * Undo a column's category change (R5-HUNT6): `changed` is `{ columnId, before, after }`, the board
+ * just before and just after updateColumn. The category goes back, and each issue the change
+ * reopened or resolved, untouched since, as it was: its resolvedAt (the day it was really done, which
+ * a reopen wipes), its history; a next occurrence the change made goes again (issuesPutBack).
+ * Refused (the board as it is) when the column is gone or its category changed again since.
+ */
+export function restoreCategory(board, changed) {
+  const { columnId, before, after } = changed ?? {};
+  const was = before && columnById(before, columnId);
+  const made = after && columnById(after, columnId);
+  const column = columnById(board, columnId);
+  if (!was || !made || !column || column.category !== made.category || was.category === made.category) return board;
+  const columns = mapById(board.columns, columnId, (c) => ({ ...c, category: was.category }));
+  return { ...board, columns, issues: issuesPutBack(board, before, after) };
 }
 
 /** Move a column to `toIndex` (clamped). */

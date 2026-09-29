@@ -106,6 +106,18 @@ export function createBoardActions({ boardsNow, setBoards, now = () => Date.now(
   }
   /** Put a deleted column back (boardOps.restoreColumn), edits made since kept; true when it came back. */
   const restoreColumn = (removed) => Boolean(removed?.boardId) && change(removed.boardId, (b) => ops.restoreColumn(b, removed));
+  /**
+   * Set a column's category (its issues resolved or reopened when it becomes or stops being done);
+   * returns `{ boardId, columnId, before, after }` (the board either side of it) for
+   * restoreCategory — the toast's Undo — or null when nothing changed.
+   */
+  function setColumnCategory(boardId, columnId, category) {
+    const before = findBoard(boardId);
+    if (!change(boardId, (b, ctx) => ops.updateColumn(b, columnId, { category }, ctx))) return null;
+    return { boardId, columnId, before, after: findBoard(boardId) };
+  }
+  /** Undo a category change (boardOps.restoreCategory), edits made since kept; true when it went back. */
+  const restoreCategory = (changed) => Boolean(changed?.boardId) && change(changed.boardId, (b) => ops.restoreCategory(b, changed));
   const moveColumn = (boardId, columnId, toIndex) => change(boardId, (b) => ops.moveColumn(b, columnId, toIndex));
 
   /** Add a label (`{ name, color }`); returns it — or the label that already has that name — or null. */
@@ -180,7 +192,7 @@ export function createBoardActions({ boardsNow, setBoards, now = () => Date.now(
 
   return {
     keyError, addBoard, updateBoard, deleteBoard, restoreBoard, toggleStar,
-    addColumn, updateColumn, deleteColumn, restoreColumn, moveColumn, addLabel, updateLabel, deleteLabel,
+    addColumn, updateColumn, setColumnCategory, restoreCategory, deleteColumn, restoreColumn, moveColumn, addLabel, updateLabel, deleteLabel,
     addIssue, updateIssue, moveIssue, deleteIssue, restoreIssue, duplicateIssue,
     addComment, updateComment, deleteComment,
     addSprint, updateSprint, startSprint, completeSprint, deleteSprint, restoreSprint,
