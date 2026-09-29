@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useLocation, useSearchParams } from 'react-router-dom';
 
 export const EDITOR_TABS = ['resume', 'design', 'coverletter', 'ats'];
 
@@ -7,10 +7,13 @@ export const EDITOR_TABS = ['resume', 'design', 'coverletter', 'ats'];
  * The editor's open tab, kept in the address as ?tab= (the dashboard's "Cover letter" links to
  * ?tab=coverletter). A value that is not a tab is the Résumé tab — it used to open a blank panel —
  * and picking a tab replaces ?tab= so a reload reopens it; the Résumé tab needs none (R2-076).
- * `setTab` takes a tab or a function of the open one, as a state setter does.
+ * `setTab` takes a tab or a function of the open one, as a state setter does. A picked tab keeps
+ * the address's state, as useUrlState does: an import's notice (useImportNotice) lives there until its
+ * Dismiss, and the first tab picked took it away (R5-HUNT2).
  */
 export function useEditorTab() {
   const [params, setParams] = useSearchParams();
+  const location = useLocation();
   const asked = params.get('tab');
   const tab = EDITOR_TABS.includes(asked) ? asked : 'resume';
 
@@ -21,7 +24,7 @@ export function useEditorTab() {
       if (value === 'resume' || !EDITOR_TABS.includes(value)) out.delete('tab');
       else out.set('tab', value);
       return out;
-    }, { replace: true });
+    }, { replace: true, state: location.state });
   }
 
   // An unknown ?tab= leaves the address too, so a reload or a copied link does not carry it on.
