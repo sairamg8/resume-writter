@@ -1,0 +1,76 @@
+{
+  "cluster": "r5-hunt7-export",
+  "branch": "claude/wf-r5-hunt7-export",
+  "base": "88819d0da706a6962a145f2f013b5a07f9841590",
+  "rows": [
+    {
+      "id": "R5-HUNT7-WORD-CONTROL-CHAR-CORRUPT-DOCX",
+      "title": "Word export writes a file Word cannot open when any printed text contains a C0 control character",
+      "severity": "high",
+      "outcome": "fixed",
+      "commits": [
+        "73fe5151a214e94ae52317293c8601506fab3724"
+      ],
+      "tests": [
+        "tests/pdf/r5hunt7-word-control-chars.test.mjs"
+      ],
+      "summary": "Now: the résumé and cover-letter Word exports build from the résumé with the characters XML 1.0 forbids left out (xmlSafe in wordExportUtils.js: C0 controls except tab/LF/CR, U+FFFE, U+FFFF), so a pasted U+000B or U+0002 no longer yields a .docx Word refuses; the rest of the text prints as before.",
+      "ci": [
+        36633052985,
+        36633706485
+      ]
+    },
+    {
+      "id": "R5-HUNT7-DOCX-AUTHOR-UN-NAMED",
+      "title": "The .docx résumé and cover letter carry Author 'Un-named' and no title in their document properties",
+      "severity": "low",
+      "outcome": "fixed",
+      "commits": [
+        "d2a9b2f641cb82647c1cdddc5cd37790017fafe4"
+      ],
+      "tests": [
+        "tests/pdf/r5hunt7-docx-properties.test.mjs"
+      ],
+      "summary": "Now: the Word files carry the PDF's properties (from getDocumentProps): Title '<Name> Resume' / '<Name> Cover Letter', Author and Last Modified By the name, Subject and Keywords; never docx's default 'Un-named'.",
+      "ci": [
+        36633052985,
+        36633706485
+      ]
+    },
+    {
+      "id": "R5-HUNT7-MD-GROUP-ROLES-SPLIT-BY-BLANK-ENTRY",
+      "title": "Markdown export splits a 'Group roles by company' group at a blank or all-eyes-off entry",
+      "severity": "low",
+      "outcome": "fixed",
+      "commits": [
+        "95cb7c09ccd2e8dd483d09144605399e19dc5575",
+        "97e12aed7baf9a752f0c62a6f79758d83ebf49fe"
+      ],
+      "tests": [
+        "tests/unit/r5-hunt7-md-group-roles-blank-entry.unit.mjs",
+        "tests/unit/markdown-export.unit.mjs"
+      ],
+      "summary": "Now: the Markdown export takes an entry section's printed entries (printedEntries), as the PDF and Word do, so a blank or all-hidden entry no longer splits a company's grouped roles; list sections (skills, languages, interests) keep their own filtering, so a legacy skill stored as a name alone still prints (the follow-up commit, proved by the existing markdown-export.unit.mjs).",
+      "ci": [
+        36633052985,
+        36633706485
+      ]
+    }
+  ],
+  "review": {
+    "by": "second agent",
+    "verdict": "fixed",
+    "issues": [
+      "R5-HUNT7-REVIEW-WORD-LONE-SURROGATE: xmlSafe (73fe515) left out the C0 controls XML 1.0 forbids but not a lone surrogate (half an emoji, e.g. from a JSON import's \"\\ud83d\" or text cut between a pair's halves), which is no XML character either. In the browser (no Buffer) docx's jszip encodes it with its own string2buf as bytes that are not UTF-8, so the .docx still would not open in Word; Node's Buffer writes U+FFFD, which is why the original tests could not see it. Fixed in d2dd3a7: the regex matches a whole pair as two units (kept) and drops a lone high or low half, with no lookbehind. Test tests/pdf/r5hunt7-word-lone-surrogate.test.mjs (the résumé and letter .docx carry no half and no U+FFFD, a whole emoji prints; xmlSafe unit)."
+    ],
+    "commits": [
+      "d2dd3a7dc49e8f5d42ae5d12943cd9062bdbbe18"
+    ],
+    "ci": [
+      36634819207
+    ],
+    "notes": "Reviewed 73fe515, d2a9b2f, 95cb7c0, 97e12ae against origin/claude/r4-green (the branch merges cleanly with its current head 420f487). Fail-first runs 36633052985 and 36633706485 checked in the logs: each fix's tests failed without it and passed with it. 73fe515: xmlSafe copies the résumé before withWordPhoto (which never mutates it or keys a cache on identity); non-plain values (Blob, Timestamp) pass through; base64 photo strings hold no match; the letter's settings, passed unsanitized to buildDocument/wordFontTable, carry only font and spacing values. d2a9b2f: Title/Subject/Keywords match the résumé PDF (getDocumentProps) and the letter PDF (CoverLetterTemplatePDF: '<Name> Cover Letter', subject 'Cover Letter'); an empty name writes no dc:creator, never 'Un-named'; importing PdfPage adds no new react-pdf dependency to the Word chunk (wordExportUtils already reaches it through PdfItemHeader). 95cb7c0/97e12ae: Markdown now only leaves out more entries than before, by the same entryPrints rule the PDF and Word use; list sections keep their own filtering, so a legacy { name } skill still prints. Run 36634819207 (head d2dd3a7): fail-first for d2dd3a7 (# fail 3 without, pass with) and 622/622 area tests green (every Word and letter test under tests/pdf, the three r5hunt7 export tests, markdown-export*, the role-group Markdown test, knowledge-docs), lint green. The full gate was not run on this branch. No accessibility issue noted."
+  },
+  "baselineFailures": [],
+  "notes": "Run 36633052985: all three fail-first checks passed; its tests job found markdown-export.unit.mjs failing (a legacy skills entry { name } was dropped by printedEntries), fixed in 97e12ae. Run 36633706485 (head 97e12ae): fail-first for 95cb7c0 and 97e12ae plus the touched-area tests (Word, cover letter, Markdown, role groups, 31-contact-fields, 91-design-resets, 71-startup-chunks, knowledge-docs) all green. The full gate was not run on this branch."
+}

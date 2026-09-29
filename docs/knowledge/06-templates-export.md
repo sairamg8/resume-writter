@@ -78,9 +78,20 @@ table, under it where a name or title word would not fit beside them (R2-137). I
 letter PDF's — the letter's own, else the résumé's, none with Show photo off — above a centred name, else
 in a column beside it at Photo → Position (`wordLetterPhoto`, R4-DOUT-06).
 
+Both .docx files are built from the résumé with the characters XML 1.0 forbids left out (`xmlSafe` in
+`wordExportUtils.js`: C0 controls but tab, LF and CR — a pasted U+000B or U+0002 — U+FFFE/U+FFFF, and
+a lone surrogate, half an emoji, which the browser's zip writes as bytes that are not UTF-8; a whole emoji
+is kept), which docx would write as they are and Word would then refuse the file
+(R5-HUNT7-WORD-CONTROL-CHAR-CORRUPT-DOCX, R5-HUNT7-REVIEW-WORD-LONE-SURROGATE). Their document properties are the PDF's
+(`getDocumentProps`): Title "<Name> Resume" or "<Name> Cover Letter", Author and Last Modified By the
+name — never docx's default "Un-named" (R5-HUNT7-DOCX-AUTHOR-UN-NAMED).
+
 ## Text exports
 
-- **Markdown** — `markdownExport.js`
+- **Markdown** — `markdownExport.js`; an entry section's entries are the ones that print (`printedEntries`
+  in `entryPrints.js`), as the PDF's and Word's, so a blank or all-hidden entry never splits a company's
+  grouped roles (R5-HUNT7-MD-GROUP-ROLES-SPLIT-BY-BLANK-ENTRY); a list section (skills, languages,
+  interests) leaves its blank entries out itself
 - **ATS plain text** — `atsPlainText.js` (re-exported from `atsChecker.js`)
 - **JSON Resume** — `jsonResumeExport.js` / `jsonResumeImport.js` (the jsonresume.org schema)
 

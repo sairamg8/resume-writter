@@ -4,6 +4,7 @@ import { contactHref, contactItems } from './contacts.js';
 import { resolveSection } from '../templates/pdf/shared/templateSectionDefaults.js';
 import { templateId } from '../constants/templates.js';
 import { employerOf, groupPlaces, groupsRoles, roleGroups } from './roleGroups.js';
+import { printedEntries } from './entryPrints.js';
 
 /**
  * Markdown Resume Exporter (Export → Markdown (.md)): the résumé as GitHub Flavored Markdown.
@@ -313,7 +314,13 @@ export function generateMarkdownResume(resume) {
   };
   for (const s of Array.isArray(resume.sections) ? resume.sections : []) {
     if (!s || s.visible === false) continue;
-    const items = (Array.isArray(s.items) ? s.items : []).filter((i) => i && i.visible !== false);
+    // The entries that print (printedEntries), as the PDF's and Word's: a blank entry, or one whose
+    // fields are all hidden with their eyes, split a company's grouped roles in two and left an empty
+    // line (R5-HUNT7-MD-GROUP-ROLES-SPLIT-BY-BLANK-ENTRY). A list section (skills, languages,
+    // interests) keeps every shown entry: listLines leaves out the blank ones itself, and prints a
+    // legacy skill stored as `name` alone.
+    const shown = (Array.isArray(s.items) ? s.items : []).filter((i) => i && i.visible !== false);
+    const items = LIST_TYPES.has(s.type) ? shown : printedEntries({ ...s, items: shown });
     const opts = resolveSection(s, templateId(resume.template)).settings;
     const one = (item) => {
       const f = fieldOf(item);
