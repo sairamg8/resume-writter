@@ -192,7 +192,10 @@ export function generateAtsPlainText(resume) {
     const items = (Array.isArray(s.items) ? s.items : []).filter((item) => item && item.visible !== false);
     const body = sectionLines(s, items, resume.settings || {}, resume.template);
     if (!body.some(Boolean)) continue;
-    lines.push(String(s.title || s.type).toUpperCase(), RULE, ...body, '');
+    // A title the user cleared prints only the rule, as the PDF does: it printed the type's internal
+    // key ('CUSTOM'). A section with no title at all (never normalized) keeps its type.
+    const title = s.title == null ? s.type : String(s.title).trim();
+    lines.push(...(title ? [String(title).toUpperCase()] : []), RULE, ...body, '');
   }
 
   return lines.join('\n').replace(/\n{3,}/g, '\n\n').trim();
