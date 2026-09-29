@@ -1,5 +1,5 @@
 import { decodeEntities, hasRichText, parseRichText } from './richText.js';
-import { contactItems } from './contacts.js';
+import { CONTACT_FIELDS, contactItems } from './contacts.js';
 import { skillGroup } from './skills.js';
 import { ACTION_VERBS, WEAK_PHRASE_REPLACEMENTS, hasMetric, leadsWithActionVerb } from './bulletOptimizer.js';
 import { ATS_TIER_POINTS, atsRating, hasHeaderControls, inSidebarColumn, templateId, templateLabel, TEMPLATE_PICKER } from '../constants/templates.js';
@@ -288,6 +288,9 @@ const PRINTED_FIELDS = [
   'language', 'proficiency', 'jobTitle', 'relationship', 'email', 'phone', 'interests',
 ];
 
+/** The contact fields that print as a bare web address unless given a display label. */
+const ADDRESS_KEYS = new Set(CONTACT_FIELDS.filter(({ link }) => link).map(({ key }) => key));
+
 /** A stored field as text: a number from imported data as written, anything else not text as ''. */
 const fieldText = (v) => (typeof v === 'string' || typeof v === 'number' ? String(v) : '');
 
@@ -296,13 +299,18 @@ const fieldText = (v) => (typeof v === 'string' || typeof v === 'number' ? Strin
  * section or field (R2-033), every field an export prints, the header's contact lines as it prints
  * them, and rich text as its words, never its markup (R2-022).
  */
-export function extractResumeCorpus(resume) {
+export function extractResumeCorpus(resume, { addresses = true } = {}) {
   if (!resume) return '';
   const parts = [];
   const p = resume.personal || {};
   if (p.name) parts.push(p.name);
   if (p.title) parts.push(p.title);
-  for (const { value } of contactItems(p)) parts.push(value);
+  for (const { key, value } of contactItems(p)) {
+    // `addresses: false` leaves out what prints as an e-mail or web address (a link's display label
+    // is words and stays): see matchResumeWithJob.
+    if (!addresses && (key === 'email' || (ADDRESS_KEYS.has(key) && !String(p[`${key}Label`] || '').trim()))) continue;
+    parts.push(value);
+  }
   parts.push(printedText(shownField(p, 'summary')));
 
   const sections = Array.isArray(resume.sections) ? resume.sections : [];
@@ -320,9 +328,9 @@ export function extractResumeCorpus(resume) {
         parts.push(category, skills);
         continue;
       }
-      parts.push(...PRINTED_FIELDS.map((key) => fieldText(item[key])));
+      parts.push(...PRINTED_FIELDS.map((key) => (addresses || key !== 'email' ? fieldText(item[key]) : '')));
       // A certificate prints its link's label where it has one, a project its link.
-      parts.push(fieldText(item.urlLabel) || fieldText(item.url));
+      parts.push(fieldText(item.urlLabel) || (addresses ? fieldText(item.url) : ''));
       parts.push(printedText(fieldText(item.description)));
       if (Array.isArray(item.bullets)) parts.push(...item.bullets.map(fieldText));
     }
@@ -452,7 +460,12 @@ export function matchResumeWithJob(resume, jobDescriptionText) {
   if (!jdKeywords.length) return null;
 
   // Composed, as the keywords are read (extractJobKeywords).
-  const resumeCorpus = extractResumeCorpus(resume).normalize('NFC').replace(APOSTROPHES, "'").toLowerCase();
+  const read = (text) => text.normalize('NFC').replace(APOSTROPHES, "'").toLowerCase();
+  const resumeCorpus = read(extractResumeCorpus(resume));
+  // A keyword that starts with a dot (".NET") is found after letters too, as in "ASP.NET", and so
+  // at the end of any .net address: it is looked for without the résumé's e-mail and web addresses,
+  // where "anna@weber.net" or "annaweber.net" names no .NET (R5-HUNT1-ats-jd-dotnet-stripped).
+  let wordsCorpus;
   const matched = [];
   const missing = [];
 
@@ -461,7 +474,9 @@ export function matchResumeWithJob(resume, jobDescriptionText) {
     const lowerKw = kw.toLowerCase();
     // A whole word, a phrase too: found with a bare includes, "system design" was matched by
     // "ecosystem design" (R5-HUNT1-ats-jd-phrase-substring-match).
-    const isPresent = wholeWord(lowerKw).test(resumeCorpus);
+    const isPresent = wholeWord(lowerKw).test(lowerKw.startsWith('.')
+      ? (wordsCorpus ??= read(extractResumeCorpus(resume, { addresses: false })))
+      : resumeCorpus);
 
     if (isPresent) {
       matched.push(kw);
