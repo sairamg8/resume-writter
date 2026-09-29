@@ -1,6 +1,13 @@
 # Session Handoff — Resume Here
 
 **STOPPED by the owner 2026-09-29 13:01 UTC. Next: DoD — résumé parsing on real career portals with the owner's own résumé; bugs resume after.**
+**DoD progress (2026-09-29, session 521f8276):** 3 real applications submitted with FlowCV-exported PDFs (GitLab/Greenhouse,
+Atlassian/iCIMS, Netflix/Eightfold). Eightfold parsed the PDF header fully and correctly; Greenhouse doesn't parse; iCIMS
+kept old profile data. No export bug found yet; one editor freeze seen while typing in Personal Info → Website (watch for
+repro). Job-hunt state/next steps live OUTSIDE the repo: `~/Documents/job-hunt/README.md`, `applications.md`,
+`shortlist.md` (57 roles abroad, top 20 ranked). Owner's résumé source of truth: `private/sairam-resume.json` (website now
+itsairam.netlify.app — owner does not own sairamg.dev). Idea from the owner (not started): for the owner's account, starter
+templates should prefill from the private résumé instead of sample people ("Alex Morgan").
 Latest green: `910237e` — DEPLOYED to master 2026-09-29 (full gate run 36567126236 GREEN).
 Stopped: hunt round 6 (had just started its finders; nothing pushed), the coordinator routine trig_01NqtyqnKGMDHRm8VnNuJLYL
 (disabled), the lock refresher. Hunt state to resume from: rounds 1–5 merged (78 fixes; seen-list wf-reports/r5-hunt-seen.json;
