@@ -355,8 +355,11 @@ export function createCollectionSync({
       }
       if (newer.length) {
         // Taken as the cloud has them: the list the queue compares with has them too, so they are not sent back.
-        const list = store.items().map((x) => newer.find((n) => n.id === x.id) || x);
-        s.prev = (s.prev || []).map((x) => newer.find((n) => n.id === x.id) || x);
+        // An item edited here while the batch read the cloud is newer still: that edit stays, and its
+        // own write is queued (taken over, it vanished here while the queue still sent it).
+        const take = (x) => { const n = newer.find((y) => y.id === x.id); return n && !(x.updatedAt > n.updatedAt) ? n : x; };
+        const list = store.items().map(take);
+        s.prev = (s.prev || []).map(take);
         store.replace(list);
       }
       await sending;
