@@ -1,0 +1,47 @@
+{
+ "rounds": {
+  "1": {
+   "confirmed": 13,
+   "head": "5a471df"
+  },
+  "2": {
+   "confirmed": 19,
+   "head": "8e2ab9e"
+  }
+ },
+ "seen": [
+  "A PDF/Word/Markdown import that finishes after you open another résumé takes over that editor, and your typing goes into the imported résumé",
+  "1-Page Fit replaces spacing that is already tighter than its ladder, then shrinks the text of a résumé that already fit on one page",
+  "Word export: nested numbered lists and paragraphs inside a bullet are not indented under the bullet's text",
+  "JSON Resume import drops the company, website, GPA and username-only profiles from pre-1.0 JSON Resume files",
+  "Text/PDF/Word import: 'Degree Subject, School' puts the school in Field of Study and leaves Institution empty",
+  "Text import: 'Company — City, ST' over the role line makes the city the job title and moves the real title into the description",
+  "Double-clicking a card's Copy or New Cover on the Dashboard creates two records",
+  "Signing out in one tab can make a second tab delete every résumé from the account's cloud",
+  "A restored job-form draft writes back stale values for fields the user never touched, including status",
+  "Summary 'Follow-ups due' shows an arbitrary 6 in board order, unsorted, and silently hides the rest",
+  "Board/Backlog/List/Calendar filters (and group-by, folded lanes) carry over when switching to another project (refuted: intended)",
+  "Job scanner finds multi-word tech phrases inside other words, in both the posting and the résumé",
+  "'.NET' in a job posting becomes the keyword 'NET', which matches 'net revenue' and is written into Skills as 'NET'",
+  "Job match counts the heading of a section that prints nothing (all entries hidden or none)",
+  "The 'read best-effort, check every section' import notice disappears when you switch editor tabs",
+  "A photo or contact-icon upload that finishes after you open another résumé is written into that résumé (icons: it overwrites that résumé's whole icon set)",
+  "1-Page Fit that cannot reach one page still leaves the text at 9 pt, and its notice only mentions spacing",
+  "Markdown export drops bold, italic, underline and strike-through from the summary, descriptions and the cover-letter body",
+  "ATS text prints a list item's second paragraph at column 0, detached from its bullet",
+  "Text/PDF import: an employer or school name typed in capitals on its own line becomes a custom section, and the real Experience/Education section disappears",
+  "Text/PDF import: 'Role' over 'Company ⇥ Date' is read as a grouped employer, so role and company swap and the next job gets the wrong company",
+  "Text/PDF import: a degree line above 'School ⇥ Date' is left out of the entry's header and lands in its description, so Degree is empty",
+  "Undo on 'Generated letter applied' writes the old letter into a different résumé opened meanwhile",
+  "Cover letter generator quotes a job title, company or skills the user hid with the eye",
+  "A job or project brought back with Undo after its deletion synced is deleted for good if that restore never reaches the cloud",
+  "Job/board flush replaces an edit typed while it read the cloud with another device's older copy",
+  "Restoring a job backup in a fresh browser silently drops the user's edited demo job (demo_1) in favour of the untouched demo",
+  "List view Salary sort misreads European amounts: '€60.000' sorts as 60 and '2,5 LPA' as 25 LPA",
+  "A monthly repeating issue due on the 29th, 30th or 31st moves to an earlier day for good after one short month",
+  "Deleting or retyping the epic the view is filtered by leaves a filter that hides every issue and cannot be unticked",
+  "On a Kanban board, a card's 'Move to' can put it in the middle of the column when the project has used sprints",
+  "Job scanner lists a tech phrase and each of its words as separate keywords, e.g. 'CI/CD', 'CI' and 'CD'",
+  "Salary figures like '$150K–$180K' become missing keywords, and '+' writes '150K' into Skills"
+ ]
+}
