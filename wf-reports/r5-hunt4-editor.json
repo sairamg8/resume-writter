@@ -1,0 +1,43 @@
+{
+  "cluster": "r5-hunt4-editor",
+  "branch": "claude/wf-r5-hunt4-editor",
+  "base": "b93a09a9c8c5553266111c967fc31cfddd2d8c39",
+  "rows": [
+    {
+      "id": "R5-HUNT4-DESIGN-UNDO-WIPES-ICONS-AND-PAPER",
+      "title": "Undo on 'Template: …' or 'Spacing: …' deletes contact icons uploaded and resets the page size chosen while the notice was up",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": [
+        "64c92ecf341ddacd563c4537731186e6ab2a11c2"
+      ],
+      "tests": [
+        "tests/pdf/106-r5-hunt4-design-undo-keeps-icons-paper.test.mjs (new)",
+        "tests/pdf/93-picker-undo.test.mjs",
+        "tests/pdf/102-r4-dux-25-spacing-presets.test.mjs",
+        "tests/unit/picker-ui.unit.mjs",
+        "tests/unit/r4dsn-gallery-count.unit.mjs",
+        "tests/unit/r4dsn-gallery-category.unit.mjs",
+        "tests/pdf/31-contact-fields.test.mjs",
+        "tests/pdf/91-design-resets.test.mjs",
+        "tests/unit/knowledge-docs.unit.mjs"
+      ],
+      "summary": "Now: Undo on a 'Template: …' or 'Spacing: …' notice restores only the look. withDesignSnapshot (src/utils/templateSwitch.js) takes the snapshot's settings, but keeps customContactIcons, pageSize and myDesigns as they are now. These are the NOT_A_LOOK keys (templatePresets.js), minus templatePreset, which is part of the look and is still restored. If the résumé no longer has one of these keys, it is dropped rather than brought back or left undefined. So a contact icon uploaded, or a US Letter page chosen, while the notice was up survives Undo, the same way Design → Reset keeps them. An icon removed, or the paper set back to A4, also stays that way. Before, Undo wrote the whole old settings object back: the icons were deleted with no way back, and the paper was reset. It kept myDesigns only when the résumé still had it, so a saved design deleted while the notice was up came back on Undo. Undo was also the only path that changed these keys, since a template switch, a picker card and a spacing preset never touch them. Callers: useResumeDesignActions.restoreDesign, reached from usePickCard (template/design picks) and DesignPanel.applySpacing. Stored data needs no migration, because the snapshot lives only in memory for the notice's lifetime.",
+      "failfirst_run": "36551782190 (green: failfirst job 109351475473, 'fail without the fix (its diff reversed): # fail 3', then 'pass with it'; named-tests job 109351432571: 35/35 pass across the 9 files; lint green)"
+    }
+  ],
+  "review": {
+    "rounds": [
+      {
+        "round": 1,
+        "issues": []
+      }
+    ],
+    "issues": [],
+    "fixedByReviewer": []
+  },
+  "rejected": [],
+  "a11yNoted": [],
+  "baselineFailures": [],
+  "notes": "Review of 64c92ec, which changes only withDesignSnapshot. Checks: (1) KEPT_ON_UNDO matches NOT_A_LOOK except templatePreset, which is the design picked and must be undone. (2) No action that the Undo reverses ever changes the kept keys: styleOnSwitch and withHeaderColorsBack leave them alone, the spacing presets set only margins, gaps and line height, and withLook adds to myDesigns, which B4 keeps anyway. (3) Undo is still a no-op on another résumé, because the snap.id guard is unchanged. (4) A missing snap.settings (old in-memory shape) gives {} and no crash. (5) A null value is kept as it is now, and only undefined or absent keys are dropped. The CI logs confirm the fail-first run: all 3 tests fail with the diff reversed and pass with it. The full gate (suite, Playwright, Cypress, build) was not run for this targeted run and is left to the batch gate. No issues were found, so the reviewer made no fix commits."
+}

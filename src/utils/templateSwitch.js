@@ -53,10 +53,13 @@ export const designSnapshot = (r) => ({
   sections: (r.sections || []).map((s) => ({ id: s.id, has: Object.hasOwn(s, 'settings'), settings: s.settings })),
 });
 
+// A résumé's settings that are not its look (templatePresets NOT_A_LOOK): a switch never changes them.
+const KEPT_ON_UNDO = ['customContactIcons', 'pageSize', 'myDesigns'];
+
 /**
  * `r` as `snap` (designSnapshot) had it: the template, the settings and each section's settings — its
- * content as it is now, typed since or not, and the designs saved since kept (B4). A section added since
- * keeps its own; one deleted since stays deleted. Another résumé than the one it was taken of: `r` itself.
+ * content as it is now, typed since or not, and the designs saved (B4), contact icons uploaded and paper
+ * chosen since kept (R5-HUNT4). A section added since keeps its own; one deleted since stays deleted. Another résumé than the one it was taken of: `r` itself.
  */
 export function withDesignSnapshot(r, snap) {
   // Only the résumé it was taken of: the Undo of a switch outlives a résumé opened meanwhile (an import).
@@ -70,7 +73,12 @@ export function withDesignSnapshot(r, snap) {
     const { settings: _gone, ...rest } = s;
     return rest;
   });
-  const mine = r.settings?.myDesigns;
-  const settings = mine ? { ...snap.settings, myDesigns: mine } : snap.settings;
+  // What is not a look stays as it is now (R5-HUNT4): the contact icons uploaded and the paper chosen
+  // while the notice was up, as Reset keeps them (resetDesignSettings), and the designs saved (B4).
+  const settings = { ...snap.settings };
+  for (const k of KEPT_ON_UNDO) {
+    if (r.settings && Object.hasOwn(r.settings, k) && r.settings[k] !== undefined) settings[k] = r.settings[k];
+    else delete settings[k];
+  }
   return { ...r, template: snap.template, settings, sections };
 }
