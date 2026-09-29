@@ -8,8 +8,12 @@
       "title": "Text/PDF/Word import: a same-year range such as 'Jun – Aug 2021' or 'May – August 2020' is not read as a date, so the job's role becomes 'Jun', its start date becomes the end month, and the real job title goes into the description",
       "severity": "high",
       "outcome": "fixed",
-      "commits": ["43e8a79ab5396189e4f3d0094f75a15be39ca41c"],
-      "tests": ["tests/unit/r5-hunt6-import-same-year-range.unit.mjs"],
+      "commits": [
+        "43e8a79ab5396189e4f3d0094f75a15be39ca41c"
+      ],
+      "tests": [
+        "tests/unit/r5-hunt6-import-same-year-range.unit.mjs"
+      ],
       "summary": "Now: 'Jun – Aug 2021', 'Jun - Aug 2021', 'May – August 2020', 'June–August 2021' and 'Jun to Aug 2021' read as ranges. The first month takes the end's year. When the first month comes later in the year than the end month ('Dec – Feb 2021'), it takes the year before (Dec 2020). The job keeps its company, role and dates, and the title stays out of the description. The fix is in readDateRange (src/utils/importText.js): SAME_YEAR / withYear add the year to the leading month before RANGE is tried. The text, PDF and Word importers all go through resumeFromText, so they all get it.",
       "product_call": "",
       "remaining": "A month with no year on its own ('Jun') is still no date, as before."
@@ -19,8 +23,12 @@
       "title": "Markdown, ATS-text or PDF round trip of a Sidebar, Executive, Timeline (or any role-first) résumé swaps role and company for every job whose title has no word from the importer's role list",
       "severity": "high",
       "outcome": "fixed",
-      "commits": ["38815fe114e993a10032a075c6c7d382e1e5785d"],
-      "tests": ["tests/unit/r5-hunt6-import-role-first-section.unit.mjs"],
+      "commits": [
+        "38815fe114e993a10032a075c6c7d382e1e5785d"
+      ],
+      "tests": [
+        "tests/unit/r5-hunt6-import-role-first-section.unit.mjs"
+      ],
       "summary": "Now: each experience or volunteering section works out its own order. The jobs whose words decide it (a ROLE word on one side only, or a company's legal ending) vote for role-first or company-first. The ambiguous jobs ('Sous Chef — Chez Panisse', 'Barista — Blue Bottle') then take the order the majority shows. Before, they always read company first. The real Markdown and ATS-text exporters on Sidebar, Executive and Timeline now round-trip. Classic still reads company first. The fix is in src/utils/importText.js. roleLeadsOf() splits out roleFirst's decision. headerOf() splits out the header and location reading from entryOf so it can be reused. sectionLeads() counts the votes. entriesOf passes the result to entryOf as roleLeads. With no votes, or a tie, each type keeps its old default: company-first for experience, role-first for volunteering.",
       "product_call": "If no job in a section has a role word or a legal ending (every title like 'Sous Chef' or 'Barista'), the exported file carries no sign of its order, so the import still reads company first. The section's order only settles ambiguous jobs. It does not overrule a job whose own words decide wrongly, such as a company named 'Summit Partners' ('Partners' is a ROLE word) with the role 'Receptionist' in a company-first export. Overruling that looked riskier for hand-typed résumés that mix orders.",
       "remaining": "The PDF round trip uses the same code path (resumeFromText), but no tests/pdf harness test renders a Sidebar PDF with ambiguous titles."
@@ -30,8 +38,12 @@
       "title": "Text/PDF/Word import: an education dated 'Graduated May 2021' or 'Class of 2020' becomes the Degree, and the real degree lands in the description",
       "severity": "medium",
       "outcome": "fixed",
-      "commits": ["1e68a0cb716a75c2bec77e082f91d2b3ba4e7a3d"],
-      "tests": ["tests/unit/r5-hunt6-import-graduated-date.unit.mjs"],
+      "commits": [
+        "1e68a0cb716a75c2bec77e082f91d2b3ba4e7a3d"
+      ],
+      "tests": [
+        "tests/unit/r5-hunt6-import-graduated-date.unit.mjs"
+      ],
       "summary": "Now: 'Graduated May 2021', 'Graduated: May 2021', 'Graduation: 2020', 'Graduation Date: May 2020', 'Class of 2020', 'May 2020 (Graduated)' and 'Aug 2017 – Graduated May 2021' read as the education's end date, with the start date kept when one is given. The degree stays the degree, and the description stays empty. The fix is in src/utils/importText.js: AHEAD now also takes graduated / graduation (date) / class of as a prefix, and AHEAD_AFTER takes '(Graduated)' as a suffix. Both feed RANGE and END_ONLY.",
       "product_call": "",
       "remaining": ""
@@ -41,8 +53,12 @@
       "title": "Text/PDF/Word import: a company line written 'Company, City, ST' keeps the city in the company name and leaves Location empty",
       "severity": "medium",
       "outcome": "fixed",
-      "commits": ["3918ff149b0f1efddd41a7aa794ebca371a776f3"],
-      "tests": ["tests/unit/r5-hunt6-import-company-comma-place.unit.mjs"],
+      "commits": [
+        "3918ff149b0f1efddd41a7aa794ebca371a776f3"
+      ],
+      "tests": [
+        "tests/unit/r5-hunt6-import-company-comma-place.unit.mjs"
+      ],
       "summary": "Now: 'Google, Mountain View, CA' beside 'Software Engineer' gives company 'Google' and location 'Mountain View, CA'. The same works for 'Globex Inc., Denver, CO | Analyst | 2010 – 2011', 'Siemens, Munich, Germany' and the one-line 'Software Engineer, Google, Mountain View, CA'. An employer line over grouped roles ('Acme Corp, Austin, TX' over 'Senior Developer, Jan 2012 – Dec 2014') gives the group the place. The fix is in src/utils/importText.js. placeAfterComma() splits off a trailing ', City, ST/Country' when it is a PLACE ending in a REGION_END and neither side has a ROLE word. headerOf applies it only to the field beside one that names the role. employerOver applies it to a grouped employer line. 'Senior Engineer — Acme, Inc.' keeps its company.",
       "product_call": "",
       "remaining": "Only a city with a state, province or country code or name (REGION_END) is peeled off. 'Acme, Berlin' with no region stays in the company."
@@ -52,14 +68,40 @@
       "title": "Text/PDF/Word/Markdown import: a header location with a ZIP code ('Chicago, IL 60601') or a street address is not read as the location and is printed as an 'Additional Information' section",
       "severity": "medium",
       "outcome": "fixed",
-      "commits": ["7d5f4fa5f299086ed09d8fc65f8f77f38caa2130"],
-      "tests": ["tests/unit/r5-hunt6-import-header-postcode.unit.mjs"],
+      "commits": [
+        "7d5f4fa5f299086ed09d8fc65f8f77f38caa2130"
+      ],
+      "tests": [
+        "tests/unit/r5-hunt6-import-header-postcode.unit.mjs"
+      ],
       "summary": "Now: 'Chicago, IL 60601', 'Austin, TX 78701-1234', 'Toronto, ON M5V 2T6' and '123 Main St, Chicago, IL 60601' on the contact line are personal.location. No 'Additional Information' section is made, and the title and phone are read as before. This works in the text import and in the Markdown import. The fix is in src/utils/importText.js: ONE_PLACE is now built from TOWN, POSTCODE and STREET. A US ZIP or ZIP+4, a Canadian postcode or a UK postcode may follow the place, with a country after it. A street part with a house number is allowed only when a postcode follows, so text such as '10 years, Leadership, Strategy' is still not a place.",
       "product_call": "",
       "remaining": "A street address with no postcode ('123 Main St, Chicago, IL') is still not read as a place."
     }
   ],
-  "review": null,
+  "review": {
+    "reviewedRange": "a79efd8b..551d8ed8",
+    "issuesFound": [
+      "R5-HUNT6-ROLE-FIRST-FIRM-VOTE (regression from R5-HUNT6-ROLE-FIRST-SECTION): sectionLeads counted a firm named with a plural role word (\"Summit Partners\", \"Gensler Architects\") as a role-first vote. In a company-first résumé, one such employer swapped role and company on every other job with no role word. For example, \"Starbucks — Barista\" and \"Target — Cashier\" came back as company \"Barista\" / role \"Starbucks\". Base a79efd8b read them correctly.",
+      "R5-HUNT6-COMPANY-COMMA-LEGAL-ENDING (regression from R5-HUNT6-COMPANY-COMMA-PLACE): placeAfterComma took a legal ending after the company comma for the city. \"Software Engineer — Google, Inc., CA\" gave company \"Google\" and location \"Inc., CA\", and a grouped employer \"Blue Bottle, LLC, OR\" gave location \"LLC, OR\".",
+      "Non-blocking: a job with a role and a three-part place but no company (\"Freelance Developer — Portland, Oregon, USA\") now reads as company \"Portland\" and location \"Oregon, USA\". Before, it read as company \"Portland, Oregon, USA\". Both readings are wrong, and nothing in the text tells a company from a city there."
+    ],
+    "issuesFixed": [
+      "R5-HUNT6-ROLE-FIRST-FIRM-VOTE: bac25d0c. In sectionLeads, a field whose role words are all plural no longer votes. Test: tests/unit/r5-hunt6-import-role-first-firm-vote.unit.mjs.",
+      "R5-HUNT6-COMPANY-COMMA-LEGAL-ENDING: 0f9163f9. placeAfterComma returns null when the part after the comma is a legal ending (CORPORATE). Test: tests/unit/r5-hunt6-import-company-comma-legal-ending.unit.mjs."
+    ],
+    "open": [
+      "Non-blocking: \"Role — City, State, Country\" with no company splits the place (see issuesFound 3). This needs a product call and is not a regression in outcome.",
+      "Non-blocking, pre-existing: in a company-first export, a firm whose name has a role word (\"Summit Partners — Receptionist\") still swaps that one job. The fixer recorded this as a product call.",
+      "The full gate (Playwright/Cypress/suite shards) has not run on this branch. The changes are import-only, so the batch gate covers it."
+    ],
+    "ciRuns": [
+      "36606581752 failfirst: bac25d0c 2 fail without / pass with; 0f9163f9 2 fail without / pass with; lint green",
+      "36606615998 tests: 566/566 pass on 0f9163f9 (every test touching importText/importFile/importDocument/atsPlainText, including tests/pdf import round-trips and all r5-hunt6 tests)"
+    ],
+    "commitsCompliant": true,
+    "testsWeakened": false
+  },
   "baselineFailures": [],
   "notes": "Five bugs, five fix commits, each with its own fail-first test. CI fail-first run 36604439078 was green on all 5 pairs. Failing without each fix: same-year 2 of 2, graduated 2 of 2, postcode 3 of 3, company-comma 2 of 3 (CI undid it with its parent's files because the later commit touches the same lines), role-first 6 of 7 (the Classic control test passes on both sides by design). All passed with their fixes, and lint was green. CI tests run 36604465527 was green: 371 of 371 tests. It covered the 5 new tests plus every existing test that imports importText/importFile, including the tests/pdf import round-trips (99-import-roundtrip*, lo-imp-group-roles-roundtrip, 104 list-depth round-trips), ats-plain-text and the 31-contact-fields guard. Playwright and Cypress were set to none: no browser spec covers the text parser. The full gate has not run on this branch. The changes are import-only and change nothing that prints, so the PDF, Word, Markdown and ATS exporters are unchanged. No Design keys and no DATA_VERSION change. Nothing in docs/tracking was edited. No accessibility issues were seen in this area."
 }
