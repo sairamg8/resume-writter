@@ -57,6 +57,8 @@ const listeners = new Set();
 /** The list this tab last knew storage to hold: what it shows, but for what storage refused. */
 let stored = null;
 let initialized = false;
+/** What storage held when this tab last took its list while no job page listened (catchUp). */
+let seenRaw = null;
 
 /**
  * Pure read of the stored jobs (writing nothing, no listeners added) so getSnapshot
@@ -87,14 +89,42 @@ function init() {
   const recovery = found ? rememberRecovery(KEY, found) : pendingRecovery(KEY);
   stored = jobs;
   const persistError = persist(jobs);
+  seenRaw = rawNow();
   current = { jobs, recovery, persistError };
 }
 
 function snapshot() {
   if (!current) {
     current = peek();
+  } else if (initialized && listeners.size === 0) {
+    catchUp();
   }
   return current;
+}
+
+function rawNow() {
+  try {
+    return localStorage.getItem(KEY);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * No job page open, so no other tab's save was heard: take what storage holds now, keeping what
+ * storage refused here (keepUnsaved), before this tab reads or writes its list. An Undo toast
+ * outlives the job pages, and a job form reopened fixes its values at the first render, before
+ * subscribe re-reads: both used this tab's old list and wrote it over the other tab's jobs. Pure —
+ * it runs in render (NB-6) — and only when storage changed, so the snapshot stays the same object.
+ */
+function catchUp() {
+  const raw = rawNow();
+  if (raw === null || raw === seenRaw) return;
+  seenRaw = raw;
+  const incoming = peek().jobs;
+  const jobs = keepUnsaved(incoming, current.jobs, stored);
+  stored = incoming;
+  current = { ...current, jobs };
 }
 
 function onStorage(e) {
@@ -147,8 +177,10 @@ function subscribe(listener) {
 
   return () => {
     listeners.delete(listener);
-    if (listeners.size === 0 && typeof window !== 'undefined') {
-      window.removeEventListener('storage', onStorage);
+    if (listeners.size === 0) {
+      // From here other tabs' saves go unheard: snapshot() compares storage with this (catchUp).
+      seenRaw = rawNow();
+      if (typeof window !== 'undefined') window.removeEventListener('storage', onStorage);
     }
   };
 }
@@ -163,6 +195,7 @@ function setJobs(change) {
   const jobs = change(snapshot().jobs);
   const persistError = persist(jobs);
   if (!persistError) stored = jobs;
+  if (listeners.size === 0) seenRaw = rawNow();
   update({ jobs, persistError });
 }
 
@@ -294,6 +327,7 @@ function dismissRecovery() {
 export function _resetJobStoreForTest() {
   current = null;
   stored = null;
+  seenRaw = null;
   initialized = false;
   listeners.clear();
 }
