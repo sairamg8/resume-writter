@@ -28,14 +28,14 @@ export const NEW_LETTER_NOTICE = 'Imported as a new cover letter: the one you ha
 /**
  * Reads `file` into a new résumé, as the JSON import does: `importResume(resume, { keep })`, then
  * the editor at it, which shows `notice` (IMPORT_NOTICE unless given). `onError(message)` when it
- * cannot be read.
+ * cannot be read. An `importResume` that answers null did not add it to the list: nothing to open.
  */
 export async function importDocument(file, { importResume, navigate, onError, keep = false, notice = IMPORT_NOTICE }) {
   try {
     const { resumeFromFile } = await import('./importFile.js');
     const resume = await resumeFromFile(file);
     const id = importResume(resume, { keep });
-    navigate(`/resume/${id}`, { state: { importNotice: notice } });
+    if (id) navigate(`/resume/${id}`, { state: { importNotice: notice } });
     return id;
   } catch (e) {
     console.error('Import failed:', e);

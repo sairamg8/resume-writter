@@ -48,6 +48,9 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false, publicL
   // A read that ends after the Dashboard is gone still imports, but no longer drags the user back.
   const mounted = useRef(true);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
+  // The account the list is now (syncedUid), for a read that ends after it signed out.
+  const listOwner = useRef(store.appState.syncedUid);
+  useEffect(() => { listOwner.current = store.appState.syncedUid; }, [store.appState.syncedUid]);
 
   function pickImport(keep) {
     importAsOriginal.current = keep;
@@ -127,8 +130,18 @@ export function Dashboard({ store, auth, sync, originalsWaiting = false, publicL
       e.target.value = '';
       importBusy.current = true;
       setImporting(true);
+      // The read takes seconds: an account that signs out meanwhile gets the résumé kept aside for it
+      // (importResume's `account`), not the signed-out list, and it is not opened
+      // (R5-HUNT6-DASH-IMPORT-AFTER-SIGN-OUT).
+      const account = store.appState.syncedUid ?? null;
+      const importResume = (resume, options) => {
+        const id = store.importResume(resume, { ...options, account });
+        if (!account || listOwner.current === account) return id;
+        if (mounted.current) setImportError(`You signed out while ${file.name} was being read. It is kept for that account and comes back when it signs in again.`);
+        return null;
+      };
       importDocument(file, {
-        importResume: store.importResume, keep: keeps && importAsOriginal.current,
+        importResume, keep: keeps && importAsOriginal.current,
         navigate: (...args) => { if (mounted.current) navigate(...args); },
         onError: setImportError,
       }).finally(() => {
