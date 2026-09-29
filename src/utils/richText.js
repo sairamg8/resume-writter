@@ -456,7 +456,11 @@ export function sanitizeRichText(html) {
       out += `<li${alignAttr(b)}>${body}`;
       continue;
     }
-    if (open.length && b.indent >= 1) {
+    // A block inside a list (the open item's paragraph, quote or text after a nested list) stays in
+    // that item; a quote or <dd> after the list, indented as a top-level item is, is body text and
+    // closes the list — or the first edit saved it as the last item's paragraph, and the ATS read it
+    // as part of that bullet again (R4-SW-WT-01).
+    if (open.length && b.indent >= 1 && b.inList) {
       closeLists(b.indent);
       if (open.length) { out += `<p${alignAttr(b)}>${body}</p>`; continue; }
     }

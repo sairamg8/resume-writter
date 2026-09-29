@@ -73,7 +73,7 @@ function markdownBody(html, bullets = []) {
     if (!lines.length) continue;
     if (block.marker) {
       item(lines, Math.max(1, block.indent), block.marker);
-    } else if (inList && block.indent > 0 && cols[Math.min(block.indent, cols.length - 1)] != null) {
+    } else if (inList && block.inList && block.indent > 0 && cols[Math.min(block.indent, cols.length - 1)] != null) {
       const col = ' '.repeat(cols[Math.min(block.indent, cols.length - 1)]);
       out[out.length - 1] += BREAK;
       push(lines, col, col);
