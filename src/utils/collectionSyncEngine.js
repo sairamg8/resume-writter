@@ -13,7 +13,7 @@
 // Signed out, or another account signing in: the list leaves this browser, what its cloud lacks
 // kept aside for its next sign-in (collectionSyncPlan.leaveList). Never signed in: nothing
 // happens — the list is this browser's, as before.
-import { backoff, failureReport } from './cloudSyncRetry.js';
+import { backoff, failureKind, failureReport } from './cloudSyncRetry.js';
 import { docSize, MAX_DOC_BYTES } from './cloudSyncHeld.js';
 import { DELETED, diffLists, leaveList, planFirstSync, stashOf, versionsOf } from './collectionSyncPlan.js';
 import { itemPath } from './collectionSyncIo.js';
@@ -188,23 +188,53 @@ export function createCollectionSync({
 
   /**
    * A first sync or a flush failed with `e` (cloudSyncRetry.failureKind): tried again later, or
-   * turned off (the project refuses this account). Refused for good: the items of that batch
-   * (`sets`) are held until they change, and a first sync sends the rest without them; with none
-   * to hold, nothing is sent until the list changes. The first sync that gets through sends what
-   * failed: the store still has it, and this browser's record says what the cloud lacks.
+   * turned off (the project refuses this account). Refused for good: the item of that batch
+   * (`sets`) is held until it changes, and a first sync sends the rest without it; with none to
+   * hold, nothing is sent until the list changes. A flush of several items refused (`apart`) is
+   * handed to a first sync after the pause, which takes the batch apart and holds only what the
+   * cloud refuses on its own. The first sync that gets through sends what failed: the store still
+   * has it, and this browser's record says what the cloud lacks.
    */
-  function failed(e, user, what, sets = []) {
+  function failed(e, user, what, sets = [], apart = false) {
     const { kind, status: said, log: line } = failureReport(e, online(), `${name} ${what}`);
     if (line) log(...line);
     s.ready = false;
     status(said);
     if (kind === 'config') s.disabled = true;
     else if (kind === 'stop') {
+      if (apart) { scheduleRetry(flushDelay); return; }
       if (!sets.length) { s.stopped = true; return; }
       sets.forEach((x) => held.set(x.id, x));
       heldChanged();
       scheduleRetry(flushDelay);
     } else if (online()) scheduleRetry();
+  }
+
+  /**
+   * A batch of several items refused for good (one job imported with an id the cloud cannot name,
+   * or a value it will not store), taken apart as the résumés' is (cloudSyncHeld.commitHolding):
+   * its deletions and order on their own, then each item on its own; one refused on its own is
+   * held, and the rest get through. The whole batch used to be held, every item in it named "too
+   * large", for the one the cloud refused (R5-HUNT7-SYNC-COLLECTION-BATCH-REFUSED-HOLDS-ALL).
+   * Only while `live()`: a first sync the next start replaced sends nothing more. Resolves to the
+   * items sent; rejects on any other failure, or when the deletions and order are refused without
+   * the items — none to hold, and the sync stops until the list changes, as before.
+   */
+  async function commitApart(uid, { sets, deletes, order }, live) {
+    const sent = [];
+    if (deletes.length || order) await io.commit(uid, { sets: [], deletes, order });
+    for (const x of sets) {
+      if (!live()) break;
+      try {
+        await io.commit(uid, { sets: [x] });
+        sent.push(x);
+      } catch (e) {
+        if (failureKind(e, online()) !== 'stop') throw e;
+        held.set(x.id, x);
+        heldChanged();
+      }
+    }
+    return sent;
   }
 
   function settled() {
@@ -243,7 +273,15 @@ export function createCollectionSync({
       sets = sendable(uid, plan.sets);
       const sameOrder = plan.order.length === cloud.order.length && plan.order.every((id, i) => cloud.order[i] === id);
       if (sets.length || plan.deletes.length || !sameOrder) {
-        await io.commit(uid, { sets, deletes: plan.deletes, order: sameOrder ? null : plan.order });
+        const batch = { sets, deletes: plan.deletes, order: sameOrder ? null : plan.order };
+        try {
+          await io.commit(uid, batch);
+        } catch (e) {
+          if (sets.length < 2 || gen !== s.gen || failureKind(e, online()) !== 'stop') throw e;
+          // Nothing of it held should the rest fail: an item refused on its own is held as it goes.
+          sets = [];
+          sets = await commitApart(uid, batch, () => gen === s.gen);
+        }
         if (gen !== s.gen) return;
       }
 
@@ -336,10 +374,11 @@ export function createCollectionSync({
     let handedOver;
     s.turn = new Promise((resolve) => { handedOver = resolve; });
     let sets = [];
+    let queued = [];
     try {
       await before;
       if (!current()) return;
-      const queued = sendable(user.uid, [...q.writes.values()]);
+      queued = sendable(user.uid, [...q.writes.values()]);
       const reading = [...queued.map((x) => x.id), ...q.deletes.keys()];
       const docs = reading.length ? await withDeadline(io.readItems(user.uid, reading)) : [];
       if (!current()) return;
@@ -385,7 +424,9 @@ export function createCollectionSync({
       if (!s.timer) settled();
     } catch (e) {
       if (s.user?.uid !== user.uid) return;
-      failed(e, user, 'flush', sets);
+      // Several items refused together, or their read refused before any was sent (an id the cloud
+      // cannot name): which one the cloud will not take is not known, and a first sync finds it.
+      failed(e, user, 'flush', sets, sets.length > 1 || (!sets.length && queued.length > 0));
     } finally {
       handedOver();
     }
