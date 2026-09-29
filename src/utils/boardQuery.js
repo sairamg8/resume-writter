@@ -11,6 +11,9 @@ import { activeSprint, addDays, isIssueDone, issueKey, statusColumn, todayISO } 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const PRIORITY_RANK = new Map(PRIORITIES.map((p) => [p.id, p.rank]));
 const TYPE_RANK = new Map(ISSUE_TYPES.map((t, n) => [t.id, n]));
+// Titles sort as the job list's text columns do (jobQuery, J-18): case and accents aside, numbers
+// in them as numbers — 'Éclair' before 'Zoo', 'Step 2' before 'Step 10' (R5-HUNT5).
+const collator = new Intl.Collator(undefined, { sensitivity: 'base', numeric: true });
 
 /**
  * True when `issue` is in the group a drop or a new issue targets: the column `columnId` and/or
@@ -143,7 +146,7 @@ export function swimlanes(board, issues = board.issues, by = 'none') {
 /**
  * `issues` sorted `by` 'rank' | 'key' | 'type' | 'title' | 'status' | 'priority' | 'due' |
  * 'estimate' | 'updated' | 'created', `dir` 'asc' | 'desc'. Ties keep the rank; an issue with no
- * due date or no estimate sorts last either way.
+ * due date or no estimate sorts last either way; titles as text (collator).
  */
 export function sortIssues(board, issues, by = 'rank', dir = 'asc') {
   const rank = new Map(board.issues.map((i, n) => [i.id, n]));
@@ -152,7 +155,7 @@ export function sortIssues(board, issues, by = 'rank', dir = 'asc') {
     rank: (i) => rank.get(i.id) ?? Infinity,
     key: (i) => i.number,
     type: (i) => TYPE_RANK.get(i.type) ?? 99,
-    title: (i) => i.title.toLowerCase(),
+    title: (i) => i.title,
     status: (i) => column.get(statusColumn(board, i)?.id) ?? 99,
     priority: (i) => PRIORITY_RANK.get(i.priority) ?? 99,
     due: (i) => i.due || null,
@@ -165,7 +168,8 @@ export function sortIssues(board, issues, by = 'rank', dir = 'asc') {
     const va = value(a);
     const vb = value(b);
     if (va === null || vb === null) return va === vb ? rank.get(a.id) - rank.get(b.id) : va === null ? 1 : -1;
-    if (va !== vb) return (va < vb ? -1 : 1) * sign;
+    const cmp = by === 'title' ? collator.compare(va, vb) : va === vb ? 0 : va < vb ? -1 : 1;
+    if (cmp) return cmp * sign;
     return rank.get(a.id) - rank.get(b.id);
   });
 }
