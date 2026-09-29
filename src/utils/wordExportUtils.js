@@ -246,12 +246,14 @@ function runsToDocx(runs, base) {
  * Height, R2-062), `bullet`, the glyph a bulleted item prints behind (Design → Lists, R2-147), and
  * `links`, Design → Links' look on its links (linkLook, R2-147);
  * `align` is the alignment of a block the editor did not align (a centred section's: 'center'), as
- * in the PDF.
+ * in the PDF. `lastAfter`: the space after the last paragraph, twips (the others keep 1 pt) — less on
+ * Modern's banner, whose padding under it is Banner top & bottom exactly (R4-SW-W-01).
  */
-export function descriptionToParagraphs(html, base = { size: 20, color: '374151' }, align = null, frame = {}) {
-  return parseRichText(html).map((block) => {
+export function descriptionToParagraphs(html, base = { size: 20, color: '374151' }, align = null, frame = {}, lastAfter = 20) {
+  const blocks = parseRichText(html);
+  return blocks.map((block, i) => {
     const children = runsToDocx(block.runs, base);
-    const spacing = { before: 20, after: 20, ...lineSpacing(base.lineHeight, base.size) };
+    const spacing = { before: 20, after: i === blocks.length - 1 ? lastAfter : 20, ...lineSpacing(base.lineHeight, base.size) };
     const options = { spacing, alignment: ALIGN[block.align || align], ...frame };
     if (block.marker) {
       const level = Math.max(0, block.indent - 1);

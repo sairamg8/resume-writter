@@ -1,8 +1,9 @@
 import { View } from '@react-pdf/renderer';
 import { Text } from './PdfText';
 import { tint, textShades } from './pdfColors';
-import { lineBox, textWidth, widestWord } from './pdfMeasure';
+import { lineBox, textWidth, widestWord, wrappedLines } from './pdfMeasure';
 import { headerTemplateId } from '@/constants/templates';
+import { mainTextWidthPt } from './PdfPage';
 
 /**
  * An entry's header — Experience, Education, Volunteering and Custom (ItemHeader), the Sidebar's
@@ -98,6 +99,31 @@ export function EndRow({ left, leftMin = 0, children }) {
   );
 }
 
+/**
+ * The lines an EndRow `width` pt wide takes (for a title's presence, R4-DOUT-07): its `text` in `box`
+ * wrapped in what the field `end` (in `endBox`, `gap` before it) leaves it, the field on its last
+ * line — or, where the text's widest word does not fit beside the field, the text at the full width
+ * and the field on a line of its own under it, as EndRow wraps it.
+ */
+export function endRowLines({ text, box, end, endBox, gap, width }) {
+  if (!end) return wrappedLines(text, box, width);
+  if (!text) return 1;
+  const room = width - textWidth(end, endBox) - gap;
+  return wordRoom([text, box]) + WORD_SLACK > room ? wrappedLines(text, box, width) + 1 : Math.max(1, wrappedLines(text, box, room));
+}
+
+/**
+ * The lines a CentredLine `width` pt wide takes (for a title's presence): its `text` in `box`, the
+ * date (in `dateBox`) after a " · " on its line — or, when the text wraps or both do not fit, the
+ * text's lines and the date on a line of its own under them, as the row wraps.
+ */
+export function centredLines({ text, box, date, dateBox, gap, width }) {
+  const lines = wrappedLines(text, box, width);
+  if (!date) return Math.max(1, lines);
+  if (!text) return 1;
+  return lines > 1 || textWidth(text, box) + 2 * gap + textWidth(`· ${date}`, dateBox) > width ? lines + 1 : 1;
+}
+
 /** A field at an EndRow's right end, on the last line of the text beside it, `gap` from what precedes it. */
 export const endField = (text, style, gap) => (text ? <Text style={{ ...style, marginLeft: gap, alignSelf: 'flex-end' }}>{text}</Text> : null);
 
@@ -151,13 +177,41 @@ function headerBoxes(settings) {
  */
 export const headPresence = ({ lines, styles, keep = 0, extra = 0 }) => Math.ceil((lines + 1) * lineBox(styles).height + keep + extra);
 
-/** headPresence of the header ItemHeader prints for these props (its lines as it lays them out below). */
-export function itemHeadPresence({ primary, sub, loc, settings, titleStyle = 'stacked', centered = false }) {
-  const second = primary ? sub : undefined; // an empty leading field: the next one leads (R2-111)
+/**
+ * headPresence of the header ItemHeader prints for these props, each of its lines wrapped at `width`
+ * pt (entryTextWidth: the page's text, the Sidebar's main column or card, a Grids cell's share) as it
+ * lays them out below: Stacked, the title with the date at its last line's right end, then the sub
+ * with the location at its; Inline, the one text with the date; Side by side, the title and sub on
+ * one line where they fit; centred, the title with its " · date" (CentredLine), then each field on
+ * lines of its own. Counted as one line a field, a title or sub that wrapped onto a third line (two
+ * with the other wrapping too) took more than the spare line headPresence adds, and the section
+ * title stayed alone at the foot of a page while the header moved on (R4-DOUT-07). Greedy
+ * (wrappedLines), so it errs on more lines, never fewer than the one a field it counted before.
+ */
+export function itemHeadPresence({ primary: first, sub: second, loc, dateStr, settings, titleStyle = 'stacked', centered = false, width = mainTextWidthPt(settings) }) {
+  // An empty leading field: the next one leads, as ItemHeader prints it (R2-111).
+  const primary = first || second;
+  const sub = first ? second : undefined;
   const oneLine = titleStyle === 'sidebyside' || titleStyle === 'inline';
-  const under = oneLine ? [loc] : centered ? [second, loc] : [second || loc];
   const { primaryBox, subBox } = headerBoxes(settings);
-  return headPresence({ lines: 1 + under.filter(Boolean).length, styles: [primaryBox, subBox], keep: headerKeep(settings), extra: centered ? 2 : 0 });
+  const fieldBox = { fontFamily: settings?._pdfFontFamily, fontSize: settings?.fontSizeBase || 11 };
+  const gap = fieldGap(fieldBox.fontSize);
+  const wrap = (text, box) => wrappedLines(text, box, width);
+  const row = (text, box, end) => endRowLines({ text, box, end, endBox: fieldBox, gap, width });
+  // Title "Inline": one text, measured in the title's bolder face.
+  const inline = [primary, sub].filter(Boolean).join(' — ');
+  const title = centered ? centredLines({ text: oneLine ? inline : primary, box: primaryBox, date: dateStr, dateBox: fieldBox, gap, width })
+    : titleStyle === 'inline' ? row(inline, primaryBox, dateStr)
+    : titleStyle === 'sidebyside' && sub ? (
+      textWidth(primary, primaryBox) + 6 + textWidth(sub, subBox) + (dateStr ? gap + textWidth(dateStr, fieldBox) : 0) <= width ? 1
+        : wrap(primary, primaryBox) + row(sub, subBox, dateStr))
+    : row(primary, primaryBox, dateStr);
+  // Under the title: a one-line or centred title's location on lines of its own, a centred Stacked
+  // title's sub on its own; Stacked, the sub with the location at its right end.
+  const under = oneLine ? wrap(loc, fieldBox)
+    : centered ? wrap(sub, subBox) + wrap(loc, fieldBox)
+    : sub ? row(sub, subBox, loc) : loc ? 1 : 0;
+  return headPresence({ lines: Math.max(1, title) + under, styles: [primaryBox, subBox], keep: headerKeep(settings), extra: centered ? 2 : 0 });
 }
 
 // Reusable item header: bold primary + optional sub-line + location + date. Supports centering.

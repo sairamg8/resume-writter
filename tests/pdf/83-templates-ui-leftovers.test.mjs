@@ -4,7 +4,9 @@
 // what the .docx leaves out. It now prints the photo (R2-126) and Modern's and the Sidebar's header on
 // their band (R2-137): the hint names what is left — Banner's and Banded's headers and the Sidebar's
 // side column print on the white page. The letter's .docx prints its photo too (R4-DOUT-06), so its
-// hint no longer says it is left out.
+// hint no longer says it is left out. Word draws the designed layouts' section-title rules
+// (wordExportBuilders.js headingFrame, R2-138 B2), so the hint no longer says their rules and bars are
+// all left out: only their header bars and rules and the Timeline's rail are (R5-OUT-02).
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { createElement } from 'react';
@@ -53,7 +55,9 @@ describe('Templates UI leftovers (R2-133)', () => {
     };
     const resumeHint = await hint(false, 'Export Word');
     assert.match(resumeHint, /Banner's and Banded's headers/);
-    assert.match(resumeHint, /designed layouts' rules and bars are left out/);
+    assert.match(resumeHint, /section-title rules print/);
+    assert.match(resumeHint, /header bars and rules and the Timeline's rail are left out/);
+    assert.doesNotMatch(resumeHint, /designed layouts' rules and bars are left out/, 'Word draws their section-title rules (R5-OUT-02)');
     assert.match(resumeHint, /Sidebar's side column/);
     assert.doesNotMatch(resumeHint, /photo|coloured column|without its banner/i);
     const letterHint = await hint(true, 'Export Cover Letter Word');

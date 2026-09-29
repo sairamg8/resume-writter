@@ -31,6 +31,12 @@ const NEST = '    ';
  * as an entity ("&copy;") prints as typed, never "©" (R4-LO-08). `lead` escapes what a line may not start with either.
  */
 const esc = (text) => String(text ?? '').replace(/[\\`*_[\]<>~|]/g, '\\$&').replace(/&(?=#?[a-z0-9]+;)/gi, '\\&');
+/**
+ * A heading's text: a run of "#" at its end after a space, or all of it, escaped (R5-OUT-03). Markdown
+ * reads that run as the heading's optional closing mark, so "## Hackathon #" showed "Hackathon" and
+ * came back from the app's own import so; "## Hackathon \#" keeps it. "C#" is left as it is.
+ */
+const closeSafe = (text) => text.replace(/(^|\s)(#+)(\s*)$/, '$1\\$2$3');
 /** A line that starts with user text: a leading "#", "-", "+", "=" or "3." prints, never a heading or list. */
 const lead = (line) => line.replace(/^([#+=-])/, '\\$1').replace(/^(\d+)([.)])(?=\s|$)/, '$1\\$2');
 
@@ -116,7 +122,7 @@ const italic = (text) => {
  * a blank line, then its body and a blank line.
  */
 function entryLines(title, meta, body) {
-  const lines = title ? [`### ${title}`] : [];
+  const lines = title ? [`### ${closeSafe(title)}`] : [];
   const shown = meta.filter(Boolean);
   shown.forEach((m, i) => lines.push(i < shown.length - 1 ? `${m}${BREAK}` : m));
   lines.push('');
@@ -241,7 +247,7 @@ export function generateMarkdownResume(resume) {
   const lines = [];
 
   // Header
-  if (String(p.name || '').trim()) lines.push(`# ${esc(String(p.name).trim())}`);
+  if (String(p.name || '').trim()) lines.push(`# ${closeSafe(esc(String(p.name).trim()))}`);
   if (String(p.title || '').trim()) lines.push(`**${esc(String(p.title).trim())}**`);
   lines.push('');
 
@@ -278,7 +284,7 @@ export function generateMarkdownResume(resume) {
         ? roleGroups(items).flatMap((g) => groupLines(g, fieldOf, settings, opts, one))
         : items.flatMap(one);
     if (!body.some((l) => l.trim())) continue;
-    lines.push(`## ${esc(s.title || s.type)}`, ...body);
+    lines.push(`## ${closeSafe(esc(s.title || s.type))}`, ...body);
   }
 
   return lines.join('\n');

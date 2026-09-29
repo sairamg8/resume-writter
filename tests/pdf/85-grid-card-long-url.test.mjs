@@ -62,6 +62,8 @@ describe('a grid card\'s link breaks inside its card (R2-105)', () => {
 
   it('a link that fits its card prints on one line, as typed (unchanged)', async () => {
     const pages = await read(await render(resume({ template: 'sidebar', sections: [projects({ columns: 1 })] })));
-    assert.ok(pages[0].items.some((t) => t.str === URL43), pages[0].items.map((t) => t.str).join(' | '));
+    // One run, whole: since R4-DOUT-04 the Sidebar card prints it after its technologies' " · ", which
+    // the reader gives the link's run (the same size), so the run is "· <link>".
+    assert.ok(pages[0].items.some((t) => t.str.replace(/^·\s*/, '') === URL43), pages[0].items.map((t) => t.str).join(' | '));
   });
 });

@@ -111,6 +111,32 @@ function pieces(text) {
     .flatMap((word) => split(word).map(String).filter(Boolean)); // a break mark reads as ''
 }
 
+/**
+ * How many lines `text` wraps to in a box `maxWidth` pt wide in `style` (textWidth's): broken at its
+ * spaces, a word wider than the box across as many lines as it fills (a link that breaks inside
+ * itself). Greedy, and every line at its full width, never closed up as textkit may: an estimate for
+ * what a block will take on the page, which errs on more lines, not fewer (R4-DOUT-07). 0 for no text.
+ */
+export function wrappedLines(text, style, maxWidth) {
+  const words = String(text ?? '').split(/\s+/).filter(Boolean);
+  if (!words.length) return 0;
+  if (!(maxWidth > 0)) return 1;
+  const space = textWidth(' ', style);
+  let lines = 1;
+  let used = 0;
+  for (const word of words) {
+    const w = textWidth(word, style);
+    if (w > maxWidth) {
+      const span = Math.ceil(w / maxWidth);
+      lines += (used ? 1 : 0) + span - 1;
+      used = w - (span - 1) * maxWidth;
+    } else if (!used) used = w;
+    else if (used + space + w <= maxWidth) used += space + w;
+    else { lines += 1; used = w; }
+  }
+  return lines;
+}
+
 /** Room left under a fitted width, pt: a word's kerning into the next space is not in it. */
 const FIT_SLACK = 1;
 /** The smallest size fitFontSize returns, pt. */

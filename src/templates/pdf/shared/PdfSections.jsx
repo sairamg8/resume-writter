@@ -4,6 +4,7 @@ import { headingFace } from './pdfFaces';
 import { PdfRichText } from './PdfRichText';
 import { CSS_PX_TO_PT, DEFAULT_ITEM_GAP_PX, MM_TO_PT, SECTION_SPACING_PX } from './pdfUnits';
 import { pageMargins } from '@/constants/pageMargins';
+import { mainTextWidthPt } from './PdfPage';
 import { sectionOverridePx } from '@/constants/spacingNumbers';
 import { tint, textShades } from './pdfColors';
 
@@ -44,6 +45,12 @@ export function getColumnWidth(cols) {
   if (cols === 4) return '23%';
   return '100%';
 }
+
+/**
+ * The width an entry's text is laid out in, pt: the page's (the Sidebar's main column, mainTextWidthPt),
+ * a Grids cell's share of it (getColumnWidth). For a section title's presence (R4-DOUT-04, R4-DOUT-07).
+ */
+export const entryTextWidth = (settings, cols = 1) => mainTextWidthPt(settings) * (parseFloat(getColumnWidth(cols)) / 100);
 
 /** `color` at `opacity`, for fills and text (see pdfColors.js for borders). */
 export const hexAlpha = (color, opacity) => tint(color, opacity);

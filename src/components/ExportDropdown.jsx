@@ -68,12 +68,15 @@ export function ExportDropdown({ exporting, importing = false, keeps = false, le
             onClick={() => { onExportWord(); setOpen(false); }}
             disabled={!!exporting}
             // Say what the .docx leaves out that the PDF has (R2-133). The résumé prints its photo (R2-126) and
-            // Modern's and the Sidebar's header on their band (R2-137); the designed layouts' own marks (Registry's
-            // bar, Timeline's rail, the rules of Bookend, Chronicle, Keel…) are not drawn. The letter prints its
-            // letterhead, photo included (R4-DOUT-06), and its text as the PDF does.
+            // Modern's and the Sidebar's header on their band (R2-137), and the designed layouts' section-title
+            // marks (wordExportBuilders.js headingFrame, R2-138 B2: Broadsheet's overline, Gridline's frame,
+            // Registry's dotted and Chronicle's double underline, Keystone's edge bar). Their header marks
+            // (Registry's, Keel's and Keystone's bars, the rules of Bookend, Chronicle, Broadsheet, Lectern, Linen
+            // and Gridline, Bookend's foot rule) and the Timeline's rail are not drawn (R5-OUT-02). The letter
+            // prints its letterhead, photo included (R4-DOUT-06), and its text as the PDF does.
             title={letter
               ? 'An editable document: the letter with the letterhead, photo and text of its PDF'
-              : "An editable document: Banner's and Banded's headers and the Sidebar's side column print on the white page, and the designed layouts' rules and bars are left out"}
+              : "An editable document: Banner's and Banded's headers and the Sidebar's side column print on the white page; the designed layouts' section-title rules print, but their header bars and rules and the Timeline's rail are left out"}
             className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 disabled:opacity-50"
           >
             <FileText size={12} className="text-emerald-500" /> {letter ? 'Export Cover Letter Word' : 'Export Word'}
