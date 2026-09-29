@@ -79,9 +79,10 @@ letter PDF's — the letter's own, else the résumé's, none with Show photo off
 in a column beside it at Photo → Position (`wordLetterPhoto`, R4-DOUT-06).
 
 Both .docx files are built from the résumé with the characters XML 1.0 forbids left out (`xmlSafe` in
-`wordExportUtils.js`: C0 controls but tab, LF and CR — a pasted U+000B or U+0002 — and U+FFFE/U+FFFF),
-which docx would write as they are and Word would then refuse the file
-(R5-HUNT7-WORD-CONTROL-CHAR-CORRUPT-DOCX). Their document properties are the PDF's
+`wordExportUtils.js`: C0 controls but tab, LF and CR — a pasted U+000B or U+0002 — U+FFFE/U+FFFF, and
+a lone surrogate, half an emoji, which the browser's zip writes as bytes that are not UTF-8; a whole emoji
+is kept), which docx would write as they are and Word would then refuse the file
+(R5-HUNT7-WORD-CONTROL-CHAR-CORRUPT-DOCX, R5-HUNT7-REVIEW-WORD-LONE-SURROGATE). Their document properties are the PDF's
 (`getDocumentProps`): Title "<Name> Resume" or "<Name> Cover Letter", Author and Last Modified By the
 name — never docx's default "Un-named" (R5-HUNT7-DOCX-AUTHOR-UN-NAMED).
 
