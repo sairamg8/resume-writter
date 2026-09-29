@@ -17,6 +17,7 @@ import { resumeFrom } from '@/utils/newResume';
 import { useSmallerPhotos } from '@/hooks/useSmallerPhotos';
 import { keepUnsaved } from '@/utils/unsavedJobs';
 import { coalescedWriter } from '@/utils/coalescedWrite';
+import { leaveAccount } from '@/utils/cloudSyncLeave';
 
 const STORAGE_KEY = 'cpwtcv_v1';
 // A save is the whole store — every résumé, photos as base64 — stringified and written on the main
@@ -68,7 +69,14 @@ function readStore() {
  * run it twice. The same arrays as `incoming` where nothing of this tab's is kept.
  */
 function withOtherTabsSave(prev, incoming, stored) {
-  const resumes = keepUnsaved(incoming.resumes, prev.resumes, stored);
+  // The list left its account there (signed out, or another account signed in): what this tab
+  // changed that storage has not seen is that account's, kept aside for it as the other tab's
+  // leaveAccount kept its own (R2-005). Kept in the list, it had no owner, stayed on screen after
+  // the sign-out, and the next account to sign in sent it to its own cloud (R5-HUNT3).
+  const left = prev.syncedUid && incoming.syncedUid !== prev.syncedUid ? prev.syncedUid : null;
+  const unsaved = left ? keepUnsaved([], prev.resumes, stored) : null;
+  const resumes = left ? incoming.resumes : keepUnsaved(incoming.resumes, prev.resumes, stored);
+  const stash = unsaved?.length ? { stashed: leaveAccount({ ...prev, resumes: unsaved, stashed: incoming.stashed }, left).stashed } : {};
   const ids = new Set(resumes.map((r) => r.id));
   const mine = (prev.deletedIds || []).filter((id) => !incoming.deletedIds.includes(id));
   const listed = mine.length ? [...incoming.deletedIds, ...mine] : incoming.deletedIds;
@@ -77,7 +85,7 @@ function withOtherTabsSave(prev, incoming, stored) {
     ? { ...incoming.deletedInfo, ...Object.fromEntries(mine.filter((id) => prev.deletedInfo?.[id]).map((id) => [id, prev.deletedInfo[id]])) }
     : incoming.deletedInfo;
   const activeId = ids.has(prev.activeId) ? prev.activeId : (ids.has(incoming.activeId) ? incoming.activeId : resumes[0]?.id ?? null);
-  return { ...incoming, resumes, deletedIds, deletedInfo, activeId };
+  return { ...incoming, resumes, deletedIds, deletedInfo, activeId, ...stash };
 }
 
 /**
@@ -157,8 +165,9 @@ export function useAppStore() {
     owner.current = appState.syncedUid;
     // Only another tab's save was taken: not written back, or two tabs would answer each other's
     // saves for ever (each keeps its own open résumé, so their stores never read the same). A save
-    // of this tab's still held (the open résumé, say) is written as the state is now.
-    if (other && appState.resumes === other.resumes && appState.deletedIds === other.deletedIds) {
+    // of this tab's still held (the open résumé, say) is written as the state is now. What this tab
+    // kept aside as the list left its account (withOtherTabsSave) is written, at once.
+    if (other && appState.resumes === other.resumes && appState.deletedIds === other.deletedIds && appState.stashed === other.stashed) {
       stored.current = appState.resumes;
       if (saver.pending()) saver.schedule(appState);
       setSaving(saver.pending());
