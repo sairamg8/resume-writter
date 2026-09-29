@@ -15,7 +15,7 @@ import { IssueTypeIcon, PriorityIcon } from '@/components/tracker/TrackerIcons';
 import { BOARD_DRAG_INSTRUCTIONS } from '@/utils/cardKeys';
 import { boardCollision } from '@/utils/boardDnd';
 import { boardLists, boardSprint, columnDeletion, dragPreview, dropTarget, hiddenDoneCount, previewLists } from '@/utils/boardView';
-import { filterIssues, swimlanes } from '@/utils/boardQuery';
+import { filterIssues, liveFilters, swimlanes } from '@/utils/boardQuery';
 import { issueKey } from '@/utils/boardModel';
 
 /** "+" at the end of the columns: a new column, named at once. */
@@ -214,8 +214,10 @@ export function Board() {
     const key = issueKey(board, made);
     toast({ tone: 'success', title: `${key} created — hidden by your filters`, action: { label: 'Open', onClick: () => route.open(key) } });
   };
-  // With filters set and no card left, the columns say so instead of just standing empty.
-  const noMatch = hasFilters(filters) && shown.size === 0;
+  // With filters set and no card left, the columns say so instead of just standing empty. An epic
+  // or label deleted since it was ticked filters nothing, so it is not a filter set here either.
+  const filtered = hasFilters(liveFilters(board, filters));
+  const noMatch = filtered && shown.size === 0;
   const clearFilters = () => setFilters(EMPTY_FILTERS);
 
   return (
@@ -296,7 +298,7 @@ export function Board() {
                   </div>
                 ))}
               </div>
-              {lanes.length === 0 && <NoMatch onClear={hasFilters(filters) ? clearFilters : null} />}
+              {lanes.length === 0 && <NoMatch onClear={filtered ? clearFilters : null} />}
               {lanes.map((lane) => {
                 const open = !folded.has(lane.id);
                 const inLane = new Set(lane.issues.map((i) => i.id));
