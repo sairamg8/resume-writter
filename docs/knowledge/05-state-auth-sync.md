@@ -268,7 +268,10 @@ Key: `cpwtcv_jobs_v1`, `JOB_VERSION = 2`.
 
 A module store shared by every job page (`useSyncExternalStore`), read from localStorage when the first job page
 opens; another tab's save arrives through the `storage` event, and what storage refused here is kept and written
-again (`src/utils/unsavedJobs.js`). Signed in, it syncs with the account through `useCollectionSync` (above);
+again (`src/utils/unsavedJobs.js`). While no job page is open (no `storage` listener), `snapshot()` first takes
+what storage holds if it changed (`catchUp`, pure: it runs in render), so an Undo toast or a reopened job form
+never writes this tab's old list over another tab's; a value it could not read in full is backed up before the
+next write (`backupRaw`). Signed in, it syncs with the account through `useCollectionSync` (above);
 `jobsNow` / `replaceJobs` are what the sync reads and replaces.
 
 ## Implications for open-source forks
