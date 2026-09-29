@@ -2,7 +2,7 @@ import { parseRichText } from './richText.js';
 import { formatDate, presentLabel } from './dates.js';
 import { resolveSection } from '../templates/pdf/shared/templateSectionDefaults.js';
 import { templateId } from '../constants/templates.js';
-import { contactItems } from './contacts.js';
+import { CONTACT_FIELDS, contactItems } from './contacts.js';
 
 /**
  * The ATS plain-text export (Export → ATS Text, and the ATS tab's Copy / Download): the résumé as
@@ -18,6 +18,9 @@ import { contactItems } from './contacts.js';
  */
 
 const RULE = '----------------------------------------';
+
+/** The contact fields that carry a "Link URL" override (website, LinkedIn, GitHub). */
+const LINK_KEYS = new Set(CONTACT_FIELDS.filter(({ link }) => link).map(({ key }) => key));
 
 /** A paragraph typed as a bullet ("• …", "- …"), not "-5%": printed as the list item it reads as. */
 const TYPED_BULLET = /^[•\-*–—◦▪▸‣⁃]\s+/;
@@ -167,8 +170,14 @@ export function generateAtsPlainText(resume) {
 
   // Contacts line: the fields contactItems prints, in its order (CONTACT_FIELDS) — the PDF, Word and
   // Markdown order — with each value as typed, not its "Display label" or bare domain: plain text
-  // carries no links, so the full URL is what a parser or recruiter can still follow (R4-DOUT-13).
-  const contacts = contactItems(p).map(({ key }) => String(p[key]).trim());
+  // carries no links, so the full URL is what a parser or recruiter can still follow (R4-DOUT-13). A
+  // website / LinkedIn / GitHub with a "Link URL" override prints that address instead — the one the
+  // PDF, Word and Markdown link to — so a handle typed in the field does not lose it; one the PDF would
+  // not follow (a javascript: address) is not printed (R5-HUNT4-ATS-TEXT-IGNORES-LINK-URL-OVERRIDE).
+  const contacts = contactItems(p).map(({ key, href }) => {
+    const url = LINK_KEYS.has(key) && href ? String(p[`${key}Url`] || '').trim() : '';
+    return url || String(p[key]).trim();
+  });
   if (contacts.length) lines.push(contacts.join(' | '));
   lines.push('');
 
