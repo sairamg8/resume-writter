@@ -7,11 +7,15 @@ import { before, after, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { setup, teardown, loadModule, resume } from './harness.mjs';
 import { elements, mount, reactProps } from './fake-dom.mjs';
+import { patchFakeDom } from '../unit/ui-dom-harness.mjs';
 import { fakeFirestore } from './fake-firestore.mjs';
 
 let link;
 let ShareLinkModal;
+// Share a public link is the kit's Dialog (R4-DVIS-07): it renders in a portal at the end of <body>, so the
+// page is searched from there, and its focus trap needs patchFakeDom.
 before(async () => {
+  patchFakeDom();
   await setup();
   link = await loadModule('/src/utils/publicLink.js');
   ({ default: ShareLinkModal } = await loadModule('/src/components/ShareLinkModal.jsx'));
@@ -20,7 +24,7 @@ after(teardown);
 
 const flush = async () => { for (let i = 0; i < 20; i += 1) await new Promise((r) => { setImmediate(r); }); };
 const until = async (done) => { for (const end = Date.now() + 30_000; !done() && Date.now() < end;) await new Promise((r) => { setTimeout(r, 10); }); };
-const buttons = (view) => [...elements(view.container)].filter((el) => el.tagName === 'BUTTON');
+const buttons = (view) => [...elements(view.document.body)].filter((el) => el.tagName === 'BUTTON');
 const buttonNamed = (view, name) => buttons(view).find((el) => el.textContent.trim() === name);
 const click = (view, el) => view.act(() => reactProps(el).onClick({}));
 
@@ -31,7 +35,7 @@ it('Unpublish asks first; Cancel keeps the link, "Yes, unpublish" takes it down'
   const r = resume({ personal: { name: 'Jordan Ellery' } });
   const props = { isOpen: true, resume: r, uid: 'uid_owner', io, onClose: () => {} };
   const view = mount(ShareLinkModal, props);
-  const text = () => view.container.textContent;
+  const text = () => view.document.body.textContent;
   try {
     await until(() => buttonNamed(view, 'Publish'));
     click(view, buttonNamed(view, 'Publish'));

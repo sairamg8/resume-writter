@@ -9,8 +9,14 @@ import assert from 'node:assert/strict';
 import { createElement, useState } from 'react';
 import { setup, teardown, resume, loadModule } from './harness.mjs';
 import { mount, elements, reactProps } from './fake-dom.mjs';
+import { patchFakeDom } from '../unit/ui-dom-harness.mjs';
 
-before(setup);
+// The header icon picker is the kit's Dialog (R4-DVIS-25): it renders in a portal at the end of <body>, so
+// the page is searched from there, and its focus trap needs patchFakeDom.
+before(async () => {
+  patchFakeDom();
+  await setup();
+});
 after(teardown);
 
 const PERSONAL = { name: 'Casey Wren', title: 'Planner', email: 'casey@example.com', phone: '+1 555 0142', location: 'Springfield' };
@@ -38,7 +44,7 @@ it('a non-image file picked as a contact icon is refused with a message, from th
   const savedAlert = globalThis.alert;
   globalThis.alert = (message) => { alerts.push(message); };
   const view = mount(Store, { initial: resume({ settings: { contactStyle: 'icon', customContactIcons: {} }, personal: PERSONAL }) });
-  const all = () => [...elements(view.container)];
+  const all = () => [...elements(view.document.body)];
   /** The file input inside the <label> reading `text`. */
   const fileInput = (text) => {
     const label = all().find((el) => el.tagName === 'LABEL' && el.textContent.trim() === text);

@@ -127,7 +127,7 @@ describe('Personal Info → header icon picker', () => {
 
   it('picks an icon for a contact field from the library; Reset to Default takes it off again', () => {
     chooseIcon().click();
-    cy.contains('h3', 'Select Header Icon').should('be.visible');
+    cy.contains('h2', 'Select Header Icon').should('be.visible');
     cy.contains('Choose a vector icon for').should('contain.text', 'Email');
     cy.contains('button', /^Recommended \(\d+\)$/).should('be.visible');
     cy.contains('span', 'Using default template icon').should('be.visible');
@@ -135,7 +135,7 @@ describe('Personal Info → header icon picker', () => {
     // Search reaches the whole library, not just the recommended few.
     cy.get('input[placeholder^="Search icons"]').type('star', { delay: 0 });
     cy.contains('button', /^Star$/).click();
-    cy.contains('h3', 'Select Header Icon').should('not.exist');
+    cy.contains('h2', 'Select Header Icon').should('not.exist');
     cy.store().should((s) => expect(active(s).settings.customContactIcons?.email).to.eq('icon:star'));
     cy.get('button[title="Remove custom icon"]').should('have.length', 1);
 

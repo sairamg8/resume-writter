@@ -76,7 +76,7 @@ describe('STAR bullet optimiser', () => {
 
 describe('cover-letter generator', () => {
   /** The generator's dialog: its fields are looked up in it, not among the letter's own. */
-  const dialog = () => cy.contains('h2', 'Smart Cover Letter Generator').parents('.rounded-2xl').first();
+  const dialog = () => cy.contains('h2', 'Smart Cover Letter Generator').parents('[role="dialog"]').first();
   /** One of the letter's own fields on the Cover Letter tab, by its label. */
   const letterField = (label) => cy.contains('label', new RegExp(`^${label}$`)).next('input');
 

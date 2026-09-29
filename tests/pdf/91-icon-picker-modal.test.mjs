@@ -4,13 +4,22 @@
 // icons, a search that looked only at the Recommended tab, or a Close that wrote something passed.
 // The real Personal Info editor is mounted over the fake DOM, its updateSetting a small store that
 // records each write and re-renders with it; the picker is opened as a person does, from the field.
+// The picker is the kit's Dialog (R4-DVIS-25): it renders in a portal at the end of <body>, so the page
+// is searched from there (patchFakeDom for its focus trap); its box is the role="dialog" panel, which
+// stays 150 ms, data-state="closed", to animate out — a closed picker is one not open; its × is the
+// kit's close button (aria-label Close), and a click beside it is a press that starts and ends on the
+// overlay around the panel, as a browser sends it.
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { createElement, useState } from 'react';
 import { setup, teardown, resume, loadModule } from './harness.mjs';
 import { mount, elements, reactProps } from './fake-dom.mjs';
+import { patchFakeDom } from '../unit/ui-dom-harness.mjs';
 
-before(setup);
+before(async () => {
+  patchFakeDom();
+  await setup();
+});
 after(teardown);
 
 const PERSONAL = { name: 'Casey Wren', title: 'Planner', email: 'casey@example.com', phone: '+1 555 0142', location: 'Springfield' };
@@ -51,10 +60,10 @@ async function editor(r) {
     });
   }
   const view = mount(Store, { initial: r });
-  const all = () => [...elements(view.container)];
+  const all = () => [...elements(view.document.body)];
   const picker = () => {
-    const h3 = all().find((el) => el.tagName === 'H3' && el.textContent.trim() === 'Select Header Icon');
-    return h3 ? h3.parentNode.parentNode.parentNode : null;
+    const box = all().find((el) => el.getAttribute('role') === 'dialog' && el.getAttribute('data-state') !== 'closed');
+    return box && [...elements(box)].some((el) => el.tagName === 'H2' && el.textContent.trim() === 'Select Header Icon') ? box : null;
   };
   const click = (el, event) => {
     writes.length = 0;
@@ -70,6 +79,7 @@ async function editor(r) {
   };
   return {
     writes,
+    act: view.act,
     picker,
     click,
     inPicker,
@@ -155,15 +165,25 @@ describe('the header icon picker (R2-157)', () => {
   it('Close, the × and a click outside close it and write nothing', async () => {
     const view = await editor(cv({ email: 'icon:mail' }));
     try {
+      const beside = (overlay) => ({ target: overlay, currentTarget: overlay, stopPropagation() {} });
       const ways = {
-        Close: () => view.inPicker('Close'),
-        '×': () => [...elements(view.picker())].find((el) => el.tagName === 'BUTTON' && el.getAttribute('title') === 'Close'),
-        outside: () => view.picker().parentNode,
+        Close: () => view.click(view.inPicker('Close')),
+        '×': () => view.click([...elements(view.picker())].find((el) => el.tagName === 'BUTTON' && el.getAttribute('aria-label') === 'Close')),
+        outside: () => {
+          const overlay = view.picker().parentNode;
+          view.writes.length = 0;
+          view.act(() => {
+            reactProps(overlay).onPointerDown(beside(overlay));
+            reactProps(overlay).onPointerUp(beside(overlay));
+            reactProps(overlay).onClick(beside(overlay));
+          });
+          return [...view.writes];
+        },
       };
-      for (const [way, target] of Object.entries(ways)) {
+      for (const [way, close] of Object.entries(ways)) {
         view.choose('email');
         view.type(view.search(), 'globe');
-        assert.deepEqual(view.click(target(), { stopPropagation() {} }), [], way);
+        assert.deepEqual(close(), [], way);
         assert.equal(view.picker(), null, `${way}: closed`);
         assert.deepEqual(view.settings().customContactIcons, { email: 'icon:mail' }, `${way}: the icon kept`);
       }

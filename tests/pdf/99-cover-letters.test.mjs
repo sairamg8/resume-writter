@@ -14,9 +14,14 @@ import { renderToString } from 'react-dom/server';
 import { MemoryRouter, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import { setup, teardown, loadModule, renderCover, render, read, readDocx, allText } from './harness.mjs';
 import { mount, elements, reactProps } from './fake-dom.mjs';
+import { patchFakeDom } from '../unit/ui-dom-harness.mjs';
 import { PNG_2X2 as PNG } from './extractors.mjs';
 
-before(setup);
+// New Cover's picker is the kit's Dialog (R4-DVIS-07): patchFakeDom for its focus trap.
+before(async () => {
+  patchFakeDom();
+  await setup();
+});
 after(teardown);
 
 const KEY = 'cpwtcv_v1';
@@ -95,9 +100,10 @@ async function openApp(resumes, dataVersion = 13) {
   // The router commits a navigation from an effect, and the store saves from one: let them run.
   const settle = async () => { for (let i = 0; i < 10; i += 1) { await new Promise((r) => { setImmediate(r); }); view.act(() => {}); } };
   await settle();
-  const all = () => [...elements(view.container)];
+  // From <body>: the kit's dialogs render in a portal there, beside the page's container.
+  const all = () => [...elements(view.document.body)];
   /** The button whose text is `label` — or starts with it, `starts` true — under `root`. */
-  const button = (label, root = view.container, starts = false) => {
+  const button = (label, root = view.document.body, starts = false) => {
     const found = [...elements(root)].find((el) => el.tagName === 'BUTTON' && (starts ? text(el).startsWith(label) : text(el) === label));
     assert.ok(found, `a button reads "${label}"; the page: ${text(view.container)}`);
     return found;
@@ -119,7 +125,8 @@ async function openApp(resumes, dataVersion = 13) {
     click,
     fire,
     press: (label) => click(button(label)),
-    dialog: () => all().find((el) => el.getAttribute('role') === 'dialog') ?? null,
+    // The open dialog: a closed one fades out for 150 ms (data-state="closed") before it unmounts.
+    dialog: () => all().find((el) => el.getAttribute('role') === 'dialog' && el.getAttribute('data-state') !== 'closed') ?? null,
     /** Every card on the dashboard: its text, and whether it is in the Cover Letters group. */
     cards: () => all().filter((el) => el.tagName === 'DIV' && /\bgroup bg-white rounded-2xl\b/.test(el.className))
       .map((el) => ({ el, text: text(el), letter: inside(el, 'SECTION') })),
@@ -221,7 +228,9 @@ describe('New Cover Letter takes a résumé\'s name, job title, contacts and pho
     const app = await openApp([cv('resume_a', 'A CV', JORDAN, 1000), cv('resume_b', 'B CV', SAM, 2000)]);
     try {
       await app.press('New Cover Letter');
-      await app.fire(app.dialog().parentNode, 'onKeyDown', { key: 'Escape' });
+      // The kit's Dialog takes Escape on its outer layer, the panel's overlay's parent; the first
+      // résumé has the focus, inside it, so the key bubbles there.
+      await app.fire(app.dialog().parentNode.parentNode, 'onKeyDown', { key: 'Escape' });
       assert.equal(app.dialog(), null, 'Escape closes it');
       await app.press('New Cover');
       await app.click([...elements(app.dialog())].find((el) => el.getAttribute('aria-label') === 'Close'));

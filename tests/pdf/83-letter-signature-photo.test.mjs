@@ -12,9 +12,15 @@ import assert from 'node:assert/strict';
 import { createElement, useState } from 'react';
 import { setup, teardown, resume, renderCover, read, allText, loadModule, readDocx } from './harness.mjs';
 import { mount, elements, reactProps } from './fake-dom.mjs';
+import { patchFakeDom } from '../unit/ui-dom-harness.mjs';
 import { PNG_2X2 as PNG } from './extractors.mjs';
 
-before(setup);
+// The Smart Cover Letter Generator is the kit's Dialog (R4-DVIS-25): it renders in a portal at the end of
+// <body>, so its controls are looked up from there, and its focus trap needs patchFakeDom.
+before(async () => {
+  patchFakeDom();
+  await setup();
+});
 after(teardown);
 
 async function coverDocx(r) {
@@ -53,7 +59,7 @@ async function withPanel(r, act) {
   const view = mount(Tab, {});
   try {
     const button = (label) => {
-      const b = [...elements(view.container)].find((el) => el.tagName === 'BUTTON' && text(el) === label);
+      const b = [...elements(view.document.body)].find((el) => el.tagName === 'BUTTON' && text(el) === label);
       assert.ok(b, `a button reads "${label}"`);
       return b;
     };

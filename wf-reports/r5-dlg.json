@@ -1,0 +1,266 @@
+{
+  "cluster": "r5-dlg",
+  "branch": "claude/wf-r5-dlg",
+  "base": "b8d7667ae7ace64a83872e84b413bc6a68d71521",
+  "rows": [
+    {
+      "id": "R4-DVIS-25",
+      "title": "Cover Letter Generator and Header Icon picker are hand-built dialogs, not the kit Dialog",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": [
+        "81d7d3ae7a7b309a95beeed1e3cd0accb5145daa",
+        "787f27179183e5994e0fb1a7d31dbd14d8d8e482",
+        "2c3a2d5957fdf259687f348aa9725f2bee21a34e",
+        "c18e127f6f6291113f1372076c8702ddefff5dcb"
+      ],
+      "tests": [
+        "tests/pdf/104-r5-dlg-generator-dialog.test.mjs",
+        "tests/pdf/104-r5-dlg-icon-picker-dialog.test.mjs",
+        "tests/pdf/104-r5-dlg-helpers.mjs",
+        "tests/pdf/91-icon-picker-modal.test.mjs",
+        "tests/pdf/102-r4-dux-29-icon-upload-not-image.test.mjs",
+        "tests/pdf/43-cover-letter-generator-escape.test.mjs",
+        "tests/pdf/44-cover-letter-generator-shapes.test.mjs",
+        "tests/pdf/61-cover-letter-generator-recipient.test.mjs",
+        "tests/pdf/102-r4-dux-13-generator-no-details.test.mjs",
+        "tests/pdf/102-r4-dux-04-letter-apply-undo.test.mjs",
+        "tests/pdf/83-letter-signature-photo.test.mjs",
+        "tests/pdf/r4cl-generator-letter-fields.test.mjs",
+        "tests/pdf/parity/walker.mjs"
+      ],
+      "summary": "Now: the Smart Cover Letter Generator (81d7d3a) and the Header Icon picker (787f271) are the kit Dialog (size lg): a role=dialog panel in the kit portal, the kit title, × and buttons, Escape closes, scroll lock. Every field and handler is kept, and the Generator keeps R4-DUX-13. 2c3a2d5 and c18e127 are test-only: existing tests and the parity walker now look for the dialogs in the portal (document.body), with no assertion weakened.",
+      "product_call": "The Generator passes closeOnOverlay={untouched}: once Target Company, Role or Recipient differs from what the dialog opened with, a click beside the box no longer closes it (Cancel, × and Escape always do). Clearing the fields back restores the click-beside close. This goes beyond the row (reviewer DLG-REV-01) and changes R3-010 for this dialog; it copies the owner's R4-DUX-09 call for the Bullet Optimizer, so a stray click never throws typing away. Kept, recorded here for the owner to confirm; reverting is one prop (drop closeOnOverlay) plus the pinning block in 104-r5-dlg-generator-dialog.test.mjs:80-99.",
+      "remaining": "Owner to confirm the closeOnOverlay product call above.",
+      "failfirst_run": "36457658960 (81d7d3a green); 36458619916 (787f271 green after 2c3a2d5)"
+    },
+    {
+      "id": "R4-DVIS-07",
+      "title": "New Cover Letter and Share Link dialogs are hand-built, not the kit Dialog (rest of the row)",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": [
+        "aa279ca825b962a940cbc9b9520d4a097e552b63",
+        "0600abbe561b943d164507ba2c9e6938d5df3bb6",
+        "7278e00c32dcf2d2574ce5d2c5bf6410fa8e3f39",
+        "8a8243ff0afa86063500b67559e94a3a95ca2bee"
+      ],
+      "tests": [
+        "tests/pdf/104-r5-dlg-new-letter-dialog.test.mjs",
+        "tests/pdf/104-r5-dlg-share-link-dialog.test.mjs",
+        "tests/unit/ui-overlays.unit.mjs",
+        "tests/pdf/96-modal-outside-click.test.mjs",
+        "tests/pdf/96-dashboard.test.mjs",
+        "tests/pdf/99-cover-letters.test.mjs",
+        "tests/pdf/99-public-link.test.mjs",
+        "tests/pdf/100-r4-sync-04-too-large-message.test.mjs",
+        "tests/pdf/100-r4-sync-05-copied-label.test.mjs",
+        "tests/pdf/102-r4-dux-10-unpublish-confirm.test.mjs"
+      ],
+      "summary": "Now: New Cover Letter (aa279ca) and Share a public link (0600abb) are the kit Dialog. 7278e00 makes the kit Dialog's panel inert and pointer-events-none while it animates out, so a double-click on one of its buttons acts once; this applies to every Dialog caller (board dialogs, ConfirmDialog, ShortcutsDialog, TemplateGallery, BulletOptimizer), none of which uses the panel while closing, and the full gate on the head is green. 8a8243f ignores a second résumé pick in New Cover Letter while it closes (defence in depth for the fake DOM). The Bullet Optimizer part was done earlier in e3b2030, so the whole row is fixed.",
+      "product_call": "",
+      "remaining": "",
+      "failfirst_run": "36457658960 (aa279ca, 0600abb green); 36460072829 (7278e00, 8a8243f green)"
+    },
+    {
+      "id": "R5-DLG-01",
+      "title": "Header Icon picker: no Escape close, a drag out of the box closes it",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": [
+        "787f27179183e5994e0fb1a7d31dbd14d8d8e482"
+      ],
+      "tests": [
+        "tests/pdf/104-r5-dlg-icon-picker-dialog.test.mjs",
+        "tests/pdf/96-modal-outside-click.test.mjs"
+      ],
+      "summary": "Now: Escape closes the Header Icon picker (but not an input method's composing Escape), and a drag that starts or ends outside the box no longer closes it.",
+      "product_call": "",
+      "remaining": "",
+      "failfirst_run": "36458619916"
+    },
+    {
+      "id": "R5-DLG-02",
+      "title": "Share a public link: Escape does nothing until you click inside",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": [
+        "0600abbe561b943d164507ba2c9e6938d5df3bb6"
+      ],
+      "tests": [
+        "tests/pdf/104-r5-dlg-share-link-dialog.test.mjs"
+      ],
+      "summary": "Now: Share a public link moves focus onto its panel as it opens, so Escape closes it at once.",
+      "product_call": "",
+      "remaining": "",
+      "failfirst_run": "36457658960"
+    },
+    {
+      "id": "R5-DLG-03",
+      "title": "New Cover Letter and Share Link close on a drag out of the box",
+      "severity": "low",
+      "outcome": "fixed",
+      "commits": [
+        "aa279ca825b962a940cbc9b9520d4a097e552b63",
+        "0600abbe561b943d164507ba2c9e6938d5df3bb6"
+      ],
+      "tests": [
+        "tests/pdf/96-modal-outside-click.test.mjs",
+        "tests/pdf/104-r5-dlg-new-letter-dialog.test.mjs",
+        "tests/pdf/104-r5-dlg-share-link-dialog.test.mjs"
+      ],
+      "summary": "Now: both close on a click beside them only when the press starts and ends on the overlay; a drag out of the box keeps them open.",
+      "product_call": "",
+      "remaining": "",
+      "failfirst_run": "36457658960"
+    },
+    {
+      "id": "R5-DLG-04",
+      "title": "New Cover Letter leaves the dashboard behind it scrollable",
+      "severity": "low",
+      "outcome": "fixed",
+      "commits": [
+        "aa279ca825b962a940cbc9b9520d4a097e552b63"
+      ],
+      "tests": [
+        "tests/pdf/104-r5-dlg-new-letter-dialog.test.mjs"
+      ],
+      "summary": "Now: New Cover Letter locks the dashboard's scroll while open and releases it when it closes.",
+      "product_call": "",
+      "remaining": "",
+      "failfirst_run": "36457658960"
+    },
+    {
+      "id": "R4-DPH-30",
+      "title": "Header Icon picker search box zooms iOS (dialog part)",
+      "severity": "low",
+      "outcome": "fixed",
+      "commits": [
+        "cb3ecdc79540a0e2678e4e46cca9959da545abcb"
+      ],
+      "tests": [
+        "tests/pdf/104-r5-dlg-dph-30-icon-picker-touch-text.test.mjs"
+      ],
+      "summary": "Now: the Header Icon picker's search box is text-xs pointer-coarse:text-base, 16 px on a touch screen; a mouse keeps 12 px. With the STAR Optimizer part (8e97533) the whole row is fixed.",
+      "product_call": "",
+      "remaining": "",
+      "failfirst_run": "36457658960"
+    },
+    {
+      "id": "R4-DPH-36",
+      "title": "Generator and Share Link text fields zoom iOS (dialog part)",
+      "severity": "low",
+      "outcome": "fixed",
+      "commits": [
+        "cf3c6723f9569a0babab08ffea1481a2d802b6b2",
+        "cb3ecdc79540a0e2678e4e46cca9959da545abcb"
+      ],
+      "tests": [
+        "tests/pdf/104-r5-dlg-dph-36-generator-share-touch-text.test.mjs",
+        "tests/pdf/104-r5-dlg-dph-30-icon-picker-touch-text.test.mjs"
+      ],
+      "summary": "Now: the Generator's Company, Role and Recipient fields and Share's Public link box are 16 px on a touch screen (cf3c672); the icon search is covered by cb3ecdc. New Cover Letter has no text field. The Bullet Optimizer part was done in 8e97533.",
+      "product_call": "",
+      "remaining": "",
+      "failfirst_run": "36457658960"
+    },
+    {
+      "id": "R4-DPH-37",
+      "title": "Dialogs capped in vh overflow the visible phone screen (dialog part)",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": [
+        "81d7d3ae7a7b309a95beeed1e3cd0accb5145daa",
+        "787f27179183e5994e0fb1a7d31dbd14d8d8e482",
+        "aa279ca825b962a940cbc9b9520d4a097e552b63",
+        "0600abbe561b943d164507ba2c9e6938d5df3bb6"
+      ],
+      "tests": [
+        "tests/pdf/104-r5-dlg-generator-dialog.test.mjs",
+        "tests/pdf/104-r5-dlg-icon-picker-dialog.test.mjs",
+        "tests/pdf/104-r5-dlg-new-letter-dialog.test.mjs",
+        "tests/pdf/104-r5-dlg-share-link-dialog.test.mjs"
+      ],
+      "summary": "Now: the Generator, icon picker, New Cover Letter and Share dialogs have no vh cap: above sm they are capped at calc(100dvh - 2rem) in a scrolling overlay, below sm the kit Dialog fills the screen, and only the body scrolls between the title and the footer. The Bullet Optimizer part was done in e3b2030.",
+      "product_call": "",
+      "remaining": "",
+      "failfirst_run": "36457658960 (81d7d3a, aa279ca, 0600abb); 36458619916 (787f271)"
+    },
+    {
+      "id": "R4-DPH-38",
+      "title": "Generator and icon picker footers squeeze their buttons on a phone (dialog part)",
+      "severity": "low",
+      "outcome": "fixed",
+      "commits": [
+        "81d7d3ae7a7b309a95beeed1e3cd0accb5145daa",
+        "787f27179183e5994e0fb1a7d31dbd14d8d8e482"
+      ],
+      "tests": [
+        "tests/pdf/104-r5-dlg-generator-dialog.test.mjs",
+        "tests/pdf/104-r5-dlg-icon-picker-dialog.test.mjs"
+      ],
+      "summary": "Now: both footers are one flex-wrap row of kit buttons (whitespace-nowrap shrink-0), so 'Apply to Cover Letter' wraps to a new line instead of squeezing. The Bullet Optimizer part was done in e3b2030.",
+      "product_call": "",
+      "remaining": "",
+      "failfirst_run": "36457658960 (81d7d3a); 36458619916 (787f271)"
+    }
+  ],
+  "review": {
+    "rounds": [
+      {
+        "round": 1,
+        "issues": [
+          "DLG-REV-01"
+        ]
+      },
+      {
+        "round": 2,
+        "issues": []
+      }
+    ],
+    "issues": [
+      {
+        "id": "DLG-REV-01",
+        "severity": "low",
+        "file": "src/components/CoverLetterGeneratorModal.jsx:77",
+        "row": "R4-DVIS-25",
+        "problem": "The Generator passes closeOnOverlay={untouched}, so after an edit to Company, Role or Recipient a click beside the box no longer closes it; on b8d7667 (useOverlayClose, R3-010) it did. No row in the cluster asks for it.",
+        "resolution": "Confirmed by the second agent (CoverLetterGeneratorModal.jsx:62 and :77; pinned by 104-r5-dlg-generator-dialog.test.mjs:80-99). It is a product call, not a defect: it prevents losing typed fields to a stray click, as the owner's R4-DUX-09 does for the Bullet Optimizer. Kept with no code change and recorded as R4-DVIS-25's product_call for the owner to confirm."
+      }
+    ],
+    "fixedByReviewer": []
+  },
+  "rejected": [],
+  "a11yNoted": [
+    "HeaderIconPickerModal.jsx: the 'Upload Image' control is a <label> around a display:none file input, so a keyboard cannot reach it.",
+    "HeaderIconPickerModal.jsx: the search input has only a placeholder (no label or aria-label), and the clear-search x button has no accessible name.",
+    "HeaderIconPickerModal.jsx: the Recommended / Style Packs / All Icons switch uses plain buttons with no tab semantics or aria-selected/aria-pressed; the selected icon is shown only by colour and a check.",
+    "CoverLetterGeneratorModal.jsx: the Target Company / Role / Recipient labels are not tied to their inputs (no htmlFor/id); the archetype buttons have no aria-pressed.",
+    "HeaderIconPickerModal.jsx / CoverLetterGeneratorModal.jsx: decorative lucide icons (Search, X, ImagePlus, RotateCcw, Building, Briefcase, User, Check) have no aria-hidden.",
+    "ShareLinkModal.jsx: Copy / Open / Publish / Unpublish buttons and text are 12 px (text-xs) with small targets (px-2 py-1.5)."
+  ],
+  "baselineFailures": [],
+  "dsgLayoutVerdicts": [
+    {
+      "id": "R4-DPH-30",
+      "verdict": "fixed-verified",
+      "evidence": "HeaderIconPickerModal.jsx:139 search input has text-xs pointer-coarse:text-base (cb3ecdc); fail-first green in 36457658960; STAR Optimizer part 8e97533."
+    },
+    {
+      "id": "R4-DPH-37",
+      "verdict": "fixed-verified",
+      "evidence": "No max-h-[..vh] left in CoverLetterGeneratorModal, HeaderIconPickerModal, NewLetterModal, ShareLinkModal; all render <Dialog> with the kit's dvh cap and full screen below sm; tested by the four 104-r5-dlg-*-dialog tests; fail-first green in 36457658960 and 36458619916."
+    },
+    {
+      "id": "R4-DPH-38",
+      "verdict": "fixed-verified",
+      "evidence": "Generator and icon picker footers use the Dialog footer prop (flex-wrap) with kit Buttons (whitespace-nowrap shrink-0); pinned in 104-r5-dlg-generator-dialog and 104-r5-dlg-icon-picker-dialog; fail-first green."
+    },
+    {
+      "id": "R4-DVIS-07",
+      "verdict": "fixed-verified",
+      "evidence": "NewLetterModal.jsx:23 and ShareLinkModal.jsx:87 render the kit <Dialog>; Bullet Optimizer done in e3b2030; Dialog inert-while-closing (Dialog.jsx:120) checked against every caller; full gate 36461349375 green on c18e127."
+    }
+  ],
+  "notes": "All ten rows are fixed; every fix commit has a green fail-first job (runs 36457658960, 36458619916, 36460072829). Full gate run 36461349375 and named-files run 36461346491 on head c18e127 are green (6 suite shards, 3 Playwright incl. the parity walk, 4 Cypress, build, lint). The branch was cut from b66da7c (claude/r4-green); 56e42bf, e939340 and b66da7c sit on top of b8d7667 and are not this cluster's work. Review: one low item (DLG-REV-01), confirmed as a product call and kept, recorded under R4-DVIS-25; no code change, so no new CI run was needed. Weak spots noted by the reviewer: in the 96-modal-outside-click pairs the old modals fail a structural assertion (no onPointerDown on a full-screen backdrop); 8a8243f's isOpen guard never fires in a real browser since 7278e00 already makes the closing panel inert. Accessibility items are noted only (deferred)."
+}

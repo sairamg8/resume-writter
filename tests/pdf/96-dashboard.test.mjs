@@ -12,6 +12,7 @@ import { createElement } from 'react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { setup, teardown, resume, section, loadModule } from './harness.mjs';
 import { mount, elements, reactProps } from './fake-dom.mjs';
+import { patchFakeDom } from '../unit/ui-dom-harness.mjs';
 import { MemoryStorage, settle } from './resume-tab.mjs';
 
 // The demo accounts of this test's build (VITE_DEMO_ACCOUNTS): a made-up one, never the owner's.
@@ -19,7 +20,11 @@ import { MemoryStorage, settle } from './resume-tab.mjs';
 const DEMO = { uid: 'demo-uid', email: 'demo@example.com', displayName: 'Demo' };
 process.env.VITE_DEMO_ACCOUNTS = DEMO.email;
 
-before(setup);
+// New Cover's picker is the kit's Dialog (R4-DVIS-07): patchFakeDom for its focus trap.
+before(async () => {
+  patchFakeDom();
+  await setup();
+});
 after(teardown);
 
 const KEY = 'cpwtcv_v1';
@@ -76,7 +81,8 @@ async function dashboard(resumes = [], { user = null } = {}) {
   }
   const view = mount(Page, {});
   await settle();
-  const all = (within = view.container) => [...elements(within)];
+  // From <body>: the kit's dialogs render in a portal there, beside the page's container.
+  const all = (within = view.document.body) => [...elements(within)];
   // A card's name: the <p> with the full name as its title (no longer one `truncate` line: R4-DVIS-28).
   const nameOf = (card) => all(card).find((el) => el.tagName === 'P' && el.getAttribute('title') != null);
   const page = {
@@ -120,7 +126,8 @@ async function dashboard(resumes = [], { user = null } = {}) {
       const line = all().find((el) => el.tagName === 'P' && /^\d+ letters?$/.test(text(el)));
       return line && text(line);
     },
-    dialog: () => all().find((el) => el.getAttribute('role') === 'dialog'),
+    // The open dialog: a closed one fades out for 150 ms (data-state="closed") before it unmounts.
+    dialog: () => all().find((el) => el.getAttribute('role') === 'dialog' && el.getAttribute('data-state') !== 'closed'),
     fileInput() {
       const input = all().find((el) => el.tagName === 'INPUT' && (el.type === 'file' || el.getAttribute('type') === 'file'));
       assert.ok(input, 'the Import file input');
