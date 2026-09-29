@@ -23,6 +23,8 @@ export default function RichTextEditor({ label, ariaLabel, value, onChange, plac
   // Where that statement sat (anchorOf): found again by its text after an outside value, the one at
   // its place is taken, not the first with the same text (R5-HUNT7 review).
   const optimizerAnchor = useRef(null);
+  // With no statement, the empty bullet or line the caret was in (blankSpot), which the result fills.
+  const optimizerSpot = useRef(null);
   // A drag that starts in this editor: the text it drags (a Range), and the mark it puts on the drag
   // so its own drop knows it (onDrop). A drag from anywhere else carries no such mark.
   const dragSource = useRef(null);
@@ -142,12 +144,14 @@ export default function RichTextEditor({ label, ariaLabel, value, onChange, plac
     const statement = statementRange(ref.current);
     optimizerTarget.current = statement;
     optimizerAnchor.current = statement ? anchorOf(ref.current, statement) : null;
+    optimizerSpot.current = statement ? null : blankSpot(ref.current);
     setOptimizerText(statement ? statement.toString().replace(/\s+/g, ' ').trim() : '');
     setOptimizerOpen(true);
   }
 
   /**
-   * The optimizer's result in place of the statement it opened on, as text; with none, a new bullet.
+   * The optimizer's result in place of the statement it opened on, as text; with none, in the empty
+   * bullet or line the caret was in (blankSpot); with neither, a new bullet.
    * A list item's own statement split by a nested list (statementRange) takes it in its first run of
    * text, and its later runs are deleted: the nested list between them is never touched (R4-SW-WT-02).
    */
@@ -156,8 +160,10 @@ export default function RichTextEditor({ label, ariaLabel, value, onChange, plac
     const text = String(optimizedText || '').trim();
     let statement = optimizerTarget.current;
     const anchor = optimizerAnchor.current;
+    const spot = optimizerSpot.current;
     optimizerTarget.current = null;
     optimizerAnchor.current = null;
+    optimizerSpot.current = null;
     if (!el || !text) return;
     // A value taken in from outside while the optimizer was open (another tab's save, a cloud pull)
     // replaced the editor's nodes, and the saved Range collapsed to the editor's start: Apply wrote the
@@ -186,6 +192,24 @@ export default function RichTextEditor({ label, ariaLabel, value, onChange, plac
       sel.addRange(range);
       document.execCommand('insertText', false, text);
       if (kept) dropPlaceholders(statement.item, kept);
+    } else if (spot && spot.html === el.innerHTML && el.contains(spot.host ?? spot.parent)) {
+      // Opened from an empty bullet or line: the result goes there. It went to the end of the
+      // description as a new bullet — in a numbered list, a bulleted list under it — and the empty
+      // bullet stayed, printed as a bare "•" (R5-HUNT8-OPTIMIZER-EMPTY-BULLET-APPLY-AT-END).
+      const at = document.createRange();
+      const placeholders = spot.host ? ownElements(spot.host).filter((n) => n.nodeName === 'BR') : [];
+      if (spot.host) at.selectNodeContents(spot.host);
+      else {
+        const i = spot.child ? [...spot.parent.childNodes].indexOf(spot.child) : spot.parent.childNodes.length;
+        at.setStart(spot.parent, i);
+        at.setEnd(spot.parent, i);
+      }
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(at);
+      document.execCommand('insertText', false, text);
+      // The empty item's own <br> (Chrome's <li><br></li>), if the browser kept it beside the text.
+      for (const br of placeholders) if (spot.host.contains(br)) br.parentNode.removeChild(br);
     } else {
       el.innerHTML = sanitizeRichText(`${el.innerHTML}<ul><li>${plainTextToHtml(text)}</li></ul>`);
     }
@@ -399,6 +423,31 @@ export function statementRange(el) {
   range.setStartBefore(leaves[i]);
   range.setEndAfter(leaves[j]);
   return range.toString().trim() ? range : null;
+}
+
+/**
+ * Where the caret sits in `el` on an empty line, when statementRange finds no statement there: an
+ * empty list item or paragraph ({ host }), or a blank line between line breaks ({ parent, child }: the
+ * caret is before `child` in `parent`, at its end with none), with the editor's HTML as it was
+ * ({ html }): Apply fills it only when nothing has changed since. null elsewhere, and in an empty
+ * editor, where the result is a new bullet.
+ */
+function blankSpot(el) {
+  const sel = window.getSelection?.();
+  if (!el || !sel || !sel.rangeCount || !el.contains(sel.anchorNode) || !el.textContent.trim()) return null;
+  const at = sel.getRangeAt(0);
+  if (at.toString().trim()) return null;
+  let host = null;
+  for (let n = at.startContainer; n && n !== el; n = n.parentNode) {
+    if (n.nodeType === 1 && STATEMENTS.has(n.nodeName)) { host = n; break; }
+  }
+  if (host && isBlank(host)) return { host, html: el.innerHTML };
+  const parent = at.startContainer;
+  if (parent.nodeType !== 1 || (parent !== el && parent !== host)) return null;
+  const child = parent.childNodes[at.startOffset] ?? null;
+  const prev = parent.childNodes[at.startOffset - 1] ?? null;
+  const edge = (n) => !n || isBreak(n);
+  return edge(child) && edge(prev) ? { parent, child, html: el.innerHTML } : null;
 }
 
 /** A statement's text as the optimizer shows it: runs of white space as one space, trimmed. */
