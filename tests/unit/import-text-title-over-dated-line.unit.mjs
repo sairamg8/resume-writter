@@ -69,3 +69,11 @@ test('a degree under its "School ⇥ dates" line stays that school\'s, a line ov
     assert.deepEqual(section(r, 'education').items.map((e) => [e.institution, e.degree]), [['Stanford University', 'Master of Science'], ['University of Oregon', 'Bachelor of Science']], over);
   }
 });
+
+test('a heading in capitals right after a job\'s list, with no blank line, over a dated line still starts its section (R5-HUNT2-TEXT-IMPORT-CAPS-EMPLOYER-BECOMES-SECTION, review)', () => {
+  for (const h of ['TEACHING', 'RESEARCH EXPERIENCE', 'LEADERSHIP']) {
+    const r = resumeFromText(`JANE DOE\njane@x.com\n\nEXPERIENCE\nEngineer\tAcme\t2018 – 2020\n• x\n${h}\nLecturer\tStanford\t2016 – 2017\n• z`);
+    assert.deepEqual(r.sections.map((s) => [s.type, s.items.length]), [['experience', 1], ['custom', 1]], h);
+    assert.equal(section(r, 'experience').items[0].description, '<ul><li>x</li></ul>', h);
+  }
+});
