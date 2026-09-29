@@ -620,6 +620,17 @@ function entryOf(type, header, body, aside = () => {}) {
   // with no role word ("Barista — Blue Bottle, LLC"): a company's legal ending is no place.
   if (JOB.has(type) && !header[0]?.group && !h.location && !h.meta.location && h.parts.length >= 3
     && !ROLE.test(h.parts[0]) && PLACE.test(h.parts[1]) && !ROLE.test(h.parts[1]) && !CORPORATE.test(h.parts[1])) h.location = h.parts.splice(1, 1)[0];
+  // "Product Manager, Google — Mountain View, CA", "Software Engineer | Google | Mountain View, CA":
+  // the role, its company, then a place is the job's location too. Before, the place became the
+  // company (the role kept "Google"), or a paragraph of the description.
+  if (JOB.has(type) && !header[0]?.group && !h.location && !h.meta.location && h.parts.length >= 2) {
+    const place = h.parts[h.parts.length - 1];
+    const pair = h.parts.length === 2 ? inlinePair(h.parts.slice(0, 1)) : h.parts.slice(0, -1);
+    if (pair.length === 2 && ROLE.test(pair[0]) && !ROLE.test(pair[1]) && PLACE.test(place) && !ROLE.test(place) && !CORPORATE.test(place)) {
+      h.location = place;
+      h.parts = pair;
+    }
+  }
   const [p0 = '', p1 = '', ...rest] = JOB.has(type) ? inlinePair(h.parts) : h.parts;
   const d = h.date || { start: '', end: '', current: false, text: '' };
   const lead = rest.length ? [rest.join(' — ')] : [];
