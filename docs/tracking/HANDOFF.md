@@ -1,5 +1,11 @@
 # Session Handoff — Resume Here
 
+**2026-09-29 23:15 UTC — DEPLOY: PR #5** (`claude/deploy-r8-ca009d4`, rounds 7 + 8-first-six = 26 fixes, full gate 36638036654 on
+`ca009d49` GREEN) supersedes PR #4; owner merges #5 (or `git push origin ca009d49:refs/heads/master`). A usage limit (reset 22:50)
+killed agents mid-run; resumed at 23:10 with the same run ids: wf_df15e7b0-cf8 (round 8 import: fixer partial on its branch,
+tools: fixer, export: review) and wf_0a064088-d78 (round 9: skeptics for dash/pdf/boards/sync 1 finding each, finders for editor
+and jobs). The fixer now continues an existing claude/wf-r5-hunt<N>-<area> branch instead of restarting it.
+
 **DEPLOY PR RULE (2026-09-29 22:15 UTC):** r4-green moves while the hunt runs, so a PR from r4-green can carry untested
 code. To deploy, pin a branch at the exact green-gated commit (`git push origin <sha>:refs/heads/claude/deploy-<tag>-<sha7>`)
 and open the PR from that branch. **PR #4** (`claude/deploy-r7-186c06a`, round 7's 21 fixes, full gate 36636419610 GREEN) is
