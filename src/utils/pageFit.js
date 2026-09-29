@@ -54,13 +54,19 @@ export function fitLadder(settings = {}) {
  * What the panel says after a fit that printed on one page (R4-DUX-15): nothing when only spacing
  * moved, but the text size when a step brought it down — the user asked to fit the page, not to
  * shrink their text, so they are told it went from `settings`' base (the résumé's as clicked) to
- * the step's.
+ * the step's. A fit that stayed over a page says so and, when its tightest step also lowered the
+ * text size, names that change too (R5-HUNT2): it was written like the spacing, and left unsaid.
  */
 export function fitSizeNotice(settings = {}, fit) {
-  if (!fit || fit.pages > 1 || fit.settings?.fontSizeBase === undefined) return '';
+  if (!fit) return '';
   const base = Number.isFinite(settings.fontSizeBase) ? settings.fontSizeBase : DEFAULT_BASE_PT;
-  if (fit.settings.fontSizeBase === base) return '';
-  return `Fits on 1 page — text size ${base} → ${fit.settings.fontSizeBase} pt.`;
+  const to = fit.settings?.fontSizeBase;
+  const smaller = to !== undefined && to !== base;
+  if (fit.pages > 1) {
+    const size = smaller ? ` and ${to} pt text (was ${base} pt)` : '';
+    return `Still ${fit.pages} pages at the tightest spacing${size} — shorten the content to fit one page.`;
+  }
+  return smaller ? `Fits on 1 page — text size ${base} → ${to} pt.` : '';
 }
 
 /** The number of pages in a PDF react-pdf wrote: its page objects, which it never compresses. */

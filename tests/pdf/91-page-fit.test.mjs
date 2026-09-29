@@ -208,7 +208,7 @@ describe('the 1-Page Fit button', () => {
       await p.settled();
       const tightest = fitLadder(r.settings).at(-1);
       assert.deepEqual(Object.fromEntries(Object.keys(tightest).map((k) => [k, p.settings()[k]])), tightest, 'the tightest step is stored');
-      assert.match(p.notice() || '', /^Still \d+ pages at the tightest spacing — shorten the content to fit one page\.$/);
+      assert.match(p.notice() || '', /^Still \d+ pages at the tightest spacing and 9 pt text \(was 11 pt\) — shorten the content to fit one page\.$/);
     } finally { await p.unmount(); }
   });
 

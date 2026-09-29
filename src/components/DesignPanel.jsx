@@ -109,8 +109,7 @@ export default function DesignPanel({
       if (!fit || stopped()) return;
       Object.entries(fit.settings).forEach(([k, v]) => { if (preset[k] !== v) updateSetting(k, v); });
       printed = { ...measured.settings, ...fit.settings };
-      if (fit.pages > 1) notice = `Still ${fit.pages} pages at the tightest spacing — shorten the content to fit one page.`;
-      else notice = fitSizeNotice(settings, fit); // a smaller text size is said, never done silently
+      notice = fitSizeNotice(settings, fit); // still over a page, or a smaller text size: said, never done silently
     } catch {
       notice = 'Could not measure the pages: the tight spacing is applied, check the preview.';
     } finally {
