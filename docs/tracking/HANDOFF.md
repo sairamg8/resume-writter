@@ -1,5 +1,9 @@
 # Session Handoff — Resume Here
 
+**2026-09-29 19:02 UTC — PR #3 (https://github.com/sairamg8/resume-writter/pull/3, r4-green → master) is ready for the owner:**
+full gate 36613904350 on `edf0c8fd` GREEN (tests-only fix below; head after it is docs only). If hunt-7 code lands on
+r4-green before it is merged, the PR carries that code too: gate the new head before the owner merges.
+
 **2026-09-29 18:45 UTC — master `b4c62440` full gate (run 36611528115) RED, only on 4 stale starter tests:** 91-starter-modal,
 93-picker-new-resume, 96-dashboard and playwright picker.spec still expected the sample person ("Sarah Chen") on a role
 starter; the app now gives the user's own details (owner's idea, intended). The tests are updated to the intended behaviour
