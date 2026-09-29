@@ -215,7 +215,12 @@ const ALIGN = {
   right: AlignmentType.RIGHT,
   justify: AlignmentType.JUSTIFIED,
 };
-const LEVEL_TWIPS = 360;
+// A list level's step, twips: an item of level n has its text at LEVEL_TWIPS × (n + 1) and its marker
+// hanging MARKER_TWIPS in front, as docx's default bullets and bulletNumbering place theirs — so a
+// numbered list nested in a bullet starts past the bullet's text, and a further paragraph of an item
+// lines up with that item's text, as the PDF prints them.
+const LEVEL_TWIPS = 720;
+const MARKER_TWIPS = 360;
 
 function runsToDocx(runs, base) {
   const out = [];
@@ -265,7 +270,7 @@ export function descriptionToParagraphs(html, base = { size: 20, color: '374151'
       return new Paragraph({
         ...options,
         children: [new TextRun({ text: `${block.marker}\t`, size: base.size, color: base.color }), ...children],
-        indent: { left, hanging: LEVEL_TWIPS },
+        indent: { left, hanging: MARKER_TWIPS },
         tabStops: [{ type: TabStopType.LEFT, position: left }],
       });
     }
