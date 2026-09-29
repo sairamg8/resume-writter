@@ -8,7 +8,8 @@ import { hasRichText, parseRichText } from '@/utils/richText';
 
 /**
  * The body's lines: each paragraph as typed (one line per line break) with a blank line after it,
- * a list item as "- …" (nested ones indented, a numbered one with its number), links as their text.
+ * a list item as "- …" (nested ones indented, a numbered one with its number, a paragraph inside one
+ * under its text), links as their text.
  */
 function bodyLines(html) {
   const out = [];
@@ -21,6 +22,12 @@ function bodyLines(html) {
       const pad = '  '.repeat(Math.max(0, block.indent - 1));
       const lead = block.marker.length === 1 ? '-' : block.marker;
       lines.forEach((line, i) => out.push(i ? `${pad}  ${line}` : `${pad}${lead} ${line}`));
+      inList = true;
+    } else if (block.inList && block.indent > 0) {
+      // A paragraph inside a list item (an <li> holding two <p>) goes under that item's text, as in the
+      // PDF, Word, Markdown and ATS text, keeping the list whole (R5-HUNT3).
+      const pad = '  '.repeat(block.indent - 1);
+      out.push(...lines.map((line) => `${pad}  ${line}`));
       inList = true;
     } else {
       if (inList) out.push('');
