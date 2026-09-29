@@ -64,7 +64,9 @@ function pageOf(template, pages, word) {
     const k = `${i.page}:${Math.round(i.y)}`;
     lines.set(k, [...(lines.get(k) || []), i]);
   }
-  for (const [k, runs] of lines) if (lineText(runs) === want) return Number(k.split(':')[0]);
+  // In Grids a row's categories share a line: the word is one of them.
+  const reads = (text) => text === want || (ONLY_CATEGORIES.test(text) && text.includes(want));
+  for (const [k, runs] of lines) if (reads(lineText(runs))) return Number(k.split(':')[0]);
   return 0;
 }
 
