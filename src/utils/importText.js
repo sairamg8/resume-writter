@@ -405,6 +405,8 @@ const ROLE = /\b(engineer|developer|programmer|manager|director|lead|head|intern
 const DEGREE = /\b(b\.?\s?[ase]\.?|b\.?sc|bsc|b\.?tech|b\.?eng|beng|bba|bfa|bcom|m\.?\s?[ase]\.?|m\.?sc|msc|m\.?tech|m\.?eng|meng|mba|mfa|ph\.?\s?d|phd|doctor(?:ate)?|bachelor'?s?|master'?s?|associate'?s?|diploma|certificate|high school|a-?levels?|gcse|degree|hnd|llb|llm|md|jd)\b/i;
 /** A subject a degree is in, as a field of study names one: "Computer Science", "Business Administration". */
 const SUBJECT = /\b(science|sciences|engineering|studies|mathematics|maths?|statistics|economics|business|administration|finance|accounting|marketing|management|psychology|biology|chemistry|physics|history|literature|english|philosophy|law|medicine|nursing|architecture|arts?|music|informatics|communications?|journalism|politics|political|sociology|linguistics|humanities|design|geography|anthropology|development|software|web|data|computing|technology|programming|stack)\b/i;
+/** What may follow a degree after its comma and is no school: "First Class Honours", "Minor in Math". */
+const HONOURS = /\b(honou?rs|distinction|merit|cum laude|summa|magna|first|second|third|class|minor|major|concentration|speciali[sz]ation|track|option|gpa|grade)\b/i;
 const SCHOOL = /\b(university|universit[äéà]t?|college|institute|institut|school|academy|polytechnic|conservatory|seminary|lyc[ée]e|gymnasium)\b/i;
 const WEB = /^(?:https?:\/\/)?(?:www\.)?[a-z0-9][a-z0-9-]*(?:\.[a-z0-9-]+)*\.[a-z]{2,}(?:[/?#]\S*)?$/i;
 
@@ -618,7 +620,12 @@ function entryOf(type, header, body, aside = () => {}) {
         const field = /^in\s+(.+)$/i.exec(part);
         if (gpa && !fields.gpa) fields.gpa = gpa[1];
         else if (field && !fields.fieldOfStudy) fields.fieldOfStudy = field[1];
-        else if (!fields.institution && SCHOOL.test(part) && !DEGREE.test(part.split(',')[0])) fields.institution = part;
+        else if (!fields.institution && SCHOOL.test(part) && !DEGREE.test(part.split(',')[0])) {
+          // "Massachusetts Institute of Technology, BSc Computer Science": the school, then its degree.
+          const pair = /^([^,]+),\s*(.+)$/.exec(part);
+          if (pair && !fields.degree && SCHOOL.test(pair[1]) && DEGREE.test(pair[2]) && !SCHOOL.test(pair[2])) [fields.institution, fields.degree] = [pair[1].trim(), pair[2].trim()];
+          else fields.institution = part;
+        }
         else if (!fields.degree && DEGREE.test(part)) fields.degree = part;
         else left.push(part);
       }
@@ -643,7 +650,13 @@ function entryOf(type, header, body, aside = () => {}) {
       // "B.S., Computer Science": the degree and its field, as the exports print them — a degree the
       // import does not know too ("Bootcamp, Full Stack"): the exports print a degree and its field so.
       const comma = /^([^,]+),\s*(.+)$/.exec(fields.degree);
-      if (comma && !fields.fieldOfStudy && (DEGREE.test(comma[1]) || !DEGREE.test(fields.degree))) { fields.degree = comma[1].trim(); fields.fieldOfStudy = comma[2].trim(); }
+      // "BSc Computer Science, Stanford University", "B.S. Computer Science, Georgia Tech": with no
+      // school found, what follows a degree that names its subject is the school — a school's name,
+      // or one that is no subject nor a grade ("Master of Science, Computer Science" is a field).
+      const school = comma && !fields.institution && DEGREE.test(comma[1]) && !DEGREE.test(comma[2])
+        && (SCHOOL.test(comma[2]) || (SUBJECT.test(comma[1].replace(DEGREE, '')) && !SUBJECT.test(comma[2]) && !HONOURS.test(comma[2])));
+      if (school) { fields.degree = comma[1].trim(); fields.institution = comma[2].trim(); }
+      else if (comma && !fields.fieldOfStudy && (DEGREE.test(comma[1]) || !DEGREE.test(fields.degree))) { fields.degree = comma[1].trim(); fields.fieldOfStudy = comma[2].trim(); }
       // The degree and the school found, one field over, on a line of its own: the field of study.
       if (placeAt >= 0 && !fields.fieldOfStudy && left.length === 1) fields.fieldOfStudy = left.shift();
       return itemOf(type, { ...fields, location, ...dates, description: description(left) });
