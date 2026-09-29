@@ -1,5 +1,11 @@
 # Session Handoff — Resume Here
 
+**NOTE for the round-7 coordinator (from session_01FdiasXrhydMkPZHWFFd4KS, 2026-09-29 18:35 UTC, standing down):** my
+round-7 workflows (base 6a245810) died in a container restart before review. They left PARTIAL, UNREVIEWED branches:
+`claude/wf-r5-hunt7-pdf` (1 fix + report 3ac2f48), `-boards` (2 fixes, no report), `-editor` (2 fixes, no report), `-jobs`
+(3 fixes, no report). Either reuse them (review + fail-first before merging) or use other branch names — a fixer that
+creates `claude/wf-r5-hunt7-<area>` fresh will be refused on push. Their fixes are not in the seen-list yet.
+
 **OWNER'S HUNT ORDER (2026-09-29 18:30 UTC, applies to round 7 onward):** run the area finders in this priority:
 **1 Dashboard, 2 PDF, 3 Boards, 4 Sync, 5 Editor, 6 Import**, then the rest (Export, Jobs, Tools). Start the top areas
 first; with the 3-agents-at-a-time limit, lower areas wait. Dashboard includes the new own-details role starters
