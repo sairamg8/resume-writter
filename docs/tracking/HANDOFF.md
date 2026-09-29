@@ -1,5 +1,11 @@
 # Session Handoff — Resume Here
 
+**OWNER'S HUNT ORDER (2026-09-29 18:30 UTC, applies to round 7 onward):** run the area finders in this priority:
+**1 Dashboard, 2 PDF, 3 Boards, 4 Sync, 5 Editor, 6 Import**, then the rest (Export, Jobs, Tools). Start the top areas
+first; with the 3-agents-at-a-time limit, lower areas wait. Dashboard includes the new own-details role starters
+(`starterFrom`, src/utils/newResume.js) — new code, check it. Deployed: master `b4c62440` (PR #1 + PR #2); full gate
+36610064297 on the round-6 code GREEN; runs 36611051400 / 36611528115 on the starter code still to read.
+
 **2026-09-29 18:25 UTC (owner's live session, session_01ETYRFaE8puvYdti25f3jzT):**
 - **master = `a561259c`** (owner merged PR #1, `claude/r4-green` → master, at 18:18 UTC, before its gate finished).
   Its code is exactly `8acb687` (round 6 + listOwner fix); full gate 36610064297 on `8acb687` was still running
