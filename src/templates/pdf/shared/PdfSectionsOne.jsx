@@ -154,6 +154,12 @@ export function SkillsSection({ section, settings, marginBottom, spaceBefore, it
   const presence   = first && !['bars', 'stacked', 'tags'].includes(style) ? headPresence({ lines: rowLines(first), styles: [rowBox] }) : 0;
   // Printed by the grid, with its first row (RenderColGrid).
   const title      = <SectionTitleOf section={section} settings={settings} centered={centered} presence={presence} />;
+  // Bars, Stacked and Tags print a group's category over its skills, and a group may split between them:
+  // the category, unbreakable, keeps three lines of what follows it on its page (a skills text that short
+  // cannot split under react-pdf's orphans and widows of two; the keep ends with the group), so it moves
+  // to the next page with its skills instead of ending a page alone (R5-HUNT8-SKILLS-STACKED-TAGS-CATEGORY-ORPHAN).
+  // entry() leads the group with SPACER, the previous sibling minPresenceAhead needs.
+  const categoryKeep = { wrap: false, minPresenceAhead: Math.ceil(entrySize * lineH * 3) };
 
   return (
     <View style={{ marginBottom, marginTop: spaceBefore }}>
@@ -170,7 +176,9 @@ export function SkillsSection({ section, settings, marginBottom, spaceBefore, it
             return (
               <View>
                 {category ? (
-                  <Text style={{ fontSize: entrySize, fontWeight: 'bold', color: accent, letterSpacing: tracking(entrySize, 0.5) }}>{skillCategory(category, { style })}</Text>
+                  <View {...categoryKeep}>
+                    <Text style={{ fontSize: entrySize, fontWeight: 'bold', color: accent, letterSpacing: tracking(entrySize, 0.5) }}>{skillCategory(category, { style })}</Text>
+                  </View>
                 ) : null}
                 {list.map((sk, i) => (
                   <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3 }}>
@@ -196,7 +204,7 @@ export function SkillsSection({ section, settings, marginBottom, spaceBefore, it
             return (
               <View>
                 {category ? (
-                  <View style={{ marginBottom: 2 }}>
+                  <View {...categoryKeep} style={{ marginBottom: 2 }}>
                     <Text style={{ fontSize: entrySize, fontWeight: 'bold', color: isModern ? accent : textColor, textAlign: centered ? 'center' : 'left' }}>{category}</Text>
                     <View style={{ height: 0.5, backgroundColor: '#e5e7eb', marginTop: 1, marginBottom: 1 }} />
                   </View>
@@ -218,9 +226,11 @@ export function SkillsSection({ section, settings, marginBottom, spaceBefore, it
             return (
               <View style={{ alignItems: centered ? 'center' : 'flex-start' }}>
                 {category ? (
-                  <Text style={{ fontSize: entrySize, fontWeight: 'bold', color: accent, marginBottom: 4, letterSpacing: tracking(entrySize, 0.5), textAlign: centered ? 'center' : 'left' }}>
-                    {skillCategory(category, { style })}
-                  </Text>
+                  <View {...categoryKeep} style={{ alignSelf: 'stretch' }}>
+                    <Text style={{ fontSize: entrySize, fontWeight: 'bold', color: accent, marginBottom: 4, letterSpacing: tracking(entrySize, 0.5), textAlign: centered ? 'center' : 'left' }}>
+                      {skillCategory(category, { style })}
+                    </Text>
+                  </View>
                 ) : null}
                 {tags.length > 0 && (
                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 3, justifyContent: centered ? 'center' : 'flex-start' }}>

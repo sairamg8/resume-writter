@@ -57,7 +57,11 @@ export), `exportToPDFReact` / `exportCoverLetterPDFReact` (download), `warmPdfEx
 4. `pdf(<Template />).toBlob()` → the preview paints it, or `downloadBlob` saves it  
 
 Shared building blocks live in `src/templates/pdf/shared/` (`PdfPage.jsx`, `PdfSections*.jsx`,
-`PdfItemHeader.jsx`, `PdfContact.jsx`, `PdfRichText.jsx`, `pdfFontLoader.js`, …). The Playwright
+`PdfItemHeader.jsx`, `PdfContact.jsx`, `PdfRichText.jsx`, `pdfFontLoader.js`, …). At a page break a
+heading never ends a page alone: a section title keeps its first content, an entry header two lines of
+body text (`headerKeep`), a grid row its cells' headers, and in Skills styles Stacked, Tags and Bars a
+group's category the first lines of its skills — in the Sidebar's side column too — as Word's Stacked
+category keeps with its skills (`tests/pdf/r5hunt8-skills-category-keep.test.mjs`). The Playwright
 suites in `tests/playwright/` check that the preview is the downloaded PDF and that every design
 control repaints it.
 
