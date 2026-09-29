@@ -435,10 +435,21 @@ export function extractJobKeywords(jobDescriptionText) {
   // As whole words, and cased from the text they were found in: found with a bare indexOf, "front
   // end" was read inside "storefront endpoints", and sliced at a lowercased index a posting's "İ"
   // shifted the casing ("achine Learning") (R5-HUNT1-ats-jd-phrase-substring-match).
+  // A phrase counts once: its words, each read above as a token ("CI/CD" as "CI" and "CD", "machine
+  // learning" as "machine" and "learning"), lose the times they were read inside it, so they are no
+  // keywords of their own that doubled the phrase in the match and "+" wrote into Skills
+  // (R5-HUNT2-ats-jd-phrase-and-its-words-counted-separately).
   const text = jobDescriptionText.normalize('NFC');
   for (const phrase of multiWordPhrases) {
     const found = wholeWord(phrase).exec(text);
     if (found) {
+      const times = text.match(new RegExp(wholeWord(phrase).source, 'giu')).length;
+      for (const part of phrase.split(/[^\p{L}\p{N}]+/u)) {
+        if (part === phrase || !counts.has(part)) continue;
+        const left = counts.get(part) - times;
+        if (left > 0) counts.set(part, left);
+        else counts.delete(part);
+      }
       counts.set(phrase, Math.max(counts.get(phrase) || 0, 2));
       casingMap.set(phrase, found[0] || phrase);
     }
