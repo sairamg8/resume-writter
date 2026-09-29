@@ -14,7 +14,8 @@ styles.xml), opt (58b8460; R6a verdicts hold; review fixed the sanitizer closing
 beside it once a field is edited, as the optimizer does) merged into `claude/r4-green` (1f99a1a). Gate 36515623771 on 3426a09
 (dash+panels) was dispatched; the batch gate for the merged head is still to run.
 **In progress:** unfinished r5 clusters, two at a time, each = finish scope → adversarial review → fix → report
-`wf-reports/r5-<key>.json` on `claude/wf-r5-<key>`. All 8 r5 clusters merged (27bfddf; full gate dispatched). Running: R2-148 (branch claude/wf-r5-r2148) and whole-app hunt
+`wf-reports/r5-<key>.json` on `claude/wf-r5-<key>`. All 8 r5 clusters merged (27bfddf; full gate dispatched). R2-148 merged (0222f6b: the sync's flush takes a deleted résumé's public copy
+down; the takedown skips a résumé that is back; known limit: an unrecorded stray public/ copy can't be listed). Running: whole-app hunt
 round 1 (9 areas: editor, pdf, export, import, dash, sync, jobs, boards, tools; branches claude/wf-r5-hunt1-<area>, reports
 wf-reports/r5-hunt1-<area>.json; finder → skeptic → fixer (fail-first) → reviewer). Loop rounds until two in a row find nothing new. Batch gate 36517981819 on 0f03b71 was red only on
 71-startup-chunks (the data router for R4-DUX-06 + the kit Dialog on the Dashboard: 1107 kB > 1100 kB); fixed by ea59ac6
