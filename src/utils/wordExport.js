@@ -1,5 +1,5 @@
 import { AlignmentType, Document, Footer, Header, Packer, PageNumber, Paragraph, TextRun } from 'docx';
-import { accent2Hex, bulletNumbering, wordMargins } from '@/utils/wordExportUtils';
+import { accent2Hex, bulletNumbering, wordMargins, xmlSafe } from '@/utils/wordExportUtils';
 import { buildSection, sectionSpaceAfter } from '@/utils/wordExportBuilders';
 import { buildPersonalSection } from '@/utils/wordExportHeader';
 import { buildCoverLetter } from '@/utils/wordExportCoverLetter';
@@ -115,8 +115,9 @@ function buildDocument(children, settings, { pageNumbers = false, template, runn
 
 /** The résumé as a .docx Blob — same sections, entries and hidden fields as the PDF. */
 export async function renderResumeDocx(resume) {
-  // The photo as the PDF export draws it: a WebP's copy, a plain URL's picture (R2-126).
-  const { personal = {}, sections = [], settings = {}, template = 'classic' } = (await withWordPhoto(resume)) || {};
+  // The photo as the PDF export draws it: a WebP's copy, a plain URL's picture (R2-126). Its text
+  // without the characters XML forbids, which would leave a file Word cannot open (xmlSafe).
+  const { personal = {}, sections = [], settings = {}, template = 'classic' } = (await withWordPhoto(xmlSafe(resume))) || {};
   const accentHex = accent2Hex(settings.accentColor);
   const effectiveTemplate = (templateId(template) === 'sidebar' && settings.sidebarSingleColumn) ? 'classic' : template;
   // Template defaults (e.g. Executive and Sidebar lead with the role, …) apply as in the PDF, and
@@ -153,7 +154,8 @@ export async function exportToWord(resume, filename = 'resume.docx') {
 /** The cover letter as a .docx Blob — the same content as the cover-letter PDF. */
 export async function renderCoverLetterDocx(resume) {
   // The letterhead's photo as the letter's PDF draws it: the copies its build prints (R4-DOUT-06).
-  const letter = await withWordPhoto(resume, { letter: true });
+  // Its text without the characters XML forbids (xmlSafe), as the résumé's.
+  const letter = await withWordPhoto(xmlSafe(resume), { letter: true });
   return Packer.toBlob(buildDocument(buildCoverLetter(letter), resume?.settings), false, [await wordFontTable(resume?.settings)]);
 }
 

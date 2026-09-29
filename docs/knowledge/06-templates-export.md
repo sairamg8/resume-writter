@@ -78,6 +78,11 @@ table, under it where a name or title word would not fit beside them (R2-137). I
 letter PDF's — the letter's own, else the résumé's, none with Show photo off — above a centred name, else
 in a column beside it at Photo → Position (`wordLetterPhoto`, R4-DOUT-06).
 
+Both .docx files are built from the résumé with the characters XML 1.0 forbids left out (`xmlSafe` in
+`wordExportUtils.js`: C0 controls but tab, LF and CR — a pasted U+000B or U+0002 — and U+FFFE/U+FFFF),
+which docx would write as they are and Word would then refuse the file
+(R5-HUNT7-WORD-CONTROL-CHAR-CORRUPT-DOCX).
+
 ## Text exports
 
 - **Markdown** — `markdownExport.js`

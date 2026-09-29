@@ -9,6 +9,27 @@ import { MARGIN_MM, pageMargins } from '@/constants/pageMargins';
 import { PAGE_SIZES, pageSizeOf } from '@/constants/pageSize';
 import { storedNumber } from '@/constants/spacingNumbers';
 
+// The characters XML 1.0 forbids in a document (C0 controls but tab, LF and CR; U+FFFE, U+FFFF).
+// docx escapes only & " ' < >, so one of them in a run — a pasted U+000B from Word's Shift+Enter, a
+// U+0002 from a PDF viewer's hyphen — went into word/document.xml as it was, and Word would not open
+// the file (R5-HUNT7-WORD-CONTROL-CHAR-CORRUPT-DOCX).
+// eslint-disable-next-line no-control-regex
+const XML_FORBIDDEN = /[\u0000-\u0008\u000B\u000C\u000E-\u001F￾￿]/g;
+
+/**
+ * `value` with every string in it (deep: plain objects and arrays) cleared of the characters XML
+ * forbids — the résumé or letter the Word export builds from, so no run, link or property of the
+ * .docx carries one. The PDF, Markdown and text exports print the same text; nothing else changes.
+ */
+export function xmlSafe(value) {
+  if (typeof value === 'string') return value.replace(XML_FORBIDDEN, '');
+  if (Array.isArray(value)) return value.map(xmlSafe);
+  if (value && Object.getPrototypeOf(value) === Object.prototype) {
+    return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, xmlSafe(v)]));
+  }
+  return value;
+}
+
 /** Points as twips, Word's 1/20 pt. */
 export const twips = (pt) => Math.round(pt * 20);
 
