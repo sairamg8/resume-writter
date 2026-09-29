@@ -206,6 +206,10 @@ function headingFields(raw, hint) {
   if (!m) return {};
   const fields = [m[1], m[2], m[3]].filter(Boolean).map((f) => unmark(f, []).trim());
   if (!fields.every(Boolean) || !fields.some((f) => fieldsOf(f).length > 1)) return {};
+  // "**Acme - Engineer** — *Leeds, UK*": a place in the italic run is a hand-written heading's, company
+  // and role bold and the place after them; the export's italic run is a role, a school or an issuer,
+  // never a place. Split at its dashes as before, or the place became the company (IMP-REV-1).
+  if (m[2] && PLACE.test(fields[1]) && !ROLE.test(fields[1]) && !SCHOOL.test(fields[1])) return {};
   // One bold or italic run alone is the export's only when the file shows it (markdownLines): people
   // and AI tools also bold a whole "### **Software Engineer — Google**", role and company in one.
   return { fields, ...(m[2] ? {} : { lone: true }) };
