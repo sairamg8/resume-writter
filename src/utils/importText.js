@@ -325,7 +325,23 @@ const EMAIL = /^(?:mailto:)?[^\s@|,;:<>()]+@[^\s@|,;:<>()]+\.[a-z]{2,}$/i;
 const URL_LIKE = /^(?:https?:\/\/)?(?:www\.)?[a-z0-9][a-z0-9-]*(?:\.[a-z0-9-]+)*\.[a-z]{2,}(?:[/?#]\S*)?$/i;
 const PHONE = /^(?:tel:)?\+?[\d\s().\-/]{7,}$/;
 /** "Portland, OR", "Leeds, United Kingdom", "Remote": a place as a header prints one. */
-const PLACE = /^(?:[\p{L}][\p{L}.'’\- ]{0,40},\s*[\p{L}][\p{L}.'’\- ]{0,40}(?:,\s*[\p{L}][\p{L}.'’\- ]{0,30})?|remote|hybrid)$/iu;
+const ONE_PLACE = /^(?:[\p{L}][\p{L}.'’\- ]{0,40},\s*[\p{L}][\p{L}.'’\- ]{0,40}(?:,\s*[\p{L}][\p{L}.'’\- ]{0,30})?|remote|hybrid)$/iu;
+/** A part of a place with a "|" typed in it: "London" in "London | Remote". */
+const PLACE_PART = /^[\p{L}][\p{L}.,'’\- ]{0,60}$/u;
+/**
+ * A place: ONE_PLACE, or places with a "|" the user typed between them (TYPED_PIPE, the Markdown's
+ * "\|"): "Boston, MA | Remote", "London | Remote", one of them a place and the rest words. Before, the
+ * typed "|" failed the test, so the export's own contact line gave no location — the whole of it went
+ * to "Additional Information" — and a grouped employer's or an undated entry's place its description.
+ */
+const PLACE = {
+  test(text) {
+    const s = String(text);
+    if (ONE_PLACE.test(s)) return true;
+    const parts = s.split(TYPED_PIPE).map((p) => p.trim());
+    return parts.length > 1 && parts.every((p) => PLACE_PART.test(p)) && parts.some((p) => ONE_PLACE.test(p));
+  },
+};
 /** A contact's name before it: "Email: …", "LinkedIn - …". */
 const LABEL = /^(?:e-?mail|mail|phone|tel|telephone|mobile|cell|linkedin|github|website|web|site|portfolio|url|location|address|based in)\s*[:\-–]\s*/i;
 
