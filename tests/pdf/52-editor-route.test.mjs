@@ -63,6 +63,18 @@ describe('the editor’s résumé', () => {
     } finally { await page.close(); }
   });
 
+  it('an import that finishes after another résumé was opened does not take over its editor (R5-HUNT1)', async () => {
+    const opened = [];
+    const page = await openAt('/resume/resume_b', storeOf(['resume_a', 'resume_b'], 'resume_b', opened));
+    try {
+      assert.deepEqual(opened, []);
+      // The late import: importResume adds its résumé as the store's open one; the address stays /resume/resume_b.
+      await page.show(storeOf(['resume_a', 'resume_b', 'resume_new'], 'resume_new', opened));
+      assert.match(page.text(), /EDITING resume_b/);
+      assert.deepEqual(opened, ['resume_b'], 'before: the editor went on showing and editing the imported résumé under B’s address');
+    } finally { await page.close(); }
+  });
+
   it('an address with no such résumé goes to the dashboard', async () => {
     const page = await openAt('/resume/resume_gone', storeOf(['resume_a'], 'resume_a'));
     try {
