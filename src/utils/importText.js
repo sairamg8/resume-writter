@@ -348,6 +348,10 @@ function trailingDate(text) {
   // The earliest split whose rest is a date: "Role - Mar 2021 - Present" keeps the whole range.
   const seps = [...text.matchAll(/\s[-–—|]\s|,\s|\(/g)];
   for (const sep of seps) {
+    // Not a split inside brackets: "Dean’s List (2018, 2019)" is no "Dean’s List (2018" dated 2019 — its
+    // years stay in its title, as written (R5-HUNT8-AWARD-MULTI-YEAR-PAREN).
+    const before = text.slice(0, sep.index);
+    if ((before.match(/\(/g) || []).length > (before.match(/\)/g) || []).length) continue;
     const rest = text.slice(sep.index + sep[0].length).replace(/\)\s*$/, '');
     const date = readDateRange(rest);
     if (date) return { date, rest: text.slice(0, sep.index).trim() };
