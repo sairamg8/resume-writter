@@ -9,6 +9,7 @@
 // tests run this very code against tests/pdf/fake-firestore.mjs.
 import { newId } from '@/utils/ids';
 import { CONTACT_FIELDS, CONTACT_KEYS } from '@/utils/contacts';
+import { entryPrints } from '@/utils/entryPrints';
 
 /** The largest copy the cloud takes (Firestore's 1 MiB a document), less room for the rest. */
 export const MAX_PUBLIC_BYTES = 1_000_000;
@@ -83,8 +84,10 @@ export function publicSnapshot(resume) {
       items: (Array.isArray(s.items) ? s.items : []).filter((item) => item && item.visible !== false)
         .map((item) => asSectionPrints(withoutHidden(item), s)),
     }))
-    // As the PDF (sectionPrints): a section with no shown entry prints nothing, not even its title.
-    .filter((s) => s.items.length > 0);
+    // As the PDF (sectionPrints): a section with no shown entry, or whose shown entries are all blank,
+    // prints nothing, not even its title (R4-SYNC-06, R5-HUNT6). A blank entry beside one that prints
+    // stays: the page leaves its gap.
+    .filter((s) => s.items.some((item) => entryPrints(s.type, item)));
   const copy = {
     template: resume?.template || 'classic',
     settings: printedSettings(resume?.settings || {}, resume?.personal?.hiddenFields),
