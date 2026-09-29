@@ -58,7 +58,21 @@
       ]
     }
   ],
-  "review": null,
+  "review": {
+    "by": "second agent",
+    "verdict": "fixed",
+    "issues": [
+      "R5-HUNT7-OPTIMIZER-APPLY-AFTER-OUTSIDE-CHANGE: after an outside change, findStatement took the FIRST place the opened text was found, so a word selected in one bullet that an earlier bullet also has ('QA' in 'Handled QA for releases' below 'Led QA hiring'), or the second of two equal bullets, made Apply silently rewrite the other bullet. Fixed in d3bb5e8: openOptimizer records where the statement sat (anchorOf: its offset in the editor's text and 40 characters either side); at Apply every candidate (statementRange with the caret in each line, and every occurrence inside a text node) is scored by the text around it, then by distance from the old place, a whole statement winning a tie. Test tests/pdf/r5hunt7-optimizer-apply-anchor.test.mjs (fail 2 without, pass with)."
+    ],
+    "commits": [
+      "d3bb5e88594a9bbb5971aa9e252d0566521c5bee"
+    ],
+    "ci": [
+      36636148684,
+      36636188573
+    ],
+    "notes": "Checked each fix against origin/claude/r4-green. ATS: the FIGURE rule sits in jobKeywordOf (read by extractJobKeywords and its phrase reader); the module-level const is only read at call time, so no TDZ; S3/EC2/5G/Web3/3D/2FA/C#/C++ are guarded by the test. Minor, left as is: the lean-manufacturing term '5S' now reads as a figure (seconds) and is no longer a keyword. Public page: each read is tagged with its shareId, the busy state and error with their link, and the finally clears only its own download; A->B->A before B settles shows A's own earlier read, which is right. Optimizer: covers() catches the browser's collapse to (el, 0) that the old el.contains check let through; split-item statements (target + removals) compare by the same flat toString as at open. Fail-first runs of the original commits confirmed green (36634593821 for ATS and public page; 36635420101 for the optimizer after 97824a0 corrected its third case). Area run 36636188573 on d3bb5e8: 57-optimizer-statement, both 104-r5-opt-sw-wt-02 files, r5hunt3-richtext-outside-value, both r5hunt7 optimizer files, the r5hunt7 public-page and ATS tests, Playwright bullet-optimizer.spec, build and lint. No accessibility issue noted."
+  },
   "baselineFailures": [],
   "notes": "Base origin/claude/r4-green was at 420f487 (a docs-only commit over 9519ef6b) when the branch was cut. Fail-first run 36634593821 proved the ATS and public-page tests (fail without, pass with); the optimizer test's third case had a wrong expectation (sanitizeRichText joins the appended list to the one before it), fixed in 97824a0, and its fail-first was re-proved green in 36635420101. Area tests run 36634599950 green: 57-optimizer-statement, 104-r5-opt-sw-wt-02, r5hunt3-richtext-outside-value, 99-public-link, 71-startup-chunks, ats-job-keywords, ats-checker, r5-hunt1/r5-hunt2 ATS JD tests, knowledge-docs, bullet-optimizer-ats-agree, plus Playwright bullet-optimizer.spec, build and lint. No accessibility issue noted."
 }
