@@ -51,7 +51,7 @@ const SEP = "[.,'’ \\u00a0\\u202f]";
 const NUM = `\\d{1,3}(?:${SEP}\\d{2,3})*${SEP}\\d{3}(?!\\d)(?:[.,]\\d+)?|\\d+(?:[.,]\\d+)?`;
 // An amount and its unit, then maybe a range's second amount ('-', '–', 'to', a currency sign):
 // '$120-150k' writes the unit once, after the second number (the first read as 120).
-const SALARY = new RegExp(`(${NUM})\\s*${UNIT}?(?![a-z])(?:\\s*(?:-|–|—|to)\\s*[^\\d\\s]{0,3}\\s*(?:${NUM})\\s*${UNIT}?(?![a-z]))?`, 'i');
+const SALARY = new RegExp(`(${NUM})\\s*${UNIT}?(?![a-z])(?:\\s*(?:-|–|—|to)\\s*[^\\d\\s]{0,3}\\s*(${NUM})\\s*${UNIT}?(?![a-z]))?`, 'i');
 const SALARY_UNIT = { k: 1e3, m: 1e6, mn: 1e6, lpa: 1e5, lakh: 1e5, lakhs: 1e5, lac: 1e5, lacs: 1e5, l: 1e5, cr: 1e7, crore: 1e7, crores: 1e7 };
 
 /**
@@ -82,9 +82,27 @@ function amount(text, scaled) {
 export function salaryValue(text) {
   const m = SALARY.exec(String(text ?? ''));
   if (!m) return null;
-  const scale = SALARY_UNIT[(m[2] || m[3] || '').toLowerCase()];
+  const scale = SALARY_UNIT[(m[2] || m[4] || '').toLowerCase()];
   const n = amount(m[1], Boolean(scale));
-  return Number.isFinite(n) ? n * (scale || 1) : null;
+  if (!Number.isFinite(n)) return null;
+  return scale ? n * scale : n * sharedGrouping(m[1], m[3]);
+}
+
+/**
+ * How much a range's bare first number is scaled by the thousands written only on its second:
+ * '$90-120,000' is 90,000, '€40-50.000' 40,000, '1-1,500,000' a million. It read as 90, below every
+ * real salary (R5-HUNT6-SALARY-RANGE-SHARED-THOUSANDS). The first number takes the second's grouped
+ * digits (120,000 → × 1000); 1 when the first is written in full or the scaled amount would pass
+ * the second ('90000-120,000' stays 90,000).
+ */
+function sharedGrouping(first, second) {
+  if (!second || !/^\d+$/.test(first)) return 1;
+  const top = amount(second, false);
+  const lead = second.match(/^\d+/)[0];
+  const digits = String(Math.trunc(top)).length - lead.length;
+  if (!Number.isFinite(top) || digits <= 0) return 1;
+  const factor = 10 ** digits;
+  return Number(first) * factor <= top ? factor : 1;
 }
 
 const collator = new Intl.Collator(undefined, { sensitivity: 'base', numeric: true });
