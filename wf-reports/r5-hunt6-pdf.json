@@ -8,8 +8,12 @@
       "title": "A dashboard card keeps a page-1 picture painted in Noto Sans or without its photo after one visit where the font or photo could not be downloaded",
       "severity": "medium",
       "outcome": "fixed",
-      "commits": ["398949305ce60d37381e58f65db28f8bd0720745"],
-      "tests": ["tests/pdf/r5hunt6-card-picture-degraded.test.mjs"],
+      "commits": [
+        "398949305ce60d37381e58f65db28f8bd0720745"
+      ],
+      "tests": [
+        "tests/pdf/r5hunt6-card-picture-degraded.test.mjs"
+      ],
       "summary": "Now: a card picture painted while the résumé's font could not load (Noto Sans in its place, or a face borrowing another's data), or while a photo, letter photo or custom contact icon URL failed for a passing reason, is shown but kept neither in memory nor in the card's storage key. The next visit paints it again, in the right font and with the photo once they load. How: each build notes its own font fallback and borrowed state on its PDF Blob (noteBuild / buildNote in src/utils/fontFallback.js, set in renderResumePdf and renderCoverLetterPdf). The worker's reply carries that build's values, not the editor's notice, which a reportFont:false build never set (pdfWorkerJobs.js). pdfBuild.js puts them back on the Blob it resolves. pageImage.js reads them, and checks imageRetryPendingFor (new in printableImage.js) for the images, then calls markIncomplete(url, …) (pageImageStore.js). The drain() queue does not remember a marked picture, and savePicture does not store one. The editor's font notice is unchanged (R4-PDF-01 still holds).",
       "product_call": null,
       "remaining": "Pictures saved before this fix in a degraded state stay until the résumé is edited; nothing migrates them. While the card stays mounted, going back online does not repaint it (only the next visit does). A photo URL whose host always fails for a passing reason (5xx, no CORS) now repaints its card on every dashboard visit instead of caching a photo-less picture. A hidden photo whose URL fails also counts as missing."
@@ -19,8 +23,12 @@
       "title": "1-Page Fit has no Undo, though it replaces all five spacing numbers and can shrink the text to 9 pt",
       "severity": "medium",
       "outcome": "fixed",
-      "commits": ["dbf9c1589ec9251d569eb607afc3c5294cf242bf"],
-      "tests": ["tests/pdf/r5hunt6-fit-undo.test.mjs"],
+      "commits": [
+        "dbf9c1589ec9251d569eb607afc3c5294cf242bf"
+      ],
+      "tests": [
+        "tests/pdf/r5hunt6-fit-undo.test.mjs"
+      ],
       "summary": "Now: when 1-Page Fit finishes, it raises the same notice Balanced and Spacious raise ('Spacing: 1-Page Fit', 'Margins, gaps, line height and text sizes replaced.'). Its Undo calls restoreDesign with the designSnapshot taken before the click, so the hand-tuned margins, gaps, line height, base size and size deltas come back. The inline fit notice still shows, and it clears when Undo changes the settings. No notice is raised when an edit, another résumé or an unmount stopped the fit, because Undo would also take back that edit. It uses the same toast id as Balanced/Spacious, so one replaces the other. Fix is in fitToOnePage, src/components/DesignPanel.jsx.",
       "product_call": null,
       "remaining": "The Undo is offered when the fit finishes, not while it measures."
@@ -30,14 +38,41 @@
       "title": "A section whose entries are all blank prints its heading alone in the PDF and in Word; Markdown and ATS text leave it out",
       "severity": "low",
       "outcome": "fixed",
-      "commits": ["e7d3650144fa85e767446a1af2de730ae8b6fd9d", "7b142ddfca8c0a10faca468ccb81efa2f649074f"],
-      "tests": ["tests/pdf/r5hunt6-blank-section-heading.test.mjs", "tests/pdf/96-section-structure.test.mjs", "tests/pdf/50-header-contact-gap-y.test.mjs"],
+      "commits": [
+        "e7d3650144fa85e767446a1af2de730ae8b6fd9d",
+        "7b142ddfca8c0a10faca468ccb81efa2f649074f"
+      ],
+      "tests": [
+        "tests/pdf/r5hunt6-blank-section-heading.test.mjs",
+        "tests/pdf/96-section-structure.test.mjs",
+        "tests/pdf/50-header-contact-gap-y.test.mjs"
+      ],
       "summary": "Now: a section prints in the PDF (every template, the Sidebar's side column and Single · ATS-safe) and in Word only if some entry prints something. That means a field whose eye is not off and that holds text: a description with text, a legacy bullet, a number, or a current role's 'Present'. For skills, skillGroupPrints decides. So a just-added Skills, Experience or Custom section, or one whose groups have both eyes off, prints nothing, as Markdown and ATS text already did. The new entryPrints is in src/utils/entryPrints.js. sectionPrints (PdfSections.jsx) and Word's `shown` (wordExportBuilders.js) use it. Two existing tests used blank entries and expected the heading. 96-section-structure expected a just-added blank Awards section to print its title; it now expects no title until the entry is typed, then the title. 50-header-contact-gap-y used section('skills', [{}]) only as a marker for its heading's position; it now holds a skill. Both are commit 7b142dd.",
       "product_call": "In the preview, a newly added section shows nothing until its first entry holds text. Before, its heading showed at once. This is what the row asks for (the PDF agrees with Markdown and ATS), but the owner may prefer a preview-only hint.",
       "remaining": "A Languages entry with only a proficiency (the default 'Professional' and no language) still prints in the PDF and Word, and not in Markdown or ATS text. That was already the case; entryPrints counts the proficiency because the PDF prints it. publicLink's publicSnapshot/publicSummary still keep a section of blank entries in the published copy and count it in 'What is public'; the public page itself prints like the PDF."
     }
   ],
-  "review": null,
+  "review": {
+    "issuesFound": [
+      "R5-HUNT6-BLANK-SECTION-HEADING: the fix changed which sections print (sectionPrints now needs an entry with text) but not the ATS Check, which mirrors sectionPrints (R1-LEFT-d, R4-CL-11, R5-HUNT1): a just-added blank Education/Skills section still passed \"section present\", its non-standard title was flagged and renamed by Standardize Headings, and its title matched job-posting keywords, though the PDF no longer prints it.",
+      "R5-HUNT6-BLANK-SECTION-HEADING: the public copy (publicSnapshot) mirrors sectionPrints (R4-SYNC-06) but still kept a section of blank entries, so the share panel listed it under What is public though the public page prints nothing of it (left open by the fixer).",
+      "tests/unit/ats-standardize-headings.unit.mjs used blank entries ({ id: \"i\" }) as sections that print; under the new rule they no longer print, so its fixtures now hold one field of text each (stale fixtures, intent unchanged: every section in them prints)."
+    ],
+    "issuesFixed": [
+      "a8f1cfe fix(ats): sectionPrints moved into src/utils/entryPrints.js (PdfSections re-exports it) and atsChecker uses it for section present, heading standardisation (report and fix) and the job-match corpus title. Test tests/unit/r5-hunt6-review-ats-blank-section.unit.mjs (4 fail without the fix).",
+      "8c2c70a fix(share): publicSnapshot drops a section none of whose entries prints (entryPrints); a blank entry beside one that prints stays. Test tests/pdf/r5hunt6-review-public-blank-section.test.mjs (fails without the fix; the copy still prints exactly as the résumé)."
+    ],
+    "open": [
+      "Non-blocking: entryPrints is a generic field check, so an entry holding only a field its renderer never prints (e.g. an experience entry with only a stray title key) still prints a lone heading, as before the branch; an entry with only dates under Show dates off likewise.",
+      "Non-blocking (disclosed by the fixer): degraded card pictures saved before the fix stay until the résumé is edited; a photo URL that always fails for a passing reason repaints its card on each dashboard visit.",
+      "Non-blocking product call (disclosed): a newly added section shows nothing in the preview until its first entry holds text.",
+      "Non-blocking: 1-Page Fit offers no Undo when an edit during the measure stopped it, though the preset was already written (by design, documented)."
+    ],
+    "ciRuns": [
+      "36607795153 failfirst: a8f1cfe (4 fail without, pass with) and 8c2c70a (fail without, pass with) - green",
+      "36607799243 full gate on 8c2c70a: build, lint, suite 6/6, Playwright 3/3, Cypress 4/4 - green"
+    ]
+  },
   "baselineFailures": [],
   "notes": "CI runs on claude/wf-r5-hunt6-pdf. Fail-first 36602979620 is green. dbf9c15: 1 of 1 fails without the fix. e7d3650: 21 fail without it. 3989493: 4 of 4 fail without it. All pass with their fix. The full gate 36602982541 (on 3989493) has build, lint, Playwright 3/3, Cypress 4/4, and suite shards 2, 3, 5 and 6 green. Shards 1 and 4 each had one failure, both stale expectations of the blank-section heading: 96-section-structure 'the Résumé tab: sections (R2-158)' and 50-header-contact-gap-y 'Between contact rows in the résumé PDF'. Commit 7b142dd updates them. Named tests 36604964833 (on 7b142dd) is green: both updated files, the three new tests, and 102-r4-dux-25-spacing-presets, 91-page-fit, 100-r4-sync-06-empty-sections, r5hunt4-empty-skill-group, 93-picker-pictures, r4pdf-font-notice, 97-pdf-worker, 92-font-fallback-notice and tests/unit/r4pdf-photo-retry, plus lint. No baseline failures were seen."
 }
