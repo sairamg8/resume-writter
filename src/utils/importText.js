@@ -405,6 +405,7 @@ function trailingDate(text) {
  * Several dates in brackets at a text's end — "Dean’s List (2018, 2019)", "(Fall 2018, Spring 2019)" —
  * which trailingDate leaves in the title: no one date of the entry, but its line an entry's, dated as
  * the line of a certificate or an award with one date is. Else, not dated, it went into the entry above.
+ * Only there (entriesOf): under a job or a school, such a line is its entry's text.
  */
 function bracketDates(text) {
   const m = /\(([^()]+)\)\s*$/.exec(text);
@@ -1014,12 +1015,16 @@ function entriesOf(type, lines, aside) {
     }
     return list.map((e) => entryOf(type, e.header, e.body, aside));
   }
+  // Several years in brackets date only a certificate's or an award's line: a line under a job or a
+  // school with them ("Named top seller (2019 and 2021)", "Dean’s List (Fall 2018, Spring 2019)") is its
+  // text. Before, it started a blank entry of its own (R5-HUNT9-BODY-LINE-BRACKET-YEARS-NEW-ENTRY).
+  const bracketed = type === 'certifications' || type === 'awards' ? bracketDates : () => false;
   const info = lines.map((l, index) => {
     const bullet = BULLET.test(l.text);
     let date = null;
     if (!bullet) {
       const ps = pieces(l.text);
-      const at = ps.findIndex((p) => readDateRange(p) || trailingDate(p) || bracketDates(p));
+      const at = ps.findIndex((p) => readDateRange(p) || trailingDate(p) || bracketed(p));
       if (at >= 0) {
         // Starts with its date: every piece before it is a date or a field by name ("Technologies: …").
         const first = ps.slice(0, at).every((p) => metaOf(p)) && Boolean(readDateRange(ps[at]));
