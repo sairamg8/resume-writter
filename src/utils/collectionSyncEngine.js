@@ -15,12 +15,8 @@
 // happens — the list is this browser's, as before.
 import { backoff, failureReport } from './cloudSyncRetry.js';
 import { docSize, MAX_DOC_BYTES } from './cloudSyncHeld.js';
-import { diffLists, leaveList, planFirstSync, stashOf, versionsOf } from './collectionSyncPlan.js';
+import { DELETED, diffLists, leaveList, planFirstSync, stashOf, versionsOf } from './collectionSyncPlan.js';
 import { itemPath } from './collectionSyncIo.js';
-
-// The version this browser records for an item it deleted from the cloud (noteVersions): older
-// than any copy, so one put back here since counts as changed (collectionSyncPlan.planFirstSync).
-const DELETED = 0;
 
 /**
  * createCollectionSync({ name, io, store, meta, report, ... }):

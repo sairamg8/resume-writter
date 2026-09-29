@@ -48,6 +48,7 @@ function device(cloud, jobs = []) {
     offline: () => { isOnline = false; sync.start(A); },
     online: async () => { isOnline = true; sync.start(A); await settle(); },
     remove: (id) => set(list.filter((j) => j.id !== id)),
+    edit: (id, patch, updatedAt) => set(list.map((j) => (j.id === id ? { ...j, ...patch, updatedAt } : j))),
     /** Undo of a deletion (useJobStore.restoreJob): the same job back at its place. */
     putBack: (j, index) => set(list.toSpliced(index, 0, j)),
   };
@@ -122,4 +123,31 @@ test('a device that held the job and never deleted it still drops it once anothe
   assert.deepEqual(d2.ids(), ['j2']);
   assert.equal(cloud.doc(jobPath('A', 'j1')), undefined);
   assert.ok(deletedIn(cloud, 'A').includes('j1'));
+});
+
+// Review of the fix above: a deletion already sent is not kept aside at sign-out (leaveList), or
+// the next sign-in sent it again and deleted the copy another device, which never saw the
+// deletion, had edited and written back meanwhile.
+test('a deletion already sent is not sent again after a sign-out: another device\'s later edit of the job stays', async () => {
+  const cloud = fakeFirestore();
+  const d1 = device(cloud, [job('j1', 'Acme'), job('j2', 'Beta')]);
+  await d1.start(A);
+  const d2 = device(cloud, []);
+  await d2.start(A);
+  d1.remove('j1');
+  await d1.timers.fire();
+  assert.ok(deletedIn(cloud, 'A').includes('j1'), 'the deletion reached the cloud');
+  await d1.start(null);
+  assert.equal(Object.keys(d1.meta.read().stashed).length, 0, 'nothing unsent is kept aside');
+
+  // Device 2 never saw the deletion: its edit of j1 wins, and j1 is back in the account.
+  d2.edit('j1', { notes: '<p>edited on device 2</p>' }, 20);
+  await d2.timers.fire();
+  assert.equal(cloud.doc(jobPath('A', 'j1'))?.notes, '<p>edited on device 2</p>');
+  assert.ok(!deletedIn(cloud, 'A').includes('j1'));
+
+  await d1.start(A);
+  assert.deepEqual(d1.ids().toSorted(), ['j1', 'j2'], 'the edited job comes to device 1');
+  assert.equal(cloud.doc(jobPath('A', 'j1'))?.notes, '<p>edited on device 2</p>', 'and stays in the account');
+  assert.ok(!deletedIn(cloud, 'A').includes('j1'));
 });
