@@ -87,9 +87,10 @@ name — never docx's default "Un-named" (R5-HUNT7-DOCX-AUTHOR-UN-NAMED).
 
 ## Text exports
 
-- **Markdown** — `markdownExport.js`; a section's entries are the ones that print (`printedEntries` in
-  `entryPrints.js`), as the PDF's and Word's, so a blank or all-hidden entry never splits a company's
-  grouped roles (R5-HUNT7-MD-GROUP-ROLES-SPLIT-BY-BLANK-ENTRY)
+- **Markdown** — `markdownExport.js`; an entry section's entries are the ones that print (`printedEntries`
+  in `entryPrints.js`), as the PDF's and Word's, so a blank or all-hidden entry never splits a company's
+  grouped roles (R5-HUNT7-MD-GROUP-ROLES-SPLIT-BY-BLANK-ENTRY); a list section (skills, languages,
+  interests) leaves its blank entries out itself
 - **ATS plain text** — `atsPlainText.js` (re-exported from `atsChecker.js`)
 - **JSON Resume** — `jsonResumeExport.js` / `jsonResumeImport.js` (the jsonresume.org schema)
 

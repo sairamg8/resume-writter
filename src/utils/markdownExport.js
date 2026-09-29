@@ -316,8 +316,11 @@ export function generateMarkdownResume(resume) {
     if (!s || s.visible === false) continue;
     // The entries that print (printedEntries), as the PDF's and Word's: a blank entry, or one whose
     // fields are all hidden with their eyes, split a company's grouped roles in two and left an empty
-    // line (R5-HUNT7-MD-GROUP-ROLES-SPLIT-BY-BLANK-ENTRY).
-    const items = printedEntries({ ...s, items: Array.isArray(s.items) ? s.items : [] });
+    // line (R5-HUNT7-MD-GROUP-ROLES-SPLIT-BY-BLANK-ENTRY). A list section (skills, languages,
+    // interests) keeps every shown entry: listLines leaves out the blank ones itself, and prints a
+    // legacy skill stored as `name` alone.
+    const shown = (Array.isArray(s.items) ? s.items : []).filter((i) => i && i.visible !== false);
+    const items = LIST_TYPES.has(s.type) ? shown : printedEntries({ ...s, items: shown });
     const opts = resolveSection(s, templateId(resume.template)).settings;
     const one = (item) => {
       const f = fieldOf(item);
