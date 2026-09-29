@@ -21,10 +21,14 @@ const mapById = (list, id, fn) => list.map((x) => (x.id === id ? fn(x) : x));
 const text = (v, fallback = '') => (typeof v === 'string' ? v : fallback);
 const categoryName = (id) => COLUMN_CATEGORIES.find((c) => c.id === id)?.name ?? id;
 
-/** A WIP limit: a whole number ≥ 1 (digits typed in a field too), else none (null). */
+/**
+ * A WIP limit: a whole number ≥ 1 (digits typed in a field too), else none (null). A fraction is
+ * rounded down, as the board's limit dialog does, rather than clearing the limit
+ * (R5-HUNT8-SETTINGS-WIP-FRACTION-CLEARS-LIMIT).
+ */
 function wipOf(v) {
   const n = typeof v === 'string' && v.trim() ? Number(v) : v;
-  return Number.isInteger(n) && n >= 1 ? n : null;
+  return typeof n === 'number' && Number.isFinite(n) && n >= 1 ? Math.floor(n) : null;
 }
 
 // ── The project itself ────────────────────────────────────────────────────────────────────

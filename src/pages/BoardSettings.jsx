@@ -24,8 +24,11 @@ const CAPTION = 'block text-[12px] font-semibold leading-5 text-ink-subtle';
  */
 function CommitField({ value, onCommit, multiline = false, ...props }) {
   const [draft, setDraft] = useState(null);
-  const commit = () => {
-    if (draft !== null && draft !== String(value ?? '')) onCommit(draft);
+  const commit = (e) => {
+    // A number field reports text it cannot read ('2,5' in Firefox or Safari) as '' with badInput
+    // set: that is not a clear, so the saved value stays (R5-HUNT8-SETTINGS-WIP-FRACTION-CLEARS-LIMIT).
+    const unreadable = !!e?.target?.validity?.badInput;
+    if (draft !== null && !unreadable && draft !== String(value ?? '')) onCommit(draft);
     setDraft(null);
   };
   const Tag = multiline ? 'textarea' : 'input';
@@ -37,7 +40,7 @@ function CommitField({ value, onCommit, multiline = false, ...props }) {
       onBlur={commit}
       onKeyDown={(e) => {
         if (isImeKey(e)) return; // an input method's Enter picks a word; its Escape drops the composition
-        if (e.key === 'Enter' && !multiline) commit();
+        if (e.key === 'Enter' && !multiline) commit(e);
         if (e.key === 'Escape') setDraft(null);
       }}
     />
