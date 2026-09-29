@@ -218,6 +218,9 @@ export function Board() {
   // or label deleted since it was ticked filters nothing, so it is not a filter set here either.
   const filtered = hasFilters(liveFilters(board, filters));
   const noMatch = filtered && shown.size === 0;
+  // Swimlanes hold only lanes with issues: a board with none and no filter set has no lane, so it
+  // shows its columns, with "+ Create issue", instead of "No issues match these filters." (R5-HUNT5).
+  const grouped = groupBy !== 'none' && (lanes.length > 0 || filtered);
   const clearFilters = () => setFilters(EMPTY_FILTERS);
 
   return (
@@ -271,8 +274,8 @@ export function Board() {
             snap belongs on the element that scrolls: on the row inside it, it did nothing (B-13). It
             is off while a card is dragged, or dnd-kit's auto-scroll toward a far column would be
             pulled back to a snap point at each step. Swimlanes stay unsnapped, as they always were. */}
-        <div className={cx('min-h-0 flex-1 overflow-auto px-4 pb-6 md:px-8', groupBy === 'none' && !active && 'snap-x snap-mandatory md:snap-none')}>
-          {groupBy === 'none' ? (
+        <div className={cx('min-h-0 flex-1 overflow-auto px-4 pb-6 md:px-8', !grouped && !active && 'snap-x snap-mandatory md:snap-none')}>
+          {!grouped ? (
             <>
               {noMatch && <NoMatch onClear={clearFilters} className="pb-3" />}
               <div className="flex min-h-full items-start gap-2">
@@ -298,7 +301,7 @@ export function Board() {
                   </div>
                 ))}
               </div>
-              {lanes.length === 0 && <NoMatch onClear={filtered ? clearFilters : null} />}
+              {lanes.length === 0 && <NoMatch onClear={clearFilters} />}
               {lanes.map((lane) => {
                 const open = !folded.has(lane.id);
                 const inLane = new Set(lane.issues.map((i) => i.id));
