@@ -734,6 +734,14 @@ export function analyzeAtsScore(resume, jobDescriptionText = '') {
       id: 'phone', status: 'pass', text: 'Valid phone number format',
       detail: `Phone "${p.phone}" contains sufficient digits for phone screen routing.`,
     });
+  } else if (phoneDigits.length > 15) {
+    // Longer than any one number (E.164 caps it at 15): two numbers or an extension, not a short one
+    // (R5-HUNT4-ATS-PHONE-OVER-15-DIGITS-CALLED-SHORT).
+    contactPts += 2;
+    results.categories.contact.items.push({
+      id: 'phone', status: 'warn', text: 'Phone field holds more than one number',
+      detail: `Phone "${p.phone}" has more digits than one phone number — it seems to hold two numbers or an extension. List a single reachable number so parsers and scheduling systems read it.`,
+    });
   } else if (phoneDigits.length >= 7) {
     contactPts += 2;
     results.categories.contact.items.push({
