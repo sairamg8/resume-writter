@@ -1,0 +1,58 @@
+{
+  "cluster": "r5-hunt2-pdf",
+  "branch": "claude/wf-r5-hunt2-pdf",
+  "base": "988681d40338da769cb7bc87f794ce722203289d",
+  "rows": [
+    {
+      "id": "R5-HUNT2-ONE-PAGE-FIT-FAILED-FIT-SILENTLY-SHRINKS-TEXT",
+      "title": "1-Page Fit that cannot reach one page lowers the text to 9 pt without saying so",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": [
+        "286b43e40858da34c03e6246e954a74b43cd3e81"
+      ],
+      "tests": [
+        "tests/pdf/r5hunt2-fit-failed-size-notice.test.mjs",
+        "tests/pdf/102-r4-dux-15-fit-size-notice.test.mjs",
+        "tests/pdf/91-page-fit.test.mjs"
+      ],
+      "summary": "Now: when 1-Page Fit cannot get a résumé onto one page, it still writes the tightest step, including the 9 pt base text size, as R2-149 intends. The notice now says so: 'Still N pages at the tightest spacing and 9 pt text (was 11 pt) — shorten the content to fit one page.' Before, it said only 'Still N pages at the tightest spacing — …', so an 11 pt résumé became 9 pt without a word, and 1-Page Fit has no Undo. A résumé whose base size did not change (already at 9 pt or below, so the ladder has no size step) gets the spacing-only wording. The wording comes from fitSizeNotice (src/utils/pageFit.js), which now covers both a fit that succeeds and one that fails. DesignPanel.fitToOnePage calls it instead of building the 'Still N pages' string inline. A fit that succeeds speaks as before: nothing for spacing alone, and 'Fits on 1 page — text size A → B pt.' when the size came down. Stale tests updated with evidence: 102-r4-dux-15 expected an empty size notice for pages > 1, which was the bug itself, and the exact regex in 91-page-fit now expects the size clause, with the tightest step still asserted as stored. The looser regexes in 102-r4-dux-25 and 91-page-fit's StrictMode test ('pages at the tightest spacing', '^Still N pages') still match the new wording. No exporter, template or stored-data change.",
+      "failfirst_run": "36530615541 (green: with 286b43e's diff reversed the two named files fail with '# fail 3', and they pass with it restored; named tests 35/35 in the same run: the new test, 102-r4-dux-15, 91-page-fit, r5hunt1-fit-keeps-tight-spacing, 31-contact-fields, 91-design-resets, knowledge-docs)"
+    }
+  ],
+  "review": {
+    "rounds": [
+      {
+        "round": 1,
+        "issues": [
+          {
+            "issue": "Does the notice name the wrong 'was' size? The ladder is built from {...settings, ...preset}, and the notice from settings as clicked.",
+            "resolution": "No change needed: the preset (fitLadder(settings)[0]) never carries fontSizeBase, so both read the same base, with the same Number.isFinite fallback to 11 pt. A fractional base (10.5) is named as 'was 10.5 pt', which is correct."
+          },
+          {
+            "issue": "A base below 9 pt, or a fit with no settings, could produce 'and undefined pt text'.",
+            "resolution": "No change needed: the size clause needs fit.settings?.fontSizeBase to be defined and different from base. A base at or below MIN_FIT_BASE_PT adds no size step, so the spacing-only wording is used. A null fit returns ''."
+          },
+          {
+            "issue": "Other tests or specs that match the old exact wording.",
+            "resolution": "No change needed: I grepped src, tests, cypress and e2e. Only 91-page-fit carried the exact string, and it was updated. The 102-r4-dux-25 and 91-page-fit StrictMode regexes are prefix/substring matches that still hold. docs/knowledge does not describe the notice."
+          },
+          {
+            "issue": "Alternative fix: keep the original text size when no step fits.",
+            "resolution": "Rejected as the fix: R2-149 and the existing 91-page-fit tests keep the tightest step, 9 pt included, as intended behaviour. Stating the change fixes the silent part without reversing a tracked product decision."
+          },
+          {
+            "issue": "Fail-first proof",
+            "resolution": "Verified in the job log for run 36530615541, job 109283270503: 'fail without the fix (its diff reversed): # fail 3', then 'pass with it'."
+          }
+        ]
+      }
+    ],
+    "issues": [],
+    "fixedByReviewer": []
+  },
+  "rejected": [],
+  "a11yNoted": [],
+  "baselineFailures": [],
+  "notes": "One bug, fixed in 286b43e. I checked it adversarially: the base-size source, fractional and sub-9 pt bases, null or partial fits, other callers (fitSizeNotice is used only by DesignPanel) and the regexes of other tests all hold. Fail-first is confirmed in the CI log. The full gate was not run on this branch; it is left to the batch gate, as the protocol says. Not done (out of scope, already noted in R5-HUNT1): Undo for 1-Page Fit."
+}
