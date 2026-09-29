@@ -1,0 +1,55 @@
+{
+  "cluster": "r5-r2148",
+  "branch": "claude/wf-r5-r2148",
+  "base": "e64b6f3fb2ef480b0cd55d7260f64769cf145c74",
+  "rows": [
+    {
+      "id": "R2-148",
+      "title": "A résumé deleted on another device keeps its public copy until unpublished (public link after delete)",
+      "severity": "medium",
+      "outcome": "fixed",
+      "commits": [
+        "4d73d70ee01e7c72c473e3e153b4a91df45635f9",
+        "6dc4c3c41d4f4c64202821a4eca5c0760efe8916"
+      ],
+      "tests": [
+        "tests/pdf/104-r5-r2148-public-copy-follows-deletion.test.mjs",
+        "tests/pdf/18-cloud-sync-public-links.test.mjs"
+      ],
+      "summary": "Now: a résumé's public copy (#/r/<id>, public/{shareId}) goes down wherever and however the résumé is deleted. The Dashboard's Delete takes it down at once. The flush that sends the deletion also takes it down (new in 4d73d70, in src/utils/cloudSyncQueue.js), so a copy whose Dashboard unpublish failed, or a résumé deleted in another tab or by an older build, no longer stays public until a reload. Any device's next first sync takes down the copies of every résumé on the account's deletion list, including on a device that never had it (the R2-148-a path, unpublishDeleted in src/utils/cloudSyncEngine.js; the note's SHA 9af32ac is on no branch). A failed takedown is retried at the next first sync. Since 6dc4c3c each sync takedown checks, inside its transaction, that the résumé is still gone, so the copy of a résumé another device wrote back (R2-029) and published again is left up.",
+      "remaining": "The full gate (node suite, Playwright, Cypress, build) has not run on 6dc4c3c or later; the coordinator must run it before master is fast-forwarded. An older build that deletes without unpublishing leaves the copy up until any device's next first sync. A stray second public copy that no shares record names cannot be found (the rules forbid listing public/): a known limit.",
+      "failfirst_run": "36521616590 (4d73d70: 3 failures without the fix, pass with it); 36522542242 (6dc4c3c: 1 failure without the fix, pass with it); named-tests runs 36522542242 (180/180 over 26 files, lint green) and 36522875734 (tests/pdf/18-cloud-sync.test.mjs, green)"
+    }
+  ],
+  "review": {
+    "rounds": [
+      {
+        "round": 1,
+        "issues": [
+          "Low: unpublishDeleted's takedown did not check the résumé was still gone (publicLink.js takeDown), so between a flush's commit and its takedown another device could write the résumé back (R2-029) and publish it, and the takedown removed that new copy",
+          "Low, undocumented: in a demo account a flagged original that is later restored comes back without its public link",
+          "Gap: a stray public copy that no users/{uid}/shares record names is never taken down",
+          "Gap: no test pinned that a flush answered after a sign-out takes nothing down and the next sign-in's first sync then takes the copy down",
+          "Process: the full gate has not been run on the branch head"
+        ]
+      }
+    ],
+    "issues": [
+      "Finding 1 (race): confirmed by reading. publicLink.js takeDown read only shares/{id} and public/{shareId}. Fixed in 6dc4c3c: unpublishDeleted passes onlyIfGone, and takeDown then reads users/{uid}/resumes/{id} and users/{uid}/meta/deletions in the same transaction. It skips the takedown only when the résumé doc exists, is not flagged deleted, and its id is off the deletion list. A copy a stale device wrote back while the id stays listed (V2OWNER-DATA-0) is still taken down. The Dashboard's own unpublishResume is unchanged, because it runs before the deletion reaches the cloud. The new test 'written back and published again elsewhere before the takedown runs' fails without the fix (failfirst run 36522542242: # fail 1).",
+      "Finding 1 side effect: the unit test in tests/pdf/18-cloud-sync-public-links.test.mjs ('publicIo.unpublishDeleted takes down only the listed résumés' copies') called unpublishDeleted for X while X was still in the cloud and not listed. Its premise was updated to the app's real call order: X is removed and listed before the call. The assertions are unchanged.",
+      "Finding 2 (demo restore leaves the link down): confirmed and intended, since it fails safe for privacy and matches the Dashboard's Delete. It is now documented in the unpublishGone comment in cloudSyncEngine.js. A restore after the takedown keeps the résumé (stillHeld only affects takedowns still to come).",
+      "Finding 4 (gap): now pinned by the test 'the flush's answer comes after a sign-out'. The server has the deletion, the answer arrives after sign-out, nothing is taken down under no account, and the next sign-in's first sync takes the copy down. The closed-during-pause case is covered by the existing 'sign-in lapsed' reload test, where the deletion waits in the store and the next first sync sends it and takes the copy down.",
+      "Finding 5 (process): still open, for the coordinator's full gate."
+    ],
+    "fixedByReviewer": []
+  },
+  "rejected": [
+    {
+      "issue": "Finding 3: stray public copies that no shares record names are never taken down",
+      "reason": "Known limit that predates this change and is outside R2-148. firestore.rules allow only get on public/{shareId}, never list, so no client can find an unrecorded copy. R4-LO-22 made publish and unpublish transactional, so no new strays are made. Legacy strays would need a server-side sweep keyed on the owner field."
+    }
+  ],
+  "a11yNoted": [],
+  "baselineFailures": [],
+  "notes": "HEAD 6dc4c3c. The takedown after a flush or first sync now reads the résumé doc and the deletion list inside its transaction; firestore.rules already allow the owner to read users/{uid}/**. The full gate (no inputs) must run on the head before master is fast-forwarded. The first 26-file named run left out tests/pdf/18-cloud-sync.test.mjs; it ran separately in 36522875734 and was green."
+}
