@@ -293,9 +293,11 @@ const NOW = '(?:present|current|currently|now|today|ongoing|till date|to date)';
 const DASHES = '\\u2010\\u2011\\u2012\\u2212';
 const SEP = `\\s*(?:[-${DASHES}–—~]|to|until|through)\\s*`;
 // "Expected May 2025", "Anticipated graduation date: 2025", "May 2025 (Expected)": a date still to
-// come is when the entry ends, alone or after its start ("Aug 2021 – Expected May 2025").
-const AHEAD = '(?:expected|anticipated)(?:\\s+(?:graduation|completion))?(?:\\s+date)?\\s*:?\\s*';
-const AHEAD_AFTER = '\\s*\\(?\\s*(?:expected|anticipated)\\s*\\)?';
+// come is when the entry ends, alone or after its start ("Aug 2021 – Expected May 2025"). So is one
+// past: "Graduated May 2021", "Graduation: 2020", "Class of 2020", "May 2020 (Graduated)". Before,
+// those were no date, and the education took them as its degree.
+const AHEAD = '(?:(?:expected|anticipated)(?:\\s+(?:graduation|completion))?(?:\\s+date)?|graduated|graduation(?:\\s+date)?|class\\s+of)\\s*:?\\s*';
+const AHEAD_AFTER = '\\s*\\(?\\s*(?:expected|anticipated|graduated)\\s*\\)?';
 // "(4 years 9 months)", "· 3 yrs 2 mos": how long it lasted, after the range as LinkedIn's PDF prints it.
 const LENGTH = '(?:less than (?:a|one) (?:year|month)|\\d+\\+?\\s*(?:years?|yrs?|months?|mos?)\\.?(?:,?\\s*(?:and\\s+)?\\d+\\s*(?:months?|mos?)\\.?)?)';
 const LENGTH_AFTER = `(?:\\s*\\(\\s*${LENGTH}\\s*\\)?|\\s+[·•]\\s+${LENGTH})`;
@@ -326,7 +328,7 @@ export function readDateRange(text) {
     else m[3] = m[2].slice(0, 2) + m[3];
   }
   if (m) {
-    // "May 2025 (Expected)": one date still to come is the end, not the start.
+    // "May 2025 (Expected)", "May 2020 (Graduated)": one date so marked is the end, not the start.
     if (m[4] && !m[3] && !m[1]) return { start: '', end: tidy(m[2]), current: false, text: t };
     // "Since 2019" is a range still running, as "2019 – Present" is.
     const now = m[3] ? IS_NOW.test(m[3]) : Boolean(m[1]);
