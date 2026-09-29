@@ -293,7 +293,11 @@ const SEP = '\\s*(?:[-–—~]|to|until|through)\\s*';
 // come is when the entry ends, alone or after its start ("Aug 2021 – Expected May 2025").
 const AHEAD = '(?:expected|anticipated)(?:\\s+(?:graduation|completion))?(?:\\s+date)?\\s*:?\\s*';
 const AHEAD_AFTER = '\\s*\\(?\\s*(?:expected|anticipated)\\s*\\)?';
-const RANGE = new RegExp(`^(since\\s+)?(${DAY})(?:${SEP}(?:${AHEAD})?(${DAY}|${NOW}))?(${AHEAD_AFTER})?$`, 'i');
+// "(4 years 9 months)", "· 3 yrs 2 mos": how long it lasted, after the range as LinkedIn's PDF prints it.
+const LENGTH = '(?:less than (?:a|one) (?:year|month)|\\d+\\+?\\s*(?:years?|yrs?|months?|mos?)\\.?(?:,?\\s*(?:and\\s+)?\\d+\\s*(?:months?|mos?)\\.?)?)';
+const LENGTH_AFTER = `(?:\\s*\\(\\s*${LENGTH}\\s*\\)?|\\s+[·•]\\s+${LENGTH})`;
+const RANGE = new RegExp(`^(since\\s+)?(${DAY})(?:${SEP}(?:${AHEAD})?(${DAY}|${NOW}))?(${AHEAD_AFTER})?(?:${LENGTH_AFTER})?$`, 'i');
+const LENGTH_ONLY = new RegExp(`^${LENGTH}$`, 'i');
 const END_ONLY = new RegExp(`^(?:(?:[-–—]|to|until)\\s*(?:${AHEAD})?|${AHEAD})(${DAY}|${NOW})(?:${AHEAD_AFTER})?$`, 'i');
 const IS_NOW = new RegExp(`^${NOW}$`, 'i');
 
@@ -423,7 +427,13 @@ function contactRun(piece) {
 // ── Entries ──────────────────────────────────────────────────────────────────
 
 /** The pieces of an entry's header line: tabs and | · • marks. */
-const pieces = (text) => text.split(/\t|\s+[|·•]\s+/).map((s) => s.trim()).filter(Boolean);
+const pieces = (text) => text.split(/\t|\s+[|·•]\s+/).map((s) => s.trim()).filter(Boolean)
+  // A range's length set apart at "·" ("Jan 2020 – Present · 3 yrs 2 mos") is part of its date.
+  .reduce((out, p) => {
+    if (out.length && LENGTH_ONLY.test(p) && readDateRange(out[out.length - 1])) out[out.length - 1] += ` · ${p}`;
+    else out.push(p);
+    return out;
+  }, []);
 /** Whether a line holds a date: an entry heading with one under it is no grouped employer (loneFields, roleEntries). */
 const dated = (l) => pieces(l.text).some((p) => readDateRange(p) || trailingDate(p));
 /** A header piece's fields: "Company — Role", "Company - Role". */
