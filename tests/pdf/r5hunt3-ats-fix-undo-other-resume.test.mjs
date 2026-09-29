@@ -89,6 +89,7 @@ describe('ATS Check fixes\' Undo never writes into another résumé (R5-HUNT3)',
       await settle();
       tab.undoAll();
       assert.equal(tab.experience('I').title, 'Where I\'ve Worked', 'I keeps its own heading');
+      await new Promise((r) => { setTimeout(r, 300); }); // past the notice's exit
       await settle();
       assert.equal(tab.undos().length, 0, 'the notice left when I opened');
     } finally { await tab.unmount(); }
