@@ -14,8 +14,8 @@ beside it once a field is edited, as the optimizer does) merged into `claude/r4-
 **In progress:** unfinished r5 clusters, two at a time, each = finish scope → adversarial review → fix → report
 `wf-reports/r5-<key>.json` on `claude/wf-r5-<key>`. Running: imp. Batch gate 36517981819 on 0f03b71 was red only on
 71-startup-chunks (the data router for R4-DUX-06 + the kit Dialog on the Dashboard: 1107 kB > 1100 kB); fixed by ea59ac6
-(1097 kB, fail-first 36520176676; margin ~3 kB). Full gate on ea59ac6 dispatched. Then the
-20-row dsg-layout verdict check, R2-148 (deleted résumé keeps its public link), the whole-app hunt (dry twice).
+(1097 kB, fail-first 36520176676; margin ~3 kB). Full gate on ea59ac6 dispatched. The 20 dsg-layout rows
+all have verdicts (12 in r5-dsgv.json, all fixed-verified; the rest in r5-dash/panels/dlg/opt). Next: R2-148 (deleted résumé keeps its public link), the whole-app hunt (dry twice).
 A cluster is done only when its report is on its branch; merge it then. No full gate yet on the merged head.
 
 ## ⏩ COLD START HERE — 2026-09-28 17:10 UTC (coordinator session_01PeuUcY5NWWpCxy878FtEE1, scheduled run; owner offline)
