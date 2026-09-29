@@ -8,8 +8,12 @@
       "title": "Changing a Done column's category, even by mistake and then back, reopens every done issue and wipes its resolved date, with no warning and no Undo",
       "severity": "medium",
       "outcome": "fixed",
-      "commits": ["fa60a204915b1d3eebd6134fa91cfb2a0a56a7b9"],
-      "tests": ["tests/pdf/107-r5-hunt6-column-category-undo.test.mjs"],
+      "commits": [
+        "fa60a204915b1d3eebd6134fa91cfb2a0a56a7b9"
+      ],
+      "tests": [
+        "tests/pdf/107-r5-hunt6-column-category-undo.test.mjs"
+      ],
       "summary": "Now a category change that reopens or resolves a column's issues asks first, from both the board's column menu (Status category) and the Category select in Project settings. The question reads 'Make Done a “To do” column? Its N issues will be reopened.' Declining changes nothing. Accepting shows a toast, 'Column “Done” is now To do', with Undo. Undo puts the category back and returns every untouched issue to its old state: its real resolvedAt and its history. A next occurrence the change made for a repeating issue is removed again. An issue edited since the change keeps the edit. Undo does nothing if the category has changed again since. A change that neither reopens nor resolves anything (To do to In progress) asks nothing and shows no toast. The fix: boardView.columnRecategorization works out the count and the effect. boardActions.setColumnCategory returns the board before and after, and restoreCategory undoes it. boardOps.restoreCategory shares a new issuesPutBack helper with restoreColumn, which was factored out of it with no change in behaviour. Board.jsx and BoardSettings.jsx now call setCategory/recategorize instead of calling store.updateColumn directly. The reopen and resolve on a category change are unchanged (R4-BRD-09).",
       "product_call": "Only a change that resolves or reopens at least one issue gets the question and the Undo toast. A category change that affects no issues applies silently, as before. Setting the category back by hand, instead of using Undo, still stamps every issue 'now'. Keeping the old dates would need a new stored field.",
       "remaining": "No Playwright or Cypress spec covers the column menu. The pages are checked over fake-dom."
@@ -19,8 +23,12 @@
       "title": "A comment typed in the issue view disappears without a word when the view is closed or another issue (epic, child, copy) is opened",
       "severity": "medium",
       "outcome": "fixed",
-      "commits": ["9d6893b2c40c70faf2c0c6236329cfaa9bb6c209"],
-      "tests": ["tests/pdf/107-r5-hunt6-comment-draft-kept.test.mjs"],
+      "commits": [
+        "9d6893b2c40c70faf2c0c6236329cfaa9bb6c209"
+      ],
+      "tests": [
+        "tests/pdf/107-r5-hunt6-comment-draft-kept.test.mjs"
+      ],
       "summary": "Now text left in the comment box is saved into the issue it was typed in when the box goes away. This covers closing the view (X, Escape, the backdrop) and opening the epic or a child from the view. An edit to an existing comment is saved the same way. This matches how the Description draft already behaved. Cancel still throws the text away, Save saves it once, and an open box with nothing typed saves nothing. The fix is in Composer (src/components/board/IssueActivity.jsx). A ref keeps the latest text and onSave; it is updated in a layout effect, and an unmount effect saves any leftover text. Save and Cancel clear the ref first, because an edited comment's box unmounts in the same render.",
       "product_call": "It saves instead of asking, to match the Description field. Because the comment rows are not shown on the History tab, an edit to an existing comment left open when switching to History is saved at that point.",
       "remaining": "None."
@@ -30,14 +38,36 @@
       "title": "On the List and Calendar, which show epics, the Type filter has no 'Epic' option",
       "severity": "low",
       "outcome": "fixed",
-      "commits": ["71938cc6f894b3ce4e5a01d341450490253c9177"],
-      "tests": ["tests/pdf/107-r5-hunt6-type-filter-epic.test.mjs"],
+      "commits": [
+        "71938cc6f894b3ce4e5a01d341450490253c9177"
+      ],
+      "tests": [
+        "tests/pdf/107-r5-hunt6-type-filter-epic.test.mjs"
+      ],
       "summary": "Now the Type filter on the List and the Calendar offers Task, Bug, Story and Epic. Ticking Epic lists only the epics. The Board and the Backlog, which never show epics, still offer three types. The fix adds a withEpics prop to BoardToolbar (src/components/board/BoardToolbar.jsx), and ProjectList.jsx and ProjectCalendar.jsx pass it. filterIssues was already correct once 'epic' can be ticked.",
       "product_call": "",
       "remaining": "None."
     }
   ],
-  "review": null,
+  "review": {
+    "reviewedHead": "2a22543331c21ba301082964a9924f05e88e7582",
+    "issuesFound": [
+      "R5-HUNT6-CATEGORY-UNDO-LEAVES-STALE-DATES: restoreCategory put the category back but left every issue in the column that was not put back (edited since, or moved or created there since) as the change or the move left it. After a reopen's Undo such an issue sat in the Done column with no resolved date (no 'Resolved' in the issue view; a repeating one moved in was never made again). After a resolve's Undo it sat open in a To do column still 'Resolved', counted as completed by the project summary."
+    ],
+    "issuesFixed": [
+      "R5-HUNT6-CATEGORY-UNDO-LEAVES-STALE-DATES: fixed in dcd20a4. restoreCategory now resolves or reopens those issues as any category change does (recategorized, limited to them by a new optional ids argument): a status entry in each history, a repeat's next occurrence made, and an issue done before the change gets back its real resolved date. Untouched issues are still put back exactly. Test tests/pdf/107-r5-hunt6-column-category-undo-since.test.mjs (fails 3 of 4 without the fix)."
+    ],
+    "open": [],
+    "notes": [
+      "Checked and fine: the comment draft is saved into the issue it was typed in (IssueView is keyed by issue id), Save and Cancel clear it first, and an empty box saves nothing. withEpics is passed only by the List and Calendar (filters are page state, so a ticked Epic never carries to the Board). Commit author, committer and messages of all fixer commits are compliant. No existing test was changed.",
+      "Weak but valid: the fixer's fail-first on fa60a20 failed at the file's import of columnRecategorization, not on its assertions; its page tests still assert the user-visible question and Undo, and would fail on them without the fix.",
+      "Product note (not blocking): an edit of an existing comment left open is saved when the Activity tab switches to History (the comment rows unmount there); the fixer's report states this."
+    ],
+    "ciRuns": [
+      "36606324775 failfirst dcd20a4 (# fail 3 without the fix, passes with it; lint green)",
+      "36606346134 tests: 59 files (new and affected board tests, knowledge-docs), 315/315 pass, lint green"
+    ]
+  },
   "baselineFailures": [],
   "notes": "Fail-first run 36602693085 is green. With each commit's src/ diff reversed: 71938cc gives '# fail 2' (the third test pins the Board's unchanged three types). 9d6893b gives '# fail 4' (the fifth test pins that an empty box saves nothing). fa60a20 gives '# fail 1' (the file imports columnRecategorization, which does not exist without the fix, so the file fails as a whole). All pass with the fixes. Tests run 36602714172: 58 files (the 3 new tests, every existing test that imports BoardToolbar, ProjectList, ProjectCalendar, IssueActivity, boardOps, boardActions, boardView, BoardSettings, Board.jsx, issue-view-page or useBoardStore, and knowledge-docs), 316 of 316 pass. Lint is green in both runs. Nothing prints differently, so the PDF, Word, Markdown and ATS output is unaffected. No DATA_VERSION, CONTACT_FIELDS or Design key changes. The full gate has not been run on this branch; it is left for the batch."
 }
