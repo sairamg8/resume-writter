@@ -9,7 +9,7 @@
 import { before, after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { setup, teardown, loadModule } from './harness.mjs';
-import { fakeFirestore, syncPage, syncModules, resumePath, settle } from './fake-firestore.mjs';
+import { fakeFirestore, syncPage, syncModules, resumePath, listPath, settle } from './fake-firestore.mjs';
 import { DATA_VERSION } from '../../src/utils/dataVersion.js';
 
 let mods;
@@ -125,5 +125,48 @@ describe('what stays on this browser (R2-005)', () => {
     await signInAs(p, cloud, A);
     assert.deepEqual(Object.keys(cloud.resumes('A')), [ALICE.id]);
     assert.deepEqual([names(p), p.store.state.deletedIds], [['Alice'], []]);
+  });
+});
+
+// R5-HUNT1-resume-sync-other-tab-signout-deletes-all: A signs out (or switches account) in another
+// tab. That tab's sign-out takes A's list off this browser at once, and this tab's store takes the
+// empty list from the storage event before its own Firebase Auth has heard of the sign-out (a
+// hidden tab's auth poll is throttled to about once a minute, the flush pause is 1.5 s). Until then
+// the empty list was queued as A's deletions: every résumé hard-deleted from A's cloud and put on
+// its deletion list, so every device dropped its copy too. Now a list that changed hands is no
+// deletion: the queue waits for the next first sync, as the jobs' and boards' sync does.
+describe('another tab signs out: this tab deletes nothing from the account (R5-HUNT1)', () => {
+  const RESUME_2 = cv('resume_two', 3, { name: 'Two' });
+  /** Tab B, signed in as A with A's two résumés synced. */
+  async function tabB() {
+    const cloud = fakeFirestore({ [resumePath('A', ALICE.id)]: ALICE, [resumePath('A', RESUME_2.id)]: RESUME_2 });
+    const p = page(cloud, { resumes: [] });
+    await signInAs(p, cloud, A);
+    assert.deepEqual(names(p), ['Alice', 'Two']);
+    return { cloud, p };
+  }
+
+  it('the empty list another tab left at A\'s sign-out is not sent as A\'s deletions', async () => {
+    const { cloud, p } = await tabB();
+    // useResumeStore's storage event: tab A's store after leaveAccount('A'). Tab B's auth token is still A's.
+    await p.change({ resumes: [], activeId: null, syncedUid: null, cloudVersions: {} });
+    await p.timers.fire();
+    await settle();
+    assert.deepEqual(Object.keys(cloud.resumes('A')).toSorted(), [ALICE.id, RESUME_2.id], 'before: both hard-deleted from A\'s cloud');
+    assert.deepEqual(cloud.doc(listPath('A'))?.ids ?? [], [], 'before: both put on A\'s deletion list');
+    // Tab B's auth hears of the sign-out, and A signs in again: A's résumés are all there.
+    await signInAs(p, cloud, null);
+    await signInAs(p, cloud, A);
+    assert.deepEqual(names(p), ['Alice', 'Two']);
+  });
+
+  it('another tab signing out of A and into B: tab B neither deletes A\'s résumés nor writes B\'s list into A\'s cloud', async () => {
+    const { cloud, p } = await tabB();
+    const BOB = cv('resume_bob', 2, { name: 'Bob' });
+    await p.change({ resumes: [BOB], activeId: BOB.id, syncedUid: 'B', cloudVersions: { [BOB.id]: 2 } });
+    await p.timers.fire();
+    await settle();
+    assert.deepEqual(Object.keys(cloud.resumes('A')).toSorted(), [ALICE.id, RESUME_2.id], 'before: A\'s résumés replaced by B\'s in A\'s cloud');
+    assert.deepEqual(cloud.doc(listPath('A'))?.ids ?? [], []);
   });
 });

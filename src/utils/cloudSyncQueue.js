@@ -51,6 +51,11 @@ export function createQueue({ s, io, store, report, held, timers, flushDelay, cl
       return;
     }
     if (!s.user || !s.initialSyncDone || s.cloudDisabled || !io) return;
+    // Another tab took the list off this browser (its sign-out, or another account signing in:
+    // cloudSyncLeave.js) and this one's auth has not heard of it yet: the list that came is no
+    // change of this account's. It was sent as the deletion of every résumé it had — and the other
+    // account's list written into its cloud. Nothing is sent until the next first sync.
+    if (store.getState().syncedUid !== s.user.uid) { dropQueue(); s.initialSyncDone = false; return; }
     const queued = queueChanges(s.queue, s.prevResumes || [], current, held.replaced(s.user.uid, current));
     if (!queued.dirty) return;
     s.queue = queued;
