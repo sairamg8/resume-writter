@@ -44,7 +44,8 @@ function TopLink({ to, label, active }) {
 }
 
 /**
- * The search box and its results (projects, then issues), searched as the user types. Below sm the
+ * The search box and its results (an issue whose key is typed in full, then projects, then issues;
+ * utils/workspaceSearch), searched as the user types. Below sm the
  * bar has no room for it: a search button (or '/') opens it as a bar over the top bar, and Escape, its X, a
  * result picked or a tap elsewhere puts it away (R4-DPH-04).
  */

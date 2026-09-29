@@ -1,6 +1,7 @@
 // The top bar's search: projects by name or key, and issues by key ("LIFE-12", "life 12") or by
 // words of their title, across every project — what a tracker's quick search finds. Pure: the
-// shell hands it the board store's list (tests/unit/workspace-search.unit.mjs).
+// shell hands it the board store's list (tests/unit/tracker-views.unit.mjs,
+// tests/unit/r5-hunt4-quick-search-exact-key.unit.mjs).
 import { issueKey } from './boardModel.js';
 
 const norm = (s) => String(s ?? '').toLowerCase().replace(/\s+/g, ' ').trim();
