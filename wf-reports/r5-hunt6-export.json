@@ -39,7 +39,8 @@
     ],
     "ciRuns": [
       "36603709820 (fail-first for all 3 commits, plus lint: green; logs read by the reviewer)",
-      "36603725069 (named tests on 2014e01: 293 pass, 0 fail)"
+      "36603725069 (named tests on 2014e01: 293 pass, 0 fail)",
+      "36606131785 (reviewer, on d16dcda: 25 named node test files, 177 pass, 0 fail; Cypress 03-export and 29-exports-imports green; lint green)"
     ],
     "notes": "Reviewed a79efd8b..2014e01 adversarially. Each fix addresses the root cause. The other exports already follow the Link URL: the PDF, Word (résumé and letter) and Markdown through contactItems' href, and the ATS text since R5-HUNT4. No existing test was changed. All 3 commits have author and committer sairamgudiputi <sairamgudiputi8@gmail.com>, carry no trailers and use the fix(<area>) style. The JSON import reads <key>Text only when the matching url was found, so hand-written files and files from older versions are unaffected."
   },
